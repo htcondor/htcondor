@@ -31,15 +31,14 @@
 #include "condor_ver_info.h"
 #include "condor_classad.h"
 #include "dc_transfer_queue.h"
-#include <list>
-
+#include <vector>
 
 extern const char * const StdoutRemapName;
 extern const char * const StderrRemapName;
 
 class FileTransfer;	// forward declatation
 class FileTransferItem;
-typedef std::list<FileTransferItem> FileTransferList;
+typedef std::vector<FileTransferItem> FileTransferList;
 
 
 struct CatalogEntry {
@@ -76,7 +75,12 @@ enum FileTransferStatus {
 };
 
 
-class FileTransfer: public Service {
+namespace htcondor {
+class DataReuseDirectory;
+}
+
+
+class FileTransfer final: public Service {
 
   public:
 
@@ -111,11 +115,11 @@ class FileTransfer: public Service {
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
-	int Init( ClassAd *Ad, bool check_file_perms = false, 
+	int Init( ClassAd *Ad, bool check_file_perms = false,
 			  priv_state priv = PRIV_UNKNOWN,
 			  bool use_file_catalog = true);
 
-	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
+	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use = NULL, 
 						 priv_state priv = PRIV_UNKNOWN,
 						 bool use_file_catalog = true,
@@ -126,10 +130,36 @@ class FileTransfer: public Service {
 		@return 1 on success, 0 on failure */
 	int InitDownloadFilenameRemaps(ClassAd *Ad);
 
+	/** Determine if this is a dataflow transfer (where the output files are 
+	/ * newer than input files)
+	 * 
+	 * @return True if newer, False otherwse
+	 */
+	static bool IsDataflowJob(ClassAd *job_ad);
+
 	/** @param session_id NULL (if should auto-negotiate) or
 		       security session id to use for outgoing file transfer
 		       commands */
 	void setSecuritySession(char const *session_id);
+
+	/** @param cred_dir The location of the credentials directory to be used
+	 *  with the file transfer plugins.
+	 */
+	void setCredsDir(const std::string &cred_dir) {m_cred_dir = cred_dir;}
+
+	/** @param reuse_dir: The DataReuseDirectory object to utilize for data reuse
+	 *  lookups
+	 */
+	void setDataReuseDirectory(htcondor::DataReuseDirectory &reuse_dir) {m_reuse_dir = &reuse_dir;}
+
+	/** Set the location of various ads describing the runtime environment.
+	 *  Used by the file transfer plugins.
+	 *
+	 *  @param job_ad The location of the job ad.
+	 *  @param machine_ad The location of the machine ad.
+	 */
+	void setRuntimeAds(const std::string &job_ad, const std::string &machine_ad)
+	{m_job_ad = job_ad; m_machine_ad = machine_ad;}
 
 		/** Set limits on how much data will be sent/received per job
 			(i.e. per call to DoUpload() or DoDownload()).  The job is
@@ -145,6 +175,9 @@ class FileTransfer: public Service {
 
 	/** @return 1 on success, 0 on failure */
 	int UploadFiles(bool blocking=true, bool final_transfer=true);
+
+	/** @return 1 on success, 0 on failure */
+	int UploadCheckpointFiles( bool blocking = true );
 
 		/** For non-blocking (i.e., multithreaded) transfers, the registered
 			handler function will be called on each transfer completion.  The
@@ -210,9 +243,9 @@ class FileTransfer: public Service {
 
 	inline bool IsClient() {return user_supplied_key == TRUE;}
 
-	static int HandleCommands(Service *,int command,Stream *s);
+	static int HandleCommands(int command,Stream *s);
 
-	static int Reaper(Service *, int pid, int exit_status);
+	static int Reaper(int pid, int exit_status);
 
 	static bool SetServerShouldBlock( bool block );
 
@@ -232,8 +265,6 @@ class FileTransfer: public Service {
 	float TotalBytesSent() { return bytesSent; }
 
 	float TotalBytesReceived() { return bytesRcvd; };
-
-	void RemoveInputFiles(const char *sandbox_path = NULL);
 
 		/** Add the given filename to our list of output files to
 			transfer back.  If we're not managing a list of output
@@ -287,9 +318,11 @@ class FileTransfer: public Service {
 	void InsertPluginMappings(MyString methods, MyString p);
 	void SetPluginMappings( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
+	int InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles);
 	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	int InvokeMultipleFileTransferPlugin(CondorError &e, std::string plugin_path, std::string transfer_files_string, const char* proxy_filename);
+	int InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
+	ssize_t InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err);
     int OutputFileTransferStats( ClassAd &stats );
 	MyString GetSupportedMethods();
 
@@ -349,91 +382,110 @@ class FileTransfer: public Service {
 	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
-	double uploadStartTime, uploadEndTime;
-	double downloadStartTime, downloadEndTime;
+	double uploadStartTime{-1}, uploadEndTime{-1};
+	double downloadStartTime{-1}, downloadEndTime{-1};
 
 	void CommitFiles();
-	void ComputeFilesToSend();
+
+	void FindChangedFiles();
+	void DetermineWhichFilesToSend();
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
-	float bytesSent, bytesRcvd;
-	StringList* InputFiles;
+	uint64_t bytesSent{0}, bytesRcvd{0};
+	StringList* InputFiles{nullptr};
 
   private:
 
-	bool TransferFilePermissions;
-	bool DelegateX509Credentials;
-	bool PeerDoesTransferAck;
-	bool PeerDoesGoAhead;
-	bool PeerUnderstandsMkdir;
-	bool PeerDoesXferInfo;
-	bool TransferUserLog;
-	char* Iwd;
-	StringList* ExceptionFiles;
-	StringList* OutputFiles;
-	StringList* EncryptInputFiles;
-	StringList* EncryptOutputFiles;
-	StringList* DontEncryptInputFiles;
-	StringList* DontEncryptOutputFiles;
-	StringList* IntermediateFiles;
-	StringList* FilesToSend;
-	StringList* EncryptFiles;
-	StringList* DontEncryptFiles;
-	char* OutputDestination;
-	char* SpooledIntermediateFiles;
-	char* ExecFile;
-	char* UserLogFile;
-	char* X509UserProxy;
+	bool uploadCheckpointFiles{false};
+	bool TransferFilePermissions{false};
+	bool DelegateX509Credentials{false};
+	bool PeerDoesTransferAck{false};
+	bool PeerDoesGoAhead{false};
+	bool PeerUnderstandsMkdir{false};
+	bool PeerDoesXferInfo{false};
+	bool PeerDoesReuseInfo{false};
+	bool PeerDoesS3Urls{false};
+	bool TransferUserLog{false};
+	char* Iwd{nullptr};
+	StringList* ExceptionFiles{nullptr};
+	StringList* OutputFiles{nullptr};
+	StringList* EncryptInputFiles{nullptr};
+	StringList* EncryptOutputFiles{nullptr};
+	StringList* DontEncryptInputFiles{nullptr};
+	StringList* DontEncryptOutputFiles{nullptr};
+	StringList* IntermediateFiles{nullptr};
+	StringList* FilesToSend{nullptr};
+	StringList* EncryptFiles{nullptr};
+	StringList* DontEncryptFiles{nullptr};
+
+	StringList* CheckpointFiles{nullptr};
+	StringList* EncryptCheckpointFiles{nullptr};
+	StringList* DontEncryptCheckpointFiles{nullptr};
+
+	char* OutputDestination{nullptr};
+	char* SpooledIntermediateFiles{nullptr};
+	char* ExecFile{nullptr};
+	char* UserLogFile{nullptr};
+	char* X509UserProxy{nullptr};
 	MyString JobStdoutFile;
 	MyString JobStderrFile;
-	char* TransSock;
-	char* TransKey;
-	char* SpoolSpace;
-	char* TmpSpoolSpace;
-	int user_supplied_key;
-	bool upload_changed_files;
-	int m_final_transfer_flag;
-	time_t last_download_time;
-	FileCatalogHashTable* last_download_catalog;
-	int ActiveTransferTid;
-	time_t TransferStart;
-	int TransferPipe[2];
-	bool registered_xfer_pipe;
-	FileTransferHandler ClientCallback;
-	FileTransferHandlerCpp ClientCallbackCpp;
-	Service* ClientCallbackClass;
-	bool ClientCallbackWantsStatusUpdates;
+	char* TransSock{nullptr};
+	char* TransKey{nullptr};
+	char* SpoolSpace{nullptr};
+	char* TmpSpoolSpace{nullptr};
+	int user_supplied_key{false};
+	bool upload_changed_files{false};
+	int m_final_transfer_flag{false};
+	time_t last_download_time{0};
+	FileCatalogHashTable* last_download_catalog{nullptr};
+	int ActiveTransferTid{-1};
+	time_t TransferStart{0};
+	int TransferPipe[2] {-1, -1};
+	bool registered_xfer_pipe{false};
+	FileTransferHandler ClientCallback{nullptr};
+	FileTransferHandlerCpp ClientCallbackCpp{nullptr};
+	Service* ClientCallbackClass{nullptr};
+	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
-	PluginHashTable* plugin_table;
+	PluginHashTable* plugin_table{nullptr};
 	std::map<MyString, bool> plugins_multifile_support;
-	bool I_support_filetransfer_plugins;
-	bool multifile_plugins_enabled;
+	std::map<std::string, bool> plugins_from_job;
+	bool I_support_filetransfer_plugins{false};
+	bool I_support_S3{false};
+	bool multifile_plugins_enabled{false};
 #ifdef WIN32
-	perm* perm_obj;
-#endif		
-    priv_state desired_priv_state;
-	bool want_priv_change;
+	perm* perm_obj{nullptr};
+#endif
+	priv_state desired_priv_state{PRIV_UNKNOWN};
+	bool want_priv_change{false};
 	static TranskeyHashTable* TranskeyTable;
 	static TransThreadHashTable* TransThreadTable;
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
 	static bool ServerShouldBlock;
-	int clientSockTimeout;
-	bool did_init;
-	bool simple_init;
-	ReliSock *simple_sock;
+	int clientSockTimeout{30};
+	bool did_init{false};
+	bool simple_init{true};
+	ReliSock *simple_sock{nullptr};
 	MyString download_filename_remaps;
-	bool m_use_file_catalog;
+	bool m_use_file_catalog{true};
 	TransferQueueContactInfo m_xfer_queue_contact_info;
 	MyString m_jobid; // what job we are working on, for informational purposes
-	char *m_sec_session_id;
-	filesize_t MaxUploadBytes;
-	filesize_t MaxDownloadBytes;
+	char *m_sec_session_id{nullptr};
+	std::string m_cred_dir;
+	std::string m_job_ad;
+	std::string m_machine_ad;
+	filesize_t MaxUploadBytes{-1};  // no limit by default
+	filesize_t MaxDownloadBytes{-1};
 
 	// stores the path to the proxy after one is received
 	MyString LocalProxyName;
+
+	// Object to manage reuse of any data locally.
+	htcondor::DataReuseDirectory *m_reuse_dir{nullptr};
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);
@@ -474,7 +526,7 @@ class FileTransfer: public Service {
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
 
-	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list );
+	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
 
 		// This function generates a list of files to transfer, including
 		// directories to create and their full contents.
@@ -484,8 +536,10 @@ class FileTransfer: public Service {
 		// iwd       - relative paths are relative to this path
 		// max_depth - how deep to recurse (-1 for infinite)
 		// expanded_list - the list of files to transfer
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths );
 
+        // Function internal to ExpandFileTransferList() -- called twice there.
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing
@@ -497,6 +551,49 @@ class FileTransfer: public Service {
 	bool outputFileIsSpooled(char const *fname);
 
 	void callClientCallback();
+
+		// Manages the information about a single file to potentially reuse.
+	class ReuseInfo
+	{
+	public:
+		ReuseInfo(const std::string &filename,
+			const std::string &checksum,
+			const std::string &checksum_type,
+			const std::string &tag,
+			uint64_t size)
+		: m_size(size),
+		m_filename(filename),
+		m_checksum(checksum),
+		m_checksum_type(checksum_type),
+		m_tag(tag)
+		{}
+
+		const std::string &filename() const {return m_filename;}
+		const std::string &checksum() const {return m_checksum;}
+		const std::string &checksum_type() const {return m_checksum_type;}
+		uint64_t size() const {return m_size;}
+
+	private:
+		const uint64_t m_size{0};
+		const std::string m_filename;
+		const std::string m_checksum;
+		const std::string m_checksum_type;
+		const std::string m_tag;
+	};
+
+		// A list of all the potential files to reuse
+	std::vector<ReuseInfo> m_reuse_info;
+		// Any errors occurred when parsing a data manifest.  The parsing
+		// occurs quite early in the upload protocol, before there is a reasonable
+		// context to respond with an error message.  Hence, we stash errors here
+		// and report them when it is reasonable to generate a hold message for the
+		// user.
+	CondorError m_reuse_info_err;
+
+	// Parse the contents of a data manifest file for data reuse.
+	// Returns true on success; false otherwise.  In the case of a failure, the
+	// err object is filled in with an appropriate error message.
+	bool ParseDataManifest();
 };
 
 // returns 0 if no expiration

@@ -78,6 +78,12 @@ public:
 		memcpy(p, mem, cb); p[cb] = p[cb+1] = 0;
 		m_strings.Append(p);
 	}
+	// move items from that list to the end of this list.
+	void take_list(StringList & that) {
+		while ( ! that.m_strings.IsEmpty()) {
+			m_strings.Append(that.m_strings.PopHead());
+		}
+	}
 	
 	/** This is invalid when "current" points to NULL as stated in list.h*/
 	void deleteCurrent();
@@ -125,6 +131,14 @@ public:
 	const List<char> &getList( void ) const { return m_strings; };
 	const char *getDelimiters(void) const { return m_delimiters; };
 
+	StringList &operator=(StringList &&rhs) {
+		clearAll();
+		free(m_delimiters);
+		this->m_strings = std::move(rhs.m_strings);
+		this->m_delimiters = rhs.m_delimiters;
+		rhs.m_delimiters = nullptr;
+		return *this;
+	}
 protected:
     const char * contains_withwildcard( const char *string,
 										bool anycase,

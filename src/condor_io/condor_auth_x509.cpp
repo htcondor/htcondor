@@ -226,7 +226,7 @@ int Condor_Auth_X509 :: wrap(const char*  data_in,
     if (!m_globusActivated || !isValid())
         return FALSE;	
     
-    input_token->value  = (void *)data_in;
+    input_token->value  = (void *)const_cast<char *>(data_in);
     input_token->length = length_in;
     
     major_status = (*gss_wrap_ptr)(&minor_status,
@@ -261,7 +261,7 @@ int Condor_Auth_X509 :: unwrap(const char*  data_in,
         return FALSE;
     }
     
-    input_token -> value = (void *)data_in;
+    input_token -> value = (void *)const_cast<char *>(data_in);
     input_token -> length = length_in;
     
     major_status = (*gss_unwrap_ptr)(&minor_status,
@@ -608,9 +608,9 @@ StringList * getDaemonList(char const *param_name,char const *fqh)
         char *tmp = strstr( entry, STR_DAEMON_NAME_FORMAT );
         if (tmp != NULL) { // we found the macro, now expand it
             char * rest = tmp + strlen(STR_DAEMON_NAME_FORMAT);
-            int totalLen = strlen(entry) + strlen(fqh);
+            int totalLen = strlen(entry) + strlen(fqh) + 1;
 
-            // We have our macor, expand it into our host name
+            // We have our macro, expand it into our host name
             buf = (char *) malloc(totalLen);
             memset(buf, 0, totalLen);
 
@@ -1082,12 +1082,21 @@ Condor_Auth_X509::authenticate_server_pre(CondorError* errstack, bool non_blocki
 	int reply = 0;
 
 	mySock_->decode();
-	mySock_->code(reply);
+	if (!mySock_->code(reply)) {
+		errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED, 
+			"Failed to auth because we could not communicate with remote side\n");
+	
+		return Fail;
+	}
 	mySock_->end_of_message();
 
 	if (reply) {
 		mySock_->encode();
-		mySock_->code(m_status);
+		if (!mySock_->code(m_status)) {
+			errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED, 
+			"Failed to auth because we could not read reply from remote side\n");
+			return Fail;
+		}
 		mySock_->end_of_message();
 	}
 	else {

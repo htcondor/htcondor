@@ -71,15 +71,17 @@ if (WITH_CURL)
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
-			set(CURL_FOUND "${CURL_INSTALL_LOC}/lib/libcurl.lib")
+			set(CURL_LIB "${CURL_INSTALL_LOC}/lib/libcurl.lib")
+			set(CURL_FOUND "${CURL_LIB}")
 		else()
 			# libcurl is dependent on these libraries on some
 			# platforms.
 			find_multiple( "rt;idn" CURL_FOUND )
-			set(CURL_FOUND "${CURL_INSTALL_LOC}/lib/libcurl.a;${CURL_FOUND}")
+			set(CURL_LIB "${CURL_INSTALL_LOC}/lib/libcurl.a")
+			set(CURL_FOUND "${CURL_LIB};${CURL_FOUND}")
 		endif()
 		
-		condor_post_external( curl include OFF )
+		condor_post_external( curl include OFF "${CURL_LIB}" )
 
 	endif()
 

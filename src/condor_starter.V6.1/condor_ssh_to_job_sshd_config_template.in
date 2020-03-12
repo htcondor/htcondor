@@ -50,7 +50,7 @@ HostbasedAuthentication no
 IgnoreRhosts yes
 IgnoreUserKnownHosts yes
 PrintLastLog yes
-UsePrivilegeSeparation yes # sandbox separation not supported in RHEL6
+UsePrivilegeSeparation sandbox
 Compression delayed
 
 #-Recommended for security, but left out ssh_to_job config
@@ -61,4 +61,4 @@ Compression delayed
 # ClientAliveCountMax 0
 # banner=/etc/issue # Set to your warning banner
 # StrictModes yes # Can't set due to tmp-like directory
-# RhostsRSAAuthentication yes # Obsolete Protocol version 1 option
+# RhostsRSAAuthentication no # Obsolete Protocol version 1 option

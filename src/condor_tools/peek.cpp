@@ -111,8 +111,8 @@ private:
 	ssize_t m_stdout_offset;
 	ssize_t m_stderr_offset;
 	std::string m_sec_session_id;
-	MyString m_starter_addr;
-	MyString m_starter_version;
+	std::string m_starter_addr;
+	std::string m_starter_version;
 	DCTransferQueue *m_xfer_q;
 };
 
@@ -260,9 +260,9 @@ HTCondorPeek::create_session()
 
 	m_xfer_q = new DCTransferQueue( schedd );
 
-	MyString starter_claim_id;
-	MyString slot_name;
-	MyString error_msg;
+	std::string starter_claim_id;
+	std::string slot_name;
+	std::string error_msg;
 	CondorError error_stack;
 	int timeout = 300;
 
@@ -271,13 +271,13 @@ HTCondorPeek::create_session()
 	char const *session_info = "[Encryption=\"YES\";Integrity=\"YES\";]";
 
 	int job_status;
-	MyString hold_reason;
+	std::string hold_reason;
 	bool success = schedd.getJobConnectInfo(m_id,-1,session_info,timeout,&error_stack,m_starter_addr,starter_claim_id,m_starter_version,slot_name,error_msg,m_retry_sensible,job_status,hold_reason);
 
 		// turn the ssh claim id into a security session so we can use it
 		// to authenticate ourselves to the starter
 	SecMan secman;
-	ClaimIdParser cidp(starter_claim_id.Value());
+	ClaimIdParser cidp(starter_claim_id.c_str());
 	if( success ) {
 		success = secman.CreateNonNegotiatedSecuritySession(
 					DAEMON,
@@ -285,8 +285,9 @@ HTCondorPeek::create_session()
 					cidp.secSessionKey(),
 					cidp.secSessionInfo(),
 					EXECUTE_SIDE_MATCHSESSION_FQU,
-					m_starter_addr.Value(),
-					0 );
+					m_starter_addr.c_str(),
+					0,
+					nullptr );
 		if( !success ) {
 			error_msg = "Failed to create security session to connect to starter.";
 		}
@@ -295,22 +296,22 @@ HTCondorPeek::create_session()
 		}
 	}
 
-	CondorVersionInfo vi(m_starter_version.Value());
+	CondorVersionInfo vi(m_starter_version.c_str());
 	if (vi.is_valid() && !vi.built_since_version(7, 9, 5))
 	{
-		std::cerr << "Remote starter (version " << m_starter_version.Value() << ") is too old for condor_peek" << std::endl;
+		std::cerr << "Remote starter (version " << m_starter_version.c_str() << ") is too old for condor_peek" << std::endl;
 		return false;
 	}
 
 	if( !success ) {
 		if ( !m_retry_sensible ) {
-			std::cerr << error_msg.Value() << std::endl;
+			std::cerr << error_msg.c_str() << std::endl;
 		}
 		return false;
 	}
 
 	dprintf(D_FULLDEBUG,"Got connect info for starter %s\n",
-			m_starter_addr.Value());
+			m_starter_addr.c_str());
 	return true;
 }
 

@@ -316,11 +316,10 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 	if( ! m_boinc_starter ) {
 		Starter* tmp_starter;
 		ClassAd fake_ad;
-		MyString fake_req;
+		std::string fake_req;
 		bool no_starter = false;
-		fake_req.formatstr( "%s = TARGET.%s", ATTR_REQUIREMENTS,
-						  ATTR_HAS_JIC_LOCAL_CONFIG );
-		fake_ad.Insert( fake_req.Value() );
+		formatstr( fake_req, "TARGET.%s", ATTR_HAS_JIC_LOCAL_CONFIG );
+		fake_ad.AssignExpr( ATTR_REQUIREMENTS, fake_req.c_str() );
 		tmp_starter = resmgr->starter_mgr.newStarter( &fake_ad, NULL, no_starter );
 		if( ! tmp_starter ) {
 			dprintf( D_ALWAYS, "ERROR: Can't find a starter with %s\n",

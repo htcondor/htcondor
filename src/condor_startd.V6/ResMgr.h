@@ -63,6 +63,10 @@ typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
 
+namespace htcondor {
+class DataReuseDirectory;
+}
+
 // Statistics to publish global to the startd
 class StartdStats {
 public:
@@ -265,7 +269,7 @@ public:
 #if HAVE_HIBERNATION
 	HibernationManager const& getHibernationManager () const;
 	void updateHibernateConfiguration ();
-    int disableResources ( const MyString &state );
+    int disableResources ( const std::string &state );
 	bool hibernating () const;
 #endif /* HAVE_HIBERNATION */
 
@@ -330,6 +334,7 @@ public:
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
 
 private:
+	static void token_request_callback(bool success, void *miscdata);
 
 	Resource**	resources;		// Array of pointers to Resource objects
 	int			nresources;		// Size of the array
@@ -375,6 +380,14 @@ private:
 
 	void sweep_timer_handler( void );
 
+	void try_token_request();
+
+		// State of the in-flight token request; for now, we only allow
+		// one at a time.
+	std::string m_token_request_id;
+	std::string m_token_client_id;
+	Daemon *m_token_daemon{nullptr};
+
 #if HAVE_BACKFILL
 	bool backfillConfig( void );
 	bool m_backfill_shutdown_pending;
@@ -391,7 +404,7 @@ private:
 	int					m_hibernate_tid;
 	bool				m_hibernating;
 	void checkHibernate(void);
-	int	 allHibernating( MyString &state_str ) const;
+	int	 allHibernating( std::string &state_str ) const;
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();
@@ -409,6 +422,9 @@ private:
 	int total_draining_badput;
 	int total_draining_unclaimed;
 	int max_job_retirement_time_override;
+
+	DCTokenRequester m_token_requester;
+	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
 };
 
 

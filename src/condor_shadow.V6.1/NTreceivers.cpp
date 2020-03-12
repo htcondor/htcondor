@@ -209,9 +209,7 @@ do_REMOTE_syscall()
 				// reconnect.  happy day! :)
 			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 
-			const char* txt = "Socket between submit and execute hosts "
-				"closed unexpectedly";
-			Shadow->logDisconnectedEvent( txt ); 
+			Shadow->resourceDisconnected(thisRemoteResource);
 
 			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
@@ -1266,7 +1264,8 @@ case CONDOR_getfile:
 		fd = safe_open_wrapper_follow( path, O_RDONLY | _O_BINARY );
 		if(fd >= 0) {
 			struct stat info;
-			stat(path, &info);
+			int rc = stat(path, &info);
+			ASSERT(rc)
 			length = info.st_size;
 			buf = (void *)malloc( (unsigned)length );
 			ASSERT( buf );
@@ -1293,6 +1292,7 @@ case CONDOR_getfile:
 		}
 		free( (char *)path );
 		free( buf );
+		close(fd);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;
@@ -1328,7 +1328,10 @@ case CONDOR_putfile:
 		ASSERT( result );
 		free((char*)path);
 
-        if (length <= 0) return 0;
+        if (length <= 0) {
+			if (fd >= 0) close(fd);
+			return 0;
+		}
 		
 		int num = -1;
 		if(fd >= 0) {
@@ -2165,7 +2168,7 @@ case CONDOR_getdir:
 		// send response
 		syscall_sock->encode();
 
-		MyString user;
+		std::string user;
 		int cluster_id, proc_id;
 		ClassAd* ad;
 		pseudo_get_job_ad(ad);
@@ -2175,7 +2178,7 @@ case CONDOR_getdir:
 
 		bool trust_cred_dir = param_boolean("TRUST_CREDENTIAL_DIRECTORY", false);
 
-		MyString cred_dir_name;
+		std::string cred_dir_name;
 		if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
 			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
 			return -1;
@@ -2186,12 +2189,12 @@ case CONDOR_getdir:
 		// what we want to do is send only the ".use" creds, and only
 		// the ones required for this job.  we will need to get that
 		// list of names from the Job Ad.
-		MyString services_needed;
+		std::string services_needed;
 		ad->LookupString("OAuthServicesNeeded", services_needed);
-		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.Value(), services_needed.Value());
+		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
 		bool had_error = false;
-		StringList services_list(services_needed.Value());
+		StringList services_list(services_needed.c_str());
 		services_list.rewind();
 		char *curr;
 		while((curr = services_list.next())) {
@@ -2204,7 +2207,7 @@ case CONDOR_getdir:
 			// them all up front.
 			fname.replaceString("*", "_");
 
-			fullname.formatstr("%s%c%s", cred_dir_name.Value(), DIR_DELIM_CHAR, fname.Value());
+			fullname.formatstr("%s%c%s", cred_dir_name.c_str(), DIR_DELIM_CHAR, fname.Value());
 
 			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
 			// read the file (fourth argument "true" means as_root)
@@ -2218,7 +2221,7 @@ case CONDOR_getdir:
 				had_error = true;
 				break;
 			}
-			MyString b64 = zkm_base64_encode(buf, len);
+			std::string b64 = Base64::zkm_base64_encode(buf, len);
 			free(buf);
 
 			ClassAd ad;

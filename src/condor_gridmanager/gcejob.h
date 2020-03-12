@@ -97,6 +97,7 @@ private:
 	std::string m_machineType;
 	bool m_preemptible;
 	std::string m_jsonFile;
+	std::vector< std::pair< std::string, std::string > > m_labels;
 
 	int m_retry_times;
 	

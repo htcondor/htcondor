@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "condor_network.h"
 #include "spooled_job_files.h"
 #include "subsystem_info.h"
 #include "env.h"
@@ -42,7 +41,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
-#include "get_daemon_name.h"
 #include "sig_install.h"
 #include "access.h"
 #include "daemon.h"
@@ -51,7 +49,6 @@
 #include "extArray.h"
 #include "MyString.h"
 #include "string_list.h"
-#include "which.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
@@ -124,6 +121,7 @@ int write_factory_file(const char * filename, const void* data, int cb, mode_t a
 	int cbwrote = write(fd, data, cb);
 	if (cbwrote != cb) {
 		dprintf(D_ALWAYS, "ERROR: write_factory_file(%s): write() failed: %s (%d)\n", filename, strerror(errno), errno);
+		close(fd);
 		return -1;
 	}
 
@@ -274,8 +272,9 @@ int SendClusterAd (ClassAd * ad)
 	classad::ClassAdUnParser unparser;
 	unparser.SetOldClassAd( true, true );
 
-	ad->ResetExpr();
-	while (ad->NextExpr(lhstr, tree)) {
+	for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		if ( ! lhstr || ! tree) {
 			fprintf( stderr, "\nERROR: Null attribute name or value for cluster %d\n", ClusterId );
 			return -1;

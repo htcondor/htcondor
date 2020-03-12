@@ -20,9 +20,11 @@ using namespace boost::python;
 
 enum DaemonCommands
 {
+  DDAEMONS_ON = DAEMONS_ON,
   DDAEMONS_OFF = DAEMONS_OFF,
   DDAEMONS_OFF_FAST = DAEMONS_OFF_FAST,
   DDAEMONS_OFF_PEACEFUL = DAEMONS_OFF_PEACEFUL,
+  DDAEMON_ON = DAEMON_ON,
   DDAEMON_OFF = DAEMON_OFF,
   DDAEMON_OFF_FAST = DAEMON_OFF_FAST,
   DDAEMON_OFF_PEACEFUL = DAEMON_OFF_PEACEFUL,
@@ -200,6 +202,7 @@ void send_alive(boost::python::object ad_obj=boost::python::object(), boost::pyt
 void
 enable_debug()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
 }
 
@@ -207,6 +210,7 @@ enable_debug()
 void
 enable_log()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     dprintf_config(get_mySubSystem()->getName());
 }
 
@@ -240,10 +244,35 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(send_command_overloads, send_command, 2, 3);
 void
 export_dc_tool()
 {
-    enum_<DaemonCommands>("DaemonCommands")
+    enum_<DaemonCommands>("DaemonCommands",
+            R"C0ND0R(
+            An enumeration of various state-changing commands that can be sent to a HTCondor daemon using :func:`send_command`.
+
+            The values of the enumeration are:
+
+            .. attribute:: DaemonOn
+            .. attribute:: DaemonOff
+            .. attribute:: DaemonOffFast
+            .. attribute:: DaemonOffPeaceful
+            .. attribute:: DaemonsOn
+            .. attribute:: DaemonsOff
+            .. attribute:: DaemonsOffFast
+            .. attribute:: DaemonsOffPeaceful
+            .. attribute:: OffFast
+            .. attribute:: OffForce
+            .. attribute:: OffGraceful
+            .. attribute:: OffPeaceful
+            .. attribute:: Reconfig
+            .. attribute:: Restart
+            .. attribute:: RestartPeacful
+            .. attribute:: SetForceShutdown
+            .. attribute:: SetPeacefulShutdown
+            )C0ND0R")
+        .value("DaemonsOn", DDAEMONS_ON)
         .value("DaemonsOff", DDAEMONS_OFF)
         .value("DaemonsOffFast", DDAEMONS_OFF_FAST)
         .value("DaemonsOffPeaceful", DDAEMONS_OFF_PEACEFUL)
+        .value("DaemonOn", DDAEMON_ON)
         .value("DaemonOff", DDAEMON_OFF)
         .value("DaemonOffFast", DDAEMON_OFF_FAST)
         .value("DaemonOffPeaceful", DDAEMON_OFF_PEACEFUL)
@@ -258,7 +287,27 @@ export_dc_tool()
         .value("RestartPeacful", DRESTART_PEACEFUL)
         ;
 
-    enum_<SubsystemType>("SubsystemType")
+    enum_<SubsystemType>("SubsystemType",
+            R"C0ND0R(
+            An enumeration of known subsystem names.
+
+            The values of the enumeration are:
+
+            .. attribute:: Collector
+            .. attribute:: Daemon
+            .. attribute:: Dagman
+            .. attribute:: GAHP
+            .. attribute:: Job
+            .. attribute:: Master
+            .. attribute:: Negotiator
+            .. attribute:: Schedd
+            .. attribute:: Shadow
+            .. attribute:: SharedPort
+            .. attribute:: Startd
+            .. attribute:: Starter
+            .. attribute:: Submit
+            .. attribute:: Tool
+            )C0ND0R")
         .value("Master", SUBSYSTEM_TYPE_MASTER)
         .value("Collector", SUBSYSTEM_TYPE_COLLECTOR)
         .value("Negotiator", SUBSYSTEM_TYPE_NEGOTIATOR)
@@ -275,7 +324,35 @@ export_dc_tool()
         .value("Job", SUBSYSTEM_TYPE_JOB)
         ;
 
-    enum_<LogLevel>("LogLevel")
+    enum_<LogLevel>("LogLevel",
+            R"C0ND0R(
+            The log level attribute to use with :func:`log`.  Note that HTCondor
+            mixes both a class (debug, network, all) and the header format (Timestamp,
+            PID, NoHeader) within this enumeration.
+
+            The values of the enumeration are:
+
+            .. attribute:: Always
+            .. attribute:: Audit
+            .. attribute:: Config
+            .. attribute:: DaemonCore
+            .. attribute:: Error
+            .. attribute:: FullDebug
+            .. attribute:: Hostname
+            .. attribute:: Job
+            .. attribute:: Machine
+            .. attribute:: Network
+            .. attribute:: NoHeader
+            .. attribute:: PID
+            .. attribute:: Priv
+            .. attribute:: Protocol
+            .. attribute:: Security
+            .. attribute:: Status
+            .. attribute:: SubSecond
+            .. attribute:: Terse
+            .. attribute:: Timestamp
+            .. attribute:: Verbose
+            )C0ND0R")
         .value("Always", DALWAYS)
         .value("Error", DERROR)
         .value("Status", DSTATUS)
@@ -298,33 +375,75 @@ export_dc_tool()
         .value("NoHeader", DNOHEADER)
         ;
 
-    def("send_command", send_command, send_command_overloads("Send a command to a HTCondor daemon specified by a location ClassAd\n"
-        ":param ad: An ad specifying the location of the daemon; typically, found by using Collector.locate(...).\n"
-        ":param dc: A command type; must be a member of the enum DaemonCommands.\n"
-        ":param target: Some commands require additional arguments; for example, sending DaemonOff to a master requires one to specify which subsystem to turn off."
-        "  If this parameter is given, the daemon is sent an additional argument."))
+    def("send_command", send_command, send_command_overloads(
+        R"C0ND0R(
+        Send a command to an HTCondor daemon specified by a location ClassAd.
+
+        :param ad: Specifies the location of the daemon (typically, found by using :meth:`Collector.locate`).
+        :type ad: :class:`~classad.ClassAd`
+        :param dc: A command type
+        :type dc: :class:`DaemonCommands`
+        :param str target: An additional command to send to a daemon. Some commands
+            require additional arguments; for example, sending ``DaemonOff`` to a
+            ``condor_master`` requires one to specify which subsystem to turn off.
+        )C0ND0R",
+        boost::python::args("ad", "dc", "target")))
         ;
 
-    def("send_alive", send_alive, "Send a keepalive to a HTCondor daemon\n"
-        ":param ad: An ad specifying the location of the daemon; typically, found by using Collector.locate(...).\n"
-        ":param pid: A process identifier for the keepalive.  Defaults to None, which indicates to utilize the value of os.getpid().\n"
-        ":param timeout: The number of seconds this keepalive is valid.  After that time, if the condor_master has not\nreceived a new .keepalive for this process, it will be terminated.  Defaults is controlled by the parameter NOT_RESPONDING_TIMEOUT.\n",
-        (boost::python::arg("ad") = boost::python::object(), boost::python::arg("pid")=boost::python::object(), boost::python::arg("timeout")=boost::python::object())
-       )
-       ;
+    def("send_alive", send_alive,
+        R"C0ND0R(
+        Send a keep alive message to an HTCondor daemon.
 
-    def("set_subsystem", set_subsystem, "Set the subsystem name for configuration.\n"
-        ":param name: The used for the config subsystem.\n"
-        ":param type: The daemon type for configuration.  Defaults to Auto, which indicates to determine the type from the parameter name.\n",
+        This is used when the python process is run as a child daemon under
+        the ``condor_master``.
+
+        :param ad: A :class:`~classad.ClassAd` specifying the location of the daemon.
+            This ad is typically found by using :meth:`Collector.locate`.
+        :type ad: :class:`~classad.ClassAd`
+        :param int pid: The process identifier for the keep alive. The default value of
+            ``None`` uses the value from :func:`os.getpid`.
+        :param int timeout: The number of seconds that this keep alive is valid. If a
+            new keep alive is not received by the condor_master in time, then the
+            process will be terminated. The default value is controlled by configuration
+            variable ``NOT_RESPONDING_TIMEOUT``.
+        )C0ND0R",
+        (boost::python::arg("ad") = boost::python::object(), boost::python::arg("pid")=boost::python::object(), boost::python::arg("timeout")=boost::python::object()))
+        ;
+
+    def("set_subsystem", set_subsystem,
+        R"C0ND0R(
+        Set the subsystem name for the object.
+
+        The subsystem is primarily used for the parsing of the HTCondor configuration file.
+
+        :param str name: The subsystem name.
+        :param daemon_type: The HTCondor daemon type. The default value of Auto infers the type from the name parameter.
+        :type daemon_type: :class:`SubsystemType`
+        )C0ND0R",
         (boost::python::arg("subsystem"), boost::python::arg("type")=SUBSYSTEM_TYPE_AUTO))
         ;
 
-    def("enable_debug", enable_debug, "Turn on debug logging output from HTCondor.  Logs to stderr.");
-    def("enable_log", enable_log, "Turn on logging output from HTCondor.  Logs to the file specified by the parameter TOOL_LOG.");
+    def("enable_debug", enable_debug,
+        R"C0ND0R(
+        Enable debugging output from HTCondor, where output is sent to ``stderr``.
+        The logging level is controlled by the ``TOOL_DEBUG`` parameter.
+        )C0ND0R");
+    def("enable_log", enable_log,
+        R"C0ND0R(
+        Enable debugging output from HTCondor, where output is sent to a file.
+        The log level is controlled by the parameter ``TOOL_DEBUG``, and the
+        file used is controlled by ``TOOL_LOG``.
+        )C0ND0R");
 
-    def("log", dprintf_wrapper, "Log a message to the HTCondor logging subsystem.\n"
-        ":param level: Log category and formatting indicator; use the LogLevel enum for a list of these (may be OR'd together).\n"
-        ":param msg: String message to log.\n")
+    def("log", dprintf_wrapper,
+        R"C0ND0R(
+        Log a message using the HTCondor logging subsystem.
+
+        :param level: The log category and formatting indicator. Multiple LogLevel enum attributes may be OR'd together.
+        :type level: :class:`LogLevel`
+        :param str msg: A message to log.
+        )C0ND0R",
+        boost::python::args("level", "msg"))
         ;
 
     if ( ! has_mySubSystem()) { set_mySubSystem("TOOL", SUBSYSTEM_TYPE_TOOL); }

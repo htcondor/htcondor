@@ -26,7 +26,6 @@
 #include "jic_shadow.h"
 
 #include "NTsenders.h"
-#include "syscall_numbers.h"
 #include "ipv6_hostname.h"
 #include "internet.h"
 #include "basename.h"
@@ -484,6 +483,16 @@ JICShadow::transferOutput( bool &transient_failure )
 			// true if job exited on its own or if we are set to not spool
 			// on eviction.
 		bool final_transfer = !spool_on_evict || (requested_exit == false);	
+
+			// For the final transfer, we obey the output file remaps.
+		if (final_transfer) {
+			if ( !filetrans->InitDownloadFilenameRemaps(job_ad) ) {
+				dprintf( D_ALWAYS, "Failed to setup output file remaps.\n" );
+				m_did_transfer = false;
+				return false;
+			}
+		}
+
 
 			// The shadow may block on disk I/O for long periods of
 			// time, so set a big timeout on the starter's side of the
@@ -987,12 +996,6 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	ad->Assign( ATTR_OPSYS, tmp_val );
 	free( tmp_val );
 
-	tmp_val = param( "CKPT_SERVER_HOST" );
-	if( tmp_val ) {
-		ad->Assign( ATTR_CKPT_SERVER, tmp_val );
-		free( tmp_val );
-	}
-
 	ad->Assign( ATTR_HAS_RECONNECT, true );
 
 		// Finally, publish all the DC-managed attributes.
@@ -1014,6 +1017,37 @@ JICShadow::removeFromOutputFiles( const char* filename )
 		m_added_output_files.file_remove(filename);
 	}
 	m_removed_output_files.append(filename);
+}
+
+bool
+JICShadow::uploadCheckpointFiles()
+{
+	if(! filetrans) {
+		return false;
+	}
+
+	// The shadow may block on disk I/O for long periods of
+	// time, so set a big timeout on the starter's side of the
+	// file transfer socket.
+
+	int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
+	filetrans->setClientSocketTimeout( timeout );
+
+	// The user job may have created files only readable
+	// by the user, so set_user_priv here.
+	priv_state saved_priv = set_user_priv();
+
+	// this will block
+	bool rval = filetrans->UploadCheckpointFiles( true );
+	set_priv( saved_priv );
+
+	if( !rval ) {
+		// Failed to transfer.
+		dprintf( D_ALWAYS,"JICShadow::uploadCheckpointFiles() failed.\n" );
+		return false;
+	}
+	dprintf( D_FULLDEBUG,"JICShadow::uploadCheckpointFiles() succeeded.\n" );
+	return true;
 }
 
 bool
@@ -1087,7 +1121,7 @@ JICShadow::initUserPriv( void )
 
 	bool run_as_owner = allowRunAsOwner( true, true );
 
-	MyString owner;
+	std::string owner;
 	if( run_as_owner ) {
 		if( job_ad->LookupString( ATTR_OWNER, owner ) != 1 ) {
 			dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
@@ -1112,7 +1146,7 @@ JICShadow::initUserPriv( void )
 		dprintf( D_FULLDEBUG, "Submit host is in different UidDomain\n" ); 
 	}
 
-	MyString vm_univ_type;
+	std::string vm_univ_type;
 	if( job_universe == CONDOR_UNIVERSE_VM ) {
 		job_ad->LookupString(ATTR_JOB_VM_TYPE, vm_univ_type);
 	}
@@ -1122,11 +1156,9 @@ JICShadow::initUserPriv( void )
 		if( use_vm_nobody_user ) {
 			run_as_owner = false;
 			dprintf( D_ALWAYS, "Using VM_UNIV_NOBODY_USER instead of %s\n", 
-					owner.Value());
+					owner.c_str());
 		}
 	}
-
-	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
 
 	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.
@@ -1135,17 +1167,14 @@ JICShadow::initUserPriv( void )
 			// "SOFT_UID_DOMAIN = True" scenario, it's entirely
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
-		if( init_user_ids_quiet(owner.Value()) ) {
-			if (privsep_helper != NULL) {
-				privsep_helper->initialize_user(owner.Value());
-			}
+		if( init_user_ids_quiet(owner.c_str()) ) {
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
-			         owner.Value() );
-			if( checkDedicatedExecuteAccounts( owner.Value() ) ) {
-				setExecuteAccountIsDedicated( owner.Value() );
+			         owner.c_str() );
+			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
+				setExecuteAccountIsDedicated( owner.c_str() );
 			}
 		}
-		else if( strcasecmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
+		else if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
 			// For VMware vm universe, we can't use SOFT_UID_DOMAIN
 			run_as_owner = false;
 		}
@@ -1158,7 +1187,7 @@ JICShadow::initUserPriv( void )
 					// need to do the RSC, we can just fail.
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 						 "passwd file and SOFT_UID_DOMAIN is False\n",
-						 owner.Value() ); 
+						 owner.c_str() );
 				return false;
             }
 
@@ -1175,7 +1204,7 @@ JICShadow::initUserPriv( void )
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 						 "passwd file, SOFT_UID_DOMAIN is True, but the "
 						 "condor_shadow failed to send the required Uid.\n",
-						 owner.Value() );
+						 owner.c_str() );
 				return false;
 			}
 
@@ -1202,10 +1231,6 @@ JICShadow::initUserPriv( void )
 						 "priv with uid %d and gid %d\n", user_uid,
 						 user_gid );
 				return false;
-			}
-
-			if (privsep_helper != NULL) {
-				privsep_helper->initialize_user((uid_t)user_uid);
 			}
 		}
 	} 
@@ -1239,10 +1264,6 @@ JICShadow::initUserPriv( void )
 		if( nobody_user == NULL ) {
 			snprintf( nobody_param, 20, "%s_USER", slotName.Value() );
 			nobody_user = param(nobody_param);
-			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", false)) {
-				snprintf( nobody_param, 20, "VM%s_USER", slotName.Value() );
-				nobody_user = param(nobody_param);
-			}
 		}
 
         if ( nobody_user != NULL ) {
@@ -1260,7 +1281,7 @@ JICShadow::initUserPriv( void )
         }
 
 
-		if( strcasecmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
+		if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
 			// VMware doesn't support that "nobody" creates a VM.
 			// So for VMware vm universe, we will "condor" instead of "nobody".
 			if( strcmp(nobody_user, "nobody") == MATCH ) {
@@ -1277,9 +1298,6 @@ JICShadow::initUserPriv( void )
 			free( nobody_user );
 			return false;
 		} else {
-			if (privsep_helper != NULL) {
-				privsep_helper->initialize_user(nobody_user);
-			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
 				  nobody_user );
 			if( checkDedicatedExecuteAccounts( nobody_user ) ) {
@@ -1302,7 +1320,7 @@ JICShadow::initJobInfo( void )
 	if (!JobInfoCommunicator::initJobInfo()) return false;
 
 	char *orig_job_iwd;
-	MyString x509userproxy;
+	std::string x509userproxy;
 
 	if( ! job_ad ) {
 		EXCEPT( "JICShadow::initJobInfo() called with NULL job ad!" );
@@ -1503,6 +1521,15 @@ JICShadow::initWithFileTransfer()
 	change_iwd = true;
 	job_iwd = strdup( Starter->GetWorkingDir() );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
+
+	// Only rename the executable if it is transferred.
+	bool xferExec = true;
+	job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
+
+	if( xferExec ) {
+		dprintf( D_FULLDEBUG, "Changing the executable name\n" );
+		job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC);
+	}
 
 		// now that we've got the iwd we're using and all our
 		// transfer-related flags set, we can finally initialize the
@@ -1850,12 +1877,12 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		refuse(s);
 		return false;
 	}
-	MyString path;
+	std::string path;
 	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
 		dprintf(D_ALWAYS, "Refusing shadow's request to update proxy as this job has no proxy\n");
 		return false;
 	}
-	const char * proxyfilename = condor_basename(path.Value());
+	const char * proxyfilename = condor_basename(path.c_str());
 
 	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
 
@@ -1872,11 +1899,11 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 void
 JICShadow::setX509ProxyExpirationTimer()
 {
-	MyString path;
+	std::string path;
 	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
 		return;
 	}
-	const char * proxyfilename = condor_basename(path.Value());
+	const char * proxyfilename = condor_basename(path.c_str());
 
 #if defined(LINUX)
 	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
@@ -2007,6 +2034,12 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 						formatstr( metricName, "%sUsage", resourceName );
 						m_job_update_attrs.append( metricName.c_str() );
 
+						// We could use metricType to determine if we need
+						// this attribute or the preceeding one, but for now
+						// don't bother.
+						formatstr( metricName, "%sAverageUsage", resourceName );
+						m_job_update_attrs.append( metricName.c_str() );
+
 						formatstr( metricName, "Recent%sUsage", resourceName );
 						m_job_update_attrs.append( metricName.c_str() );
 					}
@@ -2031,12 +2064,13 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		}
 		if( updateAdFile ) {
 			int isEOF, error, empty;
-			ClassAd updateAd( updateAdFile, "\n", isEOF, error, empty );
+			ClassAd updateAd;
+			InsertFromFile( updateAdFile, updateAd, "\n", isEOF, error, empty );
 			fclose( updateAdFile );
 
 			while( (attrName = m_job_update_attrs.next()) != NULL ) {
 				// dprintf( D_ALWAYS, "Updating job ad: %s\n", attrName );
-				ad->CopyAttribute( attrName, & updateAd );
+				CopyAttribute( attrName, *ad, updateAd );
 				published = true;
 			}
 		} else {
@@ -2056,32 +2090,29 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	m_delayed_updates.Clear();
 
 	filesize_t execsz = 0;
+	time_t begin_time = time(NULL);
 
-	// if we are using PrivSep, we need to use that mechanism to calculate
-	// the disk usage, as we don't have privs to traverse the users's execute
-	// dir.
-	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
-	if (privsep_helper) {
-		off_t total_usage = 0;
-		if (privsep_helper->get_exec_dir_usage( &total_usage)) {
-			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((total_usage+1023)/1024) );
-		}
-	} else{
-		// if there is a filetrans object, then let's send the current
-		// size of the starter execute directory back to the shadow.  this
-		// way the ATTR_DISK_USAGE will be updated, and we won't end
-		// up on a machine without enough local disk space.
-		if ( filetrans ) {
-			// make sure this computation is done with user priv, since that who
-			// owns the directory and it may not be world-readable
-			Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
-			execsz = starter_dir.GetDirectorySize();
-			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((execsz+1023)/1024) ); 
+	// if there is a filetrans object, then let's send the current
+	// size of the starter execute directory back to the shadow.  this
+	// way the ATTR_DISK_USAGE will be updated, and we won't end
+	// up on a machine without enough local disk space.
+	if ( filetrans ) {
+		// make sure this computation is done with user priv, since that who
+		// owns the directory and it may not be world-readable
+		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
+		size_t file_count = 0;
+		execsz = starter_dir.GetDirectorySize(&file_count);
+		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
+		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
+		time_t scan_time = (time(NULL) - begin_time);
+		if (scan_time > 10) {
+			dprintf(D_ALWAYS, "It took %d seconds to determine DiskUsage: %lld for %lld dirs+files\n",
+				(int)(scan_time), (long long)execsz, (long long)file_count);
 		}
 	}
 
-	MyString spooled_files;
-	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+	std::string spooled_files;
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) )
 	{
 		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
 	}
@@ -2115,6 +2146,7 @@ bool
 JICShadow::publishJobExitAd( ClassAd* ad )
 {
 	filesize_t execsz = 0;
+	time_t begin_time = time(NULL);
 
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
@@ -2124,12 +2156,19 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		// make sure this computation is done with user priv, since that who
 		// owns the directory and it may not be world-readable
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
-		execsz = starter_dir.GetDirectorySize();
-		ad->Assign( ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) );
-
+		size_t file_count = 0;
+		execsz = starter_dir.GetDirectorySize(&file_count);
+		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
+		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
+		time_t scan_time = (time(NULL) - begin_time);
+		if (scan_time > 10) {
+			dprintf(D_ALWAYS, "It took %d seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
+				(int)(scan_time), (long long)execsz, (long long)file_count);
+		}
 	}
-	MyString spooled_files;
-	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+
+	std::string spooled_files;
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.length() > 0 )
 	{
 		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
 	}
@@ -2378,16 +2417,37 @@ JICShadow::beginFileTransfer( void )
 
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
+#if 0
 		// Only rename the executable if it is transferred.
-		int xferExec = 1;
+		bool xferExec = true;
 		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
 
 		if( xferExec ) {
 			dprintf( D_FULLDEBUG, "Changing the executable name\n" );
 			job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC );
 		}
+#endif
 
 		filetrans = new FileTransfer();
+		auto reuse_dir = Starter->getDataReuseDirectory();
+		if (reuse_dir) {
+			filetrans->setDataReuseDirectory(*reuse_dir);
+		}
+
+		const char *cred_path = getCredPath();
+		if (cred_path) {
+			filetrans->setCredsDir(cred_path);
+		}
+
+		std::string job_ad_path, machine_ad_path;
+		formatstr(job_ad_path, "%s%c%s", Starter->GetWorkingDir(),
+			DIR_DELIM_CHAR,
+			JOB_AD_FILENAME);
+		formatstr(machine_ad_path, "%s%c%s", Starter->GetWorkingDir(),
+			DIR_DELIM_CHAR,
+			MACHINE_AD_FILENAME);
+		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
+		dprintf(D_ALWAYS, "Set filetransfer runtime ads to %s and %s.\n", job_ad_path.c_str(), machine_ad_path.c_str());
 
 			// In the starter, we never want to use
 			// SpooledOutputFiles, because we are not reading the
@@ -2420,28 +2480,28 @@ JICShadow::beginFileTransfer( void )
 		const char* scratch_dir = Starter->GetWorkingDir();
 
 			// Get source path to proxy file on the submit machine
-		MyString proxy_source_path;
+		std::string proxy_source_path;
 		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
 
 			// Get proxy expiration timestamp
 		time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration( job_ad );
 
 			// Parse proxy filename
-		MyString proxy_filename = condor_basename( proxy_source_path.Value() );
+		const char *proxy_filename = condor_basename( proxy_source_path.c_str() );
 
 			// Combine scratch dir and proxy filename to get destination proxy path on execute machine
-		MyString proxy_dest_path = scratch_dir;
+		std::string proxy_dest_path = scratch_dir;
 		proxy_dest_path += DIR_DELIM_CHAR;
 		proxy_dest_path += proxy_filename;
 
 			// Do RPC call to get delegated proxy.
 			// This needs to happen with user privs so we can write to scratch dir!
 		priv_state original_priv = set_user_priv();
-		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.Value(), proxy_dest_path.Value(), proxy_expiration );
+		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.c_str(), proxy_dest_path.c_str(), proxy_expiration );
 		set_priv( original_priv );
 
 			// Update job ad with location of proxy
-		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path.Value() );
+		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path );
 	}
 		// no transfer wanted or started, so return false
 	return false;
@@ -2481,7 +2541,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			// If we transferred the executable, make sure it
 			// has its execute bit set.
-		MyString cmd;
+		std::string cmd;
 		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) &&
 		    (cmd == CONDOR_EXEC))
 		{
@@ -2545,7 +2605,7 @@ JICShadow::initShadowInfo( ClassAd* ad )
 		delete shadow_version;
 		shadow_version = NULL;
 	}
-	char* tmp = shadow->version();
+	const char* tmp = shadow->version();
 	if( tmp ) {
 		dprintf( D_FULLDEBUG, "Shadow version: %s\n", tmp );
 		shadow_version = new CondorVersionInfo( tmp, "SHADOW" );
@@ -2795,7 +2855,7 @@ JICShadow::initUserCredentials() {
 	// now signal the credmon
 	rc = credmon_poll(user.c_str(), false, true);
 	if(!rc) {
-		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce .cc file!");
+		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce .cc file!\n");
 		return false;
 	}
 
@@ -2931,7 +2991,7 @@ resettimer:
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials_from_timer,
 				"refreshSandboxCredentials",
 				this );
 		} else {
@@ -2962,7 +3022,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple_from_timer,
 				"refreshSandboxCredentialsMultiple",
 				this );
 		} else {
@@ -3071,7 +3131,8 @@ JICShadow::initMatchSecuritySession()
 			reconnect_session_info.Value(),
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
-			0 /*don't expire*/ );
+			0 /*don't expire*/,
+			nullptr );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
@@ -3105,7 +3166,8 @@ JICShadow::initMatchSecuritySession()
 			filetrans_session_info.Value(),
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			shadow->addr(),
-			0 /*don't expire*/ );
+			0 /*don't expire*/,
+			nullptr );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create file "

@@ -8,51 +8,7 @@
 
 #define CONDOR_Q_HANDLE_CLUSTER_AD 1
 
-#if 1 // cant use unique_ptr<> in a std::map on Rhel6, so for now, use our own class
-
-// this class is a bit like unique_ptr<ClassAd> but works on Rhel6 because it doesn't poison the copy constructor
-// The copy constructor in this class asserts if the pointer being copied is not NULL.
-// also, assignment is has SWAP behavior. This works for our limited use case.
-// This class safe to use in a std::map or std::set when the code to populate the map/set uses the pattern
-//   auto pp = map->insert(std::pair<KEYTYPE, UniqueClassAdPtr>(key,UniqueClassAdPtr())
-//   if ( ! pp.second) {
-//      // insert failed, map[key] already has a value
-//   } else {
-//      // write the ClassAd* pointer into the map entry
-//      pp.first->second.reset(ad);
-//   }
-// This works because the copy constructor is only invoked on instances of the class that hold a null pointer
-class UniqueClassAdPtr {
-	ClassAd * ptr;
-public:
-	UniqueClassAdPtr(ClassAd* p=NULL) : ptr(p) {}
-	~UniqueClassAdPtr() { delete ptr; ptr = NULL; }
-
-	ClassAd* get() const { return ptr; }
-	ClassAd* operator->() const { return ptr; }
-	ClassAd& operator*() const { return *ptr; }
-	operator bool() const { return ptr != NULL; }
-
-	ClassAd* detach() { ClassAd* p = ptr; ptr = NULL; return p; }
-	void reset(ClassAd* p) { if (p != ptr) { delete ptr; } ptr = p; }
-
-	// copy constructor works only when the pointer being copied is NULL
-	UniqueClassAdPtr(const UniqueClassAdPtr& that) : ptr(NULL) { ASSERT(!that.ptr); }
-
-	// move constructor steals the pointer from the input
-	//UniqueClassAdPtr(UniqueClassAdPtr&& that) : ptr(that.detach()) {} // move ptr from that to this
-
-	// assignment operator swaps pointers with the input
-	//friend void swap(UniqueClassAdPtr& first, UniqueClassAdPtr& second) { ClassAd* t=first.ptr; first.ptr = second.ptr; second.ptr = t; }
-	//UniqueClassAdPtr & operator=(UniqueClassAdPtr that) { swap(*this, that); return *this; }
-};
-
-#else
-
-// For fully c++ 11 compilers/runtimes we can just use unique_ptr
 typedef std::unique_ptr<ClassAd> UniqueClassAdPtr;
-
-#endif
 
 typedef std::map< long long, UniqueClassAdPtr > IdToClassaAdMap;
 typedef std::map< std::string, UniqueClassAdPtr > KeyToClassaAdMap;

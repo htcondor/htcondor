@@ -56,7 +56,7 @@ FileLexerSource::ReadCharacter(void)
 	if (_file != NULL) {
 		character = fgetc(_file);
 	} else {
-		character = -1;
+		character = EOF;
 	}
  	_previous_character = character;
 	return character;
@@ -112,7 +112,7 @@ CharLexerSource::ReadCharacter(void)
 
 	character = (unsigned char)_string[_offset];
 	if (character == 0) {
-		character = -1; 
+		character = EOF;
 	} else {
         _offset++;
 	}
@@ -180,7 +180,7 @@ StringLexerSource::ReadCharacter(void)
 
 	character = (unsigned char)(*_string)[_offset];
 	if (character == 0) {
-		character = -1;
+		character = EOF;
 	} else {
 		_offset++;
 	}

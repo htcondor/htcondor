@@ -42,162 +42,85 @@ LocalUserLog::~LocalUserLog()
 }
 
 bool
-LocalUserLog::init( const std::vector<const char*>& filename, bool is_xml, 
-					int cluster, int proc, int subproc )
+LocalUserLog::initFromJobAd( ClassAd* ad, bool starter_ulog )
 {
-	if( ! jic->userPrivInitialized() ) { 
-		EXCEPT( "LocalUserLog::init() "
+	if( ! jic->userPrivInitialized() ) {
+		EXCEPT( "LocalUserLog::initFromJobAd() "
 				"called before user priv is initialized!" );
 	}
-	priv_state priv;
-	priv = set_user_priv();
 
-	bool ret = u_log.initialize(filename, cluster, proc, subproc);
-	if( ! ret ) {
-		dprintf( D_ALWAYS, 
-				 "Failed to initialize Starter's UserLog, aborting\n" );
-		set_priv( priv );
-		return false;
+	if ( ! starter_ulog ) {
+		// This is the primary user log for the local universe.
+		// Use WriteUserLog's full initialization logic.
+		if ( !u_log.initialize(*ad) ) {
+			dprintf( D_ALWAYS,
+				"Failed to initialize Starter's UserLog, aborting\n" );
+			return false;
+		}
+		is_initialized = true;
+		should_log = u_log.willWrite();
+		return true;
 	}
 
-	set_priv( priv );
-	u_log.setUseXML( is_xml );
-	for(std::vector<const char*>::const_iterator p = filename.begin();
-			p != filename.end(); ++p) {
-		dprintf( D_FULLDEBUG, "Starter's UserLog: %s\n", *p );
-	}
-	is_initialized = true;
-	should_log = true;
-	return true;
-}
-
-
-bool
-LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
-							 const char* xml_attr,
-							 bool write_event_log )
-{
-	MyString tmp, dagmanLogFilename, logfilename;
+	std::string tmp;
+	std::string logfilename;
 	bool use_xml = false;
 	const char* iwd = jic->jobIWD();
 	int cluster = jic->jobCluster();
 	int proc = jic->jobProc();
 	int subproc = jic->jobSubproc();
-	std::vector<const char*> logfiles;
-	
-	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: path_attr = %s\n", path_attr);
-	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: xml_attr = %s\n", xml_attr);
 
-		// Look for the "regular" user log file (e.g., UserLog or
-		// StarterUserLog).
-	if( ! ad->LookupString(path_attr, tmp) ) {
+	// Look for starter-specific user log file
+	if( ! ad->LookupString(ATTR_STARTER_ULOG_FILE, tmp) ) {
 			// The fact that this attribute is not found in the ClassAd
 			// indicates we do not want logging to a log file specified
 			// in the submit file.
 			// These semantics are defined in JICShadow::init.
 			// We still need to check below for a DAGMan-specified
 			// workflow log file for local universe!!
-		dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", path_attr );
+		dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", ATTR_STARTER_ULOG_FILE );
+		is_initialized = true;
+		should_log = false;
+		return true;
+	}
 
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
+			tmp.c_str());
+	if( fullpath (tmp.c_str() ) ) {
+		// we have a full pathname in the job ad.  however, if the
+		// job is using a different iwd (namely, filetransfer is
+		// being used), we want to just stick it in the local iwd
+		// for the job, instead.
+		if( jic->iwdIsChanged() ) {
+			const char* base = condor_basename(tmp.c_str());
+			formatstr(logfilename, "%s/%s", iwd, base);
+		} else {
+			logfilename = tmp;
+		}
 	} else {
-		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
-			tmp.Value());
-		if( fullpath (tmp.Value() ) ) {
-				// we have a full pathname in the job ad.  however, if the
-				// job is using a different iwd (namely, filetransfer is
-				// being used), we want to just stick it in the local iwd
-				// for the job, instead.
-			if( jic->iwdIsChanged() ) {
-				const char* base = condor_basename(tmp.Value());
-				logfilename.formatstr( "%s/%s", iwd, base);
-			} else {
-				logfilename = tmp;
-			}
-		} else {
-				// no full path, so, use the job's iwd...
-			logfilename.formatstr( "%s/%s", iwd, tmp.Value());
-		}
-		logfiles.push_back( logfilename.Value());
+			// no full path, so, use the job's iwd...
+		formatstr(logfilename, "%s/%s", iwd, tmp.c_str());
 	}
 
-		// Look for the special workflow log file for DAGMan (local
-		// universe only -- for other universes, the schedd or the
-		// shadow will log to that file and trying to write it in
-		// the starter will cause the starter to crash -- see
-		// gittrac #5299).
-	std::vector<ULogEventNumber> mask_vec;
-	if ( jic->jobUniverse() == CONDOR_UNIVERSE_LOCAL &&
-				ad->LookupString(ATTR_DAGMAN_WORKFLOW_LOG, tmp) ) {
-		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: %s is defined\n",
-			ATTR_DAGMAN_WORKFLOW_LOG);
-		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
-			tmp.Value());
-		if( fullpath (tmp.Value() ) ) {
-				// we have a full pathname in the job ad.  however, if the
-				// job is using a different iwd (namely, filetransfer is
-				// being used), we want to just stick it in the local iwd
-				// for the job, instead.
-			if( jic->iwdIsChanged() ) {
-				const char* base = condor_basename(tmp.Value());
-				dagmanLogFilename.formatstr( "%s/%s", iwd, base);
-			} else {
-				dagmanLogFilename = tmp;
-			}
-		} else {
-				// no full path, so, use the job's iwd...
-			dagmanLogFilename.formatstr( "%s/%s", iwd, tmp.Value());
-		}
-		logfiles.push_back( dagmanLogFilename.Value());
-		MyString msk;
-		if( ad->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk) ) {
-				// Check the mask of the DAGMan log
-			dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: msk = %s\n",
-				msk.Value());
-			Tokenize(msk.Value());
-			while(const char* mask = GetNextToken(",",true)) {
-				dprintf( D_FULLDEBUG, "Adding \"%s\" to the mask\n",mask);
-				mask_vec.push_back(ULogEventNumber(atoi(mask)));
-			}
-		}
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: UserLog "
+		"file %s\n", logfilename.c_str());
+
+	ad->LookupBool( ATTR_STARTER_ULOG_USE_XML, use_xml );
+
+	TemporaryPrivSentry temp_priv(PRIV_USER);
+
+	// TODO Do we need to ensure that u_log will switch to user priv
+	//   when writing and closing the log file?
+	bool ret = u_log.initialize(logfilename.c_str(), cluster, proc, subproc);
+	if( ! ret ) {
+		dprintf( D_ALWAYS,
+				 "Failed to initialize Starter's UserLog, aborting\n" );
+		return false;
 	}
 
-	if ( logfiles.empty() && write_event_log ) {
-		char *global_log = param( "EVENT_LOG" );
-		if ( global_log ) {
-			logfiles.push_back( UNIX_NULL_FILE );
-			free( global_log );
-		}
-	}
-
-	if ( logfiles.empty() ) {
-		return initNoLogging();
-	}
-
-	ad->LookupBool( xml_attr, use_xml );
-	for(std::vector<const char*>::iterator p = logfiles.begin();
-			p != logfiles.end(); ++p) {
-		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: UserLog "
-			"file %s\n",*p);
-	}
-	bool ret = init( logfiles, use_xml, cluster, proc, subproc );
-	if(ret) { 
-		for(std::vector<ULogEventNumber>::iterator m = mask_vec.begin();
-				m != mask_vec.end(); ++m) {
-			u_log.AddToMask(*m);
-		}
-	}
-	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: returning %s\n",
-		ret?"True":"False");
-	return ret;
-}
-
-
-bool
-LocalUserLog::initNoLogging( void )
-{
-	dprintf( D_FULLDEBUG, "Starter will not write a local UserLog\n" );
+	u_log.setUseCLASSAD( use_xml ? ULogEvent::formatOpt::XML : 0 );
 	is_initialized = true;
-	should_log = false;
+	should_log = true;
 	return true;
 }
 
@@ -361,11 +284,7 @@ LocalUserLog::logTerminate( ClassAd* ad )
 		//
 	int int_value = 0;
 	bool exited_by_signal = false;
-	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-        if( int_value ) {
-            exited_by_signal = true;
-        } 
-    } else {
+	if( ! ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
 		EXCEPT( "in LocalUserLog::logTerminate() "
 				"ERROR: ClassAd does not define %s!",
 				ATTR_ON_EXIT_BY_SIGNAL );
@@ -465,11 +384,7 @@ LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
 		//
 	int int_value = 0;
 	bool exited_by_signal = false;
-	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-        if( int_value ) {
-            exited_by_signal = true;
-        } 
-    } else {
+	if( ! ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
 		EXCEPT( "in LocalUserLog::logTerminate() "
 				"ERROR: ClassAd does not define %s!",
 				ATTR_ON_EXIT_BY_SIGNAL );
@@ -498,9 +413,9 @@ LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
     	//
     	// Grab the exit reason out of the ad
     	//
-    MyString reason;
+	std::string reason;
 	if ( ad->LookupString( ATTR_REQUEUE_REASON, reason ) ) {
-		event.setReason( reason.Value() );
+		event.setReason( reason.c_str() );
 	}
     
 	event.run_local_rusage = run_local_rusage;

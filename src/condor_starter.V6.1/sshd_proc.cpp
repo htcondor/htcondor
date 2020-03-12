@@ -83,6 +83,7 @@ SSHDProc::JobReaper(int pid, int status)
 		dprintf(D_ALWAYS, "Ssh exitting from interactive docker job, shutting down\n");
 		Starter->RemoteRemove(0);
 		VanillaProc::JobReaper(pid, status);
+		Starter->ShutdownFast();
 		return true;
 	}
 

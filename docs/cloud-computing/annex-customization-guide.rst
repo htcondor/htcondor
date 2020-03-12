@@ -1,8 +1,8 @@
 HTCondor Annex Customization Guide
 ==================================
 
-Aside from the configuration macros (see the 
-:doc:`/cloud-computing/annex-configuration` section), the major way to 
+Aside from the configuration macros (see the
+:doc:`/cloud-computing/annex-configuration` section), the major way to
 ustomize *condor_annex* is my customizing the default disk image. Because
 the implementation of *condor_annex* varies from service to service, and that
 implementation determines the constraints on the disk image, the this section
@@ -104,25 +104,37 @@ We also strongly recommend that every *condor_annex* disk image:
    :index:`TCP_FORWARDING_HOST`.
 -  Turn on communications integrity and encryption.
 -  Encrypt the run directories.
+-  Restrict access to the EC2 meta-data server to root.
 
 The default disk image is configured to do all of this.
 
+Instance Roles
+''''''''''''''
 
-Azure
------
+To explain the last point immediately above, EC2 stores (temporary)
+credentials for the role, if any, associated with an instance on that
+instance's meta-data server, which may be accessed via HTTP at a well-known
+address (currently ``169.254.169.254``). Unless otherwise configured,
+any process in the instance can access the meta-data server and thereby
+make use of the instance's credentials.
 
-Not implemented as of v8.7.8.
+Until version 8.9.0, there was no HTCondor-based reason to run an EC2
+instance with an instance role. Starting in 8.9.0, however, HTCondor
+gained the ability to use the instance role's credentials to run EC2
+universe jobs and *condor_annex* commands. This has several advantages
+over copying credentials into the instance: it may be more convenient,
+and if you're the only user of the instance, it's more secure, because
+the instance's credentials expire when the instance does.
 
-
-Google Cloud Platform
----------------------
-
-Not implemented as of v8.7.8.
-
-
-Softlayer
----------------------
-
-Not implemented as of v8.7.8.
-
+However, wanting to allow (other) users to run jobs on or submit jobs to
+your instance may not mean you want them to able to act with the
+instance's privileges (e.g., starting more instances on your account).
+Although securing your instances ultimately remains your responsibility,
+the default images we provide for *condor_annex*, and the
+condor-annex-ec2 package, both use the kernel-level firewall to prevent
+access to the metadata server by any process not owned by root. Because
+this firewall rule is added during the boot sequence, it will be in
+place before HTCondor can start any user jobs, and should therefore be
+effective in preventing access to the instance's credentials by normal
+users or their jobs.
 

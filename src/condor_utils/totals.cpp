@@ -442,9 +442,6 @@ update (ClassAd *ad, int options)
 		if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
 		return update(state);
 	}
-
-	++machines;
-	return 1;
 }
 
 

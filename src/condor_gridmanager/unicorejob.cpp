@@ -158,14 +158,7 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 
 		// If we already have an unprocessed update ad, merge the two,
 		// with the new one overwriting duplicate attributes.
-	const char *new_name;
-	ExprTree *new_expr;
-
-	update_ad->ResetExpr();
-	while ( update_ad->NextExpr( new_name, new_expr ) ) {
-		ExprTree * pTree = new_expr->Copy();
-		job->newRemoteStatusAd->Insert( new_name, pTree );
-	}
+	job->newRemoteStatusAd->Update( *update_ad );
 
 	job->SetEvaluateState();
 
@@ -182,7 +175,7 @@ HashTable<std::string, UnicoreJob *>
 UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )
 {
-	MyString buff;
+	std::string buff;
 	std::string error_string = "";
 
 	resourceName = NULL;
@@ -221,7 +214,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_GRID_RESOURCE, &resourceName );
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( !buff.IsEmpty() ) {
+	if ( !buff.empty() ) {
 		const char *token;
 
 		Tokenize( buff );
@@ -250,7 +243,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -287,8 +280,6 @@ void UnicoreJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -462,8 +453,7 @@ void UnicoreJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -567,8 +557,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) *** Processing callback ad\n",procID.cluster, procI
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -647,10 +636,7 @@ if ( unicoreState != COMPLETED ) {
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			const char *name;
-			ExprTree *expr;
-			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr(name, expr) ) {
+			if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -756,23 +742,19 @@ void UnicoreJob::UpdateUnicoreState( const char *update_ad_string )
 
 void UnicoreJob::UpdateUnicoreState( ClassAd *update_ad )
 {
-	const char *next_attr_name;
-	ExprTree *next_expr;
-
 	if ( update_ad == NULL ) {
 		dprintf( D_ALWAYS, "(%d.%d) Received NULL unicore status ad\n",
 				 procID.cluster, procID.proc );
 		return;
 	}
 
-	update_ad->ResetName();
-	while ( ( next_attr_name = update_ad->NextNameOriginal() ) != NULL ) {
-		if ( strcasecmp( next_attr_name, ATTR_MY_TYPE ) == 0 ||
-			 strcasecmp( next_attr_name, ATTR_TARGET_TYPE ) == 0 ||
-			 strcasecmp( next_attr_name, "UnicoreJobId" ) == 0 ) {
+	for ( auto itr = update_ad->begin(); itr != update_ad->end(); itr++ ) {
+		if ( strcasecmp( itr->first.c_str(), ATTR_MY_TYPE ) == 0 ||
+		     strcasecmp( itr->first.c_str(), ATTR_TARGET_TYPE ) == 0 ||
+		     strcasecmp( itr->first.c_str(), "UnicoreJobId" ) == 0 ) {
 			continue;
 		}
-		if ( strcasecmp( next_attr_name, ATTR_JOB_STATUS ) == 0 ) {
+		if ( strcasecmp( itr->first.c_str(), ATTR_JOB_STATUS ) == 0 ) {
 			int status = 0;
 			update_ad->LookupInteger( ATTR_JOB_STATUS, status );
 			unicoreState = status;
@@ -784,9 +766,8 @@ void UnicoreJob::UpdateUnicoreState( ClassAd *update_ad )
 				JobIdle();
 			}
 		}
-		next_expr = update_ad->LookupExpr( next_attr_name );
-		ExprTree * pTree = next_expr->Copy();
-		jobAd->Insert( next_attr_name, pTree );
+		ExprTree * pTree = itr->second->Copy();
+		jobAd->Insert( itr->first, pTree );
 	}
 }
 

@@ -411,7 +411,7 @@ and
       ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
       stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
       bigbird.cs.wisc.edu
-      HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
+      ALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 
 Where a line continuation character directly precedes a comment, the
 entire comment line is ignored, and the following line is used in the
@@ -919,7 +919,6 @@ will not be enough.
 -  NETWORK_INTERFACE
 -  NUM_CPUS
 -  PREEMPTION_REQUIREMENTS_STABLE
--  PRIVSEP_ENABLED
 -  PROCD_ADDRESS
 -  SLOT_TYPE_<N>
 -  OFFLINE_MACHINE_RESOURCE_<name>
@@ -955,8 +954,6 @@ restart of HTCondor in order to use the changed value.
     configuration should not depend on HTCondor picking any particular
     IP address for this macro; this macro's value may not even be one of
     the IP addresses HTCondor is configured to advertise.
-
-    labelparam:IPv4Address
 
 ``$(IPV4_ADDRESS)`` :index:`IPV4_ADDRESS`
     The ASCII string version of the local machine's "most public" IPv4
@@ -997,7 +994,6 @@ restart of HTCondor in order to use the changed value.
     -  GCE_GAHP
     -  GRIDMANAGER
     -  HAD
-    -  HDFS
     -  JOB_ROUTER
     -  KBDD
     -  LEASEMANAGER

@@ -531,12 +531,12 @@ bool SSHToJob::execute_ssh()
 	// Handle non-EC2 jobs.
 	//
 
-	MyString error_msg;
+	std::string schedd_error_msg;
 	m_retry_sensible = false;
-	MyString starter_addr;
-	MyString starter_claim_id;
-	MyString starter_version;
-	MyString slot_name;
+	std::string starter_addr;
+	std::string starter_claim_id;
+	std::string starter_version;
+	std::string slot_name;
 	CondorError error_stack;
 	int timeout = 300;
 
@@ -545,14 +545,14 @@ bool SSHToJob::execute_ssh()
 	char const *session_info = "[Encryption=\"YES\";Integrity=\"YES\";]";
 
 	int job_status;
-	MyString hold_reason;
-	bool success = schedd.getJobConnectInfo(m_jobid,m_subproc,session_info,timeout,&error_stack,starter_addr,starter_claim_id,starter_version,slot_name,error_msg,m_retry_sensible,job_status,hold_reason);
+	std::string hold_reason;
+	bool success = schedd.getJobConnectInfo(m_jobid,m_subproc,session_info,timeout,&error_stack,starter_addr,starter_claim_id,starter_version,slot_name,schedd_error_msg,m_retry_sensible,job_status,hold_reason);
 
 		// turn the ssh claim id into a security session so we can use it
 		// to authenticate ourselves to the starter
 	SecMan secman;
 	char const *ssh_session_id;
-	ClaimIdParser cidp(starter_claim_id.Value());
+	ClaimIdParser cidp(starter_claim_id.c_str());
 	if( success ) {
 		success = secman.CreateNonNegotiatedSecuritySession(
 					DAEMON,
@@ -560,10 +560,11 @@ bool SSHToJob::execute_ssh()
 					cidp.secSessionKey(),
 					cidp.secSessionInfo(),
 					EXECUTE_SIDE_MATCHSESSION_FQU,
-					starter_addr.Value(),
-					0 );
+					starter_addr.c_str(),
+					0,
+					nullptr );
 		if( !success ) {
-			error_msg = "Failed to create security session to connect to starter.";
+			schedd_error_msg = "Failed to create security session to connect to starter.";
 		}
 		else {
 			ssh_session_id = cidp.secSessionId();
@@ -572,17 +573,17 @@ bool SSHToJob::execute_ssh()
 
 	if( !success ) {
 		if ( !m_retry_sensible ) {
-			logError("%s\n",error_msg.Value());
+			logError("%s\n",schedd_error_msg.c_str());
 		}
 		if( job_status == HELD ) {
 			m_retry_sensible = false;
-			logError( "Job is held: \"%s\".\n", hold_reason.Value() );
+			logError( "Job is held: \"%s\".\n", hold_reason.c_str() );
 		}
 		return false;
 	}
 
 	dprintf(D_FULLDEBUG,"Got connect info for starter %s\n",
-			starter_addr.Value());
+			starter_addr.c_str());
 
 	ClassAd starter_ad;
 	starter_ad.Assign(ATTR_STARTER_IP_ADDR,starter_addr);
@@ -597,7 +598,7 @@ bool SSHToJob::execute_ssh()
 	}
 
 	MyString remote_host;
-	char const *at_pos = strrchr(slot_name.Value(),'@');
+	char const *at_pos = strrchr(slot_name.c_str(),'@');
 	if( at_pos ) {
 		remote_host = at_pos + 1;
 	}
@@ -617,7 +618,7 @@ bool SSHToJob::execute_ssh()
 
 	unsigned int num = 1;
 	for(num=1;num<2000;num++) {
-		unsigned int r = get_random_uint();
+		unsigned int r = get_random_uint_insecure();
 		m_session_dir.formatstr("%s%c%s.condor_ssh_to_job_%x",
 							  temp_dir,DIR_DELIM_CHAR,local_username,r);
 		if( mkdir(m_session_dir.Value(),0700)==0 ) {
@@ -647,12 +648,13 @@ bool SSHToJob::execute_ssh()
 	private_client_key_file.formatstr("%s%cssh_key",m_session_dir.Value(),DIR_DELIM_CHAR);
 
 	ReliSock sock;
-	MyString remote_user; // this will be filled in with the remote user name
+	std::string remote_user; // this will be filled in with the remote user name
+	MyString error_msg;
 	bool start_sshd = starter.startSSHD(
 		known_hosts_file.Value(),
 		private_client_key_file.Value(),
 		m_shells.Value(),
-		slot_name.Value(),
+		slot_name.c_str(),
 		m_ssh_keygen_args.Value(),
 		sock,
 		timeout,
@@ -662,7 +664,11 @@ bool SSHToJob::execute_ssh()
 		m_retry_sensible);
 
 	if( !start_sshd ) {
-		logError("%s\n",error_msg.Value());
+		// If we're going to retry, don't bother to scare/confuse the user
+		// with why unless they asked for it.
+		if( (!m_retry_sensible) || (!m_auto_retry) || m_debug ) {
+			logError("%s\n",error_msg.Value());
+		}
 		return false;
 	}
 

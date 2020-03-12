@@ -115,6 +115,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_PROPORTIONAL_SET_SIZE );
 	common_job_queue_attrs->insert( ATTR_MEMORY_USAGE );
 	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
+	common_job_queue_attrs->insert( ATTR_SCRATCH_DIR_FILE_COUNT );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU );
@@ -126,6 +127,17 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
+
+	common_job_queue_attrs->insert( "TransferInQueued" );
+	common_job_queue_attrs->insert( "TransferInStarted" );
+	common_job_queue_attrs->insert( "TransferInFinished" );
+	common_job_queue_attrs->insert( "TransferOutQueued" );
+	common_job_queue_attrs->insert( "TransferOutStarted" );
+	common_job_queue_attrs->insert( "TransferOutFinished" );
+
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
@@ -290,7 +302,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (log) {
 		flags = SHOULDLOG;
 	}
-	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.Value(),schedd_ver) ) {
+	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.c_str(),schedd_ver) ) {
 		if( SetAttribute(cluster,p,name,expr,flags) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
@@ -361,8 +373,12 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!", type );
 	}
 
-	job_ad->ResetExpr();
-	while( job_ad->NextDirtyExpr(name, tree) ) {
+	for ( auto itr = job_ad->dirtyBegin(); itr != job_ad->dirtyEnd(); itr++ ) {
+		name = itr->c_str();
+		tree = job_ad->LookupExpr(name);
+		if ( tree == NULL ) {
+			continue;
+		}
 		// There used to be a check for tree->invisible here,
 		// but there are no codepaths that reach here with
 		// private attributes set to invisible.
@@ -378,7 +394,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			 job_queue_attrs->contains_anycase(name)) ) {
 
 			if( ! is_connected ) {
-				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.Value(),schedd_ver) ) {
+				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str(),schedd_ver) ) {
 					return false;
 				}
 				is_connected = true;
@@ -421,7 +437,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		itr != undirty_attrs.end();
 		++itr)
 	{
-		job_ad->SetDirtyFlag(itr->c_str(),false);
+		job_ad->MarkAttributeClean(*itr);
 	}
 	return true;
 }

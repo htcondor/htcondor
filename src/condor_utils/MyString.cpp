@@ -22,10 +22,9 @@
 #include "MyString.h"
 #include "condor_snutils.h"
 #include "condor_debug.h"
-#include "condor_random_num.h"
 #include "strupr.h"
-#include "simplelist.h"
 #include <limits>
+#include <vector>
 
 /*--------------------------------------------------------------------
  *
@@ -136,6 +135,17 @@ operator=(const MyString& S)
     return *this;
 }
 
+/** Destructively moves a MyString guts from rhs to this */
+MyString& 
+MyString::operator=(MyString &&rhs) {
+	delete Data;
+	this->Data     = rhs.Data;
+	this->Len      = rhs.Len;
+	this->capacity = rhs.capacity;
+	rhs.init();
+	return *this;
+}
+
 MyString& MyString::
 operator=(const std::string& S) 
 {
@@ -225,7 +235,7 @@ MyString::reserve_at_least(const int sz)
 	bool success;
 
 	twice_as_much = 2 * capacity;
-	if (sz <= capacity && capacity > 0) {
+	if (sz <= capacity && capacity > 0 && Data) {
 		success = true;
 	} else if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
@@ -360,10 +370,6 @@ template <> bool MyString::serialize_int<bool>(bool val) { append_str(val ? "1" 
 
 #ifdef WIN32
 #define strtoull _strtoui64
-#pragma push_macro("min")
-#pragma push_macro("max")
-#undef min
-#undef max
 #endif
 
 // deserialize an int into the given value, and advance the deserialization pointer.
@@ -484,11 +490,6 @@ void force_mystring_templates() {
 }
 #endif
 
-#ifdef WIN32
- #pragma pop_macro("min")
- #pragma pop_macro("max")
-#endif
-
 MSC_RESTORE_WARNING(6052) // call to snprintf might not null terminate string.
 
 
@@ -602,7 +603,7 @@ MyString::replaceString(
 	const char *pszReplaceWith, 
 	int iStartFromPos) 
 {
-	SimpleList<int> listMatchesFound; 		
+	std::vector<int> listMatchesFound;
 	
 	int iToReplaceLen = (int)strlen(pszToReplace);
 	if (!iToReplaceLen) {
@@ -614,21 +615,21 @@ MyString::replaceString(
 		iStartFromPos = find(pszToReplace, iStartFromPos);
 		if (iStartFromPos == -1)
 			break;
-		listMatchesFound.Append(iStartFromPos);
+		listMatchesFound.push_back(iStartFromPos);
 		iStartFromPos += iToReplaceLen;
 	}
-	if (!listMatchesFound.Number())
+	if (!listMatchesFound.size())
 		return false;
 	
 	int iLenDifPerMatch = iWithLen - iToReplaceLen;
-	int iNewLen = Len + iLenDifPerMatch * listMatchesFound.Number();
+	int iNewLen = Len + iLenDifPerMatch * listMatchesFound.size();
 	char *pNewData = new char[iNewLen+1];
 		
 	int iItemStartInData;
 	int iPosInNewData = 0;
 	int iPreviousEnd = 0;
-	listMatchesFound.Rewind();
-	while(listMatchesFound.Next(iItemStartInData)) {
+	for(size_t i = 0; i < listMatchesFound.size(); i++) {
+		iItemStartInData = listMatchesFound[i];
 		memcpy(pNewData + iPosInNewData, 
 			   Data + iPreviousEnd, 
 			   iItemStartInData - iPreviousEnd);
@@ -863,65 +864,6 @@ MyString::RemoveAllWhitespace( void )
 	Len = j;
 }
 
-// if len is 10, this means 10 random ascii characters from the set.
-void
-MyString::randomlyGenerate(const char *set, int len)
-{
-	int i;
-	int idx;
-	int set_len;
-
-    if (!set || len <= 0) {
-		// passed in NULL set, so automatically MyString is empty
-		// or told the string size is negative or nothing, again empty string.
-		if (Data) {
-			Data[0] = '\0';
-		}
-		Len = 0;
-		// leave capacity alone.
-		return;
-	}
-
-	// start over from scratch with this string.
-    if (Data) {
-		delete[] Data;
-	}
-
-	Data = new char[len+1]; 
-	Data[len] = '\0';
-	Len = len;
-	capacity = len;
-
-	set_len = (int)strlen(set);
-
-	// now pick randomly from the set and fill stuff in
-	for (i = 0; i < len ; i++) {
-		idx = get_random_int() % set_len;
-		Data[i] = set[idx];
-	}
-}
-
-void
-MyString::randomlyGenerateHex(int len)
-{
-	randomlyGenerate("0123456789abcdef", len);
-}
-
-void
-MyString::randomlyGeneratePassword(int len)
-{
-	// Create a randome password of alphanumerics
-	// and safe-to-print punctuation.
-	//
-	randomlyGenerate(
-				"abcdefghijklmnopqrstuvwxyz"
-				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-				"0123456789"
-				"!@#$%^&*()-_=+,<.>/?",
-				len
-				);
-}
-
 void
 MyString::init()
 {
@@ -1136,12 +1078,17 @@ bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
  *--------------------------------------------------------------------*/
 
 MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
-/*
-MyStringTokener::MyStringTokener(const char *str) : tokenBuf(NULL), nextToken(NULL)
-{
-	if (str) Tokenize(str);
+
+MyStringTokener &
+MyStringTokener::operator=(MyStringTokener &&rhs) {
+	free(tokenBuf);
+	this->tokenBuf = rhs.tokenBuf;
+	this->nextToken = rhs.nextToken;
+	rhs.tokenBuf = nullptr;
+	rhs.nextToken = nullptr;
+	return *this;
 }
-*/
+
 MyStringTokener::~MyStringTokener()
 {
 	if (tokenBuf) {
@@ -1206,6 +1153,13 @@ MyStringWithTokener::MyStringWithTokener(const char *s)
 	init();
 	size_t s_len = s ? strlen(s) : 0;
 	assign_str(s, (int)s_len);
+}
+
+MyStringWithTokener &
+MyStringWithTokener::operator=(MyStringWithTokener &&rhs) {
+	MyString::operator=(rhs);
+	this->tok = std::move(rhs.tok);
+	return *this;
 }
 
 #if 1

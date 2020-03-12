@@ -182,11 +182,6 @@ makeStartdAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 			hk.name += ":";
 			hk.name += IntToStr( slot );
 		}
-		else if (param_boolean("ALLOW_VM_CRUFT", false) &&
-				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
-			hk.name += ":";
-			hk.name += IntToStr( slot );
-		}
 	}
 
 	hk.ip_addr = "";

@@ -90,13 +90,13 @@ findSignal( ClassAd* ad, const char* attr_name )
 	if( ! ad ) {
 		return -1;
 	}
-	MyString name;
+	std::string name;
 	int signal;
 
 	if ( ad->LookupInteger( attr_name, signal ) ) {
 		return signal;
 	} else if ( ad->LookupString( attr_name, name ) ) {
-		return signalNumber( name.Value() );
+		return signalNumber( name.c_str() );
 	} else {
 		return -1;
 	}
@@ -176,17 +176,14 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 		// a bunch of info out of the ClassAd to finish our task...
 
 	int int_value;
+	bool bool_value;
 	bool exited_by_signal = false;
 	int exit_value = -1;
 
 		// first grab everything from the ad we must have for this to
 		// work at all...
-	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-		if( int_value ) {
-			exited_by_signal = true;
-		} else {
-			exited_by_signal = false;
-		}
+	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, bool_value) ) {
+		exited_by_signal = bool_value;
 	} else {
 		dprintf( D_ALWAYS, "ERROR in printExitString: %s not found in ad\n",
 				 ATTR_ON_EXIT_BY_SIGNAL );
@@ -371,39 +368,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_Q_DATE, time(NULL) );
 
 	return job_ad;
-}
-
-bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
-					   const char* ulog_path_attr = ATTR_ULOG_FILE)
-{
-	bool ret_val = true;
-	char *global_log = NULL;
-
-	if ( job_ad == NULL || 
-	     job_ad->EvaluateAttrString(ulog_path_attr,result) == false )
-	{
-		// failed to find attribute, check config file
-		global_log = param("EVENT_LOG");
-		if ( global_log ) {
-			// canonicalize to UNIX_NULL_FILE even on Win32
-			result = UNIX_NULL_FILE;
-		} else {
-			ret_val = false;
-		}
-	}
-
-	if ( global_log ) free(global_log);
-
-	if( ret_val && !fullpath(result.c_str()) ) {
-		std::string iwd;
-		if( job_ad && job_ad->EvaluateAttrString(ATTR_JOB_IWD,iwd) ) {
-			iwd += "/";
-			iwd += result;
-			result = iwd;
-		}
-	}
-
-	return ret_val;
 }
 
 // tokenize the input string, and insert tokens into the attrs set

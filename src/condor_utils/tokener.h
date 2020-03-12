@@ -64,22 +64,6 @@ protected:
 	const char * sep;  // separator characters used to delimit tokens
 };
 
-#if 1
-//PRAGMA_REMIND("remove this dead code")
-#else
-// this class helps with case-insensitive comparisons between string literals
-class CaseInsensitiveLiteral {
-public:
-	const char * lit;
-	CaseInsensitiveLiteral(const char * str) : lit(str) {}
-	CaseInsensitiveLiteral(const CaseInsensitiveLiteral & str) : lit(str.lit) {}
-	bool operator ==(const char * str) const;
-	bool operator <(const char * str) const;
-	bool operator ==(const CaseInsensitiveLiteral &rhs) const { return *this == rhs.lit; }
-	bool operator <(const CaseInsensitiveLiteral &rhs) const { return *this < rhs.lit; }
-};
-#endif
-
 // These templates declare headers for token tables
 // and work with the tokener to return a pointer to the table
 // entry that matches the current token.

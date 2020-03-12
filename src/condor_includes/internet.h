@@ -70,16 +70,6 @@ int getPortFromAddr( const char* addr );
    allocated string which must be de-allocated with free(). */
 char* getHostFromAddr( const char* addr );
 
-/* Deprecated!  The claim id should no longer be used to get the st artd
-   address, except for cases where this is required for backward
-   compatibility.  The startd ClassAd should be fed into a DCDaemon
-   object to get the address of the startd, because this handles
-   private network addresses etc.
-   returns the address from a given ClaimId.  the string returned is a
-   newly allocated string which must be de-allocated with free().
-*/
-char* getAddrFromClaimId( const char* id );
-
 // generates sinful string.
 // it detects whether given ip address is IPv4 or IPv6.
 int generate_sinful(char* buf, int len, const char* ip, int port);

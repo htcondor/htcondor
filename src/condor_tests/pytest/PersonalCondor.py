@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import re
 import subprocess
@@ -6,9 +8,9 @@ import time
 import classad
 import htcondor
 
-from Globals import *
-from Utils import Utils
-from CondorCluster import CondorCluster
+from .Globals import *
+from .Utils import Utils
+from .CondorCluster import CondorCluster
 
 class PersonalCondor(object):
 
@@ -77,19 +79,54 @@ class PersonalCondor(object):
     def BeginStopping(self):
         if self._master_process is not None:
             Utils.TLog("[PC: {0}] Shutting down PersonalCondor with condor_off -master".format(self._name))
-            os.system("condor_off -master")
+            r = Utils.RunCommandCarefully( ( 'condor_off', '-master' ), 20 )
+            if not r:
+                Utils.TLog("[PC: {0}] condor_off -master failed, using terminate()".format(self._name))
+                self._master_process.terminate()
             self._is_ready = False
 
     def FinishStopping(self):
-        # FIXME: This (a) needs a timeout and (b) if the timeout expires,
-        # we need a more-agressive shutdown method.
+        then = time.time()
+        while time.time() - then < 20:
+            if self._master_process.poll() is None:
+                Utils.TLog("[PC: {0}] Master did not exit, will check again in five seconds...".format(self._name))
+                time.sleep(5)
+            else:
+                self._master_process = None
+                Utils.TLog("[PC: {0}] Master exited".format(self._name))
+                return
+
+        Utils.TLog("[PC: {0}] Master did not exit of its own accord, trying to terminate it".format(self._name))
+        self._master_process.terminate()
+        then = time.time()
+        while time.time() - then < 20:
+            if self._master_process.poll() is None:
+                Utils.TLog("[PC: {0}] Master did not exit, will check again in five seconds...".format(self._name))
+                time.sleep(5)
+            else:
+                self._master_process = None
+                Utils.TLog("[PC: {0}] Master exited".format(self._name))
+                return
+
         #
-        # FIXME: It should also, if it detects that the master exited,
-        # decline to try to stop the master again when this process exits.
-        while self._master_process.poll() is None:
-            Utils.TLog("[PC: {0}] Master did not exit, will check again in five seconds...".format(self._name))
-            time.sleep( 5 )
-        Utils.TLog("[PC: {0}] Master exited".format(self._name))
+        # kill() and terminate() are synonymous on Windows.  We could also try
+        # send_signal() either subprocess.CTRL_C_EVENT or .CTRL_BREAK_EVENT,
+        # if we're on Windows and we created the process the right way.
+        #
+        Utils.TLog("[PC: {0}] Master did not exit after being terminated, calling security".format(self._name))
+        self._master_process.kill()
+        then = time.time()
+        while time.time() - then < 5:
+            if self._master_process.poll() is None:
+                Utils.TLog("[PC: {0}] Master did not exit, will check again in a second...".format(self._name))
+                time.sleep(1)
+            else:
+                self._master_process = None
+                Utils.TLog("[PC: {0}] Master exited".format(self._name))
+                return
+
+        # Arguably, this should be a test failure.
+        Utils.TLog("[PC: {0}] Master was kill()ed but did not exit, giving up.".format(self._name))
 
     def Stop(self):
         self.BeginStopping()
@@ -98,7 +135,7 @@ class PersonalCondor(object):
     def Start(self):
         try:
             process = subprocess.Popen(["condor_master", "-f &"])
-            if process < 0:
+            if not process:
                 Utils.TLog("[PC: {0}] Child was terminated by signal: {1}".format(self._name, str(process)))
                 return False
         except OSError as e:
@@ -219,7 +256,7 @@ class PersonalCondor(object):
         os.environ["CONDOR_CONFIG"] = self._local_config
         return previous_condor_config
 
-    # MRC: Eventually want to do this using python bindings
+    # TODO: Eventually want to do this using python bindings
     # For internal use only.
     def _WaitForReadyDaemons(self):
         is_ready_attempts = 6

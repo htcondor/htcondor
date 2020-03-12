@@ -22,7 +22,7 @@ if (WINDOWS)
 	if (BOOST_DOWNLOAD_WIN)
 		set (BOOST_CONFIGURE echo "Nothing to configure")
 		set (BOOST_MAKE echo "No make necessary")
-		set (BOOST_INSTALL tar -pczf boost.tar.gz boost/ && tar -zxvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *.lib ${BOOST_INSTALL_LOC}/lib && cp *.dll ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
+		set (BOOST_INSTALL tar -czpf boost.tar.gz boost && tar -xzvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *.lib ${BOOST_INSTALL_LOC}/lib && cp *.dll ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
  
 		ExternalProject_Add(boost
 			#-- Download Step ----------
@@ -37,7 +37,7 @@ if (WINDOWS)
 
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 		set(BOOST_SHORTVER 1_68 PARENT_SCOPE)
-		condor_post_external( boost "boost" "lib" )
+		condor_post_external( boost "boost" "lib" "" )
 	endif(BOOST_DOWNLOAD_WIN)
 
 else (WINDOWS)
@@ -164,7 +164,7 @@ else (WINDOWS)
 			#set(BOOST_SHORTVER 1_68 PARENT_SCOPE)
 			#condor_post_external( boost "include/boost-1_68" "lib" )
 		else()
-			condor_post_external( boost "include" "lib" )
+			condor_post_external( boost "include" "lib" "${BOOST_INSTALL_LOC}/lib/libboost_thread.a;${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a;${BOOST_INSTALL_LOC}/lib/libboost_system.a" )
 		endif()
 	endif(NOT PROPER)
 endif(WINDOWS)

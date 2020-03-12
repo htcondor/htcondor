@@ -4,10 +4,14 @@ Using *condor_annex* for the First Time
 This guide assumes that you already have an AWS account, as well as a
 log-in account on a Linux machine with a public address and a system
 administrator who's willing to open a port for you. All the terminal
-commands (shown in a box without a title) and file edits (shown in a box
-with an emphasized title) take place on the Linux machine. You can
+commands (shown in a box) and file edits (show in a box whose first line
+begins with a ``#`` and names a file) take place on the Linux machine. You can
 perform the web-based steps from wherever is convenient, although it
 will save you some copying if you run the browser on the Linux machine.
+
+If your Linux machine will be an EC2 instance, read
+`Using Instance Credentials`_ first; by taking some care in how you start
+the instance, you can save yourself some drudgery.
 
 Before using *condor_annex* for the first time, you'll have to do three
 things:
@@ -39,10 +43,10 @@ is located in your home directory on the Linux machine, so copy it there
 if necessary.
 
 Then do the following; note that in this box, like other terminal boxes,
-the commands you type are preceded by by '$' to distinguish them from
+the commands you type are preceded by by ``$`` to distinguish them from
 any expected output, so don't copy that part of each of the following
-lines. (Lines which end in a '\\' continue on the following line; be
-sure to copy both lines. Don't copy the '\\' itself.)
+lines. (Lines which end in a ``\`` continue on the following line; be
+sure to copy both lines. Don't copy the ``\`` itself.)
 
 ::
 
@@ -143,7 +147,7 @@ Restart HTCondor to force the changes to take effect:
     Sent "Restart" command to local master
 
 To verify that this change worked, repeat the steps under the
-:ref:cloud-computing/using-annex-first-time:install a personal htcondor
+:ref:`cloud-computing/using-annex-first-time:install a personal htcondor`
 section. Then proceed onto the next section.
 
 Configure a Pool Password
@@ -209,6 +213,49 @@ Prepare your AWS account
 
 Since v8.7.1, the *condor_annex* tool has included a -setup command
 which will prepare your AWS account.
+
+.. _using_instance_credentials:
+
+Using Instance Credentials
+''''''''''''''''''''''''''
+
+If you will not be running *condor_annex* on an EC2 instance, skip
+to `Obtaining an Access Key`_.
+
+When you start an instance on EC2 [1]_, you can grant it some of your AWS
+privileges, for instance, for starting instances.  This (usually) means that
+any user logged into the instance can, for instance, start instances (as
+you).  A given collection of privileges is called an "instance profile"; a
+full description of them is outside the scope of this document.  If, however,
+you'll be the only person who can log into the instance you're creating and
+on which you will be running *condor_annex*, it may be simpler to start an
+instance with your privileges than to deal with `Obtaining an Access Key`_.
+
+You will need a privileged instance profile; if you don't already have one,
+you will only need to create it once.  When launching an instance with
+the `EC2 console <https://console.aws.amazon.com/ec2/>`_, step 3
+(labelled 'Configure Instance Details') includes an entry for 'IAM role';
+the AWS web interface creates the corresponding instance profile for you
+automatically.  If you've already created a privileged role, select it here
+and carry on launching your instance as usual.  If you haven't:
+
+#. Follow the 'Create new IAM role' link.
+#. Click the 'Create Role' button.
+#. Select 'EC2' under "the service that will use this role".
+#. Click the 'Next: Permissions' button.
+#. Select 'Administrator Access' and click the 'Next: Tags' button.
+#. Click the 'Next: Review' button.
+#. Enter a role name; 'HTCondorAnnexRole' is fine.
+#. Click the 'Create role' button.
+
+When you switch back to the previous tab, you may need to click the circular
+arrow (refresh) icon before you can select the role name you entered in the
+second-to-last step.
+
+If you'd like step-by-step instructions for creating a HTCondor-in-the-Cloud,
+see :ref:`condor_in_the_cloud`.
+
+You can skip to :ref:`configure_condor_annex` once you've completed these steps.
 
 .. _obtain_an_access_key:
 
@@ -320,3 +367,11 @@ key from your AWS account, go to the key pair console at the following
 URL and delete the 'HTCondorAnnex-KeyPair' key:
 
 `https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`_
+
+.. rubric: Footnotes
+
+.. [1] You may assign an intance profile to an EC2 instance when you launch it,
+   or at any subsequent time, through the AWS web console (or other interfaces
+   with which you may be familiar). If you start the instance using HTCondor's
+   EC2 universe, you may specify the IAM instance profile with the
+   **ec2_iam_profile_name** or **ec2_iam_profile_arn** submit commands.

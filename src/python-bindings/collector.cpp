@@ -162,7 +162,7 @@ struct Collector {
         boost::python::list attrlist;
         attrlist.append("MyAddress");
         attrlist.append("AddressV1");
-        attrlist.append("CondorVersion");
+        attrlist.append(ATTR_CONDOR_VERSION);
         attrlist.append("CondorPlatform");
         attrlist.append("Name");
         attrlist.append("Machine");
@@ -176,7 +176,7 @@ struct Collector {
         boost::python::list attrlist;
         attrlist.append("MyAddress");
         attrlist.append("AddressV1");
-        attrlist.append("CondorVersion");
+        attrlist.append(ATTR_CONDOR_VERSION);
         attrlist.append("CondorPlatform");
         attrlist.append("Name");
         attrlist.append("Machine");
@@ -270,7 +270,7 @@ struct Collector {
 
 
     // TODO: this has crappy error handling when there are multiple collectors.
-    void advertise(list ads, const std::string &command_str="UPDATE_AD_GENERIC", bool use_tcp=false)
+    void advertise(list ads, const std::string &command_str="UPDATE_AD_GENERIC", bool use_tcp=true)
     {
         m_collectors->rewind();
         Daemon *collector;
@@ -292,7 +292,7 @@ struct Collector {
         if (!list_len)
             return;
 
-        compat_classad::ClassAd ad;
+        ClassAd ad;
         while (m_collectors->next(collector))
         {
             if(!collector->locate()) {
@@ -364,14 +364,12 @@ private:
         if (statistics.size())
         {
             std::string result = quote_classads_string(statistics);
-            result = "STATISTICS_TO_PUBLISH = " + result;
-            query.addExtraAttribute(result.c_str());
+            query.addExtraAttribute("STATISTICS_TO_PUBLISH", result.c_str());
         }
         if (locationName.size())
         {
             std::string result = quote_classads_string(locationName);
-            result = "LocationQuery = " + result;
-            query.addExtraAttribute(result.c_str());
+            query.addExtraAttribute(ATTR_LOCATION_QUERY, result.c_str());
         }
 
         int len_attrs = py_len(attrs);
@@ -447,16 +445,40 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(locate_overloads, locate, 1, 2);
 
 void export_collector()
 {
-    class_<Collector>("Collector", "Client-side operations for the HTCondor collector")
-        .def(init<boost::python::object>(":param pool: Name of collector to query; if not specified, uses the local one."))
+    class_<Collector>("Collector",
+            R"C0ND0R(
+            Client object for a remote ``condor_collector``.  The interaction with the
+            collector broadly has three aspects:
+
+            * Locating a daemon.
+            * Query the collector for one or more specific ClassAds.
+            * Advertise a new ad to the ``condor_collector``.
+            )C0ND0R",
+        init<boost::python::object>(
+            boost::python::args("self", "pool"),
+            R"C0ND0R(
+            :param pool: A ``host:port`` pair specified for the remote collector
+              (or a list of pairs for HA setups). If omitted, the value of
+              configuration parameter ``COLLECTOR_HOST`` is used.
+            :type pool: str or list[str]
+            )C0ND0R"))
+        .def(init<>(boost::python::args("self")))
         .def("query", &Collector::query, query_overloads(
-            "Query the contents of a collector.\n"
-            ":param ad_type: Type of ad to return from the AdTypes enum; if not specified, uses ANY_AD.\n"
-            ":param constraint: A constraint for the ad query; defaults to true.\n"
-            ":param projection: A list of attributes; if specified, the returned ads will be "
-            "projected along these attributes.\n"
-            ":param statistics: A list of additional statistics to return, if the remote daemon has any.\n"
-            ":return: A list of ads in the collector matching the constraint.",
+            R"C0ND0R(
+            Query the contents of a condor_collector daemon. Returns a list of ClassAds that match the constraint parameter.
+
+            :param ad_type: The type of ClassAd to return. If not specified, the type will be ANY_AD.
+            :type ad_type: :class:`AdTypes`
+            :param constraint: A constraint for the collector query; only ads matching this constraint are returned.
+                If not specified, all matching ads of the given type are returned.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: A list of attributes to use for the projection.  Only these attributes, plus a few server-managed,
+                are returned in each :class:`~classad.ClassAd`.
+            :type projection: list[str]
+            :param list[str] statistics: Statistics attributes to include, if they exist for the specified daemon.
+            :return: A list of matching ads.
+            :rtype: list[:class:`~classad.ClassAd`]
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("ad_type")=ANY_AD, boost::python::arg("constraint")="", boost::python::arg("projection")=boost::python::list(), boost::python::arg("statistics")="")
 #else
@@ -464,14 +486,20 @@ void export_collector()
 #endif
              ))
         .def("directQuery", &Collector::directquery, directquery_overloads(
-            "Query a given daemon directly instead of returning a collector ad.\n"
-            "This may return more up-to-date or detailed information than what is in the collector.\n"
-            ":param daemon_type: Type of daemon; must be from the DaemonTypes enum.\n"
-            ":param name: Name of daemon to locate.  If not specified, it searches for the local daemon.\n"
-            ":param projection: A list of attributes; if specified, the returned ads will be "
-            "projected along these attributes.\n"
-            ":param statistics: A list of additional statistics to return, if the remote daemon has any.\n"
-            ":return: The ad of the matching daemon, from the daemon itself.\n",
+            R"C0ND0R(
+            Query the specified daemon directly for a ClassAd, instead of using the ClassAd from the ``condor_collector`` daemon.
+            Requires the client library to first locate the daemon in the collector, then querying the remote daemon.
+
+            :param daemon_type: Specifies the type of the remote daemon to query.
+            :type daemon_type: :class:`DaemonTypes`
+            :param str name: Specifies the daemon's name. If not specified, the local daemon is used.
+            :param projection: is a list of attributes requested, to obtain only a subset of the attributes from the daemon's :class:`~classad.ClassAd`.
+            :type projection: list[str]
+            :param statistics: Statistics attributes to include, if they exist for the specified daemon.
+            :type statistics: str
+            :return: The ad of the specified daemon.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("daemon_type"), boost::python::arg("name")="", boost::python::arg("projection")=boost::python::list(), boost::python::arg("statistics")="")
 #else
@@ -479,19 +507,38 @@ void export_collector()
 #endif
             ))
         .def("locate", &Collector::locate, locate_overloads(
-            "Query the collector for a particular daemon.\n"
-            ":param daemon_type: Type of daemon; must be from the DaemonTypes enum.\n"
-            ":param name: Name of daemon to locate.  If not specified, it searches for the local daemon.\n"
-            ":return: The ad of the corresponding daemon."))
+            (boost::python::arg("self"), boost::python::arg("daemon_type"), boost::python::arg("name")),
+            R"C0ND0R(
+            Query the ``condor_collector`` for a particular daemon.
+
+            :param daemon_type: The type of daemon to locate.
+            :type daemon_type: :class:`DaemonTypes`
+            :param str name: The name of daemon to locate. If not specified, it searches for the local daemon.
+            :return: a minimal ClassAd of the requested daemon, sufficient only to contact the daemon;
+                typically, this limits to the ``MyAddress`` attribute.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R"))
         .def("locateAll", &Collector::locateAll,
-            "Query the collector for all ads of a particular type.\n"
-            ":param daemon_type: Type of daemon; must be from the DaemonTypes enum.\n"
-            ":return: A list of matching ads.")
+            R"C0ND0R(
+            Query the condor_collector daemon for all ClassAds of a particular type. Returns a list of matching ClassAds.
+
+            :param daemon_type: The type of daemon to locate.
+            :type daemon_type: :class:`DaemonTypes`
+            :return: Matching ClassAds
+            :rtype: list[:class:`~classad.ClassAd`]
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("daemon_type")))
         .def("advertise", &Collector::advertise, advertise_overloads(
-            "Advertise a list of ClassAds into the collector.\n"
-            ":param ad_list: A list of ClassAds.\n"
-            ":param command: A command for the collector; defaults to UPDATE_AD_GENERIC;"
-            " other commands, such as UPDATE_STARTD_AD, may require reduced authorization levels.\n"
-            ":param use_tcp: When set to true, updates are sent via TCP."))
+            (boost::python::arg("self"), boost::python::arg("ad_list"), boost::python::arg("command")="UPDATE_AD_GENERIC", boost::python::arg("use_tcp")=true),
+            R"C0ND0R(
+            Advertise a list of ClassAds into the condor_collector.
+
+            :param ad_list: :class:`~classad.ClassAds` to advertise.
+            :type ad_list: list[:class:`~classad.ClassAds`]
+            :param str command: An advertise command for the remote ``condor_collector``.
+                It defaults to ``UPDATE_AD_GENERIC``.
+                Other commands, such as ``UPDATE_STARTD_AD``, may require different authorization levels with the remote daemon.
+            :param bool use_tcp: When set to ``True``, updates are sent via TCP.  Defaults to ``True``.
+            )C0ND0R"))
         ;
 }

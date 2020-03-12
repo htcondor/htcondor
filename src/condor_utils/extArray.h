@@ -75,7 +75,7 @@ ExtArray (int sz) : filler()
 	array = new Element[size];
 	if (!array)
 	{
-		dprintf (D_ALWAYS, "ExtArray: Out of memory");
+		dprintf (D_ALWAYS, "ExtArray: Out of memory\n");
 		exit (1);
 	}
 }
@@ -109,7 +109,7 @@ ExtArray (const ExtArray &old)
 	array = new Element[size];
 	if (!array) 
 	{
-		dprintf (D_ALWAYS, "ExtArray: Out of memory");
+		dprintf (D_ALWAYS, "ExtArray: Out of memory\n");
 		exit (1);
 	}
 
@@ -289,7 +289,7 @@ resize (int newsz) {
 	// check if memory allocation was successful
 	if (!newarray) 
 	{
-		dprintf (D_ALWAYS, "ExtArray: Out of memory");
+		dprintf (D_ALWAYS, "ExtArray: Out of memory\n");
 		exit (1);
 	}
 

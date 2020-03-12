@@ -31,8 +31,13 @@ class WaitForUserLog {
 		WaitForUserLog( const std::string & filename );
 		virtual ~WaitForUserLog();
 
+		void releaseResources();
 		bool isInitialized() { return reader.isInitialized() && trigger.isInitialized(); }
 		ULogEventOutcome readEvent( ULogEvent * & event, int timeout = -1, bool following = true );
+        const std::string & getFilename() const { return filename; }
+
+        size_t getOffset() const;
+        void setOffset( size_t offset );
 
 	private:
 		std::string filename;

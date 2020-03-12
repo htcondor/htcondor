@@ -76,13 +76,6 @@ Machine ClassAd Attributes
     *condor_startd* initializes, it checks for this support. If the
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
-    :index:`CheckpointPlatform<single: CheckpointPlatform; ClassAd machine attribute>`
-
-``CheckpointPlatform``
-    A string which opaquely encodes various aspects about a machine's
-    operating system, hardware, and kernel attributes. It is used to
-    identify systems where previously taken checkpoints for the standard
-    universe may resume.
     :index:`ClockDay<single: ClockDay; ClassAd machine attribute>`
 
 ``ClockDay``

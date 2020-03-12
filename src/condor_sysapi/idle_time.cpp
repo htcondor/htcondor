@@ -229,15 +229,6 @@ static char *UtmpName = "/etc/utmpx";
 static char *AltUtmpName = "/var/adm/utmpx";
 #undef UTMP_KIND
 #define UTMP_KIND utmpx
-#elif defined(HPUX11)
-/* actually, we use the xpg4.2 API to get the utmpx interface, not the 
-	files/method we normally would use. This prevents 32/64 bit
-	incompatibilities in the member fields of the utmpx structure.
-	- psilord 01/09/2002
-	*/
-#include <utmpx.h>
-#undef UTMP_KIND
-#define UTMP_KIND utmpx
 #else
 static char *UtmpName = "/etc/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
@@ -252,16 +243,11 @@ utmp_pty_idle_time( time_t now )
 	static time_t saved_now;
 	static time_t saved_idle_answer = -1;
 
-#if !defined(HPUX11)
-
 	/* freading structures directly out of a file is a pretty bad idea
 		exemplified by the fact that the elements in the utmp
 		structure may change size based upon if you are
 		compiling in 32 bit or 64 bit mode, but the byte lengths
-		of the fields in the utmp file might not.  So, for
-		everyone, but HPUX11, we'll leave it the old fread way,
-		but on HPUX11, we'll use the xpg4.2 utmpx API to get
-		this information out of the utmpx file. Maybe we should
+		of the fields in the utmp file might not. Maybe we should
 		figure out the sactioned ways on each platform to do
 		this if one exists. -psilord 01/09/2002 */
 
@@ -282,7 +268,7 @@ utmp_pty_idle_time( time_t now )
 
 		// fread returns number of items read, not bytes
 	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp) == 1) {
-#if defined(AIX) || defined(LINUX)
+#if defined(LINUX)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
 			if (utmp_info.ut_name[0] == '\0')
@@ -293,24 +279,6 @@ utmp_pty_idle_time( time_t now )
 		answer = MIN(tty_idle, answer);
 	}
 	fclose(fp);
-
-#else /* hpux 11 */
-
-	/* Here we use the xpg4.2 utmpx interface to process the utmpx entries
-		and figure out which ttys are assigned to user processes. */
-
-	struct UTMP_KIND *utmp_info;
-
-	while((utmp_info = getutxent()) != NULL)
-	{
-		if (utmp_info->ut_type != USER_PROCESS)
-			continue;
-
-		tty_idle = dev_idle_time(utmp_info->ut_line, now);
-		answer = MIN(tty_idle, answer);
-	}
-
-#endif
 
 	/* Here we check to see if we are about to return INT_MAX.  If so,
 	 * we recompute via the last pty access we knew about.  -Todd, 2/97 */
@@ -421,10 +389,6 @@ all_pty_idle_time( time_t now )
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
-#include <sys/types.h>
-#elif defined( HPUX )
-#include <sys/sysmacros.h>
-#elif defined( AIX )
 #include <sys/types.h>
 #else
 #include <sys/mkdev.h>

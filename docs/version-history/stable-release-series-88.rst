@@ -8,41 +8,136 @@ series.
 
 The details of each version are described below.
 
-Version 8.8.7
+Version 8.8.8
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.7 not yet released.
+-  HTCondor version 8.8.8 not yet released.
 
-.. HTCondor version 8.8.7 released on Month Date, 2019.
+.. HTCondor version 8.8.8 released on Month Date, 2020.
 
 New Features:
 
 -  None.
 
+Bugs Fixed:
+
+-  The *condor_annex* tool can again use Spot Fleets, after an unnannounced
+   API change by Amazon Web Services.
+   :ticket:`7489`
+
+-  Fixed a bug that prevented *condor_ssh_to_job* from working when the
+   job was in a container and there was a submit file argument
+   :ticket:`7506`
+
+-  The *condor_wait* tool is again as efficient when waiting forever as when
+   given a deadline on the command line.
+   :ticket:`7458`
+
+-  Fixed a problem where the Kerberos realm would not be set when there is no
+   mapping from domain to realm and security debugging is not enabled.
+   :ticket:`7492`
+
+Version 8.8.7
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.7 released on December 26, 2019.
+
+-  For *condor_annex* users: Amazon Web Services is deprecating support for
+   the Node.js 8.10 runtime used by *condor_annex*.  If you ran the *condor_annex*
+   setup command with a previous version of HTCondor, you should update your
+   setup to use the new runtime.  `Instructions <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUpgradeTheAnnexRuntime>`_
+   are available.
+   :ticket:`7400`
+
+New Features:
+
+-  The *condor_job_router* now applies routes in the order specified by the
+   configuration variable ``JOB_ROUTER_ROUTE_NAMES`` if it is defined.
+   :ticket:`7284`
+
+Bugs Fixed:
+
 -  Fixed a bug that caused *condor_submit* to fail when the remote option
-   was used and the remote Schedd was using a mapfile.
+   was used and the remote *condor_schedd*  was using a map file.
    :ticket:`7353`
 
--  None.
+-  The *condor_wait* command will now function properly when reading a
+   file on AFS that a process on another machine is writing.  This bug
+   may have manifested as the machine running *condor_wait* not seeing
+   writes to the log file.
+   :ticket:`7373`
+
+-  Fixed a packaging problem where the ``condor-bosco`` RPM
+   (which is required by the ``condor-all`` RPM)
+   could not installed on CentOS 8.
+   :ticket:`7426`
+
+-  Reverted an earlier change which prohibited certain characters in
+   DAGMan node names. The period (.) character is now allowed again.
+   We also added the ``DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS``
+   configuration option, which, when sent to true, allow any characters 
+   (even illegal ones) to be allowed in node names.
+   :ticket:`7403`
+
+-  Fixed a bug in the Python bindings where the user could not turn on
+   HTCondor daemons. We added ``DaemonsOn`` and ``DaemonOn`` to the
+   ``DaemonCommands`` enumeration.
+   :ticket:`7380`
+
+-  Fixed a bug in the Python bindings that could result in a job submission
+   failure with the report that there is no active transaction.
+   :ticket:`7417`
+
+-  Fixed a bug in the Python bindings that could result in intermingled messages if a multi-threaded Python program enabled
+   the HTCondor debug log.
+   :ticket:`7429`
+
+-  The *condor_update_machine_ad* tool now respects the ``-pool`` and
+   ``-name`` options.
+   :ticket:`7378`
+
+-  Fixed potential authentication failures between the *condor_schedd*
+   and *condor_startd* when multiple *condor_startd* s are using the
+   same shared port server. :ticket:`7391`
+
+-  Fixed a bug where the *condor_negotiator* would refuse to match an
+   IPv6-only *condor_startd* with a dual-stack *condor_schedd*.
+   :ticket:`7397`
+
+-  Fixed a bug that can cause the *condor_gridmanager* to exit and
+   restart repeatedly if a Condor-C (i.e. grid-type *condor*) job's
+   proxy file disappears.
+   :ticket:`7409`
+
+-  Fixed a bug that could cause the *condor_negotiator* to incorrectly
+   count the number of jobs that will fit in a partitionable slot when
+   ``NEGOTIATOR_DEPTH_FIRST`` is set to ``True``.
+   The incorrect count was especially bad when ``SLOT_WEIGHT`` was set
+   to a value other than the default of ``Cpus``.
+   :ticket:`7422`
+
+-  Python scripts included in the HTCondor release (e.g. *condor_top*)
+   work again on systems that don't have *python2* in their ``PATH``.
+   This was broken in HTCondor 8.8.6 and primarily affected macOS.
+   :ticket:`7436`
 
 Version 8.8.6
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.6 not yet released.
+- HTCondor version 8.8.6 released on November 13, 2019.
 
-.. HTCondor version 8.8.6 released on Month Date, 2019.
-
--  The classad builtin function regexMember has new semantics if
-   any member of the list is undefined.  Previously, if any member
-   of the list argument was undefined, it returned false.  Now, if
-   any member of the list is undefined, it never returns false.  If any
-   member of the list is undefined, and a defined member of the list matches,
-   the function returns true.  Otherwise, it returns undefined.
-   :ticket:`7243`
+-  Initial support for Enterprise Linux 8 (CentOS 8).
+   We recommend running HTCondor on systems with SELinux disabled.
+   If SELinux is enabled, the audit log will contain many AVC messages
+   in the audit log. Also, CREAM support is not present in this port.
+   If there is demand, we may support CREAM in the future.
+   :ticket:`7358`
 
 -  The default encryption algorithm used by HTCondor was changed from
    `Triple-DES` to `Blowfish`.
@@ -51,20 +146,41 @@ Release Notes:
    `Blowfish` is about six times faster and uses less memory than `Triple-DES`.
    :ticket:`7288`
 
+-  The ClassAd builtin function regexMember has new semantics if
+   any member of the list is undefined.  Previously, if any member
+   of the list argument was undefined, it returned false.  Now, if
+   any member of the list is undefined, it never returns false.  If any
+   member of the list is undefined, and a defined member of the list matches,
+   the function returns true.  Otherwise, it returns undefined.
+   :ticket:`7243`
+
 New Features:
 
 -  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
    files and prints out a summary of the values that differ from the defaults.
    :ticket:`7286`
 
+- Updated the BOSCO find platform script to download the binary tarball
+  via HTTPS instead of FTP.
+  :ticket:`7362`
+
 Bugs Fixed:
+
+- Fixed a memory leak in the SSL authentication method.
+  This memory leak could cause long running daemons, such as the
+  *condor_collector* to grow in size without bound.
+  :ticket:`7363`
+
+-  Fixed a bug where submitting more than one job in a single cluster
+   with the -spool option only actually submitted one job in the cluster.
+   :ticket:`7282`
 
 -  Fixed a bug where a misconfigured collector could forward ads to itself.
    The collector now recognizes more cases of this misconfiguration and
    properly ignores them.
    :ticket:`7229`
 
--  Fixed a bug where if the admin configured a SLOT_WEIGHT that evaluated
+-  Fixed a bug where if the administrator configured a SLOT_WEIGHT that evaluated
    to less than 1.0, it would round down to zero, and the user would not
    get any matches.
    :ticket:`7313`
@@ -72,10 +188,6 @@ Bugs Fixed:
 -  Fixed a bug where some tools (including *condor_submit*) would use the
    local daemon instead of failing if given a bogus hostname.
    :ticket:`7221`
-
--  Fixed a bug where submitting more than one job in a single cluster
-   with the -spool option only actually submitted one job in the cluster.
-   :ticket:`7282`
 
 -  Fixed a bug where ``COLLECTOR_REQUIREMENTS`` wrote too much to the log
    to be useful.  It now only writes warnings about rejected ads when
@@ -88,14 +200,16 @@ Bugs Fixed:
    credentials are used for some requests.
    :ticket:`7218`
 
--  Fixed a bug where the classad function bool() would return the wrong
+-  Fixed a bug where the ClassAd function bool() would return the wrong
    value when passed a string.
    :ticket:`7253`
 
--  *condor_preen* will no longer query the *condor_schedd* the whole time it is
-   preening the spool directory.  Instead, it now builds a list of potentially
-   obsolete files and then queries the *condor_schedd* once to find out which of
-   these files are associated with jobs still in the Schedd.
+-  Fixed a bug where *condor_preen* may mistakenly remove files from the
+   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive. 
+   :ticket:`7320`
+
+-  Fixed a bug where *condor_preen* could render the *condor_schedd* unresponsive once a day
+   for several minutes if there are a lot of job files spooled in the spool directory.
    :ticket:`7320`
 
 -  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
@@ -107,8 +221,9 @@ Bugs Fixed:
   the configuration was changed to not use the *condor_shared_port* daemon.
   :ticket:`7335`
 
-- Fixed a memory leak in the SSL authentication method.
-  :ticket:`7363`
+- Fixed a bug where using a custom print format with *condor_q* would not
+  produce any output when doing aggregation.
+  :ticket:`7290`
 
 Version 8.8.5
 -------------
@@ -265,11 +380,11 @@ New Features:
    significantly improve *condor_dagman* memory footprint, parse time and
    submit speed. :ticket:`7108`
 
--  Dagman can now submit directly to the Schedd without using *condor_submit*
+-  Dagman can now submit directly to the *condor_schedd*  without using *condor_submit*
    This provides a workaround for slow submission rates for very large DAGs.
    This is controlled by a new configuration variable ``DAGMAN_USE_CONDOR_SUBMIT``
    which defaults to ``True``.  When it is ``False``, Dagman will contact the
-   local Schedd directly to submit jobs. :ticket:`6974`
+   local *condor_schedd*  directly to submit jobs. :ticket:`6974`
 
 -  The HTCondor startd now advertises ``HasSelfCheckpointTransfers``, so that
    pools with 8.8.4 (and later) stable-series startds can run jobs submitted

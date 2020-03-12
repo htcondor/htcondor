@@ -35,9 +35,9 @@ class TestChirp(htcondor_tests.WithDaemons):
             os.unlink(output_file)
         ad = classad.parse(open("tests/delayed_submit.ad"))
         ad["Arguments"] = "--prefix=%s --type=delayed --shouldwork=%s" % (prefix, str(shouldwork))
-        if wantupdate == True:
+        if wantupdate:
             ad["WantDelayedUpdates"] = True
-        elif wantupdate == False:
+        elif not wantupdate:
             ad["WantDelayedUpdates"] = False
         cluster = self.runJob(ad)
         result_ad = self.getLastHistory(cluster)
@@ -57,9 +57,9 @@ class TestChirp(htcondor_tests.WithDaemons):
             os.unlink(output_file)
         ad = classad.parse(open("tests/delayed_submit.ad"))
         ad["Arguments"] = "--type=io --shouldwork=%s" % str(shouldwork)
-        if wantio == True:
+        if wantio:
             ad["WantIOProxy"] = True
-        elif wantio == False:
+        elif not wantio:
             ad["WantIOProxy"] = False
         cluster = self.runJob(ad)
         result_ad = self.getLastHistory(cluster)
@@ -74,13 +74,13 @@ class TestChirp(htcondor_tests.WithDaemons):
             os.unlink(output_file)
         ad = classad.parse(open("tests/delayed_submit.ad"))
         ad["Arguments"] = "--type=update --prefix=%s --shouldwork=%s" % (prefix, str(shouldwork))
-        if wantio == True:
+        if wantio:
             ad["WantIOProxy"] = True
-        elif wantio == False:
+        elif not wantio:
             ad["WantIOProxy"] = False
-        if wantupdate == True:
+        if wantupdate:
             ad["WantRemoteUpdates"] = True
-        elif wantupdate == False:
+        elif not wantupdate:
             ad["WantRemoteUpdates"] = False
         cluster = self.runJob(ad)
         result_ad = self.getLastHistory(cluster)

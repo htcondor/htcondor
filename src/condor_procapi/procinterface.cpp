@@ -33,7 +33,7 @@ ProcAd::~ProcAd() {
 
   /* getProcAd returns a ClassAd containing information about one process.
      Information can be retrieved on any process owned by the same user, 
-     and on some systems (Linux, HPUX, Sol2.6) information can be gathered 
+     and on some systems (Linux, Sol2.6) information can be gathered 
      from all processes.  See the ProcInfo struct definitions in procapi.h
      to see the exact definitions of what gets returned.  */
 ClassAd * ProcAd::getProcAd ( pid_t pid ) {
@@ -86,38 +86,26 @@ ClassAd * ProcAd::getFamilyAd ( pid_t fatherpid, PidEnvID *penvid ) {
 
 ClassAd * ProcAd::dumpToAd( piPTR pi ) {
 
-  char line[128];
   ClassAd *ad = new ClassAd;
 
   SetMyTypeName( *ad, "PROCESS_INFORMATION" );
   SetTargetTypeName( *ad, "ENQUIRING_MINDS_WANT_TO_KNOW" );
 
-  sprintf ( line, "THIS_PID = %d", pi->pid );
-  ad->Insert(line);
-  sprintf ( line, "PARENT_PID = %ld", (long)pi->ppid );
-  ad->Insert(line);
-  sprintf ( line, "IMAGE_SIZE = %ld", (long)pi->imgsize );
-  ad->Insert(line);
-  sprintf ( line, "RESIDENT_SET_SIZE = %ld", (long)pi->rssize );
-  ad->Insert(line);
+  ad->Assign("THIS_PID", pi->pid );
+  ad->Assign("PARENT_PID", (long)pi->ppid );
+  ad->Assign("IMAGE_SIZE", (long)pi->imgsize );
+  ad->Assign("RESIDENT_SET_SIZE", (long)pi->rssize );
 #if HAVE_PSS
   if( pi->pssize_available ) {
-	  sprintf ( line, "PROPORTIONAL_SET_SIZE = %ld", (long)pi->pssize );
-	  ad->Insert(line);
+	  ad->Assign("PROPORTIONAL_SET_SIZE", (long)pi->pssize );
   }
 #endif
-  sprintf ( line, "MAJOR_PAGE_FAULTS = %ld", (long)pi->majfault );
-  ad->Insert(line);
-  sprintf ( line, "MINOR_PAGE_FAULTS = %ld", (long)pi->minfault );
-  ad->Insert(line);
-  sprintf ( line, "USER_TIME = %ld", (long)pi->user_time );
-  ad->Insert(line);
-  sprintf ( line, "SYSTEM_TIME = %ld", (long)pi->sys_time );
-  ad->Insert(line);
-  sprintf ( line, "PROCESS_AGE = %ld", (long)pi->age );
-  ad->Insert(line);
-  sprintf ( line, "PERCENT_CPU_USAGE = %6.2f",  pi->cpuusage );
-  ad->Insert(line);
+  ad->Assign("MAJOR_PAGE_FAULTS", (long)pi->majfault );
+  ad->Assign("MINOR_PAGE_FAULTS", (long)pi->minfault );
+  ad->Assign("USER_TIME", (long)pi->user_time );
+  ad->Assign("SYSTEM_TIME", (long)pi->sys_time );
+  ad->Assign("PROCESS_AGE", (long)pi->age );
+  ad->Assign("PERCENT_CPU_USAGE",  pi->cpuusage );
 
   return ad;
 }

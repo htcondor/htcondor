@@ -185,7 +185,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 
-	int bool_value;
+	bool bool_value;
 	char buff[4096];
 	std::string buff2;
 	std::string iwd;
@@ -385,9 +385,9 @@ CreamJob::CreamJob( ClassAd *classad )
 			buff2 += job_output;
 			localOutput = strdup( buff2.c_str() );
 
-			bool_value = 0;
+			bool_value = false;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
-			streamOutput = (bool_value != 0);
+			streamOutput = bool_value;
 			stageOutput = !streamOutput;
 		}
 	}
@@ -406,9 +406,9 @@ CreamJob::CreamJob( ClassAd *classad )
 			buff2 += job_error;
 			localError = strdup( buff2.c_str() );
 
-			bool_value = 0;
+			bool_value = false;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
-			streamError = (bool_value != 0);
+			streamError = bool_value;
 			stageError = !streamError;
 		}
 	}
@@ -420,7 +420,7 @@ CreamJob::CreamJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -474,12 +474,11 @@ void CreamJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int CreamJob::ProxyCallback()
+void CreamJob::ProxyCallback()
 {
 	if ( gmState == GM_DELEGATE_PROXY || gmState == GM_PROXY_EXPIRED ) {
 		SetEvaluateState();
 	}
-	return 0;
 }
 
 void CreamJob::doEvaluateState()
@@ -490,8 +489,6 @@ void CreamJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -783,8 +780,7 @@ void CreamJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CLEANUP;
 			} else {
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -942,8 +938,7 @@ void CreamJob::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -1129,7 +1124,7 @@ void CreamJob::doEvaluateState()
 				   remoteState == CREAM_JOB_STATE_ABORTED ||
 				   remoteState == CREAM_JOB_STATE_DONE_FAILED ) 
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 
+					 && wantResubmit == false 
 					 && doResubmit == 0 ) {
 				if(remoteJobId == NULL) {
 					dprintf(D_FULLDEBUG,
@@ -1153,10 +1148,10 @@ void CreamJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
-				wantResubmit = 0;
+				wantResubmit = false;
 				dprintf(D_ALWAYS,
 						"(%d.%d) Resubmitting to CREAM because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
@@ -1190,10 +1185,10 @@ void CreamJob::doEvaluateState()
 			
 			int stage_time;
 			if ( jobAd->LookupInteger( ATTR_STAGE_IN_START, stage_time ) ) {
-				jobAd->Assign( ATTR_STAGE_IN_START, "Undefined" );
+				jobAd->AssignExpr( ATTR_STAGE_IN_START, "Undefined" );
 			}
 			if ( jobAd->LookupInteger( ATTR_STAGE_IN_FINISH, stage_time ) ) {
-				jobAd->Assign( ATTR_STAGE_IN_FINISH, "Undefined" );
+				jobAd->AssignExpr( ATTR_STAGE_IN_FINISH, "Undefined" );
 			}
 
 			if ( wantRematch ) {
@@ -1202,7 +1197,7 @@ void CreamJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 				// Set ad attributes so the schedd finds a new match.
-				int dummy;
+				bool dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					jobAd->Assign( ATTR_JOB_MATCHED, false );
 					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -1224,10 +1219,7 @@ void CreamJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			const char *name;
-			ExprTree *expr;
-			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr(name, expr) ) {
+			if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -1488,10 +1480,10 @@ char *CreamJob::buildSubmitAd()
 
 		isb.insert( tmp_str2.c_str() );
 
-		submitAd.Assign( ATTR_EXECUTABLE, tmp_str2.c_str() );
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str2 );
 	} else {
 		//PRE-STAGED
-		submitAd.Assign( ATTR_EXECUTABLE, tmp_str.c_str() );
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str );
 	}
 
 		//ARGUMENTS
@@ -1526,12 +1518,12 @@ char *CreamJob::buildSubmitAd()
 			tmp_str2 = condor_basename( tmp_str.c_str() );
 			isb.insert(condor_basename( tmp_str2.c_str() ) );
 			
-			submitAd.Assign( ATTR_STD_INPUT, tmp_str2.c_str() );
+			submitAd.Assign( ATTR_STD_INPUT, tmp_str2 );
 		} else {
 			//PRE-STAGED. Be careful, if stdin is not found in WN, job
 			// will not complete successfully.
 			if ( tmp_str[0] == '/' ) { //Only add absolute path
-				submitAd.Assign( ATTR_STD_INPUT, tmp_str.c_str() );
+				submitAd.Assign( ATTR_STD_INPUT, tmp_str );
 			}
 		}
 	}
@@ -1567,11 +1559,11 @@ char *CreamJob::buildSubmitAd()
 
 		if (result) {
 			tmp_str2 = condor_basename( tmp_str.c_str() );
-			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str2.c_str() );
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str2 );
 
 			osb.insert( condor_basename( tmp_str2.c_str() ) );
 		} else {
-			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str.c_str() );
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str );
 		}
 	}
 
@@ -1583,11 +1575,11 @@ char *CreamJob::buildSubmitAd()
 
 		if (result) {
 			tmp_str2 = condor_basename( tmp_str.c_str() );
-			submitAd.Assign( ATTR_STD_ERROR, tmp_str2.c_str() );
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str2 );
 
 			osb.insert( condor_basename( tmp_str2.c_str() ) );
 		} else {
-			submitAd.Assign( ATTR_STD_ERROR, tmp_str.c_str() );
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str );
 		}
 	}
 
@@ -1595,17 +1587,13 @@ char *CreamJob::buildSubmitAd()
 		//need to have a value
 		// TODO This needs to be extracted from the VOMS extension in the
 		//   job's credential.
-//	sprintf(buf, "%s = \"%s\"", ATTR_VIR_ORG, "");
-	formatstr(buf, "%s = \"%s\"", ATTR_VIR_ORG, "ignored");
-	submitAd.Insert(buf.c_str());
+	submitAd.Assign(ATTR_VIR_ORG, "ignored");
 	
 		//BATCHSYSTEM
-	formatstr(buf, "%s = \"%s\"", ATTR_BATCH_SYSTEM, resourceBatchSystemString);
-	submitAd.Insert(buf.c_str());
+	submitAd.Assign(ATTR_BATCH_SYSTEM, resourceBatchSystemString);
 	
 		//QUEUENAME
-	formatstr(buf, "%s = \"%s\"", ATTR_QUEUE_NAME, resourceQueueString);
-	submitAd.Insert(buf.c_str());
+	submitAd.Assign(ATTR_QUEUE_NAME, resourceQueueString);
 
 	submitAd.Assign("outputsandboxbasedesturi", "gsiftp://localhost");
 

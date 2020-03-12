@@ -75,9 +75,9 @@ void ClassAdLibraryVersion(string &version_string)
     return;
 }
 
-static References &getSpecialAttrNames()
+static inline ReferencesBySize &getSpecialAttrNames()
 {
-	static References specialAttrNames;
+	static ReferencesBySize specialAttrNames;
 	static bool specialAttrNames_inited = false;
 	if ( !specialAttrNames_inited ) {
 		specialAttrNames.insert( ATTR_TOPLEVEL );
@@ -115,7 +115,7 @@ ClassAd::
 ClassAd ()
 {
 	parentScope = NULL;
-	EnableDirtyTracking();
+	do_dirty_tracking = false;
 	chained_parent_ad = NULL;
 	alternateScope = NULL;
 }
@@ -561,6 +561,65 @@ bool ClassAd::InsertViaCache( std::string& name, const std::string & rhs, bool l
 	return Insert(name, tree);
 }
 
+bool
+ClassAd::Insert(const std::string &str)
+{
+	// this is not the optimial path, it would be better to
+	// use either the 2 argument insert, or the const char* form below
+	return this->Insert(str.c_str());
+}
+
+bool
+ClassAd::Insert( const char *str )
+{
+	std::string attr;
+	const char * rhs;
+
+	while (isspace(*str)) ++str;
+
+	// We don't support quoted attribute names in this old ClassAds method.
+	if ( *str == '\'' ) {
+		return false;
+	}
+
+	const char * peq = strchr(str, '=');
+	if ( ! peq) return false;
+
+	const char * p = peq;
+	while (p > str && ' ' == p[-1]) --p;
+	attr.assign(str, p-str);
+
+	if ( attr.empty() ) {
+		return false;
+	}
+
+	// set rhs to the first non-space character after the =
+	p = peq+1;
+	while (' ' == *p) ++p;
+	rhs = p;
+
+	return InsertViaCache(attr, rhs);
+}
+
+bool ClassAd::
+AssignExpr(const std::string &name, const char *value)
+{
+	ClassAdParser par;
+	ExprTree *expr = NULL;
+	par.SetOldClassAd( true );
+
+	if ( value == NULL ) {
+		return false;
+	}
+	if ( !par.ParseExpression( value, expr, true ) ) {
+		return false;
+	}
+	if ( !Insert( name, expr ) ) {
+		delete expr;
+		return false;
+	}
+	return true;
+}
 
 bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 {
@@ -581,9 +640,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	// parent of the expression is this classad
 	tree->SetParentScope( this );
 
-
-	//pair<AttrList::iterator,bool> insert_result = attrList.insert( AttrList::value_type(attrName,tree) );
-	pair<AttrList::iterator,bool> insert_result = attrList.insert( std::make_pair(attrName, tree) );
+	pair<AttrList::iterator,bool> insert_result = attrList.emplace(attrName, tree);
 	if ( ! insert_result.second) {
 			// replace existing value
 		delete insert_result.first->second;
@@ -607,8 +664,7 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 	if (ppv) delete ppv;
 	ppv = lit;
 #else
-	//pair<AttrList::iterator,bool> insert_result = attrList.insert( AttrList::value_type(name,lit) );
-	pair<AttrList::iterator,bool> insert_result = attrList.insert( std::make_pair(name, lit) );
+	pair<AttrList::iterator,bool> insert_result = attrList.emplace(name, lit);
 
 	if( !insert_result.second ) {
 			// replace existing value
@@ -699,9 +755,7 @@ LookupInScope( const string &name, const ClassAd *&finalScope ) const
 int ClassAd::
 LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 {
-	extern int exprHash( const ExprTree* const&, int );
 	const ClassAd *current = this, *superScope;
-	Value			val;
 
 	expr = NULL;
 
@@ -965,8 +1019,6 @@ Copy( ) const
 	newAd->parentScope = parentScope;
 	newAd->chained_parent_ad = chained_parent_ad;
 
-	newAd->DisableDirtyTracking();
-
 	AttrList::const_iterator	itr;
 	for( itr=attrList.begin( ); itr != attrList.end( ); itr++ ) {
 		if( !( tree = itr->second->Copy( ) ) ) {
@@ -977,7 +1029,7 @@ Copy( ) const
 		}
 		newAd->Insert(itr->first,tree);
 	}
-	newAd->EnableDirtyTracking();
+
 	return newAd;
 }
 

@@ -8,7 +8,7 @@ VERSION="Version 2019/10/31 (19:00)"      #
 
 CONDOR_LOG=`condor_config_val LOG`
 CONDOR_LIBEXEC=`condor_config_val LIBEXEC`
-CREDDIR=`condor_config_val SEC_CREDENTIAL_DIRECTORY`
+CREDDIR=`condor_config_val SEC_CREDENTIAL_DIRECTORY_KRB`
 
 LOGFILE="$CONDOR_LOG/CredMonLog"
 if [[ ! -f $LOGFILE ]]; then

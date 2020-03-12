@@ -24,7 +24,8 @@
 #include "MapFile.h"
 
 #ifdef USE_MAPFILE_V2
-#include <_unordered_map.h>
+
+#include <unordered_map>
 
 // THEORY OF OPERATION
 //
@@ -61,7 +62,7 @@ struct hash_yourstring {
 	}
 };
 
-typedef _unordered_map<const YourString, const char *, hash_yourstring> LITERAL_HASH;
+typedef std::unordered_map<const YourString, const char *, hash_yourstring> LITERAL_HASH;
 
 class CanonicalMapRegexEntry;
 class CanonicalMapHashEntry;

@@ -31,6 +31,8 @@
 #include "condor_netdb.h"
 
 #include "misc_utils.h"
+#include "utc_time.h"
+#include "ToE.h"
 
 //added by Ameet
 #include "condor_environ.h"
@@ -38,13 +40,8 @@
 #include "condor_debug.h"
 //--------------------------------------------------------
 
-#ifdef WIN32
- #if ! defined timegm
-  // timegm is the Linux name for the gm version of mktime, on Windows it is called _mkgmtime
-  #define timegm _mkgmtime
-  auto __inline localtime_r(const time_t*time, struct tm*result) { return localtime_s(result, time); }
-  auto __inline gmtime_r(const time_t*time, struct tm*result) { return gmtime_s(result, time); }
- #endif
+#ifndef WIN32
+#include <uuid/uuid.h>
 #endif
 
 // define this to turn off seeking in the event reader methods
@@ -53,10 +50,7 @@
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
-
-//extern ClassAd *JobAd;
-
-const char ULogEventNumberNames[][30] = {
+const char ULogEventNumberNames[][41] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -97,6 +91,12 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_FACTORY_PAUSED",			// Factory paused
 	"ULOG_FACTORY_RESUMED",			// Factory resumed
 	"ULOG_NONE",					// None (try again later)
+	"ULOG_FILE_TRANSFER",			// File transfer
+	"ULOG_RESERVE_SPACE",			// Space reserved
+	"ULOG_RELEASE_SPACE",			// Space released
+	"ULOG_FILE_COMPLETE",			// File transfer has completed successfully
+	"ULOG_FILE_USED",				// File in reuse dir utilized
+	"ULOG_FILE_REMOVED",			// File in reuse dir removed.
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -225,16 +225,34 @@ instantiateEvent (ULogEventNumber event)
 		return new PreSkipEvent;
 
 	case ULOG_CLUSTER_SUBMIT:
-		return new FactorySubmitEvent;
+		return new ClusterSubmitEvent;
 
 	case ULOG_CLUSTER_REMOVE:
-		return new FactoryRemoveEvent;
+		return new ClusterRemoveEvent;
 
 	case ULOG_FACTORY_PAUSED:
 		return new FactoryPausedEvent;
 
 	case ULOG_FACTORY_RESUMED:
 		return new FactoryResumedEvent;
+
+	case ULOG_FILE_TRANSFER:
+		return new FileTransferEvent;
+
+	case ULOG_RESERVE_SPACE:
+		return new ReserveSpaceEvent;
+
+	case ULOG_RELEASE_SPACE:
+		return new ReleaseSpaceEvent;
+
+	case ULOG_FILE_COMPLETE:
+		return new FileCompleteEvent;
+
+	case ULOG_FILE_USED:
+		return new FileUsedEvent;
+
+	case ULOG_FILE_REMOVED:
+		return new FileRemovedEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
@@ -249,8 +267,7 @@ ULogEvent::ULogEvent(void)
 {
 	eventNumber = (ULogEventNumber) - 1;
 	cluster = proc = subproc = -1;
-
-	(void) time ((time_t *)&eventclock);
+	eventclock = condor_gettimestamp(event_usec);
 }
 
 
@@ -278,9 +295,10 @@ int ULogEvent::getEvent (FILE *file, bool & got_sync_line)
 			bool bang = *opt == '!'; if (bang) ++opt;
 		#define DOOPT(tag,flag) if (YourStringNoCase(tag) == opt) { if (bang) { opts &= ~(flag); } else { opts |= (flag); } }
 			DOOPT("XML", formatOpt::XML)
+			DOOPT("JSON", formatOpt::JSON)
 			DOOPT("ISO_DATE", formatOpt::ISO_DATE)
 			DOOPT("UTC", formatOpt::UTC)
-			DOOPT("SUB_SECOND", formatOpt::USEC)
+			DOOPT("SUB_SECOND", formatOpt::SUB_SECOND)
 		#undef DOOPT
 			if (YourStringNoCase("LEGACY") == opt) {
 				if (bang) {
@@ -288,7 +306,7 @@ int ULogEvent::getEvent (FILE *file, bool & got_sync_line)
 					opts |= formatOpt::ISO_DATE;
 				} else {
 					// turn off the non-legacy options
-					opts &= ~(formatOpt::ISO_DATE | formatOpt::UTC | formatOpt::UTC);
+					opts &= ~(formatOpt::ISO_DATE | formatOpt::UTC | formatOpt::SUB_SECOND);
 				}
 			}
 		}
@@ -350,7 +368,7 @@ ULogEvent::readHeader (FILE *file)
 	// (broken) parsing algorithm to parse it
 	if (datebuf[2] == '/') {
 		// this will set -1 into all fields of dt that are not set by time parsing code
-		iso8601_to_time(&datebuf[11], &dt, &is_utc);
+		iso8601_to_time(&datebuf[11], &dt, &event_usec, &is_utc);
 		dt.tm_mon = atoi(datebuf);
 		if (dt.tm_mon <= 0) { // this detects completely garbage dates because atoi returns 0 if there are no numbers to parse
 			return 0;
@@ -362,7 +380,7 @@ ULogEvent::readHeader (FILE *file)
 		// so we can turn this into a full iso8601 datetime by stuffing a T inbetween
 		datebuf[10] = 'T';
 		// this will set -1 into all fields of dt that are not set by date/time parsing code
-		iso8601_to_time(datebuf, &dt, &is_utc);
+		iso8601_to_time(datebuf, &dt, &event_usec, &is_utc);
 	}
 	// check for a bogus date stamp
 	if (dt.tm_mon < 0 || dt.tm_mon > 11 || dt.tm_mday < 0 || dt.tm_mday > 32 || dt.tm_hour < 0 || dt.tm_hour > 24) {
@@ -392,6 +410,8 @@ ULogEvent::readHeader (FILE *file)
 
 bool ULogEvent::formatHeader( std::string &out, int options )
 {
+	out.reserve(1024);
+
 	// print event number and job id.
 	int retval = formatstr_cat(out, "%03d (%03d.%03d.%03d) ", eventNumber, cluster, proc, subproc);
 	if (retval < 0)
@@ -417,6 +437,7 @@ bool ULogEvent::formatHeader( std::string &out, int options )
 			lt->tm_hour, lt->tm_min,
 			lt->tm_sec);
 	}
+	if (options & formatOpt::SUB_SECOND) formatstr_cat(out, ".%03d", (int)(event_usec / 1000));
 	if (options & formatOpt::UTC) out += "Z";
 	out += " ";
 
@@ -624,16 +645,34 @@ ULogEvent::toClassAd(bool event_time_utc)
 		SetMyTypeName(*myad, "AttributeUpdateEvent");
 		break;
 	case ULOG_CLUSTER_SUBMIT:
-		SetMyTypeName(*myad, "FactorySubmitEvent");
+		SetMyTypeName(*myad, "ClusterSubmitEvent");
 		break;
 	case ULOG_CLUSTER_REMOVE:
-		SetMyTypeName(*myad, "FactoryRemoveEvent");
+		SetMyTypeName(*myad, "ClusterRemoveEvent");
 		break;
 	case ULOG_FACTORY_PAUSED:
 		SetMyTypeName(*myad, "FactoryPausedEvent");
 		break;
 	case ULOG_FACTORY_RESUMED:
 		SetMyTypeName(*myad, "FactoryResumedEvent");
+		break;
+	case ULOG_FILE_TRANSFER:
+		SetMyTypeName(*myad, "FileTransferEvent");
+		break;
+	case ULOG_RESERVE_SPACE:
+		SetMyTypeName(*myad, "ReserveSpaceEvent");
+		break;
+	case ULOG_RELEASE_SPACE:
+		SetMyTypeName(*myad, "ReleaseSpaceEvent");
+		break;
+	case ULOG_FILE_COMPLETE:
+		SetMyTypeName(*myad, "FileCompleteEvent");
+		break;
+	case ULOG_FILE_USED:
+		SetMyTypeName(*myad, "FileUsedEvent");
+		break;
+	case ULOG_FILE_REMOVED:
+		SetMyTypeName(*myad, "FileRemovedEvent");
 		break;
 	default:
 		SetMyTypeName(*myad, "FutureEvent");
@@ -646,16 +685,13 @@ ULogEvent::toClassAd(bool event_time_utc)
 	} else {
 		localtime_r(&eventclock, &eventTime);
 	}
-	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
-										 ISO8601_DateAndTime, event_time_utc);
-	if( eventTimeStr ) {
-		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
-			delete myad;
-			free( eventTimeStr );
-			return NULL;
-		}
-		free( eventTimeStr );
-	} else {
+	// print the time, including milliseconds if the event_usec is non-zero
+	char str[ISO8601_DateAndTimeBufferMax];
+	unsigned int sub_sec = event_usec / 1000;
+	int sub_digits = event_usec ? 3 : 0;
+	time_to_iso8601(str, eventTime, ISO8601_ExtendedFormat,
+		ISO8601_DateAndTime, event_time_utc, sub_sec, sub_digits);
+	if ( !myad->InsertAttr("EventTime", str) ) {
 		delete myad;
 		return NULL;
 	}
@@ -696,7 +732,7 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	if( ad->LookupString("EventTime", &timestr) ) {
 		bool is_utc = false;
 		struct tm eventTime;
-		iso8601_to_time(timestr, &eventTime, &is_utc);
+		iso8601_to_time(timestr, &eventTime, &event_usec, &is_utc);
 		if (is_utc) {
 			eventclock = timegm(&eventTime);
 		} else {
@@ -710,178 +746,141 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 }
 
 
-// class is used to build up Usage/Request/Allocated table for each 
+// class is used to build up Usage/Request/Allocated table for each
 // Partitionable resource before we print out the table.
-class  SlotResTermSumy {
-public:
-	std::string use;
-	std::string req;
-	std::string alloc;
-	std::string assigned;
+class SlotResTermSumy {
+	public:
+		std::string use;
+		std::string req;
+		std::string alloc;
+		std::string assigned;
 };
 
-// return true if the input consts solely of digits
-static bool is_bare_integer(const char * str) {
-	if ( ! str) return false;
-	// skip all leading digits
-	while (isdigit(*str)) ++str;
-	// return true if the next char is \0, false otherwise
-	return !*str;
+typedef std::map<std::string, SlotResTermSumy, classad::CaseIgnLTStr > UsageMap;
+
+static bool is_bare_integer( const std::string & s ) {
+	if( s.empty() ) { return false; }
+
+	const char * str = s.c_str();
+	while (isdigit(*str)) { ++str; }
+	return *str == '\0';
 }
 
-// function to format the usage ClassAd for the userlog
-// The usage ClassAd should contain attrbutes that match the pattern
-// "<RES>", "Request<RES>", or "<RES>Usage", where <RES> can be
-// Cpus, Disk, Memory, or others as defined for use by the ProvisionedResources
-// attribute.
+//
+// The usage ClassAd contains attributes that match the pattern "<RES>",
+// "Request<RES>", "<RES>Usage", "<RES>AverageUsage",
+// where <RES> can be CPUs, Disk, Memory, or another resource as defined by
+// the ProvisionedResources attribute.  Note that this function does NOT use
+// the contents of that attribute.
 //
 static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 {
-	if ( ! pusageAd)
-		return;
+	if (! pusageAd) { return; }
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
 
-	std::map<std::string, SlotResTermSumy*> useMap;
-	int has_fractional_mask = 0;
+	UsageMap useMap;
+	bool reqHFP = false, assignedHFP = false, allocHFP = false, useHFP = false;
+	for( auto iter = pusageAd->begin(); iter != pusageAd->end(); ++iter ) {
+		// Compute the string value.
+		std::string value;
+		classad::Value cVal;
+		double rVal, iVal;
 
-	for (classad::ClassAd::iterator iter = pusageAd->begin();
-		 iter != pusageAd->end();
-		 iter++) {
-		int ixu = (int)iter->first.size() - 5; // size "Usage" == 5
-		std::string key = "";
-		int efld = -1;
-		if (0 == iter->first.find("Request")) {
-			key = iter->first.substr(7); // size "Request" == 7
-			efld = 1;
-		} else if (ixu > 0 && 0 == iter->first.substr(ixu).compare("Usage")) {
-			efld = 0;
-			key = iter->first.substr(0,ixu);
-		} else if( iter->first.find( "Assigned" ) == 0 ) {
-			key = iter->first.substr( 8 ); // size "Assigned" == 8
-			efld = 3;
-		} else /*if (useMap[iter->first])*/ { // Allocated
-			efld = 2;
-			key = iter->first;
-		}
-
-		if (key.size() != 0) {
-			title_case(key); // capitalize it to make it consistent for map lookup.
-			SlotResTermSumy * psumy = useMap[key];
-			if ( ! psumy) {
-				psumy = new SlotResTermSumy();
-				ASSERT(psumy);
-				useMap[key] = psumy;
-				//formatstr_cat(out, "\tadded %x for key %s\n", psumy, key.c_str());
+		bool hasFractionalPart = false;
+		if( ExprTreeIsLiteral(iter->second, cVal) && cVal.IsRealValue(rVal) ) {
+			// show fractional values only if there actually *are* fractional
+			// values; format doubles with %.2f
+			if( modf( rVal, &iVal ) > 0.0 ) {
+				formatstr( value, "%.2f", rVal );
+				hasFractionalPart = true;
 			} else {
-				//formatstr_cat(out, "\tfound %x for key %s\n", psumy, key.c_str());
-			}
-			std::string val = "";
-			classad::Value cval;
-			double rval, tval;
-			if (ExprTreeIsLiteral(iter->second, cval) && cval.IsRealValue(rval)) {
-				if (modf(rval,&tval) > 0.0) {
-					// show fractional values only if there actually *are* fractional values
-					// format doubles with %.2f
-					formatstr(val, "%.2f", rval);
-					has_fractional_mask |= 1<<efld;
-				} else {
-				#if 1 
-					formatstr(val, "%lld", (long long)tval);
-				#else // for testing
-					formatstr(val, "%.2f", rval);
-					has_fractional_mask |= 1<<efld;
-				#endif
-				}
-			} else {
-				unp.Unparse(val, iter->second);
-			}
-
-
-			//formatstr_cat(out, "\t%-8s \t= %4s\t(efld%d, key = %s)\n", iter->first.c_str(), val.c_str(), efld, key.c_str());
-
-			switch (efld)
-			{
-				case 0: // Usage
-					psumy->use = val;
-					break;
-				case 1: // Request
-					psumy->req = val;
-					break;
-				case 2:	// Allocated
-					psumy->alloc = val;
-					break;
-				case 3: // Assigned
-					psumy->assigned = val;
-					break;
+				formatstr( value, "%lld", (long long)iVal);
 			}
 		} else {
-			std::string val = "";
-			unp.Unparse(val, iter->second);
-			formatstr_cat(out, "\t%s = %s\n", iter->first.c_str(), val.c_str());
+			unp.Unparse( value, iter->second );
+		}
+
+		// Determine the attribute name.
+		std::string resourceName;
+		std::string attributeName = iter->first;
+		if( starts_with( attributeName, "Request" ) ) {
+			resourceName = attributeName.substr(7);
+			useMap[resourceName].req = value;
+			reqHFP |= hasFractionalPart;
+		} else if( starts_with( attributeName, "Assigned" ) ) {
+			resourceName = attributeName.substr(8);
+			useMap[resourceName].assigned = value;
+			assignedHFP = hasFractionalPart;
+		} else if( ends_with( attributeName, "AverageUsage" ) ) {
+			resourceName = attributeName.substr( 0, attributeName.size() - 12 );
+			useMap[resourceName].use = value;
+			useHFP |= hasFractionalPart;
+		} else if( ends_with( attributeName, "Usage" ) ) {
+			resourceName = attributeName.substr( 0, attributeName.size() - 5 );
+			useMap[resourceName].use = value;
+			useHFP |= hasFractionalPart;
+		} else {
+			resourceName = attributeName;
+			useMap[resourceName].alloc = value;
+			allocHFP |= hasFractionalPart;
+		}
+
+		if( resourceName.empty() ) {
+			formatstr_cat( out, "\t%s = %s\n", iter->first.c_str(), value.c_str() );
 		}
 	}
-	if (useMap.empty())
-		return;
+	if( useMap.empty() ) { return; }
 
+	//
+	// Compute column widths (and fix up 'alloc' entries, I guess).
+	// Pad integer values to align with the floating point dots.
+	//
 	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0, cchAssigned = 0;
-	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
-		 it != useMap.end();
-		 ++it) {
-		SlotResTermSumy * psumy = it->second;
-		if ( ! psumy->alloc.size()) {
-			classad::ExprTree * tree = pusageAd->Lookup(it->first);
-			if (tree) {
-				unp.Unparse(psumy->alloc, tree);
-			}
-		}
-		// pad out non-fractional values for usage, request and allocation
-		// so that they align with the fractional values.  note that this code will break
-		// if the use/req/or alloc strings are something other than numbers
-		// since we are working with classads, that's possible, but not normal...
-		// if it starts to happen, we would probably have to change the values from strings to classad::value's
-		// and rework the formatting code.
-		if (has_fractional_mask & (1<<0)) { // is there fractional usage reported?
-			if (is_bare_integer(psumy->use.c_str())) { // and the value is an integer?
-				psumy->use += "   "; // pad to align to %.2f
-			}
-		}
-		if (has_fractional_mask & (1<<1)) { // is there fractional request reported?
-			if (is_bare_integer(psumy->req.c_str())) { // and the value is an integer?
-				psumy->req += "   "; // pad to align to %.2f
-			}
-		}
-		if (has_fractional_mask & (1<<2)) { // is there fractional allocation reported?
-			if (is_bare_integer(psumy->alloc.c_str())) { // and the value is an integer?
-				psumy->alloc += "   "; // pad to align to %.2f
-			}
+	for( auto & i : useMap ) {
+		SlotResTermSumy & psumy = i.second;
+		if( psumy.alloc.empty() ) {
+			classad::ExprTree * tree = pusageAd->Lookup(i.first);
+			if( tree ) { unp.Unparse( psumy.alloc, tree ); }
 		}
 
-		//formatstr_cat(out, "\t%s %s %s %s\n", it->first.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
-		cchRes = MAX(cchRes, (int)it->first.size());
-		cchUse = MAX(cchUse, (int)psumy->use.size());
-		cchReq = MAX(cchReq, (int)psumy->req.size());
-		cchAlloc = MAX(cchAlloc, (int)psumy->alloc.size());
-		cchAssigned = MAX(cchAssigned, (int)psumy->assigned.size());
+		if( useHFP && is_bare_integer(psumy.use) ) { psumy.use += "   "; }
+		if( reqHFP && is_bare_integer(psumy.req) ) { psumy.req += "   "; }
+		if( allocHFP && is_bare_integer(psumy.alloc) ) { psumy.alloc += "   "; }
+		if( assignedHFP && is_bare_integer(psumy.assigned) ) { psumy.assigned += "   "; }
+
+		cchRes = MAX(cchRes, (int)i.first.size());
+		cchUse = MAX(cchUse, (int)psumy.use.size());
+		cchReq = MAX(cchReq, (int)psumy.req.size());
+		cchAlloc = MAX(cchAlloc, (int)psumy.alloc.size());
+		cchAssigned = MAX(cchAssigned, (int)psumy.assigned.size());
 	}
 
-	MyString fmt;
-	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n", cchUse, cchReq, MAX(cchAlloc,9));
-	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "");
-	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
-	//fputs(fmt.Value(), file);
-	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
-		 it != useMap.end();
-		 ++it) {
-		SlotResTermSumy * psumy = it->second;
-		std::string lbl = it->first.c_str(); 
-		if (lbl.compare("Memory") == 0) lbl += " (MB)";
-		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
-		formatstr_cat(out, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str(), psumy->assigned.c_str());
-		delete psumy;
+	// Print table header.
+	MyString fString;
+	fString.formatstr( "\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n",
+		cchUse, cchReq, MAX(cchAlloc, 9) );
+	formatstr_cat( out, fString.Value(), "Usage", "Request",
+		 cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "" );
+
+	// Print table.
+	fString.formatstr( "\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n",
+		cchRes + 8, cchUse, cchReq, MAX(cchAlloc, 9) );
+	for( const auto & i : useMap ) {
+		if( i.first.empty() ) { continue; }
+
+		std::string label = i.first;
+		if( label == "Memory" ) { label += " (MB)"; }
+		else if( label == "Disk" ) { label += " (KB)"; }
+		// It would be nice if this weren't a special case, but we don't
+		// have a way of representing a single resource with multiple metrics.
+		else if( label == "Gpus" ) { label += " (Average)"; }
+		else if( label == "GpusMemory" ) { label += " (MB)"; }
+		const SlotResTermSumy & psumy = i.second;
+		formatstr_cat( out, fString.Value(), label.c_str(), psumy.use.c_str(),
+			psumy.req.c_str(), psumy.alloc.c_str(), psumy.assigned.c_str() );
 	}
-	//formatstr_cat(out, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);
 }
 
 #ifdef DONT_EVER_SEEK
@@ -933,26 +932,36 @@ public:
 			return;
 		++pszTbl;
 
+		std::string attrn;
+		std::string exprstr;
+
 		//pszTbl[ixUse] = 0;
 		// Insert <Tag>Usage = <value1>
-		std::string exprstr(tag); exprstr += "Usage = "; exprstr.append(pszTbl, ixUse);
-		puAd->Insert(exprstr);
+		attrn = tag;
+		attrn += "Usage";
+		exprstr.assign(pszTbl, ixUse);
+		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		//pszTbl[ixReq] = 0;
 		// Insert Request<Tag> = <value2>
-		exprstr = "Request"; exprstr += tag; exprstr += " = "; exprstr.append(&pszTbl[ixUse+1], ixReq-ixUse-1);
-		puAd->Insert(exprstr);
+		attrn = "Request";
+		attrn += tag;
+		exprstr.assign(&pszTbl[ixUse+1], ixReq-ixUse-1);
+		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		if (ixAlloc > 0) {
 			//pszTbl[ixAlloc] = 0;
 			// Insert <tag> = <value3>
-			exprstr = tag; exprstr += " = "; exprstr.append(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
-			puAd->Insert(exprstr);
+			attrn = tag;
+			exprstr.assign(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
+			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 		if (ixAssigned > 0) {
 			// the remainder of the line is the assigned value
-			exprstr = "Assigned"; exprstr += tag; exprstr += " = "; exprstr += &pszTbl[ixAssigned];
-			puAd->Insert(exprstr);
+			attrn = "Assigned";
+			attrn += tag;
+			exprstr = &pszTbl[ixAssigned];
+			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 	}
 
@@ -1044,21 +1053,20 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 		} else if (ixUse > 0) {
 			pszTbl[ixUse] = 0;
 			pszTbl[ixReq] = 0;
-			std::string exprstr;
-			formatstr(exprstr, "%sUsage = %s", pszLbl, pszTbl);
-			puAd->Insert(exprstr.c_str());
-			formatstr(exprstr, "Request%s = %s", pszLbl, &pszTbl[ixUse+1]);
-			puAd->Insert(exprstr.c_str());
+			std::string attrn;
+			formatstr(exprstr, "%sUsage", pszLbl);
+			puAd->AssignExpr(attrn, pszTbl);
+			formatstr(attrn, "Request%s", pszLbl);
+			puAd->AssignExpr(attrn, &pszTbl[ixUse+1]);
 			if (ixAlloc > 0) {
 				pszTbl[ixAlloc] = 0;
-				formatstr(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
-				puAd->Insert(exprstr.c_str());
+				formatstr(attrn, "%s", pszLbl);
+				puAd->AssignExpr(attrn, &pszTbl[ixReq+1]);
 			}
 			if (ixAssigned > 0) {
 				// the remainder of the line is the assigned value
-				formatstr(exprstr, "Assigned%s = %s", pszLbl, &pszTbl[ixAssigned]);
-				//trim(exprstr);
-				puAd->Insert(exprstr.c_str());
+				formatstr(attrn, "Assigned%s", pszLbl);
+				puAd->AssignExpr(attrn, &pszTbl[ixAssigned]);
 			}
 		}
 	}
@@ -1116,7 +1124,7 @@ FutureEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	myad->Assign("EventHead", head.c_str());
+	myad->Assign("EventHead", head);
 	if ( ! payload.empty()) {
 		StringTokenIterator lines(payload, 120, "\r\n");
 		const std::string * str;
@@ -2858,7 +2866,7 @@ JobEvictedEvent::formatBody( std::string &out )
   } else if( checkpointed ) {
     retval = formatstr_cat( out, "(1) Job was checkpointed.\n\t" );
   } else {
-    retval = formatstr_cat( out, "(0) Job was not checkpointed.\n\t" );
+    retval = formatstr_cat( out, "(0) CPU times\n\t" );
   }
 
   if( retval < 0 ) {
@@ -3051,7 +3059,7 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 
 
 // ----- JobAbortedEvent class
-JobAbortedEvent::JobAbortedEvent (void)
+JobAbortedEvent::JobAbortedEvent (void) : toeTag(NULL)
 {
 	eventNumber = ULOG_JOB_ABORTED;
 	reason = NULL;
@@ -3059,9 +3067,24 @@ JobAbortedEvent::JobAbortedEvent (void)
 
 JobAbortedEvent::~JobAbortedEvent(void)
 {
-	delete[] reason;
+	if( reason ) {
+		delete[] reason;
+	}
+	if( toeTag ) {
+		delete toeTag;
+	}
 }
 
+void
+JobAbortedEvent::setToeTag( classad::ClassAd * tt ) {
+	if(! tt) { return; }
+	if( toeTag ) { delete toeTag; }
+	toeTag = new ToE::Tag();
+	if(! ToE::decode( tt, * toeTag )) {
+		delete toeTag;
+		toeTag = NULL;
+	}
+}
 
 void
 JobAbortedEvent::setReason( const char* reason_str )
@@ -3088,11 +3111,16 @@ bool
 JobAbortedEvent::formatBody( std::string &out )
 {
 
-	if( formatstr_cat( out, "Job was aborted by the user.\n" ) < 0 ) {
+	if( formatstr_cat( out, "Job was aborted.\n" ) < 0 ) {
 		return false;
 	}
 	if( reason ) {
 		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+			return false;
+		}
+	}
+	if( toeTag ) {
+		if(! toeTag->writeToString( out )) {
 			return false;
 		}
 	}
@@ -3107,7 +3135,7 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 	reason = NULL;
 #ifdef DONT_EVER_SEEK
 	MyString line;
-	if ( ! read_line_value("Job was aborted by the user.", line, file, got_sync_line)) {
+	if ( ! read_line_value("Job was aborted", line, file, got_sync_line)) {
 		return 0;
 	}
 	// try to read the reason, this is optional
@@ -3115,31 +3143,28 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 		line.trim();
 		reason = line.detach_buffer();
 	}
-#else
-	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
-		return 0;
-	}
-	// try to read the reason, but if its not there,
-	// rewind so we don't slurp up the next event delimiter
-	fpos_t filep;
-	fgetpos( file, &filep );
-	char reason_buf[BUFSIZ];
-	if( !fgets( reason_buf, BUFSIZ, file ) ||
-		   	strcmp( reason_buf, "...\n" ) == 0 ) {
-		setReason( NULL );
-		fsetpos( file, &filep );
-		return 1;	// backwards compatibility
-	}
 
-	chomp( reason_buf );  // strip the newline, if it's there.
-		// This is strange, sometimes we get the \t from fgets(), and
-		// sometimes we don't.  Instead of trying to figure out why,
-		// we just check for it here and do the right thing...
-	if( reason_buf[0] == '\t' && reason_buf[1] ) {
-		setReason( &reason_buf[1] );
-	} else {
-		setReason( reason_buf );
+	// Try to read the ToE tag.
+	if( got_sync_line ) { return 1; }
+	if( read_optional_line( line, file, got_sync_line ) ) {
+		if( line.empty() ) {
+			if(! read_optional_line( line, file, got_sync_line )) {
+				return 0;
+			}
+		}
+
+		if( line.remove_prefix( "\tJob terminated by " ) ) {
+			if( toeTag != NULL ) { delete toeTag; }
+			toeTag = new ToE::Tag();
+			if(! toeTag->readFromString( line )) {
+				return 0;
+			}
+		} else {
+			return 0;
+		}
 	}
+#else
+    #error New JobAbortedEvent::readEvent() not implemented with seeking.
 #endif
 	return 1;
 }
@@ -3152,6 +3177,20 @@ JobAbortedEvent::toClassAd(bool event_time_utc)
 
 	if( reason ) {
 		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
+	}
+
+	if( toeTag ) {
+		classad::ClassAd * tt = new classad::ClassAd();
+		if(! ToE::encode( * toeTag, tt )) {
+			delete tt;
+			delete myad;
+			return NULL;
+		}
+		if(! myad->Insert(ATTR_JOB_TOE, tt )) {
+			delete tt;
 			delete myad;
 			return NULL;
 		}
@@ -3174,10 +3213,12 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 		free(multi);
 		multi = NULL;
 	}
+
+	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }
 
 // ----- TerminatedEvent baseclass
-TerminatedEvent::TerminatedEvent(void)
+TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 {
 	normal = false;
 	core_file = NULL;
@@ -3194,8 +3235,16 @@ TerminatedEvent::~TerminatedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
 	delete[] core_file;
+	if( toeTag ) { delete toeTag; }
 }
 
+void
+TerminatedEvent::setToeTag( classad::ClassAd * tt ) {
+	if( tt ) {
+		if( toeTag ) { delete toeTag; }
+		toeTag = new classad::ClassAd( * tt );
+	}
+}
 
 void
 TerminatedEvent::setCoreFile( const char* core_name )
@@ -3543,10 +3592,23 @@ JobTerminatedEvent::~JobTerminatedEvent(void)
 bool
 JobTerminatedEvent::formatBody( std::string &out )
 {
-  if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
-	  return false;
-  }
-  return TerminatedEvent::formatBody( out, "Job" );
+	if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
+		return false;
+	}
+	bool rv = TerminatedEvent::formatBody( out, "Job" );
+	if( rv && toeTag != NULL ) {
+		ToE::Tag tag;
+		if( ToE::decode( toeTag, tag ) ) {
+			if( tag.howCode == 0 ) {
+				if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
+					return false;
+				}
+			} else {
+				rv = tag.writeToString( out );
+			}
+		}
+	}
+	return rv;
 }
 
 
@@ -3563,7 +3625,48 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 #endif
-	return TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
+	int rv = TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
+	if(! rv) { return rv; }
+
+	MyString line;
+	if( got_sync_line ) { return 1; }
+	if( read_optional_line( line, file, got_sync_line ) ) {
+		if(line.empty()) {
+			if( read_optional_line( line, file, got_sync_line ) ) {
+				return 0;
+			}
+		}
+		if( line.remove_prefix( "\tJob terminated of its own accord at " ) ) {
+			if( toeTag != NULL ) {
+				delete toeTag;
+			}
+			toeTag = new classad::ClassAd();
+
+			toeTag->InsertAttr( "Who", ToE::itself );
+			toeTag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
+			toeTag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
+
+			// This code gets more complicated if we don't assume UTC i/o.
+			struct tm eventTime;
+			iso8601_to_time( line.Value(), & eventTime, NULL, NULL );
+			toeTag->InsertAttr( "When", timegm(&eventTime) );
+		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
+			ToE::Tag tag;
+			if(! tag.readFromString( line )) {
+				return 0;
+			}
+
+			if(toeTag != NULL) {
+				delete toeTag;
+			}
+			toeTag = new ClassAd();
+			ToE::encode( tag, toeTag );
+		} else {
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 ClassAd*
@@ -3647,6 +3750,14 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
+	if( toeTag ) {
+	    classad::ExprTree * tt = toeTag->Copy();
+		if(! myad->Insert(ATTR_JOB_TOE, tt)) {
+			delete myad;
+			return NULL;
+		}
+	}
+
 	return myad;
 }
 
@@ -3696,6 +3807,12 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
 	ad->LookupFloat("TotalSentBytes", total_sent_bytes);
 	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
+
+	if( toeTag ) { delete toeTag; }
+
+	ExprTree * fail = ad->Lookup(ATTR_JOB_TOE);
+	classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( fail );
+	if( ca ) { toeTag = new classad::ClassAd( * ca ); }
 }
 
 JobImageSizeEvent::JobImageSizeEvent(void)
@@ -4631,6 +4748,7 @@ NodeTerminatedEvent::NodeTerminatedEvent(void) : TerminatedEvent()
 {
 	eventNumber = ULOG_NODE_TERMINATED;
 	node = -1;
+	pusageAd = NULL;
 }
 
 
@@ -6568,16 +6686,16 @@ AttributeUpdate::toClassAd(bool event_time_utc)
 void
 AttributeUpdate::initFromClassAd(ClassAd* ad)
 {
-	MyString buf;
+	std::string buf;
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
 
 	if( ad->LookupString("Attribute", buf ) ) {
-		name = strdup(buf.Value());
+		name = strdup(buf.c_str());
 	}
 	if( ad->LookupString("Value", buf ) ) {
-		value = strdup(buf.Value());
+		value = strdup(buf.c_str());
 	}
 }
 
@@ -6751,8 +6869,8 @@ void PreSkipEvent::setSkipNote(const char* s)
 	}
 }
 
-// ----- the FactorySubmitEvent class
-FactorySubmitEvent::FactorySubmitEvent(void)
+// ----- the ClusterSubmitEvent class
+ClusterSubmitEvent::ClusterSubmitEvent(void)
 {
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
@@ -6760,7 +6878,7 @@ FactorySubmitEvent::FactorySubmitEvent(void)
 	eventNumber = ULOG_CLUSTER_SUBMIT;
 }
 
-FactorySubmitEvent::~FactorySubmitEvent(void)
+ClusterSubmitEvent::~ClusterSubmitEvent(void)
 {
 	if( submitHost ) {
 		delete[] submitHost;
@@ -6774,7 +6892,7 @@ FactorySubmitEvent::~FactorySubmitEvent(void)
 }
 
 void
-FactorySubmitEvent::setSubmitHost(char const *addr)
+ClusterSubmitEvent::setSubmitHost(char const *addr)
 {
 	if( submitHost ) {
 		delete[] submitHost;
@@ -6789,9 +6907,9 @@ FactorySubmitEvent::setSubmitHost(char const *addr)
 }
 
 bool
-FactorySubmitEvent::formatBody( std::string &out )
+ClusterSubmitEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, "Factory submitted from host: %s\n", submitHost);
+	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost);
 	if (retval < 0)
 	{
 		return false;
@@ -6812,7 +6930,7 @@ FactorySubmitEvent::formatBody( std::string &out )
 }
 
 int
-FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
+ClusterSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete[] submitHost;
 	submitHost = NULL;
@@ -6820,7 +6938,7 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	submitEventLogNotes = NULL;
 #ifdef DONT_EVER_SEEK
 	MyString line;
-	if ( ! read_line_value("Factory submitted from host: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("Cluster submitted from host: ", line, file, got_sync_line)) {
 		return 0;
 	}
 	submitHost = line.detach_buffer();
@@ -6849,7 +6967,7 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	setSubmitHost(line.Value()); // allocate memory
-	if( sscanf( line.Value(), "Factory submitted from host: %s\n", submitHost ) != 1 ) {
+	if( sscanf( line.Value(), "Cluster submitted from host: %s\n", submitHost ) != 1 ) {
 		return 0;
 	}
 
@@ -6905,7 +7023,7 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-FactorySubmitEvent::toClassAd(bool event_time_utc)
+ClusterSubmitEvent::toClassAd(bool event_time_utc)
 {
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
@@ -6919,7 +7037,7 @@ FactorySubmitEvent::toClassAd(bool event_time_utc)
 
 
 void
-FactorySubmitEvent::initFromClassAd(ClassAd* ad)
+ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -6933,14 +7051,14 @@ FactorySubmitEvent::initFromClassAd(ClassAd* ad)
 	}
 }
 
-// ----- the FactoryRemoveEvent class
-FactoryRemoveEvent::FactoryRemoveEvent(void)
+// ----- the ClusterRemoveEvent class
+ClusterRemoveEvent::ClusterRemoveEvent(void)
 	: next_proc_id(0), next_row(0), completion(Incomplete), notes(NULL)
 {
 	eventNumber = ULOG_CLUSTER_REMOVE;
 }
 
-FactoryRemoveEvent::~FactoryRemoveEvent(void)
+ClusterRemoveEvent::~ClusterRemoveEvent(void)
 {
 	if (notes) { free(notes); } notes = NULL;
 }
@@ -6963,10 +7081,10 @@ static bool read_line_or_rewind(FILE *file, char *buf, int bufsiz) {
 }
 #endif
 
-#define CLUSTER_REMOVED_BANNER "Factory removed"
+#define CLUSTER_REMOVED_BANNER "Cluster removed"
 
 bool
-FactoryRemoveEvent::formatBody( std::string &out )
+ClusterRemoveEvent::formatBody( std::string &out )
 {
 	int retval = formatstr_cat (out, CLUSTER_REMOVED_BANNER "\n");
 	if (retval < 0)
@@ -6990,7 +7108,7 @@ FactoryRemoveEvent::formatBody( std::string &out )
 
 
 int
-FactoryRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
+ClusterRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	if( !file ) {
 		return 0;
@@ -7020,7 +7138,7 @@ FactoryRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 			return 1; // this field is optional
 		}
 #else
-		// got the "Factory Removed" line, now get the next line.
+		// got the "Cluster removed" line, now get the next line.
 		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
 			return 1; // this field is optional
 		}
@@ -7068,7 +7186,7 @@ FactoryRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 }
 
 ClassAd*
-FactoryRemoveEvent::toClassAd(bool event_time_utc)
+ClusterRemoveEvent::toClassAd(bool event_time_utc)
 {
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
@@ -7091,7 +7209,7 @@ FactoryRemoveEvent::toClassAd(bool event_time_utc)
 
 
 void
-FactoryRemoveEvent::initFromClassAd(ClassAd* ad)
+ClusterRemoveEvent::initFromClassAd(ClassAd* ad)
 {
 	next_proc_id = next_row = 0;
 	completion = Incomplete;
@@ -7345,4 +7463,787 @@ void FactoryResumedEvent::setReason(const char* str)
 {
 	if (reason) { free(reason); } reason = NULL;
 	if (str) reason = strdup(str);
+}
+
+//
+// FileTransferEvent
+//
+
+const char * FileTransferEvent::FileTransferEventStrings[] = {
+	"NONE",
+	"Entered queue to transfer input files",
+	"Started transferring input files",
+	"Finished transferring input files",
+	"Entered queue to transfer output files",
+	"Started transferring output files",
+	"Finished transferring output files"
+};
+
+FileTransferEvent::FileTransferEvent() : queueingDelay(-1),
+  type( FileTransferEvent::NONE )
+{
+	eventNumber = ULOG_FILE_TRANSFER;
+}
+
+FileTransferEvent::~FileTransferEvent() { }
+
+bool
+FileTransferEvent::formatBody( std::string & out ) {
+	if( type == FileTransferEventType::NONE ) {
+		dprintf( D_ALWAYS, "Unspecified type in FileTransferEvent::formatBody()\n" );
+		return false;
+	} else if( FileTransferEventType::NONE < type
+	           && type < FileTransferEventType::MAX ) {
+		if( formatstr_cat( out, "%s\n",
+		                   FileTransferEventStrings[type] ) < 0 ) {
+			return false;
+		}
+	} else {
+		dprintf( D_ALWAYS, "Unknown type in FileTransferEvent::formatBody()\n" );
+		return false;
+	}
+
+
+	if( queueingDelay != -1 ) {
+		if( formatstr_cat( out, "\tSeconds spent in queue: %lu\n",
+		                   queueingDelay ) < 0 ) {
+			return false;
+		}
+	}
+
+
+	if(! host.empty()) {
+		if( formatstr_cat( out, "\tTransferring to host: %s\n",
+		                   host.c_str() ) < 0 ) {
+			return false;
+		}
+	}
+
+
+	return true;
+}
+
+int
+FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
+	// Require an 'optional' line  because read_line_value() requires a prefix.
+	MyString eventString;
+	if(! read_optional_line( eventString, f, got_sync_line )) {
+		return 0;
+	}
+
+	// NONE is not a legal event in the log.
+	bool foundEventString = false;
+	for( int i = 1; i < FileTransferEventType::MAX; ++i ) {
+		if( FileTransferEventStrings[i] == eventString ) {
+			foundEventString = true;
+			type = (FileTransferEventType)i;
+			break;
+		}
+	}
+	if(! foundEventString) { return false; }
+
+
+	// Check for an optional line.
+	MyString optionalLine;
+	if(! read_optional_line( optionalLine, f, got_sync_line )) {
+		return got_sync_line ? 1 : 0;
+	}
+	optionalLine.chomp();
+
+	// Did we record the queueing delay?
+	MyString prefix = "\tSeconds spent in queue: ";
+	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
+		MyString value = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+
+		char * endptr = NULL;
+		queueingDelay = strtol( value.c_str(), & endptr, 10 );
+		if( endptr == NULL || endptr[0] != '\0' ) {
+			return 0;
+		}
+
+		// If we read an optional line, check for the next one.
+		if(! read_optional_line( optionalLine, f, got_sync_line )) {
+			return got_sync_line ? 1 : 0;
+		}
+		optionalLine.chomp();
+	}
+
+
+	// Did we record the starter host?
+	prefix = "\tTransferring to host: ";
+	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
+		host = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+
+/*
+		// If we read an optional line, check for the next one.
+		if(! read_optional_line( optionalLine, f, got_sync_line )) {
+			return got_sync_line ? 1 : 0;
+		}
+		optionalLine.chomp();
+*/
+	}
+
+
+	return 1;
+}
+
+ClassAd *
+FileTransferEvent::toClassAd(bool event_time_utc) {
+	ClassAd * ad = ULogEvent::toClassAd(event_time_utc);
+	if(! ad) { return NULL; }
+
+	if(! ad->InsertAttr( "Type", (int)type )) {
+		delete ad;
+		return NULL;
+	}
+
+	if( queueingDelay != -1 ) {
+		if(! ad->InsertAttr( "QueueingDelay", queueingDelay )) {
+			delete ad;
+			return NULL;
+		}
+	}
+
+	if(! host.empty()) {
+		if(! ad->InsertAttr( "Host", host )) {
+			delete ad;
+			return NULL;
+		}
+	}
+
+	return ad;
+}
+
+void
+FileTransferEvent::initFromClassAd( ClassAd * ad ) {
+	ULogEvent::initFromClassAd( ad );
+
+	int typePunning = -1;
+	ad->LookupInteger( "Type", typePunning );
+	if( typePunning != -1 ) {
+		type = (FileTransferEventType)typePunning;
+	}
+
+	ad->LookupInteger( "QueueingDelay", queueingDelay );
+
+	ad->LookupString( "Host", host );
+}
+
+
+void
+ReserveSpaceEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	time_t expiry_time;
+	if (ad->EvaluateAttrInt(ATTR_EXPIRATION_TIME, expiry_time)) {
+		m_expiry = std::chrono::system_clock::from_time_t(expiry_time);
+	}
+	long long reserved_space;
+	if (ad->EvaluateAttrInt(ATTR_RESERVED_SPACE, reserved_space)) {
+		m_reserved_space = reserved_space;
+	}
+	std::string uuid;
+	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
+		m_uuid = uuid;
+	}
+	std::string tag;
+	if (ad->EvaluateAttrString(ATTR_TAG, tag)) {
+		m_tag = tag;
+	}
+}
+
+
+ClassAd *
+ReserveSpaceEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	time_t expiry_time = std::chrono::system_clock::to_time_t(m_expiry);
+	if (!ad->InsertAttr(ATTR_EXPIRATION_TIME, expiry_time)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_RESERVED_SPACE, static_cast<long long>(m_reserved_space))) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_UUID, m_uuid)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_TAG, m_tag)) {
+		return nullptr;
+	}
+	return ad.release();
+}
+
+
+bool
+ReserveSpaceEvent::formatBody(std::string &out)
+{
+	if (m_reserved_space &&
+		formatstr_cat(out, "\n\tBytes reserved: %lu\n",
+		m_reserved_space) < 0)
+	{
+		return false;
+	}
+
+	time_t expiry = std::chrono::system_clock::to_time_t(m_expiry);
+	if (formatstr_cat(out, "\tReservation Expiration: %lu\n", expiry) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tReservation UUID: %s\n", m_uuid.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tTag: %s\n", m_tag.c_str()) < 0) {
+		return false;
+	}
+	return true;
+}
+
+
+int
+ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check for bytes reserved.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "Bytes reserved:";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long bytes_long;
+		try {
+			bytes_long = stoll(bytes_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert byte count to integer: %s\n",
+				bytes_str.c_str());
+			return false;
+		}
+		m_reserved_space = bytes_long;
+	} else {
+		dprintf(D_FULLDEBUG, "Bytes reserved line missing.\n");
+		return false;
+	}
+
+		// Check the reservation expiry time.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tReservation Expiration:";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long expiry_long;
+		try {
+			expiry_long = stoll(expiry_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert reservation expiration to integer: %s\n",
+				expiry_str.c_str());
+			return false;
+		}
+		m_expiry = std::chrono::system_clock::from_time_t(expiry_long);
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation expiration line missing.\n");
+		return false;
+	}
+
+		// Check the reservation UUID.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tReservation UUID: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
+		return false;
+	}
+
+		// Check the reservation tag.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tTag: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
+		return false;
+	}
+
+
+	return true;
+}
+
+
+std::string
+ReserveSpaceEvent::generateUUID()
+{
+	// We do not link against libuuid when doing a static build.
+	// Static builds are only used for the shadow - while the space
+	// reservation events are intended for Win32 and the startd/starter
+#if defined(WIN32) || defined(CONDOR_STATIC_LIBRARY)
+	return "";
+#else
+	char uuid_str[37];
+	uuid_t uuid;
+	uuid_generate_random(uuid);
+	uuid_unparse(uuid, uuid_str);
+	return std::string(uuid_str, 36);
+#endif
+}
+
+void
+ReleaseSpaceEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	std::string uuid;
+	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
+		m_uuid = uuid;
+	}
+}
+
+
+ClassAd *
+ReleaseSpaceEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr(ATTR_UUID, m_uuid)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+ReleaseSpaceEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\n\tReservation UUID: %s\n", m_uuid.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check the reservation UUID.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	std::string prefix = "Reservation UUID: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_uuid= optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
+		return false;
+	}
+
+	return true;
+}
+
+
+void
+FileCompleteEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	long long size;
+	if (ad->EvaluateAttrInt(ATTR_SIZE, size)) {
+		m_size = size;
+	}
+
+	std::string checksum;
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
+		m_checksum = checksum;
+	}
+	std::string checksum_type;
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
+		m_checksum_type = checksum_type;
+	}
+
+	std::string uuid;
+	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
+		m_uuid = uuid;
+	}
+}
+
+
+ClassAd *
+FileCompleteEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr(ATTR_SIZE, static_cast<long long>(m_size))) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_CHECKSUM, m_checksum)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_CHECKSUM_TYPE, m_checksum_type)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_UUID, m_uuid)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+FileCompleteEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
+	{
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Type: %s\n", m_checksum_type.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tUUID: %s\n", m_uuid.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check for filesize in bytes.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "Bytes:";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long bytes_long;
+		try {
+			bytes_long = stoll(bytes_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert byte count to integer: %s\n",
+				bytes_str.c_str());
+			return false;
+		}
+		m_size = bytes_long;
+	} else {
+		dprintf(D_FULLDEBUG, "Bytes line missing.\n");
+		return false;
+	}
+
+		// Check the checksum value.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tChecksum Value: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
+		return false;
+	}
+
+		// Check the checksum type.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tChecksum Type: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
+		return false;
+	}
+
+		// Check the file UUID.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tUUID: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "File UUID line missing.\n");
+		return false;
+	}
+
+	return true;
+}
+
+
+void
+FileUsedEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	std::string checksum;
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
+		m_checksum = checksum;
+	}
+	std::string checksum_type;
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
+		m_checksum_type = checksum_type;
+	}
+
+	std::string tag;
+	if (ad->EvaluateAttrString(ATTR_TAG, tag)) {
+		m_tag = tag;
+	}
+}
+
+
+ClassAd *
+FileUsedEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr(ATTR_CHECKSUM, m_checksum)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_CHECKSUM_TYPE, m_checksum_type)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_TAG, m_tag)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+FileUsedEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\n\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Type: %s\n", m_checksum_type.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tTag: %s\n", m_tag.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check the checksum value.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "Checksum Value: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
+		return false;
+	}
+
+		// Check the checksum type.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tChecksum Type: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
+		return false;
+	}
+
+		// Check the reservation tag.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tTag: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
+		return false;
+	}
+
+
+	return true;
+}
+
+
+void
+FileRemovedEvent::initFromClassAd( ClassAd *ad )
+{
+	ULogEvent::initFromClassAd( ad );
+
+	long long size;
+	if (ad->EvaluateAttrInt(ATTR_SIZE, size)) {
+		m_size = size;
+	}
+
+	std::string checksum;
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
+		m_checksum = checksum;
+	}
+	std::string checksum_type;
+	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
+		m_checksum_type = checksum_type;
+	}
+
+	std::string tag;
+	if (ad->EvaluateAttrString(ATTR_TAG, tag)) {
+		m_tag = tag;
+	}
+}
+
+
+ClassAd *
+FileRemovedEvent::toClassAd(bool event_time_utc) {
+	std::unique_ptr<ClassAd> ad(ULogEvent::toClassAd(event_time_utc));
+	if (!ad.get()) {return nullptr;}
+
+	if (!ad->InsertAttr(ATTR_SIZE, static_cast<long long>(m_size))) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_CHECKSUM, m_checksum)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_CHECKSUM_TYPE, m_checksum_type)) {
+		return nullptr;
+	}
+
+	if (!ad->InsertAttr(ATTR_TAG, m_tag)) {
+		return nullptr;
+	}
+
+	return ad.release();
+}
+
+
+bool
+FileRemovedEvent::formatBody(std::string &out)
+{
+	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
+	{
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Value: %s\n", m_checksum.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tChecksum Type: %s\n", m_checksum_type.c_str()) < 0) {
+		return false;
+	}
+
+	if (formatstr_cat(out, "\tTag: %s\n", m_tag.c_str()) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
+	MyString optionalLine;
+
+		// Check for filesize in bytes.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	std::string prefix = "Bytes:";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		long long bytes_long;
+		try {
+			bytes_long = stoll(bytes_str);
+		} catch (...) {
+			dprintf(D_FULLDEBUG,
+				"Unable to convert byte count to integer: %s\n",
+				bytes_str.c_str());
+			return false;
+		}
+		m_size = bytes_long;
+	} else {
+		dprintf(D_FULLDEBUG, "Bytes line missing.\n");
+		return false;
+	}
+
+		// Check the checksum value.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	optionalLine.chomp();
+	prefix = "\tChecksum Value: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
+		return false;
+	}
+
+		// Check the checksum type.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tChecksum Type: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
+		return false;
+	}
+
+		// Check the file tag.
+	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
+		return false;
+	}
+	prefix = "\tTag: ";
+	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+	} else {
+		dprintf(D_FULLDEBUG, "File tag line missing.\n");
+		return false;
+	}
+
+	return true;
 }

@@ -25,8 +25,6 @@
 #include "my_popen.h"
 #include "sig_install.h"
 #include "env.h"
-#include "../condor_privsep/condor_privsep.h"
-#include "../condor_privsep/privsep_fork_exec.h"
 #include "setenv.h"
 
 #ifdef WIN32
@@ -51,6 +49,11 @@ struct popen_entry {
 	struct popen_entry *next;
 };
 struct popen_entry *popen_entry_head = NULL;
+
+// Several functions here have return values that we can't
+// sensibly check.  To quiet our static analyzers, the functions write
+// return values to this dummy variable, which is never read.
+static int dummy_global = 0;
 
 static void add_child(FILE* fp, child_handle_t ch)
 {
@@ -336,7 +339,6 @@ static FILE *
 my_popenv_impl( const char *const args[],
                 const char * mode,
                 int options,
-                uid_t privsep_uid,
 		const Env *env_ptr = 0,
 		bool drop_privs = true,
 		const char *write_data = NULL )
@@ -360,19 +362,6 @@ my_popenv_impl( const char *const args[],
 		dprintf(D_ALWAYS, "my_popenv: Failed to create the pipe, "
 				"errno=%d (%s)\n", errno, strerror(errno));
 		return NULL;
-	}
-
-		/* Prepare for PrivSep if needed */
-	PrivSepForkExec psforkexec;
-	if ( privsep_uid != (uid_t)-1 ) {
-		if (!psforkexec.init()) {
-			dprintf(D_ALWAYS,
-			        "my_popenv failure on %s\n",
-			        args[0]);
-			close(pipe_d[0]);
-			close(pipe_d[1]);
-			return NULL;
-		}
 	}
 
 		/* Create a pipe to detect execv failures */
@@ -408,7 +397,7 @@ my_popenv_impl( const char *const args[],
 // dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 
 		/* if parent reads and there is write data, create a pipe for that */
-	if (parent_reads && write_data && write_data[0] && privsep_uid==(uid_t)-1) {
+	if (parent_reads && write_data && write_data[0]) {
 		if (strlen(write_data) > 2048) {
 			/* Make sure data fits in pipe buffer to avoid deadlock */
 			dprintf(D_ALWAYS,"my_popenv: Write data is too large, failing\n");
@@ -535,13 +524,7 @@ my_popenv_impl( const char *const args[],
 		sigfillset(&sigs);
 		sigprocmask(SIG_UNBLOCK, &sigs, NULL);
 
-			/* handle PrivSep if needed */
 		MyString cmd = args[0];
-		if ( privsep_uid != (uid_t)-1 ) {
-			ArgList al;
-			psforkexec.in_child(cmd, al);
-			args = al.GetStringArray();
-		}
 
 			/* set environment if defined */
 		if (env_ptr) {
@@ -562,14 +545,12 @@ my_popenv_impl( const char *const args[],
 		int e = errno; // capture real errno
 
 		int len = snprintf(result_buf, 10, "%d", errno);
-		int ret = write(pipe_d2[1], result_buf, len);
 
-			// Jump through some hoops just to use ret.
-		if (ret <  1) {
-			_exit( e );
-		} else {
-			_exit( e );
-		}
+		// can't do anything with write's error code,
+		// save it to global to quiet static analysis
+		dummy_global = write(pipe_d2[1], result_buf, len);
+
+		_exit( e );
 	}
 
 		/* The parent */
@@ -608,8 +589,10 @@ my_popenv_impl( const char *const args[],
 		}
 
 		if ( ! fail_quietly) {
-			dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
-				exit_code, strerror(exit_code));
+			dprintf(D_ALWAYS, "my_popenv: Failed to exec %s, errno=%d (%s)\n",
+				(args && args[0]) ? args[0] : "null",
+				exit_code,
+				strerror(exit_code));
 		}
 		errno = exit_code;
 		return NULL;
@@ -630,38 +613,6 @@ my_popenv_impl( const char *const args[],
 	}
 	add_child(retp, pid);
 
-		/* handle PrivSep if needed */
-	if ( privsep_uid != (uid_t)-1 ) {
-		FILE* fp = psforkexec.parent_begin();
-		privsep_exec_set_uid(fp, privsep_uid);
-		privsep_exec_set_path(fp, args[0]);
-		ArgList al;
-		for (const char* const* arg = args; *arg != NULL; arg++) {
-			al.AppendArg(*arg);
-		}
-		privsep_exec_set_args(fp, al);
-		Env env;
-		env.Import();
-		privsep_exec_set_env(fp, env);
-		privsep_exec_set_iwd(fp, ".");
-		if (parent_reads) {
-			privsep_exec_set_inherit_fd(fp, 1);
-			if (want_stderr) {
-				privsep_exec_set_inherit_fd(fp, 2);
-			}
-		}
-		else {
-			privsep_exec_set_inherit_fd(fp, 0);
-		}
-		if (!psforkexec.parent_end()) {
-			dprintf(D_ALWAYS,
-			        "my_popenv failure on %s\n",
-			        args[0]);
-			fclose(retp);
-			return NULL;
-		}
-	}
-
 	return retp;
 }
 
@@ -670,20 +621,19 @@ my_popenv( const char *const args[],
            const char * mode,
            int options )
 {
-	return my_popenv_impl(args, mode, options, (uid_t)-1);
+	return my_popenv_impl(args, mode, options);
 }
 
 static FILE *
 my_popen_impl(const ArgList &args,
               const char *mode,
               int options,
-              uid_t privsep_uid,
               const Env *env_ptr,
               bool drop_privs = true,
 			  const char *write_data = NULL)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv_impl(string_array, mode, options, privsep_uid,
+	FILE *fp = my_popenv_impl(string_array, mode, options,
 			env_ptr, drop_privs, write_data);
 	deleteStringArray(string_array);
 
@@ -694,13 +644,7 @@ FILE*
 my_popen(const ArgList &args, const char *mode, int options, const Env *env_ptr, bool drop_privs,
 		 const char *write_data)
 {
-	return my_popen_impl(args, mode, options, (uid_t)-1, env_ptr, drop_privs, write_data);
-}
-
-FILE*
-privsep_popen(ArgList &args, const char *mode, int options, uid_t uid, Env *env_ptr)
-{
-	return my_popen_impl(args, mode, options, uid, env_ptr);
+	return my_popen_impl(args, mode, options, env_ptr, drop_privs, write_data);
 }
 
 // this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
@@ -1022,7 +966,7 @@ int MyPopenTimer::start_program (
 #else
 	int fd = fileno(fp);
 	int flags = fcntl(fd, F_GETFL, 0);
-	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	dummy_global = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 #endif
 	begin_time = time(NULL);
 	return 0;
@@ -1190,7 +1134,7 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 
 		time_t now = time(NULL);
 		time_t elapsed_time = now - begin_time;
-		if (elapsed_time >= (unsigned int)timeout) {
+		if (elapsed_time >= timeout) {
 			error = ETIMEDOUT;
 			break;
 		}

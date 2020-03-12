@@ -189,13 +189,13 @@ AbstractReplicatorStateMachine::reinitialize()
 // 'm_myVersion'
 int
 AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
-    Service* service, int pid, int exitStatus)
+    int pid, int exitStatus)
 {
     dprintf( D_ALWAYS,
             "AbstractReplicatorStateMachine::downloadReplicaTransfererReaper "
             "called for process no. %d\n", pid );
     AbstractReplicatorStateMachine* replicatorStateMachine =
-         static_cast<AbstractReplicatorStateMachine*>( service );
+         static_cast<AbstractReplicatorStateMachine*>( this );
     // setting the downloading reaper process id to initialization value to
     // know whether the downloading has finished or not
 	// NOTE: upon stalling the downloader, the transferer is being killed before
@@ -249,13 +249,13 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
 // its pid and time of creation
 int
 AbstractReplicatorStateMachine::uploadReplicaTransfererReaper(
-    Service* service, int pid, int exitStatus)
+    int pid, int exitStatus)
 {
     dprintf( D_ALWAYS,
         "AbstractReplicatorStateMachine::uploadReplicaTransfererReaper "
         "called for process no. %d\n", pid );
     AbstractReplicatorStateMachine* replicatorStateMachine =
-        static_cast<AbstractReplicatorStateMachine*>( service );
+        static_cast<AbstractReplicatorStateMachine*>( this );
 // TODO: Atomic operation
 	replicatorStateMachine->m_uploadTransfererMetadataList.Rewind( );
 

@@ -29,7 +29,7 @@ use warnings;
 my $testname = "cmd_submit-batchname";
 
 my $pid = $$;
-my $executable = "sleep.exe";
+my $executable = "x_sleep.pl";
 my $arguments = 600;
 my $submitfile = "$testname$pid.sub";
 my %Attr;

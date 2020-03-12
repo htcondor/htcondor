@@ -194,7 +194,7 @@ protected:
 	// Only called if WatchBatchStatusTimer()
 	// Implements the batch status probe, calling out to
 	// StartBatchStatus and FinishBatchStatus to implement.
-	int DoBatchStatus();
+	void DoBatchStatus();
 };
 
 #endif // define BASERESOURCE_H

@@ -47,7 +47,6 @@
 #include "condor_blkng_full_disk_io.h"
 #include "condor_create_id.h"
 
-#include "cedar_enums.h"
 #include "../condor_sysapi/sysapi.h"
 
 /*********************************************************************

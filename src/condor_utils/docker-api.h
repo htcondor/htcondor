@@ -34,6 +34,7 @@ class DockerAPI {
 		 * @param directory		...
 		 * @param pid			On success, will be set to the PID of a process which will terminate when the container does.  Otherwise, unchanged.
 		 * @param childFDs		The redirected std[in|out|err] FDs.
+		 * @param askForPorts	If you should ask for the redirected ports.
 		 * @param error			On success, unchanged.  Otherwise, [TODO].
 		 * @return 				0 on success, negative otherwise.
 		 */
@@ -48,6 +49,7 @@ class DockerAPI {
 						const std::list<std::string> extraVolumes,
 						int & pid,
 						int * childFDs,
+						bool & shouldAskForPorts,
 						CondorError & error );
 
 		static int startContainer(const std::string &name,
@@ -119,6 +121,9 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int getStatus( const std::string & container, bool isRunning, int & result, CondorError & err );
+
+		static int getServicePorts( const std::string & container,
+			const ClassAd & jobAd, ClassAd & serviceAd );
 
 		/**
 		 * Attempts to detect the presence of a working Docker installation.

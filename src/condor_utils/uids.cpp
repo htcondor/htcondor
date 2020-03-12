@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_syscall_mode.h"
 #include "condor_uid.h"
 #include "condor_config.h"
 #include "condor_environ.h"
@@ -808,7 +807,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
-			if ( dologging ) {
+			if ( dologging && IsFulldebug(D_FULLDEBUG) ) {
 				dprintf(D_FULLDEBUG, 
 						"TokenCache contents: \n%s", 
 						cached_tokens.cacheToString().Value());
@@ -949,12 +948,6 @@ delete_passwd_cache() {
 
 #include <grp.h>
 
-#if defined(AIX31) || defined(AIX32)
-#include <sys/types.h>
-#include <sys/id.h>
-#define SET_EFFECTIVE_UID(id) setuidx(ID_REAL|ID_EFFECTIVE,id)
-#define SET_REAL_UID(id) setuidx(ID_SAVED|ID_REAL|ID_EFFECTIVE,id)
-#else
 #define SET_EFFECTIVE_UID(id) seteuid(id)
 #define SET_REAL_UID(id) setuid(id)
 #define SET_EFFECTIVE_GID(id) setegid(id)
@@ -963,7 +956,6 @@ delete_passwd_cache() {
 #define GET_REAL_UID() getuid()
 #define GET_EFFECTIVE_GID() getegid()
 #define GET_REAL_GID() getgid()
-#endif
 
 #include "condor_debug.h"
 #include "passwd_cache.unix.h"
@@ -1045,20 +1037,12 @@ delete_passwd_cache() {
 void
 init_condor_ids()
 {
-	int scm;
 	bool result;
 	char* env_val = NULL;
 	char* config_val = NULL;
 	char* val = NULL;
 	uid_t envCondorUid = INT_MAX;
 	gid_t envCondorGid = INT_MAX;
-
-        /*
-        ** N.B. if we are using the yellow pages, system calls which are
-        ** not supported by either remote system calls or file descriptor
-        ** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
-        */
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
 	uid_t MyUid = get_my_uid();
 	gid_t MyGid = get_my_gid();
@@ -1190,7 +1174,6 @@ init_condor_ids()
 	}
 
 	(void)endpwent();
-	(void)SetSyscalls( scm );
 	
 	CondorIdsInited = TRUE;
 }
@@ -1314,33 +1297,12 @@ init_nobody_ids( int is_quiet )
 	if (! result ) {
 
 
-#ifdef HPUX
-		// the HPUX9 release does not have a default entry for nobody,
-		// so we'll help condor admins out a bit here...
-		nobody_uid = 59999;
-		nobody_gid = 59999;
-#else
 		if( ! is_quiet ) {
 			dprintf( D_ALWAYS, 
 					 "Can't find UID for \"nobody\" in passwd file\n" );
 		}
 		return FALSE;
-#endif
 	} 
-
-#ifdef HPUX
-	// HPUX9 has a bug in that getpwnam("nobody") always returns
-	// a gid of 60001, no matter what the group file (or NIS) says!
-	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
-	// patch here, we will generate an EXCEPT later when we try a
-	// setgid().  -Todd Tannenbaum, 3/95
-	if( (nobody_uid > 59999) || (nobody_uid <= 0) ) {
-		nobody_uid = 59999;
-	}
-	if( (nobody_gid > 59999) || (nobody_gid <= 0) ) {
-		nobody_gid = 59999;
-	}
-#endif
 
 	/* WARNING: At the top of this function, we initialized 
 	   nobody_uid and nobody_gid to 0, so if for some terrible 
@@ -1362,7 +1324,6 @@ init_nobody_ids( int is_quiet )
 int
 init_user_ids_implementation( const char username[], int is_quiet )
 {
-	int					scm;
 	uid_t 				usr_uid;
 	gid_t				usr_gid;
 
@@ -1390,13 +1351,6 @@ init_user_ids_implementation( const char username[], int is_quiet )
 										NULL, is_quiet ); 
 	}
 
-	/*
-	** N.B. if we are using the yellow pages, system calls which are
-	** not supported by either remote system calls or file descriptor
-	** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
-	*/
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-
 	if( ! strcasecmp(username, "nobody") ) {
 			// There's so much special logic for user nobody that it's
 			// all in a seperate function now.
@@ -1409,11 +1363,9 @@ init_user_ids_implementation( const char username[], int is_quiet )
 			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		}
 		(void)endpwent();
-		(void)SetSyscalls( scm );
 		return FALSE;
 	}
 	(void)endpwent();
-	(void)SetSyscalls( scm );
 	return set_user_ids_implementation( usr_uid, usr_gid, username, is_quiet ); 
 }
 

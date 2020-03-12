@@ -69,7 +69,7 @@ class CreamResource : public BaseResource
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
-	int ProxyCallback();
+	void ProxyCallback();
 
 	// This should be private, but CreamJob references it directly for now
 	static HashTable <std::string, CreamResource *> ResourcesByName;

@@ -152,15 +152,15 @@ void make_big_string(
 	return;
 }
 
-/* Returns a new compat_classad::ClassAd from a file */
-compat_classad::ClassAd* get_classad_from_file(){
+/* Returns a new ClassAd from a file */
+ClassAd* get_classad_from_file(){
 
 	FILE* classad_file;
 	ClassAd* classad_from_file;
 	const char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
 		"MyType=\"foo\"\n TargetType=\"blah\"";
-	compat_classad::ClassAd classad;
-	classad.initFromString(classad_string, NULL);
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
 	classad_file = safe_fopen_wrapper_follow("classad_file", "w");
 	fPrintAd(classad_file, classad);
 	fprintf(classad_file, "***\n");
@@ -168,7 +168,8 @@ compat_classad::ClassAd* get_classad_from_file(){
 
 	int iseof, error, empty;
 	classad_file = safe_fopen_wrapper_follow("classad_file", "r");
-	classad_from_file = new ClassAd(classad_file, "***", iseof, error, empty);
+	classad_from_file = new ClassAd;
+	InsertFromFile(classad_file, *classad_from_file, "***", iseof, error, empty);
 	fclose(classad_file);
 
 	return classad_from_file;
@@ -252,22 +253,22 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool remove_check,
 							int absent_mask /*=0*/)
 {
-	int val1, val2, val3, val4, val5;
+	bool val1, val2, val3, val4, val5;
 	int mask = 0;
-	if ( ! ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1))    { mask |= 0x01; val1 = 0; }
-	if ( ! ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2))  { mask |= 0x02; val2 = 0; }
-	if ( ! ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3)) { mask |= 0x04; val3 = 0; }
-	if ( ! ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4))     { mask |= 0x08; val4 = 0; }
-	if ( ! ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5))   { mask |= 0x10; val5 = 1; }
+	if ( ! ad->LookupBool(ATTR_PERIODIC_HOLD_CHECK, val1))    { mask |= 0x01; val1 = 0; }
+	if ( ! ad->LookupBool(ATTR_PERIODIC_REMOVE_CHECK, val2))  { mask |= 0x02; val2 = 0; }
+	if ( ! ad->LookupBool(ATTR_PERIODIC_RELEASE_CHECK, val3)) { mask |= 0x04; val3 = 0; }
+	if ( ! ad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, val4))     { mask |= 0x08; val4 = 0; }
+	if ( ! ad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, val5))   { mask |= 0x10; val5 = 1; }
 
 	bool found = (mask == (absent_mask & 0x1F));
 	
 	return found &&
-			((val1 != 0) == periodic_hold) &&
-			((val2 != 0) == periodic_remove) &&
-			((val3 != 0) == periodic_release) &&
-			((val4 != 0) == hold_check) &&
-			((val5 != 0) == remove_check);
+			(val1 == periodic_hold) &&
+			(val2 == periodic_remove) &&
+			(val3 == periodic_release) &&
+			(val4 == hold_check) &&
+			(val5 == remove_check);
 }
 
 bool user_policy_ad_checker(ClassAd* ad,
@@ -279,12 +280,12 @@ bool user_policy_ad_checker(ClassAd* ad,
 							bool remove_check,
 							int absent_mask /*=0*/)
 {
-	int val=0;
+	bool val = false;
 	int mask = 0;
-	if ( ! ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val)) { mask |= 0x01; val = 0; }
+	if ( ! ad->LookupBool(ATTR_TIMER_REMOVE_CHECK, val)) { mask |= 0x01; val = false; }
 	bool found = mask == (absent_mask & 1);
 	
-	return found && ((val != 0) == timer_remove) &&
+	return found && (val == timer_remove) &&
 		user_policy_ad_checker(ad, 
 							   periodic_hold,
 							   periodic_remove,
@@ -295,10 +296,7 @@ bool user_policy_ad_checker(ClassAd* ad,
 }
 
 void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {
-	MyString buf;
-
-	buf.formatstr("%s = %s", attribute, value);
-	ad->Insert(buf.Value());
+	ad->AssignExpr(attribute, value);
 }
 
 /* don't return anything: the process will die if value not zero */

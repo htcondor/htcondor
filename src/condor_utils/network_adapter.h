@@ -24,7 +24,6 @@
  * Headers
  ***************************************************************/
 
-#include "MyString.h"
 #include "condor_classad.h"
 #include "condor_sockaddr.h"
 
@@ -114,7 +113,7 @@ public:
 	/** Returns a string list of the supported types WOL types
 		@return comma separated list
 	 */
-	MyString& wakeSupportedString ( MyString &s ) const;
+	std::string& wakeSupportedString ( std::string &s ) const;
 
     /** Ensures that the adapter "waking" is enabled.
 		@return true if the adapter waking is enabled; otherwise, false.
@@ -129,7 +128,7 @@ public:
 	/** Returns a string list of the supported types WOL types
 		@return comma separated list
 	 */
-	MyString& wakeEnabledString ( MyString &s ) const;;
+	std::string& wakeEnabledString ( std::string &s ) const;;
 
 	/** Returns the adapter's logical name
 		@return a string with the logical name
@@ -176,8 +175,7 @@ protected:
 	unsigned wolSetBit ( WOL_TYPE type, WOL_BITS bit );
 
 	// Get string representations of the supported / enabled bits
-	MyString& getWolString ( unsigned bits, MyString &s ) const;
-	char* getWolString ( unsigned bits, char *buf, int bufsize ) const;
+	std::string& getWolString ( unsigned bits, std::string &s ) const;
 
 
   private:

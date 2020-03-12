@@ -78,8 +78,7 @@ class Lexer
 			LEX_OPEN_PAREN,
 			LEX_CLOSE_PAREN,
 			LEX_OPEN_BRACE,
-			LEX_CLOSE_BRACE,
-			LEX_BACKSLASH
+			LEX_CLOSE_BRACE
 		};
 
 		class TokenValue
@@ -216,7 +215,6 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		unsigned int			lexBufferCount;				// current offset in lexBuffer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		bool		jsonLex;
@@ -228,9 +226,10 @@ class Lexer
 		bool		tokenConsumed;				// has the token been consumed?
 
 		// internal lexing functions
-		void 		wind(void);					// consume character from source
+		void 		wind(bool fetch = true);	// consume character from source
 		void 		mark(void);					// mark()s beginning of a token
 		void 		cut(void);					// delimits token
+		void		fetch();					// fetch next character if ch is empty
 
 		// to tokenize the various tokens
 		int 		tokenizeNumber (void);		// integer or real

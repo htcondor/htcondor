@@ -55,9 +55,9 @@ struct Options {
 	char *release_dir;
 	char *smtpserver;
 	char *condoremail;
-	char *hostallowread;
-	char *hostallowwrite;
-	char *hostallowadministrator;
+	char *allowread;
+	char *allowwrite;
+	char *allowadministrator;
 	char *vmmaxnumber;
 	char *vmversion;
 	char *vmmemory;
@@ -72,9 +72,9 @@ const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:w:x:y:z:q:f:k:g:b:
 static struct option long_options[] =
 { 
 	{"acctdomain",              required_argument, 0, 'a'},
-	{"hostallowread",           required_argument, 0, 'e'},
-	{"hostallowwrite",          required_argument, 0, 't'},
-	{"hostallowadministrator",  required_argument, 0, 'i'},
+	{"allowread",               required_argument, 0, 'e'},
+	{"allowwrite",              required_argument, 0, 't'},
+	{"allowadministrator",      required_argument, 0, 'i'},
 	{"newpool",                 required_argument, 0, 'n'},
 	{"runjobs",                 required_argument, 0, 'r'},
 	{"vacatejobs",              required_argument, 0, 'v'},
@@ -127,7 +127,6 @@ void set_vmgahpoptions();
 void set_mailoptions();
 void set_hostpermissions();
 void set_vmuniverse();
-void set_hdfs();
 
 int main(int argc, char** argv) {
 
@@ -152,7 +151,6 @@ int main(int argc, char** argv) {
   set_mailoptions ();
   set_hostpermissions ();
   set_vmuniverse();
-  set_hdfs();
   
   /* the following options go in the vmgahp config file */
   if ( 'Y' == Opt.enablevmuniverse ) {
@@ -255,7 +253,6 @@ set_release_dir() {
 		set_option("RELEASE_DIR", Opt.release_dir);
 		set_option("LOCAL_DIR", Opt.release_dir);
 		//Hack until I work out the AWK script.
-		set_option("HDFS", "$(SBIN)/condor_hdfs.exe");
 		set_option("ROOSTER", "$(SBIN)/condor_rooster.exe");
 	}
 }
@@ -333,14 +330,14 @@ set_daemonlist() {
 
 void
 set_hostpermissions() {
-	if ( Opt.hostallowread != NULL ) {
-		set_option("ALLOW_READ", Opt.hostallowread);
+	if ( Opt.allowread != NULL ) {
+		set_option("ALLOW_READ", Opt.allowread);
 	}
-	if ( Opt.hostallowwrite != NULL ) {
-		set_option("ALLOW_WRITE", Opt.hostallowwrite);
+	if ( Opt.allowwrite != NULL ) {
+		set_option("ALLOW_WRITE", Opt.allowwrite);
 	}
-	if ( Opt.hostallowadministrator != NULL ) {
-		set_option("ALLOW_ADMINISTRATOR", Opt.hostallowadministrator);
+	if ( Opt.allowadministrator != NULL ) {
+		set_option("ALLOW_ADMINISTRATOR", Opt.allowadministrator);
 	}
 }
 
@@ -361,26 +358,6 @@ set_vmuniverse() {
 		set_option("VM_NETWORKING", "TRUE");	  
 	}
 	
-}
-
-void set_hdfs() {
-	char buf[MAX_PATH];
-	if ( Opt.namedata ) {
-		set_option("HDFS_SERVICES", Opt.namedata);
-		set_option("HDFS_NAMENODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_name");
-		set_option("HDFS_DATANODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_data");
-		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS");
-	}
-
-	if ( Opt.namenode && Opt.nameport ) {
-		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.nameport);
-		set_option("HDFS_NAMENODE", buf);
-	}
-
-	if ( Opt.namenode && Opt.namewebport ) {
-		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.namewebport);
-		set_option("HDFS_NAMENODE_WEB", buf);
-	}
 }
 
 bool 
@@ -407,19 +384,19 @@ parse_args(int argc, char** argv) {
 
 			case 'e':
 				if (!isempty(my_optarg)) {
-					Opt.hostallowread = strdup(my_optarg);
+					Opt.allowread = strdup(my_optarg);
 				}
 			break;
 
 			case 't':
 				if (!isempty(my_optarg)) {
-					Opt.hostallowwrite = strdup(my_optarg);
+					Opt.allowwrite = strdup(my_optarg);
 				}
 			break;
 
 			case 'i':
 				if (!isempty(my_optarg)) {
-					Opt.hostallowadministrator = strdup(my_optarg);
+					Opt.allowadministrator = strdup(my_optarg);
 				}
 			break;
 

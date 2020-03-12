@@ -602,8 +602,10 @@ int daemon::RealStart( )
 	}
 
 	if( !m_after_startup_wait_for_file.IsEmpty() ) {
-		MSC_SUPPRESS_WARNING_FIXME(6031)
-		remove( m_after_startup_wait_for_file.Value() );
+		if (0 != remove( m_after_startup_wait_for_file.Value())) {
+			dprintf(D_ALWAYS, "Cannot remove wait-for-startup file %s\n", m_after_startup_wait_for_file.c_str());
+			// Now what?  restart?  exit?
+		}
 	}
 
 	if( m_reload_shared_port_addr_after_startup ) {
@@ -624,7 +626,7 @@ int daemon::RealStart( )
 		// We didn't want them to use root for any reason, but b/c of
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(
-	bool wants_condor_priv = false;
+	const bool wants_condor_priv = false;
 	bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
 		// Collector needs to listen on a well known port.
 	if ( daemon_is_collector || (daemon_is_shared_port && collector_uses_shared_port) ) {
@@ -777,9 +779,18 @@ int daemon::RealStart( )
 	}
 
 	args.AppendArg(shortname);
+
+#if 1
+	// as if 8.9.6 daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
+	// If we *dont* pass -f, then we can valigrind or strace a daemon just by adding two statements to the config file
+	// for example:
+	//  JOB_ROUTER = /usr/bin/valgrind
+	//  JOB_ROUTER_ARGS = --leak-check=full --log-file=$(LOG)/job_router-vg.%p --error-limit=no $(LIBEXEC)/condor_job_router -f $(JOB_ROUTER_ARGS)
+#else
 	if(isDC) {
 		args.AppendArg("-f");
 	}
+#endif
 
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
@@ -801,14 +812,23 @@ int daemon::RealStart( )
 					char const * configArg = configArgs.GetArg( i );
 					if( strcmp( configArg, "-local-name" ) == 0 ) {
 						foundLocalName = true;
-						localName = configArgs.GetArg( i + 1 );
-						setLocalName = true;
+						if( i + 1 < configArgs.Count() ) {
+							daemon_sock_buf = configArgs.GetArg(i + 1);
+							daemon_sock_buf.lower_case();
+							daemon_sock = daemon_sock_buf.c_str();
+							localName = daemon_sock_buf;
+							setLocalName = true;
+						}
 						break;
 					}
 				}
 				if(! foundLocalName) {
 					args.AppendArg( "-local-name" );
 					args.AppendArg( name_in_config_file );
+
+					// Don't set daemon_sock here, since we'll catch it
+					// below if we haven't, and that avoids duplicating
+					// the code.
 					localName = name_in_config_file;
 					setLocalName = true;
 				}
@@ -923,6 +943,20 @@ int daemon::RealStart( )
 	if( daemon_sock ) {
 		dprintf (D_FULLDEBUG,"Starting daemon with shared port id %s\n",
 			daemon_sock);
+	} else {
+		// We checked for local names already, use the config name here.
+		if( isDC ) {
+			daemon_sock_buf = name_in_config_file;
+			daemon_sock_buf.lower_case();
+			// Because the master only starts daemons named in the config
+			// file, and those names are by definition unique, we don't
+			// need to further uniquify them with a sequence number, and
+			// not doing so makes it possible to construct certain
+			// addresses, rather than discover them.
+			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str(), false );
+			daemon_sock = daemon_sock_buf.c_str();
+			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
+		}
 	}
 	if( command_port > 1 ) {
 		dprintf (D_FULLDEBUG, "Starting daemon on TCP port %d\n", command_port);
@@ -1835,6 +1869,7 @@ daemon::DeregisterControllee( class daemon *controllee )
 ///////////////////////////////////////////////////////////////////////////
 
 Daemons::Daemons()
+	: m_token_requester(&Daemons::token_request_callback, this)
 {
 	check_new_exec_tid = -1;
 	update_tid = -1;
@@ -1909,12 +1944,12 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		class daemon* dmn = it->second;
 
 		std::string attr(dmn->name_in_config_file); attr += "_PID";
-		readyAd.Assign(attr.c_str(), dmn->pid);
+		readyAd.Assign(attr, dmn->pid);
 		++num_daemons;
 
 		if (dmn->ready_state) {
 			attr = dmn->name_in_config_file; attr += "_State";
-			readyAd.Assign(attr.c_str(), dmn->ready_state);
+			readyAd.Assign(attr, dmn->ready_state);
 		}
 
 		//const char * state = dmn->ready_state;
@@ -3221,20 +3256,18 @@ Daemons::Update( ClassAd* ca )
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->runs_here || iter->second == master ) {
-			sprintf( buf, "%s_Timestamp = %ld", 
-					 iter->second->name_in_config_file, 	
-					 (long)iter->second->timeStamp );
-			ca->Insert( buf );
+			sprintf( buf, "%s_Timestamp",
+					 iter->second->name_in_config_file );
+			ca->Assign( buf, (long)iter->second->timeStamp );
 			if( iter->second->pid ) {
-				sprintf( buf, "%s_StartTime = %ld", 
-						 iter->second->name_in_config_file, 	
-						 (long)iter->second->startTime );
-				ca->Insert( buf );
+				sprintf( buf, "%s_StartTime",
+						 iter->second->name_in_config_file );
+				ca->Assign( buf, (long)iter->second->startTime );
 			} else {
 					// No pid, but daemon's supposed to be running.
-				sprintf( buf, "%s_StartTime = 0", 
+				sprintf( buf, "%s_StartTime",
 						 iter->second->name_in_config_file );
-				ca->Insert( buf );
+				ca->Assign( buf, 0 );
 			}
 		}
 	}
@@ -3256,7 +3289,8 @@ Daemons::UpdateCollector()
     daemonCore->publish(ad);
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
-	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
+	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true, &m_token_requester,
+		DCTokenRequester::default_identity, "ADVERTISE_MASTER");
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -3264,8 +3298,10 @@ Daemons::UpdateCollector()
 #endif
 #endif
 
-		// Reset the timer so we don't do another period update until 
-	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
+		// Reset the timer so we don't do another period update until
+	if( update_tid != -1 ) {
+		daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
+	}
 
 	dprintf( D_FULLDEBUG, "exit Daemons::UpdateCollector\n" );
 }
@@ -3316,4 +3352,16 @@ Daemons::CancelRestartTimers( void )
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		iter->second->CancelRestartTimers();
 	}
+}
+
+void
+Daemons::token_request_callback(bool success, void *miscdata)
+{
+	auto self = reinterpret_cast<Daemons *>(miscdata);
+		// In the successful case, instantly re-fire the timer
+		// that will send an update to the collector.
+	if (success && (self->update_tid != -1)) {
+		daemonCore->Reset_Timer( self->update_tid, 0,
+		update_interval );
+}
 }

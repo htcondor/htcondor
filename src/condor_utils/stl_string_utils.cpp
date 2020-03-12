@@ -20,6 +20,7 @@
 #include "condor_common.h" 
 #include "condor_snutils.h"
 #include "condor_debug.h"
+#include "condor_random_num.h"
 #include <limits>
 
 #include "stl_string_utils.h"
@@ -38,7 +39,8 @@ bool operator>=(const MyString& L, const std::string& R) { return R <= L.Value()
 bool operator>=(const std::string& L, const MyString& R) { return L >= R.Value(); }
 
 
-int vformatstr(std::string& s, const char* format, va_list pargs) {
+static
+int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
 	int n;
@@ -58,7 +60,11 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     // In this case, fixed buffer was sufficient so we're done.
     // Return number of chars written.
     if (n < fixlen) {
-        s = fixbuf;
+		if (concat) {
+			s.append(fixbuf, n);
+		} else {
+			s.assign(fixbuf, n);
+		}
         return n;
     }
 
@@ -87,7 +93,11 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     if (nn >= n) EXCEPT("Insufficient buffer size (%d) for printing %d chars", n, nn);
 
     // safe to do string assignment
-    s = varbuf;
+	if (concat) {
+		s.append(varbuf, nn);
+	} else {
+		s.assign(varbuf, nn);
+	}
 
     // clean up our allocated buffer
     delete[] varbuf;
@@ -96,10 +106,18 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     return nn;
 }
 
+int vformatstr(std::string& s, const char* format, va_list pargs) {
+	return vformatstr_impl(s, false, format, pargs);
+}
+
+int vformatstr_cat(std::string& s, const char* format, va_list pargs) {
+	return vformatstr_impl(s, true, format, pargs);
+}
+
 int formatstr(std::string& s, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int r = vformatstr(s, format, args);
+    int r = vformatstr_impl(s, false, format, args);
     va_end(args);
     return r;
 }
@@ -109,7 +127,7 @@ int formatstr(MyString& s, const char* format, ...) {
     std::string t;
     va_start(args, format);
     // this gets me the sprintf-standard return value (# chars printed)
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(t, false, format, args);
     va_end(args);
     s = t;
     return r;
@@ -117,11 +135,9 @@ int formatstr(MyString& s, const char* format, ...) {
 
 int formatstr_cat(std::string& s, const char* format, ...) {
     va_list args;
-    std::string t;
     va_start(args, format);
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(s, true, format, args);
     va_end(args);
-    s += t;
     return r;
 }
 
@@ -129,7 +145,7 @@ int formatstr_cat(MyString& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
-    int r = vformatstr(t, format, args);
+    int r = vformatstr_impl(t, false, format, args);
     va_end(args);
     s += t.c_str();
     return r;
@@ -260,6 +276,45 @@ void title_case( std::string &str )
 		}
 		upper = isspace(str[i]);
 	}
+}
+
+std::string EscapeChars(const std::string& src, const std::string& Q, char escape)
+{
+	// create a result string.  may as well reserve the length to
+	// begin with to minimize reallocations.
+	std::string S;
+	S.reserve(src.length());
+
+	// go through each char in the string src
+	for (size_t i = 0; i < src.length(); i++) {
+
+		// if it is in the set of chars to escape,
+		// drop an escape onto the end of the result
+		if (strchr(Q.c_str(), src[i])) {
+			// this character needs escaping
+			S += escape;
+		}
+
+		// put this char into the result
+		S += src[i];
+	}
+
+	// thats it!
+	return S;
+}
+
+bool ends_with(const std::string& str, const std::string& post) {
+	size_t postSize = post.size();
+	if( postSize == 0 ) { return false; }
+
+	size_t strSize = str.size();
+	if( strSize < postSize ) { return false; }
+
+	size_t offset = strSize - postSize;
+	for( size_t i = 0; i < postSize; ++i ) {
+		if( str[offset + i] != post[i] ) { return false; }
+	}
+	return true;
 }
 
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
@@ -482,6 +537,72 @@ size_t filename_offset_from_path(std::string & pathname)
 #endif
 	}
 	return ix;
+}
+
+// if len is 10, this means 10 random ascii characters from the set.
+void
+randomlyGenerateInsecure(std::string &str, const char *set, int len)
+{
+	int i;
+	int idx;
+	int set_len;
+
+    if (!set || len <= 0) {
+		str.clear();
+		return;
+	}
+
+	str.assign(len, '0');
+
+	set_len = (int)strlen(set);
+
+	// now pick randomly from the set and fill stuff in
+	for (i = 0; i < len ; i++) {
+		idx = get_random_int_insecure() % set_len;
+		str[i] = set[idx];
+	}
+}
+
+#if 0
+void
+randomlyGeneratePRNG(std::string &str, const char *set, int len)
+{
+	if (!set || len <= 0) {
+		str.clear();
+		return;
+	}
+
+	str.assign(len, '0');
+
+	auto set_len = strlen(set);
+	for (int idx = 0; idx < len; idx++) {
+		auto rand_val = get_random_int_insecure() % set_len;
+		str[idx] = set[rand_val];
+	}
+}
+#endif
+
+void
+randomlyGenerateInsecureHex(std::string &str, int len)
+{
+	randomlyGenerateInsecure(str, "0123456789abcdef", len);
+}
+
+void
+randomlyGenerateShortLivedPassword(std::string &str, int len)
+{
+	// Create a randome password of alphanumerics
+	// and safe-to-print punctuation.
+	//
+	//randomlyGeneratePRNG(
+	randomlyGenerateInsecure(
+				str,
+				"abcdefghijklmnopqrstuvwxyz"
+				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				"0123456789"
+				"!@#$%^&*()-_=+,<.>/?",
+				len
+				);
 }
 
 // return the bounds of the next token or -1 if no tokens remain

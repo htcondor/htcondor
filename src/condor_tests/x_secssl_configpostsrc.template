@@ -17,5 +17,6 @@ AUTH_SSL_CLIENT_CAFILE =  XXXXX/ssl_keys/ca-cert.pem
 #AUTH_SSL_CLIENT_CADIR =  XXXXX/ssl_keys/cadir
 AUTH_SSL_CLIENT_CERTFILE = XXXXX/ssl_keys/user.cert
 AUTH_SSL_CLIENT_KEYFILE = XXXXX/ssl_keys/user.key
+SSL_SKIP_HOST_CHECK = true
 
 CERTIFICATE_MAPFILE = XXXXX/ssl_keys/condor_mapfile

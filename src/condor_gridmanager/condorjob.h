@@ -81,6 +81,7 @@ class CondorJob : public BaseJob
 	bool m_remoteJobFinished;
 
 	Proxy *jobProxy;
+	std::string scitokenFile;
 	time_t delegatedProxyExpireTime; // 0 if not using short-lived delegation
 	time_t lastProxyExpireTime;      // expiration time of our proxy last time we updated remote side (not shortened to short-lived delegation lifetime)
 	time_t delegatedProxyRenewTime;  // when we should renew short-lived delegation

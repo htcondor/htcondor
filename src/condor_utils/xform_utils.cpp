@@ -45,10 +45,6 @@
 #include <string>
 #include <set>
 
-#ifdef WIN32
-#define CLIPPED 1
-#endif
-
 // values for hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
 static char OneString[] = "1", ZeroString[] = "0";
 //static char ParallelNodeString[] = "#pArAlLeLnOdE#";
@@ -98,11 +94,14 @@ static MACRO_DEF_ITEM XFormMacroDefaults[] = {
 };
 
 
+// setup XFormParamInfoDefaults using the global param table
+extern "C" { int param_info_init(const void ** pvdefaults); }
+static MACRO_DEFAULTS XFormParamInfoDefaults = { 0, NULL, NULL };
+
 // these are used to keep track of the source of various macros in the table.
-//const MACRO_SOURCE DetectedMacro = { true,  false, 0, -2, -1, -2 };
-const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 }; // for macros set by default
-const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 }; // for macros set by command line
-const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
+const MACRO_SOURCE LocalMacro = { true, false, 0, -2, -1, -2 }; // for macros set by default
+const MACRO_SOURCE ArgumentMacro = { true, false, 1, -2, -1, -2 }; // for macros set by command line
+const MACRO_SOURCE LiveMacro = { true, false, 2, -2, -1, -2 };    // for macros use as queue loop variables
 
 // from submit_utils.cpp
 condor_params::string_value * allocate_live_default_string(MACRO_SET& set, const condor_params::string_value & Def, int cch);
@@ -229,8 +228,25 @@ void rewind_macro_set(MACRO_SET& set, MACRO_SET_CHECKPOINT_HDR* phdr, bool and_d
 // the macro set, because we allocate the defaults from the ALLOCATION_POOL.
 void XFormHash::setup_macro_defaults()
 {
-	// make an instance of the defaults table that is private to this function.
-	// we do this because of the 'live' keys in the 
+	if (LocalMacroSet.sources.empty()) {
+		LocalMacroSet.sources.reserve(4);
+		LocalMacroSet.sources.push_back("<Local>");
+		LocalMacroSet.sources.push_back("<Argument>");
+		LocalMacroSet.sources.push_back("<Live>");
+	}
+
+	// use param table as defaults table.  this uses less memory, but disables all of the live looping variables
+	if (LocalMacroSet.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) {
+		XFormParamInfoDefaults.size = param_info_init((const void**)&XFormParamInfoDefaults.table);
+		LocalMacroSet.defaults = &XFormParamInfoDefaults;
+		return;
+	}
+
+	// init the global xform default macros table (ARCH, OPSYS, etc) in case this hasn't happened already.
+	init_xform_default_macros();
+
+	// make an copy of the global xform default macros table that is private to this function.
+	// we do this because of the 'live' keys in the defaults table
 	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*)));
 	memcpy((void*)pdi, XFormMacroDefaults, sizeof(XFormMacroDefaults));
 	LocalMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
@@ -248,15 +264,12 @@ void XFormHash::setup_macro_defaults()
 
 
 
-XFormHash::XFormHash()
+XFormHash::XFormHash(int options /* =0 */)
 	: LiveProcessString(NULL), LiveRowString(NULL), LiveStepString(NULL)
 	, LiveRulesFileMacroDef(NULL), LiveIteratingMacroDef(NULL)
 {
-	memset(&LocalMacroSet, 0, sizeof(LocalMacroSet));
-	LocalMacroSet.options = CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
-	LocalMacroSet.apool = ALLOCATION_POOL();
-	LocalMacroSet.sources = std::vector<const char*>();
-	LocalMacroSet.errors = new CondorError();
+	int opts = options | CONFIG_OPT_SUBMIT_SYNTAX | CONFIG_OPT_NO_INCLUDE_FILE | CONFIG_OPT_NO_SMART_AUTO_USE;
+	LocalMacroSet.initialize(opts);
 	setup_macro_defaults();
 }
 
@@ -276,8 +289,14 @@ bool XFormHash::rewind_to_state(MACRO_SET_CHECKPOINT_HDR * chkhdr, bool and_dele
 
 XFormHash::~XFormHash()
 {
-	if (LocalMacroSet.errors) delete LocalMacroSet.errors;
+	delete LocalMacroSet.errors;
 	LocalMacroSet.errors = NULL;
+	delete LocalMacroSet.table;
+	LocalMacroSet.table = NULL;
+	delete LocalMacroSet.metat;
+	LocalMacroSet.metat = NULL;
+	LocalMacroSet.sources.clear();
+	LocalMacroSet.apool.clear();
 }
 
 void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
@@ -286,19 +305,17 @@ void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_F
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	if (message) {
-		vsprintf ( message, format, ap );
-	}
+
+	vsprintf ( message, format, ap );
+	
 	va_end(ap);
 
 	if (LocalMacroSet.errors) {
 		LocalMacroSet.errors->push("XForm", -1, message);
 	} else {
-		fprintf(fh, "\nERROR: %s", message ? message : "");
+		fprintf(fh, "\nERROR: %s", message);
 	}
-	if (message) {
-		free(message);
-	}
+	free(message);
 }
 
 void XFormHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
@@ -350,7 +367,7 @@ char * XFormHash::local_param(const char* name, const char* alt_name, MACRO_EVAL
 
 void XFormHash::set_local_param(const char *name, const char *value, MACRO_EVAL_CONTEXT & ctx)
 {
-	insert_macro(name, value, LocalMacroSet, DefaultMacro, ctx);
+	insert_macro(name, value, LocalMacroSet, LocalMacro, ctx);
 }
 
 void XFormHash::set_arg_variable(const char* name, const char * value, MACRO_EVAL_CONTEXT & ctx)
@@ -448,13 +465,6 @@ const char * init_xform_default_macros()
 void XFormHash::init()
 {
 	clear();
-	LocalMacroSet.sources.push_back("<Detected>");
-	LocalMacroSet.sources.push_back("<Default>");
-	LocalMacroSet.sources.push_back("<Argument>");
-	LocalMacroSet.sources.push_back("<Live>");
-
-	// in case this hasn't happened already.
-	init_xform_default_macros();
 }
 
 void XFormHash::clear()
@@ -471,7 +481,9 @@ void XFormHash::clear()
 	LocalMacroSet.size = 0;
 	LocalMacroSet.sorted = 0;
 	LocalMacroSet.apool.clear();
-	LocalMacroSet.sources.clear();
+	if (LocalMacroSet.sources.size() > 3) {
+		LocalMacroSet.sources.resize(3);
+	}
 	setup_macro_defaults(); // setup a defaults table for the macro_set. have to re-do this because we cleared the apool
 }
 
@@ -734,6 +746,98 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 	return lines.number();
 }
 
+// like the above open, but more efficient when loading from a config value
+// that has no iteration/transform statements
+int MacroStreamXFormSource::open(const char * statements_in, int & offset, std::string & errmsg)
+{
+	const char * statements = statements_in + offset;
+	size_t cb = strlen(statements);
+	char * buf = (char*)malloc(cb + 2);
+	file_string.set(buf);
+	StringTokenIterator lines(statements, 0, "\r\n");
+	int start, length, linecount = 0;
+	while ((start = lines.next_token(length)) >= 0) {
+		// tentatively copy the line, then append a null terminator
+		// at the bottom of the loop, we will advance buf if keepit is still true
+		memcpy(buf, statements+start, length);
+		buf[length] = 0;
+		bool keepit = true;
+		bool at_end = false;
+
+		// look for specific keywords that we want to parse and remove from the final transform
+		const char * p = buf + strspn(buf, " \t");
+		switch (tolower(*p)) {
+		case 'n':
+			p = is_xform_statement(buf, "name");
+			if (p) {
+				std::string tmp(p); trim(tmp);
+				// set the name, but don't overwrite a user-supplied name
+				if (! tmp.empty() && name.empty()) name = tmp;
+				keepit = false;
+			}
+			break;
+		case 'u':
+			p = is_xform_statement(buf, "universe");
+			if (p) {
+				setUniverse(p);
+				keepit = false;
+			}
+			break;
+		case 'r': 
+			p = is_xform_statement(buf, "requirements");
+			if (p) {
+				int err = 0;
+				setRequirements(p, err);
+				if (err < 0) {
+					formatstr(errmsg, "invalid REQUIREMENTS : %s", p);
+					return err;
+				}
+				keepit = false;
+			}
+			break;
+		case 't':
+			p = is_xform_statement(buf, "transform");
+			if (p) {
+				if ( ! iterate_args) {
+					p = is_non_trivial_iterate(p);
+					if (p) { iterate_args.set(strdup(p)); iterate_init_state = 2; }
+				}
+				keepit = false;
+				at_end = true;
+			}
+			break;
+		default:
+			break;
+		}
+
+		// if this was not a special keyword, append a newline and null terminator
+		// and move the buffer pointer forward so we won't overwrite it when we fetch the next line
+		// otherwise truncate the buffer in case there are no more lines to fetch
+		if (keepit) {
+			buf[length++] = '\n';
+			buf[length] = 0;
+			buf += length;
+			++linecount;
+		} else {
+			buf[0] = 0;
+		}
+		if (at_end) {
+			break;
+		}
+	}
+
+	MacroStreamCharSource::open(file_string, LocalMacro);
+	rewind();
+
+	// tell the caller where we stopped parsing
+	offset += start + length;
+	return linecount;
+}
+
+// this parser is used with condor_transform_ads to parse rules files
+// it supports TRANSFORM statements with complex arguments and itemdata (like submit queue statements)
+// but does NOT currently support NAME, UNIVERSE or REQUIREMENTS
+//
 int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource, std::string & errmsg)
 {
 	StringList lines;
@@ -1302,15 +1406,16 @@ static ExprTree * XFormCopyValueToTree(classad::Value & val)
 	classad::Value::ValueType vtyp = val.GetType();
 	if (vtyp == classad::Value::LIST_VALUE) {
 		classad::ExprList * list = NULL;
-		val.IsListValue(list);
+		(void) val.IsListValue(list);
 		tree = list->Copy();
 	} else if (vtyp == classad::Value::SLIST_VALUE) {
 		classad_shared_ptr<classad::ExprList> list;
-		val.IsSListValue(list);
+		(void) val.IsSListValue(list);
 		tree = list.get()->Copy();
-	} else if (vtyp == classad::Value::CLASSAD_VALUE) {
-		classad::ClassAd* aval;
-		val.IsClassAdValue(aval);
+	} else if (vtyp == classad::Value::CLASSAD_VALUE || vtyp == classad::Value::SCLASSAD_VALUE) {
+		classad::ClassAd* aval = NULL;
+		(void) val.IsClassAdValue(aval);
+		ASSERT(aval);
 		tree = aval->Copy();
 	} else {
 		tree = classad::Literal::MakeLiteral(val);
@@ -1596,7 +1701,7 @@ public:
 	MacroStreamXFormSource & xforms;
 	MACRO_SET_CHECKPOINT_HDR* checkpoint;
 	FILE* outfile;
-	compat_classad::CondorClassAdFileParseHelper *input_helper;
+	CondorClassAdFileParseHelper *input_helper;
 	std::string errmsg;
 };
 
@@ -1828,7 +1933,7 @@ typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
 #define XForm_ConvertJobRouter_Remove_InputRSL 0x00001
 #define XForm_ConvertJobRouter_Fix_EvalSet     0x00002
 
-int ConvertJobRouterRouteToXForm (
+int ConvertClassadJobRouterRouteToXForm (
 	StringList & statements,
 	const char * config_name, // name from config
 	const std::string & routing_string,
@@ -1838,7 +1943,7 @@ int ConvertJobRouterRouteToXForm (
 {
 	classad::ClassAdParser parser;
 	classad::ClassAdUnParser unparser;
-	unparser.SetOldClassAd(true);
+	unparser.SetOldClassAd(true, true);
 
 	//bool style_2 = (options & 0x0F) == 2;
 	int  has_set_xcount = 0, has_set_queue = 0, has_set_maxMemory = 0, has_set_maxWallTime = 0, has_set_minWallTime = 0;
@@ -2138,7 +2243,7 @@ int ConvertJobRouterRouteToXForm (
 	return 1;
 }
 
-int XFormLoadFromJobRouterRoute (
+int XFormLoadFromClassadJobRouterRoute (
 	MacroStreamXFormSource & xform,
 	const std::string & routing_string,
 	int & offset,
@@ -2146,10 +2251,12 @@ int XFormLoadFromJobRouterRoute (
 	int options)
 {
 	StringList statements;
-	int rval = ConvertJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
+	int rval = ConvertClassadJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
 	if (rval == 1) {
 		std::string errmsg;
-		xform.open(statements, ArgumentMacro, errmsg);
+		auto_free_ptr xform_text(statements.print_to_delimed_string("\n"));
+		int offset = 0;
+		rval = xform.open(xform_text, offset, errmsg);
 	}
 	return rval;
 }

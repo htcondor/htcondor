@@ -121,8 +121,8 @@ void finish_main_config();
 void main_shutdown_fast();
 void main_shutdown_graceful();
 extern "C" int do_cleanup(int,int,const char*);
-int reaper( Service*, int pid, int status);
-int	shutdown_reaper( Service*, int pid, int status ); 
+int reaper(int pid, int status);
+int	shutdown_reaper(int pid, int status ); 
 
 void
 usage( char* MyName)
@@ -179,10 +179,10 @@ main_init( int, char* argv[] )
 	resmgr->starter_mgr.init();
 
 	ClassAd tmp_classad;
-	MyString starter_ability_list;
+	std::string starter_ability_list;
 	resmgr->starter_mgr.publish(&tmp_classad, A_STATIC | A_PUBLIC);
 	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
-	if( starter_ability_list.find(ATTR_HAS_VM) >= 0 ) {
+	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
 		// Now starter has codes for vm universe.
 		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
 		// check whether vm universe is available through vmgahp server
@@ -200,7 +200,7 @@ main_init( int, char* argv[] )
 		// We do this on Win32 since Win32 uses last_x_event
 		// variable in a similar fasion to the X11 condor_kbdd, and
 		// thus it must be initialized.
-	command_x_event( 0, 0, 0 );
+	command_x_event(0, 0);
 #endif
 
 		// Instantiate Resource objects in the ResMgr
@@ -250,155 +250,157 @@ main_init( int, char* argv[] )
 		// handle them all with a common handler.  For all of them,
 		// you need WRITE permission.
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
-								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON,
+								  command_handler,
+								  "command_handler", DAEMON,
 								  D_FULLDEBUG ); 
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
-								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON );
+								  command_handler,
+								  "command_handler", DAEMON );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
 								  "DEACTIVATE_CLAIM_FORCIBLY", 
-								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON );
+								  command_handler,
+								  "command_handler", DAEMON );
 	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
-								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON );
+								  command_handler,
+								  "command_handler", DAEMON );
 	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
-								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON );
+								  command_handler,
+								  "command_handler", DAEMON );
 	if (param_boolean("ALLOW_SLOT_PAIRING", false)) {
 		daemonCore->Register_Command( SWAP_CLAIM_AND_ACTIVATION, "SWAP_CLAIM_AND_ACTIVATION",
-								  (CommandHandler)command_with_opts_handler,
-								  "command_handler", 0, DAEMON );
+								  command_with_opts_handler,
+								  "command_handler", DAEMON );
 	}
 
 		// These commands are special and need their own handlers
 		// READ permission commands
 	daemonCore->Register_Command( GIVE_STATE,
 								  "GIVE_STATE",
-								  (CommandHandler)command_give_state,
-								  "command_give_state", 0, READ );
+								  command_give_state,
+								  "command_give_state", READ );
 	daemonCore->Register_Command( GIVE_TOTALS_CLASSAD,
 								  "GIVE_TOTALS_CLASSAD",
-								  (CommandHandler)command_give_totals_classad,
-								  "command_give_totals_classad", 0, READ );
+								  command_give_totals_classad,
+								  "command_give_totals_classad", READ );
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
-								  (CommandHandler)command_query_ads,
-								  "command_query_ads", 0, READ );
+								  command_query_ads,
+								  "command_query_ads", READ );
 
 		// DAEMON permission commands
 	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
-								  (CommandHandler)command_activate_claim,
-								  "command_activate_claim", 0, DAEMON );
+								  command_activate_claim,
+								  "command_activate_claim", DAEMON );
 	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
-								  (CommandHandler)command_request_claim,
-								  "command_request_claim", 0, DAEMON );
+								  command_request_claim,
+								  "command_request_claim", DAEMON );
 	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
-								  (CommandHandler)command_release_claim,
-								  "command_release_claim", 0, DAEMON );
+								  command_release_claim,
+								  "command_release_claim", DAEMON );
 	daemonCore->Register_Command( SUSPEND_CLAIM, "SUSPEND_CLAIM", 
-								  (CommandHandler)command_suspend_claim,
-								  "command_suspend_claim", 0, DAEMON );
+								  command_suspend_claim,
+								  "command_suspend_claim", DAEMON );
 	daemonCore->Register_Command( CONTINUE_CLAIM, "CONTINUE_CLAIM", 
-								  (CommandHandler)command_continue_claim,
-								  "command_continue_claim", 0, DAEMON );	
+								  command_continue_claim,
+								  "command_continue_claim", DAEMON );	
 	
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
-								  (CommandHandler)command_x_event,
-								  "command_x_event", 0, ALLOW,
+								  command_x_event,
+								  "command_x_event", ALLOW,
 								  D_FULLDEBUG ); 
 	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
-								  (CommandHandler)command_pckpt_all,
-								  "command_pckpt_all", 0, DAEMON );
+								  command_pckpt_all,
+								  "command_pckpt_all", DAEMON );
 	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
-								  (CommandHandler)command_name_handler,
-								  "command_name_handler", 0, DAEMON );
+								  command_name_handler,
+								  "command_name_handler", DAEMON );
 #if !defined(WIN32)
 	daemonCore->Register_Command( DELEGATE_GSI_CRED_STARTD, "DELEGATE_GSI_CRED_STARTD",
-	                              (CommandHandler)command_delegate_gsi_cred,
-	                              "command_delegate_gsi_cred", 0, DAEMON );
+	                              command_delegate_gsi_cred,
+	                              "command_delegate_gsi_cred", DAEMON );
 #endif
 
-
+	daemonCore->Register_Command( COALESCE_SLOTS, "COALESCE_SLOTS",
+								  command_coalesce_slots,
+								  "command_coalesce_slots", DAEMON );
 
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",
-								  (CommandHandler)command_vacate_all,
-								  "command_vacate_all", 0, OWNER );
+								  command_vacate_all,
+								  "command_vacate_all", OWNER );
 	daemonCore->Register_Command( VACATE_ALL_FAST,
 								  "VACATE_ALL_FAST",
-								  (CommandHandler)command_vacate_all,
-								  "command_vacate_all", 0, OWNER );
+								  command_vacate_all,
+								  "command_vacate_all", OWNER );
 	daemonCore->Register_Command( VACATE_CLAIM,
 								  "VACATE_CLAIM",
-								  (CommandHandler)command_name_handler,
-								  "command_name_handler", 0, OWNER );
+								  command_name_handler,
+								  "command_name_handler", OWNER );
 	daemonCore->Register_Command( VACATE_CLAIM_FAST,
 								  "VACATE_CLAIM_FAST",
-								  (CommandHandler)command_name_handler,
-								  "command_name_handler", 0, OWNER );
+								  command_name_handler,
+								  "command_name_handler", OWNER );
 
 		// NEGOTIATOR permission commands
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
-								  (CommandHandler)command_match_info,
-								  "command_match_info", 0, NEGOTIATOR );
+								  command_match_info,
+								  "command_match_info", NEGOTIATOR );
 
 		// the ClassAd-only command
 	daemonCore->Register_Command( CA_AUTH_CMD, "CA_AUTH_CMD",
-								  (CommandHandler)command_classad_handler,
-								  "command_classad_handler", 0, WRITE );
+								  command_classad_handler,
+								  "command_classad_handler", WRITE );
 	daemonCore->Register_Command( CA_CMD, "CA_CMD",
-								  (CommandHandler)command_classad_handler,
-								  "command_classad_handler", 0, WRITE );
-	
+								  command_classad_handler,
+								  "command_classad_handler", WRITE );
+
 	// Virtual Machine commands
 	if( vmapi_is_host_machine() == TRUE ) {
 		daemonCore->Register_Command( VM_REGISTER,
 				"VM_REGISTER",
-				(CommandHandler)command_vm_register,
-				"command_vm_register", 0, DAEMON,
+				command_vm_register,
+				"command_vm_register", DAEMON,
 				D_FULLDEBUG );
 	}
 
 		// Commands from starter for VM universe
 	daemonCore->Register_Command( VM_UNIV_GAHP_ERROR, 
 								"VM_UNIV_GAHP_ERROR",
-								(CommandHandler)command_vm_universe, 
-								"command_vm_universe", 0, DAEMON, 
+								command_vm_universe, 
+								"command_vm_universe", DAEMON, 
 								D_FULLDEBUG );
 	daemonCore->Register_Command( VM_UNIV_VMPID, 
 								"VM_UNIV_VMPID",
-								(CommandHandler)command_vm_universe, 
-								"command_vm_universe", 0, DAEMON, 
+								command_vm_universe, 
+								"command_vm_universe", DAEMON, 
 								D_FULLDEBUG );
 	daemonCore->Register_Command( VM_UNIV_GUEST_IP, 
 								"VM_UNIV_GUEST_IP",
-								(CommandHandler)command_vm_universe, 
-								"command_vm_universe", 0, DAEMON, 
+								command_vm_universe, 
+								"command_vm_universe", DAEMON, 
 								D_FULLDEBUG );
 	daemonCore->Register_Command( VM_UNIV_GUEST_MAC, 
 								"VM_UNIV_GUEST_MAC",
-								(CommandHandler)command_vm_universe, 
-								"command_vm_universe", 0, DAEMON, 
+								command_vm_universe, 
+								"command_vm_universe", DAEMON, 
 								D_FULLDEBUG );
 
 	daemonCore->Register_CommandWithPayload( DRAIN_JOBS,
 								  "DRAIN_JOBS",
-								  (CommandHandler)command_drain_jobs,
-								  "command_drain_jobs", 0, ADMINISTRATOR);
+								  command_drain_jobs,
+											 "command_drain_jobs", ADMINISTRATOR);
 	daemonCore->Register_CommandWithPayload( CANCEL_DRAIN_JOBS,
 								  "CANCEL_DRAIN_JOBS",
-								  (CommandHandler)command_cancel_drain_jobs,
-								  "command_cancel_drain_jobs", 0, ADMINISTRATOR);
+								  command_cancel_drain_jobs,
+								  "command_cancel_drain_jobs", ADMINISTRATOR);
 
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
 	main_reaper = daemonCore->Register_Reaper( "reaper_starters", 
-		(ReaperHandler)reaper, "reaper" );
+		reaper, "reaper" );
 	ASSERT(main_reaper != FALSE);
 
 	daemonCore->Set_Default_Reaper( main_reaper );
@@ -409,7 +411,7 @@ main_init( int, char* argv[] )
 		// We do this on Win32 since Win32 uses last_x_event
 		// variable in a similar fasion to the X11 condor_kbdd, and
 		// thus it must be initialized.
-	command_x_event( 0, 0, 0 );
+	command_x_event(0, 0);
 #endif
 
 	resmgr->start_sweep_timer();
@@ -534,10 +536,7 @@ init_params( int /* first_time */)
 	}
 	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
 	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
-	if (startd_slot_attrs->isEmpty() && param_boolean("ALLOW_VM_CRUFT", false)) {
-		param_and_insert_unique_items("STARTD_VM_ATTRS", *startd_slot_attrs);
-		param_and_insert_unique_items("STARTD_VM_EXPRS", *startd_slot_attrs);
-	}
+
 	// now insert attributes needed by HTCondor
 	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
 	if (startd_slot_attrs->isEmpty()) {
@@ -574,7 +573,7 @@ init_params( int /* first_time */)
 	auto_free_ptr tmp(param("STARTD_NAME"));
 	if (tmp) {
 		if( Name ) {
-			delete [] Name;
+			free(Name);
 		}
 		Name = build_valid_daemon_name(tmp);
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
@@ -666,7 +665,7 @@ void CleanupReminderTimerCallback()
 		const CleanupReminder & cr = it->first; // alias the CleanupReminder so that the code below is clearer
 
 		bool retry_now = retry_on_this_iter(it->second, cr.cat);
-		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.Value(), it->second, retry_now);
+		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.c_str(), it->second, retry_now);
 
 		// if our exponential backoff says we should retry this time, attempt the cleanup.
 		if (retry_now) {
@@ -674,18 +673,18 @@ void CleanupReminderTimerCallback()
 			switch (cr.cat) {
 			case CleanupReminder::category::exec_dir:
 				if (retry_cleanup_execute_dir(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
 					erase_it = true;
 				} else {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
 				}
 				break;
 			case CleanupReminder::category::account:
 				if (retry_cleanup_user_account(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
 					erase_it = true;
 				} else {
-					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
 				}
 				break;
 			}
@@ -729,6 +728,13 @@ void register_cleanup_reminder_timer()
 void PREFAST_NORETURN
 startd_exit() 
 {
+	// print resources into log.  we need to do this before we free them
+	if(param_boolean("STARTD_PRINT_ADS_ON_SHUTDOWN", false)) {
+		dprintf(D_ALWAYS, "*** BEGIN AD DUMP ***\n");
+		resmgr->walk(&Resource::dropAdInLogFile);
+		dprintf(D_ALWAYS, "*** END AD DUMP ***\n");
+	}
+
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
 		dprintf( D_ALWAYS, "Deleting cron job manager\n" );
@@ -812,7 +818,7 @@ main_shutdown_fast()
 	resmgr->markShutdown();
 
 	daemonCore->Reset_Reaper( main_reaper, "shutdown_reaper", 
-								 (ReaperHandler)shutdown_reaper,
+								 shutdown_reaper,
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
@@ -847,7 +853,7 @@ main_shutdown_graceful()
 	resmgr->markShutdown();
 
 	daemonCore->Reset_Reaper( main_reaper, "shutdown_reaper", 
-								 (ReaperHandler)shutdown_reaper,
+								 shutdown_reaper,
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
@@ -860,7 +866,7 @@ main_shutdown_graceful()
 
 
 int
-reaper(Service *, int pid, int status)
+reaper(int pid, int status)
 {
 
 	if( WIFSIGNALED(status) ) {
@@ -892,9 +898,9 @@ reaper(Service *, int pid, int status)
 
 
 int
-shutdown_reaper(Service *, int pid, int status)
+shutdown_reaper(int pid, int status)
 {
-	reaper(NULL,pid,status);
+	reaper(pid,status);
 	startd_check_free();
 	return TRUE;
 }

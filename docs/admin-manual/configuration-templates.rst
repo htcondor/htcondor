@@ -280,9 +280,6 @@ incorporates.
        ``HOLD_REASON_CPU_EXCEEDED`` and ``HOLD_SUBCODE_CPU_EXCEEDED``
        respectively.
 
-       Standard universe jobs can't be held by startd policy
-       expressions, so this metaknob automatically ignores them.
-
     -  ``Preempt_If_Memory_Exceeded``
 
        If the startd observes the memory usage of the job exceed the
@@ -300,9 +297,6 @@ incorporates.
        ``HOLD_REASON_MEMORY_EXCEEDED`` and
        ``HOLD_SUBCODE_MEMORY_EXCEEDED`` respectively.
 
-       Standard universe jobs can't be held by startd policy
-       expressions, so this metaknob automatically ignores them.
-
     -  ``Preempt_If( policy_variable )``
 
        Preempt jobs according to the specified policy.
@@ -319,9 +313,6 @@ incorporates.
        ``WANT_HOLD`` expression is defined, ``policy_variable`` is
        prepended to the existing expression; otherwise ``WANT_HOLD`` is
        simply set to the value of the textttpolicy_variable macro.
-
-       Standard universe jobs can't be held by startd policy
-       expressions, so this metaknob automatically ignores them.
 
        See an example here:
        :ref:`admin-manual/configuration-templates:configuration template examples`.

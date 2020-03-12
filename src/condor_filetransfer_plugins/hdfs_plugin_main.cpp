@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "get_daemon_name.h"
 #include "daemon.h"
 #include "subsystem_info.h"
 #include "CondorError.h"

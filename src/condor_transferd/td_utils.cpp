@@ -27,15 +27,16 @@
 
 // generate a capability that is unique against all the capabilities presently
 // generated.
-MyString
+std::string
 TransferD::gen_capability(void)
 {
 	TransferRequest *dummy = NULL;
-	MyString cap;
+	std::string cap;
 
 	// if this iterates for a long time, there is something very wrong.
 	do {
-		cap.randomlyGenerate("0123456789abcdefg", 64);
+		//randomlyGeneratePRNG(cap, "0123456789abcdefg", 64);
+		randomlyGenerateInsecure(cap, "0123456789abcdefg", 64);
 	} while(m_treqs.lookup(cap, dummy) == 0);
 
 	return cap;

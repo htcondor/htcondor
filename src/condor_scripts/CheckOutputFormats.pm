@@ -96,6 +96,7 @@ sub dry_run {
 	# add the additional job ads that would appear in condor_q -long
 	for my $i (0..$index-1){
 		my $owner = $Attr{$i}{Owner};
+		if ($owner eq 'undefined') { $Attr{$i}{Owner} = '"billg"'; $owner = '"billg"'; }
 		$owner = substr($owner,0,length($owner)-1);
 		my $FileSystemDomain = $Attr{$i}{FileSystemDomain};
 		$FileSystemDomain = substr($FileSystemDomain, 1, length($FileSystemDomain)-1);
@@ -2328,9 +2329,9 @@ sub wait_for_reconfig {
 	my @log;
 	while ($count > 0) {
 		if (is_mac()) {
-			@log = `tail -n 40 $file`;
+			@log = `tail -n 80 $file`;
 		} else {
-			@log = `tail $file --lines=40`;
+			@log = `tail $file --lines=80`;
 		}
 		for my $i (0..(scalar @log)-1) {
 			if ($log[$i] =~ /SIGHUP/) {

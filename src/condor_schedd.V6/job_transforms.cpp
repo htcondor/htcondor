@@ -93,11 +93,8 @@ JobTransforms::initAndReconfig()
 		// this object is clean if errors were encountered instantiating a 
 		// previous transform rule.
 		if (xfm) delete xfm;
-		xfm = new MacroStreamXFormSource(NULL);
+		xfm = new MacroStreamXFormSource(name);
 		ASSERT(xfm);
-
-		// Set the name of this xfm based on the config knob name
-		xfm->setName( name );
 
 		// Load transform rule from the config param into the xfm object.  If
 		// the config param starts with a '[' (after trimming out leading whitespace above)
@@ -115,7 +112,7 @@ JobTransforms::initAndReconfig()
 			ClassAd transformAd;
 			rval = 0;
 			if ( (!parser.ParseClassAd(transform, transformAd, offset)) ||
-				 ((rval=XFormLoadFromJobRouterRoute(*xfm,empty,offset,transformAd,0)) < 0) )
+				 ((rval=XFormLoadFromClassadJobRouterRoute(*xfm,empty,offset,transformAd,0)) < 0) )
 			{
 				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s classad malformed, ignoring. (err=%d)\n",
 					name, rval );
@@ -124,10 +121,9 @@ JobTransforms::initAndReconfig()
 		} else {
 			// Transform rule is in the native xform macro stream style, so load it
 			// in that way without macro expanding at this time.
-			const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 };
-			StringList statements( raw_transform_text, "\n\r" );
 			std::string errmsg = "";
-			if ( (rval=xfm->open(statements, ArgumentMacro, errmsg)) < 0 ) {
+			int offset = 0;
+			if ( (rval=xfm->open(raw_transform_text, offset, errmsg)) < 0 ) {
 				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s macro stream malformed, ignoring. (err=%d) %s\n",
 					name, rval, errmsg.c_str() );
 				continue;

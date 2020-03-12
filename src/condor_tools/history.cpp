@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 #include "dc_collector.h"
 #include "dc_schedd.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"
@@ -532,7 +531,7 @@ main(int argc, const char* argv[])
   }
 
   if (writetosocket && streamresults) {
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 1);
 	ad.InsertAttr("StreamResults", true);
 	dprintf(D_FULLDEBUG, "condor_history: sending streaming ACK header ad:\n");
@@ -555,7 +554,7 @@ main(int argc, const char* argv[])
   }
 
   if (writetosocket) {
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 0);
 	ad.InsertAttr(ATTR_NUM_MATCHES, matchCount);
 	ad.InsertAttr("MalformedAds", writetosocket_failcount);
@@ -586,8 +585,8 @@ static bool
 render_hist_runtime (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 {
 	double utime;
-	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
-		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
+	if(!ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,utime)) {
+		if(!ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,utime)) {
 			utime = 0;
 		}
 	}
@@ -677,8 +676,8 @@ static bool
 render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
 	int clusterId, procId;
-	if( ! ad->EvalInteger(ATTR_CLUSTER_ID,NULL,clusterId)) clusterId = 0;
-	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,procId)) procId = 0;
+	if( ! ad->LookupInteger(ATTR_CLUSTER_ID,clusterId)) clusterId = 0;
+	if( ! ad->LookupInteger(ATTR_PROC_ID,procId)) procId = 0;
 	formatstr(val, "%4d.%-3d", clusterId, procId);
 	return true;
 }
@@ -686,12 +685,12 @@ render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 static bool
 render_job_cmd_and_args(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
-	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, val))
+	if ( ! ad->LookupString(ATTR_JOB_CMD, val))
 		return false;
 
 	char * args;
-	if (ad->EvalString (ATTR_JOB_ARGUMENTS1, NULL, &args) || 
-		ad->EvalString (ATTR_JOB_ARGUMENTS2, NULL, &args)) {
+	if (ad->LookupString (ATTR_JOB_ARGUMENTS1, &args) || 
+		ad->LookupString (ATTR_JOB_ARGUMENTS2, &args)) {
 		val += " ";
 		val += args;
 		free(args);
@@ -804,7 +803,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 {
 	printHeader(); // this has the side effect of setting the projection for the default output
 
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
@@ -847,7 +846,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 
 	bool eom_after_each_ad = false;
 	while (true) {
-		compat_classad::ClassAd ad;
+		ClassAd ad;
 		if (!getClassAd(sock, ad)) {
 			fprintf(stderr, "Failed to receive remote ad.\n");
 			exit(1);
@@ -1024,7 +1023,10 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 		exit(1);
 	}
 
-    buf.readLine(fd);
+    if (!buf.readLine(fd)) {
+		fprintf(stderr, "Error %d: cannot read from history file %s\n", errno, filename);
+		exit(1);
+	}
   
     owner = (char *) malloc(buf.Length() * sizeof(char)); 
 
@@ -1056,8 +1058,16 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
             }
 
             // Find previous delimiter + summary
-            fseek(fd, prevOffset, SEEK_SET);
-            buf.readLine(fd);
+            int ret = fseek(fd, prevOffset, SEEK_SET);
+			if (ret < 0) {
+				fprintf(stderr, "Cannot seek in history file to find delimiter\n");
+				exit(1);
+			}
+
+            if (!buf.readLine(fd)) {
+				fprintf(stderr, "Cannot read history file\n");
+				exit(1);
+			}
 
             void * pvner = realloc (owner, buf.Length() * sizeof(char));
             ASSERT( pvner != NULL );
@@ -1149,7 +1159,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					printf( "\t*** Error: Can't seek inside history file: errno %d\n", errno);
 					exit(1);
 				}
-                buf.readLine(LogFile); // Read one line to skip delimiter and adjust to actual offset of ad
+				// Read one line to skip delimiter and adjust to actual offset of ad
+                if (!buf.readLine(LogFile)) {
+					printf( "\t*** Error: Can't read delimiter inside history file: errno %d\n", errno);
+					exit(1);
+				}
             } else { // Offset set to 0
                 BOF = true;
                 if (fseek(LogFile, offset, SEEK_SET) < 0) {
@@ -1159,10 +1173,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
         }
       
-        if( !( ad=new ClassAd(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+        if( !( ad=new ClassAd ) ){
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
-        } 
+        }
+        InsertFromFile(LogFile,*ad,"***", EndFlag, ErrorFlag, EmptyFlag);
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
             ErrorFlag=0;
@@ -1180,7 +1195,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         }
-        if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
+        if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
 					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
@@ -1312,12 +1327,12 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	}
 	++adCount;
 
-	if (sinceExpr && EvalBool(&ad, sinceExpr)) {
+	if (sinceExpr && EvalExprBool(&ad, sinceExpr)) {
 		maxAds = adCount; // this will force us to stop scanning
 		return;
 	}
 
-	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
+	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
 	}

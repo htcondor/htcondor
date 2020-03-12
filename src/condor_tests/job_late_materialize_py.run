@@ -152,7 +152,7 @@ def wait_for_event(id, logfile, timeout, func):
 			pass
 
 		else:
-			Utils.TLog("ulog: {0}.{1} found unexpected event of type {2}, failing".format( str(event.cluster, event.proc, event.type) ) );
+			Utils.TLog("ulog: {0}.{1} found unexpected event of type {2}, failing".format(event.cluster, event.proc, event.type));
 			return 0
 
 		if (func(event)) : break

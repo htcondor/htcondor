@@ -27,9 +27,7 @@
 #include "master.h"
 #include "subsystem_info.h"
 #include "condor_daemon_core.h"
-#include "condor_collector.h"
 #include "condor_attributes.h"
-#include "condor_network.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
 #include "directory.h"
@@ -72,7 +70,6 @@ void	init_params();
 void	init_daemon_list();
 void	init_classad();
 void	init_firewall_exceptions();
-void	check_uid_for_privsep();
 void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
@@ -85,10 +82,10 @@ void	main_shutdown_normal(); // do graceful or peaceful depending on daemonCore 
 void	main_shutdown_fast();
 void	invalidate_ads();
 void	main_config();
-int	agent_starter(ReliSock *);
+int	agent_starter(ReliSock *, Stream *);
 int	handle_agent_fetch_log(ReliSock *);
-int	admin_command_handler(Service *, int, Stream *);
-int	ready_command_handler(Service *, int, Stream *);
+int	admin_command_handler(int, Stream *);
+int	ready_command_handler(int, Stream *);
 int	handle_subsys_command(int, Stream *);
 int     handle_shutdown_program( int cmd, Stream* stream );
 int     set_shutdown_program( const char * name );
@@ -126,6 +123,7 @@ int		AllowAdminCommands = FALSE;
 int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
+static int dummyGlobal;
 
 // daemons in this list are used when DAEMON_LIST is not configured
 // all will added to the list of daemons that condor_on can use
@@ -149,7 +147,7 @@ static const struct {
 // examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
 "REPLICATION, JOB_ROUTER, ROOSTER, SHARED_PORT, "
 "DEFRAG, GANGLIAD, ANNEXD";
 
@@ -249,7 +247,7 @@ cleanup_memory( void )
 		ad = NULL;
 	}
 	if ( MasterName ) {
-		delete [] MasterName;
+		free( MasterName );
 		MasterName = NULL;
 	}
 	if ( FS_Preen ) {
@@ -652,8 +650,6 @@ main_init( int argc, char* argv[] )
 	init_classad();  
 		// Initialize the master entry in the daemons data structure.
 	daemons.InitMaster();
-		// Make sure if PrivSep is on we're not running as root
-	check_uid_for_privsep();
 		// open up the windows firewall 
 	init_firewall_exceptions();
 
@@ -670,71 +666,71 @@ main_init( int argc, char* argv[] )
 
 		// Register admin commands
 	daemonCore->Register_Command( RESTART, "RESTART",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( RESTART_PEACEFUL, "RESTART_PEACEFUL",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF, "DAEMONS_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF_FAST, "DAEMONS_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF_PEACEFUL, "DAEMONS_OFF_PEACEFUL",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_ON, "DAEMONS_ON",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( MASTER_OFF, "MASTER_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( MASTER_OFF_FAST, "MASTER_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_ON, "DAEMON_ON",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF, "DAEMON_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF_FAST, "DAEMON_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF_PEACEFUL, "DAEMON_OFF_PEACEFUL",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( CHILD_ON, "CHILD_ON",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( CHILD_OFF, "CHILD_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( CHILD_OFF_FAST, "CHILD_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( SET_SHUTDOWN_PROGRAM, "SET_SHUTDOWN_PROGRAM",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	// Command handler for stashing the pool password
 	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
-								(CommandHandler)&store_pool_cred_handler,
-								"store_pool_cred_handler", NULL, CONFIG_PERM,
+								&store_pool_cred_handler,
+								"store_pool_cred_handler", CONFIG_PERM,
 								D_FULLDEBUG );
 
 	// Command handler for handling the ready state
 	daemonCore->Register_CommandWithPayload( DC_SET_READY, "DC_SET_READY",
-								  (CommandHandler)ready_command_handler,
-								  "ready_command_handler", 0, WRITE );
+								  ready_command_handler,
+								  "ready_command_handler", WRITE );
 	daemonCore->Register_CommandWithPayload( DC_QUERY_READY, "DC_QUERY_READY",
-								  (CommandHandler)ready_command_handler,
-								  "ready_command_handler", 0, READ );
+								  ready_command_handler,
+								  "ready_command_handler", READ );
 
 	/*
 	daemonCore->Register_Command( START_AGENT, "START_AGENT",
-					  (CommandHandler)admin_command_handler, 
-					  "admin_command_handler", 0, ADMINISTRATOR );
+					  admin_command_handler, 
+					  "admin_command_handler", ADMINISTRATOR );
 	*/
 
 	daemonCore->RegisterTimeSkipCallback(time_skip_handler,0);
@@ -757,7 +753,7 @@ main_init( int argc, char* argv[] )
 
 
 int
-ready_command_handler( Service*, int cmd, Stream* stm )
+ready_command_handler(int cmd, Stream* stm )
 {
 	ReliSock* stream = (ReliSock*)stm;
 	ClassAd cmdAd;
@@ -768,7 +764,7 @@ ready_command_handler( Service*, int cmd, Stream* stm )
 		dprintf( D_ALWAYS, "Failed to receive ready command (%d) on TCP: aborting\n", cmd );
 		return FALSE;
 	}
-	MyString daemon_name; // using MyString here because it will never return NULL
+	std::string daemon_name;
 	cmdAd.LookupString("DaemonName", daemon_name);
 	int daemon_pid = 0;
 	cmdAd.LookupInteger("DaemonPID", daemon_pid);
@@ -778,7 +774,7 @@ ready_command_handler( Service*, int cmd, Stream* stm )
 	switch (cmd) {
 		case DC_SET_READY:
 		{
-			MyString state; // using MyString because its c_str() never faults or returns NULL
+			std::string state;
 			cmdAd.LookupString("DaemonState", state);
 			class daemon* daemon = daemons.FindDaemonByPID(daemon_pid);
 			if ( ! daemon) {
@@ -802,7 +798,7 @@ ready_command_handler( Service*, int cmd, Stream* stm )
 }
 
 int
-admin_command_handler( Service*, int cmd, Stream* stream )
+admin_command_handler(int cmd, Stream* stream )
 {
 	if(! AllowAdminCommands ) {
 		dprintf( D_FULLDEBUG, 
@@ -872,7 +868,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 }
 
 int
-agent_starter( ReliSock * s )
+agent_starter( ReliSock * s, Stream * )
 {
 	ReliSock* stream = (ReliSock*)s;
 	char *subsys = NULL;
@@ -1079,7 +1075,7 @@ init_params()
 			} 
 		}
 	} else {
-		delete [] MasterName;
+		free( MasterName );
 		tmp = param( "MASTER_NAME" );
 		MasterName = build_valid_daemon_name( tmp );
 		free( tmp );
@@ -1361,7 +1357,7 @@ init_classad()
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 		ad->Assign(ATTR_NAME, default_name);
-		delete [] default_name;
+		free(default_name);
 	}
 
 #if !defined(WIN32)
@@ -1553,7 +1549,7 @@ invalidate_ads() {
 	
 	MyString line;
 	std::string escaped_name;
-	char* default_name = ::strnewp(MasterName);
+	char* default_name = MasterName ? ::strdup(MasterName) : NULL;
 	if(!default_name) {
 		default_name = default_daemon_name();
 	}
@@ -1564,7 +1560,7 @@ invalidate_ads() {
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
-	delete [] default_name;
+	free( default_name );
 }
 
 static const struct {
@@ -1801,10 +1797,13 @@ bool main_has_console()
 int
 main( int argc, char **argv )
 {
+    // as of 8.9.6 daemon core defaults to foreground
+    // for the master (and only the master) we change it to default to background
+    dc_args_default_to_background(true);
+
     // parse args to see if we have been asked to run as a service.
     // services are started without a console, so if we have one
     // we can't possibly run as a service.
-    //
 #ifdef WIN32
     bool has_console = main_has_console();
     bool is_daemon = dc_args_is_background(argc, argv);
@@ -1851,14 +1850,14 @@ main( int argc, char **argv )
         if (pwbuf) {
             if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/run/condor", 0775) == 0) {
-                    if (chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/run/condor", 0775)){} // Override umask
+                    dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
                 }
             }
             if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
                 if (mkdir("/var/lock/condor", 0775) == 0) {
-                    if (chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid)){}
-                    if (chmod("/var/lock/condor", 0775)){} // Override umask
+                    dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
                 }
             }
         }
@@ -1876,7 +1875,7 @@ void init_firewall_exceptions() {
 		 *dagman_image_path, *negotiator_image_path, *collector_image_path, 
 		 *starter_image_path, *shadow_image_path, *gridmanager_image_path, 
 		 *gahp_image_path, *gahp_worker_image_path, *credd_image_path, 
-		 *vmgahp_image_path, *kbdd_image_path, *hdfs_image_path, *bin_path;
+		 *vmgahp_image_path, *kbdd_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
@@ -1921,7 +1920,6 @@ void init_firewall_exceptions() {
 	gahp_worker_image_path = param("CONDOR_GAHP_WORKER");
 	credd_image_path = param("CREDD");
 	kbdd_image_path = param("KBDD");
-	hdfs_image_path = param("HDFS");
 	vmgahp_image_path = param("VM_GAHP_SERVER");
 	
 	// We also want to add exceptions for the DAGMan we ship
@@ -2028,13 +2026,6 @@ void init_firewall_exceptions() {
 		}
 	}
 
-	if ( (daemons.FindDaemon("HDFS") != NULL) && hdfs_image_path ) {
-		if ( !SUCCEEDED(wfh.addTrusted(hdfs_image_path)) ) {
-			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-				"windows firewall exception list.\n", hdfs_image_path);
-		}
-	}
-
 	if ( vmgahp_image_path ) {
 		if ( !SUCCEEDED(wfh.addTrusted(vmgahp_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
@@ -2063,29 +2054,6 @@ void init_firewall_exceptions() {
 	if ( credd_image_path ) { free(credd_image_path); }	
 	if ( vmgahp_image_path ) { free(vmgahp_image_path); }
 	if ( kbdd_image_path ) { free(kbdd_image_path); }
-#endif
-}
-
-void
-check_uid_for_privsep()
-{
-#if !defined(WIN32)
-	if (param_boolean("PRIVSEP_ENABLED", false) && (getuid() == 0)) {
-		uid_t condor_uid = get_condor_uid();
-		if (condor_uid == 0) {
-			EXCEPT("PRIVSEP_ENABLED set, but current UID is 0 "
-			           "and condor UID is also set to root");
-		}
-		dprintf(D_ALWAYS,
-		        "PRIVSEP_ENABLED set, but UID is 0; "
-		            "will drop to UID %u and restart\n",
-		        (unsigned)condor_uid);
-		daemons.CleanupBeforeRestart();
-		set_condor_priv_final();
-		daemons.ExecMaster();
-		EXCEPT("attempt to restart (via exec) failed (%s)",
-		       strerror(errno));
-	}
 #endif
 }
 

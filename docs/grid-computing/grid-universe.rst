@@ -211,7 +211,7 @@ If the remote *condor_collector* is not listening on the standard port
 File transfer of a job's executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
 HTCondor's file transfer mechanism (see the 
-:ref:`users-manual/submitting-a-job:submitting jobs without a shared file
+:ref:`users-manual/file-transfer:submitting jobs without a shared file
 system: htcondor's file transfer mechanism` section), the mechanism is applied
 based on the resulting job universe on the remote machine.
 
@@ -1046,6 +1046,8 @@ contents of the submit description file may be
 
     grid_resource = ec2 https://ec2.us-east-1.amazonaws.com/
 
+(Replace 'us-east-1' with the AWS region you'd like to use.)
+
 Since the job is a virtual machine image, most of the submit description
 file commands specifying input or output files are not applicable. The
 **executable** :index:`executable<single: executable; submit commands>` command is
@@ -1059,7 +1061,8 @@ description file, provide the identifier for the image using
 :index:`authentication methods<single: authentication methods; ec2>`
 
 This grid type requires access to user authentication information, in
-the form of path names to files containing the appropriate keys.
+the form of path names to files containing the appropriate keys, with
+one exception, described below.
 
 The **ec2** grid type has two different authentication methods. The
 first authentication method uses the EC2 API's built-in authentication.
@@ -1094,6 +1097,16 @@ illustrates the specification for X.509 authentication:
     ec2_secret_access_key = /path/to/x.509/private.key
 
 If using an X.509 proxy, specify the proxy in both places.
+
+The exception to both of these cases applies when submitting EC2 jobs to
+an HTCondor running in an EC2 instance. If that instance has been
+configured with sufficient privileges, you may specify ``FROM INSTANCE``
+for either **ec2_access_key_id** or **ec2_secret_access_key**, and
+HTCondor will use the instance's credentials. (AWS grants an EC2
+instance access to temporary credentials, renewed over the instance's
+lifetime, based on the instance's assigned IAM (instance) profile and
+the corresponding IAM role. You may specify the this information when
+launching an instance or later, during its lifetime.)
 
 HTCondor can use the EC2 API to create an SSH key pair that allows
 secure log in to the virtual machine once it is running. If the command
@@ -1306,9 +1319,6 @@ specification of trusted CAs is available at
 
 `http://curl.haxx.se/libcurl/c/curl_easy_setopt.html <http://curl.haxx.se/libcurl/c/curl_easy_setopt.html>`_
 
-Versions of HTCondor with standard universe support ship with their own
-*libcurl*, which will be linked against *OpenSSL*.
-
 The behavior when specifying both a directory and a file is undefined,
 although the EC2 GAHP allows it.
 
@@ -1477,17 +1487,25 @@ Here's a sample JSON file that sets two additional elements:
     "canIpForward": True,
     "description": "My first instance"
 
+.. _gce_configuration_variables:
+
 GCE Configuration Variables
 '''''''''''''''''''''''''''
 
 The following configuration parameters are specific to the **gce** grid
 type. The values listed here are the defaults. Different values may be
-specified in the HTCondor configuration files.
+specified in the HTCondor configuration files.  To work around an issue where
+long-running *gce_gahp* processes have trouble authenticating, the *gce_gahp*
+self-restarts periodically, with the default value of 24 hours.  You can set
+the number of seconds between restarts using *GCE_GAHP_LIFETIME*, where zero
+means to never restart.  Restarting the *gce_gahp* does not affect the jobs
+themselves.
 
 ::
 
     GCE_GAHP     = $(SBIN)/gce_gahp
     GCE_GAHP_LOG = /tmp/GceGahpLog.$(USERNAME)
+    GCE_GAHP_LIFETIME = 86400
 
 The Azure Grid Type
 -------------------

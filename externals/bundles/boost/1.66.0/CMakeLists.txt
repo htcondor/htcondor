@@ -37,7 +37,7 @@ if (WINDOWS)
 
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 		set(BOOST_SHORTVER 1.66 PARENT_SCOPE)
-		condor_post_external( boost "boost" "lib" )
+		condor_post_external( boost "boost" "lib" "" )
 	endif(BOOST_DOWNLOAD_WIN)
 
 else (WINDOWS)
@@ -58,7 +58,7 @@ else (WINDOWS)
 	endif()
 
 	# The following is helpful if you are trying to debug cmake find module
-	set (Boost_DEBUG TRUE)
+    # set (Boost_DEBUG TRUE)
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
 
     message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
@@ -79,9 +79,12 @@ else (WINDOWS)
         if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8")
             set(USE_SYSTEM_BOOST True)
         endif()
+        if (${SYSTEM_NAME} MATCHES "fc")
+            set(USE_SYSTEM_BOOST True)
+        endif()
     endif()
 
-	find_package( Boost 1.66 COMPONENTS ${BOOST_COMPONENTS} )
+	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible
 	if(Boost_FOUND)
@@ -135,7 +138,7 @@ else (WINDOWS)
 			# This only appears to affect Python 3.
 			# NOTE: This will fail if PYTHON_INCLUDE_DIRS
 			#   has multiple directories.
-			if(${PYTHONLIBS_VERSION_STRING} VERSION_LESS "3.0.0")
+			if("${PYTHONLIBS_VERSION_STRING}" VERSION_LESS "3.0.0")
 				set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
 			else()
 				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
@@ -201,7 +204,7 @@ else (WINDOWS)
 			#set(BOOST_SHORTVER 1.66 PARENT_SCOPE)
 			#condor_post_external( boost "include/boost-1.66" "lib" )
 		else()
-			condor_post_external( boost "include" "lib" )
+			condor_post_external( boost "include" "lib" "${BOOST_INSTALL_LOC}/lib/libboost_thread.a;${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a;${BOOST_INSTALL_LOC}/lib/libboost_system.a" )
 		endif()
 	endif()
 endif(WINDOWS)

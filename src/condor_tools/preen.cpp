@@ -46,7 +46,6 @@
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
@@ -1006,9 +1005,6 @@ void check_tmp_dir(){
 }
 
 
-extern "C" int
-SetSyscalls( int foo ) { return foo; }
-
 /*
   Initialize information from the configuration files.
 */
@@ -1130,15 +1126,6 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 
 	if( RmFlag ) {
 		bool removed = dir.Remove_Full_Path( pathname.Value() );
-		if( !removed && privsep_enabled() ) {
-			removed = privsep_remove_dir( pathname.Value() );
-			if( VerboseFlag ) {
-				if( removed ) {
-					dprintf( D_ALWAYS, "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
-					printf( "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
-				}
-			}
-		}
 		if( removed ) {
 			buf.formatstr( "%s - Removed", pathname.Value() );
 		} else {

@@ -56,7 +56,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		side
 	*/
 
-	MyString remoteattr;
+	std::string remoteattr;
 	remoteattr = "Remote_";
 	remoteattr += ATTR_JOB_UNIVERSE;
 
@@ -69,7 +69,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_BUFFER_SIZE);
 	ad->Delete(ATTR_BUFFER_SIZE);
 	ad->Delete("CondorPlatform"); // TODO: Find #define
-	ad->Delete("CondorVersion");  // TODO: Find #define
+	ad->Delete(ATTR_CONDOR_VERSION);  // TODO: Find #define
 	ad->Delete(ATTR_CORE_SIZE);
 	ad->Delete(ATTR_GLOBAL_JOB_ID); // Store in different ATTR here?
 	//ad->Delete(ATTR_OWNER); // How does schedd filter?
@@ -130,7 +130,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	}
 
 	ad->InsertAttr(ATTR_JOB_UNIVERSE, target_universe);
-	ad->Insert(remoteattr.Value(), olduniv);
+	ad->Insert(remoteattr, olduniv);
 		// olduniv is now controlled by ClassAd
 
 	if( target_universe == CONDOR_UNIVERSE_GRID ) {
@@ -329,6 +329,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_RESIDENT_SET_SIZE,
 		ATTR_PROPORTIONAL_SET_SIZE,
 		ATTR_DISK_USAGE,
+		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 		// ATTR_JOB_STATUS

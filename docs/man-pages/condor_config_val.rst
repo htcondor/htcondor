@@ -11,11 +11,13 @@ Synopsis
 
 **condor_config_val** *<help option>*
 
-**condor_config_val** [**<location options>**] *<edit option>*
+**condor_config_val** [**<location options>** ] *<edit option>*
 
-**condor_config_val** [**<location options>**] [**<view options>**] *vars*
+**condor_config_val** [**<location options>** ] [**<view
+options>** ] *vars*
 
-**condor_config_val** **use** *category* [*:template_name*] [**-expand** ]
+**condor_config_val** **use** *category* [*:template_name* ]
+[**-expand** ]
 
 Description
 -----------
@@ -63,7 +65,7 @@ settings of configuration variables
 (see :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`),
 ``ENABLE_PERSISTENT_CONFIG`` :index:`ENABLE_PERSISTENT_CONFIG`
 (see :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`)
-and ``HOSTALLOW...`` :index:`HOSTALLOW`
+and ``ALLOW...`` :index:`ALLOW`
 (see :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`)
 in order to use *condor_config_val* to change any configuration variable.
 

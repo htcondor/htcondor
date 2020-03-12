@@ -778,7 +778,7 @@ GahpClient * BaseResource::BatchGahp()
 	return 0;
 }
 
-int BaseResource::DoBatchStatus()
+void BaseResource::DoBatchStatus()
 {
 	dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s.\n", ResourceName());
 
@@ -788,7 +788,7 @@ int BaseResource::DoBatchStatus()
 			// in polling
 		daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
 		dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s skipped for %d seconds because %s.\n", ResourceName(), BatchStatusInterval(), resourceDown ? "the resource is down":"there are no jobs registered");
-		return 0;
+		return;
 	}
 
 	GahpClient * gahp = BatchGahp();
@@ -796,7 +796,7 @@ int BaseResource::DoBatchStatus()
 		int GAHP_INIT_DELAY = 5;
 		dprintf( D_ALWAYS,"BaseResource::DoBatchStatus: gahp server not up yet, delaying %d seconds\n", GAHP_INIT_DELAY );
 		daemonCore->Reset_Timer( m_batchPollTid, GAHP_INIT_DELAY );
-		return 0;
+		return;
 	}
 
 	daemonCore->Reset_Timer( m_batchPollTid, TIMER_NEVER );
@@ -808,16 +808,16 @@ int BaseResource::DoBatchStatus()
 			case BSR_DONE:
 				dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus: Finished bulk job poll of %s\n", ResourceName());
 				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
-				return 0;
+				return;
 
 			case BSR_ERROR:
 				dprintf(D_ALWAYS, "BaseResource::DoBatchStatus: An error occurred trying to start a bulk poll of %s\n", ResourceName());
 				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
-				return 0;
+				return;
 
 			case BSR_PENDING:
 				m_batchStatusActive = true;
-				return 0;
+				return;
 
 			default:
 				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
@@ -830,20 +830,19 @@ int BaseResource::DoBatchStatus()
 				dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus: Finished bulk job poll of %s\n", ResourceName());
 				m_batchStatusActive = false;
 				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
-				return 0;
+				return;
 
 			case BSR_ERROR:
 				dprintf(D_ALWAYS, "BaseResource::DoBatchStatus: An error occurred trying to finish a bulk poll of %s\n", ResourceName());
 				m_batchStatusActive = false;
 				daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
-				return 0;
+				return;
 
 			case BSR_PENDING:
-				return 0;
+				return;
 
 			default:
 				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
 		}
 	}
-	return 0;
 }

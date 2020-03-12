@@ -31,16 +31,15 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 		return;
 	}
 
-	merge_from->ResetName();
-	merge_from->ResetExpr();
-
 	bool was_dirty_tracking = merge_into->SetDirtyTracking(mark_dirty);
 
 	const char     *name;
 	ExprTree       *expression;
 
-	while ( merge_from->NextExpr(name, expression) ) {
+	for ( auto itr = merge_from->begin(); itr != merge_from->end(); itr++ ) {
 
+		name = itr->first.c_str();
+		expression = itr->second;
 		if (merge_conflicts || !merge_into->LookupExpr(name)) {
 			if( keep_clean_when_possible ) {
 				char *from_expr = NULL;
@@ -83,16 +82,15 @@ int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from, const AttrNa
 		return 0;
 	}
 
-	merge_from->ResetName();
-	merge_from->ResetExpr();
-
 	bool was_dirty_tracking = merge_into->SetDirtyTracking(mark_dirty);
 
 	int cMerged = 0; // count of merged items
 	const char *name;
 	ExprTree   *expression;
-	while (merge_from->NextExpr(name, expression)) {
+	for ( auto itr = merge_from->begin(); itr != merge_from->end(); itr++ ) {
 
+		name = itr->first.c_str();
+		expression = itr->second;
 		// don't merge attributes if the name is in the ignore list.
 		if (ignore.find(name) != ignore.end())
 			continue;

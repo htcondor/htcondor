@@ -7,7 +7,7 @@ Policy Configuration for Execute Hosts and for Submit Hosts
     :ref:`admin-manual/configuration-templates:available configuration templates`.
 
 *condor_startd* Policy Configuration
--------------------------------------
+------------------------------------
 
 :index:`condor_startd policy<single: condor_startd policy; configuration>`
 :index:`of machines, to implement a given policy<single: of machines, to implement a given policy; configuration>`
@@ -72,11 +72,6 @@ role in determining the state and activity of a machine.
 
 The ``Requirements`` expression is used for matching machines with jobs.
 
-For platforms that support standard universe jobs, the *condor_startd*
-defines the ``Requirements`` expression by logically **and** ing the
-``START`` expression and the ``IS_VALID_CHECKPOINT_PLATFORM``
-expression.
-
 In situations where a machine wants to make itself unavailable for
 further matches, the ``Requirements`` expression is set to ``False``.
 When the ``START`` expression locally evaluates to ``True``, the machine
@@ -133,64 +128,6 @@ priority, interactive response on the machines will not suffer. A
 machine user probably would not notice that HTCondor was running the
 jobs, assuming you had enough free memory for the HTCondor jobs such
 that there was little swapping.
-:index:`IS_VALID_CHECKPOINT_PLATFORM`
-
-The ``IS_VALID_CHECKPOINT_PLATFORM`` Expression
-'''''''''''''''''''''''''''''''''''''''''''''''
-
-A checkpoint is the platform-dependent information necessary to continue
-the execution of a standard universe job. Therefore, the machine
-(platform) upon which a job executed and produced a checkpoint limits
-the machines (platforms) which may use the checkpoint to continue job
-execution. This platform-dependent information is no longer the obvious
-combination of architecture and operating system, but may include subtle
-items such as the difference between the normal, bigmem, and hugemem
-kernels within the Linux operating system. This results in the
-incorporation of a separate expression to indicate the ability of a
-machine to resume and continue the execution of a job that has produced
-a checkpoint. The ``REQUIREMENTS`` expression is dependent on this
-information.
-
-At a high level, ``IS_VALID_CHECKPOINT_PLATFORM`` is an expression which
-becomes true when a job's checkpoint platform matches the current
-checkpointing platform of the machine. Since this expression is
-**and** ed with the ``START`` expression to produce the
-``REQUIREMENTS`` expression, it must also behave correctly when
-evaluating in the context of jobs that are not standard universe.
-
-In words, the current default policy for this expression:
-
-**Any non standard universe job may run on this machine. A standard
-universe job may run on machines with the new checkpointing
-identification system. A standard universe job may run if it has not yet
-produced a first checkpoint. If a standard universe job has produced a
-checkpoint, then make sure the checkpoint platforms between the job and
-the machine match.**
-
-The following is the default boolean expression for this policy. A
-``JobUniverse`` value of 1 denotes the standard universe. This
-expression may be overridden in the HTCondor configuration files.
-
-::
-
-    IS_VALID_CHECKPOINT_PLATFORM =
-    (
-      (TARGET.JobUniverse =!= 1) ||
-
-      (
-        (MY.CheckpointPlatform =!= UNDEFINED) &&
-        (
-          (TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||
-          (TARGET.NumCkpts == 0)
-        )
-      )
-    )
-
-``IS_VALID_CHECKPOINT_PLATFORM`` is a separate policy expression because
-the complexity of ``IS_VALID_CHECKPOINT_PLATFORM`` can be very high.
-While this functionality is conceptually separate from the normal
-``START`` policies usually constructed, it is also a part of the
-``Requirements`` to allow the job to run. :index:`RANK`
 
 The ``RANK`` Expression
 '''''''''''''''''''''''
@@ -850,10 +787,11 @@ Claimed State
 The Claimed state is certainly the most complex state. It has the most
 possible activities and the most expressions that determine its next
 activities. In addition, the *condor_checkpoint* and *condor_vacate*
-commands affect the machine when it is in the Claimed state. In general,
-there are two sets of expressions that might take effect. They depend on
-the universe of the request: standard or vanilla. The standard universe
-expressions are the normal expressions. For example:
+commands affect the machine when it is in the Claimed state.
+
+In general, there are two sets of expressions that might take effect,
+depending on the universe of the job running on the claim: vanilla,
+and all others.  The normal expressions look like the following:
 
 ::
 
@@ -874,10 +812,7 @@ names. For example:
 
 Without specific vanilla versions, the normal versions will be used for
 all jobs, including vanilla jobs. In this manual, the normal expressions
-are referenced. The difference exists for the the resource owner that
-might want the machine to behave differently for vanilla jobs, since
-they cannot checkpoint. For example, owners may want vanilla jobs to
-remain suspended for longer than standard jobs.
+are referenced.
 
 While Claimed, the ``POLLING_INTERVAL`` :index:`POLLING_INTERVAL`
 takes effect, and the startd polls the machine much more frequently to
@@ -903,12 +838,11 @@ cpu from processes that are not managed by HTCondor. The startd can be
 configured to completely ignore such activity or to suspend the job or
 even to kill it. A standard configuration for a desktop machine might be
 to go through successive levels of getting the job out of the way. The
-first and least costly to the job is suspending it. This works for both
-standard and vanilla jobs. If suspending the job for a short while does
+first and least costly to the job is suspending it.
+If suspending the job for a short while does
 not satisfy the machine owner (the owner is still using the machine
 after a specific period of time), the startd moves on to vacating the
-job. Vacating a standard universe job involves performing a checkpoint
-so that the work already completed is not lost. Vanilla jobs are sent a
+job. Vanilla jobs are sent a
 soft kill signal so that they can gracefully shut down if necessary; the
 default is SIGTERM. If vacating does not satisfy the machine owner
 (usually because it is taking too long and the owner wants their machine
@@ -1000,9 +934,7 @@ Preempting
     any suspension time. When retiring due to *condor_startd* daemon
     shutdown or restart, it is possible for the administrator to issue a
     peaceful shutdown command, which causes ``MaxJobRetirementTime`` to
-    effectively be infinite, avoiding any killing of jobs. (Note that
-    the administrator may still configure the *condor_startd* daemon
-    to kill jobs for misbehavior during a peaceful shutdown.)  It is also
+    effectively be infinite, avoiding any killing of jobs. It is also
     possible for the administrator to issue a fast shutdown command,
     which causes ``MaxJobRetirementTime`` to be effectively 0.
 
@@ -1042,8 +974,7 @@ The main function of the Preempting state is to get rid of the
 *condor_starter* associated with the resource. If the *condor_starter*
 associated with a given claim exits while the machine is still in the
 Vacating activity, then the job successfully completed a graceful
-shutdown. For standard universe jobs, this means that a checkpoint was
-saved. For other jobs, this means the application was given an
+shutdown.  For other jobs, this means the application was given an
 opportunity to do a graceful shutdown, by intercepting the soft kill
 signal.
 
@@ -1257,7 +1188,7 @@ It serves as a quick reference.
     shutting down before then. The job may provide its own expression
     for ``MaxJobRetirementTime``, but this can only be used to take less
     than the time granted by the *condor_startd*, never more. For
-    convenience, standard universe and nice_user jobs are submitted
+    convenience, nice_user jobs are submitted
     with a default retirement time of 0, so they will never wait in
     retirement unless the user overrides the default.
 
@@ -1271,11 +1202,7 @@ It serves as a quick reference.
 
     This expression is evaluated in the context of the job ClassAd, so
     it may refer to attributes of the current job as well as machine
-    attributes.  This allows the administrator to configure HTCondor to
-    preempt jobs even during retirement.  Because the peaceful shutdown mode
-    of the *condor_startd* daemon normally ignores max job retirement time
-    (treating it as infinite), this expression only preempts jobs during
-    a peaceful shutdown if it evaluates to ``-1``.
+    attributes.
 
     By default the *condor_negotiator* will not match jobs to a slot
     with retirement time remaining. This behavior is controlled by
@@ -2798,9 +2725,9 @@ Submit Requirements
 
 The *condor_schedd* may reject job submissions, such that rejected jobs
 never enter the queue. Rejection may be best for the case in which there
-are jobs that will never be able to run; an example of this might be all
-jobs that specify the standard universe in a queue with restricted
-networking. Another appropriate example might be to reject all jobs that
+are jobs that will never be able to run; for instance, a job specifying
+an obsolete universe, like standard.
+Another appropriate example might be to reject all jobs that
 do not request a minimum amount of memory. Or, it may be appropriate to
 prevent certain users from using a specific submit host.
 

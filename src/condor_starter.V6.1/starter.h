@@ -25,12 +25,16 @@
 #include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
-#include "condor_privsep_helper.h"
+#include "privsep_helper.h"
 #include "exit.h"
 
 #if defined(LINUX)
 #include "glexec_privsep_helper.linux.h"
 #endif
+
+namespace htcondor {
+class DataReuseDirectory;
+}
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
@@ -279,18 +283,13 @@ public:
 	int PeekRetry(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
 
 
-		/** This will return NULL if we're not using either
-		    PrivSep or GLExec */
+		/** This will return NULL if we're not using GLExec */
 	PrivSepHelper* privSepHelper()
 	{
 		return m_privsep_helper;
 	}
-		/** This will return NULL if we're not using PrivSep */
-	CondorPrivSepHelper* condorPrivSepHelper()
-	{
-		return dynamic_cast<CondorPrivSepHelper*>(m_privsep_helper);
-	}
 #if defined(LINUX)
+		/** This will return NULL if we're not using PrivSep */
 	GLExecPrivSepHelper* glexecPrivSepHelper()
 	{
 		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);
@@ -300,6 +299,9 @@ public:
 	int GetShutdownExitCode() { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
+	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
+
+	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
@@ -338,13 +340,13 @@ private:
 		  @param result Buffer in which to store fully-qualified user name of the job owner
 		  If no job owner can be found, substitute a suitable dummy user name.
 		 */
-	void getJobOwnerFQUOrDummy(MyString &result);
+	void getJobOwnerFQUOrDummy(std::string &result);
 
 		/*
 		  @param result Buffer in which to store claim id string from job.
 		  Returns false if no claim id could be found.
 		 */
-	bool getJobClaimId(MyString &result);
+	bool getJobClaimId(std::string &result);
 
 
 	bool WriteAdFiles();
@@ -403,6 +405,9 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
+
+		// Manage the data reuse directory.
+	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
 };
 
 #endif

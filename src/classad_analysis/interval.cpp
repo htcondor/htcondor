@@ -451,8 +451,8 @@ EqualValue( classad::Value &v1, classad::Value &v2 )
 	}
 	case classad::Value::BOOLEAN_VALUE: {
 		bool b1, b2;
-		v1.IsBooleanValue( b1 );
-		v2.IsBooleanValue( b2 );
+		(void) v1.IsBooleanValue( b1 );
+		(void) v2.IsBooleanValue( b2 );
 		if( b1 == b2 ) {
 			return true;
 		}
@@ -462,8 +462,8 @@ EqualValue( classad::Value &v1, classad::Value &v2 )
 	}
 	case classad::Value::STRING_VALUE: {
 		string s1, s2;
-		v1.IsStringValue( s1 );
-		v2.IsStringValue( s2 );
+		(void) v1.IsStringValue( s1 );
+		(void) v2.IsStringValue( s2 );
 		if( s1.compare( s2 ) == 0 ) {
 			return true;
 		}
@@ -1469,7 +1469,7 @@ Union( ValueRange *vr, int index )
 		miiList.Rewind( );
 		vr->iList.Rewind( );
 		bool done = false;
-		vr->iList.Next( interval2 );  // vr->iList is not empty
+		(void) vr->iList.Next( interval2 );  // vr->iList is not empty
 		if( !miiList.Next( mii_curr ) ) {
 				// add all intervals in vr->iList
 			i_new = new Interval;
@@ -1717,7 +1717,7 @@ Union( ValueRange *vr, int index )
 			// coalesce consecutive intervals with the same indeces
 		if( miiList.Number( ) > 1 ) {
 			MultiIndexedInterval *mii_next = NULL;
-			miiList.Next( mii_curr );
+			(void) miiList.Next( mii_curr );
 			while( miiList.Next( mii_next ) ) {
 				if( mii_curr->iSet.Equals( mii_next->iSet ) ) {
 						// coalesce mii_next into mii_curr

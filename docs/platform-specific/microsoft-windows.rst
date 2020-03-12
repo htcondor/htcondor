@@ -9,9 +9,7 @@ every bit as capable on Windows as it is on Unix - or even more capable.
 
 Porting HTCondor from Unix to Windows is a formidable task, because many
 components of HTCondor must interact closely with the underlying
-operating system. Provided is a clipped version of HTCondor for Windows.
-A clipped version is one in which there is no checkpointing and there
-are no remote system calls.
+operating system.
 
 This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
@@ -564,11 +562,10 @@ installation program will automatically set permissions on the entire
 HTCondor release directory so that only Administrators have write
 access.
 
-Finally, HTCondor has all the IP/Host-based security mechanisms present in the
-full-blown version of HTCondor. See the
-:ref:`admin-manual/security:host-based security in htcondor` section for
-complete information on how to allow/deny access to HTCondor based on machine
-host name or IP address.
+Finally, HTCondor has all the security mechanisms present in the
+full-blown version of HTCondor. See
+the :ref:`admin-manual/security:authorization` section for complete
+information on how to allow/deny access to HTCondor.
 
 Network files and HTCondor
 --------------------------

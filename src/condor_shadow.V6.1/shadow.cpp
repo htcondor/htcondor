@@ -135,8 +135,8 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 		// credential if it needs to.
 	daemonCore->
 		Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD",
-						  (CommandHandler)&get_cred_handler,
-						  "get_cred_handler", NULL, DAEMON, D_COMMAND,
+						  &get_cred_handler,
+						  "get_cred_handler", DAEMON, D_COMMAND,
 						  true /*force authentication*/ );
 }
 
@@ -173,11 +173,11 @@ UniShadow::logExecuteEvent( void )
 	char* sinful = NULL;
 	remRes->getStartdAddress( sinful );
 	event.setExecuteHost( sinful );
-	delete[] sinful;
+	free( sinful );
 	char* remote_name = NULL;
 	remRes->getStartdName(remote_name);
 	event.setRemoteName(remote_name);
-	delete[] remote_name;
+	free( remote_name );
 	if( !uLog.writeEvent(&event, getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
@@ -213,6 +213,9 @@ UniShadow::gracefulShutDown( void )
 int
 UniShadow::getExitReason( void )
 {
+	if ( isDataflowJob ) {
+		return JOB_EXITED;
+	}
 	if( remRes ) {
 		return remRes->getExitReason();
 	}
@@ -233,7 +236,7 @@ void
 UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 {
 	Email mailer;
-	float recvd_bytes, sent_bytes;
+	float recvd_bytes = 0, sent_bytes = 0;
 
 	if (kind == US_TERMINATE_PENDING) {
 		/* I don't have a remote resource, so get the values directly from
@@ -264,8 +267,6 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 
 void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	/*int iPrevExitReason=*/ remRes->getExitReason();
-	
 	remRes->setExitReason( JOB_SHOULD_HOLD );
 	BaseShadow::holdJob(reason, hold_reason_code, hold_reason_subcode);
 }
@@ -366,7 +367,7 @@ UniShadow::getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss )
 }
 
 
-int
+int64_t
 UniShadow::getDiskUsage( void )
 {
 	return remRes->getDiskUsage();
@@ -390,6 +391,9 @@ UniShadow::exitSignal( void )
 int
 UniShadow::exitCode( void )
 {
+	if (isDataflowJob) {
+		return 0;
+	}
 	return remRes->exitCode();
 }
 
@@ -407,6 +411,30 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 	BaseShadow::resourceBeganExecution(rr);
 }
 
+
+void
+UniShadow::resourceDisconnected( RemoteResource* rr )
+{
+	ASSERT( rr == remRes );
+
+	const char* txt = "Socket between submit and execute hosts "
+		"closed unexpectedly";
+	logDisconnectedEvent( txt );
+
+	int now = time(NULL);
+	jobAd->Assign(ATTR_JOB_DISCONNECTED_DATE, now);
+
+	if (m_lazy_queue_update) {
+			// For lazy update, we just want to make sure the
+			// job_updater object knows about this attribute (which we
+			// already updated our copy of).
+		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
+	}
+	else {
+			// They want it now, so do the qmgmt operation directly.
+		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, now);
+	}
+}
 
 void
 UniShadow::resourceReconnected( RemoteResource* rr )
@@ -429,16 +457,19 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 	jobAd->LookupInteger(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
 	job_reconnect_cnt++;
 	jobAd->Assign(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+	jobAd->AssignExpr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
 
 	if (m_lazy_queue_update) {
 			// For lazy update, we just want to make sure the
 			// job_updater object knows about this attribute (which we
 			// already updated our copy of).
 		job_updater->watchAttribute(ATTR_NUM_JOB_RECONNECTS);
+		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
 	}
 	else {
 			// They want it now, so do the qmgmt operation directly.
 		updateJobAttr(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
 	}
 
 		// if we're trying to remove this job, now that connection is
@@ -490,7 +521,7 @@ UniShadow::logReconnectedEvent( void )
 	char* starter = NULL;
 	remRes->getStarterAddress( starter );
 	event.setStarterAddr( starter );
-	delete [] starter;
+	free( starter );
 	starter = NULL;
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
@@ -525,7 +556,7 @@ UniShadow::getMachineName( MyString &machineName )
 		remRes->getMachineName(name);
 		if( name ) {
 			machineName = name;
-			delete [] name;
+			free(name);
 			return true;
 		}
 	}
@@ -564,8 +595,102 @@ UniShadow::exitDelayed( int &reason ) {
 	return false;
 }
 
-int
+void
 UniShadow::exitLeaseHandler() {
 	DC_Exit( delayedExitReason );
-	return TRUE;
+}
+
+void
+UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
+	bool tq = false; bool tqSet = ftAd->LookupBool( ATTR_TRANSFER_QUEUED, tq );
+	bool ti = false; bool tiSet = ftAd->LookupBool( ATTR_TRANSFERRING_INPUT, ti );
+	bool to = false; bool toSet = ftAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, to );
+
+	// If either ATTR_TRANSFER_QUEUED or ATTR_TRANSFERRING_INPUT hasn't
+	// been set yet, file transfer hasn't done anything yet and there's
+	// event to record.
+	if( (!tqSet) || (!tiSet) ) {
+		return;
+	}
+
+	// If all six of the booleans in the ftAd are the same as the booleans
+	// in the job ad, then we've already written out the event.
+	bool jtq = false; bool jtqSet = jobAd->LookupBool( ATTR_TRANSFER_QUEUED, jtq );
+	bool jti = false; bool jtiSet = jobAd->LookupBool( ATTR_TRANSFERRING_INPUT, jti );
+	bool jto = false; bool jtoSet = jobAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, jto );
+	if(  jtq == tq && jtqSet == tqSet
+	  && jti == ti && jtiSet == tiSet
+	  && jto == to && jtoSet == toSet ) {
+		return;
+	}
+
+	//
+	// I suppose for maximum geek cred I should shift tq, ti, toSet, and to
+	// into a bitfield and switch on that, instead.
+	//
+
+	FileTransferEvent te;
+	if( tq && ti && (!toSet) ) {
+		te.setType( FileTransferEvent::IN_QUEUED );
+
+		// There really ought to be a remote resource if we're doing
+		// file transfer...
+		if( remRes ) {
+			char * starterAddr = NULL;
+			remRes->getStarterAddress( starterAddr );
+			if( starterAddr ) {
+				te.setHost( starterAddr );
+				free( starterAddr );
+			}
+		}
+
+		jobAd->Assign( "TransferInQueued", (int)time(NULL) );
+	} else if( (!tq) && ti && (!toSet) ) {
+		te.setType( FileTransferEvent::IN_STARTED );
+
+		time_t now = (int)time(NULL);
+		jobAd->Assign( "TransferInStarted", now );
+
+		time_t then;
+		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
+			te.setQueueingDelay( now - then );
+		} else {
+			if( remRes ) { // this should always be true...
+				char * starterAddr = NULL;
+				remRes->getStarterAddress( starterAddr );
+				if( starterAddr ) {
+					te.setHost( starterAddr );
+					free( starterAddr );
+				}
+			}
+		}
+	} else if( (!tq) && (!ti) && (!toSet) ) {
+		te.setType( FileTransferEvent::IN_FINISHED );
+		// te.setSuccess( ... );
+
+		jobAd->Assign( "TransferInFinished", (int)time(NULL) );
+	} else if( tq && (!ti) && (toSet && to) ) {
+		te.setType( FileTransferEvent::OUT_QUEUED );
+
+		jobAd->Assign( "TransferOutQueued", (int)time(NULL) );
+	} else if( (!tq) && (!ti) && (toSet && to) ) {
+		te.setType( FileTransferEvent::OUT_STARTED );
+
+		time_t now = (int)time(NULL);
+		jobAd->Assign( "TransferOutStarted", now );
+
+		time_t then;
+		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
+			te.setQueueingDelay( now - then );
+		}
+	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
+		te.setType( FileTransferEvent::OUT_FINISHED );
+		// te.setSuccess( ... );
+
+		jobAd->Assign( "TransferOutFinished", (int)time(NULL) );
+	}
+
+	if(! uLog.writeEvent( &te, jobAd )) {
+		dprintf( D_ALWAYS, "Unable to log file transfer event.\n" );
+	}
 }

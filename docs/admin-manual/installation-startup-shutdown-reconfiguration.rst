@@ -257,20 +257,13 @@ questions:
         core file from the jobs submitted to your pool.
      ``spool``
         The ``spool`` directory holds the job queue and history files,
-        and the checkpoint files for all jobs submitted from a given
-        machine. As a result, disk space requirements for the ``spool``
-        directory can be quite large, particularly if users are
-        submitting jobs with very large executables or image sizes. By
-        using a checkpoint server (see the :doc:`/admin-manual/checkpoint-server` section on Installing
-        a Checkpoint Server on for details), you can ease the disk space
-        requirements, since all checkpoint files are stored on the
-        server instead of the spool directories for each machine.
-        However, the initial checkpoint files (the executables for all
-        the clusters you submit) are still stored in the spool
-        directory, so you will need some space, even with a checkpoint
-        server. The amount of space will depend on how many executables,
-        and what size they are, that need to be stored in the spool
-        directory.
+        and the files transferred, if any, when a job which set
+        ``when_to_transfer_files`` to ``EXIT_OR_EVICT`` is evicted.  It
+        also holds the input and output files of remotely-submitted jobs.
+        Disk usage therefore varies widely based on the job mix, but
+        since the schedd will abort if it can't append to the job queue,
+        you want to make sure this directory is on a partition which
+        won't run out of space.
      ``log``
         Each HTCondor daemon writes its own log file, and each log file
         is placed in the ``log`` directory. You can specify what size
@@ -923,8 +916,8 @@ STEP 7: Host Permission Settings.
 
     For more details on these access permissions, and others that can be
     manually changed in your configuration file, please see the section
-    titled Setting Up IP/Host-Based Security in HTCondor in the 
-    :ref:`admin-manual/security:host-based security in htcondor` section.
+    titled Setting Up Security in HTCondor in the 
+    :ref:`admin-manual/security:authorization` section.
 
 STEP 8: VM Universe Setting.
     A radio button determines whether this machine will be configured to
@@ -954,28 +947,7 @@ STEP 8: VM Universe Setting.
     Path to Perl Executable
         The path to the *Perl* executable.
 
-STEP 9: HDFS Settings.
-    A radio button enables support for the Hadoop Distributed File System
-    (HDFS). When enabled, a further radio button specifies either name node or
-    data node mode.
-
-    Running HDFS requires Java to be installed, and HTCondor must know where
-    the installation is. Running HDFS in data node mode also requires the
-    installation of Cygwin, and the path to the Cygwin directory must be added
-    to the global PATH environment variable.
-
-    HDFS has several configuration options that must be filled in to be used.
-
-    Primary Name Node
-        The full host name of the primary name node.
-    Name Node Port
-        The port that the name node is listening on.
-    Name Node Web Port
-        The port the name node’s web interface is bound to. It should be 
-        different from the name node's main port.
-
-
-STEP 10: Choose Setup Type
+STEP 9: Choose Setup Type
     :index:`location of files<single: location of files; installation>`
 
     The next step is where the destination of the HTCondor files will be
@@ -1029,9 +1001,9 @@ properties necessary for an unattended install.
     set ARGS=%ARGS% SUBMITJOBS="Y"
     set ARGS=%ARGS% CONDOREMAIL="you@yours.com"
     set ARGS=%ARGS% SMTPSERVER="smtp.localhost"
-    set ARGS=%ARGS% HOSTALLOWREAD="*"
-    set ARGS=%ARGS% HOSTALLOWWRITE="*"
-    set ARGS=%ARGS% HOSTALLOWADMINISTRATOR="$(IP_ADDRESS)"
+    set ARGS=%ARGS% ALLOWREAD="*"
+    set ARGS=%ARGS% ALLOWWRITE="*"
+    set ARGS=%ARGS% ALLOWADMINISTRATOR="$(IP_ADDRESS)"
     set ARGS=%ARGS% INSTALLDIR="C:\Condor"
     set ARGS=%ARGS% POOLHOSTNAME="$(IP_ADDRESS)"
     set ARGS=%ARGS% ACCOUNTINGDOMAIN="none"
@@ -1080,29 +1052,26 @@ of each property as it applies to unattended installations:
         sets the e-mail address of the HTCondor administrator. Possible
         values are an e-mail address or the empty string "".
 
-    HOSTALLOWREAD
+    ALLOWREAD
         is a list of names that are allowed to issue READ commands to
         HTCondor daemons. This value should be set in accordance with the
         ``ALLOW_READ`` :index:`ALLOW_READ` setting in the
         configuration file, as described in
-        the :ref:`admin-manual/security:host-based security in htcondor`
-        section.
+        the :ref:`admin-manual/security:authorization` section.
 
-    HOSTALLOWWRITE
+    ALLOWWRITE
         is a list of names that are allowed to issue WRITE commands to
         HTCondor daemons. This value should be set in accordance with the
         ``ALLOW_WRITE`` :index:`ALLOW_WRITE` setting in the
         configuration file, as described in
-        the :ref:`admin-manual/security:host-based security in htcondor`
-        section.
+        the :ref:`admin-manual/security:authorization` section.
 
-    HOSTALLOWADMINISTRATOR
+    ALLOWADMINISTRATOR
         is a list of names that are allowed to issue ADMINISTRATOR commands
         to HTCondor daemons. This value should be set in accordance with the
         ``ALLOW_ADMINISTRATOR`` :index:`ALLOW_ADMINISTRATOR` setting
         in the configuration file, as described in
-        the :ref:`admin-manual/security:host-based security in htcondor`
-        section.
+        the :ref:`admin-manual/security:authorization` section.
 
     INSTALLDIR
         defines the path to the directory where HTCondor will be installed.
@@ -1333,8 +1302,8 @@ configuration files.
 
 When upgrading from a version of HTCondor earlier than 6.8 to more
 recent version, note that the configuration settings must be modified
-for security reasons. Specifically, the ``HOSTALLOW_WRITE``
-:index:`HOSTALLOW_WRITE` configuration variable must be explicitly
+for security reasons. Specifically, the ``ALLOW_WRITE``
+:index:`ALLOW_WRITE` configuration variable must be explicitly
 changed, or no jobs can be submitted, and error messages will be issued
 by HTCondor tools.
 
@@ -1358,16 +1327,9 @@ configuration variable ``MASTER_CHECK_NEW_EXEC_INTERVAL``
 
 When the *condor_master* notices new binaries, it begins a graceful
 restart. On an execute machine, a graceful restart means that running
-jobs are preempted. Standard universe jobs will attempt to take a
-checkpoint. This could be a bottleneck if all machines in a large pool
-attempt to do this at the same time. If they do not complete within the
-cutoff time specified by the ``KILL`` policy expression (defaults to 10
-minutes), then the jobs are killed without producing a checkpoint. It
-may be appropriate to increase this cutoff time, and a better approach
-may be to upgrade the pool in stages rather than all at once.
+jobs are preempted.
 
-For universes other than the standard universe, jobs are preempted. If
-jobs have been guaranteed a certain amount of uninterrupted run time
+If jobs have been guaranteed a certain amount of uninterrupted run time
 with ``MaxJobRetirementTime``, then the job is not killed until the
 specified amount of retirement time has been exceeded (which is 0 by
 default). The first step of killing the job is a soft kill signal, which
@@ -1375,8 +1337,8 @@ can be intercepted by the job so that it can exit gracefully, perhaps
 saving its state. If the job has not gone away once the ``KILL``
 expression fires (10 minutes by default), then the job is forcibly
 hard-killed. Since the graceful shutdown of jobs may rely on shared
-resources such as disks where state is saved, the same reasoning applies
-as for the standard universe: it may be appropriate to increase the
+resources such as disks where state is saved,
+it may be appropriate to increase the
 cutoff time for large pools, and a better approach may be to upgrade the
 pool in stages to avoid jobs running out of time.
 
@@ -1409,9 +1371,7 @@ implementation of security in HTCondor.
 
         condor_off -startd <hostname>
 
-    A running **standard** universe job will be allowed to take a
-    checkpoint before the job is killed. A running job under another
-    universe will be killed. If it is instead desired that the machine
+    Jobs will be killed. If it is instead desired that the machine
     stops running jobs only after the currently executing job completes,
     the command is
 

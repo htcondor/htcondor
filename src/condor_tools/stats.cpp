@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_network.h"
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
@@ -273,7 +272,7 @@ int main(int argc, char* argv[])
   ReliSock sock;
   bool connect_error = true;
   do {
-    if (sock.connect((char*) view_host.addr(), 0)) {
+    if (sock.connect(view_host.addr(), 0)) {
       connect_error = false;
       break;
     }

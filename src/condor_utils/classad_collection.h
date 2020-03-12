@@ -205,11 +205,8 @@ public:
 	const std::string str = key;
 	LogRecord* log = new LogNewClassAd(str.c_str(),GetMyTypeName(*ad),GetTargetTypeName(*ad), this->GetTableEntryMaker());
 	this->AppendLog(log);
-	const char *name;
-	ExprTree* expr;
-	ad->ResetExpr();
-	while (ad->NextExpr(name, expr)) {
-		log = new LogSetAttribute(str.c_str(),name,ExprTreeToString(expr));
+	for (auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+		log = new LogSetAttribute(str.c_str(),itr->first.c_str(),ExprTreeToString(itr->second));
 		this->AppendLog(log);
 	}
 	return true;

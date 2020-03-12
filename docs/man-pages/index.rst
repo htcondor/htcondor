@@ -4,7 +4,7 @@ Command Reference Manual (man pages)
 .. toctree::
    :maxdepth: 1
    :glob:
-   
+
    bosco_cluster
    bosco_findplatform
    bosco_install
@@ -12,20 +12,20 @@ Command Reference Manual (man pages)
    bosco_start
    bosco_stop
    bosco_uninstall
+   classads
+   classad_eval
    condor_advertise
    condor_annex
-   condor_checkpoint
    condor_check_userlogs
    condor_chirp
    condor_cod
-   condor_compile
    condor_configure
    condor_config_val
    condor_continue
    condor_convert_history
    condor_dagman
-   condor_dagman_metrics_reporter
    condor_drain
+   condor_evicted_files
    condor_fetchlog
    condor_findhost
    condor_gather_info
@@ -67,6 +67,13 @@ Command Reference Manual (man pages)
    condor_submit
    condor_suspend
    condor_tail
+   condor_token_create
+   condor_token_fetch
+   condor_token_list
+   condor_token_request
+   condor_token_request_approve
+   condor_token_request_auto_approve
+   condor_token_request_list
    condor_top
    condor_transfer_data
    condor_transform_ads
@@ -81,4 +88,4 @@ Command Reference Manual (man pages)
    condor_wait
    condor_who
    gidd_alloc
-   procd_ctl      
+   procd_ctl

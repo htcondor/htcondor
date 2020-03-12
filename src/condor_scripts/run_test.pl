@@ -360,6 +360,8 @@ sub DoChild
         SetupPythonPath();
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
         $perl = "python";
+        print "\tPython version: ";
+        system ("python --version");
     }
 
     my $test_starttime = time();
@@ -478,7 +480,7 @@ sub load_test_requirements
                 next;
             }
 
-            if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
+            if($line =~ /<<['"]?CONDOR_TESTREQ_CONFIG/) {
                 $record = 1;
                 if ($line =~ /"""/) { $triplequote = 1; }
                 next;

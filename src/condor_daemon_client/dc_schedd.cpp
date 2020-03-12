@@ -20,16 +20,19 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_commands.h"
 #include "condor_attributes.h"
 #include "daemon.h"
+#include "condor_daemon_core.h"
 #include "dc_schedd.h"
 #include "proc.h"
 #include "file_transfer.h"
 #include "condor_version.h"
 #include "condor_ftp.h"
 
+#include <sstream>
 
 // // // // //
 // DCSchedd
@@ -475,8 +478,9 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 
 			// translate the job ad by replacing the 
 			// saved SUBMIT_ attributes
-		job.ResetExpr();
-		while( job.NextExpr(lhstr, tree) ) {
+		for ( auto itr = job.begin(); itr != job.end(); itr++ ) {
+			lhstr = itr->first.c_str();
+			tree = itr->second;
 			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
@@ -488,7 +492,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 				pTree = tree->Copy();
 				job.Insert(new_attr_name, pTree);
 			}
-		}	// while next expr
+		}
 
 		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
 			if( errstack ) {
@@ -546,7 +550,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 // requests to the transferd. Also, if the transferd dies, the schedd is 
 // informed quickly and reliably due to the closed connection.
 bool
-DCSchedd::register_transferd(MyString sinful, MyString id, int timeout, 
+DCSchedd::register_transferd(const std::string &sinful, const std::string &id, int timeout,
 		ReliSock **regsock_ptr, CondorError *errstack) 
 {
 	ReliSock *rsock;
@@ -1315,9 +1319,7 @@ DCSchedd::actOnJobs( JobAction action,
 					 action_result_type_t result_type,
 					 CondorError * errstack )
 {
-	char* tmp = NULL;
-	char buf[512];
-	int size, reply;
+	int reply;
 	ReliSock rsock;
 
 		// // // // // // // //
@@ -1326,66 +1328,36 @@ DCSchedd::actOnJobs( JobAction action,
 
 	ClassAd cmd_ad;
 
-	sprintf( buf, "%s = %d", ATTR_JOB_ACTION, action );
-	cmd_ad.Insert( buf );
+	cmd_ad.Assign( ATTR_JOB_ACTION, action );
 	
-	sprintf( buf, "%s = %d", ATTR_ACTION_RESULT_TYPE, 
-			 (int)result_type );
-	cmd_ad.Insert( buf );
+	cmd_ad.Assign( ATTR_ACTION_RESULT_TYPE, (int)result_type );
 
 	if( constraint ) {
 		if( ids ) {
 				// This is a programming error, not a run-time one
 			EXCEPT( "DCSchedd::actOnJobs has both constraint and ids!" );
 		}
-		size = strlen(constraint) + strlen(ATTR_ACTION_CONSTRAINT) + 4;  
-		tmp = (char*) malloc( size*sizeof(char) );
-		if( !tmp ) {
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( tmp, "%s = %s", ATTR_ACTION_CONSTRAINT, constraint ); 
-		if( ! cmd_ad.Insert(tmp) ) {
+		if( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint) ) {
 			dprintf( D_ALWAYS, "DCSchedd::actOnJobs: "
 					 "Can't insert constraint (%s) into ClassAd!\n",
 					 constraint );
-			free( tmp );
 			if ( errstack ) {
 				errstack->push( "DCSchedd::actOnJobs", 1,
 								"Can't insert constraint into ClassAd" );
 			}
 			return NULL;
 		}			
-		free( tmp );
-		tmp = NULL;
 	} else if( ids ) {
 		char* action_ids = ids->print_to_string();
 		if ( action_ids ) {
-			size = strlen(action_ids) + strlen(ATTR_ACTION_IDS) + 7;
-			tmp = (char*) malloc( size*sizeof(char) );
-			if( !tmp ) {
-				EXCEPT( "Out of memory!" );
-			}
-			sprintf( tmp, "%s = \"%s\"", ATTR_ACTION_IDS, action_ids );
-			cmd_ad.Insert( tmp );
-			free( tmp );
-			tmp = NULL;
-			free(action_ids);
-			action_ids = NULL;
+			cmd_ad.Assign( ATTR_ACTION_IDS, action_ids );
 		}
 	} else {
 		EXCEPT( "DCSchedd::actOnJobs called without constraint or ids" );
 	}
 
 	if( reason_attr && reason ) {
-		size = strlen(reason_attr) + strlen(reason) + 7;
-		tmp = (char*) malloc( size*sizeof(char) );
-		if( !tmp ) {
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( tmp, "%s = \"%s\"", reason_attr, reason );
-		cmd_ad.Insert( tmp );
-		free( tmp );
-		tmp = NULL;
+		cmd_ad.Assign( reason_attr, reason );
 	}
 
 	if( reason_code_attr && reason_code ) {
@@ -1528,11 +1500,11 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 	if( result_type == AR_LONG ) {
 		// Put it directly in our ad
 		if (job_id.proc < 0) {
-			sprintf( buf, "cluster_%d = %d", job_id.cluster, (int)result );
+			sprintf( buf, "cluster_%d", job_id.cluster );
 		} else {
-			sprintf( buf, "job_%d_%d = %d", job_id.cluster, job_id.proc, (int)result );
+			sprintf( buf, "job_%d_%d", job_id.cluster, job_id.proc );
 		}
-		result_ad->Insert( buf );
+		result_ad->Assign( buf, (int)result );
 		return;
 	}
 
@@ -1634,9 +1606,7 @@ JobActionResults::publishResults( void )
 		result_ad = new ClassAd();
 	}
 
-	sprintf( buf, "%s = %d", ATTR_ACTION_RESULT_TYPE, 
-			 (int)result_type ); 
-	result_ad->Insert( buf );
+	result_ad->Assign( ATTR_ACTION_RESULT_TYPE, (int)result_type );
 
 	if( result_type == AR_LONG ) {
 			// we've got everything we need in our ad already, nothing
@@ -1645,28 +1615,23 @@ JobActionResults::publishResults( void )
 	}
 
 		// They want totals for each possible result
-	sprintf( buf, "result_total_%d = %d", AR_ERROR, ar_error );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_ERROR );
+	result_ad->Assign( buf, ar_error );
 
-	sprintf( buf, "result_total_%d = %d", AR_SUCCESS,
-			 ar_success ); 
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_SUCCESS );
+	result_ad->Assign( buf, ar_success );
 		
-	sprintf( buf, "result_total_%d = %d", AR_NOT_FOUND,
-			 ar_not_found ); 
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_NOT_FOUND );
+	result_ad->Assign( buf, ar_not_found );
 
-	sprintf( buf, "result_total_%d = %d", AR_BAD_STATUS,
-			 ar_bad_status );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_BAD_STATUS );
+	result_ad->Assign( buf, ar_bad_status );
 
-	sprintf( buf, "result_total_%d = %d", AR_ALREADY_DONE,
-			 ar_already_done );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_ALREADY_DONE );
+	result_ad->Assign( buf, ar_already_done );
 
-	sprintf( buf, "result_total_%d = %d", AR_PERMISSION_DENIED,
-			 ar_permission_denied );
-	result_ad->Insert( buf );
+	sprintf( buf, "result_total_%d", AR_PERMISSION_DENIED );
+	result_ad->Assign( buf, ar_permission_denied );
 
 	return result_ad;
 }
@@ -1809,14 +1774,14 @@ bool DCSchedd::getJobConnectInfo(
 	char const *session_info,
 	int timeout,
 	CondorError *errstack,
-	MyString &starter_addr,
-	MyString &starter_claim_id,
-	MyString &starter_version,
-	MyString &slot_name,
-	MyString &error_msg,
+	std::string &starter_addr,
+	std::string &starter_claim_id,
+	std::string &starter_version,
+	std::string &slot_name,
+	std::string &error_msg,
 	bool &retry_is_sensible,
 	int &job_status,
-	MyString &hold_reason)
+	std::string &hold_reason)
 {
 	ClassAd input;
 	ClassAd output;
@@ -1836,33 +1801,33 @@ bool DCSchedd::getJobConnectInfo(
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,errstack) ) {
 		error_msg = "Failed to connect to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	if( !startCommand(GET_JOB_CONNECT_INFO, &sock, timeout, errstack) ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	if( !forceAuthentication(&sock, errstack) ) {
 		error_msg = "Failed to authenticate";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	sock.encode();
 	if( !putClassAd(&sock, input) || !sock.end_of_message() ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
 	sock.decode();
 	if( !getClassAd(&sock, output) || !sock.end_of_message() ) {
 		error_msg = "Failed to get response from schedd";
-		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
+		dprintf( D_ALWAYS, "%s\n",error_msg.c_str());
 		return false;
 	}
 
@@ -1971,10 +1936,16 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 }
 
 bool
-DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string & errorMessage ) {
+DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage, PROC_ID * vids, unsigned vCount, int flags ) {
+	std::string vidList;
+	formatstr( vidList, "%d.%d", vids[0].cluster, vids[0].proc );
+	for( unsigned i = 1; i < vCount; ++i ) {
+		formatstr_cat( vidList, ", %d.%d", vids[i].cluster, vids[i].proc );
+	}
+
 	if( IsDebugLevel( D_COMMAND ) ) {
-		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d, %d.%d ) making connection to %s\n",
-			vid.cluster, vid.proc, bid.cluster, bid.proc,
+		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d <- %s ) making connection to %s\n",
+			bid.cluster, bid.proc, vidList.c_str(),
 			_addr ? _addr : "NULL");
 	}
 
@@ -1997,11 +1968,21 @@ DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string &
 		return false;
 	}
 
+	// It would seem obvious to construct a ClassAd list of ClassAds
+	// with attributes "Cluster" and "Proc", but it turns out to be
+	// way easier to send a StringList of the x.y notation, instead.
+	//
+	// It's also marginally more efficient to send a string than two
+	// 64-bit ints, so encode the beneficiary job ID that way.
+	char bidStr[PROC_ID_STR_BUFLEN];
+	ProcIdToStr( bid, bidStr );
+
 	ClassAd request;
-	request.Assign( "Victim" ATTR_CLUSTER_ID, vid.cluster );
-	request.Assign( "Victim" ATTR_PROC_ID, vid.proc );
-	request.Assign( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster );
-	request.Assign( "Beneficiary" ATTR_PROC_ID, bid.proc );
+	request.Assign( "VictimJobIDs", vidList );
+	request.Assign( "BeneficiaryJobID", bidStr );
+	if( flags != 0 ) {
+		request.Assign( "Flags", flags );
+	}
 
 	sock.encode();
 	if(! putClassAd( & sock, request )) {
@@ -2038,5 +2019,180 @@ DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string &
 		return false;
 	}
 
+	return true;
+}
+
+
+class ImpersonationTokenContinuation : Service {
+
+public:
+	ImpersonationTokenContinuation(const std::string &identity,
+		const std::vector<std::string> &authz_bounding_set,
+		int lifetime,
+		ImpersonationTokenCallbackType *callback,
+		void *misc_data)
+	:
+	  m_identity(identity),
+	  m_authz_bounding_set(authz_bounding_set),
+	  m_lifetime(lifetime),
+	  m_callback(callback),
+	  m_misc_data(misc_data)
+	{}
+
+	static void startCommandCallback(bool success, Sock *sock, CondorError *errstack,
+		const std::string & /*trust_domain*/, bool /*should_try_token_request*/,
+		void *misc_data);
+
+	int finish(Stream*);
+
+private:
+	std::string m_identity;
+	std::vector<std::string> m_authz_bounding_set;
+	int m_lifetime{-1};
+	ImpersonationTokenCallbackType *m_callback{nullptr};
+	void *m_misc_data{nullptr};
+};
+
+
+int ImpersonationTokenContinuation::finish(Stream *stream)
+{
+	auto &sock = *static_cast<Sock *>(stream);
+	CondorError err;
+	std::unique_ptr<ImpersonationTokenContinuation> myself(this);
+
+	stream->decode();
+	classad::ClassAd ad;
+	if (!getClassAd(&sock, ad) || !sock.end_of_message()) {
+		err.push("DCSCHEDD", 5, "Failed to receive response from schedd.");
+		m_callback(false, "", err, m_misc_data);
+		return false;
+	}
+
+	int error_code;
+	std::string error_string = "(unknown)";
+	if (ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code)) {
+		ad.EvaluateAttrString(ATTR_ERROR_STRING, error_string);
+		err.push("SCHEDD", error_code, error_string.c_str());
+		m_callback(false, "", err, m_misc_data);
+		return false;
+	}
+
+	std::string token;
+	if (!ad.EvaluateAttrString(ATTR_SEC_TOKEN, token)) {
+		err.push("DCSCHEDD", 6, "Remote schedd failed to return a token.");
+		m_callback(false, "", err, m_misc_data);
+		return false;
+	}
+
+	m_callback(true, token, err, m_misc_data);
+	return true;
+}
+
+
+void
+ImpersonationTokenContinuation::startCommandCallback(bool success, Sock *sock, CondorError *errstack,
+	const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
+{
+		// Automatically free our callback data at function exit.
+	std::unique_ptr<class ImpersonationTokenContinuation> callback_ptr(
+		static_cast<class ImpersonationTokenContinuation*>(misc_data));
+	ImpersonationTokenContinuation &callback_data = *callback_ptr;
+
+	if (!success) {
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+		// Ok, we have successfully established a connection.  Let's build the request ad
+		// and shoot it off.
+	classad::ClassAd request_ad;
+	if (!request_ad.InsertAttr(ATTR_SEC_USER, callback_data.m_identity) ||
+		!request_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, callback_data.m_lifetime))
+	{
+		errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+	if (!callback_data.m_authz_bounding_set.empty()) {
+		std::stringstream ss;
+		bool first = true;
+		for (const auto &authz : callback_data.m_authz_bounding_set) {
+			if (first) {first = false;}
+			else {ss << ",";}
+			ss << authz;
+		}
+		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str()))
+		{
+			errstack->push("DCSCHEDD", 2, "Failed to create schedd request ad.");
+			callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+			return;
+		}
+	}
+
+	sock->encode();
+	if (!putClassAd(sock, request_ad) ||
+		!sock->end_of_message())
+	{
+		errstack->push("DCSCHEDD", 3, "Failed to send impersonation token request ad"
+			" to remote schedd.");
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+
+		// Now, we must register a callback to wait for a response.
+	auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
+		(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
+		"Finish impersonation token request",
+		callback_ptr.get(), ALLOW, HANDLE_READ);
+	if (rc < 0) {
+		errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
+		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);
+		return;
+	}
+
+		// At this point, the callback has been registered and DaemonCore owns the
+		// memory; release the unique_ptr to prevent it from deleting the callback
+		// object at exit.
+	callback_ptr.release();
+}
+
+
+bool
+DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
+	const std::vector<std::string> &authz_bounding_set, int lifetime,
+	ImpersonationTokenCallbackType callback, void *misc_data, CondorError &err)
+{
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf(D_COMMAND, "DCSchedd::requestImpersonationTokenAsync() making connection "
+			" to '%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	if (identity.empty()) {
+		err.push("DC_SCHEDD", 1, "Impersonation token identity not provided.");
+		dprintf(D_FULLDEBUG, "Impersonation token identity not provided.\n");
+		return false;
+	}
+	std::string full_identity = identity;
+	auto at_sign = identity.find('@');
+	if (at_sign == std::string::npos) {
+		std::string domain;
+		if (!param(domain, "UID_DOMAIN")) {
+			err.push("DAEMON", 1, "No UID_DOMAIN set!");
+			dprintf(D_FULLDEBUG, "No UID_DOMAIN set!\n");
+			return false;
+		}
+		full_identity = identity + "@" + domain;
+	}
+
+		// Connect to the schedd (if necessary) and start a non-blocking command.
+		// The continuation object holds the state needed to make the request ad later.
+	auto continuation = new ImpersonationTokenContinuation(identity, authz_bounding_set,
+		lifetime, callback, misc_data);
+	auto result = startCommand_nonblocking(COLLECTOR_TOKEN_REQUEST, Stream::reli_sock, 20, &err,
+		ImpersonationTokenContinuation::startCommandCallback, continuation,
+		"requestImpersonationToken");
+
+	if (result == StartCommandFailed) {
+		return false; // Assume startCommand already left a reasonable error message.
+	}
 	return true;
 }

@@ -263,7 +263,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
  error_exit:
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -305,8 +305,6 @@ void NordugridJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -474,8 +472,7 @@ void NordugridJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -693,8 +690,7 @@ void NordugridJob::doEvaluateState()
 			if ( condorState != HELD && condorState != REMOVED ) {
 				JobTerminated();
 				if ( condorState == COMPLETED ) {
-					jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
-					if ( attr_exists && attr_dirty ) {
+					if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 						requestScheddUpdate( this, true );
 						break;
 					}
@@ -774,17 +770,17 @@ void NordugridJob::doEvaluateState()
 			// expressed in the job ad.
 			if ( remoteJobId != NULL
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 
+					 && wantResubmit == false 
 					 && doResubmit == 0 ) {
 				gmState = GM_HOLD;
 				break;
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
-				wantResubmit = 0;
+				wantResubmit = false;
 				dprintf(D_ALWAYS,
 						"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
@@ -815,7 +811,7 @@ void NordugridJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 				// Set ad attributes so the schedd finds a new match.
-				int dummy;
+				bool dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					jobAd->Assign( ATTR_JOB_MATCHED, false );
 					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -837,10 +833,7 @@ void NordugridJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			const char *name;
-			ExprTree *expr;
-			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr(name, expr) ) {
+			if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -938,7 +931,7 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 
 std::string *NordugridJob::buildSubmitRSL()
 {
-	int transfer_exec = TRUE;
+	bool transfer_exec = true;
 	std::string *rsl = new std::string;
 	StringList *stage_list = NULL;
 	StringList *stage_local_list = NULL;
@@ -1124,7 +1117,7 @@ StringList *NordugridJob::buildStageInList()
 	char *filename = NULL;
 	std::string buf;
 	std::string iwd;
-	int transfer = TRUE;
+	bool transfer = true;
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
 		if ( iwd.length() > 1 && iwd[iwd.length() - 1] != '/' ) {
@@ -1143,7 +1136,7 @@ StringList *NordugridJob::buildStageInList()
 		}
 	}
 
-	transfer = TRUE;
+	transfer = true;
 	jobAd->LookupBool( ATTR_TRANSFER_INPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_INPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
@@ -1175,7 +1168,7 @@ StringList *NordugridJob::buildStageOutList( bool old_stdout )
 {
 	StringList *stage_list = NULL;
 	std::string buf;
-	bool transfer = TRUE;
+	bool transfer = true;
 	std::string remote_stdout_name;
 	std::string remote_stderr_name;
 
@@ -1194,7 +1187,7 @@ StringList *NordugridJob::buildStageOutList( bool old_stdout )
 		}
 	}
 
-	transfer = TRUE;
+	transfer = true;
 	jobAd->LookupBool( ATTR_TRANSFER_ERROR, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)

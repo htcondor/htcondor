@@ -1117,7 +1117,7 @@ main( int argc, const char* argv[] )
 				ReliSock sock;
 				while (collectors->next (collector)) {
 					if (collector->locate() &&
-					    sock.connect((char*) collector->addr(), 0)) {
+					    sock.connect(collector->addr(), 0)) {
 						// Do something with the connection, 
 						// such that we won't end up with 
 						// noise in the collector log
@@ -1331,8 +1331,8 @@ main( int argc, const char* argv[] )
 					param_id = pmet->param_id;
 					type_and_flags = param_default_help_by_id(pmet->param_id, descrip, tags, used_for);
 				}
+				raw_supported = true;  // local lookups always support raw
 				if ( ! name_used.empty()) {
-					raw_supported = true;
 					if (dash_raw) {
 						value = strdup(val ? val : "");
 					} else {
@@ -1417,7 +1417,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 		// tools for fear that someone's ASCII parser will break, i'm
 		// just cheating and being lazy here by replicating the old
 		// behavior...
-	char* addr;
+	const char* addr;
 	const char* name;
 	bool connect_error = true;
 	do {
@@ -1486,7 +1486,7 @@ GetRemoteParamRaw(
 	def_value = "";
 	usage_report = "";
 
-	char* addr = NULL;
+	const char* addr = NULL;
 	const char* name = NULL;
 	bool connect_error = true;
 	do {
@@ -1562,7 +1562,7 @@ int GetRemoteParamStats(Daemon* target, ClassAd & ad)
 	ReliSock s;
 	s.timeout(30);
 
-	char* addr = NULL;
+	const char* addr = NULL;
 	const char* name = NULL;
 	bool connect_error = true;
 	do {
@@ -1645,7 +1645,7 @@ GetRemoteParamNamesMatching(Daemon* target, const char * param_pat, std::vector<
 	ReliSock s;
 	s.timeout(30);
 
-	char* addr = NULL;
+	const char* addr = NULL;
 	const char* name = NULL;
 	bool connect_error = true;
 	do {
@@ -1756,7 +1756,7 @@ SetRemoteParam( Daemon* target, const char* param_value, ModeType mt )
 		// tools for fear that someone's ASCII parser will break, i'm
 		// just cheating and being lazy here by replicating the old
 		// behavior...
-	char* addr;
+	const char* addr;
 	const char* name;
 	bool connect_error = true;
 

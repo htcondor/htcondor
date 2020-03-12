@@ -184,12 +184,14 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 } elsif ($taskname eq $RUN_UNIT_TESTS) {
     if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     } else {
-        $execstr = "ctest -v --output-on-failure";
+        $execstr = "ctest -v --output-on-failure -L batlab";
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
-	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-analysis-linux64-8.6.0/bin";
-	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --enable-virtual --security --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
+	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2019.09/bin";
+	$execstr = get_cmake_args();
+	$execstr .= " -DBUILD_TESTING:bool=false ";
+	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /usr/local/coverity/.p`";
 }
 
 
@@ -234,6 +236,7 @@ else {
     $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
     $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
     $ENV{DYLD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+    $ENV{PYTHONPATH} ="$BaseDir/release_dir/lib/python";
 }
 
 ######################################################################

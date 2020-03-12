@@ -41,6 +41,7 @@
 #include "sig_install.h"
 #include "basename.h"
 #include "globus_utils.h"
+#include "condor_claimid_parser.h"
 
 // Global variables
 int cmd = 0;
@@ -239,9 +240,8 @@ fillRequirements( ClassAd* req )
 	}
 	jic_req += "==TRUE";
 
-	MyString require;
-	require = ATTR_REQUIREMENTS;
-	require += "=(";
+	std::string require;
+	require = "(";
 
 	if (requirements) {
 		require += requirements;
@@ -260,26 +260,11 @@ fillRequirements( ClassAd* req )
 		require += IntToStr( slot_id );
 		require += ")&&(";
 	}
-	else if (param_boolean("ALLOW_VM_CRUFT", false)) {
-		int vm_id = 0;
-		if (name) {
-			if (sscanf(name, "vm%d@", &vm_id) != 1) { 
-				vm_id = 0;
-			}
-		}
-		if (vm_id > 0) {
-			require += "TARGET.";
-			require += ATTR_VIRTUAL_MACHINE_ID;
-			require += "==";
-			require += IntToStr( vm_id );
-			require += ")&&(";
-		}
-	}
 
 	require += jic_req;
 	require += ')';
 
-	if( ! req->Insert(require.Value()) ) {
+	if( ! req->AssignExpr(ATTR_REQUIREMENTS, require.c_str()) ) {
 		fprintf( stderr, "ERROR: can't parse requirements '%s'\n",
 				 requirements );
 		exit( 1 );
@@ -843,7 +828,8 @@ parseArgv( int  /*argc*/, char* argv[] )
 			// This is the last resort, because claim ids are
 			// no longer considered to be the correct place to
 			// get the startd's address.
-		target = getAddrFromClaimId( claim_id );
+		ClaimIdParser id_parser(claim_id);
+		target = strdup(id_parser.startdSinfulAddr());
 	} else { 
 			// local startd
 		target = NULL;

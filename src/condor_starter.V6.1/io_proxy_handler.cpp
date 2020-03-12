@@ -853,13 +853,14 @@ int IOProxyHandler::convert( int result, int unix_errno )
 			return CHIRP_ERROR_IS_DIR;
 		case ENOTDIR:
 			return CHIRP_ERROR_NOT_DIR;
-/* ENOTEMPTY is equal to EEXIST under AIX */
-#if defined(ENOTEMPTY) && !defined(AIX) 
+#if defined(ENOTEMPTY)
 		case ENOTEMPTY:
 			return CHIRP_ERROR_NOT_EMPTY;
 #endif
 		case EXDEV:
 			return CHIRP_ERROR_CROSS_DEVICE_LINK;
+		case ETIMEDOUT:
+			return CHIRP_ERROR_OFFLINE;
 		default:
 			dprintf(D_ALWAYS, "Starter ioproxy server got unknown unix errno:%d\n", unix_errno);
 			return CHIRP_ERROR_UNKNOWN;

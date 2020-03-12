@@ -34,6 +34,11 @@
 #endif
 
 #include <string>
+#include <chrono>
+
+namespace ToE {
+    class Tag;
+}
 
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a
@@ -45,10 +50,7 @@
 namespace classad {
 	class ClassAd;
 }
-namespace compat_classad {
-  class ClassAd;
-}
-using namespace compat_classad;
+using classad::ClassAd;
 
 
 class MyString; // potential forward reference.
@@ -57,7 +59,8 @@ class MyString; // potential forward reference.
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
-	(in condor_event.C)
+	(in condor_event.cpp) and the python enums (in
+	src/python-bindings/JobEventLog.cpp).
 	WARNING: DO NOT CHANGE THE NUMBERS OF EXISTING EVENTS !!!
 	         ^^^^^^           
 */
@@ -102,15 +105,13 @@ enum ULogEventNumber {
 	/** Factory paused            */  ULOG_FACTORY_PAUSED			= 37,
 	/** Factory resumed           */  ULOG_FACTORY_RESUMED			= 38,
 	/** For the Python bindings   */  ULOG_NONE						= 39,
+	/** File transfer             */  ULOG_FILE_TRANSFER			= 40,
+	/** Reserve space for xfer    */ ULOG_RESERVE_SPACE				= 41,
+	/** Release reserved space    */ ULOG_RELEASE_SPACE				= 42,
+	/** File xfer completed       */ ULOG_FILE_COMPLETE				= 43,
+	/** Data reused               */ ULOG_FILE_USED					= 44,
+	/** File removed from reuse   */ ULOG_FILE_REMOVED				= 45,
 };
-
-/// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
-#if 1
-// use ULogEvent::eventName() instead....
-// extern const char * getULogEventNumberName(ULogEventNumber number);
-#else
-extern const char ULogEventNumberNames[][30];
-#endif
 
 //----------------------------------------------------------------------------
 /** Enumeration of possible outcomes after attempting to read an event.
@@ -123,7 +124,8 @@ enum ULogEventOutcome
     /** No event occured (like EOF)  */ ULOG_NO_EVENT,
     /** Error reading log file       */ ULOG_RD_ERROR,
     /** Missed event                 */ ULOG_MISSED_EVENT,
-    /** Unknown Error                */ ULOG_UNK_ERROR
+    /** Unknown Error                */ ULOG_UNK_ERROR,
+    /**                              */ ULOG_INVALID
 };
 
 /// For printing the enum value.  cout << ULogEventOutcomeNames[outcome];
@@ -195,7 +197,7 @@ class ULogEvent {
 	 */
 	bool formatEvent( std::string &out, int options );
 	// Flags for the formatting options for formatEvent and formatHeader
-	enum formatOpt { XML = 0x0001, ISO_DATE=0x0010, UTC=0x0020, USEC=0x0040, };
+	enum formatOpt { XML = 0x0001, JSON = 0x0002, CLASSAD = 0x0003, ISO_DATE=0x0010, UTC=0x0020, SUB_SECOND=0x0040, };
 	static int parse_opts(const char * fmt, int default_opts);
 
 		// returns a pointer to the current event name char[], or NULL
@@ -208,7 +210,7 @@ class ULogEvent {
 		@return NULL for failure, or the ClassAd pointer for success
 	*/
 	virtual ClassAd* toClassAd(bool event_time_utc);
-	    
+
 	/** Initialize from this ClassAd. This is implemented differently in each
 		of the known (by John Bethencourt as of 6/5/02) subclasses of
 		ULogEvent. Each implementation also calls ULogEvent::initFromClassAd
@@ -224,7 +226,13 @@ class ULogEvent {
 		but keeping that in sync with the eventclock was a problem, so we got rid of it
 		@return The time at which this event occurred.
 	*/
-	time_t GetEventTime() const { return eventclock; }
+	time_t GetEventTime(struct timeval *tv=NULL) const {
+		if (tv) {
+			tv->tv_sec = eventclock;
+			tv->tv_usec = event_usec;
+		}
+		return eventclock;
+	}
 
 	/** Get the time at which this event occurred, in the form
 	    of a time_t.
@@ -321,7 +329,10 @@ class ULogEvent {
   private:
     /// The time this event occurred as a UNIX timestamp
 	time_t				eventclock;
+	long				event_usec;
 };
+
+#define USERLOG_FORMAT_DEFAULT ULogEvent::formatOpt::ISO_DATE
 
 //----------------------------------------------------------------------------
 /** Instantiates an event object based on the given event number.
@@ -728,8 +739,11 @@ class JobAbortedEvent : public ULogEvent
 	const char* getReason(void) const;
 	void setReason( const char* );
 
+	void setToeTag( classad::ClassAd * toeTag );
+
  private:
 	char* reason;
+	ToE::Tag * toeTag;
 };
 
 
@@ -929,6 +943,14 @@ class TerminatedEvent : public ULogEvent
 	float total_recvd_bytes;
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
+
+	// Subclasses wishing to be more efficient can override this to store
+	// the values in the toeTag that they care about in member variables.
+	// This method just makes a copy of toeTag (if it's not NULL).
+	virtual void setToeTag( classad::ClassAd * toeTag );
+
+ protected:
+	classad::ClassAd * toeTag;
 
  private:
 
@@ -2062,21 +2084,21 @@ class PreSkipEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Factory Submit Log Event object.  Below is an example
-    Factory Submit Log entry from Condor v8. <p>
+/** Framework for a Cluster Submit Log Event object.  Below is an example
+    Cluster Submit Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Factory submitted from host: <128.105.165.12:32779>
+000 (172.000.000) 10/20 16:56:54 Cluster submitted from host: <128.105.165.12:32779>
 ...
 </PRE>
 */
-class FactorySubmitEvent : public ULogEvent
+class ClusterSubmitEvent : public ULogEvent
 {
   public:
     ///
-    FactorySubmitEvent(void);
+    ClusterSubmitEvent(void);
     ///
-    ~FactorySubmitEvent(void);
+    ~ClusterSubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -2113,21 +2135,21 @@ class FactorySubmitEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Factory Remove Log Event object.  Below is an example
-    Factory Remove Log entry from Condor v8. <p>
+/** Framework for a Cluster Remove Log Event object.  Below is an example
+    Cluster Remove Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Factory removed
+000 (172.000.000) 10/20 16:56:54 Cluster removed
 ...
 </PRE>
 */
-class FactoryRemoveEvent : public ULogEvent
+class ClusterRemoveEvent : public ULogEvent
 {
   public:
     ///
-    FactoryRemoveEvent(void);
+    ClusterRemoveEvent(void);
     ///
-    ~FactoryRemoveEvent(void);
+    ~ClusterRemoveEvent(void);
 
 /** Read the body of the next Submit event.
     @param file the non-NULL readable log file
@@ -2222,6 +2244,183 @@ public:
 	void setReason(const char* str);
 };
 
+// ----------------------------------------------------------------------------
+
+class FileTransferEvent : public ULogEvent {
+	public:
+		FileTransferEvent();
+		~FileTransferEvent();
+
+		virtual int readEvent( FILE * f, bool & got_sync_line );
+		virtual bool formatBody( std::string & out );
+
+		virtual ClassAd * toClassAd(bool event_time_utc);
+		virtual void initFromClassAd( ClassAd * ad );
+
+		enum FileTransferEventType {
+			NONE = 0,
+			IN_QUEUED = 1,
+			IN_STARTED = 2,
+			IN_FINISHED = 3,
+			OUT_QUEUED = 4,
+			OUT_STARTED = 5,
+			OUT_FINISHED = 6,
+			MAX = 7
+		};
+
+		static const char * FileTransferEventStrings[];
+
+		void setType( FileTransferEventType ftet ) { type = ftet; }
+		FileTransferEventType getType() const { return type; }
+
+		void setQueueingDelay( time_t duration ) { queueingDelay = duration; }
+		time_t getQueueingDelay() { return queueingDelay; }
+
+		void setHost( const std::string & h) { host = h; }
+		const std::string & getHost() { return host; }
+
+	protected:
+		std::string host;
+		time_t queueingDelay;
+		FileTransferEventType type;
+};
+
+
+class ReserveSpaceEvent final : public ULogEvent {
+public:
+	ReserveSpaceEvent() {eventNumber = ULOG_RESERVE_SPACE;}
+	~ReserveSpaceEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setExpirationTime(const std::chrono::system_clock::time_point &expiry) {m_expiry = expiry;}
+	std::chrono::system_clock::time_point getExpirationTime() const {return m_expiry;}
+
+	void setReservedSpace(size_t space) {m_reserved_space = space;}
+	size_t getReservedSpace() const {return m_reserved_space;}
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	std::string generateUUID();
+	const std::string &getUUID() const {return m_uuid;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+
+private:
+	std::chrono::system_clock::time_point m_expiry;
+	size_t m_reserved_space{0};
+	std::string m_uuid;
+	std::string m_tag;
+};
+
+
+class ReleaseSpaceEvent final : public ULogEvent {
+public:
+	ReleaseSpaceEvent() {eventNumber = ULOG_RELEASE_SPACE;}
+	~ReleaseSpaceEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	const std::string &getUUID() const {return m_uuid;}
+
+private:
+	std::string m_uuid;
+};
+
+
+class FileCompleteEvent final : public ULogEvent {
+public:
+	FileCompleteEvent() : m_size(0) {eventNumber = ULOG_FILE_COMPLETE;}
+	~FileCompleteEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	const std::string &getUUID() const {return m_uuid;}
+
+	void setSize(size_t size) {m_size = size;}
+	size_t getSize() const {return m_size;}
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+private:
+	size_t m_size;
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_uuid;
+};
+
+
+class FileUsedEvent final : public ULogEvent {
+public:
+	FileUsedEvent() {eventNumber = ULOG_FILE_USED;}
+	~FileUsedEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+private:
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_tag;
+};
+
+
+class FileRemovedEvent final : public ULogEvent {
+public:
+	FileRemovedEvent() : m_size(0) {eventNumber = ULOG_FILE_REMOVED;}
+	~FileRemovedEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setSize(size_t size) {m_size = size;}
+	size_t getSize() const {return m_size;}
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+private:
+	size_t m_size;
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_tag;
+};
 
 #endif // __CONDOR_EVENT_H__
-

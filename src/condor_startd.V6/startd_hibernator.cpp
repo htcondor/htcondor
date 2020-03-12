@@ -139,7 +139,7 @@ StartdHibernator::initialize( void )
 	}
 
 	// Now, let's see if the ad is valid
-	MyString	tmp;
+	std::string	tmp;
 	if( !m_ad.LookupString( ATTR_HIBERNATION_SUPPORTED_STATES, tmp ) ) {
 		dprintf( D_ALWAYS,
 				 "%s missing in ad from hibernation plugin %s\n",
@@ -147,11 +147,11 @@ StartdHibernator::initialize( void )
 		return false;
 	}
 	unsigned	mask;
-	if ( !HibernatorBase::stringToMask(tmp.Value(), mask) ) {
+	if ( !HibernatorBase::stringToMask(tmp.c_str(), mask) ) {
 		dprintf( D_ALWAYS,
 				 "%s invalid '%s' in ad from hibernation plugin %s\n",
 				 ATTR_HIBERNATION_SUPPORTED_STATES,
-				 tmp.Value(), m_plugin_path.Value() );
+				 tmp.c_str(), m_plugin_path.Value() );
 		return false;
 	}
 	setStateMask( mask );

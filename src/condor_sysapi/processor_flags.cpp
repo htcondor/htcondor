@@ -107,11 +107,17 @@ const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void ) {
                     
                     foundProcessorFlags += 1;
                 } else if (strcmp(attribute, "model") == 0) {
-			sscanf(value, "%d", &theInfo.model_no); 
+			int tmp = 0;
+			int r = sscanf(value, "%d", &tmp);
+			if (r > 0) theInfo.model_no = tmp;
 		} else if (strcmp(attribute,"cpu family") == 0) {
-			sscanf(value, "%d", &theInfo.family); 
+			int tmp = 0;
+			int r = sscanf(value, "%d", &tmp);
+			if (r > 0) theInfo.family = tmp;
 		} else if (strcmp(attribute,"cache size") == 0) {
-			sscanf(value, "%d", &theInfo.cache); 
+			int tmp = 0;
+			int r = sscanf(value, "%d", &tmp);
+			if (r > 0) theInfo.cache = tmp;
 		}
             }
         }
@@ -137,7 +143,7 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void ) {
     }
 
     /* Which flags do we care about?  You MUST terminate this list with NULL. */
-    static const char * const flagNames[] = { "avx", "avx2", "avx512", "ssse3", "sse4_1", "sse4_2", NULL };
+    static const char * const flagNames[] = { "avx", "avx2", "avx512f", "avx512dq", "avx512_vnni", "ssse3", "sse4_1", "sse4_2", NULL };
 
     /* Do some memory-allocation math. */
     int numFlags = 0;

@@ -100,6 +100,12 @@ Job ClassAd Attributes
     :index:`definition<single: definition; cluster>`
     :index:`cluster identifier<single: cluster identifier; job ID>`
 
+``CloudLabelNames``
+    Used for grid type gce jobs; a string taken from the definition of
+    the submit description file command
+    **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`.
+    Defines the set of labels associated with the GCE instance.
+
 ``ClusterId``
     Integer cluster identifier for this job. A cluster is a group of
     jobs that were submitted together. Each job has its own unique job
@@ -951,6 +957,47 @@ Job ClassAd Attributes
     :index:`JobCurrentFinishTransferInputDate<single: JobCurrentFinishTransferInputDate; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferInputDate>`
 
+``JobCurrentFinishTransferInputDate``
+    Time at which the job most recently finished transferring its input
+    sandbox. Measured in the number of seconds since the epoch (00:00:00
+    UTC, Jan 1, 1970)
+    :index:`JobCurrentFinishTransferOutputDate<single: JobCurrentFinishTransferOutputDate; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferOutputDate>`
+
+``JobCurrentFinishTransferOutputDate``
+    Time at which the job most recently finished transferring its output
+    sandbox. Measured in the number of seconds since the epoch (00:00:00
+    UTC, Jan 1, 1970)
+    :index:`JobCurrentStartDate<single: JobCurrentStartDate; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentStartDate>`
+
+``JobCurrentStartDate``
+    Time at which the job most recently began running. Measured in the
+    number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+    :index:`JobCurrentStartExecutingDate<single: JobCurrentStartExecutingDate; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentStartExecutingDate>`
+
+``JobCurrentStartExecutingDate``
+    Time at which the job most recently finished transferring its input
+    sandbox and began executing. Measured in the number of seconds since
+    the epoch (00:00:00 UTC, Jan 1, 1970)
+    :index:`JobCurrentStartTransferInputDate<single: JobCurrentStartTransferInputDate; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentStartTransferInputDate>`
+
+``JobCurrentStartTransferInputDate``
+    Time at which the job most recently began transferring its input
+    sandbox. Measured in the number of seconds since the epoch (00:00:00
+    UTC, Jan 1, 1970)
+    :index:`JobCurrentStartTransferOutputDate<single: JobCurrentStartTransferOutputDate; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentStartTransferOutputDate>`
+
+``JobCurrentStartTransferOutputDate``
+    Time at which the job most recently finished executing and began
+    transferring its output sandbox. Measured in the number of seconds
+    since the epoch (00:00:00 UTC, Jan 1, 1970)
+    :index:`JobDescription<single: JobDescription; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobDescription>`
+
 ``JobDescription``
     A string that may be defined for a job by setting
     **description** :index:`description<single: description; submit commands>` in the
@@ -958,26 +1005,13 @@ Job ClassAd Attributes
     executable such as *condor_q* will instead use this string. For
     interactive jobs that do not have a submit description file, this
     string will default to ``"Interactive job"``.
-    :index:`JobCurrentStartDate<single: JobLeasJobCurrentStartDateeDuration; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentStartDate>`
+    :index:`JobDisconnectedDate<single: JobDisconnectedDate; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; JobDisconnectedDate>`
 
-``JobCurrentStartDate``
-    Time at which the job most recently began running. Measured in the number
-    of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
-    :index:`JobCurrentStartExecutingDate<single: JobCurrentStartExecutingDate; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentStartExecutingDate>`
-
-``JobCurrentStartExecutingDate``
-    Time at which the job most recently finished transferring its input sandbox
-    and began executing. Measured in the number of seconds since the epoch
-    (00:00:00 UTC, Jan 1, 1970)
-    :index:`JobCurrentStartTransferOutputDate<single: JobCurrentStartTransferOutputDate; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentStartTransferOutputDate>`
-
-``JobCurrentStartTransferOutputDate``
-    Time at which the job most recently finished executing and began
-    transferring its output sandbox. Measured in the number of seconds since
-    the epoch (00:00:00 UTC, Jan 1, 1970)
+``JobDisconnectedDate``
+    Time at which the *condor_shadow* and *condor_starter* become disconnected.
+    Set to ``Undefined`` when a succcessful reconnect occurs. Measured in the
+    number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
     :index:`JobLeaseDuration<single: JobLeaseDuration; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobLeaseDuration>`
 
@@ -1067,7 +1101,7 @@ Job ClassAd Attributes
     :index:`JobUniverse<single: JobUniverse; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; JobUniverse>`
     :index:`universe<single: universe; job>`
-    :index:`standard = 1<single: standard = 1; job ClassAd attribute definitions>`
+    :index:`standard = 1 (no longer used)<single: standard = 1; job ClassAd attribute definitions>`
     :index:`pipe = 2 (no longer used)<single: pipe = 2 (no longer used); job ClassAd attribute definitions>`
     :index:`linda = 3 (no longer used)<single: linda = 3 (no longer used); job ClassAd attribute definitions>`
     :index:`pvm = 4 (no longer used)<single: pvm = 4 (no longer used); job ClassAd attribute definitions>`
@@ -1088,8 +1122,6 @@ Job ClassAd Attributes
     +-------+-----------------+
     | Value | Universe        |
     +=======+=================+
-    | 1     | standard        |
-    +-------+-----------------+
     | 5     | vanilla, docker |
     +-------+-----------------+
     | 7     | scheduler       |
@@ -1133,33 +1165,13 @@ Job ClassAd Attributes
 ``KillSigTimeout``
     This attribute is replaced by the functionality in
     ``JobMaxVacateTime`` as of HTCondor version 7.7.3. The number of
-    seconds that the job (other than the standard universe) requests the
+    seconds that the job requests the
     *condor_starter* wait after sending the signal defined as
     ``KillSig`` and before forcibly removing the job. The actual amount
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
     :index:`KILLING_TIMEOUT`.
-    :index:`LastCheckpointPlatform<single: LastCheckpointPlatform; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LastCheckpointPlatform>`
-
-``LastCheckpointPlatform``
-    An opaque string which is the ``CheckpointPlatform`` identifier from
-    the last machine where this standard universe job had successfully
-    produced a checkpoint.
-    :index:`LastCkptServer<single: LastCkptServer; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LastCkptServer>`
-
-``LastCkptServer``
-    Host name of the last checkpoint server used by this job. When a
-    pool is using multiple checkpoint servers, this tells the job where
-    to find its checkpoint file.
-    :index:`LastCkptTime<single: LastCkptTime; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LastCkptTime>`
-
-``LastCkptTime``
-    Time at which the job last performed a successful checkpoint.
-    Measured in the number of seconds since the epoch (00:00:00 UTC, Jan
-    1, 1970). :index:`LastMatchTime<single: LastMatchTime; ClassAd job attribute>`
+    :index:`LastMatchTime<single: LastMatchTime; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; LastMatchTime>`
 
 ``LastMatchTime``
@@ -1249,7 +1261,7 @@ Job ClassAd Attributes
 ``MaxTransferInputMB``
     This integer expression specifies the maximum allowed total size in
     Mbytes of the input files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_INPUT_MB``
@@ -1266,7 +1278,7 @@ Job ClassAd Attributes
 ``MaxTransferOutputMB``
     This integer expression specifies the maximum allowed total size in
     Mbytes of the output files that are transferred for a job. This
-    expression does not apply to grid universe, standard universe, or
+    expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_OUTPUT_MB``
@@ -1364,7 +1376,6 @@ Job ClassAd Attributes
 
 ``NumJobStarts``
     An integer count of the number of times the job started executing.
-    This is not (yet) defined for **standard** universe jobs.
     :index:`NumPids<single: NumPids; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; NumPids>`
 
@@ -1666,6 +1677,11 @@ Job ClassAd Attributes
     :index:`definition for a submitted job<single: definition for a submitted job; process>`
     :index:`process identifier<single: process identifier; job ID>`
 
+``PreserveRelativePaths``
+    When ``True``, entries in the file transfer lists that are relative
+    paths will be transferred to the same relative path on the destination
+    machine (instead of the basename).
+
 ``ProcId``
     Integer process identifier for this job. Within a cluster of many
     jobs, each job has the same ``ClusterId``, but will have a unique
@@ -1840,6 +1856,12 @@ Job ClassAd Attributes
     running. :index:`StackSize<single: StackSize; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; StackSize>`
 
+``ScitokensFile``
+    The path and filename containing a SciToken to use for a Condor-C job.
+    :index:`ScitokensFile`
+    :index:`ScitokensFile<single: ScitokensFile; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; ScitokensFile>`
+
 ``StackSize``
     Utilized for Linux jobs only, the number of bytes allocated for
     stack space for this job. This number of bytes replaces the default
@@ -1912,8 +1934,27 @@ Job ClassAd Attributes
 ``SubmitterNegotiatingGroup``
     The accounting group name under which the resource negotiated when
     it was claimed, as set by the *condor_negotiator*.
-    :index:`SuccessPreExitBySignal<single: SuccessPreExitBySignal; ClassAd job attribute>`
-    :index:`ClassAd job attribute<single: ClassAd job attribute; SuccessPreExitBySignal>`
+
+:index:`SuccessCheckpointExitBySignal<single: SuccessCheckpointExitBySignal; ClassAd job attribute>`
+
+``SuccessCheckpointExitBySignal``
+    Specifies if the ``executable`` exits with a signal after a successful
+    self-checkpoint.
+
+:index:`SuccessCheckpointExitCode<single: SuccessCheckpointExitCode; ClassAd job attribute>`
+
+``SuccessCheckpointExitCode``
+    Specifies the exit code, if any, with which the ``executable`` exits
+    after a successful self-checkpoint.
+
+:index:`SuccessCheckpointExitSignal<single: SuccessCheckpointExitSignal; ClassAd job attribute>`
+
+``SuccessCheckpointExitSignal``
+    Specifies the signal, if any, by which the ``executable`` exits after
+    a successful self-checkpoint.
+
+:index:`SuccessPreExitBySignal<single: SuccessPreExitBySignal; ClassAd job attribute>`
+:index:`ClassAd job attribute<single: ClassAd job attribute; SuccessPreExitBySignal>`
 
 ``SuccessPreExitBySignal``
     Specifies if a succesful pre command must exit with a signal.
@@ -1967,6 +2008,12 @@ Job ClassAd Attributes
 ``TotalSuspensions``
     A count of the number of times this job has been suspended during
     its lifetime. :index:`TransferErr<single: TransferErr; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; TransferCheckpoint>`
+
+``TransferCheckpoint``
+    A string attribute containing a comma separated list of directories
+    and/or files that should be transferred from the execute machine to the
+    submit machine's spool when the job successfully checkpoints.
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferErr>`
 
 ``TransferErr``
@@ -2000,6 +2047,11 @@ Job ClassAd Attributes
     (pre-staged), and the name of the file is given by the job attribute
     ``In``. :index:`TransferInFinished<single: TransferInFinished; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferInFinished>`
+
+``TransferInput``
+    A string attribute containing a comma separated list of directories, files and/or URLs
+    that should be transferred from the submit machine to the remote machine when
+    input file transfer is enabled.
 
 ``TransferInFinished``
     : When the job finished the most recent recent transfer of its input
@@ -2041,6 +2093,10 @@ Job ClassAd Attributes
     :index:`TransferOutFinished<single: TransferOutFinished; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferOutFinished>`
 
+``TransferOutput``
+    A string attribute containing a comma separated list of files and/or URLs that should be transferred
+    from the remote machine to the submit machine when output file transfer is enabled.
+
 ``TransferOutFinished``
     : When the job finished the most recent recent transfer of its
     output sandbox, measured in seconds from the epoch. (00:00:00 UTC
@@ -2081,6 +2137,15 @@ Job ClassAd Attributes
     :index:`TransferQueued<single: TransferQueued; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferQueued>`
 
+``TransferPlugins``
+    A string value containing a semicolon separated list of file transfer plugins
+    to be supplied by the job. Each entry in this list will be of the form
+    ``TAG1[,TAG2[,...]]=/path/to/plugin`` were `TAG` values are URL prefixes like `HTTP`,
+    and ``/path/to/plugin`` is the path that the transfer plugin is to be transferred from.
+    The files mentioned in this list will be transferred to the job sandbox before any file
+    transfer plugins are invoked. A transfer plugin supplied in this will way will be used
+    even if the execute node has a file transfer plugin installed that handles that URL prefix.
+
 ``TransferQueued``
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
@@ -2092,7 +2157,18 @@ Job ClassAd Attributes
 ``UserLog``
     The full path and file name on the submit machine of the log file of
     job events.
-    :index:`WantGracefulRemoval<single: WantGracefulRemoval; ClassAd job attribute>`
+
+:index:`WantFTOnCheckpoint<single: WantFTOnCheckpoint; ClassAd job attribute>`
+
+``WantFTOnCheckpoint``
+    A boolean that, when ``True``, specifies that when the ``executable``
+    exits as described by ``SuccessCheckpointExitCode``,
+    ``SuccessCheckpointExitBySignal``, and ``SuccessCheckpointExitSignal``,
+    HTCondor should do (output) file transfer and immediately continue the
+    job in the same sandbox by restarting ``executable`` with the same
+    arguments as the first time.
+
+:index:`WantGracefulRemoval<single: WantGracefulRemoval; ClassAd job attribute>`
 
 ``WantGracefulRemoval``
     A boolean expression that, when ``True``, specifies that a graceful

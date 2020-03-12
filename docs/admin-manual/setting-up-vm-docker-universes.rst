@@ -354,6 +354,14 @@ the configuration parameter ``DOCKER_DROP_ALL_CAPABILITIES``
 evalutes to false. This expression is evaluted in the context of the
 machine ad (my) and the job ad (target).
 
+Docker support an enormous number of command line options when creating
+containers. While HTCondor tries to map as many useful options from
+submit files and machine descriptions to command line options, an
+administrator may want additional options passed to the docker container
+create command. To do so, the parameter ``DOCKER_EXTRA_ARGUMENTS``
+:index:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will append
+these to the docker container create command.
+
 Docker universe jobs may fail to start on certain Linux machines when
 SELinux is enabled. The symptom is a permission denied error when
 reading or executing from the condor scratch directory. To fix this

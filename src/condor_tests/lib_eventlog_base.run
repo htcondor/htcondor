@@ -81,7 +81,7 @@ foreach my $arg ( @ARGV ) {
 }
 
 my $dir = "test-eventlog_" . $settings{name};
-my $exe = "./lib_eventlog_".$settings{name}.".exe";
+my $exe = "./lib_eventlog_".$settings{name}."_executable.exe";
 my $fulldir = getcwd() . "/$dir";
 unlink "$dir/EventLog";
 unlink "$dir/reader.state";

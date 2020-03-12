@@ -72,7 +72,7 @@ MpiResource::resourceExit( int reason, int status )
 				event.returnValue = exit_value;
 			}
 			
-			int had_core = 0;
+			bool had_core = false;
 			jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 			if( had_core ) {
 				event.setCoreFile( shadow->getCoreName() );
@@ -115,13 +115,9 @@ bool
 MpiResource::writeULogEvent( ULogEvent* event )
 {
 	bool rval;
-	// FIXME - we dont' have the gjid here (grr) so pass NULL to initialize
-	// the userlog
-	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), node_num );
+	shadow->uLog.setJobId( shadow->getCluster(), shadow->getProc(), node_num );
 	rval = RemoteResource::writeULogEvent( event );
-	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), 0 );
+	shadow->uLog.setJobId( shadow->getCluster(), shadow->getProc(), 0 );
 	return rval;
 }
 
@@ -129,7 +125,7 @@ MpiResource::writeULogEvent( ULogEvent* event )
 void
 MpiResource::beginExecution( void )
 {
-	char* startd_addr;
+	const char* startd_addr;
 	if( ! dc_startd ) {
 		dprintf( D_ALWAYS, "beginExecution() "
 				 "called with no DCStartd object!\n" ); 
@@ -145,7 +141,7 @@ MpiResource::beginExecution( void )
 	event.setExecuteHost( startd_addr );
 	event.node = node_num;
 	if( ! writeULogEvent(&event) ) {
-		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event." );
+		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event.\n" );
 	}
 
 		// Call our parent class's version to handle everything else. 

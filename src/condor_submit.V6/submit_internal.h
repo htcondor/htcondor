@@ -20,6 +20,8 @@
 #if !defined(_SUBMIT_INTERNAL_H)
 #define _SUBMIT_INTERNAL_H
 
+#include "submit_protocol.h"
+
 #define PLUS_ATTRIBS_IN_CLUSTER_AD 1
 
 // uncomment this to get (broken) legacy behavior that attributes in
@@ -48,69 +50,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 #define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
 #define QUEUE_OPT_FAIL_EMPTY_FIELDS (1<<1)
 
-// Abstract the schedd's queue protocol so we can NOT call it when simulating
-//
-class AbstractScheddQ {
-public:
-	virtual ~AbstractScheddQ() {}
-	virtual int get_NewCluster() = 0;
-	virtual int get_NewProc(int cluster_id) = 0;
-	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL) = 0;
-	virtual int get_Capabilities(ClassAd& reply) = 0;
-	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 ) = 0;
-	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 ) = 0;
-	virtual int send_SpoolFileIfNeeded(ClassAd& ad) = 0;
-	virtual int send_SpoolFile(char const *filename) = 0;
-	virtual int send_SpoolFileBytes(char const *filename) = 0;
-	virtual bool disconnect(bool commit_transaction, CondorError & errstack) = 0;
-	virtual int  get_type() = 0;
-	virtual bool has_late_materialize() = 0;
-	virtual bool allows_late_materialize() = 0;
-	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
-	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
-	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text) = 0;
-protected:
-	AbstractScheddQ() {}
-};
-
-enum {
-	AbstractQ_TYPE_NONE = 0,
-	AbstractQ_TYPE_SCHEDD_RPC = 1,
-	AbstractQ_TYPE_SIM,
-	AbstractQ_TYPE_FILE,
-};
-
-class ActualScheddQ : public AbstractScheddQ {
-public:
-	ActualScheddQ() : qmgr(NULL), tried_to_get_capabilities(false), has_late(false), allows_late(false) {}
-	virtual ~ActualScheddQ();
-	virtual int get_NewCluster();
-	virtual int get_NewProc(int cluster_id);
-	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
-	virtual int get_Capabilities(ClassAd& reply);
-	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
-	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
-	virtual int send_SpoolFileIfNeeded(ClassAd& ad);
-	virtual int send_SpoolFile(char const *filename);
-	virtual int send_SpoolFileBytes(char const *filename);
-	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
-	virtual int  get_type() { return AbstractQ_TYPE_SCHEDD_RPC; }
-	virtual bool has_late_materialize(); // version check for late materialize
-	virtual bool allows_late_materialize(); // capabilities check ffor late materialize enabled.
-	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
-	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
-	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text);
-
-	bool Connect(DCSchedd & MySchedd, CondorError & errstack);
-private:
-	Qmgr_connection * qmgr;
-	ClassAd capabilities;
-	bool tried_to_get_capabilities;
-	bool has_late; // set in Connect based on the version in DCSchedd
-	bool allows_late;
-	int init_capabilities();
-};
-
 class SimScheddQ : public AbstractScheddQ {
 public:
 	SimScheddQ(int starting_cluster=0);
@@ -126,10 +65,14 @@ public:
 	virtual int send_SpoolFileBytes(char const *filename);
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
 	virtual int  get_type() { return AbstractQ_TYPE_SIM; }
-	virtual bool has_late_materialize() { return true; }
+	virtual bool has_late_materialize(int &ver) { ver = 2; return true; }
 	virtual bool allows_late_materialize() { return true; }
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
+
+	// set a file that send_Itemdata should "echo" items into. If this file is not set
+	// items are sent but not echoed.
+	bool echo_Itemdata(const char * filename);
 
 	bool Connect(FILE* fp, bool close_on_disconnect, bool log_all);
 private:
@@ -137,6 +80,7 @@ private:
 	int proc;
 	bool close_file_on_disconnect;
 	bool log_all_communication;
+	MyString echo_itemdata_filepath;
 	FILE * fp;
 };
 

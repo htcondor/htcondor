@@ -29,7 +29,7 @@ class ISettings(object):
         '''
         from warnings import warn
         warn('ISettings.Avatar: Use ISettings.LoadAvatarFromFile instead.', DeprecationWarning, stacklevel=2)
-        if Set == None:
+        if Set is None:
             raise TypeError('Argument \'Set\' is mandatory!')
         self.LoadAvatarFromFile(Set, Id)
 
@@ -72,7 +72,7 @@ class ISettings(object):
         @return: Current status if Set=None, None otherwise.
         @rtype: bool
         '''
-        if Set == None:
+        if Set is None:
             return self._Skype._Property('RINGTONE', Id, 'STATUS') == 'ON'
         return self._Skype._Property('RINGTONE', Id, 'STATUS', cndexp(Set, 'ON', 'OFF'))
 

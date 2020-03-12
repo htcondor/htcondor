@@ -66,20 +66,19 @@ DCStarter::initFromClassAd( ClassAd* ad )
 		return false;
 	} else {
 		if( is_valid_sinful(tmp) ) {
-			New_addr( strnewp(tmp) );
+			New_addr( tmp );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCStarter::initFromClassAd(): invalid %s in ad (%s)\n", 
 					 ATTR_STARTER_IP_ADDR, tmp );
+			free( tmp );
 		}
-		free( tmp );
 		tmp = NULL;
 	}
 
 	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
-		New_version( strnewp(tmp) );
-		free( tmp );
+		New_version( tmp );
 		tmp = NULL;
 	}
 
@@ -103,14 +102,7 @@ DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
 {
 	setCmdStr( "reconnectJob" );
 
-	std::string line;
-
-		// Add our own attributes to the request ad we're sending
-	line = ATTR_COMMAND;
-	line += "=\"";
-	line += getCommandString( CA_RECONNECT_JOB );
-	line += '"';
-	req->Insert( line.c_str() );
+	req->Assign( ATTR_COMMAND, getCommandString( CA_RECONNECT_JOB ) );
 
 	return sendCACmd( req, reply, rsock, false, timeout, sec_session_id );
 	
@@ -243,13 +235,16 @@ StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
 		// read reply from starter
 	int success=0;
-	sock->get(success);
+	int r = sock->get(success);
+	if (!r) {
+		dprintf(D_ALWAYS, "Error reading hold message reply from starter\n");
+	}
 
 	return success!=0;
 }
 
 bool
-DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version,MyString &starter_addr)
+DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,std::string &owner_claim_id,std::string &error_msg,std::string &starter_version,std::string &starter_addr)
 {
 	ReliSock sock;
 
@@ -301,7 +296,7 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 	return true;
 }
 
-bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,MyString &remote_user,MyString &error_msg,bool &retry_is_sensible)
+bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,std::string &remote_user,MyString &error_msg,bool &retry_is_sensible)
 {
 
 	retry_is_sensible = false;
@@ -457,7 +452,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 bool
 DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stderr, ssize_t &stderr_offset, const std::vector<std::string> &filenames, std::vector<ssize_t> &offsets, size_t max_bytes, bool &retry_sensible, PeekGetFD &next, std::string &error_msg, unsigned timeout, const std::string &sec_session_id, DCTransferQueue *xfer_q)
 {
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.InsertAttr(ATTR_JOB_OUTPUT, transfer_stdout);
 	ad.InsertAttr("OutOffset", stdout_offset);
 	ad.InsertAttr(ATTR_JOB_ERROR, transfer_stderr);
@@ -514,7 +509,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		return false;
 	}
 
-	compat_classad::ClassAd response;
+	ClassAd response;
 	sock.decode();
 	if (!getClassAd(&sock, response) || !sock.end_of_message())
 	{

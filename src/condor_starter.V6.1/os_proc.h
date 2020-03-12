@@ -77,6 +77,8 @@ public:
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
+	virtual void PublishToEnv( Env* proc_env );
+
 		/// Send a SIGSTOP
 	virtual void Suspend();
 
@@ -112,12 +114,15 @@ protected:
 
 	bool is_suspended;
 	bool is_checkpointed;
-	
+
 		/// Number of pids under this OsProc
 	int num_pids;
 
 	bool dumped_core;
 	bool job_not_started;
+
+	// From the ToE tag, for the post script's environment.
+	int howCode;
 
 private:
 

@@ -1,0 +1,131 @@
+#!/usr/bin/env python
+#testreq: personal
+#endtestreq
+
+import sys
+
+from pytest.CondorCluster import CondorCluster
+from pytest.CondorTest import CondorTest
+from pytest.Globals import *
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+
+from htcondor import JobEventType
+import htcondor
+
+def main():
+	CondorTest.RegisterTests( [ 'send_matchless_vacate', 'pcccTest' ] )
+
+	params = {
+		"NUM_CPUS": 2,
+	}
+	ordered_params = """
+use feature : PartitionableSlot
+"""
+	pc = CondorTest.StartPersonalCondor( "cmd_now_internals", params, ordered_params )
+
+	# Sleep for way longer than the startd will need to evict.
+	job_params = {
+		"executable": 				"x_sleep.pl",
+		"transfer_executable":		"true",
+		"should_transfer_files":	"true",
+		"universe":					"vanilla",
+		"arguments": 				"600",
+		"log":						"cmd_now_internals-send_matchless_vacate.log"
+	}
+
+	victimCluster = pc.CondorCluster(job_params)
+	try:
+		victimCluster.Submit(2)
+	except RuntimeError as re:
+		Utils.TLog("Failed to submit victim jobs ({0}), aborting.".format(str(re)))
+		sys.exit(1)
+
+
+	beneficiaryCluster = pc.CondorCluster(job_params)
+	try:
+		beneficiaryCluster.Submit(1)
+	except RuntimeError as re:
+		Utils.TLog("Failed to submit beneficiary job ({0}), aborting.".format(str(re)))
+		sys.exit(1)
+
+
+	if not victimCluster.WaitUntilAllExecute(60):
+		Utils.TLog("Victim jobs did not start, aborting.")
+		sys.exit(1)
+
+
+	vID1 = "{0}.0".format(victimCluster.cluster_id)
+	vID2 = "{0}.1".format(victimCluster.cluster_id)
+	bID = "{0}.0".format(beneficiaryCluster.cluster_id)
+	result = Utils.RunCommandCarefully( [ 'condor_now', '--flags', '1', bID, vID1, vID2 ] )
+	if not result:
+		Utils.TLog("Failed run condor_now command, aborting.")
+		Utils.TLog("stdout:")
+		Utils.TLog(result.output)
+		Utils.TLog("stderr:")
+		Utils.TLog(result.error)
+		sys.exit(1)
+
+
+	# Wait for jobs to be evicted.
+	if not victimCluster.WaitUntilAllJobsEvicted(60):
+		CondorTest.RegisterFailure("send_matchless_vacate",
+			"Jobs were not evicted before deadline" )
+		sys.exit(1)
+	else:
+		CondorTest.RegisterSuccess("send_matchless_vacate",
+			"Jobs were evicted as expected" )
+
+	#
+	# Testing the pccc code deliberately terminates the schedd, so do it last.
+	#
+
+	# There's only three jobs in the queue right now, so at least one of the
+	# previous victim jobs must end up running.
+	if not victimCluster.WaitUntil( [ JobEventType.EXECUTE ],
+		[ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ], 60, -1, 1 ):
+		CondorTest.RegisterFailure( "pcccTest", "no job started executing" )
+		sys.exit(1)
+
+	# There must be a less-silly way of doing this...
+	jobAd = victimCluster.QueryForJobAd(0)
+	if jobAd["JobStatus"] == JobStatus.Number["Running"]:
+		runningJobID = "{0}.0".format(victimCluster.cluster_id)
+	else:
+		idleJobID = "{0}.0".format(victimCluster.cluster_id)
+
+	jobAd = victimCluster.QueryForJobAd(1)
+	if jobAd["JobStatus"] == JobStatus.Number["Running"]:
+		runningJobID = "{0}.1".format(victimCluster.cluster_id)
+	else:
+		idleJobID = "{0}.1".format(victimCluster.cluster_id)
+
+	jobAd = beneficiaryCluster.QueryForJobAd(0)
+	if jobAd["JobStatus"] == JobStatus.Number["Running"]:
+		runningJobID = "{0}.0".format(beneficiaryCluster.cluster_id)
+	else:
+		idleJobID = "{0}.0".format(beneficiaryCluster.cluster_id)
+
+	# Run the pccc test.
+	result = Utils.RunCommandCarefully( [ 'condor_now', '--flags', '2', idleJobID, runningJobID ] )
+	if result:
+		CondorTest.RegisterFailure( "pcccTest", "condor_now --flags 2 must fail" )
+		sys.exit(1)
+
+	# Grovel the log.
+	scheddLogFile = htcondor.param["SCHEDD_LOG"]
+	scheddLogFD = open( scheddLogFile )
+	for line in scheddLogFD.readlines():
+		if line.endswith( "pcccTest(): Succeeded.\n" ):
+			CondorTest.RegisterSuccess( "pcccTest", "Found test success message in log." );
+			break
+	else:
+		CondorTest.RegisterFailure( "pcccTest", "Did not find test success message in log." )
+
+
+	# Nothing, possibly aside from the functionality under test, went wrong.
+	sys.exit(0)
+
+if __name__ == "__main__":
+	main()

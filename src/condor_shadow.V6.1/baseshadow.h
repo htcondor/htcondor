@@ -119,9 +119,7 @@ class BaseShadow : public Service
 
 	virtual bool shouldAttemptReconnect(RemoteResource *) { return true;};
 
-		/** Here, we param for lots of stuff in the config file.  Things
-			param'ed for are: SPOOL, FILESYSTEM_DOMAIN, UID_DOMAIN, 
-			USE_AFS, USE_NFS, and CKPT_SERVER_HOST.
+		/** Here, we param for lots of stuff in the config file.
 		*/
 	virtual void config();
 
@@ -204,7 +202,7 @@ class BaseShadow : public Service
 			how the job exited. So this call places how the job exited into
 			the jobad, but doesn't write any events about it.
 		*/
-	void mockTerminateJob( MyString exit_reason, bool exited_by_signal, 
+	void mockTerminateJob( std::string exit_reason, bool exited_by_signal,
 		int exit_code, int exit_signal, bool core_dumped );
 
 		/** Set a timer to call terminateJob() so we retry
@@ -213,7 +211,7 @@ class BaseShadow : public Service
 	void retryJobCleanup( void );
 
 		/// DaemonCore timer handler to actually do the retry.
-	int retryJobCleanupHandler( void );
+	void retryJobCleanupHandler( void );
 
 		/** The job exited but it's not ready to leave the queue.  
 			We still want to log an evict event, possibly email the
@@ -307,9 +305,9 @@ class BaseShadow : public Service
 		/// Returns the schedd address
 	char *getScheddAddr() { return scheddAddr; }
         /// Returns the current working dir for the job
-    char const *getIwd() { return iwd.Value(); }
+    char const *getIwd() { return iwd.c_str(); }
         /// Returns the owner of the job - found in the job ad
-    char const *getOwner() { return owner.Value(); }
+    char const *getOwner() { return owner.c_str(); }
 		/// Returns true if job requests graceful removal
 	bool jobWantsGracefulRemoval();
 
@@ -338,7 +336,7 @@ class BaseShadow : public Service
 
 	virtual int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss ) = 0;
 
-	virtual int getDiskUsage( void ) = 0;
+	virtual int64_t getDiskUsage( void ) = 0;
 
 	virtual struct rusage getRUsage( void ) = 0;
 
@@ -352,6 +350,9 @@ class BaseShadow : public Service
 			@return true on success, false on failure
 		*/
 	bool updateJobInQueue( update_t type );
+
+	// Called by updateJobInQueue() to generate file transfer events.
+	virtual void recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) = 0;
 
 		/** Connect to the job queue and update one attribute */
 	virtual bool updateJobAttr( const char *name, const char *expr, bool log=false );
@@ -392,6 +393,8 @@ class BaseShadow : public Service
 
 	virtual void resourceBeganExecution( RemoteResource* rr ) = 0;
 
+	virtual void resourceDisconnected( RemoteResource* rr ) = 0;
+
 	virtual void resourceReconnected( RemoteResource* rr ) = 0;
 
 		/** Start a timer to do periodic updates of the job queue for
@@ -410,6 +413,8 @@ class BaseShadow : public Service
 			Used to determine if shadow exits with RECONNECT_FAILED
 			or just with JOB_SHOULD_REQUEUE. */
 	bool attemptingReconnectAtStartup;
+
+	bool isDataflowJob = false;
 
  protected:
 
@@ -472,9 +477,9 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char* gjid;
-	MyString owner;
-	MyString domain;
-	MyString iwd;
+	std::string owner;
+	std::string domain;
+	std::string iwd;
 	char *scheddAddr;
 	char *core_file_name;
 	MyString m_xfer_queue_contact_info;

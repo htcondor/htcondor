@@ -36,7 +36,7 @@ def HttpServerErrorUrlHandler(request):
 def main():
     test_params = {
         "ENABLE_MULTIFILE_TRANSFER_PLUGINS":    "true",
-        "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/multifile_curl_plugin",
+        "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/curl_plugin",
         "STARTER_LOG_NAME_APPEND":              "false"
     }
 
@@ -50,9 +50,9 @@ def main():
     httpd.RegisterUrlHandler("/file1", HttpSuccessUrlHandler)
     httpd.RegisterUrlHandler("/file2", HttpServerErrorUrlHandler)
     httpd.RegisterUrlHandler("/file3", HttpSuccessUrlHandler)
-    file1_url = "http://127.0.0.1:" + str(httpd._port) + "/file1"
-    file2_url = "http://127.0.0.1:" + str(httpd._port) + "/file2"
-    file3_url = "http://127.0.0.1:" + str(httpd._port) + "/file3"
+    file1_url = "dav://127.0.0.1:" + str(httpd._port) + "/file1"
+    file2_url = "dav://127.0.0.1:" + str(httpd._port) + "/file2"
+    file3_url = "dav://127.0.0.1:" + str(httpd._port) + "/file3"
 
     # Stand up a PersonalCondor
     personal_handle = CondorTest.StartPersonalCondor("cmd_curl_plugin_multifile_failure", test_params)

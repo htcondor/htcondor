@@ -82,6 +82,11 @@ expression could be
 
       SINGULARITY_BIND_EXPR = (Owner == "TrustedUser") ? SomeExpressionFromJob : ""
 
+Also, note that if the slot the job runs in is provisioned with GPUs,
+perhaps in response to a RequestGPU line in the submit file, the
+Singularity flag "-nv" will be passed to Singularity, which should make
+the appropriate nvidia devices visible inside the container.
+
 Finally, if an administrator wants to pass additional arguments to the
 singularity exec command that HTCondor does not currently support, the
 parameter SINGULARITY_EXTRA_ARGUMENTS allows arbitraty additional

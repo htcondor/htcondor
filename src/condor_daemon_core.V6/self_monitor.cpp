@@ -24,8 +24,6 @@
 #include "classad_helpers.h" // for cleanStringForUseAsAttr
 #include "condor_config.h"   // for param
 #include "../condor_procapi/procapi.h"
-#undef min
-#undef max
 #include <limits>
 
 int configured_statistics_window_quantum() {

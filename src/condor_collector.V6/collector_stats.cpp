@@ -297,7 +297,7 @@ void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int fla
 	// this sort of probe is useful for counting lost updates
 	if (flags & PubValue) {
 		ad.Assign(pattr, (long long)value.Sum);
-		ad.Assign(rattr.c_str(), (long long)recent.Sum);
+		ad.Assign(rattr, (long long)recent.Sum);
 	}
 	if (flags & PubRatio) {
 		double avg = value.Avg();
@@ -424,6 +424,7 @@ void UpdatesStats::Init()
 	bool enable = param_boolean("PUBLISH_COLLECTOR_ENGINE_PROFILING_STATS",false);
 	int prof_publevel = enable ? IF_BASICPUB : IF_VERBOSEPUB;
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_receive_update, prof_publevel);
+#ifdef PROFILE_RECEIVE_UPDATE
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_pre_collect, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_collect, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_plugins, prof_publevel);
@@ -448,6 +449,7 @@ void UpdatesStats::Init()
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updatePvtAd, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_repeatAd, prof_publevel);
 	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_other, prof_publevel);
+#endif
 
 	getClassAdEx_clearProfileStats();
 	getClassAdEx_addProfileStatsToPool(&Pool, prof_publevel);
@@ -768,10 +770,6 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 		// If there is a slot ID, append it to Machine
 		int	slot;
 		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
-			slot_buf.formatstr(":%d", slot);
-		}
-		else if (param_boolean("ALLOW_VM_CRUFT", false) &&
-				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
 			slot_buf.formatstr(":%d", slot);
 		}
 	}

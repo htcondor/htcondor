@@ -22,9 +22,10 @@
 #include "shared_port_endpoint.h"
 #include "subsystem_info.h"
 #include "condor_daemon_core.h"
-#include "counted_ptr.h"
+#include <memory>
 #include "basename.h"
 #include "utc_time.h"
+#include "ipv6_hostname.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -49,6 +50,39 @@ static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
+MyString
+SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
+	static unsigned short rand_tag = 0;
+	static unsigned int sequence = 0;
+	if( !rand_tag ) {
+		// We use a random tag in our name so that if we have
+		// re-used the PID of a daemon that recently ran and
+		// somebody tries to connect to that daemon, they are
+		// unlikely to connect to us.
+		rand_tag = (unsigned short)(get_random_float_insecure()*(((float)0xFFFF)+1));
+	}
+
+	MyString buffer;
+	if(! daemon_name) {
+		daemon_name = "unknown";
+	} else {
+		buffer = daemon_name;
+		buffer.lower_case();
+		daemon_name = buffer.c_str();
+	}
+
+	MyString m_local_id;
+	if( (sequence == 0) || (! addSequenceNo) ) {
+		m_local_id.formatstr("%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
+	}
+	else {
+		m_local_id.formatstr("%s_%lu_%04hx_%u",buffer.c_str(),(unsigned long)getpid(),rand_tag,sequence);
+	}
+	sequence++;
+
+	return m_local_id;
+}
+
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_is_file_socket(true),
 	m_listening(false),
@@ -68,28 +102,12 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 		// thing to do.
 
 	if( sock_name ) {
-			// we were given a name, so just use that
+		// we were given a name, so just use that
 		m_local_id = sock_name;
-	}
-	else {
-		static unsigned short rand_tag = 0;
-		static unsigned int sequence = 0;
-		if( !rand_tag ) {
-				// We use a random tag in our name so that if we have
-				// re-used the PID of a daemon that recently ran and
-				// somebody tries to connect to that daemon, they are
-				// unlikely to connect to us.
-			rand_tag = (unsigned short)(get_random_float()*(((float)0xFFFF)+1));
-		}
-
-		if( !sequence ) {
-			m_local_id.formatstr("%lu_%04hx",(unsigned long)getpid(),rand_tag);
-		}
-		else {
-			m_local_id.formatstr("%lu_%04hx_%u",(unsigned long)getpid(),rand_tag,sequence);
-		}
-
-		sequence++;
+	} else {
+		char const * daemon_name = get_mySubSystem()->getLocalName();
+		if(! daemon_name) { daemon_name = get_mySubSystem()->getName(); }
+		m_local_id = GenerateEndpointName(daemon_name);
 	}
 #ifdef WIN32
 	wake_select_source = NULL;
@@ -249,7 +267,7 @@ SharedPortEndpoint::StopListener()
 		m_retry_remote_addr_timer = -1;
 	}
 
-	if( m_socket_check_timer != -1 ) {
+	if( daemonCore && m_socket_check_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_socket_check_timer );
 		m_socket_check_timer = -1;
 	}
@@ -508,10 +526,6 @@ void ThreadSafeLogError(const char * msg, int err) {
 }
 #else
 #define ThreadSafeLogError (void)
-#endif
-
-#ifdef WIN32
-auto __inline localtime_r(const time_t*time, struct tm*result) { return localtime_s(result, time); }
 #endif
 
 // a thread safe accumulation of messages
@@ -810,12 +824,13 @@ SharedPortEndpoint::InitRemoteAddress()
 	}
 
 	int adIsEOF = 0, errorReadingAd = 0, adEmpty = 0;
-	ClassAd *ad = new ClassAd(fp, "[classad-delimiter]", adIsEOF, errorReadingAd, adEmpty);
+	ClassAd *ad = new ClassAd;
+	InsertFromFile(fp, *ad, "[classad-delimiter]", adIsEOF, errorReadingAd, adEmpty);
 	ASSERT(ad);
 	fclose( fp );
 
 		// avoid leaking ad when returning from this function
-	counted_ptr<ClassAd> smart_ad_ptr(ad);
+	std::unique_ptr<ClassAd> smart_ad_ptr(ad);
 
 	if( errorReadingAd ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to read ad from %s.\n",
@@ -823,7 +838,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		return false;
 	}
 
-	MyString public_addr;
+	std::string public_addr;
 	if( !ad->LookupString(ATTR_MY_ADDRESS,public_addr) ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to find %s in ad from %s.\n",
@@ -831,7 +846,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		return false;
 	}
 
-	Sinful sinful(public_addr.Value());
+	Sinful sinful(public_addr.c_str());
 	sinful.setSharedPortID( m_local_id.Value() );
 
 		// if there is a private address, set the shared port id on that too
@@ -996,7 +1011,9 @@ SharedPortEndpoint::GetMyLocalAddress()
 			// and daemons who can then form a connection to us via
 			// direct access to our named socket.
 		sinful.setPort("0");
-		sinful.setHost(my_ip_string());
+		// TODO: Picking IPv4 arbitrarily.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		sinful.setHost(my_ip.Value());
 		sinful.setSharedPortID( m_local_id.Value() );
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {

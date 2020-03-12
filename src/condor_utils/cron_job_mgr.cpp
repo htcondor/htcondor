@@ -219,7 +219,7 @@ CronJobMgr::JobExited( const CronJob & /*job*/ )
 	if (  (m_cur_job_load < GetMaxJobLoad()) && (m_schedule_timer < 0)  ) {
 		m_schedule_timer = daemonCore->Register_Timer(
 			0,
-			(TimerHandlercpp)& CronJobMgr::ScheduleJobsTimer,
+			(TimerHandlercpp)& CronJobMgr::ScheduleJobsFromTimer,
 			"ScheduleJobs",
 			this );
 		if ( m_schedule_timer < 0 ) {
@@ -231,11 +231,11 @@ CronJobMgr::JobExited( const CronJob & /*job*/ )
 }
 
 // Schedule all jobs
-int
-CronJobMgr::ScheduleJobsTimer( void )
+void
+CronJobMgr::ScheduleJobsFromTimer( void )
 {
 	m_schedule_timer = -1;		// I've fired; reset for next time I'm needed
-	return ScheduleAllJobs( ) ? 0 : -1;
+	ScheduleAllJobs();
 }
 
 // Schedule all jobs

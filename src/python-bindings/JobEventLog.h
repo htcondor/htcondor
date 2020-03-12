@@ -48,6 +48,9 @@ class JobEvent {
 		boost::python::object Py_Get( const std::string & k, boost::python::object d = boost::python::object() );
 		boost::python::object Py_GetItem( const std::string & k );
 
+		std::string Py_Str();
+		std::string Py_Repr();
+
 		bool Py_Contains( const std::string & k );
 		int Py_Len();
 
@@ -61,11 +64,22 @@ class JobEvent {
 
 class JobEventLog;
 
+class JobEventLogPickler : public boost::python::pickle_suite {
+	public:
+		static boost::python::tuple getinitargs( JobEventLog & self );
+		static boost::python::tuple getstate( boost::python::object & self );
+		static void setstate( boost::python::object & self,
+			boost::python::tuple & state );
+};
+
 class JobEventLog {
+	friend class JobEventLogPickler;
+
 	public:
 		JobEventLog( const std::string & filename );
 		virtual ~JobEventLog();
 
+		void close();
 		boost::shared_ptr< JobEvent > next();
 
 		static boost::python::object events( boost::python::object & self, boost::python::object & deadline );
@@ -73,6 +87,15 @@ class JobEventLog {
 		// This object is its own iterator.  boost::python::object is apparently
 		// intrinsically a reference to a Python object, so the copy here isn't.
 		inline static boost::python::object iter( const boost::python::object & o ) { return o; }
+
+		// This object is its own context manager.
+		static boost::python::object enter( boost::python::object & self );
+		static boost::python::object exit( boost::python::object & self,
+			boost::python::object & exceptionType,
+			boost::python::object & exceptionValue,
+			boost::python::object & traceback );
+
+		std::string Py_Repr();
 
 	private:
 		time_t deadline;

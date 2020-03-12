@@ -181,6 +181,10 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define FETCH_PROXY_DELEGATION (SCHED_VERS+120)
 
 #define REASSIGN_SLOT (SCHED_VERS+121) // Given two job IDs, deactivate the victim job's claim and reactivate it running the beneficiary job.
+#define COALESCE_SLOTS (SCHED_VERS+122) // Given a resource request (job ad) and k claim IDs, invalidate them, merge them into one slot, and return that slot's new claim ID and machine ad.  The resource request is used to compute left-overs.
+
+// Given a token request from a trusted collector, generate an identity token.
+#define COLLECTOR_TOKEN_REQUEST (SCHED_VERS+123)
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
@@ -335,6 +339,10 @@ const int UPDATE_ACCOUNTING_AD = 77;
 const int QUERY_ACCOUNTING_ADS = 78;
 const int INVALIDATE_ACCOUNTING_ADS = 79;
 
+const int UPDATE_OWN_SUBMITTOR_AD = 80;
+
+// Request a collector to retrieve an identity token from a schedd.
+const int IMPERSONATION_TOKEN_REQUEST = 81;
 
 /* these comments are used to control command_table_generator.pl
 NAMETABLE_DIRECTIVE:END_SECTION:collector
@@ -407,7 +415,13 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_SET_READY       (DC_BASE+43)  // sent to parent to indicate a demon is ready for use
 #define DC_QUERY_READY     (DC_BASE+44)  // daemon command handler should reply only once it and children are ready
 #define DC_QUERY_INSTANCE  (DC_BASE+45)  // ask if a daemon is alive - returns a random 64 bit int that will not change as long as this instance is alive.
-
+#define DC_GET_SESSION_TOKEN (DC_BASE+46) // Retrieve an authentication token for TOKEN that is at most equivalent to the current session.
+#define DC_START_TOKEN_REQUEST (DC_BASE+47) // Request a token from this daemon.
+#define DC_FINISH_TOKEN_REQUEST (DC_BASE+48) // Poll remote daemon for available token.
+#define DC_LIST_TOKEN_REQUEST (DC_BASE+49) // Poll for the existing token requests.
+#define DC_APPROVE_TOKEN_REQUEST (DC_BASE+50) // Approve a token request.
+#define DC_AUTO_APPROVE_TOKEN_REQUEST (DC_BASE+51) // Auto-approve token requests.
+#define DC_EXCHANGE_SCITOKEN (DC_BASE+52) // Exchange a SciToken for a Condor token.
 
 /*
 *** Log type supported by DC_FETCH_LOG

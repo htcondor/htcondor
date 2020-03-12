@@ -27,7 +27,7 @@
 
 ClassAd * java_detect()
 {
-	MyString path;
+	std::string path;
 	ArgList args;
 	MyString command;
 	MyString args_string;
@@ -40,7 +40,7 @@ ClassAd * java_detect()
 	if(!java_config(path,&args,0)) return 0;
 	int benchmark_time = param_integer("JAVA_BENCHMARK_TIME",0);
 
-	args.InsertArg(path.Value(),0);
+	args.InsertArg(path.c_str(),0);
 	args.AppendArg("CondorJavaInfo");
 	args.AppendArg("old");
 	args.AppendArg(benchmark_time);
@@ -69,7 +69,8 @@ ClassAd * java_detect()
 	}
 
 	int eof=0,error=0,empty=0;
-	ClassAd *ad = new ClassAd(stream,"***",eof,error,empty);
+	ClassAd *ad = new ClassAd;
+	InsertFromFile(stream,*ad,"***",eof,error,empty);
 
 	int rc = my_pclose(stream);
 	if( rc!=0 ) {

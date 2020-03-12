@@ -71,7 +71,7 @@ VMManager::numOfVM(void)
 }
 
 bool 
-VMManager::isRegistered(char *addr, int update_time) 
+VMManager::isRegistered(const char *addr, int update_time)
 {
 	m_virtualmachines.Rewind();
 
@@ -113,7 +113,7 @@ VMManager::detach(VMMachine *o)
 }
 
 void 
-VMManager::allNotify( char *except_ip, int cmd, void *data ) 
+VMManager::allNotify( const char *except_ip, int cmd, void *data )
 {
 	m_virtualmachines.Rewind();
 
@@ -202,7 +202,7 @@ VMManager::cancelUnRegisterTimer(void)
 }
 
 void
-vmapi_create_vmmanager(char *list)
+vmapi_create_vmmanager(const char *list)
 {
 	StringList tmplist;
 

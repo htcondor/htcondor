@@ -23,11 +23,9 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "condor_syscall_mode.h"
 #include "exit.h"
 #include "vanilla_proc.h"
 #include "starter.h"
-#include "syscall_numbers.h"
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
@@ -180,9 +178,9 @@ VanillaProc::StartJob()
 										  MATCH == strcasecmp ( ".com", extension ) ) ),
 				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
 	ArgList		arguments;
-	MyString	filename,
-				jobname, 
-				error;
+	std::string	filename;
+	std::string	jobname;
+	MyString	error;
 	
 	if ( extension && !java_universe && !binary_executable ) {
 
@@ -224,12 +222,12 @@ VanillaProc::StartJob()
 				a the correct extension before it will run. */
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
-					condor_basename ( jobname.Value () ) ) ) {
-				filename.formatstr ( "condor_exec%s", extension );
-				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
+					condor_basename ( jobname.c_str () ) ) ) {
+				formatstr ( filename, "condor_exec%s", extension );
+				if (rename(CONDOR_EXEC, filename.c_str()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 
-							CONDOR_EXEC, filename.Value() );
+							CONDOR_EXEC, filename.c_str() );
 				}
 			} else {
 				filename = jobname;
@@ -272,7 +270,7 @@ VanillaProc::StartJob()
 				will stop the file transfer mechanism from considering
 				it for transfer back to its submitter */
 			Starter->jic->removeFromOutputFiles (
-				filename.Value () );
+				filename.c_str () );
 
 		}
 			
@@ -314,12 +312,11 @@ VanillaProc::StartJob()
 	//
 	gid_t tracking_gid = 0;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() &&
-		    (Starter->condorPrivSepHelper() == NULL))
+		if (!can_switch_ids())
 		{
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
-			           "root or using PrivSep");
+			           "root");
 		}
 		fi.group_ptr = &tracking_gid;
 	}
@@ -358,7 +355,7 @@ VanillaProc::StartJob()
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
-		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
+		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
 		if (starter_name.size() == 0) {
 			char buf[16];
 			sprintf(buf, "%d", getpid());
@@ -385,7 +382,7 @@ VanillaProc::StartJob()
 	{
         // Have Condor manage a chroot
        std::string requested_chroot_name;
-       JobAd->EvalString("RequestedChroot", NULL, requested_chroot_name);
+       JobAd->LookupString("RequestedChroot", requested_chroot_name);
        const char * allowed_root_dirs = param("NAMED_CHROOT");
        if (requested_chroot_name.size()) {
                dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
@@ -591,9 +588,18 @@ VanillaProc::StartJob()
 			filename = Starter->GetWorkingDir();
 			filename += "/.condor_pid_ns_status";
 		
-			env.MergeFrom(JobAd, &env_errors);
+			if (!env.MergeFrom(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
-			env.InsertEnvIntoClassAd(JobAd, &env_errors);
+
+			if (!env.InsertEnvIntoClassAd(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 
 			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
 			this->m_pid_ns_status_filename = filename;
@@ -606,12 +612,22 @@ VanillaProc::StartJob()
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
 			args.AppendArg(cmd);
-			args.AppendArgsFromClassAd(JobAd, &arg_errors);
-			args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors);
+			if (!args.AppendArgsFromClassAd(JobAd, &arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
+
+			if (!args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {
 				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
@@ -852,7 +868,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// and then add the running total to the current when we publish the
 	// update ad.  FIXME (#4971)
 
-	if( Starter->jic->uploadWorkingFiles() ) {
+	if( Starter->jic->uploadCheckpointFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
 	} else {
 			// We assume this is a transient failure and will try
@@ -1393,7 +1409,7 @@ bool VanillaProc::Ckpt() {
 
 	if( isSoftKilling ) { return false; }
 
-	int wantCheckpointSignal = 0;
+	bool wantCheckpointSignal = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpointSignal );
 	if( wantCheckpointSignal && ! isCheckpointing ) {
 		int periodicCheckpointSignal = findCheckpointSig( JobAd );
@@ -1412,11 +1428,13 @@ bool VanillaProc::Ckpt() {
 }
 
 int VanillaProc::outputOpenFlags() {
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
-	if( wantCheckpoint || wantsFileTransferOnCheckpointExit ) {
+	bool dontAppend = true;
+	JobAd->LookupBool( ATTR_DONT_APPEND, dontAppend );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
 	} else {
 		return this->OsProc::outputOpenFlags();
@@ -1424,11 +1442,13 @@ int VanillaProc::outputOpenFlags() {
 }
 
 int VanillaProc::streamingOpenFlags( bool isOutput ) {
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
-	if( wantCheckpoint || wantsFileTransferOnCheckpointExit ) {
+	bool dontAppend = true;
+	JobAd->LookupBool( ATTR_DONT_APPEND, dontAppend );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
 	} else {
 		return this->OsProc::streamingOpenFlags( isOutput );

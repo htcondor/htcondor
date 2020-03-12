@@ -71,13 +71,13 @@ ickpt_share_get_hash(ClassAd& ad)
 {
 	// for now, we only pay attention to the executable's checksum
 	//
-	MyString hash;
+	std::string hash;
 	if (!ad.LookupString(ATTR_JOB_CMD_CHECKSUM, hash)) {
 		return "";
 	}
 	return escape_for_filename(ATTR_JOB_CMD_CHECKSUM) +
 	       "-" +
-	       escape_for_filename(hash.Value());
+	       escape_for_filename(hash.c_str());
 }
 
 bool

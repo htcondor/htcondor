@@ -184,7 +184,7 @@ static char * cookie_create( int length )
 	if(!c) return 0;
 
 	for( int i=0; i<length; i++ ) {
-		c[i] = 'a'+get_random_int()%26;
+		c[i] = 'a' + get_csrng_int()%26;
 	}
 
 	c[length-1] = 0;

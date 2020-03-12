@@ -163,7 +163,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 
 
 		// calculate the request's rank of the offer
-		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
+		if(!EvalFloat(ATTR_RANK,&request,candidate,tmp)) {
 			tmp = 0.0;
 		}
 		candidateRankValue = tmp;
@@ -532,9 +532,8 @@ main(int argc, char *argv[])
 			ad->LookupString( ATTR_REMOTE_USER , remoteUser, sizeof(remoteUser) )) 
 		{
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
-				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+				ad->Assign( ATTR_REMOTE_USER_PRIO,
 							prioTable[index].prio );
-				ad->Insert( buffer );
 			}
 		}
 	}
@@ -562,14 +561,7 @@ main(int argc, char *argv[])
 
 				// How many slots are on that machine?
 				if (!offer->LookupInteger(ATTR_TOTAL_SLOTS, slot_count)) {
-					if (param_boolean("ALLOW_VM_CRUFT", false)) {
-						if (!offer->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES,
-												  slot_count)) {
-							slot_count = 1;
-						}
-					} else {
-						slot_count = 1;
-					}
+					slot_count = 1;
 				}
 
 				slot_count_thus_far = 0;

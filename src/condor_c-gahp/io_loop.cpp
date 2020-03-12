@@ -32,6 +32,7 @@
 
 const char * version = "$GahpVersion 2.0.1 Jun 27 2005 Condor\\ GAHP $";
 
+static int verify_filename(const char *);
 
 int async_mode = 0;
 int new_results_signaled = 0;
@@ -196,7 +197,7 @@ main_init( int argc, char ** const argv )
 
 	(void)daemonCore->Register_Pipe (stdin_buffer.getPipeEnd(),
 					"stdin pipe",
-					(PipeHandler)&stdin_pipe_handler,
+					&stdin_pipe_handler,
 					"stdin_pipe_handler");
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
@@ -233,9 +234,8 @@ main_init( int argc, char ** const argv )
 	int reaper_id =
 		daemonCore->Register_Reaper(
 							"worker_thread_reaper",
-							(ReaperHandler)&worker_thread_reaper,
-							"worker_thread_reaper",
-							NULL);
+							&worker_thread_reaper,
+							"worker_thread_reaper");
 
 
 
@@ -244,8 +244,6 @@ main_init( int argc, char ** const argv )
 									1,
 									flush_pending_requests,
 									"flush_pending_requests");
-									
-									  
 
 
 	std::string exec_name;
@@ -321,7 +319,7 @@ main_init( int argc, char ** const argv )
 
 
 int
-stdin_pipe_handler(Service*, int) {
+stdin_pipe_handler(int) {
 
 	std::string* line;
 	while ((line = stdin_buffer.GetNextLine()) != NULL) {
@@ -392,6 +390,7 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_VERSION,
 					GAHP_COMMAND_COMMANDS,
 					GAHP_COMMAND_INITIALIZE_FROM_FILE,
+					GAHP_COMMAND_UPDATE_TOKEN_FROM_FILE,
 					GAHP_COMMAND_REFRESH_PROXY_FROM_FILE};
 				gahp_output_return (commands, 20);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
@@ -407,6 +406,12 @@ stdin_pipe_handler(Service*, int) {
 							   command);
 				flush_request (1,
 							   command);
+				gahp_output_return_success();
+			} else if (strcasecmp(args.argv[0], GAHP_COMMAND_UPDATE_TOKEN_FROM_FILE) == 0) {
+					// As above, both workers need to know which token
+					// file to use.
+				flush_request(0, command);
+				flush_request(1, command);
 				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
 				flush_request (1, 	// worker for stage in requests
@@ -475,7 +480,7 @@ process_next_request() {
 */
 
 int
-worker_thread_reaper (Service*, int pid, int exit_status) {
+worker_thread_reaper (int pid, int exit_status) {
 
 	dprintf (D_ALWAYS, "Worker process pid=%d exited with status %d\n", 
 			 pid, 
@@ -556,7 +561,10 @@ verify_gahp_command(char ** argv, int argc) {
 		// Expecting:GAHP_COMMAND_INITIALIZE_FROM_FILE <proxy file>
 		return verify_number_args (argc, 2) &&
 			 x509_proxy_expiration_time (argv[1]) > 0;
-
+	} else if (strcasecmp(argv[0], GAHP_COMMAND_UPDATE_TOKEN_FROM_FILE) == 0) {
+		// Expecting:GAHP_COMMAND_UPDATE_TOKEN_FROM_FILE <token file>
+		return verify_number_args(argc, 2) &&
+			verify_filename(argv[1]);
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
 		// Expecting:GAHP_COMMAND_REFRESH_PROXY_FROM_FILE <proxy file>
 		return verify_number_args (argc, 2);
@@ -621,6 +629,11 @@ int
 verify_class_ad (const char * s) {
 	// TODO: How can we verify XML?
 	return (s != NULL) && (strlen(s) > 0);
+}
+
+static int
+verify_filename(const char * fname) {
+	return fname && strlen(fname);
 }
 
 int
@@ -752,6 +765,7 @@ void
 main_pre_command_sock_init( )
 {
 	daemonCore->WantSendChildAlive( false );
+	daemonCore->m_create_family_session = false;
 }
 
 int

@@ -61,6 +61,7 @@ static int starter_stdin_fd = -1;
 static int starter_stdout_fd = -1;
 static int starter_stderr_fd = -1;
 
+[[noreturn]]
 static void PREFAST_NORETURN
 usage()
 {
@@ -86,6 +87,7 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
@@ -349,7 +351,8 @@ parseArgs( int argc, char* argv [] )
 {
 	JobInfoCommunicator* jic = NULL;
 	char* job_input_ad = NULL; 
-	char* job_output_ad = NULL; 
+	char* job_output_ad = NULL;
+	char* job_update_ad = NULL;
 	char* job_keyword = NULL; 
 	int job_cluster = -1;
 	int job_proc = -1;
@@ -363,6 +366,7 @@ parseArgs( int argc, char* argv [] )
 	bool warn_multi_keyword = false;
 	bool warn_multi_input_ad = false;
 	bool warn_multi_output_ad = false;
+	bool warn_multi_update_ad = false;
 	bool warn_multi_cluster = false;
 	bool warn_multi_proc = false;
 	bool warn_multi_subproc = false;
@@ -375,6 +379,7 @@ parseArgs( int argc, char* argv [] )
 
 	char _jobinputad[] = "-job-input-ad";
 	char _joboutputad[] = "-job-output-ad";
+	char _jobupdatead[] = "-job-update-ad";
 	char _jobkeyword[] = "-job-keyword";
 	char _jobcluster[] = "-job-cluster";
 	char _jobproc[] = "-job-proc";
@@ -480,6 +485,13 @@ parseArgs( int argc, char* argv [] )
 			target = _joboutputad;
 			break;
 
+		case 'u':
+			if( strncmp(_jobupdatead, opt, opt_len) ) {
+				invalid( opt );
+			}
+			target = _jobupdatead;
+			break;
+
 		case 'p':
 			if( strncmp(_jobproc, opt, opt_len) ) {
 				invalid( opt );
@@ -537,6 +549,12 @@ parseArgs( int argc, char* argv [] )
 				free( job_output_ad );
 			}
 			job_output_ad = strdup( arg );
+		} else if( target == _jobupdatead ) {
+			if( job_update_ad ) {
+				warn_multi_update_ad = true;
+				free( job_update_ad );
+			}
+			job_update_ad = strdup( arg );
 		} else if( target == _jobstdin ) {
 			if( job_stdin ) {
 				warn_multi_stdin = true;
@@ -628,6 +646,11 @@ parseArgs( int argc, char* argv [] )
 				 "multiple '%s' options given, using \"%s\"\n",
 				 _joboutputad, job_output_ad );
 	}
+	if( warn_multi_update_ad ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _jobupdatead, job_update_ad );
+	}
 	if( warn_multi_stdin ) {
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%s\"\n",
@@ -675,9 +698,11 @@ parseArgs( int argc, char* argv [] )
 		shadow_host = NULL;
 		free( schedd_addr );
 		free( job_output_ad );
+		free( job_update_ad );
 		free( job_stdin );
 		free( job_stdout );
 		free( job_stderr );
+		if (job_keyword) { free(job_keyword); }
 		return jic;
 	}
 
@@ -720,6 +745,10 @@ parseArgs( int argc, char* argv [] )
 	if( job_output_ad ) {
         jic->setOutputAdFile( job_output_ad );		
 		free( job_output_ad );
+	}
+	if( job_update_ad ) {
+		jic->setUpdateAdFile( job_update_ad );
+		free( job_update_ad );
 	}
 	if( job_stdin ) {
         jic->setStdin( job_stdin );		

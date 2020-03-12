@@ -30,6 +30,7 @@
 
 #include <vector>
 #include <string>
+#include <limits>
 
 typedef std::vector<const char *> MACRO_SOURCES;
 class CondorError;
@@ -105,6 +106,7 @@ typedef struct macro_set {
 	// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 	// the preface is printed with fprintf but not with the errors stack.
 	void push_error(FILE * fh, int code, const char* preface, const char* format, ... ) CHECK_PRINTF_FORMAT(5,6);
+	void initialize(int opts);
 #endif
 } MACRO_SET;
 
@@ -197,6 +199,14 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 						bool use_default, int default_value,
 						bool check_ranges = true,
 						int min_value = INT_MIN, int max_value = INT_MAX,
+                        ClassAd *me=NULL, ClassAd *target=NULL,
+						bool use_param_table = true );
+
+	bool param_longlong( const char *name, long long int &value,
+						bool use_default, long long default_value,
+						bool check_ranges = true,
+						long long min_value = (std::numeric_limits<long long>::min)(),
+						long long max_value = (std::numeric_limits<long long>::max)(),
                         ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
@@ -341,12 +351,14 @@ extern "C" {
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
 	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
 	#define CONFIG_OPT_COLON_IS_META_ONLY 0x10 // colon isn't valid for use in param assigments (only = is allowed)
+	#define CONFIG_OPT_NO_SMART_AUTO_USE  0x20 // ignore SMART_AUTO_USE_* knobs, default is to process them for CONFIG but not SUBMIT
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
 	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
 	#define CONFIG_OPT_DEPRECATION_WARNINGS 0x400 // warn about obsolete syntax/elements
 	#define CONFIG_OPT_USE_THIS_ROOT_CONFIG 0x800 // use the root config file specified in the last argument of real_config
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
+	#define CONFIG_OPT_NO_INCLUDE_FILE 0x2000 // don't allow includes from files (late materialization)
 	bool config();
 	int set_priv_initialize(void); // duplicated here for 8.8.0 to minimize code churn. actual function is in uids.cpp
 	bool config_ex(int opt);
@@ -371,7 +383,10 @@ extern "C" {
 	// this function allows tests to set the actual backend data for a param value and returns the old value.
 	// make sure that live_value stays in scope until you put the old value back
 	const char * set_live_param_value(const char * name, const char * live_value);
-	bool find_user_file(MyString & filename, const char * basename, bool check_access);
+		// Find a file associated with a user; by default, this fails if called in a context
+		// where can_switch_ids() is true; set daemon_ok = false if calling this from a root-level
+		// condor.
+	bool find_user_file(MyString & filename, const char * basename, bool check_access, bool daemon_ok);
 } // end extern "C"
 
 
@@ -514,6 +529,7 @@ BEGIN_C_DECLS
 		virtual ~MacroStream() {};
 		virtual char * getline(int gl_opt) = 0;
 		virtual MACRO_SOURCE& source() = 0;
+		virtual const char * source_name(MACRO_SET &set) = 0;
 	};
 
 	// A MacroStream that uses, but does not own a FILE* and MACRO_SOURCE
@@ -523,6 +539,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamYourFile() { fp = NULL; src = NULL; }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return *src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src && src->id >= 0 && src->id < (int)set.sources.size())
+				return set.sources[src->id];
+			return "file";
+		}
 		void set(FILE* _fp, MACRO_SOURCE& _src) { fp =  _fp; src = &_src; }
 		void reset() { fp = NULL; src = NULL; }
 	protected:
@@ -537,6 +558,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamFile() { if (fp) fclose(fp); fp = NULL; memset(&src, 0, sizeof(src)); }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src.id >= 0 && src.id < (int)set.sources.size())
+				return set.sources[src.id];
+			return "file";
+		}
 		bool open(const char * filename, bool is_command, MACRO_SET& set, std::string &errmsg);
 		int  close(MACRO_SET& set, int parsing_return_val);
 	protected:
@@ -551,6 +577,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamMemoryFile() { ls.clear(); }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return *src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src && src->id >= 0 && src->id < (int)set.sources.size())
+				return set.sources[src->id];
+			return "memory";
+		}
 		void set(const char* _fp, ssize_t _cb, size_t _ix, MACRO_SOURCE& _src) { ls.init(_fp, _cb, _ix); src = &_src; }
 		void reset() { ls.clear(); src = NULL; }
 		// return a pointer to the part of the memory buffer that has not yet been read
@@ -589,6 +620,8 @@ BEGIN_C_DECLS
 		MACRO_SOURCE * src;
 	};
 
+	// A MacroStream that parses memory but does not support line continuation like MacroStreamMemoryFile does 
+	// used by transforms
 	class MacroStreamCharSource : public MacroStream {
 	public:
 		MacroStreamCharSource() 
@@ -601,6 +634,11 @@ BEGIN_C_DECLS
 		virtual ~MacroStreamCharSource() { if (input) delete input; input = NULL; }
 		virtual char * getline(int gl_opt);
 		virtual MACRO_SOURCE& source() { return src; }
+		virtual const char * source_name(MACRO_SET&set) {
+			if (src.id >= 0 && src.id < (int)set.sources.size())
+				return set.sources[src.id];
+			return "param";
+		}
 		bool open(const char * src_string, const MACRO_SOURCE & _src);
 		int  close(MACRO_SET& set, int parsing_return_val);
 		int  load(FILE* fp, MACRO_SOURCE & _src, bool preserve_linenumbers = false);
@@ -615,7 +653,6 @@ BEGIN_C_DECLS
 		// copy construction and assignment are not permitted.
 		MacroStreamCharSource(const MacroStreamCharSource&);
 		MacroStreamCharSource & operator=(MacroStreamCharSource that); 
-
 	};
 
 	// this must be C++ linkage because condor_string already has a c linkage function by this name.

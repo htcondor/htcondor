@@ -668,7 +668,7 @@ int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 {
 	aggregate_jobs_args * pargs = (aggregate_jobs_args*)pv;
 	JobCluster* pjc = pargs->pjc;
-	if (pargs->constraint && ! EvalBool(job, pargs->constraint)) {
+	if (pargs->constraint && ! EvalExprBool(job, pargs->constraint)) {
 		// if there is a constraint, and it doesn't evaluate to true, skip this job.
 		return 0;
 	}
@@ -781,7 +781,10 @@ ClassAd * JobAggregationResults::next()
 		StringTokenIterator iter(it->first, 100, "\n");
 		const char * line;
 		while ((line = iter.next())) {
-			ad.Insert(line);
+			if (!ad.Insert(line)) {
+				dprintf(D_ALWAYS, "Negotiator sent unparseable autocluster attribute: %s\n", line);
+				continue;
+			}
 		}
 		if (this->is_def_autocluster) {
 			ad.Assign(ATTR_AUTO_CLUSTER_ID,it->second);
@@ -875,7 +878,7 @@ ClassAd * JobAggregationResults::next()
 
 		// if there is a constraint, then only return the ad if it matches the constraint.
 		if (constraint) {
-			if ( ! EvalBool(&ad, constraint))
+			if ( ! EvalExprBool(&ad, constraint))
 				continue;
 		}
 

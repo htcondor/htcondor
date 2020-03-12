@@ -185,7 +185,7 @@ void UserDefinedToolsHibernator::configure ()
 				D_FULLDEBUG,
 				"UserDefinedToolsHibernator::configure: the executable "
 				"(%s) defined in the configuration file is invalid.\n",
-				m_tool_paths[i] );
+				name.Value());
 
 		}
 	}

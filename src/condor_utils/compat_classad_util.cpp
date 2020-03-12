@@ -49,7 +49,7 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 bool ParseLongFormAttrValue(const char * str, std::string & attr, classad::ExprTree*&tree, int*pos)
 {
 	const char * rhs = NULL;
-	if ( ! compat_classad::SplitLongFormAttrValue(str, attr, rhs)) {
+	if ( ! SplitLongFormAttrValue(str, attr, rhs)) {
 		if (pos) *pos = 0;
 		return 1;
 	}
@@ -255,6 +255,143 @@ bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_a
 		((classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
 		if (is_absolute) *is_absolute = absolute;
 		return !e2;
+	}
+	return false;
+}
+
+// return true if the expression is a comparision between an Attribute and a literal
+// returns attr name, the comparison operation, and the literal value if it returns true.
+bool ExprTreeIsAttrCmpLiteral(classad::ExprTree * tree, classad::Operation::OpKind & cmp_op, std::string & attr, classad::Value & value)
+{
+	if (! tree) return false;
+	tree = SkipExprParens(tree);
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	if (kind != classad::ExprTree::OP_NODE)
+		return false;
+
+	classad::Operation::OpKind	op;
+	classad::ExprTree *t1, *t2, *t3;
+	((const classad::Operation*)tree)->GetComponents(op, t1, t2, t3);
+	if (op < classad::Operation::__COMPARISON_START__ || op > classad::Operation::__COMPARISON_END__)
+		return false;
+
+	t1 = SkipExprParens(t1);
+	t2 = SkipExprParens(t2);
+
+	if (ExprTreeIsAttrRef(t1, attr) && ExprTreeIsLiteral(t2, value)) {
+		cmp_op = op;
+		return true;
+	} else if (ExprTreeIsLiteral(t1, value) && ExprTreeIsAttrRef(t2, attr)) {
+		cmp_op = op;
+		return true;
+	}
+	return false;
+}
+
+// returns true if the expression is one of these forms
+//   ClusterId == <number>
+//   ClusterId == <number> && ProcId == <number>
+//   ClusterId == <number> && ProcId is undefined
+//
+// parens are ignored, as is the order of the arguments
+// so (<number> == ClusterId) will return true
+bool ExprTreeIsJobIdConstraint(classad::ExprTree * tree, int & cluster, int & proc, bool & cluster_only)
+{
+	cluster = proc = -1;
+	cluster_only = false;
+	if (! tree) return false;
+
+	std::string attr1, attr2;
+	classad::Value value1, value2;
+
+	tree = SkipExprParens(tree);
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	if (kind == classad::ExprTree::OP_NODE) {
+		classad::Operation::OpKind	op;
+		classad::ExprTree *t1, *t2, *t3;
+		((const classad::Operation*)tree)->GetComponents(op, t1, t2, t3);
+		if (op == classad::Operation::LOGICAL_AND_OP) {
+			if (ExprTreeIsAttrCmpLiteral(t1, op, attr1, value1) &&
+				ExprTreeIsAttrCmpLiteral(t2, op, attr2, value2)) {
+
+				classad::Value * procval = NULL;
+				// check for ClusterId == N && ProcId == N
+				if (MATCH == strcasecmp(attr1.c_str(), "ClusterId") &&
+					value1.IsNumber(cluster) &&
+					MATCH == strcasecmp(attr2.c_str(), "ProcId")) {
+					procval = &value2;
+				} else if (MATCH == strcasecmp(attr1.c_str(), "ProcId") && 
+					MATCH == strcasecmp(attr2.c_str(), "ClusterId") &&
+					value2.IsNumber(cluster)) {
+					procval = &value1;
+				}
+				// check for proc to be compared to a number or to undefined
+				if (procval) {
+					if (procval->IsUndefinedValue()) {
+						cluster_only = true;
+						proc = -1;
+						return true;
+					} else if (procval->IsNumber(proc)) {
+						return true;
+					}
+				}
+			}
+		} else {
+			// it was an op node, but not a logical &&, so it might be ==, 
+			if (ExprTreeIsAttrCmpLiteral(tree, op, attr1, value1)) {
+				if ((op == classad::Operation::EQUAL_OP || op == classad::Operation::META_EQUAL_OP) &&
+					MATCH == strcasecmp(attr1.c_str(), "ClusterId") &&
+					value1.IsNumber(cluster)) {
+					proc = -1;
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+// Returns true if expression is
+//   ClusterId == <number>
+//   ClusterId == <number> && ProcId == <number>
+//   ClusterId == <number> && ProcId is undefined
+//   <any of the above 3> || DagmanJobId == <number>
+//
+bool ExprTreeIsJobIdConstraint(classad::ExprTree * tree, int & cluster, int & proc, bool & cluster_only, bool & dagman_job_id)
+{
+	cluster = proc = -1;
+	dagman_job_id = cluster_only = false;
+	if ( ! tree) return false;
+
+	int dagid = -1;
+	std::string attr;
+	classad::Value value;
+
+	tree = SkipExprParens(tree);
+	classad::ExprTree::NodeKind kind = tree->GetKind();
+	if (kind == classad::ExprTree::OP_NODE) {
+		classad::Operation::OpKind	op;
+		classad::ExprTree *t1, *t2, *t3;
+		((const classad::Operation*)tree)->GetComponents(op, t1, t2, t3);
+		if (op == classad::Operation::LOGICAL_OR_OP) {
+			if (ExprTreeIsAttrCmpLiteral(t2, op, attr, value) &&
+				MATCH == strcasecmp(attr.c_str(), "DAGManJobId") &&
+				value.IsNumber(dagid)) {
+				dagman_job_id = true;
+			}
+			if ( ! dagman_job_id)
+				return false;
+			// no compare the right hand side of the || to see if it is a job id constraint
+			tree = t1;
+		}
+	}
+
+	if (ExprTreeIsJobIdConstraint(tree, cluster, proc, cluster_only)) {
+		if (dagman_job_id && dagid != cluster) {
+			return false;
+		}
+		return true;
 	}
 	return false;
 }
@@ -519,16 +656,12 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 }
 
 
-#define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
-
-bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
+bool EvalExprBool(ClassAd *ad, const char *constraint)
 {
 	static classad::ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
 	classad::Value result;
 	bool constraint_changed = true;
-	double doubleVal;
-	long long intVal;
 	bool boolVal;
 
 	if ( saved_constraint ) {
@@ -561,23 +694,17 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
 		return false;
 	}
-	if( result.IsBooleanValue( boolVal ) ) {
+	if( result.IsBooleanValueEquiv( boolVal ) ) {
 		return boolVal;
-	} else if( result.IsIntegerValue( intVal ) ) {
-		return intVal != 0;
-	} else if( result.IsRealValue( doubleVal ) ) {
-		return IS_DOUBLE_TRUE(doubleVal);
 	}
 	dprintf( D_FULLDEBUG, "constraint (%s) does not evaluate to bool\n",
 		constraint );
 	return false;
 }
 
-bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
+bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree)
 {
 	classad::Value result;
-	double doubleVal;
-	long long intVal;
 	bool boolVal;
 
 	// Evaluate constraint with ad in the target scope so that constraints
@@ -586,24 +713,24 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 		return false;
 	}
 
-	if( result.IsBooleanValue( boolVal ) ) {
+	if( result.IsBooleanValueEquiv( boolVal ) ) {
 		return boolVal;
-	} else if( result.IsIntegerValue( intVal ) ) {
-		return intVal != 0;
-	} else if( result.IsRealValue( doubleVal ) ) {
-		return IS_DOUBLE_TRUE(doubleVal);
 	}
 
 	return false;
 }
 
-bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList *ignored_attrs, bool verbose )
+// TODO ClassAd::SameAs() does a better job, but lacks an ignore list.
+//   This function will return true if ad1 has attributes that ad2 lacks.
+//   Both functions ignore any chained parent ad.
+bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList *ignored_attrs, bool verbose )
 {
 	classad::ExprTree *ad1_expr, *ad2_expr;
 	const char* attr_name;
-	ad2->ResetExpr();
 	bool found_diff = false;
-	while( ad2->NextExpr(attr_name, ad2_expr) && ! found_diff ) {
+	for ( auto itr = ad2->begin(); itr != ad2->end(); itr++ ) {
+		attr_name = itr->first.c_str();
+		ad2_expr = itr->second;
 		if( ignored_attrs && ignored_attrs->contains_anycase(attr_name) ) {
 			if( verbose ) {
 				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): skipping \"%s\"\n",
@@ -639,8 +766,8 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 	return ! found_diff;
 }
 
-int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, classad::Value &result,
+int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+				  ClassAd *target, classad::Value &result,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
@@ -654,35 +781,35 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
-		mad = compat_classad::getTheMatchAd( source, target, sourceAlias, targetAlias );
+		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result ) ) {
 		rc = FALSE;
 	}
 
 	if ( mad ) {
-		compat_classad::releaseTheMatchAd();
+		releaseTheMatchAd();
 	}
 	expr->SetParentScope( old_scope );
 
 	return rc;
 }
 
-bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 )
+bool IsAMatch( ClassAd *ad1, ClassAd *ad2 )
 {
-	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( ad1, ad2 );
+	classad::MatchClassAd *mad = getTheMatchAd( ad1, ad2 );
 
 	bool result = mad->symmetricMatch();
 
-	compat_classad::releaseTheMatchAd();
+	releaseTheMatchAd();
 	return result;
 }
 
 static classad::MatchClassAd *match_pool = NULL;
-static compat_classad::ClassAd *target_pool = NULL;
-static std::vector<compat_classad::ClassAd*> *matched_ads = NULL;
+static ClassAd *target_pool = NULL;
+static std::vector<ClassAd*> *matched_ads = NULL;
 
-bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::ClassAd*> &candidates, std::vector<compat_classad::ClassAd*> &matches, int threads, bool halfMatch)
+bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch)
 {
 	int adCount = candidates.size();
 	static int cpu_count = 0;
@@ -713,9 +840,9 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 	if(!match_pool)
 		match_pool = new classad::MatchClassAd[cpu_count];
 	if(!target_pool)
-		target_pool = new compat_classad::ClassAd[cpu_count];
+		target_pool = new ClassAd[cpu_count];
 	if(!matched_ads)
-		matched_ads = new std::vector<compat_classad::ClassAd*>[cpu_count];
+		matched_ads = new std::vector<ClassAd*>[cpu_count];
 
 	if(!candidates.size())
 		return false;
@@ -747,7 +874,7 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 			int offset = omp_id + index * cpu_count;
 			if(offset >= adCount)
 				break;
-			compat_classad::ClassAd *ad2 = candidates[offset];
+			ClassAd *ad2 = candidates[offset];
 
 /*
 			if(halfMatch)
@@ -771,11 +898,6 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 
 
 			match_pool[omp_id].ReplaceRightAd(ad2);
-			if ( !compat_classad::ClassAd::m_strictEvaluation )
-			{
-				target_pool[omp_id].alternateScope = ad2;
-				ad2->alternateScope = &(target_pool[omp_id]);
-			}
 		
 			if(halfMatch)
 				result = match_pool[omp_id].rightMatchesLeft();
@@ -809,7 +931,7 @@ bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::
 	return matches.size() > 0;
 }
 
-bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target )
+bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 {
 		// The collector relies on this function to check the target type.
 		// Eventually, we should move that check either into the collector
@@ -828,17 +950,12 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 		return false;
 	}
 
-	classad::MatchClassAd *mad = compat_classad::getTheMatchAd( my, target );
+	classad::MatchClassAd *mad = getTheMatchAd( my, target );
 
 	bool result = mad->rightMatchesLeft();
 
-	compat_classad::releaseTheMatchAd();
+	releaseTheMatchAd();
 	return result;
-}
-
-void AttrList_setPublishServerTime( bool publish )
-{
-	AttrList_setPublishServerTimeMangled( publish );
 }
 
 /**************************************************************************

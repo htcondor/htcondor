@@ -67,9 +67,9 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 	// if there is a SlotMergeContraint in the source, then merge into slots
 	// for which the constraint evaluates to true, and don't merge otherwise.
 	if (merge_from->Lookup(ATTR_SLOT_MERGE_CONSTRAINT)) {
-		int matches = false;
+		bool matches = false;
 		if (pattr_used) *pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
-		merge_from->EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_into, matches);
+		(void) EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_from, merge_into, matches);
 		return matches;
 	}
 
@@ -187,7 +187,7 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 			expr = to->Lookup( perJobAttributeName );
 			if( expr == NULL ) {
 				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, perJobAttributeName.c_str(), oldValue );
-				to->CopyAttribute( perJobAttributeName.c_str(), perJobAttributeName.c_str(), from );
+				CopyAttribute( perJobAttributeName, *to, *from );
 			} else {
 				classad::Value v;
 				expr->Evaluate( v );
@@ -200,7 +200,7 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 
 			// Record for each resource when we last updated it.
 			std::string lastUpdateName = "LastUpdate" + name;
-			to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
+			CopyAttribute( lastUpdateName, *to, "LastUpdate", *from );
 		} else if( name.find( "StartOfJob" ) == 0 ) {
 			// dprintf( D_FULLDEBUG, "Aggregate(): skipping StartOfJob* attribute '%s'\n", name.c_str() );
 		} else if( name == "ResetStartOfJob" ) {
@@ -240,10 +240,10 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 				std::string uptimeName = name.substr( 10 );
 				if( StartdCronJobParams::attributeIsSumMetric( uptimeName ) ) {
-					to->CopyAttribute( name.c_str(), uptimeName.c_str() );
+					CopyAttribute( name, *to, uptimeName );
 
 					std::string firstUpdateName = "FirstUpdate" + uptimeName;
-					to->CopyAttribute( firstUpdateName.c_str(), "LastUpdate" );
+					CopyAttribute( firstUpdateName, *to, "LastUpdate" );
 				} else if( StartdCronJobParams::attributeIsPeakMetric( uptimeName ) ) {
 					// PEAK metrics don't use the StartOfJob* attributes.  If
 					// the current job peak isn't set when a new sample comes
@@ -296,7 +296,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 				// Record for each resource when we last updated it.
 				std::string lastUpdateName = "LastUpdate" + usageName;
-				to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
+				CopyAttribute( lastUpdateName, *to, "LastUpdate", *from );
 			}
 		}
 
@@ -363,7 +363,7 @@ StartdNamedClassAd::reset_monitor() {
 				// persist.  Instead, make sure that the persistent resource
 				// instance ad we're modifying here will stomp on the value
 				// by instead setting usageName to undefined explicitly.
-				from->AssignExpr( usageName.c_str(), "undefined" );
+				from->AssignExpr( usageName, "undefined" );
 			} else {
 				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
 			}

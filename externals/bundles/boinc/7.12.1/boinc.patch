@@ -17,15 +17,18 @@ diff --git a/samples/condor/boinc_gahp.cpp b/samples/condor/boinc_gahp.cpp
 index 85b8b30..505115d 100644
 --- a/samples/condor/boinc_gahp.cpp
 +++ b/samples/condor/boinc_gahp.cpp
-@@ -34,7 +34,7 @@
+@@ -34,9 +34,9 @@
  #include "md5_file.h"
  #include "parse.h"
  #include "remote_submit.h"
 -#include "svn_version.h"
 +#include "version.h"
  
- #define BOINC_GAHP_VERSION "1.0.1"
+-#define BOINC_GAHP_VERSION "1.0.1"
++#define BOINC_GAHP_VERSION "1.0.2"
  
+ using std::map;
+ using std::pair;
 @@ -513,7 +513,7 @@ void handle_fetch_output(COMMAND& c) {
              sprintf(buf, "get_output_file()\\ returned\\ %d\\ ", retval);
              s = string(buf) + escape_str(error_msg);

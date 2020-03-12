@@ -167,7 +167,7 @@ protected:
 	void retryJobCleanup( void );
 
 		/// DaemonCore timer handler to actually do the retry.
-	int retryJobCleanupHandler( void );
+	void retryJobCleanupHandler( void );
 
 		/// Timer id for the job cleanup retry handler.
 	int m_cleanup_retry_tid;

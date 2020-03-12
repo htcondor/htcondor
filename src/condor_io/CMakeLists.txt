@@ -17,7 +17,7 @@
  ############################################################### 
 
 
-file( GLOB CeadarRmvSrcs *.t* test.h )
+file( GLOB CeadarRmvSrcs *.t* )
 condor_glob( CedarHdrs CedarSrcs "${CeadarRmvSrcs}" )
 
 set( CEDAR_UTIL_SRCS "${CedarHdrs};${CedarSrcs}" PARENT_SCOPE )

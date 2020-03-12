@@ -275,7 +275,7 @@ class _ISkypeAPI(_ISkypeAPIBase):
 
     def error_check(self):
         '''Checks last Xlib error and raises an exception if needed.'''
-        if self.error != None:
+        if self.error is not None:
             if self.error == 3: # BadWindow
                 self.win_skype = None
                 self.SetAttachmentStatus(apiAttachNotAvailable)
@@ -296,7 +296,7 @@ class _ISkypeAPI(_ISkypeAPIBase):
         fail = self.x11.XGetWindowProperty(self.disp, self.win_root, skype_inst,
                             0, 1, False, 33, byref(type_ret), byref(format_ret),
                             byref(nitems_ret), byref(bytes_after_ret), byref(winp))
-        if not fail and self.error == None and format_ret.value == 32 and nitems_ret.value == 1:
+        if not fail and self.error is None and format_ret.value == 32 and nitems_ret.value == 1:
             return winp.contents.value
 
     def Close(self):
@@ -331,7 +331,7 @@ class _ISkypeAPI(_ISkypeAPIBase):
                 t.start()
             while self.wait:
                 self.win_skype = self.get_skype()
-                if self.win_skype != None:
+                if self.win_skype is not None:
                     break
                 else:
                     time.sleep(1.0)
@@ -349,7 +349,7 @@ class _ISkypeAPI(_ISkypeAPIBase):
         self.SetAttachmentStatus(apiAttachSuccess)
 
     def IsRunning(self):
-        return self.get_skype() != None
+        return self.get_skype() is not None
 
     def Start(self, Minimized=False, Nosplash=False):
         # options are not supported as of Skype 1.4 Beta for Linux

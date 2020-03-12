@@ -22,6 +22,17 @@ comes back with the same IP address(es), among others -- to minimize the
 amount of work-in-progress lost.  We therefore recommend against using an
 interruptible instance for the seed node.
 
+Security
+--------
+
+Your cloud provider may allow you grant an instance privileges (e.g., the
+privilege of starting new instances).  This can be more convenient (because
+you don't have to manually copy credentials into the instance), but may be
+risky if you allow others to log into the instance (possibly allowing them
+to take advantage of the instance's privileges).  Conversely, copying
+credentials into the instance makes it easy to forget to remove them before
+creating an image of that instance (if you do).
+
 Making a HTCondor in the Cloud
 ------------------------------
 
@@ -29,7 +40,7 @@ The general instructions are simple:
 
 #. Start an instance from a seed image.  Grant it privileges if you want.  (See above).
 
-#. Copy your credentials to the instance.
+#. If you did not grant the instance privileges, copy your credentials to the instance.
 
 #. Run *condor_annex*.
 
@@ -45,6 +56,9 @@ seed image.
 #. Search for ``Condor-in-the-Cloud Seed``.  (The AMI ID is
    ``ami-00eeb25291cfad66f``.)  Click the 'Select' button.
 #. Choose an instance type.  (Select ``m5.large`` if you have no preference.)
+#. Click the 'Next: Configure Instance Details' button.
+#. For 'IAM Role', select the role you created in
+   :ref:`using_instance_credentials`, or follow those instructions now.
 #. Click '6. Configure Security Group'.  This creates a firewall rule to allow
    you to log into your instance.
 #. Click the 'Review and Launch' button.
@@ -61,7 +75,7 @@ seed image.
 
 To grow your new HTCondor-in-the-Cloud from this seed, follow the instructions
 for using *condor_annex* for the first time, starting with
-:ref:`obtain_an_access_key`.  You can than proceed to
+:ref:`configure_condor_annex`.  You can than proceed to
 :ref:`start_an_annex`.
 
 Creating a Seed

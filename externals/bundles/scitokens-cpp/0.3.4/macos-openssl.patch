@@ -1,0 +1,42 @@
+diff -u -r scitokens-cpp-0.3.4/CMakeLists.txt scitokens-cpp-0.3.4-patched/CMakeLists.txt
+--- scitokens-cpp-0.3.4/CMakeLists.txt	2019-09-18 12:50:30.000000000 -0500
++++ scitokens-cpp-0.3.4-patched/CMakeLists.txt	2019-12-03 09:48:54.000000000 -0600
+@@ -22,10 +22,12 @@
+ 
+ if( APPLE )
+ 
+-find_package( OpenSSL REQUIRED )
+ find_package( Sqlite3 REQUIRED )
+-set(LIBCRYPTO_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
+-set(LIBCRYPTO_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY})
++if( NOT LIBCRYPTO_INCLUDE_DIRS OR NOT LIBCRYPTO_LIBRARIES )
++  find_package( OpenSSL REQUIRED )
++  set(LIBCRYPTO_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
++  set(LIBCRYPTO_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY})
++endif()
+ 
+ elseif( UNIX )
+ 
+@@ -48,6 +50,10 @@
+ set_target_properties(SciTokens PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/configs/export-symbols")
+ endif()
+ 
++if ( APPLE )
++  set_target_properties(SciTokens PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib" BUILD_WITH_INSTALL_NAME_DIR TRUE)
++endif()
++
+ add_executable(scitokens-test src/test.cpp)
+ target_link_libraries(scitokens-test SciTokens)
+ 
+diff -u -r scitokens-cpp-0.3.4/src/scitokens_internal.cpp scitokens-cpp-0.3.4-patched/src/scitokens_internal.cpp
+--- scitokens-cpp-0.3.4/src/scitokens_internal.cpp	2019-09-18 12:50:30.000000000 -0500
++++ scitokens-cpp-0.3.4-patched/src/scitokens_internal.cpp	2019-11-21 10:53:17.000000000 -0600
+@@ -256,7 +256,7 @@
+     std::unique_ptr<BIGNUM, decltype(&BN_free)> n_bignum(BN_bin2bn(reinterpret_cast<const unsigned char *>(n_decode.c_str()), n_decode.size(), nullptr), BN_free);
+ 
+     std::unique_ptr<RSA, decltype(&RSA_free)> rsa(RSA_new(), RSA_free);
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+     rsa->e = e_bignum.get();
+     rsa->n = n_bignum.get();
+     rsa->d = nullptr;

@@ -28,7 +28,14 @@ if [ -z "$slurm_binpath" ] ; then
 fi
 
 requested=`echo $1 | sed 's/^.*\///'`
-${slurm_binpath}/scontrol release $requested >&/dev/null
+
+cluster_name=`echo $requested | cut -s -f2 -d@`
+if [ $cluster_name != "" ] ; then
+  requested=`echo $requested | cut -f1 -d@`
+  cluster_arg="-M $cluster_name"
+fi
+
+${slurm_binpath}/scontrol $cluster_name release $requested >&/dev/null
 
 if [ "$?" == "0" ]; then
   echo " 0 No\\ error"

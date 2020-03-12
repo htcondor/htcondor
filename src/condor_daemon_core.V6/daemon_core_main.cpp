@@ -40,10 +40,24 @@
 #include "exit.h"
 #include "match_prefix.h"
 #include "historyFileFinder.h"
+#include "store_cred.h"
+#include "condor_netaddr.h"
+#include "net_string_list.h"
+#include "dc_collector.h"
+#include "token_utils.h"
+#include "condor_scitokens.h"
+
+#include <chrono>
+#include <sstream>
+#include <algorithm>
 
 #ifdef LINUX
 #include <sys/prctl.h>
 #endif
+
+#include "condor_auth_passwd.h"
+#include "condor_auth_ssl.h"
+#include "authentication.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -51,6 +65,10 @@
 
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
+#endif
+
+#if defined(HAVE_EXT_SCITOKENS)
+#include <scitokens/scitokens.h>
 #endif
 
 // Externs to Globals
@@ -73,7 +91,7 @@ int handle_fetch_log_history_dir(ReliSock *s, char *name);
 int handle_fetch_log_history_purge(ReliSock *s);
 
 // Globals
-int		Foreground = 0;		// run in background by default
+int		Foreground = 1;		// run in foreground by default (condor_master will change this before calling dc_main)
 char *_condor_myServiceName;		// name of service on Win32 (argv[0] from SCM)
 DaemonCore*	daemonCore;
 
@@ -123,6 +141,514 @@ static bool doAuthInit = true;
 // This flag tells daemoncore whether to do the core limit initialization.
 // It can be set to false by calling the DC_Skip_Core_Init() function.
 static bool doCoreInit = true;
+
+
+	// Right now, the default ID is simply the empty string.
+const std::string DCTokenRequester::default_identity = "";
+
+namespace {
+
+class TokenRequest : public Service {
+public:
+
+	enum class State {
+		Pending,
+		Successful,
+		Failed,
+		Expired
+	};
+
+	TokenRequest(const std::string &requester_identity,
+			const std::string &requested_identity,
+			const std::string &peer_location,
+			const std::vector<std::string> &authz_bounding_set,
+			int lifetime, const std::string &client_id)
+	:
+		m_lifetime(lifetime),
+		m_requested_identity(requested_identity),
+		m_requester_identity(requester_identity),
+		m_peer_location(peer_location),
+		m_authz_bounding_set(authz_bounding_set),
+		m_client_id(client_id)
+	{
+		m_request_time = time(NULL);
+	}
+
+	std::string getPublicString() const {
+		std::stringstream ss;
+		std::string bounding_set_info = "<none>";
+		if (!m_authz_bounding_set.empty()) {
+			std::stringstream ss2;
+			bool first = true;
+			for (const auto &authz : m_authz_bounding_set) {
+				if (first) {first = false;}
+				else {ss2 << ",";}
+				ss2 << authz;
+			}
+			bounding_set_info = ss2.str();
+		}
+		ss << "[requested_id = " << m_requested_identity
+			<< "; requester_id = " << m_requester_identity
+			<< "; peer_location = " << m_peer_location
+			<< "; m_authz_bounding_set = " << bounding_set_info
+			<< "]";
+		return ss.str();
+	}
+
+	void setToken(const std::string &token) {
+		m_token = token;
+			// Ensure the token expires 60s after it is made.
+		m_lifetime = time(NULL) - m_request_time + 60;
+		m_state = State::Successful;
+	}
+
+	void setFailed() {m_state = State::Failed;}
+
+	void setExpired() {
+		if (m_state == State::Pending) {
+			m_state = State::Expired;
+		}
+	}
+
+	const std::string &getToken() const {return m_token;}
+
+	const std::string &getClientId() const {return m_client_id;}
+
+	State getState() const {return m_state;}
+
+	bool isExpiredAt(time_t now, time_t max_lifetime) const {return m_request_time + max_lifetime < now;}
+
+	const std::vector<std::string> &getBoundingSet() const {return m_authz_bounding_set;}
+
+	time_t getLifetime() const {return m_lifetime;}
+
+	const std::string &getRequestedIdentity() const {return m_requested_identity;}
+
+	const std::string &getRequesterIdentity() const {return m_requester_identity;}
+
+	const std::string &getPeerLocation() const {return m_peer_location;}
+
+	bool static ShouldAutoApprove(const TokenRequest &token_request, time_t now,
+		std::string &rule_text)
+	{
+
+			// Only auto-approve requests for the condor identity.
+		if (strncmp(token_request.getRequestedIdentity().c_str(), "condor@", 7)) {
+			return false;
+		}
+			// All auto-approve requests must have a bounding set to limit auth.
+		if (!token_request.getBoundingSet().size()) {
+			return false;
+		}
+			// Only auto-approve requests from daemons that automatically ask for one.
+		for (const auto &authz : token_request.getBoundingSet()) {
+			if ((authz != "ADVERTISE_SCHEDD") && (authz != "ADVERTISE_STARTD") && (authz != "ADVERTISE_MASTER")) {
+				return false;
+			}
+		}
+			// Only auto-approve requests that aren't pending.
+		if (token_request.getState() != State::Pending) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
+				" because it is pending.\n");
+			return false;
+		}
+			// Only auto-approve requests that haven't expired.
+		if (now > (token_request.m_request_time + \
+				(token_request.m_lifetime < 0 ?
+				86400 * 365 : token_request.m_lifetime))) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
+				" because it is expired (token was requested at %ld"
+				"; lifetime is %ld; now is %ld).\n",
+				token_request.m_request_time,
+				token_request.m_lifetime, now);
+			return false;
+		}
+
+		auto peer_location = token_request.getPeerLocation();
+		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %lu rules.\n", m_approval_rules.size());
+		for (auto &rule : m_approval_rules) {
+			if (!rule.m_approval_netblock->find_matches_withnetwork(
+					peer_location.c_str(), nullptr)) {
+				char * netblock = rule.m_approval_netblock->print_to_string();
+				dprintf(D_FULLDEBUG|D_SECURITY, "Cannot auto-approve request;"
+					" peer %s does not match netblock %s.\n",
+					peer_location.c_str(),
+					netblock);
+				free(netblock);
+				continue;
+			}
+			if (token_request.m_request_time > rule.m_expiry_time) {
+				dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
+					" because request time (%ld) is after rule expiration (%ld).\n",
+					token_request.m_request_time, rule.m_expiry_time);
+				continue;
+			}
+				// Approve requests that came in up to 60s before the
+				// auto-approval rule was installed.
+			if (token_request.m_request_time < rule.m_issue_time - 60) {
+				dprintf(D_SECURITY|D_FULLDEBUG, "Cannot auto-approve request"
+					" because it is too old");
+				continue;
+			}
+			std::unique_ptr<char> netblock(rule.m_approval_netblock->print_to_string());
+			std::stringstream ss;
+			ss << "[netblock = " << netblock.get() << "; lifetime_left = "
+				<< (rule.m_expiry_time - now) << "]";
+			rule_text = ss.str();
+			return true;
+		}
+		return false;
+	}
+
+	static bool addApprovalRule(std::string netblock, time_t lifetime, CondorError & error ) {
+		if( lifetime <= 0 ) {
+			error.push( "DAEMON", -1, "Auto-approval rule lifetimes must be greater than zero." );
+			return false;
+		}
+
+		condor_netaddr na;
+		if(! na.from_net_string(netblock.c_str())) {
+			error.push( "DAEMON", -2, "Auto-approval rule netblock invalid." );
+			return false;
+		}
+
+		m_approval_rules.emplace_back();
+		auto &rule = m_approval_rules.back();
+		rule.m_approval_netblock.reset(new NetStringList(netblock.c_str()));
+		rule.m_issue_time = time(NULL);
+		rule.m_expiry_time = rule.m_issue_time + lifetime;
+		return true;
+	}
+
+	static void clearApprovalRules() {m_approval_rules.clear();}
+
+	static void cleanupApprovalRules() {
+		auto now = time(NULL);
+		m_approval_rules.erase(
+			std::remove_if(m_approval_rules.begin(), m_approval_rules.end(),
+				[=](const ApprovalRule &rule) {return rule.m_expiry_time < now;}),
+			m_approval_rules.end()
+		);
+	}
+
+		// Callbacks for collector updates; determine whether a token request would be useful!
+	static void
+	daemonUpdateCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain, bool should_try_token_request, void *miscdata) {
+		if (success || !should_try_token_request || !sock) return;
+
+		auto data = reinterpret_cast<DCTokenRequester::DCTokenRequesterData*>(miscdata);
+		if (!data) {
+			return;
+		}
+
+			// Avoiding requesting tokens for already-pending requests.
+		for (const auto &pending_request : m_token_requests) {
+			if (pending_request.m_identity != data->m_identity) {
+				continue;
+			}
+			if (pending_request.m_trust_domain == trust_domain) {
+				return;
+			}
+		}
+
+		dprintf(D_ALWAYS, "Collector update failed; will try to get a token request for trust domain %s"
+			", identity %s.\n", trust_domain.c_str(),
+			data->m_identity == DCTokenRequester::default_identity ?
+				"(default)" : data->m_identity.c_str());
+		m_token_requests.emplace_back();
+		auto &back = m_token_requests.back();
+		back.m_identity = data->m_identity;
+		back.m_trust_domain = trust_domain;
+		back.m_authz_name = data->m_authz_name;
+		back.m_daemon.reset(new DCCollector(data->m_addr.c_str()));
+		back.m_daemon->setOwner(data->m_identity);
+			// Unprivileged requests can only use SSL or TOKEN.
+		if (data->m_identity != DCTokenRequester::default_identity) {
+			back.m_daemon->setAuthenticationMethods({"SSL", "TOKEN"});
+		}
+		back.m_callback_fn = &DCTokenRequester::tokenRequestCallback;
+		back.m_callback_data = data;
+
+		if (m_token_requests_tid == -1) {
+			m_token_requests_tid = daemonCore->Register_Timer( 0,
+			(TimerHandler)&TokenRequest::tryTokenRequests,
+			"TokenRequest::tryTokenRequests" );
+		}
+
+	}
+
+	static void
+	clearTokenRequests() {m_token_requests.clear();}
+
+private:
+	struct PendingRequest {
+			// Request ID sent to the remote server.
+		std::string m_request_id;
+			// My auto-generated client ID; an empty
+			// client ID indicates the token request has not
+			// been sent to the remote daemon yet.
+		std::string m_client_id;
+			// Identity requested for this token
+		std::string m_identity;
+		std::string m_trust_domain;
+			// Authorization level name
+		std::string m_authz_name;
+		std::unique_ptr<Daemon> m_daemon{nullptr};
+		RequestCallbackFn *m_callback_fn{nullptr};
+			// Callback data must be guaranteed to outlive the request;
+			// borrowed reference.
+		void *m_callback_data{nullptr};
+	};
+
+	static void
+	tryTokenRequests() {
+		bool should_reschedule = false;
+		dprintf(D_SECURITY|D_FULLDEBUG, "There are %lu token requests remaining.\n",
+		m_token_requests.size());
+		for (auto & request : m_token_requests)
+		{
+			should_reschedule |= tryTokenRequest(request);
+		}
+		if (should_reschedule) {
+			daemonCore->Reset_Timer(m_token_requests_tid, 5, 1);
+			dprintf(D_SECURITY|D_FULLDEBUG, "Will reschedule another poll of requests.\n");
+		} else {
+			daemonCore->Cancel_Timer(m_token_requests_tid);
+			m_token_requests_tid = -1;
+		}
+		m_token_requests.erase(
+			std::remove_if(m_token_requests.begin(),
+				m_token_requests.end(),
+				[](const PendingRequest &req) {return req.m_client_id.empty();}),
+					m_token_requests.end()
+			);
+	};
+
+	static bool
+	tryTokenRequest(PendingRequest &req) {
+		std::string subsys_name = get_mySubSystemName();
+
+		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
+			req.m_daemon->name() ? req.m_daemon->name() : req.m_daemon->addr(),
+			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
+		if (!req.m_daemon) {
+			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+			return false;
+		}
+		std::string token;
+		if (req.m_client_id.empty()) {
+			req.m_request_id = "";
+			req.m_client_id = htcondor::generate_client_id();
+
+			std::string request_id;
+			std::vector<std::string> authz_list;
+			authz_list.push_back(req.m_authz_name);
+			int lifetime = -1;
+			CondorError err;
+			if (!req.m_daemon->startTokenRequest(req.m_identity, authz_list, lifetime,
+				req.m_client_id, token, request_id, &err))
+			{
+				dprintf(D_ALWAYS, "Failed to request a new token: %s\n", err.getFullText().c_str());
+				req.m_client_id = "";
+				(*req.m_callback_fn)(false, req.m_callback_data);
+				return false;
+			}
+			if (token.empty()) {
+				req.m_request_id = request_id;
+				dprintf(D_ALWAYS, "Token requested; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), request_id.c_str());
+				return true;
+			} else {
+				dprintf(D_ALWAYS, "Token request auto-approved.\n");
+				Condor_Auth_Passwd::retry_token_search();
+				daemonCore->getSecMan()->reconfig();
+				(*req.m_callback_fn)(true, req.m_callback_data);
+				req.m_client_id = "";
+			}
+		} else {
+			CondorError err;
+			if (!req.m_daemon->finishTokenRequest(req.m_client_id, req.m_request_id, token, &err)) {
+				dprintf(D_ALWAYS, "Failed to retrieve a new token: %s\n", err.getFullText().c_str());
+				req.m_client_id = "";
+				(*req.m_callback_fn)(false, req.m_callback_data);
+				return false;
+			}
+			if (token.empty()) {
+				dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
+				dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), req.m_request_id.c_str());
+				return true;
+			} else {
+				dprintf(D_ALWAYS, "Token request approved.\n");
+					// Flush the cached result of the token search.
+				Condor_Auth_Passwd::retry_token_search();
+					// Flush out the security sessions; will need to force a re-auth.
+				auto sec_man = daemonCore->getSecMan();
+				sec_man->reconfig();
+				if (!req.m_identity.empty()) {
+					std::string orig_tag = sec_man->getTag();
+					sec_man->setTag(req.m_identity);
+					sec_man->invalidateAllCache();
+					sec_man->setTag(orig_tag);
+				} else {
+					sec_man->invalidateAllCache();
+				}
+					// Invoke the daemon-provided callback to do daemon-specific cleanups.
+				(*req.m_callback_fn)(true, req.m_callback_data);
+			}
+			req.m_client_id = "";
+		}
+		if (!token.empty()) {
+			htcondor::write_out_token(subsys_name + "_auto_generated_token", token, req.m_identity);
+		}
+		return false;
+	}
+
+	// The initial state of a request should always be pending.
+	State m_state{State::Pending};
+
+	// Initialize these to known-bogus values out of an abundance of caution.
+	time_t m_request_time{-1};
+	time_t m_lifetime{-1};
+
+	std::string m_requested_identity;
+	std::string m_requester_identity;
+	std::string m_peer_location;
+	std::vector<std::string> m_authz_bounding_set;
+	std::string m_client_id;
+	std::string m_token;
+
+	struct ApprovalRule
+	{
+		std::unique_ptr<NetStringList> m_approval_netblock;
+		time_t m_issue_time;
+		time_t m_expiry_time;
+	};
+
+	static std::vector<ApprovalRule> m_approval_rules;
+
+	static std::vector<PendingRequest> m_token_requests;
+	static int m_token_requests_tid;
+};
+
+
+int TokenRequest::m_token_requests_tid{-1};
+
+
+std::vector<TokenRequest::ApprovalRule> TokenRequest::m_approval_rules;
+
+std::vector<TokenRequest::PendingRequest> TokenRequest::m_token_requests;
+
+typedef std::unordered_map<int, std::unique_ptr<TokenRequest>> TokenMap;
+
+TokenMap g_request_map;
+
+class RequestRateLimiter {
+public:
+	RequestRateLimiter(unsigned rate_limit)
+	: m_rate_limit(rate_limit),
+	m_last_update(std::chrono::steady_clock::now())
+	{
+		classy_counted_ptr<stats_ema_config> ema_config(new stats_ema_config);
+		ema_config->add(10, "10s");
+		m_request_rate.ConfigureEMAHorizons(ema_config);
+		m_request_rate.recent_start_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+		m_request_rate.Update(m_request_rate.recent_start_time);
+	}
+
+	RequestRateLimiter(const RequestRateLimiter &) = delete;
+
+	bool AllowIncomingRequest() {
+		auto now = std::chrono::steady_clock::now();
+		m_request_rate += 1;
+		auto duration = m_last_update - now;
+		auto seconds_elapsed = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+		if (seconds_elapsed > 0) {
+			auto since_epoch = now.time_since_epoch();
+			m_request_rate.Update(std::chrono::duration_cast<std::chrono::seconds>(since_epoch).count());
+			m_recent_rate = m_request_rate.EMAValue("10s");
+			m_last_update = now;
+		}
+		return (m_rate_limit <= 0) || (m_recent_rate <= m_rate_limit);
+	}
+
+	void SetLimit(unsigned rate_limit) {m_rate_limit = rate_limit;}
+
+private:
+
+	double m_rate_limit{0};
+	double m_recent_rate{0};
+	std::chrono::steady_clock::time_point m_last_update;
+	stats_entry_sum_ema_rate<uint64_t> m_request_rate;
+};
+
+	// We allow 60 seconds for the remote side to pick up the result.
+	// During that time, an attacker can try to brute-force the request ID.
+	// This is a variant of the birthday paradox: what's the likelihood of
+	// N random selections out of D options being the same as your selection?
+	// Turns out, the answer is 1 - ((D-1)/D) ^ N.  Setting D = 9999999 and
+	// N = 60*10, there is a 0.006% chance of a determined attacker guessing
+	// a 7-digit number
+RequestRateLimiter g_request_limit(10);
+
+void cleanup_request_map() {
+	std::vector<int> requests_to_delete;
+	auto now = time(NULL);
+	auto lifetime = param_integer("SEC_TOKEN_REQUEST_LIFETIME", 3600);
+	auto max_lifetime = lifetime + 3600;
+
+	for (auto &entry : g_request_map) {
+		if (entry.second->isExpiredAt(now, lifetime)) {
+			entry.second->setExpired();
+			dprintf(D_SECURITY|D_FULLDEBUG, "Request %d has expired.\n", entry.first);
+		}
+		if (entry.second->isExpiredAt(now, max_lifetime)) {
+			requests_to_delete.push_back(entry.first);
+		}
+	}
+	for (auto request : requests_to_delete) {
+		dprintf(D_SECURITY|D_FULLDEBUG, "Cleaning up request %d.\n", request);
+		auto iter = g_request_map.find(request);
+		if (iter != g_request_map.end()) {
+			g_request_map.erase(iter);
+		}
+	}
+
+	TokenRequest::cleanupApprovalRules();
+}
+
+}
+
+
+void*
+DCTokenRequester::createCallbackData(const std::string &daemon_addr, const std::string &identity,
+	const std::string &authz_name)
+{
+	DCTokenRequesterData *data = new DCTokenRequesterData();
+	data->m_addr = daemon_addr;
+	data->m_identity = identity;
+	data->m_authz_name = authz_name;
+	data->m_callback_fn = m_callback;
+	data->m_callback_data = m_callback_data;
+
+	return data;
+}
+
+
+void
+DCTokenRequester::tokenRequestCallback(bool success, void *miscdata)
+{
+	auto data = reinterpret_cast<DCTokenRequester::DCTokenRequesterData *>(miscdata);
+	std::unique_ptr<DCTokenRequester::DCTokenRequesterData> data_uptr(data);
+
+	(*data->m_callback_fn)(success, data->m_callback_data);
+}
+
+
+void
+DCTokenRequester::daemonUpdateCallback(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain,
+                bool should_try_token_request, void *miscdata)
+{
+	TokenRequest::daemonUpdateCallback(success, sock, errstack, trust_domain, should_try_token_request, miscdata);
+}
 
 
 #ifndef WIN32
@@ -576,6 +1102,16 @@ handle_log_append( char* append_str )
 	sprintf( tmp2, "%s.%s", tmp1, append_str );
 	config_insert( buf, tmp2 );
 	free( tmp1 );
+
+	if (get_mySubSystem()->getLocalName()) {
+		std::string fullParamName;
+		fullParamName.append(get_mySubSystem()->getLocalName());
+		fullParamName.append(".");
+		fullParamName.append(get_mySubSystem()->getName());
+		fullParamName.append("_LOG");
+
+		config_insert( fullParamName.c_str(), tmp2 );
+	}
 	free( tmp2 );
 }
 
@@ -908,7 +1444,7 @@ check_core_files()
 
 
 static int
-handle_off_fast( Service*, int, Stream* stream)
+handle_off_fast(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_off_fast: failed to read end of message\n");
@@ -922,7 +1458,7 @@ handle_off_fast( Service*, int, Stream* stream)
 
 	
 static int
-handle_off_graceful( Service*, int, Stream* stream)
+handle_off_graceful(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_off_graceful: failed to read end of message\n");
@@ -947,7 +1483,7 @@ bool SigtermContinue::should_continue = true;
 
 
 static int
-handle_off_force( Service*, int, Stream* stream)
+handle_off_force(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_off_force: failed to read end of message\n");
@@ -962,7 +1498,7 @@ handle_off_force( Service*, int, Stream* stream)
 }
 
 static int
-handle_off_peaceful( Service*, int, Stream* stream)
+handle_off_peaceful(int, Stream* stream)
 {
 	// Peaceful shutdown is the same as graceful, except
 	// there is no timeout waiting for things to finish.
@@ -979,7 +1515,7 @@ handle_off_peaceful( Service*, int, Stream* stream)
 }
 
 static int
-handle_set_peaceful_shutdown( Service*, int, Stream* stream)
+handle_set_peaceful_shutdown(int, Stream* stream)
 {
 	// If the master could send peaceful shutdown signals, it would
 	// not be necessary to have a message for turning on the peaceful
@@ -996,7 +1532,7 @@ handle_set_peaceful_shutdown( Service*, int, Stream* stream)
 }
 
 static int
-handle_set_force_shutdown( Service*, int, Stream* stream)
+handle_set_force_shutdown(int, Stream* stream)
 {
 	// If the master could send peaceful shutdown signals, it would
 	// not be necessary to have a message for turning on the peaceful
@@ -1015,7 +1551,7 @@ handle_set_force_shutdown( Service*, int, Stream* stream)
 
 
 static int
-handle_reconfig( Service*, int /* cmd */, Stream* stream )
+handle_reconfig( int /* cmd */, Stream* stream )
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
@@ -1031,12 +1567,13 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 }
 
 int
-handle_fetch_log( Service *, int cmd, ReliSock *stream )
+handle_fetch_log(int cmd, Stream *s )
 {
 	char *name = NULL;
 	int  total_bytes = 0;
 	int result;
 	int type = -1;
+	ReliSock *stream = (ReliSock *) s;
 
 	if ( cmd == DC_PURGE_LOG ) {
 		return handle_fetch_log_history_purge( stream );
@@ -1281,7 +1818,7 @@ handle_fetch_log_history_purge(ReliSock *s) {
 }
 
 int
-handle_dc_query_instance( Service*, int, Stream* stream)
+handle_dc_query_instance( int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_FULLDEBUG, "handle_dc_query_instance: failed to read end of message\n");
@@ -1312,8 +1849,817 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 	return TRUE;
 }
 
+
+static int
+handle_dc_start_token_request(int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_start_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	std::string client_id;
+	if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
+		error_code = 2;
+		error_string = "No client ID provided.";
+	}
+
+	std::string requested_identity;
+	if (!ad.EvaluateAttrString(ATTR_SEC_USER, requested_identity)) {
+		error_code = 2;
+		error_string = "No identity request.";
+	}
+		// Note this allows unauthenticated users.
+	const char *fqu = static_cast<Sock*>(stream)->getFullyQualifiedUser();
+	if (!fqu) {
+		error_code = 2;
+		error_string = "Missing requester identity.";
+	}
+
+	const char *peer_location = static_cast<Sock*>(stream)->peer_ip_str();
+
+        std::set<std::string> config_bounding_set;
+        std::string config_bounding_set_str;
+        if (param(config_bounding_set_str, "SEC_TOKEN_REQUEST_LIMITS")) {
+                StringList config_bounding_set_list(config_bounding_set_str.c_str());
+                config_bounding_set_list.rewind();
+                const char *authz;
+                while ( (authz = config_bounding_set_list.next()) ) {
+                        config_bounding_set.insert(authz);
+                }
+        }
+
+	std::vector<std::string> authz_list;
+	std::string authz_list_str;
+	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
+		StringList authz_str_list(authz_list_str.c_str());
+		authz_str_list.rewind();
+		const char *authz;
+		while ( (authz = authz_str_list.next()) ) {
+			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
+				authz_list.emplace_back(authz);
+			}
+		}
+			// If all potential bounds were removed by the set intersection,
+			// throw an error instead of generating an "all powerful" token.
+		if (!config_bounding_set.empty() && authz_list.empty()) {
+			error_code = 3;
+			error_string = "All requested authorizations were eliminated by the"
+				" SEC_TOKEN_REQUEST_LIMITS setting";
+		}
+	} else if (!config_bounding_set.empty()) {
+		for (const auto &authz : config_bounding_set) {
+			authz_list.push_back(authz);
+		}
+	}
+
+	int requested_lifetime;
+	if (!ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
+		requested_lifetime = -1;
+	}
+	int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+	if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+		requested_lifetime = max_lifetime;
+	} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
+		requested_lifetime = max_lifetime;
+	}
+
+	classad::ClassAd result_ad;
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+		// TODO: If this is an ADMINISTRATOR-level connection, why not authorize immediately?
+	} else if (g_request_map.size() > 1000) {
+		error_code = 3;
+		error_string = "Too many requests in the system.";
+	} else {
+		unsigned request_id = get_csrng_uint() % 10000000;
+		auto iter = g_request_map.find(request_id);
+		int idx = 0;
+			// Try a few randomly generated request IDs; to avoid strange issues,
+			// bail out after a fixed limit.
+		while ((iter != g_request_map.end() && (idx++ < 5))) {
+			request_id = get_csrng_uint() % 10000000;
+			iter = g_request_map.find(request_id);
+		}
+		if (iter != g_request_map.end()) {
+			result_ad.InsertAttr(ATTR_ERROR_STRING, "Unable to generate new request ID");
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
+		} else {
+			g_request_map[request_id] = std::unique_ptr<TokenRequest>(
+				new TokenRequest{fqu, requested_identity, peer_location, authz_list, requested_lifetime, client_id});
+		}
+		std::string request_id_str;
+		formatstr(request_id_str, "%07d", request_id);
+			// Note we currently store this as a string; this way we can come back later
+			// and introduce alphanumeric characters if we so wish.
+		result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str);
+
+		iter = g_request_map.find(request_id);
+		time_t now = time(NULL);
+
+		CondorError err;
+		std::string final_key_name = htcondor::get_token_signing_key(err);
+		if (final_key_name.empty()) {
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+			iter = g_request_map.end();
+		}
+
+		std::string rule_text;
+		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
+			auto token_request = *(iter->second);
+			CondorError err;
+			std::string token;
+			if (!Condor_Auth_Passwd::generate_token(
+				token_request.getRequestedIdentity(),
+				final_key_name,
+				token_request.getBoundingSet(),
+				token_request.getLifetime(),
+				token,
+				static_cast<Sock*>(stream)->getUniqueId(),
+				&err))
+			{
+				result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+				result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+				token_request.setFailed();
+			} else {
+				g_request_map.erase(iter);
+				if (token.empty()) {
+					error_code = 6;
+					error_string = "Internal state error.";
+				}
+				result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+				dprintf(D_ALWAYS, "Token request %s approved via auto-approval rule %s.\n",
+					token_request.getPublicString().c_str(), rule_text.c_str());
+			}
+			// Auto-approval rules are effectively host-based security; if we trust the network
+			// blindly, the lack of encryption does not bother us.
+			//
+			// In all other cases, encryption is a hard requirement.
+		} else if (!stream->get_encryption()) {
+			g_request_map.erase(iter);
+			result_ad.Clear();
+			result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was not encrypted.");
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
+		}
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_start_token_request: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_finish_token_request(int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_finish_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	if (!g_request_limit.AllowIncomingRequest()) {
+		error_code = 5;
+		error_string = "Request rate limit hit.";
+	}
+
+	std::string client_id;
+	std::string request_id_str;
+	int request_id = -1;
+	if (!error_code) {
+		if (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id)) {
+			error_code = 2;
+			error_string = "No client ID provided.";
+		}
+
+		// See comment in handle_dc_list_token_request().
+		if (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str)) {
+			error_code = 2;
+			error_string = "No request ID provided.";
+		}
+		try {
+			request_id = std::stol(request_id_str);
+		} catch (...) {
+			error_code = 2;
+			error_string = "Unable to convert request ID to integer.";
+		}
+	}
+
+	std::string token;
+	auto iter = (request_id >= 0) ? g_request_map.find(request_id) : g_request_map.end();
+	if (iter == g_request_map.end()) {
+		error_code = 3;
+		error_string = "Request ID is not known.";
+	} else if (iter->second->getClientId() != client_id) {
+		error_code = 3;
+		error_string = "Client ID is incorrect.";
+	} else {
+		const auto &req = *(iter->second);
+		switch (req.getState()) {
+		case TokenRequest::State::Pending:
+			break;
+		case TokenRequest::State::Successful:
+			token = req.getToken();
+			// Remove the token from the request list; no one else should be able to retrieve it.
+			g_request_map.erase(iter);
+			if (token.empty()) {
+				error_code = 6;
+				error_string = "Internal state error.";
+			}
+			break;
+		case TokenRequest::State::Failed:
+			error_code = 4;
+			error_string = "Request failed.";
+			g_request_map.erase(iter);
+			break;
+		case TokenRequest::State::Expired:
+			g_request_map.erase(iter);
+			error_code = 5;
+			error_string = "Request has expired.";
+		};
+	}
+
+	classad::ClassAd result_ad;
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+	} else {
+			// NOTE: client always expects this attribute to
+			// be set; if it is set to an empty string, then
+			// it knows to poll again.
+		result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_finish_token_request: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_list_token_request(int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	bool has_admin = static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("list request", ADMINISTRATOR,
+		static_cast<ReliSock*>(stream)->peer_addr(),
+		static_cast<Sock*>(stream)->getFullyQualifiedUser());
+
+	// While it looks like we could use EvaluateAttrInt() here, we're storing
+	// request IDs as strings in case in turns out people don't like random
+	// 7-digit integers.  The std::stol() call is an optimization which we'll
+	// have to remove or replace if we cahnge the request ID format.
+	//
+	// The filter is optional; if it's absent, we'll list all pending requests.
+	std::string request_filter_str;
+	if (!error_code && (ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_filter_str) && !request_filter_str.empty())) {
+		try {
+			std::stol(request_filter_str);
+		} catch (...) {
+			error_code = 2;
+			error_string = "Unable to convert request ID to integer.";
+		}
+	}
+
+	stream->encode();
+
+	classad::ClassAd result_ad;
+	for (const auto & iter : g_request_map) {
+		if (error_code) { break; }
+
+		const auto &request_id = iter.first;
+		const auto &token_request = iter.second;
+
+		if (token_request->getState() != TokenRequest::State::Pending) {continue;}
+
+		std::string request_id_str = std::to_string(request_id);
+		if (!request_filter_str.empty() && (request_filter_str != request_id_str)) {continue;}
+
+		std::stringstream ss;
+		auto bound_set = token_request->getBoundingSet();
+		for (const auto &authz : bound_set) {
+			ss << authz << ",";
+		}
+		std::string bounds = ss.str();
+		if (bounds.size() == 1) {
+			bounds = "";
+		} else {
+			bounds = bounds.substr(0, bounds.size()-1);
+		}
+
+			// If we do not have ADMINISTRATOR privileges, the requested identity
+			// and the authenticated identity must match!
+		if (!has_admin && strcmp(token_request->getRequestedIdentity().c_str(),
+			static_cast<Sock*>(stream)->getFullyQualifiedUser()))
+		{
+			continue;
+		}
+
+		if (!result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str) ||
+			!result_ad.InsertAttr(ATTR_SEC_CLIENT_ID, token_request->getClientId()) ||
+			!result_ad.InsertAttr(ATTR_AUTHENTICATED_IDENTITY, token_request->getRequesterIdentity()) ||
+			!result_ad.InsertAttr("RequestedIdentity", token_request->getRequestedIdentity()) ||
+			!result_ad.InsertAttr("PeerLocation", token_request->getPeerLocation()))
+		{
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
+				" token request ad listing.\n");
+			return false;
+		}
+		if (bounds.size() && !result_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, bounds))
+		{
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
+				" token request ad listing.\n");
+			return false;
+		}
+		if (token_request->getLifetime() >= 0 && !result_ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, token_request->getLifetime())) {
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create"
+				" token request ad listing.\n");
+			return false;
+		}
+
+		if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+		{
+			dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to send response ad to client\n");
+			return false;
+		}
+		result_ad.Clear();
+	}
+
+	result_ad.Clear();
+	int intVal = 0;
+	if (!result_ad.InsertAttr(ATTR_ERROR_CODE, error_code) ||
+		!result_ad.InsertAttr(ATTR_OWNER, intVal))
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to create final response ad");
+		return false;
+	}
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+	}
+	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to send final response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_approve_token_request(int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_approve_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	bool has_admin = static_cast<Sock*>(stream)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("approve request", ADMINISTRATOR, static_cast<ReliSock*>(stream)->peer_addr(),
+		static_cast<Sock*>(stream)->getFullyQualifiedUser());
+
+	// See comment in handle_dc_list_token_request().
+	std::string request_id_str;
+	if (!error_code && (!ad.EvaluateAttrString(ATTR_SEC_REQUEST_ID, request_id_str) || request_id_str.empty()))
+	{
+		error_code = 1;
+		error_string = "Request ID not provided.";
+	}
+	int request_id = -1;
+	try {
+		request_id = std::stol(request_id_str);
+	} catch (...) {
+		if (!error_code) {
+			error_code = 2;
+			error_string = "Unable to convert request ID to integer.";
+		}
+	}
+
+	auto iter = g_request_map.find(request_id);
+	if (request_id != -1 && iter == g_request_map.end()) {
+		error_code = 5;
+		error_string = "Request unknown.";
+		request_id = -1;
+		dprintf(D_SECURITY, "Request ID (%d) unknown.\n", request_id);
+	}
+
+	std::string client_id;
+	if (!error_code && (!ad.EvaluateAttrString(ATTR_SEC_CLIENT_ID, client_id) || client_id.empty()))
+	{
+		error_code = 1;
+		error_string = "Client ID not provided.";
+	}
+
+	if (!error_code && request_id != -1 && client_id != iter->second->getClientId()) {
+		error_code = 5;
+		error_string = "Request unknown.";
+		request_id = -1;
+		dprintf(D_SECURITY, "Request ID (%s) correct but client ID (%s) incorrect.\n", request_id_str.c_str(),
+			client_id.c_str());
+	}
+	if (!error_code && request_id != -1 && iter->second->getState() != TokenRequest::State::Pending) {
+		error_code = 5;
+		error_string = "Request in incorrect state.";
+		request_id = -1;
+	}
+
+		// If we do not have ADMINISTRATOR privileges, the requested identity
+		// and the authenticated identity must match!
+	if (!error_code && !has_admin && strcmp(iter->second->getRequestedIdentity().c_str(),
+		static_cast<Sock*>(stream)->getFullyQualifiedUser()))
+	{
+		error_code = 6;
+		error_string = "Insufficient privilege to approve request.";
+		request_id = -1;
+	}
+
+	CondorError err;
+	std::string final_key_name = htcondor::get_token_signing_key(err);
+	if ((request_id != -1) && final_key_name.empty()) {
+		error_string = err.getFullText();
+		error_code = err.code();
+	}
+
+	stream->encode();
+	classad::ClassAd result_ad;
+
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+	} else {
+#if defined(HAVE_EXT_OPENSSL)
+		auto &token_request = *(iter->second);
+		CondorError err;
+		std::string token;
+		if (!Condor_Auth_Passwd::generate_token(
+			token_request.getRequestedIdentity(),
+			final_key_name,
+			token_request.getBoundingSet(),
+			token_request.getLifetime(),
+			token,
+			static_cast<Sock*>(stream)->getUniqueId(),
+			&err))
+		{
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+			token_request.setFailed();
+		} else {
+			token_request.setToken(token);
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 0);
+		}
+#else
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Support for tokens not available");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
+#endif
+	}
+
+	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_approve_token_request: failed to send final response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_auto_approve_token_request(int, Stream* stream )
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_auto_approve_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	std::string netblock;
+	time_t lifetime = -1;
+	ad.EvaluateAttrString(ATTR_SUBNET, netblock);
+	ad.EvaluateAttrInt(ATTR_SEC_LIFETIME, lifetime);
+	int max_lifetime = param_integer("TOKEN_REQUEST_AUTO_APPROVE_MAX_LIFETIME", 3600);
+	if (lifetime > max_lifetime) lifetime = max_lifetime;
+
+	stream->encode();
+	classad::ClassAd result_ad;
+
+	CondorError err;
+	int error_code = 0;
+	std::string error_string;
+
+	if( TokenRequest::addApprovalRule(netblock, lifetime, err) ) {
+		dprintf(D_SECURITY|D_FULLDEBUG, "Added a new auto-approve rule for netblock %s"
+			" with lifetime %ld.\n", netblock.c_str(), lifetime);
+
+		std::string final_key_name = htcondor::get_token_signing_key(err);
+		if (final_key_name.empty()) {
+			error_string = err.getFullText();
+			error_code = err.code();
+		}
+
+		time_t now = time(NULL);
+		// We otherwise only evaluate each request as it comes in, so we have to
+		// check all of them now if we want to approve ones that came in recently.
+		dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %lu existing requests for "
+			"auto-approval.\n", g_request_map.size());
+		for (auto &iter : g_request_map) {
+			if (error_code) {break;}
+
+			std::string rule_text;
+			if (!TokenRequest::ShouldAutoApprove(*(iter.second), now, rule_text)) {
+				continue;
+			}
+			auto &token_request = *(iter.second);
+			CondorError err;
+			std::string token;
+			if (!Condor_Auth_Passwd::generate_token(
+				token_request.getRequestedIdentity(),
+				final_key_name,
+				token_request.getBoundingSet(),
+				token_request.getLifetime(),
+				token,
+				static_cast<Sock*>(stream)->getUniqueId(),
+				&err))
+			{
+				error_string = err.getFullText();
+				error_code = err.code();
+				token_request.setFailed();
+			} else {
+				token_request.setToken(token);
+				dprintf(D_SECURITY|D_FULLDEBUG,
+					"Auto-approved existing request %d.\n",
+					iter.first);
+				dprintf(D_ALWAYS, "Token request %s passed via auto-approval rule %s.\n",
+					token_request.getPublicString().c_str(), rule_text.c_str());
+			}
+		}
+	} else {
+		dprintf(D_FULLDEBUG, "Rejected new auto-approve rule for netblock %s "
+			"with lifetime %ld: %s\n", netblock.c_str(), lifetime, err.getFullText().c_str());
+		error_string = err.getFullText();
+		error_code = err.code();
+	}
+
+	result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+	}
+
+	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_auto_approve_token_request: failed to send final response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_exchange_scitoken(int, Stream *stream)
+{
+	classad::ClassAd request_ad;
+	if (!getClassAd(stream, request_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to read input from client\n");
+		return false;
+	}
+
+	classad::ClassAd result_ad;
+	std::string result_token;
+	int error_code = 0;
+	std::string error_string;
+
+	std::string scitoken;
+	if (!request_ad.EvaluateAttrString(ATTR_SEC_TOKEN, scitoken) || scitoken.empty()) {
+		error_code = 1;
+		error_string = "SciToken not provided by the client";
+	}
+
+#if defined(HAVE_EXT_SCITOKENS)
+	if (!error_code) {
+		std::string subject;
+		std::string issuer;
+		long long expiry;
+		std::vector<std::string> bounding_set;
+		CondorError err;
+		std::string key_name;
+		auto map_file = Authentication::getGlobalMapFile();
+		std::string identity;
+		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, static_cast<Sock*>(stream)->getUniqueId(), err))
+		{
+			error_code = err.code();
+			error_string = err.getFullText();
+		} else if ((key_name = htcondor::get_token_signing_key(err)).empty()) {
+			error_code = err.code();
+			error_string = err.getFullText();
+		} else if (!map_file || map_file->GetCanonicalization("SCITOKENS", issuer + "," + subject, identity)) {
+			error_code = 5;
+			error_string = "Failed to map SciToken to a local identity.";
+		} else {
+			long lifetime = expiry - time(NULL);
+			int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+			if ((max_lifetime > 0) && (lifetime > max_lifetime)) {
+				lifetime = max_lifetime;
+			}
+			if (lifetime < 0) {lifetime = 0;}
+
+			if (!Condor_Auth_Passwd::generate_token(identity, key_name, bounding_set,
+				lifetime, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
+			{
+				error_code = err.code();
+				error_string = err.getFullText();
+			} else {
+				auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
+				auto peer_identity = static_cast<Sock*>(stream)->getFullyQualifiedUser();
+				std::stringstream ss;
+				std::string bounding_set_str;
+				if (!bounding_set.empty()) {
+					bool wrote_first = false;
+					for (const auto &entry : bounding_set) {
+						ss << (wrote_first ? "," : "") << entry;
+						wrote_first = true;
+					}
+					bounding_set_str = ss.str();
+				} else {
+					bounding_set_str = "(none)";
+				}
+
+				dprintf(D_ALWAYS, "For peer %s (identity %s), exchanging SciToken "
+					"from issuer %s, subject %s for a local token with identity %s,"
+					" bounding set %s, and lifetime %ld.\n", peer_location,
+					peer_identity, issuer.c_str(), subject.c_str(),
+					identity.c_str(), bounding_set_str.c_str(), lifetime);
+			}
+		}
+	}
+#else
+	error_code = 2;
+	error_string = "Server not built with SciTokens support";
+#endif
+
+	if (error_code)
+	{
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+	}
+	else
+	{
+		result_ad.InsertAttr(ATTR_SEC_TOKEN, result_token);
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
+static int
+handle_dc_session_token(int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to read input from client\n");
+		return false;
+	}
+	CondorError err;
+	classad::ClassAd result_ad;
+
+	std::vector<std::string> authz_list;
+	std::string authz_list_str;
+	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
+		StringList authz_str_list(authz_list_str.c_str());
+		authz_str_list.rewind();
+		const char *authz;
+		while ( (authz = authz_str_list.next()) ) {
+			authz_list.emplace_back(authz);
+		}
+	}
+	int requested_lifetime;
+	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
+		int max_lifetime = param_integer("SEC_ISSUED_TOKEN_EXPIRATION", -1);
+		if ((max_lifetime > 0) && (requested_lifetime > max_lifetime)) {
+			requested_lifetime = max_lifetime;
+		} else if ((max_lifetime > 0)  && (requested_lifetime < 0)) {
+			requested_lifetime = max_lifetime;
+		}
+	} else {
+		requested_lifetime = -1;
+	}
+
+	std::string final_key_name = htcondor::get_token_signing_key(err);
+
+	classad::ClassAd policy_ad;
+	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
+	const char *auth_user_cstr;
+	std::string auth_user;
+	long original_expiry = -1;
+	long max_lifetime = 0;
+	if (policy_ad.EvaluateAttrInt("TokenExpirationTime", original_expiry)) {
+		time_t now = time(NULL);
+		max_lifetime = original_expiry - now;
+		if ((requested_lifetime > max_lifetime) ||
+			((max_lifetime >= 0) && (requested_lifetime < 0)))
+		{
+			requested_lifetime = max_lifetime;
+		}
+	}
+
+	if (max_lifetime < 0) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Cannot create new session as original one expired.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
+	} else if (!static_cast<Sock*>(stream)->isMappedFQU() ||
+		!(auth_user_cstr = static_cast<Sock*>(stream)->getFullyQualifiedUser()) ||
+		(auth_user = auth_user_cstr).empty())
+	{
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server did not successfully authenticate session.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 2);
+	} else if (final_key_name.empty()) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server does not have access to requested key.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+		std::string key_name = "POOL";
+		param(key_name, "SEC_TOKEN_ISSUER_KEY");
+		dprintf(D_SECURITY, "Daemon configured to sign with key named %s; this is not available.\n",
+			key_name.c_str());
+	}
+	else
+	{
+#if defined(HAVE_EXT_OPENSSL)
+		std::string token;
+		if (!Condor_Auth_Passwd::generate_token(
+			auth_user,
+			final_key_name,
+			authz_list,
+			requested_lifetime,
+			token,
+			static_cast<Sock*>(stream)->getUniqueId(),
+			&err))
+		{
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+		} else {
+			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+		}
+#else
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
+#endif
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
 int
-handle_nop( Service*, int, Stream* stream)
+handle_nop(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_FULLDEBUG, "handle_nop: failed to read end of message\n");
@@ -1324,10 +2670,13 @@ handle_nop( Service*, int, Stream* stream)
 
 
 int
-handle_invalidate_key( Service*, int, Stream* stream)
+handle_invalidate_key(int, Stream* stream)
 {
-    int result = 0;
+	int result = 0;
 	char *key_id = NULL;
+	std::string their_sinful;
+	char *info_ad_str;
+	ClassAd info_ad;
 
 	stream->decode();
 	if ( ! stream->code(key_id) ) {
@@ -1340,13 +2689,30 @@ handle_invalidate_key( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-    result = daemonCore->getSecMan()->invalidateKey(key_id);
-    free(key_id);
-    return result;
+	info_ad_str = strchr(key_id, '\n');
+	if ( info_ad_str ) {
+		*info_ad_str = '\0';
+		info_ad_str++;
+		classad::ClassAdParser parser;
+		if (!parser.ParseClassAd(info_ad_str, info_ad, false)) {
+			dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: got unparseable classad\n");
+			return FALSE;
+		}
+		info_ad.LookupString(ATTR_SEC_CONNECT_SINFUL, their_sinful);
+	}
+
+	result = daemonCore->getSecMan()->invalidateKey(key_id);
+	if ( !their_sinful.empty() && !strcmp(key_id, daemonCore->m_family_session_id.c_str()) ) {
+		dprintf(D_ALWAYS, "DC_INVALIDATE_KEY: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", their_sinful.c_str());
+		dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+		daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
+	}
+	free(key_id);
+	return result;
 }
 
 int
-handle_config_val( Service*, int idCmd, Stream* stream ) 
+handle_config_val(int idCmd, Stream* stream ) 
 {
 	char *param_name = NULL, *tmp;
 
@@ -1547,7 +2913,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 
 
 int
-handle_config( Service *, int cmd, Stream *stream )
+handle_config(int cmd, Stream *stream )
 {
 	char *admin = NULL, *config = NULL;
 	char *to_check = NULL;
@@ -1683,21 +3049,6 @@ unix_sigusr1(int)
 void
 unix_sigusr2(int)
 {
-	// This is a debug only param not to be advertised.
-	if (param_boolean( "DEBUG_CLASSAD_CACHE", false))
-	{
-	  std::string szFile = param("LOG");
-	  szFile +="/";
-	  szFile += get_mySubSystem()->getName();
-	  szFile += "_classad_cache";
-	  
-	  if (!classad::CachedExprEnvelope::_debug_dump_keys(szFile))
-	  {
-	    dprintf( D_FULLDEBUG, "FAILED to write file %s\n",szFile.c_str() );
-	  }
-	}
-	
-  
 	if (daemonCore) {
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
 	}
@@ -1755,6 +3106,18 @@ dc_reconfig()
 	// Clear out the passwd cache.
 	clear_passwd_cache();
 
+	// Flush the cached list of keys.
+	refreshNamedCredentials();
+
+	// Allow us to retry setting the pool password.
+	Condor_Auth_Passwd::retry_pool_password();
+
+	// Allow us to search for new tokens
+	Condor_Auth_Passwd::retry_token_search();
+
+	// Allow us to search for SSL certificate and key
+	Condor_Auth_SSL::retry_cert_search();
+
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
 
@@ -1779,12 +3142,19 @@ dc_reconfig()
 			EXCEPT("FAILED TO DROP CORE");	
 	}
 
+		// On reconfig, reset token requests to a pristine state.
+	TokenRequest::clearApprovalRules();
+	for (auto &entry : g_request_map) {
+		entry.second->setFailed();
+	}
+	TokenRequest::clearTokenRequests();
+
 	// call this daemon's specific main_config()
 	dc_main_config();
 }
 
 int
-handle_dc_sighup( Service*, int )
+handle_dc_sighup(int )
 {
 	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
 	dc_reconfig();
@@ -1800,7 +3170,7 @@ TimerHandler_main_shutdown_fast()
 
 
 int
-handle_dc_sigterm( Service*, int )
+handle_dc_sigterm(int )
 {
 		// Introduces a race condition.
 		// What if SIGTERM received while we are here?
@@ -1840,12 +3210,12 @@ handle_dc_sigterm( Service*, int )
 void
 TimerHandler_dc_sigterm()
 {
-	handle_dc_sigterm(NULL, SIGTERM);
+	handle_dc_sigterm(SIGTERM);
 }
 
 
 int
-handle_dc_sigquit( Service*, int )
+handle_dc_sigquit(int )
 {
 	static int been_here = FALSE;
 	if( been_here ) {
@@ -2051,7 +3421,7 @@ int dc_main( int argc, char** argv )
 				exit( 1 );
 			}
 			break;
-		case 'b':		// run in Background (default)
+		case 'b':		// run in Background (default for condor_master)
 			Foreground = 0;
 			dcargs++;
 			break;
@@ -2079,7 +3449,7 @@ int dc_main( int argc, char** argv )
 			DynamicDirs = true;
 			dcargs++;
 			break;
-		case 'f':		// run in Foreground
+		case 'f':		// run in Foreground (default for all daemons other than condor_master)
 			Foreground = 1;
 			dcargs++;
 			break;
@@ -2585,13 +3955,13 @@ int dc_main( int argc, char** argv )
 
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( SIGHUP, "SIGHUP", 
-								 (SignalHandler)handle_dc_sighup,
+								 handle_dc_sighup,
 								 "handle_dc_sighup()" );
 	daemonCore->Register_Signal( SIGQUIT, "SIGQUIT", 
-								 (SignalHandler)handle_dc_sigquit,
+								 handle_dc_sigquit,
 								 "handle_dc_sigquit()" );
 	daemonCore->Register_Signal( SIGTERM, "SIGTERM", 
-								 (SignalHandler)handle_dc_sigterm,
+								 handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
 
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
@@ -2638,7 +4008,9 @@ int dc_main( int argc, char** argv )
 
 	daemonCore->Register_Timer( 0, 5 * 60,
 				check_session_cache, "check_session_cache" );
-	
+
+	daemonCore->Register_Timer( 0, 60,
+				cleanup_request_map, "cleanup_request_map" );
 
 	// set the timer for half the session duration, 
 	// since we retain the old cookie. Also make sure
@@ -2657,129 +4029,134 @@ int dc_main( int argc, char** argv )
         daemonCore->monitor_data.EnableMonitoring();
     }
 
+	std::vector<DCpermission> allow_perms{ALLOW};
+
+
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
-								  (CommandHandler)handle_reconfig,
-								  "handle_reconfig()", 0, WRITE );
+								  handle_reconfig,
+								  "handle_reconfig()", WRITE );
 
 	daemonCore->Register_Command( DC_RECONFIG_FULL, "DC_RECONFIG_FULL",
-								  (CommandHandler)handle_reconfig,
-								  "handle_reconfig()", 0, WRITE );
+								  handle_reconfig,
+								  "handle_reconfig()", WRITE );
 
 	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
-								  (CommandHandler)handle_config_val,
-								  "handle_config_val()", 0, READ );
+								  handle_config_val,
+								  "handle_config_val()", READ );
 		// Deprecated name for it.
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
-								  (CommandHandler)handle_config_val,
-								  "handle_config_val()", 0, READ );
+								  handle_config_val,
+								  "handle_config_val()", READ );
 
 		// The handler for setting config variables does its own
 		// authorization, so these two commands should be registered
 		// as "ALLOW" and the handler will do further checks.
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
-								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ALLOW );
+								  handle_config,
+								  "handle_config()", DAEMON,
+								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
-								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ALLOW );
+								  handle_config,
+								  "handle_config()", DAEMON,
+								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
-								  (CommandHandler)handle_off_fast,
-								  "handle_off_fast()", 0, ADMINISTRATOR );
+								  handle_off_fast,
+								  "handle_off_fast()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_OFF_GRACEFUL, "DC_OFF_GRACEFUL",
-								  (CommandHandler)handle_off_graceful,
-								  "handle_off_graceful()", 0, ADMINISTRATOR );
+								  handle_off_graceful,
+								  "handle_off_graceful()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_OFF_FORCE, "DC_OFF_FORCE",
-								  (CommandHandler)handle_off_force,
-								  "handle_off_force()", 0, ADMINISTRATOR );
+								  handle_off_force,
+								  "handle_off_force()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL",
-								  (CommandHandler)handle_off_peaceful,
-								  "handle_off_peaceful()", 0, ADMINISTRATOR );
+								  handle_off_peaceful,
+								  "handle_off_peaceful()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_SET_PEACEFUL_SHUTDOWN, "DC_SET_PEACEFUL_SHUTDOWN",
-								  (CommandHandler)handle_set_peaceful_shutdown,
-								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
+								  handle_set_peaceful_shutdown,
+								  "handle_set_peaceful_shutdown()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_SET_FORCE_SHUTDOWN, "DC_SET_FORCE_SHUTDOWN",
-								  (CommandHandler)handle_set_force_shutdown,
-								  "handle_set_force_shutdown()", 0, ADMINISTRATOR );
+								  handle_set_force_shutdown,
+								  "handle_set_force_shutdown()", ADMINISTRATOR );
 
 		// DC_NOP is for waking up select.  There is no need for
 		// security here, because anyone can wake up select anyway.
 		// This command is also used to gracefully close a socket
 		// that has been registered to read a command.
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ALLOW );
+								  handle_nop,
+								  "handle_nop()", ALLOW );
 
 		// the next several commands are NOPs registered at all permission
 		// levels, for security testing and diagnostics.  for now they all
 		// invoke the same function, but how they are authorized before calling
 		// it may vary depending on the configuration
 	daemonCore->Register_Command( DC_NOP_READ, "DC_NOP_READ",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, READ );
+								  handle_nop,
+								  "handle_nop()", READ );
 
 	daemonCore->Register_Command( DC_NOP_WRITE, "DC_NOP_WRITE",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, WRITE );
+								  handle_nop,
+								  "handle_nop()", WRITE );
 
 	daemonCore->Register_Command( DC_NOP_NEGOTIATOR, "DC_NOP_NEGOTIATOR",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, NEGOTIATOR );
+								  handle_nop,
+								  "handle_nop()", NEGOTIATOR );
 
 	daemonCore->Register_Command( DC_NOP_ADMINISTRATOR, "DC_NOP_ADMINISTRATOR",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADMINISTRATOR );
+								  handle_nop,
+								  "handle_nop()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_NOP_OWNER, "DC_NOP_OWNER",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, OWNER );
+								  handle_nop,
+								  "handle_nop()", OWNER );
 
 	daemonCore->Register_Command( DC_NOP_CONFIG, "DC_NOP_CONFIG",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, CONFIG_PERM );
+								  handle_nop,
+								  "handle_nop()", CONFIG_PERM );
 
 	daemonCore->Register_Command( DC_NOP_DAEMON, "DC_NOP_DAEMON",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, DAEMON );
+								  handle_nop,
+								  "handle_nop()", DAEMON );
 
 	daemonCore->Register_Command( DC_NOP_ADVERTISE_STARTD, "DC_NOP_ADVERTISE_STARTD",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADVERTISE_STARTD_PERM );
+								  handle_nop,
+								  "handle_nop()", ADVERTISE_STARTD_PERM );
 
 	daemonCore->Register_Command( DC_NOP_ADVERTISE_SCHEDD, "DC_NOP_ADVERTISE_SCHEDD",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADVERTISE_SCHEDD_PERM );
+								  handle_nop,
+								  "handle_nop()", ADVERTISE_SCHEDD_PERM );
 
 	daemonCore->Register_Command( DC_NOP_ADVERTISE_MASTER, "DC_NOP_ADVERTISE_MASTER",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADVERTISE_MASTER_PERM );
+								  handle_nop,
+								  "handle_nop()", ADVERTISE_MASTER_PERM );
 
 
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
-								  (CommandHandler)handle_fetch_log,
-								  "handle_fetch_log()", 0, ADMINISTRATOR );
+								  handle_fetch_log,
+								  "handle_fetch_log()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
-								  (CommandHandler)handle_fetch_log,
-								  "handle_fetch_log_history_purge()", 0, ADMINISTRATOR );
+								  handle_fetch_log,
+								  "handle_fetch_log_history_purge()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
-								  (CommandHandler)handle_invalidate_key,
-								  "handle_invalidate_key()", 0, ALLOW );
+								  handle_invalidate_key,
+								  "handle_invalidate_key()", ALLOW );
 
 		// DC_QUERY_INSTANCE is for determining if you are talking to the correct instance of a daemon.
 		// There is no need for security here, the use case is a lambda function in AWS which won't have
 		// authorization to do anything else.
 	daemonCore->Register_Command( DC_QUERY_INSTANCE, "DC_QUERY_INSTANCE",
-								  (CommandHandler)handle_dc_query_instance,
-								  "handle_dc_query_instance()", 0, ALLOW );
+								  handle_dc_query_instance,
+								  "handle_dc_query_instance()", ALLOW );
 
 		//
 		// The time offset command is used to figure out what
@@ -2787,8 +4164,68 @@ int dc_main( int argc, char** argv )
 		// entity calling into us
 		//
 	daemonCore->Register_Command( DC_TIME_OFFSET, "DC_TIME_OFFSET",
-								  (CommandHandler)time_offset_receive_cedar_stub,
-								  "time_offset_cedar_stub", 0, DAEMON );
+								  time_offset_receive_cedar_stub,
+								  "time_offset_cedar_stub", DAEMON );
+
+		//
+		// Request a token that can be used to authenticat / authorize a future
+		// session using the TOKEN protocol.
+		//
+	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
+								handle_dc_session_token,
+								"handle_dc_session_token()", DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
+
+		//
+		// Start a token request workflow.
+		//
+	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
+								handle_dc_start_token_request,
+								"handle_dc_start_token_request()", DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
+
+		//
+		// Poll for token request completion.
+		//
+	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
+								handle_dc_finish_token_request,
+								"handle_dc_finish_token_request()", DAEMON,
+								  D_COMMAND, false, 0, &allow_perms );
+
+		//
+		// List the outstanding token requests.
+		//
+		// In the handler, we further restrict the returned information based on
+		// the user authorization.
+		//
+	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
+		handle_dc_list_token_request,
+		"handle_dc_list_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
+
+		//
+		// Approve a token request.
+		//
+		// In the handler, we further restrict the returned information based on
+		// the user authorization; non-ADMINISTRATORs can only approve their own
+		// requests..
+		//
+	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
+		handle_dc_approve_token_request,
+		"handle_dc_approve_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
+
+		//
+		// Install an auto-approval rule
+		//
+	daemonCore->Register_CommandWithPayload( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
+		handle_dc_auto_approve_token_request,
+		"handle_dc_auto_approve_token_request", ADMINISTRATOR );
+
+		//
+		// Exchange a SciToken for an equivalent HTCondor token.
+		//
+	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
+		handle_dc_exchange_scitoken,
+		"handle_dc_exchange_scitoken", WRITE, D_COMMAND, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
@@ -2827,13 +4264,22 @@ int dc_main( int argc, char** argv )
 	return FALSE;
 }	
 
+// set the default for -f / -b flag for this daemon
+// used by the master to default to backround, all other daemons default to foreground.
+bool dc_args_default_to_background(bool background)
+{
+	bool ret = ! Foreground;
+	Foreground = ! background;
+	return ret;
+}
+
 // Parse argv enough to decide if we are starting as foreground or as background
 // We need this for windows because when starting as background, we need to actually
 // start via the Service Control Manager rather than calling dc_main directly.
 //
 bool dc_args_is_background(int argc, char** argv)
 {
-    bool ForegroundFlag = false; // default to background
+    bool ForegroundFlag = Foreground; // default to foreground
 
 	// Scan our command line arguments for a "-f".  If we don't find a "-f",
 	// or a "-v", then we want to register as an NT Service.

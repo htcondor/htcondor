@@ -76,7 +76,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_starter_handles_alives(false)
 	, c_startd_sends_alives(false)
 	, c_cod_keyword(NULL)
-	, c_has_job_ad(0)
+	, c_has_job_ad(false)
 	, c_state(CLAIM_IDLE)
 	, c_last_state(CLAIM_UNCLAIMED)
 	, c_pending_cmd(-1)
@@ -199,7 +199,7 @@ Claim::vacate()
 void
 Claim::publish( ClassAd* cad, amask_t how_much )
 {
-	MyString line;
+	std::string line;
 	char* tmp;
 	char *remoteUser;
 
@@ -215,19 +215,16 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		  Derek <wright@cs.wisc.edu> 2005-08-11
 		*/
 
-	line.formatstr( "%s = %f", ATTR_CURRENT_RANK, c_rank );
-	cad->Insert( line.Value() );
+	cad->Assign( ATTR_CURRENT_RANK, c_rank );
 
 	if( c_client ) {
 		remoteUser = c_client->user();
 		if( remoteUser ) {
-			line.formatstr( "%s=\"%s\"", ATTR_REMOTE_USER, remoteUser );
-			cad->Insert( line.Value() );
+			cad->Assign( ATTR_REMOTE_USER, remoteUser );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
-			line.formatstr( "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
-			cad->Insert( line.Value() );
+			cad->Assign( ATTR_REMOTE_OWNER, tmp );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
@@ -237,17 +234,15 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 			if ( remoteUser ) {
 				uidDom = strchr(remoteUser,'@');
 			}
+			line = tmp;
 			if ( uidDom ) {
-				line.formatstr("%s=\"%s%s\"",ATTR_ACCOUNTING_GROUP,tmp,uidDom);
-			} else {
-				line.formatstr("%s=\"%s\"", ATTR_ACCOUNTING_GROUP, tmp );
+				line += uidDom;
 			}
-			cad->Insert( line.Value() );
+			cad->Assign( ATTR_ACCOUNTING_GROUP, line );
 		}
 		tmp = c_client->host();
 		if( tmp ) {
-			line.formatstr( "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
-			cad->Insert( line.Value() );
+			cad->Assign( ATTR_CLIENT_MACHINE, tmp );
 		}
 
 		tmp = c_client->getConcurrencyLimits();
@@ -261,8 +256,7 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		if(c_universe == CONDOR_UNIVERSE_STANDARD) {
 			numJobPids = 1;
 		}
-		line.formatstr("%s=%d", ATTR_NUM_PIDS, numJobPids);
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_NUM_PIDS, numJobPids );
 
         if ((tmp = c_client->rmtgrp())) {
             cad->Assign(ATTR_REMOTE_GROUP, tmp);
@@ -274,13 +268,12 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
-		line.formatstr( "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
-		cad->Insert( line.Value() );
+		formatstr( line, "%d.%d", c_cluster, c_proc );
+		cad->Assign( ATTR_JOB_ID, line );
 	}
 
 	if( c_global_job_id ) {
-		line.formatstr( "%s=\"%s\"", ATTR_GLOBAL_JOB_ID, c_global_job_id );
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_GLOBAL_JOB_ID, c_global_job_id );
 	}
 
 	if( c_job_start > 0 ) {
@@ -289,8 +282,7 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 	}
 
 	if( c_last_pckpt > 0 ) {
-		line.formatstr( "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
 	}
 
 		// update ImageSize attribute from procInfo (this is
@@ -315,23 +307,20 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 void
 Claim::publishPreemptingClaim( ClassAd* cad, amask_t /*how_much*/ /*UNUSED*/ )
 {
-	MyString line;
+	std::string line;
 	char* tmp;
 	char *remoteUser;
 
 	if( c_client && c_client->user() ) {
-		line.formatstr( "%s = %f", ATTR_PREEMPTING_RANK, c_rank );
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_PREEMPTING_RANK, c_rank );
 
 		remoteUser = c_client->user();
 		if( remoteUser ) {
-			line.formatstr( "%s=\"%s\"", ATTR_PREEMPTING_USER, remoteUser );
-			cad->Insert( line.Value() );
+			cad->Assign( ATTR_PREEMPTING_USER, remoteUser );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
-			line.formatstr( "%s=\"%s\"", ATTR_PREEMPTING_OWNER, tmp );
-			cad->Insert( line.Value() );
+			cad->Assign( ATTR_PREEMPTING_OWNER, tmp );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
@@ -341,18 +330,16 @@ Claim::publishPreemptingClaim( ClassAd* cad, amask_t /*how_much*/ /*UNUSED*/ )
 			if ( remoteUser ) {
 				uidDom = strchr(remoteUser,'@');
 			}
+			line = tmp;
 			if ( uidDom ) {
-				line.formatstr("%s=\"%s%s\"",ATTR_PREEMPTING_ACCOUNTING_GROUP,tmp,uidDom);
-			} else {
-				line.formatstr("%s=\"%s\"", ATTR_PREEMPTING_ACCOUNTING_GROUP, tmp );
+				line += uidDom;
 			}
-			cad->Insert( line.Value() );
+			cad->Assign( ATTR_PREEMPTING_ACCOUNTING_GROUP, line );
 		}
 
 		tmp = c_client->getConcurrencyLimits();
 		if (tmp) {
-			line.formatstr("%s=\"%s\"", ATTR_PREEMPTING_CONCURRENCY_LIMITS, tmp);
-			cad->Insert(line.Value());
+			cad->Assign( ATTR_PREEMPTING_CONCURRENCY_LIMITS, tmp );
 		}
 	}
 	else {
@@ -367,75 +354,48 @@ Claim::publishPreemptingClaim( ClassAd* cad, amask_t /*how_much*/ /*UNUSED*/ )
 void
 Claim::publishCOD( ClassAd* cad )
 {
-	MyString line;
-	char* tmp;
+	std::string prefix;
+	std::string attrn;
+	const char* tmp;
 
-	line = codId();
-	line += '_';
-	line += ATTR_CLAIM_ID;
-	line += "=\"";
-	line += id();
-	line += '"';
-	cad->Insert( line.Value() );
+	tmp = codId();
+	if ( tmp ) {
+		prefix = tmp;
+	}
+	prefix += '_';
 
-	line = codId();
-	line += '_';
-	line += ATTR_CLAIM_STATE;
-	line += "=\"";
-	line += getClaimStateString( c_state );
-	line += '"';
-	cad->Insert( line.Value() );
+	attrn = prefix + ATTR_CLAIM_ID;
+	cad->Assign( attrn, id() );
 
-	line = codId();
-	line += '_';
-	line += ATTR_ENTERED_CURRENT_STATE;
-	line += '=';
-	line += IntToStr( (int)c_entered_state );
-	cad->Insert( line.Value() );
+	attrn = prefix + ATTR_CLAIM_STATE;
+	cad->Assign( attrn, getClaimStateString( c_state ) );
+
+	attrn = prefix + ATTR_ENTERED_CURRENT_STATE;
+	cad->Assign( attrn, c_entered_state );
 
 	if( c_client ) {
 		tmp = c_client->user();
 		if( tmp ) {
-			line = codId();
-			line += '_';
-			line += ATTR_REMOTE_USER;
-			line += "=\"";
-			line += tmp;
-			line += '"';
-			cad->Insert( line.Value() );
+			attrn = prefix + ATTR_REMOTE_USER;
+			cad->Assign( attrn, tmp );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
-			line = codId();
-			line += '_';
-			line += ATTR_ACCOUNTING_GROUP;
-			line += "=\"";
-			line += tmp;
-			line += '"';
-			cad->Insert( line.Value() );
+			attrn = prefix + ATTR_ACCOUNTING_GROUP;
+			cad->Assign( attrn, tmp );
 		}
 		tmp = c_client->host();
 		if( tmp ) {
-			line = codId();
-			line += '_';
-			line += ATTR_CLIENT_MACHINE;
-			line += "=\"";
-			line += tmp;
-			line += '"';
-			cad->Insert( line.Value() );
+			attrn = prefix + ATTR_CLIENT_MACHINE;
+			cad->Assign( attrn, tmp );
 		}
 	}
 
 	if( c_starter_pid )
 	{
 		if( c_cod_keyword ) {
-			line = codId();
-			line += '_';
-			line += ATTR_JOB_KEYWORD;
-			line += "=\"";
-			line += c_cod_keyword;
-			line += '"';
-			cad->Insert( line.Value() );
+			attrn = prefix + ATTR_JOB_KEYWORD;
+			cad->Assign( attrn, c_cod_keyword );
 		}
 		char buf[128];
 		if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -443,19 +403,12 @@ Claim::publishCOD( ClassAd* cad )
 		} else {
 			strcpy( buf, "1.0" );
 		}
-		line = codId();
-		line += '_';
-		line += ATTR_JOB_ID;
-		line += "=\"";
-		line += buf;
-		line += '"';
-		cad->Insert( line.Value() );
+		attrn = prefix + ATTR_JOB_ID;
+		cad->Assign( attrn, buf );
 		
 		if( c_job_start > 0 ) {
-			line = codId();
-			line += '_';
-			line += ATTR_JOB_START;
-			cad->Assign( line.Value(), (time_t)c_job_start );
+			attrn = prefix + ATTR_JOB_START;
+			cad->Assign( attrn, (time_t)c_job_start );
 		}	
 	}
 }
@@ -475,7 +428,6 @@ Claim::getJobTotalRunTime()
 void
 Claim::publishStateTimes( ClassAd* cad )
 {
-	MyString line;
 	time_t now, time_dif = 0;
 	time_t my_job_run = c_job_total_run_time;
 	time_t my_job_sus = c_job_total_suspend_time;
@@ -500,20 +452,16 @@ Claim::publishStateTimes( ClassAd* cad )
 
 		// Now that we have all the right values, publish them.
 	if( my_job_run > 0 ) {
-		line.formatstr( "%s=%ld", ATTR_TOTAL_JOB_RUN_TIME, (long)my_job_run );
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_TOTAL_JOB_RUN_TIME, my_job_run );
 	}
 	if( my_job_sus > 0 ) {
-		line.formatstr( "%s=%ld", ATTR_TOTAL_JOB_SUSPEND_TIME, (long)my_job_sus );
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_TOTAL_JOB_SUSPEND_TIME, my_job_sus );
 	}
 	if( my_claim_run > 0 ) {
-		line.formatstr( "%s=%ld", ATTR_TOTAL_CLAIM_RUN_TIME, (long)my_claim_run );
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_TOTAL_CLAIM_RUN_TIME, my_claim_run );
 	}
 	if( my_claim_sus > 0 ) {
-		line.formatstr( "%s=%ld", ATTR_TOTAL_CLAIM_SUSPEND_TIME, (long)my_claim_sus );
-		cad->Insert( line.Value() );
+		cad->Assign( ATTR_TOTAL_CLAIM_SUSPEND_TIME, my_claim_sus );
 	}
 }
 
@@ -752,11 +700,10 @@ Claim::loadRequestInfo()
 {
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
-	char* limits = NULL;
-	c_jobad->EvalString(ATTR_CONCURRENCY_LIMITS, c_rip->r_classad, &limits);
-	if (limits) {
-		c_client->setConcurrencyLimits(limits);
-		free(limits); limits = NULL;
+	std::string limits;
+	(void) EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, limits);
+	if (!limits.empty()) {
+		c_client->setConcurrencyLimits(limits.c_str());
 	}
 
     // stash information about what accounting group match was negotiated under
@@ -796,8 +743,8 @@ Claim::beginActivation( double now )
 
 	c_pledged_machine_max_vacate_time = 0;
 	if(c_rip->r_classad->LookupExpr(ATTR_MACHINE_MAX_VACATE_TIME)) {
-		if( !c_rip->r_classad->EvalInteger(
-			ATTR_MACHINE_MAX_VACATE_TIME,
+		if( !EvalInteger(
+			ATTR_MACHINE_MAX_VACATE_TIME, c_rip->r_classad,
 			c_jobad,
 			c_pledged_machine_max_vacate_time))
 		{
@@ -828,7 +775,7 @@ Claim::beginActivation( double now )
 	}
 	c_universe = univ;
 
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	switch( univ ) {
 		case CONDOR_UNIVERSE_VANILLA:
 			c_jobad->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
@@ -1304,7 +1251,7 @@ Claim::alive( bool alive_from_schedd )
 bool
 Claim::hasJobAd() {
 	bool has_it = false;
-	if (c_has_job_ad != 0) {
+	if (c_has_job_ad) {
 		has_it = true;
 	}
 #if HAVE_JOB_HOOKS
@@ -1881,7 +1828,7 @@ Claim::verifyCODAttrs( ClassAd* req )
 	}
 
 	req->LookupString( ATTR_JOB_KEYWORD, &c_cod_keyword );
-	req->EvalBool( ATTR_HAS_JOB_AD, NULL, c_has_job_ad );
+	req->LookupBool( ATTR_HAS_JOB_AD, c_has_job_ad );
 
 	if( c_cod_keyword || c_has_job_ad ) {
 		return true;
@@ -2080,7 +2027,7 @@ Claim::resetClaim( void )
 		free( c_cod_keyword );
 		c_cod_keyword = NULL;
 	}
-	c_has_job_ad = 0;
+	c_has_job_ad = false;
 	c_job_total_run_time = 0;
 	c_job_total_suspend_time = 0;
 	c_may_unretire = true;
@@ -2383,19 +2330,17 @@ newIdString( char** id_str_ptr )
 	MyString id;
 	// Keeping with tradition, we insert the startd's address in
 	// the claim id.  As of condor 7.2, nothing relies on this.
-	// Strip out CCB and other special info so we don't get any
-	// '#' characters in the address.
+	// Starting in 8.9, we use the full sinful string, which can
+	// contain '#'. Parsers should look for the first '>' in the
+	// string to reliably extract the startd's sinful.
 
-	Sinful my_sin( daemonCore->publicNetworkIpAddr() );
-	my_sin.clearParams();
-	char const *my_addr = my_sin.getSinful();
-
-	ASSERT( my_addr && !strchr(my_addr,'#') );
-
-	formatstr( id, "%s#%d#%d#", my_addr, (int)startd_startup, sequence_num );
+	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
+	           (int)startd_startup, sequence_num );
 
 		// keylen is 20 in order to avoid generating claim ids that
 		// overflow the 80 byte buffer in pre-7.1.3 negotiators
+		// Note: Claim id strings have been longer than 80 characters
+		//   ever since we started putting a security session ad in them.
 	const size_t keylen = 20;
 	char *keybuf = Condor_Crypt_Base::randomHexKey(keylen);
 	id += keybuf;
@@ -2422,7 +2367,6 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_OPPORTUNISTIC
 		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) )
 	{
-		MyString fqu;
 		MyString session_id;
 		MyString session_key;
 		MyString session_info;
@@ -2439,7 +2383,8 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 			NULL,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
-			0 );
+			0,
+			nullptr );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
@@ -2514,27 +2459,27 @@ ClaimId::dropFile( int slot_id )
 		return;
 	}
 
-	MyString filename_old = filename;
-	MyString filename_new = filename;
+	MyString filename_final = filename;
+	MyString filename_tmp = filename;
 	free( filename );
 	filename = NULL;
 
-	filename_new += ".new";
+	filename_tmp += ".new";
 
-	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_new.Value(), "w", 0600 );
+	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_tmp.Value(), "w", 0600 );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",
-				 filename_new.Value(), strerror(errno), errno );
+				 filename_tmp.Value(), strerror(errno), errno );
  		return;
 	}
 	fprintf( NEW_FILE, "%s\n", c_id );
 	fclose( NEW_FILE );
-	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
+	if( rotate_file(filename_tmp.Value(), filename_final.Value()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
-				 filename_new.Value() );
-		if (unlink(filename_new.Value()) < 0) {
-			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_new.Value() );
+				 filename_tmp.Value() );
+		if (unlink(filename_tmp.Value()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_tmp.Value() );
 		}
 	}
 }
@@ -2544,10 +2489,11 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 {
 	ASSERT( c_jobad );
 
-	update_ad.ResetExpr();
 	const char *name;
 	ExprTree *expr;
-	while( update_ad.NextExpr(name, expr) ) {
+	for ( auto itr = update_ad.begin(); itr != update_ad.end(); itr++ ) {
+		name = itr->first.c_str();
+		expr = itr->second;
 
 		ASSERT( name );
 		if( !strcmp(name,ATTR_MY_TYPE) ||

@@ -56,25 +56,6 @@ struct WinPerf_Query
 
 #include <hashtable.h>
 
-#if 1
-//PRAGMA_REMIND("remove this dead code")
-#else
-// This is a simple wrapper class to enable char *'s
-// that we don't manage to be put into HashTables
-
-// HashTable needs operator==, which we define to be
-// case-insensitive for ClassAds
-
-class YourInsensitiveString
-{
-	public:
-		YourInsensitiveString() : s(0) {}
-		YourInsensitiveString(const char *str) : s(str) {}
-		bool operator==(const YourInsensitiveString &rhs) { return (lstrcmpi(s,rhs.s) == 0); }
-		const char *s; // Someone else owns this
-};
-#endif
-
 // D_NORMAL can be set to D_ALWAYS to cause a LOT more output from the WinReg code
 #define D_NORMAL D_FULLDEBUG
 
@@ -583,25 +564,6 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 }
 
 
-#if 1
-//PRAGMA_REMIND("remove this dead code")
-#else
-
-// Chris Torek's world famous hashing function
-// Modified to be case-insensitive
-static unsigned int torekHash(const YourInsensitiveString &s) {
-	unsigned int hash = 0;
-
-	const char *p = s.s;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)tolower(*p);
-		p++;
-	}
-
-	return hash;
-}
-#endif
-
 static size_t
 DWORDHash( const DWORD & n )
 {
@@ -1102,7 +1064,7 @@ bool WinPerf_Object::GetValue(
 		ULONGLONG old = GetRawValue(pCounter, prev);
 		if (ctval.value.ul >= old)
 			ctval.value.ul = ctval.value.ul - old;
-		//else dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.");
+		//else dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.\n");
 	}
 
 	// number are easy, they can be decimal or hex
@@ -1278,7 +1240,7 @@ char * WinPerf_Object::PrintValue(
 		if (val >= old)
 			val = val - old;
 		else
-			dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.");
+			dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.\n");
 		//dprintf(D_FULLDEBUG, "  PrintValue: delta %I64d - %I64d = %I64d,  %I64d/%I64d %I64d/%I64d %I64d %I64d\n", 
 		//	val, old, val - old, time.head, time.headfreq, time.obj, time.objfreq, time.nanos, time.objabs);
 	}
@@ -1466,7 +1428,7 @@ bool init_WinPerf_Query(
 				}
 				if (query.idAlt[NUM_ELEMENTS(query.idAlt)-1] != 0)
 				{
-					dprintf (D_ALWAYS, "Error: too many counter ids map to the same name!");
+					dprintf (D_ALWAYS, "Error: too many counter ids map to the same name!\n");
 					query.idAlt[NUM_ELEMENTS(query.idAlt)-1] = 0;
 				}
 			}

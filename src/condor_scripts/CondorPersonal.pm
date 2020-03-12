@@ -1434,7 +1434,6 @@ sub StartPersonalCondor
 				print "Failed system call starting master\n";
 			}
 		}
-		sleep(2);
 	} else {
 		debug_flush();
 		die "Bad state for a new personal condor configuration! running :-(\n";
@@ -1442,7 +1441,7 @@ sub StartPersonalCondor
 
 	# is test opting into new condor personal status yet?
 	my $res = 1;
-	sleep(5);
+	sleep(1);
 	if(exists $control{"no_wait"}) {
 		#print "use no methods here to be sure daemons are up.\n";
 	} else {

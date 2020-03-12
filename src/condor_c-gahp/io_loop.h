@@ -46,6 +46,7 @@
 #define GAHP_COMMAND_VERSION "VERSION"
 #define GAHP_COMMAND_COMMANDS "COMMANDS"
 #define GAHP_COMMAND_INITIALIZE_FROM_FILE "INITIALIZE_FROM_FILE"
+#define GAHP_COMMAND_UPDATE_TOKEN_FROM_FILE "UPDATE_TOKEN"
 #define GAHP_COMMAND_REFRESH_PROXY_FROM_FILE "REFRESH_PROXY_FROM_FILE"
 
 #define GAHP_RESULT_SUCCESS "S"
@@ -59,7 +60,7 @@ struct inter_thread_io_t {
 
 };
 
-int stdin_pipe_handler(Service*, int);
+int stdin_pipe_handler(int);
 int result_pipe_handler(int);
 
 
@@ -82,7 +83,7 @@ int verify_number_args (const int, const int);
 void flush_request (int worker_id, const char * request);
 void flush_pending_requests();
 
-int worker_thread_reaper (Service*, int pid, int exit_status);
+int worker_thread_reaper(int pid, int exit_status);
 
 class Worker : public Service {
  public:

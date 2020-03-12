@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "adcluster.h"
+#include "string_list.h"
 
 #if 1
 
@@ -350,7 +351,7 @@ template <class K> ClassAd * AdAggregationResults<K>::next()
 
 		// if there is a constraint, then only return the ad if it matches the constraint.
 		if (constraint) {
-			if ( ! EvalBool(&ad, constraint))
+			if ( ! EvalExprBool(&ad, constraint))
 				continue;
 		}
 

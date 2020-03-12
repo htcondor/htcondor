@@ -38,7 +38,7 @@ if(BOOST_DOWNLOAD_WIN)
   
   set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
   set(BOOST_SHORTVER 1_54 PARENT_SCOPE)
-  condor_post_external( boost "boost" "lib" )
+  condor_post_external( boost "boost" "lib" "" )
 endif()
 
 # update configure information

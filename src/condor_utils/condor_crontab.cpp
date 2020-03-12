@@ -69,14 +69,14 @@ CronTab::CronTab( ClassAd *ad )
 		// Pull out the different parameters from the ClassAd
 		//
 	for ( int ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
-		MyString buffer;
+		std::string buffer;
 			//
 			// First get out the parameter value
 			//
 		if ( ad->LookupString( this->attributes[ctr], buffer ) ) {
 			dprintf( D_FULLDEBUG, "CronTab: Pulled out '%s' for %s\n",
-						buffer.Value(), this->attributes[ctr] );
-			this->parameters[ctr] = new MyString( buffer.Value() );
+						buffer.c_str(), this->attributes[ctr] );
+			this->parameters[ctr] = new MyString( buffer.c_str() );
 			//
 			// The parameter is empty, we'll use the wildcard
 			//
@@ -231,7 +231,7 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 		//
 	int ctr;
 	for ( ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
-		MyString buffer;
+		std::string buffer;
 			//
 			// If the validation fails, we keep going
 			// so that they can see all the error messages about
@@ -239,7 +239,7 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 			//
 		if ( ad->LookupString( CronTab::attributes[ctr], buffer ) ) {
 			MyString curError;
-			if ( !CronTab::validateParameter( buffer.Value(), CronTab::attributes[ctr], curError ) ) {
+			if ( !CronTab::validateParameter( buffer.c_str(), CronTab::attributes[ctr], curError ) ) {
 				ret = false;
 				error += curError;
 			}
@@ -688,7 +688,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 		// We only need to delete curRange if we had
 		// instantiated a new object for it
 		//
-	if ( attribute_idx == CRONTAB_DOM_IDX && curRange ) delete curRange;
+	if ( attribute_idx == CRONTAB_DOM_IDX) delete curRange;
 	
 	return ( ret );
 }

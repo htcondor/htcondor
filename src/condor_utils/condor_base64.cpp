@@ -32,23 +32,28 @@
 #endif
 
 // Caller needs to free the returned pointer
-char* condor_base64_encode(const unsigned char *input, int length)
+char* condor_base64_encode(const unsigned char *input, int length, bool include_newline)
 {
 #if HAVE_EXT_OPENSSL
 	BIO *bmem, *b64;
 	BUF_MEM *bptr;
 
 	b64 = BIO_new(BIO_f_base64());
+	if (!include_newline) {
+		BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+	}
 	bmem = BIO_new(BIO_s_mem());
 	b64 = BIO_push(b64, bmem);
 	BIO_write(b64, input, length);
 	(void)BIO_flush(b64);
 	BIO_get_mem_ptr(b64, &bptr);
 
-	char *buff = (char *)malloc(bptr->length);
+	// Previous versions of this function stripped the trailing newline.
+	int l = bptr->length + (include_newline ? 0 : 1);
+	char * buff = (char *)malloc(l);
 	ASSERT(buff);
-	memcpy(buff, bptr->data, bptr->length-1);
-	buff[bptr->length-1] = 0;
+	memcpy(buff, bptr->data, l - 1);
+	buff[l-1] = 0;
 	BIO_free_all(b64);
 
 	return buff;
@@ -61,7 +66,7 @@ char* condor_base64_encode(const unsigned char *input, int length)
 }
 
 // Caller needs to free *output if non-NULL
-void condor_base64_decode(const char *input,unsigned char **output, int *output_length)
+void condor_base64_decode(const char *input,unsigned char **output, int *output_length, bool require_newline)
 {
 #if HAVE_EXT_OPENSSL
 	BIO *b64, *bmem;
@@ -78,6 +83,9 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 	memset(*output, 0, input_length);
 
 	b64 = BIO_new(BIO_f_base64());
+	if (!require_newline) {
+		BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+	}
 	bmem = BIO_new_mem_buf((void *)const_cast<char*>(input), input_length);
 	bmem = BIO_push(b64, bmem);
 

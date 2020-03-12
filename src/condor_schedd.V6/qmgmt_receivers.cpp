@@ -28,8 +28,6 @@
 #include "condor_uid.h"
 #include "authentication.h"
 
-#include "../condor_syscall_lib/syscall_param_sizes.h"
-
 #include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "qmgmt_constants.h"
@@ -309,7 +307,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_SetAttributeByConstraint:
 	case CONDOR_SetAttributeByConstraint2:
 	  {
-		char *attr_name=NULL;
+		std::string attr_name;
 		char *attr_value=NULL;
 		char *constraint=NULL;
 		int terrno;
@@ -326,21 +324,21 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );;
 
-		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+		if (strcmp (attr_name.c_str(), ATTR_MYPROXY_PASSWORD) == 0) {
 			dprintf( D_SYSCALLS, "SetAttributeByConstraint (MyProxyPassword) not supported...\n");
 			rval = 0;
 			terrno = 0;
 		} else {
 
 			errno = 0;
-			rval = SetAttributeByConstraint( constraint, attr_name, attr_value, flags );
+			rval = SetAttributeByConstraint( constraint, attr_name.c_str(), attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 			if ( rval == 0 ) {
 				dprintf( D_AUDIT, *syscall_sock,
 						 "Set Attribute By Constraint %s, "
 						 "%s = %s\n",
-						 constraint, attr_name, attr_value);
+						 constraint, attr_name.c_str(), attr_value);
 			}
 
 		}
@@ -352,7 +350,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		free( (char *)constraint );
 		free( (char *)attr_value );
-		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -362,7 +359,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		char *attr_name=NULL;
+		std::string attr_name;
 		char *attr_value=NULL;
 		int terrno;
 		SetAttributeFlags_t flags = 0;
@@ -378,14 +375,31 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code( wflags ) );
 			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
-		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
-		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
+		if (!attr_name.empty()) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
+		if (attr_value) { 
+			dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
+		} else {
+			// This shouldn't happen...
+			dprintf(D_ALWAYS, "SetAttribute got NULL value for %s\n", attr_name.c_str());
+			if( flags & SetAttribute_NoAck ) {
+				return -1;
+			}
+			syscall_sock->encode();
+			rval = -1;
+			terrno = EINVAL; 
+			assert( syscall_sock->code(rval) );
+			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->end_of_message() );
+			return -1;
+		}
+
+
 
 		// ckireyev:
 		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
 		// I'm not sure if this is the best place to do this, but....
-		if (attr_name && attr_value && strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+		if (!attr_name.empty() && strcmp (attr_name.c_str(), ATTR_MYPROXY_PASSWORD) == 0) {
 			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
 			errno = 0;
 			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
@@ -396,7 +410,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		else {
 			errno = 0;
 
-			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value, flags );
+			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 				// If we're modifying a previously-submitted job AND either
@@ -412,12 +426,11 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 				dprintf( D_AUDIT, *syscall_sock, 
 						 "Set Attribute for job %d.%d, "
 						 "%s = %s\n",
-						 cluster_id, proc_id, attr_name, attr_value);
+						 cluster_id, proc_id, attr_name.c_str(), attr_value);
 			}
 		}
 
 		free( (char *)attr_value );
-		free( (char *)attr_name );
 
 		if( flags & SetAttribute_NoAck ) {
 			if( rval < 0 ) {
@@ -541,7 +554,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		char *attr_name=NULL;
+		std::string attr_name;
 		int duration = 0;
 		int terrno;
 
@@ -550,27 +563,26 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
-		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
+		if (!attr_name.empty()) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->code(duration) );
 		dprintf(D_SYSCALLS,"\tduration = %d\n",duration);
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
 
-		rval = SetTimerAttribute( cluster_id, proc_id, attr_name, duration );
+		rval = SetTimerAttribute( cluster_id, proc_id, attr_name.c_str(), duration );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		dprintf( D_AUDIT, *syscall_sock, 
 				 "Set Timer Attribute for job %d.%d, "
 				 "attr_name = %s, duration = %d\n",
-				 cluster_id, proc_id, attr_name, duration);
+				 cluster_id, proc_id, attr_name.c_str(), duration);
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
 		}
-		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -681,7 +693,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		char *attr_name=NULL;
+		std::string attr_name;
 		float value = 0.0;
 		int terrno;
 
@@ -693,8 +705,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( attr_name ) ) {
-			rval = GetAttributeFloat( cluster_id, proc_id, attr_name, &value );
+		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
+			rval = GetAttributeFloat( cluster_id, proc_id, attr_name.c_str(), &value );
 		}
 		else {
 			errno = EACCES;
@@ -711,7 +723,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( rval >= 0 ) {
 			assert( syscall_sock->code(value) );
 		}
-		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -720,7 +731,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		char *attr_name=NULL;
+		std::string attr_name;
 		int value = 0;
 		int terrno;
 
@@ -729,12 +740,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
-		dprintf( D_SYSCALLS, "  attr_name = %s\n", attr_name );
+		dprintf( D_SYSCALLS, "  attr_name = %s\n", attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( attr_name ) ) {
-			rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
+		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
+			rval = GetAttributeInt( cluster_id, proc_id, attr_name.c_str(), &value );
 		}
 		else {
 			errno = EACCES;
@@ -743,7 +754,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		terrno = errno;
 		if (rval < 0) {
 			dprintf( D_SYSCALLS, "GetAttributeInt(%d, %d, %s) not found.\n",
-					cluster_id, proc_id, attr_name);
+					cluster_id, proc_id, attr_name.c_str());
 		} else {
 			dprintf( D_SYSCALLS, "  value: %d\n", value );
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -757,7 +768,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( rval >= 0 ) {
 			assert( syscall_sock->code(value) );
 		}
-		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -766,25 +776,26 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		char *attr_name=NULL;
-		char *value = NULL;
+		std::string attr_name;
+		std::string value;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_name) );
+		assert( syscall_sock->code(attr_name));
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( attr_name ) ) {
-			rval = GetAttributeStringNew( cluster_id, proc_id, attr_name, &value );
+		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
+			rval = GetAttributeString( cluster_id, proc_id, attr_name.c_str(), value );
 		}
 		else {
 			errno = EACCES;
 			rval = -1;
 		}
+
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -794,11 +805,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(value) );
+			assert( syscall_sock->code(value));
 		}
-		free( (char *)value );
-		free( (char *)attr_name );
-		assert( syscall_sock->end_of_message() );;
+		assert( syscall_sock->end_of_message() );
 		return 0;
 	}
 
@@ -806,7 +815,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		char *attr_name=NULL;
+		std::string attr_name;
 
 		int terrno;
 
@@ -820,8 +829,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		char *value = NULL;
 
 		errno = 0;
-		if( QmgmtMayAccessAttribute( attr_name ) ) {
-			rval = GetAttributeExprNew( cluster_id, proc_id, attr_name, &value );
+		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
+			rval = GetAttributeExprNew( cluster_id, proc_id, attr_name.c_str(), &value );
 		}
 		else {
 			errno = EACCES;
@@ -849,7 +858,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			}
 		}
 		free( (char *)value );
-		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -895,7 +903,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int proc_id = -1;
-		char *attr_name=NULL;
+		std::string attr_name;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -906,7 +914,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = DeleteAttribute( cluster_id, proc_id, attr_name );
+		rval = DeleteAttribute( cluster_id, proc_id, attr_name.c_str());
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -915,7 +923,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
 		}
-		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}

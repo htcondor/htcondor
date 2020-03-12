@@ -1121,23 +1121,40 @@ bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 
 // ---------------------------------------------------------------------------
 
+// https://cloud.google.com/compute/docs/labeling-resources says
+// "Keys and values can only contain lowercase letters, numeric characters,
+// underscores, and dashes. International characters are allowed."
+// We're ignoring the second sentence until someone complains, in part
+// because it's not clear how it interacts with the first sentence.
+
+bool
+isLabelSafe( const std::string & korv ) {
+	for( size_t i = 0; i < korv.length(); ++i ) {
+		char c = korv[i];
+		if(! (std::islower(c) || std::isdigit(c) || c == '_' || c == '-' )) {
+			return false;
+		}
+	}
+	return true;
+}
+
 GceInstanceInsert::GceInstanceInsert() { }
 
 GceInstanceInsert::~GceInstanceInsert() { }
 
 // Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
-//     <preemptible> <json_file>
+//     <preemptible> <json_file> <tag=value>* NULLSTRING
 bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_INSERT" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 14 ) ) {
+	if( ! verify_min_number_args( argc, 15 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 14, argv[0] );
+				 argc, 15, argv[0] );
 		return false;
 	}
 
@@ -1185,6 +1202,56 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += " \"machineType\": \"";
 	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
+
+	// This is documented incorrectly at https://cloud.google.com/compute/docs/labeling-resources;
+	// the actual API is the sane one you'd expect.
+	int endOfTagList = 14;
+	if( strcasecmp( argv[endOfTagList], NULLSTRING ) ) {
+		insert_request.requestBody += " \"labels\": {";
+		for( ; endOfTagList < argc - 2; endOfTagList += 2 ) {
+			if( strcasecmp( argv[endOfTagList], NULLSTRING ) == 0 ) { break; }
+			std::string key = argv[endOfTagList];
+			std::string value = argv[endOfTagList + 1];
+
+			if( key.length() >= 64 || value.length() >= 64 ) {
+				result_string = create_failure_result( requestID,
+					"Label key or value too long" );
+				return true;
+			}
+
+			if( key.empty() ) {
+				result_string = create_failure_result( requestID,
+					"Label keys may not be empty" );
+				return true;
+			}
+
+			// ibid., "Label keys must start with a lowercase letter and
+			// international characters are allowed."  See comment about
+			// isLabelSafe().
+			if(! std::islower(key[0])) {
+				result_string = create_failure_result( requestID,
+					"Label keys must start with a lower case letter" );
+				return true;
+			}
+
+			if( (!isLabelSafe( key )) || (!isLabelSafe( value )) ) {
+				result_string = create_failure_result( requestID,
+					"Invalid label key or value" );
+				return true;
+			}
+
+			insert_request.requestBody +=
+				"\"" + key + "\": \"" + value + "\",";
+		}
+		if( strcasecmp( argv[endOfTagList], NULLSTRING ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse labels" );
+			return true;
+		}
+		insert_request.requestBody.erase( insert_request.requestBody.length() - 1 );
+		insert_request.requestBody += "},\n";
+	}
+
 	insert_request.requestBody += " \"name\": \"";
 	insert_request.requestBody += argv[7];
 	insert_request.requestBody += "\",\n";

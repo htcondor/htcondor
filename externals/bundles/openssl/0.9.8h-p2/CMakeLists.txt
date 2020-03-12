@@ -88,7 +88,7 @@ if (WITH_OPENSSL)
 			set(OPENSSL_FOUND "${OPENSSL_INSTALL_LOC}/lib/libssl.a;${OPENSSL_INSTALL_LOC}/lib/libcrypto.a")
 		endif(WINDOWS)
 
-		condor_post_external( openssl include OFF )
+		condor_post_external( openssl include OFF "${OPENSSL_FOUND}" )
 
 		set(BUILDING_OPENSSL ON PARENT_SCOPE)
 

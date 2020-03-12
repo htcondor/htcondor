@@ -109,16 +109,14 @@ ToolDaemonProc::StartJob()
     char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		MyString reniceAttr = "Renice = ";
-		reniceAttr += ptmp;
-		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting ToolDaemonProc::StartJob...\n" );
 			free( ptmp );
 			return 0;
 		}
 			// evaluate
-		if( JobAd->EvalInteger( "Renice", NULL, nice_inc ) ) {
+		if( JobAd->LookupInteger( "Renice", nice_inc ) ) {
 			dprintf( D_ALWAYS, "Renice expr \"%s\" evaluated to %d\n",
 					 ptmp, nice_inc );
 		} else {

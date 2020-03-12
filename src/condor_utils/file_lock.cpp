@@ -524,6 +524,10 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 }
 
 
+// fstat can't really fail, but to quell static analysis,
+// we stuff the result of fstat here.
+static int dummyGlobal;
+
 bool
 FileLock::obtain( LOCK_TYPE t )
 {
@@ -574,15 +578,15 @@ FileLock::obtain( LOCK_TYPE t )
 		
 		if (m_fp)
 		{
-			// restore their FILE*-position
-			fseek(m_fp, lPosBeforeLock, SEEK_SET); 	
+			// restore their FILE*-position, if ftell didn't return an error
+			if (lPosBeforeLock >= 0) fseek(m_fp, lPosBeforeLock, SEEK_SET); 	
 		}
 
 #ifndef WIN32		
 			// if we deal with our own fd and are not unlocking
 		if (m_delete == 1 && t != UN_LOCK){
 			struct stat si; 
-			fstat(m_fd, &si);
+			dummyGlobal = fstat(m_fd, &si);
 				// no more hard links ... it was deleted while we were waiting
 				// in that case we need to reopen and restart
 			if ( si.st_nlink < 1 ){

@@ -112,40 +112,70 @@ enum DrainTypes {
 void
 export_startd()
 {
-    boost::python::enum_<DrainTypes>("DrainTypes")
+    boost::python::enum_<DrainTypes>("DrainTypes",
+            R"C0ND0R(
+            Draining policies that can be sent to a ``condor_startd``.
+
+            The values of the enumeration are:
+
+            .. attribute:: Fast
+            .. attribute:: Graceful
+            .. attribute:: Quick
+            )C0ND0R")
         .value("Fast", (DrainTypes)DRAIN_FAST)
         .value("Graceful", (DrainTypes)DRAIN_GRACEFUL)
         .value("Quick", (DrainTypes)DRAIN_QUICK)
         ;
 
 #if BOOST_VERSION >= 103400
-    boost::python::docstring_options doc_options;
-    doc_options.disable_cpp_signatures();
     #define SELFARG boost::python::arg("self"),
 #else
     #define SELFARG
 #endif
-    
-    boost::python::class_<Startd>("Startd", "A client class for controlling Startds in HTCondor")
-        .def(boost::python::init<>())
-        .def(boost::python::init<boost::python::object>(":param ad: An ad describing the Claim (optionally) and a Startd location."))
 
-        .def("drainJobs", &Startd::drain_jobs, "Drain jobs from a startd.",
-            ":param drain_type: Type of drain to perform (Fast, Graceful or Quick); must be from DrainTypes enum."
-            ":param resume_on_completion: If true, startd will exit the draining state when draining completes.\n"
-            ":param constraint: An optional check expression that must be true for all slots for draining to begin; defaults to 'true'\n"
-            ":param start_expr: An optional expression that will be used as the START expression while draining; defaults to FALSE.\n"
-            ":return: a drain request id that can be used to cancel draining.",
+    boost::python::class_<Startd>("Startd",
+            R"C0ND0R(
+            A class that represents a Startd.
+            )C0ND0R",
+        boost::python::init<boost::python::object>(
+            R"C0ND0R(
+            :param ad: A ClassAd describing the claim and the startd location.
+                If omitted, the local startd is assumed.
+            :type ad: :class:`~classad.ClassAd`
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad")=boost::python::object())))
+        .def(boost::python::init<>(boost::python::args("self")))
+        .def("drainJobs", &Startd::drain_jobs,
+            R"C0ND0R(
+            Begin draining jobs from the startd.
+
+            :param drain_type: How fast to drain the jobs.  Defaults to ``DRAIN_GRACEFUL`` if not specified.
+            :type drain_type: :class:`DrainTypes`
+            :param bool resume_on_completion: Whether the startd should start accepting jobs again
+                once draining is complete.  Otherwise, it will remain in the drained state.
+                Defaults to ``False``.
+            :param check_expr: An expression string that must evaluate to ``true`` for all slots for
+                draining to begin. Defaults to ``'true'``.
+            :type check_expr: str or :class:`ExprTree`
+            :param start_expr: The expression that the startd should use while draining.
+            :type start_expr: str or :class:`ExprTree`
+            :return: An opaque request ID that can be used to cancel draining via :meth:`Startd.cancelDrainJobs`
+            :rtype: str
+            )C0ND0R",
                (SELFARG
                 boost::python::arg("drain_type")=DRAIN_GRACEFUL,
                 boost::python::arg("resume_on_completion")=false,
-                boost::python::arg("constraint")="true",
+                boost::python::arg("check_expr")="true",
                 boost::python::arg("start_expr")="false"
                )
             )
+        .def("cancelDrainJobs", &Startd::cancel_drain_jobs,
+            R"C0ND0R(
+            Cancel a draining request.
 
-        .def("cancelDrainJobs", &Startd::cancel_drain_jobs, "Cancel draining jobs from a startd.",
-            ":param request_id: optional, if specified cancels only the drain command with the given request_id.",
+            :param str request_id: Specifies a draining request to cancel.  If not specified, all
+                draining requests for this startd are canceled.
+            )C0ND0R",
                (SELFARG
                 boost::python::arg("request_id")=""
                )

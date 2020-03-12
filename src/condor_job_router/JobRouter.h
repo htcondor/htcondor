@@ -40,6 +40,12 @@ class JobRouterHookMgr;
 
 typedef std::map<std::string,JobRoute *, classad::CaseIgnLTStr> RoutingTable;
 
+// one or more of these flags can be passed to the JobRouter constructor
+#define JOB_ROUTER_TOOL_FLAG_AS_TOOL          0x0001  // basic operate as tool
+#define JOB_ROUTER_TOOL_FLAG_DIAGNOSTIC       0x0002  // diagnostic level output
+#define JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA   0x0004  // wrap umbrella constraint in debug()
+#define JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS   0x0008  // route as if userid switching was possible
+
 /*
  * The JobRouter is responsible for finding idle jobs of one flavor
  * (e.g. vanilla), converting them to another flavor (e.g. Condor-C),
@@ -49,7 +55,7 @@ typedef std::map<std::string,JobRoute *, classad::CaseIgnLTStr> RoutingTable;
 
 class JobRouter: public Service {
  public:
-	JobRouter(bool as_tool=false);
+	JobRouter(unsigned int as_tool=0);
 	virtual ~JobRouter();
 
 	// Add a new job to be managed by JobRouter.
@@ -69,6 +75,9 @@ class JobRouter: public Service {
 
 	// This is called in a timer to periodically manage the jobs.
 	void Poll();
+
+	// this is called by the job router tool to simulate routing of a set of simulated jobs
+	void SimulateRouting();
 
 	// This is called in a timer to evaluate periodic expressions for the
 	// jobs the JobRouter manages.
@@ -164,7 +173,7 @@ class JobRouter: public Service {
 
 	ClassAd m_public_ad;
 
-	bool m_operate_as_tool;
+	unsigned int m_operate_as_tool;	// operate as tool flags
 
 	// Count jobs being managed.  (Excludes RETIRED jobs.)
 	int NumManagedJobs();
@@ -223,6 +232,19 @@ private:
 		bool allow_empty_requirements,
 		HashTable<std::string,int> & hash_order,
 		RoutingTable *new_routes );
+#ifdef USE_XFORM_UTILS
+	void ParseRoute(const char * route_text,
+		const char * name,
+		bool allow_empty_requirements,
+		//HashTable<std::string,int> & hash_order,
+		RoutingTable * new_routes);
+
+	// these transforms are applied when a route is chosen, before and after the route is applied
+	// they serve the same purpose that JOB_ROUTER_DEFAULTS did in the old schema
+	SimpleList<MacroStreamXFormSource*> m_pre_route_xfms;
+	SimpleList<MacroStreamXFormSource*> m_post_route_xfms;
+	void clear_pre_and_post_xfms();
+#endif
 
 	JobRoute *GetRouteByName(char const *name);
 

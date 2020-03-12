@@ -236,7 +236,10 @@ public:
 		    to shadow by using file transfer
 		*/
 	bool uploadWorkingFiles(void);
-	
+
+		/** Send checkpoint files to shadow */
+	bool uploadCheckpointFiles();
+
 		/* Update Job ClassAd with checkpoint info and log it */
 	void updateCkptInfo(void);
 
@@ -441,7 +444,9 @@ private:
 	void proxyExpiring();
 
 	bool refreshSandboxCredentials();
+	void refreshSandboxCredentials_from_timer() { (void)refreshSandboxCredentials(); }
 	bool refreshSandboxCredentialsMultiple();
+	void refreshSandboxCredentialsMultiple_from_timer() { (void)refreshSandboxCredentialsMultiple(); }
 
 	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
 

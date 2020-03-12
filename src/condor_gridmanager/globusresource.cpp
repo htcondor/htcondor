@@ -611,7 +611,7 @@ GlobusResource::CheckMonitor()
 					monitorActive = true;
 					registeredJobs.Rewind();
 					while ( registeredJobs.Next( base_job ) ) {
-						job = dynamic_cast<GlobusJob*>( base_job );
+						job = static_cast<GlobusJob*>( base_job );
 						job->SetEvaluateState();
 					}
 				}
@@ -734,16 +734,18 @@ GlobusResource::CleanupMonitorJob()
 
 		formatstr( tmp_dir, "%s.remove", monitorDirectory );
 
-		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'rename' ignored.
-		rename( monitorDirectory, tmp_dir.c_str() );
+		if (0 != rename( monitorDirectory, tmp_dir.c_str())) {
+			dprintf(D_ALWAYS, "Cannot rename %s to %s\n", monitorDirectory, tmp_dir.c_str());
+		}
 		free( monitorDirectory );
 		monitorDirectory = NULL;
 
 		Directory tmp( tmp_dir.c_str() );
 		tmp.Remove_Entire_Directory();
 
-		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'rmdir' ignored.
-		rmdir( tmp_dir.c_str() );
+		if (0 != rmdir(tmp_dir.c_str())){
+			dprintf(D_ALWAYS, "Cannot remove %s\n", tmp_dir.c_str());
+		}
 	}
 	if(monitorJobStatusFile)
 	{

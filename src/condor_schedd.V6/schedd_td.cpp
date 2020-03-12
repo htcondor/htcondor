@@ -43,20 +43,18 @@ int
 Scheduler::requestSandboxLocation(int mode, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
-	int i, j, k;
 	TransferDaemon *td = NULL;
-	MyString rand_id;
+	std::string rand_id;
 	MyString fquser;
 	ClassAd reqad, respad;
-	MyString jids, jids_allow, jids_deny;
-	ExtArray<PROC_ID> *jobs = NULL;
-	ExtArray<PROC_ID> *modify_allow_jobs = NULL;
-	ExtArray<PROC_ID> *modify_deny_jobs = NULL;
+	std::string jids, jids_allow, jids_deny;
+	std::vector<PROC_ID> *jobs = NULL;
+	std::vector<PROC_ID> *modify_allow_jobs = NULL;
+	std::vector<PROC_ID> *modify_deny_jobs = NULL;
 	ClassAd *tmp_ad = NULL;
-	int cluster, proc;
-	MyString constraint_string;
+	std::string constraint_string;
 	int protocol;
-	MyString peer_version;
+	std::string peer_version;
 	bool has_constraint;
 	int direction;
 	MyString desc;
@@ -156,10 +154,10 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		
 		dprintf(D_ALWAYS, "Submittor provides procids.\n");
 
-		modify_allow_jobs = new ExtArray<PROC_ID>;
+		modify_allow_jobs = new std::vector<PROC_ID>;
 		ASSERT(modify_allow_jobs);
 
-		modify_deny_jobs = new ExtArray<PROC_ID>;
+		modify_deny_jobs = new std::vector<PROC_ID>;
 		ASSERT(modify_deny_jobs);
 
 		if (reqad.LookupString(ATTR_TREQ_JOBID_LIST, jids) == 0) {
@@ -178,10 +176,10 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		}
 
 		//////////////////////
-		// convert the stringlist of jobids into an actual ExtArray of
+		// convert the stringlist of jobids into an actual vector of
 		// PROC_IDs. we are responsible for this newly allocated memory.
 		//////////////////////
-		jobs = mystring_to_procids(jids);
+		jobs = string_to_procids(jids);
 
 		if (jobs == NULL) {
 			// can't have no constraint and no jobids, bail.
@@ -205,13 +203,13 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		// modify and those we cannot because the client is not 
 		// authorized to.
 		//////////////////////
-		setQSock(rsock);	// so OwnerCheck() will work
-		j = k = 0;
-		for (i = 0; i < jobs->length(); i++) {
-			if (OwnerCheck((*jobs)[i].cluster, (*jobs)[i].proc)) {
+		for (size_t i = 0; i < jobs->size(); i++) {
+			MyString job_owner = "";
+			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, ATTR_OWNER, job_owner);
+			if (OwnerCheck2(NULL, rsock->getOwner(), job_owner.c_str())) {
 				// only allow the user to manipulate jobs it is entitled to.
 				// structure copy...
-				(*modify_allow_jobs)[j++] = (*jobs)[i];
+				modify_allow_jobs->push_back((*jobs)[i]);
 			} else {
 				// client can't modify this ad due to not having authority
 				dprintf(D_ALWAYS, 
@@ -222,15 +220,14 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 					fquser.Value(), (*jobs)[i].cluster, (*jobs)[i].proc);
 
 				// structure copy...
-				(*modify_deny_jobs)[k++] = (*jobs)[i];
+				modify_deny_jobs->push_back((*jobs)[i]);
 			}
 		}
-		unsetQSock();
 
 		// pack back into the reqad both allow and deny arrays so the client
 		// knows for which jobids it may transfer the files.
-		procids_to_mystring(modify_allow_jobs, jids_allow);
-		procids_to_mystring(modify_deny_jobs, jids_deny);
+		procids_to_string(modify_allow_jobs, jids_allow);
+		procids_to_string(modify_deny_jobs, jids_deny);
 
 		respad.Assign(ATTR_TREQ_JOBID_ALLOW_LIST, jids_allow);
 		respad.Assign(ATTR_TREQ_JOBID_DENY_LIST, jids_deny);
@@ -273,31 +270,24 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		}
 
 		// By definition we'll only save the jobids the user may modify
-		modify_allow_jobs = new ExtArray<PROC_ID>;
+		modify_allow_jobs = new std::vector<PROC_ID>;
 		ASSERT(modify_allow_jobs);
-
-		setQSock(rsock);	// so OwnerCheck() will work
 
 		// Walk the job queue looking for jobs which match the constraint
 		// filter. Then filter that set with OwnerCheck to ensure 
 		// the client has the correct authority to modify these jobids.
-		tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 1);
-		i = 0;
+		tmp_ad = GetNextJobByConstraint(constraint_string.c_str(), 1);
 		while (tmp_ad) {
-			if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,cluster) &&
-				tmp_ad->LookupInteger(ATTR_PROC_ID,proc) &&
-				OwnerCheck(cluster, proc) )
+			PROC_ID job_id;
+			if ( OwnerCheck2(tmp_ad, rsock->getOwner()) )
 			{
-				(*modify_allow_jobs)[i].cluster = cluster;
-				(*modify_allow_jobs)[i].proc = proc;
-				i++;
+				modify_allow_jobs->push_back(job_id);
 			}
-			tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 0);
+			tmp_ad = GetNextJobByConstraint(constraint_string.c_str(), 0);
 		}
-		unsetQSock();
 
 		// Let the client know what jobids it may actually transfer for.
-		procids_to_mystring(modify_allow_jobs, jids_allow);
+		procids_to_string(modify_allow_jobs, jids_allow);
 		respad.Assign(ATTR_TREQ_JOBID_ALLOW_LIST, jids_allow);
 		respad.Assign(ATTR_TREQ_JOBID_DENY_LIST, "");
 
@@ -382,7 +372,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	treq->set_peer_version(peer_version);
 	treq->set_xfer_protocol(protocol);
 	treq->set_transfer_service("Passive"); // XXX fixme to use enum
-	treq->set_num_transfers(modify_allow_jobs->length());
+	treq->set_num_transfers(modify_allow_jobs->size());
 	treq->set_protocol_version(0); // for the treq structure, not xfer protocol
 
 	// Give the procids array to the treq, later, just before it is pushed to
@@ -524,7 +514,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			// XXX Should I test this against the keys in the manager table
 			// to ensure there are unique ids for the transferds I have
 			// requested to invoke--a collision would be nasty here.
-			rand_id.randomlyGenerateHex(64); 
+			randomlyGenerateInsecureHex(rand_id, 64);
 
 			td = new TransferDaemon(fquser, rand_id, TD_PRE_INVOKED);
 
@@ -628,8 +618,8 @@ Scheduler::treq_upload_pre_push_callback(TransferRequest *treq,
 {
 	int cluster;
 	int proc;
-	ExtArray<PROC_ID> *jobs = NULL;
-	int i;
+	std::vector<PROC_ID> *jobs = NULL;
+	size_t i;
 	time_t now;
 
 	dprintf(D_ALWAYS, "Scheduler::treq_upload_pre_push_callback() called.\n");
@@ -639,7 +629,7 @@ Scheduler::treq_upload_pre_push_callback(TransferRequest *treq,
 	now = time(NULL);
 
 	// set the stage in start time.
-	for (i = 0; i < (*jobs).length(); i++) {
+	for (i = 0; i < (*jobs).size(); i++) {
 		SetAttributeInt((*jobs)[i].cluster, (*jobs)[i].proc, 
 			ATTR_STAGE_IN_START, now);
 	}
@@ -647,7 +637,7 @@ Scheduler::treq_upload_pre_push_callback(TransferRequest *treq,
 	// Get the actual (now modified) job ads and shove them into the request
 	// for the transferd to munch on.
 
-	for (i=0; i < (*jobs).length(); i++) {
+	for (i=0; i < (*jobs).size(); i++) {
 		cluster = (*jobs)[i].cluster;
 		proc = (*jobs)[i].proc;
 		ClassAd * jad = GetJobAd( cluster, proc );
@@ -667,11 +657,11 @@ Scheduler::treq_upload_post_push_callback(TransferRequest *treq,
 	TransferDaemon *td)
 {
 	ReliSock *rsock = NULL;
-	MyString sinful;
-	MyString capability;
+	std::string sinful;
+	std::string capability;
 	ClassAd respad;
-	MyString jids;
-	MyString reason;
+	std::string jids;
+	std::string reason;
 
 	////////////////////////////////////////////////////////////////////////
 	// Respond to the client with a capability, a td sinful, the list of
@@ -699,7 +689,7 @@ Scheduler::treq_upload_post_push_callback(TransferRequest *treq,
 		sinful = td->get_sinful();
 		capability = treq->get_capability();
 
-		procids_to_mystring(treq->get_procids(), jids);
+		procids_to_string(treq->get_procids(), jids);
 
 		// This is what the transferd is willing to do for this request.
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, FALSE);
@@ -959,8 +949,8 @@ Scheduler::treq_download_pre_push_callback(TransferRequest *treq,
 {
 	int cluster;
 	int proc;
-	ExtArray<PROC_ID> *jobs = NULL;
-	int i;
+	std::vector<PROC_ID> *jobs = NULL;
+	size_t i;
 	time_t now;
 
 	dprintf(D_ALWAYS, "Scheduler::treq_download_pre_push_callback() called.\n");
@@ -974,7 +964,7 @@ Scheduler::treq_download_pre_push_callback(TransferRequest *treq,
 	now = time(NULL);
 
 	// set the stage out start time.
-	for (i = 0; i < (*jobs).length(); i++) {
+	for (i = 0; i < (*jobs).size(); i++) {
 		SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,
 						ATTR_STAGE_OUT_START,now);
 	}
@@ -984,7 +974,7 @@ Scheduler::treq_download_pre_push_callback(TransferRequest *treq,
 	// for the transferd to munch on.
 	////////////////////////////////////////////////////////////////////////
 
-	for (i=0; i < (*jobs).length(); i++) {
+	for (i=0; i < (*jobs).size(); i++) {
 		cluster = (*jobs)[i].cluster;
 		proc = (*jobs)[i].proc;
 		ClassAd * jad = GetJobAd( cluster, proc );
@@ -1000,11 +990,11 @@ Scheduler::treq_download_post_push_callback(TransferRequest *treq,
 	TransferDaemon *td)
 {
 	ReliSock *rsock = NULL;
-	MyString sinful;
-	MyString capability;
+	std::string sinful;
+	std::string capability;
 	ClassAd respad;
-	MyString jids;
-	MyString reason;
+	std::string jids;
+	std::string reason;
 
 	////////////////////////////////////////////////////////////////////////
 	// Respond to the client with a capability, a td sinful, the list of
@@ -1033,7 +1023,7 @@ Scheduler::treq_download_post_push_callback(TransferRequest *treq,
 		sinful = td->get_sinful();
 		capability = treq->get_capability();
 
-		procids_to_mystring(treq->get_procids(), jids);
+		procids_to_string(treq->get_procids(), jids);
 
 		// This is what the transferd is willing to do for this request.
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, FALSE);
@@ -1075,8 +1065,8 @@ TreqAction
 Scheduler::treq_download_update_callback(TransferRequest *treq, 
 	TransferDaemon *, ClassAd *)
 {
-	int i;
-	ExtArray<PROC_ID> *jobs;
+	size_t i;
+	std::vector<PROC_ID> *jobs;
 	time_t now;
 
 	dprintf(D_ALWAYS, "Scheduler::treq_download_update_callback() called.\n");
@@ -1097,7 +1087,7 @@ Scheduler::treq_download_update_callback(TransferRequest *treq,
 
 	now = time(NULL);
 
-	for (i=0; i < treq->get_num_transfers(); i++) {
+	for (i=0; i < jobs->size(); i++) {
 		SetAttributeInt((*jobs)[i].cluster, (*jobs)[i].proc,
 			ATTR_STAGE_OUT_FINISH, now);
 	}
@@ -1567,17 +1557,13 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 	jobs = new ExtArray<PROC_ID>;
 	ASSERT(jobs);
 
-	setQSock(rsock);	// so OwnerCheck() will work
-
 	time_t now = time(NULL);
 
 	{
 	ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
 	JobAdsArrayLen = 0;
 	while (tmp_ad) {
-		if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,a_job.cluster) &&
-		 	tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
-		 	OwnerCheck(a_job.cluster, a_job.proc) )
+		if ( OwnerCheck2(tmp_ad, rsock->getOwner()) )
 		{
 			(*jobs)[JobAdsArrayLen++] = a_job;
 		}
@@ -1594,8 +1580,6 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 						ATTR_STAGE_OUT_START,now);
 	}
 	}
-
-	unsetQSock();
 
 	rsock->end_of_message();
 

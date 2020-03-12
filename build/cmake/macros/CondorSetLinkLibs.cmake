@@ -17,26 +17,9 @@
  ############################################################### 
 
 
-MACRO (CONDOR_SET_LINK_LIBS _CNDR_TARGET _LINK_LIBS)
+function(condor_set_link_libs _CNDR_TARGET _LINK_LIBS)
 
-set(${_CNDR_TARGET}LinkLibs ${_LINK_LIBS})
+	# CONDOR_WIN_LIBS expands to nothing on non-windows, so safe to have it unconditional
+	target_link_libraries( ${_CNDR_TARGET} ${_LINK_LIBS};${CONDOR_WIN_LIBS})
 
-if (${_CNDR_TARGET}LinkLibs)
-	if (NOT AIX)
-		list(REMOVE_DUPLICATES ${_CNDR_TARGET}LinkLibs)
-	endif()
-
-	 if ( NOT WINDOWS )
-		# This should really test for whether the gnu linker
-		# is being used
-		if (DARWIN OR AIX OR SOLARIS)
-			target_link_libraries( ${_CNDR_TARGET} ${${_CNDR_TARGET}LinkLibs} ${${_CNDR_TARGET}LinkLibs}  )
-		else()
-	 		target_link_libraries( ${_CNDR_TARGET} -Wl,--start-group ${${_CNDR_TARGET}LinkLibs} -Wl,--end-group -Wl,--enable-new-dtags )
-		endif()
-	 else()
-	 	target_link_libraries( ${_CNDR_TARGET} ${${_CNDR_TARGET}LinkLibs};${CONDOR_WIN_LIBS} )
-	 endif()
-endif()
-
-ENDMACRO (CONDOR_SET_LINK_LIBS)
+endfunction (condor_set_link_libs)

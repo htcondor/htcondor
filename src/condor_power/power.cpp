@@ -260,8 +260,10 @@ serialize_input( void )
 		}
 
 		/**	Serialize the machine ad from a file */
-		ad = new ClassAd (
+		ad = new ClassAd();
+		InsertFromFile(
 			in,
+			*ad,
 			"?$#%^&*@", /* sufficiently random garbage? */
 			found_eof,
 			found_error,

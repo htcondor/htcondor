@@ -77,7 +77,6 @@ Remote_Remote_GridResource="condor remoter stuff"
 Remote_Remote_NordugridRSL="or over there"
 Requirements=/TARGET\.HasEncryptExecuteDirectory.+TARGET\.HasJobDeferral.+DeferralTime.+DeferralPrepTime/
 RunAsOwner=false
-ScheddInterval=300
 StackSize=1024 * 1024
 SubmitEventNotes="ipso lorem"
 SubmitEventUserNotes="user ipso lorem"
@@ -280,7 +279,7 @@ StreamOut=true
 
 ==periodic.sub
 OnExitHold=ExitCode > 42
-OnExitHoldReason="job failed by succeeding to well"
+OnExitHoldReason="job fooled by succeeding to well"
 OnExitHoldSubCode=43
 PeriodicHold=(time() - QDate) > 3600 || MemoryUsage > RequestMemory
 PeriodicHoldReason="exceeded 1 Hour in queue"
@@ -315,7 +314,7 @@ Arguments="-one The' 'Quicker,' 'Redder' 'Fox -two' 'other' 'stuff"
 ==retries.sub
 JobMaxRetries=3
 OnExitHold=ExitCode > 42
-OnExitHoldReason="job failed by succeeding to well"
+OnExitHoldReason="job fooled by succeeding to well"
 OnExitHoldSubCode=43
 OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
 

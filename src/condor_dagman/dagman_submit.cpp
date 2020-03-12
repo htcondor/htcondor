@@ -209,8 +209,12 @@ do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 //-------------------------------------------------------------------------
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-			   const char* DAGNodeName, MyString &DAGParentNodeNames,
+			   const char* DAGNodeName, const char *DAGParentNodeNames,
+#ifdef DEAD_CODE
 			   List<Job::NodeVar> *vars, int priority, int retry,
+#else
+			   Job * node, int priority, int retry,
+#endif
 			   const char* directory, const char *workflowLogFile,
 			   bool hold_claim, const MyString &batchName )
 {
@@ -311,23 +315,35 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	ArgList parentNameArgs;
 	parentNameArgs.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	MyString parentNodeNames = MyString( "+DAGParentNodeNames = " ) +
-	                        "\"" + DAGParentNodeNames + "\"";
+	MyString parentNodeNames = MyString("+DAGParentNodeNames = ") + "\"";
+	if (DAGParentNodeNames) parentNodeNames += DAGParentNodeNames;
+	parentNodeNames += "\"";
 	parentNameArgs.AppendArg( parentNodeNames.Value() );
 
 		// set any VARS specified in the DAG file
+#ifdef DEAD_CODE
 	MyString anotherLine;
 	ListIterator<Job::NodeVar> varsIter(*vars);
 	Job::NodeVar nodeVar;
 	while ( varsIter.Next(nodeVar) ) {
+#else
+	// allow for $(JOB) expansions in the vars - and also in the submit file.
+	MyString jobarg("JOB="); jobarg += DAGNodeName;
+	args.AppendArg("-a");
+	args.AppendArg(jobarg.Value());
 
+	for (auto it = node->varsFromDag.begin(); it != node->varsFromDag.end(); ++it) {
+		Job::NodeVar & nodeVar = *it;
+#endif
 			// Substitute the node retry count if necessary.  Note that
 			// we can't do this in Job::ResolveVarsInterpolations()
 			// because that's only called at parse time.
 		MyString value = nodeVar._value;
 		MyString retryStr = IntToStr( retry );
 		value.replaceString( "$(RETRY)", retryStr.Value() );
-		MyString varStr = nodeVar._name + " = " + value;
+		MyString varStr(nodeVar._name);
+		varStr += " = ";
+		varStr += value;
 
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		args.AppendArg( varStr.Value() );
@@ -436,7 +452,7 @@ static void init_dag_vars(SubmitHash & submitHash,
 	const char* DAGNodeName = node->GetJobName();
 	int priority = node->_effectivePriority;
 	int retry = node->GetRetries();
-	bool hold_claim = node->NumChildren() > 0 && dm._claim_hold_time > 0;
+	bool hold_claim = ( ! node->NoChildren()) && dm._claim_hold_time > 0;
 
 	// NOTE: we specify the job ID of DAGMan using only its cluster ID
 	// so that it may be referenced by jobs in their priority
@@ -475,12 +491,20 @@ static void init_dag_vars(SubmitHash & submitHash,
 
 	// set any VARS specified in the DAG file
 	//PRAGMA_REMIND("TODO: move down? and make these live vars?")
+#ifdef DEAD_CODE
 	List<Job::NodeVar> *vars = node->varsFromDag;
 	ListIterator<Job::NodeVar> varsIter(*vars);
 	Job::NodeVar nodeVar;
 	while (varsIter.Next(nodeVar)) {
 		submitHash.set_arg_variable(nodeVar._name.c_str(), nodeVar._value.c_str());
 	}
+#else
+	// this allows for $(JOB) expansions in the vars (and in the submit file)
+	submitHash.set_arg_variable("JOB", node->GetJobName());
+	for (auto it = node->varsFromDag.begin(); it != node->varsFromDag.end(); ++it) {
+		submitHash.set_arg_variable(it->_name, it->_value);
+	}
+#endif
 
 	// set RETRY for $(RETRY) substitution
 	submitHash.set_arg_variable("RETRY", IntToStr(retry).c_str());
@@ -733,8 +757,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 	}
 
 	WriteUserLog ulog;
-	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( false );
+	ulog.setUseCLASSAD( 0 );
 	ulog.initialize( logFile, condorID._cluster,
 		condorID._proc, condorID._subproc );
 
@@ -800,9 +823,8 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	}
 
 	WriteUserLog ulog;
-	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( false );
-	ulog.initialize( std::vector<const char*>(1,logFile), condorID._cluster,
+	ulog.setUseCLASSAD( 0 );
+	ulog.initialize( logFile, condorID._cluster,
 		condorID._proc, condorID._subproc );
 
 	PreSkipEvent pEvent;

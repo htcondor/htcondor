@@ -27,13 +27,15 @@
 #include "utc_time.h"
 
 WaitForUserLog::WaitForUserLog( const std::string & f ) :
-	filename( f ), reader( f.c_str() ), trigger( f ) { };
+	filename( f ), reader( f.c_str(), true ), trigger( f ) { };
 
 WaitForUserLog::~WaitForUserLog() { }
 
-// This is what ReadUserLog::readEvent() does, but I'm not sure it's right.
-// So, a layer of indirection.
-#define ULOG_INVALID ULOG_RD_ERROR
+void
+WaitForUserLog::releaseResources() {
+	reader.releaseResources();
+	trigger.releaseResources();
+}
 
 ULogEventOutcome
 WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
@@ -50,7 +52,7 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 
 		int result = trigger.wait( timeout );
 		switch( result ) {
-			case -1:
+			case -1: // FIXME: return ULOG errors...
 				return ULOG_INVALID;
 			case  0:
 				return ULOG_NO_EVENT;
@@ -61,12 +63,20 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 				// about how long we waited for a new event.
 				struct timeval now; condor_gettimestamp( now );
 				int elapsedMilliseconds = timersub_usec( now, then ) / 1000;
-				ULogEventOutcome o = readEvent( event, timeout - elapsedMilliseconds, following );
-dprintf( D_ALWAYS, "%d = readEvent( , %d )\n", o, timeout - elapsedMilliseconds );
-				return o;
+				return readEvent( event, timeout - elapsedMilliseconds, following );
 				}
 			default:
 				EXCEPT( "Unknown return value from FileModifiedTrigger::wait(): %d, aborting.\n", result );
 		}
 	}
+}
+
+size_t
+WaitForUserLog::getOffset() const {
+    return reader.getOffset();
+}
+
+void
+WaitForUserLog::setOffset( size_t offset ) {
+    reader.setOffset(offset);
 }

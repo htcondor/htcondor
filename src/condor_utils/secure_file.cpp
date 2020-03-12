@@ -159,8 +159,8 @@ bool write_secure_file(const char* path, const void* data, size_t len, bool as_r
 		dprintf(D_ALWAYS,
 			"ERROR: write_secure_file(%s): open() failed: %s (%d)\n",
 			path,
-			strerror(errno),
-				errno);
+			strerror(save_errno),
+				save_errno);
 		return false;
 	}
 	FILE *fp = fdopen(fd, fdopen_format);

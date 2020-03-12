@@ -1052,7 +1052,7 @@ main (int argc, char *argv[])
 	}
 
 	// Address (host:port) is taken from requested pool, if given.
-	char* addr = (NULL != pool) ? pool->addr() : NULL;
+	const char* addr = (NULL != pool) ? pool->addr() : NULL;
 	Daemon* requested_daemon = pool;
 
 	// If we're in "direct" mode, then we attempt to locate the daemon
@@ -1792,8 +1792,13 @@ firstPass (int argc, char *argv[])
 			i += 1;
 			target = argv[i];
 			FILE *targetFile = safe_fopen_wrapper_follow(target, "r");
+			if (targetFile == NULL) {
+				fprintf(stderr, "Cannot open file %s: errno: %d\n", target, errno);
+				exit(1);
+			}
 			int iseof, iserror, empty;
-			mainPP.targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
+			mainPP.targetAd = new ClassAd;
+			InsertFromFile(targetFile, *mainPP.targetAd, "\n\n", iseof, iserror, empty);
 			fclose(targetFile);
 		} else
 		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
@@ -2280,11 +2285,11 @@ secondPass (int argc, char *argv[])
 
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			i += 2;
-			sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
+			sprintf(buffer,"\"%s\"", statistics);
 			if (diagnose) {
-				printf ("[%s]\n", buffer);
+				printf ("[STATISTICS_TO_PUBLISH = %s]\n", buffer);
 			}
-			query->addExtraAttribute(buffer);
+			query->addExtraAttribute("STATISTICS_TO_PUBLISH", buffer);
 			continue;
 		}
 
@@ -2339,7 +2344,7 @@ secondPass (int argc, char *argv[])
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			}
-			delete [] daemonname;
+			free(daemonname);
 			daemonname = NULL;
 		} else if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }

@@ -651,7 +651,7 @@ StringList::shuffle() {
 	}
 
 	for (i = 0; i+1 < count; i++) {
-		unsigned int j = (unsigned int)(i + (get_random_float() * (count-i)));
+		unsigned int j = (unsigned int)(i + (get_random_float_insecure() * (count-i)));
 		// swap m_strings at i and j
 		str = list[i];
 		list[i] = list[j];

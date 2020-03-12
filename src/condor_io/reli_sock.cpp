@@ -25,7 +25,6 @@
 #include "condor_config.h"
 #include "internet.h"
 #include "condor_rw.h"
-#include "condor_socket_types.h"
 #include "condor_md.h"
 #include "selector.h"
 #include "ccb_client.h"
@@ -1181,6 +1180,8 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 		} else {
 			result = m_authob->authenticate( hostAddr, methods, errstack, auth_timeout, non_blocking );
 		}
+		_should_try_token_request = m_authob->shouldTryTokenRequest();
+
 		if ( result == 2 ) {
 			m_auth_in_progress = true;
 		}
@@ -1210,6 +1211,7 @@ int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, ch
 	if( m_auth_in_progress )
 	{
 		result = m_authob->authenticate_continue(errstack, non_blocking);
+		_should_try_token_request = m_authob->shouldTryTokenRequest();
 		if (result == 2) {
 			return result;
 		}
@@ -1361,6 +1363,7 @@ ReliSock::get_statistics() {
 		return statsBuf;
 	}
 
+#if __GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ > 6)
 	snprintf(statsBuf, maxSize,
 		"rto: %d "
 		"ato: %d "
@@ -1401,6 +1404,7 @@ ReliSock::get_statistics() {
 		ti.tcpi_rcv_rtt,
 		ti.tcpi_rcv_space,
 		ti.tcpi_total_retrans);
+#endif
 		
 	return statsBuf;
 #endif

@@ -52,7 +52,7 @@ configuration, set the following configuration variables:
           FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
 
 
-``HOSTALLOW_NEGOTIATOR_SCHEDD`` :index:`HOSTALLOW_NEGOTIATOR_SCHEDD`
+``ALLOW_NEGOTIATOR_SCHEDD`` :index:`ALLOW_NEGOTIATOR_SCHEDD`
     provides an access level and authorization list for the
     *condor_schedd* daemon to allow negotiation (for security reasons)
     with the machines within the pools that jobs from machine A may
@@ -61,9 +61,9 @@ configuration, set the following configuration variables:
 
     ::
 
-        ##  Now, with flocking we need to let the SCHEDD trust the other
-        ##  negotiators we are flocking with as well.  You should normally
-        ##  not have to change this either.
+          ##  Now, with flocking we need to let the SCHEDD trust the other
+          ##  negotiators we are flocking with as well.  You should normally
+          ##  not have to change this either.
         ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
 
 
@@ -108,10 +108,10 @@ Job Considerations
 A particular job will only flock to another pool when it cannot
 currently run in the current pool.
 
-The submission of jobs other than standard universe jobs must consider
+The submission of jobs must consider
 the location of input, output and error files. The common case will be
 that machines within separate pools do not have a shared file system.
 Therefore, when submitting jobs, the user will need to enable file
 transfer mechanisms. These mechanisms are discussed in
-the :ref:`users-manual/submitting-a-job:submitting jobs without a shared file
+the :ref:`users-manual/file-transfer:submitting jobs without a shared file
 system: htcondor's file transfer mechanism` section.

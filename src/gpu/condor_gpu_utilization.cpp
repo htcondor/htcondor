@@ -26,7 +26,7 @@
 #include "cuda_device_enumeration.h"
 
 unsigned debug = 0;
-unsigned reportInterval = 10;
+time_t reportInterval = 10;
 
 int compareSamples( const void * vpA, const void * vpB ) {
 	const nvmlSample_t * a = (const nvmlSample_t *)vpA;
@@ -211,7 +211,7 @@ int main() {
 			minMaxSampleCount = maxSampleCounts[i];
 		}
 	}
-	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000)/6;
+	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000ull)/6;
 
 
 	time_t lastReport = time( NULL );

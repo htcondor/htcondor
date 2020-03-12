@@ -38,7 +38,7 @@
 #include "my_popen.h"
 
 
-StarterMgr::StarterMgr()
+StarterMgr::StarterMgr() : _haveStandardUni(false)
 {
 }
 
@@ -265,9 +265,15 @@ StarterMgr::registerStarter( const char* path )
 	new_starter = new Starter();
 	new_starter->setAd( ad );
 	new_starter->setPath( path );
-	int is_dc = 0;
+	bool is_dc = false;
 	ad->LookupBool( ATTR_IS_DAEMON_CORE, is_dc );
-	new_starter->setIsDC( (bool)is_dc );
+	new_starter->setIsDC( is_dc );
+
+	bool has_checkpoint = false;
+	ad->LookupBool( ATTR_HAS_CHECKPOINTING, has_checkpoint);
+	if (has_checkpoint) {
+		_haveStandardUni = true;
+	}
 
 	return new_starter;
 }

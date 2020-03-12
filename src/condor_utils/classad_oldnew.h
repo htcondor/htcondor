@@ -28,16 +28,12 @@
 
 #include "classad/classad_distribution.h"
 
-#include "classad/value.h"
-#include "classad/matchClassad.h"
-
 // Forward dec'l
 class ReliSock;
 
-void AttrList_setPublishServerTimeMangled( bool publish);
+void AttrList_setPublishServerTime(bool publish);
 
-namespace compat_classad { class ClassAd; } //forward declaration
-compat_classad::ClassAd* getClassAd( Stream *sock );
+classad::ClassAd* getClassAd( Stream *sock );
 
 bool getClassAd( Stream *sock, classad::ClassAd& ad);
 bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options);
@@ -66,17 +62,20 @@ bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
  * @param sock the stream
  * @param ad the ClassAd to be sent
  */
-int putClassAd (Stream *sock, classad::ClassAd& ad);
+int putClassAd (Stream *sock, const classad::ClassAd& ad);
 
 /** Send the ClassAd on the CEDAR stream, this function has the functionality of all of the above
  * @param sock the stream
  * @param ad the ClassAd to be sent
  * @param whitelist list of attributes to send (default is to send all)
+ * @param encrypted_attrs list of attributes to send encrypted (if possible).
  * @param options one or more of PUT_CLASS_AD_* flags
  *  if the PUT_CLASSAD_NON_BLOCKING flag is used, then This will not block even if the send socket is full.
  *  and the return value is 2 if it would have blocked; the ClassAd will be buffered in memory.
  */
-int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::References * whitelist = NULL);
+int putClassAd (Stream *sock, const classad::ClassAd& ad, int options,
+	const classad::References * whitelist = nullptr,
+	const classad::References * encrypted_attrs = nullptr);
 // options valuees for putClassad
 #define PUT_CLASSAD_NO_PRIVATE          0x01 // exclude private attributes
 #define PUT_CLASSAD_NO_TYPES            0x02 // exclude MyType and TargetType from output.
@@ -92,11 +91,4 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 //  > 0 if valid, non-empty projection
 int mergeProjectionFromQueryAd(classad::ClassAd & queryAd, const char * attr_projection, classad::References & projection, bool allow_list = false);
 
-
-//this is a shorthand version of EvalTree w/o a target ad.
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v);
-
-// this will return false when `mine` doesn't exist, or if one of the inner
-// calls to Evaluate fails.
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd* target, classad::Value* v);
 #endif

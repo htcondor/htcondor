@@ -24,7 +24,7 @@
 #include "simplelist.h"
 
 bool vmapi_is_host_machine(void);
-void vmapi_create_vmmanager(char *);
+void vmapi_create_vmmanager(const char *);
 void vmapi_destroy_vmmanager(void);
 
 class VMMachine;
@@ -33,11 +33,11 @@ public:
 	VMManager();
 	virtual ~VMManager();
 
-	bool isRegistered(char *,int);
+	bool isRegistered(const char *,int);
 	int numOfVM(void);
 	void attach(VMMachine *);
 	void detach(VMMachine *);
-	void allNotify(char *, int cmd, void *data);
+	void allNotify(const char *, int cmd, void *data);
 	void printAllElements(void);
 
 	void checkRegisterTimeout(void);

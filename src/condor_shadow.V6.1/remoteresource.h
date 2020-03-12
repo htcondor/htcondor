@@ -80,7 +80,7 @@ const char* rrStateToString( ResourceState s );
 	<pre>
 	Parameter  Member   Results
 	---------  ------   ----------
-	  NULL     exists    string strnewp'ed and returned
+	  NULL     exists    string strdup'ed and returned
 	  NULL      NULL     NULL returned
 	 !NULL     exists    strcpy occurs
 	 !NULL      NULL     "" into parameter
@@ -277,7 +277,7 @@ class RemoteResource : public Service {
 		pss = proportional_set_size_kb;
 		return image_size_kb; 
 	};
-	int getDiskUsage( void ) { return disk_usage; };
+	int64_t getDiskUsage( void ) { return disk_usage; };
 	struct rusage getRUsage( void ) { return remote_rusage; };
 
 		/** Return the state that this resource is in. */
@@ -334,11 +334,11 @@ class RemoteResource : public Service {
 
 		/** If the job on this resource exited with a signal, return
 			the signal.  If not, return -1. */
-	int exitSignal( void );
+	int64_t exitSignal( void );
 
 		/** If the job on this resource exited normally, return the
 			exit code.  If it was killed by a signal, return -1. */ 
-	int exitCode( void );
+	int64_t exitCode( void );
 
 		/** This method is called when the job at the remote resource
 			has finally started to execute.  We use this to log the
@@ -408,7 +408,7 @@ class RemoteResource : public Service {
 	ReliSock *claim_sock;
 	int exit_reason;
 	bool claim_is_closing;
-	int exit_value;
+	int64_t exit_value;
 	bool exited_by_signal;
 
 	bool m_want_chirp;
@@ -449,7 +449,8 @@ class RemoteResource : public Service {
 	int64_t			image_size_kb;
 	int64_t			memory_usage_mb;
 	int64_t			proportional_set_size_kb;
-	int 			disk_usage;
+	int64_t			disk_usage;
+	int64_t			scratch_dir_file_count;
 
 	DCStartd* dc_startd;
 
@@ -477,7 +478,7 @@ private:
 	int next_reconnect_tid;
 	int proxy_check_tid;
 
-	MyString proxy_path;
+	std::string proxy_path;
 	time_t last_proxy_timestamp;
 
 	time_t m_remote_proxy_expiration;
@@ -511,7 +512,7 @@ private:
 	void setRemoteProxyRenewTime(time_t expiration_time);
 	void setRemoteProxyRenewTime();
 	void startCheckingProxy();
-	int attemptShutdownTimeout();
+	void attemptShutdownTimeout();
 	void attemptShutdown();
 	void abortFileTransfer();
 	int transferStatusUpdateCallback(FileTransfer *transobject);

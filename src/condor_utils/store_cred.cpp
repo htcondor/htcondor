@@ -34,8 +34,72 @@
 #include "condor_base64.h"
 #include "zkm_base64.h"
 #include "my_popen.h"
+#include "directory.h"
+
+#include <chrono>
+#include <algorithm>
+#include <iterator>
+#include <unordered_set>
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
+
+namespace {
+
+class NamedCredentialCache
+{
+private:
+	std::vector<std::string> m_creds;
+	std::chrono::steady_clock::time_point m_last_refresh;
+
+public:
+	NamedCredentialCache() {}
+
+	void Refresh() {
+		m_creds.clear();
+		m_last_refresh = std::chrono::steady_clock::time_point();
+	}
+
+	bool List(std::vector<std::string> &creds, CondorError *err);
+};
+
+NamedCredentialCache g_cred_cache;
+
+char *
+read_password_from_filename(const char *filename, CondorError *err)
+{
+	char  *buffer = nullptr;
+	size_t len;
+	bool rc = read_secure_file(filename, (void**)(&buffer), &len, true);
+	if(rc) {
+		// buffer now contains the binary contents from the file.
+		// due to the way 8.4.X and earlier version wrote the file,
+		// there will be trailing NULL characters, although they are
+		// ignored in 8.4.X by the code that reads them.  As such, for
+		// us to agree on the password, we also need to discard
+		// everything after the first NULL.  we do this by simply
+		// resetting the len.  there is a function "strnlen" but it's a
+		// GNU extension so we just do the raw scan here:
+		size_t newlen = 0;
+		while(newlen < len && buffer[newlen]) {
+			newlen++;
+		}
+		len = newlen;
+
+		// undo the trivial scramble
+		char *pw = (char *)malloc(len + 1);
+		simple_scramble(pw, buffer, len);
+		pw[len] = '\0';
+		free(buffer);
+		return pw;
+	}
+
+	if (err) err->pushf("CRED", 1, "Failed to read file %s securely.", filename);
+	dprintf(D_ALWAYS, "read_password_from_filename(): read_secure_file(%s) failed!\n", filename);
+	return nullptr;
+}
+
+}
+
 
 #ifndef WIN32
 	// **** UNIX CODE *****
@@ -299,34 +363,7 @@ char* getStoredCredential(const char *username, const char *domain)
 		return NULL;
 	}
 
-	char  *buffer;
-	size_t len;
-	bool rc = read_secure_file(filename, (void**)(&buffer), &len, true);
-	if(rc) {
-		// buffer now contains the binary contents from the file.
-		// due to the way 8.4.X and earlier version wrote the file,
-		// there will be trailing NULL characters, although they are
-		// ignored in 8.4.X by the code that reads them.  As such, for
-		// us to agree on the password, we also need to discard
-		// everything after the first NULL.  we do this by simply
-		// resetting the len.  there is a function "strnlen" but it's a
-		// GNU extension so we just do the raw scan here:
-		size_t newlen = 0;
-		while(newlen < len && buffer[newlen]) {
-			newlen++;
-		}
-		len = newlen;
-
-		// undo the trivial scramble
-		char *pw = (char *)malloc(len + 1);
-		simple_scramble(pw, buffer, len);
-		pw[len] = '\0';
-		free(buffer);
-		return pw;
-	}
-
-	dprintf(D_ALWAYS, "getStoredCredential(): read_secure_file(%s) failed!\n", filename.ptr());
-	return NULL;
+	return read_password_from_filename(filename.ptr(), nullptr);
 }
 
 int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode, int &cred_modified)
@@ -669,7 +706,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 
 
 int
-get_cred_handler(void *, int /*i*/, Stream *s)
+get_cred_handler(int, Stream *s)
 {
 	char *client_user = NULL;
 	char *client_domain = NULL;
@@ -799,11 +836,11 @@ struct StoreCredState {
 
 
 /* NOW WORKS ON BOTH WINDOWS AND UNIX */
-int store_cred_handler(void *, int /*i*/, Stream *s)
+int store_cred_handler(int, Stream *s)
 {
 	char *user = NULL;
 	char *pw = NULL;
-	int mode;
+	int mode = STORE_CRED_FIRST_MODE - 1;
 	int result;
 	int answer = FAILURE;
 	int cred_modified = false;
@@ -836,7 +873,13 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-		return FALSE;
+		goto cleanup_and_exit;
+	}
+
+	if (mode < STORE_CRED_FIRST_MODE || mode > STORE_CRED_LAST_MODE) {
+		dprintf(D_ALWAYS, "store_cred: %d is not a valid mode\n", mode);
+		answer = FAILURE;
+		goto cleanup_and_exit;
 	}
 
 	if ( user ) {
@@ -953,6 +996,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	}
 #endif // WIN32
 
+cleanup_and_exit:
 	if (pw) {
 		SecureZeroMemory(pw, strlen(pw));
 		free(pw);
@@ -1074,7 +1118,7 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
 }
 
-void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
+int store_pool_cred_handler(int, Stream *s)
 {
 	int result;
 	char *pw = NULL;
@@ -1083,7 +1127,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
-		return;
+		return CLOSE_STREAM;
 	}
 
 	// if we're the CREDD_HOST, make sure any password setting is done locally
@@ -1108,7 +1152,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 			if (!addr || strcmp(my_ip_str.Value(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);
-				return;
+				return CLOSE_STREAM;
 			}
 		}
 		free(credd_host);
@@ -1131,7 +1175,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	}
 
 	// construct the full pool username
-	username += domain;	
+	username += domain;
 
 	// do the real work
 	if (pw && *pw) {
@@ -1155,6 +1199,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 spch_cleanup:
 	if (pw) free(pw);
 	if (domain) free(domain);
+
+	return CLOSE_STREAM;
 }
 
 int 
@@ -1453,14 +1499,14 @@ char*
 get_password() {
 	char *buf;
 	
-	buf = new char[MAX_PASSWORD_LENGTH + 1];
+	buf = (char *)malloc(MAX_PASSWORD_LENGTH + 1);
 	
 	if (! buf) { fprintf(stderr, "Out of Memory!\n\n"); return NULL; }
 	
 		
 	printf("Enter password: ");
 	if ( ! read_from_keyboard(buf, MAX_PASSWORD_LENGTH + 1, false) ) {
-		delete[] buf;
+		free(buf);
 		return NULL;
 	}
 	
@@ -1468,3 +1514,120 @@ get_password() {
 }
 
 
+bool
+NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
+{
+	// First, check to see if our cache is still usable; if so, make a copy.
+	auto current = std::chrono::steady_clock::now();
+	if (std::chrono::duration_cast<std::chrono::seconds>(current - m_last_refresh).count() < 10) {
+		std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+		return true;
+	}
+
+	// Next, iterate through the passwords directory and cache the names
+	// Note we reuse the exclude regexp from the configuration subsys.
+
+	std::string dirpath;
+	if (!param(dirpath, "SEC_PASSWORD_DIRECTORY")) {
+		if (err) err->push("CRED", 1, "SEC_PASSWORD_DIRECTORY is undefined");
+		return false;
+	}
+
+	const char* _errstr;
+	int _erroffset;
+	std::string excludeRegex;
+		// We simply fail invalid regex as the config subsys should have EXCEPT'd
+		// in this case.
+	if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
+		if (err) err->push("CRED", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
+		return false;
+	}
+	Regex excludeFilesRegex;
+	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+		if (err) err->pushf("CRED", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
+			"config parameter is not a valid "
+			"regular expression.  Value: %s,  Error: %s",
+			excludeRegex.c_str(), _errstr ? _errstr : "");
+		return false;
+	}
+	if(!excludeFilesRegex.isInitialized() ) {
+		if (err) err->push("CRED", 1, "Failed to initialize exclude files regex.");
+		return false;
+	}
+
+		// If we can, try reading out the passwords as root.
+	TemporaryPrivSentry sentry(get_priv_state() == PRIV_UNKNOWN ? PRIV_UNKNOWN : PRIV_ROOT);
+
+	m_creds.clear();
+	std::unordered_set<std::string> tmp_creds;
+
+	std::string pool_password;
+	if (param(pool_password, "SEC_PASSWORD_FILE")) {
+		if (0 == access(pool_password.c_str(), R_OK)) {
+			tmp_creds.insert("POOL");
+		}
+	}
+
+	Directory dir(dirpath.c_str());
+	if (!dir.Rewind()) {
+		if (err) {
+			err->pushf("CRED", 1, "Cannot open %s: %s (errno=%d)",
+				dirpath.c_str(), strerror(errno), errno);
+		}
+		if (!tmp_creds.empty()) {
+			std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
+			std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+		} else {
+			return false;
+		}
+	}
+
+	const char *file;
+	while( (file = dir.Next()) ) {
+		if (dir.IsDirectory()) {
+			continue;
+		}
+		if(!excludeFilesRegex.match(file)) {
+			if (0 == access(dir.GetFullPath(), R_OK)) {
+				tmp_creds.insert(file);
+			}
+		} else {
+			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring password file "
+				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
+				"'%s'\n", dir.GetFullPath());
+		}
+	}
+
+	std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
+	std::sort(m_creds.begin(), m_creds.end());
+	std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+
+	return true;
+}
+
+
+bool getNamedCredential(const std::string &cred, std::string &contents, CondorError *err) {
+	std::string dirpath;
+	if (!param(dirpath, "SEC_PASSWORD_DIRECTORY")) {
+		if (err) err->push("CRED", 1, "SEC_PASSWORD_DIRECTORY is undefined");
+		return false;
+	}
+	std::string fullpath = dirpath + DIR_DELIM_CHAR + cred;
+	std::unique_ptr<char> password(read_password_from_filename(fullpath.c_str(), err));
+
+	if (!password.get()) {
+		return false;
+	}
+	contents = std::string(password.get());
+	return true;
+}
+
+
+bool
+listNamedCredentials(std::vector<std::string> &creds, CondorError *err) {
+	return g_cred_cache.List(creds, err);
+}
+
+void refreshNamedCredentials() {
+	g_cred_cache.Refresh();
+}

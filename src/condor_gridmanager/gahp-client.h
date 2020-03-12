@@ -79,6 +79,7 @@ class GahpServer : public Service {
 
 	bool Startup();
 	bool Initialize(Proxy * proxy);
+	bool UpdateToken(const std::string &token_file);
 	bool CreateSecuritySession();
 
 	void DeleteMe();
@@ -96,7 +97,7 @@ class GahpServer : public Service {
 
 	static int m_reaperid;
 
-	static void Reaper(Service *,int pid,int status);
+	static int Reaper(int pid,int status);
 
 	class GahpStatistics {
 	public:
@@ -132,7 +133,7 @@ class GahpServer : public Service {
 	void AddGahpClient();
 	void RemoveGahpClient();
 
-	int ProxyCallback();
+	void ProxyCallback();
 	void doProxyCheck();
 	GahpProxyInfo *RegisterProxy( Proxy *proxy );
 	void UnregisterProxy( Proxy *proxy );
@@ -182,6 +183,7 @@ class GahpServer : public Service {
 	bool command_version();
 	bool command_initialize_from_file(const char *proxy_path,
 									  const char *command=NULL);
+	bool command_update_token_from_file(const std::string &token);
 	bool command_commands();
 	bool command_async_mode_on();
 	bool command_response_prefix(const char *prefix);
@@ -255,6 +257,7 @@ class GenericGahpClient : public Service {
 
 		bool Startup();
 		bool Initialize( Proxy * proxy );
+		bool UpdateToken(const std::string &token_file);
 		bool CreateSecuritySession();
 
 		void purgePendingRequests() { clear_pending(); }
@@ -629,6 +632,7 @@ class GahpClient : public GenericGahpClient {
 								 const std::string &metadata_file,
 								 bool preemptible,
 								 const std::string &json_file,
+								 const std::vector< std::pair< std::string, std::string > > & labels,
 								 std::string &instance_id );
 
 		int gce_instance_delete( std::string service_url,

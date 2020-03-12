@@ -133,24 +133,26 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		return FALSE;
 	}
 
-	StatWrapper sw( secretKeyFile.c_str() );
-	mode_t mode = sw.GetBuf()->st_mode;
-	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
-		std::string errorString;
-		formatstr( errorString, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner." );
-		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
+	if( secretKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		StatWrapper sw( secretKeyFile.c_str() );
+		mode_t mode = sw.GetBuf()->st_mode;
+		if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+			std::string errorString;
+			formatstr( errorString, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner." );
+			dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
 
-		reply->Assign( "RequestVersion", 1 );
-		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
-		reply->Assign( ATTR_ERROR_STRING, errorString );
+			reply->Assign( "RequestVersion", 1 );
+			reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+			reply->Assign( ATTR_ERROR_STRING, errorString );
 
-		if( replyStream ) {
-			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			if( replyStream ) {
+				if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
+					dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+				}
 			}
-		}
 
-		return FALSE;
+			return FALSE;
+		}
 	}
 
 	// Create the GAHP client.  The first time we call a GAHP client function,
@@ -282,7 +284,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		// instances.  Otherwise, the lease may not fire.
 		GetFunction * gf = new GetFunction( leaseFunctionARN,
 			reply, lambdaGahp, scratchpad,
-	    	lambdaURL, publicKeyFile, secretKeyFile,
+			lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
 
 		UploadFile * uf = NULL;
@@ -342,9 +344,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			(void (Service::*)()) & FunctorSequence::operator(),
 			"GetFunction, PutRule, PutTarget, BulkRequest", fs );
 		gahp->setNotificationTimerId( functorSequenceTimer );
-    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
-    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
-    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
+		eventsGahp->setNotificationTimerId( functorSequenceTimer );
+		lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+		s3Gahp->setNotificationTimerId( functorSequenceTimer );
 
 		return KEEP_STREAM;
 	} else if( annexType == "odi" ) {
@@ -381,7 +383,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		GetFunction * gf = new GetFunction( leaseFunctionARN,
 			reply, lambdaGahp, scratchpad,
-	    	lambdaURL, publicKeyFile, secretKeyFile,
+			lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
 
 		UploadFile * uf = NULL;
@@ -417,9 +419,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			(void (Service::*)()) & FunctorSequence::operator(),
 			"GetFunction, PutRule, PutTarget, OnDemandRequest", fs );
 		gahp->setNotificationTimerId( functorSequenceTimer );
-    	eventsGahp->setNotificationTimerId( functorSequenceTimer );
-    	lambdaGahp->setNotificationTimerId( functorSequenceTimer );
-    	s3Gahp->setNotificationTimerId( functorSequenceTimer );
+		eventsGahp->setNotificationTimerId( functorSequenceTimer );
+		lambdaGahp->setNotificationTimerId( functorSequenceTimer );
+		s3Gahp->setNotificationTimerId( functorSequenceTimer );
 
 		return KEEP_STREAM;
 	} else {

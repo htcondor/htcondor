@@ -163,7 +163,7 @@ static bool test_hold_macro_firing_reason(void);
 //global variables
 static ClassAdParser parser;
 static ClassAdUnParser unparser;
-static compat_classad::ClassAd* ad;
+static ClassAd* ad;
 static string classad_string;
 
 //string constants used for initializing ClassAds
@@ -351,19 +351,19 @@ static bool test_init_empty() {
 	emit_param("ClassAd", "");
 	emit_output_expected_header();
 	emit_param("ClassAd", "%s", DEFAULT);
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);	//use default attributes
 	unparser.Unparse(classad_string, ad);
 	emit_output_actual_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
 #ifdef USE_NON_MUTATING_USERPOLICY
-	int val1, val2, val3, val4, val5;
-	if ( ! ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, NULL, val1) &&
-		! ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, NULL, val2) &&
-		! ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, NULL, val3) &&
-		! ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4) &&
-		! ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5))
+	bool val1, val2, val3, val4, val5;
+	if ( ! ad->LookupBool(ATTR_PERIODIC_HOLD_CHECK, val1) &&
+		! ad->LookupBool(ATTR_PERIODIC_REMOVE_CHECK, val2) &&
+		! ad->LookupBool(ATTR_PERIODIC_RELEASE_CHECK, val3) &&
+		! ad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, val4) &&
+		! ad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, val5))
 	{
 		CLEANUP;
 		PASS;
@@ -387,9 +387,9 @@ static bool test_init_non_empty() {
 	emit_param("ClassAd", "%s", expect);
 	emit_output_expected_header();
 	emit_param("ClassAd", "%s", expect);
-	ad = new compat_classad::ClassAd();
-	ad->initFromString("PeriodicHold = true\nPeriodicRemove = true\n"
-		"PeriodicRelease = true\nOnExitHold = true\nOnExitRemove = false");
+	ad = new ClassAd();
+	initAdFromString("PeriodicHold = true\nPeriodicRemove = true\n"
+		"PeriodicRelease = true\nOnExitHold = true\nOnExitRemove = false", *ad);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	unparser.Unparse(classad_string, ad);
@@ -428,9 +428,9 @@ static bool test_init_non_empty_miss1() {
 	emit_param("ClassAd", "%s", input);
 	emit_output_expected_header();
 	emit_param("ClassAd", "%s", expect);
-	ad = new compat_classad::ClassAd();
-	ad->initFromString("TimerRemove = 0\nPeriodicHold = true\n"
-		"PeriodicRemove = true");
+	ad = new ClassAd();
+	initAdFromString("TimerRemove = 0\nPeriodicHold = true\n"
+		"PeriodicRemove = true", *ad);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	unparser.Unparse(classad_string, ad);
@@ -468,9 +468,9 @@ static bool test_init_non_empty_miss2() {
 	emit_param("ClassAd", "%s", input);
 	emit_output_expected_header();
 	emit_param("ClassAd", "%s", expect);
-	ad = new compat_classad::ClassAd();
-	ad->initFromString("PeriodicRelease = true\nOnExitHold = true\n"
-		"OnExitRemove = true");
+	ad = new ClassAd();
+	initAdFromString("PeriodicRelease = true\nOnExitHold = true\n"
+		"OnExitRemove = true", *ad);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	unparser.Unparse(classad_string, ad);
@@ -509,7 +509,7 @@ static bool test_analyze_policy_invalid_mode() {
 	emit_input_header();
 	emit_param("ClassAd", "%s", DEFAULT);
 	emit_param("Mode", "%d", -1);
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	POLICY_ANALYZE(ad, -1);
@@ -526,7 +526,7 @@ static bool test_analyze_policy_missing_job_status() {
 	emit_param("Mode", "PERIODIC_ONLY");
 	emit_output_expected_header();
 	emit_retval("%d", UNDEFINED_EVAL);
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);	//use default values
 	int ret_val = POLICY_ANALYZE(ad, PERIODIC_ONLY);
@@ -547,7 +547,7 @@ static bool test_analyze_policy_empty() {
 	emit_param("Mode", "PERIODIC_ONLY");
 	emit_output_expected_header();
 	emit_retval("%d", UNDEFINED_EVAL);
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);	//use default values
 	ad->Delete(ATTR_PERIODIC_HOLD_CHECK);
@@ -569,8 +569,8 @@ static bool test_analyze_policy_undefined_timer_remove() {
 	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
 		"a ClassAd that has TimerRemove evaluate to undefined.");
 	emit_comment("See ticket #1571.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_TIMER_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -593,8 +593,8 @@ static bool test_analyze_policy_undefined_timer_remove() {
 static bool test_analyze_policy_undefined_periodic_hold() {
 	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
 		"a ClassAd that has PeriodicHold evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -617,8 +617,8 @@ static bool test_analyze_policy_undefined_periodic_hold() {
 static bool test_analyze_policy_undefined_periodic_release() {
 	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
 		"a ClassAd that has PeriodicRelease evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -641,8 +641,8 @@ static bool test_analyze_policy_undefined_periodic_release() {
 static bool test_analyze_policy_undefined_periodic_remove() {
 	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
 		"a ClassAd that has PeriodicRemove evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -665,8 +665,8 @@ static bool test_analyze_policy_undefined_periodic_remove() {
 static bool test_analyze_policy_undefined_on_exit_hold() {
 	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
 		"a ClassAd that has OnExitHold evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -689,8 +689,8 @@ static bool test_analyze_policy_undefined_on_exit_hold() {
 static bool test_analyze_policy_undefined_on_exit_remove() {
 	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
 		"a ClassAd that has OnExitRemove evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -714,8 +714,8 @@ static bool test_analyze_policy_only_timer_remove() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used "
 		"with the PERIODIC_ONLY mode and a ClassAd that has TimerRemove "
 		"evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -738,8 +738,8 @@ static bool test_analyze_policy_only_periodic_hold() {
 	emit_test("Test that AnalyzePolicy() returns HOLD_IN_QUEUE when used with "
 		"the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold evaluate "
 		"to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -762,8 +762,8 @@ static bool test_analyze_policy_only_periodic_hold_false() {
 	emit_test("Test that AnalyzePolicy() doesn't return HOLD_IN_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold "
 		"evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_JOB_STATUS, "2");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -788,8 +788,8 @@ static bool test_analyze_policy_only_periodic_release() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_HOLD when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRelease "
 		"evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -812,8 +812,8 @@ static bool test_analyze_policy_only_periodic_release_false() {
 	emit_test("Test that AnalyzePolicy() doesn't return RELEASE_FROM_HOLD when "
 		"used with the PERIODIC_ONLY mode and a ClassAd that has "
 		"PeriodicRelease evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_JOB_STATUS, "5");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -837,8 +837,8 @@ static bool test_analyze_policy_only_periodic_remove() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRemove "
 		"evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -861,8 +861,8 @@ static bool test_analyze_policy_only_false() {
 	emit_test("Test that AnalyzePolicy() returns STAYS_IN_QUEUE when used with "
 		"the PERIODIC_ONLY mode and a ClassAd that has all the checked "
 		"attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -888,8 +888,8 @@ static bool test_analyze_policy_exit_missing() {
 		"ClassAd this is missing the ExitBySignal attribute, but we can't "
 		"verify that in the current unit test framework.");
 /*	
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	ad->Delete(ATTR_ON_EXIT_BY_SIGNAL);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -918,8 +918,8 @@ static bool test_analyze_policy_exit_missing_both() {
 		"ClassAd this is missing both the ExitSignal and ExitCode attributes, "
 		"but we can't verify that in the current unit test framework.");
 /*
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	ad->Delete(ATTR_ON_EXIT_SIGNAL);
 	ad->Delete(ATTR_ON_EXIT_CODE);
 	unparser.Unparse(classad_string, ad);
@@ -945,8 +945,8 @@ static bool test_analyze_policy_exit_missing_signal() {
 	emit_test("Test that AnalyzePolicy() returns STAYS_IN_QUEUE when used with "
 		"the PERIODIC_THEN_EXIT mode and a ClassAd that has OnExitBySignal and "
 		"OnExitCode defined, but is missing the OnExitSignal attribute.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	ad->Delete(ATTR_ON_EXIT_SIGNAL);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
@@ -972,8 +972,8 @@ static bool test_analyze_policy_exit_missing_code() {
 	emit_test("Test that AnalyzePolicy() returns STAYS_IN_QUEUE when used with "
 		"the PERIODIC_THEN_EXIT mode and a ClassAd that has ExitBySignal and "
 		"ExitSignal defined, but is missing the ExitCode attribute.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	ad->Delete(ATTR_ON_EXIT_CODE);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
@@ -999,8 +999,8 @@ static bool test_analyze_policy_exit_timer_remove() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used "
 		"with the PERIODIC_THEN_EXIT mode and a ClassAd that has TimerRemove "
 		"evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1023,8 +1023,8 @@ static bool test_analyze_policy_exit_periodic_hold() {
 	emit_test("Test that AnalyzePolicy() returns HOLD_IN_QUEUE when used with "
 		"the PERIODIC_THEN_EXIT mode and a ClassAd that has PeriodicHold "
 		"evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1047,8 +1047,8 @@ static bool test_analyze_policy_exit_periodic_hold_false() {
 	emit_test("Test that AnalyzePolicy() doesn't return HOLD_IN_QUEUE when used"
 		" with the PERIODIC_THEN_EXIT mode and a ClassAd that has PeriodicHold "
 		"evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_JOB_STATUS, "2");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1072,8 +1072,8 @@ static bool test_analyze_policy_exit_periodic_release() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_HOLD when used"
 		" with the PERIODIC_THEN_EXIT mode and a ClassAd that has "
 		"PeriodicRelease evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1096,8 +1096,8 @@ static bool test_analyze_policy_exit_periodic_release_false() {
 	emit_test("Test that AnalyzePolicy() doesn't return RELEASE_FROM_HOLD when "
 		"used with the PERIODIC_THEN_EXIT mode and a ClassAd that has "
 		"PeriodicRelease evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_JOB_STATUS, "5");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1121,8 +1121,8 @@ static bool test_analyze_policy_exit_periodic_remove() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used"
 		" with the PERIODIC_THEN_EXIT mode and a ClassAd that has "
 		"PeriodicRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1145,8 +1145,8 @@ static bool test_analyze_policy_exit_on_exit_hold() {
 	emit_test("Test that AnalyzePolicy() returns HOLD_IN_QUEUE when used"
 		" with the PERIODIC_THEN_EXIT mode and a ClassAd that has "
 		"OnExitRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1169,8 +1169,8 @@ static bool test_analyze_policy_exit_on_exit_remove() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used"
 		" with the PERIODIC_THEN_EXIT mode and a ClassAd that has "
 		"OnExitRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1193,8 +1193,8 @@ static bool test_analyze_policy_exit_false() {
 	emit_test("Test that AnalyzePolicy() returns STAYS_IN_QUEUE when used with "
 		"the PERIODIC_THEN_EXIT mode and a ClassAd that has all the checked "
 		"attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1234,7 +1234,7 @@ static bool test_firing_expression_no_init() {
 static bool test_firing_expression_no_analyze() {
 	emit_test("Test that FiringExpression() returns NULL when called before "
 		"calling AnalyzePolicy().");
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	unparser.Unparse(classad_string, ad);
@@ -1259,7 +1259,7 @@ static bool test_firing_expression_empty() {
 	emit_param("ClassAd", "");
 	emit_output_expected_header();
 	emit_param("Returns NULL", "TRUE");
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);	//use default attributes
 	ad->Delete(ATTR_PERIODIC_HOLD_CHECK);
@@ -1283,8 +1283,8 @@ static bool test_firing_expression_undefined_timer_remove() {
 		" AnalyzePolicy() with a ClassAd that has TimerRemove evaluate to "
 		"undefined.");
 	emit_comment("See ticket #1572.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_TIMER_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1308,8 +1308,8 @@ static bool test_firing_expression_undefined_periodic_hold() {
 	emit_test("Test that FiringExpression() returns PeriodicHold after a call "
 		"to AnalyzePolicy() with a ClassAd that has PeriodicHold evaluate to "
 		"undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1333,8 +1333,8 @@ static bool test_firing_expression_undefined_periodic_release() {
 	emit_test("Test that FiringExpression() returns PeriodicRelease after a "
 		"call to AnalyzePolicy() with a ClassAd that has PeriodicRelase "
 		"evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1358,8 +1358,8 @@ static bool test_firing_expression_undefined_periodic_remove() {
 	emit_test("Test that FiringExpression() returns PeriodicRemove after a "
 		"call to AnalyzePolicy() with a ClassAd that has PeriodicRemove "
 		"evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1383,8 +1383,8 @@ static bool test_firing_expression_undefined_on_exit_hold() {
 	emit_test("Test that FiringExpression() returns OnExitHold after a "
 		"call to AnalyzePolicy() with a ClassAd that has OnExitHold "
 		"evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1408,8 +1408,8 @@ static bool test_firing_expression_undefined_on_exit_remove() {
 	emit_test("Test that FiringExpression() returns OnExitRemove after a "
 		"call to AnalyzePolicy() with a ClassAd that has OnExitRemove "
 		"evaluate to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1433,8 +1433,8 @@ static bool test_firing_expression_only_timer_remove() {
 	emit_test("Test that FiringExpression() returns TimerRemove after a call to"
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that has "
 		"TimerRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1457,8 +1457,8 @@ static bool test_firing_expression_only_periodic_hold() {
 	emit_test("Test that FiringExpression() returns PeriodicHold after a call "
 		"to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that has "
 		"PeriodicHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1481,8 +1481,8 @@ static bool test_firing_expression_only_periodic_release() {
 	emit_test("Test that FiringExpression() returns PeriodicRelease after a "
 		"call to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that"
 		" has PeriodicRelease evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1505,8 +1505,8 @@ static bool test_firing_expression_only_periodic_remove() {
 	emit_test("Test that FiringExpression() returns PeriodicRemove after a "
 		"call to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that"
 		" has PeriodicRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1529,8 +1529,8 @@ static bool test_firing_expression_only_false() {
 	emit_test("Test that FiringExpression() returns NULL after a call to "
 		"AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that has all"
 		" the checked attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1554,8 +1554,8 @@ static bool test_firing_expression_exit_timer_remove() {
 	emit_test("Test that FiringExpression() returns TimerRemove after a call to"
 		" AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has TimerRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1578,8 +1578,8 @@ static bool test_firing_expression_exit_periodic_hold() {
 	emit_test("Test that FiringExpression() returns PeriodicHold after a call "
 		"to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that"
 		" has PeriodicHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1602,8 +1602,8 @@ static bool test_firing_expression_exit_periodic_release() {
 	emit_test("Test that FiringExpression() returns PeriodicRelease after a "
 		"call to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd"
 		" that has PeriodicRelease evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1626,8 +1626,8 @@ static bool test_firing_expression_exit_periodic_remove() {
 	emit_test("Test that FiringExpression() returns PeriodicRemove after a "
 		"call to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that"
 		" has PeriodicRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1650,8 +1650,8 @@ static bool test_firing_expression_exit_on_exit_hold() {
 	emit_test("Test that FiringExpression() returns OnExitHold after a "
 		"call to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that"
 		" has OnExitHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1674,8 +1674,8 @@ static bool test_firing_expression_exit_on_exit_remove() {
 	emit_test("Test that FiringExpression() returns OnExitRemove after a "
 		"call to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that"
 		" has OnExitRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1698,8 +1698,8 @@ static bool test_firing_expression_exit_false() {
 	emit_test("Test that FiringExpression() returns OnExitRemove after a call "
 		"to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that"
 		" has all the checked attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1739,7 +1739,7 @@ static bool test_firing_expression_value_no_init() {
 static bool test_firing_expression_value_no_analyze() {
 	emit_test("Test that FiringExpressionValue() returns -1 when called before "
 		"AnalyzePolicy().");
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	unparser.Unparse(classad_string, ad);
@@ -1764,7 +1764,7 @@ static bool test_firing_expression_value_empty() {
 	emit_param("ClassAd", "");
 	emit_output_expected_header();
 	emit_retval("%d", -1);
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);	//use default attributes
 	ad->Delete(ATTR_PERIODIC_HOLD_CHECK);
@@ -1788,8 +1788,8 @@ static bool test_firing_expression_value_und_timer_remove() {
 		" AnalyzePolicy() with a ClassAd that has TimerRemove evaluate to "
 		"undefined.");
 	emit_comment("See ticket #1573.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_TIMER_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1813,8 +1813,8 @@ static bool test_firing_expression_value_und_periodic_hold() {
 	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
 		"AnalyzePolicy() with a ClassAd that has PeriodicHold evaluate to "
 		"undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1838,8 +1838,8 @@ static bool test_firing_expression_value_und_periodic_release() {
 	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
 		"AnalyzePolicy() with a ClassAd that has PeriodicRelase evaluate to "
 		"undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1863,8 +1863,8 @@ static bool test_firing_expression_value_und_periodic_remove() {
 	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
 		"AnalyzePolicy() with a ClassAd that has PeriodicRemove evaluate to "
 		"undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1888,8 +1888,8 @@ static bool test_firing_expression_value_und_on_exit_hold() {
 	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
 		"AnalyzePolicy() with a ClassAd that has OnExitHold evaluate to "
 		"undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1913,8 +1913,8 @@ static bool test_firing_expression_value_und_on_exit_remove() {
 	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
 		"AnalyzePolicy() with a ClassAd that has OnExitRemove evaluate to "
 		"undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -1938,8 +1938,8 @@ static bool test_firing_expression_value_only_timer_remove() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has TimerRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1962,8 +1962,8 @@ static bool test_firing_expression_value_only_periodic_hold() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -1986,8 +1986,8 @@ static bool test_firing_expression_value_only_periodic_release() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRelease evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2010,8 +2010,8 @@ static bool test_firing_expression_value_only_periodic_remove() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2034,8 +2034,8 @@ static bool test_firing_expression_value_only_false() {
 	emit_test("Test that FiringExpressionValue() returns -1 after a call to"
 		"AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that has all"
 		" the checked attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2058,8 +2058,8 @@ static bool test_firing_expression_value_exit_timer_remove() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has TimerRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2082,8 +2082,8 @@ static bool test_firing_expression_value_exit_periodic_hold() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has PeriodicHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2106,8 +2106,8 @@ static bool test_firing_expression_value_exit_periodic_release() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has PeriodicRelease evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2130,8 +2130,8 @@ static bool test_firing_expression_value_exit_periodic_remove() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has PeriodicRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2154,8 +2154,8 @@ static bool test_firing_expression_value_exit_on_exit_hold() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
 		" AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has OnExitHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2178,8 +2178,8 @@ static bool test_firing_expression_value_exit_on_exit_remove() {
 	emit_test("Test that FiringExpressionValue() returns 1 after a call to "
 		"AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has OnExitRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2202,8 +2202,8 @@ static bool test_firing_expression_value_exit_false() {
 	emit_test("Test that FiringExpressionValue() returns 0 after a call to "
 		"AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd that "
 		"has all the checked attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "false");
 	emit_input_header();
@@ -2246,7 +2246,7 @@ static bool test_firing_reason_no_init() {
 static bool test_firing_reason_no_analyze() {
 	emit_test("Test that FiringReason() returns false when called before "
 		"AnalyzePolicy().");
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	unparser.Unparse(classad_string, ad);
@@ -2274,7 +2274,7 @@ static bool test_firing_reason_empty() {
 	emit_param("ClassAd", "");
 	emit_output_expected_header();
 	emit_param("Returns false", "TRUE");
-	ad = new compat_classad::ClassAd();
+	ad = new ClassAd();
 	UserPolicy policy;
 	POLICY_INIT(ad);	//use default attributes
 	ad->Delete(ATTR_PERIODIC_HOLD_CHECK);
@@ -2302,8 +2302,8 @@ static bool test_firing_reason_undefined_timer_remove() {
 		" to AnalyzePolicy() with a ClassAd that has TimerRemove evaluate to "
 		"undefined.");
 	emit_comment("See ticket #1574.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_TIMER_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2333,8 +2333,8 @@ static bool test_firing_reason_undefined_periodic_hold() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has PeriodicHold evaluate to "
 		"undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2364,8 +2364,8 @@ static bool test_firing_reason_undefined_periodic_release() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has PeriodicRelease evaluate "
 		"to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2395,8 +2395,8 @@ static bool test_firing_reason_undefined_periodic_remove() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has PeriodicRemove evaluate "
 		"to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2426,8 +2426,8 @@ static bool test_firing_reason_undefined_on_exit_hold() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has OnExitHold evaluate "
 		"to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2457,8 +2457,8 @@ static bool test_firing_reason_undefined_on_exit_remove() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has OnExitRemove evaluate "
 		"to undefined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2489,8 +2489,8 @@ static bool test_firing_reason_only_timer_remove() {
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has TimerRemove evaluate to true.");
 	emit_comment("See ticket #1575.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2519,8 +2519,8 @@ static bool test_firing_reason_only_periodic_hold() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2549,8 +2549,8 @@ static bool test_custom_firing_reason_only_periodic_hold() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicHold evaluate to true and PeriodicHoldReason is defined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	ad->AssignExpr(ATTR_PERIODIC_HOLD_REASON,"strcat(\"Custom\",\" reason\")");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2579,8 +2579,8 @@ static bool test_firing_reason_only_periodic_release() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRelease evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2609,8 +2609,8 @@ static bool test_custom_firing_reason_only_periodic_release() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRelease evaluate to true and PeriodicReleaseReason is defined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	ad->AssignExpr(ATTR_PERIODIC_RELEASE_REASON,"strcat(\"Custom\",\" reason\")");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2639,8 +2639,8 @@ static bool test_firing_reason_only_periodic_remove() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2669,8 +2669,8 @@ static bool test_custom_firing_reason_only_periodic_remove() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRemove evaluate to true and PeriodicRemoveReason is defined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	ad->AssignExpr(ATTR_PERIODIC_REMOVE_REASON,"strcat(\"Custom\",\" reason\")");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2699,8 +2699,8 @@ static bool test_firing_reason_only_false() {
 	emit_test("Test that FiringReason() returns false after a call to "
 		"AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that has all"
 		" the checked attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2727,8 +2727,8 @@ static bool test_firing_reason_exit_timer_remove() {
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has TimerRemove evaluate to true.");
 	emit_comment("See ticket #1575.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(TIMER_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(TIMER_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2757,8 +2757,8 @@ static bool test_firing_reason_exit_periodic_hold() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has PeriodicHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2787,8 +2787,8 @@ static bool test_firing_reason_exit_periodic_release() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has PeriodicRelease evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2817,8 +2817,8 @@ static bool test_firing_reason_exit_periodic_remove() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has PeriodicRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2847,8 +2847,8 @@ static bool test_firing_reason_exit_on_exit_hold() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitHold evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2877,8 +2877,8 @@ static bool test_custom_firing_reason_exit_on_exit_hold() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitHold evaluate to true and OnExitHoldReason is defined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_HOLD);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_HOLD, *ad);
 	ad->AssignExpr(ATTR_ON_EXIT_HOLD_REASON,"strcat(\"Custom\",\" reason\")");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2907,8 +2907,8 @@ static bool test_firing_reason_exit_on_exit_remove() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitRemove evaluate to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
@@ -2937,8 +2937,8 @@ static bool test_custom_firing_reason_exit_on_exit_remove() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitRemove evaluate to true and OnExitRemoveReason is defined.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	ad->AssignExpr(ATTR_ON_EXIT_REMOVE_REASON,"strcat(\"Custom\",\" reason\")");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2967,8 +2967,8 @@ static bool test_firing_reason_exit_false() {
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has all the checked attributes evaluate to false.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(ON_EXIT_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -2997,8 +2997,8 @@ static bool test_remove_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRemove "
 		"evaluate to false, but SYSTEM_PERIODIC_REMOVE evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3025,8 +3025,8 @@ static bool test_remove_macro_firing_expression() {
 		"after a call to AnalyzePolicy() with the PERIODIC_ONLY mode and a "
 		"ClassAd that has PeriodicRemove evaluate to false, but "
 		"SYSTEM_PERIODIC_REMOVE evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3051,8 +3051,8 @@ static bool test_remove_macro_firing_expression_value() {
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRemove evaluate to false, but SYSTEM_PERIODIC_REMOVE "
 		"evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3078,8 +3078,8 @@ static bool test_remove_macro_firing_reason() {
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
 		"that has PeriodicRemove evaluate to false, but SYSTEM_PERIODIC_REMOVE "
 		"evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_REMOVE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3108,8 +3108,8 @@ static bool test_release_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRelease "
 		"evaluate to false, but SYSTEM_PERIODIC_RELEASE evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3136,8 +3136,8 @@ static bool test_release_macro_firing_expression() {
 		"after a call to AnalyzePolicy() with the PERIODIC_ONLY mode and a "
 		"ClassAd that has PeriodicRelease evaluate to false, but "
 		"SYSTEM_PERIODIC_RELEASE evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3162,8 +3162,8 @@ static bool test_release_macro_firing_expression_value() {
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRelease evaluate to false, but SYSTEM_PERIODIC_RELEASE "
 		"evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3189,8 +3189,8 @@ static bool test_release_macro_firing_reason() {
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
 		"that has PeriodicRelease evaluate to false, but SYSTEM_PERIODIC_RELEASE "
 		"evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_RELEASE);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3219,8 +3219,8 @@ static bool test_hold_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold "
 		"evaluate to false, but SYSTEM_PERIODIC_HOLD evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3247,8 +3247,8 @@ static bool test_hold_macro_firing_expression() {
 		"after a call to AnalyzePolicy() with the PERIODIC_ONLY mode and a "
 		"ClassAd that has PeriodicHold evaluate to false, but "
 		"SYSTEM_PERIODIC_HOLD evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3273,8 +3273,8 @@ static bool test_hold_macro_firing_expression_value() {
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicHold evaluate to false, but SYSTEM_PERIODIC_HOLD "
 		"evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
@@ -3300,8 +3300,8 @@ static bool test_hold_macro_firing_reason() {
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
 		"that has PeriodicHold evaluate to false, but SYSTEM_PERIODIC_HOLD "
 		"evaluates to true.");
-	ad = new compat_classad::ClassAd();
-	ad->initFromString(PERIODIC_HOLD);
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();

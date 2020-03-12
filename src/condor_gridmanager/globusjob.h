@@ -82,7 +82,7 @@ class GlobusJob : public BaseJob
 	*/
 	virtual bool IsExitStatusValid();
 
-	int ProxyCallback();
+	void ProxyCallback();
 
 	static int submitInterval;
 	static int restartInterval;

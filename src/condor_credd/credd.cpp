@@ -42,14 +42,14 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 
 		// Command handler for the user condor_store_cred tool
 	daemonCore->Register_Command( STORE_CRED, "STORE_CRED", 
-								(CommandHandler)&store_cred_handler, 
-								"store_cred_handler", NULL, WRITE, 
+								&store_cred_handler, 
+								"store_cred_handler", WRITE, 
 								D_FULLDEBUG, true /*force authentication*/ );
 
 		// Command handler for daemons to get the password
 	daemonCore->Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD", 
-								(CommandHandler)&get_cred_handler,
-								"get_cred_handler", NULL, DAEMON,
+								&get_cred_handler,
+								"get_cred_handler",DAEMON,
 								D_FULLDEBUG, true /*force authentication*/ );
 
 		// NOP command for testing authentication
@@ -112,11 +112,8 @@ CredDaemon::reconfig()
 	}
 	m_name = param("CREDD_HOST");
 	if (m_name == NULL) {
-		char* tmp = default_daemon_name();
-		ASSERT(tmp != NULL);
-		m_name = strdup(tmp);
+		m_name = default_daemon_name();
 		ASSERT(m_name != NULL);
-		delete[] tmp;
 	}
 	if(m_name == NULL) {
 		EXCEPT("default_daemon_name() returned NULL");
@@ -155,14 +152,10 @@ CredDaemon::initialize_classad()
 	SetMyTypeName(m_classad, CREDD_ADTYPE);
 	SetTargetTypeName(m_classad, "");
 
-	MyString line;
+	m_classad.Assign(ATTR_NAME, m_name);
 
-	line.formatstr("%s = \"%s\"", ATTR_NAME, m_name );
-	m_classad.Insert(line.Value());
-
-	line.formatstr ("%s = \"%s\"", ATTR_CREDD_IP_ADDR,
+	m_classad.Assign(ATTR_CREDD_IP_ADDR,
 			daemonCore->InfoCommandSinfulString() );
-	m_classad.Insert(line.Value());
 
         // Publish all DaemonCore-specific attributes, which also handles
         // SUBSYS_ATTRS for us.
@@ -182,33 +175,41 @@ CredDaemon::invalidate_ad()
 	SetMyTypeName(query_ad, QUERY_ADTYPE);
 	SetTargetTypeName(query_ad, CREDD_ADTYPE);
 
-	MyString line;
-	line.formatstr("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
-    query_ad.Insert(line.Value());
+	std::string line;
+	formatstr(line, "TARGET.%s == \"%s\"", ATTR_NAME, m_name);
+	query_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 	query_ad.Assign(ATTR_NAME,m_name);
 
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
 }
 
-void
+int
 CredDaemon::nop_handler(int, Stream*)
 {
-	return;
+	return 0; // ????
 }
 
 
-void
+int
 CredDaemon::zkm_query_creds( int, Stream* s)
 {
 	ReliSock* r = (ReliSock*)s;
 	r->decode();
-	int numads;
-	r->code(numads);
+	int numads = 0;
+	if (!r->code(numads)) {
+		dprintf(D_ALWAYS, "zkm_query_creds: cannot read numads off wire\n");
+		r->end_of_message();
+		return CLOSE_STREAM;
+	}
 
 	std::vector<ClassAd> requests;
 	requests.resize(numads);
 	for(int i=0; i<numads; i++) {
-		getClassAd(r, requests[i]);
+		if (!getClassAd(r, requests[i])) {
+			dprintf(D_ALWAYS, "zkm_query_creds: cannot read classad off wire\n");
+			r->end_of_message();
+			return CLOSE_STREAM;
+		}
 	}
 	r->end_of_message();
 
@@ -218,9 +219,9 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 
 	ClassAdListDoesNotDeleteAds missing;
 	for(int i=0; i<numads; i++) {
-		MyString service;
-		MyString handle;
-		MyString user;
+		std::string service;
+		std::string handle;
+		std::string user;
 		requests[i].LookupString("Service", service);
 		requests[i].LookupString("Handle", handle);
 		requests[i].LookupString("Username", user);
@@ -228,14 +229,14 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 		MyString tmpfname;
 		tmpfname = service;
 		tmpfname.replaceString("/",":"); // TODO: : isn't going to work on Windows. should use ; instead
-		if(handle.Length()) {
+		if(handle.length()) {
 			tmpfname += "_";
 			tmpfname += handle;
 		}
 		tmpfname += ".top";
 
 		dprintf(D_FULLDEBUG, "query_creds: checking for %s\n", tmpfname.Value());
-		if (!credmon_poll_continue(user.Value(), 0, tmpfname.Value())) {
+		if (!credmon_poll_continue(user.c_str(), 0, tmpfname.Value())) {
 			dprintf(D_ALWAYS, "query_creds: did not find %s\n", tmpfname.Value());
 			missing.Insert(&requests[i]);
 		}
@@ -259,11 +260,11 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 		while ((req = missing.Next())) {
 			// fill in everything we need to pass
 			ClassAd ad;
-			MyString tmpname;
-			MyString tmpvalue;
-			MyString secret_filename;
+			std::string tmpname;
+			std::string tmpvalue;
+			std::string secret_filename;
 
-			MyString service;
+			std::string service;
 			req->LookupString("Service", service);
 			ad.Assign("Provider", service);
 
@@ -289,9 +290,9 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			tmpvalue.clear();
 			char *buf = NULL;
 			size_t buf_len = 0;
-			int secret_len = 0;
+			size_t secret_len = 0;
 			if (param(secret_filename, tmpname.c_str()) && ! secret_filename.empty() &&
-				read_secure_file(secret_filename.Value(), (void**)&buf, &buf_len, true)) {
+				read_secure_file(secret_filename.c_str(), (void**)&buf, &buf_len, true)) {
 				// Read the file and use the contents before the first
 				// newline, if any. remember the buffer is probably not null terminated!
 				size_t i = 0;
@@ -302,8 +303,8 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 						break;
 					}
 				}
-				secret_len = (int)i;  // the secret length might be less than the file length
-				tmpvalue.set(buf, secret_len); // copy so that we can null terminate
+				secret_len = i;  // the secret length might be less than the file length
+				tmpvalue.assign(buf, secret_len); // copy so that we can null terminate
 				memset(buf, 0, buf_len); // overwrite the secret before freeing the buffer
 				free(buf);
 			} else {
@@ -344,10 +345,10 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			sPrintAd(contents, ad);
 
 			if (IsDebugVerbose(D_FULLDEBUG)) {
-				MyString tmp;
-				tmp.formatstr("<contents of %s> %d bytes", secret_filename.Value(), secret_len);
-				ad.Assign("ClientSecret", tmp.Value());
-				dprintf(D_FULLDEBUG, "Service %s ad:\n", service.Value());
+				std::string tmp;
+				formatstr(tmp, "<contents of %s> %d bytes", secret_filename.c_str(), (int)secret_len);
+				ad.Assign("ClientSecret", tmp);
+				dprintf(D_FULLDEBUG, "Service %s ad:\n", service.c_str());
 				dPrintAd(D_FULLDEBUG, ad);
 			}
 		}
@@ -382,17 +383,23 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 
 bail:
 	r->encode();
-	r->code(URL);
+	if (!r->code(URL)) {
+		dprintf(D_ALWAYS, "query_creds: error sending URL to client\n");
+	}
 	r->end_of_message();
+
+	return CLOSE_STREAM;
 }
 
-void
+int
 CredDaemon::refresh_all_handler( int, Stream* s)
 {
 	ReliSock* r = (ReliSock*)s;
 	r->decode();
 	ClassAd ad;
-	getClassAd(r, ad);
+	if (!getClassAd(r, ad)) {
+		dprintf(D_ALWAYS, "credd::refresh_all_handler cannot receive classad\n");
+	}
 	r->end_of_message();
 
 	// don't actually care (at the moment) what's in the ad, it's for
@@ -415,6 +422,8 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	dPrintAd(D_SECURITY | D_FULLDEBUG, ad);
 	putClassAd(r, ad);
 	r->end_of_message();
+
+	return CLOSE_STREAM;
 }
 
 //-------------------------------------------------------------

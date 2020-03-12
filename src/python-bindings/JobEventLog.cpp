@@ -43,8 +43,7 @@ JobEventLog::~JobEventLog() { }
 boost::python::object
 JobEventLog::events( boost::python::object & self, boost::python::object & deadline ) {
 	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
-    // Using compatible expression for old boost. Revert this change in 8.9.0
-	if( deadline.ptr() == Py_None ) {
+	if( deadline.is_none() ) {
 		jel->deadline = 0;
 	} else {
 		boost::python::extract<int> deadlineExtractor( deadline );
@@ -55,6 +54,36 @@ JobEventLog::events( boost::python::object & self, boost::python::object & deadl
 		}
 	}
 	return self;
+}
+
+void
+JobEventLog::close() {
+	wful.releaseResources();
+}
+
+boost::python::object
+JobEventLog::enter( boost::python::object & self ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	jel->deadline = 0;
+	return self;
+}
+
+boost::python::object
+JobEventLog::exit( boost::python::object & self,
+  boost::python::object & /* exceptionType */,
+  boost::python::object & /* exceptionValue */,
+  boost::python::object & /* traceback */ ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+
+	// If all three arguments are None, the with block exited normally, and
+	// we should close the FD(s).
+	//
+	// If the block exited with an exception, we should close the FD(s).
+	jel->close();
+
+	// If we expected an exception to occur during normal operation, we
+	// could check for it here and return Py_True to suppress it.
+	return boost::python::object(boost::python::handle<>(boost::python::borrowed(Py_False)));
 }
 
 class JobEventLogGlobalLockInitializer {
@@ -104,6 +133,7 @@ JobEventLog::next() {
 			return boost::shared_ptr< JobEvent >( je );
 		} break;
 
+		case ULOG_INVALID:
 		case ULOG_NO_EVENT:
 			THROW_EX( StopIteration, "All events processed" );
 		break;
@@ -124,6 +154,40 @@ JobEventLog::next() {
 			THROW_EX( RuntimeError, "WaitForUserLog::readEvent() returned an unknown outcome." );
 		break;
 	}
+}
+
+//
+// The JobEventLog constructor deliberately accepts only the filename,
+// so we have to do all three pickling methods to get and set the deadline
+// and the offset.
+//
+
+boost::python::tuple
+JobEventLogPickler::getinitargs( JobEventLog & self ) {
+	return boost::python::make_tuple( self.wful.getFilename() );
+}
+
+boost::python::tuple
+JobEventLogPickler::getstate( boost::python::object & self ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	return boost::python::make_tuple( self.attr("__dict__"), jel->deadline, jel->wful.getOffset() );
+}
+
+void
+JobEventLogPickler::setstate( boost::python::object & self, boost::python::tuple & state ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	self.attr("__dict__") = state[0];
+	jel->deadline = boost::python::extract<time_t>( state[1] );
+	jel->wful.setOffset( boost::python::extract<size_t>( state[2] ) );
+}
+
+std::string
+JobEventLog::Py_Repr() {
+	std::string constructorish;
+	formatstr( constructorish,
+		"JobEventLog(filename=%s, deadline=%ld, offset=%lu)",
+		wful.getFilename().c_str(), deadline, wful.getOffset() );
+	return constructorish;
 }
 
 // ----------------------------------------------------------------------------
@@ -218,7 +282,11 @@ JobEvent::Py_Values() {
 	for( ; i != ad->end(); ++i ) {
 		ExprTree * e = i->second;
 		classad::Value v;
-		if( e->Evaluate(v) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			l.append( convert_value_to_python( v ) );
+		} else if( e->Evaluate(v) ) {
 			l.append( convert_value_to_python( v ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -243,7 +311,12 @@ JobEvent::Py_Items() {
 	for( ; i != ad->end(); ++i ) {
 		ExprTree * e = i->second;
 		classad::Value v;
-		if( e->Evaluate(v) ) {
+
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
+		} else if( e->Evaluate(v) ) {
 			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -287,7 +360,11 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 	ExprTree * e = ad->Lookup( k );
 	if( e ) {
 		classad::Value v;
-		if( e->Evaluate( v ) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			return convert_value_to_python( v );
+		} else if( e->Evaluate( v ) ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -311,7 +388,11 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	ExprTree * e = ad->Lookup( k );
 	if( e ) {
 		classad::Value v;
-		if( e->Evaluate( v ) ) {
+		classad::ClassAd * ca = NULL;
+		if( e->isClassad(&ca) ) {
+			v.SetClassAdValue(ca);
+			return convert_value_to_python( v );
+		} else if( e->Evaluate( v ) ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
@@ -322,43 +403,220 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	}
 }
 
+std::string
+JobEvent::Py_Repr() {
+	// We could (also) sPrintAd() the backing ClassAd, but might be TMI.
+	std::string constructorish;
+	formatstr( constructorish,
+		"JobEvent(type=%d, cluster=%d, proc=%d, timestamp=%lld)",
+		type(), cluster(), proc(), (long long)timestamp() );
+	return constructorish;
+}
+
+std::string
+JobEvent::Py_Str() {
+	int fo = USERLOG_FORMAT_DEFAULT;
+	auto_free_ptr fmt(param("DEFAULT_USERLOG_FORMAT_OPTIONS"));
+	if(fmt) { fo = ULogEvent::parse_opts(fmt, USERLOG_FORMAT_DEFAULT); }
+
+	std::string buffer;
+	if(! event->formatEvent( buffer, fo )) {
+		buffer = Py_Repr();
+	}
+	return buffer;
+}
+
 // ----------------------------------------------------------------------------
 
 void export_event_log() {
 	// Could use some DocTest blocks too, probably.
-	boost::python::class_<JobEventLog, boost::noncopyable>( "JobEventLog", "Reads job event (user) logs.\n", boost::python::init<const std::string &>( "Create an instance of the JobEventLog class.\n:param filename: A file containing a job event (user) log." ) )
-		.def( NEXT_FN, &JobEventLog::next, "Return the next JobEvent in the log, blocking until the deadline (if any)." )
-		.def( "events", &JobEventLog::events, boost::python::args("stop_after"), "Return self (which is its own iterator).\n:param stop_after After how many seconds from now should the iterator stop waiting for new events?  If None, wait forever.  If 0, never wait." )
-		.def( "__iter__", &JobEventLog::iter, "Return self (which is its own iterator)." )
+	boost::python::class_<JobEventLog, boost::noncopyable>("JobEventLog",
+            R"C0ND0R(
+            Reads job event (user) logs.
+
+            By default, it waits for new events, but it may be used to
+            poll for them, as follows: ::
+
+                import htcondor
+                jel = htcondor.JobEventLog("file.log")
+                # Read all currently-available events without blocking.
+                for event in jel.events(0):
+                    print(event)
+                else:
+                    print("We found the the end of file")
+
+            A pickled :class:`JobEventLog` resumes iterating over events
+            where it left off if and only if, after being unpickled, the
+            job event log file is identical except for appended events.
+            )C0ND0R",
+        boost::python::init<const std::string &>(
+	        R"C0ND0R(
+	        :param str filename: A file containing a job event (user) log.
+            )C0ND0R",
+            boost::python::args("self", "filename")))
+		.def(NEXT_FN, &JobEventLog::next,
+            R"C0ND0R(
+            Return the next JobEvent in the log, blocking until the deadline (if any).
+            )C0ND0R")
+		.def("events", &JobEventLog::events,
+            R"C0ND0R(
+            Return an iterator over :class:`JobEvent` objects from the filename given in the constructor.
+
+            :param int stop_after: After how many seconds should the iterator
+                stop waiting for new events?  If ``None``, wait forever.
+                If ``0``, never wait.
+            )C0ND0R",
+            boost::python::args("self", "stop_after"))
+		.def("__iter__", &JobEventLog::iter, "Return self (which is its own iterator).")
+		.def("close", &JobEventLog::close,
+            R"C0ND0R(
+            Closes any open underlying file. This object will no longer iterate.
+            )C0ND0R",
+            boost::python::args("self"))
+		.def("__enter__", &JobEventLog::enter, "(Iterable context management.)")
+		.def("__exit__", &JobEventLog::exit, "(Iterable context management.)")
+		.def("__repr__", &JobEventLog::Py_Repr, "...")
+		.def_pickle(JobEventLogPickler())
 	;
 
 	// Allows conversion of JobEventLog instances to Python objects.
 	boost::python::register_ptr_to_python< boost::shared_ptr< JobEventLog > >();
 
-	boost::python::class_<JobEvent, boost::noncopyable>( "JobEvent", "...", boost::python::no_init )
-		.add_property( "type", & JobEvent::type, "..." )
-		.add_property( "cluster", & JobEvent::cluster, "..." )
-		.add_property( "proc", & JobEvent::proc, "..." )
-		.add_property( "timestamp", & JobEvent::timestamp, "..." )
-		.def( "get", &JobEvent::Py_Get, JobEventPyGetOverloads( "..." ) )
-		.def( "keys", &JobEvent::Py_Keys, "..." )
-		.def( "items", &JobEvent::Py_Items, "..." )
-		.def( "values", &JobEvent::Py_Values, "..." )
-		.def( "iterkeys", &JobEvent::Py_IterKeys, "..." )
-		.def( "iteritems", &JobEvent::Py_IterItems, "..." )
-		.def( "itervalues", &JobEvent::Py_IterValues, "..." )
-		.def( "has_key", &JobEvent::Py_Contains, "..." )
-		.def( "__len__", &JobEvent::Py_Len, "..." )
-		.def( "__iter__", &JobEvent::Py_IterKeys, "..." )
-		.def( "__contains__", &JobEvent::Py_Contains, "..." )
-		.def( "__getitem__", &JobEvent::Py_GetItem, "..."  );
+	boost::python::class_<JobEvent, boost::noncopyable>("JobEvent",
+	        R"C0ND0R(
+            Represents a single job event from the job event log.
+            Use :class:`JobEventLog` to get an iterator over the job events from a file.
+
+            Because all events have ``type``, ``cluster``, ``proc``, and ``timestamp``,
+            those are accessed via attributes (see below).
+
+            The rest of the information in the :class:`JobEvent` can be accessed by key.
+            :class:`JobEvent` behaves like a read-only Python :class:`dict`, with
+            ``get``, ``keys``, ``items``, and ``values`` methods, and supports ``len``
+            and ``in`` (``if "attribute" in job_event``, for example).
+
+            .. attention:: Although the attribute ``type`` is a :class:`JobEventType` type,
+                when acting as dictionary, a :class:`JobEvent` object returns types
+                as if it were a :class:`~classad.ClassAd`, so comparisons to enumerated
+                values must use the ``==`` operator.  (No current event type has
+                :class:`~classad.ExprTree` values.)
+            )C0ND0R",
+            boost::python::no_init)
+		.add_property("type", & JobEvent::type,
+		    R"C0ND0R(
+		    The event type.
+
+		    :rtype: :class:`JobEventType`
+            )C0ND0R")
+		.add_property("cluster", & JobEvent::cluster,
+		    R"C0ND0R(
+		    The ``clusterid`` of the job the event is for.
+
+		    :rtype: int
+            )C0ND0R")
+		.add_property("proc", & JobEvent::proc,
+		    R"C0ND0R(
+		    The ``procid`` of the job the event is for.
+
+		    :rtype: int
+            )C0ND0R")
+		.add_property("timestamp", & JobEvent::timestamp,
+		    R"C0ND0R(
+		    The timestamp of the event.
+
+		    :rtype: str
+            )C0ND0R")
+		.def("get", &JobEvent::Py_Get, JobEventPyGetOverloads(
+		    R"C0ND0R(
+		    As :meth:`dict.get`.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("key"), boost::python::arg("default")=boost::python::object())))
+		.def("keys", &JobEvent::Py_Keys,
+		    R"C0ND0R(
+		    As :meth:`dict.keys`.
+            )C0ND0R",
+            boost::python::args("self"))
+		.def("items", &JobEvent::Py_Items,
+		    R"C0ND0R(
+		    As :meth:`dict.items`.
+            )C0ND0R",
+            boost::python::args("self"))
+		.def("values", &JobEvent::Py_Values,
+		    R"C0ND0R(
+		    As :meth:`dict.values`.
+            )C0ND0R",
+            boost::python::args("self"))
+		.def("iterkeys", &JobEvent::Py_IterKeys, "...")
+		.def("iteritems", &JobEvent::Py_IterItems, "...")
+		.def("itervalues", &JobEvent::Py_IterValues, "...")
+		.def("has_key", &JobEvent::Py_Contains, "...")
+		.def("__str__", &JobEvent::Py_Str, "...")
+		.def("__repr__", &JobEvent::Py_Repr, "...")
+		.def("__len__", &JobEvent::Py_Len, "...")
+		.def("__iter__", &JobEvent::Py_IterKeys, "...")
+		.def("__contains__", &JobEvent::Py_Contains, "...")
+		.def("__getitem__", &JobEvent::Py_GetItem, "...")
+    ;
 
 
 	// Allows conversion of JobEvent instances to Python objects.
-	boost::python::register_ptr_to_python< boost::shared_ptr< JobEvent > >();
+	boost::python::register_ptr_to_python< boost::shared_ptr<JobEvent>>();
 
 	// Register the ULogEventNumber enumeration as JobEventType
-	boost::python::enum_<ULogEventNumber>( "JobEventType", "..." )
+	boost::python::enum_<ULogEventNumber>("JobEventType",
+            R"C0ND0R(
+            The type event of a user log event; corresponds to ``ULogEventNumber``
+            in the C++ source.
+
+            The values of the enumeration are:
+
+            .. attribute:: SUBMIT
+            .. attribute:: EXECUTE
+            .. attribute:: EXECUTABLE_ERROR
+            .. attribute:: CHECKPOINTED
+            .. attribute:: JOB_EVICTED
+            .. attribute:: JOB_TERMINATED
+            .. attribute:: IMAGE_SIZE
+            .. attribute:: SHADOW_EXCEPTION
+            .. attribute:: GENERIC
+            .. attribute:: JOB_ABORTED
+            .. attribute:: JOB_SUSPENDED
+            .. attribute:: JOB_UNSUSPENDED
+            .. attribute:: JOB_HELD
+            .. attribute:: JOB_RELEASED
+            .. attribute:: NODE_EXECUTE
+            .. attribute:: NODE_TERMINATED
+            .. attribute:: POST_SCRIPT_TERMINATED
+            .. attribute:: GLOBUS_SUBMIT
+            .. attribute:: GLOBUS_SUBMIT_FAILED
+            .. attribute:: GLOBUS_RESOURCE_UP
+            .. attribute:: GLOBUS_RESOURCE_DOWN
+            .. attribute:: REMOTE_ERROR
+            .. attribute:: JOB_DISCONNECTED
+            .. attribute:: JOB_RECONNECTED
+            .. attribute:: JOB_RECONNECT_FAILED
+            .. attribute:: GRID_RESOURCE_UP
+            .. attribute:: GRID_RESOURCE_DOWN
+            .. attribute:: GRID_SUBMIT
+            .. attribute:: JOB_AD_INFORMATION
+            .. attribute:: JOB_STATUS_UNKNOWN
+            .. attribute:: JOB_STATUS_KNOWN
+            .. attribute:: JOB_STAGE_IN
+            .. attribute:: JOB_STAGE_OUT
+            .. attribute:: ATTRIBUTE_UPDATE
+            .. attribute:: PRESKIP
+            .. attribute:: CLUSTER_SUBMIT
+            .. attribute:: CLUSTER_REMOVE
+            .. attribute:: FACTORY_PAUSED
+            .. attribute:: FACTORY_RESUMED
+            .. attribute:: NONE
+            .. attribute:: FILE_TRANSFER
+            .. attribute:: RESERVE_SPACE
+            .. attribute:: RELEASE_SPACE
+            .. attribute:: FILE_COMPLETE
+            .. attribute:: FILE_USED
+            .. attribute:: FILE_REMOVED
+            )C0ND0R")
 		.value( "SUBMIT", ULOG_SUBMIT )
 		.value( "EXECUTE", ULOG_EXECUTE )
 		.value( "EXECUTABLE_ERROR", ULOG_EXECUTABLE_ERROR )
@@ -399,5 +657,33 @@ void export_event_log() {
 		.value( "FACTORY_PAUSED", ULOG_FACTORY_PAUSED )
 		.value( "FACTORY_RESUMED", ULOG_FACTORY_RESUMED )
 		.value( "NONE", ULOG_NONE )
+		.value( "FILE_TRANSFER", ULOG_FILE_TRANSFER )
+		.value( "RESERVE_SPACE", ULOG_RESERVE_SPACE )
+		.value( "RELEASE_SPACE", ULOG_RELEASE_SPACE )
+		.value( "FILE_COMPLETE", ULOG_FILE_COMPLETE )
+		.value( "FILE_USED", ULOG_FILE_USED )
+		.value( "FILE_REMOVED", ULOG_FILE_REMOVED )
+	;
+
+	boost::python::enum_<FileTransferEvent::FileTransferEventType>( "FileTransferEventType",
+            R"C0ND0R(
+            The event type for file transfer events; corresponds to
+            ``FileTransferEventType`` in the C++ source.
+
+            The values of the enumeration are:
+
+            .. attribute:: IN_QUEUED
+            .. attribute:: IN_STARTED
+            .. attribute:: IN_FINISHED
+            .. attribute:: OUT_QUEUED
+            .. attribute:: OUT_STARTED
+            .. attribute:: OUT_FINISHED
+            )C0ND0R")
+		.value( "IN_QUEUED", FileTransferEvent::IN_QUEUED )
+		.value( "IN_STARTED", FileTransferEvent::IN_STARTED )
+		.value( "IN_FINISHED", FileTransferEvent::IN_FINISHED )
+		.value( "OUT_QUEUED", FileTransferEvent::OUT_QUEUED )
+		.value( "OUT_STARTED", FileTransferEvent::OUT_STARTED )
+		.value( "OUT_FINISHED", FileTransferEvent::OUT_FINISHED )
 	;
 }

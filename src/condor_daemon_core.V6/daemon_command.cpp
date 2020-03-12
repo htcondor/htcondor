@@ -501,9 +501,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		// a daemoncore command int!  [not ever likely, since CEDAR ints are
 		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
 		// with a more foolproof method.
+		// Note: We no longer support soap, but this peek is part of the
+		//   code below that checks if this is a command that shared port
+		//   should transparently hand off to the collector.
 	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( m_is_tcp ) {
+	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
 			// TODO Should we be ignoring the return value of condor_read?
 		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
@@ -707,12 +710,26 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 					char * return_addr = NULL;
 					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+					std::string our_sinful;
+					m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+					ClassAd info_ad;
+					// Presence of the ConnectSinful attribute indicates
+					// that the client understands and wants the
+					// extended information ad in the
+					// DC_INVALIDATE_KEY message.
+					if ( !our_sinful.empty() ) {
+						info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+					}
 
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 							   "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr ? return_addr : "(none)");
+					if( !strncmp( m_sid, "family:", strlen("family:") ) ) {
+						dprintf(D_ALWAYS, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
+						dprintf(D_ALWAYS, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+					}
 
 					if( return_addr ) {
-						daemonCore->send_invalidate_session( return_addr, m_sid );
+						daemonCore->send_invalidate_session( return_addr, m_sid, &info_ad );
 						free (return_addr);
 					}
 
@@ -1018,6 +1035,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		} // end !using_cookie
 	} // end DC_AUTHENTICATE
 
+	dprintf( D_DAEMONCORE, "DAEMONCORE: Leaving ReadCommand(m_req==%i)\n", m_req);
+
 	// This path means they were using "old-school" commands.  No DC_AUTHENTICATE,
 	// just raw command numbers.  We still want to do IPVerify on these however, so
 	// skip all the Authentication and Crypto and go straight to that phase.
@@ -1057,6 +1076,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	m_sock->setAuthenticationMethodsTried(auth_methods);
 
 	char *method_used = NULL;
+	m_sock->setPolicyAd(*m_policy);
 	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
 	m_sock->getPolicyAd(*m_policy);
 	free( auth_methods );
@@ -1355,11 +1375,92 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			m_perm = USER_AUTH_FAILURE;
 		}
 		else {
-			m_perm = daemonCore->Verify(
-						  command_desc.c_str(),
-						  m_comTable[m_cmd_index].perm,
-						  m_sock->peer_addr(),
-						  m_user.c_str() );
+				// Authentication methods can limit the authorizations associated with
+				// a given identity (at time of coding, only TOKEN does this); apply
+				// these limits if present.
+			std::string authz_policy;
+			bool can_attempt = true;
+			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+				StringList authz_limits(authz_policy.c_str());
+				authz_limits.rewind();
+				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
+				const char *authz_name;
+				bool found_limit = false;
+				while ( (authz_name = authz_limits.next()) ) {
+					if (!strcmp(perm_cstr, authz_name)) {
+						found_limit = true;
+						break;
+					}
+				}
+				bool has_allow_perm = !strcmp(perm_cstr, "ALLOW");
+					// If there was no match, iterate through the alternates table.
+				if (!found_limit && m_comTable[m_cmd_index].alternate_perm) {
+					for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
+						auto perm_cstr = PermString(perm);
+						const char *authz_name;
+						authz_limits.rewind();
+						has_allow_perm |= !strcmp(perm_cstr, "ALLOW");
+						while ( (authz_name = authz_limits.next()) ) {
+							dprintf(D_SECURITY, "Checking limit in token (%s) for permission %s\n", authz_name, perm_cstr);
+							if (!strcmp(perm_cstr, authz_name)) {
+								found_limit = true;
+								break;
+							}
+						}
+						if (found_limit) {break;}
+					}
+				}
+				if (!found_limit && !has_allow_perm) {
+					can_attempt = false;
+				}
+			}
+			if (can_attempt) {
+					// A bit redundant to have the outer conditional,
+					// but this gets the log verbosity right and has
+					// zero cost in the "normal" case with no alternate
+					// permissions.
+				if (m_comTable[m_cmd_index].alternate_perm) {
+					m_perm = daemonCore->Verify(
+						command_desc.c_str(),
+						m_comTable[m_cmd_index].perm,
+						m_sock->peer_addr(),
+						m_user.c_str(),
+						D_FULLDEBUG|D_SECURITY);
+						// Not allowed in the primary permission?  Try the alternates.
+					if (m_perm == USER_AUTH_FAILURE) {
+						for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
+							m_perm = daemonCore->Verify(
+								command_desc.c_str(),
+								perm,
+								m_sock->peer_addr(),
+								m_user.c_str(),
+								D_FULLDEBUG|D_SECURITY);
+							if (m_perm != USER_AUTH_FAILURE) {break;}
+						}
+							// Try it once again on the primary perm just to log
+							// things appropriately loudly.
+						if (m_perm == USER_AUTH_FAILURE) {
+							daemonCore->Verify(
+								command_desc.c_str(),
+								m_comTable[m_cmd_index].perm,
+								m_sock->peer_addr(),
+								m_user.c_str());
+						}
+					}
+				} else {
+					m_perm = daemonCore->Verify(
+						command_desc.c_str(),
+						m_comTable[m_cmd_index].perm,
+						m_sock->peer_addr(),
+						m_user.c_str() );
+				}
+			} else {
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s was successful but resulted in a limited authorization which did not include this command (%d %s), so aborting.\n",
+					m_sock->peer_description(),
+					m_req,
+					m_comTable[m_cmd_index].command_descrip);
+				m_perm = USER_AUTH_FAILURE;
+			}
 		}
 
 	} else {
@@ -1431,7 +1532,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		pa_ad.Assign(ATTR_SEC_SID, m_sid);
 
 		// other commands this session is good for
-		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[m_cmd_index].perm,m_sock->isMappedFQU()).Value());
+		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[m_cmd_index].perm,m_sock->isMappedFQU()));
 
 		// what happened with command authorization?
 		if(m_reqFound) {

@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "condor_network.h"
 #include "spooled_job_files.h"
 #include "subsystem_info.h"
 #include "env.h"
@@ -48,11 +47,9 @@
 #include "daemon.h"
 #include "match_prefix.h"
 
-#include "extArray.h"
 #include "HashTable.h"
 #include "MyString.h"
 #include "string_list.h"
-#include "which.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
@@ -127,6 +124,7 @@ int 	dash_interactive = 0; /* true if job submitted with -interactive flag */
 int 	InteractiveSubmitFile = 0; /* true if using INTERACTIVE_SUBMIT_FILE */
 bool	verbose = false; // formerly: int Quiet = 1;
 bool	terse = false; // generate parsable output
+bool	debug = false;
 SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
 bool	CmdFileIsStdin = false;
 bool	NoCmdFileNeeded = false; // set if there is no need for a commmand file (i.e. -queue was specified on command line and at least 1 key=value pair)
@@ -211,6 +209,8 @@ FILE		*DumpFile = NULL;
 bool		DumpFileIsStdout = 0;
 
 void usage();
+// this is in submit_help.cpp
+void help_info(FILE* out, int num_topics, const char ** topics);
 void init_params();
 void reschedule();
 int submit_jobs (
@@ -241,7 +241,6 @@ int process_job_credentials();
 extern DLL_IMPORT_MAGIC char **environ;
 
 extern "C" {
-int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
 
@@ -279,24 +278,22 @@ struct SubmitRec {
 	int lastjob;
 };
 
-ExtArray <SubmitRec> SubmitInfo(10);
-int CurrentSubmitInfo = -1;
+std::vector <SubmitRec> SubmitInfo;
 
-ExtArray <ClassAd*> JobAdsArray(100);
-int JobAdsArrayLen = 0;
-int JobAdsArrayLastClusterIndex = 0;
+std::vector <ClassAd*> JobAdsArray;
+size_t JobAdsArrayLastClusterIndex = 0;
 
 // called by the factory submit to fill out the data structures that
 // we use to print out the standard messages on complection.
 void set_factory_submit_info(int cluster, int num_procs)
 {
-	CurrentSubmitInfo++;
-	SubmitInfo[CurrentSubmitInfo].cluster = cluster;
-	SubmitInfo[CurrentSubmitInfo].firstjob = 0;
-	SubmitInfo[CurrentSubmitInfo].lastjob = num_procs-1;
+	SubmitInfo.push_back(SubmitRec());
+	SubmitInfo.back().cluster = cluster;
+	SubmitInfo.back().firstjob = 0;
+	SubmitInfo.back().lastjob = num_procs-1;
 }
 
-void TestFilePermissions( char *scheddAddr = NULL )
+void TestFilePermissions( const char *scheddAddr = NULL )
 {
 #ifdef WIN32
 	// this isn't going to happen on Windows since:
@@ -543,7 +540,6 @@ main( int argc, const char *argv[] )
 	const char **ptr;
 	const char *pcolon = NULL;
 	const char *cmd_file = NULL;
-	int i;
 	MyString method;
 
 	setbuf( stdout, NULL );
@@ -603,6 +599,7 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "debug", 2)) {
 				// dprintf to console
 				dprintf_set_tool_debug("TOOL", 0);
+				debug = true;
 			} else if (is_dash_arg_colon_prefix(ptr[0], "dry-run", &pcolon, 3)) {
 				DashDryRun = 1;
 				bool needs_file_arg = true;
@@ -687,7 +684,7 @@ main( int argc, const char *argv[] )
 					exit(1);
 				}
 				if( ScheddName ) {
-					delete [] ScheddName;
+					free(ScheddName);
 				}
 				if( !(ScheddName = get_daemon_name(*ptr)) ) {
 					fprintf( stderr, "%s: unknown host %s\n",
@@ -702,7 +699,7 @@ main( int argc, const char *argv[] )
 					exit(1);
 				}
 				if( ScheddName ) {
-					delete [] ScheddName;
+					free(ScheddName);
 				}
 				if( !(ScheddName = get_daemon_name(*ptr)) ) {
 					fprintf( stderr, "%s: unknown host %s\n",
@@ -847,7 +844,10 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 8)) {
 				allow_crlf_script = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
-				usage();
+				if (!(--argc) || !(*(++ptr))) {
+					usage();
+				}
+				help_info(stdout, argc, ptr);
 				exit( 0 );
 			} else if (is_dash_arg_prefix(ptr[0], "interactive", 1)) {
 				// we don't currently support -interactive on Windows, but we parse for it anyway.
@@ -931,13 +931,16 @@ main( int argc, const char *argv[] )
             MySchedd = new DCSchedd(ScheddName, PoolName);
         }
 		if( ! MySchedd->locate() ) {
-			if( ScheddName ) {
-				fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
-						 ScheddName );
+			if (ScheddName) {
+				fprintf(stderr, "\nERROR: Can't find address of schedd %s\n", ScheddName);
+				exit(1);
+			} else if ( ! DashDryRun) {
+				fprintf(stderr, "\nERROR: Can't find address of local schedd\n");
+				exit(1);
 			} else {
-				fprintf( stderr, "\nERROR: Can't find address of local schedd\n" );
+				// delete the MySchedd so that -dry-run will assume the version of submit
+				delete MySchedd; MySchedd = NULL;
 			}
-			exit(1);
 		}
 	}
 
@@ -998,13 +1001,15 @@ main( int argc, const char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// But, if there's an active ssh, stay alive, in case we are
+		// running in a container.
 		// This effectively means executable, transfer_executable,
 		// arguments, universe, and queue X are ignored from the submit
 		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
-			extraLines.Append( "executable=/bin/sleep" );
+			extraLines.Append( "executable=/bin/sh" );
+			extraLines.Append( "arguments=\"-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'\"");
 			extraLines.Append( "transfer_executable=false" );
-			extraLines.Append( "arguments=180" );
 		}
 	}
 
@@ -1082,7 +1087,10 @@ main( int argc, const char *argv[] )
 	//  Parse the file and queue the jobs
 	int as_factory = 0;
 	if (has_late_materialize) {
-		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? 2 : 0);
+		// turn dash_factory command line option and default_to_factory flag as bits
+		// so submit_jobs can be clever about defaults
+		// 0=not factory, 1=always factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
+		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? (1|2) : 0);
 	}
 	int rval = submit_jobs(fp, FileMacroSource, as_factory, extraLines, queueCommandLine);
 	if( rval < 0 ) {
@@ -1135,10 +1143,10 @@ main( int argc, const char *argv[] )
 
 	if ( ! verbose && ! DumpFileIsStdout) {
 		if (terse) {
-			int ixFirst = 0;
-			for (int ix = 0; ix <= CurrentSubmitInfo; ++ix) {
+			size_t ixFirst = 0;
+			for (size_t ix = 0; ix < SubmitInfo.size(); ++ix) {
 				// fprintf(stderr, "\t%d.%d - %d\n", SubmitInfo[ix].cluster, SubmitInfo[ix].firstjob, SubmitInfo[ix].lastjob);
-				if ((ix == CurrentSubmitInfo) || SubmitInfo[ix].cluster != SubmitInfo[ix+1].cluster) {
+				if ((ix == (SubmitInfo.size()-1)) || SubmitInfo[ix].cluster != SubmitInfo[ix+1].cluster) {
 					if (SubmitInfo[ixFirst].cluster >= 0) {
 						fprintf(stdout, "%d.%d - %d.%d\n", 
 							SubmitInfo[ixFirst].cluster, SubmitInfo[ixFirst].firstjob,
@@ -1149,15 +1157,15 @@ main( int argc, const char *argv[] )
 			}
 		} else {
 			int this_cluster = -1, job_count=0;
-			for (i=0; i <= CurrentSubmitInfo; i++) {
-				if (SubmitInfo[i].cluster != this_cluster) {
+			for (size_t ix=0; ix < SubmitInfo.size(); ix++) {
+				if (SubmitInfo[ix].cluster != this_cluster) {
 					if (this_cluster != -1) {
 						fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 						job_count = 0;
 					}
-					this_cluster = SubmitInfo[i].cluster;
+					this_cluster = SubmitInfo[ix].cluster;
 				}
-				job_count += SubmitInfo[i].lastjob - SubmitInfo[i].firstjob + 1;
+				job_count += SubmitInfo[ix].lastjob - SubmitInfo[ix].firstjob + 1;
 			}
 			if (this_cluster != -1) {
 				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
@@ -1170,22 +1178,22 @@ main( int argc, const char *argv[] )
     bool isStandardUni = false;
 	isStandardUni = submit_hash.getUniverse() == CONDOR_UNIVERSE_STANDARD;
 
-	if ( !DisableFileChecks || isStandardUni) {
+	if ( MySchedd && (!DisableFileChecks || isStandardUni)) {
 		TestFilePermissions( MySchedd->addr() );
 	}
 
 	// we don't want to spool jobs if we are simply writing the ClassAds to 
 	// a file, so we just skip this block entirely if we are doing this...
-	if ( !DumpClassAdToFile ) {
-		if ( dash_remote && JobAdsArrayLen > 0 ) {
+	if ( MySchedd && !DumpClassAdToFile ) {
+		if ( dash_remote && JobAdsArray.size() > 0 ) {
 			bool result;
 			CondorError errstack;
 
 			switch(STMethod) {
 				case STM_USE_SCHEDD_ONLY:
 					// perhaps check for proper schedd version here?
-					result = MySchedd->spoolJobFiles( JobAdsArrayLen,
-											  JobAdsArray.getarray(),
+					result = MySchedd->spoolJobFiles( (int)JobAdsArray.size(),
+											  JobAdsArray.data(),
 											  &errstack );
 					if ( !result ) {
 						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
@@ -1198,16 +1206,16 @@ main( int argc, const char *argv[] )
 					{ // start block
 
 					fprintf(stdout,
-						"Locating a Sandbox for %d jobs.\n",JobAdsArrayLen);
-					MyString td_sinful;
-					MyString td_capability;
+							"Locating a Sandbox for %lu jobs.\n", (unsigned long)JobAdsArray.size());
+					std::string td_sinful;
+					std::string td_capability;
 					ClassAd respad;
 					int invalid;
-					MyString reason;
+					std::string reason;
 
 					result = MySchedd->requestSandboxLocation( FTPD_UPLOAD, 
-												JobAdsArrayLen,
-												JobAdsArray.getarray(), FTP_CFTP,
+												(int)JobAdsArray.size(),
+												JobAdsArray.data(), FTP_CFTP,
 												&respad, &errstack );
 					if ( !result ) {
 						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
@@ -1221,23 +1229,23 @@ main( int argc, const char *argv[] )
 						fprintf( stderr, 
 							"Schedd rejected sand box location request:\n");
 						respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-						fprintf( stderr, "\t%s\n", reason.Value());
+						fprintf( stderr, "\t%s\n", reason.c_str());
 						return 0;
 					}
 
 					respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
 					respad.LookupString(ATTR_TREQ_CAPABILITY, td_capability);
 
-					dprintf(D_ALWAYS, "Got td: %s, cap: %s\n", td_sinful.Value(),
-						td_capability.Value());
+					dprintf(D_ALWAYS, "Got td: %s, cap: %s\n", td_sinful.c_str(),
+						td_capability.c_str());
 
-					fprintf(stdout,"Spooling data files for %d jobs.\n",
-						JobAdsArrayLen);
+					fprintf(stdout,"Spooling data files for %lu jobs.\n",
+						(unsigned long)JobAdsArray.size());
 
-					DCTransferD dctd(td_sinful.Value());
+					DCTransferD dctd(td_sinful.c_str());
 
-					result = dctd.upload_job_files( JobAdsArrayLen,
-											  JobAdsArray.getarray(),
+					result = dctd.upload_job_files( (int)JobAdsArray.size(),
+											  JobAdsArray.data(),
 											  &respad, &errstack );
 					if ( !result ) {
 						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
@@ -1265,8 +1273,8 @@ main( int argc, const char *argv[] )
 	}
 
 	// Deallocate some memory just to keep Purify happy
-	for (i=0;i<JobAdsArrayLen;i++) {
-		delete JobAdsArray[i];
+	for (size_t idx=0;idx<JobAdsArray.size();idx++) {
+		delete JobAdsArray[idx];
 	}
 	submit_hash.delete_job_ad();
 	delete MySchedd;
@@ -1305,6 +1313,9 @@ main( int argc, const char *argv[] )
 		sshargs[i++] = "-auto-retry";
 		sshargs[i++] = "-remove-on-interrupt";
 		sshargs[i++] = "-X";
+		if (debug) {
+			sshargs[i++] = "-debug";
+		}
 		if (PoolName) {
 			sshargs[i++] = "-pool";
 			sshargs[i++] = PoolName;
@@ -1434,10 +1445,13 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 			}
 
 			if (is_crlf_shebang(ename)) {
-				fprintf( stderr, "\n%s: Executable file %s is a script with CRLF (DOS/Win) line endings\n",
+				fprintf( stderr, "\n%s: Executable file %s is a script with "
+					"CRLF (DOS/Windows) line endings.\n",
 					allow_crlf_script ? "WARNING" : "ERROR", ename );
 				if (!allow_crlf_script) {
-					fprintf( stderr, "Run with -allow-crlf-script if this is really what you want\n");
+					fprintf( stderr, "This generally doesn't work, and you "
+						"should probably run 'dos2unix %s' -- or a similar "
+						"tool -- before you resubmit.\n", ename );
 					return 1; // abort
 				}
 			}
@@ -1488,6 +1502,7 @@ reschedule()
 {
 	if ( ! MySchedd)
 		return;
+
 	if ( param_boolean("SUBMIT_SEND_RESCHEDULE",true) ) {
 		Stream::stream_type st = MySchedd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 		if (DashDryRun) {
@@ -1870,6 +1885,12 @@ int submit_jobs (
 		// if this is the first queue command, and we don't yet know if this is a job factory, decide now.
 		// we do this after we parse the first queue command so that we can use the size of the queue statement
 		// to decide whether this is a factory or not.
+		if (as_factory == 3) {
+			// if as_factory == 3, then we want 'smart' factory, where we use late materialize
+			// for multi-proc and non-factory for single proc
+			want_factory = (selected_item_count > 1 || o.queue_num > 1) ? 1 : 0;
+			need_factory = want_factory;
+		}
 		if (GotQueueCommand == 1) {
 			if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
 				want_factory = 1;
@@ -1910,8 +1931,13 @@ int submit_jobs (
 			if (want_factory && ! MyQ->allows_late_materialize()) {
 				// if factory was required, not just preferred. then we fail the submit
 				if (need_factory) {
-					if (MyQ->has_late_materialize()) {
-						fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+					int late_ver = 0;
+					if (MyQ->has_late_materialize(late_ver)) {
+						if (late_ver < 2) {
+							fprintf(stderr, "\nERROR: This SCHEDD allows only an older Late materialization protocol\n");
+						} else {
+							fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+						}
 					} else {
 						fprintf(stderr, "\nERROR: The SCHEDD is too old to support late materialization\n");
 					}
@@ -1939,22 +1965,20 @@ int submit_jobs (
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			submit_hash.make_digest(submit_digest, ClusterId, o.vars, 0);
+			if (submit_digest.empty()) {
+				rval = -1;
+				break;
+			}
 
-		#if 1
-			//if (DashDryRun && create_local_factory_file) {
-			//	MyString items_fn = create_local_factory_file;
-			//	items_fn += ".items";
-			//	MyQ->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
-			//}
+			// if generating a dry-run digest file with a generic name, also generate a dry-run itemdata file
+			if (create_local_factory_file && (MyQ->get_type() == AbstractQ_TYPE_SIM)) {
+				MyString items_fn = create_local_factory_file;
+				items_fn += ".items";
+				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
+			}
 			rval = MyQ->send_Itemdata(ClusterId, o);
 			if (rval < 0)
 				break;
-		#else
-			// convert foreach data into canonical form, writing a new .items file if needed
-			rval = convert_to_foreach_file(submit_hash, o, ClusterId, true);
-			if (rval < 0)
-				break;
-		#endif
 
 			// append the revised queue statement to the submit digest
 			rval = append_queue_statement(submit_digest, o);
@@ -1964,7 +1988,8 @@ int submit_jobs (
 			// write the submit digest to the current working directory.
 			//PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
 			if (create_local_factory_file) {
-				rval = write_factory_file(create_local_factory_file, submit_digest.data(), (int)submit_digest.size(), 0644);
+				MyString factory_path = submit_hash.full_path(create_local_factory_file, false);
+				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), (int)submit_digest.size(), 0644);
 				if (rval < 0)
 					break;
 			}
@@ -2425,12 +2450,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			fprintf(stdout, ".");
 		}
 
-		if (CurrentSubmitInfo == -1 || SubmitInfo[CurrentSubmitInfo].cluster != ClusterId) {
-			CurrentSubmitInfo++;
-			SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
-			SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
+		if (SubmitInfo.size() == 0 || SubmitInfo.back().cluster != ClusterId) {
+			SubmitInfo.push_back(SubmitRec());
+			SubmitInfo.back().cluster = ClusterId;
+			SubmitInfo.back().firstjob = ProcId;
 		}
-		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
+		SubmitInfo.back().lastjob = ProcId;
 
 		// SubmitInfo[x].lastjob controls how many submit events we
 		// see in the user log.  For parallel jobs, we only want
@@ -2438,7 +2463,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		// Procs are in that it.  Setting lastjob to zero makes this so.
 
 		if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
-			SubmitInfo[CurrentSubmitInfo].lastjob = 0;
+			SubmitInfo.back().lastjob = 0;
 		}
 
 		// If spooling entire job "sandbox" to the schedd, then we need to keep
@@ -2448,12 +2473,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			tmp->Assign(ATTR_CLUSTER_ID, ClusterId);
 			tmp->Assign(ATTR_PROC_ID, ProcId);
 			if (0 == ProcId) {
-				JobAdsArrayLastClusterIndex = JobAdsArrayLen;
+				JobAdsArrayLastClusterIndex = JobAdsArray.size();
 			} else {
 				// proc ad to cluster ad (if there is one)
 				tmp->ChainToAd(JobAdsArray[JobAdsArrayLastClusterIndex]);
 			}
-			JobAdsArray[ JobAdsArrayLen++ ] = tmp;
+			JobAdsArray.push_back(tmp);
 		}
 
 		submit_hash.delete_job_ad();
@@ -2597,15 +2622,15 @@ init_params()
 }
 
 
-extern "C" {
-int SetSyscalls( int foo ) { return foo; }
-}
-
 // The code below needs work before it can build on Windows or older Macs
 
 MyString credd_has_tokens(MyString m) {
 
-	dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), my_username());
+	if (IsDebugLevel(D_SECURITY)) {
+			char *myname = my_username();
+			dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), myname);
+			free(myname);
+	}
 
 	// PHASE 1
 	//
@@ -2844,7 +2869,9 @@ int process_job_credentials()
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL
-					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
+					char *my_un = my_username();
+					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_un, URL.Value());
+					free(my_un);
 				} else {
 					fprintf(stderr, "\nOAuth error: %s\n\n", URL.Value());
 				}
@@ -2942,6 +2969,8 @@ int process_job_credentials()
 				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
 				exit( 1 );
 			}
+			free(ut64);
+			free(zkmbuf);
 		}
 	}  // end of block to run a credential producer
 
@@ -2975,7 +3004,7 @@ int SendLastExecutable()
 												true);
 		}
 
-		MyString hash;
+		std::string hash;
 		if (try_ickpt_sharing) {
 			Condor_MD_MAC cmm;
 			unsigned char* hash_raw;
@@ -2992,16 +3021,16 @@ int SendLastExecutable()
 			}
 			else {
 				for (int i = 0; i < MAC_SIZE; i++) {
-					hash.formatstr_cat("%02x", static_cast<int>(hash_raw[i]));
+					formatstr_cat(hash, "%02x", static_cast<int>(hash_raw[i]));
 				}
 				free(hash_raw);
 			}
 		}
 		int ret;
-		if ( ! hash.IsEmpty()) {
+		if ( ! hash.empty()) {
 			ClassAd tmp_ad;
 			tmp_ad.Assign(ATTR_OWNER, username);
-			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
+			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash);
 			ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 		}
 		else {

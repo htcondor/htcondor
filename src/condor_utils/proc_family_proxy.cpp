@@ -27,7 +27,6 @@
 #include "setenv.h"
 #include "directory.h"
 #include "basename.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "procd_config.h"
 
 // enable PROCAPI profileing code.
@@ -413,22 +412,48 @@ ProcFamilyProxy::start_procd()
 	args.AppendArg("-A");
 	args.AppendArg(m_procd_addr);
 
+	// parse the (optional) procd log file size
+	// we do this here so that we can have a log size of 0 disable logging.
+	//
+	int log_size = -1; // -1 means infinite
+	char *max_procd_log = param("MAX_PROCD_LOG");
+	if (max_procd_log) {
+		long long maxlog = 0;
+		bool unit_is_time = false;
+		bool r = dprintf_parse_log_size(max_procd_log, maxlog, unit_is_time);
+		if (!r) {
+			dprintf(D_ALWAYS, "Invalid config! MAX_PROCD_LOG = %s: must be an integer literal and may be followed by a units value\n", max_procd_log);
+			maxlog = 1*1000*1000; // use the default of 1Mb
+		}
+		if (unit_is_time) {
+			dprintf(D_ALWAYS, "Invalid config! MAX_PROCD_LOG must be a size, not a time in this version of HTCondor.\n");
+			maxlog = 1*1000*1000; // use the default of 1Mb
+		}
+
+		// the procd takes it's maxlog as an integer, so only pass the param if it is 0, or a positive value that is in range
+		// the procd treats -1 as INFINITE, and that is the default, so we don't need to pass large values on
+		// we will also treat log size of 0 as a special case that just disables the log entirely.
+		// 
+		if (maxlog >= 0 && maxlog < INT_MAX) { log_size = (int)maxlog; }
+		free(max_procd_log);
+	}
+
 	// the (optional) procd log file
 	//
-	if (m_procd_log.Length() > 0) {
+	if (m_procd_log.Length() > 0 && log_size != 0) {
 		args.AppendArg("-L");
 		args.AppendArg(m_procd_log);
-	}
 	
-	// the (optional) procd log file size
-	//
-	char *procd_log_size = param("MAX_PROCD_LOG");
-	if (procd_log_size != NULL) {
-		args.AppendArg("-R");
-		args.AppendArg(procd_log_size);
-		free(procd_log_size);
+		// pass a log size arg if it is > 0 (-1 is the internal default, and 0 means to disable the log)
+		if (log_size > 0) {
+			MyString size_arg;
+			size_arg.serialize_int(log_size);
+			args.AppendArg("-R");
+			args.AppendArg(size_arg.Value());
+		}
 	}
-	
+
+
 	Env env;
 	// The procd can't param, so pass this via the environment
 	if (param_boolean("USE_PSS", false)) {
@@ -483,10 +508,10 @@ ProcFamilyProxy::start_procd()
 	// config file
 	//
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() && !privsep_enabled()) {
+		if (!can_switch_ids()) {
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
-			           "root or using PrivSep");
+			           "root");
 		}
 		int min_tracking_gid = param_integer("MIN_TRACKING_GID", 0);
 		if (min_tracking_gid == 0) {
@@ -569,25 +594,17 @@ ProcFamilyProxy::start_procd()
 
 	// use Create_Process to start the procd
 	//
-	if (privsep_enabled()) {
-		m_procd_pid = privsep_spawn_procd(exe.Value(),
-		                                  args,
-		                                  std_io,
-		                                  m_reaper_id);
-	}
-	else {
-		m_procd_pid = daemonCore->Create_Process(exe.Value(),
-		                                         args,
-		                                         PRIV_ROOT,
-		                                         m_reaper_id,
-		                                         FALSE,
-		                                         FALSE,
-		                                         &env,
-		                                         NULL,
-		                                         NULL,
-		                                         NULL,
-		                                         std_io);
-	}
+	m_procd_pid = daemonCore->Create_Process(exe.Value(),
+	                                         args,
+	                                         PRIV_ROOT,
+	                                         m_reaper_id,
+	                                         FALSE,
+	                                         FALSE,
+	                                         &env,
+	                                         NULL,
+	                                         NULL,
+	                                         NULL,
+	                                         std_io);
 	if (m_procd_pid == FALSE) {
 		dprintf(D_ALWAYS, "start_procd: unable to execute the procd\n");
 		daemonCore->Close_Pipe(pipe_ends[0]);

@@ -96,8 +96,6 @@ public:
 	void	setIsBOINC( bool is_boinc ) { s_is_boinc = is_boinc; };
 #endif /* HAVE_BOINC */
 
-	void	setPorts( int, int );
-
 	void	printInfo( int debug_level );
 
 	char const*	getIpAddr( void );
@@ -110,7 +108,6 @@ private:
 
 		// methods
 	bool	reallykill(int, int);
-	int		execOldStarter( Claim * );
 	int		execJobPipeStarter( Claim * );
 	int		execDCStarter( Claim *, Stream* s );
 		// claim is optional here, and may be NULL (e.g. boinc) but it may NOT be null when glexec is enabled. (sigh)
@@ -159,8 +156,6 @@ private:
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
 	int             s_hold_timeout;
-	int             s_port1;
-	int             s_port2;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;
@@ -173,7 +168,7 @@ private:
 	ReliSock*       s_job_update_sock;
 	std::string     s_execute_dir;
 	DCMsgCallback*  m_hold_job_cb;
-	MyString        m_starter_addr;
+	std::string     m_starter_addr;
 };
 
 // living (or unreaped) starters live in a global data structure and can be looked up by PID.

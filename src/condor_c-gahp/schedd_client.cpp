@@ -78,7 +78,7 @@ extern char *myUserName;
 extern int main_shutdown_graceful();
 
 int
-request_pipe_handler(Service*, int) {
+request_pipe_handler(int) {
 
 	std::string* next_line;
 	while ((next_line = request_buffer.GetNextLine()) != NULL) {
@@ -615,11 +615,12 @@ doContactSchedd()
 			goto contact_schedd_disconnect;
 		}
 
-		current_command->classad->ResetExpr();
 		ExprTree *tree;
 		const char *lhstr, *rhstr;
-		while( current_command->classad->NextExpr(lhstr, tree) ) {
+		for( auto itr = current_command->classad->begin(); itr != current_command->classad->end(); itr++ ) {
 
+			lhstr = itr->first.c_str();
+			tree = itr->second;
 			rhstr = ExprTreeToString( tree );
 			if( !lhstr || !rhstr) {
 				formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
@@ -969,10 +970,11 @@ update_report_result:
 			}
 
 			// Set all the classad attribute on the remote classad
-			current_command->classad->ResetExpr();
 			ExprTree *tree;
 			const char *lhstr, *rhstr;
-			while( current_command->classad->NextExpr(lhstr, tree) ) {
+			for( auto itr = current_command->classad->begin(); itr != current_command->classad->end(); itr++ ) {
+				lhstr = itr->first.c_str();
+				tree = itr->second;
 
 				if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 					continue;
@@ -1522,6 +1524,13 @@ handle_gahp_command(char ** argv, int argc) {
 			init_done = true;
 		}
 		return TRUE;
+	} else if (!strcasecmp(argv[0], GAHP_COMMAND_UPDATE_TOKEN_FROM_FILE)) {
+		if (argc != 2) {
+			dprintf(D_ALWAYS, "Invalid args to %s\n", argv[0]);
+			return false;
+		}
+		param_insert("SCITOKENS_FILE", argv[1]);
+		return true;
 	}
 
 	dprintf (D_ALWAYS, "Invalid command %s\n", argv[0]);

@@ -30,7 +30,6 @@
 #include "compat_classad.h"
 #include "compat_classad_list.h"
 #include "compat_classad_util.h"
-using namespace compat_classad;
 
 
 #endif /* _CLASSAD_H */

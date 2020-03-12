@@ -1,4 +1,4 @@
-#!/usr/bin/env python2 -u
+#!/usr/bin/env python -u
 
 from __future__ import print_function
 
@@ -450,7 +450,7 @@ class AzureGAHPCommandExec():
         #   AZURE_KEYVAULT_CREATE commands, which we don't currently
         #   use for the grid universe.
         #   This deficiency should be fixed at some point.
-        if app_settings.tenant_id != None:
+        if app_settings.tenant_id is not None:
             resource_url = "https://login.microsoftonline.com/{}".format(
                 app_settings.tenant_id)
             context = adal.AuthenticationContext(resource_url)
@@ -714,8 +714,8 @@ class AzureGAHPCommandExec():
             self, request_id, network_client, cmd_params, subnet):
         
         #Create Virtual Network
-        if (cmd_params.vnet_name != None 
-            and cmd_params.vnet_rg_name != None ):
+        if (cmd_params.vnet_name is not None
+            and cmd_params.vnet_rg_name is not None ):
 
             self.write_message(
                 request_id, 
@@ -724,7 +724,7 @@ class AzureGAHPCommandExec():
                 )
             vnet = network_client.virtual_networks.get(
                 cmd_params.vnet_rg_name, cmd_params.vnet_name)
-            if(subnet == None):
+            if(subnet is None):
                 subnets_of_vnet = vnet.subnets
                 if len(subnets_of_vnet) > 0:
                     # use first subnet of the vnet
@@ -1015,16 +1015,16 @@ class AzureGAHPCommandExec():
             params["os_profile"]["admin_password"] = key
 
         # Handle tags related configuration
-        if cmd_params.tag != None:
+        if cmd_params.tag is not None:
             params["tags"] = tags
         # Handle custom data related configuration
-        if cmd_params.custom_data != None:
+        if cmd_params.custom_data is not None:
             base64_custom_data = self.get_base64_string(cmd_params.custom_data)
             params["os_profile"]["custom_data"] = base64_custom_data
      
         # Handle data disk configuration
         data_disks_arr = []
-        if(cmd_params.data_disks != None):
+        if(cmd_params.data_disks is not None):
             dd_arr = cmd_params.data_disks.split(",")
             for index,val in enumerate(dd_arr):    
                 dd = {
@@ -1049,7 +1049,7 @@ class AzureGAHPCommandExec():
             vnet_rg_name, vnet_name)
         subnets_of_vnet = vnet.subnets
         if len(subnets_of_vnet) > 0:
-            if subnet_name != None:
+            if subnet_name is not None:
                 for subnet in subnets_of_vnet:
                     if subnet_name.lower() == subnet.name.lower():
                         existing_subnet = subnet
@@ -1077,8 +1077,8 @@ class AzureGAHPCommandExec():
 
         existing_subnet = None
         # Check for existing Virtual Network and subnet
-        if (cmd_params.vnet_name != None 
-            and cmd_params.vnet_rg_name != None):
+        if (cmd_params.vnet_name is not None
+            and cmd_params.vnet_rg_name is not None):
 
             existing_subnet, error = self.check_existing_vnet_and_subnet(
                 request_id, network_client, cmd_params.vnet_rg_name, 
@@ -1226,18 +1226,18 @@ class AzureGAHPCommandExec():
         else:  
             params["virtual_machine_profile"]["os_profile"]["admin_password"] = key
 
-        if cmd_params.tag != None:
+        if cmd_params.tag is not None:
             params["tags"] = tags
         
         base64_custom_data = None
-        if cmd_params.custom_data != None:
+        if cmd_params.custom_data is not None:
             base64_custom_data = self.get_base64_string(cmd_params.custom_data)
         
-        if(base64_custom_data != None):
+        if(base64_custom_data is not None):
             params["virtual_machine_profile"]["os_profile"]["custom_data"] = base64_custom_data
      
         dd_arr = []
-        if(cmd_params.data_disks != None):
+        if(cmd_params.data_disks is not None):
             arr = cmd_params.data_disks.split(",")
             for index,val in enumerate(arr):    
                 dd = {
@@ -1249,9 +1249,9 @@ class AzureGAHPCommandExec():
             params["virtual_machine_profile"]["storage_profile"]["data_disks"] = dd_arr
    
      # Install Linux MSI extension
-        if (cmd_params.keyvault_name != None 
-            and cmd_params.keyvault_rg_name != None
-            and cmd_params.keyvault_secret_name != None ):
+        if (cmd_params.keyvault_name is not None
+            and cmd_params.keyvault_rg_name is not None
+            and cmd_params.keyvault_secret_name is not None ):
             extension_profile = {
                 "extensions":[{
                     "name": cmd_params.vmss_name + "linuxmsiext",
@@ -1435,9 +1435,9 @@ class AzureGAHPCommandExec():
         ad_group_object_id = None
         keyvault = None
 
-        if(cmd_params.keyvault_name != None 
-           and cmd_params.keyvault_rg_name != None
-           and cmd_params.keyvault_secret_name != None):
+        if(cmd_params.keyvault_name is not None
+           and cmd_params.keyvault_rg_name is not None
+           and cmd_params.keyvault_secret_name is not None):
             keyvault = self.get_existing_keyvault(
                 client_libs.keyvault, app_settings,
                 cmd_params.keyvault_rg_name, 
@@ -1472,8 +1472,8 @@ class AzureGAHPCommandExec():
             request_id, resource_client, cmd_params.group_name, 
             cmd_params.location)
         #Create Virtual Network
-        if (cmd_params.vnet_name != None 
-                and cmd_params.vnet_rg_name != None):
+        if (cmd_params.vnet_name is not None
+                and cmd_params.vnet_rg_name is not None):
             self.write_message(
                 request_id, 
                 "Using existing vnet '{}'{}".format(
@@ -1543,10 +1543,10 @@ class AzureGAHPCommandExec():
             vmss_principal_id = vmss_info.identity.principal_id
 
         # Download secret from Azure keyvault
-        if (app_settings.shell_script_url != None  
-            and cmd_params.keyvault_name != None
-            and cmd_params.keyvault_rg_name != None
-            and cmd_params.keyvault_secret_name != None):
+        if (app_settings.shell_script_url is not None
+            and cmd_params.keyvault_name is not None
+            and cmd_params.keyvault_rg_name is not None
+            and cmd_params.keyvault_secret_name is not None):
             
             # Add VMSS to AAD group
             base_url = "https://graph.windows.net"
@@ -1702,7 +1702,7 @@ class AzureGAHPCommandExec():
                     },
                 }
             }
-        if (clean_job_frequency is not None 
+        if (clean_job_frequency is not None
             and clean_job_interval is not None):
             recurrence_value = {
                 "frequency": self.get_recurrence_frequency(

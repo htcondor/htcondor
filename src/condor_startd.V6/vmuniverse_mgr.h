@@ -55,9 +55,9 @@ private:
 	struct procInfo m_vm_exited_pinfo;
 	struct procInfo m_vm_alive_pinfo;
 
-	MyString m_vm_mac;
-	MyString m_vm_ip;
-	MyString m_execute_dir;
+	std::string m_vm_mac;
+	std::string m_vm_ip;
+	std::string m_execute_dir;
 };
 
 class VMUniverseMgr : public Service {
@@ -112,9 +112,9 @@ private:
 	int m_check_tid;
 	int m_check_interval;
 
-	MyString m_vmgahp_server;
+	std::string m_vmgahp_server;
 	ClassAd m_vmgahp_info;
-	MyString m_vm_type;
+	std::string m_vm_type;
 
 	SimpleList<VMStarterInfo*> m_vm_starter_list;
 	int m_vm_max_memory;	// maximum amount of memory for VMs

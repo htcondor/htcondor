@@ -358,8 +358,8 @@ GahpServer::write_line(const char *command, int req, const char *args)
 	return;
 }
 
-void
-GahpServer::Reaper(Service *,int pid,int status)
+int
+GahpServer::Reaper(int pid,int status)
 {
 	/* This should be much better.... for now, if our Gahp Server
 	   goes away for any reason, we EXCEPT. */
@@ -400,6 +400,8 @@ GahpServer::Reaper(Service *,int pid,int status)
 		formatstr_cat( buf, "\n" );
 		dprintf( D_ALWAYS, "%s", buf.c_str() );
 	}
+
+	return 0; // ????
 }
 
 GahpClient::GahpClient( const char * id, const char * path, const ArgList * args )
@@ -845,10 +847,8 @@ GahpServer::Startup()
 	if ( m_reaperid == -1 ) {
 		m_reaperid = daemonCore->Register_Reaper(
 				"GAHP Server",					
-				(ReaperHandler)&GahpServer::Reaper,	// handler
-				"GahpServer::Reaper",
-				NULL
-				);
+				&GahpServer::Reaper,	// handler
+				"GahpServer::Reaper");
 	}
 
 		// Create two pairs of pipes which we will use to 
@@ -1066,6 +1066,25 @@ GahpServer::Initialize( Proxy *proxy )
 	return true;
 }
 
+
+bool
+GenericGahpClient::UpdateToken( const std::string &token )
+{
+	return server->UpdateToken(token);
+}
+
+
+bool
+GahpServer::UpdateToken( const std::string &token )
+{
+	if ( !command_update_token_from_file( token ) ) {
+		dprintf( D_ALWAYS, "GAHP: Failed to update GAHP with token from file %s\n", token.c_str() );
+		return false;
+	}
+	return true;
+}
+
+
 bool
 GenericGahpClient::CreateSecuritySession()
 {
@@ -1092,7 +1111,7 @@ GahpServer::CreateSecuritySession()
 
 	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
 										session_id, session_key, NULL,
-										CONDOR_CHILD_FQU, NULL, 0 ) ) {
+										CONDOR_CHILD_FQU, NULL, 0, nullptr ) ) {
 		free( session_id );
 		free( session_key );
 		return false;
@@ -1294,7 +1313,7 @@ GahpServer::command_use_cached_proxy( GahpProxyInfo *new_proxy )
 	return true;
 }
 
-int
+void
 GahpServer::ProxyCallback()
 {
 	if ( m_gahp_pid > 0 ) {
@@ -1302,7 +1321,6 @@ GahpServer::ProxyCallback()
 								(TimerHandlercpp)&GahpServer::doProxyCheck,
 								"GahpServer::doProxyCheck", (Service*)this );
 	}
-	return 0;
 }
 
 void
@@ -1746,8 +1764,12 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			// as well, but this should be one of the first lines in
 			// stderr and shouldn't be split across multiple reads.
 			if ( m_ssh_forward_port == 0 ) {
-				sscanf( prev_line, "Allocated port %d for remote forward to",
-						&m_ssh_forward_port );
+				int forward_port = 0;
+				int matches = sscanf( prev_line, "Allocated port %d for remote forward to",
+						&forward_port );
+				if (matches > 0) {
+					m_ssh_forward_port = forward_port;
+				}
 			}
 			prev_line = newline + 1;
 			m_gahp_error_buffer = "";
@@ -1788,6 +1810,38 @@ GahpServer::command_initialize_from_file(const char *proxy_path,
 			reason = "Unspecified error";
 		}
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",command,reason);
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+GahpServer::command_update_token_from_file(const std::string &token_path)
+{
+	static const std::string command = "UPDATE_TOKEN";
+
+	if (token_path.empty()) {
+		dprintf(D_ALWAYS, "GAHP command recieved with empty token file %s.\n",
+			token_path.c_str());
+	}
+
+	std::string buf;
+	auto x = formatstr(buf, "%s %s", command.c_str(), escapeGahpString(token_path.c_str()));
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
+
+	Gahp_Args result;
+	read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		const char *reason;
+		if ( result.argc > 1 ) {
+			reason = result.argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf(D_ALWAYS, "GAHP command '%s' failed: %s\n", command.c_str(), reason);
 		return false;
 	}
 
@@ -2726,9 +2780,9 @@ GahpServer::poll()
 {
 	Gahp_Args* result = NULL;
 	int num_results = 0;
-	int i, result_reqid;
+	int result_reqid;
 	GenericGahpClient* entry;
-	ExtArray<Gahp_Args*> result_lines;
+	std::vector<Gahp_Args*> result_lines;
 
 	m_in_results = true;
 
@@ -2752,16 +2806,17 @@ GahpServer::poll()
 		return;
 	}
 	num_results = atoi(result->argv[1]);
+	ASSERT(num_results >= 0);
 
 		// Now store each result line in an array.
-	for (i=0; i < num_results; i++) {
+	for (size_t i=0; i < (size_t)num_results; i++) {
 			// Allocate a result buffer if we don't already have one
 		if ( !result ) {
 			result = new Gahp_Args;
 			ASSERT(result);
 		}
 		read_argv(result);
-		result_lines[i] = result;
+		result_lines.push_back(result);
 		result = NULL;
 	}
 
@@ -2783,7 +2838,7 @@ GahpServer::poll()
 
 		// Now for each stored request line,
 		// lookup the request id in our hash table and stash the result.
-	for (i=0; i < num_results; i++) {
+	for (size_t i=0; i < result_lines.size(); i++) {
 		if ( result ) delete result;
 		result = result_lines[i];
 
@@ -6355,6 +6410,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 									 const std::string &metadata_file,
 									 bool preemptible,
 									 const std::string &json_file,
+									 const std::vector< std::pair< std::string, std::string > > & labels,
 									 std::string &instance_id )
 {
 	static const char* command = "GCE_INSTANCE_INSERT";
@@ -6384,6 +6440,15 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	reqline += preemptible ? "true" : "false";
 	reqline += " ";
 	reqline += json_file.empty() ? NULLSTRING : escapeGahpString( json_file );
+
+	for( auto i : labels ) {
+		reqline += " ";
+		reqline += i.first;
+		reqline += " ";
+		reqline += i.second;
+	}
+	reqline += " ";
+	reqline += NULLSTRING;
 
 	const char *buf = reqline.c_str();
 

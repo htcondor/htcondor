@@ -20,7 +20,7 @@
 #ifndef _HIBERNATER_H_
 #define _HIBERNATER_H_
 
-#include "extArray.h"
+#include <vector>
 #include "MyString.h"
 
 /***************************************************************
@@ -150,14 +150,14 @@ public:
 	static char const* sleepStateToString ( SLEEP_STATE state );
 	static SLEEP_STATE stringToSleepState ( char const *name );
 
-	static bool maskToStates( unsigned mask, ExtArray<SLEEP_STATE> &states );
-	static bool statesToString( const ExtArray<SLEEP_STATE> &states,
+	static bool maskToStates( unsigned mask, std::vector<SLEEP_STATE> &states );
+	static bool statesToString( const std::vector<SLEEP_STATE> &states,
 								MyString &string );
 	static bool maskToString( unsigned mask, MyString &str );
 
 	static bool stringToStates( const char *s,
-								ExtArray<SLEEP_STATE> &states );
-	static bool statesToMask( const ExtArray<SLEEP_STATE> &states,
+								std::vector<SLEEP_STATE> &states );
+	static bool statesToMask( const std::vector<SLEEP_STATE> &states,
 							  unsigned &mask );
 	static bool stringToMask( const char *str,
 							  unsigned &mask );

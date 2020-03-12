@@ -39,6 +39,16 @@ class DagmanClassad {
 	*/
 	~DagmanClassad();
 
+	/** Initialize the DAGMan job's classad.
+		@param maxJobs Maximum number of submitted jobs
+		@param maxIdle Maximum number of idle jobs
+		@param maxPreScripts Maximum number of active pre scripts
+		@param maxPostScripts Maximum number of active post scripts
+	**/
+	void Initialize( int maxJobs, int maxIdle, int maxPreScripts,
+			int maxPostScripts );
+
+
 	/** Update the status information in the DAGMan job's classad.
 		@param The total number of nodes
 		@param The number of nodes that are done
@@ -54,7 +64,8 @@ class DagmanClassad {
 	*/
 	void Update( int total, int done, int pre, int submitted, int post,
 				int ready, int failed, int unready,
-				Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats );
+				Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats,
+				int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A MyString to receive the Owner value.
@@ -117,6 +128,9 @@ class DagmanClassad {
 			@return true if we got the requested attribute, false otherwise
 		*/
 	bool GetDagAttribute( const char *attrName, MyString &attrVal,
+				bool printWarning = true );
+
+	bool GetDagAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true );
 
 		// Whether this object is valid.

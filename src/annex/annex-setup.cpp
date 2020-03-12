@@ -114,11 +114,13 @@ check_setup() {
 	checkOneParameter( "COLLECTOR_HOST", rv );
 	checkOneParameter( "SEC_PASSWORD_FILE", rv );
 
-	StatWrapper sw( secretKeyFile.c_str() );
-	mode_t mode = sw.GetBuf()->st_mode;
-	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
-		fprintf( stderr, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner.\n" );
-		rv = 1;
+	if( secretKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		StatWrapper sw( secretKeyFile.c_str() );
+		mode_t mode = sw.GetBuf()->st_mode;
+		if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+			fprintf( stderr, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner.\n" );
+			rv = 1;
+		}
 	}
 
 	if( rv != 0 ) {
@@ -173,6 +175,8 @@ setup_usage() {
 		"\n"
 		"To do the one-time setup for an AWS account:\n"
 		"\tcondor_annex [options] -setup\n"
+		"... if you're on an EC2 instance (with a privileged IAM role):\n"
+		"\tcondor_annex [-aws-region <region>] -setup FROM INSTANCE [CloudFormation URL]\n"
 		"\n"
 		"To specify the files for the access (public) key and secret (private) keys\n"
 		"[or, for experts, the CloudFormation URL]:\n"
@@ -204,23 +208,45 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 		}
 	}
 
-	int fd = safe_open_no_create_follow( publicKeyFile.c_str(), O_RDONLY );
-	if( fd == -1 ) {
-		fprintf( stderr, "Unable to open public key file '%s': '%s' (%d).\n",
-			publicKeyFile.c_str(), strerror( errno ), errno );
-		setup_usage();
-		return 1;
+	if( MATCH == strcasecmp( publicKeyFile.c_str(), "FROM" )
+	  && MATCH == strcasecmp( privateKeyFile.c_str(), "INSTANCE" ) ) {
+		publicKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+		privateKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
 	}
-	close( fd );
 
-	fd = safe_open_no_create_follow( privateKeyFile.c_str(), O_RDONLY );
-	if( fd == -1 ) {
-		fprintf( stderr, "Unable to open private key file '%s': '%s' (%d).\n",
-			privateKeyFile.c_str(), strerror( errno ), errno );
-		setup_usage();
-		return 1;
+	if( publicKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		int fd = safe_open_no_create_follow( publicKeyFile.c_str(), O_RDONLY );
+		if( fd == -1 ) {
+			fprintf( stderr, "Unable to open public key file '%s': '%s' (%d).\n",
+				publicKeyFile.c_str(), strerror( errno ), errno );
+			if( pukf == NULL ) {
+				fprintf( stderr, "Trying FROM INSTANCE, instead.\n" );
+				publicKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+				privateKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+			} else {
+				setup_usage();
+				return 1;
+			}
+		}
+		close( fd );
 	}
-	close( fd );
+
+	if( privateKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		int fd = safe_open_no_create_follow( privateKeyFile.c_str(), O_RDONLY );
+		if( fd == -1 ) {
+			fprintf( stderr, "Unable to open private key file '%s': '%s' (%d).\n",
+				privateKeyFile.c_str(), strerror( errno ), errno );
+			if( prkf == NULL ) {
+				fprintf( stderr, "Trying FROM INSTANCE, instead.\n" );
+				publicKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+				privateKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+			} else {
+				setup_usage();
+				return 1;
+			}
+		}
+		close( fd );
+	}
 
 
 	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
@@ -258,7 +284,7 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, ec2URL );
 
 	// FIXME: Do something cleverer for versioning.
-	std::string bucketStackURL = "https://s3.amazonaws.com/condor-annex/bucket-8.json";
+	std::string bucketStackURL = "https://s3.amazonaws.com/condor-annex/bucket-9.json";
 	std::string bucketStackName = "HTCondorAnnex-ConfigurationBucket";
 	std::string bucketStackDescription = "configuration bucket (this takes less than a minute)";
 	std::map< std::string, std::string > bucketParameters;
@@ -272,7 +298,7 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 		commandState, commandID );
 
 	// FIXME: Do something cleverer for versioning.
-	std::string lfStackURL = "https://s3.amazonaws.com/condor-annex/template-8.json";
+	std::string lfStackURL = "https://s3.amazonaws.com/condor-annex/template-9.json";
 	std::string lfStackName = "HTCondorAnnex-LambdaFunctions";
 	std::string lfStackDescription = "Lambda functions (this takes about a minute)";
 	std::map< std::string, std::string > lfParameters;
@@ -287,7 +313,7 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 		commandState, commandID );
 
 	// FIXME: Do something cleverer for versioning.
-	std::string rStackURL = "https://s3.amazonaws.com/condor-annex/role-8.json";
+	std::string rStackURL = "https://s3.amazonaws.com/condor-annex/role-9.json";
 	std::string rStackName = "HTCondorAnnex-InstanceProfile";
 	std::string rStackDescription = "instance profile (this takes about two minutes)";
 	std::map< std::string, std::string > rParameters;
@@ -302,7 +328,7 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 		commandState, commandID );
 
 	// FIXME: Do something cleverer for versioning.
-	std::string sgStackURL = "https://s3.amazonaws.com/condor-annex/security-group-8.json";
+	std::string sgStackURL = "https://s3.amazonaws.com/condor-annex/security-group-9.json";
 	std::string sgStackName = "HTCondorAnnex-SecurityGroup";
 	std::string sgStackDescription = "security group (this takes less than a minute)";
 	std::map< std::string, std::string > sgParameters;

@@ -122,7 +122,7 @@ class UniShadow : public BaseShadow
 
 	int64_t getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss );
 
-	int getDiskUsage( void );
+	int64_t getDiskUsage( void );
 
 	bool exitedBySignal( void );
 
@@ -143,6 +143,9 @@ class UniShadow : public BaseShadow
 	virtual void emailTerminateEvent( int exitReason, 
 					update_style_t kind = US_NORMAL );
 
+	// Record the file transfer state changes.
+	virtual void recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd );
+
 		/** Do all work to cleanup before this shadow can exit.  We've
 			only got 1 RemoteResource to kill the starter on.
 		*/
@@ -152,6 +155,8 @@ class UniShadow : public BaseShadow
 	virtual void gracefulShutDown( void );
 
 	virtual void resourceBeganExecution( RemoteResource* rr );
+
+	virtual void resourceDisconnected( RemoteResource* rr );
 
 	virtual void resourceReconnected( RemoteResource* rr );
 
@@ -172,7 +177,7 @@ class UniShadow : public BaseShadow
 	virtual void exitAfterEvictingJob( int reason );
 	virtual bool exitDelayed( int &reason );
 
-	int exitLeaseHandler( void );
+	void exitLeaseHandler( void );
 
  protected:
 

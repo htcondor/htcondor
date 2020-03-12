@@ -429,7 +429,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 	char formatted[2048];
 	char cond[1024];
 	char info[64];
-	char suggest[64];
+	char suggest[128];
 	char value[64];
 	char tempBuff[64];
 	int p = 1;
@@ -1280,7 +1280,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 
 		contexts.Rewind( );
 		for( int col = 0; col < numContexts; col++ ) {
-			contexts.Next( context );
+			(void) contexts.Next( context );
 			classad::Value c_val;
 			if( tooComplex[row] ){
 				BoolValue result;
@@ -1293,7 +1293,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 				}
 			}
 			else {
-				context->EvaluateAttr( attr, c_val );
+				(void) context->EvaluateAttr( attr, c_val );
 			}
 			vt.SetValue( col, row, c_val );
 		}
@@ -1948,7 +1948,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	abvList.Rewind( );
 	allHyperRectangles.Rewind( );
 	while( allHyperRectangles.Next( hrs ) ) {
-		abvList.Next( currentABV );
+		(void) abvList.Next( currentABV );
 		for( int i = 0; i < hrs->getsize( ); i++ ) {
 			currHR = ( *hrs )[i];
 			currHR->GetIndexSet( hasContext );
@@ -2167,7 +2167,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 				i1->openUpper = false;
 				i2->openUpper = false;
 				if( vr->IsInitialized( ) ) {
-					vr->Intersect( i1, i2, false );
+					vr->Intersect2( i1, i2, false );
 				}
 				else {
 					vr->Init( i1, i2, false );
@@ -2267,18 +2267,18 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 			i2->openUpper = false;
 			if( vr->IsInitialized( ) ) {
 				if( op == classad::Operation::ISNT_OP ) {
-					vr->Intersect( i1, i2, true );
+					vr->Intersect2( i1, i2, true );
 				}
 				else {
-					vr->Intersect( i1, i2, undef );
+					vr->Intersect2( i1, i2, undef );
 				}
 			}
 			else {
 				if( op == classad::Operation::ISNT_OP ) {
-					vr->Init( i1, i2, true );
+					vr->Init2( i1, i2, true );
 				}
 				else {
-					vr->Init( i1, i2, undef );
+					vr->Init2( i1, i2, undef );
 				}
 			}
 			delete i1;

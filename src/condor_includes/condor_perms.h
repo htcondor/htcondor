@@ -156,9 +156,6 @@ public:
 		done = false;
 		while( !done ) {
 			switch(m_config_perms[i-1]) {
-			case DAEMON:
-				m_config_perms[i++] = WRITE;
-				break;
 			case ADVERTISE_STARTD_PERM:
 			case ADVERTISE_SCHEDD_PERM:
 			case ADVERTISE_MASTER_PERM:

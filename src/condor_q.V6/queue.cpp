@@ -71,7 +71,6 @@ int getDisplayWidth() {
 	return testing_width;
 }
 
-extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, const char *[]);
 
@@ -270,10 +269,13 @@ static	bool		current_run = false;
 static 	bool		dash_globus = false;
 static	bool		dash_grid = false;
 static	bool		dash_run = false;
+static	bool		dash_idle = false;
 static	bool		dash_goodput = false;
 static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
 static  const char * dry_run_file = NULL;
+static  const char * capture_raw_results = NULL;
+static  FILE*        capture_raw_fp = NULL;
 static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
@@ -379,15 +381,15 @@ static struct {
 bool g_stream_results = false;
 
 
-class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 {
  public:
 	CondorQClassAdFileParseHelper(ParseType typ=Parse_long)
 		: CondorClassAdFileParseHelper("\n", typ)
 		, is_schedd(false), is_submitter(false)
 	{}
-	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
-	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* file);
 	std::string schedd_name;
 	std::string schedd_addr;
 	bool is_schedd;
@@ -396,7 +398,7 @@ class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFilePa
 
 // this method is called before each line is parsed. 
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// treat blank lines as delimiters.
 	if (line.size() <= 0) {
@@ -447,7 +449,7 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/
 
 // this method is called when the parser encounters an error
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad, FILE* file)
+int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & ad, FILE* file)
 {
 	// when we get a parse error, skip ahead to the start of the next classad.
 	int ee = this->PreParse(line, ad, file);
@@ -497,7 +499,7 @@ int main (int argc, const char **argv)
 	char		*scheddName=NULL;
 	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
-	char		*tmp;
+	const char	*tmp;
 	int         retval = 0;
 
 	Collectors = NULL;
@@ -698,9 +700,9 @@ int main (int argc, const char **argv)
 
 		first = false;
 
-		MyString scheddVersion;
+		std::string scheddVersion;
 		ad->LookupString(ATTR_VERSION, scheddVersion);
-		CondorVersionInfo v(scheddVersion.Value());
+		CondorVersionInfo v(scheddVersion.c_str());
 		if (v.built_since_version(8, 3, 3)) {
 			bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & CondorQ::fetch_MyJobs);
 			useFastScheddQuery = v3_query_with_auth ? 3 : 2;
@@ -774,6 +776,7 @@ enum {
 	QDO_NotSet=0,
 	QDO_JobNormal,
 	QDO_JobRuntime,
+	QDO_JobIdle,
 	QDO_JobGoodput,
 	QDO_JobGlobusInfo,
 	QDO_JobGridInfo,
@@ -1005,7 +1008,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
 
-			delete [] daemonname;
+			free(daemonname);
 			i++;
 			querySchedds = true;
 		} 
@@ -1440,7 +1443,16 @@ processCommandLineArguments (int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "dry-run", &pcolon, 3)) {
 			dash_dry_run = true;
-			if (pcolon && pcolon[1]) { dry_run_file = ++pcolon; }
+			if (pcolon && pcolon[1]) {
+				dry_run_file = ++pcolon;
+			}
+		}
+		else
+		if (is_dash_arg_colon_prefix(dash_arg, "capture-raw-results", &pcolon, 7)) {
+			capture_raw_results = "-";
+			if (pcolon && pcolon[1]) {
+				capture_raw_results = ++pcolon;
+			}
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "verbose", 4)) {
@@ -1456,8 +1468,8 @@ processCommandLineArguments (int argc, const char *argv[])
 			Q.addAND( expr.c_str() );
 			dash_run = true;
 			querying_partial_clusters = true;
-			if (show_held) {
-				fprintf( stderr, "-run and -hold/held are incompatible\n" );
+			if (show_held || dash_idle) {
+				fprintf( stderr, "-run and -hold/held or -idle are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
@@ -1467,8 +1479,19 @@ processCommandLineArguments (int argc, const char *argv[])
 			Q.add (CQ_STATUS, HELD);
 			show_held = true;
 			querying_partial_clusters = true;
-			if (dash_run) {
-				fprintf( stderr, "-run and -hold/held are incompatible\n" );
+			if (dash_run || dash_idle) {
+				fprintf( stderr, "-run and -hold/held or -idle are incompatible\n" );
+				usage( argv[0] );
+				exit( 1 );
+			}
+		}
+		else
+		if (is_dash_arg_prefix(dash_arg, "idle", 3)) {
+			Q.add (CQ_STATUS, IDLE);
+			dash_idle = true;
+			querying_partial_clusters = true;
+			if (dash_run || show_held) {
+				fprintf( stderr, "-run and -hold/held or -idle are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
 			}
@@ -1716,8 +1739,9 @@ processCommandLineArguments (int argc, const char *argv[])
 			if (mode == QDO_NotSet ||
 				mode == QDO_JobNormal ||
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
+			//	mode == QDO_JobIdle || // TODO: need a custom format for -batch -idle
 				mode == QDO_DAG) { // DAG and batch go naturally together
-				if ( ! dash_factory && ! dash_run) {
+				if ( ! dash_factory && ! dash_run && ! dash_idle) {
 					dash_batch = dash_batch_is_default;
 				}
 			}
@@ -1870,7 +1894,7 @@ render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 static bool
 render_cpu_time (double & cputime, ClassAd *ad, Formatter &)
 {
-	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
+	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
 		return false;
 
 	cputime = job_time(cputime, ad);
@@ -1885,10 +1909,10 @@ render_memory_usage(double & mem_used_mb, ClassAd *ad, Formatter &)
 	long long memory_usage;
 	// print memory usage unless it's unavailable, then print image size
 	// note that memory usage is megabytes but imagesize is kilobytes.
-	if (ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, memory_usage)) {
+	if (ad->LookupInteger(ATTR_MEMORY_USAGE, memory_usage)) {
 		mem_used_mb = memory_usage;
 		max_mem_used = MAX(max_mem_used, mem_used_mb);
-	} else if (ad->EvalInteger(ATTR_IMAGE_SIZE, NULL, image_size)) {
+	} else if (ad->LookupInteger(ATTR_IMAGE_SIZE, image_size)) {
 		mem_used_mb = image_size / 1024.0;
 		max_mem_used = MAX(max_mem_used, mem_used_mb);
 	} else {
@@ -1945,12 +1969,12 @@ format_readable_bytes(const classad::Value &val, Formatter &)
 static bool
 render_job_description(std::string & out, ClassAd *ad, Formatter &)
 {
-	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, out))
+	if ( ! ad->LookupString(ATTR_JOB_CMD, out))
 		return false;
 
 	std::string description;
-	if ( ! ad->EvalString("MATCH_EXP_" ATTR_JOB_DESCRIPTION, NULL, description)) {
-		ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
+	if ( ! ad->LookupString("MATCH_EXP_" ATTR_JOB_DESCRIPTION, description)) {
+		ad->LookupString(ATTR_JOB_DESCRIPTION, description);
 	}
 	if ( ! description.empty()) {
 		formatstr(out, "(%s)", description.c_str());
@@ -2019,7 +2043,7 @@ render_job_status_char(std::string & result, ClassAd*ad, Formatter &)
 		said suspension is also second class. */
 	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false)) {
 		int last_susp_time;
-		if (!ad->EvalInteger(ATTR_LAST_SUSPENSION_TIME,NULL,last_susp_time))
+		if (!ad->LookupInteger(ATTR_LAST_SUSPENSION_TIME,last_susp_time))
 		{
 			last_susp_time = 0;
 		}
@@ -2034,12 +2058,12 @@ render_job_status_char(std::string & result, ClassAd*ad, Formatter &)
 	}
 
 		// adjust status field to indicate file transfer status
-	int transferring_input = false;
-	int transferring_output = false;
-	int transfer_queued = false;
-	ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL,transferring_input);
-	ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
-	ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,transfer_queued);
+	bool transferring_input = false;
+	bool transferring_output = false;
+	bool transfer_queued = false;
+	ad->LookupBool(ATTR_TRANSFERRING_INPUT,transferring_input);
+	ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,transferring_output);
+	ad->LookupBool(ATTR_TRANSFER_QUEUED,transfer_queued);
 	if( transferring_input ) {
 		put_result[0] = '<';
 		put_result[1] = transfer_queued ? 'q' : ' ';
@@ -2083,7 +2107,7 @@ static bool
 render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
 {
 	double bytes_sent;
-	if ( ! ad->EvalFloat(ATTR_BYTES_SENT, NULL, bytes_sent))
+	if ( ! ad->LookupFloat(ATTR_BYTES_SENT, bytes_sent))
 		return false;
 
 	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
@@ -2106,7 +2130,7 @@ render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
 static bool
 render_cpu_util (double & cputime, ClassAd *ad, Formatter & /*fmt*/)
 {
-	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
+	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
 		return false;
 
 	int ckpt_time = 0;
@@ -2126,31 +2150,31 @@ render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/)
 	misc.clear();
 
 	int univ = 0;
-	if ( ! ad->EvalInteger(ATTR_JOB_UNIVERSE,NULL,univ))
+	if ( ! ad->LookupInteger(ATTR_JOB_UNIVERSE,univ))
 		return false;
 
 	if (univ==CONDOR_UNIVERSE_STANDARD) {
 
 		double seek_count=0;
 		int buffer_size=0, block_size=0;
-		ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
-		ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
-		ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
+		ad->LookupFloat(ATTR_FILE_SEEK_COUNT,seek_count);
+		ad->LookupInteger(ATTR_BUFFER_SIZE,buffer_size);
+		ad->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
 
 		formatstr(misc, " seeks=%d, buf=%d,%d", (int)seek_count, buffer_size, block_size);
 	} else {
 
 		int ix = 0;
-		int bb = false;
-		ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL, bb);
+		bool bb = false;
+		ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
 		ix += bb?1:0;
 
 		bb = false;
-		ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,bb);
+		ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
 		ix += bb?2:0;
 
 		bb = false;
-		ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,bb);
+		ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
 		ix += bb?4:0;
 
 		if (ix) {
@@ -2424,7 +2448,7 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 	const bool fshow_host_port = false;
 	const size_t width = 1+6+1+8+1+18+1;
 
-	if ( ! ad->EvalString(ATTR_GRID_RESOURCE, NULL, str))
+	if ( ! ad->LookupString(ATTR_GRID_RESOURCE, str))
 		return false;
 
 	// GridResource is a string with the format 
@@ -2486,7 +2510,7 @@ render_gridJobId(std::string & jid, ClassAd *ad, Formatter & /*fmt*/ )
 	std::string str;
 	std::string host;
 
-	if ( ! ad->EvalString(ATTR_GRID_JOB_ID, NULL, str))
+	if ( ! ad->LookupString(ATTR_GRID_JOB_ID, str))
 		return false;
 
 	std::string grid_type = "globus";
@@ -2602,6 +2626,7 @@ usage (const char *myName, int other)
 		"\t-batch\t\t\t Display DAGs or batches of similar jobs as a single line\n"
 		"\t-nobatch\t\t Display one line per job, rather than one line per batch\n"
 //FUTURE		"\t-transfer\t\t Display information for jobs that are doing file transfer\n"
+		"\t-idle\t\t\t Get information about idle jobs\n"
 		"\t-run\t\t\t Get information about running jobs\n"
 		"\t-totals\t\t\t Display only job totals\n"
 		"\t-stream-results \t Produce output as jobs are fetched\n"
@@ -2799,6 +2824,7 @@ SUMMARY STANDARD
 
 extern const char * const jobDefault_PrintFormat;
 extern const char * const jobRuntime_PrintFormat;
+extern const char * const jobIdle_PrintFormat;
 extern const char * const jobGoodput_PrintFormat;
 extern const char * const jobGlobus_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
@@ -2843,6 +2869,8 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 				mode = QDO_DAG;
 			} else if (dash_run) {
 				mode = QDO_JobRuntime;
+			} else if (dash_idle) {
+				mode = QDO_JobIdle;
 			} else if (dash_factory) {
 				mode = QDO_Factory;
 			}
@@ -2851,12 +2879,13 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	}
 
 	static const struct {
-		int mode;
+		const int mode;
 		const char * tag;
 		const char * fmt;
 	} info[] = {
-		{ QDO_JobNormal,      "",          jobDefault_PrintFormat },
+		{ QDO_JobNormal,      "",         jobDefault_PrintFormat },
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
+		{ QDO_JobIdle,        "IDLE",     jobIdle_PrintFormat },
 		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
 		{ QDO_JobGlobusInfo,  "GLOBUS",   jobGlobus_PrintFormat },
 		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
@@ -3078,7 +3107,7 @@ static void group_job(JobRowOfData & jrod, ClassAd* job)
 	if ( ! group_by_keys.empty()) {
 		for (size_t ii = 0; ii < group_by_keys.size(); ++ii) {
 			std::string value;
-			if (job->LookupString(group_by_keys[ii].expr.c_str(), value)) {
+			if (job->LookupString(group_by_keys[ii].expr, value)) {
 				key += value;
 				key += "\n";
 			}
@@ -3191,12 +3220,56 @@ void cleanup_cache_optimizer()
 	cache_optimizer.ix = 0;
 }
 
+// write an ad to the given fp in standard long classad form
+static bool dump_long_to_fp(void * pv, ClassAd *job)
+{
+	std::string line;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	for (auto itr = job->begin(); itr != job->end(); ++itr) {
+		line = itr->first.c_str();
+		line += "=";
+		unp.Unparse(line, itr->second);
+		line += "\n";
+		fputs(line.c_str(), (FILE*)pv);
+	}
+	fputs("\n", (FILE*)pv);
+
+	return true;
+}
+
+
 static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 {
 	ROD_MAP_BY_ID * pmap = (ROD_MAP_BY_ID *)pv;
 	count_job(app.sumy, job);
 
 	ASSERT( ! g_stream_results);
+	if (capture_raw_results) {
+		if ( ! capture_raw_fp) {
+			if (MATCH == strcmp(capture_raw_results, "-")) {
+				capture_raw_fp = stdout;
+			} else if (MATCH == strcmp(capture_raw_results, "-2")) {
+				capture_raw_fp = stderr;
+			} else {
+				const char * mode = "wb";
+				const char * filename = capture_raw_results;
+				if (*filename == '+') {
+					++filename;
+					mode = "ab";
+				}
+				capture_raw_fp = safe_fopen_wrapper(filename, mode);
+			}
+			// if we just opened the file, print a banner
+			if (capture_raw_fp) {
+				fprintf(capture_raw_fp, "# condor_q v" CONDOR_VERSION " raw query results\n");
+			}
+		}
+		if (capture_raw_fp) {
+			dump_long_to_fp(capture_raw_fp, job);
+		}
+	}
 
 	union _jobid jobid;
 
@@ -3378,6 +3451,7 @@ streaming_print_job(void * pv, ClassAd *job)
 	if ( ! result_text.empty()) { fputs(result_text.c_str(), stdout); }
 	return true;
 }
+
 
 /*
 static long long make_parentage_sort_key(long long id, std::string & key, ROD_MAP_BY_ID & results)
@@ -4288,6 +4362,12 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		return false;
 	}
 
+	// if we opened a raw capture file, we can close it now.
+	if (capture_raw_results && *capture_raw_results != '-' && capture_raw_fp) {
+		fclose(capture_raw_fp);
+		capture_raw_fp = NULL;
+	}
+
 	// Modern schedds will return as summary ad. otherwise we create one from our own totals
 	// in either case, we (sometimes) want to skip printing of the summary ad when there are no jobs
 	// so set a flag now we are refer to later.
@@ -4398,6 +4478,16 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 	// print constraint
 	const char * constr_str = constr.Str();
 	fprintf(stderr, "Constraint: %s\n", constr_str ? constr_str : "<null>");
+	int cluster = -99, proc = -99;
+	bool cluster_only = false, dagman_job_id = false;
+	bool is_job_id_constr = ExprTreeIsJobIdConstraint(constr.Expr(), cluster, proc, cluster_only, dagman_job_id);
+	fprintf(stderr, "  IsJobId: %s %d.%d%s%s\n",
+		is_job_id_constr ? "true" : "false",
+		cluster, proc,
+		cluster_only ? " cluster_only" : "",
+		dagman_job_id ? " dag_id" : ""
+	);
+
 	fprintf(stderr, "Opts: fetch=%d limit=%d HF=%x\n", fetch_opts, limit, customHeadFoot);
 
 	// print projection
@@ -4667,6 +4757,17 @@ const char * const jobRuntime_PrintFormat = "SELECT\n"
 "   QDate         AS '  SUBMITTED'   WIDTH 11  PRINTAS QDATE OR ??\n"
 "   RemoteUserCpu AS '    RUN_TIME'  WIDTH 12  PRINTAS CPU_TIME OR ??\n"
 "   Owner         AS 'HOST(S)'       WIDTH 0   PRINTAS REMOTE_HOST OR ??\n"
+"SUMMARY NONE\n";
+
+const char * const jobIdle_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER OR ??\n"
+"   JobUniverse   AS 'UNIVERSE '  PRINTAS JOB_UNIVERSE\n"
+"   RequestCpus   AS CPUS         PRINTF '%4d'\n"
+"   RequestMemory AS MEMORY       PRINTF '%6d'\n"
+"   NumShadowStarts?:0 AS STARTS  PRINTF '%6d'\n"
+"   LastRemoteHost AS LAST_HOST WIDTH 0\n"
 "SUMMARY NONE\n";
 
 const char * const jobGoodput_PrintFormat = "SELECT\n"
@@ -4943,7 +5044,7 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	PrintMaskMakeSettings dummySettings;
 	std::vector<GroupByKeyInfo> dummyGrpBy;
 	MyString sumyformat(standard_summary2);
-	MyString myname;
+	std::string myname;
 	if (summary_ad->LookupString("MyName", myname)) { 
 		sumyformat = standard_summary3;
 		sumyformat.replaceString("$(ME)", myname.c_str());

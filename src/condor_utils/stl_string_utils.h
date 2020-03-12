@@ -39,6 +39,7 @@ int vformatstr(std::string& s, const char* format, va_list pargs);
 // These return number of new chars appended.
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int vformatstr_cat(std::string& s, const char* format, va_list pargs);
 
 // Return the string form of the given integer value
 template <typename T> std::string IntToStr( T val );
@@ -58,7 +59,7 @@ bool operator>=(const MyString& L, const std::string& R);
 bool operator>=(const std::string& L, const MyString& R);
 
 // to replace MyString with std::string we need a compatible read-line function
-bool readLine(std::string& dst, FILE *fp, bool append);
+bool readLine(std::string& dst, FILE *fp, bool append = false);
 
 //Return true iff the given string is a blank line.
 int blankline ( const char *str );
@@ -76,10 +77,17 @@ void lower_case(std::string &str);
 void upper_case(std::string &str);
 void title_case(std::string &str); // capitalize each word
 
+// Return a string based on string src, but for each character in Q that
+// occurs in src, insert the character escape before it.
+// For example, for src="Alain", Q="abc", and escape='_', the result will
+// be "Al_ain".
+std::string EscapeChars(const std::string& src, const std::string& Q, char escape);
 
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre);
 bool starts_with_ignore_case(const std::string& str, const std::string& pre);
+
+bool ends_with(const std::string& str, const std::string& post);
 
 // case insensitive sort functions for use with std::sort
 bool sort_ascending_ignore_case(std::string const & a, std::string const & b);
@@ -100,6 +108,18 @@ const char * filename_from_path(const char * pathname);
 inline char * filename_from_path(char * pathname) { return const_cast<char*>(filename_from_path(const_cast<const char *>(pathname))); }
 size_t filename_offset_from_path(std::string & pathname);
 
+/** Clears the string and fills it with a
+ *	randomly generated set derived from 'set' of len characters. */
+void randomlyGenerateInsecure(std::string &str, const char *set, int len);
+//void randomlyGeneratePRNG(std::string &str, const char *set, int len);
+
+/** Clears the string and fills it with
+ *	randomly generated [0-9a-f] values up to len size */
+void randomlyGenerateInsecureHex(std::string &str, int len);
+
+/** Clears the string and fills it with
+ *	randomly generated alphanumerics and punctuation up to len size */
+void randomlyGenerateShortLivedPassword(std::string &str, int len);
 
 // iterate a Null terminated string constant in the same way that StringList does in initializeFromString
 // Use this class instead of creating a throw-away StringList just so you can iterate the tokens in a string.

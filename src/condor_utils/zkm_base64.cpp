@@ -46,8 +46,9 @@ std::string Base64::zkm_base64_encode(BYTE const* buf, unsigned int bufLen) {
       char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
       char_array_4[3] = char_array_3[2] & 0x3f;
 
-      for(i = 0; (i <4) ; i++)
+      for(i = 0; (i <4) ; i++) {
         ret += base64_chars[char_array_4[i]];
+      }
       i = 0;
     }
   }
@@ -132,10 +133,7 @@ void zkm_base64_decode(const char *input,unsigned char **output, int *output_len
 	*output_length = tvec.size();
 	if (*output_length > 0 ) {
 		*output=(unsigned char*)malloc(*output_length);
-		// We want to use the .data() method on a vector, but
-		// this needs to wait until all platforms support C++11 standard.
-		// Do memcpy(*output, tvec.data(), *output_length);
-		memcpy(*output, &tvec.front(), *output_length);
+		memcpy(*output, tvec.data(), *output_length);
 	}
 }
 

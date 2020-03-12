@@ -133,6 +133,7 @@ def compareEvent(event, count):
 
 	return True
 
+
 # Be sure to generate the test events in a different file than C++ test uses.
 logFileName = "local.pybind-jel.log"
 if not Utils.RunCommandCarefully(( "./x_write_joblog.exe", logFileName )):
@@ -151,7 +152,58 @@ for event in jel.events(stop_after=0):
 if count != 39:
 	CondorTest.RegisterFailure("pybind-jel", "Found the wrong number of events: {0}".format(count))
 	sys.exit(TEST_FAILURE)
+else:
+	CondorTest.RegisterSuccess("pybind-jel", "Found the right number of (correct) events.")
 
-CondorTest.RegisterSuccess("pybind-jel", "Found the right number of (correct) events.")
+
+# Test __enter__() and __exit__().  To check that __exit__() closes the log,
+# we need to leave at least one event in the log for the log to not return.
+with htcondor.JobEventLog(logFileName) as jel:
+	for i in range(0, 30):
+		event = next(jel)
+		if not compareEvent(event, i):
+			CondorTest.RegisterFailure("pybind-jel-icm", "Event {0} was wrong".format(i))
+
+try:
+	event = next(jel)
+	CondorTest.RegisterFailure("pybind-jel-icm", "__exit__() failed to close jel")
+except StopIteration as si:
+	CondorTest.RegisterSuccess("pybind-jel-icm", "__exit__() properly closed jel.")
+
+
+#
+# To test __str__(), use it to reconstruct the original log string and
+# then compare to the value of the log file.
+#
+
+new = ""
+jel = htcondor.JobEventLog(logFileName)
+for event in jel.events(stop_after=0):
+	new = new + str(event) + "...\n"
+
+old = ""
+log = open(logFileName, "r")
+for line in log:
+	old += line
+
+if new != old:
+	CondorTest.RegisterFailure("pybind-jel-str", "Original and synthesized log differ.")
+	print("Old: '{0}'".format(old))
+	print("New: '{0}'".format(new))
+else:
+	CondorTest.RegisterSuccess("pybind-jel-str", "Original and synthesized log are identical.")
+
+
+# Test close().
+with htcondor.JobEventLog(logFileName) as jel:
+	e = next(jel)
+	jel.close()
+	try:
+		e = next(jel)
+		CondorTest.RegisterFailure("pybind-jel-close", "Event found after close().")
+	except StopIteration as si:
+		CondorTest.RegisterSuccess("pybind-jel-close", "No events found after close().");
+
+
 sys.exit(TEST_SUCCESS)
 

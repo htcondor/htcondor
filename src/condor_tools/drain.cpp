@@ -32,7 +32,6 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_version.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_startd.h"

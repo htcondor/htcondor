@@ -22,11 +22,12 @@
 #define SOCK_H
 
 #include "condor_common.h"
-#include "condor_socket_types.h"
 #include "stream.h"
 #include "CondorError.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
+
+#include <unordered_set>
 
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
@@ -55,12 +56,6 @@ class SockInitializer {
 		void init();
 };
 #endif  /* of WIN32 */
-
-/*
-We want to define a callback function to be invoked when certain actions happen upon a stream.  CedarHandler is the type of a callback function.   The following notation is a little strange.  It reads: Define a new type called "CedarHandler" to be "a function returning void with single argument pointer to Stream"
-*/
-
-typedef void (CedarHandler) (Stream *s);
 
 namespace classad {
 class ClassAd;
@@ -137,9 +132,6 @@ public:
 		return connect(host,getportbyserv(service),do_not_block);
 	}
 
-
-	/** Install this function as the asynchronous handler.  When a handler is installed, it is invoked whenever data arrives on the socket.  Setting the handler to zero disables asynchronous notification.  */
-	int set_async_handler( CedarHandler *handler );
 
 	//
 	// This set of functions replaces assign().
@@ -382,6 +374,8 @@ public:
 	void setAuthenticatedName(char const *auth_name);
 	const char *getAuthenticatedName() const;
 
+	bool isAuthorizationInBoundingSet(const std::string &);
+
 	void setCryptoMethodUsed(char const *crypto_method);
 	const char* getCryptoMethodUsed() const;
 
@@ -389,6 +383,7 @@ public:
 	const std::string &getSessionID() const {return _session;}
 
 	void getPolicyAd(classad::ClassAd &ad) const;
+	const classad::ClassAd *getPolicyAd() const {return _policy_ad;}
 	void setPolicyAd(const classad::ClassAd &ad);
 
 		/// True if socket has tried to authenticate or socket is
@@ -401,6 +396,15 @@ public:
 	bool triedAuthentication() const { return _tried_authentication; }
 
 	void setTriedAuthentication(bool toggle) { _tried_authentication = toggle; }
+
+		// True if the socket failed to authenticate with the remote
+		// server but may succeed with a token request workflow.
+	bool shouldTryTokenRequest() const { return _should_try_token_request; }
+	void setShouldTryTokenRequest(bool val) { _should_try_token_request = val; }
+
+		// Trust domain of the remote host (empty if unknown).
+	void setTrustDomain(const std::string &trust_domain) { _trust_domain = trust_domain; }
+	const std::string &getTrustDomain() const { return _trust_domain; }
 
 		/// Returns true if the fully qualified user name is
 		/// a non-anonymous user name (i.e. something not from
@@ -552,6 +556,9 @@ protected:
 	std::string     _session;
 	classad::ClassAd *_policy_ad;
 	bool            _tried_authentication;
+	bool            _should_try_token_request{false};
+	std::string	_trust_domain;
+	std::unordered_set<std::string> m_authz_bound;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
 

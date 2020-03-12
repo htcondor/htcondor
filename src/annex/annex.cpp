@@ -4,7 +4,6 @@
 
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
-#include "get_daemon_name.h"
 
 #include "gahp-client.h"
 #include "compat_classad.h"
@@ -188,6 +187,7 @@ createConfigTarball(	const char * configDir,
 	if( collectorHost.empty() ) {
 		formatstr( tarballError, "COLLECTOR_HOST empty or undefined" );
 		free(cwd);
+		close(fd);
 		return false;
 	}
 
@@ -445,6 +445,8 @@ help( const char * argv0 ) {
 		"\n"
 		"OR, to do the one-time setup for an AWS region:\n"
 		"%s [-aws-region <region>] -setup [</full/path/to/access-key-file> </full/path/to/secret-key-file> [<CloudFormation URL>]]\n"
+		"... if you're on an EC2 instance (with a privileged IAM role):\n"
+		"%s [-aws-region <region>] -setup FROM INSTANCE [CloudFormation URL]\n"
 		"\n"
 		"OR, to check if the one-time setup has been done:\n"
 		"%s [-aws-region <region>] -check-setup\n"
@@ -455,7 +457,7 @@ help( const char * argv0 ) {
 		"OR, to reset the lease on an existing annex:\n"
 		"%s [-aws-region <region>] -annex[-name] <annex-name> -duration <lease duration in decimal hours>\n"
 		"\n"
-		, argv0, argv0, argv0, argv0, argv0 );
+		, argv0, argv0, argv0, argv0, argv0, argv0 );
 }
 
 
@@ -466,8 +468,8 @@ void prepareCommandAd( const ClassAd & commandArguments, int commandInt ) {
 	command->Assign( "RequestVersion", 1 );
 
 	// We don't trust the client the supply the command ID or annex ID.
-	command->Assign( "CommandID", (const char *)NULL );
-	command->Assign( "AnnexID", (const char *)NULL );
+	command->AssignExpr( "CommandID", "Undefined" );
+	command->AssignExpr( "AnnexID", "Undefined" );
 }
 
 int create_annex( ClassAd & commandArguments ) {

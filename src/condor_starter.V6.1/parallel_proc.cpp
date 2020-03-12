@@ -54,7 +54,7 @@ ParallelProc::StartJob()
 	}
 
 	if ( ! addEnvVars() ) {
-		dprintf( D_ALWAYS, "ERROR adding environment variable to job");
+		dprintf( D_ALWAYS, "ERROR adding environment variable to job\n");
 		return 0;
 	}
 
@@ -81,14 +81,14 @@ ParallelProc::addEnvVars()
 
 		// Add the remote spool dir, the "server" directory for
 		// condor_chirp to stage files to/from
-    MyString spool;
+	std::string spool;
 	if ( JobAd->LookupString( ATTR_REMOTE_SPOOL_DIR, spool ) < 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_REMOTE_SPOOL_DIR);
 		return 0;
 	}
 
-    env.SetEnv( "_CONDOR_REMOTE_SPOOL_DIR", spool.Value() );
+    env.SetEnv( "_CONDOR_REMOTE_SPOOL_DIR", spool.c_str() );
 
 		// Add this node's number to CONDOR_PROCNO
 	char buf[128];
@@ -204,9 +204,7 @@ bool
 ParallelProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In ParallelProc::PublishUpdateAd()\n" );
-	char buf[64];
-	sprintf( buf, "%s = %d", ATTR_NODE, Node );
-	ad->Insert( buf );
+	ad->Assign( ATTR_NODE, Node );
 
 		// Now, call our parent class's version
 	return VanillaProc::PublishUpdateAd( ad );

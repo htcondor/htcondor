@@ -112,10 +112,10 @@ protected:
      *                           'condor_transferer' process
      * Description: reaper of downloading 'condor_transferer' process
      */
-    static int 
-	downloadReplicaTransfererReaper(Service* service, int pid, int exitStatus);
+    int 
+	downloadReplicaTransfererReaper(int pid, int exitStatus);
 private:
-    MyString       m_name;
+    std::string    m_name;
     ClassAd*       m_classAd;
     int            m_updateCollectorTimerId;
     int            m_updateInterval;

@@ -23,7 +23,6 @@
 #include "directory.h"
 #include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
 #include "daemon.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "filesystem_remap.h"
 #include "docker-api.h"
 
@@ -37,20 +36,20 @@
 static bool
 not_root_squashed( char const *exec_path )
 {
-	MyString test_dir;
-	test_dir.formatstr("%s/.root_squash_test", exec_path);
+	std::string test_dir;
+	formatstr(test_dir,"%s/.root_squash_test", exec_path);
 
-	if (rmdir(test_dir.Value()) == -1) {
+	if (rmdir(test_dir.c_str()) == -1) {
 		if (errno != ENOENT) {
 			dprintf(D_FULLDEBUG,
 			        "not_root_squashed: rmdir of %s failed: %s\n",
-			        test_dir.Value(),
+			        test_dir.c_str(),
 			        strerror(errno));
 			return false;
 		}
 	}
 	priv_state priv = set_root_priv();
-	int rv = mkdir(test_dir.Value(), 0755);
+	int rv = mkdir(test_dir.c_str(), 0755);
 	set_priv(priv);
 	if (rv == -1) {
 		if (errno == EACCES) {
@@ -61,23 +60,23 @@ not_root_squashed( char const *exec_path )
 		else {
 			dprintf(D_FULLDEBUG,
 			        "not_root_squashed: mkdir of %s failed: %s\n",
-			        test_dir.Value(),
+			        test_dir.c_str(),
 			        strerror(errno));
 		}
 		return false;
 	}
 	struct stat st;
-	if (stat(test_dir.Value(), &st) == -1) {
+	if (stat(test_dir.c_str(), &st) == -1) {
 		dprintf(D_FULLDEBUG,
 		        "not_root_squashed: stat of %s failed: %s\n",
-		        test_dir.Value(),
+		        test_dir.c_str(),
 		        strerror(errno));
 		return false;
 	}
-	if (rmdir(test_dir.Value()) == -1) {
+	if (rmdir(test_dir.c_str()) == -1) {
 		dprintf(D_FULLDEBUG,
 		        "rmdir of %s failed: %s\n",
-		        test_dir.Value(),
+		        test_dir.c_str(),
 		        strerror(errno));
 		return false;
 	}
@@ -97,16 +96,6 @@ check_execute_dir_perms( char const *exec_path )
 	if (stat(exec_path, &st) < 0) {
 		EXCEPT( "stat exec path (%s), errno: %d (%s)", exec_path, errno,
 				strerror( errno ) ); 
-	}
-
-	// in PrivSep mode, the EXECUTE directory must be trusted by
-	// the PrivSep kernel. we can't determine this ourselves in general
-	// (since the PrivSep Switchboard can be recompiled to trust
-	// non-root users), so we'll have to be satisfied for now that we
-	// could stat its path
-	//
-	if (privsep_enabled()) {
-		return;
 	}
 
 	// the following logic sets up the new_mode variable, depending
@@ -184,21 +173,21 @@ check_execute_dir_perms( StringList &list )
 void
 check_recovery_file( const char *execute_dir )
 {
-	MyString recovery_file;
+	std::string recovery_file;
 	FILE *recovery_fp = NULL;
 	ClassAd *recovery_ad = NULL;
 	if ( execute_dir == NULL ) {
 		return;
 	}
 
-	recovery_file.formatstr( "%s.recover", execute_dir );
+	formatstr(recovery_file, "%s.recover", execute_dir );
 
-	StatInfo si( recovery_file.Value() );
+	StatInfo si( recovery_file.c_str() );
 
 	if ( si.Error() ) {
 		if ( si.Error() != SINoFile ) {
-			if (unlink(recovery_file.Value()) < 0) {
-				dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+			if (unlink(recovery_file.c_str()) < 0) {
+				dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
 			}
 		}
 		return;
@@ -206,10 +195,10 @@ check_recovery_file( const char *execute_dir )
 
 		// TODO: check file ownership?
 
-	recovery_fp = safe_fopen_wrapper_follow( recovery_file.Value(), "r" );
+	recovery_fp = safe_fopen_wrapper_follow( recovery_file.c_str(), "r" );
 	if ( recovery_fp == NULL ) {
-		if (unlink(recovery_file.Value()) < 0) {
-			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+		if (unlink(recovery_file.c_str()) < 0) {
+			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
 		}
 		return;
 	}
@@ -217,11 +206,12 @@ check_recovery_file( const char *execute_dir )
 	int eof = 0;
 	int error = 0;
 	int empty = 0;
-	recovery_ad = new ClassAd( recovery_fp, "***", eof, error, empty );
+	recovery_ad = new ClassAd;
+	InsertFromFile( recovery_fp, *recovery_ad, "***", eof, error, empty );
 	if ( error || empty ) {
 		fclose( recovery_fp );
-		if (unlink(recovery_file.Value()) < 0) {
-			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+		if (unlink(recovery_file.c_str()) < 0) {
+			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
 		} 
 		return;
 	}
@@ -229,10 +219,10 @@ check_recovery_file( const char *execute_dir )
 	int universe = 0;
 	recovery_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	if ( universe == CONDOR_UNIVERSE_VM ) {
-		MyString vm_id;
+		std::string vm_id;
 		recovery_ad->LookupString( "JobVMId", vm_id );
-		if ( !vm_id.IsEmpty() ) {
-			resmgr->m_vmuniverse_mgr.killVM( vm_id.Value() );
+		if (vm_id.length() > 0) {
+			resmgr->m_vmuniverse_mgr.killVM( vm_id.c_str() );
 		}
 	}
 
@@ -254,8 +244,8 @@ check_recovery_file( const char *execute_dir )
 
 	delete recovery_ad;
 	fclose( recovery_fp );
-	if (unlink(recovery_file.Value()) < 0) {
-		dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+	if (unlink(recovery_file.c_str()) < 0) {
+		dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
 	}
 }
 void
@@ -281,11 +271,6 @@ cleanup_execute_dirs( StringList &list )
 
 		execute_dir.Remove_Entire_Directory();
 #else
-		// if we're using PrivSep, the Switchboard will only allow
-		// us to remove subdirectories of EXECUTE - so we need to
-		// list them and ask the Switchboard to delete each one
-		//
-
 		MyString dirbuf;
 		pair_strings_vector root_dirs = root_dir_list();
 		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
@@ -300,16 +285,7 @@ cleanup_execute_dirs( StringList &list )
 				check_recovery_file( execute_dir.GetFullPath() );
 			}
 
-			if (privsep_enabled()) {
-				execute_dir.Rewind();
-				while (execute_dir.Next()) {
-					dprintf(D_FULLDEBUG, "Attempting to remove %s\n",execute_dir.GetFullPath());
-					privsep_remove_dir(execute_dir.GetFullPath());
-				}
-			}
-			else {
-				execute_dir.Remove_Entire_Directory();
-			}
+			execute_dir.Remove_Entire_Directory();
 		}
 #endif
 	}
@@ -317,7 +293,7 @@ cleanup_execute_dirs( StringList &list )
 	DockerAPI::pruneContainers();
 }
 
-bool retry_cleanup_user_account(const MyString & name, int /*options*/, int & err)
+bool retry_cleanup_user_account(const std::string & name, int /*options*/, int & err)
 {
 	err = 0;
 	if (name.empty()) {
@@ -332,7 +308,7 @@ bool retry_cleanup_user_account(const MyString & name, int /*options*/, int & er
 }
 
 
-bool retry_cleanup_execute_dir(const MyString & path, int /*options*/, int & err)
+bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & err)
 {
 	err = 0;
 	if (path.empty()) {
@@ -340,15 +316,15 @@ bool retry_cleanup_execute_dir(const MyString & path, int /*options*/, int & err
 		return true;
 	}
 
-	StatInfo si( path.Value() );
+	StatInfo si( path.c_str() );
 	if (si.Error() == SINoFile) {
 		// it's gone now. return true
 		err = EALREADY;
 		return true;
 	}
 
-	Directory dir( path.Value() );
-	bool success = dir.Remove_Full_Path(path.Value());
+	Directory dir( path.c_str() );
+	bool success = dir.Remove_Full_Path(path.c_str());
 	if ( ! success) {
 		// unfortunately Remove_Full_path doesn't tell us why we failed, so assume it's a permissions issue... <sigh>
 		err = EPERM;
@@ -362,7 +338,7 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 	ASSERT( pid );
 
 #if defined(WIN32)
-	MyString buf;
+	std::string buf;
 	dynuser nobody_login;
 
 	if ( nobody_login.reuse_accounts() == false ) {
@@ -370,9 +346,9 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 	// with this starter pid.  this account might have been left around
 	// if the starter did not clean up completely.
 	//sprintf(buf,"condor-run-dir_%d",pid);
-		buf.formatstr("condor-run-%d",pid);
-		if ( nobody_login.deleteuser(buf.Value()) ) {
-			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf.Value());
+		formatstr(buf,"condor-run-%d",pid);
+		if ( nobody_login.deleteuser(buf.c_str()) ) {
+			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf.c_str());
 		}
 	}
 
@@ -381,28 +357,28 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 	// existence of the subdirectory persistantly tells us that the
 	// account may still exist [in case the startd blows up as well].
 
-	buf.formatstr( "%s\\dir_%d", exec_path, pid );
+	formatstr(buf, "%s\\dir_%d", exec_path, pid );
  
-	check_recovery_file( buf.Value() );
+	check_recovery_file( buf.c_str() );
 
 	int err = 0;
 	if ( ! retry_cleanup_execute_dir(buf, 0, err)) {
-		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", buf.Value());
+		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", buf.c_str());
 		add_exec_dir_cleanup_reminder(buf, 0);
 	}
 
 #else /* UNIX */
 
-	MyString	pid_dir;
-	MyString pid_dir_path;
+	std::string	pid_dir;
+	std::string pid_dir_path;
 
 		// We're trying to delete a specific subdirectory, either
 		// b/c a starter just exited and we might need to clean up
 		// after it, or because we're in a recursive call.
-	pid_dir.formatstr( "dir_%d", pid );
-	pid_dir_path.formatstr( "%s/%s", exec_path, pid_dir.Value() );
+	formatstr(pid_dir, "dir_%d", pid );
+	formatstr(pid_dir_path, "%s/%s", exec_path, pid_dir.c_str() );
 
-	check_recovery_file( pid_dir_path.Value() );
+	check_recovery_file( pid_dir_path.c_str());
 
 	// Instantiate a directory object pointing at the execute directory
 	MyString dirbuf;
@@ -418,7 +394,7 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 			execute_dir.Remove_Full_Path(exec_path_full);
 		} else {
 			// Look for specific pid_dir subdir
-			if ( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
+			if ( execute_dir.Find_Named_Entry( pid_dir.c_str() ) ) {
 				// Remove the execute directory
 				execute_dir.Remove_Current_File();
 			}
@@ -430,7 +406,7 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 extern void register_cleanup_reminder_timer();
 extern int cleanup_reminder_timer_interval;
 
-void add_exec_dir_cleanup_reminder(const MyString & dir, int opts)
+void add_exec_dir_cleanup_reminder(const std::string & dir, int opts)
 {
 	// a timer interval of 0 or negative will disable cleanup reminders
 	if (cleanup_reminder_timer_interval <= 0)
@@ -443,7 +419,7 @@ void add_exec_dir_cleanup_reminder(const MyString & dir, int opts)
 	}
 }
 
-void add_account_cleanup_reminder(const MyString & name)
+void add_account_cleanup_reminder(const std::string & name)
 {
 	// a timer interval of 0 or negative will disable cleanup reminders
 	if (cleanup_reminder_timer_interval <= 0)

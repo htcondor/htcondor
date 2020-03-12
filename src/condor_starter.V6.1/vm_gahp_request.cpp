@@ -96,20 +96,15 @@ VMGahpRequest::clearPending()
 	}
 }
 
-int
+void
 VMGahpRequest::pending_timer_fn()
 {
-	int retval = TRUE;
-
-	//this function will be called by 
-	//either real pending timeout or detachVMGahpServer
 	if( m_user_timer_id != -1 ) {
-		retval = daemonCore->Reset_Timer(m_user_timer_id, 0);
+		daemonCore->Reset_Timer(m_user_timer_id, 0);
 		m_user_timer_id = -1;
 	}
 
 	m_pending_timeout_tid = -1;
-	return retval;
 }
 
 void

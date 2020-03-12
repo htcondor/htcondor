@@ -28,6 +28,7 @@
 
 #include "exit.h"
 
+#include "authentication.h"
 #include "condor_daemon_core.h"
 #include "util_lib_proto.h"
 #include "qmgmt.h"

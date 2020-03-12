@@ -106,11 +106,15 @@ Expert Settings
 
 ``ANNEX_DEFAULT_ACCESS_KEY_FILE`` :index:`ANNEX_DEFAULT_ACCESS_KEY_FILE`
     The full path to the AWS access key file *condor_annex* should use.
-    No default.
+    No default. If "FROM INSTANCE", *condor_annex* will assume it's
+    running on an EC2 instance and try to use that instance's
+    credentials.
 
 ``ANNEX_DEFAULT_SECRET_KEY_FILE`` :index:`ANNEX_DEFAULT_SECRET_KEY_FILE`
     The full path to the AWS secret key file *condor_annex* should use.
-    No default.
+    No default. If "FROM INSTANCE", *condor_annex* will assume it's
+    running on an EC2 instance and try to use that instance's
+    credentials.
 
 ``ANNEX_DEFAULT_S3_BUCKET`` :index:`ANNEX_DEFAULT_S3_BUCKET`
     A private S3 bucket that the ``ANNEX_DEFAULT_ACCESS_KEY_FILE`` and

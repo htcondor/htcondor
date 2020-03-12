@@ -740,7 +740,7 @@ int ocl_Init(void) {
 		for (unsigned int ii = 0; ii < cPlatforms; ++ii) {
 			cl_platforms.push_back(NULL);
 		}
-		clr = ocl.GetPlatformIDs(cPlatforms, &cl_platforms[0], &cPlatforms);
+		ocl.GetPlatformIDs(cPlatforms, &cl_platforms[0], &cPlatforms);
 	}
 
 	// enable logging in oclGetInfo if verbose
@@ -983,7 +983,6 @@ main( int argc, const char** argv)
 	typedef cudaError_t (CUDACALL* cuda_t)(int*); //Used for DLFCN
 	cuda_t cudaGetDeviceCount = NULL; 
 	cuda_t cudaDriverGetVersion = NULL;
-	cuda_t cudaRuntimeGetVersion = NULL;
 	dev_basic_props getBasicProps = NULL;
 
 	// function pointers for the NVIDIA management layer, used for dynamic attributes.
@@ -1019,7 +1018,6 @@ main( int argc, const char** argv)
 
 		cudaGetDeviceCount = sim_cudaGetDeviceCount;
 		cudaDriverGetVersion = sim_cudaDriverGetVersion;
-		cudaRuntimeGetVersion = sim_cudaRuntimeGetVersion;
 		getBasicProps = sim_getBasicProps;
 
 		nvmlInit = sim_nvmlInit;
@@ -1093,7 +1091,7 @@ main( int argc, const char** argv)
 			cudart_library = nvcuda_library;
 		} else {
 			if ( ! cuda_handle) {
-				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "Can't open %s. Error %d\n", nvcuda_library, dlerror());
+				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "Can't open %s. Error %s\n", nvcuda_library, dlerror());
 			} else {
 				dlclose(cuda_handle);
 				cuda_handle = NULL;
@@ -1182,6 +1180,7 @@ main( int argc, const char** argv)
 	// lookup the function pointers we will need later from the cudart library
 	//
 	if ( ! opt_simulate) {
+		cuda_t cudaRuntimeGetVersion = NULL;
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
@@ -1277,19 +1276,12 @@ main( int argc, const char** argv)
 		KVP& props = dev_props.find(prefix)->second;
 
 		if (opt_basic && getBasicProps) {
-			int driverVersion=0, runtimeVersion=0;
-
-			//printf("%sDev=%d\n",  prefix,dev);
+			int driverVersion=0;
 
 			if (cudaDriverGetVersion) {
 				cudaDriverGetVersion(&driverVersion);
 				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-			}
-			if (cudaRuntimeGetVersion) {
-				cudaRuntimeGetVersion(&runtimeVersion);
-				if (runtimeVersion) {
-					props["RuntimeVersion"] = Format("%d.%d", runtimeVersion/1000, runtimeVersion%100);
-				}
+				props["MaxSupportedVersion"] = Format("%d", driverVersion);
 			}
 
 			if (dev < g_cl_cCuda) {

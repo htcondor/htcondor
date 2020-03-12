@@ -53,25 +53,25 @@ main(int argc, char **argv)
 	char *logname = argv[1];
 	int count = atoi(argv[3]);
 
-	char * owner = my_username();
-	char * domain = my_domainname();
-
 	if( strcmp(argv[2],"submit") == 0) {
 		//printf("Drop submit events\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log(owner, domain, logname, cluster, 0, 0, false);
+			WriteUserLog log;
+			log.initialize(logname, cluster, 0, 0);
 			writeSubmitEvent(&log);
 		}
 	} else if( strcmp(argv[2],"execute") == 0) {
 		//printf("Drop execute event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log(owner, domain, logname, cluster, 0, 0, false);
+			WriteUserLog log;
+			log.initialize(logname, cluster, 0, 0);
 			writeExecuteEvent(&log);
 		}
 	} else if( strcmp(argv[2],"terminated") == 0) {
 		//printf("Drop terminated event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log(owner, domain, logname, cluster, 0, 0, false);
+			WriteUserLog log;
+			log.initialize(logname, cluster, 0, 0);
 			writeJobTerminatedEvent(&log);
 		}
 	}

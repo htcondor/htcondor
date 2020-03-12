@@ -428,6 +428,9 @@ int main(int argc, char* argv[])
 				  case ULOG_NONE:
 					printf("None (try again later).........\n");
 					break;
+				  case ULOG_FILE_TRANSFER:
+					printf("File transfer.........\n");
+					break;
 
 				  default:
 					printf("UNKNOWN USER LOG EVENT.........\n");

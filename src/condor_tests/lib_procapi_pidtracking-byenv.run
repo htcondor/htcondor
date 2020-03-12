@@ -34,8 +34,6 @@ $worked = "yes";
 
 #my %broken = 
 #(
-	#"AIX52" => "broken",
-	#"HPUX10" => "broken",
 	#"OSX_UNK" => "broken",
 	#"SOLARIS28" => "broken",
 	#"SOLARIS29" => "broken",

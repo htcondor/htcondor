@@ -219,7 +219,7 @@ inline size_t hashkey_compat_hash(const char * p)
 }
 #endif
 
-size_t JOB_ID_KEY::hash(const JOB_ID_KEY &key)
+size_t JOB_ID_KEY::hash(const JOB_ID_KEY &key) noexcept
 {
 #if JOB_HASH_ALGOR == 0
 	char buf[PROC_ID_STR_BUFLEN];
@@ -262,42 +262,30 @@ bool operator==( const PROC_ID a, const PROC_ID b)
 
 // The str will be like this: "12.0,12.1,12.2,12.3...."
 // The caller is responsible for freeing this memory.
-ExtArray<PROC_ID>*
-mystring_to_procids(MyString &str)
+std::vector<PROC_ID>*
+string_to_procids(const std::string &str)
 {
-	StringList sl(str.Value());
+	StringList sl(str.c_str());
 	char *s = NULL;
-	char *t = NULL;
-	ExtArray<PROC_ID> *jobs = NULL;
-	int i;
+	std::vector<PROC_ID> *jobs = NULL;
 
-	jobs = new ExtArray<PROC_ID>;
+	jobs = new std::vector<PROC_ID>;
 	ASSERT(jobs);
 
 	sl.rewind();
 
-	i = 0;
 	while((s = sl.next()) != NULL) {
-		// getProcByString modifies the argument in place with strtok, since
-		// s is actually held in the string list, I don't want to corrupt
-		// that memory, so make a copy and do my task on that instead.
-		t = strdup(s);
-		ASSERT(t);
-		(*jobs)[i++] = getProcByString(t);
-		free(t);
+		jobs->push_back(getProcByString(s));
 	}
 
 	return jobs;
 }
 
-// convert an ExtArray<PROC_ID> to a MyString suitable to construct a StringList
+// convert a std::vector<PROC_ID> to a std::string suitable to construct a StringList
 // out of.
 void
-procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str)
+procids_to_string(const std::vector<PROC_ID> *procids, std::string &str)
 {
-	MyString tmp;
-	int i;
-
 	str = "";
 
 	// A null procids pretty much means an empty string list.
@@ -305,16 +293,14 @@ procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str)
 		return;
 	}
 
-	for(i = 0; i < procids->length(); i++) {
-		tmp.formatstr("%d.%d", (*procids)[i].cluster, (*procids)[i].proc);
-		str += tmp;
+	for(size_t i = 0; i < procids->size(); i++) {
+		formatstr_cat(str, "%d.%d", (*procids)[i].cluster, (*procids)[i].proc);
 		// don't put a comma on the last one.
-		if (i < (procids->length() - 1)) {
+		if (i < (procids->size() - 1)) {
 			str += ",";
 		}
 	}
 }
-
 
 
 

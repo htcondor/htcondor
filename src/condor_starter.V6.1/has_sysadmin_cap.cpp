@@ -19,7 +19,6 @@ bool has_sysadmin_cap() {
 bool has_sysadmin_cap() {
 
 	return prctl(PR_CAPBSET_READ, CAP_SYS_ADMIN);
-
 }
 
 #endif

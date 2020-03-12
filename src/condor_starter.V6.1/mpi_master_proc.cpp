@@ -304,13 +304,17 @@ MPIMasterProc::checkPortFile( void )
 				// syscall to tell the shadow.  First, create the
 				// string we need and stuff it in a ClassAd 
 				// // TODO: Arbitrarily chooses IPv4, shouldn't?
-			sprintf( buf, "%s=\"%s:%d\"", ATTR_MPI_MASTER_ADDR, 
+			sprintf( buf, "%s:%d",
 					 get_local_ipaddr(CP_IPV4).to_ip_string().Value(), port );
 			ClassAd ad;
-			ad.Insert( buf );
+			ad.Assign( ATTR_MPI_MASTER_ADDR, buf );
 
 				// Now, do the call:
-			REMOTE_CONDOR_register_mpi_master_info( &ad );
+			if( REMOTE_CONDOR_register_mpi_master_info( &ad ) < 0) {
+				dprintf( D_ALWAYS, "ERROR: Failed to send MPI master info "
+					"to shadow, aborting\n" );
+				main_shutdown_graceful();
+			}
 
 				// clear our tid (since we're not going to reset the
 				// timer) 
@@ -324,7 +328,7 @@ MPIMasterProc::checkPortFile( void )
 		num_port_file_opens++;
 		if( num_port_file_opens >= max_port_file_opens ) {
 			dprintf( D_ALWAYS, "ERROR: Can't open %s after %d attempts, "
-					 "aborting", port_file, num_port_file_opens );
+					 "aborting\n", port_file, num_port_file_opens );
 			main_shutdown_graceful();
 		} else {
 			dprintf( D_FULLDEBUG, "WARNING: Can't open %s, will try again\n", 

@@ -36,7 +36,7 @@
 #endif
 
 
-typedef struct {
+typedef struct _Qmgr_connection {
 	bool dummy;
 } Qmgr_connection;
 
@@ -210,10 +210,17 @@ int SetAttributeString(int cluster, int proc, const char *attr,
 int SetAttributeExpr(int cluster, int proc, const char *attr,
                      const ExprTree *value, SetAttributeFlags_t flags = 0);
 
-// Internal function for only the schedd to use.
+// Internal SetSecure functions for only the schedd to use.
+// These functions are defined in qmgmt.cpp.
 int SetSecureAttributeInt(int cluster_id, int proc_id,
-                          const char *attr_name, int attr_value,
-                          SetAttributeFlags_t flags);
+                         const char *attr_name, int attr_value,
+                         SetAttributeFlags_t flags = 0);
+int SetSecureAttribute(int cluster_id, int proc_id,
+                         const char *attr_name, const char *attr_value, 
+                         SetAttributeFlags_t flags = 0);
+int SetSecureAttributeString(int cluster_id, int proc_id, 
+                         const char *attr_name, const char *attr_value, 
+                         SetAttributeFlags_t flags = 0);
 
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.
@@ -279,7 +286,7 @@ int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
-int GetAttributeBool(int cluster, int proc, const char *attr, int *value);
+int GetAttributeBool(int cluster, int proc, const char *attr, bool *value);
 /** Get value of string attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success. Allocates new copy of the string.
 */
@@ -290,6 +297,8 @@ int GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 */
 int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
 						MyString &val );
+int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
+                        std::string &val );
 /** Get value of attr for job with specified cluster and proc.
 	Allocates new copy of the unparsed expression string.
 	@return -1 on failure; 0 on success

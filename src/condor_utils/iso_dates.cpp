@@ -29,21 +29,20 @@ static bool get_next_bit(const char **current, int count,	char *workspace);
  * Purpose:  This converts a "struct tm" into a string containing a
  *           representation of the date that conforms to the ISO8601
  *           standard. 
- * Returns:  A string allcoated with malloc. You'll need to free() it
- *           when you're done with it. 
+ * Returns:  a pointer to the start of the supplied buffer
  * Note:     We expect a normal struct tm: the year you give is 1900 
  *           less than the actual year, months are 0-11, etc. 
  *
  ***********************************************************************/
 char *time_to_iso8601(
-	const struct tm  &time, 
-	ISO8601Format    format, 
+	char * buffer, // must be at least ISO8601_*BufferMax, where * matches ISO8601Type
+	const struct tm  &time,
+	ISO8601Format    format,
 	ISO8601Type      type, 
-	bool             is_utc)
+	bool             is_utc,
+	unsigned int sub_sec /*= 0*/,
+	int sub_sec_digits /*= 0*/)	 // if this is 3, then sub_sec should be in microseconds
 {
-	char  buffer[128];
-	char  *iso_representation;
-	const char  *utc_note;
 	int   year=0, month=0, day=0;
 	int   hour=0, minute=0, second=0;
 
@@ -78,11 +77,6 @@ char *time_to_iso8601(
 		second = time.tm_sec;
 		if (second < 0) second = 0;
 		else if (second > 60) second = 60; // yes, I really mean 60
-
-		if (is_utc)
-			utc_note = "Z";
-		else 
-			utc_note = "";
 	}
 
 	if (type == ISO8601_DateOnly) {
@@ -91,26 +85,43 @@ char *time_to_iso8601(
 		} else {
 			sprintf(buffer, "%04d-%02d-%02d", year, month, day);
 		}
-	} else if (type == ISO8601_TimeOnly) {
-		if (format == ISO8601_BasicFormat) {
-			sprintf(buffer, "T%02d%02d%02d%s", 
-					hour, minute, second, utc_note);
-		} else {
-			sprintf(buffer, "T%02d:%02d:%02d%s", 
-					hour, minute, second, utc_note);
-		}
 	} else {
-		if (format == ISO8601_BasicFormat) {
-			sprintf(buffer, "%04d%02d%02dT%02d%02d%02d%s", 
-					year, month, day, hour, minute, second, utc_note);
+		// we build seconds and fractional seconds and timezone into this buffer
+		char secbuf[2 + 1 + 6 + 1 + 1];
+		int ix;
+		// don't print sub seconds if the value would overflow our buffer
+		if (sub_sec > 999999) { sub_sec_digits = 0; }
+		switch (sub_sec_digits) {
+			case 1: ix = sprintf(secbuf, "%02d.%01d", second, sub_sec); break;
+			case 2: ix = sprintf(secbuf, "%02d.%02d", second, sub_sec); break;
+			case 3: ix = sprintf(secbuf, "%02d.%03d", second, sub_sec); break;
+			case 6: ix = sprintf(secbuf, "%02d.%06d", second, sub_sec); break;
+			default: ix = sprintf(secbuf, "%02d", second); break;
+		}
+		if (is_utc) {
+			secbuf[ix] = 'Z';
+			secbuf[ix + 1] = 0;
+		}
+
+		// then build up the time
+		if (type == ISO8601_TimeOnly) {
+			if (format == ISO8601_BasicFormat) {
+				sprintf(buffer, "T%02d%02d%s", hour, minute, secbuf);
+			} else {
+				sprintf(buffer, "%02d:%02d:%s", hour, minute, secbuf);
+			}
 		} else {
-			sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02d%s", 
-					year, month, day, hour, minute, second, utc_note);
+			if (format == ISO8601_BasicFormat) {
+				sprintf(buffer, "%04d%02d%02dT%02d%02d%s",
+					year, month, day, hour, minute, secbuf);
+			} else {
+				sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%s",
+					year, month, day, hour, minute, secbuf);
+			}
 		}
 	}
 
-	iso_representation = strdup(buffer);
-	return iso_representation;
+	return buffer;
 }
 
 /***********************************************************************
@@ -128,7 +139,8 @@ char *time_to_iso8601(
  ***********************************************************************/
 void iso8601_to_time(
 	const char     *iso_time,
-	struct tm      *time, 
+	struct tm      *time,
+	long *          pusec,
 	bool           *is_utc)
 {
 	bool begins_with_time;
@@ -186,13 +198,28 @@ void iso8601_to_time(
 		if (get_next_bit(&current, 2, workspace)) {
 			time->tm_sec = atoi(workspace);
 		
-			// if there is a fractional seconds part, skip over it
-			// so we don't miss seeing the timezone information
-			// TODO: actually parse the fractional seconds
+			// if there is a fractional seconds part, read it into sub_sec
+			// and then convert to microseconds
+			long sub_sec = 0;
 			if (*current == '.') {
 				++current;
-				while (isdigit(*current)) ++current;
+
+				int digits = 0;
+				while (isdigit(*current)) {
+					sub_sec = (sub_sec*10) + (*current - '0');
+					++current;
+					++digits;
+				}
+				// now covert to microseconds
+				if (digits < 6) {
+					const int scale[] = { 1000*1000, 100*1000, 10*1000, 1000, 100, 10 };
+					sub_sec *= scale[digits];
+				} else if (digits > 6) {
+					// more than 6 digits of sub_second is unsupported.
+					sub_sec = 0; 
+				}
 			}
+			if (pusec) *pusec = sub_sec;
 		}
 
 		if (is_utc != NULL) {

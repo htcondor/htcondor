@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 
 #  File:     pbs_status.py
 #
@@ -370,7 +370,7 @@ def get_qstat_location():
     Locate the copy of qstat the blahp configuration wants to use.
     """
     global _qstat_location_cache
-    if _qstat_location_cache != None:
+    if _qstat_location_cache is not None:
         return _qstat_location_cache
     load_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blah_load_config.sh')
     if os.path.exists(load_config_path) and os.access(load_config_path, os.R_OK):
@@ -409,7 +409,7 @@ def parse_qstat_fd(fd):
             #print cur_job_id, line
             cur_job_info = {"BatchJobId": '"%s"' % cur_job_id.split(".")[0]}
             continue
-        if cur_job_id == None:
+        if cur_job_id is None:
             continue
         m = exec_host_re.match(line)
         if m:

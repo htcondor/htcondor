@@ -24,7 +24,7 @@
 #include "ClassAdLogParser.h"
 #include "ClassAdLogProber.h"
 
-#include "classad/classad_stl.h"
+#include "classad/classad.h"
 
 enum PollResultType {
 	POLL_SUCCESS,

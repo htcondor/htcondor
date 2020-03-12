@@ -278,16 +278,14 @@ VMProc::StartJob()
     char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		MyString reniceAttr = "Renice = ";
-		reniceAttr += ptmp;
-		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting OsProc::StartJob...\n" );
 			free( ptmp );
 			return 0;
 		}
 			// evaluate
-		if( JobAd->EvalInteger( "Renice", NULL, nice_inc ) ) {
+		if( JobAd->LookupInteger( "Renice", nice_inc ) ) {
 			dprintf( D_ALWAYS, "Renice expr \"%s\" evaluated to %d\n",
 					 ptmp, nice_inc );
 		} else {
@@ -317,7 +315,7 @@ VMProc::StartJob()
 	}
 
 	// Get job name
-	MyString vm_job_name;
+	std::string vm_job_name;
 	if( JobAd->LookupString( ATTR_JOB_CMD, vm_job_name) != 1 ) {
 		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
@@ -328,7 +326,7 @@ VMProc::StartJob()
 	m_job_name = vm_job_name;
 
 	// vm_type should be from ClassAd
-	MyString vm_type_name;
+	std::string vm_type_name;
 	if( JobAd->LookupString( ATTR_JOB_VM_TYPE, vm_type_name) != 1 ) {
 		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
@@ -336,7 +334,7 @@ VMProc::StartJob()
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 		return false;
 	}
-	vm_type_name.lower_case();
+	lower_case(vm_type_name);
 	m_vm_type = vm_type_name;
 
 	// get vm checkpoint flag from ClassAd
@@ -345,15 +343,9 @@ VMProc::StartJob()
 
 	// If there exists MAC or IP address for a checkpointed VM,
 	// we use them as initial values.
-	MyString string_value;
-	if( JobAd->LookupString(ATTR_VM_CKPT_MAC, string_value) == 1 ) {
-		m_vm_mac = string_value;
-	}
+	JobAd->LookupString(ATTR_VM_CKPT_MAC, m_vm_mac);
 	/*
-	string_value = "";
-	if( JobAd->LookupString(ATTR_VM_CKPT_IP, string_value) == 1 ) {
-		m_vm_ip = string_value;
-	}
+	JobAd->LookupString(ATTR_VM_CKPT_IP, m_vm_ip);
 	*/
 
 	// For Xen and KVM jobs, the vm-gahp issues libvirt commands as root
@@ -375,14 +367,14 @@ VMProc::StartJob()
 	}
 
 	ClassAd recovery_ad = *JobAd;
-	MyString vm_name;
+	std::string vm_name;
 	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
 		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		ASSERT( create_name_for_VM( JobAd, vm_name ) );
 	} else {
 		vm_name = Starter->GetWorkingDir();
 	}
-	recovery_ad.Assign( "JobVMId", vm_name.Value() );
+	recovery_ad.Assign( "JobVMId", vm_name );
 	Starter->WriteRecoveryFile( &recovery_ad );
 
 	// //
@@ -626,7 +618,7 @@ VMProc::StartJob()
 
 		const char * const holdingErrors[] = {
 			"VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM",
-			"VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM"
+			"VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM",
 			"VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT",
 			"VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND",
 			"VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND",
@@ -1460,11 +1452,11 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	if( m_vm_checkpoint ) {
-		if( m_vm_mac.IsEmpty() == false ) {
+		if( m_vm_mac.empty() == false ) {
 			// Update MAC addresss of VM
 			ad->Assign(ATTR_VM_CKPT_MAC, m_vm_mac);
 		}
-		if( m_vm_ip.IsEmpty() == false ) {
+		if( m_vm_ip.empty() == false ) {
 			// Update IP addresss of VM
 			ad->Assign(ATTR_VM_CKPT_IP, m_vm_ip);
 		}
@@ -1497,7 +1489,7 @@ VMProc::reportErrorToStartd()
 		return false;
 	}
 
-	char* addr = startd.addr();
+	const char* addr = startd.addr();
 	if( !addr ) {
 		dprintf(D_ALWAYS,"Can't find the address of local startd\n");
 		return false;
@@ -1543,7 +1535,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 		return false;
 	}
 
-	char* addr = startd.addr();
+	const char* addr = startd.addr();
 	if( !addr ) {
 		dprintf(D_ALWAYS,"Can't find the address of local startd\n");
 		return false;
@@ -1627,35 +1619,35 @@ VMProc::setVMPID(int vm_pid)
 void
 VMProc::setVMMAC(const char* mac)
 {
-	if( !strcasecmp(m_vm_mac.Value(), mac) ) {
+	if( !strcasecmp(m_vm_mac.c_str(), mac) ) {
 		// MAC for VM doesn't change
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"MAC for VM is changed from [%s] to [%s]\n", 
-			m_vm_mac.Value(), mac);
+			m_vm_mac.c_str(), mac);
 
 	m_vm_mac = mac;
 
 	// Report this MAC to local startd
-	reportVMInfoToStartd(VM_UNIV_GUEST_MAC, m_vm_mac.Value());
+	reportVMInfoToStartd(VM_UNIV_GUEST_MAC, m_vm_mac.c_str());
 }
 
 void
 VMProc::setVMIP(const char* ip)
 {
-	if( !strcasecmp(m_vm_ip.Value(), ip) ) {
+	if( !strcasecmp(m_vm_ip.c_str(), ip) ) {
 		// IP for VM doesn't change
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"IP for VM is changed from [%s] to [%s]\n", 
-			m_vm_ip.Value(), ip);
+			m_vm_ip.c_str(), ip);
 
 	m_vm_ip = ip;
 
 	// Report this IP to local startd
-	reportVMInfoToStartd(VM_UNIV_GUEST_IP, m_vm_ip.Value());
+	reportVMInfoToStartd(VM_UNIV_GUEST_IP, m_vm_ip.c_str());
 }
 
 void

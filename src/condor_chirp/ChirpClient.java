@@ -386,6 +386,18 @@ public class ChirpClient {
 				throw new IOException("file is busy");
 			case -11:
 				throw new IOException("try again");
+			case -12:
+				throw new IOException("invalid file descriptor");
+			case -13:
+				throw new IOException("is a directory");
+			case -14:
+				throw new IOException("isn't a directory");
+			case -15:
+				throw new IOException("directory isn't empty");
+			case -16:
+				throw new IOException("cross-device hard link");
+			case -17:
+				throw new IOException("offline");
 			default:
 				throw new ChirpError("unknown error");
 		}

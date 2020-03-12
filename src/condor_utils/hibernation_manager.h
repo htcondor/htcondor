@@ -24,7 +24,6 @@
  * Headers
  ***************************************************************/
 
-#include "extArray.h"
 #include "MyString.h"
 #include "hibernator.h"
 #include "network_adapter.h"
@@ -86,7 +85,7 @@ public:
 	bool getSupportedStates( unsigned & mask ) const;
 	bool getSupportedStates( MyString &states ) const;
 	bool getSupportedStates(
-		ExtArray<HibernatorBase::SLEEP_STATE> &states ) const;
+		std::vector<HibernatorBase::SLEEP_STATE> &states ) const;
 
     /** Set which hibernation level the computer should enter
         @param the hibernation state to place machine into
@@ -187,7 +186,7 @@ public:
 
 private:
 
-	ExtArray<NetworkAdapterBase *>	 m_adapters;
+	std::vector<NetworkAdapterBase *>	 m_adapters;
 	NetworkAdapterBase			 	*m_primary_adapter;
 	HibernatorBase					*m_hibernator;
 	int								 m_interval;

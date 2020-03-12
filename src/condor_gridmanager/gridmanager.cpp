@@ -114,11 +114,11 @@ void doContactSchedd();
 std::map<std::string, BaseJob*> FetchProxyList;
 
 // handlers
-int ADD_JOBS_signalHandler( Service *, int );
-int REMOVE_JOBS_signalHandler( Service *, int );
+int ADD_JOBS_signalHandler(int );
+int REMOVE_JOBS_signalHandler(int );
 void CHECK_LEASES_signalHandler();
-int UPDATE_JOBAD_signalHandler( Service *, int );
-int FetchProxyDelegationHandler( Service *, int, Stream * );
+int UPDATE_JOBAD_signalHandler(int );
+int FetchProxyDelegationHandler(int, Stream * );
 
 static bool jobExternallyManaged(ClassAd * ad)
 {
@@ -175,12 +175,9 @@ requestScheddUpdate( BaseJob *job, bool notify )
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
 
-	const char *name;
-	ExprTree *value;
-	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
-		 job->jobAd->NextDirtyExpr(name, value) == false ) {
+		 job->jobAd->dirtyBegin() == job->jobAd->dirtyEnd() ) {
 		job->SetEvaluateState();
 		return;
 	}
@@ -420,20 +417,20 @@ void
 Register()
 {
 	daemonCore->Register_Signal( GRIDMAN_ADD_JOBS, "AddJobs",
-								 (SignalHandler)&ADD_JOBS_signalHandler,
-								 "ADD_JOBS_signalHandler", NULL );
+								 &ADD_JOBS_signalHandler,
+								 "ADD_JOBS_signalHandler");
 
 	daemonCore->Register_Signal( GRIDMAN_REMOVE_JOBS, "RemoveJobs",
-								 (SignalHandler)&REMOVE_JOBS_signalHandler,
-								 "REMOVE_JOBS_signalHandler", NULL );
+								 &REMOVE_JOBS_signalHandler,
+								 "REMOVE_JOBS_signalHandler");
 
 	daemonCore->Register_Signal( UPDATE_JOBAD, "UpdateJobAd",
-								 (SignalHandler)&UPDATE_JOBAD_signalHandler,
-								 "UPDATE_JOBAD_signalHandler", NULL );
+								 &UPDATE_JOBAD_signalHandler,
+								 "UPDATE_JOBAD_signalHandler");
 /*
 	daemonCore->Register_Signal( GRIDMAN_CHECK_LEASES, "CheckLeases",
-								 (SignalHandler)&CHECK_LEASES_signalHandler,
-								 "CHECK_LEASES_signalHandler", NULL );
+								 &CHECK_LEASES_signalHandler,
+								 "CHECK_LEASES_signalHandler");
 */
 	daemonCore->Register_Timer( 60, 60, CHECK_LEASES_signalHandler,
 								"CHECK_LEASES_signalHandler" );
@@ -442,7 +439,7 @@ Register()
 								  "FETCH_PROXY_DELEGATION",
 								  &FetchProxyDelegationHandler,
 								  "FetchProxyDelegationHandler",
-								  NULL, DAEMON, D_COMMAND, true );
+								  DAEMON, D_COMMAND, true );
 
 	Reconfig();
 }
@@ -476,7 +473,7 @@ Reconfig()
 }
 
 int
-ADD_JOBS_signalHandler( Service *, int )
+ADD_JOBS_signalHandler(int )
 {
 	dprintf(D_FULLDEBUG,"Received ADD_JOBS signal\n");
 
@@ -489,7 +486,7 @@ ADD_JOBS_signalHandler( Service *, int )
 }
 
 int
-REMOVE_JOBS_signalHandler( Service *, int )
+REMOVE_JOBS_signalHandler(int )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
@@ -509,7 +506,7 @@ REMOVE_JOBS_signalHandler( Service *, int )
 }
 
 int
-UPDATE_JOBAD_signalHandler( Service *, int )
+UPDATE_JOBAD_signalHandler(int )
 {
 	dprintf(D_FULLDEBUG,"Received UPDATE_JOBAD signal\n");
 	if ( !updateJobsSignaled ) {
@@ -641,7 +638,7 @@ doContactSchedd()
 			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
 				formatstr( buff, "job_%d_%d", curr_request.job->procID.cluster,
 							  curr_request.job->procID.proc );
-				if ( !rval->LookupInteger( buff.c_str(), result ) ) {
+				if ( !rval->LookupInteger( buff, result ) ) {
 					dprintf( D_FULLDEBUG, "vacateJobs returned malformed ad\n" );
 					EXCEPT( "vacateJobs returned malformed ad" );
 				} else {
@@ -754,7 +751,7 @@ doContactSchedd()
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			BaseJob *old_job;
-			int job_is_matched = 1;		// default to true if not in ClassAd
+			bool job_is_matched = true; // default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
@@ -1046,10 +1043,14 @@ contact_schedd_next_add_job:
 		const char *attr_value;
 		ExprTree *expr;
 		bool fake_job_in_queue = false;
-		curr_job->jobAd->ResetExpr();
-		while ( curr_job->jobAd->NextDirtyExpr(attr_name, expr) == true &&
-				fake_job_in_queue == false ) {
-			attr_value = ExprTreeToString( expr );
+		for ( auto itr = curr_job->jobAd->dirtyBegin(); itr != curr_job->jobAd->dirtyEnd() && fake_job_in_queue == false; itr++ ) {
+			attr_name = itr->c_str();
+			expr = curr_job->jobAd->LookupExpr( attr_name );
+			if ( expr ) {
+				attr_value = ExprTreeToString( expr );
+			} else {
+				attr_value = "Undefined";
+			}
 
 			dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 			rc = SetAttribute( curr_job->procID.cluster,
@@ -1260,7 +1261,7 @@ dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return;
 }
 
-int FetchProxyDelegationHandler( Service *, int, Stream *sock )
+int FetchProxyDelegationHandler(int, Stream *sock )
 {
 	ReliSock* rsock = (ReliSock*)sock;
 	std::string xfer_id;
