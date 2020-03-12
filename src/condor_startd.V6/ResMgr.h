@@ -249,6 +249,9 @@ public:
 		//Make a list of the ClassAds from each slot we represent.
 	void		makeAdList( ClassAdList*, ClassAd * pqueryAd=NULL );
 
+		// count the number of resources owned by this user
+	int			claims_for_this_user(const char * user);
+
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() { return is_shutting_down; };
 

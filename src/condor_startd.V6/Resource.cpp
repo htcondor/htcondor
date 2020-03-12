@@ -1236,8 +1236,8 @@ Resource::publish_slot_config_overrides(ClassAd * cad)
 		};
 
 	for (size_t ix = 0; ix < sizeof(attrs)/sizeof(attrs[0]); ++ix) {
-		const char * val = SlotType::type_param(r_attr, attrs[0]);
-		if (val) cad->AssignExpr(attrs[0], val);
+		const char * val = SlotType::type_param(r_attr, attrs[ix]);
+		if (val) cad->AssignExpr(attrs[ix], val);
 	}
 }
 

@@ -320,6 +320,7 @@ CStarter::Config()
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
 			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
 		}
+		m_reuse_dir->PrintInfo(true);
 	} else {
 		m_reuse_dir.reset();
 	}
@@ -1599,7 +1600,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// Use LD_PRELOAD to force an implementation of getpwnam
 		// into the process that returns a valid shell
 #ifdef LINUX
-	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", false)) {
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
 		std::string lib;
 		param(lib, "LIB");
 		std::string getpwnampath = lib + "/libgetpwnam.so";
@@ -3217,18 +3218,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
-	if(param_boolean("CREDD_OAUTH_MODE", false)) {
-		const char* sandbox_cred_dir = jic->getCredPath();
-		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
-	} else {
-		// kerberos credential cache (in sandbox)
-		const char* krb5ccname = jic->getCredPath();
-		if( krb5ccname && (krb5ccname[0] != '\0') ) {
-			// using env_name as env_value
-			env_name = "FILE:";
-			env_name += krb5ccname;
-			proc_env->SetEnv( "KRB5CCNAME", env_name );
-		}
+	// put OAuth creds directory into the environment
+	if (jic->getCredPath()) {
+		proc_env->SetEnv("_CONDOR_CREDS", jic->getCredPath());
+	}
+
+	// kerberos credential cache (in sandbox)
+	const char* krb5ccname = jic->getKrb5CCName();
+	if( krb5ccname && (krb5ccname[0] != '\0') ) {
+		// using env_name as env_value
+		env_name = "FILE:";
+		env_name += krb5ccname;
+		proc_env->SetEnv( "KRB5CCNAME", env_name );
 	}
 
 		// path to the output ad, if any

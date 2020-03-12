@@ -171,7 +171,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 }
 
 bool
-DCShadow::getUserCredential( const char* user, const char* domain, MyString& credential)
+DCShadow::getUserPassword( const char* user, const char* domain, MyString& passwd)
 {
 	ReliSock reli_sock;
 	bool  result;
@@ -223,7 +223,71 @@ DCShadow::getUserCredential( const char* user, const char* domain, MyString& cre
 		return false;
 	}
 
-	credential = recvcredential;
+	passwd = recvcredential;
 	return true;
 }
+
+bool DCShadow::getUserCredential(const char *user, const char *domain, int mode, unsigned char* & cred, int & credlen)
+{
+	ReliSock reli_sock;
+
+	// For now, if we have to ensure that the update gets
+	// there, we use a ReliSock (TCP).
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "getUserCredential: Failed to connect to shadow (%s)\n", _addr );
+		return false;
+	}
+	if ( ! startCommand( CREDD_GET_CRED, (Sock*)&reli_sock )) {
+		dprintf( D_FULLDEBUG, "startCommand(CREDD_GET_CRED) failed to shadow (%s)\n", _addr );
+		return false;
+	}
+
+	// Enable encryption if available. If it's not available, our peer
+	// will close the connection.
+	reli_sock.set_crypto_mode(true);
+
+	if(!reli_sock.put(user)) {
+		dprintf( D_FULLDEBUG, "Failed to send user (%s) to shadow\n", user );
+		return false;
+	}
+	if(!reli_sock.put(domain)) {
+		dprintf( D_FULLDEBUG, "Failed to send domain (%s) to shadow\n", domain );
+		return false;
+	}
+	if(!reli_sock.put(mode)) {
+		dprintf( D_FULLDEBUG, "Failed to send mode (%d) to shadow\n", mode );
+		return false;
+	}
+	if(!reli_sock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Failed to send EOM to shadow\n" );
+		return false;
+	}
+
+	reli_sock.decode();
+
+	if (!reli_sock.get(credlen)) {
+		dprintf( D_FULLDEBUG, "Failed to send get credential size from shadow\n" );
+		return false;
+	}
+
+	// set a 10Mb limit on the credential
+	if (credlen < 0 || credlen > 0x1000 * 0x1000 * 10) {
+		dprintf( D_ALWAYS, "Unexpected credential size from shadow : %d\n", credlen );
+		return false;
+	}
+
+	unsigned char * cred_data = (unsigned char*)malloc (credlen);
+	if ( ! reli_sock.get_bytes(cred_data, credlen) || 
+		 ! reli_sock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Failed to receive credential or EOM from shadow\n");
+		free (cred_data);
+		cred_data = NULL;
+		return false;
+	}
+
+	cred = cred_data;
+	return true;
+}
+
 

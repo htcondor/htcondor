@@ -20,6 +20,7 @@ BOOST_PYTHON_MODULE(htcondor)
     export_collector();
     export_negotiator();
     export_schedd();
+    export_credd();
     export_dc_tool();
     export_secman();
     export_event_log();

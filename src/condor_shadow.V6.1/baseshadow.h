@@ -416,6 +416,8 @@ class BaseShadow : public Service
 
 	bool isDataflowJob = false;
 
+	void logDataflowJobSkippedEvent();
+
  protected:
 
 		/** Note that this is the base, "unexpanded" ClassAd for the job.

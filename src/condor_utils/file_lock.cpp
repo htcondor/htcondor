@@ -372,6 +372,9 @@ FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
 	}
 #ifndef WIN32	
 	if (m_delete == 1) {
+		if (file == NULL) {
+			EXCEPT("FileLock::SetFdFpFile(). Programmer error: deleting lock with null filename");
+		}
 		char *nPath = CreateHashName(file);	
 		SetPath(nPath);	
 		delete []nPath;

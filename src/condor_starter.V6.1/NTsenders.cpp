@@ -2526,9 +2526,11 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
 	int result = 0;
 
 	if(!(syscall_sock->get_encryption())) {
-		dprintf ( D_ALWAYS, "ERROR: Can't do CONDOR_getcreds, syscall_sock not encrypted\n" );
-		// fail
-		return -1;
+		if (can_switch_ids() || ! param_boolean("ALLOW_OAUTH_WITHOUT_ENCRYPTION", false)) {
+			dprintf(D_ALWAYS, "ERROR: Can't do CONDOR_getcreds, syscall_sock not encrypted\n");
+			// fail
+			return -1;
+		}
 	}
 
 	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds into path %s\n", creds_receive_dir );

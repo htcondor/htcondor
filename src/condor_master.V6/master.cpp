@@ -43,6 +43,7 @@
 #include "file_lock.h"
 #include "shared_port_server.h"
 #include "shared_port_endpoint.h"
+#include "credmon_interface.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -1751,14 +1752,14 @@ main_pre_command_sock_init()
 	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
 	// to force the credmon to refresh everything and to prevent the schedd
 	// from starting up until credentials are ready.
-	p = param("SEC_CREDENTIAL_DIRECTORY");
-	if(p) {
-		MyString cred_file;
-		formatstr( cred_file, "%s%cCREDMON_COMPLETE", p, DIR_DELIM_CHAR );
-		dprintf(D_SECURITY, "CREDMON: unlinking %s.", cred_file.Value());
-		unlink(cred_file.Value());
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	if (cred_dir) {
+		credmon_clear_completion(credmon_type_KRB, cred_dir);
 	}
-	free(p);
+	cred_dir.set(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+	if (cred_dir) {
+		credmon_clear_completion(credmon_type_OAUTH, cred_dir);
+	}
 
  	// in case a shared port address file got left behind by an
  	// unclean shutdown, clean it up now before we create our

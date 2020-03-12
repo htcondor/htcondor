@@ -32,6 +32,7 @@
 #include "classadHistory.h"
 #include "misc_utils.h"
 #include "slot_builder.h"
+#include "history_queue.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -101,6 +102,9 @@ StartdCronJobMgr	*cron_job_mgr;
 
 // Benchmark stuff
 StartdBenchJobMgr	*bench_job_mgr;
+
+// remote history queries
+HistoryHelperQueue *history_queue_mgr;
 
 // Cleanup reminders, for things we tried to cleanup but initially failed.
 // for instance, the execute directory on Windows when antivirus software is hold a file in it open.
@@ -203,6 +207,11 @@ main_init( int, char* argv[] )
 	command_x_event(0, 0);
 #endif
 
+		// create the class that tracks and limits reqmote history queries
+	history_queue_mgr = new HistoryHelperQueue();
+	history_queue_mgr->want_startd_history(true);
+	history_queue_mgr->setup(1000, param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50));
+
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
 
@@ -286,6 +295,12 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
 								  command_query_ads,
 								  "command_query_ads", READ );
+	if (history_queue_mgr) {
+		daemonCore->Register_CommandWithPayload(GET_HISTORY,
+			"GET_HISTORY",
+			(CommandHandlercpp)&HistoryHelperQueue::command_handler,
+			"command_get_history", history_queue_mgr, READ);
+	}
 
 		// DAEMON permission commands
 	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",

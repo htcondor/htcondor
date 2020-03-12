@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_classad.h"
 #include "condor_debug.h"
 #include "string_list.h"
 #include "condor_classad.h"
@@ -226,7 +227,7 @@ private:
 
 const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
 const int GO_AHEAD_UNDEFINED = 0;
-const int GO_AHEAD_ONCE = 1;    // send one file and ask again
+//const int GO_AHEAD_ONCE = 1;    // send one file and ask again
 				// Currently, there is no usage of GO_AHEAD_ONCE; if we have a
 				// token, we assume it lasts forever.
 
@@ -755,11 +756,15 @@ bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	bool is_dataflow = false;
+	int newest_input_timestamp = -1;
+	int oldest_output_timestamp = -1;
 	std::set<int> input_timestamps;
 	std::set<int> output_timestamps;
+	std::string executable_file;
 	std::string iwd;
 	std::string input_files;
 	std::string output_files;
+	std::string stdin_file;
 	std::string token;
 	struct stat file_stat;
 
@@ -781,7 +786,6 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	}
 
 	// Parse the list of output files
-	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
 	std::stringstream os( output_files );
 	while ( getline( os, token, ',' ) ) {
 		// Stat each file. Add the last-modified timestamp to set of timestamps.
@@ -796,12 +800,38 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		}
 	}
 
-	// If the oldest output file is more recent than the newest input files,
-	// then this is a dataflow job.
-	if ( !input_timestamps.empty() && !output_timestamps.empty() ) {
-		auto newest_input = input_timestamps.rbegin();
-		auto oldest_output = output_timestamps.begin();
-		is_dataflow = *oldest_output > *newest_input;
+	if ( !input_timestamps.empty() ) {
+
+		newest_input_timestamp = *input_timestamps.rbegin();
+
+		// If the oldest output file is more recent than the newest input file,
+		// then this is a dataflow job.
+		if ( !output_timestamps.empty() ) {
+			oldest_output_timestamp = *output_timestamps.begin();
+			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
+		}
+
+		// If the executable is more recent than the newest input file, 
+		// then this is a dataflow job.
+		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
+		if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
+			int executable_file_timestamp = file_stat.st_mtime;
+			if ( executable_file_timestamp > newest_input_timestamp ) {
+				is_dataflow = true;
+			}
+		}
+
+		// If the standard input file is more recent than newest input,
+		// then this is a dataflow job.
+		job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
+		if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
+			if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
+				int stdin_file_timestamp = file_stat.st_mtime;
+				if ( stdin_file_timestamp > newest_input_timestamp ) {
+					is_dataflow = true;
+				}
+			}
+		}
 	}
 
 	return is_dataflow;
@@ -2467,7 +2497,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						}
 						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
 							static_cast<uint64_t>(0), [](uint64_t val, const ReuseInfo &info) {return info.size() + val;});
-						dprintf(D_FULLDEBUG, "There are %lu bytes to retrieve.\n", to_retrieve);
+						dprintf(D_FULLDEBUG, "There are %llu bytes to retrieve.\n",
+							static_cast<unsigned long long>(to_retrieve));
 						if (to_retrieve) {
 							CondorError err;
 							if (!m_reuse_dir->ReserveSpace(to_retrieve, 3600, tag, reservation_id,
@@ -2477,6 +2508,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 									" %s\n", err.getFullText().c_str());
 								retrieved_files.clear();
 								reuse_info.clear();
+							}
+							for (const auto &info : reuse_info) {
+								dprintf(D_FULLDEBUG, "File we will reuse: %s\n", info.filename().c_str());
 							}
 						}
 						ad.Insert("ReuseList", retrieved_list.release());

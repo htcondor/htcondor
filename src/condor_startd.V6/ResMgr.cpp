@@ -1281,6 +1281,9 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
 		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
 	}
+	if (IS_PUBLIC(how_much) && m_reuse_dir) {
+		m_reuse_dir->Publish(*cp);
+	}
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
@@ -1503,9 +1506,8 @@ void
 ResMgr::sweep_timer_handler( void )
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
-#ifndef WIN32
-	credmon_sweep_creds();
-#endif  // WIN32
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	credmon_sweep_creds(cred_dir, credmon_type_KRB);
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
@@ -1514,13 +1516,8 @@ int
 ResMgr::start_sweep_timer( void )
 {
 	// only sweep if we have a cred dir
-	auto_free_ptr p(param("SEC_CREDENTIAL_DIRECTORY"));
+	auto_free_ptr p(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
 	if(!p) {
-		return TRUE;
-	}
-
-	// only sweep if not in TOKENS mode
-	if (!param_boolean("CREDD_OAUTH_MODE", false)) {
 		return TRUE;
 	}
 
@@ -1829,6 +1826,26 @@ ResMgr::deleteResource( Resource* rip )
 			// We're done allocating, so we can finish our reconfig.
 		finish_main_config();
 	}
+}
+
+// return the count of claims on this machine associated with this user
+// used to decide when to delete credentials
+int ResMgr::claims_for_this_user(const char * user)
+{
+	if ( ! user || ! user[0]) {
+		return 0;
+	}
+	int num_matches = 0;
+
+	for (int ii = 0; ii < nresources; ++ii) {
+		Resource * res = resources[ii];
+		if (res && res->r_cur && res->r_cur->client() && res->r_cur->client()->user()) {
+			if (MATCH == strcmp(res->r_cur->client()->user(), user)) {
+				num_matches += 1;
+			}
+		}
+	}
+	return num_matches;
 }
 
 

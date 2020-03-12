@@ -239,6 +239,10 @@ wWinMain(__in HINSTANCE, __in_opt HINSTANCE, __in wchar_t*, __in int)
 	}
 
 	if (!window_found) {
+		debug(L"Window not found, attempting to generate a Ctrl+Break event to pid=%d\n", target_pid);
+		if (GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, target_pid)) {
+			return SOFTKILL_SUCCESS;
+		}
 		return SOFTKILL_WINDOW_NOT_FOUND;
 	}
 	else if (!message_posted) {

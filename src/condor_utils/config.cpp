@@ -258,6 +258,12 @@ condor_isidchar(int c)
 
 #define ISIDCHAR(c)		( condor_isidchar(c) )
 
+// The allowed characters after a : in $(NAME:def) is IDCHAR + COLON_DEF_EXTRACHARSET
+// Prior to 8.9.7, this was the permitted list
+#define COLON_DEF_EXTRACHARSET "$ ,\\:"
+// After 8.9.7 this is the permitted list ??
+//#define COLON_DEF_EXTRACHARSET " !#$%&'*+,-@:;[\\]^`<=>?{|}~"
+
 // $$ expressions may also contain a colon
 #define ISDDCHAR(c) ( ISIDCHAR(c) || ((c)==':') )
 
@@ -4489,11 +4495,14 @@ tryagain:
 						if (c == '(') {
 							// skip to the close )
 							const char * ptr = strchr(value, ')');
-							if (ptr) value = ptr+1;
+							if (ptr) {
+								value = ptr+1;
+								continue;
+							}
 						} else if (is_meta_arg_body) {
 							// for meta args, allow pretty much anything after the colon
 							continue;
-						} else if (strchr("$ ,\\:", c)) {
+						} else if (strchr(COLON_DEF_EXTRACHARSET, c)) {
 							// allow some characters after the : that we don't allow in param names
 							continue;
 						}
@@ -5067,11 +5076,14 @@ tryagain:
 						if (c == '(') {
 							// skip to the close )
 							char * ptr = strchr(value, ')');
-							if (ptr) value = ptr+1;
+							if (ptr) {
+								value = ptr+1;
+								continue;
+							}
 						} else if (is_meta_arg_body) {
 							// for meta args, allow pretty much anything after the colon
 							continue;
-						} else if (strchr("$ ,\\:", c)) {
+						} else if (strchr(COLON_DEF_EXTRACHARSET, c)) {
 							// allow some characters after the : that we don't allow in param names
 							continue;
 						}
