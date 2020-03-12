@@ -1490,7 +1490,7 @@ rm -rf %{buildroot}
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
 %_sbindir/condor_aklog
-%_sbindir/krbafs_credmon
+%_sbindir/condor_krbafs_credmon
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
