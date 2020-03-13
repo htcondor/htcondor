@@ -324,6 +324,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 	QueryResult result = Q_COMMUNICATION_ERROR;
 
 	bool problems_resolving = false;
+	bool random_order = param_boolean("HAD_QUERY_COLLECTORS_IN_ORDER", false);
 
 	// switch containers for easier random access.
 	this->rewind();
@@ -333,7 +334,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 
 	while ( vCollectors.size() ) {
 		// choose a random collector in the list to query.
-		unsigned int idx = get_random_int_insecure() % vCollectors.size() ;
+		unsigned int idx = random_order ? (get_random_int_insecure() % vCollectors.size()) : 0;
 		daemon = vCollectors[idx];
 
 		if ( ! daemon->addr() ) {

@@ -965,9 +965,9 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 	{
 		CondorError err;
 		LogSentry sentry = LockLog(err);
-			// If this fails, `m_valid` will be set to false and
-			// we will advertise that data reuse doesn't work later below.
-		UpdateState(sentry, err);
+		if (!UpdateState(sentry, err)) {
+			dprintf(D_ALWAYS, "DataReuseDirectory::Publish failed to Update State\n");
+		}
 	}
 
 	auto retval = true;
