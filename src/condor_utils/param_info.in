@@ -5405,6 +5405,16 @@ default=$(MAX_DEFAULT_LOG)
 default=true
 type=bool
 
+[CREDMON_KRB]
+default=$(SBIN)/condor_krbafs_credmon
+win32_default=
+type=path
+
+[SEC_CREDENTIAL_DIRECTORY_KRB]
+default=/var/condor/credentials.d/krb
+win32_default=
+type=path
+
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
