@@ -1376,10 +1376,10 @@ FileTransfer::DetermineWhichFilesToSend() {
 		CheckpointFiles = new StringList( NULL, "," );
 
 		// If we'd transfer output or error on success, do so on failure also.
-		if( OutputFiles->file_contains( JobStdoutFile.c_str() ) ) {
+		if( OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() ) ) {
 			CheckpointFiles->append( JobStdoutFile.c_str() );
 		}
-		if( OutputFiles->file_contains( JobStderrFile.c_str() ) ) {
+		if( OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() ) ) {
 			CheckpointFiles->append( JobStderrFile.c_str() );
 		}
 
