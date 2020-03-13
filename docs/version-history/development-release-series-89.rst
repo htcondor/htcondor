@@ -55,6 +55,10 @@ New Features:
   and LocalSysCpu
   :ticket:`7546`
 
+- Feature to enhance the reliability of *condor_ssh_to_job* is now on
+  by default: CONDOR_SSH_TO_JOB_USE_FAKE_PASSWD_ENTRY is now true
+  :ticket:`7536`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
