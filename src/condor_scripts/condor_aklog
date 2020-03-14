@@ -58,9 +58,13 @@
 
 ##**************************************************************
 
+# determine once which part we are in
+[ "$1" == "-htcpart2" ] && PART=2 || PART=1
+
 # Helper function: Exit with status $1 and send $2 to stderr.
 exitwitherr() { 
   printf "%s. Aborting.\n" "$2" >&2
+  [ "$PART" == 2 ] && echo aklog_real_exit_code $1
   exit "$1"
 }
 
@@ -86,7 +90,7 @@ checkexist() {
 # This is the entry-point of the script.
 #
 
-if [ "$1" != "-htcpart2" ]; then
+if [ "$PART" == 1 ]; then
 
   # Make sure some required utilities are installed in our PATH.
 
