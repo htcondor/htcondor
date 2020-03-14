@@ -7287,8 +7287,8 @@ int SubmitHash::SetTransferFiles()
 		bool StreamStdout = false;
 		bool StreamStderr = false;
 
-		job->LookupString(ATTR_JOB_OUTPUT,output);
-		job->LookupString(ATTR_JOB_ERROR,error);
+		(void) job->LookupString(ATTR_JOB_OUTPUT,output);
+		(void) job->LookupString(ATTR_JOB_ERROR,error);
 		job->LookupBool(ATTR_STREAM_OUTPUT, StreamStdout);
 		job->LookupBool(ATTR_STREAM_ERROR, StreamStderr);
 
