@@ -44,7 +44,7 @@ class DockerProc : public VanillaProc {
 		std::string containerID;
 		std::string containerName;
 		int updateTid;
-		uint64_t memUsage, netIn, netOut, userCpu, sysCpu;
+		uint64_t memUsage, max_memUsage, netIn, netOut, userCpu, sysCpu;
 		bool waitForCreate;
 		int execReaperId;
 };
