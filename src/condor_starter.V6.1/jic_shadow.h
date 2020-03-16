@@ -120,6 +120,7 @@ public:
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
 		*/
+	void setJobFailed( void );
 	bool transferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
@@ -543,6 +544,8 @@ private:
 		*/
 	bool m_job_update_attrs_set;
 	StringList m_job_update_attrs;
+
+	bool job_failed = false;
 };
 
 

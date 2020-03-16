@@ -6121,6 +6121,14 @@ int SubmitHash::SetRequirements()
 				}
 			}
 
+			std::string whenString;
+			if( job->LookupString(ATTR_WHEN_TO_TRANSFER_OUTPUT, whenString) ) {
+				auto when = getFileTransferOutputNum(whenString.c_str());
+				if( when == FTO_ON_SUCCESS ) {
+					addVersionCheck = true;
+				}
+			}
+
 			if( addVersionCheck ) {
 				// This is an ugly hack and should be changed.
 				answer += " && strcmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.6\" ) >= 0";
@@ -7279,8 +7287,8 @@ int SubmitHash::SetTransferFiles()
 		bool StreamStdout = false;
 		bool StreamStderr = false;
 
-		job->LookupString(ATTR_JOB_OUTPUT,output);
-		job->LookupString(ATTR_JOB_ERROR,error);
+		(void) job->LookupString(ATTR_JOB_OUTPUT,output);
+		(void) job->LookupString(ATTR_JOB_ERROR,error);
 		job->LookupBool(ATTR_STREAM_OUTPUT, StreamStdout);
 		job->LookupBool(ATTR_STREAM_ERROR, StreamStderr);
 

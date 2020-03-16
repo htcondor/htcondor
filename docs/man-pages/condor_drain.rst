@@ -54,9 +54,9 @@ become available for use by other jobs until the machine exits the
 draining state (see below). The **-start** expression you supply
 replaces the draining machine's normal ``START`` expression for the
 duration of the draining state, potentially making those resources
-available. See the :ref:`admin-manual/policy-configuration:*condor_startd*
-Policy Configuration` section for more information.
-policy configuration` section for more information.
+available. See the
+:ref:`admin-manual/policy-configuration:*condor_startd* Policy Configuration`
+section for more information.
 
 Once draining is complete, the machine will enter the Drained/Idle
 state. To resume normal operation (negotiation) at that time or any

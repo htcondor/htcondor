@@ -180,6 +180,9 @@ class FileTransfer final: public Service {
 	/** @return 1 on success, 0 on failure */
 	int UploadCheckpointFiles( bool blocking = true );
 
+	/** @return 1 on success, 0 on failure */
+	int UploadFailureFiles( bool blocking = true );
+
 		/** For non-blocking (i.e., multithreaded) transfers, the registered
 			handler function will be called on each transfer completion.  The
 			handler can call FileTransfer::GetInfo() for statistics on the
@@ -400,6 +403,7 @@ class FileTransfer final: public Service {
   private:
 
 	bool uploadCheckpointFiles{false};
+	bool uploadFailureFiles{false};
 	bool TransferFilePermissions{false};
 	bool DelegateX509Credentials{false};
 	bool PeerDoesTransferAck{false};

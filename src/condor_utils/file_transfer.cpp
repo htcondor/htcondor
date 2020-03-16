@@ -1327,6 +1327,14 @@ FileTransfer::UploadCheckpointFiles( bool blocking ) {
 	return rv;
 }
 
+int
+FileTransfer::UploadFailureFiles( bool blocking ) {
+	uploadFailureFiles = true;
+	int rv = UploadFiles( blocking, true );
+	uploadFailureFiles = false;
+	return rv;
+}
+
 void
 FileTransfer::DetermineWhichFilesToSend() {
 	// IntermediateFiles is dynamically allocated (some jobs never use it).
@@ -1348,7 +1356,9 @@ FileTransfer::DetermineWhichFilesToSend() {
 
 			// This should Just Work(TM), but I haven't tested it yet and
 			// I don't know that anybody will every actually use it.
+			if( EncryptCheckpointFiles ) { delete EncryptCheckpointFiles; }
 			EncryptCheckpointFiles = new StringList( NULL, "," );
+			if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
 			DontEncryptCheckpointFiles = new StringList( NULL, "," );
 
 			// Yes, this is stupid, but it'd be a big change to fix.
@@ -1358,6 +1368,32 @@ FileTransfer::DetermineWhichFilesToSend() {
 
 			return;
 		}
+	}
+
+	// See uploadCheckpointFiles comments, above.
+	if( uploadFailureFiles ) {
+		if( CheckpointFiles ) { delete CheckpointFiles; }
+		CheckpointFiles = new StringList( NULL, "," );
+
+		// If we'd transfer output or error on success, do so on failure also.
+		if( OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() ) ) {
+			CheckpointFiles->append( JobStdoutFile.c_str() );
+		}
+		if( OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() ) ) {
+			CheckpointFiles->append( JobStderrFile.c_str() );
+		}
+
+		if( EncryptCheckpointFiles ) { delete EncryptCheckpointFiles; }
+		EncryptCheckpointFiles = new StringList( NULL, "," );
+
+		if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
+		DontEncryptCheckpointFiles = new StringList( NULL, "," );
+
+		FilesToSend = CheckpointFiles;
+		EncryptFiles = EncryptCheckpointFiles;
+		DontEncryptFiles = DontEncryptCheckpointFiles;
+
+		return;
 	}
 
 	if ( upload_changed_files && last_download_time > 0 ) {
