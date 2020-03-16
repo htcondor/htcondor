@@ -297,8 +297,9 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
 		// Start a timer to poll for job usage updates.
-		updateTid = daemonCore->Register_Timer(2, 
-				20, (TimerHandlercpp)&DockerProc::getStats, 
+		int polling_interval = param_integer("POLLING_INTERVAL",5);
+		updateTid = daemonCore->Register_Timer(2,
+				polling_interval, (TimerHandlercpp)&DockerProc::getStats, 
 					"DockerProc::getStats",this);
 
 		SetupDockerSsh();
