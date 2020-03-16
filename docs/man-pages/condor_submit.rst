@@ -1250,7 +1250,7 @@ FILE TRANSFER COMMANDS
     **transfer_output_files**. Listing a file in
     **transfer_output_remaps** is not sufficient to cause it to be
     transferred.
-    :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
+    :index:`transfer_plugins<single: transfer_plugins; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins that should be transferred along with
@@ -1258,30 +1258,38 @@ FILE TRANSFER COMMANDS
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
     Plugins transfered in this way must support the multi-file transfer plugin syntax.
+    :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
- when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT >
-    Setting
-    **when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
-    equal to *ON_EXIT* will cause HTCondor to transfer the job's output
-    files back to the submitting machine only when the job completes
-    (exits on its own).  If a job is evicted and started again 
-    the subsequent execution will start with only the executable and 
-    input files in the scratch directory sandbox.
+ when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
+    Setting ``when_to_transfer_output`` to ``ON_EXIT`` will cause HTCondor
+    to transfer the job's output files back to the submitting machine when
+    the job completes (exits on its own).  If a job is evicted and started
+    again, the subsequent execution will start with only the executable and
+    input files in the scratch directory sandbox.  If ``transfer_output_files``
+    is not set, HTCondor considers all new files in the sandbox's top-level
+    directory to be the output; subdirectories and their contents will not
+    be transferred.
 
-    The *ON_EXIT_OR_EVICT* option is intended for jobs
-    which periodically save their own state and can restart where they
-    left off. In this case, files are spooled to the submit machine any
-    time the job was evicted by the HTCondor system for any reason prior to
-    job completion. The files spooled back are placed in a directory
-    defined by the value of the ``SPOOL`` configuration variable. Any
-    such files transferred back to the submit machine are
-    automatically sent back out again as input files if the job
-    restarts.  The set of files transfered back is the same set that would
-    be transfered if the job completed.  If *transfer_output_files* is not 
-    set, all files in the top level scratch directory will be saved.  Files
-    in subdirectories will not be preserved.  If *transfer_output_files* is set
-    only those files are saved.  If a file listed in *transfer_output_files* 
-    does not exist at evict time, the job will go on hold.
+    Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
+    HTCondor to transfer the job's output files when the job completes
+    (exits on its own) and when the job is evicted.  When the job is evicted,
+    HTCondor will transfer the output files to a temporary directory on the
+    submit node (determined by the ``SPOOL`` configuration variable).  When
+    the job restarts, these files will be transferred instead of the input
+    files.  If ``transfer_output_files`` is not set, HTCondor considers all
+    files in the sandbox's top-level directory to be the output;
+    subdirectories and their contents will not be transferred.
+
+    Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
+    to transfer the job's output files when the job completes succesfully.
+    Success is defined by the ``success_exit_code`` command, which must be
+    set, even if the successful value is the default ``0``.  If
+    ``transfer_output_files`` is not set, HTCondor considers all new files
+    in the sandbox's top-level directory to be the output; subdirectories
+    and their contents will not be transferred.
+
+    In all three cases, the job will go on hold if ``transfer_output_files``
+    specifies a file which does not exist at transfer time.
 
  aws_access_key_id_file
     Required if you specify an S3 URL, this command specifies the file containing
@@ -1330,8 +1338,9 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
-    **Note: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs.**
+    **Note**: non-zero values of success_exit_code should generally not be
+    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into
     account the value of **success_exit_code**. This means that, if

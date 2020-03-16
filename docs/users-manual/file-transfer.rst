@@ -55,26 +55,30 @@ command takes on one of three possible values:
    job is accessible on the remote worker node.
 
 The **when_to_transfer_output** command tells HTCondor when output
-files are to be transferred back to the submit machine. The command
-takes on one of two possible values:
+files are to be transferred back to the submit machine.  The command
+takes on one of three possible values:
 
-#. ON_EXIT (the default): HTCondor transfers the output sandbox
+#. ``ON_EXIT`` (the default): HTCondor transfers the output sandbox
    back to the submit machine only when the job exits on its own. If the
    job is preempted or removed, no files are transfered back.
-#. ON_EXIT_OR_EVICT: HTCondor behaves the same as described for the
+#. ``ON_EXIT_OR_EVICT``: HTCondor behaves the same as described for the
    value ON_EXIT when the job exits on its own. However, each
-   time the job is evicted from a machine, the output sandbox is 
+   time the job is evicted from a machine, the output sandbox is
    transferred back to the submit machine and placed under the **SPOOL** directory.
    eviction time. Before the job starts running again, the former output
    sandbox is copied to the job's new remote scratch directory.
 
    If **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
    is specified, this list governs which files are transferred back at eviction
-   time. If a file listed in **transfer_output_files** does not exist 
+   time. If a file listed in **transfer_output_files** does not exist
    at eviction time, the job will go on hold.
 
    The purpose of saving files at eviction time is to allow the job to
-   resume from where it left off. 
+   resume from where it left off.
+#. ``ON_SUCCESS``: HTCondor transfers files like ``ON_EXIT``, but only if
+   the job succeeds, as defined by the ``success_exit_code`` submit command.
+   The ``successs_exit_code`` command must be used, even for the default
+   exit code of 0.  (See the :doc:`/man-pages/condor_submit` man page.)
 
 The default values for these two submit commands make sense as used
 together. If only **should_transfer_files** is set, and set to the
