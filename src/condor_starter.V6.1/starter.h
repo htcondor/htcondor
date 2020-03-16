@@ -302,11 +302,17 @@ public:
 	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
 
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
+
+	virtual void RecordJobExitStatus(int status);
+
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
 
 	bool m_deferred_job_update;
+
+	bool recorded_job_exit_status{false};
+	int job_exit_status;
 private:
 
 		// // // // // // // //

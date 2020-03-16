@@ -11,18 +11,21 @@ computeDesiredExitStatus( const std::string & prefix, ClassAd * ad,
 
 	int desiredExitCode = 0;
 	std::string exitCode = "Success" + prefix + "ExitCode";
+	if( prefix.empty() ) { exitCode = "JobSuccessExitCode"; }
 	if( ad->LookupInteger( exitCode, desiredExitCode ) ) {
 		if( exitStatusSpecified ) { * exitStatusSpecified = true; }
 	}
 
 	int desiredExitSignal = 0;
 	std::string exitSignal = "Success" + prefix + "ExitSignal";
+	if( prefix.empty() ) { exitSignal = "JobSuccessExitSignal"; }
 	if( ad->LookupInteger( exitSignal, desiredExitSignal ) ) {
 		if( exitStatusSpecified ) { * exitStatusSpecified = true; }
 	}
 
 	bool desiredExitBySignal = false;
 	std::string exitBySignal = "Success" + prefix + "ExitBySignal";
+	if( prefix.empty() ) { exitBySignal = "JobSuccessExitBySignal"; }
 	ad->LookupBool( exitBySignal, desiredExitBySignal );
 
 	int desiredExitStatus = 0;

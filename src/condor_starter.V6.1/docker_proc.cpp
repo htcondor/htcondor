@@ -165,17 +165,17 @@ int DockerProc::StartJob() {
 	recoveryAd.Assign("DockerContainerName", containerName);
 	Starter->WriteRecoveryFile(&recoveryAd);
 
-	int childFDs[3] = { 0, 0, 0 }; 
+	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
 	std::string workingDir = Starter->GetWorkingDir();
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
 	std::string DockerErrorFile  = workingDir + "/docker_stderror";
 
-	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	}
-	  
+
 	  // Ulog the execute event
 	Starter->jic->notifyJobPreSpawn();
 

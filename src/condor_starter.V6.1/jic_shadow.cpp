@@ -479,10 +479,10 @@ JICShadow::transferOutput( bool &transient_failure )
 		if (m_wrote_chirp_config) {
 			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
 		}
-	
+
 			// true if job exited on its own or if we are set to not spool
 			// on eviction.
-		bool final_transfer = !spool_on_evict || (requested_exit == false);	
+		bool final_transfer = !spool_on_evict || (requested_exit == false);
 
 			// For the final transfer, we obey the output file remaps.
 		if (final_transfer) {
@@ -507,7 +507,11 @@ JICShadow::transferOutput( bool &transient_failure )
 
 		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
 			// this will block
-		m_ft_rval = filetrans->UploadFiles( true, final_transfer );
+		if( job_failed && final_transfer ) {
+			m_ft_rval = filetrans->UploadFailureFiles( true );
+		} else {
+			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
+		}
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
 
@@ -515,8 +519,8 @@ JICShadow::transferOutput( bool &transient_failure )
 		if (strlen(stats) != 0) {
 			std::string full_stats = "(peer stats from starter): ";
 			full_stats += stats;
-		
-			if (shadow_version && shadow_version->built_since_version(8, 5, 8)) 
+
+			if (shadow_version && shadow_version->built_since_version(8, 5, 8))
 			{
 				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
 			}
@@ -3245,4 +3249,10 @@ JICShadow::receiveMachineAd( Stream *stream )
 	}
 
 	return ret_val;
+}
+
+
+void
+JICShadow::setJobFailed( void ) {
+	job_failed = true;
 }

@@ -6141,7 +6141,7 @@ void CreateProcessForkit::exec() {
 		// close the read end of our error pipe and set the
 		// close-on-exec flag on the write end
 	close(m_errorpipe[0]);
-	fcntl(m_errorpipe[1], F_SETFD, FD_CLOEXEC);
+	dummyGlobal = fcntl(m_errorpipe[1], F_SETFD, FD_CLOEXEC);
 
 		/********************************************************
 			  Make sure we're not about to re-use a PID that

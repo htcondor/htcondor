@@ -213,6 +213,7 @@ public:
 			true if the failure is deemed transient and will therefore
 			be automatically tried again (e.g. when the shadow reconnects).
 		*/
+	virtual void setJobFailed( void );
 	virtual bool transferOutput( bool &transient_failure ) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 
