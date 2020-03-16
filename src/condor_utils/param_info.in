@@ -6347,4 +6347,19 @@ win32_default : @end
 @end
 
 
+[$FEATURE.KRBAFS]
+description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
+default : @end
+if $(1?)
+	#submit node
+	DAEMON_LIST=$(DAEMON_LIST),CREDD,CREDMON_KRB
+	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/krb_cred_producer
+	USE_KEYRING_SESSIONS=TRUE
+else
+	#exec node
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	USE_KEYRING_SESSIONS=TRUE
+endif
+@end
+
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
