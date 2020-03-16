@@ -71,27 +71,28 @@ extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 /* CStarter class implementation */
 
-CStarter::CStarter()
+CStarter::CStarter() : 
+	jic(NULL),
+	m_deferred_job_update(false),
+	job_exit_status(0),
+	jobUniverse(CONDOR_UNIVERSE_VANILLA),
+	Execute(NULL),
+	orig_cwd(NULL),
+	is_gridshell(false),
+	ShuttingDown(FALSE),
+	starter_stdin_fd(-1),
+	starter_stdout_fd(-1),
+	starter_stderr_fd(-1),
+	suspended(false),
+	deferral_tid(-1),
+	pre_script(NULL),
+	post_script(NULL),
+	m_privsep_helper(NULL),
+	m_configured(false),
+	m_job_environment_is_ready(false),
+	m_all_jobs_done(false),
+	m_shutdown_exit_code(STARTER_EXIT_NORMAL)
 {
-	Execute = NULL;
-	orig_cwd = NULL;
-	is_gridshell = false;
-	ShuttingDown = FALSE;
-	jic = NULL;
-	jobUniverse = CONDOR_UNIVERSE_VANILLA;
-	pre_script = NULL;
-	post_script = NULL;
-	starter_stdin_fd = -1;
-	starter_stdout_fd = -1;
-	starter_stderr_fd = -1;
-	deferral_tid = -1;
-	suspended = false;
-	m_privsep_helper = NULL;
-	m_configured = false;
-	m_job_environment_is_ready = false;
-	m_all_jobs_done = false;
-	m_deferred_job_update = false;
-	m_shutdown_exit_code = STARTER_EXIT_NORMAL;
 }
 
 
