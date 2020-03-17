@@ -28,6 +28,10 @@ Bugs Fixed:
    reported either zero or the current memory usage. 
    :ticket:`7527`
 
+-  Fixed a bug that prevented jobs with *stream_output* or *stream_error*
+   to append to a file greater than 2Gb when running with a 32 bit shadow
+   :ticket:`7547`
+
 -  The *condor_annex* tool can again use Spot Fleets, after an unnannounced
    API change by Amazon Web Services.
    :ticket:`7489`
