@@ -87,7 +87,7 @@ static bool handleFTL(int error) {
 // the full container ID as (part of) the cgroup identifier(s).
 //
 
-DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1), shouldAskForServicePorts(false) { }
+DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), max_memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1), shouldAskForServicePorts(false) { }
 
 DockerProc::~DockerProc() { 
 	if ( daemonCore && daemonCore->SocketIsRegistered(&listener)) {
@@ -318,8 +318,9 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
 		// Start a timer to poll for job usage updates.
-		updateTid = daemonCore->Register_Timer(2, 
-				20, (TimerHandlercpp)&DockerProc::getStats, 
+		int polling_interval = param_integer("POLLING_INTERVAL",5);
+		updateTid = daemonCore->Register_Timer(2,
+				polling_interval, (TimerHandlercpp)&DockerProc::getStats, 
 					"DockerProc::getStats",this);
 
 		SetupDockerSsh();
@@ -767,6 +768,15 @@ DockerProc::getStats() {
 		}
 	}
 	DockerAPI::stats(containerName, memUsage, netIn, netOut, userCpu, sysCpu);
+
+	// Since we typically will poll the Docker daemon for memory usage
+	// at a higher rate than we update the shadow, keep the maximum observed
+	// memory usage here in the starter (and use max_memUsage to update the shadow).
+	if (memUsage > max_memUsage) {
+		max_memUsage = memUsage;
+	}
+
+	return;
 }
 
 bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
@@ -790,12 +800,12 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	// TODO: We could approximate job_start_time and job_exit_time internally,
 	// or set them during our status polling.
 	//
-
-	if (memUsage > 0) {
+	
+	if (max_memUsage > 0) {
 		// Set RSS, Memory and ImageSize to same values, best we have
-		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(memUsage / 1024));
-		ad->Assign(ATTR_MEMORY_USAGE, int(memUsage / (1024 * 1024)));
-		ad->Assign(ATTR_IMAGE_SIZE, int(memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(max_memUsage / 1024));
+		ad->Assign(ATTR_MEMORY_USAGE, int(max_memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_IMAGE_SIZE, int(max_memUsage / (1024 * 1024)));
 		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1000 * 1000));
 		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1000 * 1000));
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int) (userCpu / (1000l * 1000l * 1000l)));
