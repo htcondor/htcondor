@@ -63,7 +63,7 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	unsigned char *keybuf = Condor_Crypt_Base::randomKey(keylen);
 	size_t i;
 	for(i=0;i<keylen;i++) {
-		formatstr(m_connect_id,"%02x",keybuf[i]);
+		formatstr_cat(m_connect_id,"%02x",keybuf[i]);
 	}
 	free( keybuf );
 }
