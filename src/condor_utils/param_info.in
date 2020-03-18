@@ -5410,11 +5410,6 @@ default=$(SBIN)/condor_krbafs_credmon
 win32_default=
 type=path
 
-[SEC_CREDENTIAL_DIRECTORY_KRB]
-default=/var/condor/credentials.d/krb
-win32_default=
-type=path
-
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
@@ -6352,11 +6347,14 @@ description=Enable the daemons and features need to support running jobs with kr
 default : @end
 if $(1?)
 	#submit node
+	SEC_CREDENTIAL_DIRECTORY_KRB=/var/condor/credentials.d/krb
 	DAEMON_LIST=$(DAEMON_LIST),CREDD,CREDMON_KRB
 	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/krb_cred_producer
 	USE_KEYRING_SESSIONS=TRUE
+
 else
 	#exec node
+	SEC_CREDENTIAL_DIRECTORY_KRB=/var/condor/credentials.d/krb
 	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
 	USE_KEYRING_SESSIONS=TRUE
 endif
