@@ -2158,7 +2158,7 @@ fi
 %endif
 
 %changelog
-* Mon Apr 04 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
 - Fixes addressing CVE-2019-18823
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
