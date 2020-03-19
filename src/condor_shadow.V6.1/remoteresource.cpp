@@ -1552,6 +1552,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
+			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
