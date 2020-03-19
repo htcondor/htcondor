@@ -3423,7 +3423,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 		sub = atoi(components.next());
 		CondorVersionInfo cvi(maj,min,sub, "ExportedSessionInfo");
 		policy.Assign(ATTR_SEC_REMOTE_VERSION, cvi.get_version_stdstring());
-		dprintf (D_SECURITY|D_VERBOSE, "IMPORT: Version components are %i:%i:%i, set Version to %s\n", maj, min, sub, cvi.get_version_string());
+		dprintf (D_SECURITY|D_VERBOSE, "IMPORT: Version components are %i:%i:%i, set Version to %s\n", maj, min, sub, cvi.get_version_stdstring().c_str());
 	}
 
 	return true;
