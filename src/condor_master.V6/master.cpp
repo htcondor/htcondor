@@ -1308,6 +1308,34 @@ init_daemon_list()
 			}
 		}
 
+		if(param_defined("SEC_CREDENTIAL_PRODUCER")) {
+			// if there is a SEC_CREDENTIAL_PRODUCER defined, then
+			// it means we want to run a CREDD if this is a submit
+			// machine.  check to see if a SCHEDD is in the DAEMON_LIST
+			// and if so, make sure there is also a CREDD.
+			//
+			// defining SEC_CREDENTIAL_PRODUCER on an execute machine
+			// should have no effect.  that's why checking for a SCHEDD
+			// is the right thing to do.
+			//
+			// this behavior can be disabled with AUTO_INCLUDE_CREDD_IN_DAEMON_LIST
+			//
+			if( param_boolean("AUTO_INCLUDE_CREDD_IN_DAEMON_LIST", true)) {
+				if (daemon_names.contains("SCHEDD")) {
+					if (!daemon_names.contains("CREDD")) {
+						dprintf(D_ALWAYS, "KRBAFS: Adding CREDD to DAEMON_LIST, because SEC_CREDENTIAL_PRODUCER is defined and this machine is running a SCHEDD (to disable this, set AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=False)\n");
+						daemon_names.append("CREDD");
+					} else {
+						dprintf(D_SECURITY|D_VERBOSE, "KRBAFS: CREDD is already explicitly in DAEMON_LIST.\n");
+					}
+				} else {
+					dprintf(D_SECURITY|D_VERBOSE, "KRBAFS: SEC_CREDENTIAL_PRODUCER is defined, but NOT adding CREDD to DAEMON_LIST because this machine is not running a SCHEDD.\n");
+				}
+			} else {
+				dprintf(D_SECURITY|D_VERBOSE, "KRBAFS: SEC_CREDENTIAL_PRODUCER is defined, but NOT adding CREDD to DAEMON_LIST because AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is false.\n");
+			}
+		}
+
 		daemons.ordered_daemon_names.create_union( daemon_names, false );
 
 		daemon_names.rewind();
