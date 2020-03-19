@@ -98,6 +98,8 @@ public:
 		// Returns NULL on error.
 	char *get_version_string() const;
 
+	std::string get_version_stdstring() const;
+
 	typedef struct VersionData {
 		int MajorVer;
 		int MinorVer;
@@ -118,8 +120,6 @@ private:
 								 const char *rest, VersionData_t &ver ) const;
 	bool string_to_VersionData(const char *,VersionData_t &) const;
 	bool string_to_PlatformData(const char *,VersionData_t &) const;
-
-	char *VersionData_to_string(VersionData_t const &ver) const;
 };
 
 

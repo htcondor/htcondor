@@ -26,10 +26,31 @@ Release Notes:
 
 New Features:
 
+- You may now specify that HTCondor only transfer files when the job
+  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
+  to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
+  job exits (in the sense of ``ON_EXIT``) with the specified sucess code.  This
+  is intended to prevent unsuccesful jobs from going on hold because they
+  failed to produce the expected output (file(s)).
+  :ticket:`7270`
+
+- HTCondor may now preserve the relative paths you specify when transferring
+  files.  See the :doc:`/man-pages/condor_submit` man page about
+  ``preserve_relative_paths``.
+  :ticket:`7338`
+
+- You may now specify a distinct list of files for use with the vanilla
+  universe's support for application-level checkpointing
+  (``checkpoint_exit_code``).  Use ``transfer_checkpoint_files`` if you'd
+  like to shorten your ``transfer_output_files`` list by removing files
+  only needed for checkpoints.  See the :doc:`/man-pages/condor_submit`
+  man page.
+  :ticket:`7269`
+
 - HTCondor now offers a submit command, ``cuda_version``, so that jobs can
   describe which CUDA version (if any) they use.  HTCondor will use that
   information to match the job with a machine whose driver supports that
-  version of CUDA.  See the *condor_submit* man page.
+  version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
 
 - When worker nodes are running on CPUs that support the AVX512 instructions,

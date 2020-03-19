@@ -860,6 +860,7 @@
 #define ATTR_SEC_SID  "Sid"
 #define ATTR_SEC_SUBSYSTEM  "Subsystem"
 #define ATTR_SEC_REMOTE_VERSION  "RemoteVersion"
+#define ATTR_SEC_SHORT_VERSION  "ShortVersion"
 #define ATTR_SEC_SERVER_ENDPOINT  "ServerEndpoint"
 #define ATTR_SEC_SERVER_COMMAND_SOCK  "ServerCommandSock"
 #define ATTR_SEC_SERVER_PID  "ServerPid"

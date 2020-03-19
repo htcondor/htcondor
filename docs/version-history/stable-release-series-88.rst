@@ -23,6 +23,11 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug whereby the ``MemoryUsage`` attribute in the job classad for a Docker Universe job
+   failed to report the maximum memory usage of the job, but instead
+   reported either zero or the current memory usage. 
+   :ticket:`7527`
+
 -  Fixed a bug that prevented jobs with *stream_output* or *stream_error*
    to append to a file greater than 2Gb when running with a 32 bit shadow
    :ticket:`7547`

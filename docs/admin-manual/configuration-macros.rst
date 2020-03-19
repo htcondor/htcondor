@@ -5993,7 +5993,8 @@ condor_submit Configuration File Entries
     *condor_submit* retry feature is used. (Note that this value is
     only relevant if either **retry_until** or **success_exit_code**
     is defined in the submit file, and **max_retries** is not.) (See
-    :doc:`/man-pages/condor_submit`) The default value if not defined is 2.
+    the :doc:`/man-pages/condor_submit` man page.) The default value
+    if not defined is 2.
 
 If you want *condor_submit* to automatically append an expression to
 the ``Requirements`` expression or ``Rank`` expression of jobs at your

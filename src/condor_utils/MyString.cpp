@@ -386,13 +386,21 @@ template <class T> bool YourStringDeserializer::deserialize_int(T* val)
 	if (std::numeric_limits<T>::is_signed) {
 		long long tmp;
 		tmp = strtoll(m_p, &endp, 10);
-		if (tmp < (long long)std::numeric_limits<T>::min() || tmp > (long long)std::numeric_limits<T>::max()) return false;
+
+			// following code is dead if T is 64 bits
+		if (sizeof(T) != sizeof(long long)) {
+				if (tmp < (long long)std::numeric_limits<T>::min() || tmp > (long long)std::numeric_limits<T>::max()) return false;
+		}
 		if (endp == m_p) return false;
 		*val = (T)tmp;
 	} else {
 		unsigned long long tmp;
 		tmp = strtoull(m_p, &endp, 10);
-		if (tmp > (unsigned long long)std::numeric_limits<T>::max()) return false;
+
+			// following code is dead if T is 64 bits
+		if (sizeof(T) != sizeof(long long)) {
+			if (tmp > (unsigned long long)std::numeric_limits<T>::max()) return false;
+		}
 		if (endp == m_p) return false;
 		*val = (T)tmp;
 	}
