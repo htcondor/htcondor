@@ -1311,16 +1311,16 @@ init_daemon_list()
 		if( param_boolean("AUTO_INCLUDE_CREDD_IN_DAEMON_LIST", false)) {
 			if (daemon_names.contains("SCHEDD")) {
 				if (!daemon_names.contains("CREDD")) {
-					dprintf(D_ALWAYS, "KRBAFS: Adding CREDD to DAEMON_LIST, because this machine is running a SCHEDD and AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is TRUE)\n");
+					dprintf(D_ALWAYS, "Adding CREDD to DAEMON_LIST.  This machine is running a SCHEDD and AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is TRUE)\n");
 					daemon_names.append("CREDD");
 				} else {
-					dprintf(D_SECURITY|D_VERBOSE, "KRBAFS: This machine is running a SCHEDD and CREDD is already explicitly in DAEMON_LIST.\n");
+					dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST. This machine is running a SCHEDD and CREDD is already explicitly listed.\n");
 				}
 			} else {
-				dprintf(D_SECURITY|D_VERBOSE, "KRBAFS: AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is TRUE, but NOT adding CREDD to DAEMON_LIST because this machine is not running a SCHEDD.\n");
+				dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST.  AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is TRUE, but this machine is not running a SCHEDD.\n");
 			}
 		} else {
-			dprintf(D_SECURITY|D_VERBOSE, "KRBAFS: Not modifying DAEMON_LIST because AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is false.\n");
+			dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST.  AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is false.\n");
 		}
 
 		daemons.ordered_daemon_names.create_union( daemon_names, false );
