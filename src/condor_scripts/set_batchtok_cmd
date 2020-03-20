@@ -1,0 +1,276 @@
+#!/usr/bin/perl -w
+###########################################################################
+# DESY HTCondor Config                                                    #
+# set_batchtok_cmd <username> <period in sec> {tokenfile} {prolong|renew} #
+# Thomas.Finnern@desy.de
+# Version 1.3
+###########################################################################
+
+use strict;
+use File::Temp;
+use Time::Local;
+use constant { true => 1, false => 0 };
+
+#$ENV{'PATH'} = '/usr/bin:/bin:/usr/local/bin';
+# klist on sld5 must come from kerberos, not heimdal
+# $ENV{'PATH'} = '/usr/kerberos/bin:/opt/products/bin:/usr/bin:/bin:/usr/local/bin:/usr/heimdal/bin/:/usr/sue/bin';
+$ENV{'LC_TIME'} = 'en_US'; # proper date format for parsing klist and ticket times
+
+
+my $procid = $$;
+my $retval = 0;
+
+# ================== config
+# enable debugging - $debugfile is filled with useful information 
+my $debug = 1;
+
+my $condor_log = `condor_config_val LOG`;
+chomp($condor_log);
+my $debugfile = "$condor_log/set_token_cmd.log";
+
+my $condor_sbin = `condor_config_val SBIN`;
+chomp($condor_sbin);
+my $condor_aklog = "$condor_sbin/condor_aklog";
+
+# if hundreds of job are submitted at a time it can be difficult to get a
+# ticket, because kstart is overloaded. Therefore bogdan delayed each
+# set_token_cmd-call for a random amount of seconds
+my $maxdelay = 30; # seconds
+my $maxretries = 5; # max number of retries
+
+my $hostname = `hostname`;
+chop $hostname;
+# ================== config end
+
+my $DFILE;
+if ($debug) {
+	open ($DFILE,">>$debugfile") or $debug = 0;
+	dmessage(">>>>>>>>>>");
+}
+dmessage("===========================");
+dmessage("set_batchtok_cmd called at: ", scalar localtime," with arguments: ", join(" ",@ARGV));
+
+# Check if you are in condor/sge or manually
+my $shepherding = false;
+my $batchsystem = "";
+my $envfile = $ENV{'_CONDOR_JOB_AD'};
+if ($envfile && -f $envfile) {
+	dmessage("Environment Found $envfile");
+	$shepherding = true;
+} else {
+	$shepherding = false;
+}
+if (-f $condor_aklog) {
+	$batchsystem = "htc";
+} elsif (-d "/usr/sge/") {
+	$batchsystem = "sge";
+}
+dmessage("Environment: Shepherding=\"$shepherding\", Batch System=\"$batchsystem\"");
+	
+# evaluate parameters
+my $username = $ARGV[0];
+my $period = $ARGV[1];
+my $krb5ccname = defined $ARGV[2] ? "$ARGV[2]" :  "";
+my $tmode = defined $ARGV[3] ? "$ARGV[3]" :  "";
+my ($prolong, $renew ) = false;
+if ($tmode eq "prolong") {
+	$prolong = true;
+	$renew = false;
+} elsif ($tmode eq "renew") {
+	$prolong = false;
+	$renew = true;
+} elsif ($batchsystem eq "sge") {
+	$tmode = "renew";
+	$prolong = false;
+	$renew = true;
+} else {
+	$tmode = "none";
+	$prolong = false;
+	$renew = false;
+}
+
+my ($ticket) = "";
+if ($krb5ccname =~ /^FILE:(.*)$/) {
+	$ticket = $1;
+	$ENV{'KRB5CCNAME'} = "$krb5ccname";
+} elsif ( -f $krb5ccname ) {
+	$ticket = $krb5ccname;
+	$krb5ccname = "FILE:$ticket";
+	$ENV{'KRB5CCNAME'} = "$krb5ccname";
+} elsif ( $ENV{'KRB5CCNAME'} =~ /^FILE:(.*)$/) {
+	$ticket = $1;
+	$krb5ccname = "FILE:$ticket"
+} else {
+	#$ticket = "/tmp/krb5cc_${pwuid}_p.$$";
+	$ticket = "/tmp/krb5cc_${username}_p.$$";
+	$ENV{'KRB5CCNAME'} = "FILE:$ticket";
+}
+
+unless ($username && $period) {
+	print STDERR "parameter constellation is not as expected.\n";
+	$retval = 1;
+	goto cleanup;
+}
+
+dmessage("Mode: $tmode for $ticket");
+
+my $TokenType = "kerberos5";
+
+# Check Ticket:
+my $timeflag = 0;
+my ($screate) = 0;
+my ($svalid) = 0;
+my ($sexpire) = 0;
+my ($snow) = time();
+if (-f $ticket ) {
+	#open(my $T, '-|', "klist $ticket");
+	#open(T, "klist $ticket |");
+	#while (my $line = <$T>) {
+	#while (<T>) {
+	my $lines = `klist $ticket`;
+	foreach my $line (split /\n/, $lines) {
+		#my ($line) = $_;
+		#print "XXX:$line";
+		if ($line =~ /^.*FILE:(.*)$/ ) {
+			#print "Using file \"$1\"\n";
+			$timeflag = 0;
+		} elsif ($line =~ /^Default principal: (.*)\@(.*)$/ ) {
+			#print "for User \"$1\" (Domain $2) (Required: \"$username\")\n";
+			$timeflag = 0;
+		} elsif ($line =~ /^Valid(.*)$/ ) {
+			$timeflag = 1;
+		} elsif ($timeflag eq 1) {
+			my ($dcreate, $tcreate, $dexpire, $texpire, $dummy1) = split(/[ ]+/, $line);
+			#print "Times $line\n";
+			$screate = parsedate($dcreate, $tcreate) - $snow;
+			$sexpire = parsedate($dexpire, $texpire) - $snow;
+			#printf "Ticket: Created before %+ 7.2f hours (%s, %s)\n", $screate / 3600, "$dcreate", "$tcreate";
+			#printf "Ticket: Expires     in %+ 7.2f hours (%s, %s)\n", $sexpire / 3600, "$dexpire", "$texpire";
+			$timeflag = 2;
+		} elsif ($timeflag eq 2) {
+			my ($dummy2, $dummy3, $dvalid, $tvalid, $dummy4) = split(/[ ]+/, $line);
+			#print "Renew $line\n";
+			chomp($tvalid);
+			$svalid = parsedate($dvalid, $tvalid) - $snow;
+			#$svalid = 0 if (!$svalid);
+			#printf "Ticket: Valid      for %+ 7.2f hours (%s, %s)\n", $svalid / 3600, "$dvalid", "$tvalid";
+			$timeflag = 3;
+			last;
+#		} else {
+#			print "Undefined $timeflag\n";
+		}
+	}
+	#close($T);
+	#close(T);
+}
+
+
+# Actions:
+my ($onescale) = 1;
+my ($onehour) = 60 * 60 * $onescale;
+my ($oneday) = 60 * 60 * 24 * $onescale;
+my ($oneweek) = 60 * 60 * 24 * 7 * $onescale;
+my ($myjob) = "undefined";
+
+# if !$renew and valid cert and expired
+if (!$renew && $timeflag eq 3 && $sexpire <= 0) {
+	$myjob = "mark_expired";
+	if ($ticket =~ /^(.*)\..*$/) {
+		dmessage("Ticket for $username is invalid for ", $svalid / 60, " minutes. Marking $1.mark");
+		system("touch $1.mark");
+	} else {
+		dmessage("Ticket for $username is invalid for ", $svalid / 60, " minutes. Marking $ticket.mark");
+		system("touch $ticket.mark");
+	}
+	goto cleanup;
+# if !$prolong|$renew or invalid or less than a week to become invalid
+} elsif (!$prolong && (($renew || $timeflag ne 3 ) || ( $svalid <= $oneweek || $sexpire <= 0))) {
+	dmessage("Creating Ticket for $username (Valid for ", $svalid / 60 / 60, " hours)");
+	$myjob = "create";
+# Prolong if created more than an hour before 
+} elsif ($screate <= -$onehour) {
+	dmessage("Prolonging Ticket for $username after ", $screate / 60, " minutes");
+	$myjob = "prolong";
+	system("kinit -R");
+	runaklog("Prolong");
+	$retval = $?;
+	goto cleanup;
+# Noop if create less than an hour before
+} elsif ($screate > -$onehour) {
+	dmessage("Next Ticket Renewal for $username in ", $onehour + $screate, " seconds");
+	$myjob = "keep";
+	runaklog("Keep");
+	#$retval = 1;
+	goto cleanup;
+# else ticket stays valid
+} else {
+	dmessage("Ticket for $username is valid for ", $svalid / 60, " minutes");
+	$myjob = "valid";
+	goto cleanup;
+}
+
+
+#$ENV{'PGPPATH'}='/var/lib/condor/util/pgp_batch';
+#$ENV{'PGPPASS'}="rtb\@desy.de";
+for (my $retry = $maxretries; $retry != 0; $retry--) {
+	my ($tokentest);
+	runaklog("Create");
+	#system("klist");
+	#$tokentest = `tokens | grep afs | grep Expires`;
+	$tokentest = `klist | grep krbtgt/`;
+	#system ("echo Test;klist") if $debug;
+	if ($tokentest) {
+		dmessage("ARC: Testing: SetToken Ok");
+		last;
+	} else {
+		dmessage("ARC: Testing: SetToken Problem");
+		next if $retry;
+		$retval = 99;
+		goto cleanup;
+	}
+}
+
+cleanup:
+# deleting the temporary CC is done by the object-destruction automatically, if $keepkrbccfile == 0
+
+dmessage ("My Job was $myjob for $username");
+
+close($DFILE) if $debug;
+
+exit $retval;
+
+sub dmessage
+{
+	print $DFILE "$procid:", join("",@_), "\n" if $debug;
+}
+sub message
+{
+	print join("",@_),"\n" if $debug;
+}
+
+sub runaklog {
+	#if ($batchsystem eq "htc" && $shepherding) {
+	if ($batchsystem eq "htc") {
+		dmessage(join("",@_).": Running $condor_aklog");
+		system($condor_aklog);
+	} else {
+		dmessage(join("",@_).": Running aklog");
+		system("aklog");
+	}
+}
+
+sub parsedate {
+  my($s) = "$_[0] $_[1]";
+  my($year, $month, $day, $hour, $minute, $second);
+
+  if($s =~ m{^\s*(\d{1,2})\W*0*(\d{1,2})\W*0*(\d{1,4})\W*(\d{0,2})\W*(\d{0,2})\W*(\d{0,2})}x) {
+    $year = $3;  $month = $1;   $day = $2;
+    $hour = defined $4 ? $4 : 0;  $minute = defined $5 ? $5 : 0;  $second = defined $6 ? $6 : 0;
+    #$hour //= 0;  $minute //= 0;  $second //= 0;  # defaults.
+    $year = ($year<100 ? ($year<70 ? 2000+$year : 1900+$year) : $year);
+    return timelocal($second,$minute,$hour,$day,$month-1,$year);
+  }
+  return -1;
+}
+
+
