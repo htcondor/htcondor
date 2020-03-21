@@ -28,18 +28,25 @@ class CapabilitySet;
 class CapabilityToken {
 public:
     CapabilityToken(int command, const std::string &server,
-    const std::string &value, const std::string &info)
-      : m_command(command),
-        m_server(server),
-        m_value(value),
-        m_info(info)
+         const std::string &value, const std::string &info)
+       : m_command(command),
+         m_server(server),
+         m_value(value),
+         m_info(info)
     {}
 
+    CapabilityToken(boost::python::object command, const std::string &server,
+    const std::string &value, const std::string &info);
+
     int command() const {return m_command;}
+    std::string commandString() const;
     std::string server() const {return m_server;}
     std::string get() const {return m_value;}
+    std::string getPython() const {return pythonFormat(m_value);}
     std::string info() const {return m_info;}
 
+    static std::string pythonFormat(const std::string &);
+    static std::string condorFormat(const std::string &);
 private:
     const int m_command; // Command integer for this capability
     const std::string m_server; // The sinful string for the remote host.
@@ -55,7 +62,8 @@ public:
     void invalidateAllCache();
     boost::shared_ptr<ClassAdWrapper> ping(boost::python::object locate_obj, boost::python::object command_obj=boost::python::object("DC_NOP"));
 
-    std::string getCommandString(int cmd);
+    std::string getCommandString(int cmd) {return getCommandStringStatic(cmd);}
+    static std::string getCommandStringStatic(int cmd);
     int getCommandNumber(const std::string &cmd);
 
     boost::python::object getCapabilityTokens(boost::python::object locate_obj,

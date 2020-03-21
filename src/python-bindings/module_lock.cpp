@@ -180,10 +180,9 @@ ModuleLock::release()
     m_token_orig = "";
 
     if (m_restore_orig_capability) {
-        SecMan::setCapabilities(*m_capability_orig);
+        SecMan::clearCapabilities();
     }
     m_restore_orig_capability = false;
-    m_capability_orig = nullptr;
 
     if (m_restore_orig_tag) {
         SecMan::setTag(m_tag_orig);

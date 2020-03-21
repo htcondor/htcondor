@@ -25,14 +25,60 @@
 using namespace boost::python;
 
 
+static int getCommand(object command);
+
+
 struct CapabilityTokenPickle : boost::python::pickle_suite
 {
-	static boost::python::tuple
-	getinitargs(const CapabilityToken& cap_token)
-	{
-		return boost::python::make_tuple(cap_token.get());
-	}
+    static boost::python::tuple
+    getinitargs(const CapabilityToken& cap_token)
+    {
+        return boost::python::make_tuple(cap_token.get());
+    }
 };
+
+
+std::string
+CapabilityToken::commandString() const
+{
+    return SecManWrapper::getCommandStringStatic(command());
+}
+
+
+CapabilityToken::CapabilityToken(boost::python::object command, const std::string &server,
+    const std::string &value, const std::string &info)
+  : m_command(getCommand(command)),
+    m_server(server),
+    m_value(condorFormat(value)),
+    m_info(info)
+{}
+
+
+// Translate tokens from python-format to condor-format:
+//     Python format: 250149c73b82f55c.309aaf9e407e5a2c8fde806f8149902a9c42187744bc24e1510e2ac576059f3b
+//     Condor format: 250149c73b82f55c#[]309aaf9e407e5a2c8fde806f8149902a9c42187744bc24e1510e2ac576059f3b
+std::string
+CapabilityToken::condorFormat(const std::string &pythonFormat)
+{
+    auto pos = pythonFormat.find('.');
+    if (pos == std::string::npos) {
+        THROW_EX(ValueError, "Capability string is missing '.' character")
+    }
+    std::string first_part = pythonFormat.substr(0, pos);
+    return pythonFormat.substr(0, pos) + "#[]" + pythonFormat.substr(pos + 1);
+}
+
+
+std::string
+CapabilityToken::pythonFormat(const std::string &condorFormat)
+{
+    auto pos = condorFormat.find("#[]");
+    if (pos == std::string::npos) {
+        THROW_EX(ValueError, "Capability string is missing '.' character")
+    }
+    std::string first_part = condorFormat.substr(0, pos);
+    return condorFormat.substr(0, pos) + "." + condorFormat.substr(pos + 3);
+}
 
 
 class Token {
@@ -184,7 +230,8 @@ public:
             }
             if (last_iteration) {
                 if (done()) {
-                    return Token(m_token);                                                                                              } else {
+                    return Token(m_token);
+                } else {
                     THROW_EX(RuntimeError, "Timed out waiting for token approval");
                 }
             }
@@ -333,7 +380,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
 }
 
 std::string
-SecManWrapper::getCommandString(int cmd)
+SecManWrapper::getCommandStringStatic(int cmd)
 {
         return ::getCommandString(cmd);
 }
@@ -407,9 +454,9 @@ SecManWrapper::getCapabilityTokens(boost::python::object locate_obj,
         THROW_EX(RuntimeError, err.getFullText().c_str());
     }
 
-    boost::python::object result_obj = boost::python::dict();
+    boost::python::list result_obj = boost::python::list();
     for (auto entry : result) {
-        result_obj[entry.first] = CapabilityToken(entry.first, addr, entry.second, session_info);
+        result_obj.append(CapabilityToken(entry.first, addr, entry.second, session_info));
     }
     return result_obj;
 }
@@ -617,16 +664,17 @@ export_secman()
             A class representing a generated HTCondor authentication token for a single command.
 
             :param command: The command integer associated with this token.
-            :type command: int
+            :type command: int or str
             :param 
             :param contents: The contents of the token.
             :type contents: str
             )C0ND0R",
-            boost::python::init<int, std::string, std::string, std::string>(
+            boost::python::init<boost::python::object, std::string, std::string, std::string>(
                 (boost::python::arg("self"), boost::python::arg("command"),
                  boost::python::arg("server"), boost::python::arg("contents"),
                  boost::python::arg("info"))))
-        .def("get", &CapabilityToken::get) // TODO: remove before final release.
+        .def("token", &CapabilityToken::getPython)
+        .def("command", &CapabilityToken::commandString)
         .def_pickle(CapabilityTokenPickle());
 
     class_<SecManWrapper>("SecMan",

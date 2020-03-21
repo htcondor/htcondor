@@ -87,7 +87,6 @@ private:
     std::string m_password_orig;
     char * m_proxy_orig;
     std::string m_token_orig;
-    CapabilitySet *m_capability_orig;
 };
 
 }

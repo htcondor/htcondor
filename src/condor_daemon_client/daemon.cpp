@@ -2858,13 +2858,13 @@ Daemon::getCapabilityTokens( const std::vector<int> &req_caps, int duration,
 	}
 
 	if (command_list.size() != capability_list.size()) {
-		err.pushf("DAEMON", 2, "Received a list of %d commands and %d capabilities;"
+		err.pushf("DAEMON", 2, "Received a list of %lu commands and %lu capabilities;"
 			" these lengths must match!", command_list.size(), capability_list.size());
-		dprintf(D_FULLDEBUG, "Received a list of %d commands and %d capabilities;"
+		dprintf(D_FULLDEBUG, "Received a list of %lu commands and %lu capabilities;"
 			" these lengths must match!", command_list.size(), capability_list.size());
 		return false;
 	}
-	for (int idx=0; idx<command_list.size(); idx++) {
+	for (size_t idx=0; idx<command_list.size(); idx++) {
 		result[command_list[idx]] = capability_list[idx];
 	}
 
