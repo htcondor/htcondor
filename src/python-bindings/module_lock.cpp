@@ -125,6 +125,11 @@ ModuleLock::acquire()
         SecMan::setToken(p);
     }
 
+    auto local_cap = SecManWrapper::getThreadLocalCapability();
+    if ((m_restore_orig_capability = local_cap)) {
+        SecMan::setCapabilities(*local_cap);
+    }
+
     p = SecManWrapper::getThreadLocalGSICred();
     m_restore_orig_proxy = p!=NULL;
     if (m_restore_orig_proxy) {
@@ -173,6 +178,12 @@ ModuleLock::release()
     }
     m_restore_orig_token = false;
     m_token_orig = "";
+
+    if (m_restore_orig_capability) {
+        SecMan::setCapabilities(*m_capability_orig);
+    }
+    m_restore_orig_capability = false;
+    m_capability_orig = nullptr;
 
     if (m_restore_orig_tag) {
         SecMan::setTag(m_tag_orig);

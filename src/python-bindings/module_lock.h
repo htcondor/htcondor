@@ -44,6 +44,8 @@ private:
 	bool auto_free;
 };
 
+class CapabilitySet;
+
 namespace condor {
 
 class ModuleLock {
@@ -65,6 +67,7 @@ private:
     bool m_restore_orig_tag;   // true when we have a m_tag_orig to restore on release
     bool m_restore_orig_password; // true when we have a m_password_orig to restore on release
     bool m_restore_orig_token;
+    bool m_restore_orig_capability{false};
     static MODULE_LOCK_MUTEX_TYPE m_mutex;
 #ifdef WIN32
     // We will initialize the mutex in a global constructor, but until it's initialized it can't be used
@@ -84,6 +87,7 @@ private:
     std::string m_password_orig;
     char * m_proxy_orig;
     std::string m_token_orig;
+    CapabilitySet *m_capability_orig;
 };
 
 }

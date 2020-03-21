@@ -23,14 +23,28 @@
 class ConfigOverrides;
 class Token;
 
+class CapabilitySet;
+
 class CapabilityToken {
 public:
-    CapabilityToken(const std::string &value) : m_value(value) {}
+    CapabilityToken(int command, const std::string &server,
+    const std::string &value, const std::string &info)
+      : m_command(command),
+        m_server(server),
+        m_value(value),
+        m_info(info)
+    {}
 
-    const std::string &get() const {return m_value;}
+    int command() const {return m_command;}
+    std::string server() const {return m_server;}
+    std::string get() const {return m_value;}
+    std::string info() const {return m_info;}
 
 private:
-    const std::string m_value;
+    const int m_command; // Command integer for this capability
+    const std::string m_server; // The sinful string for the remote host.
+    const std::string m_value;  // The actual capability contents
+    const std::string m_info;   // The session info we want for this token.
 };
 
 struct SecManWrapper
@@ -44,7 +58,7 @@ public:
     std::string getCommandString(int cmd);
     int getCommandNumber(const std::string &cmd);
 
-    std::unordered_map<int, std::string> getCapabilityTokens(boost::python::object locate_obj,
+    boost::python::object getCapabilityTokens(boost::python::object locate_obj,
         boost::python::object req_list, int duration);
 
     static boost::shared_ptr<SecManWrapper> enter(boost::shared_ptr<SecManWrapper> obj);
@@ -54,11 +68,13 @@ public:
     static const char * getThreadLocalPoolPassword();
     static const char * getThreadLocalGSICred();
     static const char * getThreadLocalToken();
+    static CapabilitySet *getThreadLocalCapability();
     static bool applyThreadLocalConfigOverrides(ConfigOverrides & old);
 
     void setToken(const Token &);
     void setTag(const std::string &tag);
     void setPoolPassword(const std::string &pool_pass);
+    void setCapability(const CapabilityToken &capability);
     void setGSICredential(const std::string &cred);
     void setConfig(const std::string &key, const std::string &val);
 
@@ -69,12 +85,14 @@ private:
     std::string m_tag;
     std::string m_pool_pass;
     std::string m_token;
+    std::shared_ptr<CapabilitySet> m_capability;
     std::string m_cred;
     ConfigOverrides m_config_overrides;
     bool m_tag_set;
     bool m_pool_pass_set;
     bool m_cred_set;
     bool m_token_set{false};
+    bool m_capability_set{false};
 };
 
 #endif  // __SECMAN_H_

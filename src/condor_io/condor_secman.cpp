@@ -42,6 +42,7 @@
 #include "ipv6_hostname.h"
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
+#include "condor_claimid_parser.h"
 
 #include <sstream>
 
@@ -97,7 +98,8 @@ std::map<DCpermission, std::string> SecMan::m_tag_methods;
 std::string SecMan::m_tag_token_owner;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
-HashTable<MyString,MyString> SecMan::command_map(hashFunction);
+HashTable<MyString,MyString> SecMan::m_default_command_map(hashFunction);
+HashTable<MyString,MyString> *SecMan::m_command_map = &m_default_command_map;
 HashTable<MyString,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
 int SecMan::sec_man_ref_count = 0;
 std::set<std::string> SecMan::m_not_my_family;
@@ -107,12 +109,28 @@ bool SecMan::_should_check_env_for_unique_id = true;
 IpVerify *SecMan::m_ipverify = NULL;
 classad::References SecMan::m_resume_proj;
 
+
+Protocol CryptProtocolNameToEnum(char const *name) {
+	switch (toupper(*name)) {
+	case 'B': // blowfish
+		return CONDOR_BLOWFISH;
+	case '3': // 3des
+	case 'T': // Tripledes
+		return CONDOR_3DES;
+	default:
+		return CONDOR_NO_PROTOCOL;
+	}
+}
+
+
 void
 SecMan::setTag(const std::string &tag) {
 
 	if (tag != m_tag) {
 		m_tag_token_owner = "";
 		m_tag_methods.clear();
+	} else {
+		return;
 	}
 
         m_tag = tag;
@@ -132,6 +150,134 @@ SecMan::setTag(const std::string &tag) {
 		tmp = iter->second;
 	}
 	session_cache = tmp;
+}
+
+
+void
+SecMan::clearCapabilities()
+{
+	if (getTag() == "_condor_capability") {
+		m_command_map = &m_default_command_map;
+		setTag("");
+	}
+}
+
+
+// setup the capability by initializing a "fake" tag ("_condor_capability")
+// and then populating the session cache & command map from the CapabilitySet.
+void
+SecMan::setCapabilities(CapabilitySet &cap_set)
+{
+	if (cap_set.empty()) {
+		setTag("");
+		return;
+	}
+	setTag("_condor_capability");
+
+	m_command_map = &cap_set.m_command_map;
+	session_cache = &cap_set.m_session_cache;
+}
+
+
+CapabilitySet::CapabilitySet()
+	: m_command_map(hashFunction)
+{
+}
+
+bool
+CapabilitySet::loadCapability(SecMan &secMan, int cmd, const std::string &server,
+	const std::string &capability, const std::string &info, CondorError &err)
+{
+	ClaimIdParser parser(capability.c_str());
+
+	const std::string public_portion = parser.publicClaimId();
+
+		// TODO: This seems to be a lot of work for a fixed security policy...
+	classad::ClassAd policy_ad;
+	secMan.FillInSecurityPolicyAd(CLIENT_PERM, &policy_ad, false);
+	policy_ad.InsertAttr(ATTR_SEC_NEGOTIATION, SecMan::sec_req_rev[SecMan::SEC_REQ_REQUIRED]);
+	std::unique_ptr<ClassAd> policy_ad_tmp(secMan.ReconcileSecurityPolicyAds(policy_ad, policy_ad));
+	if (!policy_ad_tmp) {
+		dprintf(D_SECURITY|D_FULLDEBUG, "SECMAN: unable to reconcile security ads when loading capability\n");
+		err.push("SECMAN", 2, "Unable to reconcile security ads when loading capability");
+		return false;
+	}
+	secMan.sec_copy_attribute(policy_ad, *policy_ad_tmp, ATTR_SEC_AUTHENTICATION);
+	secMan.sec_copy_attribute(policy_ad, *policy_ad_tmp, ATTR_SEC_INTEGRITY);
+	secMan.sec_copy_attribute(policy_ad, *policy_ad_tmp, ATTR_SEC_ENCRYPTION);
+	secMan.sec_copy_attribute(policy_ad, *policy_ad_tmp, ATTR_SEC_CRYPTO_METHODS);
+	std::string crypto_methods;
+	if (!policy_ad.EvaluateAttrString(ATTR_SEC_CRYPTO_METHODS, crypto_methods)) {
+		err.pushf("SECMAN", 3, "Failed to evaluate the crypto methods to a string");
+		return false;
+	}
+	if (!crypto_methods.empty()) {
+		auto pos = crypto_methods.find(',');
+		if (pos != std::string::npos) {
+			crypto_methods.erase(pos);
+			policy_ad.InsertAttr(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
+		}
+	}
+	std::string sid = parser.secSessionId();
+	if (!secMan.ImportSecSessionInfo(info.c_str(), policy_ad)) {
+		err.pushf("SECMAN", 4, "Failed to import the security session info into the policy ad");
+		return false;
+	}
+	policy_ad.InsertAttr(ATTR_SEC_USE_SESSION, "YES");
+	policy_ad.InsertAttr(ATTR_SEC_SID, sid);
+	policy_ad.InsertAttr(ATTR_SEC_ENACT, "YES");
+	policy_ad.InsertAttr(ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[SecMan::SEC_FEAT_ACT_NO]);
+	policy_ad.InsertAttr(ATTR_SEC_TRIED_AUTHENTICATION, true);
+	policy_ad.InsertAttr(ATTR_SEC_USER, "daemon-side@matchsession");
+
+
+	time_t expiration_time;
+	int session_lease = 600;
+	if( policy_ad.EvaluateAttrInt(ATTR_SEC_SESSION_EXPIRES, expiration_time) ) {
+		session_lease = expiration_time ? expiration_time - time(NULL) : 0;
+		if (session_lease < 0) {
+			err.pushf("SECMAN", 5, "Calculated an invalid duration (%d) for session %s.\n",
+				session_lease, public_portion.c_str());
+			return false;
+		}
+	} else if (session_lease > 0) {
+		expiration_time = time(NULL) + session_lease;
+		policy_ad.InsertAttr(ATTR_SEC_SESSION_EXPIRES, expiration_time);
+	}
+
+	const char *key_hash = parser.secSessionKey();
+	const int keylen = MAC_SIZE;
+
+	std::string crypto_method;
+	policy_ad.EvaluateAttrString(ATTR_SEC_CRYPTO_METHODS, crypto_method);
+	auto crypt_protocol = CryptProtocolNameToEnum(crypto_method.c_str());
+	if (CONDOR_NO_PROTOCOL == crypt_protocol) {
+		err.pushf("SECMAN", 5, "Unknown encryption protocol requested: %s", crypto_method.c_str());
+		return false;
+	}
+
+		// Note: it's not clear what happens if the protocol is wrong?
+	auto key_contents = Condor_Crypt_Base::oneWayHashKey(key_hash);
+	KeyInfo key(key_contents, keylen, crypt_protocol);
+	free(key_contents);
+	KeyCacheEntry tmp_key(parser.secSessionId(), NULL, &key, &policy_ad, expiration_time, session_lease );
+	m_session_cache.insert(tmp_key);
+
+	MyString keybuf;
+	keybuf.formatstr("{_condor_capability,%s,<%d>}", server.c_str(), cmd);
+
+		// NOTE: HashTable returns ZERO on SUCCESS!!!
+	if (m_command_map.insert(keybuf, parser.secSessionId(), true) == 0) {
+		// success
+		if (IsDebugVerbose(D_SECURITY)) {
+			dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), parser.secSessionId());
+		}
+	} else {
+		dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.Value());
+	}
+
+	size++;
+	return true;
 }
 
 
@@ -1472,7 +1618,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	}
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
-		found_map_ent = (m_sec_man.command_map.lookup(m_session_key, sid) == 0);
+		found_map_ent = (m_sec_man.m_command_map->lookup(m_session_key, sid) == 0);
 	}
 	if (found_map_ent) {
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), m_session_key.Value());
@@ -1483,7 +1629,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
-			if (m_sec_man.command_map.remove(m_session_key.Value()) == 0) {
+			if (m_sec_man.m_command_map->remove(m_session_key.Value()) == 0) {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.Value(), m_session_key.Value());
 			} else {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.Value(), m_session_key.Value());
@@ -2370,7 +2516,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				}
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (m_sec_man.command_map.insert(keybuf, sesid, true) == 0) {
+				if (m_sec_man.m_command_map->insert(keybuf, sesid, true) == 0) {
 					// success
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
@@ -2759,7 +2905,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
             while ( (cmd = cmd_list.next()) ) {
                 memset(keybuf, 0, 128);
                 sprintf (keybuf, "{%s,<%s>}", addr.Value(), cmd);
-                command_map.remove(keybuf);
+                m_command_map->remove(keybuf);
             }
         }
     }
@@ -2964,7 +3110,7 @@ void
 SecMan::invalidateAllCache() {
 	session_cache->clear();
 
-	command_map.clear();
+	m_command_map->clear();
 }
 
 void 
@@ -3161,17 +3307,6 @@ SecMan::getSecTimeout(DCpermission perm)
 	return auth_timeout;
 }
 
-Protocol CryptProtocolNameToEnum(char const *name) {
-	switch (toupper(*name)) {
-	case 'B': // blowfish
-		return CONDOR_BLOWFISH;
-	case '3': // 3des
-	case 'T': // Tripledes
-		return CONDOR_3DES;
-	default:
-		return CONDOR_NO_PROTOCOL;
-	}
-}
 
 bool
 SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input)
@@ -3334,7 +3469,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		}
 
 		// NOTE: HashTable returns ZERO on SUCCESS!!!
-		if (command_map.insert(keybuf, sesid, true) == 0) {
+		if (m_command_map->insert(keybuf, sesid, true) == 0) {
 			// success
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
@@ -3420,6 +3555,7 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FIRST_FQAN);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FQAN);
 	sec_copy_attribute(policy_ad, *policy, ATTR_REMOTE_POOL);
+	sec_copy_attribute(policy_ad, *policy, ATTR_SEC_VALID_COMMANDS);
 	sec_copy_attribute(policy_ad, *policy, "ScheddSession");
 	return true;
 }

@@ -2676,7 +2676,8 @@ Daemon::exchangeSciToken(const std::string &scitoken, std::string &token, Condor
 
 bool
 Daemon::getCapabilityTokens( const std::vector<int> &req_caps, int duration,
-	std::unordered_map<int, std::string> &result, CondorError &err ) noexcept
+	std::unordered_map<int, std::string> &result, std::string &info,
+	CondorError &err ) noexcept
 {
 	if( IsDebugLevel( D_COMMAND ) ) {
 		dprintf( D_COMMAND, "Daemon::getCapabilityTokens() making connection to "
@@ -2771,6 +2772,54 @@ Daemon::getCapabilityTokens( const std::vector<int> &req_caps, int duration,
 		return false;
 	}
 
+	std::string capability_info;
+	if (!result_ad.EvaluateAttrString("CapabilityInfo", capability_info)) {
+		dprintf(D_FULLDEBUG, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad without a CapabilityInfo attribute from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)");
+		err.pushf("DAEMON", 1, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad without a CapabilityInfo attribute from remote daemon"
+			" at '%s'", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	info = capability_info;
+
+	std::vector<int> command_list;
+	classad::Value valid_commands_val;
+	if (!result_ad.EvaluateAttr("ValidCommands", valid_commands_val)) {
+		dprintf(D_FULLDEBUG, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad with no ValidCommands attribute from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)");
+		err.pushf("DAEMON", 1, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad with no ValidCommands attribute from remote daemon"
+			" at '%s'", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	classad_shared_ptr<classad::ExprList> command_exprlist;
+	if (!valid_commands_val.IsSListValue(command_exprlist)) {
+		dprintf(D_FULLDEBUG, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad, where ValidCommands is not a list, from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)");
+		err.pushf("DAEMON", 1, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad, where ValidCommands is not a list, from remote daemon"
+			" at '%s'", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	for (const auto &expr : *command_exprlist) {
+		int command;
+		classad::Value value;
+		if (!result_ad.EvaluateExpr(expr, value) || !value.IsIntegerValue(command)) {
+			err.pushf("DAEMON", 1, "BUG!  Received an incorrect type in command"
+				" list from remote daemon at '%s'", _addr ? _addr :
+				"(unknown)");
+			dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received "
+				"an incorrect type in command list from remote daemon at "
+				"'%s'\n", _addr ? _addr : "(unknown)");
+			return false;
+		}
+		command_list.push_back(command);
+	}
+
 	classad::Value token_val;
 	if (!result_ad.EvaluateAttr("Capabilities", token_val)) {
 		dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received a "
@@ -2791,6 +2840,7 @@ Daemon::getCapabilityTokens( const std::vector<int> &req_caps, int duration,
 			_addr ? _addr : "(unknown)");
 		return false;
 	}
+	std::vector<std::string> capability_list;
 	for (const auto &expr : *token_list) {
 		std::string cap_str;
 		classad::Value value;
@@ -2804,38 +2854,20 @@ Daemon::getCapabilityTokens( const std::vector<int> &req_caps, int duration,
 				"'%s'\n", _addr ? _addr : "(unknown)");
 			return false;
 		}
-		ClaimIdParser claim_parser(cap_str.c_str());
-		auto info = claim_parser.secSessionInfo();
-		classad::ClassAdParser ad_parser;
-		std::unique_ptr<classad::ClassAd> session_ad(
-			ad_parser.ParseClassAd(info)
-		);
-
-		if (!session_ad) {
-			err.pushf("DAEMON", 1, "Unable to parse capability session info");
-			dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() unable to "
-				"parse capability session info.\n");
-			return false;
-		}
-		std::string valid_commands;
-		if (!session_ad->EvaluateAttrString("ValidCommands", valid_commands)) {
-			err.pushf("DAEMON", 1, "Unable to determine valid commands "
-				"string");
-			dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() unable to "
-				"determine valid commands string.\n");
-			return false;
-		}
-		int command_int;
-		try {
-			command_int = std::stoi(valid_commands);
-		} catch (...) {
-			err.pushf("DAEMON", 1, "Unable to parse valid command int");
-			dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() unable to "
-				"parse valid command int.\n");
-			return false;
-		}
-		result.insert({command_int, cap_str});
+		capability_list.push_back(cap_str);
 	}
+
+	if (command_list.size() != capability_list.size()) {
+		err.pushf("DAEMON", 2, "Received a list of %d commands and %d capabilities;"
+			" these lengths must match!", command_list.size(), capability_list.size());
+		dprintf(D_FULLDEBUG, "Received a list of %d commands and %d capabilities;"
+			" these lengths must match!", command_list.size(), capability_list.size());
+		return false;
+	}
+	for (int idx=0; idx<command_list.size(); idx++) {
+		result[command_list[idx]] = capability_list[idx];
+	}
+
 	return true;
 }
 

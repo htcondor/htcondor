@@ -102,7 +102,6 @@ static	char*	logDir = NULL;
 static	char*	pidFile = NULL;
 static	char*	addrFile[2] = { NULL, NULL };
 static	char*	logAppend = NULL;
-static  uint64_t cap_seq = 0;
 
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
 
@@ -2562,7 +2561,7 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 	// - Response is a ClassAd with either an ErrorCode & Error or a list of capabilities.  The
 	//   capabilities are in the same order as those requested.
 static int
-handle_dc_generate_capabilities( Service*, int, Stream* stream)
+handle_dc_generate_capabilities( int, Stream* stream)
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) ||
@@ -2594,6 +2593,10 @@ handle_dc_generate_capabilities( Service*, int, Stream* stream)
 			}
 			valid_set.insert(command_int);
 		}
+	}
+
+	if (!stream->get_encryption()) {
+		err.pushf("GEN_CAP", 5, "Capability generation request must be encrypted");
 	}
 
 		// Determine duration; minimum is 60; max is limited by the current
@@ -2642,6 +2645,7 @@ handle_dc_generate_capabilities( Service*, int, Stream* stream)
 	}
 
 	std::vector<std::string> tokens;
+	std::vector<int> final_cap_list;
 	if (err.empty()) {
 		for (auto cap : cap_list) {
 			if (valid_set.find(cap) == valid_set.end()) {continue;}
@@ -2661,11 +2665,9 @@ handle_dc_generate_capabilities( Service*, int, Stream* stream)
 			// <ip:port>#cap#sequence_num
 			// The <ip:port> is fairly meaningless but required by the
 			// claim protocol.
-			std::string id;
-			formatstr(id, "%s#cap#%lu", daemonCore->publicNetworkIpAddr(),
-				static_cast<long unsigned>(cap_seq));
+			std::string id(Condor_Crypt_Base::randomHexKey(8));
 
-			std::string session_info =  "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"" + std::to_string(cap) + "\"]";
+			std::string session_info = "[Encryption=\"YES\";Integrity=\"YES\"]";
 			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 				DENY_PERM,
 				id.c_str(),
@@ -2677,22 +2679,31 @@ handle_dc_generate_capabilities( Service*, int, Stream* stream)
 				nullptr
 			);
 			if (rc) {
-				std::string capability = id + "#" + session_info +
-					keybuf.get();
+				std::string capability = id + "#[]" + keybuf.get();
 				tokens.push_back(capability);
+				final_cap_list.push_back(cap);
 			}
 		}
 	}
 
 	if (err.empty())
 	{
+		std::string session_info = "[Encryption=\"YES\";Integrity=\"YES\"]";
+		result_ad.InsertAttr("CapabilityInfo", session_info);
 		result_ad.InsertAttr("Duration", duration);
 		std::vector<classad::ExprTree*> expr_list;
 		for (const auto & token : tokens) {
 			expr_list.push_back(classad::Literal::MakeString(token));
 		}
-		result_ad.InsertAttr("Capabilities",
+		std::vector<classad::ExprTree*> expr_list2;
+		for (const auto & cap : final_cap_list) {
+			expr_list2.push_back(classad::Literal::MakeLong(cap));
+		}
+
+		result_ad.Insert("Capabilities",
 			classad::ExprList::MakeExprList(expr_list));
+		result_ad.Insert("ValidCommands",
+			classad::ExprList::MakeExprList(expr_list2));
 	}
 	else
 	{
@@ -4389,8 +4400,8 @@ int dc_main( int argc, char** argv )
 		// and has a specified expiration time.
 		//
 	daemonCore->Register_CommandWithPayload( DC_GENERATE_CAPABILITIES, "DC_GENERATE_CAPABILITIES",
-		(CommandHandler)handle_dc_generate_capabilities,
-		"handle_dc_generate_capabilities", 0, DAEMON, D_COMMAND, true, 0, &allow_perms );
+		handle_dc_generate_capabilities,
+		"handle_dc_generate_capabilities", DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes
