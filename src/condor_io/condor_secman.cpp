@@ -352,12 +352,26 @@ void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 
 	char * p = getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm);
 
-	if (p) {
-		*result = p;
-		free (p);
-	} else {
-		*result = SecMan::getDefaultAuthenticationMethods(perm);
+	if (!p) {
+		p = strdup(SecMan::getDefaultAuthenticationMethods(perm).c_str());
 	}
+
+	StringList method_list(p);
+	method_list.rewind();
+	char *method;
+	std::stringstream ss;
+	bool first = true;
+	while ( (method = method_list.next()) ) {
+	if (!first) ss << ",";
+	if (!strcasecmp(method, "IDTOKENS") || !strcasecmp(method, "TOKENS") || !strcasecmp(method, "IDTOKEN")) {
+		ss << "TOKEN";
+	} else {
+		ss << method;
+	}
+		first = false;
+	}
+	free(p);
+	*result = ss.str().c_str();
 }
 
 bool
@@ -557,6 +571,22 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		}
 		paramer = strdup(methods.Value());
 	}
+	StringList method_list(paramer);
+	method_list.rewind();
+	char *method;
+	std::stringstream ss;
+	bool first = true;
+	while ( (method = method_list.next()) ) {
+		if (!first) ss << ",";
+		if (!strcasecmp(method, "IDTOKENS") || !strcasecmp(method, "TOKENS") || !strcasecmp(method, "IDTOKEN")) {
+			ss << "TOKEN";
+		} else {
+			ss << method;
+		}
+		first = false;
+	}
+	free(paramer);
+	paramer = strdup(ss.str().c_str());
 
 	if (paramer) {
 		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, paramer);
@@ -2838,8 +2868,8 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 
 	StringList server_methods( srv_methods );
 	StringList client_methods( cli_methods );
-	char *sm = NULL;
-	char *cm = NULL;
+	const char *sm = NULL;
+	const char *cm = NULL;
 
 	std::string results;
 	int match = 0;
@@ -2848,7 +2878,13 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 	server_methods.rewind();
 	while ( (sm = server_methods.next()) ) {
 		client_methods.rewind();
+		if (!strcasecmp("TOKENS", sm) || !strcasecmp("IDTOKENS", sm) || !strcasecmp("IDTOKEN", sm)) {
+			sm = "TOKEN";
+		}
 		while ( (cm = client_methods.next()) ) {
+			if (!strcasecmp("TOKENS", cm) || !strcasecmp("IDTOKENS", cm) || !strcasecmp("IDTOKEN", cm)) {
+				cm = "TOKEN";
+			}
 			if (!strcasecmp(sm, cm)) {
 				// add a comma if it isn't the first match
 				if (match) {
