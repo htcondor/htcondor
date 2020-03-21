@@ -37,6 +37,7 @@ DO_NOT_LOCK = {
     htcondor.JobEventLog,
     htcondor.JobEvent,
     htcondor.SubmitResult,
+    htcondor.SecMan,
     htcondor.Transaction.__enter__,  # avoids recursion (this method returns self!)
 }
 
