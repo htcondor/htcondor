@@ -999,14 +999,10 @@ ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
 {
 	ASSERT( !m_ccb_client.get() ); // only one reverse connect at a time!
 
-	//
-	// Since we can't change the CCB server without also changing the CCB
-	// client (that is, without breaking backwards compatibility), we have
-	// to determine if the server sent us ... a string we can't use.  Joy.
-	//
-
-	m_ccb_client =
-		new CCBClient( ccb_contact, (ReliSock *)this );
+	// dprintf( D_ALWAYS, "ReliSock::do_reverse_connect(%s): attempting %s connection.\n", ccb_contact, nonblocking ? "nonblocking" : "blocking" );
+	// Under certain circumstances, we batch connections to the broker,
+	// but there's no reason for this ("target") socker to know about that.
+	m_ccb_client = CCBClientFactory::make( nonblocking, ccb_contact, this );
 
 	if( !m_ccb_client->ReverseConnect(NULL,nonblocking) ) {
 		dprintf(D_ALWAYS,"Failed to reverse connect to %s via CCB.\n",

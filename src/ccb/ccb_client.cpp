@@ -851,3 +851,34 @@ CCBClient::ReverseConnectCallback(Sock *sock)
 	// this class, which would result in its destruction.
 	UnregisterReverseConnectCallback();
 }
+
+
+CCBClient *
+CCBClientFactory::make( bool nonBlocking, const char * ccbContact, ReliSock * target ) {
+	if(! (nonBlocking && get_mySubSystemType() == SUBSYSTEM_TYPE_SCHEDD) ) {
+		return new CCBClient( ccbContact, target );
+	}
+
+	dprintf( D_ALWAYS, "Using batched CCB client from SCHEDD.\n" );
+	return new BatchedCCBClient( ccbContact, target );
+}
+
+
+BatchedCCBClient::BatchedCCBClient( char const * c, ReliSock * t ) :
+	CCBClient(c, t)	{ }
+
+BatchedCCBClient::~BatchedCCBClient() { }
+
+bool
+BatchedCCBClient::ReverseConnect( CondorError * error, bool nonBlocking ) {
+	/* FIXME */ return CCBClient::ReverseConnect( error, nonBlocking );
+
+	// You can only batch connections in nonblocking mode.
+	ASSERT(nonBlocking);
+	return true;
+}
+
+void
+BatchedCCBClient::CancelReverseConnect() {
+	/* FIXME */ CCBClient::CancelReverseConnect();
+}

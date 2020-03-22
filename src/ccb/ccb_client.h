@@ -36,13 +36,24 @@
 #include "dc_message.h"
 #include "shared_port_endpoint.h"
 
-class CCBClient: public Service, public ClassyCountedPtr {
- public:
-	CCBClient( char const *ccb_contact, ReliSock *target_sock );
-	~CCBClient();
+//
+// ReliSock (the only constructor of CCBClient objects) doesn't need to
+// to know if the CCB client immediately makes a request or if the requests
+// are being batched up -- if it's making a nonblocking connection, it
+// has to wait for the callback in either case.
+//
+class CCBClientFactory;
 
-	bool ReverseConnect( CondorError *error, bool non_blocking );
-	void CancelReverseConnect();
+class CCBClient: public Service, public ClassyCountedPtr {
+ // Only CCBClientFactory can make instances of this class.
+ protected:
+	CCBClient( char const *ccb_contact, ReliSock *target_sock );
+
+ public:
+	virtual ~CCBClient();
+
+	virtual bool ReverseConnect( CondorError *error, bool non_blocking );
+	virtual void CancelReverseConnect();
 
  private:
 	MyString m_ccb_contact;
@@ -73,6 +84,31 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	// CCB contact information should be an opaque token to everyone, but
 	// Sinful needs to be able parse CCB IDs to generate v1 addresses.
 	friend class Sinful;
+	friend class CCBClientFactory;
+};
+
+class CCBClientFactory {
+	// This class is a static singleton.
+	private:
+		CCBClientFactory();
+		~CCBClientFactory();
+
+	public:
+		static CCBClient * make( bool nonBlocking, const char * ccbContact, ReliSock * target );
+};
+
+class BatchedCCBClient : public CCBClient {
+	// Only CCBClientFactory can make instances of this class.
+	protected:
+		BatchedCCBClient( char const * ccbContact, ReliSock * target );
+
+	public:
+		virtual ~BatchedCCBClient();
+
+		bool ReverseConnect( CondorError * error, bool nonBlocking ) override;
+		void CancelReverseConnect() override;
+
+	friend class CCBClientFactory;
 };
 
 #endif
