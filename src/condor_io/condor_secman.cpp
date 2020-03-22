@@ -3217,6 +3217,13 @@ Protocol CryptProtocolNameToEnum(char const *name) {
 bool
 SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input)
 {
+	if (policy_input) {
+		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
+		dPrintAd(D_SECURITY|D_VERBOSE, *policy_input);
+	} else {
+		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is NULL\n");
+	}
+
 	ClassAd policy;
 	if (policy_input) {
 		policy.CopyFrom(*policy_input);
@@ -3433,6 +3440,9 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 		}
 	}
 
+	dprintf(D_SECURITY|D_VERBOSE, "IMPORT: Importing session attributes from ad:\n");
+	dPrintAd(D_SECURITY|D_VERBOSE, imp_policy);
+
 		// We could have just blindly inserted everything into our policy,
 		// but for safety, we explicitly copy over specific attributes
 		// from imp_policy to our policy.
@@ -3442,6 +3452,20 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_VALID_COMMANDS);
+
+	// we need to convert the short version (e.g. "8.9.6") into a proper version string
+	std::string short_version;
+	if (imp_policy.LookupString(ATTR_SEC_SHORT_VERSION, short_version)) {
+		StringList components(short_version.c_str(), ".");
+		int maj, min, sub;
+		components.rewind();
+		maj = atoi(components.next());
+		min = atoi(components.next());
+		sub = atoi(components.next());
+		CondorVersionInfo cvi(maj,min,sub, "ExportedSessionInfo");
+		policy.Assign(ATTR_SEC_REMOTE_VERSION, cvi.get_version_stdstring());
+		dprintf (D_SECURITY|D_VERBOSE, "IMPORT: Version components are %i:%i:%i, set Version to %s\n", maj, min, sub, cvi.get_version_stdstring().c_str());
+	}
 
 	return true;
 }
@@ -3489,12 +3513,31 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ClassAd *policy = session_key->policy();
 	ASSERT( policy );
 
+	dprintf(D_SECURITY|D_VERBOSE, "EXPORT: Exporting session attributes from ad:\n");
+	dPrintAd(D_SECURITY|D_VERBOSE, *policy);
+
 	ClassAd exp_policy;
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_INTEGRITY);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_ENCRYPTION);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_VALID_COMMANDS);
+
+	// we want to export "RemoteVersion" but the spaces in the full version
+	// string screw up parsing when importing.  so we have to extract just
+	// the numeric version (e.g. "8.9.6")
+	std::string full_version;
+	if (policy->LookupString(ATTR_SEC_REMOTE_VERSION, full_version)) {
+		CondorVersionInfo cvi(full_version.c_str());
+		std::string short_version;
+		short_version = std::to_string(cvi.getMajorVer());
+		short_version += ".";
+		short_version += std::to_string(cvi.getMinorVer());
+		short_version += ".";
+		short_version += std::to_string(cvi.getSubMinorVer());
+		dprintf (D_SECURITY|D_VERBOSE, "EXPORT: Setting short version to %s\n", short_version.c_str());
+		exp_policy.Assign(ATTR_SEC_SHORT_VERSION, short_version.c_str());
+	}
 
 	session_info += "[";
 	for ( auto itr = exp_policy.begin(); itr != exp_policy.end(); itr++ ) {

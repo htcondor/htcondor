@@ -579,6 +579,9 @@ condor_sockaddr convert_fake_hostname_to_ipaddr(const MyString& fullname)
 	}
 
 	condor_sockaddr ret;
-	ret.from_ip_string(hostname);
-	return ret;
+	if (ret.from_ip_string(hostname)) {
+		return ret;
+	} else {
+		return condor_sockaddr::null;
+	}
 }

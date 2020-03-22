@@ -3989,6 +3989,12 @@ version=8.1.1
 type=bool
 customization=expert
 
+[AUTO_INCLUDE_CREDD_IN_DAEMON_LIST]
+default=false
+version=8.9.7
+type=bool
+customization=expert
+
 [COLLECTOR_USES_SHARED_PORT]
 default=true
 version=8.1.4
@@ -5405,6 +5411,11 @@ default=$(MAX_DEFAULT_LOG)
 default=true
 type=bool
 
+[CREDMON_KRB]
+default=$(SBIN)/condor_krbafs_credmon
+win32_default=
+type=path
+
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
@@ -6336,5 +6347,15 @@ win32_default : @end
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
 
+
+[$FEATURE.KRBAFS]
+description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
+default : @end
+	SEC_CREDENTIAL_DIRECTORY_KRB=/var/condor/credentials.d/krb
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
+	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/krb_cred_producer
+	USE_KEYRING_SESSIONS=TRUE
+@end
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

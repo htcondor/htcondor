@@ -6859,7 +6859,7 @@ int SubmitHash::process_input_file_list(StringList * input_list, long long * acc
 			// in practice, we will check the sizes of files here in submit
 			// but not when doing late materialization
 			if (accumulate_size_kb) {
-				accumulate_size_kb += calc_image_size_kb(tmp.Value());
+				*accumulate_size_kb += calc_image_size_kb(tmp.Value());
 			}
 		}
 		return count;
