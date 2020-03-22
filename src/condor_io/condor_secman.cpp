@@ -341,6 +341,25 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 	return def;
 }
 
+void CanonicalizeAuthenticationMethodNames( const char * p, std::string & s ) {
+	StringList method_list(p);
+	method_list.rewind();
+	char *method;
+	std::stringstream ss;
+	bool first = true;
+	while ( (method = method_list.next()) ) {
+		if (!first) ss << ",";
+		if (!strcasecmp(method, "IDTOKENS") || !strcasecmp(method, "TOKENS") || !strcasecmp(method, "IDTOKEN")) {
+			ss << "TOKEN";
+		} else {
+			ss << method;
+		}
+		first = false;
+	}
+	s  = ss.str();
+}
+
+
 void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 	ASSERT( result );
 
@@ -356,22 +375,10 @@ void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 		p = strdup(SecMan::getDefaultAuthenticationMethods(perm).c_str());
 	}
 
-	StringList method_list(p);
-	method_list.rewind();
-	char *method;
-	std::stringstream ss;
-	bool first = true;
-	while ( (method = method_list.next()) ) {
-		if (!first) ss << ",";
-		if (!strcasecmp(method, "IDTOKENS") || !strcasecmp(method, "TOKENS") || !strcasecmp(method, "IDTOKEN")) {
-			ss << "TOKEN";
-		} else {
-			ss << method;
-		}
-		first = false;
-	}
+	std::string canonicalMethodNames;
+	CanonicalizeAuthenticationMethodNames(p, canonicalMethodNames);
 	free(p);
-	*result = ss.str().c_str();
+	* result = canonicalMethodNames.c_str();
 }
 
 bool
@@ -571,22 +578,11 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		}
 		paramer = strdup(methods.Value());
 	}
-	StringList method_list(paramer);
-	method_list.rewind();
-	char *method;
-	std::stringstream ss;
-	bool first = true;
-	while ( (method = method_list.next()) ) {
-		if (!first) ss << ",";
-		if (!strcasecmp(method, "IDTOKENS") || !strcasecmp(method, "TOKENS") || !strcasecmp(method, "IDTOKEN")) {
-			ss << "TOKEN";
-		} else {
-			ss << method;
-		}
-		first = false;
-	}
+
+	std::string convertedMethodNames;
+	CanonicalizeAuthenticationMethodNames(paramer, convertedMethodNames);
 	free(paramer);
-	paramer = strdup(ss.str().c_str());
+	paramer = strdup(convertedMethodNames.c_str());
 
 	if (paramer) {
 		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, paramer);
