@@ -1532,22 +1532,22 @@ int Condor_Auth_Kerberos :: read_request(krb5_data * request)
 void Condor_Auth_Kerberos :: setRemoteAddress()
 {
     krb5_error_code  code;
-    krb5_address  ** remoteAddr = NULL;
+    krb5_address  *remoteAddr = NULL;
     
     // Get remote host's address first
     
     if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_, 
                                       auth_context_, 
                                       NULL, 
-                                      remoteAddr))) {
+                                      &remoteAddr))) {
         goto error;
     }
     
     if (remoteAddr) {
         struct in_addr in;
-        memcpy(&(in.s_addr), (*remoteAddr)[0].contents, sizeof(in_addr));
+        memcpy(&(in.s_addr), (remoteAddr)[0].contents, sizeof(in_addr));
         setRemoteHost(inet_ntoa(in));
-        (*krb5_free_addresses_ptr)(krb_context_, remoteAddr);
+        (*krb5_free_addresses_ptr)(krb_context_, &remoteAddr);
     }
     
     dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
