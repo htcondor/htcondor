@@ -6461,7 +6461,8 @@ int SubmitHash::SetVMParams()
 		AssignJobString(ATTR_JOB_VM_TYPE, VMType.c_str());
 		RETURN_IF_ABORT();
 	} else {
-		job->LookupString(ATTR_JOB_VM_TYPE, VMType);
+		// VMType already set, no need to check return value again
+		(void) job->LookupString(ATTR_JOB_VM_TYPE, VMType);
 	}
 
 	// so we can easly do case-insensitive comparisons of the vmtype
