@@ -5623,6 +5623,12 @@ int SubmitHash::SetRequestResources()
 			RETURN_IF_ABORT();
 			continue;
 		}
+
+		// Request_GPU (SINGULAR!) is a common typo, make it an error
+		if (strcasecmp(key, "Request_GPU") == 0) {
+			push_error(stderr, "Request_GPU is not a valid submit keyword, did you mean Request_GPUs ?\n");
+			ABORT_AND_RETURN(1);
+		}
 		const char * rname = key + strlen(SUBMIT_KEY_RequestPrefix);
 		const size_t min_tag_len = 2;
 		// resource name should be nonempty at least 2 characters long and not start with _
