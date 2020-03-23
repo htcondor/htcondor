@@ -341,6 +341,25 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 	return def;
 }
 
+void CanonicalizeAuthenticationMethodNames( const char * p, std::string & s ) {
+	StringList method_list(p);
+	method_list.rewind();
+	char *method;
+	std::stringstream ss;
+	bool first = true;
+	while ( (method = method_list.next()) ) {
+		if (!first) ss << ",";
+		if (!strcasecmp(method, "IDTOKENS") || !strcasecmp(method, "TOKENS") || !strcasecmp(method, "IDTOKEN")) {
+			ss << "TOKEN";
+		} else {
+			ss << method;
+		}
+		first = false;
+	}
+	s  = ss.str();
+}
+
+
 void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 	ASSERT( result );
 
@@ -352,12 +371,14 @@ void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
 
 	char * p = getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm);
 
-	if (p) {
-		*result = p;
-		free (p);
-	} else {
-		*result = SecMan::getDefaultAuthenticationMethods(perm);
+	if (!p) {
+		p = strdup(SecMan::getDefaultAuthenticationMethods(perm).c_str());
 	}
+
+	std::string canonicalMethodNames;
+	CanonicalizeAuthenticationMethodNames(p, canonicalMethodNames);
+	free(p);
+	* result = canonicalMethodNames.c_str();
 }
 
 bool
@@ -449,7 +470,9 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 
 	method_list.rewind();
 	while ( (method = method_list.next()) ) {
-		if (!strcmp(method, "TOKEN")) {
+		if (!strcmp(method, "TOKEN") || !strcmp(method, "TOKENS") ||
+			!strcmp(method, "IDTOKEN") || !strcmp(method, "IDTOKENS"))
+		{
 			Condor_Auth_Passwd::preauth_metadata(ad);
 		}
 	}
@@ -555,6 +578,11 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		}
 		paramer = strdup(methods.Value());
 	}
+
+	std::string convertedMethodNames;
+	CanonicalizeAuthenticationMethodNames(paramer, convertedMethodNames);
+	free(paramer);
+	paramer = strdup(convertedMethodNames.c_str());
 
 	if (paramer) {
 		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, paramer);
@@ -2775,9 +2803,17 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_NTSSPI;
 	} else if ( !strcasecmp( method, "PASSWORD" ) ) {
 		return CAUTH_PASSWORD;
+	} else if ( !strcasecmp( method, "TOKENS" ) ) {
+		return CAUTH_TOKEN;
 	} else if ( !strcasecmp( method, "TOKEN" ) ) {
 		return CAUTH_TOKEN;
+	} else if ( !strcasecmp( method, "IDTOKENS" ) ) {
+		return CAUTH_TOKEN;
+	} else if ( !strcasecmp( method, "IDTOKEN" ) ) {
+		return CAUTH_TOKEN;
 	} else if ( !strcasecmp( method, "SCITOKENS" ) ) {
+		return CAUTH_SCITOKENS;
+	} else if ( !strcasecmp( method, "SCITOKEN" ) ) {
 		return CAUTH_SCITOKENS;
 	} else if ( !strcasecmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
@@ -2828,8 +2864,8 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 
 	StringList server_methods( srv_methods );
 	StringList client_methods( cli_methods );
-	char *sm = NULL;
-	char *cm = NULL;
+	const char *sm = NULL;
+	const char *cm = NULL;
 
 	std::string results;
 	int match = 0;
@@ -2838,7 +2874,13 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 	server_methods.rewind();
 	while ( (sm = server_methods.next()) ) {
 		client_methods.rewind();
+		if (!strcasecmp("TOKENS", sm) || !strcasecmp("IDTOKENS", sm) || !strcasecmp("IDTOKEN", sm)) {
+			sm = "TOKEN";
+		}
 		while ( (cm = client_methods.next()) ) {
+			if (!strcasecmp("TOKENS", cm) || !strcasecmp("IDTOKENS", cm) || !strcasecmp("IDTOKEN", cm)) {
+				cm = "TOKEN";
+			}
 			if (!strcasecmp(sm, cm)) {
 				// add a comma if it isn't the first match
 				if (match) {
@@ -3013,7 +3055,7 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 	methods = "FS";
 #endif
 
-	methods += ",TOKEN";
+	methods += ",IDTOKENS";
 
 #if defined(HAVE_EXT_KRB5) 
 	methods += ",KERBEROS";
@@ -3039,7 +3081,7 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 				if (!Condor_Auth_Passwd::should_try_auth()) {
 					continue;
 				}
-				dprintf(D_FULLDEBUG|D_SECURITY, "Will try TOKEN auth.\n");
+				dprintf(D_FULLDEBUG|D_SECURITY, "Will try IDTOKENS auth.\n");
 				break;
 			}
 			case CAUTH_SCITOKENS: // fallthrough
@@ -3061,7 +3103,6 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 	}
 	return result;
 }
-
 
 
 MyString SecMan::getDefaultCryptoMethods() {
