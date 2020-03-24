@@ -616,7 +616,7 @@ get_mouse_info(idle_t *fill_me)
 		    tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
 		    do {
 			tok = strtok_r(NULL, DELIMS, &tok_loc);
-			if (is_number(tok)) {
+			if (tok && is_number(tok)) {
 			    /* It is ok if this overflows */
 			    fill_me->num_mouse_intr += strtoul(tok, NULL, 10);
 
