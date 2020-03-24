@@ -41,10 +41,10 @@ my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	ALL_DEBUG = 
 	NEGOTIATOR_INTERVAL = 5
-	MACHINE_RESOURCE_Gpu = 2
+	MACHINE_RESOURCE_Beers = 2
 	MACHINE_RESOURCE_Boats = 2
 	MACHINE_RESOURCE_Sails = 2
-	SLOT_TYPE_1 = cpus=1, gpu=1, boats=50%, sails=1/2
+	SLOT_TYPE_1 = cpus=1, beers=1, boats=50%, sails=1/2
 	SLOT_TYPE_1_PATITIONABLE = FALSE
 	NUM_SLOTS_TYPE_1 = 1
 	SUSPEND = FALSE
@@ -108,37 +108,37 @@ my $on_execute = sub {
 	@adarray = ();
 	my $cmd = "condor_status -l \"$partial\"";
 	runCondorTool($cmd, \@adarray, 2, {emit_output=>0});
-	my $AdType = "Gpu";
+	my $AdType = "Beers";
 	print "About to: $cmd \n";
 
 	my $longad = "";
 	foreach my $line (@adarray) {
 		chomp($line);
-		if($line =~ /^[^ ]*Gpu[^ =]*\s*=/i) {
+		if($line =~ /^[^ ]*Beers[^ =]*\s*=/i) {
 			$longad = $line;
 			$count += 1;
 			#print "AD: $line\n";
-			if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/i) {
+			if($longad =~ /^TotalBeers\s*=\s*(\d+)\s*$/i) {
 				CondorTest::debug("Total$AdType = $1\n",1);
 				CheckExpectations("Total$AdType", $1, 2);
-			} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/i) {
+			} elsif($longad =~ /^Beers\s*=\s*(\d+)\s*$/i) {
 				CondorTest::debug("$AdType = $1\n",1);
 				CheckExpectations("$AdType", $1, 1);
-			} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/i) {
+			} elsif($longad =~ /^DetectedBeers\s*=\s*(\d+)\s*$/i) {
 				CondorTest::debug("Detected$AdType = $1\n",1);
 				CheckExpectations("Detected$AdType", $1, 2);
-			} elsif($longad =~ /^TotalSlotGpu\s*=\s*(\d+)\s*$/i) {
-				my $expected_total_slot_gpu = 1;
+			} elsif($longad =~ /^TotalSlotBeers\s*=\s*(\d+)\s*$/i) {
+				my $expected_total_slot_beers = 1;
 				if ($checkpslot eq "yes") {
-					$expected_total_slot_gpu = 2;
+					$expected_total_slot_beers = 2;
 				}
-				CondorTest::debug("TotalSlotGpu = $1\n",1);
-				CheckExpectations("$AdType", $1, $expected_total_slot_gpu);
-			} elsif($longad =~ /^ChildGpu\s*=\s*{\s*(\d+)\s*}\s*$/i) {
+				CondorTest::debug("TotalSlotBeers = $1\n",1);
+				CheckExpectations("$AdType", $1, $expected_total_slot_beers);
+			} elsif($longad =~ /^ChildBeers\s*=\s*{\s*(\d+)\s*}\s*$/i) {
 				CondorTest::debug("Child$AdType = { $1 }\n",1);
 				CheckExpectations("Child$AdType", $1, 1);
 			} else {
-				CondorTest::debug("unexpected Gpu - $longad\n",1);
+				CondorTest::debug("unexpected Beers - $longad\n",1);
 			}
 		}
 	}
@@ -150,7 +150,7 @@ my $on_execute = sub {
 	}
 
 	if($count != $expected_count){
-		die "There are expected to be $expected_count resource unique ads. There were $count for Gpu\n";
+		die "There are expected to be $expected_count resource unique ads. There were $count for Beers\n";
 	}
 
 
@@ -166,21 +166,21 @@ $result = SimpleJob::RunCheck();
 $adarray = ();
 $cmd = "condor_status -l";
 runCondorTool($cmd, \@adarray, 2, {emit_output=>0});
-my $AdType = "Gpu";
+my $AdType = "Beers";
 $count = 0;
 
 foreach my $longad (@adarray) {
 	chomp($longad);
-	if($longad =~ /^[^ ]*Gpu[^ =]*\s*=/i) {
+	if($longad =~ /^[^ ]*Beers[^ =]*\s*=/i) {
 		$count += 1;
 		CondorTest::debug("ad: $longad\n",2);
-		if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/i) {
+		if($longad =~ /^TotalBeers\s*=\s*(\d+)\s*$/i) {
 			CondorTest::debug("Total$AdType = $1\n",2);
 			CheckExpectations("Total$AdType", $1, 2);
-		} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/i) {
+		} elsif($longad =~ /^Beers\s*=\s*(\d+)\s*$/i) {
 			CondorTest::debug("$AdType = $1\n",2);
 			CheckExpectations("$AdType", $1, 1);
-		} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/i) {
+		} elsif($longad =~ /^DetectedBeers\s*=\s*(\d+)\s*$/i) {
 			CondorTest::debug("Detected$AdType = $1\n",2);
 			CheckExpectations("Detected$AdType", $1, 2);
 		} 
@@ -188,7 +188,7 @@ foreach my $longad (@adarray) {
 }
 
 if($count != 4){
-	die "There are expected to be 4 resource unique ads. There were $count for Gpu\n";
+	die "There are expected to be 4 resource unique ads. There were $count for Beers\n";
 }
 
 $adarray = ();
@@ -264,18 +264,18 @@ my $negotiatorcycle = 5;
 my $nextappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	ALL_DEBUG = 
-	MACHINE_RESOURCE_gpu = 2
+	MACHINE_RESOURCE_beers = 2
 	NEGOTIATOR_INTERVAL = 5
 	NUM_SLOTS=1
 	NUM_SLOTS_TYPE_1 = 1
 	SLOT_TYPE_1_PARTITIONABLE = TRUE
-	SLOT_TYPE_1 = cpus=100%,disk=100%,swap=100%,gpu=100%
+	SLOT_TYPE_1 = cpus=100%,disk=100%,swap=100%,beers=100%
 	SUSPEND = FALSE
 ';
 
 $configfile = CondorTest::CreateLocalConfig($nextappend_condor_config,"pslot");
 
-# spin up with two gpus and ask for a dynamic slot with two
+# spin up with two beers and ask for a dynamic slot with two
 # then check the ads.
 # OK turn it on with concurrency limits
 CondorTest::StartCondorWithParams(
@@ -294,7 +294,7 @@ runcmd("condor_config_val -config",{emit_output=>1});
 
 
 $append_submit_commands = '
-request_gpu = 1
+request_beers = 1
 ';
 
 # on this on-execute, check the ads like above

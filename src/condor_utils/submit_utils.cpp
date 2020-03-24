@@ -334,7 +334,9 @@ const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros 
 SubmitHash::FNSETATTRS SubmitHash::is_special_request_resource(const char * key)
 {
 	if (YourStringNoCase(SUBMIT_KEY_RequestCpus) == key) return &SubmitHash::SetRequestCpus;
-	if (YourStringNoCase("request_cpu") == key) return &SubmitHash::SetRequestCpus;
+	if (YourStringNoCase("request_cpu") == key) return &SubmitHash::SetRequestCpus; // so we get an error for this common mistake
+	if (YourStringNoCase(SUBMIT_KEY_RequestGpus) == key) return &SubmitHash::SetRequestGpus;
+	if (YourStringNoCase("request_gpu") == key) return &SubmitHash::SetRequestGpus; // so we get an error for this common mistake
 	if (YourStringNoCase(SUBMIT_KEY_RequestDisk) == key) return &SubmitHash::SetRequestDisk;
 	if (YourStringNoCase(SUBMIT_KEY_RequestMemory) == key) return &SubmitHash::SetRequestMem;
 	return NULL;
@@ -5334,7 +5336,7 @@ int SubmitHash::SetRequestCpus(const char * key)
 	RETURN_IF_ABORT();
 
 	if (YourStringNoCase("request_cpu") == key || YourStringNoCase("RequestCpu") == key) {
-		push_warning(stderr, "request_cpu is not a valid submit keyword, did you mean request_cpus?\n");
+		push_warning(stderr, "%s is not a valid submit keyword, did you mean request_cpus?\n", key);
 		return 0;
 	}
 
@@ -5343,7 +5345,7 @@ int SubmitHash::SetRequestCpus(const char * key)
 		if (job->Lookup(ATTR_REQUEST_CPUS)) {
 			// we already have a value for request cpus, use that
 		} else if ( ! clusterAd) {
-			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_memory from somewhere
+			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_cpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_cpus keyword
 			req_cpus.set(param("JOB_DEFAULT_REQUESTCPUS"));
@@ -5355,6 +5357,39 @@ int SubmitHash::SetRequestCpus(const char * key)
 			// they want it to be undefined
 		} else {
 			AssignJobExpr(ATTR_REQUEST_CPUS, req_cpus);
+		}
+	}
+
+	RETURN_IF_ABORT();
+	return 0;
+}
+
+int SubmitHash::SetRequestGpus(const char * key)
+{
+	RETURN_IF_ABORT();
+
+	if (YourStringNoCase("request_gpu") == key || YourStringNoCase("RequestGpu") == key) {
+		push_warning(stderr, "%s is not a valid submit keyword, did you mean request_gpus?\n", key);
+		return 0;
+	}
+
+	auto_free_ptr req_gpus(submit_param(SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS));
+	if ( ! req_gpus) {
+		if (job->Lookup(ATTR_REQUEST_GPUS)) {
+			// we already have a value for request cpus, use that
+		} else if ( ! clusterAd) {
+			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_gpus from somewhere
+			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
+			// the job has a request_gpus keyword
+			req_gpus.set(param("JOB_DEFAULT_REQUESTGPUS"));
+		}
+	}
+
+	if (req_gpus) {
+		if (YourStringNoCase("undefined") == req_gpus) {
+			// they want it to be undefined
+		} else {
+			AssignJobExpr(ATTR_REQUEST_GPUS, req_gpus);
 		}
 	}
 
@@ -5624,11 +5659,6 @@ int SubmitHash::SetRequestResources()
 			continue;
 		}
 
-		// Request_GPU (SINGULAR!) is a common typo, make it an error
-		if (strcasecmp(key, "Request_GPU") == 0) {
-			push_error(stderr, "Request_GPU is not a valid submit keyword, did you mean Request_GPUs ?\n");
-			ABORT_AND_RETURN(1);
-		}
 		const char * rname = key + strlen(SUBMIT_KEY_RequestPrefix);
 		const size_t min_tag_len = 2;
 		// resource name should be nonempty at least 2 characters long and not start with _
@@ -5650,6 +5680,7 @@ int SubmitHash::SetRequestResources()
 	// this is a bit redundant, but guarantees that we honor the submit file, but also give the code
 	// a chance to fetch the JOB_DEFAULT_REQUEST* params.
 	if ( ! lookup(SUBMIT_KEY_RequestCpus)) { SetRequestCpus(SUBMIT_KEY_RequestCpus); }
+	if ( ! lookup(SUBMIT_KEY_RequestGpus)) { SetRequestGpus(SUBMIT_KEY_RequestGpus); }
 	if ( ! lookup(SUBMIT_KEY_RequestDisk)) { SetRequestDisk(SUBMIT_KEY_RequestDisk); }
 	if ( ! lookup(SUBMIT_KEY_RequestMemory)) { SetRequestMem(SUBMIT_KEY_RequestMemory); }
 
@@ -5970,6 +6001,16 @@ int SubmitHash::SetRequirements()
 				already_warned_requirements_mem = true;
 			}
 		}
+
+		/* we don't need to do this here so long as it's this simple. search for  "Request" just a few lines below
+		expr = job->Lookup(ATTR_REQUEST_GPUS);
+		if (expr && ! machine_refs.count( "GPUs" )) {
+			double val = 0;
+			if ( ! ExprTreeIsLiteralNumber(expr, val) || (val > 1.0)) {
+				answer += " && (TARGET.Gpus >= " ATTR_REQUEST_GPUS ")";
+			}
+		}
+		*/
 	}
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID ) {
