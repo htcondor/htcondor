@@ -14450,7 +14450,7 @@ Scheduler::FindMrecByJobID(PROC_ID job_id) {
 match_rec *
 Scheduler::FindMrecByClaimID(char const *claim_id) {
 	match_rec *rec = NULL;
-	matches->lookup(claim_id, rec);
+	(void) matches->lookup(claim_id, rec);
 	return rec;
 }
 
