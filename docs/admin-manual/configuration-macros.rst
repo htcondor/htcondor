@@ -5485,8 +5485,9 @@ These settings affect the *condor_shadow*.
 
 :macro-def:`SHADOW_SKIP_DATAFLOW_JOBS`
     Determines whether dataflow jobs should be skipped. A dataflow job is 
-    defined as a job whose input and output files already exist at submit time,
-    and outputs are newer than inputs. Defaults to ``False``.
+    defined as a job whose output files already exist and are newer than input
+    files. Additionally, if the executable or stdin files exist and are newer
+    than inputs, this is also considered a dataflow job. Defaults to ``False``.
 
 condor_starter Configuration File Entries
 ------------------------------------------

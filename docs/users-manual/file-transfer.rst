@@ -492,13 +492,18 @@ initial working directory as ``/scratch/test/out1``.
 Dataflow Jobs
 '''''''''''''
 
-In some situations, a job that has been submitted but not yet run might realize
-that 1) the output files it wants already exist, 2) these output files are
-newer than its input files. Typically this would happen because an earlier job
-already created the output files. This is known as a **dataflow job** and in
-some cases we want to skip it. By setting the :macro:`SHADOW_SKIP_DATAFLOW_JOBS`
-configuration option to ``True``, we can skip these jobs and potentially save
-large amounts of time in long-running workflows.
+A **dataflow job** is a job that might not need to run because its desired
+outputs already exist. The *condor_shadow* can optionally skip these jobs by
+setting :macro:`SHADOW_SKIP_DATAFLOW_JOBS` to `True`.
+
+A dataflow job meets any of the following criteria:
+* Output files exist, are newer than input files
+* Execute file is newer than input files
+* Standard input file is newer than input files
+
+Skipping dataflow jobs can potentially save large amounts of time in
+long-running workflows.
+
 
 Public Input Files
 ''''''''''''''''''

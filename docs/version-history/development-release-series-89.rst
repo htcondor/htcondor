@@ -80,6 +80,12 @@ New Features:
   by default: CONDOR_SSH_TO_JOB_USE_FAKE_PASSWD_ENTRY is now true
   :ticket:`7536`
 
+- Enhanced the dataflow jobs that we introduced in verison 8.9.5. In
+  addition to output files, we now also check the executable and stdin files.
+  If any of these are newer than the input files, we consider this to be a
+  dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to True.
+  :ticket:`7488`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
