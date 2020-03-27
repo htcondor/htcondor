@@ -2218,12 +2218,12 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
                 if (view_sock->type() == Stream::reli_sock) {
 	                view_sock_timeslice.setStartTimeNow();
                 }
-                view_coll->connectSock(view_sock,20);
+                int r = view_coll->connectSock(view_sock,20);
                 if (view_sock->type() == Stream::reli_sock) {
 	                view_sock_timeslice.setFinishTimeNow();
                 }
 
-                if (!view_sock->is_connected()) {
+                if (!view_sock->is_connected() || (!r)) {
                     dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s so not forwarding ad.\n", view_name);
                     continue;
                 }
