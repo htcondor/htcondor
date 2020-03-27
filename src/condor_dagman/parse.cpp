@@ -245,6 +245,14 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					   "submitfile" );
 		}
 
+		// Handle a PROVISIONER spec
+		else if(strcasecmp(token, "PROVISIONER") == 0) {
+			parsed_line_successfully = parse_node( dag, 
+					   token,
+					   filename, lineNumber, tmpDirectory.Value(), "",
+					   "submitfile" );
+		}
+
 		// Handle a Splice spec
 		else if(strcasecmp(token, "SPLICE") == 0) {
 			parsed_line_successfully = parse_splice(dag, filename,
@@ -313,6 +321,12 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
+				// Parsed in first pass.
+			parsed_line_successfully = true;
+		}
+
+		// Handle a PROVISIONER spec
+		else if(strcasecmp(token, "PROVISIONER") == 0) {
 				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
@@ -461,7 +475,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
 				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
-				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, FINAL, "
+				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, "
 				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
 				"CONNECT, PIN_IN, PIN_OUT, or INCLUDE token (found %s)\n",
 				filename, lineNumber, token );
@@ -544,6 +558,8 @@ parse_node( Dag *dag,
 	MyString whynot;
 	bool done = false;
 	Dag *tmp = NULL;
+
+	NodeType type = NodeType::JOB;
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
@@ -694,9 +710,9 @@ parse_node( Dag *dag,
 	}
 
 	// looks ok, so add it
-	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
+	// MRC: make sure type is set correctly
 	if( !AddNode( dag, nodeName, directory,
-				submitFile, noop, done, isFinal, whynot ) )
+				submitFile, noop, done, type, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -1065,7 +1081,7 @@ parse_parent(
 		std::string joinNodeName;
 		formatstr(joinNodeName, "_condor_join_node%d", ++numJoinNodes);
 		Job* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
-			false, false, failReason);
+			false, NodeType::JOB, failReason);
 		if (!joinNode) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) while attempting to"
 				" add join node\n", failReason.Value(), lineNumber);
@@ -1215,7 +1231,7 @@ parse_retry(
 		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -1340,7 +1356,7 @@ parse_abort(
 		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -1636,7 +1652,7 @@ parse_priority(
 		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have PRIORITY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -1732,7 +1748,7 @@ parse_category(
 		debug_printf( DEBUG_DEBUG_3, "parse_category(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -2304,7 +2320,7 @@ parse_done(
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 
-	if ( job->GetFinal() ) {
+	if ( job->GetType() == NodeType::FINAL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
 					  filename, lineNumber, jobNameOrig );
