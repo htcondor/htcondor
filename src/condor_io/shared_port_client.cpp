@@ -629,7 +629,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 
 	if (m_non_blocking) {
 		int flags = fcntl(named_sock_fd, F_GETFL, 0);
-		fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
+		(void) fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
 	}
 
 	s = named_sock;
