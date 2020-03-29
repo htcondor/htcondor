@@ -19,7 +19,7 @@
 ##########################################################################
 # Set project
 project(CONDOR)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 # Turn off deprecations warnings for cmake 3.x
 # Need to wait to fix these after we drop older cmake versions

@@ -23,7 +23,6 @@ if(${OS_NAME} STREQUAL "DARWIN")
 	# Override that to set the actual architecture.
 	set (SYS_ARCH "X86_64")
 elseif(${OS_NAME} MATCHES "WIN")
-	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
@@ -871,7 +870,6 @@ endif(BUILD_TESTING)
 
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
-	cmake_minimum_required(VERSION 2.8)
 endif()
 
 # directory that externals are downloaded from. may be a local directory
