@@ -22,10 +22,6 @@ Dennis Bareis (http://dennisbareis.com/makemsi.htm).  Complete
 conditions and disclaimers for MAKEMSI can be found at 
 http://makemsi-manual.dennisbareis.com/disclaimer.htm
 
-Some distributions of Condor include a compiled, unmodified version
-of the GNU C library. The complete source code to GNU glibc can be
-found at http://www.gnu.org/software/libc/.
-
 Part of the software embedded in this product is gSOAP software.
 Portions created by gSOAP are Copyright (C) 2001-2004 Robert A. van
 Engelen, Genivia inc. All Rights Reserved.
