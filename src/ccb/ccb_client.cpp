@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_crypt.h"
 #include "subsystem_info.h"
 #include "condor_classad.h"
@@ -859,7 +860,7 @@ CCBClientFactory::make( bool nonBlocking, const char * ccbContact, ReliSock * ta
 		return new CCBClient( ccbContact, target );
 	}
 
-	dprintf( D_ALWAYS, "Using batched CCB client from SCHEDD.\n" );
+	dprintf( D_ALWAYS, "Using batched CCB client from SCHEDD for %s.\n", ccbContact );
 	return new BatchedCCBClient( ccbContact, target );
 }
 
@@ -870,15 +871,105 @@ BatchedCCBClient::BatchedCCBClient( char const * c, ReliSock * t ) :
 BatchedCCBClient::~BatchedCCBClient() { }
 
 bool
-BatchedCCBClient::ReverseConnect( CondorError * error, bool nonBlocking ) {
-	/* FIXME */ return CCBClient::ReverseConnect( error, nonBlocking );
-
+BatchedCCBClient::ReverseConnect( CondorError *, bool nonBlocking ) {
 	// You can only batch connections in nonblocking mode.
 	ASSERT(nonBlocking);
+
+	m_ccb_contacts.rewind();
+	return try_next_ccb();
+}
+
+bool
+BatchedCCBClient::try_next_ccb() {
+	const char * nextContact = m_ccb_contacts.next();
+	if(! nextContact) {
+		dprintf( D_ALWAYS, "BatchedCCBClient: no more brokers to try for "
+		                   "reversing connection to %s; giving up.\n",
+		         m_target_peer_description.c_str() );
+		return false;
+	}
+
+	if(! SplitCCBContact( nextContact, m_cur_ccb_address, ccbID,
+	                     m_target_peer_description, NULL ) ) {
+		dprintf( D_ALWAYS, "BatchedCCBClient: failed to split CCB contact "
+		                   "%s; trying next one.\n",
+		         nextContact );
+		return try_next_ccb();
+	}
+
+	m_target_sock->enter_reverse_connecting_state();
+	return CCBConnectionBatcher::make( this );
+}
+
+std::map< std::string, CCBConnectionBatcher::Broker > CCBConnectionBatcher::brokers;
+
+void
+CCBConnectionBatcher::BatchTimerCallback() {
+	auto now = time(NULL);
+	for( auto & entry : brokers ) {
+		Broker & b = entry.second;
+		if( b.deadline <= now + 1 /* avoid aliasing bugs */ ) {
+			b.timerID = -1;
+
+			// FIXME: Send the batched request.
+dprintf( D_ALWAYS, "Sending batched requests individually...\n" );
+for( auto & e : b.clients ) {
+	dprintf( D_ALWAYS, "Sending individual batched request to %s\n", e.second->currentCCBAddress().c_str() );
+	(void) e.second->IndividualReverseConnect();
+}
+b.clients.clear();
+
+			// Only handle one broker per callback, even if we're expecting
+			// multiple brokers to become due in the same second.  This
+			// allows event-loop management to work normally.
+			return;
+		}
+	}
+
+	dprintf( D_ALWAYS, "Broker timer fired but no brokers were due.  Carrying on, confused.\n" );
+}
+
+bool
+CCBConnectionBatcher::make( BatchedCCBClient * client ) {
+	ASSERT( client != NULL );
+	ASSERT( daemonCore );
+
+	Broker & b = brokers[client->currentCCBAddress()];
+	b.clients[client->connectID()] = client;
+
+	if( b.timerID == -1 ) {
+		int batchInterval = param_integer( "CCB_CLIENT_BATCH_INTERVAL", 5 );
+
+		b.deadline = time(NULL) + batchInterval;
+		b.timerID = daemonCore->Register_Timer( batchInterval,
+			(TimerHandler)&CCBConnectionBatcher::BatchTimerCallback,
+			"CCBConnectionBatcher::BatchTimerCallback" );
+	}
+
 	return true;
 }
 
 void
 BatchedCCBClient::CancelReverseConnect() {
 	/* FIXME */ CCBClient::CancelReverseConnect();
+}
+
+bool
+BatchedCCBClient::IndividualReverseConnect() {
+	CondorError error;
+	CCBClient * client = CCBClientFactory::makeUnbatched( true, m_ccb_contact.c_str(), m_target_sock );
+
+	if(! client->ReverseConnect( & error, true )) {
+		dprintf( D_ALWAYS, "BatchedCCBClient::IndividualReverseConnect(): CCBClient::ReverseConnect() failed.\n" );
+		return false;
+	} else {
+		dprintf( D_ALWAYS, "BatchedCCBClient::IndividualReverseConnect(): CCBClient::ReverseConnect() succeeded.\n" );
+		return true;
+	}
+}
+
+// HACK
+CCBClient *
+CCBClientFactory::makeUnbatched( bool, const char * ccbContact, ReliSock * target ) {
+    return new CCBClient( ccbContact, target );
 }

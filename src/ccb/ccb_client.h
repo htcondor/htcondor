@@ -46,6 +46,7 @@ class CCBClientFactory;
 
 class CCBClient: public Service, public ClassyCountedPtr {
  // Only CCBClientFactory can make instances of this class.
+ friend class CCBClientFactory;
  protected:
 	CCBClient( char const *ccb_contact, ReliSock *target_sock );
 
@@ -55,24 +56,31 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	virtual bool ReverseConnect( CondorError *error, bool non_blocking );
 	virtual void CancelReverseConnect();
 
+	virtual const std::string & connectID() { return m_connect_id; }
+
+ protected:
+	virtual bool try_next_ccb();
+
+	static bool SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error );
+
+	MyString        m_ccb_contact;
+	StringList      m_ccb_contacts;
+	ReliSock *      m_target_sock;
+	std::string     m_target_peer_description;
+
+	std::string     m_cur_ccb_address;
+
  private:
-	MyString m_ccb_contact;
-	std::string m_cur_ccb_address;
-	StringList m_ccb_contacts;
-	ReliSock *m_target_sock; // socket to receive the reversed connection
-	std::string m_target_peer_description; // who we are trying to connect to
-	Sock *m_ccb_sock;        // socket to the CCB server
-	std::string m_connect_id;
-	DCMsgCallback *m_ccb_cb; // callback object for async CCB request
-	int m_deadline_timer;
+	Sock *          m_ccb_sock;
+	std::string     m_connect_id;
+	DCMsgCallback * m_ccb_cb;
+	int             m_deadline_timer;
 
 	bool ReverseConnect_blocking( CondorError *error );
-	static bool SplitCCBContact( char const *ccb_contact, std::string &ccb_address, std::string &ccbid, const std::string & peer, CondorError *error );
 
 	bool AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::shared_ptr<SharedPortEndpoint> shared_listener);
 	bool HandleReversedConnectionRequestReply(CondorError *error);
 
-	bool try_next_ccb();
 	void CCBResultsCallback(DCMsgCallback *cb);
 	void ReverseConnectCallback(Sock *sock);
 	void RegisterReverseConnectCallback();
@@ -84,7 +92,6 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	// CCB contact information should be an opaque token to everyone, but
 	// Sinful needs to be able parse CCB IDs to generate v1 addresses.
 	friend class Sinful;
-	friend class CCBClientFactory;
 };
 
 class CCBClientFactory {
@@ -94,11 +101,41 @@ class CCBClientFactory {
 		~CCBClientFactory();
 
 	public:
-		static CCBClient * make( bool nonBlocking, const char * ccbContact, ReliSock * target );
+		static CCBClient * make( bool nonBlocking,
+		                         const char * ccbContact, ReliSock * target );
+
+        // HACK
+        static CCBClient * makeUnbatched( bool nonblocking, const char * ccbContact, ReliSock * target );
+};
+
+class BatchedCCBClient;
+class CCBConnectionBatcher {
+	private:
+		CCBConnectionBatcher();
+		~CCBConnectionBatcher();
+
+	public:
+		static bool make( BatchedCCBClient * client ) ;
+
+	protected:
+		static void BatchTimerCallback();
+
+	private:
+		class Broker {
+			public:
+				Broker() { }
+
+				int timerID {-1};
+				time_t deadline {0};
+				std::map< std::string, BatchedCCBClient * > clients;
+		};
+
+		static std::map< std::string, Broker > brokers;
 };
 
 class BatchedCCBClient : public CCBClient {
 	// Only CCBClientFactory can make instances of this class.
+	friend class CCBClientFactory;
 	protected:
 		BatchedCCBClient( char const * ccbContact, ReliSock * target );
 
@@ -108,7 +145,15 @@ class BatchedCCBClient : public CCBClient {
 		bool ReverseConnect( CondorError * error, bool nonBlocking ) override;
 		void CancelReverseConnect() override;
 
-	friend class CCBClientFactory;
+		const std::string & currentCCBAddress() { return m_cur_ccb_address; }
+
+		// FIXME: Remove.  For development testing only.
+		bool IndividualReverseConnect();
+
+	protected:
+		bool try_next_ccb() override;
+
+		std::string ccbID;
 };
 
 #endif

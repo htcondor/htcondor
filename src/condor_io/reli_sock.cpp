@@ -1338,7 +1338,8 @@ ReliSock::enter_reverse_connecting_state()
 		// once we accept a connection from the listen socket
 		this->close();
 	}
-	ASSERT( _state == sock_virgin );
+	// HACK
+	ASSERT( _state == sock_virgin || _state == sock_reverse_connect_pending );
 	_state = sock_reverse_connect_pending;
 }
 
