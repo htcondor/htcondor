@@ -526,7 +526,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	// send any unsent data.
 
 	struct linger linger = {0,0};
-	setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
+	(void) setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 
 	ReliSock *named_sock = new ReliSock();
 	named_sock->assignDomainSocket( named_sock_fd );

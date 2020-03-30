@@ -2782,7 +2782,7 @@ Daemons::CleanupBeforeRestart()
 	for (int i=3; i < max_fds; i++) {
 		int flag = fcntl(i,F_GETFD,0);
 		if( flag != -1 ) {
-			fcntl(i,F_SETFD,flag | 1);
+			(void) fcntl(i,F_SETFD,flag | 1);
 		}
 	}
 #endif

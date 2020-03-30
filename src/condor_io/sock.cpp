@@ -1168,7 +1168,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 		previous_size = current_size;
 		temp = sizeof(int);
-		::getsockopt( _sock, SOL_SOCKET, command,
+		(void) ::getsockopt( _sock, SOL_SOCKET, command,
 					  (char*)&current_size, &temp );
 
 	} while ( ((previous_size < current_size) || (current_size >= attempt_size)) &&
