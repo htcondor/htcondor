@@ -539,7 +539,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	// socket (instead of a domain socket) and the TCP socket backlogs.
 	if (m_non_blocking) {
 		int flags = fcntl(named_sock_fd, F_GETFL, 0);
-		fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
+		(void) fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
 	}
 
 	int connect_rc = 0, connect_errno = 0, p_errno = 0;

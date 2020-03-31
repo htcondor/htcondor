@@ -1138,10 +1138,10 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 	// Log the current size since Todd is curious.  :^)
 	temp = sizeof(int);
-	::getsockopt(_sock,SOL_SOCKET,command,
+	int r = ::getsockopt(_sock,SOL_SOCKET,command,
 			(char*)&current_size,&temp);
-	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
-		current_size / 1024);
+	dprintf(D_FULLDEBUG,"getsockopt return value is %d, Current Socket bufsize=%dk\n",
+		r, current_size / 1024);
 	current_size = 0;
 
 	/* 
