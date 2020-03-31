@@ -95,7 +95,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         // get the requested asset value
         bool missing = false;
         ClassAd::iterator f(job.find(ra));
-        if (f == resource.end()) {
+        if (f == job.end()) {
             // a RequestXxx attribute not present - default to zero
             job.Assign(ra, 0);
             missing = true;
