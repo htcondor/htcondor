@@ -1179,9 +1179,9 @@ main( int argc, const char** argv)
 
 	// lookup the function pointers we will need later from the cudart library
 	//
-	if ( ! opt_simulate) {
+	if ( !opt_simulate && cuda_handle) {
 		cuda_t cudaRuntimeGetVersion = NULL;
-		if (opt_nvcuda && cuda_handle) {
+		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cuDriverGetVersion");
