@@ -1451,6 +1451,7 @@ void EC2Job::doEvaluateState()
 					|| condorState == COMPLETED
 					|| ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
 
+					ASSERT(gahp != nullptr);
 					if( m_keypair_created && ! m_key_pair.empty() ) {
 						rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
 									m_public_key_file, m_private_key_file,
