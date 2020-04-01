@@ -143,6 +143,15 @@ CCBServer::RegisterHandlers()
 		READ);
 	ASSERT( rc >= 0 );
 
+	rc = daemonCore->Register_CommandWithPayload(
+		CCB_BATCH_REQUEST,
+		"CCB_BATCH_REQUEST",
+		(CommandHandlercpp)&CCBServer::HandleBatchRequest,
+		"CCBServer::HandleBatchRequest",
+		this,
+		READ);
+	ASSERT( rc >= 0 );
+
 }
 
 void
@@ -581,9 +590,10 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 
 	SetSmallBuffers(sock);
 
+	std::shared_ptr<Sock> s(sock);
 	CCBServerRequest *request =
 		new CCBServerRequest(
-			sock,
+			s,
 			target_ccbid,
 			return_addr.c_str(),
 			connect_id.c_str() );
@@ -829,7 +839,7 @@ void
 CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const *error_msg )
 {
 	RequestReply(
-		request->getSock(),
+		request->getSock().get(),
 		success,
 		error_msg,
 		request->getRequestID(),
@@ -1033,13 +1043,13 @@ CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
 	target->AddRequest( request, this );
 
 	int rc = daemonCore->Register_Socket (
-		request->getSock(),
+		request->getSock().get(),
 		request->getSock()->peer_description(),
 		(SocketHandlercpp)&CCBServer::HandleRequestDisconnect,
 		"CCBServer::HandleRequestDisconnect",
 		this );
-
 	ASSERT( rc >= 0 );
+
 	rc = daemonCore->Register_DataPtr(request);
 	ASSERT( rc );
 }
@@ -1052,11 +1062,33 @@ CCBServer::HandleRequestDisconnect( Stream * /*stream*/ )
 	return KEEP_STREAM;
 }
 
-
 void
 CCBServer::RemoveRequest( CCBServerRequest *request )
 {
-	daemonCore->Cancel_Socket( request->getSock() );
+	// This request will be deleted at the end of this function.  If doing
+	// so would call its socket's destructor, cancel the socket first.
+	// (Otherwise, some other request might still be using the socket.)
+	//
+	// The C++ standard says a lot about how use_count() generally doesn't
+	// actually work in a multithreaded environment, but the collector
+	// isn't one, so ignore it.
+	//
+	// Because getSock() returns a copy of the shared_ptr<>, the reference
+	// count for the last request will be 2.
+	if( request->getSock().use_count() == 2 ) {
+	    // Although this function is called for both single and batch requests,
+	    // we know that the data pointer of single requests points to the
+	    // single request itself (as opposed to the list).  Since we only
+	    // care about freeing the list (the request itself is freed at the
+	    // end of this function), ignore pointers to requests.
+		void * ptr = daemonCore->GetDataPtrFor( request->getSock().get() );
+        if( ptr != request ) {
+            delete (std::vector<CCBID> *)ptr;
+        }
+
+        // Cancel the socket.
+		daemonCore->Cancel_Socket( request->getSock().get() );
+	}
 
 	if( m_requests.remove(request->getRequestID()) != 0 ) {
 		EXCEPT("CCB: failed to remove request id=%lu from %s for ccbid %lu",
@@ -1121,8 +1153,8 @@ CCBTarget::incPendingRequestResults(CCBServer *ccb_server)
 			(SocketHandlercpp)(int (CCBServer::*)(Stream*))&CCBServer::HandleRequestResultsMsg,
 			"CCBServer::HandleRequestResultsMsg",
 			ccb_server );
-
 		ASSERT( rc >= 0 );
+
 		rc = daemonCore->Register_DataPtr(this);
 		ASSERT( rc );
 
@@ -1171,7 +1203,7 @@ CCBTarget::RemoveRequest(CCBServerRequest *request)
 	}
 }
 
-CCBServerRequest::CCBServerRequest(Sock *sock,CCBID target_ccbid,char const *return_addr,char const *connect_id):
+CCBServerRequest::CCBServerRequest( std::shared_ptr<Sock> sock, CCBID target_ccbid, char const *return_addr, char const *connect_id ) :
 	m_sock(sock),
 	m_target_ccbid(target_ccbid),
 	m_request_id(-1),
@@ -1180,12 +1212,7 @@ CCBServerRequest::CCBServerRequest(Sock *sock,CCBID target_ccbid,char const *ret
 {
 }
 
-CCBServerRequest::~CCBServerRequest()
-{
-	if( m_sock ) {
-		delete m_sock;
-	}
-}
+CCBServerRequest::~CCBServerRequest() { }
 
 CCBReconnectInfo::CCBReconnectInfo(CCBID ccbid,CCBID reconnect_cookie,char const *peer_ip):
 	m_ccbid(ccbid),
@@ -1422,4 +1449,150 @@ CCBServer::SweepReconnectInfo()
 		// rewrite the file to save space, since some records were deleted
 		SaveAllReconnectInfo();
 	}
+}
+
+int
+CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
+	ReliSock *sock = (ReliSock *)stream;
+	ASSERT( cmd == CCB_BATCH_REQUEST );
+
+	// Avoid lengthy blocking on communication with our peer.
+	// This command-handler should not get called until data
+	// is ready to read.
+	sock->timeout(1);
+
+	ClassAd msg;
+	sock->decode();
+	if( !getClassAd( sock, msg ) || !sock->end_of_message() ) {
+		dprintf(D_ALWAYS,
+				"CCB: failed to receive request "
+				"from %s.\n", sock->peer_description() );
+		return FALSE;
+	}
+
+	std::string name;
+	if( msg.LookupString( ATTR_NAME, name ) ) {
+		// client name is purely for debugging purposes
+		formatstr_cat( name, " on %s", sock->peer_description() );
+		sock->set_peer_description( name.c_str() );
+	}
+
+	std::string returnAddr;
+	std::string ccbIDsString;
+	std::string connectIDsString;
+	if( !msg.LookupString( ATTR_MY_ADDRESS, returnAddr ) ||
+		!msg.LookupString( ATTR_CCBID, ccbIDsString ) ||
+		!msg.LookupString( ATTR_CLAIM_ID, connectIDsString ) )
+	{
+		std::string ad;
+		sPrintAd( ad, msg );
+		dprintf(D_ALWAYS,
+				"CCB: batch request from %s missing attributes: %s\n",
+				sock->peer_description(), ad.c_str() );
+		return FALSE;
+	}
+
+	StringList ccbIDs( ccbIDsString.c_str() );
+	StringList connectIDs( connectIDsString.c_str() );
+	if( connectIDs.number() != ccbIDs.number() ) {
+		std::string ad;
+		sPrintAd( ad, msg );
+		dprintf( D_ALWAYS,
+				"CCB: batch request from %s inconsistent: %s\n",
+				sock->peer_description(), ad.c_str() );
+		return FALSE;
+	}
+
+	ccbIDs.rewind();
+	connectIDs.rewind();
+	SetSmallBuffers( sock );
+	// Since each CCBServerRequest object gets a copy of this shared_ptr, the
+	// socket's destructor won't be called until after the last reply is sent.
+	// Since we never explicitly close the socket, everything works.
+	std::shared_ptr<Sock> s(sock);
+	std::vector<CCBID> * batchedRequestIDs = new std::vector<CCBID>();
+	const char * ccbID = NULL, * connectID = NULL;
+	while( (ccbID = ccbIDs.next()) != NULL ) {
+		connectID = connectIDs.next();
+
+		CCBID targetCCBID;
+		if(! CCBIDFromString( targetCCBID, ccbID )) {
+			dprintf( D_ALWAYS, "CCB: batch request from %s contains invalid CCBID %s, ignoring.\n",
+					sock->peer_description(), ccbID );
+			continue;
+		}
+
+		CCBTarget * target = GetTarget( targetCCBID );
+		if(! target) {
+			dprintf( D_ALWAYS, "CCB: ignoring batch request from %s for CCB "
+					"ID %s because no daemon is currently registered with "
+					"that ID.\n", sock->peer_description(), ccbID );
+
+			// FIXME: The reply should include failures so that the client
+			// doesn't bother to waste time waiting for the reverse
+			// connection; easier to include successes as well.
+			continue;
+		}
+
+		CCBServerRequest * request = new CCBServerRequest( s, targetCCBID,
+			returnAddr.c_str(), connectID );
+		AddBatchRequest( request, target );
+		batchedRequestIDs->push_back( request->getRequestID() );
+
+		dprintf( D_FULLDEBUG
+			"CCB: received batched request id %lu from %s for target "
+			"ccbid %s (registered as %s)\n",
+			request->getRequestID(),
+			request->getSock()->peer_description(),
+			ccbID,
+			target->getSock()->peer_description() );
+
+		ForwardRequestToTarget( request, target );
+	}
+
+	// Register the disconnect handler once and only once.
+	int rc = daemonCore->Register_Socket( sock, sock->peer_description(),
+		(SocketHandlercpp)&CCBServer::HandleBatchRequestDisconnect,
+		"CCBServer::HandleBatchRequestDisconnect", this );
+	ASSERT( rc >= 0 );
+
+	// Some of the CCBServerRequest objects may have already been deleted
+	// by ForwardRequestToTarget(), so we will store request IDs instead
+	// of request pointers, and not worry about it the request ID has
+	// already been removed by the time the client hangs up.
+	rc = daemonCore->Register_DataPtr( batchedRequestIDs );
+	ASSERT( rc );
+
+	return KEEP_STREAM;
+}
+
+void
+CCBServer::AddBatchRequest( CCBServerRequest * request, CCBTarget * target ) {
+	// FIXME: refactor CCB ID wrap-around handling code from AddRequest()
+	// and call it here.
+	request->setRequestID( m_next_request_id++ );
+	m_requests.insert( request->getRequestID(), request );
+
+	target->AddRequest( request, this );
+}
+
+int
+CCBServer::HandleBatchRequestDisconnect( Stream * ) {
+	dprintf( D_ALWAYS, "CCBServer::HandleBatchRequestDisconnect()...\n" );
+
+	auto list = (std::vector<CCBID> *)daemonCore->GetDataPtr();
+	for( auto & requestID : * list ) {
+		dprintf( D_ALWAYS, "... looking for request ID %lu...\n", requestID );
+		CCBServerRequest * request = NULL;
+		if( m_requests.lookup( requestID, request ) ) {
+			dprintf( D_ALWAYS, "... found it, removing.\n" );
+			RemoveRequest( request );
+		} else {
+			// This is OK.
+			dprintf( D_ALWAYS, "... it was already removed.\n" );
+		}
+	}
+	delete list;
+
+	return KEEP_STREAM;
 }

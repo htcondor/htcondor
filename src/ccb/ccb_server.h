@@ -29,6 +29,7 @@
  */
 
 #include "MyString.h"
+#include <memory>
 
 class CCBTarget;
 class CCBServerRequest;
@@ -101,6 +102,10 @@ class CCBServer: Service {
 	void HandleRequestResultsMsg( CCBTarget *target );
 	int HandleRequestResultsMsg( Stream *stream );
 
+    int HandleBatchRequest( int cmd, Stream * stream );
+	void AddBatchRequest( CCBServerRequest * request, CCBTarget * target );
+	int HandleBatchRequestDisconnect( Stream * stream );
+
 	void RegisterHandlers();
 
 	CCBReconnectInfo *GetReconnectInfo(CCBID ccbid);
@@ -149,10 +154,10 @@ class CCBTarget {
 // from a registered target
 class CCBServerRequest {
  public:
-	CCBServerRequest(Sock *sock,CCBID target_ccbid,char const *return_addr,char const *connect_id);
+	CCBServerRequest( std::shared_ptr<Sock> sock, CCBID target_ccbid, char const *return_addr, char const *connect_id );
 	~CCBServerRequest();
 
-	Sock *getSock() { return m_sock; }
+	std::shared_ptr<Sock> getSock() { return m_sock; }
 	void setRequestID( CCBID request_id ) { m_request_id = request_id; }
 	CCBID getRequestID() { return m_request_id; }
 	CCBID getTargetCCBID() { return m_target_ccbid; }
@@ -160,7 +165,7 @@ class CCBServerRequest {
 	char const *getConnectID() { return m_connect_id.Value(); }
 
  private:
-	Sock *m_sock;
+	std::shared_ptr<Sock> m_sock;
 	CCBID m_target_ccbid;    // target daemon requested by client
 	CCBID m_request_id;      // CCBServer-assigned identifier for this request
 	MyString m_return_addr;

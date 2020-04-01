@@ -889,7 +889,7 @@ BatchedCCBClient::try_next_ccb() {
 		return false;
 	}
 
-	if(! SplitCCBContact( nextContact, m_cur_ccb_address, ccbID,
+	if(! SplitCCBContact( nextContact, m_cur_ccb_address, m_ccb_id,
 	                     m_target_peer_description, NULL ) ) {
 		dprintf( D_ALWAYS, "BatchedCCBClient: failed to split CCB contact "
 		                   "%s; trying next one.\n",
@@ -911,13 +911,79 @@ CCBConnectionBatcher::BatchTimerCallback() {
 		if( b.deadline <= now + 1 /* avoid aliasing bugs */ ) {
 			b.timerID = -1;
 
-			// FIXME: Send the batched request.
-dprintf( D_ALWAYS, "Sending batched requests individually...\n" );
-for( auto & e : b.clients ) {
-	dprintf( D_ALWAYS, "Sending individual batched request to %s\n", e.second->currentCCBAddress().c_str() );
-	(void) e.second->IndividualReverseConnect();
-}
-b.clients.clear();
+			//
+			// Batch the requests.
+			//
+
+			StringList ccbIDs;
+			StringList connectIDs;
+			for( auto & e : b.clients ) {
+				ccbIDs.append( e.second->ccbID().c_str() );
+				connectIDs.append( e.second->connectID().c_str() );
+			}
+
+			ClassAd command;
+			char * ccbIDsString = ccbIDs.print_to_string();
+			command.Assign( ATTR_CCBID, ccbIDsString );
+			free( ccbIDsString );
+			char * connectIDsString = connectIDs.print_to_string();
+			command.Assign( ATTR_CLAIM_ID, connectIDsString );
+			free( connectIDsString );
+			command.Assign( ATTR_NAME, CCBClient::myName() );
+
+			const char * returnAddress = daemonCore->publicNetworkIpAddr();
+			ASSERT( returnAddress && * returnAddress );
+			Sinful returnSinful( returnAddress );
+			if( returnSinful.getCCBContact() ) {
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: WARNING: attempting to connect via CCB, but our return address is also CCB, which can't work.  Assuming misconfiguration, and that we're on the same private network.\n" );
+				returnSinful.setCCBContact( NULL );
+				returnAddress = returnSinful.getSinful();
+			}
+			command.Assign( ATTR_MY_ADDRESS, returnAddress );
+
+			dprintf( /* D_NETWORK|D_FULLDEBUG */ D_ALWAYS,
+				"CCBConnectionBatcher: requesting reverse connections "
+				"via CCB server %s; "
+				"I am listening on my command socket %s.n",
+				entry.first.c_str(), returnAddress );
+
+			//
+			// FIXME: Send the batched request using blocking i/o.
+			// FIXME: Handle the case where entry.first is myself.
+			//
+			Daemon * ccbServer = new Daemon( DT_COLLECTOR, entry.first.c_str(), NULL );
+
+			CondorError error;
+			Sock * socketToBroker = ccbServer->startCommand(
+				CCB_BATCH_REQUEST, Stream::reli_sock,
+				DEFAULT_CEDAR_TIMEOUT, & error );
+			if(! socketToBroker ) {
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to connect "
+					"to broker %s to make batched request.\n",
+					entry.first.c_str() );
+				return;
+			}
+
+			socketToBroker->encode();
+			if(! putClassAd( socketToBroker, command )) {
+				dprintf( D_ALWAYS, "CCBConnectBatcher: failed to send "
+					"batched request to broker %s\n", entry.first.c_str() );
+				return;
+			}
+			if(! socketToBroker->end_of_message() ) {
+				dprintf( D_ALWAYS, "CCBConnectBatcher: failed to send "
+					"end of message to broker %s\n", entry.first.c_str() );
+				return;
+			}
+
+			//
+			// TODO: RegisterReverseConnectCallback() -equivalent (listen
+			// on DaemonCore's command socket for reverse connection),
+			// and also listen on socketToBroker for replies (the
+			// CCBResultsCallback() -equivalent); check
+			// CCBRequestMsg::setCallback() et alia for details on...
+			// what, registering the socket?
+			//
 
 			// Only handle one broker per callback, even if we're expecting
 			// multiple brokers to become due in the same second.  This
@@ -952,24 +1018,4 @@ CCBConnectionBatcher::make( BatchedCCBClient * client ) {
 void
 BatchedCCBClient::CancelReverseConnect() {
 	/* FIXME */ CCBClient::CancelReverseConnect();
-}
-
-bool
-BatchedCCBClient::IndividualReverseConnect() {
-	CondorError error;
-	CCBClient * client = CCBClientFactory::makeUnbatched( true, m_ccb_contact.c_str(), m_target_sock );
-
-	if(! client->ReverseConnect( & error, true )) {
-		dprintf( D_ALWAYS, "BatchedCCBClient::IndividualReverseConnect(): CCBClient::ReverseConnect() failed.\n" );
-		return false;
-	} else {
-		dprintf( D_ALWAYS, "BatchedCCBClient::IndividualReverseConnect(): CCBClient::ReverseConnect() succeeded.\n" );
-		return true;
-	}
-}
-
-// HACK
-CCBClient *
-CCBClientFactory::makeUnbatched( bool, const char * ccbContact, ReliSock * target ) {
-    return new CCBClient( ccbContact, target );
 }

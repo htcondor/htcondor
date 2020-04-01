@@ -1327,7 +1327,9 @@ class DaemonCore : public Service
     */
     void *GetDataPtr();
     //@}
-    
+
+    void * GetDataPtrFor( Stream * s );
+
 	/** @name Key management.
 	 */
 	//@{

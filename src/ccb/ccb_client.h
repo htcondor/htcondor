@@ -58,6 +58,8 @@ class CCBClient: public Service, public ClassyCountedPtr {
 
 	virtual const std::string & connectID() { return m_connect_id; }
 
+	static std::string myName();
+
  protected:
 	virtual bool try_next_ccb();
 
@@ -86,7 +88,6 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	void RegisterReverseConnectCallback();
 	void UnregisterReverseConnectCallback();
 	static int ReverseConnectCommandHandler(int cmd,Stream *stream);
-	std::string myName();
 	void DeadlineExpired();
 
 	// CCB contact information should be an opaque token to everyone, but
@@ -103,9 +104,6 @@ class CCBClientFactory {
 	public:
 		static CCBClient * make( bool nonBlocking,
 		                         const char * ccbContact, ReliSock * target );
-
-        // HACK
-        static CCBClient * makeUnbatched( bool nonblocking, const char * ccbContact, ReliSock * target );
 };
 
 class BatchedCCBClient;
@@ -146,14 +144,12 @@ class BatchedCCBClient : public CCBClient {
 		void CancelReverseConnect() override;
 
 		const std::string & currentCCBAddress() { return m_cur_ccb_address; }
-
-		// FIXME: Remove.  For development testing only.
-		bool IndividualReverseConnect();
+		const std::string & ccbID() { return m_ccb_id; }
 
 	protected:
 		bool try_next_ccb() override;
 
-		std::string ccbID;
+		std::string m_ccb_id;
 };
 
 #endif

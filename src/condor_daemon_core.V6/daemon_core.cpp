@@ -1848,6 +1848,24 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return i;
 }
 
+void *
+DaemonCore::GetDataPtrFor( Stream * s ) {
+	if( daemonCore == NULL ) { return NULL; }
+	if( s == NULL ) { return NULL; }
+
+	int index = -1;
+	for( int i = 0; i < nSock; ++i ) {
+		if ( (*sockTable)[i].iosock == s ) {
+			index = i;
+			break;
+		}
+	}
+
+	if( index == -1 ) { return NULL; }
+
+	return (*sockTable)[index].data_ptr;
+}
+
 int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
 	int i,j;

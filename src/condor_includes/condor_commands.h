@@ -344,6 +344,8 @@ const int UPDATE_OWN_SUBMITTOR_AD = 80;
 // Request a collector to retrieve an identity token from a schedd.
 const int IMPERSONATION_TOKEN_REQUEST = 81;
 
+const int CCB_BATCH_REQUEST = 82;
+
 /* these comments are used to control command_table_generator.pl
 NAMETABLE_DIRECTIVE:END_SECTION:collector
 */
