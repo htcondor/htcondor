@@ -948,7 +948,7 @@ CCBConnectionBatcher::BatchTimerCallback() {
 				entry.first.c_str(), returnAddress );
 
 			//
-			// FIXME: Send the batched request using blocking i/o.
+			// FIXME: Send the batched request using non-blocking i/o.
 			// FIXME: Handle the case where entry.first is myself.
 			//
 			Daemon * ccbServer = new Daemon( DT_COLLECTOR, entry.first.c_str(), NULL );
@@ -966,24 +966,72 @@ CCBConnectionBatcher::BatchTimerCallback() {
 
 			socketToBroker->encode();
 			if(! putClassAd( socketToBroker, command )) {
-				dprintf( D_ALWAYS, "CCBConnectBatcher: failed to send "
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to send "
 					"batched request to broker %s\n", entry.first.c_str() );
 				return;
 			}
 			if(! socketToBroker->end_of_message() ) {
-				dprintf( D_ALWAYS, "CCBConnectBatcher: failed to send "
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to send "
 					"end of message to broker %s\n", entry.first.c_str() );
 				return;
 			}
 
 			//
-			// TODO: RegisterReverseConnectCallback() -equivalent (listen
-			// on DaemonCore's command socket for reverse connection),
-			// and also listen on socketToBroker for replies (the
-			// CCBResultsCallback() -equivalent); check
-			// CCBRequestMsg::setCallback() et alia for details on...
-			// what, registering the socket?
+			// The broker will reply almost immediately with the list of
+			// connection IDs whose corresponding CCB ID wasn't recognized.
+			// Don't bother to wait for those.
 			//
+			socketToBroker->decode();
+
+			ClassAd reply;
+			if( !getClassAd( socketToBroker, reply ) || !socketToBroker->end_of_message() ) {
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to read reply "
+					"from broker %s\n", entry.first.c_str() );
+
+				// FIXME: Assuming this means that the broker won't do anything
+				// useful, clean up (fail) all the pending requests.
+				// FIXME: Do the above everywhere else we exit this function,
+				// as well, except for the exits where we've configured the
+				// necessary callbacks.
+				return;
+			}
+
+			std::string failedConnectIDs;
+			if(! reply.LookupString( ATTR_CLAIM_ID, failedConnectIDs )) {
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: invalid reply "
+					"from broker %s\n", entry.first.c_str() );
+				return;
+			}
+
+			if( failedConnectIDs.empty() ) {
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: all CCB IDs sent to %s were valid.\n", entry.first.c_str() );
+			} else {
+				dprintf( D_ALWAYS, "CCBConnectionBatcher: the following CCB IDs were declared invalid %s: %s\n", entry.first.c_str(), failedConnectIDs.c_str() );
+			}
+
+			// FIXME: don't expect replies from the broker or connections from
+			// the target for connections in the failed list.
+
+			for( auto & e : b.clients ) {
+				e.second->RegisterReverseConnectCallback();
+			}
+
+			// FIXME: Receive the replies using non-blocking i/o.
+			socketToBroker->decode();
+			for( auto & e : b.clients ) {
+				ClassAd reply;
+
+				if( !getClassAd( socketToBroker, reply ) || !socketToBroker->end_of_message() ) {
+					dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to read connection-specific reply from %s, giving up on getting called back.\n", entry.first.c_str() );
+					for( auto & f : b.clients ) {
+						f.second->UnregisterReverseConnectCallback();
+					}
+					return;
+				}
+
+				dprintf( D_ALWAYS, "FIXME: respond sanely here.\n" );
+				dPrintAd( D_ALWAYS, reply );
+			}
 
 			// Only handle one broker per callback, even if we're expecting
 			// multiple brokers to become due in the same second.  This
@@ -1017,5 +1065,5 @@ CCBConnectionBatcher::make( BatchedCCBClient * client ) {
 
 void
 BatchedCCBClient::CancelReverseConnect() {
-	/* FIXME */ CCBClient::CancelReverseConnect();
+	CCBClient::CancelReverseConnect();
 }

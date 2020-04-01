@@ -60,6 +60,9 @@ class CCBClient: public Service, public ClassyCountedPtr {
 
 	static std::string myName();
 
+	void RegisterReverseConnectCallback();
+	void UnregisterReverseConnectCallback();
+
  protected:
 	virtual bool try_next_ccb();
 
@@ -85,8 +88,6 @@ class CCBClient: public Service, public ClassyCountedPtr {
 
 	void CCBResultsCallback(DCMsgCallback *cb);
 	void ReverseConnectCallback(Sock *sock);
-	void RegisterReverseConnectCallback();
-	void UnregisterReverseConnectCallback();
 	static int ReverseConnectCommandHandler(int cmd,Stream *stream);
 	void DeadlineExpired();
 

@@ -1082,7 +1082,7 @@ CCBServer::RemoveRequest( CCBServerRequest *request )
 	    // care about freeing the list (the request itself is freed at the
 	    // end of this function), ignore pointers to requests.
 		void * ptr = daemonCore->GetDataPtrFor( request->getSock().get() );
-        if( ptr != request ) {
+        if( ptr != request && ptr != NULL ) {
             delete (std::vector<CCBID> *)ptr;
         }
 
@@ -1511,6 +1511,7 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 	// Since we never explicitly close the socket, everything works.
 	std::shared_ptr<Sock> s(sock);
 	std::vector<CCBID> * batchedRequestIDs = new std::vector<CCBID>();
+	StringList failedConnectIDs;
 	const char * ccbID = NULL, * connectID = NULL;
 	while( (ccbID = ccbIDs.next()) != NULL ) {
 		connectID = connectIDs.next();
@@ -1519,6 +1520,7 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 		if(! CCBIDFromString( targetCCBID, ccbID )) {
 			dprintf( D_ALWAYS, "CCB: batch request from %s contains invalid CCBID %s, ignoring.\n",
 					sock->peer_description(), ccbID );
+			failedConnectIDs.append( connectID );
 			continue;
 		}
 
@@ -1527,10 +1529,7 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 			dprintf( D_ALWAYS, "CCB: ignoring batch request from %s for CCB "
 					"ID %s because no daemon is currently registered with "
 					"that ID.\n", sock->peer_description(), ccbID );
-
-			// FIXME: The reply should include failures so that the client
-			// doesn't bother to waste time waiting for the reverse
-			// connection; easier to include successes as well.
+			failedConnectIDs.append( connectID );
 			continue;
 		}
 
@@ -1539,7 +1538,7 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 		AddBatchRequest( request, target );
 		batchedRequestIDs->push_back( request->getRequestID() );
 
-		dprintf( D_FULLDEBUG
+		dprintf( D_FULLDEBUG,
 			"CCB: received batched request id %lu from %s for target "
 			"ccbid %s (registered as %s)\n",
 			request->getRequestID(),
@@ -1548,6 +1547,35 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 			target->getSock()->peer_description() );
 
 		ForwardRequestToTarget( request, target );
+	}
+
+	// Reply with the list of failed connect IDs.
+	ClassAd reply;
+	if( failedConnectIDs.number() != 0 ) {
+		char * list = failedConnectIDs.print_to_string();
+		reply.Assign( ATTR_CLAIM_ID, list );
+		free( list );
+	} else {
+		reply.Assign( ATTR_CLAIM_ID, "" );
+	}
+
+	sock->encode();
+	if( !putClassAd( sock, reply ) || !sock->end_of_message() ) {
+		dprintf( D_ALWAYS, "CCB: failed to send reply to %s\n",
+				sock->peer_description() );
+
+		// See HandleBatchRequestDisconnect() for an explanation of this.
+		// Note that since we haven't registered the data pointer for this
+		// socket, RemoveRequest() won't delete batchedRequestIDs for us.
+		for( auto & requestID : * batchedRequestIDs ) {
+			CCBServerRequest * request = NULL;
+			if( m_requests.lookup( requestID, request ) ) {
+				RemoveRequest( request );
+			}
+		}
+		delete batchedRequestIDs;
+
+		return FALSE;
 	}
 
 	// Register the disconnect handler once and only once.
