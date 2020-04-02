@@ -1142,7 +1142,8 @@ debug_open_lock(void)
 	if( DebugLock ) {
 		if ( ! DebugLockIsMutex) {
 			if (LockFd > 0 ) {
-				fstat(LockFd, &fstatus);
+					// fstat can't possibly fail, right?			
+				(void) fstat(LockFd, &fstatus);
 				if (fstatus.st_nlink == 0){
 					close(LockFd);
 					LockFd = -1;
