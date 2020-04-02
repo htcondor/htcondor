@@ -1420,76 +1420,59 @@ int Condor_Auth_Kerberos :: init_server_info()
     //  dprintf(D_ALWAYS,"KERBEROS: Unable to stash ticket -- STASH directory is not defined!\n");
     //}
 
-    char * serverPrincipal = param(STR_KERBEROS_SERVER_PRINCIPAL);
-    krb5_principal * server;
+    int err = 0;
 
-	if (mySock_->isClient()) {
-		server = &server_;
-	} else {
-		server = &krb_principal_;
-	}
+    // if we are client side, figure out remote server_ credentials
+    if (mySock_->isClient()) {
 
-    if (serverPrincipal) {
-    	if ((*krb5_parse_name_ptr)(krb_context_,serverPrincipal,server)) {
-        	dprintf(D_SECURITY, "Failed to build server principal\n");
-			free (serverPrincipal);
-        	return 0;
-		}
-		free (serverPrincipal);
-    } else {
-		int  size;
-		char *name = 0;
-		const char *instance = 0;
-		MyString hostname;
+        MyString remoteName = get_hostname(mySock_->peer_addr());
 
-		serverPrincipal = param(STR_KERBEROS_SERVER_SERVICE);
-		if(!serverPrincipal) {
-			serverPrincipal = strdup(STR_DEFAULT_CONDOR_SERVICE);
-		}
+        char *service = param(STR_KERBEROS_SERVER_SERVICE);
+        if (!service)
+            service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
-		size = strlen(serverPrincipal);
+        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.Value(), service, KRB5_NT_SRV_HST, &server_);
+        dprintf(D_SECURITY, "KERBEROS: get remote server principal for %s/%s%s\n",
+                service, remoteName.Value(), err ? " FAILED" : "");
 
-		if ((instance = strchr( serverPrincipal, '/')) != NULL) {
-			size = instance - serverPrincipal;
-			instance += 1;
-		}
+        if (!err)
+            err = !map_kerberos_name(&server_);
 
-		name = (char *) malloc(size + 1);
-		ASSERT( name );
-		memset(name, 0, size + 1);
-		strncpy(name, serverPrincipal, size);
+    } else { // we are the server itself
 
-		if (mySock_->isClient()) {
-			if (instance == 0) {
-				hostname = get_hostname(mySock_->peer_addr());
-				instance = hostname.Value();
-			}
-		}
+        char * principal = param(STR_KERBEROS_SERVER_PRINCIPAL);
 
-		//------------------------------------------
-		// First, find out the principal mapping
-		//------------------------------------------
-		if ((*krb5_sname_to_principal_ptr)(krb_context_,instance,name,KRB5_NT_SRV_HST,server)) {
-			dprintf(D_SECURITY, "Failed to build server principal\n");
-			free(name);
-			free(serverPrincipal);
-			return 0;
-		}
-		free(name);
-		free(serverPrincipal);
-	}
+        // if server principal is set then this overrides detection
+        if (principal) {
 
-	if ( mySock_->isClient() && !map_kerberos_name( server ) ) {
-		dprintf(D_SECURITY, "Failed to map principal to user\n");
-		return 0;
-	}
+            err = (*krb5_parse_name_ptr)(krb_context_, principal, &krb_principal_);
+            dprintf(D_SECURITY, "KERBEROS: set local server principal from %s = %s%s\n",
+                    STR_KERBEROS_SERVER_PRINCIPAL, principal, err ? " FAILED" : "");
 
-	char * tmp = 0;
-    (*krb5_unparse_name_ptr)(krb_context_, *server, &tmp);
-	dprintf(D_SECURITY, "KERBEROS: Server principal is %s\n", tmp);
-	free(tmp);
+            free (principal);
 
-    return 1;
+        } else { // server side but no principal set, so get from service (note this is duplicated in init_daemon)
+
+            char *service = param(STR_KERBEROS_SERVER_SERVICE);
+            if (!service)
+                service = strdup(STR_DEFAULT_CONDOR_SERVICE);
+
+            err = (*krb5_sname_to_principal_ptr)(krb_context_, NULL, service, KRB5_NT_SRV_HST, &krb_principal_);
+            dprintf(D_SECURITY, "KERBEROS: get local server principal for %s/%s\n",
+                    service, err ? " FAILED" : "");
+
+            free (service);
+        }
+    }
+
+    if (IsDebugLevel(D_SECURITY) && !err) {
+        char *tmp;
+        if (!(*krb5_unparse_name_ptr)(krb_context_, mySock_->isClient() ? krb_principal_ : server_, &tmp))
+	    dprintf(D_SECURITY, "KERBEROS: the server principal is %s\n", tmp);
+        free(tmp);
+    }
+
+    return !err;
 }
 
 
