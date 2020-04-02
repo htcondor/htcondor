@@ -2740,7 +2740,12 @@ bool SecMan :: invalidateKey(const char * key_id)
     bool removed = true;
     KeyCacheEntry * keyEntry = NULL;
 
-	session_cache->lookup(key_id, keyEntry);
+	int r = session_cache->lookup(key_id, keyEntry);
+	if (!r) {
+		dprintf( D_SECURITY,
+				 "DC_INVALIDATE_KEY: security session %s not found in cache.\n",
+				 key_id);
+	}
 
 	if ( keyEntry && keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
 		dprintf( D_SECURITY,
