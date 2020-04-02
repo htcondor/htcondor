@@ -1515,22 +1515,31 @@ int Condor_Auth_Kerberos :: read_request(krb5_data * request)
 void Condor_Auth_Kerberos :: setRemoteAddress()
 {
     krb5_error_code  code;
-    krb5_address  *remoteAddr = NULL;
-    
+
+    // the krb5_free_addresses function takes a NULL-terminate array of addrs,
+    // not just an address of a krb5_address*
+    //
+    // it (somewhat surprisingly) also calls free on the array itself, so
+    // allocate it with malloc() and not on the stack!
+    krb5_address**  remoteAddrs;
+    remoteAddrs = (krb5_address**)malloc(2*sizeof(krb5_address*));
+    remoteAddrs[0] = NULL;  // this one we will use
+    remoteAddrs[1] = NULL;  // keep this entry NULL so we can free everything later
+
     // Get remote host's address first
-    
     if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_, 
                                       auth_context_, 
                                       NULL, 
-                                      &remoteAddr))) {
+                                      &(remoteAddrs[0])))) {
         goto error;
     }
+    dprintf(D_SECURITY | D_VERBOSE, "KERBEROS: remoteAddrs[] is {%x, %x}\n", remoteAddrs[0], remoteAddrs[1]);
     
-    if (remoteAddr) {
+    if (remoteAddrs[0]) {
         struct in_addr in;
-        memcpy(&(in.s_addr), (remoteAddr)[0].contents, sizeof(in_addr));
+        memcpy(&(in.s_addr), (remoteAddrs[0])[0].contents, sizeof(in_addr));
         setRemoteHost(inet_ntoa(in));
-        (*krb5_free_addresses_ptr)(krb_context_, &remoteAddr);
+        (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
     }
     
     dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
