@@ -152,6 +152,9 @@ class FileTransfer final: public Service {
 	 */
 	void setCredsDir(const std::string &cred_dir) {m_cred_dir = cred_dir;}
 
+	/** @param socket The socket used to send syscall instructions */
+	void setSyscallSocket(ReliSock* socket) {m_syscall_socket = socket;}
+
 	/** @param reuse_dir: The DataReuseDirectory object to utilize for data reuse
 	 *  lookups
 	 */
@@ -475,6 +478,7 @@ class FileTransfer final: public Service {
 	bool did_init{false};
 	bool simple_init{true};
 	ReliSock *simple_sock{nullptr};
+	ReliSock *m_syscall_socket{nullptr};
 	MyString download_filename_remaps;
 	bool m_use_file_catalog{true};
 	TransferQueueContactInfo m_xfer_queue_contact_info;

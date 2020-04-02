@@ -2457,6 +2457,7 @@ JICShadow::beginFileTransfer( void )
 
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->setSecuritySession(m_filetrans_sec_session);
+		filetrans->setSyscallSocket(syscall_sock);
 		filetrans->RegisterCallback(
 				  (FileTransferHandlerCpp)&JICShadow::transferCompleted,this );
 
