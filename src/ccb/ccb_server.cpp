@@ -1076,25 +1076,25 @@ CCBServer::RemoveRequest( CCBServerRequest *request )
 	// Because getSock() returns a copy of the shared_ptr<>, the reference
 	// count for the last request will be 2.
 	if( request->getSock().use_count() == 2 ) {
-	    // Although this function is called for both single and batch requests,
-	    // we know that the data pointer of single requests points to the
-	    // single request itself (as opposed to the list).  Since we only
-	    // care about freeing the list (the request itself is freed at the
-	    // end of this function), ignore pointers to requests.
+		// Although this function is called for both single and batch requests,
+		// we know that the data pointer of single requests points to the
+		// single request itself (as opposed to the list).  Since we only
+		// care about freeing the list (the request itself is freed at the
+		// end of this function), ignore pointers to requests.
 		void * ptr = daemonCore->GetDataPtrFor( request->getSock().get() );
-        if( ptr != request && ptr != NULL ) {
-            delete (std::vector<CCBID> *)ptr;
-        }
+		if( ptr != request && ptr != NULL ) {
+			delete (std::vector<CCBID> *)ptr;
+		}
 
-        // Cancel the socket.
+		// Cancel the socket.
 		daemonCore->Cancel_Socket( request->getSock().get() );
 	}
 
 	if( m_requests.remove(request->getRequestID()) != 0 ) {
 		EXCEPT("CCB: failed to remove request id=%lu from %s for ccbid %lu",
-			   request->getRequestID(),
-			   request->getSock()->peer_description(),
-			   request->getTargetCCBID());
+				request->getRequestID(),
+				request->getSock()->peer_description(),
+				request->getTargetCCBID());
 	}
 
 		// remove this request from the list of requests waiting for the target

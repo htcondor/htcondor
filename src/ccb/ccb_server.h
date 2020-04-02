@@ -102,7 +102,7 @@ class CCBServer: Service {
 	void HandleRequestResultsMsg( CCBTarget *target );
 	int HandleRequestResultsMsg( Stream *stream );
 
-    int HandleBatchRequest( int cmd, Stream * stream );
+	int HandleBatchRequest( int cmd, Stream * stream );
 	void AddBatchRequest( CCBServerRequest * request, CCBTarget * target );
 	int HandleBatchRequestDisconnect( Stream * stream );
 
