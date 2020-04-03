@@ -58,7 +58,7 @@ public:
 		}
 		names += " at ";
 		if(pool_name) {
-			names = "pool ";
+			names += "pool ";
 			names += pool_name;
 		} else {
 			names = "local pool";
