@@ -1432,7 +1432,7 @@ int Condor_Auth_Kerberos :: init_server_info()
             service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
         err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.Value(), service, KRB5_NT_SRV_HST, &server_);
-        dprintf(D_SECURITY, "KERBEROS: get remote server principal for %s/%s%s\n",
+        dprintf(D_SECURITY, "KERBEROS: get remote server principal for \"%s/%s\"%s\n",
                 service, remoteName.Value(), err ? " FAILED" : "");
 
         if (!err)
@@ -1446,7 +1446,7 @@ int Condor_Auth_Kerberos :: init_server_info()
         if (principal) {
 
             err = (*krb5_parse_name_ptr)(krb_context_, principal, &krb_principal_);
-            dprintf(D_SECURITY, "KERBEROS: set local server principal from %s = %s%s\n",
+            dprintf(D_SECURITY, "KERBEROS: set local server principal from %s = \"%s\"%s\n",
                     STR_KERBEROS_SERVER_PRINCIPAL, principal, err ? " FAILED" : "");
 
             free (principal);
@@ -1458,7 +1458,7 @@ int Condor_Auth_Kerberos :: init_server_info()
                 service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
             err = (*krb5_sname_to_principal_ptr)(krb_context_, NULL, service, KRB5_NT_SRV_HST, &krb_principal_);
-            dprintf(D_SECURITY, "KERBEROS: get local server principal for %s/%s\n",
+            dprintf(D_SECURITY, "KERBEROS: get local server principal for \"%s\" %s\n",
                     service, err ? " FAILED" : "");
 
             free (service);
@@ -1468,7 +1468,7 @@ int Condor_Auth_Kerberos :: init_server_info()
     if (IsDebugLevel(D_SECURITY) && !err) {
         char *tmp;
         if (!(*krb5_unparse_name_ptr)(krb_context_, mySock_->isClient() ? krb_principal_ : server_, &tmp))
-	    dprintf(D_SECURITY, "KERBEROS: the server principal is %s\n", tmp);
+	    dprintf(D_SECURITY, "KERBEROS: the server principal is \"%s\"\n", tmp);
         free(tmp);
     }
 
