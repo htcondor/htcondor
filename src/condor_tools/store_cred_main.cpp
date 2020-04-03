@@ -110,7 +110,7 @@ int main(int argc, const char *argv[]) {
 	//
 	if (options.pool_password_file != NULL) {
 		auto_free_ptr pw;
-		if (options.pw[0] == '\0') {
+		if (!options.pw || options.pw[0] == '\0') {
 			pw.set(get_password());
 			printf("\n");
 		}
