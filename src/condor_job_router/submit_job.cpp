@@ -61,7 +61,7 @@ public:
 			names += "pool ";
 			names += pool_name;
 		} else {
-			names = "local pool";
+			names += "local pool";
 		}
 	}
 
