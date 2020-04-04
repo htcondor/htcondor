@@ -1533,7 +1533,7 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
                                       &(remoteAddrs[0])))) {
         goto error;
     }
-    dprintf(D_SECURITY | D_VERBOSE, "KERBEROS: remoteAddrs[] is {%x, %x}\n", remoteAddrs[0], remoteAddrs[1]);
+    dprintf(D_SECURITY | D_VERBOSE, "KERBEROS: remoteAddrs[] is {%p, %p}\n", remoteAddrs[0], remoteAddrs[1]);
     
     if (remoteAddrs[0]) {
         struct in_addr in;
