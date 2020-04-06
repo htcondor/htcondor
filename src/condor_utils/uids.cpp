@@ -1094,7 +1094,11 @@ init_condor_ids()
 		RealCondorGid = envCondorGid;
 	} else {
 		// If CONDOR_IDS isn't set, then look for the "condor" account.
-		pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
+		bool r = pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
+		if (!r) {
+			RealCondorUid = INT_MAX;
+		}
+
 		pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 	}
 	if( config_val ) {
