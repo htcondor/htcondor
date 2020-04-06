@@ -50,7 +50,8 @@ class DockerAPI {
 						int & pid,
 						int * childFDs,
 						bool & shouldAskForPorts,
-						CondorError & error );
+						CondorError & error,
+						int * affinity_mask = NULL);
 
 		static int startContainer(const std::string &name,
 						int &pid,

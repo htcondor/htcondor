@@ -11,6 +11,7 @@
 
 #include "docker-api.h"
 #include <algorithm>
+#include <sstream>
 
 #if !defined(WIN32)
 #include <sys/un.h>
@@ -83,7 +84,8 @@ int DockerAPI::createContainer(
 	int & pid,
 	int * childFDs,
 	bool & shouldAskForPorts,
-	CondorError & /* err */ )
+	CondorError & /* err */,
+	int * affinity_mask /*= NULL*/)
 {
 	gc_image(imageID);
 	//
@@ -109,18 +111,30 @@ int DockerAPI::createContainer(
 
 	// Configure resource limits.
 
-	// First cpus
-	int  cpus;
-	int cpuShare;
-
-	if (machineAd.LookupInteger(ATTR_CPUS, cpus)) {
-		cpuShare = 100 * cpus;
+	if (affinity_mask) {
+		std::stringstream cpuSetStr;
+		cpuSetStr << "--cpuset-cpus=";
+		for (int i = 1; i < affinity_mask[0]; i++) {
+			if (i != 1) {
+				cpuSetStr << ",";
+			}
+			cpuSetStr << affinity_mask[i];
+		}
+		runArgs.AppendArg(cpuSetStr.str());
 	} else {
-		cpuShare = 100;
+		// First cpus
+		int  cpus;
+		int cpuShare;
+
+		if (machineAd.LookupInteger(ATTR_CPUS, cpus)) {
+			cpuShare = 100 * cpus;
+		} else {
+			cpuShare = 100;
+		}
+		std::string cpuShareStr;
+		formatstr(cpuShareStr, "--cpu-shares=%d", cpuShare);
+		runArgs.AppendArg(cpuShareStr);
 	}
-	std::string cpuShareStr;
-	formatstr(cpuShareStr, "--cpu-shares=%d", cpuShare);
-	runArgs.AppendArg(cpuShareStr);
 
 	// Now memory
 	int memory; // in Megabytes

@@ -195,9 +195,11 @@ int DockerProc::StartJob() {
 
 	buildExtraVolumes(extras, *machineAd, *JobAd);
 
+	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
+
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
-	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, shouldAskForServicePorts, err );
+	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, shouldAskForServicePorts, err, affinity_mask);
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		handleFTL(rv);
@@ -209,6 +211,7 @@ int DockerProc::StartJob() {
 	// If we manage to start the Docker job, clear the offline state for docker universe
 	handleFTL(0);
 
+	free(affinity_mask);
 	waitForCreate = true;  // Tell the reaper to run start container on exit
 	return TRUE;
 }
