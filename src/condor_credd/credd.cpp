@@ -372,11 +372,6 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("TokenUrl", tmpvalue);
 
-			tmpname = service;
-			tmpname += "_USER_URL";
-			param(tmpvalue, tmpname.c_str());
-			ad.Assign("UserUrl", tmpvalue);
-
 			// serialize classad into string
 			if(!contents.empty()) {
 				contents += "\n";
