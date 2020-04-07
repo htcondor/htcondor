@@ -1,3 +1,13 @@
+condor (8.8.8-1) stable; urgency=high
+
+  * Fixes addressing CVE-2019-18823
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Mar 2020 11:05:03 -0500
+
 condor (8.8.7-1) stable; urgency=medium
 
   * Updated condor_annex to work with upcoming AWS Lambda function changes

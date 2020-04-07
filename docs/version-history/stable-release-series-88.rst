@@ -8,14 +8,14 @@ series.
 
 The details of each version are described below.
 
-Version 8.8.8
+Version 8.8.9
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.8 not yet released.
+-  HTCondor version 8.8.9 not yet released.
 
-.. HTCondor version 8.8.8 released on Month Date, 2020.
+.. HTCondor version 8.8.9 released on Month Date, 2020.
 
 New Features:
 
@@ -47,6 +47,31 @@ Bugs Fixed:
 -  Fixed a problem where the Kerberos realm would not be set when there is no
    mapping from domain to realm and security debugging is not enabled.
    :ticket:`7492`
+
+Version 8.8.8
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.8 released on April 6, 2020.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html>`_.
+
+   :ticket:`7356`
+   :ticket:`7427`
+   :ticket:`7507`
 
 Version 8.8.7
 -------------

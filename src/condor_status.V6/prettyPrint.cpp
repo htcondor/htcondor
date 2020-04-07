@@ -387,7 +387,7 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, S
 		classad::References attrs;
 		classad::References *proj = NULL;
 		if (PP_IS_LONGish(pps) && ( ! fHashOrder || whitelist)) {
-			sGetAdAttrs(attrs, *ad, false, whitelist);
+			sGetAdAttrs(attrs, *ad, true, whitelist);
 			proj = &attrs;
 		}
 

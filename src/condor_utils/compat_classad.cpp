@@ -1740,7 +1740,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 	classad::References attrs;
 	classad::References *print_order = NULL;
 	if ( ! hash_order || whitelist) {
-		sGetAdAttrs(attrs, ad, false, whitelist);
+		sGetAdAttrs(attrs, ad, true, whitelist);
 		print_order = &attrs;
 	}
 
@@ -2509,7 +2509,12 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 {
 	MyString buffer;
 
-	sPrintAd( buffer, ad, exclude_private, attr_white_list );
+	if( exclude_private ) {
+		sPrintAd( buffer, ad, attr_white_list );
+	} else {
+		sPrintAdWithSecrets( buffer, ad, attr_white_list );
+	}
+
 	if ( fprintf(file, "%s", buffer.Value()) < 0 ) {
 		return FALSE;
 	} else {
@@ -2523,14 +2528,19 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 	if ( IsDebugCatAndVerbosity( level ) ) {
 		MyString buffer;
 
-		sPrintAd( buffer, ad, exclude_private );
+		if( exclude_private ) {
+			sPrintAd( buffer, ad );
+		} else {
+			sPrintAdWithSecrets( buffer, ad );
+		}
 
 		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 	}
 }
 
+
 int
-sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	classad::ClassAd::const_iterator itr;
 
@@ -2575,10 +2585,30 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 }
 
 int
-sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
+	return _sPrintAd( output, ad, true, attr_white_list );
+}
+
+int
+sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
+	return _sPrintAd( output, ad, false, attr_white_list );
+}
+
+
+int
+sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
 {
 	MyString myout;
-	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
+	int rc = sPrintAd( myout, ad, attr_white_list );
+	output += myout;
+	return rc;
+}
+
+int
+sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
+{
+	MyString myout;
+	int rc = sPrintAdWithSecrets( myout, ad, attr_white_list );
 	output += myout;
 	return rc;
 }
