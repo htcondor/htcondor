@@ -5416,6 +5416,35 @@ default=$(SBIN)/condor_credmon_krbafs
 win32_default=
 type=path
 
+# standard API endpoints for common OAuth token providers
+[BOX_AUTHORIZATION_URL]
+default=https://account.box.com/api/oauth2/authorize
+type=string
+[BOX_TOKEN_URL]
+default=https://api.box.com/oauth2/token
+type=string
+
+[GDRIVE_AUTHORIZATION_URL]
+default=https://accounts.google.com/o/oauth2/v2/auth
+type=string
+[GDRIVE_TOKEN_URL]
+default=https://oauth2.googleapis.com/token
+type=string
+
+[ONEDRIVE_AUTHORIZATION_URL]
+default=https://login.live.com/oauth20_authorize.srf
+type=string
+[ONEDRIVE_TOKEN_URL]
+default=https://login.live.com/oauth20_token.srf
+type=string
+
+[DROPBOX_AUTHORIZATION_URL]
+default=https://www.dropbox.com/oauth2/authorize
+type=string
+[DROPBOX_TOKEN_URL]
+default=https://api.dropboxapi.com/oauth2/token
+type=string
+
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
