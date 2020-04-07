@@ -586,10 +586,10 @@ REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
 }
 
 
-int
+off_t
 REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
 {
-        int     rval;
+        off_t     rval;
         condor_errno_t     terrno;
 		int result = 0;
 
