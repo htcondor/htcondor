@@ -32,6 +32,19 @@ container$ su - submituser
 ```
 
 
+### Adding configuration
+
+To add extra configuration to the minicondor container, you can volume-mount
+a file to `/etc/condor/condor_config.local`.  For example, if you have a file
+called `condor_config.local` in your current directory, run docker like this:
+```console
+dockerhost$ docker run --detach \
+                --name=minicondor \
+                -v `pwd`/condor_config.local:/etc/condor/condor_config.local \
+                htcondor/mini:el7
+```
+
+
 Using the Execute Node Container
 --------------------------------
 
