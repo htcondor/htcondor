@@ -70,6 +70,10 @@ if( ! $platform ) {
 	$platform = "swamp:" . $ENV{ 'SWAMP_PLATFORM' };
 }
 
+if( exists $ENV{NMI_DOCKER_IMAGE} ) {
+	$platform = "docker://" . $ENV{NMI_DOCKER_IMAGE};
+}
+
 print "ENV: NMI_PLATFORM = $platform\n";
 $platform || die "No platform to use, NOT submitting tests\n";
 
