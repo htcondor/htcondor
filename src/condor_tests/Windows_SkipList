@@ -47,7 +47,7 @@ job_core_output_sched
 job_core_queue_sched
 job_core_remote-initialdir_van
 job_core_sh-loop_van
-job_consumption_policies_basic_van
+#job_consumption_policies_basic_van
 job_starter_script-A
 job_test_urlfetch
 

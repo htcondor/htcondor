@@ -53,8 +53,7 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
         if (MATCH == strcasecmp(asset, "swap")) continue;
         string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
-        ClassAd::iterator f(resource.find(ca));
-        if (f == resource.end()) return false;
+        if (! resource.Lookup(ca)) return false;
     }
 
     return true;
@@ -94,8 +93,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
 
         // get the requested asset value
         bool missing = false;
-        ClassAd::iterator f(job.find(ra));
-        if (f == job.end()) {
+        if (!job.Lookup(ra)) {
             // a RequestXxx attribute not present - default to zero
             job.Assign(ra, 0);
             missing = true;
@@ -222,8 +220,7 @@ void cp_override_requested(ClassAd& job, ClassAd& resource, consumption_map_t& c
         formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
 
         // If there was no RequestXXX to begin with, don't screw things up by creating one
-        ClassAd::iterator f(job.find(ra));
-        if (job.end() == f) continue;
+        if (!job.Lookup(ra)) continue;
 
         string oa;
         formatstr(oa, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, asset);
