@@ -1833,7 +1833,7 @@ bool DCSchedd::getJobConnectInfo(
 
 	if( IsFulldebug(D_FULLDEBUG) ) {
 		std::string adstr;
-		sPrintAd(adstr, output, true);
+		sPrintAd(adstr, output);
 		dprintf(D_FULLDEBUG,"Response for GET_JOB_CONNECT_INFO:\n%s\n",
 				adstr.c_str());
 	}

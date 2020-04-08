@@ -1932,6 +1932,20 @@ fi
 %endif
 
 %changelog
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
+- Fixes addressing CVE-2019-18823
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
+- Fixes addressing CVE-2019-18823
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
 * Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
 - Added a new mode that skips jobs whose outputs are newer than their inputs
 - Added command line tool to help debug ClassAd expressions

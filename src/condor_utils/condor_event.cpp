@@ -1152,7 +1152,7 @@ FutureEvent::initFromClassAd(ClassAd* ad)
 
 	// Get the list of attributes that remain after we remove the known ones.
 	classad::References attrs;
-	sGetAdAttrs(attrs, *ad, false, NULL);
+	sGetAdAttrs(attrs, *ad);
 	attrs.erase(ATTR_MY_TYPE);
 	attrs.erase("EventTypeNumber");
 	attrs.erase("Cluster");

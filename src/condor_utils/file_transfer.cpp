@@ -4444,7 +4444,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 						return_and_resetpriv( -1 );
 					}
 
-					// compute the size of what we sent
+					//
+					// This comment used to read 'compute the size of what we sent',
+					// but obviously the wire format and the string format of
+					// ClassAds are not the same and can't be expected to be the
+					// same length.  Since the size will be wrong anyway, simplify
+					// future security audits but not printing the private attrs.
+					//
 					MyString junkbuf;
 					sPrintAd(junkbuf, file_info);
 					bytes = junkbuf.Length();

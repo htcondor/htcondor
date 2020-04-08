@@ -877,7 +877,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			capabilities.insert(std::make_pair(sinful, capability));
 		} else {
 			dprintf(D_SECURITY, "No capability present for ad from %s.\n", sinful.c_str());
-			dPrintAd(D_SECURITY, *ad, false);
+			dPrintAd(D_SECURITY, *ad);
 		}
 	}
 	submitterAds.Close();
