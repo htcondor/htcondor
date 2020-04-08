@@ -7183,6 +7183,10 @@ static int jobsInSlot(ClassAd &request, ClassAd &offer) {
 	EvalInteger(ATTR_REQUEST_CPUS, &request, &offer, requestCpus);
 	EvalInteger(ATTR_REQUEST_MEMORY, &request, &offer, requestMemory);
 
+		// Eventually should support fractional Cpus...
+	if (requestCpus < 1) requestCpus = 1;
+	if (requestMemory < 1) requestMemory = 1;
+
 	return MIN( availCpus / requestCpus,
 	            availMemory / requestMemory );
 }
