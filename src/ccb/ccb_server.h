@@ -85,7 +85,7 @@ class CCBServer: Service {
 	void SendHeartbeatResponse( CCBTarget *target );
 
 	void ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target );
-	void RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid );
+	void RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid, const char * connect_id );
 
 	void RequestFinished( CCBServerRequest *request, bool success, char const *error_msg );
 

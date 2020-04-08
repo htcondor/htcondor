@@ -584,7 +584,7 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 			"CCB server rejecting request for ccbid %s because no daemon is "
 			"currently registered with that id "
 			"(perhaps it recently disconnected).", target_ccbid_str.c_str());
-		RequestReply( sock, false, error_msg.Value(), 0, target_ccbid );
+		RequestReply( sock, false, error_msg.Value(), 0, target_ccbid, connect_id.c_str() );
 		return FALSE;
 	}
 
@@ -794,7 +794,7 @@ CCBServer::ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target 
 }
 
 void
-CCBServer::RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid )
+CCBServer::RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid, const char * connect_id )
 {
 	if( success && sock->readReady() ) {
 			// the client must have disconnected (which is expected if
@@ -805,6 +805,9 @@ CCBServer::RequestReply( Sock *sock, bool success, char const *error_msg, CCBID 
 	ClassAd msg;
 	msg.Assign( ATTR_RESULT, success );
 	msg.Assign( ATTR_ERROR_STRING, error_msg );
+	// If we succeeded, nobody cares what the connect ID was, so don't
+	// make the usual/expected case more expensive.
+	if(! success) { msg.Assign( ATTR_CLAIM_ID, connect_id ); }
 
 	sock->encode();
 	if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
@@ -843,7 +846,8 @@ CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const 
 		success,
 		error_msg,
 		request->getRequestID(),
-		request->getTargetCCBID() );
+		request->getTargetCCBID(),
+		request->getConnectID() );
 
 	RemoveRequest( request );
 }
