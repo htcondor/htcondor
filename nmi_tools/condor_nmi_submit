@@ -1400,12 +1400,6 @@ EOF
     }
     print $fh "pre_all_args = $pre_all_args\n";
 
-	#tstclair: we no longer use this.
-	# print $fh "remote_declare = \n";
-    # print $fh "remote_declare_args =";
-    # print $fh " --externals-only" if defined($opt_externals_only);
-    # print $fh " --release-only" if defined($opt_release_only);
-    # print $fh "\n";
     print $fh "remote_declare = nmi_tools/glue/build/remote_declare.pl\n";
     print $fh "remote_pre = nmi_tools/glue/build/remote_pre.pl\n";
     print $fh "remote_task = nmi_tools/glue/build/remote_task.pl\n";
@@ -1594,7 +1588,7 @@ EOF
 		}
 
 		# finally print out the mess which is all passed to remote_declare.
-		print $fh "${platform_name}_remote_declare_args = $args\n";
+		print $fh "${platform_key}_remote_declare_args = $args\n";
 	}
 }
 
