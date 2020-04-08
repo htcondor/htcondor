@@ -4,14 +4,14 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 8.9.6
+Version 8.9.7
 -------------
 
 Release Notes:
 
--  HTCondor version 8.9.6 not yet released.
+-  HTCondor version 8.9.7 not yet released.
 
-.. HTCondor version 8.9.6 released on Month Date, 2019.
+.. HTCondor version 8.9.7 released on Month Date, 2020.
 
 - HTCondor now advertises ``CUDAMaxSupportedVersion`` (when appropriate).  This
   attribute is an integer representation of the highest CUDA version the
@@ -121,11 +121,35 @@ Bugs Fixed:
   deleted upon upgrade.
   :ticket:`7444`
 
-Version 8.9.5
+Version 8.9.6
 -------------
 
 Release Notes:
 
+-  HTCondor version 8.9.6 released on April 6, 2020.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html>`_.
+
+   :ticket:`7356`
+   :ticket:`7427`
+   :ticket:`7507`
+
+Version 8.9.5
+-------------
+
+Release Notes:
 
 -  HTCondor version 8.9.5 released on January 2, 2020.
 
