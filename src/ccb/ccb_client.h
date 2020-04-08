@@ -127,6 +127,9 @@ class CCBConnectionBatcher {
 				int timerID {-1};
 				time_t deadline {0};
 				std::map< std::string, BatchedCCBClient * > clients;
+
+                void HandleBrokerFailure();
+                void ForgetClientAndTryNextBroker( const std::string & connectID, BatchedCCBClient * client = NULL );
 		};
 
 		static std::map< std::string, Broker > brokers;
@@ -153,6 +156,9 @@ class BatchedCCBClient : public CCBClient {
 		bool try_next_ccb() override;
 
 		std::string m_ccb_id;
+
+    // Should only be needed for try_next_ccb(); remove when possible.
+    friend class CCBConnectionBatcher;
 };
 
 #endif

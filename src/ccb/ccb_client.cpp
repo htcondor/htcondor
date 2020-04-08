@@ -141,8 +141,6 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		// distressing that we're passed CCB contact strings rather than
 		// sinfuls, when it's time to handle multiple addresses...
 		//
-		// FIXME: Assumes that shared port knows what it's doing.
-		//
 		if( SharedPortEndpoint::UseSharedPort() ) {
 			shared_listener = std::shared_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
 			shared_listener->InitAndReconfig();
@@ -961,6 +959,7 @@ CCBConnectionBatcher::BatchTimerCallback() {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to connect "
 					"to broker %s to make batched request.\n",
 					entry.first.c_str() );
+				b.HandleBrokerFailure();
 				return;
 			}
 
@@ -968,11 +967,13 @@ CCBConnectionBatcher::BatchTimerCallback() {
 			if(! putClassAd( socketToBroker, command )) {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to send "
 					"batched request to broker %s\n", entry.first.c_str() );
+				b.HandleBrokerFailure();
 				return;
 			}
 			if(! socketToBroker->end_of_message() ) {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to send "
 					"end of message to broker %s\n", entry.first.c_str() );
+				b.HandleBrokerFailure();
 				return;
 			}
 
@@ -989,11 +990,7 @@ CCBConnectionBatcher::BatchTimerCallback() {
 			if( !getClassAd( socketToBroker, reply ) || !socketToBroker->end_of_message() ) {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to read reply "
 					"from broker %s\n", entry.first.c_str() );
-
-				// Remove and destroy all BatchedCCBClient objects; see below.
-				for( auto & e : b.clients ) { e.second->FailReverseConnect(); }
-				b.clients.clear();
-
+				b.HandleBrokerFailure();
 				return;
 			}
 
@@ -1001,11 +998,7 @@ CCBConnectionBatcher::BatchTimerCallback() {
 			if(! reply.LookupString( ATTR_CLAIM_ID, failedConnectIDsString )) {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: invalid reply "
 					"from broker %s\n", entry.first.c_str() );
-
-				// Remove and destroy all BatchedCCBClient objects; see below.
-				for( auto & e : b.clients ) { e.second->FailReverseConnect(); }
-				b.clients.clear();
-
+				b.HandleBrokerFailure();
 				return;
 			}
 
@@ -1014,8 +1007,7 @@ CCBConnectionBatcher::BatchTimerCallback() {
 			failedConnectIDs.rewind();
 			const char * failedConnectID = NULL;
 			while( (failedConnectID = failedConnectIDs.next()) != NULL ) {
-				for( auto & e : b.clients ) { e.second->FailReverseConnect(); }
-				b.clients.erase( failedConnectID );
+				b.ForgetClientAndTryNextBroker( failedConnectID );
 			}
 
 			/*
@@ -1060,12 +1052,8 @@ CCBConnectionBatcher::BatchTimerCallback() {
 					dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to read connection-specific reply from %s, giving up on getting called back.\n", entry.first.c_str() );
 					for( auto & f : b.clients ) {
 						f.second->UnregisterReverseConnectCallback();
+						b.ForgetClientAndTryNextBroker( f.first, f.second );
 					}
-
-					// Remove and destroy all BatchedCCBClient objects; see below.
-					for( auto & e : b.clients ) { e.second->FailReverseConnect(); }
-					b.clients.clear();
-
 					return;
 				}
 
@@ -1077,6 +1065,11 @@ CCBConnectionBatcher::BatchTimerCallback() {
 				if(! result) {
 					dprintf( D_ALWAYS, "FIXME: long error message from line 654.\n" );
 
+					// FIXME: There should be a fail-safe back-up timer for
+					// each client object: if the corresponding connect ID
+					// is still registered, call FailReverseConnect(), then
+					// remove and destroy it.  This may already exist once
+					// we've called RegisterReverseConnectCallback()?
 					std::string connectID;
 					reply.LookupString( ATTR_CLAIM_ID, connectID );
 					if( connectID.empty() ) {
@@ -1088,14 +1081,11 @@ CCBConnectionBatcher::BatchTimerCallback() {
 						continue;
 					}
 
+					// Unregister the reverse connect callback; the next
+					// broker we try will register it again as appropriate.
 					auto * client = b.clients[connectID];
 					client->UnregisterReverseConnectCallback();
-					// FIXME: Instead of just giving up at this point, we need
-					// to try the next broker for this client.  This applies
-					// everywhere that we give up in this function; only the
-					// client object (in try_next_ccb()) can give up for sure.
-					// *sigh*
-					client->FailReverseConnect();
+					b.ForgetClientAndTryNextBroker( connectID, client );
 				} else {
 					dprintf( D_ALWAYS, "FIXME: long debug message from line 664.\n" );
 				}
@@ -1154,4 +1144,34 @@ BatchedCCBClient::FailReverseConnect() {
 
 	m_target_sock->exit_reverse_connecting_state( NULL );
 	daemonCore->CallSocketHandler( m_target_sock, false );
+}
+
+void
+CCBConnectionBatcher::Broker::HandleBrokerFailure() {
+	for( auto e : clients ) {
+		ForgetClientAndTryNextBroker( e.first, e.second );
+	}
+}
+
+void
+CCBConnectionBatcher::Broker::ForgetClientAndTryNextBroker(
+  const std::string & connectID, BatchedCCBClient * client ) {
+	if( client == NULL ) {
+		if( clients.count( connectID ) != 0 ) {
+			client = clients[connectID];
+		} else {
+			return;
+		}
+	}
+
+	// Forget about this client without destroying it.
+	clients[connectID] = NULL;
+	clients.erase( connectID );
+
+	// Try the next broker.  If the client can't, destroy it.
+	// Otherwise, it becomes the responsibility of the next broker.
+	if(! client->try_next_ccb()) {
+		client->FailReverseConnect();
+		delete client;
+	}
 }
