@@ -7099,6 +7099,10 @@ static int jobsInSlot(ClassAd &request, ClassAd &offer) {
 	request.EvalInteger(ATTR_REQUEST_CPUS, &offer, requestCpus);
 	request.EvalInteger(ATTR_REQUEST_MEMORY, &offer, requestMemory);
 
+		// Eventually should support fractional Cpus...
+	if (requestCpus < 1) requestCpus = 1;
+	if (requestMemory < 1) requestMemory = 1;
+
 	return MIN( availCpus / requestCpus,
 	            availMemory / requestMemory );
 }
