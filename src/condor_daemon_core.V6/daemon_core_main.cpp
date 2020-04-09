@@ -1153,17 +1153,16 @@ dc_touch_lock_files( )
 void
 set_dynamic_dir( const char* param_name, const char* append_str )
 {
-	char* val;
+	std::string val;
 	MyString newdir;
 
-	val = param( param_name );
-	if( ! val ) {
+	if( !param( val, param_name ) ) {
 			// nothing to do
 		return;
 	}
 
 		// First, create the new name.
-	newdir.formatstr( "%s.%s", val, append_str );
+	newdir.formatstr( "%s.%s", val.c_str(), append_str );
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
