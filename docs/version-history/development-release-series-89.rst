@@ -121,6 +121,10 @@ Bugs Fixed:
   deleted upon upgrade.
   :ticket:`7444`
 
+- Fixed a bug where Kerberos principals were being set incorrectly when
+  :macro:`KERBEROS_SERVER_PRINCIPAL` was set.
+  :ticket:`7577`
+
 Version 8.9.6
 -------------
 
