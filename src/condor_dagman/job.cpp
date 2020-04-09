@@ -769,6 +769,10 @@ bool Job::CanAddChildren(std::forward_list<Job*> & children, MyString &whynot)
 		whynot = "Tried to add a child to a final node";
 		return false;
 	}
+	if ( GetType() == NodeType::PROVISIONER ) {
+		whynot = "Tried to add a child to a provisioner node";
+		return false;
+	}
 
 	for (auto it = children.begin(); it != children.end(); ++it) {
 		Job* child = *it;
@@ -1088,6 +1092,10 @@ Job::CanAddChild( Job* child, MyString &whynot )
 	}
 	if( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a child to a final node";
+		return false;
+	}
+	if( GetType() == NodeType::PROVISIONER ) {
+		whynot = "Tried to add a child to a provisioner node";
 		return false;
 	}
 	whynot = "n/a";

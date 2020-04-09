@@ -233,8 +233,8 @@ class Job {
 				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 
-	void SetType(NodeType type) { _type = type; }
-	bool GetType() const { return _type; }
+	void SetType( NodeType type ) { _type = type; }
+	NodeType GetType() const { return _type; }
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) const { return _noop; }
 

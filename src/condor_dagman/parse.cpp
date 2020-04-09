@@ -560,6 +560,8 @@ parse_node( Dag *dag,
 	Dag *tmp = NULL;
 
 	NodeType type = NodeType::JOB;
+	if ( strcasecmp ( nodeTypeKeyword, "FINAL" ) == 0 ) type = NodeType::FINAL;
+	if ( strcasecmp ( nodeTypeKeyword, "PROVISIONER" ) == 0 ) type = NodeType::PROVISIONER;
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
@@ -710,7 +712,6 @@ parse_node( Dag *dag,
 	}
 
 	// looks ok, so add it
-	// MRC: make sure type is set correctly
 	if( !AddNode( dag, nodeName, directory,
 				submitFile, noop, done, type, whynot ) )
 	{

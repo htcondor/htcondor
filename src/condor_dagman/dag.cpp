@@ -1389,7 +1389,7 @@ Dag::FindAllNodesByName( const char* nodeName,
 	}
 
 		// We want to skip final nodes if we're in ALL_NODES mode.
-	if ( node && node->GetType() != NodeType::FINAL && _allNodesIt ) {
+	if ( node && node->GetType() == NodeType::FINAL && _allNodesIt ) {
 		debug_printf( DEBUG_QUIET, finalSkipMsg, node->GetJobName(),
 					file, line );
 			// We know there can only be one FINAL node.
@@ -4397,7 +4397,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetType () != NodeType::FINAL ) {
+	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
 		max_submit_attempts = min( max_submit_attempts, 2 );
 	}
 
