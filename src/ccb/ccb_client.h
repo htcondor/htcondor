@@ -149,6 +149,7 @@ class BatchedCCBClient : public CCBClient {
 
 		const std::string & currentCCBAddress() { return m_cur_ccb_address; }
 		const std::string & ccbID() { return m_ccb_id; }
+		const std::string & targetPeerDescription() { return m_target_peer_description; }
 
         virtual void FailReverseConnect();
 

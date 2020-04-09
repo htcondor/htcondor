@@ -1063,13 +1063,6 @@ CCBConnectionBatcher::BatchTimerCallback() {
 				reply.LookupString( ATTR_ERROR_STRING, errorString );
 
 				if(! result) {
-					dprintf( D_ALWAYS, "FIXME: long error message from line 654.\n" );
-
-					// FIXME: There should be a fail-safe back-up timer for
-					// each client object: if the corresponding connect ID
-					// is still registered, call FailReverseConnect(), then
-					// remove and destroy it.  This may already exist once
-					// we've called RegisterReverseConnectCallback()?
 					std::string connectID;
 					reply.LookupString( ATTR_CLAIM_ID, connectID );
 					if( connectID.empty() ) {
@@ -1081,13 +1074,22 @@ CCBConnectionBatcher::BatchTimerCallback() {
 						continue;
 					}
 
+					auto * client = b.clients[connectID];
+					dprintf( D_ALWAYS, "CCBConnectionBatcher: received "
+						"failure message from broker %s in response to "
+						"request for reversed connection to %s: %s\n",
+						client->currentCCBAddress().c_str(),
+						client->targetPeerDescription().c_str(),
+						errorString.c_str() );
+
 					// Unregister the reverse connect callback; the next
 					// broker we try will register it again as appropriate.
-					auto * client = b.clients[connectID];
 					client->UnregisterReverseConnectCallback();
 					b.ForgetClientAndTryNextBroker( connectID, client );
 				} else {
-					dprintf( D_ALWAYS, "FIXME: long debug message from line 664.\n" );
+					dprintf( D_ALWAYS, "CCBConnectionBatcher: received "
+						"success message from broker %s\n",
+						entry.first.c_str() );
 				}
 			}
 
