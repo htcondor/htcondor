@@ -5432,10 +5432,10 @@ default=https://oauth2.googleapis.com/token
 type=string
 
 [ONEDRIVE_AUTHORIZATION_URL]
-default=https://login.live.com/oauth20_authorize.srf
+default=https://login.microsoftonline.com/common/oauth2/v2.0/authorize
 type=string
 [ONEDRIVE_TOKEN_URL]
-default=https://login.live.com/oauth20_token.srf
+default=https://login.microsoftonline.com/common/oauth2/v2.0/token
 type=string
 
 [DROPBOX_AUTHORIZATION_URL]
