@@ -2982,7 +2982,7 @@ bool OtherSlotEval( const char * name,
 				res->r_classad->EvaluateExpr(expr, result);
 				expr->SetParentScope(parent); // put the parent scope back to where it was
 
-				if (IsDebugCatAndVerbosity(D_MACHINE|D_VERBOSE)) {
+				if (IsDebugCatAndVerbosity((D_MACHINE|D_VERBOSE))) {
 					dprintf(D_MACHINE|D_VERBOSE, "OtherSlotEval(%s,expr) %s evalutes to %s\n",
 							slotname.c_str(), attr.c_str(), ClassAdValueToString(result));
 				}
