@@ -65,6 +65,12 @@ typedef int JobID_t;
   #define NO_EDGE_ID -1
 #endif
 
+enum NodeType {
+	JOB,
+	FINAL,
+	PROVISIONER
+};
+
 /**  The job class represents a job in the DAG and its state in the HTCondor
      system.  A job is given a name, a CondorID, and three queues.  The
      parents queue is a list of parent jobs that this one depends on.  That
@@ -227,8 +233,8 @@ class Job {
 				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 
-	void SetFinal(bool value) { _final = value; }
-	bool GetFinal() const { return _final; }
+	void SetType( NodeType type ) { _type = type; }
+	NodeType GetType() const { return _type; }
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) const { return _noop; }
 
@@ -567,8 +573,8 @@ private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
 	bool _noop;
-		// whether this is a final job
-	bool _final;
+		// What type of node (job, final, provisioner)
+	NodeType _type;
 public:
 
 #ifdef DEAD_CODE

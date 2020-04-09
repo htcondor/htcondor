@@ -121,7 +121,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, is_cluster(false)
 	, countedAsDone(false)
 	, _noop(false)
-	, _final(false)
+	, _type(NodeType::JOB)
 
 #ifdef DEAD_CDE
 	, varsFromDag(new List<NodeVar>)
@@ -743,7 +743,7 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		whynot = "parent == NULL";
 		return false;
 	}
-	if(GetFinal()) {
+	if( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a parent to a Final node";
 		return false;
 	}
@@ -765,8 +765,12 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 
 bool Job::CanAddChildren(std::forward_list<Job*> & children, MyString &whynot)
 {
-	if (GetFinal()) {
+	if ( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a child to a final node";
+		return false;
+	}
+	if ( GetType() == NodeType::PROVISIONER ) {
+		whynot = "Tried to add a child to a provisioner node";
 		return false;
 	}
 
@@ -1086,8 +1090,12 @@ Job::CanAddChild( Job* child, MyString &whynot )
 		whynot = "child == NULL";
 		return false;
 	}
-	if(GetFinal()) {
+	if( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a child to a final node";
+		return false;
+	}
+	if( GetType() == NodeType::PROVISIONER ) {
+		whynot = "Tried to add a child to a provisioner node";
 		return false;
 	}
 	whynot = "n/a";
@@ -1318,7 +1326,7 @@ Job::NumChildren() const
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
-	ASSERT( !_final );
+	ASSERT( !_type == NodeType::FINAL );
 
 	MyString	tmpName( categoryName );
 

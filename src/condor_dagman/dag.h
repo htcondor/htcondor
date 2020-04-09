@@ -835,6 +835,11 @@ class Dag {
 	*/
 	inline bool FinalNodeRun() { return _finalNodeRun; }
 
+	/** Determine whether this DAG has a provisioner node.
+		@return true iff the DAG has a provisioner node.
+	*/
+	inline bool HasProvisionerNode() const { return _provisioner_node != NULL; }
+
 	/** Determine whether the DAG is in recovery mode.
 		@return true iff the DAG is in recovery mode
 	*/
@@ -1057,6 +1062,8 @@ private:
 		// Note: the final node is in the _jobs list; this pointer is just
 		// for convenience.
 	Job* _final_job;
+
+	Job* _provisioner_node;
 
 	HashTable<MyString, Job *>		_nodeNameHash;
 
