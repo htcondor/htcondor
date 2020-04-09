@@ -469,6 +469,7 @@
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
 #define ATTR_PARENT_SLOT_ID "ParentSlotId"
+#define ATTR_DSLOT_ID "DSlotId"
 #define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_CURB_MATCHMAKING "CurbMatchmaking"

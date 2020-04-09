@@ -184,6 +184,7 @@ char		*myName;
 ClassadSortSpecs sortSpecs;
 bool			noSort = false; // set to true to disable sorting entirely
 bool			naturalSort = true;
+int				dash_snapshot = 0; // for direct query, just return current state, do *not* recompute anything
 
 classad::References projList;
 StringList dashAttributes; // Attributes specifically requested via the -attributes argument
@@ -744,6 +745,10 @@ main (int argc, char *argv[])
 	// set result limit if any is desired.
 	if (result_limit > 0) {
 		query->setResultLimit(result_limit);
+	}
+	if (dash_snapshot) {
+		MyString snap; snap.formatstr("%d", dash_snapshot);
+		query->addExtraAttribute("snapshot", snap.c_str());
 	}
 
 		// if there was a generic type specified
@@ -1968,6 +1973,13 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "state", 4)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
 			mainPP.setPPstyle (PP_STARTD_STATE, i, argv[i]);
+		} else
+		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
+			if (pcolon) {
+				dash_snapshot = atoi(pcolon + 1);
+			} else {
+				dash_snapshot = 1;
+			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			if( statistics ) {

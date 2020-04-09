@@ -41,12 +41,9 @@ CODMgr::~CODMgr()
 
 
 void
-CODMgr::publish( ClassAd* ad, amask_t mask )
+CODMgr::publish( ClassAd* ad )
 {
 	int num_claims = numClaims();
-	if( ! (IS_PUBLIC(mask) && IS_UPDATE(mask)) ) {
-		return;
-	}
 	if( ! num_claims ) {
 		return;
 	}

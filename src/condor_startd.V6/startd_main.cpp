@@ -184,7 +184,7 @@ main_init( int, char* argv[] )
 
 	ClassAd tmp_classad;
 	std::string starter_ability_list;
-	resmgr->starter_mgr.publish(&tmp_classad, A_STATIC | A_PUBLIC);
+	resmgr->starter_mgr.publish(&tmp_classad);
 	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
 	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
 		// Now starter has codes for vm universe.
@@ -222,9 +222,7 @@ main_init( int, char* argv[] )
 	cleanup_execute_dirs( execute_dirs );
 
 		// Compute all attributes
-	resmgr->compute( A_ALL );
-
-	resmgr->walk( &Resource::init_classad );
+	resmgr->compute_static();
 
 		// Startup Cron
 	cron_job_mgr = new StartdCronJobMgr( );
@@ -234,14 +232,12 @@ main_init( int, char* argv[] )
 	bench_job_mgr = new StartdBenchJobMgr( );
 	bench_job_mgr->Initialize( "benchmarks" );
 
-		// Now that we have our classads, we can compute things that
-		// need to be evaluated
-	resmgr->walk( &Resource::compute, A_EVALUATED );
-	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_EVALUATED ); 
+		// this does a bit of work that isn't valid yet 
+	resmgr->walk( &Resource::init_classad );
 
-		// Now that everything is computed and published, we can
-		// finally put in the attrs shared across the different slots
-	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_SHARED_SLOT ); 
+	// Now that we have our classads, we can compute things that
+		// need to be evaluated
+	resmgr->compute_dynamic(true);
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
@@ -475,7 +471,7 @@ finish_main_config( void )
 	resmgr->reset_credd_test_throttle();
 #endif
 		// Recompute machine-wide attributes object.
-	resmgr->compute( A_ALL );
+	resmgr->compute_static();
 		// Rebuild ads for each resource.  
 	resmgr->walk( &Resource::init_classad );  
 		// Reset various settings in the ResMgr.
@@ -499,9 +495,14 @@ finish_main_config( void )
 
 
 int
-init_params( int /* first_time */)
+init_params( int first_time)
 {
 	static bool match_password_enabled = false;
+
+	if (first_time) {
+		std::string func_name("SlotEval");
+		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
+	}
 
 	resmgr->init_config_classad();
 
@@ -644,6 +645,7 @@ init_params( int /* first_time */)
 		}
 		match_password_enabled = new_match_password;
 	}
+
 
 	return TRUE;
 }

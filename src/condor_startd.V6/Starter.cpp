@@ -240,12 +240,8 @@ Starter::setIsDC( bool updated_is_dc )
 
 
 void
-Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
+Starter::publish( ClassAd* ad, StringList* list )
 {
-	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
-		return;
-	}
-
 	StringList* ignored_attr_list = NULL;
 	ignored_attr_list = new StringList();
 	ignored_attr_list->append(ATTR_VERSION);

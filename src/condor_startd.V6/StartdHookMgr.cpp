@@ -283,6 +283,8 @@ StartdHookMgr::hookReplyFetch(bool accepted, ClassAd* job_ad, Resource* rip)
 		// the stack and be destroyed as soon as we return.
 	HookClient hook_client(HOOK_REPLY_FETCH, hook_path, false);
 
+	//PRAGMA_REMIND("tj, flatten SlotEval here?")
+
 		// Construct the output to write to STDIN.
 	MyString hook_stdin;
 	sPrintAd(hook_stdin, *job_ad);
@@ -314,6 +316,8 @@ StartdHookMgr::hookEvictClaim(Resource* rip)
 		// Since we're not saving the output, this can just live on
 		// the stack and be destroyed as soon as we return.
 	HookClient hook_client(HOOK_EVICT_CLAIM, hook_path, false);
+
+	//PRAGMA_REMIND("tj, flatten SlotEval here?")
 
 		// Construct the output to write to STDIN.
 	MyString hook_stdin;
@@ -356,7 +360,9 @@ FetchClient::startFetch()
 {
 	ASSERT(m_rip);
 	ClassAd slot_ad;
-	m_rip->publish(&slot_ad, A_ALL_PUB);
+
+	m_rip->publish_single_slot_ad(slot_ad, time(NULL), Resource::Purpose::for_workfetch);
+
 	MyString slot_ad_txt;
 	sPrintAd(slot_ad_txt, slot_ad);
 	resmgr->m_hook_mgr->spawn(this, NULL, &slot_ad_txt);
