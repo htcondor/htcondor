@@ -58,6 +58,10 @@ New Features:
   docker commands.
   :ticket:`7485`
 
+- The *condor_master* and other condor daemons can now run as pid 1.
+  This is useful when starting HTCondor inside a container.
+  :ticket:`7472`
+
 - When worker nodes are running on CPUs that support the AVX512 instructions,
   the startd now advertises that fact with has_avx512 attributes.
   :ticket:`7528`
