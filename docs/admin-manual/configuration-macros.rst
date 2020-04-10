@@ -3506,6 +3506,11 @@ section.
     directories goes to the host filesytem under the scratch directory.
     This is useful if a container has limited space to grow a filesytem.
 
+:macro-def:`MOUNT_PRIVATE_DEV_SHM`
+    This boolean value, which defaults to ``True`` tells the *condor_starter*
+    to make /dev/shm on Linux private to each job.  When private, the
+    starter removes any files from the private /dev/shm at job exit time.
+
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/setting-up-special-environments:configuring

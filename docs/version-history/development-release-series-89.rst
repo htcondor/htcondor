@@ -95,6 +95,13 @@ New Features:
   dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to True.
   :ticket:`7488`
 
+- When HTCondor is running as root on a Linux machine, it now make /dev/shm
+  a private mount for jobs.  This means that files written to /dev/shm in
+  one job aren't visible to other jobs, and that HTCondor now cleans up
+  any leftover files in /dev/shm when the job exits.  If you want to the
+  old behaviour of a shared /dev/shm, you can set :macro:`MOUNT_PRIVATE_DEV_SHM` 
+  to false.
+  :ticket:`7443` 
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
