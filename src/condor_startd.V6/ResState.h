@@ -28,11 +28,11 @@ public:
 	ResState(Resource* rip);
 	State	state( void ) { return r_state; };
 	Activity activity( void ) { return r_act; };
-	void	publish( ClassAd*, amask_t );
+	void	publish( ClassAd* );
 	void	change( Activity );
 	void	change( State );
 	void	change( State, Activity );
-	int 	eval( void );
+	int 	eval_policy( void ); // evaluate policy expressions like PREEMPT, etc
 	void	set_destination( State );
 	int		starterExited( void );
 	State	destination( void ) { return r_destination; };

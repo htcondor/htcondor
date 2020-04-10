@@ -31,9 +31,9 @@
 #include <set>
 using std::set;
 
-Reqexp::Reqexp( Resource* res_ip )
+Reqexp::Reqexp( Resource* rip )
 {
-	this->rip = res_ip;
+	this->m_rip = rip;
 	std::string tmp;
 
 	tmp = "START";
@@ -51,14 +51,14 @@ Reqexp::Reqexp( Resource* res_ip )
 
 
 char * Reqexp::param(const char * name) {
-	if (rip) return SlotType::param(rip->r_attr, name);
+	if (m_rip) return SlotType::param(m_rip->r_attr, name);
 	return param(name);
 }
 
 void
-Reqexp::compute( amask_t how_much ) 
+Reqexp::config( ) // formerly compute(A_STATIC)
 {
-	if( IS_STATIC(how_much) ) {
+	{
 		if( origstart ) {
 			free( origstart );
 		}
@@ -66,9 +66,6 @@ Reqexp::compute( amask_t how_much )
 		if( !origstart ) {
 			EXCEPT( "START expression not defined!" );
 		}
-	}
-
-	if( IS_STATIC(how_much) ) {
 
 		if( m_within_resource_limits_expr != NULL ) {
 			free(m_within_resource_limits_expr);
@@ -83,7 +80,7 @@ Reqexp::compute( amask_t how_much )
 			// In the below, _condor_RequestX attributes may be explicitly set by
 			// the schedd; if they are not set, go with the RequestX that derived from
 			// the user's original submission.
-            if (rip->r_has_cp || (rip->get_parent() && rip->get_parent()->r_has_cp)) {
+            if (m_rip->r_has_cp || (m_rip->get_parent() && m_rip->get_parent()->r_has_cp)) {
                 dprintf(D_FULLDEBUG, "Using CP variant of WithinResourceLimits\n");
                 // a CP-supporting p-slot, or a d-slot derived from one, gets variation
                 // that supports zeroed resource assets, and refers to consumption
@@ -96,7 +93,7 @@ Reqexp::compute( amask_t how_much )
                 assets.insert("Cpus");
                 assets.insert("Memory");
                 assets.insert("Disk");
-                for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+                for (auto j(m_rip->r_attr->get_slotres_map().begin());  j != m_rip->r_attr->get_slotres_map().end();  ++j) {
                     if (MATCH == strcasecmp(j->first.c_str(),"swap")) continue;
                     assets.insert(j->first);
                 }
@@ -104,7 +101,7 @@ Reqexp::compute( amask_t how_much )
                 // first subexpression does not need && operator:
                 bool need_and = false;
                 string estr = "(";
-                for (set<std::string, classad::CaseIgnLTStr>::iterator j(assets.begin());  j != assets.end();  ++j) {
+                for (auto j(assets.begin());  j != assets.end();  ++j) {
                     //string rname(*j);
                     //*(rname.begin()) = toupper(*(rname.begin()));
                     string te;
@@ -162,7 +159,7 @@ Reqexp::compute( amask_t how_much )
 				climit = climit_simple;	
 			}
 
-			const CpuAttributes::slotres_map_t& resmap = rip->r_attr->get_slotres_map();
+			const CpuAttributes::slotres_map_t& resmap = m_rip->r_attr->get_slotres_map();
 			if (resmap.empty()) {
 				m_within_resource_limits_expr = strdup(climit);
 			} else {
@@ -212,27 +209,27 @@ extern ExprTree * globalDrainingStartExpr;
 bool
 Reqexp::restore()
 {
-    if( rip->isSuspendedForCOD() ) {
+	if (m_rip->isSuspendedForCOD()) {
 		if( rstate != COD_REQ ) {
 			rstate = COD_REQ;
-			publish( rip->r_classad, A_PUBLIC );
+			publish();
 			return true;
 		} else {
 			return false;
 		}
 	} else {
-		rip->r_classad->Delete( ATTR_RUNNING_COD_JOB );
+		caDeleteThruParent(m_rip->r_classad, ATTR_RUNNING_COD_JOB );
 	}
-	if( resmgr->isShuttingDown() || rip->isDraining() ) {
+	if( resmgr->isShuttingDown() || m_rip->isDraining() ) {
 		if( rstate != UNAVAIL_REQ ) {
-			unavail( rip->isDraining() ? globalDrainingStartExpr : NULL );
+			unavail( m_rip->isDraining() ? globalDrainingStartExpr : NULL );
 			return true;
 		}
 		return false;
 	}
 	if( rstate != ORIG_REQ) {
 		rstate = ORIG_REQ;
-		publish( rip->r_classad, A_PUBLIC );
+		publish();
 		return true;
 	}
 	return false;
@@ -241,10 +238,10 @@ Reqexp::restore()
 void
 Reqexp::unavail( ExprTree * start_expr )
 {
-	if( rip->isSuspendedForCOD() ) {
+	if( m_rip->isSuspendedForCOD() ) {
 		if( rstate != COD_REQ ) {
 			rstate = COD_REQ;
-			publish( rip->r_classad, A_PUBLIC );
+			publish();
 		}
 		return;
 	}
@@ -255,20 +252,49 @@ Reqexp::unavail( ExprTree * start_expr )
 	} else {
 		drainingStartExpr = NULL;
 	}
-	publish( rip->r_classad, A_PUBLIC );
+	publish();
 }
 
 
+// internal publish
+// when reverting to ORIG_REQ, we populate the config classad and clear the r_classad of the associated Resource
+// for other states, we publish into the r_classad, which hides but does not remove things from the config classad
 void
-Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
+Reqexp::publish()
 {
-	std::string tmp;
+	ClassAd * cb = m_rip->r_config_classad;
+	ClassAd * ca = m_rip->r_classad;
 
+	ClassAd * parent = ca->GetChainedParentAd();
+	ca->Unchain();
+
+	switch (rstate)
+	{
+	case ORIG_REQ:
+		ca->Delete(ATTR_START);
+		ca->Delete(ATTR_REQUIREMENTS);
+		ca->Delete(ATTR_WITHIN_RESOURCE_LIMITS);
+		ca->Delete(ATTR_RUNNING_COD_JOB);
+		publish_external(cb);
+		break;
+
+	case UNAVAIL_REQ:
+	case COD_REQ:
+		publish_external(ca);
+		break;
+	}
+
+	if (parent) ca->ChainToAd(parent);
+}
+
+void
+Reqexp::publish_external( ClassAd* ca )
+{
 	switch( rstate ) {
 	case ORIG_REQ:
 		ca->AssignExpr( ATTR_START, origstart );
 		ca->AssignExpr( ATTR_REQUIREMENTS, origreqexp );
-		if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+		if( Resource::STANDARD_SLOT != m_rip->get_feature() ) {
 			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 							m_within_resource_limits_expr );
 		}
@@ -282,7 +308,7 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 			ca->Insert( ATTR_START, sacrifice );
 
 			ca->AssignExpr( ATTR_REQUIREMENTS, origreqexp );
-			if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+			if( Resource::STANDARD_SLOT != m_rip->get_feature() ) {
 				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 								m_within_resource_limits_expr );
 			}
@@ -290,8 +316,7 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		break;
 	case COD_REQ:
 		ca->Assign(ATTR_RUNNING_COD_JOB, true);
-		formatstr( tmp, "False && %s", ATTR_RUNNING_COD_JOB );
-		ca->AssignExpr( ATTR_REQUIREMENTS, tmp.c_str() );
+		ca->AssignExpr( ATTR_REQUIREMENTS, "False && " ATTR_RUNNING_COD_JOB );
 		break;
 	default:
 		EXCEPT("Programmer error in Reqexp::publish()!");
@@ -305,7 +330,7 @@ Reqexp::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
-	rip->dprintf_va( flags, fmt, args );
+	m_rip->dprintf_va( flags, fmt, args );
 	va_end( args );
 }
 

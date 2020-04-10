@@ -53,6 +53,11 @@ New Features:
   version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
 
+- Docker universe now works inside an unprivileged personal HTCondor,
+  if you give the user starting the personal condor rights to run the
+  docker commands.
+  :ticket:`7485`
+
 - When worker nodes are running on CPUs that support the AVX512 instructions,
   the startd now advertises that fact with has_avx512 attributes.
   :ticket:`7528`
@@ -92,6 +97,7 @@ Bugs Fixed:
   to pools when resource request list prefetching is enabled, which is the
   default in HTCondor version 8.9
   :ticket:`7549`
+  :ticket:`7539`
 
 - Some URLs for keys in AWS S3 buckets were previously of the form
   ``s3://<bucket>.s3-<region>.amazonaws.com/<key>``.  Not all regions support
@@ -120,6 +126,10 @@ Bugs Fixed:
 - The RPM packaging now obsoletes the standard universe package so that it will
   deleted upon upgrade.
   :ticket:`7444`
+
+- Fixed a bug where Kerberos principals were being set incorrectly when
+  :macro:`KERBEROS_SERVER_PRINCIPAL` was set.
+  :ticket:`7577`
 
 Version 8.9.6
 -------------

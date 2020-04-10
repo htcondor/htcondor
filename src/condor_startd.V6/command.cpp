@@ -251,8 +251,8 @@ int swap_claim_and_activation(Resource * rip, ClassAd & opts, Stream* stream)
 			dprintf(D_ALWAYS, "Claim swap from %s to %s succeeded, updating ads\n", rip->r_id_str, rip_dest->r_id_str);
 
 			// Update the resource classads
-			rip->r_cur->publish( rip->r_classad, A_PUBLIC );
-			rip_dest->r_cur->publish( rip_dest->r_classad, A_PUBLIC );
+			rip->r_cur->publish(rip->r_classad);
+			rip_dest->r_cur->publish(rip_dest->r_classad);
 			rval = OK;
 		}
 	}
@@ -818,42 +818,27 @@ command_query_ads(int, Stream* stream)
 		return FALSE;
 	}
 
-	std::string stats_config;
-   int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
-   queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
-   if ( ! stats_config.empty()) {
-#if 0 // HACK to test swapping claims without a schedd
-       dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
-       if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
-		   StringList swap_args(stats_config.c_str()+5);
-		   hack_test_claim_swap(swap_args);
-       } else
-#endif
-      daemonCore->dc_stats.PublishFlags = 
-         generic_stats_ParseConfigString(stats_config.c_str(), 
-                                         "DC", "DAEMONCORE", 
-                                         dc_publish_flags);
-   }
+		// Construct a list of all our ClassAds that match the query
+	resmgr->makeAdList( ads, queryAd );
 
-		// Construct a list of all our ClassAds:
-	resmgr->makeAdList( &ads, &queryAd );
-	
-    if ( ! stats_config.empty()) {
-       daemonCore->dc_stats.PublishFlags = dc_publish_flags;
-    }
+	classad::References proj;
+	std::string projection;
+	if (queryAd.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+		StringTokenIterator list(projection);
+		const std::string * attr;
+		while ((attr = list.next_string())) { proj.insert(*attr); }
+	}
 
-		// Now, find the ClassAds that match.
+		// Now, return the ClassAds that match.
 	stream->encode();
 	ads.Open();
 	while( (ad = ads.Next()) ) {
-		if( IsAHalfMatch( &queryAd, ad ) ) {
-			if( !stream->code(more) || !putClassAd(stream, *ad) ) {
-				dprintf (D_ALWAYS, 
-						 "Error sending query result to client -- aborting\n");
-				return FALSE;
-			}
-			num_ads++;
-        }
+		if( !stream->code(more) || !putClassAd(stream, *ad, PUT_CLASSAD_NO_PRIVATE, proj.empty() ? NULL : &proj) ) {
+			dprintf (D_ALWAYS, 
+						"Error sending query result to client -- aborting\n");
+			return FALSE;
+		}
+		num_ads++;
 	}
 
 		// Finally, close up shop.  We have to send NO_MORE.
@@ -1323,14 +1308,22 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				bool is_busy = dslots[i]->activity() != idle_act;
 				dslots[i]->kill_claim();
 				if (is_busy) {
+					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
-					*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
+					*(pslot->r_attr) += *(dslots[i]->r_attr);
+					// empty out the resource bag, so that we if the destruction decrements the 
+					// parent resource bag again, it does nothing.
 					*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+					if (pslot != parent) {
+						// we *intend* to have all of these d-slots share a parent, but in case they don't
+						// we need to make sure that the parent refreshes it's classad
+						pslot->refresh_classad_resources();
+					}
 				}
 				// TODO Do we need to call refresh_classad() on either slot?
 			}
 			if (parent) {
-				parent->refresh_classad( A_PUBLIC );
+				parent->refresh_classad_resources();
 			}
 			free( dslots );
 		}
@@ -1652,10 +1645,18 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		// leftovers in the parent partitionable slot.
 		dprintf(D_FULLDEBUG,"Will send partitionable slot leftovers to schedd\n");
 
-		leftover_claim->rip()->r_classad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
+		ClassAd *pad = leftover_claim->rip()->r_classad;
+	#if 1
+		// publish and flatten the p-slot ad
+		ClassAd ad;
+		leftover_claim->rip()->publish_single_slot_ad(ad, 0, Resource::Purpose::for_req_claim);
+		pad = &ad;
+	#endif
+
+		pad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
 		MyString claimId(leftover_claim->id());
 		if ( !(secure_claim_id ? stream->put_secret(claimId.c_str()) : stream->put(claimId)) ||
-			 !putClassAd(stream, *leftover_claim->rip()->r_classad) )
+			 !putClassAd(stream, *pad) )
 		{
 			rip->dprintf( D_ALWAYS, 
 				"Can't send partitionable slot leftovers to schedd.\n" );
@@ -1666,12 +1667,16 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	else if (cmd == REQUEST_CLAIM_PAIR || cmd == REQUEST_CLAIM_PAIR_2)
 	{
 		dprintf(D_FULLDEBUG,"Sending paired slot claim to schedd\n");
-		//PRAGMA_REMIND("remove these next two dprintfs later")
-		//dprintf(D_FULLDEBUG,"\tmain slot claim id is %s\n", rip->r_cur->id());
-		//dprintf(D_FULLDEBUG,"\tpaired slot claim id is %s\n", ripb->r_cur->id());
+		ClassAd * pad = ripb->r_classad;
+	#if 1
+		// publish and flatten the p-slot ad
+		ClassAd ad;
+		ripb->publish_single_slot_ad(ad, 0, Resource::Purpose::for_req_claim);
+		pad = &ad;
+	#endif
 		MyString claimId(ripb->r_cur->id());
 		if ( !(secure_claim_id ? stream->put_secret(claimId.c_str()) : stream->put(claimId)) ||
-		     ! putClassAd(stream, *ripb->r_classad)) {
+		     ! putClassAd(stream, *pad)) {
 			rip->dprintf( D_ALWAYS,
 				"Can't send paired slot claim & ad to schedd.\n" );
 			abort_accept_claim( rip, stream );
@@ -1831,9 +1836,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Now, ask the ResMgr to recompute so we have totally
 		// up-to-date values for everything in our classad.
-		// Unfortunately, this happens to all the resources in an SMP
-		// at once, but that's the only way to compute anything... 
-	resmgr->compute( A_TIMEOUT | A_UPDATE );
+	resmgr->compute_dynamic(true, rip);
 
 		// Possibly print out the ads we just got to the logs.
 	if( IsDebugLevel( D_JOB ) ) {
@@ -1975,7 +1978,7 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 
 		// Finally, update all these things into the resource classad.
-	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
+	rip->r_cur->publish(rip->r_classad);
 
 	rip->dprintf( D_ALWAYS,
 				  "State change: claim-activation protocol successful\n" );
@@ -2152,7 +2155,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		// a complete resource ad (like what we'd send to the
 		// collector), and include the ClaimID  
 	ClassAd reply;
-	rip->publish( &reply, A_ALL_PUB );
+	rip->publish_single_slot_ad(reply, time(NULL), Resource::Purpose::for_cod);
 
 	reply.Assign( ATTR_CLAIM_ID, claim->id() );
 	
@@ -2260,7 +2263,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		goto cleanup;
 	}
 
-	claim->publish(&reply, A_PUBLIC);
+	claim->publish(&reply);
 	if( ! claim->publishStarterAd(&reply) ) {
 		MyString err_msg = "No starter found for ";
 		err_msg += ATTR_GLOBAL_JOB_ID;
@@ -2748,7 +2751,7 @@ command_coalesce_slots(int, Stream * stream ) {
 	}
 
 	// We just updated the partitionable slot's resources...
-	parent->refresh_classad( A_PUBLIC );
+	parent->refresh_classad_resources();
 
 	Claim * leftoverClaim = NULL;
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
@@ -2798,8 +2801,8 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	// The coalesced slot is born claimed.
 	coalescedSlot->change_state( claimed_state );
-	coalescedSlot->refresh_classad( A_PUBLIC );
-	parent->refresh_classad( A_PUBLIC );
+	coalescedSlot->refresh_classad_resources();
+	parent->refresh_classad_resources();
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing complete, sending reply\n" );
 

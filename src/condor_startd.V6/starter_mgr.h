@@ -57,7 +57,7 @@ public:
 
 	void init( void );
 
-	void publish( ClassAd* ad, amask_t mask );
+	void publish(ClassAd* ad);
 
 	Starter* newStarter( ClassAd* job_ad, ClassAd* mach_ad,
 						  bool &no_starter,

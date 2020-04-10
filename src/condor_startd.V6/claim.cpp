@@ -197,7 +197,7 @@ Claim::vacate()
 
 
 void
-Claim::publish( ClassAd* cad, amask_t how_much )
+Claim::publish( ClassAd* cad )
 {
 	std::string line;
 	char* tmp;
@@ -297,7 +297,7 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 
 	// If this claim is for vm universe, update some info about VM
 	if (c_starter_pid > 0) {
-		resmgr->m_vmuniverse_mgr.publishVMInfo(c_starter_pid, cad, how_much);
+		resmgr->m_vmuniverse_mgr.publishVMInfo(c_starter_pid, cad);
 	}
 
 	publishStateTimes( cad );
@@ -305,7 +305,7 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 }
 
 void
-Claim::publishPreemptingClaim( ClassAd* cad, amask_t /*how_much*/ /*UNUSED*/ )
+Claim::publishPreemptingClaim( ClassAd* cad )
 {
 	std::string line;
 	char* tmp;
@@ -1857,7 +1857,7 @@ Claim::publishStarterAd(ClassAd *cad)
 
 		// stuff in starter-specific attributes, if we have them.
 	StringList ability_list;
-	starter->publish(cad, A_STATIC | A_PUBLIC, &ability_list);
+	starter->publish(cad, &ability_list);
 	char* ability_str = ability_list.print_to_string();
 	if (ability_str) {
 		cad->Assign(ATTR_STARTER_ABILITY_LIST, ability_str);
@@ -2113,6 +2113,7 @@ Claim::writeJobAd( int pipe_end )
 bool
 Claim::writeMachAd( Stream* stream )
 {
+	//PRAGMA_REMIND("flatten SlotEval here before printing/sending ad on wire")
 	if (IsDebugLevel(D_MACHINE)) {
 		std::string adbuf;
 		dprintf(D_MACHINE, "Sending Machine Ad to Starter :\n%s", formatAd(adbuf, *c_rip->r_classad, "\t"));

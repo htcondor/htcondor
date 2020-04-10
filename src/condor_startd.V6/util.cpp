@@ -481,6 +481,7 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 		EXCEPT( "caInsert called with NULL attribute" );
 	}
 	if( !target || !source ) {
+		dprintf(D_ALWAYS | D_BACKTRACE, "caInsert called with NULL classad\n");
 		EXCEPT( "caInsert called with NULL classad" );
 	}
 
@@ -504,6 +505,53 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 	return true;
 }
 
+bool caRevertToParent(ClassAd* target, const char * attr)
+{
+	if( !attr ) {
+		EXCEPT( "caRevertToParent called with NULL attribute" );
+	}
+	if( !target ) {
+		dprintf(D_ALWAYS | D_BACKTRACE, "caRevertToParent called with NULL classad\n");
+		EXCEPT( "caRevertToParent called with NULL classad" );
+	}
+
+	ClassAd * parent = target->GetChainedParentAd();
+	if ( ! parent) {
+		dprintf(D_ALWAYS | D_BACKTRACE, "caRevertToParent called with parentless classad\n");
+	}
+
+	target->Unchain();
+	ExprTree * tree = target->Remove(attr);
+	target->ChainToAd(parent);
+	delete tree;
+	return tree != NULL;
+}
+
+void caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix)
+{
+	if( !attr ) {
+		EXCEPT( "caDeleteThruParent called with NULL attribute" );
+	}
+	if( !target ) {
+		dprintf(D_ALWAYS | D_BACKTRACE, "caDeleteThruParent called with NULL classad\n");
+		EXCEPT( "caDeleteThruParent called with NULL classad" );
+	}
+
+	std::string new_attr;
+	if (prefix) {
+		new_attr = prefix;
+	}
+	new_attr += attr;
+
+	// we have to unchain before we delete, otherwise we end up setting attr to undefined, not deleting.
+	ClassAd * parent = target->GetChainedParentAd();
+	target->Unchain();
+	target->Delete(new_attr);
+	if (parent) {
+		parent->Delete(new_attr);
+		target->ChainToAd(parent);
+	}
+}
 
 /*
   This method takes a pointer to a classad, the name of an attribute

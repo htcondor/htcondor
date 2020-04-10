@@ -82,7 +82,7 @@ public:
 		// Called by our softkill timer
 	void softkillTimeout( void );
 	
-	void	publish( ClassAd* ad, amask_t mask, StringList* list );
+	void	publish( ClassAd* ad, StringList* list );
 
 	bool	satisfies( ClassAd* job_ad, ClassAd* mach_ad );
 	bool	provides( const char* ability );

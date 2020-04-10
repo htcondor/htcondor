@@ -41,7 +41,7 @@ public:
 	void addIPForVM(const char *ip);
 	const char *getIPForVM(void);
 
-	void publishVMInfo(ClassAd* ad, amask_t mask );
+	void publishVMInfo(ClassAd* ad);
 
 private:
 	bool updateUsageOfVM(void);
@@ -65,8 +65,8 @@ public:
 	VMUniverseMgr();
 	~VMUniverseMgr();
 
-	void publish(ClassAd* ad, amask_t mask );
-	void publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask );
+	void publish(ClassAd* ad);
+	void publishVMInfo(pid_t s_pid, ClassAd* ad);
 	void printVMGahpInfo( int debug_level );
 
 	bool allocVM(pid_t pid, ClassAd &ad, char const *execute_dir); 

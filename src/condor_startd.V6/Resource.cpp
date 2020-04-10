@@ -27,6 +27,7 @@
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
+#include "expr_analyze.h" // to analyze mismatches in the same way condor_q -better does
 
 #include "slot_builder.h"
 
@@ -198,7 +199,6 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
 		// we need this before we instantiate any Claim objects...
 	r_id = rid;
-#if 1
 	r_sub_id = 0;
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
 	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
@@ -214,27 +214,6 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	if  (_parent) { tmp.formatstr_cat( "_%d", r_sub_id ); }
 	// save the constucted slot name & id string.
 	r_id_str = strdup( tmp.Value() );
-#else
-	char* name_prefix = NULL;
-	if (cap) {
-		const char * p = SlotType::type_param(cap, "NAME_PREFIX");
-		name_prefix = p ? strdup(p) : NULL;
-	}
-	if ( ! name_prefix) name_prefix = ::param( "STARTD_RESOURCE_PREFIX" );
-	if( name_prefix ) {
-		tmp = name_prefix;
-		free( name_prefix );
-	} else {
-		tmp = "slot";
-	}
-	if( _parent ) {
-		r_sub_id = _parent->m_id_dispenser->next();
-		tmp.formatstr_cat( "%d_%d", r_id, r_sub_id );
-	} else {
-		tmp.formatstr_cat( "%d", r_id );
-	}
-	r_id_str = strdup( tmp.Value() );
-#endif
 	r_pair_name = NULL;
 
 		// we need this before we can call type()...
@@ -259,6 +238,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	if (_parent) { r_attr->bind_DevIds(r_id, r_sub_id); }
 
 	prevLHF = 0;
+	r_config_classad = NULL;
 	r_classad = NULL;
 	r_state = new ResState( this );
 	r_pre = NULL;
@@ -395,6 +375,7 @@ Resource::~Resource()
 		r_attr->unbind_DevIds(r_id, r_sub_id);
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
+		m_parent->refresh_classad_resources();
 		m_parent->update();
 		m_parent = NULL;
 	}
@@ -412,7 +393,11 @@ Resource::~Resource()
 	if( r_pre_pre ) {
 		delete r_pre_pre; r_pre_pre = NULL;
 	}
-	delete r_classad; r_classad = NULL;
+	if (r_classad) {
+		r_classad->Unchain();
+		delete r_classad; r_classad = NULL;
+	}
+	delete r_config_classad; r_config_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_reqexp; r_reqexp = NULL;
 	delete r_attr; r_attr = NULL;
@@ -432,6 +417,7 @@ Resource::set_parent( Resource* rip )
 		// If we have a parent, we consume its resources
 	if( m_parent ) {
 		*(m_parent->r_attr) -= *(r_attr);
+		m_parent->refresh_classad_resources();
 
 			// If we have a parent, we are dynamic
 		set_feature( DYNAMIC_SLOT );
@@ -566,7 +552,7 @@ Resource::periodic_checkpoint( void )
 		// Now that we updated this time, be sure to insert those
 		// attributes into the classad right away so we don't keep
 		// periodically checkpointing with stale info.
-	r_cur->publish( r_classad, A_PUBLIC );
+	r_cur->publish( r_classad );
 
 	return TRUE;
 }
@@ -722,9 +708,9 @@ Resource::dropAdInLogFile( void )
 	dprintf(D_FULLDEBUG, "DEBUG: will_print %i, get_feature %i, types %s\n", will_print, get_feature(), dropadtypes.c_str());
 
 	if (will_print) {
-		dprintf(D_ALWAYS, "** BEGIN CLASSAD ** %lx\n", (long int)(this));
+		dprintf(D_ALWAYS, "** BEGIN CLASSAD ** %p\n", this);
 		dPrintAd(D_ALWAYS, *r_classad);
-		dprintf(D_ALWAYS, "** END CLASSAD ** %lx\n", (long int)(this));
+		dprintf(D_ALWAYS, "** END CLASSAD ** %p\n", this);
 	}
 }
 
@@ -925,11 +911,10 @@ Resource::hackLoadForCOD( void )
 					 ATTR_LOAD_AVG, load, ATTR_CONDOR_LOAD_AVG, c_load );
 		}
 	}
+
 	r_classad->Assign( ATTR_LOAD_AVG, load );
 	r_classad->Assign( ATTR_CONDOR_LOAD_AVG, c_load );
-
 	r_classad->Assign( ATTR_CPU_IS_BUSY, false );
-
 	r_classad->Assign( ATTR_CPU_BUSY_TIME, 0 );
 }
 
@@ -1241,36 +1226,55 @@ Resource::publish_slot_config_overrides(ClassAd * cad)
 	}
 }
 
+// this is called on startup AND ON RECONFIG!
 void
 Resource::init_classad( void )
 {
 	ASSERT( resmgr->config_classad );
-	if( r_classad ) delete(r_classad);
-	r_classad = new ClassAd( *resmgr->config_classad );
+	if (r_classad) {
+		r_classad->Unchain();
+		delete r_classad;
+	}
+	if (r_config_classad) {
+		delete r_config_classad;
+	}
+	r_config_classad = new ClassAd( *resmgr->config_classad );
+
+	// make an ephemeral ad that we will occasionally discard
+	// this catches all state updates
+	r_classad = new ClassAd();
+	r_classad->ChainToAd(r_config_classad);
 
 		// put in slottype overrides of the config_classad
-	this->publish_slot_config_overrides(r_classad);
+	this->publish_slot_config_overrides(r_config_classad);
+	this->publish_static(r_config_classad);
 
 	// Publish everything we know about.
-	this->publish( r_classad, A_PUBLIC | A_ALL | A_EVALUATED );
-		// NOTE: we don't use A_SHARED_SLOT here, since when
-		// init_classad is being called, we don't necessarily have
-		// classads for the other slots, yet we'll publish the SHARED_SLOT
-		// attrs after this...
+	this->publish_dynamic(r_classad, false);
+	// this will publish empty child rollup on startup since no d-slots will exist yet
+	// but it *may* publish non-empty rollup when we reconfig
+	if (is_partitionable_slot()) { this->publishDynamicChildSummaries(r_classad); }
+
+	// NOTE: we don't publish cross-slot attrs here, it's too soon to look at other slots
 }
 
-
-void
-Resource::refresh_classad( amask_t mask )
+void Resource::initial_compute(Resource * pslot)
 {
-	if( ! r_classad ) {
-			// Nothing to do (except prevent a segfault *grin*)
-		return;
+	// set dslot total disk from pslot total disk (if appropriate)
+	if ( ! resmgr->m_attr->always_recompute_disk()) {
+		r_attr->init_total_disk(pslot->r_attr);
 	}
 
-	this->publish( r_classad, (A_PUBLIC | mask) );
+	initial_compute();
 }
 
+void Resource::compute_unshared()
+{
+	// this either sets total disk into the slot, or causes it to be recomputed.
+	r_attr->set_condor_load(compute_condor_usage());
+	r_attr->set_total_disk(resmgr->m_attr->total_disk(), resmgr->m_attr->always_recompute_disk());
+	r_attr->compute_disk();
+}
 
 int
 Resource::benchmarks_started( void )
@@ -1282,10 +1286,26 @@ int
 Resource::benchmarks_finished( void )
 {
 	resmgr->m_attr->benchmarks_finished( this );
-	time_t last_benchmark = time(NULL);
-	r_classad->Assign( ATTR_LAST_BENCHMARK, (unsigned)last_benchmark );
 	return 0;
 }
+
+void
+Resource::eval_state( void )
+{
+	// we may need to modify the load average in our internal
+	// policy classad if we're currently running a COD job or have
+	// been running 1 in the last minute.  so, give our rip a
+	// chance to modify the load, if necessary, before we evaluate
+	// anything.  
+	hackLoadForCOD();
+
+	// before we evaluate our state, we should refresh cross-slot attrs
+	//PRAGMA_REMIND("tj: revisit this with SlotEval?")
+	resmgr->publishSlotAttrs( r_classad );
+
+	r_state->eval_policy();
+};
+
 
 void
 Resource::reconfig( void )
@@ -1331,21 +1351,17 @@ Resource::update( void )
 	}
 }
 
+// Process SlotEval and StartdCron aggregation
+// inject attributes that the update ad needs to see, but that are not necessarily configured
+//
 void
-Resource::do_update( void )
+Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the update ad before we send it 
 {
-	int rval;
-	ClassAd private_ad;
-	ClassAd public_ad;
-
-        // Get the public and private ads
-    publish_for_update( &public_ad, &private_ad );
-
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
-	StartdPluginManager::Update(&public_ad, &private_ad);
-#endif
-#endif
+	// this special unparser works only in the Startd.
+	// it evaluates SlotEval as it unparses
+	classad::SlotEvalUnParser unparser(&public_ad);
+	unparser.SetOldClassAd(true, true);
+	std::string unparse_buffer;
 
 	// Modifying the ClassAds we're sending in ResMgr::send_update()
 	// would be evil, so do the collector filtering here.  Also,
@@ -1354,6 +1370,35 @@ Resource::do_update( void )
 	std::vector< std::string > deleteList;
 	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
 		const std::string & name = i->first;
+
+		// if this attribute has an expression with the SlotEval function
+		// flatten that function and write the flattened expression into the ad
+		//
+		if (ExprHasSlotEval(i->second)) {
+			unparse_buffer.clear();
+			if (ExprTreeIsSlotEval(i->second)) {
+				// if the entire expression is a single SlotEval call, just flatten it
+				//    Foo = SlotEval("slot1",expr)
+				// becomes
+				//    Foo = <value of expr evaluated against slot1>
+				unparser.setIndirectThroughAttr(false);
+				unparser.Unparse(unparse_buffer, i->second);
+			} else {
+				// if the expression *contains* a SlotEval, the unparser will 
+				// create an intermediate attribute to contain the value.
+				//    Foo = SlotEval("slot1",Activity) == "Idle"
+				// becomes
+				//    Foo = slot1_Activity == "Idle"
+				//    slot1_Activity == <evaluated value of Activity attribute from slot1>
+				//
+				// slot1_Activity is stored in the unparser, we will insert it into the ad
+				// after this loop exits
+				unparser.setIndirectThroughAttr(true);
+				unparser.Unparse(unparse_buffer, i->second);
+			}
+			public_ad.AssignExpr(i->first, unparse_buffer.c_str());
+		}
+
 		//
 		// Arguably, this code here and the code in Resource::publish()
 		// would benefit from a startd-global (?) list of the names of all
@@ -1400,15 +1445,91 @@ Resource::do_update( void )
 			// GPU in every slot?
 			std::string computedName = "Device" + resourceName + "AverageUsage";
 			public_ad.Assign( computedName, average );
+
+		} else if (name.find("StartOfJob") == 0) {
+
+			// Compute the SUM metrics' *Usage values.  The PEAK metrics
+			// have already inserted their *Usage values into the ad.
+		
+			std::string usageName;
+			std::string uptimeName = name.substr(10);
+			if (! StartdCronJobParams::getResourceNameFromAttributeName(uptimeName, usageName)) { continue; }
+			usageName += "AverageUsage";
+
+			std::string lastUpdateName = "LastUpdate" + uptimeName;
+			std::string firstUpdateName = "FirstUpdate" + uptimeName;
+
+			// Note that we calculate the usage rate only for full
+			// sample intervals.  This eliminates the imprecision of
+			// the sample interval in which the job started; since we
+			// can't include the usage from the sample interval in
+			// which the job ended, we also don't include the time
+			// the job was running in that interval.  The computation
+			// is thus exact for its time period.
+			std::string usageExpr;
+			formatstr(usageExpr, "(%s - %s)/(%s - %s)",
+				uptimeName.c_str(), name.c_str(),
+				lastUpdateName.c_str(), firstUpdateName.c_str());
+
+			classad::Value v;
+			if (! public_ad.EvaluateExpr(usageExpr, v)) { continue; }
+			double usageValue;
+			if (! v.IsNumber(usageValue)) { continue; }
+			public_ad.Assign(usageName, usageValue);
+
+			deleteList.push_back(uptimeName);
+			deleteList.push_back(name);
+			deleteList.push_back(lastUpdateName);
+			deleteList.push_back(firstUpdateName);
+
 		} else if( name.find( "StartOfJobUptime" ) == 0
-		 || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
-		 || name.find( "FirstUpdate" ) == 0 ) {
-			deleteList.push_back( name );
+			|| (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
+			|| name.find( "FirstUpdate" ) == 0 ) {
+		deleteList.push_back( name );
+		}
+
+	}
+	if ( ! snapshot) {
+		for (auto i = deleteList.begin(); i != deleteList.end(); ++i) {
+			public_ad.Delete(* i);
 		}
 	}
-	for( auto i = deleteList.begin(); i != deleteList.end(); ++i ) {
-		public_ad.Delete( * i );
+
+	// Assign temporary intermediate attributes that SlotEval processing generated
+	// then clear the list of them.  (we don't actually need to clear explicitly here)
+	unparser.AssignSlotAttrs(public_ad);
+	unparser.ClearSlotAttrs();
+
+	// Make sure there is a max job retirement time expression for the negotiator to see
+	// TODO: tj 2020, this is what the code did, it's not clear why??
+	if ( ! public_ad.Lookup(ATTR_MAX_JOB_RETIREMENT_TIME)) {
+		public_ad.Assign(ATTR_MAX_JOB_RETIREMENT_TIME, 0);
 	}
+	if ( ! public_ad.Lookup(ATTR_RANK)) {
+		public_ad.Assign(ATTR_RANK, 0);
+	}
+}
+
+void
+Resource::do_update( void )
+{
+	int rval;
+	ClassAd private_ad;
+	ClassAd public_ad;
+
+	// Get the public and private ads
+	publish_single_slot_ad(public_ad, 0, Resource::Purpose::for_update);
+
+		// refresh the machine ad in the job sandbox
+	refresh_sandbox_ad(&public_ad);
+
+	publish_private(&private_ad);
+
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
+	StartdPluginManager::Update(&public_ad, &private_ad);
+#endif
+#endif
 
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
@@ -1424,21 +1545,50 @@ Resource::do_update( void )
 	update_tid = -1;
 }
 
-void
-Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
+// build a slot ad from whole cloth, used for updating the collector, etc
+// it is an ERROR to pass r_classad as input ad here!!
+void Resource::publish_single_slot_ad(ClassAd & ad, time_t cur_time, Purpose purpose)
 {
-    this->publish( public_ad, A_ALL_PUB );
-    if( vmapi_is_usable_for_condor() == FALSE ) {
-        public_ad->Assign( ATTR_START, false );
-    }
+	ASSERT(&ad != r_classad && &ad != r_config_classad);
 
-    if( vmapi_is_virtual_machine() == TRUE ) {
-        ClassAd* host_classad;
-        host_classad = vmapi_get_host_classAd();
-        MergeClassAds( public_ad, host_classad, true);
-    }
+	publish_static(&ad);
+	publish_dynamic(&ad, true);
+	// the collector will set this, but for direct query, we have to set this ourselves
+	if (cur_time) { ad.Assign(ATTR_LAST_HEARD_FROM, cur_time); }
 
-    this->publish_private( private_ad );
+	switch (purpose) {
+	case Purpose::for_update:
+		if (is_partitionable_slot()) { publishDynamicChildSummaries(&ad); }
+		resmgr->publishSlotAttrs(&ad);
+		process_update_ad(ad);
+		break;
+	case Purpose::for_cod:
+	case Purpose::for_req_claim:
+		if (is_partitionable_slot()) { publishDynamicChildSummaries(&ad); }
+		resmgr->publishSlotAttrs(&ad);
+		process_update_ad(ad);
+		break;
+	case Purpose::for_workfetch:
+		if (is_partitionable_slot()) { publishDynamicChildSummaries(&ad); }
+		resmgr->publishSlotAttrs(&ad);
+		process_update_ad(ad);
+		break;
+	case Purpose::for_query:
+		if (is_partitionable_slot()) { publishDynamicChildSummaries(&ad); }
+		resmgr->publishSlotAttrs(&ad);
+		process_update_ad(ad);
+		break;
+	case Purpose::for_snap:
+		process_update_ad(ad);
+		break;
+	}
+
+	// if this STARTD is acting as proxy for another STARTD in a VM, then this STARTD should never match.
+	// TJ: 2020 I'm pretty sure this vmapi_ stuff doesn't work if it ever did, look into removing it.
+	if( vmapi_is_usable_for_condor() == FALSE ) {
+		ad.Assign( ATTR_START, false );
+	}
+
 }
 
 
@@ -1513,8 +1663,10 @@ Resource::update_with_ack( void )
     ClassAd public_ad,
             private_ad;
 
-    /* get the public and private ads */
-    publish_for_update( &public_ad, &private_ad );
+	publish_single_slot_ad(public_ad, 0, Resource::Purpose::for_update);
+
+	publish_private(&private_ad);
+
 
     if ( !putClassAd ( socket, public_ad ) ) {
 
@@ -2201,58 +2353,92 @@ Resource::hardkill_backfill( void )
 
 #endif /* HAVE_BACKFILL */
 
+void Resource::refresh_draining_attrs() {
+	// this needs to refresh 
+	if (r_classad) {
+		r_classad->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
+		if( resmgr->getMaxJobRetirementTimeOverride() >= 0 ) {
+			r_classad->InsertAttr( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
+		} else {
+			caRevertToParent(r_classad, ATTR_MAX_JOB_RETIREMENT_TIME);
+		}
+	}
+}
+void Resource::refresh_startd_cron_attrs() {
+	if (r_classad) {
+		// Publish the supplemental Class Ads IS_UPDATE
+		resmgr->adlist_publish( r_id, r_classad, A_PUBLIC | A_UPDATE, r_id_str );
+	}
+}
 
-void
-Resource::publish( ClassAd* cap, amask_t mask )
+void Resource::refresh_classad_slot_attrs() {
+	if (r_classad) {
+		resmgr->publishSlotAttrs(r_classad);
+	}
+}
+
+void Resource::publish_static(ClassAd* cap)
 {
-	State s;
-	char* ptr;
+	bool internal_ad = (cap == r_config_classad || cap == r_classad);
+	bool wrong_internal_ad = (cap == r_classad);
+	//if (param_boolean("STARTD_TRACE_PUBLISH_CALLS", false)) {
+	//	dprintf(D_ALWAYS | D_BACKTRACE, "in Resource::publish_static(%p) for %s classad=%p, base=%p\n", cap, r_name, r_classad, r_config_classad);
+	//}
+	if (wrong_internal_ad) {
+		dprintf(D_ALWAYS, "ERROR! updating the wrong internal ad!\n");
+	} else {
+		dprintf(D_TEST | D_VERBOSE, "Resource::publish_static, %s ad\n", internal_ad ? "internal" : "external");
+	}
 
-		// Set the correct types on the ClassAd
+	// Set the correct types on the ClassAd
 	SetMyTypeName( *cap,STARTD_ADTYPE );
 	SetTargetTypeName( *cap, JOB_ADTYPE );
 
-		// Insert attributes directly in the Resource object, or not
-		// handled by other objects.
+	// We need these for both public and private ads
+	cap->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString());
+	cap->Assign(ATTR_NAME, r_name);
 
-	if( IS_STATIC(mask) ) {
-			// We need these for both public and private ads
-		cap->Assign( ATTR_STARTD_IP_ADDR,
-				 daemonCore->InfoCommandSinfulString() );
+	cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 
-		cap->Assign( ATTR_NAME, r_name );
-	}
-
-	if( IS_PUBLIC(mask) && IS_STATIC(mask) ) {
-			// Since the Rank expression itself only lives in the
-			// config file and the r_classad (not any obejects), we
-			// have to insert it here from r_classad.  If Rank is
-			// undefined in r_classad, we need to insert a default
-			// value, since we don't want to use the job ClassAd's
-			// Rank expression when we evaluate our Rank value.
-		if( !caInsert(cap, r_classad, ATTR_RANK) ) {
+	{
+		// Since the Rank expression itself only lives in the
+		// config file and the r_classad (not any obejects), we
+		// have to insert it here from r_classad.  If Rank is
+		// undefined in r_classad, we need to insert a default
+		// value, since we don't want to use the job ClassAd's
+		// Rank expression when we evaluate our Rank value.
+		if( !internal_ad && !caInsert(cap, r_classad, ATTR_RANK) ) {
 			cap->Assign( ATTR_RANK, 0.0 );
 		}
 
-			// Similarly, the CpuBusy expression only lives in the
-			// config file and in the r_classad.  So, we have to
-			// insert it here, too.  This is just the expression that
-			// defines what "CpuBusy" means, not the current value of
-			// it and how long it's been true.  Those aren't static,
-			// and need to be re-published after they're evaluated.
-		if( !caInsert(cap, r_classad, ATTR_CPU_BUSY) ) {
+		// Similarly, the CpuBusy expression only lives in the
+		// config file and in the r_classad.  So, we have to
+		// insert it here, too.  This is just the expression that
+		// defines what "CpuBusy" means, not the current value of
+		// it and how long it's been true.  Those aren't static,
+		// and need to be re-published after they're evaluated.
+		if( !internal_ad && !caInsert(cap, r_classad, ATTR_CPU_BUSY) ) {
 			EXCEPT( "%s not in internal resource classad, but default "
-					"should be added by ResMgr!", ATTR_CPU_BUSY );
+				"should be added by ResMgr!", ATTR_CPU_BUSY );
 		}
 
-		caInsert(cap, r_classad, ATTR_SLOT_WEIGHT);
+		if (!internal_ad) { caInsert(cap, r_classad, ATTR_SLOT_WEIGHT); }
 
 #if HAVE_HIBERNATION
-		caInsert(cap, r_classad, ATTR_UNHIBERNATE);
+		if (!internal_ad) { caInsert(cap, r_classad, ATTR_UNHIBERNATE); }
 #endif
 
-			// this sets STARTD_ATTRS, but ignores the SLOT_TYPE_n override values
+		// this sets STARTD_ATTRS, but ignores the SLOT_TYPE_n override values
 		daemonCore->publish(cap);
+		// remove time from static ad?
+		//if (cap == r_config_classad) { cap->Delete(ATTR_MY_CURRENT_TIME); }
+
+		// Put in cpu-specific attributes that can only change on reconfig
+		r_attr->publish_static(cap);
+
+		// Put in machine-wide attributes that can only change on reconfig
+		resmgr->m_attr->publish_static(cap);
+		resmgr->publish_static(cap);
 
 		// now override the global STARTD_ATTRS values with SLOT_TYPE_n_* or SLOTn_* values if they exist.
 		// the list of attributes can also be ammended at this level, but note that the list can only be expanded
@@ -2310,159 +2496,57 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			} else {
 				if ( ! cap->AssignExpr(attr, tmp.ptr()) ) {
 					dprintf(D_ALWAYS | D_FAILURE,
-							"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s."
-							"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-							attr, tmp.ptr(), slot_name.c_str() );
+						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s."
+						"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+						attr, tmp.ptr(), slot_name.c_str() );
 				}
 			}
 		}
 
-			// Also, include a slot ID attribute, since it's handy for
-			// defining expressions, and other things.
+		// Also, include a slot ID attribute, since it's handy for
+		// defining expressions, and other things.
 		cap->Assign(ATTR_SLOT_ID, r_id);
 
 		if (r_pair_name) {
 			cap->Assign( ATTR_SLOT_PAIR_NAME, r_pair_name );
 		}
 
-
 		// include any attributes set via local resource inventory
 		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
-        // advertise the slot type id number, as in SLOT_TYPE_<N>
-        cap->Assign(ATTR_SLOT_TYPE_ID, int(r_attr->type()));
+		// advertise the slot type id number, as in SLOT_TYPE_<N>
+		cap->Assign(ATTR_SLOT_TYPE_ID, r_attr->type());
+		// advertise slot type id, but don't treat negative as a signal for "dynamic"
+		//cap->Assign(ATTR_SLOT_TYPE_ID, (r_attr->type() < 0) ? -(r_attr->type()) : r_attr->type() );
 
 		switch (get_feature()) {
 		case PARTITIONABLE_SLOT:
-			cap->AssignExpr(ATTR_SLOT_PARTITIONABLE, "TRUE");
-            cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
-            if (r_has_cp) cap->Assign(ATTR_NUM_CLAIMS, (long long)r_claims.size());
-
-			publishDynamicChildSummaries(cap);
+			cap->Assign(ATTR_SLOT_PARTITIONABLE, true);
+			cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
 			break;
 		case DYNAMIC_SLOT:
-			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
-            cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
+			cap->Assign(ATTR_SLOT_DYNAMIC, true);
+			cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
 			cap->Assign(ATTR_PARENT_SLOT_ID, r_id);
+			cap->Assign(ATTR_DSLOT_ID, r_sub_id);
 			if ( param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) ) {
+				// the Negotiator uses this to determine if the p-slot will have rollup from the d-slot
 				cap->Assign(ATTR_PSLOT_ROLLUP_INFORMATION, true);
 			}
 			break;
 		default:
-            cap->Assign(ATTR_SLOT_TYPE, "Static");
+			cap->Assign(ATTR_SLOT_TYPE, "Static");
 			break; // Do nothing
 		}
 	}
 
-	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
-			// If we're claimed or preempting, handle anything listed
-			// in STARTD_JOB_EXPRS.
-			// Our current claim object might be gone though, so make
-			// sure we have the object before we try to use it.
-			// Also, our current claim object might not have a
-			// ClassAd, so be careful about that, too.
-		s = this->state();
-		if( s == claimed_state || s == preempting_state ) {
-			if( startd_job_attrs && r_cur && r_cur->ad() ) {
-				startd_job_attrs->rewind();
-				while( (ptr = startd_job_attrs->next()) ) {
-					caInsert( cap, r_cur->ad(), ptr );
-				}
-			}
-		}
-	}
-
-		// Put in cpu-specific attributes
-	r_attr->publish( cap, mask );
-
-		// Put in machine-wide attributes
-	resmgr->m_attr->publish( cap, mask );
-
-		// Put in ResMgr-specific attributes
-	resmgr->publish( cap, mask );
-
-	resmgr->publish_draining_attrs( this, cap, mask );
-
-		// If this is a public ad, publish anything we had to evaluate
-		// to "compute"
-	if( IS_PUBLIC(mask) && IS_EVALUATED(mask) ) {
-		cap->Assign( ATTR_CPU_BUSY_TIME, (int)cpu_busy_time() );
-
-		cap->Assign( ATTR_CPU_IS_BUSY, r_cpu_busy ? true : false );
-
-        publishDeathTime( cap );
-	}
-
-		// Put in state info
-	r_state->publish( cap, mask );
-
-		// Put in requirement expression info
-	r_reqexp->publish( cap, mask );
-
-		// Put in max job retirement time expression
-	ptr = param(ATTR_MAX_JOB_RETIREMENT_TIME);
-	if( ptr && !*ptr ) {
-		free(ptr);
-		ptr = NULL;
-	}
-	cap->AssignExpr( ATTR_MAX_JOB_RETIREMENT_TIME, ptr ? ptr : "0" );
-
-	free(ptr);
-
-	cap->Assign( ATTR_RETIREMENT_TIME_REMAINING, evalRetirementRemaining() );
-
-	    // Is this the local universe startd?
-    cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
-
-		// Put in max vacate time expression
-	ptr = param(ATTR_MACHINE_MAX_VACATE_TIME);
-	if( ptr && !*ptr ) {
-		free(ptr);
-		ptr = NULL;
-	}
-	cap->AssignExpr( ATTR_MACHINE_MAX_VACATE_TIME, ptr ? ptr : "0" );
-
-	free(ptr);
-
-#if HAVE_JOB_HOOKS
-	if (IS_PUBLIC(mask)) {
-		cap->Assign( ATTR_LAST_FETCH_WORK_SPAWNED, 
-					 (int)m_last_fetch_work_spawned );
-		cap->Assign( ATTR_LAST_FETCH_WORK_COMPLETED,
-					 (int)m_last_fetch_work_completed );
-		cap->Assign( ATTR_NEXT_FETCH_WORK_DELAY,
-					 m_next_fetch_work_delay );
-	}
-#endif /* HAVE_JOB_HOOKS */
-
-		// Update info from the current Claim object, if it exists.
-	if( r_cur ) {
-		r_cur->publish( cap, mask );
-        if (state() == claimed_state)  cap->Assign(ATTR_PUBLIC_CLAIM_ID, r_cur->publicClaimId());
-	}
-	if( r_pre ) {
-		r_pre->publishPreemptingClaim( cap, mask );
-	}
-
-	r_cod_mgr->publish( cap, mask );
-
-	// Publish the supplemental Class Ads
-	resmgr->adlist_publish( r_id, cap, mask, r_id_str );
-
-    // Publish the monitoring information
-    daemonCore->dc_stats.Publish(*cap);
-    daemonCore->monitor_data.ExportData( cap );
-
-	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {
-		resmgr->publishSlotAttrs( cap );
-	}
-
-    if (IS_PUBLIC(mask)) {
-        string pname;
-        string expr;
-        // A negative slot type indicates a d-slot, in which case I want to use
-        // the slot-type of its parent for inheriting CP-related configurations:
-        int slot_type = (type() >= 0) ? type() : -type();
+	// slot weight and consumption policy
+	{
+		std::string pname;
+		std::string expr;
+		// A negative slot type indicates a d-slot, in which case I want to use
+		// the slot-type of its parent for inheriting CP-related configurations:
+		int slot_type = (type() >= 0) ? type() : -type();
 
 		if ( ! SlotType::param(expr, r_attr, "SLOT_WEIGHT") &&
 			 ! SlotType::param(expr, r_attr, "SlotWeight")) {
@@ -2500,19 +2584,151 @@ Resource::publish( ClassAd* cap, amask_t mask )
             }
         }
     }
+}
+
+void
+Resource::publish_dynamic(ClassAd* cap, bool /*for_update*/)
+{
+	bool internal_ad = (cap == r_config_classad || cap == r_classad);
+	bool wrong_internal_ad = (cap == r_config_classad);
+	//if (param_boolean("STARTD_TRACE_PUBLISH_CALLS", false)) {
+	//	dprintf(D_ALWAYS | D_BACKTRACE, "in Resource::publish_dynamic(%p) for %s classad=%p, base=%p\n", cap, r_name, r_classad, r_config_classad);
+	//}
+	if (wrong_internal_ad) {
+		dprintf(D_ALWAYS | D_BACKTRACE, "ERROR! updating the wrong internal ad!\n");
+	} else {
+		dprintf(D_TEST | D_VERBOSE, "Resource::publish_dynamic, %s ad\n", internal_ad ? "internal" : "external");
+	}
+
+	//TODO: tj can I kill this?
+	if (vmapi_is_virtual_machine()) {
+		ClassAd* host_classad = vmapi_get_host_classAd();
+		if (host_classad) { MergeClassAds(cap, host_classad, true, false); }
+	}
+
+	// If we're claimed or preempting, handle anything listed
+	// in STARTD_JOB_ATTRS.
+	// Our current claim object might be gone though, so make
+	// sure we have the object before we try to use it.
+	// Also, our current claim object might not have a
+	// ClassAd, so be careful about that, too.
+	State s = this->state();
+	if (s == claimed_state || s == preempting_state) {
+		if (startd_job_attrs && r_cur && r_cur->ad()) {
+			for (char * attr = startd_job_attrs->first(); attr != NULL; attr = startd_job_attrs->next()) {
+				caInsert(cap, r_cur->ad(), attr);
+			}
+		}
+	}
+
+	if (is_partitionable_slot()) {
+		if (r_has_cp) cap->Assign(ATTR_NUM_CLAIMS, (long long)r_claims.size());
+	}
+
+	// daemonCore->publish sets this, but it will be stale
+	cap->Assign(ATTR_MY_CURRENT_TIME, time(NULL));
+
+	// Put in cpu-specific attributes
+	r_attr->publish_dynamic(cap);
+
+	// Put in machine-wide attributes
+	resmgr->m_attr->publish_dynamic(cap);
+
+	// Put in ResMgr-specific attributes (A_STATIC, A_UPDATE, and always)
+	resmgr->publish_dynamic(cap);
+
+	resmgr->publish_draining_attrs(this, cap);	// always
+
+	// 
+	cap->Assign( ATTR_CPU_BUSY_TIME, cpu_busy_time() );
+	cap->Assign( ATTR_CPU_IS_BUSY, r_cpu_busy ? true : false );
+	publishDeathTime( cap );
+
+	// Put in state info	   A_ALWAYS
+	r_state->publish( cap );
+
+	// This is a bit of a mess, but unwinding all of the call sites of this function will have to
+	// wait for a future refactoring pass.  for now, if the caller passes the internal r_classad
+	// we call the ReqExp::publish function that knows how to manage the internal ads, otherwise
+	// we just blast stuff into the add that was passed in.
+	//
+	if (internal_ad) {
+		r_reqexp->publish(this);
+	} else {
+		r_reqexp->publish_external(cap);
+	}
+
+	cap->Assign( ATTR_RETIREMENT_TIME_REMAINING, evalRetirementRemaining() );
+	if (! internal_ad) { caInsert(cap, r_classad, ATTR_MACHINE_MAX_VACATE_TIME); }
+
+#if HAVE_JOB_HOOKS
+	cap->Assign( ATTR_LAST_FETCH_WORK_SPAWNED, m_last_fetch_work_spawned );
+	cap->Assign( ATTR_LAST_FETCH_WORK_COMPLETED, m_last_fetch_work_completed );
+	cap->Assign( ATTR_NEXT_FETCH_WORK_DELAY, m_next_fetch_work_delay );
+#endif /* HAVE_JOB_HOOKS */
+
+	// Update info from the current Claim object, if it exists.
+	if( r_cur ) {
+		r_cur->publish( cap );
+		if (state() == claimed_state)  cap->Assign(ATTR_PUBLIC_CLAIM_ID, r_cur->publicClaimId());
+	}
+	if( r_pre ) {
+		r_pre->publishPreemptingClaim( cap );
+	}
+
+	r_cod_mgr->publish(cap);  // should probably be IS_STATIC?? or IS_TIMER?
+
+	// Publish the supplemental Class Ads IS_UPDATE
+	resmgr->adlist_publish(r_id, cap, A_PUBLIC | A_UPDATE, r_id_str);
+
+	// Publish the monitoring information ALWAYS
+	daemonCore->dc_stats.Publish(*cap);
+	daemonCore->monitor_data.ExportData( cap );
 
 	cap->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
 	if( resmgr->getMaxJobRetirementTimeOverride() >= 0 ) {
-		cap->InsertAttr( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
+		cap->Assign( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
+	} else {
+		if (cap == r_classad) {
+			caRevertToParent(cap, ATTR_MAX_JOB_RETIREMENT_TIME);
+		} else if ( ! internal_ad) {
+			caInsert(cap, r_classad, ATTR_MAX_JOB_RETIREMENT_TIME);
+		}
 	}
 
+	//TODO: move this and startd_slot_attrs publishing out of here an into a separate pass
+	//      for now this must be here so that when resemgr does Walk(&Resource::refresh_classad_slot_attrs)
+	//      it can see the rollup
+	if (is_partitionable_slot()) { publishDynamicChildSummaries(cap); }
+}
+
+
+// called when the resource bag of a slot has changed (p-slot or coalesced slot)
+void Resource::refresh_classad_resources() {
+	if (r_classad) {
+		// Put in cpu-specific attributes (A_STATIC, A_UPDATE, A_TIMEOUT)
+		r_attr->publish_static(r_config_classad);
+		r_attr->publish_dynamic(r_classad);
+	}
+}
+
+void Resource::refresh_classad_evaluated()
+{
+	if (r_classad) {
+		r_classad->Assign(ATTR_CPU_BUSY_TIME, (int)cpu_busy_time());
+		r_classad->Assign(ATTR_CPU_IS_BUSY, r_cpu_busy ? true : false);
+		publishDeathTime(r_classad);
+	}
+}
+
+void Resource::refresh_sandbox_ad(ClassAd*cap)
+{
 	// Don't bother to write an ad to disk that won't include the extras ads.
 	// Also only write the ad to disk when the claim has a ClassAd and the
 	// starter knows where the execute directory is.  Empirically, this set
 	// of conditions also ensures that reset_monitor() has been called, so
 	// the first ad we write will include the StartOfJob* attribute(s).
-	if( IS_PUBLIC(mask) && IS_UPDATE(mask)
-	  && r_cur && r_cur->ad() && r_cur->executeDir() ) {
+	if (r_cur && r_cur->ad() && r_cur->executeDir() ) {
 		std::string updateAdDir;
 		formatstr( updateAdDir, "%s/dir_%d", r_cur->executeDir(), r_cur->starterPID() );
 
@@ -2537,53 +2753,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 #endif
 
 		if( updateAdFile ) {
-			std::vector< std::string > deleteList;
-			for( auto i = cap->begin(); i != cap->end(); ++i ) {
-				const std::string & name = i->first;
-
-				// Compute the SUM metrics' *Usage values.  The PEAK metrics
-				// have already inserted their *Usage values into the ad.
-				if( name.find( "StartOfJob" ) == 0 ) {
-					std::string usageName;
-					std::string uptimeName = name.substr( 10 );
-					if(! StartdCronJobParams::getResourceNameFromAttributeName( uptimeName, usageName )) { continue; }
-					usageName += "AverageUsage";
-
-					std::string lastUpdateName = "LastUpdate" + uptimeName;
-					std::string firstUpdateName = "FirstUpdate" + uptimeName;
-
-					// Note that we calculate the usage rate only for full
-					// sample intervals.  This eliminates the imprecision of
-					// the sample interval in which the job started; since we
-					// can't include the usage from the sample interval in
-					// which the job ended, we also don't include the time
-					// the job was running in that interval.  The computation
-					// is thus exact for its time period.
-					std::string usageExpr;
-					formatstr( usageExpr, "(%s - %s)/(%s - %s)",
-						uptimeName.c_str(), name.c_str(),
-						lastUpdateName.c_str(), firstUpdateName.c_str() );
-
-					classad::Value v;
-					if(! cap->EvaluateExpr( usageExpr, v )) { continue; }
-					double usageValue;
-					if(! v.IsNumber( usageValue )) { continue; }
-					cap->InsertAttr( usageName, usageValue );
-
-					deleteList.push_back( uptimeName );
-					deleteList.push_back( name );
-					deleteList.push_back( lastUpdateName );
-					deleteList.push_back( firstUpdateName );
-				}
-			}
-
-			// This is inefficient, but not inefficient enough to rewrite
-			// fPrintAd() with a blacklist.
 			classad::References r;
 			sGetAdAttrs( r, * cap, true, NULL );
-			for( auto i = deleteList.begin(); i != deleteList.end(); ++i ) {
-				r.erase( *i );
-			}
 
 			std::string adstring;
 			sPrintAdAttrs( adstring, * cap, r );
@@ -2719,6 +2890,8 @@ Resource::publishDeathTime( ClassAd* cap )
 		return;
 	}
 
+	//TODO: move setup of death time to global initialization
+
     have_death_time     = false;
     death_time_env_name = EnvGetName(ENV_DAEMON_DEATHTIME);
     death_time_string   = getenv(death_time_env_name);
@@ -2755,7 +2928,7 @@ Resource::publishDeathTime( ClassAd* cap )
 }
 
 void
-Resource::publishSlotAttrs( ClassAd* cap )
+Resource::publishSlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_values )
 {
 	if( ! startd_slot_attrs ) {
 		return;
@@ -2766,52 +2939,35 @@ Resource::publishSlotAttrs( ClassAd* cap )
 	if( ! r_classad ) {
 		return;
 	}
-	char* ptr;
-	MyString prefix = r_id_str;
-	prefix += '_';
-	startd_slot_attrs->rewind();
-	while( (ptr = startd_slot_attrs->next()) ) {
-		caInsert( cap, r_classad, ptr, prefix.Value() );
-	}
-}
+	if (as_literal) {
+		std::string slot_attr; slot_attr.reserve(64);
+		classad::Value val;
+		classad::ExprList * lstval;
+		classad::ClassAd * adval;
 
-
-void
-Resource::refreshSlotAttrs( void )
-{
-	resmgr->publishSlotAttrs( r_classad );
-}
-
-
-void
-Resource::compute( amask_t mask )
-{
-	if( IS_EVALUATED(mask) ) {
-			// We need to evaluate some classad expressions to
-			// "compute" their values.  We don't want to propagate
-			// this mask to any other objects, since this bit only
-			// applies to the Resource class
-
-			// If we don't have a classad, we can bail now, since none
-			// of this is going to work.
-		if( ! r_classad ) {
-			return;
+		for (const char * attr = startd_slot_attrs->first(); attr != NULL; attr = startd_slot_attrs->next()) {
+			if (r_classad->EvaluateAttr(attr, val) && ! val.IsErrorValue() && ( ! only_valid_values || ! val.IsUndefinedValue())) {
+				slot_attr = r_id_str;
+				slot_attr += "_";
+				slot_attr += attr;
+				if (val.IsListValue(lstval)) {
+					cap->Insert(slot_attr, lstval->Copy());
+				} else if (val.IsClassAdValue(adval)) {
+					cap->Insert(slot_attr, adval->Copy());
+				} else {
+					cap->Insert(slot_attr, classad::Literal::MakeLiteral(val));
+				}
+			}
 		}
-
-			// Evaluate the CpuBusy expression and compute CpuBusyTime
-			// and CpuIsBusy.
-		compute_cpu_busy();
-
-		return;
+	} else {
+		char* ptr;
+		MyString prefix = r_id_str;
+		prefix += '_';
+		startd_slot_attrs->rewind();
+		while ((ptr = startd_slot_attrs->next())) {
+			caInsert(cap, r_classad, ptr, prefix.Value());
+		}
 	}
-
-		// Only resource-specific things that need to be computed are
-		// in the CpuAttributes object.
-	r_attr->compute( mask );
-
-		// Actually, we'll have the Reqexp object compute too, so that
-		// we get static stuff recomputed on reconfig, etc.
-	r_reqexp->compute( mask );
 }
 
 
@@ -3467,18 +3623,6 @@ Resource::swap_claims(Resource* ripa, Resource* ripb)
 	return true;
 }
 
-
-void Resource::init_total_disk(const Resource * pslot)
-{
-	if ( ! pslot)
-		return;
-	// no need to do this if we are constantly recomputing free disk space
-	if (param_boolean("STARTD_RECOMPUTE_DISK_FREE", false))
-		return;
-
-	r_attr->init_total_disk(pslot->r_attr);
-}
-
 Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
 {
 	ASSERT(rip);
@@ -3546,6 +3690,15 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 				// an unmodified_req_classad backup copy we can try on the next iteration of
 				// the while loop
 			if (mach_requirements == false) {
+
+				std::vector<ClassAd*> jobs; jobs.push_back(req_classad);
+				classad::References attrs; attrs.insert("START"); attrs.insert("WithinResourceLimits");
+				std::string buf; buf.reserve(1000);
+				anaFormattingOptions fmt = { 100, detail_analyze_each_sub_expr | detail_inline_std_slot_exprs | detail_smart_unparse_expr, "Requirements", "Slot", "Job" };
+				AnalyzeRequirementsForEachTarget(mach_classad, ATTR_REQUIREMENTS, attrs, jobs, buf, fmt);
+				dprintf(D_ALWAYS, "STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Analysis:\n%s\n",
+					unmodified_req_classad ? "with" : "w/o", buf.c_str());
+
 				if (IsDebugVerbose(D_MATCH)) {
 					dprintf(D_MATCH | D_FULLDEBUG,
 						"STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Job ad was ============================\n", 
@@ -3696,15 +3849,13 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			return NULL;
 		}
 
-			// set dslot total disk from pslot total disk (if appropriate)
-		new_rip->init_total_disk(rip);
-
 			// Initialize the rest of the Resource
-		new_rip->compute( A_ALL );
-		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
+		new_rip->initial_compute(rip);
+		//TJ:2020 - initial_compute already does this, so commenting it out
+		//new_rip->compute( A_TIMEOUT | A_UPDATE, 0 ); // Compute disk space
 		new_rip->init_classad();
-		new_rip->refresh_classad( A_EVALUATED ); 
-		new_rip->refresh_classad( A_SHARED_SLOT ); 
+		new_rip->refresh_classad_evaluated(); 
+		new_rip->refresh_classad_slot_attrs(); 
 
 			// The new resource needs the claim from its
 			// parititionable parent
@@ -3723,10 +3874,10 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
 		resmgr->addResource( new_rip );
 
-			// XXX: This is overkill, but the best way, right now, to
 			// get many of the new_rip's attributes calculated.
-		resmgr->compute( A_ALL );
-		resmgr->compute( A_TIMEOUT | A_UPDATE );
+			// the one thing this doesn't update is owner load and keyboard
+			// note that compute_dynamic will refresh both the d-slot and p-slot
+		resmgr->compute_dynamic(true, new_rip);
 
 			// Stash pslot claim as the "leftover_claim", which
 			// we will send back directly to the schedd iff it supports
@@ -3756,7 +3907,13 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 }
 
 void
-Resource::publishDynamicChildSummaries(ClassAd *cap) {
+Resource::publishDynamicChildSummaries(ClassAd *cap)
+{
+	if (!is_partitionable_slot()) {
+		// TODO:  Add rollup by slot_type
+		dprintf(D_ALWAYS | D_BACKTRACE, "publishDynamicChildSummaries called for non p-slot\n");
+		return;
+	}
 
 	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 
@@ -3772,62 +3929,55 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 	// List of attrs to rollup from dynamic ads into lists
 	// in the partitionable ad
 
-	std::list<std::string> attrs;
-	attrs.push_back(ATTR_NAME);
-	attrs.push_back(ATTR_CURRENT_RANK);
-	attrs.push_back(ATTR_REMOTE_USER);
-	attrs.push_back(ATTR_REMOTE_OWNER);
-	attrs.push_back(ATTR_ACCOUNTING_GROUP);
-	attrs.push_back(ATTR_STATE);
-	attrs.push_back(ATTR_ACTIVITY);
-	attrs.push_back(ATTR_ENTERED_CURRENT_STATE);
-	attrs.push_back(ATTR_RETIREMENT_TIME_REMAINING);
+	classad::References attrs;
+	attrs.insert(ATTR_NAME);
+	attrs.insert(ATTR_DSLOT_ID);
+	attrs.insert(ATTR_CURRENT_RANK);
+	attrs.insert(ATTR_REMOTE_USER);
+	attrs.insert(ATTR_REMOTE_OWNER);
+	attrs.insert(ATTR_ACCOUNTING_GROUP);
+	attrs.insert(ATTR_STATE);
+	attrs.insert(ATTR_ACTIVITY);
+	attrs.insert(ATTR_ENTERED_CURRENT_STATE);
+	attrs.insert(ATTR_RETIREMENT_TIME_REMAINING);
 
-	attrs.push_back(ATTR_CPUS);
-	attrs.push_back(ATTR_MEMORY);
-	attrs.push_back(ATTR_DISK);
+	attrs.insert(ATTR_CPUS);
+	attrs.insert(ATTR_MEMORY);
+	attrs.insert(ATTR_DISK);
 
 	MachAttributes::slotres_map_t machres_map = resmgr->m_attr->machres();
-
-    for (MachAttributes::slotres_map_t::iterator j(machres_map.begin());  j != machres_map.end();  j++) {
-        attrs.push_back(j->first);
+    for (auto j(machres_map.begin());  j != machres_map.end();  j++) {
+        attrs.insert(j->first);
     }
 
 	// The admin can add additional ones
-	char *userDefined = param("STARTD_PARTITIONABLE_SLOT_ATTRS");
-	if (userDefined) {
-		char *p;
+	param_and_insert_attrs("STARTD_PARTITIONABLE_SLOT_ATTRS", attrs);
 
-		StringList udl(userDefined);
-       udl.rewind();
+	std::string attrName;
+	std::string attrValue;
+	attrValue.reserve(100);
 
-		while((p = udl.next())) {
-			attrs.push_back(p);
-		}
-		free(userDefined);
-	}
-
-	for (std::list<std::string>::iterator i(attrs.begin()); i != attrs.end(); i++) {
-		rollupDynamicAttrs(cap, (*i));
+	for (auto it(attrs.begin()); it != attrs.end(); it++) {
+		attrName = "Child" + (*it);
+		attrValue.clear();
+		rollupAttrs(attrValue, m_children, (*it));
+		cap->AssignExpr(attrName, attrValue.c_str());
 	}
 }
 
-void
-Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
-	std::string attrName;
-	attrName = "Child" + name;
-
+/* static */ void
+Resource::rollupAttrs(std::string &attrValue, std::set<Resource *,ResourceLess> & children, const std::string &name)
+{
 	classad::Value val;
+
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 
-	std::string attrValue; // the list value that we are building up
-	attrValue.reserve(100);
 	attrValue = "{";
 
 	bool firstTime = true;
 
-	for (std::set<Resource *,ResourceLess>::const_iterator i(m_children.begin());  i != m_children.end();  i++) {
+	for (auto i(children.begin());  i != children.end();  i++) {
 		if (firstTime) {
 			firstTime = false;
 		} else {
@@ -3840,7 +3990,6 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 		}
 	}
 	attrValue += "}";
-	cap->AssignExpr(attrName, attrValue.c_str());
 
 	return;
 }

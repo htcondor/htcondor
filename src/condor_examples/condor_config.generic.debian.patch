@@ -63,8 +63,8 @@
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +
 +# Account for different pki locations for Debian
-+AUTH_SSL_SERVER_CAFILE   = /etc/ssl/certs/ca-bundle.crt
-+AUTH_SSL_CLIENT_CAFILE   = /etc/ssl/certs/ca-bundle.crt
++AUTH_SSL_SERVER_CAFILE   = /etc/ssl/certs/ca-certificates.crt
++AUTH_SSL_CLIENT_CAFILE   = /etc/ssl/certs/ca-certificates.crt
 +AUTH_SSL_SERVER_CERTFILE = /etc/ssl/certs/localhost.crt
 +AUTH_SSL_SERVER_KEYFILE  = /etc/ssl/private/localhost.key
 +
