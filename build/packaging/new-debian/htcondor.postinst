@@ -57,6 +57,15 @@ case "$1" in
         fi
         # make sure the config and home dir are complete
         condor_make_homedir
+        # create needed directories
+        mkdir -p /etc/condor/passwords.d
+        chmod 0700 /etc/condor/passwords.d
+        mkdir -p /etc/condor/tokens.d
+        chmod 0700 /etc/condor/tokens.d
+        mkdir -p /var/lib/condor/credentials/krb
+        mkdir -p /var/lib/condor/credentials/oauth
+        chmod 2770 /var/lib/condor/credentials/oauth
+        chgrp condor /var/lib/condor/credentials/oauth
         # tell systemd to create tmpfiles, but do no harm if not available
         systemd-tmpfiles --create --exclude-prefix=/dev || true
     ;;
