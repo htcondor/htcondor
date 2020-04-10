@@ -576,6 +576,7 @@ if __name__ == '__main__':
         running_plugins = {}
         with open(args['outfile'], 'w') as outfile:
             for ad in infile_ads:
+                tries = 0
                 try:
                     token_name = get_token_name(ad['Url'])
                     token_path = get_token_path(token_name)
@@ -589,10 +590,21 @@ if __name__ == '__main__':
                         box = BoxPlugin(token_path)
                         running_plugins[token_path] = box
 
-                    if not args['upload']:
-                        outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
-                    else:
-                        outfile_dict = box.upload_file(ad['Url'], ad['LocalFileName'])
+                    while tries < 3:
+                        tries += 1
+                        try:
+                            if not args['upload']:
+                                outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
+                            else:
+                                outfile_dict = box.upload_file(ad['Url'], ad['LocalFileName'])
+                        except IOError as err:
+                            # Retry on socket closed unexpectedly
+                            if (err.errno == 32) and (tries < 3):
+                                pass
+                            else:
+                                raise err
+                        else:
+                            break
 
                     outfile.write(str(classad.ClassAd(outfile_dict)))
 
