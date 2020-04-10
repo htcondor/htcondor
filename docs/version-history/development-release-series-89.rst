@@ -53,6 +53,11 @@ New Features:
   version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
 
+- Docker universe now works inside an unprivileged personal HTCondor,
+  if you give the user starting the personal condor rights to run the
+  docker commands.
+  :ticket:`7485`
+
 - When worker nodes are running on CPUs that support the AVX512 instructions,
   the startd now advertises that fact with has_avx512 attributes.
   :ticket:`7528`
