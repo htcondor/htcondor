@@ -410,6 +410,9 @@ BuildRequires: python-sphinx python-sphinx_rtd_theme
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
+# openssh-server needed for condor_ssh_to_job
+Requires: openssh-server
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
