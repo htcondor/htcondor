@@ -1507,9 +1507,39 @@ public:
 	virtual ~SubmitHashEnvFilter( void ) { };
 	virtual bool ImportFilter( const MyString &var,
 							   const MyString &val ) const;
+
+	// take a string of the form  x* !y* *z* !bar
+	// and split it into two string lists
+	// items that start with ! go into the blacklist (without the leading !)
+	// all other items go into the whitelist.  leading and trailing whitespace is trimmed
+	// comma, semicolon and whitespace are item steparators
+	void AddToImportWhiteBlackList(const char * list) {
+		StringTokenIterator it(list,40,",; \t\r\n");
+		MyString name;
+		for (const char * str = it.first(); str != NULL; str = it.next()) {
+			if (*str == '!') {
+				name = str+1; name.trim();
+				if (!name.empty()) {
+					m_black.append(name.c_str());
+				}
+			} else {
+				name = str; name.trim();
+				if (!name.empty()) {
+					m_white.append(name.c_str());
+				}
+			}
+		}
+	}
+	// clear the white and black lists for Import()
+	void ClearImportWhiteBlackList() {
+		m_black.clearAll();
+		m_white.clearAll();
+	}
 private:
 	bool m_env1;
 	bool m_env2;
+	mutable StringList m_black;
+	mutable StringList m_white;
 };
 bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &val ) const
 {
@@ -1537,6 +1567,14 @@ bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &va
 	{
 		// Don't override submit file environment settings --
 		// check if environment variable is already set.
+		return false;
+	}
+	// if there is a blacklist, and this nmake matches, filter it
+	if (!m_black.isEmpty() && m_black.contains_anycase_withwildcard(var.Value())) {
+		return false;
+	}
+	// if there is a whitelist and this name does not match, filter it
+	if (!m_white.isEmpty() && !m_white.contains_anycase_withwildcard(var.Value())) {
 		return false;
 	}
 	return true;
@@ -1603,12 +1641,23 @@ int SubmitHash::SetEnvironment()
 
 	// if getenv == TRUE, merge the variables from the user's environment that
 	// are not already set in the envobject
-	if (submit_param_bool(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt, false)) {
-		if (param_boolean("SUBMIT_ALLOW_GETENV", true)) {
-			envobject.Import( );
-		} else {
+	auto_free_ptr envlist(submit_param(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt));
+	if (envlist) {
+		if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
 			push_error(stderr, "\ngetenv command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
 			ABORT_AND_RETURN(1);
+		}
+		// getenv can be a boolean, or it can be a whitelist/blacklist
+		bool getenv_is_true = false;
+		if (string_is_boolean_param(envlist, getenv_is_true)) {
+			if (getenv_is_true) {
+				envobject.Import();
+			}
+		} else {
+			// getenv is not a boolean, it must be a blacklist/whitelist
+			envobject.AddToImportWhiteBlackList(envlist);
+			envobject.Import();
+			envobject.ClearImportWhiteBlackList();
 		}
 	}
 
