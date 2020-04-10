@@ -1326,7 +1326,7 @@ Job::NumChildren() const
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
-	ASSERT( !_type == NodeType::FINAL );
+	ASSERT( _type != NodeType::FINAL );
 
 	MyString	tmpName( categoryName );
 
