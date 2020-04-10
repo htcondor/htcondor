@@ -1310,6 +1310,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					// if they were idle, kill_claim delete'd them
 					*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
 					*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+					dprintf( D_FULLDEBUG, "unbinding devIDs in slot %s \n", dslots[i]->r_name );
+					dslots[i]->r_attr->unbind_DevIds(dslots[i]->r_id, dslots[i]->r_sub_id);
 				}
 				// TODO Do we need to call refresh_classad() on either slot?
 			}
