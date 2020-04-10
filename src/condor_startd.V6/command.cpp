@@ -1310,6 +1310,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				if (is_busy) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
+					//PRAGMA_REMIND("we have to unbind here, because we decrement r_attr, remember the GPUS we unbind so we can be sure to re-bind *those* for the new claim.")
+					dslots[i]->r_attr->unbind_DevIds(dslots[i]->r_id, dslots[i]->r_sub_id);
 					*(pslot->r_attr) += *(dslots[i]->r_attr);
 					// empty out the resource bag, so that we if the destruction decrements the 
 					// parent resource bag again, it does nothing.
@@ -2742,6 +2744,7 @@ command_coalesce_slots(int, Stream * stream ) {
 			dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
 
 		// Despite appearances, this also transfers the nonfungible resources.
+			(r->r_attr)->unbind_DevIds(r->r_id, r->r_sub_id);
 			*(parent->r_attr) += *(r->r_attr);
 			*(r->r_attr) -= *(r->r_attr);
 
