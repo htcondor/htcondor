@@ -57,6 +57,7 @@ Architecture: any
 Depends: adduser,
          debconf | debconf-2.0,
          libdate-manip-perl,
+         openssh-server,
          python,
          lsb-base (>= 3.0-6),
          libclassad10 (= ${binary:Version}),
