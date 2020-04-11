@@ -57,7 +57,6 @@ Architecture: any
 Depends: adduser,
          debconf | debconf-2.0,
          libdate-manip-perl,
-         openssh-server,
          python,
          lsb-base (>= 3.0-6),
          libclassad10 (= ${binary:Version}),
@@ -65,7 +64,9 @@ Depends: adduser,
          ${perl:Depends},
          ${python:Depends},
          ${shlibs:Depends}
-Recommends: ecryptfs-utils
+Recommends: ecryptfs-utils,
+            libglobus-gss-assist3,
+            openssh-server
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
