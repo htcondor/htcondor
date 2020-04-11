@@ -285,16 +285,3 @@ Getting the definition of **role:personal** configuration template:
        DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD 
        RunBenchmarks=0
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      
