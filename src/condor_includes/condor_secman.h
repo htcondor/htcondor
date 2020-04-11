@@ -48,7 +48,28 @@ typedef enum {
   be ready for use).
 */
 
+class SecMan;
+
 class SecManStartCommand;
+
+	// The representation of a set of capabilities; it holds the
+	// parsed state of these capabilities so they can easily be
+	// swapped in/out for the SecMan.
+class CapabilitySet {
+public:
+	KeyCache                      m_session_cache;
+	HashTable<MyString, MyString> m_command_map;
+
+	CapabilitySet();
+		// Take a capability provided by a remote daemon, parse it, and load
+		// it into the capability set.
+	bool loadCapability(SecMan &, int cmd, const std::string &server,
+		const std::string &capability, const std::string &info, CondorError &err);
+	bool empty() const {return size == 0;}
+
+private:
+	size_t size{0};
+};
 
 class SecMan {
 
@@ -80,7 +101,8 @@ public:
 	// Alternate tag methods
 	static std::map<DCpermission, std::string> m_tag_methods;
 	static std::string m_tag_token_owner;
-	static HashTable<MyString, MyString> command_map;
+	static HashTable<MyString, MyString> *m_command_map;
+	static HashTable<MyString, MyString> m_default_command_map;
 	static int sec_man_ref_count;
 	static std::set<std::string> m_not_my_family;
 
@@ -147,6 +169,7 @@ public:
 	static int authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* errstack);
 
 	bool getSessionPolicy(const char *sess_id, classad::ClassAd &policy);
+	bool getSessionExpiration(const char *sess_id, time_t &) const;
 
 	bool getSessionStringAttribute(const char *sess_id, const char *attr_name, std::string &attr_value);
 
@@ -178,6 +201,10 @@ public:
 		// setPoolPassword
 	static void setToken(const std::string &token) {m_token = token;}
 	static const std::string &getToken() {return m_token;}
+
+		// Take a set of capabilities and turn them into a standalone object.
+	static void setCapabilities(CapabilitySet &);
+	static void clearCapabilities();
 
 	// Setup the current authentication methods for a tag; these are considered overrides
 	// and are cleared when the tag is changed.
@@ -282,6 +309,10 @@ public:
 		// that was originally created with no expiration time.
 	bool SetSessionExpiration(char const *session_id,time_t expiration_time);
 
+		// Retrieve the expiration for a given session ID; returns false
+		// if no session was found.
+	bool GetSessionExpiration(const char *session_id, time_t &expiry_time);
+
 		// This is used to mark a session as being in a state where it is
 		// just hanging around for a short period in case some pending
 		// communication is still in flight (not essential communication,
@@ -290,6 +321,11 @@ public:
 		// the same session id as a newly requested non-negotiated security
 		// session, the lingering session will simply be replaced.
 	bool SetSessionLingerFlag(char const *session_id);
+
+		// This is used internally to take the serialized representation
+		// of the session attributes produced by ExportSecSessionInfo
+		// and apply them while creating a session.
+	bool ImportSecSessionInfo(char const *session_info,ClassAd &policy);
 
  private:
 	void invalidateOneExpiredCache(KeyCache *session_cache);
@@ -306,11 +342,6 @@ public:
 	friend class SecManStartCommand;
 
 	bool LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_key);
-
-		// This is used internally to take the serialized representation
-		// of the session attributes produced by ExportSecSessionInfo
-		// and apply them while creating a session.
-	bool ImportSecSessionInfo(char const *session_info,ClassAd &policy);
 
 		// Once the authentication methods are known, fill in metadata from
 		// the relevant subclass; this may allow the remote client to skip a

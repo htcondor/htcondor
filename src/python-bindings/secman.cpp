@@ -24,6 +24,63 @@
 
 using namespace boost::python;
 
+
+static int getCommand(object command);
+
+
+struct CapabilityTokenPickle : boost::python::pickle_suite
+{
+    static boost::python::tuple
+    getinitargs(const CapabilityToken& cap_token)
+    {
+        return boost::python::make_tuple(cap_token.get());
+    }
+};
+
+
+std::string
+CapabilityToken::commandString() const
+{
+    return SecManWrapper::getCommandStringStatic(command());
+}
+
+
+CapabilityToken::CapabilityToken(boost::python::object command, const std::string &server,
+    const std::string &value, const std::string &info)
+  : m_command(getCommand(command)),
+    m_server(server),
+    m_value(condorFormat(value)),
+    m_info(info)
+{}
+
+
+// Translate tokens from python-format to condor-format:
+//     Python format: 250149c73b82f55c.309aaf9e407e5a2c8fde806f8149902a9c42187744bc24e1510e2ac576059f3b
+//     Condor format: 250149c73b82f55c#[]309aaf9e407e5a2c8fde806f8149902a9c42187744bc24e1510e2ac576059f3b
+std::string
+CapabilityToken::condorFormat(const std::string &pythonFormat)
+{
+    auto pos = pythonFormat.find('.');
+    if (pos == std::string::npos) {
+        THROW_EX(ValueError, "Capability string is missing '.' character")
+    }
+    std::string first_part = pythonFormat.substr(0, pos);
+    return pythonFormat.substr(0, pos) + "#[]" + pythonFormat.substr(pos + 1);
+}
+
+
+std::string
+CapabilityToken::pythonFormat(const std::string &condorFormat)
+{
+    auto pos = condorFormat.find("#[]");
+    if (pos == std::string::npos) {
+        THROW_EX(ValueError, "Capability string is missing '.' character")
+    }
+    std::string first_part = condorFormat.substr(0, pos);
+    return condorFormat.substr(0, pos) + "." + condorFormat.substr(pos + 3);
+}
+
+
 class Token {
 public:
     Token(const std::string &value) : m_value(value) {}
@@ -173,7 +230,8 @@ public:
             }
             if (last_iteration) {
                 if (done()) {
-                    return Token(m_token);                                                                                              } else {
+                    return Token(m_token);
+                } else {
                     THROW_EX(RuntimeError, "Timed out waiting for token approval");
                 }
             }
@@ -301,7 +359,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         ClassAd *policy = NULL;
 
         // IMPORTANT: this hashtable returns 0 on success!
-        if ((SecMan::command_map).lookup(cmd_map_ent, session_id))
+        if ((SecMan::m_command_map)->lookup(cmd_map_ent, session_id))
         {
             THROW_EX(RuntimeError, "No valid entry in command map hash table!");
         }
@@ -322,9 +380,85 @@ SecManWrapper::ping(object locate_obj, object command_obj)
 }
 
 std::string
-SecManWrapper::getCommandString(int cmd)
+SecManWrapper::getCommandStringStatic(int cmd)
 {
         return ::getCommandString(cmd);
+}
+
+int
+SecManWrapper::getCommandNumber(const std::string &cmd)
+{
+	return ::getCommandNum(cmd.c_str());
+}
+
+boost::python::object
+SecManWrapper::getCapabilityTokens(boost::python::object locate_obj,
+    boost::python::object req_list, int duration)
+{
+    boost::python::extract<ClassAdWrapper&> ad_extract(locate_obj);
+    std::string addr;
+    if (ad_extract.check())
+    {
+        ClassAdWrapper& ad = ad_extract();
+        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr))
+        {
+            THROW_EX(ValueError, "Daemon address not specified.");
+        }
+    }
+    else
+    {
+        boost::python::str locate_str(locate_obj);
+        addr = boost::python::extract<std::string>(locate_str);
+    }
+    Daemon daemon(DT_ANY, addr.c_str(), NULL);
+    if (!daemon.locate())
+    {
+        THROW_EX(RuntimeError, "Unable to find daemon.");
+    }
+
+    PyObject *py_iter = PyObject_GetIter(req_list.ptr());
+    if (!py_iter)
+    {
+        THROW_EX(ValueError, "Requested capabilities must be an iterator.");
+    }
+
+    std::vector<int> req_int_list;
+    while (true) {
+        PyObject *pyobj = PyIter_Next(py_iter);
+        if (!pyobj) break;
+        if (PyErr_Occurred()) {
+            boost::python::throw_error_already_set();
+        }
+
+        boost::python::object obj = boost::python::object(boost::python::handle<>(pyobj));
+        boost::python::extract<int> extract_command_int(obj);
+        if (extract_command_int.check()) {
+            req_int_list.push_back(extract_command_int());
+        } else {
+            boost::python::str obj_str(obj);
+            std::string obj_cppstr = boost::python::extract<std::string>(obj_str);
+            auto command_int = getCommandNumber(obj_cppstr);
+            if (-1 == command_int) {
+                PyErr_Format(PyExc_ValueError, "Unknown HTCondor command: %s", obj_cppstr.c_str());
+                boost::python::throw_error_already_set();
+            }
+            req_int_list.push_back(command_int);
+        }
+    }
+
+    CondorError err;
+    std::unordered_map<int, std::string> result;
+    std::string session_info;
+    if (!daemon.getCapabilityTokens(req_int_list, duration, result, session_info, err))
+    {
+        THROW_EX(RuntimeError, err.getFullText().c_str());
+    }
+
+    boost::python::list result_obj = boost::python::list();
+    for (auto entry : result) {
+        result_obj.append(CapabilityToken(entry.first, addr, entry.second, session_info));
+    }
+    return result_obj;
 }
 
 boost::shared_ptr<SecManWrapper>
@@ -346,6 +480,7 @@ SecManWrapper::exit(boost::python::object obj1, boost::python::object /*obj2*/, 
     m_pool_pass = "";
     m_token = "";
     m_token_set = false;
+    m_capability_set = false;
     m_cred = "";
     m_config_overrides.reset();
     return (obj1.ptr() == Py_None);
@@ -395,6 +530,14 @@ SecManWrapper::getThreadLocalToken()
         return (man && man->m_token_set) ? man->m_token.c_str() : NULL;
 }
 
+CapabilitySet *
+SecManWrapper::getThreadLocalCapability()
+{
+    if (!m_key_allocated) return NULL;
+        SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+        return (man && man->m_capability_set) ? man->m_capability.get() : NULL;
+}
+
 void
 SecManWrapper::setTag(const std::string &tag)
 {
@@ -414,6 +557,21 @@ SecManWrapper::setToken(const Token &token)
 {
         m_token = token.get();
         m_token_set = true;
+}
+
+void
+SecManWrapper::setCapability(const CapabilityToken &capability)
+{
+	if (!m_capability) {
+		m_capability.reset(new CapabilitySet());
+	}
+	CondorError err;
+	if (!m_capability->loadCapability(m_secman, capability.command(),
+		capability.server(), capability.get(), capability.info(), err))
+	{
+		THROW_EX(RuntimeError, err.getFullText().c_str());
+	}
+	m_capability_set = true;
 }
 
 void
@@ -501,6 +659,24 @@ export_secman()
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("timeout")=0));
 
+    class_<CapabilityToken>("CapabilityToken",
+            R"C0ND0R(
+            A class representing a generated HTCondor authentication token for a single command.
+
+            :param command: The command integer associated with this token.
+            :type command: int or str
+            :param 
+            :param contents: The contents of the token.
+            :type contents: str
+            )C0ND0R",
+            boost::python::init<boost::python::object, std::string, std::string, std::string>(
+                (boost::python::arg("self"), boost::python::arg("command"),
+                 boost::python::arg("server"), boost::python::arg("contents"),
+                 boost::python::arg("info"))))
+        .def("token", &CapabilityToken::getPython)
+        .def("command", &CapabilityToken::commandString)
+        .def_pickle(CapabilityTokenPickle());
+
     class_<SecManWrapper>("SecMan",
             R"C0ND0R(
             A class that represents the internal HTCondor security state.
@@ -540,6 +716,30 @@ export_secman()
             :param int command_int: The integer command to get the string name of.
             )C0ND0R",
             boost::python::args("self", "command_int"))
+        .def("getCommandNumber", &SecManWrapper::getCommandNumber,
+            R"C0ND0R(
+            Return the command number corresponding to a given command string.
+
+            :param str command: The command name to translate.
+            )C0ND0R",
+            boost::python::args("self", "command"))
+        .def("fetchCapabilityTokens", &SecManWrapper::getCapabilityTokens,
+            R"C0ND0R(
+            Fetch a set of capability tokens from a remote HTCondor daemon,
+            one per provided commands.
+
+            :param ad: The ClassAd of the daemon as returned by :meth:`Collector.locate`;
+                alternately, the sinful string can be given directly as the first parameter.
+            :type ad: str or :class:`~classad.ClassAd`
+            :param req_list: A list of HTCondor commands to request capabilities for.
+            :type req_list: list(str)
+            :param duration: Requested lifetime of generated capability.
+            :type duration: int
+            :return: A list of `~htcondor.Capability` objects
+            :rtype: list(`~htcondor.Capability`)
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("ad"), boost::python::arg("req_list"),
+             boost::python::arg("duration")=60))
         .def("__exit__", &SecManWrapper::exit, "Exit the context manager.")
         .def("__enter__", &SecManWrapper::enter, "Enter the context manager.")
         .def("setTag", &SecManWrapper::setTag,
@@ -579,6 +779,14 @@ export_secman()
             :type token: :class:`Token`
             )C0ND0R",
             boost::python::args("self", "token"))
+        .def("setCapability", &SecManWrapper::setCapability,
+            R"C0ND0R(
+            Set the capability to use for authorization.
+
+            :param cap: The object representing the capability
+            :type cap: :class:`Capability`
+            )C0ND0R",
+            boost::python::args("self", "cap"))
         .def("setConfig", &SecManWrapper::setConfig,
             R"C0ND0R(
             Set a temporary configuration variable; this will be kept for all security

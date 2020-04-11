@@ -52,7 +52,8 @@ class KeyCacheEntry {
     ClassAd*              policy();
     int                   expiration();
 	char const *          expirationType();
-	void                  setExpiration(int new_expiration);
+	void                  setExpiration(time_t new_expiration);
+	time_t                getExpiration() const;
 	void                  setLingerFlag(bool flag) { _lingering = flag; }
 	bool                  getLingerFlag() { return _lingering; }
 
@@ -66,7 +67,7 @@ class KeyCacheEntry {
     condor_sockaddr*              _addr;
     KeyInfo*             _key;
     ClassAd*             _policy;
-    int                  _expiration;
+    time_t               _expiration;
 	int                  _lease_interval;   // max seconds of unused time
 	time_t               _lease_expiration; // time of lease expiration
 	bool                 _lingering; // true if session only exists

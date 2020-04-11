@@ -1465,7 +1465,7 @@ struct Schedd {
         int ret = 0;
 
         // IMPORTANT: this hashtable returns 0 on success!
-        ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
+        ret = (SecMan::m_command_map)->lookup(cmd_map_ent, session_id);
         if (ret)
         {
             return false;

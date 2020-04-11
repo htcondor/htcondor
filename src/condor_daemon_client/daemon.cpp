@@ -38,6 +38,7 @@
 #include "subsystem_info.h"
 #include "condor_netaddr.h"
 #include "condor_sinful.h"
+#include "condor_claimid_parser.h"
 
 #include "ipv6_hostname.h"
 
@@ -2667,6 +2668,204 @@ Daemon::exchangeSciToken(const std::string &scitoken, std::string &token, Condor
 			"malformed ad containing no resulting token and no error message, from "
 			"remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
 		return false;
+	}
+
+	return true;
+}
+
+
+bool
+Daemon::getCapabilityTokens( const std::vector<int> &req_caps, int duration,
+	std::unordered_map<int, std::string> &result, std::string &info,
+	CondorError &err ) noexcept
+{
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::getCapabilityTokens() making connection to "
+		"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	classad::ClassAd ad;
+	if ((duration > 0) && !ad.InsertAttr("Duration", duration)) {
+		err.pushf("DAEMON", 1, "Failed to record duration into request ad");
+		dprintf(D_FULLDEBUG, "Failed to record duration into request ad\n");
+		return false;
+	}
+	std::stringstream ss;
+	bool has_entry = false;
+	for (auto cap : req_caps) {
+		if (has_entry) {ss << ",";}
+		ss << cap;
+		has_entry = true;
+	}
+	if (!has_entry) {
+		return true;
+	}
+	if (!ad.InsertAttr("RequestedCommands", ss.str())) {
+		err.pushf("DAEMON", 1, "Failed to record requested commands in ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to record requested commands in ClassAd\n");
+		return false;
+	}
+
+	ReliSock rSock;
+	rSock.timeout(5);
+	if (!connectSock(&rSock)) {
+		err.pushf("DAEMON", 1, "Failed to connect to remote daemon at '%s'",
+			_addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!startCommand(DC_GENERATE_CAPABILITIES, &rSock, 20, &err)) {
+		err.pushf("DAEMON", 1, "Failed to start command for generating "
+			"capabilities from remote daemon at '%s'.\n", _addr ? _addr :
+			"(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to start "
+			"command for generating capabilities from remote daemon at "
+			"'%s'.\n", _addr ? _addr : "NULL");
+		return false;
+	}
+
+	if (!putClassAd(&rSock, ad)) {
+		err.pushf("DAEMON", 1, "Failed to send ClassAd to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() Failed to send ClassAd"
+			" to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to send end of message to remote daemon at"
+			" '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	rSock.decode();
+
+	classad::ClassAd result_ad;
+	if (!getClassAd(&rSock, result_ad)) {
+		err.pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+			" at '%s'\n", _addr ? _addr : "(unknown)" );
+		dprintf(D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to recieve "
+			"response from remote daemon at '%s'\n", _addr ? _addr :
+			"(unknown)" );
+		return false;
+	}
+
+	if (!rSock.end_of_message()) {
+		err.pushf("DAEMON", 1, "Failed to read end of message from remote daemon "
+			"at '%s'", _addr ? _addr : "(unknown)");
+		dprintf( D_FULLDEBUG, "Daemon::getCapabilityTokens() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr);
+		return false;
+	}
+
+	std::string err_msg;
+	if (result_ad.EvaluateAttrString(ATTR_ERROR_STRING, err_msg)) {
+		int error_code = 0;
+		result_ad.EvaluateAttrInt(ATTR_ERROR_CODE, error_code);
+		if (!error_code) error_code = -1;
+
+		err.push("DAEMON", error_code, err_msg.c_str());
+		return false;
+	}
+
+	std::string capability_info;
+	if (!result_ad.EvaluateAttrString("CapabilityInfo", capability_info)) {
+		dprintf(D_FULLDEBUG, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad without a CapabilityInfo attribute from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)");
+		err.pushf("DAEMON", 1, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad without a CapabilityInfo attribute from remote daemon"
+			" at '%s'", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	info = capability_info;
+
+	std::vector<int> command_list;
+	classad::Value valid_commands_val;
+	if (!result_ad.EvaluateAttr("ValidCommands", valid_commands_val)) {
+		dprintf(D_FULLDEBUG, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad with no ValidCommands attribute from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)");
+		err.pushf("DAEMON", 1, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad with no ValidCommands attribute from remote daemon"
+			" at '%s'", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	classad_shared_ptr<classad::ExprList> command_exprlist;
+	if (!valid_commands_val.IsSListValue(command_exprlist)) {
+		dprintf(D_FULLDEBUG, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad, where ValidCommands is not a list, from remote daemon"
+			" at '%s'\n", _addr ? _addr : "(unknown)");
+		err.pushf("DAEMON", 1, "BUG! Daemon::getCapabilityTokens() received a "
+			"malformed ad, where ValidCommands is not a list, from remote daemon"
+			" at '%s'", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	for (const auto &expr : *command_exprlist) {
+		int command;
+		classad::Value value;
+		if (!result_ad.EvaluateExpr(expr, value) || !value.IsIntegerValue(command)) {
+			err.pushf("DAEMON", 1, "BUG!  Received an incorrect type in command"
+				" list from remote daemon at '%s'", _addr ? _addr :
+				"(unknown)");
+			dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received "
+				"an incorrect type in command list from remote daemon at "
+				"'%s'\n", _addr ? _addr : "(unknown)");
+			return false;
+		}
+		command_list.push_back(command);
+	}
+
+	classad::Value token_val;
+	if (!result_ad.EvaluateAttr("Capabilities", token_val)) {
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received a "
+			"malformed ad, containing no resulting token and no error "
+			"message from remote daemon at '%s'\n", _addr ? _addr :
+			"(unknown)");
+		err.pushf("DAEMON", 1, "BUG!  Daemon::getCapabilityTokens() received a "
+			"malformed ad containing no resulting token and no error message "
+			"from remote daemon at '%s'\n", _addr ? _addr : "(unknown)");
+		return false;
+	}
+	classad_shared_ptr<classad::ExprList> token_list;
+	if (!token_val.IsSListValue(token_list)) {
+		err.pushf("DAEMON", 1, "BUG!  Received an incorrect type of token response"
+			" from remote daemon at '%s'", _addr ? _addr : "(unknown)");
+		dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received an "
+			"incorrect type of token response from remote daemon at '%s'\n",
+			_addr ? _addr : "(unknown)");
+		return false;
+	}
+	std::vector<std::string> capability_list;
+	for (const auto &expr : *token_list) {
+		std::string cap_str;
+		classad::Value value;
+		if (!result_ad.EvaluateExpr(expr, value) || !value.IsStringValue(cap_str))
+		{
+			err.pushf("DAEMON", 1, "BUG!  Received an incorrect type in token"
+				" list from remote daemon at '%s'", _addr ? _addr :
+				"(unknown)");
+			dprintf(D_FULLDEBUG, "BUG!  Daemon::getCapabilityTokens() received "
+				"an incorrect type in token list from remote daemon at "
+				"'%s'\n", _addr ? _addr : "(unknown)");
+			return false;
+		}
+		capability_list.push_back(cap_str);
+	}
+
+	if (command_list.size() != capability_list.size()) {
+		err.pushf("DAEMON", 2, "Received a list of %lu commands and %lu capabilities;"
+			" these lengths must match!", command_list.size(), capability_list.size());
+		dprintf(D_FULLDEBUG, "Received a list of %lu commands and %lu capabilities;"
+			" these lengths must match!", command_list.size(), capability_list.size());
+		return false;
+	}
+	for (size_t idx=0; idx<command_list.size(); idx++) {
+		result[command_list[idx]] = capability_list[idx];
 	}
 
 	return true;

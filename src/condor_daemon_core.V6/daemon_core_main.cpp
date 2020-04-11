@@ -2574,6 +2574,174 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 }
 
 
+	//
+	// Creates 'capability tokens' (actually, just a serialized session ID!) for a remote user.
+	// - Authenticated user provides a request ClassAd including a string list of RequestedCommands,
+	//   and a possible ExpirationTime.
+	// - Response is a ClassAd with either an ErrorCode & Error or a list of capabilities.  The
+	//   capabilities are in the same order as those requested.
+static int
+handle_dc_generate_capabilities( int, Stream* stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_generate_capabilities: failed to read input ClassAd from client\n");
+		return false;
+	}
+	CondorError err;
+	classad::ClassAd result_ad;
+
+	const auto &sess_id = static_cast<ReliSock*>(stream)->getSessionID();
+	classad::ClassAd policy_ad;
+	if (!daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad)) {
+		err.pushf("GEN_CAP", 3, "Unknown internal session");
+	}
+	std::string valid_commands;
+	std::set<int> valid_set;
+	if (policy_ad.EvaluateAttrString(ATTR_SEC_VALID_COMMANDS, valid_commands)) {
+		StringList valid_commands_list(valid_commands.c_str());
+		valid_commands_list.rewind();
+		const char *authz;
+		while ( (authz = valid_commands_list.next()) ) {
+			int command_int;
+			try {
+				command_int = std::stoi(authz);
+			} catch (...) {
+				continue;
+			}
+			valid_set.insert(command_int);
+		}
+	}
+
+	if (!stream->get_encryption()) {
+		err.pushf("GEN_CAP", 5, "Capability generation request must be encrypted");
+	}
+
+		// Determine duration; minimum is 60; max is limited by the current
+		// session's duration.
+	int duration = 0;
+	time_t now = time(NULL);
+	time_t expiry;
+	unsigned max_duration;
+	if (!daemonCore->getSecMan()->getSessionExpiration(sess_id.c_str(), expiry)) {
+		err.pushf("GEN_CAP", 3, "Unknown internal session");
+		max_duration = 60;
+	} else {
+		max_duration = expiry - now;
+	}
+	if (!ad.EvaluateAttrInt("Duration", duration)) {
+		duration = max_duration;
+	}
+	if (duration <= 60) {duration = 60;}
+	if (duration > static_cast<int>(max_duration)) {duration = max_duration;}
+
+	std::vector<int> cap_list;
+	std::string req_cap_str;
+	if (ad.EvaluateAttrString("RequestedCommands", req_cap_str)) {
+		StringList req_cap_list(req_cap_str.c_str());
+		req_cap_list.rewind();
+		const char *authz;
+		while ( (authz = req_cap_list.next()) ) {
+			if (!strlen(authz)) {continue;}
+			int command_int;
+			try {
+				command_int = std::stoi(authz);
+			} catch (...) {
+				// For user-provided inputs, suspicious-looking data causes an error.
+				err.pushf("GEN_CAP", 1, "Invalid requested command integer: %s", authz);
+				break;
+			}
+			cap_list.push_back(command_int);
+		}
+	}
+
+	const char *remote_fqu = nullptr;
+	if (err.empty() && (!static_cast<Sock*>(stream)->isMappedFQU() ||
+                !(remote_fqu = static_cast<Sock*>(stream)->getFullyQualifiedUser())))
+	{
+		err.pushf("GEN_CAP", 4, "Remote user is not authenticated.");
+	}
+
+	std::vector<std::string> tokens;
+	std::vector<int> final_cap_list;
+	if (err.empty()) {
+		for (auto cap : cap_list) {
+			if (valid_set.find(cap) == valid_set.end()) {continue;}
+
+			const size_t keylen = 32;
+			auto keybuf = std::unique_ptr<char, decltype(free)*>{
+				Condor_Crypt_Base::randomHexKey(keylen),
+				free
+			};
+			if (!keybuf.get()) {
+				err.pushf("GEN_CAP", 2, "Failed to create new key for "
+					"security session");
+				break;
+			}
+
+			// Our ClaimIds are of the form
+			// <ip:port>#cap#sequence_num
+			// The <ip:port> is fairly meaningless but required by the
+			// claim protocol.
+			std::string id(Condor_Crypt_Base::randomHexKey(8));
+
+			std::string session_info = "[Encryption=\"YES\";Integrity=\"YES\"]";
+			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+				DENY_PERM,
+				id.c_str(),
+				keybuf.get(),
+				session_info.c_str(),
+				remote_fqu,
+				nullptr,
+				duration,
+				nullptr
+			);
+			if (rc) {
+				std::string capability = id + "#[]" + keybuf.get();
+				tokens.push_back(capability);
+				final_cap_list.push_back(cap);
+			}
+		}
+	}
+
+	if (err.empty())
+	{
+		std::string session_info = "[Encryption=\"YES\";Integrity=\"YES\"]";
+		result_ad.InsertAttr("CapabilityInfo", session_info);
+		result_ad.InsertAttr("Duration", duration);
+		std::vector<classad::ExprTree*> expr_list;
+		for (const auto & token : tokens) {
+			expr_list.push_back(classad::Literal::MakeString(token));
+		}
+		std::vector<classad::ExprTree*> expr_list2;
+		for (const auto & cap : final_cap_list) {
+			expr_list2.push_back(classad::Literal::MakeLong(cap));
+		}
+
+		result_ad.Insert("Capabilities",
+			classad::ExprList::MakeExprList(expr_list));
+		result_ad.Insert("ValidCommands",
+			classad::ExprList::MakeExprList(expr_list2));
+	}
+	else
+	{
+		result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+		result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+	}
+
+	stream->encode();
+	if (!putClassAd(stream, result_ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to send response ad to client\n");
+		return false;
+	}
+	return true;
+}
+
+
 static int
 handle_dc_session_token(int, Stream* stream)
 {
@@ -4246,6 +4414,14 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
 		handle_dc_exchange_scitoken,
 		"handle_dc_exchange_scitoken", WRITE, D_COMMAND, true, 0, &allow_perms );
+
+		//
+		// Get a list of capability tokens; each token is good for a single command
+		// and has a specified expiration time.
+		//
+	daemonCore->Register_CommandWithPayload( DC_GENERATE_CAPABILITIES, "DC_GENERATE_CAPABILITIES",
+		handle_dc_generate_capabilities,
+		"handle_dc_generate_capabilities", DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes

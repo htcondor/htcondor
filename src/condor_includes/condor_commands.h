@@ -422,6 +422,7 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_APPROVE_TOKEN_REQUEST (DC_BASE+50) // Approve a token request.
 #define DC_AUTO_APPROVE_TOKEN_REQUEST (DC_BASE+51) // Auto-approve token requests.
 #define DC_EXCHANGE_SCITOKEN (DC_BASE+52) // Exchange a SciToken for a Condor token.
+#define DC_GENERATE_CAPABILITIES (DC_BASE+53) // Generate a session on-demand
 
 /*
 *** Log type supported by DC_FETCH_LOG

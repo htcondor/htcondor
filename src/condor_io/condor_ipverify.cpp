@@ -173,6 +173,7 @@ IpVerify::Init()
 		// Treat "*" or "*/*" specially, because that's an optimized default.
 		bool allowAll = pAllow && (!strcmp(pAllow, "*") || !strcmp(pAllow, "*/*"));
 		bool denyAll = pDeny && (!strcmp(pDeny, "*") || !strcmp(pDeny, "*/*"));
+		if (perm == DENY_PERM) {denyAll = true;}
 
 		// Optimized cases
 		if (perm == ALLOW) {

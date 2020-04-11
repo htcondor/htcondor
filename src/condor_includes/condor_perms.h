@@ -48,6 +48,7 @@ typedef enum {
   /** startd ad */                           ADVERTISE_STARTD_PERM,
   /** schedd ad */                           ADVERTISE_SCHEDD_PERM,
   /** master ad */                           ADVERTISE_MASTER_PERM,
+  /** deny everyeone */                      DENY_PERM,
   /** Place holder, must be last */          LAST_PERM
 } DCpermission;
 

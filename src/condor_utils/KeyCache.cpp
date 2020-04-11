@@ -113,8 +113,12 @@ char const *KeyCacheEntry::expirationType() {
 	return "";
 }
 
-void KeyCacheEntry::setExpiration(int new_expiration) {
+void KeyCacheEntry::setExpiration(time_t new_expiration) {
 	_expiration = new_expiration;
+}
+
+time_t KeyCacheEntry::getExpiration() const {
+	return _expiration;
 }
 
 void KeyCacheEntry::renewLease() {
