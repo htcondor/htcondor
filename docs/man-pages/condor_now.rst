@@ -73,16 +73,3 @@ Exit Status
 accepts its request to vacate the vacate-job and start the now-job in
 its place. It does not wait for the now-job to have started running.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

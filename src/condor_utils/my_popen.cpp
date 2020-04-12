@@ -446,7 +446,8 @@ my_popenv_impl( const char *const args[],
 		 * Of course, do not close stdin/out/err or the fds to
 		 * the pipes we just created above.
 		 */
-		for (int jj=3; jj < getdtablesize(); jj++) {
+		int limit = getdtablesize();
+		for (int jj=3; jj < limit; jj++) {
 			if (jj != pipe_d[0] &&
 				jj != pipe_d[1] &&
 				jj != pipe_d2[0] &&
