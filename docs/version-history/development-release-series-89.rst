@@ -102,6 +102,7 @@ New Features:
   old behaviour of a shared /dev/shm, you can set :macro:`MOUNT_PRIVATE_DEV_SHM` 
   to false.
   :ticket:`7443` 
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
