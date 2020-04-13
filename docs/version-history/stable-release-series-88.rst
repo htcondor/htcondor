@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+-  Fixed a bug where jobs that set stream_output = true would fail
+   in a confusing when when the disk on the submit side is full.
+   :ticket:`7596`
+
 -  Fixed a bug whereby the ``MemoryUsage`` attribute in the job classad for a Docker Universe job
    failed to report the maximum memory usage of the job, but instead
    reported either zero or the current memory usage. 
