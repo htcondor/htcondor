@@ -1030,7 +1030,7 @@ the HTCondor UID domain.
 
 The configuration variable ``KERBEROS_SERVER_PRINCIPAL``
 :index:`KERBEROS_SERVER_PRINCIPAL` defines the name of a Kerberos
-principal, to override the default ``host/<hostname>@<realm>.
+principal, to override the default ``host/<hostname>@<realm>``.
 A principal specifies a unique name to which a set of
 credentials may be assigned.
 
