@@ -324,7 +324,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 	QueryResult result = Q_COMMUNICATION_ERROR;
 
 	bool problems_resolving = false;
-	bool random_order = param_boolean("HAD_QUERY_COLLECTORS_IN_ORDER", false);
+	bool random_order = ! param_boolean("HAD_USE_PRIMARY", false);
 
 	// switch containers for easier random access.
 	this->rewind();
