@@ -103,6 +103,13 @@ New Features:
   to false.
   :ticket:`7443` 
 
+- When configuration parameter ``HAD_USE_PRIMARY`` is set to ``True``,
+  the collectors will be queried in the order in which they appear in
+  ``HAD_LIST``.
+  Otherwise, the order in which the collectors are queried will be
+  randomized (before, this was always done).
+  :ticket:`7556`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
