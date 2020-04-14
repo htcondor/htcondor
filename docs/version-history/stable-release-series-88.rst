@@ -19,7 +19,9 @@ Release Notes:
 
 New Features:
 
--  None.
+-  The default value of MAX_REMAP_RECURSIONS increased from 20 to 128 since
+   a user bumped against the limit of 20 when using ``transfer_output_remaps``.
+   :ticket:`7581`
 
 Bugs Fixed:
 
