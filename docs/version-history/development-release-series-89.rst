@@ -132,6 +132,13 @@ New Features:
   randomized (before, this was always done).
   :ticket:`7556`
 
+- Added a very basic ``PROVISIONER`` node type to the *condor_dagman* parse
+  language and plumbing. When this work is completed in a future release, it
+  will allow users to provision remote compute resources (ie. Amazon EC2, 
+  Argonne Cooley) as part of their DAG workflows, then run their jobs on
+  these resources.
+  :ticket:`5622`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
