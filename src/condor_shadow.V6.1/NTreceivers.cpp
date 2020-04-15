@@ -557,7 +557,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		errno = 0;
-		rval = write( fd , buf , len);
+		rval = full_write( fd , buf , len);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 

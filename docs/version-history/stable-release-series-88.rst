@@ -19,9 +19,15 @@ Release Notes:
 
 New Features:
 
--  None.
+-  The default value of MAX_REMAP_RECURSIONS increased from 20 to 128 since
+   a user bumped against the limit of 20 when using ``transfer_output_remaps``.
+   :ticket:`7581`
 
 Bugs Fixed:
+
+-  Fixed a bug where jobs that set stream_output = true would fail
+   in a confusing way when the disk on the submit side is full.
+   :ticket:`7596`
 
 -  Fixed a bug whereby the ``MemoryUsage`` attribute in the job classad for a Docker Universe job
    failed to report the maximum memory usage of the job, but instead
