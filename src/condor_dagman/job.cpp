@@ -1533,7 +1533,7 @@ void
 Job::ExecMetrics( int proc, const struct tm &eventTime,
 			DagmanMetrics *metrics )
 {
-	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
+	debug_printf(DEBUG_NORMAL, "MRC [Job::ExecMetrics] proc = %d\n", proc);
 	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
 		_gotEvents.resize( proc+1, 0 );
 	}
@@ -1545,10 +1545,14 @@ Job::ExecMetrics( int proc, const struct tm &eventTime,
 		check_warning_strictness( DAG_STRICT_2 );
 	}
 
+#if !defined(DISABLE_NODE_TIME_METRICS)
 	if ( !( _gotEvents[proc] & EXEC_MASK ) ) {
+		debug_printf(DEBUG_NORMAL, "MRC [Job::ExecMetrics] setting EXEC_MASK\n", proc);
 		_gotEvents[proc] |= EXEC_MASK;
 		metrics->ProcStarted( eventTime );
 	}
+#endif
+
 }
 
 //---------------------------------------------------------------------------
