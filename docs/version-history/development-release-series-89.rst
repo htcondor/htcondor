@@ -162,6 +162,12 @@ Bugs Fixed:
   Previously this just caused Python to fall over and die immediately.
   :ticket:`7337`
 
+- The *curl_plugin* previously implemented a minimum speed timeout with an
+  option flag that caused memory problems in older versions of libcurl.
+  We've reimplemented timeouts now using a callback that manually enforces
+  a minimum 1 byte/second transfer speed.
+  :ticket:`7414` 
+
 Version 8.9.6
 -------------
 
