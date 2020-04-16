@@ -1056,8 +1056,8 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
-mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/credentials/krb
-mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/credentials/oauth
+mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/krb_credentials
+mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 
 # not packaging deployment tools
@@ -1546,7 +1546,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
-%dir %_var/lib/condor/credentials/
 %dir %_var/lib/condor/execute/
 %dir %_var/lib/condor/spool/
 %dir %_var/log/condor/
@@ -1554,9 +1553,9 @@ rm -rf %{buildroot}
 %dir %_var/lock/condor/local
 %dir %_var/run/condor
 %defattr(-,root,condor,-)
-%dir %_var/lib/condor/credentials/oauth
+%dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
-%dir %_var/lib/condor/credentials/krb
+%dir %_var/lib/condor/krb_credentials
 
 #################
 %files procd
