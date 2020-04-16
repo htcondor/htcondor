@@ -1530,8 +1530,8 @@ Job::Release(int proc)
 
 //---------------------------------------------------------------------------
 void
-Job::ExecMetrics( int proc, const struct tm &eventTime,
-			DagmanMetrics *metrics )
+Job::ExecMetrics( int proc, const struct tm & /*eventTime*/,
+			DagmanMetrics * /*metrics*/ )
 {
 	debug_printf(DEBUG_NORMAL, "MRC [Job::ExecMetrics] proc = %d\n", proc);
 	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
