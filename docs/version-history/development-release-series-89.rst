@@ -179,6 +179,11 @@ Bugs Fixed:
   :macro:`KERBEROS_SERVER_PRINCIPAL` was set.
   :ticket:`7577`
 
+- Our ``htcondor.Submit.from_dag()`` Python binding now throws an exception
+  when it fails, giving the programmer a chance to catch and recover. 
+  Previously this just caused Python to fall over and die immediately.
+  :ticket:`7337`
+
 Version 8.9.6
 -------------
 
