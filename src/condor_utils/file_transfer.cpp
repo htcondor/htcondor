@@ -3668,7 +3668,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
 	int rc;
 	MyString fullname;
-	filesize_t bytes;
+	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes = -1; // unlimited
 	bool is_the_executable;
 	bool upload_success = false;
@@ -5019,12 +5019,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		_set_priv(saved_priv,__FILE__,DoUpload_exit_line,1);
 	}
 
-#ifdef WIN32
-		// unsigned __int64 to float not implemented on Win32
-	bytesSent += (float)(signed __int64)*total_bytes;
-#else
 	bytesSent += *total_bytes;
-#endif
 
 	if(do_upload_ack) {
 		// peer is still expecting us to send a file command
@@ -5745,7 +5740,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
 	if ( output_file == NULL ) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open curl_plugin output file "
-			"%s.\n", input_filename.c_str() );
+			"%s.\n", output_filename.c_str() );
 		return GET_FILE_PLUGIN_FAILED;
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
