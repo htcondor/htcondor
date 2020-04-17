@@ -648,7 +648,7 @@ Job ClassAd Attributes
 ``HoldReason``
     A string containing a human-readable message about why a job is on
     hold. This is the message that will be displayed in response to the
-    command condor_q -hold. It can be used to determine if a job should
+    command ``condor_q -hold``. It can be used to determine if a job should
     be released or not.
     :index:`HoldReasonCode<single: HoldReasonCode; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; HoldReasonCode>`
@@ -1826,16 +1826,14 @@ Job ClassAd Attributes
 
 ``Requirements``
     A classad expression evaluated by the *condor_negotiator*,
-    *condor_schedd*, and *condor_startd* in the context of slot ad. If
-    true, this job is eligible to run on that slot. If the job
-    requirements does not mention the (startd) attribute ``OPSYS``
-    :index:`OPSYS`, the schedd will append a clause to
-    Requirements forcing the job to match the same ``OPSYS``
-    :index:`OPSYS` as the submit machine. The schedd appends a
-    simliar clause to match the ``ARCH`` :index:`ARCH`. The schedd
-    parameter ``APPEND_REQUIREMENTS``
-    :index:`APPEND_REQUIREMENTS`, will, if set, append that value
-    to every job's requirements expression.
+    *condor_schedd*, and *condor_startd* in the context of slot ad.  If
+    true, this job is eligible to run on that slot.  If the job
+    requirements does not mention the (startd) attribute ``OPSYS``,
+    the schedd will append a clause to Requirements forcing the job to
+    match the same ``OPSYS`` as the submit machine. :index:`OPSYS`
+    The schedd appends a simliar clause to match the ``ARCH``. :index:`ARCH`
+    The schedd parameter ``APPEND_REQUIREMENTS``, will, if set, append that
+    value to every job's requirements expression. :index:`APPEND_REQUIREMENTES`
     :index:`ResidentSetSize<single: ResidentSetSize; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; ResidentSetSize>`
 
