@@ -75,24 +75,25 @@ Central Manager Machine
     $ echo "ALLOW_WRITE_COLLECTOR=\$(ALLOW_WRITE) condor-execute.mydomain.com condor-submit.mydomain.com" | sudo tee -a /etc/condor/config.d/51-role-cm
 
 
-Start HTCondor
---------------
-
-Once the above configuration is in place, we're ready to start our HTCondor
-pool. On each of the three machines, run the following:
-
-::
-
-    $ sudo systemctl enable condor
-    $ sudo systemctl start condor
+Security
+--------
 
 We also need to add security configurations so the machines can authenticate
-with each other. On each machine, create the file 
-**/etc/condor/config.d/50-security** with the following contents:
+with each other. Start by creating a directory on each machine for passwords
+with the correct permissions:
 
 ::
 
-    SEC_PASSWORD_FILE = /etc/condor/password.d/POOL 
+    $ sudo mkdir /etc/condor/passwords.d
+    $ sudo chmod 700 /etc/condor/passwords.d
+
+
+On each machine, create the file ``/etc/condor/config.d/50-security`` with the
+following contents:
+
+::
+
+    SEC_PASSWORD_FILE = /etc/condor/passwords.d/POOL 
     SEC_DAEMON_AUTHENTICATION = REQUIRED 
     SEC_DAEMON_INTEGRITY = REQUIRED
     SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
@@ -100,14 +101,28 @@ with each other. On each machine, create the file
     SEC_NEGOTIATOR_INTEGRITY = REQUIRED
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD
     SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
-    ALLOW_DAEMON = condor_pool@*/condor*.mydomain.com, \ condor@*/$(IP_ADDRESS)
+    ALLOW_DAEMON = condor_pool@*/*, condor@*/$(IP_ADDRESS)
     ALLOW_NEGOTIATOR = condor_pool@*/condor-cm.mydomain.com
 
-Next, run:
+Next, run the following command which will ask you to set a pool password. 
+Choose any password you want, but make sure to use the same password on all
+three machines.
 
 ::
 
-    $ condor_store_cred add -c
+    $ sudo condor_store_cred add -c
+
+
+Start HTCondor
+--------------
+
+Once the above configuration is in place, we're ready to start our HTCondor
+cluster. On each of the three machines, run the following:
+
+::
+
+    $ sudo systemctl enable condor
+    $ sudo systemctl start condor
 
 
 All Done!
@@ -136,9 +151,9 @@ following output:
 
                 Machines Owner Claimed Unclaimed Matched Preempting  Drain
 
-    X86_64/LINUX        1     0       0         1       0          0      0
+    X86_64/LINUX       1     0       0         1       0          0      0
 
-            Total        1     0       0         1       0          0      0
+            Total      1     0       0         1       0          0      0
 
 
 Resources
