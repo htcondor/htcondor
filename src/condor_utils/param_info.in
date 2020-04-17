@@ -6387,7 +6387,7 @@ win32_default : @end
 [$FEATURE.KRBAFS]
 description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
 default : @end
-	SEC_CREDENTIAL_DIRECTORY_KRB=/var/condor/credentials/krb
+	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
 	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRBAFS
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
 	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/krb_cred_producer
