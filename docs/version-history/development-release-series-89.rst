@@ -53,6 +53,10 @@ New Features:
   version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
 
+- The submit command ``getenv`` can now be a list of environment variables
+  to import and not just ``True`` or ``False``.
+  :ticket:`7572`
+
 - Docker universe now works inside an unprivileged personal HTCondor,
   if you give the user starting the personal condor rights to run the
   docker commands.
