@@ -26,11 +26,13 @@ all jobs belonging to that user. For **-a**, *condor_prio* attempts to
 change priority of all jobs in the queue.
 
 The user must set a new priority with the **-p** option, or specify a
-priority adjustment. The priority of a job can be any integer, with
-higher numbers corresponding to greater priority. For adjustment of the
-current priority, *+value* increases the priority by the amount
-given with *value*. *-value* decreases the priority by the amount
-given with *value*.
+priority adjustment.
+
+The priority of a job can be any integer, with higher numbers
+corresponding to greater priority. For adjustment of the current
+priority, *+value* increases the priority by the amount given with
+*value*. *-value* decreases the priority by the amount given with
+*value*.
 
 Only the owner of a job or the super user can change the priority.
 
