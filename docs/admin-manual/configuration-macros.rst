@@ -10451,7 +10451,7 @@ general discussion of *condor_defrag* may be found in
 
 :macro-def:`DEFRAG_NAME`
     Used to give an alternative value to the ``Name`` attribute in the
-    *condor_defrag* 's ClassAd. This esoteric configuration macro
+    *condor_defrag* daemon's ClassAd. This esoteric configuration macro
     might be used in the situation where there are two *condor_defrag*
     daemons running on one machine, and each reports to the same
     *condor_collector*. Different names will distinguish the two

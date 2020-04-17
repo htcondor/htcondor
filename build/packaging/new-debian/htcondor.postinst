@@ -62,10 +62,10 @@ case "$1" in
         chmod 0700 /etc/condor/passwords.d
         mkdir -p /etc/condor/tokens.d
         chmod 0700 /etc/condor/tokens.d
-        mkdir -p /var/lib/condor/credentials/krb
-        mkdir -p /var/lib/condor/credentials/oauth
-        chmod 2770 /var/lib/condor/credentials/oauth
-        chgrp condor /var/lib/condor/credentials/oauth
+        mkdir -p /var/lib/condor/krb_credentials
+        mkdir -p /var/lib/condor/oauth_credentials
+        chmod 2770 /var/lib/condor/oauth_credentials
+        chgrp condor /var/lib/condor/oauth_credentials
         # tell systemd to create tmpfiles, but do no harm if not available
         systemd-tmpfiles --create --exclude-prefix=/dev || true
     ;;

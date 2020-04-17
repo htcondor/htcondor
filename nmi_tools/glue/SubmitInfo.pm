@@ -288,6 +288,7 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'nmi-build:x86_64_Debian9' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform RHEL 7 on x86_64
