@@ -541,9 +541,11 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
 	}
 
-		char name[256];
-		memset(name, 0, sizeof(name));
-		cuDeviceGetName(name, sizeof(name), dev);
+		// Alloc on heap, not stack, as it is passed out of this function
+		char *name;
+		name = (char*)malloc (256);
+		cuDeviceGetName(name, 256, dev);
+
 		p->name = name;
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
