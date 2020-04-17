@@ -1822,7 +1822,7 @@ Job ClassAd Attributes
 
 ``Requirements``
     A classad expression evaluated by the *condor_negotiator*,
-    *condor_schedd*, and {Condorstartd in the context of slot ad. If
+    *condor_schedd*, and *condor_startd* in the context of slot ad. If
     true, this job is eligible to run on that slot. If the job
     requirements does not mention the (startd) attribute ``OPSYS``
     :index:`OPSYS`, the schedd will append a clause to
