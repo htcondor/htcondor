@@ -1565,11 +1565,17 @@ negotiationTime ()
 			// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
 
 			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", true)) {
-				int weightedIdle = numidle;
-				int weightedRunning = numrunning;
+				double weightedIdle = numidle;
+				double weightedRunning = numrunning;
 
-				ad->LookupInteger(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
-				ad->LookupInteger(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+				int r = ad->LookupFloat(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
+				if (!r) {
+					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_IDLE_JOBS\n");
+				}
+				r = ad->LookupFloat(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+				if (!r) {
+					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_RUNNING_JOBS\n");
+				}
 
             	group->requested += weightedRunning + weightedIdle;
 			} else {
