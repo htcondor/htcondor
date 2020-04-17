@@ -2970,7 +2970,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
 	int rc;
 	MyString fullname;
-	filesize_t bytes;
+	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes = -1; // unlimited
 	bool is_the_executable;
 	bool upload_success = false;
