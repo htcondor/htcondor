@@ -63,7 +63,7 @@ You can extract a machine ad in a similar way:
     condor_status -l exec-17 > exec-17.ad
     classad_eval -file exec-17.ad 'Rank'
 
-You can not supply more than ad to **classad_eval**.
+You can not supply more than one ad to **classad_eval**.
 
 Exit Status
 -----------
