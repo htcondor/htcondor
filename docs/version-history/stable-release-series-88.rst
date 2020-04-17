@@ -54,6 +54,10 @@ Bugs Fixed:
    mapping from domain to realm and security debugging is not enabled.
    :ticket:`7492`
 
+-  Fixed an issue where ``STARTD_NAME`` was ignored if the *condor_master* was
+   started with the **-d** flag to enable dynamic directories.
+   :ticket:`7585`
+
 Version 8.8.8
 -------------
 
