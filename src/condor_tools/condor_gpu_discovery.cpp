@@ -541,12 +541,14 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
 	}
 
-		// Alloc on heap, not stack, as it is passed out of this function
-		char *name;
-		name = (char*)malloc (256);
-		cuDeviceGetName(name, 256, dev);
-
+		// for some reason PowerPC was having trouble with a stack buffer for cuGetDeviceName
+		// so we switch to malloc and a larger buffer, and we overdo the null termination.
+		char * name = (char*)malloc(1028);
+		memset(name, 0, 1028);
+		cuDeviceGetName(name, 1024, dev);
+		name[1024] = 0; // this shouldn't be necessary, but it can't hurt.
 		p->name = name;
+		free(name);
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
