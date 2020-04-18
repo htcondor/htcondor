@@ -1658,11 +1658,17 @@ negotiationTime ()
 			// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
 
 			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", true)) {
-				int weightedIdle = numidle;
-				int weightedRunning = numrunning;
+				double weightedIdle = numidle;
+				double weightedRunning = numrunning;
 
-				ad->LookupInteger(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
-				ad->LookupInteger(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+				int r = ad->LookupFloat(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
+				if (!r) {
+					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_IDLE_JOBS\n");
+				}
+				r = ad->LookupFloat(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+				if (!r) {
+					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_RUNNING_JOBS\n");
+				}
 
             	group->requested += weightedRunning + weightedIdle;
 			} else {
@@ -1828,12 +1834,10 @@ negotiationTime ()
                         continue;
                     }
 
-					if (param_boolean("SKIP_GROUP_EARLY_FOR_QUOTA", true)) {
-                    	if ((group->usage >= group->allocated) && !ConsiderPreemption) {
-                       	 dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (quota=%g) (usage=%g) (allocation=%g)\n", group->name.c_str(), group->quota, group->usage, group->allocated);
-                       	 continue;
-                    	}
-					}
+                    if ((group->usage >= group->allocated) && !ConsiderPreemption) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (quota=%g) (usage=%g) (allocation=%g)\n", group->name.c_str(), group->quota, group->usage, group->allocated);
+                        continue;
+                    }
 		    
                     if (group->submitterAds->MyLength() <= 0) {
                         dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);

@@ -75,6 +75,14 @@ New Features:
   version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
 
+- The submit command ``getenv`` can now be a list of environment variables
+  to import and not just ``True`` or ``False``.
+  :ticket:`7572`
+
+- The ``condor_history`` command now has a ``startd`` option to query the Startd
+  history file.  This works for both local and remote queries.
+  :ticket:`7538`
+
 - Docker universe now works inside an unprivileged personal HTCondor,
   if you give the user starting the personal condor rights to run the
   docker commands.
@@ -138,6 +146,11 @@ New Features:
   Argonne Cooley) as part of their DAG workflows, then run their jobs on
   these resources.
   :ticket:`5622`
+
+- A new attribute ``ScratchDirFileCount`` was added to the Job ClassAd and to
+  the Startd ClassAd. It contains the number of file in the job sandbox for the curent job.
+  This attribute will be refreshed as the same time that ``DiskUsage`` is refreshed.
+  :ticket:`7486`
 
 Bugs Fixed:
 
