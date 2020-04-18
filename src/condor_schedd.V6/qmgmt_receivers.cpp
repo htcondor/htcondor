@@ -71,9 +71,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->triedAuthentication() ) {
 			if( IsDebugLevel(D_SECURITY) ) {
-				MyString methods;
-				SecMan::getAuthenticationMethods( WRITE, &methods );
-				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
+				auto methods = SecMan::getAuthenticationMethods(WRITE);
+				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.c_str());
 			}
 			CondorError errstack;
 			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {

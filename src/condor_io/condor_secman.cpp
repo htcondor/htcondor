@@ -107,6 +107,11 @@ bool SecMan::_should_check_env_for_unique_id = true;
 IpVerify *SecMan::m_ipverify = NULL;
 classad::References SecMan::m_resume_proj;
 
+// Forward dec'l; this was previously a SecMan method but not hidden here to discourage
+// its use; in all cases, an external caller should use SecMan::getAuthenticationMethods
+// instead.
+static std::string getDefaultAuthenticationMethods(DCpermission perm);
+
 void
 SecMan::setTag(const std::string &tag) {
 
@@ -341,44 +346,31 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 	return def;
 }
 
-void CanonicalizeAuthenticationMethodNames( const char * p, std::string & s ) {
-	StringList method_list(p);
-	method_list.rewind();
-	char *method;
-	std::stringstream ss;
-	bool first = true;
-	while ( (method = method_list.next()) ) {
-		if (!first) ss << ",";
-		if (!strcasecmp(method, "IDTOKENS") || !strcasecmp(method, "TOKENS") || !strcasecmp(method, "IDTOKEN")) {
-			ss << "TOKEN";
-		} else {
-			ss << method;
-		}
-		first = false;
-	}
-	s  = ss.str();
-}
 
+	// Determine the valid authentication methods for the current process.  Order of
+	// preference is:
+	// 1. Methods explicitly set in the current security tag (typically a developer
+	//    override of settings).
+	// 2. The setting in SEC_<perm>_AUTHENTICATION_METHODS.
+	// 3. The default parameters for the permission level.
+	// Additionally, (2) and (3) are filtered to ensure they are valid.
+std::string
+SecMan::getAuthenticationMethods(DCpermission perm) {
 
-void SecMan::getAuthenticationMethods( DCpermission perm, MyString *result ) {
-	ASSERT( result );
-
-	const auto methods = getTagAuthenticationMethods(perm);
+	auto methods = getTagAuthenticationMethods(perm);
 	if (!methods.empty()) {
-		*result = methods;
-		return;
+		return methods;
 	}
 
-	char * p = getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm);
+	std::unique_ptr<char, decltype(&free)> config_methods(getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", perm), free);
 
-	if (!p) {
-		p = strdup(SecMan::getDefaultAuthenticationMethods(perm).c_str());
+	if (!config_methods) {
+		methods = getDefaultAuthenticationMethods(perm);
+	} else {
+		methods = std::string(config_methods.get());
 	}
 
-	std::string canonicalMethodNames;
-	CanonicalizeAuthenticationMethodNames(p, canonicalMethodNames);
-	free(p);
-	* result = canonicalMethodNames.c_str();
+	return filterAuthenticationMethods(perm, methods);
 }
 
 bool
@@ -556,38 +548,10 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		return false;
 	}
 
-	// for those of you reading this code, a 'paramer'
-	// is a thing that param()s.
-	char *paramer = nullptr;
-
 	// auth methods
-	const auto methods = getTagAuthenticationMethods(auth_level);
+	auto methods = getAuthenticationMethods(auth_level);
 	if (!methods.empty()) {
-		paramer = strdup(methods.c_str());
-	}
-
-	paramer = paramer ? paramer : SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
-	if (paramer == NULL) {
-		MyString methods = SecMan::getDefaultAuthenticationMethods(auth_level);
-		if(auth_level == READ) {
-			methods += ",CLAIMTOBE";
-			dprintf(D_SECURITY, "SECMAN: default READ methods: %s\n", methods.Value());
-		} else if (auth_level == CLIENT_PERM) {
-			methods += ",CLAIMTOBE";
-			dprintf(D_SECURITY, "SECMAN:: default CLIENT methods: %s\n", methods.Value());
-		}
-		paramer = strdup(methods.Value());
-	}
-
-	std::string convertedMethodNames;
-	CanonicalizeAuthenticationMethodNames(paramer, convertedMethodNames);
-	free(paramer);
-	paramer = strdup(convertedMethodNames.c_str());
-
-	if (paramer) {
-		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, paramer);
-		free(paramer);
-		paramer = NULL;
+		ad->Assign (ATTR_SEC_AUTHENTICATION_METHODS, methods.c_str());
 
 		// Some methods may need to insert additional metadata into this ad
 		// in order for the client & server to determine if they can be used.
@@ -609,7 +573,9 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		}
 	}
 
-
+	// for those of you reading this code, a 'paramer'
+	// is a thing that param()s.
+	char *paramer = nullptr;
 
 	// crypto methods
 	paramer = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
@@ -3050,36 +3016,23 @@ SecMan::invalidateExpiredCache()
 	}
 }
 
-MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
-	MyString methods;
-#if defined(WIN32)
-	// default windows method
-	methods = "NTSSPI";
-#else
-	// default unix method
-	methods = "FS";
-#endif
-
-	methods += ",IDTOKENS";
-
-#if defined(HAVE_EXT_KRB5) 
-	methods += ",KERBEROS";
-#endif
-
-#if defined(HAVE_EXT_GLOBUS)
-	methods += ",GSI";
-#endif
-
-	// SSL is last as this may cause the client to be anonymous.
-	methods += ",SSL";
-
-	StringList meth_iter( methods.c_str() );
+	// Iterate through all the methods in a list;
+	// - Canonicalize the name of the method (IDTOKENS -> TOKENS)
+	// - Remove any invalid names.
+	// - Remove any valid names not supported by this build.
+	// - Remove any methods that cannot work in the current setup (e.g.,
+	//   SSL auth for daemons if there is no host certificate).
+	// Issues warnings as appropriate to D_SECURITY.
+std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::string &input_methods)
+{
+	StringList meth_iter(input_methods.c_str());
 	meth_iter.rewind();
 	char *tmp = NULL;
 	bool first = true;
-	MyString result;
-	dprintf(D_FULLDEBUG|D_SECURITY, "Filtering authentication methods.\n");
-	while( (tmp = meth_iter.next()) ) {
+	std::string result;
+	dprintf(D_FULLDEBUG|D_SECURITY, "Filtering authentication methods (%s) prior to offering them remotely.\n",
+		input_methods.c_str());
+	while ((tmp = meth_iter.next())) {
 		int method = sec_char_to_auth_method(tmp);
 		switch (method) {
 			case CAUTH_TOKEN: {
@@ -3087,16 +3040,68 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 					continue;
 				}
 				dprintf(D_FULLDEBUG|D_SECURITY, "Will try IDTOKENS auth.\n");
+					// For wire compatibility with older versions, we
+					// actually say 'TOKEN' instead of the canonical 'TOKENS'.
+				tmp = "TOKEN";
 				break;
 			}
+#ifndef WIN32
+			case CAUTH_NTSSPI: {
+				dprintf(D_SECURITY, "Ignoring NTSSPI method because it is not"
+					" available to this build of HTCondor.\n");
+				continue;
+			}
+#endif
+#ifndef HAVE_EXT_MUNGE
+			case CAUTH_MUNGE: {
+				dprintf(D_SECURITY, "Ignoring MUNGE method because it is not"
+					" available to this build of HTCondor.\n");
+				continue;
+			}
+#endif
+#ifndef HAVE_EXT_GLOBUS
+			case CAUTH_GSI: {
+				dprintf(D_SECURITY, "Ignoring GSI method because it is not"
+					" available to this build of HTCondor.\n");
+				continue;
+			}
+#endif
+#ifndef HAVE_EXT_KRB5
+			case CAUTH_KERBEROS: {
+				dprintf(D_SECURITY, "Ignoring KERBEROS method because it is not"
+					" available to this build of HTCondor.\n");
+				continue;
+			}
+#endif
 			case CAUTH_SCITOKENS: // fallthrough
+#ifdef HAVE_EXT_SCITOKENS
+			{
+					// Ensure we use the canonical 'SCITOKENS' on the wire
+					// for compatibility with older HTCondor versions.
+				tmp = "SCITOKENS";
+				break;
+			}
+#else
+			{
+				dprintf(D_SECURITY, "Ignoring SCITOKENS method because it is not"
+					" available to this build of HTCondor.\n");
+				continue;
+			}
+#endif
 			case CAUTH_SSL: {
 					// Client auth doesn't require a SSL cert, so
 					// we always will try this
 				if (CLIENT_PERM == perm) {break;}
 				if (!Condor_Auth_SSL::should_try_auth()) {
+					dprintf(D_SECURITY|D_FULLDEBUG, "Not trying SSL auth; server is not ready.\n");
 					continue;
 				}
+				break;
+			}
+			case 0: {
+				dprintf(D_SECURITY, "Requested configured authentication method "
+					"%s not known or supported by HTCondor.\n", tmp);
+				continue;
 			}
 			// As additional filters are made, we can add them here.
 			default:
@@ -3107,6 +3112,46 @@ MyString SecMan::getDefaultAuthenticationMethods(DCpermission perm) {
 		result += tmp;
 	}
 	return result;
+}
+
+
+	// Given a known permission level, determine the default authentication
+	// methods we should use (as a string list) if the sysadmin provides
+	// no input.
+	//
+	// NOTE: this does *not* filter the authentication methods; some might
+	// not be valid for the current build of HTCondor
+static std::string
+getDefaultAuthenticationMethods(DCpermission perm) {
+	std::string methods;
+#if defined(WIN32)
+	// default windows method
+	methods = "NTSSPI";
+#else
+	// default unix method
+	methods = "FS";
+#endif
+
+	methods += ",TOKEN";
+
+#if defined(HAVE_EXT_KRB5)
+	methods += ",KERBEROS";
+#endif
+
+#if defined(HAVE_EXT_GLOBUS)
+	methods += ",GSI";
+#endif
+
+	// SSL is last as this may cause the client to be anonymous.
+	methods += ",SSL";
+
+	if (perm == READ) {
+		methods += ",CLAIMTOBE";
+	} else if (perm == CLIENT_PERM) {
+		methods += ",CLAIMTOBE";
+	}
+
+	return methods;
 }
 
 
@@ -3182,21 +3227,19 @@ char* SecMan::my_parent_unique_id() {
 int
 SecMan::authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack)
 {
-	MyString methods;
-	getAuthenticationMethods( perm, &methods );
+	auto methods = getAuthenticationMethods( perm );
 	ASSERT(s);
 	int auth_timeout = getSecTimeout(perm);
-	return s->authenticate( methods.Value(), errstack, auth_timeout, false );
+	return s->authenticate( methods.c_str(), errstack, auth_timeout, false );
 }
 
 int
 SecMan::authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* errstack)
 {
-	MyString methods;
-	getAuthenticationMethods( perm, &methods );
+	auto methods = getAuthenticationMethods( perm );
 	ASSERT(s);
 	int auth_timeout = getSecTimeout(perm);
-	return s->authenticate( ki, methods.Value(), errstack, auth_timeout, false, NULL );
+	return s->authenticate( ki, methods.c_str(), errstack, auth_timeout, false, NULL );
 }
 
 int
