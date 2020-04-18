@@ -1,5 +1,5 @@
-Introductory Tutorials
-======================
+User Quick Start
+================
 
 These tutorials are also available as a series of runnable Jupyter notebooks: |binder|
 

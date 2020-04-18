@@ -1,5 +1,5 @@
-Advanced Tutorials
-==================
+Advanced Topics
+===============
 
 These tutorials are also available as a series of runnable Jupyter notebooks: |binder|
 
