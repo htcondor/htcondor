@@ -2765,7 +2765,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 }
 
 int
-SecMan::sec_char_to_auth_method( char* method ) {
+SecMan::sec_char_to_auth_method( const char* method ) {
     if (!strcasecmp( method, "SSL" )  ) {
         return CAUTH_SSL;
     } else if (!strcasecmp( method, "GSI" )  ) {
@@ -3027,7 +3027,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 {
 	StringList meth_iter(input_methods.c_str());
 	meth_iter.rewind();
-	char *tmp = NULL;
+	const char *tmp = NULL;
 	bool first = true;
 	std::string result;
 	dprintf(D_FULLDEBUG|D_SECURITY, "Filtering authentication methods (%s) prior to offering them remotely.\n",

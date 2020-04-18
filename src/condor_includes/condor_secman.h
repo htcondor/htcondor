@@ -242,7 +242,7 @@ public:
 	bool 					sec_is_negotiable (sec_req r);
 	SecMan::sec_feat_act 	sec_req_to_feat_act (sec_req r);
 
-	static	int 			sec_char_to_auth_method( char* method );
+	static	int 			sec_char_to_auth_method( const char* method );
 
 	bool 					sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const char* attr );
 
