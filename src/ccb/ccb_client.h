@@ -128,8 +128,12 @@ class CCBConnectionBatcher {
 				time_t deadline {0};
 				std::map< std::string, BatchedCCBClient * > clients;
 
-                void HandleBrokerFailure();
-                void ForgetClientAndTryNextBroker( const std::string & connectID, BatchedCCBClient * client = NULL );
+				int recently {0};
+				time_t epoch {0};
+				bool busy {false};
+
+				void HandleBrokerFailure();
+				void ForgetClientAndTryNextBroker( const std::string & connectID, BatchedCCBClient * client = NULL );
 		};
 
 		static std::map< std::string, Broker > brokers;
@@ -151,15 +155,15 @@ class BatchedCCBClient : public CCBClient {
 		const std::string & ccbID() { return m_ccb_id; }
 		const std::string & targetPeerDescription() { return m_target_peer_description; }
 
-        virtual void FailReverseConnect();
+		virtual void FailReverseConnect();
 
 	protected:
 		bool try_next_ccb() override;
 
 		std::string m_ccb_id;
 
-    // Should only be needed for try_next_ccb(); remove when possible.
-    friend class CCBConnectionBatcher;
+	// Should only be needed for try_next_ccb(); remove when possible.
+	friend class CCBConnectionBatcher;
 };
 
 #endif

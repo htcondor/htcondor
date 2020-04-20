@@ -858,7 +858,7 @@ CCBClientFactory::make( bool nonBlocking, const char * ccbContact, ReliSock * ta
 		return new CCBClient( ccbContact, target );
 	}
 
-	dprintf( D_ALWAYS, "Using batched CCB client from SCHEDD for %s.\n", ccbContact );
+	dprintf( D_NETWORK | D_FULLDEBUG, "Using batched CCB client from SCHEDD for %s.\n", ccbContact );
 	return new BatchedCCBClient( ccbContact, target );
 }
 
@@ -939,7 +939,7 @@ CCBConnectionBatcher::BatchTimerCallback() {
 			}
 			command.Assign( ATTR_MY_ADDRESS, returnAddress );
 
-			dprintf( /* D_NETWORK|D_FULLDEBUG */ D_ALWAYS,
+			dprintf( D_NETWORK | D_FULLDEBUG,
 				"CCBConnectionBatcher: requesting reverse connections "
 				"via CCB server %s; "
 				"I am listening on my command socket %s.n",
@@ -1087,7 +1087,8 @@ CCBConnectionBatcher::BatchTimerCallback() {
 					client->UnregisterReverseConnectCallback();
 					b.ForgetClientAndTryNextBroker( connectID, client );
 				} else {
-					dprintf( D_ALWAYS, "CCBConnectionBatcher: received "
+					dprintf( D_NETWORK | D_FULLDEBUG,
+					    "CCBConnectionBatcher: received "
 						"success message from broker %s\n",
 						entry.first.c_str() );
 				}
@@ -1099,9 +1100,6 @@ CCBConnectionBatcher::BatchTimerCallback() {
 			// their reverse connection or give up waiting for it.
 
 			// We've handled all of our client objects, so forget about them.
-			// We can't just call b.clients.clear() because that destroys the
-			// client objects.
-			for( auto & e : b.clients ) { b.clients[e.first] = NULL; }
 			b.clients.clear();
 
 			// Only handle one broker per callback, even if we're expecting
@@ -1122,11 +1120,46 @@ CCBConnectionBatcher::make( BatchedCCBClient * client ) {
 	Broker & b = brokers[client->currentCCBAddress()];
 	b.clients[client->connectID()] = client;
 
-	if( b.timerID == -1 ) {
-		int batchInterval = param_integer( "CCB_CLIENT_BATCH_INTERVAL", 5 );
+	// If the broker is busy, delay.  Once the broker becomes busy, it
+	// stays busy until proven otherwise; this means that the timer delay
+	// sequence (one comma = one second) is 0 0 0 1, 1, 1, 0 instead of
+	// 0 0 0 1, 0 0 0 1, 0 0 0 1.
+	int delay = b.busy ? 1 : 0;
+	time_t now = time(NULL);
+	int threshold = param_integer( "CCB_CLIENT_MAX_CONNECTIONS_EACH_SECOND", 5 );
 
-		b.deadline = time(NULL) + batchInterval;
-		b.timerID = daemonCore->Register_Timer( batchInterval,
+	// For each second, count the number of times the broker was requested.
+	if( b.epoch == 0 ) {
+	    dprintf( D_ALWAYS, "[rate limiting] Initial case for broker %s\n", client->currentCCBAddress().c_str() );
+		b.epoch = now;
+		b.recently = 1;
+	} else if( b.epoch == now ) {
+	    dprintf( D_ALWAYS, "[rate limiting] Incrementing request count for current epoch (%lu) from %d for broker %s.\n", b.epoch, b.recently, client->currentCCBAddress().c_str() );
+		++b.recently;
+	} else {
+		// The broker is not busy if the number of times it was requested
+		// in the last second is less than the threshold, or if the broker
+		// was not requested at all in the previous second.
+		if( (b.recently < threshold) || (b.epoch + 1 < now) ) {
+		    dprintf( D_ALWAYS, "[rate limiting] The broker %s is no longer busy.\n", client->currentCCBAddress().c_str() );
+			b.busy = false;
+			delay = 0;
+		}
+		dprintf( D_ALWAYS, "[rate limiting] Resetting epoch for broker %s to %lu and request count to 1.\n", client->currentCCBAddress().c_str(), now );
+		b.epoch = now;
+		b.recently = 1;
+	}
+
+	if( b.recently >= threshold ) {
+	    if(! b.busy) { dprintf( D_ALWAYS, "[rate limiting] Broker %s is now busy.\n", client->currentCCBAddress().c_str() ); }
+		b.busy = true;
+		delay = 1;
+	}
+
+	if( b.timerID == -1 ) {
+	    dprintf( D_ALWAYS, "[rate limiting] Registering a new timer for broker %s with delay %d\n", client->currentCCBAddress().c_str(), delay );
+		b.deadline = now + delay;
+		b.timerID = daemonCore->Register_Timer( delay,
 			(TimerHandler)&CCBConnectionBatcher::BatchTimerCallback,
 			"CCBConnectionBatcher::BatchTimerCallback" );
 	}
@@ -1166,9 +1199,8 @@ CCBConnectionBatcher::Broker::ForgetClientAndTryNextBroker(
 		}
 	}
 
-	// Forget about this client without destroying it.
-	clients[connectID] = NULL;
-	clients.erase( connectID );
+	// Forget about this client (does not call destructor).
+	cients.erase( connectID );
 
 	// Try the next broker.  If the client can't, destroy it.
 	// Otherwise, it becomes the responsibility of the next broker.
