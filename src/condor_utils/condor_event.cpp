@@ -7796,7 +7796,7 @@ ReserveSpaceEvent::generateUUID()
 	// We do not link against libuuid when doing a static build.
 	// Static builds are only used for the shadow - while the space
 	// reservation events are intended for Win32 and the startd/starter
-#if defined(WIN32) || defined(CONDOR_STATIC_LIBRARY)
+#if defined(WIN32)
 	return "";
 #else
 	char uuid_str[37];
