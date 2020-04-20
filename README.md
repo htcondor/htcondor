@@ -20,7 +20,11 @@ comprehensive reference for users and administrators of HTCondor.
 
 The CHTC maintains active [email lists](https://research.cs.wisc.edu/htcondor/mail-lists/)
 where the HTCondor community asks and answers questions about the installation,
-use, or tuning of HTCondor.
+use, or tuning of HTCondor.  If you have a question, encounter a surprise about
+HTCondor, or a potential bug, these public email lists are the first place to go.
+
+We welcome github pull requests for code fixes or documentation improvements, but if
+you have ideas for a big feature change, please talk with us first.
 
 [HTCondor Week](https://research.cs.wisc.edu/htcondor/HTCondorWeek2020/index.html)
 is our annual community meeting in Madison, WI, and we often have an annual
@@ -32,9 +36,6 @@ include talks from science and industry, plus useful tutorials.
 
 [HTCondor Wiki](http://condor-wiki.cs.wisc.edu/index.cgi/wiki) contains FAQs,
 bug tickets, and more.
-
-We welcome pull requests for code fixes or documentation improvements, but if
-you have ideas for a big feature change, please talk with us first.
 
 # LICENSE
 
