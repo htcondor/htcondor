@@ -34,7 +34,7 @@ ExprTreeHolder::ExprTreeHolder(const std::string &str)
     classad::ExprTree *expr = NULL;
     if (!parser.ParseExpression(str, expr, true))
     {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into as an expression.");
+        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string as an expression.");
         boost::python::throw_error_already_set();
     }
     m_expr = expr;
