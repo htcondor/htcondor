@@ -32,9 +32,9 @@ ExprTreeHolder::ExprTreeHolder(const std::string &str)
 {
     classad::ClassAdParser parser;
     classad::ExprTree *expr = NULL;
-    if (!parser.ParseExpression(str, expr))
+    if (!parser.ParseExpression(str, expr, true))
     {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into a ClassAd.");
+        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into as an expression.");
         boost::python::throw_error_already_set();
     }
     m_expr = expr;
