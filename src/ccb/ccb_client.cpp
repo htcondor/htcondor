@@ -1200,7 +1200,7 @@ CCBConnectionBatcher::Broker::ForgetClientAndTryNextBroker(
 	}
 
 	// Forget about this client (does not call destructor).
-	cients.erase( connectID );
+	clients.erase( connectID );
 
 	// Try the next broker.  If the client can't, destroy it.
 	// Otherwise, it becomes the responsibility of the next broker.
