@@ -23,6 +23,11 @@ New Features:
    a user bumped against the limit of 20 when using ``transfer_output_remaps``.
    :ticket:`7581`
 
+-  The attributes in a Partitionable slot that are produced by ``STARTD_PARTITIONABLE_SLOT_ATTRS``
+   will contain evaluated values from the child slots rather than copies of the expressions
+   from those slots.
+   :ticket:`7521`
+
 Bugs Fixed:
 
 -  Fixed a bug where jobs that set stream_output = true would fail
@@ -57,6 +62,33 @@ Bugs Fixed:
 -  Fixed an issue where ``STARTD_NAME`` was ignored if the *condor_master* was
    started with the **-d** flag to enable dynamic directories.
    :ticket:`7585`
+
+-  The *condor_collector* will no longer wait forever on an incoming command when
+   only a few bytes of the command are sent and the socket is left open.  This change
+   is intended to prevent having a port scanner DOS the Collector.
+   :ticket:`7553`
+
+-  Fixed a bug that caused ``SLOT_TYPE_<N>_<ATTR>`` overrides to be ignored when ``<ATTR>``
+   was one of the standard policy configuration attributes like ``RANK``, ``PREEMPT``, ``KILL`` and
+   ``SUSPEND``.  Only ``START`` and user defined attributes worked.
+   :ticket:`7542`
+
+-  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
+   :ticket:`7605`
+
+-  Fixed a bug that prevented ``$(KNOB:$(DEFAULT_VALUE))`` from being recognised by the configuration system
+   and *condor_submit* as a macro with a default value that was also a macro.  As a result neither value would be substituted.
+   :ticket:`7360`
+
+-  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
+   Dynamic slot containing a GPU was preempted.  This would result in the *condor_startd* aborting
+   if the preemting job wanted a GPU and no free GPU was available.
+   :ticket:`7591`
+
+-  Fixed a bug in the parsing of ``MAX_PROCD_LOG`` when a units value was used.  This bug could result in
+   The *condor_procd* restricting itself to a very small log file size, which in turn could result in
+   slow operation of the *condor_startd*
+   :ticket:`7479`
 
 Version 8.8.8
 -------------
