@@ -69,14 +69,14 @@ Bugs Fixed:
    ``SUSPEND``.  Only ``START`` and user defined attributes worked.
    :ticket:`7542`
 
--  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors
+-  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
    :ticket:`7605`
 
 -  Fixed a bug that prevented ``$(KNOB:$(DEFAULT_VALUE))`` from being recognised by the configuration system
    and *condor_submit* as a macro with a default value that was also a macro.  As a result neither value would be substituted.
    :ticket:`7360`
 
--  Fixed a bug that prevented the GPU from being re-assigned bach to the Partitionable slot when a
+-  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
    Dynamic slot containing a GPU was preempted.  This would result in the *condor_startd* aborting
    if the preemting job wanted a GPU and no free GPU was available.
    :ticket:`7591`
