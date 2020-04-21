@@ -13,6 +13,12 @@ Release Notes:
 
 .. HTCondor version 8.8.8 released on Month Date, 2020.
 
+-  API change in the Python bindings.  The constructor ``classad.ExprTree()``
+   now tries to parse the entire string passed to it.  Failure results in a
+   ``SyntaxError``.  This prevents strings like ``foo = bar`` from silently
+   being parsed as just ``foo`` and causing unexpected results.
+   :ticket:`7607`
+
 New Features:
 
 -  None.
