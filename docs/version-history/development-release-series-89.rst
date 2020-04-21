@@ -26,6 +26,16 @@ Release Notes:
 
 New Features:
 
+- The *condor_job_router* configuration and transform language has changed.
+  The Job Router will still read the old configuration and transforms, but
+  the new configuration syntax is much more flexible and powerful.
+
+  - Routes are now a modified form of job transform. ``JOB_ROUTER_ROUTE_NAMES`` defines both the order and which routes are enabled
+  - Multiple pre-route and post-route transforms that apply to all routes can be defined.
+  - The Routes and transforms use the same syntax and transform engine as ``SUBMIT_TRANSFORM_NAMES``.
+
+  :ticket:`7432`
+
 - You may now specify that HTCondor only transfer files when the job
   succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
   to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
