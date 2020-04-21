@@ -59,6 +59,10 @@ Bugs Fixed:
    mapping from domain to realm and security debugging is not enabled.
    :ticket:`7492`
 
+-  Fixed an issue where ``STARTD_NAME`` was ignored if the *condor_master* was
+   started with the **-d** flag to enable dynamic directories.
+   :ticket:`7585`
+
 -  The *condor_collector* will no longer wait forever on an incoming command when
    only a few bytes of the command are sent and the socket is left open.  This change
    is intended to prevent having a port scanner DOS the Collector.
