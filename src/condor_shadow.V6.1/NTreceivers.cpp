@@ -1266,7 +1266,7 @@ case CONDOR_getfile:
 		if(fd >= 0) {
 			struct stat info;
 			int rc = stat(path, &info);
-			ASSERT(rc)
+			ASSERT(rc == 0)
 			length = info.st_size;
 			buf = (void *)malloc( (unsigned)length );
 			ASSERT( buf );
