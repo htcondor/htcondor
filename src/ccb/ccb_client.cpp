@@ -947,9 +947,19 @@ CCBConnectionBatcher::BatchTimerCallback() {
 
 			//
 			// FIXME: Send the batched request using non-blocking i/o.
-			// FIXME: Handle the case where entry.first is myself.
 			//
 			Daemon * ccbServer = new Daemon( DT_COLLECTOR, entry.first.c_str(), NULL );
+
+			// Condition stolen from CCBClient::try_next-ccb().
+			if( ccbServer->addr() && !strcmp(ccbServer->addr(), returnAddress) ) {
+				dprintf( D_ALWAYS /* D_NETWORK | D_FULLDEBUG */,
+					"CCBConnectionBatcher: sending request to self.\n" );
+
+				// There's no point in batching requests to ourselves,
+				// but this is where handling everything with non-blockin
+				// i/o would be super-convenient.
+				EXCEPT("FIXME: not writing and then throwing away a lot of code.\n");
+			}
 
 			CondorError error;
 			Sock * socketToBroker = ccbServer->startCommand(
