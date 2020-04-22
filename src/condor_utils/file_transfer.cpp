@@ -5549,18 +5549,6 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			const char* proxy_filename, bool do_upload,
 			std::vector<std::unique_ptr<ClassAd>> *result_ads ) {
 	
-	// MRC test code: Demonstrate a syscall to the condor_shadow
-	int syscall_code = CONDOR_set_job_attr;
-	std::string attr_name = "RefreshOAuthCredentials";
-	std::string attr_value = "Do it! Do it now!";
-	if (m_syscall_socket->is_connected()) {
-		m_syscall_socket->encode();
-		m_syscall_socket->code(syscall_code);
-		m_syscall_socket->code(attr_value);
-		m_syscall_socket->code(attr_name);
-		m_syscall_socket->end_of_message();
-	}
-
 	ArgList plugin_args;
 	CondorClassAdFileIterator adFileIter;
 	FILE* input_file;
