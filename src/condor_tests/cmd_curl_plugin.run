@@ -212,6 +212,8 @@ if __name__ == "__main__":
     # want to test this working via a proxy, we should do so explicitly.
     # The second line in this looks super-goofy, but pop() barfs on
     # non-strings and on the empty string, so...
-    lowered = {k.lower(): k for k in os.environ}
+    lowered = dict()
+    for k in os.environ:
+        lowered[k.lower()] = k
     os.environ.pop(lowered.get("http_proxy", "http_proxy"), None)
     main()
