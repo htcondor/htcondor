@@ -90,7 +90,6 @@ include (PackageDate)
 include (SystemSpecificInformations)
 include (CondorPackageConfig) # setup packaging variables needed prior to install targets
 include (CondorGlob)
-include (CondorSelectiveGlob)
 include (CondorSetLinkLibs)
 include (CondorExe)
 include (CondorDaemon)
