@@ -13,8 +13,9 @@ Synopsis
 **condor_history** [**-name** *name*]
 [**-pool** *centralmanagerhostname[:portnumber]*] [**-backwards** ]
 [**-forwards** ] [**-constraint** *expr*] [**-file** *filename*]
-[**-userlog** *filename*] [**-format** *formatString
-AttributeName*] [**-autoformat[:jlhVr,tng]  ** *attr1 [attr2 ...]*]
+[**-local**] [**-startd**] [**-userlog** *filename*]
+[**-format** *formatString AttributeName*]
+[**-autoformat[:jlhVr,tng]  ** *attr1 [attr2 ...]*]
 [**-l | -long | -xml | -json** ] [**-match | -limit  ** *number*]
 [**cluster | cluster.process | owner** ]
 
@@ -66,7 +67,7 @@ Options
  **-help**
     Display usage information and exit.
  **-name** *name*
-    Query the named *condor_schedd* daemon.
+    Query the named *condor_schedd* daemon. if used with **-startd**, query the named *condor_startd* daemon
  **-pool** *centralmanagerhostname[:portnumber]*
     Use the *centralmanagerhostname* as the central manager to locate
     *condor_schedd* daemons. The default is the ``COLLECTOR_HOST``, as
@@ -89,6 +90,8 @@ Options
  **-local**
     Read from local history files even if there is a SCHEDD_HOST
     configured.
+ **-startd**
+    Read from Startd history files rather than Schedd history files.
  **-file** *filename*
     Use the specified file instead of the default history file.
  **-userlog** *filename*

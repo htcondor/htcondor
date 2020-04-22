@@ -1848,6 +1848,13 @@ Job ClassAd Attributes
     :index:`ScitokensFile<single: ScitokensFile; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; ScitokensFile>`
 
+``ScratchDirFileCount``
+    Number of files and directories in the jobs' Scratch directory.  The value is updated
+    periodically while the job is running.
+    :index:`ScratchDirFileCount`
+    :index:`ScratchDirFileCount<single: ScratchDirFileCount; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; ScratchDirFileCount>`
+
 ``StackSize``
     Utilized for Linux jobs only, the number of bytes allocated for
     stack space for this job. This number of bytes replaces the default

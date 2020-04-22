@@ -49,6 +49,16 @@ Release Notes:
 
 New Features:
 
+- The *condor_job_router* configuration and transform language has changed.
+  The Job Router will still read the old configuration and transforms, but
+  the new configuration syntax is much more flexible and powerful.
+
+  - Routes are now a modified form of job transform. ``JOB_ROUTER_ROUTE_NAMES`` defines both the order and which routes are enabled
+  - Multiple pre-route and post-route transforms that apply to all routes can be defined.
+  - The Routes and transforms use the same syntax and transform engine as ``SUBMIT_TRANSFORM_NAMES``.
+
+  :ticket:`7432`
+
 - You may now specify that HTCondor only transfer files when the job
   succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
   to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
@@ -85,6 +95,13 @@ New Features:
   to import and not just ``True`` or ``False``.
   :ticket:`7572`
 
+- HTCondor now allows Scitokens tickets and Kerberos/AFS credentials to be
+  enabled on the same machine.  This involves some changes to the
+  way these two features are configured.  *condor_store_cred* and the python
+  bindings has new commands to allow Kerberos/AFS credentials to be stored
+  and queried.
+  :ticket:`7462`
+
 - The ``condor_history`` command now has a ``startd`` option to query the Startd
   history file.  This works for both local and remote queries.
   :ticket:`7538`
@@ -120,6 +137,11 @@ New Features:
 - Removed the unused and always set to zero job attribute LocalUserCpu
   and LocalSysCpu
   :ticket:`7546`
+
+- *condor_submit* now treats ``request_gpu`` as an type and suggests
+  that ``request_gpus`` may have been what was intended.  This is the 
+  same way that it treats ``request_cpu``.
+  :ticket:`7421`
 
 - Feature to enhance the reliability of *condor_ssh_to_job* is now on
   by default: CONDOR_SSH_TO_JOB_USE_FAKE_PASSWD_ENTRY is now true
