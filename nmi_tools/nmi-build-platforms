@@ -20,5 +20,4 @@ x86_CentOS7
 x86_64_Fedora27
 
 # We might as well build on RedHat while we still have it
-x86_64_RedHat6
 x86_64_RedHat7
