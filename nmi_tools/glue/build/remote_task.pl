@@ -336,11 +336,11 @@ sub check_deb {
     my $debs;
     for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
     if ( ! defined $debs) { $debs = "*.deb"; }
-    if ($ENV{NMI_PLATFORM} =~ /(Debian9|Ubuntu16|Ubuntu18)/) {
-        # return "lintian $debs";
-        return "dpkg-deb -W $debs";
-    } else {
+    if ($ENV{NMI_PLATFORM} =~ /Debian8/) {
         # Only works with a single deb
         return "dpkg-deb -I $debs";
+    } else {
+        # return "lintian $debs";
+        return "dpkg-deb -W $debs";
     }
 }
