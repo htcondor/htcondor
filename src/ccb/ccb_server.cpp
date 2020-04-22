@@ -1020,9 +1020,9 @@ CCBServer::RemoveTarget( CCBTarget *target )
 	delete target;
 }
 
+
 void
-CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
-{
+CCBServer::AssignNextRequestID( CCBServerRequest * request ) {
 		// in case of wrap-around in ccbid, handle conflicts
 	while(true) {
 		request->setRequestID(m_next_request_id++);
@@ -1042,6 +1042,12 @@ CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
 		}
 		// else this ccbid is already taken, so try again
 	}
+}
+
+void
+CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
+{
+	AssignNextRequestID(request);
 
 		// add this request to the list of requests waiting for the target
 	target->AddRequest( request, this );
@@ -1600,11 +1606,7 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 
 void
 CCBServer::AddBatchRequest( CCBServerRequest * request, CCBTarget * target ) {
-	// FIXME: refactor CCB ID wrap-around handling code from AddRequest()
-	// and call it here.
-	request->setRequestID( m_next_request_id++ );
-	m_requests.insert( request->getRequestID(), request );
-
+	AssignNextRequestID( request );
 	target->AddRequest( request, this );
 }
 

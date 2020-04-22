@@ -49,6 +49,10 @@ class CCBServer: Service {
 	static bool CCBIDFromString( CCBID & ccbid, char const * ccbid_str );
 
 	friend class CCBTarget;
+
+ protected:
+	void AssignNextRequestID( CCBServerRequest * request );
+
  private:
 	bool m_registered_handlers;
 	HashTable<CCBID,CCBTarget *> m_targets;        // ccbid --> target
