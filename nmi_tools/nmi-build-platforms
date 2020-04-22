@@ -1,10 +1,12 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
+x86_64_CentOS7
+#x86_64_CentOS8
 x86_64_Debian9
+docker://timtheisen/nmi-build:x86_64_Debian10
 x86_64_MacOSX10
 x86_64_MacOSX13
-x86_64_RedHat7
 x86_64_Ubuntu16
 x86_64_Ubuntu18
 x86_64_Windows7
@@ -17,5 +19,6 @@ x86_CentOS7
 # We want to build all branches on Fedora because it is our "warning check" platform
 x86_64_Fedora27
 
-# We might as well build on CentOS and SL
-x86_64_CentOS7
+# We might as well build on RedHat while we still have it
+x86_64_RedHat6
+x86_64_RedHat7
