@@ -8744,6 +8744,7 @@ int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::st
 
 void SubmitHash::warn_unused(FILE* out, const char *app)
 {
+	if (SubmitMacroSet.size <= 0) return;
 	if ( ! app) app = "condor_submit";
 
 	// Force non-zero ref count for DAG_STATUS and FAILED_COUNT
