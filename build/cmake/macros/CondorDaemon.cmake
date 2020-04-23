@@ -22,12 +22,11 @@ MACRO (CONDOR_DAEMON _CNDR_TARGET _REMOVE_ELEMENTS _LINK_LIBS _INSTALL_LOC )
 
 	condor_glob( ${_CNDR_TARGET}HDRS ${_CNDR_TARGET}SRCS "${${_CNDR_TARGET}_REMOVE_ELEMENTS}" )
 
-	if ( CONDOR_BUILD_SHARED_LIBS )
-		list(APPEND ${_CNDR_TARGET}SRCS ${CMAKE_SOURCE_DIR}/src/condor_utils/condor_version.cpp)
-	endif()
+    list(APPEND _LINK_LIBS condor_version_obj)
 
 	#Add the executable target.
 	condor_exe( condor_${_CNDR_TARGET} "${${_CNDR_TARGET}HDRS};${${_CNDR_TARGET}SRCS}" ${_INSTALL_LOC} "${_LINK_LIBS}" ON)
+	add_dependencies(condor_${_CNDR_TARGET} condor_version_obj)
 
         # full relro and PIE for daemons/setuid/setgid applications
         if (cxx_full_relro_and_pie)
