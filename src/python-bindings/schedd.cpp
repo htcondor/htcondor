@@ -558,6 +558,18 @@ struct SubmitStepFromPyIter {
 	bool has_items() { return m_items; }
 	int  step_size() { return m_fea.queue_num ? m_fea.queue_num : 1; }
 	const char * errmsg() { if ( ! m_errmsg.empty()) { return m_errmsg.c_str(); } return NULL;}
+#if defined WIN32 || __cplusplus >= 201101
+	[[noreturn]]
+	void throw_error() {
+#else
+	void throw_error() __attribute__((noreturn)) {
+#endif
+		if ( ! PyErr_Occurred()) {
+			const char * err = errmsg();
+			PyErr_SetString(PyExc_RuntimeError, err ? err : "invalid iterator");
+		}
+		throw_error_already_set();
+	}
 
 	// returns < 0 on error
 	// returns 0 if done iterating
@@ -630,6 +642,9 @@ struct SubmitStepFromPyIter {
 	{
 		PyObject *obj = PyIter_Next(m_items);
 		if ( ! obj) {
+			if (PyErr_Occurred()) {
+				return -1;
+			}
 			return 0;
 		}
 
@@ -823,7 +838,9 @@ struct SubmitJobsIterator {
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
 			rval = m_sspi.next(jid, item_index, step);
-			if (rval < 0) { THROW_EX(RuntimeError, m_sspi.errmsg()); }
+			if (rval < 0) {
+				m_sspi.throw_error();
+			}
 		}
 		if (rval == 0)  { THROW_EX(StopIteration, "All ads processed"); }
 
@@ -2846,7 +2863,7 @@ public:
 
 			// get the first rowdata, we need that to build the submit digest, etc
 			rval = ssi.next(jid, item_index, step);
-			if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+			if (rval < 0) { ssi.throw_error(); }
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
@@ -2934,7 +2951,7 @@ public:
 
 		}
 
-		if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+		if (rval < 0) { ssi.throw_error(); }
 
 		if (param_boolean("SUBMIT_SEND_RESCHEDULE",true)) {
 			txn->reschedule();

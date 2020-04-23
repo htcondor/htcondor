@@ -4847,7 +4847,7 @@ bool hash_iter_done(HASHITER& it) {
 	if (it.ix == 0 && it.id == 0) {
 		if ( ! it.set.defaults || ! it.set.defaults->table || ! it.set.defaults->size) {
 			it.opts |= HASHITER_NO_DEFAULTS;
-		} else if ( ! (it.opts & HASHITER_NO_DEFAULTS)) {
+		} else if (it.set.size > 0 && it.set.table && ! (it.opts & HASHITER_NO_DEFAULTS)) {
 			// decide whether the first item is in the defaults table or not.
 			const char * pix_key = it.set.table[it.ix].key;
 			const char * pid_key = it.set.defaults->table[it.id].key;
