@@ -965,6 +965,9 @@ else
 fi
 rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_glite_dir/lib/ 2>/dev/null
+if [ -d $archive_dir/libexec/glite/libexec ] ; then
+    rsync -aq $archive_dir/libexec/glite/libexec $remote_glite_dir/
+fi
 show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdir/condor $remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
 
