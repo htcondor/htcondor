@@ -78,6 +78,10 @@ New Features:
   history file.  This works for both local and remote queries.
   :ticket:`7538`
 
+- The ``-submitters`` argument to ``condor_q`` now correctly shows jobs for the
+  given submitter name, even when the submittor name is an accounting group.
+  :ticket:`7616`
+
 - Docker universe now works inside an unprivileged personal HTCondor,
   if you give the user starting the personal condor rights to run the
   docker commands.
@@ -110,7 +114,7 @@ New Features:
   and LocalSysCpu
   :ticket:`7546`
 
-- *condor_submit* now treats ``request_gpu`` as an type and suggests
+- *condor_submit* now treats ``request_gpu`` as a typo and suggests
   that ``request_gpus`` may have been what was intended.  This is the 
   same way that it treats ``request_cpu``.
   :ticket:`7421`
