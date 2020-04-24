@@ -19,8 +19,11 @@
 
 if (LINUX)
 
-file( GLOB RmvSrcs  declare_queues.cpp )
-condor_glob( Hdrs Srcs "${RmvSrcs}" )
+set(Srcs
+getPort.cpp
+pigeon.cpp
+pigeon_main.cpp
+)
 
 condor_static_lib( condorPigeon "${Hdrs};${Srcs}" ) 
 condor_exe( declareQueues "declare_queues.cpp" "${C_SBIN}" "condorPigeon;condorapi;${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" OFF )
