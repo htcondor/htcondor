@@ -5736,7 +5736,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if ( output_file == NULL ) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open curl_plugin output file "
 			"%s.\n", output_filename.c_str() );
-		return GET_FILE_PLUGIN_FAILED;
+		return TransferPluginResult::Error;
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
