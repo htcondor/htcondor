@@ -913,10 +913,11 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	}
 
 	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"416\"]";
+	MyString exported_session_info;
 	classad::ClassAd policy_ad;
 	policy_ad.InsertAttr(ATTR_REMOTE_POOL, pool);
 
-	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+	bool retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		NEGOTIATOR,
 		id.c_str(),
 		keybuf.get(),
@@ -926,8 +927,12 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 		duration,
 		&policy_ad
 	);
-	if (retval) {
-		capability = id + "#" + session_info + keybuf.get();
+	if ( retval ) {
+		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
+	}
+	if ( retval ) {
+		ClaimIdParser cid(id.c_str(), exported_session_info.Value(), keybuf.get());
+		capability = cid.claimId();
 	}
 	return retval;
 }
@@ -955,9 +960,10 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 	}
 
 	auto session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"523\"]";
+	MyString exported_session_info;
 	classad::ClassAd policy_ad;
 	policy_ad.InsertAttr("ScheddSession", true);
-	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+	bool retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		ALLOW,
 		id.c_str(),
 		keybuf.get(),
@@ -967,8 +973,12 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 		duration,
 		&policy_ad
 	);
-	if (retval) {
-		capability = id + "#" + session_info + keybuf.get();
+	if ( retval ) {
+		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
+	}
+	if ( retval ) {
+		ClaimIdParser cid(id.c_str(), exported_session_info.Value(), keybuf.get());
+		capability = cid.claimId();
 	}
 	return retval;
 }
