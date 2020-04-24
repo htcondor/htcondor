@@ -20,7 +20,9 @@ condor_exe( condor_testingd "testingd.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( test_user_mapping "test_user_mapping.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
-set(CONDOR_VERSION_SRC condor_version.cpp;condor_version.h)
+# We need this .o statically linked into every exe for the version object
+# to parse.  Make this an object library to link everywhere.
+add_library(condor_version_obj STATIC condor_version.cpp)
 
 # These are the sources for .o's that go into both libcondor_utils and libcondorapi
 # Ideally, as we break dependencies, more of these move into just libcondor_utils
@@ -45,8 +47,8 @@ condor_open.h
 condor_snutils.cpp
 condor_ver_info.cpp
 condor_ver_info.h
-condor_version.cpp
 condor_version.h
+condor_version.cpp
 consumption_policy.cpp
 consumption_policy.h
 directory.cpp
