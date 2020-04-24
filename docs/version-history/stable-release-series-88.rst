@@ -34,6 +34,10 @@ Bugs Fixed:
    in a confusing way when the disk on the submit side is full.
    :ticket:`7596`
 
+-  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
+   the HTCondor binaries are installed in a non-default location. 
+   :ticket:`7613`
+
 -  Fixed a bug whereby the ``MemoryUsage`` attribute in the job classad for a Docker Universe job
    failed to report the maximum memory usage of the job, but instead
    reported either zero or the current memory usage. 

@@ -1875,6 +1875,10 @@ executing job that may be useful for the job to reference.
 -  ``_CONDOR_JOB_IWD``
    :index:`_CONDOR_JOB_IWD environment variable`\ :index:`_CONDOR_JOB_IWD<single: _CONDOR_JOB_IWD; environment variables>`
    is the path to the initial working directory the job was born with.
+-  ``_CONDOR_BIN``
+   :index:`_CONDOR_BIN environment variable`\ :index:`_CONDOR_BIN<single: _CONDOR_BIN; environment variables>`
+   is the path to where the HTCondor command-line tools can be found; useful for jobs that wish to invoke
+   *condor_chirp* for instance.
 -  ``_CONDOR_WRAPPER_ERROR_FILE``
    :index:`_CONDOR_WRAPPER_ERROR_FILE environment variable`\ :index:`_CONDOR_WRAPPER_ERROR_FILE<single: _CONDOR_WRAPPER_ERROR_FILE; environment variables>`
    is only set when the administrator has installed a
