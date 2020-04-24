@@ -515,12 +515,11 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-
-    If the environment is set with the **environment** command and
-    **getenv** is also set, values specified with
-    **environment** override values in the submitter's environment
-    (regardless of the order of the **environment** and **getenv**
-    commands). :index:`input<single: input; submit commands>`
+		If the environment is set with the **environment** command and
+		**getenv** is also set, values specified with
+		**environment** override values in the submitter's environment
+		(regardless of the order of the **environment** and **getenv**
+		commands). :index:`input<single: input; submit commands>`
 
  input = <pathname>
     HTCondor assumes that its jobs are long-running, and that the user
