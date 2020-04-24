@@ -301,6 +301,25 @@ our %submit_info = (
 	'nmi-build:x86_64_Debian10' => 'x86_64_Debian9',
 
 	##########################################################################
+	# Platform CentOS 8 on x86_64
+	##########################################################################
+	'x86_64_CentOS8'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args },
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	'nmi-build:x86_64_CentOS8' => 'x86_64_CentOS8',
+
+	##########################################################################
 	# Platform RHEL 7 on x86_64
 	##########################################################################
 	'x86_64_RedHat7'	=> {

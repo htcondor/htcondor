@@ -2,7 +2,7 @@
 
 # Officially supported platforms
 x86_64_CentOS7
-#x86_64_CentOS8
+docker://timtheisen/nmi-build:x86_64_CentOS8
 x86_64_Debian8
 x86_64_Debian9
 docker://timtheisen/nmi-build:x86_64_Debian10

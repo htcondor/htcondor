@@ -94,6 +94,10 @@ Bugs Fixed:
    slow operation of the *condor_startd*
    :ticket:`7479`
 
+-  Fixed a bug that resulted in a segmentation fault when an iterator passed to the ``queue_with_itemdata``
+   method on the ``Submit`` object raised a python exception.
+   :ticket:`7609`
+
 Version 8.8.8
 -------------
 
