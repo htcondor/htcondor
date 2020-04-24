@@ -361,8 +361,6 @@
 #define ATTR_JOB_RUNAS_OWNER  "RunAsOwner"
 #define ATTR_JOB_LOAD_USER_PROFILE  "LoadUserProfile"
 #define ATTR_JOB_LOCAL_CPU  "LocalCpu"
-#define ATTR_JOB_LOCAL_SYS_CPU  "LocalSysCpu"
-#define ATTR_JOB_LOCAL_USER_CPU  "LocalUserCpu"
 #define ATTR_JOB_MANAGED  "Managed"
 #define ATTR_JOB_MANAGED_MANAGER  "ManagedManager"
 #define ATTR_JOB_MATCHED  "Matched"
@@ -471,6 +469,7 @@
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
 #define ATTR_PARENT_SLOT_ID "ParentSlotId"
+#define ATTR_DSLOT_ID "DSlotId"
 #define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_CURB_MATCHMAKING "CurbMatchmaking"
@@ -862,6 +861,7 @@
 #define ATTR_SEC_SID  "Sid"
 #define ATTR_SEC_SUBSYSTEM  "Subsystem"
 #define ATTR_SEC_REMOTE_VERSION  "RemoteVersion"
+#define ATTR_SEC_SHORT_VERSION  "ShortVersion"
 #define ATTR_SEC_SERVER_ENDPOINT  "ServerEndpoint"
 #define ATTR_SEC_SERVER_COMMAND_SOCK  "ServerCommandSock"
 #define ATTR_SEC_SERVER_PID  "ServerPid"
@@ -1157,6 +1157,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SIZE "Size"
 #define ATTR_CHECKSUM "Checksum"
 #define ATTR_CHECKSUM_TYPE "ChecksumType"
+
+// Attributes related to dataflow jobs
+#define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
+#define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

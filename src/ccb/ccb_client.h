@@ -66,7 +66,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	void ReverseConnectCallback(Sock *sock);
 	void RegisterReverseConnectCallback();
 	void UnregisterReverseConnectCallback();
-	static int ReverseConnectCommandHandler(Service *,int cmd,Stream *stream);
+	static int ReverseConnectCommandHandler(int cmd,Stream *stream);
 	std::string myName();
 	void DeadlineExpired();
 

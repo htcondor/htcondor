@@ -3506,6 +3506,11 @@ section.
     directories goes to the host filesytem under the scratch directory.
     This is useful if a container has limited space to grow a filesytem.
 
+:macro-def:`MOUNT_PRIVATE_DEV_SHM`
+    This boolean value, which defaults to ``True`` tells the *condor_starter*
+    to make /dev/shm on Linux private to each job.  When private, the
+    starter removes any files from the private /dev/shm at job exit time.
+
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/setting-up-special-environments:configuring
@@ -5485,8 +5490,9 @@ These settings affect the *condor_shadow*.
 
 :macro-def:`SHADOW_SKIP_DATAFLOW_JOBS`
     Determines whether dataflow jobs should be skipped. A dataflow job is 
-    defined as a job whose input and output files already exist at submit time,
-    and outputs are newer than inputs. Defaults to ``False``.
+    defined as a job whose output files already exist and are newer than input
+    files. Additionally, if the executable or stdin files exist and are newer
+    than inputs, this is also considered a dataflow job. Defaults to ``False``.
 
 condor_starter Configuration File Entries
 ------------------------------------------
@@ -5668,7 +5674,7 @@ These settings affect the *condor_starter*.
     by the cgroup memory controller attribute memory.limit_in_bytes.
     If the processes try to allocate more memory, the allocation will
     succeed, and virtual memory will be allocated, but no additional
-    physical memory will be allocated. If set to the default value
+    physical memory will be allocated. If set to
     ``soft``, the cgroup-based limit on the total amount of physical
     memory used by the sum of all processes in the job will be allowed
     to go over the limit, if there is free memory available on the
@@ -5993,7 +5999,8 @@ condor_submit Configuration File Entries
     *condor_submit* retry feature is used. (Note that this value is
     only relevant if either **retry_until** or **success_exit_code**
     is defined in the submit file, and **max_retries** is not.) (See
-    :doc:`/man-pages/condor_submit`) The default value if not defined is 2.
+    the :doc:`/man-pages/condor_submit` man page.) The default value
+    if not defined is 2.
 
 If you want *condor_submit* to automatically append an expression to
 the ``Requirements`` expression or ``Rank`` expression of jobs at your
@@ -10444,7 +10451,7 @@ general discussion of *condor_defrag* may be found in
 
 :macro-def:`DEFRAG_NAME`
     Used to give an alternative value to the ``Name`` attribute in the
-    *condor_defrag* 's ClassAd. This esoteric configuration macro
+    *condor_defrag* daemon's ClassAd. This esoteric configuration macro
     might be used in the situation where there are two *condor_defrag*
     daemons running on one machine, and each reports to the same
     *condor_collector*. Different names will distinguish the two

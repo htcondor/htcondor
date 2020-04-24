@@ -240,12 +240,8 @@ Starter::setIsDC( bool updated_is_dc )
 
 
 void
-Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
+Starter::publish( ClassAd* ad, StringList* list )
 {
-	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
-		return;
-	}
-
 	StringList* ignored_attr_list = NULL;
 	ignored_attr_list = new StringList();
 	ignored_attr_list->append(ATTR_VERSION);
@@ -1140,7 +1136,9 @@ int Starter::execDCStarter(
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
 
-	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "starter" );
+	std::string sockBaseName( "starter" );
+	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
+	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,

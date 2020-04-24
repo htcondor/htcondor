@@ -160,6 +160,7 @@ bool findToken(const std::string &tokenfilename,
 		return false;
 	}
     for( std::string line; readLine( line, f.get(), false ); ) {
+		if (line.empty() || line[0] == '#') continue;
         line.erase( line.length() - 1, 1 );
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
@@ -456,7 +457,7 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		std::string shared_key;
 		CondorError err;
 		if (key_id == "POOL") {
-			std::unique_ptr<char> pool_passwd(getStoredCredential(POOL_PASSWORD_USERNAME, ""));
+			std::unique_ptr<char> pool_passwd(getStoredPassword(POOL_PASSWORD_USERNAME, ""));
 			if (!pool_passwd.get()) {
 				return nullptr;
 			}
@@ -482,7 +483,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordA = getStoredCredential(name,domain);
+	//TODO: the 'password here on Unix is actually the cred converted to base64. is that right?
+	passwordA = getStoredPassword(name,domain);
 	free(name);
 
 		// Split nameB into name and domain, then get password
@@ -493,7 +495,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordB = getStoredCredential(name,domain);
+	//TODO: the 'password' here on Unix is actually the cred converted to base64. is that right?
+	passwordB = getStoredPassword(name,domain);
 	free(name);
 
 		// If we failed to find either password, fail.

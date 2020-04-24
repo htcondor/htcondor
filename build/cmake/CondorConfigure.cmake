@@ -23,7 +23,6 @@ if(${OS_NAME} STREQUAL "DARWIN")
 	# Override that to set the actual architecture.
 	set (SYS_ARCH "X86_64")
 elseif(${OS_NAME} MATCHES "WIN")
-	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
@@ -871,7 +870,6 @@ endif(BUILD_TESTING)
 
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
-	cmake_minimum_required(VERSION 2.8)
 endif()
 
 # directory that externals are downloaded from. may be a local directory
@@ -1007,7 +1005,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.4.0)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.5.0)
 
 	# globus is an odd *beast* which requires a bit more config.
 	# old globus builds on manylinux1 (centos5 docker image)
@@ -1341,6 +1339,7 @@ else(MSVC)
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 	endif(LINUX)
 
 	if (AIX)

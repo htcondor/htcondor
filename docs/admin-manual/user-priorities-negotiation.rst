@@ -388,6 +388,7 @@ the operating system username.  However, the submitter can override
 the username selected by settting the submit file option
 
 ::
+
 	accounting_group_user = ishmael
 
 This means this job should be treated, for accounting purposes only, as
@@ -612,17 +613,17 @@ negotiates with the smallest positive value going first. Available
 attributes for sorting with ``GROUP_SORT_EXPR``
 :index:`GROUP_SORT_EXPR` include:
 
-+-----------------------+--------------------------------------------+
-| Attribute Name        | Description                                |
-+=======================+============================================+
-| AccountingGroup       | A string containing the group name         |
-+-----------------------+--------------------------------------------+
-| GroupQuota            | The computed limit for this group          |
-+-----------------------+--------------------------------------------+
-| GroupQuotaInUse       | The total slot weight used by this group   |
-+-----------------------+--------------------------------------------+
-| GroupQuotaAllocated   | Quota allocated this cycle                 |
-+-----------------------+--------------------------------------------+
++-------------------------+------------------------------------------+
+| Attribute Name          | Description                              |
++=========================+==========================================+
+| AccountingGroup         | A string containing the group name       |
++-------------------------+------------------------------------------+
+| GroupQuota              | The computed limit for this group        |
++-------------------------+------------------------------------------+
+| GroupResourcesInUse     | The total slot weight used by this group |
++-------------------------+------------------------------------------+
+| GroupResourcesAllocated | Quota allocated this cycle               |
++-------------------------+------------------------------------------+
 
 Table 3.1: Attributes visible to GROUP_SORT_EXPR
 

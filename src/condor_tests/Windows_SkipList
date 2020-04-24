@@ -12,6 +12,9 @@ job_dagman_node_status_rm
 # tj: this needs windows commands for config include
 lib_include_cmd_config
 
+#  No registered converter was able to extract a C++ pointer to type struct _iobuf from this Python object of type instance
+python_bindings_classad
+
 #Java tests turned off since java in refactor glue still not working windows 8
 # bt 6/3/14
 job_core_err_java
@@ -22,6 +25,7 @@ job_core_output_java
 lib_auth_protocol-ctb
 lib_auth_protocol-fs
 lib_auth_protocol-ssl
+lib_auth_protocol-token
 lib_chirpio_van
 lib_procapi_pidtracking-snapshot
 file_transfer_submit
@@ -47,7 +51,7 @@ job_core_output_sched
 job_core_queue_sched
 job_core_remote-initialdir_van
 job_core_sh-loop_van
-job_consumption_policies_basic_van
+#job_consumption_policies_basic_van
 job_starter_script-A
 job_test_urlfetch
 

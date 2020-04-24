@@ -42,13 +42,7 @@ Interacting with Schedulers
    .. automethod:: submitMany
    .. automethod:: spool
    .. automethod:: refreshGSIProxy
-   .. automethod:: negotiate
    .. automethod:: reschedule
-
-.. autoclass:: ScheddNegotiate
-
-   .. automethod:: sendClaim
-   .. automethod:: disconnect
 
 .. autoclass:: JobAction
 
@@ -125,23 +119,30 @@ Managing Starters and Claims
 
 .. autoclass:: DrainTypes
 
-.. autoclass:: Claim
-
-   .. automethod:: requestCOD
-   .. automethod:: activate
-   .. automethod:: release
-   .. automethod:: suspend
-   .. automethod:: resume
-   .. automethod:: renew
-   .. automethod:: deactivate
-   .. automethod:: delegateGSIProxy
-
-
 .. autoclass:: VacateTypes
 
 
 Security Management
 -------------------
+
+.. autoclass:: Credd
+
+    .. automethod:: add_password
+    .. automethod:: delete_password
+    .. automethod:: query_password
+    .. automethod:: add_user_cred
+    .. automethod:: delete_user_cred
+    .. automethod:: query_user_cred
+    .. automethod:: add_user_service_cred
+    .. automethod:: delete_user_service_cred
+    .. automethod:: query_user_service_cred
+    .. automethod:: check_user_service_creds
+
+.. autoclass:: CredTypes
+
+.. autoclass:: CredCheck
+
+.. autoclass:: CredStatus
 
 .. autoclass:: SecMan
 

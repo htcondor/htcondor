@@ -442,7 +442,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     If the environment is set with the
     **environment** :index:`environment<single: environment; submit commands>`
     command and **getenv** :index:`getenv<single: getenv; submit commands>` is
-    also set to true, values specified with **environment** override
+    also set, values specified with **environment** override
     values in the submitter's environment (regardless of the order of
     the **environment** and **getenv** commands).
     :index:`error<single: error; submit commands>`
@@ -476,17 +476,48 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     as the *condor_submit* command is issued.
     :index:`getenv<single: getenv; submit commands>`
 
- getenv = <True | False>
+ getenv = <<matchlist> | True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,
     then *condor_submit* will copy all of the user's current shell
     environment variables at the time of job submission into the job
     ClassAd. The job will therefore execute with the same set of
     environment variables that the user had at submit time. Defaults to
-    ``False``.
+    ``False``.  A wholesale import of the user's environment is very likely to lead
+    to problems executing the job on a remote machine unless there is a shared 
+    file system for users' home directories between the submit machine and execute machine.
+    So rather than setting getenv to ``True``, it is much better to set it to a list
+    of environment variables to import. 
+
+    Matchlist is a comma, semicolon or space separated list of environment variable names and name patterns that
+    match or reject names.
+    Matchlist members are matched case-insensitively to each name
+    in the environment and those that match are imported. Matchlist members can contain ``*`` as wildcard
+    character which matches anything at that postion.  Members can have two ``*`` characters if one of them
+    is at the end. Members can be prefixed with ``!``
+    to force a matching environment variable to not be imported.  The order of members in the Matchlist
+    has no effect on the result.  ``getenv = true`` is equivalent to ``getenv = *``
+
+    Prior to HTCondor 8.9.7 ``getenv`` allows only ``True`` or ``False`` as values.
+
+    Examples
+
+    ::
+
+        # import everything except PATH and INCLUDE (also path, include and other case-variants)
+        getenv = !PATH, !INCLUDE
+
+        # import everything with CUDA in the name
+        getenv = *cuda*
+
+        # Import every environment variable that starts with P or Q, except PATH
+        getenv = !path, P*, Q*
+
+    ::
+
 
     If the environment is set with the **environment** command and
-    **getenv** is also set to true, values specified with
+    **getenv** is also set, values specified with
     **environment** override values in the submitter's environment
     (regardless of the order of the **environment** and **getenv**
     commands). :index:`input<single: input; submit commands>`
@@ -1201,8 +1232,35 @@ FILE TRANSFER COMMANDS
 
     Symbolic links to files are transferred as the files they point to.
     Transfer of symbolic links to directories is not currently
-    supported. :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
+    supported.
 
+    :index:`transfer_checkpoint_files<single: transfer_checkpoint_files; submit commands>`
+ transfer_checkpoint_files = < file1,file2,file3... >
+    If present, this command defines the list of files and/or directories
+    which constitute the job's checkpoint.  When the job successfully
+    checkpoints -- see ``checkpoint_exit_code`` -- these files will be
+    transferred to the submit node's spool.
+
+    If this command is absent, the output is transferred instead.
+
+    If no files or directories are specified, nothing will be transferred.
+    This is generally not useful.
+
+    The list is interpreted like ``transfer_output_files``, but there is
+    no corresponding ``remaps`` command.
+
+    :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
+ preserve_relative_paths = < True | False >
+    This command modifies the behavior of the file transfer commands.  When
+    set to true, the destination for an entry that is a relative path in a
+    file transfer list becomes its relative path, not its basename.  For
+    example, ``input_data/b`` (and its contents, if it is a directory) will
+    be transferred to ``input_data/b``, not ``b``.  This applies to the input,
+    output, and checkpoint lists.
+
+    Trailing slashes are ignored when ``preserve_relative_paths`` is set.
+
+    :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
  transfer_output_remaps = < " name = newname ; name2 = newname2 ... ">
     This specifies the name (and optionally path) to use when
     downloading output files from the completed job. Normally, output
@@ -1223,7 +1281,7 @@ FILE TRANSFER COMMANDS
     **transfer_output_files**. Listing a file in
     **transfer_output_remaps** is not sufficient to cause it to be
     transferred.
-    :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
+    :index:`transfer_plugins<single: transfer_plugins; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins that should be transferred along with
@@ -1231,30 +1289,38 @@ FILE TRANSFER COMMANDS
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
     Plugins transfered in this way must support the multi-file transfer plugin syntax.
+    :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
- when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT >
-    Setting
-    **when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
-    equal to *ON_EXIT* will cause HTCondor to transfer the job's output
-    files back to the submitting machine only when the job completes
-    (exits on its own).  If a job is evicted and started again 
-    the subsequent execution will start with only the executable and 
-    input files in the scratch directory sandbox.
+ when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
+    Setting ``when_to_transfer_output`` to ``ON_EXIT`` will cause HTCondor
+    to transfer the job's output files back to the submitting machine when
+    the job completes (exits on its own).  If a job is evicted and started
+    again, the subsequent execution will start with only the executable and
+    input files in the scratch directory sandbox.  If ``transfer_output_files``
+    is not set, HTCondor considers all new files in the sandbox's top-level
+    directory to be the output; subdirectories and their contents will not
+    be transferred.
 
-    The *ON_EXIT_OR_EVICT* option is intended for jobs
-    which periodically save their own state and can restart where they
-    left off. In this case, files are spooled to the submit machine any
-    time the job was evicted by the HTCondor system for any reason prior to
-    job completion. The files spooled back are placed in a directory
-    defined by the value of the ``SPOOL`` configuration variable. Any
-    such files transferred back to the submit machine are
-    automatically sent back out again as input files if the job
-    restarts.  The set of files transfered back is the same set that would
-    be transfered if the job completed.  If *transfer_output_files* is not 
-    set, all files in the top level scratch directory will be saved.  Files
-    in subdirectories will not be preserved.  If *transfer_output_files* is set
-    only those files are saved.  If a file listed in *transfer_output_files* 
-    does not exist at evict time, the job will go on hold.
+    Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
+    HTCondor to transfer the job's output files when the job completes
+    (exits on its own) and when the job is evicted.  When the job is evicted,
+    HTCondor will transfer the output files to a temporary directory on the
+    submit node (determined by the ``SPOOL`` configuration variable).  When
+    the job restarts, these files will be transferred instead of the input
+    files.  If ``transfer_output_files`` is not set, HTCondor considers all
+    files in the sandbox's top-level directory to be the output;
+    subdirectories and their contents will not be transferred.
+
+    Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
+    to transfer the job's output files when the job completes succesfully.
+    Success is defined by the ``success_exit_code`` command, which must be
+    set, even if the successful value is the default ``0``.  If
+    ``transfer_output_files`` is not set, HTCondor considers all new files
+    in the sandbox's top-level directory to be the output; subdirectories
+    and their contents will not be transferred.
+
+    In all three cases, the job will go on hold if ``transfer_output_files``
+    specifies a file which does not exist at transfer time.
 
  aws_access_key_id_file
     Required if you specify an S3 URL, this command specifies the file containing
@@ -1303,8 +1369,9 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
-    **Note: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs.**
+    **Note**: non-zero values of success_exit_code should generally not be
+    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into
     account the value of **success_exit_code**. This means that, if
@@ -3124,17 +3191,4 @@ See Also
 --------
 
 HTCondor User Manual
-
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
 

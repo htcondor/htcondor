@@ -43,6 +43,7 @@
 #include "file_lock.h"
 #include "shared_port_server.h"
 #include "shared_port_endpoint.h"
+#include "credmon_interface.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -84,8 +85,8 @@ void	invalidate_ads();
 void	main_config();
 int	agent_starter(ReliSock *, Stream *);
 int	handle_agent_fetch_log(ReliSock *);
-int	admin_command_handler(Service *, int, Stream *);
-int	ready_command_handler(Service *, int, Stream *);
+int	admin_command_handler(int, Stream *);
+int	ready_command_handler(int, Stream *);
 int	handle_subsys_command(int, Stream *);
 int     handle_shutdown_program( int cmd, Stream* stream );
 int     set_shutdown_program( const char * name );
@@ -666,71 +667,71 @@ main_init( int argc, char* argv[] )
 
 		// Register admin commands
 	daemonCore->Register_Command( RESTART, "RESTART",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( RESTART_PEACEFUL, "RESTART_PEACEFUL",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF, "DAEMONS_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF_FAST, "DAEMONS_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF_PEACEFUL, "DAEMONS_OFF_PEACEFUL",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_ON, "DAEMONS_ON",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( MASTER_OFF, "MASTER_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( MASTER_OFF_FAST, "MASTER_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_ON, "DAEMON_ON",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF, "DAEMON_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF_FAST, "DAEMON_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF_PEACEFUL, "DAEMON_OFF_PEACEFUL",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( CHILD_ON, "CHILD_ON",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( CHILD_OFF, "CHILD_OFF",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( CHILD_OFF_FAST, "CHILD_OFF_FAST",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( SET_SHUTDOWN_PROGRAM, "SET_SHUTDOWN_PROGRAM",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
+								  admin_command_handler, 
+								  "admin_command_handler", ADMINISTRATOR );
 	// Command handler for stashing the pool password
 	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
-								(CommandHandler)&store_pool_cred_handler,
-								"store_pool_cred_handler", NULL, CONFIG_PERM,
+								&store_pool_cred_handler,
+								"store_pool_cred_handler", CONFIG_PERM,
 								D_FULLDEBUG );
 
 	// Command handler for handling the ready state
 	daemonCore->Register_CommandWithPayload( DC_SET_READY, "DC_SET_READY",
-								  (CommandHandler)ready_command_handler,
-								  "ready_command_handler", 0, WRITE );
+								  ready_command_handler,
+								  "ready_command_handler", WRITE );
 	daemonCore->Register_CommandWithPayload( DC_QUERY_READY, "DC_QUERY_READY",
-								  (CommandHandler)ready_command_handler,
-								  "ready_command_handler", 0, READ );
+								  ready_command_handler,
+								  "ready_command_handler", READ );
 
 	/*
 	daemonCore->Register_Command( START_AGENT, "START_AGENT",
-					  (CommandHandler)admin_command_handler, 
-					  "admin_command_handler", 0, ADMINISTRATOR );
+					  admin_command_handler, 
+					  "admin_command_handler", ADMINISTRATOR );
 	*/
 
 	daemonCore->RegisterTimeSkipCallback(time_skip_handler,0);
@@ -753,7 +754,7 @@ main_init( int argc, char* argv[] )
 
 
 int
-ready_command_handler( Service*, int cmd, Stream* stm )
+ready_command_handler(int cmd, Stream* stm )
 {
 	ReliSock* stream = (ReliSock*)stm;
 	ClassAd cmdAd;
@@ -798,7 +799,7 @@ ready_command_handler( Service*, int cmd, Stream* stm )
 }
 
 int
-admin_command_handler( Service*, int cmd, Stream* stream )
+admin_command_handler(int cmd, Stream* stream )
 {
 	if(! AllowAdminCommands ) {
 		dprintf( D_FULLDEBUG, 
@@ -1307,6 +1308,21 @@ init_daemon_list()
 			}
 		}
 
+		if( param_boolean("AUTO_INCLUDE_CREDD_IN_DAEMON_LIST", false)) {
+			if (daemon_names.contains("SCHEDD")) {
+				if (!daemon_names.contains("CREDD")) {
+					dprintf(D_ALWAYS, "Adding CREDD to DAEMON_LIST.  This machine is running a SCHEDD and AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is TRUE)\n");
+					daemon_names.append("CREDD");
+				} else {
+					dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST. This machine is running a SCHEDD and CREDD is already explicitly listed.\n");
+				}
+			} else {
+				dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST.  AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is TRUE, but this machine is not running a SCHEDD.\n");
+			}
+		} else {
+			dprintf(D_SECURITY|D_VERBOSE, "Not modifying DAEMON_LIST.  AUTO_INCLUDE_CREDD_IN_DAEMON_LIST is false.\n");
+		}
+
 		daemons.ordered_daemon_names.create_union( daemon_names, false );
 
 		daemon_names.rewind();
@@ -1751,14 +1767,14 @@ main_pre_command_sock_init()
 	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
 	// to force the credmon to refresh everything and to prevent the schedd
 	// from starting up until credentials are ready.
-	p = param("SEC_CREDENTIAL_DIRECTORY");
-	if(p) {
-		MyString cred_file;
-		formatstr( cred_file, "%s%cCREDMON_COMPLETE", p, DIR_DELIM_CHAR );
-		dprintf(D_SECURITY, "CREDMON: unlinking %s.", cred_file.Value());
-		unlink(cred_file.Value());
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	if (cred_dir) {
+		credmon_clear_completion(credmon_type_KRB, cred_dir);
 	}
-	free(p);
+	cred_dir.set(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+	if (cred_dir) {
+		credmon_clear_completion(credmon_type_OAUTH, cred_dir);
+	}
 
  	// in case a shared port address file got left behind by an
  	// unclean shutdown, clean it up now before we create our

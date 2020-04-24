@@ -1153,17 +1153,16 @@ dc_touch_lock_files( )
 void
 set_dynamic_dir( const char* param_name, const char* append_str )
 {
-	char* val;
+	std::string val;
 	MyString newdir;
 
-	val = param( param_name );
-	if( ! val ) {
+	if( !param( val, param_name ) ) {
 			// nothing to do
 		return;
 	}
 
 		// First, create the new name.
-	newdir.formatstr( "%s.%s", val, append_str );
+	newdir.formatstr( "%s.%s", val.c_str(), append_str );
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
@@ -1200,24 +1199,45 @@ handle_dynamic_dirs()
 	if( ! DynamicDirs ) {
 		return;
 	}
+
+		// if the master is restarting, it already has the changes in
+		// the environment and we don't want to append yet another suffix,
+		// so bail out if we find our sentinel.
+	if(param_boolean("ALREADY_CREATED_LOCAL_DYNAMIC_DIRECTORIES", false)) {
+		return;
+	}
+
 	int mypid = daemonCore->getpid();
 	char buf[256];
 	// TODO: Picking IPv4 arbitrarily.
 	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().Value(), mypid );
 
+	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories with suffix: %s\n", buf);
 	set_dynamic_dir( "LOG", buf );
 	set_dynamic_dir( "SPOOL", buf );
 	set_dynamic_dir( "EXECUTE", buf );
 
 		// Final, evil hack.  Set the _condor_STARTD_NAME environment
 		// variable, so that the startd will have a unique name. 
-	sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
+	std::string cur_startd_name;
+	if(param(cur_startd_name, "STARTD_NAME")) {
+		sprintf( buf, "_%s_STARTD_NAME=%d@%s", myDistro->Get(), mypid, cur_startd_name.c_str());
+	} else {
+		sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
+	}
+
+		// insert modified startd name
+	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories and setting env %s\n", buf);
 	char* env_str = strdup( buf );
 	if( SetEnv(env_str) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_str );
 		exit( 4 );
 	}
+
+		// insert sentinel
+	char* acldd = strdup("_condor_ALREADY_CREATED_LOCAL_DYNAMIC_DIRECTORIES=TRUE");
+	SetEnv(acldd);
 }
 
 #if defined(UNIX)
@@ -1444,7 +1464,7 @@ check_core_files()
 
 
 static int
-handle_off_fast( Service*, int, Stream* stream)
+handle_off_fast(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_off_fast: failed to read end of message\n");
@@ -1458,7 +1478,7 @@ handle_off_fast( Service*, int, Stream* stream)
 
 	
 static int
-handle_off_graceful( Service*, int, Stream* stream)
+handle_off_graceful(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_off_graceful: failed to read end of message\n");
@@ -1483,7 +1503,7 @@ bool SigtermContinue::should_continue = true;
 
 
 static int
-handle_off_force( Service*, int, Stream* stream)
+handle_off_force(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_off_force: failed to read end of message\n");
@@ -1498,7 +1518,7 @@ handle_off_force( Service*, int, Stream* stream)
 }
 
 static int
-handle_off_peaceful( Service*, int, Stream* stream)
+handle_off_peaceful(int, Stream* stream)
 {
 	// Peaceful shutdown is the same as graceful, except
 	// there is no timeout waiting for things to finish.
@@ -1515,7 +1535,7 @@ handle_off_peaceful( Service*, int, Stream* stream)
 }
 
 static int
-handle_set_peaceful_shutdown( Service*, int, Stream* stream)
+handle_set_peaceful_shutdown(int, Stream* stream)
 {
 	// If the master could send peaceful shutdown signals, it would
 	// not be necessary to have a message for turning on the peaceful
@@ -1532,7 +1552,7 @@ handle_set_peaceful_shutdown( Service*, int, Stream* stream)
 }
 
 static int
-handle_set_force_shutdown( Service*, int, Stream* stream)
+handle_set_force_shutdown(int, Stream* stream)
 {
 	// If the master could send peaceful shutdown signals, it would
 	// not be necessary to have a message for turning on the peaceful
@@ -1551,7 +1571,7 @@ handle_set_force_shutdown( Service*, int, Stream* stream)
 
 
 static int
-handle_reconfig( Service*, int /* cmd */, Stream* stream )
+handle_reconfig( int /* cmd */, Stream* stream )
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
@@ -1567,12 +1587,13 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 }
 
 int
-handle_fetch_log( Service *, int cmd, ReliSock *stream )
+handle_fetch_log(int cmd, Stream *s )
 {
 	char *name = NULL;
 	int  total_bytes = 0;
 	int result;
 	int type = -1;
+	ReliSock *stream = (ReliSock *) s;
 
 	if ( cmd == DC_PURGE_LOG ) {
 		return handle_fetch_log_history_purge( stream );
@@ -1817,7 +1838,7 @@ handle_fetch_log_history_purge(ReliSock *s) {
 }
 
 int
-handle_dc_query_instance( Service*, int, Stream* stream)
+handle_dc_query_instance( int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_FULLDEBUG, "handle_dc_query_instance: failed to read end of message\n");
@@ -1850,7 +1871,7 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 
 
 static int
-handle_dc_start_token_request( Service*, int, Stream* stream)
+handle_dc_start_token_request(int, Stream* stream)
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) ||
@@ -2022,7 +2043,7 @@ handle_dc_start_token_request( Service*, int, Stream* stream)
 
 
 static int
-handle_dc_finish_token_request( Service*, int, Stream* stream)
+handle_dc_finish_token_request(int, Stream* stream)
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) ||
@@ -2119,7 +2140,7 @@ handle_dc_finish_token_request( Service*, int, Stream* stream)
 
 
 static int
-handle_dc_list_token_request( Service*, int, Stream* stream)
+handle_dc_list_token_request(int, Stream* stream)
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) || !stream->end_of_message())
@@ -2237,7 +2258,7 @@ handle_dc_list_token_request( Service*, int, Stream* stream)
 
 
 static int
-handle_dc_approve_token_request( Service*, int, Stream* stream)
+handle_dc_approve_token_request(int, Stream* stream)
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) || !stream->end_of_message())
@@ -2358,7 +2379,7 @@ handle_dc_approve_token_request( Service*, int, Stream* stream)
 
 
 static int
-handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
+handle_dc_auto_approve_token_request(int, Stream* stream )
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) || !stream->end_of_message())
@@ -2449,7 +2470,7 @@ handle_dc_auto_approve_token_request( Service*, int, Stream* stream )
 
 
 static int
-handle_dc_exchange_scitoken( Service*, int, Stream *stream)
+handle_dc_exchange_scitoken(int, Stream *stream)
 {
 	classad::ClassAd request_ad;
 	if (!getClassAd(stream, request_ad) ||
@@ -2554,7 +2575,7 @@ handle_dc_exchange_scitoken( Service*, int, Stream *stream)
 
 
 static int
-handle_dc_session_token( Service*, int, Stream* stream)
+handle_dc_session_token(int, Stream* stream)
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) ||
@@ -2658,7 +2679,7 @@ handle_dc_session_token( Service*, int, Stream* stream)
 }
 
 int
-handle_nop( Service*, int, Stream* stream)
+handle_nop(int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_FULLDEBUG, "handle_nop: failed to read end of message\n");
@@ -2669,7 +2690,7 @@ handle_nop( Service*, int, Stream* stream)
 
 
 int
-handle_invalidate_key( Service*, int, Stream* stream)
+handle_invalidate_key(int, Stream* stream)
 {
 	int result = 0;
 	char *key_id = NULL;
@@ -2711,7 +2732,7 @@ handle_invalidate_key( Service*, int, Stream* stream)
 }
 
 int
-handle_config_val( Service*, int idCmd, Stream* stream ) 
+handle_config_val(int idCmd, Stream* stream ) 
 {
 	char *param_name = NULL, *tmp;
 
@@ -2912,7 +2933,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 
 
 int
-handle_config( Service *, int cmd, Stream *stream )
+handle_config(int cmd, Stream *stream )
 {
 	char *admin = NULL, *config = NULL;
 	char *to_check = NULL;
@@ -3153,7 +3174,7 @@ dc_reconfig()
 }
 
 int
-handle_dc_sighup( Service*, int )
+handle_dc_sighup(int )
 {
 	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
 	dc_reconfig();
@@ -3169,7 +3190,7 @@ TimerHandler_main_shutdown_fast()
 
 
 int
-handle_dc_sigterm( Service*, int )
+handle_dc_sigterm(int )
 {
 		// Introduces a race condition.
 		// What if SIGTERM received while we are here?
@@ -3209,12 +3230,12 @@ handle_dc_sigterm( Service*, int )
 void
 TimerHandler_dc_sigterm()
 {
-	handle_dc_sigterm(NULL, SIGTERM);
+	handle_dc_sigterm(SIGTERM);
 }
 
 
 int
-handle_dc_sigquit( Service*, int )
+handle_dc_sigquit(int )
 {
 	static int been_here = FALSE;
 	if( been_here ) {
@@ -3954,13 +3975,13 @@ int dc_main( int argc, char** argv )
 
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( SIGHUP, "SIGHUP", 
-								 (SignalHandler)handle_dc_sighup,
+								 handle_dc_sighup,
 								 "handle_dc_sighup()" );
 	daemonCore->Register_Signal( SIGQUIT, "SIGQUIT", 
-								 (SignalHandler)handle_dc_sigquit,
+								 handle_dc_sigquit,
 								 "handle_dc_sigquit()" );
 	daemonCore->Register_Signal( SIGTERM, "SIGTERM", 
-								 (SignalHandler)handle_dc_sigterm,
+								 handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
 
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
@@ -4033,129 +4054,129 @@ int dc_main( int argc, char** argv )
 
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
-								  (CommandHandler)handle_reconfig,
-								  "handle_reconfig()", 0, WRITE );
+								  handle_reconfig,
+								  "handle_reconfig()", WRITE );
 
 	daemonCore->Register_Command( DC_RECONFIG_FULL, "DC_RECONFIG_FULL",
-								  (CommandHandler)handle_reconfig,
-								  "handle_reconfig()", 0, WRITE );
+								  handle_reconfig,
+								  "handle_reconfig()", WRITE );
 
 	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
-								  (CommandHandler)handle_config_val,
-								  "handle_config_val()", 0, READ );
+								  handle_config_val,
+								  "handle_config_val()", READ );
 		// Deprecated name for it.
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
-								  (CommandHandler)handle_config_val,
-								  "handle_config_val()", 0, READ );
+								  handle_config_val,
+								  "handle_config_val()", READ );
 
 		// The handler for setting config variables does its own
 		// authorization, so these two commands should be registered
 		// as "ALLOW" and the handler will do further checks.
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
-								  (CommandHandler)handle_config,
-								  "handle_config()", nullptr, DAEMON,
+								  handle_config,
+								  "handle_config()", DAEMON,
 								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
-								  (CommandHandler)handle_config,
-								  "handle_config()", nullptr, DAEMON,
+								  handle_config,
+								  "handle_config()", DAEMON,
 								  D_COMMAND, false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
-								  (CommandHandler)handle_off_fast,
-								  "handle_off_fast()", 0, ADMINISTRATOR );
+								  handle_off_fast,
+								  "handle_off_fast()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_OFF_GRACEFUL, "DC_OFF_GRACEFUL",
-								  (CommandHandler)handle_off_graceful,
-								  "handle_off_graceful()", 0, ADMINISTRATOR );
+								  handle_off_graceful,
+								  "handle_off_graceful()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_OFF_FORCE, "DC_OFF_FORCE",
-								  (CommandHandler)handle_off_force,
-								  "handle_off_force()", 0, ADMINISTRATOR );
+								  handle_off_force,
+								  "handle_off_force()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL",
-								  (CommandHandler)handle_off_peaceful,
-								  "handle_off_peaceful()", 0, ADMINISTRATOR );
+								  handle_off_peaceful,
+								  "handle_off_peaceful()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_SET_PEACEFUL_SHUTDOWN, "DC_SET_PEACEFUL_SHUTDOWN",
-								  (CommandHandler)handle_set_peaceful_shutdown,
-								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
+								  handle_set_peaceful_shutdown,
+								  "handle_set_peaceful_shutdown()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_SET_FORCE_SHUTDOWN, "DC_SET_FORCE_SHUTDOWN",
-								  (CommandHandler)handle_set_force_shutdown,
-								  "handle_set_force_shutdown()", 0, ADMINISTRATOR );
+								  handle_set_force_shutdown,
+								  "handle_set_force_shutdown()", ADMINISTRATOR );
 
 		// DC_NOP is for waking up select.  There is no need for
 		// security here, because anyone can wake up select anyway.
 		// This command is also used to gracefully close a socket
 		// that has been registered to read a command.
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ALLOW );
+								  handle_nop,
+								  "handle_nop()", ALLOW );
 
 		// the next several commands are NOPs registered at all permission
 		// levels, for security testing and diagnostics.  for now they all
 		// invoke the same function, but how they are authorized before calling
 		// it may vary depending on the configuration
 	daemonCore->Register_Command( DC_NOP_READ, "DC_NOP_READ",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, READ );
+								  handle_nop,
+								  "handle_nop()", READ );
 
 	daemonCore->Register_Command( DC_NOP_WRITE, "DC_NOP_WRITE",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, WRITE );
+								  handle_nop,
+								  "handle_nop()", WRITE );
 
 	daemonCore->Register_Command( DC_NOP_NEGOTIATOR, "DC_NOP_NEGOTIATOR",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, NEGOTIATOR );
+								  handle_nop,
+								  "handle_nop()", NEGOTIATOR );
 
 	daemonCore->Register_Command( DC_NOP_ADMINISTRATOR, "DC_NOP_ADMINISTRATOR",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADMINISTRATOR );
+								  handle_nop,
+								  "handle_nop()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_NOP_OWNER, "DC_NOP_OWNER",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, OWNER );
+								  handle_nop,
+								  "handle_nop()", OWNER );
 
 	daemonCore->Register_Command( DC_NOP_CONFIG, "DC_NOP_CONFIG",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, CONFIG_PERM );
+								  handle_nop,
+								  "handle_nop()", CONFIG_PERM );
 
 	daemonCore->Register_Command( DC_NOP_DAEMON, "DC_NOP_DAEMON",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, DAEMON );
+								  handle_nop,
+								  "handle_nop()", DAEMON );
 
 	daemonCore->Register_Command( DC_NOP_ADVERTISE_STARTD, "DC_NOP_ADVERTISE_STARTD",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADVERTISE_STARTD_PERM );
+								  handle_nop,
+								  "handle_nop()", ADVERTISE_STARTD_PERM );
 
 	daemonCore->Register_Command( DC_NOP_ADVERTISE_SCHEDD, "DC_NOP_ADVERTISE_SCHEDD",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADVERTISE_SCHEDD_PERM );
+								  handle_nop,
+								  "handle_nop()", ADVERTISE_SCHEDD_PERM );
 
 	daemonCore->Register_Command( DC_NOP_ADVERTISE_MASTER, "DC_NOP_ADVERTISE_MASTER",
-								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, ADVERTISE_MASTER_PERM );
+								  handle_nop,
+								  "handle_nop()", ADVERTISE_MASTER_PERM );
 
 
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
-								  (CommandHandler)handle_fetch_log,
-								  "handle_fetch_log()", 0, ADMINISTRATOR );
+								  handle_fetch_log,
+								  "handle_fetch_log()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
-								  (CommandHandler)handle_fetch_log,
-								  "handle_fetch_log_history_purge()", 0, ADMINISTRATOR );
+								  handle_fetch_log,
+								  "handle_fetch_log_history_purge()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
-								  (CommandHandler)handle_invalidate_key,
-								  "handle_invalidate_key()", 0, ALLOW );
+								  handle_invalidate_key,
+								  "handle_invalidate_key()", ALLOW );
 
 		// DC_QUERY_INSTANCE is for determining if you are talking to the correct instance of a daemon.
 		// There is no need for security here, the use case is a lambda function in AWS which won't have
 		// authorization to do anything else.
 	daemonCore->Register_Command( DC_QUERY_INSTANCE, "DC_QUERY_INSTANCE",
-								  (CommandHandler)handle_dc_query_instance,
-								  "handle_dc_query_instance()", 0, ALLOW );
+								  handle_dc_query_instance,
+								  "handle_dc_query_instance()", ALLOW );
 
 		//
 		// The time offset command is used to figure out what
@@ -4163,32 +4184,32 @@ int dc_main( int argc, char** argv )
 		// entity calling into us
 		//
 	daemonCore->Register_Command( DC_TIME_OFFSET, "DC_TIME_OFFSET",
-								  (CommandHandler)time_offset_receive_cedar_stub,
-								  "time_offset_cedar_stub", 0, DAEMON );
+								  time_offset_receive_cedar_stub,
+								  "time_offset_cedar_stub", DAEMON );
 
 		//
 		// Request a token that can be used to authenticat / authorize a future
 		// session using the TOKEN protocol.
 		//
 	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
-								(CommandHandler)handle_dc_session_token,
-								"handle_dc_session_token()", nullptr, DAEMON,
+								handle_dc_session_token,
+								"handle_dc_session_token()", DAEMON,
 								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// Start a token request workflow.
 		//
 	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
-								(CommandHandler)handle_dc_start_token_request,
-								"handle_dc_start_token_request()", nullptr, DAEMON,
+								handle_dc_start_token_request,
+								"handle_dc_start_token_request()", DAEMON,
 								  D_COMMAND, false, 0, &allow_perms );
 
 		//
 		// Poll for token request completion.
 		//
 	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
-								(CommandHandler)handle_dc_finish_token_request,
-								"handle_dc_finish_token_request()", nullptr, DAEMON,
+								handle_dc_finish_token_request,
+								"handle_dc_finish_token_request()", DAEMON,
 								  D_COMMAND, false, 0, &allow_perms );
 
 		//
@@ -4198,8 +4219,8 @@ int dc_main( int argc, char** argv )
 		// the user authorization.
 		//
 	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
-		(CommandHandler)handle_dc_list_token_request,
-		"handle_dc_list_token_request", 0, DAEMON, D_COMMAND, true, 0, &allow_perms );
+		handle_dc_list_token_request,
+		"handle_dc_list_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 		//
 		// Approve a token request.
@@ -4209,22 +4230,22 @@ int dc_main( int argc, char** argv )
 		// requests..
 		//
 	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
-		(CommandHandler)handle_dc_approve_token_request,
-		"handle_dc_approve_token_request", 0, DAEMON, D_COMMAND, true, 0, &allow_perms );
+		handle_dc_approve_token_request,
+		"handle_dc_approve_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
 
 		//
 		// Install an auto-approval rule
 		//
 	daemonCore->Register_CommandWithPayload( DC_AUTO_APPROVE_TOKEN_REQUEST, "DC_AUTO_APPROVE_TOKEN_REQUEST",
-		(CommandHandler)handle_dc_auto_approve_token_request,
-		"handle_dc_auto_approve_token_request", 0, ADMINISTRATOR );
+		handle_dc_auto_approve_token_request,
+		"handle_dc_auto_approve_token_request", ADMINISTRATOR );
 
 		//
 		// Exchange a SciToken for an equivalent HTCondor token.
 		//
 	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
-		(CommandHandler)handle_dc_exchange_scitoken,
-		"handle_dc_exchange_scitoken", 0, WRITE, D_COMMAND, true, 0, &allow_perms );
+		handle_dc_exchange_scitoken,
+		"handle_dc_exchange_scitoken", WRITE, D_COMMAND, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes

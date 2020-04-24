@@ -7,9 +7,10 @@ FROM centos:${EL}
 ARG EL
 ARG BUILDDATE
 ARG VERSION
+ARG SUFFIX
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}" \
+LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}${SUFFIX}" \
       org.label-schema.description="HTCondor ${VERSION} base image for RHEL ${EL}-compatible" \
       org.label-schema.vendor="HTCondor" \
       org.label-schema.license="Apache-2.0"
@@ -62,11 +63,7 @@ RUN \
 
 COPY base/supervisord.conf /etc/supervisord.conf
 COPY base/condor/*.conf /etc/condor/config.d/
-COPY base/start.sh /start.sh
-COPY base/update-config /update-config
-COPY base/update-secrets /update-secrets
-RUN chown root:root /start.sh /update-config /update-secrets; \
-    chmod 0700 /start.sh /update-config /update-secrets
+COPY base/start.sh base/update-config base/update-secrets /
 
 CMD ["/bin/bash", "-x", "/start.sh"]
 

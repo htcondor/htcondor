@@ -877,7 +877,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			capabilities.insert(std::make_pair(sinful, capability));
 		} else {
 			dprintf(D_SECURITY, "No capability present for ad from %s.\n", sinful.c_str());
-			dPrintAd(D_SECURITY, *ad, false);
+			dPrintAd(D_SECURITY, *ad);
 		}
 	}
 	submitterAds.Close();
@@ -1658,11 +1658,17 @@ negotiationTime ()
 			// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
 
 			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", true)) {
-				int weightedIdle = numidle;
-				int weightedRunning = numrunning;
+				double weightedIdle = numidle;
+				double weightedRunning = numrunning;
 
-				ad->LookupInteger(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
-				ad->LookupInteger(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+				int r = ad->LookupFloat(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
+				if (!r) {
+					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_IDLE_JOBS\n");
+				}
+				r = ad->LookupFloat(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+				if (!r) {
+					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_RUNNING_JOBS\n");
+				}
 
             	group->requested += weightedRunning + weightedIdle;
 			} else {
@@ -7182,6 +7188,10 @@ static int jobsInSlot(ClassAd &request, ClassAd &offer) {
 	offer.LookupInteger(ATTR_MEMORY, availMemory);
 	EvalInteger(ATTR_REQUEST_CPUS, &request, &offer, requestCpus);
 	EvalInteger(ATTR_REQUEST_MEMORY, &request, &offer, requestMemory);
+
+		// Eventually should support fractional Cpus...
+	if (requestCpus < 1) requestCpus = 1;
+	if (requestMemory < 1) requestMemory = 1;
 
 	return MIN( availCpus / requestCpus,
 	            availMemory / requestMemory );

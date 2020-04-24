@@ -2331,7 +2331,7 @@ type=string
 tags=sshd_wrapper
 
 [CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY]
-default=false
+default=true
 type=bool
 tags=condor_ssh_to_job
 
@@ -3989,6 +3989,12 @@ version=8.1.1
 type=bool
 customization=expert
 
+[AUTO_INCLUDE_CREDD_IN_DAEMON_LIST]
+default=false
+version=8.9.7
+type=bool
+customization=expert
+
 [COLLECTOR_USES_SHARED_PORT]
 default=true
 version=8.1.4
@@ -4188,12 +4194,6 @@ default=false
 type=bool
 tags=shadow
 restart=true
-
-[SHADOW_SKIP_DATAFLOW_JOBS]
-default=false
-type=bool
-tags=shadow,dataflow
-description=Skip dataflow jobs (output files exist, more recent than input files)?
 
 [SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
 default=25%
@@ -4550,6 +4550,13 @@ version=7.9.2
 type=int
 description=Maximum size of transferred output files
 tags=schedd
+
+[MAX_REMAP_RECURSIONS]
+default=128
+version=8.8.9
+type=int
+description=Maximum number of filetransfer remaps to apply before aborting
+tags=file_transfer
 
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
@@ -5410,6 +5417,40 @@ default=$(MAX_DEFAULT_LOG)
 [CREDD_OAUTH_MODE]
 default=true
 type=bool
+
+[CREDMON_KRBAFS]
+default=$(SBIN)/condor_credmon_krbafs
+win32_default=
+type=path
+
+# standard API endpoints for common OAuth token providers
+[BOX_AUTHORIZATION_URL]
+default=https://account.box.com/api/oauth2/authorize
+type=string
+[BOX_TOKEN_URL]
+default=https://api.box.com/oauth2/token
+type=string
+
+[GDRIVE_AUTHORIZATION_URL]
+default=https://accounts.google.com/o/oauth2/v2/auth
+type=string
+[GDRIVE_TOKEN_URL]
+default=https://oauth2.googleapis.com/token
+type=string
+
+[ONEDRIVE_AUTHORIZATION_URL]
+default=https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+type=string
+[ONEDRIVE_TOKEN_URL]
+default=https://login.microsoftonline.com/common/oauth2/v2.0/token
+type=string
+
+[DROPBOX_AUTHORIZATION_URL]
+default=https://www.dropbox.com/oauth2/authorize
+type=string
+[DROPBOX_TOKEN_URL]
+default=https://api.dropboxapi.com/oauth2/token
+type=string
 
 # benchmarking knobs
 [BenchmarkTimer]
@@ -6342,5 +6383,15 @@ win32_default : @end
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
 
+
+[$FEATURE.KRBAFS]
+description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
+default : @end
+	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRBAFS
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
+	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/krb_cred_producer
+	USE_KEYRING_SESSIONS=TRUE
+@end
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

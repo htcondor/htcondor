@@ -13,7 +13,7 @@ RUN yum install -y epel-release \
  && yum clean all
 
 # Install the minimal things to make a tar build without lots of externals like GSI, man pages, MUNGE
-RUN yum install -y systemtap-sdt-devel patch c-ares-devel autoconf automake libtool perl-Time-HiRes perl-Archive-Tar perl-XML-Parser perl-Digest-MD5 gcc-c++ make flex byacc pcre-devel openssl-devel krb5-devel libvirt-devel bind-utils m4 libX11-devel libXScrnSaver-devel curl-devel expat-devel openldap-devel python-devel redhat-rpm-config  sqlite-devel glibc-static libuuid-devel bison bison-devel libtool-ltdl-devel pam-devel nss-devel libxml2-devel libstdc++-devel libstdc++-static python36-devel boost169-devel boost169-static boost169-python2 boost169-python3 \
+RUN yum install -y systemtap-sdt-devel patch c-ares-devel autoconf automake libtool perl-Time-HiRes perl-Archive-Tar perl-XML-Parser perl-Digest-MD5 gcc-c++ make flex byacc pcre-devel openssl-devel krb5-devel libvirt-devel bind-utils m4 libX11-devel libXScrnSaver-devel curl-devel expat-devel openldap-devel python-devel redhat-rpm-config  sqlite-devel glibc-static libuuid-devel bison bison-devel libtool-ltdl-devel pam-devel nss-devel libxml2-devel libstdc++-devel libstdc++-static python36-devel boost169-devel boost169-static boost169-python2 boost169-python3 python-sphinx python-sphinx_rtd_theme \
  && yum clean all
 
 # Install all the rest of the dependecies for a UW style RPM build, e.g. GSI, CREAM, etc.

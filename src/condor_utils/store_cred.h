@@ -33,31 +33,60 @@ void SecureZeroMemory(void *, size_t);
 const int SUCCESS = 1; 					// it worked!
 const int FAILURE = 0;					// communication error
 const int FAILURE_BAD_PASSWORD = 2;		// bad (wrong) password
-const int FAILURE_NOT_SUPPORTED = 3;	// user switching not supported
+const int FAILURE_NO_IMPERSONATE = 3;	// user switching not supported
 const int FAILURE_NOT_SECURE = 4;		// channel is insecure
 const int FAILURE_NOT_FOUND = 5;		// user not found
+// error codes new for 8.9.6
+const int SUCCESS_PENDING = 6;			// The credential has not yet been processed by the credmon
+const int FAILURE_NOT_ALLOWED = 7;		// authenticated user is not allowed to do the operation
+const int FAILURE_BAD_ARGS = 8;			// argument missing or arguments contradict each other
+const int FAILURE_PROTOCOL_MISMATCH = 9; // not all of the correct information was sent on the wire, client and server my be mismatched.
+const int FAILURE_CREDMON_TIMEOUT = 10;  // The credmon did not process credentials within the timeout period
+const int FAILURE_CONFIG_ERROR = 11;    // an operation failed because of a configuration error
 
 // not a return code - reserved for caller's use
 const int FAILURE_ABORTED = -1;	
 
+const int STORE_CRED_USER_KRB = 0x20;
+const int STORE_CRED_USER_PWD = 0x24;
+const int STORE_CRED_USER_OAUTH = 0x28;
+const int STORE_CRED_LEGACY = 0x40;
+const int STORE_CRED_WAIT_FOR_CREDMON = 0x80; // wait for a credmon to process the users credential(s) before returning
+const int STORE_CRED_LEGACY_PWD = STORE_CRED_LEGACY | STORE_CRED_USER_PWD | 0x40;	 // prior to 8.9.6 the CREDD only supports this mode
+
 // store cred modes
-const int ADD_MODE = 100;
-const int DELETE_MODE = 101;
-const int QUERY_MODE = 102;
+const int GENERIC_ADD = 0;
+const int GENERIC_DELETE = 1;
+const int GENERIC_QUERY = 2;
+const int GENERIC_CONFIG = 3;
 
 const char ADD_CREDENTIAL[] = "add";
 const char DELETE_CREDENTIAL[] = "delete";
 const char QUERY_CREDENTIAL[] = "query";
+const char CONFIG_CREDENTIAL[] = "config";
 
-const int STORE_CRED_FIRST_MODE = ADD_MODE;
+const int ADD_KRB_MODE = STORE_CRED_USER_KRB | GENERIC_ADD;
+const int DELETE_KRB_MODE = STORE_CRED_USER_KRB | GENERIC_DELETE;
+const int QUERY_KRB_MODE = STORE_CRED_USER_KRB | GENERIC_QUERY;
+const int CONFIG_KRB_MODE = STORE_CRED_USER_KRB | GENERIC_CONFIG; 
 
+const int ADD_PWD_MODE = STORE_CRED_USER_PWD | GENERIC_ADD;
+const int DELETE_PWD_MODE = STORE_CRED_USER_PWD | GENERIC_DELETE;
+const int QUERY_PWD_MODE = STORE_CRED_USER_PWD | GENERIC_QUERY;
+const int CONFIG_PWD_MODE = STORE_CRED_USER_PWD | GENERIC_CONFIG; 
+
+const int ADD_OAUTH_MODE = STORE_CRED_USER_OAUTH | GENERIC_ADD;
+const int DELETE_OAUTH_MODE = STORE_CRED_USER_OAUTH | GENERIC_DELETE;
+const int QUERY_OAUTH_MODE = STORE_CRED_USER_OAUTH | GENERIC_QUERY;
+const int CONFIG_OAUTH_MODE = STORE_CRED_USER_OAUTH | GENERIC_CONFIG; 
+
+
+const int STORE_CRED_FIRST_MODE = STORE_CRED_USER_KRB;
 // config mode for debugging
 #if defined(WIN32)
-const int CONFIG_MODE = 103;
-const char CONFIG_CREDENTIAL[] = "config";
-const int STORE_CRED_LAST_MODE = CONFIG_MODE;
+const int STORE_CRED_LAST_MODE = STORE_CRED_LEGACY_PWD + GENERIC_CONFIG;
 #else
-const int STORE_CRED_LAST_MODE = QUERY_MODE;
+const int STORE_CRED_LAST_MODE = STORE_CRED_LEGACY_PWD + GENERIC_QUERY;
 #endif
 
 #define POOL_PASSWORD_USERNAME "condor_pool"
@@ -65,20 +94,46 @@ const int STORE_CRED_LAST_MODE = QUERY_MODE;
 #define MAX_PASSWORD_LENGTH 255
 
 class Daemon;
+namespace classad { class ClassAd; }
 
 class Service;
-int store_pool_cred_handler(class Service *, int, Stream *s);
-int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
-int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode, int &cred_modified);
-int store_cred_handler(void *, int i, Stream *s);
-int get_cred_handler(void *, int i, Stream *s);
+int store_pool_cred_handler(int, Stream *s);
+
+// talk to credd to query, delete or store a credential, use this one for passwords, but NOT kerberose or Oauth 
+int do_store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
+
+// talk to credd to query, delete, or store a credential, use this one for password, kerberos, or oauth
+// pass return value to store_cred_failed to determine if the return is an error or other information
+long long do_store_cred(
+	const char *user,                   // IN: full username in form user@domain
+	int mode,                           // IN: one of the command/modes above. ADD_KRB_MODE, DELETE_OAUTH_MODE, etc
+	const unsigned char * cred,         // IN: binary credential if GENERIC_ADD, may not contain \0 if mode is ADD_PWD_MODE
+	int credlen,                        // IN: size of binary credential
+	classad::ClassAd &return_ad, // OUT: some modes will return information here
+	classad::ClassAd* ad=NULL,	// IN: optional additional information (for future use)
+	Daemon *d = NULL);                  // IN: optional daemon to contact, defaults to local schedd
+
+bool store_cred_failed(long long ret, int mode, const char ** errstring=NULL);
+
+// store a password into a file on unix and into the registry on Windows
+int store_cred_password(const char *user, const char *pass, int mode);
+// store a binary blob, (kerberos ticket or OAuth token), on successful ADD ccfile will be set to a filename to watch for if a credmon needs to process the blob
+long long store_cred_blob(const char *user, int mode, const unsigned char * cred, int credlen, const classad::ClassAd* ad, MyString & ccfile);
+// command handler for STORE_CRED in Credd, Master and Schedd
+int store_cred_handler(int i, Stream *s);
+// command handler for CREDD_GET_PASSWD in Credd and Shadow
+int cred_get_password_handler(int i, Stream *s);
+// command handler for CREDD_GET_CRED in Shadow
+int cred_get_cred_handler(int i, Stream *s);
+
 bool read_from_keyboard(char* buf, int maxlength, bool echo = true);
 char* get_password(void);	// get password from user w/o echo on the screen
-int addCredential(const char* user, const char* pw, Daemon *d = NULL);
-int deleteCredential(const char* user, const char* pw, Daemon *d = NULL);
-int queryCredential(const char* user, Daemon *d = NULL);  // just tell me if I have one stashed
+//int addCredential(const char* user, const char* pw, Daemon *d = NULL);
+//int deleteCredential(const char* user, const char* pw, Daemon *d = NULL);
+//int queryCredential(const char* user, Daemon *d = NULL);  // just tell me if I have one stashed
 
 #if defined(WIN32)
+// attempt to login with given username/password to see if Windows considers it valid
 bool isValidCredential( const char *user, const char* pw );
 #endif
 
@@ -88,7 +143,7 @@ bool isValidCredential( const char *user, const char* pw );
 	called.
 	@return malloced string with the password, or NULL if failure.
 */
-char* getStoredCredential(const char *user, const char *domain);
+char* getStoredPassword(const char *user, const char *domain);
 
 /** Get a named credential from disk. */
 bool getNamedCredential(const std::string &cred, std::string &contents, CondorError *err);

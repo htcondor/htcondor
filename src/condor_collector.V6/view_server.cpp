@@ -84,25 +84,25 @@ void ViewServer::Init()
 	// install command handlers for queries
 
     daemonCore->Register_Command(QUERY_HIST_STARTD,"QUERY_HIST_STARTD",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_STARTD_LIST,"QUERY_HIST_STARTD_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTOR,"QUERY_HIST_SUBMITTOR",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTOR_LIST,"QUERY_HIST_SUBMITTOR_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTORGROUPS,"QUERY_HIST_SUBMITTORGROUPS",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTORGROUPS_LIST,"QUERY_HIST_SUBMITTORGROUPS_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_GROUPS,"QUERY_HIST_GROUPS",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_GROUPS_LIST,"QUERY_HIST_GROUPS_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_CKPTSRVR,"QUERY_HIST_CKPTSRVR",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_CKPTSRVR_LIST,"QUERY_HIST_CKPTSRVR_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
 
 	int InitialDelay=param_integer("UPDATE_INTERVAL",300);
 
@@ -219,7 +219,7 @@ void ViewServer::Shutdown()
 // HandleQuery to take care of replying to the query
 //-------------------------------------------------------------------
 
-int ViewServer::ReceiveHistoryQuery(Service* /*s*/, int command, Stream* sock)
+int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 {
 	dprintf(D_ALWAYS,"Got history query %d\n",command);
 

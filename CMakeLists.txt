@@ -19,7 +19,7 @@
 ##########################################################################
 # Set project
 project(CONDOR)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 # Turn off deprecations warnings for cmake 3.x
 # Need to wait to fix these after we drop older cmake versions
@@ -37,7 +37,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "8.9.6")
+set(VERSION "8.9.8")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
@@ -72,7 +72,6 @@ list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_S
 
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
-include (CommandTarget)
 include (CloneInstall)
 include (FindMultiple)
 include (FindSoName)
@@ -90,7 +89,6 @@ include (PackageDate)
 include (SystemSpecificInformations)
 include (CondorPackageConfig) # setup packaging variables needed prior to install targets
 include (CondorGlob)
-include (CondorSelectiveGlob)
 include (CondorSetLinkLibs)
 include (CondorExe)
 include (CondorDaemon)
@@ -105,8 +103,6 @@ include (CTest)
 include (CondorPLTest)
 include (CondorExeTest)
 #include (CondorUnitTest)
-include (SrcTargetRef)
-include (DumpLocalFlags)
 include (CondorPreExternal)
 include (CondorPostExternal)
 include (CondorConfigure)     # will initiate the configure

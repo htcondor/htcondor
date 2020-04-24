@@ -22,7 +22,14 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 ## create targets
 file( GLOB collectorRmvElements Example* )
 
-condor_selective_glob( "CollectorPlugin*;collector_stats.*;collector_engine.*;view_server.*;collector.*" CollectorLibSrcs)
+set(CollectorLibSrcs
+	CollectorPluginManager.cpp
+	collector_stats.cpp
+	collector_engine.cpp
+	view_server.cpp
+	collector.cpp
+)
+
 condor_static_lib ( collectorlib "${CollectorLibSrcs}")
 
 condor_daemon ( collector

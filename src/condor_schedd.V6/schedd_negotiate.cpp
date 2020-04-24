@@ -604,8 +604,12 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 	}
 
 	case END_NEGOTIATE:
-		dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
-				 m_jobs_matched );
+		if (RRLRequestIsPending()) {
+			dprintf(D_ALWAYS, "Finished sending rrls to negotiator\n");
+		} else {
+			dprintf( D_ALWAYS, "Negotiation ended - %d jobs matched\n",
+					 m_jobs_matched );
+		}
 
 		m_negotiation_finished = true;
 		break;

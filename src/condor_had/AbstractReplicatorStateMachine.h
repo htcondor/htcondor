@@ -108,8 +108,8 @@ protected:
 	 * Note        : returns 0 upon success, 1 - upon failure
 	 * Description : reaper of downloading 'condor_transferer' process 
      */
-	static int
-    downloadReplicaTransfererReaper(Service* service, int pid, int exitStatus);
+	int
+    downloadReplicaTransfererReaper(int pid, int exitStatus);
 	/* Function    : uploadReplicaTransfererReaper
      * Arguments   : service    - the daemon, for which the transfer has ended
      *               pid        - id of the uploading 'condor_transferer' 
@@ -120,8 +120,8 @@ protected:
      * Note        : returns 0 upon success, 1 - upon failure
      * Description : reaper of uploading 'condor_transferer' process
      */
-    static int
-    uploadReplicaTransfererReaper(Service* service, int pid, int exitStatus);
+    int
+    uploadReplicaTransfererReaper(int pid, int exitStatus);
 	/* Function   : broadcastVersion
 	 * Arguments  : command - id that is sent to other replication daemons
 	 *						  along with the local version

@@ -30,6 +30,7 @@
 #include "directory.h"
 #include "secure_file.h"
 #include "zkm_base64.h"
+#include "directory_util.h"
 
 
 #if defined(Solaris)
@@ -453,7 +454,7 @@ do_REMOTE_syscall()
 
 		errno = 0;
 		if ( access_ok ) {
-			rval = safe_open_wrapper_follow( path , flags , lastarg);
+			rval = safe_open_wrapper_follow( path , flags | O_LARGEFILE , lastarg);
 		} else {
 			rval = -1;
 			errno = EACCES;
@@ -556,7 +557,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		errno = 0;
-		rval = write( fd , buf , len);
+		rval = full_write( fd , buf , len);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -593,14 +594,14 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		errno = 0;
-		rval = lseek( fd , offset , whence);
+		off_t new_position = lseek( fd , offset , whence);
 		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		dprintf( D_SYSCALLS, "\trval = %ld, errno = %d\n", new_position, terrno );
 
 		syscall_sock->encode();
-		result = ( syscall_sock->code(rval) );
+		result = ( syscall_sock->code(new_position) );
 		ASSERT( result );
-		if( rval < 0 ) {
+		if( new_position < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}
@@ -1265,7 +1266,7 @@ case CONDOR_getfile:
 		if(fd >= 0) {
 			struct stat info;
 			int rc = stat(path, &info);
-			ASSERT(rc)
+			ASSERT(rc == 0)
 			length = info.st_size;
 			buf = (void *)malloc( (unsigned)length );
 			ASSERT( buf );
@@ -2178,13 +2179,13 @@ case CONDOR_getdir:
 
 		bool trust_cred_dir = param_boolean("TRUST_CREDENTIAL_DIRECTORY", false);
 
-		std::string cred_dir_name;
-		if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
+		auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+		if (!cred_dir) {
+			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY_OAUTH defined.\n");
 			return -1;
 		}
-		cred_dir_name += DIR_DELIM_CHAR;
-		cred_dir_name += user;
+		MyString cred_dir_name;
+		dircat(cred_dir, user.c_str(), cred_dir_name);
 
 		// what we want to do is send only the ".use" creds, and only
 		// the ones required for this job.  we will need to get that

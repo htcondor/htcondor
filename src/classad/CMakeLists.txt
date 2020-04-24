@@ -124,12 +124,14 @@ condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysb
 
 if (NOT WINDOWS)
 
-  add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
+  add_library(classads_objects OBJECT ${ClassadSrcs})
+  set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
+  add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one which all of condor depends upon
   condor_set_link_libs( classads PUBLIC ${PCRE_FOUND};${CMAKE_DL_LIBS})
   set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
   if (LINUX OR DARWIN)  
-  	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
+  	add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 11 )
 	condor_set_link_libs( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )

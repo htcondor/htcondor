@@ -63,7 +63,7 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	unsigned char *keybuf = Condor_Crypt_Base::randomKey(keylen);
 	size_t i;
 	for(i=0;i<keylen;i++) {
-		formatstr(m_connect_id,"%02x",keybuf[i]);
+		formatstr_cat(m_connect_id,"%02x",keybuf[i]);
 	}
 	free( keybuf );
 }
@@ -713,7 +713,6 @@ CCBClient::RegisterReverseConnectCallback()
 			"CCB_REVERSE_CONNECT",
 			CCBClient::ReverseConnectCommandHandler,
 			"CCBClient::ReverseConnectCommandHandler",
-			NULL,
 			ALLOW);
 	}
 
@@ -771,7 +770,7 @@ CCBClient::UnregisterReverseConnectCallback()
 }
 
 int
-CCBClient::ReverseConnectCommandHandler(Service *,int cmd,Stream *stream)
+CCBClient::ReverseConnectCommandHandler(int cmd,Stream *stream)
 {
 	// This is a static function called when the command socket
 	// receives a reverse connect command.  Our job is to direct

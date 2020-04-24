@@ -16,6 +16,9 @@
  # 
  ############################################################### 
 
-condor_glob(queueHdrs queueSrcs "")
+set(queueSrcs
+jobmatch.cpp
+queue.cpp
+)
 
 condor_exe(condor_q "${queueHdrs};${queueSrcs}" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

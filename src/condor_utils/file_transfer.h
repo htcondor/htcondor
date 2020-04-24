@@ -21,6 +21,7 @@
 #define _FILE_TRANSFER_H
 
 #include "condor_common.h"
+#include "condor_classad.h"
 #include "condor_daemon_core.h"
 #include "MyString.h"
 #include "HashTable.h"
@@ -179,6 +180,9 @@ class FileTransfer final: public Service {
 	/** @return 1 on success, 0 on failure */
 	int UploadCheckpointFiles( bool blocking = true );
 
+	/** @return 1 on success, 0 on failure */
+	int UploadFailureFiles( bool blocking = true );
+
 		/** For non-blocking (i.e., multithreaded) transfers, the registered
 			handler function will be called on each transfer completion.  The
 			handler can call FileTransfer::GetInfo() for statistics on the
@@ -243,9 +247,9 @@ class FileTransfer final: public Service {
 
 	inline bool IsClient() {return user_supplied_key == TRUE;}
 
-	static int HandleCommands(Service *,int command,Stream *s);
+	static int HandleCommands(int command,Stream *s);
 
-	static int Reaper(Service *, int pid, int exit_status);
+	static int Reaper(int pid, int exit_status);
 
 	static bool SetServerShouldBlock( bool block );
 
@@ -399,6 +403,7 @@ class FileTransfer final: public Service {
   private:
 
 	bool uploadCheckpointFiles{false};
+	bool uploadFailureFiles{false};
 	bool TransferFilePermissions{false};
 	bool DelegateX509Credentials{false};
 	bool PeerDoesTransferAck{false};

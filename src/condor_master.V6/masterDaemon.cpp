@@ -948,7 +948,12 @@ int daemon::RealStart( )
 		if( isDC ) {
 			daemon_sock_buf = name_in_config_file;
 			daemon_sock_buf.lower_case();
-			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str() );
+			// Because the master only starts daemons named in the config
+			// file, and those names are by definition unique, we don't
+			// need to further uniquify them with a sequence number, and
+			// not doing so makes it possible to construct certain
+			// addresses, rather than discover them.
+			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str(), false );
 			daemon_sock = daemon_sock_buf.c_str();
 			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
 		}
@@ -1505,6 +1510,17 @@ daemon::Kill( int sig )
 		return;
 	}
 	int status;
+#ifdef WIN32
+	// On windows we don't have any way to send a sigterm to a daemon that doesn't have a command port
+	// but we can safely generate a Ctrl+Break because we know that the process was started with CREATE_NEW_PROCESS_GROUP
+	// We do this here rather than in windows_softkill because generating the ctrl-break works best
+	// if sent by a parent process rather than by a sibling process.  This does nothing if the daemon
+	// doesn't have a console, so after we do this go ahead and fall down to the code that does a windows_softkill
+	if ( ! isDC && (sig == SIGTERM)) {
+		BOOL rbrk = GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pid);
+		dprintf(D_ALWAYS, "Sent Ctrl+Break to non-daemoncore daemon %d, ret=%d\n", pid, rbrk);
+	}
+#endif
 	status = daemonCore->Send_Signal(pid,sig);
 	if ( status == FALSE )
 		status = -1;
@@ -2766,7 +2782,7 @@ Daemons::CleanupBeforeRestart()
 	for (int i=3; i < max_fds; i++) {
 		int flag = fcntl(i,F_GETFD,0);
 		if( flag != -1 ) {
-			fcntl(i,F_SETFD,flag | 1);
+			(void) fcntl(i,F_SETFD,flag | 1);
 		}
 	}
 #endif

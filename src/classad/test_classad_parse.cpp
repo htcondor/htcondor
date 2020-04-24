@@ -255,7 +255,7 @@ static int get_image_size()
 				"%ld %ld %ld %ld "
 				"%lu %lu %lu %lu %lu "
 				"%ld %ld %ld %ld %ld %ld "
-				"%lu %lu %llu %llu %lu %lu %lu %lu %lu %lu %lu "
+				"%lu %lu %ld %llu %lu %lu %lu %lu %lu %lu %lu "
 				"%ld %ld %ld %ld %lu",
 				&procRaw.pid, s, &c, &procRaw.ppid, 
 				&i, &i, &i, &i, 

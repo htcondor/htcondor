@@ -1756,7 +1756,7 @@ AttribValue * add_WinPerf_Query(
     // allocation, with the AttribValue at the start. 
     //
 	int cbQuery  = sizeof(query) + query.cchInst+1;
-	int cchAttr  = strlen(pszAttr) + 1;
+	int cchAttr  = (int)strlen(pszAttr) + 1;
 	int cb = sizeof(AttribValue) + cbQuery + cchAttr;
 	AttribValue * pav = (AttribValue*)malloc(cb);
 	if (pav) 

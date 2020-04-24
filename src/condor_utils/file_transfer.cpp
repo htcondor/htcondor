@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_classad.h"
 #include "condor_debug.h"
 #include "string_list.h"
 #include "condor_classad.h"
@@ -226,7 +227,7 @@ private:
 
 const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
 const int GO_AHEAD_UNDEFINED = 0;
-const int GO_AHEAD_ONCE = 1;    // send one file and ask again
+//const int GO_AHEAD_ONCE = 1;    // send one file and ask again
 				// Currently, there is no usage of GO_AHEAD_ONCE; if we have a
 				// token, we assume it lasts forever.
 
@@ -755,11 +756,15 @@ bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	bool is_dataflow = false;
+	int newest_input_timestamp = -1;
+	int oldest_output_timestamp = -1;
 	std::set<int> input_timestamps;
 	std::set<int> output_timestamps;
+	std::string executable_file;
 	std::string iwd;
 	std::string input_files;
 	std::string output_files;
+	std::string stdin_file;
 	std::string token;
 	struct stat file_stat;
 
@@ -781,7 +786,6 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	}
 
 	// Parse the list of output files
-	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
 	std::stringstream os( output_files );
 	while ( getline( os, token, ',' ) ) {
 		// Stat each file. Add the last-modified timestamp to set of timestamps.
@@ -796,12 +800,38 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		}
 	}
 
-	// If the oldest output file is more recent than the newest input files,
-	// then this is a dataflow job.
-	if ( !input_timestamps.empty() && !output_timestamps.empty() ) {
-		auto newest_input = input_timestamps.rbegin();
-		auto oldest_output = output_timestamps.begin();
-		is_dataflow = *oldest_output > *newest_input;
+	if ( !input_timestamps.empty() ) {
+
+		newest_input_timestamp = *input_timestamps.rbegin();
+
+		// If the oldest output file is more recent than the newest input file,
+		// then this is a dataflow job.
+		if ( !output_timestamps.empty() ) {
+			oldest_output_timestamp = *output_timestamps.begin();
+			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
+		}
+
+		// If the executable is more recent than the newest input file, 
+		// then this is a dataflow job.
+		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
+		if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
+			int executable_file_timestamp = file_stat.st_mtime;
+			if ( executable_file_timestamp > newest_input_timestamp ) {
+				is_dataflow = true;
+			}
+		}
+
+		// If the standard input file is more recent than newest input,
+		// then this is a dataflow job.
+		job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
+		if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
+			if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
+				int stdin_file_timestamp = file_stat.st_mtime;
+				if ( stdin_file_timestamp > newest_input_timestamp ) {
+					is_dataflow = true;
+				}
+			}
+		}
 	}
 
 	return is_dataflow;
@@ -886,14 +916,14 @@ FileTransfer::Init(
 	if ( !CommandsRegistered  ) {
 		CommandsRegistered = TRUE;
 		daemonCore->Register_Command(FILETRANS_UPLOAD,"FILETRANS_UPLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
+				&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",WRITE);
 		daemonCore->Register_Command(FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
+				&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",WRITE);
 		ReaperId = daemonCore->Register_Reaper("FileTransfer::Reaper",
-							(ReaperHandler)&FileTransfer::Reaper,
-							"FileTransfer::Reaper()",NULL);
+							&FileTransfer::Reaper,
+							"FileTransfer::Reaper()");
 		if (ReaperId == 1) {
 			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
 		}
@@ -1297,6 +1327,14 @@ FileTransfer::UploadCheckpointFiles( bool blocking ) {
 	return rv;
 }
 
+int
+FileTransfer::UploadFailureFiles( bool blocking ) {
+	uploadFailureFiles = true;
+	int rv = UploadFiles( blocking, true );
+	uploadFailureFiles = false;
+	return rv;
+}
+
 void
 FileTransfer::DetermineWhichFilesToSend() {
 	// IntermediateFiles is dynamically allocated (some jobs never use it).
@@ -1318,7 +1356,9 @@ FileTransfer::DetermineWhichFilesToSend() {
 
 			// This should Just Work(TM), but I haven't tested it yet and
 			// I don't know that anybody will every actually use it.
+			if( EncryptCheckpointFiles ) { delete EncryptCheckpointFiles; }
 			EncryptCheckpointFiles = new StringList( NULL, "," );
+			if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
 			DontEncryptCheckpointFiles = new StringList( NULL, "," );
 
 			// Yes, this is stupid, but it'd be a big change to fix.
@@ -1328,6 +1368,32 @@ FileTransfer::DetermineWhichFilesToSend() {
 
 			return;
 		}
+	}
+
+	// See uploadCheckpointFiles comments, above.
+	if( uploadFailureFiles ) {
+		if( CheckpointFiles ) { delete CheckpointFiles; }
+		CheckpointFiles = new StringList( NULL, "," );
+
+		// If we'd transfer output or error on success, do so on failure also.
+		if( OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() ) ) {
+			CheckpointFiles->append( JobStdoutFile.c_str() );
+		}
+		if( OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() ) ) {
+			CheckpointFiles->append( JobStderrFile.c_str() );
+		}
+
+		if( EncryptCheckpointFiles ) { delete EncryptCheckpointFiles; }
+		EncryptCheckpointFiles = new StringList( NULL, "," );
+
+		if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
+		DontEncryptCheckpointFiles = new StringList( NULL, "," );
+
+		FilesToSend = CheckpointFiles;
+		EncryptFiles = EncryptCheckpointFiles;
+		DontEncryptFiles = DontEncryptCheckpointFiles;
+
+		return;
 	}
 
 	if ( upload_changed_files && last_download_time > 0 ) {
@@ -1462,7 +1528,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 }
 
 int
-FileTransfer::HandleCommands(Service *, int command, Stream *s)
+FileTransfer::HandleCommands(int command, Stream *s)
 {
 	FileTransfer *transobject;
 	char *transkey = NULL;
@@ -1570,7 +1636,7 @@ FileTransfer::SetServerShouldBlock( bool block )
 }
 
 int
-FileTransfer::Reaper(Service *, int pid, int exit_status)
+FileTransfer::Reaper(int pid, int exit_status)
 {
 	FileTransfer *transobject;
 	if (!TransThreadTable || TransThreadTable->lookup(pid,transobject) < 0) {
@@ -2467,7 +2533,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						}
 						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
 							static_cast<uint64_t>(0), [](uint64_t val, const ReuseInfo &info) {return info.size() + val;});
-						dprintf(D_FULLDEBUG, "There are %lu bytes to retrieve.\n", to_retrieve);
+						dprintf(D_FULLDEBUG, "There are %llu bytes to retrieve.\n",
+							static_cast<unsigned long long>(to_retrieve));
 						if (to_retrieve) {
 							CondorError err;
 							if (!m_reuse_dir->ReserveSpace(to_retrieve, 3600, tag, reservation_id,
@@ -2477,6 +2544,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 									" %s\n", err.getFullText().c_str());
 								retrieved_files.clear();
 								reuse_info.clear();
+							}
+							for (const auto &info : reuse_info) {
+								dprintf(D_FULLDEBUG, "File we will reuse: %s\n", info.filename().c_str());
 							}
 						}
 						ad.Insert("ReuseList", retrieved_list.release());
@@ -2541,7 +2611,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								std::string signed_url;
 								CondorError err;
 								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
-									dprintf(D_ALWAYS, "DoDownload: Failure when signing URL: %s", err.getFullText().c_str());
+								    std::string errorMessage;
+								    formatstr( errorMessage, "DoDownload: Failure when signing URL '%s': %s", url_value.c_str(), err.message() );
+								    result_ad.Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_DownloadFileError );
+								    result_ad.Assign( ATTR_HOLD_REASON_SUBCODE, err.code() );
+								    result_ad.Assign( ATTR_HOLD_REASON, errorMessage.c_str() );
+								    dprintf( D_ALWAYS, "%s\n", errorMessage.c_str() );
+
 									signed_urls.push_back("");
 								} else {
 									signed_urls.push_back(signed_url);
@@ -2567,7 +2643,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				s->encode();
 					// Send resulting list of signed URLs, encrypted if possible.
 				classad::References encrypted_attrs{"SignList"};
-				if (!putClassAd(s, result_ad, 0, &encrypted_attrs) || !s->end_of_message()) {
+				if (!putClassAd(s, result_ad, 0, NULL, &encrypted_attrs) || !s->end_of_message()) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -3592,7 +3668,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
 	int rc;
 	MyString fullname;
-	filesize_t bytes;
+	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes = -1; // unlimited
 	bool is_the_executable;
 	bool upload_success = false;
@@ -3751,7 +3827,23 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			if (htcondor::generate_presigned_url(jobAd, src_url, "GET", signed_url, err)) {
 				fileitem.setSrcName(signed_url);
 			} else {
-				dprintf(D_ALWAYS, "DoUpload: Failed to sign URL - %s\n", err.getFullText().c_str());
+				std::string errorMessage;
+				formatstr( errorMessage, "DoUpload: Failure when signing URL '%s': %s", src_url.c_str(), err.message() );
+				dprintf( D_ALWAYS, "%s\n",errorMessage.c_str() );
+
+				// While (* total_bytes) and numFiles should both be 0
+				// at this point, we should probably be explicit.
+				filesize_t logTCPStats = 0;
+				return ExitDoUpload( & logTCPStats,
+					/* num files */ 0,
+					s, saved_priv, socket_default_crypto,
+					/* upload success */ false,
+					/* do upload ACK (required to put job on hold) */ true,
+					/* do download ACK */ false,
+					/* try again */ false,
+					CONDOR_HOLD_CODE_UploadFileError,
+					/* hold subcode */ 3,
+					errorMessage.c_str(), __LINE__ );
 			}
 		}
 	}
@@ -3890,6 +3982,28 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv(-1);
 		}
 		s->encode();
+
+		std::string holdReason;
+		if( signed_ad.LookupString( ATTR_HOLD_REASON, holdReason ) ) {
+			int holdCode = CONDOR_HOLD_CODE_DownloadFileError;
+			signed_ad.LookupInteger( ATTR_HOLD_REASON_CODE, holdCode );
+
+			int holdSubCode = -1;
+			signed_ad.LookupInteger( ATTR_HOLD_REASON_SUBCODE, holdSubCode );
+
+			// While (* total_bytes) and numFiles should both be 0
+			// at this point, we should probably be explicit.
+			filesize_t logTCPStats = 0;
+			return ExitDoUpload( & logTCPStats,
+				/* num files */ 0,
+				s, saved_priv, socket_default_crypto,
+				/* upload success */ false,
+				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
+				/* do download ACK */ false,
+				/* try again */ false,
+				holdCode, holdSubCode, holdReason.c_str(), __LINE__ );
+		}
+
 		classad::Value value;
 		classad_shared_ptr<classad::ExprList> exprlist;
 		if (signed_ad.EvaluateAttr("SignList", value) && value.IsSListValue(exprlist))
@@ -4325,12 +4439,18 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					// don't end the message, it's done below.
 					// Always encrypt the URL as it might contain an authorization.
 					const classad::References encrypted_attrs{"OutputDestination"};
-					if(!putClassAd(s, file_info, 0, &encrypted_attrs)) {
+					if(!putClassAd(s, file_info, 0, NULL, &encrypted_attrs)) {
 						dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 						return_and_resetpriv( -1 );
 					}
 
-					// compute the size of what we sent
+					//
+					// This comment used to read 'compute the size of what we sent',
+					// but obviously the wire format and the string format of
+					// ClassAds are not the same and can't be expected to be the
+					// same length.  Since the size will be wrong anyway, simplify
+					// future security audits but not printing the private attrs.
+					//
 					MyString junkbuf;
 					sPrintAd(junkbuf, file_info);
 					bytes = junkbuf.Length();
@@ -4530,7 +4650,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				first_failed_line_number = __LINE__;
 			}
 		}
-		total_bytes += result;
+		*total_bytes += result;
 	}
 
 	// If we had an error when parsing the data manifest, it occurred far too early for us to
@@ -4899,12 +5019,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		_set_priv(saved_priv,__FILE__,DoUpload_exit_line,1);
 	}
 
-#ifdef WIN32
-		// unsigned __int64 to float not implemented on Win32
-	bytesSent += (float)(signed __int64)*total_bytes;
-#else
 	bytesSent += *total_bytes;
-#endif
 
 	if(do_upload_ack) {
 		// peer is still expecting us to send a file command
@@ -5625,7 +5740,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
 	if ( output_file == NULL ) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open curl_plugin output file "
-			"%s.\n", input_filename.c_str() );
+			"%s.\n", output_filename.c_str() );
 		return GET_FILE_PLUGIN_FAILED;
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {

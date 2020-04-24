@@ -48,6 +48,7 @@
 #include "NegotiationUtils.h"
 #include "param_info.h" // for BinaryLookup
 #include "classad_helpers.h"
+#include "metric_units.h"
 #include "submit_utils.h"
 
 #include "list.h"
@@ -333,7 +334,9 @@ const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros 
 SubmitHash::FNSETATTRS SubmitHash::is_special_request_resource(const char * key)
 {
 	if (YourStringNoCase(SUBMIT_KEY_RequestCpus) == key) return &SubmitHash::SetRequestCpus;
-	if (YourStringNoCase("request_cpu") == key) return &SubmitHash::SetRequestCpus;
+	if (YourStringNoCase("request_cpu") == key) return &SubmitHash::SetRequestCpus; // so we get an error for this common mistake
+	if (YourStringNoCase(SUBMIT_KEY_RequestGpus) == key) return &SubmitHash::SetRequestGpus;
+	if (YourStringNoCase("request_gpu") == key) return &SubmitHash::SetRequestGpus; // so we get an error for this common mistake
 	if (YourStringNoCase(SUBMIT_KEY_RequestDisk) == key) return &SubmitHash::SetRequestDisk;
 	if (YourStringNoCase(SUBMIT_KEY_RequestMemory) == key) return &SubmitHash::SetRequestMem;
 	return NULL;
@@ -756,82 +759,6 @@ int SubmitHash::check_and_universalize_path( MyString &path )
 	return retval;
 }
 
-
-// parse a input string for an int64 value optionally followed by K,M,G,or T
-// as a scaling factor, then divide by a base scaling factor and return the
-// result by ref. base is expected to be a multiple of 2 usually  1, 1024 or 1024*1024.
-// result is truncated to the next largest value by base.
-//
-// Return value is true if the input string contains only a valid int, false if
-// there are any unexpected characters other than whitespace.  value is
-// unmodified when false is returned.
-//
-// this function exists to regularize the former ad-hoc parsing of integers in the
-// submit file, it expands parsing to handle 64 bit ints and multiplier suffixes.
-// Note that new classads will interpret the multiplier suffixes without
-// regard for the fact that the defined units of many job ad attributes are
-// in Kbytes or Mbytes. We need to parse them in submit rather than
-// passing the expression on to the classad code to be parsed to preserve the
-// assumption that the base units of the output is not bytes.
-//
-bool parse_int64_bytes(const char * input, int64_t & value, int base)
-{
-	const char * tmp = input;
-	while (isspace(*tmp)) ++tmp;
-
-	char * p;
-#ifdef WIN32
-	int64_t val = _strtoi64(tmp, &p, 10);
-#else
-	int64_t val = strtol(tmp, &p, 10);
-#endif
-
-	// allow input to have a fractional part, so "2.2M" would be valid input.
-	// this doesn't have to be very accurate, since we round up to base anyway.
-	double fract = 0;
-	if (*p == '.') {
-		++p;
-		if (isdigit(*p)) { fract += (*p - '0') / 10.0; ++p; }
-		if (isdigit(*p)) { fract += (*p - '0') / 100.0; ++p; }
-		if (isdigit(*p)) { fract += (*p - '0') / 1000.0; ++p; }
-		while (isdigit(*p)) ++p;
-	}
-
-	// if the first non-space character wasn't a number
-	// then this isn't a simple integer, return false.
-	if (p == tmp)
-		return false;
-
-	while (isspace(*p)) ++p;
-
-	// parse the multiplier postfix
-	int64_t mult = 1;
-	if (!*p) mult = base;
-	else if (*p == 'k' || *p == 'K') mult = 1024;
-	else if (*p == 'm' || *p == 'M') mult = 1024*1024;
-	else if (*p == 'g' || *p == 'G') mult = (int64_t)1024*1024*1024;
-	else if (*p == 't' || *p == 'T') mult = (int64_t)1024*1024*1024*1024;
-	else return false;
-
-	val = (int64_t)((val + fract) * mult + base-1) / base;
-
-	// if we to to here and we are at the end of the string
-	// then the input is valid, return true;
-	if (!*p || !p[1]) { 
-		value = val;
-		return true; 
-	}
-
-	// Tolerate a b (as in Kb) and whitespace at the end, anything else and return false)
-	if (p[1] == 'b' || p[1] == 'B') p += 2;
-	while (isspace(*p)) ++p;
-	if (!*p) {
-		value = val;
-		return true;
-	}
-
-	return false;
-}
 
 /*
 ** Make a wild guess at the size of the image represented by this a.out.
@@ -1580,9 +1507,39 @@ public:
 	virtual ~SubmitHashEnvFilter( void ) { };
 	virtual bool ImportFilter( const MyString &var,
 							   const MyString &val ) const;
+
+	// take a string of the form  x* !y* *z* !bar
+	// and split it into two string lists
+	// items that start with ! go into the blacklist (without the leading !)
+	// all other items go into the whitelist.  leading and trailing whitespace is trimmed
+	// comma, semicolon and whitespace are item steparators
+	void AddToImportWhiteBlackList(const char * list) {
+		StringTokenIterator it(list,40,",; \t\r\n");
+		MyString name;
+		for (const char * str = it.first(); str != NULL; str = it.next()) {
+			if (*str == '!') {
+				name = str+1; name.trim();
+				if (!name.empty()) {
+					m_black.append(name.c_str());
+				}
+			} else {
+				name = str; name.trim();
+				if (!name.empty()) {
+					m_white.append(name.c_str());
+				}
+			}
+		}
+	}
+	// clear the white and black lists for Import()
+	void ClearImportWhiteBlackList() {
+		m_black.clearAll();
+		m_white.clearAll();
+	}
 private:
 	bool m_env1;
 	bool m_env2;
+	mutable StringList m_black;
+	mutable StringList m_white;
 };
 bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &val ) const
 {
@@ -1610,6 +1567,14 @@ bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &va
 	{
 		// Don't override submit file environment settings --
 		// check if environment variable is already set.
+		return false;
+	}
+	// if there is a blacklist, and this nmake matches, filter it
+	if (!m_black.isEmpty() && m_black.contains_anycase_withwildcard(var.Value())) {
+		return false;
+	}
+	// if there is a whitelist and this name does not match, filter it
+	if (!m_white.isEmpty() && !m_white.contains_anycase_withwildcard(var.Value())) {
 		return false;
 	}
 	return true;
@@ -1676,12 +1641,23 @@ int SubmitHash::SetEnvironment()
 
 	// if getenv == TRUE, merge the variables from the user's environment that
 	// are not already set in the envobject
-	if (submit_param_bool(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt, false)) {
-		if (param_boolean("SUBMIT_ALLOW_GETENV", true)) {
-			envobject.Import( );
-		} else {
+	auto_free_ptr envlist(submit_param(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt));
+	if (envlist) {
+		if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
 			push_error(stderr, "\ngetenv command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
 			ABORT_AND_RETURN(1);
+		}
+		// getenv can be a boolean, or it can be a whitelist/blacklist
+		bool getenv_is_true = false;
+		if (string_is_boolean_param(envlist, getenv_is_true)) {
+			if (getenv_is_true) {
+				envobject.Import();
+			}
+		} else {
+			// getenv is not a boolean, it must be a blacklist/whitelist
+			envobject.AddToImportWhiteBlackList(envlist);
+			envobject.Import();
+			envobject.ClearImportWhiteBlackList();
 		}
 	}
 
@@ -5003,6 +4979,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// The special processing for require_cuda_version is in SetRequirements().
 	{SUBMIT_KEY_CUDAVersion, ATTR_CUDA_VERSION, SimpleSubmitKeyword::f_as_string },
 
+	// Dataflow jobs
+	{SUBMIT_KEY_SkipIfDataflow, ATTR_SKIP_IF_DATAFLOW, SimpleSubmitKeyword::f_as_bool },
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods
@@ -5406,7 +5385,7 @@ int SubmitHash::SetRequestCpus(const char * key)
 	RETURN_IF_ABORT();
 
 	if (YourStringNoCase("request_cpu") == key || YourStringNoCase("RequestCpu") == key) {
-		push_warning(stderr, "request_cpu is not a valid submit keyword, did you mean request_cpus?\n");
+		push_warning(stderr, "%s is not a valid submit keyword, did you mean request_cpus?\n", key);
 		return 0;
 	}
 
@@ -5415,7 +5394,7 @@ int SubmitHash::SetRequestCpus(const char * key)
 		if (job->Lookup(ATTR_REQUEST_CPUS)) {
 			// we already have a value for request cpus, use that
 		} else if ( ! clusterAd) {
-			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_memory from somewhere
+			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_cpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_cpus keyword
 			req_cpus.set(param("JOB_DEFAULT_REQUESTCPUS"));
@@ -5427,6 +5406,39 @@ int SubmitHash::SetRequestCpus(const char * key)
 			// they want it to be undefined
 		} else {
 			AssignJobExpr(ATTR_REQUEST_CPUS, req_cpus);
+		}
+	}
+
+	RETURN_IF_ABORT();
+	return 0;
+}
+
+int SubmitHash::SetRequestGpus(const char * key)
+{
+	RETURN_IF_ABORT();
+
+	if (YourStringNoCase("request_gpu") == key || YourStringNoCase("RequestGpu") == key) {
+		push_warning(stderr, "%s is not a valid submit keyword, did you mean request_gpus?\n", key);
+		return 0;
+	}
+
+	auto_free_ptr req_gpus(submit_param(SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS));
+	if ( ! req_gpus) {
+		if (job->Lookup(ATTR_REQUEST_GPUS)) {
+			// we already have a value for request cpus, use that
+		} else if ( ! clusterAd) {
+			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_gpus from somewhere
+			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
+			// the job has a request_gpus keyword
+			req_gpus.set(param("JOB_DEFAULT_REQUESTGPUS"));
+		}
+	}
+
+	if (req_gpus) {
+		if (YourStringNoCase("undefined") == req_gpus) {
+			// they want it to be undefined
+		} else {
+			AssignJobExpr(ATTR_REQUEST_GPUS, req_gpus);
 		}
 	}
 
@@ -5695,6 +5707,7 @@ int SubmitHash::SetRequestResources()
 			RETURN_IF_ABORT();
 			continue;
 		}
+
 		const char * rname = key + strlen(SUBMIT_KEY_RequestPrefix);
 		const size_t min_tag_len = 2;
 		// resource name should be nonempty at least 2 characters long and not start with _
@@ -5716,6 +5729,7 @@ int SubmitHash::SetRequestResources()
 	// this is a bit redundant, but guarantees that we honor the submit file, but also give the code
 	// a chance to fetch the JOB_DEFAULT_REQUEST* params.
 	if ( ! lookup(SUBMIT_KEY_RequestCpus)) { SetRequestCpus(SUBMIT_KEY_RequestCpus); }
+	if ( ! lookup(SUBMIT_KEY_RequestGpus)) { SetRequestGpus(SUBMIT_KEY_RequestGpus); }
 	if ( ! lookup(SUBMIT_KEY_RequestDisk)) { SetRequestDisk(SUBMIT_KEY_RequestDisk); }
 	if ( ! lookup(SUBMIT_KEY_RequestMemory)) { SetRequestMem(SUBMIT_KEY_RequestMemory); }
 
@@ -6036,6 +6050,16 @@ int SubmitHash::SetRequirements()
 				already_warned_requirements_mem = true;
 			}
 		}
+
+		/* we don't need to do this here so long as it's this simple. search for  "Request" just a few lines below
+		expr = job->Lookup(ATTR_REQUEST_GPUS);
+		if (expr && ! machine_refs.count( "GPUs" )) {
+			double val = 0;
+			if ( ! ExprTreeIsLiteralNumber(expr, val) || (val > 1.0)) {
+				answer += " && (TARGET.Gpus >= " ATTR_REQUEST_GPUS ")";
+			}
+		}
+		*/
 	}
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID ) {
@@ -6189,6 +6213,14 @@ int SubmitHash::SetRequirements()
 			bool preserveRelativePaths = false;
 			if( job->LookupBool(ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths) ) {
 				if( preserveRelativePaths ) {
+					addVersionCheck = true;
+				}
+			}
+
+			std::string whenString;
+			if( job->LookupString(ATTR_WHEN_TO_TRANSFER_OUTPUT, whenString) ) {
+				auto when = getFileTransferOutputNum(whenString.c_str());
+				if( when == FTO_ON_SUCCESS ) {
 					addVersionCheck = true;
 				}
 			}
@@ -6525,7 +6557,8 @@ int SubmitHash::SetVMParams()
 		AssignJobString(ATTR_JOB_VM_TYPE, VMType.c_str());
 		RETURN_IF_ABORT();
 	} else {
-		job->LookupString(ATTR_JOB_VM_TYPE, VMType);
+		// VMType already set, no need to check return value again
+		(void) job->LookupString(ATTR_JOB_VM_TYPE, VMType);
 	}
 
 	// so we can easly do case-insensitive comparisons of the vmtype
@@ -6853,7 +6886,7 @@ int SubmitHash::process_vm_input_files(StringList & input_files, long long * acc
 				// in practice, we will check the sizes of files here in submit
 				// but not when doing late materialization
 				if (accumulate_size_kb) {
-					accumulate_size_kb += calc_image_size_kb(tmp.Value());
+					*accumulate_size_kb += calc_image_size_kb(tmp.Value());
 				}
 
 			}
@@ -6923,7 +6956,7 @@ int SubmitHash::process_input_file_list(StringList * input_list, long long * acc
 			// in practice, we will check the sizes of files here in submit
 			// but not when doing late materialization
 			if (accumulate_size_kb) {
-				accumulate_size_kb += calc_image_size_kb(tmp.Value());
+				*accumulate_size_kb += calc_image_size_kb(tmp.Value());
 			}
 		}
 		return count;
@@ -7351,8 +7384,8 @@ int SubmitHash::SetTransferFiles()
 		bool StreamStdout = false;
 		bool StreamStderr = false;
 
-		job->LookupString(ATTR_JOB_OUTPUT,output);
-		job->LookupString(ATTR_JOB_ERROR,error);
+		(void) job->LookupString(ATTR_JOB_OUTPUT,output);
+		(void) job->LookupString(ATTR_JOB_ERROR,error);
 		job->LookupBool(ATTR_STREAM_OUTPUT, StreamStdout);
 		job->LookupBool(ATTR_STREAM_ERROR, StreamStderr);
 
@@ -7670,8 +7703,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 #endif
 
 	baseJob.Assign(ATTR_JOB_REMOTE_WALL_CLOCK, 0.0);
-	baseJob.Assign(ATTR_JOB_LOCAL_USER_CPU,    0.0);
-	baseJob.Assign(ATTR_JOB_LOCAL_SYS_CPU,     0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_USER_CPU,   0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_SYS_CPU,    0.0);
 	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,   0.0);
@@ -8713,6 +8744,7 @@ int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::st
 
 void SubmitHash::warn_unused(FILE* out, const char *app)
 {
+	if (SubmitMacroSet.size <= 0) return;
 	if ( ! app) app = "condor_submit";
 
 	// Force non-zero ref count for DAG_STATUS and FAILED_COUNT

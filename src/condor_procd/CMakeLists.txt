@@ -20,11 +20,27 @@
 file( GLOB ProcdRmvElements *_test* proc_family_client* proc_family_io*
 local_client.UNIX* procd_ctl* gidd_alloc*)
 
+set(ProcClientElements
+	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_client.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_io.cpp
+)
+
 if (WINDOWS)
 	set (PROCD_WIN_LINK_LIBS psapi)
-	condor_selective_glob ( "proc_family_client*;proc_family_io*;local_client.*" ProcClientElements)
-else(WINDOWS)
-    condor_selective_glob( "proc_family_client*;proc_family_io*;local_client.*;named_pipe_reader*;named_pipe_writer*;named_pipe_util*;named_pipe_watchdog*" ProcClientElements )
+	list(APPEND ProcClientElements
+		${CMAKE_CURRENT_SOURCE_DIR}/local_server.WINDOWS.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/local_client.WINDOWS.cpp
+	)
+else()
+	list(APPEND ProcClientElements
+		${CMAKE_CURRENT_SOURCE_DIR}/named_pipe_reader.unix.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/named_pipe_writer.unix.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/named_pipe_util.unix.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/named_pipe_watchdog.unix.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/named_pipe_watchdog_server.unix.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/local_server.UNIX.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/local_client.UNIX.cpp
+	)
 endif(WINDOWS)
 
 set( ProcdUtilsSrcs "${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp;../condor_utils/condor_full_io.cpp;../condor_utils/condor_blkng_full_disk_io.cpp;../condor_utils/selector.cpp;../condor_procapi/procapi.cpp;../condor_procapi/processid.cpp;../condor_procapi/procapi_killfamily.cpp;../condor_starter.V6.1/cgroup.linux.cpp" )

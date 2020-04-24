@@ -132,16 +132,13 @@ StarterMgr::printStarterInfo( int debug_level )
 
 
 void
-StarterMgr::publish( ClassAd* ad, amask_t mask )
+StarterMgr::publish(ClassAd* ad)  // all of this should be IS_STATIC()
 {
-	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
-		return;
-	}
 	Starter *tmp_starter;
 	StringList ability_list;
 	starters.Rewind();
 	while( starters.Next(tmp_starter) ) {
-		tmp_starter->publish( ad, mask, &ability_list );
+		tmp_starter->publish( ad, &ability_list );
 	}
 		// finally, print out all the abilities we added into the
 		// classad so that other folks can know what we did.

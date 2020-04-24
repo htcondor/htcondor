@@ -372,6 +372,9 @@ FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
 	}
 #ifndef WIN32	
 	if (m_delete == 1) {
+		if (file == NULL) {
+			EXCEPT("FileLock::SetFdFpFile(). Programmer error: deleting lock with null filename");
+		}
 		char *nPath = CreateHashName(file);	
 		SetPath(nPath);	
 		delete []nPath;
@@ -524,6 +527,10 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 }
 
 
+// fstat can't really fail, but to quell static analysis,
+// we stuff the result of fstat here.
+static int dummyGlobal;
+
 bool
 FileLock::obtain( LOCK_TYPE t )
 {
@@ -582,7 +589,7 @@ FileLock::obtain( LOCK_TYPE t )
 			// if we deal with our own fd and are not unlocking
 		if (m_delete == 1 && t != UN_LOCK){
 			struct stat si; 
-			fstat(m_fd, &si);
+			dummyGlobal = fstat(m_fd, &si);
 				// no more hard links ... it was deleted while we were waiting
 				// in that case we need to reopen and restart
 			if ( si.st_nlink < 1 ){

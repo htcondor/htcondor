@@ -213,6 +213,7 @@ public:
 			true if the failure is deemed transient and will therefore
 			be automatically tried again (e.g. when the shadow reconnects).
 		*/
+	virtual void setJobFailed( void );
 	virtual bool transferOutput( bool &transient_failure ) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 
@@ -285,6 +286,9 @@ public:
 
 	void setCredPath( const char* path );
 	const char* getCredPath( void ) { return job_CredPath; };
+
+	void setKrb5CCName( const char* path );
+	const char* getKrb5CCName( void ) { return job_Krb5CCName; };
 
 		/**
 		   Send a periodic update ClassAd to our controller.  The
@@ -485,6 +489,7 @@ protected:
 	std::string m_job_update_ad_file;
 
 	char* job_CredPath;
+	char* job_Krb5CCName;
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;

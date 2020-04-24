@@ -67,7 +67,9 @@ Depends: adduser,
          ${perl:Depends},
          ${python:Depends},
          ${shlibs:Depends}
-Recommends: ecryptfs-utils
+Recommends: ecryptfs-utils,
+            libglobus-gss-assist3,
+            openssh-server
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,

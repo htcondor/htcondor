@@ -71,27 +71,28 @@ extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 /* CStarter class implementation */
 
-CStarter::CStarter()
+CStarter::CStarter() : 
+	jic(NULL),
+	m_deferred_job_update(false),
+	job_exit_status(0),
+	jobUniverse(CONDOR_UNIVERSE_VANILLA),
+	Execute(NULL),
+	orig_cwd(NULL),
+	is_gridshell(false),
+	ShuttingDown(FALSE),
+	starter_stdin_fd(-1),
+	starter_stdout_fd(-1),
+	starter_stderr_fd(-1),
+	suspended(false),
+	deferral_tid(-1),
+	pre_script(NULL),
+	post_script(NULL),
+	m_privsep_helper(NULL),
+	m_configured(false),
+	m_job_environment_is_ready(false),
+	m_all_jobs_done(false),
+	m_shutdown_exit_code(STARTER_EXIT_NORMAL)
 {
-	Execute = NULL;
-	orig_cwd = NULL;
-	is_gridshell = false;
-	ShuttingDown = FALSE;
-	jic = NULL;
-	jobUniverse = CONDOR_UNIVERSE_VANILLA;
-	pre_script = NULL;
-	post_script = NULL;
-	starter_stdin_fd = -1;
-	starter_stdout_fd = -1;
-	starter_stderr_fd = -1;
-	deferral_tid = -1;
-	suspended = false;
-	m_privsep_helper = NULL;
-	m_configured = false;
-	m_job_environment_is_ready = false;
-	m_all_jobs_done = false;
-	m_deferred_job_update = false;
-	m_shutdown_exit_code = STARTER_EXIT_NORMAL;
 }
 
 
@@ -320,6 +321,7 @@ CStarter::Config()
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
 			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
 		}
+		m_reuse_dir->PrintInfo(true);
 	} else {
 		m_reuse_dir.reset();
 	}
@@ -394,10 +396,10 @@ CStarter::ShutdownGraceful( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownGraceful when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return 0;
 }
 
@@ -405,10 +407,10 @@ CStarter::ShutdownGraceful( void )
  * DC Shutdown Fast Wrapper
  * We notify our JIC that we got a shutdown fast call
  * then invoke ShutdownFast() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
- */ 
+ */
 int
 CStarter::RemoteShutdownFast(int)
 {
@@ -466,10 +468,10 @@ CStarter::ShutdownFast( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownFast when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return ( false );
 }
 
@@ -477,7 +479,7 @@ CStarter::ShutdownFast( void )
  * DC Remove Job Wrapper
  * We notify our JIC that we got a remove call
  * then invoke Remove() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
@@ -498,7 +500,7 @@ CStarter::RemoteRemove( int )
 		dprintf( D_FULLDEBUG, "Got Remove when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -571,11 +573,11 @@ CStarter::RemoteHold( int )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
-int 
+int
 CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 {
 		// A Condor daemon on the submit side (e.g. schedd) wishes to
@@ -1599,7 +1601,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// Use LD_PRELOAD to force an implementation of getpwnam
 		// into the process that returns a valid shell
 #ifdef LINUX
-	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", false)) {
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
 		std::string lib;
 		param(lib, "LIB");
 		std::string getpwnampath = lib + "/libgetpwnam.so";
@@ -1726,7 +1728,7 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -2232,7 +2234,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 		this->allJobsDone();
 		ret = false;
 	}
-	
+
 	return ( ret );
 }
 
@@ -2918,7 +2920,7 @@ CStarter::allJobsDone( void )
 			// JIC::allJobsDone returned true: we're ready to move on.
 		bRet=transferOutput();
 	}
-	
+
 	if (m_deferred_job_update){
 		jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, 0 );
 	}
@@ -2933,6 +2935,14 @@ CStarter::transferOutput( void )
 {
 	UserProc *job;
 	bool transient_failure = false;
+
+	if( recorded_job_exit_status ) {
+		bool exitStatusSpecified = false;
+		int desiredExitStatus = computeDesiredExitStatus( "", this->jic->jobClassAd(), & exitStatusSpecified );
+		if( exitStatusSpecified && job_exit_status != desiredExitStatus ) {
+			jic->setJobFailed();
+		}
+	}
 
 	if (jic->transferOutput(transient_failure) == false) {
 
@@ -3217,18 +3227,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
-	if(param_boolean("CREDD_OAUTH_MODE", false)) {
-		const char* sandbox_cred_dir = jic->getCredPath();
-		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
-	} else {
-		// kerberos credential cache (in sandbox)
-		const char* krb5ccname = jic->getCredPath();
-		if( krb5ccname && (krb5ccname[0] != '\0') ) {
-			// using env_name as env_value
-			env_name = "FILE:";
-			env_name += krb5ccname;
-			proc_env->SetEnv( "KRB5CCNAME", env_name );
-		}
+	// put OAuth creds directory into the environment
+	if (jic->getCredPath()) {
+		proc_env->SetEnv("_CONDOR_CREDS", jic->getCredPath());
+	}
+
+	// kerberos credential cache (in sandbox)
+	const char* krb5ccname = jic->getKrb5CCName();
+	if( krb5ccname && (krb5ccname[0] != '\0') ) {
+		// using env_name as env_value
+		env_name = "FILE:";
+		env_name += krb5ccname;
+		proc_env->SetEnv( "KRB5CCNAME", env_name );
 	}
 
 		// path to the output ad, if any
@@ -3768,7 +3778,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3793,7 +3803,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3831,4 +3841,10 @@ CStarter::WriteAdFiles()
 	}
 
 	return ret_val;
+}
+
+void
+CStarter::RecordJobExitStatus(int status) {
+	recorded_job_exit_status = true;
+	job_exit_status = status;
 }

@@ -19,9 +19,13 @@
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*;history_helper.cpp" qmgmtElements )
-file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
+set(qmgmtElements
+	${CMAKE_CURRENT_SOURCE_DIR}/qmgmt_send_stubs.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/qmgr_lib_support.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/qmgr_job_updater.cpp
+)
 
+file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 
 condor_daemon( schedd "${scheddRmvElements}"
   "${CONDOR_LIBS};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}")

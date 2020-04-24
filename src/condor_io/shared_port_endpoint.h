@@ -35,7 +35,8 @@
 class SharedPortEndpoint: Service {
  public:
 
-	static MyString GenerateEndpointName(char const *daemon_name=NULL);
+	static MyString GenerateEndpointName(char const *daemon_name=NULL,
+		bool addSequenceNo = true);
 
 	SharedPortEndpoint(char const *sock_name=NULL);
 	~SharedPortEndpoint();

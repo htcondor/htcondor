@@ -35,7 +35,7 @@ public:
 
 	void init( void );
 
-	void publish( ClassAd* ad, amask_t mask );
+	void publish( ClassAd* ad );
 	
 	Claim* addClaim(int lease_duration);
 	bool removeClaim( Claim* c );

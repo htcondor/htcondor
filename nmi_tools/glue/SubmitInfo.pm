@@ -288,6 +288,27 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'nmi-build:x86_64_Debian9'  => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian10' => 'x86_64_Debian9',
+
+	##########################################################################
+	# Platform CentOS 8 on x86_64
+	##########################################################################
+	'x86_64_CentOS8'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args },
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	'nmi-build:x86_64_CentOS8' => 'x86_64_CentOS8',
 
 	##########################################################################
 	# Platform RHEL 7 on x86_64
@@ -402,6 +423,7 @@ our %submit_info = (
 	'x86_rhap_6.7'		=> 'x86_RedHat6',
 	'x86_rhap_6.8'		=> 'x86_RedHat6',
 	'x86_rhap_6.9'		=> 'x86_RedHat6',
+	'nmi-build:x86_CentOS6' => 'x86_RedHat6',
 
 	# 32 bit RedHat 5
 	'x86_RedHat5'		=> {

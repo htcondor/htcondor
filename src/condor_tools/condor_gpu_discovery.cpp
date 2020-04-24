@@ -541,10 +541,14 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
 	}
 
-		char name[256];
-		memset(name, 0, sizeof(name));
-		cuDeviceGetName(name, sizeof(name), dev);
+		// for some reason PowerPC was having trouble with a stack buffer for cuGetDeviceName
+		// so we switch to malloc and a larger buffer, and we overdo the null termination.
+		char * name = (char*)malloc(1028);
+		memset(name, 0, 1028);
+		cuDeviceGetName(name, 1024, dev);
+		name[1024] = 0; // this shouldn't be necessary, but it can't hurt.
 		p->name = name;
+		free(name);
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
@@ -1179,7 +1183,7 @@ main( int argc, const char** argv)
 
 	// lookup the function pointers we will need later from the cudart library
 	//
-	if ( ! opt_simulate) {
+	if ( !opt_simulate && cuda_handle) {
 		cuda_t cudaRuntimeGetVersion = NULL;
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 

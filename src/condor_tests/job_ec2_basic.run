@@ -31,6 +31,16 @@ use Check::SimpleJob;
 use Check::CondorLog;
 
 #
+# The EC2_GAHP will respect HTTP_PROXY if it's set, but that proxy won't
+# be able to contact localhost if we're inside a container.
+#
+foreach my $key (keys(%ENV)) {
+	if( $key =~ m/http_proxy/i ) {
+		delete $ENV{$key};
+	}
+}
+
+#
 # Start up the simulator, which will print the port to which it binds.
 #
 my $pid = fork();
@@ -54,7 +64,7 @@ my $testname = "job_ec2_basic";
 my $port = undef;
 for( my $i = 0; $i < 10; ++$i ) {
     sleep( 1 );
-    
+
     if( ! open( SIMULATOR_OUT, '<', 'simulator.out' ) ) { next; }
     while( my $line = <SIMULATOR_OUT> ) {
         if( $line =~ /^listen_port = (\d+)$/ ) {
@@ -67,7 +77,7 @@ for( my $i = 0; $i < 10; ++$i ) {
     my $rv = waitpid( $pid, WNOHANG );
     if( $rv == -1 || $rv == $pid ) {
         die( "Simulator died before printing its port number (pid $pid), aborting.\n" );
-    } 
+    }
 }
 
 if( ! defined( $port ) ) {
@@ -75,7 +85,7 @@ if( ! defined( $port ) ) {
     die( "Unable to determine simulator's port number, aborting.\n" );
 } else {
     print( "Determined simulator's port number (pid $pid, port $port).\n" );
-}    
+}
 
 #
 # Start up a personal condor.

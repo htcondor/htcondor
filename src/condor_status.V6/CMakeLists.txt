@@ -16,7 +16,11 @@
  # 
  ############################################################### 
 
-condor_glob(statusHdrs statusSrcs "")
+set(statusSrcs
+prettyPrint.cpp
+setflags.cpp
+status.cpp
+)
 
 condor_exe( condor_status "${statusHdrs};${statusSrcs}" ${C_BIN}
 "${CONDOR_TOOL_LIBS}" OFF )

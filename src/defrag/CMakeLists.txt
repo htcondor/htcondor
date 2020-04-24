@@ -16,6 +16,10 @@
  # 
  ############################################################### 
 
+set(DEFRAG
+	defrag.cpp
+	defrag_main.cpp
+	defrag_stats.cpp
+)
 
-condor_selective_glob( "defrag*" DEFRAG )
 condor_exe( condor_defrag "${DEFRAG}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )

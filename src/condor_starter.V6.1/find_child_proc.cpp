@@ -47,7 +47,8 @@ isChildOf(const char *subdir, pid_t parent) {
 		return false;
 	}
 
-	if (read(fd, buf, 511) < 0) {
+	ssize_t num_read = read(fd, buf, 511);
+	if (num_read < 5) { // minimum # of bytes for legal stat line
 		close(fd);
 		return false;
 	}

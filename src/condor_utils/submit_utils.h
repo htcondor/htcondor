@@ -201,6 +201,8 @@
 
 #define SUBMIT_KEY_JobWantsAds "want_ads"
 
+#define SUBMIT_KEY_SkipIfDataflow "skip_if_dataflow"
+
 //
 // Job Deferral Parameters
 //
@@ -808,6 +810,7 @@ private:
 	int SetRequestMem(const char * key);   /* used by SetRequestResources */
 	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
+	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,

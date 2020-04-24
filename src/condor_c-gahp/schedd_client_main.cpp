@@ -142,7 +142,7 @@ init_pipes() {
 	(void)daemonCore->Register_Pipe (
 									 request_buffer.getPipeEnd(),
 									 "request pipe",
-									 (PipeHandler)&request_pipe_handler,
+									 &request_pipe_handler,
 									 "request_pipe_handler");
 
 

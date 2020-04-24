@@ -1,17 +1,16 @@
 These patches allow the man pages to be built using older version
 of Sphinx. These patches may be dropped for more recent versions.
-Currently, our man pages are built on submit-3.batlab.org and
-python-sphinx10 is installed from EPEL 6. (version 1.0.8)
 These components are not used for the man pages.
 
-* process_index_entry appears in Sphinx 1.1
 * sphnix.ext.napoleon appears in Sphinx 1.3
 * sphinx.ext.autosectionlabel appears in Sphinx 1.4
+
+* nbsphinx is only available via pip
 
 * pathlib appears in Python 3
 
 diff --git a/docs/conf.py b/docs/conf.py
-index 47daf87..eb31d25 100644
+index 506b948..3abac8c 100644
 --- a/docs/conf.py
 +++ b/docs/conf.py
 @@ -17,8 +17,6 @@ import os
@@ -23,7 +22,7 @@ index 47daf87..eb31d25 100644
  ON_RTD = os.environ.get('READTHEDOCS') == 'True'
  if ON_RTD:
      print("ON RTD, THEREFORE INSTALLING HTCONDOR PACKAGE")
-@@ -51,10 +49,8 @@ sys.path.append(os.path.abspath('extensions'))
+@@ -51,11 +49,8 @@ sys.path.append(os.path.abspath('extensions'))
  # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
  # ones.
  extensions = [
@@ -31,50 +30,7 @@ index 47daf87..eb31d25 100644
      'sphinx.ext.intersphinx',
      'sphinx.ext.autodoc',
 -    'sphinx.ext.napoleon',
+-    'nbsphinx',
      'ticket',
      'macro',
      'macro-def',
-diff --git a/docs/extensions/index.py b/docs/extensions/index.py
-index 7565e0b..c02bf21 100644
---- a/docs/extensions/index.py
-+++ b/docs/extensions/index.py
-@@ -5,7 +5,7 @@ from docutils import nodes, utils
- from docutils.parsers.rst import Directive
- from sphinx import addnodes
- from sphinx.errors import SphinxError
--from sphinx.util.nodes import split_explicit_title, process_index_entry, \
-+from sphinx.util.nodes import split_explicit_title, \
-     set_role_source_info
- 
- def dump(obj):
-@@ -23,7 +23,7 @@ def index_role(typ, rawtext, text, lineno, inliner, options={}, content=[]):
-     title = utils.unescape(title)
-     target = utils.unescape(target)
-     # if an explicit target is given, we can process it as a full entry
--    if has_explicit_title:
-+    if False:
-         entries = process_index_entry(target, targetid)
-     # otherwise we just create a "single" entry
-     else:
-diff --git a/docs/extensions/macro-def.py b/docs/extensions/macro-def.py
-index 862724c..7e65090 100644
---- a/docs/extensions/macro-def.py
-+++ b/docs/extensions/macro-def.py
-@@ -5,7 +5,7 @@ from docutils import nodes, utils
- from docutils.parsers.rst import Directive
- from sphinx import addnodes
- from sphinx.errors import SphinxError
--from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
-+from sphinx.util.nodes import split_explicit_title, set_role_source_info
- 
- 
- def dump(obj):
-@@ -21,7 +21,7 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
-     targetnode = nodes.target('', text, ids=[targetid], classes=["macro-def"])
-     
-     # Automatically include an index entry for macro definitions
--    entries = process_index_entry(text, targetid)
-+    entries = [('single', text, targetid, '', None)]
-     indexnode = addnodes.index()
-     indexnode['entries'] = entries
-     set_role_source_info(inliner, lineno, indexnode)

@@ -365,6 +365,9 @@ BuildRequires: python-sphinx python-sphinx_rtd_theme
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
+# openssh-server needed for condor_ssh_to_job
+Requires: openssh-server
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
@@ -1020,6 +1023,8 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
 mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
+mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/passwords.d
+mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -1051,6 +1056,9 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
+mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/krb_credentials
+mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
+
 
 # not packaging deployment tools
 rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
@@ -1277,6 +1285,8 @@ rm -rf %{buildroot}
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif
+%dir %_sysconfdir/condor/passwords.d/
+%dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
@@ -1293,6 +1303,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/sshd.sh
 %_libexecdir/condor/get_orted_cmd.sh
 %_libexecdir/condor/orted_launcher.sh
+%_libexecdir/condor/set_batchtok_cmd
+%_libexecdir/condor/krb_cred_producer
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
@@ -1488,6 +1500,7 @@ rm -rf %{buildroot}
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
 %_sbindir/condor_aklog
+%_sbindir/condor_credmon_krbafs
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
@@ -1534,11 +1547,15 @@ rm -rf %{buildroot}
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
 %dir %_var/lib/condor/execute/
-%dir %_var/log/condor/
 %dir %_var/lib/condor/spool/
+%dir %_var/log/condor/
 %dir %_var/lock/condor
 %dir %_var/lock/condor/local
 %dir %_var/run/condor
+%defattr(-,root,condor,-)
+%dir %_var/lib/condor/oauth_credentials
+%defattr(-,root,root,-)
+%dir %_var/lib/condor/krb_credentials
 
 #################
 %files procd
@@ -1929,6 +1946,20 @@ fi
 %endif
 
 %changelog
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
+- Fixes addressing CVE-2019-18823
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
+- Fixes addressing CVE-2019-18823
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
 * Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
 - Added a new mode that skips jobs whose outputs are newer than their inputs
 - Added command line tool to help debug ClassAd expressions

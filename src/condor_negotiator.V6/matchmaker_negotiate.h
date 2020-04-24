@@ -22,7 +22,7 @@
 
 #include <deque>
 
-class ResourceRequestList : public ClassyCountedPtr {
+class ResourceRequestList {
 
  public:
 	ResourceRequestList(int protocol_version);

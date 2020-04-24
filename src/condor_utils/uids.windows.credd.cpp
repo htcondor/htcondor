@@ -73,7 +73,7 @@ cache_credd_locally (
 	bool fAdded = false;
 	MyString my_full_name;
 	my_full_name.formatstr("%s@%s",username,domain);
-	if ( addCredential(my_full_name.Value(),pw) == SUCCESS ) {
+	if ( do_store_cred(my_full_name.Value(),pw,ADD_PWD_MODE) == SUCCESS ) {
 		dprintf(D_FULLDEBUG,
 			"init_user_ids: "
 			"Successfully stashed credential in registry for user %s\n",

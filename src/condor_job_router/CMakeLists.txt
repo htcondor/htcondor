@@ -17,9 +17,17 @@
  ############################################################### 
 
 
-condor_glob(JRHdrs JRSrcs "VanillaToGrid_main.cpp;job_router_info.cpp")
+set(JRSrcs
+JobRouter.cpp
+JobRouterHookMgr.cpp
+NewClassAdJobLogConsumer.cpp
+schedd_main.cpp
+schedd_v7_utils.cpp
+submit_job.cpp
+VanillaToGrid.cpp
+)
 
-condor_exe( condor_job_router "${JRHdrs};${JRSrcs}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+condor_exe( condor_job_router "${JRSrcs}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
 condor_exe( condor_job_router_info "job_router_info.cpp;JobRouter.cpp;VanillaToGrid.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 

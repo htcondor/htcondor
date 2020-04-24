@@ -34,6 +34,7 @@
 #include "submit_utils.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
+#include "history_iterator.h"
 
 #include <algorithm>
 #include <string>
@@ -265,6 +266,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 	return getClassAd(&sock, ad);
 }
 
+#if 0
 struct HistoryIterator
 {
     HistoryIterator(boost::shared_ptr<Sock> sock)
@@ -304,6 +306,128 @@ private:
     int m_count;
     boost::shared_ptr<Sock> m_sock;
 };
+
+#endif
+
+boost::shared_ptr<HistoryIterator>
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int cmd, const std::string & addr)
+{
+	bool want_startd = (cmd == GET_HISTORY);
+
+	std::string val_str;
+	extract<ExprTreeHolder &> exprtree_extract(requirement);
+	extract<std::string> string_extract(requirement);
+	classad::ExprTree *expr = NULL;
+	boost::shared_ptr<classad::ExprTree> expr_ref;
+	if (string_extract.check())
+	{
+		classad::ClassAdParser parser;
+		std::string val_str = string_extract();
+		if (!parser.ParseExpression(val_str, expr))
+		{
+			THROW_EX(ValueError, "Unable to parse requirements expression");
+		}
+		expr_ref.reset(expr);
+	}
+	else if (exprtree_extract.check())
+	{
+		expr = exprtree_extract().get();
+	}
+	else
+	{
+		THROW_EX(ValueError, "Unable to parse requirements expression");
+	}
+	classad::ExprTree *expr_copy = expr->Copy();
+	if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+
+	classad::ExprList *projList(new classad::ExprList());
+	unsigned len_attrs = py_len(projection);
+	for (unsigned idx = 0; idx < len_attrs; idx++)
+	{
+		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
+		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+		if (!entry) THROW_EX(ValueError, "Unable to create copy of list entry.")
+			projList->push_back(entry);
+	}
+
+	// decode the since argument, this can either be an expression, or a string
+	// containing either an expression, a cluster id or a full job id.
+	classad::ExprTree *since_expr_copy = NULL;
+	extract<ExprTreeHolder &> since_exprtree_extract(since);
+	extract<std::string> since_string_extract(since);
+	extract<int>  since_cluster_extract(since);
+	if (since_cluster_extract.check()) {
+		std::string expr_str;
+		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
+		classad::ClassAdParser parser;
+		parser.ParseExpression(expr_str, since_expr_copy);
+	} else if (since_string_extract.check()) {
+		std::string since_str = since_string_extract();
+		classad::ClassAdParser parser;
+		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
+			THROW_EX(ValueError, "Unable to parse since argument as an expression or as a job id.");
+		} else {
+			classad::Value val;
+			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+				delete since_expr_copy; since_expr_copy = NULL;
+				// if the stop constraint is a numeric literal.
+				// then there are a few special cases...
+				// it might be a job id. or it might (someday) be a time value
+				PROC_ID jid;
+				const char * pend;
+				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
+					if (jid.proc >= 0) {
+						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
+					} else {
+						formatstr(since_str, "ClusterId == %d", jid.cluster);
+					}
+					parser.ParseExpression(since_str, since_expr_copy);
+				}
+			}
+		}
+	} else if (since_exprtree_extract.check()) {
+		since_expr_copy = since_exprtree_extract().get()->Copy();
+	} else if (since.ptr() != Py_None) {
+		THROW_EX(ValueError, "invalid since argument");
+	}
+
+
+	classad::ClassAd ad;
+	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
+	ad.InsertAttr(ATTR_NUM_MATCHES, match);
+	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
+
+	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
+	ad.Insert(ATTR_PROJECTION, projTree);
+
+	daemon_t dt = DT_SCHEDD;
+	if (want_startd) {
+		dt = DT_STARTD;
+	}
+
+	Daemon daemon(dt, addr.c_str());
+	CondorError errstack;
+	Sock* sock;
+	bool result;
+	{
+		condor::ModuleLock ml;
+		result = !(sock = daemon.startCommand(cmd, Stream::reli_sock, 0, &errstack));
+	}
+	if (result)
+	{
+		const char * msg = errstack.message(0);
+		if ( ! msg || ! msg[0]) {
+			msg = want_startd ? "Unable to connect to startd" : "Unable to connect to schedd";
+		}
+		THROW_EX(RuntimeError, msg);
+	}
+	boost::shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+
+	boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
+	return iter;
+}
 
 
 struct RequestIterator;
@@ -520,7 +644,7 @@ struct SubmitResult {
 		std::string str;
 		formatstr(str, "Submitted %d jobs into cluster %d,%d :\n", m_num, m_id.cluster, m_id.proc);
 		classad::References attrs;
-		sGetAdAttrs(attrs, m_ad, false, NULL);
+		sGetAdAttrs(attrs, m_ad);
 		sPrintAdAttrs(str, m_ad, attrs);
 		return str;
 	}
@@ -565,6 +689,18 @@ struct SubmitStepFromPyIter {
 	bool has_items() { return m_items; }
 	int  step_size() { return m_fea.queue_num ? m_fea.queue_num : 1; }
 	const char * errmsg() { if ( ! m_errmsg.empty()) { return m_errmsg.c_str(); } return NULL;}
+#if defined WIN32 || __cplusplus >= 201101
+	[[noreturn]]
+	void throw_error() {
+#else
+	void throw_error() __attribute__((noreturn)) {
+#endif
+		if ( ! PyErr_Occurred()) {
+			const char * err = errmsg();
+			PyErr_SetString(PyExc_RuntimeError, err ? err : "invalid iterator");
+		}
+		throw_error_already_set();
+	}
 
 	// returns < 0 on error
 	// returns 0 if done iterating
@@ -637,6 +773,9 @@ struct SubmitStepFromPyIter {
 	{
 		PyObject *obj = PyIter_Next(m_items);
 		if ( ! obj) {
+			if (PyErr_Occurred()) {
+				return -1;
+			}
 			return 0;
 		}
 
@@ -709,8 +848,8 @@ struct SubmitStepFromPyIter {
 	{
 		// so that the separator and line terminators can be \0, we make the size strlen()
 		// unless the first character is \0, then the size is 1
-		int cchSep = sep ? (sep[0] ? strlen(sep) : 1) : 0;
-		int cchEol = eol ? (eol[0] ? strlen(eol) : 1) : 0;
+		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
+		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
 		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
@@ -831,7 +970,9 @@ struct SubmitJobsIterator {
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
 			rval = m_sspi.next(jid, item_index, step);
-			if (rval < 0) { THROW_EX(RuntimeError, m_sspi.errmsg()); }
+			if (rval < 0) {
+				m_sspi.throw_error();
+			}
 		}
 		if (rval == 0)  { THROW_EX(StopIteration, "All ads processed"); }
 
@@ -1870,6 +2011,9 @@ struct Schedd {
 
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
+#if 1
+		return history_query(requirement, projection, match, since, QUERY_SCHEDD_HISTORY, m_addr);
+#else
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
@@ -1973,6 +2117,7 @@ struct Schedd {
 
         boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
         return iter;
+#endif
     }
 
 
@@ -3018,7 +3163,7 @@ public:
 
 			// get the first rowdata, we need that to build the submit digest, etc
 			rval = ssi.next(jid, item_index, step);
-			if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+			if (rval < 0) { ssi.throw_error(); }
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
@@ -3106,7 +3251,7 @@ public:
 
 		}
 
-		if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+		if (rval < 0) { ssi.throw_error(); }
 
 		if (param_boolean("SUBMIT_SEND_RESCHEDULE",true)) {
 			txn->reschedule();
@@ -3766,7 +3911,7 @@ void export_schedd()
                 If a string is used, the text should consist of valid *condor_submit*
                 statments optionally followed by a a single *condor_submit* ``QUEUE``
                 statement. The arguments to the QUEUE statement will be stored
-                in the ``QArgs`` member of this class and used when the :method:`Submit.queue()`
+                in the ``QArgs`` member of this class and used when the :meth:`Submit.queue()`
                 method is called.
                 If omitted, the submit object is initially empty.
             :type input: dict or str

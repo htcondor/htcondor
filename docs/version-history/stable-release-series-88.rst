@@ -8,24 +8,48 @@ series.
 
 The details of each version are described below.
 
-Version 8.8.8
+Version 8.8.9
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.8 not yet released.
+-  HTCondor version 8.8.9 not yet released.
 
-.. HTCondor version 8.8.8 released on Month Date, 2020.
+.. HTCondor version 8.8.9 released on Month Date, 2020.
 
 New Features:
 
--  None.
+-  The default value of MAX_REMAP_RECURSIONS increased from 20 to 128 since
+   a user bumped against the limit of 20 when using ``transfer_output_remaps``.
+   :ticket:`7581`
+
+-  The attributes in a Partitionable slot that are produced by ``STARTD_PARTITIONABLE_SLOT_ATTRS``
+   will contain evaluated values from the child slots rather than copies of the expressions
+   from those slots.
+   :ticket:`7521`
 
 Bugs Fixed:
+
+-  Fixed a bug where jobs that set stream_output = true would fail
+   in a confusing way when the disk on the submit side is full.
+   :ticket:`7596`
+
+-  Fixed a bug whereby the ``MemoryUsage`` attribute in the job classad for a Docker Universe job
+   failed to report the maximum memory usage of the job, but instead
+   reported either zero or the current memory usage. 
+   :ticket:`7527`
+
+-  Fixed a bug that prevented jobs with *stream_output* or *stream_error*
+   to append to a file greater than 2Gb when running with a 32 bit shadow
+   :ticket:`7547`
 
 -  The *condor_annex* tool can again use Spot Fleets, after an unnannounced
    API change by Amazon Web Services.
    :ticket:`7489`
+
+-  Fixed a bug that prevented *condor_ssh_to_job* from working when the
+   job was in a container and there was a submit file argument
+   :ticket:`7506`
 
 -  The *condor_wait* tool is again as efficient when waiting forever as when
    given a deadline on the command line.
@@ -34,6 +58,66 @@ Bugs Fixed:
 -  Fixed a problem where the Kerberos realm would not be set when there is no
    mapping from domain to realm and security debugging is not enabled.
    :ticket:`7492`
+
+-  Fixed an issue where ``STARTD_NAME`` was ignored if the *condor_master* was
+   started with the **-d** flag to enable dynamic directories.
+   :ticket:`7585`
+
+-  The *condor_collector* will no longer wait forever on an incoming command when
+   only a few bytes of the command are sent and the socket is left open.  This change
+   is intended to prevent having a port scanner DOS the Collector.
+   :ticket:`7553`
+
+-  Fixed a bug that caused ``SLOT_TYPE_<N>_<ATTR>`` overrides to be ignored when ``<ATTR>``
+   was one of the standard policy configuration attributes like ``RANK``, ``PREEMPT``, ``KILL`` and
+   ``SUSPEND``.  Only ``START`` and user defined attributes worked.
+   :ticket:`7542`
+
+-  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
+   :ticket:`7605`
+
+-  Fixed a bug that prevented ``$(KNOB:$(DEFAULT_VALUE))`` from being recognised by the configuration system
+   and *condor_submit* as a macro with a default value that was also a macro.  As a result neither value would be substituted.
+   :ticket:`7360`
+
+-  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
+   Dynamic slot containing a GPU was preempted.  This would result in the *condor_startd* aborting
+   if the preemting job wanted a GPU and no free GPU was available.
+   :ticket:`7591`
+
+-  Fixed a bug in the parsing of ``MAX_PROCD_LOG`` when a units value was used.  This bug could result in
+   The *condor_procd* restricting itself to a very small log file size, which in turn could result in
+   slow operation of the *condor_startd*
+   :ticket:`7479`
+
+-  Fixed a bug that resulted in a segmentation fault when an iterator passed to the ``queue_with_itemdata``
+   method on the ``Submit`` object raised a python exception.
+   :ticket:`7609`
+
+Version 8.8.8
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.8.8 released on April 6, 2020.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html>`_.
+
+   :ticket:`7356`
+   :ticket:`7427`
+   :ticket:`7507`
 
 Version 8.8.7
 -------------

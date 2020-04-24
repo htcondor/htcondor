@@ -592,7 +592,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 // this gets called by DC when DAGMan receives a SIGUSR1 -- which,
 // assuming the DAGMan submit file was properly written, is the signal
 // the schedd will send if the DAGMan job is removed from the queue
-int main_shutdown_remove(Service *, int) {
+int main_shutdown_remove(int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	// We don't remove Condor node jobs here because the schedd will
 	// automatically remove them itself.
@@ -642,12 +642,12 @@ void main_init (int argc, char ** const argv) {
 
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
-                                 (SignalHandler) main_shutdown_remove,
-                                 "main_shutdown_remove", NULL);
+                                  main_shutdown_remove,
+                                 "main_shutdown_remove");
 
 /****** FOR TESTING *******
     daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
-                                 (SignalHandler) main_testing_stub,
+                                  main_testing_stub,
                                  "main_testing_stub", NULL);
 ****** FOR TESTING ********/
     debug_progname = condor_basename(argv[0]);

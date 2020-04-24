@@ -4,14 +4,37 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 8.9.6
+Version 8.9.8
 -------------
 
 Release Notes:
 
--  HTCondor version 8.9.6 not yet released.
+-  HTCondor version 8.9.8 not yet released.
 
-.. HTCondor version 8.9.6 released on Month Date, 2019.
+.. HTCondor version 8.8.8 released on Month Date, 2020.
+
+-  API change in the Python bindings.  The constructor ``classad.ExprTree()``
+   now tries to parse the entire string passed to it.  Failure results in a
+   ``SyntaxError``.  This prevents strings like ``foo = bar`` from silently
+   being parsed as just ``foo`` and causing unexpected results.
+   :ticket:`7607`
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
+Version 8.9.7
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.9.7 not yet released.
+
+.. HTCondor version 8.9.7 released on Month Date, 2020.
 
 - HTCondor now advertises ``CUDAMaxSupportedVersion`` (when appropriate).  This
   attribute is an integer representation of the highest CUDA version the
@@ -19,13 +42,82 @@ Release Notes:
   ``CUDARuntimeVersion``.
   :ticket:`7413`
 
+- If you know what a shared port ID is, it may interest you to learn that
+  starters in this version of HTCondor use their slot names, if available,
+  in their shared port IDs.
+  :ticket:`7510`
+
 New Features:
+
+- The *condor_job_router* configuration and transform language has changed.
+  The Job Router will still read the old configuration and transforms, but
+  the new configuration syntax is much more flexible and powerful.
+
+  - Routes are now a modified form of job transform. ``JOB_ROUTER_ROUTE_NAMES`` defines both the order and which routes are enabled
+  - Multiple pre-route and post-route transforms that apply to all routes can be defined.
+  - The Routes and transforms use the same syntax and transform engine as ``SUBMIT_TRANSFORM_NAMES``.
+
+  :ticket:`7432`
+
+- You may now specify that HTCondor only transfer files when the job
+  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
+  to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
+  job exits (in the sense of ``ON_EXIT``) with the specified sucess code.  This
+  is intended to prevent unsuccesful jobs from going on hold because they
+  failed to produce the expected output (file(s)).
+  :ticket:`7270`
+
+- When running on a Linux system with cgroups enabled, the MemoryUsage
+  attribute of a job now includes the memory usage by the kernel disk
+  cache.  This helps users set Request_Memory to more useful values.
+  :ticket:`7442`
+
+- HTCondor may now preserve the relative paths you specify when transferring
+  files.  See the :doc:`/man-pages/condor_submit` man page about
+  ``preserve_relative_paths``.
+  :ticket:`7338`
+
+- You may now specify a distinct list of files for use with the vanilla
+  universe's support for application-level checkpointing
+  (``checkpoint_exit_code``).  Use ``transfer_checkpoint_files`` if you'd
+  like to shorten your ``transfer_output_files`` list by removing files
+  only needed for checkpoints.  See the :doc:`/man-pages/condor_submit`
+  man page.
+  :ticket:`7269`
 
 - HTCondor now offers a submit command, ``cuda_version``, so that jobs can
   describe which CUDA version (if any) they use.  HTCondor will use that
   information to match the job with a machine whose driver supports that
-  version of CUDA.  See the *condor_submit* man page.
+  version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
+
+- The submit command ``getenv`` can now be a list of environment variables
+  to import and not just ``True`` or ``False``.
+  :ticket:`7572`
+
+- HTCondor now allows Scitokens tickets and Kerberos/AFS credentials to be
+  enabled on the same machine.  This involves some changes to the
+  way these two features are configured.  *condor_store_cred* and the python
+  bindings has new commands to allow Kerberos/AFS credentials to be stored
+  and queried.
+  :ticket:`7462`
+
+- The ``condor_history`` command now has a ``startd`` option to query the Startd
+  history file.  This works for both local and remote queries.
+  :ticket:`7538`
+
+- Docker universe now works inside an unprivileged personal HTCondor,
+  if you give the user starting the personal condor rights to run the
+  docker commands.
+  :ticket:`7485`
+
+- The *condor_master* and other condor daemons can now run as pid 1.
+  This is useful when starting HTCondor inside a container.
+  :ticket:`7472`
+
+- When worker nodes are running on CPUs that support the AVX512 instructions,
+  the startd now advertises that fact with has_avx512 attributes.
+  :ticket:`7528`
 
 - Added ``GOMAXPROCS`` to the default list of environment variables that are
   set to the number of CPU cores allocated to the job.
@@ -42,7 +134,59 @@ New Features:
   matchmaking by the *condor_negotiator*.
   :ticket:`7490`
 
+- Removed the unused and always set to zero job attribute LocalUserCpu
+  and LocalSysCpu
+  :ticket:`7546`
+
+- *condor_submit* now treats ``request_gpu`` as an type and suggests
+  that ``request_gpus`` may have been what was intended.  This is the 
+  same way that it treats ``request_cpu``.
+  :ticket:`7421`
+
+- Feature to enhance the reliability of *condor_ssh_to_job* is now on
+  by default: CONDOR_SSH_TO_JOB_USE_FAKE_PASSWD_ENTRY is now true
+  :ticket:`7536`
+
+- Enhanced the dataflow jobs that we introduced in verison 8.9.5. In
+  addition to output files, we now also check the executable and stdin files.
+  If any of these are newer than the input files, we consider this to be a
+  dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to True.
+  :ticket:`7488`
+
+- When HTCondor is running as root on a Linux machine, it now make /dev/shm
+  a private mount for jobs.  This means that files written to /dev/shm in
+  one job aren't visible to other jobs, and that HTCondor now cleans up
+  any leftover files in /dev/shm when the job exits.  If you want to the
+  old behaviour of a shared /dev/shm, you can set :macro:`MOUNT_PRIVATE_DEV_SHM` 
+  to false.
+  :ticket:`7443` 
+
+- When configuration parameter ``HAD_USE_PRIMARY`` is set to ``True``,
+  the collectors will be queried in the order in which they appear in
+  ``HAD_LIST``.
+  Otherwise, the order in which the collectors are queried will be
+  randomized (before, this was always done).
+  :ticket:`7556`
+
+- Added a very basic ``PROVISIONER`` node type to the *condor_dagman* parse
+  language and plumbing. When this work is completed in a future release, it
+  will allow users to provision remote compute resources (ie. Amazon EC2, 
+  Argonne Cooley) as part of their DAG workflows, then run their jobs on
+  these resources.
+  :ticket:`5622`
+
+- A new attribute ``ScratchDirFileCount`` was added to the Job ClassAd and to
+  the Startd ClassAd. It contains the number of file in the job sandbox for the curent job.
+  This attribute will be refreshed as the same time that ``DiskUsage`` is refreshed.
+  :ticket:`7486`
+
 Bugs Fixed:
+
+- Fixed a bug that prevented the *condor_schedd* from effectively flocking
+  to pools when resource request list prefetching is enabled, which is the
+  default in HTCondor version 8.9
+  :ticket:`7549`
+  :ticket:`7539`
 
 - Some URLs for keys in AWS S3 buckets were previously of the form
   ``s3://<bucket>.s3-<region>.amazonaws.com/<key>``.  Not all regions support
@@ -72,11 +216,50 @@ Bugs Fixed:
   deleted upon upgrade.
   :ticket:`7444`
 
-Version 8.9.5
+- Fixed a bug where Kerberos principals were being set incorrectly when
+  :macro:`KERBEROS_SERVER_PRINCIPAL` was set.
+  :ticket:`7577`
+
+- Our ``htcondor.Submit.from_dag()`` Python binding now throws an exception
+  when it fails, giving the programmer a chance to catch and recover. 
+  Previously this just caused Python to fall over and die immediately.
+  :ticket:`7337`
+
+- The *curl_plugin* previously implemented a minimum speed timeout with an
+  option flag that caused memory problems in older versions of libcurl.
+  We've reimplemented timeouts now using a callback that manually enforces
+  a minimum 1 byte/second transfer speed.
+  :ticket:`7414` 
+
+Version 8.9.6
 -------------
 
 Release Notes:
 
+-  HTCondor version 8.9.6 released on April 6, 2020.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html>`_.
+
+   :ticket:`7356`
+   :ticket:`7427`
+   :ticket:`7507`
+
+Version 8.9.5
+-------------
+
+Release Notes:
 
 -  HTCondor version 8.9.5 released on January 2, 2020.
 

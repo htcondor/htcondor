@@ -23,6 +23,6 @@
 const int ACCESS_READ = 0;
 const int ACCESS_WRITE = 1;
 
-int attempt_access_handler(Service *, int i, Stream *s);
+int attempt_access_handler(int i, Stream *s);
 int  attempt_access(const char *filename, int  mode, int uid, int gid, const char *scheddAddress = NULL );
 	
