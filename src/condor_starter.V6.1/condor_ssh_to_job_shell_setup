@@ -47,7 +47,7 @@ else
 	export CONDOR_CONFIG
 	
 	cd $_CONDOR_SCRATCH_DIR
-	exec /usr/bin/condor_docker_enter
+	exec "$_CONDOR_BIN"/condor_docker_enter
   fi
   # start a shell for the user
   if [ "${_CONDOR_SHELL}" != "" ]; then

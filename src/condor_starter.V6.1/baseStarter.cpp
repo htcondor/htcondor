@@ -3130,6 +3130,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
+		// put the value of BIN into the environment; used by sshd to find
+		// condor_config_val. also helpful to find condor_chirp.
+	std::string condorBinDir;
+	param(condorBinDir,"BIN");
+	if (!condorBinDir.empty()) {
+		proc_env->SetEnv("_CONDOR_BIN",condorBinDir.c_str());
+	}
+
 		// put in environment variables specific to the type (universe) of job
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
