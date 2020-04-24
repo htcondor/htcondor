@@ -94,6 +94,9 @@ Bugs Fixed:
    slow operation of the *condor_startd*
    :ticket:`7479`
 
+-  Fixed a bug that prevented ``POOL_HISTORY_MAX_STORAGE`` from begin honored on Windows.
+   :ticket:`7438`
+
 -  Fixed a bug that resulted in a segmentation fault when an iterator passed to the ``queue_with_itemdata``
    method on the ``Submit`` object raised a python exception.
    :ticket:`7609`
