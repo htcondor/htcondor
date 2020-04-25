@@ -6057,6 +6057,13 @@ do not specify their own with:
     default. If this macro is undefined, a default size of 32 KB will be
     used.
 
+:macro-def:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`
+    If ``True``, *condor_submit* will treat any attribute in the job
+    ClassAd that begins with ``Request`` as a request for a custom resource
+    and will ad a clause to the Requirements expression insuring that
+    on slots that have that resource will match the job.
+    The default value is ``True``.
+
 :macro-def:`SUBMIT_SKIP_FILECHECKS`
     If ``True``, *condor_submit* behaves as if the **-disable**
     command-line option is used. This tells *condor_submit* to disable

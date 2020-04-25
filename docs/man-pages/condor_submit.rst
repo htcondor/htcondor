@@ -849,6 +849,8 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     ``<name>`` that this job needs. The custom machine resource is
     defined in the machine's configuration. Machines that have available
     GPUs will define ``<name>`` to be ``GPUs``.
+    ``<name>`` must be at least two characters, and must not begin with ``_``.
+    If ``<name>`` is either ``Cpu`` or ``Gpu`` a warning will be printed since these are common typos.
     :index:`CUDA version<single: CUDA version; submit commands>`
 
  cuda_version = <version>

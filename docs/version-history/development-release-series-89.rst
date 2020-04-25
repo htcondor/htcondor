@@ -156,6 +156,11 @@ New Features:
   This attribute will be refreshed as the same time that ``DiskUsage`` is refreshed.
   :ticket:`7486`
 
+- A new configuration macro ``SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`` can be
+  used to disable the behavior of *condor_submit* to generate Requirements clauses
+  for job attributes that begin with Request
+  :ticket:`7513`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
