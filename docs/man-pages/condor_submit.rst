@@ -515,12 +515,11 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     ::
 
-
-    If the environment is set with the **environment** command and
-    **getenv** is also set, values specified with
-    **environment** override values in the submitter's environment
-    (regardless of the order of the **environment** and **getenv**
-    commands). :index:`input<single: input; submit commands>`
+		If the environment is set with the **environment** command and
+		**getenv** is also set, values specified with
+		**environment** override values in the submitter's environment
+		(regardless of the order of the **environment** and **getenv**
+		commands). :index:`input<single: input; submit commands>`
 
  input = <pathname>
     HTCondor assumes that its jobs are long-running, and that the user
@@ -850,6 +849,8 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     ``<name>`` that this job needs. The custom machine resource is
     defined in the machine's configuration. Machines that have available
     GPUs will define ``<name>`` to be ``GPUs``.
+    ``<name>`` must be at least two characters, and must not begin with ``_``.
+    If ``<name>`` is either ``Cpu`` or ``Gpu`` a warning will be printed since these are common typos.
     :index:`CUDA version<single: CUDA version; submit commands>`
 
  cuda_version = <version>

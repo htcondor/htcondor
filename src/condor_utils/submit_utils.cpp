@@ -6101,9 +6101,20 @@ int SubmitHash::SetRequirements()
 	tags.erase("RequestCpus");
 	tags.erase("RequestDisk");
 	tags.erase("RequestMemory");
+	// if custom resource requirements generation is disabled
+	// remove all but GPUs
+	if ( ! param_boolean("SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS", true)) {
+		bool req_gpus = tags.count(ATTR_REQUEST_GPUS) > 0;
+		tags.clear();
+		if (req_gpus) { tags.insert(ATTR_REQUEST_GPUS); }
+	}
 	for (auto it = tags.begin(); it != tags.end(); ++it) {
-		// don't add clause to the requirements expression if one already exists
 		const char * tag = it->c_str() + prefix_len;
+
+		// resource tag name should be at least 2 characters long and not start with _
+		if ((strlen(tag) < min_tag_len) || *tag == '_') continue;
+
+		// don't add clause to the requirements expression if one already exists
 		if (machine_refs.count(tag))
 			continue;
 
