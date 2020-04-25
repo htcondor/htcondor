@@ -20,7 +20,11 @@
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 ## create targets
-file( GLOB collectorRmvElements Example* )
+set( collectorElements
+collector_main.cpp
+offline_plugin.cpp
+)
+
 
 set(CollectorLibSrcs
 	CollectorPluginManager.cpp
@@ -30,9 +34,10 @@ set(CollectorLibSrcs
 	collector.cpp
 )
 
-condor_static_lib ( collectorlib "${CollectorLibSrcs}")
+#
+#condor_static_lib ( collectorlib "${CollectorLibSrcs}")
 
-condor_daemon ( collector
-  "${collectorRmvElements};${CollectorLibSrcs}"
-  "${CONDOR_LIBS};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
-  ${C_SBIN} )
+condor_daemon ( EXE condor_collector
+  SOURCES "${collectorElements};${CollectorLibSrcs}"
+  LIBRARIES "${CONDOR_LIBS};${ZLIB_FOUND};${CONDOR_QMF}"
+  INSTALL ${C_SBIN} )

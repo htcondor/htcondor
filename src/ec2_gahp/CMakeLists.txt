@@ -22,7 +22,6 @@ if( EXPAT_FOUND AND HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAV
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-    condor_glob( HeaderFiles SourceFiles "queryAPI-sim.cpp" )
 	set(SourceFiles
 	amazonCommands.cpp
 	amazongahp_common.cpp

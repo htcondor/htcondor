@@ -17,8 +17,32 @@
  ############################################################### 
 
 
-file( GLOB ProcdRmvElements *_test* proc_family_client* proc_family_io*
-local_client.UNIX* procd_ctl* gidd_alloc*)
+set(ProcdElements
+cgroup_tracker.linux.cpp
+dprintf_lite.cpp
+login_tracker.cpp
+parent_tracker.cpp
+procd_common.cpp
+procd_main.cpp
+proc_family.cpp
+proc_family_member.cpp
+proc_family_monitor.cpp
+proc_family_server.cpp
+proc_family_tracker.cpp
+)
+
+if (LINUX)
+list(APPEND ProcdElements
+	gid_pool.linux.cpp
+	group_tracker.linux.cpp
+	)
+endif(LINUX)
+
+if (NOT WINDOWS)
+list(APPEND ProcdElements
+	glexec_kill.unix.cpp
+	)
+endif(NOT WINDOWS)
 
 set(ProcClientElements
 	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_client.cpp
@@ -48,7 +72,7 @@ if (WINDOWS)
 	set( ProcdUtilsSrcs "${ProcdUtilsSrcs};../condor_utils/process_control.WINDOWS.cpp;../condor_utils/ntsysinfo.WINDOWS.cpp" )
 endif(WINDOWS)
 condor_static_lib( procdutils "${ProcdUtilsSrcs}" )
-condor_daemon(procd "${ProcdRmvElements}" "procdutils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}")
+condor_daemon(EXE condor_procd SOURCES "${ProcdElements};${ProcClientElements}" LIBRARIES "procdutils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" INSTALL "${C_SBIN}")
 
 if (LINUX AND WANT_FULL_DEPLOYMENT)
 	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/distribution.cpp;../condor_utils/my_distribution.cpp;../condor_utils/condor_pidenvid.cpp;dprintf_lite.cpp" ${C_SBIN} "procdutils" OFF)

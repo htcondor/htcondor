@@ -21,12 +21,6 @@
 project(CONDOR)
 cmake_minimum_required(VERSION 2.8)
 
-# Turn off deprecations warnings for cmake 3.x
-# Need to wait to fix these after we drop older cmake versions
-if(POLICY CMP0054)
-	cmake_policy(SET CMP0054 OLD)
-endif()
-
 ##########################################################################
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")
@@ -88,7 +82,6 @@ include (CleanString)
 include (PackageDate)
 include (SystemSpecificInformations)
 include (CondorPackageConfig) # setup packaging variables needed prior to install targets
-include (CondorGlob)
 include (CondorSetLinkLibs)
 include (CondorExe)
 include (CondorDaemon)

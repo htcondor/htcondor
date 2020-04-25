@@ -24,8 +24,6 @@
 
 #condor_exe( condor_hdfs_hook "${HOOK}" ${C_SBIN} "hdfs;${CONDOR_TOOL_LIBS}" OFF)
 
-dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up with this? it's not in packages...")
-
 #  Curl isn't linking properly on windows, turn it as a short term hackaround
 if (CURL_FOUND)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
