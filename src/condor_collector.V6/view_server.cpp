@@ -27,6 +27,7 @@
 #include "directory.h"
 #include "view_server.h"
 #include "extArray.h"
+#include "util_lib_proto.h" // for rotate_file
 
 //-------------------------------------------------------------------
 
@@ -768,7 +769,7 @@ void ViewServer::WriteHistory()
 				EXCEPT("Could not check data file size!!!");
 			}
 			if (statbuf.st_size>MaxFileSize) {
-				int r = rename(DataSet[i][j].NewFileName.Value(),DataSet[i][j].OldFileName.Value());
+				int r = rotate_file(DataSet[i][j].OldFileName.Value(), DataSet[i][j].NewFileName.Value());
 				if (r < 0) {
 					dprintf(D_ALWAYS,"Could not rename %s to %s (%d)\n", DataSet[i][j].OldFileName.Value(), DataSet[i][j].NewFileName.Value(), errno);
 					EXCEPT("Could not rename data file");
