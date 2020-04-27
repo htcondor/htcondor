@@ -34,6 +34,11 @@ Bugs Fixed:
    in a confusing way when the disk on the submit side is full.
    :ticket:`7596`
 
+-  Fixed a bug that prevented HTCondor from starting on Amazon AWS Fargate
+   and other container based systems where HTCondor was started as root,
+   but without the Linux capability CAP_SYS_RESOURCE.
+   :ticket:`7470`
+
 -  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
    the HTCondor binaries are installed in a non-default location. 
    :ticket:`7613`
