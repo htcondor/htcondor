@@ -34,6 +34,10 @@ Bugs Fixed:
    in a confusing way when the disk on the submit side is full.
    :ticket:`7596`
 
+-  Fixed a bug that caused the negotiator to crash when RequestCpus = 0
+   and depth first filling was on.
+   :ticket:`7583`
+
 -  Fixed a bug that prevented HTCondor from starting on Amazon AWS Fargate
    and other container based systems where HTCondor was started as root,
    but without the Linux capability CAP_SYS_RESOURCE.
