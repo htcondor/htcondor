@@ -101,6 +101,11 @@ Bugs Fixed:
    method on the ``Submit`` object raised a python exception.
    :ticket:`7609`
 
+-  Increased the max directory depth from 20 to 128 when transferring files to
+   avoid tripping a circuit breaker that limited the depth HTCondor was willing
+   to traverse.
+   :ticket:`7581`
+
 Version 8.8.8
 -------------
 
