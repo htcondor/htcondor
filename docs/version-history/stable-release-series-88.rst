@@ -34,6 +34,11 @@ Bugs Fixed:
    in a confusing way when the disk on the submit side is full.
    :ticket:`7596`
 
+-  Fixed a bug with accounting groups with quota where the quota was
+   incorrectly calculated when jobs requested more than 1 cpu.  This
+   bug was introduced in 8.8.3.
+   :ticket:`7602`
+
 -  Fixed a bug that caused the negotiator to crash when RequestCpus = 0
    and depth first filling was on.
    :ticket:`7583`
