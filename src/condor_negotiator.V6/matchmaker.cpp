@@ -866,37 +866,60 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 	dprintf(D_SECURITY, "Will look for match security sessions.\n");
 
 	std::set<std::pair<std::string, std::string>> capabilities;
+	SecMan *secman = daemonCore->getSecMan();
 	submitterAds.Open();
 	classad::ClassAd *ad;
 	while ((ad = submitterAds.Next())) {
 		std::string capability;
 		std::string sinful;
-		if (ad->EvaluateAttrString(ATTR_CAPABILITY, capability) &&
-			ad->EvaluateAttrString(ATTR_MY_ADDRESS, sinful))
+		std::string version;
+		if (!ad->EvaluateAttrString(ATTR_CAPABILITY, capability) ||
+			!ad->EvaluateAttrString(ATTR_MY_ADDRESS, sinful))
 		{
-			capabilities.insert(std::make_pair(sinful, capability));
-		} else {
 			dprintf(D_SECURITY, "No capability present for ad from %s.\n", sinful.c_str());
 			dPrintAd(D_SECURITY, *ad);
+			continue;
 		}
-	}
-	submitterAds.Close();
-
-	auto secman = daemonCore->getSecMan();
-	for (const auto &capability_pair : capabilities) {
-		ClaimIdParser cidp(capability_pair.second.c_str());
-		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability_pair.second.c_str());
+		if (capabilities.find(std::make_pair(sinful, capability)) != capabilities.end()) {
+			// Already saw a submitter ad from this schedd with this capability
+			continue;
+		}
+		capabilities.insert(std::make_pair(sinful, capability));
+		// CRUFT: 8.9.3 schedds send a capability that doesn't include
+		//   the encryption algorithm (attribute CryptoMethods), and the
+		//   default algorithm changed from 3DES to BLOWFISH in 8.9.4.
+		//   So we'll insert a CryptoMethods attribute into the session
+		//   policy for capabilities from 8.9.3 schedds.
+		bool old_schedd = false;
+		if (ad->EvaluateAttrString(ATTR_VERSION, version)) {
+			CondorVersionInfo vi(version.c_str());
+			if (!vi.built_since_version(8, 9, 4)) {
+				old_schedd = true;
+			}
+		}
+		ClaimIdParser cidp(capability.c_str());
+		dprintf(D_FULLDEBUG, "Creating a new session for capability %s\n", capability.c_str());
+		const char *session_info = cidp.secSessionInfo();
+		std::string info_str;
+		if ( old_schedd && session_info ) {
+			dprintf(D_FULLDEBUG, "Adding CryptoMethods=\"3DES\" to session policy of 8.9.3 schedd\n");
+			info_str = session_info;
+			info_str.insert(1, "CryptoMethods=\"3DES\";");
+			session_info = info_str.c_str();
+		}
 		secman->CreateNonNegotiatedSecuritySession(
 			CLIENT_PERM,
 			cidp.secSessionId(),
 			cidp.secSessionKey(),
-			cidp.secSessionInfo(),
+			session_info,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
-			capability_pair.first.c_str(),
+			sinful.c_str(),
 			1200,
 			nullptr
 		);
+
 	}
+	submitterAds.Close();
 }
 
 int Matchmaker::
