@@ -1304,7 +1304,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/get_orted_cmd.sh
 %_libexecdir/condor/orted_launcher.sh
 %_libexecdir/condor/set_batchtok_cmd
-%_libexecdir/condor/krb_cred_producer
+%_libexecdir/condor/cred_producer_krb
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
@@ -1500,7 +1500,7 @@ rm -rf %{buildroot}
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
 %_sbindir/condor_aklog
-%_sbindir/condor_credmon_krbafs
+%_sbindir/condor_credmon_krb
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
