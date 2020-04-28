@@ -467,6 +467,7 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::Cla
 int GetQueueConstraint(CondorQ & q, ConstraintHolder & constr) {
 	int err = 0;
 	MyString query;
+	q.useDefaultingOperator(true);
 	q.rawQuery(query);
 	if (query.empty()) {
 		constr.clear();
@@ -587,6 +588,7 @@ int main (int argc, const char **argv)
 				} else {
 					useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 				}
+				Q.useDefaultingOperator(v.built_since_version(8,6,0));
 			}
 
 			CondorClassAdListWriter writer(dash_long_format);
@@ -709,6 +711,7 @@ int main (int argc, const char **argv)
 		} else {
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
+		Q.useDefaultingOperator(v.built_since_version(8,6,0));
 		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
 	}
 
@@ -1078,6 +1081,12 @@ processCommandLineArguments (int argc, const char *argv[])
 				if( strstr( argv[i] , NiceUserName ) == argv[i] ) {
 					ownerName = argv[i]+strlen(NiceUserName)+1;
 				}
+			#if 1
+				if (Q.add (CQ_SUBMITTER, ownerName) != Q_OK) {
+					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
+					exit (1);
+				}
+			#else
 				const char * dotptr = strchr(ownerName, '.');
 				if (dotptr) {
 					// ensure that the group prefix isn't inserted as part
@@ -1097,6 +1106,7 @@ processCommandLineArguments (int argc, const char *argv[])
 					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
 					exit (1);
 				}
+			#endif
 			}
 
 			querySubmittors = true;

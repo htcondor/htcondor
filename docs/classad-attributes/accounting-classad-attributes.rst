@@ -1,5 +1,5 @@
 Accounting ClassAd Attributes
-============================
+=============================
 
 :index:`accounting attributes<single: accounting attributes; ClassAd>`
 :index:`CondorVersion<single: CondorVersion; ClassAd accounting attribute>`

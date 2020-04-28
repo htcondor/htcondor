@@ -415,8 +415,12 @@ if( NOT WINDOWS)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
       add_definitions(-D_FORTIFY_SOURCE=2)
-	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
-	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  # -g3 causes the debug info extractor to seg fault on x86_64_CentOS8
+	  # Perhaps, make this conditional on platform?
+	  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  # set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
 	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
