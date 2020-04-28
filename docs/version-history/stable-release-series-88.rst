@@ -120,6 +120,10 @@ Bugs Fixed:
    to traverse.
    :ticket:`7581`
 
+-  Fixed a bug where *condor_qedit* would report incorrect counts of
+   matching jobs when modifying multiple attributes.
+   :ticket:`7520`
+
 Version 8.8.8
 -------------
 
