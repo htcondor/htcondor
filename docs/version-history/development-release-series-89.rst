@@ -218,6 +218,10 @@ Bugs Fixed:
   were found when ``LD_LIBRARY_PATH`` is set.
   :ticket:`7584`
 
+- Fixed a bug in reading service account credentials when submitting
+  to Google Compute Engine (grid universe, grid-type ``gce``).
+  :ticket:`7555`
+
 Version 8.9.6
 -------------
 
