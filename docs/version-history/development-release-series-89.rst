@@ -212,6 +212,12 @@ Bugs Fixed:
   a minimum 1 byte/second transfer speed.
   :ticket:`7414` 
 
+- Restored setting RUNPATH instead of RPATH for the libcondor_utils
+  shared library and the Python bindings.
+  The accidental change to setting RPATH in 8.9.5 altered how libraries
+  were found when ``LD_LIBRARY_PATH`` is set.
+  :ticket:`7584`
+
 Version 8.9.6
 -------------
 
