@@ -36,11 +36,13 @@ if you have a file named ``attempt2``, but the second one will:
     classad_eval 'a = 2' 'a * 2'
 
 The simplest ad that will work assigns a value to an attribute, as seen
-above.  You may set multiple attributes in the following way:
+above.  You may set multiple attributes in the following ways; the second
+is entirely equivalent to the first, but a little easier to type:
 
 ::
 
     classad_eval '[ a = 2; b = 2 ]' 'a + b'
+    classad_eval 'a = 2; b = 2' 'a + b'
 
 You must supply an empty ad for expressions that don't reference attributes:
 

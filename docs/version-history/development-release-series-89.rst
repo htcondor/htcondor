@@ -21,11 +21,18 @@ Release Notes:
 
 New Features:
 
--  None.
+-  *classad_eval* now allows its first (ClassAd) argument to be just the
+   interior of a single ClassAd.  That is, you no longer need to surround
+   the first argument with square brackets.  This means that
+   ``classad_eval 'x = y; y = 7' 'x'`` will now correctly return ``7``.
+   :ticket:`7621`
 
 Bugs Fixed:
 
--  None.
+- *classad_eval* no longer ignores trailing garbage in its first (ClassAd)
+  argument.  This prevents  ``classad_eval 'x = y; y = 7' 'x'`` from
+  incorrectly returning ``undefined``.
+  :ticket:`7621`
 
 Version 8.9.7
 -------------

@@ -11,14 +11,31 @@ def evaluateAndPrint(argv):
         return -1
 
     adString = argv[1]
+    adStringFileName = None
     if adString == "-file":
         argv.pop(1)
-        adString = open(argv[1]).read()
+        adStringFileName = argv[1]
+        adString = open(adStringFileName).read()
 
     for i in range(2,len(argv)):
+        try:
+            ad = classad.ClassAd(adString)
+        except SyntaxError:
+            modifiedAdString = "[" + adString + "]"
+            try:
+                ad = classad.ClassAd(modifiedAdString)
+            except SyntaxError:
+                if adStringFileName is not None:
+                    sys.exit("Unable to turn file '" + adStringFileName + "' into a ClassAd.")
+                else:
+                    sys.exit("Unable to turn '" + adString + "' into a ClassAd.")
+
         exprString = argv[i]
-        ad = classad.parseOne(adString)
-        expr = classad.ExprTree(exprString)
+        try:
+            expr = classad.ExprTree(exprString)
+        except SyntaxError:
+            sys.exit("Unable to turn '" + argv[i] + "' into a ClassAd expression.")
+
         result = expr.simplify(ad)
         print(repr(result))
 
@@ -29,4 +46,4 @@ def main():
     return evaluateAndPrint(sys.argv)
 
 if __name__ == "__main__":
-    exit(evaluateAndPrint(sys.argv))
+    exit(main())
