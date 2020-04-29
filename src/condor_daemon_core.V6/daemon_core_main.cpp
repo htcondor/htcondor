@@ -1184,8 +1184,10 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	if( SetEnv(env_cstr) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_cstr );
+		free(env_cstr);
 		exit( 4 );
 	}
+	free(env_cstr);
 }
 
 
@@ -1234,10 +1236,12 @@ handle_dynamic_dirs()
 				 env_str );
 		exit( 4 );
 	}
+	free(env_str);
 
 		// insert sentinel
 	char* acldd = strdup("_condor_ALREADY_CREATED_LOCAL_DYNAMIC_DIRECTORIES=TRUE");
 	SetEnv(acldd);
+	free(acldd);
 }
 
 #if defined(UNIX)
