@@ -34,6 +34,20 @@ Bugs Fixed:
    in a confusing way when the disk on the submit side is full.
    :ticket:`7596`
 
+-  Fixed a bug with accounting groups with quota where the quota was
+   incorrectly calculated when jobs requested more than 1 cpu.  This
+   bug was introduced in 8.8.3.
+   :ticket:`7602`
+
+-  Fixed a bug that caused the negotiator to crash when RequestCpus = 0
+   and depth first filling was on.
+   :ticket:`7583`
+
+-  Fixed a bug that prevented HTCondor from starting on Amazon AWS Fargate
+   and other container based systems where HTCondor was started as root,
+   but without the Linux capability CAP_SYS_RESOURCE.
+   :ticket:`7470`
+
 -  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
    the HTCondor binaries are installed in a non-default location. 
    :ticket:`7613`
@@ -100,6 +114,15 @@ Bugs Fixed:
 -  Fixed a bug that resulted in a segmentation fault when an iterator passed to the ``queue_with_itemdata``
    method on the ``Submit`` object raised a python exception.
    :ticket:`7609`
+
+-  Increased the max directory depth from 20 to 128 when transferring files to
+   avoid tripping a circuit breaker that limited the depth HTCondor was willing
+   to traverse.
+   :ticket:`7581`
+
+-  Fixed a bug where *condor_qedit* would report incorrect counts of
+   matching jobs when modifying multiple attributes.
+   :ticket:`7520`
 
 Version 8.8.8
 -------------
