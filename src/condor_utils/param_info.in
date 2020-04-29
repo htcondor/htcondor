@@ -5424,8 +5424,13 @@ default=$(MAX_DEFAULT_LOG)
 default=true
 type=bool
 
-[CREDMON_KRBAFS]
-default=$(SBIN)/condor_credmon_krbafs
+[CREDMON_KRB]
+default=$(SBIN)/condor_credmon_krb
+win32_default=
+type=path
+
+[CREDMON_OAUTH]
+default=$(SBIN)/condor_credmon_oauth
 win32_default=
 type=path
 
@@ -6390,14 +6395,27 @@ win32_default : @end
 @end
 
 
-[$FEATURE.KRBAFS]
+[$FEATURE.KRB]
 description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
-	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRBAFS
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/cred_producer_krb
+	SEC_CREDENTIAL_MONITOR_KRB_LOG=$(LOG)/CredMonKrbLog
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
-	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/krb_cred_producer
-	USE_KEYRING_SESSIONS=TRUE
+	USE_KEYRING_SESSIONS=True
 @end
+
+
+[$FEATURE.OAUTH]
+description=Enable the daemons and features need to support running jobs with OAuth
+default : @end
+	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
+	SEC_CREDENTIAL_MONITOR_OAUTH_LOG=$(LOG)/CredMonOAuthLog
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
+	TRUST_CREDENTIAL_DIRECTORY=True
+@end
+
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
