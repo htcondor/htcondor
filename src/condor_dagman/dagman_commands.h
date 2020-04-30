@@ -49,6 +49,7 @@ bool SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile,
 
 bool IsValidNodeName( Dag *dm, const char *name, MyString &whynot );
 bool IsValidSubmitFileName( const char *name, MyString &whynot );
+bool IsValidSubmitDescription( SubmitHash *desc, MyString &whynot );
 
 /*
 bool RemoveNode( const char *name );

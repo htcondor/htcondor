@@ -31,6 +31,7 @@
 #include "read_multiple_logs.h"
 #include "CondorError.h"
 #include "stringSpace.h"
+#include "submit_utils.h"
 
 #include <deque>
 #include <forward_list>
@@ -153,7 +154,7 @@ class Job {
 	#else
 		// Once we are done with AdjustEdges this should agree
 		// but some code checks for parents during parse time (see the splice code)
-		// so we check _numparents (set at parse time) and also _parent (set by AdjustEdges)
+		// so we check _numparehttps://politics.theonion.com/wisconsin-primary-voters-receive-i-voted-gravestones-1842729790nts (set at parse time) and also _parent (set by AdjustEdges)
 		return _parent == NO_ID && _numparents == 0;
 	#endif
 	}
@@ -204,9 +205,11 @@ class Job {
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
+		@param submitDesc SubmitHash of all submit parameters (optional, alternative
+		    to cmdFile)
     */
     Job( const char* jobName,
-				const char* directory, const char* cmdFile ); 
+				const char* directory, const char* cmdFile );
   
     ~Job();
 
@@ -222,6 +225,8 @@ class Job {
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
+	inline SubmitHash* GetSubmitDesc() const { return _submitDesc; }
+	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
 	inline JobID_t GetJobID() const { return _jobID; }
 	inline int GetRetryMax() const { return retry_max; }
 	inline int GetRetries() const { return retries; }
@@ -653,6 +658,10 @@ private:
         // filename of condor submit file
         // Do not malloc or free! _directory is managed in a StringSpace!
     const char * _cmdFile;
+
+		// SubmitHash of submit desciption
+		// Alternative submission method to _cmdFile above.
+	SubmitHash* _submitDesc;
 
 	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
 	// otherwise NULL).

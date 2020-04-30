@@ -136,6 +136,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 
 	, _directory(NULL)
 	, _cmdFile(NULL)
+	, _submitDesc(NULL)
 	, _dagFile(NULL)
 	, _jobName(NULL)
 
@@ -1533,7 +1534,6 @@ void
 Job::ExecMetrics( int proc, const struct tm & /*eventTime*/,
 			DagmanMetrics * /*metrics*/ )
 {
-	debug_printf(DEBUG_NORMAL, "MRC [Job::ExecMetrics] proc = %d\n", proc);
 	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
 		_gotEvents.resize( proc+1, 0 );
 	}
@@ -1547,7 +1547,6 @@ Job::ExecMetrics( int proc, const struct tm & /*eventTime*/,
 
 #if !defined(DISABLE_NODE_TIME_METRICS)
 	if ( !( _gotEvents[proc] & EXEC_MASK ) ) {
-		debug_printf(DEBUG_NORMAL, "MRC [Job::ExecMetrics] setting EXEC_MASK\n", proc);
 		_gotEvents[proc] |= EXEC_MASK;
 		metrics->ProcStarted( eventTime );
 	}

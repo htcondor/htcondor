@@ -24,6 +24,7 @@
 #include "debug.h"
 #include "parse.h"
 #include "dagman_commands.h"
+#include "submit_utils.h"
 
 bool
 PauseDag(Dagman &dm)
@@ -155,6 +156,16 @@ IsValidSubmitFileName( const char *name, MyString &whynot )
 	}
 	if( strlen( name ) == 0 ) {
 		whynot = "empty submit file name (name == \"\")";
+		return false;
+	}
+	return true;
+}
+
+bool
+IsValidSubmitDescription( SubmitHash *desc, MyString &whynot )
+{
+	if( desc == NULL ) {
+		whynot = "missing submit file and/or description";
 		return false;
 	}
 	return true;

@@ -542,6 +542,8 @@ class Dag {
 
 	bool _removeJobsAfterLimitChange = false;
 
+	std::vector<SubmitHash*> JobSubmitDescriptions;
+
 #if 0
 	bool RemoveNode( const char *name, MyString &whynot );
 #endif
