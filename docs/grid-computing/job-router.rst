@@ -550,7 +550,7 @@ table.
 Deprecated router configuration
 ---------------------------------------
 
-Prior to version 8.9.6 the *condor_job_router* used a list of ClassAds
+Prior to version 8.9.7 the *condor_job_router* used a list of ClassAds
 to configure the routes. This form of configuration is still supported.
 It will be converted at load time to the new syntax.
 

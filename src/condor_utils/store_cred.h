@@ -36,7 +36,7 @@ const int FAILURE_BAD_PASSWORD = 2;		// bad (wrong) password
 const int FAILURE_NO_IMPERSONATE = 3;	// user switching not supported
 const int FAILURE_NOT_SECURE = 4;		// channel is insecure
 const int FAILURE_NOT_FOUND = 5;		// user not found
-// error codes new for 8.9.6
+// error codes new for 8.9.7
 const int SUCCESS_PENDING = 6;			// The credential has not yet been processed by the credmon
 const int FAILURE_NOT_ALLOWED = 7;		// authenticated user is not allowed to do the operation
 const int FAILURE_BAD_ARGS = 8;			// argument missing or arguments contradict each other
@@ -52,7 +52,7 @@ const int STORE_CRED_USER_PWD = 0x24;
 const int STORE_CRED_USER_OAUTH = 0x28;
 const int STORE_CRED_LEGACY = 0x40;
 const int STORE_CRED_WAIT_FOR_CREDMON = 0x80; // wait for a credmon to process the users credential(s) before returning
-const int STORE_CRED_LEGACY_PWD = STORE_CRED_LEGACY | STORE_CRED_USER_PWD | 0x40;	 // prior to 8.9.6 the CREDD only supports this mode
+const int STORE_CRED_LEGACY_PWD = STORE_CRED_LEGACY | STORE_CRED_USER_PWD | 0x40;	 // prior to 8.9.7 the CREDD only supports this mode
 
 // store cred modes
 const int GENERIC_ADD = 0;
