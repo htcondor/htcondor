@@ -124,6 +124,10 @@ Bugs Fixed:
    matching jobs when modifying multiple attributes.
    :ticket:`7520`
 
+-  Fixed a bug with correctly marking and sweeping credentials on the execute
+   machines when using Kerberos with ``SEC_CREDENTIAL_DIRECTORY`` defined.
+   :ticket:`7558`
+
 Version 8.8.8
 -------------
 
