@@ -944,6 +944,9 @@ void Accountant::UpdatePriorities()
 		DeleteClassAd(key);
 	}
 
+	// This isn't logged, but clear out the submitterLimit and share
+	ad->Assign("SubmitterLimit", 0.0);
+	ad->Assign("SubmitterShare", 0.0);
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , WeightedResourcesUsed=%f\n",key,OldPrio,Priority,ResourcesUsed,WeightedResourcesUsed);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f (unweighted %8.3f), UnchargedTime=%8.3f (unweighted %d), AccumulatedUsage=%5.3f (unweighted %5.3f), BeginUsageTime=%d\n",WeightedRecentUsage,RecentUsage,WeightedUnchargedTime,UnchargedTime,WeightedAccumulatedUsage,AccumulatedUsage,BeginUsageTime);
 
@@ -1209,6 +1212,11 @@ ClassAd* Accountant::ReportState(bool rollup) {
         if (CustomerAd->LookupFloat("SubmitterShare",SubmitterShare)==0) SubmitterShare=0;
         formatstr(tmp, "SubmitterShare%d", snum);
         ad->Assign(tmp, SubmitterShare);
+
+        float SubmitterLimit = 0;
+        if (CustomerAd->LookupFloat("SubmitterLimit",SubmitterLimit)==0) SubmitterLimit=0;
+        formatstr(tmp, "SubmitterLimit%d", snum);
+        ad->Assign(tmp, SubmitterLimit);
 
         int BeginUsageTime = 0;
         if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
