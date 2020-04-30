@@ -1589,6 +1589,11 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 		return KEEP_STREAM;
 	}
 
+	if( failedConnectIDs.number() == connectIDs.number() ) {
+		// DaemonCore segfaults, otherwise. (?!)
+		return KEEP_STREAM;
+	}
+
 	// Register the disconnect handler once and only once.
 	int rc = daemonCore->Register_Socket( sock, sock->peer_description(),
 		(SocketHandlercpp)&CCBServer::HandleBatchRequestDisconnect,
