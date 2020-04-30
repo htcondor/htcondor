@@ -3157,6 +3157,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					ClassAd *accountingAd = accountant.GetClassAd(key);
 					if (accountingAd) {
 						accountingAd->Assign("SubmitterShare", submitterShare);
+						accountingAd->Assign("SubmitterLimit", submitterShare * slotWeightTotal);
 					}
 				}
 
