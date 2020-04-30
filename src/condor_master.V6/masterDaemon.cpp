@@ -781,7 +781,7 @@ int daemon::RealStart( )
 	args.AppendArg(shortname);
 
 #if 1
-	// as if 8.9.6 daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
+	// as if 8.9.7 daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
 	// If we *dont* pass -f, then we can valigrind or strace a daemon just by adding two statements to the config file
 	// for example:
 	//  JOB_ROUTER = /usr/bin/valgrind
