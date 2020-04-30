@@ -36,7 +36,6 @@ Job* AddNode( Dag *dag, const char *name,
 			  const char* submitFile,
 			  bool noop,
 			  bool done, NodeType type, MyString &failReason );
-			  SubmitHash* submitDesc = NULL );
 
 /** Set the DAG file (if any) for a node.
 	@param dag: the DAG this node is part of

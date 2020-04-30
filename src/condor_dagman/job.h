@@ -154,7 +154,7 @@ class Job {
 	#else
 		// Once we are done with AdjustEdges this should agree
 		// but some code checks for parents during parse time (see the splice code)
-		// so we check _numparents (set at parse time) and also _parent (set by AdjustEdges)
+		// so we check _numparehttps://politics.theonion.com/wisconsin-primary-voters-receive-i-voted-gravestones-1842729790nts (set at parse time) and also _parent (set by AdjustEdges)
 		return _parent == NO_ID && _numparents == 0;
 	#endif
 	}
@@ -209,8 +209,7 @@ class Job {
 		    to cmdFile)
     */
     Job( const char* jobName,
-				const char* directory, const char* cmdFile,
-				SubmitHash* submitDesc = NULL ); 
+				const char* directory, const char* cmdFile );
   
     ~Job();
 
@@ -226,6 +225,8 @@ class Job {
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
+	inline SubmitHash* GetSubmitDesc() const { return _submitDesc; }
+	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
 	inline JobID_t GetJobID() const { return _jobID; }
 	inline int GetRetryMax() const { return retry_max; }
 	inline int GetRetries() const { return retries; }

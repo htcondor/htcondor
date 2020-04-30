@@ -74,10 +74,8 @@ AddNode( Dag *dag, const char *name,
 		return NULL;
 	}
 	if( !IsValidSubmitFileName( submitFile, why ) ) {
-		if ( !IsValidSubmitDescription( submitDesc, why ) ) {
-			failReason = why;
-			return NULL;
-		}
+		failReason = why;
+		return NULL;
 	}
 	if( done && type == NodeType::FINAL ) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",

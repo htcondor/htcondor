@@ -4227,6 +4227,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
 	bool use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
+	// If a submit description is already set, override the DAGMAN_USE_CONDOR_SUBMIT knob
+	if (node->GetSubmitDesc()) { use_condor_submit = false; }
 
 		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
@@ -4299,7 +4301,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		} else {
 			batchName = dm._batchName.Value();
 		}
-
 		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents.c_str(),
 					node, node->_effectivePriority,

@@ -57,7 +57,7 @@ static bool _mungeNames = true;
 static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
-						const char *directory, FILE *fp);
+						const char *directory);
 
 static bool parse_node( Dag *dag, const char * nodeName, const char * submitFile,
 						const char* nodeTypeKeyword,
@@ -65,7 +65,7 @@ static bool parse_node( Dag *dag, const char * nodeName, const char * submitFile
 						const char *directory, const char *inlineOrExt,
 						const char *submitOrDagFile);
 
-static bool pre_parse_node(Dag *dag, MyString & nodename, const char * &submitFile);
+static bool pre_parse_node(MyString & nodename, const char * &submitFile);
 
 static bool parse_script(const char *endline, Dag *dag, 
 		const char *filename, int lineNumber);
@@ -139,7 +139,7 @@ void parseSetDoNameMunge(bool doit)
 
 struct _parse_inline_submit_callback_args { char * line; int source_id; };
 
-static int parse_inline_submit_callback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*macro_set*/, char * line, std::string & errmsg)
+static int parse_inline_submit_callback(void* pv, MACRO_SOURCE& /*source*/, MACRO_SET& /*macro_set*/, char * line, std::string & /*errmsg*/)
 {
 	char ** stopline = (char**)pv;
 	*stopline = line;
@@ -264,29 +264,35 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		if(strcasecmp(token, "JOB") == 0) {
 			MyString nodename;
 			const char * subfile = NULL;
-			pre_parse_node(dag, nodename, subfile);
-			bool inline_subfile = subfile && *subfile == '{';
-			if (inline_subfile) { subfile = "{}"; } // TODO: generate a pseudo filename
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) { subfile = "submitDesc"; } // Set a pseudo filename
 			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
 						   "JOB",
 						   filename, lineNumber, tmpDirectory.Value(), "",
 						   "submitfile" );
-			if (parsed_line_successfully && inline_subfile) {
+			if (parsed_line_successfully && inline_submit) {
 				// go into inline subfile parsing mode
-				SubmitHash submitDesc;
-				submitDesc.init();
-				submitDesc.setDisableFileChecks(true);
+				dag->JobSubmitDescriptions.push_back(new SubmitHash());
+				SubmitHash* submitDesc = dag->JobSubmitDescriptions.back();
+				submitDesc->init();
+				submitDesc->setDisableFileChecks(true);
 				std::string errmsg;
 				char * stopline = NULL;
-				if (parse_up_to_close_brace(submitDesc, ms, errmsg, &stopline) < 0) {
-					// stopped parsing for an unknown reason, qline *may* be the next dag line
+				if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
+					parsed_line_successfully = false;
 				} else {
-					// good to go.
-					debug_printf(DEBUG_NORMAL, "MRC [parse_node] opening output file...\n");
-					FILE *hashFile = fopen("/scratch/condor/dagman-inline-submit/inline-submit-hash.out", "w");
-					debug_printf(DEBUG_NORMAL, "MRC [parse_node] trying to dump submit hash to disk...\n");
-					submitDesc.dump(hashFile, 0);
-					fclose(hashFile);
+					// Attach the submit description to the actual node
+					Job *job;
+					job = dag->FindAllNodesByName((const char *)nodename.Value(), 
+						"", filename, lineNumber);
+					if (job) {
+						job->setSubmitDesc(submitDesc);
+					}
+					else {
+						debug_printf(DEBUG_NORMAL, "Error: unable to find node "
+							"%s in our DAG structure, aborting.\n", nodename.Value());
+					}
 				}
 			}
 		}
@@ -294,28 +300,52 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
-						token, filename, lineNumber, tmpDirectory.Value(), fp );
+						token, filename, lineNumber, tmpDirectory.Value() );
 		}
 
 		// Handle a FINAL spec
 		else if(strcasecmp(token, "FINAL") == 0) {
 			MyString nodename;
 			const char * subfile;
-			pre_parse_node(dag, nodename, subfile);
-			bool inline_subfile = subfile && *subfile == '{';
-			if (inline_subfile) { subfile = "{}"; } // // TODO: generate a pseudo filename?
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) { subfile = "submitDesc"; } // // Generate a pseudo filename?
 			parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile,
 					"FINAL",
 					filename, lineNumber, tmpDirectory.Value(), "",
 					"submitfile");
-			if (parsed_line_successfully && inline_subfile) {
+			if (parsed_line_successfully && inline_submit) {
 				// go into inline subfile parsing mode
+				dag->JobSubmitDescriptions.push_back(new SubmitHash());
+				SubmitHash* submitDesc = dag->JobSubmitDescriptions.back();
+				submitDesc->init();
+				submitDesc->setDisableFileChecks(true);
+				std::string errmsg;
+				char * stopline = NULL;
+				if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
+					parsed_line_successfully = false;
+				} else {
+					// Attach the submit description to the actual node
+					Job *job;
+					job = dag->FindAllNodesByName((const char *)nodename.Value(), 
+						"", filename, lineNumber);
+					if (job) {
+						job->setSubmitDesc(submitDesc);
+					}
+					else {
+						debug_printf(DEBUG_NORMAL, "Error: unable to find node "
+							"%s in our DAG structure, aborting.\n", nodename.Value());
+					}
+				}
 			}
 		}
 
 		// Handle a PROVISIONER spec
 		else if(strcasecmp(token, "PROVISIONER") == 0) {
-			parsed_line_successfully = parse_node( dag, 
+			MyString nodename;
+			const char * subfile;
+			pre_parse_node(nodename, subfile);
+			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
 					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
@@ -386,8 +416,34 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-				// Parsed in first pass.
+				// Parsed in first pass. 
+				// However we still need to check if this is an inline submit 
+				// description, and if so advance the line parser.
 			parsed_line_successfully = true;
+			int startLineNumber = lineNumber;
+			MyString nodename;
+			const char * subfile = NULL;
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) {
+				// It's probably pointless to look for a missing close brace at
+				// this point since it would have failed on the first pass.
+				bool found_close_bracket = false;
+				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
+					lineNumber++;
+					if (line[0] == '}') {
+						found_close_bracket = true;
+						break;
+					}
+				}
+				if (!found_close_bracket) {
+					debug_printf(DEBUG_NORMAL, "Error: no closing brace in JOB %s "
+						"submit description (starting on line %d)\n",
+						nodename.Value(), startLineNumber);
+					parsed_line_successfully = false;
+				}
+			}
+			
 		}
 
 		// Handle a SUBDAG spec
@@ -405,7 +461,32 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// Handle a FINAL spec
 		else if(strcasecmp(token, "FINAL") == 0) {
 				// Parsed in first pass.
+				// However we still need to check if this is an inline submit 
+				// description, and if so advance the line parser.
 			parsed_line_successfully = true;
+			int startLineNumber = lineNumber;
+			MyString nodename;
+			const char * subfile = NULL;
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) {
+				// It's probably pointless to look for a missing close brace at
+				// this point since it would have failed on the first pass.
+				bool found_close_bracket = false;
+				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
+					lineNumber++;
+					if (line[0] == '}') {
+						found_close_bracket = true;
+						break;
+					}
+				}
+				if (!found_close_bracket) {
+					debug_printf(DEBUG_NORMAL, "Error: no closing brace in FINAL "
+						"%s submit description (starting on line %d)\n",
+						nodename.Value(), startLineNumber);
+					parsed_line_successfully = false;
+				}
+			}
 		}
 
 		// Handle a SCRIPT spec
@@ -583,7 +664,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 static bool 
 parse_subdag( Dag *dag, 
 			const char* nodeTypeKeyword,
-			const char* dagFile, int lineNum, const char *directory, FILE *fp )
+			const char* dagFile, int lineNum, const char *directory )
 {
 	const char *inlineOrExt = strtok( NULL, DELIMITERS );
 	if ( !inlineOrExt ) {
@@ -594,7 +675,7 @@ parse_subdag( Dag *dag,
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
 		MyString nodename;
 		const char * subfile;
-		pre_parse_node(dag, nodename, subfile);
+		pre_parse_node(nodename, subfile);
 		return parse_node( dag, nodename.c_str(), subfile, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
 	}
@@ -621,7 +702,7 @@ static const char* next_possibly_quoted_token( void )
 //-----------------------------------------------------------------------------
 // parse just enough of the JOB line to know if this is an inline submit file or a submit filename
 static bool
-pre_parse_node(Dag *dag, MyString & nodename, const char * &submitFile)
+pre_parse_node(MyString & nodename, const char * &submitFile)
 {
 	nodename.clear();
 	submitFile = NULL;
@@ -710,54 +791,6 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFile,
 		exampleSyntax( example.Value() );
 		return false;
 	}
-
-#if 1
-	// TODO : this is only here because AddNode requires it.
-	SubmitHash submitDesc;
-	submitDesc.init();
-	submitDesc.setDisableFileChecks(true);
-#else
-	// If the submitFile token is a { brace, this is actually an inline description
-	SubmitHash submitDesc;
-	submitDesc.init();
-	submitDesc.setDisableFileChecks(true);
-
-	if ( *submitFile == '{' ) {
-		char *line;
-		std::string submitDescStr = "";
-		while ( ((line = getline_trim(fp, lineNum)) != NULL) ) {
-
-			if( *line == '}') break;
-
-			// Note that getline will truncate leading spaces (as defined by isspace())
-			// so we don't need to do that before checking for empty lines or comments.
-			if (line[0] == 0)       continue;  // Ignore blank lines
-			if (line[0] == COMMENT) continue;  // Ignore comments
-			submitDescStr += line;
-		}
-
-		debug_printf(DEBUG_NORMAL, "MRC [parse_node] trying to init_base_ad\n");
-		submitDesc.init_base_ad(time(NULL), "coatsworth"); // returns 0 on success
-
-		std::string submitHashStr;
-		debug_printf(DEBUG_NORMAL, "MRC [parse_node] writing submitDesc to string...\n");
-		submitDesc.to_string(submitHashStr, 0);
-		debug_printf(DEBUG_NORMAL, "MRC [parse_node] submitHashStr = %s\n", submitHashStr.c_str());
-
-		debug_printf(DEBUG_NORMAL, "MRC [parse_node] opening output file...\n");
-		FILE *hashFile = fopen("/scratch/condor/dagman-inline-submit/inline-submit-hash.out", "w");
-		debug_printf(DEBUG_NORMAL, "MRC [parse_node] trying to dump submit hash to disk...\n");
-		submitDesc.dump(hashFile, 0);
-		fclose(hashFile);
-
-
-		submitFile = NULL;
-
-		// Advance the tokenizer to the end of the submit description block
-		strtok( NULL, "}" );
-	}
-#endif
-
 
 		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
 	TmpDir nodeDir;
@@ -862,7 +895,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFile,
 
 	// looks ok, so add it
 	if( !AddNode( dag, nodeName, directory,
-				submitFile, noop, done, type, whynot, &submitDesc ) )
+				submitFile, noop, done, type, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					dagFile, lineNum, whynot.Value() );
