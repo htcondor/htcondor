@@ -970,6 +970,8 @@ CCBConnectionBatcher::BatchTimerCallback() {
 					"to broker %s to make batched request.\n",
 					entry.first.c_str() );
 				b.HandleBrokerFailure();
+
+				delete ccbServer;
 				return;
 			}
 
@@ -978,12 +980,16 @@ CCBConnectionBatcher::BatchTimerCallback() {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to send "
 					"batched request to broker %s\n", entry.first.c_str() );
 				b.HandleBrokerFailure();
+
+				delete ccbServer;
 				return;
 			}
 			if(! socketToBroker->end_of_message() ) {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to send "
 					"end of message to broker %s\n", entry.first.c_str() );
 				b.HandleBrokerFailure();
+
+				delete ccbServer;
 				return;
 			}
 
@@ -1001,6 +1007,8 @@ CCBConnectionBatcher::BatchTimerCallback() {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: failed to read reply "
 					"from broker %s\n", entry.first.c_str() );
 				b.HandleBrokerFailure();
+
+				delete ccbServer;
 				return;
 			}
 
@@ -1009,6 +1017,8 @@ CCBConnectionBatcher::BatchTimerCallback() {
 				dprintf( D_ALWAYS, "CCBConnectionBatcher: invalid reply "
 					"from broker %s\n", entry.first.c_str() );
 				b.HandleBrokerFailure();
+
+				delete ccbServer;
 				return;
 			}
 
@@ -1064,6 +1074,8 @@ CCBConnectionBatcher::BatchTimerCallback() {
 						f.second->UnregisterReverseConnectCallback();
 						b.ForgetClientAndTryNextBroker( f.first, f.second );
 					}
+
+					delete ccbServer;
 					return;
 				}
 
@@ -1115,6 +1127,7 @@ CCBConnectionBatcher::BatchTimerCallback() {
 			// Only handle one broker per callback, even if we're expecting
 			// multiple brokers to become due in the same second.  This
 			// allows event-loop management to work normally.
+			delete ccbServer;
 			return;
 		}
 	}

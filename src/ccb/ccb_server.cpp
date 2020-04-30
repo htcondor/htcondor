@@ -1585,7 +1585,8 @@ CCBServer::HandleBatchRequest( int cmd, Stream * stream ) {
 		}
 		delete batchedRequestIDs;
 
-		return FALSE;
+		// DaemonCore segfaults, otherwise. (?!)
+		return KEEP_STREAM;
 	}
 
 	// Register the disconnect handler once and only once.

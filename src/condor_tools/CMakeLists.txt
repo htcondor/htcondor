@@ -16,6 +16,8 @@
  # 
  ############################################################### 
 
+condor_exe( ccb_test "../ccb/test.cpp" "${C_BIN}" "${CONDOR_LIBS}" ON )
+
 # condor_exe(condor_userlog_tail "userlog_tail.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_evicted_files "evicted_files.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_now "now.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
