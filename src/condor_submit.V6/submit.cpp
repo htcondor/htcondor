@@ -2794,7 +2794,21 @@ MyString credd_has_tokens(MyString m) {
 			param_val = param(config_param_name.c_str());
 		}
 		request_ad->Assign("Audience", param_val);
-		request_ad->Assign("Username", my_username());
+
+		// right now, we only ever want to obtain creds for the user
+		// principal as determined by the CredD.  omitting username
+		// tells the CredD to take the authenticated user from the
+		// socket and use that.
+		//
+		// NOTE: this will fail when talking to a pre-8.9.7 CredD
+		// because it is expecting this username and does not know to
+		// use the authenticated from the socket.
+		//
+		// in the future, if we wish to obtain credentials on behalf of
+		// another user, you would fill in this attribute, presumably
+		// with some value obtained from the submit file.
+		//
+		// request_ad->Assign("Username", "<username>");
 
 		if (IsDebugLevel (D_SECURITY)) {
 			std::string dbgout;
@@ -2898,14 +2912,6 @@ int process_job_credentials()
 		return 0;
 	}
 
-	// setup the username to query
-	MyString userdom;
-	auto_free_ptr the_username(my_username());
-	auto_free_ptr the_domainname(my_domainname());
-	userdom = the_username;
-	userdom += "@";
-	if (the_domainname) { userdom += the_domainname.ptr(); }
-
 	// If SEC_CREDENTIAL_PRODUCER is set to magic value CREDENTIAL_ALREADY_STORED,
 	// this means that condor_submit should NOT bother spending time to send the
 	// credential to the credd (because it is already there), but it SHOULD do
@@ -2937,16 +2943,24 @@ int process_job_credentials()
 			}
 
 #if 1 // support new credd commands only
-			dprintf(D_ALWAYS, "CREDMON: storing cred for user %s\n", userdom.c_str());
+			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
 			Daemon my_credd(DT_CREDD);
 			if (my_credd.locate()) {
+				// this version check will fail if CredD is not
+				// local.  the version is not exchanged over
+				// the wire until calling startCommand().  if
+				// we want to support remote submit we should
+				// just send the command anyway, after checking
+				// to make sure older CredDs won't completely
+				// choke on the new protocol.
 				CondorVersionInfo cvi(my_credd.version());
 				bool new_credd = cvi.built_since_version(8, 9, 6);
 				if (new_credd) {
 					const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
 					const char * err = NULL;
 					ClassAd return_ad;
-					long long result = do_store_cred(userdom.c_str(), mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
+					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
+					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
 					if (store_cred_failed(result, mode, &err)) {
 						fprintf( stderr, "\nERROR: store_cred of Kerberose credential failed - %s\n", err ? err : "");
 						exit(1);

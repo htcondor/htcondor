@@ -234,15 +234,62 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		return CLOSE_STREAM;
 	}
 
+	// do the superuser check once and set a flag for later use
+	bool is_cred_super_user = false;
+
+	StringList super_users;
+	param_and_insert_unique_items("CRED_SUPER_USERS", super_users);
+	std::string sock_user = r->getOwner();
+	if ( !sock_user.empty() &&
+#if defined(WIN32)
+	     super_users.contains_anycase_withwildcard( sock_user.c_str() )
+#else
+	     super_users.contains_withwildcard( sock_user.c_str() )
+#endif
+	   )
+	{
+		dprintf( D_ALWAYS, "OAuth creds being requested by \"%s\", a member of CRED_SUPER_USERS\n", sock_user.c_str());
+		is_cred_super_user = true;
+	}
+
 	ClassAdListDoesNotDeleteAds missing;
 	for(int i=0; i<numads; i++) {
 		std::string service;
 		std::string handle;
-		std::string username;
+		std::string req_user;
 		requests[i].LookupString("Service", service);
 		requests[i].LookupString("Handle", handle);
-		requests[i].LookupString("Username", username);
+		requests[i].LookupString("Username", req_user);
 
+		// username handling is special.  we have the req_user sent by
+		// the client, and we have the authenticated sock_user from the
+		// socket (obtained above). the logic is as follows:
+		//
+		// empty req_user means we always proceed using the sock_user.
+		//
+		// if req_user and sock_user match then proceed using sock_user.
+		//   NOTE: the definition of "match" will need to be addressed
+		//   if these usernames include a domain.  TODO ZKM FIX
+		//
+		// if the sock_user is a super user proceed using the req_user.
+		//
+		// otherwise we fail.
+
+		// this holds the final result
+		std::string username;
+
+		if (req_user.empty() || (req_user == sock_user)) {
+			username = sock_user;
+		} else if (is_cred_super_user) {
+			dprintf(D_SECURITY, "OAuth creds for \"%s\" were requested by \"%s\".", req_user.c_str(), sock_user.c_str());
+			username = req_user;
+		} else {
+			// a non-super user requested a username that is not theirs.
+			URL.formatstr("ERROR: credentials for user \"%s\" cannot be requested by authenticated user \"%s\".", req_user.c_str(), sock_user.c_str());
+			goto bail;
+		}
+
+		// TODO ZKM FIX: eventually we will need to honor domain names.
 		// strip off the domain from the username (if any)
 		MyString user(username);
 		int ix = user.FindChar('@');

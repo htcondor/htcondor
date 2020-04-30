@@ -1322,11 +1322,21 @@ int store_cred_handler(int /*i*/, Stream *s)
 		goto cleanup_and_exit;
 	}
 
+	// if no user was sent, this instructs us to take the authenticated
+	// user from the socket.
+	if (fulluser.empty()) {
+		// fulluser needs to have the @domain attached to pass checks
+		// below, even though at the moment it ultimately gets stripped
+		// off.
+		fulluser = sock->getFullyQualifiedUser();
+		dprintf(D_SECURITY | D_VERBOSE, "store_cred: Storing cred for authenticated user \"%s\"", fulluser.c_str());
+	}
+
 	if ( ! fulluser.empty()) {
 			// ensure that the username has an '@' delimteter
 		size_t ix_at = fulluser.find('@');
 		if (ix_at == std::string::npos || ix_at == 0) {
-			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
+			dprintf(D_ALWAYS, "store_cred_handler: user \"%s\" not in user@domain format\n", fulluser.c_str());
 			answer = FAILURE_BAD_ARGS;
 		}
 		else {
