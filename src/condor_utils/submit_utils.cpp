@@ -6238,7 +6238,7 @@ int SubmitHash::SetRequirements()
 
 			if( addVersionCheck ) {
 				// This is an ugly hack and should be changed.
-				answer += " && strcmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.6\" ) >= 0";
+				answer += " && strcmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
 			}
 
 

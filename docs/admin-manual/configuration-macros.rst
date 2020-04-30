@@ -7601,7 +7601,7 @@ These macros affect the *condor_job_router* daemon.
 
 
 :macro-def:`JOB_ROUTER_ROUTE_NAMES`
-    An ordered list of the names of enabled routes.  In version 8.9.6 or later,
+    An ordered list of the names of enabled routes.  In version 8.9.7 or later,
     routes whose names are listed here should each have a ``JOB_ROUTER_ROUTE_<NAME>``
     configuration variable that specifies the route.
 

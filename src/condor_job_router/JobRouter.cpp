@@ -3249,7 +3249,7 @@ JobRoute::ParseNext(
 	while (offset < (int)routing_string.size() && isspace(routing_string[offset])) ++offset;
 	if (offset >= (int)routing_string.size()) return false;
 
-#if 1 // new for 8.9.6 
+#if 1 // new for 8.9.7
 	if (routing_string[offset] == '[') {
 		// parse as new classad, use an empty defaults ad if none was provided
 		ClassAd dummy;
