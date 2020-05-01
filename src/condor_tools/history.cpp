@@ -853,8 +853,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 				do_projection = false;
 			}
 		} else if (dt == DT_STARTD) {
-			// remote history to the startd was added in 8.9.6
-			if (!v.built_since_version(8, 9, 6)) {
+			// remote history to the startd was added in 8.9.7
+			if (!v.built_since_version(8, 9, 7)) {
 				fprintf(stderr, "The version of the startd does not support remote history");
 				exit(1);
 			}

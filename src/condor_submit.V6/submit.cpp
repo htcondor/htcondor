@@ -2941,7 +2941,7 @@ int process_job_credentials()
 			Daemon my_credd(DT_CREDD);
 			if (my_credd.locate()) {
 				CondorVersionInfo cvi(my_credd.version());
-				bool new_credd = cvi.built_since_version(8, 9, 6);
+				bool new_credd = cvi.built_since_version(8, 9, 7);
 				if (new_credd) {
 					const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
 					const char * err = NULL;

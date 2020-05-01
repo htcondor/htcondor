@@ -1813,7 +1813,7 @@ bool main_has_console()
 int
 main( int argc, char **argv )
 {
-    // as of 8.9.6 daemon core defaults to foreground
+    // as of 8.9.7 daemon core defaults to foreground
     // for the master (and only the master) we change it to default to background
     dc_args_default_to_background(true);
 

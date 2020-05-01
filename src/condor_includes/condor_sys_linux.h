@@ -27,7 +27,7 @@
 # endif
 #endif
 
-#if defined(GLIBC)
+#if defined(__GLIBC__)
 # ifndef _GNU_SOURCE
 #  define _GNU_SOURCE
 # endif
@@ -43,12 +43,12 @@
 
 /* <stdio.h> on glibc Linux defines a "dprintf()" function, which
    we've got hide since we've got our own. */
-#if defined(GLIBC)
+#if defined(__GLIBC__)
 #	define dprintf _hide_dprintf
 #	define getline _hide_getline
 #endif
 #include <stdio.h>
-#if defined(GLIBC)
+#if defined(__GLIBC__)
 #	undef dprintf
 #	undef getline
 #endif
@@ -66,9 +66,7 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 
-#if !defined(GLIBC20) && !defined(GLIBC21)
 #include <search.h>
-#endif
 
 /* include stuff for malloc control */
 #include <malloc.h>

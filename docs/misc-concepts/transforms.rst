@@ -5,7 +5,7 @@ ClassAd Transforms
 
 HTCondor has a general purpose language for transforming ClassAds,
 this language is used by the *condor_schedd* for submit transforms,
-and as of version 8.9.6 by the job router for routes and pre and post route transforms.
+and as of version 8.9.7 by the job router for routes and pre and post route transforms.
 
 There is also a stand alone tool ``condor_transform_ads`` than can
 read ClassAds from a file or pipe, transform them, and write the

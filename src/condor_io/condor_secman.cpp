@@ -3501,7 +3501,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_VALID_COMMANDS);
 
-	// we need to convert the short version (e.g. "8.9.6") into a proper version string
+	// we need to convert the short version (e.g. "8.9.7") into a proper version string
 	std::string short_version;
 	if (imp_policy.LookupString(ATTR_SEC_SHORT_VERSION, short_version)) {
 		StringList components(short_version.c_str(), ".");
@@ -3573,7 +3573,7 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 
 	// we want to export "RemoteVersion" but the spaces in the full version
 	// string screw up parsing when importing.  so we have to extract just
-	// the numeric version (e.g. "8.9.6")
+	// the numeric version (e.g. "8.9.7")
 	std::string full_version;
 	if (policy->LookupString(ATTR_SEC_REMOTE_VERSION, full_version)) {
 		CondorVersionInfo cvi(full_version.c_str());

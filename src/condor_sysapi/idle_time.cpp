@@ -365,7 +365,7 @@ all_pty_idle_time( time_t now )
 		this stuff is created each and every time this function is called.
 		psilord 1/4/2002
 	*/
-#if defined(LINUX) && (!defined(GLIBC20) && !defined(GLIBC21))
+#if defined(LINUX) 
 	if (dev != NULL)
 	{
 		delete dev;

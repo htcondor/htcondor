@@ -357,7 +357,6 @@ if(NOT WINDOWS)
 	endif(WINDOWS)
 endif()
 include (FindThreads)
-include (GlibcDetect)
 if (WINDOWS)
 	message(STATUS "OpenMP support will be disabled on Windows until we have a chance to fix the installer to support it")
 	# TJ: 8.5.8 disabling OpenMP on Windows because it adds a dependency on an additional merge module for VCOMP110.DLL
@@ -748,9 +747,6 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	# may run on some other version of linux that does, so
 	# be optimistic here.
 	set(HAVE_PSS ON)
-
-	#The following checks are for std:u only.
-	glibc_detect( GLIBC_VERSION )
 
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
@@ -1202,12 +1198,6 @@ if(MSVC)
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
-
-	if (GLIBC_VERSION)
-		add_definitions(-DGLIBC=GLIBC)
-		add_definitions(-DGLIBC${GLIBC_VERSION}=GLIBC${GLIBC_VERSION})
-		set(GLIBC${GLIBC_VERSION} ON)
-	endif(GLIBC_VERSION)
 
 	check_c_compiler_flag(-Wall c_Wall)
 	if (c_Wall)
