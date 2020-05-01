@@ -2820,12 +2820,12 @@ JICShadow::initUserCredentials() {
 	unsigned char * cred = NULL;
 	int credlen = 0;
 
-	// if we don't know the shadow version, or if it is > 8.9.6, use getUserCredential
+	// if we don't know the shadow version, or if it is >= 8.9.7, use getUserCredential
 	// if older than that use the backward compat hack where we fetch the 'password'
 	// and then base64 decode it to get the krb credential.  the backward compat
 	// mode only works if the shadow is not Windows, and there is a credmon running on the schedd.
 	CondorVersionInfo ver(shadow->version());
-	if (ver.getMajorVer() < 8 || ver.built_since_version(8, 9, 6)) {
+	if (ver.getMajorVer() < 8 || ver.built_since_version(8, 9, 7)) {
 		if (! shadow->getUserCredential(user, domain, STORE_CRED_USER_KRB, cred, credlen)) {
 			dprintf(D_ALWAYS, "getUserCredential failed to get KRB cred from the shadow\n");
 			return false;

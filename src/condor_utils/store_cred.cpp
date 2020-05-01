@@ -1781,7 +1781,7 @@ do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force)
 }
 
 // This implentation of do_store_cred handles password, krb, or oauth credential types
-// as of 8.9.6, this is the preferred method
+// as of 8.9.7, this is the preferred method
 // 
 long long
 do_store_cred (

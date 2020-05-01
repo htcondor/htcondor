@@ -1481,7 +1481,7 @@ ResMgr::publishSlotAttrs( ClassAd* cap )
 	if( ! resources ) {
 		return;
 	}
-	// experimental flags new for 8.9.6, evaluate STARTD_SLOT_ATTRS and insert valid literals only
+	// experimental flags new for 8.9.7, evaluate STARTD_SLOT_ATTRS and insert valid literals only
 	bool as_literal = param_boolean("STARTD_EVAL_SLOT_ATTRS", false);
 	bool valid_only = ! param_boolean("STARTD_EVAL_SLOT_ATTRS_DEBUG", false);
 	int i;
