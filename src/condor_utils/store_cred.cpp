@@ -1656,7 +1656,7 @@ do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force)
 	}
 
 	// to help future debugging, print out the mode we are in
-	dprintf ( D_ALWAYS,  "STORE_CRED: In mode '%s'\n",  mode_name[mode & MODE_MASK]);
+	dprintf ( D_ALWAYS,  "STORE_CRED: (old) In mode %d '%s', user is \"%s\"\n", mode, mode_name[mode & MODE_MASK], user);
 	
 		// If we are root / SYSTEM and we want a local daemon, 
 		// then do the work directly to the local registry.
@@ -1675,7 +1675,7 @@ do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force)
 			user += domain_pos + 1;	// we only need to send the domain name for STORE_POOL_CRED
 		}
 		if (domain_pos <= 0) {
-			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
+			dprintf(D_ALWAYS, "store_cred: user \"%s\" not in user@domain format\n", user);
 			return FAILURE_BAD_ARGS;
 		}
 
@@ -1812,7 +1812,7 @@ do_store_cred (
 	MyString daemonid; // for error messages
 
 	// to help future debugging, print out the mode we are in
-	dprintf ( D_ALWAYS,  "STORE_CRED: In mode %d '%s'\n", mode, mode_name[mode & MODE_MASK]);
+	dprintf ( D_ALWAYS,  "STORE_CRED: In mode %d '%s', user is \"%s\"\n", mode, mode_name[mode & MODE_MASK], user);
 
 	// if a legacy mode is requested, no ClassAd argument can be sent
 	if (mode & STORE_CRED_LEGACY) {
@@ -1857,8 +1857,8 @@ do_store_cred (
 			if (cred) pw.set((const char *)cred, credlen);
 			return do_store_cred(user, pw.c_str(), mode, d);
 		}
-		if (domain_pos <= 0) {
-			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
+		if ((domain_pos <= 0) && user && user[0]) {
+			dprintf(D_ALWAYS, "store_cred: FAILED. user \"%s\" not in user@domain format\n", user);
 			return FAILURE;
 		}
 
