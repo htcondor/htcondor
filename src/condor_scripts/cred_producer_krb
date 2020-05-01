@@ -55,7 +55,7 @@ if [[ $KRB5CCNAME ]]; then
 else
         # assume the default:  /tmp/krb5cc_<uid>
         KRB5CCNAME="/tmp/krb5cc_"
-        KRB5CCNAME+= `id -u`
+        KRB5CCNAME+=`id -u`
         # add to the environment for condor_aklog
         export KRB5CCNAME
         logging "KRB5CCNAME not set, using default $KRB5CCNAME"
