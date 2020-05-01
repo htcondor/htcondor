@@ -769,7 +769,7 @@ void ViewServer::WriteHistory()
 				EXCEPT("Could not check data file size!!!");
 			}
 			if (statbuf.st_size>MaxFileSize) {
-				rotate_file(DataSet[i][j].OldFileName.Value(), DataSet[i][j].NewFileName.Value());
+				rotate_file(DataSet[i][j].NewFileName.Value(), DataSet[i][j].OldFileName.Value());
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
 				if(FileHash->lookup(DataSet[i][j].OldFileName.Value(),
