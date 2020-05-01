@@ -289,6 +289,11 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			goto bail;
 		}
 
+		// whatever we decided, put it back into the ad so anything
+		// that examines this attribute later doesn't need to redo all
+		// this username logic.
+		requests[i].Assign("Username", username);
+
 		// TODO ZKM FIX: eventually we will need to honor domain names.
 		// strip off the domain from the username (if any)
 		MyString user(username);
