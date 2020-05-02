@@ -161,6 +161,11 @@ New Features:
   for job attributes that begin with Request
   :ticket:`7513`
 
+- If the *condor_master* cannot authenticate with the collector then it will
+  automatically attempt to request an ID token (which the collector
+  administrator can subsequently approve).  This now matches the behavior of
+  the *condor_schedd* and *condor_startd*. :ticket:`7447`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking

@@ -94,8 +94,8 @@ are no unprivileged users logged in to the submit hosts:
 
         condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
 
-3. Within the auto-approval rule's lifetime, start the *condor_schedd* and *condor_startd*
-   hosts inside the appropriate network.  The token requests for these daemons
+3. Within the auto-approval rule's lifetime, start the submit and execute
+   hosts inside the appropriate network.  The token requests for the corresponding daemons (the *condor_master*, *condor_startd*, and *condor_schedd*)
    will be automatically approved and installed into ``/etc/condor/tokens.d/``;
    this will authorize the daemon to advertise to the collector.  By default,
    auto-generated tokens do not have an expiration.
@@ -1311,6 +1311,10 @@ over the phone (compared to the token, which is hundreds of characters long).
 Importantly, neither user nor administrator is responsible
 for securely moving the token - e.g., there is no chance it will be leaked into
 an email archive.
+
+If a *condor_master*, *condor_startd*, or *condor_schedd* daemon cannot
+authenticate with the collector, it will automatically perform a token request
+from the collector.
 
 To use the token request workflow, the user needs a confidential channel to
 the server or an appropriate auto-approval rule needs to be in place.  The simplest
