@@ -222,6 +222,12 @@ Bugs Fixed:
   to Google Compute Engine (grid universe, grid-type ``gce``).
   :ticket:`7555`
 
+- The *condor_token* family of tools now respect the ``-debug`` command
+  line flag. :ticket:`7448`
+
+- The *condor_token_request_list* tool now respects the ``-reqid`` flag.
+  :ticket:`7448`
+
 Version 8.9.6
 -------------
 
