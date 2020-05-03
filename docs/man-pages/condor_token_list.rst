@@ -3,7 +3,7 @@
 *condor_token_list*
 ======================
 
-list all available tokens for TOKEN auth
+list all available tokens for IDTOKENS auth
 :index:`condor_token_list<single: condor_token_list; HTCondor commands>`\ :index:`condor_token_list command`
 
 Synopsis

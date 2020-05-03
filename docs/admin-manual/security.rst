@@ -687,7 +687,7 @@ indicated in the following list of defined values:
         PASSWORD
         FS        (not available on Windows platforms)
         FS_REMOTE (not available on Windows platforms)
-        TOKEN
+        IDTOKENS
         SCITOKENS
         NTSSPI
         MUNGE
@@ -742,8 +742,8 @@ value of OPTIONAL. Authentication will be required for any operation
 which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
-Unix machine is FS, TOKEN, KERBEROS, GSI. This default value for a Windows
-machine is NTSSPI, TOKEN, KERBEROS, GSI.
+Unix machine is FS, IDTOKENS, KERBEROS, GSI. This default value for a Windows
+machine is NTSSPI, IDTOKENS, KERBEROS, GSI.
 
 GSI Authentication
 ''''''''''''''''''
@@ -1353,14 +1353,14 @@ the ``condor_token_fetch`` has no control over the mapped identity (but does not
 need to read the files in ``SEC_PASSWORD_DIRECTORY``).
 
 If no security authentication methods specified by the administrator - and the
-daemon or user has access to at least one token - then ``TOKEN`` authentication
+daemon or user has access to at least one token - then ``IDTOKENS`` authentication
 is automatically added to the list of valid authentication methods. Otherwise,
-to setup ``TOKEN`` authentication, enable it in the list of authentication methods:
+to setup ``IDTOKENS`` authentication, enable it in the list of authentication methods:
 
 ::
 
-    SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), TOKEN
-    SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), TOKEN
+    SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
+    SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
 **Blacklisting Token**: If a token is lost, stolen, or accidentally exposed,
 then the system administrator may use the token blacklisting mechanism in order
@@ -1505,7 +1505,7 @@ repeated here:
         PASSWORD
         FS
         FS_REMOTE
-        TOKEN
+        IDTOKENS
         SCITOKENS
         NTSSPI
         MUNGE

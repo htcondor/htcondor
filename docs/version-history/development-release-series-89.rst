@@ -24,6 +24,12 @@ Release Notes:
   in their shared port IDs.
   :ticket:`7510`
 
+- The ``TOKEN`` authentication method has been renamed to ``IDTOKENS`` to
+  better differentiate it from the ``SCITOKENS`` method.  All sites are
+  encouraged to update their configurations accordingly; however, the
+  configuration files and wire protocol remains backward compatible with
+  prior releases. :ticket:`7540`
+
 New Features:
 
 - The *condor_job_router* configuration and transform language has changed.

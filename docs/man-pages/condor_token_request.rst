@@ -3,7 +3,7 @@
 *condor_token_request*
 ======================
 
-interactively request a token from a remote daemon for the TOKEN authentication method
+interactively request a token from a remote daemon for the IDTOKENS authentication method
 :index:`condor_token_request<single: condor_token_request; HTCondor commands>`\ :index:`condor_token_request command`
 
 Synopsis
