@@ -35,7 +35,7 @@ void print_usage(const char *argv0) {
 		"\nToken options:\n"
 		"    -reqid <val>                    Token request identity\n"
                 "\nOutput options:\n"
-                "    -json                           Print out tokens as JSON, line-delimited (RFC 7464)"
+                "    -json                           Print out tokens as JSON, line-delimited (RFC 7464)\n"
 		"Specifying target options:\n"
 		"    -pool    <host>                 Query this collector\n"
 		"    -name    <name>                 Find a daemon with this name\n"

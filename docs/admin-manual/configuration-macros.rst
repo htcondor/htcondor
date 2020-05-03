@@ -8727,12 +8727,12 @@ macros are described in the :doc:`/admin-manual/security` section.
     level.  This set of configuration variables controls both the ordering and
     the allowed methods.  Currently allowed values are ``GSI`` (non-Windows),
     ``SSL``, ``KERBEROS``, ``PASSWORD``, ``FS`` (non-Windows), ``FS_REMOTE``
-    (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``TOKEN``,
-    ``SCITOKEN``,  and ``ANONYMOUS``.
+    (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``IDTOKENS``,
+    ``SCITOKENS``,  and ``ANONYMOUS``.
     See the :doc:`/admin-manual/security` section for a discussion of the
     relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
     no security at all.  The default authentication methods are
-    ``NTSSPI,FS,TOKEN,KERBEROS,GSI,SSL``.
+    ``NTSSPI,FS,IDTOKENS,KERBEROS,GSI,SSL``.
 
     These methods are tried in order until one succeeds or they all fail; for
     this reason, we do not recommend changing the default method list.
@@ -9051,6 +9051,18 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_TOKEN_DIRECTORY`
     For Unix machines, the path to the directory containing tokens for
     user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+
+:macro-def:`SEC_TOKEN_BLACKLIST_EXPR`
+    A ClassAd expression evaluated against tokens during authentication;
+    if ``SEC_TOKEN_BLACKLIST_EXPR`` is set and evaluates to true, then the
+    token is blacklisted and the authentication attempt is denied.
+
+:macro-def:`SEC_TOKEN_REQUEST_LIMITS`
+    If set, this is a comma-separated list of authorization levels that limit
+    the authorizations a token request can recieve.  For example, if
+    ``SEC_TOKEN_REQUEST_LIMITS`` is set to ``READ, WRITE``, then a token
+    cannot be issued with the authorization ``DAEMON`` even if this would
+    otherwise be permissible.
 
 :macro-def:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's

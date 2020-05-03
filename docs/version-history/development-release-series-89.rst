@@ -54,6 +54,12 @@ Release Notes:
   in their shared port IDs.
   :ticket:`7510`
 
+- The ``TOKEN`` authentication method has been renamed to ``IDTOKENS`` to
+  better differentiate it from the ``SCITOKENS`` method.  All sites are
+  encouraged to update their configurations accordingly; however, the
+  configuration files and wire protocol remains backward compatible with
+  prior releases. :ticket:`7540`
+
 New Features:
 
 - The *condor_job_router* configuration and transform language has changed.
@@ -69,8 +75,8 @@ New Features:
 - You may now specify that HTCondor only transfer files when the job
   succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
   to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
-  job exits (in the sense of ``ON_EXIT``) with the specified sucess code.  This
-  is intended to prevent unsuccesful jobs from going on hold because they
+  job exits (in the sense of ``ON_EXIT``) with the specified success code.  This
+  is intended to prevent unsuccessful jobs from going on hold because they
   failed to produce the expected output (file(s)).
   :ticket:`7270`
 
@@ -102,7 +108,7 @@ New Features:
   to import and not just ``True`` or ``False``.
   :ticket:`7572`
 
-- HTCondor now allows Scitokens tickets and Kerberos/AFS credentials to be
+- HTCondor now allows SciTokens tickets and Kerberos/AFS credentials to be
   enabled on the same machine.  This involves some changes to the
   way these two features are configured.  *condor_store_cred* and the python
   bindings has new commands to allow Kerberos/AFS credentials to be stored
@@ -114,7 +120,7 @@ New Features:
   :ticket:`7538`
 
 - The ``-submitters`` argument to ``condor_q`` now correctly shows jobs for the
-  given submitter name, even when the submittor name is an accounting group.
+  given submitter name, even when the submitter name is an accounting group.
   :ticket:`7616`
 
 - Docker universe now works inside an unprivileged personal HTCondor,
@@ -122,7 +128,7 @@ New Features:
   docker commands.
   :ticket:`7485`
 
-- The *condor_master* and other condor daemons can now run as pid 1.
+- The *condor_master* and other condor daemons can now run as PID 1.
   This is useful when starting HTCondor inside a container.
   :ticket:`7472`
 
@@ -158,7 +164,7 @@ New Features:
   by default: CONDOR_SSH_TO_JOB_USE_FAKE_PASSWD_ENTRY is now true
   :ticket:`7536`
 
-- Enhanced the dataflow jobs that we introduced in verison 8.9.5. In
+- Enhanced the dataflow jobs that we introduced in version 8.9.5. In
   addition to output files, we now also check the executable and stdin files.
   If any of these are newer than the input files, we consider this to be a
   dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to True.
@@ -168,7 +174,7 @@ New Features:
   a private mount for jobs.  This means that files written to /dev/shm in
   one job aren't visible to other jobs, and that HTCondor now cleans up
   any leftover files in /dev/shm when the job exits.  If you want to the
-  old behaviour of a shared /dev/shm, you can set :macro:`MOUNT_PRIVATE_DEV_SHM` 
+  old behavior of a shared /dev/shm, you can set :macro:`MOUNT_PRIVATE_DEV_SHM` 
   to false.
   :ticket:`7443` 
 
@@ -187,7 +193,7 @@ New Features:
   :ticket:`5622`
 
 - A new attribute ``ScratchDirFileCount`` was added to the Job ClassAd and to
-  the Startd ClassAd. It contains the number of file in the job sandbox for the curent job.
+  the Startd ClassAd. It contains the number of files in the job sandbox for the current job.
   This attribute will be refreshed as the same time that ``DiskUsage`` is refreshed.
   :ticket:`7486`
 
@@ -195,6 +201,31 @@ New Features:
   used to disable the behavior of *condor_submit* to generate Requirements clauses
   for job attributes that begin with Request
   :ticket:`7513`
+
+- If the *condor_master* cannot authenticate with the collector then it will
+  automatically attempt to request an ID token (which the collector
+  administrator can subsequently approve).  This now matches the behavior of
+  the *condor_schedd* and *condor_startd*. :ticket:`7447`
+
+- Tokens can be blacklisted by setting the ``SEC_TOKEN_BLACKLIST_EXPR``
+  configuration parameter to an expression matching the token contents.
+  Further, a unique ID has been added to all generated tokens, allowing
+  individual tokens to be blacklisted.
+  :ticket:`7449`
+  :ticket:`7450`
+
+- The *condor_token_request_list* can now print out pending token requests
+  when invoked with the ``-json`` flag. :ticket:`7454`
+
+- Request IDs used for *condor_token_request* are now zero-padded, ensuring
+  they are always a fixed-length. :ticket:`7461`
+
+- All token generation and usage is now logged using HTCondor's audit log
+  mechanism. :ticket:`7450`
+
+- The new ``SEC_TOKEN_REQUEST_LIMITS`` configuration parameter allows
+  administrators to limit the authorizations available to issued tokens.
+  :ticket:`7455`
 
 Bugs Fixed:
 
@@ -256,6 +287,22 @@ Bugs Fixed:
 - Fixed a bug in reading service account credentials when submitting
   to Google Compute Engine (grid universe, grid-type ``gce``).
   :ticket:`7555`
+
+- The *condor_token* family of tools now respect the ``-debug`` command
+  line flag. :ticket:`7448`
+
+- The *condor_token_request_list* tool now respects the ``-reqid`` flag.
+  :ticket:`7448`
+
+- Tokens with authorization limits no longer need to explicitly list
+  the ``ALLOW`` authorization, fixing a regression from 8.9.4. :ticket:`7456`
+
+- The packaged versions of HTCondor automatically creates the directories to
+  hold pool passwords, tokens, and Kerberos and OAuth credentials.
+  :ticket:`7117`
+
+- The location for the CA certificates on Debian and Ubuntu systems is now
+  properly set. :ticket:`7569`
 
 Version 8.9.6
 -------------
@@ -618,7 +665,7 @@ New Features:
 
 - Added a new multifile transfer plugin for downloading and uploading
   files from/to Google Drive user accounts. This supports URLs like
-  "gdrive://path/to/file" and using the plugin requires the admin
+  "gdrive://path/to/file" and using the plugin requires the administrator
   configure the *condor_credd* to allow users to obtain Google Drive
   tokens and requires the user request Google Drive tokens in their
   submit file. :ticket:`7136`
@@ -799,7 +846,7 @@ New Features:
    that make no progress as opposed to waiting indefinitely.  :ticket:`6971`
 
 -  Added a new multifile transfer plugin for downloading files from Box.com user accounts. This
-   supports URLs like "box://path/to/file" and using the plugin requires the admin configure the
+   supports URLs like "box://path/to/file" and using the plugin requires the administrator to configure the
    *condor_credd* to allow users to obtain Box.com tokens and requires the user request Box.com
    tokens in their submit file. :ticket:`7007`
 
@@ -924,7 +971,7 @@ New Features:
    causes a docker universe job to use the host's network, instead of
    the default NATed interface. :ticket:`6906`
 
--  Added a new configuration knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
+-  Added a new configuration knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow administrators
    to add arbitrary docker command line options to the docker create
    command. :ticket:`6900`
 
@@ -965,7 +1012,7 @@ New Features:
 
 -  When jobs are run without file transfer on, usually because there is
    a shared file system, HTCondor used to unconditionally set the jobs
-   argv[0] to the string *condor_exe.exe*. This breaks jobs that look
+   argv[0] to the string *condor_exec.exe*. This breaks jobs that look
    at their own argv[0], in ways that are very hard to debug. In this
    release of HTCondor, we no longer do this. :ticket:`6943`
 

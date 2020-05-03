@@ -3,7 +3,7 @@
 *condor_token_create*
 ======================
 
-given a password file, create an authentication token for the TOKEN authentication method
+given a password file, create an authentication token for the IDTOKENS authentication method
 :index:`condor_token_create<single: condor_token_create; HTCondor commands>`\ :index:`condor_token_create command`
 
 Synopsis
