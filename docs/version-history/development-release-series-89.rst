@@ -168,13 +168,19 @@ New Features:
 
 - Tokens can be blacklisted by setting the ``SEC_TOKEN_BLACKLIST_EXPR``
   configuration parameter to an expression matching the token contents.
+  Further, a unique ID has been added to all generated tokens, allowing
+  individual tokens to be blacklisted.
   :ticket:`7449`
+  :ticket:`7450`
 
 - The *condor_token_request_list* can now print out pending token requests
   when invoked with the ``-json`` flag. :ticket:`7454`
 
 - Request IDs used for *condor_token_request* are now zero-padded, ensuring
   they are always a fixed-length. :ticket:`7461`
+
+- All token generation and usage is now logged using HTCondor's audit log
+  mechanism. :ticket:`7450`
 
 Bugs Fixed:
 
