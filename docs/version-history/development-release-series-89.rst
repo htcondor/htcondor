@@ -173,6 +173,9 @@ New Features:
 - The *condor_token_request_list* can now print out pending token requests
   when invoked with the ``-json`` flag. :ticket:`7454`
 
+- Request IDs used for *condor_token_request* are now zero-padded, ensuring
+  they are always a fixed-length. :ticket:`7461`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
