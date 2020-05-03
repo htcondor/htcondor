@@ -1286,7 +1286,9 @@ rm -rf %{buildroot}
 %_datadir/condor/htcondor.pp
 %endif
 %dir %_sysconfdir/condor/passwords.d/
+%defattr(-,condor,condor,-)
 %dir %_sysconfdir/condor/tokens.d/
+%defattr(-,root,root,-)
 %dir %_sysconfdir/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
