@@ -166,6 +166,10 @@ New Features:
   administrator can subsequently approve).  This now matches the behavior of
   the *condor_schedd* and *condor_startd*. :ticket:`7447`
 
+- Tokens can be blacklisted by setting the ``SEC_TOKEN_BLACKLIST_EXPR``
+  configuration parameter to an expression matching the token contents.
+  :ticket:`7449`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking

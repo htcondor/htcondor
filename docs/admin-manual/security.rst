@@ -1362,6 +1362,54 @@ to setup ``TOKEN`` authentication, enable it in the list of authentication metho
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), TOKEN
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), TOKEN
 
+**Blacklisting Token**: If a token is lost, stolen, or accidentally exposed,
+then the system administrator may use the token blacklisting mechanism in order
+to prevent unauthorized use.  Blacklisting can be accomplished by setting the
+``SEC_TOKEN_BLACKLIST_EXPR``; when set, the value of this parameter will be
+evaluated as a ClassAd expression against the token's contents.
+
+For example, consider the following token:
+
+::
+
+    eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYXQiOjE1ODg0NzQ3MTksImlzcyI6ImhjYy1icmlhbnRlc3Q3LnVubC5lZHUiLCJqdGkiOiJjNzYwYzJhZjE5M2ExZmQ0ZTQwYmM5YzUzYzk2ZWU3YyIsInN1YiI6ImJib2NrZWxtQGhjYy1icmlhbnRlc3Q3LnVubC5lZHUifQ.fiqfgwjyTkxMSdxwm84xxMTVcGfearddEDj_rhiIbi4ummU
+
+When printed using ``condor_token_list``, the human-readable form is as follows
+(line breaks added for readability):
+
+::
+
+    $ condor_token_list
+    Header: {"alg":"HS256","kid":"POOL"}
+    Payload: {
+        "iat": 1588474719,
+        "iss": "pool.example.com",
+        "jti": "c760c2af193a1fd4e40bc9c53c96ee7c",
+        "sub": "alice@pool.example.com"
+    }
+
+If we would like to blacklist this token, we could utilize any of the following
+values for ``SEC_TOKEN_BLACKLIST_EXPR``, depending on the desired breadth of
+the blacklist:
+
+::
+
+    # Blacklists all tokens from the user Alice:
+    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com"
+
+    # Blacklists all tokens from Alice issued before or after this one:
+    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com" && \
+        iat <= 1588474719
+
+    # Blacklists *only* this token:
+    SEC_TOKEN_BLACKLIST_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
+
+The blacklist only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
+set; to blacklist a token across the entire pool, set
+``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
+
+In order to invalidate all tokens issued by a given master password in
+``SEC_PASSWORD_DIRECTORY``, simply remove the password file from the directory.
 
 File System Authentication
 ''''''''''''''''''''''''''
