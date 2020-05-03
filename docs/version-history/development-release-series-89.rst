@@ -182,6 +182,10 @@ New Features:
 - All token generation and usage is now logged using HTCondor's audit log
   mechanism. :ticket:`7450`
 
+- The new ``SEC_TOKEN_REQUEST_LIMITS`` configuration parameter allows
+  administrators to limit the authorizations available to issued tokens.
+  :ticket:`7455`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
