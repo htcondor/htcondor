@@ -237,6 +237,9 @@ Bugs Fixed:
 - The *condor_token_request_list* tool now respects the ``-reqid`` flag.
   :ticket:`7448`
 
+- Tokens with authorization limits no longer need to explicitly list
+  the ``ALLOW`` authorization, fixing a regression from 8.9.4. :ticket:`7456`
+
 Version 8.9.6
 -------------
 
