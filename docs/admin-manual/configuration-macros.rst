@@ -9052,6 +9052,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     For Unix machines, the path to the directory containing tokens for
     user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
 
+:macro-def:`SEC_TOKEN_BLACKLIST_EXPR`
+    A ClassAd expression evaluated against tokens during authentication;
+    if ``SEC_TOKEN_BLACKLIST_EXPR`` is set and evaluates to true, then the
+    token is blacklisted and the authentication attempt is denied.
+
 :macro-def:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
     certificates for the server side of a communication authenticating
