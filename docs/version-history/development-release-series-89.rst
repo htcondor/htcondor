@@ -170,6 +170,9 @@ New Features:
   configuration parameter to an expression matching the token contents.
   :ticket:`7449`
 
+- The *condor_token_request_list* can now print out pending token requests
+  when invoked with the ``-json`` flag. :ticket:`7454`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
