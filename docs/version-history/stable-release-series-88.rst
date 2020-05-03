@@ -52,7 +52,7 @@ Bugs Fixed:
    :ticket:`7596`
 
 -  Fixed a bug with accounting groups with quota where the quota was
-   incorrectly calculated when jobs requested more than 1 cpu.  This
+   incorrectly calculated when jobs requested more than 1 CPU.  This
    bug was introduced in 8.8.3.
    :ticket:`7602`
 
@@ -69,7 +69,7 @@ Bugs Fixed:
    the HTCondor binaries are installed in a non-default location. 
    :ticket:`7613`
 
--  Fixed a bug whereby the ``MemoryUsage`` attribute in the job classad for a Docker Universe job
+-  Fixed a bug whereby the ``MemoryUsage`` attribute in the job ClassAd for a Docker Universe job
    failed to report the maximum memory usage of the job, but instead
    reported either zero or the current memory usage. 
    :ticket:`7527`
@@ -78,7 +78,7 @@ Bugs Fixed:
    to append to a file greater than 2Gb when running with a 32 bit shadow
    :ticket:`7547`
 
--  The *condor_annex* tool can again use Spot Fleets, after an unnannounced
+-  The *condor_annex* tool can again use Spot Fleets, after an unannounced
    API change by Amazon Web Services.
    :ticket:`7489`
 
@@ -111,13 +111,13 @@ Bugs Fixed:
 -  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
    :ticket:`7605`
 
--  Fixed a bug that prevented ``$(KNOB:$(DEFAULT_VALUE))`` from being recognised by the configuration system
+-  Fixed a bug that prevented ``$(KNOB:$(DEFAULT_VALUE))`` from being recognized by the configuration system
    and *condor_submit* as a macro with a default value that was also a macro.  As a result neither value would be substituted.
    :ticket:`7360`
 
 -  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
    Dynamic slot containing a GPU was preempted.  This would result in the *condor_startd* aborting
-   if the preemting job wanted a GPU and no free GPU was available.
+   if the preempting job wanted a GPU and no free GPU was available.
    :ticket:`7591`
 
 -  Fixed a bug in the parsing of ``MAX_PROCD_LOG`` when a units value was used.  This bug could result in
@@ -144,6 +144,18 @@ Bugs Fixed:
 -  Fixed a bug with correctly marking and sweeping credentials on the execute
    machines when using Kerberos with ``SEC_CREDENTIAL_DIRECTORY`` defined.
    :ticket:`7558`
+
+-  The *bosco_cluster* script now ensures that the ``glite/libexec`` directory
+   is present on the remote host.
+   :ticket:`7618`
+
+-  ``openssh-server`` is now listed as an installation dependency so that
+   *condor_ssh_to_job* works properly.
+   :ticket:`7589`
+
+-  On Debian and Ubuntu platforms, ``libglobus-gss-assist3`` is now listed
+   as an installation dependency to ensure proper operation of HTCondor.
+   :ticket:`7469`
 
 Version 8.8.8
 -------------
