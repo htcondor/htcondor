@@ -818,6 +818,44 @@ MachAttributes::final_idle_dprintf()
 	}
 }
 
+#ifdef LINUX
+
+static int cloned_function(void * /*unused */ ) {
+	return(0);
+}
+
+static bool hasUnprivUserNamespace() {
+	static bool firstTime = true;
+	static bool hasNamespace = false;
+	if (firstTime) {
+		firstTime = false;
+		// Detect if we support unprivileged user namespaces
+		// by cloning with the user namespace flag as non-root.
+		// clone returns tid if successful, -1 on error
+
+		double stack[128];  // force alignment
+		int r = clone(cloned_function, &stack[126], 
+					CLONE_NEWUSER,
+					0);
+		if (r > 0) {
+			int status = 0;
+			int wr = waitpid(r, &status, __WCLONE);
+			dprintf(D_ALWAYS, "ResAttributes detected we do have unpriv user namespaces (pid was %d: status was %d)\n", wr, status);
+
+			hasNamespace = true;
+
+		} else if (r == 0) { 
+			// The child
+			exit(0);
+		} else {
+			dprintf(D_ALWAYS, "ResAttribute detected we don't have unpriv user namespaces:  return is  is %d\n", errno);
+		}
+	}
+	return hasNamespace;
+}
+
+#endif
+
 void 
 MachAttributes::publish_static(ClassAd* cp)
 {
@@ -968,6 +1006,11 @@ MachAttributes::publish_static(ClassAd* cp)
 		cp->Assign(ATTR_CPU_CACHE_SIZE, cache);
 	}
 
+#ifdef LINUX
+	if (hasUnprivUserNamespace()) {
+		cp->Assign(ATTR_HAS_USER_NAMESPACES, true);
+	}
+#endif
 }
 
 void

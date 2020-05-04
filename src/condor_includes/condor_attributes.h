@@ -271,6 +271,7 @@
 #define ATTR_HAS_SINGULARITY "HasSingularity"
 #define ATTR_HAS_TDP  "HasTDP"
 #define ATTR_HAS_TRANSFER_INPUT_REMAPS "HasTransferInputRemaps"
+#define ATTR_HAS_USER_NAMESPACES "HasUserNamespaces"
 #define ATTR_HAS_WIN_RUN_AS_OWNER  "HasWindowsRunAsOwner"
 #define ATTR_HAS_VM  "HasVM"
 #define ATTR_HELD_JOBS  "HeldJobs"
