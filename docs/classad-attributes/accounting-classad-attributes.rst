@@ -61,8 +61,6 @@ Accounting ClassAd Attributes
     :index:`accounting ClassAd attribute`
 
 ``Name``:
-
-``Name``:
     The fully qualified name of the user or accounting group. It will be
     of the form ``name@submit.domain``.
     :index:`accounting ClassAd attribute`
