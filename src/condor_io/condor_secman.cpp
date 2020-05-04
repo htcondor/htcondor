@@ -3461,15 +3461,16 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	// we need to convert the short version (e.g. "8.9.7") into a proper version string
 	std::string short_version;
 	if (imp_policy.LookupString(ATTR_SEC_SHORT_VERSION, short_version)) {
-		StringList components(short_version.c_str(), ".");
 		int maj, min, sub;
-		components.rewind();
-		maj = atoi(components.next());
-		min = atoi(components.next());
-		sub = atoi(components.next());
+		char *pos = NULL;
+		maj = strtol(short_version.c_str(), &pos, 10);
+		min = (pos[0] == '.') ? strtol(pos+1, &pos, 10) : 0;
+		sub = (pos[0] == '.') ? strtol(pos+1, &pos, 10) : 0;
+
 		CondorVersionInfo cvi(maj,min,sub, "ExportedSessionInfo");
-		policy.Assign(ATTR_SEC_REMOTE_VERSION, cvi.get_version_stdstring());
-		dprintf (D_SECURITY|D_VERBOSE, "IMPORT: Version components are %i:%i:%i, set Version to %s\n", maj, min, sub, cvi.get_version_stdstring().c_str());
+		std::string full_version = cvi.get_version_stdstring();
+		policy.Assign(ATTR_SEC_REMOTE_VERSION, full_version.c_str());
+		dprintf (D_SECURITY|D_VERBOSE, "IMPORT: Version components are %i:%i:%i, set Version to %s\n", maj, min, sub, full_version.c_str());
 	}
 
 	return true;
