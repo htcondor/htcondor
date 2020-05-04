@@ -1329,7 +1329,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 		// below, even though at the moment it ultimately gets stripped
 		// off.
 		fulluser = sock->getFullyQualifiedUser();
-		dprintf(D_SECURITY | D_VERBOSE, "store_cred: Storing cred for authenticated user \"%s\"", fulluser.c_str());
+		dprintf(D_SECURITY | D_VERBOSE, "store_cred: Storing cred for authenticated user \"%s\"\n", fulluser.c_str());
 	}
 
 	if ( ! fulluser.empty()) {
