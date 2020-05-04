@@ -201,9 +201,12 @@ New Features:
 - Made some performance improvements in the *condor_collector*.
   This includes new configuration parameter
   ``COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS``, which reduces the amount
-  of data forwarded between *condor_collector*s.
+  of data forwarded between *condor_collectors*.
   :ticket:`7440`
   :ticket:`7423`
+
+- *condor_install* can now generate a script to set environment variables
+  for the "fish" shell. :ticket:`7505`
 
 Bugs Fixed:
 
