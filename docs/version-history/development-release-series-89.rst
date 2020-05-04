@@ -80,6 +80,12 @@ New Features:
   and queried.
   :ticket:`7462`
 
+- The accoutant ads that *condor_userprio* displays have two new attributes.
+  The ``SubmitterLimit`` contains the fair share, in number of cores, that this
+  submitter should have access to, if they have sufficient jobs, and they all match.
+  The ``SubmitterShares`` is the percentage of the pool they should have access to.
+  :ticket:`7626`
+
 - The ``condor_history`` command now has a ``startd`` option to query the Startd
   history file.  This works for both local and remote queries.
   :ticket:`7538`

@@ -53,6 +53,15 @@ Accounting ClassAd Attributes
     this user should get.  A floating point number from 0 to 1.0.
     :index:`accounting ClassAd attribute`
 
+``SubmitterLimit``:
+    When the negotiator computes the fair share of the pool that
+    each user should get, assuming they have infinite jobs and every job
+    matches every slot, the SubmitterLimit is the absolute number of cores
+    this user should get.
+    :index:`accounting ClassAd attribute`
+
+``Name``:
+
 ``Name``:
     The fully qualified name of the user or accounting group. It will be
     of the form ``name@submit.domain``.
