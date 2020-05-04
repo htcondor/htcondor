@@ -225,6 +225,12 @@ Bugs Fixed:
   sort of name.
   :ticket:`7477`
 
+- The Box.com file transfer plugin now implements the chunked upload
+  method, which means that uploads of 50 MB or greater are now
+  possible. Prior to this implementation, jobs uploading large files
+  would unexpectedly go on hold.
+  :ticket:`7531`
+
 - To work around an issue where long-running *gce_gahp* process enter a state
   where they can no longer authenticate with GCE, the daemon now restarts once
   every 24 hours.  This does not affect the jobs themselves.
