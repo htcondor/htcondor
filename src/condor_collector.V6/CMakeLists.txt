@@ -39,5 +39,5 @@ set(CollectorLibSrcs
 
 condor_daemon ( EXE condor_collector
   SOURCES "${collectorElements};${CollectorLibSrcs}"
-  LIBRARIES "${CONDOR_LIBS};${ZLIB_FOUND};${CONDOR_QMF}"
+  LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}"
   INSTALL ${C_SBIN} )
