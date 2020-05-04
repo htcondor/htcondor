@@ -140,6 +140,11 @@ Bugs Fixed:
    as an installation dependency to ensure proper operation of HTCondor.
    :ticket:`7469`
 
+-  The *condor_schedd* will now refuse to allow a job to be submitted when the
+   submitting user is ``root`` or ``LOCAL_SYSTEM``.  Formerly such jobs could
+   be submitted, but would not run because of an ``Owner`` check in the *condor_shadow*.
+   :ticket:`7441`
+
 Version 8.8.8
 -------------
 
