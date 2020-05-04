@@ -252,7 +252,7 @@ def action(*args, params=None):
     return decorator
 
 
-@pytest.fixture(scope = 'session')
+@pytest.fixture(scope = 'class')
 def default_condor(test_dir):
     with Condor(local_dir=test_dir / "condor") as condor:
         yield condor
