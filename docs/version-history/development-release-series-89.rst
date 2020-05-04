@@ -198,6 +198,13 @@ New Features:
   administrators to limit the authorizations available to issued tokens.
   :ticket:`7455`
 
+- Made some performance improvements in the *condor_collector*.
+  This includes new configuration parameter
+  ``COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS``, which reduces the amount
+  of data forwarded between *condor_collector*s.
+  :ticket:`7440`
+  :ticket:`7423`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
