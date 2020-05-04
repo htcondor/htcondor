@@ -99,9 +99,16 @@ struct Credd
 		return false;
 	}
 
-	const char * cook_username_arg(const std::string user_in, std::string & fullusername)
+	const char * cook_username_arg(const std::string user_in, std::string & fullusername, int mode)
 	{
+		// in legacy mode, we can't put an empty password on the wire
+		// so we lookup the current account name
+		bool legacy_mode = mode & STORE_CRED_LEGACY;
 		if (user_in.empty()) {
+			 if ( ! legacy_mode) {
+				fullusername = "";
+				return fullusername.c_str();
+			}
 			auto_free_ptr uname(my_username());
 			auto_free_ptr dname(my_domainname());
 			if (! dname) {
@@ -151,7 +158,7 @@ struct Credd
 			THROW_EX(ValueError, "password may not be empty");
 		}
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -174,7 +181,7 @@ struct Credd
 
 		int mode = STORE_CRED_LEGACY_PWD | GENERIC_DELETE;
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -200,7 +207,7 @@ struct Credd
 
 		int mode = STORE_CRED_LEGACY_PWD | GENERIC_QUERY;
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -325,7 +332,7 @@ struct Credd
 			THROW_EX(ValueError, "credential may not be empty");
 		}
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -365,7 +372,7 @@ struct Credd
 			break;
 		}
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -402,7 +409,7 @@ struct Credd
 			break;
 		}
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -538,7 +545,7 @@ struct Credd
 			THROW_EX(ValueError, "invalid service arg");
 		}
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -576,7 +583,7 @@ struct Credd
 			THROW_EX(ValueError, "invalid service arg");
 		}
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -614,7 +621,7 @@ struct Credd
 			THROW_EX(ValueError, "invalid service arg");
 		}
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
@@ -652,7 +659,7 @@ struct Credd
 
 		// TODO: cook services arg
 
-		const char * user = cook_username_arg(user_in, fullusername);
+		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
 			THROW_EX(ValueError, "invalid user argument");
 		}
