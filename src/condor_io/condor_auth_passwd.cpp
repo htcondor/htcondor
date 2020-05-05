@@ -161,7 +161,7 @@ bool findToken(const std::string &tokenfilename,
 	}
     for( std::string line; readLine( line, f.get(), false ); ) {
 		if (line.empty() || line[0] == '#') continue;
-        line.erase( line.length() - 1, 1 );
+		if (line[line.size()-1] == '\n') line.erase( line.length() - 1, 1 );
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),

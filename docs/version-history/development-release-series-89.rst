@@ -34,6 +34,9 @@ Bugs Fixed:
   incorrectly returning ``undefined``.
   :ticket:`7621`
 
+- An ID token at the end of a file lacking a trailing newline is no longer ignored.
+  :ticket:`7499`
+
 Version 8.9.7
 -------------
 
