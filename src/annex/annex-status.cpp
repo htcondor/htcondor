@@ -56,7 +56,7 @@ int status( const char * annexName, bool wantClassAds, const char * sURL ) {
 		}
 	}
 
-	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, serviceURL );
+	EC2GahpClient * ec2Gahp = startOneEC2GahpClient( publicKeyFile );
 
 
 	scratchpad->Assign( "AnnexID", annexName );

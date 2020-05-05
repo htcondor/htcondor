@@ -56,7 +56,7 @@ condor_status(	const char * annexName, const char * sURL,
 		}
 	}
 
-	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, serviceURL );
+	EC2GahpClient * ec2Gahp = startOneEC2GahpClient( publicKeyFile );
 
 
 	scratchpad->Assign( "AnnexID", annexName );

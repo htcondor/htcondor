@@ -30,6 +30,14 @@
 #include "annex-condor-off.h"
 #include "user-config-dir.h"
 
+#include <uuid/uuid.h>
+
+// This should go into annex-gre-create...
+#include "Functor.h"
+#include "gce-instance-insert.h"
+#include "ReplyAndClean.h"
+#include "FunctorSequence.h"
+
 // Why don't c-style timer callbacks have context pointers?
 ClassAd * command = NULL;
 
@@ -40,33 +48,10 @@ ClassAdCollection * commandState;
 // Required by GahpServer::Startup().
 char * GridmanagerScratchDir = NULL;
 
-// Start a GAHP client.  Each GAHP client can only have one request outstanding
-// at a time, and it distinguishes between them based only on the name of the
-// command.  As a result, we want each annex (or bulk request) to have its own
-// GAHP client, to make sure that the requests don't collide.  If two GAHP
-// clients shared a 'name' parameter, they will share a GAHP server process;
-// to make the RequestLimitExceeded stuff work right, we start a GAHP server
-// for each {public key file, service URL} tuple.
-EC2GahpClient * startOneGahpClient( const std::string & publicKeyFile, const std::string & /* serviceURL */ ) {
+template<class T>
+T * startOneGahpClient( const std::string & key, const std::string & gahp_path ) {
 	std::string gahpName;
-
-	// This makes me sad, now that the annexd needs to use three endpoints, so
-	// let's ignore the technical limitation about RequestLimitExceeded for
-	// now, since we shouldn't encounter it and the only consequence is, I
-	// think, backoffs for endpoints that don't need them.  (If this becomes
-	// a problem, we should probably change this to configuration knob,
-	// because that means we probably want to split the load up among multiple
-	// GAHPs anyway.)
-	// formatstr( gahpName, "annex-%s@%s", publicKeyFile.c_str(), serviceURL.c_str() );
-
-	// The unfixable technical restriction is actually that all credentials
-	// passed to the same GAHP must be accessible by it.  Since the GAHP
-	// (will) run as a particular user for precisely this reason (not just
-	// isolation but also network filesystems), we could instead name the
-	// GAHP after the key into the authorized user map we used.  For now,
-	// since people aren't likely to have that many different credentials,
-	// just use the name of the credentials.
-	formatstr( gahpName, "annex-%s", publicKeyFile.c_str() );
+	formatstr( gahpName, "annex-%s", key.c_str() );
 
 	ArgList args;
 
@@ -99,13 +84,10 @@ EC2GahpClient * startOneGahpClient( const std::string & publicKeyFile, const std
 		free( gahp_debug );
 	}
 
-	char * gahp_path = param( "ANNEX_GAHP" );
-	if( gahp_path == NULL ) {
-		EXCEPT( "ANNEX_GAHP must be defined." );
-	}
-
-	EC2GahpClient * gahp = new EC2GahpClient( gahpName.c_str(), gahp_path, & args );
-	free( gahp_path );
+	MyString argsString; args.GetArgsStringForDisplay(& argsString);
+	dprintf( D_ALWAYS, "Starting %s as %s %s\n",
+		gahpName.c_str(), gahp_path.c_str(), argsString.c_str() );
+	T * gahp = new T( gahpName.c_str(), gahp_path.c_str(), & args );
 
 	gahp->setMode( GahpClient::normal );
 
@@ -118,6 +100,29 @@ EC2GahpClient * startOneGahpClient( const std::string & publicKeyFile, const std
 
 	return gahp;
 }
+
+EC2GahpClient *
+startOneEC2GahpClient( const std::string & key ) {
+	std::string gahp_path;
+	param(gahp_path, "EC2_GAHP");
+	if( gahp_path.empty() ) {
+		EXCEPT( "EC2_GAHP must be defined." );
+	}
+
+	return startOneGahpClient<EC2GahpClient>( key, gahp_path );
+}
+
+GahpClient *
+startOneGceGahpClient( const std::string & key ) {
+	std::string gahp_path;
+	param(gahp_path, "GCE_GAHP");
+	if( gahp_path.empty() ) {
+		EXCEPT( "GCE_GAHP must be defined." );
+	}
+
+	return startOneGahpClient<GahpClient>( key, gahp_path );
+}
+
 
 void
 InsertOrUpdateAd( const std::string & id, ClassAd * command,
@@ -712,6 +717,44 @@ void dumpParam( const char * attribute, int defaultValue ) {
 	dprintf( D_AUDIT | D_NOHEADER, "%s = %d\n", attribute, value );
 }
 
+bool
+handleArgument( std::string & s, const char * arg, const char * parameterName, const char * value, const char * flag, const char * argv0 ) {
+	if( arg ) { s = arg; return true; }
+
+	std::string p;
+	param( p, parameterName );
+	if(! p.empty()) { s = p; return true; }
+
+	fprintf( stderr, "%s: default %s not set.  You must specify %s\n", argv0, value, flag );
+	return false;
+}
+
+enum annex_t {
+	at_none = 0,
+	at_sfr = 1,
+	at_odi = 2,
+	at_gcp = 3,
+	at_gcp_interruptible = 4
+};
+
+bool
+handleGCPArgument( const char * flag, const char * & var, int argc, char ** argv, int & i, annex_t & annexType ) {
+	if( annexType == at_none ) { annexType = at_gcp; }
+	if( annexType != at_gcp ) {
+		fprintf( stderr, "%s: unwilling to ignore -%s being set for a non-GCP annex.\n", argv[0], flag );
+		return false;
+	}
+
+	++i;
+	if( i < argc && argv[i] != NULL ) {
+		var = argv[i];
+		return true;
+	} else {
+		fprintf( stderr, "%s: -%s requires an argument.\n", argv[0], flag );
+		return false;
+	}
+}
+
 int _argc;
 char ** _argv;
 
@@ -750,11 +793,18 @@ annex_main( int argc, char ** argv ) {
 	std::string userData;
 	const char * userDataFileName = NULL;
 
-	enum annex_t {
-		at_none = 0,
-		at_sfr = 1,
-		at_odi = 2
-	};
+	const char * gcpImageName = NULL;
+	const char * gcpMachineType = NULL;
+	const char * gcpZone = NULL;
+
+	const char * gcpServiceURL = NULL;
+	const char * gcpAccount = NULL;
+	const char * gcpProject = NULL;
+	const char * gcpAuthFile = NULL;
+	const char * gcpMetadata = NULL;
+	const char * gcpMetadataFile = NULL;
+	const char * gcpJSONFile = NULL;
+
 	annex_t annexType = at_none;
 
 	unsigned subCommandIndex = 0;
@@ -786,6 +836,32 @@ annex_main( int argc, char ** argv ) {
 			theCommand = ct_condor_off;
 			subCommandIndex = i;
 			break;
+		} else if( is_dash_arg_prefix( argv[i], "gcp", 3 ) ) {
+			if( annexType == at_none ) { annexType = at_gcp; }
+			if( annexType != at_gcp ) {
+				fprintf( stderr, "%s: unwilling to ignore -gcp being set for a non-GCP annex.\n", argv[0] );
+				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "gcp-account", 6 ) ) {
+			if(! handleGCPArgument( "gcp-account", gcpAccount, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-auth-file", 6 ) ) {
+			if(! handleGCPArgument( "gcp-auth-file", gcpAuthFile, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-image-name", 5 ) ) {
+			if(! handleGCPArgument( "gcp-image-name", gcpImageName, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-json-file", 5 ) ) {
+			if(! handleGCPArgument( "gcp-json-file", gcpJSONFile, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-machine-type", 6 ) ) {
+			if(! handleGCPArgument( "gcp-machine-type", gcpMachineType, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-metadata-file", 14 ) ) {
+			if(! handleGCPArgument( "gcp-metatdata-file", gcpMetadataFile, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-metadata", 12 ) ) {
+			if(! handleGCPArgument( "gcp-metadata", gcpMetadata, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-project", 5 ) ) {
+			if(! handleGCPArgument( "gcp-project", gcpProject, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-service-url", 5 ) ) {
+			if(! handleGCPArgument( "gcp-service-url", gcpServiceURL, argc, argv, i, annexType )) { return 1; }
+		} else if( is_dash_arg_prefix( argv[i], "gcp-zone", 5 ) ) {
+			if(! handleGCPArgument( "gcp-zone", gcpZone, argc, argv, i, annexType )) { return 1; }
 		} else if( is_dash_arg_prefix( argv[i], "aws-region", 10 ) ) {
 			++i;
 			if( i < argc && argv[i] != NULL ) {
@@ -1141,6 +1217,120 @@ annex_main( int argc, char ** argv ) {
 	}
 
 	//
+	// Logic common to AWS and GCP.
+	//
+
+	if( leaseDuration == 0 ) {
+		leaseDuration = param_integer( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
+	}
+
+	if( unclaimedTimeout == 0 ) {
+		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
+	}
+
+	//
+	// GCP-specific logic.
+	//
+
+	if( annexType == at_gcp || annexType == at_gcp_interruptible ) {
+		// Move the ct_default handler into common code once GCP supports
+		// updating leases.  Until then...
+		if( theCommand == ct_default ) { theCommand = ct_create_annex; }
+
+		if( theCommand != ct_create_annex ) {
+			fprintf( stderr, "%s: command not implemented for GCP.\n", argv[0] );
+			return 1;
+		}
+
+		if( annexName == NULL ) {
+			fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
+			return 1;
+		}
+
+		if( count == 0 ) {
+			fprintf( stderr, "%s: you must specify -count\n", argv[0] );
+			return 1;
+		}
+
+		std::string zone;
+		if(! handleArgument( zone, gcpZone, "ANNEX_DEFAULT_GCP_ZONE", "GCP zone", "-gcp-zone", argv[0] )) { return 1; }
+
+		std::string machineType;
+		if(! handleArgument( machineType, gcpMachineType, "ANNEX_DEFAULT_GCP_MACHINE_TYPE", "GCP machine type", "-gcp-machine-type", argv[0] )) { return 1; }
+
+		std::string imageName;
+		if(! handleArgument( imageName, gcpImageName, "ANNEX_DEFAULT_GCP_IMAGE_NAME", "GCP image name", "-gcp-image-name", argv[0] )) { return 1; }
+
+		std::string serviceURL;
+		if(! handleArgument( serviceURL, gcpServiceURL, "ANNEX_DEFAULT_GCP_SERVICE_URL", "GCP service URL", "-gcp-service-url", argv[0] )) { return 1; }
+
+		std::string account;
+		if(! handleArgument( account, gcpAccount, "ANNEX_DEFAULT_GCP_ACCOUNT", "GCP account", "-gcp-account", argv[0] )) { return 1; }
+
+		std::string project;
+		if(! handleArgument( project, gcpProject, "ANNEX_DEFAULT_GCP_PROJECT", "GCP project", "-gcp-project", argv[0] )) { return 1; }
+
+		std::string authFile;
+		if(! handleArgument( authFile, gcpAuthFile, "ANNEX_DEFAULT_GCP_AUTHFILE", "GCP authfile", "-gcp-authfile", argv[0] )) { return 1; }
+
+        // These have no defaults.
+        std::string jsonFile;
+        if( gcpJSONFile != NULL ) { jsonFile = gcpJSONFile; }
+        std::string metadata;
+        if( gcpMetadata) { metadata = gcpMetadata; }
+        std::string metadataFile;
+        if( gcpMetadataFile ) { metadataFile = gcpMetadataFile; }
+
+        // FIXME: We use the metadata for own purposes.
+        // metadata += "htcondor_password = " + password + ",";
+
+
+		fprintf( stdout,
+			"Will request %ld %s instance%s for %.2f hours.  "
+			"Each instance will terminate after being idle for %.2f hours.\n",
+			count, machineType.c_str(), count == 1 ? "" : "s",
+			leaseDuration / 3600.0, unclaimedTimeout / 3600.0 );
+
+
+		// from GCEJob::build_instance_name().
+		std::string instanceName = "annex-";
+
+		uuid_t uuid;
+		char uuid_str[37];
+		uuid_generate( uuid );
+		uuid_unparse( uuid, uuid_str );
+		uuid_str[36] = '\0';
+		for( char * c = uuid_str; *c != '\0'; ++c ) {
+			*c = tolower( *c );
+		}
+
+		instanceName += uuid_str;
+
+
+		std::vector< std::pair< std::string, std::string > > labels;
+		GahpClient * gceGahpClient = startOneGceGahpClient( authFile );
+
+		std::string commandID;
+		ClassAd * reply = new ClassAd();
+		ClassAd * scratchpad = new ClassAd();
+		auto * ii = new GCEInstanceInsert( gceGahpClient,
+		    reply, scratchpad,
+		    { serviceURL, authFile, account, project, zone,
+		      instanceName, machineType, imageName,
+		      metadata, metadataFile, jsonFile },
+		    labels );
+		ReplyAndClean * last = new ReplyAndClean( reply, NULL, gceGahpClient, scratchpad, NULL, commandState, commandID, NULL, NULL );
+		FunctorSequence * fs = new FunctorSequence( {ii}, last, commandState, commandID, scratchpad );
+
+		int gceGahpTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
+			(void (Service::*)()) & FunctorSequence::operator(),
+			"gce_instance_insert", fs );
+		gceGahpClient->setNotificationTimerId( gceGahpTimer );
+
+		return 0;
+	}
+
+	//
 	// Validation.
 	//
 
@@ -1228,14 +1418,6 @@ annex_main( int argc, char ** argv ) {
 		if( region ) { free( const_cast<char *>(s3URL) ); }
 	}
 
-	if( leaseDuration == 0 ) {
-		leaseDuration = param_integer( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
-	}
-
-	if( unclaimedTimeout == 0 ) {
-		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
-	}
-
 	commandArguments.Assign( "TargetCapacity", count );
 
 	time_t now = time( NULL );
@@ -1309,7 +1491,7 @@ annex_main( int argc, char ** argv ) {
 			commandArguments.Assign( "UploadTo", tarballTarget ); }
 
 			// Deliberate fall-through to common code.
-            //@fallthrough@
+			//@fallthrough@
 
 		case ct_update_annex:
 			// Set AnnexType and LeaseFunctionARN.

@@ -85,7 +85,7 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		return FALSE;
 	}
 
-	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
+	EC2GahpClient * eventsGahp = startOneEC2GahpClient( publicKeyFile );
 
 	std::string commandID;
 	command->LookupString( "CommandID", commandID );

@@ -138,20 +138,13 @@ main( int argc, char ** const argv )
 	sigprocmask( SIG_UNBLOCK, &sigSet, NULL );
 #endif
 
-	set_mySubSystem("GCE_GAHP", SUBSYSTEM_TYPE_GAHP);
-
-	config();
-	dprintf_config( "GCE_GAHP" );
-	const char * debug_string = getenv( "DebugLevel" );
-	if( debug_string && * debug_string ) {
-		set_debug_flags( debug_string, 0 );
-	}
-
 	int min_workers = MIN_NUMBER_WORKERS;
-	int max_workers = MAX_NUMBER_WORKERS;
+	int max_workers = -1;
+	const char * subSystemName = "GCE_GAHP";
+	const char * logDirectory = NULL;
 
 	int c = 0;
-	while ( (c = my_getopt(argc, argv, "f:d:w:m:" )) != -1 ) {
+	while ( (c = my_getopt(argc, argv, "f:d:w:m:s:l:" )) != -1 ) {
 		switch(c) {
 			case 'f':
 				break;
@@ -175,9 +168,32 @@ main( int argc, char ** const argv )
 					max_workers = -1;
 				}
 				break;
+			case 's':
+				if( my_optarg && *my_optarg ) {
+					subSystemName = my_optarg;
+				}
+				break;
+			case 'l':
+				if( my_optarg && *my_optarg ) {
+					logDirectory = my_optarg;
+				}
+				break;
 			default:
 				usage();
 		}
+	}
+
+	// This is horrible, but I can't find the "right" way to do it.
+    if( logDirectory != NULL ) {
+    	setenv( "_CONDOR_LOG", logDirectory, 1 );
+    }
+
+    set_mySubSystem( subSystemName, SUBSYSTEM_TYPE_GAHP );
+	config();
+	dprintf_config( subSystemName );
+	const char * debug_string = getenv( "DebugLevel" );
+	if( debug_string && * debug_string ) {
+		set_debug_flags( debug_string, 0 );
 	}
 
 	dprintf(D_FULLDEBUG, "Welcome to the GCE GAHP\n");

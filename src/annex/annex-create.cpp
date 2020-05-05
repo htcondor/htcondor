@@ -160,18 +160,18 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	// take some time to get the result.  The GAHP client will fire the
 	// notification timer when the result is ready, and we can get it by
 	// calling the GAHP client function a second time with the same arguments.
-	EC2GahpClient * gahp = startOneGahpClient( publicKeyFile, serviceURL );
+	EC2GahpClient * gahp = startOneEC2GahpClient( publicKeyFile );
 
 	// The lease requires a different endpoint to implement.
-	EC2GahpClient * eventsGahp = startOneGahpClient( publicKeyFile, eventsURL );
+	EC2GahpClient * eventsGahp = startOneEC2GahpClient( publicKeyFile );
 
 	// Checking for the existence of the lease function requires a different
 	// endpoint as well.  Maybe we should fiddle the GAHP to make it less
 	// traumatic to use different endpoints?
-	EC2GahpClient * lambdaGahp = startOneGahpClient( publicKeyFile, lambdaURL );
+	EC2GahpClient * lambdaGahp = startOneEC2GahpClient( publicKeyFile );
 
 	// For uploading to S3.
-	EC2GahpClient * s3Gahp = startOneGahpClient( publicKeyFile, s3URL );
+	EC2GahpClient * s3Gahp = startOneEC2GahpClient( publicKeyFile );
 
 	//
 	// Construct the bulk request, create rule, and add target functors,

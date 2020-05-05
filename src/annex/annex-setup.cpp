@@ -39,7 +39,7 @@ checkOneParameter( const char * pName, int & rv ) {
 }
 
 int
-check_account_setup( const std::string & publicKeyFile, const std::string & privateKeyFile, const std::string & cfURL, const std::string & ec2URL ) {
+check_account_setup( const std::string & publicKeyFile, const std::string & privateKeyFile, const std::string & cfURL, const std::string & /* ec2URL */ ) {
 	ClassAd * reply = new ClassAd();
 	ClassAd * scratchpad = new ClassAd();
 
@@ -48,8 +48,8 @@ check_account_setup( const std::string & publicKeyFile, const std::string & priv
 
 	Stream * replyStream = NULL;
 
-	EC2GahpClient * cfGahp = startOneGahpClient( publicKeyFile, cfURL );
-	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, ec2URL );
+	EC2GahpClient * cfGahp = startOneEC2GahpClient( publicKeyFile );
+	EC2GahpClient * ec2Gahp = startOneEC2GahpClient( publicKeyFile );
 
 	std::string bucketStackName = "HTCondorAnnex-ConfigurationBucket";
 	std::string bucketStackDescription = "configuration bucket";
@@ -280,8 +280,8 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 
 	Stream * replyStream = NULL;
 
-	EC2GahpClient * cfGahp = startOneGahpClient( publicKeyFile, cfURL );
-	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, ec2URL );
+	EC2GahpClient * cfGahp = startOneEC2GahpClient( publicKeyFile );
+	EC2GahpClient * ec2Gahp = startOneEC2GahpClient( publicKeyFile );
 
 	// FIXME: Do something cleverer for versioning.
 	std::string bucketStackURL = "https://s3.amazonaws.com/condor-annex/bucket-9.json";
