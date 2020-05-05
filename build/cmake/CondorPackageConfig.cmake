@@ -392,9 +392,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( CMAKE_INSTALL_PREFIX "")
 		set( CPACK_SET_DESTDIR "ON")
 
-		# Processing control files
-		add_subdirectory(build/packaging/debian)
-
 	elseif ( RPM_SYSTEM_NAME )
 		# This variable will be defined if the platfrom support RPM
 		message (STATUS "Configuring RPM package on ${LINUX_NAME}-${LINUX_VER} -> ${RPM_SYSTEM_NAME}.${SYS_ARCH}")
