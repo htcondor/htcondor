@@ -6,6 +6,8 @@ NOCACHE:=no
 UNVERSIONED:=no
 BUILDAH:=no
 
+SHELL:=/bin/bash
+
 basetargets:=build-base-el7  #build-base-el8
 imgtargets-el7:=$(shell echo build-{cm,submit,execute,mini}-el7)
 #imgtargets-el8:=$(shell echo build-{cm,submit,execute,mini}-el8)
