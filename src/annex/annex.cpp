@@ -1255,6 +1255,22 @@ annex_main( int argc, char ** argv ) {
 		std::string zone;
 		if(! handleArgument( zone, gcpZone, "ANNEX_DEFAULT_GCP_ZONE", "GCP zone", "-gcp-zone", argv[0] )) { return 1; }
 
+		// Allow zone-specific defaults in configuration.
+		char * safeZone = strdup( zone.c_str() );
+		for( unsigned i = 0; i < strlen( safeZone ); ++i ) {
+			if( ('a' <= safeZone[i] && safeZone[i] <= 'z') ||
+			    ('A' <= safeZone[i] && safeZone[i] <= 'Z') ||
+			    ('0' <= safeZone[i] && safeZone[i] <= '9') ||
+			    strchr( "_./", safeZone[i] ) != NULL )
+			{
+				continue;
+			} else {
+				safeZone[i] = '_';
+			}
+		}
+		get_mySubSystem()->setLocalName( safeZone );
+		free( safeZone );
+
 		std::string machineType;
 		if(! handleArgument( machineType, gcpMachineType, "ANNEX_DEFAULT_GCP_MACHINE_TYPE", "GCP machine type", "-gcp-machine-type", argv[0] )) { return 1; }
 
@@ -1271,7 +1287,7 @@ annex_main( int argc, char ** argv ) {
 		if(! handleArgument( project, gcpProject, "ANNEX_DEFAULT_GCP_PROJECT", "GCP project", "-gcp-project", argv[0] )) { return 1; }
 
 		std::string authFile;
-		if(! handleArgument( authFile, gcpAuthFile, "ANNEX_DEFAULT_GCP_AUTHFILE", "GCP authfile", "-gcp-authfile", argv[0] )) { return 1; }
+		if(! handleArgument( authFile, gcpAuthFile, "ANNEX_DEFAULT_GCP_AUTH_FILE", "GCP auth file", "-gcp-auth-file", argv[0] )) { return 1; }
 
         // These have no defaults.
         std::string jsonFile;
