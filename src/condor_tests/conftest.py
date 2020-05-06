@@ -22,8 +22,12 @@ import collections
 import copy
 import time
 import tempfile
+import os
+import subprocess
 
 import pytest
+
+import htcondor
 
 from ornithology import Condor
 
@@ -38,16 +42,38 @@ CONFIG_IDS = collections.defaultdict(set)
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--tests-dir",
+        "--base-test-dir",
         action="store",
-        default = None,
-        help="Set the root directory for per-test directories. Defaults to a timestamped directory in the system temporary directory.",
+        default=None,
+        help="Set the base directory that per-test directories will be created in. Defaults to a time-and-pid-stamped directory in the system temporary directory.",
     )
 
 
 def get_base_test_dir(config):
-    default = Path(tempfile.gettempdir()) / f"condor-tests-{int(time.time())}"
-    return Path(config.getoption("tests-dir", default=default)).absolute()
+    base_dir = config.getoption("base_test_dir")
+
+    if base_dir is None:
+        base_dir = (
+            Path(tempfile.gettempdir())
+            / f"condor-tests-{int(time.time())}-{os.getpid()}"
+        )
+
+    base_dir = Path(base_dir).absolute()
+
+    base_dir.mkdir(exist_ok=True, parents=True)
+
+    return base_dir
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_report_header(config, startdir):
+    return [
+        "",
+        f"Base per-test directory: {get_base_test_dir(config)}",
+        f"Python bindings version:\n{htcondor.version()}",
+        f"HTCondor version:\n{subprocess.run(['condor_version'], stdout = subprocess.PIPE).stdout.decode('utf-8').strip()}",
+        "",
+    ]
 
 
 class TestDir:
@@ -166,7 +192,7 @@ def test_dir() -> Path:
 
 
 def pytest_runtest_protocol(item, nextitem):
-    if 'test_dir' in item.fixturenames:
+    if "test_dir" in item.fixturenames:
         TEST_DIR._recompute(item)
 
 
@@ -196,6 +222,7 @@ def config(*args, params=None):
     ----------
     params
     """
+
     def decorator(func):
         _check_params(params)
         _add_config_ids(func, params)
@@ -218,6 +245,7 @@ def standup(*args):
     Standup is always performed after all :func:`config` fixtures have run,
     and before any :func:`action` fixtures that depend on it.
     """
+
     def decorator(func):
         return pytest.fixture(scope="class")(func)
 
@@ -252,7 +280,7 @@ def action(*args, params=None):
     return decorator
 
 
-@pytest.fixture(scope = 'class')
+@pytest.fixture(scope="class")
 def default_condor(test_dir):
     with Condor(local_dir=test_dir / "condor") as condor:
         yield condor
