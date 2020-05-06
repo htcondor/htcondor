@@ -372,7 +372,7 @@ sub DoChild
         print "run_test $$: $testname is pytest, checking python bindings and pytest\n";
         SetupPython3Path();
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
-        $perl = "python3 -m pytest --tests-dir $BaseDir/tests/";
+        $perl = "python3 -m pytest --base-test-dir $BaseDir/test-dirs/";
         print "\tPython version: ";
         system ("python3 --version");
         print "\tPytest version: ";
