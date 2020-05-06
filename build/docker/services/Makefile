@@ -12,7 +12,7 @@ basetargets:=build-base-el7  #build-base-el8
 imgtargets-el7:=$(shell echo build-{cm,submit,execute,mini}-el7)
 #imgtargets-el8:=$(shell echo build-{cm,submit,execute,mini}-el8)
 imgtargets:=$(imgtargets-el7)  #$(imgtargets-el8)
-pushtargets:=$(shell echo push-{execute,mini}-el7)  #$(shell echo push-{execute-mini}-el8)
+pushtargets:=$(shell echo push-{cm,execute,mini}-el7)  #$(shell echo push-{cm,execute-mini}-el8)
 pushalltargets:=$(shell echo push-{base,cm,submit,execute,mini}-el7)  #$(shell echo push-{base,cm,submit,execute,mini}-el8)
 
 
