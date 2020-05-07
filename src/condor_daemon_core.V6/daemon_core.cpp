@@ -7548,6 +7548,13 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
+	// if working in an encrypted execute directory, we won't be able to check the exe type
+	// unless we first switch to user priv
+	priv_state gbt_prv = PRIV_UNKNOWN;
+	if (priv == PRIV_USER_FINAL) {
+		gbt_prv = set_user_priv();
+	}
+
 	BOOL cp_result, gbt_result;
 	DWORD binType;
 	gbt_result = GetBinaryType(executable, &binType);
@@ -7566,6 +7573,10 @@ int DaemonCore::Create_Process(
 				// try GetBinaryType again...
 			gbt_result = GetBinaryType(executable, &binType);
 		}
+	}
+
+	if (priv == PRIV_USER_FINAL) {
+		set_priv(gbt_prv);
 	}
 
 	// test if the executable is either unexecutable, or if GetBinaryType()
