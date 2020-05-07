@@ -117,23 +117,18 @@ xmlSource.cpp
 
 #####################################################################
 
-#####################################################################
-# treat like an external for others to use
-condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysbuild")
-#####################################################################
-
 if (NOT WINDOWS)
 
   add_library(classads_objects OBJECT ${ClassadSrcs})
   set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
   add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one which all of condor depends upon
-  condor_set_link_libs( classads PUBLIC ${PCRE_FOUND};${CMAKE_DL_LIBS})
+  target_link_libraries( classads PUBLIC ${PCRE_FOUND};${CMAKE_DL_LIBS})
   set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
   if (LINUX OR DARWIN)  
   	add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 12 )
-	condor_set_link_libs( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
+	target_link_libraries( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
   if ( DARWIN )
@@ -144,21 +139,17 @@ if (NOT WINDOWS)
   if ( LINUX OR DARWIN )
 	# set external reference to the shared library for linux
 	set (CLASSADS_FOUND classad)
-	set (CLASSADS_FOUND_STATIC classads)
   else()
 	# set external reference to the static library for non-linux
 	set (CLASSADS_FOUND classads)
-	set (CLASSADS_FOUND_STATIC classads)
   endif()
 
-  ##condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
   add_executable( classad_functional_tester "classad_functional_tester.cpp" )
-  condor_set_link_libs( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
+  target_link_libraries( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
   install (TARGETS classad_functional_tester DESTINATION ${C_BIN} )
   
-  ##condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
   add_executable( classad_version "classad_version.cpp" )
-  condor_set_link_libs( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
+  target_link_libraries( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
   install (TARGETS classad_version DESTINATION ${C_BIN} )
   
   ###### Install elements with our distribution
@@ -169,15 +160,9 @@ else()
 	# windows specific configuration.
 	add_library( classads STATIC ${ClassadSrcs} )
 	set (CLASSADS_FOUND classads)
-	set (CLASSADS_FOUND_STATIC classads)
-
 endif()
 
 set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
-set( CLASSADS_FOUND_STATIC ${CLASSADS_FOUND_STATIC} PARENT_SCOPE )
-
-
-condor_post_external( classads include OFF "" )
 
 # standard output message used to slog users.  
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
