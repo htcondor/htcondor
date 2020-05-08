@@ -5406,9 +5406,6 @@ type=path
 [CREDD_PORT]
 default=9620
 
-[CRED_STORE_DIR]
-default=$(LOCAL_DIR)/cred_dir
-type=path
 [CREDD_ARGS]
 default=-p $(CREDD_PORT) -f
 [CREDD_LOG]
