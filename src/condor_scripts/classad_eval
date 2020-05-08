@@ -4,10 +4,20 @@ import sys
 import classad
 import htcondor
 
+def makeClassAd(adString):
+    try:
+        return classad.ClassAd(adString)
+    except SyntaxError:
+        modifiedAdString = "[" + adString + "]"
+        return classad.ClassAd(modifiedAdString)
+
 def evaluateAndPrint(argv):
-    if len(argv) < 3:
-        print("Usage: {0} <classad> <expr>[ <expr>]*".format(argv[0]))
-        print("       You may substitute '-file <file>' for '<classad>'.");
+    if len(argv) < 2:
+        print("Usage: {0} [-file <file>] <expr|assignment>[ <expr|assignment>]*".format(argv[0]))
+        print("Evaluate ClassAd expressions.")
+        print("Assignments modify the ClassAd context.");
+        print("")
+        print("\t-file <file>\tA file containing the initial ClassAd context");
         return -1
 
     adString = argv[1]
@@ -17,27 +27,27 @@ def evaluateAndPrint(argv):
         adStringFileName = argv[1]
         adString = open(adStringFileName).read()
 
-    for i in range(2,len(argv)):
+    try:
+        ad = makeClassAd(adString)
+        argv.pop(1)
+    except SyntaxError:
+        if adStringFileName is not None:
+            sys.exit("Unable to turn file '" + adStringFileName + "' into a ClassAd.")
+        else:
+            ad = classad.ClassAd()
+
+    for i in range(1,len(argv)):
         try:
-            ad = classad.ClassAd(adString)
+            newAd = makeClassAd(argv[i])
+            ad.update(newAd)
         except SyntaxError:
-            modifiedAdString = "[" + adString + "]"
             try:
-                ad = classad.ClassAd(modifiedAdString)
+                expr = classad.ExprTree(argv[i])
             except SyntaxError:
-                if adStringFileName is not None:
-                    sys.exit("Unable to turn file '" + adStringFileName + "' into a ClassAd.")
-                else:
-                    sys.exit("Unable to turn '" + adString + "' into a ClassAd.")
+                sys.exit("Unable to turn '" + argv[i] + "' into a ClassAd or an expression.")
 
-        exprString = argv[i]
-        try:
-            expr = classad.ExprTree(exprString)
-        except SyntaxError:
-            sys.exit("Unable to turn '" + argv[i] + "' into a ClassAd expression.")
-
-        result = expr.simplify(ad)
-        print(repr(result))
+            result = expr.simplify(ad)
+            print(repr(result))
 
     return 0
 
