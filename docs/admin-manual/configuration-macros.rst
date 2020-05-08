@@ -6535,6 +6535,12 @@ These macros affect the *condor_collector*.
     filtered before an update must be forwarded. The default is one
     third of ``CLASSAD_LIFETIME``.
 
+:macro-def:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`
+    When this boolean variable is set to ``True``, the *condor_collector*
+    will not forward the private portion of Machine ads to the
+    ``CONDOR_VIEW_HOST`` if the ad's ``State`` is ``Claimed``.
+    The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
+
 The following macros control where, when, and for how long HTCondor
 persistently stores absent ClassAds. See
 section :ref:`admin-manual/monitoring:absent classads` for more details.

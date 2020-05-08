@@ -118,6 +118,12 @@ New Features:
   and queried.
   :ticket:`7462`
 
+- The accoutant ads that *condor_userprio* displays have two new attributes.
+  The ``SubmitterLimit`` contains the fair share, in number of cores, that this
+  submitter should have access to, if they have sufficient jobs, and they all match.
+  The ``SubmitterShares`` is the percentage of the pool they should have access to.
+  :ticket:`7626`
+
 - The ``condor_history`` command now has a ``startd`` option to query the Startd
   history file.  This works for both local and remote queries.
   :ticket:`7538`
@@ -230,6 +236,16 @@ New Features:
   administrators to limit the authorizations available to issued tokens.
   :ticket:`7455`
 
+- Made some performance improvements in the *condor_collector*.
+  This includes new configuration parameter
+  ``COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS``, which reduces the amount
+  of data forwarded between *condor_collectors*.
+  :ticket:`7440`
+  :ticket:`7423`
+
+- *condor_install* can now generate a script to set environment variables
+  for the "fish" shell. :ticket:`7505`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
@@ -249,6 +265,12 @@ Bugs Fixed:
   letters.  HTCondor can now download from and upload to buckets with this
   sort of name.
   :ticket:`7477`
+
+- The Box.com file transfer plugin now implements the chunked upload
+  method, which means that uploads of 50 MB or greater are now
+  possible. Prior to this implementation, jobs uploading large files
+  would unexpectedly go on hold.
+  :ticket:`7531`
 
 - To work around an issue where long-running *gce_gahp* process enter a state
   where they can no longer authenticate with GCE, the daemon now restarts once
