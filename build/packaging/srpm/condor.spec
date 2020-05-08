@@ -1948,6 +1948,17 @@ fi
 %endif
 
 %changelog
+* Thu May 07 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.9-1
+- Proper tracking of maximum memory used by Docker universe jobs
+- Fixed preempting a GPU slot for a GPU job when all GPUs are in use
+- Fixed a Python crash when queue_item_data iterator raises an exception
+- Fixed a bug where slot attribute overrides were ignored
+- Calculates accounting group quota correctly when more than 1 CPU requested
+- Updated HTCondor Annex to accommodate API change for AWS Spot Fleet
+- Fixed a problem where HTCondor would not start on AWS Fargate
+- Fixed where the collector could wait forever for a partial message
+- Fixed streaming output to large files (>2Gb) when using the 32-bit shadow
+
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
 - Fixes addressing CVE-2019-18823
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
