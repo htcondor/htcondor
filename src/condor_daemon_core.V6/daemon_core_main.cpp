@@ -3133,9 +3133,6 @@ dc_reconfig()
 	// Flush the cached list of keys.
 	refreshNamedCredentials();
 
-	// Allow us to retry setting the pool password.
-	Condor_Auth_Passwd::retry_pool_password();
-
 	// Allow us to search for new tokens
 	Condor_Auth_Passwd::retry_token_search();
 
