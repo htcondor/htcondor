@@ -255,6 +255,28 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	priv_state priv;
 	priv = set_user_priv();
 
+#ifdef WIN32
+	owner_profile_.update ();
+	/*************************************************************
+	NOTE: We currently *ONLY* support loading slot-user profiles.
+	This limitation will be addressed shortly, by allowing regular 
+	users to load their registry hive - Ben [2008-09-31]
+	**************************************************************/
+	bool load_profile = false;
+	bool run_as_owner = false;
+	JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
+	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+		// load the slot user registry.  if that failed then turn load_profile off
+	if ( load_profile && !run_as_owner ) {
+		if ( ! owner_profile_.load()) {
+			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n",
+				owner_profile_.user_name_ ? owner_profile_.user_name_ : "NULL");
+			load_profile = false;
+		}
+	}
+
+#endif
+
 		// if we're in PrivSep mode, we won't necessarily be able to
 		// open the files for the job. getStdFile will return us an
 		// open FD in some situations, but otherwise will give us
@@ -444,31 +466,15 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
 
-#if defined ( WIN32 )
-    owner_profile_.update ();
-    /*************************************************************
-    NOTE: We currently *ONLY* support loading slot-user profiles.
-    This limitation will be addressed shortly, by allowing regular 
-    users to load their registry hive - Ben [2008-09-31]
-    **************************************************************/
-    bool load_profile = false,
-         run_as_owner = false;
-    JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
-    JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
-    if ( load_profile && !run_as_owner ) {
-        if ( owner_profile_.load () ) {
-            /* publish the users environment into that of the main 
-
-            job's environment */
-            if ( !owner_profile_.environment ( job_env ) ) {
-                dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
-                    "export owner's environment.\n" );
-            }            
-        } else {
-            dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to load "
-                "owner's profile.\n" );
-        }
-    }
+#ifdef WIN32
+	// if we loaded a slot user profile, import environment variables from it
+	if (load_profile && !run_as_owner) {
+		/* publish the users environment into that of the main job's environment */
+		if (!owner_profile_.environment(job_env)) {
+			dprintf(D_ALWAYS, "Failed to export environment for %s into the job.\n",
+				owner_profile_.user_name_ ? owner_profile_.user_name_ : "NULL");
+		}
+	}
 #endif
 
 		// While we are still in user priv, print out the username

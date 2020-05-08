@@ -28,6 +28,7 @@
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
 #include "expr_analyze.h" // to analyze mismatches in the same way condor_q -better does
+#include "directory_util.h"
 
 #include "slot_builder.h"
 
@@ -2729,19 +2730,24 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 	// of conditions also ensures that reset_monitor() has been called, so
 	// the first ad we write will include the StartOfJob* attribute(s).
 	if (r_cur && r_cur->ad() && r_cur->executeDir() ) {
+
 		std::string updateAdDir;
-		formatstr( updateAdDir, "%s/dir_%d", r_cur->executeDir(), r_cur->starterPID() );
+		formatstr( updateAdDir, "%s%cdir_%d", r_cur->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
 
 		// Write to a temporary file first and then rename it
 		// to ensure atomic updates.
-		std::string updateAdTmpPath;
-		formatstr( updateAdTmpPath, "%s/.update.ad.tmp", updateAdDir.c_str() );
+		MyString updateAdTmpPath;
+		dircat(updateAdDir.c_str(), ".update.ad.tmp", updateAdTmpPath);
 
 		FILE * updateAdFile = NULL;
 #if defined(WINDOWS)
-		{
-			TemporaryPrivSentry p( PRIV_ROOT );
-			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
+		// use don't set_user_priv on windows because we don't have an easy way to figure
+		// out what user to use and it matters a lot less that we do so. 
+		updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
+		if (updateAdFile) {
+			// If directory encryption is on, we want to make sure that this file is not encryped
+			// since it would be encrypted by LOCAL_SYSTEM and not readable by others
+			DecryptFile(updateAdTmpPath.c_str(), 0);
 		}
 #else
 		StatInfo si( updateAdDir.c_str() );
@@ -2767,14 +2773,11 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 
 
 			// Rename the temporary.
-			std::string updateAdPath;
-			formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
+			MyString updateAdPath;
+			dircat(updateAdDir.c_str(), ".update.ad", updateAdPath);
 
 #if defined(WINDOWS)
-			{
-				TemporaryPrivSentry p( PRIV_ROOT );
-				rename( updateAdTmpPath.c_str(), updateAdPath.c_str() );
-			}
+			rotate_file( updateAdTmpPath.c_str(), updateAdPath.c_str() );
 #else
 			StatInfo si( updateAdDir.c_str() );
 			if(! si.Error()) {

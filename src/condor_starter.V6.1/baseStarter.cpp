@@ -1113,7 +1113,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		}
 		if (offset > 0 && size < static_cast<size_t>(offset))
 		{
-			offset = size;
+			offset = (int)size;
 			*it2 = offset;
 			classad::Value value; value.SetIntegerValue(*it2);
 			off_expr_list[idx] = classad::Literal::MakeLiteral(value);
@@ -1886,15 +1886,14 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-	}
 	
-	// if the admin or the user wants the execute directory encrypted,
-	// go ahead and set that up now too
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
-	if (!encrypt_execdir && jic && jic->jobClassAd()) {
-		jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
+		// if the admin or the user wants the execute directory encrypted,
+		// go ahead and set that up now too
+		bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+		if (!encrypt_execdir && jic && jic->jobClassAd()) {
+			jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+		}
+		if (encrypt_execdir) {
 		
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(
@@ -1926,14 +1925,15 @@ CStarter::createTempExecuteDir( void )
 				size_t cch = WorkingDir.Length()+1;
 				wchar_t *WorkingDir_w = new wchar_t[cch];
 				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.Value());
+
 				EncryptionDisable(WorkingDir_w, FALSE);
-				delete[] WorkingDir_w;
 				
 				if ( EncryptFile(WorkingDir.Value()) == 0 ) {
 					dprintf(D_ALWAYS, "Could not encrypt execute directory "
 							"(err=%li)\n", GetLastError());
 				}
 
+				delete[] WorkingDir_w;
 				FreeLibrary(advapi); // don't leak the dll library handle
 
 			} else {
@@ -1942,8 +1942,9 @@ CStarter::createTempExecuteDir( void )
 						"but the Encryption" " functions are unavailable!");
 			}
 
-	} // ENCRYPT_EXECUTE_DIRECTORY is True
-	
+		} // ENCRYPT_EXECUTE_DIRECTORY is True
+	}
+
 
 #endif /* WIN32 */
 
