@@ -279,7 +279,8 @@ our %submit_info = (
 		},
 	},
 
-	'x86_64_Debian8'	=> 'x86_64_Debian7',
+	'x86_64_Debian8'	        => 'x86_64_Debian7',
+	'nmi-build:x86_64_Debian8'	=> 'x86_64_Debian7',
 
 	##########################################################################
 	# Platform DEB 9 on x86_64
@@ -340,6 +341,7 @@ our %submit_info = (
 
 	'x86_64_CentOS7'	=> 'x86_64_RedHat7',
 	'x86_64_SL7'		=> 'x86_64_RedHat7',
+	'nmi-build:x86_64_CentOS7' => 'x86_64_RedHat7',
 
 	# 32 bit CentOS 7
 	'x86_CentOS7'		=> {
@@ -357,6 +359,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+
+	'nmi-build:x86_CentOS7' => 'x86_CentOS7',
 
 	##########################################################################
 	# Platform RedHat and SL
@@ -687,6 +691,8 @@ our %submit_info = (
 		},
 	},
 
+	'nmi-build:x86_64_Ubuntu16'	=> 'x86_64_Ubuntu16',
+
 	'x86_64_Ubuntu18'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
@@ -701,6 +707,8 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+
+	'nmi-build:x86_64_Ubuntu18'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',
