@@ -15,7 +15,7 @@ condor_home=/var/lib/condor
 
 
 condor_make_homedir() {
-    for dlabel in LOCAL_UNIV_EXECUTE CRED_STORE_DIR EXECUTE LOCK LOG SPOOL; do
+    for dlabel in LOCAL_UNIV_EXECUTE EXECUTE LOCK LOG SPOOL; do
         if dname=$(condor_config_val $dlabel 2>/dev/null); then
             mkdir -p $dname
             chown -R $condor_user: $dname
@@ -24,7 +24,7 @@ condor_make_homedir() {
         fi
     done
     # why should this be world writable?
-    #for dlabel in EXECUTE CRED_STORE_DIR; do
+    #for dlabel in EXECUTE; do
     #	chmod 1777 $(condor_config_val $dlabel)
     #done
 }
