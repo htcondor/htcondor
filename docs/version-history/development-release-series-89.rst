@@ -27,6 +27,14 @@ New Features:
    ``classad_eval 'x = y; y = 7' 'x'`` will now correctly return ``7``.
    :ticket:`7621`
 
+-  *classad_eval* now allows you to freely mix (partial) ClassAds,
+   single attribute assignments, and the expressions you want to evaluate.
+   This means that ``classad_eval 'x = y' 'y = 7' 'x'`` will now return
+   ``7``.  The ad used to evaluate an expression will be printed before
+   the expression's result, unless doing so would repeat the previous
+   expression's ad; use the ``-quiet`` flag to disable.
+   :ticket:`7341`
+
 Bugs Fixed:
 
 - *classad_eval* no longer ignores trailing garbage in its first (ClassAd)
