@@ -911,6 +911,9 @@ main( int argc, const char** argv)
 			opt_extra = 1; // publish extra GPU properties
 		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
+			// We need the basic properties in order to determine the
+			// dynamic ones (most noticeably, the PCI bus ID).
+			opt_basic = 1;
 			opt_dynamic = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
