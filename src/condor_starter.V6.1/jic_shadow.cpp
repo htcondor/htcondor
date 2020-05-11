@@ -237,7 +237,7 @@ JICShadow::init( void )
 		// If the user wants it, initialize our io proxy
 		// Must have user priv to drop the config info	
 		// into the execute dir.
-        priv_state priv = set_user_priv();
+	priv_state priv = set_user_priv();
 	initIOProxy();
 	priv = set_priv(priv);
 

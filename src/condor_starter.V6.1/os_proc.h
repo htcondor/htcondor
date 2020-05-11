@@ -124,10 +124,6 @@ private:
 	bool m_using_priv_sep;
 	int singReaperId;
 
-#if defined ( WIN32 )
-    OwnerProfile owner_profile_;
-#endif
-
 };
 
 #endif
