@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  *condor_gpu_discovery* no longer crashes if passed just the
+   ``-dynamic`` flag.
+   :ticket:`7639`
 
 Version 8.8.9
 -------------
