@@ -8,6 +8,7 @@ x86_64_Debian9
 docker://timtheisen/nmi-build:x86_64_Debian10
 x86_64_MacOSX10
 x86_64_MacOSX13
+x86_64_MacOSX15
 x86_64_Ubuntu16
 x86_64_Ubuntu18
 x86_64_Windows7
