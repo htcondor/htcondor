@@ -2724,15 +2724,26 @@ void Resource::refresh_classad_evaluated()
 
 void Resource::refresh_sandbox_ad(ClassAd*cap)
 {
+	// If we have a starter that is alive enough to have sent it's first update.
+	// And it has not yet sent the final update when we may want to refresh the .update.ad
 	// Don't bother to write an ad to disk that won't include the extras ads.
 	// Also only write the ad to disk when the claim has a ClassAd and the
 	// starter knows where the execute directory is.  Empirically, this set
 	// of conditions also ensures that reset_monitor() has been called, so
 	// the first ad we write will include the StartOfJob* attribute(s).
-	if (r_cur && r_cur->ad() && r_cur->executeDir() ) {
+	Starter * starter = NULL;
+	if (r_cur && r_cur->ad() && r_cur->starterPID()) {
+		starter = findStarterByPid(r_cur->starterPID());
+		if (starter && ( ! starter->got_update() || starter->got_final_update())) {
+			dprintf(D_FULLDEBUG, "Skipping refresh of .update.ad because Starter is alive, but %s\n",
+				starter->got_final_update() ? "sent final update" : "has not yet sent any updates");
+			starter = NULL;
+		}
+	}
+	if (starter && starter->executeDir()) {
 
 		std::string updateAdDir;
-		formatstr( updateAdDir, "%s%cdir_%d", r_cur->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
+		formatstr( updateAdDir, "%s%cdir_%d", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
 
 		// Write to a temporary file first and then rename it
 		// to ensure atomic updates.

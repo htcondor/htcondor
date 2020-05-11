@@ -32,6 +32,10 @@
 #include "glexec_privsep_helper.linux.h"
 #endif
 
+#ifdef WIN32
+#include "profile.WINDOWS.h" // for OwnerProfile class
+#endif
+
 namespace htcondor {
 class DataReuseDirectory;
 }
@@ -258,6 +262,10 @@ public:
 	int numberOfJobs( void ) { return m_job_list.Number(); };
 
 	bool isGridshell( void ) {return is_gridshell;};
+#ifdef WIN32
+	bool hasEncryptedWorkingDir(void) { return has_encrypted_working_dir; }
+	bool loadUserRegistry(const ClassAd * jobAd);
+#endif
 	const char* origCwd( void ) {return (const char*) orig_cwd;};
 	int starterStdinFd( void ) { return starter_stdin_fd; };
 	int starterStdoutFd( void ) { return starter_stdout_fd; };
@@ -308,6 +316,10 @@ public:
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
+
+#ifdef WIN32
+	OwnerProfile m_owner_profile;
+#endif
 
 	bool m_deferred_job_update;
 
@@ -370,6 +382,9 @@ private:
 	char *orig_cwd;
 	MyString m_recoveryFile;
 	bool is_gridshell;
+#ifdef WIN32
+	bool has_encrypted_working_dir;
+#endif
 	int ShuttingDown;
 	int starter_stdin_fd;
 	int starter_stdout_fd;
