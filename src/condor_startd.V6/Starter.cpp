@@ -910,7 +910,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
 		} else {
-			dprintf(D_ALWAYS, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
 		}
 
 		// In addition to new info about the job, the starter also
