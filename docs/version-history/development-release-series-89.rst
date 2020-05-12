@@ -45,6 +45,10 @@ Bugs Fixed:
 - An ID token at the end of a file lacking a trailing newline is no longer ignored.
   :ticket:`7499`
 
+- ``condor_token_request_list`` will now correctly list requests with request IDs
+  starting with the number ``0``.
+  :ticket:`7641`
+
 Version 8.9.7
 -------------
 
