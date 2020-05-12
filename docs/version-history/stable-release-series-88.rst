@@ -27,6 +27,10 @@ Bugs Fixed:
    ``-dynamic`` flag.
    :ticket:`7639`
 
+-  Fix typographic error in ``condor.service`` file to wait for
+   ``nfs-client.target``.
+   :ticket:`7638`
+
 Version 8.8.9
 -------------
 
