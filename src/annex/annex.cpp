@@ -1280,8 +1280,9 @@ annex_main( int argc, char ** argv ) {
 		std::string serviceURL;
 		if(! handleArgument( serviceURL, gcpServiceURL, "ANNEX_DEFAULT_GCP_SERVICE_URL", "GCP service URL", "-gcp-service-url", argv[0] )) { return 1; }
 
+		// It's OK for the account ID to be empty.
 		std::string account;
-		if(! handleArgument( account, gcpAccount, "ANNEX_DEFAULT_GCP_ACCOUNT", "GCP account", "-gcp-account", argv[0] )) { return 1; }
+		param( account, "ANNEX_DEFAULT_GCP_ACCOUNT" );
 
 		std::string project;
 		if(! handleArgument( project, gcpProject, "ANNEX_DEFAULT_GCP_PROJECT", "GCP project", "-gcp-project", argv[0] )) { return 1; }
