@@ -112,8 +112,8 @@ Run `condor_reconfig` on the central manager to pick up the changes.
 
 Create a token for the execute node.  On the central manager:
 ```console
-cm$ sudo condor_create_token -authz ADVERTISE_MASTER \
-         -authz ADVERTISE_STARTD -identity dockerworker@example.net \
+cm$ sudo condor_token_create -authz ADVERTISE_MASTER \
+         -authz ADVERTISE_STARTD -authz READ -identity dockerworker@example.net \
          dockerworker_token
 cm$ sudo scp user@dockerhost.example.net:volumes/condorexec/secrets/token
 ```
