@@ -717,6 +717,12 @@ void dumpParam( const char * attribute, int defaultValue ) {
 	dprintf( D_AUDIT | D_NOHEADER, "%s = %d\n", attribute, value );
 }
 
+void
+addToMetadataString( std::string & metadata, const std::string & key, const std::string & value ) {
+	if(! metadata.empty()) { metadata += ","; }
+	metadata += key + "=" + value;
+}
+
 bool
 handleArgument( std::string & s, const char * arg, const char * parameterName, const char * value, const char * flag, const char * argv0 ) {
 	if( arg ) { s = arg; return true; }
@@ -1290,17 +1296,63 @@ annex_main( int argc, char ** argv ) {
 		std::string authFile;
 		if(! handleArgument( authFile, gcpAuthFile, "ANNEX_DEFAULT_GCP_AUTH_FILE", "GCP auth file", "-gcp-auth-file", argv[0] )) { return 1; }
 
-        // These have no defaults.
-        std::string jsonFile;
-        if( gcpJSONFile != NULL ) { jsonFile = gcpJSONFile; }
-        std::string metadata;
-        if( gcpMetadata) { metadata = gcpMetadata; }
-        std::string metadataFile;
-        if( gcpMetadataFile ) { metadataFile = gcpMetadataFile; }
+		// These have no defaults.
+		std::string jsonFile;
+		if( gcpJSONFile != NULL ) { jsonFile = gcpJSONFile; }
+		std::string metadata;
+		if( gcpMetadata) { metadata = gcpMetadata; }
+		std::string metadataFile;
+		if( gcpMetadataFile ) { metadataFile = gcpMetadataFile; }
 
-        // FIXME: We use the metadata for own purposes.
-        // metadata += "htcondor_password = " + password + ",";
+		//
+		// Add the HTCondor-specific contextualization metadata.
+		//
 
+		// Set the pool password.
+		std::string localPasswordFile;
+		param( localPasswordFile, "SEC_PASSWORD_FILE" );
+		if( localPasswordFile.empty() ) {
+			fprintf( stderr, "SEC_PASSWORD_FILE empty or undefined\n" );
+			return 1;
+		}
+		std::string localPassword;
+		if(! readShortFile( localPasswordFile.c_str(), localPassword )) {
+			return 1;
+		}
+		char * encoded = condor_base64_encode( (const unsigned char *)localPassword.c_str(), localPassword.length(), false );
+		addToMetadataString( metadata, "htcondor.pool_password", encoded );
+		free( encoded );
+
+		// Set the collector host.
+		std::string collectorHost;
+		param( collectorHost, "COLLECTOR_HOST" );
+		if( collectorHost.empty() ) {
+			fprintf( stderr, "COLLECTOR_HOST empty or undefined\n" );
+			return 1;
+		}
+		// Phase 2: Contact the COLLECTOR_HOST to fetch its instance ID.
+		addToMetadataString( metadata, "htcondor.pool_collector", collectorHost );
+
+		// Set the annex name.
+		addToMetadataString( metadata, "htcondor.annex_name", annexName );
+
+		// The instance blobs may need 'serviceAccounts'...
+
+		/*
+		ClassAd instanceBlob;
+		if(! jsonFile.empty()) {
+			classad::ClassAdJsonParser parser;
+			readShortFile( ... );
+			ClassAd * result = parser.ParseClassAd(jsonFileContents);
+			if(! result) {
+				fprintf( stderr, "GCP metadata '%s' does not look like JSON.\n", metadata.c_str() );
+				return 1;
+			}
+			instanceBlob.CopyFrom(*result);
+			delete result;
+		}
+		instanceBlob.InsertAttr( ... );
+		*/
 
 		fprintf( stdout,
 			"Will request %ld %s instance%s for %.2f hours.  "
@@ -1337,6 +1389,7 @@ annex_main( int argc, char ** argv ) {
 		      metadata, metadataFile, jsonFile },
 		    labels );
 		ReplyAndClean * last = new ReplyAndClean( reply, NULL, gceGahpClient, scratchpad, NULL, commandState, commandID, NULL, NULL );
+		// FIXME: Verify collector instance ID.
 		FunctorSequence * fs = new FunctorSequence( {ii}, last, commandState, commandID, scratchpad );
 
 		int gceGahpTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
