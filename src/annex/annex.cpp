@@ -1320,7 +1320,7 @@ annex_main( int argc, char ** argv ) {
 			return 1;
 		}
 		char * encoded = condor_base64_encode( (const unsigned char *)localPassword.c_str(), localPassword.length(), false );
-		addToMetadataString( metadata, "htcondor.pool_password", encoded );
+		addToMetadataString( metadata, "htcondor_pool_password", encoded );
 		free( encoded );
 
 		// Set the collector host.
@@ -1331,10 +1331,24 @@ annex_main( int argc, char ** argv ) {
 			return 1;
 		}
 		// Phase 2: Contact the COLLECTOR_HOST to fetch its instance ID.
-		addToMetadataString( metadata, "htcondor.pool_collector", collectorHost );
+		addToMetadataString( metadata, "htcondor_pool_collector", collectorHost );
 
 		// Set the annex name.
-		addToMetadataString( metadata, "htcondor.annex_name", annexName );
+		addToMetadataString( metadata, "htcondor_annex_name", annexName );
+
+		// FIXME: Pass the idle time-out.
+		// addToMetadataString( metadata, "htcondor_annex_idle", idleTime );
+
+		// FIXME: The obvious command-line option.
+		std::string startupScriptFile;
+		param( startupScriptFile, "ANNEX_DEFAULT_GCP_STARTUP_SCRIPT" );
+		if(! startupScriptFile.empty()) {
+			std::string startupScript;
+			if(! readShortFile( startupScriptFile.c_str(), startupScript )) {
+				return 1;
+			}
+			addToMetadataString( metadata, "startup-script", startupScript );
+		}
 
 		// The instance blobs may need 'serviceAccounts'...
 
@@ -1362,6 +1376,10 @@ annex_main( int argc, char ** argv ) {
 
 
 		// from GCEJob::build_instance_name().
+		// FIXME: this is great for tracking instances that we care about
+		// individually, although that could probably be done with the
+		// metadata instead, but for the annex, this creates really ugly
+		// hostnames.
 		std::string instanceName = "annex-";
 
 		uuid_t uuid;

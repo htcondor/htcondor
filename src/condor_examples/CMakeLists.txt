@@ -70,6 +70,7 @@ install (FILES
 		condor-annex-ec2.service
 		00-minicondor
 		50ec2.config
+		gce-annex-configure.sh
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES
