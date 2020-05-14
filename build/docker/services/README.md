@@ -114,7 +114,7 @@ Create a token for the execute node.  On the central manager:
 ```console
 cm$ sudo condor_token_create -authz ADVERTISE_MASTER \
          -authz ADVERTISE_STARTD -authz READ -identity dockerworker@example.net \
-         dockerworker_token
+         --token dockerworker_token
 cm$ sudo scp user@dockerhost.example.net:volumes/condorexec/secrets/token
 ```
 
