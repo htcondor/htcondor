@@ -1,7 +1,6 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-# Using 64-bit CentOS 7 hardware for std univ tests
 x86_64_CentOS7
 docker://timtheisen/nmi-build:x86_64_CentOS8
 x86_64_Debian9
