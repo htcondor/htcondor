@@ -23,12 +23,22 @@ GCEInstanceInsert::operator() () {
 		metadata, metadataFile, false /* not interruptible */,
 		jsonFile, labels, instanceID );
 
-    int rv = TRUE;
+	int rv = TRUE;
 	switch(rc) {
 		case 0:
-			fprintf( stdout, "Instance %s started with ID %s\n", instanceName.c_str(), instanceID.c_str() );
+			// fprintf( stdout, "Instance %s started with ID %s\n", instanceName.c_str(), instanceID.c_str() );
 			reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
-			reply->Assign( "BulkRequestID", instanceID );
+
+			// This is a phase 1 abomination.
+			{ std::string bulkRequestID;
+			reply->LookupString( "BulkRequestID", bulkRequestID );
+			if( bulkRequestID.empty() ) {
+				bulkRequestID = instanceID;
+			} else {
+				bulkRequestID += ", " + instanceID;
+			}
+			reply->Assign( "BulkRequestID", bulkRequestID ); }
+
 			rv = PASS_STREAM;
 			break;
 

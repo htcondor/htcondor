@@ -1253,6 +1253,23 @@ annex_main( int argc, char ** argv ) {
 			return 1;
 		}
 
+		// This can be relaxed if we don't use the annex name as part of the
+		// instance name.  Since the latter appears on condor_status, I don't
+		// have any ideas for anything better.
+		Regex re; const char * errorMessage = NULL; int offset = 0;
+		if(! re.compile( "^[a-z]([-a-z0-9]*[a-z0-9])?$", &errorMessage, &offset )) {
+			fprintf( stderr, "INTERNAL ERROR: failed to compile regular expression: '%s' @ %d\n", errorMessage, offset );
+			return 1;
+		}
+		if(! re.isInitialized()) {
+			fprintf( stderr, "INTERNAL ERROR: regular expression not initialized\n" );
+			return 1;
+		}
+		if(! re.match(annexName)) {
+			fprintf( stderr, "%s: for GCP, the annex name must start with a lowercase letter, contain only hypens, digits, and lowercase letters, and not end in a hyphen.\n", argv[0] );
+			return 1;
+		}
+
 		if( count == 0 ) {
 			fprintf( stderr, "%s: you must specify -count\n", argv[0] );
 			return 1;
@@ -1350,48 +1367,11 @@ annex_main( int argc, char ** argv ) {
 			addToMetadataString( metadata, "startup-script", startupScript );
 		}
 
-		// The instance blobs may need 'serviceAccounts'...
-
-		/*
-		ClassAd instanceBlob;
-		if(! jsonFile.empty()) {
-			classad::ClassAdJsonParser parser;
-			readShortFile( ... );
-			ClassAd * result = parser.ParseClassAd(jsonFileContents);
-			if(! result) {
-				fprintf( stderr, "GCP metadata '%s' does not look like JSON.\n", metadata.c_str() );
-				return 1;
-			}
-			instanceBlob.CopyFrom(*result);
-			delete result;
-		}
-		instanceBlob.InsertAttr( ... );
-		*/
-
 		fprintf( stdout,
 			"Will request %ld %s instance%s for %.2f hours.  "
 			"Each instance will terminate after being idle for %.2f hours.\n",
 			count, machineType.c_str(), count == 1 ? "" : "s",
 			leaseDuration / 3600.0, unclaimedTimeout / 3600.0 );
-
-
-		// from GCEJob::build_instance_name().
-		// FIXME: this is great for tracking instances that we care about
-		// individually, although that could probably be done with the
-		// metadata instead, but for the annex, this creates really ugly
-		// hostnames.
-		std::string instanceName = "annex-";
-
-		uuid_t uuid;
-		char uuid_str[37];
-		uuid_generate( uuid );
-		uuid_unparse( uuid, uuid_str );
-		uuid_str[36] = '\0';
-		for( char * c = uuid_str; *c != '\0'; ++c ) {
-			*c = tolower( *c );
-		}
-
-		instanceName += uuid_str;
 
 
 		std::vector< std::pair< std::string, std::string > > labels;
@@ -1400,15 +1380,32 @@ annex_main( int argc, char ** argv ) {
 		std::string commandID;
 		ClassAd * reply = new ClassAd();
 		ClassAd * scratchpad = new ClassAd();
-		auto * ii = new GCEInstanceInsert( gceGahpClient,
-		    reply, scratchpad,
-		    { serviceURL, authFile, account, project, zone,
-		      instanceName, machineType, imageName,
-		      metadata, metadataFile, jsonFile },
-		    labels );
+
+		//
+		// This is embarassing, but for phase 1, just keep asking more
+		// for instances.
+		//
+		std::vector<Functor *> instanceInserts;
+		for( long i = 0; i < count; ++i ) {
+			// These instance names are relatively pretty, but will collide
+			// if you try to increase the size of an existing annex.  Another
+			// problem for phase 2 to deal with.
+			std::string instanceName;
+			formatstr( instanceName, "%s-%.4ld", annexName, i + 1 );
+
+			auto * ii = new GCEInstanceInsert( gceGahpClient,
+				reply, scratchpad,
+				{ serviceURL, authFile, account, project, zone,
+				  instanceName, machineType, imageName,
+				metadata, metadataFile, jsonFile },
+				labels );
+
+		    instanceInserts.push_back(ii);
+        }
+
 		ReplyAndClean * last = new ReplyAndClean( reply, NULL, gceGahpClient, scratchpad, NULL, commandState, commandID, NULL, NULL );
 		// FIXME: Verify collector instance ID.
-		FunctorSequence * fs = new FunctorSequence( {ii}, last, commandState, commandID, scratchpad );
+		FunctorSequence * fs = new FunctorSequence( instanceInserts, last, commandState, commandID, scratchpad );
 
 		int gceGahpTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,
 			(void (Service::*)()) & FunctorSequence::operator(),
