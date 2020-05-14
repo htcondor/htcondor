@@ -19,7 +19,7 @@ add_values_to () {
 # at run time so condor_config_val can work.
 echo "# This file was created by $prog" > /etc/condor/config.d/01-env.conf
 add_values_to 01-env.conf \
-    CONDOR_HOST "${CONDOR_HOST:-\$(FULL_HOSTNAME)}" \
+    CONDOR_HOST "${CONDOR_SERVICE_HOST:-\$(FULL_HOSTNAME)}" \
     NUM_CPUS "${NUM_CPUS:-1}" \
     MEMORY "${MEMORY:-1024}" \
     RESERVED_DISK "${RESERVED_DISK:-1024}" \
