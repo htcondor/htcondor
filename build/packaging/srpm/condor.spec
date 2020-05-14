@@ -10,10 +10,10 @@
 %define cgroups 0
 %define python 0
 
-%if 0%{?rhel} >= 6
+%if 0%{?rhel} >= 6 || 0%{?fedora}
 %define cgroups 1
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %define systemd 1
 %endif
 
@@ -249,7 +249,7 @@ BuildRequires: expat-devel
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 BuildRequires: python3-devel
 %else
 BuildRequires: python-devel
@@ -388,7 +388,7 @@ Requires: %name-external-libs%{?_isa} = %version-%release
 %if 0%{?rhel} <= 7
 Requires: python-requests
 %endif
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3-requests
 %endif
 
@@ -413,7 +413,7 @@ Requires(post): policycoreutils-python
 Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires(post): python3-policycoreutils
 Requires(post): selinux-policy-targeted
 %endif
@@ -627,7 +627,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 #######################
 %package -n python3-condor
@@ -666,7 +666,7 @@ the ClassAd library and HTCondor from python
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
 Url: https://osg-bosco.github.io/docs/
 Group: Applications/System
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3
 %else
 Requires: python >= 2.2
@@ -691,7 +691,7 @@ Requires: %name = %version-%release
 %if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
 
@@ -788,7 +788,7 @@ Requires: %name-cream-gahp = %version-%release
 %if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
@@ -980,7 +980,7 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_ssh
 %if 0%{?rhel} <= 7
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 populate /usr/lib64/python3.6/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
@@ -1702,7 +1702,7 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor-*.egg-info/
 %endif
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)

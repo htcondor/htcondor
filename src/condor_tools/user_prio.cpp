@@ -1413,7 +1413,7 @@ static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const ch
 static char * FormatFloat(char * pszDest, int width, int decimal, float value)
 {
    char sz[60];
-   char fmt[10] = "%";
+   char fmt[16] = "%";
    sprintf(fmt+1, "%d.%df", width, decimal);
    sprintf(sz, fmt, value);
    int cch = strlen(sz);

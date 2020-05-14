@@ -173,7 +173,7 @@ short_print(
 
 static const char* format_date( time_t date )
 {
-        static char     buf[ 12 ];
+        static char     buf[ 48 ];
         struct tm       *tm;
 
 		if (date==0) return " ??? ";

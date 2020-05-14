@@ -1472,7 +1472,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	int			file_there = 0;
 	FILE		*debug_file_ptr = (*it).debugFP;
 	std::string		filePath = (*it).logPath;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX + MAXPATHLEN + 4];
 
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -1589,7 +1589,7 @@ void
 _condor_fd_panic( int line, const char* file )
 {
 	int i;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX * 2];
 	char panic_msg[DPRINTF_ERR_MAX];
 	int save_errno;
 	std::vector<DebugFileInfo>::iterator it;
