@@ -50,7 +50,8 @@ static bool handleFTL(int error) {
 	// to force the startd to advertise this fact so other jobs can avoid
 	// this machine.
 	//
-	DCStartd startd( (const char * const)NULL, (const char * const)NULL );
+	const char * nullString = nullptr;
+	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
 		return false;
