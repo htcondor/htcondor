@@ -982,7 +982,7 @@ populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
-populate /usr/lib64/python3.6/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
+populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
 %endif
 %endif
@@ -1711,9 +1711,9 @@ rm -rf %{buildroot}
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
-/usr/lib64/python3.6/site-packages/classad/
-/usr/lib64/python3.6/site-packages/htcondor/
-/usr/lib64/python3.6/site-packages/htcondor-*.egg-info/
+/usr/lib64/python%{python3_version}/site-packages/classad/
+/usr/lib64/python%{python3_version}/site-packages/htcondor/
+/usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 %endif
 %endif
 %endif
