@@ -126,39 +126,6 @@ int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_
 int reconfig_user_maps() { return 0; }
 bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }
 
-#ifdef HAVE_EXT_PCRE
-
-#ifdef HAVE_PCRE_PCRE_H
-#  include "pcre/pcre.h"
-#else
-#  include "pcre.h"
-#endif
-
-#ifdef WIN32
-#pragma warning(disable : 4273) // inconsistent dll linkage
-#endif
-
-pcre *pcre_compile(const char *, int, const char **, int *,
-				   const unsigned char *)
-{ not_impl(); return NULL; }
-int  pcre_exec(const pcre *, const pcre_extra *, const char *,
-			   int, int, int, int *, int)
-{ return not_impl(); }
-static void my_pcre_free(void *) { not_impl(); }
-void  (*pcre_free)(void *) = my_pcre_free;
-void pcre_free_substring_list(const char **)
-{ not_impl(); }
-int  pcre_fullinfo(const pcre *, const pcre_extra *, int, void *)
-{ return not_impl(); }
-int  pcre_get_substring_list(const char *, int *, int, const char ***)
-{ return not_impl(); }
-
-#ifdef WIN32
-#pragma warning(default : 4273) // inconsistent dll linkage
-#endif
-
-#endif
-
 END_C_DECLS
 int param_integer(const char *, int default_value, int, int, ClassAd *, 
 	ClassAd *, bool)
