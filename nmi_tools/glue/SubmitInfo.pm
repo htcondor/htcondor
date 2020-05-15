@@ -551,6 +551,10 @@ our %submit_info = (
 	'x86_64_Fedora27'				=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora27'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora28'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora29'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora30'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora31'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora32'		=> 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',
