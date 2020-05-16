@@ -25,6 +25,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include "classad/classad_containers.h"
 #include "classad/exprTree.h"
 
@@ -38,7 +39,72 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-typedef classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr> AttrList;
+//typedef classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr> AttrList;
+class AttrList {
+	public:
+		using keyValue = std::pair<std::string, ExprTree *>;
+		using container = std::vector<keyValue>;
+		using iterator = container::iterator;
+		using const_iterator = container::const_iterator;
+
+		// The iterators
+		iterator begin() { return _theVector.begin(); }
+		const_iterator begin() const { return _theVector.cbegin(); }
+		iterator end() { return _theVector.end(); }
+		const_iterator end() const { return _theVector.cend(); }
+
+		size_t size() const { return _theVector.size();}
+		void rehash(int capacity) { _theVector.reserve(capacity); return;}
+
+		void clear() { _theVector.clear();}
+
+		iterator find(const std::string &key) {
+			return 
+				std::find_if(begin(), end(), [&] (const keyValue &kv) {
+					return strcasecmp(key.c_str(), kv.first.c_str()) == 0;
+				});
+		}
+
+		const_iterator find(const std::string &key) const {
+			return 
+				std::find_if(begin(), end(), [&] (const keyValue &kv) {
+					return strcasecmp(key.c_str(), kv.first.c_str()) == 0;
+				});
+		}
+
+		ExprTree *&  operator[](const std::string &key) {
+			iterator it = find(key);
+			if (it == _theVector.end()) {
+				_theVector.push_back(std::make_pair(key, nullptr));
+				iterator last = end() - 1;	
+				return last->second;
+			} else {
+				return it->second;
+			}
+		}
+
+		void erase(const iterator &it) { _theVector.erase(it);}
+		void erase(const std::string &key) { 
+			iterator it = find(key);
+			if (it != _theVector.end()) {
+				_theVector.erase(it);
+			}
+		}
+
+		std::pair<iterator, bool> emplace(const std::string &key, ExprTree *value) {
+			iterator it = find(key);
+			if (it == _theVector.end()) {
+				iterator endit = _theVector.emplace(end(), key, value);
+				return std::make_pair(endit, true);
+			} else {
+				return std::make_pair(it, false);
+			}
+		}
+
+	private:
+		container _theVector;
+};
+
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
