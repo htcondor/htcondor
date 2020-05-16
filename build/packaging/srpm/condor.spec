@@ -329,7 +329,11 @@ BuildRequires: boost-static
 %if 0%{?rhel} >= 8
 BuildRequires: boost-python3-devel
 %else
+%if 0%{?fedora} >= 30
+BuildRequires: boost-python2-devel
+%else
 BuildRequires: boost-python
+%endif
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
@@ -817,7 +821,7 @@ exit 0
 %endif
 
 %patch1 -p1
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 %patch2 -p1
 %endif
 
@@ -1352,7 +1356,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && !0%{?fedora}
 %_libexecdir/condor/box_plugin.pyc
 %_libexecdir/condor/box_plugin.pyo
 %_libexecdir/condor/gdrive_plugin.pyc
