@@ -1193,6 +1193,16 @@ public:
          }
       }
    ~stats_histogram() { delete [] data; data = 0, cLevels = 0; }
+   stats_histogram(const stats_histogram<T> &sh) {
+      cLevels = sh.cLevels;
+      levels = sh.levels;
+      if (cLevels) {
+         data = new int[cLevels+1];
+         for (int i = 0; i <= cLevels; ++i) {
+            data[i] = sh.data[i];
+         }
+      }
+   }
 
 public:
    int      cLevels;    // number of levels
