@@ -29,6 +29,7 @@ RAPIDJSON_DIAG_OFF(4127) // conditional expression is constant
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(effc++)
 RAPIDJSON_DIAG_OFF(class-memaccess)
+RAPIDJSON_DIAG_OFF(deprecated-copy)
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
