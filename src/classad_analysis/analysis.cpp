@@ -649,7 +649,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 			switch( attrExplain->suggestion ) {
 			case AttributeExplain::MODIFY: {
 				numModAttrs++;
-				strncpy( attr, attrExplain->attribute.c_str( ), 64 );
+				strncpy( attr, attrExplain->attribute.c_str( ), 63 );
 				if( attrExplain->isInterval ) {
 					double lower = 0;
 					double upper = 0;
@@ -688,7 +688,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 					suggest_s += value_s;
 					value_s = "";
 				}
-				strncpy( suggest, suggest_s.c_str( ), 64 ); 
+				strncpy( suggest, suggest_s.c_str( ), 63 ); 
 				sprintf( formatted, "%-24s%s\n", attr, suggest );
 				result_add_suggestion(suggestion(suggestion::MODIFY_ATTRIBUTE, attr, suggest_s));
 				tempBuff += formatted;
@@ -804,7 +804,7 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 		profile->Rewind( );
 		while( profile->NextCondition( condition ) ) {
 			condition->ToString( cond_s );
-			strncpy( cond, cond_s.c_str( ), 1024 );
+			strncpy( cond, cond_s.c_str( ), 1023 );
 			cond_s = "";
 
 			if( condition->explain.match ) {
@@ -812,7 +812,7 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 			} else {
 				value_s = "is false";
 			}
-			strncpy( value, value_s.c_str( ), 64 );
+			strncpy( value, value_s.c_str( ), 63 );
 			value_s = "";
 
 			sprintf( formatted, "    %-25s%s\n", cond, value );

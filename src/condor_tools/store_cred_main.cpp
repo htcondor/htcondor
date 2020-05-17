@@ -416,7 +416,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 		const char * arg = argv[ix];
 		const char * dasharg = strchr(arg, '-');
 		if (dasharg && (dasharg != arg)) {
-			strncpy(arg_prefix, arg, sizeof(arg_prefix));
+			strncpy(arg_prefix, arg, sizeof(arg_prefix)-1);
 			arg_prefix[dasharg - arg] = 0;
 			arg = arg_prefix;
 		}
