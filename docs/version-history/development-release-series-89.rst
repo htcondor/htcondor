@@ -297,9 +297,8 @@ Bugs Fixed:
 - The location for the CA certificates on Debian and Ubuntu systems is now
   properly set. :ticket:`7569`
 
-- The HTCondor central manager will now always generate a pool password if
-  needed. Previously, it would not generate a pool password upon
-  reconfiguration. :ticket:`7634`
+- The HTCondor central manager will generate a pool password if needed on
+  startup or reconfiguration. :ticket:`7634`
 
 Version 8.9.6
 -------------
