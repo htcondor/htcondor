@@ -50,6 +50,11 @@ New Features:
   failed to produce the expected output (file(s)).
   :ticket:`7270`
 
+- When running on a Linux system with cgroups enabled, the MemoryUsage
+  attribute of a job now includes the memory usage by the kernel disk
+  cache.  This helps users set Request_Memory to more useful values.
+  :ticket:`7442`
+
 - HTCondor may now preserve the relative paths you specify when transferring
   files.  See the :doc:`/man-pages/condor_submit` man page about
   ``preserve_relative_paths``.
@@ -85,6 +90,7 @@ New Features:
   submitter should have access to, if they have sufficient jobs, and they all match.
   The ``SubmitterShares`` is the percentage of the pool they should have access to.
   :ticket:`7626`
+  :ticket:`7453`
 
 - The ``condor_history`` command now has a ``startd`` option to query the Startd
   history file.  This works for both local and remote queries.
