@@ -329,6 +329,7 @@ our %submit_info = (
 
 	'x86_64_CentOS7'	=> 'x86_64_RedHat7',
 	'x86_64_SL7'		=> 'x86_64_RedHat7',
+	'nmi-build:x86_64_CentOS7' => 'x86_64_RedHat7',
 
 	# 32 bit CentOS 7
 	'x86_CentOS7'		=> {
