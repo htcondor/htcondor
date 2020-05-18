@@ -2179,22 +2179,26 @@ int ClassAd::PruneChildAd()
 		AttrList::const_iterator	itr= attrList.begin( );
 		ExprTree 					*tree;
 	
+		std::list<std::string> victims;
+
 		while (itr != attrList.end() )
 		{
 			tree = chained_parent_ad->Lookup(itr->first);
 				
 			if(  tree && tree->SameAs(itr->second) ) {
-				AttrList::const_iterator rm_itr = itr;
-				itr++; // once 
-				// 1st remove from dirty list
-				MarkAttributeClean(rm_itr->first);
-				delete rm_itr->second;
-				attrList.erase( rm_itr->first );
+				MarkAttributeClean(itr->first);
+				victims.push_back(itr->first);
 				iRet++;
 			}
-			else
-			{
-				itr++;
+
+			itr++;
+		}
+
+		for (auto &s: victims) {
+			AttrList::iterator itr = attrList.find(s);
+			if( itr != attrList.end( ) ) {
+				delete itr->second;
+				attrList.erase( itr );
 			}
 		}
 	}

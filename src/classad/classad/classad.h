@@ -59,27 +59,41 @@ class AttrList {
 		void clear() { _theVector.clear();}
 
 		iterator find(const std::string &key) {
-			return 
-				std::find_if(begin(), end(), [&] (const keyValue &kv) {
-					return strcasecmp(key.c_str(), kv.first.c_str()) == 0;
+			iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
 				});
+			if (lb != end() && lb->first == key) {
+				return lb;
+			} else  {
+				return end();
+			}
 		}
+
 
 		const_iterator find(const std::string &key) const {
-			return 
-				std::find_if(begin(), end(), [&] (const keyValue &kv) {
-					return strcasecmp(key.c_str(), kv.first.c_str()) == 0;
+			const_iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
 				});
+			if (lb != end() && lb->first == key) {
+				return lb;
+			} else  {
+				return end();
+			}
 		}
 
+
 		ExprTree *&  operator[](const std::string &key) {
-			iterator it = find(key);
-			if (it == _theVector.end()) {
-				_theVector.push_back(std::make_pair(key, nullptr));
-				iterator last = end() - 1;	
-				return last->second;
+			iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
+				});
+
+			if (lb != end() && lb->first == key) {
+				return lb->second;
 			} else {
-				return it->second;
+				return _theVector.insert(lb, std::make_pair(key, nullptr))->second;
 			}
 		}
 
@@ -92,12 +106,16 @@ class AttrList {
 		}
 
 		std::pair<iterator, bool> emplace(const std::string &key, ExprTree *value) {
-			iterator it = find(key);
-			if (it == _theVector.end()) {
-				iterator endit = _theVector.emplace(end(), key, value);
-				return std::make_pair(endit, true);
+			iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
+				});
+
+			if (lb != end() && lb->first == key) {
+				return std::make_pair(lb, false);
 			} else {
-				return std::make_pair(it, false);
+				iterator newit = _theVector.insert(lb, std::make_pair(key, value));
+				return std::make_pair(newit, true);
 			}
 		}
 
