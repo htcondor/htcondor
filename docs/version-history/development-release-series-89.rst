@@ -300,6 +300,11 @@ Bugs Fixed:
 - The HTCondor central manager will generate a pool password if needed on
   startup or reconfiguration. :ticket:`7634`
 
+- Fixed a bug where the *condor_schedd* and *condor_negotiator* couldn't
+  talk to each other if one was version 8.9.3 and the other was version
+  8.9.4 or later.
+  :ticket:`7615`
+
 Version 8.9.6
 -------------
 
