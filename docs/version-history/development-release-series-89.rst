@@ -54,9 +54,13 @@ Version 8.9.7
 
 Release Notes:
 
--  HTCondor version 8.9.7 not yet released.
+- HTCondor version 8.9.7 released on May 20, 2020.
 
-.. HTCondor version 8.9.7 released on Month Date, 2020.
+- The ``TOKEN`` authentication method has been renamed to ``IDTOKENS`` to
+  better differentiate it from the ``SCITOKENS`` method.  All sites are
+  encouraged to update their configurations accordingly; however, the
+  configuration files and wire protocol remains backward compatible with
+  prior releases. :ticket:`7540`
 
 - HTCondor now advertises ``CUDAMaxSupportedVersion`` (when appropriate).  This
   attribute is an integer representation of the highest CUDA version the
@@ -69,23 +73,7 @@ Release Notes:
   in their shared port IDs.
   :ticket:`7510`
 
-- The ``TOKEN`` authentication method has been renamed to ``IDTOKENS`` to
-  better differentiate it from the ``SCITOKENS`` method.  All sites are
-  encouraged to update their configurations accordingly; however, the
-  configuration files and wire protocol remains backward compatible with
-  prior releases. :ticket:`7540`
-
 New Features:
-
-- The *condor_job_router* configuration and transform language has changed.
-  The Job Router will still read the old configuration and transforms, but
-  the new configuration syntax is much more flexible and powerful.
-
-  - Routes are now a modified form of job transform. ``JOB_ROUTER_ROUTE_NAMES`` defines both the order and which routes are enabled
-  - Multiple pre-route and post-route transforms that apply to all routes can be defined.
-  - The Routes and transforms use the same syntax and transform engine as ``SUBMIT_TRANSFORM_NAMES``.
-
-  :ticket:`7432`
 
 - You may now specify that HTCondor only transfer files when the job
   succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
@@ -94,11 +82,6 @@ New Features:
   is intended to prevent unsuccessful jobs from going on hold because they
   failed to produce the expected output (file(s)).
   :ticket:`7270`
-
-- When running on a Linux system with cgroups enabled, the MemoryUsage
-  attribute of a job now includes the memory usage by the kernel disk
-  cache.  This helps users set Request_Memory to more useful values.
-  :ticket:`7442`
 
 - HTCondor may now preserve the relative paths you specify when transferring
   files.  See the :doc:`/man-pages/condor_submit` man page about
@@ -113,37 +96,77 @@ New Features:
   man page.
   :ticket:`7269`
 
+- The *condor_job_router* configuration and transform language has changed.
+  The Job Router will still read the old configuration and transforms, but
+  the new configuration syntax is much more flexible and powerful.
+
+  - Routes are now a modified form of job transform. ``JOB_ROUTER_ROUTE_NAMES`` defines both the order and which routes are enabled
+  - Multiple pre-route and post-route transforms that apply to all routes can be defined.
+  - The Routes and transforms use the same syntax and transform engine as ``SUBMIT_TRANSFORM_NAMES``.
+
+  :ticket:`7432`
+
 - HTCondor now offers a submit command, ``cuda_version``, so that jobs can
   describe which CUDA version (if any) they use.  HTCondor will use that
   information to match the job with a machine whose driver supports that
   version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
 
+- Tokens can be blacklisted by setting the ``SEC_TOKEN_BLACKLIST_EXPR``
+  configuration parameter to an expression matching the token contents.
+  Further, a unique ID has been added to all generated tokens, allowing
+  individual tokens to be blacklisted.
+  :ticket:`7449`
+  :ticket:`7450`
+
+- If the *condor_master* cannot authenticate with the collector then it will
+  automatically attempt to request an ID token (which the collector
+  administrator can subsequently approve).  This now matches the behavior of
+  the *condor_schedd* and *condor_startd*. :ticket:`7447`
+
+- The *condor_token_request_list* can now print out pending token requests
+  when invoked with the ``-json`` flag. :ticket:`7454`
+
+- Request IDs used for *condor_token_request* are now zero-padded, ensuring
+  they are always a fixed-length. :ticket:`7461`
+
+- All token generation and usage is now logged using HTCondor's audit log
+  mechanism. :ticket:`7450`
+
+- The new ``SEC_TOKEN_REQUEST_LIMITS`` configuration parameter allows
+  administrators to limit the authorizations available to issued tokens.
+  :ticket:`7455`
+
+- HTCondor now allows OAuth tokens and Kerberos credentials to be
+  enabled on the same machine.  This involves some changes to the
+  way these two features are configured.  *condor_store_cred* and the Python
+  bindings has new commands to allow Kerberos and OAuth credentials to be stored
+  and queried.
+  :ticket:`7462`
+
 - The submit command ``getenv`` can now be a list of environment variables
   to import and not just ``True`` or ``False``.
   :ticket:`7572`
 
-- HTCondor now allows SciTokens tickets and Kerberos/AFS credentials to be
-  enabled on the same machine.  This involves some changes to the
-  way these two features are configured.  *condor_store_cred* and the python
-  bindings has new commands to allow Kerberos/AFS credentials to be stored
-  and queried.
-  :ticket:`7462`
-
-- The accoutant ads that *condor_userprio* displays have two new attributes.
-  The ``SubmitterLimit`` contains the fair share, in number of cores, that this
-  submitter should have access to, if they have sufficient jobs, and they all match.
-  The ``SubmitterShares`` is the percentage of the pool they should have access to.
-  :ticket:`7626`
-  :ticket:`7453`
-
-- The ``condor_history`` command now has a ``startd`` option to query the Startd
+- The ``condor_history`` command now has a ``startd`` option to query the *condor_startd*
   history file.  This works for both local and remote queries.
   :ticket:`7538`
 
 - The ``-submitters`` argument to ``condor_q`` now correctly shows jobs for the
   given submitter name, even when the submitter name is an accounting group.
   :ticket:`7616`
+
+- The accountant ads that *condor_userprio* displays have two new attributes.
+  The ``SubmitterLimit`` contains the fair share, in number of cores, that this
+  submitter should have access to, if they have sufficient jobs, and they all match.
+  The ``SubmitterShares`` is the percentage of the pool they should have access to.
+  :ticket:`7626`
+  :ticket:`7453`
+
+- When running on a Linux system with cgroups enabled, the MemoryUsage
+  attribute of a job now includes the memory usage by the kernel disk
+  cache.  This helps users set Request_Memory to more useful values.
+  :ticket:`7442`
 
 - Docker universe now works inside an unprivileged personal HTCondor,
   if you give the user starting the personal condor rights to run the
@@ -155,7 +178,7 @@ New Features:
   :ticket:`7472`
 
 - When worker nodes are running on CPUs that support the AVX512 instructions,
-  the startd now advertises that fact with has_avx512 attributes.
+  the *condor_startd* now advertises that fact with has_avx512 attributes.
   :ticket:`7528`
 
 - Added ``GOMAXPROCS`` to the default list of environment variables that are
@@ -192,7 +215,7 @@ New Features:
   dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to True.
   :ticket:`7488`
 
-- When HTCondor is running as root on a Linux machine, it now make /dev/shm
+- When HTCondor is running as root on a Linux machine, it now makes /dev/shm
   a private mount for jobs.  This means that files written to /dev/shm in
   one job aren't visible to other jobs, and that HTCondor now cleans up
   any leftover files in /dev/shm when the job exits.  If you want to the
@@ -224,31 +247,6 @@ New Features:
   for job attributes that begin with Request
   :ticket:`7513`
 
-- If the *condor_master* cannot authenticate with the collector then it will
-  automatically attempt to request an ID token (which the collector
-  administrator can subsequently approve).  This now matches the behavior of
-  the *condor_schedd* and *condor_startd*. :ticket:`7447`
-
-- Tokens can be blacklisted by setting the ``SEC_TOKEN_BLACKLIST_EXPR``
-  configuration parameter to an expression matching the token contents.
-  Further, a unique ID has been added to all generated tokens, allowing
-  individual tokens to be blacklisted.
-  :ticket:`7449`
-  :ticket:`7450`
-
-- The *condor_token_request_list* can now print out pending token requests
-  when invoked with the ``-json`` flag. :ticket:`7454`
-
-- Request IDs used for *condor_token_request* are now zero-padded, ensuring
-  they are always a fixed-length. :ticket:`7461`
-
-- All token generation and usage is now logged using HTCondor's audit log
-  mechanism. :ticket:`7450`
-
-- The new ``SEC_TOKEN_REQUEST_LIMITS`` configuration parameter allows
-  administrators to limit the authorizations available to issued tokens.
-  :ticket:`7455`
-
 - Made some performance improvements in the *condor_collector*.
   This includes new configuration parameter
   ``COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS``, which reduces the amount
@@ -261,11 +259,17 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that prevented the *condor_schedd* from effectively flocking
-  to pools when resource request list prefetching is enabled, which is the
-  default in HTCondor version 8.9
-  :ticket:`7549`
-  :ticket:`7539`
+- The Box.com file transfer plugin now implements the chunked upload
+  method, which means that uploads of 50 MB or greater are now
+  possible. Prior to this implementation, jobs uploading large files
+  would unexpectedly go on hold.
+  :ticket:`7531`
+
+- The *curl_plugin* previously implemented a minimum speed timeout with an
+  option flag that caused memory problems in older versions of libcurl.
+  We've reimplemented timeouts now using a callback that manually enforces
+  a minimum 1 byte/second transfer speed.
+  :ticket:`7414` 
 
 - Some URLs for keys in AWS S3 buckets were previously of the form
   ``s3://<bucket>.s3-<region>.amazonaws.com/<key>``.  Not all regions support
@@ -279,53 +283,6 @@ Bugs Fixed:
   sort of name.
   :ticket:`7477`
 
-- The Box.com file transfer plugin now implements the chunked upload
-  method, which means that uploads of 50 MB or greater are now
-  possible. Prior to this implementation, jobs uploading large files
-  would unexpectedly go on hold.
-  :ticket:`7531`
-
-- To work around an issue where long-running *gce_gahp* process enter a state
-  where they can no longer authenticate with GCE, the daemon now restarts once
-  every 24 hours.  This does not affect the jobs themselves.
-  See :ref:`gce_configuration_variables`.
-  :ticket:`7401`
-
-- It is now safe to call functions from the Python bindings ``htcondor`` module
-  on multiple threads simultaneously. See the
-  :ref:`python-bindings-thread-safety` section in the
-  Python bindings documentation for more details.
-  :ticket:`7359`
-
-- The RPM packaging now obsoletes the standard universe package so that it will
-  deleted upon upgrade.
-  :ticket:`7444`
-
-- Fixed a bug where Kerberos principals were being set incorrectly when
-  :macro:`KERBEROS_SERVER_PRINCIPAL` was set.
-  :ticket:`7577`
-
-- Our ``htcondor.Submit.from_dag()`` Python binding now throws an exception
-  when it fails, giving the programmer a chance to catch and recover. 
-  Previously this just caused Python to fall over and die immediately.
-  :ticket:`7337`
-
-- The *curl_plugin* previously implemented a minimum speed timeout with an
-  option flag that caused memory problems in older versions of libcurl.
-  We've reimplemented timeouts now using a callback that manually enforces
-  a minimum 1 byte/second transfer speed.
-  :ticket:`7414` 
-
-- Restored setting RUNPATH instead of RPATH for the libcondor_utils
-  shared library and the Python bindings.
-  The accidental change to setting RPATH in 8.9.5 altered how libraries
-  were found when ``LD_LIBRARY_PATH`` is set.
-  :ticket:`7584`
-
-- Fixed a bug in reading service account credentials when submitting
-  to Google Compute Engine (grid universe, grid-type ``gce``).
-  :ticket:`7555`
-
 - The *condor_token* family of tools now respect the ``-debug`` command
   line flag. :ticket:`7448`
 
@@ -335,15 +292,56 @@ Bugs Fixed:
 - Tokens with authorization limits no longer need to explicitly list
   the ``ALLOW`` authorization, fixing a regression from 8.9.4. :ticket:`7456`
 
+- Fixed a bug where Kerberos principals were being set incorrectly when
+  :macro:`KERBEROS_SERVER_PRINCIPAL` was set.
+  :ticket:`7577`
+
 - The packaged versions of HTCondor automatically creates the directories to
   hold pool passwords, tokens, and Kerberos and OAuth credentials.
   :ticket:`7117`
 
-- The location for the CA certificates on Debian and Ubuntu systems is now
-  properly set. :ticket:`7569`
-
 - The HTCondor central manager will generate a pool password if needed on
   startup or reconfiguration. :ticket:`7634`
+
+- Fixed a bug in reading service account credentials when submitting
+  to Google Compute Engine (grid universe, grid-type ``gce``).
+  :ticket:`7555`
+
+- To work around an issue where long-running *gce_gahp* process enter a state
+  where they can no longer authenticate with GCE, the daemon now restarts once
+  every 24 hours.  This does not affect the jobs themselves.
+  See :ref:`gce_configuration_variables`.
+  :ticket:`7401`
+
+- Fixed a bug that prevented the *condor_schedd* from effectively flocking
+  to pools when resource request list prefetching is enabled, which is the
+  default in HTCondor version 8.9
+  :ticket:`7549`
+  :ticket:`7539`
+
+- It is now safe to call functions from the Python bindings ``htcondor`` module
+  on multiple threads simultaneously. See the
+  :ref:`python-bindings-thread-safety` section in the
+  Python bindings documentation for more details.
+  :ticket:`7359`
+
+- Our ``htcondor.Submit.from_dag()`` Python binding now throws an exception
+  when it fails, giving the programmer a chance to catch and recover. 
+  Previously this just caused Python to fall over and die immediately.
+  :ticket:`7337`
+
+- The RPM packaging now obsoletes the standard universe package so that it will
+  deleted upon upgrade.
+  :ticket:`7444`
+
+- Restored setting RUNPATH instead of RPATH for the libcondor_utils
+  shared library and the Python bindings.
+  The accidental change to setting RPATH in 8.9.5 altered how libraries
+  were found when ``LD_LIBRARY_PATH`` is set.
+  :ticket:`7584`
+
+- The location for the CA certificates on Debian and Ubuntu systems is now
+  properly set. :ticket:`7569`
 
 - Fixed a bug where the *condor_schedd* and *condor_negotiator* couldn't
   talk to each other if one was version 8.9.3 and the other was version
