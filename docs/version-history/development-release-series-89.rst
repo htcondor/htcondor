@@ -135,6 +135,7 @@ New Features:
   submitter should have access to, if they have sufficient jobs, and they all match.
   The ``SubmitterShares`` is the percentage of the pool they should have access to.
   :ticket:`7626`
+  :ticket:`7453`
 
 - The ``condor_history`` command now has a ``startd`` option to query the Startd
   history file.  This works for both local and remote queries.
@@ -340,6 +341,14 @@ Bugs Fixed:
 
 - The location for the CA certificates on Debian and Ubuntu systems is now
   properly set. :ticket:`7569`
+
+- The HTCondor central manager will generate a pool password if needed on
+  startup or reconfiguration. :ticket:`7634`
+
+- Fixed a bug where the *condor_schedd* and *condor_negotiator* couldn't
+  talk to each other if one was version 8.9.3 and the other was version
+  8.9.4 or later.
+  :ticket:`7615`
 
 Version 8.9.6
 -------------
