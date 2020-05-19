@@ -214,6 +214,10 @@ New Features:
 - *condor_install* can now generate a script to set environment variables
   for the "fish" shell. :ticket:`7505`
 
+- Added support for simultaneously running multiple CredMons to support jobs
+  that use both Kerberos and OAuth credentials.
+  :ticket:`6734`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
