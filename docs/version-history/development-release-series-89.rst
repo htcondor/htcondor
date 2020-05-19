@@ -9,9 +9,7 @@ Version 8.9.7
 
 Release Notes:
 
--  HTCondor version 8.9.7 not yet released.
-
-.. HTCondor version 8.9.7 released on Month Date, 2020.
+- HTCondor version 8.9.7 released on May 20, 2020.
 
 - The ``TOKEN`` authentication method has been renamed to ``IDTOKENS`` to
   better differentiate it from the ``SCITOKENS`` method.  All sites are
