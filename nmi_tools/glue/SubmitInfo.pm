@@ -270,7 +270,8 @@ our %submit_info = (
 		},
 	},
 
-	'x86_64_Debian8'	=> 'x86_64_Debian7',
+	'x86_64_Debian8'	        => 'x86_64_Debian7',
+	'nmi-build:x86_64_Debian8'	=> 'x86_64_Debian7',
 
 	##########################################################################
 	# Platform DEB 9 on x86_64
@@ -347,6 +348,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+
+	'nmi-build:x86_CentOS7' => 'x86_CentOS7',
 
 	##########################################################################
 	# Platform RedHat and SL
@@ -489,6 +492,7 @@ our %submit_info = (
 	'x86_64_MacOSX9',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX10',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX13',	=> 'x86_64_MacOSX',
+	'x86_64_MacOSX15',	=> 'x86_64_MacOSX',
 
 	#
 	# The SWAMP platforms.
@@ -545,6 +549,12 @@ our %submit_info = (
 	'x86_64_Fedora24'				=> 'x86_64_Fedora',
 	'x86_64_Fedora25'				=> 'x86_64_Fedora',
 	'x86_64_Fedora27'				=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora27'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora28'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora29'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora30'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora31'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora32'		=> 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',
@@ -665,6 +675,8 @@ our %submit_info = (
 		},
 	},
 
+	'nmi-build:x86_64_Ubuntu16'	=> 'x86_64_Ubuntu16',
+
 	'x86_64_Ubuntu18'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
@@ -679,6 +691,8 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+
+	'nmi-build:x86_64_Ubuntu18'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',
