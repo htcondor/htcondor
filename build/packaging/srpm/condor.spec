@@ -1948,6 +1948,19 @@ fi
 %endif
 
 %changelog
+* Wed May 20 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.7-1
+- Multiple enhancements in the file transfer code
+- Support for more regions in s3:// URLs
+- Much more flexible job router language
+- Jobs may now specify cuda_version to match equally-capable GPUs
+- TOKENS are now called IDTOKENS to differentiate from SCITOKENS
+- Added the ability to blacklist TOKENS via an expression
+- Can simultaneously handle Kerberos and OAUTH credentials
+- The getenv submit command now supports a blacklist and whitelist
+- The startd supports a remote history query similar to the schedd
+- condor_q -submitters now works with accounting groups
+- Fixed a bug reading service account credentials for Google Compute Engine
+
 * Thu May 07 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.9-1
 - Proper tracking of maximum memory used by Docker universe jobs
 - Fixed preempting a GPU slot for a GPU job when all GPUs are in use

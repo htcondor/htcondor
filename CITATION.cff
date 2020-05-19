@@ -26,8 +26,8 @@ references:
 license: Apache-2.0
 # --- Updates happen below this line. ---
 # Required.
-date-released: TBD
+date-released: 2020-05-20
 # Required.
 version: 8.9.7
 # Strongly recommended.  Really ought to correspond to the version above.
-doi: TBD
+doi: 10.5281/zenodo.3834815
