@@ -8,8 +8,9 @@ x86_64_Debian9
 docker://timtheisen/nmi-build:x86_64_Debian10
 x86_64_MacOSX10
 x86_64_MacOSX13
+x86_64_MacOSX15
 x86_64_Ubuntu16
-x86_64_Ubuntu18
+docker://timtheisen/nmi-build:x86_64_Ubuntu18
 x86_64_Windows7
 x86_64_Windows8
 x86_64_Windows10
@@ -18,7 +19,4 @@ x86_64_Windows10
 x86_CentOS7
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-x86_64_Fedora27
-
-# We might as well build on RedHat while we still have it
-x86_64_RedHat7
+docker://timtheisen/nmi-build:x86_64_Fedora27
