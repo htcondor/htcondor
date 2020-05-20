@@ -56,6 +56,10 @@ hostkey=$_CONDOR_SCRATCH_DIR/tmp/hostkey
 for keytype in dsa rsa
 do
     rm -f ${hostkey}.${keytype} ${hostkey}.${keytype}.pub
+    # If FIPS enforcement enabled, do not generate DSA keys
+    if [ "`cat /proc/sys/crypto/fips_enabled 2>/dev/null`" == "1" -a $keytype == "dsa" ]; then
+	continue
+    fi
     $KEYGEN -q -f ${hostkey}.${keytype} -t $keytype -N '' 
     _TEST=$?
     if [ $_TEST -ne 0 ]
