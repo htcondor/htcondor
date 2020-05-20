@@ -2375,7 +2375,7 @@ ConnectionSentry::disconnect()
         if (result)
         {
             if (PyErr_Occurred()) {return;}
-            std::string errmsg = "Failed to commmit and disconnect from queue.";
+            std::string errmsg = "Failed to commit and disconnect from queue.";
             std::string esMsg = errstack.getFullText();
             if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
             THROW_EX(RuntimeError, errmsg.c_str());
