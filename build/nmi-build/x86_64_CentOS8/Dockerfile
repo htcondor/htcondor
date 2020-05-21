@@ -227,6 +227,8 @@ RUN dnf install -y \
     java \
     openssh-clients \
     openssh-server \
+    'perl(Net::Domain)' \
+    'perl(Time::HiRes)' \
     which \
     && dnf clean all
 
