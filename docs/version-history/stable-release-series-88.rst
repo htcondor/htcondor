@@ -13,23 +13,27 @@ Version 8.8.10
 
 Release Notes:
 
--  HTCondor version 8.8.10 not yet released.
+- HTCondor version 8.8.10 not yet released.
 
 .. HTCondor version 8.8.10 released on Month Date, 2020.
 
 New Features:
 
--  None.
+- None.
 
 Bugs Fixed:
 
--  *condor_gpu_discovery* no longer crashes if passed just the
-   ``-dynamic`` flag.
-   :ticket:`7639`
+- *condor_gpu_discovery* no longer crashes if passed just the
+  ``-dynamic`` flag.
+  :ticket:`7639`
 
--  Fix typographic error in ``condor.service`` file to wait for
-   ``nfs-client.target``.
-   :ticket:`7638`
+- Fix typographic error in ``condor.service`` file to wait for
+  ``nfs-client.target``.
+  :ticket:`7638`
+
+- Increased ``TasksMax`` and ``LimitNOFILE`` to ``infinity`` in HTCondor's
+  systemd unit file so more than 32k shadows can run on a submit node.
+  :ticket:`7650`
 
 Version 8.8.9
 -------------
