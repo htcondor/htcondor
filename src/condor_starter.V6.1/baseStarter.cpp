@@ -914,7 +914,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	ssize_t max_xfer = -1;
 	input.EvaluateAttrInt(ATTR_MAX_TRANSFER_BYTES, max_xfer);
 
-	const char *jic_iwd = GetWorkingDir();
+	const char *jic_iwd = GetWorkingDir(0);
 	if (!jic_iwd) return PeekFailed(s, "Unknown job remote IWD.");
 	std::string iwd = jic_iwd;
 	std::vector<char> real_iwd; real_iwd.reserve(MAXPATHLEN+1);
@@ -1406,7 +1406,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	ArgList setup_args;
 	setup_args.AppendArg(ssh_to_job_sshd_setup.Value());
-	setup_args.AppendArg(GetWorkingDir());
+	setup_args.AppendArg(GetWorkingDir(0));
 	setup_args.AppendArg(ssh_to_job_shell_setup.Value());
 	setup_args.AppendArg(sshd_config_template.Value());
 	setup_args.AppendArg(ssh_keygen_cmd.Value());
@@ -1421,7 +1421,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			ssh_to_job_sshd_setup.Value(),
 			setup_args,
 			setup_env,
-			GetWorkingDir(),
+			GetWorkingDir(0),
 			setup_std_fds,
 			NULL,
 			0,
@@ -1439,7 +1439,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			FALSE,
 			FALSE,
 			&setup_env,
-			GetWorkingDir(),
+			GetWorkingDir(0),
 			NULL,
 			NULL,
 			setup_std_fds,
@@ -3317,7 +3317,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// job scratch space
 	env_name = base.Value();
 	env_name += "SCRATCH_DIR";
-	proc_env->SetEnv( env_name.Value(), GetWorkingDir() );
+	proc_env->SetEnv( env_name.Value(), GetWorkingDir(true) );
 
 		// slot identifier
 	env_name = base.Value();
@@ -3348,9 +3348,9 @@ CStarter::PublishToEnv( Env* proc_env )
 		// Condor will clean these up on job exits, and there's
 		// no chance of file collisions with other running slots
 
-	proc_env->SetEnv("TMPDIR", GetWorkingDir());
-	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
-	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
+	proc_env->SetEnv("TMPDIR", GetWorkingDir(true));
+	proc_env->SetEnv("TEMP", GetWorkingDir(true)); // Windows
+	proc_env->SetEnv("TMP", GetWorkingDir(true)); // Windows
 
 		// Programs built with OpenMP (including matlab, gnu sort
 		// and others) look at OMP_NUM_THREADS
@@ -3390,7 +3390,7 @@ CStarter::PublishToEnv( Env* proc_env )
 			// setenv only if wrapper actually exists
 		if ( access(wrapper,X_OK) >= 0 ) {
 			MyString wrapper_err;
-			wrapper_err.formatstr("%s%c%s", GetWorkingDir(),
+			wrapper_err.formatstr("%s%c%s", GetWorkingDir(0),
 						DIR_DELIM_CHAR,
 						JOB_WRAPPER_FAILURE_FILE);
 			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
@@ -3403,7 +3403,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// so they will also appear in ssh_to_job environments.
 
 	MyString path;
-	path.formatstr("%s%c%s", GetWorkingDir(),
+	path.formatstr("%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
@@ -3416,7 +3416,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
 	}
 
-	path.formatstr("%s%c%s", GetWorkingDir(),
+	path.formatstr("%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
@@ -3823,7 +3823,7 @@ CStarter::WriteAdFiles()
 {
 
 	ClassAd* ad;
-	const char* dir = this->GetWorkingDir();
+	const char* dir = this->GetWorkingDir(0);
 	MyString ad_str, filename;
 	FILE* fp;
 	bool ret_val = true;

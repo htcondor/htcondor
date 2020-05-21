@@ -507,7 +507,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 		if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
 			job_output_ad_is_stdout = true;
 		} else if( ! fullpath(job_output_ad_file) ) {
-			std::string path = Starter->GetWorkingDir();
+			std::string path = Starter->GetWorkingDir(0);
 			path += DIR_DELIM_CHAR;
 			path += job_output_ad_file;
 			free( job_output_ad_file );
@@ -518,7 +518,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 	}
 	if( ! m_job_update_ad_file.empty() ) {
 		if( ! fullpath(m_job_update_ad_file.c_str()) ) {
-			std::string path = Starter->GetWorkingDir();
+			std::string path = Starter->GetWorkingDir(0);
 			path += DIR_DELIM_CHAR;
 			path += m_job_update_ad_file;
 			m_job_update_ad_file = path;

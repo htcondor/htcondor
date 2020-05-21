@@ -142,7 +142,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     }
 	else if ( strcmp(CONDOR_EXEC,JobName.c_str()) == 0 ) {
 		formatstr( JobName, "%s%c%s",
-		                 Starter->GetWorkingDir(),
+		                 Starter->GetWorkingDir(0),
 		                 DIR_DELIM_CHAR,
 		                 CONDOR_EXEC );
     }
@@ -697,7 +697,7 @@ OsProc::JobReaper( int pid, int status )
 
 				std::string jobAdFileName;
 				formatstr( jobAdFileName, "%s/.job.ad",
-					Starter->GetWorkingDir() );
+					Starter->GetWorkingDir(0) );
 				ToE::writeTag( & toe, jobAdFileName );
 
 				// Update the schedd's copy of the job ad.
@@ -708,7 +708,7 @@ OsProc::JobReaper( int pid, int status )
 				// If we didn't write a ToE, check to see if the startd did.
 				std::string jobAdFileName;
 				formatstr( jobAdFileName, "%s/.job.ad",
-					Starter->GetWorkingDir() );
+					Starter->GetWorkingDir(0) );
 				FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
 				if(! f) {
 					dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
@@ -1092,7 +1092,7 @@ OsProc::SetupSingularitySsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = Starter->GetWorkingDir();
+	std::string workingDir = Starter->GetWorkingDir(0);
 	std::string pipeName = workingDir + "/.docker_sock";	
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);

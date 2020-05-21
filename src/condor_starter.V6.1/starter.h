@@ -205,7 +205,24 @@ public:
 		/** Return the temporary directory under Execute for this job.
 		 *  If file transfer is used, this will also be the job's IWD.
 		 */
-	const char *GetWorkingDir() const { return WorkingDir.Value(); }
+	const char *GetWorkingDir(bool inner) const {
+		if (inner && ! InnerWorkingDir.empty()) {
+			return InnerWorkingDir.c_str();
+		}
+		return WorkingDir.Value();
+	}
+		/* Set the working dir from the perspective of the job. This may differ from
+		*  the Starter's WorkingDir value when the job is in a container.  For a containerized job
+		*  Working dir will be something like /var/lib/condor/execute/dir_nnnn  or C:\Condor\Execute\dir_nnnn
+		*  while inner working dir might be  /scratch/condor_job on all platforms
+		*/
+	void SetInnerWorkingDir(const char * inner_dir) {
+		if (inner_dir) {
+			InnerWorkingDir = inner_dir;
+		} else {
+			InnerWorkingDir.clear();
+		}
+	}
 
 		/** Publish all attributes we care about for our job
 			controller into the given ClassAd.  Walk through all our
@@ -379,6 +396,7 @@ private:
 		// The temporary directory created under Execute for this job.
 		// If file transfer is used, this will also be the IWD of the job.
 	MyString WorkingDir;
+	MyString InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
 	char *orig_cwd;
 	MyString m_recoveryFile;
 	bool is_gridshell;

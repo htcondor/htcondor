@@ -1523,7 +1523,7 @@ JICShadow::initWithFileTransfer()
 
 	wants_file_transfer = true;
 	change_iwd = true;
-	job_iwd = strdup( Starter->GetWorkingDir() );
+	job_iwd = strdup( Starter->GetWorkingDir(0) );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
 	// Only rename the executable if it is transferred.
@@ -2103,7 +2103,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	if ( filetrans ) {
 		// make sure this computation is done with user priv, since that who
 		// owns the directory and it may not be world-readable
-		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
+		Directory starter_dir( Starter->GetWorkingDir(0), PRIV_USER );
 		size_t file_count = 0;
 		execsz = starter_dir.GetDirectorySize(&file_count);
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
@@ -2159,7 +2159,7 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 	if ( filetrans ) {
 		// make sure this computation is done with user priv, since that who
 		// owns the directory and it may not be world-readable
-		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
+		Directory starter_dir( Starter->GetWorkingDir(0), PRIV_USER );
 		size_t file_count = 0;
 		execsz = starter_dir.GetDirectorySize(&file_count);
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
@@ -2445,10 +2445,10 @@ JICShadow::beginFileTransfer( void )
 		}
 
 		std::string job_ad_path, machine_ad_path;
-		formatstr(job_ad_path, "%s%c%s", Starter->GetWorkingDir(),
+		formatstr(job_ad_path, "%s%c%s", Starter->GetWorkingDir(0),
 			DIR_DELIM_CHAR,
 			JOB_AD_FILENAME);
-		formatstr(machine_ad_path, "%s%c%s", Starter->GetWorkingDir(),
+		formatstr(machine_ad_path, "%s%c%s", Starter->GetWorkingDir(0),
 			DIR_DELIM_CHAR,
 			MACHINE_AD_FILENAME);
 		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
@@ -2483,7 +2483,7 @@ JICShadow::beginFileTransfer( void )
 	else if ( wants_x509_proxy ) {
 		
 			// Get scratch directory path
-		const char* scratch_dir = Starter->GetWorkingDir();
+		const char* scratch_dir = Starter->GetWorkingDir(0);
 
 			// Get source path to proxy file on the submit machine
 		std::string proxy_source_path;
@@ -2707,7 +2707,7 @@ JICShadow::initIOProxy( void )
 		}
 
 		io_proxy_config_file.formatstr( "%s%c%s" ,
-				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+				 Starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
 		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
@@ -3000,7 +3000,7 @@ JICShadow::refreshSandboxCredentialsKRB()
 	//
 	// securely copy the cc to sandbox.
 	//
-	sandboxccfilename = dircat(Starter->GetWorkingDir(), user, ".cc", sandboxccfile);
+	sandboxccfilename = dircat(Starter->GetWorkingDir(0), user, ".cc", sandboxccfile);
 
 	// as user, write tmp file securely
 	priv = set_user_priv();
@@ -3085,7 +3085,7 @@ JICShadow::refreshSandboxCredentialsOAuth()
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	MyString sandbox_dir_name;
-	dircat(Starter->GetWorkingDir(), ".condor_creds", sandbox_dir_name);
+	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
 
 	// from here on out, do everything as the user.
 	TemporaryPrivSentry mysentry(PRIV_USER);
