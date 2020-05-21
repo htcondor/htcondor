@@ -49,6 +49,10 @@ Bugs Fixed:
   starting with the number ``0``.
   :ticket:`7641`
 
+- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let program like
+  ``R`` know the maximum number of threads it should use.
+  :ticket:`7649`
+
 Version 8.9.7
 -------------
 
