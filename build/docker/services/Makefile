@@ -118,23 +118,60 @@ help:
 .PHONY: build
 build: $(imgtargets)
 
+
+# "build-cm-el7" -> "build" "cm" "el7"
+split = $(subst -, ,$(1))
+# "cm"
+img = $(word 2, $(call split,$(1)))
+# "el7" -> "7"
+el = $(subst el,,$(word 3,$(call split,$(1))))
+
+# define-build-target(target)
+#  Defines build-* target (e.g. build-cm-el7) and target for the associated stamp file (e.g. .build-cm-el7.stamp).
+#  Check that the user specified VERSION, docker build the image, and create the stamp file if successful.
+define define-build-target
+
+.PHONY: $(1)
+# Create a "stamp" file for the build target
+$(1): .$(1).stamp
+
+# Stamp file depends on the image directory
+.$(1).stamp: $$(call img,$(1))/
+
+# Error if the user didn't specify VERSION
+	@: $$(if $$(value VERSION),,$$(error VERSION not set))
+
+# Build the image
+	$$(call docker_build,$$(call img,$(1)),$$(call el,$(1)))
+
+# Create the stamp file
+	touch $$@
+
+endef
+
+
+# add-base-dependency(target)
+#  Adds to a build-* target a dependency on the appropriate base image (by means of its stamp file).
+#  For example, add-base-dependency(build-cm-el7) will add
+#    .build-cm-el7.stamp: .build-base-el7.stamp
+define add-base-dependency
+
+.$(1).stamp: .build-base-el$$(call el,$(1)).stamp
+
+endef
+
+
+$(foreach it, $(basetargets) $(imgtargets),\
+	$(eval $(call define-build-target,$(it))))
+
+$(foreach it, $(imgtargets),\
+	$(eval $(call add-base-dependency,$(it))))
+
+
 # "build-base-el7" -> "base"
 getimg=$(word 2,$(subst -, ,$@))
 # "build-base-el7" -> "7"
-getel=$(subst el,,$(word 3,$(subst -, ,$@)))
-
-.PHONY: $(basetargets)
-$(basetargets):
-	@: $(if $(value VERSION),,$(error VERSION not set))
-	$(call docker_build,$(getimg),$(getel))
-
-.PHONY: $(imgtargets)
-$(imgtargets):
-	@: $(if $(value VERSION),,$(error VERSION not set))
-	$(call docker_build,$(getimg),$(getel))
-
-$(imgtargets-el7): build-base-el7
-#$(imgtargets-el8): build-base-el8
+getel=$(subst .stamp,,$(subst el,,$(word 3,$(subst -, ,$@))))
 
 
 .PHONY: push push-all
@@ -158,8 +195,14 @@ define clean_unversioned =
 -docker rmi htcondor/{base,cm,execute,mini,submit}:el$(1)$(SUFFIX)
 endef
 
+
+.PHONY: clean-stamps
+clean-stamps:
+	$(foreach it,$(basetargets) $(imgtargets),\
+		-rm -f .$(it).stamp)
+
 .PHONY: clean
-clean:
+clean: clean-stamps
 	$(if $(value VERSION),\
 		$(call clean_versioned,7),)
 	$(if $(findstring yes,$(UNVERSIONED)),\
