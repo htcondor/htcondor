@@ -89,7 +89,12 @@ help:
 	$(echotbl) "push" "Push default distro/image combinations to a registry"
 	$(echotbl) "push-all" "Push all distro/image combinations to a registry"
 	$(echotbl) "push-IMAGE-DISTRO" "Push one distro/image combination to a registry"
+	$(echotbl) "tag-unversioned" "Add unversioned tags of the images for the given VERSION"
+	$(echotbl) "" "(e.g. 'tag-unversioned VERSION=8.9.5' makes an"
+	$(echotbl) "" "htcondor/mini:el7 tag from htcondor/mini:8.9.5-el7)"
 	$(echotbl) "clean" "Delete images from local cache"
+	$(echotbl) "clean-stamps" "Delete build stamps only, causing docker builds"
+	$(echotbl) "" "to be run next time (but leaving the cache alone)"
 	$(echotbl) "help" "This text"
 	$(echo)
 	$(echo) "Available build targets:"
@@ -112,7 +117,7 @@ help:
 	$(echotbl) "VERSION" "HTCondor version [$(VERSION)]"
 	$(echotbl) "UNVERSIONED" "Set to 'yes' to make or push unversioned tags of the images"
 	$(echotbl) "" "(e.g. htcondor/mini:el7 -> htcondor/mini:VERSION-el7) [$(UNVERSIONED)]"
-	$(echotbl) "BUILDAH" "Set to 'yes' to build using buildah instead of docker"
+	$(echotbl) "BUILDAH" "Set to 'yes' to build using buildah instead of docker [$(BUILDAH)]"
 
 
 .PHONY: build
@@ -194,6 +199,18 @@ endef
 define clean_unversioned =
 -docker rmi htcondor/{base,cm,execute,mini,submit}:el$(1)$(SUFFIX)
 endef
+
+
+fulltag_from_target = htcondor/$(call img,$(1)):$(VERSION)-el$(call el,$(1))$(SUFFIX)
+fulltag_uv_from_target = htcondor/$(call img,$(1)):el$(call el,$(1))$(SUFFIX)
+
+
+.PHONY: tag-unversioned
+tag-unversioned:
+	@: $(if $(value VERSION),,$(error VERSION not set))
+
+	$(foreach it,$(basetargets) $(imgtargets),\
+		docker tag $(call fulltag_from_target,$(it)) $(call fulltag_uv_from_target,$(it));)
 
 
 .PHONY: clean-stamps
