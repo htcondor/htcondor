@@ -4118,7 +4118,7 @@ details.
     and docker universes`).
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on
-    the local machine. The default value is 20.
+    the local machine. The default value is 8.
 
 :macro-def:`DOCKER_DROP_ALL_CAPABILITIES`
     A class ad expression, which defaults to true. Evaluated in the
