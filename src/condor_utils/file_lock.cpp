@@ -754,12 +754,21 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 #endif
 		sprintf(dest, "%s", path  );
 	delete []temp_filename; 
-	for (int i = 0 ; i < 4; i+=2 ) {
-		snprintf(dest+strlen(dest), 3, "%s", hashVal+i);
-		snprintf(dest+strlen(dest), 2, "%c", DIR_DELIM_CHAR);
-	}
+
+	char *destPtr = dest + strlen(dest);
+	char *hashPtr = hashVal;
+
+	// append the first 2 chars of the hash value to filename
+	*destPtr++ = *hashPtr++;
+	*destPtr++ = *hashPtr++;
+	// make it a directory..
+	*destPtr++ = DIR_DELIM_CHAR;
+
+	// and repeat
+	*destPtr++ = *hashPtr++;
+	*destPtr++ = *hashPtr++;
+	*destPtr++ = DIR_DELIM_CHAR;
 	 
-	
-	sprintf(dest+strlen(dest), "%s.lockc", hashVal+4);
+	sprintf(destPtr, "%s.lockc", hashVal+4);
 	return dest;
 }
