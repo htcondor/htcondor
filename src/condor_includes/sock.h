@@ -86,6 +86,7 @@ public:
 	friend class SharedPortListener;
 	friend class SharedPortEndpoint;
 	friend class DockerProc;
+	friend class OsProc;
 
 	/*
 	**	Methods
