@@ -642,7 +642,9 @@ bool validate_config(bool abort_if_invalid, int opt)
 	if (deprecation_check) {
 		int err = 0; const char * pszMsg = 0;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
-		re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS);
+		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS)) {
+			EXCEPT("Programmer error in condor_config: invalid regexp\n");
+		}
 	}
 
 	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
