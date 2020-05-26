@@ -1857,7 +1857,7 @@ do_store_cred (
 			if (cred) pw.set((const char *)cred, credlen);
 			return do_store_cred(user, pw.c_str(), mode, d);
 		}
-		if ((domain_pos <= 0) && user && user[0]) {
+		if ((domain_pos <= 0) && user[0]) {
 			dprintf(D_ALWAYS, "store_cred: FAILED. user \"%s\" not in user@domain format\n", user);
 			return FAILURE;
 		}
