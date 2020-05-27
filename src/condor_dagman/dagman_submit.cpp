@@ -578,6 +578,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 
 	// If the submitDesc hash is not set, we need to parse it from the file
 	if (!node->GetSubmitDesc()) {
+		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetJobName(), node->GetCmdFile());
 		submitHash = new SubmitHash();
 		// Start by populating the hash with some parameters
 		submitHash->init();
@@ -612,6 +613,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		}
 	}
 	else {
+		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node->GetJobName());
 		submitHash = node->GetSubmitDesc();
 	}
 
@@ -697,6 +699,17 @@ finis:
 			std::string errstk(submitHash->error_stack()->getFullText());
 			if (! errstk.empty()) {
 				debug_printf(DEBUG_QUIET, "submit error: %s", errstk.c_str());
+			}
+			submitHash->error_stack()->clear();
+		}
+	}
+	else {
+		// If submit succeeded, we still need to log any warning messages
+		if (submitHash->error_stack()) {
+			submitHash->warn_unused(stderr, "DAGMAN");
+			std::string errstk(submitHash->error_stack()->getFullText());
+			if (!errstk.empty()) {
+				debug_printf(DEBUG_QUIET, "Submit warning: %s", errstk.c_str());
 			}
 			submitHash->error_stack()->clear();
 		}
