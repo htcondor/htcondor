@@ -1074,10 +1074,19 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
 
+	// we have the pid of the singularity process, need pid of the job
+	// sometimes this is the direct child of singularity, sometimes singularity
+	// runs an init-like process and the job is the grandchild of singularity
+
+	// if a grandkid exists, use that, otherwise child, otherwise sing itself
+
 	int pid = findChildProc(JobPid);
 	if (pid == -1) {
 		pid = JobPid; // hope for the best
 	}
+	if (findChildProc(pid) > 0)
+		pid = findChildProc(pid);
+
 	ArgList args;
 	args.AppendArg("/usr/bin/nsenter");
 	args.AppendArg("-t"); // target pid
@@ -1118,8 +1127,13 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		htcondor::Singularity::retargetEnvs(env, target_dir, "");
 	}
 
+	std::string bin_dir;
+	param(bin_dir, "BIN");
+	if (bin_dir.empty()) bin_dir = "/usr/bin";
+	bin_dir += "/condor_nsenter";
+
 	singExecPid = daemonCore->Create_Process(
-		"/usr/bin/nsenter",
+		bin_dir.c_str(),
 		args,
 		setuid ? PRIV_ROOT : PRIV_USER,
 		singReaperId,
