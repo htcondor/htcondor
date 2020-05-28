@@ -1604,6 +1604,7 @@ rm -rf %{buildroot}
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
 %_bindir/condor_annex
+%_bindir/condor_nsenter
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
