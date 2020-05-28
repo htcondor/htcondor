@@ -43,6 +43,7 @@ condor_exe(condor_token_request_auto_approve "token_request_auto_approve.cpp" "$
 condor_exe(condor_scitoken_exchange "scitoken_exchange.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 if (LINUX)
 condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_nsenter "nsenter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
 
 
