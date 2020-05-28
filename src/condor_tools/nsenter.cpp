@@ -68,6 +68,13 @@ usage( char *cmd )
 	fprintf(stderr,"    -help              Display options\n");
 }
 
+#if (__GLIBC__ == 2) && (__GLIBC_MINOR__ < 15)
+// el6 doesn't have setns.  What are we going to do?  
+// what can we do?  Just not enter the container
+int setns(int , int) {
+        return 0;
+}
+#endif
 
 // Before we exit, we need to reset the pty back to normal
 // if we put it in raw mode
@@ -150,16 +157,16 @@ int main( int argc, char *argv[] )
 
 	// the first one
 	envp.push_back(env.c_str());
-	auto it = env.cbegin();
-	while (env.cend() != (it = std::find(it, env.cend(), '\0'))) {
+	auto it = env.begin();
+	while (env.end() != (it = std::find(it, env.end(), '\0'))) {
 		// skip past null terminator
 		it++;	
-		if (& (*it)  != nullptr) {
+		if (& (*it)  != 0) {
 			envp.push_back(& (*it));
 		}
 	}
-	envp.push_back(nullptr);
-	envp.push_back(nullptr);
+	envp.push_back(0);
+	envp.push_back(0);
 
 	// grab the fd for the cwd -- need to get this outside
 	// but chdir inside the container
@@ -228,7 +235,7 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	setgroups(0, nullptr);
+	setgroups(0, 0);
 
 	// order matters!
 	r = setgid(gid);
@@ -282,7 +289,7 @@ int main( int argc, char *argv[] )
 		// make this process group leader so shell job control works
 		setsid();
 
-		execle("/bin/sh", "/bin/sh", "-i", nullptr, envp.data());
+		execle("/bin/sh", "/bin/sh", "-i", 0, envp.data());
 
 		// Only get here if exec fails
 		fprintf(stderr, "exec failed %d\n", errno);
@@ -320,7 +327,7 @@ int main( int argc, char *argv[] )
 			FD_SET(0, &readfds);
 			FD_SET(masterPty, &readfds);
 
-			select(masterPty + 1, &readfds, &writefds, &exceptfds, nullptr);
+			select(masterPty + 1, &readfds, &writefds, &exceptfds, 0);
 
 			if (FD_ISSET(masterPty, &readfds)) {
 				char buf;
