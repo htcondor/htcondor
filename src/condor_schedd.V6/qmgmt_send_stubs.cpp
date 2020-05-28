@@ -405,7 +405,7 @@ SetAttributeByConstraint( char const *constraint, char const *attr_name, char co
 
 
 int
-SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags_in )
+SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags_in, CondorError *)
 {
 	int	rval;
 
