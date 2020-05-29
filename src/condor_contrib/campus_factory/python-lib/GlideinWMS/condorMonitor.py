@@ -37,18 +37,18 @@ def set_path(new_condor_bin_path):
 class AbstractQuery: # pure virtual, just to have a minimum set of methods defined
     # returns the data, will not modify self
     def fetch(self,constraint=None,format_list=None):
-        raise RuntimeError,"Fetch not implemented"
+        raise RuntimeError("Fetch not implemented")
 
     # will fetch in self.stored_data
     def load(self,constraint=None,format_list=None):
-        raise RuntimeError,"Load not implemented"
+        raise RuntimeError("Load not implemented")
 
     # constraint_func is a boolean function, with only one argument (data el)
     # same output as fetch, but limited to constraint_func(el)==True
     #
     # if constraint_func is None, return all the data
     def fetchStored(self,constraint_func=None):
-        raise RuntimeError,"fetchStored not implemented"
+        raise RuntimeError("fetchStored not implemented")
 
 class StoredQuery(AbstractQuery): # still virtual, only fetchStored defined
     def fetchStored(self,constraint_func=None):
@@ -78,7 +78,7 @@ class QueryExe(StoredQuery): # first fully implemented one, execute commands
 
         if security_obj is not None:
             if security_obj.has_saved_state():
-                raise RuntimeError, "Cannot use a security object which has saved state."
+                raise RuntimeError( "Cannot use a security object which has saved state.")
             self.security_obj=copy.deepcopy(security_obj)
         else:
             self.security_obj=condorSecurity.ProtoRequest()
@@ -402,7 +402,7 @@ def xml2list_start_element(name, attrs):
     elif name=="classads":
         pass # top element, nothing to do
     else:
-        raise TypeError,"Unsupported type: %s"%name
+        raise TypeError("Unsupported type: %s"%name)
         
 def xml2list_end_element(name):
     global xml2list_data,xml2list_inclassad,xml2list_inattr,xml2list_intype
@@ -419,7 +419,7 @@ def xml2list_end_element(name):
     elif name=="classads":
         pass # top element, nothing to do
     else:
-        raise TypeError,"Unexpected type: %s"%name
+        raise TypeError("Unexpected type: %s"%name)
     
 def xml2list_char_data(data):
     global xml2list_data,xml2list_inclassad,xml2list_inattr,xml2list_intype
@@ -464,10 +464,10 @@ def xml2list(xml_data):
     if found_xml>=0:
       try:
         p.Parse(string.join(xml_data[found_xml:]),1)
-      except TypeError, e:
-        raise RuntimeError, "Failed to parse XML data, TypeError: %s"%e
+      except TypeError as e:
+        raise RuntimeError( "Failed to parse XML data, TypeError: %s"%e)
       except:
-        raise RuntimeError, "Failed to parse XML data, generic error"
+        raise RuntimeError( "Failed to parse XML data, generic error")
     # else no xml, so return an empty list
     
     return xml2list_data

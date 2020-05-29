@@ -37,11 +37,13 @@
 %define qmf 0
 
 %if 0%{?fedora}
-%define blahp 1
+%define blahp 0
 %define cream 0
+%define drmaa 0
 %else
 %define blahp 1
 %define cream 1
+%define drmaa 1
 %endif
 
 %if 0%{?hcc}
@@ -326,7 +328,7 @@ BuildRequires: boost-static
 %endif
 
 %if 0%{?rhel} >= 6 || 0%{?fedora}
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 BuildRequires: boost-python3-devel
 %else
 %if 0%{?fedora} >= 30
@@ -389,7 +391,7 @@ Requires: blahp >= 1.16.1
 Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python-requests
 %endif
 %if 0%{?rhel} >= 8 || 0%{?fedora}
@@ -597,7 +599,7 @@ host as the DedicatedScheduler.
 
 #######################
 %if %python
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %package -n python2-condor
 Summary: Python bindings for HTCondor.
 Group: Applications/System
@@ -692,7 +694,7 @@ multiple clusters.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python2-condor = %version-%release
 %endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
@@ -789,7 +791,7 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python2-condor = %version-%release
 %endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
@@ -862,10 +864,20 @@ cmake \
        -DBUILD_TESTING:BOOL=FALSE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
+%if %blahp
+       -DWITH_BLAHP:BOOL=TRUE \
+%else
+       -DWITH_BLAHP:BOOL=FALSE \
+%endif
 %if %cream
        -DWITH_CREAM:BOOL=TRUE \
 %else
        -DWITH_CREAM:BOOL=FALSE \
+%endif
+%if %drmaa
+       -DWITH_DRMAA:BOOL=TRUE \
+%else
+       -DWITH_DRMAA:BOOL=FALSE \
 %endif
 %ifarch %{ix86}
 %if 0%{?rhel} >= 7
@@ -981,7 +993,7 @@ mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
 # And the Python bindings
 %if %python
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
@@ -1237,11 +1249,13 @@ install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-rest
 %endif
 
 %if %uw_build
+%if %drmaa
 populate %{_libdir}/condor %{buildroot}/%{_libdir}/libdrmaa.so
+populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcondordrmaa.a
+%endif
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libglobus*.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libvomsapi*.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libSciTokens.so*
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcondordrmaa.a
 # these probably belong elsewhere
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 %endif
@@ -1356,7 +1370,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
-%if 0%{?rhel} <= 7 && !0%{?fedora}
+%if 0%{?rhel} <= 7 && ! 0%{?fedora}
 %_libexecdir/condor/box_plugin.pyc
 %_libexecdir/condor/box_plugin.pyo
 %_libexecdir/condor/gdrive_plugin.pyc
@@ -1694,7 +1708,7 @@ rm -rf %{buildroot}
 %endif
 
 %if %python
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %files -n python2-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1776,8 +1790,10 @@ rm -rf %{buildroot}
 
 %files external-libs
 %dir %_libdir/condor
+%if %drmaa
 %_libdir/condor/libcondordrmaa.a
 %_libdir/condor/libdrmaa.so
+%endif
 %_libdir/condor/libglobus*.so*
 %_libdir/condor/libvomsapi*.so*
 %_libdir/condor/libSciTokens.so*
