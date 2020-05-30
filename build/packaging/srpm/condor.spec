@@ -315,7 +315,7 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if 0%{?rhel} == 7
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 %ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
@@ -633,7 +633,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
 %ifarch x86_64
 #######################
 %package -n python3-condor
@@ -697,7 +697,7 @@ Requires: %name = %version-%release
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
 Requires: python3-condor = %version-%release
 %endif
 
@@ -794,7 +794,7 @@ Requires: %name-cream-gahp = %version-%release
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
@@ -996,7 +996,7 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_ssh
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %endif
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
 %ifarch x86_64
 populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
@@ -1721,7 +1721,7 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor-*.egg-info/
 %endif
 
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
 %ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
