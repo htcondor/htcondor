@@ -29,7 +29,7 @@
 %endif
 
 # Not supporting std universe in RHEL/CentOS 8
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?amzn}
 %define std_univ 0
 %endif
 
@@ -358,7 +358,7 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if 0%{?rhel} == 7
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 %ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
@@ -701,7 +701,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 && ! 0%{?amzn}
 %ifarch x86_64
 #######################
 %package -n python3-condor
@@ -775,7 +775,7 @@ Requires: %name = %version-%release
 %if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 && ! 0%{?amzn}
 Requires: python3-condor = %version-%release
 %endif
 
@@ -872,7 +872,7 @@ Requires: %name-cream-gahp = %version-%release
 %if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 && ! 0%{?amzn}
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
@@ -1232,7 +1232,7 @@ install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
 
 # Install python-binding libs
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 && ! 0%{?amzn}
 %ifarch x86_64
 mv %{buildroot}/usr/lib64/python3.6/site-packages/py3classad.so %{buildroot}/usr/lib64/python3.6/site-packages/classad.so
 mv %{buildroot}/usr/lib64/python3.6/site-packages/py3htcondor.so %{buildroot}/usr/lib64/python3.6/site-packages/htcondor.so
@@ -1890,7 +1890,7 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor.so
 %endif
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 && ! 0%{?amzn}
 %ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
