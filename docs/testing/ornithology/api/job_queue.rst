@@ -10,5 +10,4 @@ Job Queue Log Reader
    :members:
 
 .. autofunction:: SetJobStatus
-   :members:
 
