@@ -29,17 +29,22 @@ Create the following as ``test_curl_plugin.py``.  The filename *must* begin
 with a ``test_`` to become part of the test suite.  Likewise, the functions
 in that file which start with ``test_`` become individual tests.  Note that
 we gave the functions relatively long but descriptively self-explanatory
-names, because those are what we'll see in the test reports.
+names, because those are what we'll see in the test reports.  For now,
+ignore the fact that the test functions are part of a class; we'll explain
+why later.  (The leading ``self`` in a member function's parameters is
+mandatory but may safely be ignored.)  Like the filename and the function name,
+the class name *must* begin with ``Test`` (but not the underscore).
 
 .. code-block:: python
 
     from ornithology import JobStatus
 
-    def test_job_with_good_url_succeeds(job_with_good_url):
-        assert job_with_good_url.state[0] == JobStatus.COMPLETED
+    class TestCurlPlugin:
+        def test_job_with_good_url_succeeds(self. job_with_good_url):
+            assert job_with_good_url.state[0] == JobStatus.COMPLETED
 
-    def test_job_with_bad_url_holds(job_with_bad_url):
-        assert job_with_bad_url.state[0] == JobStatus.HELD
+        def test_job_with_bad_url_holds(self, job_with_bad_url):
+            assert job_with_bad_url.state[0] == JobStatus.HELD
 
 We do *not* attempt to create the job object in the test; instead, we take the
 test jobs as arguments.  The canonical test function is just a (short) series
@@ -62,9 +67,9 @@ Fixtures!
 
 ``@action`` is an annotation; an annotation is syntatic sugar for calling
 a function on the subsequent function.  In the following code, ``@action``
-basically just marks ``bad_job`` and ``good_job`` as the functions which
-produce the ``bad_job`` and ``good_job`` fixtures.  (Which is why we gave
-them different names in the test functions.)
+basically just marks ``job_with_bad_url`` and ``job_with_good_url`` as the
+functions which produce the ``job_with_bad_url`` and ``job_with_good_url``
+fixtures.  (Which is why we gave them different names in the test functions.)
 
 We start with an empty argument list and a desire to submit a job and then
 wait for it to complete.
@@ -73,8 +78,8 @@ wait for it to complete.
 At one level, because some function has to for the test to work, and we don't
 want to wait in the test functions because waiting could fail.  At another
 level, it's a judgement call: you could certainly instead write a smaller
-``bad_job()`` function that accepted a different fixture, a job which had
-only just been submitted, and that would be fine too.
+``job_with_bad_url()`` function that accepted a different fixture, a job
+which had only just been submitted, and that would be fine too.
 
 In this case, the judgement was that we didn't expect the abstract operation
 of "running the job" to fail often enough to be worth breaking into two
@@ -114,7 +119,7 @@ we can use the ``default_condor`` fixture provided by Ornithology.
 It is considered good Python form to leave the trailing comma in so that
 the individual lines may be freely reordered.
 
-What about the ``FIXME`` s?
+What about the ``FIXME``\s?
 
 The job we submit needs to know what URL to download from, but to minimize
 the tests' frailty, we want that URL to be a server we started for the
@@ -153,9 +158,9 @@ you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
 
 In our best tradition of solving the problem later, I replaced the the
 FIXME in ``job.wait()`` with a function we haven't written yet.  The
-implementation is below, and is something you should have been able to
-dig out of the job handle API documentation.  The code block below also
-adds the bad job fixture.
+implementation is below, and is something you'll be able to dig out the API
+documentation once Josh finishes writing it.  The code block below also
+adds the ``job_with_bad_url`` fixture.
 
 .. code-block:: python
 
@@ -246,8 +251,8 @@ looking for more documentation about this.)
 
 As written, the bad URL gets a code 404 reply.  If we wanted to test what
 happens how the curl plugin responds to a code 500 reply, we don't have
-to change anything about the test except ``bad_job``.  With PyTest, that's
-true even if we want to test *both* codes.
+to change anything about the test except ``job_with_bad_url``.  With PyTest,
+that's true even if we want to test *both* codes.
 
 Parameterizing ``@actions`` involves an unfortunate amount of syntactic
 magic, but here's how you do it:
@@ -264,8 +269,8 @@ the named argument ``parameters`` as an inline-constant dictionary
 mapping the string (name, in this case) "404" to the integer 404, and the
 string "500" to the integer 500.
 
-For each use of the ``bad_job`` fixture, this causes PyTest to run two
-subtests: one named "404", and the other named "500".  In the former,
+For each use of the ``job_with_bad_url`` fixture, this causes PyTest to run
+two subtests: one named "404", and the other named "500".  In the former,
 ``parameter.value`` is 404, and in the latter, it is 500.  IF you run
 PyTest again, you'll see that it now reports three test results, one
 for the good URL job, and one for each of the two bad URL jobs:
@@ -275,14 +280,14 @@ for the good URL job, and one for each of the two bad URL jobs:
     $ pytest ./test_curl_plugin.py
     FIXME
 
-You could parameterize ``good_job`` in a similar way to verify that
+You could parameterize ``job_with_good_url`` in a similar way to verify that
 a very small (0 byte) file or a very large file are also handled correctly.
 
 If you instead wanted to verify that the curl plugin worked with static
 slots, then PyTest would instead run six tests: the good URL test and the two
 bad URL tests in dynamic slots, and those three again in static slots.
 
-The Song and Dance
+The Song-and-Dance
 ------------------
 
 PyTest normally doesn't cache fixtures at all (although they call this
@@ -294,11 +299,17 @@ a multi-step test where the state of that personal condor matters.
 The Ornithology framework solves this by defining all of its custom fixtures
 to cache at the class level -- all functions that are members of the same
 class share a common pool of fixtures.  This makes the tests both easier
-to write and faster.
+to write and faster, and it's why the tutorial starts off with the functions
+in a class.
 
 However, since the PyTest default *is* not to share fixtures between
-functions, some extensions -- ``pytest_httpserver`` -- only provide their
-default fixtures at the functional level.  (Why PyTest can't automagically
-convert, I don't know.)  Basically, the ``with``/``yield`` construct holds
-a reference on the fixture even after the fixture function exits.  (FIXME:
-Explain why that doesn't make it a globl.)
+functions, some extensions -- including ``pytest_httpserver`` -- only provide
+their default fixtures at the functional level.  (Why PyTest can't
+automagically convert, I don't know.)  Basically, the ``with``/``yield``
+construct holds a reference on the fixture even after the fixture function
+exits.
+
+(The ``yield`` makes the fixture function a generator [FIXME: link]; this
+can be detected [FIXME: link] by PyTest.  For that kind of fixture, PyTest
+exhausts the generator by calling ``next`` repeatedly and ignoring the
+result, which implicitly dereferences all of them.)
