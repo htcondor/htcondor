@@ -74,26 +74,29 @@ fixtures.  (Which is why we gave them different names in the test functions.)
 We start with an empty argument list and a desire to submit a job and then
 wait for it to complete.
 
-(Why do we wait for the jobs to enter a terminal state in these functions?
-At one level, because some function has to for the test to work, and we don't
-want to wait in the test functions because waiting could fail.  At another
-level, it's a judgement call: you could certainly instead write a smaller
-``job_with_bad_url()`` function that accepted a different fixture, a job
-which had only just been submitted, and that would be fine too.
-
-In this case, the judgement was that we didn't expect the abstract operation
-of "running the job" to fail often enough to be worth breaking into two
-separately-checked pieces.
-
-However, in any case, if these functions checked for the specific state
-the test functions expect to see, that would defeat the point of splitting
-them up, so we don't do that, either.)
-
 .. code-block:: python
 
     @action
     def job_with_good_url():
         pass
+
+.. note::
+
+    Why wait for the jobs in their fixtures?
+
+    At one level, because some function has to for the test to work, and we
+    don't want to wait in the test functions because waiting could fail.  At
+    another level, it's a judgement call: you could certainly instead write a
+    smaller ``job_with_bad_url()`` function that accepted a different fixture,
+    a job which had only just been submitted, and that would be fine too.
+
+    In this case, the judgement was that we didn't expect the abstract
+    operation of "running the job" to fail often enough to be worth breaking
+    into two separately-checked pieces.
+
+    However, in any case, if these functions checked for the specific state
+    the test functions expect to see, that would defeat the point of splitting
+    them up, so we don't do that, either.)
 
 To ``wait`` [FIXME: link] for a job [handle], we need a job [handle],
 which we get by submitting a job to a personal condor.  Luckily, we
@@ -246,8 +249,9 @@ which means it's now time to run PyTest and see what happens.
 Parameterization
 ----------------
 
-(PyTest consistently misspells parameterize as parametrize, if you're
-looking for more documentation about this.)
+.. note::
+    PyTest consistently misspells parameterize as *parametrize*, if you're
+    looking for more documentation about this.
 
 As written, the bad URL gets a code 404 reply.  If we wanted to test what
 happens how the curl plugin responds to a code 500 reply, we don't have
