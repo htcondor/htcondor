@@ -56,8 +56,8 @@ and ``@action``.  We'll only need the third one for this tutorial.
 Note that we gave the fixtures long but descriptively self-explanatory
 names as well, since those names will be used to report errors.
 
-Fixtures
---------
+Fixtures!
+---------
 (Think: "Plastics!")
 
 ``@action`` is an annotation; an annotation is syntatic sugar for calling
@@ -67,36 +67,9 @@ produce the ``bad_job`` and ``good_job`` fixtures.  (Which is why we gave
 them different names in the test functions.)
 
 We start with an empty argument list and a desire to submit a job and then
-wait for it to complete.  [FIXME....]
+wait for it to complete.
 
-.. code-block:: python
-
-    @action
-    def job_with_good_url():
-        job = default_condor.submit(
-            {
-                "executable": "/bin/sleep",
-                "arguments": "1",
-                "log": (test_dir / "good_url.log").as_posix(),
-                "transfer_input_files": good_url,
-                "should_transfer_files": "YES"
-            }
-        )
-
-
-    @action
-    def job_with_bad_url():
-        job = default_condor.submit(
-            {
-                "executable": "/bin/sleep",
-                "arguments": "1",
-                "log": (test_dir / "bad_url.log").as_posix(),
-                "transfer_input_files": bad_url,
-                "should_transfer_files": "YES"
-            }
-        )
-
-Why do we wait for the jobs to enter a terminal state in these functions?
+(Why do we wait for the jobs to enter a terminal state in these functions?
 At one level, because some function has to for the test to work, and we don't
 want to wait in the test functions because waiting could fail.  At another
 level, it's a judgement call: you could certainly instead write a smaller
@@ -109,32 +82,161 @@ separately-checked pieces.
 
 However, in any case, if these functions checked for the specific state
 the test functions expect to see, that would defeat the point of splitting
-them up, so we don't do that, either.
-
-We also don't create the personal condor that the job needs; instead we used
-the default one supplied by the ``ornithology`` package.  If at some point we
-wanted to check to see if the curl plugin worked just as well in static slots,
-we could ask for our own custom fixture, and parameterize that by which kind
-of slots it had.  We'll get to that later.
-
-The last thing each test job needs is a server to try to download from.
-Conveniently, PyTest provides a fixture for just this purpose, named
-'httpserver'.  Inconviently, and for stupid reasons, we need to do a little
-song and dance to try and use it in an ``@action``; hopefully, the song
-and the dance will be built into a later version of Ornithology.
+them up, so we don't do that, either.)
 
 .. code-block:: python
 
-    FIXME
+    @action
+    def job_with_good_url():
+        pass
+
+To ``wait`` [FIXME: link] for a job [handle], we need a job [handle],
+which we get by submitting a job to a personal condor.  Luckily, we
+don't care all that much about the details of our personal condor, so
+we can use the ``default_condor`` fixture provided by Ornithology.
+
+.. code-block:: python
+
+    @action
+    def job_with_good_url(default_condor):
+        job = default_condor.submit(
+            {
+                # Do nothing of interest.
+                "executable": "/bin/sleep",
+                "arguments": "1",
+                # These are the two lines we really care about.
+                "transfer_input_files": "FIXME",
+                "should_transfer_files": "YES",
+            }
+        )
+        job.wait(condition = FIXME)
+
+It is considered good Python form to leave the trailing comma in so that
+the individual lines may be freely reordered.
+
+What about the ``FIXME`` s?
+
+The job we submit needs to know what URL to download from, but to minimize
+the tests' frailty, we want that URL to be a server we started for the
+test.  We obviously can't count on port 80 being available, so we'll need
+the URL to include the port.  The safest way to do that is to determine the
+URL at run-time, after we've started the web server and it has bound to its
+listen port.  That sounds like a lot of work, and something else that could
+fail, so let's make the URL a fixture.
+
+As an implementation detail, ``job.wait()`` requires the job to produce an
+event log, so we'll have to provide one.  By convention, everything the
+job produces should go into the corresponding test-specific directory.  As
+you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
+
+.. code-block:: python
+
+    def job_in_terminal_state(job):
+        return job.state.any_held() or job.state.any_complete()
+
+    @action
+    def job_with_good_url(default_condor, good_url):
+        job = default_condor.submit(
+            {
+                # Do nothing of interest.
+                "executable": "/bin/sleep",
+                "arguments": "1",
+                # These are the two lines we really care about.
+                "transfer_input_files": good_url,
+                "should_transfer_files": "YES",
+                # Implementation detail.
+                "log": (test_dir / "good_url.log").as_posix(),
+            }
+        )
+        job.wait(condition = job_in_terminal_state)
+        return job
+
+In our best tradition of solving the problem later, I replaced the the
+FIXME in ``job.wait()`` with a function we haven't written yet.  The
+implementation is below, and is something you should have been able to
+dig out of the job handle API documentation.  The code block below also
+adds the bad job fixture.
+
+.. code-block:: python
+
+    def job_in_terminal_state(job):
+        return job.state.any_held() or job.state.any_complete()
+
+    @action
+    def job_with_good_url(default_condor, good_url):
+        job = default_condor.submit(
+            {
+                # Do nothing of interest.
+                "executable": "/bin/sleep",
+                "arguments": "1",
+                # These are the two lines we really care about.
+                "transfer_input_files": good_url,
+                "should_transfer_files": "YES",
+                # Implementation detail.
+                "log": (test_dir / "good_url.log").as_posix(),
+            }
+        )
+        job.wait(condition = job_in_terminal_state)
+        return job
+
+    @action
+    def job_with_bad_url(default_condor, bad_url, test_dir):
+        job = default_condor.submit(
+            {
+                "executable": "/bin/sleep",
+                "arguments": "1",
+                "log": (test_dir / "bad_url.log").as_posix(),
+                "transfer_input_files": bad_url,
+                "should_transfer_files": "YES"
+            }
+        )
+        job.wait(condition = job_in_terminal_state)
+        return job
+
+OK!  Now we just need the good and bad URL fixtures.  Again, we could split
+this fixture in two pieces, but it's already short and simple, so we won't
+bother.
+
+.. code-block:: python
+
+    @action
+    def good_url(server):
+        server.expect_request("/goodurl").respond_with_data("Great success!")
+        return f"http://localhost:{server.port}/goodurl"
+
+    @action
+    def bad_url(server):
+        server.expect_request("/badurl").respond_with_data(status = 404)
+        return f"http://localhost:{server.port}/badurl"
+
+
+We're getting a little test-specific and a little exotic here, so I'll just
+say that ``server`` is an instance of PyTest extension designed for exactly
+this purpose.  The fixture is implemented in the following, funny, way.
+
+.. code-block:: python
+
+    import pytest_httpserver import HTTPServer
+
+    @action
+    def server():
+        with HTTPServer() as httpserver:
+            yield httpserver
+
+This song-and-dance works around a detail in how ``@action`` is implemented
+that we'll talk about further below.
+
+Testing the Test
+----------------
 
 We've now iterated backwards from the asserts, writing functions for the
-missing arguments until we've reached a function which takes only arguments
-provided by the framework, which means it's now time to run PyTest and
-see what happens.
+missing arguments until we've reached a function which takes no arguments,
+which means it's now time to run PyTest and see what happens.
 
 ..
+
     $ pytest ./test_curl_plugin.py
-    ...
+    FIXME
 
 Parameterization
 ----------------
@@ -152,9 +254,10 @@ magic, but here's how you do it:
 
 .. code-block:: python
 
-    @action(parameters={ "404": 404, "500": 500 })
-    def bad_job(..., parameter)
-        ... parameter.value
+    @action(params={"404":404, "500":500})
+    def bad_url(server, request):
+        server.expect_request("/badurl").respond_with_data(status = request.param)
+        return f"http://localhost:{server.port}/badurl"
 
 If you're not familiar with the syntax, that's calling ``@action`` with
 the named argument ``parameters`` as an inline-constant dictionary
@@ -168,8 +271,9 @@ PyTest again, you'll see that it now reports three test results, one
 for the good URL job, and one for each of the two bad URL jobs:
 
 ..
+
     $ pytest ./test_curl_plugin.py
-    ...
+    FIXME
 
 You could parameterize ``good_job`` in a similar way to verify that
 a very small (0 byte) file or a very large file are also handled correctly.
@@ -178,20 +282,23 @@ If you instead wanted to verify that the curl plugin worked with static
 slots, then PyTest would instead run six tests: the good URL test and the two
 bad URL tests in dynamic slots, and those three again in static slots.
 
-Test Classes
-------------
+The Song and Dance
+------------------
 
-[FIXME: verify]  Even at three tests, this test runs a little slowly.  The
-reason is that, to make sure that one test doesn't stomp another test's
-fixture, PyTest creates a new set of fixtures for each test function.  So
-you're starting three personal condors each time you run this test.  That's
-not necessary for this test.  The way to tell PyTest to cache fixtures
-between tests is simple, but bizarre: you put them together inside the same
-class[FIXME?, which must also start with ``Test`` (no underscore).
+PyTest normally doesn't cache fixtures at all (although they call this
+"caching at the function level").  However, for testing HTConodr, where
+starting up a personal condor is a core task, and therefore a core fixture,
+this rapidly becomes a burden, both in terms of time and in terms of writing
+a multi-step test where the state of that personal condor matters.
 
-(For those of you who have used PyTest before, this answer may come as a bit
-of a surprise, but the ``@action`` annotation sets its scope to the class,
-which is not the default for PyTest ``@pytest.fixture``.)
+The Ornithology framework solves this by defining all of its custom fixtures
+to cache at the class level -- all functions that are members of the same
+class share a common pool of fixtures.  This makes the tests both easier
+to write and faster.
 
-When you do this, the tests should run faster, because they will share a
-single personal condor.
+However, since the PyTest default *is* not to share fixtures between
+functions, some extensions -- ``pytest_httpserver`` -- only provide their
+default fixtures at the functional level.  (Why PyTest can't automagically
+convert, I don't know.)  Basically, the ``with``/``yield`` construct holds
+a reference on the fixture even after the fixture function exits.  (FIXME:
+Explain why that doesn't make it a globl.)
