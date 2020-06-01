@@ -236,6 +236,7 @@ void AddInstanceToResult( vector<string> &result, string &id,
 
 
 struct AuthInfo {
+	ClassAd m_json_data;
 	string m_auth_file;
 	string m_account;
 	string m_access_token;
@@ -331,6 +332,8 @@ bool ReadCredData( AuthInfo &auth_info, const classad::ClassAd &cred_ad )
 		struct tm expiration_tm;
 		if ( strptime(token_expiry.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
 			expiration = timegm(&expiration_tm);
+		} else if ( strptime(token_expiry.c_str(), "%Y-%m-%d %T", &expiration_tm ) != NULL ) {
+			expiration = timegm(&expiration_tm);
 		}
 	}
 
@@ -338,6 +341,10 @@ bool ReadCredData( AuthInfo &auth_info, const classad::ClassAd &cred_ad )
 		// This is a service credential
 		if ( access_token.empty() ) {
 			auth_info.m_err_msg = "Failed to find refresh_token or access_token in credentials file";
+			return false;
+		}
+		if ( expiration == 0 ) {
+			auth_info.m_err_msg = "Failed to parse expiration: " + token_expiry;
 			return false;
 		}
 		if ( expiration < time(NULL) ) {
@@ -371,8 +378,7 @@ int SqliteCredFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
 		return 0;
 	}
 	classad::ClassAdJsonParser parser;
-	classad::ClassAd cred_ad;
-	if ( ! parser.ParseClassAd(argv[1], cred_ad, true) ) {
+	if ( ! parser.ParseClassAd(argv[1], auth_info->m_json_data, true) ) {
 		auth_info->m_err_msg = "Invalid JSON data";
 		return 0;
 	}
@@ -383,9 +389,6 @@ int SqliteCredFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
 	}
 	// Clear the not-found error message set before the query.
 	auth_info->m_err_msg.clear();
-	// If ReadCredData() fails, it'll set auth_info->m_err_msg.
-	// No need to take any further action here.
-	ReadCredData( *auth_info, cred_ad );
 	return 0;
 }
 
@@ -400,13 +403,8 @@ int SqliteAccessFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
 	// Clear the not-found error message set before the query.
 	auth_info->m_err_msg.clear();
 
-	auth_info->m_access_token = argv[1];
-	// Parse token expiry time in (UTC) format
-	// "2016-07-27T18:44:12Z"
-	struct tm expiration_tm;
-	if ( strptime(argv[2], "%Y-%m-%d %T", &expiration_tm ) != NULL) {
-		auth_info->m_expiration = timegm(&expiration_tm);
-	}
+	auth_info->m_json_data.Assign( "access_token", argv[1] );
+	auth_info->m_json_data.Assign( "token_expiry", argv[2] );
 	return 0;
 }
 
@@ -429,6 +427,7 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 	int rc;
 	char *query_stmt;
 
+	auth_info.m_json_data.Clear();
 	if ( auth_info.m_account.empty() ) {
 		rc = asprintf(&query_stmt, "select * from credentials limit 1;");
 	} else {
@@ -502,6 +501,11 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 	if ( ! auth_info.m_err_msg.empty() ) {
 		return CRED_FILE_FAILURE;
 	}
+
+	ReadCredData(auth_info, auth_info.m_json_data);
+	if ( ! auth_info.m_err_msg.empty() ) {
+		return CRED_FILE_FAILURE;
+	}
 	return CRED_FILE_SUCCESS;
 }
 
@@ -511,21 +515,21 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 int ReadCredFileJson( AuthInfo &auth_info )
 {
 	auth_info.m_err_msg.clear();
+	auth_info.m_json_data.Clear();
 	FILE *fp = safe_fopen_wrapper_follow(auth_info.m_auth_file.c_str(), "r");
 	if ( fp == NULL ) {
 		auth_info.m_err_msg = "Failed to open credentials file";
 		return CRED_FILE_FAILURE;
 	}
 	classad::ClassAdJsonParser parser;
-	classad::ClassAd file_ad;
-	if ( ! parser.ParseClassAd(fp, file_ad, true) ) {
+	if ( ! parser.ParseClassAd(fp, auth_info.m_json_data, true) ) {
 		auth_info.m_err_msg = "Invalid JSON data";
 		fclose(fp);
 		return CRED_FILE_BAD_FORMAT;
 	}
 	fclose(fp);
 	classad::ExprTree *tree;
-	tree = file_ad.Lookup("data");
+	tree = auth_info.m_json_data.Lookup("data");
 	if ( tree == NULL || tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
 		auth_info.m_err_msg = "Invalid JSON data";
 		return CRED_FILE_FAILURE;

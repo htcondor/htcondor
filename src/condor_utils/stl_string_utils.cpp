@@ -278,6 +278,31 @@ void title_case( std::string &str )
 	}
 }
 
+std::string EscapeChars(const std::string& src, const std::string& Q, char escape)
+{
+	// create a result string.  may as well reserve the length to
+	// begin with to minimize reallocations.
+	std::string S;
+	S.reserve(src.length());
+
+	// go through each char in the string src
+	for (size_t i = 0; i < src.length(); i++) {
+
+		// if it is in the set of chars to escape,
+		// drop an escape onto the end of the result
+		if (strchr(Q.c_str(), src[i])) {
+			// this character needs escaping
+			S += escape;
+		}
+
+		// put this char into the result
+		S += src[i];
+	}
+
+	// thats it!
+	return S;
+}
+
 bool ends_with(const std::string& str, const std::string& post) {
 	size_t postSize = post.size();
 	if( postSize == 0 ) { return false; }

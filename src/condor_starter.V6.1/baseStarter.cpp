@@ -25,6 +25,7 @@
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "docker_proc.h"
+#include "remote_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
@@ -70,27 +71,31 @@ extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 /* CStarter class implementation */
 
-CStarter::CStarter()
+CStarter::CStarter() : 
+	jic(NULL),
+	m_deferred_job_update(false),
+	job_exit_status(0),
+	jobUniverse(CONDOR_UNIVERSE_VANILLA),
+	Execute(NULL),
+	orig_cwd(NULL),
+	is_gridshell(false),
+#ifdef WIN32
+	has_encrypted_working_dir(false),
+#endif
+	ShuttingDown(FALSE),
+	starter_stdin_fd(-1),
+	starter_stdout_fd(-1),
+	starter_stderr_fd(-1),
+	suspended(false),
+	deferral_tid(-1),
+	pre_script(NULL),
+	post_script(NULL),
+	m_privsep_helper(NULL),
+	m_configured(false),
+	m_job_environment_is_ready(false),
+	m_all_jobs_done(false),
+	m_shutdown_exit_code(STARTER_EXIT_NORMAL)
 {
-	Execute = NULL;
-	orig_cwd = NULL;
-	is_gridshell = false;
-	ShuttingDown = FALSE;
-	jic = NULL;
-	jobUniverse = CONDOR_UNIVERSE_VANILLA;
-	pre_script = NULL;
-	post_script = NULL;
-	starter_stdin_fd = -1;
-	starter_stdout_fd = -1;
-	starter_stderr_fd = -1;
-	deferral_tid = -1;
-	suspended = false;
-	m_privsep_helper = NULL;
-	m_configured = false;
-	m_job_environment_is_ready = false;
-	m_all_jobs_done = false;
-	m_deferred_job_update = false;
-	m_shutdown_exit_code = STARTER_EXIT_NORMAL;
 }
 
 
@@ -279,6 +284,14 @@ void CStarter::FinalCleanup()
 {
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
+#ifdef WIN32
+	/* If we loaded the user's profile, then we should dump it now */
+	if (m_owner_profile.loaded()) {
+		m_owner_profile.unload ();
+		// TODO: figure out how we can avoid doing this..
+		m_owner_profile.destroy ();
+	}
+#endif
 }
 
 
@@ -319,6 +332,7 @@ CStarter::Config()
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
 			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
 		}
+		m_reuse_dir->PrintInfo(true);
 	} else {
 		m_reuse_dir.reset();
 	}
@@ -393,10 +407,10 @@ CStarter::ShutdownGraceful( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownGraceful when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return 0;
 }
 
@@ -404,10 +418,10 @@ CStarter::ShutdownGraceful( void )
  * DC Shutdown Fast Wrapper
  * We notify our JIC that we got a shutdown fast call
  * then invoke ShutdownFast() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
- */ 
+ */
 int
 CStarter::RemoteShutdownFast(int)
 {
@@ -465,10 +479,10 @@ CStarter::ShutdownFast( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownFast when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return ( false );
 }
 
@@ -476,7 +490,7 @@ CStarter::ShutdownFast( void )
  * DC Remove Job Wrapper
  * We notify our JIC that we got a remove call
  * then invoke Remove() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
@@ -497,7 +511,7 @@ CStarter::RemoteRemove( int )
 		dprintf( D_FULLDEBUG, "Got Remove when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -570,11 +584,11 @@ CStarter::RemoteHold( int )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
-int 
+int
 CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 {
 		// A Condor daemon on the submit side (e.g. schedd) wishes to
@@ -861,15 +875,15 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		return false;
 	}
 
-	compat_classad::ClassAd input;
+	ClassAd input;
 	s->decode();
 	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS, "Failed to read request for peeking at logs.\n");
 		return false;
 	}
 
-	compat_classad::ClassAd *jobad = NULL;
-	compat_classad::ClassAd *machinead = NULL;
+	ClassAd *jobad = NULL;
+	ClassAd *machinead = NULL;
         if( jic )
 	{
                 jobad = jic->jobClassAd();
@@ -900,7 +914,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	ssize_t max_xfer = -1;
 	input.EvaluateAttrInt(ATTR_MAX_TRANSFER_BYTES, max_xfer);
 
-	const char *jic_iwd = GetWorkingDir();
+	const char *jic_iwd = GetWorkingDir(0);
 	if (!jic_iwd) return PeekFailed(s, "Unknown job remote IWD.");
 	std::string iwd = jic_iwd;
 	std::vector<char> real_iwd; real_iwd.reserve(MAXPATHLEN+1);
@@ -1110,7 +1124,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		}
 		if (offset > 0 && size < static_cast<size_t>(offset))
 		{
-			offset = size;
+			offset = (int)size;
 			*it2 = offset;
 			classad::Value value; value.SetIntegerValue(*it2);
 			off_expr_list[idx] = classad::Literal::MakeLiteral(value);
@@ -1161,7 +1175,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 	}
 
-	compat_classad::ClassAd reply;
+	ClassAd reply;
 	reply.InsertAttr(ATTR_RESULT, true);
 	classad::ExprTree *list = classad::ExprList::MakeExprList(file_expr_list);
 	if (!reply.Insert("TransferFiles", list))
@@ -1392,7 +1406,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	ArgList setup_args;
 	setup_args.AppendArg(ssh_to_job_sshd_setup.Value());
-	setup_args.AppendArg(GetWorkingDir());
+	setup_args.AppendArg(GetWorkingDir(0));
 	setup_args.AppendArg(ssh_to_job_shell_setup.Value());
 	setup_args.AppendArg(sshd_config_template.Value());
 	setup_args.AppendArg(ssh_keygen_cmd.Value());
@@ -1407,7 +1421,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			ssh_to_job_sshd_setup.Value(),
 			setup_args,
 			setup_env,
-			GetWorkingDir(),
+			GetWorkingDir(0),
 			setup_std_fds,
 			NULL,
 			0,
@@ -1425,7 +1439,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			FALSE,
 			FALSE,
 			&setup_env,
-			GetWorkingDir(),
+			GetWorkingDir(0),
 			NULL,
 			NULL,
 			setup_std_fds,
@@ -1598,7 +1612,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// Use LD_PRELOAD to force an implementation of getpwnam
 		// into the process that returns a valid shell
 #ifdef LINUX
-	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", false)) {
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
 		std::string lib;
 		param(lib, "LIB");
 		std::string getpwnampath = lib + "/libgetpwnam.so";
@@ -1725,7 +1739,7 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -1768,6 +1782,43 @@ CStarter::Hold( void )
 	return ( !jobRunning );
 }
 
+#ifdef WIN32
+bool CStarter::loadUserRegistry(const ClassAd * JobAd)
+{
+	m_owner_profile.update ();
+	MyString username(m_owner_profile.username());
+
+	/*************************************************************
+	NOTE: We currently *ONLY* support loading slot-user profiles.
+	This limitation will be addressed shortly, by allowing regular
+	users to load their registry hive - Ben [2008-09-31]
+	**************************************************************/
+	bool run_as_owner = false;
+	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+	if (run_as_owner) {
+		return true;
+	}
+
+	bool load_profile = has_encrypted_working_dir;
+	if ( ! load_profile) {
+		// If we don't *need* to load the user registry let the job decide that it wants to
+		JobAd->LookupBool(ATTR_JOB_LOAD_PROFILE, load_profile);
+	}
+
+	// load the slot user registry if it is wanted or needed. This can take about 30 seconds to load
+	if (load_profile) {
+		dprintf(D_FULLDEBUG, "Loading registry hives for %s\n", username.Value());
+		if ( ! m_owner_profile.load()) {
+			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n", username.Value());
+			return false;
+		} else {
+			dprintf(D_ALWAYS, "Loaded Registry hives for %s\n", username.Value());
+		}
+	}
+
+	return true;
+}
+#endif
 
 bool
 CStarter::createTempExecuteDir( void )
@@ -1848,8 +1899,8 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-		WriteAdFiles();
 #if !defined(WIN32)
+		WriteAdFiles();
 		if (use_chown) {
 			priv_state p = set_root_priv();
 			if (chown(WorkingDir.Value(),
@@ -1883,15 +1934,14 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-	}
 	
-	// if the admin or the user wants the execute directory encrypted,
-	// go ahead and set that up now too
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
-	if (!encrypt_execdir && jic && jic->jobClassAd()) {
-		jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
+		// if the admin or the user wants the execute directory encrypted,
+		// go ahead and set that up now too
+		bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+		if (!encrypt_execdir && jic && jic->jobClassAd()) {
+			jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+		}
+		if (encrypt_execdir) {
 		
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(
@@ -1923,24 +1973,34 @@ CStarter::createTempExecuteDir( void )
 				size_t cch = WorkingDir.Length()+1;
 				wchar_t *WorkingDir_w = new wchar_t[cch];
 				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.Value());
+
 				EncryptionDisable(WorkingDir_w, FALSE);
-				delete[] WorkingDir_w;
 				
 				if ( EncryptFile(WorkingDir.Value()) == 0 ) {
-					dprintf(D_ALWAYS, "Could not encrypt execute directory "
-							"(err=%li)\n", GetLastError());
+					dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", GetLastError());
+				} else {
+					has_encrypted_working_dir = true;
+					dprintf(D_ALWAYS, "Encrypting execute directory \"%s\" to user %s\n", WorkingDir.Value(), nobody_login);
 				}
 
+				delete[] WorkingDir_w;
 				FreeLibrary(advapi); // don't leak the dll library handle
 
 			} else {
 				// tell the user it didn't work out
-				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, "
-						"but the Encryption" " functions are unavailable!");
+				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, but the Encryption functions are unavailable!");
 			}
 
-	} // ENCRYPT_EXECUTE_DIRECTORY is True
-	
+		} // ENCRYPT_EXECUTE_DIRECTORY is True
+	}
+
+	// We might need to load registry hives for encrypted execute dir to work
+	// so give the jic a chance to do that now. Also if the job has load_profile = true
+	// this is where we honor that.  Note that a registry create/load can take multiple seconds
+	loadUserRegistry(jic->jobClassAd());
+
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
 
 #endif /* WIN32 */
 
@@ -2231,7 +2291,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 		this->allJobsDone();
 		ret = false;
 	}
-	
+
 	return ( ret );
 }
 
@@ -2296,11 +2356,11 @@ CStarter::SpawnPreScript( void )
 		// first, see if we're going to need any pre and post scripts
 	ClassAd* jobAd = jic->jobClassAd();
 	char* tmp = NULL;
-	MyString attr;
+	std::string attr;
 
 	attr = "Pre";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		pre_script = new ScriptProc( jobAd, "Pre" );
@@ -2308,7 +2368,7 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Post";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		post_script = new ScriptProc( jobAd, "Post" );
@@ -2385,9 +2445,13 @@ CStarter::SpawnJob( void )
 		case CONDOR_UNIVERSE_VANILLA: {
 			bool wantDocker = false;
 			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+			std::string remote_cmd;
+			bool wantRemote = param(remote_cmd, "STARTER_REMOTE_CMD");
 
 			if( wantDocker ) {
 				job = new DockerProc( jobAd );
+			} else if ( wantRemote ) {
+				job = new RemoteProc( jobAd );
 			} else {
 				job = new VanillaProc( jobAd );
 			}
@@ -2913,7 +2977,7 @@ CStarter::allJobsDone( void )
 			// JIC::allJobsDone returned true: we're ready to move on.
 		bRet=transferOutput();
 	}
-	
+
 	if (m_deferred_job_update){
 		jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, 0 );
 	}
@@ -2928,6 +2992,14 @@ CStarter::transferOutput( void )
 {
 	UserProc *job;
 	bool transient_failure = false;
+
+	if( recorded_job_exit_status ) {
+		bool exitStatusSpecified = false;
+		int desiredExitStatus = computeDesiredExitStatus( "", this->jic->jobClassAd(), & exitStatusSpecified );
+		if( exitStatusSpecified && job_exit_status != desiredExitStatus ) {
+			jic->setJobFailed();
+		}
+	}
 
 	if (jic->transferOutput(transient_failure) == false) {
 
@@ -3142,6 +3214,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
+		// put the value of BIN into the environment; used by sshd to find
+		// condor_config_val. also helpful to find condor_chirp.
+	std::string condorBinDir;
+	param(condorBinDir,"BIN");
+	if (!condorBinDir.empty()) {
+		proc_env->SetEnv("_CONDOR_BIN",condorBinDir.c_str());
+	}
+
 		// put in environment variables specific to the type (universe) of job
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
@@ -3181,7 +3261,7 @@ CStarter::PublishToEnv( Env* proc_env )
 			tags.rewind();
 			const char *tag;
 			while ((tag = tags.next())) {
-				MyString attr("Assigned"); attr += tag;
+				std::string attr("Assigned"); attr += tag;
 
 				// we need to publish Assigned resources in the environment. the rules are 
 				// a bit wierd here. we publish if there are any assigned, we also always
@@ -3192,7 +3272,7 @@ CStarter::PublishToEnv( Env* proc_env )
 				param(env_name, param_name.c_str());
 
 				std::string assigned;
-				bool is_assigned = mad->LookupString(attr.c_str(), assigned);
+				bool is_assigned = mad->LookupString(attr, assigned);
 				if (is_assigned || (mad->Lookup(tag) &&  ! env_name.empty())) {
 
 					if ( ! is_assigned) {
@@ -3212,18 +3292,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
-	if(param_boolean("CREDD_OAUTH_MODE", false)) {
-		const char* sandbox_cred_dir = jic->getCredPath();
-		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
-	} else {
-		// kerberos credential cache (in sandbox)
-		const char* krb5ccname = jic->getCredPath();
-		if( krb5ccname && (krb5ccname[0] != '\0') ) {
-			// using env_name as env_value
-			env_name = "FILE:";
-			env_name += krb5ccname;
-			proc_env->SetEnv( "KRB5CCNAME", env_name );
-		}
+	// put OAuth creds directory into the environment
+	if (jic->getCredPath()) {
+		proc_env->SetEnv("_CONDOR_CREDS", jic->getCredPath());
+	}
+
+	// kerberos credential cache (in sandbox)
+	const char* krb5ccname = jic->getKrb5CCName();
+	if( krb5ccname && (krb5ccname[0] != '\0') ) {
+		// using env_name as env_value
+		env_name = "FILE:";
+		env_name += krb5ccname;
+		proc_env->SetEnv( "KRB5CCNAME", env_name );
 	}
 
 		// path to the output ad, if any
@@ -3237,7 +3317,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// job scratch space
 	env_name = base.Value();
 	env_name += "SCRATCH_DIR";
-	proc_env->SetEnv( env_name.Value(), GetWorkingDir() );
+	proc_env->SetEnv( env_name.Value(), GetWorkingDir(true) );
 
 		// slot identifier
 	env_name = base.Value();
@@ -3268,9 +3348,9 @@ CStarter::PublishToEnv( Env* proc_env )
 		// Condor will clean these up on job exits, and there's
 		// no chance of file collisions with other running slots
 
-	proc_env->SetEnv("TMPDIR", GetWorkingDir());
-	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
-	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
+	proc_env->SetEnv("TMPDIR", GetWorkingDir(true));
+	proc_env->SetEnv("TEMP", GetWorkingDir(true)); // Windows
+	proc_env->SetEnv("TMP", GetWorkingDir(true)); // Windows
 
 		// Programs built with OpenMP (including matlab, gnu sort
 		// and others) look at OMP_NUM_THREADS
@@ -3310,7 +3390,7 @@ CStarter::PublishToEnv( Env* proc_env )
 			// setenv only if wrapper actually exists
 		if ( access(wrapper,X_OK) >= 0 ) {
 			MyString wrapper_err;
-			wrapper_err.formatstr("%s%c%s", GetWorkingDir(),
+			wrapper_err.formatstr("%s%c%s", GetWorkingDir(0),
 						DIR_DELIM_CHAR,
 						JOB_WRAPPER_FAILURE_FILE);
 			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
@@ -3323,7 +3403,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// so they will also appear in ssh_to_job environments.
 
 	MyString path;
-	path.formatstr("%s%c%s", GetWorkingDir(),
+	path.formatstr("%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
@@ -3336,7 +3416,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
 	}
 
-	path.formatstr("%s%c%s", GetWorkingDir(),
+	path.formatstr("%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
@@ -3743,7 +3823,7 @@ CStarter::WriteAdFiles()
 {
 
 	ClassAd* ad;
-	const char* dir = this->GetWorkingDir();
+	const char* dir = this->GetWorkingDir(0);
 	MyString ad_str, filename;
 	FILE* fp;
 	bool ret_val = true;
@@ -3763,7 +3843,12 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.Value(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3788,7 +3873,12 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.Value(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3826,4 +3916,10 @@ CStarter::WriteAdFiles()
 	}
 
 	return ret_val;
+}
+
+void
+CStarter::RecordJobExitStatus(int status) {
+	recorded_job_exit_status = true;
+	job_exit_status = status;
 }

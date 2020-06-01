@@ -55,26 +55,30 @@ command takes on one of three possible values:
    job is accessible on the remote worker node.
 
 The **when_to_transfer_output** command tells HTCondor when output
-files are to be transferred back to the submit machine. The command
-takes on one of two possible values:
+files are to be transferred back to the submit machine.  The command
+takes on one of three possible values:
 
-#. ON_EXIT (the default): HTCondor transfers the output sandbox
+#. ``ON_EXIT`` (the default): HTCondor transfers the output sandbox
    back to the submit machine only when the job exits on its own. If the
    job is preempted or removed, no files are transfered back.
-#. ON_EXIT_OR_EVICT: HTCondor behaves the same as described for the
+#. ``ON_EXIT_OR_EVICT``: HTCondor behaves the same as described for the
    value ON_EXIT when the job exits on its own. However, each
-   time the job is evicted from a machine, the output sandbox is 
+   time the job is evicted from a machine, the output sandbox is
    transferred back to the submit machine and placed under the **SPOOL** directory.
    eviction time. Before the job starts running again, the former output
    sandbox is copied to the job's new remote scratch directory.
 
    If **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
    is specified, this list governs which files are transferred back at eviction
-   time. If a file listed in **transfer_output_files** does not exist 
+   time. If a file listed in **transfer_output_files** does not exist
    at eviction time, the job will go on hold.
 
    The purpose of saving files at eviction time is to allow the job to
-   resume from where it left off. 
+   resume from where it left off.
+#. ``ON_SUCCESS``: HTCondor transfers files like ``ON_EXIT``, but only if
+   the job succeeds, as defined by the ``success_exit_code`` submit command.
+   The ``successs_exit_code`` command must be used, even for the default
+   exit code of 0.  (See the :doc:`/man-pages/condor_submit` man page.)
 
 The default values for these two submit commands make sense as used
 together. If only **should_transfer_files** is set, and set to the
@@ -119,11 +123,15 @@ executable. For example:
 
 ::
 
+      executable = my_program
+      input = my_input
       should_transfer_files = YES
       transfer_input_files = file1,file2
 
-This example explicitly enables the file transfer mechanism, and it
-transfers the executable, the file specified by the **input** command.
+This example explicitly enables the file transfer mechanism.  By default,
+HTCondor will transfer the executable (``my_program``) and the file
+specified by the input command (``my_input``).  The files ``file1``
+and ``file2`` are also transferred, by explicit user instruction.
 
 If the file transfer mechanism is enabled, HTCondor will transfer the
 following files from the execute machine back to the submit machine
@@ -220,7 +228,7 @@ file specified with ``d1/o3``.
 File Paths for File Transfer
 ''''''''''''''''''''''''''''
 
-The file transfer mechanism specifies file names or URLs on 
+The file transfer mechanism specifies file names or URLs on
 the file system of the submit machine and file names on the
 execute machine. Care must be taken to know which machine, submit or
 execute, is referencing the file.
@@ -252,6 +260,13 @@ Because all files and directories listed for transfer are placed into a
 single, flat directory, inputs must be uniquely named to avoid collision
 when transferred.
 
+A job may instead set ``preserve_relative_paths`` (to ``True``), in which
+case the relative paths of transferred files are preserved.  For example,
+although the input list ``dirA/file1, dirB/file1`` would normally result in
+a collision, instead HTCondor will create the directories ``dirA`` and
+``dirB`` in the input sandbox, and each will get its corresponding version
+of ``file1``.
+
 Both relative and absolute paths may be used in
 **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
 Relative paths are relative to the job's remote scratch directory on the
@@ -260,6 +275,9 @@ submit machine, they are placed in the job's initial working directory
 as the base name of the original path. An alternate name or path may be
 specified by using
 **transfer_output_remaps** :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`.
+
+The ``preserve_relative_paths`` command also applies to relative paths
+specified in **transfer_output_files** (if not remapped).
 
 A job may create files outside the remote scratch directory but within
 the file system of the execute machine, in a directory such as ``/tmp``,
@@ -474,13 +492,18 @@ initial working directory as ``/scratch/test/out1``.
 Dataflow Jobs
 '''''''''''''
 
-In some situations, a job that has been submitted but not yet run might realize
-that 1) the output files it wants already exist, 2) these output files are
-newer than its input files. Typically this would happen because an earlier job
-already created the output files. This is known as a **dataflow job** and in
-some cases we want to skip it. By setting the :macro:`SHADOW_SKIP_DATAFLOW_JOBS`
-configuration option to ``True``, we can skip these jobs and potentially save
-large amounts of time in long-running workflows.
+A **dataflow job** is a job that might not need to run because its desired
+outputs already exist. The *condor_shadow* can optionally skip these jobs by
+setting :macro:`SHADOW_SKIP_DATAFLOW_JOBS` to `True`.
+
+A dataflow job meets any of the following criteria:
+* Output files exist, are newer than input files
+* Execute file is newer than input files
+* Standard input file is newer than input files
+
+Skipping dataflow jobs can potentially save large amounts of time in
+long-running workflows.
+
 
 Public Input Files
 ''''''''''''''''''
@@ -662,7 +685,7 @@ key (and nothing else), and one or more S3 URLs in one of three forms:
     # For old, non-region-specific buckets.
     transfer_input_files = s3://<bucket-name>/<key-name>,
     # or, for new, region-specific buckets:
-    transfer_input_files = s3://<bucket-name>.s3-<region>.amazonaws.com/<key>
+    transfer_input_files = s3://<bucket-name>.s3.<region>.amazonaws.com/<key>
     # or, for non-AWS services with an S3 API; <host> must contain a dot:
     transfer_input_files = s3://<host>/<key>
     # Optionally, specify a region for S3 URLs which don't include one:

@@ -951,30 +951,30 @@ main( int argc, const char *argv[] )
 
 #ifdef WIN32
 		// setup the username to query
-		char userdom[256];
-		char* the_username = my_username();
-		char* the_domainname = my_domainname();
-		sprintf(userdom, "%s@%s", the_username, the_domainname);
-		free(the_username);
-		free(the_domainname);
+		MyString userdom;
+		auto_free_ptr the_username(my_username());
+		auto_free_ptr the_domainname(my_domainname());
+		userdom = the_username;
+		userdom += "@";
+		if (the_domainname) { userdom += the_domainname.ptr(); }
 
 		// if we have a credd, query it first
 		bool cred_is_stored = false;
 		int store_cred_result;
 		Daemon my_credd(DT_CREDD);
 		if (my_credd.locate()) {
-			store_cred_result = store_cred(userdom, NULL, QUERY_MODE, &my_credd);
+			store_cred_result = do_store_cred(userdom.c_str(), NULL, QUERY_PWD_MODE, &my_credd);
 			if ( store_cred_result == SUCCESS ||
-							store_cred_result == FAILURE_NOT_SUPPORTED) {
+							store_cred_result == FAILURE_NO_IMPERSONATE) {
 				cred_is_stored = true;
 			}
 		}
 
 		if (!cred_is_stored) {
 			// query the schedd
-			store_cred_result = store_cred(userdom, NULL, QUERY_MODE, MySchedd);
+			store_cred_result = do_store_cred(userdom.c_str(), NULL, QUERY_PWD_MODE, MySchedd);
 			if ( store_cred_result == SUCCESS ||
-							store_cred_result == FAILURE_NOT_SUPPORTED) {
+							store_cred_result == FAILURE_NO_IMPERSONATE) {
 				cred_is_stored = true;
 			} else if (DashDryRun && (store_cred_result == FAILURE)) {
 				// if we can't contact the schedd, just keep going.
@@ -984,7 +984,7 @@ main( int argc, const char *argv[] )
 		if (!cred_is_stored) {
 			fprintf( stderr, "\nERROR: No credential stored for %s\n"
 					"\n\tCorrect this by running:\n"
-					"\tcondor_store_cred add\n", userdom );
+					"\tcondor_store_cred add\n", userdom.c_str() );
 			exit(1);
 		}
 #endif
@@ -1001,13 +1001,15 @@ main( int argc, const char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// But, if there's an active ssh, stay alive, in case we are
+		// running in a container.
 		// This effectively means executable, transfer_executable,
 		// arguments, universe, and queue X are ignored from the submit
 		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
-			extraLines.Append( "executable=/bin/sleep" );
+			extraLines.Append( "executable=/bin/sh" );
+			extraLines.Append( "arguments=\"-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'\"");
 			extraLines.Append( "transfer_executable=false" );
-			extraLines.Append( "arguments=180" );
 		}
 	}
 
@@ -2792,7 +2794,21 @@ MyString credd_has_tokens(MyString m) {
 			param_val = param(config_param_name.c_str());
 		}
 		request_ad->Assign("Audience", param_val);
-		request_ad->Assign("Username", my_username());
+
+		// right now, we only ever want to obtain creds for the user
+		// principal as determined by the CredD.  omitting username
+		// tells the CredD to take the authenticated user from the
+		// socket and use that.
+		//
+		// NOTE: this will fail when talking to a pre-8.9.7 CredD
+		// because it is expecting this username and does not know to
+		// use the authenticated from the socket.
+		//
+		// in the future, if we wish to obtain credentials on behalf of
+		// another user, you would fill in this attribute, presumably
+		// with some value obtained from the submit file.
+		//
+		// request_ad->Assign("Username", "<username>");
 
 		if (IsDebugLevel (D_SECURITY)) {
 			std::string dbgout;
@@ -2812,7 +2828,7 @@ MyString credd_has_tokens(MyString m) {
 	if (my_credd.locate()) {
 		CondorError e;
 		ReliSock *r;
-		r = (ReliSock*)my_credd.startCommand(ZKM_QUERY_CREDS, Stream::reli_sock, 20, &e);
+		r = (ReliSock*)my_credd.startCommand(CREDD_CHECK_CREDS, Stream::reli_sock, 20, &e);
 
 		if(!r) {
 			fprintf( stderr, "\nCRED: startCommand to CredD failed!\n");
@@ -2879,7 +2895,8 @@ int process_job_credentials()
 
 			// force this to be written into the job, by using set_arg_variable
 			// it is also available to the submit file parser itself (i.e. can be used in If statements)
-			submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
+			//TJ:gt7462 don't set SendCredential for OAuth, now that we have multiple credmons, this applies only to Krb credential
+			//submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 		} else {
 			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
@@ -2925,6 +2942,39 @@ int process_job_credentials()
 				exit( 1 );
 			}
 
+#if 1 // support new credd commands only
+			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
+			Daemon my_credd(DT_CREDD);
+			if (my_credd.locate()) {
+				// this version check will fail if CredD is not
+				// local.  the version is not exchanged over
+				// the wire until calling startCommand().  if
+				// we want to support remote submit we should
+				// just send the command anyway, after checking
+				// to make sure older CredDs won't completely
+				// choke on the new protocol.
+				CondorVersionInfo cvi(my_credd.version());
+				bool new_credd = cvi.built_since_version(8, 9, 7);
+				if (new_credd) {
+					const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
+					const char * err = NULL;
+					ClassAd return_ad;
+					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
+					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
+					if (store_cred_failed(result, mode, &err)) {
+						fprintf( stderr, "\nERROR: store_cred of Kerberose credential failed - %s\n", err ? err : "");
+						exit(1);
+					}
+				} else {
+					fprintf( stderr, "\nERROR: Credd is too old to support storing of Kerberose credentials\n"
+							"  Credd version: %s", cvi.get_version_string());
+					exit(1);
+				}
+			} else {
+				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
+				exit( 1 );
+			}
+#else
 			// immediately convert to base64
 			char* ut64 = zkm_base64_encode(uber_ticket, (int)bytes_read);
 
@@ -2946,19 +2996,11 @@ int process_job_credentials()
 
 			// my_domainname() returns NULL on UNIX... no need to use this
 
-			// setup the username to query
-			char userdom[256];
-			char* the_username = my_username();
-			char* the_domainname = my_domainname();
-			sprintf(userdom, "%s@%s", the_username, the_domainname);
-			free(the_username);
-			free(the_domainname);
-
 			dprintf(D_ALWAYS, "CREDMON: storing cred for user %s\n", userdom);
 			Daemon my_credd(DT_CREDD);
 			int store_cred_result;
 			if (my_credd.locate()) {
-				store_cred_result = store_cred(userdom, ut64, ADD_MODE, &my_credd);
+				store_cred_result = do_store_cred(userdom.c_str(), ut64, STORE_CRED_LEGACY | ADD_KRB_MODE, &my_credd);
 				if ( store_cred_result != SUCCESS ) {
 					fprintf( stderr, "\nERROR: store_cred failed!\n");
 					exit( 1 );
@@ -2969,6 +3011,7 @@ int process_job_credentials()
 			}
 			free(ut64);
 			free(zkmbuf);
+#endif
 		}
 	}  // end of block to run a credential producer
 

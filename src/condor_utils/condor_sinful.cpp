@@ -1138,8 +1138,8 @@ Sinful::regenerateV1String() {
 		brokers.rewind();
 		char * contact = NULL;
 		while( (contact = brokers.next()) != NULL ) {
-			MyString ccbAddr, ccbID;
-			MyString peer( "er, constructing v1 Sinful string" );
+			std::string ccbAddr, ccbID;
+			std::string peer( "er, constructing v1 Sinful string" );
 			bool contactOK = CCBClient::SplitCCBContact( contact, ccbAddr, ccbID, peer, NULL );
 			if(! contactOK ) {
 				m_valid = false;

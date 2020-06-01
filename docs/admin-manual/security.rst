@@ -94,8 +94,8 @@ are no unprivileged users logged in to the submit hosts:
 
         condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
 
-3. Within the auto-approval rule's lifetime, start the *condor_schedd* and *condor_startd*
-   hosts inside the appropriate network.  The token requests for these daemons
+3. Within the auto-approval rule's lifetime, start the submit and execute
+   hosts inside the appropriate network.  The token requests for the corresponding daemons (the *condor_master*, *condor_startd*, and *condor_schedd*)
    will be automatically approved and installed into ``/etc/condor/tokens.d/``;
    this will authorize the daemon to advertise to the collector.  By default,
    auto-generated tokens do not have an expiration.
@@ -687,7 +687,7 @@ indicated in the following list of defined values:
         PASSWORD
         FS        (not available on Windows platforms)
         FS_REMOTE (not available on Windows platforms)
-        TOKEN
+        IDTOKENS
         SCITOKENS
         NTSSPI
         MUNGE
@@ -742,8 +742,8 @@ value of OPTIONAL. Authentication will be required for any operation
 which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
-Unix machine is FS, TOKEN, KERBEROS, GSI. This default value for a Windows
-machine is NTSSPI, TOKEN, KERBEROS, GSI.
+Unix machine is FS, IDTOKENS, KERBEROS, GSI. This default value for a Windows
+machine is NTSSPI, IDTOKENS, KERBEROS, GSI.
 
 GSI Authentication
 ''''''''''''''''''
@@ -1312,6 +1312,10 @@ Importantly, neither user nor administrator is responsible
 for securely moving the token - e.g., there is no chance it will be leaked into
 an email archive.
 
+If a *condor_master*, *condor_startd*, or *condor_schedd* daemon cannot
+authenticate with the collector, it will automatically perform a token request
+from the collector.
+
 To use the token request workflow, the user needs a confidential channel to
 the server or an appropriate auto-approval rule needs to be in place.  The simplest
 way to establish a confidential channel is using :ref:`admin-manual/security:ssl authentication`
@@ -1349,15 +1353,63 @@ the ``condor_token_fetch`` has no control over the mapped identity (but does not
 need to read the files in ``SEC_PASSWORD_DIRECTORY``).
 
 If no security authentication methods specified by the administrator - and the
-daemon or user has access to at least one token - then ``TOKEN`` authentication
+daemon or user has access to at least one token - then ``IDTOKENS`` authentication
 is automatically added to the list of valid authentication methods. Otherwise,
-to setup ``TOKEN`` authentication, enable it in the list of authentication methods:
+to setup ``IDTOKENS`` authentication, enable it in the list of authentication methods:
 
 ::
 
-    SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), TOKEN
-    SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), TOKEN
+    SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
+    SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
+**Blacklisting Token**: If a token is lost, stolen, or accidentally exposed,
+then the system administrator may use the token blacklisting mechanism in order
+to prevent unauthorized use.  Blacklisting can be accomplished by setting the
+``SEC_TOKEN_BLACKLIST_EXPR``; when set, the value of this parameter will be
+evaluated as a ClassAd expression against the token's contents.
+
+For example, consider the following token:
+
+::
+
+    eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYXQiOjE1ODg0NzQ3MTksImlzcyI6ImhjYy1icmlhbnRlc3Q3LnVubC5lZHUiLCJqdGkiOiJjNzYwYzJhZjE5M2ExZmQ0ZTQwYmM5YzUzYzk2ZWU3YyIsInN1YiI6ImJib2NrZWxtQGhjYy1icmlhbnRlc3Q3LnVubC5lZHUifQ.fiqfgwjyTkxMSdxwm84xxMTVcGfearddEDj_rhiIbi4ummU
+
+When printed using ``condor_token_list``, the human-readable form is as follows
+(line breaks added for readability):
+
+::
+
+    $ condor_token_list
+    Header: {"alg":"HS256","kid":"POOL"}
+    Payload: {
+        "iat": 1588474719,
+        "iss": "pool.example.com",
+        "jti": "c760c2af193a1fd4e40bc9c53c96ee7c",
+        "sub": "alice@pool.example.com"
+    }
+
+If we would like to blacklist this token, we could utilize any of the following
+values for ``SEC_TOKEN_BLACKLIST_EXPR``, depending on the desired breadth of
+the blacklist:
+
+::
+
+    # Blacklists all tokens from the user Alice:
+    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com"
+
+    # Blacklists all tokens from Alice issued before or after this one:
+    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com" && \
+        iat <= 1588474719
+
+    # Blacklists *only* this token:
+    SEC_TOKEN_BLACKLIST_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
+
+The blacklist only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
+set; to blacklist a token across the entire pool, set
+``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
+
+In order to invalidate all tokens issued by a given master password in
+``SEC_PASSWORD_DIRECTORY``, simply remove the password file from the directory.
 
 File System Authentication
 ''''''''''''''''''''''''''
@@ -1453,7 +1505,7 @@ repeated here:
         PASSWORD
         FS
         FS_REMOTE
-        TOKEN
+        IDTOKENS
         SCITOKENS
         NTSSPI
         MUNGE

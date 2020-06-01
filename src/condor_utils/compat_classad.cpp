@@ -59,8 +59,6 @@ IsStringEnd(const char *str, unsigned off)
 	return (  (str[off] == '\0') || (str[off] == '\n') || (str[off] == '\r')  );
 }
 
-namespace compat_classad {
-
 static StringList ClassAdUserLibs;
 
 static void registerClassadFunctions();
@@ -75,15 +73,14 @@ classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
 
 }
 
-bool ClassAd::m_initConfig = false;
-bool ClassAd::m_strictEvaluation = false;
+static bool ClassAd_initConfig = false;
+static bool ClassAd_strictEvaluation = false;
 
-void ClassAd::
-Reconfig()
+void ClassAdReconfig()
 {
 	//ClassAdPrivateAttrs.rehash(11);
-	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
-	classad::SetOldClassAdSemantics( !m_strictEvaluation );
+	ClassAd_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
+	classad::SetOldClassAdSemantics( !ClassAd_strictEvaluation );
 
 	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
@@ -137,11 +134,11 @@ Reconfig()
 		}
 		if (loc_char) {free(loc_char);}
 	}
-	if (!m_initConfig)
+	if (!ClassAd_initConfig)
 	{
 		registerClassadFunctions();
 		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
-		m_initConfig = true;
+		ClassAd_initConfig = true;
 	}
 }
 
@@ -1194,36 +1191,6 @@ classad_debug_dprintf(const char *s) {
 	dprintf(D_FULLDEBUG, "%s", s);
 }
 
-ClassAd::ClassAd()
-{
-	if ( !m_initConfig ) {
-		this->Reconfig();
-		m_initConfig = true;
-	}
-
-	DisableDirtyTracking();
-}
-
-ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
-{
-	if ( !m_initConfig ) {
-		this->Reconfig();
-		m_initConfig = true;
-	}
-}
-
-ClassAd::ClassAd( const classad::ClassAd &ad ) : classad::ClassAd(ad)
-{
-	if ( !m_initConfig ) {
-		this->Reconfig();
-		m_initConfig = true;
-	}
-}
-
-ClassAd::~ClassAd()
-{
-}
-
 CondorClassAdFileParseHelper::~CondorClassAdFileParseHelper()
 {
 	switch (parse_type) {
@@ -1663,7 +1630,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 	classad::References attrs;
 	classad::References *print_order = NULL;
 	if ( ! hash_order || whitelist) {
-		sGetAdAttrs(attrs, ad, false, whitelist);
+		sGetAdAttrs(attrs, ad, true, whitelist);
 		print_order = &attrs;
 	}
 
@@ -1820,55 +1787,6 @@ bool
 ClassAdAttributeIsPrivate( const std::string &name )
 {
 	return ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end();
-}
-
-bool ClassAd::Insert( const std::string &attrName, classad::ExprTree * expr)
-{
-	return classad::ClassAd::Insert( attrName, expr );
-}
-
-bool
-ClassAd::Insert(const std::string &str)
-{
-	// this is not the optimial path, it would be better to
-	// use either the 2 argument insert, or the const char* form below
-	return this->Insert(str.c_str());
-}
-
-bool
-ClassAd::Insert( const char *str )
-{
-	return InsertLongFormAttrValue(*this, str, true);
-}
-
-bool ClassAd::
-AssignExpr(const std::string &name, const char *value)
-{
-	classad::ClassAdParser par;
-	classad::ExprTree *expr = NULL;
-	par.SetOldClassAd( true );
-
-	if ( value == NULL ) {
-		return false;
-	}
-	if ( !par.ParseExpression( value, expr, true ) ) {
-		return false;
-	}
-	if ( !Insert( name, expr ) ) {
-		delete expr;
-		return false;
-	}
-	return true;
-}
-
-bool ClassAd::
-Assign(const std::string &name, char const *value)
-{
-	if ( value == NULL ) {
-		return false;
-	} else {
-		return InsertAttr( name, value );
-	}
 }
 
 int
@@ -2077,7 +1995,12 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 {
 	MyString buffer;
 
-	sPrintAd( buffer, ad, exclude_private, attr_white_list );
+	if( exclude_private ) {
+		sPrintAd( buffer, ad, attr_white_list );
+	} else {
+		sPrintAdWithSecrets( buffer, ad, attr_white_list );
+	}
+
 	if ( fprintf(file, "%s", buffer.Value()) < 0 ) {
 		return FALSE;
 	} else {
@@ -2091,14 +2014,19 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 	if ( IsDebugCatAndVerbosity( level ) ) {
 		MyString buffer;
 
-		sPrintAd( buffer, ad, exclude_private );
+		if( exclude_private ) {
+			sPrintAd( buffer, ad );
+		} else {
+			sPrintAdWithSecrets( buffer, ad );
+		}
 
 		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 	}
 }
 
+
 int
-sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	classad::ClassAd::const_iterator itr;
 
@@ -2153,10 +2081,30 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 }
 
 int
-sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
+	return _sPrintAd( output, ad, true, attr_white_list );
+}
+
+int
+sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
+	return _sPrintAd( output, ad, false, attr_white_list );
+}
+
+
+int
+sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
 {
 	MyString myout;
-	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
+	int rc = sPrintAd( myout, ad, attr_white_list );
+	output += myout;
+	return rc;
+}
+
+int
+sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
+{
+	MyString myout;
+	int rc = sPrintAdWithSecrets( myout, ad, attr_white_list );
 	output += myout;
 	return rc;
 }
@@ -2777,5 +2725,3 @@ bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_
 
 
 // end functions
-
-} // namespace compat_classad

@@ -31,6 +31,7 @@
 #include "read_multiple_logs.h"
 #include "CondorError.h"
 #include "stringSpace.h"
+#include "submit_utils.h"
 
 #include <deque>
 #include <forward_list>
@@ -64,6 +65,12 @@ typedef int JobID_t;
   typedef int EdgeID_t;
   #define NO_EDGE_ID -1
 #endif
+
+enum NodeType {
+	JOB,
+	FINAL,
+	PROVISIONER
+};
 
 /**  The job class represents a job in the DAG and its state in the HTCondor
      system.  A job is given a name, a CondorID, and three queues.  The
@@ -147,7 +154,7 @@ class Job {
 	#else
 		// Once we are done with AdjustEdges this should agree
 		// but some code checks for parents during parse time (see the splice code)
-		// so we check _numparents (set at parse time) and also _parent (set by AdjustEdges)
+		// so we check _numparehttps://politics.theonion.com/wisconsin-primary-voters-receive-i-voted-gravestones-1842729790nts (set at parse time) and also _parent (set by AdjustEdges)
 		return _parent == NO_ID && _numparents == 0;
 	#endif
 	}
@@ -198,9 +205,11 @@ class Job {
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
+		@param submitDesc SubmitHash of all submit parameters (optional, alternative
+		    to cmdFile)
     */
     Job( const char* jobName,
-				const char* directory, const char* cmdFile ); 
+				const char* directory, const char* cmdFile );
   
     ~Job();
 
@@ -216,6 +225,8 @@ class Job {
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
+	inline SubmitHash* GetSubmitDesc() const { return _submitDesc; }
+	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
 	inline JobID_t GetJobID() const { return _jobID; }
 	inline int GetRetryMax() const { return retry_max; }
 	inline int GetRetries() const { return retries; }
@@ -227,8 +238,8 @@ class Job {
 				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 
-	void SetFinal(bool value) { _final = value; }
-	bool GetFinal() const { return _final; }
+	void SetType( NodeType type ) { _type = type; }
+	NodeType GetType() const { return _type; }
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) const { return _noop; }
 
@@ -567,8 +578,8 @@ private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
 	bool _noop;
-		// whether this is a final job
-	bool _final;
+		// What type of node (job, final, provisioner)
+	NodeType _type;
 public:
 
 #ifdef DEAD_CODE
@@ -647,6 +658,10 @@ private:
         // filename of condor submit file
         // Do not malloc or free! _directory is managed in a StringSpace!
     const char * _cmdFile;
+
+		// SubmitHash of submit desciption
+		// Alternative submission method to _cmdFile above.
+	SubmitHash* _submitDesc;
 
 	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
 	// otherwise NULL).

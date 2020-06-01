@@ -58,16 +58,17 @@ temp_dir_path()
 }
 
 /*
-  Concatenates a given directory path and filename into a single
-  string, stored in result argument. This function makes sure
+  Concatenates a given directory path and filename and optional file extension
+  into a single string, stored in result argument. This function makes sure
   sure that if the given directory path doesn't end with the
   appropriate directory delimiter for this platform, that the new
-  string includes that.  Delete return string with delete[].
+  string includes that.
 */
-const char* dircat(const char *dirpath, const char *filename, MyString &result )
+const char* dircat(const char *dirpath, const char *filename, const char * fileext, MyString &result )
 {
 	ASSERT(dirpath);
 	ASSERT(filename);
+	// fileext may be NULL
 
 	// skip leading directory separator characters from the filename.
 	while (IS_ANY_DIR_DELIM_CHAR(*filename)) {
@@ -81,17 +82,28 @@ const char* dircat(const char *dirpath, const char *filename, MyString &result )
 		--dirlen;
 	}
 
-	// reserve space for directory and filename plus delim and \0 at the end plus 1 more for dirscat
-	result.reserve(3 + dirlen + strlen(filename));
+	int extlen = 0;
+	if (fileext) { extlen = strlen(fileext); }
+
+	// reserve space for directory and filename and fileext plus delim and \0 at the end plus 1 more for dirscat
+	result.reserve(3 + dirlen + strlen(filename) + extlen);
 
 	// copy the directory minus any trailing delims, then append the platform specific delim, and then the filename
 	result.set(dirpath, dirlen);
 	result += DIR_DELIM_STRING;
 	result += filename;
+	if (fileext) {
+		result += fileext;
+	}
 
 	// return the result
 	return result.Value();
 }
+
+const char* dircat(const char *dirpath, const char *filename, MyString &result ) {
+	return dircat(dirpath, filename, NULL, result);
+}
+
 
 const char* dirscat(const char *dirpath, const char *subdir, MyString &result )
 {

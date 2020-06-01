@@ -56,6 +56,8 @@ class QmgmtPeer {
 		bool setEffectiveOwner(char const *o);
 		bool setAllowProtectedAttrChanges(bool val);
 		bool getAllowProtectedAttrChanges() { return allow_protected_attr_changes_by_superuser; }
+		bool setReadOnly(bool val);
+		bool getReadOnly() const { return readonly; }
 
 		ReliSock *getReliSock() const { return sock; };
 		const CondorVersionInfo *get_peer_version() const { return sock->get_peer_version(); };
@@ -73,6 +75,7 @@ class QmgmtPeer {
 
 		char *owner;  
 		bool allow_protected_attr_changes_by_superuser;
+		bool readonly;
 		char *fquser;  // owner@domain
 		char *myendpoint; 
 		condor_sockaddr addr;
@@ -316,7 +319,7 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & f
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
-int handle_q(Service *, int, Stream *sock);
+int handle_q(int, Stream *sock);
 void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 
@@ -551,7 +554,7 @@ bool Reschedule();
 
 bool UniverseUsesVanillaStartExpr(int universe);
 
-int get_myproxy_password_handler(Service *, int, Stream *sock);
+int get_myproxy_password_handler(int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
 

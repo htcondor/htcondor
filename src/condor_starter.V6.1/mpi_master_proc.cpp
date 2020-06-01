@@ -304,10 +304,10 @@ MPIMasterProc::checkPortFile( void )
 				// syscall to tell the shadow.  First, create the
 				// string we need and stuff it in a ClassAd 
 				// // TODO: Arbitrarily chooses IPv4, shouldn't?
-			sprintf( buf, "%s=\"%s:%d\"", ATTR_MPI_MASTER_ADDR, 
+			sprintf( buf, "%s:%d",
 					 get_local_ipaddr(CP_IPV4).to_ip_string().Value(), port );
 			ClassAd ad;
-			ad.Insert( buf );
+			ad.Assign( ATTR_MPI_MASTER_ADDR, buf );
 
 				// Now, do the call:
 			if( REMOTE_CONDOR_register_mpi_master_info( &ad ) < 0) {

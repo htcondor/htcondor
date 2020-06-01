@@ -1285,8 +1285,6 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
 		ATTR_JOB_LAST_START_DATE,
 		ATTR_SHADOW_BIRTHDATE,
-		ATTR_JOB_LOCAL_SYS_CPU,
-		ATTR_JOB_LOCAL_USER_CPU,
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_CKPTS,
@@ -1442,7 +1440,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( "CondorPlatform" );
-	submit_ad->Delete( "CondorVersion" );
+	submit_ad->Delete( ATTR_CONDOR_VERSION );
 	submit_ad->Delete( ATTR_WANT_CLAIMING );
 	submit_ad->Delete( ATTR_WANT_MATCHING );
 	submit_ad->Delete( ATTR_HOLD_REASON );
@@ -1471,8 +1469,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, 0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
@@ -1528,24 +1524,22 @@ ClassAd *CondorJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 	}
 
-	formatstr( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
-				  COMPLETED );
+	formatstr( expr, "%s == %d", ATTR_JOB_STATUS, COMPLETED );
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
 		formatstr_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
 	}
 
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_JOB_LEAVE_IN_QUEUE, expr.c_str() );
 
-	formatstr( expr, "%s = Undefined", ATTR_OWNER );
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_OWNER, "Undefined" );
 
 	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
-	formatstr( expr, "%s = (%s > 0) =!= True && time() > %s + %d",
-				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
+	formatstr( expr, "(%s > 0) =!= True && time() > %s + %d",
+				  ATTR_STAGE_IN_FINISH,
 				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_PERIODIC_REMOVE_CHECK, expr.c_str() );
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 

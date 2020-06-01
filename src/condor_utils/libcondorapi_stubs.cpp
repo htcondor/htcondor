@@ -24,7 +24,6 @@
 #include "condor_query.h"
 
 #ifdef WIN32
-#if 1
 bool 
 get_password_from_credd (
 	const char * credd_host,
@@ -43,37 +42,6 @@ cache_credd_locally (
 {
 	return false;
 }
-#else
-Daemon::Daemon( daemon_t type, const char* name, const char* pool)
-{
-}
-Daemon::~Daemon(void)
-{
-}
-
-bool Daemon::locate()
-{
-	return false;
-}
-
-Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
-{
-	return NULL;
-}
-
-SecMan::SecMan(int)
-{
-}
-
-SecMan::~SecMan()
-{
-}
-
-int addCredential( const char* user, const char* pw, Daemon *d ) {
-	return 0;	
-}
-#endif
 #endif
 /* This file contains various stub functions or small implementation of other
 	functions. The purpose of this is to break edges in a nasty dependency
@@ -157,39 +125,6 @@ int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_
 // stubs for classad_usermap.cpp functions needed by compat_classad
 int reconfig_user_maps() { return 0; }
 bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }
-
-#ifdef HAVE_EXT_PCRE
-
-#ifdef HAVE_PCRE_PCRE_H
-#  include "pcre/pcre.h"
-#else
-#  include "pcre.h"
-#endif
-
-#ifdef WIN32
-#pragma warning(disable : 4273) // inconsistent dll linkage
-#endif
-
-pcre *pcre_compile(const char *, int, const char **, int *,
-				   const unsigned char *)
-{ not_impl(); return NULL; }
-int  pcre_exec(const pcre *, const pcre_extra *, const char *,
-			   int, int, int, int *, int)
-{ return not_impl(); }
-static void my_pcre_free(void *) { not_impl(); }
-void  (*pcre_free)(void *) = my_pcre_free;
-void pcre_free_substring_list(const char **)
-{ not_impl(); }
-int  pcre_fullinfo(const pcre *, const pcre_extra *, int, void *)
-{ return not_impl(); }
-int  pcre_get_substring_list(const char *, int *, int, const char ***)
-{ return not_impl(); }
-
-#ifdef WIN32
-#pragma warning(default : 4273) // inconsistent dll linkage
-#endif
-
-#endif
 
 END_C_DECLS
 int param_integer(const char *, int default_value, int, int, ClassAd *, 

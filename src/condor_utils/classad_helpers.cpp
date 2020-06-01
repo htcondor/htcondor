@@ -90,13 +90,13 @@ findSignal( ClassAd* ad, const char* attr_name )
 	if( ! ad ) {
 		return -1;
 	}
-	MyString name;
+	std::string name;
 	int signal;
 
 	if ( ad->LookupInteger( attr_name, signal ) ) {
 		return signal;
 	} else if ( ad->LookupString( attr_name, name ) ) {
-		return signalNumber( name.Value() );
+		return signalNumber( name.c_str() );
 	} else {
 		return -1;
 	}
@@ -265,8 +265,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 
 	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
-	job_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, 0.0 );
-	job_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, 0.0 );
 	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
 	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 

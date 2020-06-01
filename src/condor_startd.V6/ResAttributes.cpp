@@ -72,6 +72,15 @@ MachAttributes::MachAttributes()
 	m_num_real_cpus = count_hyper ? nhyper_cpus : ncpus;
 	m_num_cpus = param_integer("NUM_CPUS");
 
+	// recompute disk is false if DISK is configured to a static value
+	// otherwise we recompute based on a knob. the actual live disk computation
+	// happens in the Resource class if recompute_disk is true
+	m_always_recompute_disk = false;
+	m_total_disk = -1;
+	auto_free_ptr disk(param("DISK"));
+	if (!disk || ! string_is_long_param(disk, m_total_disk)) {
+		m_always_recompute_disk = param_boolean("STARTD_RECOMPUTE_DISK_FREE", false);
+	}
 
 		// The same is true of physical memory.  If we had an error in
 		// sysapi_phys_memory(), we need to just EXCEPT with a message
@@ -99,6 +108,8 @@ MachAttributes::MachAttributes()
 
 
 #if defined ( WIN32 )
+#pragma warning(push)
+#pragma warning(disable : 4996)
 	// Get the version information of the copy of Windows 
 	// we are running
 	ZeroMemory ( &m_window_version_info, sizeof ( OSVERSIONINFOEX ) );
@@ -116,6 +127,8 @@ MachAttributes::MachAttributes()
 				"get Windows version information.\n" );
 		}
 	}
+#pragma warning(pop)
+
 	m_local_credd = NULL;
 	m_last_credd_test = 0;
     m_dot_Net_Versions = NULL;
@@ -319,12 +332,13 @@ void
 MachAttributes::init()
 {
 	this->init_user_settings();
-	this->compute( A_ALL );
+	this->compute_config();
+	this->compute_for_update();
+	this->compute_for_policy();
 }
 
-
 void
-MachAttributes::compute( amask_t how_much )
+MachAttributes::compute_config()
 {
 	// the startd doesn't normally call the init() method (bug?),
 	// it just starts calling compute, so in order to gurantee that
@@ -332,7 +346,7 @@ MachAttributes::compute( amask_t how_much )
 	if ( ! m_user_settings_init)
 		init_user_settings();
 
-	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
+	{ // formerly IS_STATIC(how_much) && IS_SHARED(how_much)
 
 			// Since we need real values for them as soon as a
 			// MachAttributes object is instantiated, we handle number
@@ -396,7 +410,7 @@ MachAttributes::compute( amask_t how_much )
 			free( m_utsname_machine );
 		}
 
-       		m_utsname_sysname = param( "UTSNAME_SYSNAME" );
+		m_utsname_sysname = param( "UTSNAME_SYSNAME" );
 		m_utsname_nodename = param( "UTSNAME_NODENAME" );
 		m_utsname_release = param( "UTSNAME_RELEASE" );
 		m_utsname_version = param( "UTSNAME_VERSION" );
@@ -435,10 +449,13 @@ MachAttributes::compute( amask_t how_much )
 			m_named_chroot = result_str;
 		}
 
-    }
+	}
+}
 
-
-	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
+void
+MachAttributes::compute_for_update()
+{
+	{  // formerly IS_UPDATE(how_much) && IS_SHARED(how_much)
 
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lld\n", m_virt_mem );
@@ -447,9 +464,12 @@ MachAttributes::compute( amask_t how_much )
 		credd_test();
 #endif
 	}
+}
 
-
-	if( IS_TIMEOUT(how_much) && IS_SHARED(how_much) ) {
+void
+MachAttributes::compute_for_policy()
+{
+	{ // formerly IS_TIMEOUT(how_much) && IS_SHARED(how_much)
 		m_load = sysapi_load_avg();
 
 		sysapi_idle_time( &m_idle, &m_console_idle );
@@ -498,15 +518,6 @@ MachAttributes::compute( amask_t how_much )
            }
         }
 	}
-
-	if( IS_TIMEOUT(how_much) && IS_SUMMED(how_much) ) {
-		m_condor_load = resmgr->sum( &Resource::condor_load );
-		if( m_condor_load > m_load ) {
-			m_condor_load = m_load;
-		}
-	}
-
-
 }
 
 // Allocate a user-defined resource deviceid to a slot
@@ -651,10 +662,10 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
 		} else {
 			classad::Value value;
-			MyString attr(ATTR_OFFLINE_PREFIX); attr += tag;
+			std::string attr(ATTR_OFFLINE_PREFIX); attr += tag;
 			std::string res_value;
 			StringList offline_ids;
-			if (ad.LookupString(attr.c_str(),res_value)) {
+			if (ad.LookupString(attr,res_value)) {
 				offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);
 			} else {
 				attr = "OFFLINE_MACHINE_RESOURCE_"; attr += tag;
@@ -664,7 +675,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			}
 
 			attr = ATTR_DETECTED_PREFIX; attr += tag;
-			if (ad.LookupString(attr.c_str(),res_value)) {
+			if (ad.LookupString(attr,res_value)) {
 				StringList ids;
 				quantity = parse_user_resource_config(tag, res_value.c_str(), ids);
 				if ( ! ids.isEmpty()) {
@@ -807,233 +818,148 @@ MachAttributes::final_idle_dprintf()
 	}
 }
 
-void
-MachAttributes::publish( ClassAd* cp, amask_t how_much) 
-{
-	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
+#ifdef LINUX
 
-			// STARTD_IP_ADDR
-		cp->Assign( ATTR_STARTD_IP_ADDR,
-					daemonCore->InfoCommandSinfulString() );
+static int cloned_function(void * /*unused */ ) {
+	return(0);
+}
 
-        	cp->Assign( ATTR_ARCH, m_arch );
+static bool hasUnprivUserNamespace() {
+	static bool firstTime = true;
+	static bool hasNamespace = false;
+	if (firstTime) {
+		firstTime = false;
+		// Detect if we support unprivileged user namespaces
+		// by cloning with the user namespace flag as non-root.
+		// clone returns tid if successful, -1 on error
 
-		cp->Assign( ATTR_OPSYS, m_opsys );
-       	 	if (m_opsysver) {
-			cp->Assign( ATTR_OPSYSVER, m_opsysver );
- 	        }
-		cp->Assign( ATTR_OPSYS_AND_VER, m_opsys_and_ver );
+		double stack[128];  // force alignment
+		int r = clone(cloned_function, &stack[126], 
+					CLONE_NEWUSER,
+					0);
+		if (r > 0) {
+			int status = 0;
+			int wr = waitpid(r, &status, __WCLONE);
+			dprintf(D_ALWAYS, "ResAttributes detected we do have unpriv user namespaces (pid was %d: status was %d)\n", wr, status);
 
-       	 	if (m_opsys_major_ver) {
-			cp->Assign( ATTR_OPSYS_MAJOR_VER, m_opsys_major_ver );
-        	}
-        	if (m_opsys_name) {
-			cp->Assign( ATTR_OPSYS_NAME, m_opsys_name );
-	        }
-        	if (m_opsys_long_name) {
-			cp->Assign( ATTR_OPSYS_LONG_NAME, m_opsys_long_name );
-	        }
-        	if (m_opsys_short_name) {
-			cp->Assign( ATTR_OPSYS_SHORT_NAME, m_opsys_short_name );
-	        }
-        	if (m_opsys_legacy) {
-			cp->Assign( ATTR_OPSYS_LEGACY, m_opsys_legacy );
-	        }
+			hasNamespace = true;
 
-		cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
-
-		cp->Assign( ATTR_FILE_SYSTEM_DOMAIN, m_filesystem_domain );
-
-		cp->Assign( ATTR_HAS_IO_PROXY, true );
-
-#if defined ( WIN32 )
-		// publish the Windows version information
-		if ( m_got_windows_version_info ) {
-			cp->Assign( ATTR_WINDOWS_MAJOR_VERSION, 
-				(int)m_window_version_info.dwMajorVersion );
-			cp->Assign( ATTR_WINDOWS_MINOR_VERSION, 
-				(int)m_window_version_info.dwMinorVersion );
-			cp->Assign( ATTR_WINDOWS_BUILD_NUMBER, 
-				(int)m_window_version_info.dwBuildNumber );
-			// publish the extended Windows version information if we
-			// have it at our disposal
-			if ( sizeof ( OSVERSIONINFOEX ) == 
-				 m_window_version_info.dwOSVersionInfoSize ) {
-				cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MAJOR, 
-					(int)m_window_version_info.wServicePackMajor );
-				cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MINOR, 
-					(int)m_window_version_info.wServicePackMinor );
-				cp->Assign( ATTR_WINDOWS_PRODUCT_TYPE, 
-					(int)m_window_version_info.wProductType );
-			}
+		} else if (r == 0) { 
+			// The child
+			exit(0);
+		} else {
+			dprintf(D_ALWAYS, "ResAttribute detected we don't have unpriv user namespaces:  return is  is %d\n", errno);
 		}
-
-
-        /*
-        Publish .Net versions installed on current machine assuming
-        the option is turned on..
-        */
-        if(param_boolean("STARTD_PUBLISH_DOTNET", true))
-        {
-            if(m_dot_Net_Versions)
-                cp->Assign(ATTR_DOTNET_VERSIONS, m_dot_Net_Versions);
-        }
-
-        // publish values from the window's registry as specified
-		// in the STARTD_PUBLISH_WINREG param.
-		//
-		m_lst_static.Rewind();
-		while (AttribValue *pav = m_lst_static.Next()) {
-			if (pav) pav->AssignToClassAd(cp);
-		}
-        /*
-     	char * pubreg_param = param("STARTD_PUBLISH_WINREG");
-		if (pubreg_param) {
-			StringList reg_list(pubreg_param, ";");
-			reg_list.rewind();
-
-			while(char * reg_item = reg_list.next()) {
-
-				// if the reg_item is of the form attr_name=reg_path;
-				// then skip over the attr_name and '=' and trailing
-				// whitespace.  But if the = is after the first \, then
-				// it's a part of the reg_path, so ignore it.
-				//
-				const char * pkey = strchr(reg_item, '=');
-				const char * pbs  = strchr(reg_item, '\\');
-				if (pkey && ( ! pbs || pkey < pbs)) {
-					++pkey; // skip the '='
-				} else {
-					pkey = reg_item;
-				}
-
-				// skip any leading whitespace in the reg_path
-				while (isspace(pkey[0]))
-					++pkey;
-
-				// if the keyname begins with 32 or 64, use that to designate either
-				// the WOW64 or WOW32 view of the registry, but don't pass the
-				// leading number on to the lower level code.
-				int options = 0;
-				if (isdigit(pkey[0])) {
-					options = atoi(pkey);
-					while (isdigit(pkey[0])) {
-						++pkey;
-					}
-				}
-
-				// get the registry value of the given key, and assign it 
-				// to the given attribute name, or a generated name.
-				//
-				char * value = get_windows_reg_value(pkey, NULL, options);
-				if (value) {
-					char * attr_name = generate_reg_key_attr_name("WINREG_", reg_item);
-					if (attr_name) {
-						cp->Assign(attr_name, value);
-						free (attr_name);
-					}
-					free(value);
-				}
-			}
-
-			free (pubreg_param);
-		}
-        */
-#endif // defined ( WIN32 )
-
 	}
+	return hasNamespace;
+}
 
-	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
-
-		cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
-
-		cp->Assign( ATTR_TOTAL_CPUS, m_num_cpus );
-
-		cp->Assign( ATTR_TOTAL_MEMORY, m_phys_mem );
-
-			// KFLOPS and MIPS are only conditionally computed; thus, only
-			// advertise them if we computed them.
-		if ( m_kflops > 0 ) {
-			cp->Assign( ATTR_KFLOPS, m_kflops );
-		}
-		if ( m_mips > 0 ) {
-			cp->Assign( ATTR_MIPS, m_mips );
-		}
-
-#if defined(WIN32)
-		if ( m_local_credd != NULL ) {
-			cp->Assign(ATTR_LOCAL_CREDD, m_local_credd);
-		}
 #endif
 
-		string machine_resources = "Cpus Memory Disk Swap";
-		// publish any local resources
-		for (slotres_map_t::iterator j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
-			const char * rname = j->first.c_str();
-			string attr(ATTR_DETECTED_PREFIX); attr += rname;
-			double ipart, fpart = modf(j->second, &ipart);
-			if (fpart >= 0.0 && fpart <= 0.0) {
-				cp->Assign(attr.c_str(), (long long)ipart);
-			} else {
-				cp->Assign(attr.c_str(), j->second);
-			}
-			attr = ATTR_TOTAL_PREFIX; attr += rname;
-			if (fpart >= 0.0 && fpart <= 0.0) {
-				cp->Assign(attr.c_str(), (long long)ipart);
-			} else {
-				cp->Assign(attr.c_str(), j->second);
-			}
-			// are there any offline ids for this resource?
-			slotres_devIds_map_t::const_iterator k = m_machres_offline_devIds_map.find(j->first);
-			if (k != m_machres_offline_devIds_map.end()) {
-				if ( ! k->second.empty()) {
-					attr = ATTR_OFFLINE_PREFIX; attr += k->first;
-					string ids;
-					join(k->second, ",", ids);
-					cp->Assign(attr.c_str(), ids);
-				}
-			}
-			machine_resources += " ";
-			machine_resources += j->first;
-			}
-		cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources);
-	}
+void 
+MachAttributes::publish_static(ClassAd* cp)
+{
+	// STARTD_IP_ADDR
+	cp->Assign( ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString() );
+	cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
+	cp->Assign( ATTR_FILE_SYSTEM_DOMAIN, m_filesystem_domain );
+	cp->Assign( ATTR_HAS_IO_PROXY, true );
 
-		// We don't want this inserted into the public ad automatically
-	if( IS_UPDATE(how_much) || IS_TIMEOUT(how_much) ) {
-		cp->Assign( ATTR_LAST_BENCHMARK, (unsigned)m_last_benchmark );
-	}
+	// publish OS info
+	cp->Assign( ATTR_ARCH, m_arch );
+	cp->Assign( ATTR_OPSYS, m_opsys );
+	if (m_opsysver) { cp->Assign( ATTR_OPSYSVER, m_opsysver ); }
+	cp->Assign( ATTR_OPSYS_AND_VER, m_opsys_and_ver );
+	if (m_opsys_major_ver) { cp->Assign( ATTR_OPSYS_MAJOR_VER, m_opsys_major_ver ); }
+	if (m_opsys_name) { cp->Assign( ATTR_OPSYS_NAME, m_opsys_name ); }
+	if (m_opsys_long_name) { cp->Assign( ATTR_OPSYS_LONG_NAME, m_opsys_long_name ); }
+	if (m_opsys_short_name) { cp->Assign( ATTR_OPSYS_SHORT_NAME, m_opsys_short_name ); }
+	if (m_opsys_legacy) { cp->Assign( ATTR_OPSYS_LEGACY, m_opsys_legacy ); }
 
-
-	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
-
-		cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
-		
-		cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG,
-					rint(m_condor_load * 100) / 100.0);
-		
-		cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
-
-		cp->Assign( ATTR_CLOCK_DAY, m_clock_day );
-
-		m_lst_dynamic.Rewind();
-		while (AttribValue *pav = m_lst_dynamic.Next() ) {
-			if (pav) pav->AssignToClassAd(cp);
+#if defined ( WIN32 )
+	// publish the Windows version information
+	if ( m_got_windows_version_info ) {
+		cp->Assign( ATTR_WINDOWS_MAJOR_VERSION, 
+			(int)m_window_version_info.dwMajorVersion );
+		cp->Assign( ATTR_WINDOWS_MINOR_VERSION, 
+			(int)m_window_version_info.dwMinorVersion );
+		cp->Assign( ATTR_WINDOWS_BUILD_NUMBER, 
+			(int)m_window_version_info.dwBuildNumber );
+		// publish the extended Windows version information if we
+		// have it at our disposal
+		if ( sizeof ( OSVERSIONINFOEX ) == 
+			m_window_version_info.dwOSVersionInfoSize ) {
+			cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MAJOR, 
+				(int)m_window_version_info.wServicePackMajor );
+			cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MINOR, 
+				(int)m_window_version_info.wServicePackMinor );
+			cp->Assign( ATTR_WINDOWS_PRODUCT_TYPE, 
+				(int)m_window_version_info.wProductType );
 		}
 	}
 
-        // temporary attributes for raw utsname info
+
+	/*
+	Publish .Net versions installed on current machine assuming
+	the option is turned on..
+	*/
+	if(param_boolean("STARTD_PUBLISH_DOTNET", true))
+	{
+		if(m_dot_Net_Versions)
+			cp->Assign(ATTR_DOTNET_VERSIONS, m_dot_Net_Versions);
+	}
+
+	// publish values from the window's registry as specified
+	// in the STARTD_PUBLISH_WINREG param.
+	//
+	m_lst_static.Rewind();
+	while (AttribValue *pav = m_lst_static.Next()) {
+		if (pav) pav->AssignToClassAd(cp);
+	}
+
+	if (m_local_credd) { cp->Assign(ATTR_LOCAL_CREDD, m_local_credd); }
+
+#else
+	// temporary attributes for raw utsname info
 	cp->Assign( ATTR_UTSNAME_SYSNAME, m_utsname_sysname );
 	cp->Assign( ATTR_UTSNAME_NODENAME, m_utsname_nodename );
 	cp->Assign( ATTR_UTSNAME_RELEASE, m_utsname_release );
 	cp->Assign( ATTR_UTSNAME_VERSION, m_utsname_version );
 	cp->Assign( ATTR_UTSNAME_MACHINE, m_utsname_machine );
 
+#endif // defined ( WIN32 )
+
+	// publish resource totals
+	cp->Assign( ATTR_TOTAL_CPUS, m_num_cpus );
+	cp->Assign( ATTR_TOTAL_MEMORY, m_phys_mem );
+
+	std::string machine_resources = "Cpus Memory Disk Swap";
+	// publish any local resources
+	for (slotres_map_t::iterator j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
+		const char * rname = j->first.c_str();
+		std::string attr(ATTR_DETECTED_PREFIX); attr += rname;
+		double ipart, fpart = modf(j->second, &ipart);
+		if (fpart >= 0.0 && fpart <= 0.0) {
+			cp->Assign(attr, (long long)ipart);
+		} else {
+			cp->Assign(attr, j->second);
+		}
+		attr = ATTR_TOTAL_PREFIX; attr += rname;
+		if (fpart >= 0.0 && fpart <= 0.0) {
+			cp->Assign(attr, (long long)ipart);
+		} else {
+			cp->Assign(attr, j->second);
+		}
+		machine_resources += " ";
+		machine_resources += j->first;
+	}
+	cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources);
+
 	// Advertise chroot information
 	if ( m_named_chroot.size() > 0 ) {
 		cp->Assign( "NamedChroot", m_named_chroot );
 	}
-	
+
 	// Advertise Docker Volumes
 	char *dockerVolumes = param("DOCKER_VOLUMES");
 	if (dockerVolumes) {
@@ -1043,13 +969,13 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		while ((volume = vl.next())) {
 			std::string attrName = "HasDockerVolume";
 			attrName += volume;
-			cp->Assign(attrName.c_str(), true);
+			cp->Assign(attrName, true);
 		}
 		free(dockerVolumes);
 	}
 
 #ifdef WIN32
-// window's strtok_s is the 'safe' version of strtok, it's not identical to linx's strtok_r, but it's close enough.
+	// window's strtok_s is the 'safe' version of strtok, it's not identical to linx's strtok_r, but it's close enough.
 #define strtok_r strtok_s
 #endif
 
@@ -1062,7 +988,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		std::string attributeName;
 		while( flag != NULL ) {
 			formatstr( attributeName, "has_%s", flag );
-			cp->Assign( attributeName.c_str(), true );
+			cp->Assign( attributeName, true );
 			flag = strtok_r( NULL, " ", & savePointer );
 		}
 		free( processor_flags );
@@ -1079,13 +1005,55 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	if ((cache = sysapi_processor_flags()->cache) > 0) {
 		cp->Assign(ATTR_CPU_CACHE_SIZE, cache);
 	}
+
+#ifdef LINUX
+	if (hasUnprivUserNamespace()) {
+		cp->Assign(ATTR_HAS_USER_NAMESPACES, true);
+	}
+#endif
+}
+
+void
+MachAttributes::publish_dynamic( ClassAd* cp)
+{
+	// things that need to be refrehsed periodially
+
+	// KFLOPS and MIPS are only conditionally computed; thus, only
+	// advertise them if we computed them.
+	if (m_kflops > 0) { cp->Assign( ATTR_KFLOPS, m_kflops ); }
+	if (m_mips > 0) { cp->Assign( ATTR_MIPS, m_mips ); }
+
+	// publish offline ids for any of the resources
+	for (auto j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
+		slotres_devIds_map_t::const_iterator k = m_machres_offline_devIds_map.find(j->first);
+		if (k != m_machres_offline_devIds_map.end()) {
+			if ( ! k->second.empty()) {
+				string attr(ATTR_OFFLINE_PREFIX); attr += k->first;
+				string ids;
+				join(k->second, ",", ids);
+				cp->Assign(attr, ids);
+			}
+		}
+	}
+
+	cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
+	cp->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
+	cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
+	cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
+	cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
+	cp->Assign( ATTR_CLOCK_DAY, m_clock_day );
+
+	m_lst_dynamic.Rewind();
+	while (AttribValue *pav = m_lst_dynamic.Next() ) {
+		if (pav) pav->AssignToClassAd(cp);
+	}
 }
 
 void
 MachAttributes::start_benchmarks( Resource* rip, int &count )
 {
 	count = 0;
-	ClassAd* cp = rip->r_classad;
+	const ClassAd* cp = rip->r_classad;
 
 	if( rip->isSuspendedForCOD() ) {
 			// if there's a COD job, we definitely don't want to run
@@ -1131,14 +1099,17 @@ MachAttributes::start_benchmarks( Resource* rip, int &count )
 void
 MachAttributes::benchmarks_finished( Resource* rip )
 {
-	// Update all ClassAds with this new value for LastBenchmark.
+	// Update this ClassAds with this new value for LastBenchmark.
+	// the other classads will be updated before the next policy evaluation pass
 	m_last_benchmark = time(NULL);
-	resmgr->refresh_benchmarks();
+	// refresh this in the classad, since we might be about to do policy evaluation
+	rip->r_classad->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
 
 	dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
 	if( rip->activity() == benchmarking_act ) {
 		rip->change_state( idle_act );
 	}
+	return;
 }
 
 #if defined(WIN32)
@@ -1267,7 +1238,7 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 
 	if (IsFulldebug(D_ALWAYS)) {
 		std::string ids_dump;
-		::dprintf(D_ALWAYS, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		::dprintf(D_FULLDEBUG, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 	}
 }
 
@@ -1303,33 +1274,24 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 }
 
 void
-CpuAttributes::publish( ClassAd* cp, amask_t how_much )
+CpuAttributes::publish_dynamic(ClassAd* cp)
 {
-	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
-
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
-
 		cp->Assign( ATTR_DISK, c_disk );
-		
-	}
-
-	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
-
 		cp->Assign( ATTR_CONDOR_LOAD_AVG, rint(c_condor_load * 100) / 100.0 );
-
 		cp->Assign( ATTR_LOAD_AVG, rint((c_owner_load + c_condor_load) * 100) / 100.0 );
-
 		cp->Assign( ATTR_KEYBOARD_IDLE, c_idle );
-  
+
 			// ConsoleIdle cannot be determined on all platforms; thus, only
 			// advertise if it is not -1.
 		if( c_console_idle != -1 ) {
 			cp->Assign( ATTR_CONSOLE_IDLE, c_console_idle );
 		}
-	}
+}
 
-	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
-
+void
+CpuAttributes::publish_static(ClassAd* cp)
+{
 		cp->Assign( ATTR_MEMORY, c_phys_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
@@ -1346,162 +1308,108 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 
 		// publish local resource quantities for this slot
 		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-			cp->Assign(j->first.c_str(), int(j->second));
+			cp->Assign(j->first, int(j->second));
 			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
-			cp->Assign(attr.c_str(), int(c_slottot_map[j->first]));
+			cp->Assign(attr, int(c_slottot_map[j->first]));
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
 				attr = "Assigned";
 				attr += j->first;
 				string ids;
 				join(k->second, ",", ids);
-				cp->Assign(attr.c_str(), ids);
+				cp->Assign(attr, ids);
 			}
 		}
+}
+
+void
+CpuAttributes::compute_virt_mem()
+{
+	// Shared attributes that we only get a fraction of
+	double val = map->virt_mem();
+	if (!IS_AUTO_SHARE(c_virt_mem_fraction)) {
+		val *= c_virt_mem_fraction;
+	}
+	c_virt_mem = (unsigned long)floor( val );
+}
+
+void
+CpuAttributes::compute_disk()
+{
+	// Dynamic, non-shared attributes we need to actually compute
+
+	double val = c_total_disk * c_disk_fraction;
+	c_disk = (long long)ceil(val);
+	if (0 == (long long)c_slot_disk) {
+		// only use the 1st compute ignore subsequent.
+		c_slot_disk = c_disk; 
 	}
 }
 
 
 void
-CpuAttributes::compute( amask_t how_much )
+CpuAttributes::display(int dpf_flags) const
 {
-	double val;
+	// dpf_flags is expected to be 0 or D_VERBOSE
+	dprintf( D_KEYBOARD | dpf_flags,
+				"Idle time: %s %-8d %s %d\n",
+				"Keyboard:", (int)c_idle, 
+				"Console:", (int)c_console_idle );
 
-	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
-
-			// Shared attributes that we only get a fraction of
-		val = map->virt_mem();
-		if (!IS_AUTO_SHARE(c_virt_mem_fraction)) {
-			val *= c_virt_mem_fraction;
-		}
-		c_virt_mem = (unsigned long)floor( val );
-	} 
-
-	if( IS_TIMEOUT(how_much) && !IS_SHARED(how_much) ) {
-
-		// Dynamic, non-shared attributes we need to actually compute
-
-		// Update the Cpus and Memory usage values of the starter on the active claim
-		// and compute the condor load average from those numbers.
-		c_condor_load = rip->compute_condor_usage();
-
-			// If the admin is forcing DISK via param, set that here,
-			// else calculate current free disk space for exec partition
-		long long temp_disk = -1;
-		auto_free_ptr disk_as_str(param("DISK"));
-		if (disk_as_str && string_is_long_param(disk_as_str, temp_disk)) {
-			c_total_disk = temp_disk;
-		} else {
-			// only calculate total_disk once
-			if ((c_total_disk == 0) || (param_boolean("STARTD_RECOMPUTE_DISK_FREE", false))) {
-				c_total_disk = sysapi_disk_space(rip->executeDir());
-			}
-		}
-
-		if (IS_UPDATE(how_much)) {
-			dprintf(D_FULLDEBUG, "Total execute space: %lu\n", c_total_disk);
-		}
-
-		val = c_total_disk * c_disk_fraction;
-		c_disk = (long long)ceil(val);
-		if (0 == (long long)c_slot_disk)
-		{
-		  // only use the 1st compute ignore subsequent.
-		  c_slot_disk = c_disk; 
-		}
-	}	
+	dprintf( D_LOAD | dpf_flags,
+				"%s %.2f  %s %.2f  %s %.2f\n",
+				"SystemLoad:", c_condor_load + c_owner_load,
+				"CondorLoad:", c_condor_load,
+				"OwnerLoad:", c_owner_load );
 }
 
-void
-CpuAttributes::display( amask_t how_much )
-{
-	if( IS_UPDATE(how_much) ) {
-		dprintf( D_KEYBOARD, 
-				 "Idle time: %s %-8d %s %d\n",  
-				 "Keyboard:", (int)c_idle, 
-				 "Console:", (int)c_console_idle );
-
-		dprintf( D_LOAD, 
-				 "%s %.2f  %s %.2f  %s %.2f\n",  
-				 "SystemLoad:", c_condor_load + c_owner_load,
-				 "CondorLoad:", c_condor_load,
-				 "OwnerLoad:", c_owner_load );
-	} else {
-		if( IsDebugVerbose( D_LOAD ) ) {
-			dprintf( D_LOAD | D_VERBOSE,
-					 "%s %.2f  %s %.2f  %s %.2f\n",  
-					 "SystemLoad:", c_condor_load + c_owner_load,
-					 "CondorLoad:", c_condor_load,
-					 "OwnerLoad:", c_owner_load );
-		}
-		if( IsDebugVerbose( D_KEYBOARD ) ) {
-			dprintf( D_KEYBOARD | D_VERBOSE,
-					 "Idle time: %s %-8d %s %d\n",  
-					 "Keyboard:", (int)c_idle, 
-					 "Console:", (int)c_console_idle );
-		}
-	}
-}	
-
 
 void
-CpuAttributes::show_totals( int dflag )
+CpuAttributes::cat_totals(MyString & buf) const
 {
-	::dprintf( dflag | D_NOHEADER, 
-			 "slot type %d: " , c_type);
-
-	
+	buf += "Cpus: ";
 	if (IS_AUTO_SHARE(c_num_cpus)) {
-		::dprintf( dflag | D_NOHEADER, 
-			 "Cpus: auto");
+		buf += "auto";
 	} else {
-		::dprintf( dflag | D_NOHEADER, 
-			 "Cpus: %f", c_num_cpus);
+		buf.formatstr_cat("%f", c_num_cpus);
 	}
 
+	buf += ", Memory: ";
 	if (IS_AUTO_SHARE(c_phys_mem)) {
-		::dprintf( dflag | D_NOHEADER, 
-				   ", Memory: auto" );
+		buf += "auto";
 	}
 	else {
-		::dprintf( dflag | D_NOHEADER, 
-				   ", Memory: %d",c_phys_mem );
+		buf.formatstr_cat("%d", c_phys_mem);
 	}
-	
 
-	if( IS_AUTO_SHARE(c_virt_mem_fraction) ) {
-		::dprintf( dflag | D_NOHEADER, 
-				   ", Swap: auto" );
+	buf += ", Swap: ";
+	if (IS_AUTO_SHARE(c_virt_mem_fraction)) {
+		buf += "auto";
 	}
 	else {
-		::dprintf( dflag | D_NOHEADER, 
-				   ", Swap: %.2f%%", 100*c_virt_mem_fraction );
+		buf.formatstr_cat("%.2f%%", 100*c_virt_mem_fraction );
 	}
-	
 
-	if( IS_AUTO_SHARE(c_disk_fraction) ) {
-		::dprintf( dflag | D_NOHEADER, 
-				   ", Disk: auto" );
+	buf += ", Disk: ";
+	if (IS_AUTO_SHARE(c_disk_fraction)) {
+		buf += "auto";
 	}
 	else {
-		::dprintf( dflag | D_NOHEADER, 
-				   ", Disk: %.2f%%", 100*c_disk_fraction );
+		buf.formatstr_cat("%.2f%%", 100*c_disk_fraction );
 	}
 
-    for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-        if (IS_AUTO_SHARE(j->second)) {
-            ::dprintf(dflag | D_NOHEADER, ", %s: auto", j->first.c_str()); 
-        } else {
-            ::dprintf(dflag | D_NOHEADER, ", %s: %d", j->first.c_str(), int(j->second));
-        }
-    }
-
-    ::dprintf(dflag | D_NOHEADER, "\n");
+	for (auto j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
+		if (IS_AUTO_SHARE(j->second)) {
+			buf.formatstr_cat(", %s: auto", j->first.c_str());
+		} else {
+			buf.formatstr_cat(", %s: %d", j->first.c_str(), int(j->second));
+		}
+	}
 }
 
 
 void
-CpuAttributes::dprintf( int flags, const char* fmt, ... )
+CpuAttributes::dprintf( int flags, const char* fmt, ... ) const
 {
     if (NULL == rip) {
         EXCEPT("CpuAttributes::dprintf() called with NULL resource pointer");
@@ -1533,7 +1441,6 @@ CpuAttributes::swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int
 	}
 }
 
-
 CpuAttributes&
 CpuAttributes::operator+=( CpuAttributes& rhs )
 {
@@ -1550,11 +1457,11 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 		c_disk_fraction += rhs.c_disk_fraction;
 	}
 
-    for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-        j->second += rhs.c_slotres_map[j->first];
-    }
+	for (auto j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
+		j->second += rhs.c_slotres_map[j->first];
+	}
 
-	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
+	compute_disk();
 
 	return *this;
 }
@@ -1574,11 +1481,11 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 		c_disk_fraction -= rhs.c_disk_fraction;
 	}
 
-    for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-        j->second -= rhs.c_slotres_map[j->first];
-    }
+	for (auto j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
+		j->second -= rhs.c_slotres_map[j->first];
+	}
 
-	compute( A_TIMEOUT | A_UPDATE ); // Re-compute
+	compute_disk();
 
 	return *this;
 }
@@ -1642,16 +1549,16 @@ AvailAttributes::decrement( CpuAttributes* cap )
 		new_disk -= cap->c_disk_fraction;
 	}
 
-    bool resfloor = false;
-    slotres_map_t new_res(a_slotres_map);
-    for (slotres_map_t::iterator j(new_res.begin());  j != new_res.end();  ++j) {
-        if (!IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
-            j->second -= cap->c_slotres_map[j->first];
-        }
-        if (j->second < floor) { 
-            resfloor = true;
-        }
-    }
+	bool resfloor = false;
+	slotres_map_t new_res(a_slotres_map);
+	for (auto j(new_res.begin()); j != new_res.end(); ++j) {
+		if (!IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
+			j->second -= cap->c_slotres_map[j->first];
+		}
+		if (j->second < floor) {
+			resfloor = true;
+		}
+	}
 
 	if (resfloor || new_cpus < floor || new_phys_mem < floor || 
 		new_virt_mem < floor || new_disk < floor) {
@@ -1678,12 +1585,12 @@ AvailAttributes::decrement( CpuAttributes* cap )
         partition.m_auto_count += 1;
     }
 
-    for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
-        j->second = new_res[j->first];
-        if (IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
-            a_autocnt_map[j->first] += 1;
-        }
-    }
+	for (auto j(a_slotres_map.begin()); j != a_slotres_map.end(); ++j) {
+		j->second = new_res[j->first];
+		if (IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
+			a_autocnt_map[j->first] += 1;
+		}
+	}
 
 	return true;
 }
@@ -1698,10 +1605,10 @@ bool AvailAttributes::computeRemainder(slotres_map_t & remain_cap, slotres_map_t
 {
 	remain_cap.clear();
 	remain_cnt.clear();
-	for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
+	for (auto j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
 		remain_cap[j->first] = j->second;
 	}
-	for (slotres_map_t::iterator j(a_autocnt_map.begin());  j != a_autocnt_map.end();  ++j) {
+	for (auto j(a_autocnt_map.begin());  j != a_autocnt_map.end();  ++j) {
 		remain_cnt[j->first] = j->second;
 	}
 	return true;
@@ -1758,7 +1665,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 		cap->c_disk_fraction = new_value;
 	}
 
-	for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
+	for (auto j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
 		if (IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
 			// replace auto share vals with final values:
 			// if there are less than 1 of the resource remaining, hand out 0
@@ -1788,15 +1695,13 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 
 
 void
-AvailAttributes::show_totals( int dflag, CpuAttributes *cap )
+AvailAttributes::cat_totals(MyString & buf, const char * execute_partition_id)
 {
-	AvailDiskPartition &partition = GetAvailDiskPartition( cap->c_execute_partition_id );
-	::dprintf( dflag | D_NOHEADER, 
-			 "Slot #%d: Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
-			 cap->c_type, a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
-			 100*partition.m_disk_fraction );
-    for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
-        ::dprintf(dflag | D_NOHEADER, ", %s: %d", j->first.c_str(), int(j->second));
-    }
-    ::dprintf(dflag | D_NOHEADER, "\n");
+	AvailDiskPartition &partition = GetAvailDiskPartition( execute_partition_id );
+	buf.formatstr_cat("Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
+		a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
+		100*partition.m_disk_fraction );
+	for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
+		buf.formatstr_cat(", %s: %d", j->first.c_str(), int(j->second));
+	}
 }

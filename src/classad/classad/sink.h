@@ -34,10 +34,10 @@ class ClassAdUnParser
 {
 	public:
 		/// Constructor
-		ClassAdUnParser( );
+		ClassAdUnParser() : oldClassAd(false), xmlUnparse(false), delimiter('\"'), oldClassAdValue(false) {}
 
 		/// Destructor
-		virtual ~ClassAdUnParser( );
+		virtual ~ClassAdUnParser() {}
 
 		/** Function to be called by the ClassAdXMLUnParser with a true
 		 *     flag before doing an XMLUnparse

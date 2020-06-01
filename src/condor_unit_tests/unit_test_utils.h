@@ -93,7 +93,7 @@ void free_helper(char** array, int num_strs);
 void make_big_string(int length, char **string, char **quoted_string);
 
 /* Originally from condor_c++_util/test_old_classads.cpp*/
-compat_classad::ClassAd* get_classad_from_file();
+ClassAd* get_classad_from_file();
 
 /* Originally from condor_c++_util/test_old_classads.cpp*/
 bool floats_close( float one, float two, float diff = .0001);

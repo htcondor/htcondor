@@ -88,8 +88,6 @@ static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
 { return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
 #endif
 
-bool Condor_Auth_Passwd::m_attempt_pool_password = true;
-
 GCC_DIAG_OFF(float-equal)
 GCC_DIAG_OFF(cast-qual)
 #include "jwt-cpp/jwt.h"
@@ -160,7 +158,8 @@ bool findToken(const std::string &tokenfilename,
 		return false;
 	}
     for( std::string line; readLine( line, f.get(), false ); ) {
-        line.erase( line.length() - 1, 1 );
+		if (line.empty() || line[0] == '#') continue;
+		if (line[line.size()-1] == '\n') line.erase( line.length() - 1, 1 );
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),
@@ -456,7 +455,7 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		std::string shared_key;
 		CondorError err;
 		if (key_id == "POOL") {
-			std::unique_ptr<char> pool_passwd(getStoredCredential(POOL_PASSWORD_USERNAME, ""));
+			std::unique_ptr<char> pool_passwd(getStoredPassword(POOL_PASSWORD_USERNAME, ""));
 			if (!pool_passwd.get()) {
 				return nullptr;
 			}
@@ -482,7 +481,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordA = getStoredCredential(name,domain);
+	//TODO: the 'password here on Unix is actually the cred converted to base64. is that right?
+	passwordA = getStoredPassword(name,domain);
 	free(name);
 
 		// Split nameB into name and domain, then get password
@@ -493,7 +493,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordB = getStoredCredential(name,domain);
+	//TODO: the 'password' here on Unix is actually the cred converted to base64. is that right?
+	passwordB = getStoredPassword(name,domain);
 	free(name);
 
 		// If we failed to find either password, fail.
@@ -2795,8 +2796,6 @@ Condor_Auth_Passwd::key_strength_bytes() const
 bool
 Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
-	check_pool_password();
-
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
 	std::vector<std::string> creds;
 	CondorError err;
@@ -2816,12 +2815,11 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 }
 
 void
-Condor_Auth_Passwd::check_pool_password()
+Condor_Auth_Passwd::create_pool_password_if_needed()
 {
-		// Only attempt to drop the pool password once.
-	if (!m_attempt_pool_password) {return;}
-	m_attempt_pool_password = false;
+	// This method is invoked by DaemonCore upon startup and a reconfig.
 
+	// Currently only the Collector will generate a pool password by default...
 	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
 		return;
 	}
@@ -2859,7 +2857,12 @@ Condor_Auth_Passwd::check_pool_password()
 	}
 
 		// Write out the password.
-	write_password_file(pool_password.c_str(), password_buffer);
+	if (TRUE == write_password_file(pool_password.c_str(), password_buffer)) {
+		dprintf(D_ALWAYS, "Created a pool password in file %s\n", pool_password.c_str());
+	}
+	else {
+		dprintf(D_ALWAYS, "WARNING: Failed to create a pool password in file %s\n", pool_password.c_str());
+	}
 }
 
 

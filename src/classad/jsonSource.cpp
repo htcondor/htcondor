@@ -424,7 +424,6 @@ parseClassAd( ClassAd &ad , bool full )
 	string				s;
 
 	ad.Clear( );
-	ad.DisableDirtyTracking();
 
 	if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_OPEN_BRACE ) {
 	    CondorErrno = ERR_PARSE_ERROR;
@@ -497,7 +496,6 @@ parseClassAd( ClassAd &ad , bool full )
 		return false;
 	}
 
-	ad.EnableDirtyTracking();
 	return true;
 }
 

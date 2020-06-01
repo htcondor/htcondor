@@ -66,7 +66,6 @@ const char ATTR_USER_ERROR_REASON [] = "ErrorReason";
 ClassAd* user_job_policy(ClassAd *jad)
 {
 	ClassAd *result;
-	char buf[4096]; /* old classads needs to go away */
 	bool on_exit_hold = false, on_exit_remove = false;
 	int cdate = 0;
 	int adkind;
@@ -85,10 +84,8 @@ ClassAd* user_job_policy(ClassAd *jad)
 	{
 		EXCEPT("Out of memory!"); /* XXX should this be here? */
 	}
-	sprintf(buf, "%s = FALSE", ATTR_TAKE_ACTION);
-	result->Insert(buf);
-	sprintf(buf, "%s = FALSE", ATTR_USER_POLICY_ERROR);
-	result->Insert(buf);
+	result->Assign(ATTR_TAKE_ACTION, false);
+	result->Assign(ATTR_USER_POLICY_ERROR, false);
 
 	/* figure out the ad kind and then do something with it */
 
@@ -100,11 +97,8 @@ ClassAd* user_job_policy(ClassAd *jad)
 			dprintf(D_ALWAYS, "user_job_policy(): I have something that "
 					"doesn't appear to be a job ad! Ignoring.\n");
 
-			sprintf(buf, "%s = TRUE", ATTR_USER_POLICY_ERROR);
-			result->Insert(buf);
-			sprintf(buf, "%s = %u", ATTR_USER_ERROR_REASON, 
-				USER_ERROR_NOT_JOB_AD);
-			result->Insert(buf);
+			result->Assign(ATTR_USER_POLICY_ERROR, true);
+			result->Assign(ATTR_USER_ERROR_REASON, USER_ERROR_NOT_JOB_AD);
 
 			return result;
 			break;
@@ -127,11 +121,8 @@ ClassAd* user_job_policy(ClassAd *jad)
 				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_REMOVE_CHECK, oer_expr);
 			}
 
-			sprintf(buf, "%s = TRUE", ATTR_USER_POLICY_ERROR);
-			result->Insert(buf);
-			sprintf(buf, "%s = %u", ATTR_USER_ERROR_REASON, 
-				USER_ERROR_INCONSISTANT);
-			result->Insert(buf);
+			result->Assign(ATTR_USER_POLICY_ERROR, true);
+			result->Assign(ATTR_USER_ERROR_REASON, USER_ERROR_INCONSISTANT);
 
 			return result;
 			break;
@@ -140,13 +131,9 @@ ClassAd* user_job_policy(ClassAd *jad)
 			jad->LookupInteger(ATTR_COMPLETION_DATE, cdate);
 			if (cdate > 0)
 			{
-				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-				result->Insert(buf);
-				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Insert(buf);
-				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-					old_style_exit);
-				result->Insert(buf);
+				result->Assign(ATTR_TAKE_ACTION, true);
+				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Assign(ATTR_USER_POLICY_FIRING_EXPR, old_style_exit);
 			}
 			return result;
 			break;
@@ -176,13 +163,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 			{
 				/* make a result classad explaining this and return it */
 
-				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-				result->Insert(buf);
-				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
-				result->Insert(buf);
-				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+				result->Assign(ATTR_TAKE_ACTION, true);
+				result->Assign(ATTR_USER_POLICY_ACTION, HOLD_JOB);
+				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
 					userpolicy.FiringExpression());
-				result->Insert(buf);
 
 				return result;
 			}
@@ -192,13 +176,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 			{
 				/* make a result classad explaining this and return it */
 
-				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-				result->Insert(buf);
-				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Insert(buf);
-				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+				result->Assign(ATTR_TAKE_ACTION, true);
+				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
 					userpolicy.FiringExpression());
-				result->Insert(buf);
 
 				return result;
 			}
@@ -208,13 +189,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 			{
 				/* make a result classad explaining this and return it */
 
-				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-				result->Insert(buf);
-				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Insert(buf);
-				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+				result->Assign(ATTR_TAKE_ACTION, true);
+				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
 					userpolicy.FiringExpression());
-				result->Insert(buf);
 
 				return result;
 			}
@@ -238,13 +216,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 			{
 				/* make a result classad explaining this and return it */
 
-				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-				result->Insert(buf);
-				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
-				result->Insert(buf);
-				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+				result->Assign(ATTR_TAKE_ACTION, true);
+				result->Assign(ATTR_USER_POLICY_ACTION, HOLD_JOB);
+				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
 					ATTR_ON_EXIT_HOLD_CHECK);
-				result->Insert(buf);
 
 				return result;
 			}
@@ -255,13 +230,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 			{
 				/* make a result classad explaining this and return it */
 
-				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-				result->Insert(buf);
-				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Insert(buf);
-				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+				result->Assign(ATTR_TAKE_ACTION, true);
+				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
 					ATTR_ON_EXIT_REMOVE_CHECK);
-				result->Insert(buf);
 
 				return result;
 			}
@@ -458,8 +430,6 @@ void UserPolicy::Init(ClassAd *ad)
 
 void UserPolicy::SetDefaults()
 {
-	MyString buf;
-
 	ExprTree *ph_expr = m_ad->LookupExpr(ATTR_PERIODIC_HOLD_CHECK);
 	ExprTree *pr_expr = m_ad->LookupExpr(ATTR_PERIODIC_REMOVE_CHECK);
 	ExprTree *pl_expr = m_ad->LookupExpr(ATTR_PERIODIC_RELEASE_CHECK);
@@ -469,28 +439,23 @@ void UserPolicy::SetDefaults()
 	/* if the default user policy expressions do not exist, then add them
 		here and now with the usual defaults */
 	if (ph_expr == NULL) {
-		buf.formatstr( "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK );
-		m_ad->Insert( buf.Value() );
+		m_ad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
 	}
 
 	if (pr_expr == NULL) {
-		buf.formatstr( "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK );
-		m_ad->Insert( buf.Value() );
+		m_ad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
 	}
 
 	if (pl_expr == NULL) {
-		buf.formatstr( "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK );
-		m_ad->Insert( buf.Value() );
+		m_ad->Assign(ATTR_PERIODIC_RELEASE_CHECK, false);
 	}
 
 	if (oeh_expr == NULL) {
-		buf.formatstr( "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK );
-		m_ad->Insert( buf.Value() );
+		m_ad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
 	}
 
 	if (oer_expr == NULL) {
-		buf.formatstr( "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK );
-		m_ad->Insert( buf.Value() );
+		m_ad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
 	}
 }
 
@@ -1031,7 +996,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 	else if( !subcode_expr_attr.empty() )
 	{
-		m_ad->LookupInteger(subcode_expr_attr.c_str(), reason_subcode);
+		m_ad->LookupInteger(subcode_expr_attr, reason_subcode);
 	}
 
 	MyString reason_expr;
@@ -1045,7 +1010,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 	else if( !reason_expr_attr.empty() )
 	{
-		m_ad->LookupString(reason_expr_attr.c_str(), reason);
+		m_ad->LookupString(reason_expr_attr, reason);
 	}
 #endif
 

@@ -20,6 +20,9 @@
 #include "old_boost.h"
 #include "module_lock.h"
 #include "classad_wrapper.h"
+#include "history_iterator.h"
+
+using namespace boost::python;
 
 /*
  * Object representing a claim on a remote startd.
@@ -96,6 +99,11 @@ struct Startd
         bool rval = startd.cancelDrainJobs( request_id );
         if (!rval) {THROW_EX(RuntimeError, "Startd failed to cancel draining jobs.");}
     }
+
+	boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection = boost::python::list(), int match = -1, boost::python::object since = boost::python::object())
+	{
+		return history_query(requirement, projection, match, since, GET_HISTORY, m_addr);
+	}
 
 private:
 
@@ -180,6 +188,28 @@ export_startd()
                 boost::python::arg("request_id")=""
                )
            )
+        .def("history", &Startd::history,
+            R"C0ND0R(
+            Fetch history records from the ``condor_startd`` daemon.
+
+            :param requirements: Query constraint; only jobs matching this constraint will be returned;
+                defaults to ``'true'``.
+            :type constraint: str or :class:`class.ExprTree`
+            :param projection: Attributes that are to be included for each returned job.
+                The empty list causes all attributes to be included.
+            :type projection: list[str]
+            :param int match: An limit on the number of jobs to include; the default (``-1``)
+                indicates to return all matching jobs.
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
+               (SELFARG
+                boost::python::arg("requirements"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+                boost::python::arg("since")=boost::python::object())
+            )
+
         ;
+
 }
 

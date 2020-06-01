@@ -120,6 +120,7 @@ public:
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
 		*/
+	void setJobFailed( void );
 	bool transferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
@@ -236,7 +237,10 @@ public:
 		    to shadow by using file transfer
 		*/
 	bool uploadWorkingFiles(void);
-	
+
+		/** Send checkpoint files to shadow */
+	bool uploadCheckpointFiles();
+
 		/* Update Job ClassAd with checkpoint info and log it */
 	void updateCkptInfo(void);
 
@@ -440,10 +444,10 @@ private:
 		// The proxy is about to expire, do something!
 	void proxyExpiring();
 
-	bool refreshSandboxCredentials();
-	void refreshSandboxCredentials_from_timer() { (void)refreshSandboxCredentials(); }
-	bool refreshSandboxCredentialsMultiple();
-	void refreshSandboxCredentialsMultiple_from_timer() { (void)refreshSandboxCredentialsMultiple(); }
+	bool refreshSandboxCredentialsKRB();
+	void refreshSandboxCredentialsKRB_from_timer() { (void)refreshSandboxCredentialsKRB(); }
+	bool refreshSandboxCredentialsOAuth();
+	void refreshSandboxCredentialsOAuth_from_timer() { (void)refreshSandboxCredentialsOAuth(); }
 
 	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
 
@@ -540,6 +544,8 @@ private:
 		*/
 	bool m_job_update_attrs_set;
 	StringList m_job_update_attrs;
+
+	bool job_failed = false;
 };
 
 

@@ -78,7 +78,7 @@ extern char *myUserName;
 extern int main_shutdown_graceful();
 
 int
-request_pipe_handler(Service*, int) {
+request_pipe_handler(int) {
 
 	std::string* next_line;
 	while ((next_line = request_buffer.GetNextLine()) != NULL) {

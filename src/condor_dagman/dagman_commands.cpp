@@ -24,6 +24,7 @@
 #include "debug.h"
 #include "parse.h"
 #include "dagman_commands.h"
+#include "submit_utils.h"
 
 bool
 PauseDag(Dagman &dm)
@@ -64,7 +65,7 @@ AddNode( Dag *dag, const char *name,
 		 const char* directory,
 		 const char* submitFile,
 		 bool noop,
-		 bool done, bool isFinal,
+		 bool done, NodeType type,
 		 MyString &failReason )
 {
 	MyString why;
@@ -76,7 +77,7 @@ AddNode( Dag *dag, const char *name,
 		failReason = why;
 		return NULL;
 	}
-	if( done && isFinal) {
+	if( done && type == NodeType::FINAL ) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
 					name );
         debug_printf( DEBUG_QUIET, "%s", failReason.Value() );
@@ -95,11 +96,11 @@ AddNode( Dag *dag, const char *name,
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
-	node->SetFinal( isFinal );
+	node->SetType( type );
 	ASSERT( dag != NULL );
 	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding ";
-		failReason += isFinal? "Final " : "";
+		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
 		failReason += "node to DAG";
 		delete node;
 		return NULL;
@@ -155,6 +156,16 @@ IsValidSubmitFileName( const char *name, MyString &whynot )
 	}
 	if( strlen( name ) == 0 ) {
 		whynot = "empty submit file name (name == \"\")";
+		return false;
+	}
+	return true;
+}
+
+bool
+IsValidSubmitDescription( SubmitHash *desc, MyString &whynot )
+{
+	if( desc == NULL ) {
+		whynot = "missing submit file and/or description";
 		return false;
 	}
 	return true;

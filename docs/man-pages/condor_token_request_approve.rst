@@ -20,7 +20,7 @@ Description
 
 *condor_token_request_approve* will approve an request for an authentication token
 queued at a remote daemon.  Once approved, the requester will be able to fetch a
-fully signed token from the daemon and use it to authenticate with the TOKEN method.
+fully signed token from the daemon and use it to authenticate with the IDTOKENS method.
 
 **NOTE** that any user can request a very powerful token, even allowing them to be
 the HTCondor administrator; such requests can only be approved by an administrator.

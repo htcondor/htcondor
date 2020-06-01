@@ -583,7 +583,6 @@ Scheduler::Scheduler() :
 	slotWeightGuessAd(0),
 	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
-	m_history_helper_count(0),
 	m_matchPasswordEnabled(false),
 	m_token_requester(&Scheduler::token_request_callback, this)
 {
@@ -720,8 +719,6 @@ Scheduler::Scheduler() :
 	cronTabs = 0;
 	MaxExceptions = 0;
 	m_job_machine_attrs_history_length = 0;
-	m_history_helper_max = 0;
-	m_history_helper_rid = -1;
 
 	jobSets = nullptr;
 }
@@ -916,10 +913,11 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	}
 
 	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"416\"]";
+	MyString exported_session_info;
 	classad::ClassAd policy_ad;
 	policy_ad.InsertAttr(ATTR_REMOTE_POOL, pool);
 
-	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+	bool retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		NEGOTIATOR,
 		id.c_str(),
 		keybuf.get(),
@@ -929,8 +927,12 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 		duration,
 		&policy_ad
 	);
-	if (retval) {
-		capability = id + "#" + session_info + keybuf.get();
+	if ( retval ) {
+		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
+	}
+	if ( retval ) {
+		ClaimIdParser cid(id.c_str(), exported_session_info.Value(), keybuf.get());
+		capability = cid.claimId();
 	}
 	return retval;
 }
@@ -958,9 +960,10 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 	}
 
 	auto session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"523\"]";
+	MyString exported_session_info;
 	classad::ClassAd policy_ad;
 	policy_ad.InsertAttr("ScheddSession", true);
-	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+	bool retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		ALLOW,
 		id.c_str(),
 		keybuf.get(),
@@ -970,8 +973,12 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 		duration,
 		&policy_ad
 	);
-	if (retval) {
-		capability = id + "#" + session_info + keybuf.get();
+	if ( retval ) {
+		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
+	}
+	if ( retval ) {
+		ClaimIdParser cid(id.c_str(), exported_session_info.Value(), keybuf.get());
+		capability = cid.claimId();
 	}
 	return retval;
 }
@@ -1237,7 +1244,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	std::string str;
 	if ( param_boolean("USE_GLOBAL_JOB_PRIOS",false) ) {
 		int max_entries = param_integer("MAX_GLOBAL_JOB_PRIOS",500);
-		int num_prios = Owner.PrioSet.size();
+		int num_prios = (int)Owner.PrioSet.size();
 		if (num_prios > max_entries) {
 			pAd.Assign(ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
 		} else {
@@ -1431,6 +1438,10 @@ Scheduler::count_jobs()
 		if (SubDat.num.Hits > 0) ++NumSubmitters;
 	}
 
+	// we may need to create a mark file if we have expired users
+	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	auto_free_ptr cred_dir_oauth(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+
 	// Look for owners with zero jobs and purge them
 	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
 		OwnerInfo & owner_info = it->second;
@@ -1438,18 +1449,21 @@ Scheduler::count_jobs()
 		// we don't want to remove the entry.
 		if (owner_info.num.Hits > 0) continue;
 
-#ifndef WIN32
-		// mark user creds for sweeping.
-		dprintf( D_FULLDEBUG, "ZKM: creating mark file for user %s\n", owner_info.Name());
-		credmon_mark_creds_for_sweeping(owner_info.Name());
-#endif // WIN32
-
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
 		if ( ! owner_info.LastHitTime) {
 			// this is unxpected, we really should never get here with LastHitTime of 0, but in case
 			// we do. start the decay timer now.
 			owner_info.LastHitTime = current_time;
 		} else if ( current_time - owner_info.LastHitTime > AbsentOwnerLifetime ) {
+			// mark user creds for sweeping.
+			if (cred_dir_krb) {
+				dprintf(D_FULLDEBUG, "creating credmon KRB mark file for user %s\n", owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_krb, owner_info.Name());
+			}
+			if (cred_dir_oauth) {
+				dprintf(D_FULLDEBUG, "creating credmon OAUTH mark file for user %s\n", owner_info.Name());
+				credmon_mark_creds_for_sweeping(cred_dir_oauth, owner_info.Name());
+			}
 			// Now that we've finished using Owner.Name, we can
 			// free it.  this marks the entry as unused
 			owner_info.name.clear();
@@ -2093,170 +2107,6 @@ int Scheduler::command_query_ads(int command, Stream* stream)
 	return TRUE;
 }
 
-static bool
-sendHistoryErrorAd(Stream *stream, int errorCode, std::string errorString)
-{
-	classad::ClassAd ad;
-	ad.InsertAttr(ATTR_OWNER, 0);
-	ad.InsertAttr(ATTR_ERROR_STRING, errorString);
-	ad.InsertAttr(ATTR_ERROR_CODE, errorCode);
-
-	stream->encode();
-	if (!putClassAd(stream, ad) || !stream->end_of_message())
-	{
-		dprintf(D_ALWAYS, "Failed to send error ad for remote history query\n");
-	}
-	return false;
-}
-
-int Scheduler::command_history(int, Stream* stream)
-{
-	ClassAd queryAd;
-
-	stream->decode();
-	stream->timeout(15);
-	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
-		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
-		return FALSE;
-	}
-
-	if ((param_integer("HISTORY_HELPER_MAX_HISTORY", 10000) == 0) || param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50) == 0) {
-		return sendHistoryErrorAd(stream, 10, "Remote history has been disabled on this schedd");
-	}
-
-	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
-	if (!requirements)
-	{
-		classad::Value val; val.SetBooleanValue(true);
-		requirements = classad::Literal::MakeLiteral(val);
-		if (!requirements) return sendHistoryErrorAd(stream, 1, "Failed to create default requirements");
-	}
-	classad::ClassAdUnParser unparser;
-	std::string requirements_str;
-	unparser.Unparse(requirements_str, requirements);
-
-	classad::ExprTree * since_expr = queryAd.Lookup("Since");
-	std::string since_str;
-	if (since_expr) { unparser.Unparse(since_str, since_expr); }
-
-	classad::Value value;
-	classad::References projection;
-	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, projection, true);
-	if (proj_err < 0) {
-		if (proj_err == -1) {
-			return sendHistoryErrorAd(stream, 2, "Unable to evaluate projection list");
-		}
-		return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string list");
-	}
-	std::string proj_str;
-	print_attrs(proj_str, false, projection, ",");
-
-	int matchCount = -1;
-	if (!queryAd.EvaluateAttr(ATTR_NUM_MATCHES, value) || !value.IsIntegerValue(matchCount))
-	{
-		matchCount = -1;
-	}
-	std::string match_limit;
-	formatstr(match_limit, "%d", matchCount);
-
-	bool streamresults = false;
-	if (!queryAd.EvaluateAttrBool("StreamResults", streamresults)) {
-		streamresults = false;
-	}
-
-	if (m_history_helper_count >= m_history_helper_max) {
-		if (m_history_helper_queue.size() > 1000) {
-			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
-		}
-		classad_shared_ptr<Stream> stream_shared(stream);
-		HistoryHelperState state(stream_shared, requirements_str, since_str, proj_str, match_limit);
-		state.m_streamresults = streamresults;
-		m_history_helper_queue.push_back(state);
-		return KEEP_STREAM;
-	} else {
-		HistoryHelperState state(*stream, requirements_str, since_str, proj_str, match_limit);
-		state.m_streamresults = streamresults;
-		return history_helper_launcher(state);
-	}
-}
-
-int Scheduler::history_helper_reaper(int, int) {
-	m_history_helper_count--;
-	while ((m_history_helper_count < m_history_helper_max) && m_history_helper_queue.size()) {
-		std::vector<HistoryHelperState>::iterator it = m_history_helper_queue.begin();
-		history_helper_launcher(*it);
-		m_history_helper_queue.erase(it);
-	}
-	return TRUE;
-}
-
-int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
-
-	auto_free_ptr history_helper(param("HISTORY_HELPER"));
-	if ( ! history_helper) {
-#ifdef WIN32
-		history_helper.set(expand_param("$(BIN)\\condor_history.exe"));
-#else
-		history_helper.set(expand_param("$(BIN)/condor_history"));
-#endif
-	}
-	ArgList args;
-	if (strstr(history_helper.ptr(), "_helper")) {
-		dprintf(D_ALWAYS, "Using obsolete condor_history_helper arguments\n");
-		args.AppendArg("condor_history_helper");
-		args.AppendArg("-f");
-		args.AppendArg("-t");
-		// NOTE: before 8.4.8 and 8.5.6 the argument order was: requirements projection match max
-		// starting with 8.4.8 and 8.5.6 the argument order was changed to: match max requirements projection
-		// this change was made so that projection could be empty without causing problems on Windows.
-		args.AppendArg(state.m_streamresults ? "true" : "false"); // new for 8.4.9
-		args.AppendArg(state.MatchCount());
-		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
-		args.AppendArg(state.Requirements());
-		args.AppendArg(state.Projection());
-		MyString myargs;
-		args.GetArgsStringForLogging(&myargs);
-		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
-	} else {
-		// pass arguments in the format that condor_history wants
-		args.AppendArg("condor_history");
-		args.AppendArg("-inherit"); // tell it to write to an inherited socket
-		if (state.m_streamresults) { args.AppendArg("-stream-results"); }
-		if ( ! state.MatchCount().empty()) {
-			args.AppendArg("-match");
-			args.AppendArg(state.MatchCount());
-		}
-		args.AppendArg("-scanlimit");
-		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
-		if ( ! state.Since().empty()) {
-			args.AppendArg("-since");
-			args.AppendArg(state.Since());
-		}
-		if ( ! state.Requirements().empty()) {
-			args.AppendArg("-constraint");
-			args.AppendArg(state.Requirements());
-		}
-		if ( ! state.Projection().empty()) {
-			args.AppendArg("-attributes");
-			args.AppendArg(state.Projection());
-		}
-		MyString myargs;
-		args.GetArgsStringForLogging(&myargs);
-		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
-	}
-
-	Stream *inherit_list[] = {state.GetStream(), NULL};
-
-	FamilyInfo fi;
-	pid_t pid = daemonCore->Create_Process(history_helper.ptr(), args, PRIV_ROOT, m_history_helper_rid,
-		false, false, NULL, NULL, NULL, inherit_list);
-	if (!pid)
-	{
-		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");
-	}
-	m_history_helper_count++;
-	return true;
-}
 
 static bool
 sendJobErrorAd(Stream *stream, int errorCode, std::string errorString)
@@ -2923,7 +2773,7 @@ Scheduler::guessJobSlotWeight(JobQueueJob * job)
 			ad->Assign(ATTR_MEMORY, 1024);
 			ad->Assign(ATTR_DISK, 1024);
 			dprintf(D_ALWAYS, "Creating slotWeightGuessAd as:\n");
-			dPrintAd(D_ALWAYS, *ad, false);
+			dPrintAd(D_ALWAYS, *ad);
 		}
 	}
 
@@ -7146,6 +6996,25 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 void
 MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 {
+	int rval =
+		daemonCore->Register_Socket(
+			sock, "<Negotiator Socket>", 
+			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
+			"<Negotiator Command>", &scheduler, ALLOW);
+
+	if( rval >= 0 ) {
+			// do not delete this sock until we get called back
+		sock->incRefCount();
+	}
+
+	// Negotiator has asked us to send it RRL, but not started negotiation proper
+	// don't consider negotiation finished.
+	if (RRLRequestIsPending()) {
+		dprintf(D_ALWAYS,"Finished sending RRL for %s\n", getOwner());
+		return;
+	}
+
+	// When we get here, it is a bona-fide end of negotiation
 	bool satisfied = getSatisfaction();
 	char const *remote_pool = getRemotePool();
 
@@ -7157,16 +7026,6 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 
 	scheduler.negotiationFinished( getOwner(), remote_pool, satisfied );
 
-	int rval =
-		daemonCore->Register_Socket(
-			sock, "<Negotiator Socket>", 
-			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
-
-	if( rval >= 0 ) {
-			// do not delete this sock until we get called back
-		sock->incRefCount();
-	}
 }
 
 void
@@ -7552,11 +7411,6 @@ Scheduler::negotiate(int command, Stream* s)
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		jobs = 0;
 		skip_negotiation = true;
-	} else if (Owner->FlockLevel < which_negotiator) {
-		dprintf(D_FULLDEBUG,
-				"This user is no longer flocking with this negotiator.\n");
-		jobs = 0;
-		skip_negotiation = true;
 	} else if (shadowsSpawnLimit() == 0) {
 		// shadowsSpawnLimit() prints reason for limit of 0
 		jobs = 0;
@@ -7913,7 +7767,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
 		for ( auto itr = match->my_match_ad->begin(); itr != match->my_match_ad->end(); itr++ ) {
 			if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first.c_str());
+				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first);
 				if ( expr ) {
 					continue;
 				}
@@ -7924,7 +7778,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				const char *new_value = NULL;
 				new_value = ExprTreeToString(expr);
 				ASSERT(new_value);
-				msg->leftover_startd_ad()->AssignExpr(itr->first.c_str(),new_value);
+				msg->leftover_startd_ad()->AssignExpr(itr->first,new_value);
  				dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from match record.\n",
 				         slot_name, itr->first.c_str(), new_value);
 			}
@@ -9883,7 +9737,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// handler is now alive and can read from the pipe.
 		ASSERT( job_ad );
 		MyString ad_str;
-		sPrintAd(ad_str, *job_ad);
+		sPrintAdWithSecrets(ad_str, *job_ad);
 		const char* ptr = ad_str.Value();
 		int len = ad_str.Length();
 		while (len) {
@@ -10481,7 +10335,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed (%s, errno=%d).\n", job_ad_path.c_str(), strerror(errno), errno );
 			} else {
 				// fPrindAd does not have any usable error reporting.
-				fPrintAd(job_ad_fp, *userJob, true);
+				fPrintAd(job_ad_fp, *userJob);
 				wrote_job_ad = true;
 				fclose(job_ad_fp);
 			}
@@ -12049,7 +11903,7 @@ Scheduler::child_exit(int pid, int status)
 		if( SchedUniverseJobsRunning > 0 ) {
 			SchedUniverseJobsRunning--;
 		}
-	} else if (srec) {
+	} else {
 		const char* name = NULL;
 		//
 		// Local Universe
@@ -12126,16 +11980,7 @@ Scheduler::child_exit(int pid, int status)
 		// of how the job exited
 		delete_shadow_rec( pid );
 
-	} else {
-		// Hmm -- doesn't seem like we can ever get here, given
-		// that we deference srec before the if... wenger 2011-02-09
-		//
-		// There wasn't a shadow record, so that agent dies after
-		// deleting match. We want to make sure that we don't
-		// call to start more jobs
-		//
-		StartJobsFlag=FALSE;
-	 }  // big if..else if...
+	} 
 
 	//
 	// If the job was a local universe job, we will want to
@@ -13598,7 +13443,8 @@ Scheduler::Init()
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
-	m_history_helper_max = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50);
+	int max_history_concurrency = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50);
+	HistoryQue.setup(1000, max_history_concurrency);
 
     m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
     m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);
@@ -13792,14 +13638,14 @@ Scheduler::Register()
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
 	daemonCore->Register_CommandWithPayload( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
-								  (CommandHandler)&attempt_access_handler,
-								  "attempt_access_handler", NULL, WRITE,
+								  &attempt_access_handler,
+								  "attempt_access_handler", WRITE,
 								  D_FULLDEBUG );
 #ifdef WIN32
 	// Command handler for stashing credentials.
 	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
-								(CommandHandler)&store_cred_handler,
-								"cred_access_handler", NULL, WRITE,
+								&store_cred_handler,
+								"cred_access_handler", WRITE,
 								D_FULLDEBUG, true /*force authentication*/);
 #endif
 
@@ -13817,8 +13663,8 @@ Scheduler::Register()
 
 	// Command handler for remote history	
 	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_HISTORY,"QUERY_SCHEDD_HISTORY",
-				(CommandHandlercpp)&Scheduler::command_history,
-				"command_history", this, READ);
+				(CommandHandlercpp)&HistoryHelperQueue::command_handler,
+				"command_history", &HistoryQue, READ);
 
 	// Command handler for 'condor_q' queries.  Broken out from QMGMT for the 8.1.4 series.
 	// QMGMT is a massive hulk of global variables - we want to make this non-blocking and have
@@ -13835,8 +13681,8 @@ Scheduler::Register()
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
-								  (CommandHandler)&handle_q,
-								  "handle_q", NULL, READ, D_FULLDEBUG );
+								  &handle_q,
+								  "handle_q", READ, D_FULLDEBUG );
 
 	// This command always requires authentication.  Therefore, it is
 	// more efficient to force authentication when establishing the
@@ -13844,8 +13690,8 @@ Scheduler::Register()
 	// security session that has to be authenticated every time in
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
-								  (CommandHandler)&handle_q,
-								  "handle_q", NULL, WRITE, D_FULLDEBUG,
+								  &handle_q,
+								  "handle_q", WRITE, D_FULLDEBUG,
 								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
@@ -13853,8 +13699,8 @@ Scheduler::Register()
 								  "dumpState", this, READ  );
 
 	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
-								  (CommandHandler)&get_myproxy_password_handler,
-								  "get_myproxy_password", NULL, WRITE, D_FULLDEBUG  );
+								  &get_myproxy_password_handler,
+								  "get_myproxy_password", WRITE, D_FULLDEBUG  );
 
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
@@ -13895,11 +13741,6 @@ Scheduler::Register()
 		"reaper",
 		(ReaperHandlercpp)&Scheduler::child_exit_from_reaper,
 		"child_exit", this );
-
-	m_history_helper_rid = daemonCore->Register_Reaper(
-		"history_reaper",
-		(ReaperHandlercpp)&Scheduler::history_helper_reaper,
-		"history_helper_exit", this );
 
 	// register all the timers
 	RegisterTimers();
@@ -14257,7 +14098,7 @@ Scheduler::schedd_exit()
 void
 Scheduler::invalidate_ads()
 {
-	MyString line;
+	std::string line;
 
 		// The ClassAd we need to use is totally different from the
 		// regular one, so just create a temporary one
@@ -14266,8 +14107,8 @@ Scheduler::invalidate_ads()
     SetTargetTypeName( *cad, SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
-    line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
-    cad->Insert( line.Value() );
+	formatstr( line, "TARGET.%s == \"%s\"", ATTR_NAME, Name );
+	cad->AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 	cad->Assign( ATTR_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
@@ -14293,11 +14134,10 @@ Scheduler::invalidate_ads()
 		formatstr(submitter, "%s@%s", Owner.Name(), UidDomain);
 		cad->Assign( ATTR_NAME, submitter );
 
-		line.formatstr( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
-					  ATTR_REQUIREMENTS,
+		formatstr( line, "TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
 					  ATTR_SCHEDD_NAME, Name,
 					  ATTR_NAME, submitter.c_str() );
-		cad->Insert( line.Value() );
+		cad->AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 
 		DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 		Daemon* d;
@@ -14620,7 +14460,7 @@ Scheduler::FindMrecByJobID(PROC_ID job_id) {
 match_rec *
 Scheduler::FindMrecByClaimID(char const *claim_id) {
 	match_rec *rec = NULL;
-	matches->lookup(claim_id, rec);
+	(void) matches->lookup(claim_id, rec);
 	return rec;
 }
 
@@ -15247,7 +15087,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	ClassAd input;
 	ClassAd reply;
 	PROC_ID jobid;
-	MyString error_msg;
+	std::string error_msg;
 	ClassAd *jobad;
 	int job_status = -1;
 	match_rec *mrec = NULL;
@@ -15256,10 +15096,10 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	char const *match_sec_session_id = NULL;
 	int universe = -1;
 	std::string startd_name;
-	MyString starter_addr;
-	MyString starter_claim_id;
+	std::string starter_addr;
+	std::string starter_claim_id;
 	std::string job_owner_session_info;
-	MyString starter_version;
+	std::string starter_version;
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
 	ClassAd starter_ad;
@@ -15294,7 +15134,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	if( !input.LookupInteger(ATTR_CLUSTER_ID,jobid.cluster) ||
 		!input.LookupInteger(ATTR_PROC_ID,jobid.proc) ) {
-		error_msg.formatstr("Job id missing from GET_JOB_CONNECT_INFO request");
+		error_msg = "Job id missing from GET_JOB_CONNECT_INFO request";
 		goto error_wrapup;
 	}
 
@@ -15304,12 +15144,12 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
 	if( !jobad ) {
-		error_msg.formatstr("No such job: %d.%d", jobid.cluster, jobid.proc);
+		formatstr(error_msg, "No such job: %d.%d", jobid.cluster, jobid.proc);
 		goto error_wrapup;
 	}
 
 	if( !OwnerCheck2(jobad,sock->getOwner()) ) {
-		error_msg.formatstr("%s is not authorized for access to the starter for job %d.%d",
+		formatstr(error_msg, "%s is not authorized for access to the starter for job %d.%d",
 						  sock->getOwner(), jobid.cluster, jobid.proc);
 		goto error_wrapup;
 	}
@@ -15338,7 +15178,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				subproc = 0;
 			}
 			if( subproc == -1 || subproc >= claim_idlist.number() ) {
-				error_msg.formatstr("This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,claim_idlist.number()-1);
+				formatstr(error_msg, "This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,claim_idlist.number()-1);
 				goto error_wrapup;
 			}
 			else {
@@ -15371,7 +15211,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				// If there is one, we'll get it when we call the starter
 				// below.  (We don't need it ourself, because it is on the
 				// same machine, but our client might not be.)
-			starter_addr = daemonCore->InfoCommandSinfulString( srec->pid );
+			const char *addr = daemonCore->InfoCommandSinfulString( srec->pid );
+			starter_addr = addr ? addr : "";
 			if( starter_addr.empty() ) {
 				retry_is_sensible = true;
 				break;
@@ -15403,7 +15244,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	if( job_is_suitable && 
 		!param_boolean("SCHEDD_ENABLE_SSH_TO_JOB",true,true,jobad,NULL) )
 	{
-		error_msg.formatstr("Job %d.%d is denied by SCHEDD_ENABLE_SSH_TO_JOB.",
+		formatstr(error_msg, "Job %d.%d is denied by SCHEDD_ENABLE_SSH_TO_JOB.",
 						  jobid.cluster,jobid.proc);
 		goto error_wrapup;
 	}
@@ -15413,7 +15254,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	{
 		if( !retry_is_sensible ) {
 				// this must be a job universe that we don't support
-			error_msg.formatstr("Job %d.%d does not support remote access.",
+			formatstr(error_msg, "Job %d.%d does not support remote access.",
 							  jobid.cluster,jobid.proc);
 		}
 		else {
@@ -15421,7 +15262,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			if( job_status == HELD ) {
 				CopyAttribute( ATTR_HOLD_REASON, reply, *jobad );
 			}
-			error_msg.formatstr("Job %d.%d is not running.",
+			formatstr(error_msg, "Job %d.%d is not running.",
 							  jobid.cluster,jobid.proc);
 		}
 		goto error_wrapup;
@@ -15463,8 +15304,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	reply.Assign(ATTR_RESULT,true);
 	reply.Assign(ATTR_STARTER_IP_ADDR,starter_addr);
-	reply.Assign(ATTR_CLAIM_ID,starter_claim_id.Value());
-	reply.Assign(ATTR_VERSION,starter_version.Value());
+	reply.Assign(ATTR_CLAIM_ID,starter_claim_id);
+	reply.Assign(ATTR_VERSION,starter_version);
 	reply.Assign(ATTR_REMOTE_HOST,startd_name);
 	if( !putClassAd(s, reply) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
@@ -15478,7 +15319,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return TRUE;
 
  error_wrapup:
-	dprintf(D_AUDIT|D_FAILURE, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value() );
+	dprintf(D_AUDIT|D_FAILURE, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.c_str() );
 	reply.Assign(ATTR_RESULT,false);
 	reply.Assign(ATTR_ERROR_STRING,error_msg);
 	if( retry_is_sensible ) {

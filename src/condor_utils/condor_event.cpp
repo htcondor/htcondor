@@ -254,6 +254,9 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_FILE_REMOVED:
 		return new FileRemovedEvent;
 
+	case ULOG_DATAFLOW_JOB_SKIPPED:
+		return new DataflowJobSkippedEvent;
+
 	default:
 		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
 		return new FutureEvent(event);
@@ -674,6 +677,9 @@ ULogEvent::toClassAd(bool event_time_utc)
 	case ULOG_FILE_REMOVED:
 		SetMyTypeName(*myad, "FileRemovedEvent");
 		break;
+	case ULOG_DATAFLOW_JOB_SKIPPED:
+		SetMyTypeName(*myad, "DataflowJobSkippedEvent");
+		break;
 	default:
 		SetMyTypeName(*myad, "FutureEvent");
 		break;
@@ -932,26 +938,36 @@ public:
 			return;
 		++pszTbl;
 
+		std::string attrn;
+		std::string exprstr;
+
 		//pszTbl[ixUse] = 0;
 		// Insert <Tag>Usage = <value1>
-		std::string exprstr(tag); exprstr += "Usage = "; exprstr.append(pszTbl, ixUse);
-		puAd->Insert(exprstr);
+		attrn = tag;
+		attrn += "Usage";
+		exprstr.assign(pszTbl, ixUse);
+		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		//pszTbl[ixReq] = 0;
 		// Insert Request<Tag> = <value2>
-		exprstr = "Request"; exprstr += tag; exprstr += " = "; exprstr.append(&pszTbl[ixUse+1], ixReq-ixUse-1);
-		puAd->Insert(exprstr);
+		attrn = "Request";
+		attrn += tag;
+		exprstr.assign(&pszTbl[ixUse+1], ixReq-ixUse-1);
+		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		if (ixAlloc > 0) {
 			//pszTbl[ixAlloc] = 0;
 			// Insert <tag> = <value3>
-			exprstr = tag; exprstr += " = "; exprstr.append(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
-			puAd->Insert(exprstr);
+			attrn = tag;
+			exprstr.assign(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
+			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 		if (ixAssigned > 0) {
 			// the remainder of the line is the assigned value
-			exprstr = "Assigned"; exprstr += tag; exprstr += " = "; exprstr += &pszTbl[ixAssigned];
-			puAd->Insert(exprstr);
+			attrn = "Assigned";
+			attrn += tag;
+			exprstr = &pszTbl[ixAssigned];
+			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 	}
 
@@ -1043,21 +1059,20 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 		} else if (ixUse > 0) {
 			pszTbl[ixUse] = 0;
 			pszTbl[ixReq] = 0;
-			std::string exprstr;
-			formatstr(exprstr, "%sUsage = %s", pszLbl, pszTbl);
-			puAd->Insert(exprstr.c_str());
-			formatstr(exprstr, "Request%s = %s", pszLbl, &pszTbl[ixUse+1]);
-			puAd->Insert(exprstr.c_str());
+			std::string attrn;
+			formatstr(exprstr, "%sUsage", pszLbl);
+			puAd->AssignExpr(attrn, pszTbl);
+			formatstr(attrn, "Request%s", pszLbl);
+			puAd->AssignExpr(attrn, &pszTbl[ixUse+1]);
 			if (ixAlloc > 0) {
 				pszTbl[ixAlloc] = 0;
-				formatstr(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
-				puAd->Insert(exprstr.c_str());
+				formatstr(attrn, "%s", pszLbl);
+				puAd->AssignExpr(attrn, &pszTbl[ixReq+1]);
 			}
 			if (ixAssigned > 0) {
 				// the remainder of the line is the assigned value
-				formatstr(exprstr, "Assigned%s = %s", pszLbl, &pszTbl[ixAssigned]);
-				//trim(exprstr);
-				puAd->Insert(exprstr.c_str());
+				formatstr(attrn, "Assigned%s", pszLbl);
+				puAd->AssignExpr(attrn, &pszTbl[ixAssigned]);
 			}
 		}
 	}
@@ -1137,7 +1152,7 @@ FutureEvent::initFromClassAd(ClassAd* ad)
 
 	// Get the list of attributes that remain after we remove the known ones.
 	classad::References attrs;
-	sGetAdAttrs(attrs, *ad, false, NULL);
+	sGetAdAttrs(attrs, *ad);
 	attrs.erase(ATTR_MY_TYPE);
 	attrs.erase("EventTypeNumber");
 	attrs.erase("Cluster");
@@ -6677,16 +6692,16 @@ AttributeUpdate::toClassAd(bool event_time_utc)
 void
 AttributeUpdate::initFromClassAd(ClassAd* ad)
 {
-	MyString buf;
+	std::string buf;
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
 
 	if( ad->LookupString("Attribute", buf ) ) {
-		name = strdup(buf.Value());
+		name = strdup(buf.c_str());
 	}
 	if( ad->LookupString("Value", buf ) ) {
-		value = strdup(buf.Value());
+		value = strdup(buf.c_str());
 	}
 }
 
@@ -7781,7 +7796,7 @@ ReserveSpaceEvent::generateUUID()
 	// We do not link against libuuid when doing a static build.
 	// Static builds are only used for the shadow - while the space
 	// reservation events are intended for Win32 and the startd/starter
-#if defined(WIN32) || defined(CONDOR_STATIC_LIBRARY)
+#if defined(WIN32)
 	return "";
 #else
 	char uuid_str[37];
@@ -8237,4 +8252,163 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 
 	return true;
+}
+
+// ----- DataflowJobSkippedEvent class
+DataflowJobSkippedEvent::DataflowJobSkippedEvent (void) : toeTag(NULL)
+{
+	eventNumber = ULOG_DATAFLOW_JOB_SKIPPED;
+	reason = NULL;
+}
+
+DataflowJobSkippedEvent::~DataflowJobSkippedEvent(void)
+{
+	if( reason ) {
+		delete[] reason;
+	}
+	if( toeTag ) {
+		delete toeTag;
+	}
+}
+
+void
+DataflowJobSkippedEvent::setToeTag( classad::ClassAd * tt ) {
+	if(! tt) { return; }
+	if( toeTag ) { delete toeTag; }
+	toeTag = new ToE::Tag();
+	if(! ToE::decode( tt, * toeTag )) {
+		delete toeTag;
+		toeTag = NULL;
+	}
+}
+
+void
+DataflowJobSkippedEvent::setReason( const char* reason_str )
+{
+	delete[] reason;
+	reason = NULL;
+	if( reason_str ) {
+		reason = strnewp( reason_str );
+		if( !reason ) {
+			EXCEPT( "ERROR: out of memory!" );
+		}
+	}
+}
+
+
+const char*
+DataflowJobSkippedEvent::getReason( void ) const
+{
+	return reason;
+}
+
+
+bool
+DataflowJobSkippedEvent::formatBody( std::string &out )
+{
+
+	if( formatstr_cat( out, "Dataflow job was skipped.\n" ) < 0 ) {
+		return false;
+	}
+	if( reason ) {
+		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+			return false;
+		}
+	}
+	if( toeTag ) {
+		if(! toeTag->writeToString( out )) {
+			return false;
+		}
+	}
+	return true;
+}
+
+
+int
+DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
+{
+	delete [] reason;
+	reason = NULL;
+#ifdef DONT_EVER_SEEK
+	MyString line;
+	if ( ! read_line_value("Dataflow job was skipped.", line, file, got_sync_line)) {
+		return 0;
+	}
+	// try to read the reason, this is optional
+	if (read_optional_line(line, file, got_sync_line, true)) {
+		line.trim();
+		reason = line.detach_buffer();
+	}
+
+	// Try to read the ToE tag.
+	if( got_sync_line ) { return 1; }
+	if( read_optional_line( line, file, got_sync_line ) ) {
+		if( line.empty() ) {
+			if(! read_optional_line( line, file, got_sync_line )) {
+				return 0;
+			}
+		}
+
+		if( line.remove_prefix( "\tJob terminated by " ) ) {
+			if( toeTag != NULL ) { delete toeTag; }
+			toeTag = new ToE::Tag();
+			if(! toeTag->readFromString( line )) {
+				return 0;
+			}
+		} else {
+			return 0;
+		}
+	}
+#else
+    #error New JobAbortedEvent::readEvent() not implemented with seeking.
+#endif
+	return 1;
+}
+
+ClassAd*
+DataflowJobSkippedEvent::toClassAd(bool event_time_utc)
+{
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
+	if( !myad ) return NULL;
+
+	if( reason ) {
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
+	}
+
+	if( toeTag ) {
+		classad::ClassAd * tt = new classad::ClassAd();
+		if(! ToE::encode( * toeTag, tt )) {
+			delete tt;
+			delete myad;
+			return NULL;
+		}
+		if(! myad->Insert(ATTR_JOB_TOE, tt )) {
+			delete tt;
+			delete myad;
+			return NULL;
+		}
+	}
+
+	return myad;
+}
+
+void
+DataflowJobSkippedEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	char* multi = NULL;
+	ad->LookupString("Reason", &multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
+
+	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }

@@ -121,7 +121,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, is_cluster(false)
 	, countedAsDone(false)
 	, _noop(false)
-	, _final(false)
+	, _type(NodeType::JOB)
 
 #ifdef DEAD_CDE
 	, varsFromDag(new List<NodeVar>)
@@ -136,6 +136,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 
 	, _directory(NULL)
 	, _cmdFile(NULL)
+	, _submitDesc(NULL)
 	, _dagFile(NULL)
 	, _jobName(NULL)
 
@@ -743,7 +744,7 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		whynot = "parent == NULL";
 		return false;
 	}
-	if(GetFinal()) {
+	if( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a parent to a Final node";
 		return false;
 	}
@@ -765,8 +766,12 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 
 bool Job::CanAddChildren(std::forward_list<Job*> & children, MyString &whynot)
 {
-	if (GetFinal()) {
+	if ( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a child to a final node";
+		return false;
+	}
+	if ( GetType() == NodeType::PROVISIONER ) {
+		whynot = "Tried to add a child to a provisioner node";
 		return false;
 	}
 
@@ -1086,8 +1091,12 @@ Job::CanAddChild( Job* child, MyString &whynot )
 		whynot = "child == NULL";
 		return false;
 	}
-	if(GetFinal()) {
+	if( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a child to a final node";
+		return false;
+	}
+	if( GetType() == NodeType::PROVISIONER ) {
+		whynot = "Tried to add a child to a provisioner node";
 		return false;
 	}
 	whynot = "n/a";
@@ -1318,7 +1327,7 @@ Job::NumChildren() const
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
-	ASSERT( !_final );
+	ASSERT( _type != NodeType::FINAL );
 
 	MyString	tmpName( categoryName );
 
@@ -1522,10 +1531,9 @@ Job::Release(int proc)
 
 //---------------------------------------------------------------------------
 void
-Job::ExecMetrics( int proc, const struct tm &eventTime,
-			DagmanMetrics *metrics )
+Job::ExecMetrics( int proc, const struct tm & /*eventTime*/,
+			DagmanMetrics * /*metrics*/ )
 {
-	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
 	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
 		_gotEvents.resize( proc+1, 0 );
 	}
@@ -1537,10 +1545,13 @@ Job::ExecMetrics( int proc, const struct tm &eventTime,
 		check_warning_strictness( DAG_STRICT_2 );
 	}
 
+#if !defined(DISABLE_NODE_TIME_METRICS)
 	if ( !( _gotEvents[proc] & EXEC_MASK ) ) {
 		_gotEvents[proc] |= EXEC_MASK;
 		metrics->ProcStarted( eventTime );
 	}
+#endif
+
 }
 
 //---------------------------------------------------------------------------

@@ -286,6 +286,26 @@ double _condor_debug_get_time_double()
 #endif
 }
 
+// print hex bytes from data into buf, up to a maximum of datalen bytes
+// caller must supply the buffer and must insure that it is at least datalen*3+1
+// this is intended to provide a way to add small hex dumps to dprintf logging
+static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+const char * debug_hex_dump(char * buf, const char * data, int datalen)
+{
+	if (!buf) return "";
+	const unsigned char * d = (const unsigned char *)data;
+	char * p = buf;
+	char * endp = buf;
+	while (datalen-- > 0) {
+		unsigned char ch = *d++;
+		*p++ = hex_digit((ch >> 4) & 0xF);
+		*p++ = hex_digit(ch & 0xF);
+		endp = p;
+		*p++ = ' ';
+	}
+	*endp = 0;
+	return buf;
+}
 
 DebugFileInfo::~DebugFileInfo()
 {
@@ -1122,7 +1142,8 @@ debug_open_lock(void)
 	if( DebugLock ) {
 		if ( ! DebugLockIsMutex) {
 			if (LockFd > 0 ) {
-				fstat(LockFd, &fstatus);
+					// fstat can't possibly fail, right?			
+				(void) fstat(LockFd, &fstatus);
 				if (fstatus.st_nlink == 0){
 					close(LockFd);
 					LockFd = -1;
@@ -1451,7 +1472,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	int			file_there = 0;
 	FILE		*debug_file_ptr = (*it).debugFP;
 	std::string		filePath = (*it).logPath;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX + MAXPATHLEN + 4];
 
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -1568,7 +1589,7 @@ void
 _condor_fd_panic( int line, const char* file )
 {
 	int i;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX * 2];
 	char panic_msg[DPRINTF_ERR_MAX];
 	int save_errno;
 	std::vector<DebugFileInfo>::iterator it;

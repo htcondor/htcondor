@@ -541,10 +541,14 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
 	}
 
-		char name[256];
-		memset(name, 0, sizeof(name));
-		cuDeviceGetName(name, sizeof(name), dev);
+		// for some reason PowerPC was having trouble with a stack buffer for cuGetDeviceName
+		// so we switch to malloc and a larger buffer, and we overdo the null termination.
+		char * name = (char*)malloc(1028);
+		memset(name, 0, 1028);
+		cuDeviceGetName(name, 1024, dev);
+		name[1024] = 0; // this shouldn't be necessary, but it can't hurt.
 		p->name = name;
+		free(name);
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
@@ -907,6 +911,9 @@ main( int argc, const char** argv)
 			opt_extra = 1; // publish extra GPU properties
 		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
+			// We need the basic properties in order to determine the
+			// dynamic ones (most noticeably, the PCI bus ID).
+			opt_basic = 1;
 			opt_dynamic = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
@@ -983,7 +990,6 @@ main( int argc, const char** argv)
 	typedef cudaError_t (CUDACALL* cuda_t)(int*); //Used for DLFCN
 	cuda_t cudaGetDeviceCount = NULL; 
 	cuda_t cudaDriverGetVersion = NULL;
-	cuda_t cudaRuntimeGetVersion = NULL;
 	dev_basic_props getBasicProps = NULL;
 
 	// function pointers for the NVIDIA management layer, used for dynamic attributes.
@@ -1019,7 +1025,6 @@ main( int argc, const char** argv)
 
 		cudaGetDeviceCount = sim_cudaGetDeviceCount;
 		cudaDriverGetVersion = sim_cudaDriverGetVersion;
-		cudaRuntimeGetVersion = sim_cudaRuntimeGetVersion;
 		getBasicProps = sim_getBasicProps;
 
 		nvmlInit = sim_nvmlInit;
@@ -1181,7 +1186,8 @@ main( int argc, const char** argv)
 
 	// lookup the function pointers we will need later from the cudart library
 	//
-	if ( ! opt_simulate) {
+	if ( !opt_simulate && cuda_handle) {
+		cuda_t cudaRuntimeGetVersion = NULL;
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
@@ -1277,19 +1283,12 @@ main( int argc, const char** argv)
 		KVP& props = dev_props.find(prefix)->second;
 
 		if (opt_basic && getBasicProps) {
-			int driverVersion=0, runtimeVersion=0;
-
-			//printf("%sDev=%d\n",  prefix,dev);
+			int driverVersion=0;
 
 			if (cudaDriverGetVersion) {
 				cudaDriverGetVersion(&driverVersion);
 				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-			}
-			if (cudaRuntimeGetVersion) {
-				cudaRuntimeGetVersion(&runtimeVersion);
-				if (runtimeVersion) {
-					props["RuntimeVersion"] = Format("%d.%d", runtimeVersion/1000, runtimeVersion%100);
-				}
+				props["MaxSupportedVersion"] = Format("%d", driverVersion);
 			}
 
 			if (dev < g_cl_cCuda) {

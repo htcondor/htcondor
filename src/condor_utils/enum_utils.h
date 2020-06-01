@@ -92,6 +92,7 @@ typedef enum {
 	FTO_NONE = 0,
 	FTO_ON_EXIT = 1,
 	FTO_ON_EXIT_OR_EVICT,
+	FTO_ON_SUCCESS
 } FileTransferOutput_t;
 
 const char* getFileTransferOutputString( FileTransferOutput_t type );

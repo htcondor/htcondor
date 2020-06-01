@@ -23,7 +23,6 @@ if(${OS_NAME} STREQUAL "DARWIN")
 	# Override that to set the actual architecture.
 	set (SYS_ARCH "X86_64")
 elseif(${OS_NAME} MATCHES "WIN")
-	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
@@ -358,7 +357,6 @@ if(NOT WINDOWS)
 	endif(WINDOWS)
 endif()
 include (FindThreads)
-include (GlibcDetect)
 if (WINDOWS)
 	message(STATUS "OpenMP support will be disabled on Windows until we have a chance to fix the installer to support it")
 	# TJ: 8.5.8 disabling OpenMP on Windows because it adds a dependency on an additional merge module for VCOMP110.DLL
@@ -416,8 +414,12 @@ if( NOT WINDOWS)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
       add_definitions(-D_FORTIFY_SOURCE=2)
-	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
-	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  # -g3 causes the debug info extractor to seg fault on x86_64_CentOS8
+	  # Perhaps, make this conditional on platform?
+	  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  # set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
 	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
@@ -746,9 +748,6 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	# be optimistic here.
 	set(HAVE_PSS ON)
 
-	#The following checks are for std:u only.
-	glibc_detect( GLIBC_VERSION )
-
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
@@ -871,7 +870,6 @@ endif(BUILD_TESTING)
 
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
-	cmake_minimum_required(VERSION 2.8)
 endif()
 
 # directory that externals are downloaded from. may be a local directory
@@ -1007,7 +1005,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.4.0)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.5.0)
 
 	# globus is an odd *beast* which requires a bit more config.
 	# old globus builds on manylinux1 (centos5 docker image)
@@ -1201,40 +1199,19 @@ if(MSVC)
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
 
-	if (GLIBC_VERSION)
-		add_definitions(-DGLIBC=GLIBC)
-		add_definitions(-DGLIBC${GLIBC_VERSION}=GLIBC${GLIBC_VERSION})
-		set(GLIBC${GLIBC_VERSION} ON)
-	endif(GLIBC_VERSION)
-
 	check_c_compiler_flag(-Wall c_Wall)
 	if (c_Wall)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 	endif(c_Wall)
 
-	# Added to help make resulting libcondor_utils smaller.
-	#check_c_compiler_flag(-fno-exceptions no_exceptions)
-	#if (no_exceptions)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-exceptions")
-	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fno-exceptions")
-	#endif(no_exceptions)
-	#check_c_compiler_flag(-Os c_Os)
-	#if (c_Os)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
-	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Os")
-	#endif(c_Os)
+	# GGT tested compiling  condor_history with -flto, it ran less than one tenth of one percent faster
+    # and took more than 3 times longer to compile.  Try again later.
 
-	dprint("TSTCLAIR - DISABLING -flto b/c of gcc failure in koji try again later")
-	#if (CMAKE_C_COMPILER_VERSION STRGREATER "4.7.0" OR CMAKE_C_COMPILER_VERSION STREQUAL "4.7.0")
-	#   
 	#  check_c_compiler_flag(-flto c_lto)
 	#  if (c_lto)
 	#	  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
 	#	  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
 	#  endif(c_lto)
-	#else()
-	#  dprint("skipping c_lto flag check")
-	#endif()
 
 	check_c_compiler_flag(-W c_W)
 	if (c_W)
@@ -1341,6 +1318,7 @@ else(MSVC)
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 	endif(LINUX)
 
 	if (AIX)

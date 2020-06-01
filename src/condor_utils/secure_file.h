@@ -28,10 +28,17 @@ int write_password_file(const char* path, const char* password);
 FILE* open_secure_file_for_write(const char* path, bool as_root, bool group_readable = false);
 bool write_secure_file(const char* path, const void* data, size_t len, bool as_root, bool group_readable = false);
 
+// write a secure temp file (using the function above), then rename/replace it over the given filename
+//   path - file to replace
+//   tmpext - appended to path to create the temp filename
+bool replace_secure_file(const char* path, const char * tmpext, const void* data, size_t len, bool as_root, bool group_readable = false);
+
 #define SECURE_FILE_VERIFY_OWNER     0x01
 #define SECURE_FILE_VERIFY_ACCESS    0x02
 #define SECURE_FILE_VERIFY_ALL       0xFF
 bool read_secure_file(const char *fname, void **buf, size_t *len, bool as_root, int verify_mode = SECURE_FILE_VERIFY_ALL);
+
+
 
 #endif // SECURE_FILE_H
 

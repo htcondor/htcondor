@@ -1701,7 +1701,7 @@ public:
 	MacroStreamXFormSource & xforms;
 	MACRO_SET_CHECKPOINT_HDR* checkpoint;
 	FILE* outfile;
-	compat_classad::CondorClassAdFileParseHelper *input_helper;
+	CondorClassAdFileParseHelper *input_helper;
 	std::string errmsg;
 };
 

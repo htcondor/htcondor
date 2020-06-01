@@ -18,7 +18,12 @@
 
 if (WITH_GANGLIA)
 
-  condor_selective_glob( "ganglia*;statsd*" GANGLIAD )
+  set(GANGLIAD
+	gangliad.cpp
+	gangliad_main.cpp
+	ganglia_interaction.cpp
+	statsd.cpp
+  )
 
   condor_exe( condor_gangliad "${GANGLIAD}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 

@@ -35,8 +35,6 @@
 #ifdef __GNUC__
 #if __GNUC__ >= 4
   #pragma GCC diagnostic ignored "-Wunused-parameter"
-  #pragma GCC diagnostic ignored "-Wunused-variable"
-  #pragma GCC diagnostic ignored "-Wunused-value"
 #endif
 #endif
 
@@ -160,7 +158,6 @@ int main(int argc, const char *argv[])
 	bool dash_match_jobs = false;
 	bool dash_route_jobs = false;
 	int  dash_diagnostic = 0;
-	bool dash_d_always = true;
 	bool dash_ignore_prior_routing = false;
 	//bool dash_d_fulldebug = false;
 	const char * route_jobs_filename = NULL;
@@ -319,7 +316,7 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
-class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public ClassAdFileParseHelper
 {
  public:
 	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
@@ -565,17 +562,12 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 
 bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
-	return submit_job(owner, domain, static_cast<classad::ClassAd&>(src), schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
-}
-
-bool submit_job( const std::string & owner, const std::string & domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
-{
 	fprintf(stdout, "submit_job as %s@%s to %s pool:%s%s:\n", owner.c_str(), domain.c_str(),
 		schedd_name ? schedd_name : "local",
 		pool_name ? pool_name : "local",
 		is_sandboxed ? " (sandboxed)" : "");
 	if (submitted_jobs_fh) {
-		fPrintAd(submitted_jobs_fh, src, false);
+		fPrintAd(submitted_jobs_fh, src);
 		fprintf(submitted_jobs_fh, "\n");
 	}
 	return true;

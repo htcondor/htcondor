@@ -66,14 +66,14 @@ ScriptProc::StartJob()
 		return 0;
 	}
 
-	MyString attr;
+	std::string attr;
 
 	attr = name;
 	attr += ATTR_JOB_CMD;
 	char* tmp = NULL;
-	if( ! JobAd->LookupString( attr.Value(), &tmp ) ) {
+	if( ! JobAd->LookupString( attr, &tmp ) ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
-				 attr.Value() );
+				 attr.c_str() );
 		return 0;
 	}
 
@@ -84,7 +84,7 @@ ScriptProc::StartJob()
 		// TODO: make it smart in cases we're not the gridshell and/or
 		// didn't transfer files so that we don't prepend the wrong
 		// path to the binary, and don't try to chmod it.
-	MyString exe_path = Starter->GetWorkingDir();
+	MyString exe_path = Starter->GetWorkingDir(0);
 	exe_path += DIR_DELIM_CHAR;
 	exe_path += tmp;
 	free( tmp ); 
@@ -111,15 +111,15 @@ ScriptProc::StartJob()
 
 	char *args1 = NULL;
 	char *args2 = NULL;
-	MyString args1_attr;
-	MyString args2_attr;
+	std::string args1_attr;
+	std::string args2_attr;
 	args1_attr = name;
 	args1_attr += ATTR_JOB_ARGUMENTS1;
 	args2_attr = name;
 	args2_attr += ATTR_JOB_ARGUMENTS2;
 
-	JobAd->LookupString(args1_attr.Value(), &args1);
-	JobAd->LookupString(args2_attr.Value(), &args2);
+	JobAd->LookupString(args1_attr, &args1);
+	JobAd->LookupString(args2_attr, &args2);
 
 	ArgList args;
 
@@ -146,7 +146,7 @@ ScriptProc::StartJob()
 	}
 	else {
 		dprintf( D_FULLDEBUG, "neither %s nor %s could be found in JobAd\n",
-				 args1_attr.Value(), args2_attr.Value());
+				 args1_attr.c_str(), args2_attr.c_str());
 	}
 
 	free( args1 );
@@ -158,14 +158,14 @@ ScriptProc::StartJob()
 
 	char *env1 = NULL;
 	char *env2 = NULL;
-	MyString env1_attr;
-	MyString env2_attr;
+	std::string env1_attr;
+	std::string env2_attr;
 	env1_attr = name;
 	env1_attr += ATTR_JOB_ENVIRONMENT1;
 	env2_attr = name;
 	env2_attr += ATTR_JOB_ENVIRONMENT2;
-	JobAd->LookupString( env1_attr.Value(), &env1 );
-	JobAd->LookupString( env2_attr.Value(), &env2 );
+	JobAd->LookupString( env1_attr, &env1 );
+	JobAd->LookupString( env2_attr, &env2 );
 			// TODO do we want to use the regular ATTR_JOB_ENVIRONMENT
 			// if there's nothing specific for this script?
 
@@ -177,7 +177,7 @@ ScriptProc::StartJob()
 		if( ! job_env.MergeFromV2Raw(env2,&env_errors) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
-					 env2_attr.Value(),env_errors.Value() );  
+					 env2_attr.c_str(),env_errors.Value() );
 			free( env1 );
 			free( env2 );
 			return 0;
@@ -187,7 +187,7 @@ ScriptProc::StartJob()
 		if( ! job_env.MergeFromV1Raw(env1,&env_errors) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
-					 env1_attr.Value(),env_errors.Value() );  
+					 env1_attr.c_str(),env_errors.Value() );
 			free( env1 );
 			free( env2 );
 			return 0;

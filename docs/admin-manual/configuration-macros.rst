@@ -3506,6 +3506,11 @@ section.
     directories goes to the host filesytem under the scratch directory.
     This is useful if a container has limited space to grow a filesytem.
 
+:macro-def:`MOUNT_PRIVATE_DEV_SHM`
+    This boolean value, which defaults to ``True`` tells the *condor_starter*
+    to make /dev/shm on Linux private to each job.  When private, the
+    starter removes any files from the private /dev/shm at job exit time.
+
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/setting-up-special-environments:configuring
@@ -4113,7 +4118,7 @@ details.
     and docker universes`).
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on
-    the local machine. The default value is 20.
+    the local machine. The default value is 8.
 
 :macro-def:`DOCKER_DROP_ALL_CAPABILITIES`
     A class ad expression, which defaults to true. Evaluated in the
@@ -5485,8 +5490,9 @@ These settings affect the *condor_shadow*.
 
 :macro-def:`SHADOW_SKIP_DATAFLOW_JOBS`
     Determines whether dataflow jobs should be skipped. A dataflow job is 
-    defined as a job whose input and output files already exist at submit time,
-    and outputs are newer than inputs. Defaults to ``False``.
+    defined as a job whose output files already exist and are newer than input
+    files. Additionally, if the executable or stdin files exist and are newer
+    than inputs, this is also considered a dataflow job. Defaults to ``False``.
 
 condor_starter Configuration File Entries
 ------------------------------------------
@@ -5564,8 +5570,8 @@ These settings affect the *condor_starter*.
     the number of cores allocated into the slot.  Many commonly used computing
     libraries and programs will look at the value of environment
     variables, such as ``OMP_NUM_THREADS``, to control how many CPU cores to use.  
-    Defaults to OMP_NUM_THREADS, NUMEXPR_NUM_THREADS, MKL_NUM_THREADS, 
-    CUBACORES, JULIA_NUM_THREADS, GOMAXPROCS.
+    Defaults to
+    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS, NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT.
 
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd
@@ -5668,7 +5674,7 @@ These settings affect the *condor_starter*.
     by the cgroup memory controller attribute memory.limit_in_bytes.
     If the processes try to allocate more memory, the allocation will
     succeed, and virtual memory will be allocated, but no additional
-    physical memory will be allocated. If set to the default value
+    physical memory will be allocated. If set to
     ``soft``, the cgroup-based limit on the total amount of physical
     memory used by the sum of all processes in the job will be allowed
     to go over the limit, if there is free memory available on the
@@ -5993,7 +5999,8 @@ condor_submit Configuration File Entries
     *condor_submit* retry feature is used. (Note that this value is
     only relevant if either **retry_until** or **success_exit_code**
     is defined in the submit file, and **max_retries** is not.) (See
-    :doc:`/man-pages/condor_submit`) The default value if not defined is 2.
+    the :doc:`/man-pages/condor_submit` man page.) The default value
+    if not defined is 2.
 
 If you want *condor_submit* to automatically append an expression to
 the ``Requirements`` expression or ``Rank`` expression of jobs at your
@@ -6049,6 +6056,13 @@ do not specify their own with:
     *condor_status* ``buffer_block_size`` command will override this
     default. If this macro is undefined, a default size of 32 KB will be
     used.
+
+:macro-def:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`
+    If ``True``, *condor_submit* will treat any attribute in the job
+    ClassAd that begins with ``Request`` as a request for a custom resource
+    and will ad a clause to the Requirements expression insuring that
+    on slots that have that resource will match the job.
+    The default value is ``True``.
 
 :macro-def:`SUBMIT_SKIP_FILECHECKS`
     If ``True``, *condor_submit* behaves as if the **-disable**
@@ -6520,6 +6534,12 @@ These macros affect the *condor_collector*.
     variable limits how long forwarding of updates for a given ad can be
     filtered before an update must be forwarded. The default is one
     third of ``CLASSAD_LIFETIME``.
+
+:macro-def:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`
+    When this boolean variable is set to ``True``, the *condor_collector*
+    will not forward the private portion of Machine ads to the
+    ``CONDOR_VIEW_HOST`` if the ad's ``State`` is ``Claimed``.
+    The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
 
 The following macros control where, when, and for how long HTCondor
 persistently stores absent ClassAds. See
@@ -7587,7 +7607,7 @@ These macros affect the *condor_job_router* daemon.
 
 
 :macro-def:`JOB_ROUTER_ROUTE_NAMES`
-    An ordered list of the names of enabled routes.  In version 8.9.6 or later,
+    An ordered list of the names of enabled routes.  In version 8.9.7 or later,
     routes whose names are listed here should each have a ``JOB_ROUTER_ROUTE_<NAME>``
     configuration variable that specifies the route.
 
@@ -8713,12 +8733,12 @@ macros are described in the :doc:`/admin-manual/security` section.
     level.  This set of configuration variables controls both the ordering and
     the allowed methods.  Currently allowed values are ``GSI`` (non-Windows),
     ``SSL``, ``KERBEROS``, ``PASSWORD``, ``FS`` (non-Windows), ``FS_REMOTE``
-    (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``TOKEN``,
-    ``SCITOKEN``,  and ``ANONYMOUS``.
+    (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``IDTOKENS``,
+    ``SCITOKENS``,  and ``ANONYMOUS``.
     See the :doc:`/admin-manual/security` section for a discussion of the
     relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
     no security at all.  The default authentication methods are
-    ``NTSSPI,FS,TOKEN,KERBEROS,GSI,SSL``.
+    ``NTSSPI,FS,IDTOKENS,KERBEROS,GSI,SSL``.
 
     These methods are tried in order until one succeeds or they all fail; for
     this reason, we do not recommend changing the default method list.
@@ -9037,6 +9057,18 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_TOKEN_DIRECTORY`
     For Unix machines, the path to the directory containing tokens for
     user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+
+:macro-def:`SEC_TOKEN_BLACKLIST_EXPR`
+    A ClassAd expression evaluated against tokens during authentication;
+    if ``SEC_TOKEN_BLACKLIST_EXPR`` is set and evaluates to true, then the
+    token is blacklisted and the authentication attempt is denied.
+
+:macro-def:`SEC_TOKEN_REQUEST_LIMITS`
+    If set, this is a comma-separated list of authorization levels that limit
+    the authorizations a token request can recieve.  For example, if
+    ``SEC_TOKEN_REQUEST_LIMITS`` is set to ``READ, WRITE``, then a token
+    cannot be issued with the authorization ``DAEMON`` even if this would
+    otherwise be permissible.
 
 :macro-def:`AUTH_SSL_SERVER_CAFILE`
     The path and file name of a file containing one or more trusted CA's
@@ -10444,7 +10476,7 @@ general discussion of *condor_defrag* may be found in
 
 :macro-def:`DEFRAG_NAME`
     Used to give an alternative value to the ``Name`` attribute in the
-    *condor_defrag* 's ClassAd. This esoteric configuration macro
+    *condor_defrag* daemon's ClassAd. This esoteric configuration macro
     might be used in the situation where there are two *condor_defrag*
     daemons running on one machine, and each reports to the same
     *condor_collector*. Different names will distinguish the two

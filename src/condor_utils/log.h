@@ -20,6 +20,8 @@
 #if !defined(_LOG_H)
 #define _LOG_H
 
+#include "condor_common.h"
+#include "condor_classad.h"
 #include <string>
 using std::string;
 
@@ -73,12 +75,11 @@ private:
 	int WriteTail(FILE *fp);
 };
 
-namespace compat_classad { class ClassAd; }
 class ConstructLogEntry
 {
 public:
-	virtual compat_classad::ClassAd* New(const char * key, const char * mytype) const = 0;
-	virtual void Delete(compat_classad::ClassAd*& val) const = 0;
+	virtual ClassAd* New(const char * key, const char * mytype) const = 0;
+	virtual void Delete(ClassAd*& val) const = 0;
 	virtual ~ConstructLogEntry() {}; // declare (superfluous) virtual constructor to get rid of g++ warning.
 };
 

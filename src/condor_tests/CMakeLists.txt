@@ -16,10 +16,25 @@
  #
  ###############################################################
 
+MACRO (ADD_DEPENDENCIES_SUFFIX_HACK _SOURCE _TARGET)
+# Many, but not all of the tests added with CondorExeTest have a target name that
+# ends in exe.  We want all of the generated executable for these to end in exe, 
+# both on Unix and Windows.  To do this, the CondorExeTest macro removes the .exe
+# suffix of the target name (not the generated executable, but the target) only
+# on Windows, so CMake will tack on the exe suffix to the generated target, and we
+# won't end up with double .exe suffixes.  This creates problems when we want
+# to add additional dependencies on those targets, because the name is different
+# on each platform.
+
+if (WINDOWS)
+	string(REPLACE ".exe" "" _TARGET_WITHOUT_EXE ${_TARGET})
+	add_dependencies(${_SOURCE} ${_TARGET_WITHOUT_EXE})
+else(WINDOWS)
+	add_dependencies(${_SOURCE} ${_TARGET})
+endif (WINDOWS)
+
+ENDMACRO(ADD_DEPENDENCIES_SUFFIX_HACK)
 ############################################################################
-## Ok, so in exorcising the unholy daemons in the test goop
-## all file generation & manipulation is done in a configure step
-## vs. a target. As a result I no longer use safe_append.
 if (BUILD_TESTING)
 
 	##########################################################
@@ -146,7 +161,7 @@ if (BUILD_TESTING)
 	condor_pl_test (cmd_submit_coverage "Test condor_submit file entries" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test (cmd_submit_regress_dry "Regression test for condor_submit keywords" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/cmd_submit_regress_dry.expect;src/condor_tests/cmd_submit_regress_dry.subs")
 	condor_pl_test (cmd_submit_factory_regress_dry "Regression test for condor_submit keywords with late materialization" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/cmd_submit_regress_dry.expect;src/condor_tests/cmd_submit_regress_dry.subs;${CMAKE_BINARY_DIR}/src/condor_tests/test_job_factory.exe")
-	add_dependencies(cmd_submit_factory_regress_dry test_job_factory.exe)
+	add_dependencies_suffix_hack(cmd_submit_factory_regress_dry test_job_factory.exe)
 	condor_pl_test (cmd_submit_massive "Test condor_submit file massive" "core;quick;full;quicknolink" CTEST)
 	#condor_pl_test (job_test_urlfetch "Test condor_urlfetch" "core;quick;full;quicknolink")
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "core;quick;full;quicknolink" CTEST)
@@ -235,7 +250,7 @@ if (BUILD_TESTING)
 
 	##### dagman tests
 	condor_pl_test(job_core_chirp_par "Exercise the chirp I/O C library in Parallel Universe" "lib;quick;full" CTEST DEPENDS "src/condor_tests/job_core_chirp_par.template;${CMAKE_BINARY_DIR}/src/condor_tests/job_core_chirp_par_executable.exe;src/condor_tests/x_chirpio_mkdata.pl")
-	add_dependencies(job_core_chirp_par job_core_chirp_par_executable.exe)
+	add_dependencies_suffix_hack(job_core_chirp_par job_core_chirp_par_executable.exe)
 	condor_pl_test(job_dagman_splice-scaling "Dagman Splice Parse Scaling" "core;dagman;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_dagman_splice-scaling-splice.cmd;src/condor_tests/job_dagman_splice-scaling-splice.dag")
 	condor_pl_test(job_dagman_splice-A "Simple Dagman Splice A" "core;dagman;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_dagman_splice-A.cmd;src/condor_tests/job_dagman_splice-A.dag")
 	condor_pl_test(job_dagman_splice-B "Simple Dagman Splice B" "core;dagman;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_dagman_splice-B.cmd;src/condor_tests/job_dagman_splice-B-splice2.dag;src/condor_tests/job_dagman_splice-B.dag;src/condor_tests/job_dagman_splice-B-splice1.dag;src/condor_tests/job_dagman_splice-B-splice3.dag")
@@ -305,7 +320,7 @@ if (BUILD_TESTING)
 
 	# auth tests
 	condor_pl_test(lib_auth_config "Run Authorization Config Tests" "core;quick;full;quicknolink" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/condor_test_auth")
-	add_dependencies(lib_auth_config condor_test_auth)
+	add_dependencies_suffix_hack(lib_auth_config condor_test_auth)
 	condor_pl_test(lib_auth_protocol-fs "FS authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/lib_auth_protocol-fs.cmd;src/condor_tests/x_sleep.pl;src/condor_tests/x_lib_auth_protocol.pl;src/condor_tests/x_param.protocol-fs.template;src/condor_tests/x_secfs_configpostsrc")
 	condor_pl_test(lib_auth_protocol-ctb "CTB authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/lib_auth_protocol-ctb.cmd;src/condor_tests/x_sleep.pl;src/condor_tests/x_lib_auth_protocol.pl;src/condor_tests/x_param.protocol-ctb.template;src/condor_tests/x_secneg_clR_dmnR_secprepostsrc;src/condor_tests/x_secctb_configpostsrc")
 	## Disabled due to bugginess and dubious worth
@@ -368,19 +383,19 @@ if (BUILD_TESTING)
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe;src/condor_tests/lib_userlog.cmd")
-	add_dependencies(lib_userlog x_read_joblog.exe x_write_joblog.exe)
+	add_dependencies_suffix_hack(lib_userlog x_read_joblog.exe x_write_joblog.exe)
 	condor_pl_test(lib_eventlog "Basic Event Log Test" "core;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
-	add_dependencies(lib_eventlog x_read_joblog.exe)
+	add_dependencies_suffix_hack(lib_eventlog x_read_joblog.exe)
 	condor_pl_test(lib_eventlog-xml "Basic XML Event Log Test" "core;quick;full" CTEST DEPENDS "src/condor_tests/x_sleep.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;src/condor_tests/x_lib_eventlog.expected")
-	add_dependencies(lib_eventlog-xml x_read_joblog.exe)
+	add_dependencies_suffix_hack(lib_eventlog-xml x_read_joblog.exe)
 	condor_pl_test(lib_eventlog_base "Test re-initialization of eventlog reader does not cause seg faults" "lib;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/lib_eventlog_base_executable.exe")
-	add_dependencies(lib_eventlog_base lib_eventlog_base_executable.exe)
+	add_dependencies_suffix_hack(lib_eventlog_base lib_eventlog_base_executable.exe)
 
 	#dprint("TODO: Need to fix lib_eventlog_rotation-defaults test")
 	#condor_pl_test(lib_eventlog_rotation-defaults "Event Log Rotation: Default settings" "core;quick;full")
 	condor_pl_test(lib_chirp "Exercise the chirp I/O tool" "lib;quick;full" CTEST)
 	condor_pl_test(lib_chirpio_van "Exercise the chirp I/O library using the C client library" "lib;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/lib_chirpio.exe")
-	add_dependencies(lib_chirpio_van lib_chirpio.exe)
+	add_dependencies_suffix_hack(lib_chirpio_van lib_chirpio.exe)
 	condor_pl_test(lib_eventlog_rotation-no_rotations_1 "Event Log Rotation: no rotations/1" "core;quick;full" CTEST DEPENDS "src/condor_tests/lib_eventlog_rotation.pl;${CMAKE_BINARY_DIR}/src/condor_tests/test_log_writer")
 	add_dependencies(lib_eventlog_rotation-no_rotations_1 test_log_writer)
 	condor_pl_test(lib_eventlog_rotation-no_rotations_2 "Event Log Rotation: no rotations/2" "core;quick;full" CTEST DEPENDS "src/condor_tests/lib_eventlog_rotation.pl;${CMAKE_BINARY_DIR}/src/condor_tests/test_log_writer")
@@ -423,7 +438,7 @@ if (BUILD_TESTING)
 	add_dependencies(lib_eventlog_rotation-reader_old_rotations test_log_writer test_log_reader)
 	condor_pl_test(negotiator_match_log_exists "ensure Matlog has only matches" "core;quick;full" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_mem_checker "Look at reported memory usage" "core;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_job_mem_checker.exe;src/condor_tests/x_sleep.pl")
-	add_dependencies(job_mem_checker x_job_mem_checker.exe)
+	add_dependencies_suffix_hack(job_mem_checker x_job_mem_checker.exe)
 	condor_pl_test(cmd_condor_submit_dashspool "Look at condor_submit -spool" "core;quick;full" CTEST DEPENDS "src/condor_tests/x_condorsubmitdashspool.pl")
 	condor_pl_test(config_if_then_else "config file ifdefs" "core;quick;full" CTEST)
 	condor_pl_test(job_massive_config "LARGE config file" "core;quick;full" CTEST)
@@ -478,9 +493,9 @@ if (BUILD_TESTING)
 	condor_pl_test(job_rank_and_aclustering "rank and autoclustering checking" "core;quick;full" CTEST)
 	#condor_pl_test(cmd_ccval_remote "param remote checks" "core;quick;full")
 	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_complete_params.exe;${CMAKE_BINARY_DIR}/src/condor_utils/param_info_tables.h")
-	add_dependencies(lib_param_completeness x_complete_params.exe)
+	add_dependencies_suffix_hack(lib_param_completeness x_complete_params.exe)
 	condor_pl_test(lib_param_conditionals "config conditionals" "core;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_conditional_params.exe")
-	add_dependencies(lib_param_conditionals x_conditional_params.exe)
+	add_dependencies_suffix_hack(lib_param_conditionals x_conditional_params.exe)
 	condor_pl_test(unit_test_macro_expand "config macro unit tests" "core;quick;full" CTEST DEPENDS "src/condor_tests/NetworkTestConfigs.pm;${CMAKE_BINARY_DIR}/src/condor_tests/test_macro_expand")
 	add_dependencies(unit_test_macro_expand test_macro_expand)
 	condor_pl_test(unit_test_user_mapping "MapFile parse and map unit tests" "core;quick;full" CTEST DEPENDS "src/condor_tests/NetworkTestConfigs.pm")
@@ -583,15 +598,15 @@ if (BUILD_TESTING)
 	condor_pl_test(job_filexfer_md5-remote_van "Vanilla: Can we move 200 megs and not impact md5 checksum?" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;full;quicknolink")
 	condor_pl_test(cmd_wait_shows-all "" "quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
-        add_dependencies(cmd_wait_shows-all x_write_joblog_events.exe)
+        add_dependencies_suffix_hack(cmd_wait_shows-all x_write_joblog_events.exe)
 	condor_pl_test(cmd_wait_shows-base "" "quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
-        add_dependencies(cmd_wait_shows-base x_write_joblog_events.exe)
+        add_dependencies_suffix_hack(cmd_wait_shows-base x_write_joblog_events.exe)
 	condor_pl_test(cmd_wait_shows-notimeout "" "quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
-        add_dependencies(cmd_wait_shows-notimeout x_write_joblog_events.exe)
+        add_dependencies_suffix_hack(cmd_wait_shows-notimeout x_write_joblog_events.exe)
 	condor_pl_test(cmd_wait_shows-partial "" "quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
-        add_dependencies(cmd_wait_shows-partial x_write_joblog_events.exe)
+        add_dependencies_suffix_hack(cmd_wait_shows-partial x_write_joblog_events.exe)
 	condor_pl_test(cmd_wait_shows-timeout "" "quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
-        add_dependencies(cmd_wait_shows-timeout x_write_joblog_events.exe)
+        add_dependencies_suffix_hack(cmd_wait_shows-timeout x_write_joblog_events.exe)
 	condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;full;quicknolink")
@@ -685,9 +700,9 @@ if (BUILD_TESTING)
 	condor_pl_test(job_filexfer_sandbox-empty_van "Are job sandboxes with bad permissions cleaned up?" "framework;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_filexfer_sandbox-empty_van.pl")
 	condor_pl_test(job_core_sh-loop_van "Simple vanilla job that loops for N seconds" "framework;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_core_sh-loop_van.cmd;src/condor_tests/job_core_sh-loop_van.sh")
 	condor_pl_test(job_core_bigenv_van "Vanilla test for enormous environment" "framework;quick;full;quicknolink" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/job_core_bigenv.exe;src/condor_tests/job_core_bigenv_van.cmd")
-	add_dependencies(job_core_bigenv_van job_core_bigenv.exe)
+	add_dependencies_suffix_hack(job_core_bigenv_van job_core_bigenv.exe)
 	condor_pl_test(job_core_bigenv_sched "Scheduler test for enormous environment" "framework;quick;full;quicknolink" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/job_core_bigenv.exe;src/condor_tests/job_core_bigenv_sched.cmd" )
-	add_dependencies(job_core_bigenv_sched job_core_bigenv.exe)
+	add_dependencies_suffix_hack(job_core_bigenv_sched job_core_bigenv.exe)
 	condor_pl_test(lib_ccb_startd "Test of execute daemons using CCB." "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "core;quick;full;quicknolink" CTEST)

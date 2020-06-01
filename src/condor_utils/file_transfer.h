@@ -21,6 +21,7 @@
 #define _FILE_TRANSFER_H
 
 #include "condor_common.h"
+#include "condor_classad.h"
 #include "condor_daemon_core.h"
 #include "MyString.h"
 #include "HashTable.h"
@@ -74,6 +75,11 @@ enum FileTransferStatus {
 	XFER_STATUS_DONE
 };
 
+enum class TransferPluginResult {
+	Success = 0,
+	Error = 1,
+	InvalidCredentials = 2
+};
 
 namespace htcondor {
 class DataReuseDirectory;
@@ -147,6 +153,9 @@ class FileTransfer final: public Service {
 	 */
 	void setCredsDir(const std::string &cred_dir) {m_cred_dir = cred_dir;}
 
+	/** @param socket The socket used to send syscall instructions */
+	void setSyscallSocket(ReliSock* socket) {m_syscall_socket = socket;}
+
 	/** @param reuse_dir: The DataReuseDirectory object to utilize for data reuse
 	 *  lookups
 	 */
@@ -176,6 +185,12 @@ class FileTransfer final: public Service {
 	/** @return 1 on success, 0 on failure */
 	int UploadFiles(bool blocking=true, bool final_transfer=true);
 
+	/** @return 1 on success, 0 on failure */
+	int UploadCheckpointFiles( bool blocking = true );
+
+	/** @return 1 on success, 0 on failure */
+	int UploadFailureFiles( bool blocking = true );
+
 		/** For non-blocking (i.e., multithreaded) transfers, the registered
 			handler function will be called on each transfer completion.  The
 			handler can call FileTransfer::GetInfo() for statistics on the
@@ -201,21 +216,6 @@ class FileTransfer final: public Service {
 		    success(true), in_progress(false), xfer_status(XFER_STATUS_UNKNOWN),
 			try_again(true), hold_code(0), hold_subcode(0) {}
 
-		FileTransferInfo(const FileTransferInfo &rhs) {
-			bytes = rhs.bytes;
-			duration = rhs.duration;
-			type = rhs.type;
-			success = rhs.success;
-			in_progress = rhs.in_progress;
-			xfer_status = rhs.xfer_status;
-			try_again = rhs.try_again;
-			hold_code = rhs.hold_code;
-			hold_subcode = rhs.hold_subcode;
-			error_desc = rhs.error_desc;
-			spooled_files = rhs.spooled_files;
-			tcp_stats = rhs.tcp_stats;
-			
-		}
 		void addSpooledFile(char const *name_in_spool);
 
 		filesize_t bytes;
@@ -240,9 +240,9 @@ class FileTransfer final: public Service {
 
 	inline bool IsClient() {return user_supplied_key == TRUE;}
 
-	static int HandleCommands(Service *,int command,Stream *s);
+	static int HandleCommands(int command,Stream *s);
 
-	static int Reaper(Service *, int pid, int exit_status);
+	static int Reaper(int pid, int exit_status);
 
 	static bool SetServerShouldBlock( bool block );
 
@@ -262,8 +262,6 @@ class FileTransfer final: public Service {
 	float TotalBytesSent() { return bytesSent; }
 
 	float TotalBytesReceived() { return bytesRcvd; };
-
-	void RemoveInputFiles(const char *sandbox_path = NULL);
 
 		/** Add the given filename to our list of output files to
 			transfer back.  If we're not managing a list of output
@@ -319,9 +317,9 @@ class FileTransfer final: public Service {
 	int InitializePlugins(CondorError &e);
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles);
 	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
-	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	int InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
-	ssize_t InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err);
+	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
+	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
+	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
     int OutputFileTransferStats( ClassAd &stats );
 	MyString GetSupportedMethods();
 
@@ -385,7 +383,10 @@ class FileTransfer final: public Service {
 	double downloadStartTime{-1}, downloadEndTime{-1};
 
 	void CommitFiles();
-	void ComputeFilesToSend();
+
+	void FindChangedFiles();
+	void DetermineWhichFilesToSend();
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
@@ -394,6 +395,8 @@ class FileTransfer final: public Service {
 
   private:
 
+	bool uploadCheckpointFiles{false};
+	bool uploadFailureFiles{false};
 	bool TransferFilePermissions{false};
 	bool DelegateX509Credentials{false};
 	bool PeerDoesTransferAck{false};
@@ -414,6 +417,11 @@ class FileTransfer final: public Service {
 	StringList* FilesToSend{nullptr};
 	StringList* EncryptFiles{nullptr};
 	StringList* DontEncryptFiles{nullptr};
+
+	StringList* CheckpointFiles{nullptr};
+	StringList* EncryptCheckpointFiles{nullptr};
+	StringList* DontEncryptCheckpointFiles{nullptr};
+
 	char* OutputDestination{nullptr};
 	char* SpooledIntermediateFiles{nullptr};
 	char* ExecFile{nullptr};
@@ -447,7 +455,7 @@ class FileTransfer final: public Service {
 	bool multifile_plugins_enabled{false};
 #ifdef WIN32
 	perm* perm_obj{nullptr};
-#endif		
+#endif
 	priv_state desired_priv_state{PRIV_UNKNOWN};
 	bool want_priv_change{false};
 	static TranskeyHashTable* TranskeyTable;
@@ -460,6 +468,7 @@ class FileTransfer final: public Service {
 	bool did_init{false};
 	bool simple_init{true};
 	ReliSock *simple_sock{nullptr};
+	ReliSock *m_syscall_socket{nullptr};
 	MyString download_filename_remaps;
 	bool m_use_file_catalog{true};
 	TransferQueueContactInfo m_xfer_queue_contact_info;
@@ -516,7 +525,7 @@ class FileTransfer final: public Service {
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
 
-	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list );
+	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
 
 		// This function generates a list of files to transfer, including
 		// directories to create and their full contents.
@@ -526,8 +535,10 @@ class FileTransfer final: public Service {
 		// iwd       - relative paths are relative to this path
 		// max_depth - how deep to recurse (-1 for infinite)
 		// expanded_list - the list of files to transfer
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths );
 
+        // Function internal to ExpandFileTransferList() -- called twice there.
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing

@@ -75,18 +75,6 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		dprintf( D_ALWAYS, "Can't pointer cast generic event!\n" );
 		return ULOG_UNK_ERROR;
 	}
-	{
-		char	buf[1024];
-		memset( buf, 0, sizeof(buf) );
-		strncpy( buf, generic->info, sizeof(buf)-1 );
-		buf[COUNTOF(buf)-1] = 0; // make sure it's null terminated.
-		int size = strlen( buf );
-		while( isspace(buf[size-1]) )
-			buf[--size] = '\0';
-		::dprintf( D_FULLDEBUG,
-				   "UserLogHeader::ExtractEvent(): parsing '%s'\n",
-				   buf );
-	}
 
 	char		 id[256];
 	char		 name[256];

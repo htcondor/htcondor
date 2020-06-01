@@ -162,7 +162,7 @@ static QmgmtPeer *Q_SOCK = NULL;
 // running.  Used by SuperUserAllowedToSetOwnerTo().
 static HashTable<MyString,int> owner_history(hashFunction);
 
-int		do_Q_request(ReliSock *,bool &may_fork);
+int		do_Q_request(QmgmtPeer &,bool &may_fork);
 #if 0 // not used?
 void	FindPrioJob(PROC_ID &);
 #endif
@@ -467,11 +467,10 @@ ClusterCleanup(int cluster_id)
 
 int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
 {
-	//reply.Assign("CondorVersion", );
 	reply.Assign( "LateMaterialize", scheduler.getAllowLateMaterialize() );
 	reply.Assign("LateMaterializeVersion", 2);
 	dprintf(D_ALWAYS, "GetSchedulerCapabilities called, returning\n");
-	dPrintAd(D_ALWAYS, reply, false);
+	dPrintAd(D_ALWAYS, reply);
 	return 0;
 }
 
@@ -957,6 +956,7 @@ QmgmtPeer::QmgmtPeer()
 	sock = NULL;
 	transaction = NULL;
 	allow_protected_attr_changes_by_superuser = true;
+	readonly = false;
 
 	unset();
 }
@@ -1025,6 +1025,16 @@ QmgmtPeer::setEffectiveOwner(char const *o)
 	return true;
 }
 
+bool
+QmgmtPeer::setReadOnly(bool val)
+{
+	bool old_val = readonly;
+
+	readonly = val;
+
+	return old_val;
+}
+
 void
 QmgmtPeer::unset()
 {
@@ -1049,6 +1059,7 @@ QmgmtPeer::unset()
 	next_proc_num = 0;
 	active_cluster_num = -1;	
 	xact_start_time = 0;	// time at which the current transaction was started
+	readonly = false;
 }
 
 const char*
@@ -2430,6 +2441,12 @@ QmgmtSetEffectiveOwner(char const *o)
 bool
 OwnerCheck(ClassAd *ad, const char *test_owner)
 {
+	if ( Q_SOCK->getReadOnly() ) {
+		errno = EACCES;
+		dprintf( D_FULLDEBUG, "OwnerCheck: reject read-only client\n" );
+		return false;
+	}
+
 	// check if the IP address of the peer has daemon core write permission
 	// to the schedd.  we have to explicitly check here because all queue
 	// management commands come in via one sole daemon core command which
@@ -2656,7 +2673,7 @@ unsetQSock()
 
 
 int
-handle_q(Service *, int, Stream *sock)
+handle_q(int cmd, Stream *sock)
 {
 	int	rval;
 	bool all_good;
@@ -2675,13 +2692,15 @@ handle_q(Service *, int, Stream *sock)
 	}
 	ASSERT(Q_SOCK);
 
+	Q_SOCK->setReadOnly(cmd == QMGMT_READ_CMD);
+
 	BeginTransaction();
 
 	bool may_fork = false;
 	ForkStatus fork_status = FORK_FAILED;
 	do {
 		/* Probably should wrap a timer around this */
-		rval = do_Q_request( Q_SOCK->getReliSock(), may_fork );
+		rval = do_Q_request( *Q_SOCK, may_fork );
 
 		if( may_fork && fork_status == FORK_FAILED ) {
 			fork_status = schedd_forker.NewJob();
@@ -2716,7 +2735,7 @@ handle_q(Service *, int, Stream *sock)
 
 int GetMyProxyPassword (int, int, char **);
 
-int get_myproxy_password_handler(Service * /*service*/, int /*i*/, Stream *socket) {
+int get_myproxy_password_handler(int /*i*/, Stream *socket) {
 
 	//	For debugging
 //	DebugFP = stderr;
@@ -4173,17 +4192,17 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		if ( attr_type == classad::Value::INTEGER_VALUE || attr_type == classad::Value::REAL_VALUE ) {
 			// first, store the actual value
-			MyString raw_attribute = attr_name;
+			std::string raw_attribute = attr_name;
 			raw_attribute += "_RAW";
-			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value, flags & SETDIRTY);
+			JobQueue->SetAttribute(key, raw_attribute.c_str(), attr_value, flags & SETDIRTY);
 			if( flags & SHOULDLOG ) {
 				char* old_val = NULL;
 				ExprTree *ltree;
-				ltree = job->LookupExpr(raw_attribute.Value());
+				ltree = job->LookupExpr(raw_attribute);
 				if( ltree ) {
 					old_val = const_cast<char*>(ExprTreeToString(ltree));
 				}
-				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.Value(), attr_value, old_val);
+				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.c_str(), attr_value, old_val);
 			}
 
 			int ivalue;
@@ -5965,13 +5984,13 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				break;
 			}
 
-			MyString cachedAttrName = MATCH_EXP;
+			std::string cachedAttrName = MATCH_EXP;
 			cachedAttrName += curr_attr_to_expand;
 
 			if( !startd_ad ) {
 					// No startd ad, so try to find cached value from back
 					// when we did have a startd ad.
-				ExprTree *cached_value = ad->LookupExpr(cachedAttrName.Value());
+				ExprTree *cached_value = ad->LookupExpr(cachedAttrName);
 				if( cached_value ) {
 					const char *cached_value_buf =
 						ExprTreeToString(cached_value);
@@ -6095,11 +6114,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					replacement_value += result;
 					search_pos = replacement_value.Length();
 					replacement_value += right;
-					MyString replacement_attr = curr_attr_to_expand;
-					replacement_attr += "=";
-					replacement_attr += replacement_value;
-					expanded_ad->Insert(replacement_attr.Value());
-					dprintf(D_FULLDEBUG,"$$([]) substitution: %s\n",replacement_attr.Value());
+					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.Value());
+					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.Value());
 
 					free(attribute_value);
 					attribute_value = strdup(replacement_value.Value());
@@ -6218,16 +6234,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					bigbuf2 = (char *) malloc( lenBigbuf +1 );
 					ASSERT(bigbuf2);
 					sprintf(bigbuf2,"%s%s%n%s",left,tvalue,&search_pos,right);
-					free(attribute_value);
-					attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
-													  + 3 // = and quotes
-													  + lenBigbuf
-													  + 1);
-					ASSERT(attribute_value);
-					sprintf(attribute_value,"%s=%s",curr_attr_to_expand,
-						bigbuf2);
-					expanded_ad->Insert(attribute_value);
-					dprintf(D_FULLDEBUG,"$$ substitution: %s\n",attribute_value);
+					expanded_ad->AssignExpr(curr_attr_to_expand, bigbuf2);
+					dprintf(D_FULLDEBUG,"$$ substitution: %s=%s\n",curr_attr_to_expand,bigbuf2);
 					free(value);	// must use free here, not delete[]
 					free(attribute_value);
 					attribute_value = bigbuf2;
@@ -6246,10 +6254,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						// expansions, do it all in one transaction
 					BeginTransaction();
 				}
-				if ( SetAttribute(cluster_id,proc_id,cachedAttrName.Value(),attribute_value) < 0 )
+				if ( SetAttribute(cluster_id,proc_id,cachedAttrName.c_str(),attribute_value) < 0 )
 				{
 					EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
-						cachedAttrName.Value(), attribute_value, cluster_id, proc_id);
+						cachedAttrName.c_str(), attribute_value, cluster_id, proc_id);
 				}
 			}
 
@@ -6275,7 +6283,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					const char *new_value = NULL;
 					new_value = ExprTreeToString(expr);
 					ASSERT(new_value);
-					expanded_ad->AssignExpr(itr->first.c_str(),new_value);
+					expanded_ad->AssignExpr(itr->first,new_value);
 
 					MyString match_exp_name = MATCH_EXP;
 					match_exp_name += itr->first;

@@ -1577,6 +1577,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
+			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -2346,7 +2347,11 @@ RemoteResource::initFileTransfer()
 	ASSERT(jobAd);
 	int spool_time = 0;
 	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
-	filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+	int r = filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+	if (r == 0) {
+		// filetransfer Init failed
+		EXCEPT( "RemoteResource::initFileTransfer  Init failed\n");
+	}
 
 	filetrans.RegisterCallback(
 		(FileTransferHandlerCpp)&RemoteResource::transferStatusUpdateCallback,

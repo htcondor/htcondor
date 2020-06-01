@@ -526,7 +526,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	// send any unsent data.
 
 	struct linger linger = {0,0};
-	setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
+	(void) setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 
 	ReliSock *named_sock = new ReliSock();
 	named_sock->assignDomainSocket( named_sock_fd );
@@ -539,7 +539,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	// socket (instead of a domain socket) and the TCP socket backlogs.
 	if (m_non_blocking) {
 		int flags = fcntl(named_sock_fd, F_GETFL, 0);
-		fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
+		(void) fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
 	}
 
 	int connect_rc = 0, connect_errno = 0, p_errno = 0;
@@ -629,7 +629,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 
 	if (m_non_blocking) {
 		int flags = fcntl(named_sock_fd, F_GETFL, 0);
-		fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
+		(void) fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
 	}
 
 	s = named_sock;

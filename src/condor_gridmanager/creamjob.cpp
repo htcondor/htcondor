@@ -1587,17 +1587,13 @@ char *CreamJob::buildSubmitAd()
 		//need to have a value
 		// TODO This needs to be extracted from the VOMS extension in the
 		//   job's credential.
-//	sprintf(buf, "%s = \"%s\"", ATTR_VIR_ORG, "");
-	formatstr(buf, "%s = \"%s\"", ATTR_VIR_ORG, "ignored");
-	submitAd.Insert(buf.c_str());
+	submitAd.Assign(ATTR_VIR_ORG, "ignored");
 	
 		//BATCHSYSTEM
-	formatstr(buf, "%s = \"%s\"", ATTR_BATCH_SYSTEM, resourceBatchSystemString);
-	submitAd.Insert(buf.c_str());
+	submitAd.Assign(ATTR_BATCH_SYSTEM, resourceBatchSystemString);
 	
 		//QUEUENAME
-	formatstr(buf, "%s = \"%s\"", ATTR_QUEUE_NAME, resourceQueueString);
-	submitAd.Insert(buf.c_str());
+	submitAd.Assign(ATTR_QUEUE_NAME, resourceQueueString);
 
 	submitAd.Assign("outputsandboxbasedesturi", "gsiftp://localhost");
 

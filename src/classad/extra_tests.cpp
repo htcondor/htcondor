@@ -502,6 +502,8 @@ static void test_dirty(void)
 
 	cout << "Testing dirty attributes...\n";
 
+	classad->EnableDirtyTracking();
+
 	if (classad->IsAttributeDirty("A")) {
 		cout << "  Failed: A is dirty just after construction.\n";
 	} else {

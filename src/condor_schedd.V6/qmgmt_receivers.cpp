@@ -49,11 +49,12 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 }
 
 int
-do_Q_request(ReliSock *syscall_sock,bool &may_fork)
+do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 {
 	int	request_num = -1;
 	int	rval;
 
+	ReliSock *syscall_sock = Q_PEER.getReliSock();
 	syscall_sock->decode();
 
 	assert( syscall_sock->code(request_num) );
@@ -70,9 +71,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->triedAuthentication() ) {
 			if( IsDebugLevel(D_SECURITY) ) {
-				MyString methods;
-				SecMan::getAuthenticationMethods( WRITE, &methods );
-				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
+				auto methods = SecMan::getAuthenticationMethods(WRITE);
+				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.c_str());
 			}
 			CondorError errstack;
 			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
@@ -96,12 +96,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	{
 		// dprintf( D_ALWAYS, "InitializeReadOnlyConnection()\n" );
 
-		// Since InitializeConnection() does nothing, and we need
-		// to record the fact that this is a read-only connection,
-		// but we have to do it in the socket (since we don't have
-		// any other persistent data structure, and it's probably
-		// the right place anyway), set the FQU.
-		//
 		// We need to record if this is a read-only connection so that
 		// we can avoid expanding $$ in GetJobAd; simply checking if the
 		// connection is authenticated isn't sufficient, because the
@@ -109,7 +103,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// be authenticated by a previous authenticated connection from
 		// the same address (when using host-based security) less than
 		// the expiration period ago.
-		syscall_sock->setFullyQualifiedUser( "read-only" );
+		Q_PEER.setReadOnly(true);
 
 		// same as InitializeConnection but no authenticate()
 		InitializeConnection( NULL, NULL );
@@ -948,8 +942,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// Only fetch the jobad for legal values of cluster/proc
 		if( cluster_id >= 1 ) {
 			if( proc_id >= 0 ) {
-				const char * fqu = syscall_sock->getFullyQualifiedUser();
-				if( fqu != NULL && strcmp( fqu, "read-only" ) != 0 ) {
+				if( !Q_PEER.getReadOnly() ) {
 					// expand $$() macros in the jobad as required by GridManager.
 					// The GridManager depends on the fact that the following call
 					// expands $$ and saves the expansions to disk in case of

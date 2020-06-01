@@ -607,8 +607,8 @@ filterAds (ClassAdList &in, ClassAdList &out)
 }
 
 int 
-CondorQuery::addExtraAttribute(const char *attr) {
-	return extraAttrs.Insert(attr);
+CondorQuery::addExtraAttribute(const char *name, const char *value) {
+	return extraAttrs.AssignExpr(name, value);
 }
 
 

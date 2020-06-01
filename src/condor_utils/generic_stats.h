@@ -1188,10 +1188,23 @@ public:
       , data(0)
       {
          if (cLevels) {
-      		data = new int[cLevels+1];
-		    Clear();
+            data = new int[cLevels+1];
+            Clear();
          }
       }
+   stats_histogram(const stats_histogram<T> &sh)
+      : cLevels(sh.cLevels)
+      , levels(sh.levels)
+      , data(0)
+      {
+         if (cLevels) {
+            data = new int[cLevels+1];
+            for (int ii = 0; ii <= cLevels; ++ii) {
+               data[ii] = sh.data[ii];
+            }
+         }
+      }
+
    ~stats_histogram() { delete [] data; data = 0, cLevels = 0; }
 
 public:
@@ -1205,7 +1218,7 @@ public:
 
    static const int PubValue = 1;
    static const int PubDefault = PubValue;
-   void AppendToString(MyString & str) const {
+   void AppendToString(std::string & str) const {
       if (this->cLevels > 0) {
          str += IntToStr( this->data[0] );
          for (int ix = 1; ix <= this->cLevels; ++ix) {
@@ -1215,7 +1228,7 @@ public:
          }
       }
    void Publish(ClassAd & ad, const char * pattr, int  /*flags*/) const {
-      MyString str;
+      std::string str;
       this->AppendToString(str);
       ad.Assign(pattr, str);
       }
@@ -1429,13 +1442,13 @@ public:
       if ( ! flags) flags = this->PubDefault;
       if ((flags & IF_NONZERO) && this->value.cLevels <= 0) return;
       if (flags & this->PubValue) {
-       	 MyString str("");
+       	 std::string str;
          this->value.AppendToString(str);
          ClassAdAssign(ad, pattr, str); 
       }
       if (flags & this->PubRecent) {
          UpdateRecent();
-       	 MyString str("");
+       	 std::string str;
          this->recent.AppendToString(str);
          if (flags & this->PubDecorateAttr)
             ClassAdAssign2(ad, "Recent", pattr, str);

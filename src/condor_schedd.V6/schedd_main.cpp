@@ -42,6 +42,7 @@
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 #include "credmon_interface.h"
+#include "directory_util.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
@@ -112,113 +113,23 @@ main_init(int argc, char* argv[])
 	ClassAdLogPluginManager::EarlyInitialize();
 #endif
 
-/* schedd doesn't care about other daemons.  only that it has the ability
- * to run jobs.  so the following code is for now not needed.
 
-	// ZKM HACK TO MAKE SURE SCHEDD HAS USER CREDENTIALS
-	//
-	// if we are using the credd and credmon, we need to init them before
-	// doing anything!
-	char* p = param("SEC_CREDENTIAL_DIRECTORY");
-	if(p) {
-		free(p);
-		dprintf(D_ALWAYS, "SCHEDD: INITIALIZING USER CREDS\n");
-		Daemon *my_credd;
-
-		// we will abort if we can't locate the credd, so let's try a
-		// few times. locate() caches the result so we have to destroy
-		// the object and make a new one each time.
-		int retries = 20;
-		bool success = false;
-		do {
-			// allocate a credd
-			my_credd = new Daemon(DT_CREDD);
-			if(my_credd) {
-				// call locate
-				bool loc_rc = my_credd->locate();
-				if(loc_rc) {
-					// get a connected relisock
-					CondorError errstack;
-					ReliSock* r = (ReliSock*)my_credd->startCommand(
-						CREDD_REFRESH_ALL, Stream::reli_sock, 20, &errstack);
-					if ( r ) {
-						// ask the credd to get us some fresh user creds
-						ClassAd ad;
-						putClassAd(r, ad);
-						r->end_of_message();
-						r->decode();
-						getClassAd(r, ad);
-						r->end_of_message();
-						dprintf(D_SECURITY | D_FULLDEBUG, "SCHEDD: received ad from CREDD:\n");
-						dPrintAd(D_SECURITY | D_FULLDEBUG, ad);
-						MyString result;
-						ad.LookupString("Result", result);
-						if(result == "success") {
-							success = true;
-						} else {
-							dprintf(D_FULLDEBUG, "SCHEDD: warning, creddmon returned failure.\n");
-						}
-
-						// clean up.
-						delete r;
-					} else {
-						dprintf(D_FULLDEBUG, "SCHEDD: warning, startCommand failed, %s\n", errstack.getFullText(true).c_str());
-					}
-				} else {
-					dprintf(D_FULLDEBUG, "SCHEDD: warning, locate failed.\n");
-				}
-
-				// clean up.
-				delete my_credd;
-			} else {
-				dprintf(D_FULLDEBUG, "SCHEDD: warning, new Daemon(DT_CREDD) failed.\n");
-			}
-
-			// if something went wrong, sleep and retry (finit number of times)
-			if(!success) {
-				dprintf(D_FULLDEBUG, "SCHEDD: sleeping and trying again %i times.\n", retries);
-				sleep(1);
-				retries--;
-			}
-		} while ((retries > 0) && (success == false));
-
-		// except if fail
-		if (!success) {
-			EXCEPT("FAILED TO INITIALIZE USER CREDS (locate failed)");
-		}
-	}
-	// END ZKM HACK
-*/
-
-#ifndef WIN32
-	// if using the SEC_CREDENTIAL_DIRECTORY, confirm we are "up-to-date".
+	// if using the SEC_CREDENTIAL_DIRECTORY_KRB, confirm we are "up-to-date".
 	// at the moment, we take an "all-or-nothing" approach.  ultimately, this
 	// should be per-user, and the SchedD should start normally and run jobs
 	// for users who DO have valid credentials, and simply holding on to jobs
 	// in idle state for users who do NOT have valid credentials.
 	//
-	char* p = param("SEC_CREDENTIAL_DIRECTORY");
-	if(p) {
-		free(p);
-		bool success = false;
-		int retries = 60;
-		do {
-			// look for existence of file that says everything is up-to-date.
-			success = credmon_poll(NULL, false, false);
-			if(!success) {
-				dprintf(D_ALWAYS, "SCHEDD: User credentials not up-to-date.  Start-up delayed.  Waiting 10 seconds and trying %i more times.\n", retries);
-				sleep(10);
-				retries--;
-			}
-		} while ((!success) && (retries > 0));
+	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	if (cred_dir_krb) {
+		dprintf(D_ALWAYS, "SEC_CREDENTIAL_DIRECTORY_KRB is %s, will wait up to 10 minutes for user credentials to be updated before continuing.\n", cred_dir_krb.ptr());
 
 		// we tried, we give up.
-		if(!success) {
+		if ( ! credmon_poll_for_completion(credmon_type_KRB, cred_dir_krb, 600)) {
 			EXCEPT("User credentials unavailable after 10 minutes");
 		}
 	}
 	// User creds good to go, let's start this thing up!
-#endif  // WIN32
 
 		// Initialize all the modules
 	scheduler.Init();

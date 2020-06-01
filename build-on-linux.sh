@@ -2,7 +2,7 @@
 
 # Build RPMs and debs for Linux in the current directory using the
 # source in the named directory
-if [ -f /etc/redhat-release -o -f /etc/debian_version ]; then
+if [ -f /etc/debian_version -o -f /etc/redhat-release -o -f /etc/system-release ]; then
 
     # Locate the source directory
     if [ $# -eq 1 -a -d $1 ]; then
@@ -29,11 +29,11 @@ if [ -f /etc/redhat-release -o -f /etc/debian_version ]; then
     rm -rf condor-${condor_version}
 
     # Call the official build scripts
-    if [ -f /etc/redhat-release ]; then
-        exec ${src_dir}/nmi_tools/glue/build/build_uw_rpm.sh
-    fi
     if [ -f /etc/debian_version ]; then
         exec ${src_dir}/nmi_tools/glue/build/build_uw_deb.sh
+    fi
+    if [ -f /etc/redhat-release -o -f /etc/system-release ]; then
+        exec ${src_dir}/nmi_tools/glue/build/build_uw_rpm.sh
     fi
 fi
 

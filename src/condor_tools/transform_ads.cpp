@@ -97,7 +97,7 @@ public:
 #ifdef USE_CLASSAD_LIST_WRITER
 	CondorClassAdListWriter & writer;
 #endif
-	compat_classad::CondorClassAdFileParseHelper *input_helper;
+	CondorClassAdFileParseHelper *input_helper;
 	std::string errmsg;
 };
 
@@ -547,7 +547,7 @@ static bool read_classad_file (
 	return success;
 }
 
-class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFileParseHelper
+class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 {
  public:
 	CondorQClassAdFileParseHelper(ParseType typ=Parse_long)
@@ -730,8 +730,6 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	if ( ! job) return false;
 	if (testing.no_output) return true;
 
-	StringList * whitelist = NULL;
-
 	// if we have not yet picked and output format, do that now.
 	if (DashOutFormat == ClassAdFileParseType::Parse_auto) {
 		if (xform_args.input_helper) {
@@ -749,7 +747,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	classad::References attrs;
 	classad::References *print_order = NULL;
 	if ( ! DashOutAttrsInHashOrder) {
-		sGetAdAttrs(attrs, *job, false, whitelist);
+		sGetAdAttrs(attrs, *job);
 		print_order = &attrs;
 	}
 	switch (DashOutFormat) {

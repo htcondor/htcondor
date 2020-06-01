@@ -594,11 +594,21 @@ unless ( $opt_disable_env_scripts ) {
 	print CSH "endif\n";
 	close( CSH );
 
+	my $env_fish = $opt_env_scripts_dir ."/condor.fish";
+	open( FISH, ">$env_fish" ) or die "Can't write to $env_fish";
+	print FISH "# The script should be sourced by the fish shell\n";
+	print FISH "set -x CONDOR_CONFIG \"$config_file\"\n";
+	print FISH "set -x -p PATH \"$release_dir/bin\" \"$release_dir/sbin\"\n";
+	print FISH "set -x -p PYTHONPATH \"$release_dir/lib/python\n";
+	close( FISH );
+
 	if ( $opt_bosco ) {
 		$env_sh = $opt_env_scripts_dir ."/bosco.sh";
 		$env_csh = $opt_env_scripts_dir ."/bosco.csh";
+		$env_fish = $opt_env_scripts_dir ."/bosco.fish";
 		system( "cp $opt_env_scripts_dir/condor.sh $env_sh" );
 		system( "cp $opt_env_scripts_dir/condor.csh $env_csh" );
+		system( "cp $opt_env_scripts_dir/condor.fish $env_fish" );
 
 		open( SETENV, ">$opt_env_scripts_dir/bosco_setenv" );
 		print SETENV "# Shell-independent setup\n";
@@ -616,6 +626,7 @@ unless ( $opt_disable_env_scripts ) {
 		print "Condor environment variables.  These are:\n";
 		print "   sh: $env_sh\n";
 		print "  csh: $env_csh\n";
+		print " fish: $env_fish\n";
 	}
 }
 

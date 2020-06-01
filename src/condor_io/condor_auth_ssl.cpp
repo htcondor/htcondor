@@ -1710,9 +1710,13 @@ Condor_Auth_SSL::should_try_auth()
 
 	std::string certfile, keyfile;
 	if (!param(certfile, AUTH_SSL_SERVER_CERTFILE_STR)) {
+		dprintf(D_SECURITY, "Not trying SSL auth because server certificate"
+			" parameter (%s) is not set.\n", AUTH_SSL_SERVER_CERTFILE_STR);
 		return false;
 	}
 	if (!param(keyfile, AUTH_SSL_SERVER_KEYFILE_STR)) {
+		dprintf(D_SECURITY, "Not trying SSL auth because server key"
+			" parameter (%s) is not set.\n", AUTH_SSL_SERVER_KEYFILE_STR);
 		return false;
 	}
 
@@ -1720,11 +1724,15 @@ Condor_Auth_SSL::should_try_auth()
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		int fd = open(certfile.c_str(), O_RDONLY);
 		if (fd < 0) {
+			dprintf(D_SECURITY, "Not trying SSL auth because server certificate"
+				" (%s) is not readable by HTCondor: %s.\n", certfile.c_str(), strerror(errno));
 			return false;
 		}
 		close(fd);
 		fd = open(keyfile.c_str(), O_RDONLY);
 		if (fd < 0) {
+			dprintf(D_SECURITY, "Not trying SSL auth because server key"
+				" (%s) is not readable by HTCondor: %s.\n", certfile.c_str(), strerror(errno));
 			return false;
 		}
 		close(fd);

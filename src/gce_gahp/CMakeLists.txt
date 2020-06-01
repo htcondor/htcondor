@@ -29,10 +29,16 @@ if( NOT WINDOWS )
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-	condor_glob( HeaderFiles SourceFiles "" )
+	set(SourceFiles
+		gceCommands.cpp
+		gcegahp_common.cpp
+		gce_io_checkfn.cpp
+		io_loop_pthread.cpp
+		PipeBuffer.cpp
+	)
 
 	condor_exe( gce_gahp
-		"${HeaderFiles};${SourceFiles}" ${C_SBIN}
+		"${SourceFiles}" ${C_SBIN}
 		"${CONDOR_TOOL_LIBS};${CURL_FOUND};${SQLITE3_LIB}"
 		OFF )
 

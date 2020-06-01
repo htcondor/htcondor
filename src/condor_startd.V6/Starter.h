@@ -45,6 +45,8 @@ public:
 
 	char*	path() {return s_path;};
 	time_t	birthdate( void ) {return s_birthdate;};
+	time_t	got_update(void) {return s_last_update_time;}
+	bool	got_final_update(void) {return s_got_final_update;}
 	bool	kill(int);
 	bool	killpg(int);
 	void	killkids(int);
@@ -82,7 +84,7 @@ public:
 		// Called by our softkill timer
 	void softkillTimeout( void );
 	
-	void	publish( ClassAd* ad, amask_t mask, StringList* list );
+	void	publish( ClassAd* ad, StringList* list );
 
 	bool	satisfies( ClassAd* job_ad, ClassAd* mach_ad );
 	bool	provides( const char* ability );
@@ -151,6 +153,7 @@ private:
 	pid_t           s_pid;
 	ProcFamilyUsage s_usage;
 	time_t          s_birthdate;
+	time_t          s_last_update_time;
 	double          s_vm_cpu_usage;
 	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
@@ -162,6 +165,7 @@ private:
 #endif /* HAVE_BOINC */
 	bool            s_was_reaped;
 	bool            s_created_execute_dir; // should we cleanup s_execute_dir
+	bool            s_got_final_update;
 	int             s_reaper_id;
 	int             s_exit_status;
 	ClassAd *       s_orphaned_jobad;  // the job ad is transferred from the Claim to here if the claim is deleted before the starter is reaped.

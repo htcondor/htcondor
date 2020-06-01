@@ -172,7 +172,7 @@ struct TokenRequestContinuation {
 
 
 int
-CollectorDaemon::schedd_token_request(Service *, int, Stream *stream)
+CollectorDaemon::schedd_token_request(int, Stream *stream)
 {
 	classad::ClassAd ad;
 	if (!getClassAd(stream, ad) ||
@@ -220,7 +220,7 @@ CollectorDaemon::schedd_token_request(Service *, int, Stream *stream)
 		error_string = "No schedd target specified.";
 	}
 	std::string capability, schedd_addr;
-	if (!error_code && !collector.walkConcreteTable(SCHEDD_AD, [&](compat_classad::ClassAd *ad) -> int {
+	if (!error_code && !collector.walkConcreteTable(SCHEDD_AD, [&](ClassAd *ad) -> int {
 			std::string local_schedd_name;
 			if (!ad ||
 				!ad->EvaluateAttrString(ATTR_NAME, local_schedd_name) ||
@@ -315,118 +315,118 @@ void CollectorDaemon::Init()
 
 	// install command handlers for queries
 	daemonCore->Register_CommandWithPayload(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
+		receive_query_cedar,"receive_query_cedar",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_CKPT_SRVR_ADS,"QUERY_CKPT_SRVR_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	if(param_boolean("PROTECT_COLLECTOR_ADS", false)) {
 		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-			(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,ADMINISTRATOR);
+			receive_query_cedar,"receive_query_cedar",ADMINISTRATOR);
 	} else {
 		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-			(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+			receive_query_cedar,"receive_query_cedar",READ);
 	}
 	daemonCore->Register_CommandWithPayload(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_ACCOUNTING_ADS,"QUERY_ACCOUNTING_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_HAD_ADS,"QUERY_HAD_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_ANY_ADS,"QUERY_ANY_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
     daemonCore->Register_CommandWithPayload(QUERY_GRID_ADS,"QUERY_GRID_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	
 	// install command handlers for invalidations
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_STARTD_PERM);
+		receive_invalidation,"receive_invalidation",ADVERTISE_STARTD_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
+		receive_invalidation,"receive_invalidation",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_MASTER_PERM);
+		receive_invalidation,"receive_invalidation",ADVERTISE_MASTER_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_CKPT_SRVR_ADS,
-		"INVALIDATE_CKPT_SRVR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_CKPT_SRVR_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_SUBMITTOR_ADS,
-		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
+		"INVALIDATE_SUBMITTOR_ADS", receive_invalidation,
+		"receive_invalidation",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_LICENSE_ADS,
-		"INVALIDATE_LICENSE_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_LICENSE_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_COLLECTOR_ADS,
-		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_COLLECTOR_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STORAGE_ADS,
-		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_STORAGE_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_ACCOUNTING_ADS,
-		"INVALIDATE_ACCOUNTING_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,NEGOTIATOR);
+		"INVALIDATE_ACCOUNTING_ADS", receive_invalidation,
+		"receive_invalidation",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_NEGOTIATOR_ADS,
-		"INVALIDATE_NEGOTIATOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,NEGOTIATOR);
+		"INVALIDATE_NEGOTIATOR_ADS", receive_invalidation,
+		"receive_invalidation",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_HAD_ADS,
-		"INVALIDATE_HAD_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_HAD_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_ADS_GENERIC,
-		"INVALIDATE_ADS_GENERIC", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_ADS_GENERIC", receive_invalidation,
+		"receive_invalidation",DAEMON);
     daemonCore->Register_CommandWithPayload(INVALIDATE_GRID_ADS,
-        "INVALIDATE_GRID_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+        "INVALIDATE_GRID_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 
 	// install command handlers for updates
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
+		receive_update,"receive_update",ADVERTISE_STARTD_PERM);
 	daemonCore->Register_CommandWithPayload(MERGE_STARTD_AD,"MERGE_STARTD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+		receive_update,"receive_update",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
+		receive_update,"receive_update",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
+		receive_update,"receive_update",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(UPDATE_LICENSE_AD,"UPDATE_LICENSE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_MASTER_PERM);
+		receive_update,"receive_update",ADVERTISE_MASTER_PERM);
 	daemonCore->Register_CommandWithPayload(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
+		receive_update,"receive_update",ALLOW);
 	daemonCore->Register_CommandWithPayload(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+		receive_update,"receive_update",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(UPDATE_HAD_AD,"UPDATE_HAD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
-		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
+		receive_update,"receive_update", DAEMON);
     daemonCore->Register_CommandWithPayload(UPDATE_GRID_AD,"UPDATE_GRID_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_ACCOUNTING_AD,"UPDATE_ACCOUNTING_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+		receive_update,"receive_update",NEGOTIATOR);
 	std::vector<DCpermission> allow_perms{ALLOW};
 		// Users may advertise their own submitter ads.  If they do, there are additional
 		// restrictions to their contents (such as the user must be authenticated, not
 		// unmapped, and must match the Owner attribute).
 	daemonCore->Register_CommandWithPayload(UPDATE_OWN_SUBMITTOR_AD,"UPDATE_OWN_SUBMITTOR_AD",
-		(CommandHandler)receive_update,"receive_update", nullptr , DAEMON, D_COMMAND, false,
+		receive_update,"receive_update", DAEMON, D_COMMAND, false,
 		0, &allow_perms);
 		//
 	daemonCore->Register_CommandWithPayload(IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST",
-		(CommandHandler)schedd_token_request, "schedd_token_request", nullptr, DAEMON,
+		schedd_token_request, "schedd_token_request", DAEMON,
 		D_COMMAND, true, 0, &allow_perms);
 
     // install command handlers for updates with acknowledgement
@@ -434,8 +434,8 @@ void CollectorDaemon::Init()
     daemonCore->Register_CommandWithPayload(
 		UPDATE_STARTD_AD_WITH_ACK,
 		"UPDATE_STARTD_AD_WITH_ACK",
-		(CommandHandler)receive_update_expect_ack,
-		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
+		receive_update_expect_ack,
+		"receive_update_expect_ack",ADVERTISE_STARTD_PERM);
 
     // add all persisted ads back into the collector's store
     // process the given command
@@ -470,8 +470,8 @@ void CollectorDaemon::Init()
 	// add a reaper for our query threads spawned off via Create_Thread
 	if ( ReaperId == -1 ) {
 		ReaperId = daemonCore->Register_Reaper("CollectorDaemon::QueryReaper",
-						(ReaperHandler)&CollectorDaemon::QueryReaper,
-						"CollectorDaemon::QueryReaper()",NULL);
+						&CollectorDaemon::QueryReaper,
+						"CollectorDaemon::QueryReaper()");
 	}	
 }
 
@@ -493,8 +493,7 @@ public:
 };
 
 
-int CollectorDaemon::receive_query_cedar(Service* /*s*/,
-										 int command,
+int CollectorDaemon::receive_query_cedar(int command,
 										 Stream* sock)
 {
 	int return_status = TRUE;
@@ -653,7 +652,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			} else {
 				query_queue_low_prio.push( query_entry );
 			}
-			did_we_fork = QueryReaper(NULL, -1, -1);
+			did_we_fork = QueryReaper(-1, -1);
 			cad = NULL; // set this to NULL so we won't delete it below; our reaper will remove it
 			query_entry = NULL; // set this to NULL so we won't free it below; daemoncore will remove it
 			return_status = KEEP_STREAM; // tell daemoncore to not mess with socket when we return
@@ -699,7 +698,7 @@ END:
 
 
 // Return 1 if forked a worker, 0 if not, and -1 upon an error.
-int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
+int CollectorDaemon::QueryReaper(int pid, int /* exit_status */ )
 {
 	if ( pid >= 0 ) {
 		dprintf(D_FULLDEBUG,
@@ -1079,8 +1078,7 @@ CollectorDaemon::receive_query_public( int command )
 	return whichAds;
 }
 
-int CollectorDaemon::receive_invalidation(Service* /*s*/,
-										  int command,
+int CollectorDaemon::receive_invalidation(int command,
 										  Stream* sock)
 {
 	AdTypes whichAds;
@@ -1220,7 +1218,7 @@ collector_runtime_probe CollectorEngine_ru_forward_runtime;
 collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
 #endif
 
-int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
+int CollectorDaemon::receive_update(int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
@@ -1311,8 +1309,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	return TRUE;
 }
 
-int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
-												int command,
+int CollectorDaemon::receive_update_expect_ack(int command,
 												Stream *stream )
 {
 
@@ -2221,12 +2218,12 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
                 if (view_sock->type() == Stream::reli_sock) {
 	                view_sock_timeslice.setStartTimeNow();
                 }
-                view_coll->connectSock(view_sock,20);
+                int r = view_coll->connectSock(view_sock,20);
                 if (view_sock->type() == Stream::reli_sock) {
 	                view_sock_timeslice.setFinishTimeNow();
                 }
 
-                if (!view_sock->is_connected()) {
+                if (!view_sock->is_connected() || (!r)) {
                     dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s so not forwarding ad.\n", view_name);
                     continue;
                 }
@@ -2371,18 +2368,20 @@ int
 CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 {
 	int	univ;
-	char line[100];
+	std::string attrn;
 
 	// Loop through, publish all universes with a name
 	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
 		const char *name = getName( univ );
 		if ( name ) {
-			sprintf( line, "%s%s = %d", label, name, getValue( univ ) );
-			ad->Insert(line);
+			attrn = label;
+			attrn += name;
+			ad->Assign(attrn, getValue(univ));
 		}
 	}
-	sprintf( line, "%s%s = %d", label, "All", count );
-	ad->Insert(line);
+	attrn = label;
+	attrn += "All";
+	ad->Assign(attrn, count);
 
 	return 0;
 }
