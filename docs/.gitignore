@@ -2,3 +2,4 @@ _build
 extensions/*.pyc
 utils/html-cleanup/src/*
 utils/html-cleanup/dst/*
+__pycache__
