@@ -46,6 +46,7 @@ def job_with_good_url(default_condor, good_url, test_dir):
             "arguments": "1",
             "log": (test_dir / "good_url.log").as_posix(),
             "transfer_input_files": good_url,
+            "transfer_output_files": "goodurl",
             "should_transfer_files": "YES"
         }
     )
@@ -73,6 +74,10 @@ class TestCurlPlugin:
 
     def test_job_with_good_url_succeeds(self, job_with_good_url, test_dir):
         assert job_with_good_url.state[0] == JobStatus.COMPLETED
+
+    def test_job_with_good_url_file_contents(self, test_dir):
+        file_contents = open("goodurl", 'r').read()
+        assert file_contents == "Great success!"
 
     def test_job_with_bad_url_holds(self, job_with_bad_url):
         assert job_with_bad_url.state[0] == JobStatus.HELD
