@@ -243,13 +243,13 @@ class TestCustomMachineResources:
 
     def test_reported_usage_in_job_ads_makes_sense(self, handle, resources):
         ads = handle.query(
-            # projection=[
-            #     "ClusterID",
-            #     "ProcID",
-            #     "AssignedXXX",
-            #     "XXXAverageUsage",
-            #     "RemoteWallClockTime",
-            # ]
+            projection=[
+                "ClusterID",
+                "ProcID",
+                "AssignedXXX",
+                "XXXAverageUsage",
+                "RemoteWallClockTime",
+            ]
         )
 
         # Here's the deal: XUsage is

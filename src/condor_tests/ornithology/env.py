@@ -26,7 +26,7 @@ logger.setLevel(logging.DEBUG)
 
 def set_env_var(key: str, value: str):
     os.environ[key] = value
-    logger.debug("Set environment variable {} = {}".format(key, value))
+    # logger.debug("Set environment variable {} = {}".format(key, value))
 
 
 def unset_env_var(key: str):
@@ -34,7 +34,7 @@ def unset_env_var(key: str):
 
     if value is not None:
         del os.environ[key]
-        logger.debug("Unset environment variable {}, value was {}".format(key, value))
+        # logger.debug("Unset environment variable {}, value was {}".format(key, value))
 
 
 class SetEnv:
