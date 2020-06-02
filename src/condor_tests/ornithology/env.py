@@ -106,7 +106,7 @@ class ChangeDir:
 
     def __enter__(self):
         self.previous_dir = Path.cwd()
-        os.chdir(self.dir)
+        os.chdir(str(self.dir))
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

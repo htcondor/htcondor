@@ -29,7 +29,7 @@ import pytest
 
 import htcondor
 
-from ornithology import Condor
+from ornithology import Condor, ChangeDir
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -188,7 +188,8 @@ def test_dir() -> Path:
     path
         The path to the test directory.
     """
-    return TEST_DIR
+    with ChangeDir(TEST_DIR):
+        yield TEST_DIR
 
 
 def pytest_runtest_protocol(item, nextitem):
