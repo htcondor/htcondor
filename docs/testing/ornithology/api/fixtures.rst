@@ -1,8 +1,8 @@
 Fixture-Defining Decorators
 ===========================
 
-.. autofunction:: config
+.. autofunction:: ornithology.config
 
-.. autofunction:: standup
+.. autofunction:: ornithology.standup
 
-.. autofunction:: action
+.. autofunction:: ornithology.action
