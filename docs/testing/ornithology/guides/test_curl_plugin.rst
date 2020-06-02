@@ -35,6 +35,14 @@ In this first pass, we'll simplify things by assuming that if job A completes,
 then the URL was downloaded to the right place with the right contents.  We
 can elaborate on these conditions to avoid false positives later.
 
+The Assertions
+--------------
+
+Our first task is to write down what it means for the test to pass.
+We do this by using Python's ``assert`` statement to check whether a given
+value is ``True``. Our job is to figure out what we want to assert on, and how
+to produce that value in the first place.
+
 Create the following as ``test_curl_plugin.py``.  The filename *must* begin
 with a ``test_`` to become part of the test suite.  Likewise, the functions
 in that file which start with ``test_`` become individual tests.  Note that
@@ -76,7 +84,7 @@ Fixtures!
 ---------
 (Think: "Plastics!")
 
-``@action`` is an annotation; an annotation is syntatic sugar for calling
+``@action`` is an annotation; an annotation is syntactic sugar for calling
 a function on the subsequent function.  In the following code, ``@action``
 basically just marks ``job_with_bad_url`` and ``job_with_good_url`` as the
 functions which produce the ``job_with_bad_url`` and ``job_with_good_url``
@@ -93,25 +101,9 @@ wait for it to complete.
     def job_with_good_url():
         pass
 
-.. note::
-
-    Why wait for the jobs in their fixtures?
-
-    At one level, because some function has to for the test to work, and we
-    don't want to wait in the test functions because waiting could fail.  At
-    another level, it's a judgement call: you could certainly instead write a
-    smaller ``job_with_bad_url()`` function that accepted a different fixture,
-    a job which had only just been submitted, and that would be fine too.
-
-    In this case, the judgement was that we didn't expect the abstract
-    operation of "running the job" to fail often enough to be worth breaking
-    into two separately-checked pieces.
-
-    However, in any case, if these functions checked for the specific state
-    the test functions expect to see, that would defeat the point of splitting
-    them up, so we don't do that, either.)
-
-The easiest way to wait for a job to finish is to use a :class:`ClusterHandle`.
+We need to submit this job and wait for it to reach a "terminal" state:
+either completed, held, or removed.
+The easiest way to wait for a job to terminate is to use a :class:`ClusterHandle`.
 These are what we get back when submitting jobs via Ornithology.
 Once we have a handle, we can use its :func:`ClusterHandle.wait` method to do
 the actual waiting.
@@ -142,7 +134,7 @@ the individual lines may be freely reordered.
 
 .. note::
 
-    Why do we wait for the jobs to enter a terminal state in these functions?
+    Why do we wait for the jobs to enter a terminal state in this fixture?
 
     At one level, we have to wait at some point for the test to work, and we don't
     want to wait in the test functions because waiting could fail.  At another
