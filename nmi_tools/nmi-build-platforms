@@ -1,6 +1,9 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
+#docker://timtheisen/nmi-build:x86_64_CentOS6 (Using x86_64_RedHat6 below)
+docker://timtheisen/nmi-build:x86_64_AmazonLinux2
+# Using 64-bit CentOS 7 hardware for IPv6 tests
 x86_64_CentOS7
 docker://timtheisen/nmi-build:x86_64_CentOS7
 docker://timtheisen/nmi-build:x86_64_CentOS8
@@ -20,3 +23,4 @@ x86_CentOS7
 
 # We want to build all branches on Fedora because it is our "warning check" platform
 docker://timtheisen/nmi-build:x86_64_Fedora30
+docker://timtheisen/nmi-build:x86_64_Fedora32

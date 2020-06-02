@@ -2090,12 +2090,17 @@ ProcAPI::buildPidList() {
 
 	dirp = condor_opendir("/proc");
 	if( dirp != NULL ) {
+		int total_entries = 0;
+		int pid_entries = 0;
 			// NOTE: this will use readdir64() when available to avoid
 			// skipping over directories with an inode value that
 			// doesn't happen to fit in the 32-bit ino_t
 		condor_dirent *direntp;
+		errno = 0;
 		while( (direntp = condor_readdir(dirp)) != NULL ) {
+			total_entries++;
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
+				pid_entries++;
 				temp = new pidlist;
 				temp->pid = (pid_t) atol ( direntp->d_name );
 				temp->next = NULL;
@@ -2103,12 +2108,17 @@ ProcAPI::buildPidList() {
 				current = temp;
 			}
 		}
+		if( errno != 0 ) {
+			dprintf(D_ALWAYS, "ProcAPI: readdir() failed: errno %d (%s)\n",
+			        errno, strerror(errno));
+		}
 		condor_closedir( dirp );
     
 		temp = pidList;
 		pidList = pidList->next;
 		delete temp;           // remove header node.
 
+		dprintf(D_FULLDEBUG,"ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 		return PROCAPI_SUCCESS;
 	} 
 
