@@ -1,3 +1,5 @@
+.. py:currentmodule:: ornithology
+
 test_curl_plugin.py
 ===================
 
@@ -109,10 +111,12 @@ wait for it to complete.
     the test functions expect to see, that would defeat the point of splitting
     them up, so we don't do that, either.)
 
-To ``wait`` [TODO: link] for a job [handle], we need a job [handle],
-which we get by submitting a job to a personal condor.  Luckily, we
-don't care all that much about the details of our personal condor, so
-we can use the ``default_condor`` fixture provided by Ornithology.
+The easiest way to wait for a job to finish is to use a :class:`ClusterHandle`.
+These are what we get back when submitting jobs via Ornithology.
+Once we have a handle, we can use its :func:`ClusterHandle.wait` method to do
+the actual waiting.
+Luckily, we don't care all that much about the details of our personal condor,
+so we can use the ``default_condor`` fixture provided by Ornithology.
 
 .. code-block:: python
 
@@ -130,6 +134,7 @@ we can use the ``default_condor`` fixture provided by Ornithology.
                 "should_transfer_files": "YES",
             }
         )
+
         job.wait(condition = FIXME)
 
 It is considered good Python form to leave the trailing comma in so that
@@ -157,7 +162,7 @@ the individual lines may be freely reordered.
 What about the ``FIXME``\s?
 
 The job we submit needs to know what URL to download from, but to minimize
-the tests' frailty and isolate it from the outside world,
+the tests' frailty and to isolate it from the outside world,
 we want that URL to be served by a server we started for the
 test.  We obviously can't count on port 80 being available, so we'll need
 the URL to include the port.  The safest way to do that is to determine the
@@ -165,13 +170,15 @@ URL at run-time, after we've started the web server and it has bound to its
 listen port.  That sounds like a lot of work, and something else that could
 fail, so let's make the URL a fixture.
 
-As an implementation detail, ``job.wait()`` requires the job to produce an
-event log, so we'll have to provide one.  By convention, everything the
-job produces should go into the corresponding test-specific directory.  As
+Now we'll get the waiting working.
+As an implementation detail, :func:`ClusterHandle.wait` requires the job to
+produce an event log, so we'll have to provide one.  By convention, everything
+the job produces should go into the corresponding test-specific directory.  As
 you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
 
 .. code-block:: python
 
+    from ornithology import ClusterState
     from conftest import action
 
     @action
@@ -180,7 +187,7 @@ you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
             {
                 # Do nothing of interest.
                 "executable": "/bin/sleep",
-                "arguments": "1",
+                "arguments": "1s",
                 # These are the two lines we really care about.
                 "transfer_input_files": good_url,
                 "should_transfer_files": "YES",
@@ -189,36 +196,35 @@ you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
             }
         )
 
-        job.wait(condition = job_in_terminal_state)
+        job.wait(condition = FIXME)
 
         return job
 
-In our best tradition of solving the problem later, I replaced the
-``FIXME`` in ``job.wait()`` with a function we haven't written yet.  The
-implementation is below, and something you could have discovered from
-the API documentation [TODO: link, once Josh finishes writing it].  The code
-block below also adds the ``job_with_bad_url`` fixture.
+The actual waiting ``condition`` will be a method on the :class:`ClusterState`
+that is attached to the :class:`ClusterHandle`. Because functions are
+first-class objects in Python, we can simply pass a reference to the
+appropriate method to :meth:`ClusterHandle.wait`. In this case we will wait
+for the job to either complete or get held, which are both "terminal" states.
+The code block below also adds the ``job_with_bad_url`` fixture.
 
 .. code-block:: python
 
+    from ornithology import ClusterState
     from conftest import action
-
-    def job_in_terminal_state(job):
-        return job.state.any_held() or job.state.any_complete()
 
     @action
     def job_with_good_url(default_condor, good_url, test_dir):
         job = default_condor.submit(
             {
                 "executable": "/bin/sleep",
-                "arguments": "1",
+                "arguments": "1s",
                 "transfer_input_files": good_url,
                 "should_transfer_files": "YES",
                 "log": (test_dir / "good_url.log").as_posix(),
             }
         )
 
-        job.wait(condition = job_in_terminal_state)
+        job.wait(condition=ClusterState.all_terminal)
 
         return job
 
@@ -227,14 +233,14 @@ block below also adds the ``job_with_bad_url`` fixture.
         job = default_condor.submit(
             {
                 "executable": "/bin/sleep",
-                "arguments": "1",
+                "arguments": "1s",
                 "log": (test_dir / "bad_url.log").as_posix(),
                 "transfer_input_files": bad_url,
                 "should_transfer_files": "YES"
             }
         )
 
-        job.wait(condition = job_in_terminal_state)
+        job.wait(condition=ClusterState.all_terminal)
 
         return job
 
@@ -402,15 +408,15 @@ its execution is temporarily suspended. When the fixture goes out of scope,
 Complete Test
 -------------
 
-This version is slightly different than what's in the source tree -- it's
-doesn't check the contents of the downloaded file, or use ``lambda``\s --
+This version is slightly different than what's in the source tree
+(it doesn't check the contents of the downloaded file)
 so here's a copy of the whole thing in one go, as formatted by the
-``black`` package (``pip install [-user] black``).
+``black`` package (``pip install [--user] black``).
 
 .. code-block:: python
 
     from conftest import action
-    from ornithology import JobStatus
+    from ornithology import JobStatus, ClusterState
     from pytest_httpserver import HTTPServer
 
 
@@ -432,10 +438,6 @@ so here's a copy of the whole thing in one go, as formatted by the
         return f"http://localhost:{server.port}/badurl"
 
 
-    def job_in_terminal_state(job):
-        return job.state.any_held() or job.state.any_complete()
-
-
     @action
     def job_with_good_url(default_condor, good_url, test_dir):
         job = default_condor.submit(
@@ -448,7 +450,7 @@ so here's a copy of the whole thing in one go, as formatted by the
             }
         )
 
-        job.wait(condition=job_in_terminal_state)
+        job.wait(condition=ClusterState.all_terminal)
 
         return job
 
@@ -465,7 +467,7 @@ so here's a copy of the whole thing in one go, as formatted by the
             }
         )
 
-        job.wait(condition=job_in_terminal_state)
+        job.wait(condition=ClusterState.all_terminal)
 
         return job
 
@@ -476,4 +478,3 @@ so here's a copy of the whole thing in one go, as formatted by the
 
         def test_job_with_bad_url_holds(self, job_with_bad_url):
             assert job_with_bad_url.state[0] == JobStatus.HELD
-

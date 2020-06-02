@@ -277,13 +277,38 @@ class ClusterHandle(ConstraintHandle):
 
         return self._state
 
-    def wait(self, condition=None, timeout=60, verbose=False) -> float:
+    def wait(self, condition=None, timeout=60, verbose=False) -> bool:
+        """
+        Waits for the ``condition`` to become ``True``.
+
+        Parameters
+        ----------
+        condition
+            The function to wait to become ``True``. It will be passed the
+            :class:`ClusterState` as its only argument.
+            Because of how Python calls unbound class methods, you may directly
+            pass :class:`ClusterState` methods as conditions
+            (e.g., ``handle.wait(condition = ClusterState.any_held)``).
+            The default condition is :meth:`ClusterState.all_complete`, which
+            means "wait until all the jobs in this cluster are completed".
+        timeout
+            After this amount of time, ``wait`` will return ``False`` and emit
+            a warning in the log.
+        verbose
+            If ``True``, the handle's state counts will be logged during the wait.
+
+        Returns
+        -------
+        success : bool
+            ``True`` if the wait finished because the condition became ``True``;
+            ``False`` otherwise.
+        """
         if condition is None:
-            condition = lambda hnd: hnd.state.all_complete()
+            condition = ClusterState.all_complete
 
         start_time = time.time()
         self.state.read_events()
-        while not condition(self):
+        while not condition(self.state):
             if timeout is not None and time.time() > start_time + timeout:
                 logger.warning(
                     "Wait for handle {} did not complete successfully".format(self)
@@ -428,7 +453,7 @@ class ClusterState:
         Note that this definition does include jobs that have left the queue,
         not just ones that are in the "Completed" state in the queue.
         """
-        return self.counts()[jobs.JobStatus.COMPLETED] == len(self)
+        return self.all_status(jobs.JobStatus.COMPLETED)
 
     def any_complete(self) -> bool:
         """
@@ -436,19 +461,72 @@ class ClusterState:
         Note that this definition does include jobs that have left the queue,
         not just ones that are in the "Completed" state in the queue.
         """
-        return self.counts()[jobs.JobStatus.COMPLETED] > 0
+        return self.any_status(jobs.JobStatus.COMPLETED)
 
     def any_idle(self) -> bool:
         """Return ``True`` if **any** of the jobs in the cluster are idle."""
-        return self.counts()[jobs.JobStatus.IDLE] > 0
+        return self.any_status(jobs.JobStatus.IDLE)
+
+    def none_idle(self) -> bool:
+        """Return ``True`` if **none** of the jobs in the cluster are idle."""
+        return self.none_status(jobs.JobStatus.IDLE)
 
     def any_running(self) -> bool:
         """Return ``True`` if **any** of the jobs in the cluster are running."""
-        return self.counts()[jobs.JobStatus.RUNNING] > 0
+        return self.any_status(jobs.JobStatus.RUNNING)
+
+    def all_held(self) -> bool:
+        """Return ``True`` if **all** of the jobs in the cluster are held."""
+        return self.all_status(jobs.JobStatus.HELD)
 
     def any_held(self) -> bool:
         """Return ``True`` if **any** of the jobs in the cluster are held."""
-        return self.counts()[jobs.JobStatus.HELD] > 0
+        return self.any_status(jobs.JobStatus.HELD)
+
+    def none_held(self) -> bool:
+        """Return ``True`` if **none** of the jobs in the cluster are held."""
+        return self.any_status(jobs.JobStatus.HELD)
+
+    def all_terminal(self) -> bool:
+        """Return ``True`` if **all** of the jobs in the cluster are completed, held, or removed."""
+        return self.all_status(
+            jobs.JobStatus.COMPLETED, jobs.JobStatus.HELD, jobs.JobStatus.REMOVED
+        )
+
+    def any_terminal(self) -> bool:
+        """Return ``True`` if **any** of the jobs in the cluster are completed, held, or removed."""
+        return self.any_status(
+            jobs.JobStatus.COMPLETED, jobs.JobStatus.HELD, jobs.JobStatus.REMOVED
+        )
+
+    def all_status(self, *statuses: jobs.JobStatus) -> bool:
+        """
+        Return ``True`` if **all** of the jobs in the cluster are in one of the ``statuses``.
+        Prefer one of the explicitly-named helper methods when possible,
+        and don't be afraid to make a new helper method!
+        """
+        return self.count_status(*statuses) == len(self)
+
+    def any_status(self, *statuses: jobs.JobStatus) -> bool:
+        """
+        Return ``True`` if **any** of the jobs in the cluster are in one of the ``statuses``.
+        Prefer one of the explicitly-named helper methods when possible,
+        and don't be afraid to make a new helper method!
+        """
+        return self.count_status(*statuses) > 0
+
+    def none_status(self, *statuses: jobs.JobStatus) -> bool:
+        """
+        Return ``True`` if **none** of the jobs in the cluster are in one of the ``statuses``.
+        Prefer one of the explicitly-named helper methods when possible,
+        and don't be afraid to make a new helper method!
+        """
+        return self.count_status(*statuses) == 0
+
+    def count_status(self, *statuses: jobs.JobStatus) -> int:
+        """Return the total number of jobs in the cluster in any of the given statuses."""
+        counts = self.counts()
+        return sum(counts[status] for status in statuses)
 
 
 class EventLog:

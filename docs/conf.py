@@ -381,6 +381,7 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # autodoc settings
 autoclass_content = 'both'
+autodoc_member_order = "bysource"
 
 # napoleon settings
 napoleon_use_param = False

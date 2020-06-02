@@ -169,7 +169,9 @@ def clusterid_for_itemdata(test_dir, condor):
         My.Foo = "$(Item)"
 
         queue in (A, B, C, D, E)
-    """.format(exe = SCRIPTS['sleep'])
+    """.format(
+        exe=SCRIPTS["sleep"]
+    )
     submit_file = write_file(test_dir / "queue_in.sub", sub_description)
 
     submit_cmd = condor.run_command(["condor_submit", submit_file])

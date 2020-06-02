@@ -43,10 +43,13 @@ CONFIG_IDS = collections.defaultdict(set)
 def pytest_addoption(parser):
     parser.addoption(
         "--base-test-dir",
-        action="store",
-        default=None,
-        help="Set the base directory that per-test directories will be created in. Defaults to a time-and-pid-stamped directory in the system temporary directory.",
+        action = "store",
+        default = None,
+        help = "Set the base directory that per-test directories will be created in. Defaults to a time-and-pid-stamped directory in the system temporary directory.",
     )
+
+
+STAMP = f"{int(time.time())}-{os.getpid()}"
 
 
 def get_base_test_dir(config):
@@ -55,17 +58,17 @@ def get_base_test_dir(config):
     if base_dir is None:
         base_dir = (
             Path(tempfile.gettempdir())
-            / f"condor-tests-{int(time.time())}-{os.getpid()}"
+            / f"condor-tests-{STAMP}"
         )
 
     base_dir = Path(base_dir).absolute()
 
-    base_dir.mkdir(exist_ok=True, parents=True)
+    base_dir.mkdir(exist_ok = True, parents = True)
 
     return base_dir
 
 
-@pytest.hookimpl(tryfirst=True)
+@pytest.hookimpl(tryfirst = True)
 def pytest_report_header(config, startdir):
     return [
         "",
@@ -99,7 +102,7 @@ class TestDir:
             shutil.rmtree(dir)
 
         ALREADY_SEEN.add(dir)
-        dir.mkdir(parents=True, exist_ok=True)
+        dir.mkdir(parents = True, exist_ok = True)
 
         self._path = dir
         logger.info(
@@ -177,7 +180,7 @@ class TestDir:
 TEST_DIR = TestDir()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope = "class")
 def test_dir() -> Path:
     """
     This fixture provides a :class:`pathlib.Path` pointing to the unique, isolated
@@ -213,7 +216,7 @@ def _add_config_ids(func, params):
     CONFIG_IDS[func.__module__] |= params.keys()
 
 
-def config(*args, params=None):
+def config(*args, params = None):
     """
     Marks a function as a **config** fixture.
     Config is always performed before any :func:`standup` or :func:`action` fixtures
@@ -228,10 +231,10 @@ def config(*args, params=None):
         _check_params(params)
         _add_config_ids(func, params)
         return pytest.fixture(
-            scope="module",
-            autouse=True,
-            params=params.values() if params is not None else None,
-            ids=params.keys() if params is not None else None,
+            scope = "module",
+            autouse = True,
+            params = params.values() if params is not None else None,
+            ids = params.keys() if params is not None else None,
         )(func)
 
     if len(args) == 1:
@@ -248,7 +251,7 @@ def standup(*args):
     """
 
     def decorator(func):
-        return pytest.fixture(scope="class")(func)
+        return pytest.fixture(scope = "class")(func)
 
     if len(args) == 1:
         return decorator(args[0])
@@ -256,7 +259,7 @@ def standup(*args):
     return decorator
 
 
-def action(*args, params=None):
+def action(*args, params = None):
     """
     Marks a function as an **action** fixture.
     Actions are always performed after all :func:`standup` fixtures have run,
@@ -270,9 +273,9 @@ def action(*args, params=None):
 
     def decorator(func):
         return pytest.fixture(
-            scope="class",
-            params=params.values() if params is not None else None,
-            ids=params.keys() if params is not None else None,
+            scope = "class",
+            params = params.values() if params is not None else None,
+            ids = params.keys() if params is not None else None,
         )(func)
 
     if len(args) == 1:
@@ -281,7 +284,7 @@ def action(*args, params=None):
     return decorator
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope = "class")
 def default_condor(test_dir):
-    with Condor(local_dir=test_dir / "condor") as condor:
+    with Condor(local_dir = test_dir / "condor") as condor:
         yield condor

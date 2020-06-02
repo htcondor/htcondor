@@ -90,7 +90,11 @@ class Condor:
     """
 
     def __init__(
-        self, local_dir: Path, config: Mapping[str, str]=None, raw_config: str=None, clean_local_dir_before=True
+        self,
+        local_dir: Path,
+        config: Mapping[str, str] = None,
+        raw_config: str = None,
+        clean_local_dir_before=True,
     ):
         """
         Parameters

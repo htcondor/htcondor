@@ -37,6 +37,7 @@ class DaemonLog:
         You shouldn't need to create these yourself. Instead, see the ``<daemon>_log``
         methods on :class:`Condor`.
     """
+
     def __init__(self, path: Path):
         self.path = path
 
@@ -98,7 +99,7 @@ class DaemonLogStream:
         """
         print("\n".join(self.lines))
 
-    def wait(self, condition: Callable[['DaemonLogMessage'], bool], timeout=60) -> bool:
+    def wait(self, condition: Callable[["DaemonLogMessage"], bool], timeout=60) -> bool:
         """
         Wait for some condition to be true on a :class:`DaemonLogMessage`
         parsed from the daemon log.
