@@ -284,3 +284,5 @@ RUN dnf install -y \
     'systemd-devel' \
     'systemd-units' \
     && dnf clean all
+
+RUN pip3 install pytest pytest-httpserver

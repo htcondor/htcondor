@@ -285,12 +285,8 @@ RUN apt update && apt install -y \
     zlib1g-dev \
     && apt clean
 
-# Give root a passwd
-#RUN sed -i 's;^root:[^:]:;root:$6$QVSQdhVm$jwePHVkKvuAcIbTitF.ExK2Y1QKdwvwYJDfctz.e0Zl9JDSO7eh6lHflYDsCFw0e8Bpt41vfnAzLSdRB1nI/B0:;' /etc/shadow
+RUN apt update && apt install -y \
+    python3-pip \
+    && apt clean
 
-# Need stuff for debugging
-#RUN apt update && apt install -y \
-#    gdb \
-#    htcondor-dbg \
-#    less \
-#    vim-tiny
+RUN pip3 install pytest pytest-httpserver

@@ -274,3 +274,5 @@ RUN dnf install -y \
     'sqlite-devel' \
     'systemd-devel' \
     && dnf clean all
+
+RUN pip3 install pytest pytest-httpserver
