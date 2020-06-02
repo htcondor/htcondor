@@ -14,24 +14,40 @@
 # limitations under the License.
 
 import logging
-
 import enum
+
+import htcondor
+import classad
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
 class JobID:
+    """
+    A class that encapsulates a (cluster ID, proc ID) pair.
+    """
+
     def __init__(self, cluster, proc):
+        """
+        Parameters
+        ----------
+        cluster
+            The cluster ID for the job.
+        proc
+            The process ID for the job.
+        """
         self.cluster = int(cluster)
         self.proc = int(proc)
 
     @classmethod
-    def from_job_event(cls, job_event):
+    def from_job_event(cls, job_event: htcondor.JobEvent) -> "JobID":
+        """Get the :class:`JobID` of a :class:`htcondor.JobEvent`."""
         return cls(job_event.cluster, job_event.proc)
 
     @classmethod
-    def from_job_ad(cls, job_ad):
+    def from_job_ad(cls, job_ad: classad.ClassAd) -> "JobID":
+        """Get the :class:`JobID` of a job ad."""
         return cls(job_ad["ClusterID"], job_ad["ProcID"])
 
     def __eq__(self, other):
@@ -55,9 +71,13 @@ class JobID:
 
 class JobStatus(str, enum.Enum):
     """
-    Note that UNMATERIALIZED is not a real job state! It is used as the initial
-    state for jobs in some places, but will never show up in (for example) the
-    job queue log.
+    An enumeration of the HTCondor job states.
+
+    .. warning ::
+
+        ``UNMATERIALIZED`` is not a real job state! It is used as the initial
+        state for jobs in some places, but will never show up in (for example)
+        the job queue log.
     """
 
     IDLE = "1"

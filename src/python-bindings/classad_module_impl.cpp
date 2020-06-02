@@ -661,12 +661,12 @@ export_classad()
             R"C0ND0R(
             Evaluate the expression and return as a :class:`ExprTree`.
 
-            .. warning ::
+            .. warning::
 
                 If ``scope`` is passed and is not the :class:`ClassAd` this :class:`ExprTree`
                 might belong to, this method is not thread-safe.
 
-            .. warning ::
+            .. warning::
 
                 It is erroneous for ``scope`` to be a temporary; the
                 lifetime of the returned object may depend on the lifetime
@@ -687,7 +687,7 @@ export_classad()
             Evaluate the expression and return as a ClassAd value,
             typically a Python object.
 
-            .. warning ::
+            .. warning::
 
                 If ``scope`` is passed and is not the :class:`ClassAd` this :class:`ExprTree`
                 might belong to, this method is not thread-safe.

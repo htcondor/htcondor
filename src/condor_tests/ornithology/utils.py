@@ -13,8 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Mapping, TypeVar, Hashable, Iterable, Optional
 
-def chain_get(mapping, keys, default=None):
+K = TypeVar("K", bound=Hashable)
+V = TypeVar("V")
+
+
+def chain_get(mapping: Mapping[K, V], keys: Iterable[K], default: Optional[V] = None):
     """
     As Mapping.get(key, default), except that it will try multiple keys before returning the default.
 

@@ -139,7 +139,11 @@ LOG_MESSAGE_TIME_FORMAT = r"%m/%d/%y %H:%M:%S"
 
 
 class DaemonLogMessage:
-    def __init__(self, line, file_name, line_number):
+    """
+    A class that represents a single message in a :class:`DaemonLog`.
+    """
+
+    def __init__(self, line: int, file_name: str, line_number: int):
         self.line = line
         match = RE_MESSAGE.match(line)
         if match is None:

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Iterable
+from typing import Any, Iterable, TypeVar, List, Callable, Optional
 
 import logging
 
@@ -23,7 +23,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def in_order(items: Iterable[Any], expected) -> bool:
+T = TypeVar("T")
+
+
+def in_order(items: Iterable[T], expected: Iterable[T]) -> bool:
     """
     .. attention::
         This function never asserts on its own! You must assert some condition
@@ -39,11 +42,14 @@ def in_order(items: Iterable[Any], expected) -> bool:
     Parameters
     ----------
     items
+        The items to check.
     expected
+        The expected order of some subset of the items.
 
     Returns
     -------
-
+    result : bool
+        ``True`` if the items were ordered as expected, ``False`` otherwise.
     """
     items = iter(items)
     items, backup = itertools.tee(items)
@@ -85,21 +91,22 @@ def in_order(items: Iterable[Any], expected) -> bool:
 
 
 def track_quantity(
-    iterable,
-    increment_condition,
-    decrement_condition,
-    initial_quantity=0,
-    min_quantity=None,
-    max_quantity=None,
-    expected_quantity=None,
-):
+    items: Iterable[T],
+    increment_condition: Callable[[T], bool],
+    decrement_condition: Callable[[T], bool],
+    initial_quantity: int = 0,
+    min_quantity: Optional[int] = None,
+    max_quantity: Optional[int] = None,
+    expected_quantity: Optional[int] = None,
+) -> List[int]:
     """
     .. attention::
         This function never asserts on its own! You must assert some condition
         on its return value.
 
     Given an iterable of items, track the value of a "quantity" as it changes
-    over the items. The increment and decrement conditions are given as functions.
+    over the items. The increment and decrement conditions are given as functions
+    that will receive a single item as their argument and should return a boolean.
     If the increment (decrement) condition returns ``True`` for an item,
     the quantity is incremented (decremented).
 
@@ -114,9 +121,12 @@ def track_quantity(
 
     Parameters
     ----------
-    iterable
+    items
+        The items to track a quantity over.
     increment_condition
+        If this condition evaluates to ``True`` on an item, the quantity will be incremented.
     decrement_condition
+        If this condition evaluates to ``True`` on an item, the quantity will be decremented.
     min_quantity
         If given, and the quantity is ever lower than this value, print the debug message.
     max_quantity
@@ -126,14 +136,15 @@ def track_quantity(
 
     Returns
     -------
-
+    history : List[int]
+        The "history" of the tracked quantity, one element for each entry in the items.
     """
     quantity_history = []
     quantity_current = initial_quantity
 
     msg_lines = ["A quantity tracking condition was not satisfied:"]
 
-    for item in iterable:
+    for item in items:
         if increment_condition(item):
             quantity_current += 1
         if decrement_condition(item):

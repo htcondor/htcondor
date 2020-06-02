@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Mapping
+from typing import Mapping, Optional
 import logging
 
 import subprocess
@@ -92,9 +92,9 @@ class Condor:
     def __init__(
         self,
         local_dir: Path,
-        config: Mapping[str, str] = None,
-        raw_config: str = None,
-        clean_local_dir_before=True,
+        config: Optional[Mapping[str, str]] = None,
+        raw_config: Optional[str] = None,
+        clean_local_dir_before: bool = True,
     ):
         """
         Parameters
@@ -249,7 +249,7 @@ class Condor:
             )
 
     @skip_if(condor_is_ready)
-    def _wait_for_ready(self, timeout=120, dump_logs_if_fail=False):
+    def _wait_for_ready(self, timeout: int = 120, dump_logs_if_fail: bool = False):
         daemons = set(
             self.run_command(
                 ["condor_config_val", "DAEMON_LIST"], echo=False
@@ -346,7 +346,7 @@ class Condor:
         logger.debug("condor_off succeeded: {}".format(off.stdout))
 
     @skip_if(master_is_not_alive)
-    def _wait_for_master_to_terminate(self, kill_after=60, timeout=120):
+    def _wait_for_master_to_terminate(self, kill_after: int = 60, timeout: int = 120):
         logger.debug(
             "Waiting for condor_master (pid {}) to terminate".format(
                 self.condor_master.pid
@@ -407,10 +407,10 @@ class Condor:
             "Sent kill signal to condor_master (pid {})".format(self.condor_master.pid)
         )
 
-    def read_config(self):
+    def read_config(self) -> str:
         return self.config_file.read_text()
 
-    def run_command(self, *args, **kwargs):
+    def run_command(self, *args, **kwargs) -> subprocess.CompletedProcess:
         """
         Execute a command with ``CONDOR_CONFIG`` set to point to this HTCondor pool.
         Arguments and keyword arguments are passed through to :func:`~run_command`.
@@ -450,7 +450,7 @@ class Condor:
 
     @property
     def job_queue_log(self) -> Path:
-        """The path to the pool's job queue log."""
+        """The :class:`pathlib.Path` to the pool's job queue log."""
         return self._get_log_path("JOB_QUEUE")
 
     @property
@@ -630,18 +630,20 @@ class Condor:
             )
             return self.get_local_schedd().edit(constraint, attr, value)
 
-    def submit(self, description, count=1, itemdata=None) -> handles.ClusterHandle:
+    def submit(
+        self, description: Mapping[str, str], count=1, itemdata=None
+    ) -> handles.ClusterHandle:
         """
         Submit jobs to the pool.
 
         Internally, this method uses the Python bindings to submit jobs and
-        returns a rich handle object that can be used to inspect and manage the
-        jobs.
+        returns a rich handle object (a :class:`ClusterHandle`)
+        that can be used to inspect and manage the jobs.
 
         .. warning::
 
             If your intent is to test job submission itself, **DO NOT** use this method.
-            Instead, submit jobs by calling ``condor_q`` with :meth:`Condor.run_command`,
+            Instead, submit jobs by calling `condor_q` with :meth:`Condor.run_command`,
             using the Python bindings directly, or whatever other method you want
             to test.
 

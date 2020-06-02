@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import logging
 
@@ -27,18 +27,28 @@ logger.setLevel(logging.DEBUG)
 
 
 def run_command(
-    args: List[str], stdin=None, timeout: int = 60, echo=False, suppress=False
-):
+    args: List[str],
+    stdin: Optional[str] = None,
+    timeout: int = 60,
+    echo: bool = False,
+    suppress: bool = False,
+) -> subprocess.CompletedProcess:
     """
     Execute a command.
 
     Parameters
     ----------
     args
+        The command to run, as a list of strings.
     stdin
+        Any stdin to pass to the command.
     timeout
+        If the command does not return within this time, a :class:`TimeoutError`
+        will be raised.
     echo
+        If ``True``, the stdout and stderr of the command will be printed.
     suppress
+        If ``True``, the details of the command execution will be truncated.
 
     Returns
     -------
@@ -81,16 +91,19 @@ RE_SUBMIT_RESULT = re.compile(r"(\d+) job\(s\) submitted to cluster (\d+)\.")
 
 def parse_submit_result(submit_cmd: subprocess.CompletedProcess) -> Tuple[int, int]:
     """
-    Get a "submit result" from a ``condor_submit`` command run via
+    Get a "submit result" from a `condor_submit` command run via
     :func:`run_command`.
 
     Parameters
     ----------
     submit_cmd
+        The :class:`subprocess.CompletedProcess` returned by a call to
+        `condor_submit` via :func:`run_command`.
 
     Returns
     -------
-
+    cluster_id, num_procs : int, int
+        The cluster ID and number of submitted jobs for the cluster.
     """
     match = RE_SUBMIT_RESULT.search(submit_cmd.stdout)
     if match is not None:

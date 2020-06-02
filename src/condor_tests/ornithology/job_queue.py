@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, Iterator, List, Optional, Tuple, Union, Mapping, Iterable
 
 import logging
 
@@ -27,7 +27,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class SetAttribute:
-    def __init__(self, attribute, value):
+    def __init__(self, attribute: str, value: str):
         self.attribute = attribute
         self.value = value
 
@@ -74,8 +74,14 @@ class SetAttribute:
         return "Set({} = {})".format(self.attribute, self._fmt_value())
 
 
-def SetJobStatus(new_status):
-    return SetAttribute("JobStatus", new_status)
+class SetJobStatus(SetAttribute):
+    """A subclass of :class:`SetAttribute` specialized for a job status change."""
+
+    def __init__(self, new_status: jobs.JobStatus):
+        super().__init__(attribute="JobStatus", value=new_status)
+
+
+EXPECTED_EVENTS = Mapping[jobs.JobID, Iterable[SetAttribute]]
 
 
 class JobQueue:
@@ -97,7 +103,7 @@ class JobQueue:
     def filter(self, condition):
         yield from ((j, e) for j, e in self.events() if condition(j, e))
 
-    def read_transactions(self) -> Iterator[List[Tuple[jobs.JobID, SetAttribute]]]:
+    def transactions(self) -> Iterator[List[Tuple[jobs.JobID, SetAttribute]]]:
         """Yield transactions (i.e., lists) of (jobid, event) pairs from the job queue log."""
         if self._job_queue_log_file is None:
             self._job_queue_log_file = self.condor.job_queue_log.open(mode="r")
@@ -115,7 +121,10 @@ class JobQueue:
                 acc.append((jobid, event))
 
     def wait_for_events(
-        self, expected_events, unexpected_events=None, timeout: int = 60
+        self,
+        expected_events: EXPECTED_EVENTS,
+        unexpected_events: Optional[EXPECTED_EVENTS] = None,
+        timeout: int = 60,
     ):
         """
         Wait for job queue events to occur.
@@ -140,7 +149,7 @@ class JobQueue:
 
         Returns
         -------
-        all_good
+        all_good : bool
             ``True`` is all events occurred and no unexpected events occurred.
             ``False`` if it timed out, or if any unexpected events occurred.
         """
@@ -171,7 +180,7 @@ class JobQueue:
                 logger.error("Job queue event wait ending due to timeout!")
                 return False
 
-            for transaction in self.read_transactions():
+            for transaction in self.transactions():
                 for jobid, event in transaction:
                     if jobid not in jobids:
                         continue

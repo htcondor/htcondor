@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from typing import Optional, Callable
 
+import logging
 import abc
 import time
 from pathlib import Path
@@ -161,7 +162,7 @@ class Handle(abc.ABC):
         """
         Edit attributes of jobs.
 
-        .. warning ::
+        .. warning::
             Many attribute edits will not affect jobs that have already matched.
             For example, changing ``RequestMemory`` will not affect the memory allocation
             of a job that is already executing.
@@ -185,11 +186,9 @@ class Handle(abc.ABC):
 
 class ConstraintHandle(Handle):
     """
-    A connection to a set of jobs defined by a :class:`Constraint`.
+    A connection to a set of jobs defined by an :attr:`ConstraintHandle.constraint`.
     The handle can be used to query, act on, or edit those jobs.
     """
-
-    __slots__ = ("_constraint",)
 
     def __init__(self, condor, constraint):
         super().__init__(condor=condor)
@@ -200,10 +199,18 @@ class ConstraintHandle(Handle):
 
     @property
     def constraint(self) -> classad.ExprTree:
+        """
+        The constraint that defines this :class:`ConstraintHandle`,
+        as an :class:`classad.ExprTree`.
+        """
         return self._constraint
 
     @property
     def constraint_string(self) -> str:
+        """
+        The constraint that defines this :class:`ConstraintHandle`,
+        as a string.
+        """
         return str(self.constraint)
 
     def __repr__(self):
@@ -217,10 +224,17 @@ class ClusterHandle(ConstraintHandle):
 
     Because this handle targets a single cluster of jobs, it has superpowers.
     If the cluster has an event log
-    (``log = <path>`` in the :class:`SubmitDescription`,
-    see `the docs <https://htcondor.readthedocs.io/en/latest/man-pages/condor_submit.html>`_),
+    (``log = <path>`` in the submit description,
+    see the `docs`_),
     this handle's ``state`` attribute will be a :class:`ClusterState` that provides
     information about the current state of the jobs in the cluster.
+
+    .. warning ::
+
+        You shouldn't have to construct a :class:`ClusterHandle` yourself.
+        Instead, use the ones returned by :func:`Condor.submit`.
+
+    .. _docs: https://htcondor.readthedocs.io/en/latest/man-pages/condor_submit.html
     """
 
     def __init__(self, condor, submit_result):
@@ -248,18 +262,22 @@ class ClusterHandle(ConstraintHandle):
 
     @property
     def clusterid(self):
+        """The cluster's cluster ID."""
         return self._clusterid
 
     @property
     def clusterad(self):
+        """The cluster's cluster ad."""
         return self._clusterad
 
     @property
     def first_proc(self):
+        """The process ID of the first job in the cluster."""
         return self._first_proc
 
     @property
     def num_procs(self):
+        """The number of jobs in the cluster."""
         return self._num_procs
 
     def __len__(self):
@@ -277,7 +295,12 @@ class ClusterHandle(ConstraintHandle):
 
         return self._state
 
-    def wait(self, condition=None, timeout=60, verbose=False) -> bool:
+    def wait(
+        self,
+        condition: Optional[Callable[["ClusterState"], bool]] = None,
+        timeout: int = 60,
+        verbose: bool = False,
+    ) -> bool:
         """
         Waits for the ``condition`` to become ``True``.
 

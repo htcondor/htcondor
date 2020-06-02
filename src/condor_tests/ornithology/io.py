@@ -30,12 +30,15 @@ def write_file(path: Path, text: str, permissions: int = 0o777) -> Path:
     Parameters
     ----------
     path
+        The path to write to.
     text
+        The text to write.
     permissions
+        The permissions to give the file.
 
     Returns
     -------
-    path
+    path : pathlib.Path
         The path the file was written to (as an absolute path).
     """
     path = Path(path).absolute()
