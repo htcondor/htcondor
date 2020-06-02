@@ -41,6 +41,7 @@ API
    :maxdepth: 2
    :hidden:
 
+   api/fixtures
    api/condor
    api/cmd
    api/handles

@@ -320,6 +320,7 @@ Execution order:
 Note how tests run as soon as possible,
 possibly before actions which they don't depend on.
 
+.. py:currentmodule:: conftest
 
 Pre-Defined Fixtures
 --------------------
