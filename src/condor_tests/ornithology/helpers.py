@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Iterable, TypeVar, List, Callable, Optional
+from typing import Iterable, TypeVar, List, Callable, Optional
 
 import logging
 

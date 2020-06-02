@@ -5,6 +5,9 @@
 import logging
 
 from ornithology import (
+    config,
+    standup,
+    action,
     Condor,
     SetJobStatus,
     JobStatus,
@@ -12,8 +15,6 @@ from ornithology import (
     track_quantity,
     SCRIPTS,
 )
-
-from conftest import config, standup, action
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

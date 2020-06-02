@@ -1,6 +1,9 @@
 API
 ===
 
+:doc:`api/fixtures`
+    Functions for defining fixtures, and fixtures provided by Ornithology.
+
 :doc:`api/condor`
     The central API for standing up and tearing down HTCondor pools, as well as
     the entrypoint for communicating with them (submitting jobs, reading daemon

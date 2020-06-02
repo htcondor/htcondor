@@ -6,9 +6,10 @@ import logging
 
 import htcondor
 
-from conftest import config, standup, action
-
 from ornithology import (
+    config,
+    standup,
+    action,
     Condor,
     write_file,
     parse_submit_result,

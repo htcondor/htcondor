@@ -1,7 +1,7 @@
 ``pytest`` Integration
 ======================
 
-.. currentmodule:: conftest
+.. py:currentmodule:: ornithology
 
 What is ``pytest``?
 -------------------

@@ -74,7 +74,8 @@ started running).
 ``pytest`` calls each object referenced a test function's arguments a "fixture",
 in the sense of a fixed piece of machinery necessary to run the text.
 Ornithology provides three special ways of defining fixtures:
-``@config``, ``@standup``, and ``@action``.
+``@config``, ``@standup``, and ``@action``
+(:func:`config`, :func:`standup`, and :func:`action`).
 We'll only need the third one for this tutorial.
 
 Note that we gave the fixtures long but descriptively self-explanatory
@@ -95,7 +96,7 @@ wait for it to complete.
 
 .. code-block:: python
 
-    from conftest import action
+    from ornithology import action
 
     @action
     def job_with_good_url():
@@ -112,7 +113,7 @@ so we can use the ``default_condor`` fixture provided by Ornithology.
 
 .. code-block:: python
 
-    from conftest import action
+    from ornithology import action
 
     @action
     def job_with_good_url(default_condor):
@@ -170,8 +171,7 @@ you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
 
 .. code-block:: python
 
-    from ornithology import ClusterState
-    from conftest import action
+    from ornithology import action, ClusterState
 
     @action
     def job_with_good_url(default_condor, good_url, test_dir):
@@ -201,8 +201,7 @@ The code block below also adds the ``job_with_bad_url`` fixture.
 
 .. code-block:: python
 
-    from ornithology import ClusterState
-    from conftest import action
+    from ornithology import action, ClusterState
 
     @action
     def job_with_good_url(default_condor, good_url, test_dir):
@@ -407,8 +406,7 @@ so here's a copy of the whole thing in one go, as formatted by the
 
 .. code-block:: python
 
-    from conftest import action
-    from ornithology import JobStatus, ClusterState
+    from ornithology import action, JobStatus, ClusterState
     from pytest_httpserver import HTTPServer
 
 

@@ -10,6 +10,9 @@ import fractions
 import htcondor
 
 from ornithology import (
+    config,
+    standup,
+    action,
     Condor,
     write_file,
     JobID,
@@ -17,8 +20,6 @@ from ornithology import (
     JobStatus,
     track_quantity,
 )
-
-from conftest import config, standup, action
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

@@ -18,7 +18,6 @@ import logging
 from pathlib import Path
 import shutil
 import re
-import collections
 import copy
 import time
 import tempfile
@@ -29,7 +28,7 @@ import pytest
 
 import htcondor
 
-from ornithology import Condor, ChangeDir
+from ornithology import Condor, ChangeDir, CONFIG_IDS
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -37,7 +36,6 @@ logger.setLevel(logging.DEBUG)
 RE_ID = re.compile(r"\[([^()]*)\]$")
 
 ALREADY_SEEN = set()
-CONFIG_IDS = collections.defaultdict(set)
 
 
 def pytest_addoption(parser):
@@ -200,88 +198,6 @@ def pytest_runtest_protocol(item, nextitem):
         TEST_DIR._recompute(item)
 
 
-def _check_params(params):
-    if params is None:
-        return True
-
-    for key in params.keys():
-        if "-" in key:
-            raise ValueError('config param keys must not include "-"')
-
-
-def _add_config_ids(func, params):
-    if params is None:
-        return
-
-    CONFIG_IDS[func.__module__] |= params.keys()
-
-
-def config(*args, params = None):
-    """
-    Marks a function as a **config** fixture.
-    Config is always performed before any :func:`standup` or :func:`action` fixtures
-    are run.
-
-    Parameters
-    ----------
-    params
-    """
-
-    def decorator(func):
-        _check_params(params)
-        _add_config_ids(func, params)
-        return pytest.fixture(
-            scope = "module",
-            autouse = True,
-            params = params.values() if params is not None else None,
-            ids = params.keys() if params is not None else None,
-        )(func)
-
-    if len(args) == 1:
-        return decorator(args[0])
-
-    return decorator
-
-
-def standup(*args):
-    """
-    Marks a function as a **standup** fixture.
-    Standup is always performed after all :func:`config` fixtures have run,
-    and before any :func:`action` fixtures that depend on it.
-    """
-
-    def decorator(func):
-        return pytest.fixture(scope = "class")(func)
-
-    if len(args) == 1:
-        return decorator(args[0])
-
-    return decorator
-
-
-def action(*args, params = None):
-    """
-    Marks a function as an **action** fixture.
-    Actions are always performed after all :func:`standup` fixtures have run,
-    and before any tests that depend on them.
-
-    Parameters
-    ----------
-    params
-    """
-    _check_params(params)
-
-    def decorator(func):
-        return pytest.fixture(
-            scope = "class",
-            params = params.values() if params is not None else None,
-            ids = params.keys() if params is not None else None,
-        )(func)
-
-    if len(args) == 1:
-        return decorator(args[0])
-
-    return decorator
 
 
 @pytest.fixture(scope = "class")

@@ -103,7 +103,7 @@ class JobQueue:
     def filter(self, condition):
         yield from ((j, e) for j, e in self.events() if condition(j, e))
 
-    def transactions(self) -> Iterator[List[Tuple[jobs.JobID, SetAttribute]]]:
+    def read_transactions(self) -> Iterator[List[Tuple[jobs.JobID, SetAttribute]]]:
         """Yield transactions (i.e., lists) of (jobid, event) pairs from the job queue log."""
         if self._job_queue_log_file is None:
             self._job_queue_log_file = self.condor.job_queue_log.open(mode="r")
@@ -180,7 +180,7 @@ class JobQueue:
                 logger.error("Job queue event wait ending due to timeout!")
                 return False
 
-            for transaction in self.transactions():
+            for transaction in self.read_transactions():
                 for jobid, event in transaction:
                     if jobid not in jobids:
                         continue

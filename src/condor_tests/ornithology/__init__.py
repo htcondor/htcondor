@@ -30,4 +30,5 @@ from .jobs import JobID, JobStatus
 from .handles import Handle, ConstraintHandle, ClusterHandle, ClusterState
 from .meta import get_current_func_name
 from .utils import chain_get
+from .fixtures import config, standup, action, CONFIG_IDS
 from .scripts import SCRIPTS

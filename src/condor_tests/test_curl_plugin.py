@@ -1,14 +1,14 @@
 #!/usr/bin/env pytest
 
-import pytest
-
 import logging
 from pathlib import Path
 
-from conftest import config, standup, action
 from pytest_httpserver import HTTPServer
 
 from ornithology import (
+    config,
+    standup,
+    action,
     JobStatus,
     ClusterState,
 )
@@ -75,7 +75,9 @@ class TestCurlPlugin:
     def test_job_with_good_url_succeeds(self, job_with_good_url):
         assert job_with_good_url.state[0] == JobStatus.COMPLETED
 
-    def test_job_with_good_url_file_contents_are_correct(self, job_with_good_url, test_dir):
+    def test_job_with_good_url_file_contents_are_correct(
+        self, job_with_good_url, test_dir
+    ):
         assert Path("goodurl").read_text() == "Great success!"
 
     def test_job_with_bad_url_holds(self, job_with_bad_url):

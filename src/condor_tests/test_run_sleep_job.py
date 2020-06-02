@@ -4,6 +4,9 @@ import logging
 
 
 from ornithology import (
+    config,
+    standup,
+    action,
     write_file,
     parse_submit_result,
     JobID,
@@ -14,7 +17,6 @@ from ornithology import (
     SCRIPTS,
 )
 
-from conftest import config, standup, action
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
