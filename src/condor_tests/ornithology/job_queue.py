@@ -39,7 +39,7 @@ class SetAttribute:
         )
 
     def __hash__(self):
-        return hash((self.__class__, self.attribute, self.value))
+        return hash((SetAttribute, self.attribute, self.value))
 
     def matches(self, other):
         return self == other or (
