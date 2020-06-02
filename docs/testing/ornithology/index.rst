@@ -13,14 +13,11 @@ It has two major components:
    not reference ``pytest``. Instead, integration is provided by ``pytest``
    support files like ``src/condor_tests/conftest.py``.
 
-:doc:`tutorial`
-   Tutorials, walkthroughs, getting stated.
+:doc:`guides`
+   Tutorials, walkthroughs, and design documents.
 
 :doc:`api`
    Documentation for the ``ornithology`` API.
-
-:doc:`pytest-integration`
-   Documentation for how ``ornithology`` integrates with ``pytest``.
 
 
 .. toctree::
@@ -28,5 +25,5 @@ It has two major components:
    :hidden:
 
    tutorial
+   guides
    api
-   pytest-integration
