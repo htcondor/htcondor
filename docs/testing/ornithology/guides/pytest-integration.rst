@@ -137,38 +137,44 @@ if it is "falsey", an ``AssertionError`` is raised.
 Truthiness is fairly complicated in Python, and use of implicity truthiness
 can make tests hard to read. We recommend **always explicitly producing a boolean value to assert on**.
 For example, if you want to assert that a list ``x`` is not empty,
-write ``assert len(x) > 0``, **not** ``assert x``.
+write ``assert len(x) > 0``,
+**not** ``assert x`` (even though a non-empty list is "truthy").
 
 
 How does ``ornithology`` integrate with ``pytest``?
 ---------------------------------------------------
 
-``ornithology`` itself does not reference ``pytest``. Instead, integration is
-provided by hooking into ``pytest`` in standard ``pytest`` configuration files,
+``ornithology`` itself mostly does not reference ``pytest``. Instead, integration is
+provided by hooking into ``pytest`` via standard ``pytest`` configuration files,
 namely ``src/condor_tests/conftest.py``. This file pre-defines several useful
 fixtures, and sets up several hooks that slightly modify how ``pytest`` executes.
 
-Most importantly, ``conftest.py`` provides a set of
-**domain-specific fixture decorators**.
+Ornithology also provides a set of **domain-specific fixture decorators**.
 These functions produce standard ``pytest`` fixtures as described above, but
-with settings defined to help write standardized HTCondor tests.
+with settings pre-configured to help write standardized HTCondor tests.
 
 
 Fixture-Defining Decorators
 ---------------------------
 
-These domain-specific fixture decorators help you write tests that use language
-closer to our familiar HTCondor idioms.
+Ornithology provides domain-specific fixture decorators help you write tests
+that use language closer to our familiar HTCondor idioms: :func:`config`,
+:func:`standup`, and :func:`action`.
+If your tests do not need a personal condor, you can likely bypass all of this
+and just use standard pytest fixtures.
 
-.. autofunction:: config
-.. autofunction:: standup
-.. autofunction:: action
+Configuration happen before the test's condors are launched.
+Standup is the process of launching the test's condors.
+Actions happen after condor is ready to receive instructions.
+Generally, a test file will have a few configuration fixtures,
+a single standup fixture,
+and many actions.
 
 All :func:`config` fixtures run before all :func:`standup` fixtures, which run
 before all :func:`action` fixtures.
 The :func:`standup` fixtures should generally yield an instance of
-:class:`ornithology.Condor`.
-The :func:`test_dir` fixture becomes available (via fixture scoping rules)
+:class:`Condor`.
+The :func:`~conftest.test_dir` fixture becomes available (via fixture scoping rules)
 starting with :func:`standup`.
 To use these scoping rules correctly, all tests must be written as part of a
 test class.
@@ -319,12 +325,3 @@ Execution order:
 
 Note how tests run as soon as possible,
 possibly before actions which they don't depend on.
-
-.. py:currentmodule:: conftest
-
-Pre-Defined Fixtures
---------------------
-
-.. autofunction:: test_dir
-
-.. autofunction:: default_condor

@@ -1,6 +1,6 @@
 Meta
 ====
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autofunction:: get_current_func_name

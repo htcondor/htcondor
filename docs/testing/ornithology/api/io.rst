@@ -1,6 +1,6 @@
 File Interaction
 ================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autofunction:: write_file

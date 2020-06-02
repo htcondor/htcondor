@@ -1,7 +1,7 @@
 Daemon Log Reader
 =================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autoclass:: DaemonLog
    :members:

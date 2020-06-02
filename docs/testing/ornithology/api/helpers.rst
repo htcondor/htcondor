@@ -1,7 +1,7 @@
 Assertion Helper Functions
 ==========================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autofunction:: in_order
 

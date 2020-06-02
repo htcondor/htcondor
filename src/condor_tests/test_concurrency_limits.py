@@ -37,6 +37,26 @@ def slot_config(request):
     return request.param
 
 
+@standup
+def condor(test_dir, slot_config):
+    # set all of the concurrency limits for each slot config,
+    # so that we can run all the actual job submits against the same config
+    concurrency_limit_config = {
+        v["config-key"]: v["config-value"] for v in CONCURRENCY_LIMITS.values()
+    }
+
+    with Condor(
+        local_dir=test_dir / "condor",
+        config={
+            **slot_config,
+            **concurrency_limit_config,
+            # make the sure the negotiator runs many times within a single job duration
+            "NEGOTIATOR_INTERVAL": "1",
+        },
+    ) as condor:
+        yield condor
+
+
 CONCURRENCY_LIMITS = {
     "named_limit": {
         "config-key": "XSW_LIMIT",
@@ -63,26 +83,6 @@ CONCURRENCY_LIMITS = {
         "max-running": 1,
     },
 }
-
-
-@standup
-def condor(test_dir, slot_config):
-    # set all of the concurrency limits for each slot config,
-    # so that we can run all the actual job submits against the same config
-    concurrency_limit_config = {
-        v["config-key"]: v["config-value"] for v in CONCURRENCY_LIMITS.values()
-    }
-
-    with Condor(
-        local_dir=test_dir / "condor",
-        config={
-            **slot_config,
-            **concurrency_limit_config,
-            # make the sure the negotiator runs many times within a single job duration
-            "NEGOTIATOR_INTERVAL": "1",
-        },
-    ) as condor:
-        yield condor
 
 
 @action(params=CONCURRENCY_LIMITS)

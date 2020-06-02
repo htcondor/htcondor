@@ -1,6 +1,6 @@
 Running Commands
 ================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autofunction:: run_command

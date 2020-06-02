@@ -1,7 +1,7 @@
 HTCondor Pool Management
 ========================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autoclass:: Condor
    :members:

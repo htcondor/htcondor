@@ -1,7 +1,7 @@
 Environment Control
 ===================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autoclass:: SetEnv
 

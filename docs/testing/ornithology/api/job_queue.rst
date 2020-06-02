@@ -1,7 +1,7 @@
 Job Queue Log Reader
 ====================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autoclass:: JobQueue
    :members:

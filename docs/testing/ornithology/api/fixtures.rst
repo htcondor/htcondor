@@ -1,8 +1,10 @@
 Fixture-Defining Decorators
 ===========================
 
-.. autofunction:: ornithology.config
+.. py:currentmodule:: ornithology
 
-.. autofunction:: ornithology.standup
+.. autofunction:: config
 
-.. autofunction:: ornithology.action
+.. autofunction:: standup
+
+.. autofunction:: action

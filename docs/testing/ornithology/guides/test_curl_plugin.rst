@@ -167,7 +167,8 @@ Now we'll get the waiting working.
 As an implementation detail, :func:`ClusterHandle.wait` requires the job to
 produce an event log, so we'll have to provide one.  By convention, everything
 the job produces should go into the corresponding test-specific directory.  As
-you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
+you might expect by now, Ornithology provides a fixture for that,
+:func:`~conftest.test_dir`.
 
 .. code-block:: python
 

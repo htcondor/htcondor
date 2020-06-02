@@ -2,7 +2,10 @@ API
 ===
 
 :doc:`api/fixtures`
-    Functions for defining fixtures, and fixtures provided by Ornithology.
+    Domains-specific decorators for defining fixtures.
+
+:doc:`api/predefined`
+    Fixtures provided by Ornithology.
 
 :doc:`api/condor`
     The central API for standing up and tearing down HTCondor pools, as well as
@@ -42,6 +45,7 @@ API
    :hidden:
 
    api/fixtures
+   api/predefined
    api/condor
    api/cmd
    api/handles

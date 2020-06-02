@@ -81,11 +81,11 @@ class DaemonLogStream:
                 continue
             try:
                 msg = DaemonLogMessage(line.strip(), self.file.name, self.line_number)
+                self.messages.append(msg)
+                yield msg
             except exceptions.DaemonLogParsingFailed as e:
                 logger.warning(e)
             self.line_number += 1
-            self.messages.append(msg)
-            yield msg
 
     def clear(self):
         """
@@ -143,7 +143,17 @@ class DaemonLogMessage:
     A class that represents a single message in a :class:`DaemonLog`.
     """
 
-    def __init__(self, line: int, file_name: str, line_number: int):
+    def __init__(self, line: str, file_name: str, line_number: int):
+        """
+        Parameters
+        ----------
+        line
+            The actual line that appeared in the daemon log file.
+        file_name
+            The file that the line came from.
+        line_number
+            The line number of the message in the log file.
+        """
         self.line = line
         match = RE_MESSAGE.match(line)
         if match is None:
@@ -153,12 +163,22 @@ class DaemonLogMessage:
                 )
             )
 
-        self.timestamp = datetime.datetime.strptime(
+        self._timestamp = datetime.datetime.strptime(
             match.group("timestamp"), LOG_MESSAGE_TIME_FORMAT
         )
 
-        self.tags = RE_TAGS.findall(match.group("tags"))
+        self._tags = RE_TAGS.findall(match.group("tags"))
         self.message = match.group("msg")
+
+    @property
+    def timestamp(self) -> datetime.datetime:
+        """The time that the message occurred."""
+        return self._timestamp
+
+    @property
+    def tags(self):
+        """The tags (like ``D_ALL``) of the message."""
+        return self._tags
 
     def __iter__(self):
         return self.timestamp, self.tags, self.message

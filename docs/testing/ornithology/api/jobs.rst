@@ -1,7 +1,7 @@
 Job IDs and Job Status
 ======================
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 .. autoclass:: JobID
    :members:

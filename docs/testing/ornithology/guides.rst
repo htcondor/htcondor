@@ -1,18 +1,13 @@
 Guides
 ======
 
-Tutorials
----------
-
 :doc:`guides/test_curl_plugin`
     Walk through the process of writing an Ornithology test for the
-    curl plugin.
-
-How It Works
-------------
+    ``curl`` plugin from start to finish.
 
 :doc:`guides/pytest-integration`
     Documentation for how ``ornithology`` integrates with ``pytest``.
+    Details on how tests and fixtures execute.
 
 
 .. toctree::

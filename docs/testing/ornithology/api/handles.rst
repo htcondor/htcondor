@@ -1,7 +1,7 @@
 Job Handles
 ===========
 
-.. currentmodule:: ornithology
+.. py:currentmodule:: ornithology
 
 Handles
 -------
