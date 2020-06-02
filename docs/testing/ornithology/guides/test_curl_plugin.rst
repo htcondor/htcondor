@@ -1,10 +1,12 @@
 test_curl_plugin.py
 ===================
 
-This tutorial assumes you've already installed [FIXME: link] pytest and
-Python 3, and that you've set up your shell so that you can run pytest in
+This tutorial assumes you've already installed `pytest`_ (``pip install pytest``)
+and Python 3, and that you've set up your shell so that you can run pytest in
 the ``condor_tests`` directory (meaning, with the ``ornithology`` extensions
 active, which requires ``condor_version`` to be in your PATH).
+
+.. _pytest: https://docs.pytest.org/en/stable/
 
 Description
 -----------
@@ -53,10 +55,11 @@ automatic -- to distinguish a test failure (the job with the bad URL didn't
 go on hold...) from a testing infrastructure failure (... because it never
 started running).
 
-PyTest calls each object referenced a test function's arguments a "fixture",
+pytest calls each object referenced a test function's arguments a "fixture",
 in the sense of a fixed piece of machinery necessary to run the text.  The
-``ornithology`` package provides three fixtures: ``@config``, ``@standup``,
-and ``@action``.  We'll only need the third one for this tutorial.
+``ornithology`` package provides three special ways of defining fixtures:
+``@config``, ``@standup``, and ``@action``.
+We'll only need the third one for this tutorial.
 
 Note that we gave the fixtures long but descriptively self-explanatory
 names as well, since those names will be used to report errors.
@@ -122,10 +125,29 @@ we can use the ``default_condor`` fixture provided by Ornithology.
 It is considered good Python form to leave the trailing comma in so that
 the individual lines may be freely reordered.
 
+.. note::
+
+    Why do we wait for the jobs to enter a terminal state in these functions?
+    At one level, we have to wait at some point for the test to work, and we don't
+    want to wait in the test functions because waiting could fail.  At another
+    level, it's a judgement call: you could certainly instead write a smaller
+    ``job_with_bad_url()`` function that accepted a different fixture, a job
+    which had only just been submitted, and that would be fine too.
+
+    In this case, the judgement was that we didn't expect the abstract operation
+    of "running the job" to fail often enough to be worth breaking into two
+    separately-checked pieces.
+
+    However, in any case, if these functions checked for the specific state
+    the test functions expect to see, that would defeat the point of splitting
+    them up, so we don't do that, either.)
+
+
 What about the ``FIXME``\s?
 
 The job we submit needs to know what URL to download from, but to minimize
-the tests' frailty, we want that URL to be a server we started for the
+the tests' frailty and isolate it from the outside world,
+we want that URL to be served by a server we started for the
 test.  We obviously can't count on port 80 being available, so we'll need
 the URL to include the port.  The safest way to do that is to determine the
 URL at run-time, after we've started the web server and it has bound to its
@@ -138,9 +160,6 @@ job produces should go into the corresponding test-specific directory.  As
 you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
 
 .. code-block:: python
-
-    def job_in_terminal_state(job):
-        return job.state.any_held() or job.state.any_complete()
 
     @action
     def job_with_good_url(default_condor, good_url):
@@ -156,7 +175,9 @@ you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
                 "log": (test_dir / "good_url.log").as_posix(),
             }
         )
+
         job.wait(condition = job_in_terminal_state)
+
         return job
 
 In our best tradition of solving the problem later, I replaced the the
@@ -174,17 +195,16 @@ adds the ``job_with_bad_url`` fixture.
     def job_with_good_url(default_condor, good_url):
         job = default_condor.submit(
             {
-                # Do nothing of interest.
                 "executable": "/bin/sleep",
                 "arguments": "1",
-                # These are the two lines we really care about.
                 "transfer_input_files": good_url,
                 "should_transfer_files": "YES",
-                # Implementation detail.
                 "log": (test_dir / "good_url.log").as_posix(),
             }
         )
+
         job.wait(condition = job_in_terminal_state)
+
         return job
 
     @action
@@ -198,7 +218,9 @@ adds the ``job_with_bad_url`` fixture.
                 "should_transfer_files": "YES"
             }
         )
+
         job.wait(condition = job_in_terminal_state)
+
         return job
 
 OK!  Now we just need the good and bad URL fixtures.  Again, we could split
@@ -219,12 +241,12 @@ bother.
 
 
 We're getting a little test-specific and a little exotic here, so I'll just
-say that ``server`` is an instance of PyTest extension designed for exactly
+say that ``server`` is provided by a pytest extension designed for exactly
 this purpose.  The fixture is implemented in the following, funny, way.
 
 .. code-block:: python
 
-    import pytest_httpserver import HTTPServer
+    from pytest_httpserver import HTTPServer
 
     @action
     def server():
@@ -239,26 +261,27 @@ Testing the Test
 
 We've now iterated backwards from the asserts, writing functions for the
 missing arguments until we've reached a function which takes no arguments,
-which means it's now time to run PyTest and see what happens.
+which means it's now time to run pytest and see what happens.
 
-..
+.. code-block:: console
 
     $ pytest ./test_curl_plugin.py
     FIXME
 
-Parameterization
-----------------
+Parametrization
+---------------
 
-.. note::
-    PyTest consistently misspells parameterize as *parametrize*, if you're
-    looking for more documentation about this.
+.. warning::
+
+    pytest uses the British spelling **parametrize** instead of **parameterize**.
+    Be aware if you're looking for more documentation!
 
 As written, the bad URL gets a code 404 reply.  If we wanted to test what
 happens how the curl plugin responds to a code 500 reply, we don't have
-to change anything about the test except ``job_with_bad_url``.  With PyTest,
+to change anything about the test except ``job_with_bad_url``.  With pytest,
 that's true even if we want to test *both* codes.
 
-Parameterizing ``@actions`` involves an unfortunate amount of syntactic
+Parametrizing ``@actions`` involves an unfortunate amount of syntactic
 magic, but here's how you do it:
 
 .. code-block:: python
@@ -269,17 +292,19 @@ magic, but here's how you do it:
         return f"http://localhost:{server.port}/badurl"
 
 If you're not familiar with the syntax, that's calling ``@action`` with
-the named argument ``parameters`` as an inline-constant dictionary
-mapping the string (name, in this case) "404" to the integer 404, and the
+the named argument ``params`` as an inline-constant dictionary
+mapping the string "404" to the integer 404, and the
 string "500" to the integer 500.
+The keys are used by pytest to generate the test's "id" when reporting results;
+the values will be injected into the test as described below.
 
-For each use of the ``job_with_bad_url`` fixture, this causes PyTest to run
+For each use of the ``job_with_bad_url`` fixture, pytest will generate
 two subtests: one named "404", and the other named "500".  In the former,
-``parameter.value`` is 404, and in the latter, it is 500.  IF you run
-PyTest again, you'll see that it now reports three test results, one
+``request.param`` is ``404``, and in the latter, it is ``500``.  IF you run
+pytest again, you'll see that it now reports three test results, one
 for the good URL job, and one for each of the two bad URL jobs:
 
-..
+.. code-block:: console
 
     $ pytest ./test_curl_plugin.py
     FIXME
@@ -287,15 +312,16 @@ for the good URL job, and one for each of the two bad URL jobs:
 You could parameterize ``job_with_good_url`` in a similar way to verify that
 a very small (0 byte) file or a very large file are also handled correctly.
 
-If you instead wanted to verify that the curl plugin worked with static
-slots, then PyTest would instead run six tests: the good URL test and the two
-bad URL tests in dynamic slots, and those three again in static slots.
+If you instead wanted to verify that the curl plugin worked with both static
+and dynamic slots, then pytest would instead run six tests: the good URL test
+and the two bad URL tests in dynamic slots, and those three again in static
+slots.
 
 The Song-and-Dance
 ------------------
 
-PyTest normally doesn't cache fixtures at all (although they call this
-"caching at the function level").  However, for testing HTConodr, where
+pytest normally doesn't cache fixtures at all (although they call this
+"caching at the function level").  However, for testing HTCondor, where
 starting up a personal condor is a core task, and therefore a core fixture,
 this rapidly becomes a burden, both in terms of time and in terms of writing
 a multi-step test where the state of that personal condor matters.
@@ -306,14 +332,17 @@ class share a common pool of fixtures.  This makes the tests both easier
 to write and faster, and it's why the tutorial starts off with the functions
 in a class.
 
-However, since the PyTest default *is* not to share fixtures between
+However, since the pytest default *is* not to share fixtures between
 functions, some extensions -- including ``pytest_httpserver`` -- only provide
-their default fixtures at the functional level.  (Why PyTest can't
-automagically convert, I don't know.)  Basically, the ``with``/``yield``
-construct holds a reference on the fixture even after the fixture function
-exits.
+their default fixtures at the functional level.  (Why pytest can't
+automagically convert, I don't know.) This is why we needed to write an
+adapter around it.
 
-(The ``yield`` makes the fixture function a generator [FIXME: link]; this
-can be detected [FIXME: link] by PyTest.  For that kind of fixture, PyTest
-exhausts the generator by calling ``next`` repeatedly and ignoring the
-result, which implicitly dereferences all of them.)
+Implementation details of our workaround: the ``yield <value>`` construct
+causes the value to be "returned", but instead of the function returning,
+its execution is temporarily suspended. When the fixture goes out of scope,
+pytest resumes the execution of the function. The ``with`` construct is a
+"context manager" which arranges for the cleanup of the ``server`` when the
+``with`` block ends. This is all implemented via `generators`_.
+
+.. _generators: https://wiki.python.org/moin/Generators

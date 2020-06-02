@@ -19,5 +19,5 @@ How It Works
    :maxdepth: 2
    :hidden:
 
-   test_curl_plugin
-   pytest-integration
+   guides/test_curl_plugin
+   guides/pytest-integration

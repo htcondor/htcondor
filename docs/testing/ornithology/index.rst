@@ -24,6 +24,5 @@ It has two major components:
    :maxdepth: 2
    :hidden:
 
-   tutorial
    guides
    api
