@@ -34,7 +34,6 @@ logger.setLevel(logging.DEBUG)
 
 DEFAULT_PARAMS = {
     "LOCAL_CONFIG_FILE": "",
-    "CONDOR_HOST": "$(IP_ADDRESS)",
     "COLLECTOR_HOST": "$(CONDOR_HOST):0",
     "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
     "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",

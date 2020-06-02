@@ -48,9 +48,7 @@ def job_with_good_url(default_condor, good_url, test_dir):
             "should_transfer_files": "YES",
         }
     )
-
     job.wait(condition=ClusterState.all_terminal)
-
     return job
 
 
@@ -65,9 +63,7 @@ def job_with_bad_url(default_condor, bad_url, test_dir):
             "should_transfer_files": "YES",
         }
     )
-
     job.wait(condition=ClusterState.all_terminal)
-
     return job
 
 
