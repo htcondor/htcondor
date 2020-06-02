@@ -109,7 +109,7 @@ wait for it to complete.
     the test functions expect to see, that would defeat the point of splitting
     them up, so we don't do that, either.)
 
-To ``wait`` [FIXME: link] for a job [handle], we need a job [handle],
+To ``wait`` [TODO: link] for a job [handle], we need a job [handle],
 which we get by submitting a job to a personal condor.  Luckily, we
 don't care all that much about the details of our personal condor, so
 we can use the ``default_condor`` fixture provided by Ornithology.
@@ -193,11 +193,11 @@ you might expect by now, Ornithology provides a fixture for that, ``test_dir``.
 
         return job
 
-In our best tradition of solving the problem later, I replaced the the
-FIXME in ``job.wait()`` with a function we haven't written yet.  The
-implementation is below, and is something you'll be able to dig out the API
-documentation once Josh finishes writing it.  The code block below also
-adds the ``job_with_bad_url`` fixture.
+In our best tradition of solving the problem later, I replaced the
+``FIXME`` in ``job.wait()`` with a function we haven't written yet.  The
+implementation is below, and something you could have discovered from
+the API documentation [TODO: link, once Josh finishes writing it].  The code
+block below also adds the ``job_with_bad_url`` fixture.
 
 .. code-block:: python
 
