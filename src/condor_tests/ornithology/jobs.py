@@ -15,6 +15,7 @@
 
 import logging
 import enum
+import functools
 
 import htcondor
 import classad
@@ -50,6 +51,10 @@ class JobID:
         """Get the :class:`JobID` of a job ad."""
         return cls(job_ad["ClusterID"], job_ad["ProcID"])
 
+    def id_for_cluster_ad(self) -> "JobID":
+        """Return the :class:`JobID` for the cluster ad of the cluster this :class:`JobID` belongs to."""
+        return type(self)(cluster=self.cluster, proc=-1)
+
     def __eq__(self, other):
         return (
             (isinstance(other, self.__class__) or isinstance(self, other.__class__))
@@ -67,6 +72,18 @@ class JobID:
 
     def __str__(self):
         return "{}.{}".format(self.cluster, self.proc)
+
+    def __ge__(self, other):
+        return (self.cluster, self.proc) >= (other.cluster, other.proc)
+
+    def __gt__(self, other):
+        return (self.cluster, self.proc) > (other.cluster, other.proc)
+
+    def __le__(self, other):
+        return (self.cluster, self.proc) <= (other.cluster, other.proc)
+
+    def __lt__(self, other):
+        return (self.cluster, self.proc) < (other.cluster, other.proc)
 
 
 class JobStatus(str, enum.Enum):

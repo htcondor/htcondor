@@ -71,7 +71,9 @@ class SetAttribute:
         )
 
     def __str__(self):
-        return "Set({} = {})".format(self.attribute, self._fmt_value())
+        return "{}({} = {})".format(
+            type(self).__name__, self.attribute, self._fmt_value()
+        )
 
 
 class SetJobStatus(SetAttribute):
@@ -97,10 +99,23 @@ class JobQueue:
         yield from self.transactions
 
     def events(self):
+        """
+        Yield a flat stream of events from the job queue log
+        (ignoring transaction structure).
+        """
         for transaction in self.transactions:
             yield from transaction
 
     def filter(self, condition):
+        """
+        Yield a flat stream of events on the job queue log that satisfy
+        some condition
+        (ignoring transaction structure).
+
+        Parameters
+        ----------
+        condition
+        """
         yield from ((j, e) for j, e in self.events() if condition(j, e))
 
     def read_transactions(self) -> Iterator[List[Tuple[jobs.JobID, SetAttribute]]]:
@@ -138,7 +153,8 @@ class JobQueue:
 
         This method never raises an exception intentionally, even when it times out.
         It simply returns control to the test, so that the test itself can
-        declare failure.
+        declare failure. Log messages are recorded with detailed information
+        in either case.
 
 
         Parameters
@@ -236,7 +252,26 @@ class JobQueue:
 
             time.sleep(0.1)
 
-    def wait_for_job_completion(self, job_ids, timeout=60):
+    def wait_for_job_completion(self, job_ids, timeout=60) -> bool:
+        """
+        Wait for a set of job ids to reach the completed state.
+        If any of the jobs reach a non-complete terminal state
+        (held, removed, etc.)
+        this function will immediately return ``False``.
+
+        Parameters
+        ----------
+        job_ids
+            The job ids to wait for. You may find :attr:`ClusterHandle.job_ids`
+            useful.
+        timeout
+
+        Returns
+        -------
+        all_good : bool
+            ``True`` is all events occurred and no unexpected events occurred.
+            ``False`` if it timed out, or if any unexpected events occurred.
+        """
         job_ids = list(job_ids)
         return self.wait_for_events(
             expected_events={
@@ -246,6 +281,7 @@ class JobQueue:
                 job_id: {
                     SetJobStatus(jobs.JobStatus.HELD),
                     SetJobStatus(jobs.JobStatus.SUSPENDED),
+                    SetJobStatus(jobs.JobStatus.REMOVED),
                 }
                 for job_id in job_ids
             },

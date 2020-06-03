@@ -670,6 +670,20 @@ class Condor:
 
         return handles.ClusterHandle(self, result)
 
+    def submit_dag(self, dagfile: Path) -> handles.ClusterHandle:
+        """
+        Submit a DAG.
+
+        Parameters
+        ----------
+        dagfile
+
+        Returns
+        -------
+
+        """
+        return self.submit(htcondor.Submit.from_dag(str(dagfile)))
+
 
 RE_PORT_HOST = re.compile(r"\d+\.\d+\.\d+\.\d+:\d+")
 

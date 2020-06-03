@@ -298,6 +298,7 @@ class ClusterHandle(ConstraintHandle):
     def wait(
         self,
         condition: Optional[Callable[["ClusterState"], bool]] = None,
+        fail_condition: Optional[Callable[["ClusterState"], bool]] = None,
         timeout: int = 60,
         verbose: bool = False,
     ) -> bool:
@@ -314,6 +315,10 @@ class ClusterHandle(ConstraintHandle):
             (e.g., ``handle.wait(condition = ClusterState.any_held)``).
             The default condition is :meth:`ClusterState.all_complete`, which
             means "wait until all the jobs in this cluster are completed".
+        fail_condition
+            If this function becomes ``True``, ``wait`` will immediately
+            return ``False``. Use this to avoid waiting for a long time when
+            a test is failing.
         timeout
             After this amount of time, ``wait`` will return ``False`` and emit
             a warning in the log.
@@ -328,15 +333,23 @@ class ClusterHandle(ConstraintHandle):
         """
         if condition is None:
             condition = ClusterState.all_complete
+        if fail_condition is None:
+            fail_condition = lambda _: False
 
         start_time = time.time()
         self.state.read_events()
-        while not condition(self.state):
-            if timeout is not None and time.time() > start_time + timeout:
+        while True:
+            if condition(self.state):
+                break
+
+            if fail_condition(self.state) or (
+                timeout is not None and time.time() > start_time + timeout
+            ):
                 logger.warning(
                     "Wait for handle {} did not complete successfully".format(self)
                 )
                 return False
+
             if verbose:
                 logger.debug("Handle {} state: {}", self, self.state.counts())
             time.sleep(1)
