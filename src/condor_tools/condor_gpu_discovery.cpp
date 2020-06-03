@@ -1314,11 +1314,7 @@ main( int argc, const char** argv)
 				if (opt_extra) {
 					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
 					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-					if (bp.ccMajor <= 6) {
-						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
-					} else {
-						// CoresPerCU not meaningful for Architecture 7 and later
-					}
+					props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
 				}
 			}
 		} else if (opt_basic && ocl_handle) {
