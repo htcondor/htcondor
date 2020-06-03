@@ -59,7 +59,6 @@ else (WINDOWS)
 
 	# The following is helpful if you are trying to debug cmake find module
     # set (Boost_DEBUG TRUE)
-	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
 
     message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
     if (DEFINED SYSTEM_NAME)
@@ -79,8 +78,12 @@ else (WINDOWS)
         if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8")
             set(USE_SYSTEM_BOOST True)
         endif()
+        if (${SYSTEM_NAME} MATCHES "Ubuntu-20")
+            set(BOOST_COMPONENTS python-dev )
+        endif()
     endif()
 
+	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
 	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible

@@ -14,6 +14,7 @@ x86_64_MacOSX13
 x86_64_MacOSX15
 x86_64_Ubuntu16
 docker://timtheisen/nmi-build:x86_64_Ubuntu18
+docker://timtheisen/nmi-build:x86_64_Ubuntu20
 x86_64_Windows7
 x86_64_Windows8
 x86_64_Windows10
