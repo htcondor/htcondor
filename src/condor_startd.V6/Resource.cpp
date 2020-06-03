@@ -1311,6 +1311,7 @@ Resource::eval_state( void )
 void
 Resource::reconfig( void )
 {
+	r_attr->reconfig_DevIds(r_id, r_sub_id);
 #if HAVE_JOB_HOOKS
 	if (m_hook_keyword) {
 		free(m_hook_keyword);

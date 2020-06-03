@@ -542,6 +542,8 @@ ResMgr::reconfig_resources( void )
 	Resource*** sorted_resources;	// Array of arrays of pointers.
 	Resource* rip;
 
+	dprintf(D_ALWAYS, "beginning reconfig_resources\n");
+
 #if HAVE_BACKFILL
 	backfillConfig();
 #endif
@@ -555,6 +557,8 @@ ResMgr::reconfig_resources( void )
 #if HAVE_HIBERNATION
 	updateHibernateConfiguration();
 #endif /* HAVE_HIBERNATE */
+
+	m_attr->ReconfigOfflineDevIds();
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -571,6 +575,7 @@ ResMgr::reconfig_resources( void )
 	if( typeNumCmp(new_type_nums, type_nums) ) {
 			// We want the same number of each slot type that we've got
 			// now.  We're done!
+		dprintf(D_ALWAYS, "no change to slot type config, exiting reconfig_resources\n");
 		delete [] new_type_nums;
 		new_type_nums = NULL;
 		return true;
