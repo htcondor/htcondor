@@ -79,7 +79,8 @@ else (WINDOWS)
             set(USE_SYSTEM_BOOST True)
         endif()
         if (${SYSTEM_NAME} MATCHES "Ubuntu-20")
-            set(BOOST_COMPONENTS python-dev )
+            # BOOST_COMPONENTS breaks CMake boost detection on Ubuntu 20.04
+            set(BOOST_COMPONENTS "" )
         endif()
     endif()
 
