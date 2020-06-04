@@ -339,6 +339,9 @@ class ClusterHandle(ConstraintHandle):
         start_time = time.time()
         self.state.read_events()
         while True:
+            if verbose:
+                logger.debug(f"Handle {self} state: {self.state.counts()}")
+
             if condition(self.state):
                 break
 
@@ -350,10 +353,6 @@ class ClusterHandle(ConstraintHandle):
                 )
                 return False
 
-            if verbose:
-                # No idea why this call fails but the f"" string succeeds.
-                # logger.debug("Handle {} state: {}", self, self.state.counts())
-                logger.debug(f"Handle {self} state: {self.state.counts()}")
             time.sleep(1)
             self.state.read_events()
 
