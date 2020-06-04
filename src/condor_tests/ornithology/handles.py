@@ -351,7 +351,9 @@ class ClusterHandle(ConstraintHandle):
                 return False
 
             if verbose:
-                logger.debug("Handle {} state: {}", self, self.state.counts())
+                # No idea why this call fails but the f"" string succeeds.
+                # logger.debug("Handle {} state: {}", self, self.state.counts())
+                logger.debug(f"Handle {self} state: {self.state.counts()}")
             time.sleep(1)
             self.state.read_events()
 
@@ -510,6 +512,10 @@ class ClusterState:
     def any_running(self) -> bool:
         """Return ``True`` if **any** of the jobs in the cluster are running."""
         return self.any_status(jobs.JobStatus.RUNNING)
+
+    def all_running(self) -> bool:
+        """Return ``True`` if **all** of the jobs in the cluster are running."""
+        return self.all_status(jobs.JobStatus.RUNNING)
 
     def all_held(self) -> bool:
         """Return ``True`` if **all** of the jobs in the cluster are held."""
