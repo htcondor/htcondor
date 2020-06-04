@@ -168,7 +168,7 @@ class DaemonLogMessage:
             self._timestamp = datetime.datetime.strptime(
                 match.group("timestamp"), MICROSECOND_LOG_MESSAGE_TIME_FORMAT
             )
-        else :
+        else:
             self._timestamp = datetime.datetime.strptime(
                 match.group("timestamp"), LOG_MESSAGE_TIME_FORMAT
             )

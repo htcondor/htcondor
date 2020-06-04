@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 import logging
 import abc
@@ -284,7 +284,8 @@ class ClusterHandle(ConstraintHandle):
         return self.num_procs
 
     @property
-    def job_ids(self):
+    def job_ids(self) -> List[jobs.JobID]:
+        """Return the list of :class:`JobID` in this :class:`ClusterHandle`."""
         return [jobs.JobID(self.clusterid, proc) for proc in range(len(self))]
 
     @property
