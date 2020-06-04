@@ -27,7 +27,7 @@ from .helpers import in_order, track_quantity
 from .io import write_file
 from .job_queue import SetAttribute, SetJobStatus, JobQueue
 from .jobs import JobID, JobStatus
-from .handles import Handle, ConstraintHandle, ClusterHandle, ClusterState
+from .handles import Handle, ConstraintHandle, ClusterHandle, ClusterState, EventLog
 from .meta import get_current_func_name
 from .utils import chain_get
 from .fixtures import config, standup, action, CONFIG_IDS

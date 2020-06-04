@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Callable
+from typing import Optional, Callable, List, Iterator
 
 import logging
 import abc
@@ -284,7 +284,8 @@ class ClusterHandle(ConstraintHandle):
         return self.num_procs
 
     @property
-    def job_ids(self):
+    def job_ids(self) -> List[jobs.JobID]:
+        """Return the list of :class:`JobID` in this :class:`ClusterHandle`."""
         return [jobs.JobID(self.clusterid, proc) for proc in range(len(self))]
 
     @property
@@ -294,6 +295,13 @@ class ClusterHandle(ConstraintHandle):
             self._state = ClusterState(self)
 
         return self._state
+
+    @property
+    def event_log(self):
+        """The :class:`EventLog` for this :class:`ClusterHandle`."""
+        if self._event_log is None:
+            self._event_log = EventLog(self)
+        return self._event_log
 
     def wait(
         self,
@@ -358,12 +366,6 @@ class ClusterHandle(ConstraintHandle):
 
         logger.debug("Wait for handle {} finished successfully".format(self))
         return True
-
-    @property
-    def event_log(self):
-        if self._event_log is None:
-            self._event_log = EventLog(self)
-        return self._event_log
 
 
 class _MockSubmitResult:
@@ -571,7 +573,16 @@ class ClusterState:
 
 
 class EventLog:
-    def __init__(self, handle):
+    """
+    This class represents the job event log for a :class:`ClusterHandle`.
+
+    .. warning ::
+
+        You shouldn't have to construct this yourself.
+        Instead, use :attr:`ClusterHandle.event_log`.
+    """
+
+    def __init__(self, handle: ClusterHandle):
         self._handle = handle
         self._clusterid = handle.clusterid
         raw_event_log_path = utils.chain_get(
@@ -588,7 +599,8 @@ class EventLog:
         self._event_reader = None
         self.events = []
 
-    def read_events(self):
+    def read_events(self) -> Iterator[htcondor.JobEvent]:
+        """Yield all un-read events in the event log."""
         if self._event_reader is None:
             self._event_reader = htcondor.JobEventLog(
                 self._event_log_path.as_posix()
@@ -601,5 +613,10 @@ class EventLog:
             self.events.append(event)
             yield event
 
-    def filter(self, condition):
+    def filter(
+        self, condition: Callable[[htcondor.JobEvent], bool]
+    ) -> List[htcondor.JobEvent]:
+        """
+        Return a list containing the job events that the condition is ``True`` for.
+        """
         return [e for e in self.events if condition(e)]

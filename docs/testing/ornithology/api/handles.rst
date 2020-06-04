@@ -18,5 +18,9 @@ Handles
 State Tracking
 --------------
 
+.. autoclass:: EventLog
+   :members:
+
 .. autoclass:: ClusterState
    :members:
+
