@@ -56,7 +56,6 @@ def config(*args, params: PARAMS = None):
         _add_config_ids(func, params)
         return pytest.fixture(
             scope="module",
-#            autouse=True,
             params=params.values() if params is not None else None,
             ids=params.keys() if params is not None else None,
         )(func)
