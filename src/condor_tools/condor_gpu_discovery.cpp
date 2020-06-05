@@ -277,7 +277,6 @@ struct _simulated_cuda_device {
 };
 struct _simulated_cuda_config {
 	int driverVer;
-	int runtimeVer;
 	int deviceCount;
 	const struct _simulated_cuda_device * device;
 };
@@ -311,13 +310,6 @@ cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
 		return cudaErrorInvalidValue;
 	int ix = sim_index < sim_index_max ? sim_index : 0;
 	*pver = aSimConfig[ix].driverVer;
-	return cudaSuccess; 
-}
-cudaError_t CUDACALL sim_cudaRuntimeGetVersion(int* pver) {
-	if (sim_index < 0 || sim_index > sim_index_max)
-		return cudaErrorInvalidValue;
-	int ix = sim_index < sim_index_max ? sim_index : 0;
-	*pver = aSimConfig[ix].runtimeVer;
 	return cudaSuccess; 
 }
 
@@ -1187,16 +1179,14 @@ main( int argc, const char** argv)
 	// lookup the function pointers we will need later from the cudart library
 	//
 	if ( !opt_simulate && cuda_handle) {
-		cuda_t cudaRuntimeGetVersion = NULL;
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cuDriverGetVersion");
-			cudaRuntimeGetVersion = cu_cudaRuntimeGetVersion;
 			getBasicProps = cu_getBasicProps;
 		} else {
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cudaDriverGetVersion");
-			cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
+			cuda_t cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
 			if (cudaRuntimeGetVersion) {
 				int runtimeVersion = 0;
 				cudaRuntimeGetVersion(&runtimeVersion);
