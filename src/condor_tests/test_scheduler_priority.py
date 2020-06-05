@@ -27,6 +27,7 @@ functionality from both pytest and ornithology for more concise code.
 
 NUM_JOBS = 5
 
+
 @action
 def submit_equal_priority_jobs(default_condor):
     """
@@ -97,7 +98,9 @@ class TestSchedulerPriority:
     def test_ran_all_equal_priority_jobs(self, equal_priority_execute_events):
         assert len(equal_priority_execute_events) == NUM_JOBS
 
-    def test_equal_priority_jobs_run_in_submit_order(self, equal_priority_execute_events):
+    def test_equal_priority_jobs_run_in_submit_order(
+        self, equal_priority_execute_events
+    ):
         """
         We expect equal priority jobs to run in the order they were submitted,
         which means they should run in job-id-order.
@@ -110,7 +113,9 @@ class TestSchedulerPriority:
     def test_ran_all_unequal_priority_jobs(self, unequal_priority_execute_events):
         assert len(unequal_priority_execute_events) == NUM_JOBS
 
-    def test_unequal_priority_jobs_run_in_priority_order(self, unequal_priority_execute_events):
+    def test_unequal_priority_jobs_run_in_priority_order(
+        self, unequal_priority_execute_events
+    ):
         """
         We expect unequal priority jobs to run in the order of priority,
         which for the set up above, means they should run in reverse-job-id-order.

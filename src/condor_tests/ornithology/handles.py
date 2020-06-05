@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Iterator
 
 import logging
 import abc
@@ -296,6 +296,13 @@ class ClusterHandle(ConstraintHandle):
 
         return self._state
 
+    @property
+    def event_log(self):
+        """The :class:`EventLog` for this :class:`ClusterHandle`."""
+        if self._event_log is None:
+            self._event_log = EventLog(self)
+        return self._event_log
+
     def wait(
         self,
         condition: Optional[Callable[["ClusterState"], bool]] = None,
@@ -340,6 +347,9 @@ class ClusterHandle(ConstraintHandle):
         start_time = time.time()
         self.state.read_events()
         while True:
+            if verbose:
+                logger.debug(f"Handle {self} state: {self.state.counts()}")
+
             if condition(self.state):
                 break
 
@@ -351,21 +361,11 @@ class ClusterHandle(ConstraintHandle):
                 )
                 return False
 
-            if verbose:
-                # No idea why this call fails but the f"" string succeeds.
-                # logger.debug("Handle {} state: {}", self, self.state.counts())
-                logger.debug(f"Handle {self} state: {self.state.counts()}")
             time.sleep(1)
             self.state.read_events()
 
         logger.debug("Wait for handle {} finished successfully".format(self))
         return True
-
-    @property
-    def event_log(self):
-        if self._event_log is None:
-            self._event_log = EventLog(self)
-        return self._event_log
 
 
 class _MockSubmitResult:
@@ -573,7 +573,16 @@ class ClusterState:
 
 
 class EventLog:
-    def __init__(self, handle):
+    """
+    This class represents the job event log for a :class:`ClusterHandle`.
+
+    .. warning ::
+
+        You shouldn't have to construct this yourself.
+        Instead, use :attr:`ClusterHandle.event_log`.
+    """
+
+    def __init__(self, handle: ClusterHandle):
         self._handle = handle
         self._clusterid = handle.clusterid
         raw_event_log_path = utils.chain_get(
@@ -590,7 +599,8 @@ class EventLog:
         self._event_reader = None
         self.events = []
 
-    def read_events(self):
+    def read_events(self) -> Iterator[htcondor.JobEvent]:
+        """Yield all un-read events in the event log."""
         if self._event_reader is None:
             self._event_reader = htcondor.JobEventLog(
                 self._event_log_path.as_posix()
@@ -603,5 +613,10 @@ class EventLog:
             self.events.append(event)
             yield event
 
-    def filter(self, condition):
+    def filter(
+        self, condition: Callable[[htcondor.JobEvent], bool]
+    ) -> List[htcondor.JobEvent]:
+        """
+        Return a list containing the job events that the condition is ``True`` for.
+        """
         return [e for e in self.events if condition(e)]
