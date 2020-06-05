@@ -148,8 +148,19 @@ def sched_log_containing_failure(
     return sched_log
 
 
+@config(params=
+    {
+        "1_victim_job": 1,
+        "2_victim_jobs": 2,
+        "3_victim_jobs": 3,
+    }
+)
+def successful_max_victim_jobs(request):
+    return request.param
+
+
 @action
-def successful_job_parameters(path_to_sleep):
+def successful_job_parameters(path_to_sleep, successful_max_victim_jobs):
     return {
         "executable": path_to_sleep,
         "transfer_executable": "true",
@@ -161,9 +172,9 @@ def successful_job_parameters(path_to_sleep):
 
 
 @config
-def successful_condor_config(max_victim_jobs):
+def successful_condor_config(successful_max_victim_jobs):
     config = {
-        "NUM_CPUS": max_victim_jobs,
+        "NUM_CPUS": successful_max_victim_jobs,
     }
     raw_config = "use feature : PartitionableSlot"
     return {"config": config, "raw_config": raw_config}
@@ -177,10 +188,10 @@ def successful_condor(successful_condor_config, test_dir):
 
 @action
 def successful_victim_jobs(
-    successful_job_parameters, successful_condor, max_victim_jobs
+    successful_job_parameters, successful_condor, successful_max_victim_jobs
 ):
     victim_jobs = successful_condor.submit(
-        successful_job_parameters, count=max_victim_jobs
+        successful_job_parameters, count=successful_max_victim_jobs
     )
     assert victim_jobs.wait(
         condition=ClusterState.all_running, timeout=60, verbose=True
@@ -216,13 +227,12 @@ def successful_job_log(
 
 
 class TestCondorNow:
-    # FIXME: repeat this test over the range(1, max_victim_jobs).
     def test_success(
         self,
         successful_job_log,
         successful_beneficiary_job,
         successful_victim_jobs,
-        max_victim_jobs,
+        successful_max_victim_jobs,
     ):
         # We can't assert ornithology.in_order() because the evictions can
         # (and do) happen in any order.
@@ -241,7 +251,7 @@ class TestCondorNow:
             ):
                 saw_beneficiary_execute = True
                 break
-        assert num_evicted_jobs == max_victim_jobs and saw_beneficiary_execute
+        assert num_evicted_jobs == successful_max_victim_jobs and saw_beneficiary_execute
 
     def test_failure_cleanup(self, sched_log_containing_failure):
         expected_lines = [
