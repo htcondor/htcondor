@@ -148,31 +148,118 @@ def sched_log_containing_failure(
     return sched_log
 
 
-class TestCondorNow:
-    def test_failure_cleanup(self, sched_log_containing_failure):
-        # FIXME: asserting that lines exist in order in a log, possibly
-        # without any gaps, should certainly be a helper function.
-        match = 0
-        # Read the remainder of the log.
-        lines = list(sched_log_containing_failure.read())
-        for line in lines:
-            if match == 0 and "pcccDumpTable(): dumping table..." in line:
-                match = 1
-                continue
-            if match == 1 and "pcccDumpTable(): ... done dumping PCCC table." in line:
-                match = 2
-                continue
-            if match == 2 and "Dumping match records (with now jobs)..." in line:
-                match = 3
-                continue
-            if match == 3 and "... done dumping match records." in line:
-                match = 4
-                break
-            match = 0
-        assert match == 4
+@action
+def successful_job_parameters(path_to_sleep):
+    return {
+        "executable": path_to_sleep,
+        "transfer_executable": "true",
+        "should_transfer_files": "true",
+        "universe": "vanilla",
+        "arguments": "600",
+        "log": "cmd_now-success.log",
+    }
 
-    """
-    def test_success(self, job_event_log, beneficiaryID, victimIDs):
-        # assert that certain job events happened in order
-        assert False
-    """
+
+@config
+def successful_condor_config(max_victim_jobs):
+    config = {
+        "NUM_CPUS": max_victim_jobs,
+    }
+    raw_config = "use feature : PartitionableSlot"
+    return {"config": config, "raw_config": raw_config}
+
+
+@standup
+def successful_condor(successful_condor_config, test_dir):
+    with Condor(test_dir / "condor", **successful_condor_config) as condor:
+        yield condor
+
+
+@action
+def successful_victim_jobs(
+    successful_job_parameters, successful_condor, max_victim_jobs
+):
+    victim_jobs = successful_condor.submit(
+        successful_job_parameters, count=max_victim_jobs
+    )
+    assert victim_jobs.wait(
+        condition=ClusterState.all_running, timeout=60, verbose=True
+    )
+    return victim_jobs
+
+
+# Note that the beneficiary job fixtures depend on the victim job features,
+# not because they need to know about them, but to ensure that the victim
+# jobs have all started running before submitting the beneficiary.
+@action
+def successful_beneficiary_job(
+    successful_job_parameters, successful_condor, successful_victim_jobs
+):
+    return successful_condor.submit(successful_job_parameters, count=1)
+
+
+@action
+def successful_job_log(
+    successful_condor, successful_beneficiary_job, successful_victim_jobs, test_dir
+):
+    bID = str(successful_beneficiary_job.job_ids[0])
+    vIDs = [str(vID) for vID in successful_victim_jobs.job_ids]
+    rv = successful_condor.run_command(["condor_now", bID] + vIDs)
+    assert rv.returncode == 0
+
+    assert successful_beneficiary_job.wait(
+        condition=ClusterState.all_running, timeout=60
+    )
+
+    # This seems like something I should be able to get from the cluster handle.
+    return htcondor.JobEventLog((test_dir / "cmd_now-success.log").as_posix())
+
+
+class TestCondorNow:
+    # FIXME: repeat this test over the range(1, max_victim_jobs).
+    def test_success(
+        self,
+        successful_job_log,
+        successful_beneficiary_job,
+        successful_victim_jobs,
+        max_victim_jobs,
+    ):
+        # We can't assert ornithology.in_order() because the evictions can
+        # (and do) happen in any order.
+        num_evicted_jobs = 0
+        saw_beneficiary_execute = False
+        for event in successful_job_log.events(0):
+            if (
+                event.type == htcondor.JobEventType.JOB_EVICTED
+                and event.cluster == successful_victim_jobs.clusterid
+            ):
+                num_evicted_jobs += 1
+                continue
+            if (
+                event.type == htcondor.JobEventType.EXECUTE
+                and event.cluster == successful_beneficiary_job.clusterid
+            ):
+                saw_beneficiary_execute = True
+                break
+        assert num_evicted_jobs == max_victim_jobs and saw_beneficiary_execute
+
+    def test_failure_cleanup(self, sched_log_containing_failure):
+        expected_lines = [
+            "pcccDumpTable(): dumping table...",
+            "pcccDumpTable(): ... done dumping PCCC table.",
+            "Dumping match records (with now jobs)...",
+            "... done dumping match records.",
+        ]
+
+        # Iterate until we find the first expected line, then check that
+        # all expected lines are in the log.  This avoids reading and
+        # parsing the whole log in the (expected) case where we find what
+        # we're looking for.  [FIXME: this should be an assert helper.]
+        iter = sched_log_containing_failure.read()
+        for line in iter:
+            if expected_lines[0] in line:
+                break
+
+        assert expected_lines[0] in line
+        for expected, line in zip(expected_lines[1:], iter):
+            assert expected in line
