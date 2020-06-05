@@ -170,7 +170,8 @@ bool handleFTL( const char * reason ) {
 	// to force the startd to advertise this fact so other jobs can avoid
 	// this machine.
 	//
-	DCStartd startd( (const char * const)NULL, (const char * const)NULL );
+	const char *nullString = nullptr;
+	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
 		return false;
@@ -358,7 +359,7 @@ VMProc::StartJob()
 	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
 		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		priv_state oldpriv = set_user_priv();
-		if ( chmod( Starter->GetWorkingDir(), 0755 ) == -1 ) {
+		if ( chmod( Starter->GetWorkingDir(0), 0755 ) == -1 ) {
 			set_priv( oldpriv );
 			dprintf( D_ALWAYS, "Failed to chmod execute directory for Xen/KVM job: %s\n", strerror( errno ) );
 			return false;
@@ -372,7 +373,7 @@ VMProc::StartJob()
 		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		ASSERT( create_name_for_VM( JobAd, vm_name ) );
 	} else {
-		vm_name = Starter->GetWorkingDir();
+		vm_name = Starter->GetWorkingDir(0);
 	}
 	recovery_ad.Assign( "JobVMId", vm_name );
 	Starter->WriteRecoveryFile( &recovery_ad );
@@ -390,7 +391,7 @@ VMProc::StartJob()
 	ASSERT(m_vmgahp);
 
 	m_vmgahp->start_err_msg = "";
-	if( m_vmgahp->startUp(&job_env, Starter->GetWorkingDir(), nice_inc,
+	if( m_vmgahp->startUp(&job_env, Starter->GetWorkingDir(0), nice_inc,
 				&fi) == false ) {
 		JobPid = -1;
 		err_msg = "Failed to start vm-gahp server";
@@ -427,7 +428,7 @@ VMProc::StartJob()
 				break;
 			case 1:
 			default:
-				p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir() );
+				p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir(0) );
 				break;
 			case 2:
 				p_result = VMGAHP_REQ_COMMAND_TIMED_OUT;
@@ -443,7 +444,7 @@ VMProc::StartJob()
 				break;
 		}
 	} else {
-		p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir() );
+		p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir(0) );
 	}
 
 

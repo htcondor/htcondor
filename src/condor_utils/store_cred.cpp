@@ -1322,11 +1322,21 @@ int store_cred_handler(int /*i*/, Stream *s)
 		goto cleanup_and_exit;
 	}
 
+	// if no user was sent, this instructs us to take the authenticated
+	// user from the socket.
+	if (fulluser.empty()) {
+		// fulluser needs to have the @domain attached to pass checks
+		// below, even though at the moment it ultimately gets stripped
+		// off.
+		fulluser = sock->getFullyQualifiedUser();
+		dprintf(D_SECURITY | D_VERBOSE, "store_cred: Storing cred for authenticated user \"%s\"\n", fulluser.c_str());
+	}
+
 	if ( ! fulluser.empty()) {
 			// ensure that the username has an '@' delimteter
 		size_t ix_at = fulluser.find('@');
 		if (ix_at == std::string::npos || ix_at == 0) {
-			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
+			dprintf(D_ALWAYS, "store_cred_handler: user \"%s\" not in user@domain format\n", fulluser.c_str());
 			answer = FAILURE_BAD_ARGS;
 		}
 		else {
@@ -1646,7 +1656,7 @@ do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force)
 	}
 
 	// to help future debugging, print out the mode we are in
-	dprintf ( D_ALWAYS,  "STORE_CRED: In mode '%s'\n",  mode_name[mode & MODE_MASK]);
+	dprintf ( D_ALWAYS,  "STORE_CRED: (old) In mode %d '%s', user is \"%s\"\n", mode, mode_name[mode & MODE_MASK], user);
 	
 		// If we are root / SYSTEM and we want a local daemon, 
 		// then do the work directly to the local registry.
@@ -1665,7 +1675,7 @@ do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force)
 			user += domain_pos + 1;	// we only need to send the domain name for STORE_POOL_CRED
 		}
 		if (domain_pos <= 0) {
-			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
+			dprintf(D_ALWAYS, "store_cred: user \"%s\" not in user@domain format\n", user);
 			return FAILURE_BAD_ARGS;
 		}
 
@@ -1802,7 +1812,7 @@ do_store_cred (
 	MyString daemonid; // for error messages
 
 	// to help future debugging, print out the mode we are in
-	dprintf ( D_ALWAYS,  "STORE_CRED: In mode %d '%s'\n", mode, mode_name[mode & MODE_MASK]);
+	dprintf ( D_ALWAYS,  "STORE_CRED: In mode %d '%s', user is \"%s\"\n", mode, mode_name[mode & MODE_MASK], user);
 
 	// if a legacy mode is requested, no ClassAd argument can be sent
 	if (mode & STORE_CRED_LEGACY) {
@@ -1847,8 +1857,8 @@ do_store_cred (
 			if (cred) pw.set((const char *)cred, credlen);
 			return do_store_cred(user, pw.c_str(), mode, d);
 		}
-		if (domain_pos <= 0) {
-			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
+		if ((domain_pos <= 0) && user[0]) {
+			dprintf(D_ALWAYS, "store_cred: FAILED. user \"%s\" not in user@domain format\n", user);
 			return FAILURE;
 		}
 

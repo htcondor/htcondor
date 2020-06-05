@@ -79,7 +79,6 @@ include (CheckLibraryExists)
 include (CheckTypeSize)
 include (GetTimeDate)
 include (CleanString)
-include (PackageDate)
 include (SystemSpecificInformations)
 include (CondorPackageConfig) # setup packaging variables needed prior to install targets
 include (CondorSetLinkLibs)

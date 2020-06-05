@@ -75,7 +75,7 @@ ToolDaemonProc::StartJob()
 	const char* base = NULL;
 	base = condor_basename( tmp );
 	if( Starter->jic->iwdIsChanged() ) {
-		DaemonNameStr.formatstr( "%s%c%s", Starter->GetWorkingDir(),
+		DaemonNameStr.formatstr( "%s%c%s", Starter->GetWorkingDir(0),
 							   DIR_DELIM_CHAR, base );
 	} else if( ! fullpath(tmp) ) {
 		DaemonNameStr.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );

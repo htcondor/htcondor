@@ -2087,12 +2087,6 @@ Daemon::New_addr( char* str )
 				free( our_network_name );
 			}
 			if( !using_private ) {
-				// Remove junk from address that we don't care about so
-				// it is not so noisy in logs and such.
-				sinful.setPrivateAddr(NULL);
-				sinful.setPrivateNetworkName(NULL);
-				free(_addr);
-				_addr = strdup( sinful.getSinful() );
 				dprintf( D_HOSTNAME, "Private network name not matched.\n");
 			}
 		}

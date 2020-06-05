@@ -340,7 +340,7 @@ Enterprise Linux machine.
          HasDocker = true
          DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
 
-By default, HTCondor will keep the 20 most recently used Docker images
+By default, HTCondor will keep the 8 most recently used Docker images
 on the local machine. This number may be controlled with the
 configuration variable ``DOCKER_IMAGE_CACHE_SIZE``
 :index:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the

@@ -2375,7 +2375,7 @@ ConnectionSentry::disconnect()
         if (result)
         {
             if (PyErr_Occurred()) {return;}
-            std::string errmsg = "Failed to commmit and disconnect from queue.";
+            std::string errmsg = "Failed to commit and disconnect from queue.";
             std::string esMsg = errstack.getFullText();
             if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
             THROW_EX(RuntimeError, errmsg.c_str());
@@ -3539,7 +3539,7 @@ void export_schedd()
 
             .. attribute:: Default
 
-                Queries should use all default behaviors.
+                Queries should use default behaviors, and return jobs for all users.
 
             .. attribute:: AutoCluster
 
@@ -3547,11 +3547,21 @@ void export_schedd()
 
             .. attribute:: GroupBy
 
+                Instead of returning job ads, return an ad for each unique combination of values for the attributes in the projection.
+                Similar to AutoCluster, but using the projection as the significant attributes for auto-clustering.
+
             .. attribute:: DefaultMyJobsOnly
+
+                Queries should use all default behaviors, and return jobs only for the current user.
 
             .. attribute:: SummaryOnly
 
+                Instead of returning job ads, return only the final summary ad.
+
             .. attribute:: IncludeClusterAd
+
+                Query should return raw cluster ads as well as job ads if the cluster ads match the query constraint.
+
             )C0ND0R")
         .value("Default", CondorQ::fetch_Jobs)
         .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)

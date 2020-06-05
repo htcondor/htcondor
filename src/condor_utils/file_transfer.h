@@ -216,21 +216,6 @@ class FileTransfer final: public Service {
 		    success(true), in_progress(false), xfer_status(XFER_STATUS_UNKNOWN),
 			try_again(true), hold_code(0), hold_subcode(0) {}
 
-		FileTransferInfo(const FileTransferInfo &rhs) {
-			bytes = rhs.bytes;
-			duration = rhs.duration;
-			type = rhs.type;
-			success = rhs.success;
-			in_progress = rhs.in_progress;
-			xfer_status = rhs.xfer_status;
-			try_again = rhs.try_again;
-			hold_code = rhs.hold_code;
-			hold_subcode = rhs.hold_subcode;
-			error_desc = rhs.error_desc;
-			spooled_files = rhs.spooled_files;
-			tcp_stats = rhs.tcp_stats;
-			
-		}
 		void addSpooledFile(char const *name_in_spool);
 
 		filesize_t bytes;

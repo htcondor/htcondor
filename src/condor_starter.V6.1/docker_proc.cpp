@@ -50,7 +50,8 @@ static bool handleFTL(int error) {
 	// to force the startd to advertise this fact so other jobs can avoid
 	// this machine.
 	//
-	DCStartd startd( (const char * const)NULL, (const char * const)NULL );
+	const char * nullString = nullptr;
+	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
 		return false;
@@ -107,10 +108,31 @@ int DockerProc::StartJob() {
 	}
 
 	std::string command;
-	JobAd->LookupString( ATTR_JOB_CMD, command );
-	dprintf( D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str() );
+	JobAd->LookupString(ATTR_JOB_CMD, command);
+	dprintf(D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str());
 
 	std::string sandboxPath = Starter->jic->jobRemoteIWD();
+
+#ifdef WIN32
+	#if 1
+	// TODO: make this configurable? and the same on Windows/Linux
+	// TODO: make it settable by the job so that we can support Windows containers on Windows?
+	std::string innerdir("/test/execute/");
+	Starter->SetInnerWorkingDir(innerdir.c_str());
+	#else
+	const char * outerdir = Starter->GetWorkingDir(false);
+	std::string innerdir(outerdir);
+	const char * tmp = strstr(outerdir, "\\execute\\");
+	if (tmp) {
+		innerdir = tmp;
+		std::replace(innerdir.begin(), innerdir.end(), '\\', '/');
+		Starter->SetInnerWorkingDir(innerdir.c_str());
+	}
+	#endif
+#else
+	// TODO: make this work on Linux also
+	std::string innerdir = Starter->GetWorkingDir(true);
+#endif
 
 	//
 	// This code is deliberately wrong, probably for backwards-compability.
@@ -168,7 +190,7 @@ int DockerProc::StartJob() {
 	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string workingDir = Starter->GetWorkingDir();
+	std::string workingDir = Starter->GetWorkingDir(0);
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
 	std::string DockerErrorFile  = workingDir + "/docker_stderror";
 
@@ -187,7 +209,7 @@ int DockerProc::StartJob() {
 	ClassAd *machineAd = Starter->jic->machClassAd();
 
 	std::list<std::string> extras;
-	std::string scratchDir = Starter->GetWorkingDir();
+	std::string scratchDir = Starter->GetWorkingDir(0);
 		// if file xfer is off, need to also mount SCRATCH_DIR (= cwd)
 	if (scratchDir != sandboxPath) {
 		extras.push_back(scratchDir + ":" + scratchDir);
@@ -199,7 +221,12 @@ int DockerProc::StartJob() {
 
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
-	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, shouldAskForServicePorts, err, affinity_mask);
+	int rv = DockerAPI::createContainer( *machineAd, *JobAd,
+		containerName, imageID,
+		command, args, job_env,
+		sandboxPath, innerdir,
+		extras, JobPid, childFDs,
+		shouldAskForServicePorts, err, affinity_mask);
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		handleFTL(rv);
@@ -247,7 +274,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
-			std::string fileName = Starter->GetWorkingDir();
+			std::string fileName = Starter->GetWorkingDir(0);
 			fileName += "/docker_stderror";
 			int fd = open(fileName.c_str(), O_RDONLY, 0000);
 			if (fd >= 0) {
@@ -283,8 +310,30 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// for search service (if any) before we actually started the job,
 		// but (understandably) Docker doesn't do that.
 
+	#ifdef WIN32 
+		#ifdef COPY_INPUT_SANDBOX
+		// copy the input sandbox into the container
+		{
+			std::string workingDir = Starter->GetWorkingDir(0);
+			std::string innerPath = Starter->GetWorkingDir(true);
+			StringList opts("-a");
+
+			//TODO: figure out if we need to do this, or to switch to  PRIV_USER
+			//TemporaryPrivSentry sentry(PRIV_ROOT);
+
+			int rv = DockerAPI::copyToContainer(workingDir, containerName, innerPath, &opts);
+			if (rv < 0) {
+				dprintf(D_ALWAYS | D_FAILURE, "DockerAPI::copyToContainer( %s, %s, %s ) failed with return value %d\n",
+					workingDir.c_str(), containerName.c_str(), innerPath.c_str(), rv);
+				return FALSE;
+			}
+		}
+		#endif
+	#endif
+
 		// It seems like this should be done _after_ we call start Container().
 		Starter->SetJobEnvironmentReady(true);
+
 
 		CondorError err;
 
@@ -508,7 +557,7 @@ DockerProc::SetupDockerSsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = Starter->GetWorkingDir();
+	std::string workingDir = Starter->GetWorkingDir(0);
 	std::string pipeName = workingDir + "/.docker_sock";	
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
@@ -762,7 +811,7 @@ DockerProc::getStats() {
 
 			// Append serviceAd to the sandbox's copy of the job ad.
 			std::string jobAdFileName;
-			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
+			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir(0) );
 			{
 				TemporaryPrivSentry sentry(PRIV_ROOT);
 				// ... sigh ...
@@ -875,7 +924,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 #endif
 
 	if (scratchNames.length() > 0) {
-		std::string workingDir = Starter->GetWorkingDir();
+		std::string workingDir = Starter->GetWorkingDir(0);
 		StringList sl(scratchNames.c_str());
 		sl.rewind();
 		char *scratchName = 0;
@@ -885,12 +934,15 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);
-			if (mkdir_and_parents_if_needed( hostDir, S_IRWXU, PRIV_USER )) {
+			
+			mode_t old_mask = umask(000);
+			if (mkdir_and_parents_if_needed( hostDir, 01777, PRIV_USER )) {
 				extras.push_back(volumePath);
 				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount under scratch\n", volumePath.c_str());
 			} else {
 				dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", hostDir);
 			}
+			umask(old_mask);
 		}
 	}
 

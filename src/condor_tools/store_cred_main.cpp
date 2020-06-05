@@ -131,14 +131,16 @@ int main(int argc, const char *argv[]) {
 
 	// determine the username to use
 	if ( strcmp(options.username, "") == 0 ) {
+		if (cred_type == STORE_CRED_USER_KRB || cred_type == STORE_CRED_USER_OAUTH) {
+			// for KRB and OAuth pass an empty username to indicate that we want
+			// the Credd to use the mapped authenticated username
+			my_full_name = "";
+		} else {
 			// default to current user and domain
-		char* my_name = my_username();	
-		char* my_domain = my_domainname();
-
-		my_full_name.formatstr("%s@%s", my_name, my_domain);
-		if ( my_name) { free(my_name); }
-		if ( my_domain) { free(my_domain); }
-		my_name = my_domain = NULL;
+			auto_free_ptr my_name(my_username());
+			auto_free_ptr my_domain(my_domainname());
+			my_full_name.formatstr("%s@%s", my_name.ptr(), my_domain.ptr());
+		}
 	} else if (strcmp(options.username, POOL_PASSWORD_USERNAME) == 0) {
 #if !defined(WIN32)
 		// we don't support querying the pool password on UNIX
@@ -163,10 +165,17 @@ int main(int argc, const char *argv[]) {
 		free(domain);
 	} else {
 			// username was specified on the command line
-		my_full_name += options.username;
+		my_full_name = options.username;
 	}
+	// print the account, if we haven't looked up the account because we want the credd
+	// to figure it out print the name of the current user just as a double check
 	full_name = my_full_name.Value();
-	printf("Account: %s\n", full_name);
+	if (my_full_name.empty()) {
+		auto_free_ptr user(my_username());
+		printf("Account: <current> (%s)\n", user.ptr());
+	} else {
+		printf("Account: %s\n", full_name);
+	}
 	printf("CredType: %s\n\n", cred_type_name(options.mode));
 
 	// setup cred_info classad
@@ -407,7 +416,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 		const char * arg = argv[ix];
 		const char * dasharg = strchr(arg, '-');
 		if (dasharg && (dasharg != arg)) {
-			strncpy(arg_prefix, arg, sizeof(arg_prefix));
+			strncpy(arg_prefix, arg, sizeof(arg_prefix)-1);
 			arg_prefix[dasharg - arg] = 0;
 			arg = arg_prefix;
 		}

@@ -73,7 +73,7 @@ public:
     virtual BOOL unload ();
     
     /* returns TRUE if a user's environment was loaded; otherwise, FALSE.*/
-    virtual BOOL environment ( Env &env );
+	virtual BOOL environment(Env &env) { return environment(env, user_token_, user_name_); }
     
     /***************************************************************
      * Attributes
@@ -88,14 +88,15 @@ public:
     /* returns the type of profile the current user has; 
        otherwise 0. */
     virtual DWORD type () const;
-	
+
     /* if it exits, this function returns the path to the root 
        directory of the user's profile; otherwise, NULL. Remember 
        to delete the return value (using the delete [] form).*/
     virtual PSTR directory ();	
-    
-protected:
-    
+
+     PCSTR username() const { return user_name_; }
+	 static BOOL environment(Env & env, HANDLE user_token, PCSTR username);
+
     /* returns TRUE if a user profile was destroyed; otherwise, FALSE. 
        It's protected because it does not change the state of the 
        profile object, so even though the profile object may think it 
@@ -103,7 +104,9 @@ protected:
        remedied by the code surrounding its invocation. */
     virtual BOOL destroy () const;
 
-     /* returns TRUE if the user profile template was backup-ed up; 
+protected:
+
+	/* returns TRUE if the user profile template was backup-ed up;
     otherwise, FALSE.*/
     virtual BOOL backup ();
 

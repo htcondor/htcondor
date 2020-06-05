@@ -120,7 +120,7 @@ UserProc::JobReaper(int pid, int status)
 	MyString line;
 	MyString error_txt;
 	MyString filename;
-	const char* dir = Starter->GetWorkingDir();
+	const char* dir = Starter->GetWorkingDir(0);
 	FILE* fp;
 
 	dprintf( D_FULLDEBUG, "Inside UserProc::JobReaper()\n" );

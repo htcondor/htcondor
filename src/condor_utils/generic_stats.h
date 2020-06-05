@@ -1188,10 +1188,23 @@ public:
       , data(0)
       {
          if (cLevels) {
-      		data = new int[cLevels+1];
-		    Clear();
+            data = new int[cLevels+1];
+            Clear();
          }
       }
+   stats_histogram(const stats_histogram<T> &sh)
+      : cLevels(sh.cLevels)
+      , levels(sh.levels)
+      , data(0)
+      {
+         if (cLevels) {
+            data = new int[cLevels+1];
+            for (int ii = 0; ii <= cLevels; ++ii) {
+               data[ii] = sh.data[ii];
+            }
+         }
+      }
+
    ~stats_histogram() { delete [] data; data = 0, cLevels = 0; }
 
 public:

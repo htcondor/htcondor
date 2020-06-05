@@ -103,6 +103,8 @@ Starter::initRunData( void )
 {
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_birthdate = 0;
+	s_last_update_time = 0;
+	s_got_final_update = false;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
 	s_hold_timeout = -1;
@@ -888,6 +890,8 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	ClassAd update_ad;
 	int final_update = 0;
 
+	s_last_update_time = time(NULL);
+
 		// It is expected that we will get here when the stream is closed.
 		// Unfortunately, log noise will be generated when we try to read
 		// from it.
@@ -945,6 +949,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;
 		s_job_update_sock = NULL;
+		s_got_final_update = true;
 	}
 	return KEEP_STREAM;
 }

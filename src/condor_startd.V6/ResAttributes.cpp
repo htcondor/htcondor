@@ -528,6 +528,8 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, int assign_t
 {
 	if ( ! assign_to) return NULL;
 
+	auto & offline_ids(m_machres_runtime_offline_ids_map[tag]);
+
 	slotres_devIds_map_t::const_iterator f(m_machres_devIds_map.find(tag));
 	if (f !=  m_machres_devIds_map.end()) {
 		const slotres_assigned_ids_t & ids(f->second);
@@ -540,6 +542,8 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, int assign_t
 		//
 		if (assign_to_sub > 0) {
 			for (int ii = 0; ii < (int)ids.size(); ++ii) {
+				if (offline_ids.find(ids[ii]) != offline_ids.end())
+					continue;
 				if (owners[ii].id == assign_to && owners[ii].dyn_id == 0) {
 					owners[ii].dyn_id = assign_to_sub;
 					return ids[ii].c_str();
@@ -547,6 +551,8 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, int assign_t
 			}
 		} else {
 			for (int ii = 0; ii < (int)ids.size(); ++ii) {
+				if (offline_ids.find(ids[ii]) != offline_ids.end())
+					continue;
 				if ( ! owners[ii].id) {
 					owners[ii] = FullSlotId(assign_to, assign_to_sub);
 					return ids[ii].c_str();
@@ -577,6 +583,9 @@ bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * i
 	return false;
 }
 
+// log level for custom resource device id (e.g. CUDA0) management
+static int d_log_devids = D_FULLDEBUG;
+
 const char * MachAttributes::DumpDevIds(std::string & buf, const char * tag, const char * sep)
 {
 	slotres_devIds_map_t::const_iterator f;
@@ -586,9 +595,11 @@ const char * MachAttributes::DumpDevIds(std::string & buf, const char * tag, con
 
 		const slotres_assigned_ids_t & ids(f->second);
 		const slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[f->first];
+		const std::set<std::string> & offline_ids = m_machres_runtime_offline_ids_map[f->first];
 		buf += f->first;
 		buf += ":{";
 		for (auto id = ids.begin(); id != ids.end(); ++id) {
+			if (offline_ids.count(*id)) {buf += "!";}
 			buf += *id;
 			buf += ", ";
 		}
@@ -601,11 +612,139 @@ const char * MachAttributes::DumpDevIds(std::string & buf, const char * tag, con
 			}
 		}
 		buf += "}";
+		auto off = m_machres_offline_devIds_map.find(f->first);
+		if (off != m_machres_offline_devIds_map.end()) {
+			if (off->second.empty()) {
+				buf += " offline";
+				buf += f->first;
+				buf += ":{}";
+			} else {
+				buf += " offline";
+				buf += f->first;
+				buf += "{";
+				for (auto id = off->second.begin(); id != off->second.end(); ++id) {
+					buf += *id;
+					buf += ",";
+				}
+				buf += "}";
+			}
+		}
 		if (tag && sep)
 			buf += sep;
 	}
 	return buf.c_str();
 }
+
+// This is a bit complicated, because we actually keep two sets of offline ids.
+// one that is set on startup from the resource ads (m_machres_offline_devIds_map) 
+// and another that is set on reconfig (m_machres_runtime_offline_ids_map)
+// The first one is a map of resource tag to vector of string devids, the vector may contain duplicates:   map[GPUs]={CUDA0, CUDA0, CUDA1}
+// the second is a map of resource tag to a set of string unique string devids, map[GPUs][CUDA0]
+//
+// Then there are three collections that show the active devids:
+//    m_machres_map  - a map of resource tag to number of active (i.e. non-offline) devids  map[Gpus] = N
+//    m_machres_devIds_map  - a map of resource tag to vector of devids that were active at startup. this preserves devid assigment
+//    m_machres_devIdOwners_map - a map of resource tag to vector of slot-ids to which they are assigned.  this is a parallel vector to the above vector
+//
+// When a devid is marked offline at startup, it is put into the m_machres_offline_devIds_map and NOT into the m_machres_devIds_map
+// but when a devid is marked offline on reconfig, it is not removed from the m_machres_devIds_map, nor is it added to the m_machres_offline_devIds_map
+// instead, it is added to the m_machres_runtime_offline_ids_map, and that map is checked each time we want to make a d-slot.
+// The advertised value for the resource Tag (e.g. GPUs) should be the number of items in the m_machres_devIds_map vector that
+// are not in the m_machres_runtime_offline_ids_map, and are bound to that slot
+//
+// Thus a static slot that has an assigned GPU, may have a GPUs value of 0, if that assigned GPU is in the runtime_offline_ids collection.
+// This can happen to a slot that is running jobs if a reconfig happens while the job is running.
+//
+// The job of ReconfigOfflineDevIds is to:
+//    build the m_machres_runtime_offline_ids_map, so that is has all of the unique DevIds that are offline
+//    Update the m_machres_map quantities so that only active resources are counted
+// This does not directly affect the attributes advertised in the slot, but this information is used by RefreshDevIds
+// which is called for each slot on reconfig after ReconfigOfflineDevIds is called.
+//
+void MachAttributes::ReconfigOfflineDevIds()
+{
+	// we will rebuild this to contain only offline ids that were not offline'd at startup
+	m_machres_runtime_offline_ids_map.clear();
+
+	std::string knob;
+	StringList offline_ids;
+	for (auto f = m_machres_devIds_map.begin(); f != m_machres_devIds_map.end(); ++f) {
+		knob = "OFFLINE_MACHINE_RESOURCE_"; knob += f->first;
+		param_and_insert_unique_items(knob.c_str(), offline_ids);
+
+		// we've got offline resources, check to see if any of them are assigned
+		slotres_assigned_ids_t & ids(f->second);
+
+		int offline = 0;
+		// look through assigned resource list and see if we have offlined any of them.
+		for (int ii = (int)ids.size()-1; ii >= 0; --ii) {
+			if (offline_ids.contains(ids[ii].c_str())) {
+				dprintf(D_ALWAYS, "%s %s is now marked offline\n", f->first.c_str(), ids[ii].c_str());
+				slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[f->first];
+				if (owners[ii].dyn_id) {
+					// currently assigned to a dynamic slot
+					dprintf(D_ALWAYS, "%s %s is currently assigned to slot %d_%d\n",
+						f->first.c_str(), ids[ii].c_str(), owners[ii].id, owners[ii].dyn_id);
+				} else {
+					// currently assigned to a static slot or p-slot
+					dprintf(D_ALWAYS, "%s %s is currently assigned to slot %d\n",
+						f->first.c_str(), ids[ii].c_str(), owners[ii].id);
+				}
+
+				// we found an Assignd<Tag> devid that should be offline,
+				// so it needs to be in the dynamic_offline_ids collecton so we can check at runtime
+				m_machres_runtime_offline_ids_map[f->first].insert(ids[ii]);
+				++offline;
+			}
+
+			// update quantites to count only assigned, non-offline devids
+			m_machres_map[f->first] = ids.size() - offline;
+		}
+	}
+}
+
+// refresh the assigned ids for this slot, and update the count so that only non-offline ids are counted
+// we do this on reconfig, incase we have changed the offline list
+void MachAttributes::RefreshDevIds(
+	slotres_map_t::iterator & slot_res,
+	slotres_devIds_map_t::iterator & slot_res_devids,
+	int assign_to,
+	int assign_to_sub)
+{
+	slot_res->second = 0;
+	slot_res_devids->second.clear();
+
+	auto ids = m_machres_devIds_map.find(slot_res->first);
+	if (ids == m_machres_devIds_map.end()) {
+		return;
+	}
+
+	// for p-slots & static slots, we ignore the sub-id when building the Assigned list (slot_res_devids)
+	// but not when counting the number of resources
+	// thus in slot1 we can have 
+	//   AssignedGPUs = "CUDA0,CUDA1,CUDA2"  (slot_res_devids)
+	//   OfflineGPUs = "CUDA2"               (offline_ids)
+	//   GPUs = 1                            (slot_res)
+	// while in slot1_1 we have 
+	//   AssignedGPUs = "CUDA0"
+	//   Gpus = 1
+
+	int num_res = 0;
+	auto & offline_ids(m_machres_runtime_offline_ids_map[slot_res->first]);
+	slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[slot_res->first];
+	for (int ii = 0; ii < (int)ids->second.size(); ++ii) {
+		if (owners[ii].id == assign_to && (assign_to_sub == 0 || owners[ii].dyn_id == assign_to_sub)) {
+			slot_res_devids->second.push_back(ids->second[ii]);
+			if (offline_ids.count(ids->second[ii])) {
+				// don't count this one even though it is assigned
+			} else if (owners[ii].dyn_id == assign_to_sub) {
+				num_res += 1;
+			}
+		}
+	}
+	slot_res->second = num_res;
+}
+
 
 // res_value is a string that contains either a number, which is the count of a
 // fungable resource, or a list of ids of non-fungable resources.
@@ -768,6 +907,7 @@ void MachAttributes::init_machine_resources() {
 	// defines which local machine resource device IDs are in use
 	m_machres_devIds_map.clear();
 	m_machres_offline_devIds_map.clear();
+	m_machres_runtime_offline_ids_map.clear();
 
 	// this may be filled from resource inventory scripts
 	m_machres_attr.Clear();
@@ -1025,14 +1165,41 @@ MachAttributes::publish_dynamic( ClassAd* cp)
 
 	// publish offline ids for any of the resources
 	for (auto j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
+		string ids;
+		auto & offline_ids(m_machres_runtime_offline_ids_map[j->first]);
 		slotres_devIds_map_t::const_iterator k = m_machres_offline_devIds_map.find(j->first);
-		if (k != m_machres_offline_devIds_map.end()) {
-			if ( ! k->second.empty()) {
-				string attr(ATTR_OFFLINE_PREFIX); attr += k->first;
-				string ids;
-				join(k->second, ",", ids);
-				cp->Assign(attr, ids);
+		if ( ! offline_ids.empty()) {
+			// we have runtime offline ids which *may* need to be merged with the static offline ids list
+			if (k != m_machres_offline_devIds_map.end() && ! k->second.empty()) {
+				// build a de-duplicated collection of offline ids including the static list and the dynamic list.
+				std::set<std::string> all_offline;
+				for (auto id = offline_ids.begin(); id != offline_ids.end(); ++id) { all_offline.insert(*id); }
+				if (k != m_machres_offline_devIds_map.end()) {
+					for (auto id = k->second.begin(); id != k->second.end(); ++id) { all_offline.insert(*id); }
+				}
+				for (auto id = all_offline.begin(); id != all_offline.end(); ++id) {
+					if (!ids.empty()) { ids += ","; }
+					ids += *id;
+				}
+			} else {
+				for (auto id = offline_ids.begin(); id != offline_ids.end(); ++id) {
+					if (!ids.empty()) { ids += ","; }
+					ids += *id;
+				}
 			}
+		} else if (k != m_machres_offline_devIds_map.end()) {
+			// we just have the static offline ids list (set at startup)
+			if ( ! k->second.empty()) {
+				join(k->second, ",", ids);
+			}
+		}
+		string attr(ATTR_OFFLINE_PREFIX); attr += j->first;
+		if (ids.empty()) {
+			if (cp->Lookup(attr)) {
+				cp->Assign(attr, "");
+			}
+		} else {
+			cp->Assign(attr, ids);
 		}
 	}
 
@@ -1208,9 +1375,13 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 	if ( ! map)
 		return;
 
-	if (IsFulldebug(D_ALWAYS)) {
+	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
-		::dprintf(D_FULLDEBUG, "bind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		if (rip) { // on startup this is called before this structure has been attached to a RIP
+			dprintf(d_log_devids, "bind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		} else {
+			::dprintf(d_log_devids, "bind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		}
 	}
 
 	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
@@ -1229,16 +1400,20 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 					EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
 				} else {
 					c_slotres_ids_map[j->first].push_back(id);
-					::dprintf(D_FULLDEBUG, "bind_DevIds for slot%d.%d bound %s %d\n",
+					::dprintf(d_log_devids, "bind_DevIds for slot%d.%d bound %s %d\n",
 						slot_id, slot_sub_id, id, (int)c_slotres_ids_map[j->first].size());
 				}
 			}
 		}
 	}
 
-	if (IsFulldebug(D_ALWAYS)) {
+	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
-		::dprintf(D_FULLDEBUG, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		if (rip) {
+			dprintf(d_log_devids, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		} else {
+			::dprintf(d_log_devids, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		}
 	}
 }
 
@@ -1247,9 +1422,9 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 {
 	if ( ! map) return;
 
-	if (IsFulldebug(D_ALWAYS)) {
+	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
-		::dprintf(D_FULLDEBUG, "unbind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		dprintf(d_log_devids, "unbind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 	}
 
 	if ( ! slot_sub_id) return;
@@ -1260,16 +1435,43 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 			slotres_assigned_ids_t & ids = c_slotres_ids_map[j->first];
 			while ( ! ids.empty()) {
 				bool released = map->ReleaseDynamicDevId(j->first, ids.back().c_str(), slot_id, slot_sub_id);
-				::dprintf(released ? D_FULLDEBUG : D_ALWAYS, "ubind_DevIds for slot%d.%d unbind %s %d %s\n",
+				dprintf(released ? d_log_devids : D_ALWAYS, "ubind_DevIds for slot%d.%d unbind %s %d %s\n",
 					slot_id, slot_sub_id, ids.back().c_str(), (int)ids.size(), released ? "OK" : "failed");
 				ids.pop_back();
 			}
 		}
 	}
 
-	if (IsFulldebug(D_ALWAYS)) {
+	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
-		::dprintf(D_FULLDEBUG, "unbind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		dprintf(d_log_devids, "unbind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+	}
+}
+
+void
+CpuAttributes::reconfig_DevIds(int slot_id, int slot_sub_id) // release non-fungable resource ids
+{
+	if (! map) return;
+
+	//if (IsDebugCatAndVerbosity(d_log_devids)) {
+	//	std::string ids_dump;
+	//	dprintf(d_log_devids, "reconfig_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+	//}
+
+	// make sure that the assigned devid's matches the global assigment
+	// which may have changed based on reconfig
+
+	for (slotres_map_t::iterator j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
+		slotres_devIds_map_t::iterator ids(c_slotres_ids_map.find(j->first));
+		if (ids == c_slotres_ids_map.end())
+			continue;
+
+		map->RefreshDevIds(j, ids, slot_id, slot_sub_id);
+	}
+
+	if (IsDebugCatAndVerbosity(d_log_devids)) {
+		std::string ids_dump;
+		dprintf(d_log_devids, "reconfig_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 	}
 }
 

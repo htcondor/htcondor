@@ -500,7 +500,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = Starter->GetWorkingDir();
+		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
 			StringList mount_list(mount_under_scratch);
@@ -585,7 +585,7 @@ VanillaProc::StartJob()
 			MyString arg_errors;
 			std::string filename;
 
-			filename = Starter->GetWorkingDir();
+			filename = Starter->GetWorkingDir(0);
 			filename += "/.condor_pid_ns_status";
 		
 			if (!env.MergeFrom(JobAd, &env_errors)) {

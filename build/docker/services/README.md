@@ -1,9 +1,12 @@
 HTCondor Containers
 ===================
 
-Currently, we provide two kinds of containers for HTCondor services:
-the Minicondor container (`htcondor/mini`) and the Execute Node container
-(`htcondor/execute`).
+We provide the following containers for HTCondor services:
+- Minicondor (`htcondor/mini`)
+- Execute Node (`htcondor/execute`)
+- Central Manager (`htcondor/cm`)
+- Submit Node (`htcondor/submit`)
+
 
 
 Using the Minicondor Container
@@ -57,19 +60,23 @@ container needs no inbound connectivity, and only needs outbound connectivity
 to the central manager and the submit host, even for running jobs or using
 `condor_ssh_to_job`.
 
-You must specify the address of the pool's central manager in the
-`CONDOR_HOST` environment variable.
+You must specify the address of the pool's central manager in the `CONDOR_HOST`
+environment variable or `CONDOR_SERVICE_HOST` environment variable.
 
-If you are using token auth, you must have a token with the
-`ADVERTISE_MASTER` and `ADVERTISE_STARTD` privileges mounted at
-`/root/secrets/token` inside the container.
+If you are using token auth, you must have a token mounted at
+`/root/secrets/token` inside the container.  The token must have the following
+privileges:
+- `READ`
+- `ADVERTISE_MASTER`
+- `ADVERTISE_STARTD`
 
 Otherwise, if you are using pool password auth, you must have a copy of
 the pool password file mounted at `/root/secrets/pool_password` inside the
 container, and specify `USE_POOL_PASSWORD=yes` in the container environment.
 
 Here are the environment variables that the container can use:
-- `CONDOR_HOST` (required): the address of the central manager
+- `CONDOR_HOST`/`CONDOR_SERVICE_HOST` (required): the address of the central
+  manager
 - `NUM_CPUS` (optional, default 1): the number of CPUs to advertise
 - `MEMORY` (optional, default 1024): the amount of total memory (in MB)
   to advertise
@@ -79,7 +86,8 @@ Here are the environment variables that the container can use:
   pool password authentication
 
 In addition, you can add more HTCondor configuration by putting it in
-`/root/config/*.conf` files in the container.
+`/root/config/*.conf` files in the container, or bind-mounting to
+`/etc/condor/condor_config.local`.
 
 
 ### Example
@@ -112,10 +120,10 @@ Run `condor_reconfig` on the central manager to pick up the changes.
 
 Create a token for the execute node.  On the central manager:
 ```console
-cm$ sudo condor_create_token -authz ADVERTISE_MASTER \
-         -authz ADVERTISE_STARTD -identity dockerworker@example.net \
-         dockerworker_token
-cm$ sudo scp user@dockerhost.example.net:volumes/condorexec/secrets/token
+cm$ sudo condor_token_create -authz ADVERTISE_MASTER \
+         -authz ADVERTISE_STARTD -authz READ -identity dockerworker@example.net \
+         -token dockerworker_token
+cm$ sudo scp dockerworker_token user@dockerhost.example.net:volumes/condorexec/secrets/token
 ```
 
 On the Docker host, create an environment file for the container:
@@ -164,6 +172,86 @@ $ docker build -t custom-htcondor-worker .
 
 Afterwards, use `custom-htcondor-worker` instead of `htcondor/execute:el7`
 in your `docker run` command.
+
+
+
+Using the Central Manager Container
+-----------------------------------
+
+### Overview
+
+The central manager (cm) container includes the collector and
+negotiator daemons as described in [the machine roles section of the HTCondor
+manual](https://htcondor.readthedocs.io/en/latest/admin-manual/introduction-admin-manual.html#the-different-roles-a-machine-can-play).
+Other hosts in the HTCondor pool can connect to the central manager via
+token authentication (recommended) or pool password.  Token authentication
+requires HTCondor 8.9.2+ on both sides of the connection.
+
+The central manager requires inbound connectivity on port 9618.
+
+You must have a copy of the master password file mounted at
+`/root/secrets/pool_password`.  If using tokens, this is the secret used to
+create new tokens and validate existing ones; if you are using pool password
+as your auth method, this is the pool password.
+
+If you are using pool password as your auth method, specify
+`USE_POOL_PASSWORD=yes` in the container environment.
+
+You can add more HTCondor configuration by putting it in `/root/config/*.conf`
+files in the container, or bind-mounting a configuration file to
+`/etc/condor/condor_config.local`.
+
+Here are the environment variables that the container can use:
+- `USE_POOL_PASSWORD` (optional, default no): set this to `yes` to use
+  pool password authentication
+
+
+Using the Submit Host Container
+-------------------------------
+
+### Overview
+
+The submit container (htcondor/submit) includes the
+scheduler daemon as described in [the machine roles section of the HTCondor
+manual](https://htcondor.readthedocs.io/en/latest/admin-manual/introduction-admin-manual.html#the-different-roles-a-machine-can-play)
+and can connect to an existing HTCondor pool via token authentication
+(recommended) or pool password.  Token authentication requires HTCondor 8.9.2+
+on both sides of the connection.  This container needs no inbound connectivity.
+
+You must specify the address of the pool's central manager in the `CONDOR_HOST`
+environment variable or `CONDOR_SERVICE_HOST` environment variable.
+
+If you are using token auth, you must have a token mounted at
+`/root/secrets/token` inside the container.  The token must have the following
+privileges:
+- `READ`
+- `ADVERTISE_MASTER`
+- `ADVERTISE_SCHEDD`
+
+Otherwise, if you are using pool password auth, you must have a copy of
+the pool password file mounted at `/root/secrets/pool_password` inside the
+container, and specify `USE_POOL_PASSWORD=yes` in the container environment.
+
+Here are the environment variables that the container can use:
+- `CONDOR_HOST`/`CONDOR_SERVICE_HOST` (required): the address of the central
+  manager
+- `USE_POOL_PASSWORD` (optional, default no): set this to `yes` to use
+  pool password authentication
+
+In addition, you can add more HTCondor configuration by putting it in
+`/root/config/*.conf` files in the container, or bind-mounting a configuration
+file to `/etc/condor/condor_config.local`.
+
+
+### Submitting jobs
+
+In order to submit jobs from the submit container, you must become the
+`submituser` user.  Interactively:
+```console
+root@container# su - submituser
+submituser@container$ condor_submit job.sub
+```
+
 
 
 Building

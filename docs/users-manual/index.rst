@@ -23,5 +23,4 @@ Users' Manual
    self-checkpointing-applications
    time-scheduling-for-job-execution
    special-environment-considerations
-   how-to-report-a-bug
    potential-problems

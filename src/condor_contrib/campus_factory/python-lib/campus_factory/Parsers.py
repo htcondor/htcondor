@@ -13,7 +13,7 @@ class AvailableGlideins(xml.sax.handler.ContentHandler, object):
     
     
     def __init__(self):
-	self.owner_idle = {}
+        self.owner_idle = {}
         pass
 
     def GetIdle(self):
@@ -27,7 +27,7 @@ class AvailableGlideins(xml.sax.handler.ContentHandler, object):
         # Parse the data
         try:
             xml.sax.parseString(formatted_to_parse, self)
-        except xml.sax._exceptions.SAXParseException, inst:
+        except xml.sax._exceptions.SAXParseException as inst:
             logging.error("Error parsing:")
             logging.error("command = %s" % self.command)
             logging.error("stderr = %s" % stderr)

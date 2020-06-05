@@ -100,6 +100,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
 #include "condor_sockfunc.h"
+#include "condor_auth_passwd.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -3115,6 +3116,10 @@ DaemonCore::reconfig(void) {
 
 		const bool blocking = true;
 		m_ccb_listeners->RegisterWithCCBServer(blocking);
+
+		// Drop a pool password if not already there; needed for PASSWORD and IDTOKENS security.
+		Condor_Auth_Passwd::create_pool_password_if_needed();
+
 	}
 
 	// Cons up a thread pool.
@@ -7587,6 +7592,13 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
+	// if working in an encrypted execute directory, we won't be able to check the exe type
+	// unless we first switch to user priv
+	priv_state gbt_prv = PRIV_UNKNOWN;
+	if (priv == PRIV_USER_FINAL) {
+		gbt_prv = set_user_priv();
+	}
+
 	BOOL cp_result, gbt_result;
 	DWORD binType;
 	gbt_result = GetBinaryType(executable, &binType);
@@ -7605,6 +7617,10 @@ int DaemonCore::Create_Process(
 				// try GetBinaryType again...
 			gbt_result = GetBinaryType(executable, &binType);
 		}
+	}
+
+	if (priv == PRIV_USER_FINAL) {
+		set_priv(gbt_prv);
 	}
 
 	// test if the executable is either unexecutable, or if GetBinaryType()

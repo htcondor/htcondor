@@ -392,9 +392,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( CMAKE_INSTALL_PREFIX "")
 		set( CPACK_SET_DESTDIR "ON")
 
-		# Processing control files
-		add_subdirectory(build/packaging/debian)
-
 	elseif ( RPM_SYSTEM_NAME )
 		# This variable will be defined if the platfrom support RPM
 		message (STATUS "Configuring RPM package on ${LINUX_NAME}-${LINUX_VER} -> ${RPM_SYSTEM_NAME}.${SYS_ARCH}")
@@ -423,7 +420,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set ( CPACK_RPM_PACKAGE_URL ${URL})
 		set ( CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
 
-		PackageDate( RPM CPACK_RPM_DATE)
+		string(TIMESTAMP CPACK_RPM_DATE "+%a %b %d %Y")
 
 		#Specify SPEC file template
 		set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_SOURCE_DIR}/build/packaging/rpm/condor.spec.in")

@@ -3720,7 +3720,14 @@ needs.
     ``MACHINE_RESOURCE_NAMES``. This configuration variable is used to
     have resources that are detected and reported to exist by HTCondor,
     but not assigned to slots. A restart of the *condor_startd* is
-    required for changes to this configuration variable to take effect.
+    required for changes to resources assigned to slots to take effect.
+    If this variable is changed and *condor_reconfig* command is sent
+    to the Startd, the list of Offline resources will be updated, and
+    the count of resources of that type will be updated,
+    but newly offline resources will still be assigned to slots.
+    If an offline resource is assigned to a Partitionable slot, it will
+    never be assigned to a new dynamic slot but it will not be removed from
+    the ``Assigned<name>`` attribute of an existing dynamic slot.
 
 :macro-def:`MACHINE_RESOURCE_INVENTORY_<name>`
     Specifies a command line that is executed upon start up of the
@@ -3747,6 +3754,20 @@ needs.
     resource, instead of specifying a fixed quantity or list of the
     resource in the the configuration when set by
     ``MACHINE_RESOURCE_<name>`` :index:`MACHINE_RESOURCE_<name>`.
+
+    The script may also output an attribute of the form
+
+    ::
+
+        Offline<xxx>="y, z"
+
+    where ``<xxx>`` is the name of the resource, and ``"y, z"`` is a comma and/or
+    space separated list of resource identifiers that are also in the ``Detected<xxx>`` list.
+    This attribute is added to the machine ClassAd, and resources ``y`` and ``z`` will not be
+    assigned to any slot and will not be included in the count of resources of this type.
+    This will override the configuration variable ``OFFLINE_MACHINE_RESOURCE_<xxx>``
+    on startup. But ``OFFLINE_MACHINE_RESOURCE_<xxx>`` can still be used to take additional resources offline
+    without restarting.
 
 :macro-def:`ENVIRONMENT_FOR_Assigned<name>`
     A space separated list of environment variables to set for the job.
@@ -4118,7 +4139,7 @@ details.
     and docker universes`).
 :macro-def:`DOCKER_IMAGE_CACHE_SIZE`
     The number of most recently used Docker images that will be kept on
-    the local machine. The default value is 20.
+    the local machine. The default value is 8.
 
 :macro-def:`DOCKER_DROP_ALL_CAPABILITIES`
     A class ad expression, which defaults to true. Evaluated in the
@@ -5570,8 +5591,8 @@ These settings affect the *condor_starter*.
     the number of cores allocated into the slot.  Many commonly used computing
     libraries and programs will look at the value of environment
     variables, such as ``OMP_NUM_THREADS``, to control how many CPU cores to use.  
-    Defaults to OMP_NUM_THREADS, NUMEXPR_NUM_THREADS, MKL_NUM_THREADS, 
-    CUBACORES, JULIA_NUM_THREADS, GOMAXPROCS.
+    Defaults to
+    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS, NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT.
 
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd
@@ -6534,6 +6555,12 @@ These macros affect the *condor_collector*.
     variable limits how long forwarding of updates for a given ad can be
     filtered before an update must be forwarded. The default is one
     third of ``CLASSAD_LIFETIME``.
+
+:macro-def:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`
+    When this boolean variable is set to ``True``, the *condor_collector*
+    will not forward the private portion of Machine ads to the
+    ``CONDOR_VIEW_HOST`` if the ad's ``State`` is ``Claimed``.
+    The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
 
 The following macros control where, when, and for how long HTCondor
 persistently stores absent ClassAds. See

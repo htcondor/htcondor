@@ -162,14 +162,16 @@ public:
 			const std::string &requested_identity,
 			const std::string &peer_location,
 			const std::vector<std::string> &authz_bounding_set,
-			int lifetime, const std::string &client_id)
+			int lifetime, const std::string &client_id,
+			const std::string &request_id)
 	:
 		m_lifetime(lifetime),
 		m_requested_identity(requested_identity),
 		m_requester_identity(requester_identity),
 		m_peer_location(peer_location),
 		m_authz_bounding_set(authz_bounding_set),
-		m_client_id(client_id)
+		m_client_id(client_id),
+		m_request_id(request_id)
 	{
 		m_request_time = time(NULL);
 	}
@@ -227,6 +229,8 @@ public:
 	const std::string &getRequesterIdentity() const {return m_requester_identity;}
 
 	const std::string &getPeerLocation() const {return m_peer_location;}
+
+	const std::string &getRequestId() const {return m_request_id;}
 
 	bool static ShouldAutoApprove(const TokenRequest &token_request, time_t now,
 		std::string &rule_text)
@@ -514,6 +518,7 @@ private:
 	std::string m_peer_location;
 	std::vector<std::string> m_authz_bounding_set;
 	std::string m_client_id;
+        std::string m_request_id;
 	std::string m_token;
 
 	struct ApprovalRule
@@ -1972,15 +1977,15 @@ handle_dc_start_token_request(int, Stream* stream)
 			request_id = get_csrng_uint() % 10000000;
 			iter = g_request_map.find(request_id);
 		}
+		std::string request_id_str;
+		formatstr(request_id_str, "%07d", request_id);
 		if (iter != g_request_map.end()) {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, "Unable to generate new request ID");
 			result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
 		} else {
 			g_request_map[request_id] = std::unique_ptr<TokenRequest>(
-				new TokenRequest{fqu, requested_identity, peer_location, authz_list, requested_lifetime, client_id});
+				new TokenRequest{fqu, requested_identity, peer_location, authz_list, requested_lifetime, client_id, request_id_str});
 		}
-		std::string request_id_str;
-		formatstr(request_id_str, "%07d", request_id);
 			// Note we currently store this as a string; this way we can come back later
 			// and introduce alphanumeric characters if we so wish.
 		result_ad.InsertAttr(ATTR_SEC_REQUEST_ID, request_id_str);
@@ -2183,12 +2188,11 @@ handle_dc_list_token_request(int, Stream* stream)
 	for (const auto & iter : g_request_map) {
 		if (error_code) { break; }
 
-		const auto &request_id = iter.first;
 		const auto &token_request = iter.second;
 
 		if (token_request->getState() != TokenRequest::State::Pending) {continue;}
 
-		std::string request_id_str = std::to_string(request_id);
+		const auto &request_id_str = iter.second->getRequestId();
 		if (!request_filter_str.empty() && (request_filter_str != request_id_str)) {continue;}
 
 		std::stringstream ss;
@@ -3132,9 +3136,6 @@ dc_reconfig()
 
 	// Flush the cached list of keys.
 	refreshNamedCredentials();
-
-	// Allow us to retry setting the pool password.
-	Condor_Auth_Passwd::retry_pool_password();
 
 	// Allow us to search for new tokens
 	Condor_Auth_Passwd::retry_token_search();

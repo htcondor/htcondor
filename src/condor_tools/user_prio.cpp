@@ -1413,7 +1413,7 @@ static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const ch
 static char * FormatFloat(char * pszDest, int width, int decimal, float value)
 {
    char sz[60];
-   char fmt[10] = "%";
+   char fmt[16] = "%";
    sprintf(fmt+1, "%d.%df", width, decimal);
    sprintf(sz, fmt, value);
    int cch = strlen(sz);
@@ -1454,7 +1454,7 @@ static const struct {
    { DetailPriority,  12, "Effective\0Priority" },
    { DetailRealPrio,   8, "Real\0Priority" },
    { DetailFactor,     9, "Priority\0Factor" },
-   { DetailResUsed,    6, "Res\0In Use" },
+   { DetailResUsed,    6, "Whgted\0In Use" },
    { DetailWtResUsed, 12, "Total Usage\0(wghted-hrs)" },
    { DetailUseTime1,  16, "Usage\0Start Time" },
    { DetailUseTime2,  16, "Last\0Usage Time" },

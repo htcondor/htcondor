@@ -35,8 +35,6 @@
 #ifdef __GNUC__
 #if __GNUC__ >= 4
   #pragma GCC diagnostic ignored "-Wunused-parameter"
-  #pragma GCC diagnostic ignored "-Wunused-variable"
-  #pragma GCC diagnostic ignored "-Wunused-value"
 #endif
 #endif
 
@@ -160,7 +158,6 @@ int main(int argc, const char *argv[])
 	bool dash_match_jobs = false;
 	bool dash_route_jobs = false;
 	int  dash_diagnostic = 0;
-	bool dash_d_always = true;
 	bool dash_ignore_prior_routing = false;
 	//bool dash_d_fulldebug = false;
 	const char * route_jobs_filename = NULL;

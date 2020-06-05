@@ -107,14 +107,6 @@ public:
 				, m_timeslice_ms(timeslice_ms)
 				, m_done(at_end)
 				, m_options(0) {}
-			filter_iterator(const filter_iterator &other)
-				: m_table(other.m_table)
-				, m_cur(other.m_cur)
-				, m_found_ad(other.m_found_ad)
-				, m_requirements(other.m_requirements)
-				, m_timeslice_ms(other.m_timeslice_ms)
-				, m_done(other.m_done)
-				, m_options(other.m_options) {}
 
 			~filter_iterator() {}
 			AD operator *() const {

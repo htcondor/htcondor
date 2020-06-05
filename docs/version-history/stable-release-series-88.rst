@@ -13,32 +13,37 @@ Version 8.8.10
 
 Release Notes:
 
--  HTCondor version 8.8.10 not yet released.
+- HTCondor version 8.8.10 not yet released.
 
 .. HTCondor version 8.8.10 released on Month Date, 2020.
 
 New Features:
 
--  None.
+- None.
 
 Bugs Fixed:
 
--  None.
+- *condor_gpu_discovery* no longer crashes if passed just the
+  ``-dynamic`` flag.
+  :ticket:`7639`
+
+- Fix typographic error in ``condor.service`` file to wait for
+  ``nfs-client.target``.
+  :ticket:`7638`
+
+- Increased ``TasksMax`` and ``LimitNOFILE`` to ``infinity`` in HTCondor's
+  systemd unit file so more than 32k shadows can run on a submit node.
+  :ticket:`7650`
 
 Version 8.8.9
 -------------
 
 Release Notes:
 
--  HTCondor version 8.8.9 not yet released.
 
-.. HTCondor version 8.8.9 released on Month Date, 2020.
+-  HTCondor version 8.8.9 released on May 7, 2020.
 
 New Features:
-
--  The default value of MAX_REMAP_RECURSIONS increased from 20 to 128 since
-   a user bumped against the limit of 20 when using ``transfer_output_remaps``.
-   :ticket:`7581`
 
 -  The attributes in a Partitionable slot that are produced by ``STARTD_PARTITIONABLE_SLOT_ATTRS``
    will contain evaluated values from the child slots rather than copies of the expressions
@@ -47,44 +52,74 @@ New Features:
 
 Bugs Fixed:
 
--  Fixed a bug where jobs that set stream_output = true would fail
-   in a confusing way when the disk on the submit side is full.
-   :ticket:`7596`
+-  Fixed a bug whereby the ``MemoryUsage`` attribute in the job ClassAd for a Docker Universe job
+   failed to report the maximum memory usage of the job, but instead
+   reported either zero or the current memory usage. 
+   :ticket:`7527`
+
+-  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
+   Dynamic slot containing a GPU was preempted.  This would result in the *condor_startd* aborting
+   if the preempting job wanted a GPU and no free GPU was available.
+   :ticket:`7591`
+
+-  Fixed a bug that resulted in a segmentation fault when an iterator passed to the ``queue_with_itemdata``
+   method on the ``Submit`` object raised a Python exception.
+   :ticket:`7609`
+
+-  Fixed a bug that caused ``SLOT_TYPE_<N>_<ATTR>`` overrides to be ignored when ``<ATTR>``
+   was one of the standard policy configuration attributes like ``RANK``, ``PREEMPT``, ``KILL`` and
+   ``SUSPEND``.  Only ``START`` and user defined attributes worked.
+   :ticket:`7542`
 
 -  Fixed a bug with accounting groups with quota where the quota was
    incorrectly calculated when jobs requested more than 1 CPU.  This
-   bug was introduced in 8.8.3.
+   bug was introduced in version 8.8.3.
    :ticket:`7602`
 
--  Fixed a bug that caused the negotiator to crash when RequestCpus = 0
-   and depth first filling was on.
-   :ticket:`7583`
+-  The *condor_annex* tool can again use Spot Fleets, after an unannounced
+   API change by Amazon Web Services.
+   :ticket:`7489`
 
 -  Fixed a bug that prevented HTCondor from starting on Amazon AWS Fargate
    and other container based systems where HTCondor was started as root,
    but without the Linux capability CAP_SYS_RESOURCE.
    :ticket:`7470`
 
--  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
-   the HTCondor binaries are installed in a non-default location. 
-   :ticket:`7613`
-
--  Fixed a bug whereby the ``MemoryUsage`` attribute in the job ClassAd for a Docker Universe job
-   failed to report the maximum memory usage of the job, but instead
-   reported either zero or the current memory usage. 
-   :ticket:`7527`
+-  The *condor_collector* will no longer wait forever on an incoming command when
+   only a few bytes of the command are sent and the socket is left open.
+   Without this change, it is possible that a port scanner might hang the collector.
+   :ticket:`7553`
 
 -  Fixed a bug that prevented jobs with *stream_output* or *stream_error*
    to append to a file greater than 2Gb when running with a 32 bit shadow
    :ticket:`7547`
 
--  The *condor_annex* tool can again use Spot Fleets, after an unannounced
-   API change by Amazon Web Services.
-   :ticket:`7489`
+-  Fixed a bug where jobs that set `stream_output = true` would fail
+   in a confusing way when the disk on the submit side is full.
+   :ticket:`7596`
 
 -  Fixed a bug that prevented *condor_ssh_to_job* from working when the
    job was in a container and there was a submit file argument
    :ticket:`7506`
+
+-  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
+   the HTCondor binaries are installed in a non-default location. 
+   :ticket:`7613`
+
+-  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
+   :ticket:`7605`
+
+-  Fixed a bug that prevented ``POOL_HISTORY_MAX_STORAGE`` from begin honored on Windows.
+   :ticket:`7438`
+
+-  Increased the max directory depth from 20 to 128 when transferring files to
+   avoid tripping a circuit breaker that limited the depth HTCondor was willing
+   to traverse.
+   :ticket:`7581`
+
+-  Fixed a bug that caused the negotiator to crash when RequestCpus = 0
+   and ``NEGOTIATOR_DEPTH_FIRST`` is set to ``True``.
+   :ticket:`7583`
 
 -  The *condor_wait* tool is again as efficient when waiting forever as when
    given a deadline on the command line.
@@ -98,44 +133,14 @@ Bugs Fixed:
    started with the **-d** flag to enable dynamic directories.
    :ticket:`7585`
 
--  The *condor_collector* will no longer wait forever on an incoming command when
-   only a few bytes of the command are sent and the socket is left open.  This change
-   is intended to prevent having a port scanner DOS the Collector.
-   :ticket:`7553`
-
--  Fixed a bug that caused ``SLOT_TYPE_<N>_<ATTR>`` overrides to be ignored when ``<ATTR>``
-   was one of the standard policy configuration attributes like ``RANK``, ``PREEMPT``, ``KILL`` and
-   ``SUSPEND``.  Only ``START`` and user defined attributes worked.
-   :ticket:`7542`
-
--  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
-   :ticket:`7605`
-
 -  Fixed a bug that prevented ``$(KNOB:$(DEFAULT_VALUE))`` from being recognized by the configuration system
    and *condor_submit* as a macro with a default value that was also a macro.  As a result neither value would be substituted.
    :ticket:`7360`
-
--  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
-   Dynamic slot containing a GPU was preempted.  This would result in the *condor_startd* aborting
-   if the preempting job wanted a GPU and no free GPU was available.
-   :ticket:`7591`
 
 -  Fixed a bug in the parsing of ``MAX_PROCD_LOG`` when a units value was used.  This bug could result in
    The *condor_procd* restricting itself to a very small log file size, which in turn could result in
    slow operation of the *condor_startd*
    :ticket:`7479`
-
--  Fixed a bug that prevented ``POOL_HISTORY_MAX_STORAGE`` from begin honored on Windows.
-   :ticket:`7438`
-
--  Fixed a bug that resulted in a segmentation fault when an iterator passed to the ``queue_with_itemdata``
-   method on the ``Submit`` object raised a python exception.
-   :ticket:`7609`
-
--  Increased the max directory depth from 20 to 128 when transferring files to
-   avoid tripping a circuit breaker that limited the depth HTCondor was willing
-   to traverse.
-   :ticket:`7581`
 
 -  Fixed a bug where *condor_qedit* would report incorrect counts of
    matching jobs when modifying multiple attributes.
@@ -156,6 +161,11 @@ Bugs Fixed:
 -  On Debian and Ubuntu platforms, ``libglobus-gss-assist3`` is now listed
    as an installation dependency to ensure proper operation of HTCondor.
    :ticket:`7469`
+
+-  The *condor_schedd* will now refuse to allow a job to be submitted when the
+   submitting user is ``root`` or ``LOCAL_SYSTEM``.  Formerly, such jobs could
+   be submitted, but would not run because of an ``Owner`` check in the *condor_shadow*.
+   :ticket:`7441`
 
 Version 8.8.8
 -------------
