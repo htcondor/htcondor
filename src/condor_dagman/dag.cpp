@@ -58,7 +58,7 @@ const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
 const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
 const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
 
-// NOTE: this must be kept in sync with the dag_status enum
+// NOTE: this must be kept in sync with the DagStatus enum
 const char * Dag::_dag_status_names[] = {
     "DAG_STATUS_OK",
     "DAG_STATUS_ERROR",
@@ -275,7 +275,7 @@ Dag::ReportMetrics( int exitCode )
 		return;
 	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
 	if ( report_graph_metrics == true ) {
-		if (_dagStatus != dag_status::DAG_STATUS_CYCLE ) {
+		if (_dagStatus != DagStatus::DAG_STATUS_CYCLE ) {
 			_metrics->GatherGraphMetrics( this );
 		}
 	}
@@ -361,13 +361,19 @@ bool Dag::Bootstrap (bool recovery)
 		PrintReadyQ( DEBUG_DEBUG_2 );
     }	
     
+		// If we have a provisioner job, submit that before any other jobs
+	if( HasProvisionerNode() ) {
+		StartProvisionerNode();
+	}
 		// Note: we're bypassing the ready queue here...
-    jobs.ToBeforeFirst();
-    while( jobs.Next( job ) ) {
-		if( job->CanSubmit() ) {
-			StartNode( job, false );
+	else {
+		jobs.ToBeforeFirst();
+		while( jobs.Next( job ) ) {
+			if( job->CanSubmit() ) {
+				StartNode( job, false );
+			}
 		}
-    }
+	}
 
     return true;
 }
@@ -1574,6 +1580,32 @@ Dag::StartFinalNode()
 }
 
 //-------------------------------------------------------------------------
+bool
+Dag::StartProvisionerNode()
+{
+	if ( _provisioner_node && _provisioner_node->GetStatus() == Job::STATUS_READY ) {
+		debug_printf( DEBUG_QUIET, "Starting provisioner node...\n" );
+		if ( StartNode( _provisioner_node, false ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+//-------------------------------------------------------------------------
+Job::status_t
+Dag::GetProvisionerJobAdState()
+{
+	// TODO: Replace this with code that actually polls the job ad
+	static int count = 0;
+	count ++;
+	if (count <= 3) return Job::STATUS_READY;
+
+	return Job::STATUS_PROVISIONED;
+}
+
+//-------------------------------------------------------------------------
 // returns number of jobs submitted
 int
 Dag::SubmitReadyJobs(const Dagman &dm)
@@ -1618,6 +1650,27 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// to fire up any PRE scripts that were deferred while we were
 			// halted.
 		_preScriptQ->RunWaitingScripts();
+	}
+
+		// Check if we have a provisioner node.
+	if ( HasProvisionerNode() ) {
+			// If it has not yet reached a provisioned state, update its status
+			// from the schedd job ad.
+		if ( _provisioner_node->GetStatus() != Job::STATUS_PROVISIONED ) {
+			_provisioner_node->SetStatus( GetProvisionerJobAdState() );
+				// If we just moved into a provisioned state, we can start
+				// submitting the other jobs in the dag
+			if ( _provisioner_node->GetStatus() == Job::STATUS_PROVISIONED ) {
+				Job* job;
+				ListIterator<Job> jobs (_jobs);
+				jobs.ToBeforeFirst();
+				while( jobs.Next( job ) ) {
+					if( job->CanSubmit() ) {
+						StartNode( job, false );
+					}
+				}
+			}
+		}
 	}
 
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
@@ -3756,6 +3809,17 @@ bool Dag::Add( Job& job )
 		job.SetStatus( Job::STATUS_NOT_READY );
 		_final_job = &job;
 	}
+
+	if ( ( job.GetType() == NodeType::PROVISIONER ) ) {
+		if ( _provisioner_node ) {
+			debug_printf( DEBUG_QUIET, "Error: DAG already has a provisioner "
+						"node %s; attempting to add provisioner node %s\n",
+						_provisioner_node->GetJobName(), job.GetJobName() );
+			return false;
+		}
+		_provisioner_node = &job;
+	}
+
 	return _jobs.Append(&job);
 }
 
@@ -4398,7 +4462,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
+	if ( _dagStatus == DagStatus::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
 		max_submit_attempts = min( max_submit_attempts, 2 );
 	}
 

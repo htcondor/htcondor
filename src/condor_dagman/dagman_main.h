@@ -25,6 +25,7 @@
 #include "dagman_classad.h"
 #include "dagman_stats.h"
 #include "utc_time.h"
+#include "../condor_utils/dagman_utils.h"
 
 	// Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -34,7 +35,7 @@ enum exit_value {
 	EXIT_RESTART = 3,	// exit but indicate that we should be restarted
 };
 
-void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
+void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 			bool removeCondorJobs = true );
 void main_shutdown_graceful( void );
 void main_shutdown_logerror( void );

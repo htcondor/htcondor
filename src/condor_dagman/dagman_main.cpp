@@ -519,7 +519,7 @@ void main_shutdown_logerror() {
 	DC_Exit( EXIT_ABORT );
 }
 
-void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
+void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 			bool removeCondorJobs ) {
 		// Avoid possible infinite recursion if you hit a fatal error
 		// while writing a rescue DAG.
@@ -577,7 +577,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			return;
 		}
 		print_status( true );
-		bool removed = ( dagStatus == Dag::DAG_STATUS_RM );
+		bool removed = ( dagStatus == DagStatus::DAG_STATUS_RM );
 		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
@@ -596,7 +596,7 @@ int main_shutdown_remove(int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	// We don't remove Condor node jobs here because the schedd will
 	// automatically remove them itself.
-	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM,
+	main_shutdown_rescue( EXIT_ABORT, DagStatus::DAG_STATUS_RM,
 				dagman._removeNodeJobs );
 	return FALSE;
 }
@@ -1646,7 +1646,7 @@ void condor_event_timer () {
 	if( log_status == ReadUserLog::LOG_STATUS_ERROR || log_status == ReadUserLog::LOG_STATUS_SHRUNK ) {
 		debug_printf( DEBUG_NORMAL, "DAGMan exiting due to error in log file\n" );
 		dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-		dagman.dag->_dagStatus = Dag::DAG_STATUS_ERROR;
+		dagman.dag->_dagStatus = DagStatus::DAG_STATUS_ERROR;
 		main_shutdown_logerror();
 		return;
 	}
@@ -1672,7 +1672,7 @@ void condor_event_timer () {
 			debug_printf( DEBUG_NORMAL,
 						"ProcessLogEvents() returned false\n" );
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, DagStatus::DAG_STATUS_ERROR );
 			return;
 		}
 		logProcessCycleEndTime = condor_gettimestamp_double();
@@ -1772,7 +1772,7 @@ void condor_event_timer () {
 		debug_printf( DEBUG_QUIET,
 				  "ERROR: the following job(s) failed:\n" );
 		dagman.dag->PrintJobList( Job::STATUS_ERROR );
-		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
+		main_shutdown_rescue( EXIT_ERROR, DagStatus::DAG_STATUS_HALTED );
 		return;
 	}
 
@@ -1783,14 +1783,14 @@ void condor_event_timer () {
 	// returned from this function above.)
     // 
     if( dagman.dag->FinishedRunning( false ) ) {
-		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
+		DagStatus dagStatus = DagStatus::DAG_STATUS_OK;
 		if( dagman.dag->DoneFailed( false ) ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
 				dagman.dag->PrintJobList( Job::STATUS_ERROR );
 			}
-			dagStatus = Dag::DAG_STATUS_NODE_FAILED;
+			dagStatus = DagStatus::DAG_STATUS_NODE_FAILED;
 		} else {
 			// no jobs failed, so a cycle must exist
 			debug_printf( DEBUG_QUIET, "ERROR: DAG finished but not all "
@@ -1798,11 +1798,11 @@ void condor_event_timer () {
 			if( dagman.dag->isCycle() ) {
 				debug_printf (DEBUG_QUIET, "... ERROR: a cycle exists "
 							"in the dag, please check input\n");
-				dagStatus = Dag::DAG_STATUS_CYCLE;
+				dagStatus = DagStatus::DAG_STATUS_CYCLE;
 			} else {
 				debug_printf (DEBUG_QUIET, "... ERROR: no cycle found; "
 							"unknown error condition\n");
-				dagStatus = Dag::DAG_STATUS_ERROR;
+				dagStatus = DagStatus::DAG_STATUS_ERROR;
 			}
 			if ( debug_level >= DEBUG_NORMAL ) {
 				dagman.dag->PrintJobList();

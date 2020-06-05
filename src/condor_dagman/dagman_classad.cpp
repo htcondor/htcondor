@@ -27,9 +27,114 @@
 #include "basename.h"
 
 //---------------------------------------------------------------------------
+Qmgr_connection *
+DagmanScheddClient::OpenConnection()
+{
+		// Open job queue
+	CondorError errstack;
+	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
+				&errstack, NULL, _schedd->version() );
+	if ( !queue ) {
+		debug_printf( DEBUG_QUIET,
+					"WARNING: failed to connect to queue manager (%s)\n",
+					errstack.getFullText().c_str() );
+		check_warning_strictness( DAG_STRICT_3 );
+		return NULL;
+	}
+
+	return queue;
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanScheddClient::CloseConnection( Qmgr_connection *queue )
+{
+	if ( !DisconnectQ( queue ) ) {
+		debug_printf( DEBUG_QUIET,
+					"WARNING: queue transaction failed.  No attributes were set.\n" );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanScheddClient::SetAttribute( CondorID jobId, const char *attrName, int attrVal )
+{
+	if ( SetAttributeInt( jobId._cluster, jobId._proc,
+						  attrName, attrVal ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanScheddClient::SetAttribute( CondorID jobId, const char *attrName, const MyString &value )
+{
+	if ( SetAttributeString( jobId._cluster, jobId._proc,
+						  attrName, value.Value() ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanScheddClient::SetAttribute( CondorID jobId, const char *attrName, const ClassAd &ad )
+{
+	if ( SetAttributeExpr( jobId._cluster, jobId._proc,
+						  attrName, &ad ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
+//---------------------------------------------------------------------------
+bool
+DagmanScheddClient::GetAttribute( CondorID jobId, const char *attrName, MyString &attrVal,
+			bool printWarning )
+{
+	char *val;
+	if ( GetAttributeStringNew( jobId._cluster, jobId._proc,
+				attrName, &val ) == -1 ) {
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+					  	"Warning: failed to get attribute %s\n", attrName );
+		}
+		return false;
+	}
+
+	attrVal = val;
+	free( val );
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+bool
+DagmanScheddClient::GetAttribute( CondorID jobId, const char *attrName, int &attrVal,
+			bool printWarning )
+{
+	int val;
+	if ( GetAttributeInt( jobId._cluster, jobId._proc,
+				attrName, &val ) == -1 ) {
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+				"Warning: failed to get attribute %s\n", attrName );
+		}
+		return false;
+	}
+
+	attrVal = val;
+	return true;
+}
+
+//---------------------------------------------------------------------------
 DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
-	_valid( false ),
-	_schedd( NULL )
+	_valid( false )
 {
 	CondorID defaultCondorId;
 	if ( DAGManJobId == defaultCondorId ) {
@@ -72,10 +177,10 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 		return;
 	}
 
-	SetDagAttribute( ATTR_DAGMAN_MAXJOBS, maxJobs );
-	SetDagAttribute( ATTR_DAGMAN_MAXIDLE, maxIdle );
-	SetDagAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, maxPreScripts );
-	SetDagAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, maxPostScripts );
+	SetAttribute( _dagmanId, ATTR_DAGMAN_MAXJOBS, maxJobs );
+	SetAttribute( _dagmanId, ATTR_DAGMAN_MAXIDLE, maxIdle );
+	SetAttribute( _dagmanId, ATTR_DAGMAN_MAXPRESCRIPTS, maxPreScripts );
+	SetAttribute( _dagmanId, ATTR_DAGMAN_MAXPOSTSCRIPTS, maxPostScripts );
 
 	CloseConnection( queue );
 }
@@ -84,7 +189,7 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
 			int post, int ready, int failed, int unready,
-			Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats,
+			DagStatus dagStatus, bool recovery, const DagmanStats &stats,
 			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts )
 {
 	if ( !_valid ) {
@@ -98,21 +203,21 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 		return;
 	}
 
-	SetDagAttribute( ATTR_DAG_NODES_TOTAL, total );
-	SetDagAttribute( ATTR_DAG_NODES_DONE, done );
-	SetDagAttribute( ATTR_DAG_NODES_PRERUN, pre );
-	SetDagAttribute( ATTR_DAG_NODES_QUEUED, submitted );
-	SetDagAttribute( ATTR_DAG_NODES_POSTRUN, post );
-	SetDagAttribute( ATTR_DAG_NODES_READY, ready );
-	SetDagAttribute( ATTR_DAG_NODES_FAILED, failed );
-	SetDagAttribute( ATTR_DAG_NODES_UNREADY, unready );
-	SetDagAttribute( ATTR_DAG_STATUS, (int)dagStatus );
-	SetDagAttribute( ATTR_DAG_IN_RECOVERY, recovery );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_TOTAL, total );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_DONE, done );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_PRERUN, pre );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_QUEUED, submitted );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_POSTRUN, post );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_READY, ready );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_FAILED, failed );
+	SetAttribute( _dagmanId, ATTR_DAG_NODES_UNREADY, unready );
+	SetAttribute( _dagmanId, ATTR_DAG_STATUS, (int)dagStatus );
+	SetAttribute( _dagmanId, ATTR_DAG_IN_RECOVERY, recovery );
 
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;
 	stats.Publish( stats_ad );
-	SetDagAttribute( ATTR_DAG_STATS, stats_ad );
+	SetAttribute( _dagmanId, ATTR_DAG_STATS, stats_ad );
 
 	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
 	// users. Start by declaring variables for these properties.
@@ -122,10 +227,10 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	int jobAdMaxPostScripts;
 
 	// Look up the current values of these properties in the condor_dagman job ad.
-	GetDagAttribute( ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle );
-	GetDagAttribute( ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs );
-	GetDagAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts );
-	GetDagAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts );
+	GetAttribute( _dagmanId, ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle );
+	GetAttribute( _dagmanId, ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs );
+	GetAttribute( _dagmanId, ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts );
+	GetAttribute( _dagmanId, ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts );
 
 	// Update our internal dag values according to whatever is in the job ad.
 	maxIdle = jobAdMaxIdle;
@@ -152,12 +257,12 @@ DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
 		return;
 	}
 
-	if ( !GetDagAttribute( ATTR_OWNER, owner ) ) {
+	if ( !GetAttribute( _dagmanId, ATTR_OWNER, owner ) ) {
 		check_warning_strictness( DAG_STRICT_1 );
 		owner = "undef";
 	}
 
-	if ( !GetDagAttribute( ATTR_DAG_NODE_NAME, nodeName ) ) {
+	if ( !GetAttribute( _dagmanId, ATTR_DAG_NODE_NAME, nodeName ) ) {
 		// We should only get this value if we're a sub-DAG.
 		nodeName = "undef";
 	}
@@ -183,13 +288,13 @@ DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 		return;
 	}
 
-	if ( !GetDagAttribute( ATTR_JOB_BATCH_NAME, batchName, false ) ) {
+	if ( !GetAttribute( _dagmanId, ATTR_JOB_BATCH_NAME, batchName, false ) ) {
 			// Default batch name is top-level DAG's primary
 			// DAG file (base name only).
 		batchName = condor_basename( primaryDagFile.Value() );
 		batchName += "+";
 		batchName += IntToStr( _dagmanId._cluster );
-		SetDagAttribute( ATTR_JOB_BATCH_NAME, batchName );
+		SetAttribute( _dagmanId, ATTR_JOB_BATCH_NAME, batchName );
 	}
 
 	CloseConnection( queue );
@@ -213,11 +318,11 @@ DagmanClassad::GetAcctInfo( MyString &group, MyString &user )
 		return;
 	}
 
-	GetDagAttribute( ATTR_ACCT_GROUP, group, false );
+	GetAttribute( _dagmanId, ATTR_ACCT_GROUP, group, false );
 	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group: <%s>\n",
 				group.Value() );
 
-	GetDagAttribute( ATTR_ACCT_GROUP_USER, user, false );
+	GetAttribute( _dagmanId, ATTR_ACCT_GROUP_USER, user, false );
 	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group_user: <%s>\n",
 				user.Value() );
 
@@ -253,107 +358,34 @@ DagmanClassad::InitializeMetrics()
 }
 
 //---------------------------------------------------------------------------
-Qmgr_connection *
-DagmanClassad::OpenConnection()
+JobClassad::JobClassad( const CondorID &JobId ) :
+	_valid( false )
 {
-		// Open job queue
-	CondorError errstack;
-	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
-				&errstack, NULL, _schedd->version() );
-	if ( !queue ) {
+	CondorID defaultCondorId;
+	if ( JobId == defaultCondorId ) {
+		debug_printf( DEBUG_QUIET, "No HTCondor ID available for this job." );
+		return;
+	}
+
+	_jobId = JobId;
+
+	_schedd = new DCSchedd( NULL, NULL );
+	if ( !_schedd || !_schedd->locate() ) {
+		const char *errMsg = _schedd ? _schedd->error() : "?";
 		debug_printf( DEBUG_QUIET,
-					"WARNING: failed to connect to queue manager (%s)\n",
-					errstack.getFullText().c_str() );
+					"WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
+					errMsg );
 		check_warning_strictness( DAG_STRICT_3 );
-		return NULL;
+		return;
 	}
 
-	return queue;
+	_valid = true;
 }
 
 //---------------------------------------------------------------------------
-void
-DagmanClassad::CloseConnection( Qmgr_connection *queue )
+JobClassad::~JobClassad()
 {
-	if ( !DisconnectQ( queue ) ) {
-		debug_printf( DEBUG_QUIET,
-					"WARNING: queue transaction failed.  No attributes were set.\n" );
-		check_warning_strictness( DAG_STRICT_3 );
-	}
-}
+	_valid = false;
 
-//---------------------------------------------------------------------------
-void
-DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
-{
-	if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
-						  attrName, attrVal ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "WARNING: failed to set attribute %s\n", attrName );
-		check_warning_strictness( DAG_STRICT_3 );
-	}
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
-{
-	if ( SetAttributeString( _dagmanId._cluster, _dagmanId._proc,
-						  attrName, value.Value() ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "WARNING: failed to set attribute %s\n", attrName );
-		check_warning_strictness( DAG_STRICT_3 );
-	}
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanClassad::SetDagAttribute( const char *attrName, const ClassAd &ad )
-{
-	if ( SetAttributeExpr( _dagmanId._cluster, _dagmanId._proc,
-						  attrName, &ad ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					  "WARNING: failed to set attribute %s\n", attrName );
-		check_warning_strictness( DAG_STRICT_3 );
-	}
-}
-
-//---------------------------------------------------------------------------
-bool
-DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
-			bool printWarning )
-{
-	char *val;
-	if ( GetAttributeStringNew( _dagmanId._cluster, _dagmanId._proc,
-				attrName, &val ) == -1 ) {
-		if ( printWarning ) {
-			debug_printf( DEBUG_QUIET,
-					  	"Warning: failed to get attribute %s\n", attrName );
-		}
-		return false;
-	}
-
-	attrVal = val;
-	free( val );
-
-	return true;
-}
-
-//---------------------------------------------------------------------------
-bool
-DagmanClassad::GetDagAttribute( const char *attrName, int &attrVal,
-			bool printWarning )
-{
-	int val;
-	if ( GetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
-				attrName, &val ) == -1 ) {
-		if ( printWarning ) {
-			debug_printf( DEBUG_QUIET,
-				"Warning: failed to get attribute %s\n", attrName );
-		}
-		return false;
-	}
-
-	attrVal = val;
-	return true;
+	delete _schedd;
 }
