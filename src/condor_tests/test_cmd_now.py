@@ -8,7 +8,13 @@ import logging
 import htcondor
 
 from ornithology import (
-    config, standup, action, JobStatus, ClusterState, Condor, path_to_sleep
+    config,
+    standup,
+    action,
+    JobStatus,
+    ClusterState,
+    Condor,
+    path_to_sleep,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,13 +31,22 @@ def max_victim_jobs():
         # PyTest and HTCondor can both handle spaces in the parameter name,
         # but it's easier debugging in the shell without them.
         "time_out": ("1", "[now job {0}]: coalesce command timed out, failing"),
-        #        "transient_failure": ("2", "[now job {0}]: coalesce failed"),
-        #        "permanent_failure": ("3", "[now job {0}]: coalesce failed last retry, giving up"),
-        #        "no_claim_ID": ("4", "[now job {0}]: coalesce did not return a claim ID, failing"),
-        #        "too_slow": (
-        #            "5",
-        #            "[now job {0}]: targeted job(s) did not vacate quickly enough, failing",
-        #        ),
+        "transient_failure": (
+            "2",
+            "[now job {0}]: coalesce failed: FAILURE INJECTION: 2",
+        ),
+        "permanent_failure": (
+            "3",
+            "[now job {0}]: coalesce failed last retry, giving up.",
+        ),
+        "no_claim_ID": (
+            "4",
+            "[now job {0}]: coalesce did not return a claim ID, failing",
+        ),
+        "too_slow": (
+            "5",
+            "[now job {0}]: targeted job(s) did not vacate quickly enough, failing",
+        ),
     }
 )
 def failure_injection(request):
@@ -113,20 +128,21 @@ def failure_log_message_with_job_id(failure_log_message, beneficiary_job):
 
 
 @action
-def sched_log_containing_failure(failure_log_message_with_job_id, sched_log, failure_injection_condor):
+def sched_log_containing_failure(
+    failure_log_message_with_job_id, sched_log, failure_injection_condor
+):
     # Wait for the injected failure to happen.
     assert sched_log.wait(
         # The documentation of DaemonLogMessage looks incomplete, but since
         # this doesn't start with an underscore, I'm assuming it's public.
         condition=lambda line: line.message == failure_log_message_with_job_id,
-        timeout=60
+        timeout=60,
     )
 
     # Once the injected failure happens, we want to check the schedd's
     # pcccTable.  It will dump it when asked for its machine ads.
     failure_injection_condor.direct_status(
-        htcondor.DaemonTypes.Schedd,
-        htcondor.AdTypes.Startd
+        htcondor.DaemonTypes.Schedd, htcondor.AdTypes.Startd
     )
 
     return sched_log
@@ -143,16 +159,10 @@ class TestCondorNow:
             if match == 0 and "pcccDumpTable(): dumping table..." in line:
                 match = 1
                 continue
-            if (
-                match == 1
-                and "pcccDumpTable(): ... done dumping PCCC table." in line
-            ):
+            if match == 1 and "pcccDumpTable(): ... done dumping PCCC table." in line:
                 match = 2
                 continue
-            if (
-                match == 2
-                and "Dumping match records (with now jobs)..." in line
-            ):
+            if match == 2 and "Dumping match records (with now jobs)..." in line:
                 match = 3
                 continue
             if match == 3 and "... done dumping match records." in line:
