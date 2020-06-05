@@ -196,7 +196,7 @@ def test_dir() -> Path:
 def pytest_runtest_protocol(item, nextitem):
     if "test_dir" in item.fixturenames:
         TEST_DIR._recompute(item)
-
+        os.chdir(str(TEST_DIR))
 
 
 
