@@ -123,7 +123,8 @@ static void* dlsym(void* hlib, const char * symbol) {
 }
 #endif
 
-// this coded was stolen from helper_cuda.h in the cuda 5.5 sdk.
+// Function taken from helper_cuda.h in the CUDA SDK
+// https://github.com/NVIDIA/cuda-samples/blob/master/Common/helper_cuda.h
 int ConvertSMVer2Cores(int major, int minor)
 {
 	// Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
@@ -153,6 +154,7 @@ int ConvertSMVer2Cores(int major, int minor)
         { 0x70, 64 }, // Volta Generation (SM 7.0) GV100 class
         { 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
         { 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
+        { 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
         {   -1, -1 }
     };
 
