@@ -226,9 +226,9 @@ The code block below also adds the ``job_with_bad_url`` fixture.
             {
                 "executable": "/bin/sleep",
                 "arguments": "1s",
-                "log": (test_dir / "bad_url.log").as_posix(),
                 "transfer_input_files": bad_url,
-                "should_transfer_files": "YES"
+                "should_transfer_files": "YES",
+                "log": (test_dir / "bad_url.log").as_posix(),
             }
         )
 
@@ -452,9 +452,9 @@ so here's a copy of the whole thing in one go, as formatted by the
             {
                 "executable": "/bin/sleep",
                 "arguments": "1",
-                "log": (test_dir / "bad_url.log").as_posix(),
                 "transfer_input_files": bad_url,
                 "should_transfer_files": "YES",
+                "log": (test_dir / "bad_url.log").as_posix(),
             }
         )
 
