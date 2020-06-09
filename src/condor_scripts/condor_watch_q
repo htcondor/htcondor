@@ -42,20 +42,14 @@ def parse_args():
             """
             Track the status of jobs over time without repeatedly querying the condor_schedd.
 
-            If no users, cluster ids, or event logs are given, condor_watch_q will 
-            default to tracking all of the current user's jobs.
+            If no users, cluster ids, event logs, or batch names are given,
+            condor_watch_q will default to tracking all of the current user's jobs.
 
-            Any option beginning with a single "-" can be specified by its unique
-            prefix. For example, these commands are all equivalent:
-
-                condor_watch_q -clusters 12345
-                condor_watch_q -clu 12345
-                condor_watch_q -c 12345
-
-            By default, condor_watch_q will never exit on its own (unless it errors).
+            By default, condor_watch_q will never exit on its own 
+            (unless it encounters an error).
             You can tell it to exit when certain conditions are met. For example,
-            to exit when all of the jobs it is tracking are done (with exit status 0),
-            or when any job is held (with exit status 1), you could run
+            to exit with status 0 when all of the jobs it is tracking are done
+            or with status 1 when any job is held, you could run
 
                 condor_watch_q -exit all,done,0 -exit any,held,1
             """
@@ -64,6 +58,8 @@ def parse_args():
         add_help=False,
     )
 
+    # GENERAL OPTIONS
+
     parser.add_argument(
         "-help",
         action="help",
@@ -71,7 +67,12 @@ def parse_args():
         help="Show this help message and exit.",
     )
 
-    # select which jobs to track
+    parser.add_argument(
+        "-debug", action="store_true", help="Turn on HTCondor debug printing."
+    )
+
+    # TRACKING OPTIONS
+
     parser.add_argument(
         "-users", nargs="+", metavar="USER", help="Which users to track."
     )
@@ -100,33 +101,35 @@ def parse_args():
         help="Which schedd to contact for queries, if needed. Defaults to the local schedd.",
     )
 
-    # select when (if) to exit
+    # BEHAVIOR OPTIONS
+
     parser.add_argument(
         "-exit",
         action=ExitConditions,
-        metavar="GROUPER,JOB_STATUS[,EXIT_CODE]",
+        metavar="GROUPER,JOB_STATUS[,EXIT_STATUS]",
         help=textwrap.dedent(
             """
             Specify conditions under which condor_watch_q should exit. 
 
-            GROUPER is one of {{{}}}.
+            GROUPER is one of {{{exit_groupers}}}.
 
-            JOB_STATUS is one of {{{}}}.
+            JOB_STATUS is one of {{{job_statuses}}}.
 
-            "active" means "in the queue".
+            The "active" status means "in the queue",
+            and includes jobs in the idle, running, and held states.
+            
+            ``EXIT_STATUS`` may be any valid exit status integer.
 
             To specify multiple exit conditions, pass this option multiple times.
+            condor_watch_q will exit when any of the conditions are satisfied.
             """.format(
-                ", ".join(EXIT_GROUPERS.keys()), ", ".join(EXIT_JOB_STATUS_CHECK.keys())
+                exit_groupers=", ".join(EXIT_GROUPERS.keys()),
+                job_statuses=", ".join(EXIT_JOB_STATUS_CHECK.keys()),
             )
         ),
     )
 
-    parser.add_argument(
-        "-abbreviate",
-        action="store_true",
-        help="Abbreviate path components to the shortest unique prefix.",
-    )
+    # DISPLAY OPTIONS
 
     parser.add_argument(
         "-groupby",
@@ -142,7 +145,6 @@ def parse_args():
             """
         ),
     )
-
     parser.add_argument(
         "-table",
         "-no-table",
@@ -191,12 +193,20 @@ def parse_args():
         help='Enable/disable the "updated at" line. Enabled by default.',
     )
     parser.add_argument(
+        "-abbreviate",
+        "-no-abbreviate",
+        action=NegateAction,
+        nargs = 0,
+        default = True,
+        help="Enable/disable abbreviating path components to the shortest somewhat-unique prefix. Disabled by default.",
+    )
+    parser.add_argument(
         "-color",
         "-no-color",
         action=NegateAction,
         nargs=0,
         default=sys.stdout.isatty(),
-        help="Enable/disable colored output. Enabled by default if connected to a tty.",
+        help="Enable/disable colored output. Enabled by default if connected to a tty and not on Windows.",
     )
     parser.add_argument(
         "-refresh",
@@ -205,10 +215,6 @@ def parse_args():
         nargs=0,
         default=sys.stdout.isatty(),
         help="Enable/disable refreshing output (instead of appending). Enabled by default if connected to a tty.",
-    )
-
-    parser.add_argument(
-        "-debug", action="store_true", help="Turn on HTCondor debug printing."
     )
 
     args, unknown = parser.parse_known_args()
@@ -294,38 +300,40 @@ class ExitConditions(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
         v = values.split(",")
         if len(v) == 3:
-            grouper, status, exit_code = v
+            grouper, status, exit_status = v
         elif len(v) == 2:
             grouper, status = v
-            exit_code = 0
+            exit_status = 0
         else:
             parser.error(message="invalid -exit specification")
 
         if grouper not in EXIT_GROUPERS:
             parser.error(
-                message='invalid GROUPER "{}", must be one of {{ {} }}'.format(
-                    grouper, ", ".join(EXIT_GROUPERS.keys())
+                message='invalid GROUPER "{grouper}", must be one of {{{groupers}}}'.format(
+                    grouper=grouper, groupers=", ".join(EXIT_GROUPERS.keys())
                 )
             )
 
         if status not in EXIT_JOB_STATUS_CHECK:
             parser.error(
-                message='invalid JOB_STATUS "{}", must be one of {{ {} }}'.format(
-                    status, ", ".join(EXIT_JOB_STATUS_CHECK.keys())
+                message='invalid JOB_STATUS "{status}", must be one of {{{statuses}}}'.format(
+                    status=status, statuses=", ".join(EXIT_JOB_STATUS_CHECK.keys())
                 )
             )
 
         try:
-            exit_code = int(exit_code)
+            exit_status = int(exit_status)
         except ValueError:
             parser.error(
-                message='EXIT_CODE must be an integer, but was "{}"'.format(exit_code)
+                message='exit_status must be an integer, but was "{}"'.format(
+                    exit_status
+                )
             )
 
         if getattr(args, self.dest, None) is None:
             setattr(args, self.dest, [])
 
-        getattr(args, self.dest).append((grouper, status, exit_code))
+        getattr(args, self.dest).append((grouper, status, exit_status))
 
 
 class NegateAction(argparse.Action):
@@ -430,11 +438,11 @@ def watch_q(
     tracker = JobStateTracker(event_logs, batch_names)
 
     exit_checks = []
-    for grouper, checker, exit_code in exit_conditions:
+    for grouper, checker, exit_status in exit_conditions:
         disp = "{} {}".format(grouper, checker)
         exit_grouper = EXIT_GROUPERS[grouper.lower()]
         exit_check = EXIT_JOB_STATUS_CHECK[checker.lower()]
-        exit_checks.append((exit_grouper, exit_check, exit_code, disp))
+        exit_checks.append((exit_grouper, exit_check, exit_status, disp))
 
     try:
         msg, move, clear = None, None, None
@@ -533,14 +541,14 @@ def watch_q(
 
             print(msg)
 
-            for grouper, checker, exit_code, disp in exit_checks:
+            for grouper, checker, exit_status, disp in exit_checks:
                 if grouper((checker(s) for s in tracker.job_states)):
                     print(
                         'Exiting with code {} because of condition "{}" at {}'.format(
-                            exit_code, disp, now
+                            exit_status, disp, now
                         )
                     )
-                    sys.exit(exit_code)
+                    sys.exit(exit_status)
 
             time.sleep(2)
     except KeyboardInterrupt:

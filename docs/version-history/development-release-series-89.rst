@@ -39,6 +39,7 @@ New Features:
    that does not repeatedly query the *condor_schedd* like ``watch condor_q``
    would. It includes options for colored output, progress bars, and a minimal
    language for exiting when certain conditions are met.
+   The man page can be found here: :ref:`condor_watch_q`.
    *condor_watch_q* is still under development;
    several known issues are summarized in the ticket.
    :ticket:`7343`
