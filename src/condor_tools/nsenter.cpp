@@ -302,7 +302,7 @@ int main( int argc, char *argv[] )
 		ioctl(0, TIOCSWINSZ, &win);
 
 		// Finally, launch the shell
-		execle("/bin/sh", "/bin/sh", "-l", "-i", nullptr, envp.data());
+		execle("/bin/sh", "/bin/sh", "-l", "-i", 0, envp.data());
  
 		// Only get here if exec fails
 		fprintf(stderr, "exec failed %d\n", errno);
