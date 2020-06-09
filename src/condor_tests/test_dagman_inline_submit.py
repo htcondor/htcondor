@@ -35,14 +35,14 @@ def custom_attribute_value(request):
 def dag_description(custom_attribute_value):
     # the {{ and }} are escaped { and } because they are f-string delimiters
     return textwrap.dedent(
-        f"""
+        """
         JOB HelloInlineSubmit {{
             executable = /bin/echo
             arguments = Hello, inline submit!
             output = inline.out
-            MY.CustomAttribute = {custom_attribute_value}
+            MY.CustomAttribute = {}
         }}
-    """
+    """.format(custom_attribute_value)
     )
 
 
@@ -56,7 +56,7 @@ def dag_dir(test_dir, dag_description):
     global sequence_number
     sequence_number += 1
 
-    return test_dir / f"dagman-{sequence_number}"
+    return test_dir / "dagman-{}".format(sequence_number)
 
 
 @action
@@ -104,8 +104,8 @@ class TestDagmanInlineSubmit:
         assert inline_dag_job.state[0] == JobStatus.COMPLETED
 
     def test_inline_dagman_job_returned_zero(self, dagman_terminate_event, test_dir):
-        for file in (test_dir / f"dagman-{sequence_number}").iterdir():
-            print(f"Contents of {file}")
+        for file in (test_dir / "dagman-{}".format(sequence_number)).iterdir():
+            print("Contents of {}".format(file))
             print(textwrap.indent(file.read_text(), prefix=" " * 4))
             print()
         assert dagman_terminate_event["ReturnValue"] == 0
@@ -123,10 +123,5 @@ class TestDagmanInlineSubmit:
             ],
         )
 
-    def test_inline_job_has_custom_attribute(
-        self, condor, custom_attribute_value, finished_inline_jobid,
-    ):
-        # The attribute will be in the cluster ad, not the individual job ad
-        assert (
-            SetAttribute("CustomAttribute", custom_attribute_value),
-        ) in condor.job_queue.for_jobid(finished_inline_jobid.id_for_cluster_ad())
+    def test_inline_job_has_custom_attribute(self, condor, custom_attribute_value, job_queue_events_for_inline_job, finished_inline_jobid):  
+        assert (JobID(finished_inline_jobid.cluster, -1), SetAttribute("CustomAttribute", custom_attribute_value)) in condor.job_queue.events()
