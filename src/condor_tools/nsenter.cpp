@@ -323,6 +323,8 @@ int main( int argc, char *argv[] )
 		struct sigaction oldhandler;
 		handler.sa_handler = reset_pty_and_exit;
 		handler.sa_flags   = 0;
+		sigemptyset(&handler.sa_mask);
+
 
 		sigaction(SIGCHLD, &handler, &oldhandler);
 
