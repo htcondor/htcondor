@@ -861,24 +861,36 @@ def normalize_path(path):
 
 
 def abbreviate_path(path):
+    """
+    Abbreviate a filesystem path by finding somewhat-unique prefixes for each
+    component in the path.
+
+    If the path was /home/foobar/wizbang/events.log and there was nothing else in any
+    of those directories, the result would be /h/f/w/events.log . If there was a
+    directory /home/foobar/wizard, the result would be /h/f/wizb/events.log .
+    """
     abbreviated_components = []
-    path_to_here = ""
+    path_so_far = ""
     components = split_all(path)
     for component in components[:-1]:
-        path_to_here = os.path.expanduser(os.path.join(path_to_here, component))
+        # the actual, unabbreviated path to this depth in the path
+        path_so_far = os.path.expanduser(os.path.join(path_so_far, component))
 
+        # these have special meaning, so don't do anything to them
         if component in ("~", "."):
             abbreviated_components.append(component)
             continue
 
-        contents = os.listdir(os.path.dirname(path_to_here))
+        contents = os.listdir(os.path.dirname(path_so_far))
         if len(contents) == 1:
             longest_common = ""
         else:
             longest_common = os.path.commonprefix(contents)
 
+        # tack on the common prefix plus one extra character to give a degree of uniqueness
         abbreviated_components.append(component[: len(longest_common) + 1])
 
+    # tack on the last path component as-is; this is the actual event log file name
     abbreviated_components.append(components[-1])
 
     return os.path.join(*abbreviated_components)
