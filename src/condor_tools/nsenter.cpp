@@ -242,6 +242,9 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 
+	struct winsize win;
+	ioctl(0, TIOCGWINSZ, &win);
+
 	// now the pty handling
 	int masterPty = -1;
 	int workerPty = -1;
@@ -282,8 +285,18 @@ int main( int argc, char *argv[] )
 		// make this process group leader so shell job control works
 		setsid();
 
-		execle("/bin/sh", "/bin/sh", "-i", nullptr, envp.data());
+		// Make the pty the controlling terminal
+		ioctl(workerPty, TIOCSCTTY, 0);
 
+		// and make it the process group leader
+		tcsetpgrp(workerPty, getpid());
+ 
+		// and set the window size properly
+		ioctl(0, TIOCSWINSZ, &win);
+
+		// Finally, launch the shell
+		execle("/bin/sh", "/bin/sh", "-l", "-i", nullptr, envp.data());
+ 
 		// Only get here if exec fails
 		fprintf(stderr, "exec failed %d\n", errno);
 		exit(errno);
@@ -309,6 +322,7 @@ int main( int argc, char *argv[] )
 		struct sigaction handler;
 		struct sigaction oldhandler;
 		handler.sa_handler = reset_pty_and_exit;
+		handler.sa_flags   = 0;
 
 		sigaction(SIGCHLD, &handler, &oldhandler);
 
