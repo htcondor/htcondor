@@ -1069,7 +1069,7 @@ private:
 
 	Job* _provisioner_node;
 
-	JobClassad* _provisionerClassad;
+	ProvisionerClassad* _provisionerClassad = NULL;
 
 	HashTable<MyString, Job *>		_nodeNameHash;
 

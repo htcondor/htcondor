@@ -248,6 +248,9 @@ Dag::~Dag()
 	DeletePinList( _pinOuts );
 	delete _allNodesIt;
 
+	delete _provisionerClassad;
+	_provisionerClassad = NULL;
+
     return;
 }
 
@@ -1170,6 +1173,13 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		}
 	}
 
+		// If this is a provisioner node, initialize the classad object
+		// that communicates with the schedd.
+	if ( job->GetType() == NodeType::PROVISIONER ) {
+		CondorID provisionerId = CondorID( job->GetCluster(), job->GetProc(), 0 );
+		_provisionerClassad = new ProvisionerClassad( provisionerId );
+	}
+
 	PrintReadyQ( DEBUG_DEBUG_2 );
 }
 
@@ -1597,7 +1607,16 @@ Dag::StartProvisionerNode()
 Job::status_t
 Dag::GetProvisionerJobAdState()
 {
-	// TODO: Replace this with code that actually polls the job ad
+	MyString provisionerState;
+	if (_provisionerClassad) {
+		provisionerState = _provisionerClassad->GetProvisionerState();
+	}
+
+	if (provisionerState == "PROVISIONER_READY") {
+		return Job::STATUS_PROVISIONED;
+	}
+
+	// TODO: Remove this mock code once we're polling the schedd correctly above.
 	static int count = 0;
 	count ++;
 	if (count <= 3) return Job::STATUS_READY;

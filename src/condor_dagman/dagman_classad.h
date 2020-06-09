@@ -29,7 +29,7 @@
 
 class DCSchedd;
 
-class DagmanScheddClient {
+class ScheddClassad {
 
   public:
 		/** Open a connection to the schedd.
@@ -47,19 +47,19 @@ class DagmanScheddClient {
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( CondorID jobId, const char *attrName, int attrVal );
+	void SetAttribute( const char *attrName, int attrVal );
 
 		/** Set an attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( CondorID jobId, const char *attrName, const MyString &value );
+	void SetAttribute( const char *attrName, const MyString &value );
 
 		/** Set a nested ClassAd attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
 			@param ad The ClassAd to set.
 		*/
-	void SetAttribute( CondorID jobId, const char *attrName, const ClassAd &ad );
+	void SetAttribute( const char *attrName, const ClassAd &ad );
 
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.
@@ -68,18 +68,21 @@ class DagmanScheddClient {
 				can't get the requested attribute.
 			@return true if we got the requested attribute, false otherwise
 		*/
-	bool GetAttribute( CondorID jobId, const char *attrName, MyString &attrVal,
+	bool GetAttribute( const char *attrName, MyString &attrVal,
 				bool printWarning = true );
 
-	bool GetAttribute( CondorID jobId, const char *attrName, int &attrVal,
+	bool GetAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true );
+
+		// The condor ID for this connection client.
+	CondorID _jobId;
 
 		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;
 
 };
 
-class DagmanClassad : public DagmanScheddClient {
+class DagmanClassad : public ScheddClassad {
   public:
 	/** Constructor.
 	*/
@@ -151,21 +154,22 @@ class DagmanClassad : public DagmanScheddClient {
 };
 
 
-class JobClassad : public DagmanScheddClient {
+class ProvisionerClassad : public ScheddClassad {
   public:
 	/** Constructor.
 	*/
-	JobClassad( const CondorID &JobId );
+	ProvisionerClassad( const CondorID &JobId );
 
 	/** Destructor.
 	*/
-	~JobClassad();
+	~ProvisionerClassad();
+
+		// Returns the state of a provisioner, represented as a string
+	MyString GetProvisionerState();
 
 		// Whether this object is valid.
 	bool _valid;
 
-		// The condor ID for this job -- that's the classad we'll update.
-	CondorID _jobId;
 };
 
 
