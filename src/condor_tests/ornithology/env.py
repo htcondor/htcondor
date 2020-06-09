@@ -39,8 +39,8 @@ def unset_env_var(key: str):
 
 class SetEnv:
     """
-    A context manager. Inside the block, the Condor config file is the one given
-    to the constructor. After the block, it is reset to whatever it was before
+    A context manager. Inside the block, the given environment variable ``key``
+    is set to ``value``. After the block, it is reset to whatever it was before
     the block was entered.
 
     If you need to change the ``CONDOR_CONFIG``, use the specialized
