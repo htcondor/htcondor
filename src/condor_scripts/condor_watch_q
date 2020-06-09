@@ -40,8 +40,7 @@ def parse_args():
         prog="condor_watch_q",
         description=textwrap.dedent(
             """
-            Track the status of HTCondor jobs over time without repeatedly 
-            querying the Schedd.
+            Track the status of jobs over time without repeatedly querying the condor_schedd.
 
             If no users, cluster ids, or event logs are given, condor_watch_q will 
             default to tracking all of the current user's jobs.
@@ -53,10 +52,10 @@ def parse_args():
                 condor_watch_q -clu 12345
                 condor_watch_q -c 12345
 
-            By default, condor_watch_q will not exit on its own. You can tell it
-            to exit when certain conditions are met. For example, to exit when
-            all of the jobs it is tracking are done (with exit code 0) or when any
-            job is held (with exit code 1), run
+            By default, condor_watch_q will never exit on its own (unless it errors).
+            You can tell it to exit when certain conditions are met. For example,
+            to exit when all of the jobs it is tracking are done (with exit status 0),
+            or when any job is held (with exit status 1), you could run
 
                 condor_watch_q -exit all,done,0 -exit any,held,1
             """
@@ -197,7 +196,7 @@ def parse_args():
         action=NegateAction,
         nargs=0,
         default=sys.stdout.isatty(),
-        help="Enable/disable colored output. Enabled by default if STDOUT is a terminal.",
+        help="Enable/disable colored output. Enabled by default if connected to a tty.",
     )
     parser.add_argument(
         "-refresh",
@@ -205,7 +204,7 @@ def parse_args():
         action=NegateAction,
         nargs=0,
         default=sys.stdout.isatty(),
-        help="Enable/disable refreshing output (instead of appending). Enabled by default if STDOUT is a terminal.",
+        help="Enable/disable refreshing output (instead of appending). Enabled by default if connected to a tty.",
     )
 
     parser.add_argument(
