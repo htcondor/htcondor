@@ -27,13 +27,13 @@ def server():
 @action(params={"404": 404, "500": 500})
 def bad_url(server, request):
     server.expect_request("/badurl").respond_with_data(status=request.param)
-    return f"http://localhost:{server.port}/badurl"
+    return "http://localhost:{}/badurl".format(server.port)
 
 
 @action
 def good_url(server):
     server.expect_request("/goodurl").respond_with_data("Great success!")
-    return f"http://localhost:{server.port}/goodurl"
+    return "http://localhost:{}/goodurl".format(server.port)
 
 
 @action
