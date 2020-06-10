@@ -47,7 +47,7 @@ default to tracking all of the current user's jobs. Thus, with no arguments,
 
 will track all of your currently-active clusters.
 
-To track jobs from a specific cluster (say, cluster ``12345),
+To track jobs from a specific cluster,
 use the ``-clusters`` option, passing the cluster ID:
 
 .. code-block:: bash
