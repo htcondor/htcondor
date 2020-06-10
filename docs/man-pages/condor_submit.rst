@@ -2268,7 +2268,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
  accounting_group_user = <accounting-group-user-name>
     Sets the user name associated with the accounting group name for
     resource usage accounting purposes. If not set, defaults to the
-    value of the job ClassAd attribute ``Owner``. This value is
+    value of the job ClassAd attribute ``User``. This value is
     advertised in the job ClassAd as ``AcctGroupUser``. If an accounting
     group has not been set with the
     **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`

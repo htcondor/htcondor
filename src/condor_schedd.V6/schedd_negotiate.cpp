@@ -103,7 +103,7 @@ ScheddNegotiate::negotiate(Sock *sock)
 }
 
 char const *
-ScheddNegotiate::getOwner()
+ScheddNegotiate::getFullyQualifiedUser()
 {
 	return m_owner.c_str();
 }

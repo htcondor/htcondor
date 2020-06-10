@@ -4738,7 +4738,9 @@ These macros control the *condor_schedd*.
 :macro-def:`QUEUE_SUPER_USERS`
     A comma and/or space separated list of user names on a given machine
     that are given super-user access to the job queue, meaning that they
-    can modify or delete the job ClassAds of other users. When not on
+    can modify or delete the job ClassAds of other users. These should be
+    of form ``USER@DOMAIN``; if the domain is not present in the username,
+    HTCondor will assume the default ``UID_DOMAIN``. When not on
     this list, users can only modify or delete their own ClassAds from
     the job queue. Whatever user name corresponds with the UID that
     HTCondor is running as - usually user condor - will automatically be
@@ -4754,8 +4756,10 @@ These macros control the *condor_schedd*.
     members of the user group are given super-user access.
 
 :macro-def:`QUEUE_SUPER_USER_MAY_IMPERSONATE`
-    A regular expression that matches the user names (that is, job owner
-    names) that the queue super user may impersonate when managing jobs.
+    A regular expression that matches the operating system user names
+    (that is, job owners in the form ``USER``) that the queue super user
+    may impersonate when managing jobs.  This allows the admin to limit
+    the operating system users a super user can launch jobs as.
     When not set, the default behavior is to allow impersonation of any
     user who has had a job in the queue during the life of the
     *condor_schedd*. For proper functioning of the *condor_shadow*,

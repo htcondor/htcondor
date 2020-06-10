@@ -66,7 +66,7 @@
 #include "classad_helpers.h"
 #include "../condor_procapi/procapi.h" // for getting cpu time & process memory
 
-static	const char	*fixSubmittorName( const char*, int );
+static	std::string      fixSubmittorName( const char*, int );
 static	ExprTree	*stdRankCondition;
 static	ExprTree	*preemptRankCondition;
 static	ExprTree	*preemptPrioCondition;
@@ -832,7 +832,7 @@ bool doJobRunAnalysis (
 	// setup submitter info
 	if (prio) {
 		if ( ! request->LookupInteger(ATTR_NICE_USER, prio->niceUser)) { prio->niceUser = 0; }
-		prio->ixSubmittor = findSubmittor(fixSubmittorName(user.c_str(), prio->niceUser));
+		prio->ixSubmittor = findSubmittor(fixSubmittorName(user.c_str(), prio->niceUser).c_str());
 		if (prio->ixSubmittor >= 0) {
 			request->Assign(ATTR_SUBMITTOR_PRIO, prioTable[prio->ixSubmittor].prio);
 		}
@@ -1598,12 +1598,11 @@ int findSubmittor( const char *name )
 }
 
 
-static const char*
+static std::string
 fixSubmittorName( const char *name, int niceUser )
 {
 	static 	bool initialized = false;
 	static	char * uid_domain = 0;
-	static	char buffer[128];
 
 	if( !initialized ) {
 		uid_domain = param( "UID_DOMAIN" );
@@ -1615,21 +1614,17 @@ fixSubmittorName( const char *name, int niceUser )
 	}
 
     // potential buffer overflow! Hao
+	std::string result;
 	if( strchr( name , '@' ) ) {
-		sprintf( buffer, "%s%s%s", 
-					niceUser ? NiceUserName : "",
-					niceUser ? "." : "",
+		formatstr( result, "%s%s",
+					niceUser ? "nice_user." : "",
 					name );
-		return buffer;
 	} else {
-		sprintf( buffer, "%s%s%s@%s", 
-					niceUser ? NiceUserName : "",
-					niceUser ? "." : "",
+		formatstr( result, "%s%s@%s",
+					niceUser ? "nice_user." : "",
 					name, uid_domain );
-		return buffer;
 	}
-
-	return NULL;
+	return result;
 }
 
 

@@ -767,7 +767,7 @@ DedicatedScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	char const *remote_pool = getRemotePool();
 
 	dprintf(D_ALWAYS,"Finished negotiating for %s%s%s: %d matched, %d rejected\n",
-			getOwner(),
+			getFullyQualifiedUser(),
 			remote_pool ? " in pool " : "",
 			remote_pool ? remote_pool : " in local pool",
 			getNumJobsMatched(), getNumJobsRejected() );

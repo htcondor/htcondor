@@ -103,7 +103,7 @@ class ScheddNegotiate: public DCMsg {
 	void negotiate(Sock *sock);
 
 		// returns the job owner name (or accounting group) we are serving
-	char const *getOwner();
+	char const *getFullyQualifiedUser();
 
 		// returns name of remote pool or NULL if none
 	char const *getRemotePool();

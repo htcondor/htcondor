@@ -205,8 +205,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		//////////////////////
 		for (size_t i = 0; i < jobs->size(); i++) {
 			MyString job_owner = "";
-			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, ATTR_OWNER, job_owner);
-			if (OwnerCheck2(NULL, rsock->getOwner(), job_owner.c_str())) {
+			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, ATTR_USER, job_owner);
+			if (UserCheck2(NULL, rsock->getFullyQualifiedUser(), job_owner.c_str())) {
 				// only allow the user to manipulate jobs it is entitled to.
 				// structure copy...
 				modify_allow_jobs->push_back((*jobs)[i]);
@@ -279,7 +279,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		tmp_ad = GetNextJobByConstraint(constraint_string.c_str(), 1);
 		while (tmp_ad) {
 			PROC_ID job_id;
-			if ( OwnerCheck2(tmp_ad, rsock->getOwner()) )
+			if ( UserCheck2(tmp_ad, rsock->getFullyQualifiedUser()) )
 			{
 				modify_allow_jobs->push_back(job_id);
 			}
