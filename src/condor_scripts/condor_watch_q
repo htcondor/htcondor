@@ -38,6 +38,7 @@ import classad
 
 try:
     from colorama import init
+
     init()
     HAS_COLORAMA = True
 except ImportError:
@@ -248,6 +249,12 @@ def parse_args():
 
 
 def check_unknown_args_for_known_errors(parser, unknown_args):
+    """
+    This function tries to capture known errors in the arguments that
+    argparse fails to parse and emit our own error messages.
+    Individual args are passed to _check_unknown_arg for processing.
+    Common errors are trying to use condor_q-like arguments.
+    """
     unknown_args = iter(unknown_args)
     for arg in unknown_args:
         error_message = _check_unknown_arg(arg, unknown_args)
@@ -405,45 +412,6 @@ GROUPBY_ATTRIBUTE_TO_AD_KEY = {
 }
 GROUPBY_AD_KEY_TO_ATTRIBUTE = {v: k for k, v in GROUPBY_ATTRIBUTE_TO_AD_KEY.items()}
 
-terminal_size = collections.namedtuple("terminal_size", ["columns", "lines"])
-
-
-def get_terminal_size():
-    try:
-        return shutil.get_terminal_size()
-    # TODO: remove this once we don't support Python 2 anymore
-    except AttributeError:  # Python 2 doesn't have shutil.get_terminal_size
-        try:
-            if IS_WINDOWS:
-                # https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
-                from ctypes import windll, create_string_buffer
-
-                h = windll.kernel32.GetStdHandle(-12)
-                csbi = create_string_buffer(22)
-                res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
-                if res:
-                    (
-                        _,
-                        _,
-                        _,
-                        _,
-                        _,
-                        left,
-                        top,
-                        right,
-                        bottom,
-                        _,
-                        _,
-                    ) = struct.unpack("hhhhHhhhhhh", csbi.raw)
-                    return terminal_size(right - left + 1, bottom - top + 1)
-                else:
-                    raise OSError("Failed to get Windows terminal size")
-            else:
-                rows, cols = os.popen("stty size", "r").read().split()
-                return terminal_size(int(cols), int(rows))
-        except Exception:
-            return terminal_size(80, 24)
-
 
 def watch_q(
     users=None,
@@ -495,15 +463,15 @@ def watch_q(
         while True:
             with display_temporary_message("Processing new events...", enabled=refresh):
                 processing_messages = tracker.process_events()
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+                # "if msg is not None" skips the first iteration, when there's nothing to clear
                 if msg is not None and refresh:
                     msg = strip_ansi(msg)
                     prev_lines = list(msg.splitlines())
                     prev_len_lines = [len(line) for line in prev_lines]
                     move = "\033[{}A\r".format(len(prev_len_lines))
                     clear = "\n".join(" " * len(line) for line in prev_lines) + "\n"
-
-                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 groups_by_key = group_clusters_by_key(tracker.clusters, key)
                 rows_by_key, totals = make_rows_from_groups(groups_by_key, key)
@@ -600,6 +568,36 @@ def watch_q(
         sys.exit(0)
 
 
+terminal_size = collections.namedtuple("terminal_size", ["columns", "lines"])
+
+
+def get_terminal_size():
+    try:
+        return shutil.get_terminal_size()
+    # TODO: remove this once we don't support Python 2 anymore
+    except AttributeError:  # Python 2 doesn't have shutil.get_terminal_size
+        try:
+            if IS_WINDOWS:
+                # https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
+                from ctypes import windll, create_string_buffer
+
+                h = windll.kernel32.GetStdHandle(-12)
+                csbi = create_string_buffer(22)
+                res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
+                if res:
+                    (_, _, _, _, _, left, top, right, bottom, _, _,) = struct.unpack(
+                        "hhhhHhhhhhh", csbi.raw
+                    )
+                    return terminal_size(right - left + 1, bottom - top + 1)
+                else:
+                    raise OSError("Failed to get Windows terminal size")
+            else:
+                rows, cols = os.popen("stty size", "r").read().split()
+                return terminal_size(int(cols), int(rows))
+        except Exception:
+            return terminal_size(80, 24)
+
+
 @contextlib.contextmanager
 def display_temporary_message(msg, enabled=True):
     """Display a single-line message until the context ends."""
@@ -621,6 +619,26 @@ PROJECTION = ["ClusterId", "Owner", "UserLog", "JobBatchName", "Iwd"]
 def find_job_event_logs(
     users=None, cluster_ids=None, files=None, batches=None, collector=None, schedd=None
 ):
+    """
+    Discover job event logs to read events from based on various methods.
+
+    Parameters
+    ----------
+    users
+        Find job event logs for these user's active jobs.
+    cluster_ids
+        Find job event logs for these clusters.
+    files
+        Find these job event logs (basically, these just get passed straight through).
+    batches
+        Find job event logs for these batch names.
+    collector
+        Query this collector to find the schedd.
+        Defaults to the local collector.
+    schedd
+        Query this schedd for users, cluster_ids, and batches.
+        Defaults to the local schedd.
+    """
     if users is None:
         users = []
     if cluster_ids is None:
@@ -691,6 +709,8 @@ def get_schedd(collector=None, schedd=None):
 
 
 class Cluster:
+    """Holds the job state for a singe cluster."""
+
     def __init__(self, cluster_id, event_log_path, batch_name):
         self.cluster_id = cluster_id
         self.event_log_path = event_log_path
@@ -716,6 +736,12 @@ class Cluster:
 
 
 class JobStateTracker:
+    """
+    Tracks the job state from many event logs,
+    maintaining a mapping of cluster_id to Cluster
+    (available as the state attribute).
+    """
+
     def __init__(self, event_log_paths, batch_names):
         event_readers = {}
         for event_log_path in event_log_paths:
@@ -738,6 +764,9 @@ class JobStateTracker:
         self.cluster_id_to_cluster = {}
 
     def process_events(self):
+        """
+        Process all currently-available events in all event logs.
+        """
         messages = []
 
         for event_log_path, events in self.event_readers.items():
@@ -794,7 +823,7 @@ def make_rows_from_groups(groups, key):
             totals[status] += row_data[status]
 
         if key == EVENT_LOG:
-            row_data[key] = normalize_path(attribute_value)
+            row_data[key] = nice_path(attribute_value)
         else:
             row_data[key] = attribute_value
 
@@ -864,6 +893,7 @@ def strip_empty_columns(rows_by_key):
 
 
 def row_data_from_job_state(clusters):
+    """Construct the data for a single row."""
     row_data = {js: 0 for js in JobStatus}
     active_job_ids = []
 
@@ -886,7 +916,14 @@ def row_data_from_job_state(clusters):
     return row_data
 
 
-def normalize_path(path):
+def nice_path(path):
+    """
+    Try to find a "nice" representation of a path.
+    The shortest (by string length) of these options is returned:
+      - the absolute path
+      - the path relative to the current user's home directory
+      - the path relative to the current working directory
+    """
     possibilities = []
 
     abs = os.path.abspath(path)
@@ -942,19 +979,20 @@ def abbreviate_path(path):
 
 
 def split_all(path):
-    allparts = []
+    """Consistently split a path into components."""
+    split_parts = []
     while 1:
         parts = os.path.split(path)
         if parts[0] == path:  # sentinel for absolute paths
-            allparts.insert(0, parts[0])
+            split_parts.insert(0, parts[0])
             break
         elif parts[1] == path:  # sentinel for relative paths
-            allparts.insert(0, parts[1])
+            split_parts.insert(0, parts[1])
             break
         else:
             path = parts[0]
-            allparts.insert(0, parts[1])
-    return allparts
+            split_parts.insert(0, parts[1])
+    return split_parts
 
 
 class JobStatus(enum.Enum):
@@ -1145,10 +1183,14 @@ def make_progress_bar(totals, width=None, color=True):
     return [bar]
 
 
-def argmax(iter):
-    return max(enumerate(iter), key=lambda x: x[1])[0]
+def argmax(collection):
+    """
+    Return the index of the element of the collection with the maximum value.
+    """
+    return max(enumerate(collection), key=lambda x: x[1])[0]
 
 
+# this controls the ordering of the summary message
 SUMMARY_STATES = [
     JobStatus.COMPLETED,
     JobStatus.REMOVED,
