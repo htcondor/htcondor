@@ -30,6 +30,8 @@ import time
 import operator
 import re
 import contextlib
+import shutil
+import struct
 
 import htcondor
 import classad
@@ -196,8 +198,8 @@ def parse_args():
         "-abbreviate",
         "-no-abbreviate",
         action=NegateAction,
-        nargs = 0,
-        default = True,
+        nargs=0,
+        default=True,
         help="Enable/disable abbreviating path components to the shortest somewhat-unique prefix. Disabled by default.",
     )
     parser.add_argument(
@@ -394,10 +396,44 @@ GROUPBY_ATTRIBUTE_TO_AD_KEY = {
 }
 GROUPBY_AD_KEY_TO_ATTRIBUTE = {v: k for k, v in GROUPBY_ATTRIBUTE_TO_AD_KEY.items()}
 
+terminal_size = collections.namedtuple("terminal_size", ["columns", "lines"])
 
-def get_linux_console_width():
-    terminal_rows, terminal_columns = os.popen("stty size", "r").read().split()
-    return int(terminal_columns), int(terminal_rows)
+
+def get_terminal_size():
+    try:
+        return shutil.get_terminal_size()
+    # TODO: remove this once we don't support Python 2 anymore
+    except AttributeError:  # Python 2 doesn't have shutil.get_terminal_size
+        try:
+            if os.name == "nt":
+                # https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
+                from ctypes import windll, create_string_buffer
+
+                h = windll.kernel32.GetStdHandle(-12)
+                csbi = create_string_buffer(22)
+                res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
+                if res:
+                    (
+                        _,
+                        _,
+                        _,
+                        _,
+                        _,
+                        left,
+                        top,
+                        right,
+                        bottom,
+                        _,
+                        _,
+                    ) = struct.unpack("hhhhHhhhhhh", csbi.raw)
+                    return terminal_size(right - left + 1, bottom - top + 1)
+                else:
+                    raise OSError("Failed to get Windows terminal size")
+            else:
+                rows, cols = os.popen("stty size", "r").read().split()
+                return terminal_size(int(cols), int(rows))
+        except Exception:
+            return terminal_size(80, 24)
 
 
 def watch_q(
@@ -484,7 +520,7 @@ def watch_q(
 
                 msg = []
 
-                terminal_columns, terminal_rows = get_linux_console_width()
+                terminal_columns, terminal_rows = get_terminal_size()
 
                 if table:
                     msg += make_table(
