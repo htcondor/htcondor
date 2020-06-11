@@ -45,7 +45,7 @@ class Handle(abc.ABC):
         raise NotImplementedError
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(constraint = {self.constraint_string})"
+        return "{}(constraint = {})".format(type(self).__name__, self.constraint_string)
 
     def __eq__(self, other):
         return all(
@@ -214,7 +214,7 @@ class ConstraintHandle(Handle):
         return str(self.constraint)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(constraint = {self.constraint})"
+        return "{}(constraint = {})".format(type(self).__name__, self.constraint)
 
 
 class ClusterHandle(ConstraintHandle):
@@ -244,7 +244,8 @@ class ClusterHandle(ConstraintHandle):
         self._num_procs = submit_result.num_procs()
 
         super().__init__(
-            condor=condor, constraint=classad.ExprTree(f"ClusterID == {self.clusterid}")
+            condor=condor,
+            constraint=classad.ExprTree("ClusterID == {}".format(self.clusterid)),
         )
 
         # must delay this until after init, because at this point the submit
@@ -257,8 +258,10 @@ class ClusterHandle(ConstraintHandle):
 
     def __repr__(self):
         batch_name = self.clusterad.get("JobBatchName", None)
-        batch = f", JobBatchName = {batch_name}" if batch_name is not None else ""
-        return f"{self.__class__.__name__}(ClusterID = {self.clusterid}{batch})"
+        batch = (
+            ", JobBatchName = {}".format(batch_name) if batch_name is not None else ""
+        )
+        return "{}(ClusterID = {}{})".format(type(self).__name__, self.clusterid, batch)
 
     @property
     def clusterid(self):
@@ -348,7 +351,7 @@ class ClusterHandle(ConstraintHandle):
         self.state.read_events()
         while True:
             if verbose:
-                logger.debug(f"Handle {self} state: {self.state.counts()}")
+                logger.debug("Handle {} state: {}".format(self, self.state.counts()))
 
             if condition(self.state):
                 break

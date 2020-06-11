@@ -89,7 +89,7 @@ def failure_injection_job_parameters(failure_config_value, path_to_sleep):
         "should_transfer_files": "true",
         "universe": "vanilla",
         "arguments": "600",
-        "log": f"cmd_now-failure-{failure_config_value}.log",
+        "log": "cmd_now-failure-{}.log".format(failure_config_value),
     }
 
 
@@ -127,7 +127,7 @@ def sched_log(failure_injection_condor, beneficiary_job, victim_jobs):
 
 @action
 def failure_log_message_with_job_id(failure_log_message, beneficiary_job):
-    return failure_log_message.format(f"{beneficiary_job.clusterid}.0")
+    return failure_log_message.format("{}.0".format(beneficiary_job.clusterid))
 
 
 @action
@@ -153,9 +153,7 @@ def sched_log_containing_failure(
     return sched_log
 
 
-@config(
-    params={"1_victim_job": 1, "2_victim_jobs": 2, "3_victim_jobs": 3,}
-)
+@config(params={"1_victim_job": 1, "2_victim_jobs": 2, "3_victim_jobs": 3})
 def successful_max_victim_jobs(request):
     return request.param
 
@@ -269,6 +267,7 @@ def empty_pccc_table_and_no_match_records(log):
             return False
 
     return True
+
 
 class TestCondorNow:
     def test_success(

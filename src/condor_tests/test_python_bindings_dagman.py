@@ -13,14 +13,15 @@ logger.setLevel(logging.DEBUG)
 @standup
 def condor(test_dir):
     with Condor(
-        local_dir=test_dir / "condor",
-        config={"DAGMAN_USE_STRICT": "0"},
+        local_dir=test_dir / "condor", config={"DAGMAN_USE_STRICT": "0"},
     ) as condor:
         yield condor
+
 
 @action
 def dag_dir(test_dir):
     return test_dir / "dagman"
+
 
 @action
 def valid_dag_job(condor, dag_dir):
@@ -36,7 +37,9 @@ def valid_dag_job(condor, dag_dir):
 
     dag_description = """
         JOB sleep {}
-    """.format(sub_file)
+    """.format(
+        sub_file
+    )
     dag_file = write_file(dag_dir / "valid.dag", dag_description)
 
     dag = htcondor.Submit.from_dag(str(dag_file))
@@ -47,6 +50,7 @@ def valid_dag_job(condor, dag_dir):
     condor.job_queue.wait_for_job_completion(dag_job.job_ids)
 
     return dag_job
+
 
 @action
 def invalid_dag_job(condor, dag_dir):
@@ -63,6 +67,7 @@ def invalid_dag_job(condor, dag_dir):
     condor.job_queue.wait_for_job_completion(dag_job.job_ids)
 
     return dag_job
+
 
 @action
 def invalid_dagman_binding(condor, dag_dir):
@@ -91,6 +96,7 @@ def valid_dag_terminate_event(valid_dag_job):
     assert len(terminate_event) == 1
     return terminate_event[0]
 
+
 @action
 def invalid_dag_terminate_event(invalid_dag_job):
     terminate_event = invalid_dag_job.event_log.filter(
@@ -112,5 +118,3 @@ class TestDagmanInlineSubmit:
 
     def test_invalid_dagman_binding(self, invalid_dagman_binding):
         assert invalid_dagman_binding == 0
-
-

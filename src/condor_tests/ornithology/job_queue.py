@@ -27,7 +27,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class SetAttribute:
-    def __init__(self, attribute: str, value: str):
+    def __init__(self, attribute: str, value: Optional[str]):
         self.attribute = attribute
         self.value = value
 
@@ -139,7 +139,7 @@ class JobQueue:
         self,
         expected_events: EXPECTED_EVENTS,
         unexpected_events: Optional[EXPECTED_EVENTS] = None,
-        timeout: int = 60,
+        timeout: int = 120,
     ):
         """
         Wait for job queue events to occur.
@@ -252,7 +252,7 @@ class JobQueue:
 
             time.sleep(0.1)
 
-    def wait_for_job_completion(self, job_ids, timeout=60) -> bool:
+    def wait_for_job_completion(self, job_ids, timeout=120) -> bool:
         """
         Wait for a set of job ids to reach the completed state.
         If any of the jobs reach a non-complete terminal state

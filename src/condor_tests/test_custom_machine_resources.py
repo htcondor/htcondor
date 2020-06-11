@@ -6,6 +6,7 @@ import logging
 
 import textwrap
 import fractions
+import time
 
 import htcondor
 
@@ -19,6 +20,7 @@ from ornithology import (
     SetJobStatus,
     JobStatus,
     track_quantity,
+    format_script,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,7 +57,7 @@ def resources(request):
 
 @config
 def discovery_script(resources):
-    return textwrap.dedent(
+    return format_script(
         """
         #!/usr/bin/python3
         
@@ -68,17 +70,18 @@ def discovery_script(resources):
 
 @config
 def monitor_script(resources):
-    return "#!/usr/bin/python3\n" + "".join(
-        textwrap.dedent(
-            """
+    return format_script(
+        "#!/usr/bin/python3\n"
+        + "".join(
+            textwrap.dedent("""
             print('SlotMergeConstraint = StringListMember( "{name}", AssignedXXX )')
-            print('UptimeXXXSeconds = {increment}')
+            print('UptimeXXXeconds = {increment}')
             print('- {name}')
             """.format(
                 name=name, increment=increment
-            )
+            ))
+            for name, increment in resources.items()
         )
-        for name, increment in resources.items()
     )
 
 
@@ -96,6 +99,8 @@ def condor(test_dir, slot_config, discovery_script, monitor_script):
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
+        # try to make sure the monitor runs before we continue with the test
+        time.sleep(MONITOR_PERIOD * 1.5)
         yield condor
 
 
@@ -114,7 +119,7 @@ def handle(test_dir, condor, num_resources):
 
     # we must wait for both the handle and the job queue here,
     # because we want to use both later
-    handle.wait(timeout=60, verbose=True)
+    handle.wait(verbose=True)
     condor.job_queue.wait_for_job_completion(handle.job_ids)
 
     yield handle
@@ -170,10 +175,10 @@ class TestCustomMachineResources:
             htcondor.DaemonTypes.Startd,
             htcondor.AdTypes.Startd,
             constraint="AssignedXXX =!= undefined",
-            projection=["SlotID", "AssignedXXX", "UptimeXXXSeconds"],
+            projection=["SlotID", "AssignedXXX", "UptimeXXXeconds"],
         )
 
-        measured_uptimes = set(int(ad["UptimeXXXSeconds"]) for ad in direct)
+        measured_uptimes = set(int(ad["UptimeXXXeconds"]) for ad in direct)
 
         logger.info(
             "Measured uptimes were {}, expected multiples of {} (not necessarily in order)".format(
@@ -252,7 +257,7 @@ class TestCustomMachineResources:
             ]
         )
 
-        # Here's the deal: XUsage is
+        # Here's the deal: XXXAverageUsage is
         #
         #   (increment amount * number of periods)
         # -----------------------------------------

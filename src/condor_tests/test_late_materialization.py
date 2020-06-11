@@ -80,7 +80,7 @@ def jobids_for_sleep_jobs(test_dir, condor, max_idle, max_materialize):
     jobids = [JobID(clusterid, n) for n in range(num_procs)]
 
     condor.job_queue.wait_for_events(
-        {jobid: [SetJobStatus(JobStatus.COMPLETED)] for jobid in jobids}, timeout=60
+        {jobid: [SetJobStatus(JobStatus.COMPLETED)] for jobid in jobids}
     )
 
     return jobids
@@ -181,7 +181,7 @@ def clusterid_for_itemdata(test_dir, condor):
     jobids = [JobID(clusterid, n) for n in range(num_procs)]
 
     condor.job_queue.wait_for_events(
-        {jobid: [SetAttribute("Foo", None)] for jobid in jobids}, timeout=10
+        {jobid: [SetAttribute("Foo", None)] for jobid in jobids}
     )
 
     yield clusterid
