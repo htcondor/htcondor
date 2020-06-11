@@ -6,6 +6,7 @@ import logging
 
 import textwrap
 import fractions
+import time
 
 import htcondor
 
@@ -96,6 +97,8 @@ def condor(test_dir, slot_config, discovery_script, monitor_script):
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
+        # try to make sure the monitor runs before we continue with the test
+        time.sleep(MONITOR_PERIOD * 1.5)
         yield condor
 
 
@@ -252,7 +255,7 @@ class TestCustomMachineResources:
             ]
         )
 
-        # Here's the deal: XUsage is
+        # Here's the deal: XXXAverageUsage is
         #
         #   (increment amount * number of periods)
         # -----------------------------------------

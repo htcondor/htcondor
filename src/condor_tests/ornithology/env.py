@@ -15,6 +15,7 @@
 
 import logging
 
+from typing import Mapping, Optional
 import os
 from pathlib import Path
 
@@ -39,30 +40,35 @@ def unset_env_var(key: str):
 
 class SetEnv:
     """
-    A context manager. Inside the block, the given environment variable ``key``
-    is set to ``value``. After the block, it is reset to whatever it was before
-    the block was entered.
+    A context manager for setting environment variables.
+    Inside the context manager's block, the environment is updated according
+    to the mapping. When the block ends, the environment is reset to whatever
+    it was before entering the block.
 
     If you need to change the ``CONDOR_CONFIG``, use the specialized
     :func:`SetCondorConfig`.
     """
 
-    def __init__(self, key: str, value: str):
-        self.key = key
-        self.value = value
-        self.previous_value = None
+    UNSET = object()
+
+    def __init__(self, mapping: Mapping[str, str]):
+        self.mapping = mapping
+        self.previous_values= None
 
     def __enter__(self):
-        self.previous_value = os.environ.get(self.key, None)
-        set_env_var(self.key, self.value)
+        self.previous_values = {
+            key: os.environ.get(key, self.UNSET) for key in self.mapping.keys()
+        }
+        os.environ.update(self.mapping)
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.previous_value is not None:
-            set_env_var(self.key, self.previous_value)
-        else:
-            unset_env_var(self.key)
+        for key, prev_val in self.previous_values.items():
+            if prev_val is not self.UNSET:
+                set_env_var(key, prev_val)
+            else:
+                unset_env_var(key)
 
 
 class SetCondorConfig:
@@ -78,7 +84,7 @@ class SetCondorConfig:
 
     def __enter__(self):
         self.previous_value = os.environ.get("CONDOR_CONFIG", None)
-        set_env_var("CONDOR_CONFIG", self.config_file.as_posix())
+        set_env_var("CONDOR_CONFIG", str(self.config_file))
 
         htcondor.reload_config()
 
@@ -110,4 +116,4 @@ class ChangeDir:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        os.chdir(self.previous_dir)
+        os.chdir(str(self.previous_dir))

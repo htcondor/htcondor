@@ -58,6 +58,9 @@ def run_command(
         raise TypeError("run_command timeout cannot be None")
 
     args = list(map(str, args))
+
+    logger.debug("About to run command: {}".format(" ".join(args)))
+
     p = subprocess.run(
         args,
         timeout=timeout,

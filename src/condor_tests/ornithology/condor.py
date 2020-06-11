@@ -187,7 +187,7 @@ class Condor:
             self.tokens_dir,
         ):
             dir.mkdir(parents=True, exist_ok=False)
-            logger.debug("Created dir {}".format(dir))
+            # logger.debug("Created dir {}".format(dir))
 
     def _write_config(self):
         # TODO: how to ensure that this always hits the right config?
