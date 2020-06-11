@@ -148,13 +148,7 @@ def sched_log_containing_failure(
     return sched_log
 
 
-@config(params=
-    {
-        "1_victim_job": 1,
-        "2_victim_jobs": 2,
-        "3_victim_jobs": 3,
-    }
-)
+@config(params={"1_victim_job": 1, "2_victim_jobs": 2, "3_victim_jobs": 3})
 def successful_max_victim_jobs(request):
     return request.param
 
@@ -251,7 +245,9 @@ class TestCondorNow:
             ):
                 saw_beneficiary_execute = True
                 break
-        assert num_evicted_jobs == successful_max_victim_jobs and saw_beneficiary_execute
+        assert (
+            num_evicted_jobs == successful_max_victim_jobs and saw_beneficiary_execute
+        )
 
     def test_failure_cleanup(self, sched_log_containing_failure):
         expected_lines = [

@@ -42,7 +42,9 @@ def dag_description(custom_attribute_value):
             output = inline.out
             MY.CustomAttribute = {}
         }}
-    """.format(custom_attribute_value)
+    """.format(
+            custom_attribute_value
+        )
     )
 
 
@@ -123,5 +125,14 @@ class TestDagmanInlineSubmit:
             ],
         )
 
-    def test_inline_job_has_custom_attribute(self, condor, custom_attribute_value, job_queue_events_for_inline_job, finished_inline_jobid):  
-        assert (JobID(finished_inline_jobid.cluster, -1), SetAttribute("CustomAttribute", custom_attribute_value)) in condor.job_queue.events()
+    def test_inline_job_has_custom_attribute(
+        self,
+        condor,
+        custom_attribute_value,
+        job_queue_events_for_inline_job,
+        finished_inline_jobid,
+    ):
+        assert (
+            JobID(finished_inline_jobid.cluster, -1),
+            SetAttribute("CustomAttribute", custom_attribute_value),
+        ) in condor.job_queue.events()

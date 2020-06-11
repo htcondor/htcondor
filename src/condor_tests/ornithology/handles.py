@@ -244,7 +244,8 @@ class ClusterHandle(ConstraintHandle):
         self._num_procs = submit_result.num_procs()
 
         super().__init__(
-            condor=condor, constraint=classad.ExprTree("ClusterID == {}".format(self.clusterid))
+            condor=condor,
+            constraint=classad.ExprTree("ClusterID == {}".format(self.clusterid)),
         )
 
         # must delay this until after init, because at this point the submit
@@ -257,7 +258,9 @@ class ClusterHandle(ConstraintHandle):
 
     def __repr__(self):
         batch_name = self.clusterad.get("JobBatchName", None)
-        batch = ", JobBatchName = {}".format(batch_name) if batch_name is not None else ""
+        batch = (
+            ", JobBatchName = {}".format(batch_name) if batch_name is not None else ""
+        )
         return "{}(ClusterID = {}{})".format(type(self).__name__, self.clusterid, batch)
 
     @property

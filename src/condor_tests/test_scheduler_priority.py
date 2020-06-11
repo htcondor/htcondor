@@ -94,7 +94,6 @@ def unequal_priority_execute_events(submit_unequal_priority_jobs):
 
 
 class TestSchedulerPriority:
-    
     def test_ran_all_equal_priority_jobs(self, equal_priority_execute_events):
         assert len(equal_priority_execute_events) == NUM_JOBS
 
@@ -107,8 +106,11 @@ class TestSchedulerPriority:
         Simple approach, just iterate over the list of events in a for-loop
         and make sure proc ids appear in ascending order.
         """
-        for i in range(1,NUM_JOBS):
-            assert JobID.from_job_event(equal_priority_execute_events[i]).proc > JobID.from_job_event(equal_priority_execute_events[i-1]).proc
+        for i in range(1, NUM_JOBS):
+            assert (
+                JobID.from_job_event(equal_priority_execute_events[i]).proc
+                > JobID.from_job_event(equal_priority_execute_events[i - 1]).proc
+            )
 
     def test_ran_all_unequal_priority_jobs(self, unequal_priority_execute_events):
         assert len(unequal_priority_execute_events) == NUM_JOBS

@@ -30,7 +30,7 @@ import pytest
 
 import htcondor
 
-from ornithology import Condor, ChangeDir, CONFIG_IDS
+from ornithology import Condor, CONFIG_IDS
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -96,7 +96,7 @@ class TestDir:
 
         if id is not None:
             config_ids = CONFIG_IDS[funcitem.module.__name__]
-            ids = [id for id in id.group(1).split("-") if id in config_ids]
+            ids = sorted(id for id in id.group(1).split("-") if id in config_ids)
             if len(ids) > 0:
                 dir /= "-".join(ids)
 
@@ -193,8 +193,7 @@ def test_dir() -> Path:
     path
         The path to the test directory.
     """
-    with ChangeDir(TEST_DIR):
-        yield TEST_DIR
+    return TEST_DIR
 
 
 def pytest_runtest_protocol(item, nextitem):

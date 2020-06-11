@@ -53,7 +53,7 @@ class SetEnv:
 
     def __init__(self, mapping: Mapping[str, str]):
         self.mapping = mapping
-        self.previous_values= None
+        self.previous_values = None
 
     def __enter__(self):
         self.previous_values = {

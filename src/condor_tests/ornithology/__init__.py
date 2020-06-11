@@ -29,7 +29,7 @@ from .job_queue import SetAttribute, SetJobStatus, JobQueue
 from .jobs import JobID, JobStatus
 from .handles import Handle, ConstraintHandle, ClusterHandle, ClusterState, EventLog
 from .meta import get_current_func_name
-from .utils import chain_get
+from .utils import chain_get, format_script
 from .fixtures import config, standup, action, CONFIG_IDS
 from .scripts import SCRIPTS
 from .script_fixtures import path_to_sleep

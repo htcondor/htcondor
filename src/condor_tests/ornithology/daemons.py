@@ -99,7 +99,9 @@ class DaemonLogStream:
         """
         print("\n".join(self.lines))
 
-    def wait(self, condition: Callable[["DaemonLogMessage"], bool], timeout=120) -> bool:
+    def wait(
+        self, condition: Callable[["DaemonLogMessage"], bool], timeout=120
+    ) -> bool:
         """
         Wait for some condition to be true on a :class:`DaemonLogMessage`
         parsed from the daemon log.

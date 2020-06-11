@@ -14,12 +14,15 @@
 # limitations under the License.
 
 from typing import Mapping, TypeVar, Hashable, Iterable, Optional
+import textwrap
 
 K = TypeVar("K", bound=Hashable)
 V = TypeVar("V")
 
 
-def chain_get(mapping: Mapping[K, V], keys: Iterable[K], default: Optional[V] = None):
+def chain_get(
+    mapping: Mapping[K, V], keys: Iterable[K], default: Optional[V] = None
+) -> V:
     """
     As Mapping.get(key, default), except that it will try multiple keys before returning the default.
 
@@ -46,3 +49,7 @@ def chain_get(mapping: Mapping[K, V], keys: Iterable[K], default: Optional[V] = 
             pass
 
     return default
+
+
+def format_script(text: str) -> str:
+    return textwrap.dedent(text).strip()
