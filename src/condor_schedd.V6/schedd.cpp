@@ -218,9 +218,9 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 		return;
 	}
 
-	std::string uid_domain;
-	param(uid_domain, "UID_DOMAIN");
-	if ( (!strcmp( get_condor_username(), sock.getOwner() ) && !strcmp( uid_domain.c_str(), sock.getDomain())) ||
+	const char *schedd_uid_domain = scheduler.uidDomain();
+	const char *uid_domain = schedd_uid_domain ? schedd_uid_domain : "";
+	if ( (!strcmp( get_condor_username(), sock.getOwner() ) && !strcmp(uid_domain, sock.getDomain())) ||
 	     !strcmp( CONDOR_CHILD_FQU, sock.getFullyQualifiedUser() ) ) {
 		return;
 	}
