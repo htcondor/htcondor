@@ -204,8 +204,8 @@ Many of them are "toggles": ``-x`` enables option "x", and ``-no-x`` disables it
 
  **-color/-no-color**
     Enable/disable colored output.
-    Enabled by default if connected to a tty and not on Windows.
-    (**condor_watch_q** does not currently support colored output on Windows).
+    Enabled by default if connected to a tty.
+    Disabled on Windows if colorama is not available (https://pypi.org/project/colorama/).
 
  **-refresh/-no-refresh**
     Enable/disable refreshing output.

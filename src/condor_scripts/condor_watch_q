@@ -36,6 +36,15 @@ import struct
 import htcondor
 import classad
 
+try:
+    from colorama import init
+    init()
+    HAS_COLORAMA = True
+except ImportError:
+    HAS_COLORAMA = False
+
+IS_WINDOWS = os.name == "nt"
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -207,8 +216,8 @@ def parse_args():
         "-no-color",
         action=NegateAction,
         nargs=0,
-        default=sys.stdout.isatty(),
-        help="Enable/disable colored output. Enabled by default if connected to a tty and not on Windows.",
+        default=sys.stdout.isatty() and (not IS_WINDOWS or HAS_COLORAMA),
+        help="Enable/disable colored output. Enabled by default if connected to a tty. Disabled on Windows if colorama is not available.",
     )
     parser.add_argument(
         "-refresh",
@@ -405,7 +414,7 @@ def get_terminal_size():
     # TODO: remove this once we don't support Python 2 anymore
     except AttributeError:  # Python 2 doesn't have shutil.get_terminal_size
         try:
-            if os.name == "nt":
+            if IS_WINDOWS:
                 # https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
                 from ctypes import windll, create_string_buffer
 
