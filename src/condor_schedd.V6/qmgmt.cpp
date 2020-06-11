@@ -1187,7 +1187,7 @@ InitQmgmt()
 		// is a superuser, then 'condor@child', 'condor@parent', and 'condor@family'
 		// are considered superusers.
 		std::string super_user(tmp);
-		if  (tmp.find("@") == std::string::npos) {
+		if  (super_user.find("@") == std::string::npos) {
 			std::string alt_super_user = std::string(tmp) + "@" + uid_domain;
 			super_users.emplace_back(alt_super_user);
 		} else {
