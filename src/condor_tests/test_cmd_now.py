@@ -89,7 +89,7 @@ def failure_injection_job_parameters(failure_config_value, path_to_sleep):
         "should_transfer_files": "true",
         "universe": "vanilla",
         "arguments": "600",
-        "log": f"cmd_now-failure-{failure_config_value}.log",
+        "log": "cmd_now-failure-{}.log".format(failure_config_value),
     }
 
 
@@ -124,7 +124,7 @@ def sched_log(failure_injection_condor, beneficiary_job, victim_jobs):
 
 @action
 def failure_log_message_with_job_id(failure_log_message, beneficiary_job):
-    return failure_log_message.format(f"{beneficiary_job.clusterid}.0")
+    return failure_log_message.format("{}.0".format(beneficiary_job.clusterid))
 
 
 @action

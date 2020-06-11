@@ -22,6 +22,8 @@ import copy
 import time
 import tempfile
 import os
+import sys
+import platform
 import subprocess
 
 import pytest
@@ -47,7 +49,7 @@ def pytest_addoption(parser):
     )
 
 
-STAMP = f"{int(time.time())}-{os.getpid()}"
+STAMP = "{}-{}".format(int(time.time()), os.getpid())
 
 
 def get_base_test_dir(config):
@@ -56,7 +58,7 @@ def get_base_test_dir(config):
     if base_dir is None:
         base_dir = (
             Path(tempfile.gettempdir())
-            / f"condor-tests-{STAMP}"
+            / "condor-tests-{}".format(STAMP)
         )
 
     base_dir = Path(base_dir).absolute()
@@ -70,9 +72,11 @@ def get_base_test_dir(config):
 def pytest_report_header(config, startdir):
     return [
         "",
-        f"Base per-test directory: {get_base_test_dir(config)}",
-        f"Python bindings version:\n{htcondor.version()}",
-        f"HTCondor version:\n{subprocess.run(['condor_version'], stdout = subprocess.PIPE).stdout.decode('utf-8').strip()}",
+        "Base per-test directory: {}".format(get_base_test_dir(config)),
+        "Platform:\n{}".format(platform.platform()),
+        "Python version:\n{}".format(sys.version),
+        "Python bindings version:\n{}".format(htcondor.version()),
+        "HTCondor version:\n{}".format(subprocess.run(['condor_version'], stdout = subprocess.PIPE).stdout.decode('utf-8').strip()),
         "",
     ]
 
