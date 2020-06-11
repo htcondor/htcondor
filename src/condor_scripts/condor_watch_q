@@ -58,7 +58,7 @@ def parse_args():
             condor_watch_q will default to tracking all of the current user's jobs.
 
             By default, condor_watch_q will never exit on its own 
-            (unless it encounters an error).
+            (unless it encounters an error or it is not tracking any jobs).
             You can tell it to exit when certain conditions are met. For example,
             to exit with status 0 when all of the jobs it is tracking are done
             or with status 1 when any job is held, you could run
@@ -363,28 +363,35 @@ def cli():
     args = parse_args()
 
     if args.debug:
-        print("Enabling HTCondor debug output...", file=sys.stderr)
+        warning("Debug mode enabled...")
         htcondor.enable_debug()
 
-    return watch_q(
-        users=args.users,
-        cluster_ids=args.clusters,
-        event_logs=args.files,
-        batches=args.batches,
-        collector=args.collector,
-        schedd=args.schedd,
-        exit_conditions=args.exit,
-        group_by=args.groupby,
-        table=args.table,
-        progress_bar=args.progress,
-        row_progress_bar=args.row_progress,
-        summary=args.summary,
-        summary_type=args.summary_type,
-        updated_at=args.updated_at,
-        color=args.color,
-        refresh=args.refresh,
-        abbreviate_path_components=args.abbreviate,
-    )
+    try:
+        return watch_q(
+            users=args.users,
+            cluster_ids=args.clusters,
+            event_logs=args.files,
+            batches=args.batches,
+            collector=args.collector,
+            schedd=args.schedd,
+            exit_conditions=args.exit,
+            group_by=args.groupby,
+            table=args.table,
+            progress_bar=args.progress,
+            row_progress_bar=args.row_progress,
+            summary=args.summary,
+            summary_type=args.summary_type,
+            updated_at=args.updated_at,
+            color=args.color,
+            refresh=args.refresh,
+            abbreviate_path_components=args.abbreviate,
+        )
+    except Exception as e:
+        if args.debug:
+            raise
+
+        error("Unhandled error: {}. Re-run with -debug for a full stack trace.".format(e))
+        sys.exit(1)
 
 
 EXIT_GROUPERS = {"all": all, "any": any, "none": lambda _: not any(_)}
@@ -445,7 +452,7 @@ def watch_q(
         users, cluster_ids, event_logs, batches, collector=collector, schedd=schedd
     )
     if len(event_logs) == 0:
-        print("No jobs found")
+        warning("No jobs found, exiting...")
         sys.exit(0)
 
     tracker = JobStateTracker(event_logs, batch_names)
@@ -648,6 +655,14 @@ def find_job_event_logs(
     if batches is None:
         batches = []
 
+    clusters = set()
+    event_logs = set()
+    batch_names = {}
+    already_warned_missing_log = set()
+
+    for file in files:
+        event_logs.add(os.path.abspath(file))
+
     constraint = " || ".join(
         itertools.chain(
             ("Owner == {}".format(classad.quote(u)) for u in users),
@@ -655,31 +670,21 @@ def find_job_event_logs(
             ("JobBatchName == {}".format(b) for b in batches),
         )
     )
-    if constraint != "":
-        ads = get_schedd(collector=collector, schedd=schedd).query(
-            constraint, PROJECTION
-        )
-    else:
-        ads = []
 
-    cluster_ids = set()
-    event_logs = set()
-    batch_names = {}
-    already_warned_missing_log = set()
-    for ad in ads:
+    for ad in get_ads(constraint, collector, schedd):
         cluster_id = ad["ClusterId"]
-        cluster_ids.add(cluster_id)
+        clusters.add(cluster_id)
+
         batch_names[cluster_id] = ad.get("JobBatchName")
 
         try:
             log_path = ad["UserLog"]
         except KeyError:
             if cluster_id not in already_warned_missing_log:
-                print(
-                    "WARNING: cluster {} does not have a job event log file (set log=<path> in the submit description)".format(
+                warning(
+                    "Cluster {} does not have a job event log file (set log=<path> in the submit description)".format(
                         cluster_id
-                    ),
-                    file=sys.stderr,
+                    )
                 )
                 already_warned_missing_log.add(cluster_id)
             continue
@@ -691,10 +696,20 @@ def find_job_event_logs(
 
         event_logs.add(log_path)
 
-    for file in files:
-        event_logs.add(os.path.abspath(file))
+    return clusters, event_logs, batch_names
 
-    return cluster_ids, event_logs, batch_names
+
+def get_ads(constraint, collector, schedd):
+    if constraint == "":
+        return []
+
+    try:
+        return get_schedd(collector=collector, schedd=schedd).query(
+            constraint, PROJECTION
+        )
+    except Exception as e:
+        warning("Was not able to query to discover job event logs due to: {}".format(e))
+        return []
 
 
 def get_schedd(collector=None, schedd=None):
@@ -749,11 +764,10 @@ class JobStateTracker:
                 reader = htcondor.JobEventLog(event_log_path).events(0)
                 event_readers[event_log_path] = reader
             except (OSError, IOError) as e:
-                print(
-                    "WARNING: Could not open event log at {} for reading, so it will be ignored. Reason: {}".format(
+                warning(
+                    "Could not open event log at {} for reading, so it will be ignored. Reason: {}".format(
                         event_log_path, e
-                    ),
-                    file=sys.stderr,
+                    )
                 )
 
         self.event_readers = event_readers
@@ -777,8 +791,10 @@ class JobStateTracker:
                     break
                 except Exception as e:
                     messages.append(
-                        "ERROR: failed to parse event from {}. Reason: {}".format(
-                            event_log_path, e
+                        fmt_error(
+                            "Failed to parse event from {}. Reason: {}".format(
+                                event_log_path, e
+                            )
                         )
                     )
                     continue
@@ -1255,6 +1271,22 @@ def safe_divide(numerator, denominator, default=0):
         return numerator / denominator
     except ZeroDivisionError:
         return default
+
+
+def warning(msg):
+    print(fmt_warning(msg), file=sys.stderr)
+
+
+def fmt_warning(msg):
+    return "WARNING: {}".format(msg)
+
+
+def error(msg):
+    print(fmt_error(msg), file=sys.stderr)
+
+
+def fmt_error(msg):
+    return "ERROR: {}".format(msg)
 
 
 if __name__ == "__main__":

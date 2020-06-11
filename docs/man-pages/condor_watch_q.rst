@@ -86,7 +86,7 @@ or in the event log ``/home/jill/events.log``, run
     condor_watch_q -users jane jim -clusters 12345 -files /home/jill/events.log
 
 By default, **condor_watch_q** will never exit on its own
-(unless it encounters an error).
+(unless it encounters an error or it is not tracking any jobs).
 You can tell it to exit when certain conditions are met. For example,
 to exit with status 0 when all of the jobs it is tracking are done
 or with status 1 when any job is held, you could run
@@ -218,7 +218,9 @@ Exit Status
 
 Returns ``0`` when sent a SIGINT (keyboard interrupt).
 
-Returns ``1`` for internal errors.
+Returns ``0`` if no jobs are found to track.
+
+Returns ``1`` for fatal internal errors.
 
 Can be configured via the ``-exit`` option to return any valid exit status when
 a certain condition is met.
