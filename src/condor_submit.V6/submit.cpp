@@ -546,15 +546,6 @@ main( int argc, const char *argv[] )
 
 	set_mySubSystem( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
 
-#if !defined(WIN32)
-		// Make sure root isn't trying to submit.
-	if( getuid() == 0 || getgid() == 0 ) {
-		fprintf( stderr, "\nERROR: Submitting jobs as user/group 0 (root) is not "
-				 "allowed for security reasons.\n" );
-		exit( 1 );
-	}
-#endif /* not WIN32 */
-
 	MyName = condor_basename(argv[0]);
 	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
