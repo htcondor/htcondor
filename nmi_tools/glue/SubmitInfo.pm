@@ -389,6 +389,7 @@ our %submit_info = (
 	'x86_64_rhap_6.7'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.8'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.9'	=> 'x86_64_RedHat6',
+	'nmi-build:x86_64_CentOS6'	=> 'x86_64_RedHat6',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:rhel-6.4-64'	=> 'x86_64_RedHat6',
