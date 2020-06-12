@@ -4019,10 +4019,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			// Similar to the case above, if UID_DOMAIN != socket FQU domain,
 			// then we map to 'nobody' unless TRUST_UID_DOMAIN is set.
+		bool set_to_nobody = false;
 		if (strcmp(uid_domain.c_str(), Q_SOCK->getDomain()) &&
-			param_boolean("TRUST_UID_DOMAIN", false))
+			!param_boolean("TRUST_UID_DOMAIN", false))
 		{
-			owner = "\"nobody\"";
+			new_value = "\"nobody\"";
+			attr_value = new_value.Value();
+			owner = "nobody";
+			set_to_nobody = true;
+			dprintf(D_SYSCALLS, "  Overriding Owner attribute; setting to nobody\n");
 		}
 
 		if( !owner_is_quoted ) {
@@ -4059,7 +4064,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 
-		if (!qmgmt_all_users_trusted
+		if (!set_to_nobody && !qmgmt_all_users_trusted
 #if defined(WIN32)
 			&& (strcasecmp(owner,sock_owner) != 0)
 #else
@@ -4068,7 +4073,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			&& (!isQueueSuperUser(Q_SOCK->getEffectiveFullyQualifiedUser().c_str()) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
-					attr_value, sock_owner);
+					owner, sock_owner);
 				errno = EACCES;
 				return -1;
 		}
@@ -4077,7 +4082,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// If the remote user sets the Owner to something different than the
 			// socket owner *and* they are in the same UID domain, then we will
 			// also set the user.
-		if (((orig_owner != owner) || strcmp(sock_owner, owner)) &&
+		if (!set_to_nobody && ((orig_owner != owner) || strcmp(sock_owner, owner)) &&
 			(!strcmp(uid_domain.c_str(), Q_SOCK->getDomain()) || param_boolean("TRUST_UID_DOMAIN", false)))
 		{
 			auto new_user = std::string("\"") + owner + "@" + uid_domain + "\"";
