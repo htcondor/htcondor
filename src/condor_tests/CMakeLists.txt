@@ -201,7 +201,7 @@ if (BUILD_TESTING)
 		condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full")
 		condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full")
 		condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "core;quick;full")
-		condor_pl_test(test_cmd_now "Test that cmd_now works and never leaks memory" "core;quick;full")
+		condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "core;quick;full")
 	endif()
 
 	if(WITH_GANGLIA)
