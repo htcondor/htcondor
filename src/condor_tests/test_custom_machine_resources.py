@@ -75,7 +75,7 @@ def monitor_script(resources):
         + "".join(
             textwrap.dedent("""
             print('SlotMergeConstraint = StringListMember( "{name}", AssignedXXX )')
-            print('UptimeXXXeconds = {increment}')
+            print('UptimeXXXSeconds = {increment}')
             print('- {name}')
             """.format(
                 name=name, increment=increment
@@ -175,10 +175,10 @@ class TestCustomMachineResources:
             htcondor.DaemonTypes.Startd,
             htcondor.AdTypes.Startd,
             constraint="AssignedXXX =!= undefined",
-            projection=["SlotID", "AssignedXXX", "UptimeXXXeconds"],
+            projection=["SlotID", "AssignedXXX", "UptimeXXXSeconds"],
         )
 
-        measured_uptimes = set(int(ad["UptimeXXXeconds"]) for ad in direct)
+        measured_uptimes = set(int(ad["UptimeXXXSeconds"]) for ad in direct)
 
         logger.info(
             "Measured uptimes were {}, expected multiples of {} (not necessarily in order)".format(
