@@ -1,27 +1,24 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-#docker://timtheisen/nmi-build:x86_64_CentOS6 (Using x86_64_RedHat6 below)
-docker://timtheisen/nmi-build:x86_64_AmazonLinux2
+docker://timtheisen/nmi-v89:x86_64_AmazonLinux2
 # Using 64-bit CentOS 7 hardware for IPv6 tests
 x86_64_CentOS7
-docker://timtheisen/nmi-build:x86_64_CentOS7
-docker://timtheisen/nmi-build:x86_64_CentOS8
-x86_64_Debian9
-docker://timtheisen/nmi-build:x86_64_Debian10
+docker://timtheisen/nmi-v89:x86_64_CentOS7
+docker://timtheisen/nmi-v89:x86_64_CentOS8
+docker://timtheisen/nmi-v89:x86_64_Debian9
+docker://timtheisen/nmi-v89:x86_64_Debian10
 x86_64_MacOSX10
 x86_64_MacOSX13
 x86_64_MacOSX15
-x86_64_Ubuntu16
-docker://timtheisen/nmi-build:x86_64_Ubuntu18
-docker://timtheisen/nmi-build:x86_64_Ubuntu20
+docker://timtheisen/nmi-v89:x86_64_Ubuntu16
+docker://timtheisen/nmi-v89:x86_64_Ubuntu18
 x86_64_Windows7
 x86_64_Windows8
 x86_64_Windows10
 
 # Just for small-shadow RPM
-x86_CentOS7
+docker://timtheisen/nmi-v89:x86_CentOS7
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-docker://timtheisen/nmi-build:x86_64_Fedora30
-docker://timtheisen/nmi-build:x86_64_Fedora32
+docker://timtheisen/nmi-v89:x86_64_Fedora32
