@@ -300,6 +300,9 @@ class TestCondorNow:
             num_evicted_jobs == successful_max_victim_jobs and saw_beneficiary_execute
         )
 
+    def test_success_cleanup(
+        self, sched_log_containing_success,
+    ):
         assert empty_pccc_table_and_no_match_records(sched_log_containing_success)
 
     def test_failure_cleanup(self, sched_log_containing_failure):
