@@ -1,18 +1,21 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-#docker://timtheisen/nmi-build:x86_64_CentOS6 (Using x86_64_RedHat6 below)
+docker://timtheisen/nmi-build:x86_64_CentOS6
 # Using 64-bit CentOS 7 hardware for std univ tests
 docker://timtheisen/nmi-build:x86_64_AmazonLinux2
 x86_64_CentOS7
+docker://timtheisen/nmi-build:x86_64_CentOS7
 docker://timtheisen/nmi-build:x86_64_CentOS8
 x86_64_Debian8
 x86_64_Debian9
+docker://timtheisen/nmi-build:x86_64_Debian9
 docker://timtheisen/nmi-build:x86_64_Debian10
 x86_64_MacOSX10
 x86_64_MacOSX13
 x86_64_MacOSX15
 x86_64_Ubuntu16
+docker://timtheisen/nmi-build:x86_64_Ubuntu16
 docker://timtheisen/nmi-build:x86_64_Ubuntu18
 docker://timtheisen/nmi-build:x86_64_Ubuntu20
 x86_64_Windows7
