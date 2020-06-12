@@ -45,6 +45,7 @@ commands:
  -s|--status [host]         Get status of installed cluster
  -t|--test [host]           Test the installed cluster (all clusters)
  -o|--override directory    Override the bosco installation with a directory structure
+ -d|--debug                 Display debugging output
  -h|--help                  Show this help message
 
 Where host is user@fqdn.example.com
@@ -737,7 +738,7 @@ if [ `uname` = "Darwin" ] ; then
     # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
     TEMP="$@"
 else
-    TEMP=`getopt -a -o a:ls:t:r:hp:o: --longoptions add:,platform:,list,status:,test:,remove:,help,override:  -n 'bosco_cluster' -- "$@"`
+    TEMP=`getopt -a -o a:ls:t:r:dhp:o: --longoptions add:,platform:,list,status:,test:,remove:,debug,help,override:  -n 'bosco_cluster' -- "$@"`
 
     if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 fi
@@ -751,6 +752,7 @@ override_dir=
 while true; do
     case "$1" in
         -h|--help) usage; exit 1; shift ;;
+        -d|--debug) debug=1; shift;;
         -p|--platform) platform_force=$2; shift 2;;
         -a|--add) remote_host=$2; shift 2; break;;
         -l|--list) list $2
@@ -839,10 +841,13 @@ fi
 start_ssh
 
 # Quickly test the ssh
-qmgr_out=`ssh -o "PasswordAuthentication=no" $remote_host "pwd" 2>/dev/null`
+ssh_opts='-o "PasswordAuthentication=no"'
+[ $debug -eq 0 ] || ssh_opts="$ssh_opts -vvvvv"
+qmgr_out=$(ssh $ssh_opts $remote_host "pwd" 2>&1)
 if [ $? -ne 0 ]; then
     echo "Password-less ssh to $remote_host did NOT work, even after adding the ssh-keys."
     echo "Does the remote resource allow password-less ssh?"
+    echo "$qmgr_out"
     exit 1
 fi
 
