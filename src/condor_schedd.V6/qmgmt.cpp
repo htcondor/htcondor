@@ -4008,6 +4008,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 
+		dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i\n",
+			qmgmt_all_users_trusted,owner,sock_owner,isQueueSuperUser(sock_owner),SuperUserAllowedToSetOwnerTo(owner));
+
 		if (!qmgmt_all_users_trusted
 #if defined(WIN32)
 			&& (strcasecmp(owner,sock_owner) != 0)
