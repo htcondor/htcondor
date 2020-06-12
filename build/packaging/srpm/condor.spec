@@ -1097,10 +1097,11 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 
-# Remove condor_top with no python bindings
+# Remove python-based tools when no python bindings
 %if ! %python
 rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
+rm -f %{buildroot}/%{_bindir}/condor_watch_q
 %endif
 
 # Remove junk
@@ -1713,6 +1714,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %_bindir/condor_top
 %_bindir/classad_eval
+%_bindir/condor_watch_q
 %_libdir/libpyclassad2*.so
 %_libexecdir/condor/libclassad_python_user.so
 %_libexecdir/condor/libcollector_python_plugin.so
@@ -1727,6 +1729,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %_bindir/condor_top
 %_bindir/classad_eval
+%_bindir/condor_watch_q
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
