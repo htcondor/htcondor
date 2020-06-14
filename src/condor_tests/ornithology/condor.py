@@ -358,7 +358,7 @@ class Condor:
             try:
                 self.condor_master.communicate(timeout=5)
                 break
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 pass
 
             elapsed = time.time() - start
