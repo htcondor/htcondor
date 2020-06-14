@@ -133,12 +133,12 @@ class DaemonLogStream:
 
 
 RE_MESSAGE = re.compile(
-    r"^(?P<timestamp>\d{2}\/\d{2}\/\d{2}\s\d{2}:\d{2}:\d{2}(?P<microseconds>\.\d{3})?)\s(?P<tags>(?:\([^()]+\)\s+)*)(?P<msg>.*)$"
+    r"^(?P<timestamp>\d{2}\/\d{2}\/\d{2}\s\d{2}:\d{2}:\d{2}(?P<milliseconds>\.(\d{3}|1000))?)\s(?P<tags>(?:\([^()]+\)\s+)*)(?P<msg>.*)$"
 )
 RE_TAGS = re.compile(r"\(([^()]+)\)")
 
 LOG_MESSAGE_TIME_FORMAT = r"%m/%d/%y %H:%M:%S"
-MICROSECOND_LOG_MESSAGE_TIME_FORMAT = r"%m/%d/%y %H:%M:%S.%f"
+MILLISECONDS_LOG_MESSAGE_TIME_FORMAT = r"%m/%d/%y %H:%M:%S.%f"
 
 
 class DaemonLogMessage:
@@ -166,10 +166,12 @@ class DaemonLogMessage:
                 )
             )
 
-        if match.group("microseconds"):
+        if match.group("milliseconds"):
             self._timestamp = datetime.datetime.strptime(
-                match.group("timestamp"), MICROSECOND_LOG_MESSAGE_TIME_FORMAT
+                match.group("timestamp"), MILLISECONDS_LOG_MESSAGE_TIME_FORMAT
             )
+            if match.group("milliseconds") == ".1000":
+                self._timestamp = self._timestamp.replace(microsecond=999999)
         else:
             self._timestamp = datetime.datetime.strptime(
                 match.group("timestamp"), LOG_MESSAGE_TIME_FORMAT
