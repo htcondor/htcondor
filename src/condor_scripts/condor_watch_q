@@ -129,7 +129,7 @@ def parse_args():
 
             The "active" status means "in the queue",
             and includes jobs in the idle, running, and held states.
-            
+
             ``EXIT_STATUS`` may be any valid exit status integer.
 
             To specify multiple exit conditions, pass this option multiple times.
@@ -151,7 +151,7 @@ def parse_args():
         help=textwrap.dedent(
             """
             Select what attribute to group jobs by.
-    
+
             Note that batch names can only be determined if the tracked jobs were
             found in the queue; if they were not, a default batch name is used.
             """
@@ -402,13 +402,11 @@ EXIT_JOB_STATUS_CHECK = {
     "held": lambda s: s is JobStatus.HELD,
 }
 
-
 TOTAL = "TOTAL"
 ACTIVE_JOBS = "JOB_IDS"
 EVENT_LOG = "LOG"
 CLUSTER_ID = "CLUSTER"
 BATCH_NAME = "BATCH"
-
 
 # attribute is the Python attribute name of the Cluster object
 # key is the key in the events and job rows
@@ -548,6 +546,9 @@ def watch_q(
 
                 if not refresh:
                     msg += "\n..."
+
+                if not exit_conditions:
+                    msg += "\nInput ^C to exit"
 
             if clear and move:
                 sys.stdout.write(move + clear + move)
