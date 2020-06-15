@@ -86,6 +86,7 @@ Command Reference Manual (man pages)
    condor_vacate_job
    condor_version
    condor_wait
+   condor_watch_q
    condor_who
    gidd_alloc
    procd_ctl

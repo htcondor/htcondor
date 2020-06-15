@@ -2246,6 +2246,11 @@ COMMANDS FOR THE DOCKER UNIVERSE
     Defines the name of the Docker image that is the basis for the
     docker container.
 
+ docker_network_type = host
+    If docker_network_type is set to the string host, then the job is run
+    using the host's network.  If this is not set, each job gets a private
+    network interface.
+
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
     Each *service-name*
