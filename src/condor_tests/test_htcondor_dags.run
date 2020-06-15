@@ -21,5 +21,5 @@
 use CondorTest;
 use CondorUtils;
 
-my $rv = runCommandCarefully( undef, 'pytest', 'test_htcondor_dags' );
+my $rv = runCommandCarefully( undef, 'python3', '-m', 'pytest', 'test_htcondor_dags' );
 exit $rv->{"exitcode"}
