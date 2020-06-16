@@ -66,3 +66,12 @@ _lock.add_locks(htcondor, skip=_lock.DO_NOT_LOCK)
 # because of import caching, this respects the mutation we did above
 from .htcondor import *
 from .htcondor import _Param
+
+
+#
+# Deprecation warnings.
+#
+
+from .deprecation import LogReader
+from .deprecation import EventIterator, FileLock, lock, read_events
+from .deprecation import Negotiator
