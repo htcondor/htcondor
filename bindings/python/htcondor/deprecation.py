@@ -1,4 +1,5 @@
 import warnings as _warnings;
+import functools as _functools;
 
 def deprecate(message):
     """
@@ -21,12 +22,26 @@ def deprecate(message):
 
     return deprecated
 
-def deprecate_class(message, c):
-    def class_name(*args, **kwargs):
-        _warnings.warn(message, FutureWarning)
-        return c(*args, **kwargs)
+def deprecate_method(message, cls, method = None):
+    if method is None:
+        method = cls.__init__
 
-    return class_name
+    # assigned protects us from accessing attributes of the function object
+    # that may not exist inside functools.wraps, which can fail on 2.7
+    # Compare https://github.com/python/cpython/blob/2.7/Lib/functools.py#L33 to
+    #         https://github.com/python/cpython/blob/3.7/Lib/functools.py#L53
+    assigned = (a for a in _functools.WRAPPER_ASSIGNMENTS if hasattr(method, a))
+
+    @_functools.wraps(method, assigned)
+    def wrapper(*args, **kwargs):
+        _warnings.warn(message, FutureWarning)
+        return method(*args, **kwargs)
+
+    setattr(cls, method.__name__,  wrapper)
+    return cls
+
+def deprecate_class(message, cls):
+    return deprecate_method(message, cls, None)
 
 
 # FIXME: deprecate this enum
