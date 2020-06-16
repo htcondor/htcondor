@@ -382,12 +382,12 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	// insert the authenticated user into the ad itself
 	const char* authn_user = sock->getFullyQualifiedUser();
 	if (authn_user) {
-		clientAd->Assign("AuthenticatedIdentity", authn_user);
-		clientAd->Assign("AuthenticationMethod", sock->getAuthenticationMethodUsed());
+		clientAd->Assign(ATTR_AUTHENTICATED_IDENTITY, authn_user);
+		clientAd->Assign(ATTR_AUTHENTICATION_METHOD, sock->getAuthenticationMethodUsed());
 	} else {
 		// remove it from the ad if it's not authenticated.
-		clientAd->Delete("AuthenticatedIdentity");
-		clientAd->Delete("AuthenticationMethod");
+		clientAd->Delete(ATTR_AUTHENTICATED_IDENTITY);
+		clientAd->Delete(ATTR_AUTHENTICATION_METHOD);
 	}
 
 #ifdef PROFILE_RECEIVE_UPDATE
