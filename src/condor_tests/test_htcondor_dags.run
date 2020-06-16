@@ -21,5 +21,25 @@
 use CondorTest;
 use CondorUtils;
 
+my $iswindows = CondorUtils::is_windows();
+
+my $reldir = `condor_config_val release_dir`; chomp $reldir;
+my $pathsep = ':';
+my $relpy = "$reldir/lib/python3";
+if ($iswindows) { $relpy = "$reldir\\lib\\python3"; $pathsep = ';'; }
+
+my $pythonpath = "";
+if (exists($ENV{PYTHONPATH})) {
+    $pythonpath = $ENV{PYTHONPATH};
+    print "\texisting PYTHONPATH=$pythonpath\n";
+    if (index($reldir,$pythonpath) != -1) {
+        print "\tadding $relpy to PYTHONPATH\n";
+        $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
+    }
+} else {
+    print "\tsetting PYTHONPATH to $relpy\n";
+    $ENV{PYTHONPATH} = $relpy;
+}
+
 my $rv = runCommandCarefully( undef, 'python3', '-m', 'pytest', 'test_htcondor_dags' );
 exit $rv->{"exitcode"}
