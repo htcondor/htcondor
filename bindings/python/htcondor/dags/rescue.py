@@ -108,11 +108,11 @@ def find_rescue_file(
         The :class:`pathlib.Path` to the latest rescue file.
     """
     dag_dir = Path(dag_dir)
-    rescue_files = sorted(dag_dir.glob(f"{dag_file_name}.rescue*"))
+    rescue_files = sorted(dag_dir.glob("{}.rescue*".format(dag_file_name)))
 
     if len(rescue_files) == 0:
         raise exceptions.NoRescueFileFound(
-            f"No rescue file for dag {dag_file_name} found in {dag_dir}"
+            "No rescue file for dag {} found in {}".format(dag_file_name, dag_dir)
         )
 
     return rescue_files[-1]

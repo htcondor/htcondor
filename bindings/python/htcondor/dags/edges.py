@@ -140,7 +140,9 @@ class OneToOne(BaseEdge):
 
         if num_parent_vars != num_child_vars:
             raise exceptions.OneToOneEdgeNeedsSameNumberOfVars(
-                f"Parent layer {parent} has {num_parent_vars} nodes, but child layer {child} has {num_child_vars} nodes"
+                "Parent layer {} has {} nodes, but child layer {} has {} nodes".format(
+                    parent, num_parent_vars, child, num_child_vars
+                )
             )
 
         yield from (((i,), (i,)) for i in range(num_parent_vars))
@@ -186,17 +188,31 @@ class Grouper(BaseEdge):
 
         if num_parent_vars % self.parent_chunk_size != 0:
             raise exceptions.IncompatibleGrouper(
-                "Cannot apply edge {} to parent layer {} because number of real parent nodes ({}) is not evenly divisible by the parent chunk size ({})".format(self, parent, len(parent), self.parent_chunk_size)
+                "Cannot apply edge {} to parent layer {} because number of real parent nodes ({}) is not evenly divisible by the parent chunk size ({})".format(
+                    self, parent, len(parent), self.parent_chunk_size
+                )
             )
         if num_child_vars % self.child_chunk_size != 0:
             raise exceptions.IncompatibleGrouper(
-                "Cannot apply edge {} to child layer {} because number of real child nodes ({}) is not evenly divisible by the child chunk size ({})".format(self, child, len(child), self.child_chunk_size)
+                "Cannot apply edge {} to child layer {} because number of real child nodes ({}) is not evenly divisible by the child chunk size ({})".format(
+                    self, child, len(child), self.child_chunk_size
+                )
             )
         if (num_parent_vars // self.parent_chunk_size) != (
             num_child_vars // self.child_chunk_size
         ):
             raise exceptions.IncompatibleGrouper(
-                "Cannot apply edge {} to layers {} and {} because they do not produce the same number of chunks (parent chunk: {} / {} = {}, child chunk: {} / {} = {})".format(self, parent, child, len(parent), self.parent_chunk_size, len(parent) // self.parent_chunk_size, len(child), self.child_chunk_size, len(child) // self.child_chunk_size)
+                "Cannot apply edge {} to layers {} and {} because they do not produce the same number of chunks (parent chunk: {} / {} = {}, child chunk: {} / {} = {})".format(
+                    self,
+                    parent,
+                    child,
+                    len(parent),
+                    self.parent_chunk_size,
+                    len(parent) // self.parent_chunk_size,
+                    len(child),
+                    self.child_chunk_size,
+                    len(child) // self.child_chunk_size,
+                )
             )
 
         for parent_group, child_group in zip(

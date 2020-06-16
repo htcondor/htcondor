@@ -96,13 +96,12 @@ class BaseNode(abc.ABC):
         retry_unless_exit: Optional[int] = None,
         pre: Optional[Script] = None,
         post: Optional[Script] = None,
-        pre_skip_exit_code=None,
+        pre_skip_exit_code: Optional[int] = None,
         priority: int = 0,
         category: Optional[str] = None,
-        abort: Optional[DAGAbortCondition] = None,
+        abort: Optional[DAGAbortCondition] = None
     ):
         """
-
         Parameters
         ----------
         dag
@@ -403,7 +402,7 @@ class NodeLayer(BaseNode):
         *,
         submit_description: Union[Optional[htcondor.Submit], Path] = None,
         vars: Optional[Iterable[Dict[str, str]]] = None,
-        **kwargs,
+        **kwargs
     ):
         """
         Parameters
@@ -458,7 +457,7 @@ class FinalNode(BaseNode):
         self,
         dag: "dag.DAG",
         submit_description: Union[Optional[htcondor.Submit], Path] = None,
-        **kwargs,
+        **kwargs
     ):
         """
         Parameters
@@ -511,10 +510,14 @@ class Nodes:
         return node in self.nodes
 
     def __repr__(self) -> str:
-        return "Nodes({})".format(', '.join(repr(n) for n in sorted(self.nodes, key = lambda n: n.name)))
+        return "Nodes({})".format(
+            ", ".join(repr(n) for n in sorted(self.nodes, key=lambda n: n.name))
+        )
 
     def __str__(self) -> str:
-        return "Nodes({})".format(', '.join(str(n) for n in sorted(self.nodes, key = lambda n: n.name)))
+        return "Nodes({})".format(
+            ", ".join(str(n) for n in sorted(self.nodes, key=lambda n: n.name))
+        )
 
     def _some_element(self) -> BaseNode:
         return next(iter(self.nodes))

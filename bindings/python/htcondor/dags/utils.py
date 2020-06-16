@@ -48,8 +48,8 @@ def grouper(iterable, n, fill=None):
 
 
 def make_repr(obj, attrs):
-    entries = ", ".join(f"{k} = {getattr(obj, k)}" for k in attrs)
-    return f"{obj.__class__.__name__}({entries})"
+    entries = ", ".join("{} = {}".format(k, getattr(obj, k)) for k in attrs)
+    return "{}({})".format(type(obj).__name__, entries)
 
 
 def table(
@@ -140,30 +140,7 @@ VERSION_RE = re.compile(
 def parse_version(v: str) -> Tuple[int, int, int, str, int]:
     match = VERSION_RE.match(v)
     if match is None:
-        raise Exception(f"Could not determine version info from {v}")
-
-    (major, minor, micro, prerelease, prerelease_num) = match.group(1, 2, 4, 5, 6)
-
-    out = (
-        int(major),
-        int(minor),
-        int(micro or 0),
-        prerelease[0] if prerelease is not None else None,
-        int(prerelease_num) if prerelease_num is not None else None,
-    )
-
-    return out
-
-
-VERSION_RE = re.compile(
-    r"^(\d+) \. (\d+) (\. (\d+))? ([ab](\d+))?$", re.VERBOSE | re.ASCII,
-)
-
-
-def parse_version(v: str) -> Tuple[int, int, int, Optional[str], Optional[int]]:
-    match = VERSION_RE.match(v)
-    if match is None:
-        raise Exception(f"Could not determine version info from {v}")
+        raise Exception("Could not determine version info from {}".format(v))
 
     (major, minor, micro, prerelease, prerelease_num) = match.group(1, 2, 4, 5, 6)
 

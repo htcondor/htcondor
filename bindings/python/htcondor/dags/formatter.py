@@ -41,13 +41,21 @@ class SimpleFormatter(NodeNameFormatter):
     def generate(self, layer_name: str, node_index: int) -> str:
         if self.separator in layer_name:
             raise exceptions.LayerNameContainsSeparator(
-                "The layer name {} cannot contain the node name separator character '{}'".format(layer_name, self.separator)
+                "The layer name {} cannot contain the node name separator character '{}'".format(
+                    layer_name, self.separator
+                )
             )
-        name = "{}{}{}".format(layer_name, self.separator, self.index_format.format(node_index + self.offset))
+        name = "{}{}{}".format(
+            layer_name,
+            self.separator,
+            self.index_format.format(node_index + self.offset),
+        )
 
         if self.parse(name) != (layer_name, node_index):
             raise exceptions.NoninvertibleFormat(
-                "{} was not able to invert the formatted node name {}. Perhaps the index_format is incompatible?".format(type(self).__name__, name)
+                "{} was not able to invert the formatted node name {}. Perhaps the index_format is incompatible?".format(
+                    type(self).__name__, name
+                )
             )
 
         return name

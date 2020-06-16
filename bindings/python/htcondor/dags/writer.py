@@ -173,7 +173,9 @@ class DAGWriter:
             yield "CATEGORY {} {}".format(category, value)
 
     def write_dagman_config_file(self, dag_dir: Path):
-        contents = "\n".join(f"{k} = {v}" for k, v in self.dag.dagman_config.items())
+        contents = "\n".join(
+            "{} = {}".format(k, v) for k, v in self.dag.dagman_config.items()
+        )
         (dag_dir / CONFIG_FILE_NAME).write_text(contents)
 
     def yield_node_lines(self, node_: node.BaseNode) -> Iterator[str]:
@@ -239,9 +241,9 @@ class DAGWriter:
 
     def yield_node_meta_lines(self, node: node.BaseNode, name: str) -> Iterator[str]:
         if node.retries is not None:
-            parts = [f"RETRY {name} {node.retries}"]
+            parts = ["RETRY {} {}".format(name, node.retries)]
             if node.retry_unless_exit is not None:
-                parts.append(f"UNLESS-EXIT {node.retry_unless_exit}")
+                parts.append("UNLESS-EXIT {}".format(node.retry_unless_exit))
             yield " ".join(parts)
 
         if node.pre is not None:
@@ -250,18 +252,18 @@ class DAGWriter:
             yield from self.yield_script_line(name, node.post, "POST")
 
         if node.pre_skip_exit_code is not None:
-            yield f"PRE_SKIP {name} {node.pre_skip_exit_code}"
+            yield "PRE_SKIP {} {}".format(name, node.pre_skip_exit_code)
 
         if node.priority != 0:
-            yield f"PRIORITY {name} {node.priority}"
+            yield "PRIORITY {} {}".format(name, node.priority)
 
         if node.category is not None:
-            yield f"CATEGORY {name} {node.category}"
+            yield "CATEGORY {} {}".format(name, node.category)
 
         if node.abort is not None:
-            parts = [f"ABORT-DAG-ON {name} {node.abort.node_exit_value}"]
+            parts = ["ABORT-DAG-ON {} {}".format(name, node.abort.node_exit_value)]
             if node.abort.dag_return_value is not None:
-                parts.append(f"RETURN {node.abort.dag_return_value}")
+                parts.append("RETURN {}".format(node.abort.dag_return_value))
             yield " ".join(parts)
 
     def yield_script_line(
@@ -286,7 +288,9 @@ class DAGWriter:
             return {idx: self.get_node_name(n, idx) for idx in range(len(n.vars))}
         else:
             raise TypeError(
-                f"Was not able to generate node names for node {n} because it was not a recognized node type"
+                "Was not able to generate node names for node {} because it was not a recognized node type".format(
+                    n
+                )
             )
 
     def join_node_name(self, join: edges.JoinNode) -> str:
@@ -310,4 +314,6 @@ class DAGWriter:
                     if not isinstance(c, edges.JoinNode)
                     else (self.join_node_name(c),)
                 )
-                yield f"PARENT {' '.join(parent_node_names)} CHILD {' '.join(child_node_names)}"
+                yield "PARENT {} CHILD {}".format(
+                    " ".join(parent_node_names), " ".join(child_node_names)
+                )
