@@ -6,6 +6,10 @@ set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
 if (WITH_PYTHON_BINDINGS)
     set(DEPS "")
 
+    configure_file(${SETUP_PY_IN} ${SETUP_PY})
+
+    # Copy over module directories if __init__.py is missing, i.e. out of
+    # source build.  This is broken (see hack at the end of this file).
     foreach(PACKAGE ${PACKAGES})
         set(PKG_DIR "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}")
         add_custom_command(OUTPUT "${PKG_DIR}/__init__.py"
@@ -21,7 +25,7 @@ if (WITH_PYTHON_BINDINGS)
 
     if (WINDOWS AND DEFINED PYTHON3_VERSION_STRING)
         list(APPEND DEPS py3classad_module py3htcondor)
-        if (NOT DEFINED PYTHON_VERSION_STRING)
+        if (NOT DEFINED PYTHON_VERSION_STRING) # make sure Windows has a Python executable even if building Python 3 only
             set(PYTHON_EXECUTABLE ${PYTHON3_EXECUTABLE})
         endif()
     endif()
