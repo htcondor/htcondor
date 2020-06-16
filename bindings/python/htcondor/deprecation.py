@@ -54,9 +54,11 @@ LogReader = deprecate_class("deprecated", _LogReader)
 # FIXME: deprecate this enum
 # from .htcondor import LockType as _LockType
 
+# This class can't be constructed from Python, so maybe we don't need this?
 from .htcondor import EventIterator as _EventIterator
 EventIterator = deprecate_class("deprecated", _EventIterator)
 
+# This class can't be constructed from Python, so maybe we don't need this?
 from .htcondor import FileLock as _FileLock
 FileLock = deprecate_class("deprecated", _FileLock)
 
@@ -64,7 +66,7 @@ from .htcondor import lock
 lock = deprecate("deprecated")(lock)
 
 from .htcondor import read_events
-read_events = deprecate("deprecated")(read_events)
+read_events = deprecate("Deprecated; use JobEventLog, instead.")(read_events)
 
 
 from .htcondor import Negotiator as _Negotiator
