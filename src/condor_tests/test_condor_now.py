@@ -68,7 +68,7 @@ def failure_injection_config(max_victim_jobs, failure_config_value):
     config = {
         "NUM_CPUS": max_victim_jobs,
         "STARTD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
-        "SCHEDD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST D_FULLDEBUG",
+        "SCHEDD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
         "COALESCE_FAILURE_MODE": failure_config_value,
     }
     raw_config = "use feature: PartitionableSlot"
@@ -174,7 +174,7 @@ def successful_job_parameters(path_to_sleep, successful_max_victim_jobs):
 def successful_condor_config(successful_max_victim_jobs):
     config = {
         "NUM_CPUS": successful_max_victim_jobs,
-        "SCHEDD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST D_FULLDEBUG",
+        "SCHEDD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
     }
     raw_config = "use feature : PartitionableSlot"
     return {"config": config, "raw_config": raw_config}
