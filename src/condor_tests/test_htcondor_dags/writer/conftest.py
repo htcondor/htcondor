@@ -15,6 +15,8 @@
 
 import pytest
 
+from pathlib import Path
+
 from htcondor import dags
 from htcondor.dags.writer import DAGWriter
 
@@ -29,7 +31,7 @@ def writer(dag):
 
 @pytest.fixture(scope="function")
 def dag_dir(tmp_path):
-    d = tmp_path / "dag-dir"
+    d = Path(str(tmp_path / "dag-dir"))
     d.mkdir()
 
     return d

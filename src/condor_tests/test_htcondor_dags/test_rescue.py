@@ -15,6 +15,7 @@
 
 import pytest
 
+from pathlib import Path
 import textwrap
 
 import htcondor
@@ -78,22 +79,16 @@ def test_rescue(rescue_dag, rescue_file_text):
 
 
 @pytest.mark.parametrize("num_rescues", [1, 5, 15, 150])
-def test_find_rescue_file_with_existing_rescue_file(tmp_path, num_rescues):
-    d = tmp_path / "dag-dir"
-    d.mkdir()
-
+def test_find_rescue_file_with_existing_rescue_file(dag_dir, num_rescues):
     base = "dagfile.dag"
     for n in range(num_rescues):
-        (d / "{}.rescue{:03d}".format(base, n + 1)).touch()
+        (dag_dir / "{}.rescue{:03d}".format(base, n + 1)).touch()
 
-    assert dags.find_rescue_file(d, base) == (
-        d / "{}.rescue{:03d}".format(base, num_rescues)
+    assert dags.find_rescue_file(dag_dir, base) == (
+        dag_dir / "{}.rescue{:03d}".format(base, num_rescues)
     )
 
 
-def test_find_rescue_file_raises_if_no_rescue_found(tmp_path):
-    d = tmp_path / "dag-dir"
-    d.mkdir()
-
+def test_find_rescue_file_raises_if_no_rescue_found(dag_dir):
     with pytest.raises(htcondor.dags.exceptions.NoRescueFileFound):
-        dags.find_rescue_file(d, "dagfile.dag")
+        dags.find_rescue_file(dag_dir, "dagfile.dag")
