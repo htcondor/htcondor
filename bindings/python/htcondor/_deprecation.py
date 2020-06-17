@@ -1,5 +1,16 @@
-import warnings as _warnings
-import functools as _functools
+import warnings
+import textwrap
+
+from . import htcondor
+from ._wrap import wraps
+
+DEPRECATION_WARNING_FORMAT_STR = ".. warning::\n\n    {}\n\n"
+
+
+def add_deprecation_doc_warning(obj, message):
+    obj.__doc__ = DEPRECATION_WARNING_FORMAT_STR.format(message) + textwrap.dedent(
+        obj.__doc__ or ""
+    )
 
 
 def deprecate(message):
@@ -16,8 +27,14 @@ def deprecate(message):
     """
 
     def deprecated(func):
+        # this implies we're deprecating a class, in which case the warning
+        # will be applied to the class docstring via deprecate_class below
+        if func.__name__ != "__init__":
+            add_deprecation_doc_warning(func, message)
+
+        @wraps(func)
         def wrapper(*args, **kwargs):
-            _warnings.warn(message, FutureWarning)
+            warnings.warn(message, FutureWarning)
             return func(*args, **kwargs)
 
         return wrapper
@@ -29,55 +46,43 @@ def deprecate_method(message, cls, method=None):
     if method is None:
         method = cls.__init__
 
-    # assigned protects us from accessing attributes of the function object
-    # that may not exist inside functools.wraps, which can fail on 2.7
-    # Compare https://github.com/python/cpython/blob/2.7/Lib/functools.py#L33 to
-    #         https://github.com/python/cpython/blob/3.7/Lib/functools.py#L53
-    assigned = (a for a in _functools.WRAPPER_ASSIGNMENTS if hasattr(method, a))
+    setattr(cls, method.__name__, deprecate(message)(method))
 
-    @_functools.wraps(method, assigned)
-    def wrapper(*args, **kwargs):
-        _warnings.warn(message, FutureWarning)
-        return method(*args, **kwargs)
-
-    setattr(cls, method.__name__, wrapper)
     return cls
 
 
 def deprecate_class(message, cls):
+    add_deprecation_doc_warning(cls, message)
     return deprecate_method(message, cls, None)
 
+# deprecations by version of HTCondor; call these in __init__.py
 
-# FIXME: deprecate this enum
-# from .htcondor import EntryType as _EntryType
+def deprecate_8_9_8():
+    deprecate_class(
+        "LogReader is deprecated since v8.9.8 and will be removed in a future release.",
+        htcondor.LogReader,
+    )
 
-from .htcondor import LogReader as _LogReader
+    deprecate_class(
+        "Negotiator is deprecated since v8.9.8 and will be removed in a future release.",
+        htcondor.Negotiator,
+    )
 
-LogReader = deprecate_class("deprecated", _LogReader)
+    # These classes can't be constructed from Python, so maybe we don't need this?
+    deprecate_class(
+        "EventIterator is deprecated since v8.9.8 and will be removed in a future release.",
+        htcondor.EventIterator,
+    )
+    deprecate_class(
+        "FileLock is deprecated since v8.9.8 and will be removed in a future release.",
+        htcondor.EventIterator,
+    )
 
+    htcondor.lock = deprecate("lock is deprecated since v8.9.8 and will be removed in a future release.")(htcondor.lock)
 
-# FIXME: deprecate this enum
-# from .htcondor import LockType as _LockType
+    htcondor.read_events = deprecate(
+        "read_events is deprecated since v8.9.8 and will be removed in a future release; use JobEventLog instead."
+    )(htcondor.read_events)
 
-# This class can't be constructed from Python, so maybe we don't need this?
-from .htcondor import EventIterator as _EventIterator
-
-EventIterator = deprecate_class("deprecated", _EventIterator)
-
-# This class can't be constructed from Python, so maybe we don't need this?
-from .htcondor import FileLock as _FileLock
-
-FileLock = deprecate_class("deprecated", _FileLock)
-
-from .htcondor import lock
-
-lock = deprecate("deprecated")(lock)
-
-from .htcondor import read_events
-
-read_events = deprecate("Deprecated; use JobEventLog, instead.")(read_events)
-
-
-from .htcondor import Negotiator as _Negotiator
-
-Negotiator = deprecate_class("deprecated", _Negotiator)
+    # FIXME: deprecate htcondor.EntryType enum
+    # FIXME: deprecate htcondor.LockType enum

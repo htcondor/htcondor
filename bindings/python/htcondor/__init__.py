@@ -62,16 +62,12 @@ except (AttributeError, IndexError):
 # add locks in-place
 _lock.add_locks(htcondor, skip=_lock.DO_NOT_LOCK)
 
+from . import _deprecation
+
+# deprecate in-place
+_deprecation.deprecate_8_9_8()
+
 # re-import htcondor with a splat to get it into our namespace
 # because of import caching, this respects the mutation we did above
 from .htcondor import *
 from .htcondor import _Param
-
-
-#
-# Deprecation warnings.
-#
-
-from ._deprecation import LogReader
-from ._deprecation import EventIterator, FileLock, lock, read_events
-from ._deprecation import Negotiator
