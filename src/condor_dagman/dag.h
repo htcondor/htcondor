@@ -137,7 +137,8 @@ class Dag {
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
-		 bool isSplice = false, const MyString &spliceScope = "root" );
+		 bool isSplice = false, const MyString &spliceScope = "root",
+		 DCSchedd *schedd = NULL );
 
     ///
     ~Dag();
@@ -1067,7 +1068,7 @@ private:
 		// for convenience.
 	Job* _final_job;
 
-	Job* _provisioner_node;
+	Job* _provisioner_node = NULL;
 
 	ProvisionerClassad* _provisionerClassad = NULL;
 
@@ -1360,6 +1361,9 @@ private:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
 	mutable ListIterator<Job> *_allNodesIt;
+
+		// The schedd we need to talk to to update the classad.
+	DCSchedd *_schedd;
 };
 
 #endif /* #ifndef DAG_H */

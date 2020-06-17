@@ -150,7 +150,16 @@ Dagman::Dagman() :
 	_dagmanClassad(NULL),
 	_removeNodeJobs(true)
 {
-    debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
+	debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
+	_schedd = new DCSchedd( NULL, NULL );
+	if ( !_schedd || !_schedd->locate() ) {
+		const char *errMsg = _schedd ? _schedd->error() : "?";
+		debug_printf( DEBUG_QUIET,
+			"WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
+			errMsg );
+		check_warning_strictness( DAG_STRICT_3 );
+		return;
+	}
 }
 
 Dagman::~Dagman()
@@ -669,7 +678,7 @@ void main_init (int argc, char ** const argv) {
 		// (otherwise it will be set to "-1.-1.-1")
 	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
 
-	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId );
+	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId, dagman._schedd );
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible

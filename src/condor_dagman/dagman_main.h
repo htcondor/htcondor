@@ -54,6 +54,8 @@ class Dagman {
 		}
 		delete _dagmanClassad;
 		_dagmanClassad = NULL;
+		delete _schedd;
+		_schedd = NULL;
 	}
 
 		// Check (based on the version from the .condor.sub file, etc.),
@@ -250,6 +252,9 @@ class Dagman {
 
 		// Dagman statistics
 	DagmanStats _dagmanStats;
+
+		// The schedd we need to talk to to update the classad.
+	DCSchedd *_schedd;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

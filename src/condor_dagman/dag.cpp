@@ -90,7 +90,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
-		  const MyString &spliceScope ) :
+		  const MyString &spliceScope, DCSchedd *schedd ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -131,7 +131,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_alwaysRunPost		  (true),
 	_dry_run			  (0),
 	_dagPriority		  (0),
-	_metrics			  (NULL)
+	_metrics			  (NULL),
+	_schedd				  (schedd)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.Value() );
 
@@ -1177,7 +1178,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		// that communicates with the schedd.
 	if ( job->GetType() == NodeType::PROVISIONER ) {
 		CondorID provisionerId = CondorID( job->GetCluster(), job->GetProc(), 0 );
-		_provisionerClassad = new ProvisionerClassad( provisionerId );
+		_provisionerClassad = new ProvisionerClassad( provisionerId, _schedd );
 	}
 
 	PrintReadyQ( DEBUG_DEBUG_2 );

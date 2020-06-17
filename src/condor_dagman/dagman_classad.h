@@ -86,7 +86,7 @@ class DagmanClassad : public ScheddClassad {
   public:
 	/** Constructor.
 	*/
-	DagmanClassad( const CondorID &DAGManJobId );
+	DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd );
 	
 	/** Destructor.
 	*/
@@ -158,7 +158,7 @@ class ProvisionerClassad : public ScheddClassad {
   public:
 	/** Constructor.
 	*/
-	ProvisionerClassad( const CondorID &JobId );
+	ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd );
 
 	/** Destructor.
 	*/

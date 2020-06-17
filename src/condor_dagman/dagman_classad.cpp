@@ -133,7 +133,7 @@ ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
 }
 
 //---------------------------------------------------------------------------
-DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
+DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd ) :
 	_valid( false )
 {
 	CondorID defaultCondorId;
@@ -143,17 +143,7 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
 	}
 
 	_jobId = DAGManJobId;
-
-	_schedd = new DCSchedd( NULL, NULL );
-	if ( !_schedd || !_schedd->locate() ) {
-		const char *errMsg = _schedd ? _schedd->error() : "?";
-		debug_printf( DEBUG_QUIET,
-					"WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
-					errMsg );
-		check_warning_strictness( DAG_STRICT_3 );
-		return;
-	}
-
+	_schedd = schedd;
 	_valid = true;
 
 	InitializeMetrics();
@@ -358,7 +348,7 @@ DagmanClassad::InitializeMetrics()
 }
 
 //---------------------------------------------------------------------------
-ProvisionerClassad::ProvisionerClassad( const CondorID &JobId ) :
+ProvisionerClassad::ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd ) :
 	_valid( false )
 {
 	CondorID defaultCondorId;
@@ -368,17 +358,7 @@ ProvisionerClassad::ProvisionerClassad( const CondorID &JobId ) :
 	}
 
 	_jobId = JobId;
-
-	_schedd = new DCSchedd( NULL, NULL );
-	if ( !_schedd || !_schedd->locate() ) {
-		const char *errMsg = _schedd ? _schedd->error() : "?";
-		debug_printf( DEBUG_QUIET,
-					"WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
-					errMsg );
-		check_warning_strictness( DAG_STRICT_3 );
-		return;
-	}
-
+	_schedd = schedd;
 	_valid = true;
 }
 
