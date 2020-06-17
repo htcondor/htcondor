@@ -1,5 +1,6 @@
-import warnings as _warnings;
-import functools as _functools;
+import warnings as _warnings
+import functools as _functools
+
 
 def deprecate(message):
     """
@@ -13,6 +14,7 @@ def deprecate(message):
 
     function = deprecate("deprecated")(function)
     """
+
     def deprecated(func):
         def wrapper(*args, **kwargs):
             _warnings.warn(message, FutureWarning)
@@ -22,7 +24,8 @@ def deprecate(message):
 
     return deprecated
 
-def deprecate_method(message, cls, method = None):
+
+def deprecate_method(message, cls, method=None):
     if method is None:
         method = cls.__init__
 
@@ -37,8 +40,9 @@ def deprecate_method(message, cls, method = None):
         _warnings.warn(message, FutureWarning)
         return method(*args, **kwargs)
 
-    setattr(cls, method.__name__,  wrapper)
+    setattr(cls, method.__name__, wrapper)
     return cls
+
 
 def deprecate_class(message, cls):
     return deprecate_method(message, cls, None)
@@ -48,6 +52,7 @@ def deprecate_class(message, cls):
 # from .htcondor import EntryType as _EntryType
 
 from .htcondor import LogReader as _LogReader
+
 LogReader = deprecate_class("deprecated", _LogReader)
 
 
@@ -56,18 +61,23 @@ LogReader = deprecate_class("deprecated", _LogReader)
 
 # This class can't be constructed from Python, so maybe we don't need this?
 from .htcondor import EventIterator as _EventIterator
+
 EventIterator = deprecate_class("deprecated", _EventIterator)
 
 # This class can't be constructed from Python, so maybe we don't need this?
 from .htcondor import FileLock as _FileLock
+
 FileLock = deprecate_class("deprecated", _FileLock)
 
 from .htcondor import lock
+
 lock = deprecate("deprecated")(lock)
 
 from .htcondor import read_events
+
 read_events = deprecate("Deprecated; use JobEventLog, instead.")(read_events)
 
 
 from .htcondor import Negotiator as _Negotiator
+
 Negotiator = deprecate_class("deprecated", _Negotiator)
