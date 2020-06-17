@@ -8,13 +8,13 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
     Learn how to use the HTCondor Python bindings.
 
 :doc:`api/classad`
-    Documentation for the public API of :mod:`classad`.
+    Documentation for :mod:`classad`.
 
 :doc:`api/htcondor`
-    Documentation for the public API of :mod:`htcondor`.
+    Documentation for :mod:`htcondor`.
 
 :doc:`api/dags`
-    Documentation for the public API of :mod:`htcondor.dags`.
+    Documentation for :mod:`htcondor.dags`.
 
 
 .. toctree::

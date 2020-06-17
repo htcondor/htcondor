@@ -7,7 +7,8 @@
 
 .. attention::
     This is not documentation for DAGMan itself! If you run into DAGMan jargon
-    that isn't explained here, see `The DAGMan Manual <https://htcondor.readthedocs.io/en/latest/users-manual/dagman-applications.html>`_.
+    that isn't explained here, see :ref:`dagman-workflows`.
+
 
 Creating DAGs
 -------------
