@@ -72,6 +72,6 @@ from .htcondor import _Param
 # Deprecation warnings.
 #
 
-from .deprecation import LogReader
-from .deprecation import EventIterator, FileLock, lock, read_events
-from .deprecation import Negotiator
+from ._deprecation import LogReader
+from ._deprecation import EventIterator, FileLock, lock, read_events
+from ._deprecation import Negotiator
