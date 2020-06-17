@@ -68,7 +68,7 @@ def _rescue(dag: dag.DAG, rescue_file_text: str, formatter: NodeNameFormatter) -
 def parse_rescue_file_text(
     rescue_file_text: str, formatter: NodeNameFormatter
 ) -> Mapping[str, Set[int]]:
-    finished_nodes: Mapping[str, Set[int]] = collections.defaultdict(set)
+    finished_nodes = collections.defaultdict(set)
     for line in rescue_file_text.splitlines():
         if line.startswith("#"):
             continue
@@ -84,7 +84,7 @@ def parse_rescue_file_text(
 
 def apply_rescue(dag: dag.DAG, finished_nodes: Mapping[str, Set[int]]) -> None:
     for node in dag.nodes:
-        node.done.clear()
+        node.done = {}
         for index in finished_nodes[node.name]:
             node.done[index] = True
 

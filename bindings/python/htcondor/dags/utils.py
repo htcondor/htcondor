@@ -22,7 +22,6 @@ from typing import (
     Iterator,
     TypeVar,
     Tuple,
-    Optional,
 )
 import logging
 
