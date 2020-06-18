@@ -2581,9 +2581,9 @@ UserCheck2(ClassAd *ad, const char *test_user, const char *job_user)
         return true;
     }
 
-		// If the job user is "nice_user.foo@bar", then we pass the permission
+		// If the job user is "nice-user.foo@bar", then we pass the permission
 		// check for test user "foo@bar".
-	if (!strncmp(job_user, "nice_user.", 10) && !strcmp(job_user + 10, test_user)) {
+	if (!strncmp(job_user, "nice-user.", 10) && !strcmp(job_user + 10, test_user)) {
 		return true;
 	}
 
@@ -4157,6 +4157,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		std::string orig_user;
 		if (GetAttributeString(cluster_id, proc_id, ATTR_USER, orig_user) >= 0
 			&& orig_user != user
+			&& (std::string("nice-user.") + orig_user != user)
 			&& !qmgmt_all_users_trusted )
 		{
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
@@ -4171,7 +4172,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// SuperUserAllowedToSetOwnerTo
 		if (!qmgmt_all_users_trusted
 			&& (user != sock_user)
-			&& (std::string("nice_user.") + sock_user != user)
+			&& (std::string("nice-user.") + sock_user != user)
 			&& !isQueueSuperUser(sock_user.c_str()))
 		{
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
@@ -7403,7 +7404,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 
 	std::string powner;
 	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-		powner = "nice_user.";
+		powner = "nice-user.";
 	}
 	std::string acct_group;
 	job->LookupString(ATTR_ACCOUNTING_GROUP, acct_group);  // TODDCORE
