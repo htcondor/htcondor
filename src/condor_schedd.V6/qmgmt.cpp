@@ -4137,7 +4137,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		} else {
 
 				// Strip out the quote characters as with ATTR_OWNER
-			std::string user = attr_value;
+			user = attr_value;
 			bool user_is_valid = false;
 			if ((user.size() > 2) && (user[0] == '"') && user[user.size()-1] == '"' )
 			{
@@ -4206,7 +4206,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			std::string new_user;
 			formatstr(new_user, "\"nice-user.%s\"", user.c_str());
 			SetAttribute( cluster_id, proc_id, ATTR_USER,
-				user.c_str(), flags );
+				new_user.c_str(), flags );
 		}
 	}
 	else if (attr_id == idATTR_JOB_NOOP) {
