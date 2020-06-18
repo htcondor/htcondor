@@ -56,6 +56,7 @@
 #include "starter_util.h"
 #include "condor_random_num.h"
 #include "data_reuse.h"
+#include "authentication.h"
 
 extern void main_shutdown_fast();
 
@@ -658,6 +659,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 			session_id,
 			session_key,
 			session_info.c_str(),
+			AUTH_METHOD_MATCH,
 			fqu.c_str(),
 			NULL,
 			0,
