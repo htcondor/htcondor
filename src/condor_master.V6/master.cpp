@@ -748,6 +748,11 @@ main_init( int argc, char* argv[] )
 
 	if( StartDaemons ) {
 		daemons.StartAllDaemons();
+	} else {
+	#ifndef WIN32
+		// StartAllDaemons does this , but if we don't call that ...
+		dc_release_background_parent(0);
+	#endif
 	}
 	daemons.StartTimers();
 }
@@ -1816,6 +1821,11 @@ main( int argc, char **argv )
     // as of 8.9.7 daemon core defaults to foreground
     // for the master (and only the master) we change it to default to background
     dc_args_default_to_background(true);
+#ifndef WIN32
+	// tell daemon core that if we fork into the background
+	// let the forked child decide when to allow the forked parent to exit
+	dc_set_background_parent_mode(true);
+#endif
 
     // parse args to see if we have been asked to run as a service.
     // services are started without a console, so if we have one

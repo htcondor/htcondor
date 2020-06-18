@@ -1204,29 +1204,14 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 	endif(c_Wall)
 
-	# Added to help make resulting libcondor_utils smaller.
-	#check_c_compiler_flag(-fno-exceptions no_exceptions)
-	#if (no_exceptions)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-exceptions")
-	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fno-exceptions")
-	#endif(no_exceptions)
-	#check_c_compiler_flag(-Os c_Os)
-	#if (c_Os)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
-	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Os")
-	#endif(c_Os)
+	# GGT tested compiling  condor_history with -flto, it ran less than one tenth of one percent faster
+    # and took more than 3 times longer to compile.  Try again later.
 
-	dprint("TSTCLAIR - DISABLING -flto b/c of gcc failure in koji try again later")
-	#if (CMAKE_C_COMPILER_VERSION STRGREATER "4.7.0" OR CMAKE_C_COMPILER_VERSION STREQUAL "4.7.0")
-	#   
 	#  check_c_compiler_flag(-flto c_lto)
 	#  if (c_lto)
 	#	  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
 	#	  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
 	#  endif(c_lto)
-	#else()
-	#  dprint("skipping c_lto flag check")
-	#endif()
 
 	check_c_compiler_flag(-W c_W)
 	if (c_W)

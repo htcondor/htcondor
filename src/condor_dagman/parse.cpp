@@ -272,26 +272,34 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 						   filename, lineNumber, tmpDirectory.Value(), "",
 						   "submitfile" );
 			if (parsed_line_successfully && inline_submit) {
-				// go into inline subfile parsing mode
-				dag->JobSubmitDescriptions.push_back(new SubmitHash());
-				SubmitHash* submitDesc = dag->JobSubmitDescriptions.back();
-				submitDesc->init();
-				submitDesc->setDisableFileChecks(true);
-				std::string errmsg;
-				char * stopline = NULL;
-				if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
+				if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true)) {
+					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
+					  "description for node %s, DAGMAN_USE_CONDOR_SUBMIT must "
+					  "be set to False. Aborting.\n", nodename.Value());
 					parsed_line_successfully = false;
-				} else {
-					// Attach the submit description to the actual node
-					Job *job;
-					job = dag->FindAllNodesByName((const char *)nodename.Value(), 
-						"", filename, lineNumber);
-					if (job) {
-						job->setSubmitDesc(submitDesc);
-					}
-					else {
-						debug_printf(DEBUG_NORMAL, "Error: unable to find node "
-							"%s in our DAG structure, aborting.\n", nodename.Value());
+				}
+				else {
+					// go into inline subfile parsing mode
+					dag->JobSubmitDescriptions.push_back(new SubmitHash());
+					SubmitHash* submitDesc = dag->JobSubmitDescriptions.back();
+					submitDesc->init();
+					submitDesc->setDisableFileChecks(true);
+					std::string errmsg;
+					char * stopline = NULL;
+					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
+						parsed_line_successfully = false;
+					} else {
+						// Attach the submit description to the actual node
+						Job *job;
+						job = dag->FindAllNodesByName((const char *)nodename.Value(), 
+							"", filename, lineNumber);
+						if (job) {
+							job->setSubmitDesc(submitDesc);
+						}
+						else {
+							debug_printf(DEBUG_NORMAL, "Error: unable to find node "
+								"%s in our DAG structure, aborting.\n", nodename.Value());
+						}
 					}
 				}
 			}

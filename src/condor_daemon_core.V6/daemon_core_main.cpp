@@ -3293,6 +3293,32 @@ static void InstallOutOfMemoryHandler()
 	std::set_new_handler(OutOfMemoryHandler);
 }
 
+#ifndef WIN32
+// if we fork into the background, this is the write pipe in the child
+// and the read pipe for the parent (i.e. the current process)
+static int dc_background_pipe = -1;
+static bool dc_background_parent_is_master = false;
+bool dc_set_background_parent_mode(bool is_master)
+{
+	bool retval = dc_background_parent_is_master;
+	dc_background_parent_is_master = is_master;
+	return retval;
+}
+
+bool dc_release_background_parent(int status)
+{
+	if (dc_background_pipe >= 0) {
+		int data = status;
+		if (sizeof(data) != write(dc_background_pipe, (void*)&data, sizeof(data))) {
+			// do what?
+		}
+		close(dc_background_pipe); dc_background_pipe = -1;
+		return true;
+	}
+	return false;
+}
+#endif
+
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
 // the command line args of the condor_master, in which case it registers as 
@@ -3307,7 +3333,6 @@ int dc_main( int argc, char** argv )
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	bool	done;
-
 
 	set_priv_initialize();
 
@@ -3709,10 +3734,32 @@ int dc_main( int argc, char** argv )
 		// Disconnect from the console
 		FreeConsole();
 #else	// UNIX
+
+		// before we fork, make a pipe that the child can use to tell the parent
+		// that it's done with initialization.
+		int bgpipe[2] = { -1,-1 };
+		if (pipe(bgpipe) == -1) {
+			fprintf(stderr, "could not open background pipe\n");
+		}
+
 		// on unix, background means just fork ourselves
 		if ( fork() ) {
+			int child_status = 0;
+			if (bgpipe[1] >= 0) {
+				close(bgpipe[1]); // close write end of pipe
+				dc_background_pipe = bgpipe[0];
+				if (sizeof(child_status) != read(dc_background_pipe, (void*)&child_status, sizeof(child_status))) {
+					child_status = 0; // child never wrote to the pipe!
+				}
+				close(dc_background_pipe); dc_background_pipe = -1;
+				if (child_status != 0) { fprintf(stderr, "forked condor_master status is %d\n", child_status); }
+			}
 			// parent
-			exit(0);
+			exit(child_status);
+		}
+		if (bgpipe[0] >= 0) {
+			close(bgpipe[0]); // close read end of pipe
+			dc_background_pipe = bgpipe[1]; // save hte write end of the pipe for later
 		}
 
 		// And close stdin, out, err if we are the MASTER.
@@ -3781,6 +3828,11 @@ int dc_main( int argc, char** argv )
 		dprintf(D_ALWAYS,
 				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
 				debug_wait_param.Value(), (int)::getpid());
+		#ifndef WIN32
+			// since we are about to delay for an arbitrary amount of time, write to the background pipe
+			// so that our forked parent can exit.
+			dc_release_background_parent(0);
+		#endif
 		while (debug_wait) {
 			sleep(1);
 		}
@@ -4280,6 +4332,15 @@ int dc_main( int argc, char** argv )
 
 	// call the daemon's main_init()
 	dc_main_init( argc, argv );
+
+#ifndef WIN32
+	// last chance to send status to the fork parent so it can exit.
+	// unless we have been put into parent_is_master mode, where we let the master
+	// decide when to release the forked parent (i.e. after shared port)
+	if ( ! dc_background_parent_is_master) {
+		dc_release_background_parent(0);
+	}
+#endif
 
 	// now call the driver.  we never return from the driver (infinite loop).
 	daemonCore->Driver();

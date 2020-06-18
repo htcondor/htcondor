@@ -194,7 +194,9 @@ public:
 	typedef std::map<string, double, classad::CaseIgnLTStr> slotres_map_t;
 	typedef std::vector<std::string> slotres_assigned_ids_t;
 	typedef std::vector<FullSlotId> slotres_assigned_id_owners_t;
+	typedef std::set<std::string> slotres_offline_ids_t;
 	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	typedef std::map<string, slotres_offline_ids_t, classad::CaseIgnLTStr> slotres_offline_ids_map_t;
 	typedef std::map<string, slotres_assigned_id_owners_t, classad::CaseIgnLTStr> slotres_devIdOwners_map_t;
 
 	MachAttributes();
@@ -249,6 +251,8 @@ public:
 	const char * AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
+	void         ReconfigOfflineDevIds();
+	void         RefreshDevIds(slotres_map_t::iterator & slot_res_count, slotres_devIds_map_t::iterator & slot_res_devids, int assign_to, int assign_to_sub);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
@@ -280,7 +284,8 @@ private:
 	long long		m_total_disk; // the value of total_disk if m_recompute_disk is false
 	slotres_map_t   m_machres_map;
 	slotres_devIds_map_t m_machres_devIds_map;
-	slotres_devIds_map_t m_machres_offline_devIds_map;
+	slotres_devIds_map_t m_machres_offline_devIds_map; // startup list of offline ids
+	slotres_offline_ids_map_t m_machres_runtime_offline_ids_map; // dynamic list of offline ids (unique set of ids, startup + runtime)
 	slotres_devIdOwners_map_t m_machres_devIdOwners_map;
 	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
 	double init_machine_resource_from_script(const char * tag, const char * script_cmd);
@@ -332,6 +337,7 @@ class CpuAttributes
 public:
     typedef MachAttributes::slotres_map_t slotres_map_t;
 	typedef MachAttributes::slotres_devIds_map_t slotres_devIds_map_t;
+	typedef MachAttributes::slotres_offline_ids_map_t slotres_offline_ids_map_t;
 	typedef MachAttributes::slotres_assigned_ids_t slotres_assigned_ids_t;
 
 	friend class AvailAttributes;
@@ -345,6 +351,7 @@ public:
 	void attach( Resource* );	// Attach to the given Resource
 	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
+	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
 	void publish_static(ClassAd*);  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*);  // Publish desired info to given CA

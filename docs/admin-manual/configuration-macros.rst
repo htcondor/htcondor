@@ -3720,7 +3720,14 @@ needs.
     ``MACHINE_RESOURCE_NAMES``. This configuration variable is used to
     have resources that are detected and reported to exist by HTCondor,
     but not assigned to slots. A restart of the *condor_startd* is
-    required for changes to this configuration variable to take effect.
+    required for changes to resources assigned to slots to take effect.
+    If this variable is changed and *condor_reconfig* command is sent
+    to the Startd, the list of Offline resources will be updated, and
+    the count of resources of that type will be updated,
+    but newly offline resources will still be assigned to slots.
+    If an offline resource is assigned to a Partitionable slot, it will
+    never be assigned to a new dynamic slot but it will not be removed from
+    the ``Assigned<name>`` attribute of an existing dynamic slot.
 
 :macro-def:`MACHINE_RESOURCE_INVENTORY_<name>`
     Specifies a command line that is executed upon start up of the
@@ -3747,6 +3754,20 @@ needs.
     resource, instead of specifying a fixed quantity or list of the
     resource in the the configuration when set by
     ``MACHINE_RESOURCE_<name>`` :index:`MACHINE_RESOURCE_<name>`.
+
+    The script may also output an attribute of the form
+
+    ::
+
+        Offline<xxx>="y, z"
+
+    where ``<xxx>`` is the name of the resource, and ``"y, z"`` is a comma and/or
+    space separated list of resource identifiers that are also in the ``Detected<xxx>`` list.
+    This attribute is added to the machine ClassAd, and resources ``y`` and ``z`` will not be
+    assigned to any slot and will not be included in the count of resources of this type.
+    This will override the configuration variable ``OFFLINE_MACHINE_RESOURCE_<xxx>``
+    on startup. But ``OFFLINE_MACHINE_RESOURCE_<xxx>`` can still be used to take additional resources offline
+    without restarting.
 
 :macro-def:`ENVIRONMENT_FOR_Assigned<name>`
     A space separated list of environment variables to set for the job.

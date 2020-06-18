@@ -104,6 +104,12 @@ bool dc_args_is_background(int argc, char** argv); // return true if we should r
 // set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
 bool dc_args_default_to_background(bool background);
 
+#ifndef WIN32
+// call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
+bool dc_release_background_parent(int status);
+bool dc_set_background_parent_mode(bool is_master = true);
+#endif
+
 
 // External protos
 extern void (*dc_main_init)(int argc, char *argv[]);	// old main
