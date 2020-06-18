@@ -97,3 +97,8 @@ def deprecate_8_9_8():
     htcondor.read_events = deprecate(
         "read_events() is deprecated since v8.9.8 and will be removed in a future release; use JobEventLog instead."
     )(htcondor.read_events)
+
+    ## See GT#7524.
+    htcondor.Schedd.negotiate = deprecate(
+        "Schedd.negotiate() is deprecated since v8.9.8 and will be removed in a future release.",
+    )(htcondor.Schedd.negotiate)
