@@ -15,7 +15,6 @@
 
 import pytest
 
-from pathlib import Path
 import textwrap
 
 import htcondor

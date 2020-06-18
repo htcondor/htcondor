@@ -13,12 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import pytest
+
+from pathlib import Path
 
 from htcondor import dags
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope = "function")
 def dag(request):
     dag = dags.DAG()
 
@@ -26,3 +29,11 @@ def dag(request):
 
     if request.session.testsfailed:
         print(dag.describe())
+
+
+@pytest.fixture(scope = "function")
+def dag_dir(tmp_path):
+    d = Path(str(tmp_path / "dag-dir"))
+    d.mkdir()
+
+    return d

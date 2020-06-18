@@ -15,8 +15,6 @@
 
 import pytest
 
-from pathlib import Path
-
 from htcondor import dags
 from htcondor.dags.writer import DAGWriter
 
@@ -27,14 +25,6 @@ s = dags.DEFAULT_SEPARATOR
 @pytest.fixture(scope="function")
 def writer(dag):
     return DAGWriter(dag)
-
-
-@pytest.fixture(scope="function")
-def dag_dir(tmp_path):
-    d = Path(str(tmp_path / "dag-dir"))
-    d.mkdir()
-
-    return d
 
 
 def dagfile_lines(writer):
