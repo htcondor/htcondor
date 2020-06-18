@@ -1021,7 +1021,10 @@ QmgmtPeer::setEffectiveOwner(char const *o)
 
 	if ( o ) {
 		owner = strdup(o);
-		fquser = std::string(o) + "@" + getDomain();
+		std::string uid_domain;
+		param(uid_domain, "UID_DOMAIN");
+
+		fquser = std::string(o) + "@" + uid_domain;
 	}
 	return true;
 }
@@ -2498,7 +2501,7 @@ UserCheck(ClassAd *ad, const char *test_owner)
 	condor_sockaddr addr = Q_SOCK->endpoint();
 	if ( !Q_SOCK->isAuthorizationInBoundingSet("WRITE") ||
 		daemonCore->Verify("queue management", WRITE, addr,
-		Q_SOCK->getFullyQualifiedUser()) == FALSE )
+		Q_SOCK->getEffectiveFullyQualifiedUser().c_str()) == FALSE )
 	{
 		// this machine does not have write permission; return failure
 		return false;
@@ -2859,7 +2862,7 @@ int
 NewCluster()
 {
 
-	if( Q_SOCK && !UserCheck(NULL, Q_SOCK->getFullyQualifiedUser()  ) ) {
+	if( Q_SOCK && !UserCheck(NULL, Q_SOCK->getEffectiveFullyQualifiedUser().c_str()  ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
 		errno = EACCES;
 		return -1;
@@ -2924,7 +2927,7 @@ NewProc(int cluster_id)
 {
 	int				proc_id;
 
-	if( Q_SOCK && !UserCheck(NULL, Q_SOCK->getFullyQualifiedUser() ) ) {
+	if( Q_SOCK && !UserCheck(NULL, Q_SOCK->getEffectiveFullyQualifiedUser().c_str() ) ) {
 		errno = EACCES;
 		return -1;
 	}
@@ -2957,7 +2960,7 @@ NewProc(int cluster_id)
 	// the owner attribute after the submission.  The latter would allow them
 	// to bypass the job quota, but that's not necessarily a bad thing.
 	if (Q_SOCK) {
-		const char * owner = Q_SOCK->getFullyQualifiedUser();
+		const char * owner = Q_SOCK->getEffectiveFullyQualifiedUser().c_str();
 		if( owner == NULL ) {
 			// This should only happen for job submission via SOAP, but
 			// it's unclear how we can verify that.  Regardless, if we
@@ -3231,7 +3234,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 	// Only the owner can delete a proc.
-	if ( Q_SOCK && !UserCheck(ad, Q_SOCK->getFullyQualifiedUser() )) {
+	if ( Q_SOCK && !UserCheck(ad, Q_SOCK->getEffectiveFullyQualifiedUser().c_str() )) {
 		errno = EACCES;
 		return DESTROYPROC_EACCES;
 	}
@@ -3409,7 +3412,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
 	if (clusterad && clusterad->factory) {
 		// Only the owner can delete a cluster
-		if ( Q_SOCK && !UserCheck(clusterad, Q_SOCK->getFullyQualifiedUser() )) {
+		if ( Q_SOCK && !UserCheck(clusterad, Q_SOCK->getEffectiveFullyQualifiedUser().c_str() )) {
 			errno = EACCES;
 			return -1;
 		}
@@ -3423,7 +3426,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 		KeyToId(key,c,proc_id);
 		if (c == cluster_id && proc_id > -1) {
 				// Only the owner can delete a cluster
-				if ( Q_SOCK && !UserCheck(ad, Q_SOCK->getFullyQualifiedUser() )) {
+				if ( Q_SOCK && !UserCheck(ad, Q_SOCK->getEffectiveFullyQualifiedUser().c_str() )) {
 					errno = EACCES;
 					return -1;
 				}
@@ -3543,7 +3546,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	MyString owner_expr;
 	if (flags & SetAttribute_OnlyMyJobs) {
 			// TODO: Owner should be 'nobody' for non-local UID domain.
-		user = Q_SOCK ? Q_SOCK->getFullyQualifiedUser() : "";
+		user = Q_SOCK ? Q_SOCK->getEffectiveFullyQualifiedUser() : "";
 		owner = Q_SOCK ? Q_SOCK->getOwner() : "unauthenticated";
 		if (owner == "unauthenticated") {
 			// no job will be owned by "unauthenticated" so just quit now.
@@ -3871,8 +3874,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// to an ad that has already been committed in the queue.
 
 		// Ensure the user is not changing a job they do not own.
-		if ( Q_SOCK && !UserCheck(job, Q_SOCK->getFullyQualifiedUser() )) {
-			const char *user = Q_SOCK->getFullyQualifiedUser( );
+		if ( Q_SOCK && !UserCheck(job, Q_SOCK->getEffectiveFullyQualifiedUser().c_str() )) {
+			const char *user = Q_SOCK->getEffectiveFullyQualifiedUser( ).c_str();
 			if (!user) {
 				user = "NULL";
 			}
@@ -4019,8 +4022,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			// Similar to the case above, if UID_DOMAIN != socket FQU domain,
 			// then we map to 'nobody' unless TRUST_UID_DOMAIN is set.
+			//
+			// In the case of an internal superuser (e.g., condor@family, condor@parent),
+			// we assume the intent is the default domain; this allows the JobRouter
+			// (which authenticates as condor@family) to behave as if it is in the same
+			// UID domain by default.
 		bool set_to_nobody = false;
 		if (strcmp(uid_domain.c_str(), Q_SOCK->getDomain()) &&
+			!strcmp("family", Q_SOCK->getDomain()) &&
+			!strcmp("parent", Q_SOCK->getDomain()) &&
+			!strcmp("child", Q_SOCK->getDomain()) &&
 			!param_boolean("TRUST_UID_DOMAIN", false))
 		{
 			new_value = "\"nobody\"";
@@ -5511,8 +5522,8 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				if (clusterad) {
 					clusterad->jid = job_id;
 					clusterad->PopulateFromAd();
-					if ( Q_SOCK && Q_SOCK->getOwner() ) {
-						clusterad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(Q_SOCK->getOwner()));
+					if ( Q_SOCK && !Q_SOCK->getEffectiveFullyQualifiedUser().empty() ) {
+						clusterad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(Q_SOCK->getEffectiveFullyQualifiedUser().c_str()));
 					}
 
 					// make the cluster job factory if one is desired and does not already exist.
@@ -5589,8 +5600,8 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				OwnerInfo * ownerinfo = clusterad->ownerinfo;
 				if (ownerinfo) {
 					scheduler.incrementRecentlyAdded( ownerinfo, NULL );
-				} else if ( Q_SOCK && Q_SOCK->getOwner() ) {
-					ownerinfo = scheduler.incrementRecentlyAdded( ownerinfo, Q_SOCK->getOwner() );
+				} else if ( Q_SOCK && !Q_SOCK->getEffectiveFullyQualifiedUser().empty() ) {
+					ownerinfo = scheduler.incrementRecentlyAdded( ownerinfo, Q_SOCK->getEffectiveFullyQualifiedUser().c_str() );
 					clusterad->ownerinfo = ownerinfo;
 				} else {
 					ASSERT(ownerinfo);
@@ -7206,7 +7217,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			free(path);
 			return -1;
 		}
-		if (!UserCheck(&ad, Q_SOCK->getFullyQualifiedUser())) {
+		if (!UserCheck(&ad, Q_SOCK->getEffectiveFullyQualifiedUser().c_str())) {
 			dprintf(D_ALWAYS, "SendSpoolFileIfNeeded: OwnerCheck failure\n");
 			Q_SOCK->getReliSock()->put(-1);
 			Q_SOCK->getReliSock()->end_of_message();
