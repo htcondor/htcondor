@@ -178,14 +178,12 @@ printClassAd( void )
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;
 	CondorError e;
-	ft.InitializePlugins(e);
-	if (e.code()) {
-		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
-	}
-
-	MyString method_list = ft.GetSupportedMethods();
+	MyString method_list = ft.GetSupportedMethods(e);
 	if (!method_list.IsEmpty()) {
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.Value());
+	}
+	if (e.code()) {
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
 
 #if defined(WIN32)
