@@ -935,6 +935,11 @@ default=true
 type=bool
 tags=shadow,baseshadow
 
+[RESERVED_MEMORY]
+default=0
+type=int
+tags=startd
+
 [RESERVED_SWAP]
 default=0
 type=int
