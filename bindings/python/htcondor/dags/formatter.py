@@ -23,9 +23,11 @@ DEFAULT_SEPARATOR = ":"
 
 
 class NodeNameFormatter(abc.ABC):
+    @abc.abstractmethod
     def generate(self, layer_name: str, node_index: int) -> str:
         raise NotImplementedError
 
+    @abc.abstractmethod
     def parse(self, node_name: str) -> Tuple[str, int]:
         raise NotImplementedError
 
@@ -52,7 +54,7 @@ class SimpleFormatter(NodeNameFormatter):
         )
 
         if self.parse(name) != (layer_name, node_index):
-            raise exceptions.NoninvertibleFormat(
+            raise exceptions.CannotInvertFormat(
                 "{} was not able to invert the formatted node name {}. Perhaps the index_format is incompatible?".format(
                     type(self).__name__, name
                 )
@@ -62,4 +64,12 @@ class SimpleFormatter(NodeNameFormatter):
 
     def parse(self, node_name: str) -> Tuple[str, int]:
         layer, index = node_name.split(self.separator)
-        return layer, int(index) - self.offset
+        try:
+            index = int(index)
+        except ValueError:
+            raise exceptions.CannotInvertFormat(
+                "{} was not able to invert the formatted node name {}. Perhaps the index_format is incompatible?".format(
+                    type(self).__name__, node_name
+                )
+            )
+        return layer, index - self.offset

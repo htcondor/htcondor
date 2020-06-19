@@ -21,7 +21,7 @@ from pathlib import Path
 from htcondor import dags
 
 
-@pytest.fixture(scope = "function")
+@pytest.fixture(scope="function")
 def dag(request):
     dag = dags.DAG()
 
@@ -31,7 +31,7 @@ def dag(request):
         print(dag.describe())
 
 
-@pytest.fixture(scope = "function")
+@pytest.fixture(scope="function")
 def dag_dir(tmp_path):
     d = Path(str(tmp_path / "dag-dir"))
     d.mkdir()

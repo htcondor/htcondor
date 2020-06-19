@@ -42,5 +42,5 @@ class NoRescueFileFound(DAGsException):
     pass
 
 
-class NoninvertibleFormat(DAGsException):
+class CannotInvertFormat(DAGsException):
     pass

@@ -46,7 +46,7 @@ def test_simple_formatter_layer_name_cant_contain_separator():
     f = dags.SimpleFormatter()
 
     with pytest.raises(dags.exceptions.LayerNameContainsSeparator):
-        f.generate("foo:bar", 0)
+        f.generate("foo{}bar".format(dags.DEFAULT_SEPARATOR), 0)
 
 
 LAYER_INDEX_NAME_WITH_OFFSET = [
@@ -62,3 +62,14 @@ def test_simple_formatter_with_offset_is_invertible(layer, index, name):
 
     assert f.parse(f.generate(layer, index)) == (layer, index)
     assert f.generate(*f.parse(name)) == name
+
+
+@pytest.mark.parametrize(
+    "format, index",
+    [("{:b}", 100), ("{:c}", 100), ("{:o}", 100), ("{:x}", 100), ("{:X}", 100),],
+)
+def test_bad_index_format_raises_error(format, index):
+    f = dags.SimpleFormatter(index_format=format)
+
+    with pytest.raises(dags.exceptions.CannotInvertFormat):
+        print(f.generate("layer", index))
