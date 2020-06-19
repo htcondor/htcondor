@@ -310,7 +310,7 @@ our %submit_info = (
 	},
 
 	'nmi-build:x86_64_CentOS8' => 'x86_64_CentOS8',
-	'nmi-build:x86_64_AmazonLinux2' => 'x86_64_CentOS8',
+	'nmi-build:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
 
 	##########################################################################
 	# Platform RHEL 7 on x86_64

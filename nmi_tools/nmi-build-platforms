@@ -12,7 +12,6 @@ docker://timtheisen/nmi-build:x86_64_Debian10
 x86_64_MacOSX10
 x86_64_MacOSX13
 x86_64_MacOSX15
-x86_64_Ubuntu16
 docker://timtheisen/nmi-build:x86_64_Ubuntu16
 docker://timtheisen/nmi-build:x86_64_Ubuntu18
 docker://timtheisen/nmi-build:x86_64_Ubuntu20
@@ -21,8 +20,7 @@ x86_64_Windows8
 x86_64_Windows10
 
 # Just for small-shadow RPM
-x86_CentOS7
+docker://timtheisen/nmi-build:x86_CentOS7
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-docker://timtheisen/nmi-build:x86_64_Fedora30
 docker://timtheisen/nmi-build:x86_64_Fedora32

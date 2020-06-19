@@ -208,10 +208,6 @@ RUN useradd --uid  5001 --shell /bin/bash --create-home slot1 && \
     useradd --uid 20015 --shell /bin/bash --create-home tlmiller && \
     useradd --uid 20017 --shell /bin/bash --create-home zmiller
 
-# Fake package id
-RUN mkdir /home/batlab-admin && \
-    echo 0 > /home/batlab-admin/package_id
-
 # Provide a condor_config.generic
 RUN mkdir -p /usr/local/condor/etc/examples && \
     echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.generic
@@ -256,7 +252,8 @@ RUN yum install -y \
     'bison' \
     'bison-devel' \
     'boost-devel' \
-    'boost-python' \
+    'boost169-python2-devel' \
+    'boost169-python3-devel' \
     'byacc' \
     'c-ares-devel' \
     'cmake' \
@@ -285,6 +282,8 @@ RUN yum install -y \
     'perl(Data::Dumper)' \
     'perl(Digest::MD5)' \
     'perl(XML::Parser)' \
+    'python3-devel' \
+    'python3-setuptools' \
     'python-devel' \
     'python-sphinx' \
     'python-sphinx_rtd_theme' \
