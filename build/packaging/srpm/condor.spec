@@ -95,7 +95,7 @@
 %endif
 
 # cream support is going away, skip for EL8
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?amzn}
 %define cream 0
 %endif
 
@@ -374,7 +374,13 @@ BuildRequires: boost-static
 %if 0%{?rhel} >= 8
 BuildRequires: boost-python3-devel
 %else
+%if ! 0%{?amzn}
 BuildRequires: boost-python
+%else
+BuildRequires: python3-devel
+BuildRequires: boost169-python2-devel
+BuildRequires: boost169-python3-devel
+%endif
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
@@ -701,7 +707,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} >= 7 && ! 0%{?amzn}
+%if 0%{?rhel} >= 7
 %ifarch x86_64
 #######################
 %package -n python3-condor
@@ -775,7 +781,7 @@ Requires: %name = %version-%release
 %if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7 && ! 0%{?amzn}
+%if 0%{?rhel} >= 7
 Requires: python3-condor = %version-%release
 %endif
 
@@ -872,7 +878,7 @@ Requires: %name-cream-gahp = %version-%release
 %if 0%{?rhel} <= 7
 Requires: python2-condor = %version-%release
 %endif
-%if 0%{?rhel} >= 7 && ! 0%{?amzn}
+%if 0%{?rhel} >= 7
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
@@ -1232,10 +1238,15 @@ install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
 
 # Install python-binding libs
-%if 0%{?rhel} >= 7 && ! 0%{?amzn}
+%if 0%{?rhel} >= 7
 %ifarch x86_64
+%if ! 0%{?amzn}
 mv %{buildroot}/usr/lib64/python3.6/site-packages/py3classad.so %{buildroot}/usr/lib64/python3.6/site-packages/classad.so
 mv %{buildroot}/usr/lib64/python3.6/site-packages/py3htcondor.so %{buildroot}/usr/lib64/python3.6/site-packages/htcondor.so
+%else
+mv %{buildroot}/usr/lib64/python3.7/site-packages/py3classad.so %{buildroot}/usr/lib64/python3.7/site-packages/classad.so
+mv %{buildroot}/usr/lib64/python3.7/site-packages/py3htcondor.so %{buildroot}/usr/lib64/python3.7/site-packages/htcondor.so
+%endif
 %endif
 %endif
 
@@ -1890,7 +1901,7 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor.so
 %endif
 
-%if 0%{?rhel} >= 7 && ! 0%{?amzn}
+%if 0%{?rhel} >= 7
 %ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
@@ -1898,8 +1909,13 @@ rm -rf %{buildroot}
 %_libdir/libpy3classad*.so
 %_libexecdir/condor/libclassad_python3_user.so
 %_libexecdir/condor/libcollector_python3_plugin.so
+%if ! 0%{?amzn}
 /usr/lib64/python3.6/site-packages/classad.so
 /usr/lib64/python3.6/site-packages/htcondor.so
+%else
+/usr/lib64/python3.7/site-packages/classad.so
+/usr/lib64/python3.7/site-packages/htcondor.so
+%endif
 %endif
 %endif
 %endif

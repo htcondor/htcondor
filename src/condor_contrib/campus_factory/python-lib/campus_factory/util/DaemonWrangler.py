@@ -54,7 +54,7 @@ class DaemonWrangler:
             
         try:
             self._CheckLibraries(library_paths)
-        except Exception, e:
+        except Exception as e:
             logging.error("Unable to read all libraries, not packaging libraries...")
             raise e
         
@@ -76,7 +76,7 @@ class DaemonWrangler:
             tfile = tarfile.open(name, mode='w:gz')
             tfile.add(target_dir, arcname="glideinExec")
             tfile.close()
-        except IOError, e:
+        except IOError as e:
             logging.error("Unable to open package file %s" % name)
             logging.error(str(e))
             shutil.rmtree(tmpdir)
@@ -158,7 +158,7 @@ class DaemonWrangler:
             try:
                 fp = open(path)
                 fp.close()
-            except IOError, e:
+            except IOError as e:
                 logging.error("Unable to open file: %s" % path)
                 logging.error(str(e))
                 return None
