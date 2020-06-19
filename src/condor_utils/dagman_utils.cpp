@@ -66,6 +66,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         if ( valgrindPath == "" ) {
             fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
                          valgrind_exe );
+			fclose(pSubFile);
             return false;
         } else {
             executable = valgrindPath.Value();
@@ -287,6 +288,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
             fprintf( stderr, "ERROR: unable to read config file %s "
                         "(error %d, %s)\n",
                         shallowOpts.strConfigFile.Value(), errno, strerror(errno) );
+			fclose(pSubFile);
             return false;
         }
         env.SetEnv("_CONDOR_DAGMAN_CONFIG_FILE", shallowOpts.strConfigFile.Value());
@@ -297,6 +299,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
     if ( !env.getDelimitedStringV1RawOrV2Quoted( &env_str, &env_errors ) ) {
         fprintf( stderr,"Failed to insert environment: %s",
                     env_errors.Value() );
+		fclose(pSubFile);
         return false;
     }
     fprintf(pSubFile, "environment\t= %s\n",env_str.Value());
