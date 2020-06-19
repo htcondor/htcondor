@@ -1369,6 +1369,10 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 	// would be evil, so do the collector filtering here.  Also,
 	// ClassAd iterators are broken, so delay attribute deletion until
 	// after the loop.
+	//
+	// It looks like attributes you add during an iteration may also be
+	// seen during that iteration.  This could cause problems later, but
+	// doesn't seem like it's worth fixing now.
 	std::vector< std::string > deleteList;
 	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
 		const std::string & name = i->first;
