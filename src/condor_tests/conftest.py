@@ -35,6 +35,8 @@ from ornithology import Condor, CONFIG_IDS
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+pytest_plugins = ["ornithology.plugin"]
+
 RE_ID = re.compile(r"\[([^()]*)\]$")
 
 ALREADY_SEEN = set()

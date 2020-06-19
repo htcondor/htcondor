@@ -14,7 +14,6 @@ from ornithology import (
     JobStatus,
     ClusterState,
     Condor,
-    path_to_sleep,
 )
 
 logger = logging.getLogger(__name__)
