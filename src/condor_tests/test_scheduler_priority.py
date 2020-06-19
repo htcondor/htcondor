@@ -29,14 +29,14 @@ NUM_JOBS = 5
 
 
 @action
-def submit_equal_priority_jobs(default_condor):
+def submit_equal_priority_jobs(default_condor, path_to_sleep):
     """
     Submit a cluster of 5 scheduler universe jobs with equal priority,
     and wait until they finish running.
     """
     cluster = default_condor.submit(
         {
-            "executable": SCRIPTS["sleep"],
+            "executable": path_to_sleep,
             "arguments": "1",
             "universe": "scheduler",
             "log": "scheduler_priority-equal.log",
@@ -48,7 +48,7 @@ def submit_equal_priority_jobs(default_condor):
 
 
 @action
-def submit_unequal_priority_jobs(default_condor):
+def submit_unequal_priority_jobs(default_condor, path_to_sleep):
     """
     Submit a cluster of 5 scheduler universe jobs with unequal priority,
     (proc 1 has priority = 1, proc 2 has priority = 2, etc.) and wait until
@@ -56,7 +56,7 @@ def submit_unequal_priority_jobs(default_condor):
     """
     cluster = default_condor.submit(
         {
-            "executable": SCRIPTS["sleep"],
+            "executable": path_to_sleep,
             "arguments": "1",
             "universe": "scheduler",
             "log": "scheduler_priority-unequal.log",

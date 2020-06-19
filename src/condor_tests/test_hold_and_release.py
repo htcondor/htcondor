@@ -22,9 +22,9 @@ logger.setLevel(logging.DEBUG)
 
 
 @action
-def job_queue_events_for_sleep_job(default_condor):
+def job_queue_events_for_sleep_job(default_condor, path_to_sleep):
     handle = default_condor.submit(
-        description={"executable": SCRIPTS["sleep"], "arguments": "10",}, count=1,
+        description={"executable": path_to_sleep, "arguments": "10",}, count=1,
     )
     jobid = handle.job_ids[0]
 

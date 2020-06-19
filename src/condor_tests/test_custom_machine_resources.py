@@ -73,13 +73,15 @@ def monitor_script(resources):
     return format_script(
         "#!/usr/bin/python3\n"
         + "".join(
-            textwrap.dedent("""
+            textwrap.dedent(
+                """
             print('SlotMergeConstraint = StringListMember( "{name}", AssignedXXX )')
             print('UptimeXXXSeconds = {increment}')
             print('- {name}')
             """.format(
-                name=name, increment=increment
-            ))
+                    name=name, increment=increment
+                )
+            )
             for name, increment in resources.items()
         )
     )

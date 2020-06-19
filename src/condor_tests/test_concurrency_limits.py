@@ -91,10 +91,10 @@ def concurrency_limit(request):
 
 
 @action
-def handle(condor, concurrency_limit):
+def handle(condor, concurrency_limit, path_to_sleep):
     handle = condor.submit(
         description={
-            "executable": SCRIPTS["sleep"],
+            "executable": path_to_sleep,
             "arguments": "5",
             "request_memory": "100MB",
             "request_disk": "10MB",

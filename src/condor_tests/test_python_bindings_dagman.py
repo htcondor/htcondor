@@ -24,14 +24,14 @@ def dag_dir(test_dir):
 
 
 @action
-def valid_dag_job(condor, dag_dir):
+def valid_dag_job(condor, dag_dir, path_to_sleep):
     sub_description = """
         executable = {exe}
         arguments = 1
         
         queue
     """.format(
-        exe=SCRIPTS["sleep"]
+        exe=path_to_sleep,
     )
     sub_file = write_file(dag_dir / "sleep.sub", sub_description)
 

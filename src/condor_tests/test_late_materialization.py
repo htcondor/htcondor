@@ -54,7 +54,7 @@ def max_materialize(request):
 
 
 @action
-def jobids_for_sleep_jobs(test_dir, condor, max_idle, max_materialize):
+def jobids_for_sleep_jobs(test_dir, path_to_sleep, condor, max_idle, max_materialize):
     sub_description = """
         executable = {exe}
         arguments = 10
@@ -67,7 +67,7 @@ def jobids_for_sleep_jobs(test_dir, condor, max_idle, max_materialize):
 
         queue {q}
     """.format(
-        exe=SCRIPTS["sleep"],
+        exe=path_to_sleep,
         max_materialize=max_materialize,
         max_idle=max_idle,
         q=max_materialize + max_idle + 1,
@@ -152,7 +152,7 @@ class TestLateMaterializationLimits:
 
 
 @action
-def clusterid_for_itemdata(test_dir, condor):
+def clusterid_for_itemdata(test_dir, path_to_sleep, condor):
     # enable late materialization, but with a high enough limit that they all
     # show up immediately (on hold, because we don't need to actually run
     # the jobs to do the tests)
@@ -171,7 +171,7 @@ def clusterid_for_itemdata(test_dir, condor):
 
         queue in (A, B, C, D, E)
     """.format(
-        exe=SCRIPTS["sleep"]
+        exe=path_to_sleep,
     )
     submit_file = write_file(test_dir / "queue_in.sub", sub_description)
 

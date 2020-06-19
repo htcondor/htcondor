@@ -14,7 +14,6 @@ from ornithology import (
     SetJobStatus,
     JobStatus,
     in_order,
-    SCRIPTS,
 )
 
 
@@ -23,14 +22,14 @@ logger.setLevel(logging.DEBUG)
 
 
 @action
-def submit_sleep_job_cmd(test_dir, default_condor):
+def submit_sleep_job_cmd(test_dir, default_condor, path_to_sleep):
     sub_description = """
         executable = {exe}
         arguments = 1
         
         queue
     """.format(
-        exe=SCRIPTS["sleep"]
+        exe=path_to_sleep
     )
     submit_file = write_file(test_dir / "submit" / "job.sub", sub_description)
 
