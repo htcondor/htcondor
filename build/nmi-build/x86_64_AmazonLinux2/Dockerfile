@@ -291,3 +291,4 @@ RUN yum install -y \
     'systemd-devel' \
     && yum clean all
 
+RUN pip3 install pytest pytest-httpserver

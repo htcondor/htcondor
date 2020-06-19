@@ -286,3 +286,8 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     zlib1g-dev \
     && apt clean
 
+RUN apt update && apt install -y \
+    python3-pip \
+    && apt clean
+
+RUN pip3 install pytest pytest-httpserver

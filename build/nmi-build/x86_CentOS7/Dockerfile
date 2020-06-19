@@ -290,3 +290,4 @@ RUN yum install -y \
     'which' \
     && yum clean all
 
+RUN pip3 install pytest pytest-httpserver
