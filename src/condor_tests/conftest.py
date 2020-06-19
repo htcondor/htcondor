@@ -45,9 +45,9 @@ ALREADY_SEEN = set()
 def pytest_addoption(parser):
     parser.addoption(
         "--base-test-dir",
-        action = "store",
-        default = None,
-        help = "Set the base directory that per-test directories will be created in. Defaults to a time-and-pid-stamped directory in the system temporary directory.",
+        action="store",
+        default=None,
+        help="Set the base directory that per-test directories will be created in. Defaults to a time-and-pid-stamped directory in the system temporary directory.",
     )
 
 
@@ -58,19 +58,16 @@ def get_base_test_dir(config):
     base_dir = config.getoption("base_test_dir")
 
     if base_dir is None:
-        base_dir = (
-            Path(tempfile.gettempdir())
-            / "condor-tests-{}".format(STAMP)
-        )
+        base_dir = Path(tempfile.gettempdir()) / "condor-tests-{}".format(STAMP)
 
     base_dir = Path(base_dir).absolute()
 
-    base_dir.mkdir(exist_ok = True, parents = True)
+    base_dir.mkdir(exist_ok=True, parents=True)
 
     return base_dir
 
 
-@pytest.hookimpl(tryfirst = True)
+@pytest.hookimpl(tryfirst=True)
 def pytest_report_header(config, startdir):
     return [
         "",
@@ -78,7 +75,11 @@ def pytest_report_header(config, startdir):
         "Platform:\n{}".format(platform.platform()),
         "Python version:\n{}".format(sys.version),
         "Python bindings version:\n{}".format(htcondor.version()),
-        "HTCondor version:\n{}".format(subprocess.run(['condor_version'], stdout = subprocess.PIPE).stdout.decode('utf-8').strip()),
+        "HTCondor version:\n{}".format(
+            subprocess.run(["condor_version"], stdout=subprocess.PIPE)
+            .stdout.decode("utf-8")
+            .strip()
+        ),
         "",
     ]
 
@@ -106,7 +107,7 @@ class TestDir:
             shutil.rmtree(dir)
 
         ALREADY_SEEN.add(dir)
-        dir.mkdir(parents = True, exist_ok = True)
+        dir.mkdir(parents=True, exist_ok=True)
 
         self._path = dir
         logger.info(
@@ -184,7 +185,7 @@ class TestDir:
 TEST_DIR = TestDir()
 
 
-@pytest.fixture(scope = "class")
+@pytest.fixture(scope="class")
 def test_dir() -> Path:
     """
     This fixture provides a :class:`pathlib.Path` pointing to the unique, isolated
@@ -204,8 +205,7 @@ def pytest_runtest_protocol(item, nextitem):
         os.chdir(str(TEST_DIR))
 
 
-
-@pytest.fixture(scope = "class")
+@pytest.fixture(scope="class")
 def default_condor(test_dir):
-    with Condor(local_dir = test_dir / "condor") as condor:
+    with Condor(local_dir=test_dir / "condor") as condor:
         yield condor

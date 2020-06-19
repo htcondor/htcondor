@@ -69,6 +69,8 @@ def job_with_bad_url(default_condor, bad_url, test_dir):
 
 class TestCurlPlugin:
     def test_job_with_good_url_succeeds(self, job_with_good_url):
+        for event in job_with_good_url.event_log.events:
+            print(event)
         assert job_with_good_url.state[0] == JobStatus.COMPLETED
 
     def test_job_with_good_url_file_contents_are_correct(
@@ -77,4 +79,6 @@ class TestCurlPlugin:
         assert Path("goodurl").read_text() == "Great success!"
 
     def test_job_with_bad_url_holds(self, job_with_bad_url):
+        for event in job_with_good_url.event_log.events:
+            print(event)
         assert job_with_bad_url.state[0] == JobStatus.HELD

@@ -310,7 +310,7 @@ class ClusterHandle(ConstraintHandle):
         self,
         condition: Optional[Callable[["ClusterState"], bool]] = None,
         fail_condition: Optional[Callable[["ClusterState"], bool]] = None,
-        timeout: int = 60,
+        timeout: int = 120,
         verbose: bool = False,
     ) -> bool:
         """
