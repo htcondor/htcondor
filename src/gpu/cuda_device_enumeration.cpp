@@ -37,10 +37,31 @@ enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 	return true;
 }
 
+static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+static char printable_digit(unsigned char n) { return (n >= ' ' && n <= '~') ? n : '.'; }
+static const char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
+	char *p = buf;
+	char *endp = buf + bufsiz -1;
+	for (int ix = 0; ix < 16; ++ix) {
+		if (ix == 4 || ix == 6 || ix == 8 || ix == 10) *p++ = '-';
+		unsigned char ch = uuid[ix];
+		*p++ = hex_digit((ch >> 4) & 0xF);
+		*p++ = hex_digit(ch & 0xF);
+		if (p >= endp) break;
+	}
+	*p = 0;
+	return buf;
+}
+
 BasicProps::BasicProps() : totalGlobalMem(0), ccMajor(0), ccMinor(0), multiProcessorCount(0), clockRate(0), ECCEnabled(0) {
 	memset( uuid, 0, sizeof(uuid) );
 	memset( pciId, 0, sizeof(pciId) );
 }
+
+const char * BasicProps::printUUID(char* buf, int bufsiz) {
+	return print_uuid(buf, bufsiz, uuid);
+}
+
 
 // ----------------------------------------------------------------------------
 

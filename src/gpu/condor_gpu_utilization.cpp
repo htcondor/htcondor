@@ -217,7 +217,7 @@ int main() {
 	time_t lastReport = time( NULL );
 	while( 1 ) {
 		// Take samples three times as often as we have to minimize aliasing.
-		usleep(sampleIntervalMicrosec / 3 );
+		usleep((unsigned int)(sampleIntervalMicrosec / 3));
 
 		for( unsigned i = 0; i < deviceCount; ++i ) {
 			if( devices[i] == NULL ) { continue; }
@@ -248,7 +248,14 @@ int main() {
 		if( time( NULL ) - lastReport >= reportInterval ) {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
 				if( devices[i] == NULL ) { continue; }
-				fprintf( stdout, "SlotMergeConstraint = StringListMember( \"CUDA%u\", AssignedGPUs )\n", i );
+				if (cudaDevices[i].hasUUID()) {
+					char gpuid[64] = "GPU-";
+					cudaDevices[i].printUUID(gpuid+4, 9);
+					gpuid[12] = 0;
+					fprintf(stdout, "SlotMergeConstraint = StringListMember(\"CUDA%u\", AssignedGPUs) || StringListMember(\"%s\", AssignedGPUs)\n", i, gpuid);
+				} else {
+					fprintf(stdout, "SlotMergeConstraint = StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
+				}
 				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1000000.0 );
 				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );
 				fprintf( stdout, "- GPUsSlot%u\n", i );
