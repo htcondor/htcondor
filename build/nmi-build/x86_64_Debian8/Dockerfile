@@ -1,5 +1,8 @@
 FROM debian:jessie
 
+# Ensure that gethostbyaddr() returns our hostname
+RUN sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
+
 # Add users that might be used in CHTC
 # The HTCondor that runs inside the container needs to have the user defined
 RUN useradd --uid  5001 --shell /bin/bash --create-home slot1 && \
@@ -203,9 +206,9 @@ RUN useradd --uid  5001 --shell /bin/bash --create-home slot1 && \
     useradd --uid 20015 --shell /bin/bash --create-home tlmiller && \
     useradd --uid 20017 --shell /bin/bash --create-home zmiller
 
-# Fake package id
-RUN mkdir /home/batlab-admin && \
-    echo 0 > /home/batlab-admin/package_id
+# Provide a condor_config.generic
+RUN mkdir -p /usr/local/condor/etc/examples && \
+    echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.generic
 
 # Add tools to add the HTCondor repository
 RUN apt update && apt install -y \
@@ -221,6 +224,7 @@ RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/debian/stable/ j
 # Need HTCondor to build HTCondor (BatLab style)
 RUN apt update && apt install -y \
     condor \
+    libnss-myhostname \
     openssh-server \
     && mkdir /var/run/sshd
 

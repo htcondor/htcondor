@@ -209,9 +209,9 @@ RUN useradd --uid  5001 --shell /bin/bash --create-home slot1 && \
     useradd --uid 20015 --shell /bin/bash --create-home tlmiller && \
     useradd --uid 20017 --shell /bin/bash --create-home zmiller
 
-# Fake package id
-RUN mkdir /home/batlab-admin && \
-    echo 0 > /home/batlab-admin/package_id
+# Provide a condor_config.generic
+RUN mkdir -p /usr/local/condor/etc/examples && \
+    echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.generic
 
 # Add tools to add the HTCondor repository
 RUN yum update && yum install -y \
@@ -231,11 +231,6 @@ RUN yum update && yum install -y \
     java \
     openssh-clients \
     openssh-server \
-    && yum clean all
-
-# Need to reinstall HTCondor with documentation for Metronome
-RUN yum update && yum reinstall --setopt='tsflags=' -y \
-    condor.i686 \
     && yum clean all
 
 # Tools needed for building
@@ -287,12 +282,3 @@ RUN yum update && yum install -y \
     'sqlite-devel' \
     && yum clean all
 
-# Give root a passwd
-#RUN sed -i 's;^root:[^:]:;root:$6$QVSQdhVm$jwePHVkKvuAcIbTitF.ExK2Y1QKdwvwYJDfctz.e0Zl9JDSO7eh6lHflYDsCFw0e8Bpt41vfnAzLSdRB1nI/B0:;' /etc/shadow
-
-# Need stuff for debugging
-#RUN yum update && yum install -y \
-#    gdb \
-#    htcondor-dbg \
-#    less \
-#    vim-tiny
