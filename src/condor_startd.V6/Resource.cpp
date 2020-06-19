@@ -1386,7 +1386,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				unparser.setIndirectThroughAttr(false);
 				unparser.Unparse(unparse_buffer, i->second);
 			} else {
-				// if the expression *contains* a SlotEval, the unparser will 
+				// if the expression *contains* a SlotEval, the unparser will
 				// create an intermediate attribute to contain the value.
 				//    Foo = SlotEval("slot1",Activity) == "Idle"
 				// becomes
@@ -1425,7 +1425,9 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
-			deleteList.push_back( name );
+			if(! param_boolean( "ADVERTISE_CMR_UPTIME_SECONDS", false )) {
+			    deleteList.push_back( name );
+			}
 
 			classad::Value v;
 			double uptimeValue;
@@ -1452,7 +1454,6 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 
 			// Compute the SUM metrics' *Usage values.  The PEAK metrics
 			// have already inserted their *Usage values into the ad.
-		
 			std::string usageName;
 			std::string uptimeName = name.substr(10);
 			if (! StartdCronJobParams::getResourceNameFromAttributeName(uptimeName, usageName)) { continue; }
