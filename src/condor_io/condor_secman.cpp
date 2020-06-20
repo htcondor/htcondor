@@ -3340,14 +3340,21 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method);
 
 	Protocol crypt_protocol = CryptProtocolNameToEnum(crypto_method.c_str());
-	const int keylen = MAC_SIZE;
 	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
 	if(!keybuf) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
 				" oneWayHashKey() failed.\n",sesid);
 		return false;
 	}
-	KeyInfo *keyinfo = new KeyInfo(keybuf,keylen,crypt_protocol);
+	KeyInfo *keyinfo;
+	if (crypt_protocol == CONDOR_AESGCM) {
+		unsigned char keybuf2[32];
+		memcpy(keybuf2, keybuf, 16);
+		memcpy(keybuf2 + 16, keybuf, 16);
+		keyinfo = new KeyInfo(keybuf2,32,crypt_protocol);
+	} else {
+		keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol);
+	}
 	free( keybuf );
 	keybuf = NULL;
 

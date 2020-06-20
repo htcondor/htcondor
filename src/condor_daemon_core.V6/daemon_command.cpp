@@ -914,7 +914,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 								m_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
 								break;
 							case 'A': // AES-GCM
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %...\n", m_sid);
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
 								m_key = new KeyInfo(rbuf, 32, CONDOR_AESGCM);
 							default:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);

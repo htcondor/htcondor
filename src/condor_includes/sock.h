@@ -233,6 +233,8 @@ public:
         // Encryption support below
         //------------------------------------------
         bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
+
+	int ciphertext_size(int cipher_size) {return crypto_ ? crypto_->ciphertext_size(cipher_size) : cipher_size;}
         //------------------------------------------
         // PURPOSE: set sock to use a particular encryption key
         // REQUIRE: KeyInfo -- a wrapper for keyData

@@ -337,6 +337,7 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 			goto error;
 		}
 		cur = (char *)buf;
+                dprintf(D_NETWORK, "put_bytes encrypted; plain text %d; cipher text %d.\n", length, l_out);
 	}
 	else {
 		cur = buffer;
@@ -436,12 +437,14 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	else {
 		// See if it needs to be decrypted
 		if (get_encryption()) {
+                	dprintf(D_NETWORK, "get_bytes_nobuffer unwrapping data of size %d", result);
 			unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
 			memcpy(buffer, buf, length);
 			free(buf);
 		}
+                dprintf(D_NETWORK, "get_bytes_nobuffer encrypted; cipher text %d; plain text %d.\n", result, length);
 		_bytes_recvd += length;
-		return result;
+		return length;
 	}
  error:
         return -1;
@@ -598,8 +601,10 @@ ReliSock::put_bytes(const void *data, int sz)
 				}
                 return -1;  // encryption failed!
             }
+            dprintf(D_NETWORK, "Putting bytes with a payload of size %d\n", l_out);
 			int r = put_bytes_after_encryption(dta, l_out); // l_out instead?
 			free(dta);
+            dprintf(D_NETWORK, "Result of putting bytes is %d\n", r);
 			return r;
         }
         else {
@@ -654,7 +659,7 @@ ReliSock::put_bytes_after_encryption(const void *dta, int sz) {
 int 
 ReliSock::get_bytes(void *dta, int max_sz)
 {
-	int		bytes, length;
+	int		bytes, length = 0;
     unsigned char * data = 0;
 
 	ignore_next_decode_eom = FALSE;
@@ -671,17 +676,29 @@ ReliSock::get_bytes(void *dta, int max_sz)
 		}
 	}
 
-	bytes = rcv_msg.buf.get(dta, max_sz);
-
-	if (bytes > 0) {
-            if (get_encryption()) {
-                unwrap((unsigned char *) dta, bytes, data, length);
-                memcpy(dta, data, length);
+        if (get_encryption()) {
+                auto ct_sz = ciphertext_size(max_sz);
+                if (ct_sz > max_sz) {
+                	std::vector<unsigned char> plaintext_temp;
+			plaintext_temp.reserve(ct_sz);
+	        	bytes = rcv_msg.buf.get(&plaintext_temp[0], ct_sz);
+                	dprintf(D_NETWORK, "get_bytes unwrapping cipher text of size %d\n", bytes);
+                	unwrap(&plaintext_temp[0], bytes, data, length);
+                	memcpy(dta, data, length);
+		} else {
+			bytes = rcv_msg.buf.get(dta, max_sz);
+			dprintf(D_NETWORK, "get_bytes unwrapping data of size %d\n", bytes);
+			unwrap((unsigned char *) dta, bytes, data, length);
+		}
                 free(data);
-            }
+                dprintf(D_NETWORK, "get_bytes encrypted; cipher text %d; plaintext %d.\n", bytes, length);
+                _bytes_recvd += bytes;
+                bytes = length;
+        } else {
+	     bytes = rcv_msg.buf.get(dta, max_sz);
             _bytes_recvd += bytes;
         }
-        
+
 	return bytes;
 }
 
@@ -852,6 +869,7 @@ check_header:
 	m_tmp->grow_buf(len+1);
 
 read_packet:
+	dprintf(D_NETWORK, "Reading packet body of length %d\n", len);
 	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
 	if (tmp_len != len) {
 		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {

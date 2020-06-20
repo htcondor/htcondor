@@ -42,6 +42,8 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
                  unsigned char *&      output, 
                  int&         output_len);
 
+    virtual int ciphertext_size(int plaintext) const;
+
  private:
     Condor_Crypt_AESGCM();
 
