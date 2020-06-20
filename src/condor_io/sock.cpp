@@ -2885,6 +2885,7 @@ Sock::initialize_crypto(KeyInfo * key)
             crypto_ = new Condor_Crypt_3des(*key);
             break;
         case CONDOR_AESGCM:
+			setCryptoMethodUsed("AESGCM");
             crypto_ = new Condor_Crypt_AESGCM(*key);
             break;
         default:
