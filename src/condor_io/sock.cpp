@@ -2887,6 +2887,8 @@ Sock::initialize_crypto(KeyInfo * key)
         case CONDOR_AESGCM:
 			setCryptoMethodUsed("AESGCM");
             crypto_ = new Condor_Crypt_AESGCM(*key);
+                // AES-GCM is incompatible with MD mode.
+            set_MD_mode(MD_OFF);
             break;
         default:
             break;
@@ -2898,6 +2900,10 @@ Sock::initialize_crypto(KeyInfo * key)
 
 bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 {
+    if (mode != MD_OFF && crypto_ && crypto_->protocol() == CONDOR_AESGCM) {
+        set_MD_mode(MD_OFF);
+    }
+
     mdMode_ = mode;
     delete mdKey_;
     mdKey_ = 0;
