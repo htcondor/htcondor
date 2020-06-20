@@ -548,7 +548,7 @@ Stream::code(condor_mode_t &m)
 int 
 Stream::put( char	c)
 {
-	if (put_bytes(&c, 1) == -1) return FALSE;
+	if (put_bytes(&c, 1) != 1) return FALSE;
 	return TRUE;
 }
 
@@ -557,7 +557,7 @@ Stream::put( char	c)
 int 
 Stream::put( unsigned char	c)
 {
-	if (put_bytes(&c, 1) == -1) return FALSE;
+	if (put_bytes(&c, 1) != 1) return FALSE;
 	return TRUE;
 }
 
@@ -571,10 +571,10 @@ Stream::put( int		i)
 
 	tmp = htonl(i);
 	pad = (i >= 0) ? 0 : 0xff; // sign extend value
-	char pad_array[INT_SIZE - (int)sizeof(int)];
-	memset(pad_array, pad, sizeof(pad_array));
-	if (put_bytes(&pad_array, sizeof(pad_array)) == -1) return FALSE;
-	if (put_bytes(&tmp, sizeof(int)) == -1) return FALSE;
+	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
+		if (put_bytes(&pad, 1) != 1) return FALSE;
+	}
+	if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
 	return TRUE;
 }
 
@@ -589,9 +589,9 @@ Stream::put( unsigned int		i)
 	tmp = htonl(i);
 	pad = 0;
 	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
-		if (put_bytes(&pad, 1) == -1) return FALSE;
+		if (put_bytes(&pad, 1) != 1) return FALSE;
 	}
-	if (put_bytes(&tmp, sizeof(int)) == -1) return FALSE;
+	if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
 	return TRUE;
 }
 
@@ -641,10 +641,10 @@ Stream::put( long	l)
 		if (sizeof(long) < INT_SIZE) {
 			pad = (l >= 0) ? 0 : 0xff; // sign extend value
 			for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
-				if (put_bytes(&pad, 1) == -1) return FALSE;
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 		}
-		if (put_bytes(&l, sizeof(long)) == -1) return FALSE;
+		if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
 	}
 	return TRUE;
 }
@@ -664,10 +664,10 @@ Stream::put( unsigned long	l)
 		if (sizeof(long) < INT_SIZE) {
 			pad = 0;
 			for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
-				if (put_bytes(&pad, 1) == -1) return FALSE;
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 		}
-		if (put_bytes(&l, sizeof(long)) == -1) return FALSE;
+		if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
 	}
 	return TRUE;
 }
@@ -717,10 +717,10 @@ Stream::put( int64_t	l)
 		if (sizeof(int64_t) < INT_SIZE) {
 			pad = (l >= 0) ? 0 : 0xff; // sign extend value
 			for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) {
-				if (put_bytes(&pad, 1) == -1) return FALSE;
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 		}
-		if (put_bytes(&l, sizeof(int64_t)) == -1) return FALSE;
+		if (put_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
 	}
 	return TRUE;
 }
@@ -740,10 +740,10 @@ Stream::put( uint64_t	l)
 		if (sizeof(uint64_t) < INT_SIZE) {
 			pad = 0;
 			for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) {
-				if (put_bytes(&pad, 1) == -1) return FALSE;
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 		}
-		if (put_bytes(&l, sizeof(uint64_t)) == -1) return FALSE;
+		if (put_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
 	}
 	return TRUE;
 }
@@ -797,7 +797,7 @@ Stream::put( char const *s)
 			return FALSE;
 		}
 	}
-	if (put_bytes(s, len) == -1) return FALSE;
+	if (put_bytes(s, len) != len) return FALSE;
 	return TRUE;
 }
 
@@ -820,7 +820,7 @@ Stream::put_nullstr( char const *s)
 				return FALSE;
 			}
 		}
-		if (put_bytes(BIN_NULL_CHAR, 1) == -1) return FALSE;
+		if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 	}
 	else{
 		len = (int)strlen(s)+1;
@@ -829,7 +829,7 @@ Stream::put_nullstr( char const *s)
 				return FALSE;
 			}
 		}
-		if (put_bytes(s, len) == -1) return FALSE;
+		if (put_bytes(s, len) != len) return FALSE;
 	}
 	return TRUE;
 }
@@ -883,7 +883,7 @@ Stream::put( char const *s, int		l)
 			return FALSE;
 		}
 	}
-	if (put_bytes(s, l) == -1) return FALSE;
+	if (put_bytes(s, l) != l) return FALSE;
 	return TRUE;
 }
 
@@ -919,20 +919,17 @@ Stream::get( int		&i)
 	int		tmp;
 	char	pad[INT_SIZE-sizeof(int)], sign;
 
-	dprintf(D_NETWORK,"Streaming an integer\n");
 	if (INT_SIZE > sizeof(int)) { // get overflow bytes
 		if (get_bytes(pad, INT_SIZE-sizeof(int))
-			== -1) {
+			!= INT_SIZE-sizeof(int)) {
 			dprintf(D_NETWORK, "Stream::get(int) failed to read padding\n");
 			return FALSE;
 		}
-		dprintf(D_NETWORK,"Got %u bytes of padding.\n", INT_SIZE-sizeof(int));
 	}
-	if (get_bytes(&tmp, sizeof(int)) == -1) {
+	if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
 		dprintf(D_NETWORK, "Stream::get(int) failed to read int\n");
 		return FALSE;
 	}
-	dprintf(D_NETWORK,"Got %u bytes of integer\n", sizeof(int));
 	i = ntohl(tmp);
 	sign = (i >= 0) ? 0 : 0xff;
 	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
@@ -954,12 +951,12 @@ Stream::get( unsigned int	&i)
 
 	if (INT_SIZE > sizeof(int)) { // get overflow bytes
 		if (get_bytes(pad, INT_SIZE-sizeof(int))
-			== -1) {
+			!= INT_SIZE-sizeof(int)) {
 			dprintf(D_NETWORK, "Stream::get(uint) failed to read padding\n");
 			return FALSE;
 		}
 	}
-	if (get_bytes(&tmp, sizeof(int)) == -1) {
+	if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
 		dprintf(D_NETWORK, "Stream::get(uint) failed to read int\n");
 		return FALSE;
 	}
