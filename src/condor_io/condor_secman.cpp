@@ -3156,11 +3156,7 @@ getDefaultAuthenticationMethods(DCpermission perm) {
 
 
 MyString SecMan::getDefaultCryptoMethods() {
-#ifdef HAVE_EXT_OPENSSL
-	return "BLOWFISH,3DES";
-#else
-	return "";
-#endif
+	return "AESGCM,BLOWFISH,3DES";
 }
 
 char* SecMan::my_unique_id() {
@@ -3257,6 +3253,8 @@ Protocol CryptProtocolNameToEnum(char const *name) {
 	case '3': // 3des
 	case 'T': // Tripledes
 		return CONDOR_3DES;
+	case 'A': // AES-GCM-256
+		return CONDOR_AESGCM;
 	default:
 		return CONDOR_NO_PROTOCOL;
 	}

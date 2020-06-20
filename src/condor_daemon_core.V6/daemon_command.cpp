@@ -888,14 +888,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							return CommandProtocolFinished;
 						}
 
-						unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
-						unsigned char  rbuf[24];
+						unsigned char* rkey = Condor_Crypt_Base::randomKey(32);
+						unsigned char  rbuf[32];
 						if (rkey) {
-							memcpy (rbuf, rkey, 24);
+							memcpy (rbuf, rkey, 32);
 							// this was malloced in randomKey
 							free (rkey);
 						} else {
-							memset (rbuf, 0, 24);
+							memset (rbuf, 0, 32);
 							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );							
 							free( crypto_method );
 							crypto_method = NULL;
@@ -913,6 +913,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
 								m_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
 								break;
+							case 'A': // AES-GCM
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %...\n", m_sid);
+								m_key = new KeyInfo(rbuf, 32, CONDOR_AESGCM);
 							default:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
 								m_key = new KeyInfo(rbuf, 24);

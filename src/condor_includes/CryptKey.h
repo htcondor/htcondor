@@ -24,7 +24,8 @@
 enum Protocol {
     CONDOR_NO_PROTOCOL,
     CONDOR_BLOWFISH,
-    CONDOR_3DES
+    CONDOR_3DES,
+    CONDOR_AESGCM
 };
 
 class KeyInfo {

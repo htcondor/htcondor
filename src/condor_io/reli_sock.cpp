@@ -325,7 +325,7 @@ ReliSock::get_bytes_raw( char *buffer, int length )
 int 
 ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 {
-	int i, result, l_out;
+	int i, result, l_out = length;
 	int pagesize = 65536;  // Optimize large writes to be page sized.
 	const char * cur;
 	unsigned char * buf = NULL;
@@ -346,7 +346,7 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	// Note: send_size param is 1 (true) by default.
 	this->encode();
 	if ( send_size ) {
-		ASSERT( this->code(length) != FALSE );
+		ASSERT( this->code(l_out) != FALSE );
 		ASSERT( this->end_of_message() != FALSE );
 	}
 
@@ -357,16 +357,16 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	}
 
 	// Optimize transfer by writing in pagesized chunks.
-	for(i = 0; i < length;)
+	for(i = 0; i < l_out;)
 	{
 		// If there is less then a page left.
-		if( (length - i) < pagesize ) {
-			result = condor_write(peer_description(), _sock, cur, (length - i), _timeout);
+		if( (l_out - i) < pagesize ) {
+			result = condor_write(peer_description(), _sock, cur, (l_out - i), _timeout);
 			if( result < 0 ) {
                                 goto error;
 			}
-			cur += (length - i);
-			i += (length - i);
+			cur += (l_out - i);
+			i += (l_out - i);
 		} else {  
 			// Send another page...
 			result = condor_write(peer_description(), _sock, cur, pagesize, _timeout);
@@ -437,10 +437,10 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 		// See if it needs to be decrypted
 		if (get_encryption()) {
 			unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
-			memcpy(buffer, buf, result);
+			memcpy(buffer, buf, length);
 			free(buf);
 		}
-		_bytes_recvd += result;
+		_bytes_recvd += length;
 		return result;
 	}
  error:
@@ -598,7 +598,7 @@ ReliSock::put_bytes(const void *data, int sz)
 				}
                 return -1;  // encryption failed!
             }
-			int r = put_bytes_after_encryption(dta, sz); // l_out instead?
+			int r = put_bytes_after_encryption(dta, l_out); // l_out instead?
 			free(dta);
 			return r;
         }
@@ -676,7 +676,7 @@ ReliSock::get_bytes(void *dta, int max_sz)
 	if (bytes > 0) {
             if (get_encryption()) {
                 unwrap((unsigned char *) dta, bytes, data, length);
-                memcpy(dta, data, bytes);
+                memcpy(dta, data, length);
                 free(data);
             }
             _bytes_recvd += bytes;

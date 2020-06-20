@@ -48,11 +48,10 @@
 #include <netinet/in.h>
 #endif
 
-#ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
 #include "condor_crypt_3des.h"
+#include "condor_crypt_aesgcm.h"
 #include "condor_md.h"                // Message authentication stuff
-#endif
 
 #if !defined(WIN32)
 #define closesocket close
@@ -2877,7 +2876,6 @@ Sock::initialize_crypto(KeyInfo * key)
     if (key) {
         switch (key->getProtocol()) 
         {
-#ifdef HAVE_EXT_OPENSSL
         case CONDOR_BLOWFISH :
 			setCryptoMethodUsed("BLOWFISH");
             crypto_ = new Condor_Crypt_Blowfish(*key);
@@ -2886,7 +2884,9 @@ Sock::initialize_crypto(KeyInfo * key)
 			setCryptoMethodUsed("3DES");
             crypto_ = new Condor_Crypt_3des(*key);
             break;
-#endif
+        case CONDOR_AESGCM:
+            crypto_ = new Condor_Crypt_AESGCM(*key);
+            break;
         default:
             break;
         }
