@@ -32,15 +32,29 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
 
     void resetState();
 
-    bool encrypt(const unsigned char * input,
-                 int          input_len, 
-                 unsigned char *&      output, 
-                 int&         output_len);
+    bool encrypt(const unsigned char *,
+                 int                  ,
+                 unsigned char *&     ,
+                 int&                 ) {return false;}
 
-    bool decrypt(const unsigned char * input,
-                 int          input_len, 
-                 unsigned char *&      output, 
-                 int&         output_len);
+    bool decrypt(const unsigned char * ,
+                       int             ,
+                       unsigned char *&,
+                       int&            ) {return false;}
+
+    bool encrypt(const unsigned char * aad_data,
+                 int                   aad_data_len,
+                 const unsigned char * input,
+                 int                   input_len, 
+                 unsigned char *       output, 
+                 int                   output_len);
+
+    bool decrypt(const unsigned char * aad_data,
+                 int                   aad_data_len,
+                 const unsigned char * input,
+                 int                   input_len, 
+                 unsigned char *       output, 
+                 int&                  output_len);
 
     virtual int ciphertext_size(int plaintext) const;
 
