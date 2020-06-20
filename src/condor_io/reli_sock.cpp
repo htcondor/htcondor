@@ -29,6 +29,7 @@
 #include "selector.h"
 #include "ccb_client.h"
 #include "condor_sockfunc.h"
+#include "condor_crypt_aesgcm.h"
 
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
@@ -331,7 +332,7 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	unsigned char * buf = NULL;
         
 	// First, encrypt the data if necessary
-	if (get_encryption()) {
+	if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
 		if (!wrap((const unsigned char *) buffer, length,  buf , l_out)) {
 			dprintf(D_SECURITY, "Encryption failed\n");
 			goto error;
@@ -436,7 +437,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	} 
 	else {
 		// See if it needs to be decrypted
-		if (get_encryption()) {
+		if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
                 	dprintf(D_NETWORK, "get_bytes_nobuffer unwrapping data of size %d", result);
 			unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
 			memcpy(buffer, buf, length);
@@ -589,7 +590,7 @@ ReliSock::put_bytes(const void *data, int sz)
         // Check to see if we need to encrypt
         // Okay, this is a bug! H.W. 9/25/2001
 
-        if (get_encryption()) {
+        if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
         	unsigned char * dta = NULL;
 			int l_out;
             if (!wrap((const unsigned char *)(data), sz, dta , l_out)) {
@@ -676,7 +677,7 @@ ReliSock::get_bytes(void *dta, int max_sz)
 		}
 	}
 
-        if (get_encryption()) {
+        if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
                 auto ct_sz = ciphertext_size(max_sz);
                 if (ct_sz > max_sz) {
                 	std::vector<unsigned char> plaintext_temp;
@@ -776,6 +777,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	int		tmp_len;
 	int		retval;
 	const int max_packet_size = 1024 * 1024;  // We will reject packets bigger than this
+	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
 	// We read the partial packet in a previous read; try to finish it and
 	// then skip down to packet verification.
@@ -783,10 +785,11 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 		m_partial_packet = false;
 		len = m_remaining_read_length;
 		cksum_ptr = m_partial_cksum;
+		hdr[0] = (char) m_end;
+		memcpy(hdr + 1, &m_len_t, 4);
 		goto read_packet;
 	}
 
-	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 	header_filled = 0;
 
 	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
@@ -836,8 +839,8 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 
 	m_end = (int) ((char *)hdr)[0];
-	memcpy(&len_t,  &hdr[1], 4);
-	len = (int) ntohl(len_t);
+	memcpy(&m_len_t,  &hdr[1], 4);
+	len = (int) ntohl(m_len_t);
 	header_filled = header_size;
 
 check_header:
@@ -886,6 +889,26 @@ read_packet:
 					tmp_len, len);
 			return FALSE;
 		}
+	}
+
+	if (p_sock->get_encryption() && p_sock->get_crypto()->protocol() == CONDOR_AESGCM) {
+		auto crypt = static_cast<Condor_Crypt_AESGCM*>(p_sock->get_crypto());
+		int length = m_tmp->num_untouched();
+		Buf new_buf(p_sock, length);
+		new_buf.alloc_buf();
+		if (!crypt->decrypt(
+			reinterpret_cast<unsigned char *>(hdr),
+			header_size,
+			static_cast<unsigned char *>(m_tmp->get_ptr()),
+			m_tmp->num_untouched(),
+			static_cast<unsigned char *>(new_buf.get_ptr()),
+			length))
+		{
+			dprintf(D_SECURITY, "IO: Failed to unwrap the packet.\n");
+			return false;
+		}
+		m_tmp->swap(new_buf);
+		m_tmp->truncate(length);
 	}
 
         // Now, check MD
@@ -990,10 +1013,35 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 	hdr[0] = (char) end;
-	ns = buf.num_used() - header_size;
-	len = (int) htonl(ns);
 
-	memcpy(&hdr[1], &len, 4);
+	if (p_sock->get_encryption() && p_sock->get_crypto()->protocol() == CONDOR_AESGCM) {
+		auto cipher_sz = p_sock->ciphertext_size(buf.num_untouched());
+		ns = cipher_sz;
+		len = (int) htonl(ns);
+		memcpy(&hdr[1], &len, 4);
+
+		buf.grow_buf(cipher_sz);
+                auto crypt = static_cast<Condor_Crypt_AESGCM*>(p_sock->get_crypto());
+		Buf new_buf(p_sock, cipher_sz + header_size);
+		new_buf.alloc_buf();
+		if (!crypt->encrypt(
+			reinterpret_cast<unsigned char *>(hdr),
+			header_size,
+                        static_cast<unsigned char *>(buf.get_ptr()),
+			buf.num_untouched(),
+			static_cast<unsigned char *>(new_buf.get_ptr()) + header_size,
+			cipher_sz))
+		{
+			dprintf(D_SECURITY, "IO: Failed to encrypt packet\n");
+			return false;
+		}
+		buf.swap(new_buf);
+		buf.truncate(cipher_sz + header_size);
+	} else {
+		ns = buf.num_used() - header_size;
+		len = (int) htonl(ns);
+		memcpy(&hdr[1], &len, 4);
+	}
 
 	if (mode_ != MD_OFF) {
 		if (!buf.computeMD(&hdr[5], mdChecker_)) {
