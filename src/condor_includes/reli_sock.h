@@ -297,6 +297,7 @@ protected:
 
         virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId);
         virtual bool set_encryption_id(const char * keyId);
+	Condor_Crypt_Base *get_crypto() {return crypto_;}
 
 	/*
 	**	Types
@@ -326,6 +327,7 @@ protected:
 		ReliSock      * p_sock; //preserve parent pointer to use for condor_read/write
 		bool		m_partial_packet; // A partial packet is stored.
 		size_t		m_remaining_read_length; // Length remaining on a partial packet
+		size_t		m_len_t; // Network-encoded length of packet (used to reconstruct header).
 		int		m_end; // The end status of the partial packet.
 		Buf		*m_tmp;
 	public:

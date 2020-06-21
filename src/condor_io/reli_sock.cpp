@@ -326,7 +326,7 @@ ReliSock::get_bytes_raw( char *buffer, int length )
 int 
 ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 {
-	int i, result, l_out = length;
+	int i, result, l_out;
 	int pagesize = 65536;  // Optimize large writes to be page sized.
 	const char * cur;
 	unsigned char * buf = NULL;
@@ -338,7 +338,6 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 			goto error;
 		}
 		cur = (char *)buf;
-                dprintf(D_NETWORK, "put_bytes encrypted; plain text %d; cipher text %d.\n", length, l_out);
 	}
 	else {
 		cur = buffer;
@@ -348,7 +347,7 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	// Note: send_size param is 1 (true) by default.
 	this->encode();
 	if ( send_size ) {
-		ASSERT( this->code(l_out) != FALSE );
+		ASSERT( this->code(length) != FALSE );
 		ASSERT( this->end_of_message() != FALSE );
 	}
 
@@ -359,16 +358,16 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	}
 
 	// Optimize transfer by writing in pagesized chunks.
-	for(i = 0; i < l_out;)
+	for(i = 0; i < length;)
 	{
 		// If there is less then a page left.
-		if( (l_out - i) < pagesize ) {
-			result = condor_write(peer_description(), _sock, cur, (l_out - i), _timeout);
+		if( (length - i) < pagesize ) {
+			result = condor_write(peer_description(), _sock, cur, (length - i), _timeout);
 			if( result < 0 ) {
                                 goto error;
 			}
-			cur += (l_out - i);
-			i += (l_out - i);
+			cur += (length - i);
+			i += (length - i);
 		} else {  
 			// Send another page...
 			result = condor_write(peer_description(), _sock, cur, pagesize, _timeout);
@@ -438,14 +437,12 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	else {
 		// See if it needs to be decrypted
 		if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
-                	dprintf(D_NETWORK, "get_bytes_nobuffer unwrapping data of size %d", result);
 			unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
-			memcpy(buffer, buf, length);
+			memcpy(buffer, buf, result);
 			free(buf);
 		}
-                dprintf(D_NETWORK, "get_bytes_nobuffer encrypted; cipher text %d; plain text %d.\n", result, length);
-		_bytes_recvd += length;
-		return length;
+		_bytes_recvd += result;
+		return result;
 	}
  error:
         return -1;
@@ -518,7 +515,9 @@ ReliSock::end_of_message_internal()
 {
 	int ret_val = FALSE;
 
-    resetCrypto();
+	if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
+		resetCrypto();
+	}
 	switch(_coding){
 		case stream_encode:
 			if ( ignore_next_encode_eom == TRUE ) {
@@ -602,10 +601,8 @@ ReliSock::put_bytes(const void *data, int sz)
 				}
                 return -1;  // encryption failed!
             }
-            dprintf(D_NETWORK, "Putting bytes with a payload of size %d\n", l_out);
-			int r = put_bytes_after_encryption(dta, l_out); // l_out instead?
+			int r = put_bytes_after_encryption(dta, sz); // l_out instead?
 			free(dta);
-            dprintf(D_NETWORK, "Result of putting bytes is %d\n", r);
 			return r;
         }
         else {
@@ -660,7 +657,7 @@ ReliSock::put_bytes_after_encryption(const void *dta, int sz) {
 int 
 ReliSock::get_bytes(void *dta, int max_sz)
 {
-	int		bytes, length = 0;
+	int		bytes, length;
     unsigned char * data = 0;
 
 	ignore_next_decode_eom = FALSE;
@@ -677,29 +674,17 @@ ReliSock::get_bytes(void *dta, int max_sz)
 		}
 	}
 
-        if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
-                auto ct_sz = ciphertext_size(max_sz);
-                if (ct_sz > max_sz) {
-                	std::vector<unsigned char> plaintext_temp;
-			plaintext_temp.reserve(ct_sz);
-	        	bytes = rcv_msg.buf.get(&plaintext_temp[0], ct_sz);
-                	dprintf(D_NETWORK, "get_bytes unwrapping cipher text of size %d\n", bytes);
-                	unwrap(&plaintext_temp[0], bytes, data, length);
-                	memcpy(dta, data, length);
-		} else {
-			bytes = rcv_msg.buf.get(dta, max_sz);
-			dprintf(D_NETWORK, "get_bytes unwrapping data of size %d\n", bytes);
-			unwrap((unsigned char *) dta, bytes, data, length);
-		}
+	bytes = rcv_msg.buf.get(dta, max_sz);
+
+	if (bytes > 0) {
+            if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
+                unwrap((unsigned char *) dta, bytes, data, length);
+                memcpy(dta, data, bytes);
                 free(data);
-                dprintf(D_NETWORK, "get_bytes encrypted; cipher text %d; plaintext %d.\n", bytes, length);
-                _bytes_recvd += bytes;
-                bytes = length;
-        } else {
-	     bytes = rcv_msg.buf.get(dta, max_sz);
+            }
             _bytes_recvd += bytes;
         }
-
+        
 	return bytes;
 }
 

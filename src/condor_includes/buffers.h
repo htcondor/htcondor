@@ -43,6 +43,7 @@ public:
 
 	inline void reset() { _dta_pt = _dta_sz = 0; }
 	inline void rewind() { _dta_pt = 0; }
+	void truncate(int new_sz) {_dta_sz = _dta_pt + new_sz;}
 
 	void alloc_buf();
 	void dealloc_buf();

@@ -61,7 +61,20 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
  private:
     Condor_Crypt_AESGCM();
 
-    uint64_t m_ctr{0};
+    union Packed_IV {
+       unsigned char iv[12];
+       uint32_t ctr;
+    };
+
+        // The IV is split in two: a 32-bit counter and a
+        // 64-bit random number for a total of 12 bytes.
+        // The ctr is added to the last 4 bytes of the IV.
+    uint32_t m_ctr_enc{0};
+    uint32_t m_ctr_dec{0};
+    union Packed_IV m_iv;
+        // The first packet this object receives will set the
+        // IV here.
+    union Packed_IV m_iv_decrypt;
 };
 
 #endif
