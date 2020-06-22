@@ -37,6 +37,7 @@ NUM_PERIODS = 3
         "static_slots": {
             "NUM_CPUS": "16",
             "NUM_SLOTS": "16",
+            "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
             "MACHINE_RESOURCE_INVENTORY_XXX": "$(TEST_DIR)/discovery",
             "STARTD_CRON_XXX_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor",
             "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) XXX_MONITOR",
