@@ -1,9 +1,7 @@
 .. py:currentmodule:: ornithology
 
-Philosophy
-==========
-
-A few tidbits of advice.
+Philosophy and Tricks
+=====================
 
 Fail-Fast Testing
 -----------------
@@ -27,11 +25,6 @@ for instance, two thing have to happen for the success test to pass: the
 beneficiary job must start running, and the schedd must not leak memory.
 The ``condor_now`` tool returning zero is a pre-condition for both these
 assertions; if it doesn't, we can fail immediately.
-
-Tricks
-======
-
-Useful techniques.
 
 Tuple-Parameterized Configuration
 ---------------------------------
