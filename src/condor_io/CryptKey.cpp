@@ -35,7 +35,8 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
     : keyData_    ( 0 ),
       keyDataLen_ (copy.keyDataLen_),
       protocol_   (copy.protocol_),
-      duration_   (copy.duration_)
+      duration_   (copy.duration_),
+      state_      (copy.state_)
 {
     init(copy.keyData_, copy.keyDataLen_);
 }
@@ -43,12 +44,14 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
 KeyInfo :: KeyInfo(const unsigned char * keyData,
                    int             keyDataLen,
                    Protocol        protocol,
-                   int             duration )
+                   int             duration,
+                   std::shared_ptr<CryptoState> state )
     : 
       keyData_    (0),
       keyDataLen_ (keyDataLen),
 	  protocol_   (protocol),
-      duration_   (duration)
+      duration_   (duration),
+      state_      (state)
 {
     init(keyData, keyDataLen);
 }
@@ -64,6 +67,7 @@ KeyInfo& KeyInfo :: operator=(const KeyInfo& copy)
 		keyDataLen_ = copy.keyDataLen_;
 		protocol_   = copy.protocol_;
 		duration_   = copy.duration_;
+		state_      = copy.state_;
 
 		init(copy.keyData_, copy.keyDataLen_);
 	}

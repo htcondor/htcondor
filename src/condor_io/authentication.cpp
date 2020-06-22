@@ -981,7 +981,13 @@ int Authentication::exchangeKey(KeyInfo *& key)
             // Now, unwrap it.  
             if ( authenticator_ && authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
 					// Success
-				key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
+				if (protocol == CONDOR_AESGCM) {
+					key = new KeyInfo((unsigned char *)decryptedKey, keyLength,
+						(Protocol) protocol, duration,
+						std::shared_ptr<CryptoState>(new CryptoState()));
+				} else {
+					key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration, std::shared_ptr<CryptoState>());
+				}
 			} else {
 					// Failure!
 				retval = 0;

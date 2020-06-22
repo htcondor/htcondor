@@ -2224,7 +2224,7 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         }        
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
+        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0, std::shared_ptr<CryptoState>());
         set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
 		ASSERT( *ptmp == '*' );
@@ -2273,7 +2273,7 @@ const char * Sock::serializeMdInfo(const char * buf)
         }        
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kmd, len);
+        KeyInfo k((unsigned char *)kmd, len, CONDOR_NO_PROTOCOL, 0, std::shared_ptr<CryptoState>());
         set_MD_mode(MD_ALWAYS_ON, &k, 0);
         free(kmd);
 		ASSERT( *ptmp == '*' );

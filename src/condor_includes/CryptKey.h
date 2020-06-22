@@ -21,11 +21,30 @@
 #ifndef CONDOR_CRYPT_KEY
 #define CONDOR_CRYPT_KEY
 
+#include <memory>
+
 enum Protocol {
     CONDOR_NO_PROTOCOL,
     CONDOR_BLOWFISH,
     CONDOR_3DES,
     CONDOR_AESGCM
+};
+
+struct CryptoState {
+		// The IV is split in two: a 32-bit counter and a
+		// 64-bit random number for a total of 12 bytes.
+		// The ctr is added to the last 4 bytes of the IV.
+	union Packed_IV {
+		unsigned char iv[12]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		uint32_t ctr;
+		uint32_t ctr_conn;
+	};
+
+	uint32_t m_ctr_enc{0}; // Number of outgoing (encrypted) packets
+	uint32_t m_ctr_dec{0}; // Number of incoming (decrypted) packets
+	uint32_t m_ctr_conn{0}; // Number of times this session has been used by a connection
+	union Packed_IV m_iv_enc; // IV for outgoing data
+	union Packed_IV m_iv_dec; // IV for incoming data.
 };
 
 class KeyInfo {
@@ -37,8 +56,9 @@ class KeyInfo {
 
     KeyInfo(const unsigned char * keyData,
             int             keyDataLen,
-            Protocol        protocol = CONDOR_NO_PROTOCOL,
-            int             duration = 0);
+            Protocol        protocol,
+            int             duration,
+            std::shared_ptr<CryptoState> state);
     //------------------------------------------
     // Construct a key object
     //------------------------------------------
@@ -87,6 +107,8 @@ class KeyInfo {
 	*/
 	unsigned char * getPaddedKeyData(int len) const;
 
+    std::shared_ptr<CryptoState> getCryptoState() const {return state_;}
+
  private:
     void init(const unsigned char * keyData, int keyDataLen);
 
@@ -95,6 +117,8 @@ class KeyInfo {
 	//int				keyBufferLen_;
     Protocol        protocol_;
     int             duration_;
+
+    std::shared_ptr<CryptoState> state_;
 };
 
 #endif

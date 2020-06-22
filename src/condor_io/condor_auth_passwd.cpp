@@ -697,7 +697,7 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 	}
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
-	KeyInfo thekey(key,keylen,CONDOR_3DES);
+	KeyInfo thekey(key, keylen, CONDOR_3DES, 0, std::shared_ptr<CryptoState>());
 	m_crypto = new Condor_Crypt_3des(thekey);
 	return m_crypto ? true : false;
 }
@@ -2773,7 +2773,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
-	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
+	KeyInfo thekey(key, (int)key_len, CONDOR_3DES, 0, std::shared_ptr<CryptoState>());
 	m_crypto = new Condor_Crypt_3des(thekey);
 
 	if ( key ) free(key);	// KeyInfo makes a copy of the key

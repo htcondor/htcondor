@@ -257,7 +257,7 @@ Condor_Auth_MUNGE::setupCrypto(const unsigned char* key, const int keylen)
 	}
 
 	// This could be 3des -- maybe we should use "best crypto" indirection.
-	KeyInfo thekey(key,keylen,CONDOR_3DES);
+	KeyInfo thekey(key, keylen, CONDOR_3DES, 0, std::shared_ptr<CryptoState>());
 	m_crypto = new Condor_Crypt_3des(thekey);
 	return m_crypto ? true : false;
 }
