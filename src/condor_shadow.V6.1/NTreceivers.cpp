@@ -1266,14 +1266,19 @@ case CONDOR_getfile:
 		if(fd >= 0) {
 			struct stat info;
 			int rc = stat(path, &info);
-			ASSERT(rc == 0)
-			length = info.st_size;
-			buf = (void *)malloc( (unsigned)length );
-			ASSERT( buf );
-			memset( buf, 0, (unsigned)length );
+			if (rc >= 0) {
+				length = info.st_size;
+				buf = (void *)malloc( (unsigned)length );
+				ASSERT( buf );
+				memset( buf, 0, (unsigned)length );
 
-			errno = 0;
-			rval = read( fd , buf , length);
+				errno = 0;
+				rval = read( fd , buf , length);
+			} else {
+				// stat failed.
+				rval = rc;
+				dprintf(D_ALWAYS, "getfile:: stat of %s failed: %d\n", path, errno);
+			}
 		} else {
 			rval = fd;
 		}

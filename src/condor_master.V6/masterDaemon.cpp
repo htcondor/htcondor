@@ -2437,6 +2437,15 @@ Daemons::StartAllDaemons()
 			return;
 		}
 	}
+
+	if (m_retry_start_all_daemons_tid != -1) {
+		dprintf(D_ALWAYS, "Daemons::StartAllDaemons there were some wait before daemons\n");
+	} else {
+		dprintf(D_ALWAYS, "Daemons::StartAllDaemons all daemons were started\n");
+	#ifndef WIN32
+		dc_release_background_parent(0);
+	#endif
+	}
 }
 
 

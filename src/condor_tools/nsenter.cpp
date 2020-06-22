@@ -145,6 +145,38 @@ int main( int argc, char *argv[] )
 	}
 	close(e);
 	
+	// If the environment contains a string with the value of the
+	// path to the container's scratch directory outside the container
+	// replace it with the path inside the container.
+	
+	std::string outsidePath;
+	if (getenv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER")) {
+		outsidePath = getenv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER");
+	}  
+	std::string insidePath; 
+	if (getenv("_CONDOR_SCRATCH_DIR")) {
+		insidePath = getenv("_CONDOR_SCRATCH_DIR");
+	}  
+	if (outsidePath.length() > 0) {
+		size_t pos = 0;
+		do {
+			pos = env.find(outsidePath, pos);
+			if (pos != std::string::npos) {
+				env.replace(pos, outsidePath.length(), insidePath);
+				pos += insidePath.length();
+			}	
+		} while (pos != std::string::npos);
+	}
+	// we probably replaced the value of _CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER
+	// with the inside value, so set that back
+	size_t pos = 0;
+	pos = env.find("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER=", pos);
+	if (pos != std::string::npos) {
+		size_t eqpos = env.find("=", pos);
+		eqpos++;
+		env.replace(eqpos, insidePath.length(), outsidePath);  
+	}
+
 	// make a vector to hold all the pointers to env entries
 	std::vector<const char *> envp;
 
@@ -160,16 +192,6 @@ int main( int argc, char *argv[] )
 	}
 	envp.push_back(nullptr);
 	envp.push_back(nullptr);
-
-	// grab the fd for the cwd -- need to get this outside
-	// but chdir inside the container
-	std::string cwdPath;
-	formatstr(cwdPath, "/proc/%d/cwd", pid);
-	int rootFd = open(cwdPath.c_str(), O_RDONLY);
-	if (rootFd < 0) {
-		fprintf(stderr, "Can't open %s\n", cwdPath.c_str());
-	}
-
 
 	std::string filename;
 
@@ -242,6 +264,9 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 
+	struct winsize win;
+	ioctl(0, TIOCGWINSZ, &win);
+
 	// now the pty handling
 	int masterPty = -1;
 	int workerPty = -1;
@@ -272,18 +297,28 @@ int main( int argc, char *argv[] )
 		dup2(workerPty, 1);
 		dup2(workerPty, 2);
 
-		// chdir to existing cwd
-		int ret = fchdir(rootFd);
-		if (ret < 0) {
-			fprintf(stderr, "Can't open %s\n", cwdPath.c_str());
-		}
-		close(rootFd);
+		if (getenv("_CONDOR_SCRATCH_DIR")) {
+			int r = chdir(getenv("_CONDOR_SCRATCH_DIR"));
+			if (r < 0) {
+				printf("Cannot chdir to %s: %s\n", getenv("_CONDOR_SCRATCH_DIR"), strerror(errno));
+			}
+ 		}
 
 		// make this process group leader so shell job control works
 		setsid();
 
-		execle("/bin/sh", "/bin/sh", "-i", nullptr, envp.data());
+		// Make the pty the controlling terminal
+		ioctl(workerPty, TIOCSCTTY, 0);
 
+		// and make it the process group leader
+		tcsetpgrp(workerPty, getpid());
+ 
+		// and set the window size properly
+		ioctl(0, TIOCSWINSZ, &win);
+
+		// Finally, launch the shell
+		execle("/bin/sh", "/bin/sh", "-l", "-i", nullptr, envp.data());
+ 
 		// Only get here if exec fails
 		fprintf(stderr, "exec failed %d\n", errno);
 		exit(errno);
@@ -309,6 +344,9 @@ int main( int argc, char *argv[] )
 		struct sigaction handler;
 		struct sigaction oldhandler;
 		handler.sa_handler = reset_pty_and_exit;
+		handler.sa_flags   = 0;
+		sigemptyset(&handler.sa_mask);
+
 
 		sigaction(SIGCHLD, &handler, &oldhandler);
 

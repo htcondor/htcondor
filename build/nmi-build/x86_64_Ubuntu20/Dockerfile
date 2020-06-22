@@ -1,4 +1,7 @@
-FROM fedora:27
+FROM ubuntu:focal
+
+# Ensure that gethostbyaddr() returns our hostname
+RUN sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 
 # Add users that might be used in CHTC
 # The HTCondor that runs inside the container needs to have the user defined
@@ -203,78 +206,88 @@ RUN useradd --uid  5001 --shell /bin/bash --create-home slot1 && \
     useradd --uid 20015 --shell /bin/bash --create-home tlmiller && \
     useradd --uid 20017 --shell /bin/bash --create-home zmiller
 
-# Fake package id
-RUN mkdir /home/batlab-admin && \
-    echo 0 > /home/batlab-admin/package_id
-
 # Provide a condor_config.generic
 RUN mkdir -p /usr/local/condor/etc/examples && \
     echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.generic
 
-# Need HTCondor to build and test HTCondor (BaTLab style)
-RUN dnf install -y \
-    condor \
-    java \
-    openssh-clients \
-    openssh-server \
-    'openssl' \
-    'openssl-devel' \
-    'perl(Digest::SHA)' \
-    'perl(Env)' \
-    'perl(Net::Domain)' \
-    'perl(Time::HiRes)' \
-    'perl(XML::Parser)' \
-    && dnf clean all
+# Add tools to add the HTCondor repository
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
+    apt-transport-https \
+    gnupg \
+    wget \
+    && apt clean
 
-# Need to reinstall HTCondor with documentation for Metronome
-RUN dnf reinstall --setopt='tsflags=' -y \
-    condor \
-    && dnf clean all
+# Add HTCondor repository
+RUN wget -qO - https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key | apt-key add -
+RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/ubuntu/8.8-testing/focal focal contrib" > /etc/apt/sources.list.d/htcondor.list
+
+# Need HTCondor to build HTCondor (BatLab style)
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
+    htcondor \
+    libnss-myhostname \
+    openssh-server \
+    && apt clean
 
 # Tools needed for building
-RUN dnf install -y \
-    make \
-    rpm-build \
-    && dnf clean all
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
+    build-essential \
+    devscripts \
+    && apt clean
 
 # HTCondor build dependencies
-RUN dnf install -y \
-    'bind-utils' \
-    'bison' \
-    'bison-devel' \
-    'boost-devel' \
-    'boost-python' \
-    'boost-python3-devel' \
-    'byacc' \
-    'c-ares-devel' \
-    'cmake' \
-    'expat-devel' \
-    'flex' \
-    'gcc-c++' \
-    'krb5-devel' \
-    'libcgroup-devel' \
-    'libcurl-devel' \
-    'libtool' \
-    'libtool-ltdl-devel' \
-    'libuuid-devel' \
-    'libvirt-devel' \
-    'libX11-devel' \
-    'libxml2-devel' \
-    'libXScrnSaver-devel' \
-    'm4' \
-    'nss-devel' \
-    'openldap-devel' \
-    'pam-devel' \
-    'pcre-devel' \
-    'perl(Archive::Tar)' \
-    'perl(Data::Dumper)' \
-    'perl(Digest::MD5)' \
-    'python3-setuptools' \
-    'python-devel' \
-    'python-setuptools' \
-    'python-sphinx' \
-    'python-sphinx_rtd_theme' \
-    'sqlite-devel' \
-    'systemd-devel' \
-    && dnf clean all
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
+    autoconf \
+    automake \
+    bison \
+    chrpath \
+    cmake \
+    debhelper \
+    default-jdk \
+    dh-autoreconf \
+    dh-python \
+    fakeroot \
+    flex \
+    help2man \
+    libboost-filesystem-dev \
+    libboost-program-options-dev \
+    libboost-python-dev \
+    libboost-regex-dev \
+    libboost-system-dev \
+    libboost-test-dev \
+    libboost-thread-dev \
+    libcgroup-dev \
+    libcurl4-openssl-dev \
+    libdistro-info-perl \
+    libexpat1-dev \
+    libglobus-ftp-client-dev \
+    libglobus-gass-server-ez-dev \
+    libglobus-gram-client-dev \
+    libglobus-gram-protocol-dev \
+    libglobus-gss-assist-dev \
+    libkrb5-dev \
+    libldap2-dev \
+    libmunge-dev \
+    libpam0g-dev \
+    libpcre3-dev \
+    libpq-dev \
+    libsqlite3-dev \
+    libtool \
+    libvirt-dev \
+    libx11-dev \
+    libxml2-dev \
+    libxss-dev \
+    pkg-config \
+    po-debconf \
+    python3-all-dev \
+    python3-setuptools \
+    python3-sphinx \
+    python3-sphinx-rtd-theme \
+    uuid-dev \
+    zlib1g-dev \
+    && apt clean
 
+RUN apt update && apt install -y \
+    python3-pip \
+    && apt clean
+
+RUN pip3 install pytest pytest-httpserver

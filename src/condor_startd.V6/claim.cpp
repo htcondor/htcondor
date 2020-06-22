@@ -2383,6 +2383,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 			session_id.Value(),
 			session_key.Value(),
 			NULL,
+			AUTH_METHOD_MATCH,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
 			0,

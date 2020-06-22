@@ -245,6 +245,9 @@ extern char const *CONDOR_CHILD_FQU;
 extern char const *CONDOR_PARENT_FQU;
 extern char const *CONDOR_FAMILY_FQU;
 
+extern char const *AUTH_METHOD_FAMILY;
+extern char const *AUTH_METHOD_MATCH;
+
 #endif /* AUTHENTICATION_H */
 
 

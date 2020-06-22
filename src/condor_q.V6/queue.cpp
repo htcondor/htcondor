@@ -1813,6 +1813,8 @@ processCommandLineArguments (int argc, const char *argv[])
 			if ((dash_dag || dash_batch) && it->_proc < 1) {
 				sprintf(constraint, ATTR_DAGMAN_JOB_ID " == %d", it->_cluster);
 				Q.addOR(constraint);
+				sprintf(constraint, "int(split(" ATTR_JOB_BATCH_NAME ", \"+\")[1]) == %d", it->_cluster);
+				Q.addOR(constraint);
 			}
 		}
 	} else if (show_io) {

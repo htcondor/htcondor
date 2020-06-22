@@ -730,9 +730,6 @@ bool send_reschedule(const Dagman & /*dm*/)
 	if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true))
 		return true; // submit already did it
 
-	if (param_boolean("SUBMIT_SEND_RESCHEDULE", true))
-		return false; // submit should not do it
-
 	DCSchedd schedd;
 	Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	return schedd.sendCommand(RESCHEDULE, st, 0);

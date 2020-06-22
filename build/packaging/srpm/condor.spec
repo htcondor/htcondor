@@ -71,7 +71,7 @@
 %endif
 
 # cream support is going away, skip for EL8
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?amzn}
 %define cream 0
 %endif
 
@@ -334,7 +334,13 @@ BuildRequires: boost-python3-devel
 %if 0%{?fedora} >= 30
 BuildRequires: boost-python2-devel
 %else
+%if ! 0%{?amzn}
 BuildRequires: boost-python
+%else
+BuildRequires: python3-devel
+BuildRequires: boost169-python2-devel
+BuildRequires: boost169-python3-devel
+%endif
 %endif
 %endif
 BuildRequires: libuuid-devel
@@ -633,7 +639,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 #######################
 %package -n python3-condor
@@ -697,7 +703,7 @@ Requires: %name = %version-%release
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python2-condor = %version-%release
 %endif
-%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
 
@@ -794,7 +800,7 @@ Requires: %name-cream-gahp = %version-%release
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python2-condor = %version-%release
 %endif
-%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
@@ -1100,10 +1106,11 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 # remove junk man page (Fedora 32 build)
 rm -f %{buildroot}/%{_mandir}/man1/_static/graphviz.css
 
-# Remove condor_top with no python bindings
+# Remove python-based tools when no python bindings
 %if ! %python
 rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
+rm -f %{buildroot}/%{_bindir}/condor_watch_q
 %endif
 
 # Remove junk
@@ -1716,6 +1723,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %_bindir/condor_top
 %_bindir/classad_eval
+%_bindir/condor_watch_q
 %_libdir/libpyclassad2*.so
 %_libexecdir/condor/libclassad_python_user.so
 %_libexecdir/condor/libcollector_python_plugin.so
@@ -1724,12 +1732,13 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor-*.egg-info/
 %endif
 
-%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
 %_bindir/classad_eval
+%_bindir/condor_watch_q
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
