@@ -197,6 +197,7 @@ if (BUILD_TESTING)
 		# Ornithology
 		condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full")
 		condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "core;quick;full")
+		condor_pl_test(test_condor_now_internals "Test that condow_now internals" "core;quick;full")
 		condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "core;quick;full")
 		condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full")
 		condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "core;quick;full")
