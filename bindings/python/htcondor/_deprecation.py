@@ -102,3 +102,30 @@ def deprecate_8_9_8():
     htcondor.Schedd.negotiate = deprecate(
         "Schedd.negotiate() is deprecated since v8.9.8 and will be removed in a future release.",
     )(htcondor.Schedd.negotiate)
+
+    ## See GT#7630
+    def normalize_query_args(method):
+        @wraps(method)
+        def wrapper(self, *args, **kwargs):
+            kwargs = _normalize_query_args(method, kwargs)
+            return method(self, *args, **kwargs)
+
+        return wrapper
+
+    def _normalize_query_args(method, kwargs):
+        kwargs = kwargs.copy()
+
+        if "requirements" in kwargs:
+            warnings.warn('The "requirements" argument of {}() will be renamed to "constraint" in a future release. For now, it will accept both names.'.format(method.__name__), FutureWarning)
+            kwargs["constraint"] = kwargs.pop("requirements")
+        if "attr_list" in kwargs:
+            warnings.warn('The "attr_list" argument of {}() will be renamed to "projection" in a future release. For now, it will accept both names.'.format(method.__name__), FutureWarning)
+            kwargs["projection"] = kwargs.pop("attr_list")
+
+        return kwargs
+
+    htcondor.Schedd.query = normalize_query_args(htcondor.Schedd.query)
+    htcondor.Schedd.xquery = normalize_query_args(htcondor.Schedd.xquery)
+    htcondor.Schedd.history = normalize_query_args(htcondor.Schedd.history)
+
+
