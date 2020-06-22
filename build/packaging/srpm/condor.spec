@@ -1263,6 +1263,9 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 
 populate %{_libdir}/condor %{buildroot}/%{_libdir}/libgetpwnam.so
 
+# htcondor/dags only works with Python3
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
+
 %clean
 rm -rf %{buildroot}
 
