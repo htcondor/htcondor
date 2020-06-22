@@ -2432,7 +2432,7 @@ CStarter::SpawnJob( void )
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
 	ClassAd* jobAd = jic->jobClassAd();
-	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) < 1 ) {
+	if ( ! jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) || jobUniverse < 1 ) {
 		dprintf( D_ALWAYS, 
 				 "Job doesn't specify universe, assuming VANILLA\n" ); 
 	}
@@ -2466,7 +2466,7 @@ CStarter::SpawnJob( void )
 			break;
 		case CONDOR_UNIVERSE_MPI: {
 			bool is_master = false;
-			if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
+			if ( ! jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master )) {
 				is_master = false;
 			}
 			if ( is_master ) {
@@ -3500,8 +3500,8 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			break;
 		}
 
-		// HACK! special magic for CUDA_VISIBLE_DEVICES
-		if (env_name == "CUDA_VISIBLE_DEVICES") {
+		// HACK! special magic for CUDA_VISIBLE_DEVICES with no pattern supplied
+		if (env_name == "CUDA_VISIBLE_DEVICES" && pat.empty()) {
 			// strip everthing but digits and , from the assigned gpus value
 			for (const char * p = assigned; *p; ++p) {
 				if (isdigit(*p) || *p == ',') rhs += *p;
