@@ -912,6 +912,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			cidp.secSessionId(),
 			cidp.secSessionKey(),
 			session_info,
+			AUTH_METHOD_MATCH,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			sinful.c_str(),
 			1200,

@@ -39,6 +39,8 @@ use CustomMachineResource;
 my $config = <<CONDOR_TESTREQ_CONFIG;
 NUM_CPUS = 16
 
+ADVERTISE_CMR_UPTIME_SECONDS = TRUE
+
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
 use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor, SUM:SQUIDs )
 

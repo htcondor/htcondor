@@ -3263,7 +3263,7 @@ Protocol CryptProtocolNameToEnum(char const *name) {
 }
 
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3327,6 +3327,10 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	policy.Assign(ATTR_SEC_SID, sesid);
 	policy.Assign(ATTR_SEC_ENACT, "YES");
 
+	if( auth_method ) {
+		policy.Assign(ATTR_SEC_AUTHENTICATION_METHODS, auth_method);
+
+	}
 	if( peer_fqu ) {
 		policy.Assign(ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[SEC_FEAT_ACT_NO]);
 		policy.Assign(ATTR_SEC_TRIED_AUTHENTICATION,true);

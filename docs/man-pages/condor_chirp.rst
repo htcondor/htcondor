@@ -126,7 +126,7 @@ Chirp Commands
  **chown** *RemotePath UID GID*
     Change the ownership of *RemotePath* to *UID* and *GID*. Changes the
     target of *RemotePath*, if it is a symbolic link.
- **chown** *RemotePath UID GID*
+ **lchown** *RemotePath UID GID*
     Change the ownership of *RemotePath* to *UID* and *GID*. Changes the
     link, if *RemotePath* is a symbolic link.
  **truncate** *RemoteFileName Length*
