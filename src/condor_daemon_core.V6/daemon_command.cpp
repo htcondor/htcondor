@@ -903,17 +903,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							return CommandProtocolFinished;
 						}
 
-						switch (toupper(crypto_method[0])) {
-							case 'B': // blowfish
+						Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method);
+						switch (method) {
+							case CONDOR_BLOWFISH:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
 								m_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH, 0, std::shared_ptr<CryptoState>());
 								break;
-							case '3': // 3des
-							case 'T': // Tripledes
+							case CONDOR_3DES:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
 								m_key = new KeyInfo(rbuf, 24, CONDOR_3DES, 0, std::shared_ptr<CryptoState>());
 								break;
-							case 'A': // AES-GCM
+							case CONDOR_AESGCM:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
 								m_key = new KeyInfo(rbuf, 32, CONDOR_AESGCM, 0, std::shared_ptr<CryptoState>(new CryptoState()));
 								break;

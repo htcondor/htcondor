@@ -2216,6 +2216,14 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				}
 			}
 
+				// Mark the session as having state-tracking enabled.
+				// When combined with AES-GCM, this will cause the ReliSock to
+				// store the state of the encryption in the session cache.
+			if (!m_auth_info.InsertAttr( "TrackState", true )) {
+				dprintf(D_SECURITY, "SECMAN: Failed to enable state tracking.\n");
+				return StartCommandFailed;
+			}
+
 			// Starting in 8.3.6, there is a ReturnCode attribute which tells us if the
 			// other side authorized, denied, or was unaware of the command we sent.
 			//
@@ -3246,18 +3254,24 @@ SecMan::getSecTimeout(DCpermission perm)
 	return auth_timeout;
 }
 
-Protocol CryptProtocolNameToEnum(char const *name) {
-	switch (toupper(*name)) {
-	case 'B': // blowfish
-		return CONDOR_BLOWFISH;
-	case '3': // 3des
-	case 'T': // Tripledes
-		return CONDOR_3DES;
-	case 'A': // AES-GCM-256
-		return CONDOR_AESGCM;
-	default:
-		return CONDOR_NO_PROTOCOL;
+Protocol
+SecMan::getCryptProtocolNameToEnum(char const *name) {
+	if (!name) return CONDOR_NO_PROTOCOL;
+
+	StringList list(name);
+	list.rewind();
+	char *tmp;
+	while ((tmp = list.next())) {
+		dprintf(D_NETWORK, "Considering crypto protocol %s.\n", tmp);
+		if (!strcasecmp(tmp, "BLOWFISH")) {
+			return CONDOR_BLOWFISH;
+		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(name, "TRIPLEDES")) {
+			return CONDOR_3DES;
+		} else if (!strcasecmp(tmp, "AESGCM")) {
+			return CONDOR_AESGCM;
+		}
 	}
+	return CONDOR_NO_PROTOCOL;
 }
 
 bool
@@ -3303,17 +3317,6 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	sec_copy_attribute(policy,*auth_info,ATTR_SEC_ENCRYPTION);
 	sec_copy_attribute(policy,*auth_info,ATTR_SEC_CRYPTO_METHODS);
 
-		// remove all but the first crypto method
-	std::string crypto_methods;
-	policy.LookupString(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
-	if( crypto_methods.length() ) {
-		size_t pos = crypto_methods.find(',');
-		if( pos != std::string::npos ) {
-			crypto_methods.erase(pos);
-			policy.Assign(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
-		}
-	}
-
 	delete auth_info;
 	auth_info = NULL;
 
@@ -3338,8 +3341,21 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	std::string crypto_method;
 	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method);
+		// Backward compat HACK: Until the introduction of AESGCM, SecMan only
+		// considered the first letter of the method - and we only sent the first
+		// method (preventing negotiation).
+		//
+		// Hence, we have a fictional protocol named 'B' in this list -- old clients
+		// will use BLOWFISH.
+		//
+		// When AESGCM was introduced, you have to spell the method name correct,
+		// meaning 'B' is automatically ignored and the real preference is used.
+	if (crypto_method.find("BLOWFISH") != std::string::npos) {
+		crypto_method = std::string("B,") + crypto_method;
+		policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_method);
+	}
 
-	Protocol crypt_protocol = CryptProtocolNameToEnum(crypto_method.c_str());
+	Protocol crypt_protocol = getCryptProtocolNameToEnum(crypto_method.c_str());
 	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
 	if(!keybuf) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"

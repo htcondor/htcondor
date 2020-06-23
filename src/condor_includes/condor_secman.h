@@ -290,6 +290,9 @@ public:
 		// session, the lingering session will simply be replaced.
 	bool SetSessionLingerFlag(char const *session_id);
 
+		// Given a list of crypto methods, return the first valid protocol name.
+	static Protocol getCryptProtocolNameToEnum(char const *name);
+
  private:
 	void invalidateOneExpiredCache(KeyCache *session_cache);
 	static  std::string		filterAuthenticationMethods(DCpermission perm, const std::string &input_methods);
