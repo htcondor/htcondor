@@ -78,7 +78,7 @@ public:
   void AddMatch(const string& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const string& ResourceName); // remove a match
 
-  float GetSlotWeight(ClassAd *candidate);
+  float GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
@@ -104,7 +104,7 @@ public:
   GroupEntry* GetAssignedGroup(const string& CustomerName);
   GroupEntry* GetAssignedGroup(const string& CustomerName, bool& IsGroup);
 
-  bool UsingWeightedSlots();
+  bool UsingWeightedSlots() const;
 
   struct ci_less {
       bool operator()(const string& a, const string& b) const {

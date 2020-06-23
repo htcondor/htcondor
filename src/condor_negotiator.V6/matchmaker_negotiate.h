@@ -43,8 +43,8 @@ class ResourceRequestList {
 		// 
 	void noMatchFound();
 
-	bool needsEndNegotiate();
-	bool needsEndNegotiateNow();
+	bool needsEndNegotiate() const;
+	bool needsEndNegotiateNow() const;
 
 		//
 	void clearRejectedAutoclusters() { m_clear_rejected_autoclusters = true; }

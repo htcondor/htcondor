@@ -375,7 +375,7 @@ GroupEntry* Accountant::GetAssignedGroup(const string& CustomerName, bool& IsGro
 }
 
 
-bool Accountant::UsingWeightedSlots() {
+bool Accountant::UsingWeightedSlots() const {
     return UseSlotWeights;
 }
 
@@ -1846,7 +1846,7 @@ void Accountant::DecrementLimits(const string& limits)
 	}
 }
 
-float Accountant::GetSlotWeight(ClassAd *candidate) 
+float Accountant::GetSlotWeight(ClassAd *candidate) const 
 {
 	float SlotWeight = 1.0;
 	if(!UseSlotWeights) {

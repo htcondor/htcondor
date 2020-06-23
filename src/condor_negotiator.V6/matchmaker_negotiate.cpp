@@ -61,14 +61,14 @@ ResourceRequestList::~ResourceRequestList()
 }
 
 bool
-ResourceRequestList::needsEndNegotiate()
+ResourceRequestList::needsEndNegotiate() const
 {
 	return m_send_end_negotiate;
 }
 
 
 bool
-ResourceRequestList::needsEndNegotiateNow()
+ResourceRequestList::needsEndNegotiateNow() const
 {
 	return m_send_end_negotiate_now;
 }

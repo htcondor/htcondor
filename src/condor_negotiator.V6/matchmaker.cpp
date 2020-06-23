@@ -2869,7 +2869,7 @@ void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
  false if there is a data structure inconsistency and/or want_globaljobprio should be false.
 */
 bool Matchmaker::
-consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAds)
+consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAds) const
 {
 	// nothing to do if unless want_globaljobprio is true...
 	if (!want_globaljobprio) {
@@ -3470,7 +3470,7 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 }
 
 int Matchmaker::
-trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds)
+trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 {
 	int removed = 0;
 	ClassAd *ad = NULL;
@@ -5569,7 +5569,7 @@ public:
 		delete self;
 	}
 
-	bool WriteMatchInfo(Sock *sock)
+	bool WriteMatchInfo(Sock *sock) const
 	{
 		ClaimIdParser idp( m_claim_id.Value() );
 		ASSERT(sock);
@@ -6441,7 +6441,7 @@ get_diagnostics(int & rejForNetwork,
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 				    int & rejPreemptForRank,
-				    int & rejForSubmitterLimit)
+				    int & rejForSubmitterLimit) const
 {
 	rejForNetwork = m_rejForNetwork;
 	rejForNetworkShare = m_rejForNetworkShare;
