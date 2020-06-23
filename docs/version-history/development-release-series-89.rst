@@ -19,6 +19,15 @@ Release Notes:
    being parsed as just ``foo`` and causing unexpected results.
    :ticket:`7607`
 
+-  API change in the Python bindings: we deprecated ``Schedd.negotiate()``.
+   :ticket:`7524`
+
+-  API change in the Python bindings: we deprecated the classes
+   ``htcondor.Negotiator``, ``htcondor.FileLock``, ``htcondor.EventIterator``,
+   and ``htcondor.LogReader``,  as well as the functions ``htcondor.lock()``
+   and ``htcondor.read_events()``.
+   :ticket:`7690`
+
 New Features:
 
 -  *classad_eval* now allows its first (ClassAd) argument to be just the
