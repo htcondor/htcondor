@@ -36,8 +36,10 @@ struct CryptoState {
 		// The ctr is added to the last 4 bytes of the IV.
 	union Packed_IV {
 		unsigned char iv[12]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		uint32_t ctr;
-		uint32_t ctr_conn;
+                struct {
+		    uint32_t pkt;
+		    uint32_t conn;
+                } ctr;
 	};
 
 	uint32_t m_ctr_enc{0}; // Number of outgoing (encrypted) packets
@@ -45,6 +47,8 @@ struct CryptoState {
 	uint32_t m_ctr_conn{0}; // Number of times this session has been used by a connection
 	union Packed_IV m_iv_enc; // IV for outgoing data
 	union Packed_IV m_iv_dec; // IV for incoming data.
+        unsigned char m_prev_mac_enc[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        unsigned char m_prev_mac_dec[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 };
 
 class KeyInfo {
