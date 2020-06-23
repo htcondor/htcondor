@@ -336,8 +336,8 @@ cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
 	}
 
 	p->name = dev->name;
-	unsigned char uuid[16] = {0x01,0x22,0x33,0x34,  0x44,0x45, 0x56,0x67, 0x89,0x9a, 0xab,0xbc,0xcd,0xde,0xef,0xf0 };
-	uuid[0] = (unsigned char)devID;
+	unsigned char uuid[16] = {0xa1,0x22,0x33,0x34,  0x44,0x45, 0x56,0x67, 0x89,0x9a, 0xab,0xbc,0xcd,0xde,0xef,0xf0 };
+	uuid[0] = (unsigned char)((devID*0x11) + 0xa0);
 	memcpy(p->uuid, uuid, 16);
 	sprintf(p->pciId, "0000:%02x:00.0", devID + 0x40);
 	p->ccMajor = (dev->SM & 0xF0) >> 4;
@@ -856,6 +856,8 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
+	int opt_uuid = 0;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
+	int opt_short_uuid = 0; // use shortened uuids
 	//int opt_rdp = 0;
 	std::list<int> dwl; // Device White List
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
@@ -941,6 +943,13 @@ main( int argc, const char** argv)
 			if (argv[i+1]) {
 				opt_tag = argv[++i];
 			}
+		}
+		else if (is_dash_arg_prefix(argv[i], "uuid", 2)) {
+			opt_uuid = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "short-uuid", -1)) {
+			opt_uuid = 1;
+			opt_short_uuid = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
@@ -1251,6 +1260,7 @@ main( int argc, const char** argv)
 	//
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
+#if 0
 	for (dev = 0; dev < deviceCount; dev++) {
 		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
@@ -1270,6 +1280,7 @@ main( int argc, const char** argv)
 	if (opt_config) {
 		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
 	}
+#endif
 
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {
@@ -1278,14 +1289,53 @@ main( int argc, const char** argv)
 			continue;
 		}
 
+	#if 1
+		char gpuid[100];
+		sprintf(gpuid,"%s%d",opt_pre,dev); // establish a default GPU identifier. e.g CUDA0. we might replace this later
+	#else
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
-		KVP& props = dev_props.find(prefix)->second;
+	#endif
 
-		if (opt_basic && getBasicProps) {
+		if ((opt_basic || opt_uuid) && getBasicProps) {
+
+			BasicProps bp;
+			cudaError_t rv = getBasicProps(dev, &bp);
+			const char * uuidstr = NULL;
+			if (cudaSuccess == rv) {
+				uuidstr = bp.printUuid();
+			}
+			if (opt_uuid && uuidstr && uuidstr[0]) {
+				strcpy(gpuid, "GPU-");
+				strcat(gpuid, uuidstr);
+				if (opt_short_uuid) {
+					gpuid[12] = 0;
+				}
+			}
+
+			dev_props[gpuid].clear(); // this has the side effect of creating the KVP for gpuid.
+			KVP& props = dev_props.find(gpuid)->second;
+
+			if ((cudaSuccess == rv) && opt_basic) {
+				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", bp.printUuid());
+				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
+				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
+				props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
+				props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
+				props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
+				if (opt_extra) {
+					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
+					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
+					if (bp.ccMajor <= 6) {
+						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
+					} else {
+						// CoresPerCU not meaningful for Architecture 7 and later
+					}
+				}
+			}
+
 			int driverVersion=0;
-
-			if (cudaDriverGetVersion) {
+			if (opt_basic && cudaDriverGetVersion) {
 				cudaDriverGetVersion(&driverVersion);
 				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
 				props["MaxSupportedVersion"] = Format("%d", driverVersion);
@@ -1303,26 +1353,11 @@ main( int argc, const char** argv)
 				}
 			}
 
-			BasicProps bp;
-			if (cudaSuccess == getBasicProps(dev, &bp)) {
-				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
-				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", bp.printUuid());
-				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
-				props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
-				props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
-				props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
-				if (opt_extra) {
-					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
-					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-					if (bp.ccMajor <= 6) {
-						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
-					} else {
-						// CoresPerCU not meaningful for Architecture 7 and later
-					}
-				}
-			}
 		} else if (opt_basic && ocl_handle) {
 			cl_device_id did = cl_gpu_ids[dev];
+
+			dev_props[gpuid].clear(); // this has the side effect of creating the KVP for gpuid.
+			KVP& props = dev_props.find(gpuid)->second;
 
 			std::string val;
 			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_NAME, val)) {
@@ -1363,7 +1398,19 @@ main( int argc, const char** argv)
 			}
 		}
 
+		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
+		detected_gpus += gpuid;
+		++filteredDeviceCount;
 	}
+
+#if 1
+	if ( ! opt_cron) {
+		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+	}
+	if (opt_config) {
+		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
+	}
+#endif
 
 	// check for device homogeneity so we can print out simpler
 	// config/device attributes 
@@ -1397,7 +1444,9 @@ main( int argc, const char** argv)
 		for (MKVP::const_iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
 			for (KVP::const_iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
 				if (common.find(it->first) != common.end()) continue;
-				printf("%s%s=%s\n", mit->first.c_str(), it->first.c_str(), it->second.c_str());
+				std::string attrpre(mit->first.c_str());
+				std::replace(attrpre.begin(), attrpre.end(), '-', '_');
+				printf("%s%s=%s\n", attrpre.c_str(), it->first.c_str(), it->second.c_str());
 			}
 		}
 	}
@@ -1482,6 +1531,8 @@ void usage(FILE* out, const char * argv0)
 		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
 		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
+		"    -uuid             Use GPU uuid instead of index as GPU id\n"
+		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id\n"
 		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"

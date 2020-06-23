@@ -267,6 +267,7 @@ CollectorDaemon::schedd_token_request(int, Stream *stream)
 		cidp.secSessionId(),
 		cidp.secSessionKey(),
 		cidp.secSessionInfo(),
+		AUTH_METHOD_MATCH,
 		SUBMIT_SIDE_MATCHSESSION_FQU,
 		schedd_addr.c_str(),
 		1200,

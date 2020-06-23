@@ -5,13 +5,13 @@ In this Quick Start guide for setting up an HTCondor pool, we show how to setup
 and configure a basic pool with three machines:
 
 -   A **submit** machine, where users log in to submit their jobs
-    (*condor-submit.mydomain.com*)
+    (*condor-submit.example.com*)
 
 -   An **execute** machine, where the jobs actually run
-    (*condor-execute.mydomain.com*)
+    (*condor-execute.example.com*)
 
 -   A **central manager**, which matches submitted jobs to execute resources
-    (*condor-cm.mydomain.com*)
+    (*condor-cm.example.com*)
 
 We'll show how to install and configure this pool using the latest Stable
 release of the HTCondor software on RHEL 7 / CentOS 7. For different operating
@@ -46,7 +46,7 @@ well as a firewall rule:
 
 ::
 
-    $ echo "CONDOR_HOST = condor-cm.mydomain.com" | sudo tee -a /etc/condor/config.d/49-common
+    $ echo "CONDOR_HOST = condor-cm.example.com" | sudo tee -a /etc/condor/config.d/49-common
     $ sudo firewall-cmd --zone=public --add-port=9618/tcp --permanent
     $ sudo firewall-cmd --reload
 
@@ -72,7 +72,7 @@ Central Manager Machine
 ::
 
     $ echo "use ROLE: CentralManager" | sudo tee -a /etc/condor/config.d/51-role-cm
-    $ echo "ALLOW_WRITE_COLLECTOR=\$(ALLOW_WRITE) condor-execute.mydomain.com condor-submit.mydomain.com" | sudo tee -a /etc/condor/config.d/51-role-cm
+    $ echo "ALLOW_WRITE_COLLECTOR=\$(ALLOW_WRITE) condor-execute.example.com condor-submit.example.com" | sudo tee -a /etc/condor/config.d/51-role-cm
 
 
 Security
@@ -102,7 +102,7 @@ following contents:
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD
     SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
     ALLOW_DAEMON = condor_pool@*/*, condor@*/$(IP_ADDRESS)
-    ALLOW_NEGOTIATOR = condor_pool@*/condor-cm.mydomain.com
+    ALLOW_NEGOTIATOR = condor_pool@*/condor-cm.example.com
 
 Next, run the following command which will ask you to set a pool password. 
 Choose any password you want, but make sure to use the same password on all

@@ -188,10 +188,10 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
-	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2019.09/bin";
+	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2020.06/bin";
 	$execstr = get_cmake_args();
 	$execstr .= " -DBUILD_TESTING:bool=false ";
-	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /usr/local/coverity/.p`";
+	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
 }
 
 

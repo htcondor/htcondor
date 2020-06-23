@@ -269,7 +269,7 @@ public:
 		// If additional attributes should be copied into the session policy,
 		// these can be copied into the policy parameter:
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
-		char const *exported_session_info, char const *peer_fqu, char const *peer_sinful, int duration,
+		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
 		classad::ClassAd *policy);
 
 		// Get security session info to send to our peer so that peer

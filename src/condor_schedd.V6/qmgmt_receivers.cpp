@@ -58,7 +58,7 @@ int
 do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 {
 	int	request_num = -1;
-	int	rval;
+	int	rval = -1;
 
 	ReliSock *syscall_sock = Q_PEER.getReliSock();
 	syscall_sock->decode();

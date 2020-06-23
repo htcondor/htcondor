@@ -90,7 +90,7 @@ class BasicProps {
 		int           ECCEnabled;
 
 		bool hasUUID() { return uuid[0] || uuid[6] || uuid[8]; }
-		const char * printUUID();
+		const char * printUUID(char* buf, int bufsiz);
 };
 
 bool enumerateCUDADevices( std::vector< BasicProps > & devices );

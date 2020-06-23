@@ -289,6 +289,9 @@ int DockerAPI::createContainer(
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
 	}
+	if (networkType == "none") {
+		runArgs.AppendArg("--network=none");
+	}
 
 	// Handle port forwarding.
 	std::string containerServiceNames;
