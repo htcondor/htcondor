@@ -239,7 +239,6 @@ bool Condor_Crypt_AESGCM::decrypt(const unsigned char *  aad,
                                   unsigned char *        output, 
                                   int&                   output_len)
 {
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt with payload %d.\n", input_len);
     EVP_CIPHER_CTX *ctx;
 
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt with input buffer %d.\n", input_len);
@@ -320,7 +319,9 @@ bool Condor_Crypt_AESGCM::decrypt(const unsigned char *  aad,
         return false;
     }
 
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt about to init key %0x %0x %0x %0x.\n", *(get_key().getKeyData()), *(get_key().getKeyData() + 15), *(get_key().getKeyData() + 16), *(get_key().getKeyData() + 31));
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt about to init key %0x %0x %0x %0x.\n",
+        *(get_key().getKeyData()), *(get_key().getKeyData() + 15),
+        *(get_key().getKeyData() + 16), *(get_key().getKeyData() + 31));
 
     char hex[3 * IV_SIZE + 1];
     dprintf(D_ALWAYS,"IO: Incoming IV : %s\n",

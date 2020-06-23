@@ -61,16 +61,22 @@ ReliSock::init()
 	rcv_msg.init_parent(this);
 	snd_msg.init_parent(this);
 	m_target_shared_port_id = NULL;
+	m_finished_recv_header = false;
+	m_finished_send_header = false;
 }
 
 
 ReliSock::ReliSock()
-	: Sock()
+	: Sock(),
+	m_send_md_ctx(nullptr, EVP_MD_CTX_destroy),
+	m_recv_md_ctx(nullptr, EVP_MD_CTX_destroy)
 {
 	init();
 }
 
-ReliSock::ReliSock(const ReliSock & orig) : Sock(orig)
+ReliSock::ReliSock(const ReliSock & orig) : Sock(orig),
+	m_send_md_ctx(nullptr, EVP_MD_CTX_destroy),
+	m_recv_md_ctx(nullptr, EVP_MD_CTX_destroy)
 {
 	init();
 	// now copy all cedar state info via the serialize() method
@@ -114,6 +120,12 @@ ReliSock::close()
 	// Purge send and receive buffers at the relisock level
 	snd_msg.reset();
 	rcv_msg.reset();
+	m_finished_send_header = false;
+	m_finished_recv_header = false;
+	m_final_send_header = false;
+	m_final_recv_header = false;
+	m_send_md_ctx.reset();
+	m_recv_md_ctx.reset();
 
 	// then invoke close() in parent class to close fd etc
 	return Sock::close();
@@ -729,6 +741,17 @@ bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
     return true;
 }
 
+void ReliSock::resetHeaderMD()
+{
+	dprintf(D_NETWORK, "Reset Header MD.\n");
+	m_send_md_ctx.reset();
+	m_finished_send_header = false;
+	m_final_send_header = false;
+	m_recv_md_ctx.reset();
+	m_finished_recv_header = false;
+	m_final_recv_header = false;
+}
+
 ReliSock::RcvMsg :: RcvMsg() : 
     mode_(MD_OFF),
     mdChecker_(0), 
@@ -856,6 +879,29 @@ check_header:
 	}
 	m_tmp->grow_buf(len+1);
 
+        if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->_bytes_recvd < 1024*1024) {
+                if (!p_sock->m_recv_md_ctx) {
+                        p_sock->m_recv_md_ctx.reset(EVP_MD_CTX_create());
+                        if (!p_sock->m_recv_md_ctx) {
+                                dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
+                                return false;
+                        }
+                        if (1 != EVP_DigestInit_ex(p_sock->m_recv_md_ctx.get(), EVP_sha256(), NULL)) {
+                                dprintf(D_NETWORK, "IO: Failed to initialize SHA-256 context.\n");
+                                return false;
+                        }
+                }
+		char hex[3*5 + 1];
+		dprintf(D_NETWORK, "Recv Header contents: %s\n",
+			debug_hex_dump(hex, reinterpret_cast<char*>(hdr), header_size));
+
+		if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), hdr, header_size)) {
+			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
+			return false;
+		}
+		dprintf(D_NETWORK, "AESGCM: Recv header digest added %u bytes \n", header_size);
+        }
+
 read_packet:
 	dprintf(D_NETWORK, "Reading packet body of length %d\n", len);
 	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
@@ -876,14 +922,69 @@ read_packet:
 		}
 	}
 
+		// Note that we don't check the header here as the body may be
+		// split across several function invocations.
+	if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->m_recv_md_ctx && (p_sock->_bytes_recvd < 1024*1024)) {
+	/*	if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), m_tmp->get_ptr(), m_tmp->num_untouched())) {
+			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
+			return false;
+	        }
+		else {
+			dprintf(D_NETWORK, "AESGCM: Recv body digest added %u bytes \n", m_tmp->num_untouched());
+		}
+	*/}
+
 	if (p_sock->get_encryption() && p_sock->get_crypto()->protocol() == CONDOR_AESGCM) {
 		auto crypt = static_cast<Condor_Crypt_AESGCM*>(p_sock->get_crypto());
 		int length = m_tmp->num_untouched();
 		Buf new_buf(p_sock, length);
 		new_buf.alloc_buf();
+		unsigned char *aad_data = reinterpret_cast<unsigned char *>(hdr);
+		int aad_len = header_size;
+		std::vector<unsigned char> aad_with_digest;
+		if (!p_sock->m_finished_recv_header) {
+			p_sock->m_finished_recv_header = true;
+			unsigned md_size = EVP_MD_size(EVP_sha256());
+			aad_len = 2*md_size + header_size;
+			aad_with_digest.reserve(aad_len);
+			aad_data = &aad_with_digest[0];
+			if (!p_sock->m_final_recv_header) {
+				if (1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data, &md_size)) {
+					dprintf(D_NETWORK, "IO: Failed to compute final received message digest.\n");
+					return false;
+				}
+				p_sock->m_final_recv_header = true;
+				p_sock->m_final_mds.reserve(2*md_size);
+				memcpy(&p_sock->m_final_mds[0] + md_size, aad_data, md_size);
+			} else {
+				memcpy(aad_data, &p_sock->m_final_mds[0] + md_size, md_size);
+			}
+			if (!p_sock->m_final_send_header) {
+				if (p_sock->m_send_md_ctx &&
+					(1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data + md_size, &md_size)))
+				{
+					dprintf(D_NETWORK, "IO: Failed to compute final send message digest.\n");
+					return false;
+				} else if (!p_sock->m_send_md_ctx) {
+					memset(aad_data + md_size, '\0', md_size);
+					dprintf(D_NETWORK, "Setting second digest in AAD to %u 0's\n", md_size);
+				} else {
+					dprintf(D_NETWORK, "Successfully set second digest in AAD\n");
+				}
+				p_sock->m_final_send_header = true;
+				p_sock->m_final_mds.reserve(2*md_size);
+				memcpy(&p_sock->m_final_mds[0], aad_data + md_size, md_size);
+			} else {
+				memcpy(aad_data + md_size, &p_sock->m_final_mds[0], md_size);
+			}
+			memcpy(aad_data + 2*md_size, hdr, header_size);
+			char hex[3*(32*2 + 5) + 1];
+			dprintf(D_NETWORK, "Expecting AAD with handshake digest %s\n",
+				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
+		}
 		if (!crypt->decrypt(
-			reinterpret_cast<unsigned char *>(hdr),
-			header_size,
+			aad_data,
+			aad_len,
 			static_cast<unsigned char *>(m_tmp->get_ptr()),
 			m_tmp->num_untouched(),
 			static_cast<unsigned char *>(new_buf.get_ptr()),
@@ -894,6 +995,15 @@ read_packet:
 		}
 		m_tmp->swap(new_buf);
 		m_tmp->truncate(length);
+	}
+
+		// For non-AES-GCM encryption or unexpectedly large headers, release the memory...
+	if (p_sock->m_recv_md_ctx && ((p_sock->get_encryption() && p_sock->get_crypto()->protocol() != CONDOR_AESGCM) ||
+		(p_sock->m_finished_recv_header && p_sock->m_finished_send_header) || p_sock->_bytes_sent > 1024*1024))
+	{
+		p_sock->m_finished_recv_header = true;
+		p_sock->m_recv_md_ctx.reset();
+		dprintf(D_NETWORK, "Resetting Header for recv.\n");
 	}
 
         // Now, check MD
@@ -998,20 +1108,92 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 	hdr[0] = (char) end;
+	ns = buf.num_used() - header_size;
+	len = (int) htonl(ns);
+	memcpy(&hdr[1], &len, 4);
+
+	if (!p_sock->get_encryption() && !p_sock->m_finished_send_header && p_sock->_bytes_sent < 1024*1024) {
+		if (!p_sock->m_send_md_ctx) {
+			p_sock->m_send_md_ctx.reset(EVP_MD_CTX_create());
+			if (!p_sock->m_send_md_ctx) {
+				dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
+				return false;
+			}
+			if (1 != EVP_DigestInit_ex(p_sock->m_send_md_ctx.get(), EVP_sha256(), NULL)) {
+				dprintf(D_NETWORK, "IO: Failed to initialize SHA-256 context.\n");
+				return false;
+			}
+		}
+		if (1 != EVP_DigestUpdate(p_sock->m_send_md_ctx.get(), hdr, header_size)) {
+			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
+			return false;
+		}
+		char hex[3*5 + 1];
+		dprintf(D_NETWORK, "Send Header contents: %s\n",
+			debug_hex_dump(hex, reinterpret_cast<char*>(hdr), header_size));
+/*
+		if (1 != EVP_DigestUpdate(p_sock->m_send_md_ctx.get(), buf.get_ptr(), buf.num_untouched())) {
+			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
+			return false;
+		}
+*/		dprintf(D_NETWORK, "AESGCM: Send digest added %u + %d bytes \n", header_size, buf.num_untouched());
+	}
 
 	if (p_sock->get_encryption() && p_sock->get_crypto()->protocol() == CONDOR_AESGCM) {
 		auto cipher_sz = p_sock->ciphertext_size(buf.num_untouched());
 		ns = cipher_sz;
 		len = (int) htonl(ns);
-		memcpy(&hdr[1], &len, 4);
 
 		buf.grow_buf(cipher_sz);
                 auto crypt = static_cast<Condor_Crypt_AESGCM*>(p_sock->get_crypto());
 		Buf new_buf(p_sock, cipher_sz + header_size);
 		new_buf.alloc_buf();
+		memcpy(&hdr[1], &len, 4);
+		unsigned char *aad_data = reinterpret_cast<unsigned char *>(hdr);
+		int aad_len = header_size;
+		std::vector<unsigned char> aad_with_digest;
+		if (!p_sock->m_finished_send_header) {
+			p_sock->m_finished_send_header = true;
+			unsigned md_size = EVP_MD_size(EVP_sha256());
+			aad_len = 2*md_size + header_size;
+			aad_with_digest.reserve(aad_len);
+			aad_data = &aad_with_digest[0];
+			if (!p_sock->m_final_send_header) {
+				if (1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data, &md_size)) {
+					dprintf(D_NETWORK, "IO: Failed to compute final message digest.\n");
+					return false;
+				}
+				p_sock->m_final_send_header = true;
+				p_sock->m_final_mds.reserve(2*md_size);
+				memcpy(&p_sock->m_final_mds[0], aad_data, md_size);
+			} else {
+				memcpy(aad_data, &p_sock->m_final_mds[0], md_size);
+			}
+			if (!p_sock->m_final_recv_header) {
+				if (p_sock->m_recv_md_ctx.get() &&
+						(1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data + md_size, &md_size)))
+				{
+					dprintf(D_NETWORK, "IO: Failed to compute final receive message digest.\n");
+					return false;
+				} else if (!p_sock->m_recv_md_ctx) {
+					memset(aad_data + md_size, '\0', md_size);
+				} else {
+					dprintf(D_NETWORK, "Successfully set second digest in AAD when sending\n");
+				}
+				p_sock->m_final_recv_header = true;
+				p_sock->m_final_mds.reserve(2*md_size);
+				memcpy(&p_sock->m_final_mds[0] + md_size, aad_data + md_size, md_size);
+			} else {
+				memcpy(aad_data + md_size, &p_sock->m_final_mds[0] + md_size, md_size);
+			}
+			memcpy(aad_data + 2*md_size, hdr, header_size);
+			char hex[3*(32*2 + 5) + 1];
+			dprintf(D_NETWORK, "Sending AAD with handshake digest %s\n",
+				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
+		}
 		if (!crypt->encrypt(
-			reinterpret_cast<unsigned char *>(hdr),
-			header_size,
+			aad_data,
+			aad_len,
                         static_cast<unsigned char *>(buf.get_ptr()),
 			buf.num_untouched(),
 			static_cast<unsigned char *>(new_buf.get_ptr()) + header_size,
@@ -1022,10 +1204,14 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 		}
 		buf.swap(new_buf);
 		buf.truncate(cipher_sz + header_size);
-	} else {
-		ns = buf.num_used() - header_size;
-		len = (int) htonl(ns);
-		memcpy(&hdr[1], &len, 4);
+	}
+
+		// For non-AES-GCM encryption or unexpectedly large headers, release the memory...
+	if (p_sock->m_send_md_ctx && ((p_sock->get_encryption() && p_sock->get_crypto()->protocol() != CONDOR_AESGCM) ||
+		(p_sock->m_finished_recv_header && p_sock->m_finished_send_header) || p_sock->_bytes_sent > 1024*1024)) {
+		p_sock->m_finished_send_header = true;
+		p_sock->m_send_md_ctx.reset();
+		dprintf(D_NETWORK, "Resetting Header for send.\n");
 	}
 
 	if (mode_ != MD_OFF) {

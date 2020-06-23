@@ -159,6 +159,8 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 		return false;
 	}
 
+	static_cast<ReliSock*>(sock)->resetHeaderMD();
+
 	dprintf(D_FULLDEBUG,
 			"SharedPortClient: sent connection request to %s for shared port id %s\n",
 			sock->peer_description(), shared_port_id);
