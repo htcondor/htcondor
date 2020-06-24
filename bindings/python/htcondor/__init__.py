@@ -46,7 +46,6 @@ Neither the environment variable CONDOR_CONFIG, /etc/condor/,
         warnings.warn(message)
 
 from .htcondor import *
-import htcondor.htchirp
 
 # get the version using regexp ideally, and fall back to basic string parsing
 import re as _re
