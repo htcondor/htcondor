@@ -94,6 +94,7 @@ Submitting Jobs
 Interacting with Negotiators
 ----------------------------
 
+.. deprecated:: 8.9.8
 .. autoclass:: Negotiator
 
    .. automethod:: deleteUser
@@ -195,7 +196,6 @@ HTCondor Configuration
 
    .. automethod:: refresh
 
-
 .. autofunction:: platform
 .. autofunction:: version
 
@@ -220,10 +220,6 @@ Esoteric Functionality
 
 .. autofunction:: set_subsystem
 .. autoclass:: SubsystemType
-
-.. .. autofunction:: lock
-.. .. autoclass:: FileLock
-.. .. autoclass:: LockType
 
 .. _python-bindings-thread-safety:
 

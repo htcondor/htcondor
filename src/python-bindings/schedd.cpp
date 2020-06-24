@@ -3614,18 +3614,25 @@ void export_schedd()
         .def(boost::python::init<>(boost::python::args("self")))
         .def("query", &Schedd::query, query_overloads(
             R"C0ND0R(
-            Query the ``condor_schedd`` daemon for jobs.
+            Query the ``condor_schedd`` daemon for job ads.
 
-            .. warning:: This returns a *list* of :class:`~classad.ClassAd` objects, meaning all results must
-                be buffered in memory.  This may be memory-intensive for large responses; we strongly recommend
-                to utilize the :meth:`xquery`
+            .. warning::
 
-            :param constraint: Query constraint; only jobs matching this constraint will be returned; defaults to ``'true'``.
+                This returns a *list* of :class:`~classad.ClassAd` objects,
+                meaning all results must be held in memory simultaneously.
+                This may be memory-intensive for queries that return
+                many and/or large jobs ads.
+                If you are retrieving many large ads, consider using
+                :meth:`xquery` instead to reduce memory requirements.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                Defaults to ``'true'``, which means all jobs will be returned.
             :type constraint: str or :class:`~classad.ExprTree`
-            :param attr_list: Attributes for the ``condor_schedd`` daemon to project along.
-                At least the attributes in this list will be returned.
-                The default behavior is to return all attributes.
-            :type attr_list: list[str]
+            :param projection: Attributes that will be returned for each job in the query.
+                At least the attributes in this list will be returned, but additional ones may be returned as well.
+                An empty list (the default) returns all attributes.
+            :type projection: list[str]
             :param callback: A callable object; if provided, it will be invoked for each ClassAd.
                 The return value (if not ``None``) will be added to the returned list instead of the ad.
             :param int limit: The maximum number of ads to return; the default (``-1``) is to return all ads.
@@ -3635,11 +3642,75 @@ void export_schedd()
             :rtype: list[:class:`~classad.ClassAd`]
             )C0ND0R",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
+            (boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #endif
             ))
+        .def("xquery", &Schedd::xquery,
+            R"C0ND0R(
+            Query the ``condor_schedd`` daemon for job ads.
+
+            .. warning::
+
+                This returns an *iterator* of :class:`~classad.ClassAd` objects,
+                which means you may not need to hold all of the ads returned by
+                the query in memory simultaneously.
+                However, this method holds a connection open to the schedd,
+                and a fork of the schedd will remain active, until you finish
+                iterating.
+                If you are **not** retrieving many large ads, consider using
+                :meth:`query` instead to reduce load on the schedd.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                Defaults to ``'true'``, which means all jobs will be returned.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: Attributes that will be returned for each job in the query.
+                At least the attributes in this list will be returned, but additional ones may be returned as well.
+                An empty list (the default) returns all attributes.
+            :type projection: list[str]
+            :param int limit: A limit on the number of matches to return.  The default (``-1``) indicates all
+                matching jobs should be returned.
+            :param opts: Additional flags for the query, from :class:`QueryOpts`.
+            :type opts: :class:`QueryOpts`
+            :param str name: A tag name for the returned query iterator. This string will always be
+                returned from the :meth:`QueryIterator.tag` method of the returned iterator.
+                The default value is the ``condor_schedd``'s name. This tag is useful to identify
+                different queries when using the :func:`poll` function.
+            :return: An iterator for the matching job ads
+            :rtype: :class:`~htcondor.QueryIterator`
+            )C0ND0R",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
+#else
+            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
+#endif
+            )
+        .def("history", &Schedd::history,
+            R"C0ND0R(
+            Fetch history records from the ``condor_schedd`` daemon.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                Defaults to ``'true'``, which means all jobs will be returned.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: Attributes that will be returned for each job in the query.
+                At least the attributes in this list will be returned, but additional ones may be returned as well.
+                An empty list (the default) returns all attributes.
+            :type projection: list[str]
+            :param int match: An limit on the number of jobs to include; the default (``-1``)
+                indicates to return all matching jobs.
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
+#if BOOST_VERSION >= 103400
+             (boost::python::arg("self"),
+#endif
+             boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+             boost::python::arg("since")=boost::python::object())
+            )
         .def("act", &Schedd::actOnJobs,
             R"C0ND0R(
             Change status of job(s) in the ``condor_schedd`` daemon. The return value is a ClassAd object
@@ -3777,28 +3848,6 @@ void export_schedd()
             Send reschedule command to the schedd.
             )C0ND0R",
             boost::python::args("self"))
-        .def("history", &Schedd::history,
-            R"C0ND0R(
-            Fetch history records from the ``condor_schedd`` daemon.
-
-            :param requirements: Query constraint; only jobs matching this constraint will be returned;
-                defaults to ``'true'``.
-            :type constraint: str or :class:`class.ExprTree`
-            :param projection: Attributes that are to be included for each returned job.
-                The empty list causes all attributes to be included.
-            :type projection: list[str]
-            :param int match: An limit on the number of jobs to include; the default (``-1``)
-                indicates to return all matching jobs.
-            :return: All matching ads in the Schedd history, with attributes according to the
-                ``projection`` keyword.
-            :rtype: :class:`HistoryIterator`
-            )C0ND0R",
-#if BOOST_VERSION >= 103400
-             (boost::python::arg("self"),
-#endif
-             boost::python::arg("requirements"), boost::python::arg("projection"), boost::python::arg("match")=-1,
-             boost::python::arg("since")=boost::python::object())
-            )
         .def("refreshGSIProxy", &Schedd::refreshGSIProxy,
             R"C0ND0R(
             Refresh the GSI proxy of a job; the job's proxy will be replaced the contents
@@ -3816,33 +3865,6 @@ void export_schedd()
                 ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``.
             )C0ND0R",
             boost::python::args("self", "cluster", "proc", "proxy_filename", "lifetime"))
-        .def("xquery", &Schedd::xquery,
-            R"C0ND0R(
-            Query the ``condor_schedd`` daemon for jobs.
-
-            As opposed to :meth:`query`, this returns an *iterator*, meaning only one ad is buffered in memory at a time.
-
-            :param requirements: provides a constraint for filtering out jobs. It defaults to ``'true'``.
-            :type requirements: str or :class:`~classad.ExprTree`
-            :param projection: The attributes to return; an empty list (the default) signifies all attributes.
-            :type projection: list[str]
-            :param int limit: A limit on the number of matches to return.  The default (``-1``) indicates all
-                matching jobs should be returned.
-            :param opts: Additional flags for the query, from :class:`QueryOpts`.
-            :type opts: :class:`QueryOpts`
-            :param str name: A tag name for the returned query iterator. This string will always be
-                returned from the :meth:`QueryIterator.tag` method of the returned iterator.
-                The default value is the ``condor_schedd``'s name. This tag is useful to identify
-                different queries when using the :func:`poll` function.
-            :return: An iterator for the matching job ads
-            :rtype: :class:`~htcondor.QueryIterator`
-            )C0ND0R",
-#if BOOST_VERSION < 103400
-            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
-#else
-            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
-#endif
-            )
         .def("negotiate", &Schedd::negotiate, boost::python::with_custodian_and_ward_postcall<1, 0>(),
             R"C0ND0R(
             Begin a negotiation cycle with the remote schedd for a given user.
