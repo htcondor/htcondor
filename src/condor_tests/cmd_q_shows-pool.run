@@ -63,6 +63,7 @@ if($iswindows) {
 }
 
 my $sheddoneappend_condor_config = '
+	SHARED_PORT_PORT = 0
 	DAEMON_LIST = MASTER,SCHEDD,STARTD
 	MASTER_NAME = master_scheddone
 	SCHEDD_NAME = master_scheddone_schd
