@@ -689,27 +689,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 #endif
 	}
 
-	// plugin setup
-
 	// get plugin configuration (enabled/disabled)
 	DoPluginConfiguration();
 
-	// don't leak even if SimpleInit gets called more than once
-	if (plugin_table) {
-		delete plugin_table;
-		plugin_table = NULL;
-	}
-
-	// are there custom job plugins?
+	// if there are job plugins, add them to the list of input files.
 	CondorError e;
-	InitializeJobPlugins(*Ad, e, *InputFiles);
-	if (e.code()) {
-		dprintf(D_ALWAYS, "WARNING: InitializeJobPlugins returned: %s\n", e.getFullText().c_str());
-		// TODO: should probably be fatal if job plugins failed (since
-		// the job will certainly need them), but not if system plugins
-		// failed (since they might not be used by job).  job will fail
-		// later during transfer, so for now it is not fatal.
-	}
+	AddJobPluginsToInputFiles(*Ad, e, *InputFiles);
 
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
@@ -969,6 +954,13 @@ FileTransfer::Init(
 			NULL, priv, m_use_file_catalog ) )
 	{
 		return 0;
+	}
+
+		// It is important that we call SimpleInit above before calling
+		// InitializeJobPlugins because that sets up the plugin config
+	if(IsClient()) {
+		CondorError e;
+		InitializeJobPlugins(*Ad, e);
 	}
 
 		// At this point, we'd better have a transfer socket
@@ -5478,7 +5470,7 @@ MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const ch
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		InitializePlugins(error);
+		InitializeSystemPlugins(error);
 	}
 
 	// Hashtable returns zero if found.
@@ -5528,7 +5520,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		InitializePlugins(e);
+		InitializeSystemPlugins(e);
 	}
 
 	// look up the method in our hash table
@@ -5881,9 +5873,11 @@ void FileTransfer::DoPluginConfiguration() {
 MyString FileTransfer::GetSupportedMethods(CondorError &e) {
 	MyString method_list;
 
+	DoPluginConfiguration();
+
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
-		InitializePlugins(e);
+		InitializeSystemPlugins(e);
 	}
 
 	// iterate plugin_table if it existssrc
@@ -5907,10 +5901,7 @@ MyString FileTransfer::GetSupportedMethods(CondorError &e) {
 	return method_list;
 }
 
-int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles)
-{
-	// make sure we're all configured
-	DoPluginConfiguration();
+int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) {
 
 	if ( ! I_support_filetransfer_plugins ) {
 		return 0;
@@ -5921,42 +5912,59 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, Strin
 		return 0;
 	}
 
-	// only the starter (client) side runs plugins, to fetch input or store
-	// output.  avoid probing all the plugins if we are not going to use
-	// them.
-	if(IsClient()) {
-		// create the plugin_table with the system-defined plugins as a base
-		InitializePlugins(e);
-	}
-
 	StringTokenIterator plugins(job_plugins, 100, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
-		const char * colon = strchr(plug, '=');
-		if (colon) {
-			MyString methods; methods.set(plug, colon - plug);
-
+		const char * equals = strchr(plug, '=');
+		if (equals) {
 			// add the plugin to the front of the input files list
-			MyString plugin_path(colon + 1);
+			MyString plugin_path(equals + 1);
 			plugin_path.trim();
 			if (! infiles.file_contains(plugin_path.c_str())) {
 				infiles.insert(plugin_path.c_str());
 			}
-
-			// shadow side (server) doesn't need or use plugins so
-			// only do this on the starter (client) side.
-			if(IsClient()) {
-				// use the file basename as the plugin name, so that when we invoke it
-				// we will invoke the copy in the input sandbox
-				MyString plugin(condor_basename(plugin_path.c_str()));
-
-				InsertPluginMappings(methods, plugin);
-				plugins_multifile_support[plugin] = true;
-				plugins_from_job[plugin.c_str()] = true;
-				multifile_plugins_enabled = true;
-			}
 		} else {
-			dprintf(D_ALWAYS, "FILETRANSFER: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
-			e.pushf("FILETRANSFER", 1, "no '=' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
+			dprintf(D_ALWAYS, "FILETRANSFER: AJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
+			e.pushf("FILETRANSFER", 1, "AJP: no '=' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
+		}
+	}
+
+	return 0;
+}
+
+int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
+{
+	if ( ! I_support_filetransfer_plugins ) {
+		return 0;
+	}
+
+	std::string job_plugins;
+	if ( ! job.LookupString(ATTR_TRANSFER_PLUGINS, job_plugins)) {
+		return 0;
+	}
+
+	// start with the system table
+	InitializeSystemPlugins(e);
+
+	// process the user plugins
+	StringTokenIterator plugins(job_plugins, 100, ";");
+	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
+		const char * equals = strchr(plug, '=');
+		if (equals) {
+			MyString methods; methods.set(plug, equals - plug);
+
+			// use the file basename as the plugin name, so that when we invoke it
+			// we will invoke the copy in the input sandbox
+			MyString plugin_path(equals + 1);
+			plugin_path.trim();
+			MyString plugin(condor_basename(plugin_path.c_str()));
+
+			InsertPluginMappings(methods, plugin);
+			plugins_multifile_support[plugin] = true;
+			plugins_from_job[plugin.c_str()] = true;
+			multifile_plugins_enabled = true;
+		} else {
+			dprintf(D_ALWAYS, "FILETRANSFER: IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
+			e.pushf("FILETRANSFER", 1, "IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'", plug);
 		}
 	}
 
@@ -5964,16 +5972,13 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, Strin
 }
 
 
-int FileTransfer::InitializePlugins(CondorError &e) {
+int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 
 	// don't leak even if Initialize gets called more than once
 	if (plugin_table) {
 		delete plugin_table;
 		plugin_table = NULL;
 	}
-
-	// use current config
-	DoPluginConfiguration();
 
 	// see if this is explicitly disabled
 	if (!I_support_filetransfer_plugins) {
