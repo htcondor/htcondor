@@ -284,8 +284,8 @@ struct _simulated_cuda_config {
 static const struct _simulated_cuda_device GeForceGTX480 = { "GeForce GTX 480", 0x20, 1400*1000, 15, 0, 1536*1024*1024 };
 static const struct _simulated_cuda_device GeForceGT330 = { "GeForce GT 330",  0x12, 1340*1000, 12,  0, 1024*1024*1024 };
 static const struct _simulated_cuda_config aSimConfig[] = {
-	{6000, 5050, 1, &GeForceGT330 },
-	{4020, 4010, 2, &GeForceGTX480 },
+	{6000, 1, &GeForceGT330 },
+	{4020, 2, &GeForceGTX480 },
 };
 const int sim_index_max = (int)(sizeof(aSimConfig)/sizeof(aSimConfig[0]));
 
