@@ -73,10 +73,12 @@ def deprecate_8_9_8():
 
     # FIXME: deprecate htcondor.EntryType enum
 
-    deprecate_class(
-        "LogReader is deprecated since v8.9.8 and will be removed in a future release.",
-        htcondor.LogReader,
-    )
+    # This didn't exist on Windows, so trying to deprecate it throws AttributeError.
+    if hasattr(htcondor, "LogReader"):
+        deprecate_class(
+            "LogReader is deprecated since v8.9.8 and will be removed in a future release.",
+            htcondor.LogReader,
+        )
 
     ## from python-bindings/event.cpp
 
