@@ -428,6 +428,9 @@ class ProcAPI {
       @see procInfo
   */
   static int getProcInfo ( pid_t pid, piPTR& pi, int &status );
+#if defined(DARWIN)
+  static int getProcInfo_impl ( pid_t pid, piPTR& pi, int &status );
+#endif
 
   /** Feed this function a procInfo struct and it'll print it out for you. 
 
