@@ -26,6 +26,9 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
 :doc:`api/classad`
     Documentation for the public API of :mod:`classad`.
 
+:doc:`api/htchirp`
+     Documentation for :mod:`htcondor.htchirp`.
+
 
 .. toctree::
    :maxdepth: 2
@@ -37,3 +40,4 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
    advanced/index
    api/htcondor
    api/classad
+   api/htchirp
