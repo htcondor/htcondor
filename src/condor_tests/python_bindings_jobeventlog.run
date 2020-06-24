@@ -6,9 +6,9 @@ import time
 
 import htcondor
 
-from pytest.CondorTest import CondorTest
-from pytest.Utils import Utils
-from pytest.Globals import *
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Utils import Utils
+from pytest_old.Globals import *
 
 #
 # Test the JobEventLog code.

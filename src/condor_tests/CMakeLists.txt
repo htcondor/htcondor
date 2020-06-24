@@ -193,6 +193,9 @@ if (BUILD_TESTING)
 		condor_pl_test (cmd_now "condor_now functional tests" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
 		condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 		condor_pl_test(lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
+
+		# htcondor-dags test suite
+		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "core;quick;full;quicknolink")
 	endif()
 
 	if(WITH_GANGLIA)
