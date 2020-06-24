@@ -2677,7 +2677,16 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			if( multifile_plugins_enabled ) {
+			if( !I_support_filetransfer_plugins ) {
+				// we shouldn't get here, because a job shouldn't match to a machine that won't
+				// support URL transfers if the job needs URL transfers.  but if we do get here,
+				// give a nice error message.
+				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer %s.", URL.Value());
+				dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", URL.Value());
+				rc = GET_FILE_PLUGIN_FAILED;
+			}
+
+			if( (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
@@ -2711,7 +2720,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			}
 
-			if( !isDeferredTransfer ) {
+			if( (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
 				// If transfer failed, set rc to error code that ReliSock recognizes
