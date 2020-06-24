@@ -87,7 +87,9 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
-	printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	if(param_boolean("ENABLE_URL_TRANSFERS", true)) {
+		printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	}
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
