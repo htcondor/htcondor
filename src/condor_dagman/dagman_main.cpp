@@ -592,7 +592,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 // this gets called by DC when DAGMan receives a SIGUSR1 -- which,
 // assuming the DAGMan submit file was properly written, is the signal
 // the schedd will send if the DAGMan job is removed from the queue
-int main_shutdown_remove(Service *, int) {
+int main_shutdown_remove(int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
 	// We don't remove Condor node jobs here because the schedd will
 	// automatically remove them itself.
@@ -642,12 +642,12 @@ void main_init (int argc, char ** const argv) {
 
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
-                                 (SignalHandler) main_shutdown_remove,
-                                 "main_shutdown_remove", NULL);
+                                  main_shutdown_remove,
+                                 "main_shutdown_remove");
 
 /****** FOR TESTING *******
     daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
-                                 (SignalHandler) main_testing_stub,
+                                  main_testing_stub,
                                  "main_testing_stub", NULL);
 ****** FOR TESTING ********/
     debug_progname = condor_basename(argv[0]);
@@ -896,6 +896,9 @@ void main_init (int argc, char ** const argv) {
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
+
+	dagman._dagmanClassad->Initialize( dagman.maxJobs, dagman.maxIdle, 
+				dagman.maxPreScripts, dagman.maxPostScripts );
 
 	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
 				dagman._batchName );
@@ -1552,23 +1555,44 @@ print_status( bool forceScheddUpdate ) {
 
 	dagman.PublishStats();
 
-	// Set up a static double to track the last schedd update time. On the first
-	// iteration we'll set it to the current time. On subsequent iterations it 
-	// will only be updated when we call a schedd update.
-	double currentTime = condor_gettimestamp_double();
-	static double scheddLastUpdateTime = 0.0;
-	if ( scheddLastUpdateTime <= 0.0 ) {
-		scheddLastUpdateTime = currentTime;
+	if (forceScheddUpdate) {
+		jobad_update();
 	}
-	
-	if( forceScheddUpdate || ( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
-		if ( dagman._dagmanClassad ) {
-			dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-						ready, failed, unready, dagman.dag->_dagStatus,
-						dagman.dag->Recovery(), dagman._dagmanStats );
-		}
-		scheddLastUpdateTime = currentTime;
+
+}
+
+/**
+	Two-way job ad update.
+	First, update the job ad with new information from local dagman
+	Next, update local dagman with any new information from the job ad
+*/
+void
+jobad_update() {
+
+	int total = dagman.dag->NumNodes( true );
+	int done = dagman.dag->NumNodesDone( true );
+	int pre = dagman.dag->PreRunNodeCount();
+	int submitted = dagman.dag->NumJobsSubmitted();
+	int post = dagman.dag->PostRunNodeCount();
+	int ready =  dagman.dag->NumNodesReady();
+	int failed = dagman.dag->NumNodesFailed();
+	int unready = dagman.dag->NumNodesUnready( true );
+
+	if ( dagman._dagmanClassad ) {
+		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
+					ready, failed, unready, dagman.dag->_dagStatus,
+					dagman.dag->Recovery(), dagman._dagmanStats,
+					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
+					dagman.maxPostScripts );
+
+		// It's possible that certain DAGMan attributes were changed in the job ad.
+		// If this happened, update the internal values in our dagman data structure.
+		dagman.dag->SetMaxIdleJobProcs(dagman.maxIdle);
+		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
+		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
+		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
 	}
+
 }
 
 void condor_event_timer () {
@@ -1677,6 +1701,17 @@ void condor_event_timer () {
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();
 		}
+	}
+
+	// Periodically perform a two-way update with the job ad
+	double currentTime = condor_gettimestamp_double();
+	static double scheddLastUpdateTime = 0.0;
+	if ( scheddLastUpdateTime <= 0.0 ) {
+		scheddLastUpdateTime = currentTime;
+	}
+	if( ( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
+		jobad_update();
+		scheddLastUpdateTime = currentTime;
 	}
 
 	dagman.dag->DumpNodeStatus( false, false );

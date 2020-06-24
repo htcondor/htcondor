@@ -501,9 +501,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		// a daemoncore command int!  [not ever likely, since CEDAR ints are
 		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
 		// with a more foolproof method.
+		// Note: We no longer support soap, but this peek is part of the
+		//   code below that checks if this is a command that shared port
+		//   should transparently hand off to the collector.
 	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( m_is_tcp ) {
+	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
 			// TODO Should we be ignoring the return value of condor_read?
 		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
@@ -1032,6 +1035,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		} // end !using_cookie
 	} // end DC_AUTHENTICATE
 
+	dprintf( D_DAEMONCORE, "DAEMONCORE: Leaving ReadCommand(m_req==%i)\n", m_req);
+
 	// This path means they were using "old-school" commands.  No DC_AUTHENTICATE,
 	// just raw command numbers.  We still want to do IPVerify on these however, so
 	// skip all the Authentication and Crypto and go straight to that phase.
@@ -1387,14 +1392,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						break;
 					}
 				}
+				bool has_allow_perm = !strcmp(perm_cstr, "ALLOW");
 					// If there was no match, iterate through the alternates table.
 				if (!found_limit && m_comTable[m_cmd_index].alternate_perm) {
 					for (auto perm : *m_comTable[m_cmd_index].alternate_perm) {
 						auto perm_cstr = PermString(perm);
 						const char *authz_name;
 						authz_limits.rewind();
+						has_allow_perm |= !strcmp(perm_cstr, "ALLOW");
 						while ( (authz_name = authz_limits.next()) ) {
-							dprintf(D_ALWAYS, "Checking token limit %s\n", perm_cstr);
+							dprintf(D_SECURITY, "Checking limit in token (%s) for permission %s\n", authz_name, perm_cstr);
 							if (!strcmp(perm_cstr, authz_name)) {
 								found_limit = true;
 								break;
@@ -1403,7 +1410,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						if (found_limit) {break;}
 					}
 				}
-				if (!found_limit && strcmp(perm_cstr, "ALLOW")) {
+				if (!found_limit && !has_allow_perm) {
 					can_attempt = false;
 				}
 			}

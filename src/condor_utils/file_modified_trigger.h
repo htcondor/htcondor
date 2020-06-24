@@ -28,9 +28,8 @@ class FileModifiedTrigger {
 		bool isInitialized( void ) const { return initialized; }
 		void releaseResources();
 
-		// Timeout is in milliseconds.  Returns -1 if invalid, 0 if timed
-		// out, 1 if file has changed (like poll()).
-		int wait( int timeout = -1 );
+		// Returns -1 if invalid, 0 if timed out, 1 if file has changed.
+		int wait( int timeout_in_ms = -1 );
 
 	private:
 		// Only needed for better log messages.
@@ -40,13 +39,15 @@ class FileModifiedTrigger {
 		FileModifiedTrigger( const FileModifiedTrigger & fmt );
 		FileModifiedTrigger & operator =( const FileModifiedTrigger & fmt );
 
+		// Returns -1 if invalid, 0 if timed out, 1 if file has changed.
+		int notify_or_sleep( int timeout_in_ms );
+
 #if defined( LINUX )
 		int read_inotify_events( void );
 		int inotify_fd;
-#else
+#endif
 		int statfd;
 		off_t lastSize;
-#endif
 };
 
 #endif

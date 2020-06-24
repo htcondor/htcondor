@@ -45,6 +45,8 @@
 #include "subsystem_info.h"
 #include "secure_file.h"
 #include "condor_secman.h"
+#include "compat_classad_util.h"
+#include "classad/exprTree.h"
 
 #include "condor_auth_passwd.h"
 
@@ -85,8 +87,6 @@ static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
         const EVP_MD *Hash, const EVP_MD *mgf1Hash, int sLen)
 { return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
 #endif
-
-bool Condor_Auth_Passwd::m_attempt_pool_password = true;
 
 GCC_DIAG_OFF(float-equal)
 GCC_DIAG_OFF(cast-qual)
@@ -158,7 +158,8 @@ bool findToken(const std::string &tokenfilename,
 		return false;
 	}
     for( std::string line; readLine( line, f.get(), false ); ) {
-        line.erase( line.length() - 1, 1 );
+		if (line.empty() || line[0] == '#') continue;
+		if (line[line.size()-1] == '\n') line.erase( line.length() - 1, 1 );
 		line.erase(line.begin(),
 			std::find_if(line.begin(),
 				line.end(),
@@ -384,12 +385,26 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_TOKEN),
     m_crypto(NULL),
+	m_client_status(0),
+	m_server_status(0),
+	m_ret_value(0),
+	m_sk({0,0,0,0,0,0}),
     m_version(version),
     m_k(NULL),
     m_k_prime(NULL),
     m_k_len(0),
-    m_k_prime_len(0)
+    m_k_prime_len(0),
+	m_state(ServerRec1)
 {
+	if (m_version == 2) {
+		std::string blacklist_param;
+		classad::ExprTree *expr = nullptr;
+		if (param(blacklist_param, "SEC_TOKEN_BLACKLIST_EXPR") &&
+			!ParseClassAdRvalExpr(blacklist_param.c_str(), expr))
+		{
+			m_token_blacklist_expr.reset(expr);
+		}
+	}
 }
 
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
@@ -440,7 +455,7 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		std::string shared_key;
 		CondorError err;
 		if (key_id == "POOL") {
-			std::unique_ptr<char> pool_passwd(getStoredCredential(POOL_PASSWORD_USERNAME, ""));
+			std::unique_ptr<char> pool_passwd(getStoredPassword(POOL_PASSWORD_USERNAME, ""));
 			if (!pool_passwd.get()) {
 				return nullptr;
 			}
@@ -466,7 +481,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordA = getStoredCredential(name,domain);
+	//TODO: the 'password here on Unix is actually the cred converted to base64. is that right?
+	passwordA = getStoredPassword(name,domain);
 	free(name);
 
 		// Split nameB into name and domain, then get password
@@ -477,7 +493,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordB = getStoredCredential(name,domain);
+	//TODO: the 'password' here on Unix is actually the cred converted to base64. is that right?
+	passwordB = getStoredPassword(name,domain);
 	free(name);
 
 		// If we failed to find either password, fail.
@@ -552,8 +569,10 @@ Condor_Auth_Passwd::fetchLogin()
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
 					std::string local_token;
+						// Note we don't log the token generation here as it is an ephemeral token
+						// used server-side to complete the secret generation process.
 					if (!Condor_Auth_Passwd::generate_token(identity, match_key,
-						authz_list, lifetime, local_token, &err))
+						authz_list, lifetime, local_token, 0, &err))
 					{
 						dprintf(D_SECURITY, "Failed to generate a token: %s\n",
 							err.getFullText().c_str());
@@ -883,6 +902,17 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 					return false;
 				}
 			}
+			dprintf(D_AUDIT, mySock_->getUniqueId(),
+				"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
+
+			if (isTokenBlacklisted(jwt)) {
+				dprintf(D_SECURITY, "User token with payload %s has been blacklisted.\n", jwt.get_payload().c_str());
+				free(ka);
+				free(kb);
+				free(seed_ka);
+				free(seed_kb);
+				return false;
+			}
 
 			const std::string& algo = jwt.get_algorithm();
 			if (algo == "HS256") {
@@ -928,6 +958,63 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 
     return true;
 }
+
+
+bool
+Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
+{
+	if (!m_token_blacklist_expr) {
+		return false;
+	}
+	classad::ClassAd ad;
+	auto claims = jwt.get_payload_claims();
+	for (const auto &pair : claims) {
+		bool inserted = true;
+		const auto &claim = pair.second;
+		switch (claim.get_type()) {
+		case jwt::claim::type::null:
+			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+			break;
+		case jwt::claim::type::boolean:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
+			break;
+		case jwt::claim::type::int64:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
+			break;
+		case jwt::claim::type::number:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
+			break;
+		case jwt::claim::type::string:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
+			break;
+		// TODO: these are not currently supported
+		case jwt::claim::type::array: // fallthrough
+		case jwt::claim::type::object: // fallthrough
+		default:
+			break;
+		}
+
+			// If, somehow, we can't build the ad, be paranoid,
+			// and assume blacklisted. "abundance of caution"
+		if (!inserted) {
+			return true;
+		}
+	}
+
+	classad::EvalState state;
+	state.SetScopes(&ad);
+	classad::Value val;
+	bool blacklisted = true;
+		// Out of an abundance of caution, if we fail to evaluate the
+		// expression or it doesn't evaluate to something boolean-like,
+		// we consider the token potentially suspect.
+	if (!m_token_blacklist_expr->Evaluate(state, val) ||
+		!val.IsBooleanValueEquiv(blacklisted)) {
+		return true;
+	}
+	return blacklisted;
+}
+
 
 void
 Condor_Auth_Passwd::setup_seed(unsigned char *ka, unsigned char *kb) 
@@ -1508,6 +1595,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	const std::vector<std::string> &authz_list,
 	long lifetime,
 	std::string &token,
+	int ident,
 	CondorError *err)
 {
 	std::string example_username(POOL_PASSWORD_USERNAME);
@@ -1565,10 +1653,20 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	if (lifetime >= 0) {
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
 	}
+		// Set a unique JTI so we can identify the token we issued later on.
+	std::unique_ptr<char,decltype(&::free)> hexkey( Condor_Crypt_Base::randomHexKey(16), free );
+	if (hexkey) {
+		jwt_builder.set_id(hexkey.get());
+	}
 
 	try {
 		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
 		token = jwt_token;
+		if (ident && IsDebugCategory( D_AUDIT )) {
+			// Annoyingly, there's no way to get the payload from the jwt_builder object.
+			auto decoded_jwt = jwt::decode(token);
+			dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
+		}
 	} catch (...) {
 		return false;
 	}
@@ -2698,8 +2796,6 @@ Condor_Auth_Passwd::key_strength_bytes() const
 bool
 Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
-	check_pool_password();
-
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
 	std::vector<std::string> creds;
 	CondorError err;
@@ -2719,12 +2815,11 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 }
 
 void
-Condor_Auth_Passwd::check_pool_password()
+Condor_Auth_Passwd::create_pool_password_if_needed()
 {
-		// Only attempt to drop the pool password once.
-	if (!m_attempt_pool_password) {return;}
-	m_attempt_pool_password = false;
+	// This method is invoked by DaemonCore upon startup and a reconfig.
 
+	// Currently only the Collector will generate a pool password by default...
 	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
 		return;
 	}
@@ -2762,7 +2857,12 @@ Condor_Auth_Passwd::check_pool_password()
 	}
 
 		// Write out the password.
-	write_password_file(pool_password.c_str(), password_buffer);
+	if (TRUE == write_password_file(pool_password.c_str(), password_buffer)) {
+		dprintf(D_ALWAYS, "Created a pool password in file %s\n", pool_password.c_str());
+	}
+	else {
+		dprintf(D_ALWAYS, "WARNING: Failed to create a pool password in file %s\n", pool_password.c_str());
+	}
 }
 
 

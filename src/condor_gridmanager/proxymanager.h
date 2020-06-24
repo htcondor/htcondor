@@ -106,7 +106,7 @@ void DeleteProxy (Proxy *& proxy);
 void DeleteMyProxyEntry (MyProxyEntry *& proxy);
 
 int RefreshProxyThruMyProxy (Proxy * proxy);
-int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus);
+int MyProxyGetDelegationReaper(int exitPid, int exitStatus);
 int GetMyProxyPasswordFromSchedD (int cluster_id, int proc_id, char ** password);
 extern int myproxyGetDelegationReaperId;
 

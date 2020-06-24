@@ -1,0 +1,670 @@
+diff --git a/externals/bundles/blahp/1.16.5.1/pbs_status.py b/externals/bundles/blahp/1.16.5.1/pbs_status.py
+index 1a6b48a..cf96a1a 100755
+--- a/externals/bundles/blahp/1.16.5.1/pbs_status.py
++++ b/externals/bundles/blahp/1.16.5.1/pbs_status.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ #  File:     pbs_status.py
+ #
+diff --git a/nmi_tools/condor_nmi_extract b/nmi_tools/condor_nmi_extract
+index 3fc95ae..d459c26 100755
+--- a/nmi_tools/condor_nmi_extract
++++ b/nmi_tools/condor_nmi_extract
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env python
++#! /usr/bin/env python3
+ import os
+ import re
+ import sys
+diff --git a/nmi_tools/glue/build/email_on_failure.py b/nmi_tools/glue/build/email_on_failure.py
+index b3a4cb9..ab8ce88 100755
+--- a/nmi_tools/glue/build/email_on_failure.py
++++ b/nmi_tools/glue/build/email_on_failure.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ # The purpose of this script is to email users when an automated build breaks.
+ # Caveats:
+diff --git a/src/annex/setup/upgrade-runtime.py b/src/annex/setup/upgrade-runtime.py
+index aa80b63..71de2da 100755
+--- a/src/annex/setup/upgrade-runtime.py
++++ b/src/annex/setup/upgrade-runtime.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ 
+ from __future__ import print_function
+ 
+diff --git a/src/azure_gahp/AzureGAHPServer.py b/src/azure_gahp/AzureGAHPServer.py
+index 1ff2910..bef5a33 100644
+--- a/src/azure_gahp/AzureGAHPServer.py
++++ b/src/azure_gahp/AzureGAHPServer.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python -u
++#!/usr/bin/env python3 -u
+ 
+ from __future__ import print_function
+ 
+diff --git a/src/condor_contrib/bosco/bosco_cluster b/src/condor_contrib/bosco/bosco_cluster
+index 82a0401..a5a7a17 100755
+--- a/src/condor_contrib/bosco/bosco_cluster
++++ b/src/condor_contrib/bosco/bosco_cluster
+@@ -321,7 +321,7 @@ check_reverse_connectivity() {
+     # Create tmp file for the python script to test connectivity
+     tmpfile=`mktemp -t tmpreversetest.XXXXXX`
+     cat << EOF > $tmpfile
+-#!/usr/bin/python
++#!/usr/bin/python3
+ import sys,socket
+ (host,port)=sys.argv[1].split(":")
+ s = socket.socket()
+diff --git a/src/condor_contrib/bosco/bosco_findplatform b/src/condor_contrib/bosco/bosco_findplatform
+index caccba1..af1e2c3 100755
+--- a/src/condor_contrib/bosco/bosco_findplatform
++++ b/src/condor_contrib/bosco/bosco_findplatform
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ #Marco Mambelli - first version 10/8/2012 
+ 
+ from __future__ import print_function
+diff --git a/src/condor_contrib/bosco/bosco_ssh_start b/src/condor_contrib/bosco/bosco_ssh_start
+index ead8870..2e51439 100755
+--- a/src/condor_contrib/bosco/bosco_ssh_start
++++ b/src/condor_contrib/bosco/bosco_ssh_start
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ from __future__ import print_function
+ 
+diff --git a/src/condor_contrib/bosco/htsub b/src/condor_contrib/bosco/htsub
+index 3edb6a9..cde2f5f 100755
+--- a/src/condor_contrib/bosco/htsub
++++ b/src/condor_contrib/bosco/htsub
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ """
+ htsub command to submit high throughput jobs via BOSCO/HTCondor:
+ http://jira.opensciencegrid.org/browse/CAMPUS-54
+diff --git a/src/condor_contrib/campus_factory/bin/glidein_creation b/src/condor_contrib/campus_factory/bin/glidein_creation
+index 3f99a5b..8067a71 100755
+--- a/src/condor_contrib/campus_factory/bin/glidein_creation
++++ b/src/condor_contrib/campus_factory/bin/glidein_creation
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ import warnings
+ warnings.filterwarnings("ignore", category=DeprecationWarning)
+diff --git a/src/condor_contrib/campus_factory/bin/runfactory b/src/condor_contrib/campus_factory/bin/runfactory
+index a2a9c5f..3af42cf 100755
+--- a/src/condor_contrib/campus_factory/bin/runfactory
++++ b/src/condor_contrib/campus_factory/bin/runfactory
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ from optparse import OptionParser
+ 
+ from campus_factory.Factory import Factory
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/sendAll.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/sendAll.py
+index 222a234..dccbe72 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/sendAll.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/sendAll.py
+@@ -1,4 +1,4 @@
+-#! /s/python-2.5/i386_rhel5/bin/python
++#! /s/python-2.5/i386_rhel5/bin/python3
+ #
+ # Starts a Skype File Transfer.
+ # The open file dialog is set to the current directory.
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/change_availability.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/change_availability.py
+index c4212f4..39adb4e 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/change_availability.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/change_availability.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Changes your Skype online status (availability).
+ #
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/chat_send_all.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/chat_send_all.py
+index 08d328a..12deb88 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/chat_send_all.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/chat_send_all.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import Skype4Py
+ import re
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/find_chat.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/find_chat.py
+index 696ed37..5843379 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/find_chat.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/find_chat.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Displays all multi-chats and allows to open them.
+ #
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/mood_to_twitter.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/mood_to_twitter.py
+index 1c52255..cd6910c 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/mood_to_twitter.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/mood_to_twitter.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Sends your own mood messages to Twitter.
+ #
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/msgSend.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/msgSend.py
+index b8e3113..76e8a38 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/msgSend.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/msgSend.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Starts a Skype File Transfer.
+ # The open file dialog is set to the current directory.
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/sendAll.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/sendAll.py
+index 8854f95..c848b43 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/sendAll.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/sendAll.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Starts a Skype File Transfer.
+ # The open file dialog is set to the current directory.
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_file.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_file.py
+index e022b7e..ea819b6 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_file.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_file.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Starts a Skype File Transfer.
+ # The open file dialog is set to the current directory.
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_sms.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_sms.py
+index f6e7787..b3653e8 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_sms.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/send_sms.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Sends a SMS with Skype.
+ # Uses the Skype4Py Skype API Wrapper. See https://developer.skype.com/wiki/Skype4Py
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/show_edited_chats.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/show_edited_chats.py
+index a150e7c..ae199e8 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/show_edited_chats.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/show_edited_chats.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Shows Skype edited chat messages
+ #
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/skype_api.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/skype_api.py
+index 0d9414d..c56f854 100755
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/skype_api.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/skype_api.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#! /usr/bin/python3
+ #
+ # Some tools to use the Skype Public API under Linux.
+ # Uses X11 as communication protocol. Tested with Skype version 1.4.
+diff --git a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/twitter.py b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/twitter.py
+index 9da7739..25af549 100644
+--- a/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/twitter.py
++++ b/src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/twitter.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ #
+ # Copyright 2007 Google Inc. All Rights Reserved.
+ 
+diff --git a/src/condor_contrib/plumage/test/plumage_accounting b/src/condor_contrib/plumage/test/plumage_accounting
+index d85f976..129207b 100755
+--- a/src/condor_contrib/plumage/test/plumage_accounting
++++ b/src/condor_contrib/plumage/test/plumage_accounting
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ # -*- coding: utf-8 -*-
+ #
+ # Copyright 2009-2012 Red Hat, Inc.
+diff --git a/src/condor_contrib/plumage/test/plumage_history b/src/condor_contrib/plumage/test/plumage_history
+index 3c01cf9..b68955b 100755
+--- a/src/condor_contrib/plumage/test/plumage_history
++++ b/src/condor_contrib/plumage/test/plumage_history
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ # -*- coding: utf-8 -*-
+ #
+ # Copyright 2009-2012 Red Hat, Inc.
+diff --git a/src/condor_contrib/plumage/test/plumage_scheduler b/src/condor_contrib/plumage/test/plumage_scheduler
+index 259e04c..d2a3846 100755
+--- a/src/condor_contrib/plumage/test/plumage_scheduler
++++ b/src/condor_contrib/plumage/test/plumage_scheduler
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ # -*- coding: utf-8 -*-
+ #
+ # Copyright 2009-2012 Red Hat, Inc.
+diff --git a/src/condor_contrib/plumage/test/plumage_stats b/src/condor_contrib/plumage/test/plumage_stats
+index 5372e65..be55014 100755
+--- a/src/condor_contrib/plumage/test/plumage_stats
++++ b/src/condor_contrib/plumage/test/plumage_stats
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ # -*- coding: utf-8 -*-
+ #
+ # Copyright 2009-2011 Red Hat, Inc.
+diff --git a/src/condor_contrib/plumage/test/plumage_utilization b/src/condor_contrib/plumage/test/plumage_utilization
+index 6235ade..b008019 100755
+--- a/src/condor_contrib/plumage/test/plumage_utilization
++++ b/src/condor_contrib/plumage/test/plumage_utilization
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ # -*- coding: utf-8 -*-
+ #
+ # Copyright 2009-2012 Red Hat, Inc.
+diff --git a/src/condor_examples/gluster_plugin.py b/src/condor_examples/gluster_plugin.py
+index d9c0fdc..fe94b19 100755
+--- a/src/condor_examples/gluster_plugin.py
++++ b/src/condor_examples/gluster_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import classad
+ import json
+diff --git a/src/condor_examples/master_wrapper b/src/condor_examples/master_wrapper
+index 72d9f47..0c1138f 100755
+--- a/src/condor_examples/master_wrapper
++++ b/src/condor_examples/master_wrapper
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env python
++#! /usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+diff --git a/src/condor_gridmanager/slurm_status.py b/src/condor_gridmanager/slurm_status.py
+index c13f7ee..0d1b693 100755
+--- a/src/condor_gridmanager/slurm_status.py
++++ b/src/condor_gridmanager/slurm_status.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ #  File:     slurm_status.py
+ #
+diff --git a/src/condor_job_router/condor_router_history b/src/condor_job_router/condor_router_history
+index 2b36844..963b2e7 100755
+--- a/src/condor_job_router/condor_router_history
++++ b/src/condor_job_router/condor_router_history
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+diff --git a/src/condor_scripts/box_plugin.py b/src/condor_scripts/box_plugin.py
+index 6dc5744..be91ed5 100755
+--- a/src/condor_scripts/box_plugin.py
++++ b/src/condor_scripts/box_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_scripts/classad_eval b/src/condor_scripts/classad_eval
+index b163dfc..ce99e42 100755
+--- a/src/condor_scripts/classad_eval
++++ b/src/condor_scripts/classad_eval
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ import sys
+ import classad
+diff --git a/src/condor_scripts/condor_top b/src/condor_scripts/condor_top
+index dc338ad..9c838c7 100755
+--- a/src/condor_scripts/condor_top
++++ b/src/condor_scripts/condor_top
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import htcondor
+ import classad
+diff --git a/src/condor_scripts/gdrive_plugin.py b/src/condor_scripts/gdrive_plugin.py
+index 986d96a..8ea93c3 100755
+--- a/src/condor_scripts/gdrive_plugin.py
++++ b/src/condor_scripts/gdrive_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_scripts/onedrive_plugin.py b/src/condor_scripts/onedrive_plugin.py
+index f7d88a4..6a4b8d8 100755
+--- a/src/condor_scripts/onedrive_plugin.py
++++ b/src/condor_scripts/onedrive_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/BasePython/pythontest.py b/src/condor_tests/BasePython/pythontest.py
+index cbbcbae..da7ee65 100755
+--- a/src/condor_tests/BasePython/pythontest.py
++++ b/src/condor_tests/BasePython/pythontest.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import platform
+diff --git a/src/condor_tests/classad_tests.py b/src/condor_tests/classad_tests.py
+index 3c28949..48927bf 100644
+--- a/src/condor_tests/classad_tests.py
++++ b/src/condor_tests/classad_tests.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import re
+ import classad
+diff --git a/src/condor_tests/cmd_curl_plugin.run b/src/condor_tests/cmd_curl_plugin.run
+index 5e1333b..217145c 100755
+--- a/src/condor_tests/cmd_curl_plugin.run
++++ b/src/condor_tests/cmd_curl_plugin.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+@@ -94,7 +94,7 @@ def main():
+ 
+     # Create the executable for test 1
+     success_executable = os.path.join( os.getcwd(), "cmd_curl_plugin-success.py" )
+-    success_executable_contents = """#!/usr/bin/env python
++    success_executable_contents = """#!/usr/bin/env python3
+ import sys
+ import time
+ 
+@@ -164,7 +164,7 @@ sys.exit(0)
+ 
+     # Create the executable for test 1
+     partial_executable = os.path.join( os.getcwd(), "cmd_curl_plugin-partial.py" )
+-    partial_executable_contents = """#!/usr/bin/env python
++    partial_executable_contents = """#!/usr/bin/env python3
+ import os
+ import sys
+ import time
+diff --git a/src/condor_tests/cmd_curl_plugin_multifile_failure.run b/src/condor_tests/cmd_curl_plugin_multifile_failure.run
+index c24bd0e..1609ab1 100755
+--- a/src/condor_tests/cmd_curl_plugin_multifile_failure.run
++++ b/src/condor_tests/cmd_curl_plugin_multifile_failure.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import htcondor
+ import os
+diff --git a/src/condor_tests/cmd_curl_plugin_multifile_success.py b/src/condor_tests/cmd_curl_plugin_multifile_success.py
+index 8fd509c..ef8cafb 100755
+--- a/src/condor_tests/cmd_curl_plugin_multifile_success.py
++++ b/src/condor_tests/cmd_curl_plugin_multifile_success.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/cmd_curl_plugin_multifile_success.run b/src/condor_tests/cmd_curl_plugin_multifile_success.run
+index 39a215c..bb678ec 100755
+--- a/src/condor_tests/cmd_curl_plugin_multifile_success.run
++++ b/src/condor_tests/cmd_curl_plugin_multifile_success.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import htcondor
+ import os
+diff --git a/src/condor_tests/cmd_drain_policies.run b/src/condor_tests/cmd_drain_policies.run
+index c908493..7d243aa 100755
+--- a/src/condor_tests/cmd_drain_policies.run
++++ b/src/condor_tests/cmd_drain_policies.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+@@ -71,7 +71,7 @@ def main():
+ 	# Construct our test executable.
+ 	#
+ 	jobFile = os.path.join( os.getcwd(), "condition-sleep.py" )
+-	contents = """#!/usr/bin/env python
++	contents = """#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/cmd_now.run b/src/condor_tests/cmd_now.run
+index b9ac7e8..0ff9ff1 100644
+--- a/src/condor_tests/cmd_now.run
++++ b/src/condor_tests/cmd_now.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ #testreq: personal
+ #endtestreq
+ 
+diff --git a/src/condor_tests/cmd_now_internals.run b/src/condor_tests/cmd_now_internals.run
+index d3b7de3..fd50122 100644
+--- a/src/condor_tests/cmd_now_internals.run
++++ b/src/condor_tests/cmd_now_internals.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ #testreq: personal
+ #endtestreq
+ 
+diff --git a/src/condor_tests/ctest_driver b/src/condor_tests/ctest_driver
+index 1a5abba..87ef6ae 100755
+--- a/src/condor_tests/ctest_driver
++++ b/src/condor_tests/ctest_driver
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python2
++#!/usr/bin/python3
+ 
+ import os
+ import shutil
+diff --git a/src/condor_tests/job_basic_pytest.run b/src/condor_tests/job_basic_pytest.run
+index 4f82dc3..7a71847 100755
+--- a/src/condor_tests/job_basic_pytest.run
++++ b/src/condor_tests/job_basic_pytest.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/job_core_scheduler_priority.run b/src/condor_tests/job_core_scheduler_priority.run
+index 448cb23..03903d2 100755
+--- a/src/condor_tests/job_core_scheduler_priority.run
++++ b/src/condor_tests/job_core_scheduler_priority.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/job_late_materialize_py.run b/src/condor_tests/job_late_materialize_py.run
+index 9f278cc..8f4baac 100755
+--- a/src/condor_tests/job_late_materialize_py.run
++++ b/src/condor_tests/job_late_materialize_py.run
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env python
++#! /usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 2018, Condor Team, Computer Sciences Department,
+diff --git a/src/condor_tests/lib_auth_protocol-token.run b/src/condor_tests/lib_auth_protocol-token.run
+index f5df31e..77fab4b 100644
+--- a/src/condor_tests/lib_auth_protocol-token.run
++++ b/src/condor_tests/lib_auth_protocol-token.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/python_bindings/htcondor_version_tests.py b/src/condor_tests/python_bindings/htcondor_version_tests.py
+index de40976..4ed993e 100644
+--- a/src/condor_tests/python_bindings/htcondor_version_tests.py
++++ b/src/condor_tests/python_bindings/htcondor_version_tests.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/python_bindings_classad.run b/src/condor_tests/python_bindings_classad.run
+index 4aa753d..d388802 100755
+--- a/src/condor_tests/python_bindings_classad.run
++++ b/src/condor_tests/python_bindings_classad.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ import classad
+ import datetime
+diff --git a/src/condor_tests/python_bindings_dagman.run b/src/condor_tests/python_bindings_dagman.run
+index c6bd0b6..de726ce 100755
+--- a/src/condor_tests/python_bindings_dagman.run
++++ b/src/condor_tests/python_bindings_dagman.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import htcondor
+ import os
+diff --git a/src/condor_tests/python_bindings_example.run b/src/condor_tests/python_bindings_example.run
+index 15ccd2b..cf1b3e3 100644
+--- a/src/condor_tests/python_bindings_example.run
++++ b/src/condor_tests/python_bindings_example.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ ##**************************************************************
+ ##
+diff --git a/src/condor_tests/python_bindings_htcondor.run b/src/condor_tests/python_bindings_htcondor.run
+index bd6407d..be56796 100755
+--- a/src/condor_tests/python_bindings_htcondor.run
++++ b/src/condor_tests/python_bindings_htcondor.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ import atexit
+ import classad
+diff --git a/src/condor_tests/python_bindings_jobeventlog.run b/src/condor_tests/python_bindings_jobeventlog.run
+index 5f9755b..447a680 100644
+--- a/src/condor_tests/python_bindings_jobeventlog.run
++++ b/src/condor_tests/python_bindings_jobeventlog.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_tests/python_collector_query.run b/src/condor_tests/python_collector_query.run
+index 5bb8b19..b4a9ae8 100755
+--- a/src/condor_tests/python_collector_query.run
++++ b/src/condor_tests/python_collector_query.run
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env python
++#! /usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 2018, Condor Team, Computer Sciences Department,
+diff --git a/src/condor_tests/python_example.run b/src/condor_tests/python_example.run
+index 1ba7f1d..ca8b39b 100644
+--- a/src/condor_tests/python_example.run
++++ b/src/condor_tests/python_example.run
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ ##**************************************************************
+ ##
+diff --git a/src/condor_tests/pythontestfiles/pythontest.py b/src/condor_tests/pythontestfiles/pythontest.py
+index 69db1fe..eb96a3b 100755
+--- a/src/condor_tests/pythontestfiles/pythontest.py
++++ b/src/condor_tests/pythontestfiles/pythontest.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import platform
+diff --git a/src/condor_tests/queue_itemdata_regression_test.py b/src/condor_tests/queue_itemdata_regression_test.py
+index f1b329e..2c73c4c 100644
+--- a/src/condor_tests/queue_itemdata_regression_test.py
++++ b/src/condor_tests/queue_itemdata_regression_test.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import htcondor
+ import random
+diff --git a/src/condor_tools/userlog_tail.py b/src/condor_tools/userlog_tail.py
+index 6417c85..f70845f 100755
+--- a/src/condor_tools/userlog_tail.py
++++ b/src/condor_tools/userlog_tail.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import sys;
+ import htcondor;
+diff --git a/src/condor_utils/condor_log_reader.py b/src/condor_utils/condor_log_reader.py
+index 5a822ed..593a260 100644
+--- a/src/condor_utils/condor_log_reader.py
++++ b/src/condor_utils/condor_log_reader.py
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env python
++#! /usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+diff --git a/src/condor_utils/test_log_verify b/src/condor_utils/test_log_verify
+index c932a14..fee56e7 100755
+--- a/src/condor_utils/test_log_verify
++++ b/src/condor_utils/test_log_verify
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env python
++#! /usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,

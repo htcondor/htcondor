@@ -209,4 +209,13 @@ sys.exit(0)
 
 
 if __name__ == "__main__":
+    # The curl plug-in will respect HTTP_PROXY if it's set, but doing so
+    # causes this test to fail when run in a Docker container.  If we
+    # want to test this working via a proxy, we should do so explicitly.
+    # The second line in this looks super-goofy, but pop() barfs on
+    # non-strings and on the empty string, so...
+    lowered = dict()
+    for k in os.environ:
+        lowered[k.lower()] = k
+    os.environ.pop(lowered.get("http_proxy", "http_proxy"), None)
     main()

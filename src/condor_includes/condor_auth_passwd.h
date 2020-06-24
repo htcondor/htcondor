@@ -44,7 +44,11 @@
 
 class CondorError;
 namespace classad {
+	class ExprTree;
 	class ClassAd;
+}
+namespace jwt {
+	class decoded_jwt;
 }
 
 /** A class to implement the AKEP2 protocol for password-based authentication.
@@ -142,17 +146,17 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	*/    
 	int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
-	/** Generate a token */
+	/** Generate a token.  Note the "ident" should be a unique ID for use in the audit
+	    log trail; typically, this is something like Sock::getUniqueId() */
 	static bool generate_token(const std::string &id, const std::string &key_id,
-		const std::vector<std::string> &authz_list, long lifetime, std::string &token, CondorError *err);
+		const std::vector<std::string> &authz_list, long lifetime, std::string &token,
+		int ident, CondorError *err);
 
 	/** Metadata needed prior to starting authorization */
 	static bool preauth_metadata(classad::ClassAd &ad);
 
 	void set_remote_issuer(const std::string &issuer) {m_server_issuer = issuer;}
 	void set_remote_keys(const std::vector<std::string> &keys);
-
-	static void retry_pool_password() {m_attempt_pool_password = true;}
 
 	/** Determines if any credentials (tokens, master passwords) are available;
 	 *  if not, then there's no point in trying auth'n. */
@@ -161,11 +165,10 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	/** Retry search for tokens */
 	static void retry_token_search() {m_should_search_for_tokens = true;}
 
- private:
+	/** Check and generate a pool password if not already done */
+	static void create_pool_password_if_needed();
 
-	/** If we are the collector, we may check & generate a pool password */
-	static void check_pool_password();
-	static bool m_attempt_pool_password;
+ private:
 
 	enum CondorAuthPasswordState {
 		ServerRec1 = 100,
@@ -328,6 +331,10 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	CondorAuthPasswordRetval doServerRec1(CondorError* errstack, bool non_blocking);
 	CondorAuthPasswordRetval doServerRec2(CondorError* errstack, bool non_blocking);
 
+		/** Check to see if a given token is on the blacklist; returns
+		    true if the token is blacklisted. */
+	bool isTokenBlacklisted(const jwt::decoded_jwt &jwt);
+
 	int m_client_status;
 	int m_server_status;
 	int m_ret_value;
@@ -354,6 +361,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	std::string m_keyfile_token;
 	std::string m_server_issuer;
 	std::set<std::string> m_server_keys;
+	std::unique_ptr<classad::ExprTree> m_token_blacklist_expr;
 
 	CondorAuthPasswordState m_state;
 

@@ -167,14 +167,14 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
-		set( PYTHON_RPATH "$ORIGIN/../:/lib:/usr/lib:$ORIGIN/../condor" )
+		set( PYTHON_RPATH "$ORIGIN/../../:/lib:/usr/lib:$ORIGIN/../../condor" )
 	else()
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
         if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
-            set( PYTHON_RPATH "$ORIGIN/../:/usr/lib64/boost169:/lib64:/usr/lib64:$ORIGIN/../condor" )
+            set( PYTHON_RPATH "$ORIGIN/../../:/usr/lib64/boost169:/lib64:/usr/lib64:$ORIGIN/../../condor" )
         else()
-            set( PYTHON_RPATH "$ORIGIN/../:/lib64:/usr/lib64:$ORIGIN/../condor" )
+            set( PYTHON_RPATH "$ORIGIN/../../:/lib64:/usr/lib64:$ORIGIN/../../condor" )
         endif()
 	endif()
 elseif( ${OS_NAME} STREQUAL "DARWIN" )
@@ -392,9 +392,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( CMAKE_INSTALL_PREFIX "")
 		set( CPACK_SET_DESTDIR "ON")
 
-		# Processing control files
-		add_subdirectory(build/packaging/debian)
-
 	elseif ( RPM_SYSTEM_NAME )
 		# This variable will be defined if the platfrom support RPM
 		message (STATUS "Configuring RPM package on ${LINUX_NAME}-${LINUX_VER} -> ${RPM_SYSTEM_NAME}.${SYS_ARCH}")
@@ -423,7 +420,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set ( CPACK_RPM_PACKAGE_URL ${URL})
 		set ( CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
 
-		PackageDate( RPM CPACK_RPM_DATE)
+		string(TIMESTAMP CPACK_RPM_DATE "+%a %b %d %Y")
 
 		#Specify SPEC file template
 		set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_SOURCE_DIR}/build/packaging/rpm/condor.spec.in")

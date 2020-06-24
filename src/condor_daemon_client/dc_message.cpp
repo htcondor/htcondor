@@ -617,7 +617,7 @@ DCMessenger::cancelMessage( classy_counted_ptr<DCMsg> msg )
 		return;
 	}
 
-	if( m_callback_sock->is_reverse_connect_pending() ) {
+	if( m_callback_sock && m_callback_sock->is_reverse_connect_pending() ) {
 		// have to be careful, because if callback sock is doing a CCB
 		// reverse connect, close() will result in the socket callback
 		// handler getting called immediately and m_callback_sock

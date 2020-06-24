@@ -147,7 +147,7 @@ static const char *GMStateNames[] = {
 
 #define CHECK_PROXY \
 { \
-	if ( ((PROXY_NEAR_EXPIRED( jobProxy ) && condorState != REMOVED) || \
+	if ( jobProxy && ((PROXY_NEAR_EXPIRED( jobProxy ) && condorState != REMOVED) || \
 		  (PROXY_IS_EXPIRED( jobProxy ) && condorState == REMOVED)) \
 		 && gmState != GM_PROXY_EXPIRED ) { \
 		dprintf( D_ALWAYS, "(%d.%d) proxy is about to expire, changing state to GM_PROXY_EXPIRED\n", \
@@ -351,13 +351,8 @@ static bool write_classad_input_file( ClassAd *classad,
 
 	ClassAd tmpclassad(*classad);
 
-	std::string CmdExpr;
-	CmdExpr = ATTR_JOB_CMD;
-	CmdExpr += "=\"";
-	CmdExpr += condor_basename( executable_path.c_str() );
-	CmdExpr += '"';
 	// TODO: Store old Cmd as OrigCmd?
-	tmpclassad.Insert(CmdExpr.c_str());
+	tmpclassad.Assign(ATTR_JOB_CMD, condor_basename( executable_path.c_str() ));
 
 	PROC_ID procID;
 	if( ! tmpclassad.LookupInteger( ATTR_CLUSTER_ID, procID.cluster ) ) {
@@ -394,7 +389,7 @@ static bool write_classad_input_file( ClassAd *classad,
 
 		// Fix the universe, too, since the starter is going to expect
 		// "VANILLA", not "GLOBUS"...
-	tmpclassad.Insert( "JobUniverse = 5" );
+	tmpclassad.Assign( ATTR_JOB_UNIVERSE, 5 );
 
 	dprintf(D_FULLDEBUG,"(%d.%d) Writing ClassAd to file %s\n",
 		procID.cluster, procID.proc, out_filename.c_str());
@@ -3527,6 +3522,11 @@ GlobusJob::JmShouldSleep()
 	if ( probeNow == true ) {
 		return false;
 	}
+
+	if (!jobProxy) {
+		return false;
+	}
+
 	if ( jmProxyExpireTime < jobProxy->expiration_time ) {
 		// Don't forward the refreshed proxy if the remote proxy has more
 		// than GRIDMANAGER_PROXY_RENEW_LIMIT time left.

@@ -171,6 +171,14 @@ int dprintf_config(
 int dprintf_config_tool(const char* subsys = NULL, int flags = 0, const char * logfile = NULL);
 int dprintf_config_tool_on_error(int flags = 0);
 
+// parse a string of the form "NNN Unit" where NNN is an integer, and Unit is b, Kb, Mb, Gb, or Tb (size units) or s, m, h, d, or w (time units)
+bool dprintf_parse_log_size(const char * input, long long  & value, bool & is_time);
+
+// call when you want to insure that dprintfs are thread safe on Linux regardless of
+// wether daemon core threads are enabled. thread safety cannot be disabled once enabled
+// note that this is always implicitly called on Windows
+void dprintf_make_thread_safe();
+
 // parse strflags and cat_and_flags and merge them into the in,out args
 // for backward compatibility, the D_ALWAYS bit will always be set in basic
 // and bits passed in via the in,out args will be preserved unless explicitly cleared via D_FLAG:0 syntax.
@@ -354,6 +362,11 @@ public:
 	~_condor_auto_accum_runtime() { runtime += elapsed_runtime(); };
 	T & runtime;
 };
+
+// print hex bytes from data into buf, up to a maximum of datalen bytes
+// caller must supply the buffer and must insure that it is at least datalen*3+1
+// this is intended to provide a way to add small hex dumps to dprintf logging
+extern const char * debug_hex_dump(char * buf, const char * data, int datalen);
 
 #endif // defined(__cplusplus)
 

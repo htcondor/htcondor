@@ -44,9 +44,12 @@ class DockerProc : public VanillaProc {
 		std::string containerID;
 		std::string containerName;
 		int updateTid;
-		uint64_t memUsage, netIn, netOut, userCpu, sysCpu;
+		uint64_t memUsage, max_memUsage, netIn, netOut, userCpu, sysCpu;
 		bool waitForCreate;
 		int execReaperId;
+
+		bool shouldAskForServicePorts;
+		ClassAd serviceAd;
 };
 
 #endif /* _CONDOR_DOCKER_PROC_H */

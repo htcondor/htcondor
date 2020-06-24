@@ -64,7 +64,7 @@ typedef std::unordered_map<int, struct SandboxEnt> SandboxMap;
 SandboxMap sandbox_map;
 
 
-int stdin_pipe_handler(Service*, int);
+int stdin_pipe_handler(int);
 void handle_results( std::string line );
 
 
@@ -100,9 +100,9 @@ int do_command_upload_sandbox(void *arg, Stream*);
 int do_command_download_proxy(void *arg, Stream*);
 int do_command_destroy_sandbox(void *arg, Stream*);
 
-int download_sandbox_reaper(Service*, int, int);
-int upload_sandbox_reaper(Service*, int, int);
-int download_proxy_reaper(Service*, int, int);
-int destroy_sandbox_reaper(Service*, int, int);
+int download_sandbox_reaper(int, int);
+int upload_sandbox_reaper(int, int);
+int download_proxy_reaper(int, int);
+int destroy_sandbox_reaper(int, int);
 
 #endif

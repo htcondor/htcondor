@@ -60,7 +60,14 @@ public:
 		const std::string &checksum_type, const std::string &tag,
 		CondorError &err);
 
+		// Publish various data reuse statistics to the ad.
+	bool Publish(classad::ClassAd &ad);
+
 	static bool IsChecksumTypeSupported(const std::string &type) {return type == "sha256";}
+
+	// Print known info about the state of the directory:
+	// - print_to_log: Set to True to print data via dprintf; otherwise, will print to stdout.
+	void PrintInfo(bool print_to_log);
 
 private:
 	class LogSentry {
@@ -83,9 +90,9 @@ private:
 	public:
 		FileEntry(DataReuseDirectory &parent, const std::string &checksum,
 			const std::string &checksum_type, const std::string &tag,
-			uint64_t size)
+			uint64_t size, time_t last_use)
 		: m_size(size),
-		m_last_use(time(NULL)),
+		m_last_use(last_use),
 		m_checksum(checksum),
 		m_checksum_type(checksum_type),
 		m_tag(tag),
@@ -133,6 +140,21 @@ private:
 		size_t m_reserved{0};
 	};
 
+	class SpaceUtilization {
+	public:
+		uint64_t used() const {return m_used;}
+		uint64_t written() const {return m_written;}
+		uint64_t deleted() const {return m_deleted;}
+
+		void incUsed(uint64_t used) {m_used += used;}
+		void incWritten(uint64_t written) {m_written += written;}
+		void incDeleted(uint64_t deleted) {m_deleted += deleted;}
+	private:
+		uint64_t m_used{0};
+		uint64_t m_written{0};
+		uint64_t m_deleted{0};
+	};
+
 	bool ClearSpace(uint64_t size, LogSentry &sentry, CondorError &err);
 	bool UpdateState(LogSentry &sentry, CondorError &err);
 	bool HandleEvent(ULogEvent &event, CondorError &err);
@@ -142,6 +164,9 @@ private:
 
 	void CreatePaths();
 	void Cleanup();
+
+		// Returns true if we should have an extra-high debug level.
+	static bool GetExtraDebug();
 
 	bool m_owner{true};
 	bool m_valid{false};
@@ -159,6 +184,9 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<SpaceReservationInfo>> m_space_reservations;
 	std::vector<std::unique_ptr<FileEntry>> m_contents;
+
+		// Track the space read, written and deleted per-tag.
+	std::unordered_map<std::string, SpaceUtilization> m_space_utilization;
 };
 
 }

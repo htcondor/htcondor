@@ -209,7 +209,7 @@ update (ClassAd *ad, int options)
 		for (it = plist->begin(); it != plist->end(); ++it) {
 			const classad::ExprTree * pexpr = *it;
 			classad::Value val;
-			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state))) {
+			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state)-1)) {
 				update(state);
 			}
 		}
@@ -433,7 +433,7 @@ update (ClassAd *ad, int options)
 		for (it = plist->begin(); it != plist->end(); ++it) {
 			const classad::ExprTree * pexpr = *it;
 			classad::Value val;
-			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state))) {
+			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state)-1)) {
 				update(state);
 			}
 		}
@@ -442,9 +442,6 @@ update (ClassAd *ad, int options)
 		if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
 		return update(state);
 	}
-
-	++machines;
-	return 1;
 }
 
 

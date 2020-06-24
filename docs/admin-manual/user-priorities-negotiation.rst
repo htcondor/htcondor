@@ -388,6 +388,7 @@ the operating system username.  However, the submitter can override
 the username selected by settting the submit file option
 
 ::
+
 	accounting_group_user = ishmael
 
 This means this job should be treated, for accounting purposes only, as
@@ -612,17 +613,17 @@ negotiates with the smallest positive value going first. Available
 attributes for sorting with ``GROUP_SORT_EXPR``
 :index:`GROUP_SORT_EXPR` include:
 
-+-----------------------+--------------------------------------------+
-| Attribute Name        | Description                                |
-+=======================+============================================+
-| AccountingGroup       | A string containing the group name         |
-+-----------------------+--------------------------------------------+
-| GroupQuota            | The computed limit for this group          |
-+-----------------------+--------------------------------------------+
-| GroupQuotaInUse       | The total slot weight used by this group   |
-+-----------------------+--------------------------------------------+
-| GroupQuotaAllocated   | Quota allocated this cycle                 |
-+-----------------------+--------------------------------------------+
++-------------------------+------------------------------------------+
+| Attribute Name          | Description                              |
++=========================+==========================================+
+| AccountingGroup         | A string containing the group name       |
++-------------------------+------------------------------------------+
+| GroupQuota              | The computed limit for this group        |
++-------------------------+------------------------------------------+
+| GroupResourcesInUse     | The total slot weight used by this group |
++-------------------------+------------------------------------------+
+| GroupResourcesAllocated | Quota allocated this cycle               |
++-------------------------+------------------------------------------+
 
 Table 3.1: Attributes visible to GROUP_SORT_EXPR
 
@@ -661,3 +662,43 @@ This shows that there are two groups, each with 60 jobs in the queue.
 group_physics.hep has a quota of 15 machines, and group_physics.lep
 has 5 machines. Other options to *condor_userprio*, such as **-most**
 will also show the number of resources in use.
+
+Setting Accounting Group automatically per user
+-----------------------------------------------
+
+:index:`group quotas`
+:index:`accounting groups`
+
+By default, any user can put the jobs into any accounting group by
+setting parameters in the submit file.  This can be useful if a person
+is a member of multiple groups.  However, many sites want to force all 
+jobs submitted by a given user into one accounting group, and forbid
+the user to submit to any other group.  An HTCondor meta-knob makes this 
+easy.  By adding to the submit machine's configuration, the setting
+
+::
+	USE Feature: AssignAccountingGroup(file_name_of_map)
+
+
+The admin can create a file that maps the users into their required
+accounting groups, and makes the attributes immutable, so they can't
+be changed.  The format of this map file is like other classad map
+files:  Lines of three columns.  The first should be an asterisk 
+'*'.  The second column is the name of the user, and the final is the
+accounting group that user should always submit to.  For example,
+
+::
+	* Alice	group_physics
+	* Bob	group_atlas
+	* Carol group_physics
+	* /^student_.*/	group_students
+
+The second field can be a regular expression, if
+enclosed in //.  Note that this is on the submit side, and the 
+administrator will still need to create these group names and give them
+a quota on the central manager machine.  This file is re-read on a
+condor_reconfig.  The third field can also be a comma-separated list.
+If so, it represents the set of valid accounting groups a user can
+opt into.  If the user does not set an acounting group in the submit file
+the first entry in the list will be used.
+

@@ -32,6 +32,7 @@ enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE,
 class CAList {
 public:
 	CAList() {};
+	virtual ~CAList() {};
 
 	// Instead of deriving from List, have-a list internally instead
 	// allows us to controll access and replace List with std::list

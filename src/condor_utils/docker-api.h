@@ -34,6 +34,7 @@ class DockerAPI {
 		 * @param directory		...
 		 * @param pid			On success, will be set to the PID of a process which will terminate when the container does.  Otherwise, unchanged.
 		 * @param childFDs		The redirected std[in|out|err] FDs.
+		 * @param askForPorts	If you should ask for the redirected ports.
 		 * @param error			On success, unchanged.  Otherwise, [TODO].
 		 * @return 				0 on success, negative otherwise.
 		 */
@@ -44,11 +45,14 @@ class DockerAPI {
 						const std::string & command,
 						const ArgList & arguments,
 						const Env & environment,
-						const std::string & directory,
+						const std::string & outside_directory,
+						const std::string & inside_directory,
 						const std::list<std::string> extraVolumes,
 						int & pid,
 						int * childFDs,
-						CondorError & error );
+						bool & shouldAskForPorts,
+						CondorError & error,
+						int * affinity_mask = NULL);
 
 		static int startContainer(const std::string &name,
 						int &pid,
@@ -62,6 +66,26 @@ class DockerAPI {
 					    int *childFDs,
 					    int reaperid,
 					    int &pid);
+
+		/**
+		 * copy files/folders from srcPath to the given path in the container
+		 *   invokes
+		 *      docker cp SRC_PATH CONTAINER:CONTAINER_PATH
+		 */
+		static int copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
+						const std::string &container,       // container to copy into
+						const std::string & containerPath,  // destination path in container
+						StringList * options);
+		/**
+		 * copy files/folders from given path in the container to destPath
+		 *   invokes
+		 *      docker cp CONTAINER:CONTAINER_PATH DEST_PATH
+		 */
+		static int copyFromContainer(const std::string &container, // container to copy into
+						const std::string & containerPath,             // source file or folder in container
+						const std::string & destPath,                 // destination path on local file system
+						StringList * options);
+
 		/**
 		 * Releases the disk space (but not the image) associated with
 		 * the given container.
@@ -119,6 +143,9 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int getStatus( const std::string & container, bool isRunning, int & result, CondorError & err );
+
+		static int getServicePorts( const std::string & container,
+			const ClassAd & jobAd, ClassAd & serviceAd );
 
 		/**
 		 * Attempts to detect the presence of a working Docker installation.

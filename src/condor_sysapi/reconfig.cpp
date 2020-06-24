@@ -76,9 +76,6 @@ int _sysapi_max_ncpus = 0;
 int _sysapi_memory = 0;
 int _sysapi_reserve_memory = 0;
 
-/* needed by ckptpltfrm.c */
-char *_sysapi_ckptpltfrm = NULL;
-
 /* needed by load_avg.c */
 int _sysapi_getload = 0;
 
@@ -167,20 +164,6 @@ sysapi_reconfig(void)
 	_sysapi_memory = param_integer_c( "MEMORY", 0, 0, INT_MAX );
 
 	_sysapi_reserve_memory = param_integer_c( "RESERVED_MEMORY", 0, INT_MIN, INT_MAX );
-
-	/* _sysapi_ckptpltfrm is either set to NULL, or whatever 
-		CHECKPOINT_PLATFORM says in the config file. If set to NULL,
-		then _sysapi_ckptpltfrm will be properly initialized after the first
-		call to sysapi_ckptpltfrm() */
-	if (_sysapi_ckptpltfrm != NULL) {
-		free(_sysapi_ckptpltfrm);
-		_sysapi_ckptpltfrm = NULL;
-	}
-	tmp = param( "CHECKPOINT_PLATFORM" );
-	if (tmp != NULL) {
-		_sysapi_ckptpltfrm = strdup(tmp);
-		free(tmp);
-	}
 
 	_sysapi_getload = param_boolean_int("SYSAPI_GET_LOADAVG",1);
 

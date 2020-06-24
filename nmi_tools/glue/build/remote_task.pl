@@ -188,10 +188,10 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
-	$ENV{PATH} = "/bin:$ENV{PATH}:/home/condorauto/cov-analysis-linux64-2019.03/bin";
+	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2020.06/bin";
 	$execstr = get_cmake_args();
 	$execstr .= " -DBUILD_TESTING:bool=false ";
-	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
+	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
 }
 
 
@@ -236,6 +236,7 @@ else {
     $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
     $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
     $ENV{DYLD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+    $ENV{PYTHONPATH} ="$BaseDir/release_dir/lib/python";
 }
 
 ######################################################################
@@ -338,11 +339,11 @@ sub check_deb {
     my $debs;
     for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
     if ( ! defined $debs) { $debs = "*.deb"; }
-    if ($ENV{NMI_PLATFORM} =~ /(Debian9|Ubuntu16|Ubuntu18)/) {
-        # return "lintian $debs";
-        return "dpkg-deb -W $debs";
-    } else {
+    if ($ENV{NMI_PLATFORM} =~ /Debian8/) {
         # Only works with a single deb
         return "dpkg-deb -I $debs";
+    } else {
+        # return "lintian $debs";
+        return "dpkg-deb -W $debs";
     }
 }

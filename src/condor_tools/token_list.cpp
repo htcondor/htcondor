@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_distribution.h"
 
 #include "match_prefix.h"
 #include "CondorError.h"
@@ -118,7 +119,7 @@ bool printToken(const std::string &tokenfilename) {
 			printf("Header: %s Payload: %s File: %s\n", decoded_jwt.get_header().c_str(),
 				decoded_jwt.get_payload().c_str(),
 				tokenfilename.c_str());
-		} catch (std::exception) {
+		} catch (...) {
 			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
 		}
 #endif
@@ -192,6 +193,11 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "Cannot list tokens on HTCondor build without OpenSSL\n");
 	return 1;
 #else
+
+	myDistro->Init( argc, argv );
+	set_priv_initialize();
+	config();
+
         for (int i = 1; i < argc; i++) {
 		if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
@@ -205,8 +211,6 @@ int main(int argc, char *argv[]) {
 			exit(1);
 		}
 	}
-
-	config();
 
 	printAllTokens();
 	return 0;

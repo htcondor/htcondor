@@ -215,7 +215,10 @@ pcccStopCoalescing( PROC_ID nowJob ) {
 	dprintf( D_FULLDEBUG, "pcccStopCoalescing( %d.%d )\n", nowJob.cluster, nowJob.proc );
 
 	if( pcccTimerMap.find( nowJob ) != pcccTimerMap.end() ) {
+		dprintf( D_FULLDEBUG, "pcccStopCoalescing( %d.%d ): Cancel_Timer( %d )\n", nowJob.cluster, nowJob.proc, pcccTimerMap[ nowJob ] );
 		daemonCore->Cancel_Timer( pcccTimerMap[ nowJob ] );
+
+		dprintf( D_FULLDEBUG, "pcccStopCoalescing( %d.%d ): delete( %p )\n", nowJob.cluster, nowJob.proc, pcccTimerSelfMap[ nowJob ] );
 		delete( pcccTimerSelfMap[ nowJob ] );
 	}
 
@@ -279,9 +282,10 @@ pcccDoneCallback::callback() {
 		daemonCore->Cancel_Timer( pcccTimerMap[ nowJob ] );
 		pcccTimerMap.erase( nowJob );
 
-		dprintf( D_FULLDEBUG, "pcccDoneCallback::callback( %d.%d ): delete( %p )\n", nowJob.cluster, nowJob.proc, pcccTimerSelfMap[ nowJob ] );
-		delete( pcccTimerSelfMap[ nowJob ] );
-		pcccTimerSelfMap.erase( nowJob );
+		auto * self = pcccTimerSelfMap[ this->nowJob ];
+		dprintf( D_FULLDEBUG, "pcccDoneCallback::callback( %d.%d ): delete( %p )\n", nowJob.cluster, nowJob.proc, self );
+		pcccTimerSelfMap.erase( this->nowJob );
+		delete( self );
 	}
 
 	pcccDumpTable();
@@ -397,19 +401,20 @@ pcccStopCallback::dcMessageCallback( DCMsgCallback * cb ) {
 
 					// Kill the timer from this attempt.  Deletes this.
 					if( pcccTimerMap.find( nowJob ) != pcccTimerMap.end() ) {
-						dprintf( D_FULLDEBUG, "pcccStopCallback::dcMessageCallback( %d.%d ): delete( %p )\n", nowJob.cluster, nowJob.proc, pcccTimerSelfMap[ nowJob ] );
-						delete( pcccTimerSelfMap[ nowJob ] );
-						pcccTimerSelfMap.erase( nowJob );
-
 						dprintf( D_FULLDEBUG, "pcccStopCallback::dcMessageCallback( %d.%d ): Cancel_Timer( %d )\n", nowJob.cluster, nowJob.proc, pcccTimerMap[ nowJob ] );
 						daemonCore->Cancel_Timer( pcccTimerMap[ nowJob ] );
 						pcccTimerMap.erase( nowJob );
+
+						auto * self = pcccTimerSelfMap[ this->nowJob ];
+						dprintf( D_FULLDEBUG, "pcccStopCallback::dcMessageCallback( %d.%d ): delete( %p )\n", nowJob.cluster, nowJob.proc, self );
+						pcccTimerSelfMap.erase( this->nowJob );
+						delete( self );
 					}
 					return;
 			}
 
 			// dprintf( D_FULLDEBUG, "pcccStopCallback::dcMessageCallback( %d.%d ): coalesce command returned the following slot ad:\n", nowJob.cluster, nowJob.proc );
-			// dPrintAd( D_FULLDEBUG, slotAd, false );
+			// dPrintAd( D_FULLDEBUG, slotAd );
 
 			std::string claimID;
 			if((! reply.LookupString( ATTR_CLAIM_ID, claimID )) || claimID.empty() ) {

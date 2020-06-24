@@ -486,12 +486,6 @@ WriteUserLog::Reset( void )
 	m_global_close = false;
 # endif
 
-	// For PrivSep:
-#if !defined(WIN32)
-	m_privsep_uid = 0;
-	m_privsep_gid = 0;
-#endif
-
 	m_global_id_base = NULL;
 	(void) GetGlobalIdBase( );
 	m_global_sequence = 0;
@@ -868,11 +862,6 @@ WriteUserLog::checkGlobalLogRotation( void )
 	}
 	if ( m_global_disable || (NULL==m_global_path) ) {
 		return false;
-	}
-	if ( !m_global_lock ||
-		 m_global_lock->isFakeLock() ||
-		 m_global_lock->isUnlocked() ) {
-		dprintf( D_ALWAYS, "WriteUserLog checking for event log rotation, but no lock\n" );
 	}
 
 	// Don't rotate if max rotations is set to zero

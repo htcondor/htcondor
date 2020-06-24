@@ -40,17 +40,17 @@ int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & wh
 
 
 static bool publish_server_timeMangled = false;
-void AttrList_setPublishServerTimeMangled( bool publish)
+void AttrList_setPublishServerTime(bool publish)
 {
     publish_server_timeMangled = publish;
 }
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
-compat_classad::ClassAd *
+ClassAd *
 getClassAd( Stream *sock )
 {
-	compat_classad::ClassAd *ad = new compat_classad::ClassAd( );
+	ClassAd *ad = new ClassAd( );
 	if( !ad ) { 
 		return NULL;
 	}
@@ -674,18 +674,10 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 
 			if(!exclude_private ||
-				!(compat_classad::ClassAdAttributeIsPrivate(attr) ||
+				!(ClassAdAttributeIsPrivate(attr) ||
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
 			{
-				if(excludeTypes)
-				{
-					if(strcasecmp( ATTR_MY_TYPE, attr.c_str() ) != 0 &&
-						strcasecmp( ATTR_TARGET_TYPE, attr.c_str() ) != 0)
-					{
-						numExprs++;
-					}
-				}
-				else { numExprs++; }
+				numExprs++;
 			} else {
 				private_count++;
 			}
@@ -729,18 +721,10 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if(exclude_private && (compat_classad::ClassAdAttributeIsPrivate(attr) ||
+			if(exclude_private && (ClassAdAttributeIsPrivate(attr) ||
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
 			{
 				continue;
-			}
-
-			if(excludeTypes){
-				if(strcasecmp( ATTR_MY_TYPE, attr.c_str( ) ) == 0 || 
-				   strcasecmp( ATTR_TARGET_TYPE, attr.c_str( ) ) == 0 )
-				{
-					continue;
-				}
 			}
 
 			buf = attr;
@@ -748,7 +732,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			unp.Unparse( buf, expr );
 
 			if( ! crypto_is_noop && private_count &&
-				(compat_classad::ClassAdAttributeIsPrivate(attr) ||
+				(ClassAdAttributeIsPrivate(attr) ||
 				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))) )
 			{
 				sock->put(SECRET_MARKER);
@@ -775,7 +759,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	classad::References blacklist;
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
 		if ( ! ad.Lookup(*attr) || (exclude_private && (
-			compat_classad::ClassAdAttributeIsPrivate(*attr) ||
+			ClassAdAttributeIsPrivate(*attr) ||
 			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end()))
 		))) {
 			blacklist.insert(*attr);
@@ -817,7 +801,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 		unp.Unparse( buf, expr );
 
 		if ( ! crypto_is_noop &&
-			(compat_classad::ClassAdAttributeIsPrivate(*attr) ||
+			(ClassAdAttributeIsPrivate(*attr) ||
 			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
 		) {
 			if (!sock->put(SECRET_MARKER)) {
@@ -833,41 +817,4 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	}
 
 	return _putClassAdTrailingInfo(sock, ad, send_server_time, excludeTypes);
-}
-
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v)
-{
-    return EvalTree(eTree, mine, NULL, v);
-}
-
-
-bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd* target, classad::Value* v)
-{
-    if(!mine)
-    {
-        return false;
-    }
-    const classad::ClassAd* tmp = eTree->GetParentScope(); 
-    eTree->SetParentScope(mine);
-
-    if(target)
-    {
-        classad::MatchClassAd mad(mine,target);
-
-        bool rval = eTree->Evaluate(*v);
-
-        mad.RemoveLeftAd( );
-        mad.RemoveRightAd( );
-        
-        //restore the old scope
-        eTree->SetParentScope(tmp);
-
-        return rval;
-    }
-
-
-    //restore the old scope
-    eTree->SetParentScope(tmp);
-
-    return eTree->Evaluate(*v);
 }

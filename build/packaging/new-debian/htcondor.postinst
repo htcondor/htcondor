@@ -15,7 +15,7 @@ condor_home=/var/lib/condor
 
 
 condor_make_homedir() {
-    for dlabel in LOCAL_UNIV_EXECUTE CRED_STORE_DIR EXECUTE LOCK LOG SPOOL; do
+    for dlabel in LOCAL_UNIV_EXECUTE EXECUTE LOCK LOG SPOOL; do
         if dname=$(condor_config_val $dlabel 2>/dev/null); then
             mkdir -p $dname
             chown -R $condor_user: $dname
@@ -24,7 +24,7 @@ condor_make_homedir() {
         fi
     done
     # why should this be world writable?
-    #for dlabel in EXECUTE CRED_STORE_DIR; do
+    #for dlabel in EXECUTE; do
     #	chmod 1777 $(condor_config_val $dlabel)
     #done
 }
@@ -57,6 +57,16 @@ case "$1" in
         fi
         # make sure the config and home dir are complete
         condor_make_homedir
+        # create needed directories
+        mkdir -p /etc/condor/passwords.d
+        chmod 0700 /etc/condor/passwords.d
+        mkdir -p /etc/condor/tokens.d
+        chmod 0700 /etc/condor/tokens.d
+        chown condor /etc/condor/tokens.d
+        mkdir -p /var/lib/condor/krb_credentials
+        mkdir -p /var/lib/condor/oauth_credentials
+        chmod 2770 /var/lib/condor/oauth_credentials
+        chgrp condor /var/lib/condor/oauth_credentials
         # tell systemd to create tmpfiles, but do no harm if not available
         systemd-tmpfiles --create --exclude-prefix=/dev || true
     ;;

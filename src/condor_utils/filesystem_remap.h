@@ -73,6 +73,11 @@ public:
 	int AddEncryptedMapping(std::string mountpoint, std::string password = "");
 
 	/**
+	 * Make /dev/shm a private mount
+     * this gives each job their own view, and cleans up /dev/shm on exit
+     */
+	int AddDevShmMapping();
+	/**
 	 * Performs the mappings known to this class.
 	 * This method does not touch the privilege settings - the caller is responsible
 	 * for setting the appropriate context.  This is done because the primary usage

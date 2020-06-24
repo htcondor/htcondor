@@ -93,6 +93,14 @@ job:
 A debian container is the HTCondor job, and it runs the */bin/cat*
 program on the ``/etc/hosts`` file before exiting.
 
+.. _`Docker and Networking`:
+
+Docker and Networking
+---------------------
+
+:index:`Docker and Networking`
+:index:`docker<single: docker; networking>`
+
 By default, docker universe jobs will be run with a private, NATed
 network interface. In the job submit file, if the user specifies
 
@@ -104,4 +112,32 @@ then, instead of at NATted interface, the job will use the host's
 network interface, just like a vanilla universe job.
 :index:`docker universe`
 
+If the *host* network type is unavailable, you can ask Docker to forward one
+or more ports on the host into the container.  In the following example, we
+assume that the 'centos7_with_htcondor' image has HTCondor set up and ready
+to go, but doesn't turn it on by default.
 
+::
+
+      universe                = docker
+      docker_image            = centos7_with_htcondor
+      executable              = /usr/sbin/condor_master
+      arguments               = -f
+      container_service_names = condor
+      condor_container_port   = 9618
+      should_transfer_files   = YES
+      when_to_transfer_output = ON_EXIT
+      output                  = out.$(Process)
+      error                   = err.$(Process)
+      log                     = log.$(Process)
+      request_memory          = 100M
+      queue 1
+
+The ``container_service_names`` submit command accepts a comma- or space-
+separated list of service names; each service name must have a corresponding
+``<service-name>_container_port`` submit command specifying an integer
+between 0 and 65535.  Docker will automatically select a port on the host
+to forward to that port in the container; HTCondor will report that port
+in the job ad attribute ``<service-name>_HostPort`` after it becomes
+available, which will be (several seconds) after the job starts.  HTCondor
+will update the job ad in the sandbox (``.job.ad``) at that time.

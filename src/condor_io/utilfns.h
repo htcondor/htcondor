@@ -21,12 +21,6 @@
 
 extern "C" {
 
-int fcntl_cmd_encode(int cmd);
-int fcntl_cmd_decode(int cmd);
-
-int sig_num_encode( int sig_num );
-int sig_num_decode( int sig_num );
-
 int errno_num_encode( int errno_num );
 int errno_num_decode( int errno_num );
 

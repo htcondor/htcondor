@@ -302,20 +302,6 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		vmgahp_user_uid = get_user_uid();
 		vmgahp_user_gid = get_user_gid();
 	}
-	else if (Starter->condorPrivSepHelper() != NULL) {
-		vmgahp_user_uid = Starter->condorPrivSepHelper()->get_uid();
-		char* user_name;
-		if (!pcache()->get_user_name(vmgahp_user_uid, user_name)) {
-			EXCEPT("unable to get user name for UID %u", vmgahp_user_uid);
-		}
-		if (!pcache()->get_user_ids(user_name,
-		                            vmgahp_user_uid,
-		                            vmgahp_user_gid))
-		{
-			EXCEPT("unable to get GID for UID %u", vmgahp_user_uid);
-		}
-		free(user_name);
-	}
 	else {
 		// vmgahp may have setuid-root (e.g. vmgahp for Xen)
 		vmgahp_user_uid = get_condor_uid();
@@ -1499,11 +1485,6 @@ VMGahpServer::killVM(void)
 	if( can_switch_ids() ) {
 		MyString tmp_str;
 		tmp_str.formatstr("%d", (int)get_condor_uid());
-		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
-	}
-	else if (Starter->condorPrivSepHelper() != NULL) {
-		MyString tmp_str;
-		tmp_str.formatstr("%d", (int)Starter->condorPrivSepHelper()->get_uid());
 		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif

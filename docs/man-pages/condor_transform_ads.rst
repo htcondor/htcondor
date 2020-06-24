@@ -28,9 +28,7 @@ Description
 transforms them according to rules defined in a rules file, and outputs
 the resulting transformed ClassAds.
 
-See
-`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=TjsAdTransformLanguage>`_
-for a description of the transform language.
+See the :ref:`misc-concepts/transforms:Classad Transforms` section for a description of the transform language.
 
 Options
 -------
@@ -126,17 +124,4 @@ according to the given rules:
       NumCheckPoints = 0
       RequestDisk = ( 5000000 / 1024 )
       ResidentSetSize = 500
-
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
 

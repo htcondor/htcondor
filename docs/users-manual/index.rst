@@ -6,12 +6,14 @@ Users' Manual
    :glob:
 
    welcome-to-htcondor
-   introduction-users-manual
    running-a-job-steps
    submitting-a-job
+   file-transfer
    managing-a-job
+   automatic-job-management
+   services-for-jobs
    priorities-and-preemption
-   dagman-applications
+   dagman-workflows
    matchmaking-with-classads
    choosing-an-htcondor-universe
    java-applications

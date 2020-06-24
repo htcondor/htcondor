@@ -104,7 +104,7 @@ if ( WITH_BLAHP )
 							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&
-							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
+							./bootstrap && ./configure --with-classads-prefix=$<TARGET_FILE_DIR:classads>/..
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg

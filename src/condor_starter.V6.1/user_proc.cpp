@@ -120,7 +120,7 @@ UserProc::JobReaper(int pid, int status)
 	MyString line;
 	MyString error_txt;
 	MyString filename;
-	const char* dir = Starter->GetWorkingDir();
+	const char* dir = Starter->GetWorkingDir(0);
 	FILE* fp;
 
 	dprintf( D_FULLDEBUG, "Inside UserProc::JobReaper()\n" );
@@ -151,6 +151,13 @@ UserProc::JobReaper(int pid, int status)
 		m_proc_exited = true;
 		exit_status = status;
 		condor_gettimestamp( job_exit_time );
+
+		// Let the base starter know, for file-transfer purposes, what
+		// the job's exit status was (as opposed to, for instance, being
+		// a script proc or a non-interactive sshd proc).
+		if( name == NULL ) {
+			Starter->RecordJobExitStatus(status);
+		}
 	}
 	return m_proc_exited;
 }
@@ -159,28 +166,26 @@ UserProc::JobReaper(int pid, int status)
 bool
 UserProc::PublishUpdateAd( ClassAd* ad )
 {
-	char buf[256];
+	std::string prefix = name ? name : "";
+	std::string attrn;
 
 	dprintf( D_FULLDEBUG, "Inside UserProc::PublishUpdateAd()\n" );
 
-	if( JobPid >= 0 ) { 
-		sprintf( buf, "%s%s=%d", name ? name : "", ATTR_JOB_PID,
-				 JobPid );
-		ad->Insert( buf );
+	if( JobPid >= 0 ) {
+		attrn = prefix + ATTR_JOB_PID;
+		ad->Assign( attrn, JobPid );
 	}
 
 	if( job_start_time.tv_sec > 0 ) {
-		sprintf( buf, "%s%s=%ld", name ? name : "", ATTR_JOB_START_DATE,
-				 (long)job_start_time.tv_sec );
-		ad->Insert( buf );
+		attrn = prefix + ATTR_JOB_START_DATE;
+		ad->Assign( attrn, (long)job_start_time.tv_sec );
 	}
 
 	if (m_proc_exited) {
 
 		if( job_exit_time.tv_sec > 0 ) {
-			sprintf( buf, "%s%s=%f", name ? name : "", ATTR_JOB_DURATION, 
-					 timersub_double( job_exit_time, job_start_time ) );
-			ad->Insert( buf );
+			attrn = prefix + ATTR_JOB_DURATION;
+			ad->Assign( attrn, timersub_double( job_exit_time, job_start_time ) );
 		}
 
 			/*
@@ -193,23 +198,19 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 			  got back from a different platform.
 			*/
 		if( WIFSIGNALED(exit_status) ) {
-			sprintf( buf, "%s%s = TRUE", name ? name : "",
-					 ATTR_ON_EXIT_BY_SIGNAL );
-			ad->Insert( buf );
-			sprintf( buf, "%s%s = %d", name ? name : "",
-					 ATTR_ON_EXIT_SIGNAL, WTERMSIG(exit_status) );
-			ad->Insert( buf );
-			sprintf( buf, "%s%s = \"died on %s\"",
-					 name ? name : "", ATTR_EXIT_REASON,
-					 daemonCore->GetExceptionString(WTERMSIG(exit_status)) );
-			ad->Insert( buf );
+			attrn = prefix + ATTR_ON_EXIT_BY_SIGNAL;
+			ad->Assign( attrn, true );
+			attrn = prefix + ATTR_ON_EXIT_SIGNAL;
+			ad->Assign( attrn, WTERMSIG(exit_status) );
+			attrn = prefix + ATTR_EXIT_REASON;
+			std::string attrv = "died on ";
+			attrv += daemonCore->GetExceptionString(WTERMSIG(exit_status));
+			ad->Assign( attrn, attrv );
 		} else {
-			sprintf( buf, "%s%s = FALSE", name ? name : "",
-					 ATTR_ON_EXIT_BY_SIGNAL );
-			ad->Insert( buf );
-			sprintf( buf, "%s%s = %d", name ? name : "",
-					 ATTR_ON_EXIT_CODE, WEXITSTATUS(exit_status) );
-			ad->Insert( buf );
+			attrn = prefix + ATTR_ON_EXIT_BY_SIGNAL;
+			ad->Assign( attrn, false );
+			attrn = prefix + ATTR_ON_EXIT_CODE;
+			ad->Assign( attrn, WEXITSTATUS(exit_status) );
 		}
 	}
 	return true;

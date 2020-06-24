@@ -33,7 +33,7 @@ ScriptQ::ScriptQ( Dag* dag ) :
 	_numScriptsRunning = 0;
 
     _scriptPidTable = new HashTable<int,Script*>( &hashFuncInt );
-    _waitingQueue = new Queue<Script*>();
+    _waitingQueue = new std::queue<Script*>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
         EXCEPT( "ERROR: out of memory!");
@@ -66,7 +66,7 @@ ScriptQ::Run( Script *script )
 		// and run POST scripts so we don't "waste" the fact that the
 		// job completed).  (Allow PRE script for final node, though.)
 	if ( _dag->IsHalted() && !script->_post &&
-				!script->GetNode()->GetFinal() ) {
+				!( script->GetNode()->GetType() == NodeType::FINAL ) ) {
 		debug_printf( DEBUG_DEBUG_1,
 					"Deferring %s script of node %s because DAG is halted\n",
 					prefix, script->GetNodeName() );
@@ -89,7 +89,7 @@ ScriptQ::Run( Script *script )
 
 	if ( deferScript ) {
 		_scriptDeferredCount++;
-		_waitingQueue->enqueue( script );
+		_waitingQueue->push( script );
 		return 0;
 	}
 
@@ -131,15 +131,16 @@ ScriptQ::RunWaitingScripts( bool justOne )
 	int scriptsRun = 0;
 	time_t now = time( NULL );
 
-	int lastScriptNum = _waitingQueue->Length();
+	int lastScriptNum = _waitingQueue->size();
 	for ( int curScriptNum = 0; curScriptNum < lastScriptNum;
 				++curScriptNum ) {
 		Script *script;
-		_waitingQueue->dequeue( script );
+		script = _waitingQueue->front();
+		_waitingQueue->pop();
 		ASSERT( script != NULL );
 		if ( script->_nextRunTime != 0 && script->_nextRunTime > now ) {
 				// Deferral time is not yet up -- put it back into the queue.
-			_waitingQueue->enqueue( script );
+			_waitingQueue->push( script );
 		} else {
 				// Try to run the script.  Note:  Run() takes care of
 				// checking for halted state and maxpre/maxpost.
@@ -188,7 +189,7 @@ ScriptQ::ScriptReaper( int pid, int status )
 				WEXITSTATUS( status ) == script->_deferStatus ) {
 		++_scriptDeferredCount;
 		script->_nextRunTime = time( NULL ) + script->_deferTime;
-		_waitingQueue->enqueue( script );
+		_waitingQueue->push( script );
 		const char *prefix = script->_post ? "POST" : "PRE";
 		debug_printf( DEBUG_NORMAL, "Deferring %s script of node %s for %ld seconds (exit status was %d)...\n",
 					prefix, script->GetNodeName(), script->_deferTime,

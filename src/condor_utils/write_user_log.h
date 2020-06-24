@@ -361,11 +361,6 @@ public:
 
 	/** ULogEvent::formatOpt flags   */  int        m_format_opts; // formerly m_use_xml
 
-#if !defined(WIN32)
-	/** PrivSep: the user's UID      */  uid_t      m_privsep_uid;
-	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
-#endif
-
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
 	/** called init_user_ids()?      */  bool       m_init_user_ids;

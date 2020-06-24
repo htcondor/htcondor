@@ -20,9 +20,11 @@ using namespace boost::python;
 
 enum DaemonCommands
 {
+  DDAEMONS_ON = DAEMONS_ON,
   DDAEMONS_OFF = DAEMONS_OFF,
   DDAEMONS_OFF_FAST = DAEMONS_OFF_FAST,
   DDAEMONS_OFF_PEACEFUL = DAEMONS_OFF_PEACEFUL,
+  DDAEMON_ON = DAEMON_ON,
   DDAEMON_OFF = DAEMON_OFF,
   DDAEMON_OFF_FAST = DAEMON_OFF_FAST,
   DDAEMON_OFF_PEACEFUL = DAEMON_OFF_PEACEFUL,
@@ -200,6 +202,7 @@ void send_alive(boost::python::object ad_obj=boost::python::object(), boost::pyt
 void
 enable_debug()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
 }
 
@@ -207,6 +210,7 @@ enable_debug()
 void
 enable_log()
 {
+    dprintf_make_thread_safe(); // make sure that any dprintf's we do are thread safe on Linux (they always are on Windows)
     dprintf_config(get_mySubSystem()->getName());
 }
 
@@ -246,9 +250,11 @@ export_dc_tool()
 
             The values of the enumeration are:
 
+            .. attribute:: DaemonOn
             .. attribute:: DaemonOff
             .. attribute:: DaemonOffFast
             .. attribute:: DaemonOffPeaceful
+            .. attribute:: DaemonsOn
             .. attribute:: DaemonsOff
             .. attribute:: DaemonsOffFast
             .. attribute:: DaemonsOffPeaceful
@@ -262,9 +268,11 @@ export_dc_tool()
             .. attribute:: SetForceShutdown
             .. attribute:: SetPeacefulShutdown
             )C0ND0R")
+        .value("DaemonsOn", DDAEMONS_ON)
         .value("DaemonsOff", DDAEMONS_OFF)
         .value("DaemonsOffFast", DDAEMONS_OFF_FAST)
         .value("DaemonsOffPeaceful", DDAEMONS_OFF_PEACEFUL)
+        .value("DaemonOn", DDAEMON_ON)
         .value("DaemonOff", DDAEMON_OFF)
         .value("DaemonOffFast", DDAEMON_OFF_FAST)
         .value("DaemonOffPeaceful", DDAEMON_OFF_PEACEFUL)

@@ -42,13 +42,7 @@ Interacting with Schedulers
    .. automethod:: submitMany
    .. automethod:: spool
    .. automethod:: refreshGSIProxy
-   .. automethod:: negotiate
    .. automethod:: reschedule
-
-.. autoclass:: ScheddNegotiate
-
-   .. automethod:: sendClaim
-   .. automethod:: disconnect
 
 .. autoclass:: JobAction
 
@@ -100,6 +94,7 @@ Submitting Jobs
 Interacting with Negotiators
 ----------------------------
 
+.. deprecated:: 8.9.8
 .. autoclass:: Negotiator
 
    .. automethod:: deleteUser
@@ -125,23 +120,30 @@ Managing Starters and Claims
 
 .. autoclass:: DrainTypes
 
-.. autoclass:: Claim
-
-   .. automethod:: requestCOD
-   .. automethod:: activate
-   .. automethod:: release
-   .. automethod:: suspend
-   .. automethod:: resume
-   .. automethod:: renew
-   .. automethod:: deactivate
-   .. automethod:: delegateGSIProxy
-
-
 .. autoclass:: VacateTypes
 
 
 Security Management
 -------------------
+
+.. autoclass:: Credd
+
+    .. automethod:: add_password
+    .. automethod:: delete_password
+    .. automethod:: query_password
+    .. automethod:: add_user_cred
+    .. automethod:: delete_user_cred
+    .. automethod:: query_user_cred
+    .. automethod:: add_user_service_cred
+    .. automethod:: delete_user_service_cred
+    .. automethod:: query_user_service_cred
+    .. automethod:: check_user_service_creds
+
+.. autoclass:: CredTypes
+
+.. autoclass:: CredCheck
+
+.. autoclass:: CredStatus
 
 .. autoclass:: SecMan
 
@@ -152,7 +154,14 @@ Security Management
    .. automethod:: setGSICredential
    .. automethod:: setPoolPassword
    .. automethod:: setTag
+   .. automethod:: setToken
 
+.. autoclass:: Token
+
+   .. automethod:: write
+
+.. autoclass:: TokenRequest
+   :members:
 
 Reading Job Events
 ------------------
@@ -187,7 +196,6 @@ HTCondor Configuration
 
    .. automethod:: refresh
 
-
 .. autofunction:: platform
 .. autofunction:: version
 
@@ -213,7 +221,21 @@ Esoteric Functionality
 .. autofunction:: set_subsystem
 .. autoclass:: SubsystemType
 
-.. .. autofunction:: lock
-.. .. autoclass:: FileLock
-.. .. autoclass:: LockType
+.. _python-bindings-thread-safety:
 
+Thread Safety
+-------------
+
+Most of the ``htcondor`` module is protected by a lock that prevents multiple
+threads from executing locked functions at the same time.
+When two threads both want to call locked functions or methods, they will wait
+in line to execute them one at a time
+(the ordering between threads is not guaranteed beyond "first come first serve").
+Examples of locked functions include:
+:meth:`Schedd.query`, :meth:`Submit.queue`, and :meth:`Schedd.edit`.
+
+Threads that are not trying to execute locked ``htcondor`` functions will
+be allowed to proceed normally.
+
+This locking may cause unexpected slowdowns when using ``htcondor`` from
+multiple threads simultaneously.

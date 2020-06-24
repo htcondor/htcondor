@@ -31,7 +31,6 @@
 #include "daemon_types.h"
 #include "directory.h"
 #include "condor_environ.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "vmuniverse_mgr.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
@@ -191,7 +190,7 @@ VMStarterInfo::getIPForVM(void)
 }
 
 void 
-VMStarterInfo::publishVMInfo(ClassAd* ad, amask_t  /*mask*/ )
+VMStarterInfo::publishVMInfo(ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -293,7 +292,7 @@ VMUniverseMgr::printVMGahpInfo( int debug_level )
 }
 
 void
-VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
+VMUniverseMgr::publish( ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -1058,7 +1057,7 @@ VMUniverseMgr::getIPForVM(pid_t s_pid)
 }
 
 void
-VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask )
+VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -1069,6 +1068,6 @@ VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask )
 		return;
 	}
 
-	info->publishVMInfo(ad, mask);
+	info->publishVMInfo(ad);
 	return;
 }

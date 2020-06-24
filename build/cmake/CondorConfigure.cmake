@@ -23,7 +23,6 @@ if(${OS_NAME} STREQUAL "DARWIN")
 	# Override that to set the actual architecture.
 	set (SYS_ARCH "X86_64")
 elseif(${OS_NAME} MATCHES "WIN")
-	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
@@ -43,7 +42,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
-	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
@@ -359,7 +357,6 @@ if(NOT WINDOWS)
 	endif(WINDOWS)
 endif()
 include (FindThreads)
-include (GlibcDetect)
 if (WINDOWS)
 	message(STATUS "OpenMP support will be disabled on Windows until we have a chance to fix the installer to support it")
 	# TJ: 8.5.8 disabling OpenMP on Windows because it adds a dependency on an additional merge module for VCOMP110.DLL
@@ -416,15 +413,14 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-	  # Using -O2 crashes the compiler on ppc mac os x when compiling
-	  # condor_submit
-	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
-	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
-	  else()
-
-            add_definitions(-D_FORTIFY_SOURCE=2)
-	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
-	  endif()
+      add_definitions(-D_FORTIFY_SOURCE=2)
+	  # -g3 causes the debug info extractor to seg fault on x86_64_CentOS8
+	  # Perhaps, make this conditional on platform?
+	  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  # set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
+	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	endif()
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
@@ -457,16 +453,12 @@ if( NOT WINDOWS)
 		message(FATAL_ERROR "Could not find libuuid")
 	endif()
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
-	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
-    find_multiple ("dl" HAVE_LIBDL )
 	find_library( HAVE_LIBLTDL "ltdl" )
 	find_multiple( "cares" HAVE_LIBCARES )
 	# On RedHat6, there's a libcares19 package, but no libcares
 	find_multiple( "cares19" HAVE_LIBCARES19 )
 	find_multiple( "pam" HAVE_LIBPAM )
-	find_program( BISON bison )
-	find_program( FLEX flex )
 	find_program( AUTOCONF autoconf )
 	find_program( AUTOMAKE automake )
 	find_program( LIBTOOLIZE libtoolize )
@@ -496,8 +488,6 @@ if( NOT WINDOWS)
 	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
 	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
 	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
-	check_symbol_exists(CLOCK_MONOTONIC_RAW "time.h" HAVE_CLOCK_MONOTONIC_RAW)
-	check_symbol_exists(CLOCK_REALTIME_COARSE "time.h" HAVE_CLOCK_REALTIME_COARSE)
 	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
 	check_function_exists("access" HAVE_ACCESS)
@@ -539,7 +529,6 @@ if( NOT WINDOWS)
 	check_function_exists("readdir64" HAVE_READDIR64)
 	check_function_exists("backtrace" HAVE_BACKTRACE)
 	check_function_exists("unshare" HAVE_UNSHARE)
-	check_function_exists("proc_pid_rusage" HAVE_PROC_PID_RUSAGE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
@@ -663,8 +652,7 @@ endif()
 
 find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
-find_program(LATEX2HTML latex2html)
-find_program(LATEX latex)
+find_program(SPHINXBUILD NAMES sphinx-build sphinx-1.0-build)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -760,16 +748,9 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	# be optimistic here.
 	set(HAVE_PSS ON)
 
-	#The following checks are for std:u only.
-	glibc_detect( GLIBC_VERSION )
-
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
-elseif(${OS_NAME} STREQUAL "AIX")
-	set(AIX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
@@ -822,22 +803,10 @@ option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run a
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
-  # so the clipped detection will try to match glibc vers and if it fails will disable
-  if (LINUX)
-	option(CLIPPED "enable/disable the standard universe" ON)
-  else()
-	option(CLIPPED "enable/disable the standard universe" ON)
-  endif()
-
   dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
 
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "disable the standard universe" ON)
-endif()
-
-if (NOT CLIPPED AND NOT LINUX)
-	message (FATAL_ERROR "standard universe is *only* supported on Linux")
 endif()
 
 #####################################
@@ -901,7 +870,6 @@ endif(BUILD_TESTING)
 
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
-	cmake_minimum_required(VERSION 2.8)
 endif()
 
 # directory that externals are downloaded from. may be a local directory
@@ -1037,7 +1005,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.3.4)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.5.0)
 
 	# globus is an odd *beast* which requires a bit more config.
 	# old globus builds on manylinux1 (centos5 docker image)
@@ -1071,39 +1039,6 @@ else ()
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
         endif(LINUX)
-
-	# the following logic if for standard universe *only*
-	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION)
-
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
-
-		if (EXT_GLIBC_FOUND)
-		  if (${BIT_MODE} STREQUAL "32")
-			  set (DOES_COMPRESS_CKPT ON) # this is total crap
-		  endif(${BIT_MODE} STREQUAL "32")
-
-		  if (DOES_SAVE_SIGSTATE)
-			  set(STD_U_C_FLAGS -DSAVE_SIGSTATE)
-		  endif(DOES_SAVE_SIGSTATE)
-
-		  set (STD_UNIVERSE ON)
-
-		  # seriously I've sold my soul doing this dirty work
-		  set (CONDOR_COMPILE ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_compile)
-		  set (CONDOR_ARCH_LINK ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_arch_link)
-		  set (STDU_LIB_LOC ${CMAKE_INSTALL_PREFIX}/${C_LIB})
-
-		  include_directories( ${CONDOR_SOURCE_DIR}/src/condor_io.std )
-
-		  message( STATUS "** Standard Universe Enabled **")
-
-		else()
-			message( STATUS "** Standard Universe Disabled **")
-		endif()
-	else()
-		message( STATUS "** Standard Universe Disabled **")
-	endif()
 
 endif(WINDOWS)
 
@@ -1219,12 +1154,12 @@ else()
     set(RT_FOUND "")
 endif()
 
-set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND};${MUNGE_FOUND}")
+set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${PCRE_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND};${MUNGE_FOUND}")
 set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
 set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 if (LINUX AND NOT PROPER)
-  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
+  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
 endif ()
@@ -1264,40 +1199,19 @@ if(MSVC)
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
 
-	if (GLIBC_VERSION)
-		add_definitions(-DGLIBC=GLIBC)
-		add_definitions(-DGLIBC${GLIBC_VERSION}=GLIBC${GLIBC_VERSION})
-		set(GLIBC${GLIBC_VERSION} ON)
-	endif(GLIBC_VERSION)
-
 	check_c_compiler_flag(-Wall c_Wall)
 	if (c_Wall)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 	endif(c_Wall)
 
-	# Added to help make resulting libcondor_utils smaller.
-	#check_c_compiler_flag(-fno-exceptions no_exceptions)
-	#if (no_exceptions)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-exceptions")
-	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fno-exceptions")
-	#endif(no_exceptions)
-	#check_c_compiler_flag(-Os c_Os)
-	#if (c_Os)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
-	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Os")
-	#endif(c_Os)
+	# GGT tested compiling  condor_history with -flto, it ran less than one tenth of one percent faster
+    # and took more than 3 times longer to compile.  Try again later.
 
-	dprint("TSTCLAIR - DISABLING -flto b/c of gcc failure in koji try again later")
-	#if (CMAKE_C_COMPILER_VERSION STRGREATER "4.7.0" OR CMAKE_C_COMPILER_VERSION STREQUAL "4.7.0")
-	#   
 	#  check_c_compiler_flag(-flto c_lto)
 	#  if (c_lto)
 	#	  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
 	#	  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
 	#  endif(c_lto)
-	#else()
-	#  dprint("skipping c_lto flag check")
-	#endif()
 
 	check_c_compiler_flag(-W c_W)
 	if (c_W)
@@ -1402,9 +1316,10 @@ else(MSVC)
 		endif()
 	endif(LINUX)
 
-	if( HAVE_LIBDL AND NOT BSD_UNIX )
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
-	endif()
+	if (LINUX)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
+	endif(LINUX)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
@@ -1421,20 +1336,6 @@ else(MSVC)
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
-	if ( NOT CLIPPED AND ${SYS_ARCH} MATCHES "86")
-
-		if (NOT ${SYS_ARCH} MATCHES "64" )
-			add_definitions( -DI386=${SYS_ARCH} )
-		endif()
-
-		# set for maximum binary compatibility based on current machine arch.
-		check_c_compiler_flag(-mtune=generic c_mtune)
-		if (c_mtune)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=generic")
-		endif(c_mtune)
-
-	endif()
-
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 
 	# Append C flags list to C++ flags list.
@@ -1447,8 +1348,7 @@ message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 message(STATUS "LN: ${LN}")
-message(STATUS "LATEX: ${LATEX}")
-message(STATUS "LATEX2HTML: ${LATEX2HTML}")
+message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree

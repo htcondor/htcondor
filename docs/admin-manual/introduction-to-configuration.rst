@@ -842,11 +842,23 @@ as given in these definitions.
 
 ``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
 
-``$INT(item-to-convert)`` or``$INT(item-to-convert, format-specifier)``
+``$INT(item-to-convert)`` or ``$INT(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert``. The ``format-specifier`` has the same syntax as
     a C language or Perl format specifier. If no ``format-specifier`` is
-    specified, "%d" is used as the format specifier.
+    specified, "%d" is used as the format specifier. The format
+    is everything after the comma, including spaces.  It can include other text.
+
+    ::
+
+        X = 2
+        Y = 6
+        XYArea = $(X) * $(Y)
+
+    -  ``$INT(XYArea)`` is ``12``
+    -  ``$INT(XYArea,%04d)`` is ``0012``
+    -  ``$INT(XYArea,Area=%d)`` is ``Area=12``
+
 
 ``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
     :index:`$RANDOM_CHOICE() function macro` A random choice
@@ -896,6 +908,47 @@ as given in these definitions.
     -  ``$SUBSTR(Name, 4, -3)`` is the empty string, as there are no
        characters in the substring for this request.
 
+``$STRING(item-to-convert)`` or ``$STRING(item-to-convert, format-specifier)``
+    Expands, evaluates, and returns a string version of
+    ``item-to-convert`` for a string type. The
+    ``format-specifier`` is a C language or Perl format specifier. If no
+    ``format-specifier`` is specified, "%s" is used as a format specifier.  The format
+    is everything after the comma, including spaces.  It can include other text
+    besides %s.
+
+    ::
+
+        FULL_HOSTNAME = host.DOMAIN
+        LCFullHostname = toLower("$(FULL_HOSTNAME)")
+
+    -  ``$STRING(LCFullHostname)`` is ``host.domain``
+    -  ``$STRING(LCFullHostname,Name: %s)`` is ``Name: host.domain``
+
+
+``$EVAL(item-to-convert)``
+    Expands, evaluates, and returns an classad unparsed version of
+    ``item-to-convert`` for any classad type, the resulting value is
+    formatted using the equivalent of the "%v" format specifier - If it
+    is a string it is printed without quotes, otherwise it is unparsed
+    as a classad value.  Due to the way the parser works, you must use
+    a variable to hold the expression to be evaluated if the expression
+    has a close brace ')' character.
+
+    ::
+
+        slist = "a,B,c"
+        lcslist = tolower($(slist))
+        list = split($(slist))
+        clist = size($(list)) * 10
+        semilist = join(";",split($(lcslist)))
+
+    -  ``$EVAL(slist)`` is ``a,B,c``
+    -  ``$EVAL(lcslist)`` is ``a,b,c``
+    -  ``$EVAL(list)`` is ``{"a", "B", "c"}``
+    -  ``$EVAL(clist)`` is ``30``
+    -  ``$EVAL(semilist)`` is ``a;b;c``
+
+
 Environment references are not currently used in standard HTCondor
 configurations. However, they can sometimes be useful in custom
 configurations.
@@ -919,7 +972,6 @@ will not be enough.
 -  NETWORK_INTERFACE
 -  NUM_CPUS
 -  PREEMPTION_REQUIREMENTS_STABLE
--  PRIVSEP_ENABLED
 -  PROCD_ADDRESS
 -  SLOT_TYPE_<N>
 -  OFFLINE_MACHINE_RESOURCE_<name>
@@ -955,8 +1007,6 @@ restart of HTCondor in order to use the changed value.
     configuration should not depend on HTCondor picking any particular
     IP address for this macro; this macro's value may not even be one of
     the IP addresses HTCondor is configured to advertise.
-
-    labelparam:IPv4Address
 
 ``$(IPV4_ADDRESS)`` :index:`IPV4_ADDRESS`
     The ASCII string version of the local machine's "most public" IPv4

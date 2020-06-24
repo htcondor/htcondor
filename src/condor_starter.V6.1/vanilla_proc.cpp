@@ -178,9 +178,9 @@ VanillaProc::StartJob()
 										  MATCH == strcasecmp ( ".com", extension ) ) ),
 				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
 	ArgList		arguments;
-	MyString	filename,
-				jobname, 
-				error;
+	std::string	filename;
+	std::string	jobname;
+	MyString	error;
 	
 	if ( extension && !java_universe && !binary_executable ) {
 
@@ -222,12 +222,12 @@ VanillaProc::StartJob()
 				a the correct extension before it will run. */
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
-					condor_basename ( jobname.Value () ) ) ) {
-				filename.formatstr ( "condor_exec%s", extension );
-				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
+					condor_basename ( jobname.c_str () ) ) ) {
+				formatstr ( filename, "condor_exec%s", extension );
+				if (rename(CONDOR_EXEC, filename.c_str()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 
-							CONDOR_EXEC, filename.Value() );
+							CONDOR_EXEC, filename.c_str() );
 				}
 			} else {
 				filename = jobname;
@@ -270,7 +270,7 @@ VanillaProc::StartJob()
 				will stop the file transfer mechanism from considering
 				it for transfer back to its submitter */
 			Starter->jic->removeFromOutputFiles (
-				filename.Value () );
+				filename.c_str () );
 
 		}
 			
@@ -312,12 +312,11 @@ VanillaProc::StartJob()
 	//
 	gid_t tracking_gid = 0;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() &&
-		    (Starter->condorPrivSepHelper() == NULL))
+		if (!can_switch_ids())
 		{
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
-			           "root or using PrivSep");
+			           "root");
 		}
 		fi.group_ptr = &tracking_gid;
 	}
@@ -501,7 +500,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = Starter->GetWorkingDir();
+		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
 			StringList mount_list(mount_under_scratch);
@@ -586,7 +585,7 @@ VanillaProc::StartJob()
 			MyString arg_errors;
 			std::string filename;
 
-			filename = Starter->GetWorkingDir();
+			filename = Starter->GetWorkingDir(0);
 			filename += "/.condor_pid_ns_status";
 		
 			if (!env.MergeFrom(JobAd, &env_errors)) {
@@ -615,17 +614,20 @@ VanillaProc::StartJob()
 			args.AppendArg(cmd);
 			if (!args.AppendArgsFromClassAd(JobAd, &arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 
 			if (!args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {
 				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
@@ -866,7 +868,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// and then add the running total to the current when we publish the
 	// update ad.  FIXME (#4971)
 
-	if( Starter->jic->uploadWorkingFiles() ) {
+	if( Starter->jic->uploadCheckpointFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
 	} else {
 			// We assume this is a transient failure and will try
@@ -1154,7 +1156,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		// will be killed, and when it does, this job will get unfrozen
 		// and continue running.
 
-		if (usage < m_memory_limit) {
+		if (usage < (0.9 * m_memory_limit)) {
 			long long oomData = 0xdeadbeef;
 			int efd = -1;
 			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );

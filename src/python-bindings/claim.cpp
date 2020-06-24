@@ -72,7 +72,7 @@ struct Claim
             constraint.reset(convert_python_to_exprtree(constraint_obj));
         }
 
-        compat_classad::ClassAd ad, reply;
+        ClassAd ad, reply;
         if (constraint.get())
         {
             classad::ExprTree *expr_tmp = constraint->Copy();
@@ -98,7 +98,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -115,7 +115,7 @@ struct Claim
     {
         if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
 
-        compat_classad::ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
+        ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
         if (ad.find(ATTR_JOB_KEYWORD) == ad.end())
         {
             ad.InsertAttr(ATTR_HAS_JOB_AD, true);
@@ -123,7 +123,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         int irval;
         {
             condor::ModuleLock ml;
@@ -140,7 +140,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -157,7 +157,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -174,7 +174,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -191,7 +191,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -218,7 +218,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         int irval;
         {
             condor::ModuleLock ml;

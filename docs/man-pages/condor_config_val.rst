@@ -102,6 +102,11 @@ Options
  **-runset** *var*
     (edit option) Each of the configuration variables listed reverts to
     its previous value as long as the daemon continues running.
+ **-summary**
+    (view option) For all configuration variables that differ from
+    default value, print out the name and value. The values are grouped
+    by the file that last set the variable, and in the order that they
+    were set in that file.
  **-dump**
     (view option) For all configuration variables that match *vars*,
     display the variables and their values. If no *vars* are listed,
@@ -282,16 +287,3 @@ Getting the definition of **role:personal** configuration template:
        DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD 
        RunBenchmarks=0
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

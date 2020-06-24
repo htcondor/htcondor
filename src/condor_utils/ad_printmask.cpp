@@ -895,21 +895,21 @@ display (std::string & out, MyRowOfValues & rov)
 		switch (fmt->fmtKind) {
 		case CustomFormatFn::INT_CUSTOM_FMT:
 			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
-				pval->IsNumber(intValue);
+				(void) pval->IsNumber(intValue);
 				pszVal = fmt->df(intValue, *fmt);
 				col_is_valid = true; printfFmt = NULL;
 			}
 			break;
 		case CustomFormatFn::FLT_CUSTOM_FMT:
 			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
-				pval->IsNumber(realValue);
+				(void) pval->IsNumber(realValue);
 				pszVal = fmt->ff(realValue, *fmt);
 				col_is_valid = true; printfFmt = NULL;
 			}
 			break;
 		case CustomFormatFn::STR_CUSTOM_FMT:
 			if (col_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
-				pval->IsStringValue(pszVal);
+				(void) pval->IsStringValue(pszVal);
 				pszVal = fmt->sf(pszVal, *fmt);
 				col_is_valid = true; printfFmt = NULL;
 			}

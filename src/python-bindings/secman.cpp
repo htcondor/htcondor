@@ -459,9 +459,9 @@ export_secman()
 
             :param identity: Requested identity from the remote daemon (the empty string implies condor user).
             :type identity: str
-            :param bounding_set: A list of authorizations that the token is restricted to
-            :type List[str]
-            :param lifetime: Requested lifetime, in seconds, the token will be valid for
+            :param bounding_set: A list of authorizations that the token is restricted to.
+            :type bounding_set: list[str]
+            :param lifetime: Requested lifetime, in seconds, that the token will be valid for.
             :type lifetime: int
             )C0ND0R",
             boost::python::init<boost::python::object, boost::python::object, int>(
@@ -469,7 +469,10 @@ export_secman()
                  boost::python::arg("identity")=boost::python::str(),
                  boost::python::arg("bounding_set")=boost::python::object(),
                  boost::python::arg("lifetime")=-1)))
-        .add_property("request_id", &TokenRequest::request_id)
+        .add_property(
+            "request_id",
+            &TokenRequest::request_id,
+            "The ID of the request at the remote daemon.")
         .def("submit", &TokenRequest::submit,
             R"C0ND0R(
             Submit the token request to a remote daemon.
@@ -482,7 +485,8 @@ export_secman()
             R"C0ND0R(
             Check to see if the token request has completed.
 
-            :return: True if the request is complete; false otherwise.  May throw an exception.
+            :return: ``True`` if the request is complete; ``False`` otherwise.
+                May throw an exception.
             :rtype: bool
             )C0ND0R",
             (boost::python::arg("self")))

@@ -779,9 +779,18 @@ int daemon::RealStart( )
 	}
 
 	args.AppendArg(shortname);
+
+#if 1
+	// as if 8.9.7 daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
+	// If we *dont* pass -f, then we can valigrind or strace a daemon just by adding two statements to the config file
+	// for example:
+	//  JOB_ROUTER = /usr/bin/valgrind
+	//  JOB_ROUTER_ARGS = --leak-check=full --log-file=$(LOG)/job_router-vg.%p --error-limit=no $(LIBEXEC)/condor_job_router -f $(JOB_ROUTER_ARGS)
+#else
 	if(isDC) {
 		args.AppendArg("-f");
 	}
+#endif
 
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
@@ -939,7 +948,12 @@ int daemon::RealStart( )
 		if( isDC ) {
 			daemon_sock_buf = name_in_config_file;
 			daemon_sock_buf.lower_case();
-			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str() );
+			// Because the master only starts daemons named in the config
+			// file, and those names are by definition unique, we don't
+			// need to further uniquify them with a sequence number, and
+			// not doing so makes it possible to construct certain
+			// addresses, rather than discover them.
+			daemon_sock_buf = SharedPortEndpoint::GenerateEndpointName( daemon_sock_buf.c_str(), false );
 			daemon_sock = daemon_sock_buf.c_str();
 			dprintf( D_FULLDEBUG, "Starting daemon with shared port id %s\n", daemon_sock );
 		}
@@ -1496,6 +1510,17 @@ daemon::Kill( int sig )
 		return;
 	}
 	int status;
+#ifdef WIN32
+	// On windows we don't have any way to send a sigterm to a daemon that doesn't have a command port
+	// but we can safely generate a Ctrl+Break because we know that the process was started with CREATE_NEW_PROCESS_GROUP
+	// We do this here rather than in windows_softkill because generating the ctrl-break works best
+	// if sent by a parent process rather than by a sibling process.  This does nothing if the daemon
+	// doesn't have a console, so after we do this go ahead and fall down to the code that does a windows_softkill
+	if ( ! isDC && (sig == SIGTERM)) {
+		BOOL rbrk = GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pid);
+		dprintf(D_ALWAYS, "Sent Ctrl+Break to non-daemoncore daemon %d, ret=%d\n", pid, rbrk);
+	}
+#endif
 	status = daemonCore->Send_Signal(pid,sig);
 	if ( status == FALSE )
 		status = -1;
@@ -1855,6 +1880,7 @@ daemon::DeregisterControllee( class daemon *controllee )
 ///////////////////////////////////////////////////////////////////////////
 
 Daemons::Daemons()
+	: m_token_requester(&Daemons::token_request_callback, this)
 {
 	check_new_exec_tid = -1;
 	update_tid = -1;
@@ -1929,12 +1955,12 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		class daemon* dmn = it->second;
 
 		std::string attr(dmn->name_in_config_file); attr += "_PID";
-		readyAd.Assign(attr.c_str(), dmn->pid);
+		readyAd.Assign(attr, dmn->pid);
 		++num_daemons;
 
 		if (dmn->ready_state) {
 			attr = dmn->name_in_config_file; attr += "_State";
-			readyAd.Assign(attr.c_str(), dmn->ready_state);
+			readyAd.Assign(attr, dmn->ready_state);
 		}
 
 		//const char * state = dmn->ready_state;
@@ -2411,6 +2437,15 @@ Daemons::StartAllDaemons()
 			return;
 		}
 	}
+
+	if (m_retry_start_all_daemons_tid != -1) {
+		dprintf(D_ALWAYS, "Daemons::StartAllDaemons there were some wait before daemons\n");
+	} else {
+		dprintf(D_ALWAYS, "Daemons::StartAllDaemons all daemons were started\n");
+	#ifndef WIN32
+		dc_release_background_parent(0);
+	#endif
+	}
 }
 
 
@@ -2756,7 +2791,7 @@ Daemons::CleanupBeforeRestart()
 	for (int i=3; i < max_fds; i++) {
 		int flag = fcntl(i,F_GETFD,0);
 		if( flag != -1 ) {
-			fcntl(i,F_SETFD,flag | 1);
+			(void) fcntl(i,F_SETFD,flag | 1);
 		}
 	}
 #endif
@@ -3241,20 +3276,18 @@ Daemons::Update( ClassAd* ca )
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->runs_here || iter->second == master ) {
-			sprintf( buf, "%s_Timestamp = %ld", 
-					 iter->second->name_in_config_file, 	
-					 (long)iter->second->timeStamp );
-			ca->Insert( buf );
+			sprintf( buf, "%s_Timestamp",
+					 iter->second->name_in_config_file );
+			ca->Assign( buf, (long)iter->second->timeStamp );
 			if( iter->second->pid ) {
-				sprintf( buf, "%s_StartTime = %ld", 
-						 iter->second->name_in_config_file, 	
-						 (long)iter->second->startTime );
-				ca->Insert( buf );
+				sprintf( buf, "%s_StartTime",
+						 iter->second->name_in_config_file );
+				ca->Assign( buf, (long)iter->second->startTime );
 			} else {
 					// No pid, but daemon's supposed to be running.
-				sprintf( buf, "%s_StartTime = 0", 
+				sprintf( buf, "%s_StartTime",
 						 iter->second->name_in_config_file );
-				ca->Insert( buf );
+				ca->Assign( buf, 0 );
 			}
 		}
 	}
@@ -3276,7 +3309,8 @@ Daemons::UpdateCollector()
     daemonCore->publish(ad);
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
-	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
+	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true, &m_token_requester,
+		DCTokenRequester::default_identity, "ADVERTISE_MASTER");
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -3338,4 +3372,16 @@ Daemons::CancelRestartTimers( void )
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		iter->second->CancelRestartTimers();
 	}
+}
+
+void
+Daemons::token_request_callback(bool success, void *miscdata)
+{
+	auto self = reinterpret_cast<Daemons *>(miscdata);
+		// In the successful case, instantly re-fire the timer
+		// that will send an update to the collector.
+	if (success && (self->update_tid != -1)) {
+		daemonCore->Reset_Timer( self->update_tid, 0,
+		update_interval );
+}
 }

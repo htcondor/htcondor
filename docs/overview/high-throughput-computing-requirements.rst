@@ -5,22 +5,20 @@ High-Throughput Computing (HTC) and its Requirements
 
 :index:`overview<single: overview; HTCondor>` :index:`overview`
 
-The quality of the many projects is dependent upon the quantity of computing
-cycles available. It is not uncommon to find problems that require months
-or years of computation to solve.  These problems demand a computing 
-environment that delivers large amounts of computational power over a 
-long period of time. Such an environment is called a 
-High-Throughput Computing (HTC) environment.
+The quality of many projects is dependent upon the quantity of computing
+cycles available. Many problems require years of computation to solve.  
+These problems demand a computing environment that delivers large amounts 
+of computational power over a long period of time. Such an environment is 
+called a High-Throughput Computing (HTC) environment.
 :index:`High-Throughput Computing (HTC)`\ :index:`HTC (High-Throughput Computing)`
 In contrast, High Performance Computing (HPC)
 :index:`High-Performance Computing (HPC)`\ :index:`HPC (High-Performance Computing)`
 environments deliver a tremendous amount of compute power over a short
-period of time. HPC environments are often measured in terms of FLoating
+period of time. HPC environments are often measured in terms of Floating
 point Operations Per Second (FLOPS). A growing community is not
 concerned about operations per second, but operations per month or per
-year. These problems are of a much larger scale. They are more
-interested in how many jobs they can complete over a long period of time
-instead of how fast an individual job can complete.
+year (FLOPY). They are more interested in how many jobs they can complete 
+over a long period of time instead of how fast an individual job can finish.
 
 The key to HTC is to efficiently harness the use of all available
 resources. Years ago, the engineering and scientific community relied on
@@ -39,8 +37,8 @@ allocations from national supercomputer centers are all examples
 of these resources.  This is an environment of distributed ownership,
 :index:`of machines<single: of machines; distributed ownership>`\ where individuals
 throughout an organization own their own resources. The total
-computational power of the institution as a whole may rise dramatically
-as the result of such a change, but because of distributed ownership,
+computational power of the institution as a whole may be enormous,
+but because of distributed ownership,
 groups have not been able to capitalize on the aggregate institutional
 computing power. And, while distributed ownership is more convenient
 for the users, the utilization of the computing power is lower. Many

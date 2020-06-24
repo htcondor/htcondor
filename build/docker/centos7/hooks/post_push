@@ -1,9 +1,0 @@
-#!/bin/bash
-
-set -e
-
-# Tag the build with the short git sha. Push this tag (in addition
-# to the tag already pushed by Docker Hub's default push)
-GIT_SHA_TAG=${SOURCE_COMMIT:0:12}
-docker tag $IMAGE_NAME $DOCKER_REPO:$GIT_SHA_TAG
-docker push $DOCKER_REPO:$GIT_SHA_TAG

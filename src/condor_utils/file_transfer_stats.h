@@ -21,7 +21,6 @@
  #define __FILETRANSFER_STATS_H__
  
  #include "condor_classad.h"
- #include "condor_collector.h"
  #include "hashkey.h"
  #include "extArray.h"
  #include "generic_stats.h"

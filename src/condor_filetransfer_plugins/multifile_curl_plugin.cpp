@@ -16,6 +16,41 @@
 
 #define MAX_RETRY_ATTEMPTS 20
 
+// Setup a transfer progress callback. We'll use this to manually timeout 
+// any transfers that are not making forward progress.
+
+struct xferProgress {
+    double lastRunTime;
+    CURL *curl;
+};
+struct xferProgress myProgress;
+
+static int xferInfo(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
+{
+    struct xferProgress *progress = (struct xferProgress *)p;
+    CURL *curl = progress->curl;
+    double curTime = 0;
+    
+    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &curTime);
+
+    // After 30 seconds, check if we're making forward progress (> 1 byte/s)
+    if (curTime > 30) {
+
+        // If this is a download and not making progress, abort
+        if (dltotal > 0 && curTime > dlnow) return 1;
+
+        // If this is an upload and not making progress, abort
+        if (ultotal > 0 && curTime > ulnow) return 1;
+
+        // Sometimes a misconfigured proxy will report 0 bytes available. Abort.
+        if (dltotal <= 0 && ultotal <= 0) return 1;
+    }
+
+    // All good. Return success.
+    return 0;
+}
+
+
 namespace {
 
 bool
@@ -53,7 +88,6 @@ CurlWriteCallback(char *buffer, size_t size, size_t nitems, void *userdata) {
     }
     return fwrite(buffer, size, nitems, static_cast<FILE*>(userdata));
 }
-
 
 void
 GetToken(const std::string & cred_name, std::string & token) {
@@ -109,7 +143,6 @@ GetToken(const std::string & cred_name, std::string & token) {
 MultiFileCurlPlugin::MultiFileCurlPlugin( bool diagnostic ) :
     _diagnostic ( diagnostic )
 {
-    ParseAds();
 }
 
 MultiFileCurlPlugin::~MultiFileCurlPlugin() {
@@ -119,6 +152,8 @@ MultiFileCurlPlugin::~MultiFileCurlPlugin() {
 
 int
 MultiFileCurlPlugin::InitializeCurl() {
+    ParseAds();
+
     // Initialize win32 + SSL socket libraries.
     // Do not initialize these separately! Doing so causes https:// transfers
     // to segfault.
@@ -136,24 +171,36 @@ void
 MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::string &cred,
         struct curl_slist *& header_list)
 {
-    curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
-    curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
-
-    if (m_speed_limit > 0) {
-        curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_LIMIT, m_speed_limit );
-    }
-    if (m_speed_time > 0) {
-        curl_easy_setopt( _handle, CURLOPT_LOW_SPEED_TIME, m_speed_time );
-    }
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_URL\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CONNECTIMEOUT\n");
+	}
 
     // Provide default read / write callback functions; note these
     // don't segfault if a nullptr is given as the read/write data.
-    curl_easy_setopt( _handle, CURLOPT_READFUNCTION, &CurlReadCallback );
-    curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &CurlWriteCallback );
+    r = curl_easy_setopt( _handle, CURLOPT_READFUNCTION, &CurlReadCallback );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt READFUNCTION\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &CurlWriteCallback );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt WRITEFUNCTION\n");
+	}
 
     // Prevent curl from spewing to stdout / in by default.
-    curl_easy_setopt( _handle, CURLOPT_READDATA, NULL );
-    curl_easy_setopt( _handle, CURLOPT_WRITEDATA, NULL );
+    r = curl_easy_setopt( _handle, CURLOPT_READDATA, NULL );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt READDATA\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_WRITEDATA, NULL );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt WRITEDATA\n");
+	}
 
     std::string token;
 
@@ -161,14 +208,23 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     if( !strncasecmp( url.c_str(), "http://", 7 ) ||
             !strncasecmp( url.c_str(), "https://", 8 ) ||
             !strncasecmp( url.c_str(), "file://", 7 ) ) {
-        curl_easy_setopt( _handle, CURLOPT_FOLLOWLOCATION, 1 );
-        curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, &HeaderCallback );
+        r = curl_easy_setopt( _handle, CURLOPT_FOLLOWLOCATION, 1 );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt FOLLOWLOCATION\n");
+		}
+        r = curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, &HeaderCallback );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt HEADERFUNCTOIN\n");
+		}
 
         GetToken(cred, token);
     }
     // Libcurl options for FTP
     else if( !strncasecmp( url.c_str(), "ftp://", 6 ) ) {
-        curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &FtpWriteCallback );
+        r = curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &FtpWriteCallback );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt WRITEFUNCTION\n");
+		}
     }
 
     if (!token.empty()) {
@@ -184,15 +240,41 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     // happens? 500 errors fail before we see HTTP headers but I don't
     // think that's a big deal.
     // * Let's keep it set to 1 for now.
-    curl_easy_setopt( _handle, CURLOPT_FAILONERROR, 1 );
+    r = curl_easy_setopt( _handle, CURLOPT_FAILONERROR, 1 );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt FAILONERROR\n");
+	}
 
     if( _diagnostic ) {
-        curl_easy_setopt( _handle, CURLOPT_VERBOSE, 1 );
+        r = curl_easy_setopt( _handle, CURLOPT_VERBOSE, 1 );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt VERBOSE\n");
+		}
     }
 
     // Setup a buffer to store error messages. For debug use.
     _error_buffer[0] = '\0';
-    curl_easy_setopt( _handle, CURLOPT_ERRORBUFFER, _error_buffer );
+    r = curl_easy_setopt( _handle, CURLOPT_ERRORBUFFER, _error_buffer );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt ERRORBUFFER\n");
+	}
+
+    // Setup a transfer progress callback. We'll use this to determine if a 
+    // transfer is not making progress, and if not then abort it.
+    myProgress.curl = _handle;
+    myProgress.lastRunTime = 0;
+    r = curl_easy_setopt(_handle, CURLOPT_PROGRESSFUNCTION, xferInfo);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt PROGRESSFUNCTION\n");
+	}
+    r = curl_easy_setopt(_handle, CURLOPT_PROGRESSDATA, &myProgress);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt PROGRESSDATA\n");
+	}
+    r = curl_easy_setopt(_handle, CURLOPT_NOPROGRESS, 0L);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt NOPROGRESS\n");
+	}
 }
 
 FILE *
@@ -222,16 +304,24 @@ void
 MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
 
     // Gather more statistics
-    double bytes_downloaded;
+    double bytes_downloaded = 0;
+    double bytes_uploaded = 0;
     double transfer_connection_time;
     double transfer_total_time;
     long return_code;
     curl_easy_getinfo( _handle, CURLINFO_SIZE_DOWNLOAD, &bytes_downloaded );
+    curl_easy_getinfo( _handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
     curl_easy_getinfo( _handle, CURLINFO_CONNECT_TIME, &transfer_connection_time );
     curl_easy_getinfo( _handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
     curl_easy_getinfo( _handle, CURLINFO_RESPONSE_CODE, &return_code );
 
-    _this_file_stats->TransferTotalBytes += ( long ) bytes_downloaded;
+    if(bytes_downloaded > 0) {
+        _this_file_stats->TransferTotalBytes += ( long ) bytes_downloaded;
+    }
+    else {
+        _this_file_stats->TransferTotalBytes += ( long ) bytes_uploaded;
+    }
+
     _this_file_stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
     _this_file_stats->TransferHTTPStatusCode = return_code;
     _this_file_stats->LibcurlReturnCode = rval;
@@ -275,11 +365,36 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
         return rval;
     }
 
-    curl_easy_setopt( _handle, CURLOPT_READDATA, file );
-    curl_easy_setopt( _handle, CURLOPT_UPLOAD, 1L);
-    curl_easy_setopt( _handle, CURLOPT_INFILESIZE_LARGE, (curl_off_t)stat_buf.st_size );
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_READDATA, file );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_READDATA\n");
+        fclose( file );
+		return -1;
+	}
 
-    if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+    r = curl_easy_setopt( _handle, CURLOPT_UPLOAD, 1L);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_UPLOAD\n");
+        fclose( file );
+		return -1;
+	}
+
+    r = curl_easy_setopt( _handle, CURLOPT_INFILESIZE_LARGE, (curl_off_t)stat_buf.st_size );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CUROPT_INFILESIZE_LARGE\n");
+        fclose( file );
+		return -1;
+	}
+
+    if (header_list) {
+		r = curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CUROPT_HTTPHEADER\n");
+        	fclose( file );
+			return -1;
+		}
+	}
 
     // Update some statistics
     _this_file_stats->TransferType = "upload";
@@ -325,15 +440,30 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
     }   
 
     // Libcurl options that apply to all transfer protocols
-    curl_easy_setopt( _handle, CURLOPT_WRITEDATA, file );
-    curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_WRITEDATA, file );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_WRITEDATA\n");
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_HEADERDATA\n");
+	}
 
-    if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+    if (header_list) {
+		r = curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CURLOPT_HTTPHEADER\n");
+		}
+	}
 
     // If we are attempting to resume a download, set additional flags
     if( partial_bytes ) {
         sprintf( partial_range, "%lu-", partial_bytes );
-        curl_easy_setopt( _handle, CURLOPT_RANGE, partial_range );
+        r = curl_easy_setopt( _handle, CURLOPT_RANGE, partial_range );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CURLOPT_RANGE\n");
+		}
     }
 
     // Update some statistics
@@ -382,6 +512,7 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 
 int
 MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, std::vector<std::pair<std::string, transfer_request>> &requested_files) const {
+
     CondorClassAdFileIterator adFileIter;
     FILE* input_file;
 
@@ -438,11 +569,13 @@ MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, st
 }
 
 
-int
+TransferPluginResult
 MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
     std::vector<std::pair<std::string, transfer_request>> requested_files;
     auto rval = BuildTransferRequests(input_filename, requested_files);
-    if (rval) {return rval;}
+    if (rval != 0) {
+        return TransferPluginResult::Error;
+    }
 
     classad::ClassAdUnParser unparser;
     if ( _diagnostic ) { fprintf( stderr, "Uploading multiple files.\n" ); }
@@ -510,19 +643,23 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
             rval = file_rval;
         }
     }
-    return rval;
+
+    if ( rval != 0 ) return TransferPluginResult::Error;
+
+    return TransferPluginResult::Success;
 }
 
 
-int
+TransferPluginResult
 MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) {
+
     int rval = 0;
 
     std::vector<std::pair<std::string, transfer_request>> requested_files;
     rval = BuildTransferRequests(input_filename, requested_files);
     // If BuildTransferRequests failed, exit immediately
     if ( rval != 0 ) {
-        return rval;
+        return TransferPluginResult::Error;
     }
     classad::ClassAdUnParser unparser;
 
@@ -593,7 +730,9 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
         if ( rval > 0 ) break;
     }
 
-    return rval;
+    if ( rval != 0 ) return TransferPluginResult::Error;
+
+    return TransferPluginResult::Success;
 }
 
 /*
@@ -608,9 +747,22 @@ MultiFileCurlPlugin::ServerSupportsResume( const std::string &url ) {
     int rval = -1;
 
     // Send a basic request, with Range set to a null range
-    curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
-    curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
-    curl_easy_setopt( _handle, CURLOPT_RANGE, "0-0" );
+	CURLcode r;
+    r = curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_URL\n");
+		return 0;
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_CONNECTTIMEOUT\n");
+		return 0;
+	}
+    r = curl_easy_setopt( _handle, CURLOPT_RANGE, "0-0" );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_RANGE\n");
+		return 0;
+	}
 
     rval = curl_easy_perform(_handle);
 
@@ -634,7 +786,11 @@ MultiFileCurlPlugin::ServerSupportsResume( const std::string &url ) {
 
     // If we've gotten this far the server does not support resume. Clear the
     // HTTP "Range" header and return false.
-    curl_easy_setopt( _handle, CURLOPT_RANGE, NULL );
+    r = curl_easy_setopt( _handle, CURLOPT_RANGE, NULL );
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt CURLOPT_RANGE\n");
+		return 0;
+	}
     return 0;
 }
 
@@ -691,10 +847,14 @@ MultiFileCurlPlugin::InitializeStats( std::string request_url ) {
 
 size_t
 MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, void *userdata ) {
+    fprintf(stderr, "[MultiFileCurlPlugin::HeaderCallback] called\n");
     auto ft_stats = static_cast<FileTransferStats*>(userdata);
 
     const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
+
+    // In some unique cases, ftstats get passed in as null. If this happens, abort.
+    if( !ft_stats ) return numBytes;
 
     // Parse this HTTP header
     // We should probably add more error checking to this parse method...
@@ -729,48 +889,49 @@ MultiFileCurlPlugin::FtpWriteCallback( void* buffer, size_t size, size_t nmemb, 
 
 void
 MultiFileCurlPlugin::ParseAds() {
-    const char *job_ad = getenv("_CONDOR_JOB_AD");
-    const char *machine_ad = getenv("_CONDOR_MACHINE_AD");
-    FILE *fp = nullptr;
-    classad::ClassAd *ad = nullptr;
-    int error;
-    bool is_eof;
-    if (job_ad && (fp = fopen(job_ad, "r"))) {
-        ad = new classad::ClassAd();
-        if (InsertFromFile(fp, *ad, is_eof, error) < 0) {
-            delete ad;
-            ad = nullptr;
-        }
-    }
-    if (fp) {fclose(fp); fp = nullptr;}
-    classad::ClassAd *ad2 = nullptr;
-    if (machine_ad && (fp = fopen(machine_ad, "r"))) {
-        ad2 = new classad::ClassAd();
-        if (InsertFromFile(fp, *ad2, is_eof, error) < 0) {
-            delete ad2;
-            ad2 = nullptr;
-        }
-    }
-    if (fp) {fclose(fp); fp = nullptr;}
-    if (!ad) {
-        delete ad2;
+
+        // Look in the job ad for speed limits; job ad is mandatory
+    const char *job_ad_env = getenv("_CONDOR_JOB_AD");
+    if (!job_ad_env) {
         return;
     }
-    if (ad2) ad->ChainToAd(ad2);
+        // If not present in the job ad, the machine ad can also contain
+        // default limits; machine ad is optional.
+    const char *machine_ad_env = getenv("_CONDOR_MACHINE_AD");
 
-    classad::ClassAdUnParser unp;
-    std::string val;
-    unp.Unparse(val, ad);
+    std::unique_ptr<FILE,decltype(&fclose)> fp(nullptr, fclose);
+    fp.reset(safe_fopen_wrapper(job_ad_env, "r"));
+    if (!fp) {
+        return;
+    }
+
+    int error;
+    bool is_eof;
+    classad::ClassAd job_ad;
+    if (InsertFromFile(fp.get(), job_ad, is_eof, error) < 0) {
+        return;
+    }
+
+    classad::ClassAd machine_ad;
+    if (machine_ad_env) {
+        fp.reset(safe_fopen_wrapper(machine_ad_env, "r"));
+        if (fp) {
+                // Note we ignore errors; failure to parse machine ad
+                // is not fatal.
+            InsertFromFile(fp.get(), machine_ad, is_eof, error);
+        }
+    }
+
+    job_ad.ChainToAd(&machine_ad);
+
     int speed_limit;
-    if (ad->EvaluateAttrInt("LowSpeedLimit", speed_limit)) {
+    if (job_ad.EvaluateAttrInt("LowSpeedLimit", speed_limit)) {
         m_speed_limit = speed_limit;
     }
     int speed_time;
-    if (ad->EvaluateAttrInt("LowSpeedTime", speed_time)) {
+    if (job_ad.EvaluateAttrInt("LowSpeedTime", speed_time)) {
         m_speed_time = speed_time;
     }
-    if (ad2) {ad->Unchain(); delete ad2;}
-    delete ad;
 }
 
 
@@ -781,7 +942,7 @@ main( int argc, char **argv ) {
     FILE* output_file;
     bool diagnostic = false;
     bool upload = false;
-    int rval = 0;
+    TransferPluginResult result;
     std::string input_filename;
     std::string output_filename;
     std::string transfer_files;
@@ -793,9 +954,9 @@ main( int argc, char **argv ) {
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"0.2\"\n"
                 "PluginType = \"FileTransfer\"\n"
-                "SupportedMethods = \"http,https,dav,davs\"\n"
+                "SupportedMethods = \"http,https,ftp,file,dav,davs\"\n"
             );
-            return 0;
+            return (int)TransferPluginResult::Success;
         }
     }
     // If not, iterate over command-line arguments and set variables appropriately
@@ -832,18 +993,18 @@ main( int argc, char **argv ) {
         fprintf( stderr, "[general-opts] are:\n" );
         fprintf( stderr, "\t-diagnostic\t\tRun the plugin in diagnostic (verbose) mode\n\n" );
         fprintf( stderr, "\t-upload\t\tRun the plugin in upload mode, copying files to a remote location\n\n" );
-        return 1;
+        return -1;
     }
 
     // Instantiate a MultiFileCurlPlugin object and handle the request
     MultiFileCurlPlugin curl_plugin( diagnostic );
     if( curl_plugin.InitializeCurl() != 0 ) {
         fprintf( stderr, "ERROR: curl_plugin failed to initialize. Aborting.\n" );
-        return 1;
+        return (int)TransferPluginResult::Error;
     }
 
     // Do the transfer(s)
-    rval = upload ?
+    result = upload ?
              curl_plugin.UploadMultipleFiles( input_filename )
            : curl_plugin.DownloadMultipleFiles( input_filename );
 
@@ -852,7 +1013,7 @@ main( int argc, char **argv ) {
         output_file = safe_fopen_wrapper( output_filename.c_str(), "w" );
         if( output_file == NULL ) {
             fprintf( stderr, "Unable to open curl_plugin output file: %s\n", output_filename.c_str() );
-            return 1;
+            return (int)TransferPluginResult::Error;
         }
         fprintf( output_file, "%s", curl_plugin.GetStats().c_str() );
         fclose( output_file );
@@ -861,8 +1022,7 @@ main( int argc, char **argv ) {
         printf( "%s\n", curl_plugin.GetStats().c_str() );
     }
 
-    // 0 on success, error code >= 1 on failure
-    return rval;
+    return (int)result;
 }
 
 

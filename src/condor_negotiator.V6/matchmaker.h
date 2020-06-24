@@ -164,7 +164,7 @@ class Matchmaker : public Service
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList &allAds, ClassAdListDoesNotDeleteAds &startdAds, ClassAdListDoesNotDeleteAds &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
-		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds);
+		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds) const;
 
 		void SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds);
 
@@ -339,7 +339,7 @@ class Matchmaker : public Service
 		**/
 		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
 		// Note: these are called by trimStartdAds as required
-		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds);
+		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const;
 		int trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
@@ -385,6 +385,7 @@ class Matchmaker : public Service
                                          // constraint before calculating quotas
                                          // formerly DynQuotaMachConstraint Added for CDF.
 
+		std::string m_SubmitterConstraintStr;
 		std::string m_JobConstraintStr;
 
 		bool m_staticRanks;
@@ -513,7 +514,7 @@ class Matchmaker : public Service
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 					int & rejPreemptForRank,
-					int & rejForSubmitterLimit);
+					int & rejForSubmitterLimit) const;
 			void set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
 					int rejForConcurrencyLimit,

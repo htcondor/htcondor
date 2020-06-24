@@ -74,13 +74,11 @@ CatchFalseAlarm(Display *display, XErrorEvent *err)
 }
 
 static int 
-CatchIOFalseAlarm(Display *display, XErrorEvent *err)
+CatchIOFalseAlarm(Display *)
 {
-	char msg[80];
 	g_connected = false;
 		
-	XGetErrorText(display, err->error_code, msg, 80);
-	dprintf(D_FULLDEBUG, "Caught Error code(%d): %s\n", err->error_code, msg);
+	dprintf(D_FULLDEBUG, "Caught IOError\n");
 
 	longjmp(jmp, 0);
 	return 0;
@@ -115,7 +113,9 @@ XInterface::TryUser(const char *user)
 	if (strcmp(user, "root") == 0) {
 		set_root_priv();
 	} else {
-		init_user_ids( user, NULL );
+		if (!init_user_ids( user, NULL )) {
+			dprintf(D_ALWAYS, "init_user_ids failed\n");
+		}
 		set_user_priv();
 		need_uninit = true;
 	}
@@ -224,14 +224,17 @@ XInterface::ReadUtmp() {
 
 		if (utmp_entry.ut_type == USER_PROCESS) {
 			bool _found_it = false;
+			char user[UT_NAMESIZE + 1];
 			for (size_t i=0; (i<logged_on_users->size()) && (! _found_it); i++) {
-				if (!strcmp(utmp_entry.ut_user, (*logged_on_users)[i])) {
+				memcpy(user, utmp_entry.ut_user, UT_NAMESIZE);
+				user[UT_NAMESIZE] = 0;
+				if (!strcmp(user, (*logged_on_users)[i])) {
 					_found_it = true;
 				}
 			}
 			if (! _found_it) {
 				dprintf(D_FULLDEBUG, "User %s is logged in.\n",
-					utmp_entry.ut_user );
+					user );
 				logged_on_users->push_back(strdup( utmp_entry.ut_user ));
 			}
 		}

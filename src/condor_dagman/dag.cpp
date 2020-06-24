@@ -150,7 +150,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	}
 
  	_readyQ = new PrioritySimpleList<Job*>;
-	_submitQ = new Queue<Job*>;
+	_submitQ = new std::queue<Job*>;
 	if( !_readyQ || !_submitQ ) {
 		EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 	}
@@ -1140,14 +1140,16 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 				// submit event to the job we expected to see from
 				// our submit queue
 			Job* expectedJob = NULL;
-			if ( _submitQ->dequeue( expectedJob ) == -1 ) {
+			if ( _submitQ->empty() ) {
 				debug_printf( DEBUG_QUIET,
 						"Unrecognized submit event (for job "
 						"\"%s\") found in log (none expected)\n",
 						job->GetJobName() );
 				return;
-			} 
-			else if ( job != expectedJob ) {
+			}
+			expectedJob = _submitQ->front();
+			_submitQ->pop();
+			if ( job != expectedJob ) {
 				ASSERT( expectedJob != NULL );
 				debug_printf( DEBUG_QUIET,
 						"Unexpected submit event (for job "
@@ -1156,7 +1158,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 						job->GetJobName(),
 						expectedJob->GetJobName() );
 				// put expectedJob back onto submit queue
-				_submitQ->enqueue( expectedJob );
+				_submitQ->push( expectedJob );
 				return;
 			}
 		}
@@ -1387,12 +1389,12 @@ Dag::FindAllNodesByName( const char* nodeName,
 	}
 
 		// We want to skip final nodes if we're in ALL_NODES mode.
-	if ( node && node->GetFinal() && _allNodesIt ) {
+	if ( node && node->GetType() == NodeType::FINAL && _allNodesIt ) {
 		debug_printf( DEBUG_QUIET, finalSkipMsg, node->GetJobName(),
 					file, line );
 			// We know there can only be one FINAL node.
 		node = _allNodesIt->Next();
-		ASSERT( !node || !node->GetFinal() );
+		ASSERT( !node || !( node->GetType() == NodeType::FINAL ) );
 	}
 
 		// Delete the ALL_NODES iterator if we've hit the last node.
@@ -1551,7 +1553,7 @@ Dag::StartFinalNode()
 		Job* job;
 		_readyQ->Rewind();
 		while ( _readyQ->Next( job ) ) {
-			if ( !job->GetFinal() ) {
+			if ( !(job->GetType() == NodeType::FINAL) ) {
 				debug_printf( DEBUG_DEBUG_1,
 							"Removing node %s from ready queue\n",
 							job->GetJobName() );
@@ -2337,7 +2339,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 {
 		// Print the JOB/DATA line.
 	const char *keyword = "";
-	if ( node->GetFinal() ) {
+	if ( node->GetType() == NodeType::FINAL ) {
 		keyword = "FINAL";
 	} else {
 		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
@@ -2435,7 +2437,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		// Never mark a FINAL node as done.
 		// Also avoid a possible race condition where the job
 		// has been skipped but is not yet marked as DONE.
-	if ( node->GetStatus() == Job::STATUS_DONE && !node->GetFinal() ) {
+	if ( node->GetStatus() == Job::STATUS_DONE && !( node->GetType() == NodeType::FINAL ) ) {
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
 
@@ -3347,6 +3349,36 @@ Dag::GetReject( MyString &firstLocation )
 	return _reject;
 }
 
+//-------------------------------------------------------------------------
+void 
+Dag::SetMaxJobsSubmitted(int newMax) {
+
+	bool isChanged = (newMax != _maxJobsSubmitted);
+	bool removeJobsAfterLimitChange = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
+
+	// Update our internal max jobs count
+	_maxJobsSubmitted = newMax;
+
+	// If maxJobs is set to 0, that means no maximum limit. Exit now.
+	if (_maxJobsSubmitted == 0) return;
+
+	// Optionally remove jobs to meet the new limit, starting with most recent
+	if (isChanged && removeJobsAfterLimitChange) {
+		int submittedJobsCount = 0;
+		Job* job;
+		ListIterator<Job> iList (_jobs);
+		while ((job = iList.Next()) != NULL) {
+			if (job->GetStatus() == Job::STATUS_SUBMITTED) {
+				submittedJobsCount++;
+				if (submittedJobsCount > _maxJobsSubmitted) {
+					job->retry_max++;
+					RemoveBatchJob(job);
+				}
+			}
+		}
+	}
+}
+
 //===========================================================================
 
 /** Set the filename of the jobstate.log file.
@@ -3714,7 +3746,7 @@ bool Dag::Add( Job& job )
 		// Final node status is set to STATUS_NOT_READY here, so it
 		// won't get run even though it has no parents; its status
 		// will get changed when it should be run.
-	if ( job.GetFinal() ) {
+	if ( ( job.GetType() == NodeType::FINAL ) ) {
 		if ( _final_job ) {
         	debug_printf( DEBUG_QUIET, "Error: DAG already has a final "
 						"node %s; attempting to add final node %s\n",
@@ -4195,6 +4227,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
 	bool use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
+	// If a submit description is already set, override the DAGMAN_USE_CONDOR_SUBMIT knob
+	if (node->GetSubmitDesc()) { use_condor_submit = false; }
 
 		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
@@ -4267,7 +4301,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		} else {
 			batchName = dm._batchName.Value();
 		}
-
 		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents.c_str(),
 					node, node->_effectivePriority,
@@ -4322,9 +4355,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 
     // append node to the submit queue so we can match it with its
     // submit event once the latter appears in the HTCondor job log
-	if( _submitQ->enqueue( node ) == -1 ) {
-		debug_printf( DEBUG_QUIET, "ERROR: _submitQ->enqueue() failed!\n" );
-	}
+	_submitQ->push( node );
 
     node->SetStatus( Job::STATUS_SUBMITTED );
 
@@ -4367,7 +4398,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetFinal() ) {
+	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
 		max_submit_attempts = min( max_submit_attempts, 2 );
 	}
 

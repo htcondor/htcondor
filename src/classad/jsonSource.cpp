@@ -424,9 +424,12 @@ parseClassAd( ClassAd &ad , bool full )
 	string				s;
 
 	ad.Clear( );
-	ad.DisableDirtyTracking();
 
-	if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_OPEN_BRACE ) return false;
+	if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_OPEN_BRACE ) {
+	    CondorErrno = ERR_PARSE_ERROR;
+	    CondorErrMsg = "putative JSON did not begin with open brace";
+	    return false;
+	}
 	tt = lexer.PeekToken();
 	while( tt != Lexer::LEX_CLOSE_BRACE ) {
 		// Get the name of the expression
@@ -493,7 +496,6 @@ parseClassAd( ClassAd &ad , bool full )
 		return false;
 	}
 
-	ad.EnableDirtyTracking();
 	return true;
 }
 

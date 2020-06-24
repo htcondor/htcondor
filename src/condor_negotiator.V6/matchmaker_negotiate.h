@@ -22,7 +22,7 @@
 
 #include <deque>
 
-class ResourceRequestList : public ClassyCountedPtr {
+class ResourceRequestList {
 
  public:
 	ResourceRequestList(int protocol_version);
@@ -43,8 +43,8 @@ class ResourceRequestList : public ClassyCountedPtr {
 		// 
 	void noMatchFound();
 
-	bool needsEndNegotiate();
-	bool needsEndNegotiateNow();
+	bool needsEndNegotiate() const;
+	bool needsEndNegotiateNow() const;
 
 		//
 	void clearRejectedAutoclusters() { m_clear_rejected_autoclusters = true; }

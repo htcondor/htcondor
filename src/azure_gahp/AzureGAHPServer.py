@@ -1,5 +1,7 @@
 #!/usr/bin/env python -u
 
+from __future__ import print_function
+
 import platform
 
 ## AzureGAHPLib.py ############################
@@ -3061,6 +3063,6 @@ while(True):
             continue
         print(s_alphabet)
     else:
-        print("E Unsupported command: To see a list of valid commands use COMMANDS");
+        print("E Unsupported command: To see a list of valid commands use COMMANDS")
 
 ##### END MAIN PROGRAM ##############

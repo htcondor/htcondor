@@ -16,8 +16,20 @@
  # 
  ############################################################### 
 
-
-file( GLOB DCRmvElements *.t* )
-condor_glob(DCHeaderFiles DCSourceFiles "${DCRmvElements}")
-
-set ( DAEMON_CLIENT_UTIL_SRCS "${DCHeaderFiles};${DCSourceFiles}" PARENT_SCOPE)
+set (DAEMON_CLIENT_UTIL_SRCS
+${CMAKE_CURRENT_SOURCE_DIR}/daemon.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_annexd.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_credd.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_message.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_shadow.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_transfer_queue.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/daemon_list.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/daemon_types.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_collector.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_master.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_schedd.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_startd.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_starter.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_transferd.cpp
+PARENT_SCOPE
+)

@@ -43,6 +43,12 @@ char* temp_dir_path();
 */
 const char* dircat(const char* dirpath, const char* filename, MyString & result);
 
+/*
+ same as above but filename and fileext are concatenated together to produce the effect filename
+*/
+const char* dircat(const char* dirpath, const char* filename, const char * fileext, MyString & result);
+
+
 /** Take two strings, a directory path, and a subdirectory, and
   concatenate them together.  If the directory or subdirectory paths
   don't end with the appropriate directory deliminator for this platform, or have excess delimiters

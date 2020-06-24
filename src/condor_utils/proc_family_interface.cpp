@@ -24,7 +24,6 @@
 #include "proc_family_interface.h"
 #include "proc_family_proxy.h"
 #include "proc_family_direct.h"
-#include "../condor_privsep/condor_privsep.h"
 
 ProcFamilyInterface* ProcFamilyInterface::create(const char* subsys)
 {
@@ -41,13 +40,6 @@ ProcFamilyInterface* ProcFamilyInterface::create(const char* subsys)
 		//
 		const char* address_suffix = is_master ? NULL : subsys;
 		ptr = new ProcFamilyProxy(address_suffix);
-	}
-	else if (privsep_enabled()) {
-
-		dprintf(D_ALWAYS,
-		        "PrivSep requires use of ProcD; "
-		            "ignoring USE_PROCD setting\n");
-		ptr = new ProcFamilyProxy;
 	}
 	else if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
 

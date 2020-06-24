@@ -135,6 +135,8 @@
 
 #define SUBMIT_KEY_WhenToTransferOutput "when_to_transfer_output"
 #define SUBMIT_KEY_ShouldTransferFiles "should_transfer_files"
+#define SUBMIT_KEY_PreserveRelativePaths "preserve_relative_paths"
+#define SUBMIT_KEY_TransferCheckpointFiles "transfer_checkpoint_files"
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
 #define SUBMIT_KEY_TransferInputFilesAlt "TransferInputFiles"
 #define SUBMIT_KEY_TransferOutputFiles "transfer_output_files"
@@ -199,6 +201,8 @@
 
 #define SUBMIT_KEY_JobWantsAds "want_ads"
 
+#define SUBMIT_KEY_SkipIfDataflow "skip_if_dataflow"
+
 //
 // Job Deferral Parameters
 //
@@ -245,6 +249,9 @@
 //
 #define SUBMIT_KEY_DockerImage "docker_image"
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
+
+#define SUBMIT_KEY_ContainerServiceNames "container_service_names"
+#define SUBMIT_KEY_ContainerPortSuffix "_container_port"
 
 //
 // VM universe Parameters
@@ -334,6 +341,7 @@
 #define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
 #define SUBMIT_KEY_JobMaterializeMaxIdleAlt "materialize_max_idle"
 
+#define SUBMIT_KEY_CUDAVersion "cuda_version"
 
 #define SUBMIT_KEY_REMOTE_PREFIX "Remote_"
 
@@ -549,7 +557,7 @@ public:
 
 	// establishes default job attibutes that are independent of submit file (i.e. SUBMIT_ATTRS, etc)
 	// call once before parsing the submit file and/or calling make_job_ad.
-	int init_base_ad(time_t _submit_time, const char * owner); // returns 0 on success
+	int init_base_ad(time_t _submit_time, const char * username); // returns 0 on success
 
 	// establish default attributes using a foreign ad rather than by calling init_base_ad above
 	// used by late materialization when the 'base' ad is the cluster ad in the job queue.
@@ -642,7 +650,7 @@ protected:
 	DeltaClassAd * job; // this wraps the procAd or baseJob and tracks changes to the underlying ad.
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
-	MyString   submit_owner; // owner specified to init_cluster_ad
+	std::string   submit_username; // username specified to init_cluster_ad
 
 	int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
 	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
@@ -683,12 +691,12 @@ protected:
 	bool already_warned_job_lease_too_small;
 	bool already_warned_notification_never;
 	auto_free_ptr RunAsOwnerCredD;
-	MyString JobIwd;
+	std::string JobIwd;
 	#if !defined(WIN32)
 	MyString JobRootdir;
 	#endif
 	MyString JobGridType;  // set from "GridResource" for globus or grid universe jobs.
-	MyString VMType;
+	std::string VMType;
 	MyString TempPathname; // temporary path used by full_path
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
 	MyString MyProxyPassword; // set by command line or by submit file. command line wins
@@ -772,6 +780,9 @@ protected:
 	// otherwise it is the name of the attribute that tells us we need job deferral
 	const char * NeedsJobDeferral();
 
+    // For now, just handles port-forwarding.
+    int SetContainerSpecial();
+
 	int CheckStdFile(
 		_submit_file_role role,
 		const char * value, // in: filename to use, may be NULL
@@ -799,6 +810,7 @@ private:
 	int SetRequestMem(const char * key);   /* used by SetRequestResources */
 	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
+	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,

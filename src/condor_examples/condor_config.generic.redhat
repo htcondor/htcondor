@@ -1212,9 +1212,8 @@ NEGOTIATOR_USE_SLOT_WEIGHTS = True
 ##  condor_startd
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
-STARTER_LIST = STARTER, STARTER_STANDARD
+STARTER_LIST = STARTER
 STARTER			= $(SBIN)/condor_starter
-STARTER_STANDARD	= $(SBIN)/condor_starter.std
 STARTER_LOCAL		= $(SBIN)/condor_starter
 
 ##  When the startd starts up, it can place it's address (IP and port)
@@ -1458,18 +1457,12 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  nodes, just increase this parameter.
 #DISCONNECTED_KEYBOARD_IDLE_BOOST = 1200
 
-##	CKPT_PROBE is the location of a program which computes aspects of the
-##	CheckpointPlatform classad attribute. By default the location of this
-##	executable will be here: $(LIBEXEC)/condor_ckpt_probe
-CKPT_PROBE = $(LIBEXEC)/condor_ckpt_probe
-
 ##--------------------------------------------------------------------
 ##  condor_schedd
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
-SHADOW_LIST = SHADOW, SHADOW_STANDARD
+SHADOW_LIST = SHADOW
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_STANDARD		= $(SBIN)/condor_shadow.std
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1667,8 +1660,8 @@ PROCD_ADDRESS = $(RUN)/procd_pipe
 PROCD_MAX_SNAPSHOT_INTERVAL = 60
 
 # On Windows, we send a process a "soft kill" via a WM_CLOSE message.
-# This binary is used by the ProcD (and other Condor daemons if PRIVSEP
-# is not enabled) to help when sending soft kills.
+# This binary is used by the ProcD (and other Condor daemons)
+# to help when sending soft kills.
 WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 
 ##--------------------------------------------------------------------

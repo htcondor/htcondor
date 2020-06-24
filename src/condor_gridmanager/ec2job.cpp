@@ -260,7 +260,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 				std::replace( jobAdName.begin(), jobAdName.end(), '.', '_' );
 				formatstr( jobAdName, "%s_%s", ATTR_EC2_PARAM_PREFIX, jobAdName.c_str() );
 
-				jobAd->LookupString( jobAdName.c_str(), paramValue );
+				jobAd->LookupString( jobAdName, paramValue );
 				if( paramValue.empty() ) {
 					dprintf( D_ALWAYS, "EC2 parameter '%s' had no corresponding value, ignoring.\n", paramName );
 					continue;
@@ -1451,6 +1451,7 @@ void EC2Job::doEvaluateState()
 					|| condorState == COMPLETED
 					|| ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
 
+					ASSERT(gahp != nullptr);
 					if( m_keypair_created && ! m_key_pair.empty() ) {
 						rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
 									m_public_key_file, m_private_key_file,
@@ -2200,7 +2201,7 @@ void EC2Job::associate_n_attach()
 			string tagAttr(ATTR_EC2_TAG_PREFIX);
 			tagAttr.append(tagName);
 			char *value = NULL;
-			if (!jobAd->LookupString(tagAttr.c_str(), &value)) {
+			if (!jobAd->LookupString(tagAttr, &value)) {
 				dprintf(D_ALWAYS, "(%d.%d) Error: %s not defined, no value for tag, skipping\n",
 						procID.cluster, procID.proc,
 						tagAttr.c_str());

@@ -43,7 +43,6 @@
 #include "KeyCache.h"
 #include "list.h"
 #include "extArray.h"
-#include "Queue.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -60,10 +59,11 @@
 #include "condor_sockaddr.h"
 #include "generic_stats.h"
 #include "filesystem_remap.h"
-#include "counted_ptr.h"
 #include "daemon_keep_alive.h"
 
 #include <vector>
+#include <memory>
+#include <deque>
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -101,6 +101,14 @@ static const int DC_STD_FD_NOPIPE = -1;
 
 int dc_main( int argc, char **argv );
 bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
+// set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
+bool dc_args_default_to_background(bool background);
+
+#ifndef WIN32
+// call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
+bool dc_release_background_parent(int status);
+bool dc_set_background_parent_mode(bool is_master = true);
+#endif
 
 
 // External protos
@@ -115,31 +123,31 @@ extern void (*dc_main_pre_command_sock_init)();
  */
 //@{
 ///
-typedef int     (*CommandHandler)(Service*,int,Stream*);
+typedef int     (*CommandHandler)(int,Stream*);
 
 ///
 typedef int     (Service::*CommandHandlercpp)(int,Stream*);
 
 ///
-typedef int     (*SignalHandler)(Service*,int);
+typedef int     (*SignalHandler)(int);
 
 ///
 typedef int     (Service::*SignalHandlercpp)(int);
 
 ///
-typedef int     (*SocketHandler)(Service*,Stream*);
+typedef int     (*SocketHandler)(Stream*);
 
 ///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
 
 ///
-typedef int     (*PipeHandler)(Service*,int);
+typedef int     (*PipeHandler)(int);
 
 ///
 typedef int     (Service::*PipeHandlercpp)(int);
 
 ///
-typedef int     (*ReaperHandler)(Service*,int pid,int exit_status);
+typedef int     (*ReaperHandler)(int pid,int exit_status);
 
 ///
 typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
@@ -387,7 +395,6 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
@@ -440,7 +447,6 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
@@ -601,8 +607,7 @@ class DaemonCore : public Service
     int Register_Signal (int             sig,
                          const char *    sig_descrip,
                          SignalHandler   handler, 
-                         const char *    handler_descrip,
-                         Service*        s                = NULL);
+                         const char *    handler_descrip);
     
     /** Not_Yet_Documented
         @param sig              Not_Yet_Documented
@@ -682,8 +687,7 @@ class DaemonCore : public Service
     */
     int Register_Reaper (const char *    reap_descrip,
                          ReaperHandler   handler,
-                         const char *    handler_descrip,
-                         Service*        s = NULL);
+                         const char *    handler_descrip);
     
     /** Not_Yet_Documented
         @param reap_descrip     Not_Yet_Documented
@@ -708,8 +712,7 @@ class DaemonCore : public Service
     int Reset_Reaper (int              rid,
                       const char *     reap_descrip,
                       ReaperHandler    handler, 
-                      const char *     handler_descrip,
-                      Service *        s = NULL);
+                      const char *     handler_descrip);
     
     /** Not_Yet_Documented
         @param rid The Reaper ID
@@ -763,7 +766,6 @@ class DaemonCore : public Service
                          const char *      iosock_descrip,
                          SocketHandler     handler,
                          const char *      handler_descrip,
-                         Service *         s                = NULL,
                          DCpermission      perm             = ALLOW,
                          HandlerType       handler_type = HANDLE_READ,
                          void **           prev_entry = NULL);
@@ -886,7 +888,6 @@ class DaemonCore : public Service
                          const char *      pipe_descrip,
                          PipeHandler       handler,
                          const char *      handler_descrip,
-                         Service *         s                = NULL,
                          HandlerType       handler_type     = HANDLE_READ,    
                          DCpermission      perm             = ALLOW);
 
@@ -1667,18 +1668,18 @@ class DaemonCore : public Service
 
 			// Strictly unnecessary, but proved helpful for debugging.
 		~SockPair() {
-			m_rsock = counted_ptr<ReliSock>(NULL);
-			m_ssock = counted_ptr<SafeSock>(NULL);
+			m_rsock = std::shared_ptr<ReliSock>(nullptr);
+			m_ssock = std::shared_ptr<SafeSock>(nullptr);
 		}
 
-		bool has_relisock() const { return !m_rsock.is_null(); }
-		bool has_safesock() const { return !m_ssock.is_null(); }
+		bool has_relisock() const { return (bool)m_rsock; }
+		bool has_safesock() const { return (bool)m_ssock; }
 		bool not_empty() const { return has_relisock() || has_safesock(); }
 
-		// If you really need a non-counted_ptr version, use .get(). Avoid
+		// If you really need a non-shared_ptr version, use .get(). Avoid
 		// doing so if possible.  If you must, keep the usage brief.
-		counted_ptr<ReliSock> rsock() { return m_rsock; }
-		counted_ptr<SafeSock> ssock() { return m_ssock; }
+		std::shared_ptr<ReliSock> rsock() { return m_rsock; }
+		std::shared_ptr<SafeSock> ssock() { return m_ssock; }
 
 		// Associate a ReliSock or SafeSock with this SockPair. Does nothing
 		// if one is already associated. b must always be true and always
@@ -1686,8 +1687,8 @@ class DaemonCore : public Service
 		bool has_relisock(bool b);
 		bool has_safesock(bool b);
 	private:
-		counted_ptr<ReliSock> m_rsock;	// tcp command socket
-		counted_ptr<SafeSock> m_ssock;	// udp command socket
+		std::shared_ptr<ReliSock> m_rsock;	// tcp command socket
+		std::shared_ptr<SafeSock> m_ssock;	// udp command socket
 	};
 	typedef std::vector<SockPair> SockPairVec;
 
@@ -2069,7 +2070,7 @@ class DaemonCore : public Service
 
 	};
 	typedef struct WaitpidEntry_s WaitpidEntry;
-	Queue<WaitpidEntry> WaitpidQueue;
+	std::deque<WaitpidEntry> WaitpidQueue;
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 

@@ -122,7 +122,7 @@ class UniShadow : public BaseShadow
 
 	int64_t getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss );
 
-	int getDiskUsage( void );
+	int64_t getDiskUsage( void );
 
 	bool exitedBySignal( void );
 

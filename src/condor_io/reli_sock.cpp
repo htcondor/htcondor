@@ -25,7 +25,6 @@
 #include "condor_config.h"
 #include "internet.h"
 #include "condor_rw.h"
-#include "condor_socket_types.h"
 #include "condor_md.h"
 #include "selector.h"
 #include "ccb_client.h"
@@ -751,13 +750,15 @@ void ReliSock::RcvMsg::reset()
 	buf.reset();
 }
 
+
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
 	char	        hdr[MAX_HEADER_SIZE];
 	char *cksum_ptr = &hdr[5];
-	int		len, len_t, header_size;
+	int		len, len_t, header_size, header_filled;
 	int		tmp_len;
 	int		retval;
+	const int max_packet_size = 1024 * 1024;  // We will reject packets bigger than this
 
 	// We read the partial packet in a previous read; try to finish it and
 	// then skip down to packet verification.
@@ -769,6 +770,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
+	header_filled = 0;
 
 	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
 	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
@@ -776,12 +778,32 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 		dprintf(D_NETWORK, "Reading header would have blocked.\n");
 		return 2;
 	}
+
 	// Block on short reads for the header.  Since the header is very short (typically, 5 bytes),
 	// we don't care to gracefully handle the case where it has been fragmented over multiple
-	// TCP packets.
+	// TCP packets.  If in non-blocking mode, we want to limit the wait to to a maximum of 1 second.
+	// This is larger than the contractual delay of 'never block' but we need that header to proceeed.
 	if ( (retval > 0) && (retval != header_size) ) {
+
+		// if we got some data, check to see if it looks valid, otherwise don't even bother to
+		// do a blocking read to get the rest of the header.
+		// Network byte order of a 32 bit integer (BigEndian) will have the most significant
+		// byte first.  so we can do an *approximate* size validation check if we have
+		// at least the first network byte of the size
+		// We do this validation because some government labs require a port scanner to be running. If the port
+		// scanner sends more than 0 bytes but less than header_size we can block below until the scanner closes the socket.
+		for (int ii = retval; ii < 5; ++ii) { hdr[ii] = 0; }
+		memcpy(&len_t, &hdr[1], 4);
+		len = (int)ntohl(len_t);
+		m_end = (int) ((char *)hdr)[0];
+		if (m_end < 0 || m_end > 10 || len < 0 || len > max_packet_size) {
+			header_filled = retval;
+			goto check_header; // jump down to a check we now know will fail
+		}
+
 		dprintf(D_NETWORK, "Force-reading remainder of header.\n");
-		retval = condor_read(peer_description, _sock, hdr+retval, header_size-retval, _timeout);
+		retval = condor_read(peer_description, _sock, hdr+retval, header_size-retval,
+			p_sock->is_non_blocking() ? 1 : _timeout);
 	}
 
 	if ( retval < 0 && 
@@ -799,31 +821,35 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	m_end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
 	len = (int) ntohl(len_t);
+	header_filled = header_size;
 
+check_header:
 	if (m_end < 0 || m_end > 10) {
-		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized\n");
+		char hex[3 * NORMAL_HEADER_SIZE + 1];
+		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized : %s\n",
+				debug_hex_dump(hex, &hdr[0], MIN(NORMAL_HEADER_SIZE, header_filled)));
 		return FALSE;
 	}
-        
-	if (len > 1024*1024){
-		dprintf(D_ALWAYS, "IO: Incoming packet is larger than 1MB limit (requested size %d)\n", len);
+
+	if (len > max_packet_size) {
+		char hex[3 * NORMAL_HEADER_SIZE + 1];
+		dprintf(D_ALWAYS, "IO: Incoming packet is larger than 1MB limit (requested size %d) : %s\n", len,
+				debug_hex_dump(hex, &hdr[0], MIN(NORMAL_HEADER_SIZE, header_filled)));
 		return FALSE;
 	}
+
+	if (len <= 0) {
+		char hex[3 * NORMAL_HEADER_SIZE + 1];
+		dprintf(D_ALWAYS, "IO: Incoming packet improperly sized (len=%d,end=%d) : %s\n", len, m_end,
+			debug_hex_dump(hex, &hdr[0], MIN(NORMAL_HEADER_SIZE, header_filled)));
+		return FALSE;
+	}
+
 	if (!(m_tmp = new Buf)){
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
 		return FALSE;
 	}
 	m_tmp->grow_buf(len+1);
-
-	if (len <= 0)
-	{
-		delete m_tmp;
-		m_tmp = NULL;
-		dprintf(D_ALWAYS, 
-			"IO: Incoming packet improperly sized (len=%d,end=%d)\n",
-			len, m_end);
-		return FALSE;
-	}
 
 read_packet:
 	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
@@ -1364,6 +1390,7 @@ ReliSock::get_statistics() {
 		return statsBuf;
 	}
 
+#if __GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ > 6)
 	snprintf(statsBuf, maxSize,
 		"rto: %d "
 		"ato: %d "
@@ -1404,6 +1431,7 @@ ReliSock::get_statistics() {
 		ti.tcpi_rcv_rtt,
 		ti.tcpi_rcv_space,
 		ti.tcpi_total_retrans);
+#endif
 		
 	return statsBuf;
 #endif

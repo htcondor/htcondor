@@ -142,7 +142,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     }
 	else if ( strcmp(CONDOR_EXEC,JobName.c_str()) == 0 ) {
 		formatstr( JobName, "%s%c%s",
-		                 Starter->GetWorkingDir(),
+		                 Starter->GetWorkingDir(0),
 		                 DIR_DELIM_CHAR,
 		                 CONDOR_EXEC );
     }
@@ -333,9 +333,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		MyString reniceAttr = "Renice = ";
-		reniceAttr += ptmp;
-		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting OsProc::StartJob...\n" );
 			free( ptmp );
@@ -446,31 +444,20 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
 
-#if defined ( WIN32 )
-    owner_profile_.update ();
-    /*************************************************************
-    NOTE: We currently *ONLY* support loading slot-user profiles.
-    This limitation will be addressed shortly, by allowing regular 
-    users to load their registry hive - Ben [2008-09-31]
-    **************************************************************/
-    bool load_profile = false,
-         run_as_owner = false;
-    JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
-    JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
-    if ( load_profile && !run_as_owner ) {
-        if ( owner_profile_.load () ) {
-            /* publish the users environment into that of the main 
-
-            job's environment */
-            if ( !owner_profile_.environment ( job_env ) ) {
-                dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
-                    "export owner's environment.\n" );
-            }            
-        } else {
-            dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to load "
-                "owner's profile.\n" );
-        }
-    }
+#ifdef WIN32
+	// if we loaded a slot user profile, import environment variables from it
+	bool load_profile = false;
+	bool run_as_owner = false;
+	JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
+	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+	if (load_profile && !run_as_owner) {
+		const char * username = get_user_loginname();
+		/* publish the users environment into that of the main job's environment */
+		if (!OwnerProfile::environment(job_env, priv_state_get_handle(), username)) {
+			dprintf(D_ALWAYS, "Failed to export environment for %s into the job.\n",
+				username ? username : "<null>");
+		}
+	}
 #endif
 
 		// While we are still in user priv, print out the username
@@ -480,7 +467,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
 	if (SupportsPIDNamespace()) {
-		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd, execute_dir, job_env);
+		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
 	} else {
 		sing_result = htcondor::Singularity::DISABLE;
 	}
@@ -515,14 +502,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	else {
 		char const *username = NULL;
 		char const *how = "";
-		CondorPrivSepHelper* cpsh = Starter->condorPrivSepHelper();
-		if( cpsh ) {
-			username = cpsh->get_user_name();
-			how = "via privsep switchboard ";
-		}
-		else {
-			username = get_user_loginname();
-		}
+		username = get_user_loginname();
 		if( !username ) {
 			username = "same uid as parent: personal condor";
 		}
@@ -694,61 +674,67 @@ OsProc::JobReaper( int pid, int status )
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
 
 	if (JobPid == pid) {
-		// Write the appropriate ToE tag if the process exited of its own accord.
-		if(! requested_exit) {
-			// Store for the post-script's environment.
-			this->howCode = ToE::OfItsOwnAccord;
+		// Only write ToE tags for the actual job process.
+		if(! ThisProcRunsAlongsideMainProc()) {
+			// Write the appropriate ToE tag if the process exited
+			// of its own accord.
+			if(! requested_exit) {
+				// Store for the post-script's environment.
+				this->howCode = ToE::OfItsOwnAccord;
 
-			// This ClassAd gets delete()d by toe when toe goes out of scope,
-			// because Insert() transfers ownership.
-			classad::ClassAd * tag = new classad::ClassAd();
-			tag->InsertAttr( "Who", ToE::itself );
-			tag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
-			tag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
-			struct timeval exitTime;
-			condor_gettimestamp( exitTime );
-			tag->InsertAttr( "When", (long long)exitTime.tv_sec );
+				// This ClassAd gets delete()d by toe when toe goes out of
+				// scope, because Insert() transfers ownership.
+				classad::ClassAd * tag = new classad::ClassAd();
+				tag->InsertAttr( "Who", ToE::itself );
+				tag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
+				tag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
+				struct timeval exitTime;
+				condor_gettimestamp( exitTime );
+				tag->InsertAttr( "When", (long long)exitTime.tv_sec );
 
-			classad::ClassAd toe;
-			toe.Insert( ATTR_JOB_TOE, tag );
+				classad::ClassAd toe;
+				toe.Insert( ATTR_JOB_TOE, tag );
 
-			std::string jobAdFileName;
-			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
-			ToE::writeTag( & toe, jobAdFileName );
+				std::string jobAdFileName;
+				formatstr( jobAdFileName, "%s/.job.ad",
+					Starter->GetWorkingDir(0) );
+				ToE::writeTag( & toe, jobAdFileName );
 
-			// Update the schedd's copy of the job ad.
-			ClassAd updateAd( toe );
-			Starter->publishUpdateAd( & updateAd );
-			Starter->jic->periodicJobUpdate( & updateAd, true );
-		} else {
-			// If we didn't write a ToE, check to see if the startd did.
-			std::string jobAdFileName;
-			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir() );
-			FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
-			if(! f) {
-				dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
+				// Update the schedd's copy of the job ad.
+				ClassAd updateAd( toe );
+				Starter->publishUpdateAd( & updateAd );
+				Starter->jic->periodicJobUpdate( & updateAd, true );
 			} else {
-				int error;
-				bool isEof;
-				classad::ClassAd jobAd;
-				if( InsertFromFile( f, jobAd, isEof, error ) ) {
-					classad::ClassAd * tag =
-						dynamic_cast<classad::ClassAd *>(jobAd.Lookup(ATTR_JOB_TOE));
-					if( tag ) {
-						// Store for the post-script's environment.
-						tag->EvaluateAttrInt( "HowCode", this->howCode );
+				// If we didn't write a ToE, check to see if the startd did.
+				std::string jobAdFileName;
+				formatstr( jobAdFileName, "%s/.job.ad",
+					Starter->GetWorkingDir(0) );
+				FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
+				if(! f) {
+					dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
+				} else {
+					int error;
+					bool isEof;
+					classad::ClassAd jobAd;
+					if( InsertFromFile( f, jobAd, isEof, error ) ) {
+						classad::ClassAd * tag =
+							dynamic_cast<classad::ClassAd *>(jobAd.Lookup(ATTR_JOB_TOE));
+						if( tag ) {
+							// Store for the post-script's environment.
+							tag->EvaluateAttrInt( "HowCode", this->howCode );
 
-						// Don't let jobAd delete tag; toe will delete when it
-						// goes out of scope.
-						jobAd.Remove(ATTR_JOB_TOE);
+							// Don't let jobAd delete tag; toe will delete
+							// when it goes out of scope.
+							jobAd.Remove(ATTR_JOB_TOE);
 
-						classad::ClassAd toe;
-						toe.Insert(ATTR_JOB_TOE, tag );
+							classad::ClassAd toe;
+							toe.Insert(ATTR_JOB_TOE, tag );
 
-						// Update the schedd's copy of the job ad.
-						ClassAd updateAd( toe );
-						Starter->publishUpdateAd( & updateAd );
-						Starter->jic->periodicJobUpdate( & updateAd, true );
+							// Update the schedd's copy of the job ad.
+							ClassAd updateAd( toe );
+							Starter->publishUpdateAd( & updateAd );
+							Starter->jic->periodicJobUpdate( & updateAd, true );
+						}
 					}
 				}
 			}
@@ -789,16 +775,6 @@ OsProc::JobExit( void )
 	}
 
 #if defined ( WIN32 )
-    
-    /* If we loaded the user's profile, then we should dump it now */
-    if ( owner_profile_.loaded () ) {
-        owner_profile_.unload ();
-        
-        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
-        owner_profile_.destroy ();
-        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
-        
-    }
 
     priv_state old = set_user_priv ();
     HANDLE user_token = priv_state_get_handle ();
@@ -1002,26 +978,24 @@ bool
 OsProc::PublishUpdateAd( ClassAd* ad ) 
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
-	MyString buf;
+	std::string buf;
 
 	if (m_proc_exited) {
-		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
+		buf = "Exited";
 	} else if( is_checkpointed ) {
-		buf.formatstr( "%s=\"Checkpointed\"", ATTR_JOB_STATE );
+		buf = "Checkpointed";
 	} else if( is_suspended ) {
-		buf.formatstr( "%s=\"Suspended\"", ATTR_JOB_STATE );
+		buf = "Suspended";
 	} else {
-		buf.formatstr( "%s=\"Running\"", ATTR_JOB_STATE );
+		buf = "Running";
 	}
-	ad->Insert( buf.Value() );
+	ad->Assign( ATTR_JOB_STATE, buf );
 
-	buf.formatstr( "%s=%d", ATTR_NUM_PIDS, num_pids );
-	ad->Insert( buf.Value() );
+	ad->Assign( ATTR_NUM_PIDS, num_pids );
 
 	if (m_proc_exited) {
 		if( dumped_core ) {
-			buf.formatstr( "%s = True", ATTR_JOB_CORE_DUMPED );
-			ad->Insert( buf.Value() );
+			ad->Assign( ATTR_JOB_CORE_DUMPED, true );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 
@@ -1118,7 +1092,7 @@ OsProc::SetupSingularitySsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = Starter->GetWorkingDir();
+	std::string workingDir = Starter->GetWorkingDir(0);
 	std::string pipeName = workingDir + "/.docker_sock";	
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
@@ -1169,10 +1143,19 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
 
+	// we have the pid of the singularity process, need pid of the job
+	// sometimes this is the direct child of singularity, sometimes singularity
+	// runs an init-like process and the job is the grandchild of singularity
+
+	// if a grandkid exists, use that, otherwise child, otherwise sing itself
+
 	int pid = findChildProc(JobPid);
 	if (pid == -1) {
 		pid = JobPid; // hope for the best
 	}
+	if (findChildProc(pid) > 0)
+		pid = findChildProc(pid);
+
 	ArgList args;
 	args.AppendArg("/usr/bin/nsenter");
 	args.AppendArg("-t"); // target pid
@@ -1215,8 +1198,13 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		htcondor::Singularity::retargetEnvs(env, target_dir, "");
 	}
 
+	std::string bin_dir;
+	param(bin_dir, "BIN");
+	if (bin_dir.empty()) bin_dir = "/usr/bin";
+	bin_dir += "/condor_nsenter";
+
 	singExecPid = daemonCore->Create_Process(
-		"/usr/bin/nsenter",
+		bin_dir.c_str(),
 		args,
 		setuid ? PRIV_ROOT : PRIV_USER,
 		singReaperId,

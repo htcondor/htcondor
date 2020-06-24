@@ -252,6 +252,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(init_overloads, init, 0, 1);
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(evaluate_overloads, Evaluate, 0, 1);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(simplify_overloads, simplify, 0, 1);
 
 #define PYTHON_OPERATOR(op) \
 .def("__" #op "__", &ExprTreeHolder:: __ ##op ##__)
@@ -263,6 +264,8 @@ void
 export_classad()
 {
     using namespace boost::python;
+
+    py_import("classad").attr("_registered_functions") = boost::python::dict();
 
     def("version", ClassadLibraryVersion,
         R"C0ND0R(
@@ -522,7 +525,7 @@ export_classad()
             R"C0ND0R(
             As :meth:`dict.values`.
             )C0ND0R")
-        .def("items", boost::python::range(&ClassAdWrapper::beginItems, &ClassAdWrapper::endItems),
+        .def("items", &ClassAdWrapper::items, with_custodian_and_ward_postcall<0, 1>(),
             R"C0ND0R(
             As :meth:`dict.items`.
             )C0ND0R")
@@ -653,6 +656,31 @@ export_classad()
         .def("__repr__", &ExprTreeHolder::toRepr)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
         .def("_get", &ExprTreeHolder::subscript, condor::classad_expr_return_policy<>())
+        .def("simplify", &ExprTreeHolder::simplify, simplify_overloads(
+            boost::python::args("self", "scope"),
+            R"C0ND0R(
+            Evaluate the expression and return as a :class:`ExprTree`.
+
+            .. warning ::
+
+                If ``scope`` is passed and is not the :class:`ClassAd` this :class:`ExprTree`
+                might belong to, this method is not thread-safe.
+
+            .. warning ::
+
+                It is erroneous for ``scope`` to be a temporary; the
+                lifetime of the returned object may depend on the lifetime
+                of the scope object.
+
+            :param scope: Optionally, the :class:`ClassAd` context in which to evaluate.
+                Unnecessary if the :class:`ExprTree` comes from its own :class:`ClassAd`,
+                in which case it will be evaluated in the scope of that ad,
+                or if the :class:`ExprTree` can be evaluated without a context.
+
+                If passed, ``scope`` must be a :class:`classad.ClassAd`.
+            :type scope: :class:`ClassAd`
+            :return: The evaluated expression as an :class:`ExprTree`.
+            )C0ND0R"))
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads(
             boost::python::args("self", "scope"),
             R"C0ND0R(
@@ -664,10 +692,12 @@ export_classad()
                 If ``scope`` is passed and is not the :class:`ClassAd` this :class:`ExprTree`
                 might belong to, this method is not thread-safe.
 
-            :param scope: Optionally, a ClassAd to evaluate the :class:`ExprTree` in the context of.
+            :param scope: Optionally, the :class:`ClassAd` context in which to evaluate.
                 Unnecessary if the :class:`ExprTree` comes from its own :class:`ClassAd`,
                 in which case it will be evaluated in the scope of that ad,
                 or if the :class:`ExprTree` can be evaluated without a context.
+
+                If passed, ``scope`` must be a :class:`classad.ClassAd`.
             :type scope: :class:`ClassAd`
             :return: The evaluated expression as a Python object.
             )C0ND0R"))
@@ -740,6 +770,7 @@ export_classad()
         PYTHON_ROPERATOR(add)
         PYTHON_ROPERATOR(mul)
         PYTHON_ROPERATOR(div)
+        PYTHON_ROPERATOR(truediv)
         PYTHON_ROPERATOR(xor)
         PYTHON_ROPERATOR(mod)
         PYTHON_ROPERATOR(lshift)
@@ -749,7 +780,15 @@ export_classad()
 
     register_ptr_to_python< boost::shared_ptr<ClassAdWrapper> >();
 
-    boost::python::enum_<classad::Value::ValueType> value_type("Value");
+    boost::python::enum_<classad::Value::ValueType> value_type("Value",
+        R"C0ND0R(
+        An enumeration of the two special ClassAd values ``Undefined`` and ``Error``.
+
+        The values of the enumeration are:
+
+        .. attribute:: Undefined
+        .. attribute:: Error
+        )C0ND0R");
     value_type
         .value("Error", classad::Value::ERROR_VALUE)
         .value("Undefined", classad::Value::UNDEFINED_VALUE)
@@ -829,7 +868,4 @@ export_classad()
         &classad_from_python_dict::convertible,
         &classad_from_python_dict::construct,
         boost::python::type_id<ClassAdWrapper>());
-
-    boost::python::scope().attr("_registered_functions") = boost::python::dict();
-
 }

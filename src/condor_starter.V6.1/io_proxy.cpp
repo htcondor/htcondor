@@ -51,6 +51,7 @@ IOProxy::~IOProxy()
 		delete server;
 	}
 	if(cookie) free(cookie);
+	cookie = NULL;
 }
 
 /*
@@ -168,6 +169,7 @@ bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bo
 
 	failure:
 	if(cookie) free(cookie);
+	cookie = NULL;
 	IGNORE_RETURN unlink(config_file);
 	server->close();
 	return false;

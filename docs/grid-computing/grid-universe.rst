@@ -211,7 +211,7 @@ If the remote *condor_collector* is not listening on the standard port
 File transfer of a job's executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
 HTCondor's file transfer mechanism (see the 
-:ref:`users-manual/submitting-a-job:submitting jobs without a shared file
+:ref:`users-manual/file-transfer:submitting jobs without a shared file
 system: htcondor's file transfer mechanism` section), the mechanism is applied
 based on the resulting job universe on the remote machine.
 
@@ -1487,17 +1487,25 @@ Here's a sample JSON file that sets two additional elements:
     "canIpForward": True,
     "description": "My first instance"
 
+.. _gce_configuration_variables:
+
 GCE Configuration Variables
 '''''''''''''''''''''''''''
 
 The following configuration parameters are specific to the **gce** grid
 type. The values listed here are the defaults. Different values may be
-specified in the HTCondor configuration files.
+specified in the HTCondor configuration files.  To work around an issue where
+long-running *gce_gahp* processes have trouble authenticating, the *gce_gahp*
+self-restarts periodically, with the default value of 24 hours.  You can set
+the number of seconds between restarts using *GCE_GAHP_LIFETIME*, where zero
+means to never restart.  Restarting the *gce_gahp* does not affect the jobs
+themselves.
 
 ::
 
     GCE_GAHP     = $(SBIN)/gce_gahp
     GCE_GAHP_LOG = /tmp/GceGahpLog.$(USERNAME)
+    GCE_GAHP_LIFETIME = 86400
 
 The Azure Grid Type
 -------------------

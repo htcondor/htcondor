@@ -1026,7 +1026,7 @@ Condor_Auth_SSL::server_verify_scitoken()
 	long long expiry;
 	std::vector<std::string> bounding_set;
 	if (!htcondor::validate_scitoken(m_client_scitoken, issuer, subject, expiry,
-		bounding_set, err))
+		bounding_set, mySock_->getUniqueId(), err))
 	{
 		dprintf(D_SECURITY, "%s\n", err.getFullText().c_str());
 		return false;
@@ -1060,6 +1060,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
     	X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
 		if (peer) {
 			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+			(*X509_free)(peer);
 			setRemoteUser( "ssl" );
 		} else {
 			strcpy(subjectname, "unauthenticated");
@@ -1709,9 +1710,13 @@ Condor_Auth_SSL::should_try_auth()
 
 	std::string certfile, keyfile;
 	if (!param(certfile, AUTH_SSL_SERVER_CERTFILE_STR)) {
+		dprintf(D_SECURITY, "Not trying SSL auth because server certificate"
+			" parameter (%s) is not set.\n", AUTH_SSL_SERVER_CERTFILE_STR);
 		return false;
 	}
 	if (!param(keyfile, AUTH_SSL_SERVER_KEYFILE_STR)) {
+		dprintf(D_SECURITY, "Not trying SSL auth because server key"
+			" parameter (%s) is not set.\n", AUTH_SSL_SERVER_KEYFILE_STR);
 		return false;
 	}
 
@@ -1719,11 +1724,15 @@ Condor_Auth_SSL::should_try_auth()
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		int fd = open(certfile.c_str(), O_RDONLY);
 		if (fd < 0) {
+			dprintf(D_SECURITY, "Not trying SSL auth because server certificate"
+				" (%s) is not readable by HTCondor: %s.\n", certfile.c_str(), strerror(errno));
 			return false;
 		}
 		close(fd);
 		fd = open(keyfile.c_str(), O_RDONLY);
 		if (fd < 0) {
+			dprintf(D_SECURITY, "Not trying SSL auth because server key"
+				" (%s) is not readable by HTCondor: %s.\n", certfile.c_str(), strerror(errno));
 			return false;
 		}
 		close(fd);

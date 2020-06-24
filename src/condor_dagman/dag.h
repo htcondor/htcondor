@@ -38,6 +38,8 @@
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 
+#include <queue>
+
 // Which layer of splices do we want to lift?
 enum SpliceLayer {
 	SELF,
@@ -538,6 +540,10 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+	bool _removeJobsAfterLimitChange = false;
+
+	std::vector<SubmitHash*> JobSubmitDescriptions;
+
 #if 0
 	bool RemoveNode( const char *name, MyString &whynot );
 #endif
@@ -553,8 +559,8 @@ class Dag {
 	bool isCycle();
 
 	// max number of PRE & POST scripts to run at once (0 means no limit)
-    const int _maxPreScripts;
-    const int _maxPostScripts;
+    int _maxPreScripts;
+    int _maxPostScripts;
 
 	void SetDotFileName(const char *dot_file_name);
 	void SetDotIncludeFileName(const char *include_file_name);
@@ -655,6 +661,11 @@ class Dag {
 	int MaxIdleJobProcs(void) { return _maxIdleJobProcs; }
 	int MaxPreScripts(void) { return _maxPreScripts; }
 	int MaxPostScripts(void) { return _maxPostScripts; }
+
+	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
+	void SetMaxJobsSubmitted(int newMax);
+	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
+	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
 
 	bool RetrySubmitFirst(void) { return m_retrySubmitFirst; }
 
@@ -825,6 +836,11 @@ class Dag {
 		@return true iff the final node is running or has been run
 	*/
 	inline bool FinalNodeRun() { return _finalNodeRun; }
+
+	/** Determine whether this DAG has a provisioner node.
+		@return true iff the DAG has a provisioner node.
+	*/
+	inline bool HasProvisionerNode() const { return _provisioner_node != NULL; }
 
 	/** Determine whether the DAG is in recovery mode.
 		@return true iff the DAG is in recovery mode
@@ -1049,6 +1065,8 @@ private:
 		// for convenience.
 	Job* _final_job;
 
+	Job* _provisioner_node;
+
 	HashTable<MyString, Job *>		_nodeNameHash;
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;
@@ -1072,7 +1090,7 @@ private:
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
-    const int _maxJobsSubmitted;
+    int _maxJobsSubmitted;
 
 		// Number of DAG job procs currently idle.
 	int _numIdleJobProcs;
@@ -1080,7 +1098,10 @@ private:
     	// Maximum number of idle job procs to allow (stop submitting if the
 		// number of idle job procs hits this limit).  Non-negative.  Zero
 		// means unlimited.
-    const int _maxIdleJobProcs;
+    int _maxIdleJobProcs;
+
+		// Policy for how we respond to DAG edits.
+	std::string _editPolicy;
 
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts
@@ -1104,7 +1125,7 @@ private:
 
 	// queue of submitted jobs not yet matched with submit events in
 	// the HTCondor job log
-    Queue<Job*>* _submitQ;
+	std::queue<Job*>* _submitQ;
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;

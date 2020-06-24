@@ -34,7 +34,7 @@ public:
 
 private:
 
-	int zkm_query_creds(int, Stream*);
+	int check_creds_handler(int, Stream*);
 	int nop_handler(int, Stream*);
 	void initialize_classad();
 	void update_collector();

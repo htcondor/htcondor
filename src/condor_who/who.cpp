@@ -36,6 +36,7 @@
 #include "directory.h"
 #include "format_time.h"
 #include "console-utils.h"
+#include "ipv6_hostname.h"
 #include <my_popen.h>
 
 #include "condor_distribution.h"
@@ -798,7 +799,9 @@ void convert_to_sinful_addr(std::string & out, const std::string & str)
 	}
 
 	if (port_offset) {
-		formatstr(out, "<%s:%s>", my_ip_string(), str.substr(port_offset).c_str());
+		// TODO Picking IPv4 arbitrarily.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		formatstr(out, "<%s:%s>", my_ip.Value(), str.substr(port_offset).c_str());
 	} else {
 		formatstr(out, "<%s>", str.c_str());
 	}
@@ -1452,7 +1455,7 @@ main( int argc, char *argv[] )
 							std::string tmp;
 							if (App.print_mask.IsEmpty()) {
 								classad::References attrs;
-								sGetAdAttrs(attrs, ready_ad, false, NULL);
+								sGetAdAttrs(attrs, ready_ad);
 								sPrintAdAttrs(tmp, ready_ad, attrs);
 							} else {
 								if (App.print_mask.has_headings()) {
@@ -1678,7 +1681,7 @@ main( int argc, char *argv[] )
 			while (ClassAd	*ad = result.Next()) {
 				tmp.clear();
 				classad::References attrs;
-				sGetAdAttrs(attrs, *ad, false, NULL);
+				sGetAdAttrs(attrs, *ad);
 				sPrintAdAttrs(tmp, *ad, attrs);
 				tmp += "\n";
 				fputs(tmp.c_str(), stdout);

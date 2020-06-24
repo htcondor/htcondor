@@ -22,9 +22,10 @@
 #include "shared_port_endpoint.h"
 #include "subsystem_info.h"
 #include "condor_daemon_core.h"
-#include "counted_ptr.h"
+#include <memory>
 #include "basename.h"
 #include "utc_time.h"
+#include "ipv6_hostname.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -50,7 +51,7 @@ bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 MyString
-SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
+SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
 	static unsigned short rand_tag = 0;
 	static unsigned int sequence = 0;
 	if( !rand_tag ) {
@@ -71,7 +72,7 @@ SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
 	}
 
 	MyString m_local_id;
-	if( !sequence ) {
+	if( (sequence == 0) || (! addSequenceNo) ) {
 		m_local_id.formatstr("%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
 	}
 	else {
@@ -264,6 +265,11 @@ SharedPortEndpoint::StopListener()
 	if( m_retry_remote_addr_timer != -1 ) {
 		if (daemonCore) daemonCore->Cancel_Timer( m_retry_remote_addr_timer );
 		m_retry_remote_addr_timer = -1;
+	}
+
+	if( daemonCore && m_socket_check_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_socket_check_timer );
+		m_socket_check_timer = -1;
 	}
 #endif
 	m_listening = false;
@@ -824,7 +830,7 @@ SharedPortEndpoint::InitRemoteAddress()
 	fclose( fp );
 
 		// avoid leaking ad when returning from this function
-	counted_ptr<ClassAd> smart_ad_ptr(ad);
+	std::unique_ptr<ClassAd> smart_ad_ptr(ad);
 
 	if( errorReadingAd ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to read ad from %s.\n",
@@ -1005,7 +1011,9 @@ SharedPortEndpoint::GetMyLocalAddress()
 			// and daemons who can then form a connection to us via
 			// direct access to our named socket.
 		sinful.setPort("0");
-		sinful.setHost(my_ip_string());
+		// TODO: Picking IPv4 arbitrarily.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		sinful.setHost(my_ip.Value());
 		sinful.setSharedPortID( m_local_id.Value() );
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {

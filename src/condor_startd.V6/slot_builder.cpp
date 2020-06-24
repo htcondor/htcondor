@@ -91,6 +91,7 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 	int num;
 	CpuAttributes* cap;
 	CpuAttributes** cap_array;
+	MyString logbuf; logbuf.reserve(200);  // buffer use for reporting resource totals
 
 		// Available system resources.
 	AvailAttributes avail( m_attr );
@@ -109,14 +110,14 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 					cap_array[num] = cap;
 					num++;
 				} else {
-						// We ran out of system resources.
-					dprintf( D_ALWAYS,
-							 "ERROR: Can't allocate %s slot of type %d\n",
-							 num_string(j+1), i );
-					dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
-					cap->show_totals( D_ALWAYS );
-					dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
-					avail.show_totals( D_ALWAYS, cap );
+					// We ran out of system resources.
+					logbuf =    "\tRequesting: ";
+					cap->cat_totals(logbuf);
+					logbuf += "\n\tAvailable:  ";
+					avail.cat_totals(logbuf, cap->executePartitionID());
+					dprintf( D_ALWAYS | D_FAILURE,
+							 "ERROR: Can't allocate %s slot of type %d\n%s\n",
+							 num_string(j+1), i, logbuf.c_str() );
 					delete cap;	// This isn't in our array yet.
 					if( except ) {
 						EXCEPT( "Ran out of system resources" );
@@ -148,20 +149,25 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 		cap = cap_array[i];
 		unsigned long bit = 1 << cap->type();
 		if (report_auto & bit) {
-			dprintf(d_level, "Allocating auto shares for ");
-			cap->show_totals(d_level);
+			if (IsDebugLevel(d_level)) {
+				logbuf.clear();
+				cap->cat_totals(logbuf);
+				dprintf(d_level, "Allocating auto shares for slot type %d: %s\n", cap->type(), logbuf.c_str());
+			}
 			report_auto &= ~bit;
 		}
 		if( !avail.computeAutoShares(cap, remain_cap, remain_cnt) ) {
 
-				// We ran out of system resources.
-			dprintf( D_ALWAYS,
-					 "ERROR: Can't allocate slot id %d during auto "
-					 "allocation of resources\n", i+1 );
-			dprintf(D_ALWAYS | D_NOHEADER, "\tRequesting ");
-			cap->show_totals(d_level);
-			dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
-			avail.show_totals( D_ALWAYS, cap );
+			// We ran out of system resources.
+			logbuf =    "\tRequesting: ";
+			cap->cat_totals(logbuf);
+			logbuf += "\n\tAvailable:  ";
+			avail.cat_totals(logbuf, cap->executePartitionID());
+
+			dprintf(D_ALWAYS | D_FAILURE,
+					"ERROR: Can't allocate slot id %d (slot type %d) during auto allocation of resources\n%s\n",
+					i+1, cap->type(), logbuf.c_str() );
+
 			delete cap;	// This isn't in our array yet.
 			if( except ) {
 				EXCEPT( "Ran out of system resources in auto allocation" );
@@ -174,7 +180,12 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 				return NULL;
 			}
 		}
-		cap->show_totals(d_level);
+
+		if (IsDebugLevel(d_level)) {
+			logbuf.clear();
+			cap->cat_totals(logbuf);
+			dprintf(d_level, "  slot type %d: %s\n", cap->type(), logbuf.c_str());
+		}
 	}
 
 	for (int i=0; i<num; i++) {

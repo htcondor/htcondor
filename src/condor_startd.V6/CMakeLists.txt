@@ -21,13 +21,60 @@ if (DARWIN)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit -framework Carbon")
 endif()
 
-if (NOT HAVE_BOINC)
-	file( GLOB BOINC_GOO boinc* )
+set(startdElements
+backfill_mgr.cpp
+claim.cpp
+cod_mgr.cpp
+command.cpp
+IdDispenser.cpp
+LoadQueue.cpp
+Reqexp.cpp
+ResAttributes.cpp
+ResMgr.cpp
+Resource.cpp
+ResState.cpp
+slot_builder.cpp
+startd_bench_job.cpp
+startd_bench_job_mgr.cpp
+startd_bench_job_params.cpp
+startd_cron_job.cpp
+startd_cron_job_mgr.cpp
+startd_cron_job_params.cpp
+startd_hibernator.cpp
+StartdHookMgr.cpp
+startd_main.cpp
+startd_named_classad.cpp
+startd_named_classad_list.cpp
+StartdPluginManager.cpp
+Starter.cpp
+starter_mgr.cpp
+util.cpp
+vm_common.cpp
+VMMachine.cpp
+VMManager.cpp
+VMRegister.cpp
+vmuniverse_mgr.cpp
+)
+
+if (WINDOWS)
+	list(APPEND startdElements
+		CondorSystrayNotifier.windows.cpp
+		winreg.windows.cpp
+	)
+endif(WINDOWS)
+
+if (LINUX)
+	list(APPEND startdElements
+		glexec_starter.linux.cpp
+	)
+endif(LINUX)
+
+
+if (HAVE_BOINC)
+list(APPEND startdElements boinc_mgr.cpp)
 endif()
 
-file( GLOB startdRmvElements Example* *.t.* glexec_wrapper* ${BOINC_GOO} )
-
-condor_daemon( startd "${startdRmvElements}" "${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}")
+condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}")
 
 if (LINUX AND GLOBUS_FOUND)
   condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )

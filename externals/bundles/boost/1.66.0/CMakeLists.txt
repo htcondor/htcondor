@@ -58,13 +58,12 @@ else (WINDOWS)
 	endif()
 
 	# The following is helpful if you are trying to debug cmake find module
-	set (Boost_DEBUG TRUE)
-	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
+    # set (Boost_DEBUG TRUE)
 
     message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
     if (DEFINED SYSTEM_NAME)
         if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
-            if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+            if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2")
                 message (STATUS "Using system boost169 for 64-bit EL7" )
                 # If you look for python on cmake 2.8.12.2 it fails.
                 # Looking for thread finds boost for python for me.
@@ -76,14 +75,19 @@ else (WINDOWS)
                 set(USE_SYSTEM_BOOST True)
             endif()
         endif()
-        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu")
+        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8")
             set(USE_SYSTEM_BOOST True)
         endif()
         if (${SYSTEM_NAME} MATCHES "fc")
             set(USE_SYSTEM_BOOST True)
         endif()
+        if (${SYSTEM_NAME} MATCHES "Ubuntu-20")
+            # BOOST_COMPONENTS breaks CMake boost detection on Ubuntu 20.04
+            set(BOOST_COMPONENTS "" )
+        endif()
     endif()
 
+	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
 	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible

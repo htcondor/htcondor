@@ -28,6 +28,7 @@
 #include "condor_daemon_client.h"
 #include "condor_daemon_core.h"
 #include "classad_helpers.h"
+#include "ToE.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -49,7 +50,8 @@ static bool handleFTL(int error) {
 	// to force the startd to advertise this fact so other jobs can avoid
 	// this machine.
 	//
-	DCStartd startd( (const char * const)NULL, (const char * const)NULL );
+	const char * nullString = nullptr;
+	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
 		return false;
@@ -86,7 +88,7 @@ static bool handleFTL(int error) {
 // the full container ID as (part of) the cgroup identifier(s).
 //
 
-DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1) { }
+DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), max_memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1), shouldAskForServicePorts(false) { }
 
 DockerProc::~DockerProc() { 
 	if ( daemonCore && daemonCore->SocketIsRegistered(&listener)) {
@@ -106,10 +108,31 @@ int DockerProc::StartJob() {
 	}
 
 	std::string command;
-	JobAd->LookupString( ATTR_JOB_CMD, command );
-	dprintf( D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str() );
+	JobAd->LookupString(ATTR_JOB_CMD, command);
+	dprintf(D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str());
 
 	std::string sandboxPath = Starter->jic->jobRemoteIWD();
+
+#ifdef WIN32
+	#if 1
+	// TODO: make this configurable? and the same on Windows/Linux
+	// TODO: make it settable by the job so that we can support Windows containers on Windows?
+	std::string innerdir("/test/execute/");
+	Starter->SetInnerWorkingDir(innerdir.c_str());
+	#else
+	const char * outerdir = Starter->GetWorkingDir(false);
+	std::string innerdir(outerdir);
+	const char * tmp = strstr(outerdir, "\\execute\\");
+	if (tmp) {
+		innerdir = tmp;
+		std::replace(innerdir.begin(), innerdir.end(), '\\', '/');
+		Starter->SetInnerWorkingDir(innerdir.c_str());
+	}
+	#endif
+#else
+	// TODO: make this work on Linux also
+	std::string innerdir = Starter->GetWorkingDir(true);
+#endif
 
 	//
 	// This code is deliberately wrong, probably for backwards-compability.
@@ -135,6 +158,14 @@ int DockerProc::StartJob() {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
 		return FALSE;
 	}
+	//
+	// temporary hack to allow condor_submit -i to work better
+	// with docker universe
+	bool isInteractive = false;
+	JobAd->LookupBool("InteractiveJob", isInteractive);	
+	if (isInteractive) {
+		args.AppendArg("86400");
+	}
 
 	Env job_env;
 	MyString env_errors;
@@ -156,17 +187,17 @@ int DockerProc::StartJob() {
 	recoveryAd.Assign("DockerContainerName", containerName);
 	Starter->WriteRecoveryFile(&recoveryAd);
 
-	int childFDs[3] = { 0, 0, 0 }; 
+	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string workingDir = Starter->GetWorkingDir();
+	std::string workingDir = Starter->GetWorkingDir(0);
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
 	std::string DockerErrorFile  = workingDir + "/docker_stderror";
 
-	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	}
-	  
+
 	  // Ulog the execute event
 	Starter->jic->notifyJobPreSpawn();
 
@@ -178,7 +209,7 @@ int DockerProc::StartJob() {
 	ClassAd *machineAd = Starter->jic->machClassAd();
 
 	std::list<std::string> extras;
-	std::string scratchDir = Starter->GetWorkingDir();
+	std::string scratchDir = Starter->GetWorkingDir(0);
 		// if file xfer is off, need to also mount SCRATCH_DIR (= cwd)
 	if (scratchDir != sandboxPath) {
 		extras.push_back(scratchDir + ":" + scratchDir);
@@ -186,9 +217,16 @@ int DockerProc::StartJob() {
 
 	buildExtraVolumes(extras, *machineAd, *JobAd);
 
+	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
+
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
-	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
+	int rv = DockerAPI::createContainer( *machineAd, *JobAd,
+		containerName, imageID,
+		command, args, job_env,
+		sandboxPath, innerdir,
+		extras, JobPid, childFDs,
+		shouldAskForServicePorts, err, affinity_mask);
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		handleFTL(rv);
@@ -200,6 +238,7 @@ int DockerProc::StartJob() {
 	// If we manage to start the Docker job, clear the offline state for docker universe
 	handleFTL(0);
 
+	free(affinity_mask);
 	waitForCreate = true;  // Tell the reaper to run start container on exit
 	return TRUE;
 }
@@ -209,7 +248,7 @@ ReliSock *ns;
 
 int
 DockerProc::ExecReaper(int pid, int status) {
-	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d with status %d\n", pid, status);
+	dprintf( D_FULLDEBUG, "DockerProc::ExecReaper() pid is %d with status %d\n", pid, status);
 	if (pid == execPid) {
 		dprintf(D_ALWAYS, "docker exec pid %d exited\n", pid);
 		delete ns;
@@ -235,7 +274,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
-			std::string fileName = Starter->GetWorkingDir();
+			std::string fileName = Starter->GetWorkingDir(0);
 			fileName += "/docker_stderror";
 			int fd = open(fileName.c_str(), O_RDONLY, 0000);
 			if (fd >= 0) {
@@ -266,9 +305,35 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// When we get here docker create has just succeeded
 		waitForCreate = false;
 		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
-		
-		// Now ssh-to-job can go
+
+		// It would be nice if we could find out what port Docker selected
+		// for search service (if any) before we actually started the job,
+		// but (understandably) Docker doesn't do that.
+
+	#ifdef WIN32 
+		#ifdef COPY_INPUT_SANDBOX
+		// copy the input sandbox into the container
+		{
+			std::string workingDir = Starter->GetWorkingDir(0);
+			std::string innerPath = Starter->GetWorkingDir(true);
+			StringList opts("-a");
+
+			//TODO: figure out if we need to do this, or to switch to  PRIV_USER
+			//TemporaryPrivSentry sentry(PRIV_ROOT);
+
+			int rv = DockerAPI::copyToContainer(workingDir, containerName, innerPath, &opts);
+			if (rv < 0) {
+				dprintf(D_ALWAYS | D_FAILURE, "DockerAPI::copyToContainer( %s, %s, %s ) failed with return value %d\n",
+					workingDir.c_str(), containerName.c_str(), innerPath.c_str(), rv);
+				return FALSE;
+			}
+		}
+		#endif
+	#endif
+
+		// It seems like this should be done _after_ we call start Container().
 		Starter->SetJobEnvironmentReady(true);
+
 
 		CondorError err;
 
@@ -305,8 +370,9 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
 		// Start a timer to poll for job usage updates.
-		updateTid = daemonCore->Register_Timer(2, 
-				20, (TimerHandlercpp)&DockerProc::getStats, 
+		int polling_interval = param_integer("POLLING_INTERVAL",5);
+		updateTid = daemonCore->Register_Timer(2,
+				polling_interval, (TimerHandlercpp)&DockerProc::getStats, 
 					"DockerProc::getStats",this);
 
 		SetupDockerSsh();
@@ -320,10 +386,25 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	// This should mean that the container has terminated.
 	//
 	if( pid == JobPid ) {
-
 		daemonCore->Cancel_Timer(updateTid);
 
+		// Once the container has terminated, I don't care what Docker
+		// thinks; nobody's going to be answering the phone.
+		std::string containerServiceNames;
+		JobAd->LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
+		if(! containerServiceNames.empty()) {
+			StringList services(containerServiceNames.c_str());
+			services.rewind();
+			const char * service = NULL;
+			while( NULL != (service = services.next()) ) {
+				std::string attrName;
+				formatstr( attrName, "%s_%s", service, "HostPort" );
+				serviceAd.Insert( attrName, classad::Literal::MakeUndefined() );
+			}
+		}
+
 		TemporaryPrivSentry sentry(PRIV_ROOT);
+
 		//
 		// Even running Docker in attached mode, we have a race condition
 		// is exiting when the container exits, not when the docker daemon
@@ -344,7 +425,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 
 			if( ! dockerAd.LookupBool( "Running", running ) ) {
-				dprintf( D_FULLDEBUG, "Inspection of container '%s' failed to reveal its running state; sleeping a second (%d already slept) to give Docke a chance to catch up.\n", containerName.c_str(), i );
+				dprintf( D_FULLDEBUG, "Inspection of container '%s' failed to reveal its running state; sleeping a second (%d already slept) to give Docker a chance to catch up.\n", containerName.c_str(), i );
 				sleep( 1 );
 				continue;
 			}
@@ -368,13 +449,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				imageName = "Unknown"; // shouldn't ever happen
 			}
 
-			/*
-			std::string message;
-			formatstr(message, "Cannot start container\n");
-
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
-			return VanillaProc::JobReaper( pid, status );
-			*/
 			EXCEPT("Cannot inspect exited container");
 		}
 
@@ -396,7 +470,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		if (! dockerAd.LookupString( "OOMKilled", oomkilled)) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether it was OOM killed. Assuming it was not.\n", containerName.c_str() );
 		}
-		
+
 		if (oomkilled.find("true") == 0) {
 			ClassAd *machineAd = Starter->jic->machClassAd();
 			int memory;
@@ -405,7 +479,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			formatstr(message, "Docker job has gone over memory limit of %d Mb", memory);
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
-			
+
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
 			DockerAPI::rm( containerName, error );
 
@@ -430,7 +504,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			formatstr(message, "Error running docker job: %s", dockerError.c_str());
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
-			
+
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 			DockerAPI::rm( containerName, error );
 
@@ -441,8 +515,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			Starter->ShutdownFast();
 			return 0;
-		} 
-		
+		}
+
 		int dockerStatus;
 		if( ! dockerAd.LookupInteger( "ExitCode", dockerStatus ) ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
@@ -483,7 +557,7 @@ DockerProc::SetupDockerSsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = Starter->GetWorkingDir();
+	std::string workingDir = Starter->GetWorkingDir(0);
 	std::string pipeName = workingDir + "/.docker_sock";	
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
@@ -731,11 +805,37 @@ bool DockerProc::ShutdownFast() {
 
 void
 DockerProc::getStats() {
-	DockerAPI::stats( containerName, memUsage, netIn, netOut, userCpu, sysCpu);
+	if( shouldAskForServicePorts ) {
+		if( DockerAPI::getServicePorts( containerName, * JobAd, serviceAd ) == 0 ) {
+			shouldAskForServicePorts = false;
+
+			// Append serviceAd to the sandbox's copy of the job ad.
+			std::string jobAdFileName;
+			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir(0) );
+			{
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				// ... sigh ...
+				ToE::writeTag( & serviceAd, jobAdFileName );
+			}
+		}
+	}
+	DockerAPI::stats(containerName, memUsage, netIn, netOut, userCpu, sysCpu);
+
+	// Since we typically will poll the Docker daemon for memory usage
+	// at a higher rate than we update the shadow, keep the maximum observed
+	// memory usage here in the starter (and use max_memUsage to update the shadow).
+	if (memUsage > max_memUsage) {
+		max_memUsage = memUsage;
+	}
+
+	return;
 }
 
 bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	dprintf( D_FULLDEBUG, "DockerProc::PublishUpdateAd() container '%s'\n", containerName.c_str() );
+
+	// Copy the service-to-port map into the update ad.
+	ad->Update( serviceAd );
 
 	//
 	// If we want to use the existing reporting code (probably a good
@@ -752,12 +852,12 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	// TODO: We could approximate job_start_time and job_exit_time internally,
 	// or set them during our status polling.
 	//
-
-	if (memUsage > 0) {
+	
+	if (max_memUsage > 0) {
 		// Set RSS, Memory and ImageSize to same values, best we have
-		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(memUsage / 1024));
-		ad->Assign(ATTR_MEMORY_USAGE, int(memUsage / (1024 * 1024)));
-		ad->Assign(ATTR_IMAGE_SIZE, int(memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(max_memUsage / 1024));
+		ad->Assign(ATTR_MEMORY_USAGE, int(max_memUsage / (1024 * 1024)));
+		ad->Assign(ATTR_IMAGE_SIZE, int(max_memUsage / (1024 * 1024)));
 		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1000 * 1000));
 		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1000 * 1000));
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int) (userCpu / (1000l * 1000l * 1000l)));
@@ -815,8 +915,16 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		param(scratchNames, "MOUNT_UNDER_SCRATCH");
 	} 
 
+#ifdef DOCKER_ALLOW_RUN_AS_ROOT
+		// If docker is allowing the user to be root, don't mount anything
+		// so that we can't create rootly files in shared places.
+	if (param_boolean("DOCKER_RUN_AS_ROOT", false)) {
+		return;
+	}
+#endif
+
 	if (scratchNames.length() > 0) {
-		std::string workingDir = Starter->GetWorkingDir();
+		std::string workingDir = Starter->GetWorkingDir(0);
 		StringList sl(scratchNames.c_str());
 		sl.rewind();
 		char *scratchName = 0;
@@ -826,12 +934,15 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);
-			if (mkdir_and_parents_if_needed( hostDir, S_IRWXU, PRIV_USER )) {
+			
+			mode_t old_mask = umask(000);
+			if (mkdir_and_parents_if_needed( hostDir, 01777, PRIV_USER )) {
 				extras.push_back(volumePath);
 				dprintf(D_ALWAYS, "Adding %s as a docker volume to mount under scratch\n", volumePath.c_str());
 			} else {
 				dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", hostDir);
 			}
+			umask(old_mask);
 		}
 	}
 

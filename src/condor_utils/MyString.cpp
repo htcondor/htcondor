@@ -135,6 +135,17 @@ operator=(const MyString& S)
     return *this;
 }
 
+/** Destructively moves a MyString guts from rhs to this */
+MyString& 
+MyString::operator=(MyString &&rhs) {
+	delete Data;
+	this->Data     = rhs.Data;
+	this->Len      = rhs.Len;
+	this->capacity = rhs.capacity;
+	rhs.init();
+	return *this;
+}
+
 MyString& MyString::
 operator=(const std::string& S) 
 {
@@ -375,13 +386,21 @@ template <class T> bool YourStringDeserializer::deserialize_int(T* val)
 	if (std::numeric_limits<T>::is_signed) {
 		long long tmp;
 		tmp = strtoll(m_p, &endp, 10);
-		if (tmp < (long long)std::numeric_limits<T>::min() || tmp > (long long)std::numeric_limits<T>::max()) return false;
+
+			// following code is dead if T is 64 bits
+		if (sizeof(T) != sizeof(long long)) {
+				if (tmp < (long long)std::numeric_limits<T>::min() || tmp > (long long)std::numeric_limits<T>::max()) return false;
+		}
 		if (endp == m_p) return false;
 		*val = (T)tmp;
 	} else {
 		unsigned long long tmp;
 		tmp = strtoull(m_p, &endp, 10);
-		if (tmp > (unsigned long long)std::numeric_limits<T>::max()) return false;
+
+			// following code is dead if T is 64 bits
+		if (sizeof(T) != sizeof(long long)) {
+			if (tmp > (unsigned long long)std::numeric_limits<T>::max()) return false;
+		}
 		if (endp == m_p) return false;
 		*val = (T)tmp;
 	}
@@ -1067,12 +1086,17 @@ bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
  *--------------------------------------------------------------------*/
 
 MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
-/*
-MyStringTokener::MyStringTokener(const char *str) : tokenBuf(NULL), nextToken(NULL)
-{
-	if (str) Tokenize(str);
+
+MyStringTokener &
+MyStringTokener::operator=(MyStringTokener &&rhs) {
+	free(tokenBuf);
+	this->tokenBuf = rhs.tokenBuf;
+	this->nextToken = rhs.nextToken;
+	rhs.tokenBuf = nullptr;
+	rhs.nextToken = nullptr;
+	return *this;
 }
-*/
+
 MyStringTokener::~MyStringTokener()
 {
 	if (tokenBuf) {
@@ -1137,6 +1161,13 @@ MyStringWithTokener::MyStringWithTokener(const char *s)
 	init();
 	size_t s_len = s ? strlen(s) : 0;
 	assign_str(s, (int)s_len);
+}
+
+MyStringWithTokener &
+MyStringWithTokener::operator=(MyStringWithTokener &&rhs) {
+	MyString::operator=(rhs);
+	this->tok = std::move(rhs.tok);
+	return *this;
 }
 
 #if 1

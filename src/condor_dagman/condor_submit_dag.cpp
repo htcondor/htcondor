@@ -141,7 +141,9 @@ int main(int argc, char *argv[])
 		// Check whether the output files already exist; if so, we may
 		// abort depending on the -f flag and whether we're running
 		// a rescue DAG.
-	dagmanUtils.ensureOutputFilesExist( deepOpts, shallowOpts );
+	if ( !dagmanUtils.ensureOutputFilesExist( deepOpts, shallowOpts ) ) {
+		exit( 1 );
+	}
 
 		// Make sure that all node jobs have log files, the files
 		// aren't on NFS, etc.
@@ -155,7 +157,9 @@ int main(int argc, char *argv[])
 	}
 
 		// Write the actual submit file for DAGMan.
-	dagmanUtils.writeSubmitFile( deepOpts, shallowOpts, dagFileAttrLines );
+	if ( !dagmanUtils.writeSubmitFile( deepOpts, shallowOpts, dagFileAttrLines ) ) {
+		exit( 1 );
+	}
 
 	return submitDag( shallowOpts );
 }

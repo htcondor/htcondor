@@ -258,6 +258,12 @@ condor_isidchar(int c)
 
 #define ISIDCHAR(c)		( condor_isidchar(c) )
 
+// The allowed characters after a : in $(NAME:def) is IDCHAR + COLON_DEF_EXTRACHARSET
+// Prior to 8.9.7, this was the permitted list
+#define COLON_DEF_EXTRACHARSET "$ ,\\:"
+// After 8.9.7 this is the permitted list ??
+//#define COLON_DEF_EXTRACHARSET " !#$%&'*+,-@:;[\\]^`<=>?{|}~"
+
 // $$ expressions may also contain a colon
 #define ISDDCHAR(c) ( ISIDCHAR(c) || ((c)==':') )
 
@@ -1444,7 +1450,7 @@ Parse_macros(
 
 	bool is_submit = (fnSubmit != NULL);
 	MACRO_SOURCE& FileSource = ms.source();
-	const char * source_file = macro_source_filename(FileSource, macro_set);
+	const char * source_file = ms.source_name(macro_set);
 	const char * source_type = is_submit ? "Submit file" : "Config source";
 
 	while (true) {
@@ -2244,7 +2250,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 				pmeta->matches_default = same_param_value(def_value, pitem->raw_value, is_path);
 			}
 		}
-		if (tvalue) free(tvalue);
+		free(tvalue);
 		return;
 	}
 
@@ -3351,23 +3357,23 @@ static const char * evaluate_macro_func (
 			if (len_arg) *len_arg++ = 0;
 
 			int start_pos = 0;
-			if (start_arg) {
-				const char * arg = lookup_macro(start_arg, macro_set, ctx);
-				if ( ! arg) arg = start_arg;
 
-				char * tmp3 = NULL;
-				if (strchr(arg, '$')) {
-					tmp3 = expand_macro(arg, macro_set, ctx);
-					arg = tmp3;
-				}
+			const char * arg = lookup_macro(start_arg, macro_set, ctx);
+			if ( ! arg) arg = start_arg;
 
-				long long index = -1;
-				if ( ! string_is_long_param(arg, index) || index < INT_MIN || index >= INT_MAX) {
-					EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
-				}
-				start_pos = (int)index;
-				if (tmp3) {free(tmp3);} tmp3 = NULL;
+			char * tmp3 = NULL;
+			if (strchr(arg, '$')) {
+				tmp3 = expand_macro(arg, macro_set, ctx);
+				arg = tmp3;
 			}
+
+			long long index = -1;
+			if ( ! string_is_long_param(arg, index) || index < INT_MIN || index >= INT_MAX) {
+				EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
+			}
+			start_pos = (int)index;
+			if (tmp3) {free(tmp3);} tmp3 = NULL;
+
 
 			int sub_len = INT_MAX/2;
 			if (len_arg) {
@@ -4489,11 +4495,14 @@ tryagain:
 						if (c == '(') {
 							// skip to the close )
 							const char * ptr = strchr(value, ')');
-							if (ptr) value = ptr+1;
+							if (ptr) {
+								value = ptr+1;
+								continue;
+							}
 						} else if (is_meta_arg_body) {
 							// for meta args, allow pretty much anything after the colon
 							continue;
-						} else if (strchr("$ ,\\:", c)) {
+						} else if (strchr(COLON_DEF_EXTRACHARSET, c)) {
 							// allow some characters after the : that we don't allow in param names
 							continue;
 						}
@@ -4861,7 +4870,7 @@ bool hash_iter_done(HASHITER& it) {
 	if (it.ix == 0 && it.id == 0) {
 		if ( ! it.set.defaults || ! it.set.defaults->table || ! it.set.defaults->size) {
 			it.opts |= HASHITER_NO_DEFAULTS;
-		} else if ( ! (it.opts & HASHITER_NO_DEFAULTS)) {
+		} else if (it.set.size > 0 && it.set.table && ! (it.opts & HASHITER_NO_DEFAULTS)) {
 			// decide whether the first item is in the defaults table or not.
 			const char * pix_key = it.set.table[it.ix].key;
 			const char * pid_key = it.set.defaults->table[it.id].key;
@@ -5067,11 +5076,14 @@ tryagain:
 						if (c == '(') {
 							// skip to the close )
 							char * ptr = strchr(value, ')');
-							if (ptr) value = ptr+1;
+							if (ptr) {
+								value = ptr+1;
+								continue;
+							}
 						} else if (is_meta_arg_body) {
 							// for meta args, allow pretty much anything after the colon
 							continue;
-						} else if (strchr("$ ,\\:", c)) {
+						} else if (strchr(COLON_DEF_EXTRACHARSET, c)) {
 							// allow some characters after the : that we don't allow in param names
 							continue;
 						}

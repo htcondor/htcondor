@@ -4,14 +4,390 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 8.9.5
+Version 8.9.8
 -------------
 
 Release Notes:
 
--  HTCondor version 8.9.5 not yet released.
+-  HTCondor version 8.9.8 not yet released.
 
-.. HTCondor version 8.9.5 released on Month Date, 2019.
+.. HTCondor version 8.8.8 released on Month Date, 2020.
+
+-  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
+   now tries to parse the entire string passed to it.  Failure results in a
+   ``SyntaxError``.  This prevents strings like ``foo = bar`` from silently
+   being parsed as just ``foo`` and causing unexpected results.
+   :ticket:`7607`
+
+-  API change in the Python bindings: we deprecated ``Schedd.negotiate()``.
+   :ticket:`7524`
+
+-  API change in the Python bindings: we deprecated the classes
+   ``htcondor.Negotiator``, ``htcondor.FileLock``, ``htcondor.EventIterator``,
+   and ``htcondor.LogReader``,  as well as the functions ``htcondor.lock()``
+   and ``htcondor.read_events()``.
+   :ticket:`7690`
+
+New Features:
+
+-  *classad_eval* now allows its first (ClassAd) argument to be just the
+   interior of a single ClassAd.  That is, you no longer need to surround
+   the first argument with square brackets.  This means that
+   ``classad_eval 'x = y; y = 7' 'x'`` will now correctly return ``7``.
+   :ticket:`7621`
+
+-  *classad_eval* now allows you to freely mix (partial) ClassAds,
+   single attribute assignments, and the expressions you want to evaluate.
+   This means that ``classad_eval 'x = y' 'y = 7' 'x'`` will now return
+   ``7``.  The ad used to evaluate an expression will be printed before
+   the expression's result, unless doing so would repeat the previous
+   expression's ad; use the ``-quiet`` flag to disable.
+   :ticket:`7341`
+
+-  Added a new tool, *condor_watch_q*, a live-updating job status tracker
+   that does not repeatedly query the *condor_schedd* like ``watch condor_q``
+   would. It includes options for colored output, progress bars, and a minimal
+   language for exiting when certain conditions are met.
+   The man page can be found here: :ref:`condor_watch_q`.
+   *condor_watch_q* is still under development;
+   several known issues are summarized in the ticket.
+   :ticket:`7343`
+
+Bugs Fixed:
+
+- The Python bindings methods
+  :meth:`htcondor.Schedd.query`,
+  :meth:`htcondor.Schedd.xquery`, and
+  :meth:`htcondor.Schedd.history`
+  now use the argument names ``constraint`` and ``projection``
+  (for the query condition and the attributes to return from the query)
+  consistently.
+  The old argument names (``requirements`` and ``attr_list``) are deprecated,
+  but will still work (raising a deprecation warning when used) until a future
+  release.
+  :ticket:`7630`
+
+- *classad_eval* no longer ignores trailing garbage in its first (ClassAd)
+  argument.  This prevents  ``classad_eval 'x = y; y = 7' 'x'`` from
+  incorrectly returning ``undefined``.
+  :ticket:`7621`
+
+- An ID token at the end of a file lacking a trailing newline is no longer ignored.
+  :ticket:`7499`
+
+- ``condor_token_request_list`` will now correctly list requests with request IDs
+  starting with the number ``0``.
+  :ticket:`7641`
+
+- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let program like
+  ``R`` know the maximum number of threads it should use.
+  :ticket:`7649`
+
+Version 8.9.7
+-------------
+
+Release Notes:
+
+- HTCondor version 8.9.7 released on May 20, 2020.
+
+- The ``TOKEN`` authentication method has been renamed to ``IDTOKENS`` to
+  better differentiate it from the ``SCITOKENS`` method.  All sites are
+  encouraged to update their configurations accordingly; however, the
+  configuration files and wire protocol remains backward compatible with
+  prior releases. :ticket:`7540`
+
+- HTCondor now advertises ``CUDAMaxSupportedVersion`` (when appropriate).  This
+  attribute is an integer representation of the highest CUDA version the
+  machine's driver supports.  HTCondor no longer advertises the attribute
+  ``CUDARuntimeVersion``.
+  :ticket:`7413`
+
+- If you know what a shared port ID is, it may interest you to learn that
+  starters in this version of HTCondor use their slot names, if available,
+  in their shared port IDs.
+  :ticket:`7510`
+
+New Features:
+
+- You may now specify that HTCondor only transfer files when the job
+  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
+  to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
+  job exits (in the sense of ``ON_EXIT``) with the specified success code.  This
+  is intended to prevent unsuccessful jobs from going on hold because they
+  failed to produce the expected output (file(s)).
+  :ticket:`7270`
+
+- HTCondor may now preserve the relative paths you specify when transferring
+  files.  See the :doc:`/man-pages/condor_submit` man page about
+  ``preserve_relative_paths``.
+  :ticket:`7338`
+
+- You may now specify a distinct list of files for use with the vanilla
+  universe's support for application-level checkpointing
+  (``checkpoint_exit_code``).  Use ``transfer_checkpoint_files`` if you'd
+  like to shorten your ``transfer_output_files`` list by removing files
+  only needed for checkpoints.  See the :doc:`/man-pages/condor_submit`
+  man page.
+  :ticket:`7269`
+
+- The *condor_job_router* configuration and transform language has changed.
+  The Job Router will still read the old configuration and transforms, but
+  the new configuration syntax is much more flexible and powerful.
+
+  - Routes are now a modified form of job transform. ``JOB_ROUTER_ROUTE_NAMES`` defines both the order and which routes are enabled
+  - Multiple pre-route and post-route transforms that apply to all routes can be defined.
+  - The Routes and transforms use the same syntax and transform engine as ``SUBMIT_TRANSFORM_NAMES``.
+
+  :ticket:`7432`
+
+- HTCondor now offers a submit command, ``cuda_version``, so that jobs can
+  describe which CUDA version (if any) they use.  HTCondor will use that
+  information to match the job with a machine whose driver supports that
+  version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
+  :ticket:`7413`
+
+- Tokens can be blacklisted by setting the ``SEC_TOKEN_BLACKLIST_EXPR``
+  configuration parameter to an expression matching the token contents.
+  Further, a unique ID has been added to all generated tokens, allowing
+  individual tokens to be blacklisted.
+  :ticket:`7449`
+  :ticket:`7450`
+
+- If the *condor_master* cannot authenticate with the collector then it will
+  automatically attempt to request an ID token (which the collector
+  administrator can subsequently approve).  This now matches the behavior of
+  the *condor_schedd* and *condor_startd*. :ticket:`7447`
+
+- The *condor_token_request_list* can now print out pending token requests
+  when invoked with the ``-json`` flag. :ticket:`7454`
+
+- Request IDs used for *condor_token_request* are now zero-padded, ensuring
+  they are always a fixed-length. :ticket:`7461`
+
+- All token generation and usage is now logged using HTCondor's audit log
+  mechanism. :ticket:`7450`
+
+- The new ``SEC_TOKEN_REQUEST_LIMITS`` configuration parameter allows
+  administrators to limit the authorizations available to issued tokens.
+  :ticket:`7455`
+
+- HTCondor now allows OAuth tokens and Kerberos credentials to be
+  enabled on the same machine.  This involves some changes to the
+  way these two features are configured.  *condor_store_cred* and the Python
+  bindings has new commands to allow Kerberos and OAuth credentials to be stored
+  and queried.
+  :ticket:`7462`
+
+- The submit command ``getenv`` can now be a list of environment variables
+  to import and not just ``True`` or ``False``.
+  :ticket:`7572`
+
+- The ``condor_history`` command now has a ``startd`` option to query the *condor_startd*
+  history file.  This works for both local and remote queries.
+  :ticket:`7538`
+
+- The ``-submitters`` argument to ``condor_q`` now correctly shows jobs for the
+  given submitter name, even when the submitter name is an accounting group.
+  :ticket:`7616`
+
+- The accountant ads that *condor_userprio* displays have two new attributes.
+  The ``SubmitterLimit`` contains the fair share, in number of cores, that this
+  submitter should have access to, if they have sufficient jobs, and they all match.
+  The ``SubmitterShares`` is the percentage of the pool they should have access to.
+  :ticket:`7626`
+  :ticket:`7453`
+
+- When running on a Linux system with cgroups enabled, the MemoryUsage
+  attribute of a job now includes the memory usage by the kernel disk
+  cache.  This helps users set Request_Memory to more useful values.
+  :ticket:`7442`
+
+- Docker universe now works inside an unprivileged personal HTCondor,
+  if you give the user starting the personal condor rights to run the
+  docker commands.
+  :ticket:`7485`
+
+- The *condor_master* and other condor daemons can now run as PID 1.
+  This is useful when starting HTCondor inside a container.
+  :ticket:`7472`
+
+- When worker nodes are running on CPUs that support the AVX512 instructions,
+  the *condor_startd* now advertises that fact with has_avx512 attributes.
+  :ticket:`7528`
+
+- Added ``GOMAXPROCS`` to the default list of environment variables that are
+  set to the number of CPU cores allocated to the job.
+  :ticket:`7418`
+
+- Added the option for *condor_dagman* to remove jobs after reducing
+  MaxJobs to a value lower than the number of currently running jobs. This
+  behavior is controlled by the
+  :macro:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE` macro, which defaults to False.
+  :ticket:`7368`
+
+- The new configuration parameter ``NEGOTIATOR_SUBMITTER_CONSTRAINT`` defines
+  an expression which constrains which submitter ads are considered for
+  matchmaking by the *condor_negotiator*.
+  :ticket:`7490`
+
+- Removed the unused and always set to zero job attribute LocalUserCpu
+  and LocalSysCpu
+  :ticket:`7546`
+
+- *condor_submit* now treats ``request_gpu`` as a typo and suggests
+  that ``request_gpus`` may have been what was intended.  This is the 
+  same way that it treats ``request_cpu``.
+  :ticket:`7421`
+
+- Feature to enhance the reliability of *condor_ssh_to_job* is now on
+  by default: CONDOR_SSH_TO_JOB_USE_FAKE_PASSWD_ENTRY is now true
+  :ticket:`7536`
+
+- Enhanced the dataflow jobs that we introduced in version 8.9.5. In
+  addition to output files, we now also check the executable and stdin files.
+  If any of these are newer than the input files, we consider this to be a
+  dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to True.
+  :ticket:`7488`
+
+- When HTCondor is running as root on a Linux machine, it now makes /dev/shm
+  a private mount for jobs.  This means that files written to /dev/shm in
+  one job aren't visible to other jobs, and that HTCondor now cleans up
+  any leftover files in /dev/shm when the job exits.  If you want to the
+  old behavior of a shared /dev/shm, you can set :macro:`MOUNT_PRIVATE_DEV_SHM` 
+  to false.
+  :ticket:`7443` 
+
+- When configuration parameter ``HAD_USE_PRIMARY`` is set to ``True``,
+  the collectors will be queried in the order in which they appear in
+  ``HAD_LIST``.
+  Otherwise, the order in which the collectors are queried will be
+  randomized (before, this was always done).
+  :ticket:`7556`
+
+- Added a very basic ``PROVISIONER`` node type to the *condor_dagman* parse
+  language and plumbing. When this work is completed in a future release, it
+  will allow users to provision remote compute resources (ie. Amazon EC2, 
+  Argonne Cooley) as part of their DAG workflows, then run their jobs on
+  these resources.
+  :ticket:`5622`
+
+- A new attribute ``ScratchDirFileCount`` was added to the Job ClassAd and to
+  the Startd ClassAd. It contains the number of files in the job sandbox for the current job.
+  This attribute will be refreshed as the same time that ``DiskUsage`` is refreshed.
+  :ticket:`7486`
+
+- A new configuration macro ``SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`` can be
+  used to disable the behavior of *condor_submit* to generate Requirements clauses
+  for job attributes that begin with Request
+  :ticket:`7513`
+
+- Made some performance improvements in the *condor_collector*.
+  This includes new configuration parameter
+  ``COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS``, which reduces the amount
+  of data forwarded between *condor_collectors*.
+  :ticket:`7440`
+  :ticket:`7423`
+
+- *condor_install* can now generate a script to set environment variables
+  for the "fish" shell. :ticket:`7505`
+
+Bugs Fixed:
+
+- The Box.com file transfer plugin now implements the chunked upload
+  method, which means that uploads of 50 MB or greater are now
+  possible. Prior to this implementation, jobs uploading large files
+  would unexpectedly go on hold.
+  :ticket:`7531`
+
+- The *curl_plugin* previously implemented a minimum speed timeout with an
+  option flag that caused memory problems in older versions of libcurl.
+  We've reimplemented timeouts now using a callback that manually enforces
+  a minimum 1 byte/second transfer speed.
+  :ticket:`7414` 
+
+- Some URLs for keys in AWS S3 buckets were previously of the form
+  ``s3://<bucket>.s3-<region>.amazonaws.com/<key>``.  Not all regions support
+  this form of address; instead, you must use URLs of the form
+  ``s3://<bucket>.s3.<region>.amazonaws.com/<key>``.  HTCondor now allows
+  and requires the latter; you will have to change older submit files.
+  :ticket:`7517`
+
+- Amazon's S3 service used to allow bucket names with underscores or capital
+  letters.  HTCondor can now download from and upload to buckets with this
+  sort of name.
+  :ticket:`7477`
+
+- The *condor_token* family of tools now respect the ``-debug`` command
+  line flag. :ticket:`7448`
+
+- The *condor_token_request_list* tool now respects the ``-reqid`` flag.
+  :ticket:`7448`
+
+- Tokens with authorization limits no longer need to explicitly list
+  the ``ALLOW`` authorization, fixing a regression from 8.9.4. :ticket:`7456`
+
+- Fixed a bug where Kerberos principals were being set incorrectly when
+  :macro:`KERBEROS_SERVER_PRINCIPAL` was set.
+  :ticket:`7577`
+
+- The packaged versions of HTCondor automatically creates the directories to
+  hold pool passwords, tokens, and Kerberos and OAuth credentials.
+  :ticket:`7117`
+
+- The HTCondor central manager will generate a pool password if needed on
+  startup or reconfiguration. :ticket:`7634`
+
+- Fixed a bug in reading service account credentials when submitting
+  to Google Compute Engine (grid universe, grid-type ``gce``).
+  :ticket:`7555`
+
+- To work around an issue where long-running *gce_gahp* process enter a state
+  where they can no longer authenticate with GCE, the daemon now restarts once
+  every 24 hours.  This does not affect the jobs themselves.
+  See :ref:`gce_configuration_variables`.
+  :ticket:`7401`
+
+- Fixed a bug that prevented the *condor_schedd* from effectively flocking
+  to pools when resource request list prefetching is enabled, which is the
+  default in HTCondor version 8.9
+  :ticket:`7549`
+  :ticket:`7539`
+
+- It is now safe to call functions from the Python bindings ``htcondor`` module
+  on multiple threads simultaneously. See the
+  :ref:`python-bindings-thread-safety` section in the
+  Python bindings documentation for more details.
+  :ticket:`7359`
+
+- Our ``htcondor.Submit.from_dag()`` Python binding now throws an exception
+  when it fails, giving the programmer a chance to catch and recover. 
+  Previously this just caused Python to fall over and die immediately.
+  :ticket:`7337`
+
+- The RPM packaging now obsoletes the standard universe package so that it will
+  deleted upon upgrade.
+  :ticket:`7444`
+
+- Restored setting RUNPATH instead of RPATH for the libcondor_utils
+  shared library and the Python bindings.
+  The accidental change to setting RPATH in 8.9.5 altered how libraries
+  were found when ``LD_LIBRARY_PATH`` is set.
+  :ticket:`7584`
+
+- The location for the CA certificates on Debian and Ubuntu systems is now
+  properly set. :ticket:`7569`
+
+- Fixed a bug where the *condor_schedd* and *condor_negotiator* couldn't
+  talk to each other if one was version 8.9.3 and the other was version
+  8.9.4 or later.
+  :ticket:`7615`
+
+Version 8.9.6
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.9.6 released on April 6, 2020.
 
 New Features:
 
@@ -19,22 +395,144 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html>`_.
+
+   :ticket:`7356`
+   :ticket:`7427`
+   :ticket:`7507`
+
+Version 8.9.5
+-------------
+
+Release Notes:
+
+-  HTCondor version 8.9.5 released on January 2, 2020.
+
+New Features:
+
+-  Implemented a *dataflow* mode for jobs. When enabled, a job whose
+   1) pre-declared output files already exist, and 2) output files are
+   more recent than its input files, is considered a dataflow job and
+   gets skipped. This feature can be enabled by setting the
+   ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to ``True``.
+   :ticket:`7231`
+
+-  Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
+   the context of ClassAd attributes, and print the result in ClassAd format.
+   :ticket:`7339`
+
+-  You may now specify ports to forward into your Docker container.  See
+   :ref:`Docker and Networking` for details.
+   :ticket:`7322`
+
+-  Added the ability to edit certain properties of a running *condor_dagman*
+   workflow: **MaxJobs**, **MaxIdle**, **MaxPreScripts**, **MaxPostScripts**.
+   A user can call *condor_qedit* to set new values in the job ad, which will
+   then be updated in the running workflow.
+   :ticket:`7236`
+
+-  Jobs which must use temporary credentials for S3 access may now specify
+   the "session token" in their submit files.  Set ``+EC2SessionToken``
+   to the name of a file whose only content is the session token.  Temporary
+   credentials have a limited lifetime, which HTCondor does not help you
+   manage; as a result, file transfers may fail because the temporary
+   credentials expired.
+   :ticket:`7407`
+
+-  Improved the performance of the negotiator by simplifying the definition of
+   the *condor_startd*'s ``WithinResourceLimits`` attribute when custom
+   resources are defined.
+   :ticket:`7323`
+
+-  If you configure a *condor_startd* with different SLOT_TYPEs,
+   you can use the SLOT_TYPE as a prefix for configuration entries.
+   This can be useful to set different BASE_GROUPs
+   for different slot types within the same *condor_startd*. For example,
+   SLOT_TYPE_1.BASE_CGROUP = hi_prio
+   :ticket:`7390`
+
+-  Added a new knob ``SUBMIT_ALLOW_GETENV``. This defaults to ``true``. When
+   set to ``false``, a submit file with `getenv = true` will become an error.
+   Administrators may want to set this to ``false`` to prevent users from
+   submitting jobs that depend on the local environment of the submit machine.
+   :ticket:`7383`
+
+-  *condor_submit* will no longer set the ``Owner`` attribute of jobs
+   it submits to the name of the current user. It now leaves this attribute up
+   to the *condor_schedd* to set.  This change was made because the
+   *condor_schedd* will reject the submission if the ``Owner`` attribute is set
+   but does not match the name of the mapped authenticated user submitting the
+   job, and it is difficult for *condor_submit* to know what the mapped name is
+   when there is a map file configured.
+   :ticket:`7355`
+
+-  Added ability for a *condor_startd* to log the state of Ads when shutting
+   down using ``STARTD_PRINT_ADS_ON_SHUTDOWN`` and ``STARTD_PRINT_ADS_FILTER``.
+   :ticket:`7328`
+
+Bugs Fixed:
+
+-  ``condor_submit -i`` now works with Docker universe jobs.
+   :ticket:`7394`
+
+-  Fixed a bug that happened on a Linux *condor_startd* running as root where
+   a running job getting close to the ``RequestMemory`` limit, could get stuck,
+   and neither get held with an out of memory error, nor killed, nor allowed
+   to run.
+   :ticket:`7367`
+
+-  The Python 3 bindings no longer segfault when putting a
+   :class:`~classad.ClassAd` constructed from a Python dictionary into another
+   :class:`~classad.ClassAd`.
+   :ticket:`7371`
+
+-  The Python 3 bindings were missing the division operator for
+   :class:`~classad.ExprTree`.
+   :ticket:`7372`
+
+-  When calling :meth:`classad.ClassAd.setdefault` without a default, or
+   with a default of None, if the default is used, it is now treated as the
+   :attr:`classad.Value.Undefined` ClassAd value.
+   :ticket:`7370`
+
+-  Fixed a bug where when file transfers fail with an error message containing
+   a newline (``\n``) character, the error message would not be propagated to
+   the job's hold message.
+   :ticket:`7395`
+
+-  SciTokens support is now available on all Linux and MacOS platforms.
+   :ticket:`7406`
+
+-  Fixed a bug that caused the Python bindings included in the tarball
+   package to fail due to a missing library dependency.
+   :ticket:`7435`
+
+-  Fixed a bug where the library that is pre-loaded to provide a sane passwd
+   entry when using ``condor_ssh_to_job`` was placed in the wrong directory
+   in the RPM packaging.
+   :ticket:`7408`
 
 Version 8.9.4
 -------------
 
 Release Notes:
 
--  HTCondor version 8.9.4 not yet released.
+- HTCondor version 8.9.4 released on November 19, 2019.
 
-.. HTCondor version 8.9.4 released on Month Date, 2019.
+- The Python bindings are now packaged as extendable modules.
+  :ticket:`6907`
 
 - The format of the aborted event has changed.  This will
   only affect you if you're not using one the readers provided by HTCondor.
   :ticket:`7191`
 
-- `DAGMAN_USE_JOIN_NODES` is now on by default.
+- ``DAGMAN_USE_JOIN_NODES`` is now on by default.
   :ticket:`7271`
 
 New Features:
@@ -43,13 +541,20 @@ New Features:
   the *condor_submit* man page and :ref:`file_transfer_using_a_url`.
   :ticket:`7289`
 
-- Added ``erase_output_and_error_on_restart`` as a new submit command.  It
-  defaults to true; if set to false, and ``when_to_transfer_output`` is
-  ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
-  when the job restarts, instead of erasing them (and starting the logs
-  over).  This may make the output and error logs more useful when the
-  job self-checkpoints.
-  :ticket:`7189`
+- Reduced the memory needed for *condor_dagman* to load a DAG that has
+  a large number of PARENT and CHILD statements.
+  :ticket:`7170`
+
+- Optimized *condor_dagman* startup speed by removing unnecessary 3-second
+  sleep.
+  :ticket:`7273`
+
+- Added a new option to *condor_q*.  `-idle` shows only idle jobs and
+  their requested resources.
+  :ticket:`7241`
+
+- `SciTokens <https://scitokens.org>`_ support is now available.
+  :ticket:`7248`
 
 - Added a new tool, :ref:`condor_evicted_files`,
   to help users find files that HTCondor is holding on to for them (as
@@ -58,20 +563,32 @@ New Features:
   ``CheckpointExitCode`` is set).
   :ticket:`7038`
 
-- GPU monitoring now reports ``DeviceGPUsAverageUsage`` and
-  ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
-  are for the lifetime of the startd.  Also, we renamed ``GPUsUsage`` to
+- Added ``erase_output_and_error_on_restart`` as a new submit command.  It
+  defaults to ``true``; if set to ``false``, and ``when_to_transfer_output`` is
+  ``ON_EXIT_OR_EVICT``, HTCondor will append to the output and error logs
+  when the job restarts, instead of erasing them (and starting the logs
+  over).  This may make the output and error logs more useful when the
+  job self-checkpoints.
+  :ticket:`7189`
+
+- Added ``$(SUBMIT_TIME)``, ``$(YEAR), ``$(MONTH)``, and ``$(DAY)`` as
+  built-in submit variables. These expand to the time of submission.
+  :ticket:`7283`
+
+- GPU monitoring is now on by default.  It reports ``DeviceGPUsAverageUsage``
+  and ``DeviceGPUsMemoryPeakUsage`` for slots with GPUs assigned.  These values
+  are for the lifetime of the *condor_startd*.  Also, we renamed ``GPUsUsage`` to
   ``GPUsAverageUsage`` because all other usage values are peaks.  We also
   now report GPU memory usage in the job termination event.
   :ticket:`7201`
 
-- Added new config parameter for execute machines,
-  CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY, which defaults to false.  When true,
-  condor LD_PRELOADs into unprivileged sshd it startd a special version of
-  the linux getpwnam library call, which forces the user's shell to
-  /bin/bash and the home directory to the scratch directory.  This allows
-  condor_ssh_to_job to work on sites that don't create login shells for
-  slots users, or who want to run as nobody.
+- Added new configuration parameter for execute machines,
+  ``CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY``, which defaults to ``false``.
+  When ``true``, condor LD_PRELOADs into unprivileged sshd it *condor_startd*
+  a special version of the Linux getpwnam() library call, which forces
+  the user's shell to /bin/bash and the home directory to the scratch directory.
+  This allows *condor_ssh_to_job* to work on sites that don't create
+  login shells for slots users, or who want to run as nobody.
   :ticket:`7260`
 
 - The ``htcondor.Submit.from_dag()`` static method in the Python bindings,
@@ -79,19 +596,60 @@ New Features:
   arguments (in addition to positional arguments), and the ``options`` argument
   is now optional:
 
-  .. code-block::python
+  .. code-block:: python
 
-    dag_args = { "maxidle": 10, "maxpost": 5 }
+     dag_args = { "maxidle": 10, "maxpost": 5 }
 
-    # with keyword arguments for filename and options
-    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
+     # with keyword arguments for filename and options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag", options = dag_args)
 
-    # or like this, with no options
-    dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
+     # or like this, with no options
+     dag_submit = htcondor.Submit.from_dag(filename = "mydagfile.dag")
 
   :ticket:`7278`
 
+- Added an example of a multi-file plugin to transfer files from a locally
+  mounted Gluster file system. This script is also designed to be a template
+  for other file transfer plugins, as the logic to download or upload files is
+  clearly indicated and could be easily changed to support different file
+  services.
+  :ticket:`7212`
+
+- Added a new multi-file transfer plugin for downloading files from
+  Microsoft OneDrive user accounts. This supports URLs like
+  "onedrive://path/to/file" and using the plugin requires the administrator
+  configure the *condor_credd* to allow users to obtain Microsoft OneDrive
+  tokens and requires the user request Microsoft OneDrive tokens in their
+  submit file. :ticket:`7171`
+
+- Externally-issued SciTokens can be exchanged for an equivalent HTCondor-issued
+  token, enabling authorization flows in some cases where SciTokens could
+  not otherwise be used (such as when the remote daemon has no host certificate).
+  :ticket:`7281`
+
+- The *condor_annex* tool will now check during setup for instance credentials
+  if none were specified.
+  :ticket:`7097`
+
+- The *condor_schedd* now keeps track of which submitters it has advertised to
+  flocked pools.  The *condor_schedd* will only honor matchmaking requests
+  from flocked pool for submitters it did not advertise to the flock pool.  This
+  new logic only applies to auto-created authorizations (introduced in 8.9.3)
+  and not NEGOTIATOR-level authorizations setup by pool administrators.
+  :ticket:`7100`
+
+- Added Python bindings for the TOKEN request API.
+  :ticket:`7162`
+
+- In addition to administrators, token requests can be approved by the user whose
+  identity is requested.
+  :ticket:`7159`
+
 Bugs Fixed:
+
+- The *curl_plugin* now correctly advertises ``file`` and ``ftp`` as
+  supported methods.
+  :ticket:`7357`
 
 -  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
    outside the container if the container had not completely started.
@@ -102,6 +660,47 @@ Bugs Fixed:
   and soft kill (defaulting to SIGTERM).  This gives Docker jobs a chance
   to shut down cleanly.
   :ticket:`7247`
+
+- ``condor_submit`` and the python bindings ``Submit`` object will no longer treat
+  submit commands that begin with ``request_<tag>`` as custom resource requests unless
+  ``<tag>`` does not begin with an underscore, and is at least 2 characters long.
+  :ticket:`7172`
+
+- The python bindings ``Submit`` object now converts keys of the form ``+Attr``
+  to ``MY.Attr`` when setting and getting values into the ``Submit`` object.
+  The ``Submit`` object had been storing ``+Attr`` keys and then converting
+  these keys to the correct ``MY.Attr`` form on an ad-hoc basis, this could lead
+  to some very strange error conditions.
+  :ticket:`7261`
+
+- In some situations, notably with Amazon AWS, our *curl_plugin* requests URLs
+  which return an HTTP 301 or 302 redirection but do not include a Location
+  header. These were previously considered successful transfers. We've fixed
+  this so they are now considered failures, and the jobs go on hold.
+  :ticket:`7292`
+
+- Our *curl_plugin* is designed to partially retry downloads which did not
+  complete successfully (HTTP Content-Length header reporting a different number
+  than bytes downloaded). However partial retries do not work with some proxy
+  servers, causing jobs to go on hold. We've updated the plugin to not attempt
+  partial retries when a proxy is detected.
+  :ticket:`7259`
+
+- The timeout for *condor_ssh_to_job* connection has been restored to the
+  previous setting of 20 seconds. Shortening the timeout avoids getting into
+  a deadlock between the *condor_schedd*, *condor_starter*, and
+  *condor_shadow*.
+  :ticket:`7193`
+
+- Fixed a performance issue in the *curl_plugin*, where our low-bandwidth
+  timeout caused 100% CPU utilization due to an old libcurl bug.
+  :ticket:`7316`
+
+- The Condor Connection Broker (CCB) will allow daemons to register at the
+  ``ADVERTISE_STARTD``, ``ADVERTISE_SCHEDD``, and ``ADVERTISE_MASTER`` authorization
+  level.  This reduces the minimum authorization needed by daemons that are located
+  behind NATs.
+  :ticket:`7225`
 
 Version 8.9.3
 -------------
@@ -144,7 +743,7 @@ New Features:
 
 - Added a new multifile transfer plugin for downloading and uploading
   files from/to Google Drive user accounts. This supports URLs like
-  "gdrive://path/to/file" and using the plugin requires the admin
+  "gdrive://path/to/file" and using the plugin requires the administrator
   configure the *condor_credd* to allow users to obtain Google Drive
   tokens and requires the user request Google Drive tokens in their
   submit file. :ticket:`7136`
@@ -155,16 +754,16 @@ New Features:
   :ticket:`7085`
 
 - Added a Python binding for *condor_submit_dag*. A new method,
-  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a 
+  ``htcondor.Submit.from_dag()`` class creates a Submit description based on a
   .dag file:
-  
+
   ::
 
     dag_args = { "maxidle": 10, "maxpost": 5 }
     dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
 
   The resulting ``dag_submit`` object can be submitted to a *condor_schedd* and
-  monitored just like any other Submit description object in the Python bindings.  
+  monitored just like any other Submit description object in the Python bindings.
   :ticket:`6275`
 
 - The Python binding's ``JobEventLog`` can now be pickled and unpickled,
@@ -186,8 +785,8 @@ New Features:
   in a ``RuntimeError`` exception.  :ticket:`7109`
 
 - Improved the speed of matchmaking in pools with partitionable slots
-  by simplifying the slot's WithinResourceLimits expression.  This new 
-  definition for this expression now ignores the job's 
+  by simplifying the slot's WithinResourceLimits expression.  This new
+  definition for this expression now ignores the job's
   _condor_RequestXXX attributes, which were never set.
   In pools with simple start expressions, this can double the speed of
   matchmaking.
@@ -198,7 +797,7 @@ New Features:
   expressions in the slot START expression.
   :ticket:`7123`
 
-- Reduced DAGMan's memory footprint when running DAGs with nodes 
+- Reduced DAGMan's memory footprint when running DAGs with nodes
   that use the same submit file and/or current working directory.
   :ticket:`7121`
 
@@ -236,10 +835,10 @@ New Features:
   ``batch_queue`` submit attribute (e.g. ``batch_queue = debug@cluster1``).
   :ticket:`7167`
 
-- HTCondor now sets numerous environment variables 
+- HTCondor now sets numerous environment variables
   to tell the job (or libraries being used by the job) how many CPU cores
-  have been provisioned.  Also added the config knob ``STARTER_NUM_THREADS_ENV_VARS``
-  to allow the administrator to customize this set of environment 
+  have been provisioned.  Also added the configuration knob ``STARTER_NUM_THREADS_ENV_VARS``
+  to allow the administrator to customize this set of environment
   variables.
   :ticket:`7296`
 
@@ -325,7 +924,7 @@ New Features:
    that make no progress as opposed to waiting indefinitely.  :ticket:`6971`
 
 -  Added a new multifile transfer plugin for downloading files from Box.com user accounts. This
-   supports URLs like "box://path/to/file" and using the plugin requires the admin configure the
+   supports URLs like "box://path/to/file" and using the plugin requires the administrator to configure the
    *condor_credd* to allow users to obtain Box.com tokens and requires the user request Box.com
    tokens in their submit file. :ticket:`7007`
 
@@ -450,7 +1049,7 @@ New Features:
    causes a docker universe job to use the host's network, instead of
    the default NATed interface. :ticket:`6906`
 
--  Added a new config knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow admins
+-  Added a new configuration knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow administrators
    to add arbitrary docker command line options to the docker create
    command. :ticket:`6900`
 
@@ -491,7 +1090,7 @@ New Features:
 
 -  When jobs are run without file transfer on, usually because there is
    a shared file system, HTCondor used to unconditionally set the jobs
-   argv[0] to the string *condor_exe.exe*. This breaks jobs that look
+   argv[0] to the string *condor_exec.exe*. This breaks jobs that look
    at their own argv[0], in ways that are very hard to debug. In this
    release of HTCondor, we no longer do this. :ticket:`6943`
 

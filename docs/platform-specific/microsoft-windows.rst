@@ -9,9 +9,7 @@ every bit as capable on Windows as it is on Unix - or even more capable.
 
 Porting HTCondor from Unix to Windows is a formidable task, because many
 components of HTCondor must interact closely with the underlying
-operating system. Provided is a clipped version of HTCondor for Windows.
-A clipped version is one in which there is no checkpointing and there
-are no remote system calls.
+operating system.
 
 This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
@@ -47,8 +45,8 @@ Supported Features under Windows
 
 Except for those items listed above, most everything works the same way
 in HTCondor as it does in the Unix release. This release is based on the
-HTCondor Version 8.9.1 source tree, and thus the feature set is the same
-as HTCondor Version 8.9.1 for Unix. For instance, all of the following
+HTCondor Version |release| source tree, and thus the feature set is the same
+as HTCondor Version |release| for Unix. For instance, all of the following
 work in HTCondor:
 
 -  The ability to submit, run, and manage queues of jobs running on a

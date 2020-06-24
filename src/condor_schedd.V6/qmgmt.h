@@ -37,7 +37,6 @@ GCC_DIAG_OFF(invalid-offsetof)
 #error This header must be included before condor_qmgr.h for code internal to the SCHEDD, and not at all for external code
 #endif
 
-void PrintQ();
 class Service;
 
 class QmgmtPeer {
@@ -57,6 +56,8 @@ class QmgmtPeer {
 		bool setEffectiveOwner(char const *o);
 		bool setAllowProtectedAttrChanges(bool val);
 		bool getAllowProtectedAttrChanges() { return allow_protected_attr_changes_by_superuser; }
+		bool setReadOnly(bool val);
+		bool getReadOnly() const { return readonly; }
 
 		ReliSock *getReliSock() const { return sock; };
 		const CondorVersionInfo *get_peer_version() const { return sock->get_peer_version(); };
@@ -74,6 +75,7 @@ class QmgmtPeer {
 
 		char *owner;  
 		bool allow_protected_attr_changes_by_superuser;
+		bool readonly;
 		char *fquser;  // owner@domain
 		char *myendpoint; 
 		condor_sockaddr addr;
@@ -129,18 +131,45 @@ private:
 };
 	
 
-// used to store a ClassAd + runtime information in a condor hashtable.
-class JobQueueJob : public ClassAd {
+// used to store a ClassAd + basic information in a condor hashtable.
+class JobQueueBase : public ClassAd {
 public:
 	JOB_ID_KEY jid;
 protected:
-	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)
+	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)	
+public:
+	JobQueueBase(int _etype=0) 
+		: jid(0, 0)
+		, entry_type(_etype)		
+	{};
+	virtual ~JobQueueBase() {};
+
+	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
+
+	enum {
+		entry_type_unknown = 0,
+		entry_type_header,
+		entry_type_jobset,
+		entry_type_cluster,
+		entry_type_job,
+	};
+	bool IsType(char _type) { if (!entry_type) this->PopulateFromAd(); return entry_type == _type; }
+	bool IsJob() { return IsType(entry_type_job); }
+	bool IsHeader() { return IsType(entry_type_header); }
+	bool IsJobSet() { return IsType(entry_type_jobset); }
+	bool IsCluster() { return IsType(entry_type_cluster); }
+};
+
+class JobQueueJob : public JobQueueBase {
+public:
+	//TT JOB_ID_KEY jid;
+protected:
 	char universe;      // this is in sync with ATTR_JOB_UNIVERSE
 	char has_noop_attr; // 1 if job has ATTR_JOB_NOOP
 	char status;        // this is in sync with committed job status and used when tracking job counts by state
 public:
 	int dirty_flags;	// one or more of JQJ_CHACHE_DIRTY_ flags indicating that the job ad differs from the JobQueueJob 
-	int spare;
+	int set_id;
 	int autocluster_id;
 	// cached pointer into schedulers's SubmitterDataMap and OwnerInfoMap
 	// it is set by count_jobs() or by scheduler::get_submitter_and_owner()
@@ -153,13 +182,13 @@ protected:
 
 public:
 	JobQueueJob(int _etype=0)
-		: jid(0,0)
-		, entry_type(_etype)
+		: JobQueueBase(_etype)
+		//TT , jid(0,0)
 		, universe(0)
 		, has_noop_attr(2) // value of 2 forces IsNoopJob() to populate this field
 		, status(0) // JOB_STATUS_MIN
 		, dirty_flags(0)
-		, spare(0)
+		, set_id(0)
 		, autocluster_id(0)
 		, submitterdata(NULL)
 		, ownerinfo(NULL)
@@ -167,16 +196,8 @@ public:
 	{}
 	virtual ~JobQueueJob() {};
 
-	enum {
-		entry_type_unknown=0,
-		entry_type_header,
-		entry_type_cluster,
-		entry_type_job,
-	};
-	bool IsType(char _type) { if ( ! entry_type) this->PopulateFromAd(); return entry_type==_type; }
-	bool IsJob() { return IsType(entry_type_job); }
-	bool IsHeader() { return IsType(entry_type_header); }
-	bool IsCluster() { return IsType(entry_type_cluster); }
+	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
+
 	int  Universe() { return universe; }
 	int  Status() { return status; }
 	void SetUniverse(int uni) { universe = uni; }
@@ -194,8 +215,6 @@ public:
 	//JobQueueJob( const classad::ClassAd &ad );
 	friend class JobQueueCluster;
 	friend class qelm;
-
-	void PopulateFromAd(); // populate this structure from contained ClassAd state
 
 	// if this object is a job object, it should be linked to its cluster object
 	JobQueueCluster * Cluster() { if (entry_type == entry_type_job) return parent; return NULL; }
@@ -300,7 +319,7 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & f
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
-int handle_q(Service *, int, Stream *sock);
+int handle_q(int, Stream *sock);
 void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 
@@ -504,7 +523,7 @@ private:
 // and a type derived from ClassAd for the payload.
 typedef JOB_ID_KEY JobQueueKey;
 typedef JobQueueJob* JobQueuePayload;
-typedef ClassAdLog<JOB_ID_KEY, JobQueueJob*> JobQueueLogType;
+typedef ClassAdLog<JOB_ID_KEY, JobQueuePayload> JobQueueLogType;
 
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
@@ -535,10 +554,13 @@ bool Reschedule();
 
 bool UniverseUsesVanillaStartExpr(int universe);
 
-int get_myproxy_password_handler(Service *, int, Stream *sock);
+int get_myproxy_password_handler(int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
 
+// JobSet qmgmt support functions
+bool JobSetDestroy(int setid);
+bool JobSetStoreAllDirtyAttrs(int setid, ClassAd & src, bool create);
 
 // priority records
 extern prio_rec *PrioRec;

@@ -260,15 +260,16 @@ OfflineCollectorPlugin::update (
 	ClassAd	&ad )
 {
 
+	/* bail out if the plug-in is not enabled */
+	if ( !enabled () ) {
+		return;
+	}
+
 	dprintf (
 		D_FULLDEBUG,
 		"In OfflineCollectorPlugin::update ( %d )\n",
 		command );
 
-	/* bail out if the plug-in is not enabled */
-	if ( !enabled () ) {
-		return;
-	}
 
 	/* make sure the command is relevant to us */
 	if ( UPDATE_STARTD_AD_WITH_ACK != command &&

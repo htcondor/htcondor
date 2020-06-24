@@ -28,6 +28,8 @@ Internally, it creates a cache of the SLURM response for all jobs and
 will reuse this for subsequent queries.
 """
 
+from __future__ import print_function
+
 import os
 import re
 import pwd
@@ -52,7 +54,7 @@ def log(msg):
     A very lightweight log - not meant to be used in production, but helps
     when debugging scale tests
     """
-    print >> sys.stderr, time.strftime("%x %X"), os.getpid(), msg
+    print(time.strftime("%x %X"), os.getpid(), msg, file = sys.stderr)
 
 def createCacheDir():
     uid = os.geteuid()
@@ -60,8 +62,8 @@ def createCacheDir():
     cache_dir = os.path.join("/var/tmp", "slurm_cache_%s" % username)
     
     try:
-        os.mkdir(cache_dir, 0755)
-    except OSError, oe:
+        os.mkdir(cache_dir, 0o755)
+    except OSError as oe:
         if oe.errno != errno.EEXIST:
             raise
         s = os.stat(cache_dir)
@@ -115,7 +117,7 @@ def ExclusiveLock(fd, timeout=120):
         try:
             fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return
-        except IOError, ie:
+        except IOError as ie:
             if not ((ie.errno == errno.EACCES) or (ie.errno == errno.EAGAIN)):
                 raise
             if check_lock(fd, timeout):
@@ -128,7 +130,7 @@ def ExclusiveLock(fd, timeout=120):
                 try:
                     fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                     return
-                except IOError, ie:
+                except IOError as ie:
                     if not ((ie.errno == errno.EACCES) or (ie.errno == errno.EAGAIN)):
                         raise
         sleeptime = random.random()
@@ -200,11 +202,11 @@ def get_lock_pid(fd):
         else:
             arg = struct.pack(linux_struct_flock, fcntl.F_WRLCK, 0, 0, 0, 0)
         result = fcntl.fcntl(fd, fcntl.F_GETLK, arg)
-    except IOError, ie:
+    except IOError as ie:
         if ie.errno != errno.EINVAL:
             raise
-        log("Unable to determine which PID has the lock due to a " \
-            "python portability failure.  Contact the developers with your" \
+        log("Unable to determine which PID has the lock due to a "
+            "python portability failure.  Contact the developers with your"
             " platform information for support.")
         return False
     if sys.platform == "darwin":
@@ -316,7 +318,7 @@ def get_finished_job_stats(jobid, cluster):
 
     try:
         reader = csv.DictReader(sacct_data, delimiter="|")
-    except Exception, e:
+    except Exception as e:
         log("Unable to read in CSV output from sacct: %s" % str(e))
         return return_dict
            
@@ -453,10 +455,10 @@ def check_cache(jobid, cluster, recurse=True):
     if recurse:
         try:
             s = os.stat(cache_dir)
-        except OSError, oe:
+        except OSError as oe:
             if oe.errno != 2:
                 raise
-            os.mkdir(cache_dir, 0755)
+            os.mkdir(cache_dir, 0o755)
             s = os.stat(cache_dir)
         if s.st_uid != uid:
             raise Exception("Unable to check cache because it is owned by UID %d" % s.st_uid)
@@ -465,7 +467,7 @@ def check_cache(jobid, cluster, recurse=True):
         cache_location += "-%s" % cluster
     try:
         fd = open(cache_location, "a+")
-    except IOError, ie:
+    except IOError as ie:
         if ie.errno != 2:
             raise
         # Create an empty file so we can hold the file lock
@@ -507,7 +509,7 @@ def main():
     elif len(sys.argv) == 3 and sys.argv[1] == "-w":
         jobid_arg = sys.argv[2]
     else:
-        print "1Usage: slurm_status.py slurm/<date>/<jobid>"
+        print("1Usage: slurm_status.py slurm/<date>/<jobid>")
         return 1
     jobid = jobid_arg.split("/")[-1]
     cluster = ""
@@ -520,7 +522,7 @@ def main():
     cache_contents = None
     try:
         cache_contents = check_cache(jobid, cluster)
-    except Exception, e:
+    except Exception as e:
         msg = "1ERROR: Internal exception, %s" % str(e)
         log(msg)
         #print msg
@@ -530,10 +532,10 @@ def main():
         log("Finished querying SLURM for jobid %s" % jobid)
         if not results or jobid not in results:
             log("1ERROR: Unable to find job %s" % jobid)
-            print "1ERROR: Unable to find job %s" % jobid
+            print("1ERROR: Unable to find job %s" % jobid)
         else:
             log("0%s" % job_dict_to_string(results[jobid]))
-            print "0%s" % job_dict_to_string(results[jobid])
+            print("0%s" % job_dict_to_string(results[jobid]))
     else:
         log("Jobid %s in cache." % jobid)
         log("0%s" % job_dict_to_string(cache_contents))
@@ -542,7 +544,7 @@ def main():
             finished_job_stats = get_finished_job_stats(jobid, cluster)
             cache_contents.update(finished_job_stats)
             
-        print "0%s" % job_dict_to_string(cache_contents)
+        print("0%s" % job_dict_to_string(cache_contents))
     return 0
 
 if __name__ == "__main__":
@@ -550,6 +552,6 @@ if __name__ == "__main__":
         sys.exit(main())
     except SystemExit:
         raise
-    except Exception, e:
-        print "1ERROR: %s" % str(e).replace("\n", "\\n")
+    except Exception as e:
+        print("1ERROR: %s" % str(e).replace("\n", "\\n"))
         sys.exit(0)

@@ -15,7 +15,6 @@ else:
     package_data["htcondor"] = ["*.pyd", "*.dll", "htcondor_libs/*.dll*"]
     package_data["classad"] = ["*.pyd", "*.dll"]
 
-
 class BinaryDistribution(Distribution):
     """ Forces BinaryDistribution. """
 

@@ -33,7 +33,6 @@
 #include "ODSHistoryFile.h"
 
 using namespace std;
-using namespace compat_classad;
 using namespace mongo;
 using namespace plumage::history;
 using namespace plumage::util;

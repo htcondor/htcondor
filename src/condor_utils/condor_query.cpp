@@ -20,9 +20,7 @@
 #include "condor_common.h"
 #include "condor_query.h"
 #include "condor_attributes.h"
-#include "condor_collector.h"
 #include "condor_config.h"
-#include "condor_network.h"
 #include "condor_io.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
@@ -609,8 +607,8 @@ filterAds (ClassAdList &in, ClassAdList &out)
 }
 
 int 
-CondorQuery::addExtraAttribute(const char *attr) {
-	return extraAttrs.Insert(attr);
+CondorQuery::addExtraAttribute(const char *name, const char *value) {
+	return extraAttrs.AssignExpr(name, value);
 }
 
 

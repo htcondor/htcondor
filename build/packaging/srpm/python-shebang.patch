@@ -1,0 +1,140 @@
+diff --git a/externals/bundles/blahp/1.16.5.1/pbs_status.py b/externals/bundles/blahp/1.16.5.1/pbs_status.py
+index 1a6b48a144..cf96a1af15 100755
+--- a/externals/bundles/blahp/1.16.5.1/pbs_status.py
++++ b/externals/bundles/blahp/1.16.5.1/pbs_status.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ #  File:     pbs_status.py
+ #
+diff --git a/src/azure_gahp/AzureGAHPServer.py b/src/azure_gahp/AzureGAHPServer.py
+index 1ff2910b20..bef5a334a4 100644
+--- a/src/azure_gahp/AzureGAHPServer.py
++++ b/src/azure_gahp/AzureGAHPServer.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python -u
++#!/usr/bin/env python3 -u
+ 
+ from __future__ import print_function
+ 
+diff --git a/src/condor_contrib/bosco/bosco_findplatform b/src/condor_contrib/bosco/bosco_findplatform
+index 43515d88a8..b66dd59879 100755
+--- a/src/condor_contrib/bosco/bosco_findplatform
++++ b/src/condor_contrib/bosco/bosco_findplatform
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ #Marco Mambelli - first version 10/8/2012 
+ 
+ from __future__ import print_function
+diff --git a/src/condor_contrib/bosco/bosco_ssh_start b/src/condor_contrib/bosco/bosco_ssh_start
+index ead8870555..2e514393b3 100755
+--- a/src/condor_contrib/bosco/bosco_ssh_start
++++ b/src/condor_contrib/bosco/bosco_ssh_start
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ from __future__ import print_function
+ 
+diff --git a/src/condor_contrib/bosco/htsub b/src/condor_contrib/bosco/htsub
+index 3edb6a9a4c..cde2f5ffb6 100755
+--- a/src/condor_contrib/bosco/htsub
++++ b/src/condor_contrib/bosco/htsub
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ """
+ htsub command to submit high throughput jobs via BOSCO/HTCondor:
+ http://jira.opensciencegrid.org/browse/CAMPUS-54
+diff --git a/src/condor_contrib/campus_factory/bin/glidein_creation b/src/condor_contrib/campus_factory/bin/glidein_creation
+index 3f99a5b9a6..8067a71af9 100755
+--- a/src/condor_contrib/campus_factory/bin/glidein_creation
++++ b/src/condor_contrib/campus_factory/bin/glidein_creation
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ import warnings
+ warnings.filterwarnings("ignore", category=DeprecationWarning)
+diff --git a/src/condor_contrib/campus_factory/bin/runfactory b/src/condor_contrib/campus_factory/bin/runfactory
+index a2a9c5fb0b..3af42cfbaa 100755
+--- a/src/condor_contrib/campus_factory/bin/runfactory
++++ b/src/condor_contrib/campus_factory/bin/runfactory
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ from optparse import OptionParser
+ 
+ from campus_factory.Factory import Factory
+diff --git a/src/condor_gridmanager/slurm_status.py b/src/condor_gridmanager/slurm_status.py
+index c13f7eefcf..0d1b6933b6 100755
+--- a/src/condor_gridmanager/slurm_status.py
++++ b/src/condor_gridmanager/slurm_status.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ #  File:     slurm_status.py
+ #
+diff --git a/src/condor_job_router/condor_router_history b/src/condor_job_router/condor_router_history
+index 8120fde566..2e49cd9b54 100755
+--- a/src/condor_job_router/condor_router_history
++++ b/src/condor_job_router/condor_router_history
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ ##**************************************************************
+ ##
+ ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+diff --git a/src/condor_scripts/box_plugin.py b/src/condor_scripts/box_plugin.py
+index fa7b7f462c..7b7c816e30 100755
+--- a/src/condor_scripts/box_plugin.py
++++ b/src/condor_scripts/box_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_scripts/classad_eval b/src/condor_scripts/classad_eval
+index fedb7e30f7..46e122d2a1 100755
+--- a/src/condor_scripts/classad_eval
++++ b/src/condor_scripts/classad_eval
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ 
+ import sys
+ import classad
+diff --git a/src/condor_scripts/condor_top b/src/condor_scripts/condor_top
+index dc338ad07f..9c838c76e1 100755
+--- a/src/condor_scripts/condor_top
++++ b/src/condor_scripts/condor_top
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import htcondor
+ import classad
+diff --git a/src/condor_scripts/gdrive_plugin.py b/src/condor_scripts/gdrive_plugin.py
+index 986d96a389..8ea93c355f 100755
+--- a/src/condor_scripts/gdrive_plugin.py
++++ b/src/condor_scripts/gdrive_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys
+diff --git a/src/condor_scripts/onedrive_plugin.py b/src/condor_scripts/onedrive_plugin.py
+index f7d88a4b4e..6a4b8d8ed8 100755
+--- a/src/condor_scripts/onedrive_plugin.py
++++ b/src/condor_scripts/onedrive_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/env python3
+ 
+ import os
+ import sys

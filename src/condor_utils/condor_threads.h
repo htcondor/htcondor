@@ -42,17 +42,17 @@ int CondorThreads_gettid(void);
 
 END_C_DECLS
 #ifdef __cplusplus
-#include "counted_ptr.h"
+#include <memory>
 
 class ThreadImplementation;	// forward declaration
 class WorkerThread;			// forward declaration
 class EnableParallel;		// forward declaration
 
-#define ScopedEnableParallel(m) counted_ptr<EnableParallel> _enableparallel(new EnableParallel( m ))
+#define ScopedEnableParallel(m) std::shared_ptr<EnableParallel> _enableparallel(new EnableParallel( m ))
 
 typedef void (*condor_thread_func_t)(void*);
 typedef void (*condor_thread_switch_callback_t)(void* &);
-typedef counted_ptr<WorkerThread> WorkerThreadPtr_t;
+typedef std::shared_ptr<WorkerThread> WorkerThreadPtr_t;
 
 
 class WorkerThread

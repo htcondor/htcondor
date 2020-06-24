@@ -41,19 +41,27 @@ public:
 	// Set requirements to False, or the indicated start expr, if any.
 	void	unavail( ExprTree * start_expr = NULL );
 
-	void 	publish( ClassAd*, amask_t );
-	void	compute( amask_t );
+	void 	publish_external( ClassAd* );
+	void	config( ); // formerly compute(A_STATIC)
 	void	dprintf( int, const char* ... );
 
+	// for use by Resource::publish when updating it's own ad (sigh)
+	void	publish(Resource * _rip) {
+		ASSERT(m_rip == _rip);
+		publish();
+	}
 private:
-	Resource*		rip;
+	Resource*		m_rip;
 	char* 			origreqexp;
 	char* 			origstart;
-	char*			m_origvalidckptpltfrm;
 	char*			m_within_resource_limits_expr;
 	reqexp_state	rstate;
 
 	ExprTree *		drainingStartExpr;
+
+	// internal version of publish that writes into the associated Resource
+	// and knows about the r_config_classad
+	void	publish();
 
 		// override param by slot_type
 	char * param(const char * name);

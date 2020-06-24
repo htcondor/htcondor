@@ -37,7 +37,7 @@ static bool find_singularity(std::string &exec)
 
 
 bool
-Singularity::advertise(classad::ClassAd &ad)
+Singularity::advertise(ClassAd &ad)
 {
 	if (m_enabled && ad.InsertAttr("HasSingularity", true)) {
 		return false;
@@ -122,7 +122,7 @@ Singularity::detect(CondorError &err)
 }
 
 bool
-Singularity::job_enabled(compat_classad::ClassAd &machineAd, compat_classad::ClassAd &jobAd)
+Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
 	return param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd);
 }
@@ -271,6 +271,10 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
+
+	MyString oldScratchDir;
+	job_env.GetEnv("_CONDOR_SCRATCH_DIR", oldScratchDir);
+	job_env.SetEnv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER", oldScratchDir);
 
 	job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
 	job_env.SetEnv("TEMP", target_dir.c_str());

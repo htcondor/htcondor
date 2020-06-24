@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "internet.h"
-#include "condor_socket_types.h"
 #include "condor_netdb.h"
 #include "ipv6_hostname.h"
 #include "condor_sockfunc.h"
@@ -93,12 +92,9 @@ condor_gethostname(char *name, size_t namelen) {
 			// use to contact the COLLECTOR_HOST
 		if ( (param_buf = param( "COLLECTOR_HOST" )) ) {
 
-			//struct hostent *collector_ent;
 			int s;
-			//SOCKET_LENGTH_TYPE addr_len;
 			char collector_host[MAXHOSTNAMELEN];
 			char *idx;
-			//struct sockaddr_in addr, collector_addr;
 			condor_sockaddr collector_addr;
 			condor_sockaddr addr;
 			std::vector<condor_sockaddr> collector_addrs;

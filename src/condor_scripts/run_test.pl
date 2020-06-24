@@ -480,7 +480,7 @@ sub load_test_requirements
                 next;
             }
 
-            if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
+            if($line =~ /<<['"]?CONDOR_TESTREQ_CONFIG/) {
                 $record = 1;
                 if ($line =~ /"""/) { $triplequote = 1; }
                 next;
@@ -580,8 +580,8 @@ sub SetupPythonPath {
         system("dir $reldir");
         system("dir $reldir\\lib");
         system("dir $relpy");
-        system("dumpbin -headers $relpy\\classad.pyd");
-        system("dumpbin -imports $relpy\\classad.pyd");
+        #system("dumpbin -headers $relpy\\classad.pyd");
+        #system("dumpbin -imports $relpy\\classad.pyd");
     } else {
         system("ls -l $reldir");
         system("ls -l $reldir/lib");
@@ -593,7 +593,7 @@ sub SetupPythonPath {
     if (exists($ENV{PYTHONPATH})) {
         $pythonpath = $ENV{PYTHONPATH};
         print "\texisting PYTHONPATH=$pythonpath\n";
-        if (index($reldir,$pythonpath) != -1) {
+        { #if (index($pythonpath,$reldir) != -1) {
             print "\tadding $relpy to PYTHONPATH\n";
             $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
         }

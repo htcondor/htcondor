@@ -70,21 +70,12 @@ if( ! $platform ) {
 	$platform = "swamp:" . $ENV{ 'SWAMP_PLATFORM' };
 }
 
+if( exists $ENV{NMI_DOCKER_IMAGE} ) {
+	$platform = "docker://" . $ENV{NMI_DOCKER_IMAGE};
+}
+
 print "ENV: NMI_PLATFORM = $platform\n";
 $platform || die "No platform to use, NOT submitting tests\n";
-
-# Since we succeeded, let's pull out any RPM and Deb files and push them to mirror.batlab.org
-if(!$ENV{_NMI_STEP_FAILED}) {
-    system("mkdir native-packages && cd native-packages && tar zxf ../results.tar.gz public/condor-*.{deb,rpm}");
-    print "\nNative packages to push to mirror.batlab.org:\n";
-    print map("\t$_", `find native-packages 2>&1`);
-    foreach my $file (glob("native-packages/public/*.rpm")) {
-	my $cmd = "scp $file mirror.batlab.org:public/html/repos/inbox/";
-	print "Executing command: '$cmd'\n";
-	system($cmd);
-    }
-    print "\n";
-}
 
 
 if( defined $opt_without_tests ) {

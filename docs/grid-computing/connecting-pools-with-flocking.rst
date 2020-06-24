@@ -113,5 +113,5 @@ the location of input, output and error files. The common case will be
 that machines within separate pools do not have a shared file system.
 Therefore, when submitting jobs, the user will need to enable file
 transfer mechanisms. These mechanisms are discussed in
-the :ref:`users-manual/submitting-a-job:submitting jobs without a shared file
+the :ref:`users-manual/file-transfer:submitting jobs without a shared file
 system: htcondor's file transfer mechanism` section.

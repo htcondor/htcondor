@@ -28,7 +28,6 @@
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
-#include "condor_network.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
@@ -316,6 +315,11 @@ Sock::getPolicyAd(classad::ClassAd &ad) const
 bool
 Sock::isAuthorizationInBoundingSet(const std::string &authz)
 {
+		// Short-circuit: ALLOW is implicitly in the bounding set.
+	if (authz == "ALLOW") {
+		return true;
+	}
+
 		// Cache the bounding set on first access.
 	if (m_authz_bound.empty())
 	{
@@ -1122,7 +1126,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int previous_size = 0;
 	int attempt_size = 0;
 	int command;
-	SOCKET_LENGTH_TYPE temp;
+	socklen_t temp;
 
 	ASSERT(_state != sock_virgin); 
 
@@ -1134,10 +1138,10 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 	// Log the current size since Todd is curious.  :^)
 	temp = sizeof(int);
-	::getsockopt(_sock,SOL_SOCKET,command,
-			(char*)&current_size,(socklen_t*)&temp);
-	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
-		current_size / 1024);
+	int r = ::getsockopt(_sock,SOL_SOCKET,command,
+			(char*)&current_size,&temp);
+	dprintf(D_FULLDEBUG,"getsockopt return value is %d, Current Socket bufsize=%dk\n",
+		r, current_size / 1024);
 	current_size = 0;
 
 	/* 
@@ -1164,8 +1168,8 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 		previous_size = current_size;
 		temp = sizeof(int);
-		::getsockopt( _sock, SOL_SOCKET, command,
- 					  (char*)&current_size, (socklen_t*)&temp );
+		(void) ::getsockopt( _sock, SOL_SOCKET, command,
+					  (char*)&current_size, &temp );
 
 	} while ( ((previous_size < current_size) || (current_size >= attempt_size)) &&
 			  (attempt_size < desired_size) );
@@ -1870,8 +1874,8 @@ bool Sock::test_connection()
     // that way. --Sonny 7/16/2003
 
 	int error;
-    SOCKET_LENGTH_TYPE len = sizeof(error);
-    if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, (socklen_t*)&len) < 0) {
+    socklen_t len = sizeof(error);
+    if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0) {
 		connect_state.connect_failed = true;
 #if defined(WIN32)
 		setConnectFailureErrno(WSAGetLastError(),"getsockopt");
@@ -2567,7 +2571,7 @@ Sock::peer_is_local() const
     mySockAddr.sin_port = htons( 0 );
 		// invoke OS bind, not cedar bind - cedar bind does not allow us
 		// to specify the local address.
-	if ( ::bind(sock, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE) &mySockAddr, 
+	if ( ::bind(sock, (const struct sockaddr*) &mySockAddr,
 		        sizeof(mySockAddr)) < 0 ) 
 	{
 		// failed to bind.  assume we failed  because the peer address is
@@ -2663,174 +2667,6 @@ Sock::get_port() const
 		return -1;
 	return addr.get_port();
 }
-
-#if !defined(WIN32)
-
-/*
-These arrays form the asynchronous handler table.  The number of entries is stored in "table_size".  Each entry in "handler_table" points to the asynchronous handler registered for each fd.  Each entry in "stream_table" gives the Stream object associated with each fd.  When a SIGIO comes in, we will consult this table to find the correct handler.
-*/
-
-static CedarHandler ** handler_table  = 0;
-static Stream ** stream_table = 0;
-static int table_size = 0;
-
-/*
-This function is invoked whenever a SIGIO arrives.  When this happens, we don't even know what fd is begging for attention, so we must use select() (or poll()) to figure this out.  With the fd in hand, we can look up the appropriate Stream and Handler in the table above.  Each Stream that is active will have its handler invoked.
-*/
-
-static void async_handler( int )
-{
-	Selector selector;
-	int i;
-
-	selector.set_timeout( 0 );
-
-	for( i=0; i<table_size; i++ ) {
-		if( handler_table[i] ) {
-			selector.add_fd( i, Selector::IO_READ );
-		}
-	}
-
-	selector.execute();
-
-	if( selector.has_ready() ) {
-		for( i=0; i<table_size; i++ ) {
-			if( selector.fd_ready( i, Selector::IO_READ ) ) {
-				handler_table[i](stream_table[i]);
-			}
-		}
-	}
-}
-
-/*
-Set this fd up for asynchronous operation.  There are many ways of accomplishing this.  
-Some systems require multiple calls, some systems only support a few of these calls, 
-and some support multiple, but only require one.  
-On top of that, many calls with defined constants are known to fail.  
-So, we will throw all of our knives at once and ignore return values.
-*/
-
-static void make_fd_async( int fd )
-{
-	int bits;
-	int pid = getpid();
-
-	/* Make the owner of this fd be this process */
-
-	#if defined(FIOSSAIOOWN)
-		ioctl( fd, FIOSSAIOOWN, &pid );
-	#endif
-
-	#if defined(F_SETOWN)
-		fcntl( fd, F_SETOWN, pid);
-	#endif
-
-	/* make the fd asynchronous -- signal when ready */
-
-	#if defined(O_ASYNC)
-		bits = fcntl( fd, F_GETFL, 0 );
-		fcntl( fd, F_SETFL, bits | O_ASYNC );
-	#endif
-
-	#if defined(FASYNC)
-		bits = fcntl( fd, F_GETFL, 0 );
-		fcntl( fd, F_SETFL, bits | FASYNC );
-	#endif
-
-	#if defined(FIOASYNC) && !defined(linux)
-		{
-		/* In some versions of linux, FIOASYNC results in
-		   _synchronous_ I/O.  Bug!  Fortunately, FASYNC
-		   is defined in these cases. */
-			int on = 1;
-			ioctl( fd, FIOASYNC, &on );
-		}
-    #endif
-
-	#if defined(FIOSSAIOSTAT)
-		{
-			int on = 1; 
-			ioctl( fd, FIOSSAIOSTAT, &on );
-		}
-	#endif
-}
-
-/* change this fd back to synchronous mode */
-
-static void  make_fd_sync( int fd )
-{
-	int bits;
-
-	bits = fcntl( fd, F_GETFL, 0 );
-
-	#if defined(O_ASYNC)
-		bits = bits & ~O_ASYNC;
-	#endif
-
-	#if defined(FASYNC)
-		bits = bits & ~FASYNC;
-	#endif
-
-	fcntl( fd, F_SETFL, bits );
-}
-
-/*
-This function adds a new entry to the handler table and marks the fd as 
-asynchronous.  If the table does not exist yet, it is allocated and the 
-async_handler is installed as the handler for SIGIO.  
-If "handler" is null, then async notification is disabled for that fd.
-*/
-
-static int install_async_handler( int fd, CedarHandler *handler, Stream *stream )
-{
-	int i;
-	struct sigaction act;
-
-	if( !handler_table ) {
-		table_size = sysconf(_SC_OPEN_MAX);
-		if(table_size<=0) return 0;
-
-		handler_table = (CedarHandler **) malloc( sizeof(handler) * table_size );
-		if(!handler_table) return 0;
-
-		stream_table = (Stream **) malloc( sizeof(stream) * table_size );
-		if(!stream_table) return 0;
-
-		for( i=0; i<table_size; i++ ) {
-			handler_table[i] = 0;
-			stream_table[i] = 0;
-		}
-
-		act.sa_handler = async_handler;
-		sigfillset(&act.sa_mask);
-		act.sa_flags = 0;
-
-		sigaction( SIGIO, &act, 0 );
-	}
-
-	handler_table[fd] = handler;
-	stream_table[fd] = stream;
-
-	if(handler) {
-		make_fd_async(fd);
-	} else {
-		make_fd_sync(fd);
-	}
-
-	return 1;
-}
-
-/*
-Install the given handler for this stream.
-*/
-
-int Sock::set_async_handler( CedarHandler *handler )
-{
-	return install_async_handler( _sock, handler, this );
-}
-
-#endif  /* of ifndef WIN32 for the async support */
-
 
 void Sock :: setAuthenticationMethodUsed(char const *auth_method)
 {
