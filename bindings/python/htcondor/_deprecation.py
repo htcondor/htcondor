@@ -8,9 +8,13 @@ DEPRECATION_WARNING_FORMAT_STR = ".. warning::\n\n    {}\n\n"
 
 
 def add_deprecation_doc_warning(obj, message):
-    obj.__doc__ = DEPRECATION_WARNING_FORMAT_STR.format(message) + textwrap.dedent(
-        obj.__doc__ or ""
-    )
+    try:
+        obj.__doc__ = DEPRECATION_WARNING_FORMAT_STR.format(message) + textwrap.dedent(
+            obj.__doc__ or ""
+        )
+    except AttributeError:
+        # Ignore not being able to change docstrings in Python 2.
+        pass
 
 
 def deprecate(message):
