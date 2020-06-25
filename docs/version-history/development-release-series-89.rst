@@ -58,6 +58,9 @@ New Features:
    several known issues are summarized in the ticket.
    :ticket:`7343`
 
+-  Improved the efficiency of process monitoring in macOS.
+   :ticket:`7708`
+
 Bugs Fixed:
 
 - The Python bindings methods

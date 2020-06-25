@@ -549,7 +549,7 @@ SetOldClassAd( bool old_syntax, bool attr_value )
 }
 
 bool ClassAdUnParser::
-GetOldClassAd()
+GetOldClassAd() const
 {
 	return oldClassAd;
 }
