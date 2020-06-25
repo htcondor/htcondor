@@ -30,6 +30,11 @@ Release Notes:
 
 New Features:
 
+-  Added a ``SEC_CREDENTIAL_SWEEP_DELAY`` configuration parameter which
+   specifies how long, in seconds, we should wait before cleaning up unused
+   credentials.
+   :ticket:`7484`
+
 -  *classad_eval* now allows its first (ClassAd) argument to be just the
    interior of a single ClassAd.  That is, you no longer need to surround
    the first argument with square brackets.  This means that
