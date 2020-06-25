@@ -778,8 +778,15 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	while ( getline( is, token, ',' ) ) {
 		// Skip any file path that looks like a URL or transfer plugin related
 		if ( token.find( "://" ) == std::string::npos ) {
-			// Stat each file. Add the last-modified timestamp to set of timestamps.
-			std::string input_filename = iwd + DIR_DELIM_CHAR + token;
+			// Stat each file. Paths can be relative or absolute.
+			std::string input_filename;
+			if ( token.find_last_of( DIR_DELIM_CHAR ) != std::string::npos ) {
+				input_filename = token;
+			}
+			else {
+				input_filename = iwd + DIR_DELIM_CHAR + token;
+			}
+
 			if ( stat( input_filename.c_str(), &file_stat ) == 0 ) {
 				input_timestamps.insert( file_stat.st_mtime );
 			}
@@ -787,10 +794,18 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	}
 
 	// Parse the list of output files
+	job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, output_files );
 	std::stringstream os( output_files );
 	while ( getline( os, token, ',' ) ) {
 		// Stat each file. Add the last-modified timestamp to set of timestamps.
-		std::string output_filename = iwd + DIR_DELIM_CHAR + token;
+		std::string output_filename;
+		if ( token.find_last_of( DIR_DELIM_CHAR ) != std::string::npos ) {
+			output_filename = token;
+		}
+		else {
+			output_filename = iwd + DIR_DELIM_CHAR + token;
+		}
+
 		if ( stat( output_filename.c_str(), &file_stat ) == 0 ) {
 			output_timestamps.insert( file_stat.st_mtime );
 		}
@@ -811,7 +826,6 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			oldest_output_timestamp = *output_timestamps.begin();
 			is_dataflow = oldest_output_timestamp > newest_input_timestamp;
 		}
-
 		// If the executable is more recent than the newest input file, 
 		// then this is a dataflow job.
 		job_ad->LookupString( ATTR_JOB_CMD, executable_file );
@@ -834,7 +848,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			}
 		}
 	}
-
+	dprintf(D_ALWAYS, "MRC [FileTransfer::IsDataflowJob] returning is_dataflow = %s\n", is_dataflow ? "true" : "false");
 	return is_dataflow;
 }
 
