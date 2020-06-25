@@ -90,7 +90,7 @@ Reinitialize(void)
 }
 
 bool Lexer::
-WasInitialized(void)
+WasInitialized(void) const
 {
     return initialized;
 }
