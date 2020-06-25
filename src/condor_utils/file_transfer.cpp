@@ -310,7 +310,6 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
-	const bool allow_inline_plugins = true; // enable job TransferPlugins attribute
 
 	jobAd = *Ad;	// save job ad
 
@@ -690,13 +689,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 #endif
 	}
 
+	// get plugin configuration (enabled/disabled)
+	DoPluginConfiguration();
+
+	// if there are job plugins, add them to the list of input files.
 	CondorError e;
-	I_support_filetransfer_plugins = false;
-	plugin_table = NULL;
-	InitializePlugins(e);
-	if (allow_inline_plugins) {
-		InitializeJobPlugins(*Ad, e, *InputFiles);
-	}
+	AddJobPluginsToInputFiles(*Ad, e, *InputFiles);
 
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
@@ -970,6 +968,13 @@ FileTransfer::Init(
 			NULL, priv, m_use_file_catalog ) )
 	{
 		return 0;
+	}
+
+		// It is important that we call SimpleInit above before calling
+		// InitializeJobPlugins because that sets up the plugin config
+	if(IsClient()) {
+		CondorError e;
+		InitializeJobPlugins(*Ad, e);
 	}
 
 		// At this point, we'd better have a transfer socket
@@ -2686,7 +2691,16 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			if( multifile_plugins_enabled ) {
+			if( !I_support_filetransfer_plugins ) {
+				// we shouldn't get here, because a job shouldn't match to a machine that won't
+				// support URL transfers if the job needs URL transfers.  but if we do get here,
+				// give a nice error message.
+				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer %s.", URL.Value());
+				dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", URL.Value());
+				rc = GET_FILE_PLUGIN_FAILED;
+			}
+
+			if( (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
@@ -2720,7 +2734,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			}
 
-			if( !isDeferredTransfer ) {
+			if( (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
 				// If transfer failed, set rc to error code that ReliSock recognizes
@@ -5461,17 +5475,26 @@ MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const ch
 	// If not, source must be the URL.
 	if( IsUrl( dest ) ) {
 		URL = const_cast<char*>(dest);
-		dprintf( D_FULLDEBUG, "FILETRANSFER: using destination to determine "
+		dprintf( D_FULLDEBUG, "FILETRANSFER: DFT: using destination to determine "
 			"plugin type: %s\n", dest );
 	}
 	else {
 		URL = const_cast<char*>(source);
-		dprintf( D_FULLDEBUG, "FILETRANSFER: using source to determine "
+		dprintf( D_FULLDEBUG, "FILETRANSFER: DFT: using source to determine "
 			"plugin type: %s\n", source );
 	}
 
 	// Find the type of transfer
 	auto method = getURLType( URL, true );
+
+	// we now (as of 8.9.8) defer building the table until we actually
+	// need it.  if the job had custom plugins the table is already built.
+	// but if not we need to build it now.
+	if ( !plugin_table ) {
+		// this function always succeeds (sigh) but we can capture the errors
+		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
+		InitializeSystemPlugins(error);
+	}
 
 	// Hashtable returns zero if found.
 	if ( plugin_table->lookup( method, plugin ) ) {
@@ -5488,12 +5511,6 @@ MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const ch
 TransferPluginResult
 FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, ClassAd* plugin_stats, const char* proxy_filename) {
 
-	if (plugin_table == NULL) {
-		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", source);
-		e.pushf("FILETRANSFER", 1, "No plugin table defined (request was %s)", source);
-		return TransferPluginResult::Error;
-	}
-
 	// detect which plugin to invoke
 	char *URL = NULL;
 
@@ -5501,10 +5518,10 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	// be the URL.
 	if(IsUrl(dest)) {
 		URL = const_cast<char*>(dest);
-		dprintf(D_FULLDEBUG, "FILETRANSFER: using destination to determine plugin type: %s\n", dest);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: IFT: using destination to determine plugin type: %s\n", dest);
 	} else {
 		URL = const_cast<char*>(source);
-		dprintf(D_FULLDEBUG, "FILETRANSFER: using source to determine plugin type: %s\n", source);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: IFT: using source to determine plugin type: %s\n", source);
 	}
 
 	// find the type of transfer
@@ -5519,6 +5536,15 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	// Find the type of transfer
 	auto method = getURLType( URL, true );
+
+	// we now (as of 8.9.8) defer building the table until we actually
+	// need it.  if the job had custom plugins the table is already built.
+	// but if not we need to build it now.
+	if ( !plugin_table ) {
+		// this function always succeeds (sigh) but we can capture the errors
+		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
+		InitializeSystemPlugins(e);
+	}
 
 	// look up the method in our hash table
 	MyString plugin;
@@ -5641,14 +5667,6 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	std::string input_filename;
 	std::string output_filename;
 	std::string plugin_name;
-
-	if ( plugin_table == NULL ) {
-		dprintf( D_FULLDEBUG, "FILETRANSFER: No plugin table defined! "
-				"(requesting multi-file transfer)\n" );
-		e.pushf( "FILETRANSFER", 1, "No plugin table defined (requesting "
-				"multi-file transfer)" );
-		return TransferPluginResult::Error;
-	}
 
 	// Prepare environment for the plugin
 	Env plugin_env;
@@ -5856,8 +5874,34 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 	return 0;
 }
 
-MyString FileTransfer::GetSupportedMethods() {
+void FileTransfer::DoPluginConfiguration() {
+	// see if they are explicitly disabled
+	if (param_boolean("ENABLE_URL_TRANSFERS", true)) {
+		I_support_filetransfer_plugins = true;
+	} else {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: transfer plugins are disabled by config.\n");
+		I_support_filetransfer_plugins = false;
+	}
+
+	// we should also check to see if multi-file transfers have been
+	// explicitly disabled.
+	if (param_boolean("ENABLE_MULTIFILE_TRANSFER_PLUGINS", true)) {
+		multifile_plugins_enabled = true;
+	} else {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: multi-file transfers are disabled by config.\n");
+		multifile_plugins_enabled = false;
+	}
+}
+
+MyString FileTransfer::GetSupportedMethods(CondorError &e) {
 	MyString method_list;
+
+	DoPluginConfiguration();
+
+	// build plugin table if we haven't done so
+	if (!plugin_table) {
+		InitializeSystemPlugins(e);
+	}
 
 	// iterate plugin_table if it existssrc
 	if (plugin_table) {
@@ -5880,9 +5924,9 @@ MyString FileTransfer::GetSupportedMethods() {
 	return method_list;
 }
 
-int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles)
-{
-	if ( ! I_support_filetransfer_plugins || ! plugin_table) {
+int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) {
+
+	if ( ! I_support_filetransfer_plugins ) {
 		return 0;
 	}
 
@@ -5893,28 +5937,57 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, Strin
 
 	StringTokenIterator plugins(job_plugins, 100, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
-		const char * colon = strchr(plug, '=');
-		if (colon) {
-			MyString methods; methods.set(plug, colon - plug);
-
+		const char * equals = strchr(plug, '=');
+		if (equals) {
 			// add the plugin to the front of the input files list
-			MyString plugin_path(colon + 1);
+			MyString plugin_path(equals + 1);
 			plugin_path.trim();
 			if (! infiles.file_contains(plugin_path.c_str())) {
 				infiles.insert(plugin_path.c_str());
 			}
+		} else {
+			dprintf(D_ALWAYS, "FILETRANSFER: AJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
+			e.pushf("FILETRANSFER", 1, "AJP: no '=' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
+		}
+	}
+
+	return 0;
+}
+
+int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
+{
+	if ( ! I_support_filetransfer_plugins ) {
+		return 0;
+	}
+
+	std::string job_plugins;
+	if ( ! job.LookupString(ATTR_TRANSFER_PLUGINS, job_plugins)) {
+		return 0;
+	}
+
+	// start with the system table
+	InitializeSystemPlugins(e);
+
+	// process the user plugins
+	StringTokenIterator plugins(job_plugins, 100, ";");
+	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
+		const char * equals = strchr(plug, '=');
+		if (equals) {
+			MyString methods; methods.set(plug, equals - plug);
+
 			// use the file basename as the plugin name, so that when we invoke it
 			// we will invoke the copy in the input sandbox
+			MyString plugin_path(equals + 1);
+			plugin_path.trim();
 			MyString plugin(condor_basename(plugin_path.c_str()));
 
 			InsertPluginMappings(methods, plugin);
 			plugins_multifile_support[plugin] = true;
 			plugins_from_job[plugin.c_str()] = true;
 			multifile_plugins_enabled = true;
-			// add the plugin to the transfer list
 		} else {
-			dprintf(D_ALWAYS, "FILETRANSFER: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
-			e.pushf("FILETRANSFER", 1, "no '=' in " ATTR_TRANSFER_PLUGINS" definition '%s'", plug);
+			dprintf(D_ALWAYS, "FILETRANSFER: IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
+			e.pushf("FILETRANSFER", 1, "IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'", plug);
 		}
 	}
 
@@ -5922,24 +5995,23 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e, Strin
 }
 
 
-int FileTransfer::InitializePlugins(CondorError &e) {
+int FileTransfer::InitializeSystemPlugins(CondorError &e) {
+
+	// don't leak even if Initialize gets called more than once
+	if (plugin_table) {
+		delete plugin_table;
+		plugin_table = NULL;
+	}
 
 	// see if this is explicitly disabled
-	if (!param_boolean("ENABLE_URL_TRANSFERS", true)) {
-		I_support_filetransfer_plugins = false;
+	if (!I_support_filetransfer_plugins) {
 		return 0;
 	}
 
+	// even if we do not have any plugins, we still need to set up the
+	// table so any user plugins can be added.  plugin_table should not
+	// be NULL after this function exits.
 	char* plugin_list_string = param("FILETRANSFER_PLUGINS");
-	if (!plugin_list_string) {
-		I_support_filetransfer_plugins = false;
-		return 0;
-	}
-
-	// See if multifile transfer plugins are enabled
-	if (param_boolean("ENABLE_MULTIFILE_TRANSFER_PLUGINS", true)) {
-		multifile_plugins_enabled = true;
-	}
 
 	// plugin_table is a member variable
 	plugin_table = new PluginHashTable(hashFunction);
@@ -5951,16 +6023,6 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 	while ((p = plugin_list.next())) {
 		// TODO: plugin must be an absolute path (win and unix)
 		SetPluginMappings( e, p );
-
-		// Now verify that the plugin supports at least one transfer method.
-		MyString methods = GetSupportedMethods();
-		if (!methods.IsEmpty()) {
-			// we support at least one plugin type
-			I_support_filetransfer_plugins = true;
-		} else {
-			dprintf(D_ALWAYS, "FILETRANSFER: failed to add plugin \"%s\" because: %s\n", p, e.getFullText().c_str());
-			e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring", p);
-		}
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
