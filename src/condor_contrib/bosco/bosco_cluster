@@ -841,9 +841,9 @@ fi
 start_ssh
 
 # Quickly test the ssh
-ssh_opts='-o "PasswordAuthentication=no"'
-[ $debug -eq 0 ] || ssh_opts="$ssh_opts -vvvvv"
-qmgr_out=$(ssh $ssh_opts $remote_host "pwd" 2>&1)
+ssh_opts='-o PasswordAuthentication=no'
+[[ $debug = 1 ]] && ssh_opts="$ssh_opts -vvv"
+qmgr_out=$(ssh $ssh_opts "$remote_host" "pwd" 2>&1)
 if [ $? -ne 0 ]; then
     echo "Password-less ssh to $remote_host did NOT work, even after adding the ssh-keys."
     echo "Does the remote resource allow password-less ssh?"
@@ -1083,4 +1083,3 @@ EOM
 
 
 fi
-
