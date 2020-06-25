@@ -277,7 +277,6 @@ struct _simulated_cuda_device {
 };
 struct _simulated_cuda_config {
 	int driverVer;
-	int runtimeVer;
 	int deviceCount;
 	const struct _simulated_cuda_device * device;
 };
@@ -285,8 +284,8 @@ struct _simulated_cuda_config {
 static const struct _simulated_cuda_device GeForceGTX480 = { "GeForce GTX 480", 0x20, 1400*1000, 15, 0, 1536*1024*1024 };
 static const struct _simulated_cuda_device GeForceGT330 = { "GeForce GT 330",  0x12, 1340*1000, 12,  0, 1024*1024*1024 };
 static const struct _simulated_cuda_config aSimConfig[] = {
-	{6000, 5050, 1, &GeForceGT330 },
-	{4020, 4010, 2, &GeForceGTX480 },
+	{6000, 1, &GeForceGT330 },
+	{4020, 2, &GeForceGTX480 },
 };
 const int sim_index_max = (int)(sizeof(aSimConfig)/sizeof(aSimConfig[0]));
 
@@ -311,13 +310,6 @@ cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
 		return cudaErrorInvalidValue;
 	int ix = sim_index < sim_index_max ? sim_index : 0;
 	*pver = aSimConfig[ix].driverVer;
-	return cudaSuccess; 
-}
-cudaError_t CUDACALL sim_cudaRuntimeGetVersion(int* pver) {
-	if (sim_index < 0 || sim_index > sim_index_max)
-		return cudaErrorInvalidValue;
-	int ix = sim_index < sim_index_max ? sim_index : 0;
-	*pver = aSimConfig[ix].runtimeVer;
 	return cudaSuccess; 
 }
 
@@ -1196,16 +1188,14 @@ main( int argc, const char** argv)
 	// lookup the function pointers we will need later from the cudart library
 	//
 	if ( !opt_simulate && cuda_handle) {
-		cuda_t cudaRuntimeGetVersion = NULL;
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cuDriverGetVersion");
-			cudaRuntimeGetVersion = cu_cudaRuntimeGetVersion;
 			getBasicProps = cu_getBasicProps;
 		} else {
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cudaDriverGetVersion");
-			cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
+			cuda_t cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
 			if (cudaRuntimeGetVersion) {
 				int runtimeVersion = 0;
 				cudaRuntimeGetVersion(&runtimeVersion);
