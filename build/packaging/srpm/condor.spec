@@ -188,7 +188,6 @@ Source118: voms-2.0.6.tar.gz
 %endif
 
 Patch1: old-sphinx.patch
-Patch2: python-shebang.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -700,9 +699,6 @@ multiple clusters.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-Requires: python2-condor = %version-%release
-%endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
@@ -797,9 +793,6 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-Requires: python2-condor = %version-%release
-%endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
@@ -829,9 +822,6 @@ exit 0
 %endif
 
 %patch1 -p1
-%if 0%{?rhel} >= 8 || 0%{?fedora}
-%patch2 -p1
-%endif
 
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
