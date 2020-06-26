@@ -364,6 +364,7 @@ main(int argc, const char* argv[])
   int DeleteUser=0;
   int SetFactor=0;
   int SetPrio=0;
+  int SetCeiling=0;
   int SetAccum=0;
   int SetBegin=0;
   int SetLast=0;
@@ -393,6 +394,11 @@ main(int argc, const char* argv[])
     else if (IsArg(argv[i],"setfactor")) {
       if (i+2>=argc) usage(argv[0]);
       SetFactor=i;
+      i+=2;
+    }
+    else if (IsArg(argv[i],"setceiling")) {
+      if (i+2>=argc) usage(argv[0]);
+      SetCeiling=i;
       i+=2;
     }
     else if (IsArg(argv[i],"setbegin")) {
@@ -657,6 +663,42 @@ main(int argc, const char* argv[])
     delete sock;
 
     printf("The priority factor of %s was set to %f\n",argv[SetFactor+1],Factor);
+
+  }
+
+  else if (SetCeiling) { // set ceiling
+
+	const char* tmp;
+	if( ! (tmp = strchr(argv[SetCeiling+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the submittor you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto update the ceiling of (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+    long ceiling = strtol(argv[SetCeiling+2], nullptr, 10);
+	if (ceiling < 0) {
+		fprintf( stderr, "Ceiling must be greater than or equal to "
+				 "1.\n");
+		exit(1);
+	}
+
+    // send request
+    Sock* sock;
+    if( !(sock = negotiator.startCommand(SET_CEILING,
+										 Stream::reli_sock, 0) ) ||
+        !sock->put(argv[SetCeiling+1]) ||
+        !sock->put(ceiling) ||
+        !sock->end_of_message()) {
+      fprintf( stderr, "failed to send SET_CEILING command to negotiator\n" );
+      exit(1);
+    }
+
+    sock->close();
+    delete sock;
+
+    printf("The ceiling of %s was set to %ld\n",argv[SetCeiling+1],ceiling);
 
   }
 
@@ -1754,6 +1796,7 @@ static void usage(const char* name) {
      "\t-delete <user>\t\tRemove a user record from the accountant\n"
      "\t-setprio <user> <val>\tSet priority for <user>\n"
      "\t-setfactor <user> <val>\tSet priority factor for <user>\n"
+     "\t-setceiling <user> <val>\tSet ceiling for <user>\n"
      "\t-setaccum <user> <val>\tSet Accumulated usage for <user>\n"
      "\t-setbegin <user> <val>\tset last first date for <user>\n"
      "\t-setlast <user> <val>\tset last active date for <user>\n"
