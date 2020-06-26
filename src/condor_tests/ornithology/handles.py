@@ -474,6 +474,13 @@ class ClusterState:
         """
         return self._counts.copy()
 
+    @property
+    def by_name(self):
+        states = collections.defaultdict(list)
+        for p, s in enumerate(self._data):
+            states[s].append(jobs.JobID(self._clusterid, p + self._offset))
+        return states
+
     def __iter__(self):
         yield from self._data
 
@@ -513,6 +520,11 @@ class ClusterState:
         """Return ``True`` if **none** of the jobs in the cluster are idle."""
         return self.none_status(jobs.JobStatus.IDLE)
 
+    @staticmethod
+    def running_exactly(count) -> bool:
+        """Returns ``True`` if **count** of the jobs in the cluster are running."""
+        return lambda self: self.status_exactly(count, jobs.JobStatus.RUNNING)
+
     def any_running(self) -> bool:
         """Return ``True`` if **any** of the jobs in the cluster are running."""
         return self.any_status(jobs.JobStatus.RUNNING)
@@ -544,6 +556,14 @@ class ClusterState:
         return self.any_status(
             jobs.JobStatus.COMPLETED, jobs.JobStatus.HELD, jobs.JobStatus.REMOVED
         )
+
+    def status_exactly(self, count, *statuses: jobs.JobStatus) -> bool:
+        """
+        Return ``True`` if **exactly** ``count`` of the jobs in the cluster are
+        in one of the ``statuses``.  Prefer one of the explicitly-named helper
+        methods when possible, and don't be afraid to make a new helper method!
+        """
+        return self.count_status(*statuses) == count
 
     def all_status(self, *statuses: jobs.JobStatus) -> bool:
         """

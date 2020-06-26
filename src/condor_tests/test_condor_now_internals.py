@@ -48,38 +48,33 @@ def job_parameters(path_to_sleep):
 
 
 @action
-def victim_jobs(condor, job_parameters):
-    victim_jobs = condor.submit(job_parameters, count=2)
+def jobs(condor, job_parameters):
+    jobs = condor.submit(job_parameters, count=3)
 
-    assert victim_jobs.wait(
-        condition=ClusterState.all_running,
+    assert jobs.wait(
+        condition=ClusterState.running_exactly(2),
         timeout=60,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
-    return victim_jobs
-
-
-# Note that the beneficiary job fixtures depend on the victim job features,
-# not because they need to know about them, but to ensure that the victim
-# jobs have all started running before submitting the beneficiary.
-@action
-def beneficiary_job(job_parameters, condor, victim_jobs):
-    return condor.submit(job_parameters, count=1)
-
+    return jobs
 
 @action
-def job_log(victim_jobs, beneficiary_job, condor, test_dir):
-    bID = str(beneficiary_job.job_ids[0])
-    vIDs = [str(vID) for vID in victim_jobs.job_ids]
+def job_log(jobs, condor, test_dir):
+    bID = str(jobs.state.by_name[JobStatus.IDLE][0])
+    vIDs = [str(vID) for vID in jobs.state.by_name[JobStatus.RUNNING]]
+
     rv = condor.run_command([ 'condor_now', '--flags', '1', bID, *vIDs ])
     assert rv.returncode == 0
 
+    # Consider converting this into a wait() for these jobs to go idle, and
+    # then assert ordering about the eviction event in
+    # jobs.event_log.events.
     jel = htcondor.JobEventLog((test_dir / "condor_now_internals.log").as_posix())
 
     num_evicted = 0;
     for e in jel.events(60):
-        if e.type == htcondor.JobEventType.JOB_EVICTED and e.cluster == victim_jobs.clusterid:
+        if e.type == htcondor.JobEventType.JOB_EVICTED and e.cluster == jobs.clusterid:
             num_evicted += 1
             if num_evicted == len(vIDs):
                 break
@@ -89,27 +84,17 @@ def job_log(victim_jobs, beneficiary_job, condor, test_dir):
 
 
 @action
-def schedd_log(job_log, condor, victim_jobs, beneficiary_job):
-    # There's two slots and three jobs in the queue, so at least one of the
-    # victim jobs must end up running.
-    assert victim_jobs.wait(
-        condition=ClusterState.any_running,
+def schedd_log(job_log, condor, jobs):
+    assert jobs.wait(
+        condition=ClusterState.running_exactly(2),
         timeout=60,
         fail_condition=ClusterState.any_held,
     )
 
-    # There are two slots in the pool, and three jobs in the queue.
-    bID = str(beneficiary_job.job_ids[0])
-    if beneficiary_job.state.any_running():
-        runningJobID = bID
-        for i, status in items(victim_jobs.state):
-            if status == JobStatus.IDLE:
-                idleJobID = str(victim_jobs.jobs_ids[i])
-    else:
-        runningJobID = str(victim_jobs.job_ids[0])
-        idleJobID = bID
+    idleJobID = str(jobs.state.by_name[JobStatus.IDLE][0])
+    runningJobID = str(jobs.state.by_name[JobStatus.RUNNING][0])
 
-    rv = condor.run_command(['condor_now', '--flags', '2', idleJobID, runningJobID])
+    rv = condor.run_command(['condor_now', '--flags', '2', str(idleJobID), str(runningJobID)])
     assert rv.returncode != 0
 
     return condor.schedd_log.open()
