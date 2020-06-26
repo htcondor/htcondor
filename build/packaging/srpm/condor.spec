@@ -148,7 +148,7 @@ Source0: %{name}-%{tarball_version}.tar.gz
 Source1: generate-tarball.sh
 %endif
 
-# % if %systemd
+# % if % systemd
 Source3: osg-env.conf
 # % else
 Source4: condor.osg-sysconfig
@@ -435,7 +435,7 @@ Requires(post): selinux-policy-targeted
 Obsoletes: condor-static < 7.2.0
 
 # Standard Universe discontinued as of 8.9.0
-Obsoletes: condor-std-universe
+Obsoletes: condor-std-universe < 8.9.0
 
 %if ! %cream
 Obsoletes: condor-cream-gahp <= %{version}
@@ -652,17 +652,6 @@ Requires: python36
 Requires: boost-python3
 Requires: python3
 %endif
-
-#%if 0%{?rhel} >= 7 && ! %uw_build
-# auto provides generator does not pick these up for some reason
-#    %ifarch x86_64
-#Provides: classad.so()(64bit)
-#Provides: htcondor.so()(64bit)
-#    %else
-#Provides: classad.so
-#Provides: htcondor.so
-#    %endif
-#%endif
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
@@ -1287,7 +1276,7 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service.d/osg-env.conf
 %endif
 # Disabled until HTCondor security fixed.
-# %{_unitdir}/condor.socket
+# % {_unitdir}/condor.socket
 %else
 %_initrddir/condor
 %if 0%{?osg} || 0%{?hcc}
