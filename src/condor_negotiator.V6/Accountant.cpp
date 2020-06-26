@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 
+#include <climits>
 #include <math.h>
 #include <iomanip>
 
@@ -44,6 +45,7 @@ string Accountant::CustomerRecord="Customer.";
 string Accountant::ResourceRecord="Resource.";
 
 static char const *PriorityAttr="Priority";
+static char const *CeilingAttr="Ceiling";
 static char const *ResourcesUsedAttr="ResourcesUsed";
 static char const *WeightedResourcesUsedAttr="WeightedResourcesUsed";
 static char const *UnchargedTimeAttr="UnchargedTime";
@@ -420,6 +422,16 @@ float Accountant::GetPriority(const string& CustomerName)
   return Priority*PriorityFactor;
 }
 
+int Accountant::GetCeiling(const string& CustomerName) 
+{
+  int ceiling = -1; // Bogus value
+  GetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
+  if (ceiling < 0) {
+    ceiling = -1 ; // Meaning unlimited
+  }
+  return ceiling;
+}
+
 //------------------------------------------------------------------
 // Return the priority factor of a customer
 //------------------------------------------------------------------
@@ -541,6 +553,17 @@ void Accountant::SetPriority(const string& CustomerName, float Priority)
   dprintf(D_ACCOUNTANT,"Accountant::SetPriority - CustomerName=%s, Priority=%8.3f\n",CustomerName.c_str(),Priority);
   SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
 }
+//
+//------------------------------------------------------------------
+// Set the Ceiling of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetCeiling(const string& CustomerName, int ceiling) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetCeiling - CustomerName=%s, Ceiling=%d\n",CustomerName.c_str(),ceiling);
+  SetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
+}
+
 
 //------------------------------------------------------------------
 // Set the accumulated usage of a customer
@@ -1182,6 +1205,10 @@ ClassAd* Accountant::ReportState(bool rollup) {
         float Priority = GetPriority(CustomerName);
         formatstr(tmp, "Priority%d", snum);
         ad->Assign(tmp, Priority);
+
+        int Ceiling = GetCeiling(CustomerName);
+        formatstr(tmp, "Ceiling%d", snum);
+        ad->Assign(tmp, Ceiling);
 
         float PriorityFactor = 0;
         if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
