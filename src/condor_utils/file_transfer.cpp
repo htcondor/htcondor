@@ -974,7 +974,9 @@ FileTransfer::Init(
 		// InitializeJobPlugins because that sets up the plugin config
 	if(IsClient()) {
 		CondorError e;
-		InitializeJobPlugins(*Ad, e);
+		if(-1 == InitializeJobPlugins(*Ad, e)) {
+			return 0;
+		}
 	}
 
 		// At this point, we'd better have a transfer socket
@@ -5493,7 +5495,9 @@ MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const ch
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		InitializeSystemPlugins(error);
+		if(-1 == InitializeSystemPlugins(error)) {
+			return NULL;
+		}
 	}
 
 	// Hashtable returns zero if found.
@@ -5543,7 +5547,9 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		InitializeSystemPlugins(e);
+		if(-1 == InitializeSystemPlugins(e)) {
+			return TransferPluginResult::Error;
+		}
 	}
 
 	// look up the method in our hash table
@@ -5900,7 +5906,9 @@ MyString FileTransfer::GetSupportedMethods(CondorError &e) {
 
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
-		InitializeSystemPlugins(e);
+		if(-1 == InitializeSystemPlugins(e)) {
+			return NULL;
+		}
 	}
 
 	// iterate plugin_table if it existssrc
@@ -5966,7 +5974,9 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	}
 
 	// start with the system table
-	InitializeSystemPlugins(e);
+	if (-1 == InitializeSystemPlugins(e)) {
+		return -1;
+	}
 
 	// process the user plugins
 	StringTokenIterator plugins(job_plugins, 100, ";");
@@ -6005,7 +6015,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 
 	// see if this is explicitly disabled
 	if (!I_support_filetransfer_plugins) {
-		return 0;
+		return -1;
 	}
 
 	// even if we do not have any plugins, we still need to set up the
