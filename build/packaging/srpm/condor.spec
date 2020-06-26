@@ -188,6 +188,7 @@ Source118: voms-2.0.6.tar.gz
 %endif
 
 Patch1: old-sphinx.patch
+Patch2: el7-python2.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -398,10 +399,14 @@ Requires: %name-external-libs%{?_isa} = %version-%release
 
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python-requests
+Requires: python2-condor
 %endif
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3-requests
 %endif
+
+# Useful tools are using the Python bindings
+Requires: python3-condor
 
 Requires: initscripts
 
@@ -811,6 +816,10 @@ exit 0
 %endif
 
 %patch1 -p1
+
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
+%patch2 -p1
+%endif
 
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
