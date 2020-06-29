@@ -9234,6 +9234,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     the client during the SCITOKENS authentication methods.  This variable
     has no default value.
 
+:macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
+    The number of seconds to wait before cleaning up unused credentials.
+    Defaults to 3,600 seconds (1 hour).
+
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------
 

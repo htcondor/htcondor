@@ -30,7 +30,7 @@ Release Notes:
 
 New Features:
 
--  Added a ``SEC_CREDENTIAL_SWEEP_DELAY`` configuration parameter which
+-  Added a :macro:`SEC_CREDENTIAL_SWEEP_DELAY` configuration parameter which
    specifies how long, in seconds, we should wait before cleaning up unused
    credentials.
    :ticket:`7484`
@@ -108,7 +108,8 @@ Release Notes:
   better differentiate it from the ``SCITOKENS`` method.  All sites are
   encouraged to update their configurations accordingly; however, the
   configuration files and wire protocol remains backward compatible with
-  prior releases. :ticket:`7540`
+  prior releases.
+  :ticket:`7540`
 
 - HTCondor now advertises ``CUDAMaxSupportedVersion`` (when appropriate).  This
   attribute is an integer representation of the highest CUDA version the
@@ -148,9 +149,11 @@ New Features:
   The Job Router will still read the old configuration and transforms, but
   the new configuration syntax is much more flexible and powerful.
 
-  - Routes are now a modified form of job transform. ``JOB_ROUTER_ROUTE_NAMES`` defines both the order and which routes are enabled
+  - Routes are now a modified form of job transform. :macro:`JOB_ROUTER_ROUTE_NAMES``
+    defines both the order and which routes are enabled
   - Multiple pre-route and post-route transforms that apply to all routes can be defined.
-  - The Routes and transforms use the same syntax and transform engine as ``SUBMIT_TRANSFORM_NAMES``.
+  - The Routes and transforms use the same syntax and transform engine as 
+    :macro:`SUBMIT_TRANSFORM_NAMES`.
 
   :ticket:`7432`
 
@@ -160,7 +163,7 @@ New Features:
   version of CUDA.  See the :doc:`/man-pages/condor_submit` man page.
   :ticket:`7413`
 
-- Tokens can be blacklisted by setting the ``SEC_TOKEN_BLACKLIST_EXPR``
+- Tokens can be blacklisted by setting the :macro:`SEC_TOKEN_BLACKLIST_EXPR`
   configuration parameter to an expression matching the token contents.
   Further, a unique ID has been added to all generated tokens, allowing
   individual tokens to be blacklisted.
@@ -181,7 +184,7 @@ New Features:
 - All token generation and usage is now logged using HTCondor's audit log
   mechanism. :ticket:`7450`
 
-- The new ``SEC_TOKEN_REQUEST_LIMITS`` configuration parameter allows
+- The new :macro:`SEC_TOKEN_REQUEST_LIMITS` configuration parameter allows
   administrators to limit the authorizations available to issued tokens.
   :ticket:`7455`
 
@@ -239,8 +242,8 @@ New Features:
   :macro:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE` macro, which defaults to False.
   :ticket:`7368`
 
-- The new configuration parameter ``NEGOTIATOR_SUBMITTER_CONSTRAINT`` defines
-  an expression which constrains which submitter ads are considered for
+- The new configuration parameter :macro:`NEGOTIATOR_SUBMITTER_CONSTRAINT`
+  defines an expression which constrains which submitter ads are considered for
   matchmaking by the *condor_negotiator*.
   :ticket:`7490`
 
@@ -254,7 +257,7 @@ New Features:
   :ticket:`7421`
 
 - Feature to enhance the reliability of *condor_ssh_to_job* is now on
-  by default: CONDOR_SSH_TO_JOB_USE_FAKE_PASSWD_ENTRY is now true
+  by default: :macro:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY` is now true
   :ticket:`7536`
 
 - Enhanced the dataflow jobs that we introduced in version 8.9.5. In
@@ -271,9 +274,9 @@ New Features:
   to false.
   :ticket:`7443` 
 
-- When configuration parameter ``HAD_USE_PRIMARY`` is set to ``True``,
+- When configuration parameter :macro:`HAD_USE_PRIMARY` is set to ``True``,
   the collectors will be queried in the order in which they appear in
-  ``HAD_LIST``.
+  :macro:`HAD_LIST`.
   Otherwise, the order in which the collectors are queried will be
   randomized (before, this was always done).
   :ticket:`7556`
@@ -290,14 +293,14 @@ New Features:
   This attribute will be refreshed as the same time that ``DiskUsage`` is refreshed.
   :ticket:`7486`
 
-- A new configuration macro ``SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`` can be
+- A new configuration macro :macro:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS` can be
   used to disable the behavior of *condor_submit* to generate Requirements clauses
   for job attributes that begin with Request
   :ticket:`7513`
 
 - Made some performance improvements in the *condor_collector*.
   This includes new configuration parameter
-  ``COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS``, which reduces the amount
+  :macro:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`, which reduces the amount
   of data forwarded between *condor_collectors*.
   :ticket:`7440`
   :ticket:`7423`
@@ -434,7 +437,7 @@ New Features:
    1) pre-declared output files already exist, and 2) output files are
    more recent than its input files, is considered a dataflow job and
    gets skipped. This feature can be enabled by setting the
-   ``SHADOW_SKIP_DATAFLOW_JOBS`` configuration option to ``True``.
+   :macro:`SHADOW_SKIP_DATAFLOW_JOBS` configuration option to ``True``.
    :ticket:`7231`
 
 -  Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
@@ -468,10 +471,10 @@ New Features:
    you can use the SLOT_TYPE as a prefix for configuration entries.
    This can be useful to set different BASE_GROUPs
    for different slot types within the same *condor_startd*. For example,
-   SLOT_TYPE_1.BASE_CGROUP = hi_prio
+   ``SLOT_TYPE_1.BASE_CGROUP = hi_prio``
    :ticket:`7390`
 
--  Added a new knob ``SUBMIT_ALLOW_GETENV``. This defaults to ``true``. When
+-  Added a new knob :macro:`SUBMIT_ALLOW_GETENV`. This defaults to ``true``. When
    set to ``false``, a submit file with `getenv = true` will become an error.
    Administrators may want to set this to ``false`` to prevent users from
    submitting jobs that depend on the local environment of the submit machine.
@@ -487,7 +490,8 @@ New Features:
    :ticket:`7355`
 
 -  Added ability for a *condor_startd* to log the state of Ads when shutting
-   down using ``STARTD_PRINT_ADS_ON_SHUTDOWN`` and ``STARTD_PRINT_ADS_FILTER``.
+   down using :macro:`STARTD_PRINT_ADS_ON_SHUTDOWN` and 
+   :macro:`STARTD_PRINT_ADS_FILTER`.
    :ticket:`7328`
 
 Bugs Fixed:
@@ -546,7 +550,7 @@ Release Notes:
   only affect you if you're not using one the readers provided by HTCondor.
   :ticket:`7191`
 
-- ``DAGMAN_USE_JOIN_NODES`` is now on by default.
+- :macro:`DAGMAN_USE_JOIN_NODES` is now on by default.
   :ticket:`7271`
 
 New Features:
@@ -597,7 +601,7 @@ New Features:
   :ticket:`7201`
 
 - Added new configuration parameter for execute machines,
-  ``CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY``, which defaults to ``false``.
+  :macro:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY`, which defaults to ``false``.
   When ``true``, condor LD_PRELOADs into unprivileged sshd it *condor_startd*
   a special version of the Linux getpwnam() library call, which forces
   the user's shell to /bin/bash and the home directory to the scratch directory.
@@ -724,18 +728,18 @@ Release Notes:
 - HTCondor version 8.9.3 released on September 12, 2019.
 
 - If you run a CCB server, please note that the default value for
-  ``CCB_RECONNECT_FILE`` has changed.  If your configuration does not
-  set ``CCB_RECONNECT_FILE``, CCB will forget about existing connections
+  :macro:`CCB_RECONNECT_FILE` has changed.  If your configuration does not
+  set :macro:`CCB_RECONNECT_FILE`, CCB will forget about existing connections
   after you upgrade.  To avoid this problem,
-  set ``CCB_RECONNECT_FILE`` to its default path before upgrading.  (Look in
+  set :macro:`CCB_RECONNECT_FILE` to its default path before upgrading.  (Look in
   the ``SPOOL`` directory for a file ending in ``.ccb_reconnect``.  If you
   don't see one, you don't have to do anything.)
   :ticket:`7135`
 
-- The Log file specified by a job, and by the ``EVENT_LOG`` configuration variable
+- The Log file specified by a job, and by the :macro:`EVENT_LOG` configuration variable
   will now have the year in the event time. Formerly, only the day and month were
   printed.  This change makes these logs unreadable by versions of DAGMan and ``condor_wait``
-  that are older 8.8.4 or 8.9.2.  The configuration variable ``DEFAULT_USERLOG_FORMAT_OPTIONS``
+  that are older 8.8.4 or 8.9.2.  The configuration variable :macro:`DEFAULT_USERLOG_FORMAT_OPTIONS`
   can be used to revert to the old time format or to opt in to UTC time and/or fractional seconds.
   :ticket:`6940`
 
@@ -749,18 +753,21 @@ New Features:
   does not specify a preferred list of authentication methods.  In this case,
   ``TOKEN`` is only used if the user has at least one usable token available.
   :ticket:`7070`  Similarly, ``SSL`` authentication is enabled by default and
-  used if there is a server certificate available. :ticket:`7074`
+  used if there is a server certificate available. 
+  :ticket:`7074`
 
 - The *condor_collector* daemon will automatically generate a pool password file at the
-  location specified by ``SEC_PASSWORD_FILE`` if no file is already present.  This should
-  ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. :ticket:`7069`
+  location specified by :macro:`SEC_PASSWORD_FILE` if no file is already present.  This should
+  ease the setup of ``TOKEN`` and ``POOL`` authentication for a new HTCondor pool. 
+  :ticket:`7069`
 
 - Added a new multifile transfer plugin for downloading and uploading
   files from/to Google Drive user accounts. This supports URLs like
   "gdrive://path/to/file" and using the plugin requires the administrator
   configure the *condor_credd* to allow users to obtain Google Drive
   tokens and requires the user request Google Drive tokens in their
-  submit file. :ticket:`7136`
+  submit file. 
+  :ticket:`7136`
 
 - The Box.com multifile transfer plugin now supports uploads. The
   plugin will be used when a user lists a "box://path/to/file" URL as
@@ -831,7 +838,7 @@ New Features:
   :ticket:`6993`
 
 - The *condor_schedd* automatically creates a security session for
-  the negotiator if ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is enabled
+  the negotiator if :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is enabled
   (the default setting).  HTCondor pool administrators no longer need to
   setup explicit authentication from the negotiator to the *condor_schedd*; any
   negotiator trusted by the collector is automatically trusted by the collector.
@@ -841,7 +848,7 @@ New Features:
   an X.509 credential for authentication that contains VOMS extensions that
   cannot be verified.
   These warnings can be silenced by setting configuration parameter
-  ``USE_VOMS_ATTRIBUTES`` to ``False``.
+  :macro:`USE_VOMS_ATTRIBUTES` to ``False``.
   :ticket:`5916`
 
 - When submitting jobs to a multi-cluster Slurm configuration under the
@@ -851,7 +858,7 @@ New Features:
 
 - HTCondor now sets numerous environment variables
   to tell the job (or libraries being used by the job) how many CPU cores
-  have been provisioned.  Also added the configuration knob ``STARTER_NUM_THREADS_ENV_VARS``
+  have been provisioned.  Also added the configuration knob :macro:`STARTER_NUM_THREADS_ENV_VARS`
   to allow the administrator to customize this set of environment
   variables.
   :ticket:`7296`
@@ -862,7 +869,7 @@ Bugs Fixed:
   size, named by MAX_HISTORY_SIZE was more than 2 Gigabytes.
   :ticket:`7023`
 
-- The default ``CCB_RECONNECT_FILE`` name now includes the shared port ID
+- The default :macro:`CCB_RECONNECT_FILE` name now includes the shared port ID
   instead of the port number, if available, which prevents multiple CCBs
   behind the same shared port from interfering with each other's state file.
   :ticket:`7135`
@@ -871,7 +878,8 @@ Bugs Fixed:
   :ticket:`7145`
 
 -  The ``TOKEN`` authentication method no longer fails if the ``/etc/condor/passwords.d``
-   is missing.  :ticket:`7138`
+   is missing.  
+   :ticket:`7138`
 
 -  Hostname-based verification for SSL now works more reliably from command-line tools.
    In some cases, the hostname was dropped internally in HTCondor, causing the SSL certificate
@@ -883,7 +891,7 @@ Bugs Fixed:
   :ticket:`7210`
 
 - Eliminated needless work done by the *condor_schedd* when contacted by
-  the negotiator when ``CURB_MATCHMAKING`` or ``MAX_JOBS_RUNNING``
+  the negotiator when :macro:`CURB_MATCHMAKING` or :macro:`MAX_JOBS_RUNNING`
   prevent the *condor_schedd* from accepting any new matches.
   :ticket:`6749`
 
@@ -921,9 +929,9 @@ Release Notes:
 
 -  HTCondor version 8.9.2 released on June 4, 2019.
 
--  The default setting for ``CREDD_OAUTH_MODE`` is now ``true``.  This only
+-  The default setting for :macro:`CREDD_OAUTH_MODE` is now ``true``.  This only
    affects people who were using the *condor_credd* to manage Kerberos credentials
-   in the ``SEC_CREDENTIAL_DIRECTORY``.
+   in the :macro:`SEC_CREDENTIAL_DIRECTORY`.
    :ticket:`7046`
 
 Known Issues:
@@ -952,8 +960,8 @@ New Features:
 
 -  The system administrator can now configure better time stamps for the global event log
    and for all jobs that specify a user log or DAGMan nodes log. There are two new configuration
-   variables that control this; ``EVENT_LOG_FORMAT_OPTIONS`` controls the format of the global event log
-   and ``DEFAULT_USERLOG_FORMAT_OPTIONS`` controls formatting of user log and DAGMan nodes logs.  These
+   variables that control this; :macro:`EVENT_LOG_FORMAT_OPTIONS` controls the format of the global event log
+   and :macro:`DEFAULT_USERLOG_FORMAT_OPTIONS` controls formatting of user log and DAGMan nodes logs.  These
    configuration variables can individually enable UTC time, ISO 8601 time stamps, and fractional seconds.
    :ticket:`6941`
 
@@ -968,7 +976,7 @@ New Features:
    the host's X509 certificate, using the rules from RFC 2818.  This matches the
    behavior most users expected in the first place.  To restore the prior behavior,
    where any valid certificate (regardless of hostname) is accepted by default, set
-   ``SSL_SKIP_HOST_CHECK`` to ``true``. :ticket:`7030`
+   :macro:`SSL_SKIP_HOST_CHECK` to ``true``. :ticket:`7030`
 
 -  HTCondor will now utilize OpenSSL for random number generation when
    cryptographically secure (e.g., effectively impossible to guess beforehand) random
@@ -982,7 +990,7 @@ New Features:
    to exist within a single setup. :ticket:`6947`
 
 -  Authentication can be done using `SciTokens <https://scitokens.org>`_.  If the
-   client saves the token to the file specified in ``SCITOKENS_FILE``, that token
+   client saves the token to the file specified in :macro:`SCITOKENS_FILE`, that token
    will be used to authenticate with the remote server.  Further, for HTCondor-C
    jobs, the token file can be specified by the job attribute ``ScitokensFile``.
    :ticket:`7011`
@@ -1063,7 +1071,7 @@ New Features:
    causes a docker universe job to use the host's network, instead of
    the default NATed interface. :ticket:`6906`
 
--  Added a new configuration knob, ``DOCKER_EXTRA_ARGUMENTS``, to allow administrators
+-  Added a new configuration knob, :macro:`DOCKER_EXTRA_ARGUMENTS`, to allow administrators
    to add arbitrary docker command line options to the docker create
    command. :ticket:`6900`
 
@@ -1172,7 +1180,7 @@ New Features:
    allows them to trust each other without doing a security negotiation
    when a network connection is made amongst them. This "family"
    security session can be disabled by setting the new configuration
-   parameter ``SEC_USE_FAMILY_SESSION`` to ``False``. :ticket:`6788`
+   parameter :macro:`SEC_USE_FAMILY_SESSION` to ``False``. :ticket:`6788`
 
 -  Scheduler Universe jobs now start in order of priority, instead of
    random order. This is most typically used for DAGMan. When running
