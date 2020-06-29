@@ -212,7 +212,7 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
 
 			// no family at all found, clean up and get out 
 
-			deallocPidList();
+			pidList.clear();
 			deallocAllProcInfos();
 			deallocProcFamily();
 
@@ -237,7 +237,7 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
 
 		// deallocate all the lists of stuff...don't leave stale info
 		// lying around. 
-	deallocPidList();
+	pidList.clear();
 	deallocAllProcInfos();
 	deallocProcFamily();
 

@@ -65,7 +65,7 @@ int ProcAPI::getProcInfoListStats(double & sOverall,
 
 
 #ifndef WIN32
-pidlistPTR ProcAPI::pidList = NULL;
+std::vector<pid_t> ProcAPI::pidList;
 int ProcAPI::pagesize		= 0;
 #ifdef LINUX
 long unsigned ProcAPI::boottime	= 0;
@@ -121,7 +121,7 @@ procHashNode::procHashNode()
 ProcAPI::~ProcAPI() {
         // deallocate stuff like crazy.
 #ifndef WIN32
-    deallocPidList();
+    pidList.clear();
 #endif
     deallocAllProcInfos();
 
@@ -1224,7 +1224,6 @@ ProcAPI::buildProcInfoList()
 		if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
 			dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 					strerror(errno));
-			deallocPidList();
 			free( kp );
 			return PROCAPI_FAILURE;
 		}
@@ -1239,7 +1238,6 @@ ProcAPI::buildProcInfoList()
 		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 				strerror(errno));
 		free(kp);
-		deallocPidList();
 		return PROCAPI_FAILURE;
 	}
 
@@ -2076,7 +2074,7 @@ ProcAPI::getProcInfoList()
 	}
 
 #if !defined(WIN32) && !defined(DARWIN)
-	deallocPidList();
+	pidList.clear();
 #endif
 
 	procInfo* ret = allProcInfos;
@@ -2131,27 +2129,6 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
 
 #ifndef WIN32
 
-/* This function returns the next pid in the pidlist.  That pid is then 
-   removed from the pidList.  A -1 is returned when there are no more pids.
- */
-
-pid_t
-ProcAPI::getAndRemNextPid () {
-
-	pidlistPTR temp;
-	pid_t tpid;
-
-	if( pidList == NULL ) {
-		return -1;
-	}
-	temp = pidList;
-	tpid = pidList->pid;
-	pidList = pidList->next;
-	delete temp;
-
-	return tpid;
-}
-
 /* Wonderfully enough, this works for all OS'es except OS X and HPUX. 
    OS X has it's own version, HP-UX never calls it.
    This function opens
@@ -2165,14 +2142,8 @@ int
 ProcAPI::buildPidList() {
 
 	condor_DIR *dirp;
-	pidlistPTR current;
-	pidlistPTR temp;
 
-		// make a header node for the pidList:
-	deallocPidList();
-	pidList = new pidlist;
-
-	current = pidList;
+	pidList.clear();
 
 	dirp = condor_opendir("/proc");
 	if( dirp != NULL ) {
@@ -2187,11 +2158,7 @@ ProcAPI::buildPidList() {
 			total_entries++;
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
 				pid_entries++;
-				temp = new pidlist;
-				temp->pid = (pid_t) atol ( direntp->d_name );
-				temp->next = NULL;
-				current->next = temp;
-				current = temp;
+				pidList.push_back((pid_t)atol(direntp->d_name));
 			}
 		}
 		if( errno != 0 ) {
@@ -2200,16 +2167,9 @@ ProcAPI::buildPidList() {
 		}
 		condor_closedir( dirp );
     
-		temp = pidList;
-		pidList = pidList->next;
-		delete temp;           // remove header node.
-
 		dprintf(D_FULLDEBUG,"ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 		return PROCAPI_SUCCESS;
 	} 
-
-	delete pidList;        // remove header node.
-	pidList = NULL;
 
 	return PROCAPI_FAILURE;
 }
@@ -2223,14 +2183,7 @@ ProcAPI::buildPidList() {
 int
 ProcAPI::buildPidList() {
 
-	pidlistPTR current;
-	pidlistPTR temp;
-
-		// make a header node for the pidList:
-	deallocPidList();
-	pidList = new pidlist;
-
-	current = pidList;
+	pidList.clear();
 
 	int mib[4];
 	struct kinfo_proc *kp = NULL;
@@ -2252,7 +2205,6 @@ ProcAPI::buildPidList() {
 		if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
 			dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 					strerror(errno));
-			deallocPidList();
 			free( kp );
 			return PROCAPI_FAILURE;
 		}
@@ -2267,7 +2219,6 @@ ProcAPI::buildPidList() {
 		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 				strerror(errno));
 		free(kp);
-		deallocPidList();
 		return PROCAPI_FAILURE;
 	}
 
@@ -2278,17 +2229,9 @@ ProcAPI::buildPidList() {
 		if ( kp[i].kp_proc.p_pid == 0 ) {
 			continue;
 		}
-		temp = new pidlist;
-		temp->pid = (pid_t) kp[i].kp_proc.p_pid;
-		temp->next = NULL;
-		current->next = temp;
-		current = temp;
+		pidList.push_back((pid_t) kp[i].kp_proc.p_pid);
 	}
     
-	temp = pidList;
-	pidList = pidList->next;
-	delete temp;           // remove header node.
-
 	free(kp);
 
 	return PROCAPI_SUCCESS;
@@ -2300,14 +2243,7 @@ ProcAPI::buildPidList() {
 int
 ProcAPI::buildPidList() {
 
-	pidlistPTR current;
-	pidlistPTR temp;
-
-		// make a header node for the pidList:
-	deallocPidList();
-	pidList = new pidlist;
-
-	current = pidList;
+	pidList.clear();
 
 	int mib[4];
 	struct kinfo_proc *kp = NULL;
@@ -2323,7 +2259,6 @@ ProcAPI::buildPidList() {
 	if (sysctl(mib, 3, NULL, &bufSize, NULL, 0) < 0) {
 		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 				strerror(errno));
-		deallocPidList();
 		return PROCAPI_FAILURE;
 	}	
 
@@ -2338,28 +2273,19 @@ ProcAPI::buildPidList() {
 		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 				strerror(errno));
 		free(kp);
-		deallocPidList();
 		return PROCAPI_FAILURE;
 	}
 
 	nentries = bufSize / sizeof(struct kinfo_proc);
 
 	for(int i = 0; i < nentries; i++) {
-		temp = new pidlist;
 #if defined(CONDOR_FREEBSD4)
-		temp->pid = (pid_t) kp[i].kp_proc.p_pid;
+		pidList.push_back((pid_t) kp[i].kp_proc.p_pid);
 #else
-		temp->pid = kp[i].ki_pid;
+		pidList.push_back(kp[i].ki_pid);
 #endif
-		temp->next = NULL;
-		current->next = temp;
-		current = temp;
 	}
     
-	temp = pidList;
-	pidList = pidList->next;
-	delete temp;           // remove header node.
-
 	free(kp);
 
 	return PROCAPI_SUCCESS;
@@ -2372,7 +2298,6 @@ ProcAPI::buildProcInfoList() {
   
 	piPTR current;
 	piPTR temp;
-	pid_t thispid;
 	int status;
 
 		// make a header node for ease of list construction:
@@ -2382,7 +2307,7 @@ ProcAPI::buildProcInfoList() {
 	current->next = NULL;
 
 	temp = NULL;
-	while( (thispid = getAndRemNextPid()) >= 0 ) {
+	for( pid_t thispid : pidList ) {
 		if( getProcInfo(thispid, temp, status) == PROCAPI_SUCCESS) {
 			current->next = temp;
 			current = temp;
@@ -2398,6 +2323,8 @@ ProcAPI::buildProcInfoList() {
 	temp = allProcInfos;
 	allProcInfos = allProcInfos->next;
 	delete temp;
+
+	pidList.clear();
 
 	return PROCAPI_SUCCESS;
 }
@@ -2462,21 +2389,6 @@ ProcAPI::getFileOwner(int fd) {
 	return si.st_uid;
 }
 
-
- 
-void
-ProcAPI::deallocPidList() {
-	if( pidList != NULL ) {
-		pidlistPTR prev;
-		pidlistPTR temp = pidList;
-		while( temp != NULL ) {
-			prev = temp;
-			temp = temp->next;
-			delete prev;
-		}
-		pidList = NULL;
-	}
-}
 
 #endif // not defined WIN32
 
