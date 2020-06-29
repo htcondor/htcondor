@@ -25,7 +25,8 @@ RUN yum install -y rpm-build cmake perl-Data-Dumper glibc-devel libcurl-devel gl
 USER build
 
 # Install some pip package dependencies for the manual and man pages in docs/
-RUN pip3 --no-cache install --user build sphinx sphinx_rtd_theme nbsphinx sphinx-autobuild
+RUN pip3 --no-cache install --user sphinx sphinx_rtd_theme nbsphinx sphinx-autobuild ipython
+
 
 # Set up entrypoint script; see that script for more on what it does
 COPY --chown=build:build entrypoint.sh /home/build/.entrypoint.sh
