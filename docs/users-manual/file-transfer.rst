@@ -493,13 +493,18 @@ Dataflow Jobs
 '''''''''''''
 
 A **dataflow job** is a job that might not need to run because its desired
-outputs already exist. The *condor_shadow* can optionally skip these jobs by
-setting :macro:`SHADOW_SKIP_DATAFLOW_JOBS` to `True`.
+outputs already exist. To skip such a job, add the following line to your
+submit file:
+
+::
+
+    skip_if_dataflow = True
 
 A dataflow job meets any of the following criteria:
-* Output files exist, are newer than input files
-* Execute file is newer than input files
-* Standard input file is newer than input files
+
+*   Output files exist, are newer than input files
+*   Execute file is newer than input files
+*   Standard input file is newer than input files
 
 Skipping dataflow jobs can potentially save large amounts of time in
 long-running workflows.

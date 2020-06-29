@@ -5509,11 +5509,6 @@ These settings affect the *condor_shadow*.
     currently defaults to 10 MiB in size. Values are specified with the
     same syntax as ``MAX_DEFAULT_LOG``.
 
-:macro-def:`SHADOW_SKIP_DATAFLOW_JOBS`
-    Determines whether dataflow jobs should be skipped. A dataflow job is 
-    defined as a job whose output files already exist and are newer than input
-    files. Additionally, if the executable or stdin files exist and are newer
-    than inputs, this is also considered a dataflow job. Defaults to ``False``.
 
 condor_starter Configuration File Entries
 ------------------------------------------
