@@ -1,5 +1,5 @@
 :mod:`htcondor.htchirp` API Reference
-==================================
+=====================================
 
 .. module:: htcondor.htchirp
 
@@ -17,7 +17,7 @@ only works for jobs run in the vanilla, paralllel, and java universes.
 
 :mod:`htcondor.htchirp` provides two objects for interacting with the
 *condor_starter* Chirp proxy server, :class:`HTChirp` and
-:function:`condor_chirp`.
+:func:`condor_chirp`.
 
 Initialized :class:`HTChirp` objects can be connected and disconnected
 explicitly from the *condor_starter* Chirp proxy server, however we recommend
@@ -28,7 +28,7 @@ using context management:
        i = chirp.get_job_attr("IterationNum")
        chirp.set_job_attr("IterationNum") = i + 1
 
-:function:`condor_chirp` is a wrapper around :class:`HTChirp` that takes a
+:func:`condor_chirp` is a wrapper around :class:`HTChirp` that takes a
 string containing a :ref:`man-pages/condor_chirp:*condor_chirp*` command (with
 arguments) and returns the value from the relevant :class:`HTChirp` method.
 
