@@ -22,9 +22,12 @@ only works for jobs run in the vanilla, paralllel, and java universes.
 Initialized :class:`HTChirp` objects can be connected and disconnected
 explicitly from the *condor_starter* Chirp proxy server, however we recommend
 using context management:
+
 .. code-block:: python
 
-   with htcondor.htchirp.HTChirp() as chirp:
+   from htcondor.htchirp import HTChirp
+
+   with HTChirp() as chirp:
        i = chirp.get_job_attr("IterationNum")
        chirp.set_job_attr("IterationNum") = i + 1
 
