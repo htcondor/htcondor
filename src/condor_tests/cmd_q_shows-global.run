@@ -95,7 +95,7 @@ my $line = "";
 
 print "Start a job which runs from remote schedd - ";
 my $forever = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	no_wait => 1,
 );
 if($forever != 0) {

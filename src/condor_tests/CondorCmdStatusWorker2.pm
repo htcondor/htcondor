@@ -134,14 +134,14 @@ sub SetUp
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);
@@ -192,14 +192,14 @@ sub SetUp
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);

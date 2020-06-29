@@ -306,7 +306,7 @@ CondorTest::StartCondorWithParams(
 my $submit_body = "
 universe = vanilla
 executable = x_sleep.pl
-arguments = 0
+arguments = 3600
 request_cpus = 1
 request_memory = 1
 request_disk = 1

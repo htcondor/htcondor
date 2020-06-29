@@ -6,6 +6,6 @@ output = cmd_q_shows-better-analyze.out
 error = cmd_q_shows-better-analyze.err
 Notification = NEVER
 requirements = Memory >= 3000000 && FALSE
-arguments  = 0
+arguments  = 3600
 queue
 

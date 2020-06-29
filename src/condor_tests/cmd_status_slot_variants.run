@@ -160,7 +160,7 @@ foreach my $subfile (readdir SC)
 		$result = SimpleJob::RunCheck(
     		#append_submit_commands => $appended_submit_info,
     		queue_sz =>  $expectedrunning,
-			duration => 0,
+			duration => 3600,
 			test_name => $testname,
     		on_execute => $on_execute,
 			timeout => 450,
