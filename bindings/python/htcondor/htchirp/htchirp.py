@@ -71,8 +71,8 @@ class HTChirp:
     A Chirp client compatible with the HTCondor Chirp implementation.
 
     If the host and port of a Chirp server are not specified, you are assumed
-    to be running in a HTCondor "+WantIOProxy = true" job and that
-    $_CONDOR_SCRATCH_DIR/.chirp.config contains the host, port, and cookie for
+    to be running in a HTCondor ``My.WantIOProxy = true`` job and that
+    ``$_CONDOR_SCRATCH_DIR/.chirp.config`` contains the host, port, and cookie for
     connecting to the embedded chirp proxy.
 
     """
