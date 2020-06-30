@@ -2059,23 +2059,11 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 procInfo*
 ProcAPI::getProcInfoList()
 {
-#if !defined(WIN32) && !defined(DARWIN)
-	if (buildPidList() != PROCAPI_SUCCESS) {
-		dprintf(D_ALWAYS, "ProcAPI: error retrieving list of processes\n");
-		deallocAllProcInfos();
-		return NULL;
-	}
-#endif
-
 	if (buildProcInfoList() != PROCAPI_SUCCESS) {
 		dprintf(D_ALWAYS,
 		        "ProcAPI: error retrieving list of process data\n");
 		deallocAllProcInfos();
 	}
-
-#if !defined(WIN32) && !defined(DARWIN)
-	pidList.clear();
-#endif
 
 	procInfo* ret = allProcInfos;
 	allProcInfos = NULL;
@@ -2174,70 +2162,6 @@ ProcAPI::buildPidList() {
 	return PROCAPI_FAILURE;
 }
 #endif
-/* 
-   The darwin/OS X version of this code - it should work just fine on 
-   FreeBSD as well, but FreeBSD does have a /proc that it could look at
- */
-
-#ifdef Darwin
-int
-ProcAPI::buildPidList() {
-
-	pidList.clear();
-
-	int mib[4];
-	struct kinfo_proc *kp = NULL;
-	size_t bufSize = 0;
-	int nentries;
-	int rc = -1;
-	int ntries = 5;
-
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_PROC;
-	mib[2] = KERN_PROC_ALL;
-	mib[3] = 0;
-
-	do {
-		ntries--;
-		//
-		// Returns back the size of the kinfo_proc struct
-		//
-		if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
-			dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
-					strerror(errno));
-			free( kp );
-			return PROCAPI_FAILURE;
-		}
-
-		ASSERT( bufSize );
-		kp = (struct kinfo_proc *)realloc(kp, bufSize);
-
-		rc = sysctl(mib, 4, kp, &bufSize, NULL, 0);
-	} while ( ntries >= 0 && ( ( rc == -1 && errno == ENOMEM ) || ( rc == 0 && bufSize == 0 ) ) );
-
-	if ( rc == -1 || bufSize == 0 ) {
-		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
-				strerror(errno));
-		free(kp);
-		return PROCAPI_FAILURE;
-	}
-
-	nentries = bufSize / sizeof(struct kinfo_proc);
-
-	for(int i = 0; i < nentries; i++) {
-			// Pid 0 is not a real process. It represents the kernel.
-		if ( kp[i].kp_proc.p_pid == 0 ) {
-			continue;
-		}
-		pidList.push_back((pid_t) kp[i].kp_proc.p_pid);
-	}
-    
-	free(kp);
-
-	return PROCAPI_SUCCESS;
-}
-
-#endif
 
 #if defined(CONDOR_FREEBSD)
 int
@@ -2300,8 +2224,14 @@ ProcAPI::buildProcInfoList() {
 	piPTR temp;
 	int status;
 
-		// make a header node for ease of list construction:
 	deallocAllProcInfos();
+
+	if (buildPidList() != PROCAPI_SUCCESS) {
+		dprintf(D_ALWAYS, "ProcAPI: error retrieving list of processes\n");
+		return PROCAPI_FAILURE;
+	}
+
+		// make a header node for ease of list construction:
 	allProcInfos = new procInfo;
 	current = allProcInfos;
 	current->next = NULL;

@@ -608,7 +608,9 @@ class ProcAPI {
 #endif
 								 );
 
+#if !defined(DARWIN) && !defined(WIN32)
   static int buildPidList();                      // just what it says
+#endif
   static int buildProcInfoList();                 // ditto.
   static long secsSinceEpoch();                   // used for wall clock age
   static double convertTimeval ( struct timeval );// convert timeval to double
