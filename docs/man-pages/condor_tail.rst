@@ -1,5 +1,3 @@
-      
-
 *condor_tail*
 ==============
 
@@ -25,6 +23,9 @@ is tailed by default. The number of bytes displayed is limited to 1024,
 unless changed by specifying the **-maxbytes** option. This limit is
 applied for each individual tail of a file; for example, when following
 a file, the limit is applied each subsequent time output is obtained.
+
+If you specify *filename*, that name must be specifically listed in the job's
+``transfer_output_files``.
 
 Options
 -------
