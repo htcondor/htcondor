@@ -190,7 +190,7 @@ output = $testname.out
 error = $testname.err
 notification = never
 request_memory = 25
-arguments = 0
+arguments = 3600
 #
 # jobs charged against group "a" (quota is 1)
 accounting_group = a

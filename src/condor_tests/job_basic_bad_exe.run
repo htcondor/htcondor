@@ -84,7 +84,7 @@ my $sleepforever = '
 	executable = x_sleep.pl
 	log = $sleepforeverlog
 	notification = never
-	arguments = 0
+	arguments = 3600
 	queue
 ';
 
