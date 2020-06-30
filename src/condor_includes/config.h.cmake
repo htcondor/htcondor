@@ -527,9 +527,6 @@
 /* Define to 1 if the compiler supports C++11 conventions */
 #cmakedefine PREFER_CPP11
 
-/* Define to 1 if the compiler does not support C++11 but does support TR1 */
-#cmakedefine PREFER_TR1
-
 /* Define to 1 if the OS has support for epoll (Linux) */
 #cmakedefine CONDOR_HAVE_EPOLL
 
