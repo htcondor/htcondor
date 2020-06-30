@@ -387,10 +387,13 @@ Requires: %name-external-libs%{?_isa} = %version-%release
 
 %if 0%{?rhel} <= 7
 Requires: python-requests
+Requires: python2-condor
 %endif
 %if 0%{?rhel} >= 8
 Requires: python3-requests
 %endif
+Requires: python3-condor
+
 
 Requires: initscripts
 
