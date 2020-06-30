@@ -178,7 +178,9 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
 	int fam_status;
 	int rval;
 
+#if !defined(DARWIN)
 	buildPidList();
+#endif
 
 	buildProcInfoList();
 
@@ -472,7 +474,9 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	piPTR cur = allProcInfos;
 	int fam_index = 0;
 
+#if !defined(DARWIN)
 	buildPidList();
+#endif
 
 	buildProcInfoList();
 

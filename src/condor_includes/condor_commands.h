@@ -185,6 +185,10 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 
 // Given a token request from a trusted collector, generate an identity token.
 #define COLLECTOR_TOKEN_REQUEST (SCHED_VERS+123)
+// Get the SubmitterCeiling
+#define GET_CEILING (SCHED_VERS+124)
+#define SET_CEILING (SCHED_VERS+125)
+
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0

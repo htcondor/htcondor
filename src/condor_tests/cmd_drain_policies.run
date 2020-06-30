@@ -6,11 +6,11 @@ import time
 
 import htcondor
 
-from pytest.CondorCluster import CondorCluster
-from pytest.CondorTest import CondorTest
-from pytest.Globals import *
-from pytest.PersonalCondor import PersonalCondor
-from pytest.Utils import Utils
+from pytest_old.CondorCluster import CondorCluster
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.PersonalCondor import PersonalCondor
+from pytest_old.Utils import Utils
 
 #
 # Test to see if startd job policies function properly during retirement.

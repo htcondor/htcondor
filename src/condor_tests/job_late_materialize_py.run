@@ -40,7 +40,7 @@ CONDOR_TESTREQ_CONFIG
 #endtestreq
 """
 
-from pytest.Utils import Utils
+from pytest_old.Utils import Utils
 
 testname = os.path.basename(__file__)[:-4]
 
@@ -188,7 +188,7 @@ else :
 sub = htcondor.Submit("""
 	executable = x_sleep.pl
 	arguments = 1
-	notification = never	
+	notification = never
 	max_idle = 3
 	My.Foo = "$(Item)"
 	log = %s.$(ClusterId).log

@@ -154,7 +154,7 @@ $result = SimpleJob::RunCheck(
 	on_success => \&exit_success_callback,
 	timeout => 15,
 	queue_sz => 10,
-	duration => 0,
+	duration => 3600,
 	request_memory => 1,
 	#GetClusterId => $GetClusterId,
 );

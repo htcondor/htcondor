@@ -5513,11 +5513,6 @@ These settings affect the *condor_shadow*.
     currently defaults to 10 MiB in size. Values are specified with the
     same syntax as ``MAX_DEFAULT_LOG``.
 
-:macro-def:`SHADOW_SKIP_DATAFLOW_JOBS`
-    Determines whether dataflow jobs should be skipped. A dataflow job is 
-    defined as a job whose output files already exist and are newer than input
-    files. Additionally, if the executable or stdin files exist and are newer
-    than inputs, this is also considered a dataflow job. Defaults to ``False``.
 
 condor_starter Configuration File Entries
 ------------------------------------------
@@ -9242,6 +9237,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     The path and file name of a file containing a SciToken for use by
     the client during the SCITOKENS authentication methods.  This variable
     has no default value.
+
+:macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
+    The number of seconds to wait before cleaning up unused credentials.
+    Defaults to 3,600 seconds (1 hour).
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------

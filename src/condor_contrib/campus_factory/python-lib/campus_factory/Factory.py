@@ -71,14 +71,14 @@ class Factory:
         
         self.cluster_list = []
         # Get the cluster lists
-        if get_option("clusterlist", "") is not "":
+        if get_option("clusterlist", "") != "":
             logging.debug("Using the cluster list in the campus factory configuration.")
             for cluster_id in get_option("clusterlist").split(','):
                 self.cluster_list.append(Cluster(cluster_id, useOffline = self.UseOffline))
         else:
             # Check for the bosco cluster command
             (stdout, stderr) = RunExternal("bosco_cluster -l")
-            if len(stdout) != 0 and stdout is not "No clusters configured":
+            if len(stdout) != 0 and stdout != "No clusters configured":
                 logging.debug("Using the cluster list installed with BOSCO")
                 for cluster_id in stdout.split("\n"):
                     if len(cluster_id) > 0 and cluster_id != "":
