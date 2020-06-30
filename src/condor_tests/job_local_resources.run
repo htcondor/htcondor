@@ -306,7 +306,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
-	duration => 0,
+	duration => 3600,
 	append_submit_commands => $append_submit_commands
 );
 print "******************** Test for correct local resource ClassAds on dynamic slot\n";
@@ -329,7 +329,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
-	duration => 0,
+	duration => 3600,
 	append_submit_commands => $append_submit_commands
 );
 print "******************** Test for correct local resource ClassAds on partionable slot\n";

@@ -46,7 +46,7 @@ my $testname = "cmd_submit_coverage";
 #
 my $coverage_sub_content = <<COVERAGE_SUB_CONTENT;
 accounting_group = fw
-arguments =  0
+arguments =  3600
 concurrency_limits = XSW
 copy_to_spool = false
 coresize = 1000000

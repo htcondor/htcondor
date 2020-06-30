@@ -145,7 +145,7 @@ my $success = sub
 };
 
 my $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $abort,
 	on_hold => $hold,
 	hold => "True",

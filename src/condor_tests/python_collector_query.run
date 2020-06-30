@@ -43,7 +43,7 @@ testname = os.path.basename(__file__)[:-4]
 logfile = "{0}{1}.log".format(testname, os.getpid())
 cluster = CondorCluster( {
 	"executable": "x_sleep.pl",
-	"arguments": "0",
+	"arguments": "3600",
 	"notification": "never",
 	"log": logfile
 	} )
