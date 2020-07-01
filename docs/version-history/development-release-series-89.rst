@@ -80,6 +80,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a segfault in the schedd that could happen on some platforms
+  when handling certain startd failures after invoking ``condor_now``.
+  :ticket:`7692`
+
 - The Python bindings methods
   :meth:`htcondor.Schedd.query`,
   :meth:`htcondor.Schedd.xquery`, and
