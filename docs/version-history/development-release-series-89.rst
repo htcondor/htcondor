@@ -40,6 +40,12 @@ New Features:
    :macro:`OFFLINE_MACHINE_RESOURCE_GPUs` will now take effect on a *condor_reconfig*.
    :ticket:`7651`
 
+-  The *condor_startd* now detects whether user namespaces can be created by
+   unprivileged processes.  If so, it advertises the classad attribute
+   ``HasUserNamespaces``. In this case, container managers like
+   singularity can be run without setuid root.
+   :ticket:`7625`
+
 -  Added a :macro:`SEC_CREDENTIAL_SWEEP_DELAY` configuration parameter which
    specifies how long, in seconds, we should wait before cleaning up unused
    credentials.
