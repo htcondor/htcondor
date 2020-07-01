@@ -19,6 +19,10 @@ Release Notes:
    being parsed as just ``foo`` and causing unexpected results.
    :ticket:`7607`
 
+-  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
+   now accepts an exprTree or a string.
+   :ticket:`7654`
+
 -  API change in the Python bindings: we deprecated ``Schedd.negotiate()``.
    :ticket:`7524`
 
@@ -76,6 +80,17 @@ New Features:
 
 -  Improved the efficiency of process monitoring in macOS.
    :ticket:`7708`
+
+-  The *condor_startd* now handles :macro:`STARTD_SLOT_ATTRS` after
+   :macro:`STARTD_ATTRS` and :macro:`STARTD_PARTITIONABLE_SLOT_ATTRS`
+   so that custom slot attributes describing the resources of
+   dynamic children can be refered to by :macro:`STARTD_SLOT_ATTRS`
+   :ticket:`7588`
+
+-  When the *condor_master* starts in background mode, which is the default,
+   control is not returned until the background *condor_master* has created
+   the MasterLog and is ready to accept commands.
+   :ticket:`7667`
 
 Bugs Fixed:
 
