@@ -30,6 +30,16 @@ Release Notes:
 
 New Features:
 
+-  Added options ``-short-uuid`` and ``-uuid`` to the *condor_gpu_discovery*
+   tool. These options use the NVIDIA uuid assigned to each GPU to produce
+   stable identifiers for each GPU so that devices can be taken offline without
+   causing confusion about which of the remaining devices a job is using.
+   :ticket:`7696`
+
+-  Configuration variables of the form :macro:`OFFLINE_MACHINE_RESOURCE_<TAG>` such as
+   :macro:`OFFLINE_MACHINE_RESOURCE_GPUs` will now take effect on a *condor_reconfig*.
+   :ticket:`7651`
+
 -  Added a :macro:`SEC_CREDENTIAL_SWEEP_DELAY` configuration parameter which
    specifies how long, in seconds, we should wait before cleaning up unused
    credentials.
