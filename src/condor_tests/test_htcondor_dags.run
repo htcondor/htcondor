@@ -26,13 +26,24 @@ my $iswindows = CondorUtils::is_windows();
 my $reldir = `condor_config_val release_dir`; chomp $reldir;
 my $pathsep = ':';
 my $relpy = "$reldir/lib/python3";
-if ($iswindows) { $relpy = "$reldir\\lib\\python3"; $pathsep = ';'; }
+my $pypgm = "python3";
+if ($iswindows) {
+    $relpy = "$reldir\\lib\\python"; $pathsep = ';';
+    my @reglines = `reg query HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath /ve`;
+    for my $line (@reglines) {
+       if ($line =~ /REG_SZ\s+(.+)$/) {
+          print "\tfound python 3.6 install dir : '$1'\n";
+          $pypgm = "$1python3.exe";
+          last;
+       }
+    }
+}
 
 my $pythonpath = "";
 if (exists($ENV{PYTHONPATH})) {
     $pythonpath = $ENV{PYTHONPATH};
     print "\texisting PYTHONPATH=$pythonpath\n";
-    if (index($reldir,$pythonpath) != -1) {
+    if (index($reldir,$pythonpath) < 0) {
         print "\tadding $relpy to PYTHONPATH\n";
         $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
     }
@@ -41,5 +52,5 @@ if (exists($ENV{PYTHONPATH})) {
     $ENV{PYTHONPATH} = $relpy;
 }
 
-my $rv = runCommandCarefully( undef, 'python3', '-m', 'pytest', 'test_htcondor_dags' );
+my $rv = runCommandCarefully( undef, $pypgm, '-m', 'pytest', 'test_htcondor_dags' );
 exit $rv->{"exitcode"}
