@@ -111,6 +111,10 @@ Bugs Fixed:
   ``R`` know the maximum number of threads it should use.
   :ticket:`7649`
 
+- Fixed a bug in Docker Universe that prevented administrator defined bind 
+  mounts from working correctly
+  :ticket:`7635`
+
 - If the administrator of an execute machine has disabled file transfer plugins
   by setting :macro:`ENABLE_URL_TRANSFERS` to ``False``, then the machine Ad in
   the collector will no longer advertise support, which will prevent jobs from
