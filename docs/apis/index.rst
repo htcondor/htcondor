@@ -10,9 +10,6 @@ way for a running job to update information about itself to its job ad,
 or to remotely read or write files from the executing job on the worker
 node to/from the submitting machine.
 
-Older programs which have SOAP bindings may find the HTCondor SOAP
-interfaces useful.
-
 If you have developed an interface to HTCondor, please consider sharing
 it with the HTCondor community.
 
