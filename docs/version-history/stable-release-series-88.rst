@@ -23,6 +23,15 @@ New Features:
 
 Bugs Fixed:
 
+- HTCondor daemons used to discard the private network name and address of
+  daemons they were attempting to contact via the contactee's public
+  address; however, if the contact had been pre-authorized, this would
+  cause the contactee not to recognize the contacting daemon, and force it
+  to reauthenticate.  The HTCondor daemons no longer discard the private
+  network name and address; this will cause them to appear in the logs in
+  places where they had not previously.
+  :ticket:`7582`
+
 - Allow `SINGULARITY_EXTRA_ARGUMENTS` to override the default -C option
   condor passes to singularity exec to allow administrators to tell
   condor not to contain certain resoures.
