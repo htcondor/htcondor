@@ -91,6 +91,15 @@ New Features:
    several known issues are summarized in the ticket.
    :ticket:`7343`
 
+-  Added a new Python bindings subpackage, :mod:`htcondor.dags`, which contains
+   tools for writing DAGMan input files programmatically using
+   high-level abstractions over the basic DAGMan constructs.
+   :mod:`htcondor.dags` is very new and its API has not fully stabilized;
+   it is possible that there will be deprecations and breaking changes
+   in the near future.
+   Bug reports and feature requests greatly encouraged!
+   :ticket:`7682`
+
 -  Improved the efficiency of process monitoring in macOS.
    :ticket:`7708`
 
