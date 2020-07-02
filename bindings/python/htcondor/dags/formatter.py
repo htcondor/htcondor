@@ -23,16 +23,36 @@ DEFAULT_SEPARATOR = ":"
 
 
 class NodeNameFormatter(abc.ABC):
+    """
+    An abstract base class that represents a certain way of formatting and
+    parsing underlying node names.
+    """
+
     @abc.abstractmethod
     def generate(self, layer_name: str, node_index: int) -> str:
+        """
+        This method should generate a single node name,
+        given the name of the layer and the index of the underlying node
+        inside the layer.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def parse(self, node_name: str) -> Tuple[str, int]:
+        """
+        This method should convert a single node name back into a layer name
+        and underlying node index.
+        Node names must be invertible for :func:`rescue` to work.
+        """
         raise NotImplementedError
 
 
 class SimpleFormatter(NodeNameFormatter):
+    """
+    A no-frills :class:`NodeNameFormatter`
+    that produces underlying node names like ``LayerName-5``.
+    """
+
     def __init__(
         self, separator=DEFAULT_SEPARATOR, index_format="{:d}", offset: int = 0
     ):

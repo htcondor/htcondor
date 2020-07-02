@@ -27,15 +27,6 @@ from . import dag, edges, utils
 from .walk_order import WalkOrder
 
 
-class DAGAbortCondition:
-    def __init__(self, node_exit_value: int, dag_return_value: Optional[int] = None):
-        self.node_exit_value = node_exit_value
-        self.dag_return_value = dag_return_value
-
-    def __repr__(self) -> str:
-        return utils.make_repr(self, ("node_exit_value", "dag_return_value"))
-
-
 class Script:
     def __init__(
         self,
@@ -77,11 +68,42 @@ class Script:
         )
 
 
+class DAGAbortCondition:
+    """
+    Represents the configuration of a node's DAG abort condition.
+
+    See :ref:`abort-dag-on` for more information about DAG aborts.
+    """
+
+    def __init__(self, node_exit_value: int, dag_return_value: Optional[int] = None):
+        """
+        Parameters
+        ----------
+        node_exit_value
+            If the underlying node exits with this value, the DAG will be aborted.
+        dag_return_value
+            If the DAG is aborted via this condition, it will exit with this code, if given.
+            If not given, it will exit with the same return value that the node did.
+        """
+        self.node_exit_value = node_exit_value
+        self.dag_return_value = dag_return_value
+
+    def __repr__(self) -> str:
+        return utils.make_repr(self, ("node_exit_value", "dag_return_value"))
+
+
 @functools.total_ordering
 class BaseNode(abc.ABC):
     """
-    This is the superclass for all node-like objects (things that can be the
-    logical nodes in a :class:`DAG`).
+    This is the superclass for all node-like objects
+    (things that can be the logical nodes in a :class:`DAG`,
+    like :class:`NodeLayer` and :class:`SubDAG`).
+
+    Generally, you do not need to construct nodes yourself; instead, they are
+    created by calling methods like :meth:`DAG.layer`, :meth:`DAG.subdag`,
+    :meth:`BaseNode.child_layer`, and so forth. These methods automatically
+    attach the new node to the same :class:`DAG` as the node you called the
+    method on.
     """
 
     def __init__(
@@ -200,7 +222,7 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        node_layer
+        node_layer : :class:`NodeLayer`
             The newly-created node layer.
         """
         node = self._dag.layer(**kwargs)
@@ -227,7 +249,7 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        node_layer
+        node_layer : :class:`NodeLayer`
             The newly-created node layer.
         """
         node = self._dag.layer(**kwargs)
@@ -252,8 +274,8 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        subdag
-            The newly-created subDAG.
+        subdag : :class:`SubDAG`
+            The newly-created sub-DAG.
         """
         node = self._dag.subdag(**kwargs)
 
@@ -279,8 +301,8 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        subdag
-            The newly-created subDAG.
+        subdag : :class:`SubDAG`
+            The newly-created sub-DAG.
         """
         node = self._dag.subdag(**kwargs)
 
@@ -303,7 +325,8 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        self
+        self : :class:`BaseNode`
+            This method returns ``self``.
         """
         nodes = utils.flatten(nodes)
         for node in nodes:
@@ -322,7 +345,8 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        self
+        self : :class:`BaseNode`
+            This method returns ``self``.
         """
         nodes = utils.flatten(nodes)
         for node in nodes:
@@ -345,7 +369,8 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        self
+        self : :class:`BaseNode`
+            This method returns ``self``.
         """
         nodes = utils.flatten(nodes)
         for node in nodes:
@@ -364,7 +389,8 @@ class BaseNode(abc.ABC):
 
         Returns
         -------
-        self
+        self : :class:`BaseNode`
+            This method returns ``self``.
         """
         nodes = utils.flatten(nodes)
         for node in nodes:
@@ -396,6 +422,12 @@ class BaseNode(abc.ABC):
 
 
 class NodeLayer(BaseNode):
+    """
+    Represents a "layer" of actual ``JOB`` nodes that share a submit description
+    and edge relationships.
+    Each underlying actual node's attributes may be customized using ``vars``.
+    """
+
     def __init__(
         self,
         dag: "dag.DAG",
@@ -430,10 +462,17 @@ class NodeLayer(BaseNode):
         self.vars = list(vars)
 
     def __len__(self):
+        """The number of actual nodes in the layer."""
         return len(self.vars)
 
 
 class SubDAG(BaseNode):
+    """
+    Represents a ``SUBDAG`` in the graph.
+
+    See :ref:`subdag-external` for more information on sub-DAGs.
+    """
+
     def __init__(self, dag: "dag.DAG", *, dag_file: Path, **kwargs):
         """
         Parameters
@@ -441,7 +480,7 @@ class SubDAG(BaseNode):
         dag
             The DAG to connect this node to.
         dag_file
-            The :class:`pathlib.Path` to where the subDAG's DAG description file
+            The :class:`pathlib.Path` to where the sub-DAG's DAG description file
             is (or will be).
         kwargs
             Additional keyword arguments are passed to the :class:`BaseNode`
@@ -453,6 +492,12 @@ class SubDAG(BaseNode):
 
 
 class FinalNode(BaseNode):
+    """
+    Represents the ``FINAL`` node in a DAG.
+
+    See :ref:`final-node` for more information on the ``FINAL`` node.
+    """
+
     def __init__(
         self,
         dag: "dag.DAG",
@@ -539,7 +584,7 @@ class Nodes:
 
         Returns
         -------
-        node_layer
+        node_layer : :class:`NodeLayer`
             The newly-created node layer.
         """
         node = self._some_element().child_layer(**kwargs)
@@ -567,7 +612,7 @@ class Nodes:
 
         Returns
         -------
-        node_layer
+        node_layer : :class:`NodeLayer`
             The newly-created node layer.
         """
         node = self._some_element().parent_layer(**kwargs)
@@ -593,8 +638,8 @@ class Nodes:
 
         Returns
         -------
-        subdag
-            The newly-created subDAG.
+        subdag : :class:`SubDAG`
+            The newly-created sub-DAG.
         """
         node = self._some_element().child_subdag(**kwargs)
 
@@ -619,8 +664,8 @@ class Nodes:
 
         Returns
         -------
-        subdag
-            The newly-created subDAG.
+        subdag : :class:`SubDAG`
+            The newly-created sub-DAG.
         """
         node = self._some_element().parent_subdag(**kwargs)
 
@@ -644,7 +689,8 @@ class Nodes:
 
         Returns
         -------
-        self
+        self : :class:`Nodes`
+            This method returns ``self``.
         """
         for s in self:
             s.add_children(nodes, edge=type)
@@ -663,7 +709,8 @@ class Nodes:
 
         Returns
         -------
-        self
+        self : :class:`Nodes`
+            This method returns ``self``.
         """
         for s in self:
             s.remove_children(nodes)
@@ -686,7 +733,8 @@ class Nodes:
 
         Returns
         -------
-        self
+        self : :class:`Nodes`
+            This method returns ``self``.
         """
         for s in self:
             s.add_parents(nodes, edge=type)
@@ -705,7 +753,8 @@ class Nodes:
 
         Returns
         -------
-        self
+        self : :class:`Nodes`
+            This method returns ``self``.
         """
         for s in self:
             s.remove_parents(nodes)

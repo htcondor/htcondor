@@ -32,7 +32,10 @@ NOOP_SUBMIT_FILE_NAME = "__JOIN__.sub"
 
 
 def write_dag(
-    dag: dag.DAG, dag_dir: Path, dag_file_name: Optional[str] = DEFAULT_DAG_FILE_NAME
+    dag: dag.DAG,
+    dag_dir: Path,
+    dag_file_name: Optional[str] = DEFAULT_DAG_FILE_NAME,
+    node_name_formatter: Optional[formatter.NodeNameFormatter] = None,
 ) -> Path:
     """
     Write out the given DAG to the given directory.
@@ -47,13 +50,20 @@ def write_dag(
         The directory to write the DAG files to.
     dag_file_name
         The name of the DAG description file itself.
+    node_name_formatter
+        The :class:`NodeNameFormatter` to use for generating underlying node names.
+        If not provided, the default is :class:`SimpleFormatter`.
 
     Returns
     -------
-    dag_file_path :
-        Returns the path to the DAG description file.
+    dag_file_path : :class:`pathlib.Path`
+        The path to the DAG description file;
+        can be passed to :meth:`htcondor.Submit.from_dag` if you convert it to
+        a string, like ``Submit.from_dag(str(write_dag(...)))``.
     """
-    return DAGWriter(dag).write(dag_dir, dag_file_name=dag_file_name)
+    return DAGWriter(dag, node_name_formatter=node_name_formatter).write(
+        dag_dir, dag_file_name=dag_file_name,
+    )
 
 
 class DAGWriter:

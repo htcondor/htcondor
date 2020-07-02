@@ -55,6 +55,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'sphinx_autodoc_typehints',
     'nbsphinx',
     'ticket',
     'macro',
@@ -379,9 +380,6 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # autodoc settings
 autoclass_content = 'both'
-
-# napoleon settings
-napoleon_use_param = False
 
 
 def modify_docstring(app, what, name, obj, options, lines):
