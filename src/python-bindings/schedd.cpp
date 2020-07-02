@@ -3932,7 +3932,7 @@ void export_schedd()
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
             ``items``, and ``values`` methods.
             )C0ND0R", boost::python::no_init)
-        .def(init<boost::python::dict>(
+        .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
             R"C0ND0R(
             :param input: Submit descriptors as
                 ``key = value`` pairs in a dictionary,
@@ -3974,12 +3974,8 @@ void export_schedd()
                 or :meth:`Submit.queue_with_itemdata` are called.
                 If omitted, the submit description is initially empty.
             :type input: dict or str
-            )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
-        .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
-            R"C0ND0R(
-            Construct the Submit object from a number of ``key = value`` keyword arguments.
             )C0ND0R")
+        .def(init<boost::python::dict>((boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
         .def(init<std::string>())
         //.def_pickle(submit_pickle_suite())
         .def("expand", &Submit::expand,
