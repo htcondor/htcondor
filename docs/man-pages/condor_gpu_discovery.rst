@@ -54,7 +54,7 @@ also use the ``-short-uuid`` or ``-uuid`` option.  The uuid value assigned by
 NVIDA to each GPU is unique, so  using this option provides stable device
 identifiers for your devices. The ``--short-uuid`` option uses only part of the
 uuid, but it is highly likely to still be unique for devices on a single machine.
-When ``-short-uuid` is used, discovery of two GPUs may look like this
+When ``-short-uuid`` is used, discovery of two GPUs may look like this
 
 ::
 

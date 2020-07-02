@@ -15,12 +15,13 @@ Release Notes:
 
 -  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
    now tries to parse the entire string passed to it.  Failure results in a
-   ``SyntaxError``.  This prevents strings like ``foo = bar`` from silently
+   :class:`SyntaxError`.  This prevents strings like ``"foo = bar"`` from silently
    being parsed as just ``foo`` and causing unexpected results.
    :ticket:`7607`
 
 -  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
-   now accepts an exprTree or a string.
+   now accepts :class:`classad.ExprTree` (creating an identical copy)
+   in addition to strings, making it easier to handle inputs uniformly.
    :ticket:`7654`
 
 -  API change in the Python bindings: we deprecated ``Schedd.negotiate()``.
@@ -31,6 +32,18 @@ Release Notes:
    and ``htcondor.LogReader``,  as well as the functions ``htcondor.lock()``
    and ``htcondor.read_events()``.
    :ticket:`7690`
+
+- API change in the Python bindings: the methods
+  :meth:`htcondor.Schedd.query`,
+  :meth:`htcondor.Schedd.xquery`, and
+  :meth:`htcondor.Schedd.history`
+  now use the argument names ``constraint`` and ``projection``
+  (for the query condition and the attributes to return from the query)
+  consistently.
+  The old argument names (``requirements`` and ``attr_list``) are deprecated,
+  but will still work (raising a :class:`FutureWarning` when used) until a future
+  release.
+  :ticket:`7630`
 
 New Features:
 
@@ -97,18 +110,6 @@ Bugs Fixed:
 - Fixed a segfault in the schedd that could happen on some platforms
   when handling certain startd failures after invoking ``condor_now``.
   :ticket:`7692`
-
-- The Python bindings methods
-  :meth:`htcondor.Schedd.query`,
-  :meth:`htcondor.Schedd.xquery`, and
-  :meth:`htcondor.Schedd.history`
-  now use the argument names ``constraint`` and ``projection``
-  (for the query condition and the attributes to return from the query)
-  consistently.
-  The old argument names (``requirements`` and ``attr_list``) are deprecated,
-  but will still work (raising a deprecation warning when used) until a future
-  release.
-  :ticket:`7630`
 
 - *classad_eval* no longer ignores trailing garbage in its first (ClassAd)
   argument.  This prevents  ``classad_eval 'x = y; y = 7' 'x'`` from
