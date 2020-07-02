@@ -68,6 +68,7 @@ public:
 	time_t	timeStamp;		// Timestamp of this daemon's binary.
 	time_t	startTime;		// Time this daemon was started
 	bool	isDC;
+	bool	use_collector_port; // true for daemon's that are SHARED_PORT in front of a COLLECTOR
 
 	Env     env;			// Environment of daemon.
 

@@ -65,7 +65,7 @@ else (WINDOWS)
 	# always prefer system libraries where possible
 	if(Boost_FOUND)
 
-		if (NOT PREFER_CPP11 AND NOT PREFER_TR1)
+		if (NOT PREFER_CPP11)
 			check_cxx_source_compiles("
 				#include <boost/unordered_map.hpp>
 				int main() {

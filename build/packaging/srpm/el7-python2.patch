@@ -1,0 +1,33 @@
+# On EL7 python3-requests is unavailable.
+# So, these scripts must use Python 2.
+
+diff --git a/src/condor_scripts/box_plugin.py b/src/condor_scripts/box_plugin.py
+index be91ed5..eeb97b8 100755
+--- a/src/condor_scripts/box_plugin.py
++++ b/src/condor_scripts/box_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/env python2
+ 
+ import os
+ import sys
+diff --git a/src/condor_scripts/gdrive_plugin.py b/src/condor_scripts/gdrive_plugin.py
+index 8ea93c3..86d2f36 100755
+--- a/src/condor_scripts/gdrive_plugin.py
++++ b/src/condor_scripts/gdrive_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/env python2
+ 
+ import os
+ import sys
+diff --git a/src/condor_scripts/onedrive_plugin.py b/src/condor_scripts/onedrive_plugin.py
+index 6a4b8d8..088d409 100755
+--- a/src/condor_scripts/onedrive_plugin.py
++++ b/src/condor_scripts/onedrive_plugin.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/env python2
+ 
+ import os
+ import sys

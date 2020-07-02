@@ -190,7 +190,7 @@ log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never
-arguments = 0
+arguments = 3600
 # group 'a.a' should be able to use slots unused by 'a.b'
 # set up requirements to stay out of lower slots (used by b.a and b.b)
 Requirements = (SlotID > 10)

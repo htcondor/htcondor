@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import threading
-import functools
 import inspect
 
 from . import htcondor
+from ._wrap import wraps
 
 # this is the single, global, re-entrant lock for the htcondor module
 LOCK = threading.RLock()
@@ -59,13 +59,7 @@ def add_locks(namespace, skip=None):
 
 
 def add_lock(func):
-    # assigned protects us from accessing attributes of the function object that
-    # may not exist inside functools.wraps, which can fail on 2.7
-    # Compare https://github.com/python/cpython/blob/2.7/Lib/functools.py#L33 to
-    # https://github.com/python/cpython/blob/3.7/Lib/functools.py#L53
-    assigned = (a for a in functools.WRAPPER_ASSIGNMENTS if hasattr(func, a))
-
-    @functools.wraps(func, assigned=assigned)
+    @wraps(func)
     def wrapper(*args, **kwargs):
         acquired = False
         is_cm = False

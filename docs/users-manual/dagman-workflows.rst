@@ -1,3 +1,5 @@
+.. _dagman-workflows:
+
 DAGMan Workflows
 ================
 

@@ -9,6 +9,6 @@ hold = true
 +last		= "first"
 +done		= FALSE
 Notification = NEVER
-arguments  = 0
+arguments  = 3600
 queue
 

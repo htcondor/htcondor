@@ -139,4 +139,5 @@ separated list of service names; each service name must have a corresponding
 between 0 and 65535.  Docker will automatically select a port on the host
 to forward to that port in the container; HTCondor will report that port
 in the job ad attribute ``<service-name>_HostPort`` after it becomes
-available.  This includes updating the job ad in the sandbox (``.job.ad``).
+available, which will be (several seconds) after the job starts.  HTCondor
+will update the job ad in the sandbox (``.job.ad``) at that time.

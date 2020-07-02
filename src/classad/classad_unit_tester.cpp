@@ -75,7 +75,7 @@ public:
     void AddSuccessfulTest(const char *name, int line_number);
     void AddFailedTest(const char *name, int line_number);
 
-    void GetResults(int &number_of_errors, int &number_of_tests);
+    void GetResults(int &number_of_errors, int &number_of_tests) const;
 
 private:
     int         _number_of_errors;
@@ -243,7 +243,7 @@ void Results::AddFailedTest(const char *name, int line_number)
     return;
 }
 
-void Results::GetResults(int &number_of_errors, int &number_of_tests)
+void Results::GetResults(int &number_of_errors, int &number_of_tests) const
 {
     number_of_errors = _number_of_errors;
     number_of_tests  = _number_of_tests;

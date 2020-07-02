@@ -317,7 +317,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => $burst,
 	return_submit_file_name => $on_submitnameknown,
-	duration => 0,
+	duration => 3600,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
@@ -363,7 +363,7 @@ $result = SimpleJob::RunCheck(
 	on_imageupdated => $on_imageupdated,
 	on_execute => $on_execute,
 	queue_sz => $burst,
-	duration => 0,
+	duration => 3600,
 	timeout => 600,
 );
 
@@ -406,7 +406,7 @@ $result = SimpleJob::RunCheck(
 	on_imageupdated => $on_imageupdated,
 	on_execute => $on_execute,
 	queue_sz => $burst,
-	duration => 0,
+	duration => 3600,
 	timeout => 600,
 );
 

@@ -473,12 +473,14 @@ limited to 20 slots, and chemistry would be limited to 10. This example
 in which the quota is defined by absolute values is called a static
 quota.
 
-Each job must state which group it belongs to. Currently this is opt-in,
+Each job must state which group it belongs to. By default, this is opt-in,
 and the system trusts each user to put the correct group in the submit
-description file. Jobs that do not identify themselves as a group member
-are negotiated for as part of the "<none>" group. Note that this
-requirement is per job, not per user. A given user may be a member of
-many groups. Jobs identify which group they are in by setting the
+description file. See "Setting Accounting Groups Automatically below"
+to configure the system to set them without user input and to prevent
+users from opting into the wrong groups.  Jobs that do not identify 
+themselves as a group member are negotiated for as part of the "<none>" 
+group. Note that this requirement is per job, not per user. A given user 
+may be a member of many groups. Jobs identify which group they are in by setting the
 **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
 and
 **accounting_group_user** :index:`accounting_group_user<single: accounting_group_user; submit commands>`
@@ -677,7 +679,8 @@ the user to submit to any other group.  An HTCondor meta-knob makes this
 easy.  By adding to the submit machine's configuration, the setting
 
 ::
-	USE Feature: AssignAccountingGroup(file_name_of_map)
+
+     USE Feature: AssignAccountingGroup(file_name_of_map)
 
 
 The admin can create a file that maps the users into their required
@@ -688,10 +691,11 @@ files:  Lines of three columns.  The first should be an asterisk
 accounting group that user should always submit to.  For example,
 
 ::
-	* Alice	group_physics
-	* Bob	group_atlas
-	* Carol group_physics
-	* /^student_.*/	group_students
+
+    * Alice	group_physics
+    * Bob	group_atlas
+    * Carol group_physics
+    * /^student_.*/	group_students
 
 The second field can be a regular expression, if
 enclosed in //.  Note that this is on the submit side, and the 

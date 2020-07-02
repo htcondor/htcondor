@@ -44,7 +44,7 @@ class ClassAdParser
 		~ClassAdParser();
 
 		void SetOldClassAd( bool old_syntax );
-		bool GetOldClassAd();
+		bool GetOldClassAd() const;
 
 		/** Parse a ClassAd 
 			@param buffer Buffer containing the string representation of the
