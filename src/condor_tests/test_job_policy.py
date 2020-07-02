@@ -95,7 +95,9 @@ def job_parameters(job_file, kill_file):
 @action
 def job(condor, job_parameters):
     job = condor.submit(job_parameters, count=1)
+
     yield job
+
     job.remove()
 
 

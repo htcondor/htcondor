@@ -103,6 +103,10 @@ def job(condor, job_parameters):
     job.remove()
 
 
+def ask_to_misbehave(job, proc, kill_file):
+    Path("{}.{}.{}".format(kill_file, job.clusterid, proc)).touch()
+
+
 def issue_drain_command(condor):
     with condor.use_config():
         hostname = htcondor.param["FULL_HOSTNAME"]
@@ -131,10 +135,6 @@ def wait_for_draining_to_start(condor):
             break
 
     assert foundClaimedRetiring
-
-
-def ask_to_misbehave(job, proc, kill_file):
-    Path("{}.{}.{}".format(kill_file, job.clusterid, proc)).touch()
 
 
 @action
