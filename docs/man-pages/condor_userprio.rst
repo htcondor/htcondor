@@ -1,4 +1,4 @@
-      
+
 
 *condor_userprio*
 ==================
@@ -107,6 +107,9 @@ Options
     *username* to the specified *value*.
  **-setprio** *username value*
     (Edit option) Set the real priority of the user specified by
+    *username* to the specified *value*.
+ **-setceil** *username value*
+    (Edit option) Set the ceiling for the user specified by
     *username* to the specified *value*.
  **-activefrom** *month day year*
     (Display option) Display information for users who have some
@@ -218,30 +221,30 @@ the **-most** Display option.
 
 ::
 
-    Last Priority Update:  1/19 13:14 
-                            Effective   Priority   Res   Total Usage  Time Since 
-    User Name                Priority    Factor   In Use (wghted-hrs) Last Usage 
-    ---------------------- ------------ --------- ------ ------------ ---------- 
-    www-cndr@cs.wisc.edu           0.56      1.00      0    591998.44    0+16:30 
-    joey@cs.wisc.edu               1.00      1.00      1       990.15 <now> 
-    suzy@cs.wisc.edu               1.53      1.00      0       261.78    0+09:31 
-    leon@cs.wisc.edu               1.63      1.00      2     12597.82 <now> 
-    raj@cs.wisc.edu                3.34      1.00      0      8049.48    0+01:39 
-    jose@cs.wisc.edu               3.62      1.00      4     58137.63 <now> 
-    betsy@cs.wisc.edu             13.47      1.00      0      1475.31    0+22:46 
-    petra@cs.wisc.edu            266.02    500.00      1    288082.03 <now> 
-    carmen@cs.wisc.edu           329.87     10.00    634   2685305.25 <now> 
-    carlos@cs.wisc.edu           687.36     10.00      0     76555.13    0+14:31 
-    ali@proj1.wisc.edu          5000.00  10000.00      0      1315.56    0+03:33 
-    apu@nnland.edu              5000.00  10000.00      0       482.63    0+09:56 
-    pop@proj1.wisc.edu         26688.11  10000.00      1     49560.88 <now> 
-    franz@cs.wisc.edu          29352.06    500.00    109    600277.88 <now> 
-    martha@nnland.edu          58030.94  10000.00      0     48212.79    0+12:32 
-    izzi@nnland.edu            62106.40  10000.00      0      6569.75    0+02:26 
-    marta@cs.wisc.edu          62577.84    500.00     29    193706.30 <now> 
-    kris@proj1.wisc.edu       100597.94  10000.00      0     20814.24    0+04:26 
-    boss@proj1.wisc.edu       318229.25  10000.00      3    324680.47 <now> 
-    ---------------------- ------------ --------- ------ ------------ ---------- 
+    Last Priority Update:  1/19 13:14
+                            Effective   Priority   Res   Total Usage  Time Since
+    User Name                Priority    Factor   In Use (wghted-hrs) Last Usage
+    ---------------------- ------------ --------- ------ ------------ ----------
+    www-cndr@cs.wisc.edu           0.56      1.00      0    591998.44    0+16:30
+    joey@cs.wisc.edu               1.00      1.00      1       990.15 <now>
+    suzy@cs.wisc.edu               1.53      1.00      0       261.78    0+09:31
+    leon@cs.wisc.edu               1.63      1.00      2     12597.82 <now>
+    raj@cs.wisc.edu                3.34      1.00      0      8049.48    0+01:39
+    jose@cs.wisc.edu               3.62      1.00      4     58137.63 <now>
+    betsy@cs.wisc.edu             13.47      1.00      0      1475.31    0+22:46
+    petra@cs.wisc.edu            266.02    500.00      1    288082.03 <now>
+    carmen@cs.wisc.edu           329.87     10.00    634   2685305.25 <now>
+    carlos@cs.wisc.edu           687.36     10.00      0     76555.13    0+14:31
+    ali@proj1.wisc.edu          5000.00  10000.00      0      1315.56    0+03:33
+    apu@nnland.edu              5000.00  10000.00      0       482.63    0+09:56
+    pop@proj1.wisc.edu         26688.11  10000.00      1     49560.88 <now>
+    franz@cs.wisc.edu          29352.06    500.00    109    600277.88 <now>
+    martha@nnland.edu          58030.94  10000.00      0     48212.79    0+12:32
+    izzi@nnland.edu            62106.40  10000.00      0      6569.75    0+02:26
+    marta@cs.wisc.edu          62577.84    500.00     29    193706.30 <now>
+    kris@proj1.wisc.edu       100597.94  10000.00      0     20814.24    0+04:26
+    boss@proj1.wisc.edu       318229.25  10000.00      3    324680.47 <now>
+    ---------------------- ------------ --------- ------ ------------ ----------
     Number of users: 19                              784   4969073.00    0+23:59
 
 Example 2 This is an example of the default output for a pool that uses
@@ -250,25 +253,25 @@ wide display.
 
 ::
 
-    % condor_userprio -pool crane.cs.wisc.edu -allusers 
-    Last Priority Update:  1/19 13:18 
-    Group                                 Config     Use    Effective   Priority   Res   Total Usage  Time Since 
-      User Name                            Quota   Surplus   Priority    Factor   In Use (wghted-hrs) Last Usage 
-    ------------------------------------ --------- ------- ------------ --------- ------ ------------ ---------- 
-    <none>                                    0.00     yes                   1.00      0         6.78    9+03:52 
-      johnsm@crane.cs.wisc.edu                                     0.50      1.00      0         6.62    9+19:42 
-      John.Smith@crane.cs.wisc.edu                                 0.50      1.00      0         0.02    9+03:52 
-      Sedge@crane.cs.wisc.edu                                      0.50      1.00      0         0.05   13+03:03 
-      Duck@crane.cs.wisc.edu                                       0.50      1.00      0         0.02   31+00:28 
-      other@crane.cs.wisc.edu                                      0.50      1.00      0         0.04   16+03:42 
-    Duck                                      2.00      no                   1.00      0         0.02   13+02:57 
-      goose@crane.cs.wisc.edu                                      0.50      1.00      0         0.02   13+02:57 
-    Sedge                                     4.00      no                   1.00      0         0.17    9+03:07 
-      johnsm@crane.cs.wisc.edu                                     0.50      1.00      0         0.13    9+03:08 
-      Half@crane.cs.wisc.edu                                       0.50      1.00      0         0.02   31+00:02 
-      John.Smith@crane.cs.wisc.edu                                 0.50      1.00      0         0.05    9+03:07 
-      other@crane.cs.wisc.edu                                      0.50      1.00      0         0.01   28+19:34 
-    ------------------------------------ --------- ------- ------------ --------- ------ ------------ ---------- 
+    % condor_userprio -pool crane.cs.wisc.edu -allusers
+    Last Priority Update:  1/19 13:18
+    Group                                 Config     Use    Effective   Priority   Res   Total Usage  Time Since
+      User Name                            Quota   Surplus   Priority    Factor   In Use (wghted-hrs) Last Usage
+    ------------------------------------ --------- ------- ------------ --------- ------ ------------ ----------
+    <none>                                    0.00     yes                   1.00      0         6.78    9+03:52
+      johnsm@crane.cs.wisc.edu                                     0.50      1.00      0         6.62    9+19:42
+      John.Smith@crane.cs.wisc.edu                                 0.50      1.00      0         0.02    9+03:52
+      Sedge@crane.cs.wisc.edu                                      0.50      1.00      0         0.05   13+03:03
+      Duck@crane.cs.wisc.edu                                       0.50      1.00      0         0.02   31+00:28
+      other@crane.cs.wisc.edu                                      0.50      1.00      0         0.04   16+03:42
+    Duck                                      2.00      no                   1.00      0         0.02   13+02:57
+      goose@crane.cs.wisc.edu                                      0.50      1.00      0         0.02   13+02:57
+    Sedge                                     4.00      no                   1.00      0         0.17    9+03:07
+      johnsm@crane.cs.wisc.edu                                     0.50      1.00      0         0.13    9+03:08
+      Half@crane.cs.wisc.edu                                       0.50      1.00      0         0.02   31+00:02
+      John.Smith@crane.cs.wisc.edu                                 0.50      1.00      0         0.05    9+03:07
+      other@crane.cs.wisc.edu                                      0.50      1.00      0         0.01   28+19:34
+    ------------------------------------ --------- ------- ------------ --------- ------ ------------ ----------
     Number of users: 10                            ByQuota                             0         6.97
 
 Exit Status

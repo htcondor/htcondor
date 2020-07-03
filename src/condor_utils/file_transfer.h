@@ -314,14 +314,16 @@ class FileTransfer final: public Service {
 
 	void InsertPluginMappings(MyString methods, MyString p);
 	void SetPluginMappings( CondorError &e, const char* path );
-	int InitializePlugins(CondorError &e);
-	int InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles);
+	int InitializeSystemPlugins(CondorError &e);
+	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
+	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles);
 	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
 	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
     int OutputFileTransferStats( ClassAd &stats );
-	MyString GetSupportedMethods();
+	MyString GetSupportedMethods(CondorError &err);
+	void DoPluginConfiguration();
 
 		// Convert directories with a trailing slash to a list of the contents
 		// of the directory.  This is used so that ATTR_TRANSFER_INPUT_FILES

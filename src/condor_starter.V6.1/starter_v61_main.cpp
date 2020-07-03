@@ -87,7 +87,9 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
-	printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	if(param_boolean("ENABLE_URL_TRANSFERS", true)) {
+		printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	}
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
@@ -178,14 +180,12 @@ printClassAd( void )
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;
 	CondorError e;
-	ft.InitializePlugins(e);
-	if (e.code()) {
-		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
-	}
-
-	MyString method_list = ft.GetSupportedMethods();
+	MyString method_list = ft.GetSupportedMethods(e);
 	if (!method_list.IsEmpty()) {
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.Value());
+	}
+	if (e.code()) {
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
 
 #if defined(WIN32)

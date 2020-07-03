@@ -385,7 +385,7 @@ export_dc_tool()
         :type dc: :class:`DaemonCommands`
         :param str target: An additional command to send to a daemon. Some commands
             require additional arguments; for example, sending ``DaemonOff`` to a
-            ``condor_master`` requires one to specify which subsystem to turn off.
+            *condor_master* requires one to specify which subsystem to turn off.
         )C0ND0R",
         boost::python::args("ad", "dc", "target")))
         ;
@@ -395,7 +395,7 @@ export_dc_tool()
         Send a keep alive message to an HTCondor daemon.
 
         This is used when the python process is run as a child daemon under
-        the ``condor_master``.
+        the *condor_master*.
 
         :param ad: A :class:`~classad.ClassAd` specifying the location of the daemon.
             This ad is typically found by using :meth:`Collector.locate`.

@@ -263,6 +263,11 @@ Machine ClassAd Attributes
     entries`.
     :index:`Has_sse4_1<single: Has_sse4_1; ClassAd machine attribute>`
 
+``HasUserNamespaces``
+    A boolean value that when ``True`` identifies that the jobs on this machine
+    can create user namespaces without root privileges.
+    :index:`HasUserNamespaces<single: HasUserNamespaces; ClassAd machine attribute>`
+
 ``Has_sse4_1``
     A boolean value set to ``True`` if the machine being advertised
     supports the SSE 4.1 instructions, and ``Undefined`` otherwise.

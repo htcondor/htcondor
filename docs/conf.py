@@ -55,6 +55,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'sphinx_autodoc_typehints',
     'nbsphinx',
     'ticket',
     'macro',
@@ -88,7 +89,7 @@ Licensed under the Apache License, Version 2.0.'
 # The short X.Y version.
 version = '8.9'
 # The full version, including alpha/beta/rc tags.
-release = '8.9.8'
+release = '8.9.9'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2020
@@ -379,9 +380,6 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # autodoc settings
 autoclass_content = 'both'
-
-# napoleon settings
-napoleon_use_param = False
 
 
 def modify_docstring(app, what, name, obj, options, lines):

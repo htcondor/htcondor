@@ -140,6 +140,7 @@ chdir("$here");
 
 my $append_condor_config = '
 	DAEMON_LIST = MASTER,STARTD
+	SHARED_PORT_PORT = 0
 	NEGOTIATOR_INTERVAL = 5
 	NUM_CPUS = 2
 	SLOT1_JOB_HOOK_KEYWORD = TEST_FETCH

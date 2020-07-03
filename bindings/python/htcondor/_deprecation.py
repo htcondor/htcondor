@@ -122,10 +122,20 @@ def deprecate_8_9_8():
         kwargs = kwargs.copy()
 
         if "requirements" in kwargs:
-            warnings.warn('The "requirements" argument of {}() will be renamed to "constraint" in a future release. For now, it will accept both names.'.format(method.__name__), FutureWarning)
+            warnings.warn(
+                'The "requirements" argument of {}() will be renamed to "constraint" in a future release. For now, it will accept both names.'.format(
+                    method.__name__
+                ),
+                FutureWarning,
+            )
             kwargs["constraint"] = kwargs.pop("requirements")
         if "attr_list" in kwargs:
-            warnings.warn('The "attr_list" argument of {}() will be renamed to "projection" in a future release. For now, it will accept both names.'.format(method.__name__), FutureWarning)
+            warnings.warn(
+                'The "attr_list" argument of {}() will be renamed to "projection" in a future release. For now, it will accept both names.'.format(
+                    method.__name__
+                ),
+                FutureWarning,
+            )
             kwargs["projection"] = kwargs.pop("attr_list")
 
         return kwargs
@@ -133,5 +143,3 @@ def deprecate_8_9_8():
     htcondor.Schedd.query = normalize_query_args(htcondor.Schedd.query)
     htcondor.Schedd.xquery = normalize_query_args(htcondor.Schedd.xquery)
     htcondor.Schedd.history = normalize_query_args(htcondor.Schedd.history)
-
-

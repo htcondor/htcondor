@@ -98,7 +98,7 @@ my $on_evictedwithoutcheckpoint = sub {
 };
 
 my $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $aborted,
 	on_submit => $on_submit,
 	on_success => $ExitSuccess,

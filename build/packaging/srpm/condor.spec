@@ -148,7 +148,7 @@ Source0: %{name}-%{tarball_version}.tar.gz
 Source1: generate-tarball.sh
 %endif
 
-# % if %systemd
+# % if % systemd
 Source3: osg-env.conf
 # % else
 Source4: condor.osg-sysconfig
@@ -188,7 +188,7 @@ Source118: voms-2.0.6.tar.gz
 %endif
 
 Patch1: old-sphinx.patch
-Patch2: python-shebang.patch
+Patch2: el7-python2.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -399,10 +399,14 @@ Requires: %name-external-libs%{?_isa} = %version-%release
 
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python-requests
+Requires: python2-condor
 %endif
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3-requests
 %endif
+
+# Useful tools are using the Python bindings
+Requires: python3-condor
 
 Requires: initscripts
 
@@ -436,7 +440,7 @@ Requires(post): selinux-policy-targeted
 Obsoletes: condor-static < 7.2.0
 
 # Standard Universe discontinued as of 8.9.0
-Obsoletes: condor-std-universe
+Obsoletes: condor-std-universe < 8.9.0
 
 %if ! %cream
 Obsoletes: condor-cream-gahp <= %{version}
@@ -654,17 +658,6 @@ Requires: boost-python3
 Requires: python3
 %endif
 
-#%if 0%{?rhel} >= 7 && ! %uw_build
-# auto provides generator does not pick these up for some reason
-#    %ifarch x86_64
-#Provides: classad.so()(64bit)
-#Provides: htcondor.so()(64bit)
-#    %else
-#Provides: classad.so
-#Provides: htcondor.so
-#    %endif
-#%endif
-
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
@@ -700,9 +693,6 @@ multiple clusters.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-Requires: python2-condor = %version-%release
-%endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
@@ -797,9 +787,6 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-Requires: python2-condor = %version-%release
-%endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
@@ -829,7 +816,8 @@ exit 0
 %endif
 
 %patch1 -p1
-%if 0%{?rhel} >= 8 || 0%{?fedora}
+
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %patch2 -p1
 %endif
 
@@ -1269,6 +1257,9 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 
 populate %{_libdir}/condor %{buildroot}/%{_libdir}/libgetpwnam.so
 
+# htcondor/dags only works with Python3
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
+
 %clean
 rm -rf %{buildroot}
 
@@ -1294,7 +1285,7 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service.d/osg-env.conf
 %endif
 # Disabled until HTCondor security fixed.
-# %{_unitdir}/condor.socket
+# % {_unitdir}/condor.socket
 %else
 %_initrddir/condor
 %if 0%{?osg} || 0%{?hcc}

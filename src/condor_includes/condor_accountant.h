@@ -60,10 +60,12 @@ public:
 
   void Initialize(GroupEntry* group);  // Configuration
 
-  int GetResourcesUsed(const string& CustomerName); // get # of used resources (unweighted by SlotWeight)
+  int   GetResourcesUsed(const string& CustomerName); // get # of used resources (unweighted by SlotWeight)
   float GetWeightedResourcesUsed(const string& CustomerName);
   float GetPriority(const string& CustomerName); // get priority for a customer
-  void SetPriority(const string& CustomerName, float Priority); // set priority for a customer
+  int   GetCeiling(const string& CustomerName); // get Ceiling for a customer
+  void  SetPriority(const string& CustomerName, float Priority); // set priority for a customer
+  void  SetCeiling(const string& CustomerName, int Ceiling); // set Ceiling for a customer
 
   void SetAccumUsage(const string& CustomerName, float AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const string& CustomerName, int BeginTime); // set begin usage time for a customer

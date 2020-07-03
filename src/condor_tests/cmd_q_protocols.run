@@ -191,7 +191,7 @@ my $ExitSuccess = sub {
 };
 
 my $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $aborted,
 	on_submit => $submit,
 	on_success => $ExitSuccess,
@@ -223,7 +223,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $aborted,
 	on_submit => $submit,
 	on_success => $ExitSuccess,
@@ -268,7 +268,7 @@ if(($qsize == $q2size)&&($qsize == 0)) {
 # the new protocol
 
 $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $aborted,
 	on_execute => $on_execute,
 	on_submit => $submit,
@@ -300,7 +300,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $aborted,
 	on_submit => $submit,
 	on_execute => $on_execute,

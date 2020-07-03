@@ -164,20 +164,20 @@ boost::python::object Value__eq__(classad::Value::ValueType val, boost::python::
         return boost::python::object(true);
     }
 
-    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError());
+    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true);
     boost::python::object left(tmp);
     return left.attr("__eq__")(right);
 }
 
 boost::python::object ValueInt(classad::Value::ValueType val) {
-    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError());
+    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true);
     boost::python::object expr(tmp);
     return expr.attr("__int__")();
 }
 
 
 boost::python::object ValueFloat(classad::Value::ValueType val) {
-    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError());
+    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true);
     boost::python::object expr(tmp);
     return expr.attr("__float__")();
 }
@@ -189,14 +189,14 @@ boost::python::object ValueFloat(classad::Value::ValueType val) {
 
 #define VALUE_THIS_OPERATOR_DECLARE(pykind) \
     boost::python::object Value__##pykind##__(classad::Value::ValueType val, boost::python::object right) {\
-        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError()); \
+        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true); \
         boost::python::object left(tmp); \
         return getattr(left, "__"#pykind"__")(right); \
     }
 
 #define VALUE_THIS_ROPERATOR_DECLARE(pykind) \
     boost::python::object Value__r##pykind##__(classad::Value::ValueType val, boost::python::object right) {\
-        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError()); \
+        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true); \
         boost::python::object left(tmp); \
         return getattr(left, "__r"#pykind"__")(right); \
     }
@@ -206,7 +206,7 @@ boost::python::object ValueFloat(classad::Value::ValueType val) {
 
 #define VALUE_UNARY_OPERATOR_DECLARE(pykind) \
     boost::python::object Value__##pykind##__(classad::Value::ValueType val) { \
-        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError()); \
+        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true); \
         boost::python::object left(tmp); \
         return getattr(left, "__"#pykind"__")(); \
     }
@@ -636,7 +636,7 @@ export_classad()
             R"C0ND0R(
             The :class:`ExprTree` class represents an expression in the ClassAd language.
 
-            The :class:`ExprTree` constructor takes a string, which it will attempt to
+            The :class:`ExprTree` constructor takes an ExprTree, or a string, which it will attempt to
             parse into a ClassAd expression.
             ``str(expr)`` will turn the ``ExprTree`` back into its string representation.
             ``int``, ``float``, and ``bool`` behave similarly, evaluating as necessary.
@@ -650,7 +650,7 @@ export_classad()
                for ``e1 && e2`` cause ``e1`` to be evaluated.  In order to get the 'logical and' of the two expressions *without*
                evaluating, use ``e1.and_(e2)``.  Similarly, ``e1.or_(e2)`` results in the 'logical or'.
             )C0ND0R",
-            init<std::string>((boost::python::arg("self"), boost::python::arg("expr"))))
+            init<boost::python::object>((boost::python::arg("self"), boost::python::arg("expr"))))
         .def_pickle(exprtree_pickle_suite())
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)

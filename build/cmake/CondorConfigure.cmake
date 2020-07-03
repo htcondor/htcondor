@@ -35,7 +35,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 	    add_definitions(-DNTDDI_VERSION=NTDDI_WIN7)
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	
+
 	if(NOT (MSVC_VERSION LESS 1700))
 		set(PREFER_CPP11 TRUE)
 	endif()
@@ -53,7 +53,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 		dprint("**** OUT OF SOURCE BUILDS ****")
 		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 	endif()
-    
+
 	# means user did not specify, so change the default.
 	if ( ${CMAKE_INSTALL_PREFIX} MATCHES "Program Files" )
 		# mimic *nix for consistency
@@ -69,7 +69,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 
 endif()
 
-  
+
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
 message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX}")
@@ -223,7 +223,7 @@ if(NOT WINDOWS)
 				get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
 				message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 			endif()
-		
+
 			message(STATUS "  Looking for python 3.6 in HKLM\\Software\\Wow3264Node")
 			get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
 			message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
@@ -256,11 +256,11 @@ if(NOT WINDOWS)
 				set(PYTHON_QUERY_PART_09 "print(hasattr(sys, 'gettotalrefcount')+0);")
 				set(PYTHON_QUERY_PART_10 "print(struct.calcsize('@P'));")
 				set(PYTHON_QUERY_PART_11 "print(s.get_config_var('LDVERSION') or s.get_config_var('VERSION'));")
-				
+
 				set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}")
-				
+
 				if( NOT "${PYTHON_INSTALL_DIR}" MATCHES "registry")
-					execute_process(COMMAND "${PYTHON_INSTALL_DIR}\\python.exe" "-c" "${PYTHON_QUERY_COMMAND}" 
+					execute_process(COMMAND "${PYTHON_INSTALL_DIR}\\python.exe" "-c" "${PYTHON_QUERY_COMMAND}"
 									RESULT_VARIABLE _PYTHON_SUCCESS
 									OUTPUT_VARIABLE _PYTHON_VALUES
 									ERROR_VARIABLE _PYTHON_ERROR_VALUE
@@ -626,19 +626,7 @@ if( NOT WINDOWS)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 	endif()
 
-	if (NOT PREFER_CPP11)
 
-	  # Some early 4.0 g++'s have unordered maps, but their iterators don't work
-	  check_cxx_source_compiles("
-		#include <tr1/unordered_map>
-		int main() {
-			std::tr1::unordered_map<int, int>::const_iterator ci;
-			return 0;
-		}
-		" PREFER_TR1 )
-
-	endif(NOT PREFER_CPP11)
-	
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
@@ -844,7 +832,7 @@ endif()
 
 #####################################
 # ssh_to_job option
-if (NOT WINDOWS) 
+if (NOT WINDOWS)
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 if ( HAVE_SSH_TO_JOB )
@@ -900,7 +888,7 @@ endif()
 # I'd like this to apply to classads build as well, so I put it
 # above the addition of the .../src/classads subdir:
 if (LINUX
-    AND PROPER 
+    AND PROPER
     AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     AND NOT (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.4.6))
 
@@ -981,7 +969,7 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1)
   endif()
-  
+
   # DRMAA currently punted on Windows until we can figure out correct build
   #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
@@ -1056,7 +1044,7 @@ if (NOT WINDOWS)
 else (NOT WINDOWS)
 	add_custom_target( ALL_EXTERN DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
-endif (NOT WINDOWS)	
+endif (NOT WINDOWS)
 endif(CONDOR_EXTERNALS)
 
 ######### special case for contrib
@@ -1180,12 +1168,12 @@ if (OPENMP_FOUND)
 endif()
 
 if(MSVC)
-	#disable autolink settings 
+	#disable autolink settings
 	add_definitions(-DBOOST_ALL_NO_LIB)
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FC")      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
-		# turn on code analysis. 
+		# turn on code analysis.
 		# also disable 6211 (leak because of exception). we use new but not catch so this warning is just noise
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /analyze /wd6211") # turn on code analysis (level 6 warnings)
 	endif(MSVC_ANALYZE)
@@ -1194,7 +1182,7 @@ if(MSVC)
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4275")  #
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4996")  # deprecation warnings
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4273")  # inconsistent dll linkage
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd6334") # inclusion warning from boost. 
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd6334") # inclusion warning from boost.
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
@@ -1270,7 +1258,7 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=unused-local-typedefs")
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
 
-	# check compiler flag not working for this flag.  
+	# check compiler flag not working for this flag.
 	if (NOT CMAKE_C_COMPILER_VERSION VERSION_LESS "4.8")
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
 	if (c_Wdeprecated_declarations)
