@@ -207,11 +207,7 @@ if (BUILD_TESTING)
 		condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "core;quick;full")
 		condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "core;quick;full")
 		condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "core;quick;full")
-
-		condor_pl_test(test_job_policy "Test the HOLD_IF_MEMORY_EXCEEDED job policy" "core;quick;full")
-		condor_pl_test(test_backfill_while_draining "Test backfill-while-draining" "core;quick;full")
-		condor_pl_test(test_job_policy_while_draining "Test the HOLD_IF_MEMORY_EXCEEDED job policy while draining" "core;quick;full")
-		condor_pl_test(test_job_policy_on_backfill "Test the HOLD_IF_MEMORY_EXCEEDED policy on a backfill-while-draining job" "core;quick;full")
+		condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "core;quick;full")
 
 		# htcondor-dags test suite
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "core;quick;full;quicknolink")

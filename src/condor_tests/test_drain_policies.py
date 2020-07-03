@@ -1,6 +1,17 @@
+#!/usr/bin/env pytest
+
+#
+# Reimplements cmd_drain_policies.run.
+#
+
 import time
 import textwrap
 from pathlib import Path
+
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 import htcondor
 
@@ -10,6 +21,7 @@ from ornithology import (
     Condor,
     action,
     ClusterState,
+    JobStatus,
 )
 
 
@@ -148,3 +160,85 @@ def backfill_job(condor, job, job_parameters):
 
     backfill_job.remove()
 
+
+@action
+def misbehaving_job(job, kill_file):
+    assert job.wait(
+        condition=ClusterState.all_running,
+        timeout=60,
+        fail_condition=ClusterState.any_terminal,
+    )
+
+    ask_to_misbehave(job, 0, kill_file)
+    return job
+
+
+class TestPolicy:
+    def test_job_is_held(self, misbehaving_job):
+        assert misbehaving_job.wait(
+            condition=ClusterState.all_held,
+            timeout=60,
+            fail_condition=lambda self: self.any_status(
+                JobStatus.COMPLETED, JobStatus.REMOVED
+            ),
+        )
+
+
+# This subtest will become obsolete when we port cmd_drain_scavenging and
+# cmd_drain_scavenging_vacation.
+class TestBackfillJob:
+    def test_job_starts(self, backfill_job):
+        assert backfill_job.wait(
+            condition=ClusterState.all_running,
+            timeout=60,
+            fail_condition=ClusterState.any_held,
+        )
+
+
+@action
+def misbehaving_backfill_job(backfill_job, kill_file):
+    assert backfill_job.wait(
+        condition=ClusterState.all_running,
+        timeout=60,
+        fail_condition=ClusterState.any_terminal,
+    )
+
+    ask_to_misbehave(backfill_job, 0, kill_file)
+    return backfill_job
+
+
+class TestBackfillPolicy:
+    def test_job_held(self, misbehaving_backfill_job):
+        assert misbehaving_backfill_job.wait(
+            condition=ClusterState.all_held,
+            timeout=60,
+            fail_condition=lambda self: self.any_status(
+                JobStatus.COMPLETED, JobStatus.REMOVED
+            ),
+        )
+
+
+@action
+def misbehaving_draining_job(condor, job, kill_file):
+    assert job.wait(
+        condition=ClusterState.all_running,
+        timeout=60,
+        fail_condition=ClusterState.any_terminal,
+    )
+
+    issue_drain_command(condor)
+    wait_for_draining_to_start(condor)
+
+    ask_to_misbehave(job, 0, kill_file)
+    return job
+
+
+class TestDrainingPolicy:
+    def test_job_held(self, misbehaving_draining_job):
+        assert misbehaving_draining_job.wait(
+            condition=ClusterState.all_held,
+            timeout=60,
+            fail_condition=lambda self: self.any_status(
+                JobStatus.COMPLETED, JobStatus.REMOVED
+            ),
+        )
