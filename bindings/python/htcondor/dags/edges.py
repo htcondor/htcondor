@@ -38,6 +38,11 @@ class JoinFactory:
 
 
 class BaseEdge(abc.ABC):
+    """
+    An abstract class that represents the edge between two logical nodes
+    in the DAG.
+    """
+
     @abc.abstractmethod
     def get_edges(
         self, parent: "node.BaseNode", child: "node.BaseNode", join_factory: JoinFactory
@@ -51,7 +56,8 @@ class BaseEdge(abc.ABC):
         """
         This abstract method is used by the writer to figure out which nodes
         in the parent and child should be connected by an actual DAGMan
-        edge. It should yield (or simply return) individual edge specifications.
+        edge. It should yield (or simply return an iterable of)
+        individual edge specifications.
 
         Each edge specification is a tuple containing two elements: the first is
         a group of parent node indices, the second is a group of child node indices.
@@ -112,11 +118,11 @@ class ManyToMany(BaseEdge):
         if num_parent_vars == 1 or num_child_vars == 1:
             # the weird pattern here is just to symmetrize the result, so that
             # we don't care which number of vars was 1
-            yield (tuple(range(num_parent_vars)), tuple(range(num_child_vars)))
+            yield tuple(range(num_parent_vars)), tuple(range(num_child_vars))
         else:
             join = join_factory.get_join_node()
-            yield (tuple(range(num_parent_vars)), join)
-            yield (join, tuple(range(num_child_vars)))
+            yield tuple(range(num_parent_vars)), join
+            yield join, tuple(range(num_child_vars))
 
 
 class OneToOne(BaseEdge):
@@ -124,6 +130,7 @@ class OneToOne(BaseEdge):
     This edge connects two layers "linearly": each underlying node in the child
     layer is a child of the corresponding underlying node with the same index
     in the parent layer.
+    The parent and child layers must have the same number of underlying nodes.
     """
 
     def get_edges(
@@ -155,7 +162,7 @@ class Grouper(BaseEdge):
     constructor). Chunks are then connected like a :class:`OneToOne` edge.
 
     The number of chunks in each layer must be the same, and each layer must be
-    evenly-divided into chunks.
+    evenly-divided into chunks (no leftover underlying nodes).
 
     When both chunk sizes are ``1`` this is identical to a :class:`OneToOne`
     edge, and you should use that edge instead because it produces a more
@@ -238,6 +245,14 @@ class Slicer(BaseEdge):
     def __init__(
         self, parent_slice: slice = slice(None), child_slice: slice = slice(None)
     ):
+        """
+        Parameters
+        ----------
+        parent_slice
+            The slice to use for the parent layer.
+        child_slice
+            The slice to use for the child layer.
+        """
         self.parent_slice = parent_slice
         self.child_slice = child_slice
 

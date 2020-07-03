@@ -94,7 +94,6 @@ Submitting Jobs
 Interacting with Negotiators
 ----------------------------
 
-.. deprecated:: 8.9.8
 .. autoclass:: Negotiator
 
    .. automethod:: deleteUser
