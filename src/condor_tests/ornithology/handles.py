@@ -356,11 +356,15 @@ class ClusterHandle(ConstraintHandle):
             if condition(self.state):
                 break
 
-            if fail_condition(self.state) or (
-                timeout is not None and time.time() > start_time + timeout
-            ):
+            if fail_condition(self.state):
                 logger.warning(
-                    "Wait for handle {} did not complete successfully".format(self)
+                    "Wait for handle {} triggered its failure condition".format(self)
+                )
+                return False
+
+            if timeout is not None and time.time() > start_time + timeout:
+                logger.warning(
+                    "Wait for handle {} timed out".format(self)
                 )
                 return False
 
