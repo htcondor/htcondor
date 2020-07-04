@@ -359,9 +359,9 @@ sub DoChild
         print "run_test $$: $testname is python, checking python bindings\n";
         SetupPythonPath();
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
-        $perl = "python";
+        $perl = "python3";
         print "\tPython version: ";
-        system ("python --version");
+        system ("python3 --version");
     }
 
     my $test_starttime = time();
@@ -571,7 +571,7 @@ sub StopTestPersonal {
 sub SetupPythonPath {
     my $reldir = `condor_config_val release_dir`; chomp $reldir;
     my $pathsep = ':';
-    my $relpy = "$reldir/lib/python";
+    my $relpy = "$reldir/lib/python3";
     if ($iswindows) { $relpy = "$reldir\\lib\\python"; $pathsep = ';'; }
 
     # debug code, show what is in release dir and lib and lib/python
