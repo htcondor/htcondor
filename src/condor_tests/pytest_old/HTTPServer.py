@@ -1,12 +1,12 @@
-import SimpleHTTPServer, BaseHTTPServer
+import http.server, http.server
 import socket
-import thread
+import _thread
 
-from Globals import *
+from .Globals import *
 from random import randint
-from Utils import Utils
+from .Utils import Utils
 
-class StoppableHTTPServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class StoppableHTTPServerHandler(http.server.BaseHTTPRequestHandler):
 
     urls = {}
 
@@ -21,13 +21,13 @@ class StoppableHTTPServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             s.end_headers()
 
 
-class StoppableHTTPServer(BaseHTTPServer.HTTPServer):
+class StoppableHTTPServer(http.server.HTTPServer):
 
     def __del__(self):
         self.stop()
 
     def server_bind(self):
-        BaseHTTPServer.HTTPServer.server_bind(self)
+        http.server.HTTPServer.server_bind(self)
         self.socket.settimeout(1)
         self.run = True
 
@@ -41,7 +41,7 @@ class StoppableHTTPServer(BaseHTTPServer.HTTPServer):
                 pass
 
     def start(self):
-        thread.start_new_thread(self.serve, ())
+        _thread.start_new_thread(self.serve, ())
 
     def stop(self):
         self.run = False

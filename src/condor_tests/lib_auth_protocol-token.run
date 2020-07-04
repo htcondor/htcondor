@@ -38,7 +38,7 @@ from pytest_old.Utils import Utils
 
 def preparePasswordFile( file, contents ):
 	Utils.WriteFile( file, contents )
-	os.chmod( file, 0600 )
+	os.chmod( file, 0o600 )
 
 def extractTokenFileFromListOutput( output ):
 	return output.split( ' ' )[-1][0:-1]
