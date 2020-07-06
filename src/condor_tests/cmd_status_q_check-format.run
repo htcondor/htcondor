@@ -116,7 +116,7 @@ my $ExitSuccess = sub {
 };
 
 my $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $aborted,
 	on_submit => $submit,
 	on_success => $ExitSuccess,

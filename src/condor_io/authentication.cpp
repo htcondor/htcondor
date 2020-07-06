@@ -65,6 +65,9 @@ char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
 
+char const *AUTH_METHOD_FAMILY = "FAMILY";
+char const *AUTH_METHOD_MATCH = "MATCH";
+
 Authentication::Authentication( ReliSock *sock )
 	: m_auth(NULL),
 	  m_key(NULL),

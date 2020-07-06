@@ -360,6 +360,7 @@ stdin_pipe_handler(int) {
 										claimid.secSessionId(),
 										claimid.secSessionKey(),
 										claimid.secSessionInfo(),
+										AUTH_METHOD_FAMILY,
 										CONDOR_PARENT_FQU,
 										NULL,
 										0,

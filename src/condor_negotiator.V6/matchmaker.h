@@ -118,6 +118,7 @@ class Matchmaker : public Service
 		int DELETE_USER_commandHandler(int, Stream*);
 		int SET_PRIORITYFACTOR_commandHandler(int, Stream*);
 		int SET_PRIORITY_commandHandler(int, Stream*);
+		int SET_CEILING_commandHandler(int, Stream*);
 		int SET_ACCUMUSAGE_commandHandler(int, Stream*);
 		int SET_BEGINTIME_commandHandler(int, Stream*);
 		int SET_LASTTIME_commandHandler(int, Stream*);
@@ -164,7 +165,7 @@ class Matchmaker : public Service
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList &allAds, ClassAdListDoesNotDeleteAds &startdAds, ClassAdListDoesNotDeleteAds &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
-		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds);
+		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds) const;
 
 		void SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds);
 
@@ -217,7 +218,7 @@ class Matchmaker : public Service
 		**/
 		int negotiate(char const* groupName, char const *submitterName, const ClassAd *submitterAd,
 		   double priority,
-           double submitterLimit, double submitterLimitUnclaimed,
+           double submitterLimit, double submitterLimitUnclaimed, int submitterCeiling,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t deadline,
            int& numMatched, double &pieLeft);
@@ -339,7 +340,7 @@ class Matchmaker : public Service
 		**/
 		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
 		// Note: these are called by trimStartdAds as required
-		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds);
+		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const;
 		int trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
@@ -433,6 +434,7 @@ class Matchmaker : public Service
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
 		int rejForSubmitterLimit;   //   - not enough group quota?
+		int rejForSubmitterCeiling;   //   - not enough submitter ceiling ?
 	std::set<std::string> rejectedConcurrencyLimits;
 	std::string lastRejectedConcurrencyString;
 		bool m_dryrun;
@@ -514,14 +516,16 @@ class Matchmaker : public Service
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 					int & rejPreemptForRank,
-					int & rejForSubmitterLimit);
+					int & rejForSubmitterLimit,
+					int & rejForSubmitterCeiling) const;
 			void set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
 					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
 					int rejPreemptForRank,
-					int rejForSubmitterLimit);
+					int rejForSubmitterLimit,
+					int rejForSubmitterCeiling);
 			void add_candidate(ClassAd* candidate,
 					double candidateRankValue,
 					double candidatePreJobRankValue,
@@ -555,6 +559,7 @@ class Matchmaker : public Service
 			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 			int m_rejPreemptForRank;    //   - startd RANKs new job lower?
 			int m_rejForSubmitterLimit;     //  - not enough group quota?
+			int m_rejForSubmitterCeiling;     //  - not enough submitter ceiling?
 			float m_submitterLimit;
 			
 			

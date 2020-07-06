@@ -363,8 +363,6 @@ log.cpp
 log.h
 log_transaction.cpp
 log_transaction.h
-lsa_mgr.cpp
-lsa_mgr.h
 make_printmask.cpp
 MapFile.cpp
 MapFile.h

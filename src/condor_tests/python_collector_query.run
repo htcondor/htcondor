@@ -35,15 +35,15 @@ append_config = """#<<CONDOR_TESTREQ_CONFIG
 """
 #endtestreq
 
-from pytest.CondorCluster import CondorCluster
-from pytest.Utils import Utils
+from pytest_old.CondorCluster import CondorCluster
+from pytest_old.Utils import Utils
 
 testname = os.path.basename(__file__)[:-4]
 
 logfile = "{0}{1}.log".format(testname, os.getpid())
 cluster = CondorCluster( {
 	"executable": "x_sleep.pl",
-	"arguments": "0",
+	"arguments": "3600",
 	"notification": "never",
 	"log": logfile
 	} )

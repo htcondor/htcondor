@@ -1195,7 +1195,7 @@ using the provided GUI-based setup program:
     The files that are needed for HTCondor to operate are identical to
     the Unix version of HTCondor, except that executable files end in
     ``.exe``. For example the on Unix one of the files is
-    ``condor_master`` and on HTCondor the corresponding file is
+    *condor_master* and on HTCondor the corresponding file is
     ``condor_master.exe``.
 
     These files currently must reside on the local disk for a variety of

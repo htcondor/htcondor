@@ -195,7 +195,6 @@ HTCondor Configuration
 
    .. automethod:: refresh
 
-
 .. autofunction:: platform
 .. autofunction:: version
 
@@ -220,10 +219,6 @@ Esoteric Functionality
 
 .. autofunction:: set_subsystem
 .. autoclass:: SubsystemType
-
-.. .. autofunction:: lock
-.. .. autoclass:: FileLock
-.. .. autoclass:: LockType
 
 .. _python-bindings-thread-safety:
 

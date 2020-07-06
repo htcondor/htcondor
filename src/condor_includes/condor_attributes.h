@@ -1092,6 +1092,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 #define ATTR_HASH_NAME  "HashName"
 #define ATTR_AUTHENTICATED_IDENTITY  "AuthenticatedIdentity"
+#define ATTR_AUTHENTICATION_METHOD  "AuthenticationMethod"
 #define ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME  "DelegateJobGSICredentialsLifetime"
 
 #define ATTR_DOTNET_VERSIONS  "DotNetVersions"

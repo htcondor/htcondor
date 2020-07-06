@@ -47,6 +47,7 @@ print "Master PID is $mypid\n";
 
 my $firstappend_condor_config = '
     DAEMON_LIST = MASTER,SCHEDD
+    SHARED_PORT_PORT = 0
     WANT_SUSPEND = FALSE
     NEGOTIATION_INTERVAL = 5
     START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 1

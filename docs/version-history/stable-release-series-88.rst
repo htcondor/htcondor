@@ -23,6 +23,20 @@ New Features:
 
 Bugs Fixed:
 
+- HTCondor daemons used to discard the private network name and address of
+  daemons they were attempting to contact via the contactee's public
+  address; however, if the contact had been pre-authorized, this would
+  cause the contactee not to recognize the contacting daemon, and force it
+  to reauthenticate.  The HTCondor daemons no longer discard the private
+  network name and address; this will cause them to appear in the logs in
+  places where they had not previously.
+  :ticket:`7582`
+
+- Allow `SINGULARITY_EXTRA_ARGUMENTS` to override the default -C option
+  condor passes to singularity exec to allow administrators to tell
+  condor not to contain certain resoures.
+  :ticket:`7719`
+
 - *condor_gpu_discovery* no longer crashes if passed just the
   ``-dynamic`` flag.
   :ticket:`7639`
@@ -54,7 +68,7 @@ Bugs Fixed:
 
 -  Fixed a bug whereby the ``MemoryUsage`` attribute in the job ClassAd for a Docker Universe job
    failed to report the maximum memory usage of the job, but instead
-   reported either zero or the current memory usage. 
+   reported either zero or the current memory usage.
    :ticket:`7527`
 
 -  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
@@ -103,7 +117,7 @@ Bugs Fixed:
    :ticket:`7506`
 
 -  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
-   the HTCondor binaries are installed in a non-default location. 
+   the HTCondor binaries are installed in a non-default location.
    :ticket:`7613`
 
 -  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
@@ -232,7 +246,7 @@ Bugs Fixed:
 -  Reverted an earlier change which prohibited certain characters in
    DAGMan node names. The period (.) character is now allowed again.
    We also added the ``DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS``
-   configuration option, which, when sent to true, allow any characters 
+   configuration option, which, when sent to true, allow any characters
    (even illegal ones) to be allowed in node names.
    :ticket:`7403`
 
@@ -358,7 +372,7 @@ Bugs Fixed:
    :ticket:`7253`
 
 -  Fixed a bug where *condor_preen* may mistakenly remove files from the
-   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive. 
+   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive.
    :ticket:`7320`
 
 -  Fixed a bug where *condor_preen* could render the *condor_schedd* unresponsive once a day

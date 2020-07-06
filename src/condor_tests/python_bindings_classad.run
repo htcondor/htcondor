@@ -11,9 +11,9 @@ import types
 import unittest
 import warnings
 
-from pytest.CondorTest import CondorTest
-from pytest.Globals import *
-from pytest.Utils import Utils
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.Utils import Utils
 
 _long_type = int if sys.version_info > (3,) else long
 

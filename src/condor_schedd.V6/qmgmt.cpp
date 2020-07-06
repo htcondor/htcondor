@@ -3743,7 +3743,7 @@ SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const cha
 
 int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
-			 const char *attr_value, SetAttributeFlags_t flags)
+			 const char *attr_value, SetAttributeFlags_t flags, CondorError *err)
 {
 	JOB_ID_KEY_BUF key;
 	JobQueueJob    *job = NULL;
@@ -3752,6 +3752,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
+		if (err) err->push("QMGMT", EACCES, "Authentication is required to set attributes");
 		errno = EACCES;
 		return -1;
 	}
@@ -3760,6 +3761,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// attribute name, bail out early
 	if (!IsValidAttrName(attr_name)) {
 		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
+			attr_name ? attr_name : "(null)", cluster_id, proc_id);
+		if (err) err->pushf("QMGMT", EINVAL, "Got invalid attribute named %s for job %d.%d",
 			attr_name ? attr_name : "(null)", cluster_id, proc_id);
 		errno = EINVAL;
 		return -1;
@@ -3771,6 +3774,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		dprintf(D_ALWAYS,
 				"SetAttribute received invalid attribute value '%s' for "
 				"job %d.%d, ignoring\n",
+				attr_value ? attr_value : "(null)", cluster_id, proc_id);
+		if (err) err->pushf("QMGMT", EINVAL, "Received invalid attribute value '%s' for "
+				"job %d.%d; ignoring",
 				attr_value ? attr_value : "(null)", cluster_id, proc_id);
 		errno = EINVAL;
 		return -1;
@@ -3790,6 +3796,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS,
 				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Failing!\n",
 				attr_name, cluster_id, proc_id);
+			if (err) err->pushf("QMGMT", EACCES, "Attempt to edit secure attribute %s"
+				" in job %d.%d. Failing!", attr_name, cluster_id, proc_id);
 			errno = EACCES;
 			return -1;
 		} else {
@@ -3819,6 +3827,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS,
 					"OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
 					owner, cluster_id, proc_id);
+			if (err) err->pushf("QMGMT", EACCES, "User %s may not change attributes for "
+				"jobs they do not own (job %d.%d)", owner, cluster_id, proc_id);
 			errno = EACCES;
 			return -1;
 		}
@@ -3837,6 +3847,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS,
 					"SetAttribute attempt to edit immutable attribute %s in job %d.%d\n",
 					attr_name, cluster_id, proc_id);
+			if (err) err->pushf("QMGMT", EACCES, "Attempt to edit immutable attribute"
+				" %s in job %d.%d", attr_name, cluster_id, proc_id);
 			errno = EACCES;
 			return -1;
 		}
@@ -3859,6 +3871,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					Q_SOCK->getOwner() ? Q_SOCK->getOwner() : "(null)",
 					Q_SOCK->getAllowProtectedAttrChanges() ? "true" : "false",
 					attr_name, cluster_id, proc_id);
+			if (err) err->pushf("QMGMT", EACCES,
+				"Unauthorized setting of protected attribute %s denied "
+				"for real owner %s (effective owner %s; allowed protected attribute "
+				"change = %s) in job %d.%d", attr_name,
+				Q_SOCK->getRealOwner() ? Q_SOCK->getRealOwner() : "(null)",
+				Q_SOCK->getOwner() ? Q_SOCK->getOwner() : "(null)",
+				Q_SOCK->getAllowProtectedAttrChanges() ? "true" : "false",
+				cluster_id, proc_id);
 			errno = EACCES;
 			return -1;
 		}
@@ -3883,6 +3903,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if ((cluster_id != active_cluster_num) || (proc_id >= next_proc_num)) {
 			dprintf(D_ALWAYS,"Inserting new attribute %s into non-active cluster cid=%d acid=%d\n", 
 					attr_name, cluster_id,active_cluster_num);
+			if (err) err->pushf("QMGMT", ENOENT, "Inserting new attribute %s into "
+				"a non-active cluster %d (current active cluster is %d)",
+				attr_name, cluster_id, active_cluster_num);
 			errno = ENOENT;
 			return -1;
 		}
@@ -3922,6 +3945,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// socket not authenticated and Owner is UNDEFINED.
 				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
 					"Owner is UNDEFINED, but client not authenticated\n");
+				if (err) err->pushf("QMGMT", EACCES, "Client is not authenticated "
+					"and owner is unfedfined");
 				errno = EACCES;
 				return -1;
 
@@ -3950,6 +3975,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s which is not a valid string\n",
 					attr_value);
+			if (err) err->pushf("QMGMT", EACCES, "Unable to set owner to %s as it is"
+				" not a valid owner string", attr_value);
 			errno = EACCES;
 			return -1;
 		}
@@ -3958,6 +3985,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// Never allow the owner to be "root" (Linux) or "LOCAL_SYSTEM" (Windows).
 			// Because we run cross-platform, we never allow either name on all platforms
 			dprintf(D_ALWAYS, "SetAttribute security violation: setting owner to %s is not permitted\n", attr_value);
+			if (err) err->pushf("QMGMT", EACCES, "Setting job owner to %s is not "
+				"permitted", attr_value);
 			errno = EACCES;
 			return -1;
 		}
@@ -3973,9 +4002,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when previously set to \"%s\"\n",
 					attr_value, orig_owner.Value());
+			if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s when previously "
+				"set to %s is not permitted.", attr_value, orig_owner.Value());
 			errno = EACCES;
 			return -1;
 		}
+
+		dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i\n",
+			qmgmt_all_users_trusted,owner,sock_owner,isQueueSuperUser(sock_owner),SuperUserAllowedToSetOwnerTo(owner));
 
 		if (!qmgmt_all_users_trusted
 #if defined(WIN32)
@@ -3987,6 +4021,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
 					attr_value, sock_owner);
+				if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s when "
+					"active owner is %s is not permitted",
+					attr_value, sock_owner);
 				errno = EACCES;
 				return -1;
 		}
@@ -3997,6 +4034,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf( D_ALWAYS, "SetAttribute security violation: "
 					 "setting owner to %s, which is not a valid user account\n",
 					 attr_value );
+			if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s, which is not a "
+				"valid user account", attr_value);
 			errno = EACCES;
 			return -1;
 		}
@@ -4017,7 +4056,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 						 &nice_user );
 		user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 				 owner, scheduler.uidDomain() );
-		SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
+		SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags, nullptr );
 
 			// Also update the owner history hash table
 		AddOwnerHistory(owner);
@@ -4043,7 +4082,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			>= 0 ) {
 			user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." :
 					 "", owner.Value(), scheduler.uidDomain() );
-			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
+			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags, nullptr );
 		}
 	}
 	else if (attr_id == idATTR_JOB_NOOP) {
@@ -4057,12 +4096,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if (attr_id == idATTR_CLUSTER_ID && (*endptr != '\0' || id != cluster_id)) {
 			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%s!=%d)\n",
 				attr_value, cluster_id);
+			if (err) err->pushf("QMGMT", EACCES, "Setting cluster ID %d to new value "
+				"(%s) is not permitted", cluster_id, attr_value);
 			errno = EACCES;
 			return -1;
 		}
 		if (attr_id == idATTR_PROC_ID && (*endptr != '\0' || id != proc_id)) {
 			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%s!=%d)\n",
 				attr_value, proc_id);
+			if (err) err->pushf("QMGMT", EACCES, "Setting proc ID %d to new value (%s) "
+				"is not permitted", proc_id, attr_value);
 			errno = EACCES;
 			return -1;
 		}
@@ -4114,6 +4157,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf( D_ALWAYS, "SetAttribute violation: Attempt to change %s of removed job %d.%d to %d\n",
 					 ATTR_JOB_STATUS, cluster_id, proc_id, new_status );
 			errno = EINVAL;
+			if (err) err->pushf("QMGMT", EINVAL, "Changing %s of removed job %d.%d to "
+				"%d is invalid", ATTR_JOB_STATUS, cluster_id, proc_id, new_status);
 			return -1;
 		}
 		if (query_can_change_only) {
@@ -5010,7 +5055,7 @@ void AddClusterEditedAttributes(std::set<std::string> & ad_keys)
 
 	// add the new values for ATTR_EDITED_CLUSTER_ATTRS to the current transaction.
 	for (auto it = to_add.begin(); it != to_add.end(); ++it) {
-		SetAttribute(it->first.cluster, it->first.proc, ATTR_EDITED_CLUSTER_ATTRS, it->second.c_str(), 0);
+		SetAttribute(it->first.cluster, it->first.proc, ATTR_EDITED_CLUSTER_ATTRS, it->second.c_str(), 0, nullptr);
 	}
 }
 

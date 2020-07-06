@@ -559,6 +559,7 @@ bool SSHToJob::execute_ssh()
 					cidp.secSessionId(),
 					cidp.secSessionKey(),
 					cidp.secSessionInfo(),
+					AUTH_METHOD_MATCH,
 					EXECUTE_SIDE_MATCHSESSION_FQU,
 					starter_addr.c_str(),
 					0,

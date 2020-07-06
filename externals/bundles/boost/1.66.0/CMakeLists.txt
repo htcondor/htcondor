@@ -63,7 +63,7 @@ else (WINDOWS)
     message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
     if (DEFINED SYSTEM_NAME)
         if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
-            if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+            if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2")
                 message (STATUS "Using system boost169 for 64-bit EL7" )
                 # If you look for python on cmake 2.8.12.2 it fails.
                 # Looking for thread finds boost for python for me.
@@ -93,7 +93,7 @@ else (WINDOWS)
 	# always prefer system libraries where possible
 	if(Boost_FOUND)
 
-		if (NOT PREFER_CPP11 AND NOT PREFER_TR1)
+		if (NOT PREFER_CPP11)
 			check_cxx_source_compiles("
 				#include <boost/unordered_map.hpp>
 				int main() {

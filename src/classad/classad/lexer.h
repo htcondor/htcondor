@@ -135,14 +135,14 @@ class Lexer
 					f = factor;
 				}
 
-				void GetBoolValue( bool& b ) {
+				void GetBoolValue( bool& b ) const {
 					b = boolValue;
 				}
 
 				void GetStringValue( std::string &str ) {
 					str = strValue;	
 				}
-				void GetQuotedExpr( bool &quoted ) {
+				void GetQuotedExpr( bool &quoted ) const {
 					quoted = quotedExpr;
 				}
 
@@ -174,7 +174,7 @@ class Lexer
 		bool Initialize(LexerSource *source);
 		bool Reinitialize(void);
         
-        bool WasInitialized(void);
+        bool WasInitialized(void) const;
 
 		bool SetOldClassAdLex( bool do_old );
 		bool SetJsonLex( bool do_json );

@@ -301,12 +301,12 @@ void export_negotiator()
 {
     class_<Negotiator>("Negotiator",
             R"C0ND0R(
-            This class provides a query interface to the ``condor_negotiator``.
+            This class provides a query interface to the *condor_negotiator*.
             It primarily allows one to query and set various parameters in the fair-share accounting.
             )C0ND0R",
         init<const ClassAdWrapper &>(
             R"C0ND0R(
-            :param ad: A ClassAd describing the claim and the ``condor_negotiator``
+            :param ad: A ClassAd describing the claim and the *condor_negotiator*
                 location.  If omitted, the default pool negotiator is assumed.
             :type ad: :class:`~classad.ClassAd`
             )C0ND0R",

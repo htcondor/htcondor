@@ -55,7 +55,7 @@ SetOldClassAd( bool old_syntax )
 }
 
 bool ClassAdParser::
-GetOldClassAd()
+GetOldClassAd() const
 {
 	return oldClassAd;
 }

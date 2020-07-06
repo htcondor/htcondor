@@ -1,3 +1,5 @@
+.. _dagman-workflows:
+
 DAGMan Workflows
 ================
 
@@ -964,6 +966,8 @@ retried. The macro ``$MAX_RETRIES`` is the value set for
 *NumberOfRetries*. These macros may be used as arguments passed to a PRE
 or POST script.
 
+.. _abort-dag-on:
+
 Stopping the Entire DAG
 '''''''''''''''''''''''
 
@@ -1830,6 +1834,8 @@ Note that sub-DAGs and splices can be combined in a single workflow, and
 can be nested to any depth (but be sure to avoid recursion, which will
 cause problems!).
 
+.. _subdag-external:
+
 A DAG Within a DAG Is a SUBDAG
 ''''''''''''''''''''''''''''''
 
@@ -2651,6 +2657,7 @@ A diagram of the above example:
 
   Diagram of the splice connect example
 
+.. _final-node:
 
 FINAL node
 ''''''''''
@@ -2832,6 +2839,8 @@ Here is an example DAG using the *ALL_NODES* option:
         VARS B name="nodeB"
 
         RETRY all_nodes 3
+
+.. _rescue-dags:
 
 The Rescue DAG
 --------------
@@ -3099,6 +3108,8 @@ finished normally. If there is no line similar to this at the end of the
 *condor_dagman* job for the DAG being debugged is not in the queue,
 then recovery is indicated.
 
+.. _visualizing-dags-with-dot:
+
 Visualizing DAGs with *dot*
 ---------------------------
 
@@ -3161,6 +3172,8 @@ parameters:
 
 If conflicting parameters are used in a DOT command, the last one listed
 is used.
+
+.. _node-status-file:
 
 Capturing the Status of Nodes in a File
 ---------------------------------------

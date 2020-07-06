@@ -122,7 +122,7 @@ export_startd()
 {
     boost::python::enum_<DrainTypes>("DrainTypes",
             R"C0ND0R(
-            Draining policies that can be sent to a ``condor_startd``.
+            Draining policies that can be sent to a *condor_startd*.
 
             The values of the enumeration are:
 
@@ -190,7 +190,7 @@ export_startd()
            )
         .def("history", &Startd::history,
             R"C0ND0R(
-            Fetch history records from the ``condor_startd`` daemon.
+            Fetch history records from the *condor_startd* daemon.
 
             :param requirements: Query constraint; only jobs matching this constraint will be returned;
                 defaults to ``'true'``.

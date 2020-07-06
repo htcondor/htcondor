@@ -324,15 +324,6 @@ typedef struct procInfoRaw{
 #endif //LINUX
 }procInfoRaw;
 
-/* The pidlist struct is used for getting all the pids on a machine
-   at once.  It is used by getpidlist() */
-
-struct pidlist {
-  pid_t pid;               // the pid of a process
-  struct pidlist *next;    // the next pid.
-};
-typedef struct pidlist * pidlistPTR;
-
 /** procHashNode is used to hold information in the hashtable.  It is used
     to save the state of certain things that need to be sampled over time.
     For instance, the number of page faults is always given as a number 
@@ -428,6 +419,9 @@ class ProcAPI {
       @see procInfo
   */
   static int getProcInfo ( pid_t pid, piPTR& pi, int &status );
+#if defined(DARWIN)
+  static int getProcInfo_impl ( pid_t pid, piPTR& pi, int &status );
+#endif
 
   /** Feed this function a procInfo struct and it'll print it out for you. 
 
@@ -614,12 +608,12 @@ class ProcAPI {
 #endif
 								 );
 
+#if !defined(DARWIN) && !defined(WIN32)
   static int buildPidList();                      // just what it says
+#endif
   static int buildProcInfoList();                 // ditto.
   static long secsSinceEpoch();                   // used for wall clock age
   static double convertTimeval ( struct timeval );// convert timeval to double
-  static pid_t getAndRemNextPid();                // used in pidList deconstruction
-  static void deallocPidList();                   // these deallocate their
   static void deallocAllProcInfos();              // respective lists.
 
   public:
@@ -683,7 +677,7 @@ private:
                              // whose /proc information is available.
 
 #ifndef WIN32
-  static pidlistPTR pidList;      // this will be a linked list of all processes
+  static std::vector<pid_t> pidList;      // this will be a linked list of all processes
                                   // in the system.  Built by buildpidlist()
 
   static int pagesize;     // pagesize is the size of memory pages, in k.

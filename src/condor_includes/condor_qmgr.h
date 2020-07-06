@@ -185,7 +185,7 @@ int SetAttributeExprByConstraint(const char *constraint, const char *attr,
 	quotes)
 	@return -1 on failure; 0 on success
 */
-int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
+int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0, CondorError *err=nullptr );
 
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd integer literal.

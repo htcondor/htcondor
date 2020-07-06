@@ -222,7 +222,7 @@ log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never
-arguments = 0
+arguments = 3600
 +AccountingGroup=\"a.user\"
 queue 2
 +AccountingGroup=\"b.user\"

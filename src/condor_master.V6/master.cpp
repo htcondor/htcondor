@@ -748,6 +748,11 @@ main_init( int argc, char* argv[] )
 
 	if( StartDaemons ) {
 		daemons.StartAllDaemons();
+	} else {
+	#ifndef WIN32
+		// StartAllDaemons does this , but if we don't call that ...
+		dc_release_background_parent(0);
+	#endif
 	}
 	daemons.StartTimers();
 }
@@ -1181,6 +1186,7 @@ init_daemon_list()
 {
 	char	*daemon_name;
 	StringList daemon_names, dc_daemon_names;
+	bool have_primary_collector = false; // daemon list has COLLECTOR (just that - VIEW_COLLECTOR or COLLECTOR_B doesn't count)
 
 	daemons.ordered_daemon_names.clearAll();
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
@@ -1290,6 +1296,7 @@ init_daemon_list()
 			daemon_names.rewind();
 			daemon_names.next();
 			daemon_names.insert( "COLLECTOR" );
+			have_primary_collector = true;
 		}
 
 			// start shared_port first for a cleaner startup
@@ -1353,6 +1360,19 @@ init_daemon_list()
 		daemons.ordered_daemon_names.create_union(daemon_names, false);
 	}
 
+	// if we have a primary collector, and it is behind a shared port daemon
+	// then we need to let the SHARED_PORT daemon know that it should be using the configured collector port
+	// and not the configured shared port port
+	if (have_primary_collector) {
+		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
+		if (collector_uses_shared_port) {
+			class daemon* d = daemons.FindDaemon("SHARED_PORT");
+			if (d != NULL) {
+				d->use_collector_port = d->isDC;
+				dprintf(D_ALWAYS,"SHARED_PORT is in front of a COLLECTOR, so it will use the configured collector port\n");
+			}
+		}
+	}
 }
 
 
@@ -1816,6 +1836,11 @@ main( int argc, char **argv )
     // as of 8.9.7 daemon core defaults to foreground
     // for the master (and only the master) we change it to default to background
     dc_args_default_to_background(true);
+#ifndef WIN32
+	// tell daemon core that if we fork into the background
+	// let the forked child decide when to allow the forked parent to exit
+	dc_set_background_parent_mode(true);
+#endif
 
     // parse args to see if we have been asked to run as a service.
     // services are started without a console, so if we have one

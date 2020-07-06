@@ -690,7 +690,7 @@ export_credd()
 {
 	boost::python::enum_<CredTypes>("CredTypes",
 		R"C0ND0R(
-            The types of credentials that can be managed by a ``condor_credd``.
+            The types of credentials that can be managed by a *condor_credd*.
 
             The values of the enumeration are:
 
