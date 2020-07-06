@@ -54,7 +54,8 @@ class Dagman {
 		}
 		delete _dagmanClassad;
 		_dagmanClassad = NULL;
-		delete _schedd;
+		// TODO MRC: Why does deleting the _schedd here cause a segfault?
+		//delete _schedd;
 		_schedd = NULL;
 	}
 
@@ -68,6 +69,8 @@ class Dagman {
 
 		// Publish statistics to a log file.
 	void PublishStats();
+
+	void LocateSchedd();
 
     Dag * dag;
     int maxIdle;  // Maximum number of idle DAG nodes

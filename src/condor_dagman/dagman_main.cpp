@@ -151,15 +151,6 @@ Dagman::Dagman() :
 	_removeNodeJobs(true)
 {
 	debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
-	_schedd = new DCSchedd( NULL, NULL );
-	if ( !_schedd || !_schedd->locate() ) {
-		const char *errMsg = _schedd ? _schedd->error() : "?";
-		debug_printf( DEBUG_QUIET,
-			"WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
-			errMsg );
-		check_warning_strictness( DAG_STRICT_3 );
-		return;
-	}
 }
 
 Dagman::~Dagman()
@@ -485,6 +476,19 @@ Dagman::Config()
 	return true;
 }
 
+void
+Dagman::LocateSchedd() 
+{
+	_schedd = new DCSchedd( NULL, NULL );
+	if ( !_schedd || !_schedd->locate() ) {
+		const char *errMsg = _schedd ? _schedd->error() : "?";
+		debug_printf( DEBUG_QUIET,
+			"WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
+			errMsg );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
 
 // NOTE: this is only called on reconfig, not at startup
 void
@@ -648,6 +652,8 @@ void main_init (int argc, char ** const argv) {
 		// process any config vars -- this happens before we process
 		// argv[], since arguments should override config settings
 	dagman.Config();
+
+	dagman.LocateSchedd();
 
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
@@ -1163,7 +1169,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman._defaultNodeLog.Value(),
 						  dagman._generateSubdagSubmits,
 						  &dagman._submitDagDeepOpts,
-						  false ); /* toplevel dag! */
+						  false, dagman._schedd ); /* toplevel dag! */
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -1198,7 +1204,7 @@ void main_init (int argc, char ** const argv) {
 	while ( (dagFile = sl.next()) != NULL ) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
 
-    	if( !parse( dagman.dag, dagFile, dagman.useDagDir ) ) {
+    	if( !parse( dagman.dag, dagFile, dagman.useDagDir, dagman._schedd ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1263,7 +1269,7 @@ void main_init (int argc, char ** const argv) {
 		parseSetDoNameMunge( false );
 
     	if( !parse( dagman.dag, dagman.rescueFileToRun.Value(),
-					dagman.useDagDir ) ) {
+					dagman.useDagDir, dagman._schedd ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.

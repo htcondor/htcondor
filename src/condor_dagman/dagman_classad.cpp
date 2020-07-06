@@ -109,7 +109,6 @@ ScheddClassad::GetAttribute( const char *attrName, MyString &attrVal,
 
 	attrVal = val;
 	free( val );
-
 	return true;
 }
 
@@ -372,7 +371,7 @@ ProvisionerClassad::~ProvisionerClassad()
 
 //---------------------------------------------------------------------------
 MyString
-ProvisionerClassad::GetProvisionerState( )
+ProvisionerClassad::GetProvisionerState()
 {
 	MyString state = "";
 
@@ -383,11 +382,12 @@ ProvisionerClassad::GetProvisionerState( )
 	}
 
 	Qmgr_connection *queue = OpenConnection();
+
 	if ( !queue ) {
 		return state;
 	}
 
-	GetAttribute( "ProvisionerState", state, false );
+	GetAttribute( ATTR_PROVISIONER_STATE, state, false );
 	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%s>\n",
 				state.Value() );
 

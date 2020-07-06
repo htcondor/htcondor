@@ -187,7 +187,6 @@ class Job {
         /** Job waiting for POST script */ STATUS_POSTRUN = 4,
         /** Job is done */                 STATUS_DONE = 5,
         /** Job exited abnormally */       STATUS_ERROR = 6,
-        /** Job is provisioned (for provisioner) */ STATUS_PROVISIONED = 7,
     };
 
     /** The string names for the status_t enumeration.  Use this the same

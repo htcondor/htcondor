@@ -992,6 +992,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 //************* End of changes for EC2 Jobs *****************//
 
+// Provisioner jobs
+#define ATTR_PROVISIONER_STATE "ProvisionerState"
+#define ATTR_PROVISIONER_RESOURCE_ID "ProvisionerResourceID"
+
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"

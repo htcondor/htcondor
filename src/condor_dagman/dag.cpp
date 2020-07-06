@@ -90,7 +90,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
-		  const MyString &spliceScope, DCSchedd *schedd ) :
+		  DCSchedd *schedd, const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -1605,24 +1605,14 @@ Dag::StartProvisionerNode()
 }
 
 //-------------------------------------------------------------------------
-Job::status_t
+MyString
 Dag::GetProvisionerJobAdState()
 {
 	MyString provisionerState;
 	if (_provisionerClassad) {
 		provisionerState = _provisionerClassad->GetProvisionerState();
 	}
-
-	if (provisionerState == "PROVISIONER_READY") {
-		return Job::STATUS_PROVISIONED;
-	}
-
-	// TODO: Remove this mock code once we're polling the schedd correctly above.
-	static int count = 0;
-	count ++;
-	if (count <= 3) return Job::STATUS_READY;
-
-	return Job::STATUS_PROVISIONED;
+	return provisionerState;
 }
 
 //-------------------------------------------------------------------------
@@ -1672,22 +1662,19 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		_preScriptQ->RunWaitingScripts();
 	}
 
-		// Check if we have a provisioner node.
-	if ( HasProvisionerNode() ) {
-			// If it has not yet reached a provisioned state, update its status
-			// from the schedd job ad.
-		if ( _provisioner_node->GetStatus() != Job::STATUS_PROVISIONED ) {
-			_provisioner_node->SetStatus( GetProvisionerJobAdState() );
-				// If we just moved into a provisioned state, we can start
-				// submitting the other jobs in the dag
-			if ( _provisioner_node->GetStatus() == Job::STATUS_PROVISIONED ) {
-				Job* job;
-				ListIterator<Job> jobs (_jobs);
-				jobs.ToBeforeFirst();
-				while( jobs.Next( job ) ) {
-					if( job->CanSubmit() ) {
-						StartNode( job, false );
-					}
+		// Check if we are waiting for a provisioner node to become ready
+	if ( HasProvisionerNode() && !_provisioner_ready ) {
+			// If we just moved into a provisioned state, we can start
+			// submitting the other jobs in the dag
+		MyString state = GetProvisionerJobAdState();
+		if ( GetProvisionerJobAdState() == "ProvisionerState.PROVISIONING_COMPLETE" ) {
+			_provisioner_ready = true;
+			Job* job;
+			ListIterator<Job> jobs (_jobs);
+			jobs.ToBeforeFirst();
+			while( jobs.Next( job ) ) {
+				if( job->CanSubmit() ) {
+					StartNode( job, false );
 				}
 			}
 		}

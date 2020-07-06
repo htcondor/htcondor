@@ -137,8 +137,8 @@ class Dag {
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
-		 bool isSplice = false, const MyString &spliceScope = "root",
-		 DCSchedd *schedd = NULL );
+		 bool isSplice = false, DCSchedd *schedd = NULL,
+		 const MyString &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -488,7 +488,7 @@ class Dag {
 		    checking its job ad.
 			@return status of the provisioner
 		*/
-	Job::status_t GetProvisionerJobAdState();
+	MyString GetProvisionerJobAdState();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -1071,6 +1071,8 @@ private:
 	Job* _provisioner_node = NULL;
 
 	ProvisionerClassad* _provisionerClassad = NULL;
+
+	bool _provisioner_ready = false;
 
 	HashTable<MyString, Job *>		_nodeNameHash;
 
