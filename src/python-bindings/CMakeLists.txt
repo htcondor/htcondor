@@ -195,6 +195,14 @@ else()
       add_definitions ( -DBOOST_NO_AUTO_PTR )
     endif()
 
+    if (DARWIN)
+        # This is probably a sign that something else needs fixing.
+        # Note that you can NOT set this to DARWIN, because CMake's parser
+        # is terrible.  (It will silently dereference the quoted string
+        # "DARWIN" as the variable in some situations.)
+        set(SYSTEM_NAME "darwin")
+    endif()
+
     if (DEFINED PYTHON_VERSION_STRING AND PYTHONLIBS_FOUND)
       if (NOT DEFINED PYTHON_BOOST_LIB )
         set ( PYTHON_BOOST_LIB boost_python )
@@ -210,6 +218,9 @@ else()
           endif()
           if (${SYSTEM_NAME} MATCHES "fc2[0-9]" )
             set ( PYTHON_BOOST_LIB "boost_python" )
+          endif()
+          if (${SYSTEM_NAME} MATCHES "darwin")
+              set( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
           endif()
         endif()
       endif()
@@ -285,6 +296,14 @@ else()
       endif()
     endif()
 
+    if (DARWIN)
+        # This is probably a sign that something else needs fixing.
+        # Note that you can NOT set this to DARWIN, because CMake's parser
+        # is terrible.  (It will silently dereference the quoted string
+        # "DARWIN" as the variable in some situations.)
+        set(SYSTEM_NAME "darwin")
+    endif()
+
     if (DEFINED PYTHON3_VERSION_STRING AND PYTHON3LIBS_FOUND AND NOT ${SYSTEM_NAME} MATCHES "fc27")
       if (NOT DEFINED PYTHON3_BOOST_LIB)
         if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu")
@@ -295,6 +314,9 @@ else()
         endif()
         if (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "fc2[0-9]" )
           set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}" )
+        endif()
+        if (${SYSTEM_NAME} MATCHES "darwin")
+            set( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
         endif()
       endif()
       include_directories(${BOOST_INCLUDE})

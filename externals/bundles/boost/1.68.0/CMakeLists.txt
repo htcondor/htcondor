@@ -44,13 +44,14 @@ else (WINDOWS)
 
 	set(Boost_USE_MULTITHREADED ON)
 
-	if (NOT PROPER) 
-		set (BOOST_COMPONENTS thread) 
+	if (NOT PROPER)
+		set (BOOST_COMPONENTS thread)
 	else()
 
-		if (BUILD_TESTING) 
+		if (BUILD_TESTING)
 			set (BOOST_COMPONENTS unit_test_framework ${BOOST_COMPONENTS})
 		endif()
+
 		if (WITH_PYTHON_BINDINGS)
 			set (BOOST_COMPONENTS python ${BOOST_COMPONENTS})
 		endif()
@@ -93,15 +94,9 @@ else (WINDOWS)
 	endif(Boost_FOUND)
 
 	# we only use our version of boost if the system is not good enough
-	if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
+	if (NOT PROPER)
 
 		if (WINDOWS)
-			# building boost on windows here doesn't work right now. must use the pre-built boost external.
-			#set(TOOLSET msvc-${MSVCVERNUM})
-			#set(BOOTSTRAP call bootstrap.bat )
-			#set(EXEC .\\)
-			#set(BUILD_OPTIONS )
-			#set(INCLUDE_LOC include/boost_1_68)
 			message (FATAL_ERROR "WINDOWS builds must use pre-built boost")
 		else()
 
@@ -123,6 +118,7 @@ else (WINDOWS)
 			set(INCLUDE_LOC include)
 			set(BOOTSTRAP ./bootstrap.sh )
 			set(EXEC ./)
+
 		endif()
 
 		set(BOOST_FILENAME boost_1_68_0)
@@ -138,7 +134,14 @@ else (WINDOWS)
 		if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
 			message(STATUS "Bootstrapping python for boost")
 			set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
-			set(BOOTSTRAP_PYTHON_OPTION "--with-python=${PYTHON_EXECUTABLE}")
+
+			# FIXME: The 2.7 and 3.7 here obviously need to come from our detection code.
+			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
+				"using python : 2.7 : ${PYTHON_EXECUTABLE} : ${PYTHON_INCLUDE_DIRS} ;\n"
+				"using python : 3.7 : ${PYTHON3_EXECUTABLE} : ${PYTHON3_INCLUDE_DIRS} ;\n"
+			)
+			# FIXME: The 2.7 and 3.7 here obviously need to come from our detection code.
+			set(BUILD_OPTIONS ${BUILD_OPTIONS} --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam python=2.7,3.7)
 		else ()
 			set(BOOTSTRAP_PYTHON_OPTION )
 		endif()
@@ -151,21 +154,16 @@ else (WINDOWS)
 			#--Patch step ----------
 			 PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/no_numpy.patch -p0
 			#--Configure step ----------
-			 CONFIGURE_COMMAND ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${BOOTSTRAP_PYTHON_OPTION} ${CMD_TERM} echo "Configure complete"
+			 CONFIGURE_COMMAND ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${CMD_TERM} echo "Configure complete"
 			#--Build Step ----------
 			BUILD_COMMAND ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
 			BUILD_IN_SOURCE 1
 			#--install Step ----------
 			INSTALL_DIR ${BOOST_INSTALL_LOC}
-			INSTALL_COMMAND touch ${BOOST_INSTALL_LOC}/done )
+			INSTALL_COMMAND touch ${BOOST_INSTALL_LOC}/done
+		)
 
-		if (WINDOWS)
-			#set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
-			#set(BOOST_SHORTVER 1_68 PARENT_SCOPE)
-			#condor_post_external( boost "include/boost-1_68" "lib" )
-		else()
-			condor_post_external( boost "include" "lib" "${BOOST_INSTALL_LOC}/lib/libboost_thread.a;${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a;${BOOST_INSTALL_LOC}/lib/libboost_system.a" )
-		endif()
+		condor_post_external( boost "include" "lib" "${BOOST_INSTALL_LOC}/lib/libboost_thread.a;${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a;${BOOST_INSTALL_LOC}/lib/libboost_system.a" )
 	endif(NOT PROPER)
 endif(WINDOWS)
 
