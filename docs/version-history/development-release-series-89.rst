@@ -111,6 +111,8 @@ New Features:
 -  Added a new Python bindings subpackage, :mod:`htcondor.dags`, which contains
    tools for writing DAGMan input files programmatically using
    high-level abstractions over the basic DAGMan constructs.
+   There is a new tutorial at :doc:`/apis/python-bindings/tutorials/index`
+   walking through a basic use case.
    :mod:`htcondor.dags` is very new and its API has not fully stabilized;
    it is possible that there will be deprecations and breaking changes
    in the near future.
