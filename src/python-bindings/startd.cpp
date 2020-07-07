@@ -46,18 +46,21 @@ struct Startd
     std::string
     drain_jobs(int how_fast=DRAIN_GRACEFUL, bool resume_on_completion=false, boost::python::object check_obj=boost::python::object(""), boost::python::object start_obj = boost::python::object() )
     {
-        std::string check_expr;
-        boost::python::extract<std::string> expr_extract(check_obj);
-        if (expr_extract.check())
-        {
-            check_expr = expr_extract();
-        }
-        else
-        {
-            classad::ClassAdUnParser printer;
-            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(check_obj));
-            printer.Unparse(check_expr, expr.get());
-        }
+		std::string check_expr;
+		if (check_obj.ptr() != Py_None) {
+			boost::python::extract<std::string> expr_extract(check_obj);
+			if (expr_extract.check())
+			{
+				check_expr = expr_extract();
+			} else
+			{
+				classad::ClassAdUnParser printer;
+				classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(check_obj));
+				printer.Unparse(check_expr, expr.get());
+			}
+		}
+		const char * check_expr_ptr = nullptr;
+		if ( ! check_expr.empty()) { check_expr_ptr = check_expr.c_str(); }
 
 		std::string start_expr;
 		boost::python::extract<std::string> start_extract( start_obj );
@@ -72,7 +75,7 @@ struct Startd
         std::string request_id;
 
         DCStartd startd(m_addr.c_str());
-        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr.c_str(), start_expr.c_str(), request_id);
+        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr_ptr, start_expr.c_str(), request_id);
         if (!rval) {THROW_EX(RuntimeError, "Startd failed to begin draining jobs.");}
         return request_id;
     }
