@@ -65,6 +65,7 @@ Interacting with Schedulers
 
 .. autoclass:: BulkQueryIterator
 
+.. autoclass:: JobStatus
 
 Submitting Jobs
 ---------------
@@ -238,3 +239,4 @@ be allowed to proceed normally.
 
 This locking may cause unexpected slowdowns when using ``htcondor`` from
 multiple threads simultaneously.
+

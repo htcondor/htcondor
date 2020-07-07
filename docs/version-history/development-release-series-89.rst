@@ -15,7 +15,8 @@ Release Notes:
 
 New Features:
 
--  None.
+-  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
+   :ticket:`7726`
 
 Bugs Fixed:
 
