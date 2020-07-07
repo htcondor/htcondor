@@ -35,8 +35,8 @@ class MsWindowsHibernator : public HibernatorBase
 
 public:
 
-	MsWindowsHibernator (void) throw ();
-	virtual ~MsWindowsHibernator (void) throw ();
+	MsWindowsHibernator (void) noexcept;
+	virtual ~MsWindowsHibernator (void) noexcept;
 
 	/* Discover supported sleep states */
 	virtual bool initialize( void );

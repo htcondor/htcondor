@@ -975,7 +975,7 @@ bool initializedRequestMap = false;
 unsigned char requestMap[ requestPoolSize ];
 unsigned char requests[ requestPoolSize * sizeof( Request ) ];
 
-void * Request::operator new( size_t i ) throw() {
+void * Request::operator new( size_t i ) noexcept {
 	static unsigned int index = 0;
 	if( ! initializedRequestMap ) {
 		memset( requestMap, 0, requestPoolSize );
@@ -1011,7 +1011,7 @@ void * Request::operator new( size_t i ) throw() {
 	return address;
 }
 
-void Request::operator delete( void * v ) throw() {
+void Request::operator delete( void * v ) noexcept {
 	if( requests <= v && v < requests + sizeof( requests ) ) {
 		unsigned long offset = ((unsigned long)v) - ((unsigned long)requests);
 		offset = offset / sizeof( Request );

@@ -61,10 +61,10 @@ public:
 	//@{
 
     /// Constructor
-	NetworkAdapterBase () throw ();
+	NetworkAdapterBase () noexcept;
 
     /// Destructor
-	virtual ~NetworkAdapterBase () throw ();
+	virtual ~NetworkAdapterBase () noexcept;
 
 	//@}
 

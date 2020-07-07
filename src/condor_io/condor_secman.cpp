@@ -2910,7 +2910,7 @@ const SecMan & SecMan::operator=(const SecMan & /* copy */) {
 }
 
 SecMan &
-SecMan::operator=(SecMan && rhs) {
+SecMan::operator=(SecMan && rhs)  noexcept {
 	this->m_cached_auth_level   = rhs.m_cached_auth_level;
 	this->m_cached_raw_protocol = rhs.m_cached_raw_protocol;
 	this->m_cached_use_tmp_sec_session = rhs.m_cached_use_tmp_sec_session;

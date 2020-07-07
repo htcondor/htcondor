@@ -37,7 +37,7 @@
 /***************************************************************
  * Base NetworkAdapterBase class
  ***************************************************************/
-NetworkAdapterBase::NetworkAdapterBase (void) throw ()
+NetworkAdapterBase::NetworkAdapterBase (void) noexcept
 {
 	wolResetSupportBits( );
 	wolResetEnableBits( );
@@ -45,7 +45,7 @@ NetworkAdapterBase::NetworkAdapterBase (void) throw ()
 	m_is_primary = false;
 }
 
-NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
+NetworkAdapterBase::~NetworkAdapterBase (void) noexcept
 {
 }
 
