@@ -152,8 +152,6 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd ) :
 DagmanClassad::~DagmanClassad()
 {
 	_valid = false;
-
-	delete _schedd;
 }
 
 //---------------------------------------------------------------------------
@@ -365,8 +363,6 @@ ProvisionerClassad::ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd 
 ProvisionerClassad::~ProvisionerClassad()
 {
 	_valid = false;
-
-	delete _schedd;
 }
 
 //---------------------------------------------------------------------------

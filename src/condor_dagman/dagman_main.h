@@ -48,15 +48,19 @@ class Dagman {
 	~Dagman();
 
     inline void CleanUp () { 
+		// CleanUp() gets invoked multiple times, so check for null objects
 		if ( dag != NULL ) {
 			delete dag; 
 			dag = NULL;
 		}
-		delete _dagmanClassad;
-		_dagmanClassad = NULL;
-		// TODO MRC: Why does deleting the _schedd here cause a segfault?
-		//delete _schedd;
-		_schedd = NULL;
+		if ( _dagmanClassad != NULL ) {
+			delete _dagmanClassad;
+			_dagmanClassad = NULL;
+		}
+		if ( _schedd != NULL ) {
+			delete _schedd;
+			_schedd = NULL;
+		}
 	}
 
 		// Check (based on the version from the .condor.sub file, etc.),
