@@ -135,15 +135,13 @@ else (WINDOWS)
 			message(STATUS "Bootstrapping python for boost")
 			set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
 
-			# FIXME: The 2.7 and 3.7 here obviously need to come from our detection code.
+			# We should probably change how we write this file
+			# depending on which Pythons we actually found.
 			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
-				"using python : 2.7 : ${PYTHON_EXECUTABLE} : ${PYTHON_INCLUDE_DIRS} ;\n"
-				"using python : 3.7 : ${PYTHON3_EXECUTABLE} : ${PYTHON3_INCLUDE_DIRS} ;\n"
+				"using python : ${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR} : ${PYTHON_EXECUTABLE} : ${PYTHON_INCLUDE_DIRS} ;\n"
+				"using python : ${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR} : ${PYTHON3_EXECUTABLE} : ${PYTHON3_INCLUDE_DIRS} ;\n"
 			)
-			# FIXME: The 2.7 and 3.7 here obviously need to come from our detection code.
-			set(BUILD_OPTIONS ${BUILD_OPTIONS} --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam python=2.7,3.7)
-		else ()
-			set(BOOTSTRAP_PYTHON_OPTION )
+			set(BUILD_OPTIONS ${BUILD_OPTIONS} --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam python=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR},${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR})
 		endif()
 
 		# so the idea of privately staging boost is silly.
