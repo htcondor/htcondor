@@ -500,7 +500,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Prior to HTCondor 8.9.7 ``getenv`` allows only ``True`` or ``False`` as values.
 
-    Examples
+    Examples:
 
     ::
 
@@ -513,13 +513,11 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
         # Import every environment variable that starts with P or Q, except PATH
         getenv = !path, P*, Q*
 
-    ::
-
-		If the environment is set with the **environment** command and
-		**getenv** is also set, values specified with
-		**environment** override values in the submitter's environment
-		(regardless of the order of the **environment** and **getenv**
-		commands). :index:`input<single: input; submit commands>`
+    If the environment is set with the **environment** command and
+    **getenv** is also set, values specified with
+    **environment** override values in the submitter's environment
+    (regardless of the order of the **environment** and **getenv**
+    commands). :index:`input<single: input; submit commands>`
 
  input = <pathname>
     HTCondor assumes that its jobs are long-running, and that the user
