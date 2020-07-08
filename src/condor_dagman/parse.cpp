@@ -54,6 +54,9 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
+// DAGMan global schedd object. Only used here to hand off to a splice DAG.
+DCSchedd *_schedd = NULL;
+
 static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
@@ -167,7 +170,7 @@ int parse_up_to_close_brace(SubmitHash & hash, MacroStream &ms, std::string & er
 
 //-----------------------------------------------------------------------------
 bool parse(Dag *dag, const char *filename, bool useDagDir,
-			bool incrementDagNum)
+			DCSchedd *schedd, bool incrementDagNum)
 {
 	ASSERT( dag != NULL );
 
@@ -176,6 +179,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	}
 
 	_useDagDir = useDagDir;
+	_schedd = schedd;
 
 		//
 		// If useDagDir is true, we have to cd into the directory so we can
@@ -2080,6 +2084,7 @@ parse_splice(
 							dag->GenerateSubdagSubmits(),
 							NULL, // this Dag will never submit a job
 							true, /* we are a splice! */
+							_schedd,
 							current_splice_scope() );
 	
 	// initialize whatever the DIR line was, or defaults to, here.
@@ -2100,7 +2105,7 @@ parse_splice(
 	}
 
 	// parse the splice file into a separate dag.
-	if (!parse(splice_dag, spliceFile.Value(), _useDagDir, false)) {
+	if (!parse(splice_dag, spliceFile.Value(), _useDagDir, _schedd, false)) {
 		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
 			spliceName.Value(), spliceFile.Value());
 		return false;
@@ -2713,7 +2718,7 @@ parse_include(
 		// include file path is always relative to the submit directory,
 		// *not* relative to the DAG file's directory, even if
 		// 'condor_submit -usedagdir' is specified.
-	return parse( dag, tmpFilename.Value(), false, false );
+	return parse( dag, tmpFilename.Value(), false, _schedd, false );
 }
 
 static MyString munge_job_name(const char *jobName)
