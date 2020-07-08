@@ -98,7 +98,13 @@ if(NOT WINDOWS)
     else()
         # We need to do this the hard way for both python2 and python3 support in the same build
         # This will be easier in cmake 3
-        find_program(PYTHON_EXECUTABLE python2)
+
+        if(DARWIN)
+            find_program(PYTHON_EXECUTABLE python2.7)
+        else()
+            find_program(PYTHON_EXECUTABLE python2)
+        endif()
+
         if (PYTHON_EXECUTABLE)
             set(PYTHONINTERP_FOUND TRUE)
             set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
