@@ -179,7 +179,6 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
 	endif()
 elseif( ${OS_NAME} STREQUAL "DARWIN" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
-	set( PYTHON_RPATH "$ORIGIN/../../:/lib64:/usr/lib64:$ORIGIN/../../condor" )
 endif()
 
 # Use the limited RPATH when building directly with RPM
