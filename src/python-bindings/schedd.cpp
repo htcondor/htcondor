@@ -314,31 +314,23 @@ history_query(boost::python::object requirement, boost::python::list projection,
 {
 	bool want_startd = (cmd == GET_HISTORY);
 
-	std::string val_str;
-	extract<ExprTreeHolder &> exprtree_extract(requirement);
-	extract<std::string> string_extract(requirement);
-	classad::ExprTree *expr = NULL;
-	boost::shared_ptr<classad::ExprTree> expr_ref;
-	if (string_extract.check())
-	{
-		classad::ClassAdParser parser;
-		std::string val_str = string_extract();
-		if (!parser.ParseExpression(val_str, expr))
-		{
-			THROW_EX(ValueError, "Unable to parse requirements expression");
+	ConstraintHolder req_expr;	// insure that we don't leak the expr if we throw
+	classad::ExprTree * expr = NULL;
+	bool new_expr = false;
+	if (convert_python_to_constraint(requirement, expr, new_expr)) {
+		// if requirements is None, we can get back success, but expr==NULL
+		if (expr) {
+			if (new_expr) {
+				req_expr.set(expr); // take ownership of the new expression
+			} else {
+				classad::ExprTree * expr_copy = expr->Copy();
+				if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+				req_expr.set(expr_copy);
+			}
 		}
-		expr_ref.reset(expr);
-	}
-	else if (exprtree_extract.check())
-	{
-		expr = exprtree_extract().get();
-	}
-	else
-	{
+	} else {
 		THROW_EX(ValueError, "Unable to parse requirements expression");
 	}
-	classad::ExprTree *expr_copy = expr->Copy();
-	if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
 
 	classad::ExprList *projList(new classad::ExprList());
 	unsigned len_attrs = py_len(projection);
@@ -393,10 +385,13 @@ history_query(boost::python::object requirement, boost::python::list projection,
 
 
 	classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
+	if (!req_expr.empty()) {
+		ad.Insert(ATTR_REQUIREMENTS, req_expr.detach());
+	}
 	ad.InsertAttr(ATTR_NUM_MATCHES, match);
 	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
 
+	// PRAGMA_REMIND("projection should be a string, not a classad list")
 	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
 	ad.Insert(ATTR_PROJECTION, projTree);
 
@@ -1355,18 +1350,8 @@ struct Schedd {
     object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs)
     {
         std::string constraint;
-        if (constraint_obj.ptr() != Py_None) {
-            extract<std::string> constraint_extract(constraint_obj);
-            if (constraint_extract.check())
-            {
-                constraint = constraint_extract();
-            }
-            else
-            {
-                classad::ClassAdUnParser printer;
-                classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
-                printer.Unparse(constraint, expr.get());
-            }
+        if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
+            THROW_EX(ValueError, "Invalid constraint.");
         }
 
         CondorQ q;
@@ -1517,27 +1502,23 @@ struct Schedd {
         {
             reason = object("Python-initiated action");
         }
+
+        // job_spec can either be a list of job id's (as strings) or a constraint expression
         StringList ids;
-        std::vector<std::string> ids_list;
         std::string constraint, reason_str, reason_code;
         bool use_ids = false;
-        extract<std::string> constraint_extract(job_spec);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
-        }
-        else
-        {
+        if (PyList_Check(job_spec.ptr())) {
             int id_len = py_len(job_spec);
-            ids_list.reserve(id_len);
             for (int i=0; i<id_len; i++)
             {
                 std::string str = extract<std::string>(job_spec[i]);
-                ids_list.push_back(str);
-                ids.append(ids_list[i].c_str());
+                ids.append(str.c_str());
             }
             use_ids = true;
+        } else if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
+            THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
         }
+
         DCSchedd schedd(m_addr.c_str());
         ClassAd *result = NULL;
         VacateType vacate_type;
@@ -1942,12 +1923,7 @@ struct Schedd {
         std::vector<int> procs;
         std::string constraint;
         bool use_ids = false;
-        extract<std::string> constraint_extract(job_spec);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
-        }
-        else
+        if (PyList_Check(job_spec.ptr()))
         {
             int id_len = py_len(job_spec);
             clusters.reserve(id_len);
@@ -1964,6 +1940,9 @@ struct Schedd {
                 procs.push_back(extract<int>(long_(id_list[1])));
             }
             use_ids = true;
+        }
+        else if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
+            THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
         }
 
         std::string val_str;
@@ -3722,7 +3701,7 @@ void export_schedd()
 
             :param action: The action to perform; must be of the enum JobAction.
             :type action: :class:`JobAction`
-            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+            :param job_spec: The job specification. It can either be a list of job IDs, or an ExprTree or string specifying a constraint.
                 Only jobs matching this description will be acted upon.
             :type job_spec: list[str] or str
             :param reason: The reason for the action.

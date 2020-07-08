@@ -951,6 +951,142 @@ convert_python_to_exprtree(boost::python::object value)
     return NULL;
 }
 
+// convert a python object to a constraint expression.
+// returns true if conversion was successful
+// if value is true or None, constraint is nullptr
+// otherwise constraint is an ExprTree pointer and new_object is set to true if the caller now owns the ExprTree
+// this is mostly a helper function for the second form below, which returns a string as most condor API expect
+bool convert_python_to_constraint(boost::python::object value, classad::ExprTree * & constraint, bool & new_object)
+{
+	constraint = nullptr;
+	new_object = false;
+
+	if (value.ptr() == Py_None) {
+		return true;
+	}
+	if (PyBool_Check(value.ptr())) {
+		bool cppvalue = boost::python::extract<bool>(value);
+		classad::Value val; val.SetBooleanValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+	if (PyLong_Check(value.ptr())) {
+		long long cppvalue = boost::python::extract<long long>(value);
+		classad::Value val; val.SetIntegerValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+#if PY_VERSION_HEX < 0x03000000
+	if (PyInt_Check(value.ptr())) {
+		long int cppvalue = boost::python::extract<long int>(value);
+		classad::Value val; val.SetIntegerValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+#endif
+	if (PyFloat_Check(value.ptr())) {
+		double cppvalue = boost::python::extract<double>(value);
+		classad::Value val; val.SetRealValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+	boost::python::extract<ExprTreeHolder&> expr_obj(value);
+	if (expr_obj.check()) {
+		constraint = expr_obj().get();
+		new_object = false;
+		return true;
+	}
+	boost::python::extract<std::string> str_obj(value);
+	if (str_obj.check()) {
+		std::string str = str_obj();
+		if (str.empty()) {
+			return true;
+		}
+		classad::ClassAdParser parser;
+		parser.SetOldClassAd(true);
+		if (parser.ParseExpression(str, constraint, true)) {
+			new_object = true;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	return false;
+}
+
+// convert a python object to an unparsed constraint expression, 
+// returns true if conversion was successful, althrough the result may be the empty string
+// if value is NULL or true constraint will be the empty string
+bool convert_python_to_constraint(boost::python::object value, std::string & constraint, bool validate /*=false*/)
+{
+	constraint.clear();
+
+	// strings pass through unmodified if validate is false
+	if ( ! validate) {
+		boost::python::extract<std::string> str_obj(value);
+		if (str_obj.check()) {
+			constraint = str_obj();
+			return true;
+		}
+	}
+
+	classad::ExprTree * expr = nullptr;
+	bool new_expr = false;
+	if ( ! convert_python_to_constraint(value, expr, new_expr)) {
+		return false;
+	}
+
+	if (expr) {
+		// treat a simple literal true as no constraint
+		// literals that don't convert to bool are error
+		// we go ahead and unparse false, int and real and pass those as constraints
+		// rather than treating those as errors, because these *might* be intended
+		// to contact the daemon but get no results
+		bool has_constraint = true;
+		if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) {
+			classad::Value::NumberFactor factor;
+			classad::Value lvalue;
+			bool bvalue = false;
+			((classad::Literal*)expr)->GetComponents(lvalue, factor);
+			if (lvalue.IsBooleanValue(bvalue) && bvalue) {
+				has_constraint = false;
+			} else {
+				classad::Value::ValueType vt = lvalue.GetType();
+				if (vt != classad::Value::INTEGER_VALUE && 
+					vt != classad::Value::REAL_VALUE && 
+					vt != classad::Value::BOOLEAN_VALUE && // bool false ends up here
+					vt != classad::Value::UNDEFINED_VALUE) {
+					// literal constraints that are not bool or convertable to bool (like lists and nested ads) are not valid. 
+					if (new_expr) {
+						delete expr;
+						expr = NULL;
+					}
+					return false;
+				}
+			}
+		}
+
+		if (has_constraint) {
+			classad::ClassAdUnParser unparser;
+			unparser.SetOldClassAd(true, true);
+			unparser.Unparse(constraint, expr);
+		}
+
+		if (new_expr) {
+			delete expr;
+			expr = NULL;
+		}
+	}
+
+	return true;
+}
+
+
 void ClassAdWrapper::InsertAttrObject( const std::string &attr, boost::python::object value)
 {
     ExprTree *result = convert_python_to_exprtree(value);

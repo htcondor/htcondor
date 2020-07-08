@@ -343,18 +343,8 @@ private:
     object query_internal(AdTypes ad_type, boost::python::object constraint_obj, boost::python::list attrs, const std::string &statistics, std::string locationName)
     {
         std::string constraint;
-        if (constraint_obj.ptr() != Py_None) {
-            extract<std::string> constraint_extract(constraint_obj);
-            if (constraint_extract.check())
-            {
-                constraint = constraint_extract();
-            }
-            else
-            {
-                classad::ClassAdUnParser printer;
-                classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
-                printer.Unparse(constraint, expr.get());
-            }
+        if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
+            THROW_EX(ValueError, "Invalid constraint.");
         }
 
         CondorQuery query(ad_type);
