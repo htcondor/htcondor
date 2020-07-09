@@ -31,7 +31,7 @@ Release Notes:
 New Features:
 
 - You may now specify that HTCondor only transfer files when the job
-  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
+  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_output``
   to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
   job exits (in the sense of ``ON_EXIT``) with the specified success code.  This
   is intended to prevent unsuccessful jobs from going on hold because they
