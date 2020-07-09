@@ -100,7 +100,10 @@ if(NOT WINDOWS)
         # This will be easier in cmake 3
 
         if(DARWIN)
-            find_program(PYTHON_EXECUTABLE python2.7)
+            # This is a glorious hack, but it's the right thing to do
+            # for our machines.  [FIXME: TimT, should we pass this in as
+            # a command-line argument to CMake in BaTLab?]
+        	set(PYTHON_EXECUTABLE /usr/bin/python)
         else()
             find_program(PYTHON_EXECUTABLE python2)
         endif()
