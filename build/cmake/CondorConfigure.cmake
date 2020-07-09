@@ -99,15 +99,13 @@ if(NOT WINDOWS)
         # We need to do this the hard way for both python2 and python3 support in the same build
         # This will be easier in cmake 3
 
-        if(DARWIN)
-            # This is a glorious hack, but it's the right thing to do
-            # for our machines.  [FIXME: TimT, should we pass this in as
-            # a command-line argument to CMake in BaTLab?]
-        	set(PYTHON_EXECUTABLE /usr/bin/python)
+        if(${OS_NAME} STREQUAL "DARWIN")
+            find_program(PYTHON_EXECUTABLE python)
         else()
             find_program(PYTHON_EXECUTABLE python2)
         endif()
 
+message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
         if (PYTHON_EXECUTABLE)
             set(PYTHONINTERP_FOUND TRUE)
             set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
