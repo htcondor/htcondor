@@ -482,14 +482,13 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 		}
 
 		// also make sure the .mark file is older than the sweep delay.
-		// default is to clean up after 8 hours of no jobs.
 		int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
 		int now = time(0);
 		int mtime = cred_dir.GetModifyTime();
-		if ( (now - mtime) > sweep_delay ) {
-			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Sweeping...\n", markfile, mtime, sweep_delay);
+		if ( (now - mtime) >= sweep_delay ) {
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is at least %i seconds old. Sweeping...\n", markfile, mtime, sweep_delay);
 		} else {
-			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Skipping...\n", markfile, mtime, sweep_delay);
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is less than %i seconds old. Skipping...\n", markfile, mtime, sweep_delay);
 			return;
 		}
 	} else {
