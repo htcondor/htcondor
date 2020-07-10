@@ -116,6 +116,10 @@ New Features:
    the MasterLog and is ready to accept commands.
    :ticket:`7667`
 
+-  Updated *condor_q* so when called with the ``-dag`` flag and a DAGMan job
+   ID, it will display all jobs running under any nested subdags.
+   :ticket:`7483`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
