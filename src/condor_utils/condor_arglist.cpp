@@ -550,7 +550,7 @@ ArgList::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
 }
 
 bool
-ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_msg)
+ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_msg) const
 {
 	bool has_args1 = ad->LookupExpr(ATTR_JOB_ARGUMENTS1) != NULL;
 	bool has_args2 = ad->LookupExpr(ATTR_JOB_ARGUMENTS2) != NULL;
@@ -657,7 +657,7 @@ ArgList::GetArgsStringV1Raw(MyString *result,MyString *error_msg) const
 }
 
 bool
-ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg)
+ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg) const
 {
 	MyString v2_raw;
 	if(!GetArgsStringV2Raw(&v2_raw,error_msg)) {

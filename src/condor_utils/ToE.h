@@ -18,7 +18,7 @@ namespace ToE {
         std::string when;
         unsigned int howCode;
 
-        bool writeToString( std::string & out );
+        bool writeToString( std::string & out ) const;
         bool readFromString( const std::string & in );
     };
 

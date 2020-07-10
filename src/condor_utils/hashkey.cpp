@@ -30,7 +30,7 @@
 #include <netinet/in.h>
 #endif
 
-void AdNameHashKey::sprint (MyString &s)
+void AdNameHashKey::sprint (MyString &s) const
 {
 	if (ip_addr.Length() )
 		s.formatstr( "< %s , %s >", name.Value(), ip_addr.Value() );

@@ -530,7 +530,7 @@ SubmitHash::~SubmitHash()
 	clusterAd = NULL;
 }
 
-void SubmitHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
 {
 	va_list ap;
 	va_start(ap, format);
@@ -547,7 +547,7 @@ void SubmitHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_
 	free(message);
 }
 
-void SubmitHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+void SubmitHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
 {
 	va_list ap;
 	va_start(ap, format);
@@ -8067,7 +8067,7 @@ char *qslice::set(char* str) {
 
 // convert ix based on slice start & step, returns true if translated ix is within slice start and length.
 // input ix is assumed to be 0 based and increasing.
-bool qslice::translate(int & ix, int len) {
+bool qslice::translate(int & ix, int len) const {
 	if (!(flags & 1)) return ix >= 0 && ix < len;
 	int im = (flags&8) ? step : 1;
 	if (im <= 0) {
@@ -8082,7 +8082,7 @@ bool qslice::translate(int & ix, int len) {
 }
 
 // check to see if ix is selected for by the slice. negative iteration is ignored 
-bool qslice::selected(int ix, int len) {
+bool qslice::selected(int ix, int len) const {
 	if (!(flags&1)) return ix >= 0 && ix < len;
 	int is = 0; if (flags&2) { is = (start < 0) ? start+len : start; }
 	int ie = len; if (flags&4) { ie = (end < 0) ? end+len : end; }
@@ -8091,7 +8091,7 @@ bool qslice::selected(int ix, int len) {
 
 // returns number of selected items for a list of the given length, result is never negative
 // negative step values NOT handled correctly
-int qslice::length_for(int len) {
+int qslice::length_for(int len) const {
 	if (!(flags&1)) return len;
 	int is = 0; if (flags&2) { is = (start < 0) ? start+len : start; }
 	int ie = len; if (flags&4) { ie = (end < 0) ? end+len : end; }
@@ -8105,7 +8105,7 @@ int qslice::length_for(int len) {
 }
 
 
-int qslice::to_string(char * buf, int cch) {
+int qslice::to_string(char * buf, int cch) const {
 	char sz[16*3];
 	if ( ! (flags&1)) return 0;
 	char * p = sz;

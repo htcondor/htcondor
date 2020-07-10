@@ -109,7 +109,7 @@ class WriteUserLog
       ~log_file(); 
       log_file& operator=(const log_file& rhs);
       void set_user_priv_flag(bool v) { user_priv_flag = v; }
-      bool get_user_priv_flag() { return user_priv_flag; }
+      bool get_user_priv_flag() const { return user_priv_flag; }
     };
 
     typedef std::map<std::string, log_file*> log_file_cache_map_t;
@@ -205,7 +205,7 @@ public:
 	void setEnableFsync(bool enabled);
 
 	/**@return false if disabled, true if enabled*/
-	bool getEnableFsync();
+	bool getEnableFsync() const;
 
 	/** APIs for testing */
 	int getGlobalSequence( void ) const { return m_global_sequence; };

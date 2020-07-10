@@ -28,7 +28,7 @@ public:
         return m_accum_ms;
     }
 
-    double get_ms()
+    double get_ms() const
     {
         double change_ms = 0;
         if (m_running)
@@ -46,7 +46,7 @@ public:
     }
 
 
-    bool is_running() {return m_running;}
+    bool is_running() const {return m_running;}
 
 private:
 

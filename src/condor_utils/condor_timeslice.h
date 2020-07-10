@@ -94,7 +94,7 @@ class Timeslice {
 	// The next interval will be as small as is allowed by the
 	// min interval and max timeslice.
 	void expediteNextRun();
-	bool isNextRunExpedited() { return m_expedite_next_run; }
+	bool isNextRunExpedited() const { return m_expedite_next_run; }
 
  private:
 	double m_timeslice;        // maximum fraction of time to consume

@@ -521,7 +521,7 @@ ResMgr::init_resources( void )
 
 
 bool
-ResMgr::typeNumCmp( int* a, int* b )
+ResMgr::typeNumCmp( const int* a, const int* b ) const
 {
 	int i;
 	for( i=0; i<max_types; i++ ) {
@@ -1215,7 +1215,7 @@ ResMgr::eval_all( void )
 
 
 void
-ResMgr::report_updates( void )
+ResMgr::report_updates( void ) const
 {
 	if( !num_updates ) {
 		return;
@@ -1594,7 +1594,7 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void )
+ResMgr::sweep_timer_handler( void ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
@@ -2674,7 +2674,7 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 }
 
 bool
-ResMgr::isSlotDraining(Resource * /*rip*/)
+ResMgr::isSlotDraining(Resource * /*rip*/) const
 {
 	return draining;
 }

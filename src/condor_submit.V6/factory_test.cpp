@@ -114,10 +114,10 @@ public:
 	int PauseMode() { return paused; }
 
 	const char * Name() { return name ? name : "<empty>"; }
-	int ID() { return ident; }
+	int ID() const { return ident; }
 
-	bool NoItems() { return fea.foreach_mode == foreach_not; }
-	int StepSize() { return fea.queue_num; }
+	bool NoItems() const { return fea.foreach_mode == foreach_not; }
+	int StepSize() const { return fea.queue_num; }
 	// advance from the input row until the next selected row. return  < 0 if no more selected rows.
 	int NextSelectedRow(int row) {
 		if (fea.foreach_mode == foreach_not) return -1;

@@ -474,7 +474,7 @@ UserProc::openStdFile( std_file_type type,
 }
 
 void
-UserProc::SetStdFiles(int std_fds[], char const *std_fnames[])
+UserProc::SetStdFiles(const int std_fds[], char const *std_fnames[])
 {
 		// store the pre-defined std files for use by getStdFile()
 	int i;

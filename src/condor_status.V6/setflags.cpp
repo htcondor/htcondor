@@ -261,7 +261,7 @@ AdTypes PrettyPrinter::resetMode(int sm, int arg_index, const char * arg)
 	return setMode(sm, arg_index, arg);
 }
 
-void PrettyPrinter::dumpPPMode(FILE* out)
+void PrettyPrinter::dumpPPMode(FILE* out) const
 {
 	const char * sdo_str = getSDOModeStr(sdo_mode);
 	const char * adtype_str = AdTypeToString(setby.adType);
@@ -275,7 +275,7 @@ void PrettyPrinter::dumpPPMode(FILE* out)
 	fprintf (out, "PrettyPrint: %s   (Set by arg %d '%s')\n", style_str, setby.ppArgIndex, setby.ppArg ? setby.ppArg : "NULL");
 }
 
-const char * PrettyPrinter::adtypeNameFromPPMode()
+const char * PrettyPrinter::adtypeNameFromPPMode() const
 {
 	return AdTypeToString(setby.adType);
 }

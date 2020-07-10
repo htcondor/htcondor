@@ -1628,7 +1628,7 @@ WriteUserLog::setEnableFsync(bool enabled) {
 }
 
 bool
-WriteUserLog::getEnableFsync() {
+WriteUserLog::getEnableFsync() const {
 	return m_enable_fsync;
 }
 

@@ -413,7 +413,7 @@ class Job {
 		/** Should we retry this node (if it failed)?
 			@return true: retry the node; false: don't retry
 		*/
-	bool DoRetry() { return !DoAbort() &&
+	bool DoRetry() const { return !DoAbort() &&
 				( GetRetries() < GetRetryMax() ); }
 
     /** Returns true if the node's pre script, batch job, or post

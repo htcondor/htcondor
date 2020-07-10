@@ -363,19 +363,19 @@ public:
 	// x,y & z are integers, y and z are optional
 	char *set(char* str);
 	void clear() { flags = start = end = step = 0; }
-	bool  initialized() { return flags & 1; }
+	bool  initialized() const { return flags & 1; }
 
 	// convert ix based on slice start & step, returns true if translated ix is within slice start and length.
 	// input ix is assumed to be 0 based and increasing.
-	bool translate(int & ix, int len);
+	bool translate(int & ix, int len) const;
 
 	// check to see if ix is selected for by the slice. negative iteration is ignored 
-	bool selected(int ix, int len);
+	bool selected(int ix, int len) const;
 
 	// returns number of selected items for a list of the given length, result is never negative
-	int length_for(int len);
+	int length_for(int len) const;
 
-	int to_string(char * buf, int cch);
+	int to_string(char * buf, int cch) const;
 
 private:
 	int flags; // 1==initialized, 2==start set, 4==length set, 8==step set
@@ -631,11 +631,11 @@ public:
 
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
-	int getUniverse()  { return JobUniverse; }
-	int getClusterId() { return jid.cluster; }
-	int getProcId()    { return jid.proc; }
-	time_t getSubmitTime() { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
-	bool getSubmitOnHold(int & code) { code = SubmitOnHoldCode; return SubmitOnHold; }
+	int getUniverse() const  { return JobUniverse; }
+	int getClusterId() const { return jid.cluster; }
+	int getProcId() const    { return jid.proc; }
+	time_t getSubmitTime() const { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
+	bool getSubmitOnHold(int & code) const { code = SubmitOnHoldCode; return SubmitOnHold; }
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
@@ -795,8 +795,8 @@ protected:
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
 	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
-	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
-	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
+	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 private:
 
 	int64_t calc_image_size_kb( const char *name);
@@ -834,9 +834,9 @@ struct SubmitStepFromQArgs {
 		unset_live_vars();
 	}
 
-	bool has_items() { return m_fea.items.number() > 0; }
-	bool done() { return m_done; }
-	int  step_size() { return m_step_size; }
+	bool has_items() const { return m_fea.items.number() > 0; }
+	bool done() const { return m_done; }
+	int  step_size() const { return m_step_size; }
 
 	// setup for iteration from the args of a QUEUE statement and (possibly) inline itemdata
 	int begin(const JOB_ID_KEY & id, const char * qargs)

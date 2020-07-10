@@ -114,7 +114,7 @@ AllocationNode::setClaimId( const char* new_id )
 
 
 void
-AllocationNode::display( void )
+AllocationNode::display( void ) const
 {
 	const int level = D_FULLDEBUG;
 	if( ! IsFulldebug(D_FULLDEBUG) ) {

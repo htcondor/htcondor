@@ -110,7 +110,7 @@ private:
 		int				 rot,
 		const char		*path,
 		int				 match_thresh,
-		int				*state_score ) const;
+		const int				*state_score ) const;
 	MatchResult EvalScore(
 		int				 max_thresh,
 		int				 score ) const;
@@ -1541,7 +1541,7 @@ ReadUserLogMatch::MatchInternal(
 	int				 rot,
 	const char		*path,
 	int				 match_thresh,
-	int				*score_ptr ) const
+	const int				*score_ptr ) const
 {
 	int		score = *score_ptr;
 

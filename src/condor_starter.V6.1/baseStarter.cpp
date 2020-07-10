@@ -2400,7 +2400,7 @@ CStarter::SpawnPreScript( void )
 	}
 }
 
-void CStarter::getJobOwnerFQUOrDummy(std::string &result)
+void CStarter::getJobOwnerFQUOrDummy(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -2411,7 +2411,7 @@ void CStarter::getJobOwnerFQUOrDummy(std::string &result)
 	}
 }
 
-bool CStarter::getJobClaimId(std::string &result)
+bool CStarter::getJobClaimId(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -3688,7 +3688,7 @@ CStarter::closeSavedStderr( void )
 
 
 int
-CStarter::classadCommand( int, Stream* s )
+CStarter::classadCommand( int, Stream* s ) const
 {
 	ClassAd ad;
 	ReliSock* rsock = (ReliSock*)s;
@@ -3821,7 +3821,7 @@ CStarter::exitAfterGlexec( int code )
 #endif
 
 bool
-CStarter::WriteAdFiles()
+CStarter::WriteAdFiles() const
 {
 
 	ClassAd* ad;
