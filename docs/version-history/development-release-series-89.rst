@@ -120,6 +120,11 @@ New Features:
    ID, it will display all jobs running under any nested subdags.
    :ticket:`7483`
 
+-  Direct job submission in *condor_dagman* now reports warning messages related
+   to job submission (for example, possible typos in submit arguments) to help
+   debug problems with jobs not running correctly.
+   :ticket:`7568`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
