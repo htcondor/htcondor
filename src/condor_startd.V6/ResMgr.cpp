@@ -1599,7 +1599,7 @@ ResMgr::sweep_timer_handler( void )
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
 	credmon_sweep_creds(cred_dir, credmon_type_KRB);
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
 
@@ -1613,7 +1613,7 @@ ResMgr::start_sweep_timer( void )
 	}
 
 	dprintf(D_FULLDEBUG, "STARTD: setting start_sweep_timer()\n");
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 							(TimerHandlercpp)&ResMgr::sweep_timer_handler,
 							"sweep_timer_handler", this );
@@ -1702,7 +1702,7 @@ ResMgr::reset_timers( void )
 								 update_interval );
 	}
 
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	if( m_cred_sweep_tid != -1 ) {
 		daemonCore->Reset_Timer( m_cred_sweep_tid, sec_cred_sweep_interval,
 								 sec_cred_sweep_interval );
