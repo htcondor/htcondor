@@ -156,6 +156,10 @@ Bugs Fixed:
   matching there and attempting to run.
   :ticket:`7707`
 
+- Fixed a bug in *condor_dagman* where completed jobs incorrectly showed a 
+  warning message related to job events.
+  :ticket:`7548`
+
 Version 8.9.7
 -------------
 
