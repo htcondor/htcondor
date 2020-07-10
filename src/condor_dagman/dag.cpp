@@ -4156,7 +4156,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 // in the submit command's stdout (which we stashed in the Job object)
 
 bool
-Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
+Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const
 {
 		// Changed this if from "if( recovery )" during work on PR 806 --
 		// this is better because if you get two submit events for the

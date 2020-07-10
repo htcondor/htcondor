@@ -920,20 +920,20 @@ RemoteResource::closeClaimSock( void )
 
 
 int
-RemoteResource::getExitReason()
+RemoteResource::getExitReason() const
 {
 	return exit_reason;
 }
 
 bool
-RemoteResource::claimIsClosing()
+RemoteResource::claimIsClosing() const
 {
 	return claim_is_closing;
 }
 
 
 int64_t
-RemoteResource::exitSignal( void )
+RemoteResource::exitSignal( void ) const
 {
 	if( exited_by_signal ) {
 		return exit_value;
@@ -943,7 +943,7 @@ RemoteResource::exitSignal( void )
 
 
 int64_t
-RemoteResource::exitCode( void )
+RemoteResource::exitCode( void ) const
 {
 	if( ! exited_by_signal ) {
 		return exit_value;
@@ -2313,7 +2313,7 @@ RemoteResource::locateReconnectStarter( void )
 }
 
 void
-RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
+RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const
 {
 	upload_status = m_upload_xfer_status;
 	download_status = m_download_xfer_status;

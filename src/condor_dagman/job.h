@@ -373,7 +373,7 @@ class Job {
 	bool SanityCheck() const;
 
 	bool CanAddParent(Job* parent, MyString &whynot);
-	bool CanAddChild(Job* child, MyString &whynot);
+	bool CanAddChild(Job* child, MyString &whynot) const;
 	// check to see if we can add this as a child, and it allows us as a parent..
 	bool CanAddChildren(std::forward_list<Job*> & children, MyString &whynot);
 #ifdef DEAD_CODE
@@ -390,7 +390,7 @@ class Job {
 
 	bool AddVar(const char * name, const char * value, const char* filename, int lineno);
 	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }
-	bool HasVars() { return ! varsFromDag.empty(); }
+	bool HasVars() const { return ! varsFromDag.empty(); }
 	int PrintVars(std::string &vars);
 
 	// called after the DAG has been parsed to build the parent and waiting edge lists
@@ -407,7 +407,7 @@ class Job {
         	@return true: node should abort the DAG; false node should
 				not abort the DAG
 		*/
-	bool DoAbort() { return have_abort_dag_val &&
+	bool DoAbort() const { return have_abort_dag_val &&
 				( retval == abort_dag_val ); }
 
 		/** Should we retry this node (if it failed)?
@@ -496,7 +496,7 @@ class Job {
 	/** Get the time at which the most recent event occurred for this job.
 		@return the last event time.
 	*/
-	time_t GetLastEventTime() { return _lastEventTime; }
+	time_t GetLastEventTime() const { return _lastEventTime; }
 
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
@@ -834,10 +834,10 @@ public:
 		_ary.insert(it, id);
 		return true;
 	}
-	inline size_t size() {
+	inline size_t size() const {
 		return _ary.size();
 	}
-	inline bool empty() {
+	inline bool empty() const {
 		return _ary.empty();
 	}
 
@@ -920,7 +920,7 @@ public:
 		return NULL;
 	}
 
-	int Waiting() { return _num_waiting; }
+	int Waiting() const { return _num_waiting; }
 
 	void MarkAllWaiting() {
 		_num_waiting = (int)_wait.size();

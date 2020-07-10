@@ -691,7 +691,7 @@ int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
 							handler_descrip, s, TRUE) );
 }
 
-int DaemonCore::RegisteredSocketCount()
+int DaemonCore::RegisteredSocketCount() const
 {
 	return nRegisteredSocks + nPendingSockets;
 }
@@ -1467,7 +1467,7 @@ DaemonCore::superUserNetworkIpAddr(void) {
 }
 
 bool
-DaemonCore::Is_Command_From_SuperUser( Stream *s )
+DaemonCore::Is_Command_From_SuperUser( Stream *s ) const
 {
 	if (m_super_dc_port < 0) {
 		// This daemon does not have a super user command port
@@ -2914,7 +2914,7 @@ class DCThreadState : public Service {
  public:
 	DCThreadState(int tid) 
 		{m_tid=tid; m_dataptr=NULL; m_regdataptr=NULL;}
-	int get_tid() { return m_tid; }
+	int get_tid() const { return m_tid; }
 	void* *m_dataptr;
 	void* *m_regdataptr;
  private:
@@ -5357,7 +5357,7 @@ int DaemonCore::Continue_Thread(int tid)
 #endif
 }
 
-int DaemonCore::Suspend_Process(pid_t pid)
+int DaemonCore::Suspend_Process(pid_t pid) const
 {
 	dprintf(D_DAEMONCORE,"called DaemonCore::Suspend_Process(%d)\n",
 		pid);
@@ -5711,7 +5711,7 @@ public:
 		const sigset_t *the_sigmask,
 		size_t *core_hard_limit,
 		long    as_hard_limit,
-		int		*affinity_mask,
+		const int		*affinity_mask,
 		FilesystemRemap *fs_remap
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
@@ -5749,8 +5749,8 @@ public:
 	void exec();
 	static int clone_fn( void *arg );
 
-	pid_t clone_safe_getpid();
-	pid_t clone_safe_getppid();
+	pid_t clone_safe_getpid() const;
+	pid_t clone_safe_getppid() const;
 
 	void writeTrackingGid(gid_t tracking_gid);
 	void writeExecError(int exec_errno,int failed_op=0);
@@ -5820,7 +5820,7 @@ static int stack_direction() {
 }
 #endif
 
-pid_t CreateProcessForkit::clone_safe_getpid() {
+pid_t CreateProcessForkit::clone_safe_getpid() const {
 #if HAVE_CLONE
 		// In some broken threading implementations (e.g. PPC SUSE 9 tls),
 		// getpid() in the child branch of clone(CLONE_VM) returns
@@ -5848,7 +5848,7 @@ pid_t CreateProcessForkit::clone_safe_getpid() {
 	return ::getpid();
 #endif
 }
-pid_t CreateProcessForkit::clone_safe_getppid() {
+pid_t CreateProcessForkit::clone_safe_getppid() const {
 #if HAVE_CLONE
 		// See above comment for clone_safe_getpid() for explanation of
 		// why we need to do this.
@@ -8409,7 +8409,7 @@ public:
 
 	void CallReaper();
 
-	int FakeThreadID() { return m_tid; }
+	int FakeThreadID() const { return m_tid; }
 
 private:
 	int m_tid; // timer id
@@ -10790,7 +10790,7 @@ bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
 }
 
 bool
-DaemonCore::GetPeacefulShutdown() {
+DaemonCore::GetPeacefulShutdown() const {
 	return peaceful_shutdown;
 }
 
@@ -11017,7 +11017,7 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 
 
 bool
-DaemonCore::wantsRestart()
+DaemonCore::wantsRestart() const
 {
 	return m_wants_restart;
 }
@@ -11202,7 +11202,7 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	return 0;
 }
 
-void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) {
+void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) const {
 	if ( !sinful ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
 		return;

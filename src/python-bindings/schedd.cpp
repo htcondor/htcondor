@@ -437,7 +437,7 @@ public:
     static boost::shared_ptr<ScheddNegotiate> enter(boost::shared_ptr<ScheddNegotiate> obj) {return obj;}
     static bool exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/);
 
-    bool negotiating() {return m_negotiating;}
+    bool negotiating() const {return m_negotiating;}
 
     void disconnect();
 
@@ -536,7 +536,7 @@ private:
         if (m_use_rrc) {m_num_to_fetch = param_integer("NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE");}
     }
 
-    bool needs_end_negotiate()
+    bool needs_end_negotiate() const
     {
         if (!m_done) {return true;}
         return m_use_rrc ? m_got_job_info : false;
@@ -596,7 +596,7 @@ struct QueueItemsIterator {
 		return row;
 	}
 
-	int row_count() { return num_rows; }
+	int row_count() const { return num_rows; }
 
 	int load_items(SubmitHash & h, MacroStreamMemoryFile &ms)
 	{
@@ -624,9 +624,9 @@ struct SubmitResult {
 		if (clusterAd) m_ad.Update(*clusterAd);
 	}
 
-	int cluster() { return m_id.cluster; }
-	int first_procid() { return m_id.proc; }
-	int num_procs() { return m_num; }
+	int cluster() const { return m_id.cluster; }
+	int first_procid() const { return m_id.proc; }
+	int num_procs() const { return m_num; }
 	boost::shared_ptr<ClassAdWrapper> clusterad() {
 		//PRAGMA_REMIND("does the ref counting work if our m_ad is actually a shared_ptr<ClassAdWrapper> ?")
 		boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
@@ -680,7 +680,7 @@ struct SubmitStepFromPyIter {
 		unset_live_vars();
 	}
 
-	bool done() { return m_done; }
+	bool done() const { return m_done; }
 	bool has_items() { return m_items; }
 	int  step_size() { return m_fea.queue_num ? m_fea.queue_num : 1; }
 	const char * errmsg() { if ( ! m_errmsg.empty()) { return m_errmsg.c_str(); } return NULL;}

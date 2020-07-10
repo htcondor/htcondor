@@ -62,7 +62,7 @@ public:
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
-	bool hadAuthFailure() { return m_hadAuthFailure; }
+	bool hadAuthFailure() const { return m_hadAuthFailure; }
 
 	std::string authFailureMessage;
 

@@ -1085,7 +1085,7 @@ void Job::FinalizeAdjustEdges(Dag* /*dag*/)
 #endif
 
 bool
-Job::CanAddChild( Job* child, MyString &whynot )
+Job::CanAddChild( Job* child, MyString &whynot ) const
 {
 	if( !child ) {
 		whynot = "child == NULL";

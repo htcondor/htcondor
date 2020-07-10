@@ -284,7 +284,7 @@ DagmanClassad::CloseConnection( Qmgr_connection *queue )
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
+DagmanClassad::SetDagAttribute( const char *attrName, int attrVal ) const
 {
 	if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
 						  attrName, attrVal ) != 0 ) {
@@ -296,7 +296,7 @@ DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
+DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value ) const
 {
 	if ( SetAttributeString( _dagmanId._cluster, _dagmanId._proc,
 						  attrName, value.Value() ) != 0 ) {
@@ -308,7 +308,7 @@ DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::SetDagAttribute( const char *attrName, const ClassAd &ad )
+DagmanClassad::SetDagAttribute( const char *attrName, const ClassAd &ad ) const
 {
 	if ( SetAttributeExpr( _dagmanId._cluster, _dagmanId._proc,
 						  attrName, &ad ) != 0 ) {
@@ -321,7 +321,7 @@ DagmanClassad::SetDagAttribute( const char *attrName, const ClassAd &ad )
 //---------------------------------------------------------------------------
 bool
 DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
-			bool printWarning )
+			bool printWarning ) const
 {
 	char *val;
 	if ( GetAttributeStringNew( _dagmanId._cluster, _dagmanId._proc,
@@ -342,7 +342,7 @@ DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal,
 //---------------------------------------------------------------------------
 bool
 DagmanClassad::GetDagAttribute( const char *attrName, int &attrVal,
-			bool printWarning )
+			bool printWarning ) const
 {
 	int val;
 	if ( GetAttributeInt( _dagmanId._cluster, _dagmanId._proc,

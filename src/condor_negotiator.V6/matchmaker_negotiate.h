@@ -35,10 +35,10 @@ class ResourceRequestList {
 			int &autocluster, ReliSock* const sock, int skipJobs = 1);
 
 		//
-	bool hadError() { return errcode > 0; }
+	bool hadError() const { return errcode > 0; }
 
 		//
-	int getErrorCode() { return errcode; }
+	int getErrorCode() const { return errcode; }
 
 		// 
 	void noMatchFound();

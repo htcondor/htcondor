@@ -171,7 +171,7 @@ private:
     time_t  m_lastHadAliveTime;
 
 // Debugging utilities
-	void printDataMembers()
+	void printDataMembers() const
     {
         dprintf( D_ALWAYS, "\n"
 						   "Replication interval                  - %d\n"

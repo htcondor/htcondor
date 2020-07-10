@@ -58,7 +58,7 @@ class ScriptQ : public Service {
 	/** Return the number of scripts actually running (does not include
 	    scripts that are queued to run but have been deferred).
 	*/
-    int NumScriptsRunning();
+    int NumScriptsRunning() const;
 
     // reaper function for PRE & POST script completion
     int ScriptReaper( int pid, int status );

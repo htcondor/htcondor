@@ -106,19 +106,19 @@ class DagmanClassad {
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetDagAttribute( const char *attrName, int attrVal );
+	void SetDagAttribute( const char *attrName, int attrVal ) const;
 
 		/** Set an attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetDagAttribute( const char *attrName, const MyString &value );
+	void SetDagAttribute( const char *attrName, const MyString &value ) const;
 
 		/** Set a nested ClassAd attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
 			@param ad The ClassAd to set.
 		*/
-	void SetDagAttribute( const char *attrName, const ClassAd &ad );
+	void SetDagAttribute( const char *attrName, const ClassAd &ad ) const;
 
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.
@@ -128,10 +128,10 @@ class DagmanClassad {
 			@return true if we got the requested attribute, false otherwise
 		*/
 	bool GetDagAttribute( const char *attrName, MyString &attrVal,
-				bool printWarning = true );
+				bool printWarning = true ) const;
 
 	bool GetDagAttribute( const char *attrName, int &attrVal,
-				bool printWarning = true );
+				bool printWarning = true ) const;
 
 		// Whether this object is valid.
 	bool _valid;
