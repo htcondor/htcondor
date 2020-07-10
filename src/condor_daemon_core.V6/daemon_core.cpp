@@ -168,6 +168,8 @@ const int DaemonCore::ERRNO_EXIT = 666669;
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 
+#include <memory>
+
 int
 tdp_wait_stopped_child (pid_t pid)
 {
@@ -11244,7 +11246,7 @@ bool DaemonCore::SockPair::has_relisock(bool b) {
 		EXCEPT("Internal error: DaemonCore::SockPair::has_relisock must never be called with false as an argument.");
 	}
 	if(!m_rsock) {
-		m_rsock = std::shared_ptr<ReliSock>(new ReliSock);
+		m_rsock = std::make_shared<ReliSock>();
 	}
 	return true;
 }
@@ -11254,7 +11256,7 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		EXCEPT("Internal error: DaemonCore::SockPair::has_safesock must never be called with false as an argument.");
 	}
 	if(!m_ssock) {
-		m_ssock = std::shared_ptr<SafeSock>(new SafeSock);
+		m_ssock = std::make_shared<SafeSock>();
 	}
 	return true;
 }
