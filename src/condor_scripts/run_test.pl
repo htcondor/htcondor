@@ -360,8 +360,29 @@ sub DoChild
         SetupPythonPath();
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
         $perl = "python3";
+
+        if ($iswindows) {
+            my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
+
+            # use 32 bit python if we have a 32 bit htcondor python module
+            my $reldir = `condor_config_val release_dir`; chomp $reldir;
+            my $relpy = "$reldir\\lib\\python";
+            if( -f "$relpy\\htcondor\\htcondor.cp36-win32.pyd" ) {
+                $regkey = "HKLM\\Software\\wow6432node\\Python\\PythonCore\\3.6\\InstallPath" 
+            }
+
+            my @reglines = `reg query $regkey /ve`;
+            for my $line (@reglines) {
+                if ($line =~ /REG_SZ\s+(.+)$/) {
+                    print "\tfound python 3.6 install dir : '$1'\n";
+                    $perl = "$1python3.exe";
+                    last;
+                }
+            }
+        }
+
         print "\tPython version: ";
-        system ("python3 --version");
+        system ("$perl --version");
     }
 
     my $test_starttime = time();
