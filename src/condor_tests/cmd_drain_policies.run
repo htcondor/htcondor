@@ -71,7 +71,7 @@ def main():
 	# Construct our test executable.
 	#
 	jobFile = os.path.join( os.getcwd(), "condition-sleep.py" )
-	contents = """/usr/bin/python3
+	contents = """#!/usr/bin/python3
 
 import os
 import sys
