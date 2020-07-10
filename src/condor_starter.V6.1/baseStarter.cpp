@@ -74,6 +74,9 @@ CStarter::CStarter()
 	Execute = NULL;
 	orig_cwd = NULL;
 	is_gridshell = false;
+#ifdef WIN32
+	has_encrypted_working_dir = false;
+#endif
 	ShuttingDown = FALSE;
 	jic = NULL;
 	jobUniverse = CONDOR_UNIVERSE_VANILLA;
@@ -278,6 +281,14 @@ void CStarter::FinalCleanup()
 {
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
+#ifdef WIN32
+	/* If we loaded the user's profile, then we should dump it now */
+	if (m_owner_profile.loaded()) {
+		m_owner_profile.unload ();
+		// TODO: figure out how we can avoid doing this..
+		m_owner_profile.destroy ();
+	}
+#endif
 }
 
 
@@ -1106,7 +1117,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		}
 		if (offset > 0 && size < static_cast<size_t>(offset))
 		{
-			offset = size;
+			offset = (int)size;
 			*it2 = offset;
 			classad::Value value; value.SetIntegerValue(*it2);
 			off_expr_list[idx] = classad::Literal::MakeLiteral(value);
@@ -1748,6 +1759,43 @@ CStarter::Hold( void )
 	return ( !jobRunning );
 }
 
+#ifdef WIN32
+bool CStarter::loadUserRegistry(const ClassAd * JobAd)
+{
+	m_owner_profile.update ();
+	MyString username(m_owner_profile.username());
+
+	/*************************************************************
+	NOTE: We currently *ONLY* support loading slot-user profiles.
+	This limitation will be addressed shortly, by allowing regular
+	users to load their registry hive - Ben [2008-09-31]
+	**************************************************************/
+	bool run_as_owner = false;
+	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+	if (run_as_owner) {
+		return true;
+	}
+
+	bool load_profile = has_encrypted_working_dir;
+	if ( ! load_profile) {
+		// If we don't *need* to load the user registry let the job decide that it wants to
+		JobAd->LookupBool(ATTR_JOB_LOAD_PROFILE, load_profile);
+	}
+
+	// load the slot user registry if it is wanted or needed. This can take about 30 seconds to load
+	if (load_profile) {
+		dprintf(D_FULLDEBUG, "Loading registry hives for %s\n", username.Value());
+		if ( ! m_owner_profile.load()) {
+			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n", username.Value());
+			return false;
+		} else {
+			dprintf(D_ALWAYS, "Loaded Registry hives for %s\n", username.Value());
+		}
+	}
+
+	return true;
+}
+#endif
 
 bool
 CStarter::createTempExecuteDir( void )
@@ -1837,8 +1885,8 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-		WriteAdFiles();
 #if !defined(WIN32)
+		WriteAdFiles();
 		if (use_chown) {
 			priv_state p = set_root_priv();
 			if (chown(WorkingDir.Value(),
@@ -1872,15 +1920,14 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-	}
 	
-	// if the admin or the user wants the execute directory encrypted,
-	// go ahead and set that up now too
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
-	if (!encrypt_execdir && jic && jic->jobClassAd()) {
-		jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
+		// if the admin or the user wants the execute directory encrypted,
+		// go ahead and set that up now too
+		bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+		if (!encrypt_execdir && jic && jic->jobClassAd()) {
+			jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+		}
+		if (encrypt_execdir) {
 		
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(
@@ -1912,24 +1959,34 @@ CStarter::createTempExecuteDir( void )
 				size_t cch = WorkingDir.Length()+1;
 				wchar_t *WorkingDir_w = new wchar_t[cch];
 				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.Value());
+
 				EncryptionDisable(WorkingDir_w, FALSE);
-				delete[] WorkingDir_w;
 				
 				if ( EncryptFile(WorkingDir.Value()) == 0 ) {
-					dprintf(D_ALWAYS, "Could not encrypt execute directory "
-							"(err=%li)\n", GetLastError());
+					dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", GetLastError());
+				} else {
+					has_encrypted_working_dir = true;
+					dprintf(D_ALWAYS, "Encrypting execute directory \"%s\" to user %s\n", WorkingDir.Value(), nobody_login);
 				}
 
+				delete[] WorkingDir_w;
 				FreeLibrary(advapi); // don't leak the dll library handle
 
 			} else {
 				// tell the user it didn't work out
-				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, "
-						"but the Encryption" " functions are unavailable!");
+				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, but the Encryption functions are unavailable!");
 			}
 
-	} // ENCRYPT_EXECUTE_DIRECTORY is True
-	
+		} // ENCRYPT_EXECUTE_DIRECTORY is True
+	}
+
+	// We might need to load registry hives for encrypted execute dir to work
+	// so give the jic a chance to do that now. Also if the job has load_profile = true
+	// this is where we honor that.  Note that a registry create/load can take multiple seconds
+	loadUserRegistry(jic->jobClassAd());
+
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
 
 #endif /* WIN32 */
 
@@ -3130,6 +3187,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
+		// put the value of BIN into the environment; used by sshd to find
+		// condor_config_val. also helpful to find condor_chirp.
+	std::string condorBinDir;
+	param(condorBinDir,"BIN");
+	if (!condorBinDir.empty()) {
+		proc_env->SetEnv("_CONDOR_BIN",condorBinDir.c_str());
+	}
+
 		// put in environment variables specific to the type (universe) of job
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
@@ -3755,7 +3820,12 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.Value(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3780,7 +3850,12 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.Value(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}

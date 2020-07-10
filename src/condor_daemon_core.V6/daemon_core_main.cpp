@@ -664,24 +664,45 @@ handle_dynamic_dirs()
 	if( ! DynamicDirs ) {
 		return;
 	}
+
+		// if the master is restarting, it already has the changes in
+		// the environment and we don't want to append yet another suffix,
+		// so bail out if we find our sentinel.
+	if(param_boolean("ALREADY_CREATED_LOCAL_DYNAMIC_DIRECTORIES", false)) {
+		return;
+	}
+
 	int mypid = daemonCore->getpid();
 	char buf[256];
 	// TODO: Picking IPv4 arbitrarily.
 	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().Value(), mypid );
 
+	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories with suffix: %s\n", buf);
 	set_dynamic_dir( "LOG", buf );
 	set_dynamic_dir( "SPOOL", buf );
 	set_dynamic_dir( "EXECUTE", buf );
 
 		// Final, evil hack.  Set the _condor_STARTD_NAME environment
 		// variable, so that the startd will have a unique name. 
-	sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
+	std::string cur_startd_name;
+	if(param(cur_startd_name, "STARTD_NAME")) {
+		sprintf( buf, "_%s_STARTD_NAME=%d@%s", myDistro->Get(), mypid, cur_startd_name.c_str());
+	} else {
+		sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
+	}
+
+		// insert modified startd name
+	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories and setting env %s\n", buf);
 	char* env_str = strdup( buf );
 	if( SetEnv(env_str) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_str );
 		exit( 4 );
 	}
+
+		// insert sentinel
+	char* acldd = strdup("_condor_ALREADY_CREATED_LOCAL_DYNAMIC_DIRECTORIES=TRUE");
+	SetEnv(acldd);
 }
 
 #if defined(UNIX)

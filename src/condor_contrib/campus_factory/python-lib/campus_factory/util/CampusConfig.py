@@ -92,7 +92,7 @@ def _get_condor_option(option):
     condor_config = None
     try:
         condor_config = CondorConfig()
-    except EnvironmentError, inst:
+    except EnvironmentError as inst:
         logging.exception(str(inst))
         raise inst
     condor_option = condor_config.get(option)

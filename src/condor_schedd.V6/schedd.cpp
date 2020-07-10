@@ -2692,7 +2692,7 @@ Scheduler::guessJobSlotWeight(JobQueueJob * job)
 			ad->Assign(ATTR_MEMORY, 1024);
 			ad->Assign(ATTR_DISK, 1024);
 			dprintf(D_ALWAYS, "Creating slotWeightGuessAd as:\n");
-			dPrintAd(D_ALWAYS, *ad, false);
+			dPrintAd(D_ALWAYS, *ad);
 		}
 	}
 
@@ -6936,6 +6936,25 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 void
 MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 {
+	int rval =
+		daemonCore->Register_Socket(
+			sock, "<Negotiator Socket>", 
+			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
+			"<Negotiator Command>", &scheduler, ALLOW);
+
+	if( rval >= 0 ) {
+			// do not delete this sock until we get called back
+		sock->incRefCount();
+	}
+
+	// Negotiator has asked us to send it RRL, but not started negotiation proper
+	// don't consider negotiation finished.
+	if (RRLRequestIsPending()) {
+		dprintf(D_ALWAYS,"Finished sending RRL for %s\n", getOwner());
+		return;
+	}
+
+	// When we get here, it is a bona-fide end of negotiation
 	bool satisfied = getSatisfaction();
 	char const *remote_pool = getRemotePool();
 
@@ -6947,16 +6966,6 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 
 	scheduler.negotiationFinished( getOwner(), remote_pool, satisfied );
 
-	int rval =
-		daemonCore->Register_Socket(
-			sock, "<Negotiator Socket>", 
-			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
-
-	if( rval >= 0 ) {
-			// do not delete this sock until we get called back
-		sock->incRefCount();
-	}
 }
 
 void
@@ -7334,11 +7343,6 @@ Scheduler::negotiate(int command, Stream* s)
 	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
-		jobs = 0;
-		skip_negotiation = true;
-	} else if (Owner->FlockLevel < which_negotiator) {
-		dprintf(D_FULLDEBUG,
-				"This user is no longer flocking with this negotiator.\n");
 		jobs = 0;
 		skip_negotiation = true;
 	}
@@ -9706,7 +9710,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// handler is now alive and can read from the pipe.
 		ASSERT( job_ad );
 		MyString ad_str;
-		sPrintAd(ad_str, *job_ad);
+		sPrintAdWithSecrets(ad_str, *job_ad);
 		const char* ptr = ad_str.Value();
 		int len = ad_str.Length();
 		while (len) {
@@ -10340,7 +10344,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed (%s, errno=%d).\n", job_ad_path.c_str(), strerror(errno), errno );
 			} else {
 				// fPrindAd does not have any usable error reporting.
-				fPrintAd(job_ad_fp, *userJob, true);
+				fPrintAd(job_ad_fp, *userJob);
 				wrote_job_ad = true;
 				fclose(job_ad_fp);
 			}

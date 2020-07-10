@@ -1745,8 +1745,6 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	if ( ! job) return false;
 	if (testing.no_output) return true;
 
-	StringList * whitelist = NULL;
-
 	// if we have not yet picked and output format, do that now.
 	if (DashOutFormat == ClassAdFileParseType::Parse_auto) {
 		if (xform_args.input_helper) {
@@ -1764,7 +1762,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	classad::References attrs;
 	classad::References *print_order = NULL;
 	if ( ! DashOutAttrsInHashOrder) {
-		sGetAdAttrs(attrs, *job, false, whitelist);
+		sGetAdAttrs(attrs, *job);
 		print_order = &attrs;
 	}
 	switch (DashOutFormat) {

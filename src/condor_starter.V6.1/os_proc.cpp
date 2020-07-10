@@ -446,31 +446,20 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
 
-#if defined ( WIN32 )
-    owner_profile_.update ();
-    /*************************************************************
-    NOTE: We currently *ONLY* support loading slot-user profiles.
-    This limitation will be addressed shortly, by allowing regular 
-    users to load their registry hive - Ben [2008-09-31]
-    **************************************************************/
-    bool load_profile = false,
-         run_as_owner = false;
-    JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
-    JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
-    if ( load_profile && !run_as_owner ) {
-        if ( owner_profile_.load () ) {
-            /* publish the users environment into that of the main 
-
-            job's environment */
-            if ( !owner_profile_.environment ( job_env ) ) {
-                dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
-                    "export owner's environment.\n" );
-            }            
-        } else {
-            dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to load "
-                "owner's profile.\n" );
-        }
-    }
+#ifdef WIN32
+	// if we loaded a slot user profile, import environment variables from it
+	bool load_profile = false;
+	bool run_as_owner = false;
+	JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
+	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+	if (load_profile && !run_as_owner) {
+		const char * username = get_user_loginname();
+		/* publish the users environment into that of the main job's environment */
+		if (!OwnerProfile::environment(job_env, priv_state_get_handle(), username)) {
+			dprintf(D_ALWAYS, "Failed to export environment for %s into the job.\n",
+				username ? username : "<null>");
+		}
+	}
 #endif
 
 		// While we are still in user priv, print out the username
@@ -726,16 +715,6 @@ OsProc::JobExit( void )
 	}
 
 #if defined ( WIN32 )
-    
-    /* If we loaded the user's profile, then we should dump it now */
-    if ( owner_profile_.loaded () ) {
-        owner_profile_.unload ();
-        
-        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
-        owner_profile_.destroy ();
-        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
-        
-    }
 
     priv_state old = set_user_priv ();
     HANDLE user_token = priv_state_get_handle ();
@@ -1095,10 +1074,19 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
 
+	// we have the pid of the singularity process, need pid of the job
+	// sometimes this is the direct child of singularity, sometimes singularity
+	// runs an init-like process and the job is the grandchild of singularity
+
+	// if a grandkid exists, use that, otherwise child, otherwise sing itself
+
 	int pid = findChildProc(JobPid);
 	if (pid == -1) {
 		pid = JobPid; // hope for the best
 	}
+	if (findChildProc(pid) > 0)
+		pid = findChildProc(pid);
+
 	ArgList args;
 	args.AppendArg("/usr/bin/nsenter");
 	args.AppendArg("-t"); // target pid
@@ -1139,8 +1127,13 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		htcondor::Singularity::retargetEnvs(env, target_dir, "");
 	}
 
+	std::string bin_dir;
+	param(bin_dir, "BIN");
+	if (bin_dir.empty()) bin_dir = "/usr/bin";
+	bin_dir += "/condor_nsenter";
+
 	singExecPid = daemonCore->Create_Process(
-		"/usr/bin/nsenter",
+		bin_dir.c_str(),
 		args,
 		setuid ? PRIV_ROOT : PRIV_USER,
 		singReaperId,

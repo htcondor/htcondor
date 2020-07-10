@@ -221,6 +221,8 @@ Singularity::setup(ClassAd &machineAd,
 		}
 	}
 
+	sing_args.AppendArg("-C");
+
 	MyString args_error;
 	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
 	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
@@ -231,7 +233,6 @@ Singularity::setup(ClassAd &machineAd,
 	}
 	if (tmp) free(tmp);
 
-	sing_args.AppendArg("-C");
 	sing_args.AppendArg(image.c_str());
 
 	sing_args.AppendArg(exec.Value());
@@ -256,9 +257,13 @@ envToList(void *list, const MyString &Name, const MyString & /*value*/) {
 
 bool
 Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
-	
+
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
+
+	MyString oldScratchDir;
+	job_env.GetEnv("_CONDOR_SCRATCH_DIR", oldScratchDir);
+	job_env.SetEnv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER", oldScratchDir);
 
 	job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
 	job_env.SetEnv("TEMP", target_dir.c_str());
@@ -279,7 +284,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	}
 	return true;
 }
-bool 
+bool
 Singularity::convertEnv(Env *job_env) {
 	std::list<std::string> envNames;
 	job_env->Walk(envToList, (void *)&envNames);

@@ -39,7 +39,8 @@ binary distributions.
 |                                      | - Red Hat Enterprise Linux 7         |
 |                                      | - Red Hat Enterprise Linux 8         |
 |                                      |   (clipped)                          |
-|                                      | - Debian Linux 8; Jessie             |
+|                                      | - Amazon Linux 2                     |
+|                                      |   (clipped)                          |
 |                                      | - Debian Linux 9; Stretch            |
 |                                      |   (clipped)                          |
 |                                      | - Debian Linux 10; Buster            |
@@ -49,6 +50,8 @@ binary distributions.
 |                                      | - Ubuntu 16.04; Xenial Xerus         |
 |                                      |   (clipped)                          |
 |                                      | - Ubuntu 18.04; Bionic Beaver        |
+|                                      |   (clipped)                          |
+|                                      | - Ubuntu 20.04; Focal Fossa          |
 |                                      |   (clipped)                          |
 +--------------------------------------+--------------------------------------+
 
@@ -74,10 +77,6 @@ supported.
 | Red Hat Enterprise Linux 6 on x86_64 | gcc, g++, and g77  | as shipped |
 +--------------------------------------+--------------------+------------+
 | Red Hat Enterprise Linux 7 on x86_64 | gcc, g++, and g77  | as shipped |
-+--------------------------------------+--------------------+------------+
-| Debian Linux 8.0 (jessie) on x86_64  | gcc, g++, gfortran | as shipped |
-+--------------------------------------+--------------------+------------+
-| Ubuntu 14.04 on x86_64               | gcc, g++, gfortran | as shipped |
 +--------------------------------------+--------------------+------------+
 
 

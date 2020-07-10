@@ -174,16 +174,3 @@ success. The exit status of *condor_run* will be non-zero upon failure.
 The exit status in the case of a single error due to a system call will
 be the error number (``errno``) of the failed call.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-

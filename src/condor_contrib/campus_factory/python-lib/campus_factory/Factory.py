@@ -1,4 +1,6 @@
 
+from __future__ import print_function
+
 import ConfigParser
 import sys
 import time
@@ -159,11 +161,11 @@ class Factory:
         
         # Hold then release the factory in the queue
         (stderr, stdout) = RunExternal("condor_hold %s" % factoryID)
-        print "Stderr = %s" % stderr.strip()
+        print("Stderr = %s" % stderr.strip())
         #print "Stdout = %s" % stdout.strip()
         
         (stderr, stdout) = RunExternal("condor_release %s" % factoryID)
-        print "Stderr = %s" % stderr.strip()
+        print("Stderr = %s" % stderr.strip())
         #print "Stdout = %s" % stdout.strip()
         
     
@@ -176,7 +178,7 @@ class Factory:
         
         # Remove the factory job
         (stderr, stdout) = RunExternal("condor_rm %s" % factoryID)
-        print "Stderr = %s" % stderr.strip()
+        print("Stderr = %s" % stderr.strip())
 
 
 
@@ -225,7 +227,7 @@ class Factory:
                 # Check if the cluster is able to submit jobs
                 try:
                     (idleslots, idlejobs) = cluster.ClusterMeetPreferences()
-                except ClusterPreferenceException, e:
+                except ClusterPreferenceException as e:
                     logging.debug("Received error from ClusterMeetPreferences")
                     logging.debug(e)
                     idleslots = idlejobs = None

@@ -27,6 +27,7 @@
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
+#include "directory_util.h"
 
 #include "slot_builder.h"
 
@@ -2431,26 +2432,41 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		cap->InsertAttr( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
 	}
 
+	// If we have a starter that is alive enough to have sent it's first update.
+	// And it has not yet sent the final update when we may want to refresh the .update.ad
 	// Don't bother to write an ad to disk that won't include the extras ads.
 	// Also only write the ad to disk when the claim has a ClassAd and the
 	// starter knows where the execute directory is.  Empirically, this set
 	// of conditions also ensures that reset_monitor() has been called, so
 	// the first ad we write will include the StartOfJob* attribute(s).
-	if( IS_PUBLIC(mask) && IS_UPDATE(mask)
-	  && r_cur && r_cur->ad() && r_cur->executeDir() ) {
+	Starter * starter = NULL;
+	if (IS_PUBLIC(mask) && IS_UPDATE(mask) && r_cur && r_cur->ad() && r_cur->starterPID()) {
+		starter = findStarterByPid(r_cur->starterPID());
+		if (starter && ( ! starter->got_update() || starter->got_final_update())) {
+			dprintf(D_FULLDEBUG, "Skipping refresh of .update.ad because Starter is alive, but %s\n",
+				starter->got_final_update() ? "sent final update" : "has not yet sent any updates");
+			starter = NULL;
+		}
+	}
+	if (starter && starter->executeDir()) {
+
 		std::string updateAdDir;
-		formatstr( updateAdDir, "%s/dir_%d", r_cur->executeDir(), r_cur->starterPID() );
+		formatstr( updateAdDir, "%s%cdir_%d", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
 
 		// Write to a temporary file first and then rename it
 		// to ensure atomic updates.
-		std::string updateAdTmpPath;
-		formatstr( updateAdTmpPath, "%s/.update.ad.tmp", updateAdDir.c_str() );
+		MyString updateAdTmpPath;
+		dircat(updateAdDir.c_str(), ".update.ad.tmp", updateAdTmpPath);
 
 		FILE * updateAdFile = NULL;
 #if defined(WINDOWS)
-		{
-			TemporaryPrivSentry p( PRIV_ROOT );
-			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
+		// use don't set_user_priv on windows because we don't have an easy way to figure
+		// out what user to use and on Windows, directory settings matter more than file ownership
+		updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
+		if (updateAdFile) {
+			// If directory encryption is on, we want to make sure that this file is not encryped
+			// since it would be encrypted by LOCAL_SYSTEM and not readable by others
+			DecryptFile(updateAdTmpPath.c_str(), 0);
 		}
 #else
 		StatInfo si( updateAdDir.c_str() );
@@ -2520,14 +2536,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 
 			// Rename the temporary.
-			std::string updateAdPath;
-			formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
+			MyString updateAdPath;
+			dircat(updateAdDir.c_str(), ".update.ad", updateAdPath);
 
 #if defined(WINDOWS)
-			{
-				TemporaryPrivSentry p( PRIV_ROOT );
-				rename( updateAdTmpPath.c_str(), updateAdPath.c_str() );
-			}
+			rotate_file( updateAdTmpPath.c_str(), updateAdPath.c_str() );
 #else
 			StatInfo si( updateAdDir.c_str() );
 			if(! si.Error()) {
@@ -3476,9 +3489,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					dprintf(D_MATCH | D_FULLDEBUG,
 						"STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Job ad was ============================\n", 
 						unmodified_req_classad ? "with" : "w/o");
-					dPrintAd(D_MATCH | D_FULLDEBUG, *req_classad, true);
+					dPrintAd(D_MATCH | D_FULLDEBUG, *req_classad);
 					dprintf(D_MATCH | D_FULLDEBUG, "Machine ad was ============================\n");
-					dPrintAd(D_MATCH | D_FULLDEBUG, *mach_classad, true);
+					dPrintAd(D_MATCH | D_FULLDEBUG, *mach_classad);
 				}
 				if (unmodified_req_classad) {
 					// our modified req_classad no longer matches, put back the original

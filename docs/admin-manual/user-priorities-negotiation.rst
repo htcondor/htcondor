@@ -388,6 +388,7 @@ the operating system username.  However, the submitter can override
 the username selected by settting the submit file option
 
 ::
+
 	accounting_group_user = ishmael
 
 This means this job should be treated, for accounting purposes only, as

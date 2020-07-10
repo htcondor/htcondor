@@ -1,3 +1,27 @@
+condor (8.8.9-1) stable; urgency=medium
+
+  * Proper tracking of maximum memory used by Docker universe jobs
+  * Fixed preempting a GPU slot for a GPU job when all GPUs are in use
+  * Fixed a Python crash when queue_item_data iterator raises an exception
+  * Fixed a bug where slot attribute overrides were ignored
+  * Calculates accounting group quota correctly when more than 1 CPU requested
+  * Updated HTCondor Annex to accommodate API change for AWS Spot Fleet
+  * Fixed a problem where HTCondor would not start on AWS Fargate
+  * Fixed where the collector could wait forever for a partial message
+  * Fixed streaming output to large files (>2Gb) when using the 32-bit shadow
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 06 May 2020 07:36:28 -0500
+
+condor (8.8.8-1) stable; urgency=high
+
+  * Fixes addressing CVE-2019-18823
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Mar 2020 11:05:03 -0500
+
 condor (8.8.7-1) stable; urgency=medium
 
   * Updated condor_annex to work with upcoming AWS Lambda function changes

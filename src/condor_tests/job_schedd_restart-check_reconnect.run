@@ -160,7 +160,7 @@ CondorTest::StartCondorWithParams(
 $result = SimpleJob::RunCheck(
     append_submit_commands => $appended_submit_info,
     queue_sz => 5,
-    duration => 0,
+    duration => 3600,
 	timeout => 480,
     on_execute => $executed,
     on_disconnected => $disconnected,

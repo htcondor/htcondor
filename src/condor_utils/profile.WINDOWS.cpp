@@ -660,8 +660,8 @@ OwnerProfile::unload () {
 }
 
 /* returns TRUE if a user's environment was loaded; otherwise, FALSE.*/
-BOOL
-OwnerProfile::environment ( Env &env ) {
+/*static*/ BOOL
+OwnerProfile::environment ( Env &env, HANDLE user_token, PCSTR username ) {
 
     dprintf ( D_FULLDEBUG, "In OwnerProfile::environment()\n" );
 
@@ -685,7 +685,7 @@ OwnerProfile::environment ( Env &env ) {
         called) */
         created = CreateEnvironmentBlock ( 
             &penv, 
-            user_token_, 
+            user_token,
             FALSE ); /* we already have the current process env */
         ASSERT ( penv );
 
@@ -694,7 +694,7 @@ OwnerProfile::environment ( Env &env ) {
             "OwnerProfile::environment: Loading %s while retrieving "
             "%s's environment (last-error = %u)\n",
             created ? "succeeded" : "failed", 
-            user_name_,
+            username,
             GetLastError () );
 
         if ( !created ) {

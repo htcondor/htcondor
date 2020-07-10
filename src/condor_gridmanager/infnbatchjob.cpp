@@ -287,7 +287,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
-														  gahp_args.GetArg(0) );
+		gahp_args.GetArg(0), args_str.c_str() );
 	myResource->RegisterJob( this );
 	if ( remoteJobId ) {
 		myResource->AlreadySubmitted( this );

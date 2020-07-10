@@ -29,7 +29,7 @@
 %endif
 
 # Not supporting std universe in RHEL/CentOS 8
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?amzn}
 %define std_univ 0
 %endif
 
@@ -95,7 +95,7 @@
 %endif
 
 # cream support is going away, skip for EL8
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?amzn}
 %define cream 0
 %endif
 
@@ -358,7 +358,7 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if 0%{?rhel} == 7
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 %ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
@@ -374,7 +374,13 @@ BuildRequires: boost-static
 %if 0%{?rhel} >= 8
 BuildRequires: boost-python3-devel
 %else
+%if ! 0%{?amzn}
 BuildRequires: boost-python
+%else
+BuildRequires: python3-devel
+BuildRequires: boost169-python2-devel
+BuildRequires: boost169-python3-devel
+%endif
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
@@ -409,6 +415,9 @@ BuildRequires: python-sphinx python-sphinx_rtd_theme
 %if 0%{?rhel} >= 8
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
+
+# openssh-server needed for condor_ssh_to_job
+Requires: openssh-server
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
@@ -1231,8 +1240,13 @@ install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor
 # Install python-binding libs
 %if 0%{?rhel} >= 7
 %ifarch x86_64
+%if ! 0%{?amzn}
 mv %{buildroot}/usr/lib64/python3.6/site-packages/py3classad.so %{buildroot}/usr/lib64/python3.6/site-packages/classad.so
 mv %{buildroot}/usr/lib64/python3.6/site-packages/py3htcondor.so %{buildroot}/usr/lib64/python3.6/site-packages/htcondor.so
+%else
+mv %{buildroot}/usr/lib64/python3.7/site-packages/py3classad.so %{buildroot}/usr/lib64/python3.7/site-packages/classad.so
+mv %{buildroot}/usr/lib64/python3.7/site-packages/py3htcondor.so %{buildroot}/usr/lib64/python3.7/site-packages/htcondor.so
+%endif
 %endif
 %endif
 
@@ -1601,6 +1615,7 @@ rm -rf %{buildroot}
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
 %_bindir/condor_annex
+%_bindir/condor_nsenter
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1894,8 +1909,13 @@ rm -rf %{buildroot}
 %_libdir/libpy3classad*.so
 %_libexecdir/condor/libclassad_python3_user.so
 %_libexecdir/condor/libcollector_python3_plugin.so
+%if ! 0%{?amzn}
 /usr/lib64/python3.6/site-packages/classad.so
 /usr/lib64/python3.6/site-packages/htcondor.so
+%else
+/usr/lib64/python3.7/site-packages/classad.so
+/usr/lib64/python3.7/site-packages/htcondor.so
+%endif
 %endif
 %endif
 %endif
@@ -2158,6 +2178,24 @@ fi
 %endif
 
 %changelog
+* Thu May 07 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.9-1
+- Proper tracking of maximum memory used by Docker universe jobs
+- Fixed preempting a GPU slot for a GPU job when all GPUs are in use
+- Fixed a Python crash when queue_item_data iterator raises an exception
+- Fixed a bug where slot attribute overrides were ignored
+- Calculates accounting group quota correctly when more than 1 CPU requested
+- Updated HTCondor Annex to accommodate API change for AWS Spot Fleet
+- Fixed a problem where HTCondor would not start on AWS Fargate
+- Fixed where the collector could wait forever for a partial message
+- Fixed streaming output to large files (>2Gb) when using the 32-bit shadow
+
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
+- Fixes addressing CVE-2019-18823
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
 * Thu Dec 26 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.7-1
 - Updated condor_annex to work with upcoming AWS Lambda function changes
 - Added the ability to specify the order that job routes are applied

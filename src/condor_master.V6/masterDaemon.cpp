@@ -142,6 +142,7 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	m_waiting_for_startup = false;
 	m_reload_shared_port_addr_after_startup = false;
 	m_never_use_shared_port = false;
+	use_collector_port = false;
 	m_only_stop_when_master_stops = false;
 	flag_in_config_file = NULL;
 	controller_name = NULL;
@@ -627,7 +628,7 @@ int daemon::RealStart( )
 	bool wants_condor_priv = false;
 	bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
 		// Collector needs to listen on a well known port.
-	if ( daemon_is_collector || (daemon_is_shared_port && collector_uses_shared_port) ) {
+	if ( daemon_is_collector || (daemon_is_shared_port && use_collector_port) ) {
 
 			// Go through all of the
 			// collectors until we find the one for THIS machine. Then
@@ -715,6 +716,15 @@ int daemon::RealStart( )
 			dprintf (D_FULLDEBUG, "Starting Collector on port %d\n", command_port);
 		}
 
+	} else if (daemon_is_shared_port) {
+
+		command_port = param_integer("SHARED_PORT_PORT", COLLECTOR_PORT);
+		dprintf (D_ALWAYS, "Starting shared port with port: %d\n", command_port);
+
+		// If the user explicitly asked for command port 0, meaning "pick an ephemeral port",
+		// we need to pass 1 to CreateProcess, since it special cases command_port=1 to mean "any"
+		// and command_port=0 to mean 'no command port' (i.e. child is not DC)
+		if( command_port == 0 ) { command_port = 1; }
 
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;

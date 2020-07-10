@@ -558,7 +558,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		errno = 0;
-		rval = write( fd , buf , len);
+		rval = full_write( fd , buf , len);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -595,14 +595,14 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		errno = 0;
-		rval = lseek( fd , offset , whence);
+		off_t new_position = lseek( fd , offset , whence);
 		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		dprintf( D_SYSCALLS, "\trval = %ld, errno = %d\n", new_position, terrno );
 
 		syscall_sock->encode();
-		result = ( syscall_sock->code(rval) );
+		result = ( syscall_sock->code(new_position) );
 		ASSERT( result );
-		if( rval < 0 ) {
+		if( new_position < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}

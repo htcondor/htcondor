@@ -108,9 +108,9 @@ class ScheddNegotiate: public DCMsg {
 		// returns name of remote pool or NULL if none
 	char const *getRemotePool();
 
-	int getNumJobsMatched() { return m_jobs_matched; }
+	int getNumJobsMatched() const { return m_jobs_matched; }
 
-	int getNumJobsRejected() { return m_jobs_rejected; }
+	int getNumJobsRejected() const { return m_jobs_rejected; }
 
 		// Returns true if we got everything we wanted from the negotiator
 		// and false if "I can't get no ..."
@@ -149,6 +149,9 @@ class ScheddNegotiate: public DCMsg {
 	virtual int scheduler_maxJobsToOffer() {return -1;};
 
 		///////// end of virtual functions for scheduler to define  //////////
+
+		// We've sent a RRL, but haven't heard back with a match yet
+	bool RRLRequestIsPending() const { return ((getNumJobsMatched() == 0) && (getNumJobsRejected() == 0));} 
 
  protected:
 	ResourceRequestList *m_jobs;

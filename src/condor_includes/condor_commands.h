@@ -530,6 +530,8 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 /* Replies specific to the REQUEST_CLAIM command */
 #define REQUEST_CLAIM_LEFTOVERS		3
 #define REQUEST_CLAIM_PAIR			4
+#define REQUEST_CLAIM_LEFTOVERS_2	5
+#define REQUEST_CLAIM_PAIR_2		6
 
 /* Replies specific to the SWAP_CLAIM_AND_ACTIVATION command */
 #define SWAP_CLAIM_ALREADY_SWAPPED	4

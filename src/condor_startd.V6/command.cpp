@@ -1223,6 +1223,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	char *client_addr = NULL;
 	int interval;
 	ClaimIdParser idp(id);
+	bool secure_claim_id = false;
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -1309,6 +1310,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					// if they were idle, kill_claim delete'd them
 					*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
 					*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+					dprintf( D_FULLDEBUG, "unbinding devIDs in slot %s \n", dslots[i]->r_name );
+					dslots[i]->r_attr->unbind_DevIds(dslots[i]->r_id, dslots[i]->r_sub_id);
 				}
 				// TODO Do we need to call refresh_classad() on either slot?
 			}
@@ -1325,6 +1328,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Can't receive eom from schedd\n" );
 		ABORT;
 	}
+
+		// If we include a claim id in our response, should it be
+		// encrypted? In the old protocol, it was sent in the clear.
+	req_classad->LookupBool("_condor_SECURE_CLAIM_ID", secure_claim_id);
 
 		// At this point, the schedd has registered this socket (stream)
 		// and likely has gone off to service other requests.  Thus, 
@@ -1535,7 +1542,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip, leftover_claim, and_pair );
+	accept_request_claim( rip, secure_claim_id, leftover_claim, and_pair );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -1574,7 +1581,7 @@ abort_accept_claim( Resource* rip, Stream* stream )
 
 
 bool
-accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
+accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim, bool and_pair )
 {
 	int interval = -1;
 	char *client_addr = NULL;
@@ -1597,18 +1604,22 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 		Reply of 4 (REQUEST_CLAIM_PAIR) means claim accepted by a slot
 		  that is paired, and the partner slot ad and claim id will be
 		  sent next.
+		Reply of 5 (REQUEST_CLAIM_LEFTOVERS_2) is the same as 3, but
+		  the claim id is encrypted.
+		Reply of 6 (REQUEST_CLAIM_PAIR_2) is the same as 4, but
+		  the claim id is encrypted.
 	*/
 	int cmd = OK;
 	if ( leftover_claim && leftover_claim->id() && 
 		 leftover_claim->rip()->r_classad ) 
 	{
-		// schedd wants leftovers, send reply code 3
-		cmd = REQUEST_CLAIM_LEFTOVERS;
+		// schedd wants leftovers, send reply code 3 (or 5)
+		cmd = secure_claim_id ? REQUEST_CLAIM_LEFTOVERS_2 : REQUEST_CLAIM_LEFTOVERS;
 	}
 	else if (rip->r_pair_name) {
 		ripb = resmgr->get_by_name(rip->r_pair_name);
 		if (ripb && and_pair) {
-			cmd = REQUEST_CLAIM_PAIR;
+			cmd = secure_claim_id ? REQUEST_CLAIM_PAIR_2 : REQUEST_CLAIM_PAIR;
 		}
 	}
 
@@ -1620,7 +1631,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 		abort_accept_claim( rip, stream );
 		return false;
 	}
-	if ( cmd == REQUEST_CLAIM_LEFTOVERS )
+	if ( cmd == REQUEST_CLAIM_LEFTOVERS || cmd == REQUEST_CLAIM_LEFTOVERS_2 )
 	{
 		// schedd just claimed a dynamic slot, and it wants
 		// us to send back to the classad and the new claim id for
@@ -1629,7 +1640,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 
 		leftover_claim->rip()->r_classad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
 		MyString claimId(leftover_claim->id());
-		if ( !stream->put(claimId) ||
+		if ( !(secure_claim_id ? stream->put_secret(claimId.c_str()) : stream->put(claimId)) ||
 			 !putClassAd(stream, *leftover_claim->rip()->r_classad) )
 		{
 			rip->dprintf( D_ALWAYS, 
@@ -1638,14 +1649,15 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 			return false;
 		}
 	}
-	else if (cmd == REQUEST_CLAIM_PAIR)
+	else if (cmd == REQUEST_CLAIM_PAIR || cmd == REQUEST_CLAIM_PAIR_2)
 	{
 		dprintf(D_FULLDEBUG,"Sending paired slot claim to schedd\n");
 		//PRAGMA_REMIND("remove these next two dprintfs later")
 		//dprintf(D_FULLDEBUG,"\tmain slot claim id is %s\n", rip->r_cur->id());
 		//dprintf(D_FULLDEBUG,"\tpaired slot claim id is %s\n", ripb->r_cur->id());
 		MyString claimId(ripb->r_cur->id());
-		if ( !stream->put(claimId) || ! putClassAd(stream, *ripb->r_classad)) {
+		if ( !(secure_claim_id ? stream->put_secret(claimId.c_str()) : stream->put(claimId)) ||
+		     ! putClassAd(stream, *ripb->r_classad)) {
 			rip->dprintf( D_ALWAYS,
 				"Can't send paired slot claim & ad to schedd.\n" );
 			abort_accept_claim( rip, stream );

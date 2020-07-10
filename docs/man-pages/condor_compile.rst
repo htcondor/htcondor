@@ -91,16 +91,3 @@ linkers. If an error is encountered before calling these other programs,
 *condor_compile* will exit with a status value of 1 (one). Otherwise,
 the exit status will be that given by the executed program.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-

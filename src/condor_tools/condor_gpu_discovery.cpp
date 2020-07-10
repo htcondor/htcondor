@@ -123,7 +123,8 @@ static void* dlsym(void* hlib, const char * symbol) {
 }
 #endif
 
-// this coded was stolen from helper_cuda.h in the cuda 5.5 sdk.
+// Function taken from helper_cuda.h in the CUDA SDK
+// https://github.com/NVIDIA/cuda-samples/blob/master/Common/helper_cuda.h
 int ConvertSMVer2Cores(int major, int minor)
 {
 	// Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
@@ -153,6 +154,7 @@ int ConvertSMVer2Cores(int major, int minor)
         { 0x70, 64 }, // Volta Generation (SM 7.0) GV100 class
         { 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
         { 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
+        { 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
         {   -1, -1 }
     };
 
@@ -541,10 +543,14 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
 	}
 
-		char name[256];
-		memset(name, 0, sizeof(name));
-		cuDeviceGetName(name, sizeof(name), dev);
+		// for some reason PowerPC was having trouble with a stack buffer for cuGetDeviceName
+		// so we switch to malloc and a larger buffer, and we overdo the null termination.
+		char * name = (char*)malloc(1028);
+		memset(name, 0, 1028);
+		cuDeviceGetName(name, 1024, dev);
+		name[1024] = 0; // this shouldn't be necessary, but it can't hurt.
 		p->name = name;
+		free(name);
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
@@ -907,6 +913,9 @@ main( int argc, const char** argv)
 			opt_extra = 1; // publish extra GPU properties
 		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
+			// We need the basic properties in order to determine the
+			// dynamic ones (most noticeably, the PCI bus ID).
+			opt_basic = 1;
 			opt_dynamic = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
@@ -1315,11 +1324,7 @@ main( int argc, const char** argv)
 				if (opt_extra) {
 					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
 					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-					if (bp.ccMajor <= 6) {
-						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
-					} else {
-						// CoresPerCU not meaningful for Architecture 7 and later
-					}
+					props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
 				}
 			}
 		} else if (opt_basic && ocl_handle) {

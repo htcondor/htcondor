@@ -1,0 +1,31 @@
+# Require authentication, encryption, integrity
+use SECURITY: Strong
+
+# Set things up so authentication must happen  via the local filesystem
+# or a pool password.  The local file system will be used to authenticate
+# users submitting, removing, or editing jobs; this means we assume users will
+# be logged into submit nodes.  HTCondor daemons themselves will only trust
+# other daemons with the same pool password, a secret contained in file on each
+# node that requires root access to read.
+SEC_DEFAULT_AUTHENTICATION_METHODS = FS, PASSWORD
+
+# Allow READ level access (e.g. condor_status) with
+# ANONYMOUS authentication, since we do not want users to have to login
+# to the central manager just to see output from condor_status.
+SEC_READ_AUTHENTICATION_METHODS = \
+  $(SEC_DEFAULT_AUTHENTICATION_METHODS), ANONYMOUS
+SEC_CLIENT_AUTHENTICATION_METHODS = \
+ $(SEC_DEFAULT_AUTHENTICATION_METHODS), ANONYMOUS
+
+# This is the file that will contain the secret; it should only
+# be readable by user root and will be created when you run:
+#
+#     sudo condor_store_cred add -c -p <password>
+#
+SEC_PASSWORD_FILE = /etc/condor/passwords.d/POOL
+
+# Allow principals that authenticated using FS (condor) or PASSWORD (condor_pool)
+ALLOW_DAEMON = condor@*/*, condor_pool@*/*
+ALLOW_NEGOTIATOR = condor@*/$(CONDOR_HOST), condor_pool@*/$(CONDOR_HOST)
+# Allow admin command like condor_user_prio from any machine in the pool
+ALLOW_ADMINISTRATOR = condor@*/*, condor_pool@*/*
