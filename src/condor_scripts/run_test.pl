@@ -375,7 +375,10 @@ sub DoChild
             for my $line (@reglines) {
                 if ($line =~ /REG_SZ\s+(.+)$/) {
                     print "\tfound python 3.6 install dir : '$1'\n";
-                    $perl = "$1python3.exe";
+                   	# Since we're using the full path, 'python.exe' will
+                   	# always by the right Python version, and some of the
+                   	# installs don't have a 'python3.exe'.
+                    $perl = "$1python.exe";
                     last;
                 }
             }
