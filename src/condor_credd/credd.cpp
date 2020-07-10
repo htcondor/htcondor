@@ -85,7 +85,7 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	if (cred_dir_krb || cred_dir_oauth) {
 		// didn't need the value, just to see if it's defined.
 		dprintf(D_FULLDEBUG, "CREDD: setting sweep_timer_handler for KRB\n");
-		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 		m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 								(TimerHandlercpp)&CredDaemon::sweep_timer_handler,
 								"sweep_timer_handler", this );
@@ -146,7 +146,7 @@ CredDaemon::sweep_timer_handler( void )
 	credmon_sweep_creds(cred_dir, credmon_type_KRB);
 	cred_dir.set(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
 	credmon_sweep_creds(cred_dir, credmon_type_OAUTH);
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
 
