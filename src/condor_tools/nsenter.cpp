@@ -187,6 +187,15 @@ int main( int argc, char *argv[] )
 	// make a vector to hold all the pointers to env entries
 	std::vector<const char *> envp;
 
+	// copy DISPLAY from outside to inside.  sshd has set this,
+	// it is the only one from the outside we need on the inside,
+	// and one way that an ssh-to-job shell is different than the job.
+	std::string display;
+	if (getenv("DISPLAY")) {
+		formatstr(display, "DISPLAY=%s", getenv("DISPLAY"));
+		envp.push_back(display.c_str());
+	}
+
 	// the first one
 	envp.push_back(env.c_str());
 	auto it = env.begin();
