@@ -59,7 +59,7 @@ struct Startd
 				printer.Unparse(check_expr, expr.get());
 			}
 		}
-		const char * check_expr_ptr = nullptr;
+		const char * check_expr_ptr = 0;
 		if ( ! check_expr.empty()) { check_expr_ptr = check_expr.c_str(); }
 
 		std::string start_expr;
