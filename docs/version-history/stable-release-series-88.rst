@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+- The ``DiskUsage`` attribute should once again reflect the job's peak disk
+  usage, rather than its current or terminal usage.
+  :ticket:`7207`
+
 - HTCondor daemons used to discard the private network name and address of
   daemons they were attempting to contact via the contactee's public
   address; however, if the contact had been pre-authorized, this would
@@ -32,7 +36,7 @@ Bugs Fixed:
   places where they had not previously.
   :ticket:`7582`
 
-- Allow `SINGULARITY_EXTRA_ARGUMENTS` to override the default -C option
+- Allow ``SINGULARITY_EXTRA_ARGUMENTS`` to override the default -C option
   condor passes to singularity exec to allow administrators to tell
   condor not to contain certain resoures.
   :ticket:`7719`

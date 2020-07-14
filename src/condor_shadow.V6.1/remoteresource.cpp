@@ -1299,7 +1299,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 	remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 	jA->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	jA->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
-			
+
 	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
 		image_size_kb = int64_value;
 	}
@@ -1316,7 +1316,6 @@ RemoteResource::setJobAd( ClassAd *jA )
 		proportional_set_size_kb = int64_value;
 	}
 
-			
 	if( jA->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
 	}
@@ -1379,7 +1378,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage + (real_value - prevUsage));
 		}
-		
+
 		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
@@ -1396,7 +1395,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage + (real_value - prevUsage));
 		}
-		
+
 		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}
@@ -1415,8 +1414,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			memory_usage_mb = int64_value;
 		}
 	}
-	// Now update MemoryUsage in the job ad.  If the update ad sent us 
-	// a literal value for MemoryUsage, then insert in the job ad the MAX 
+	// Now update MemoryUsage in the job ad.  If the update ad sent us
+	// a literal value for MemoryUsage, then insert in the job ad the MAX
 	// value we have seen.  But if the update ad sent us MemoryUsage as an
 	// expression, then just copy the expression into the job ad.
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
@@ -1553,6 +1552,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
 			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
+			&& it->first != ATTR_DISK_USAGE    // ditto
+			// the ATTR_JOB_*_CPU attributes don't end in "Usage"
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
