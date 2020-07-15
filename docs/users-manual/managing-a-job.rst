@@ -20,19 +20,18 @@ queued in the local scheduler. An example of the output from *condor_q* is
 
     $ condor_q
 
+    -- Schedd: submit.chtc.wisc.edu : <127.0.0.1:9618?... @ 12/31/69 23:00:00
+    OWNER    BATCH_NAME    SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
+    nemo     batch23       4/22 20:44      _      _      _      1      _ 3671850.0
+    nemo     batch24       4/22 20:56      _      _      _      1      _ 3673477.0
+    nemo     batch25       4/22 20:57      _      _      _      1      _ 3673728.0
+    nemo     batch26       4/23 10:44      _      _      _      1      _ 3750339.0
+    nemo     batch27       7/2  15:11      _      _      _      _      _ 7594591.0
+    nemo     batch28       7/10 03:22   4428      3      _      _   4434 7801943.0 ... 7858552.0
+    nemo     batch29       7/14 14:18   5074   1182     30     19  80064 7859129.0 ... 7885217.0
+    nemo     batch30       7/14 14:18   5172   1088     28     30  58310 7859106.0 ... 7885192.0
 
--- Schedd: submit.chtc.wisc.edu : <127.0.0.1:9618?... @ 12/31/69 23:00:00
-OWNER    BATCH_NAME    SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
-nemo     batch23       4/22 20:44      _      _      _      1      _ 3671850.0
-nemo     batch24       4/22 20:56      _      _      _      1      _ 3673477.0
-nemo     batch25       4/22 20:57      _      _      _      1      _ 3673728.0
-nemo     batch26       4/23 10:44      _      _      _      1      _ 3750339.0
-nemo     batch27       7/2  15:11      _      _      _      _      _ 7594591.0
-nemo     batch28       7/10 03:22   4428      3      _      _   4434 7801943.0 ... 7858552.0
-nemo     batch29       7/14 14:18   5074   1182     30     19  80064 7859129.0 ... 7885217.0
-nemo     batch30       7/14 14:18   5172   1088     28     30  58310 7859106.0 ... 7885192.0
-
-2388 jobs; 0 completed, 1 removed, 58 idle, 2276 running, 53 held, 0 suspended
+    2388 jobs; 0 completed, 1 removed, 58 idle, 2276 running, 53 held, 0 suspended
 
 The goal of the HTCondor system is to effectively manage many jobs. As you may have thousands
 of jobs in a queue, by default *condor_q* summarizes many similiar jobs on one line.  Depending
@@ -152,20 +151,20 @@ Simply run, where xx.yy is the job id of a running job:
 
 ::
 
-     condor_tail xx.yy
+    $ condor_tail xx.yy
 
 
 or
 
 ::
 
-     condor_tail -f xx.yy
+    $ condor_tail -f xx.yy
 
 to continuously follow the standard output.  To copy a different file, run
 
 ::
 
-     condor_tail xx.yy name_of_output_file
+    $ condor_tail xx.yy name_of_output_file
 
 
 Starting an interactive shell next to a running job on a remote machine
@@ -574,6 +573,7 @@ through *condor_status*
 :index:`condor_status<single: condor_status; HTCondor commands>`\ with the *-submitters*
 option. An example of this would yield output similar to:
 
+
 ::
 
     $ condor_status -submitters
@@ -593,4 +593,5 @@ option. An example of this would yield output similar to:
       wright@cs.wisc.edu                 1                  1                  0
 
                    Total                 7                516                  5
+
 
