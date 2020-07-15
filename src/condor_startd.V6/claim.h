@@ -305,7 +305,7 @@ public:
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
-	bool waitingForActivation();
+	bool waitingForActivation() const;
 	void invalidateID();
 
 private:

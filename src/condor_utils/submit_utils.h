@@ -427,7 +427,7 @@ public:
 	}
 
 	int  parse_queue_args(char* pqargs); // destructively parse queue line.
-	int  item_len();           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
+	int  item_len() const;           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
 	                           // the return does not take queue_num into account.
 
 	// destructively split the item, inserting \0 to terminate and trim

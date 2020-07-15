@@ -668,7 +668,7 @@ ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg) const
 }
 
 bool
-ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg)
+ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) const
 {
 	MyString v1_raw;
 	if(GetArgsStringV1Raw(&v1_raw,NULL)) {

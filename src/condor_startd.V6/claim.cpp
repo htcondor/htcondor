@@ -2529,7 +2529,7 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 }
 
 bool
-Claim::waitingForActivation() {
+Claim::waitingForActivation() const {
 	time_t maxDrainingActivationDelay = param_integer( "MAX_DRAINING_ACTIVATION_DELAY", 20 );
 	return getClaimAge() < maxDrainingActivationDelay;
 }

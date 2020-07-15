@@ -8166,7 +8166,7 @@ static char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ct
 // the items member must have been populated
 // or the mode must be foreach_not
 // the return does not take queue_num into account.
-int SubmitForeachArgs::item_len()
+int SubmitForeachArgs::item_len() const
 {
 	if (foreach_mode == foreach_not) return 1;
 	return slice.length_for(items.number());

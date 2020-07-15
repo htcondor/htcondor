@@ -197,7 +197,7 @@ class ArgList {
 		// Create V1Wacked args string if possible; o.w. V2Quoted.  In
 		// other words, if possible, produce a string that is
 		// backward-compatible with older versions of condor_submit.
-	bool GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg);
+	bool GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) const;
 
 		// Create a V1 args string if possible.  o.w. V2, with
 		// necessary markings to make it correctly recognized as V2

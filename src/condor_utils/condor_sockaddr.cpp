@@ -547,7 +547,7 @@ MyString condor_sockaddr::to_ip_and_port_string() const {
 	return oss.str().c_str();
 }
 
-MyString condor_sockaddr::to_ccb_safe_string() {
+MyString condor_sockaddr::to_ccb_safe_string() const {
 	//
 	// For backwards-compatibility with broken 8.2 Sinful code, we can't
 	// allow a colon to appear in a CCB ID string.  That includes both
