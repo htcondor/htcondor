@@ -152,7 +152,7 @@ shown in this example output.
 
 ::
 
-    % condor_who 
+    $ condor_who 
      
     OWNER                    CLIENT            SLOT JOB RUNTIME    PID    PROGRAM 
     smith1@crane.cs.wisc.edu crane.cs.wisc.edu    2 320.0 0+00:00:08 7776 D:\scratch\condor\execut
@@ -161,7 +161,7 @@ Example 2 Verbose sample output.
 
 ::
 
-    % condor_who -verbose 
+    $ condor_who -verbose 
      
     LOG directory "D:\scratch\condor\master\test/log" 
      

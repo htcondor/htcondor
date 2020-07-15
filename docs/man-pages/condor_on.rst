@@ -79,13 +79,13 @@ configuration variable ``DAEMON_LIST`` on the local host:
 
 ::
 
-    % condor_on
+    $ condor_on
 
 To start up only the *condor_negotiator* on two named machines:
 
 ::
 
-    % condor_on  robin cardinal -daemon negotiator
+    $ condor_on  robin cardinal -daemon negotiator
 
 To start up only a daemon within a pool of machines other than the local
 pool, use the **-pool** option. The argument is the name of the central
@@ -97,5 +97,5 @@ central manager:
 
 ::
 
-    % condor_on -pool condor.cae.wisc.edu -name cae17 -daemon schedd
+    $ condor_on -pool condor.cae.wisc.edu -name cae17 -daemon schedd
 

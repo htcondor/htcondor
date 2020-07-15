@@ -72,7 +72,7 @@ To release all of the jobs of a user named Mary:
 
 ::
 
-    % condor_release Mary
+    $ condor_release Mary
 
 Exit Status
 -----------

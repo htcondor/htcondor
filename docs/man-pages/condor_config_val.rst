@@ -211,7 +211,7 @@ variable:
 
 ::
 
-       % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
        500
 
 To request the *condor_schedd* daemon on host perdita to set the value
@@ -219,7 +219,7 @@ of the ``MAX_JOBS_RUNNING`` configuration variable to the value 10.
 
 ::
 
-       % condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10" 
+       $ condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10" 
        Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
        schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
 
@@ -228,7 +228,7 @@ example.
 
 ::
 
-       % condor_reconfig -schedd perdita 
+       $ condor_reconfig -schedd perdita 
        Sent "Reconfig" command to schedd perdita.cs.wisc.edu
 
 A re-check of the configuration variable reflects the change
@@ -236,7 +236,7 @@ implemented:
 
 ::
 
-       % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
        10
 
 To set the configuration variable ``MAX_JOBS_RUNNING`` back to what it
@@ -244,7 +244,7 @@ was before the command to set it to 10:
 
 ::
 
-       % condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING 
        Successfully unset configuration "MAX_JOBS_RUNNING" on 
        schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
 
@@ -253,7 +253,7 @@ example.
 
 ::
 
-       % condor_reconfig -schedd perdita 
+       $ condor_reconfig -schedd perdita 
        Sent "Reconfig" command to schedd perdita.cs.wisc.edu
 
 A re-check of the configuration variable reflects that variable has gone
@@ -261,7 +261,7 @@ back to is value before initial set of the variable:
 
 ::
 
-       % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
        500
 
 Getting a list of template_names for the **role** configuration
@@ -269,7 +269,7 @@ template category:
 
 ::
 
-       % condor_config_val use role 
+       $ condor_config_val use role 
        use ROLE accepts 
          CentralManager 
          Execute 
@@ -280,7 +280,7 @@ Getting the definition of **role:personal** configuration template:
 
 ::
 
-       % condor_config_val use role:personal 
+       $ condor_config_val use role:personal 
        use ROLE:Personal is 
            CONDOR_HOST=127.0.0.1 
        COLLECTOR_HOST=$(CONDOR_HOST):0 

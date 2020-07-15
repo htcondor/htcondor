@@ -75,7 +75,7 @@ To update the information on three named machines:
 
 ::
 
-    % condor_reschedule robin cardinal bluejay
+    $ condor_reschedule robin cardinal bluejay
 
 To reschedule on a machine within a pool other than the local pool, use
 the **-pool** option. The argument is the name of the central manager
@@ -86,5 +86,5 @@ single machine named **cae17** within the pool of machines that has
 
 ::
 
-    % condor_reschedule -pool condor.cae.wisc.edu -name cae17
+    $ condor_reschedule -pool condor.cae.wisc.edu -name cae17
 

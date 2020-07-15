@@ -110,7 +110,7 @@ submitting with a command similar to:
 
 ::
 
-      % condor_submit -remote condor@example.com myjob.submit
+      $ condor_submit -remote condor@example.com myjob.submit
 
 This implies the identification of a single *condor_schedd* daemon,
 running on a single machine. With the high availability of the job
@@ -135,7 +135,7 @@ Then, with this sample configuration, the submit command appears as:
 
 ::
 
-      % condor_submit -remote had-schedd@  myjob.submit
+      $ condor_submit -remote had-schedd@  myjob.submit
 
 High Availability of the Central Manager
 ----------------------------------------

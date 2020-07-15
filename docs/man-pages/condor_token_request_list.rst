@@ -55,7 +55,7 @@ To list the tokens at the default *condor_collector*:
 
 ::
 
-    % condor_token_request_list
+    $ condor_token_request_list
     RequestId = "4303687"
     ClientId = "worker0000.wisc.edu-960"
     PeerLocation = "10.0.4.13"

@@ -1428,7 +1428,7 @@ On a Unix platform, the command appears as
 
 ::
 
-    % condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
+    $ condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
 
     Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime
     100
@@ -1464,9 +1464,9 @@ expression that contains a ClassAd function.
     DaemonStartTime = 1153192799
     UpdateSequenceNumber = 1
 
-    % condor_advertise UPDATE_AD_GENERIC ad
+    $ condor_advertise UPDATE_AD_GENERIC ad
 
-    % condor_status -any -constraint 'FauxType=="DBMS" &&
+    $ condor_status -any -constraint 'FauxType=="DBMS" &&
       regexp("random.*", Name, "i")'
 
     MyType               TargetType           Name
@@ -1486,15 +1486,15 @@ to show where they are permitted.
 
 ::
 
-    % condor_status -constraint ' OpSys == "WINDOWS"  '
+    $ condor_status -constraint ' OpSys == "WINDOWS"  '
 
 ::
 
-    % condor_status -constraint OpSys==\"WINDOWS\"
+    $ condor_status -constraint OpSys==\"WINDOWS\"
 
 ::
 
-    % condor_status -constraint "OpSys==\"WINDOWS\""
+    $ condor_status -constraint "OpSys==\"WINDOWS\""
 
 The equivalent command on a Windows platform to list all machines
 advertising a Windows operating system must delimit the single argument

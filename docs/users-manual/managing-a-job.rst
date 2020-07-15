@@ -107,7 +107,7 @@ all the machines that are running jobs submitted by
 
 ::
 
-    %  condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"'
+    $ condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"'
 
     Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
 
@@ -125,7 +125,7 @@ To find all the machines that are running any job at all, type:
 
 ::
 
-    %  condor_status -run
+    $ condor_status -run
 
     Name       Arch     OpSys        LoadAv RemoteUser           ClientMachine
 
@@ -190,7 +190,7 @@ example shows the queue of jobs before and after a job is removed.
 
 ::
 
-    %  condor_q -nobatch
+    $ condor_q -nobatch
 
     -- Schedd: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
@@ -199,10 +199,10 @@ example shows the queue of jobs before and after a job is removed.
 
     2 jobs; 1 idle, 1 running, 0 held
 
-    %  condor_rm 132.0
+    $ condor_rm 132.0
     Job 132.0 removed.
 
-    %  condor_q -nobatch
+    $ condor_q -nobatch
 
     -- Schedd: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
@@ -251,7 +251,7 @@ the priority of a job to -15,
 
 ::
 
-    %  condor_q -nobatch raman
+    $ condor_q -nobatch raman
 
     -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
@@ -259,9 +259,9 @@ the priority of a job to -15,
 
     1 jobs; 1 idle, 0 running, 0 held
 
-    %  condor_prio -p -15 126.0
+    $ condor_prio -p -15 126.0
 
-    %  condor_q -nobatch raman
+    $ condor_q -nobatch raman
 
     -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
@@ -381,7 +381,7 @@ command
 
 ::
 
-    %  condor_config_val SHADOW_LOG
+    $ condor_config_val SHADOW_LOG
 
 Job in the Hold State
 ---------------------
@@ -576,7 +576,7 @@ option. An example of this would yield output similar to:
 
 ::
 
-    %  condor_status -submitters
+    $ condor_status -submitters
 
     Name                 Machine      Running IdleJobs HeldJobs
 

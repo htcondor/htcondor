@@ -533,7 +533,7 @@ central manager machine, run *condor_install* as follows.
 
 ::
 
-    % condor_install --prefix=~condor \
+    $ condor_install --prefix=~condor \
     --local-dir=/scratch/condor --type=manager
 
 To update the above HTCondor installation, for example, to also be
@@ -541,7 +541,7 @@ submit machine:
 
 ::
 
-    % condor_configure --prefix=~condor \
+    $ condor_configure --prefix=~condor \
     --local-dir=/scratch/condor --type=manager,submit
 
 As in the above example, the central manager can also be a submit point
@@ -556,7 +556,7 @@ pool, run
 
 ::
 
-    % condor_install --prefix=~condor \
+    $ condor_install --prefix=~condor \
     --local-dir=/scratch/condor --type=execute,submit
 
 See the :doc:`/man-pages/condor_configure` manual page for details.

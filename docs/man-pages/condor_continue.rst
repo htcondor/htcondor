@@ -67,5 +67,5 @@ To continue all jobs except for a specific user:
 
 ::
 
-    % condor_continue -constraint 'Owner =!= "foo"'
+    $ condor_continue -constraint 'Owner =!= "foo"'
 

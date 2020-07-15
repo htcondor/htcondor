@@ -156,7 +156,7 @@ This file is used with the command:
 
 ::
 
-    % condor_advertise INVALIDATE_STARTD_ADS remove_file
+    $ condor_advertise INVALIDATE_STARTD_ADS remove_file
 
 Exit Status
 -----------

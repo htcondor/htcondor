@@ -94,19 +94,19 @@ To vacate job 23.0:
 
 ::
 
-    % condor_vacate_job 23.0
+    $ condor_vacate_job 23.0
 
 To vacate all jobs of a user named Mary:
 
 ::
 
-    % condor_vacate_job mary
+    $ condor_vacate_job mary
 
 To vacate all vanilla universe jobs owned by Mary:
 
 ::
 
-    % condor_vacate_job -constraint 'JobUniverse == 5 && Owner == "mary"'
+    $ condor_vacate_job -constraint 'JobUniverse == 5 && Owner == "mary"'
 
 Note that the entire constraint, including the quotation marks, must be
 enclosed in single quote marks for most shells.

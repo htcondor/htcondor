@@ -175,7 +175,7 @@ Examples
 
 ::
 
-    % condor_ssh_to_job 32.0 
+    $ condor_ssh_to_job 32.0 
     Welcome to slot2@tonic.cs.wisc.edu! 
     Your condor job is running with pid(s) 65881. 
     % gdb -p 65881 
@@ -188,7 +188,7 @@ To upload or download files interactively with *sftp*:
 
 ::
 
-    % condor_ssh_to_job -ssh sftp 32.0 
+    $ condor_ssh_to_job -ssh sftp 32.0 
     Connecting to condor-job.tonic.cs.wisc.edu... 
     sftp> ls 
     ... 
@@ -202,7 +202,7 @@ Therefore, the placeholder string "remote" is perfectly fine.
 
 ::
 
-    % condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
+    $ condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
 
 This example uses *condor_ssh_to_job* to accomplish the task of
 running *rsync* to synchronize a local file with a remote file in the

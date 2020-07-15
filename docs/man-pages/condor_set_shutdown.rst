@@ -80,8 +80,8 @@ where ``REBOOT`` is an invented name for this program that the
 
 ::
 
-    % condor_set_shutdown -exec reboot -all 
-    % condor_off -graceful -all
+    $ condor_set_shutdown -exec reboot -all 
+    $ condor_off -graceful -all
 
 where the string reboot matches the invented name.
 

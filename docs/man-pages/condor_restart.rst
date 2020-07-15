@@ -92,13 +92,13 @@ To restart the *condor_master* and all its children on the local host:
 
 ::
 
-    % condor_restart
+    $ condor_restart
 
 To restart only the *condor_startd* on a named machine:
 
 ::
 
-    % condor_restart -name bluejay -daemon startd
+    $ condor_restart -name bluejay -daemon startd
 
 To restart a machine within a pool other than the local pool, use the
 **-pool** option. The argument is the name of the central manager for
@@ -109,5 +109,5 @@ single machine named **cae17** within the pool of machines that has
 
 ::
 
-    % condor_restart -pool condor.cae.wisc.edu -name cae17
+    $ condor_restart -pool condor.cae.wisc.edu -name cae17
 

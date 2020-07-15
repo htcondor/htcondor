@@ -142,7 +142,7 @@ argument can optionally be given a port number. For example:
 
 ::
 
-            % condor_status -pool foo.bar.org:1234
+            $ condor_status -pool foo.bar.org:1234
 
 Using a Dynamically Assigned Port for the *condor_collector*
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

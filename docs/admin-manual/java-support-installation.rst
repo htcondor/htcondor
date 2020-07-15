@@ -19,7 +19,7 @@ the *condor_startd* daemon on that host. For example,
 
 ::
 
-    % condor_restart -startd bluejay
+    $ condor_restart -startd bluejay
 
 The *condor_startd* daemon takes a few moments to exercise the Java
 capabilities of the *condor_starter*, query its properties, and then
@@ -29,7 +29,7 @@ Java-capable by printing the Java vendor and the version number:
 
 ::
 
-    % condor_status -java bluejay
+    $ condor_status -java bluejay
 
 After a suitable amount of time, if this command does not give any
 output, then the *condor_starter* is having difficulty executing the
@@ -44,7 +44,7 @@ running the Java *condor_starter* directly. To find where the
 
 ::
 
-    % condor_config_val STARTER
+    $ condor_config_val STARTER
 
 This command prints out the path to the *condor_starter*, perhaps
 something like this:

@@ -422,7 +422,7 @@ Example output from *condor_q* for this submission looks like:
 
 ::
 
-    % condor_q
+    $ condor_q
 
 
     -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
@@ -437,7 +437,7 @@ After a short time, the Globus resource accepts the job. Again running
 
 ::
 
-    % condor_q
+    $ condor_q
 
 
     -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
@@ -452,7 +452,7 @@ the job has finished:
 
 ::
 
-    % condor_q
+    $ condor_q
 
 
     -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi

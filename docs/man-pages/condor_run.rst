@@ -27,7 +27,7 @@ illustrated by the example
 
 ::
 
-    % condor_run "myprog < input.data"
+    $ condor_run "myprog < input.data"
 
 *condor_run* jobs rely on a shared file system for access to any
 necessary input files. The current working directory of the job must be
@@ -98,19 +98,19 @@ three examples.
 
 ::
 
-    % condor_run "f77 -O -o myprog myprog.f"
+    $ condor_run "f77 -O -o myprog myprog.f"
 
 or
 
 ::
 
-    % condor_run "make"
+    $ condor_run "make"
 
 or
 
 ::
 
-    % condor_run "condor_compile cc -o myprog.condor myprog.c"
+    $ condor_run "condor_compile cc -o myprog.condor myprog.c"
 
 Files
 -----

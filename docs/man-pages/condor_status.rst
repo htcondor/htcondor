@@ -327,7 +327,7 @@ the host name. For example, if you had a 4-CPU machine, named
 
 ::
 
-    % condor_status vulture
+    $ condor_status vulture
 
     Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
 
@@ -348,7 +348,7 @@ slot. This has the form ``slot#@hostname``. For example:
 
 ::
 
-    % condor_status slot3@vulture
+    $ condor_status slot3@vulture
 
     Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
 
@@ -367,7 +367,7 @@ the ``OpSys`` of ``"LINUX"``:
 
 ::
 
-    % condor_status -constraint OpSys==\"LINUX\"
+    $ condor_status -constraint OpSys==\"LINUX\"
 
 Note that quotation marks must be escaped with the backslash characters
 for most shells.
@@ -388,14 +388,14 @@ command is
 
 ::
 
-    % condor_status -constraint State==\"Idle\"
+    $ condor_status -constraint State==\"Idle\"
 
 To see all machines that are bench marked to have a MIPS rating of more
 than 750, the Unix command is
 
 ::
 
-    % condor_status -constraint 'Mips>750'
+    $ condor_status -constraint 'Mips>750'
 
 -cod option example
 
@@ -418,13 +418,13 @@ job ClassAd in a format that is easily parsable by other tools:
 
 ::
 
-    % condor_status -format "%s " Name -format "%d\n" Memory
+    $ condor_status -format "%s " Name -format "%d\n" Memory
 
 To do the same with the **autoformat** option, run
 
 ::
 
-    % condor_status -autoformat Name Memory
+    $ condor_status -autoformat Name Memory
 
 Exit Status
 -----------

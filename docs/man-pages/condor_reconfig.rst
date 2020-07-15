@@ -84,13 +84,13 @@ host:
 
 ::
 
-    % condor_reconfig
+    $ condor_reconfig
 
 To reconfigure only the *condor_startd* on a named machine:
 
 ::
 
-    % condor_reconfig -name bluejay -daemon startd
+    $ condor_reconfig -name bluejay -daemon startd
 
 To reconfigure a machine within a pool other than the local pool, use
 the **-pool** option. The argument is the name of the central manager
@@ -101,5 +101,5 @@ single machine named **cae17** within the pool of machines that has
 
 ::
 
-    % condor_reconfig -pool condor.cae.wisc.edu -name cae17
+    $ condor_reconfig -pool condor.cae.wisc.edu -name cae17
 

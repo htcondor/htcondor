@@ -87,7 +87,7 @@ To create a token for ``jane@cs.wisc.edu`` with no additional restrictions:
 
 ::
 
-    % condor_token_create -identity jane@cs.wisc.edu
+    $ condor_token_create -identity jane@cs.wisc.edu
     eyJhbGciOiJIUzI1NiIsImtpZCI6Il....bnu3NoO9BGM
 
 To create a token for ``worker-node@cs.wisc.edu`` that may advertise either
@@ -95,7 +95,7 @@ a *condor_startd* or a *condor_master*:
 
 ::
 
-    % condor_token_create -identity worker-node@cs.wisc.edu \
+    $ condor_token_create -identity worker-node@cs.wisc.edu \
                           -authz ADVERTISE_STARTD \
                           -authz ADVERTISE_MASTER
     eyJhbGciOiJIUzI1NiIsImtpZC.....8wkstyj_OnM0SHsOdw
@@ -105,7 +105,7 @@ and then to save it to ``~/.condor/tokens.d/friend``:
 
 ::
 
-    % condor_token_create -identity friend@cs.wisc.edu -lifetime 600 -token friend
+    $ condor_token_create -identity friend@cs.wisc.edu -lifetime 600 -token friend
 
 If the administrator would like to create a specific key for signing tokens, ``token_key``,
 distinct from the default pool password, they would first use *condor_store_cred*
@@ -122,7 +122,7 @@ Next, the administrator would run run *condor_token_create*:
 
 ::
 
-    % condor_token_create -identity frida@cs.wisc.edu -key token_key
+    $ condor_token_create -identity frida@cs.wisc.edu -key token_key
     eyJhbGciOiJIUzI1NiIsImtpZCI6I.....eyJpYXQiOUzlN6QA
 
 If the ``token_key`` file is deleted from the *SEC_PASSWORD_DIRECTORY*, then all of

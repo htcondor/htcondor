@@ -40,7 +40,7 @@ To list all tokens as the current user:
 
 ::
 
-    % condor_token_list
+    $ condor_token_list
     Header: {"alg":"HS256","kid":"POOL"} Payload: {"exp":1565576872,"iat":1565543872,"iss":"htcondor.cs.wisc.edu","scope":"condor:\/DAEMON","sub":"k8sworker@wisc.edu"} File: /home/bucky/.condor/tokens.d/token1
     Header: {"alg":"HS256","kid":"POOL"} Payload: {"iat":1572414350,"iss":"htcondor.cs.wisc.edu","scope":"condor:\/WRITE","sub":"bucky@wisc.edu"} File: /home/bucky/.condor/tokens.d/token2
 

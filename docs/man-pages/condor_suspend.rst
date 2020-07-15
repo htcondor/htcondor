@@ -70,7 +70,7 @@ To suspend all jobs except for a specific user:
 
 ::
 
-    % condor_suspend -constraint 'Owner =!= "foo"'
+    $ condor_suspend -constraint 'Owner =!= "foo"'
 
 Run *condor_continue* to continue execution.
 

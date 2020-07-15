@@ -97,13 +97,13 @@ host:
 
 ::
 
-    % condor_off
+    $ condor_off
 
 To shut down only the *condor_collector* on three named machines:
 
 ::
 
-    % condor_off  cinnamon cloves vanilla -daemon collector
+    $ condor_off  cinnamon cloves vanilla -daemon collector
 
 To shut down daemons within a pool of machines other than the local
 pool, use the **-pool** option. The argument is the name of the central
@@ -115,5 +115,5 @@ as its central manager:
 
 ::
 
-    % condor_off  -pool condor.cae.wisc.edu -name cae17
+    $ condor_off  -pool condor.cae.wisc.edu -name cae17
 

@@ -92,7 +92,7 @@ To obtain a token with a lifetime of 10 minutes from the default *condor_collect
 
 ::
 
-    % condor_token_request -lifetime 600
+    $ condor_token_request -lifetime 600
     Token request enqueued.  Ask an administrator to please approve request 6108900.
     eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYX...ii7lAfCA
 
@@ -101,7 +101,7 @@ To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 
 ::
 
-    % condor_token_request -name bird.cs.wisc.edu \
+    $ condor_token_request -name bird.cs.wisc.edu \
                            -identity bucky@cs.wisc.edu
                            -authz READ -authz WRITE
     Token request enqueued.  Ask an administrator to please approve request 2578154
@@ -112,7 +112,7 @@ and then to save it to ``~/.condor/tokens.d/friend``:
 
 ::
 
-    % condor_token_request -pool htcondor.cs.wisc.edu \
+    $ condor_token_request -pool htcondor.cs.wisc.edu \
                          -identity friend@cs.wisc.edu \
                          -lifetime 600 -token friend
     Token request enqueued.  Ask an administrator to please approve request 2720841.

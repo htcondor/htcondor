@@ -90,7 +90,7 @@ command) that are not currently running:
 
 ::
 
-    % condor_hold -constraint "JobStatus!=2"
+    $ condor_hold -constraint "JobStatus!=2"
 
 Multiple options within the same command cause the union of all jobs
 that meet either (or both) of the options to be placed in the hold
@@ -98,7 +98,7 @@ state. Therefore, the command
 
 ::
 
-    % condor_hold Mary -constraint "JobStatus!=2"
+    $ condor_hold Mary -constraint "JobStatus!=2"
 
 places all of Mary's queued jobs into the hold state, and the constraint
 holds all queued jobs not currently running. It also sends a hard kill
