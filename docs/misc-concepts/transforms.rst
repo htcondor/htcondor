@@ -108,6 +108,7 @@ Transform Commands
     For example
 
     .. code-block:: text
+
       # copy all attributes whose names begin with Resource to new attribute with names that begin with OriginalResource
       COPY /Resource(.+)/ OriginalResource\1
 
