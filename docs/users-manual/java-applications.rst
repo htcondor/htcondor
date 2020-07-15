@@ -20,7 +20,7 @@ the pool for which HTCondor can use the Java Virtual Machine.
 
 ::
 
-    % condor_status -java
+    $ condor_status -java
 
     Name               JavaVendor Ver    State     Activity LoadAv  Mem  ActvtyTime
 
@@ -148,7 +148,7 @@ Less Simple Java Specifications
 
     ::
 
-        % jar cvf Library.jar Larry.class Curly.class Moe.class Stooges.class
+        $ jar cvf Library.jar Larry.class Curly.class Moe.class Stooges.class
 
     HTCondor must then be told where to find the JAR as well as to use
     the JAR. The JAR file that contains the entry point is specified
@@ -405,15 +405,15 @@ use Chirp I/O.
 
 ::
 
-    % condor_config_val LIB
+    $ condor_config_val LIB
     /usr/local/condor/lib
-    % cp /usr/local/condor/lib/Chirp.jar .
+    $ cp /usr/local/condor/lib/Chirp.jar .
 
 Rebuild the program with the Chirp JAR file in the class path.
 
 ::
 
-    % javac -classpath Chirp.jar:. TestChirp.java
+    $ javac -classpath Chirp.jar:. TestChirp.java
 
 The Chirp JAR file must be specified in the submit description file.
 Here is an example submit description file that works for both of the

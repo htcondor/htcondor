@@ -825,7 +825,7 @@ running *condor_rm*. For example,
 
 ::
 
-    % condor_q
+    $ condor_q
     -- Submitter: turunmaa.cs.wisc.edu : <128.105.175.125:36165> : turunmaa.cs.wisc.edu
      ID      OWNER          SUBMITTED     RUN_TIME ST PRI SIZE CMD
       9.0   taylor         10/12 11:47   0+00:01:32 R  0   8.7  condor_dagman -f -
@@ -834,7 +834,7 @@ running *condor_rm*. For example,
 
         3 jobs; 2 idle, 1 running, 0 held
 
-    % condor_rm 9.0
+    $ condor_rm 9.0
 
 When a *condor_dagman* job is removed, all node jobs (including
 sub-DAGs) of that *condor_dagman* will be removed by the

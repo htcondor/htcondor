@@ -121,13 +121,13 @@ that flavor of Unix. In some, it appears as
 
 ::
 
-    %  date --date "MM/DD/YYYY HH:MM:SS" +%s
+    $ date --date "MM/DD/YYYY HH:MM:SS" +%s
 
 and in others, it appears as
 
 ::
 
-    %  date -d "YYYY-MM-DD HH:MM:SS" +%s
+    $ date -d "YYYY-MM-DD HH:MM:SS" +%s
 
 MM is a 2-digit month number, DD is a 2-digit day of the month number,
 and YYYY is a 4-digit year. HH is the 2-digit hour of the day, MM is the
