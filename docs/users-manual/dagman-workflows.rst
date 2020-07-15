@@ -61,7 +61,7 @@ nodes.
 
 A very simple DAG input file for this diamond-shaped DAG is:
 
-.. code-block::
+.. code-block:: text
 
     # File name: diamond.dag
     #
@@ -83,7 +83,7 @@ JOB
 The **JOB** command specifies an HTCondor job. The syntax used for each
 *JOB* command is:
 
-.. code-block::
+.. code-block:: text
 
     JOB JobName SubmitDescriptionFileName [DIR directory] [NOOP] [DONE]
 
@@ -142,7 +142,7 @@ only be started once all its parents have successfully completed.
 
 The syntax used for each dependency (PARENT/CHILD) command is
 
-.. code-block::
+.. code-block:: text
 
     PARENT ParentJobName [ParentJobName2 ... ] CHILD  ChildJobName [ChildJobName2 ... ]
 
@@ -153,7 +153,7 @@ input file can specify the dependencies from one or more parents to one
 or more children. The diamond-shaped DAG example may specify the
 dependencies with
 
-.. code-block::
+.. code-block:: text
 
     PARENT A CHILD B C
     PARENT B C CHILD D
@@ -161,7 +161,7 @@ dependencies with
 An alternative specification for the diamond-shaped DAG may specify some
 or all of the dependencies on separate lines:
 
-.. code-block::
+.. code-block:: text
 
     PARENT A CHILD B C
     PARENT B CHILD D
@@ -169,7 +169,7 @@ or all of the dependencies on separate lines:
 
 As a further example, the line
 
-.. code-block::
+.. code-block:: text
 
     PARENT p1 p2 CHILD c1 c2
 
@@ -199,11 +199,11 @@ an HTCondor job.
 
 The syntax used for each *PRE* or *POST* command is
 
-.. code-block::
+.. code-block:: text
 
     SCRIPT [DEFER status time] PRE [JobName | ALL_NODES] ExecutableName [arguments]
 
-.. code-block::
+.. code-block:: text
 
     SCRIPT [DEFER status time] POST [JobName | ALL_NODES] ExecutableName [arguments]
 
@@ -399,7 +399,7 @@ Examples use the diamond-shaped DAG. A first example uses a PRE script
 to expand a compressed file needed as input to each of the HTCondor jobs
 of nodes B and C. The DAG input file:
 
-.. code-block::
+.. code-block:: text
 
     # File name: diamond.dag
     #
@@ -432,27 +432,27 @@ for node B, which uncompresses file ``B.gz``, placing the result in file
 A second example uses the ``$RETURN`` macro. The DAG input file contains
 the POST script specification:
 
-.. code-block::
+.. code-block:: text
 
     SCRIPT POST A stage-out job_status $RETURN
 
 If the HTCondor job of node A exits with the value -1, the POST script
 is invoked as
 
-.. code-block::
+.. code-block:: text
 
     stage-out job_status -1
 
 The slightly different example POST script specification in the DAG
 input file
 
-.. code-block::
+.. code-block:: text
 
     SCRIPT POST A stage-out job_status=$RETURN
 
 invokes the POST script with
 
-.. code-block::
+.. code-block:: text
 
     stage-out job_status=$RETURN
 
@@ -470,7 +470,7 @@ The behavior of DAGMan with respect to node success or failure can be
 changed with the addition of a *PRE_SKIP* command. A *PRE_SKIP* line
 within the DAG input file uses the syntax:
 
-.. code-block::
+.. code-block:: text
 
     PRE_SKIP [JobName | ALL_NODES] non-zero-exit-code
 
@@ -492,7 +492,7 @@ submit description file producing multiple job clusters.
 Consider again the diamond-shaped DAG example, where each node job uses
 the same submit description file.
 
-.. code-block::
+.. code-block:: text
 
     # File name: diamond.dag
     #
@@ -506,7 +506,7 @@ the same submit description file.
 Here is a sample HTCondor submit description file for this DAG:
 :index:`example submit description file<single: example submit description file; DAGMan>`
 
-.. code-block::
+.. code-block:: text
 
     # File name: diamond_job.condor
     #
@@ -531,7 +531,7 @@ attribute may be used in the
 all but scheduler universe jobs. For example, if the job has two
 parents, with *JobName* s B and C, the submit description file command
 
-.. code-block::
+.. code-block:: text
 
     arguments = $$([DAGParentNodeNames])
 
@@ -540,7 +540,7 @@ invoking the job.
 
 DAGMan supports jobs with queues of multiple procs, so for example:
 
-.. code-block::
+.. code-block:: text
 
     queue 500
 
@@ -671,21 +671,21 @@ Consider an example DAG within a directory named ``dag1``. There would
 be a DAG input file, named ``one.dag`` for this example. Assume the
 contents of this DAG input file specify a node job with
 
-.. code-block::
+.. code-block:: text
 
       JOB A  A.submit
 
 Further assume that partial contents of submit description file
 ``A.submit`` specify
 
-.. code-block::
+.. code-block:: text
 
       executable = programA
       input      = A.input
 
 Directory contents are
 
-.. code-block::
+.. code-block:: text
 
     dag1/
     ├── A.input
@@ -708,7 +708,7 @@ each is contained within its own directory. For simplicity, assume that
 the DAG in ``dag2`` has remarkably similar files and file naming as the
 DAG in ``dag1``. Assume that the directory contents are
 
-.. code-block::
+.. code-block:: text
 
     parent/
     ├── dag1
@@ -929,7 +929,7 @@ DAGMan can retry any failed node in a DAG by specifying the node in the
 DAG input file with the *RETRY* command. The use of retry is optional.
 The syntax for retry is
 
-.. code-block::
+.. code-block:: text
 
     RETRY [JobName | ALL_NODES] NumberOfRetries [UNLESS-EXIT value]
 
@@ -940,7 +940,7 @@ file. Retry is implemented on nodes, not parts of a node.
 
 The diamond-shaped DAG example may be modified to retry node C:
 
-.. code-block::
+.. code-block:: text
 
         # File name: diamond.dag
         #
@@ -980,7 +980,7 @@ The *ABORT-DAG-ON* command provides a way to abort the entire DAG if a
 given node returns a specific exit code. The syntax for *ABORT-DAG-ON*
 is
 
-.. code-block::
+.. code-block:: text
 
     ABORT-DAG-ON [JobName | ALL_NODES] AbortExitValue [RETURN DAGReturnValue]
 
@@ -1015,7 +1015,7 @@ modified.
 
 Adding *ABORT-DAG-ON* for node C in the diamond-shaped DAG
 
-.. code-block::
+.. code-block:: text
 
         # File name: diamond.dag
         #
@@ -1043,7 +1043,7 @@ Macros defined for DAG nodes can be used within the submit description
 file of the node job. The *VARS* command provides a method for defining
 a macro. Macros are defined on a per-node basis, using the syntax
 
-.. code-block::
+.. code-block:: text
 
     VARS [JobName | ALL_NODES] macroname="string" [macroname2="string2" ... ]
 
@@ -1065,7 +1065,7 @@ string ``queue``, in any combination of upper or lower case letters.
 
 If the DAG input file contains
 
-.. code-block::
+.. code-block:: text
 
     # File name: diamond.dag
     #
@@ -1080,7 +1080,7 @@ If the DAG input file contains
 then the submit description file ``A.submit`` may use the macro state.
 Consider this submit description file ``A.submit``:
 
-.. code-block::
+.. code-block:: text
 
     # file name: A.submit
     executable = A.exe
@@ -1091,7 +1091,7 @@ Consider this submit description file ``A.submit``:
 The macro value expands to become a command-line argument in the
 invocation of the job. The job is invoked with
 
-.. code-block::
+.. code-block:: text
 
     A.exe Wisconsin
 
@@ -1107,7 +1107,7 @@ used by each job.
 
 The relevant portion of the DAG input file appears as
 
-.. code-block::
+.. code-block:: text
 
     JOB A theonefile.sub
     JOB B theonefile.sub
@@ -1119,7 +1119,7 @@ The relevant portion of the DAG input file appears as
 
 The submit description file appears as
 
-.. code-block::
+.. code-block:: text
 
     # submit description file called:  theonefile.sub
     executable   = progX
@@ -1138,7 +1138,7 @@ Multiple macroname definitions
 If a macro name for a specific node in a DAG is defined more than once,
 as it would be with the partial file contents
 
-.. code-block::
+.. code-block:: text
 
     JOB job1 job1.submit
     VARS job1 a="foo"
@@ -1146,7 +1146,7 @@ as it would be with the partial file contents
 
 a warning is written to the log, of the format
 
-.. code-block::
+.. code-block:: text
 
     Warning: VAR <macroname> is already defined in job <JobName>
     Discovered at file "<DAG input file name>", line <line number>
@@ -1155,7 +1155,7 @@ The behavior of DAGMan is such that all definitions for the macro exist,
 but only the last one defined is used as the variable's value. Using
 this example, if the ``job1.submit`` submit description file contains
 
-.. code-block::
+.. code-block:: text
 
     arguments = "$(a)"
 
@@ -1193,7 +1193,7 @@ As an example that shows uses of all special characters, here are only
 the relevant parts of a DAG input file. Note that the NodeA value for
 the macro ``second`` contains a tab.
 
-.. code-block::
+.. code-block:: text
 
     VARS NodeA first="Alberto Contador"
     VARS NodeA second="\"\"Andy Schleck\"\""
@@ -1212,7 +1212,7 @@ the macro ``second`` contains a tab.
 Consider an example in which the submit description file for NodeA uses
 the New Syntax for the **arguments** command:
 
-.. code-block::
+.. code-block:: text
 
     arguments = "'$(first)' '$(second)' '$(third)' '($fourth)' '$(misc)'"
 
@@ -1220,7 +1220,7 @@ The single quotes around each variable reference are only necessary if
 the variable value may contain spaces or tabs. The resulting values
 passed to the NodeA executable are:
 
-.. code-block::
+.. code-block:: text
 
     Alberto Contador
     "Andy Schleck"
@@ -1231,13 +1231,13 @@ passed to the NodeA executable are:
 Consider an example in which the submit description file for NodeB uses
 the Old Syntax for the **arguments** command:
 
-.. code-block::
+.. code-block:: text
 
       arguments = $(first) $(second) $(third) $(fourth) $(misc)
 
 The resulting values passed to the NodeB executable are:
 
-.. code-block::
+.. code-block:: text
 
       Lance_Armstrong
       "Andreas_Kloden"
@@ -1248,13 +1248,13 @@ The resulting values passed to the NodeB executable are:
 Consider an example in which the submit description file for NodeC uses
 the New Syntax for the **arguments** command:
 
-.. code-block::
+.. code-block:: text
 
       arguments = "$(args)"
 
 The resulting values passed to the NodeC executable are:
 
-.. code-block::
+.. code-block:: text
 
       Nairo Quintana
       Chris Froome
@@ -1273,14 +1273,14 @@ only a portion of the string.
 
    For example, the DAG input file lines
 
-   .. code-block::
+   .. code-block:: text
 
          JOB  NodeC NodeC.submit
          VARS NodeC nodename="$(JOB)"
 
    set ``nodename`` to ``NodeC``, and the DAG input file lines
 
-   .. code-block::
+   .. code-block:: text
 
          JOB  NodeD NodeD.submit
          VARS NodeD outfilename="$(JOB)-output"
@@ -1290,7 +1290,7 @@ only a portion of the string.
 -  $(RETRY) expands to 0 the first time a node is run; the value is
    incremented each time the node is retried. For example:
 
-   .. code-block::
+   .. code-block:: text
 
          VARS NodeE noderetry="$(RETRY)"
 
@@ -1300,13 +1300,13 @@ Using VARS to define ClassAd attributes
 The *macroname* may also begin with a ``+`` character, in which case it
 names a ClassAd attribute. For example, the VARS specification
 
-.. code-block::
+.. code-block:: text
 
     VARS NodeF +A="\"bob\""
 
 results in the job ClassAd attribute
 
-.. code-block::
+.. code-block:: text
 
     A = "bob"
 
@@ -1318,19 +1318,19 @@ definition of the attribute value.
 Continuing this example, it allows the HTCondor submit description file
 for NodeF to use the following line:
 
-.. code-block::
+.. code-block:: text
 
     arguments = "$$([A])"
 
 The special macros may also be used. For example
 
-.. code-block::
+.. code-block:: text
 
     VARS NodeG +B="$(RETRY)"
 
 places the numerical attribute
 
-.. code-block::
+.. code-block:: text
 
     B = 1
 
@@ -1346,7 +1346,7 @@ Setting Priorities for Nodes
 The *PRIORITY* command assigns a priority to a DAG node (and to the
 HTCondor job(s) associated with the node). The syntax for *PRIORITY* is
 
-.. code-block::
+.. code-block:: text
 
     PRIORITY [JobName | ALL_NODES] PriorityValue
 
@@ -1396,7 +1396,7 @@ pools.
 
 Adding *PRIORITY* for node C in the diamond-shaped DAG:
 
-.. code-block::
+.. code-block:: text
 
     # File name: diamond.dag
     #
@@ -1430,7 +1430,7 @@ its parents).**
 
 Here is an example to clarify:
 
-.. code-block::
+.. code-block:: text
 
     # File name: priorities.dag
     #
@@ -1440,7 +1440,7 @@ Here is an example to clarify:
     PRIORITY A 60
     PRIORITY B 100
 
-.. code-block::
+.. code-block:: text
 
     # File name: SD.dag
     #
@@ -1478,7 +1478,7 @@ maximum number of submitted clusters may be specified for each category.
 The *CATEGORY* command assigns a category name to a DAG node. The syntax
 for *CATEGORY* is
 
-.. code-block::
+.. code-block:: text
 
     CATEGORY [JobName | ALL_NODES] CategoryName
 
@@ -1487,7 +1487,7 @@ Category names cannot contain white space.
 The *MAXJOBS* command limits the number of submitted job clusters on a
 per category basis. The syntax for *MAXJOBS* is
 
-.. code-block::
+.. code-block:: text
 
     MAXJOBS CategoryName MaxJobsValue
 
@@ -1550,14 +1550,14 @@ file to be used to set configuration variables related to
 
 As an example, if the DAG input file contains:
 
-.. code-block::
+.. code-block:: text
 
     CONFIG dagman.config
 
 then the configuration values in file ``dagman.config`` will be used for
 this DAG. If the contents of file ``dagman.config`` is
 
-.. code-block::
+.. code-block:: text
 
     DAGMAN_MAX_JOBS_IDLE = 10
 
@@ -1590,13 +1590,13 @@ The *SET_JOB_ATTR* keyword within the DAG input file specifies an
 attribute/value pair to be set in the DAGMan job's ClassAd. The syntax
 for *SET_JOB_ATTR* is
 
-.. code-block::
+.. code-block:: text
 
     SET_JOB_ATTR AttributeName = AttributeValue
 
 As an example, if the DAG input file contains:
 
-.. code-block::
+.. code-block:: text
 
     SET_JOB_ATTR TestNumber = 17
 
@@ -1617,7 +1617,7 @@ command. If the same attribute is specified multiple times in the DAG
 value is the one that will be utilized. An attribute set in the DAG file
 can be overridden by specifying
 
-.. code-block::
+.. code-block:: text
 
     -append '+<attribute> = <value>'
 
@@ -1710,20 +1710,20 @@ The *INCLUDE* command allows the contents of one DAG file to be parsed
 as if they were physically included in the referencing DAG file. The
 syntax for *INCLUDE* is
 
-.. code-block::
+.. code-block:: text
 
     INCLUDE FileName
 
 For example, if we have two DAG files like this:
 
-.. code-block::
+.. code-block:: text
 
     # File name: foo.dag
     #
     JOB  A  A.sub
     INCLUDE bar.dag
 
-.. code-block::
+.. code-block:: text
 
     # File name: bar.dag
     #
@@ -1732,7 +1732,7 @@ For example, if we have two DAG files like this:
 
 this is equivalent to the single DAG file:
 
-.. code-block::
+.. code-block:: text
 
     JOB  A  A.sub
     JOB  B  B.sub
@@ -1753,7 +1753,7 @@ One use of the *INCLUDE* command is to simplify the DAG files when we
 have a single workflow that we want to run on a number of data sets. In
 that case, we can do something like this:
 
-.. code-block::
+.. code-block:: text
 
     # File name: workflow.dag
     # Defines the structure of the workflow
@@ -1854,7 +1854,7 @@ file to be run by a separate instance of *condor_dagman*, with the
 
 The syntax for the SUBDAG command is
 
-.. code-block::
+.. code-block:: text
 
     SUBDAG EXTERNAL JobName DagFileName [DIR directory] [NOOP] [DONE]
 
@@ -1877,7 +1877,7 @@ diamond-shaped DAG is called the outer or top-level DAG.
 Work on the inner DAG first. Here is a very simple linear DAG input file
 used as an example of the inner DAG.
 
-.. code-block::
+.. code-block:: text
 
     # File name: inner.dag
     #
@@ -1896,7 +1896,7 @@ submission of *condor_dagman* as an HTCondor job, and
 
 The preferred specification of the DAG input file for the outer DAG is
 
-.. code-block::
+.. code-block:: text
 
     # File name: diamond.dag
     #
@@ -2063,7 +2063,7 @@ Here are details that affect SUBDAGs:
    a Rescue DAG for ``diamond.dag`` (named ``diamond.dag.rescue.001``,
    etc.). If the command
 
-   .. code-block::
+   .. code-block:: console
 
         $ condor_submit_dag diamond.dag
 
@@ -2090,7 +2090,7 @@ containing the SPLICE command).
 
 The syntax for the *SPLICE* command is
 
-.. code-block::
+.. code-block:: text
 
     SPLICE SpliceName DagFileName [DIR directory]
 
@@ -2131,7 +2131,7 @@ The following series of examples illustrate potential uses of splicing.
 To simplify the examples, presume that each and every job uses the same,
 simple HTCondor submit description file:
 
-.. code-block::
+.. code-block:: text
 
       # BEGIN SUBMIT FILE submit.condor
       executable   = /bin/echo
@@ -2148,7 +2148,7 @@ This first simple example splices a diamond-shaped DAG in between the
 two nodes of a top level DAG. Here is the DAG input file for the
 diamond-shaped DAG:
 
-.. code-block::
+.. code-block:: text
 
       # BEGIN DAG FILE diamond.dag
       JOB A submit.condor
@@ -2169,7 +2169,7 @@ diamond-shaped DAG:
 
 The top level DAG incorporates the diamond-shaped splice:
 
-.. code-block::
+.. code-block:: text
 
       # BEGIN DAG FILE toplevel.dag
       JOB X submit.condor
@@ -2207,7 +2207,7 @@ constructs provided by splices. Pay particular attention to the notion
 that each named splice creates a new graph, even when the same DAG input
 file is specified.
 
-.. code-block::
+.. code-block:: text
 
       # BEGIN DAG FILE X.dag
 
@@ -2250,7 +2250,7 @@ File ``s1.dag`` continues the example, presenting the DAG input file
 that incorporates two separate splices of the X-shaped DAG.
 The next description illustrates the resulting DAG.
 
-.. code-block::
+.. code-block:: text
 
       # BEGIN DAG FILE s1.dag
 
@@ -2288,7 +2288,7 @@ by the DAG input file ``toplevel.dag``, which illustrates the final DAG.
 Notice that the DAG has two disjoint graphs in it as a result of splice S3 not
 having any dependencies associated with it in this top level DAG.
 
-.. code-block::
+.. code-block:: text
 
       # BEGIN DAG FILE toplevel.dag
 
@@ -2377,7 +2377,7 @@ To achieve the desired effect of having a PRE script associated with a
 splice, introduce a new NOOP node into the DAG with the splice as a
 dependency. Attach the PRE script to the NOOP node.
 
-.. code-block::
+.. code-block:: text
 
     # BEGIN DAG FILE example1.dag
 
@@ -2400,7 +2400,7 @@ The same technique is used to achieve the effect of having a POST script
 associated with a splice. Introduce a new NOOP node into the DAG as a
 child of the splice, and attach the POST script to the NOOP node.
 
-.. code-block::
+.. code-block:: text
 
     # BEGIN DAG FILE example2.dag
 
@@ -2427,7 +2427,7 @@ PRIORITY specified.
 
 Here is an example showing a DAG that will not be parsed successfully:
 
-.. code-block::
+.. code-block:: text
 
       # top level DAG input file
       JOB    A a.sub
@@ -2442,7 +2442,7 @@ Here is an example showing a DAG that will not be parsed successfully:
 
 The following example will work:
 
-.. code-block::
+.. code-block:: text
 
       # top level DAG input file
       JOB    A a.sub
@@ -2461,7 +2461,7 @@ above) must be used instead of splices.
 Here is the same example, now defining job B as a SUBDAG, and effecting
 RETRY on that SUBDAG.
 
-.. code-block::
+.. code-block:: text
 
       # top level DAG input file
       JOB    A a.sub
@@ -2487,7 +2487,7 @@ probably makes the most sense to put it in the upper-level DAG file.
 Here is an example which applies a single limitation on submitted jobs,
 identifying the category with ``+init``.
 
-.. code-block::
+.. code-block:: text
 
     # relevant portion of file name: upper.dag
 
@@ -2496,7 +2496,7 @@ identifying the category with ``+init``.
 
     MAXJOBS +init 2
 
-.. code-block::
+.. code-block:: text
 
     # relevant portion of file name: splice1.dag
 
@@ -2505,7 +2505,7 @@ identifying the category with ``+init``.
     JOB D D.sub
     CATEGORY D +init
 
-.. code-block::
+.. code-block:: text
 
     # relevant portion of file name: splice2.dag
 
@@ -2517,7 +2517,7 @@ identifying the category with ``+init``.
 For both global and non-global category throttles, settings at a higher
 level in the DAG override settings at a lower level. In this example:
 
-.. code-block::
+.. code-block:: text
 
     # relevant portion of file name: upper.dag
 
@@ -2555,19 +2555,19 @@ chosen because of the hardware analogy.)
 
 The syntax for *CONNECT* is
 
-.. code-block::
+.. code-block:: text
 
     CONNECT OutputSpliceName InputSpliceName
 
 The syntax for *PIN_IN* is
 
-.. code-block::
+.. code-block:: text
 
     PIN_IN NodeName PinNumber
 
 The syntax for *PIN_OUT* is
 
-.. code-block::
+.. code-block:: text
 
     PIN_OUT NodeName PinNumber
 
@@ -2609,7 +2609,7 @@ is not required.
 
 **Here is a simple example:**
 
-.. code-block::
+.. code-block:: text
 
     # File: top.dag
     SPLICE A spliceA.dag
@@ -2619,7 +2619,7 @@ is not required.
     CONNECT A B
     CONNECT B C
 
-.. code-block::
+.. code-block:: text
 
     # File: spliceA.dag
     JOB A1 A1.sub
@@ -2628,7 +2628,7 @@ is not required.
     PIN_OUT A1 1
     PIN_OUT A2 2
 
-.. code-block::
+.. code-block:: text
 
     # File: spliceB.dag
     JOB B1 B1.sub
@@ -2646,7 +2646,7 @@ is not required.
     PIN_OUT B3 3
     PIN_OUT B4 4
 
-.. code-block::
+.. code-block:: text
 
     # File: spliceC.dag
     JOB C1 C1.sub
@@ -2685,7 +2685,7 @@ input file specifies a node job to be run at the end of the DAG.
 
 The syntax used for the *FINAL* command is
 
-.. code-block::
+.. code-block:: text
 
     FINAL JobName SubmitDescriptionFileName [DIR directory] [NOOP]
 
@@ -2723,7 +2723,7 @@ The ``$DAG_STATUS`` and ``$FAILED_COUNT`` macros can be used both as PRE
 and POST script arguments, and in node job submit description files. As
 an example of this, here are the partial contents of the DAG input file,
 
-.. code-block::
+.. code-block:: text
 
         FINAL final_node final_node.sub
         SCRIPT PRE final_node final_pre.pl $DAG_STATUS $FAILED_COUNT
@@ -2731,7 +2731,7 @@ an example of this, here are the partial contents of the DAG input file,
 and here are the partial contents of the submit description file,
 ``final_node.sub``
 
-.. code-block::
+.. code-block:: text
 
         arguments = "$(DAG_STATUS) $(FAILED_COUNT)"
 
@@ -2744,7 +2744,7 @@ in turn, causes the FINAL node to be considered failed without actually
 submitting the HTCondor job specified for the node. Partial contents of
 the DAG input file:
 
-.. code-block::
+.. code-block:: text
 
     FINAL final_node final_node.sub
     SCRIPT PRE final_node final_pre.pl $DAG_STATUS
@@ -2815,7 +2815,7 @@ earlier commands, as shown in the following examples:
 
 For example, in this DAG:
 
-.. code-block::
+.. code-block:: text
 
     JOB A node.sub
     VARS A name="A"
@@ -2825,7 +2825,7 @@ the value of *name* for node A will be "X".
 
 In this DAG:
 
-.. code-block::
+.. code-block:: text
 
     JOB A node.sub
     VARS A name="A"
@@ -2836,7 +2836,7 @@ the value of *name* for node A will be "foo".
 
 Here is an example DAG using the *ALL_NODES* option:
 
-.. code-block::
+.. code-block:: text
 
     # File: all_ex.dag
     JOB A node.sub
@@ -3110,7 +3110,7 @@ Determine if a DAG ever completed (independent of whether it was
 successful or not) by looking at the last lines of the ``.dagman.out``
 file. If there is a line similar to
 
-.. code-block::
+.. code-block:: text
 
     (condor_DAGMAN) pid 445 EXITING WITH STATUS 0
 
@@ -3137,7 +3137,7 @@ and it is used to draw pictures of DAGs.
 DAGMan produces one or more dot files as the result of an extra line in
 a DAG input file. The line appears as
 
-.. code-block::
+.. code-block:: text
 
     DOT dag.dot
 
@@ -3166,7 +3166,7 @@ parameters:
    uses the name of the file concatenated with a period and an integer.
    For example, the DAG input file line
 
-   .. code-block::
+   .. code-block:: text
 
         DOT dag.dot DONT-OVERWRITE
 
@@ -3202,7 +3202,7 @@ enable this feature, the DAG input file must contain a line with the
 
 The syntax for a *NODE_STATUS_FILE* command is
 
-.. code-block::
+.. code-block:: text
 
     NODE_STATUS_FILE statusFileName [minimumUpdateTime] [ALWAYS-UPDATE]
 
@@ -3237,7 +3237,7 @@ are poor candidates for using the *ALWAYS-UPDATE* option.
 
 As an example, if the DAG input file contains the line
 
-.. code-block::
+.. code-block:: text
 
     NODE_STATUS_FILE my.dag.status 30
 
@@ -3257,7 +3257,7 @@ status file was completed as well as the time of the next update.
 
 Here is an example portion of a node status file:
 
-.. code-block::
+.. code-block:: text
 
     [
       Type = "DagStatus";
@@ -3363,7 +3363,7 @@ within each line are separated by a single space character.
 *   **DAGMan start**: This line identifies the *condor_dagman* job. 
     The formatting of the line is
 
-    .. code-block::
+    .. code-block:: text
 
         timestamp INTERNAL \*** DAGMAN_STARTED dagmanCondorID \***
 
@@ -3373,7 +3373,7 @@ within each line are separated by a single space character.
 *   **DAGMan exit**: This line identifies the completion of the *condor_dagman*
     job. The formatting of the line is
 
-    .. code-block::
+    .. code-block:: text
 
         timestamp INTERNAL \*** DAGMAN_FINISHED exitCode \***
 
@@ -3385,7 +3385,7 @@ within each line are separated by a single space character.
     printed in the file if they were not already printed before recovery mode
     started. The formatting of the line is
 
-    .. code-block::
+    .. code-block:: text
 
         timestamp INTERNAL \*** RECOVERY_STARTED \***
 
@@ -3393,20 +3393,20 @@ within each line are separated by a single space character.
     either a RECOVERY_FINISHED or RECOVERY_FAILURE meta-event will be printed,
     as appropriate. The formatting of the line is
 
-    .. code-block::
+    .. code-block:: text
 
         timestamp INTERNAL \*** RECOVERY_FINISHED \***
 
     or
 
-    .. code-block::
+    .. code-block:: text
 
         timestamp INTERNAL \*** RECOVERY_FAILURE \***
 
 *   **Normal**:  This line is used for all other event and meta-event types.
     The formatting of the line is
 
-    .. code-block::
+    .. code-block:: text
 
         timestamp JobName eventName condorID jobTag - sequenceNumber
 
@@ -3427,7 +3427,7 @@ within each line are separated by a single space character.
     Pegasus-managed jobs add a line of the following form to their
     HTCondor submit description file:
 
-    .. code-block::
+    .. code-block:: text
 
         +pegasus_site = "local"
 
@@ -3436,7 +3436,7 @@ within each line are separated by a single space character.
     Generalized usage adds a set of 2 commands to the HTCondor submit
     description file to define a string as the *jobTag* field:
 
-    .. code-block::
+    .. code-block:: text
 
         +job_tag_name = "+job_tag_value"
         +job_tag_value = "viz"
@@ -3457,7 +3457,7 @@ within each line are separated by a single space character.
 Here is an example of a very simple Pegasus ``jobstate.log`` file,
 assuming the example *jobTag* field of ``local``:
 
-.. code-block::
+.. code-block:: text
 
     1292620511 INTERNAL *** DAGMAN_STARTED 4972.0 ***
     1292620523 NodeA PRE_SCRIPT_STARTED - local - 1
@@ -3542,7 +3542,7 @@ names the submit description file. For example, the simplest DAG
 input file for a set of 1000 independent jobs, as might be part of a
 parameter sweep, appears as
 
-.. code-block::
+.. code-block:: text
 
     # file sweep.dag
     JOB job0 job0.submit
@@ -3559,7 +3559,7 @@ of jobs are in the same directory, and that files continue the same
 naming and numbering scheme, the submit description file for
 ``job6.submit`` might appear as
 
-.. code-block::
+.. code-block:: text
 
     # file job6.submit
     universe = vanilla
@@ -3588,7 +3588,7 @@ many jobs of the parameter sweep. To distinguish the jobs and their
 associated distinct input and output files, the DAG input file
 assigns a unique identifier with the *VARS* command.
 
-.. code-block::
+.. code-block:: text
 
     # file sweep.dag
     JOB job0 common.submit
@@ -3607,7 +3607,7 @@ The single submit description file for all these jobs utilizes the
 ``runnumber`` variable value in its identification of the job's
 files. This submit description file might appear as
 
-.. code-block::
+.. code-block:: text
 
     # file common.submit
     universe = vanilla
@@ -3626,7 +3626,7 @@ limitation that no macro substitution may be specified for the job
 log file, and it is likely more efficient as well. This node's
 executable is invoked with
 
-.. code-block::
+.. code-block:: text
 
     /path/to/executable -8
 
@@ -3652,7 +3652,7 @@ with run number 600.
 The DAG input file sets a variable representing the run number, as in
 the previous example:
 
-.. code-block::
+.. code-block:: text
 
     # file biggersweep.dag
     JOB job0 bigger.submit
@@ -3670,7 +3670,7 @@ the previous example:
 A single HTCondor submit description file may be written. It resides in
 the same directory as the DAG input file.
 
-.. code-block::
+.. code-block:: text
 
     # file bigger.submit
     universe = vanilla

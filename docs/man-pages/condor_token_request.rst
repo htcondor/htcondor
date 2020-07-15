@@ -90,7 +90,7 @@ Examples
 To obtain a token with a lifetime of 10 minutes from the default *condor_collector*
 (the token is not returned until the daemon's administrator takes action):
 
-::
+.. code-block:: console
 
     $ condor_token_request -lifetime 600
     Token request enqueued.  Ask an administrator to please approve request 6108900.
@@ -99,7 +99,7 @@ To obtain a token with a lifetime of 10 minutes from the default *condor_collect
 To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 ``WRITE``:
 
-::
+.. code-block:: console
 
     $ condor_token_request -name bird.cs.wisc.edu \
                            -identity bucky@cs.wisc.edu
@@ -110,7 +110,7 @@ To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 To create a token from the collector in the ``htcondor.cs.wisc.edu`` pool
 and then to save it to ``~/.condor/tokens.d/friend``:
 
-::
+.. code-block:: console
 
     $ condor_token_request -pool htcondor.cs.wisc.edu \
                          -identity friend@cs.wisc.edu \

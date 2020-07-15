@@ -16,7 +16,7 @@ command has many options, by default, it displays only your jobs
 queued in the local scheduler. An example of the output from *condor_q* is
 
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -40,7 +40,7 @@ on the types of your jobs, this output may look a little different.
 Often, when you are starting out, and have few jobs, you may want to see one line of output
 per job.  The -nobatch option to *condor_q* does this, and output might look something like:
 
-::
+.. code-block:: console
 
     $ condor_q -nobatch
 
@@ -104,7 +104,7 @@ You can also find all the machines that are running your job through the
 all the machines that are running jobs submitted by
 ``breach@cs.wisc.edu``, type:
 
-::
+.. code-block:: console
 
     $ condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"'
 
@@ -122,7 +122,7 @@ all the machines that are running jobs submitted by
 
 To find all the machines that are running any job at all, type:
 
-::
+.. code-block:: console
 
     $ condor_status -run
 
@@ -149,20 +149,20 @@ machine back to the submit machine.  **condor_tail** uses the same networking
 stack as HTCondor proper, so it will work if the execute machine is behind a firewall.
 Simply run, where xx.yy is the job id of a running job:
 
-::
+.. code-block:: console
 
     $ condor_tail xx.yy
 
 
 or
 
-::
+.. code-block:: console
 
     $ condor_tail -f xx.yy
 
 to continuously follow the standard output.  To copy a different file, run
 
-::
+.. code-block:: console
 
     $ condor_tail xx.yy name_of_output_file
 
@@ -187,7 +187,7 @@ the job that is being removed is currently running, the job is killed
 without a checkpoint, and its queue entry is removed. The following
 example shows the queue of jobs before and after a job is removed.
 
-::
+.. code-block:: console
 
     $ condor_q -nobatch
 
@@ -248,7 +248,7 @@ The default priority of a job is 0, but can be changed using the
 :index:`condor_prio<single: condor_prio; HTCondor commands>`\ For example, to change
 the priority of a job to -15,
 
-::
+.. code-block:: console
 
     $ condor_q -nobatch raman
 
@@ -302,7 +302,7 @@ diagnosed by using the **-analyze** option of the *condor_q* command.
 Here is an example; running *condor_q* 's analyzer provided the
 following information:
 
-::
+.. code-block:: console
 
     $ condor_q -analyze 27497829
 
@@ -378,7 +378,7 @@ with the machine on which the job was submitted. The location and name
 of this log file may be discovered on the submitting machine, using the
 command
 
-::
+.. code-block:: console
 
     $ condor_config_val SHADOW_LOG
 
@@ -401,7 +401,7 @@ string identifying the reason that a particular job is in the Hold state
 may be displayed by invoking *condor_q* -hold. For the example job ID 16.0,
 use:
 
-::
+.. code-block:: text
 
       $ condor_q  -hold  16.0
 
@@ -573,8 +573,7 @@ through *condor_status*
 :index:`condor_status<single: condor_status; HTCondor commands>`\ with the *-submitters*
 option. An example of this would yield output similar to:
 
-
-::
+.. code-block:: console
 
     $ condor_status -submitters
 
@@ -593,5 +592,3 @@ option. An example of this would yield output similar to:
       wright@cs.wisc.edu                 1                  1                  0
 
                    Total                 7                516                  5
-
-

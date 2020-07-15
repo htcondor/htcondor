@@ -83,7 +83,7 @@ Examples
 
 To obtain a token with a lifetime of 10 minutes from the default *condor_schedd*:
 
-::
+.. code-block:: console
 
     $ condor_token_fetch -lifetime 600
     eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYX...ii7lAfCA
@@ -91,7 +91,7 @@ To obtain a token with a lifetime of 10 minutes from the default *condor_schedd*
 To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 ``WRITE``:
 
-::
+.. code-block:: console
 
     $ condor_token_fetch -name bird.cs.wisc.edu \
                           -authz READ -authz WRITE
@@ -100,7 +100,7 @@ To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 To create a token from the collector in the ``htcondor.cs.wisc.edu`` pool
 and then to save it to ``~/.condor/tokens.d/friend``:
 
-::
+.. code-block:: console
 
     $ condor_token_fetch -identity friend@cs.wisc.edu -lifetime 600 -token friend
 

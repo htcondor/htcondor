@@ -63,7 +63,7 @@ Options
 Examples
 --------
 
-::
+.. code-block:: console
 
     $ condor_qedit -name north.cs.wisc.edu -pool condor.cs.wisc.edu 249.0 answer 42 
     Set attribute "answer". 
@@ -79,9 +79,9 @@ General Remarks
 
 A job's ClassAd attributes may be viewed with
 
-::
+.. code-block:: console
 
-      condor_q -long
+      $ condor_q -long
 
 Exit Status
 -----------

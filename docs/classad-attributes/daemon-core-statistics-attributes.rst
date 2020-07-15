@@ -10,9 +10,9 @@ slow performance of the HTCondor system. The following statistics are
 available for all daemons, and can be accessed directly with the
 condor_status command with a direct query, such as
 
-::
+.. code-block:: console
 
-    condor_status -direct somehostname.example.com -schedd -statistics DC:2 -l
+    $ condor_status -direct somehostname.example.com -schedd -statistics DC:2 -l
 
 :index:`DCUdpQueueDepth<single: DCUdpQueueDepth; ClassAd statistics attribute>`
 

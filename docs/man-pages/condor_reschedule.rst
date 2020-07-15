@@ -73,7 +73,7 @@ Examples
 
 To update the information on three named machines:
 
-::
+.. code-block:: console
 
     $ condor_reschedule robin cardinal bluejay
 
@@ -84,7 +84,7 @@ specified as the targets for the command. This command reschedules the
 single machine named **cae17** within the pool of machines that has
 **condor.cae.wisc.edu** as its central manager:
 
-::
+.. code-block:: console
 
     $ condor_reschedule -pool condor.cae.wisc.edu -name cae17
 

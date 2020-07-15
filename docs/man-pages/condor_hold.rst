@@ -88,7 +88,7 @@ Examples
 To place on hold all jobs (of the user that issued the *condor_hold*
 command) that are not currently running:
 
-::
+.. code-block:: console
 
     $ condor_hold -constraint "JobStatus!=2"
 
@@ -96,7 +96,7 @@ Multiple options within the same command cause the union of all jobs
 that meet either (or both) of the options to be placed in the hold
 state. Therefore, the command
 
-::
+.. code-block:: console
 
     $ condor_hold Mary -constraint "JobStatus!=2"
 

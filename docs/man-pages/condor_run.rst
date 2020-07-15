@@ -25,7 +25,7 @@ read input from the terminal while the job executes. If the shell
 command line requires input, redirect the input from a file, as
 illustrated by the example
 
-::
+.. code-block:: console
 
     $ condor_run "myprog < input.data"
 
@@ -50,7 +50,7 @@ for the machine where the job may run.
 When one or more of these environment variables is specified, the job is
 submitted with:
 
-::
+.. code-block:: text
 
     Requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && \
        OpSys == $CONDOR_OPSYS
@@ -88,27 +88,27 @@ Examples
 platform. As an example, first set the environment variables for the
 required platform:
 
-::
+.. code-block:: console
 
-    % setenv CONDOR_ARCH "SUN4u"
-    % setenv CONDOR_OPSYS "SOLARIS28"
+    $ export CONDOR_ARCH="SUN4u"
+    $ export CONDOR_OPSYS="SOLARIS28"
 
 Then, use *condor_run* to submit the compilation as in the following
 three examples.
 
-::
+.. code-block:: console
 
     $ condor_run "f77 -O -o myprog myprog.f"
 
 or
 
-::
+.. code-block:: console
 
     $ condor_run "make"
 
 or
 
-::
+.. code-block:: console
 
     $ condor_run "condor_compile cc -o myprog.condor myprog.c"
 
@@ -162,9 +162,9 @@ By default, *condor_run* expects Perl to be installed in
 administrator to edit the path in the *condor_run* script, or
 explicitly call Perl from the command line:
 
-::
+.. code-block:: bash
 
-    % perl path-to-condor/bin/condor_run "shell-cmd"
+    $ perl path-to-condor/bin/condor_run "shell-cmd"
 
 Exit Status
 -----------

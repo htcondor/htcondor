@@ -77,13 +77,13 @@ Examples
 To begin running all daemons (other than *condor_master*) given in the
 configuration variable ``DAEMON_LIST`` on the local host:
 
-::
+.. code-block:: console
 
     $ condor_on
 
 To start up only the *condor_negotiator* on two named machines:
 
-::
+.. code-block:: console
 
     $ condor_on  robin cardinal -daemon negotiator
 
@@ -95,7 +95,7 @@ only the *condor_schedd* daemon on the single machine named **cae17**
 within the pool of machines that has **condor.cae.wisc.edu** as its
 central manager:
 
-::
+.. code-block:: console
 
     $ condor_on -pool condor.cae.wisc.edu -name cae17 -daemon schedd
 

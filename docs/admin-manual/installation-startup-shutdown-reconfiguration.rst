@@ -449,7 +449,7 @@ Details are given below.
 After download, all the files are in a compressed, tar format. They need
 to be untarred, as
 
-::
+.. code-block:: text
 
       tar xzf <completename>.tar.gz
 
@@ -469,9 +469,9 @@ recent version of Perl.
 *condor_configure* and *condor_install* are the same program, but have
 different default behaviors. *condor_install* is identical to running
 
-::
+.. code-block:: console
 
-      condor_configure --install=.
+      $ condor_configure --install=.
 
 *condor_configure* and *condor_install* work on the named directories.
 As the names imply, *condor_install* is used to install HTCondor,
@@ -483,26 +483,26 @@ driven and are not interactive. Several command-line arguments are
 always needed with *condor_configure* and *condor_install*. The
 argument
 
-::
+.. code-block:: text
 
       --install=/path/to/release
 
 specifies the path to the HTCondor release directories. The default
 command-line argument for *condor_install* is
 
-::
+.. code-block:: text
 
       --install=.
 
 The argument
 
-::
+.. code-block:: text
 
       --install-dir=<directory>
 
 or
 
-::
+.. code-block:: text
 
       --prefix=<directory>
 
@@ -510,7 +510,7 @@ specifies the path to the install directory.
 
 The argument
 
-::
+.. code-block:: text
 
       --local-dir=<directory>
 
@@ -522,7 +522,7 @@ manager, submit or execute. These options are given in a comma separated
 list. So, if a machine is both a submit and execute machine, the proper
 command-line option is
 
-::
+.. code-block:: text
 
       --type=submit,execute
 
@@ -531,7 +531,7 @@ run as root in this pool (Item 3 above), run *condor_install* as root,
 and it will install and set the file permissions correctly. On the
 central manager machine, run *condor_install* as follows.
 
-::
+.. code-block:: console
 
     $ condor_install --prefix=~condor \
     --local-dir=/scratch/condor --type=manager
@@ -539,7 +539,7 @@ central manager machine, run *condor_install* as follows.
 To update the above HTCondor installation, for example, to also be
 submit machine:
 
-::
+.. code-block:: console
 
     $ condor_configure --prefix=~condor \
     --local-dir=/scratch/condor --type=manager,submit
@@ -554,7 +554,7 @@ should then be configured. Decisions about whether to run HTCondor as
 root should be consistent throughout the pool. For each machine in the
 pool, run
 
-::
+.. code-block:: console
 
     $ condor_install --prefix=~condor \
     --local-dir=/scratch/condor --type=execute,submit
@@ -619,13 +619,13 @@ order does not matter.
 
 To ensure that HTCondor is running, you can run either:
 
-::
+.. code-block:: text
 
     ps -ef | egrep condor_
 
 or
 
-::
+.. code-block:: text
 
     ps -aux | egrep condor_
 
@@ -716,7 +716,7 @@ Be sure that the HTCondor tools are of the same version as the daemons
 installed. The HTCondor executable for distribution is packaged in a
 single file named similarly to:
 
-::
+.. code-block:: text
 
     condor-8.4.11-390598-Windows-x86.msi
 
@@ -990,7 +990,7 @@ to any other ordinary MSI installer.
 The following is a sample batch file that is used to set all the
 properties necessary for an unattended install.
 
-::
+.. code-block:: text
 
     @echo on
     set ARGS=
@@ -1127,7 +1127,7 @@ installer can be started with the *msiexec* command. The following
 command starts the installer in unattended mode, and it dumps a journal
 of the installer's progress to a log file:
 
-::
+.. code-block:: text
 
     msiexec /qb /lxv* condor-install-log.txt /i condor-8.0.0-173133-Windows-x86.msi [property=value] ...
 
@@ -1163,13 +1163,13 @@ using the provided GUI-based setup program:
 
     Installation can be done as follows:
 
-    ::
+    .. code-block:: text
 
         sc create Condor binpath= c:\condor\bin\condor_master.exe
 
     To remove the service, use:
 
-    ::
+    .. code-block:: text
 
         sc delete Condor
 
@@ -1235,7 +1235,7 @@ To start HTCondor by hand:
 Or, alternatively you can enter the following command from a command
 prompt:
 
-::
+.. code-block:: text
 
              net start condor
 
@@ -1367,47 +1367,47 @@ implementation of security in HTCondor.
     To stop a single execute machine from running jobs, the
     *condor_off* command specifies the machine by host name.
 
-    ::
+    .. code-block:: console
 
-        condor_off -startd <hostname>
+        $ condor_off -startd <hostname>
 
     Jobs will be killed. If it is instead desired that the machine
     stops running jobs only after the currently executing job completes,
     the command is
 
-    ::
+    .. code-block:: console
 
-        condor_off -startd -peaceful <hostname>
+        $ condor_off -startd -peaceful <hostname>
 
     Note that this waits indefinitely for the running job to finish,
     before the *condor_startd* daemon exits.
 
     Th shut down all execution machines within the pool,
 
-    ::
+    .. code-block:: console
 
-        condor_off -all -startd
+        $ condor_off -all -startd
 
     To wait indefinitely for each machine in the pool to finish its
     current HTCondor job, shutting down all of the execute machines as
     they no longer have a running job,
 
-    ::
+    .. code-block:: console
 
-        condor_off -all -startd -peaceful
+        $ condor_off -all -startd -peaceful
 
     To shut down HTCondor on a machine from which jobs are submitted,
 
-    ::
+    .. code-block:: console
 
-        condor_off -schedd <hostname>
+        $ condor_off -schedd <hostname>
 
     If it is instead desired that the submit machine shuts down only
     after all jobs that are currently in the queue are finished, first
     disable new submissions to the queue by setting the configuration
     variable
 
-    ::
+    .. code-block:: text
 
         MAX_JOBS_SUBMITTED = 0
 
@@ -1417,9 +1417,9 @@ implementation of security in HTCondor.
     the command to wait for all jobs to complete and shut down the submission of
     jobs is
 
-    ::
+    .. code-block:: console
 
-        condor_off -schedd -peaceful <hostname>
+        $ condor_off -schedd -peaceful <hostname>
 
     Substitute the option **-all** for the host name, if all submit
     machines in the pool are to be shut down.
@@ -1439,17 +1439,17 @@ implementation of security in HTCondor.
     *condor_master* daemon is already running, then issue the command
     on the specific machine with
 
-    ::
+    .. code-block:: console
 
-        condor_on -subsystem <subsystemname>
+        $ condor_on -subsystem <subsystemname>
 
     where <subsystemname> is replaced by the daemon's subsystem name.
     Or, this command might be issued from another machine in the pool
     (which has administrative authority) with
 
-    ::
+    .. code-block:: console
 
-        condor_on <hostname> -subsystem <subsystemname>
+        $ condor_on <hostname> -subsystem <subsystemname>
 
     where <subsystemname> is replaced by the daemon's subsystem name,
     and <hostname> is replaced by the host name of the machine where
@@ -1463,15 +1463,15 @@ implementation of security in HTCondor.
 
     To restart all daemons on all machines in the pool,
 
-    ::
+    .. code-block:: console
 
-        condor_restart -all
+        $ condor_restart -all
 
     To restart all daemons on a single machine in the pool,
 
-    ::
+    .. code-block:: console
 
-        condor_restart <hostname>
+        $ condor_restart <hostname>
 
     where <hostname> is replaced by the host name of the machine to be
     restarted.
@@ -1486,9 +1486,9 @@ start to use the new setting, change the value within the file, and send
 a *condor_reconfig* command to each host. Do this with a single
 command,
 
-::
+.. code-block:: console
 
-      condor_reconfig -all
+      $ condor_reconfig -all
 
 If the global configuration file is not shared among all the machines,
 as it will be if using a shared file system, the change must be made to

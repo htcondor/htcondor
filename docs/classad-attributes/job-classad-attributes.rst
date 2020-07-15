@@ -127,7 +127,7 @@ Job ClassAd Attributes
     this includes time the job spent in a suspended state, so the total
     committed wall time spent running is
 
-    ::
+    .. code-block:: text
 
         CommittedTime - CommittedSuspensionTime
 
@@ -210,7 +210,7 @@ Job ClassAd Attributes
     example, if a node job has two parents with *JobName* s B and C,
     the *condor_submit* command line will contain
 
-    ::
+    .. code-block:: text
 
           -append +DAGParentNodeNames=B,C
 
@@ -282,7 +282,7 @@ Job ClassAd Attributes
     at the job's request, placing into the job's submit description file
     a setting such as
 
-    ::
+    .. code-block:: text
 
           # 1 megabyte initial value
           +DiskUsage = 1024
@@ -493,7 +493,7 @@ Job ClassAd Attributes
     its current status So for example, if the job is on hold, the
     ClassAd expression
 
-    ::
+    .. code-block:: text
 
             time() - EnteredCurrentStatus
 
@@ -1415,9 +1415,9 @@ Job ClassAd Attributes
     also removed. The string is an expression that defines a constraint
     equivalent to the one implied by the command
 
-    ::
+    .. code-block:: console
 
-          condor_rm -constraint <constraint>
+          $ condor_rm -constraint <constraint>
 
     This attribute is used for jobs managed with *condor_dagman* to
     ensure that node jobs of the DAG are removed when the
@@ -1776,7 +1776,7 @@ Job ClassAd Attributes
     This also includes time spent in suspension (if any), so the total
     real time spent running is
 
-    ::
+    .. code-block:: text
 
         RemoteWallClockTime - CumulativeSuspensionTime
 

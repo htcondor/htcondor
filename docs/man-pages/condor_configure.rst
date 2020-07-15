@@ -38,21 +38,21 @@ versions.
 than one time where required. It can install HTCondor when invoked with
 a correct configuration via
 
-::
+.. code-block:: console
 
-    condor_install
+    $ condor_install
 
 or
 
-::
+.. code-block:: console
 
-    condor_configure --install
+    $ condor_configure --install
 
 or, it can change the configuration files when invoked via
 
-::
+.. code-block:: console
 
-    condor_configure
+    $ condor_configure
 
 Note that changes in the configuration files do not result in changes
 while HTCondor is running. To effect changes while HTCondor is running,
@@ -228,7 +228,7 @@ Install HTCondor on the machine (machine1@cs.wisc.edu) to be the pool's
 central manager. On machine1, within the directory that contains the
 unzipped HTCondor distribution directories:
 
-::
+.. code-block:: console
 
     $ condor_install --type=submit,execute,manager
 
@@ -241,14 +241,14 @@ with central manager on machine1@cs.wisc.edu, issue the command on that
 machine2@cs.wisc.edu from within the directory where HTCondor is
 installed:
 
-::
+.. code-block:: console
 
     $ condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
 
 To change the location of the ``LOCAL_DIR`` directory in the
 configuration file, do (from the directory where HTCondor is installed):
 
-::
+.. code-block:: console
 
     $ condor_configure --local-dir=/path/to/new/local/directory
 

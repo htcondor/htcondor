@@ -72,7 +72,7 @@ seconds at each step. It writes a checkpoint file (containing the next number)
 after each nap, and exits with code 85 at count 3, 6, and 9. It exits
 with code 0 when complete.
 
-::
+.. code-block:: text
 
     #!/usr/bin/env python
 
@@ -108,7 +108,7 @@ in ``transfer_output_files``; otherwise HTCondor will not transfer it
 ``transfer_checkpoint_files``, as documented on
 the :doc:`/man-pages/condor_submit` man page.
 
-::
+.. code-block:: text
 
     checkpoint_exit_code        = 85
     transfer_output_files       = 85.checkpoint
@@ -190,9 +190,9 @@ For example, if your job is ID 635.0, and is logging to the file
 ``job.log``, you can copy the files in the checkpoint to a subdirectory of
 the current as follows:
 
-::
+.. code-block:: console
 
-    condor_vacate_job 635.0
+    $ condor_vacate_job 635.0
 
     # Wait for the job to finish being evicted;
     # hit CTRL-C when you see 'Job was evicted.'

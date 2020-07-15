@@ -851,10 +851,10 @@ New Features:
   ``htcondor.Submit.from_dag()`` class creates a Submit description based on a
   .dag file:
 
-  ::
+  .. code-block:: python
 
-    dag_args = { "maxidle": 10, "maxpost": 5 }
-    dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
+        dag_args = { "maxidle": 10, "maxpost": 5 }
+        dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
 
   The resulting ``dag_submit`` object can be submitted to a *condor_schedd* and
   monitored just like any other Submit description object in the Python bindings.
@@ -1227,7 +1227,7 @@ changes.
    On most pools, the easiest way to get the previous behavior is to add
    the following to your configuration:
 
-   ::
+   .. code-block:: text
 
        ALLOW_READ = *
        ALLOW_DAEMON = $(ALLOW_WRITE)

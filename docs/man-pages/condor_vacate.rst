@@ -74,7 +74,7 @@ Examples
 
 To send a *condor_vacate* command to two named machines:
 
-::
+.. code-block:: console
 
     $ condor_vacate  robin cardinal
 
@@ -86,7 +86,7 @@ the command. This command sends the command to a the single machine
 named **cae17** within the pool of machines that has
 **condor.cae.wisc.edu** as its central manager:
 
-::
+.. code-block:: console
 
     $ condor_vacate -pool condor.cae.wisc.edu -name cae17
 

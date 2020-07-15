@@ -71,14 +71,14 @@ To have all *condor_master* daemons run the program */bin/reboot* upon
 shut down, configure the *condor_master* to contain a definition
 similar to:
 
-::
+.. code-block:: text
 
     MASTER_SHUTDOWN_REBOOT = /sbin/reboot
 
 where ``REBOOT`` is an invented name for this program that the
 *condor_master* will execute. On the command line, run
 
-::
+.. code-block:: console
 
     $ condor_set_shutdown -exec reboot -all 
     $ condor_off -graceful -all

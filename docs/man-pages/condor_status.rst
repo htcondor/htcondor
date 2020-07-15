@@ -325,7 +325,7 @@ Example 1 To view information from all nodes of an SMP machine, use only
 the host name. For example, if you had a 4-CPU machine, named
 ``vulture.cs.wisc.edu``, you might see
 
-::
+.. code-block:: console
 
     $ condor_status vulture
 
@@ -346,7 +346,7 @@ Example 2 To view information from a specific nodes of an SMP machine,
 specify the node directly. You do this by providing the name of the
 slot. This has the form ``slot#@hostname``. For example:
 
-::
+.. code-block:: console
 
     $ condor_status slot3@vulture
 
@@ -365,7 +365,7 @@ Constraint option examples
 The Unix command to use the constraint option to see all machines with
 the ``OpSys`` of ``"LINUX"``:
 
-::
+.. code-block:: console
 
     $ condor_status -constraint OpSys==\"LINUX\"
 
@@ -374,9 +374,9 @@ for most shells.
 
 The Windows command to do the same thing:
 
-::
+.. code-block:: doscon
 
-    >condor_status -constraint " OpSys==""LINUX"" "
+    > condor_status -constraint " OpSys==""LINUX"" "
 
 Note that quotation marks are used to delimit the single argument which
 is the expression, and the quotation marks that identify the string must
@@ -386,14 +386,14 @@ intervening spaces.
 To see all machines that are currently in the Idle state, the Unix
 command is
 
-::
+.. code-block:: console
 
     $ condor_status -constraint State==\"Idle\"
 
 To see all machines that are bench marked to have a MIPS rating of more
 than 750, the Unix command is
 
-::
+.. code-block:: console
 
     $ condor_status -constraint 'Mips>750'
 
@@ -402,7 +402,7 @@ than 750, the Unix command is
 The **-cod** option displays the status of COD claims within a given
 HTCondor pool.
 
-::
+.. code-block:: text
 
     Name        ID   ClaimState TimeInState RemoteUser JobId Keyword
     astro.cs.wi COD1 Idle        0+00:00:04 wright
@@ -416,13 +416,13 @@ HTCondor pool.
 -format option example To display the name and memory attributes of each
 job ClassAd in a format that is easily parsable by other tools:
 
-::
+.. code-block:: console
 
     $ condor_status -format "%s " Name -format "%d\n" Memory
 
 To do the same with the **autoformat** option, run
 
-::
+.. code-block:: console
 
     $ condor_status -autoformat Name Memory
 

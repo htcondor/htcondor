@@ -95,13 +95,13 @@ Examples
 To shut down all daemons (other than *condor_master*) on the local
 host:
 
-::
+.. code-block:: console
 
     $ condor_off
 
 To shut down only the *condor_collector* on three named machines:
 
-::
+.. code-block:: console
 
     $ condor_off  cinnamon cloves vanilla -daemon collector
 
@@ -113,7 +113,7 @@ down all daemons except the *condor_master* on the single machine named
 **cae17** within the pool of machines that has **condor.cae.wisc.edu**
 as its central manager:
 
-::
+.. code-block:: console
 
     $ condor_off  -pool condor.cae.wisc.edu -name cae17
 

@@ -173,20 +173,20 @@ Options
 Examples
 --------
 
-::
+.. code-block:: console
 
     $ condor_ssh_to_job 32.0 
     Welcome to slot2@tonic.cs.wisc.edu! 
     Your condor job is running with pid(s) 65881. 
-    % gdb -p 65881 
+    $ gdb -p 65881
     (gdb) where 
     ... 
-    % logout 
+    $ logout
     Connection to condor-job.tonic.cs.wisc.edu closed.
 
 To upload or download files interactively with *sftp*:
 
-::
+.. code-block:: console
 
     $ condor_ssh_to_job -ssh sftp 32.0 
     Connecting to condor-job.tonic.cs.wisc.edu... 
@@ -200,7 +200,7 @@ not necessary to insert the correct remote host name, or even a valid
 one, because the connection to the job is created automatically.
 Therefore, the placeholder string "remote" is perfectly fine.
 
-::
+.. code-block:: console
 
     $ condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
 
@@ -210,16 +210,16 @@ job's working directory. Job id 32.0 is used in place of a host name in
 this example. This causes *rsync* to insert the expected job id in the
 arguments to *condor_ssh_to_job*.
 
-::
+.. code-block:: console
 
-    % rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
+    $ rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
 
 Note that *condor_ssh_to_job* was added to HTCondor in version 7.3.
 If one uses *condor_ssh_to_job* to connect to a job on an execute
 machine running a version of HTCondor older than the 7.3 series, the
 command will fail with the error message
 
-::
+.. code-block:: text
 
     Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter
 

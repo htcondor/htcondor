@@ -150,7 +150,7 @@ single HTCondor job. Note that the output of the ``PROGRAM`` field will
 be truncated to fit the display, similar to the artificial truncation
 shown in this example output.
 
-::
+.. code-block:: console
 
     $ condor_who 
      
@@ -159,7 +159,7 @@ shown in this example output.
 
 Example 2 Verbose sample output.
 
-::
+.. code-block:: console
 
     $ condor_who -verbose 
      

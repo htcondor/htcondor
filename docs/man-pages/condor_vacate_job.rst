@@ -92,19 +92,19 @@ Examples
 
 To vacate job 23.0:
 
-::
+.. code-block:: console
 
     $ condor_vacate_job 23.0
 
 To vacate all jobs of a user named Mary:
 
-::
+.. code-block:: console
 
     $ condor_vacate_job mary
 
 To vacate all vanilla universe jobs owned by Mary:
 
-::
+.. code-block:: console
 
     $ condor_vacate_job -constraint 'JobUniverse == 5 && Owner == "mary"'
 

@@ -39,7 +39,7 @@ placed in the queue (executed).
 Configuration of a machine from which jobs are submitted requires a few
 extra configuration variables:
 
-::
+.. code-block:: text
 
     CONDOR_GAHP = $(SBIN)/condor_c-gahp
     C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
@@ -81,7 +81,7 @@ to run a job. The following is a working example of the security
 configuration for authentication. This authentication method, CLAIMTOBE,
 trusts the identity claimed by a host or IP address.
 
-::
+.. code-block:: text
 
     SEC_DEFAULT_NEGOTIATION = OPTIONAL
     SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
@@ -105,7 +105,7 @@ third field is the name of the remote pool's *condor_collector*.
 
 The following represents a minimal submit description file for a job.
 
-::
+.. code-block:: text
 
     # minimal submit description file for an HTCondor-C job
     universe = grid
@@ -134,13 +134,13 @@ using an integer assigned for a job ClassAd ``JobUniverse``. Similarly,
 place quotation marks around string expressions. As an example, a submit
 description file would ordinarily contain
 
-::
+.. code-block:: text
 
     when_to_transfer_output = ON_EXIT
 
 This must appear in the HTCondor-C job submit description file as
 
-::
+.. code-block:: text
 
     +remote_WhenToTransferOutput = "ON_EXIT"
 
@@ -150,25 +150,25 @@ For convenience, the specific entries of **universe**,
 **globus_xml** :index:`globus_xml<single: globus_xml; submit commands>` may be
 specified as **remote_** commands without the leading '+'. Instead of
 
-::
+.. code-block:: text
 
     +remote_universe = 5
 
 the submit description file command may appear as
 
-::
+.. code-block:: text
 
     remote_universe = vanilla
 
 Similarly, the command
 
-::
+.. code-block:: text
 
     +remote_gridresource = "condor schedd.example.com cm.example.com"
 
 may be given as
 
-::
+.. code-block:: text
 
     remote_grid_resource = condor schedd.example.com cm.example.com
 
@@ -181,7 +181,7 @@ machine specified by **remote_schedd**) and the execute machine (the
 machine that runs the job) will not be shared. Thus, the two inserted
 ClassAd attributes
 
-::
+.. code-block:: text
 
     +remote_ShouldTransferFiles = "YES"
     +remote_WhenToTransferOutput = "ON_EXIT"
@@ -197,14 +197,14 @@ command in the submit description file says which *condor_collector*
 should be queried for the remote *condor_schedd* daemon's location. An
 example of this submit command is
 
-::
+.. code-block:: text
 
     grid_resource = condor schedd.example.com machine1.example.com
 
 If the remote *condor_collector* is not listening on the standard port
 (9618), then the port it is listening on needs to be specified:
 
-::
+.. code-block:: text
 
     grid_resource = condor schedd.example.comd machine1.example.com:12345
 
@@ -224,7 +224,7 @@ defining a ClassAd attribute for the job. Where the Windows domain is
 different at the submit machine from the remote machine, the submit
 description file defines the Windows domain of the remote machine with
 
-::
+.. code-block:: text
 
       +remote_NTDomain = "DomainAtRemoteMachine"
 
@@ -371,7 +371,7 @@ Here is a simple submit description file.
 :index:`grid universe<single: grid universe; submit description file>`\ The example
 specifies a **gt2** job to be run on an NCSA machine.
 
-::
+.. code-block:: text
 
     executable = test
     universe = grid
@@ -394,7 +394,7 @@ scheduling software to be used on the remote resource. There is a
 specific jobmanager for each type of batch system supported by Globus.
 The full syntax for this command line appears as
 
-::
+.. code-block:: text
 
     grid_resource = gt2 machinename[:port]/jobmanagername[:X.509 distinguished name]
 
@@ -404,7 +404,7 @@ listening on a nonstandard port, include the port number. The
 jobmanagername is a site-specific string. The most common one is
 jobmanager-fork, but others are
 
-::
+.. code-block:: text
 
     jobmanager
     jobmanager-condor
@@ -420,7 +420,7 @@ The job log file is maintained on the submit machine.
 
 Example output from *condor_q* for this submission looks like:
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -435,7 +435,7 @@ Example output from *condor_q* for this submission looks like:
 After a short time, the Globus resource accepts the job. Again running
 *condor_q* will now result in
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -450,7 +450,7 @@ After a short time, the Globus resource accepts the job. Again running
 Then, very shortly after that, the queue will be empty again, because
 the job has finished:
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -464,7 +464,7 @@ the job has finished:
 A second example of a submit description file runs the Unix *ls* program
 on a different Globus resource.
 
-::
+.. code-block:: text
 
     executable = /bin/ls
     transfer_executable = false
@@ -479,7 +479,7 @@ executable is on the remote machine, and it is not to be transferred
 before execution. Note that the required **grid_resource** and
 **universe** commands are present. The command
 
-::
+.. code-block:: text
 
     transfer_executable = false
 
@@ -492,7 +492,7 @@ job. The Perl script both lists and sets environment variables for a
 job. Save the following Perl script with the name ``env-test.pl``, to be
 used as an HTCondor job executable.
 
-::
+.. code-block:: text
 
     #!/usr/bin/env perl
 
@@ -505,7 +505,7 @@ used as an HTCondor job executable.
 
 Run the Unix command
 
-::
+.. code-block:: text
 
     chmod 755 env-test.pl
 
@@ -515,7 +515,7 @@ Now create the following submit description file. Replace
 ``example.cs.wisc.edu/jobmanager`` with a resource you are authorized to
 use.
 
-::
+.. code-block:: text
 
     executable = env-test.pl
     universe = grid
@@ -528,7 +528,7 @@ use.
 When the job has completed, the output file, ``env-test.out``, should
 contain something like this:
 
-::
+.. code-block:: text
 
     GLOBUS_GRAM_JOB_CONTACT = https://example.cs.wisc.edu:36213/30905/1020633947/
     GLOBUS_GRAM_MYJOB_CONTACT = URLx-nexus://example.cs.wisc.edu:36214
@@ -558,7 +558,7 @@ The following example is a Perl script that uses the GASS server in
 HTCondor-G to copy input files to the execute machine. In this example,
 the remote job counts the number of lines in a file.
 
-::
+.. code-block:: text
 
     #!/usr/bin/env perl
     use FileHandle;
@@ -586,7 +586,7 @@ the remote job counts the number of lines in a file.
 The submit description file used to submit the Perl script as an
 HTCondor job appears as:
 
-::
+.. code-block:: text
 
     executable = gass-example.pl
     universe = grid
@@ -601,7 +601,7 @@ There are two optional submit description file commands of note:
 **x509userproxy** command specifies the path to an X.509 proxy. The
 command is of the form:
 
-::
+.. code-block:: text
 
     x509userproxy = /path/to/proxy
 
@@ -615,13 +615,13 @@ replaced with the Unix user id.
 The **globus_rsl** command is used to add additional attribute settings
 to a job's RSL string. The format of the **globus_rsl** command is
 
-::
+.. code-block:: text
 
     globus_rsl = (name=value)(name=value)
 
 Here is an example of this command from a submit description file:
 
-::
+.. code-block:: text
 
     globus_rsl = (project=Test_Project)
 
@@ -720,7 +720,7 @@ practices are recommended.
 #. Use the following options when initializing the credential on the
    *MyProxy* server:
 
-   ::
+   .. code-block:: text
 
        myproxy-init -s <host> -x -r <cert subject> -k <cred name>
 
@@ -733,7 +733,7 @@ practices are recommended.
 #. A submit description file may include the password. An example
    contains commands of the form:
 
-   ::
+   .. code-block:: text
 
        executable      = /usr/bin/my-executable
        universe        = grid
@@ -751,9 +751,9 @@ practices are recommended.
 #. Use the **-p** option to *condor_submit*. The submit command appears
    as
 
-   ::
+   .. code-block:: console
 
-       condor_submit -p mypassword /home/user/myjob.submit
+       $ condor_submit -p mypassword /home/user/myjob.submit
 
    The argument list for *condor_submit* defaults to being publicly
    available. An attacker with a login on that local machine could
@@ -772,7 +772,7 @@ this with ``ldd myproxy-get-delegation``), point
 directory and then calls *myproxy-get-delegation*. Here is an example of
 such a wrapper script:
 
-::
+.. code-block:: text
 
     #!/bin/sh
     export LD_LIBRARY_PATH=/opt/myglobus/lib
@@ -848,7 +848,7 @@ universe. The
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command specifies the name of the NorduGrid resource as follows:
 
-::
+.. code-block:: text
 
     grid_resource = nordugrid ng.example.com
 
@@ -870,7 +870,7 @@ command
 additional attributes to the job RSL that HTCondor constructs. The
 format this submit description file command is
 
-::
+.. code-block:: text
 
     nordugrid_rsl = (name=value)(name=value)
 
@@ -889,7 +889,7 @@ universe. The
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command specifies the name of the Unicore resource as follows:
 
-::
+.. code-block:: text
 
     grid_resource = unicore usite.example.com vsite
 
@@ -924,7 +924,7 @@ SLURM system using the **grid** universe and the
 command by placing a variant of the following into the submit
 description file.
 
-::
+.. code-block:: text
 
     grid_resource = batch pbs
 
@@ -942,7 +942,7 @@ in ``$(GLITE_LOCATION)``/etc/batch_gahp.config. The batch GAHP's
 auxiliary binaries are to be in the directory ``$(GLITE_LOCATION)``/bin.
 The HTCondor configuration file appears
 
-::
+.. code-block:: text
 
     GLITE_LOCATION = $(LIBEXEC)/glite
     BATCH_GAHP     = $(GLITE_LOCATION)/bin/batch_gahp
@@ -971,7 +971,7 @@ may be submitted to a local PBS system using the **grid** universe and
 the **grid_resource** command by placing the following into the submit
 description file.
 
-::
+.. code-block:: text
 
     grid_resource = pbs
 
@@ -988,7 +988,7 @@ may be submitted to a local Platform LSF system using the **grid**
 universe and the **grid_resource** command by placing the following
 into the submit description file.
 
-::
+.. code-block:: text
 
     grid_resource = lsf
 
@@ -1006,7 +1006,7 @@ may be submitted to a local SGE system using the **grid** universe and
 adding the **grid_resource** command by placing into the submit
 description file:
 
-::
+.. code-block:: text
 
     grid_resource = sge
 
@@ -1042,7 +1042,7 @@ universe, setting the
 command to **ec2**, followed by the service's URL. For example, partial
 contents of the submit description file may be
 
-::
+.. code-block:: text
 
     grid_resource = ec2 https://ec2.us-east-1.amazonaws.com/
 
@@ -1069,7 +1069,7 @@ first authentication method uses the EC2 API's built-in authentication.
 Specify the service with expected ``http://`` or ``https://`` URL, and
 set the EC2 access key and secret access key as follows:
 
-::
+.. code-block:: text
 
     ec2_access_key_id = /path/to/access.key
     ec2_secret_access_key = /path/to/secret.key
@@ -1090,7 +1090,7 @@ specifies the path to the X.509 private key, which is not the same as
 the built-in authentication's secret key. The following example
 illustrates the specification for X.509 authentication:
 
-::
+.. code-block:: text
 
     grid_resource = ec2 x509://service.example
     ec2_access_key_id = /path/to/x.509/public.key
@@ -1150,7 +1150,7 @@ are separated by a commas, and/or spaces. For example, to specify that
 the first ephemeral device should be ``/dev/sdb`` and the second
 ``/dev/sdc``:
 
-::
+.. code-block:: text
 
     ec2_block_device_mapping = ephemeral0:/dev/sdb, ephemeral1:/dev/sdc
 
@@ -1209,7 +1209,7 @@ submit command
 specifies this floating point value. For example, to bid 1.1 cents per
 hour on Amazon:
 
-::
+.. code-block:: text
 
     ec2_spot_price = 0.011
 
@@ -1245,7 +1245,7 @@ command name.
 For example, the submit description file commands to set parameter
 ``IamInstanceProfile.Name`` to value ``ExampleProfile`` are
 
-::
+.. code-block:: text
 
     ec2_parameter_names = IamInstanceProfile.Name
     ec2_parameter_IamInstanceProfile_Name = ExampleProfile
@@ -1305,7 +1305,7 @@ These CAs will usually work without any additional configuration. For
 other providers, a specification of trusted CAs may be needed. Without,
 errors such as the following will be in the EC2 GAHP log:
 
-::
+.. code-block:: text
 
     06/13/13 15:16:16 curl_easy_perform() failed (60):
     'Peer certificate cannot be authenticated with given CA certificates'.
@@ -1404,7 +1404,7 @@ command to **gce**, followed by the service's URL, your GCE project, and
 the desired GCE zone to be used. The submit description file command
 will be similar to:
 
-::
+.. code-block:: text
 
     grid_resource = gce https://www.googleapis.com/compute/v1 my_proj us-central1-a
 
@@ -1434,7 +1434,7 @@ description file using the
 **gce_auth_file** :index:`gce_auth_file<single: gce_auth_file; submit commands>`
 command, as in the example:
 
-::
+.. code-block:: text
 
     gce_auth_file = /path/to/auth-file
 
@@ -1455,7 +1455,7 @@ the submit description file using the
 command. The value should be a comma-separated list of name=value
 settings, as the example:
 
-::
+.. code-block:: text
 
     gce_metadata = setting1=foo,setting2=bar
 
@@ -1482,7 +1482,7 @@ description of the instance, between a comma and the closing brace.
 
 Here's a sample JSON file that sets two additional elements:
 
-::
+.. code-block:: text
 
     "canIpForward": True,
     "description": "My first instance"
@@ -1501,7 +1501,7 @@ the number of seconds between restarts using *GCE_GAHP_LIFETIME*, where zero
 means to never restart.  Restarting the *gce_gahp* does not affect the jobs
 themselves.
 
-::
+.. code-block:: text
 
     GCE_GAHP     = $(SBIN)/gce_gahp
     GCE_GAHP_LOG = /tmp/GceGahpLog.$(USERNAME)
@@ -1530,7 +1530,7 @@ universe, setting the
 command to **azure**, followed by your Azure subscription id. The submit
 description file command will be similar to:
 
-::
+.. code-block:: text
 
     grid_resource = azure 4843bfe3-1ebe-423e-a6ea-c777e57700a9
 
@@ -1565,7 +1565,7 @@ you can specify its location in the submit description file using the
 **azure_auth_file** :index:`azure_auth_file<single: azure_auth_file; submit commands>`
 command, as in the example:
 
-::
+.. code-block:: text
 
     azure_auth_file = /path/to/auth-file
 
@@ -1608,14 +1608,14 @@ be used.
 
 A CREAM resource specification is of the form:
 
-::
+.. code-block:: text
 
     grid_resource = cream <web-services-address> <batch-system> <queue-name>
 
 The <web-services-address> appears the same for most servers, differing
 only in the host name, as
 
-::
+.. code-block:: text
 
     <machinename[:port]>/ce-cream/services/CREAM2
 
@@ -1632,7 +1632,7 @@ be used. Values for this will vary by site, with no typical values.
 A full example for the specification of a CREAM
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>` is
 
-::
+.. code-block:: text
 
     grid_resource = cream https://cream-12.pd.infn.it:8443/ce-cream/services/CREAM2
        pbs cream_1
@@ -1647,7 +1647,7 @@ command
 adds additional attributes to the CREAM-style job ClassAd that HTCondor
 constructs. The format for this submit description file command is
 
-::
+.. code-block:: text
 
     cream_attributes = name=value;name=value
 
@@ -1678,7 +1678,7 @@ and specify its location in the submit description file using the
 **boinc_authenticator_file** :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
 command, as in the example:
 
-::
+.. code-block:: text
 
     boinc_authenticator_file = /path/to/auth-file
 
@@ -1704,7 +1704,7 @@ The following configuration variable is specific to the **boinc** grid
 type. The value listed here is the default. A different value may be
 specified in the HTCondor configuration files.
 
-::
+.. code-block:: text
 
     BOINC_GAHP = $(SBIN)/boinc_gahp
 
@@ -1741,14 +1741,14 @@ To submit a grid universe job intended for a single, specific **gt2**
 resource, the submit description file for the job explicitly specifies
 the resource:
 
-::
+.. code-block:: text
 
     grid_resource = gt2 grid.example.com/jobmanager-pbs
 
 If there were multiple **gt2** resources that might be matched to the
 job, the submit description file changes:
 
-::
+.. code-block:: text
 
     grid_resource   = $$(resource_name)
     requirements    = TARGET.resource_name =!= UNDEFINED
@@ -1769,7 +1769,7 @@ As a more complex example, consider a job that wants to run not only on
 a **gt2** resource, but on one that has the Bamboozle software
 installed. The complete submit description file might appear:
 
-::
+.. code-block:: text
 
     universe        = grid
     executable      = analyze_bamboozle_data
@@ -1811,7 +1811,7 @@ To advertise a grid site, place the attributes in a file. Here is a
 sample ClassAd that describes a grid resource that is capable of running
 a **gt2** job.
 
-::
+.. code-block:: text
 
     # example grid resource ClassAd for a gt2 job
     MyType         = "Machine"
@@ -1828,7 +1828,7 @@ Some attributes are defined as expressions, while others are integers,
 floating point values, or strings. The type is important, and must be
 correct for the ClassAd to be effective. The attributes
 
-::
+.. code-block:: text
 
     MyType         = "Machine"
     TargetType     = "Job"
@@ -1841,7 +1841,7 @@ are surrounded by double quote marks.
 The attributes ``Name`` and ``Machine`` are likely to be defined to be
 the same string value as in the example:
 
-::
+.. code-block:: text
 
     Name           = "Example1_Gatekeeper"
     Machine        = "Example1_Gatekeeper"
@@ -1856,7 +1856,7 @@ Where the job depends on the resource to specify the value of the
 command by the use of the substitution macro, the ClassAd for the grid
 resource (machine) defines this value. The example given as
 
-::
+.. code-block:: text
 
     grid_resource = "gt2 grid.example.com/jobmanager-pbs"
 
@@ -1873,7 +1873,7 @@ ads may be lost without notice or may arrive out of order. Out of order
 arrival leads to the definition of an attribute which provides an
 ordering. This positive integer value is given in the example ClassAd as
 
-::
+.. code-block:: text
 
     UpdateSequenceNumber  = 4
 
@@ -1886,7 +1886,7 @@ seconds (since the epoch, as given by the C time() function call).
 The requirements that the grid resource sets for any job that it will
 accept are given as
 
-::
+.. code-block:: text
 
     Requirements     = (TARGET.JobUniverse == 9)
 
@@ -1895,7 +1895,7 @@ This set of requirements state that any job is required to be for the
 
 The attributes
 
-::
+.. code-block:: text
 
     Rank             = 0.000000
     CurrentRank      = 0.000000
@@ -1906,7 +1906,7 @@ relevant to grid matchmaking. Set both to the floating point value 0.0.
 The example machine ClassAd becomes more complex for the case where the
 grid resource allows matches with more than one job:
 
-::
+.. code-block:: text
 
     # example grid resource ClassAd for a gt2 job
     MyType         = "Machine"
@@ -1938,7 +1938,7 @@ jobs it has. This integer value is given as the ``CurMatches`` attribute
 in the advertised ClassAd. It is then compared in order to limit the
 number of jobs matched with the grid resource.
 
-::
+.. code-block:: text
 
     Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9)
     CurMatches     = 1
@@ -1953,7 +1953,7 @@ For multiple matching of a site ClassAd to work correctly, it is also
 necessary to add the following to the configuration file read by the
 *condor_negotiator*:
 
-::
+.. code-block:: text
 
     NEGOTIATOR_MATCHLIST_CACHING = False
     NEGOTIATOR_IGNORE_USER_PRIORITIES = True
@@ -1977,7 +1977,7 @@ may be bad, but you can give it some assistance. Let's say that you want
 to avoid running at the last grid site you ran at. You could add this to
 your job description:
 
-::
+.. code-block:: text
 
     match_list_length = 1
     Rank              = TARGET.Name != LastMatchName0
@@ -2022,7 +2022,7 @@ per Globus submission, plus 4. The plus 4 is necessary in case the job
 goes on hold before being submitted to Globus, although this is
 unlikely.
 
-::
+.. code-block:: text
 
     periodic_release = ( NumSystemHolds <= ((NumGlobusSubmits * 4) + 4) ) \
        && (NumGlobusSubmits < 4) && \
@@ -2032,7 +2032,7 @@ unlikely.
 The following example forces Globus resubmission after a job has been
 held 4 times per Globus submission.
 
-::
+.. code-block:: text
 
     globus_resubmit = NumSystemHolds == (NumGlobusSubmits + 1) * 4
 

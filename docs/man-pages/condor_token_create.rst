@@ -85,7 +85,7 @@ Examples
 
 To create a token for ``jane@cs.wisc.edu`` with no additional restrictions:
 
-::
+.. code-block:: console
 
     $ condor_token_create -identity jane@cs.wisc.edu
     eyJhbGciOiJIUzI1NiIsImtpZCI6Il....bnu3NoO9BGM
@@ -93,7 +93,7 @@ To create a token for ``jane@cs.wisc.edu`` with no additional restrictions:
 To create a token for ``worker-node@cs.wisc.edu`` that may advertise either
 a *condor_startd* or a *condor_master*:
 
-::
+.. code-block:: console
 
     $ condor_token_create -identity worker-node@cs.wisc.edu \
                           -authz ADVERTISE_STARTD \
@@ -103,7 +103,7 @@ a *condor_startd* or a *condor_master*:
 To create a token for ``friend@cs.wisc.edu`` that is only valid for 10 minutes,
 and then to save it to ``~/.condor/tokens.d/friend``:
 
-::
+.. code-block:: console
 
     $ condor_token_create -identity friend@cs.wisc.edu -lifetime 600 -token friend
 
@@ -111,16 +111,16 @@ If the administrator would like to create a specific key for signing tokens, ``t
 distinct from the default pool password, they would first use *condor_store_cred*
 to create the key:
 
-::
+.. code-block:: console
 
-    % openssl rand -base64 32 | condor_store_cred -f /etc/condor/passwords.d/token_key
+    $ openssl rand -base64 32 | condor_store_cred -f /etc/condor/passwords.d/token_key
 
 Note, in this case, we created a random 32 character key using SSL instead of providing
 a human-friendly password.
 
 Next, the administrator would run run *condor_token_create*:
 
-::
+.. code-block:: console
 
     $ condor_token_create -identity frida@cs.wisc.edu -key token_key
     eyJhbGciOiJIUzI1NiIsImtpZCI6I.....eyJpYXQiOUzlN6QA

@@ -36,7 +36,7 @@ To put the machine in a low power state rapidly after it has become
 idle, consider checking each slot's state frequently, as in the example
 configuration:
 
-::
+.. code-block:: text
 
     HIBERNATE_CHECK_INTERVAL = 20
 
@@ -59,7 +59,7 @@ set to always be ``True``. This permits an easy determination whether or
 not the machine is in an Unclaimed state through the use of an auxiliary
 macro called ``ShouldHibernate``.
 
-::
+.. code-block:: text
 
     TimeToWait  = (2 * $(HOUR))
     ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
@@ -76,7 +76,7 @@ The sample ``HIBERNATE`` expression that enters the power state called
 "RAM", if ``ShouldHibernate`` evaluates to ``True``, and remains in its
 current state otherwise is
 
-::
+.. code-block:: text
 
     HibernateState  = "RAM"
     HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )
@@ -172,7 +172,7 @@ tool can be used to discover the available power states on the machine.
 The following command demonstrates how to list all of the supported
 power states of the machine:
 
-::
+.. code-block:: doscon
 
     > powercfg -A
     The following sleep states are available on this system:
@@ -189,7 +189,7 @@ state, where n is the value evaluated from the expression.
 This tool can also be used to enable and disable other sleep states.
 This example turns hibernation on.
 
-::
+.. code-block:: doscon
 
     > powercfg -h on
 

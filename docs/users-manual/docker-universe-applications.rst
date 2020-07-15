@@ -59,7 +59,7 @@ the latter, use a relative path.
 
 Therefore, the submit description file should contain the submit command
 
-::
+.. code-block:: text
 
       should_transfer_files = YES
 
@@ -76,7 +76,7 @@ the machine, the container will be removed.
 Here is a complete submit description file for a sample docker universe
 job:
 
-::
+.. code-block:: text
 
       universe                = docker
       docker_image            = debian
@@ -104,7 +104,7 @@ Docker and Networking
 By default, docker universe jobs will be run with a private, NATed
 network interface. In the job submit file, if the user specifies
 
-::
+.. code-block:: text
 
     docker_network_type = host
 
@@ -117,7 +117,7 @@ or more ports on the host into the container.  In the following example, we
 assume that the 'centos7_with_htcondor' image has HTCondor set up and ready
 to go, but doesn't turn it on by default.
 
-::
+.. code-block:: text
 
       universe                = docker
       docker_image            = centos7_with_htcondor

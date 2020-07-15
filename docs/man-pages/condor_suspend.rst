@@ -68,7 +68,7 @@ Examples
 
 To suspend all jobs except for a specific user:
 
-::
+.. code-block:: console
 
     $ condor_suspend -constraint 'Owner =!= "foo"'
 

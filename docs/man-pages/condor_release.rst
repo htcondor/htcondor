@@ -70,7 +70,7 @@ Examples
 
 To release all of the jobs of a user named Mary:
 
-::
+.. code-block:: console
 
     $ condor_release Mary
 

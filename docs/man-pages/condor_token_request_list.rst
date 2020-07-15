@@ -53,7 +53,7 @@ Examples
 
 To list the tokens at the default *condor_collector*:
 
-::
+.. code-block:: console
 
     $ condor_token_request_list
     RequestId = "4303687"

@@ -90,13 +90,13 @@ Examples
 
 To restart the *condor_master* and all its children on the local host:
 
-::
+.. code-block:: console
 
     $ condor_restart
 
 To restart only the *condor_startd* on a named machine:
 
-::
+.. code-block:: console
 
     $ condor_restart -name bluejay -daemon startd
 
@@ -107,7 +107,7 @@ specified as the targets for the command. This command restarts the
 single machine named **cae17** within the pool of machines that has
 **condor.cae.wisc.edu** as its central manager:
 
-::
+.. code-block:: console
 
     $ condor_restart -pool condor.cae.wisc.edu -name cae17
 

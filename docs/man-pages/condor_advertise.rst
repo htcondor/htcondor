@@ -71,9 +71,9 @@ currently held by the *condor_collector* daemon. In this case the
 For any of these INVALIDATE commands, the ClassAd in the required file
 consists of three entries. The file contents will be similar to:
 
-::
+.. code-block:: text
 
-    MyType = "Query" 
+    MyType = "Query"
     TargetType = "Machine" 
     Requirements = Name == "condor.example.com"
 
@@ -146,15 +146,15 @@ avoid this machine being matched, an administrator chooses to delete the
 machine's *condor_startd* ClassAd. Create a file (called
 ``remove_file`` in this example) with the three required attributes:
 
-::
+.. code-block:: text
 
-    MyType = "Query" 
+    MyType = "Query"
     TargetType = "Machine" 
     Requirements = Name == "condor.example.com"
 
 This file is used with the command:
 
-::
+.. code-block:: console
 
     $ condor_advertise INVALIDATE_STARTD_ADS remove_file
 
