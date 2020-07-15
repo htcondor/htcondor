@@ -4,67 +4,64 @@ Managing a Job
 This section provides a brief summary of what can be done once jobs are
 submitted. The basic mechanisms for monitoring a job are introduced, but
 the commands are discussed briefly. You are encouraged to look at the
-man pages of the commands referred to (located in :doc:`/man-pages/index`) 
+man pages of the commands referred to (located in :doc:`/man-pages/index`)
 for more information.
-
-When jobs are submitted, HTCondor will attempt to find resources to run
-the jobs. A list of all those with jobs submitted may be obtained
-through *condor_status*
-:index:`condor_status<single: condor_status; HTCondor commands>`\ with the *-submitters*
-option. An example of this would yield output similar to:
-
-::
-
-    %  condor_status -submitters
-
-    Name                 Machine      Running IdleJobs HeldJobs
-
-    ballard@cs.wisc.edu  bluebird.c         0       11        0
-    nice-user.condor@cs. cardinal.c         6      504        0
-    wright@cs.wisc.edu   finch.cs.w         1        1        0
-    jbasney@cs.wisc.edu  perdita.cs         0        0        5
-
-                               RunningJobs           IdleJobs           HeldJobs
-
-     ballard@cs.wisc.edu                 0                 11                  0
-     jbasney@cs.wisc.edu                 0                  0                  5
-    nice-user.condor@cs.                 6                504                  0
-      wright@cs.wisc.edu                 1                  1                  0
-
-                   Total                 7                516                  5
 
 Checking on the progress of jobs
 --------------------------------
 
-At any time, you can check on the status of your jobs with the
-*condor_q* command. :index:`condor_q<single: condor_q; HTCondor commands>`\ This
-command displays the status of all queued jobs. An example of the output
-from *condor_q* is
+You can check on your jobs with the *condor_q*
+command. :index:`condor_q<single: condor_q; HTCondor commands>`\ This
+command has many options, by default, it displays only your jobs
+queued in the local scheduler. An example of the output from *condor_q* is
+
 
 ::
 
-    %  condor_q
+    $ condor_q
 
-    -- Submitter: submit.chtc.wisc.edu : <128.104.55.9:32772> : submit.chtc.wisc.edu
-     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
-    711197.0   aragorn         1/15 19:18   0+04:29:33 H  0   0.0  script.sh
-    894381.0   frodo           3/16 09:06  82+17:08:51 R  0   439.5 elk elk.in
-    894386.0   frodo           3/16 09:06  82+20:21:28 R  0   219.7 elk elk.in
-    894388.0   frodo           3/16 09:06  81+17:22:10 R  0   439.5 elk elk.in
-    1086870.0   gollum          4/27 09:07   0+00:10:14 I  0   7.3  condor_dagman
-    1086874.0   gollum          4/27 09:08   0+00:00:01 H  0   0.0  RunDC.bat
-    1297254.0   legolas         5/31 18:05  14+17:40:01 R  0   7.3  condor_dagman
-    1297255.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
-    1297256.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
-    1297259.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
-    1297261.0   legolas         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
-    1302278.0   legolas         6/4  12:22   1+00:05:37 I  0   390.6 mdrun_1.sh
-    1304740.0   legolas         6/5  00:14   1+00:03:43 I  0   390.6 mdrun_1.sh
-    1304967.0   legolas         6/5  05:08   0+00:00:00 I  0   0.0  mdrun_1.sh
+
+-- Schedd: submit.chtc.wisc.edu : <127.0.0.1:9618?... @ 12/31/69 23:00:00
+OWNER    BATCH_NAME    SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
+nemo     batch23       4/22 20:44      _      _      _      1      _ 3671850.0
+nemo     batch24       4/22 20:56      _      _      _      1      _ 3673477.0
+nemo     batch25       4/22 20:57      _      _      _      1      _ 3673728.0
+nemo     batch26       4/23 10:44      _      _      _      1      _ 3750339.0
+nemo     batch27       7/2  15:11      _      _      _      _      _ 7594591.0
+nemo     batch28       7/10 03:22   4428      3      _      _   4434 7801943.0 ... 7858552.0
+nemo     batch29       7/14 14:18   5074   1182     30     19  80064 7859129.0 ... 7885217.0
+nemo     batch30       7/14 14:18   5172   1088     28     30  58310 7859106.0 ... 7885192.0
+
+2388 jobs; 0 completed, 1 removed, 58 idle, 2276 running, 53 held, 0 suspended
+
+The goal of the HTCondor system is to effectively manage many jobs. As you may have thousands
+of jobs in a queue, by default *condor_q* summarizes many similiar jobs on one line.  Depending
+on the types of your jobs, this output may look a little different.
+
+Often, when you are starting out, and have few jobs, you may want to see one line of output
+per job.  The -nobatch option to *condor_q* does this, and output might look something like:
+
+::
+
+    $  condor_q -nobatch
+
+    -- Schedd submit.chtc.wisc.edu : <127.0.0.1:9618?...
+    ID          OWNER        SUBMITTED     RUN_TIME ST PRI SIZE CMD
+    1297254.0   nemo         5/31 18:05  14+17:40:01 R  0   7.3  condor_dagman
+    1297255.0   nemo         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
+    1297256.0   nemo         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
+    1297259.0   nemo         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
+    1297261.0   nemo         5/31 18:05  14+17:39:55 R  0   7.3  condor_dagman
+    1302278.0   nemo         6/4  12:22   1+00:05:37 I  0   390.6 mdrun_1.sh
+    1304740.0   nemo         6/5  00:14   1+00:03:43 I  0   390.6 mdrun_1.sh
+    1304967.0   nemo         6/5  05:08   0+00:00:00 I  0   0.0  mdrun_1.sh
 
     14 jobs; 4 idle, 8 running, 2 held
 
-This output contains many columns of information about the queued jobs.
+This still only shows your jobs.  You can display information about all the users
+with jobs in this scheduler by adding the -allusers option to *condor_q*.
+
+The output contains many columns of information about the queued jobs.
 :index:`of queued jobs<single: of queued jobs; status>`\ :index:`state<single: state; job>` The
 ST column (for status) shows the status of current jobs in the queue:
 
@@ -193,11 +190,11 @@ example shows the queue of jobs before and after a job is removed.
 
 ::
 
-    %  condor_q
+    %  condor_q -nobatch
 
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+    -- Schedd: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
-     125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote
+     125.0   raman           4/11 14:37   0+00:00:00 R  0   1.4  sleepy
      132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello
 
     2 jobs; 1 idle, 1 running, 0 held
@@ -205,11 +202,11 @@ example shows the queue of jobs before and after a job is removed.
     %  condor_rm 132.0
     Job 132.0 removed.
 
-    %  condor_q
+    %  condor_q -nobatch
 
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+    -- Schedd: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
-     125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote
+     125.0   raman           4/11 14:37   0+00:00:00 R  0   1.4  sleepy
 
     1 jobs; 1 idle, 0 running, 0 held
 
@@ -254,7 +251,7 @@ the priority of a job to -15,
 
 ::
 
-    %  condor_q raman
+    %  condor_q -nobatch raman
 
     -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
@@ -264,7 +261,7 @@ the priority of a job to -15,
 
     %  condor_prio -p -15 126.0
 
-    %  condor_q raman
+    %  condor_q -nobatch raman
 
     -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
@@ -399,7 +396,7 @@ output of the *condor_q* command, but is not eligible to run.
 The job will stay in this state until it is released or removed.  Users
 may also hold their jobs manually with the *condor_hold* command.
 
-A table listing the reasons why a job may be held is at the 
+A table listing the reasons why a job may be held is at the
 :doc:`/classad-attributes/job-classad-attributes` section. A
 string identifying the reason that a particular job is in the Hold state
 may be displayed by invoking *condor_q* -hold. For the example job ID 16.0,
@@ -568,3 +565,32 @@ attributes in the job:
 
   ``GPUsMemoryUsage``
     Peak memory usage over the lifetime of the job, in megabytes.
+
+Summary of all HTCondor users and their jobs
+--------------------------------------------
+When jobs are submitted, HTCondor will attempt to find resources to run
+the jobs. A list of all those with jobs submitted may be obtained
+through *condor_status*
+:index:`condor_status<single: condor_status; HTCondor commands>`\ with the *-submitters*
+option. An example of this would yield output similar to:
+
+::
+
+    %  condor_status -submitters
+
+    Name                 Machine      Running IdleJobs HeldJobs
+
+    ballard@cs.wisc.edu  bluebird.c         0       11        0
+    nice-user.condor@cs. cardinal.c         6      504        0
+    wright@cs.wisc.edu   finch.cs.w         1        1        0
+    jbasney@cs.wisc.edu  perdita.cs         0        0        5
+
+                               RunningJobs           IdleJobs           HeldJobs
+
+     ballard@cs.wisc.edu                 0                 11                  0
+     jbasney@cs.wisc.edu                 0                  0                  5
+    nice-user.condor@cs.                 6                504                  0
+      wright@cs.wisc.edu                 1                  1                  0
+
+                   Total                 7                516                  5
+
