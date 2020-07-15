@@ -196,20 +196,20 @@ the current as follows:
 
     # Wait for the job to finish being evicted;
     # hit CTRL-C when you see 'Job was evicted.'
-    tail --follow job.log
-    condor_hold 635.0
+    $ tail --follow job.log
+    $ condor_hold 635.0
 
     # Copy the checkpoint files from the spool.
     # Note that _condor_stderr and _condor_stdout are the files corresponding
     # to the job's output and error submit commands; they aren't named
     # correctly until the the job finishes.
-    cp -a `condor_config_val SPOOL`/635/0/cluster635.proc0.subproc0 .
+    $ cp -a `condor_config_val SPOOL`/635/0/cluster635.proc0.subproc0 .
 
     # Now examine the checkpoint files to see if they look right.
 
     # When you're done, release the job to see if it actually works right.
-    condor_release 635.0
-    condor_ssh_to_job 635.0
+    $ condor_release 635.0
+    $ condor_ssh_to_job 635.0
 
 Working Around the Assumptions
 ------------------------------

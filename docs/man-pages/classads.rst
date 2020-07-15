@@ -240,15 +240,13 @@ they've started running jobs yet.
 
 .. code-block:: console
 
-    $ condor_status -const '296 <= int(substr( Machine, 8 )) &&
-        int(substr( Machine, 8 )) <= 307'
+    $ condor_status -const '296 <= int(substr( Machine, 8 )) && int(substr( Machine, 8 )) <= 307'
 
 You could also write this as follows:
 
 .. code-block:: console
 
-    $ condor_status -const '296 <= int(split(Machine, "-")[1]) &&
-        int(split(Machine, "-")[1]) <= 307'
+    $ condor_status -const '296 <= int(split(Machine, "-")[1]) && int(split(Machine, "-")[1]) <= 307'
 
 Selecting Machines with a Particular File-Transfer Plugin
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -273,8 +271,7 @@ this case, it's just to make the output prettier.
 
     $ condor_status -af Machine CPUs Memory Disk \
         '(GPUs =!= undefined && GPUs >= 1) ? CUDACapability : "[no GPUs]"' \
-        -const 'SlotType =!= "Dynamic" &&
-            StringListIMember( "gdrive", HasFileTransferPluginMethods )'
+        -const 'SlotType =!= "Dynamic" && StringListIMember( "gdrive", HasFileTransferPluginMethods )'
 
 .. _`Specification`:
 

@@ -1466,8 +1466,7 @@ expression that contains a ClassAd function.
 
     $ condor_advertise UPDATE_AD_GENERIC ad
 
-    $ condor_status -any -constraint 'FauxType=="DBMS" &&
-      regexp("random.*", Name, "i")'
+    $ condor_status -any -constraint 'FauxType=="DBMS" && regexp("random.*", Name, "i")'
 
     MyType               TargetType           Name
 
