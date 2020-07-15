@@ -6244,12 +6244,6 @@ These macros affect the *condor_collector*.
     -  ``DEFRAG_UPDATE_INTERVAL``
     -  ``HAD_UPDATE_INTERVAL``
 
-:macro-def:`MASTER_CHECK_INTERVAL`
-    This macro defines how often the collector should check for machines
-    that have ClassAds from some daemons, but not from the
-    *condor_master* (orphaned daemons) and send e-mail about it. It is
-    defined in seconds and defaults to 10800 (3 hours).
-
 :macro-def:`COLLECTOR_REQUIREMENTS`
     A boolean expression that filters out unwanted ClassAd updates. The
     expression is evaluated for ClassAd updates that have passed through
