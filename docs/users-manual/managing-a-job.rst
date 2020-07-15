@@ -42,7 +42,7 @@ per job.  The -nobatch option to *condor_q* does this, and output might look som
 
 ::
 
-    $  condor_q -nobatch
+    $ condor_q -nobatch
 
     -- Schedd submit.chtc.wisc.edu : <127.0.0.1:9618?...
     ID          OWNER        SUBMITTED     RUN_TIME ST PRI SIZE CMD
@@ -403,7 +403,7 @@ use:
 
 ::
 
-      condor_q  -hold  16.0
+      $ condor_q  -hold  16.0
 
 This command prints information about the job, including the job ClassAd
 attribute ``HoldReason``.
