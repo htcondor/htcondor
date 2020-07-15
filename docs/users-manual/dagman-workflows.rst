@@ -417,8 +417,8 @@ name of the compressed file. The script contains
 
 .. code-block:: bash
 
-    #!/bin/bash
-    gunzip $argv[1]$argv[2]
+    #!/bin/sh
+    gunzip ${1}${2}
 
 Therefore, the PRE script invokes
 
