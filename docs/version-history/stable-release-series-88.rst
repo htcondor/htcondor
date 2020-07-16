@@ -53,6 +53,10 @@ Bugs Fixed:
   systemd unit file so more than 32k shadows can run on a submit node.
   :ticket:`7650`
 
+- For grid universe jobs of type ``batch``, stop using characters ``@``
+  and ``#`` in temporary directory names.
+  :ticket:`7730`
+
 Version 8.8.9
 -------------
 
