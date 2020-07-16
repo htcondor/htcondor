@@ -252,14 +252,14 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// append a line adding the parent DAGMan's cluster ID to the job ad
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString dagJobId = MyString( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
-				IntToStr( dm.DAGManJobId._cluster );
+				std::to_string( dm.DAGManJobId._cluster );
 	args.AppendArg( dagJobId.Value() );
 
 		// now we append a line setting the same thing as a submit-file macro
 		// (this is necessary so the user can reference it in the priority)
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString dagJobIdMacro = MyString( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
-				IntToStr( dm.DAGManJobId._cluster );
+				std::to_string( dm.DAGManJobId._cluster );
 	args.AppendArg( dagJobIdMacro.Value() );
 
 		// Pass the batch name to lower levels.
@@ -301,7 +301,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	if ( priority != 0 ) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString prioStr = "priority=";
-		prioStr += IntToStr( priority );
+		prioStr += std::to_string( priority );
 		args.AppendArg( prioStr.Value() );
 	}
 
@@ -339,7 +339,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			// we can't do this in Job::ResolveVarsInterpolations()
 			// because that's only called at parse time.
 		MyString value = nodeVar._value;
-		MyString retryStr = IntToStr( retry );
+		MyString retryStr = std::to_string( retry );
 		value.replaceString( "$(RETRY)", retryStr.Value() );
 		MyString varStr(nodeVar._name);
 		varStr += " = ";
@@ -353,20 +353,20 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// "final" nodes).
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString var = "DAG_STATUS = ";
-	var += IntToStr( (int)dm.dag->_dagStatus );
+	var += std::to_string( (int)dm.dag->_dagStatus );
 	args.AppendArg( var.Value() );
 
 		// Set the special FAILED_COUNT variable (mainly for use by
 		// "final" nodes).
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	var = "FAILED_COUNT = ";
-	var += IntToStr( dm.dag->NumNodesFailed() );
+	var += std::to_string( dm.dag->NumNodesFailed() );
 	args.AppendArg( var.Value() );
 
 	if( hold_claim ){
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
-			+ IntToStr( dm._claim_hold_time );
+			+ std::to_string( dm._claim_hold_time );
 		args.AppendArg( holdit.Value() );	
 	}
 	
@@ -461,7 +461,7 @@ static void init_dag_vars(SubmitHash * submitHash,
 	// submit many DAGs to the same schedd, all the ready jobs from
 	// one DAG complete before any jobs from another begin.
 	submitHash->set_arg_variable(ATTR_DAG_NODE_NAME_ALT, DAGNodeName);
-	submitHash->set_arg_variable(ATTR_DAGMAN_JOB_ID, IntToStr(dm.DAGManJobId._cluster).c_str());
+	submitHash->set_arg_variable(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster).c_str());
 
 	if (batchName && batchName[0]) {
 		submitHash->set_arg_variable(SUBMIT_KEY_BatchName, batchName);
@@ -479,7 +479,7 @@ static void init_dag_vars(SubmitHash * submitHash,
 
 	// Append the priority, if we have one.
 	if (priority != 0) {
-		std::string prio = IntToStr(priority);
+		std::string prio = std::to_string(priority);
 		submitHash->set_arg_variable(SUBMIT_KEY_Priority, prio.c_str());
 	}
 
@@ -507,16 +507,16 @@ static void init_dag_vars(SubmitHash * submitHash,
 #endif
 
 	// set RETRY for $(RETRY) substitution
-	submitHash->set_arg_variable("RETRY", IntToStr(retry).c_str());
+	submitHash->set_arg_variable("RETRY", std::to_string(retry).c_str());
 
 	// Set the special DAG_STATUS variable (mainly for use by "final" nodes).
-	submitHash->set_arg_variable("DAG_STATUS", IntToStr((int)dm.dag->_dagStatus).c_str());
+	submitHash->set_arg_variable("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus).c_str());
 
 	// Set the special FAILED_COUNT variable (mainly for use by "final" nodes).
-	submitHash->set_arg_variable("FAILED_COUNT", IntToStr(dm.dag->NumNodesFailed()).c_str());
+	submitHash->set_arg_variable("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()).c_str());
 
 	if (hold_claim) {
-		submitHash->set_arg_variable(SUBMIT_KEY_KeepClaimIdle, IntToStr(dm._claim_hold_time).c_str());
+		submitHash->set_arg_variable(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time).c_str());
 	}
 
 	if (dm._submitDagDeepOpts.suppress_notification) {

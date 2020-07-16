@@ -3660,7 +3660,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 	msg.formatstr( "Satisfied job %d with ", cluster );
 	bool had_one = false;
 	if( idle && idle->Length() ) {
-		msg += IntToStr( idle->Length() );
+		msg += std::to_string( idle->Length() );
 		msg += " idle";
 		had_one = true;
 	}
@@ -3668,7 +3668,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( limbo->Length() );
+		msg += std::to_string( limbo->Length() );
 		msg += " limbo";
 		had_one = true;
 	}
@@ -3676,7 +3676,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( serial->Length() );
+		msg += std::to_string( serial->Length() );
 		msg += " serial";
 		had_one = true;
 	}
@@ -3684,7 +3684,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( unclaimed->Length() );
+		msg += std::to_string( unclaimed->Length() );
 		msg += " unclaimed";
 		had_one = true;
 	}
@@ -3692,7 +3692,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( busy->Length() );
+		msg += std::to_string( busy->Length() );
 		msg += " busy";
 		had_one = true;
 	}

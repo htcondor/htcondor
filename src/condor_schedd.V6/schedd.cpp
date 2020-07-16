@@ -1264,7 +1264,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 			if ( !str.empty() ) {
 				str += ",";
 			}
-			str += IntToStr( *rit );
+			str += std::to_string( *rit );
 			num_entries++;
 		}
 		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str);
@@ -12600,7 +12600,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"Putting job on hold. (Reason: %s)\n",
 				 job_id.cluster, job_id.proc, action, reason.Value());
 			MyString reason2 = "Unknown action (";
-			reason2 += IntToStr( action );
+			reason2 += std::to_string( action );
 			reason2 += ") ";
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
@@ -15490,7 +15490,7 @@ moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 		return false;
 	}
 	
-	new_value += IntToStr( value );
+	new_value += std::to_string( value );
 
 	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
 						 new_value.Value() ); 

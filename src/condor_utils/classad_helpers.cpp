@@ -165,7 +165,7 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 
 	default:
 		str += "has a strange exit reason code of ";
-		str += IntToStr( exit_reason );
+		str += std::to_string( exit_reason );
 		return true;
 		break;
 
@@ -226,12 +226,12 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 				str += reason_str;
 			} else {
 				str += "died on signal ";
-				str += IntToStr( exit_value );
+				str += std::to_string( exit_value );
 			}
 		}
 	} else {
 		str += "exited normally with status ";
-		str += IntToStr( exit_value );
+		str += std::to_string( exit_value );
 	}
 
 	if( ename ) {

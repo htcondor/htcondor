@@ -6484,7 +6484,7 @@ void CreateProcessForkit::exec() {
 				// Now, if we didn't find it in the inherit list, close it
 			if ( ( ! found ) && ( close ( q ) != -1 ) ) {
 				closed_fds[num_closed++] = q;
-				msg += IntToStr( q );
+				msg += std::to_string( q );
 				msg += ' ';
 			}
 		}
@@ -6633,7 +6633,7 @@ void CreateProcessForkit::exec() {
 			// exec().  Otherwise, it would be a leak.
 		MyString msg = "Printing fds to inherit: ";
 		for ( int a=0 ; a<m_numInheritFds ; a++ ) {
-			msg += IntToStr( m_inheritFds[a] );
+			msg += std::to_string( m_inheritFds[a] );
 			msg += ' ';
 		}
 		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
@@ -9210,7 +9210,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 				desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
 											 10000 * 1024, 1024);
 				int final_udp = it->ssock()->set_os_buffers(desired_size);
-				msg += IntToStr(final_udp / 1024);
+				msg += std::to_string(final_udp / 1024);
 				msg += "k (UDP), ";
 			}
 
@@ -9221,7 +9221,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 											 128 * 1024, 1024 );
 				int final_tcp = it->rsock()->set_os_buffers( desired_size, true );
 
-				msg += IntToStr(final_tcp / 1024);
+				msg += std::to_string(final_tcp / 1024);
 				msg += "k (TCP)";
 			}
 			if( !msg.IsEmpty() ) {

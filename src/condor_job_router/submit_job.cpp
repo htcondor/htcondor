@@ -83,10 +83,10 @@ public:
 
 		if(cluster != -1) {
 			msg += "(";
-			msg += IntToStr( cluster );
+			msg += std::to_string( cluster );
 			if(proc != -1) {
 				msg += ".";
-				msg += IntToStr( proc );
+				msg += std::to_string( proc );
 			}
 			msg += ") ";
 		}

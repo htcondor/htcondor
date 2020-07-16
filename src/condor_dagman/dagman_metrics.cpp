@@ -50,11 +50,11 @@ DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
 			int parentDagmanCluster )
 {
 	_dagmanId = "";
-	_dagmanId += IntToStr( DAGManJobId._cluster );
+	_dagmanId += std::to_string( DAGManJobId._cluster );
 
 	if ( parentDagmanCluster >= 0 ) {
 		_parentDagmanId = "";
-		_parentDagmanId += IntToStr( parentDagmanCluster );
+		_parentDagmanId += std::to_string( parentDagmanCluster );
 	}
 }
 

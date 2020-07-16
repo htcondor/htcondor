@@ -96,7 +96,7 @@ startdClaimIdFile( int slot_id )
 
 	if( slot_id ) {
 		filename += ".slot";
-		filename += IntToStr( slot_id );
+		filename += std::to_string( slot_id );
 	}			
 	return strdup( filename.Value() );
 }
