@@ -1,4 +1,8 @@
-import enum
+import sys
+if sys.version_info < (3, 5, 0):
+	import compat_enum as enum
+else:
+	import enum
 
 class JobStatus(enum.IntEnum):
     '''
