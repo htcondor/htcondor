@@ -21,24 +21,24 @@
 #include "condor_common.h"
 #include "analysis.h"
 
-static bool GetOpName( Operation::OpKind, string & );
-static bool GetTypeName( Value::ValueType, string & );
+static bool GetOpName( classad::Operation::OpKind, std::string & );
+static bool GetTypeName( classad::Value::ValueType, std::string & );
 
 int main( ) {
-	PrettyPrint pp;
-	ClassAdParser parser;
-	string buffer = "";
-	string condString = "( ( MemoryRequirements < 234 ) || ( MemoryRequirements =?= undefined ) )";
+	classad::PrettyPrint pp;
+	classad::ClassAdParser parser;
+	std::string buffer = "";
+	std::string condString = "( ( MemoryRequirements < 234 ) || ( MemoryRequirements =?= undefined ) )";
 
-	cout << "-------------" << endl;
-	cout << "BOOLEXPR TEST" << endl;
-	cout << "-------------" << endl;
-	cout << "condString = " << condString << endl;
-	cout << endl;
+	std::cout << "-------------" << std::endl;
+	std::cout << "BOOLEXPR TEST" << std::endl;
+	std::cout << "-------------" << std::endl;
+	std::cout << "condString = " << condString << std::endl;
+	std::cout << std::endl;
 
 	ExprTree *condTree = NULL;
 	if( !( condTree =  parser.ParseExpression( condString ) ) ) {
-		cerr << "error parsing expression" << endl;
+		std::cerr << "error parsing expression" << endl;
 	}
 
 	Condition *cond = new Condition( );

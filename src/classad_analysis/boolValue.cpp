@@ -168,7 +168,7 @@ GetValue( int index, BoolValue &result )
 }
 
 bool BoolVector::
-GetNumValues( int &result )
+GetNumValues( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -178,7 +178,7 @@ GetNumValues( int &result )
 }
 
 bool BoolVector::
-GetTotalTrue( int &result )
+GetTotalTrue( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -474,7 +474,7 @@ GetValue( int col, int row, BoolValue &result )
 }
 	
 bool BoolTable::
-GetNumRows( int &result )
+GetNumRows( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -484,7 +484,7 @@ GetNumRows( int &result )
 }
 
 bool BoolTable::
-GetNumColumns( int &result )
+GetNumColumns( int &result ) const
 {
 	if( !initialized ) {
 		return false;
