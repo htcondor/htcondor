@@ -921,6 +921,7 @@ int Authentication :: wrap(char*  input,
     return FALSE;
 #else
     // Shouldn't we check the flag first?
+    dprintf(D_ALWAYS, "ZKM: Here we are in AUTHENTICATION::WRAP\n");
     if (authenticator_) {
         return authenticator_->wrap(input, input_len, output, output_len);
     }
@@ -939,6 +940,7 @@ int Authentication :: unwrap(char*  input,
     return FALSE;
 #else
     // Shouldn't we check the flag first?
+    dprintf(D_ALWAYS, "ZKM: Here we are in AUTHENTICATION::UNWRAP\n");
     if (authenticator_) {
         return authenticator_->unwrap(input, input_len, output, output_len);
     }

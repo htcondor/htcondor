@@ -23,13 +23,14 @@
 
 #ifdef HAVE_EXT_OPENSSL
 
+#include "condor_common.h"
 #include "condor_crypt.h"          // base class
 #include <openssl/blowfish.h>
 
 class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_Blowfish(const KeyInfo& key);
+    Condor_Crypt_Blowfish();
     //------------------------------------------
     // PURPOSE: Cryto base class constructor
     // REQUIRE: None
@@ -45,26 +46,27 @@ class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
 
     void resetState();
 
-
-    bool encrypt(const unsigned char * input,
+    bool encrypt(Condor_Crypto_State *s,
+                 const unsigned char * input,
                  int          input_len, 
                  unsigned char *&      output, 
                  int&         output_len);
 
-    bool decrypt(const unsigned char * input,
+    bool decrypt(Condor_Crypto_State *s,
+                 const unsigned char * input,
                  int          input_len, 
                  unsigned char *&      output, 
                  int&         output_len);
 
  private:
-    Condor_Crypt_Blowfish();
     //------------------------------------------
     // Private constructor
     //------------------------------------------
+    //Condor_Crypt_Blowfish(const KeyInfo& key);
 
-    int             num_;            // For stream encryption
-    BF_KEY          key_;
-    unsigned char   ivec_[8];
+//    int             num_;            // For stream encryption
+//    BF_KEY          key_;
+//    unsigned char   ivec_[8];
 
 };
 

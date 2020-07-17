@@ -179,6 +179,7 @@ Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */, bool scito
 	m_scitokens_mode(scitokens_mode)
 {
 	m_crypto = NULL;
+	m_crypto_state = NULL;
 	ASSERT( Initialize() == true );
 }
 
@@ -190,6 +191,7 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
     ERR_remove_thread_state( 0 );
 #endif
 	if(m_crypto) delete(m_crypto);
+	if(m_crypto_state) delete(m_crypto_state);
 }
 
 bool Condor_Auth_SSL::Initialize()
@@ -1085,7 +1087,7 @@ Condor_Auth_SSL::authenticate_fail()
 
 int Condor_Auth_SSL::isValid() const
 {
-	if ( m_crypto ) {
+	if ( m_crypto && m_crypto_state ) {
 		return TRUE;
 	} else {
 		return FALSE;
@@ -1099,6 +1101,9 @@ Condor_Auth_SSL::setup_crypto(unsigned char* key, const int keylen)
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
 
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
+
 	if ( !key || !keylen ) {
 		// cannot setup anything without a key
 		return false;
@@ -1106,7 +1111,16 @@ Condor_Auth_SSL::setup_crypto(unsigned char* key, const int keylen)
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
 	KeyInfo thekey(key,keylen,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
+
 	return m_crypto ? true : false;
 }
 
@@ -1144,16 +1158,16 @@ Condor_Auth_SSL::encrypt_or_decrypt(bool want_encrypt,
 	}
 	
 		// make certain we got a crypto object
-	if (!m_crypto) {
+	if (!m_crypto || !m_crypto_state) {
 		return false;
 	}
 
 		// do the work
-	m_crypto->resetState();
+	m_crypto_state->reset();
 	if (want_encrypt) {
-		result = m_crypto->encrypt(input,input_len,output,output_len);
+		result = m_crypto->encrypt(m_crypto_state, input,input_len,output,output_len);
 	} else {
-		result = m_crypto->decrypt(input,input_len,output,output_len);
+		result = m_crypto->decrypt(m_crypto_state, input,input_len,output,output_len);
 	}
 	
 		// mark output_len as zero upon failure
@@ -1181,7 +1195,7 @@ Condor_Auth_SSL::wrap(const char *   input,
 	bool result;
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
-	dprintf(D_SECURITY, "In wrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -1199,7 +1213,7 @@ Condor_Auth_SSL::unwrap(const char *   input,
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
-	dprintf(D_SECURITY, "In unwrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In unwrap.\n");
 	result = decrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;

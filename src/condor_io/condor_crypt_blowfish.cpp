@@ -20,27 +20,36 @@
 
 #include "condor_common.h"
 #include "condor_crypt_blowfish.h"
-//#include <string.h>
-//#include <malloc.h>
+#include "condor_debug.h"
 
 #ifdef HAVE_EXT_OPENSSL
 
+/*
 Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)
-    : Condor_Crypt_Base(CONDOR_BLOWFISH, key)
+//    : Condor_Crypt_Base(CONDOR_BLOWFISH, key)
 {
+    EXCEPT("ZKM: blowfish con key");
+
     // initialize 
     resetState();
 
     // Generate the key
     KeyInfo k(key);
-    BF_set_key(&key_, k.getKeyLength(), k.getKeyData());
+    //BF_set_key(&state.key_, k.getKeyLength(), k.getKeyData());
+    dprintf(D_ALWAYS, "ZKM: ERROR: accessed internal state!!!\n");
 }
 #else
 {
     resetState();
 }
 #endif
+*/
+
+Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish()
+{
+    dprintf(D_ALWAYS, "ZKM: BLOWFISH CON\n");
+}
 
 Condor_Crypt_Blowfish :: ~Condor_Crypt_Blowfish()
 {
@@ -48,11 +57,14 @@ Condor_Crypt_Blowfish :: ~Condor_Crypt_Blowfish()
 
 void Condor_Crypt_Blowfish:: resetState()
 {
-     memset(ivec_, 0, 8);
-     num_=0;
+    EXCEPT("ZKM: blowfish resetstate");
+    //memset(state.ivec_, 0, 8);
+    //state.num_=0;
+    dprintf(D_ALWAYS, "ZKM: ERROR: accessed internal state!!!\n");
 }
 
-bool Condor_Crypt_Blowfish :: encrypt(const unsigned char *  input,
+bool Condor_Crypt_Blowfish :: encrypt(Condor_Crypto_State *cs,
+                                      const unsigned char *  input,
                                       int              input_len, 
                                       unsigned char *& output, 
                                       int&             output_len)
@@ -64,7 +76,7 @@ bool Condor_Crypt_Blowfish :: encrypt(const unsigned char *  input,
 
     if (output) {
         // Now, encrypt
-        BF_cfb64_encrypt(input, output, output_len, &key_, ivec_, &num_, BF_ENCRYPT);
+        BF_cfb64_encrypt(input, output, output_len, &cs->key_, cs->ivec_, &cs->num_, BF_ENCRYPT);
         return true;
     }
     else {
@@ -75,7 +87,8 @@ bool Condor_Crypt_Blowfish :: encrypt(const unsigned char *  input,
 #endif
 }
 
-bool Condor_Crypt_Blowfish :: decrypt(const unsigned char *  input,
+bool Condor_Crypt_Blowfish :: decrypt(Condor_Crypto_State *cs,
+                                      const unsigned char *  input,
                                       int              input_len, 
                                       unsigned char *& output, 
                                       int&             output_len)
@@ -87,7 +100,7 @@ bool Condor_Crypt_Blowfish :: decrypt(const unsigned char *  input,
 
     if (output) {
         // Now, encrypt
-        BF_cfb64_encrypt(input, output, output_len, &key_, ivec_, &num_, BF_DECRYPT);
+        BF_cfb64_encrypt(input, output, output_len, &cs->key_, cs->ivec_, &cs->num_, BF_DECRYPT);
         return true;
     }
     else {

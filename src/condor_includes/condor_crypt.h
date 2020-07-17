@@ -22,13 +22,57 @@
 #define CONDOR_CRYPTO
 
 #include "condor_common.h"
+#include "condor_debug.h"
 
 #include "CryptKey.h"
+
+
+// temp.  for the key storage below
+#include <openssl/des.h>
+#include <openssl/blowfish.h>
+
+class Condor_Crypto_State {
+
+public:
+    Condor_Crypto_State(Protocol proto, KeyInfo& key);
+    ~Condor_Crypto_State();
+
+    void reset();
+    const KeyInfo& getkey() { return keyInfo_; }
+
+    KeyInfo       keyInfo_;
+
+    int keytype;
+    std::string keyalgorithm;
+
+    int keylen;
+    unsigned char *key;
+
+    int iveclen;
+    unsigned char *ivec;
+
+    int num;
+
+    int additional_len;
+    unsigned char *additional;
+
+    int             num_;
+    unsigned char   ivec_[8];
+
+    BF_KEY          key_;
+    DES_key_schedule  keySchedule1_, keySchedule2_, keySchedule3_;
+
+private:
+    Condor_Crypto_State();
+    Condor_Crypto_State(Condor_Crypto_State &c);
+
+};
+
 
 class Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_Base(Protocol, const KeyInfo& key);
+    Condor_Crypt_Base();
     //------------------------------------------
     // PURPOSE: Cryto base class constructor
     // REQUIRE: None
@@ -66,7 +110,7 @@ class Condor_Crypt_Base {
     // RETURNS: protocol
     //------------------------------------------
 
-    const KeyInfo& get_key() { return keyInfo_; }
+    const KeyInfo& get_key() {EXCEPT("ZKM: get_key\n"); /* return state.keyInfo_; */ }
 
     virtual void resetState() = 0;
     //------------------------------------------
@@ -76,12 +120,14 @@ class Condor_Crypt_Base {
     // RETURNS: None
     //------------------------------------------
 
-    virtual bool encrypt(const unsigned char *   input,
+    virtual bool encrypt(Condor_Crypto_State *s,
+                         const unsigned char *   input,
                          int               input_len, 
                          unsigned char *&  output, 
                          int&              output_len) = 0;
 
-    virtual bool decrypt(const unsigned char *  input,
+    virtual bool decrypt(Condor_Crypto_State *s,
+                         const unsigned char *  input,
                          int              input_len, 
                          unsigned char *& output, 
                          int&             output_len) = 0;
@@ -99,12 +145,14 @@ class Condor_Crypt_Base {
     //------------------------------------------
 
  protected:
-    Condor_Crypt_Base();
+    // ZKM TODO FIXME THIS should not be here
+    //Condor_Crypto_State state;
+
     //------------------------------------------
     // Pricate constructor
     //------------------------------------------
- private:
-    KeyInfo       keyInfo_;
+    //Condor_Crypt_Base(Protocol, const KeyInfo& key);
+    //KeyInfo       keyInfo_;
 };
 
 #endif
