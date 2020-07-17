@@ -385,6 +385,7 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_TOKEN),
     m_crypto(NULL),
+    m_crypto_state(NULL),
 	m_client_status(0),
 	m_server_status(0),
 	m_ret_value(0),
@@ -410,6 +411,7 @@ Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
 {
     if(m_crypto) delete(m_crypto);
+    if(m_crypto_state) delete(m_crypto_state);
     if (m_k) free(m_k);
     if (m_k_prime) free(m_k_prime);
 }
@@ -690,6 +692,8 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 		// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
 
 	if ( !key || !keylen ) {
 		// cannot setup anything without a key
@@ -698,7 +702,16 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
 	KeyInfo thekey(key,keylen,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
+
 	return m_crypto ? true : false;
 }
 
@@ -736,16 +749,16 @@ Condor_Auth_Passwd::encrypt_or_decrypt(bool want_encrypt,
 	}
 	
 		// make certain we got a crypto object
-	if (!m_crypto) {
+	if (!m_crypto || !m_crypto_state) {
 		return false;
 	}
 
 		// do the work
-	m_crypto->resetState();
+	m_crypto_state->reset();
 	if (want_encrypt) {
-		result = m_crypto->encrypt(input,input_len,output,output_len);
+		result = m_crypto->encrypt(m_crypto_state, input,input_len,output,output_len);
 	} else {
-		result = m_crypto->decrypt(input,input_len,output,output_len);
+		result = m_crypto->decrypt(m_crypto_state, input,input_len,output,output_len);
 	}
 	
 		// mark output_len as zero upon failure
@@ -773,7 +786,7 @@ Condor_Auth_Passwd::wrap(const char *   input,
 	bool result;
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::wrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -791,7 +804,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::unwrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::unwrap.\n");
 	result = decrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -2727,7 +2740,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 
 int Condor_Auth_Passwd :: isValid() const
 {
-	if ( m_crypto ) {
+	if ( m_crypto && m_crypto_state) {
 		return TRUE;
 	} else {
 		return FALSE;
@@ -2755,6 +2768,9 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
 
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
+
 		// Calculate W based on K'
 	if (m_version == 1) {
 		hmac( t_buf->rb, AUTH_PW_KEY_LEN,
@@ -2774,7 +2790,15 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
 	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
 
 	if ( key ) free(key);	// KeyInfo makes a copy of the key
 

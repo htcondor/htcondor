@@ -30,7 +30,7 @@
 class Condor_Crypt_3des : public Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_3des(const KeyInfo& key);
+    Condor_Crypt_3des();
     //------------------------------------------
     // PURPOSE: Cryto base class constructor
     // REQUIRE: keyLength = 8 * 3 = 24
@@ -46,24 +46,26 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
 
     void resetState();
 
-    bool encrypt(const unsigned char *  input,
+    bool encrypt(Condor_Crypto_State *s,
+                 const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);
 
-    bool decrypt(const unsigned char *  input,
+    bool decrypt(Condor_Crypto_State *s,
+                 const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);
 
  private:
-    Condor_Crypt_3des();
     //------------------------------------------
     // Private constructor
     //------------------------------------------
-    DES_key_schedule  keySchedule1_, keySchedule2_, keySchedule3_;
-    unsigned char     ivec_[8];
-    int               num_;
+    //Condor_Crypt_3des(const KeyInfo& key);
+//    DES_key_schedule  keySchedule1_, keySchedule2_, keySchedule3_;
+//    unsigned char     ivec_[8];
+//    int               num_;
 };
 
 

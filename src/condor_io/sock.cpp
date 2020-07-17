@@ -58,6 +58,22 @@
 #define closesocket close
 #endif
 
+
+struct SockCryptoState {
+	bool initialized;
+
+	int crypto_method_type;
+	std::string crypto_method_name;
+
+	KeyInfo key;
+
+	unsigned char IV[256];
+	unsigned char *additional_data;
+
+	// more?
+};
+
+
 void dprintf ( int flags, const Sock & sock, const char *fmt, ... )
 {
     va_list args;
@@ -97,6 +113,7 @@ Sock::Sock() : Stream(), _policy_ad(NULL) {
 	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
+    crypto_state_ = NULL;
     mdMode_ = MD_OFF;
     mdKey_ = 0;
 
@@ -140,6 +157,7 @@ Sock::Sock(const Sock & orig) : Stream(), _policy_ad(NULL) {
 	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
+    crypto_state_ = NULL;
     mdMode_ = MD_OFF;
     mdKey_ = 0;
 
@@ -184,6 +202,7 @@ Sock::~Sock()
 {
     delete crypto_;
 	crypto_ = NULL;
+	crypto_state_ = NULL;
     delete mdKey_;
 	mdKey_ = NULL;
 
@@ -2124,6 +2143,11 @@ char * Sock::serializeCryptoInfo() const
         len = get_crypto_key().getKeyLength();
     }
 
+    // ZKM TODO FIX ME
+    // serialize ENTIRE crypto_state_
+    dprintf(D_ALWAYS, "ZKM: deserialize crypto state!\n");
+
+
 	// here we want to save our state into a buffer
 	char * outbuf = NULL;
     if (len > 0) {
@@ -2188,6 +2212,10 @@ const char * Sock::serializeCryptoInfo(const char * buf)
     // it. As a result, kserial may contains not just the key, but
     // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
+
+    // ZKM FIXME TODO
+    // deserialize ENTIRE crypto_state_
+    dprintf(D_ALWAYS, "ZKM: deserialize crypto state!\n");
 
     int citems = sscanf(ptmp, "%d*", &encoded_len);
     if ( citems == 1 && encoded_len > 0 ) {
@@ -2831,16 +2859,74 @@ Sock::isAuthenticated() const
 	return strcmp(_fqu,UNAUTHENTICATED_FQU) != 0;
 }
 
+char zkm_buf[256];
+char* zkm_dump(const unsigned char* d, int l) {
+
+	// add terminator
+        if(l > 32) {
+		l = 32;
+	}
+
+	for (int i = 0; i < l; i++) {
+		if(d[i] >= 32 && d[i] < 128) {
+			zkm_buf[i] = d[i];
+		} else {
+			zkm_buf[i] = '.';
+		}
+	}
+
+
+        for (int i = 0; i < l; i++) {
+                sprintf(&zkm_buf[l+i*3], " %02X", d[i]);
+        }
+
+	zkm_buf[l*4] = '\0';
+        return &(zkm_buf[0]);
+}
+
 bool 
+Sock::zkm_wrap(const unsigned char* d_in,int l_in,
+                    unsigned char*& d_out,int& l_out)
+{    
+    d_out = (unsigned char *) malloc(l_out = l_in);
+    memcpy(d_out, d_in, l_out);
+
+    int coded = get_encryption();
+    dprintf(D_ALWAYS, "ZKM_WRAP REAL: got %d bytes:\n", l_in);
+    dprintf(D_ALWAYS, "ZKM_WRAP REAL: IN:  %s\n", zkm_dump(d_in, l_in));
+    dprintf(D_ALWAYS, "ZKM_WRAP REAL: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
+    return coded;
+}
+
+
+bool 
+Sock::zkm_unwrap(const unsigned char* d_in,int l_in,
+                      unsigned char*& d_out, int& l_out)
+{
+    d_out = (unsigned char *) malloc(l_out = l_in);
+    memcpy(d_out, d_in, l_out);
+
+    int coded = get_encryption();
+    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: got %d bytes:\n", l_in);
+    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: IN:  %s\n", zkm_dump(d_in, l_in));
+    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
+    return coded;
+}
+
+//*
+ bool 
 Sock::wrap(const unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
 {    
     bool coded = false;
 #ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
-        coded = crypto_->encrypt(d_in, l_in, d_out, l_out);
+        coded = crypto_->encrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
 #endif
+    dprintf(D_ALWAYS, "ZKM_WRAP: got %d bytes:\n", l_in);
+    dprintf(D_ALWAYS, "ZKM_WRAP: IN:  %s\n", zkm_dump(d_in, l_in));
+    dprintf(D_ALWAYS, "ZKM_WRAP: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
     return coded;
 }
 
@@ -2851,17 +2937,22 @@ Sock::unwrap(const unsigned char* d_in,int l_in,
     bool coded = false;
 #ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
-        coded = crypto_->decrypt(d_in, l_in, d_out, l_out);
+        coded = crypto_->decrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
 #endif
+    dprintf(D_ALWAYS, "ZKM_UNWRAP: got %d bytes:\n", l_in);
+    dprintf(D_ALWAYS, "ZKM_UNWRAP: IN:  %s\n", zkm_dump(d_in, l_in));
+    dprintf(D_ALWAYS, "ZKM_UNWRAP: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
+
     return coded;
 }
+// */
 
 void Sock::resetCrypto()
 {
 #ifdef HAVE_EXT_OPENSSL
-  if (crypto_) {
-    crypto_->resetState();
+  if (crypto_state_) {
+    crypto_state_->reset();
   }
 #endif
 }
@@ -2871,6 +2962,8 @@ Sock::initialize_crypto(KeyInfo * key)
 {
     delete crypto_;
     crypto_ = 0;
+    delete crypto_state_;
+    crypto_state_ = 0;
 	crypto_mode_ = false;
 
     // Will try to do a throw/catch later on
@@ -2880,16 +2973,21 @@ Sock::initialize_crypto(KeyInfo * key)
 #ifdef HAVE_EXT_OPENSSL
         case CONDOR_BLOWFISH :
 			setCryptoMethodUsed("BLOWFISH");
-            crypto_ = new Condor_Crypt_Blowfish(*key);
+            crypto_ = new Condor_Crypt_Blowfish();
             break;
         case CONDOR_3DES:
 			setCryptoMethodUsed("3DES");
-            crypto_ = new Condor_Crypt_3des(*key);
+            crypto_ = new Condor_Crypt_3des();
             break;
 #endif
         default:
             break;
         }
+    }
+
+    // if we made an object, make a state object as well
+    if(crypto_) {
+        crypto_state_ = new Condor_Crypto_State(key->getProtocol(), *key);
     }
 
     return (crypto_ != 0);
@@ -2910,6 +3008,7 @@ bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 const KeyInfo& Sock :: get_crypto_key() const
 {
 #ifdef HAVE_EXT_OPENSSL
+    // ZKM TODO FIXME
     if (crypto_) {
         return crypto_->get_key();
     }
@@ -2944,6 +3043,8 @@ Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
         if (crypto_) {
             delete crypto_;
             crypto_ = 0;
+            delete crypto_state_;
+            crypto_state_ = 0;
 			crypto_mode_ = false;
         }
         ASSERT(keyId == 0);
