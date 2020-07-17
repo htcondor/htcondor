@@ -43,7 +43,7 @@ class MultiProfile : public BoolExpr
 		/** Determines if the MultiProfile represents a literal value
 			@return true if MulitProfile is a literal value, false otherwise.
 		*/
-	bool IsLiteral( );
+	bool IsLiteral( ) const;
 
 		/** Gets the BoolValue if the MultiProfile represents a literal value
 			@param result the BoolValue represented by the MultiProfile
