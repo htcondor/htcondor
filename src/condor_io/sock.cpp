@@ -2145,7 +2145,7 @@ char * Sock::serializeCryptoInfo() const
 
     // ZKM TODO FIX ME
     // serialize ENTIRE crypto_state_
-    dprintf(D_ALWAYS, "ZKM: deserialize crypto state!\n");
+    dprintf(D_ALWAYS, "ZKM: serialize crypto state!\n");
 
 
 	// here we want to save our state into a buffer
@@ -2868,7 +2868,7 @@ char* zkm_dump(const unsigned char* d, int l) {
 	}
 
 	for (int i = 0; i < l; i++) {
-		if(d[i] >= 32 && d[i] < 128) {
+		if(d[i] >= 32 && d[i] < 127) {
 			zkm_buf[i] = d[i];
 		} else {
 			zkm_buf[i] = '.';
@@ -3009,12 +3009,14 @@ const KeyInfo& Sock :: get_crypto_key() const
 {
 #ifdef HAVE_EXT_OPENSSL
     // ZKM TODO FIXME
-    if (crypto_) {
-        return crypto_->get_key();
+    if (crypto_state_) {
+        return crypto_state_->getkey();
+    } else {
+        dprintf(D_ALWAYS, "ZKM: get_crypto_key: no crypto_state_\n");
     }
 #endif
     ASSERT(0);	// This does not return...
-	return  crypto_->get_key();  // just to make compiler happy...
+	return  crypto_state_->getkey();  // just to make compiler happy...
 }
 
 const KeyInfo& Sock :: get_md_key() const

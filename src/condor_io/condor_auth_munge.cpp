@@ -307,13 +307,12 @@ Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, const unsigned char* in
 	}
 
 	// make certain we got a crypto object
-	if (!m_crypto) {
-		dprintf(D_SECURITY, "In Condor_Auth_MUNGE.  No m_crypto!\n");
+	if (!m_crypto || !m_crypto_state) {
+		dprintf(D_SECURITY, "In Condor_Auth_MUNGE.  Found NULL m_crypto or m_crypto_state!\n");
 		return false;
 	}
 
 	// do the work
-	m_crypto->resetState();
 	m_crypto_state->reset();
 	if (want_encrypt) {
 		result = m_crypto->encrypt(m_crypto_state, input,input_len,output,output_len);

@@ -29,19 +29,29 @@
 
 
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
+
+    // store key (includes: protocol, len, data, duration)
+    keyInfo_ = key;
+
     // zero everything;
-    //
+    additional_len = 0;
+    additional = NULL;
+
+    bzero(&key_, sizeof(key_));
+
+    bzero(&keySchedule1_, sizeof(keySchedule1_));
+    bzero(&keySchedule2_, sizeof(keySchedule2_));
+    bzero(&keySchedule3_, sizeof(keySchedule3_));
+
+    // zero ivec and num
     reset();
 
 #if !defined(SKIP_AUTHENTICATION)
-    KeyInfo k(key);
     switch(proto) {
         case CONDOR_3DES: {
-            // initialize ivsec ???
-            
             // triple des requires a key of 8 x 3 = 24 bytes
             // so pad the key out to at least 24 bytes if needed
-            unsigned char * keyData = k.getPaddedKeyData(24);
+            unsigned char * keyData = keyInfo_.getPaddedKeyData(24);
             ASSERT(keyData);
             
             DES_set_key((DES_cblock *)  keyData    , &keySchedule1_);
@@ -52,80 +62,33 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
             break;
         }
         case CONDOR_BLOWFISH: {
-            BF_set_key(&key_, k.getKeyLength(), k.getKeyData());
+            BF_set_key(&key_, keyInfo_.getKeyLength(), keyInfo_.getKeyData());
             break;
         }
         default:
-            // already zerod out above
+            // already zeroed out above
             break;
     }
 #endif
 }
 
-Condor_Crypto_State::Condor_Crypto_State() {
-    EXCEPT("crypto regular con");
-}
-
-Condor_Crypto_State::Condor_Crypto_State(Condor_Crypto_State &c) {
-    c.keytype = 0;
-    EXCEPT("crypto copy con");
-}
-
 Condor_Crypto_State::~Condor_Crypto_State() {
+    if(ivec) free(ivec);
+    if(additional) free(additional);
+    // need to free key data
+    dprintf(D_ALWAYS, "ZKM: FREE() CRYPTO DATA\n");
 }
 
 void Condor_Crypto_State::reset() {
-    // assign "empty" key (there's no clear() or reset() method on KeyInfo)
-    KeyInfo k;
-    keyInfo_ = k;
+    dprintf(D_ALWAYS, "ZKM: reset state (ivec and num)\n");
 
-    keytype = 0;
-    keyalgorithm.clear();
-    
-    keylen = 0;
-    key = NULL;
-    
-    iveclen = 0;
+    ivec_len = 0;
     ivec = NULL;
     
     num = 0;
-    
-    additional_len = 0;
-    additional = NULL;
 
     num_ = 0;
     bzero(ivec_, 8); // u char [8]
-
-    bzero(&key_, sizeof(key_));
-
-    bzero(&keySchedule1_, sizeof(keySchedule1_));
-    bzero(&keySchedule2_, sizeof(keySchedule2_));
-    bzero(&keySchedule3_, sizeof(keySchedule3_));
-
-    dprintf(D_ALWAYS, "ZKM: NEED TO RESET STATE FOR ALL TYPES\n");
-}
-
-/*
-Condor_Crypt_Base :: Condor_Crypt_Base(Protocol prot, const KeyInfo& keyInfo)
-{
-#ifdef HAVE_EXT_OPENSSL
-    EXCEPT("ZKM: ERROR: base con key");
-
-    if((prot = keyInfo.getProtocol())) {}
-    //state.keyInfo_ = keyInfo;
-    dprintf(D_ALWAYS, "ZKM: ERROR: accessed internal state!!!\n");
-    //ASSERT(state.keyInfo_.getProtocol() == prot);
-#endif
-}
-*/
-
-Condor_Crypt_Base :: Condor_Crypt_Base()
-{
-    dprintf(D_ALWAYS, "ZKM: Constructed Crypto Object.\n");
-}
-
-Condor_Crypt_Base :: ~Condor_Crypt_Base()
-{
 }
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
@@ -135,17 +98,6 @@ int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
     return (inputLength + ((size == 0) ? blockSize : (blockSize - size)));
 #else
     return -1;
-#endif
-}
-
-Protocol Condor_Crypt_Base :: protocol()
-{
-    EXCEPT("ZKM: ERROR: accessed internal state!!!");
-#ifdef HAVE_EXT_OPENSSL
-    dprintf(D_ALWAYS, "ZKM: ERROR: accessed internal state!!!\n");
-    //return state.keyInfo_.getProtocol();
-#else
-    return (Protocol)0;
 #endif
 }
 

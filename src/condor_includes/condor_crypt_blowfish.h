@@ -30,21 +30,8 @@
 class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_Blowfish();
-    //------------------------------------------
-    // PURPOSE: Cryto base class constructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
-
-    ~Condor_Crypt_Blowfish();
-    //------------------------------------------
-    // PURPOSE: Crypto base class destructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
-
-    void resetState();
+    Condor_Crypt_Blowfish() {}
+    ~Condor_Crypt_Blowfish() {}
 
     bool encrypt(Condor_Crypto_State *s,
                  const unsigned char * input,
@@ -57,17 +44,6 @@ class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
                  int          input_len, 
                  unsigned char *&      output, 
                  int&         output_len);
-
- private:
-    //------------------------------------------
-    // Private constructor
-    //------------------------------------------
-    //Condor_Crypt_Blowfish(const KeyInfo& key);
-
-//    int             num_;            // For stream encryption
-//    BF_KEY          key_;
-//    unsigned char   ivec_[8];
-
 };
 
 #endif

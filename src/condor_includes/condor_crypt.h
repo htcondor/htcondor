@@ -40,15 +40,14 @@ public:
     void reset();
     const KeyInfo& getkey() { return keyInfo_; }
 
+    // the KeyInfo holds:
+    // protocol
+    // key length
+    // key data
+    // duration
     KeyInfo       keyInfo_;
 
-    int keytype;
-    std::string keyalgorithm;
-
-    int keylen;
-    unsigned char *key;
-
-    int iveclen;
+    int ivec_len;
     unsigned char *ivec;
 
     int num;
@@ -63,8 +62,8 @@ public:
     DES_key_schedule  keySchedule1_, keySchedule2_, keySchedule3_;
 
 private:
-    Condor_Crypto_State();
-    Condor_Crypto_State(Condor_Crypto_State &c);
+    Condor_Crypto_State() {} ;
+    Condor_Crypto_State(Condor_Crypto_State&) {};
 
 };
 
@@ -72,19 +71,8 @@ private:
 class Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_Base();
-    //------------------------------------------
-    // PURPOSE: Cryto base class constructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
-
-    virtual ~Condor_Crypt_Base();
-    //------------------------------------------
-    // PURPOSE: Crypto base class destructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
+    Condor_Crypt_Base() {}
+    virtual ~Condor_Crypt_Base() {};
 
 		// Returns an array of random bytes.
 		// Caller should free returned buffer when done.
@@ -101,23 +89,6 @@ class Condor_Crypt_Base {
     //             using the input string. initialkey should not be too short!
     // REQUIRE: length of the key, default to 12
     // RETURNS: a buffer (malloc) with length 
-    //------------------------------------------
-
-    Protocol protocol();
-    //------------------------------------------
-    // PURPOSE: return protocol 
-    // REQUIRE: None
-    // RETURNS: protocol
-    //------------------------------------------
-
-    const KeyInfo& get_key() {EXCEPT("ZKM: get_key\n"); /* return state.keyInfo_; */ }
-
-    virtual void resetState() = 0;
-    //------------------------------------------
-    // PURPOSE: Reset encryption state. This is 
-    //          required for UPD encryption
-    // REQUIRE: None
-    // RETURNS: None
     //------------------------------------------
 
     virtual bool encrypt(Condor_Crypto_State *s,
@@ -144,15 +115,6 @@ class Condor_Crypt_Base {
     // RETURNS: size of the cipher text
     //------------------------------------------
 
- protected:
-    // ZKM TODO FIXME THIS should not be here
-    //Condor_Crypto_State state;
-
-    //------------------------------------------
-    // Pricate constructor
-    //------------------------------------------
-    //Condor_Crypt_Base(Protocol, const KeyInfo& key);
-    //KeyInfo       keyInfo_;
 };
 
 #endif
