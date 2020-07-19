@@ -32,7 +32,11 @@ if ( WITH_BLAHP )
 			message(FATAL_ERROR "Can't find autoconf, automake, or libtoolize, needed to build blahp external!")
 		endif()
 
-		set( C_FLAG "-fcommon" )
+		if (PREFER_CPP11)
+			set( CPP11_FLAG -std=c++11 )
+		else()
+			set( CPP11_FLAG "-I${BOOST_INCLUDE}" )
+		endif()
 
 		if ( BUILDING_OPENSSL )
 			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} )
@@ -99,7 +103,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/kill-job.patch -p0 &&
 							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
-						CONFIGURE_COMMAND export CPPFLAGS=${C_FLAG} &&
+						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&
 							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
