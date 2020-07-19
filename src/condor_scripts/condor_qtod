@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import subprocess
+import itertools
 
 def replace_queue_statement_in_file(file_name, new):
     with open(file_name) as file:
@@ -46,14 +47,15 @@ def convert_process_variables(submit_file_name, dag_submit_file_name):
 def convert_queue_from_file(queue_statement, submit_file_name):
     dag_submit_file_name = "generated.submit"
 
-    match = re.match("^[Qq]ueue (\d+)( ([^ ]+)? from (.*))?$", queue_statement)
+    match = re.match("^[Qq]ueue (\d+)( ([^ ]+)?( \[[\d:]+\])? from (.*))?$", queue_statement)
     if not match:
         print("Internal error, aborting.", file=sys.stderr)
         sys.exit(-4)
 
     count = int(match.group(1))
     vars_string = match.group(3)
-    item_data_file_name = match.group(4)
+    slice_string = match.group(4)
+    item_data_file_name = match.group(5)
 
     var_names = []
     if vars_string is not None:
@@ -70,6 +72,18 @@ def convert_queue_from_file(queue_statement, submit_file_name):
             line_data = item_data_lines[item_index].split('\x1F')
             for var_index in range(len(var_names)):
                 item_data[item_index][var_names[var_index]] = line_data[var_index].strip()
+
+        if slice_string is not None:
+            match = re.match(" \[(\d+)?:(\d+)?:(\d+)?\]", slice_string)
+            (start, stop, step) = match.group(1, 2, 3)
+            if start is not None:
+                start = int(start)
+            if stop is not None:
+                stop = int(stop)
+            if step is not None:
+                step = int(step)
+            slice = itertools.islice(item_data, start, stop, step)
+            item_data = [i for i in slice]
     else:
         item_data = ["one-single-job"]
 
