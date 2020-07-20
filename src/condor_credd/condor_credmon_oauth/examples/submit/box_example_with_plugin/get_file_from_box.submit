@@ -1,0 +1,12 @@
+executable = /bin/sleep
+transfer_executable = false
+arguments = 300
+
+# Get a Box token and use it to transfer my_input.dat from
+# the htcondor directory in your Box account.
+use_oauth_services = box
+transfer_input_files = box://htcondor/my_input.dat
+
+# Successful submission will result in my_input.dat being
+# downloaded to the job sandbox.
+queue
