@@ -71,7 +71,7 @@ num_string( int num )
 char*
 startdClaimIdFile( int slot_id )
 {
-	MyString filename;
+	std::string filename;
 
 	char* tmp;
 	tmp = param( "STARTD_CLAIM_ID_FILE" );
@@ -98,7 +98,7 @@ startdClaimIdFile( int slot_id )
 		filename += ".slot";
 		filename += std::to_string( slot_id );
 	}			
-	return strdup( filename.Value() );
+	return strdup( filename.c_str() );
 }
 
 const char*

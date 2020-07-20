@@ -2969,7 +2969,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
-	MyString gjid = "\"";
+	std::string gjid = "\"";
 	gjid += Name;             // schedd's name
 	gjid += "#";
 	gjid += std::to_string( cluster_id );
@@ -2981,7 +2981,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 		gjid += std::to_string( now );
 	}
 	gjid += "\"";
-	JobQueue->SetAttribute(key, ATTR_GLOBAL_JOB_ID, gjid.Value());
+	JobQueue->SetAttribute(key, ATTR_GLOBAL_JOB_ID, gjid.c_str());
 
 	return proc_id;
 }
@@ -3747,7 +3747,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 {
 	JOB_ID_KEY_BUF key;
 	JobQueueJob    *job = NULL;
-	MyString		new_value;
+	std::string		new_value;
 	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
 	// Only an authenticated user or the schedd itself can set an attribute.
@@ -3939,8 +3939,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// just fill in the value of Owner with the owner name
 				// of the authenticated socket.
 			if ( sock_owner && *sock_owner ) {
-				new_value.formatstr("\"%s\"",sock_owner);
-				attr_value  = new_value.Value();
+				new_value = '"';
+				new_value += sock_owner;
+				new_value += '"';
+				attr_value  = new_value.c_str();
 			} else {
 				// socket not authenticated and Owner is UNDEFINED.
 				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
@@ -4282,10 +4284,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					fvalue = ceil( fvalue/roundto )*roundto;
 
 					if( attr_type == classad::Value::INTEGER_VALUE ) {
-						new_value.formatstr("%d",(int)fvalue);
+						new_value = std::to_string((int)fvalue);
 					}
 					else {
-						new_value.formatstr("%f",fvalue);
+						new_value = std::to_string(fvalue);
 					}
 				}
 			}
@@ -4312,7 +4314,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			// change attr_value, so when we do the SetAttribute below
 			// we really set to the rounded value.
-			attr_value = new_value.Value();
+			attr_value = new_value.c_str();
 
 		} else {
 			dprintf(D_FULLDEBUG,

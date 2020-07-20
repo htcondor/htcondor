@@ -130,7 +130,7 @@ findCheckpointSig( ClassAd* ad )
 }
 
 bool
-printExitString( ClassAd* ad, int exit_reason, MyString &str )
+printExitString( ClassAd* ad, int exit_reason, std::string &str )
 {
 		// first handle a bunch of cases that don't really need any
 		// info from the ClassAd at all.

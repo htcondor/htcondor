@@ -1611,10 +1611,10 @@ VMProc::setVMPID(int vm_pid)
 	// Get initial usage of the process	
 	updateUsageOfVM();
 
-	MyString pid_string = std::to_string( (int)m_vm_pid );
+	std::string pid_string = std::to_string( (int)m_vm_pid );
 
 	// Report this PID to local startd
-	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.Value());
+	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.c_str());
 }
 
 void

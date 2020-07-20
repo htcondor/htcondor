@@ -365,11 +365,11 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	time_t now = time(NULL);
 
 	writeJobId( ad );
-	MyString msg;
+	std::string msg;
 	if( ! printExitString(ad, exit_reason, msg)	) {
 		msg += "exited in an unknown way";
 	}
-	fprintf( fp, "%s\n", msg.Value() );
+	fprintf( fp, "%s\n", msg.c_str() );
 
 	if( had_core ) {
 			// TODO!

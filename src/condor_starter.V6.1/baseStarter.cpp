@@ -3333,17 +3333,17 @@ CStarter::PublishToEnv( Env* proc_env )
 		// port regulation stuff.  assume the outgoing port range.
 	int low, high;
 	if (get_port_range (TRUE, &low, &high) == TRUE) {
-		MyString tmp_port_number;
+		std::string tmp_port_number;
 
 		tmp_port_number = std::to_string( high );
 		env_name = base.Value();
 		env_name += "HIGHPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
 
 		tmp_port_number = std::to_string( low );
 		env_name = base.Value();
 		env_name += "LOWPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
     }
 
 		// set environment variables for temporary directories

@@ -3656,8 +3656,8 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 									   CAList* limbo, CAList* unclaimed, 
 									   CAList* busy )
 {
-	MyString msg;
-	msg.formatstr( "Satisfied job %d with ", cluster );
+	std::string msg;
+	formatstr( msg, "Satisfied job %d with ", cluster );
 	bool had_one = false;
 	if( idle && idle->Length() ) {
 		msg += std::to_string( idle->Length() );
@@ -3697,7 +3697,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		had_one = true;
 	}
 	msg += " resources";
-	dprintf( D_FULLDEBUG, "%s\n", msg.Value() );
+	dprintf( D_FULLDEBUG, "%s\n", msg.c_str() );
 
 	if( unclaimed && unclaimed->Length() ) {
 		dprintf( D_FULLDEBUG, "Generating %d resource requests for job %d\n", 

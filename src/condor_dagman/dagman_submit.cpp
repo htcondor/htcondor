@@ -251,16 +251,16 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// append a line adding the parent DAGMan's cluster ID to the job ad
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	MyString dagJobId = MyString( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
+	std::string dagJobId = std::string( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
 				std::to_string( dm.DAGManJobId._cluster );
-	args.AppendArg( dagJobId.Value() );
+	args.AppendArg( dagJobId.c_str() );
 
 		// now we append a line setting the same thing as a submit-file macro
 		// (this is necessary so the user can reference it in the priority)
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	MyString dagJobIdMacro = MyString( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
+	std::string dagJobIdMacro = std::string( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
 				std::to_string( dm.DAGManJobId._cluster );
-	args.AppendArg( dagJobIdMacro.Value() );
+	args.AppendArg( dagJobIdMacro.c_str() );
 
 		// Pass the batch name to lower levels.
 	if ( batchName != "" ) {
@@ -300,9 +300,9 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Append the priority, if we have one.
 	if ( priority != 0 ) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		MyString prioStr = "priority=";
+		std::string prioStr = "priority=";
 		prioStr += std::to_string( priority );
-		args.AppendArg( prioStr.Value() );
+		args.AppendArg( prioStr.c_str() );
 	}
 
 
@@ -339,8 +339,8 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			// we can't do this in Job::ResolveVarsInterpolations()
 			// because that's only called at parse time.
 		MyString value = nodeVar._value;
-		MyString retryStr = std::to_string( retry );
-		value.replaceString( "$(RETRY)", retryStr.Value() );
+		std::string retryStr = std::to_string( retry );
+		value.replaceString( "$(RETRY)", retryStr.c_str() );
 		MyString varStr(nodeVar._name);
 		varStr += " = ";
 		varStr += value;
@@ -352,22 +352,22 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Set the special DAG_STATUS variable (mainly for use by
 		// "final" nodes).
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	MyString var = "DAG_STATUS = ";
+	std::string var = "DAG_STATUS = ";
 	var += std::to_string( (int)dm.dag->_dagStatus );
-	args.AppendArg( var.Value() );
+	args.AppendArg( var.c_str() );
 
 		// Set the special FAILED_COUNT variable (mainly for use by
 		// "final" nodes).
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	var = "FAILED_COUNT = ";
 	var += std::to_string( dm.dag->NumNodesFailed() );
-	args.AppendArg( var.Value() );
+	args.AppendArg( var.c_str() );
 
 	if( hold_claim ){
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
+		std::string holdit = std::string("+") + ATTR_JOB_KEEP_CLAIM_IDLE + " = "
 			+ std::to_string( dm._claim_hold_time );
-		args.AppendArg( holdit.Value() );	
+		args.AppendArg( holdit.c_str() );
 	}
 	
 	if (dm._submitDagDeepOpts.suppress_notification) {

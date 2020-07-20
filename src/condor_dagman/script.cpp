@@ -86,7 +86,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
 
-		MyString arg;
+		std::string arg;
 
 		if ( !strcasecmp( token, "$JOB" ) ) {
 			arg += _node->GetJobName();
@@ -143,7 +143,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 			arg += token;
 		}
 
-		args.AppendArg(arg.Value());
+		args.AppendArg(arg.c_str());
     }
 
 	_pid = daemonCore->Create_Process( cmd, args,

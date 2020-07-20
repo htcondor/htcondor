@@ -73,7 +73,7 @@ public:
 		}
 		if(qmgr) { DisconnectQ( qmgr, false /* don't commit */); }
 
-		MyString msg;
+		std::string msg;
 		msg = "ERROR ";
 		if(names.Length()) {
 			msg += "(";
@@ -92,15 +92,15 @@ public:
 		}
 		va_list args;
 		va_start(args,fmt);
-		msg.vformatstr_cat(fmt,args);
+		vformatstr_cat(msg,fmt,args);
 		va_end(args);
 
 
 		if( save_error_msg ) {
-			*save_error_msg = msg.Value();
+			*save_error_msg = msg.c_str();
 		}
 		else {
-			dprintf(D_ALWAYS, "%s", msg.Value());
+			dprintf(D_ALWAYS, "%s", msg.c_str());
 		}
 	}
 private:
