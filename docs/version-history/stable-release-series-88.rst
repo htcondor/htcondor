@@ -52,7 +52,7 @@ Bugs Fixed:
   ``nfs-client.target``.
   :ticket:`7638`
 
-- Increased ``TasksMax`` and ``LimitNOFILE`` to ``1000000`` in HTCondor's
+- Increased ``TasksMax`` to ``4194303`` in HTCondor's
   systemd unit file so more than 32k shadows can run on a submit node.
   :ticket:`7650`
 
