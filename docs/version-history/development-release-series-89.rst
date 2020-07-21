@@ -13,6 +13,10 @@ Release Notes:
 
 .. HTCondor version 8.8.9 released on Month Date, 2020.
 
+-  ``condor_q`` no longer prints misleading message about the matchmaker
+   when asked to analyze a job.
+   :ticket:`5834`
+
 New Features:
 
 -  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
