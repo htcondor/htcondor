@@ -23,6 +23,9 @@ New Features:
 
 Bugs Fixed:
 
+- The shared port daemon no longer blocks during socket hand-off.
+  :ticket:`7502`
+
 - The ``DiskUsage`` attribute should once again reflect the job's peak disk
   usage, rather than its current or terminal usage.
   :ticket:`7207`
