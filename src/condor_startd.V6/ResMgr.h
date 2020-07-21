@@ -338,6 +338,7 @@ public:
 	void checkForDrainCompletion();
 	int getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
+	void setLastDrainStopTime() { last_drain_stop_time = time(NULL); }
 
 private:
 	static void token_request_callback(bool success, void *miscdata);
@@ -421,6 +422,7 @@ private:
 	bool resume_on_completion_of_draining;
 	int draining_id;
 	time_t last_drain_start_time;
+	time_t last_drain_stop_time;
 	int expected_graceful_draining_completion;
 	int expected_quick_draining_completion;
 	int expected_graceful_draining_badput;

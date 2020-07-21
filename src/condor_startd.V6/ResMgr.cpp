@@ -54,6 +54,7 @@ ResMgr::ResMgr() :
 	resume_on_completion_of_draining = false;
 	draining_id = 0;
 	last_drain_start_time = 0;
+	last_drain_stop_time = 0;
 	expected_graceful_draining_completion = 0;
 	expected_quick_draining_completion = 0;
 	expected_graceful_draining_badput = 0;
@@ -2606,6 +2607,7 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		ad.InsertAttr( ATTR_DRAINING, true );
 		ad.InsertAttr( ATTR_DRAINING_REQUEST_ID, new_request_id );
 		ad.InsertAttr( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
+		ad.InsertAttr( ATTR_LAST_DRAIN_STOP_TIME, last_drain_stop_time );
 	}
 
 	if( how_fast <= DRAIN_GRACEFUL ) {
@@ -2667,6 +2669,11 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 	}
 
 	draining = false;
+	// If we want to record when a non-resuming drain actually finished, we
+	// should only call this here if we've started draining since the last
+	// time we stopped.
+	// if( last_drain_start_time > last_drain_stop_time ) { setLastDrainStopTime(); }
+	setLastDrainStopTime();
 
 	walk(&Resource::enable);
 	update_all();
@@ -2784,6 +2791,9 @@ ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 	}
 	if( last_drain_start_time != 0 ) {
 		cap->Assign( ATTR_LAST_DRAIN_START_TIME, (int)last_drain_start_time );
+	}
+	if( last_drain_stop_time != 0 ) {
+	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, (int)last_drain_stop_time );
 	}
 }
 
