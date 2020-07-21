@@ -23,12 +23,12 @@
 
 int main( ) {
 
-	ClassAdCollectionServer server;
-	string filename = "serverlog";
+	classad::ClassAdCollectionServer server;
+	std::string filename = "serverlog";
 	server.InitializeFromLog( filename, "", "" );
 
-	ClassAdParser parser;
-	ClassAdUnParser unparser;
+	classad::ClassAdParser parser;
+	classad::ClassAdUnParser unparser;
 	ClassAdAnalyzer analyzer;
 		/*
 		  ClassAd *classad_a;
@@ -37,16 +37,16 @@ int main( ) {
 		  int viewc=1;
 		*/
 	ClassAd* one_cla;
-	string machine( "[ Type = \"Machine\"; Disk = 333333; Arch =
+	std::string machine( "[ Type = \"Machine\"; Disk = 333333; Arch =
 \"SUN\"; OpSys = \"solaris\";Memory = 22222;]" );
 
 	one_cla = parser.ParseClassAd( machine,true );
-	string mkey( "m1" );
+	std::string mkey( "m1" );
 	if ( !server.AddClassAd( mkey, one_cla ) ) {
 		printf( "AddClassAd failed!\n" );
 		exit( 1 );
 	}
-	string job( "[ Type = \"job\"; owner = \"zs\"; requirements = other.Type
+	std::string job( "[ Type = \"job\"; owner = \"zs\"; requirements = other.Type
 == \"Machine\" && Arch == \"INTEL\" && OpSys == \"LINUX\" && Disk >= 100000 &&
 other.Memory >= 10000; ]" );
 	string buffer;
@@ -65,4 +65,4 @@ other.Memory >= 10000; ]" );
 
 	cout << "end show " << endl;
 
-}
+};

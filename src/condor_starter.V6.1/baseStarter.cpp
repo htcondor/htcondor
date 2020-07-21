@@ -3333,17 +3333,17 @@ CStarter::PublishToEnv( Env* proc_env )
 		// port regulation stuff.  assume the outgoing port range.
 	int low, high;
 	if (get_port_range (TRUE, &low, &high) == TRUE) {
-		MyString tmp_port_number;
+		std::string tmp_port_number;
 
-		tmp_port_number = IntToStr( high );
+		tmp_port_number = std::to_string( high );
 		env_name = base.Value();
 		env_name += "HIGHPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
 
-		tmp_port_number = IntToStr( low );
+		tmp_port_number = std::to_string( low );
 		env_name = base.Value();
 		env_name += "LOWPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
     }
 
 		// set environment variables for temporary directories
@@ -3378,7 +3378,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		while ((var = cpu_vars_list.next())) {
 			proc_env->GetEnv(var, jobNumThreads);
 			if (jobNumThreads.Length() == 0) {
-				proc_env->SetEnv(var, IntToStr(cpus));
+				proc_env->SetEnv(var, std::to_string(cpus));
 			}
 		}
 	}
@@ -3739,7 +3739,7 @@ CStarter::removeTempExecuteDir( void )
 	}
 
 	MyString dir_name = "dir_";
-	dir_name += IntToStr( daemonCore->getpid() );
+	dir_name += std::to_string( daemonCore->getpid() );
 
 #if defined(LINUX)
 	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&

@@ -1507,7 +1507,7 @@ struct Schedd {
         StringList ids;
         std::string constraint, reason_str, reason_code;
         bool use_ids = false;
-        if (PyList_Check(job_spec.ptr())) {
+        if (PyList_Check(job_spec.ptr()) && !(PyBytes_Check(job_spec.ptr()) || PyUnicode_Check(job_spec.ptr()))) {
             int id_len = py_len(job_spec);
             for (int i=0; i<id_len; i++)
             {

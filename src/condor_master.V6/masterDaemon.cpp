@@ -1280,8 +1280,8 @@ daemon::HardKill()
 void
 daemon::Exited( int status )
 {
-	MyString msg;
-	msg.formatstr( "The %s (pid %d) ", name_in_config_file, pid );
+	std::string msg;
+	formatstr( msg, "The %s (pid %d) ", name_in_config_file, pid );
 	bool had_failure = true;
 	if (daemonCore->Was_Not_Responding(pid)) {
 		msg += "was killed because it was no longer responding";
@@ -1292,7 +1292,7 @@ daemon::Exited( int status )
 	}
 	else {
 		msg += "exited with status ";
-		msg += IntToStr( WEXITSTATUS(status) );
+		msg += std::to_string( WEXITSTATUS(status) );
 		if( WEXITSTATUS(status) == DAEMON_NO_RESTART ) {
 			had_failure = false;
 			msg += " (daemon will not restart automatically)";
@@ -1310,7 +1310,7 @@ daemon::Exited( int status )
 	if( had_failure ) {
 		d_flag |= D_FAILURE;
 	}
-	dprintf(d_flag, "%s\n", msg.Value());
+	dprintf(d_flag, "%s\n", msg.c_str());
 
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {

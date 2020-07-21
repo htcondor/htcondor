@@ -1220,10 +1220,10 @@ public:
    static const int PubDefault = PubValue;
    void AppendToString(std::string & str) const {
       if (this->cLevels > 0) {
-         str += IntToStr( this->data[0] );
+         str += std::to_string( this->data[0] );
          for (int ix = 1; ix <= this->cLevels; ++ix) {
             str += ", ";
-            str += IntToStr( this->data[ix] );
+            str += std::to_string( this->data[ix] );
             }
          }
       }
