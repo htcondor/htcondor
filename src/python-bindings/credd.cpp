@@ -19,6 +19,7 @@
 
 #include "old_boost.h"
 #include "module_lock.h"
+#include "daemon_location.h"
 #include "classad_wrapper.h"
 #include "dc_credd.h"
 #include "store_cred.h"
@@ -79,13 +80,17 @@ struct Credd
 
 	Credd() {}
 
-	Credd(boost::python::object ad_obj)
+	Credd(boost::python::object loc)
 	{
-		ClassAdWrapper ad = boost::python::extract<ClassAdWrapper>(ad_obj);
-		if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
-		{
-			THROW_EX(ValueError, "No contact string in ClassAd");
+		int rv = construct_for_location(loc, DT_CREDD, m_addr, m_version);
+		if (rv < 0) {
+			if (rv == -2) { boost::python::throw_error_already_set(); }
+			THROW_EX(RuntimeError, "Unknown type");
 		}
+	}
+
+	boost::python::object location() const {
+		return make_daemon_location(DT_CREDD, m_addr, m_version);
 	}
 
 	// this is the same as the credd's store_cred_failed function,
@@ -676,6 +681,7 @@ struct Credd
 private:
 
     std::string m_addr;
+    std::string m_version;
 };
 
 enum CredTypes {
@@ -715,12 +721,17 @@ export_credd()
             )C0ND0R",
 		boost::python::init<boost::python::object>(
 			R"C0ND0R(
-            :param ad: A ClassAd describing the Credd, Schedd or Master location.
+            :param location_ad: A ClassAd or DaemonLocation describing the Credd, Schedd or Master location.
                 If omitted, the local schedd is assumed.
-            :type ad: :class:`~classad.ClassAd`
+            :type location_ad: :class:`~classad.ClassAd` or :class:`DaemonLocation`
             )C0ND0R",
 			(boost::python::arg("self"), boost::python::arg("ad") = boost::python::object())))
 		.def(boost::python::init<>(boost::python::args("self")))
+        .add_property("location", &Credd::location,
+            R"C0ND0R(
+            The Credd to query or send commands to
+            :rtype: location :class:`DaemonLocation`
+            )C0ND0R")
 
 		.def("add_password", &Credd::add_password,
 			R"C0ND0R(
