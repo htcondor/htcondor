@@ -138,7 +138,7 @@ CredDaemon::reconfig()
 }
 
 void
-CredDaemon::sweep_timer_handler( void )
+CredDaemon::sweep_timer_handler( void ) const
 {
 	dprintf(D_FULLDEBUG, "CREDD: calling and resetting sweep_timer_handler()\n");
 

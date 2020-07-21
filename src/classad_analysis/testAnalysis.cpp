@@ -127,20 +127,20 @@ int main ( int argc, char *argv[] )
 			numOffers = atoi( argv[5] );
 			if( numOffers <= 0 ) {
 				std::cerr << argv[0] << ": bad value for number of offers: "
-					 << numOffers << endl;
+					 << numOffers << std::endl;
 				exit( 1 );
 			}
 			numUniqueOfferReqs = atoi( argv[6] );
 			if( numUniqueOfferReqs <= 0 || numUniqueOfferReqs > numOffers ) {
-				cerr << argv[0] << ": bad value for number of unique offer requirements: "
-					 << numUniqueOfferReqs << endl;
+				std::cerr << argv[0] << ": bad value for number of unique offer requirements: "
+					 << numUniqueOfferReqs << std::endl;
 				exit( 1 );
 			}
 			if ( !generateClassAdList( numOffers, offerReqLen, 
 									   numUniqueOfferReqs, offerList ) ) {
-				cerr << argv[0] << ": error in generateClassAdList( "
+				std::cerr << argv[0] << ": error in generateClassAdList( "
 					 << numOffers << ", " << offerReqLen << ", "
-					 << numUniqueOfferReqs << ", offerList )" << endl;
+					 << numUniqueOfferReqs << ", offerList )" << std::endl;
 				exit( 1 );
 			}
 
@@ -153,9 +153,9 @@ int main ( int argc, char *argv[] )
 				analyzer.AnalyzeJobReqToBuffer( toOldClassAd( request ), 
 												offerList, buffer );
 				gettimeofday( tvEnd, tz );
-				cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
+				std::cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
 								 + ( tvEnd->tv_usec - tvStart->tv_usec )/10000)
-						  / 100 ) << endl;
+						  / 100 ) << std::endl;
 //  				cout << buffer;
 				return 0;
 			}
@@ -168,10 +168,10 @@ int main ( int argc, char *argv[] )
 				analyzer.AnalyzeJobAttrsToBuffer( toOldClassAd( request ), 
 												  offerList, buffer );
 				gettimeofday( tvEnd, tz );
-				cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
+				std::cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
 								 + ( tvEnd->tv_usec - tvStart->tv_usec )/10000)
 								 
-						  / 100 ) << endl;
+						  / 100 ) << std::endl;
 //  				cout << buffer;
 				return 0;				
 			}
@@ -197,7 +197,7 @@ generateAttributes( )
 	if( numAttrs <= 0 ) {
 		return false;
 	}
-	attrs = new string[numAttrs];
+	attrs = new std::string[numAttrs];
 	char tempAttr[32];
 	for( int i = 0; i < numAttrs; i++ ){
 		sprintf( tempAttr, "attr%i", i );
@@ -233,8 +233,8 @@ bool generateClassAd( int reqLen, classad::ClassAd *&ad )
 		return false;
 	}
 	classad::ClassAdParser parser;
-	string adString = "";
-	string reqString = "";
+	std::string adString = "";
+	std::string reqString = "";
 	char tempString[64];
 
 	adString += '[';
@@ -260,7 +260,7 @@ bool generateClassAd( int reqLen, classad::ClassAd *&ad )
 
 	adString += ']';
 	if( !( ad = parser.ParseClassAd( adString ) ) ) {
-		cerr << "ad = " << adString;
+		std::cerr << "ad = " << adString;
 		return false;
 	}
 	else {
