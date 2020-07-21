@@ -43,29 +43,29 @@ int main (int argc, char *argv[])
 	classad::ClassAd *jobAd, *machineAd;
 	classad::ClassAdParser parser;
 	ClassAdAnalyzer analyzer;
-	string buffer;
-	string start = ATTR_START;
+	std::string buffer;
+	std::string start = ATTR_START;
 
 		// Get the job ad
 	if( !( jobAd = parser.ParseClassAd( jobString ) ) ) {
-		cerr << "error parsing job ad\n" << endl;
+		std::cerr << "error parsing job ad\n" << std::endl;
 		exit(1);
 	}
 
 		// Get the machine ad
 	if( !( machineAd = parser.ParseClassAd( machineString ) ) ) {
-		cerr << "error parsing machine ad\n" << endl;
+		std::cerr << "error parsing machine ad\n" << std::endl;
 		exit(1);
 	}
 
 		// Do analysis
 	if( !( analyzer.AnalyzeExprToBuffer( machineAd, jobAd, start,
 										 buffer ) ) ) {
-		cerr << "error analyzing expression\n" << endl;
+		std::cerr << "error analyzing expression\n" << std::endl;
 		exit(1);
 	}
 
-	cout << buffer;
+	std::cout << buffer;
 }
 
 void usage( char *myName ) {
@@ -76,12 +76,12 @@ int readFileIntoString(char* fileName, char* resultString, int size){
   // this is a retarded way to read the file, but it works.
   int fd = safe_open_wrapper_follow(fileName, O_RDONLY);
   if(fd < 0){
-    cerr << "couldn't open" << fileName << endl;
+    std::cerr << "couldn't open" << fileName << std::endl;
     exit(1);
   }
   int nread = read(fd, resultString, size);
   if(nread < 0){
-    cerr << "couldn't read" << fileName << endl;
+    std::cerr << "couldn't read" << fileName << std::endl;
     exit(1);
   }    
   close(fd);

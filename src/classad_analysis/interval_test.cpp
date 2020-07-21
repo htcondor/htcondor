@@ -22,7 +22,7 @@
 #include "analysis.h"
 
 int main( ) {
-	string buffer = "";
+	std::string buffer = "";
 
 		// i1 = [7,23)
 	Interval *i1 = new Interval;
@@ -31,9 +31,9 @@ int main( ) {
 	i1->upper.SetIntegerValue( 23 );
 	i1->openUpper = true;
 	if( !IntervalToString( i1, buffer ) ) {
-		cerr << "IntervalToString failed on i1" << endl;
+		std::cerr << "IntervalToString failed on i1" << std::endl;
 	}
-	cout << "i1 = " << buffer << endl;
+	std::cout << "i1 = " << buffer << std::endl;
 	buffer = "";
 
 		// i2 = [12, 23]
@@ -43,34 +43,34 @@ int main( ) {
 	i2->upper.SetIntegerValue( 23 );
 	i2->openUpper = false;
 	if( !IntervalToString( i2, buffer ) ) {
-		cerr << "IntervalToString failed on i2" << endl;
+		std::cerr << "IntervalToString failed on i2" << std::endl;
 	}
-	cout << "i2 = " << buffer << endl;
+	std::cout << "i2 = " << buffer << std::endl;
 	buffer = "";
 
 		// i3 = [foo]
 	Interval *i3 = new Interval;
 	i3->lower.SetStringValue( "foo" );
 	if( !IntervalToString( i3, buffer ) ) {
-		cerr << "IntervalToString failed on i3" << endl;
+		std::cerr << "IntervalToString failed on i3" << std::endl;
 	}
-	cout << "i3 = " << buffer << endl;
+	std::cout << "i3 = " << buffer << std::endl;
 	buffer = "";
 
 		// i4 = [bar]
 	Interval *i4 = new Interval;
 	i4->lower.SetStringValue( "bar" );
 	if( !IntervalToString( i4, buffer ) ) {
-		cerr << "IntervalToString failed on i4" << endl;
+		std::cerr << "IntervalToString failed on i4" << std::endl;
 	}
-	cout << "i4 = " << buffer << endl;
+	std::cout << "i4 = " << buffer << std::endl;
 	buffer = "";
 
 		// i5 = [zap]
 	Interval *i5 = new Interval;
 	i5->lower.SetStringValue( "zap" );
 	if( !IntervalToString( i5, buffer ) ) {
-		cerr << "IntervalToString failed on i5" << endl;
+		std::cerr << "IntervalToString failed on i5" << std::endl;
 	}
 	cout << "i5 = " << buffer << endl;
 	buffer = "";

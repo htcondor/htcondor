@@ -55,7 +55,7 @@ class ExtAttrNode
 	bool AtLastPath( );
 	
 
-	bool ToString( std::string& );
+	bool ToString( std::string& ) const;
 
  private:
 	int eNodeNum;
@@ -83,7 +83,7 @@ class AttrNode
 
 		// access methods
 	ExtAttrNode* GetDep( );
-	bool IsLiteral( );
+	bool IsLiteral( ) const;
 
 		// modification methods
 	bool AddDep( ExtAttrNode* );
@@ -111,8 +111,8 @@ class PortNode
 	~PortNode( );
 
 		// access methods
-	int GetAdNum( );
-	int GetPortNum( );
+	int GetAdNum( ) const;
+	int GetPortNum( ) const;
 	bool GetReqDeps( unsigned int, std::set<ExtAttrNode*>& );
 	bool GetAttrDeps( std::set<ExtAttrNode*>& );
 	classad::ClassAd* GetParentAd( );
@@ -132,7 +132,7 @@ class PortNode
 	bool AddMatchEdge( int edgeNum, PortNode* target, 
 					   std::vector<MatchPath*>& annotations );
 
-	bool ToString( std::string& );
+	bool ToString( std::string& ) const;
 
  private:
 	classad::ClassAd* parentAd;
@@ -160,7 +160,7 @@ class MatchEdge
 
 	PortNode *GetSource( );
 	PortNode *GetTarget( );
-	int GetEdgeNum( );
+	int GetEdgeNum( ) const;
 	bool HasNoAnnotations( );
 	bool SameAnnotations( std::vector<MatchPath*>& );
 
@@ -212,7 +212,7 @@ class PortGraph
 	bool Initialize( std::vector<classad::ClassAd*>& );
 	bool Saturate( );
 
-	bool ToString( std::string& );
+	bool ToString( std::string& ) const;
 
  private:
 	int nextMatchEdgeNum;
