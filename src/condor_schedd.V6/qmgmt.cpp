@@ -3640,23 +3640,27 @@ SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const cha
 	return 0;
 }
 
+// Check whether modification of a job attribute should be allowed.
+// return <0 : reject, return error to client
+// return 0 : ignore, return success to client
+// return >0 : accept, apply change and return success to client
+// TODO formalize the return type with an enum?
 int
-SetAttribute(int cluster_id, int proc_id, const char *attr_name,
-			 const char *attr_value, SetAttributeFlags_t flags)
+ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags)
 {
-	JOB_ID_KEY_BUF key;
 	JobQueueJob    *job = NULL;
-	MyString		new_value;
-	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
-	// Only an authenticated user or the schedd itself can set an attribute.
+	const char *func_name = (flags & SetAttribute_Delete) ? "DeleteAttribute" : "SetAttribute";
+
+	// Only an authenticated user or the schedd itself can modify an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
 		errno = EACCES;
 		return -1;
 	}
 
-	if ( cluster_id == 0 && proc_id == 0 ) {
-		dprintf(D_ALWAYS, "SetAttribute attempt to edit special ad 0.0\n");
+	// job id 0.0 is special and cannot normally be modified.
+	if ( key.cluster == 0 && key.proc == 0 ) {
+		dprintf(D_ALWAYS, "%s attempt to edit special ad 0.0\n", func_name);
 		errno = EACCES;
 		return -1;
 	}
@@ -3664,21 +3668,24 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// If someone is trying to do something funny with an invalid
 	// attribute name, bail out early
 	if (!IsValidAttrName(attr_name)) {
-		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
-			attr_name ? attr_name : "(null)", cluster_id, proc_id);
+		dprintf(D_ALWAYS, "%s got invalid attribute named %s for job %d.%d\n",
+			func_name, attr_name ? attr_name : "(null)", key.cluster, key.proc);
 		errno = EINVAL;
 		return -1;
 	}
 
 		// If someone is trying to do something funny with an invalid
-		// attribute value, bail earlyxs
-	if (!IsValidAttrValue(attr_value)) {
-		dprintf(D_ALWAYS,
-				"SetAttribute received invalid attribute value '%s' for "
+		// attribute value, bail early
+		// This check doesn't apply to DeleteAttribute.
+	if ( !(flags & SetAttribute_Delete) ) {
+		if (!IsValidAttrValue(attr_value)) {
+			dprintf(D_ALWAYS,
+				"%s received invalid attribute value '%s' for "
 				"job %d.%d, ignoring\n",
-				attr_value ? attr_value : "(null)", cluster_id, proc_id);
-		errno = EINVAL;
-		return -1;
+				func_name, attr_value ? attr_value : "(null)", key.cluster, key.proc);
+			errno = EINVAL;
+			return -1;
+		}
 	}
 
 	// Ensure user is not changing a secure attribute.  Only schedd is
@@ -3693,8 +3700,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if (vers && vers->built_since_version( 8, 5, 8 ) ) {
 			// new versions should know better!  fail!
 			dprintf(D_ALWAYS,
-				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Failing!\n",
-				attr_name, cluster_id, proc_id);
+				"%s attempt to edit secure attribute %s in job %d.%d. Failing!\n",
+				func_name, attr_name, key.cluster, key.proc);
 			errno = EACCES;
 			return -1;
 		} else {
@@ -3703,13 +3710,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// propagate the error back because we don't want old condor_submits to not
 			// be able to submit jobs.
 			dprintf(D_ALWAYS,
-				"SetAttribute attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
-				attr_name, cluster_id, proc_id);
+				"%s attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
+				func_name, attr_name, key.cluster, key.proc);
 			return 0;
 		}
 	}
-
-	IdToKey(cluster_id,proc_id,key);
 
 	if (JobQueue->Lookup(key, job)) {
 		// If we made it here, the user is adding or editing attrbiutes
@@ -3722,8 +3727,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				owner = "NULL";
 			}
 			dprintf(D_ALWAYS,
-					"OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
-					owner, cluster_id, proc_id);
+					"OwnerCheck(%s) failed in %s for job %d.%d\n",
+					owner, func_name, key.cluster, key.proc);
 			errno = EACCES;
 			return -1;
 		}
@@ -3740,8 +3745,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		{
 
 			dprintf(D_ALWAYS,
-					"SetAttribute attempt to edit immutable attribute %s in job %d.%d\n",
-					attr_name, cluster_id, proc_id);
+					"%s attempt to edit immutable attribute %s in job %d.%d\n",
+					func_name, attr_name, key.cluster, key.proc);
 			errno = EACCES;
 			return -1;
 		}
@@ -3759,39 +3764,70 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			 protected_attrs.find(attr_name) != protected_attrs.end() )
 		{
 			dprintf(D_ALWAYS,
-					"SetAttribute of protected attribute denied, RealOwner=%s EffectiveOwner=%s AllowPAttrchange=%s Attr=%s in job %d.%d\n",
+					"%s of protected attribute denied, RealOwner=%s EffectiveOwner=%s AllowPAttrchange=%s Attr=%s in job %d.%d\n",
+					func_name,
 					Q_SOCK->getRealOwner() ? Q_SOCK->getRealOwner() : "(null)",
 					Q_SOCK->getOwner() ? Q_SOCK->getOwner() : "(null)",
 					Q_SOCK->getAllowProtectedAttrChanges() ? "true" : "false",
-					attr_name, cluster_id, proc_id);
+					attr_name, key.cluster, key.proc);
 			errno = EACCES;
 			return -1;
 		}
-	/*
-	}
-	else if ( ! JobQueue->InTransaction()) {
-		dprintf(D_ALWAYS,"Inserting new attribute %s into non-existent job %d.%d outside of a transaction\n", attr_name, cluster_id, proc_id);
-		errno = ENOENT;
-		return -1;
-	*/
 	} else if (flags & SetAttribute_SubmitTransform) {
 		// submit transforms come from inside the schedd and have no restrictions
 		// on which cluster/proc may be edited (the transform itself guarantees that only
 		// jobs in the submit transaction will be edited)
-	} else if (Q_SOCK != NULL || (flags&NONDURABLE)) {
+	} else if (Q_SOCK != NULL) {
 		// If we made it here, the user (i.e. not the schedd itself)
-		// is adding attributes to an ad that has not been committed yet
+		// is modifying attributes in an ad that has not been committed yet
 		// (we know this because it cannot be found in the JobQueue above).
-		// Restrict the user to only adding attributes to the current cluster
+		// Restrict the user to only modifying attributes in the current cluster
 		// returned by NewCluster, and also restrict the user to procs that have been
 		// returned by NewProc.
-		if ((cluster_id != active_cluster_num) || (proc_id >= next_proc_num)) {
-			dprintf(D_ALWAYS,"Inserting new attribute %s into non-active cluster cid=%d acid=%d\n", 
-					attr_name, cluster_id,active_cluster_num);
+		if ((key.cluster != active_cluster_num) || (key.proc >= next_proc_num)) {
+			dprintf(D_ALWAYS,"%s modifying attribute %s in non-active cluster cid=%d acid=%d\n", 
+					func_name, attr_name, key.cluster, active_cluster_num);
 			errno = ENOENT;
 			return -1;
 		}
+
+		// TODO Do we need to do this check for internal calls?
+		// If deleting an attribute in an uncommitted ad, check if the
+		// attribute is set in the transaction. If not, return failure.
+		if ( flags & SetAttribute_Delete ) {
+			char *val = NULL;
+			if ( ! JobQueue->LookupInTransaction(key, attr_name, val) ) {
+				errno = ENOENT;
+				return -1;
+			}
+			// If we found it in the transaction, we need to free val
+			// so we don't leak memory.  We don't use the value, we just
+			// wanted to make sure we could find the attribute so we know
+			// to return failure if needed.
+			free( val );
+		}
 	}
+
+	return 1;
+}
+
+int
+SetAttribute(int cluster_id, int proc_id, const char *attr_name,
+			 const char *attr_value, SetAttributeFlags_t flags)
+{
+	JOB_ID_KEY_BUF key;
+	JobQueueJob    *job = NULL;
+	MyString		new_value;
+	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
+
+	IdToKey(cluster_id,proc_id,key);
+
+	int rc = ModifyAttrCheck(key, attr_name, attr_value, flags);
+	if ( rc <= 0 ) {
+		return rc;
+	}
+
+	JobQueue->Lookup(key, job);
 
 	int attr_category;
 	int attr_id = IsSpecialSetAttribute(attr_name, &attr_category);
@@ -5604,24 +5640,9 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
 
-	if (!JobQueue->LookupClassAd(key, ad)) {
-		if( ! JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-			errno = ENOENT;
-			return -1;
-		}
-	}
-
-		// If we found it in the transaction, we need to free attr_val
-		// so we don't leak memory.  We don't use the value, we just
-		// wanted to make sure we could find the attribute so we know
-		// to return failure if needed.
-	if( attr_val ) {
-		free( attr_val );
-	}
-	
-	if (Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
-		errno = EACCES;
-		return -1;
+	int rc = ModifyAttrCheck(key, attr_name, NULL, SetAttribute_Delete);
+	if ( rc <= 0 ) {
+		return rc;
 	}
 
 	JobQueue->DeleteAttribute(key, attr_name);

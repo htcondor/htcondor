@@ -343,6 +343,7 @@ ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan)
 typedef unsigned int SetAttributeFlags_t;
 const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
 const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
+const SetAttributeFlags_t SetAttribute_Delete              = (1 << 18);
 
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
