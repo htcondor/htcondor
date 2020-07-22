@@ -38,32 +38,32 @@ int main( ) {
 
 	ExprTree *condTree = NULL;
 	if( !( condTree =  parser.ParseExpression( condString ) ) ) {
-		std::cerr << "error parsing expression" << endl;
+		std::cerr << "error parsing expression" << std::endl;
 	}
 
 	Condition *cond = new Condition( );
 	if( !( BoolExpr::ExprToCondition( condTree, cond ) ) ) {
-		cerr << "error with ExprToCondition" << endl;
+		std::cerr << "error with ExprToCondition" << std::endl;
 	}
 
 	cond->ToString( buffer );
-	cout << "cond.ToString( ) = " << buffer << endl;
+	std::cout << "cond.ToString( ) = " << buffer << std::endl;
 	buffer = "";
-	cout << endl;
+	std::cout << std::endl;
 
-	string attr;
-	Operation::OpKind op1 = Operation::__NO_OP__;
-	Operation::OpKind op2 = Operation::__NO_OP__;
-	Value val1, val2;
-	Value::ValueType type;
+	std::string attr;
+	classad::Operation::OpKind op1 = classad::Operation::__NO_OP__;
+	classad::Operation::OpKind op2 = classad::Operation::__NO_OP__;
+	classad::Value val1, val2;
+	classad::Value::ValueType type;
 
 	cond->GetAttr( attr );
-	cout << "attr = " << attr << endl;
+	std::cout << "attr = " << attr << std::endl;
 
 	cond->GetOp( op1 );
 	GetOpName( op1, buffer );
-	cout << "op1 = " << buffer << endl;
-	cout << "op1 is op number " << (int)op1 << endl;
+	std::cout << "op1 = " << buffer << std::endl;
+	std::cout << "op1 is op number " << (int)op1 << endl;
 	buffer = "";
 
 	cond->GetOp2( op2 );
