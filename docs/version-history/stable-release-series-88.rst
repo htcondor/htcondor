@@ -23,6 +23,13 @@ New Features:
 
 Bugs Fixed:
 
+- The shared port daemon no longer blocks during socket hand-off.
+  :ticket:`7502`
+
+- The ``DiskUsage`` attribute should once again reflect the job's peak disk
+  usage, rather than its current or terminal usage.
+  :ticket:`7207`
+
 - HTCondor daemons used to discard the private network name and address of
   daemons they were attempting to contact via the contactee's public
   address; however, if the contact had been pre-authorized, this would
@@ -32,7 +39,7 @@ Bugs Fixed:
   places where they had not previously.
   :ticket:`7582`
 
-- Allow `SINGULARITY_EXTRA_ARGUMENTS` to override the default -C option
+- Allow ``SINGULARITY_EXTRA_ARGUMENTS`` to override the default -C option
   condor passes to singularity exec to allow administrators to tell
   condor not to contain certain resoures.
   :ticket:`7719`
@@ -45,9 +52,13 @@ Bugs Fixed:
   ``nfs-client.target``.
   :ticket:`7638`
 
-- Increased ``TasksMax`` and ``LimitNOFILE`` to ``infinity`` in HTCondor's
+- Increased ``TasksMax`` to ``4194303`` in HTCondor's
   systemd unit file so more than 32k shadows can run on a submit node.
   :ticket:`7650`
+
+- For grid universe jobs of type ``batch``, stop using characters ``@``
+  and ``#`` in temporary directory names.
+  :ticket:`7730`
 
 Version 8.8.9
 -------------

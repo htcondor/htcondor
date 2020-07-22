@@ -20,8 +20,9 @@ TimeoutStopSec=150seconds
 StandardOutput=syslog
 NotifyAccess=main
 KillSignal=SIGQUIT
-LimitNOFILE=infinity
-TasksMax=infinity
+# Matches values in Linux Kernel Tuning script
+LimitNOFILE=32768
+TasksMax=4194303
 
 [Install]
 WantedBy=multi-user.target

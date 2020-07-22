@@ -3169,6 +3169,12 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueueKeyBuf		key;
 	JobQueueJob			*ad = NULL;
 
+	// cannot destroy the header ad 0.0
+	if ( cluster_id == 0 && proc_id == 0 ) {
+		errno = EINVAL;
+		return DESTROYPROC_ERROR;
+	}
+
 	IdToKey(cluster_id,proc_id,key);
 	if (!JobQueue->Lookup(key, ad)) {
 		errno = ENOENT;
@@ -3753,6 +3759,12 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
 		if (err) err->push("QMGMT", EACCES, "Authentication is required to set attributes");
+		errno = EACCES;
+		return -1;
+	}
+
+	if ( cluster_id == 0 && proc_id == 0 ) {
+		dprintf(D_ALWAYS, "SetAttribute attempt to edit special ad 0.0\n");
 		errno = EACCES;
 		return -1;
 	}
@@ -5898,6 +5910,11 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
 	ClassAd				*ad = NULL;
 	char				*attr_val = NULL;
+
+	if ( cluster_id == 0 && proc_id == 0 ) {
+		errno = EACCES;
+		return -1;
+	}
 
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);

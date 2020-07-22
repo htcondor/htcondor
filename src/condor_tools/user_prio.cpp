@@ -1501,7 +1501,7 @@ static const struct {
    { DetailUseTime1,  16, "Usage\0Start Time" },
    { DetailUseTime2,  16, "Last\0Usage Time" },
    { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
-   { DetailRequested, 10, "Requested\0Resources" },
+   { DetailRequested, 10, "Weighted\0Requested" }
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
