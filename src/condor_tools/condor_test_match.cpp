@@ -52,10 +52,10 @@ public:
 
     bool analyze_demand(char const *jobads_fname, char const *job_constraint, char const *machineads_fname, char const *machine_constraint, char const *claimed);
 
-    unsigned int getMachinesMatched() { return m_machines_matched; }
-    unsigned int getMachinesUnmatched() { return m_machines_unmatched; }
+    unsigned int getMachinesMatched() const { return m_machines_matched; }
+    unsigned int getMachinesUnmatched() const { return m_machines_unmatched; }
 
-    float getMachinesMatchedFraction() {
+    float getMachinesMatchedFraction() const {
         if( m_machines_matched + m_machines_unmatched == 0 ) {
             return 0;
         }

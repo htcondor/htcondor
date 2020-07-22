@@ -182,7 +182,7 @@ LogRecord::Read(FILE *fp)
 }
 
 int
-LogRecord::WriteHeader(FILE *fp)
+LogRecord::WriteHeader(FILE *fp) const
 {
 	char op[20];
 	int  len = sprintf(op, "%d ", op_type);

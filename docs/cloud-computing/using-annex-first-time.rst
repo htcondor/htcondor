@@ -48,7 +48,7 @@ any expected output, so don't copy that part of each of the following
 lines. (Lines which end in a ``\`` continue on the following line; be
 sure to copy both lines. Don't copy the ``\`` itself.)
 
-::
+.. code-block:: console
 
     $ mkdir ~/condor-8.7.8; cd ~/condor-8.7.8; mkdir local
     $ tar -z -x -f ~/condor-8.7.8-*-stripped.tar.gz
@@ -65,7 +65,7 @@ make sure the basics are working. Your output will vary depending on the
 time of day, the name of your Linux machine, and its core count, but it
 should generally be pretty similar to the following.
 
-::
+.. code-block:: console
 
     $ condor_q
      Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35
@@ -93,7 +93,7 @@ You should also try to submit a job; create the following file. (We'll
 refer to the contents of the box by the emphasized filename in later
 terminals and/or files.)
 
-::
+.. code-block:: text
 
     # ~/condor-annex/sleep.submit
 
@@ -103,7 +103,7 @@ terminals and/or files.)
 
 and submit it:
 
-::
+.. code-block:: console
 
     $ condor_submit ~/condor-annex/sleep.submit
     Submitting job(s).
@@ -112,7 +112,7 @@ and submit it:
 
 After a little while:
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -132,7 +132,7 @@ basically just means it won't talk to anyone other than itself. For
 machine's public interface. In most cases, that's as simple as adding
 the following lines:
 
-::
+.. code-block:: text
 
     # ~/condor-8.7.8/local/condor_config.local
 
@@ -141,7 +141,7 @@ the following lines:
 
 Restart HTCondor to force the changes to take effect:
 
-::
+.. code-block:: console
 
     $ condor_restart
     Sent "Restart" command to local master
@@ -159,7 +159,7 @@ communications to AWS.
 
 Add the following lines:
 
-::
+.. code-block:: text
 
     # ~/condor-8.7.8/local/condor_config.local
 
@@ -177,7 +177,7 @@ Add the following lines:
 You also need to run the following command, which prompts you to enter a
 password:
 
-::
+.. code-block:: console
 
     $ condor_store_cred -c add -f `condor_config_val SEC_PASSWORD_FILE`
     Enter password:
@@ -193,7 +193,7 @@ port, then you don't have to do anything. Otherwise, you'll need to add
 a line like the following, replacing '9618' with whatever port the
 administrator opened for you.
 
-::
+.. code-block:: text
 
     # ~/condor-8.7.8/local/condor_config.local
 
@@ -204,7 +204,7 @@ Activate the New Configuration
 
 Force HTCondor to read the new configuration by restarting it:
 
-::
+.. code-block:: console
 
     $ condor_restart
 
@@ -274,7 +274,7 @@ Create those two files now; we'll tell you how to fill them in shortly.
 By convention, these files exist in your ~/.condor directory, which is
 where the -setup command will store the rest of the data it needs.
 
-::
+.. code-block:: console
 
     $ mkdir ~/.condor
     $ cd ~/.condor
@@ -323,7 +323,7 @@ keep around. These components can take quite some time to create;
 an additional dot (past the first three) when it does so, to let you
 know that everything's still working.
 
-::
+.. code-block:: console
 
     $ condor_annex -setup
     Creating configuration bucket (this takes less than a minute)....... complete.
@@ -338,7 +338,7 @@ Checking the Setup
 You can verify at this point (or any later time) that the setup
 procedure completed successfully by running the following command.
 
-::
+.. code-block:: console
 
     $ condor_annex -check-setup
     Checking for configuration bucket... OK.

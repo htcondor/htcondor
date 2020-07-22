@@ -1243,7 +1243,7 @@ housekeeper()
 }
 
 void CollectorEngine::
-cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey)
+cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) const
 {
 	ClassAd  *ad;
 	int   	 timeStamp;

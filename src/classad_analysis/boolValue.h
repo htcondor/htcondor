@@ -51,8 +51,8 @@ class BoolVector
 	bool Init( BoolVector *bv );
 	bool SetValue( int index, BoolValue bval );
 	bool GetValue( int index, BoolValue &result );
-	bool GetNumValues( int &result );
-	bool GetTotalTrue( int &result );
+	bool GetNumValues( int &result ) const;
+	bool GetTotalTrue( int &result ) const;
 	bool TrueEquals( BoolVector &, bool &result );
 	bool IsTrueSubsetOf( BoolVector &, bool &result );
 	bool ToString( std::string &buffer );
@@ -89,8 +89,8 @@ class BoolTable
 	bool Init( int numCols, int numRows );
 	bool SetValue( int col, int row, BoolValue bval );
 	bool GetValue( int col, int row, BoolValue &result );
-	bool GetNumRows( int &result );
-	bool GetNumColumns(int &result );
+	bool GetNumRows( int &result ) const;
+	bool GetNumColumns(int &result ) const;
 	bool RowTotalTrue( int row, int &result );
 	bool ColumnTotalTrue( int col, int &result );
 	bool AndOfRow( int row, BoolValue &result );

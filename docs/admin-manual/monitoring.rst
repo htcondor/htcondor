@@ -73,7 +73,7 @@ directory specified by configuration variable
 is read, and the format within each file is that of New ClassAds. Here
 is an example of a single metric definition given as a New ClassAd:
 
-::
+.. code-block:: text
 
     [
       Name   = "JobsSubmitted";

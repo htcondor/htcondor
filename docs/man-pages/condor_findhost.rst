@@ -59,7 +59,7 @@ taken out of the pool with the least disturbance of the pool.
 An administrator should set preemption requirements for the HTCondor
 pool. The expression
 
-::
+.. code-block:: text
 
     (Interactive =?= TRUE )
 
@@ -82,14 +82,14 @@ Examples
 To find and list four machines, preferring those with the highest mips
 (on Drystone benchmark) rating:
 
-::
+.. code-block:: console
 
-    condor_findhost -n 4 -r "mips"
+    $ condor_findhost -n 4 -r "mips"
 
 To find and list 24 machines, considering only those where the
 ``kflops`` attribute is not defined:
 
-::
+.. code-block:: console
 
-    condor_findhost -n 24 -c "kflops=?=undefined"
+    $ condor_findhost -n 24 -c "kflops=?=undefined"
 

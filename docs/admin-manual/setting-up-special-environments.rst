@@ -140,14 +140,14 @@ output.
 URL transfers are enabled by default in the configuration of execute
 machines. Disabling URL transfers is accomplished by setting
 
-::
+.. code-block:: text
 
     ENABLE_URL_TRANSFERS = FALSE
 
 A comma separated list giving the absolute path and name of all
 available plug-ins is specified as in the example:
 
-::
+.. code-block:: text
 
     FILETRANSFER_PLUGINS = /opt/condor/plugins/wget-plugin, \
                            /opt/condor/plugins/hdfs-plugin, \
@@ -168,7 +168,7 @@ command line argument **-classad**. In response to invocation with this
 command line argument, the plug-in must respond with an output of three
 ClassAd attributes. The first two are fixed:
 
-::
+.. code-block:: text
 
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
@@ -177,7 +177,7 @@ The third ClassAd attribute is ``SupportedMethods``. This attribute is a
 string containing a comma separated list of the protocols that the
 plug-in handles. So, for example
 
-::
+.. code-block:: text
 
     SupportedMethods = "http,ftp,file"
 
@@ -208,7 +208,7 @@ status of the plug-in.
 As an example of the transfer of a subset of output files, assume that
 the submit description file contains
 
-::
+.. code-block:: text
 
     output_destination = url://server/some/directory/
     transfer_output_files = foo, bar, qux
@@ -218,7 +218,7 @@ times. The directory delimiter (/ on Unix, and \\ on Windows) is
 appended to the destination URL, such that the three (Unix) invocations
 of the plug-in will appear similar to
 
-::
+.. code-block:: text
 
     url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
     url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
@@ -230,7 +230,7 @@ transfer type writes random bytes to a file. The plug-in that handles
 zkm transfers would respond to invocation with the **-classad** command
 line argument with:
 
-::
+.. code-block:: text
 
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
@@ -239,7 +239,7 @@ line argument with:
 And, then when a job requested that this plug-in be invoked, for the
 invented example:
 
-::
+.. code-block:: text
 
     transfer_input_files = zkm://128/r-data
 
@@ -272,7 +272,7 @@ Another option for transferring files over HTTP is for users to specify
 a list of public input files. These are specified in the submit file as
 follows:
 
-::
+.. code-block:: text
 
     public_input_files = file1,file2,file3
 
@@ -374,9 +374,9 @@ using ``$(ARCH)`` and ``$(OPSYS)``, as defined automatically by
 HTCondor. For example, for 32-bit Intel Windows 7 machines and 64-bit
 Intel Linux machines, the files ought to be named:
 
-::
+.. code-block:: console
 
-      condor_config.INTEL.WINDOWS
+      $ condor_config.INTEL.WINDOWS
       condor_config.X86_64.LINUX
 
 Then, assuming these files are in the directory defined by the ``ETC``
@@ -384,7 +384,7 @@ configuration variable, and machine-specific configuration files are in
 the same directory, named by each machine's host name,
 ``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE` becomes:
 
-::
+.. code-block:: text
 
     LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \
                         $(ETC)/$(HOSTNAME).local
@@ -395,14 +395,14 @@ link based on platform name. For example, consider a soft link named
 ``condor_config.platform`` that points to ``condor_config.@sys``. In
 this case, the files might be named:
 
-::
+.. code-block:: console
 
-      condor_config.i386_linux2
+      $ condor_config.i386_linux2
       condor_config.platform -> condor_config.@sys
 
 and the ``LOCAL_CONFIG_FILE`` configuration variable would be set to
 
-::
+.. code-block:: text
 
     LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \
                         $(ETC)/$(HOSTNAME).local
@@ -519,7 +519,7 @@ following steps need to be taken:
 The actual commands to execute depend upon the platform. The location of
 the system linker (*ld*), is as follows:
 
-::
+.. code-block:: text
 
     Operating System              Location of ld (ld-path)
     Linux                         /usr/bin
@@ -527,7 +527,7 @@ the system linker (*ld*), is as follows:
 On these platforms, issue the following commands (as root), where
 *ld-path* is replaced by the path to the system's *ld*.
 
-::
+.. code-block:: text
 
       mv /[ld-path]/ld /<ld-path>/ld.real
       cp /usr/local/condor/lib/ld /<ld-path>/ld
@@ -630,18 +630,18 @@ can write, and the file will not get in the way. The **-pidfile** and
 the process ID in a file. It will be necessary to add lines to the XDM
 configuration similar to
 
-::
+.. code-block:: console
 
-      condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
+      $ condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
 
 This will start the *condor_kbdd* as the user who is currently logged
 in and write the log to a file in the directory ``$HOME/.kbdd.log/``.
 This will also save the process ID of the daemon to ``˜/.kbdd.pid``, so
 that when the user logs out, XDM can do:
 
-::
+.. code-block:: console
 
-      condor_kbdd -k $HOME/.kbdd.pid
+      $ condor_kbdd -k $HOME/.kbdd.pid
 
 This will shut down the process recorded in file ``˜/.kbdd.pid`` and
 exit.
@@ -722,7 +722,7 @@ main *condor_collector* and the HTCondorView collector are started up
 by the same *condor_master* daemon on the same machine. In this
 example, the HTCondorView collector uses port 12345.
 
-::
+.. code-block:: text
 
       VIEW_SERVER = $(COLLECTOR)
       VIEW_SERVER_ARGS = -f -p 12345
@@ -746,7 +746,7 @@ HTCondorView server.
 
 Define the following configuration variable:
 
-::
+.. code-block:: text
 
       CONDOR_VIEW_HOST = full.hostname[:portnumber]
 
@@ -767,9 +767,9 @@ change to take effect, so it will begin forwarding updates. A query to
 the HTCondorView collector will verify that it is working. A query
 example:
 
-::
+.. code-block:: console
 
-      condor_status -pool condor.view.host[:portnumber]
+      $ condor_status -pool condor.view.host[:portnumber]
 
 A *condor_collector* may also be configured to report to multiple
 HTCondorView servers. The configuration variable ``CONDOR_VIEW_HOST``
@@ -780,7 +780,7 @@ The following demonstrates an example configuration for two HTCondorView
 servers, where both HTCondorView servers (and the *condor_collector*)
 are running on the same machine, localhost.localdomain:
 
-::
+.. code-block:: text
 
     VIEWSERV01 = $(COLLECTOR)
     VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
@@ -850,7 +850,7 @@ The configuration for the host specifies ``VMP_VM_LIST``
 all inner virtual machines running on this host. An example
 configuration on the host machine:
 
-::
+.. code-block:: text
 
     VMP_VM_LIST = vmware1.domain.com, vmware2.domain.com
 
@@ -859,7 +859,7 @@ The configuration for each separate inner virtual machine specifies
 host for the inner virtual machine. An example configuration on an inner
 virtual machine:
 
-::
+.. code-block:: text
 
     VMP_HOST_MACHINE = host.domain.com
 
@@ -881,7 +881,7 @@ inner virtual machine ought to use this syntax to avoid starting jobs
 when its host is too busy processing other items. An example
 configuration for ``START`` on an inner virtual machine:
 
-::
+.. code-block:: text
 
     START = ( (KeyboardIdle > 150 ) && ( HOST_KeyboardIdle > 150 ) \
             && ( LoadAvg <= 0.3 ) && ( HOST_TotalLoadAvg <= 0.3 ) )
@@ -935,7 +935,7 @@ Each execute machine defines the configuration variable
 identifies the dedicated scheduler it is managed by. The local
 configuration file contains a modified form of
 
-::
+.. code-block:: text
 
     DedicatedScheduler = "DedicatedScheduler@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -946,7 +946,7 @@ string "full.host.name".
 If running personal HTCondor, the name of the scheduler includes the
 user name it was started as, so the configuration appears as:
 
-::
+.. code-block:: text
 
     DedicatedScheduler = "DedicatedScheduler@username@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -961,7 +961,7 @@ requirements on a resource for it to be considered dedicated.
 Job ClassAds from the dedicated scheduler contain the attribute
 ``Scheduler``. The attribute is defined by a string of the form
 
-::
+.. code-block:: text
 
     Scheduler = "DedicatedScheduler@full.host.name"
 
@@ -976,7 +976,7 @@ Policy Scenario: Machine Runs Only Jobs That Require Dedicated Resources
     run jobs that require the dedicated resource. To enact this policy,
     configure the following expressions:
 
-    ::
+    .. code-block:: text
 
         START     = Scheduler =?= $(DedicatedScheduler)
         SUSPEND   = False
@@ -1008,7 +1008,7 @@ Policy Scenario: Run Both Jobs That Do and Do Not Require Dedicated Resources
     To implement this, configure the machine as a dedicated resource as
     above, modifying only the ``START`` expression:
 
-    ::
+    .. code-block:: text
 
         START = True
 
@@ -1025,7 +1025,7 @@ Policy Scenario: Adding Desktop Resources To The Mix
     set in the global configuration. Locally, the configuration is
     modified to this hybrid policy by adding a second case.
 
-    ::
+    .. code-block:: text
 
         SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
         PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
@@ -1070,7 +1070,7 @@ beginning. Thus, the administrator should be careful when enabling
 preemption of these dedicated resources. Enable dedicated preemption
 with the configuration:
 
-::
+.. code-block:: text
 
     STARTD_JOB_EXPRS = JobPrio
     SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
@@ -1110,7 +1110,7 @@ must be advertised in the *condor_startd* ClassAd by appending
 The submit description file for a parallel universe job which must not
 cross group boundaries contains
 
-::
+.. code-block:: text
 
     +WantParallelSchedulingGroups = True
 
@@ -1204,7 +1204,7 @@ section briefly lists these expressions. More detail can be found in
 
 The following example shows a possible configuration to enable backfill:
 
-::
+.. code-block:: text
 
     # Turn on backfill functionality, and use BOINC
     ENABLE_BACKFILL = TRUE
@@ -1378,7 +1378,7 @@ Optional configuration variables:
     is to use the **-attach_project** argument to specify a project URL
     and account key. For example:
 
-    ::
+    .. code-block:: text
 
         BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
 
@@ -1397,7 +1397,7 @@ Optional configuration variables:
 
 The following example shows one possible usage of these settings:
 
-::
+.. code-block:: text
 
     # Define a shared macro that can be used to define other settings.
     # This directory must be manually created before attempting to run
@@ -1418,7 +1418,7 @@ The following example shows one possible usage of these settings:
 If the HTCondor daemons reading this configuration are running as root,
 an additional variable must be defined:
 
-::
+.. code-block:: text
 
     # Specify the user that the boinc_client should run as:
     BOINC_Owner = nobody
@@ -1457,7 +1457,7 @@ BOINC project:
    the file define the project URL and the authentication key. The
    format is:
 
-   ::
+   .. code-block:: text
 
        <account>
          <master_url>[URL]</master_url>
@@ -1466,7 +1466,7 @@ BOINC project:
 
    For example:
 
-   ::
+   .. code-block:: text
 
        <account>
          <master_url>http://einstein.phys.uwm.edu</master_url>
@@ -1507,7 +1507,7 @@ when dealing with the Windows installation:
    configuration variable ``BOINC_Executable``
    :index:`BOINC_Executable` is written:
 
-   ::
+   .. code-block:: text
 
        BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
 
@@ -1521,7 +1521,7 @@ when dealing with the Windows installation:
    ``BOINC_Arguments`` :index:`BOINC_Arguments` configuration
    variable. For Windows, rewrite the argument line as:
 
-   ::
+   .. code-block:: text
 
        BOINC_Arguments = --dir $(BOINC_HOME) \
                  --attach_project http://einstein.phys.uwm.edu [account_key]
@@ -1529,7 +1529,7 @@ when dealing with the Windows installation:
    As a consequence of setting the BOINC home directory, some projects
    may fail with the authentication error:
 
-   ::
+   .. code-block:: text
 
        Scheduler request failed: Peer
        certificate cannot be authenticated
@@ -1550,7 +1550,7 @@ when dealing with the Windows installation:
 
    Setting this option causes the addition of the job attribute
 
-   ::
+   .. code-block:: text
 
        RunAsUser = True
 
@@ -1599,7 +1599,7 @@ takes care of killing all child processes.
 To enable the use of per job PID namespaces, set the configuration to
 include
 
-::
+.. code-block:: text
 
       USE_PID_NAMESPACES = True
 
@@ -1652,7 +1652,7 @@ maximum GIDs included in the range are specified with the
 example, the following would enable GID-based tracking for an execute
 machine with 8 slots.
 
-::
+.. code-block:: text
 
     USE_GID_PROCESS_TRACKING = True
     MIN_TRACKING_GID = 750
@@ -1701,7 +1701,7 @@ default, and needs to be enabled with a boot time option.
 This setting needs to be inherited down to the per-job cgroup with the
 following commands in ``rc.local``:
 
-::
+.. code-block:: text
 
     /usr/sbin/cgconfigparser -l /etc/cgconfig.conf
     /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
@@ -1761,7 +1761,7 @@ An initial sample of a ``USER_JOB_WRAPPER`` script is provided in the
 installation at ``$(LIBEXEC)/condor_limits_wrapper.sh``. Here is the
 contents of that file:
 
-::
+.. code-block:: text
 
     #!/bin/bash
     # Copyright 2008 Red Hat, Inc.
@@ -1903,7 +1903,7 @@ use. With partitionable slots, this is done in the per slot definition,
 and must be a percentage of the total swap space on the system. For
 example,
 
-::
+.. code-block:: text
 
     NUM_SLOTS_TYPE_1 = 1
     SLOT_TYPE_1_PARTITIONABLE = true
@@ -1964,7 +1964,7 @@ HTCondor should constrain the number of running jobs which need the X
 software to 3. The administrator picks XSW as the name of the resource
 and sets the configuration
 
-::
+.. code-block:: text
 
     XSW_LIMIT = 3
 
@@ -1979,7 +1979,7 @@ not covered by specifically-named limits. The configuration variable
 ``CONCURRENCY_LIMIT_DEFAULT`` :index:`CONCURRENCY_LIMIT_DEFAULT`
 sets this value. For example,
 
-::
+.. code-block:: text
 
     CONCURRENCY_LIMIT_DEFAULT = 1
 
@@ -1994,20 +1994,20 @@ submit description file or adding an attribute to the job ClassAd. In
 the submit description file, an example job that requires the X software
 adds:
 
-::
+.. code-block:: text
 
     concurrency_limits = XSW
 
 This results in the job ClassAd attribute
 
-::
+.. code-block:: text
 
     ConcurrencyLimits = "XSW"
 
 Jobs may declare that they need more than one type of resource. In this
 case, specify a comma-separated list of resources:
 
-::
+.. code-block:: text
 
     concurrency_limits = XSW, DATABASE, FILESERVER
 
@@ -2017,7 +2017,7 @@ syntax that follows the resource name by a colon character and the
 integer number of resources. For example, if the above job uses three
 units of the file server resource, it is declared with
 
-::
+.. code-block:: text
 
     concurrency_limits = XSW, DATABASE, FILESERVER:3
 
@@ -2026,7 +2026,7 @@ member of the set, the configuration may become tedious, as it defines
 each member of the set individually. A shortcut defines a name for a
 set. For example, define the sets called ``LARGE`` and ``SMALL``:
 
-::
+.. code-block:: text
 
     CONCURRENCY_LIMIT_DEFAULT = 5
     CONCURRENCY_LIMIT_DEFAULT_LARGE = 100
@@ -2053,21 +2053,21 @@ number of network intensive jobs on each network to 10. Configuration of
 each execute machine advertises which local network it is on. A machine
 on ``"NETWORK_A"`` configures
 
-::
+.. code-block:: text
 
     NETWORK = "NETWORK_A"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 and a machine on ``"NETWORK_B"`` configures
 
-::
+.. code-block:: text
 
     NETWORK = "NETWORK_B"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 The configuration for the negotiator sets the concurrency limits:
 
-::
+.. code-block:: text
 
     NETWORK_A_LIMIT = 10
     NETWORK_B_LIMIT = 10
@@ -2075,7 +2075,7 @@ The configuration for the negotiator sets the concurrency limits:
 Each network intensive job identifies itself by specifying the limit
 within the submit description file:
 
-::
+.. code-block:: text
 
     concurrency_limits_expr = TARGET.NETWORK
 
@@ -2088,7 +2088,7 @@ the matched machine. The other limit is of a specialized application
 called ``"SWX"`` in this example. The negotiator configuration is
 extended to also include
 
-::
+.. code-block:: text
 
     SWX_LIMIT = 15
 
@@ -2096,7 +2096,7 @@ The network intensive job that also uses two units of the ``SWX``
 application identifies the needed resources in the single submit
 command:
 
-::
+.. code-block:: text
 
     concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 

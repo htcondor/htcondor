@@ -65,7 +65,7 @@ Examples
 
 To continue all jobs except for a specific user:
 
-::
+.. code-block:: console
 
-    % condor_continue -constraint 'Owner =!= "foo"'
+    $ condor_continue -constraint 'Owner =!= "foo"'
 

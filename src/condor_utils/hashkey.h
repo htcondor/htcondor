@@ -38,7 +38,7 @@ class AdNameHashKey
     MyString name;
     MyString ip_addr;
 
-	void   sprint (MyString &);
+	void   sprint (MyString &) const;
     friend bool operator== (const AdNameHashKey &, const AdNameHashKey &);
 
 };

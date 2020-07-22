@@ -236,7 +236,7 @@ public:
 		  documentation for this class for details on exactly what
 		  "local" means for the different types of daemons.
 		  */
-	bool isLocal( void )			{ return _is_local; }
+	bool isLocal( void ) const			{ return _is_local; }
 
 		/** Returns a descriptive string for error messages.  This has
 		  all the logic about printing out an appropriate string to

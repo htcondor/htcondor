@@ -48,14 +48,14 @@ Before submitting a job to HTCondor, it is a good idea to test it
 first locally, by running it from a command shell.  This example job
 might look like this when run from the shell prompt.
 
-::
+.. code-block:: console
 
       $ ./myexe SomeArgument
 
       
 The corresponding submit description file might look like the following
 
-::
+.. code-block:: text
 
       ####################
       #
@@ -119,7 +119,8 @@ input file is passed to the program as the only argument.  We prepare
 150 copies of this input file in the current directory, and name them
 input_file.0, input_file.1 ... up to input_file.149.  Using transfer_input_files,
 we tell HTCondor which input file to send to each instance of the program.
-::
+
+.. code-block:: text
 
       ####################
       #
@@ -200,7 +201,7 @@ Here are a set of examples.
 
 **Example 1**
 
-::
+.. code-block:: text
 
       transfer_input_files = $(filename)
       arguments            = -infile $(filename)
@@ -217,7 +218,7 @@ job queued. That macro value is then substituted into the **arguments**
 and **transfer_input_files** commands. The **queue** command expands
 to
 
-::
+.. code-block:: text
 
       transfer_input_files = initial.dat
       arguments            = -infile initial.dat
@@ -233,7 +234,7 @@ to
 
 **Example 2**
 
-::
+.. code-block:: text
 
       queue 1 input in A, B, C
 
@@ -241,7 +242,7 @@ Variable ``input`` is set to each of the 3 items in the list, and one
 job is queued for each. For this example the **queue** command expands
 to
 
-::
+.. code-block:: text
 
       input = A
       queue
@@ -253,7 +254,7 @@ to
 
 **Example 3**
 
-::
+.. code-block:: text
 
       queue input,arguments from (
         file1, -a -b 26
@@ -264,7 +265,7 @@ Using the ``from`` form of the options, each of the two variables
 specified is given a value from the list of items. For this example the
 **queue** command expands to
 
-::
+.. code-block:: text
 
       input = file1
       arguments = -a -b 26
@@ -275,13 +276,13 @@ specified is given a value from the list of items. For this example the
 
 **Example 4**
 
-::
+.. code-block:: text
 
       queue from seq 7 9 |
       
 feeds the list of items to queue with the output of ``seq 7 9``:
 
-::
+.. code-block:: text
 
       item = 7
       queue
@@ -342,7 +343,7 @@ automatic variables are identified.
 
 This example queues six jobs.
 
-::
+.. code-block:: text
 
     queue 3 in (A, B)
 
@@ -367,7 +368,7 @@ Including Submit Commands Defined Elsewhere
 Externally defined submit commands can be incorporated into the submit
 description file using the syntax
 
-::
+.. code-block:: text
 
       include : <what-to-include>
 
@@ -389,7 +390,7 @@ nesting is discovered and thwarted, while still permitting nesting.
 
 Consider the example
 
-::
+.. code-block:: text
 
       include : list-infiles.sh |
 
@@ -398,7 +399,7 @@ script ``list-infiles.sh`` to be invoked, and the output of the script
 is parsed and incorporated into the submit description file. If this
 bash script is in the PATH when submit is run, and contains
 
-::
+.. code-block:: text
 
       #!/bin/sh
 
@@ -410,7 +411,7 @@ transfer to the execute host. For example, if directory ``infiles``
 contains the three files ``A.dat``, ``B.dat``, and ``C.dat``, then the
 submit command
 
-::
+.. code-block:: text
 
       transfer_input_files = infiles/A.dat, infiles/B.dat, infiles/C.dat
 
@@ -426,7 +427,7 @@ Using Conditionals in the Submit Description File
 Conditional if/else semantics are available in a limited form. The
 syntax:
 
-::
+.. code-block:: text
 
       if <simple condition>
          <statement>
@@ -448,7 +449,7 @@ character (!) to represent the not operation, followed by
    expanded input. If the variable is not defined, the statement(s) are
    not incorporated into the expanded input. As an example,
 
-   ::
+   .. code-block:: text
 
          if defined MY_UNDEFINED_VARIABLE
             X = 12
@@ -475,7 +476,7 @@ character (!) to represent the not operation, followed by
 
    As an example,
 
-   ::
+   .. code-block:: text
 
          if version >= 8.1.6
             DO_X = True
@@ -496,7 +497,7 @@ character (!) to represent the not operation, followed by
 
 The syntax
 
-::
+.. code-block:: text
 
       if <simple condition>
          <statement>
@@ -510,7 +511,7 @@ The syntax
 
 is the same as syntax
 
-::
+.. code-block:: text
 
       if <simple condition>
          <statement>
@@ -528,7 +529,7 @@ Here is an example use of a conditional in the submit description file.
 A portion of the ``sample.sub`` submit description file uses the if/else
 syntax to define command line arguments in one of two ways:
 
-::
+.. code-block:: text
 
       if defined X
         arguments = -n $(X)
@@ -539,27 +540,27 @@ syntax to define command line arguments in one of two ways:
 Submit variable ``X`` is defined on the *condor_submit* command line
 with
 
-::
+.. code-block:: console
 
-      condor_submit  X=3  sample.sub
+      $ condor_submit  X=3  sample.sub
 
 This command line incorporates the submit command ``X = 3`` into the
 submission before parsing the submit description file. For this
 submission, the command line arguments of the submitted job become
 
-::
+.. code-block:: text
 
         -n 3
 
 If the job were instead submitted with the command line
 
-::
+.. code-block:: console
 
-      condor_submit  sample.sub
+      $ condor_submit  sample.sub
 
 then the command line arguments of the submitted job become
 
-::
+.. code-block:: text
 
         -n 1 -debug
 
@@ -591,7 +592,7 @@ as given in these definitions.
     :default-value is used; in which case it evaluates to default-value.
     For example,
 
-    ::
+    .. code-block:: text
 
           A = $ENV(HOME)
 
@@ -652,7 +653,7 @@ as given in these definitions.
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
 
-    ::
+    .. code-block:: console
 
           $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
@@ -663,7 +664,7 @@ as given in these definitions.
     to the value 1. For example, to randomly chose an even integer in
     the range 0-8 (inclusive):
 
-    ::
+    .. code-block:: console
 
           $RANDOM_INTEGER(0, 8, 2)
 
@@ -683,7 +684,7 @@ as given in these definitions.
     A negative value of length eliminates use of characters from the end
     of the string. Here are some examples that all assume
 
-    ::
+    .. code-block:: text
 
           Name = abcdef
 
@@ -705,7 +706,7 @@ function macros.
 Generate a range of numerical values for a set of jobs, where values
 other than those given by $(Process) are desired.
 
-::
+.. code-block:: text
 
       MyIndex     = $(Process) + 1
       initial_dir = run-$INT(MyIndex,%04d)
@@ -720,7 +721,7 @@ Assuming that there are three jobs queued, such that $(Process) becomes
 This variation on Example 1 generates a file name extension which is a
 3-digit integer value.
 
-::
+.. code-block:: text
 
       Values     = $(Process) * 10
       Extension  = $INT(Values,%03d)
@@ -740,7 +741,7 @@ function to specify a job input file that is within a subdirectory on
 the submit host, but will be placed into a single, flat directory on the
 execute host.
 
-::
+.. code-block:: text
 
       arguments            = $Fnx(FILE)
       transfer_input_files = $(FILE)
@@ -838,21 +839,21 @@ The following ``Rank`` expressions provide examples to follow.
 
 For a job that desires the machine with the most available memory:
 
-::
+.. code-block:: text
 
        Rank = memory
 
 For a job that prefers to run on a friend's machine on Saturdays and
 Sundays:
 
-::
+.. code-block:: text
 
        Rank = ( (clockday == 0) || (clockday == 6) )
               && (machine == "friend.cs.wisc.edu")
 
 For a job that prefers to run on one of three specific machines:
 
-::
+.. code-block:: text
 
        Rank = (machine == "friend1.cs.wisc.edu") ||
               (machine == "friend2.cs.wisc.edu") ||
@@ -861,7 +862,7 @@ For a job that prefers to run on one of three specific machines:
 For a job that wants the machine with the best floating point
 performance (on Linpack benchmarks):
 
-::
+.. code-block:: text
 
        Rank = kflops
 
@@ -881,20 +882,20 @@ with the *-constraint* argument. This allows the user to see a list of
 machines that fit a constraint. To see which machines in the pool have
 ``kflops`` defined, use
 
-::
+.. code-block:: console
 
-    condor_status -constraint kflops
+    $ condor_status -constraint kflops
 
 Alternatively, to see a list of machines where ``kflops`` is not
 defined, use
 
-::
+.. code-block:: console
 
-    condor_status -constraint "kflops=?=undefined"
+    $ condor_status -constraint "kflops=?=undefined"
 
 For a job that prefers specific machines in a specific order:
 
-::
+.. code-block:: text
 
        Rank = ((machine == "friend1.cs.wisc.edu")*3) +
               ((machine == "friend2.cs.wisc.edu")*2) +
@@ -903,19 +904,19 @@ For a job that prefers specific machines in a specific order:
 If the machine being ranked is ``friend1.cs.wisc.edu``, then the
 expression
 
-::
+.. code-block:: text
 
        (machine == "friend1.cs.wisc.edu")
 
 is true, and gives the value 1.0. The expressions
 
-::
+.. code-block:: text
 
        (machine == "friend2.cs.wisc.edu")
 
 and
 
-::
+.. code-block:: text
 
        (machine == "friend3.cs.wisc.edu")
 
@@ -989,7 +990,7 @@ the jobs, she needs to tell HTCondor to send them to machines that have
 access to that shared data, so she specifies a different
 ``requirements`` expression than the default:
 
-::
+.. code-block:: text
 
        Requirements = TARGET.UidDomain == "cs.wisc.edu" && \
                       TARGET.FileSystemDomain == "cs.wisc.edu"
@@ -1010,14 +1011,14 @@ Jobs That Require GPUs
 A job that needs GPUs to run identifies the number of GPUs needed in the
 submit description file by adding the submit command
 
-::
+.. code-block:: text
 
       request_GPUs = <n>
 
 where ``<n>`` is replaced by the integer quantity of GPUs required for
 the job. For example, a job that needs 1 GPU uses
 
-::
+.. code-block:: text
 
       request_GPUs = 1
 
@@ -1029,7 +1030,7 @@ command. As an example, assume that the job needs a speed and capacity
 of a CUDA GPU that meets or exceeds the value 1.2. In the submit
 description file, place
 
-::
+.. code-block:: text
 
       request_GPUs = 1
       requirements = (CUDACapability >= 1.2) && $(requirements:True)
@@ -1066,7 +1067,7 @@ enabled.
 
 Each interactive job will have a job ClassAd attribute of
 
-::
+.. code-block:: text
 
       InteractiveJob = True
 

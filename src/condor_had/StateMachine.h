@@ -135,10 +135,10 @@ protected:
 						   StringList &other,
 						   StringList &all,
 						   int &selfId );
-    bool  checkList(List<int>*);
+    bool  checkList(List<int>*) const;
     static void removeAllFromList(List<int>*);
     void clearBuffers(void);
-    void printStep(const char *curState,const char *nextState);
+    void printStep(const char *curState,const char *nextState) const;
     //char* commandToString(int command);
 
     void init(void);

@@ -634,7 +634,13 @@ int CollectorDaemon::receive_query_cedar(int command,
 				query_entry->subsys[COUNTOF(query_entry->subsys)-1] = 0;
 			}
 		}
-		if ( clientSubsys == SUBSYSTEM_ID_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
+		// TODO Giving high-priority to queries from a collector is a hack
+		//   to work around the fact that queries from the negotiator get
+		//   flagged is coming from a collector when the family security
+		//   session is used.
+		//   Better identification of the peer when a non-negotiated
+		//   security session is used is the real solution.
+		if ( clientSubsys == SUBSYSTEM_ID_NEGOTIATOR || clientSubsys == SUBSYSTEM_ID_COLLECTOR || daemonCore->Is_Command_From_SuperUser(sock) )
 		{
 			high_prio_query = true;
 		}
@@ -2338,7 +2344,7 @@ CollectorUniverseStats::getValue (int univ )
 }
 
 int
-CollectorUniverseStats::getCount ( void )
+CollectorUniverseStats::getCount ( void ) const
 {
 	return count;
 }

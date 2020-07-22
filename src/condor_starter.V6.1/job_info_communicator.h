@@ -146,11 +146,11 @@ public:
 	virtual ClassAd* machClassAd( void );
 
 		/// Return the job's universe integer.
-	int jobUniverse( void );
+	int jobUniverse( void ) const;
 
-	int jobCluster( void );
-	int jobProc( void );
-	int jobSubproc( void );
+	int jobCluster( void ) const;
+	int jobProc( void ) const;
+	int jobSubproc( void ) const;
 
 		/// Total bytes sent by this job 
 	virtual float bytesSent( void ) = 0;
@@ -239,11 +239,11 @@ public:
 		 */
 	virtual void gotHold( void );
 
-	bool hadRemove( void ) { return had_remove; };
-	bool hadHold( void ) { return had_hold; };
-	bool isExiting( void ) { return requested_exit; };
-	bool isGracefulShutdown( void ) { return graceful_exit; };
-	bool isFastShutdown( void ) { return fast_exit; };
+	bool hadRemove( void ) const { return had_remove; };
+	bool hadHold( void ) const { return had_hold; };
+	bool isExiting( void ) const { return requested_exit; };
+	bool isGracefulShutdown( void ) const { return graceful_exit; };
+	bool isFastShutdown( void ) const { return fast_exit; };
 
 
 		/** Someone is attempting to reconnect to this job.
@@ -335,7 +335,7 @@ public:
 	virtual void removeFromOutputFiles( const char* filename ) = 0;
 
 		/// Has user_priv been initialized yet?
-	bool userPrivInitialized( void ); 
+	bool userPrivInitialized( void ) const; 
 
 		/** Are we currently using file transfer? 
 		    Used elsewhere to determine if we need to potentially
@@ -546,7 +546,7 @@ private:
 		     the job.  Possible values: "exit" (on its own), "hold",
 		     "remove", or "evict" (PREEMPT, condor_vacate, condor_off).
 		*/
-	const char* getExitReasonString( void );
+	const char* getExitReasonString( void ) const;
 
 	int m_exit_hook_timer_tid;
 };

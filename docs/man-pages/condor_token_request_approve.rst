@@ -66,9 +66,9 @@ Examples
 
 To approve the tokens at the default *condor_collector*, one-by-one:
 
-::
+.. code-block:: console
 
-    % condor_token_request_approve                                                                                               
+    $ condor_token_request_approve                                                                                               
     RequestedIdentity = "bucky@cs.wisc.edu"
     AuthenticatedIdentity = "anonymous@ssl"
     PeerLocation = "10.0.0.42"

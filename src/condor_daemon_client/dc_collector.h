@@ -37,8 +37,8 @@
 class DCCollectorAdSeq {
 public:
 	DCCollectorAdSeq() : sequence(0), last_advance(0) {}
-	long long getSequence() { return sequence; }
-	time_t    lastAdvance() { return last_advance; }
+	long long getSequence() const { return sequence; }
+	time_t    lastAdvance() const { return last_advance; }
 	long long advance(time_t now) {
 		//if ( ! now) now = time(NULL);
 		last_advance = now;
@@ -103,10 +103,10 @@ public:
 	void blacklistMonitorQueryStarted();
 	void blacklistMonitorQueryFinished( bool success );
 
-	bool useTCPForUpdates() { return use_tcp; }
+	bool useTCPForUpdates() const { return use_tcp; }
 
-	time_t getStartTime() { return startTime; }
-	time_t getReconfigTime() { return reconfigTime; }
+	time_t getStartTime() const { return startTime; }
+	time_t getReconfigTime() const { return reconfigTime; }
 
 		/** Request that the collector get an identity token from the specified
 		 *  schedd.

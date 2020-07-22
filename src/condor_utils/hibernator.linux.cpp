@@ -137,14 +137,14 @@ public:
 
 
 // Publich Linux hibernator class methods
-LinuxHibernator::LinuxHibernator( void ) throw ()
+LinuxHibernator::LinuxHibernator( void ) noexcept
 		: HibernatorBase (),
 		  m_real_hibernator( NULL ),
 		  m_method( NULL )
 {
 }
 
-LinuxHibernator::~LinuxHibernator( void ) throw ()
+LinuxHibernator::~LinuxHibernator( void ) noexcept
 {
 	if ( m_real_hibernator ) {
 		delete m_real_hibernator;

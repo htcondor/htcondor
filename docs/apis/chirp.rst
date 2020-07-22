@@ -14,7 +14,7 @@ server running in the *condor_starter* that allows a job to
 This service is off by default; it may be enabled by placing in the
 submit description file:
 
-::
+.. code-block:: text
 
     +WantIOProxy = True
 

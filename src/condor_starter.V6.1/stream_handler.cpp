@@ -250,7 +250,7 @@ int StreamHandler::Handler( int  /* fd */)
 	return KEEP_STREAM;
 }
 
-int StreamHandler::GetJobPipe()
+int StreamHandler::GetJobPipe() const
 {
 	return job_pipe;
 }

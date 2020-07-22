@@ -150,7 +150,7 @@ class Throttle {
 
         // This function is called without the big mutex.  Do NOT add
         // dprintf() statements or refers to globals other than 'this'.
-        bool isValid() { return when.tv_sec != 0; }
+        bool isValid() const { return when.tv_sec != 0; }
 
         // This function is called without the big mutex.  Do NOT add
         // dprintf() statements or refers to globals other than 'this'.

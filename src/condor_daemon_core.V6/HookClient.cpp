@@ -70,10 +70,10 @@ HookClient::hookExited(int exit_status) {
 	m_has_exited = true;
 	m_exit_status = exit_status;
 
-	MyString status_txt;
-	status_txt.formatstr("HookClient %s (pid %d) ", m_hook_path, m_pid);
+	std::string status_txt;
+	formatstr(status_txt, "HookClient %s (pid %d) ", m_hook_path, m_pid);
 	statusString(exit_status, status_txt);
-	dprintf(D_FULLDEBUG, "%s\n", status_txt.Value());
+	dprintf(D_FULLDEBUG, "%s\n", status_txt.c_str());
 
 	MyString* std_out = daemonCore->Read_Std_Pipe(m_pid, 1);
 	if (std_out) {

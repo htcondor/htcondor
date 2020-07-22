@@ -364,9 +364,9 @@ BOINC_BackfillMgr::killClient( void )
 int
 BOINC_BackfillMgr::reaper( int pid, int status )
 {
-	MyString status_str;
+	std::string status_str;
 	statusString( status, status_str );
-	dprintf( D_ALWAYS, "BOINC client (pid %d) %s\n", pid, status_str.Value() );
+	dprintf( D_ALWAYS, "BOINC client (pid %d) %s\n", pid, status_str.c_str() );
 	if( ! m_boinc_starter ) {
 		EXCEPT( "Impossible: BOINC_BackfillMgr::reaper() pid [%d] "
 				"called while m_boinc_starter is NULL!", pid );

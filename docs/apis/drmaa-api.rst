@@ -81,7 +81,7 @@ memory (65536 kilobytes), to more highly rank machines with more memory,
 and to add the arbitrary attribute of department set to chemistry, you
 would set AttrDRMAA_NATIVE_SPECIFICATION to the C string:
 
-::
+.. code-block:: text
 
       drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION,
           "image_size=65536\nrank=Memory\n+department=\"chemistry\"",

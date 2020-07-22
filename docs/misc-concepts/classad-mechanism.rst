@@ -14,7 +14,7 @@ A ClassAd is a set of uniquely named expressions. Each named
 expression is called an attribute. The following shows
 ten attributes, a portion of an example ClassAd.
 
-::
+.. code-block:: text
 
     MyType       = "Machine"
     TargetType   = "Job"
@@ -84,7 +84,7 @@ HTCondor older than 7.5.1.
 The syntax varies slightly between Old and New ClassAds. Here is an
 example ClassAd presented in both forms. The Old form:
 
-::
+.. code-block:: text
 
     Foo = 3
     Bar = "ab\"cd\ef"
@@ -92,7 +92,7 @@ example ClassAd presented in both forms. The Old form:
 
 The New form:
 
-::
+.. code-block:: text
 
     [
     Foo = 3;
@@ -209,7 +209,7 @@ The operators that may be used in ClassAd expressions are similar to
 those available in C. The available operators and their relative
 precedence is shown in the following example:
 
-::
+.. code-block:: text
 
       - (unary negation)   (high precedence)
       *   /
@@ -243,7 +243,7 @@ Integer, but only returns the value 1 or 0 (implying ``True`` or
 ``False``), it is called out as Boolean. The format of each function is
 given as
 
-::
+.. code-block:: text
 
     ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
 
@@ -557,7 +557,7 @@ Optional parameters are given within square brackets.
 
     Here are examples:
 
-    ::
+    .. code-block:: text
 
              8     = quantize(3, 8)
              4     = quantize(3, 2)
@@ -659,7 +659,7 @@ Optional parameters are given within square brackets.
 
     For example:
 
-    ::
+    .. code-block:: text
 
             "a, b, c" = join(", ", "a", "b", "c")
             "abc"   = join(split("a b c"))
@@ -1360,7 +1360,7 @@ For both machine and job, the ``rank`` expression specifies the
 desirability of the match (where higher numbers mean better matches).
 For example, a job ClassAd may contain the following expressions:
 
-::
+.. code-block:: text
 
     Requirements = (Arch == "INTEL") && (OpSys == "LINUX")
     Rank         = TARGET.Memory + TARGET.Mips
@@ -1376,7 +1376,7 @@ expression), while satisfying other required criteria.
 Similarly, the machine may place constraints and preferences on the jobs
 that it will run by setting the machine's configuration. For example,
 
-::
+.. code-block:: text
 
         Friend        = Owner == "tannenba" || Owner == "wright"
         ResearchGroup = Owner == "jbasney" || Owner == "raman"
@@ -1420,15 +1420,15 @@ Here are several examples. To find all computers which have had their
 keyboards idle for more than 60 minutes and have more than 4000 MB of
 memory, the desired ClassAd expression is
 
-::
+.. code-block:: text
 
     KeyboardIdle > 60*60 && Memory > 4000
 
 On a Unix platform, the command appears as
 
-::
+.. code-block:: console
 
-    % condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
+    $ condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
 
     Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime
     100
@@ -1443,9 +1443,9 @@ On a Unix platform, the command appears as
 
 The Windows equivalent command is
 
-::
+.. code-block:: doscon
 
-    >condor_status -const "KeyboardIdle > 60*60 && Memory > 4000"
+    > condor_status -const "KeyboardIdle > 60*60 && Memory > 4000"
 
 Here is an example for a Unix platform that utilizes a regular
 expression ClassAd function to list specific information. A file
@@ -1453,9 +1453,9 @@ contains ClassAd information. *condor_advertise* is used to inject this
 information, and *condor_status* constrains the search with an
 expression that contains a ClassAd function.
 
-::
+.. code-block:: console
 
-    % cat ad
+    $ cat ad
     MyType = "Generic"
     FauxType = "DBMS"
     Name = "random-test"
@@ -1464,10 +1464,9 @@ expression that contains a ClassAd function.
     DaemonStartTime = 1153192799
     UpdateSequenceNumber = 1
 
-    % condor_advertise UPDATE_AD_GENERIC ad
+    $ condor_advertise UPDATE_AD_GENERIC ad
 
-    % condor_status -any -constraint 'FauxType=="DBMS" &&
-      regexp("random.*", Name, "i")'
+    $ condor_status -any -constraint 'FauxType=="DBMS" && regexp("random.*", Name, "i")'
 
     MyType               TargetType           Name
 
@@ -1476,7 +1475,7 @@ expression that contains a ClassAd function.
 The ClassAd expression describing a machine that advertises a Windows
 operating system:
 
-::
+.. code-block:: text
 
     OpSys == "WINDOWS"
 
@@ -1484,17 +1483,17 @@ Here are three equivalent ways on a Unix platform to list all machines
 advertising a Windows operating system. Spaces appear in these examples
 to show where they are permitted.
 
-::
+.. code-block:: console
 
-    % condor_status -constraint ' OpSys == "WINDOWS"  '
+    $ condor_status -constraint ' OpSys == "WINDOWS"  '
 
-::
+.. code-block:: console
 
-    % condor_status -constraint OpSys==\"WINDOWS\"
+    $ condor_status -constraint OpSys==\"WINDOWS\"
 
-::
+.. code-block:: console
 
-    % condor_status -constraint "OpSys==\"WINDOWS\""
+    $ condor_status -constraint "OpSys==\"WINDOWS\""
 
 The equivalent command on a Windows platform to list all machines
 advertising a Windows operating system must delimit the single argument
@@ -1502,9 +1501,9 @@ with double quote marks, and then escape the needed double quote marks
 that identify the string within the expression. Spaces appear in this
 example where they are permitted.
 
-::
+.. code-block:: doscon
 
-    >condor_status -constraint " OpSys == ""WINDOWS"" "
+    > condor_status -constraint " OpSys == ""WINDOWS"" "
 
 Extending ClassAds with User-written Functions
 ----------------------------------------------
@@ -1531,7 +1530,7 @@ the following steps on Linux:
 -  Build ``shared.cpp`` into a shared library. On Linux, the command
    line to do so is
 
-   ::
+   .. code-block:: console
 
        $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \
          -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
@@ -1539,7 +1538,7 @@ the following steps on Linux:
 -  Copy the file ``shared.so`` to a location that all of the HTCondor
    tools and daemons can read.
 
-   ::
+   .. code-block:: console
 
        $ cp shared.so `condor_config_val LIBEXEC`
 
@@ -1548,14 +1547,14 @@ the following steps on Linux:
    configuration variable to the full name of the shared library. In
    this case,
 
-   ::
+   .. code-block:: text
 
        CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
 
 -  Restart HTCondor.
 -  Test the new functions by running
 
-   ::
+   .. code-block:: console
 
        $ condor_status -format "%s\n" todays_date()
 

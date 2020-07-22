@@ -87,7 +87,7 @@ If no output options are specified, *condor_q* now defaults to batch
 mode, and displays the following columns of information, with one line
 of output per batch of jobs:
 
-::
+.. code-block:: text
 
         OWNER, BATCH_NAME, SUBMITTED, DONE, RUN, IDLE, [HOLD,] TOTAL, JOB_IDS
 
@@ -97,7 +97,7 @@ output or if there are no jobs in the output.
 If the **-nobatch** option is specified, *condor_q* displays the
 following columns of information, with one line of output per job:
 
-::
+.. code-block:: text
 
         ID, OWNER, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
 
@@ -106,7 +106,7 @@ If the **-dag** option is specified (in conjunction with **-nobatch**),
 of output per job; the owner is shown only for top-level jobs, and for
 all other jobs (including sub-DAGs) the node name is shown:
 
-::
+.. code-block:: text
 
         ID, OWNER/NODENAME, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
 
@@ -114,7 +114,7 @@ If the **-run** option is specified (in conjunction with **-nobatch**),
 *condor_q* displays the following columns of information, with one line
 of output per running job:
 
-::
+.. code-block:: text
 
         ID, OWNER, SUBMITTED, RUN_TIME, HOST(S)
 
@@ -123,28 +123,28 @@ Also note that the **-run** option disables output of the totals line.
 If the **-grid** option is specified, *condor_q* displays the following
 columns of information, with one line of output per job:
 
-::
+.. code-block:: text
 
         ID, OWNER, STATUS, GRID->MANAGER, HOST, GRID_JOB_ID
 
 If the **-grid:ec2** option is specified, *condor_q* displays the
 following columns of information, with one line of output per job:
 
-::
+.. code-block:: text
 
         ID, OWNER, STATUS, INSTANCE ID, CMD
 
 If the **-goodput** option is specified, *condor_q* displays the
 following columns of information, with one line of output per job:
 
-::
+.. code-block:: text
 
         ID, OWNER, SUBMITTED, RUN_TIME, GOODPUT, CPU_UTIL, Mb/s
 
 If the **-io** option is specified, *condor_q* displays the following
 columns of information, with one line of output per job:
 
-::
+.. code-block:: text
 
         ID, OWNER, RUNS, ST, INPUT, OUTPUT, RATE, MISC
 
@@ -152,14 +152,14 @@ If the **-cputime** option is specified (in conjunction with
 **-nobatch**), *condor_q* displays the following columns of
 information, with one line of output per job:
 
-::
+.. code-block:: text
 
         ID, OWNER, SUBMITTED, CPU_TIME, ST, PRI, SIZE, CMD
 
 If the **-hold** option is specified, *condor_q* displays the following
 columns of information, with one line of output per job:
 
-::
+.. code-block:: text
 
         ID, OWNER, HELD_SINCE, HOLD_REASON
 
@@ -661,7 +661,7 @@ Doe's jobs in the queue, choosing to print and format only the owner of
 the job, the command line arguments for the job, and the process ID of
 the job:
 
-::
+.. code-block:: console
 
     $ condor_q -submitter jdoe -format "%s" Owner -format " %s " Args -format " ProcId = %d\n" ProcId
     jdoe 16386 2800 ProcId = 0
@@ -674,7 +674,7 @@ the job:
 To display only the JobID's of Jane Doe's jobs you can use the
 following.
 
-::
+.. code-block:: console
 
     $ condor_q -submitter jdoe -format "%d." ClusterId -format "%d\n" ProcId
     27.0
@@ -686,7 +686,7 @@ following.
 
 An example that shows the analysis in summary format:
 
-::
+.. code-block:: console
 
     $ condor_q -analyze:summary
 
@@ -703,7 +703,7 @@ An example that shows the analysis in summary format:
 
 An example that shows summary information by machine:
 
-::
+.. code-block:: console
 
     $ condor_q -ana:sum,rev
 
@@ -724,7 +724,7 @@ An example that shows summary information by machine:
 
 An example with two independent DAGs in the queue:
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -748,7 +748,7 @@ queue.
 Here's an example with a held job, illustrating the addition of the HOLD
 column to the output:
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -766,7 +766,7 @@ clusters.
 
 First of all, non-batch mode with all of the node jobs in the queue:
 
-::
+.. code-block:: console
 
     $ condor_q -nobatch
 
@@ -788,7 +788,7 @@ First of all, non-batch mode with all of the node jobs in the queue:
 Now non-batch mode with the **-dag** option (unfortunately, *condor_q*
 doesn't do a good job of grouping procs in the same cluster together):
 
-::
+.. code-block:: console
 
     $ condor_q -nobatch -dag
 
@@ -809,7 +809,7 @@ doesn't do a good job of grouping procs in the same cluster together):
 
 Now, finally, the non-batch (default) mode:
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -836,7 +836,7 @@ confusing:
 
 Now here is non-batch mode after proc 0 of each node job has finished:
 
-::
+.. code-block:: console
 
     $ condor_q -nobatch
 
@@ -853,7 +853,7 @@ Now here is non-batch mode after proc 0 of each node job has finished:
 
 The same state also with the **-dag** option:
 
-::
+.. code-block:: console
 
     $ condor_q -nobatch -dag
 
@@ -870,7 +870,7 @@ The same state also with the **-dag** option:
 
 And, finally, that state in batch (default) mode:
 
-::
+.. code-block:: console
 
     $ condor_q
 

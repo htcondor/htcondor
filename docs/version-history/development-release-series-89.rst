@@ -13,9 +13,14 @@ Release Notes:
 
 .. HTCondor version 8.8.9 released on Month Date, 2020.
 
+-  ``condor_q`` no longer prints misleading message about the matchmaker
+   when asked to analyze a job.
+   :ticket:`5834`
+
 New Features:
 
--  None.
+-  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
+   :ticket:`7726`
 
 Bugs Fixed:
 
@@ -111,6 +116,8 @@ New Features:
 -  Added a new Python bindings subpackage, :mod:`htcondor.dags`, which contains
    tools for writing DAGMan input files programmatically using
    high-level abstractions over the basic DAGMan constructs.
+   There is a new tutorial at :doc:`/apis/python-bindings/tutorials/index`
+   walking through a basic use case.
    :mod:`htcondor.dags` is very new and its API has not fully stabilized;
    it is possible that there will be deprecations and breaking changes
    in the near future.
@@ -130,6 +137,15 @@ New Features:
    control is not returned until the background *condor_master* has created
    the MasterLog and is ready to accept commands.
    :ticket:`7667`
+
+-  Updated *condor_q* so when called with the ``-dag`` flag and a DAGMan job
+   ID, it will display all jobs running under any nested subdags.
+   :ticket:`7483`
+
+-  Direct job submission in *condor_dagman* now reports warning messages related
+   to job submission (for example, possible typos in submit arguments) to help
+   debug problems with jobs not running correctly.
+   :ticket:`7568`
 
 Bugs Fixed:
 
@@ -166,6 +182,10 @@ Bugs Fixed:
   the collector will no longer advertise support, which will prevent jobs from
   matching there and attempting to run.
   :ticket:`7707`
+
+- Fixed a bug in *condor_dagman* where completed jobs incorrectly showed a 
+  warning message related to job events.
+  :ticket:`7548`
 
 Version 8.9.7
 -------------
@@ -848,10 +868,10 @@ New Features:
   ``htcondor.Submit.from_dag()`` class creates a Submit description based on a
   .dag file:
 
-  ::
+  .. code-block:: python
 
-    dag_args = { "maxidle": 10, "maxpost": 5 }
-    dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
+        dag_args = { "maxidle": 10, "maxpost": 5 }
+        dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
 
   The resulting ``dag_submit`` object can be submitted to a *condor_schedd* and
   monitored just like any other Submit description object in the Python bindings.
@@ -1224,7 +1244,7 @@ changes.
    On most pools, the easiest way to get the previous behavior is to add
    the following to your configuration:
 
-   ::
+   .. code-block:: text
 
        ALLOW_READ = *
        ALLOW_DAEMON = $(ALLOW_WRITE)

@@ -1702,23 +1702,23 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					key_serial_t htcondor_keyring = KEY_SPEC_USER_KEYRING;
 
 					// create the keyring name for user keyring
-					MyString ring_name = "htcondor_uid";
-					ring_name += IntToStr( UserUid );
+					std::string ring_name = "htcondor_uid";
+					ring_name += std::to_string( UserUid );
 
 					// locate the user keyring
-					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
+					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.c_str(), 0);
 					if(user_keyring == -1) {
 						CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
 						CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
 						if (really_dologging) _condor_save_dprintf_line(D_ALWAYS,
 							"KEYCTL: unable to find keyring '%s', error: %s\n",
-							ring_name.Value(), strerror(errno));
+							ring_name.c_str(), strerror(errno));
 					} else {
 						CurrentSessionKeyring = user_keyring;
 						CurrentSessionKeyringUID = UserUid;
 						if (really_dologging) _condor_save_dprintf_line(D_SECURITY,
 							 "KEYCTL: found user keyring %s (%li) for uid %i.\n",
-							 ring_name.Value(), (long)user_keyring, UserUid);
+							 ring_name.c_str(), (long)user_keyring, UserUid);
 					}
 				} else {
 					CurrentSessionKeyring = PreviousSessionKeyring;

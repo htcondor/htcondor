@@ -79,8 +79,8 @@ public:
 	void* get_arg() const {return arg_;}  // get args to routine
 	int get_tid() const {return tid_;}
 
-	int operator== (const WorkerThread& r) {return tid_ == r.tid_; }
-	int operator< (const WorkerThread& r) {return tid_ < r.tid_; }
+	int operator== (const WorkerThread& r) const {return tid_ == r.tid_; }
+	int operator< (const WorkerThread& r) const {return tid_ < r.tid_; }
 
 	void *user_pointer_;
 

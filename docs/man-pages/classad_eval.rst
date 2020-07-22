@@ -40,46 +40,46 @@ Almost every ad, assignment, or expression will require you to single
 quote them.  There are some exceptions; for instance, the following two
 commands are equivalent:
 
-::
+.. code-block:: console
 
-    classad_eval 'a = 2' 'a * 2'
-    classad_eval a=2 a*2
+    $ classad_eval 'a = 2' 'a * 2'
+    $ classad_eval a=2 a*2
 
 You can specify attributes for the context ad in three ways:
 
-::
+.. code-block:: console
 
-    classad_eval '[ a = 2; b = 2 ]' 'a + b'
-    classad_eval 'a = 2; b = 2' 'a + b'
-    classad_eval 'a = 2' 'b = 2' 'a + b'
+    $ classad_eval '[ a = 2; b = 2 ]' 'a + b'
+    $ classad_eval 'a = 2; b = 2' 'a + b'
+    $ classad_eval 'a = 2' 'b = 2' 'a + b'
 
 You need not supply an empty ad for expressions that don't reference attributes:
 
-::
+.. code-block:: console
 
-    classad_eval 'strcat("foo", "bar")'
+    $ classad_eval 'strcat("foo", "bar")'
 
 If you want to evaluate an expression in the context of the job ad, first
 store the job ad in a file:
 
-::
+.. code-block:: console
 
-    condor_q -l 1777.2 > 1227.2.ad
-    classad_eval -file 1277.2.ad 'JobUniverse'
+    $ condor_q -l 1777.2 > 1227.2.ad
+    $ classad_eval -file 1277.2.ad 'JobUniverse'
 
 You can extract a machine ad in a similar way:
 
-::
+.. code-block:: console
 
-    condor_status -l exec-17 > exec-17.ad
-    classad_eval -file exec-17.ad 'Rank'
+    $ condor_status -l exec-17 > exec-17.ad
+    $ classad_eval -file exec-17.ad 'Rank'
 
 You can not supply more than one ad to **classad_eval**.  Assignments
 (including whole ClassAds) are all merged into the context ad:
 
-::
+.. code-block:: console
 
-    classad_eval 'x = y' 'x' 'y = 7' 'x' 'x=6' 'x'
+    $ classad_eval 'x = y' 'x' 'y = 7' 'x' 'x=6' 'x'
     [ x = y ]
     undefined
     [ y = 7; x = y ]
@@ -89,9 +89,9 @@ You can not supply more than one ad to **classad_eval**.  Assignments
 
 You can suppress printing the context ad partway through:
 
-::
+.. code-block:: console
 
-    classad_eval -file example 'x' -quiet 'y = 7' 'x' 'x=6' 'x'
+    $ classad_eval -file example 'x' -quiet 'y = 7' 'x' 'x=6' 'x'
     [ x = y ]
     undefined
     7

@@ -42,11 +42,11 @@ protected:
 		}
 
 		void clear() { cbData = 0; }
-		int size() { return cbData; }
-		int capacity() { return cbAlloc-1; }
-		int LastError() { return error; }
-		bool AtEOF() { return at_eof; }
-		bool IsTextMode() { return text_mode; }
+		int size() const { return cbData; }
+		int capacity() const { return cbAlloc-1; }
+		int LastError() const { return error; }
+		bool AtEOF() const { return at_eof; }
+		bool IsTextMode() const { return text_mode; }
 		void SetTextMode(bool text) { text_mode = text; }
 		char operator[](int ix) const { return data[ix]; }
 		char& operator[](int ix) { return data[ix]; }
@@ -73,7 +73,7 @@ public:
 		file = NULL;
 	}
 
-	int  LastError() { 
+	int  LastError() const { 
 		return error; 
 	}
 	bool AtEOF() { 

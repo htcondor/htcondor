@@ -137,7 +137,7 @@ operator=(const MyString& S)
 
 /** Destructively moves a MyString guts from rhs to this */
 MyString& 
-MyString::operator=(MyString &&rhs) {
+MyString::operator=(MyString &&rhs)  noexcept {
 	delete Data;
 	this->Data     = rhs.Data;
 	this->Len      = rhs.Len;
@@ -1088,7 +1088,7 @@ bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
 MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
 
 MyStringTokener &
-MyStringTokener::operator=(MyStringTokener &&rhs) {
+MyStringTokener::operator=(MyStringTokener &&rhs)  noexcept {
 	free(tokenBuf);
 	this->tokenBuf = rhs.tokenBuf;
 	this->nextToken = rhs.nextToken;
@@ -1164,7 +1164,7 @@ MyStringWithTokener::MyStringWithTokener(const char *s)
 }
 
 MyStringWithTokener &
-MyStringWithTokener::operator=(MyStringWithTokener &&rhs) {
+MyStringWithTokener::operator=(MyStringWithTokener &&rhs)  noexcept {
 	MyString::operator=(rhs);
 	this->tok = std::move(rhs.tok);
 	return *this;

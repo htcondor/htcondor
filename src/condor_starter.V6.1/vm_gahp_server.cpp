@@ -701,7 +701,7 @@ VMGahpServer::setPollInterval(unsigned int interval)
 }
 
 unsigned int
-VMGahpServer::getPollInterval(void)
+VMGahpServer::getPollInterval(void) const
 {
 	return m_pollInterval;
 }
@@ -765,7 +765,7 @@ VMGahpServer::err_pipe_ready(void)
 }
 
 bool
-VMGahpServer::write_line(const char *command)
+VMGahpServer::write_line(const char *command) const
 {
 	if( m_is_initialized == false ) {
 		return false;
@@ -794,7 +794,7 @@ VMGahpServer::write_line(const char *command)
 }
 
 bool
-VMGahpServer::write_line(const char *command, int req, const char *args)
+VMGahpServer::write_line(const char *command, int req, const char *args) const
 {
 	if( m_is_initialized == false ) {
 		return false;

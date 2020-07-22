@@ -49,7 +49,7 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 bool 
 DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts,
-			/* const */ StringList &dagFileAttrLines )
+			/* const */ StringList &dagFileAttrLines ) const
 {
 	FILE *pSubFile = safe_fopen_wrapper_follow(shallowOpts.strSubFile.Value(), "w");
 	if (!pSubFile)

@@ -49,7 +49,7 @@ executable exits. All other nodes that are part of the parallel job and
 that have not yet exited on their own are killed. This default behavior
 may be altered by placing the line
 
-::
+.. code-block:: text
 
     +ParallelShutdownPolicy = "WAIT_FOR_ALL"
 
@@ -84,9 +84,9 @@ printing the name of that dedicated scheduler. In order to run parallel
 jobs, this name will be defined to be the string
 ``"DedicatedScheduler@"``, prepended to the name of the scheduler host.
 
-::
+.. code-block:: console
 
-      condor_status -const '!isUndefined(DedicatedScheduler)' \
+      $ condor_status -const '!isUndefined(DedicatedScheduler)' \
     -format "%s\t" Machine -format "%s\n" DedicatedScheduler
 
     execute1.example.com DedicatedScheduler@submit.example.com
@@ -97,9 +97,9 @@ correctly configured to run parallel jobs. Make sure that the name of
 the scheduler is correct. The string after the ``@`` sign should match
 the name of the *condor_schedd* daemon, as returned by the command
 
-::
+.. code-block:: console
 
-      condor_status -schedd
+      $ condor_status -schedd
 
 Submission Examples
 -------------------
@@ -110,7 +110,7 @@ Simplest Example
 Here is a submit description file for a parallel universe job example
 that is as simple as possible:
 
-::
+.. code-block:: text
 
     #############################################
     ##  submit description file for a parallel universe job
@@ -153,7 +153,7 @@ Assume that the pool contains Linux machines installed with either a
 RedHat or an Ubuntu operating system. If the job should run only on
 RedHat platforms, the requirements expression may specify this:
 
-::
+.. code-block:: text
 
     #############################################
     ##  submit description file for a parallel program
@@ -172,7 +172,7 @@ RedHat platforms, the requirements expression may specify this:
 The machine selection may be further narrowed, instead using the
 ``OpSysAndVer`` attribute.
 
-::
+.. code-block:: text
 
     #############################################
     ##  submit description file for a parallel program
@@ -190,7 +190,7 @@ The machine selection may be further narrowed, instead using the
 
 Using the ``$(Node)`` Macro
 
-::
+.. code-block:: text
 
     ######################################
     ## submit description file for a parallel program
@@ -220,7 +220,7 @@ needs. These can be handled with a
 **Requirements** :index:`Requirements<single: Requirements; submit commands>` submit
 command that also specifies the number of needed machines.
 
-::
+.. code-block:: text
 
     ######################################
     ## Example submit description file
@@ -252,7 +252,7 @@ Requesting multiple cores per slot
 If the parallel program has a structure that benefits from running on
 multiple cores within the same slot, multi-core slots may be specified.
 
-::
+.. code-block:: text
 
     ######################################
     ## submit description file for a parallel program
@@ -283,7 +283,7 @@ other seven CPUs (cores) associated with the slot.
 Potentially fewer machines are impacted with this specification, as
 compared with the request that contains
 
-::
+.. code-block:: text
 
     machine_count = 16
     request_cpus = 1
@@ -317,7 +317,7 @@ restricts connections to the approved shells listed in the
 
 Here is a sample submit description file for an MPICH MPI application:
 
-::
+.. code-block:: text
 
     ######################################
     ## Example submit description file
@@ -349,7 +349,7 @@ command.
 Here is the equivalent sample submit description file, but for an Open
 MPI application:
 
-::
+.. code-block:: text
 
     ######################################
     ## Example submit description file
@@ -418,7 +418,7 @@ Here is a submit description file example assuming that MPI is installed
 on all machines on which the MPI job may run, or that the code was built
 using static libraries and a static version of ``mpirun`` is available.
 
-::
+.. code-block:: text
 
     ############################################################
     ##   submit description file for
@@ -437,7 +437,7 @@ If CDE is to be used, then CDE needs to be run first to create the
 directory tree. On the host machine which has the original program, the
 command
 
-::
+.. code-block:: text
 
     prompt-> cde mpirun -n 2 my_mpi_linked_executable
 
@@ -448,7 +448,7 @@ necessary libraries. The following example assumes that the user has
 created a tarball called ``cde_my_mpi_linked_executable.tar`` which
 contains the directory tree created by CDE.
 
-::
+.. code-block:: text
 
     ############################################################
     ##   submit description file for
@@ -466,7 +466,7 @@ contains the directory tree created by CDE.
 The executable is now a specialized shell script tailored to this job.
 In this example, *cde_script.sh* contains:
 
-::
+.. code-block:: text
 
     #!/bin/sh
     # Untar the CDE package

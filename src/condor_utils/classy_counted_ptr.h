@@ -118,7 +118,7 @@ public:
         : itsPtr(p) {if(p) p->incRefCount();}
     ~classy_counted_ptr()
         {if(itsPtr) itsPtr->decRefCount();}
-    classy_counted_ptr(const classy_counted_ptr& r) throw()
+    classy_counted_ptr(const classy_counted_ptr& r) noexcept
     {
 		itsPtr = r.itsPtr;
 		if(itsPtr) itsPtr->incRefCount();
@@ -134,10 +134,10 @@ public:
     }
 
 
-    X& operator*()  const throw()   {return *itsPtr;}
-    X* operator->() const throw()   {return itsPtr;}
-    X* get()        const throw()   {return itsPtr;}
-    bool unique()   const throw()
+    X& operator*()  const noexcept   {return *itsPtr;}
+    X* operator->() const noexcept   {return itsPtr;}
+    X* get()        const noexcept   {return itsPtr;}
+    bool unique()   const noexcept
         {return (itsPtr ? itsPtr->refCount() == 1 : true);}
 
 		// Unfortunately, the following auto-conversion to a

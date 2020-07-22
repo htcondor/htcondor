@@ -262,7 +262,7 @@ protected:
 		 * Description : checks the structure validity by comparing its data
 		 *				 members to the initialization value
          */
-		bool isValid()
+		bool isValid() const
 		{
 			return m_pid != -1 && m_lastTimeCreated != -1;
 		};

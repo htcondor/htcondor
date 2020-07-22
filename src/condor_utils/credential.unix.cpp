@@ -126,6 +126,6 @@ Credential::GetOwner() {
 }
 
 int
-Credential::GetType() {
+Credential::GetType() const {
 	return type;
 }

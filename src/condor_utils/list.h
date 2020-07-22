@@ -126,7 +126,7 @@ public:
 	List(int dummy); // to allow custruction of list as struct member
 
 	virtual ~List();
-	List<ObjType> & operator=(List<ObjType> &&rhs);
+	List<ObjType> & operator=(List<ObjType> &&rhs) noexcept ;
 	bool	Append( ObjType * obj );
 	void	Clear();
 
@@ -308,7 +308,7 @@ List<ObjType>::~List()
 template <class ObjType>
 List<ObjType> &
 List<ObjType>::operator=(List<ObjType> &&rhs)
-{
+ noexcept {
 	// First destroy ourselves
 	while( !IsEmpty() ) {
 		RemoveItem( dummy->next );
