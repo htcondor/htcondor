@@ -188,8 +188,8 @@ for line in log:
 
 if new != old:
 	CondorTest.RegisterFailure("pybind-jel-str", "Original and synthesized log differ.")
-	print(("Old: '{0}'".format(old)))
-	print(("New: '{0}'".format(new)))
+	print("Old: '{0}'".format(old))
+	print("New: '{0}'".format(new))
 else:
 	CondorTest.RegisterSuccess("pybind-jel-str", "Original and synthesized log are identical.")
 
