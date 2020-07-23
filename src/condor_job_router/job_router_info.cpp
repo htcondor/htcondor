@@ -487,7 +487,7 @@ Scheduler::~Scheduler()
 	m_consumer = NULL;
 }
 
-classad::ClassAdCollection *Scheduler::GetClassAds()
+classad::ClassAdCollection *Scheduler::GetClassAds() const
 {
 	if (m_id == 0) {
 		return g_jobs;
@@ -499,7 +499,7 @@ void Scheduler::init() {  m_mirror->init(); }
 void Scheduler::config() { m_mirror->config(); }
 void Scheduler::stop()  { m_mirror->stop(); }
 void Scheduler::poll()  { }
-int  Scheduler::id() { return m_id; }
+int  Scheduler::id() const { return m_id; }
 
 
 // 

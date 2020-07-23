@@ -3516,7 +3516,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 #endif
 
 std::string
-RoutedJob::JobDesc() {
+RoutedJob::JobDesc() const {
 	std::string desc;
 	if(!src_key.empty()) {
 		desc += "src=";

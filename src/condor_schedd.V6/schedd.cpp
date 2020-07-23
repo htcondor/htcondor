@@ -2133,7 +2133,7 @@ static const std::string & attrjoin(std::string & buf, const char * prefix, cons
 	return buf;
 }
 
-void LiveJobCounters::publish(ClassAd & ad, const char * prefix)
+void LiveJobCounters::publish(ClassAd & ad, const char * prefix) const
 {
 	std::string buf;
 	ad.InsertAttr(attrjoin(buf,prefix,"Jobs"), (long long)(JobsIdle + JobsRunning + JobsHeld + JobsRemoved + JobsCompleted + JobsSuspended));
@@ -2708,7 +2708,7 @@ clear_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 	// This function, given a job, calculates the "weight", or cost
 	// of the slot for accounting purposes.  Usually the # of cpus
 double 
-Scheduler::calcSlotWeight(match_rec *mrec) {
+Scheduler::calcSlotWeight(match_rec *mrec) const {
 	if (!mrec) {
 		// shouldn't ever happen, but be defensive
 		return 1;
@@ -8222,7 +8222,7 @@ PostInitJobQueue()
 
 
 void
-Scheduler::ExpediteStartJobs()
+Scheduler::ExpediteStartJobs() const
 {
 	if( startjobsid == -1 ) {
 		return;
@@ -14597,7 +14597,7 @@ sendAlive( match_rec* mrec )
 }
 
 int
-Scheduler::receive_startd_alive(int cmd, Stream *s)
+Scheduler::receive_startd_alive(int cmd, Stream *s) const
 {
 	// Received a keep-alive from a startd.  
 	// Protocol: startd sends up the match id, and we send back 

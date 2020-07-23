@@ -7067,7 +7067,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		if ( child_claims[i] == "" ) {
 			continue;
 		}
-		ranks.push_back( std::pair<int, double>(i, currentRank) );
+		ranks.emplace_back(i, currentRank );
 	}
 
 		// Early opt-out -- if no dslots are eligible for matching, bail out now
@@ -7085,12 +7085,12 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		attrs_list.rewind();
 		char *entry;
 		while ( (entry = attrs_list.next()) ) {
-			attrs.push_back( entry );
+			attrs.emplace_back(entry );
 		}
 	} else {
-		attrs.push_back("cpus");
-		attrs.push_back("memory");
-		attrs.push_back("disk");
+		attrs.emplace_back("cpus");
+		attrs.emplace_back("memory");
+		attrs.emplace_back("disk");
 	}
 
 		// Backup all the attributes in the machine ad we may end up mutating
@@ -7249,7 +7249,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 
 			// Stash away all the attributes we mutated in the slot ad so we can restore it
 			// when/if we purge the match list in DeleteMatchList().
-			unmutatedSlotAds.push_back( std::pair<ClassAd*, ClassAd*>(machine, backupAd) );
+			unmutatedSlotAds.emplace_back(machine, backupAd );
 
 			// Note we do not want to delete backupAd when returning here, since we handed off this
 			// pointer to unmutatedSlotAds above; it will be deleted in DeleteMatchList().
