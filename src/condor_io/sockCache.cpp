@@ -134,7 +134,7 @@ SocketCache::isFull( void )
 
 
 int
-SocketCache::size( void )
+SocketCache::size( void ) const
 {
 	return cacheSize;
 }

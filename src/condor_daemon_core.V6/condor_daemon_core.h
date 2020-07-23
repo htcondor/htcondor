@@ -253,7 +253,7 @@ class DCSignalMsg: public DCMsg {
 	int theSignal() const {return m_signal;}
 	pid_t thePid() const {return m_pid;}
 
-	char const *signalName();
+	char const *signalName() const;
 
 	bool codeMsg( DCMessenger *messenger, Sock *sock );
 

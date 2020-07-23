@@ -1237,7 +1237,7 @@ RemoteResource::setExitReason( int reason )
 
 
 float
-RemoteResource::bytesSent()
+RemoteResource::bytesSent() const
 {
 	float bytes = 0.0;
 
@@ -1257,7 +1257,7 @@ RemoteResource::bytesSent()
 
 
 float
-RemoteResource::bytesReceived()
+RemoteResource::bytesReceived() const
 {
 	float bytes = 0.0;
 

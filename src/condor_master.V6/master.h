@@ -77,13 +77,13 @@ public:
 	char*	config_info_file;				// for config server
 #endif
 
-	time_t		GetNextRestart();
-	int		NextStart();
+	time_t		GetNextRestart() const;
+	int		NextStart() const;
 	int		Start( bool never_forward = false );
 	int		RealStart();
 	int		Restart();
 	void    Hold( bool on_hold, bool never_forward = false );
-	int		OnHold( void ) { return on_hold; };
+	int		OnHold( void ) const { return on_hold; };
 	bool	WaitingforStartup(bool & for_file) { for_file = ! m_after_startup_wait_for_file.empty(); return m_waiting_for_startup; }
 	void	Stop( bool never_forward = false );
 	void	StopFast( bool never_forward = false );
@@ -94,8 +94,8 @@ public:
 	void	Obituary( int );
 	void	CancelAllTimers();
 	void	CancelRestartTimers();
-	void	Kill( int );
-	void	KillFamily( void );
+	void	Kill( int ) const;
+	void	KillFamily( void ) const;
 	void	Reconfig();
 	void	InitParams();
 	void	SetReadyState(const char * state);
@@ -105,13 +105,13 @@ public:
 	int		RegisterControllee( class daemon * );
 	void		DeregisterControllee( class daemon * );
 
-	bool	IsHA( void ) { return is_ha; };
+	bool	IsHA( void ) const { return is_ha; };
 
 	bool WaitBeforeStartingOtherDaemons(bool first_time);
 
 		// true if this daemon needs to run right up until just before
 		// the master shuts down (e.g. shared port server)
-	bool OnlyStopWhenMasterStops() { return m_only_stop_when_master_stops; }
+	bool OnlyStopWhenMasterStops() const { return m_only_stop_when_master_stops; }
 
 private:
 
@@ -122,7 +122,7 @@ private:
 	int		SetupHighAvailability( void );
 	int		HaLockAcquired( LockEventSrc src );
 	int		HaLockLost( LockEventSrc src );
-	void	DoActionAfterStartup();
+	void	DoActionAfterStartup() const;
 
 	int		start_tid;
 	int		recover_tid;
