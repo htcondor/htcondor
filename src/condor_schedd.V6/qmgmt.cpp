@@ -3948,7 +3948,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 {
 	JOB_ID_KEY_BUF key;
 	JobQueueJob    *job = NULL;
-	MyString		new_value;
+	std::string		new_value;
 	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
 	IdToKey(cluster_id,proc_id,key);
