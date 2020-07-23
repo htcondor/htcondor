@@ -3904,7 +3904,7 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		// submit transforms come from inside the schedd and have no restrictions
 		// on which cluster/proc may be edited (the transform itself guarantees that only
 		// jobs in the submit transaction will be edited)
-	} else if (Q_SOCK != NULL) {
+	} else if (Q_SOCK != NULL || (flags&NONDURABLE)) {
 		// If we made it here, the user (i.e. not the schedd itself)
 		// is modifying attributes in an ad that has not been committed yet
 		// (we know this because it cannot be found in the JobQueue above).
