@@ -5629,9 +5629,6 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
-	ClassAd				*ad = NULL;
-	char				*attr_val = NULL;
-
 	if ( cluster_id == 0 && proc_id == 0 ) {
 		errno = EACCES;
 		return -1;
