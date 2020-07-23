@@ -37,10 +37,10 @@ Step-by-Step Installation of the HTCondorView Client
    following entries to the configuration file for the
    *condor_collector* chosen to act as the ViewServer.
 
-   ::
+   .. code-block:: text
 
-           POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data
-           KEEP_POOL_HISTORY = True
+        POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data
+        KEEP_POOL_HISTORY = True
 
 #. Create a directory where HTCondorView is to place the HTML files.
    This directory should be one published by a web server, so that HTML
@@ -53,9 +53,9 @@ Step-by-Step Installation of the HTCondorView Client
    This creates several files and subdirectories. Further unpack the jar
    file within the ``VIEWDIR`` directory with:
 
-   ::
+   .. code-block:: console
 
-         jar -xf condorview.jar
+        $ jar -xf condorview.jar
 
 #. Edit the *make_stats* script. At the beginning of the file are six
    parameters to customize. The parameters are
@@ -83,16 +83,16 @@ Step-by-Step Installation of the HTCondorView Client
        also include the directory where *perl* is installed. The
        following default works on most systems:
 
-       ::
+       .. code-block:: text
 
-                   PATH=/bin:/usr/bin:$STATSDIR:/usr/local/bin
+            PATH=/bin:/usr/bin:$STATSDIR:/usr/local/bin
 
 
 #. To create all of the initial HTML files, run
 
-   ::
+   .. code-block:: console
 
-               ./make_stats setup
+        $ ./make_stats setup
 
    Open the file ``index.html`` to verify that things look good.
    :index:`use of<single: use of; HTCondorView>` :index:`crontab program`
@@ -112,9 +112,9 @@ Step-by-Step Installation of the HTCondorView Client
    any user that has read/write access to the ``VIEWDIR`` directory. The
    command
 
-   ::
+   .. code-block:: console
 
-         crontab cronentries
+        $ crontab cronentries
 
    can set the crontab file; note that this command overwrites the
    current, existing crontab file with the entries from the file

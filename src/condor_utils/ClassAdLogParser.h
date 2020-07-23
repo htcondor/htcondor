@@ -84,18 +84,18 @@ public:
 	//!	get a current classad log entry data as a New ClassAd command
 	ParserErrCode 	getNewClassAdBody(char*& key, 
 									  char*& mytype, 
-									  char*& targettype);
+									  char*& targettype) const;
 	//!	get a current classad log entry data as a Destroy ClassAd command
-	ParserErrCode 	getDestroyClassAdBody(char*& key);
+	ParserErrCode 	getDestroyClassAdBody(char*& key) const;
 	//!	get a current classad log entry data as a Set Attribute command
 	ParserErrCode 	getSetAttributeBody(char*& key, 
 										char*& name, 
-										char*& value);
+										char*& value) const;
 	//!	get a current classad log entry data as a Delete Attribute command
-	ParserErrCode 	getDeleteAttributeBody(char*& key, char*& name);
+	ParserErrCode 	getDeleteAttributeBody(char*& key, char*& name) const;
 
 	//!	get the body of a historical sequence number command
-	ParserErrCode	getLogHistoricalSNBody(char*& seqnum, char*& timestamp);
+	ParserErrCode	getLogHistoricalSNBody(char*& seqnum, char*& timestamp) const;
 
 	//! read a classad log entry in the current offset of a file
 	FileOpErrCode readLogEntry(int &op_type);

@@ -236,15 +236,15 @@ public:
 	char const *claim_id() {return m_claim_id.c_str();}
 
 		// Message results:
-	bool claimed_startd_success() { return m_reply == OK; }
+	bool claimed_startd_success() const { return m_reply == OK; }
 	char const *startd_ip_addr() {return m_startd_ip_addr.c_str();}
 	char const *startd_fqu() {return m_startd_fqu.c_str();}
-	bool have_leftovers() { return m_have_leftovers; }
+	bool have_leftovers() const { return m_have_leftovers; }
 	char const *leftover_claim_id() { return m_leftover_claim_id.c_str(); }
 	ClassAd * leftover_startd_ad() 
 		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
 
-	bool have_paired_slot() { return m_have_paired_slot; }
+	bool have_paired_slot() const { return m_have_paired_slot; }
 	char const *paired_claim_id() { return m_paired_claim_id.c_str(); }
 	ClassAd *paired_startd_ad()
 		{ return m_have_paired_slot ? &m_paired_startd_ad : NULL; }
@@ -294,7 +294,7 @@ public:
 	char const *dest_slot_name() {return m_dest_slot_name.c_str();}
 
 		// Message results:
-	bool swap_claims_success() { return m_reply == OK || m_reply == SWAP_CLAIM_ALREADY_SWAPPED; }
+	bool swap_claims_success() const { return m_reply == OK || m_reply == SWAP_CLAIM_ALREADY_SWAPPED; }
 private:
 	std::string m_claim_id;
 	std::string m_description;

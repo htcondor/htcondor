@@ -49,7 +49,7 @@ class TestEventReader(unittest.TestCase):
         t = threading.Thread(target=self.targetSleepAndWrite, name="Sleep and write event")
         self.reader.setBlocking(True)
         t.start()
-        new_event = self.reader.next()
+        new_event = next(self.reader)
         self.compareEvents(new_event, self.sampleEvent)
         t.join()
 
@@ -66,7 +66,7 @@ class TestEventReader(unittest.TestCase):
         t.setDaemon(True)
         t.start()
         self.reader.wait()
-        self.compareEvents(self.reader.next(), self.sampleEvent)
+        self.compareEvents(next(self.reader), self.sampleEvent)
 
     def test_wait2(self):
         events = list(self.reader)
@@ -74,11 +74,11 @@ class TestEventReader(unittest.TestCase):
         t.setDaemon(True)
         t.start()
         time.sleep(1)
-        self.compareEvents(self.reader.next(), self.sampleEvent)
+        self.compareEvents(next(self.reader), self.sampleEvent)
 
     def test_nochange(self):
         events = list(self.reader)
-        self.assertRaises(StopIteration, self.reader.next, )
+        self.assertRaises(StopIteration, lambda: next(self.reader))
 
     def test_poll(self):
         events = list(self.reader)
@@ -98,7 +98,7 @@ class TestEventReader(unittest.TestCase):
         file2.write("...\n...\n")
         file2.flush()
         file2.close()
-        self.assertRaises(ValueError, self.reader.next)
+        self.assertRaises(ValueError, lambda: next(self.reader))
 
     def compareEvents(self, one, two):
         keys1 = list(one.keys())

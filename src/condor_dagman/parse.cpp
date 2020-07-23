@@ -2729,7 +2729,7 @@ static MyString munge_job_name(const char *jobName)
 	MyString newName;
 
 	if ( _mungeNames ) {
-		newName = IntToStr(_thisDagNum) + "." + jobName;
+		newName = std::to_string(_thisDagNum) + "." + jobName;
 	} else {
 		newName = jobName;
 	}

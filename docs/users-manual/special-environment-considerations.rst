@@ -53,7 +53,7 @@ automounter is configured to mount a volume at mount point
 ``/home/johndoe`` is accessed. Adding the following line to the submit
 description file solves the problem.
 
-::
+.. code-block:: text
 
       initialdir = /home/johndoe
 
@@ -67,7 +67,7 @@ visible on the submit machine. Since the flush operation can require
 multiple round trips to the NFS server, it is expensive. Therefore, a
 job may disable the flushing by setting
 
-::
+.. code-block:: text
 
       +IwdFlushNFSCache = False
 
@@ -93,9 +93,9 @@ root access, or has decided not to run the daemons as root. That is
 unfortunate, since HTCondor is designed to be run as root. To see if
 HTCondor is running as root on a specific machine, use the command
 
-::
+.. code-block:: console
 
-      condor_status -master -l <machine-name>
+      $ condor_status -master -l <machine-name>
 
 where <machine-name> is the name of the specified machine. This command
 displays the full condor_master ClassAd; if the attribute ``RealUid``
@@ -166,7 +166,7 @@ beginning.
 
 As a special case, a submit description file setting of
 
-::
+.. code-block:: text
 
      job_lease_duration = 0
 
@@ -197,7 +197,7 @@ executable compiled for a 32-bit Intel processor running Windows Vista,
 submitted from an Intel architecture running Linux would add the
 ``requirement``
 
-::
+.. code-block:: text
 
       requirements = Arch == "INTEL" && OpSys == "WINDOWS"
 
@@ -218,7 +218,7 @@ after an available machine is chosen.
 A special-purpose Machine Ad substitution macro can be used in string
 attributes in the submit description file. The macro has the form
 
-::
+.. code-block:: text
 
       $$(MachineAdAttribute)
 
@@ -235,14 +235,14 @@ for running the job is chosen. These executables must therefore be named
 based on the machine attributes that describe a platform. The
 executables named
 
-::
+.. code-block:: text
 
       povray.LINUX.INTEL
       povray.LINUX.X86_64
 
 will work correctly for the macro
 
-::
+.. code-block:: text
 
       povray.$$(OpSys).$$(Arch)
 
@@ -250,7 +250,7 @@ The executables or links to executables with this name are placed into
 the initial working directory so that they may be found by HTCondor. A
 submit description file that queues three jobs for this example:
 
-::
+.. code-block:: text
 
       ####################
       #
@@ -299,7 +299,7 @@ Vanilla Universe Example for Execution on Differing Operating Systems
 The addition of several related OpSys attributes assists in selection of
 specific operating systems and versions in heterogeneous pools.
 
-::
+.. code-block:: text
 
       ####################
       #
@@ -317,7 +317,7 @@ specific operating systems and versions in heterogeneous pools.
 
       Queue
 
-::
+.. code-block:: text
 
       ####################
       #
@@ -337,7 +337,7 @@ specific operating systems and versions in heterogeneous pools.
 
 Here is a more compact way to specify a RedHat 6 platform.
 
-::
+.. code-block:: text
 
       ####################
       #

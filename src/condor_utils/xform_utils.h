@@ -97,7 +97,7 @@ public:
 
 	const char * getName() { return name.c_str(); }
 	const char * setName(const char * nam) { name = nam; return getName(); }
-	int getUniverse() { return universe; }
+	int getUniverse() const { return universe; }
 	int setUniverse(int uni) { universe=uni; return universe; }
 	int setUniverse(const char * uni);
 
@@ -113,7 +113,7 @@ public:
 		if (iterate_init_state <= 1) return iterate_init_state;
 		return init_iterator(mset, errmsg);
 	}
-	bool iterate_init_pending() { return iterate_init_state > 1; }
+	bool iterate_init_pending() const { return iterate_init_state > 1; }
 	bool first_iteration(XFormHash &mset); // returns true if next_iteration should be called
 	bool next_iteration(XFormHash &mset);  // returns true if there was a next
 	void clear_iteration(XFormHash &mset); // clean up iteration variables in the hashtable
@@ -185,7 +185,7 @@ public:
 	void set_live_variable(const char* name, const char* live_value, MACRO_EVAL_CONTEXT & ctx);
 	void set_iterate_step(int step, int proc);
 	void set_iterate_row(int row, bool iterating);
-	void clear_live_variables();
+	void clear_live_variables() const;
 
 	const char * get_RulesFilename();
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, LocalMacroSet); }
@@ -193,8 +193,8 @@ public:
 	void warn_unused(FILE* out, const char *app);
 
 	void dump(FILE* out, int flags);
-	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
-	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
+	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 
 	MACRO_SET& macros() { return LocalMacroSet; }
 	MACRO_SET_CHECKPOINT_HDR * save_state();

@@ -219,7 +219,7 @@ an example of the default output for a pool that does not use
 Hierarchical Group Quotas. This default output is the same as given with
 the **-most** Display option.
 
-::
+.. code-block:: text
 
     Last Priority Update:  1/19 13:14
                             Effective   Priority   Res   Total Usage  Time Since
@@ -251,9 +251,9 @@ Example 2 This is an example of the default output for a pool that uses
 hierarchical groups, and the groups accept surplus. This leads to a very
 wide display.
 
-::
+.. code-block:: console
 
-    % condor_userprio -pool crane.cs.wisc.edu -allusers
+    $ condor_userprio -pool crane.cs.wisc.edu -allusers
     Last Priority Update:  1/19 13:18
     Group                                 Config     Use    Effective   Priority   Res   Total Usage  Time Since
       User Name                            Quota   Surplus   Priority    Factor   In Use (wghted-hrs) Last Usage

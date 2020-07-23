@@ -521,7 +521,7 @@ ResMgr::init_resources( void )
 
 
 bool
-ResMgr::typeNumCmp( int* a, int* b )
+ResMgr::typeNumCmp( const int* a, const int* b ) const
 {
 	int i;
 	for( i=0; i<max_types; i++ ) {
@@ -1215,7 +1215,7 @@ ResMgr::eval_all( void )
 
 
 void
-ResMgr::report_updates( void )
+ResMgr::report_updates( void ) const
 {
 	if( !num_updates ) {
 		return;
@@ -1594,12 +1594,12 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void )
+ResMgr::sweep_timer_handler( void ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
 	credmon_sweep_creds(cred_dir, credmon_type_KRB);
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
 
@@ -1613,7 +1613,7 @@ ResMgr::start_sweep_timer( void )
 	}
 
 	dprintf(D_FULLDEBUG, "STARTD: setting start_sweep_timer()\n");
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 							(TimerHandlercpp)&ResMgr::sweep_timer_handler,
 							"sweep_timer_handler", this );
@@ -1702,7 +1702,7 @@ ResMgr::reset_timers( void )
 								 update_interval );
 	}
 
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	if( m_cred_sweep_tid != -1 ) {
 		daemonCore->Reset_Timer( m_cred_sweep_tid, sec_cred_sweep_interval,
 								 sec_cred_sweep_interval );
@@ -2674,7 +2674,7 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 }
 
 bool
-ResMgr::isSlotDraining(Resource * /*rip*/)
+ResMgr::isSlotDraining(Resource * /*rip*/) const
 {
 	return draining;
 }

@@ -44,22 +44,22 @@ public:
 	void	set_dprintf_prefix(const char * prefix) { if (prefix) { s_dpf = prefix; } else { s_dpf.clear(); } }
 
 	char*	path() {return s_path;};
-	time_t	birthdate( void ) {return s_birthdate;};
-	time_t	got_update(void) {return s_last_update_time;}
-	bool	got_final_update(void) {return s_got_final_update;}
+	time_t	birthdate( void ) const {return s_birthdate;};
+	time_t	got_update(void) const {return s_last_update_time;}
+	bool	got_final_update(void) const {return s_got_final_update;}
 	bool	kill(int);
 	bool	killpg(int);
 	void	killkids(int);
 	void	exited(Claim *, int status);
 	int 	spawn(Claim *, time_t now, Stream* s );
-	pid_t	pid() {return s_pid;};
-	bool	is_dc() {return s_is_dc;};
-	bool	active();
+	pid_t	pid() const {return s_pid;};
+	bool	is_dc() const {return s_is_dc;};
+	bool	active() const;
 	const ProcFamilyUsage & updateUsage(void);
 
 
 	void	setReaperID( int reaper_id ) { s_reaper_id = reaper_id; };
-	bool    notYetReaped() { return (s_pid != 0) && ! s_was_reaped; }
+	bool    notYetReaped() const { return (s_pid != 0) && ! s_was_reaped; }
 	void    setOrphanedJob(ClassAd * job);
 
 	void    setExecuteDir( char const * dir ) { s_execute_dir = dir; }
@@ -94,7 +94,7 @@ public:
 	void	setIsDC( bool is_dc );
 
 #if HAVE_BOINC
-	bool	isBOINC( void ) { return s_is_boinc; };
+	bool	isBOINC( void ) const { return s_is_boinc; };
 	void	setIsBOINC( bool is_boinc ) { s_is_boinc = is_boinc; };
 #endif /* HAVE_BOINC */
 

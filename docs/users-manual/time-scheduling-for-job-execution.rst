@@ -111,7 +111,7 @@ preparation time may be used.
 The job's submit description file specifies that the job is to begin
 execution on January 1st, 2006 at 12:00 pm:
 
-::
+.. code-block:: text
 
        deferral_time = 1136138400
 
@@ -119,15 +119,15 @@ The Unix *date* program may be used to calculate a Unix epoch time. The
 syntax of the command to do this depends on the options provided within
 that flavor of Unix. In some, it appears as
 
-::
+.. code-block:: console
 
-    %  date --date "MM/DD/YYYY HH:MM:SS" +%s
+    $ date --date "MM/DD/YYYY HH:MM:SS" +%s
 
 and in others, it appears as
 
-::
+.. code-block:: console
 
-    %  date -d "YYYY-MM-DD HH:MM:SS" +%s
+    $ date -d "YYYY-MM-DD HH:MM:SS" +%s
 
 MM is a 2-digit month number, DD is a 2-digit day of the month number,
 and YYYY is a 4-digit year. HH is the 2-digit hour of the day, MM is the
@@ -138,7 +138,7 @@ a Unix epoch time.
 The job always waits 60 seconds after submission before beginning
 execution:
 
-::
+.. code-block:: text
 
        deferral_time = (QDate + 60)
 
@@ -146,7 +146,7 @@ In this example, assume that the deferral time is 45 seconds in the past
 as the job is available. The job begins execution, because 75 seconds
 remain in the deferral window:
 
-::
+.. code-block:: text
 
        deferral_window = 120
 
@@ -156,7 +156,7 @@ January 1st, 2010 at 12:00 pm. The
 attribute delays the job from being matched until 60 seconds before the
 job is to begin execution.
 
-::
+.. code-block:: text
 
        deferral_time      = 1262368800
        deferral_prep_time = 60
@@ -246,7 +246,7 @@ operator, ranges, lists, and steps (strides) within ranges.
     The \* (asterisk) operator specifies that all of the allowed values
     are used for scheduling. For example,
 
-    ::
+    .. code-block:: text
 
               cron_month = *
 
@@ -261,7 +261,7 @@ operator, ranges, lists, and steps (strides) within ranges.
     inclusive, and the integer to the left of the hyphen must be less
     than the right hand integer. For example,
 
-    ::
+    .. code-block:: text
 
               cron_hour = 0-4
 
@@ -273,7 +273,7 @@ operator, ranges, lists, and steps (strides) within ranges.
     A list is the union of the values or ranges separated by commas.
     Multiple entries of the same value are ignored. For example,
 
-    ::
+    .. code-block:: text
 
               cron_minute = 15,20,25,30
               cron_hour   = 0-3,9-12,15
@@ -287,7 +287,7 @@ operator, ranges, lists, and steps (strides) within ranges.
     step is specified by appending a range or the asterisk operator with
     a slash character (/), followed by an integer value. For example,
 
-    ::
+    .. code-block:: text
 
               cron_minute = 10-30/5
               cron_hour = */3
@@ -312,7 +312,7 @@ occurs.
 
 Consider the submit description file example that includes
 
-::
+.. code-block:: text
 
        cron_minute = 0
        cron_hour = *
@@ -334,7 +334,7 @@ analogous to the submit command
 **deferral_window** :index:`deferral_window<single: deferral_window; submit commands>`.
 Consider the submit description file example that includes
 
-::
+.. code-block:: text
 
        cron_minute = 0
        cron_hour = *
@@ -369,7 +369,7 @@ operate on the job queue just after a job's deferral time states that it
 is to begin execution. HTCondor attempts to start a job when the
 following pseudo-code boolean expression evaluates to ``True``:
 
-::
+.. code-block:: text
 
        ( time() + SCHEDD_INTERVAL ) >= ( DeferralTime - CronPrepTime )
 
@@ -394,7 +394,7 @@ explicitly define each attribute; the default value is \*.
 
 Run 23 minutes after every two hours, every day of the week:
 
-::
+.. code-block:: text
 
        on_exit_remove = false
        cron_minute = 23
@@ -406,7 +406,7 @@ Run 23 minutes after every two hours, every day of the week:
 Run at 10:30pm on each of May 10th to May 20th, as well as every
 remaining Monday within the month of May:
 
-::
+.. code-block:: text
 
        on_exit_remove = false
        cron_minute = 30
@@ -418,7 +418,7 @@ remaining Monday within the month of May:
 Run every 10 minutes and every 6 minutes before noon on January 18th
 with a 2-minute preparation time:
 
-::
+.. code-block:: text
 
        on_exit_remove = false
        cron_minute = */10,*/6

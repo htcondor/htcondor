@@ -138,7 +138,7 @@ the user's password must be stored, using the *condor_store_cred*
 tool. Then, a user that wants a job to run using their own account
 places into the job's submit description file
 
-::
+.. code-block:: text
 
       run_as_owner = True
 
@@ -178,7 +178,7 @@ customized to point to the machine hosting the *condor_credd* and the
 customized, if needed, to refer to an administrative account that exists
 on all HTCondor nodes.
 
-::
+.. code-block:: text
 
     CREDD_HOST = credd.cs.wisc.edu
     CREDD_CACHE_LOCALLY = True
@@ -210,9 +210,9 @@ pool.
 
 To store the pool password on a Windows machine, run
 
-::
+.. code-block:: console
 
-      condor_store_cred add -c
+      $ condor_store_cred add -c
 
 when logged in with the administrative account on that machine, and
 enter the password when prompted. If the administrative account is
@@ -221,24 +221,24 @@ same password on all machines, logging in separately to each machine in
 the pool can be avoided. Instead, the pool password can be securely
 pushed out for each Windows machine using a command of the form
 
-::
+.. code-block:: console
 
-      condor_store_cred add -c -n exec01.cs.wisc.edu
+      $ condor_store_cred add -c -n exec01.cs.wisc.edu
 
 Once the pool password is distributed, but before submitting jobs, all
 machines must reevaluate their configuration, so execute
 
-::
+.. code-block:: console
 
-      condor_reconfig -all
+      $ condor_reconfig -all
 
 from the central manager. This will cause each execute machine to test
 its ability to authenticate with the *condor_credd*. To see whether
 this test worked for each machine in the pool, run the command
 
-::
+.. code-block:: console
 
-      condor_status -f "%s\t" Name -f "%s\n" ifThenElse(isUndefined(LocalCredd),\"UNDEF\",LocalCredd)
+      $ condor_status -f "%s\t" Name -f "%s\n" ifThenElse(isUndefined(LocalCredd),\"UNDEF\",LocalCredd)
 
 Any rows in the output with the ``UNDEF`` string indicate machines where
 secure communication is not working properly. Verify that the pool
@@ -247,9 +247,9 @@ password is stored correctly on these machines.
 Regardless of how Condor's authentication is configured, the pool
 password can always be set locally by running the
 
-::
+.. code-block:: console
 
-      condor_store_cred add -c
+      $ condor_store_cred add -c
 
 command as the local SYSTEM account. Third party tools such as PsExec
 can be used to accomplish this. When condor_store_cred is run as the
@@ -261,9 +261,9 @@ pool is remote and no initial communication can be established due to
 strong security, the pool password may have to be set using the above
 method and following command:
 
-::
+.. code-block:: console
 
-      condor_store_cred -u condor_pool@poolhost add
+      $ condor_store_cred -u condor_pool@poolhost add
 
 Executing Jobs with the User's Profile Loaded
 ---------------------------------------------
@@ -288,7 +288,7 @@ A job that is to run with a profile uses the
 **load_profile** :index:`load_profile<single: load_profile; submit commands>` command
 in the job's submit description file:
 
-::
+.. code-block:: text
 
     load_profile = True
 
@@ -320,7 +320,7 @@ right clicks on a file. The command lines to be used for each of these
 verbs are stored in the registry under the ``HKEY_CLASSES_ROOT`` hive.
 In general, a registry look up uses the form:
 
-::
+.. code-block:: text
 
     HKEY_CLASSES_ROOT\<FileType>\Shell\<OpenVerb>\Command
 
@@ -333,7 +333,7 @@ The HTCondor configuration sets the selection of a verb, to aid in the
 registry look up. The file name extension sets the name of the HTCondor
 configuration variable. This variable name is of the form:
 
-::
+.. code-block:: text
 
     OPEN_VERB_FOR_<EXT>_FILES
 
@@ -341,7 +341,7 @@ configuration variable. This variable name is of the form:
 example uses the Open2 verb for a *Windows Scripting Host* registry look
 up for several scripting languages:
 
-::
+.. code-block:: text
 
     OPEN_VERB_FOR_JS_FILES  = Open2
     OPEN_VERB_FOR_VBS_FILES = Open2
@@ -361,7 +361,7 @@ different than the root registry. If not given access to the user's
 registry, some scripts, such as *Windows Scripting Host* scripts, will
 fail. The failure error message appears as:
 
-::
+.. code-block:: text
 
     CScript Error: Loading your settings failed. (Access is denied.)
 
@@ -370,7 +370,7 @@ user's registry hive. This can be accomplished with the addition of the
 **load_profile** :index:`load_profile<single: load_profile; submit commands>` command
 in the job's submit description file:
 
-::
+.. code-block:: text
 
     load_profile = True
 
@@ -516,7 +516,7 @@ submitting user. For example, say only Administrators can write to
 C:\\WINNT on the submit machine, and a user gives the following to
 *condor_submit* :
 
-::
+.. code-block:: text
 
              executable = mytrojan.exe
              initialdir = c:\winnt
@@ -600,7 +600,7 @@ command with a login and password
 
 Example: you want to copy a file off of a server before running it....
 
-::
+.. code-block:: text
 
        @echo off
        net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN
@@ -617,7 +617,7 @@ METHOD B - access the file server as guest
 Example: you want to copy a file off of a server before running it as
 GUEST
 
-::
+.. code-block:: text
 
        @echo off
        net use \\myserver\someshare
@@ -641,7 +641,7 @@ One more option is to use NULL Security Descriptors. In this way, you
 can specify which shares are accessible by NULL Descriptor by adding
 them to your registry. You can then use the batch file wrapper like:
 
-::
+.. code-block:: text
 
     net use z: \\myserver\someshare /USER:""
     z:\my-program.exe
@@ -649,7 +649,7 @@ them to your registry. You can then use the batch file wrapper like:
 so long as 'someshare' is in the list of allowed NULL session shares. To
 edit this list, run regedit.exe and navigate to the key:
 
-::
+.. code-block:: text
 
     HKEY_LOCAL_MACHINE\
        SYSTEM\

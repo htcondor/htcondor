@@ -188,7 +188,7 @@ class CondorQuery
 	void setDesiredAttrsExpr(const char *expr);
 
 	void setResultLimit(int limit) { resultLimit = limit; }
-	int  getResultLimit() { return resultLimit; }
+	int  getResultLimit() const { return resultLimit; }
 
   private:
 		// These are unimplemented, so make them private so that they

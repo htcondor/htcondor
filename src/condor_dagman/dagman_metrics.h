@@ -140,8 +140,8 @@ private:
 
 		// The IDs (in the form to be reported in the metrics) of this
 		// DAGMan, and it's parent DAGMan (if there is one).
-	static MyString _dagmanId;
-	static MyString _parentDagmanId;
+	static std::string _dagmanId;
+	static std::string _parentDagmanId;
 
 		// The name of the primary DAG file.
 	char *_primaryDagFile;

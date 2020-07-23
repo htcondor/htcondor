@@ -922,7 +922,7 @@ public:
 		}
 	}
 
-	void Parse(const char * sz, ClassAd * puAd) {
+	void Parse(const char * sz, ClassAd * puAd) const {
 		std::string tag;
 
 		// parse out resource tag

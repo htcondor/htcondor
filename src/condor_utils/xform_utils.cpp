@@ -299,7 +299,7 @@ XFormHash::~XFormHash()
 	LocalMacroSet.apool.clear();
 }
 
-void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+void XFormHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
 {
 	va_list ap;
 	va_start(ap, format);
@@ -318,7 +318,7 @@ void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_F
 	free(message);
 }
 
-void XFormHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+void XFormHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
 {
 	va_list ap;
 	va_start(ap, format);
@@ -400,7 +400,7 @@ void XFormHash::set_live_variable(const char *name, const char *live_value, MACR
 	}
 }
 
-void XFormHash::clear_live_variables()
+void XFormHash::clear_live_variables() const
 {
 	if (LocalMacroSet.metat) {
 		for (int ii = 0; ii < LocalMacroSet.size; ++ii) {
@@ -1322,7 +1322,7 @@ struct _parse_rules_args {
 const char * append_substituted_regex (
 	std::string &output,      // substituted regex will be appended to this
 	const char * input,       // original input passed to pcre_exec (ovector has offsets into this)
-	int ovector[], // output vector from pcre_exec
+	const int ovector[], // output vector from pcre_exec
 	int cvec,      // output count from pcre_exec
 	const char * replacement, // replacement template string
 	char tagChar)  // char that introduces a subtitution in replacement string, usually \ or $

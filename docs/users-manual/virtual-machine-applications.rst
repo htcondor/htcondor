@@ -31,21 +31,21 @@ of virtual machine software identify the disk image.
 VMware, Xen, and KVM virtual machine software are supported. As these
 differ from each other, the submit description file specifies one of
 
-::
+.. code-block:: text
 
-      vm_type = vmware
-
-or
-
-::
-
-      vm_type = xen
+    vm_type = vmware
 
 or
 
-::
+.. code-block:: text
 
-      vm_type = kvm
+    vm_type = xen
+
+or
+
+.. code-block:: text
+
+    vm_type = kvm
 
 The job is required to specify its memory needs for the disk image with
 **vm_memory** :index:`vm_memory<single: vm_memory; submit commands>`, which is
@@ -54,9 +54,9 @@ machine that can provide the needed memory space.
 
 Virtual machine networking is enabled with the command
 
-::
+.. code-block:: text
 
-      vm_networking = true
+    vm_networking = true
 
 And, when networking is enabled, a definition of
 **vm_networking_type** :index:`vm_networking_type<single: vm_networking_type; submit commands>`
@@ -78,9 +78,9 @@ the virtual machine). Should the job not want any files transferred back
 (modified or not), for example because the job explicitly transferred
 its own files, the submit command to prevent the transfer is
 
-::
+.. code-block:: text
 
-      vm_no_output_vm = true
+    vm_no_output_vm = true
 
 The required disk image must be identified for a virtual machine. This
 **vm_disk** :index:`vm_disk<single: vm_disk; submit commands>` command specifies
@@ -90,9 +90,9 @@ disk file. The second field specifies the device. The third field
 specifies permissions, and the optional fourth specifies the format.
 Here is an example that identifies a single file:
 
-::
+.. code-block:: text
 
-      vm_disk = swap.img:sda2:w:raw
+    vm_disk = swap.img:sda2:w:raw
 
 If HTCondor will be transferring the disk file, then the file name given
 in **vm_disk** :index:`vm_disk<single: vm_disk; submit commands>` should not
@@ -119,11 +119,11 @@ submit machine to the machine where the **vm** universe job will
 execute, HTCondor must be explicitly told to do so with the standard
 file transfer attributes:
 
-::
+.. code-block:: text
 
-      should_transfer_files = YES
-      when_to_transfer_output = ON_EXIT
-      transfer_input_files = /myxen/diskfile.img,/myxen/swap.img
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    transfer_input_files = /myxen/diskfile.img,/myxen/swap.img
 
 Any and all needed files that will not accessible directly from the
 machines where the job may execute must be listed.
@@ -160,9 +160,9 @@ initially quite small, growing only as new files are created or files
 are modified. When **vmware_should_transfer_files** is ``True``, a
 job may specify that a snapshot disk is not to be used with the command
 
-::
+.. code-block:: text
 
-      vmware_snapshot_disk = False
+    vmware_snapshot_disk = False
 
 In this case, HTCondor will utilize original disk files in producing
 checkpoints. Note that *condor_submit* issues an error message and does
@@ -187,7 +187,7 @@ page under the answer to why VMware jobs with symbolic links fail.
 
 Here is a sample submit description file for a VMware virtual machine:
 
-::
+.. code-block:: text
 
     universe                     = vm
     executable                   = vmware_sample_job
@@ -238,9 +238,9 @@ image and memory. The checkpoint is created and all files are
 transferred back to the ``$(SPOOL)`` directory on the machine from which
 the job was submitted. The submit command to create checkpoints is
 
-::
+.. code-block:: text
 
-      vm_checkpoint = true
+    vm_checkpoint = true
 
 Without this command, no checkpoints are created (by default). With the
 command, a checkpoint is created any time the **vm** universe jobs is
@@ -257,9 +257,9 @@ cause networking problems when the job restarts, particularly if the job
 migrates to a different machine. *condor_submit* will normally reject
 such jobs. To enable both, then add the command
 
-::
+.. code-block:: text
 
-      when_to_transfer_output = ON_EXIT_OR_EVICT
+    when_to_transfer_output = ON_EXIT_OR_EVICT
 
 Take care with respect to the use of network connections within the
 virtual machine and their interaction with checkpoints. Open network
@@ -303,17 +303,17 @@ the likely source of the shut down commands.
 Under a Windows 2000, Windows XP, or Vista virtual machine, an
 administrator issues the command
 
-::
+.. code-block:: doscon
 
-      shutdown -s -t 01
+    > shutdown -s -t 01
 
 Under a Linux virtual machine, the root user executes
 
-::
+.. code-block:: console
 
-      /sbin/poweroff
+    $ /sbin/poweroff
 
-The command /sbin/halt will not completely shut down some Linux
+The command ``/sbin/halt`` will not completely shut down some Linux
 distributions, and instead causes the job to hang.
 
 Since the successful completion of the **vm** universe job requires the

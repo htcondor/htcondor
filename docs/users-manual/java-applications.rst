@@ -18,9 +18,9 @@ Virtual Machine.
 The *condor_status* command can be used to see a list of machines in
 the pool for which HTCondor can use the Java Virtual Machine.
 
-::
+.. code-block:: console
 
-    % condor_status -java
+    $ condor_status -java
 
     Name               JavaVendor Ver    State     Activity LoadAv  Mem  ActvtyTime
 
@@ -45,26 +45,26 @@ A Simple Example Java Application
 Here is a complete, if simple, example. Start with a simple Java
 program, ``Hello.java``:
 
-::
+.. code-block:: java
 
     public class Hello {
-            public static void main( String [] args ) {
-                    System.out.println("Hello, world!\n");
-            }
+        public static void main( String [] args ) {
+            System.out.println("Hello, world!\n");
+        }
     }
 
 Build this program using your Java compiler. On most platforms, this is
 accomplished with the command
 
-::
+.. code-block:: console
 
-    javac Hello.java
+    $ javac Hello.java
 
 Submission to HTCondor requires a submit description file. If submitting
 where files are accessible using a shared file system, this simple
 submit description file works:
 
-::
+.. code-block:: text
 
       ####################
       #
@@ -91,7 +91,7 @@ argument to the program.
 If submitting the job where a shared file system is not accessible, the
 submit description file becomes:
 
-::
+.. code-block:: text
 
       ####################
       #
@@ -116,9 +116,9 @@ see the :doc:`/users-manual/submitting-a-job` section.
 To submit the job, where the submit description file is named
 ``Hello.cmd``, execute
 
-::
+.. code-block:: console
 
-    condor_submit Hello.cmd
+    $ condor_submit Hello.cmd
 
 To monitor the job, the commands *condor_q* and *condor_rm* are used
 as with all jobs.
@@ -131,7 +131,7 @@ Less Simple Java Specifications
     consist of more than one ``.class`` file, identify the files in the
     submit description file:
 
-    ::
+    .. code-block:: text
 
         executable = Stooges.class
         transfer_input_files = Larry.class,Curly.class,Moe.class
@@ -146,9 +146,9 @@ Less Simple Java Specifications
     together into a single Java Archive (JAR) file. A JAR can be created
     with:
 
-    ::
+    .. code-block:: console
 
-        % jar cvf Library.jar Larry.class Curly.class Moe.class Stooges.class
+        $ jar cvf Library.jar Larry.class Curly.class Moe.class Stooges.class
 
     HTCondor must then be told where to find the JAR as well as to use
     the JAR. The JAR file that contains the entry point is specified
@@ -158,7 +158,7 @@ Less Simple Java Specifications
     For this example that collected all the class files into a single
     JAR file, the submit description file contains:
 
-    ::
+    .. code-block:: text
 
         executable = Library.jar
         jar_files = Library.jar
@@ -175,7 +175,7 @@ Less Simple Java Specifications
     specifies the JAR file that contains the program's entry point. This
     file is also listed with the **jar_files** command:
 
-    ::
+    .. code-block:: text
 
         executable = sortmerge.jar
         jar_files = sortmerge.jar,statemap.jar
@@ -188,7 +188,7 @@ Less Simple Java Specifications
     JAR file has been placed in the same directory with the other JAR
     files, then the submit description file contains
 
-    ::
+    .. code-block:: text
 
         executable = sortmerge.jar
         jar_files = sortmerge.jar,statemap.jar,commons-lang-2.1.jar
@@ -198,7 +198,7 @@ Less Simple Java Specifications
     point in the
     **arguments** :index:`arguments<single: arguments; submit commands>` command:
 
-    ::
+    .. code-block:: text
 
         executable = anexecutable.jar
         jar_files  = anexecutable.jar
@@ -215,15 +215,15 @@ Less Simple Java Specifications
 
     For a Java application which is run on the command line with
 
-    ::
+    .. code-block:: console
 
-          java -jar OneJarFile.jar
+        $ java -jar OneJarFile.jar
 
     the equivalent version after discovery might look like
 
-    ::
+    .. code-block:: console
 
-          java -classpath OneJarFile.jar TheMainClass
+        $ java -classpath OneJarFile.jar TheMainClass
 
     The specified value for TheMainClass can be discovered by unjarring
     the JAR file, and looking for the MainClass definition in the
@@ -231,26 +231,26 @@ Less Simple Java Specifications
     description file. Partial contents of that file Java universe submit
     file will appear as
 
-    ::
+    .. code-block:: text
 
           universe   = java
           executable =  OneJarFile.jar
-          jar_files = OneJarFile.jar
-          Arguments = TheMainClass More-Arguments
+          jar_files  = OneJarFile.jar
+          Arguments  = TheMainClass More-Arguments
           queue
 
  Packages.
     :index:`using packages<single: using packages; Java>` An example of a Java class that
     is declared in a non-default package is
 
-    ::
+    .. code-block:: java
 
         package hpc;
 
-         public class CondorDriver
-         {
-             // class definition here
-         }
+        public class CondorDriver
+        {
+         // class definition here
+        }
 
     The JVM needs to know the location of this package. It is passed as
     a command-line argument, implying the use of the naming convention
@@ -258,7 +258,7 @@ Less Simple Java Specifications
 
     Therefore, the submit description file for this example will contain
 
-    ::
+    .. code-block:: text
 
         arguments = hpc.CondorDriver
 
@@ -270,7 +270,7 @@ Less Simple Java Specifications
     For example, to require version 3.2, add to the submit description
     file:
 
-    ::
+    .. code-block:: text
 
         requirements = (JavaVersion=="3.2")
 
@@ -286,7 +286,7 @@ Less Simple Java Specifications
     ``rank`` or ``requirements`` in the submit description file. As an
     example, to execute only on machines of a minimum speed:
 
-    ::
+    .. code-block:: text
 
         requirements = (JavaMFlops>4.5)
 
@@ -294,7 +294,7 @@ Less Simple Java Specifications
     Options to the JVM itself are specified in the submit description
     file:
 
-    ::
+    .. code-block:: text
 
         java_vm_args = -DMyProperty=Value -verbose:gc -Xmx1024m
 
@@ -328,7 +328,7 @@ are completely documented
 in the HTCondor Software Developer's Kit (SDK). Here is a simple code
 example:
 
-::
+.. code-block:: java
 
     import java.io.*;
     import edu.wisc.cs.condor.chirp.*;
@@ -365,7 +365,7 @@ This object supports familiar operations such as ``open``, ``read``,
 ``write``, and ``close``. Exhaustive detail of the methods may be found
 in the HTCondor SDK, but here is a brief example:
 
-::
+.. code-block:: java
 
     import java.io.*;
     import edu.wisc.cs.condor.chirp.*;
@@ -403,23 +403,23 @@ included with the job. The Chirp JAR (``Chirp.jar``) is found in the
 working directory in order to compile the program after modification to
 use Chirp I/O.
 
-::
+.. code-block:: console
 
-    % condor_config_val LIB
+    $ condor_config_val LIB
     /usr/local/condor/lib
-    % cp /usr/local/condor/lib/Chirp.jar .
+    $ cp /usr/local/condor/lib/Chirp.jar .
 
 Rebuild the program with the Chirp JAR file in the class path.
 
-::
+.. code-block:: console
 
-    % javac -classpath Chirp.jar:. TestChirp.java
+    $ javac -classpath Chirp.jar:. TestChirp.java
 
 The Chirp JAR file must be specified in the submit description file.
 Here is an example submit description file that works for both of the
 given test programs:
 
-::
+.. code-block:: text
 
     universe = java
     executable = TestChirp.class

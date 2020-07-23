@@ -71,7 +71,7 @@ TransferD::dump_state_handler(int  /*cmd*/, Stream *sock)
 // inspect the transfer request data structures and exit if they have been
 // empty for too long.
 void
-TransferD::exit_due_to_inactivity_timer(void)
+TransferD::exit_due_to_inactivity_timer(void) const
 {
 	time_t now;
 

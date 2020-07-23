@@ -1,4 +1,4 @@
-set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp")
+set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
 set(SETUP_PY      "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
@@ -73,6 +73,12 @@ if (WITH_PYTHON_BINDINGS)
     endif()
 
     # build Python 3 scaffolding on non-Windows
+    if (DARWIN)
+        # This is probably a sign that something else needs fixing.
+        # Note that value shoud NOT be the same as the variable name.
+        set(SYSTEM_NAME "darwin")
+    endif()
+
     if (NOT WINDOWS AND PYTHON3LIBS_FOUND AND NOT ${SYSTEM_NAME} MATCHES "fc27")
         set(TIMESTAMP3_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp3")
         add_custom_command(

@@ -666,7 +666,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 		// For historical reasons, session duration is inserted as a string
 		// in the ClassAd
-	ad->Assign ( ATTR_SEC_SESSION_DURATION, IntToStr(session_duration) );
+	ad->Assign ( ATTR_SEC_SESSION_DURATION, std::to_string(session_duration) );
 
 	int session_lease = 3600;
 	SecMan::getIntSecSetting(session_lease, "SEC_%s_SESSION_LEASE", auth_level);
@@ -949,7 +949,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		free(dur);
 	}
 
-	action_ad->Assign(ATTR_SEC_SESSION_DURATION, IntToStr((cli_duration < srv_duration) ? cli_duration : srv_duration));
+	action_ad->Assign(ATTR_SEC_SESSION_DURATION, std::to_string((cli_duration < srv_duration) ? cli_duration : srv_duration));
 
 
 		// Session lease time (max unused time) is the shorter of the

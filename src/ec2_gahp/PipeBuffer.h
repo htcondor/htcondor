@@ -32,11 +32,11 @@ public:
 
 	bool GetNextLine( char * buffer, int length );
 
-	int getPipeEnd() { return pipe_end; }
+	int getPipeEnd() const { return pipe_end; }
 	void setPipeEnd( const int _pipe_end ) { pipe_end = _pipe_end; }
 
-	bool IsError() { return error; }
-	bool IsEOF() { return eof; }
+	bool IsError() const { return error; }
+	bool IsEOF() const { return eof; }
 
 protected:
 	int pipe_end;

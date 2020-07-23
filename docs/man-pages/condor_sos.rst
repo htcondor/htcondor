@@ -48,9 +48,9 @@ Examples
 
 The example command
 
-::
+.. code-block:: console
 
-      condor_sos -timeoutmult 5 condor_hold -all
+      $ condor_sos -timeoutmult 5 condor_hold -all
 
 causes the ``condor_hold -all`` command to be handled by the
 *condor_schedd* with priority over any other commands that the

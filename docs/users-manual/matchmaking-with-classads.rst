@@ -59,7 +59,7 @@ ClassAd does by trying the *condor_status* command. Try the
 about the resources available in your pool. Type *condor_status* and
 hit enter to see a summary similar to the following:
 
-::
+.. code-block:: text
 
     Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
 
@@ -97,7 +97,7 @@ request or preference on what machine to use. Additional attributes can
 be easily added. For example, your site administrator can add a physical
 location attribute to your machine ClassAds.
 
-::
+.. code-block:: text
 
     Machine = "turunmaa.cs.wisc.edu"
     FileSystemDomain = "cs.wisc.edu"

@@ -278,21 +278,21 @@ public:
 		 */
 	int numberOfJobs( void ) { return m_job_list.Number(); };
 
-	bool isGridshell( void ) {return is_gridshell;};
+	bool isGridshell( void ) const {return is_gridshell;};
 #ifdef WIN32
 	bool hasEncryptedWorkingDir(void) { return has_encrypted_working_dir; }
 	bool loadUserRegistry(const ClassAd * jobAd);
 #endif
 	const char* origCwd( void ) {return (const char*) orig_cwd;};
-	int starterStdinFd( void ) { return starter_stdin_fd; };
-	int starterStdoutFd( void ) { return starter_stdout_fd; };
-	int starterStderrFd( void ) { return starter_stderr_fd; };
+	int starterStdinFd( void ) const { return starter_stdin_fd; };
+	int starterStdoutFd( void ) const { return starter_stdout_fd; };
+	int starterStderrFd( void ) const { return starter_stderr_fd; };
 	void closeSavedStdin( void );
 	void closeSavedStdout( void );
 	void closeSavedStderr( void );
 
 		/** Command handler for ClassAd-only protocol commands */
-	int classadCommand( int, Stream* );
+	int classadCommand( int, Stream* ) const;
 
 	int updateX509Proxy( int cmd, Stream* );
 
@@ -321,7 +321,7 @@ public:
 	}
 #endif
 
-	int GetShutdownExitCode() { return m_shutdown_exit_code; };
+	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
 	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
@@ -375,16 +375,16 @@ private:
 		  @param result Buffer in which to store fully-qualified user name of the job owner
 		  If no job owner can be found, substitute a suitable dummy user name.
 		 */
-	void getJobOwnerFQUOrDummy(std::string &result);
+	void getJobOwnerFQUOrDummy(std::string &result) const;
 
 		/*
 		  @param result Buffer in which to store claim id string from job.
 		  Returns false if no claim id could be found.
 		 */
-	bool getJobClaimId(std::string &result);
+	bool getJobClaimId(std::string &result) const;
 
 
-	bool WriteAdFiles();
+	bool WriteAdFiles() const;
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //

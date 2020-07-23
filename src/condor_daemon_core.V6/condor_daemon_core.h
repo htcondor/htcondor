@@ -250,8 +250,8 @@ class DCSignalMsg: public DCMsg {
 	DCSignalMsg(pid_t pid, int s): DCMsg(DC_RAISESIGNAL)
 		{m_pid = pid; m_signal = s; m_messenger_delivery = false;}
 
-	int theSignal() {return m_signal;}
-	pid_t thePid() {return m_pid;}
+	int theSignal() const {return m_signal;}
+	pid_t thePid() const {return m_pid;}
 
 	char const *signalName();
 
@@ -265,7 +265,7 @@ class DCSignalMsg: public DCMsg {
 	virtual void reportFailure( DCMessenger *messenger );
 	virtual void reportSuccess( DCMessenger *messenger );
 
-	bool messengerDelivery() {return m_messenger_delivery;}
+	bool messengerDelivery() const {return m_messenger_delivery;}
 	void messengerDelivery(bool flag) {m_messenger_delivery = flag;}
 
  private:
@@ -537,7 +537,7 @@ class DaemonCore : public Service
 			originated via the condor_sos command (i.e. via super user socket)
 			@return true if super user command, else false
 		*/
-	bool Is_Command_From_SuperUser( Stream *s );
+	bool Is_Command_From_SuperUser( Stream *s ) const;
 
 		/**
 		   @return The daemon's private network name, or NULL if there
@@ -569,7 +569,7 @@ class DaemonCore : public Service
     /** Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int InServiceCommandSocket() {
+    int InServiceCommandSocket() const {
         return inServiceCommandSocket_flag;
     }
     
@@ -842,7 +842,7 @@ class DaemonCore : public Service
 	/**
 	   @return Number of currently registered sockets.
 	 */
-	int RegisteredSocketCount();
+	int RegisteredSocketCount() const;
 
 	/** This function is specifically tailored for testing if it is
 		ok to register a new socket (e.g. for non-blocking connect).
@@ -944,7 +944,7 @@ class DaemonCore : public Service
 	*/
 	int Close_Pipe(int pipe_end);
 
-	int Get_Max_Pipe_Buffer() { return maxPipeBuffer; };
+	int Get_Max_Pipe_Buffer() const { return maxPipeBuffer; };
 
 #if !defined(WIN32)
 	/** Get the FD underlying the given pipe end. Returns FALSE
@@ -1140,12 +1140,12 @@ class DaemonCore : public Service
     /** Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    inline pid_t getpid() { return this->mypid; };
+    inline pid_t getpid() const { return this->mypid; };
 
     /** Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    inline pid_t getppid() { return ppid; };
+    inline pid_t getppid() const { return ppid; };
 
     /** Not_Yet_Documented
         @param pid Not_Yet_Documented
@@ -1173,7 +1173,7 @@ class DaemonCore : public Service
         @param pid Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Suspend_Process(pid_t pid);
+    int Suspend_Process(pid_t pid) const;
 
     /** Not_Yet_Documented
         @param pid Not_Yet_Documented
@@ -1399,7 +1399,7 @@ class DaemonCore : public Service
 		// On some platforms (currently Windows), we do not want
 		// Create_Thread() to actually create a thread, because
 		// just about nothing in Condor is thread safe at this time.
-	bool DoFakeCreateThread() { return m_fake_create_thread; }
+	bool DoFakeCreateThread() const { return m_fake_create_thread; }
 
 	///
 	int Suspend_Thread(int tid);
@@ -1454,7 +1454,7 @@ class DaemonCore : public Service
 	/** The peaceful shutdown toggle controls whether graceful shutdown
 	   avoids any hard killing.
 	*/
-	bool GetPeacefulShutdown();
+	bool GetPeacefulShutdown() const;
 	void SetPeacefulShutdown(bool value);
 
 	/** Called when it looks like the clock jumped unexpectedly.
@@ -1520,7 +1520,7 @@ class DaemonCore : public Service
 		   DAEMON_SHUTDOWN expressions was TRUE, in which case we do
 		   not want to be automatically restarted.
 		*/
-	bool wantsRestart( void );
+	bool wantsRestart( void ) const;
 
 		/**
 		   Set whether this daemon should should send CHILDALIVE commands
@@ -1791,7 +1791,7 @@ class DaemonCore : public Service
 		// If this platform supports clone() as a faster alternative to fork(), use it (or not).
 #ifdef HAVE_CLONE
 	bool m_use_clone_to_create_processes;
-	bool UseCloneToCreateProcesses() { return m_use_clone_to_create_processes; }
+	bool UseCloneToCreateProcesses() const { return m_use_clone_to_create_processes; }
 #else
 	bool UseCloneToCreateProcesses() { return false; }
 #endif
@@ -2061,7 +2061,7 @@ class DaemonCore : public Service
 	{
 		pid_t child_pid;
 		int exit_status;
-		bool operator==( const struct WaitpidEntry_s &target) { 
+		bool operator==( const struct WaitpidEntry_s &target) const { 
 			if(child_pid == target.child_pid) {
 				return true;
 			}
@@ -2162,7 +2162,7 @@ class DaemonCore : public Service
 	// can be provided in the info_ad. Older clients will assume the
 	// ad is part of the session id to invalidate.
 	void send_invalidate_session ( const char* sinful, const char* sessid,
-	                               const ClassAd* info_ad = NULL );
+	                               const ClassAd* info_ad = NULL ) const;
 
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;

@@ -49,13 +49,13 @@ space randomization by modifying the command line. For a 32-bit
 architecture, assuming an HTCondor-linked binary called *myapp*, invoke
 the standalone executable with:
 
-::
+.. code-block:: text
 
       setarch i386 -L -R ./myapp
 
 For a 64-bit architecture, the resumption command will be:
 
-::
+.. code-block:: text
 
       setarch x86_64 -L -R ./myapp
 
@@ -64,6 +64,6 @@ Some applications will also need the **-B** option.
 The command to resume execution using the checkpoint must also disable
 address space randomization, as the 32-bit architecture example:
 
-::
+.. code-block:: text
 
       setarch i386 -L -R myapp -_condor_restart myapp.ckpt

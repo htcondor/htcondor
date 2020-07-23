@@ -21,49 +21,49 @@
 #include "condor_common.h"
 #include "analysis.h"
 
-static bool GetOpName( Operation::OpKind, string & );
-static bool GetTypeName( Value::ValueType, string & );
+static bool GetOpName( classad::Operation::OpKind, std::string & );
+static bool GetTypeName( classad::Value::ValueType, std::string & );
 
 int main( ) {
-	PrettyPrint pp;
-	ClassAdParser parser;
-	string buffer = "";
-	string condString = "( ( MemoryRequirements < 234 ) || ( MemoryRequirements =?= undefined ) )";
+	classad::PrettyPrint pp;
+	classad::ClassAdParser parser;
+	std::string buffer = "";
+	std::string condString = "( ( MemoryRequirements < 234 ) || ( MemoryRequirements =?= undefined ) )";
 
-	cout << "-------------" << endl;
-	cout << "BOOLEXPR TEST" << endl;
-	cout << "-------------" << endl;
-	cout << "condString = " << condString << endl;
-	cout << endl;
+	std::cout << "-------------" << std::endl;
+	std::cout << "BOOLEXPR TEST" << std::endl;
+	std::cout << "-------------" << std::endl;
+	std::cout << "condString = " << condString << std::endl;
+	std::cout << std::endl;
 
 	ExprTree *condTree = NULL;
 	if( !( condTree =  parser.ParseExpression( condString ) ) ) {
-		cerr << "error parsing expression" << endl;
+		std::cerr << "error parsing expression" << std::endl;
 	}
 
 	Condition *cond = new Condition( );
 	if( !( BoolExpr::ExprToCondition( condTree, cond ) ) ) {
-		cerr << "error with ExprToCondition" << endl;
+		std::cerr << "error with ExprToCondition" << std::endl;
 	}
 
 	cond->ToString( buffer );
-	cout << "cond.ToString( ) = " << buffer << endl;
+	std::cout << "cond.ToString( ) = " << buffer << std::endl;
 	buffer = "";
-	cout << endl;
+	std::cout << std::endl;
 
-	string attr;
-	Operation::OpKind op1 = Operation::__NO_OP__;
-	Operation::OpKind op2 = Operation::__NO_OP__;
-	Value val1, val2;
-	Value::ValueType type;
+	std::string attr;
+	classad::Operation::OpKind op1 = classad::Operation::__NO_OP__;
+	classad::Operation::OpKind op2 = classad::Operation::__NO_OP__;
+	classad::Value val1, val2;
+	classad::Value::ValueType type;
 
 	cond->GetAttr( attr );
-	cout << "attr = " << attr << endl;
+	std::cout << "attr = " << attr << std::endl;
 
 	cond->GetOp( op1 );
 	GetOpName( op1, buffer );
-	cout << "op1 = " << buffer << endl;
-	cout << "op1 is op number " << (int)op1 << endl;
+	std::cout << "op1 = " << buffer << std::endl;
+	std::cout << "op1 is op number " << (int)op1 << endl;
 	buffer = "";
 
 	cond->GetOp2( op2 );

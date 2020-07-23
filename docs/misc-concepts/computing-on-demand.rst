@@ -364,7 +364,7 @@ For example, if the user's keyword for a given fractal generation
 application is ``FractGen``, the resulting entries in the HTCondor
 configuration file may appear as:
 
-::
+.. code-block:: text
 
     FractGen_Cmd = "/usr/local/bin/fractgen"
     FractGen_Iwd = "/tmp/cod-fractgen"
@@ -452,16 +452,16 @@ Delegate proxy
 To issue these commands, a user or application invokes the *condor_cod*
 tool. A command may be specified as the first argument to this tool, as
 
-::
+.. code-block:: console
 
-    condor_cod request -name c02.cs.wisc.edu
+    $ condor_cod request -name c02.cs.wisc.edu
 
 or the *condor_cod* tool can be installed in such a way that the same
 binary is used for a set of names, as
 
-::
+.. code-block:: console
 
-    condor_cod_request -name c02.cs.wisc.edu
+    $ condor_cod_request -name c02.cs.wisc.edu
 
 Other than the command name itself (which must be included in full)
 additional options supported by each tool can be abbreviated to the
@@ -491,18 +491,18 @@ accomplished by specifying the name of the *condor_startd* daemon
 desired by invoking *condor_cod_request* with the **-name** option and
 the resource name (usually the host name). For example:
 
-::
+.. code-block:: console
 
-    condor_cod_request -name c02.cs.wisc.edu
+    $ condor_cod_request -name c02.cs.wisc.edu
 
 If the *condor_startd* daemon desired belongs to a different HTCondor
 pool than the one where executing the COD commands, use the **-pool**
 option to provide the name of the central manager machine of the other
 pool. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_request -name c02.cs.wisc.edu -pool condor.cs.wisc.edu
+    $ condor_cod_request -name c02.cs.wisc.edu -pool condor.cs.wisc.edu
 
 An alternative is to provide the IP address and port number where the
 *condor_startd* daemon is listening with the **-addr** option. This
@@ -510,9 +510,9 @@ information can be found in the *condor_startd* ClassAd as the
 attribute ``StartdIpAddr`` or by reading the log file when the
 *condor_startd* first starts up. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_request -addr "<128.105.146.102:40967>"
+    $ condor_cod_request -addr "<128.105.146.102:40967>"
 
 If neither **-name** or **-addr** are specified, *condor_cod_request*
 attempts to connect to the *condor_startd* daemon running on the local
@@ -523,18 +523,18 @@ machine and has multiple slots, specify which resource on the machine to
 use for COD by providing the full name of the resource, not just the
 host name. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_request -name slot2@c02.cs.wisc.edu
+    $ condor_cod_request -name slot2@c02.cs.wisc.edu
 
 A constraint on what slot is desired may be provided, instead of
 specifying it by name. For example, to run on machine c02.cs.wisc.edu,
 not caring which slot is used, so long as it the machine is not
 currently running a job, use something like:
 
-::
+.. code-block:: console
 
-    condor_cod_request -name c02.cs.wisc.edu -requirements 'State!="Claimed"'
+    $ condor_cod_request -name c02.cs.wisc.edu -requirements 'State!="Claimed"'
 
 In general, be careful with shell quoting issues, so that your shell is
 not confused by the ClassAd expression syntax (in particular if the
@@ -565,7 +565,7 @@ whole ClassAd is also being written to a file.
 The claim ID as given after listing the machine ClassAd appears as this
 example:
 
-::
+.. code-block:: text
 
     ID of new claim is: "<128.105.121.21:49973>#1073352104#4"
 
@@ -625,16 +625,16 @@ uniquely identifies the application's configuration attributes. To continue
 the example from that section, the user would spawn their job by specifying
 -keyword FractGen, for example:
 
-::
+.. code-block:: console
 
-    condor_cod_activate -id "<claim_id>" -keyword FractGen
+    $ condor_cod_activate -id "<claim_id>" -keyword FractGen
 
 Substitute the <claim_id> with the valid Cod Claim Id. Using the same
 example as given above, this example would be:
 
-::
+.. code-block:: console
 
-    condor_cod_activate -id "<128.105.121.21:49973>#1073352104#4" -keyword FractGen
+    $ condor_cod_activate -id "<128.105.121.21:49973>#1073352104#4" -keyword FractGen
 
 If the job attributes are placed into a file to be passed to the
 *condor_cod_activate* tool, the user must provide the name of the file
@@ -642,9 +642,9 @@ using the **-jobad** option. For example, if the job attributes were
 defined in a file named ``cod-fractgen.txt``, the user spawns the job
 using the command:
 
-::
+.. code-block:: console
 
-    condor_cod_activate -id "<claim_id>" -jobad cod-fractgen.txt
+    $ condor_cod_activate -id "<claim_id>" -jobad cod-fractgen.txt
 
 Alternatively, if the filename specified with **-jobad** is ``-``, the
 *condor_cod_activate* tool reads the job ClassAd from standard input
@@ -658,9 +658,9 @@ in the job's ClassAd, or it can be specified on the command line to
 For example, to launch a COD job with keyword foo as cluster 23, proc 5,
 or 23.5, the user invokes:
 
-::
+.. code-block:: console
 
-    condor_cod_activate -id "<claim_id>" -key foo -cluster 23 -proc 5
+    $ condor_cod_activate -id "<claim_id>" -key foo -cluster 23 -proc 5
 
 The **-cluster** and **-proc** arguments are optional, since the job ID
 is not required for COD. If not specified, the job ID defaults to 1.0.
@@ -684,9 +684,9 @@ should be suspended to prevent the resource from being wasted.
 The interface of *condor_cod_suspend* supports the single option
 **-id**, to specify the COD claim ID to be suspended. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_suspend -id "<claim_id>"
+    $ condor_cod_suspend -id "<claim_id>"
 
 If the user attempts to suspend a COD job that is not running,
 *condor_cod_suspend* exits with an error message. The COD job may not
@@ -706,9 +706,9 @@ more information on using leases.
 The *condor_cod_renew* tool supports only the **-id** option to
 specify the COD claim ID the user wishes to renew. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_renew -id "<claim_id>"
+    $ condor_cod_renew -id "<claim_id>"
 
 If the user attempts to renew a COD job that no longer exists,
 *condor_cod_renew* exits with an error message.
@@ -727,9 +727,9 @@ is resumed.
 The *condor_cod_resume* tool supports only the **-id** option to
 specify the COD claim ID the user wishes to resume. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_resume -id "<claim_id>"
+    $ condor_cod_resume -id "<claim_id>"
 
 If the user attempts to resume a COD job that is not suspended,
 *condor_cod_resume* exits with an error message.
@@ -745,9 +745,9 @@ the job, but leave the COD claim ID valid for future COD jobs. The user
 must specify the claim ID they wish to deactivate using the **-id**
 option. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_deactivate -id "<claim_id>"
+    $ condor_cod_deactivate -id "<claim_id>"
 
 By default, *condor_cod_deactivate* attempts to gracefully cleanup the
 COD application and give it time to exit. In this case the COD claim
@@ -762,9 +762,9 @@ option to tell the *condor_starter* to quickly kill the job and all its
 descendants using SIGKILL. In this case the COD claim goes into the
 Killing state. For example:
 
-::
+.. code-block:: console
 
-    condor_cod_deactivate -id "<claim_id>" -fast
+    $ condor_cod_deactivate -id "<claim_id>" -fast
 
 In either case, once the COD job has finally exited, the COD claim will
 go into the Idle state and will be available for future COD

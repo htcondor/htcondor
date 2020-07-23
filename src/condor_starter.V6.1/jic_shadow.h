@@ -449,7 +449,7 @@ private:
 	bool refreshSandboxCredentialsOAuth();
 	void refreshSandboxCredentialsOAuth_from_timer() { (void)refreshSandboxCredentialsOAuth(); }
 
-	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
+	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
 		// // // // // // // //
 		// Private Data Members
@@ -521,7 +521,7 @@ private:
 		/** timer id of timer to invoke job_lease_expired() when syscall_sock closed */
 	int syscall_sock_lost_tid;
 		/** invoked when job lease expired - exits w/ well known status */
-	void job_lease_expired();
+	void job_lease_expired() const;
 		/** must be invoked whenever our syscall_sock is reconnected */
 	void syscall_sock_reconnect();
 		/** must be invoked whenever we notice our syscall_sock is borked */

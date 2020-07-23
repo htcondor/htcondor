@@ -230,8 +230,8 @@ public:
 	MyRowOfValues( const MyRowOfValues & in ) :
 	  pdata( NULL ), pvalid( NULL ), cols( 0 ), cmax( 0 ) { * this = in; }
 
-	bool empty() { return cols > 0; }
-	int ColCount() { return cols; }
+	bool empty() const { return cols > 0; }
+	int ColCount() const { return cols; }
 	classad::Value * Column(int index) {
 		if (index < 0) index = cols+index;
 		if (index >= 0 && index < cols) return &pdata[index];

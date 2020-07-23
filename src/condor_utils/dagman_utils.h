@@ -179,7 +179,7 @@ public:
 
     bool writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         /* const */ SubmitDagShallowOptions &shallowOpts,
-        /* const */ StringList &dagFileAttrLines );
+        /* const */ StringList &dagFileAttrLines ) const;
     
     int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
         const char *dagFile, const char *directory, int priority,

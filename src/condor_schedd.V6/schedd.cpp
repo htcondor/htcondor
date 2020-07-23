@@ -1264,7 +1264,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 			if ( !str.empty() ) {
 				str += ",";
 			}
-			str += IntToStr( *rit );
+			str += std::to_string( *rit );
 			num_entries++;
 		}
 		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str);
@@ -12599,11 +12599,11 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"(%d.%d) User policy requested unknown action of %d. "
 				"Putting job on hold. (Reason: %s)\n",
 				 job_id.cluster, job_id.proc, action, reason.Value());
-			MyString reason2 = "Unknown action (";
-			reason2 += IntToStr( action );
+			std::string reason2 = "Unknown action (";
+			reason2 += std::to_string( action );
 			reason2 += ") ";
 			reason2 += reason;
-			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
+			holdJob(job_id.cluster, job_id.proc, reason2.c_str(),
 					CONDOR_HOLD_CODE_JobPolicyUndefined, 0,
 				true,false,false,true);
 			break;
@@ -15479,7 +15479,6 @@ moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			 bool verbose )
 {
 	int value;
-	MyString new_value;
 	int rval;
 
 	if( GetAttributeInt(job_id.cluster, job_id.proc, old_attr, &value) < 0 ) {
@@ -15490,10 +15489,8 @@ moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 		return false;
 	}
 	
-	new_value += IntToStr( value );
-
 	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
-						 new_value.Value() ); 
+						 std::to_string(value).c_str() );
 
 	if( rval < 0 ) { 
 		if( verbose ) {

@@ -33,8 +33,8 @@ class PrivSepError {
 	void setHoldInfo(int hold_code,int hold_subcode,char const *hold_reason);
 
 	char const *holdReason() { return hold_reason.c_str(); }
-	int holdCode() { return hold_code; }
-	int holdSubCode() { return hold_subcode; }
+	int holdCode() const { return hold_code; }
+	int holdSubCode() const { return hold_subcode; }
 
  private:
 	int hold_code;

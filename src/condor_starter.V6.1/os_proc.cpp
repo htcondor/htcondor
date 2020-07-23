@@ -1010,7 +1010,7 @@ OsProc::PublishToEnv( Env * proc_env ) {
 		MyString name;
 		formatstr( name, "_%s_HOW_CODE", myDistro->Get() );
 		name.upper_case();
-		proc_env->SetEnv( name, IntToStr( howCode ) );
+		proc_env->SetEnv( name, std::to_string( howCode ) );
 	}
 }
 

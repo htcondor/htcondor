@@ -37,7 +37,7 @@ IPv4 Port Specification
 
 The general form for IPv4 port specification is
 
-::
+.. code-block:: text
 
     <IP:port?param1name=value1&param2name=value2&param3name=value3&...>
 
@@ -117,14 +117,14 @@ To use a different port number for this daemon, the configuration
 variables that tell HTCondor these communication details are modified.
 Instead of
 
-::
+.. code-block:: text
 
     CONDOR_HOST = machX.cs.wisc.edu
     COLLECTOR_HOST = $(CONDOR_HOST)
 
 the configuration might be
 
-::
+.. code-block:: text
 
     CONDOR_HOST = machX.cs.wisc.edu
     COLLECTOR_HOST = $(CONDOR_HOST):9650
@@ -140,9 +140,9 @@ When querying the *condor_collector* for a remote pool that is running
 on a non standard port, any HTCondor tool that accepts the **-pool**
 argument can optionally be given a port number. For example:
 
-::
+.. code-block:: console
 
-            % condor_status -pool foo.bar.org:1234
+            $ condor_status -pool foo.bar.org:1234
 
 Using a Dynamically Assigned Port for the *condor_collector*
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -167,7 +167,7 @@ where the IP address and port information will be stored. All HTCondor
 clients know to look at the information stored in this file. For
 example:
 
-::
+.. code-block:: text
 
     COLLECTOR_HOST = $(CONDOR_HOST):0
     COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
@@ -269,7 +269,7 @@ ports used for these machines are not restricted. This can be
 accomplished by adding the following to the local configuration file of
 those machines not behind a firewall:
 
-::
+.. code-block:: text
 
     HIGHPORT = UNDEFINED
     LOWPORT  = UNDEFINED
@@ -277,7 +277,7 @@ those machines not behind a firewall:
 If the maximum number of ports allocated using ``HIGHPORT`` and
 ``LOWPORT`` is too few, socket binding errors of the form
 
-::
+.. code-block:: text
 
     failed to bind any port within <$LOWPORT> - <$HIGHPORT>
 
@@ -352,7 +352,7 @@ daemon, which is then responsible for enforcing the security policy.
 When the *condor_master* is configured to use the shared port by
 setting the configuration variable
 
-::
+.. code-block:: text
 
     USE_SHARED_PORT = True
 
@@ -369,7 +369,7 @@ port that are destined for the *condor_collector* can be forwarded. As
 an example, the shared port socket name of the *condor_collector* with
 shared port number 11000 is
 
-::
+.. code-block:: text
 
     COLLECTOR_HOST = cm.host.name:11000?sock=collector
 
@@ -380,7 +380,7 @@ choose this socket name. If multiple *condor_collector* daemons are
 started on the same machine, the socket name can be explicitly set in
 the daemon's invocation arguments, as in the example:
 
-::
+.. code-block:: text
 
     COLLECTOR_ARGS = -sock collector
 
@@ -432,7 +432,7 @@ This functionality is on by default. To disable this functionality, the
 boolean configuration variable ``BIND_ALL_INTERFACES`` is defined and
 set to ``False``:
 
-::
+.. code-block:: text
 
     BIND_ALL_INTERFACES = FALSE
 
@@ -528,13 +528,13 @@ HTCondor:
 In this example, ``farm-server.farm.org`` maps to the private interface.
 In the central manager's global (to the cluster) configuration file:
 
-::
+.. code-block:: text
 
     CONDOR_HOST = farm-server.farm.org
 
 In the central manager's local configuration file:
 
-::
+.. code-block:: text
 
     NETWORK_INTERFACE = <IP address of farm-server.farm.org>
     NEGOTIATOR = $(SBIN)/condor_negotiator
@@ -555,7 +555,7 @@ network interface on which the client machine desires to communicate
 with the rest of the HTCondor pool. In this case, the local
 configuration file for the client should have
 
-::
+.. code-block:: text
 
       NETWORK_INTERFACE = <IP address of desired interface>
 
@@ -645,7 +645,7 @@ dual-homed machine in both networks.
 The configuration of variable ``CCB_ADDRESS`` on machines in the private
 network causes registration with the CCB server as in the example:
 
-::
+.. code-block:: text
 
       CCB_ADDRESS = $(COLLECTOR_HOST)
       PRIVATE_NETWORK_NAME = cs.wisc.edu
@@ -673,7 +673,7 @@ to be sent to the *condor_master* from outside of the private network,
 then CCB may be disabled in the *condor_master* by assigning
 ``MASTER.CCB_ADDRESS`` to nothing:
 
-::
+.. code-block:: text
 
       MASTER.CCB_ADDRESS =
 
@@ -684,7 +684,7 @@ of needed file descriptors plus some extra for other transient
 connections to the collector is 500\*(1+1+8)=5000. Be generous, and give
 it twice as many descriptors as needed by CCB alone:
 
-::
+.. code-block:: text
 
       COLLECTOR.MAX_FILE_DESCRIPTORS = 10000
 
@@ -789,7 +789,7 @@ configuration, the number of file descriptors available to the
 *condor_collector* is 10240. For very large pools, the number of
 descriptor can be modified with the configuration:
 
-::
+.. code-block:: text
 
       COLLECTOR_MAX_FILE_DESCRIPTORS = 40960
 
@@ -880,14 +880,14 @@ When you specify an IPv6 address and a port number simultaneously, you
 must separate the IPv6 address from the port number by placing square
 brackets around the address. For instance:
 
-::
+.. code-block:: text
 
     COLLECTOR_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
 
 If you do not (or may not) specify a port, do not use the square
 brackets. For instance:
 
-::
+.. code-block:: text
 
     NETWORK_INTERFACE = 1234:5678::90ab
 
@@ -898,19 +898,19 @@ When using the configuration variable ``NO_DNS`` :index:`NO_DNS`,
 IPv6 addresses are turned into host names by taking the IPv6 address,
 changing colons to dashes, and appending ``$(DEFAULT_DOMAIN_NAME)``. So,
 
-::
+.. code-block:: text
 
     2607:f388:1086:0:21b:24ff:fedf:b520
 
 becomes
 
-::
+.. code-block:: text
 
     2607-f388-1086-0-21b-24ff-fedf-b520.example.com
 
 assuming
 
-::
+.. code-block:: text
 
     DEFAULT_DOMAIN_NAME=example.com
 

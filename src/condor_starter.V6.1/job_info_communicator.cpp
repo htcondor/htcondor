@@ -242,28 +242,28 @@ JobInfoCommunicator::machClassAd( void )
 
 
 int
-JobInfoCommunicator::jobUniverse( void )
+JobInfoCommunicator::jobUniverse( void ) const
 {
 	return job_universe;
 }
 
 
 int
-JobInfoCommunicator::jobCluster( void )
+JobInfoCommunicator::jobCluster( void ) const
 {
 	return job_cluster;
 }
 
 
 int
-JobInfoCommunicator::jobProc( void )
+JobInfoCommunicator::jobProc( void ) const
 {
 	return job_proc;
 }
 
 
 int
-JobInfoCommunicator::jobSubproc( void )
+JobInfoCommunicator::jobSubproc( void ) const
 {
 	return job_subproc;
 }
@@ -531,7 +531,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 
 
 bool
-JobInfoCommunicator::userPrivInitialized( void )
+JobInfoCommunicator::userPrivInitialized( void ) const
 {
 	return user_priv_is_initialized;
 }
@@ -995,7 +995,7 @@ JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad, bool)
 
 
 const char*
-JobInfoCommunicator::getExitReasonString( void )
+JobInfoCommunicator::getExitReasonString( void ) const
 {
 	if (requested_exit == true) {
 		if (had_hold) {

@@ -579,7 +579,7 @@ class Dag {
 	void SetDotIncludeFileName(const char *include_file_name);
 	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
-	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
+	bool GetDotFileUpdate(void) const                       { return _update_dot_file; }
 	void DumpDotFile(void);
 
 	void SetNodeStatusFileName( const char *statusFileName,
@@ -667,33 +667,33 @@ class Dag {
 		*/
 	void CheckThrottleCats();
 
-	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
+	int MaxJobsSubmitted(void) const { return _maxJobsSubmitted; }
 
-	bool UseDagDir(void) { return _useDagDir; }
+	bool UseDagDir(void) const { return _useDagDir; }
 
-	int MaxIdleJobProcs(void) { return _maxIdleJobProcs; }
-	int MaxPreScripts(void) { return _maxPreScripts; }
-	int MaxPostScripts(void) { return _maxPostScripts; }
+	int MaxIdleJobProcs(void) const { return _maxIdleJobProcs; }
+	int MaxPreScripts(void) const { return _maxPreScripts; }
+	int MaxPostScripts(void) const { return _maxPostScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
 	void SetMaxJobsSubmitted(int newMax);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
 
-	bool RetrySubmitFirst(void) { return m_retrySubmitFirst; }
+	bool RetrySubmitFirst(void) const { return m_retrySubmitFirst; }
 
-	bool RetryNodeFirst(void) { return m_retryNodeFirst; }
+	bool RetryNodeFirst(void) const { return m_retryNodeFirst; }
 
 	// do not free this pointer
 	const char* CondorRmExe(void) { return _condorRmExe; }
 
 	const CondorID* DAGManJobId(void) { return _DAGManJobId; }
 
-	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
+	bool SubmitDepthFirst(void) const { return _submitDepthFirst; }
 
 	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
-	bool GenerateSubdagSubmits(void) { return _generateSubdagSubmits; }
+	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
@@ -838,7 +838,7 @@ class Dag {
 		running (or has been run).
 		@return true iff the final node is running or has been run
 	*/
-	inline bool FinalNodeRun() { return _finalNodeRun; }
+	inline bool FinalNodeRun() const { return _finalNodeRun; }
 
 	/** Determine whether this DAG has a provisioner node.
 		@return true iff the DAG has a provisioner node.
@@ -990,7 +990,7 @@ class Dag {
 		// earlier in the submit command's stdout (which we stashed in
 		// the Job object)
 
-	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
+	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const;
 
 		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node

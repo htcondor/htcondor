@@ -34,8 +34,8 @@
 using namespace std;
 
 double DagmanMetrics::_startTime = 0.0;
-MyString DagmanMetrics::_dagmanId = "";
-MyString DagmanMetrics::_parentDagmanId = "";
+std::string DagmanMetrics::_dagmanId;
+std::string DagmanMetrics::_parentDagmanId;
 
 //---------------------------------------------------------------------------
 void
@@ -49,12 +49,10 @@ void
 DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
 			int parentDagmanCluster )
 {
-	_dagmanId = "";
-	_dagmanId += IntToStr( DAGManJobId._cluster );
+	_dagmanId = std::to_string( DAGManJobId._cluster );
 
 	if ( parentDagmanCluster >= 0 ) {
-		_parentDagmanId = "";
-		_parentDagmanId += IntToStr( parentDagmanCluster );
+		_parentDagmanId = std::to_string( parentDagmanCluster );
 	}
 }
 
@@ -200,9 +198,9 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
 	fprintf( fp, "    \"exitcode\":%d,\n", exitCode );
-	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.Value() );
+	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.c_str() );
 	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n",
-				_parentDagmanId.Value() );
+				_parentDagmanId.c_str() );
 	fprintf( fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum );
 	fprintf( fp, "    \"jobs\":%d,\n", _simpleNodes );
 	fprintf( fp, "    \"jobs_failed\":%d,\n", _simpleNodesFailed );

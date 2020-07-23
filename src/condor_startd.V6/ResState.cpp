@@ -1310,7 +1310,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 }
 
 int
-ResState::activityTimeElapsed()
+ResState::activityTimeElapsed() const
 {
 	return time(NULL) - m_atime;
 }

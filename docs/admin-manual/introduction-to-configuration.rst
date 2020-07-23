@@ -46,7 +46,7 @@ noted, configuration values that are expected to be numeric or boolean
 constants can be any valid ClassAd expression of operators on constants.
 Example:
 
-::
+.. code-block:: text
 
     MINUTE          = 60
     HOUR            = (60 * $(MINUTE))
@@ -152,7 +152,7 @@ Configuration File Macros
 
 Macro definitions are of the form:
 
-::
+.. code-block:: text
 
     <macro_name> = <macro_definition>
 
@@ -163,7 +163,7 @@ string literal that may utilize macro substitution.
 
 Macro invocations are of the form:
 
-::
+.. code-block:: text
 
     $(macro_name[:<default if macro_name not defined>])
 
@@ -174,7 +174,7 @@ configuration files. All macro expansion is done after all configuration
 files have been parsed, with the exception of macros that reference
 themselves.
 
-::
+.. code-block:: text
 
     A = xxx
     C = $(A)
@@ -184,7 +184,7 @@ is a legal set of macro definitions, and the resulting value of ``C`` is
 
 As a further example,
 
-::
+.. code-block:: text
 
     A = xxx
     C = $(A)
@@ -196,7 +196,7 @@ is also a legal set of macro definitions, and the resulting value of
 A macro may be incrementally defined by invoking itself in its
 definition. For example,
 
-::
+.. code-block:: text
 
     A = xxx
     B = $(A)
@@ -211,7 +211,7 @@ evaluate.
 
 Recursively defined macros such as
 
-::
+.. code-block:: text
 
     A = $(B)
     B = $(A)
@@ -221,33 +221,33 @@ are not allowed. They create definitions that HTCondor refuses to parse.
 A macro invocation where the macro name is not defined results in a
 substitution of the empty string. Consider the example
 
-::
+.. code-block:: text
 
     MAX_ALLOC_CPUS = $(NUMCPUS)-1
 
 If ``NUMCPUS`` is not defined, then this macro substitution becomes
 
-::
+.. code-block:: text
 
     MAX_ALLOC_CPUS = -1
 
 The default value may help to avoid this situation. The default value
 may be a literal
 
-::
+.. code-block:: text
 
     MAX_ALLOC_CPUS = $(NUMCPUS:4)-1
 
 such that if ``NUMCPUS`` is not defined, the result of macro
 substitution becomes
 
-::
+.. code-block:: text
 
     MAX_ALLOC_CPUS = 4-1
 
 The default may be another macro invocation:
 
-::
+.. code-block:: text
 
     MAX_ALLOC_CPUS = $(NUMCPUS:$(DETECTED_CPUS))-1
 
@@ -266,7 +266,7 @@ left square bracket will be ignored. The following two-line example
 treats the first line as a comment, and correctly handles the second
 line.
 
-::
+.. code-block:: text
 
     [HTCondor Settings]
     my_classad = [ foo=bar ]
@@ -279,18 +279,18 @@ defined this way, the value is applied to the specific subsystem. For example,
 the ports that HTCondor may use can be restricted to a range using the
 ``HIGHPORT`` and ``LOWPORT`` configuration variables.
 
-::
+.. code-block:: text
 
-      MASTER.LOWPORT   = 20000
-      MASTER.HIGHPORT  = 20100
+    MASTER.LOWPORT   = 20000
+    MASTER.HIGHPORT  = 20100
 
 Note that all configuration variables may utilize this syntax, but
 nonsense configuration variables may result. For example, it makes no
 sense to define
 
-::
+.. code-block:: text
 
-      NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
+    NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
 
 since the *condor_negotiator* daemon does not use the
 ``MASTER_UPDATE_INTERVAL`` variable.
@@ -298,9 +298,9 @@ since the *condor_negotiator* daemon does not use the
 It makes little sense to do so, but HTCondor will configure correctly
 with a definition such as
 
-::
+.. code-block:: text
 
-      MASTER.MASTER_UPDATE_INTERVAL = 60
+    MASTER.MASTER_UPDATE_INTERVAL = 60
 
 The *condor_master* uses this configuration variable, and the prefix of
 ``MASTER.`` causes this configuration to be specific to the
@@ -310,17 +310,17 @@ As of HTCondor version 8.1.1, evaluation works in the expected manner
 when combining the definition of a macro with use of a prefix that gives
 the subsystem name and a period. Consider the example
 
-::
+.. code-block:: text
 
-      FILESPEC = A
-      MASTER.FILESPEC = B
+    FILESPEC = A
+    MASTER.FILESPEC = B
 
 combined with a later definition that incorporates ``FILESPEC`` in a
 macro:
 
-::
+.. code-block:: text
 
-      USEFILE = mydir/$(FILESPEC)
+    USEFILE = mydir/$(FILESPEC)
 
 When the *condor_master* evaluates variable ``USEFILE``, it evaluates
 to ``mydir/B``. Previous to HTCondor version 8.1.1, it evaluated to
@@ -330,9 +330,9 @@ evaluates to ``mydir/A``.
 This syntax has been further expanded to allow for the specification of
 a local name on the command line using the command line option
 
-::
+.. code-block:: text
 
-      -local-name <local-name>
+    -local-name <local-name>
 
 This allows multiple instances of a daemon to be run by the same
 *condor_master* daemon, each instance with its own local configuration
@@ -352,13 +352,13 @@ completed, and the corresponding value is used.
 This example configures a *condor_master* to run 2 *condor_schedd*
 daemons. The *condor_master* daemon needs the configuration:
 
-::
+.. code-block:: text
 
-      XYZZY           = $(SCHEDD)
-      XYZZY_ARGS      = -local-name xyzzy
-      DAEMON_LIST     = $(DAEMON_LIST) XYZZY
-      DC_DAEMON_LIST  = + XYZZY
-      XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
+    XYZZY           = $(SCHEDD)
+    XYZZY_ARGS      = -local-name xyzzy
+    DAEMON_LIST     = $(DAEMON_LIST) XYZZY
+    DC_DAEMON_LIST  = + XYZZY
+    XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 
 Using this example configuration, the *condor_master* starts up a
 second *condor_schedd* daemon, where this second *condor_schedd*
@@ -369,11 +369,11 @@ Continuing the example, configure the *condor_schedd* daemon named
 variable definitions with the other *condor_schedd* daemon, except for
 those specified separately.
 
-::
+.. code-block:: text
 
-      SCHEDD.XYZZY.SCHEDD_NAME = XYZZY
-      SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
-      SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
+    SCHEDD.XYZZY.SCHEDD_NAME = XYZZY
+    SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
+    SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 
 Note that the example ``SCHEDD_NAME`` and ``SPOOL`` are specific to the
 *condor_schedd* daemon, as opposed to a different daemon such as the
@@ -399,19 +399,19 @@ Line continuation is accomplished by placing the backslash character (\\)
 at the end of any line to be continued onto another. Valid examples of
 line continuation are
 
-::
+.. code-block:: text
 
-      START = (KeyboardIdle > 15 * $(MINUTE)) && \
-      ((LoadAvg - CondorLoadAvg) <= 0.3)
+    START = (KeyboardIdle > 15 * $(MINUTE)) && \
+    ((LoadAvg - CondorLoadAvg) <= 0.3)
 
 and
 
-::
+.. code-block:: text
 
-      ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
-      stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
-      bigbird.cs.wisc.edu
-      ALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
+    ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
+    stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
+    bigbird.cs.wisc.edu
+    ALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 
 Where a line continuation character directly precedes a comment, the
 entire comment line is ignored, and the following line is used in the
@@ -419,25 +419,25 @@ continuation. Line continuation characters within comments are ignored.
 
 Both this example
 
-::
+.. code-block:: text
 
-      A = $(B) \
-      # $(C)
-      $(D)
+    A = $(B) \
+    # $(C)
+    $(D)
 
 and this example
 
-::
+.. code-block:: text
 
-      A = $(B) \
-      # $(C) \
-      $(D)
+    A = $(B) \
+    # $(C) \
+    $(D)
 
 result in the same value for A:
 
-::
+.. code-block:: text
 
-      A = $(B) $(D)
+    A = $(B) $(D)
 
 Multi-Line Values
 -----------------
@@ -445,7 +445,7 @@ Multi-Line Values
 As of version 8.5.6, the value for a macro can comprise multiple lines
 of text. The syntax for this is as follows:
 
-::
+.. code-block:: text
 
     <macro_name> @=<tag>
     <macro_definition lines>
@@ -453,7 +453,7 @@ of text. The syntax for this is as follows:
 
 For example:
 
-::
+.. code-block:: text
 
     JOB_ROUTER_DEFAULTS @=jrd
       [
@@ -490,7 +490,7 @@ as a configuration file would be.
 
 An example:
 
-::
+.. code-block:: text
 
     LOCAL_CONFIG_FILE = /bin/make_the_config|
 
@@ -517,7 +517,7 @@ Including Configuration from Elsewhere
 Externally defined configuration can be incorporated using the following
 syntax:
 
-::
+.. code-block:: text
 
       include [ifexist] : <file>
       include : <cmdline>|
@@ -556,7 +556,7 @@ for white space characters surrounding the colon character.
 
 Consider the example
 
-::
+.. code-block:: text
 
       FILE = config.$(FULL_HOSTNAME)
       include : $(LOCAL_DIR)/$(FILE)
@@ -573,7 +573,7 @@ is discovered and thwarted, while still permitting nesting.
 
 Consider the further example
 
-::
+.. code-block:: text
 
       SCRIPT_FILE = script.$(IP_ADDRESS)
       include : $(RELEASE_DIR)/$(SCRIPT_FILE) |
@@ -594,7 +594,7 @@ the older daemons to fail when they attempt to parse this syntax.
 Here is the same example, but with the syntax that causes older daemons
 to fail when reading it.
 
-::
+.. code-block:: text
 
       FILE = config.$(FULL_HOSTNAME)
       @include : $(LOCAL_DIR)/$(FILE)
@@ -603,7 +603,7 @@ A daemon older than version 8.1.6 will fail to start. Running an older
 *condor_config_val* identifies the ``@include`` line as being bad. A
 daemon of HTCondor version 8.1.6 or more recent sees:
 
-::
+.. code-block:: text
 
       FILE = config.$(FULL_HOSTNAME)
       include : $(LOCAL_DIR)/$(FILE)
@@ -612,7 +612,7 @@ and starts up successfully.
 
 Here is an example using the new ifexist and into options:
 
-::
+.. code-block:: text
 
       # stuff.pl writes "STUFF=1" to stdout
       include ifexist command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
@@ -628,7 +628,7 @@ HTCondor configuration files.
 
 The syntax for warning and error messages is as follows:
 
-::
+.. code-block:: text
 
       warning : <warning message>
       error : <error message>
@@ -642,7 +642,7 @@ starting, and prevent *condor_config_val* from returning a value.
 Here's an example of using an error message in a configuration file
 (combined with some of the new include features documented above):
 
-::
+.. code-block:: text
 
     # stuff.pl writes "STUFF=1" to stdout
     include command into $(LOCAL_DIR)/stuff.config : perl $(LOCAL_DIR)/stuff.pl
@@ -659,7 +659,7 @@ Conditionals in Configuration
 Conditional if/else semantics are available in a limited form. The
 syntax:
 
-::
+.. code-block:: text
 
       if <simple condition>
          <statement>
@@ -681,7 +681,7 @@ character (!) to represent the not operation, followed by
    expanded input. If the variable is not defined, the statement(s) are
    not incorporated into the expanded input. As an example,
 
-   ::
+   .. code-block:: text
 
          if defined MY_UNDEFINED_VARIABLE
             X = 12
@@ -708,7 +708,7 @@ character (!) to represent the not operation, followed by
 
    As an example,
 
-   ::
+   .. code-block:: text
 
          if version >= 8.1.6
             DO_X = True
@@ -729,7 +729,7 @@ character (!) to represent the not operation, followed by
 
 The syntax
 
-::
+.. code-block:: text
 
       if <simple condition>
          <statement>
@@ -743,7 +743,7 @@ The syntax
 
 is the same as syntax
 
-::
+.. code-block:: text
 
       if <simple condition>
          <statement>
@@ -784,7 +784,7 @@ as given in these definitions.
     :default-value is used; in which case it evaluates to default-value.
     For example,
 
-    ::
+    .. code-block:: text
 
         A = $ENV(HOME)
 
@@ -849,7 +849,7 @@ as given in these definitions.
     specified, "%d" is used as the format specifier. The format
     is everything after the comma, including spaces.  It can include other text.
 
-    ::
+    .. code-block:: text
 
         X = 2
         Y = 6
@@ -866,7 +866,7 @@ as given in these definitions.
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
 
-    ::
+    .. code-block:: console
 
         $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
@@ -877,7 +877,7 @@ as given in these definitions.
     to the value 1. For example, to randomly chose an even integer in
     the range 0-8 (inclusive):
 
-    ::
+    .. code-block:: console
 
         $RANDOM_INTEGER(0, 8, 2)
 
@@ -897,7 +897,7 @@ as given in these definitions.
     A negative value of length eliminates use of characters from the end
     of the string. Here are some examples that all assume
 
-    ::
+    .. code-block:: text
 
         Name = abcdef
 
@@ -916,7 +916,7 @@ as given in these definitions.
     is everything after the comma, including spaces.  It can include other text
     besides %s.
 
-    ::
+    .. code-block:: text
 
         FULL_HOSTNAME = host.DOMAIN
         LCFullHostname = toLower("$(FULL_HOSTNAME)")
@@ -934,7 +934,7 @@ as given in these definitions.
     a variable to hold the expression to be evaluated if the expression
     has a close brace ')' character.
 
-    ::
+    .. code-block:: text
 
         slist = "a,B,c"
         lcslist = tolower($(slist))

@@ -59,7 +59,7 @@ public:
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
-	bool GahpIsRemote() { return m_gahpIsRemote; };
+	bool GahpIsRemote() const { return m_gahpIsRemote; };
 	const char *RemoteHostname() { return m_remoteHostname.c_str(); };
 	bool GahpCanRefreshProxy();
 

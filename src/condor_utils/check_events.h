@@ -216,27 +216,27 @@ class CheckEvents {
 		// one entry for each Condor job we process.
 	HashTable<CondorID, JobInfo *>	jobHash;
 
-	inline bool		AllowAlmostAll() { return allowEvents & ALLOW_ALMOST_ALL; }
+	inline bool		AllowAlmostAll() const { return allowEvents & ALLOW_ALMOST_ALL; }
 
-	inline bool		AllowExtraAborts() { return
+	inline bool		AllowExtraAborts() const { return
 			(allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_TERM_ABORT); }
 
-	inline bool		AllowExtraRuns() { return
+	inline bool		AllowExtraRuns() const { return
 			allowEvents & ALLOW_RUN_AFTER_TERM; }
 
-	inline bool		AllowGarbage() { return (allowEvents & ALLOW_ALMOST_ALL) ||
+	inline bool		AllowGarbage() const { return (allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_GARBAGE); }
 
-	inline bool		AllowExecSubmit() { return
+	inline bool		AllowExecSubmit() const { return
 			(allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_EXEC_BEFORE_SUBMIT); }
 
-	inline bool		AllowDoubleTerm() { return
+	inline bool		AllowDoubleTerm() const { return
 			(allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_DOUBLE_TERMINATE); }
 
-	inline bool		AllowDuplicates() { return
+	inline bool		AllowDuplicates() const { return
 			(allowEvents & ALLOW_ALMOST_ALL) ||
 			allowEvents & ALLOW_DUPLICATE_EVENTS; }
 

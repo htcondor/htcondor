@@ -401,13 +401,13 @@ Selector::execute()
 }
 
 int
-Selector::select_retval()
+Selector::select_retval() const
 {
 	return _select_retval;
 }
 
 int
-Selector::select_errno()
+Selector::select_errno() const
 {
 	return _select_errno;
 }

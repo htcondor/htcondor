@@ -592,11 +592,6 @@ static bool checkPremption (
 				return true;
 			  } else {
 				ac.available++; // tj: is this correct?
-				//PRAGMA_REMIND("TJ: move this out of the machine iteration loop?")
-				int last_match_time = 0;
-				if (job_status.empty() && ! request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time)) {
-					job_status = "Job has not yet been considered by the matchmaker.";
-				}
 				return true;
 			  }
 			}
@@ -668,13 +663,9 @@ static bool checkPremption (
 					// unknown problem.
 				  if (last_rej_match_time != 0) {
 					ac.fRankCond++;
-				  } else {
-					if (job_status.empty()) {
-						job_status = "Job has not yet been considered by the matchmaker.";
-					}
 				  }
 				}
-			} 
+			}
 		} else {
 			ac.fPreemptPrioCond++;
 			if (pmat) pmat->append_to_fail_list(anaMachines::PreemptPrio, slotname);
@@ -935,11 +926,6 @@ bool doJobRunAnalysis (
 		if ( ! offer->LookupString(ATTR_REMOTE_USER, remoteUser)) {
 #if 1
 			ac.available++; // tj: is this correct?
-			int last_match_time = 0;
-			if (job_status.empty() && last_rej_match_time==0 &&
-				( ! request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time) || ! last_match_time)) {
-				job_status = "Job has not yet been considered by the matchmaker.";
-			}
 			continue;
 #else  // i think this is bogus
 			// no remote user
@@ -958,11 +944,6 @@ bool doJobRunAnalysis (
 				continue;
 			  } else {
 				ac.available++; // tj: is this correct?
-				//PRAGMA_REMIND("TJ: move this out of the machine iteration loop?")
-				int last_match_time = 0;
-				if (job_status.empty() && ! request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time)) {
-					job_status = "Job has not yet been considered by the matchmaker.";
-				}
 				continue;
 			  }
 			}
@@ -1034,11 +1015,6 @@ bool doJobRunAnalysis (
 				} else {
 #if 1
 					ac.available++;
-					int last_match_time = 0;
-					if (job_status.empty() && last_rej_match_time==0 &&
-						( ! request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time) || ! last_match_time)) {
-						job_status = "Job has not yet been considered by the matchmaker.";
-					}
 #else
 					// failed 6 and 5, but satisfies 4; so have priority
 					// but not better or equally preferred than current
@@ -1047,14 +1023,10 @@ bool doJobRunAnalysis (
 					// unknown problem.
 				  if (last_rej_match_time != 0) {
 					ac.fRankCond++;
-				  } else {
-					if (job_status.empty()) {
-						job_status = "Job has not yet been considered by the matchmaker.";
-					}
 				  }
 #endif
 				}
-			} 
+			}
 		} else {
 			ac.fPreemptPrioCond++;
 			if (pmat) pmat->append_to_fail_list(anaMachines::PreemptPrio, slotname.c_str());

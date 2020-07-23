@@ -37,7 +37,7 @@ configuration, set the following configuration variables:
     jobs from machine A may flock to. In most cases, it is the same as
     ``FLOCK_TO``, and it would be defined with
 
-    ::
+    .. code-block:: text
 
           FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 
@@ -47,7 +47,7 @@ configuration, set the following configuration variables:
     jobs from machine A may flock to. In most cases, it is the same as
     ``FLOCK_TO``, and it would be defined with
 
-    ::
+    .. code-block:: text
 
           FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
 
@@ -59,7 +59,7 @@ configuration, set the following configuration variables:
     flock to. This configuration variable will not likely need to change
     from its default value as given in the sample configuration:
 
-    ::
+    .. code-block:: text
 
           ##  Now, with flocking we need to let the SCHEDD trust the other
           ##  negotiators we are flocking with as well.  You should normally
@@ -81,7 +81,7 @@ machines where the jobs may flock from. ``FLOCK_FROM``
 is used in the default configuration setting of the security macros that
 do authorization:
 
-::
+.. code-block:: text
 
     ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM)
     ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM)
@@ -95,7 +95,7 @@ cs.wisc.edu domain.
 Further, if using Kerberos or GSI authentication, then the setting
 becomes:
 
-::
+.. code-block:: text
 
     ALLOW_NEGOTIATOR = condor@$(UID_DOMAIN)/$(COLLECTOR_HOST)
 

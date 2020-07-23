@@ -2344,7 +2344,7 @@ CollectorUniverseStats::getValue (int univ )
 }
 
 int
-CollectorUniverseStats::getCount ( void )
+CollectorUniverseStats::getCount ( void ) const
 {
 	return count;
 }

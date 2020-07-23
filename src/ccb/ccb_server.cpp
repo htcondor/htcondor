@@ -498,7 +498,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 }
 
 void
-CCBServer::SetSmallBuffers(Sock *sock)
+CCBServer::SetSmallBuffers(Sock *sock) const
 {
 		// Adjust socket buffers so we can have loads of these sockets
 		// without chewing up too much memory.  We expect to just send

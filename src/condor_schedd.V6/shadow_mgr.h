@@ -59,7 +59,7 @@ public:
 	bool	provides( const char* ability );
 
 	char*	path( void ) { return s_path; };
-	bool	isDC( void ) { return s_is_dc; };
+	bool	isDC( void ) const { return s_is_dc; };
 
 	void	printInfo( int debug_level );
 

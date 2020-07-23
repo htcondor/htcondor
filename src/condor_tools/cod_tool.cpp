@@ -257,7 +257,7 @@ fillRequirements( ClassAd* req )
 		require += "TARGET.";
 		require += ATTR_SLOT_ID;
 		require += "==";
-		require += IntToStr( slot_id );
+		require += std::to_string( slot_id );
 		require += ")&&(";
 	}
 

@@ -120,7 +120,7 @@ NetworkAdapterBase::doInitialize ()
 }
 
 void
-NetworkAdapterBase::publish ( ClassAd &ad )
+NetworkAdapterBase::publish ( ClassAd &ad ) const
 {
     ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
     ad.Assign ( ATTR_SUBNET_MASK, subnetMask () );
@@ -238,7 +238,7 @@ NetworkAdapterBase::isWakeable () const
 }
 
 bool
-NetworkAdapterBase::getInitStatus ()
+NetworkAdapterBase::getInitStatus () const
 {
 	return m_initialization_status;
 }

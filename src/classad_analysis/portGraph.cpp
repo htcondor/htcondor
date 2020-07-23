@@ -218,8 +218,8 @@ GetNextPath( )
 						// should not reach here
 					std::string buffer = "";
 					attrNode->ToString( buffer );
-					cout << "error: AttrNode " << buffer << 
-						"has no dependencies and no literal value" << endl;
+					std::cout << "error: AttrNode " << buffer << 
+						"has no dependencies and no literal value" << std::endl;
 					return NULL;
 				}
 			}
@@ -235,12 +235,12 @@ GetNextPath( )
 			}
 		}
 	}
-	cout << "error: ExtAttrNode::GetNextPath exited loop abnormally" << endl; 
+	std::cout << "error: ExtAttrNode::GetNextPath exited loop abnormally" << std::endl; 
 	return NULL;
 }
 
 bool ExtAttrNode::
-ToString( std::string& buffer )
+ToString( std::string& buffer ) const
 {
 	char tempBuf[512];
 	sprintf( tempBuf, "%d", eNodeNum );
@@ -286,7 +286,7 @@ GetDep( )
 }
 
 bool AttrNode::
-IsLiteral( )
+IsLiteral( ) const
 {
 	return literalVal;
 }
@@ -339,13 +339,13 @@ PortNode::
 }
 
 int PortNode::
-GetAdNum( )
+GetAdNum( ) const
 {
 	return adNum;
 }
 
 int PortNode::
-GetPortNum( )
+GetPortNum( ) const
 {
 	return portNum;
 }
@@ -497,7 +497,7 @@ AddMatchEdge( int edgeNum, PortNode *target,
 
 
 bool PortNode::
-ToString( std::string& buffer ) {
+ToString( std::string& buffer ) const {
 	char tempBuf[512];
 	sprintf( tempBuf, "%d", adNum );
 	buffer += "[adNum:";
@@ -593,7 +593,7 @@ GetTarget( )
 }
 
 int MatchEdge::
-GetEdgeNum( )
+GetEdgeNum( ) const
 {
 	return edgeNum;
 }
@@ -1194,7 +1194,7 @@ AddMatchEdge( PortNode *p1, PortNode *p2, std::vector<MatchPath*>& paths )
 }
 
 bool PortGraph::
-ToString( std::string& buffer )
+ToString( std::string& buffer ) const
 {
 	char tempBuf[512];
 	sprintf( tempBuf, "%d", numPortNodes );

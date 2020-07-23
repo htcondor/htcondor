@@ -80,7 +80,7 @@ Transform Commands
     that ClassAd does not currently have ``<attr>`` or if it is currently set to ``undefined``.  This
     is equivalent to
 
-    ::
+    .. code-block:: text
 
       if ! defined MY.<Attr>
         SET <Attr> <value>
@@ -107,7 +107,8 @@ Transform Commands
     portions of the original attribute name. ``\0`` Is the entire attribute name, and ``\1`` is the first capture, etc.
     For example
 
-    ::
+    .. code-block:: text
+
       # copy all attributes whose names begin with Resource to new attribute with names that begin with OriginalResource
       COPY /Resource(.+)/ OriginalResource\1
 
