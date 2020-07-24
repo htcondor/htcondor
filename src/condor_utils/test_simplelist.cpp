@@ -25,30 +25,30 @@ void iterate (const SimpleList<int> & list) {
   iter.Initialize(list);
 
   while (1) {
-    cout << endl << "List: " << list << endl;
+    std::cout << endl << "List: " << list << endl;
     
-    cout << "Choice: (C)urrent, (P)rev, (N)ext, (B)egin, (E)nd "
+    std::cout << "Choice: (C)urrent, (P)rev, (N)ext, (B)egin, (E)nd "
          << "(Q)uit --> ";
 
     char choice;
     int i;
 
-    cin >> choice;
+    std::cin >> choice;
     switch (choice) {
      case 'C':
      case 'c':
-      if (iter.Current(i)) cout << "Current is: " << i << endl;
-      else cout << "No current" << endl;
+      if (iter.Current(i)) std::cout << "Current is: " << i << std::endl;
+      else std::cout << "No current" << std::endl;
       break;
      case 'P':
      case 'p':
-      if (iter.Prev(i)) cout << "Current is: " << i << endl;
-      else cout << "No current" << endl;
+      if (iter.Prev(i)) std::cout << "Current is: " << i << std::endl;
+      else std::cout << "No current" << std::endl;
       break;
      case 'N':
      case 'n':
-      if (iter.Next(i)) cout << "Current is: " << i << endl;
-      else cout << "No current" << endl;
+      if (iter.Next(i)) std::cout << "Current is: " << i << std::endl;
+      else std::cout << "No current" << std::endl;
       break;
      case 'B':
      case 'b':
@@ -69,7 +69,7 @@ int main (int argc, char *argv[]) {
   SimpleList<int> list;
 
   while (1) {
-    cout << endl << "List: " << list << endl;
+    std::cout << endl << "List: " << list << endl;
     
     cout << "Choice: (A)ppend, (R)ewind, (C)urrent, (N)ext, (D)eleteCurrent "
          << endl

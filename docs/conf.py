@@ -475,3 +475,343 @@ def setup(app):
     app.add_stylesheet('css/htcondor-manual.css')
     app.connect('autodoc-process-docstring', modify_docstring)
     app.connect('autodoc-process-signature', modify_signature)
+
+
+# custom highlighting
+# see https://pygments.org/docs/lexerdevelopment/
+# and https://pygments.org/docs/tokens/
+
+from pygments import token, lexer
+from sphinx.highlighting import lexers
+
+
+class CondorSubmitLexer(lexer.RegexLexer):
+    name = "condor-submit"
+
+    flags = re.MULTILINE | re.IGNORECASE
+
+    tokens = {
+        "root": [
+            (r"\s+", token.Text),
+            (r"^#.*?$", token.Comment.Single),
+            (
+                r"(if|elif)( *)(.*?)$",
+                lexer.bygroups(token.Keyword, token.Text, token.Text),
+            ),
+            (r"(else|endif)$", token.Keyword),
+            (r"^queue", token.Keyword, "queue"),
+            # matches key = val
+            (
+                r"(\w+)( *)(=)( *)",
+                lexer.bygroups(
+                    token.Name.Builtin, token.Text, token.Operator, token.Text,
+                ),
+                "value",
+            ),
+            (
+                r"(include\s*:)(\s*)(.*?)(\|)?$",
+                lexer.bygroups(token.Keyword, token.Text, token.String, token.Keyword,),
+            ),
+            # examples sometimes use ... to indicate continuation
+            (r"^.{3}$", token.Text),
+            # catch-all for things that aren't strictly legal syntax, like <placeholders>
+            (r".", token.Text),
+        ],
+        "value": [
+            (r"\n\n", token.Text, "#pop"),
+            (r"\n\s+", token.Text),
+            (r"$", token.Text, "#pop"),
+            (r".", token.String),
+        ],
+        "queue": [
+            (r"\s*$", token.Text, "#pop"),
+            (r"\|$", token.Keyword, "#pop"),
+            (r"\(", token.Text, "inline-from"),
+            (r"\s(in|matching|from)\s", token.Keyword),
+            (r"\d+", token.Number.Integer),
+            (r"[-\*\./\?\w]+", token.String),
+            (r",", token.Text),
+            (r"\s+", token.Text),
+        ],
+        "inline-from": [
+            (r"\)", token.Text, "#pop"),
+            (r"\s+", token.Text),
+            (r"[-\*\./\?\w]+", token.String),
+            (r",", token.Text),
+        ],
+    }
+
+
+lexers["condor-submit"] = CondorSubmitLexer()
+
+CLASSAD_EXPR_TOKENS = [
+    (r"-|\*|/|\+|<=|>=|<|>|==|!=|=\?=|=!=|isnt|is|&&|\|\||\(|\)|{|}", token.Operator),
+    (r",", token.Text),
+    (r"true|false|undefined|error", token.Keyword.Constant),
+    (r"\d+\.\d+", token.Number.Float),
+    (r"\d+", token.Number.Integer),
+    (r'"', token.String, "string"),
+    (r"(my|target)", token.Name.Builtin.Pseudo),
+    (r"\.", token.Operator),
+    (r"(\w+)(\[)", lexer.bygroups(token.Name.Variable, token.Operator), "getter"),
+    (r"\w+", token.Name.Variable),
+    (r"\s+", token.Text),
+]
+
+CLASSAD_STRING_TOKENS = [
+    (r'\\"', token.String),
+    (r'"', token.String, "#pop"),
+    (r".", token.String),
+]
+
+CLASSAD_GETTER_TOKENS = [
+    (r"\]", token.Operator, "#pop"),
+    (r'"', token.String, "string"),
+    (r"\d+", token.Number.Integer),
+    (r"\w+", token.Name.Variable),
+]
+
+
+class CondorClassAdLexer(lexer.RegexLexer):
+    name = "condor-classad"
+
+    flags = re.MULTILINE | re.IGNORECASE
+
+    tokens = {
+        "root": [
+            (r"\s+", token.Text),
+            (r"\[", token.Text, "new"),
+            (
+                r"(\w+)( *)(=)( *)",
+                lexer.bygroups(
+                    token.Name.Variable, token.Text, token.Operator, token.Text,
+                ),
+                "value",
+            ),
+            # examples sometimes use ... to indicate continuation
+            (r"^\.{3}", token.Text),
+        ],
+        "new": [(r"\]", token.Text, "#pop"), lexer.include("root")],
+        "value": [
+            (r"\]", token.Text, "#pop:2"),
+            (r"\n\s", token.Text),
+            (r";|$", token.Text, "#pop"),
+            (r"\[", token.Text, "new"),
+        ] + CLASSAD_EXPR_TOKENS,
+        "string": CLASSAD_STRING_TOKENS,
+        "getter": CLASSAD_GETTER_TOKENS,
+    }
+
+
+lexers["condor-classad"] = CondorClassAdLexer()
+
+
+class CondorClassAdExpressionLexer(lexer.RegexLexer):
+    name = "condor-classad-expr"
+
+    flags = re.MULTILINE | re.IGNORECASE
+
+    tokens = {
+        "root": CLASSAD_EXPR_TOKENS,
+        "string": CLASSAD_STRING_TOKENS,
+        "getter": CLASSAD_GETTER_TOKENS,
+    }
+
+
+lexers["condor-classad-expr"] = CondorClassAdExpressionLexer()
+
+DAGMAN_COMMON = [
+    (r"\s*$", token.Text, "#pop"),
+    (r"\[|\]|\|", token.Text),
+    (r"ALL_NODES", token.Name.Variable.Magic),
+    # examples sometimes use ... to indicate continuation
+    (r"\.{3}", token.Text),
+    (r'[\w\.\$"-=!@\\\{\}\?^]+', token.String),
+    (r"\s", token.Text),
+]
+
+
+class CondorDAGManLexer(lexer.RegexLexer):
+    name = "condor-dagman"
+
+    flags = re.MULTILINE | re.IGNORECASE
+
+    tokens = {
+        "root": [
+            (r"\s+", token.Text),
+            (r"^#.*?$", token.Comment.Single),
+            (r"^job", token.Keyword, "job"),
+            (r"^parent", token.Keyword, "parent"),
+            (r"^script", token.Keyword, "script"),
+            (r"^pre_skip", token.Keyword, "pre_skip"),
+            (r"^retry", token.Keyword, "retry"),
+            (r"^abort-dag-on", token.Keyword, "abort-dag-on"),
+            (r"^vars", token.Keyword, "vars"),
+            (r"^priority", token.Keyword, "priority"),
+            (r"^category", token.Keyword, "category"),
+            (r"^maxjobs", token.Keyword, "maxjobs"),
+            (r"^config", token.Keyword, "maxjobs"),
+            (r"^set_job_attr", token.Keyword, "set_job_attr"),
+            (r"^include", token.Keyword, "include"),
+            (r"^subdag", token.Keyword, "subdag"),
+            (r"^splice", token.Keyword, "splice"),
+            (r"^connect", token.Keyword, "connect"),
+            (r"^pin_in", token.Keyword, "pin_in"),
+            (r"^pin_out", token.Keyword, "pin_out"),
+            (r"^final", token.Keyword, "final"),
+            (r"^dot", token.Keyword, "dot"),
+            (r"^node_status_file", token.Keyword, "node_status_file"),
+            # examples sometimes use ... to indicate continuation
+            (r"^.{3}$", token.Text),
+        ],
+        "job": [
+            (
+                r"([\s\[])(dir|noop|done)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "parent": [
+            (
+                r"([\s\[])(child)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "script": [
+            (
+                r"([\s\[])(defer|pre|post)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "pre_skip": DAGMAN_COMMON,
+        "retry": [
+            (
+                r"([\s\[])(unless-exit)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "abort-dag-on": [
+            (
+                r"([\s\[])(return)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "vars": DAGMAN_COMMON,
+        "priority": DAGMAN_COMMON,
+        "category": DAGMAN_COMMON,
+        "maxjobs": DAGMAN_COMMON,
+        "config": DAGMAN_COMMON,
+        "set_job_attr": [(r"\s=\s", token.Operator)] + DAGMAN_COMMON,
+        "include": DAGMAN_COMMON,
+        "subdag": [
+            (
+                r"([\s\[])(external|dir|noop|done)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "splice": [
+            (
+                r"([\s\[])(dir)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "connect": DAGMAN_COMMON,
+        "pin_in": DAGMAN_COMMON,
+        "pin_out": DAGMAN_COMMON,
+        "final": [
+            (
+                r"([\s\[])(dir|noop)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "dot": [
+            (
+                r"([\s\[])(update|dont-update|overwrite|dont-overwrite|include)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+        "node_status_file": [
+            (
+                r"([\s\[])(always-update)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            ),
+        ] + DAGMAN_COMMON,
+    }
+
+
+lexers["condor-dagman"] = CondorDAGManLexer()
+
+CONFIG_VALUE_SHARED = [
+    # comment
+    (r"^#.*?\n", token.Comment.Single),
+    # booleans
+    (r"\b(true|false)\b", token.Keyword.Constant),
+    # security keywords
+    (
+        r"\b(required|optional|never|preferred|password|fs|kerberos|gsi)\b",
+        token.Keyword,
+    ),
+    # catch-all
+    (r".|\s", token.Text),
+]
+
+
+class CondorConfigLexer(lexer.RegexLexer):
+    name = "condor-config"
+
+    flags = re.MULTILINE | re.IGNORECASE
+
+    tokens = {
+        "root": [
+            (r"\s+", token.Text),
+            (r"^#.*?$", token.Comment.Single),
+            (
+                r"^(@?use)( +)(\w+)( +: +)(.+)$",
+                lexer.bygroups(
+                    token.Keyword, token.Text, token.Literal, token.Text, token.Literal
+                ),
+            ),
+            (r"^@?include", token.Keyword, "include"),
+            (
+                r"(warning|error)( +: +)(.*)$",
+                lexer.bygroups(token.Keyword, token.Keyword, token.String),
+            ),
+            (r"(if|elif)(.*?)$", lexer.bygroups(token.Keyword, token.Text),),
+            (r"(else|endif)$", token.Keyword),
+            (
+                r"([\w\.]+)( *?)(@=)(\w+)$",
+                lexer.bygroups(
+                    token.Name.Builtin,
+                    token.Text,
+                    token.Operator,
+                    token.Name.Namespace,
+                ),
+                "multi-line",
+            ),
+            (
+                r"([\w\.]+)( *)(=)( *)",
+                lexer.bygroups(
+                    token.Name.Builtin, token.Text, token.Operator, token.Text,
+                ),
+                "value",
+            ),
+            (r"\s", token.Text),
+        ],
+        "value": [
+            (r"\\\n", token.Text),
+            (r"\|?$", token.Keyword, "#pop"),
+        ] + CONFIG_VALUE_SHARED,
+        "multi-line": [(r"@.+$", token.Name.Namespace, "#pop")] + CONFIG_VALUE_SHARED,
+        "include": [
+            (r"\|?$", token.Keyword, "#pop"),
+            (r":", token.Keyword),
+            (r"\b(ifexist|into)\b", token.Keyword),
+            (r".", token.Text),
+        ],
+    }
+
+
+lexers["condor-config"] = CondorConfigLexer()
+
+# TODO: if I was really clever, I would re-use the classad expression fragment
+# parser for condor config values... but not all config values are classad
+# expressions, so that gets really hard.

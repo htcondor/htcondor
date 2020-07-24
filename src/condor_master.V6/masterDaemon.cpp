@@ -288,7 +288,7 @@ daemon::Recover()
 
 
 int
-daemon::NextStart()
+daemon::NextStart() const
 {
 	int seconds;
 	seconds = m_backoff_constant + (int)ceil(::pow(m_backoff_factor, restarts));
@@ -1098,7 +1098,7 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 }
 
 void
-daemon::DoActionAfterStartup()
+daemon::DoActionAfterStartup() const
 {
 	if( m_reload_shared_port_addr_after_startup ) {
 		daemonCore->ReloadSharedPortServerAddr();
@@ -1505,7 +1505,7 @@ daemon::CancelRestartTimers()
 }
 
 time_t
-daemon::GetNextRestart()
+daemon::GetNextRestart() const
 {
 	if( start_tid != -1 ) {
 		return daemonCore->GetNextRuntime(start_tid);
@@ -1514,7 +1514,7 @@ daemon::GetNextRestart()
 }
 
 void
-daemon::Kill( int sig )
+daemon::Kill( int sig ) const
 {
 	if( (!pid) || (pid == -1) ) {
 		return;
@@ -1554,7 +1554,7 @@ daemon::Kill( int sig )
 
 
 void
-daemon::KillFamily( void ) 
+daemon::KillFamily( void ) const 
 {
 	if( pid == 0 ) {
 		return;

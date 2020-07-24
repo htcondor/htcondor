@@ -498,7 +498,7 @@ protected:
 
 	void set_connect_addr(char const *addr);
 
-	inline SOCKET get_socket (void) { return _sock; }
+	inline SOCKET get_socket (void) const { return _sock; }
 	const char * serialize(const char *);
 	static void close_serialized_socket(char const *buf);
 	char * serialize() const;
@@ -659,7 +659,7 @@ private:
 	   setConnectFailureErrno.
 	   @param timed_out True if we failed due to timeout.
 	**/
-	void reportConnectionFailure(bool timed_out);
+	void reportConnectionFailure(bool timed_out) const;
 
 	/**
 	   This function puts the socket back in a state suitable for another

@@ -449,9 +449,9 @@ Details are given below.
 After download, all the files are in a compressed, tar format. They need
 to be untarred, as
 
-.. code-block:: text
+.. code-block:: console
 
-      tar xzf <completename>.tar.gz
+    $ tar xzf <completename>.tar.gz
 
 After untarring, the directory will have the Perl scripts
 *condor_configure* and *condor_install* (and *bosco_install*), as
@@ -556,8 +556,7 @@ pool, run
 
 .. code-block:: console
 
-    $ condor_install --prefix=~condor \
-    --local-dir=/scratch/condor --type=execute,submit
+    $ condor_install --prefix=~condor --local-dir=/scratch/condor --type=execute,submit
 
 See the :doc:`/man-pages/condor_configure` manual page for details.
 
@@ -619,15 +618,15 @@ order does not matter.
 
 To ensure that HTCondor is running, you can run either:
 
-.. code-block:: text
+.. code-block:: console
 
-    ps -ef | egrep condor_
+    $ ps -ef | egrep condor_
 
 or
 
-.. code-block:: text
+.. code-block:: console
 
-    ps -aux | egrep condor_
+    $ ps -aux | egrep condor_
 
 depending on your flavor of Unix. On a central manager machine that can
 submit jobs as well as execute them, there will be processes for:
@@ -990,7 +989,7 @@ to any other ordinary MSI installer.
 The following is a sample batch file that is used to set all the
 properties necessary for an unattended install.
 
-.. code-block:: text
+.. code-block:: bat
 
     @echo on
     set ARGS=
@@ -1127,9 +1126,9 @@ installer can be started with the *msiexec* command. The following
 command starts the installer in unattended mode, and it dumps a journal
 of the installer's progress to a log file:
 
-.. code-block:: text
+.. code-block:: doscon
 
-    msiexec /qb /lxv* condor-install-log.txt /i condor-8.0.0-173133-Windows-x86.msi [property=value] ...
+    > msiexec /qb /lxv* condor-install-log.txt /i condor-8.0.0-173133-Windows-x86.msi [property=value] ...
 
 More information on the features of *msiexec* can be found at
 Microsoft's website at
@@ -1163,15 +1162,15 @@ using the provided GUI-based setup program:
 
     Installation can be done as follows:
 
-    .. code-block:: text
+    .. code-block:: doscon
 
-        sc create Condor binpath= c:\condor\bin\condor_master.exe
+        > sc create Condor binpath= c:\condor\bin\condor_master.exe
 
     To remove the service, use:
 
-    .. code-block:: text
+    .. code-block:: doscon
 
-        sc delete Condor
+        > sc delete Condor
 
  The Registry
     HTCondor uses a few registry entries in its operation. The key that
@@ -1235,9 +1234,9 @@ To start HTCondor by hand:
 Or, alternatively you can enter the following command from a command
 prompt:
 
-.. code-block:: text
+.. code-block:: doscon
 
-             net start condor
+    > net start condor
 
 :index:`HTCondor daemon names<single: HTCondor daemon names; Windows>`
 
@@ -1407,7 +1406,7 @@ implementation of security in HTCondor.
     disable new submissions to the queue by setting the configuration
     variable
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         MAX_JOBS_SUBMITTED = 0
 

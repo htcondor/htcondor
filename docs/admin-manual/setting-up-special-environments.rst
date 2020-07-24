@@ -140,14 +140,14 @@ output.
 URL transfers are enabled by default in the configuration of execute
 machines. Disabling URL transfers is accomplished by setting
 
-.. code-block:: text
+.. code-block:: condor-config
 
     ENABLE_URL_TRANSFERS = FALSE
 
 A comma separated list giving the absolute path and name of all
 available plug-ins is specified as in the example:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     FILETRANSFER_PLUGINS = /opt/condor/plugins/wget-plugin, \
                            /opt/condor/plugins/hdfs-plugin, \
@@ -168,7 +168,7 @@ command line argument **-classad**. In response to invocation with this
 command line argument, the plug-in must respond with an output of three
 ClassAd attributes. The first two are fixed:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
@@ -177,7 +177,7 @@ The third ClassAd attribute is ``SupportedMethods``. This attribute is a
 string containing a comma separated list of the protocols that the
 plug-in handles. So, for example
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     SupportedMethods = "http,ftp,file"
 
@@ -208,7 +208,7 @@ status of the plug-in.
 As an example of the transfer of a subset of output files, assume that
 the submit description file contains
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     output_destination = url://server/some/directory/
     transfer_output_files = foo, bar, qux
@@ -218,11 +218,11 @@ times. The directory delimiter (/ on Unix, and \\ on Windows) is
 appended to the destination URL, such that the three (Unix) invocations
 of the plug-in will appear similar to
 
-.. code-block:: text
+.. code-block:: console
 
-    url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
-    url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
-    url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
+    $ url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
+    $ url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
+    $ url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
 
 Note that this functionality is not limited to a predefined set of
 protocols. New ones can be invented. As an invented example, the zkm
@@ -230,7 +230,7 @@ transfer type writes random bytes to a file. The plug-in that handles
 zkm transfers would respond to invocation with the **-classad** command
 line argument with:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
@@ -239,7 +239,7 @@ line argument with:
 And, then when a job requested that this plug-in be invoked, for the
 invented example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     transfer_input_files = zkm://128/r-data
 
@@ -272,7 +272,7 @@ Another option for transferring files over HTTP is for users to specify
 a list of public input files. These are specified in the submit file as
 follows:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     public_input_files = file1,file2,file3
 
@@ -384,7 +384,7 @@ configuration variable, and machine-specific configuration files are in
 the same directory, named by each machine's host name,
 ``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE` becomes:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \
                         $(ETC)/$(HOSTNAME).local
@@ -402,7 +402,7 @@ this case, the files might be named:
 
 and the ``LOCAL_CONFIG_FILE`` configuration variable would be set to
 
-.. code-block:: text
+.. code-block:: condor-config
 
     LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \
                         $(ETC)/$(HOSTNAME).local
@@ -527,12 +527,12 @@ the system linker (*ld*), is as follows:
 On these platforms, issue the following commands (as root), where
 *ld-path* is replaced by the path to the system's *ld*.
 
-.. code-block:: text
+.. code-block:: console
 
-      mv /[ld-path]/ld /<ld-path>/ld.real
-      cp /usr/local/condor/lib/ld /<ld-path>/ld
-      chown root /<ld-path>/ld
-      chmod 755 /<ld-path>/ld
+    $ mv /[ld-path]/ld /<ld-path>/ld.real
+    $ cp /usr/local/condor/lib/ld /<ld-path>/ld
+    $ chown root /<ld-path>/ld
+    $ chmod 755 /<ld-path>/ld
 
 If you remove HTCondor from your system later on, linking will continue
 to work, since the HTCondor linker will always default to compiling
@@ -722,7 +722,7 @@ main *condor_collector* and the HTCondorView collector are started up
 by the same *condor_master* daemon on the same machine. In this
 example, the HTCondorView collector uses port 12345.
 
-.. code-block:: text
+.. code-block:: condor-config
 
       VIEW_SERVER = $(COLLECTOR)
       VIEW_SERVER_ARGS = -f -p 12345
@@ -746,7 +746,7 @@ HTCondorView server.
 
 Define the following configuration variable:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       CONDOR_VIEW_HOST = full.hostname[:portnumber]
 

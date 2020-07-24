@@ -102,10 +102,10 @@ JobSets::restoreJobSet(ClassAd *setAd)
 	}
 	set = new JobSet(setId, setName, setOwner, setAd);
 
-	if (setId > next_setid_num) {
+	if (setId >= next_setid_num) {
 		dprintf(D_ALWAYS,"Warning: restoreJobSet - JobSet id larger than expected (%s,%d)\n",
 			setName.c_str(), setId);
-		next_setid_num = setId;
+		next_setid_num = setId + 1;
 	}
 
 	// Increment aggregates for removed and completed jobs from the past
@@ -150,8 +150,8 @@ JobSets::JobSet* JobSets::getOrCreateSet(JobQueueJob & job)
 		auto it = mapAliasToId.find(key);
 		if (it == mapAliasToId.end()) {
 			// Create a new set with a new set id!
-			setId = ++next_setid_num;
-			SetSecureAttributeInt(0, 0, ATTR_NEXT_JOBSET_NUM, setId);
+			setId = next_setid_num;
+			SetSecureAttributeInt(0, 0, ATTR_NEXT_JOBSET_NUM, ++next_setid_num);
 			newSet = true;
 			mapAliasToId[key] = setId;
 		}

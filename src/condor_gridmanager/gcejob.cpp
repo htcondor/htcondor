@@ -191,7 +191,7 @@ GCEJob::GCEJob( ClassAd *classad ) :
 			std::string labelValue;
 			jobAd->LookupString( labelAttr, labelValue );
 
-            m_labels.push_back( std::make_pair( labelName, labelValue ) );
+            m_labels.emplace_back( labelName, labelValue );
 		}
 	}
 

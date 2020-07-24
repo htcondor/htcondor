@@ -114,17 +114,17 @@ int main( ) {
 
 	vr3.Init( i3, false, true );
 	vr3.ToString( buffer );
-	std::cout << "Init vr3 with NOT[foo]: " << buffer << endl;
+	std::cout << "Init vr3 with NOT[foo]: " << buffer << std::endl;
 	buffer = "";
 
 	vr3.Intersect( i4, false, true );
 	vr3.ToString( buffer );
-	cout << "Intersect vr3 with NOT[bar]: " << buffer << endl;
+	std::cout << "Intersect vr3 with NOT[bar]: " << buffer << std::endl;
 	buffer = "";
 
 	vr3.Intersect( i5 );
 	vr3.ToString( buffer );
-	cout << "Intersect vr3 with [zap]: " << buffer << endl;
+	std::cout << "Intersect vr3 with [zap]: " << buffer << std::endl;
 	buffer = "";
 
 	delete i1;

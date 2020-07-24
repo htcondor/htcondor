@@ -33,7 +33,7 @@ instead of a local file.
 Jobs that use *condor_chirp* must have the attribute ``WantIOProxy``
 set to ``True`` in the job ClassAd. To do this, place
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +WantIOProxy = true
 
@@ -159,9 +159,9 @@ the current directory of the running program.
 To append the word "foo" to a file called ``RemoteFile`` on the submit
 machine, run
 
-.. code-block:: text
+.. code-block:: console
 
-      echo foo | condor_chirp put -mode wa - RemoteFile
+      $ echo foo | condor_chirp put -mode wa - RemoteFile
 
 To append the message "Hello World" to the job event log, run
 

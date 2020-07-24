@@ -50,7 +50,7 @@ configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION``
 :index:`DAGMAN_SUPPRESS_NOTIFICATION` is its default value of
 ``True``, and a node job's submit description file contains
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       notification = Complete
 

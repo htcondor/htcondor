@@ -18,28 +18,27 @@ number of times to restart the job from scratch.  In the rare case where some
 value other than zero indicates success, a submit file can set **success_exit_code**
 to the integer value that is considered successful.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      ####################
-      # Example submit description with max_retries
-      ####################
+    # Example submit description with max_retries
 
-      executable   = myexe
-      arguments    = SomeArgument
+    executable   = myexe
+    arguments    = SomeArgument
 
-      # Retry this job 5 times if non-zero exit code
-      max_retries = 5
+    # Retry this job 5 times if non-zero exit code
+    max_retries = 5
 
-      output       = outputfile
-      error        = errorfile
-      log          = myexe.log
+    output       = outputfile
+    error        = errorfile
+    log          = myexe.log
 
-      request_cpus   = 1
-      request_memory = 1024
-      request_disk   = 10240
-      
-      should_transfer_files = yes
-      queue
+    request_cpus   = 1
+    request_memory = 1024
+    request_disk   = 10240
+
+    should_transfer_files = yes
+
+    queue
 
 
 Automatically removing a job in the queue
@@ -54,13 +53,13 @@ about the classad language and :doc:`/classad-attributes/index` for the list of 
 which can be used in these expressions.  For example, to automatically remove a 
 job which has been in the queue for more than 100 hours, the submit file could have
 
-.. code-block:: text
+.. code-block:: condor-submit
 
        periodic_remove = (time() - QDate) > (100 * 3600)
 
 or, to remove jobs that have been running for more than two hours:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
        periodic_remove = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
 
@@ -90,7 +89,7 @@ into the hold state for many reasons, so best practice, when trying to release
 a job that was held with **periodic_hold** is to include the **HoldReasonSubCode**
 in the **periodic_release** expression.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
        periodic_hold = (JobStatus == 2) && (time() - EnteredCurrentStatus) > (2 * 3600)
        periodic_hold_reason = "Job ran for more than two hours"
@@ -108,7 +107,7 @@ job informs users that there may have been a problem with the job that should be
 For example, if a job should never exit by a signal, the job can be put on hold if it
 does with
 
-.. code-block:: text
+.. code-block:: condor-submit
 
        on_exit_hold = ExitBySignal == true
 

@@ -97,7 +97,7 @@ request or preference on what machine to use. Additional attributes can
 be easily added. For example, your site administrator can add a physical
 location attribute to your machine ClassAds.
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     Machine = "turunmaa.cs.wisc.edu"
     FileSystemDomain = "cs.wisc.edu"

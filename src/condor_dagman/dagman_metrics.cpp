@@ -163,7 +163,7 @@ DagmanMetrics::NodeFinished( bool isSubdag, bool successful )
 
 //---------------------------------------------------------------------------
 bool
-DagmanMetrics::Report( int exitCode, Dag::dag_status status )
+DagmanMetrics::Report( int exitCode, DagStatus status )
 {
 	if ( !WriteMetricsFile( exitCode, status ) ) {
 		return false;
@@ -174,7 +174,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 
 //---------------------------------------------------------------------------
 bool
-DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
+DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 {
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
@@ -223,7 +223,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	}
 
 		// Last item must NOT have trailing comma!
-	fprintf( fp, "    \"dag_status\":%d\n", status );
+	fprintf( fp, "    \"DagStatus\":%d\n", status );
 	fprintf( fp, "}\n" );
 
 	if ( fclose( fp ) != 0 ) {

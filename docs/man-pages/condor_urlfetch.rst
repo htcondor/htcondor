@@ -22,7 +22,7 @@ file specified by *local-url-cache-file* to standard output.
 *condor_urlfetch* is intended to be used as the program to run when
 defining configuration, such as in the nonfunctional example:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     LOCAL_CONFIG_FILE = $(LIBEXEC)/condor_urlfetch -$(SUBSYSTEM) \
       http://www.example.com/htcondor-baseconfig  local.config |

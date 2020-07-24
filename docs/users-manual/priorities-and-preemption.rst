@@ -29,7 +29,7 @@ will keep going, and try the priority 9 job next.
 
 The job priority may be specified in the submit description file by setting
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     priority = 15
 

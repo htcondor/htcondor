@@ -1,11 +1,13 @@
 import sys
+
 if sys.version_info < (3, 5, 0):
-	import compat_enum as enum
+    import compat_enum as enum
 else:
-	import enum
+    import enum
+
 
 class JobStatus(enum.IntEnum):
-    '''
+    """
     An enumeration of HTCondor job status values.
 
     .. attribute:: IDLE
@@ -21,7 +23,7 @@ class JobStatus(enum.IntEnum):
     .. attribute:: TRANSFERRING_OUTPUT
 
     .. attribute:: SUSPENDED
-    '''
+    """
 
     IDLE = 1
     RUNNING = 2

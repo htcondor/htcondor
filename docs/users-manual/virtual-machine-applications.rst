@@ -31,19 +31,19 @@ of virtual machine software identify the disk image.
 VMware, Xen, and KVM virtual machine software are supported. As these
 differ from each other, the submit description file specifies one of
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vm_type = vmware
 
 or
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vm_type = xen
 
 or
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vm_type = kvm
 
@@ -54,7 +54,7 @@ machine that can provide the needed memory space.
 
 Virtual machine networking is enabled with the command
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vm_networking = true
 
@@ -78,7 +78,7 @@ the virtual machine). Should the job not want any files transferred back
 (modified or not), for example because the job explicitly transferred
 its own files, the submit command to prevent the transfer is
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vm_no_output_vm = true
 
@@ -90,7 +90,7 @@ disk file. The second field specifies the device. The third field
 specifies permissions, and the optional fourth specifies the format.
 Here is an example that identifies a single file:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vm_disk = swap.img:sda2:w:raw
 
@@ -119,7 +119,7 @@ submit machine to the machine where the **vm** universe job will
 execute, HTCondor must be explicitly told to do so with the standard
 file transfer attributes:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
@@ -160,7 +160,7 @@ initially quite small, growing only as new files are created or files
 are modified. When **vmware_should_transfer_files** is ``True``, a
 job may specify that a snapshot disk is not to be used with the command
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vmware_snapshot_disk = False
 
@@ -187,7 +187,7 @@ page under the answer to why VMware jobs with symbolic links fail.
 
 Here is a sample submit description file for a VMware virtual machine:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     universe                     = vm
     executable                   = vmware_sample_job
@@ -238,7 +238,7 @@ image and memory. The checkpoint is created and all files are
 transferred back to the ``$(SPOOL)`` directory on the machine from which
 the job was submitted. The submit command to create checkpoints is
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     vm_checkpoint = true
 
@@ -257,7 +257,7 @@ cause networking problems when the job restarts, particularly if the job
 migrates to a different machine. *condor_submit* will normally reject
 such jobs. To enable both, then add the command
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     when_to_transfer_output = ON_EXIT_OR_EVICT
 

@@ -593,7 +593,7 @@ Machine ClassAd Attributes
     number. Could be used the the startd to refuse to start jobs in
     offline universes:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         START = OfflineUniverses is undefined || (! member( JobUniverse, OfflineUniverses ))
 
@@ -972,7 +972,7 @@ Machine ClassAd Attributes
     For SMP machines, the integer that identifies the slot. The value
     will be X for the slot with
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         name="slotX@full.hostname"
 

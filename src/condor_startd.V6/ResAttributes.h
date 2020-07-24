@@ -232,7 +232,7 @@ public:
 
 		// On shutdown, print one last D_IDLE debug message, so we don't
 		// lose statistics when the startd is restarted.
-	void final_idle_dprintf();
+	void final_idle_dprintf() const;
 
 		// Functions to return the value of shared attributes
 	double			num_cpus()	const { return m_num_cpus; };
@@ -354,33 +354,33 @@ public:
 	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
 	void publish_static(ClassAd*);  // Publish desired info to given CA
-	void publish_dynamic(ClassAd*);  // Publish desired info to given CA
+	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
 	void compute_virt_mem();
 	void compute_disk();
 	void set_condor_load(float load) { c_condor_load = load; }
 
 		// Load average methods
-	float condor_load() { return c_condor_load; };
-	float owner_load() { return c_owner_load; };
-	float total_load() { return c_owner_load + c_condor_load; };
+	float condor_load() const { return c_condor_load; };
+	float owner_load() const { return c_owner_load; };
+	float total_load() const { return c_owner_load + c_condor_load; };
 	void set_owner_load( float v ) { c_owner_load = v; };
 
 		// Keyboad activity methods
 	void set_keyboard( time_t k ) { c_idle = k; };
 	void set_console( time_t k ) { c_console_idle = k; };
-	time_t keyboard_idle() { return c_idle; };
-	time_t console_idle() { return c_console_idle; };
-	int	type() { return c_type; };
+	time_t keyboard_idle() const { return c_idle; };
+	time_t console_idle() const { return c_console_idle; };
+	int	type() const { return c_type; };
 
 	void display(int dpf_flags) const;
 	void dprintf( int, const char*, ... ) const;
 	void cat_totals(MyString & buf) const;
 
-	double num_cpus() { return c_num_cpus; }
+	double num_cpus() const { return c_num_cpus; }
 	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
-	long long get_disk() { return c_disk; }
-	double get_disk_fraction() { return c_disk_fraction; }
-	long long get_total_disk() { return c_total_disk; }
+	long long get_disk() const { return c_disk; }
+	double get_disk_fraction() const { return c_disk_fraction; }
+	long long get_total_disk() const { return c_total_disk; }
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
