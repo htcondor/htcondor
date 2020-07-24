@@ -597,10 +597,9 @@ class CondorClassAdLexer(lexer.RegexLexer):
             (r"\n\s", token.Text),
             (r";|$", token.Text, "#pop"),
             (r"\[", token.Text, "new"),
-            *CLASSAD_EXPR_TOKENS,
-        ],
-        "string": [*CLASSAD_STRING_TOKENS],
-        "getter": [*CLASSAD_GETTER_TOKENS],
+        ] + CLASSAD_EXPR_TOKENS,
+        "string": CLASSAD_STRING_TOKENS,
+        "getter": CLASSAD_GETTER_TOKENS,
     }
 
 
@@ -613,9 +612,9 @@ class CondorClassAdExpressionLexer(lexer.RegexLexer):
     flags = re.MULTILINE | re.IGNORECASE
 
     tokens = {
-        "root": [*CLASSAD_EXPR_TOKENS],
-        "string": [*CLASSAD_STRING_TOKENS],
-        "getter": [*CLASSAD_GETTER_TOKENS],
+        "root": CLASSAD_EXPR_TOKENS,
+        "string": CLASSAD_STRING_TOKENS,
+        "getter": CLASSAD_GETTER_TOKENS,
     }
 
 
@@ -670,82 +669,72 @@ class CondorDAGManLexer(lexer.RegexLexer):
                 r"([\s\[])(dir|noop|done)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
+        ] + DAGMAN_COMMON,
         "parent": [
             (
                 r"([\s\[])(child)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
+        ] + DAGMAN_COMMON,
         "script": [
             (
                 r"([\s\[])(defer|pre|post)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
-        "pre_skip": [*DAGMAN_COMMON],
+        ] + DAGMAN_COMMON,
+        "pre_skip": DAGMAN_COMMON,
         "retry": [
             (
                 r"([\s\[])(unless-exit)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
+        ] + DAGMAN_COMMON,
         "abort-dag-on": [
             (
                 r"([\s\[])(return)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
-        "vars": [*DAGMAN_COMMON],
-        "priority": [*DAGMAN_COMMON],
-        "category": [*DAGMAN_COMMON],
-        "maxjobs": [*DAGMAN_COMMON],
-        "config": [*DAGMAN_COMMON],
-        "set_job_attr": [(r"\s=\s", token.Operator), *DAGMAN_COMMON],
-        "include": [*DAGMAN_COMMON],
+        ] + DAGMAN_COMMON,
+        "vars": DAGMAN_COMMON,
+        "priority": DAGMAN_COMMON,
+        "category": DAGMAN_COMMON,
+        "maxjobs": DAGMAN_COMMON,
+        "config": DAGMAN_COMMON,
+        "set_job_attr": [(r"\s=\s", token.Operator)] + DAGMAN_COMMON,
+        "include": DAGMAN_COMMON,
         "subdag": [
             (
                 r"([\s\[])(external|dir|noop|done)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
+        ] + DAGMAN_COMMON,
         "splice": [
             (
                 r"([\s\[])(dir)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
-        "connect": [*DAGMAN_COMMON],
-        "pin_in": [*DAGMAN_COMMON],
-        "pin_out": [*DAGMAN_COMMON],
+        ] + DAGMAN_COMMON,
+        "connect": DAGMAN_COMMON,
+        "pin_in": DAGMAN_COMMON,
+        "pin_out": DAGMAN_COMMON,
         "final": [
             (
                 r"([\s\[])(dir|noop)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
+        ] + DAGMAN_COMMON,
         "dot": [
             (
                 r"([\s\[])(update|dont-update|overwrite|dont-overwrite|include)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
+        ] + DAGMAN_COMMON,
         "node_status_file": [
             (
                 r"([\s\[])(always-update)([\s\]])",
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
-            *DAGMAN_COMMON,
-        ],
+        ] + DAGMAN_COMMON,
     }
 
 
@@ -810,9 +799,8 @@ class CondorConfigLexer(lexer.RegexLexer):
         "value": [
             (r"\\\n", token.Text),
             (r"\|?$", token.Keyword, "#pop"),
-            *CONFIG_VALUE_SHARED,
-        ],
-        "multi-line": [(r"@.+$", token.Name.Namespace, "#pop"), *CONFIG_VALUE_SHARED,],
+        ] + CONFIG_VALUE_SHARED,
+        "multi-line": [(r"@.+$", token.Name.Namespace, "#pop")] + CONFIG_VALUE_SHARED,
         "include": [
             (r"\|?$", token.Keyword, "#pop"),
             (r":", token.Keyword),
