@@ -50,10 +50,9 @@ for the machine where the job may run.
 When one or more of these environment variables is specified, the job is
 submitted with:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-    Requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && \
-       OpSys == $CONDOR_OPSYS
+    Requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && OpSys == $CONDOR_OPSYS
 
 Without these environment variables, the job receives the default
 requirements expression, which requests a machine of the same platform

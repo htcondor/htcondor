@@ -287,7 +287,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = one \"two\" 'three'
 
@@ -318,7 +318,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = "3 simple arguments"
 
@@ -332,7 +332,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Another example:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = "one 'two with spaces' 3"
 
@@ -346,7 +346,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     And yet another example:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = "one ""two"" 'spacey ''quoted'' argument'"
 
@@ -396,7 +396,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         environment = "one=1 two=""2"" three='spacey ''quoted'' value'"
 
@@ -427,7 +427,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     A Unix example:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         environment = one=1;two=2;three="quotes have no 'special' meaning"
 
@@ -502,7 +502,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Examples:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         # import everything except PATH and INCLUDE (also path, include and other case-variants)
         getenv = !PATH, !INCLUDE
@@ -752,10 +752,10 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     rank. HTCondor will give the job the machine with the highest rank.
     For example,
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
-                request_memory = max({60, Target.TotalSlotMemory})
-                rank = Memory
+        request_memory = max({60, Target.TotalSlotMemory})
+        rank = Memory
 
     asks HTCondor to find all available machines with more than 60
     megabytes of memory and give to the job the machine with the most
@@ -768,7 +768,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     A requested number of CPUs (cores). If not specified, the number
     requested will be 1. If specified, the expression
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
           && (RequestCpus <= Target.Cpus)
 
@@ -786,7 +786,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     not specified, it will be set to the job ClassAd attribute
     ``DiskUsage``. The expression
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
           && (RequestDisk <= Target.Disk)
 
@@ -825,7 +825,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     The expression
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
           && (RequestMemory <= Target.Memory)
 
@@ -943,7 +943,7 @@ FILE TRANSFER COMMANDS
     **requirements** :index:`requirements<single: requirements; submit commands>`
     expression
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
           && (TARGET.HasEncryptExecuteDirectory)
 
@@ -1153,6 +1153,7 @@ FILE TRANSFER COMMANDS
 
         # For older buckets that aren't region-specific.
         s3://<bucket>/<key>
+
         # For newer, region-specific buckets.
         s3://<bucket>.s3.<region>.amazonaws.com/<key>
 
@@ -1161,6 +1162,7 @@ FILE TRANSFER COMMANDS
     .. code-block:: text
 
         s3://<host>/<key>
+
         # If necessary
         aws_region = <region>
 

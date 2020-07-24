@@ -60,7 +60,7 @@ Collector ClassAd Attributes
     An integer value representing the current number of jobs running
     under the universe which forms the attribute name. For example
 
-    .. code-block:: text
+    .. code-block:: condor-classad
 
         CurrentJobsRunningVanilla = 567
 
@@ -225,7 +225,7 @@ Collector ClassAd Attributes
     jobs ever seen under the universe which forms the attribute name,
     over the life of this *condor_collector* process. For example
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
           MaxJobsRunningVanilla = 401
 

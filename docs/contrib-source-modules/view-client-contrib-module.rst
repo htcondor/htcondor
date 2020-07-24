@@ -37,7 +37,7 @@ Step-by-Step Installation of the HTCondorView Client
    following entries to the configuration file for the
    *condor_collector* chosen to act as the ViewServer.
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
         POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data
         KEEP_POOL_HISTORY = True

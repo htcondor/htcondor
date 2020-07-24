@@ -91,7 +91,7 @@ with the correct permissions:
 On each machine, create the file ``/etc/condor/config.d/50-security`` with the
 following contents:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SEC_PASSWORD_FILE = /etc/condor/passwords.d/POOL
     SEC_DAEMON_AUTHENTICATION = REQUIRED
@@ -160,8 +160,8 @@ Resources
 ---------
 
 More detailed instructions (including steps for Debian and 
-Ubuntu) are available in the slides from a HTCondor Week talk:
-https://agenda.hep.wisc.edu/event/1325/session/16/contribution/41/material/slides/0.pdf
+Ubuntu) are available in
+`these slides from a HTCondor Week talk <https://agenda.hep.wisc.edu/event/1325/session/16/contribution/41/material/slides/0.pdf>`_.
 
 Full installation instructions are available in the HTCondor Manual:
 :doc:`/admin-manual/installation-startup-shutdown-reconfiguration`

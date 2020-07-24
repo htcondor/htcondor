@@ -93,7 +93,7 @@ You should also try to submit a job; create the following file. (We'll
 refer to the contents of the box by the emphasized filename in later
 terminals and/or files.)
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     # ~/condor-annex/sleep.submit
 
@@ -132,7 +132,7 @@ basically just means it won't talk to anyone other than itself. For
 machine's public interface. In most cases, that's as simple as adding
 the following lines:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # ~/condor-8.7.8/local/condor_config.local
 
@@ -159,7 +159,7 @@ communications to AWS.
 
 Add the following lines:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # ~/condor-8.7.8/local/condor_config.local
 
@@ -193,7 +193,7 @@ port, then you don't have to do anything. Otherwise, you'll need to add
 a line like the following, replacing '9618' with whatever port the
 administrator opened for you.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # ~/condor-8.7.8/local/condor_config.local
 

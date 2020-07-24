@@ -39,7 +39,7 @@ placed in the queue (executed).
 Configuration of a machine from which jobs are submitted requires a few
 extra configuration variables:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     CONDOR_GAHP = $(SBIN)/condor_c-gahp
     C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
@@ -81,7 +81,7 @@ to run a job. The following is a working example of the security
 configuration for authentication. This authentication method, CLAIMTOBE,
 trusts the identity claimed by a host or IP address.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SEC_DEFAULT_NEGOTIATION = OPTIONAL
     SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
@@ -105,7 +105,7 @@ third field is the name of the remote pool's *condor_collector*.
 
 The following represents a minimal submit description file for a job.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     # minimal submit description file for an HTCondor-C job
     universe = grid
@@ -134,13 +134,13 @@ using an integer assigned for a job ClassAd ``JobUniverse``. Similarly,
 place quotation marks around string expressions. As an example, a submit
 description file would ordinarily contain
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     when_to_transfer_output = ON_EXIT
 
 This must appear in the HTCondor-C job submit description file as
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +remote_WhenToTransferOutput = "ON_EXIT"
 
@@ -150,25 +150,25 @@ For convenience, the specific entries of **universe**,
 **globus_xml** :index:`globus_xml<single: globus_xml; submit commands>` may be
 specified as **remote_** commands without the leading '+'. Instead of
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +remote_universe = 5
 
 the submit description file command may appear as
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     remote_universe = vanilla
 
 Similarly, the command
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +remote_gridresource = "condor schedd.example.com cm.example.com"
 
 may be given as
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     remote_grid_resource = condor schedd.example.com cm.example.com
 
@@ -181,7 +181,7 @@ machine specified by **remote_schedd**) and the execute machine (the
 machine that runs the job) will not be shared. Thus, the two inserted
 ClassAd attributes
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +remote_ShouldTransferFiles = "YES"
     +remote_WhenToTransferOutput = "ON_EXIT"
@@ -197,14 +197,14 @@ command in the submit description file says which *condor_collector*
 should be queried for the remote *condor_schedd* daemon's location. An
 example of this submit command is
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = condor schedd.example.com machine1.example.com
 
 If the remote *condor_collector* is not listening on the standard port
 (9618), then the port it is listening on needs to be specified:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = condor schedd.example.comd machine1.example.com:12345
 
@@ -224,7 +224,7 @@ defining a ClassAd attribute for the job. Where the Windows domain is
 different at the submit machine from the remote machine, the submit
 description file defines the Windows domain of the remote machine with
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       +remote_NTDomain = "DomainAtRemoteMachine"
 
@@ -371,7 +371,7 @@ Here is a simple submit description file.
 :index:`grid universe<single: grid universe; submit description file>`\ The example
 specifies a **gt2** job to be run on an NCSA machine.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     executable = test
     universe = grid
@@ -394,7 +394,7 @@ scheduling software to be used on the remote resource. There is a
 specific jobmanager for each type of batch system supported by Globus.
 The full syntax for this command line appears as
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = gt2 machinename[:port]/jobmanagername[:X.509 distinguished name]
 
@@ -464,7 +464,7 @@ the job has finished:
 A second example of a submit description file runs the Unix *ls* program
 on a different Globus resource.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     executable = /bin/ls
     transfer_executable = false
@@ -479,7 +479,7 @@ executable is on the remote machine, and it is not to be transferred
 before execution. Note that the required **grid_resource** and
 **universe** commands are present. The command
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     transfer_executable = false
 
@@ -492,7 +492,7 @@ job. The Perl script both lists and sets environment variables for a
 job. Save the following Perl script with the name ``env-test.pl``, to be
 used as an HTCondor job executable.
 
-.. code-block:: text
+.. code-block:: perl
 
     #!/usr/bin/env perl
 
@@ -505,9 +505,9 @@ used as an HTCondor job executable.
 
 Run the Unix command
 
-.. code-block:: text
+.. code-block:: console
 
-    chmod 755 env-test.pl
+    $ chmod 755 env-test.pl
 
 to make the Perl script executable.
 
@@ -515,7 +515,7 @@ Now create the following submit description file. Replace
 ``example.cs.wisc.edu/jobmanager`` with a resource you are authorized to
 use.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     executable = env-test.pl
     universe = grid
@@ -528,7 +528,7 @@ use.
 When the job has completed, the output file, ``env-test.out``, should
 contain something like this:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     GLOBUS_GRAM_JOB_CONTACT = https://example.cs.wisc.edu:36213/30905/1020633947/
     GLOBUS_GRAM_MYJOB_CONTACT = URLx-nexus://example.cs.wisc.edu:36214
@@ -558,7 +558,7 @@ The following example is a Perl script that uses the GASS server in
 HTCondor-G to copy input files to the execute machine. In this example,
 the remote job counts the number of lines in a file.
 
-.. code-block:: text
+.. code-block:: perl
 
     #!/usr/bin/env perl
     use FileHandle;
@@ -586,7 +586,7 @@ the remote job counts the number of lines in a file.
 The submit description file used to submit the Perl script as an
 HTCondor job appears as:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     executable = gass-example.pl
     universe = grid
@@ -601,7 +601,7 @@ There are two optional submit description file commands of note:
 **x509userproxy** command specifies the path to an X.509 proxy. The
 command is of the form:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     x509userproxy = /path/to/proxy
 
@@ -615,13 +615,13 @@ replaced with the Unix user id.
 The **globus_rsl** command is used to add additional attribute settings
 to a job's RSL string. The format of the **globus_rsl** command is
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     globus_rsl = (name=value)(name=value)
 
 Here is an example of this command from a submit description file:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     globus_rsl = (project=Test_Project)
 
@@ -720,9 +720,9 @@ practices are recommended.
 #. Use the following options when initializing the credential on the
    *MyProxy* server:
 
-   .. code-block:: text
+   .. code-block:: console
 
-       myproxy-init -s <host> -x -r <cert subject> -k <cred name>
+       $ myproxy-init -s <host> -x -r <cert subject> -k <cred name>
 
    The option **-x -r** *<cert subject>* essentially tells the
    *MyProxy* server to require two forms of authentication:
