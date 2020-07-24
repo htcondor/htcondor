@@ -22,30 +22,23 @@
 #include "condor_crypt_blowfish.h"
 #include "condor_debug.h"
 
-#ifdef HAVE_EXT_OPENSSL
-
 bool Condor_Crypt_Blowfish :: encrypt(Condor_Crypto_State *cs,
                                       const unsigned char *  input,
                                       int              input_len, 
                                       unsigned char *& output, 
                                       int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(output_len);
 
     if (output) {
-        // Now, encrypt
         BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->method_key_data, cs->ivec, &cs->num, BF_ENCRYPT);
         return true;
     }
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
 bool Condor_Crypt_Blowfish :: decrypt(Condor_Crypto_State *cs,
@@ -54,22 +47,16 @@ bool Condor_Crypt_Blowfish :: decrypt(Condor_Crypto_State *cs,
                                       unsigned char *& output, 
                                       int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(output_len);
 
     if (output) {
-        // Now, encrypt
         BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->method_key_data, cs->ivec, &cs->num, BF_DECRYPT);
         return true;
     }
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
-#endif /*HAVE_EXT_OPENSSL*/

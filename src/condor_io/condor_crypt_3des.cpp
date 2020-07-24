@@ -22,15 +22,12 @@
 #include "condor_crypt_3des.h"
 #include "condor_debug.h"
 
-#ifdef HAVE_EXT_OPENSSL
-
 bool Condor_Crypt_3des :: encrypt(Condor_Crypto_State *cs,
                                   const unsigned char *  input,
                                   int              input_len, 
                                   unsigned char *& output, 
                                   int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(input_len);
@@ -47,9 +44,6 @@ bool Condor_Crypt_3des :: encrypt(Condor_Crypto_State *cs,
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
 bool Condor_Crypt_3des :: decrypt(Condor_Crypto_State *cs,
@@ -58,7 +52,6 @@ bool Condor_Crypt_3des :: decrypt(Condor_Crypto_State *cs,
                                   unsigned char *& output, 
                                   int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output = (unsigned char *) malloc(input_len);
 
     if (output) {
@@ -76,9 +69,5 @@ bool Condor_Crypt_3des :: decrypt(Condor_Crypto_State *cs,
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
-#endif /*HAVE_EXT_OPENSSL*/

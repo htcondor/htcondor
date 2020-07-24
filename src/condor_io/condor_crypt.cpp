@@ -22,11 +22,13 @@
 #include "condor_crypt.h"
 #include "condor_md.h"
 #include "condor_random_num.h"
-#ifdef HAVE_EXT_OPENSSL
 #include <openssl/rand.h>              // SSLeay rand function
-#endif
 #include "condor_debug.h"
 
+// for manipulating per-method keys.  see new below about moving to static
+// function in each method object.
+#include <openssl/des.h>
+#include <openssl/blowfish.h>
 
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
 
@@ -45,7 +47,6 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
     // these conversions so that the state object doesn't need any specifc
     // method manipulation here.
 
-#if !defined(SKIP_AUTHENTICATION)
     switch(proto) {
         case CONDOR_3DES: {
             // triple des requires a key of 8 x 3 = 24 bytes
@@ -77,10 +78,10 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
             break;
         }
         default:
-            dprintf(D_ALWAYS, "WARNING: Initialized crypto state for unknown proto %i.\n", proto);
+            dprintf(D_ALWAYS, "CRYPTO: WARNING: Initialized crypto state for unknown proto %i.\n", proto);
             break;
     }
-#endif
+
     // zero ivec and num
     reset();
 
@@ -90,12 +91,10 @@ Condor_Crypto_State::~Condor_Crypto_State() {
     if(ivec) free(ivec);
     if(additional) free(additional);
     if(method_key_data) free(method_key_data);
-    // need to free key data
-    dprintf(D_ALWAYS, "ZKM: FREE() CRYPTO DATA\n");
 }
 
 void Condor_Crypto_State::reset() {
-    dprintf(D_ALWAYS, "ZKM: reset state (ivec and num)\n");
+    dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: resetting ivec(len %i) and num\n", ivec_len);
 
     if(ivec) {
 	bzero(ivec, ivec_len);
@@ -106,22 +105,17 @@ void Condor_Crypto_State::reset() {
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
 {
-#ifdef HAVE_EXT_OPENSSL
     int size = inputLength % blockSize;
     return (inputLength + ((size == 0) ? blockSize : (blockSize - size)));
-#else
-    return -1;
-#endif
 }
 
 unsigned char * Condor_Crypt_Base :: randomKey(int length)
 {
     unsigned char * key = (unsigned char *)(malloc(length));
 
-	memset(key, 0, length);
+    memset(key, 0, length);
 
-#ifdef HAVE_EXT_OPENSSL
-	static bool already_seeded = false;
+    static bool already_seeded = false;
     int size = 128;
     if( ! already_seeded ) {
         unsigned char * buf = (unsigned char *) malloc(size);
@@ -144,19 +138,6 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     }
 
     RAND_bytes(key, length);
-#else
-    // use condor_util_lib/get_random.c
-    int r, s, size = sizeof(r);
-    unsigned char * tmp = key;
-    for (s = 0; s < length; s+=size, tmp+=size) {
-        r = get_random_int_insecure();
-        memcpy(tmp, &r, size);
-    }
-    if (length > s) {
-        r = get_random_int_insecure();
-        memcpy(tmp, &r, length - s);
-    }
-#endif
     return key;
 }
 
@@ -175,9 +156,5 @@ char *Condor_Crypt_Base::randomHexKey(int length)
 
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 {
-#ifdef HAVE_EXT_OPENSSL
     return Condor_MD_MAC::computeOnce((const unsigned char *)initialKey, strlen(initialKey));
-#else 
-    return NULL;
-#endif
 }

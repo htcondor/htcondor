@@ -27,10 +27,6 @@
 #include "CryptKey.h"
 
 
-// temp.  for the key storage below
-#include <openssl/des.h>
-#include <openssl/blowfish.h>
-
 class Condor_Crypto_State {
 
 public:
