@@ -26,6 +26,7 @@
 #include "submit_utils.h"
 #include "condor_version.h"
 #include "my_username.h"
+#include "../condor_utils/dagman_utils.h"
 
 #include <sstream>
 
@@ -177,7 +178,7 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 	debug_printf( DEBUG_NORMAL, "Submit generated %d job procs; "
 				"disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
 				jobProcCount );
-	main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
+	main_shutdown_rescue( EXIT_ERROR, DagStatus::DAG_STATUS_ERROR );
   }
   
   return true;

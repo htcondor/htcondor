@@ -37,6 +37,7 @@
 #include "MyString.h"
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
+#include "dagman_classad.h"
 
 #include <queue>
 
@@ -136,7 +137,8 @@ class Dag {
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
-		 bool isSplice = false, const MyString &spliceScope = "root" );
+		 bool isSplice = false, DCSchedd *schedd = NULL,
+		 const MyString &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -477,6 +479,17 @@ class Dag {
 		*/
 	bool StartFinalNode();
 
+		/** Start the DAG's provisioner node if there is one.
+			@return true iff the provisioner node was actually started.
+		*/
+	bool StartProvisionerNode();
+
+		/** Get the status of the provisioner by querying the schedd and
+		    checking its job ad.
+			@return status of the provisioner
+		*/
+	MyString GetProvisionerJobAdState();
+
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
@@ -806,19 +819,9 @@ class Dag {
 	*/
 	bool IsHalted() const { return _dagIsHalted; }
 
-	enum dag_status {
-		DAG_STATUS_OK = 0,
-		DAG_STATUS_ERROR = 1, // Error not enumerated below
-		DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
-		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
-		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
-		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
-		DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
-	};
+	DagStatus _dagStatus;
 
-	dag_status _dagStatus;
-
-	// WARNING!  dag_status and dag_status_names just be kept in sync!
+	// WARNING!  DagStatus and _dag_status_names just be kept in sync!
 	static const char *_dag_status_names[];
 
 	const char *GetStatusName() const {
@@ -1065,7 +1068,11 @@ private:
 		// for convenience.
 	Job* _final_job;
 
-	Job* _provisioner_node;
+	Job* _provisioner_node = NULL;
+
+	ProvisionerClassad* _provisionerClassad = NULL;
+
+	bool _provisioner_ready = false;
 
 	HashTable<MyString, Job *>		_nodeNameHash;
 
@@ -1356,6 +1363,9 @@ private:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
 	mutable ListIterator<Job> *_allNodesIt;
+
+		// The schedd we need to talk to to update the classad.
+	DCSchedd *_schedd;
 };
 
 #endif /* #ifndef DAG_H */

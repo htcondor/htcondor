@@ -94,7 +94,7 @@ reference job ClassAd attributes. When using the ``POLICY : Desktop``
 configuration template, the ``IS_OWNER`` expression is a function of the
 ``START`` expression:
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     START =?= FALSE
 
@@ -115,7 +115,7 @@ reference only machine ClassAd attributes.
     HTCondor starts jobs on the machine with low priority. Then, further
     configure to set up the machines with:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         START = True
         SUSPEND = False
@@ -152,7 +152,7 @@ group, set the ``RANK`` expression on the machines to reference the
 ``Owner`` attribute and prefer requests where that attribute matches one
 of the people in the group as in
 
-.. code-block:: text
+.. code-block:: condor-config
 
     RANK = Owner == "coltrane" || Owner == "tyner" \
         || Owner == "garrison" || Owner == "jones"
@@ -170,7 +170,7 @@ difference is that the machine owner has better priority on their own
 machine. To set this up for Garrison's machine (``bass``), place the
 following entry in the local configuration file of machine ``bass``:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     RANK = (Owner == "coltrane") + (Owner == "tyner") \
         + ((Owner == "garrison") * 10) + (Owner == "jones")
@@ -199,7 +199,7 @@ memory, and others with not much at all. Perhaps configure this
 large-memory machine to prefer to run jobs with larger memory
 requirements:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     RANK = ImageSize
 
@@ -209,7 +209,7 @@ largest of jobs, no matter who submitted them. A little less altruistic
 is the ``RANK`` on Coltrane's machine that prefers John Coltrane's jobs
 over those with the largest ``Imagesize``:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
 
@@ -595,7 +595,7 @@ which is intended for dedicated resources. But when the
 ``POLICY : Desktop`` configuration template is used, the ``IS_OWNER``
 expression is optimized for a shared resource
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     START =?= FALSE
 
@@ -627,7 +627,7 @@ goes into the Unclaimed State.
 Here is an example that assumes that the ``POLICY : Desktop``
 configuration template is in use. If the ``START`` expression is
 
-.. code-block:: text
+.. code-block:: condor-config
 
     START = KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane"
 
@@ -636,7 +636,7 @@ the Owner state. Owner is undefined, and anything && FALSE is FALSE.
 
 If, however, the ``START`` expression is
 
-.. code-block:: text
+.. code-block:: condor-config
 
     START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 
@@ -687,7 +687,7 @@ machine remains in the Unclaimed state. The default value of
 ``POLICY : Desktop`` configuration template is used, then the
 ``IS_OWNER`` expression is changed to
 
-.. code-block:: text
+.. code-block:: condor-config
 
     START =?= FALSE
 
@@ -707,7 +707,7 @@ The startd automatically inserts an attribute, ``LastBenchmark``,
 whenever it runs benchmarks, so commonly ``RunBenchmarks`` is defined in
 terms of this attribute, for example:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     RunBenchmarks = (time() - LastBenchmark) >= (4 * $(HOUR))
 
@@ -793,7 +793,7 @@ In general, there are two sets of expressions that might take effect,
 depending on the universe of the job running on the claim: vanilla,
 and all others.  The normal expressions look like the following:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     WANT_SUSPEND            = True
     WANT_VACATE             = $(ActivationTimer) > 10 * $(MINUTE)
@@ -803,7 +803,7 @@ and all others.  The normal expressions look like the following:
 The vanilla expressions have the string"_VANILLA" appended to their
 names. For example:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     WANT_SUSPEND_VANILLA    = True
     WANT_VACATE_VANILLA     = True
@@ -1328,7 +1328,7 @@ These variable definitions exist in the example configuration file in
 order to help write legible expressions. They are not required, and
 perhaps will go unused by many configurations.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     ##  These macros are here to help write legible expressions:
     MINUTE          = 60
@@ -1354,7 +1354,7 @@ perhaps will go unused by many configurations.
 
 Preemption is disabled as a default. Always desire to start jobs.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     WANT_SUSPEND         = False
     WANT_VACATE          = False
@@ -1370,7 +1370,7 @@ Periodic checkpointing specifies that for jobs smaller than 60 Mbytes,
 take a periodic checkpoint every 6 hours. For larger jobs, only take a
 checkpoint every 12 hours.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                                 ($(LastCkpt) > (6 * $(HOUR))) ) || \
@@ -1381,7 +1381,7 @@ checkpoint every 12 hours.
 At UW-Madison, we have a fast network. We simplify our expression
 considerably to
 
-.. code-block:: text
+.. code-block:: condor-config
 
     PERIODIC_CHECKPOINT     = $(LastCkpt) > (3 * $(HOUR))
 
@@ -1399,7 +1399,7 @@ programs for testing purposes. The jobs should be executed right away.
 This works with any machine (or the whole pool, for that matter) by
 adding the following 5 expressions to the existing configuration:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       START      = ($(START)) || Owner == "coltrane"
       SUSPEND    = ($(SUSPEND)) && Owner != "coltrane"
@@ -1436,7 +1436,7 @@ to define the time periods when you want jobs to run or not run. For
 example, assume regular work hours at your site are from 8:00am until
 5:00pm, Monday through Friday:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     WorkHours = ( (ClockMin >= 480 && ClockMin < 1020) && \
                   (ClockDay > 0 && ClockDay < 6) )
@@ -1449,7 +1449,7 @@ of ``AfterHours`` :index:`AfterHours` and ``WorkHours``
 
 To force HTCondor jobs to stay off of your machines during work hours:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # Only start jobs after hours.
     START = $(AfterHours)
@@ -1484,7 +1484,7 @@ approach.
 For ease of use, an entire policy is included in this example. Some of
 the expressions are just the usual default settings.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # If "IsDesktop" is configured, make it an attribute of the machine ClassAd.
     STARTD_ATTRS = IsDesktop
@@ -1539,7 +1539,7 @@ the expressions are just the usual default settings.
 With this policy in the global configuration, the local configuration
 files for desktops can be easily configured with the following line:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     IsDesktop = True
 
@@ -1614,7 +1614,7 @@ policy:
 
 :index:`eval()<single: eval(); ClassAd functions>`
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # Lie to HTCondor, to achieve 2 slots for each real slot
     NUM_CPUS = $(DETECTED_CORES)*2
@@ -1662,7 +1662,7 @@ a job that wishes to be suspended must submit the job so that this
 attribute is defined. The following line should be placed in the job's
 submit description file:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +IsSuspendableJob = True
 
@@ -1673,7 +1673,7 @@ submit description file:
 Policy may be set based on whether a job is an interactive one or not.
 Each interactive job has the job ClassAd attribute
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     InteractiveJob = True
 
@@ -1683,13 +1683,13 @@ from all other jobs.
 As an example, presume that slot 1 prefers interactive jobs. Set the
 machine's ``RANK`` to show the preference:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     RANK = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
 Or, if slot 1 should be reserved for interactive jobs:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
@@ -1794,7 +1794,7 @@ Define slot types.
     For example, in a machine with 128 Mbytes of RAM, all the following
     definitions result in the same allocation amount.
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         SLOT_TYPE_1 = mem=64
 
@@ -1836,7 +1836,7 @@ Define slot types.
     resources. This configuration example also omits definitions of
     ``NUM_SLOTS_TYPE_<N>``, to define the number of each slot type.
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
           SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
 
@@ -1862,7 +1862,7 @@ Define slot types.
     In both of the following examples, the disk share is set to
     ``auto``, number of cores is 1, and everything else is 50%:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
 
@@ -1883,7 +1883,7 @@ Define slot types.
     ``MACHINE_RESOURCE_<name>`` :index:`MACHINE_RESOURCE_<name>`,
     as shown in this example:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         MACHINE_RESOURCE_gpu = 16
         MACHINE_RESOURCE_actuator = 8
@@ -1893,7 +1893,7 @@ Define slot types.
     enable and disable local machine resources, also add the resource
     names to this variable. For example:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         if defined MACHINE_RESOURCE_NAMES
           MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator
@@ -1905,7 +1905,7 @@ Define slot types.
     following example demonstrates the definition of static and
     partitionable slot types with local machine resources:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         # declare one partitionable slot with half of the GPUs, 6 actuators, and
         # 50% of all other resources:
@@ -1925,7 +1925,7 @@ Define slot types.
     policy configuration`. This example shows a portion of a submit description
     file that requests GPUs and an actuator:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         universe = vanilla
 
@@ -2042,7 +2042,7 @@ To set a different policy for the slots within a machine, incorporate
 the slot-specific machine ClassAd attribute ``SlotID``. A ``SUSPEND``
 policy that is different for each of the two slots will be of the form
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
               ( (SlotID == 2) && (PolicyForSlot2) )

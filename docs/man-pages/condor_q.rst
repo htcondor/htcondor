@@ -89,7 +89,7 @@ of output per batch of jobs:
 
 .. code-block:: text
 
-        OWNER, BATCH_NAME, SUBMITTED, DONE, RUN, IDLE, [HOLD,] TOTAL, JOB_IDS
+    OWNER, BATCH_NAME, SUBMITTED, DONE, RUN, IDLE, [HOLD,] TOTAL, JOB_IDS
 
 Note that the HOLD column is only shown if there are held jobs in the
 output or if there are no jobs in the output.
@@ -99,7 +99,7 @@ following columns of information, with one line of output per job:
 
 .. code-block:: text
 
-        ID, OWNER, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
+    ID, OWNER, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
 
 If the **-dag** option is specified (in conjunction with **-nobatch**),
 *condor_q* displays the following columns of information, with one line
@@ -108,7 +108,7 @@ all other jobs (including sub-DAGs) the node name is shown:
 
 .. code-block:: text
 
-        ID, OWNER/NODENAME, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
+    ID, OWNER/NODENAME, SUBMITTED, RUN_TIME, ST, PRI, SIZE, CMD
 
 If the **-run** option is specified (in conjunction with **-nobatch**),
 *condor_q* displays the following columns of information, with one line
@@ -116,7 +116,7 @@ of output per running job:
 
 .. code-block:: text
 
-        ID, OWNER, SUBMITTED, RUN_TIME, HOST(S)
+    ID, OWNER, SUBMITTED, RUN_TIME, HOST(S)
 
 Also note that the **-run** option disables output of the totals line.
 

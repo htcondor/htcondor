@@ -42,7 +42,7 @@ option is used or unless otherwise specified
 in the environment; see above. For example, a discovery of two GPUs may
 output
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     DetectedGPUs="CUDA0, CUDA1"
 
@@ -56,7 +56,7 @@ identifiers for your devices. The ``--short-uuid`` option uses only part of the
 uuid, but it is highly likely to still be unique for devices on a single machine.
 When ``-short-uuid`` is used, discovery of two GPUs may look like this
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     DetectedGPUs="GPU-ddc1c098, GPU-9dc7c6d6"
 
@@ -143,7 +143,7 @@ Options
  **-verbose**
     Also print detection progress. This option is for interactive use only.
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron)
           

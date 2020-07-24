@@ -364,7 +364,7 @@ For example, if the user's keyword for a given fractal generation
 application is ``FractGen``, the resulting entries in the HTCondor
 configuration file may appear as:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     FractGen_Cmd = "/usr/local/bin/fractgen"
     FractGen_Iwd = "/tmp/cod-fractgen"

@@ -67,7 +67,7 @@ public:
 	void		addReliSock( const std::string &addr, ReliSock* rsock ) {addReliSock(addr.c_str(), rsock);}
 
 	bool	isFull( void );
-	int		size( void );
+	int		size( void ) const;
 
 private:
 

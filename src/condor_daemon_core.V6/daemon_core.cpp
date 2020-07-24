@@ -4784,7 +4784,7 @@ void DCSignalMsg::reportSuccess( DCMessenger * )
 			theSignal(),signalName(),thePid());
 }
 
-char const *DCSignalMsg::signalName()
+char const *DCSignalMsg::signalName() const
 {
 	switch(theSignal()) {
 	case SIGUSR1:

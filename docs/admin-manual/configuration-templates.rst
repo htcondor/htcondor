@@ -361,7 +361,7 @@ As an example, consider the *condor_startd* as it starts up. A
 *condor_startd* previous to HTCondor version 8.1.6 fails to start when
 it sees:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     @use feature : GPUs
 
@@ -369,7 +369,7 @@ Running an older *condor_config_val* also identifies the ``@use`` line
 as being bad. A *condor_startd* of HTCondor version 8.1.6 or more
 recent sees
 
-.. code-block:: text
+.. code-block:: condor-config
 
     use feature : GPUs
 
@@ -378,26 +378,26 @@ Configuration Template Examples
 
 -  Preempt a job if its memory usage exceeds the requested memory:
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
         MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
         use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
 
 -  Put a job on hold if its memory usage exceeds the requested memory:
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
         MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
         use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
 
 -  Update dynamic GPU information every 15 minutes:
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
         use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic)
 
    where ``dynamic_gpu_info.pl`` is a simple perl script that strips off
-   the DetectedGPUs line from textttcondor_gpu_discovery:
+   the DetectedGPUs line from *condor_gpu_discovery*:
 
    .. code-block:: perl
 

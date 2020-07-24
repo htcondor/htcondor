@@ -275,7 +275,7 @@ Save state to persistent storage
 
 To save the state, do something like this:
 
-.. code-block:: text
+.. code-block:: c++
 
     ReadUserLog                reader;
     ReadUserLog::FileState     statebuf;
@@ -296,7 +296,7 @@ Restore state from persistent storage
 
 To restore the state, do something like this:
 
-.. code-block:: text
+.. code-block:: c++
 
     ReadUserLog::FileState     statebuf;
     status = ReadUserLog::InitFileState( statebuf );

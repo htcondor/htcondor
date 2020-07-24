@@ -124,25 +124,25 @@ int main ( int argc, char *argv[] )
 
 	mad.EvaluateAttrBool( "rightMatchesLeft", match );
 	if( match ) {
-		cout << "MatchClassAd + target matches" << endl;
+		std::cout << "MatchClassAd + target matches" << std::endl;
 	}
 	else {
-		cout << "MatchClassAd + target doesn't match" << endl;
+		std::cout << "MatchClassAd + target doesn't match" << std::endl;
 	}
 
-	cout << "RemoveLeftAd( )" << endl;
+	std::cout << "RemoveLeftAd( )" << std::endl;
 
 	mad.RemoveLeftAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "RemoveRightAd( )" << endl;
+	std::cout << "RemoveRightAd( )" << std::endl;
 
 	mad.RemoveRightAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 }
 
