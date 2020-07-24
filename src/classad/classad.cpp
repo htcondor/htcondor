@@ -273,8 +273,7 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs ) const
 	attrs.clear( );
 	for( AttrList::const_iterator itr=attrList.begin(); itr!=attrList.end(); 
 		itr++ ) {
-			// make_pair is a STL function
-		attrs.push_back( make_pair( itr->first, itr->second ) );
+		attrs.emplace_back(itr->first, itr->second);
 	}
 }
 
@@ -286,7 +285,7 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs,
 	for ( References::const_iterator wl_itr = whitelist.begin(); wl_itr != whitelist.end(); wl_itr++ ) {
 		AttrList::const_iterator attr_itr = attrList.find( *wl_itr );
 		if ( attr_itr != attrList.end() ) {
-			attrs.push_back( make_pair( attr_itr->first, attr_itr->second ) );
+			attrs.emplace_back( attr_itr->first, attr_itr->second );
 		}
 	}
 }

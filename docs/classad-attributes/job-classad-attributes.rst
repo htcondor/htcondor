@@ -127,7 +127,7 @@ Job ClassAd Attributes
     this includes time the job spent in a suspended state, so the total
     committed wall time spent running is
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
         CommittedTime - CommittedSuspensionTime
 
@@ -282,7 +282,7 @@ Job ClassAd Attributes
     at the job's request, placing into the job's submit description file
     a setting such as
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           # 1 megabyte initial value
           +DiskUsage = 1024
@@ -493,7 +493,7 @@ Job ClassAd Attributes
     its current status So for example, if the job is on hold, the
     ClassAd expression
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
             time() - EnteredCurrentStatus
 
@@ -1776,7 +1776,7 @@ Job ClassAd Attributes
     This also includes time spent in suspension (if any), so the total
     real time spent running is
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
         RemoteWallClockTime - CumulativeSuspensionTime
 

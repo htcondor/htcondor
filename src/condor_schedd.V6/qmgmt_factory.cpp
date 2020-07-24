@@ -68,13 +68,13 @@ public:
 	bool IsPaused() { return paused != mmRunning; }
 	bool IsComplete() { return paused > mmHold; }
 	const char * Name() { return name ? name : "<empty>"; }
-	int ID() { return ident; }
+	int ID() const { return ident; }
 	int PauseMode() { return paused; }
 
-	bool NoItems() { return fea.foreach_mode == foreach_not; }
-	int StepSize() { return fea.queue_num; }
+	bool NoItems() const { return fea.foreach_mode == foreach_not; }
+	int StepSize() const { return fea.queue_num; }
 	// advance from the input row until the next selected row. return  < 0 if no more selected rows.
-	int NextSelectedRow(int row) {
+	int NextSelectedRow(int row) const {
 		if (fea.foreach_mode == foreach_not) return -1;
 		int num_rows = fea.items.number();
 		while (++row < num_rows) {
@@ -85,7 +85,7 @@ public:
 		return -1;
 	}
 	// returns the first row selected by the slice (if any)
-	int FirstSelectedRow() {
+	int FirstSelectedRow() const {
 		if (fea.foreach_mode == foreach_not) return 0;
 		int num_rows = (fea.foreach_mode == foreach_from_async) ? INT_MAX : fea.items.number();
 		if (num_rows <= 0) return -1;

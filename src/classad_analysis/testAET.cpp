@@ -85,64 +85,64 @@ int main ( int argc, char *argv[] )
 		std::cout << "MatchClassAd matches" << std::endl;
 	}
 	else {
-		std::cout << "MatchClassAd doesn't match" << endl;
+		std::cout << "MatchClassAd doesn't match" << std::endl;
 	}
 
-	cout << "RemoveLeftAd( )" << endl;
+	std::cout << "RemoveLeftAd( )" << std::endl;
 
 	mad.RemoveLeftAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "RemoveRightAd( )" << endl;
+	std::cout << "RemoveRightAd( )" << std::endl;
 
 	mad.RemoveRightAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 
-	cout << "----------------------------------------" << endl;
+	std::cout << "----------------------------------------" << std::endl;
 
 	match = false;
 
-	cout << "ReplaceLeftAd( newJobAd )" << endl;
+	std::cout << "ReplaceLeftAd( newJobAd )" << std::endl;
 
 	mad.ReplaceLeftAd( newJobAd );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "ReplaceRightAd( newMachineAd )" << endl;
+	std::cout << "ReplaceRightAd( newMachineAd )" << std::endl;
 
 	mad.ReplaceRightAd( newMachineAd );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 
 	mad.EvaluateAttrBool( "rightMatchesLeft", match );
 	if( match ) {
-		cout << "MatchClassAd + target matches" << endl;
+		std::cout << "MatchClassAd + target matches" << std::endl;
 	}
 	else {
-		cout << "MatchClassAd + target doesn't match" << endl;
+		std::cout << "MatchClassAd + target doesn't match" << std::endl;
 	}
 
-	cout << "RemoveLeftAd( )" << endl;
+	std::cout << "RemoveLeftAd( )" << std::endl;
 
 	mad.RemoveLeftAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "RemoveRightAd( )" << endl;
+	std::cout << "RemoveRightAd( )" << std::endl;
 
 	mad.RemoveRightAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 }
 

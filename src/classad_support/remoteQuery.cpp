@@ -245,7 +245,7 @@ Next( string &key, ClassAd *& ad )
 
 		// if accumulating, add <key,ad> to the results list
 	if( accumulate ) {
-		results.push_back( make_pair( key, ad ) );
+		results.emplace_back( key, ad );
 	}
 
 		// done

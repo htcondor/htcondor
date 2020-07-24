@@ -33,9 +33,9 @@ if ( WITH_BLAHP )
 		endif()
 
 		if (PREFER_CPP11)
-			set( CPP11_FLAG -std=c++11 )
+			set( CPP11_FLAG "-fcommon -std=c++11" )
 		else()
-			set( CPP11_FLAG "-I${BOOST_INCLUDE}" )
+			set( CPP11_FLAG "-fcommon -I${BOOST_INCLUDE}" )
 		endif()
 
 		if ( BUILDING_OPENSSL )

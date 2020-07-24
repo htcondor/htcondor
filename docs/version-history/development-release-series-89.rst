@@ -138,6 +138,15 @@ New Features:
    the MasterLog and is ready to accept commands.
    :ticket:`7667`
 
+-  Updated *condor_q* so when called with the ``-dag`` flag and a DAGMan job
+   ID, it will display all jobs running under any nested subdags.
+   :ticket:`7483`
+
+-  Direct job submission in *condor_dagman* now reports warning messages related
+   to job submission (for example, possible typos in submit arguments) to help
+   debug problems with jobs not running correctly.
+   :ticket:`7568`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
@@ -173,6 +182,10 @@ Bugs Fixed:
   the collector will no longer advertise support, which will prevent jobs from
   matching there and attempting to run.
   :ticket:`7707`
+
+- Fixed a bug in *condor_dagman* where completed jobs incorrectly showed a 
+  warning message related to job events.
+  :ticket:`7548`
 
 Version 8.9.7
 -------------

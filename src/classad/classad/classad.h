@@ -635,7 +635,7 @@ class ClassAd : public ExprTree
          */
 		ClassAd &operator=(const ClassAd &rhs);
 
-		ClassAd &operator=(ClassAd &&rhs) {
+		ClassAd &operator=(ClassAd &&rhs)  noexcept {
 			this->do_dirty_tracking = rhs.do_dirty_tracking;
 			this->chained_parent_ad = rhs.chained_parent_ad;
 			this->alternateScope = rhs.alternateScope;

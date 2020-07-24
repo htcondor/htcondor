@@ -72,59 +72,59 @@ int main( ) {
 	if( !IntervalToString( i5, buffer ) ) {
 		std::cerr << "IntervalToString failed on i5" << std::endl;
 	}
-	cout << "i5 = " << buffer << endl;
+	std::cout << "i5 = " << buffer << std::endl;
 	buffer = "";
 
 		// test 1
-	cout << endl;
+	std::cout << std::endl;
 	ValueRange vr1;
 
 	vr1.Init( i1 );
 	vr1.ToString( buffer );
-	cout << "Init vr1 with [7,23): " << buffer << endl;
+	std::cout << "Init vr1 with [7,23): " << buffer << std::endl;
 	buffer = "";
 
 	vr1.Intersect( i2 );
 	vr1.ToString( buffer );
-	cout << "Intersect vr1 with [12,23]: " << buffer << endl;
+	std::cout << "Intersect vr1 with [12,23]: " << buffer << std::endl;
 	buffer = "";
 
 		// test 2
-	cout << endl;
+	std::cout << std::endl;
 	ValueRange vr2;
 
 	vr2.Init( i3, false, true );
 	vr2.ToString( buffer );
-	cout << "Init vr2 with NOT[foo]: " << buffer << endl;
+	std::cout << "Init vr2 with NOT[foo]: " << buffer << std::endl;
 	buffer = "";
 
 	vr2.Intersect( i4, false, true );
 	vr2.ToString( buffer );
-	cout << "Intersect vr2 with NOT[bar]: " << buffer << endl;
+	std::cout << "Intersect vr2 with NOT[bar]: " << buffer << std::endl;
 	buffer = "";
 
 	vr2.Intersect( i3 );
 	vr2.ToString( buffer );
-	cout << "Intersect vr2 with [foo]: " << buffer << endl;
+	std::cout << "Intersect vr2 with [foo]: " << buffer << std::endl;
 	buffer = "";
 
 		// test 3
-	cout << endl;
+	std::cout << std::endl;
 	ValueRange vr3;
 
 	vr3.Init( i3, false, true );
 	vr3.ToString( buffer );
-	cout << "Init vr3 with NOT[foo]: " << buffer << endl;
+	std::cout << "Init vr3 with NOT[foo]: " << buffer << std::endl;
 	buffer = "";
 
 	vr3.Intersect( i4, false, true );
 	vr3.ToString( buffer );
-	cout << "Intersect vr3 with NOT[bar]: " << buffer << endl;
+	std::cout << "Intersect vr3 with NOT[bar]: " << buffer << std::endl;
 	buffer = "";
 
 	vr3.Intersect( i5 );
 	vr3.ToString( buffer );
-	cout << "Intersect vr3 with [zap]: " << buffer << endl;
+	std::cout << "Intersect vr3 with [zap]: " << buffer << std::endl;
 	buffer = "";
 
 	delete i1;

@@ -59,8 +59,8 @@ int main( int argc, char *argv[] )
 	newBuffer = "";
 	newAd = toNewClassAd( oldAd );
 	pp.Unparse( newBuffer, newAd );
-	cout << "New ClassAd:" << endl;
-	cout << "------------" << endl;
-	cout << newBuffer << endl << endl;
+	std::cout << "New ClassAd:" << std::endl;
+	std::cout << "------------" << std::endl;
+	std::cout << newBuffer << std::endl << std::endl;
 
 }

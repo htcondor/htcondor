@@ -59,7 +59,7 @@ taken out of the pool with the least disturbance of the pool.
 An administrator should set preemption requirements for the HTCondor
 pool. The expression
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     (Interactive =?= TRUE )
 

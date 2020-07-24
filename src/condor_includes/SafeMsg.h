@@ -95,8 +95,8 @@ class _condorInMsg
         void resetEnc();
         void resetMD();
 
-		bool consumed();
-		void dumpMsg();
+		bool consumed() const;
+		void dumpMsg() const;
 
 	// next line should be uncommented after testing
 	private:
@@ -171,14 +171,14 @@ class _condorPacket
 		void reset();
 
 		// Check if every data in the packet has been read
-		bool consumed();
+		bool consumed() const;
 
 		// 
 		int putMax(const void* dta,	// input buffer
 			     const int size);	// # of bytes requested
 
 		// check if full
-		bool full();
+		bool full() const;
 
 		// check if empty
 		bool empty();
@@ -263,7 +263,7 @@ class _condorOutMsg
 
         bool init_MD(const char * keyId = 0);
         bool set_encryption_id(const char * keyId);
-		unsigned long getAvgMsgSize();
+		unsigned long getAvgMsgSize() const;
 
 		// request size for outgoing datagram fragments; returns size
 		// actually used.

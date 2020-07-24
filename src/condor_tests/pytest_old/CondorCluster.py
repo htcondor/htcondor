@@ -179,8 +179,8 @@ class CondorCluster(object):
         if self._schedd is None:
             self._schedd = htcondor.Schedd()
         try:
-            return self._schedd.xquery( requirements = "ClusterID == {0} && ProcID == {1}".
-                format( self._cluster_id, proc ) ).next()
+            return next(self._schedd.xquery( requirements = "ClusterID == {0} && ProcID == {1}".
+                format( self._cluster_id, proc ) ))
         except StopIteration as si:
             return None
 

@@ -8,18 +8,17 @@ The DRMAA API
 The following quote from the DRMAA Specification 1.0 abstract nicely
 describes the purpose of the API:
 
-The Distributed Resource Management Application API (DRMAA), developed
-by a working group of the Global Grid Forum (GGF),
-
-provides a generalized API to distributed resource management systems
-(DRMSs) in order to facilitate integration of application programs. The
-scope of DRMAA is limited to job submission, job monitoring and control,
-and the retrieval of the finished job status. DRMAA provides application
-developers and distributed resource management builders with a
-programming model that enables the development of distributed
-applications tightly coupled to an underlying DRMS. For deployers of
-such distributed applications, DRMAA preserves flexibility and choice in
-system design.
+    The Distributed Resource Management Application API (DRMAA), developed
+    by a working group of the Global Grid Forum (GGF),
+    provides a generalized API to distributed resource management systems
+    (DRMSs) in order to facilitate integration of application programs. The
+    scope of DRMAA is limited to job submission, job monitoring and control,
+    and the retrieval of the finished job status. DRMAA provides application
+    developers and distributed resource management builders with a
+    programming model that enables the development of distributed
+    applications tightly coupled to an underlying DRMS. For deployers of
+    such distributed applications, DRMAA preserves flexibility and choice in
+    system design.
 
 The API allows users who write programs using DRMAA functions and link
 to a DRMAA library to submit, control, and retrieve information about
@@ -83,8 +82,8 @@ would set AttrDRMAA_NATIVE_SPECIFICATION to the C string:
 
 .. code-block:: text
 
-      drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION,
-          "image_size=65536\nrank=Memory\n+department=\"chemistry\"",
-          err_buf, sizeof(err_buf)-1);
+    drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION,
+        "image_size=65536\nrank=Memory\n+department=\"chemistry\"",
+        err_buf, sizeof(err_buf)-1);
 
 

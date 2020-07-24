@@ -846,7 +846,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			}
 		}
 	}
-	dprintf(D_ALWAYS, "MRC [FileTransfer::IsDataflowJob] returning is_dataflow = %s\n", is_dataflow ? "true" : "false");
+
 	return is_dataflow;
 }
 

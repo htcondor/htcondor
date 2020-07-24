@@ -43,10 +43,10 @@ main()
 
 	while (true) {
 		char c1, c2;
-		cin >> c1;
-		if (!cin) {
-			if (!cin.eof()) {
-				cout << "error in input stream" << endl;
+		sin >> c1;
+		if (!std::cin) {
+			if (!std::cin.eof()) {
+				std::cout << "error in input stream" << std::endl;
 			}
 			break;
 		}
@@ -57,7 +57,7 @@ main()
 			EXCEPT("error in LocalClient::read_data");
 		}
 		client->end_connection();
-		cout << "received " << c2 << endl;
+		std::cout << "received " << c2 << std::endl;
 		if (c2 == 'q') {
 			break;
 		}

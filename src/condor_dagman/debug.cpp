@@ -24,6 +24,7 @@
 #include "condor_daemon_core.h"
 #include "MyString.h"
 #include "dagman_main.h"
+#include "../condor_utils/dagman_utils.h"
 
 debug_level_t debug_level    = DEBUG_NORMAL;
 const char *        debug_progname = NULL;
@@ -267,7 +268,7 @@ bool check_warning_strictness( strict_level_t strictness, bool quit_if_error )
 		debug_printf( DEBUG_QUIET, "ERROR: Warning is fatal "
 					"error because of DAGMAN_USE_STRICT setting\n" );
 		if ( quit_if_error ) {
-			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, DagStatus::DAG_STATUS_ERROR );
 		}
 
 		return true;

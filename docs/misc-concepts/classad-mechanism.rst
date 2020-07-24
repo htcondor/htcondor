@@ -14,7 +14,7 @@ A ClassAd is a set of uniquely named expressions. Each named
 expression is called an attribute. The following shows
 ten attributes, a portion of an example ClassAd.
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     MyType       = "Machine"
     TargetType   = "Job"
@@ -84,7 +84,7 @@ HTCondor older than 7.5.1.
 The syntax varies slightly between Old and New ClassAds. Here is an
 example ClassAd presented in both forms. The Old form:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     Foo = 3
     Bar = "ab\"cd\ef"
@@ -92,7 +92,7 @@ example ClassAd presented in both forms. The Old form:
 
 The New form:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     [
     Foo = 3;
@@ -1360,7 +1360,7 @@ For both machine and job, the ``rank`` expression specifies the
 desirability of the match (where higher numbers mean better matches).
 For example, a job ClassAd may contain the following expressions:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     Requirements = (Arch == "INTEL") && (OpSys == "LINUX")
     Rank         = TARGET.Memory + TARGET.Mips
@@ -1376,13 +1376,12 @@ expression), while satisfying other required criteria.
 Similarly, the machine may place constraints and preferences on the jobs
 that it will run by setting the machine's configuration. For example,
 
-.. code-block:: text
+.. code-block:: condor-classad
 
         Friend        = Owner == "tannenba" || Owner == "wright"
         ResearchGroup = Owner == "jbasney" || Owner == "raman"
         Trusted       = Owner != "rival" && Owner != "riffraff"
-        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 &&
-                             KeyboardIdle > 15*60 )
+        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 && KeyboardIdle > 15*60 )
         RANK          = Friend + ResearchGroup*10
 
 The above policy states that the computer will never run jobs owned by
@@ -1420,7 +1419,7 @@ Here are several examples. To find all computers which have had their
 keyboards idle for more than 60 minutes and have more than 4000 MB of
 memory, the desired ClassAd expression is
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     KeyboardIdle > 60*60 && Memory > 4000
 
@@ -1475,7 +1474,7 @@ expression that contains a ClassAd function.
 The ClassAd expression describing a machine that advertises a Windows
 operating system:
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     OpSys == "WINDOWS"
 
@@ -1547,7 +1546,7 @@ the following steps on Linux:
    configuration variable to the full name of the shared library. In
    this case,
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
        CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
 
