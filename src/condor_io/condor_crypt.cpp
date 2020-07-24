@@ -36,15 +36,14 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
     // zero everything;
     additional_len = 0;
     additional = NULL;
+    ivec_len = 0;
+    ivec = NULL;
+    method_key_data_len = 0;
+    method_key_data = NULL;
 
-    bzero(&key_, sizeof(key_));
-
-    bzero(&keySchedule1_, sizeof(keySchedule1_));
-    bzero(&keySchedule2_, sizeof(keySchedule2_));
-    bzero(&keySchedule3_, sizeof(keySchedule3_));
-
-    // zero ivec and num
-    reset();
+    // there should probably be a static function in each crypto object to do
+    // these conversions so that the state object doesn't need any specifc
+    // method manipulation here.
 
 #if !defined(SKIP_AUTHENTICATION)
     switch(proto) {
@@ -53,28 +52,44 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
             // so pad the key out to at least 24 bytes if needed
             unsigned char * keyData = keyInfo_.getPaddedKeyData(24);
             ASSERT(keyData);
-            
-            DES_set_key((DES_cblock *)  keyData    , &keySchedule1_);
-            DES_set_key((DES_cblock *) (keyData+8) , &keySchedule2_);
-            DES_set_key((DES_cblock *) (keyData+16), &keySchedule3_);
-            
+
+            const int des_ks = sizeof(DES_key_schedule);
+            method_key_data_len = 3*des_ks;
+            method_key_data = (unsigned char*)malloc(method_key_data_len);
+            DES_set_key((DES_cblock *)  keyData    , (DES_key_schedule*)(method_key_data));
+            DES_set_key((DES_cblock *) (keyData+8) , (DES_key_schedule*)(method_key_data + des_ks));
+            DES_set_key((DES_cblock *) (keyData+16), (DES_key_schedule*)(method_key_data + 2*des_ks));
+
             free(keyData);
+
+            ivec_len = 8;
+            ivec = (unsigned char*)malloc(ivec_len);
             break;
         }
         case CONDOR_BLOWFISH: {
-            BF_set_key(&key_, keyInfo_.getKeyLength(), keyInfo_.getKeyData());
+            const int bf_ks = sizeof(BF_KEY);
+            method_key_data_len = bf_ks;
+            method_key_data = (unsigned char*)malloc(method_key_data_len);
+            BF_set_key((BF_KEY*)method_key_data, keyInfo_.getKeyLength(), keyInfo_.getKeyData());
+
+            ivec_len = 8;
+            ivec = (unsigned char*)malloc(ivec_len);
             break;
         }
         default:
-            // already zeroed out above
+            dprintf(D_ALWAYS, "WARNING: Initialized crypto state for unknown proto %i.\n", proto);
             break;
     }
 #endif
+    // zero ivec and num
+    reset();
+
 }
 
 Condor_Crypto_State::~Condor_Crypto_State() {
     if(ivec) free(ivec);
     if(additional) free(additional);
+    if(method_key_data) free(method_key_data);
     // need to free key data
     dprintf(D_ALWAYS, "ZKM: FREE() CRYPTO DATA\n");
 }
@@ -82,13 +97,11 @@ Condor_Crypto_State::~Condor_Crypto_State() {
 void Condor_Crypto_State::reset() {
     dprintf(D_ALWAYS, "ZKM: reset state (ivec and num)\n");
 
-    ivec_len = 0;
-    ivec = NULL;
-    
+    if(ivec) {
+	bzero(ivec, ivec_len);
+    }
+   
     num = 0;
-
-    num_ = 0;
-    bzero(ivec_, 8); // u char [8]
 }
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)

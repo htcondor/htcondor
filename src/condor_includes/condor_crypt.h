@@ -52,14 +52,13 @@ public:
 
     int num;
 
+    // holds key data specific to the method (e.g. key schedules for DES)
+    int method_key_data_len;
+    unsigned char *method_key_data;
+
+    // currently unused
     int additional_len;
     unsigned char *additional;
-
-    int             num_;
-    unsigned char   ivec_[8];
-
-    BF_KEY          key_;
-    DES_key_schedule  keySchedule1_, keySchedule2_, keySchedule3_;
 
 private:
     Condor_Crypto_State() {} ;

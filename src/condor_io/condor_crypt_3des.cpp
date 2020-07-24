@@ -35,10 +35,13 @@ bool Condor_Crypt_3des :: encrypt(Condor_Crypto_State *cs,
 
     output = (unsigned char *) malloc(input_len);
 
+    const int des_ks = sizeof(DES_key_schedule);
     if (output) {
         DES_ede3_cfb64_encrypt(input, output, output_len,
-                               &cs->keySchedule1_, &cs->keySchedule2_, &cs->keySchedule3_,
-                               (DES_cblock *)cs->ivec_, &cs->num_, DES_ENCRYPT);
+                               (DES_key_schedule*)(cs->method_key_data),
+                               (DES_key_schedule*)(cs->method_key_data + des_ks),
+                               (DES_key_schedule*)(cs->method_key_data + 2*des_ks),
+                               (DES_cblock *)cs->ivec, &cs->num, DES_ENCRYPT);
         return true;   
     }
     else {
@@ -61,9 +64,12 @@ bool Condor_Crypt_3des :: decrypt(Condor_Crypto_State *cs,
     if (output) {
         output_len = input_len;
 
+        const int des_ks = sizeof(DES_key_schedule);
         DES_ede3_cfb64_encrypt(input, output, output_len,
-                               &cs->keySchedule1_, &cs->keySchedule2_, &cs->keySchedule3_,
-                               (DES_cblock *)cs->ivec_, &cs->num_, DES_DECRYPT);
+                               (DES_key_schedule*)(cs->method_key_data),
+                               (DES_key_schedule*)(cs->method_key_data + des_ks),
+                               (DES_key_schedule*)(cs->method_key_data + 2*des_ks),
+                               (DES_cblock *)cs->ivec, &cs->num, DES_DECRYPT);
         
         return true;           // Should be changed
     }
