@@ -39,15 +39,15 @@ template <class T>
 void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
    std::string str;
       
-   str += IntToStr(this->value);
+   str += std::to_string(this->value);
    str += " ";
-   str += IntToStr(this->recent);
+   str += std::to_string(this->recent);
    formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
-         str += IntToStr(this->buf.pbuf[ix]);
+         str += std::to_string(this->buf.pbuf[ix]);
          }
       str += "]";
       }
