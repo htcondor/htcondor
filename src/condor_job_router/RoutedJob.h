@@ -171,7 +171,7 @@ class JobRoute {
 	bool ApplyRoutingJobEdits(classad::ClassAd *src_ad);
 #endif
 
-	bool AcceptingMoreJobs();
+	bool AcceptingMoreJobs() const;
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}
 	void IncrementRoutedJobs() {IncrementCurrentRoutedJobs(); m_recent_jobs_routed++;}
 	void ResetCurrentRoutedJobs() {m_num_jobs = 0;m_num_running_jobs=0;}

@@ -120,7 +120,7 @@ private:
 			@param The ExprTree you want to update in the job queue 
 			@return success or failure to set the attribute
 		 */
-	bool updateExprTree( const char *name, ExprTree* tree );
+	bool updateExprTree( const char *name, ExprTree* tree ) const;
 
 		/// Pointers to lists of attribute names we care about
 

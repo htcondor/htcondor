@@ -321,7 +321,7 @@ struct LiveJobCounters {
   int SchedulerJobsCompleted;
   int SchedulerJobsHeld;
   void clear_counters() { memset(this, 0, sizeof(*this)); }
-  void publish(ClassAd & ad, const char * prefix);
+  void publish(ClassAd & ad, const char * prefix) const;
   LiveJobCounters()
 	: JobsSuspended(0)
 	, JobsIdle(0)
@@ -335,7 +335,7 @@ struct LiveJobCounters {
 	, SchedulerJobsCompleted(0)
 	, SchedulerJobsHeld(0)
   {}
-  bool empty() {
+  bool empty() const {
 	return !(JobsIdle || JobsRunning || JobsHeld || JobsRemoved || JobsCompleted || JobsSuspended
 		|| SchedulerJobsIdle || SchedulerJobsRunning || SchedulerJobsHeld || SchedulerJobsRemoved || SchedulerJobsCompleted);
   }
@@ -347,7 +347,7 @@ static const std::string & attrjoin(std::string & buf, const char * prefix, cons
 	return buf;
 }
 
-void LiveJobCounters::publish(ClassAd & ad, const char * prefix)
+void LiveJobCounters::publish(ClassAd & ad, const char * prefix) const
 {
 	std::string buf;
 	ad.InsertAttr(attrjoin(buf,prefix,"Jobs"), (long long)(JobsIdle + JobsRunning + JobsHeld + JobsRemoved + JobsCompleted + JobsSuspended));
@@ -523,10 +523,10 @@ int main (int argc, const char **argv)
 	// We do this very early to be a default, as we may override it with more specific
 	// options depending upon command line arguments, e.g. -name.
 	std::vector<std::string> attrs; attrs.reserve(4);
-	attrs.push_back(ATTR_SCHEDD_IP_ADDR);
-	attrs.push_back(ATTR_VERSION);
-	attrs.push_back(ATTR_NAME);
-	attrs.push_back(ATTR_MACHINE);
+	attrs.emplace_back(ATTR_SCHEDD_IP_ADDR);
+	attrs.emplace_back(ATTR_VERSION);
+	attrs.emplace_back(ATTR_NAME);
+	attrs.emplace_back(ATTR_MACHINE);
 	submittorQuery.setDesiredAttrs(attrs);
 	scheddQuery.setDesiredAttrs(attrs);
 
@@ -826,7 +826,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			int cluster, proc;
 			const char * pend;
 			if (StrIsProcId(argv[i], cluster, proc, &pend) && *pend == 0) {
-				constrID.push_back(CondorID(cluster,proc,-1));
+				constrID.emplace_back(cluster,proc,-1);
 			}
 			else {
 				++cOwnersOnCmdline;

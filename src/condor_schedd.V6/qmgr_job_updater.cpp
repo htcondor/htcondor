@@ -402,7 +402,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			if( ! updateExprTree(name, tree) ) {
 				had_error = true;
 			}
-			undirty_attrs.push_back( name );
+			undirty_attrs.emplace_back(name );
 		}
 	}
 	m_pull_attrs->rewind();
@@ -417,7 +417,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			had_error = true;
 		} else {
 			job_ad->AssignExpr( name, value );
-			undirty_attrs.push_back( name );
+			undirty_attrs.emplace_back(name );
 		}
 		free( value );
 	}
@@ -485,7 +485,7 @@ QmgrJobUpdater::periodicUpdateQ( void )
 }
 
 bool
-QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
+QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree ) const
 {
 	if( ! tree ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateExprTree: tree is NULL!\n" );

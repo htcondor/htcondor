@@ -36,7 +36,7 @@ class ScheddClassad {
 		@return Qmgr_connection An opaque connection object -- NULL
 				if connection fails.
 		*/
-	Qmgr_connection *OpenConnection();
+	Qmgr_connection *OpenConnection() const;
 
 		/** Close the given connection to the schedd.
 			@param Qmgr_connection An opaque connection object.
@@ -47,19 +47,19 @@ class ScheddClassad {
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( const char *attrName, int attrVal );
+	void SetAttribute( const char *attrName, int attrVal ) const;
 
 		/** Set an attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( const char *attrName, const MyString &value );
+	void SetAttribute( const char *attrName, const MyString &value ) const;
 
 		/** Set a nested ClassAd attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
 			@param ad The ClassAd to set.
 		*/
-	void SetAttribute( const char *attrName, const ClassAd &ad );
+	void SetAttribute( const char *attrName, const ClassAd &ad ) const;
 
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.
@@ -69,10 +69,10 @@ class ScheddClassad {
 			@return true if we got the requested attribute, false otherwise
 		*/
 	bool GetAttribute( const char *attrName, MyString &attrVal,
-				bool printWarning = true );
+				bool printWarning = true ) const;
 
 	bool GetAttribute( const char *attrName, int &attrVal,
-				bool printWarning = true );
+				bool printWarning = true ) const;
 
 		// The condor ID for this connection client.
 	CondorID _jobId;
