@@ -9,7 +9,7 @@ series.
 The details of each version are described below.
 
 Version 8.8.11
--------------
+--------------
 
 Release Notes:
 
@@ -23,7 +23,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
+  Additionally, the spurious warning about ``NAMES`` not being list as a
+  resource has been eliminated.
+  :ticket:`7755`
 
 Version 8.8.10
 --------------
