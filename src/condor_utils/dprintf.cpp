@@ -381,9 +381,9 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, (int)info.tv.tv_usec );
 				#else
 				int seconds = (int)clock_now;
-				int millis = info.tv.tv_usec + 500;
-				if( millis >= 1000000 ) { millis = 0; seconds += 1; }
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, millis );
+				int micros = info.tv.tv_usec + 500;
+				if( micros >= 1000000 ) { micros = 0; seconds += 1; }
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d ", (int)clock_now );
@@ -396,9 +396,9 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
-				int millis = info.tv.tv_usec + 500;
-				if( millis >= 1000000 ) { millis = 0; info.tm += 1; }
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), millis );
+				int micros = info.tv.tv_usec + 500;
+				if( micros >= 1000000 ) { micros = 0; info.tm += 1; }
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));
