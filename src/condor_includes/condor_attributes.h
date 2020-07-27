@@ -1134,6 +1134,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_START_EXPR  "StartExpr"
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
+#define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
 
 #define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 

@@ -1261,7 +1261,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 			auto rt = m_routes->find(name);
 			if (rt != m_routes->end()) {
 				route = rt->second;
-				m_route_order.push_back(route->Name());
+				m_route_order.emplace_back(route->Name());
 				remaining_names.erase(route->Name());
 			} else {
 				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTER_ROUTE_NAMES not found in the routing table.\n", name);
@@ -3009,7 +3009,7 @@ JobRoute::JobRoute(const char * source) : m_source(source) {
 
 JobRoute::~JobRoute() {
 }
-bool JobRoute::AcceptingMoreJobs()
+bool JobRoute::AcceptingMoreJobs() const
 {
 	if( m_throttle > 0 && m_throttle <= m_recent_jobs_routed) {
 		return false;
