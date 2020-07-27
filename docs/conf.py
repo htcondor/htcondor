@@ -197,7 +197,9 @@ man_pages = [
 # If true, show URL addresses after external links.
 # man_show_urls = False
 
-# -- full_conf for full manual, above common and man pages --------------------
+# -- conf.py contains common configuration and man pages configuration
+# -- full_conf.py contains configuration for the whole manual
+sys.path.append(os.path.dirname(__file__))
 MANPAGES = os.environ.get('MANPAGES') == 'True'
 if not MANPAGES:
     from full_conf import *
