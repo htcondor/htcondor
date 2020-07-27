@@ -42,26 +42,16 @@ Common Module-Level Functions and Objects
 
 .. function:: enable_debug()
 
-   Enable debugging output from HTCondor, where output is sent to ``stderr``.
-   The logging level is controlled by the ``TOOL_DEBUG`` parameter.
+   Enable debugging output from HTCondor; output is sent to ``stderr``.
+   The logging level is controlled by the HTCondor configuration variable
+   ``TOOL_DEBUG``.
 
 .. function:: enable_log()
 
-   Enable debugging output from HTCondor, where output is sent to a file.
-   The log level is controlled by the parameter ``TOOL_DEBUG``, and the
-   file used is controlled by ``TOOL_LOG``.
-
-.. function:: enable_debug( )
-
-   Enable debugging output from HTCondor; output is sent to ``stderr``.
-   The logging level is controlled by the HTCondor configuration variable ``TOOL_DEBUG``.
-
-.. function:: enable_log( )
-
    Enable debugging output from HTCondor; output is sent to a file.
 
-   The log level is controlled by the HTCondor configuration variable ``TOOL_DEBUG``,
-   and the file used is controlled by ``TOOL_LOG``.
+   The log level and the file used are controlled by the HTCondor configuration
+   variables ``TOOL_DEBUG`` and ``TOOL_LOG``, respectively.
 
 .. function:: read_events( file_obj, is_xml = True )
 
