@@ -790,11 +790,12 @@ void MachAttributes::init_machine_resources() {
 
 	StringList disallowed("CPU CPUS DISK SWAP MEM MEMORY RAM");
 
+	std::vector<const char *> tags_to_erase;
 	for (slotres_map_t::iterator it(m_machres_map.begin());  it != m_machres_map.end();  ++it) {
 		const char * tag = it->first.c_str();
 		if ( ! allowed.isEmpty() && ! allowed.contains_anycase(tag)) {
 			dprintf(D_ALWAYS, "Local machine resource %s is not in MACHINE_RESOURCE_NAMES so it will have no effect\n", tag);
-			m_machres_map.erase(tag);
+			tags_to_erase.emplace_back(tag);
 			continue;
 		}
 		if ( ! disallowed.isEmpty() && disallowed.contains_anycase(tag)) {
@@ -802,6 +803,9 @@ void MachAttributes::init_machine_resources() {
 			continue;
 		}
 		dprintf(D_ALWAYS, "Local machine resource %s = %g\n", tag, it->second);
+	}
+	for( auto i = tags_to_erase.begin(); i != tags_to_erase.end(); ++i ) {
+		m_machres_map.erase(*i);
 	}
 }
 
