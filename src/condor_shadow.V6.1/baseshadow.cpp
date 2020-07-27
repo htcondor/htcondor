@@ -359,7 +359,7 @@ BaseShadow::shutDown( int reason )
 
 
 int
-BaseShadow::nextReconnectDelay( int attempts )
+BaseShadow::nextReconnectDelay( int attempts ) const
 {
 	if( ! attempts ) {
 			// first time, do it right away

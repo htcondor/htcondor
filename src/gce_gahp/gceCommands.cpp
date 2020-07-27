@@ -224,7 +224,7 @@ void AddInstanceToResult( vector<string> &result, string &id,
 	result.push_back( name );
 	result.push_back( status );
 	if ( status_msg.empty() ) {
-		result.push_back( string( "NULL" ) );
+		result.emplace_back( "NULL" );
 	} else {
 		result.push_back( status_msg );
 	}

@@ -21,11 +21,11 @@ void export_daemon_and_ad_types()
 
             .. attribute:: Master
 
-                Ads representing the ``condor_master``.
+                Ads representing the *condor_master*.
 
             .. attribute:: Schedd
 
-                Ads representing the ``condor_schedd``.
+                Ads representing the *condor_schedd*.
 
             .. attribute:: Startd
 
@@ -33,15 +33,15 @@ void export_daemon_and_ad_types()
 
             .. attribute:: Collector
 
-                Ads representing the ``condor_collector``.
+                Ads representing the *condor_collector*.
 
             .. attribute:: Negotiator
 
-                Ads representing the ``condor_negotiator``.
+                Ads representing the *condor_negotiator*.
 
             .. attribute:: HAD
 
-                Ads representing the high-availability daemons (``condor_had``).
+                Ads representing the high-availability daemons (*condor_had*).
 
             .. attribute:: Generic
 
@@ -63,7 +63,7 @@ void export_daemon_and_ad_types()
 
     enum_<AdTypes>("AdTypes",
             R"C0ND0R(
-            A list of different types of ads that may be kept in the ``condor_collector``.
+            A list of different types of ads that may be kept in the *condor_collector*.
 
             The values of the enumeration are:
 
@@ -79,7 +79,7 @@ void export_daemon_and_ad_types()
 
             .. attribute:: Startd
 
-                Startd ads, produced by the ``condor_startd`` daemon.  Represents the
+                Startd ads, produced by the *condor_startd* daemon.  Represents the
                 available slots managed by the startd.
 
             .. attribute:: StartdPrivate
@@ -90,24 +90,24 @@ void export_daemon_and_ad_types()
 
             .. attribute:: Schedd
 
-                Schedd ads, produced by the ``condor_schedd`` daemon.
+                Schedd ads, produced by the *condor_schedd* daemon.
 
             .. attribute:: Master
 
-                Master ads, produced by the ``condor_master`` daemon.
+                Master ads, produced by the *condor_master* daemon.
 
             .. attribute:: Collector
 
-                Ads from the ``condor_collector`` daemon.
+                Ads from the *condor_collector* daemon.
 
             .. attribute:: Negotiator
 
-                Negotiator ads, produced by the ``condor_negotiator`` daemon.
+                Negotiator ads, produced by the *condor_negotiator* daemon.
 
             .. attribute:: Submitter
 
                 Ads describing the submitters with available jobs to run; produced by
-                the ``condor_schedd`` and read by the ``condor_negotiator`` to determine
+                the *condor_schedd* and read by the *condor_negotiator* to determine
                 which users need a new negotiation cycle.
 
             .. attribute:: Grid
@@ -116,7 +116,7 @@ void export_daemon_and_ad_types()
 
             .. attribute:: HAD
 
-                Ads produced by the ``condor_had``.
+                Ads produced by the *condor_had*.
 
             .. attribute:: License
 

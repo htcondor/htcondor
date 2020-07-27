@@ -459,12 +459,12 @@ public:
 		*/
 	void record( PROC_ID job_id, action_result_t result );
 
-	int numError( void ) { return ar_error; };
-	int numSuccess( void ) { return ar_success; };
-	int numNotFound( void ) { return ar_not_found; };
-	int numBadStatus( void ) { return ar_bad_status; };
-	int numAlreadyDone( void ) { return ar_already_done; };
-	int numPermissionDenied( void ) { return ar_permission_denied; }; 
+	int numError( void ) const { return ar_error; };
+	int numSuccess( void ) const { return ar_success; };
+	int numNotFound( void ) const { return ar_not_found; };
+	int numBadStatus( void ) const { return ar_bad_status; };
+	int numAlreadyDone( void ) const { return ar_already_done; };
+	int numPermissionDenied( void ) const { return ar_permission_denied; }; 
 
 		/** Return the result code for the given job.
 			@param job_id The job you care about

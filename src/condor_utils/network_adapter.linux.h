@@ -41,14 +41,14 @@ public:
 
 	/// Constructor
 	LinuxNetworkAdapter ( const condor_sockaddr& ip_addr )
-		throw ();
+		noexcept;
 
 	// Alternate
 	LinuxNetworkAdapter ( const char *name )
-		throw ();
+		noexcept;
 
 	/// Destructor
-	virtual ~LinuxNetworkAdapter ( void ) throw();
+	virtual ~LinuxNetworkAdapter ( void ) noexcept;
 
 
 	/** @name Adapter properties.

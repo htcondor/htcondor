@@ -160,7 +160,7 @@ VMStarterInfo::addProcessForVM(pid_t vm_pid)
 }
 
 pid_t
-VMStarterInfo::getProcessForVM(void)
+VMStarterInfo::getProcessForVM(void) const
 {
 	return m_vm_pid;
 }
@@ -571,7 +571,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 }
 
 int
-VMUniverseMgr::getFreeVMMemSize()
+VMUniverseMgr::getFreeVMMemSize() const
 {
 	return (m_vm_max_memory - m_vm_used_memory);
 }

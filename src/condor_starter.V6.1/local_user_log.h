@@ -67,7 +67,7 @@ public:
 	bool initFromJobAd( ClassAd* ad, bool starter_ulog = true );
 
 		/// Do we want to be writing a log or not?
-	bool wantsLog( void ) { return should_log; };
+	bool wantsLog( void ) const { return should_log; };
 
 		// // // // // // // // // // // //
 		// Writing Events

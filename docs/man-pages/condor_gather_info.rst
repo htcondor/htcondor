@@ -34,7 +34,7 @@ of information can be extensive, this information is placed into a
 compressed tar file. The file is placed into the current working
 directory, and it is named using the format
 
-::
+.. code-block:: text
 
     cgi-<username>-jid<ClusterId>.<ProcId>-<year>-<month>-<day>-<hour>_<minute>_<second>-<TZ>.tar.gz
 

@@ -26,6 +26,8 @@
 #include "selector.h"
 #include "CondorError.h"
 #include "ccb_client.h"
+
+#include <memory>
 #include "condor_sinful.h"
 #include "shared_port_endpoint.h"
 
@@ -143,7 +145,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		// FIXME: Assumes that shared port knows what it's doing.
 		//
 		if( SharedPortEndpoint::UseSharedPort() ) {
-			shared_listener = std::shared_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
+			shared_listener = std::make_shared<SharedPortEndpoint>();
 			shared_listener->InitAndReconfig();
 			MyString errmsg;
 			if( !shared_listener->CreateListener() ) {
@@ -169,7 +171,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 				continue;
 			}
 
-			listen_sock = std::shared_ptr<ReliSock>( new ReliSock() );
+			listen_sock = std::make_shared<ReliSock>( );
 
 			// Should bind() should accept a condor_sockaddr directly?
 			if (!listen_sock->bind( ccbSA.get_protocol(), false, 0, false )) {

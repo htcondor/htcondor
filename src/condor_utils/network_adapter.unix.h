@@ -43,13 +43,13 @@ public:
 	//@{
 
 	/// Constructor
-	UnixNetworkAdapter ( const condor_sockaddr& ip_addr ) throw ();
+	UnixNetworkAdapter ( const condor_sockaddr& ip_addr ) noexcept;
 
 	/// Constructor
-	UnixNetworkAdapter ( const char *name ) throw ();
+	UnixNetworkAdapter ( const char *name ) noexcept;
 
 	/// Destructor
-	virtual ~UnixNetworkAdapter ( void ) throw ();
+	virtual ~UnixNetworkAdapter ( void ) noexcept;
 
 
 	/** @name Adapter properties.

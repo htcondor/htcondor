@@ -42,10 +42,10 @@ public:
 	//@{
 	
 	/// Constructor
-	HibernationManager( HibernatorBase *hibernator ) throw ();
+	HibernationManager( HibernatorBase *hibernator ) noexcept;
 	
 	/// Destructor
-	virtual ~HibernationManager( void ) throw ();
+	virtual ~HibernationManager( void ) noexcept;
 
 	/// Initializer
 	bool initialize( void );

@@ -84,7 +84,7 @@ Examples
 Assuming the default of 128 updates kept, and assuming that the update
 interval is 5 minutes, *condor_updates_stats* displays:
 
-::
+.. code-block:: console
 
     $ condor_status -l host1 | condor_updates_stats --interval=300 
     (Reading from stdin) 

@@ -50,7 +50,7 @@ public:
     /* If you want to put the monitoring ClassAd, just call this
        function with your ClassAd, and we'll drop in the data for
        you. */
-    bool ExportData(ClassAd *ad, bool verbose=false);
+    bool ExportData(ClassAd *ad, bool verbose=false) const;
 
     /* Below is the data that we collect. Feel free to look at it
        directly if you don't want to put it into a ClassAd wtih

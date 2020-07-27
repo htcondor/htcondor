@@ -24,7 +24,7 @@ Installing from the Repository
 
 On each of the three machines, add the HTCondor repository to your system:
 
-::
+.. code-block:: console
 
     $ wget https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor
     $ sudo rpm --import RPM-GPG-KEY-HTCondor
@@ -33,7 +33,7 @@ On each of the three machines, add the HTCondor repository to your system:
 
 Now on each of the three machines, install HTCondor:
 
-::
+.. code-block:: console
 
     $ sudo yum install condor
 
@@ -44,7 +44,7 @@ Cluster Configuration
 On all three machines, start by setting the address of the Central Manager, as
 well as a firewall rule:
 
-::
+.. code-block:: console
 
     $ echo "CONDOR_HOST = condor-cm.example.com" | sudo tee -a /etc/condor/config.d/49-common
     $ sudo firewall-cmd --zone=public --add-port=9618/tcp --permanent
@@ -55,21 +55,21 @@ Now we need to set machine-specific configuration.
 Submit Machine
 ''''''''''''''
 
-::
+.. code-block:: console
 
     $ echo "use ROLE: Submit" | sudo tee -a /etc/condor/config.d/51-role-submit
 
 Execute Machine
 '''''''''''''''
 
-::
+.. code-block:: console
 
     $ echo "use ROLE: Execute" | sudo tee -a /etc/condor/config.d/51-role-exec
 
 Central Manager Machine
 '''''''''''''''''''''''
 
-::
+.. code-block:: console
 
     $ echo "use ROLE: CentralManager" | sudo tee -a /etc/condor/config.d/51-role-cm
     $ echo "ALLOW_WRITE_COLLECTOR=\$(ALLOW_WRITE) condor-execute.example.com condor-submit.example.com" | sudo tee -a /etc/condor/config.d/51-role-cm
@@ -82,7 +82,7 @@ We also need to add security configurations so the machines can authenticate
 with each other. Start by creating a directory on each machine for passwords
 with the correct permissions:
 
-::
+.. code-block:: console
 
     $ sudo mkdir /etc/condor/passwords.d
     $ sudo chmod 700 /etc/condor/passwords.d
@@ -91,10 +91,10 @@ with the correct permissions:
 On each machine, create the file ``/etc/condor/config.d/50-security`` with the
 following contents:
 
-::
+.. code-block:: condor-config
 
-    SEC_PASSWORD_FILE = /etc/condor/passwords.d/POOL 
-    SEC_DAEMON_AUTHENTICATION = REQUIRED 
+    SEC_PASSWORD_FILE = /etc/condor/passwords.d/POOL
+    SEC_DAEMON_AUTHENTICATION = REQUIRED
     SEC_DAEMON_INTEGRITY = REQUIRED
     SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
     SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED
@@ -108,7 +108,7 @@ Next, run the following command which will ask you to set a pool password.
 Choose any password you want, but make sure to use the same password on all
 three machines.
 
-::
+.. code-block:: console
 
     $ sudo condor_store_cred add -c
 
@@ -119,7 +119,7 @@ Start HTCondor
 Once the above configuration is in place, we're ready to start our HTCondor
 cluster. On each of the three machines, run the following:
 
-::
+.. code-block:: console
 
     $ sudo systemctl enable condor
     $ sudo systemctl start condor
@@ -132,7 +132,7 @@ At this point, your HTCondor pool should be up and running. You can test it
 using the *condor_q* and *condor_status* commands, which should produce the
 following output:
 
-::
+.. code-block:: console
 
     $ condor_q
 
@@ -160,8 +160,8 @@ Resources
 ---------
 
 More detailed instructions (including steps for Debian and 
-Ubuntu) are available in the slides from a HTCondor Week talk:
-https://agenda.hep.wisc.edu/event/1325/session/16/contribution/41/material/slides/0.pdf
+Ubuntu) are available in
+`these slides from a HTCondor Week talk <https://agenda.hep.wisc.edu/event/1325/session/16/contribution/41/material/slides/0.pdf>`_.
 
 Full installation instructions are available in the HTCondor Manual:
 :doc:`/admin-manual/installation-startup-shutdown-reconfiguration`

@@ -343,18 +343,9 @@ private:
     object query_internal(AdTypes ad_type, boost::python::object constraint_obj, boost::python::list attrs, const std::string &statistics, std::string locationName)
     {
         std::string constraint;
-        extract<std::string> constraint_extract(constraint_obj);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
+        if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
+            THROW_EX(ValueError, "Invalid constraint.");
         }
-        else
-        {
-            classad::ClassAdUnParser printer;
-            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
-            printer.Unparse(constraint, expr.get());
-        }
-
 
         CondorQuery query(ad_type);
         if (constraint.length())
@@ -447,12 +438,12 @@ void export_collector()
 {
     class_<Collector>("Collector",
             R"C0ND0R(
-            Client object for a remote ``condor_collector``.  The interaction with the
-            collector broadly has three aspects:
+            Client object for a remote *condor_collector*.
+            The :class:`Collector` can be used to:
 
-            * Locating a daemon.
-            * Query the collector for one or more specific ClassAds.
-            * Advertise a new ad to the ``condor_collector``.
+            * Locate a daemon.
+            * Query the *condor_collector* for one or more specific ClassAds.
+            * Advertise a new ad to the *condor_collector*.
             )C0ND0R",
         init<boost::python::object>(
             boost::python::args("self", "pool"),
@@ -487,7 +478,7 @@ void export_collector()
              ))
         .def("directQuery", &Collector::directquery, directquery_overloads(
             R"C0ND0R(
-            Query the specified daemon directly for a ClassAd, instead of using the ClassAd from the ``condor_collector`` daemon.
+            Query the specified daemon directly for a ClassAd, instead of using the ClassAd from the *condor_collector* daemon.
             Requires the client library to first locate the daemon in the collector, then querying the remote daemon.
 
             :param daemon_type: Specifies the type of the remote daemon to query.
@@ -509,7 +500,7 @@ void export_collector()
         .def("locate", &Collector::locate, locate_overloads(
             (boost::python::arg("self"), boost::python::arg("daemon_type"), boost::python::arg("name")),
             R"C0ND0R(
-            Query the ``condor_collector`` for a particular daemon.
+            Query the *condor_collector* for a particular daemon.
 
             :param daemon_type: The type of daemon to locate.
             :type daemon_type: :class:`DaemonTypes`
@@ -535,7 +526,7 @@ void export_collector()
 
             :param ad_list: :class:`~classad.ClassAds` to advertise.
             :type ad_list: list[:class:`~classad.ClassAds`]
-            :param str command: An advertise command for the remote ``condor_collector``.
+            :param str command: An advertise command for the remote *condor_collector*.
                 It defaults to ``UPDATE_AD_GENERIC``.
                 Other commands, such as ``UPDATE_STARTD_AD``, may require different authorization levels with the remote daemon.
             :param bool use_tcp: When set to ``True``, updates are sent via TCP.  Defaults to ``True``.

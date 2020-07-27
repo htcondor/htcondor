@@ -41,9 +41,6 @@ int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2
 int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr_cat(std::string& s, const char* format, va_list pargs);
 
-// Return the string form of the given integer value
-template <typename T> std::string IntToStr( T val );
-
 // comparison ops between the two houses divided
 bool operator==(const MyString& L, const std::string& R);
 bool operator==(const std::string& L, const MyString& R);

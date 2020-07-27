@@ -275,39 +275,39 @@ Save state to persistent storage
 
 To save the state, do something like this:
 
-::
+.. code-block:: c++
 
-      ReadUserLog                reader;
-      ReadUserLog::FileState     statebuf;
+    ReadUserLog                reader;
+    ReadUserLog::FileState     statebuf;
 
-      status = ReadUserLog::InitFileState( statebuf );
+    status = ReadUserLog::InitFileState( statebuf );
 
-      status = reader.GetFileState( statebuf );
-      write( fd, statebuf.buf, statebuf.size );
-      ...
-      status = reader.GetFileState( statebuf );
-      write( fd, statebuf.buf, statebuf.size );
-      ...
+    status = reader.GetFileState( statebuf );
+    write( fd, statebuf.buf, statebuf.size );
+    ...
+    status = reader.GetFileState( statebuf );
+    write( fd, statebuf.buf, statebuf.size );
+    ...
 
-      status = UninitFileState( statebuf );
+    status = UninitFileState( statebuf );
 
 Restore state from persistent storage
 -------------------------------------
 
 To restore the state, do something like this:
 
-::
+.. code-block:: c++
 
-      ReadUserLog::FileState     statebuf;
-      status = ReadUserLog::InitFileState( statebuf );
+    ReadUserLog::FileState     statebuf;
+    status = ReadUserLog::InitFileState( statebuf );
 
-      read( fd, statebuf.buf, statebuf.size );
+    read( fd, statebuf.buf, statebuf.size );
 
-      ReadUserLog                reader;
-      status = reader.initialize( statebuf );
+    ReadUserLog                reader;
+    status = reader.initialize( statebuf );
 
-      status = UninitFileState( statebuf );
-      ....
+    status = UninitFileState( statebuf );
+    ....
 
 API Reference
 -------------

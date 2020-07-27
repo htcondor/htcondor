@@ -26,7 +26,7 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 			StringList sl( iidString.c_str(), "," );
 			sl.rewind(); char * current = sl.next();
 			for( ; current != NULL; current = sl.next() ) {
-				instanceIDs.push_back( current );
+				instanceIDs.emplace_back(current );
 			}
 		}
 	}

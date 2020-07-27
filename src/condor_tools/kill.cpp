@@ -46,7 +46,7 @@ public:
 	CondorPid( pid_t, char* );
 	~CondorPid();
 	bool Kill( int );	// Kill this pid with the given signal, and log it 
-	pid_t Pid() {return m_pid;};
+	pid_t Pid() const {return m_pid;};
 private:
 	pid_t m_pid;
 	char* m_line;

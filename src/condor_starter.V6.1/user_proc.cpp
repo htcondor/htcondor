@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_config.h"
 #include "user_proc.h"
 #include "starter.h"
 #include "condor_attributes.h"
@@ -240,11 +241,11 @@ UserProc::PublishToEnv( Env* proc_env )
 		if( WIFSIGNALED(exit_status) ) {
 			env_name = base.Value();
 			env_name += "EXIT_SIGNAL";
-			proc_env->SetEnv( env_name.Value(), IntToStr( WTERMSIG(exit_status) ) );
+			proc_env->SetEnv( env_name.Value(), std::to_string( WTERMSIG(exit_status) ) );
 		} else {
 			env_name = base.Value();
 			env_name += "EXIT_CODE";
-			proc_env->SetEnv( env_name.Value(), IntToStr( WEXITSTATUS(exit_status) ) );
+			proc_env->SetEnv( env_name.Value(), std::to_string( WEXITSTATUS(exit_status) ) );
 		}
 	}
 }
@@ -433,6 +434,15 @@ UserProc::openStdFile( std_file_type type,
 	bool is_output = (type != SFT_IN);
 	if( is_output ) {
 		int flags = outputOpenFlags();
+
+#ifdef LINUX
+		if (param_boolean("LIGO_NFS_SERVER_HACKS", false)) {
+			int r = chmod(filename.c_str(), 0664);
+			if (r < 0) {
+				dprintf(D_FULLDEBUG, "LIGO_NFS_SERVER_HACKS: chmod failed (%d) with errno %d\n", r, errno);
+			}
+		}
+#endif
 		fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
@@ -474,7 +484,7 @@ UserProc::openStdFile( std_file_type type,
 }
 
 void
-UserProc::SetStdFiles(int std_fds[], char const *std_fnames[])
+UserProc::SetStdFiles(const int std_fds[], char const *std_fnames[])
 {
 		// store the pre-defined std files for use by getStdFile()
 	int i;

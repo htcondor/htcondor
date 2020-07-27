@@ -28,15 +28,15 @@ information, please see the Bosco web site:
 
 *bosco_install* is linked to *condor_install*. The command
 
-::
+.. code-block:: console
 
-      bosco_install
+      $ bosco_install
 
 becomes
 
-::
+.. code-block:: console
 
-      condor_install --bosco
+      $ condor_install --bosco
 
 Please see the *condor_install* man page for details of the command
 line options.

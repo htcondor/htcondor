@@ -162,9 +162,9 @@ public:
 	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
-	int		num_cpus( void ) { return m_attr->num_cpus(); }
-	int		num_real_cpus( void ) { return m_attr->num_real_cpus(); }
-	int		numSlots( void ) { return nresources; }
+	int		num_cpus( void ) const { return m_attr->num_cpus(); }
+	int		num_real_cpus( void ) const { return m_attr->num_real_cpus(); }
+	int		numSlots( void ) const { return nresources; }
 
 	int		send_update( int, ClassAd*, ClassAd*, bool nonblocking );
 	void	final_update( void );
@@ -235,7 +235,7 @@ public:
 	State		state( void );			// Return the machine state
 
 
-	void report_updates( void );	// Log updates w/ dprintf()
+	void report_updates( void ) const;	// Log updates w/ dprintf()
 
 	MachAttributes*	m_attr;		// Machine-wide attribute object
 	
@@ -258,7 +258,7 @@ public:
 	int			claims_for_this_user(const char * user);
 
 	void		markShutdown() { is_shutting_down = true; };
-	bool		isShuttingDown() { return is_shutting_down; };
+	bool		isShuttingDown() const { return is_shutting_down; };
 
 	StarterMgr starter_mgr;
 
@@ -281,9 +281,9 @@ public:
 	bool hibernating () const;
 #endif /* HAVE_HIBERNATION */
 
-	time_t	now( void ) { return cur_time; };
+	time_t	now( void ) const { return cur_time; };
 
-	StartdStats startd_stats;  
+	StartdStats startd_stats;
 
     class Stats {
 	public:
@@ -291,6 +291,7 @@ public:
        stats_recent_counter_timer WalkEvalState;
        stats_recent_counter_timer WalkUpdate;
        stats_recent_counter_timer WalkOther;
+       stats_recent_counter_timer Drain;
 
        // TJ: for now these stats will be registered in the DC pool.
        void Init(void);
@@ -305,7 +306,7 @@ public:
 	int nextId( void ) { return id_disp->next(); };
 
 		// returns true if specified slot is draining
-	bool isSlotDraining(Resource *rip);
+	bool isSlotDraining(Resource *rip) const;
 
 		// return number of seconds after which we want
 		// to transition to fast eviction of jobs
@@ -331,13 +332,17 @@ public:
 		// badput is in seconds
 	void addToDrainingBadput( int badput );
 
-	bool typeNumCmp( int* a, int* b );
+	bool typeNumCmp( const int* a, const int* b ) const;
 
 	void calculateAffinityMask(Resource *rip);
 
 	void checkForDrainCompletion();
-	int getMaxJobRetirementTimeOverride() { return max_job_retirement_time_override; }
+	int getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
+	void setLastDrainStopTime() {
+		last_drain_stop_time = time(NULL);
+		stats.Drain.Add( last_drain_stop_time - last_drain_start_time );
+	}
 
 private:
 	static void token_request_callback(bool success, void *miscdata);
@@ -384,7 +389,7 @@ private:
 		*/
 	void check_use( void );
 
-	void sweep_timer_handler( void );
+	void sweep_timer_handler( void ) const;
 
 	void try_token_request();
 
@@ -421,6 +426,7 @@ private:
 	bool resume_on_completion_of_draining;
 	int draining_id;
 	time_t last_drain_start_time;
+	time_t last_drain_stop_time;
 	int expected_graceful_draining_completion;
 	int expected_quick_draining_completion;
 	int expected_graceful_draining_badput;

@@ -475,7 +475,7 @@ EC2Resource::BatchStatusResult EC2Resource::FinishBatchStatus() {
     return StartBatchStatus();
 }
 
-bool EC2Resource::ServerTypeQueried( EC2Job *job ) {
+bool EC2Resource::ServerTypeQueried( EC2Job *job ) const {
 	if ( !m_serverType.empty() ) {
 		return true;
 	}
@@ -486,7 +486,7 @@ bool EC2Resource::ServerTypeQueried( EC2Job *job ) {
 	return false;
 }
 
-bool EC2Resource::ClientTokenWorks( EC2Job *job )
+bool EC2Resource::ClientTokenWorks( EC2Job *job ) const
 {
 	if ( m_serverType == "Amazon" || m_serverType == "Nimbus" ) {
 		return true;
@@ -501,7 +501,7 @@ bool EC2Resource::ClientTokenWorks( EC2Job *job )
 	return false;
 }
 
-bool EC2Resource::ShuttingDownTrusted( EC2Job *job ) {
+bool EC2Resource::ShuttingDownTrusted( EC2Job *job ) const {
 	std::string type = m_serverType;
 	if( type.empty() && job ) {
 		// CODE REVIEWER: This assumes that LookupString() will leave

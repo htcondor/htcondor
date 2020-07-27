@@ -35,12 +35,12 @@ extern "C" {
  * MsWindowsHibernator class
  ***************************************************************/
 
-MsWindowsHibernator::MsWindowsHibernator( void ) throw ()
+MsWindowsHibernator::MsWindowsHibernator( void ) noexcept
 		: HibernatorBase ()
 {
 }
 
-MsWindowsHibernator::~MsWindowsHibernator( void ) throw ()
+MsWindowsHibernator::~MsWindowsHibernator( void ) noexcept
 {
 }
 

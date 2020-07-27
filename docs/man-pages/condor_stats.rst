@@ -99,9 +99,9 @@ specification as given by an argument.
     information displayed includes the number of running jobs and the
     number of idle jobs. An example argument appears as
 
-    ::
+    .. code-block:: text
 
-            -userquery jondoe@sample.com/onemachine.sample.com
+        -userquery jondoe@sample.com/onemachine.sample.com
 
  **-userlist**
     Queries for the list of all submitters for which the

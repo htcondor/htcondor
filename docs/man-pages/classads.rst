@@ -20,7 +20,7 @@ Dictionaries are marked by square brackets and lists by braces;
 dictionaries separate elements with semicolons,
 and lists separate elements with commas.
 
-::
+.. code-block:: condor-classad
 
     attribute_name  = "attribute-value"
     pi              = 3.141
@@ -42,7 +42,7 @@ An expression consists of literals (from the data syntax) and attribute
 references composed with operators and functions.  The value of a ClassAd
 attribute may be an expression.
 
-::
+.. code-block:: condor-classad-expr
 
     MY.count < 10 && regexp( ".*example.*", attribute_name )
 
@@ -54,7 +54,7 @@ when determining if two ClassAds match, an expression may specify which
 ad's value is used by prefixing it with ``MY.`` or ``TARGET.``.  Attribute
 references are case-insensitive.
 
-::
+.. code-block:: condor-classad-expr
 
     MY.count
     TARGET.machine
@@ -63,7 +63,7 @@ An element of a dictionary is referenced by using the subscript operator
 (``[]``) with an expression that evaluates to a string *or* with a dot
 (``.``), as follows:
 
-::
+.. code-block:: condor-classad-expr
 
     MY.structured_attr.hostnames
     MY.structured_attr["hostnames"]
@@ -71,7 +71,7 @@ An element of a dictionary is referenced by using the subscript operator
 Note that the following references the attribute named by the attribute
 ``hostnames``, not the attribute named hostnames:
 
-::
+.. code-block:: condor-classad-expr
 
     MY.structured_attr[hostnames]
 
@@ -88,7 +88,7 @@ An attribute may be set to either explicitly, but these values typically
 result from referring to an attribute that doesn't exist, or asking
 for something impossible:
 
-::
+.. code-block:: condor-classad
 
     undefined_reference = MY.undefined_attribute
     explicitly_undefined = UNDEFINED
@@ -176,7 +176,7 @@ has that type.
         no characters, return the empty string.  Thus, the following two
         calls both return the string "78":
 
-        ::
+        .. code-block:: text
 
             substr( "0123456789", 7, 2 )
             substr( "0123456789", -3, -1 )
@@ -197,10 +197,10 @@ a ClassAd expression on the command-line.  For instance, if you can't remember
 which kind of regular expressions the ``regexp()`` function uses,
 you could check in the following way (on Linux):
 
-::
+.. code-block:: console
 
-    condor_status -limit 1 -af 'regexp( "*tr*", "string" )'
-    condor_status -limit 1 -af 'regexp( ".*tr.*", "string" )'
+    $ condor_status -limit 1 -af 'regexp( "*tr*", "string" )'
+    $ condor_status -limit 1 -af 'regexp( ".*tr.*", "string" )'
 
 This will print out ``false`` and then ``true``; if you have no machines
 in your pool, it will print nothing.  (For each ad ``condor_status``
@@ -217,9 +217,9 @@ Selecting a Slot based on Job ID
 
 If job 288.7 is running:
 
-::
+.. code-block:: console
 
-    condor_status -const 'JobId == "288.7"'
+    $ condor_status -const 'JobId == "288.7"'
 
 Only Run on a Particular Machine
 ''''''''''''''''''''''''''''''''
@@ -227,7 +227,7 @@ Only Run on a Particular Machine
 If you want your job to run only on a particular machine named 'special',
 add the following to your submit file's ``requirements`` line:
 
-::
+.. code-block:: condor-classad-expr
 
     Machine == "special"
 
@@ -238,17 +238,15 @@ In this example, an administrator has just added twelve new hosts
 to the pool -- ``compute-296`` to ``compute-307`` -- and wants to see if
 they've started running jobs yet.
 
-::
+.. code-block:: console
 
-    condor_status -const '296 <= int(substr( Machine, 8 )) &&
-        int(substr( Machine, 8 )) <= 307'
+    $ condor_status -const '296 <= int(substr( Machine, 8 )) && int(substr( Machine, 8 )) <= 307'
 
 You could also write this as follows:
 
-::
+.. code-block:: console
 
-    condor_status -const '296 <= int(split(Machine, "-")[1]) &&
-        int(split(Machine, "-")[1]) <= 307'
+    $ condor_status -const '296 <= int(split(Machine, "-")[1]) && int(split(Machine, "-")[1]) <= 307'
 
 Selecting Machines with a Particular File-Transfer Plugin
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -258,9 +256,9 @@ to see which machines have it, select from the slot ads based on the
 corresponding attribute, but only print out the machine name, and then
 throw away the duplicates:
 
-::
+.. code-block:: console
 
-    condor_status -af Machine \
+    $ condor_status -af Machine \
         -const 'StringListIMember( "gdrive", HasFileTransferPluginMethods )' \
         | uniq
 
@@ -269,12 +267,11 @@ on the resources available to run jobs which require the gdrive plugin.
 Note that you can also use expressions when formatting the output.  In
 this case, it's just to make the output prettier.
 
-::
+.. code-block:: console
 
-    condor_status -af Machine CPUs Memory Disk \
+    $ condor_status -af Machine CPUs Memory Disk \
         '(GPUs =!= undefined && GPUs >= 1) ? CUDACapability : "[no GPUs]"' \
-        -const 'SlotType =!= "Dynamic" &&
-            StringListIMember( "gdrive", HasFileTransferPluginMethods )'
+        -const 'SlotType =!= "Dynamic" && StringListIMember( "gdrive", HasFileTransferPluginMethods )'
 
 .. _`Specification`:
 

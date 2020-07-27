@@ -53,14 +53,14 @@ class BaseResource : public Service
 
 	void RequestPing( BaseJob *job );
 	bool IsDown();
-	time_t getLastStatusChangeTime() { return lastStatusChange; }
+	time_t getLastStatusChangeTime() const { return lastStatusChange; }
 
 	bool RequestSubmit( BaseJob *job );
 	void CancelSubmit( BaseJob *job );
 	void AlreadySubmitted( BaseJob *job );
 
-	void RequestUpdateLeases();
-	time_t GetLeaseExpiration( const BaseJob *job = NULL );
+	void RequestUpdateLeases() const;
+	time_t GetLeaseExpiration( const BaseJob *job = NULL ) const;
 
     static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -73,9 +73,9 @@ class BaseResource : public Service
 	int m_jobPollInterval;
 
 	virtual void SetJobPollInterval();
-	int GetJobPollInterval() { return m_jobPollInterval; };
+	int GetJobPollInterval() const { return m_jobPollInterval; };
 
-    bool didFirstPing() { return firstPingDone; }
+    bool didFirstPing() const { return firstPingDone; }
 
  protected:
 	void DeleteMe();

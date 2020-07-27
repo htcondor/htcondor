@@ -727,6 +727,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
+		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -765,7 +766,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
-		dprintf( D_SYSCALLS, "  attr_name = %s\n", attr_name.c_str());
+		dprintf( D_SYSCALLS, "\tattr_name = %s\n", attr_name.c_str() );
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -810,6 +811,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name));
+		dprintf(D_SYSCALLS, "\tattr_name = %s\n", attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -849,6 +851,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
+		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		char *value = NULL;
@@ -936,6 +939,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
+		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;

@@ -134,7 +134,7 @@ definitions. Care should be taken when using these attributes, due to
 their ephemeral nature; they are not always defined, so the usage of an
 expression to check if defined such as
 
-::
+.. code-block:: condor-classad-expr
 
       (RemoteUserPrio =?= UNDEFINED)
 
@@ -387,9 +387,9 @@ when the job was first submitted to the schedd.  Usually, this is
 the operating system username.  However, the submitter can override
 the username selected by settting the submit file option
 
-::
+.. code-block:: condor-submit
 
-	accounting_group_user = ishmael
+    accounting_group_user = ishmael
 
 This means this job should be treated, for accounting purposes only, as
 "ishamel", but "ishmael" will not be the operating system id the shadow
@@ -435,7 +435,7 @@ are correct.
 Group quotas may implement this policy. Define the groups and set their
 quotas in the configuration of the central manager:
 
-::
+.. code-block:: condor-config
 
     GROUP_NAMES = group_physics, group_chemistry
     GROUP_QUOTA_group_physics =   20
@@ -488,7 +488,7 @@ commands within the submit description file, as specified in the
 :ref:`admin-manual/user-priorities-negotiation:group accounting` section.
 For example:
 
-::
+.. code-block:: condor-submit
 
     accounting_group = group_physics
     accounting_group_user = einstein
@@ -504,7 +504,7 @@ failures, because of the arrival of new machines within the pool, or
 because of other reasons. The job submit description files remain the
 same. Configuration on the central manager becomes:
 
-::
+.. code-block:: condor-config
 
     GROUP_NAMES = group_physics, group_chemistry
     GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33
@@ -523,18 +523,18 @@ low-energy group owns the remainder. Groups are distinguished from
 subgroups by an intervening period character (.) in the group's name.
 Static quotas for these subgroups extend the example configuration:
 
-::
+.. code-block:: condor-config
 
-      GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
-      GROUP_QUOTA_group_physics     =   20
-      GROUP_QUOTA_group_physics.hep =   15
-      GROUP_QUOTA_group_physics.lep =    5
-      GROUP_QUOTA_group_chemistry   =   10
+    GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
+    GROUP_QUOTA_group_physics     =   20
+    GROUP_QUOTA_group_physics.hep =   15
+    GROUP_QUOTA_group_physics.lep =    5
+    GROUP_QUOTA_group_chemistry   =   10
 
 This hierarchy may be more useful when dynamic quotas are used. Here is
 the example, using dynamic quotas:
 
-::
+.. code-block:: condor-config
 
       GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
       GROUP_QUOTA_DYNAMIC_group_chemistry   =   0.33334
@@ -551,7 +551,7 @@ the same 15 machines as specified in the static quota example.
 High-energy physics users indicate which group their jobs should go in
 with the submit description file identification:
 
-::
+.. code-block:: condor-submit
 
     accounting_group = group_physics.hep
     accounting_group_user = higgs
@@ -571,7 +571,7 @@ Accepting surplus may be enabled for all groups by setting
 :index:`GROUP_ACCEPT_SURPLUS_<groupname>` to ``True``. Consider
 the following example:
 
-::
+.. code-block:: condor-config
 
       GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
       GROUP_QUOTA_group_physics     =   20
@@ -648,7 +648,7 @@ support a third, even lower priority group, and so on.
 The *condor_userprio* command can show the current quotas in effect,
 and the current usage by group. For example:
 
-::
+.. code-block:: console
 
     $ condor_userprio -quotas
     Last Priority Update: 11/12 15:18
@@ -678,7 +678,7 @@ jobs submitted by a given user into one accounting group, and forbid
 the user to submit to any other group.  An HTCondor meta-knob makes this 
 easy.  By adding to the submit machine's configuration, the setting
 
-::
+.. code-block:: condor-config
 
      USE Feature: AssignAccountingGroup(file_name_of_map)
 
@@ -687,10 +687,10 @@ The admin can create a file that maps the users into their required
 accounting groups, and makes the attributes immutable, so they can't
 be changed.  The format of this map file is like other classad map
 files:  Lines of three columns.  The first should be an asterisk 
-'*'.  The second column is the name of the user, and the final is the
+``*``.  The second column is the name of the user, and the final is the
 accounting group that user should always submit to.  For example,
 
-::
+.. code-block:: text
 
     * Alice	group_physics
     * Bob	group_atlas
@@ -698,11 +698,11 @@ accounting group that user should always submit to.  For example,
     * /^student_.*/	group_students
 
 The second field can be a regular expression, if
-enclosed in //.  Note that this is on the submit side, and the 
+enclosed in ``//``.  Note that this is on the submit side, and the
 administrator will still need to create these group names and give them
 a quota on the central manager machine.  This file is re-read on a
-condor_reconfig.  The third field can also be a comma-separated list.
+*condor_reconfig*.  The third field can also be a comma-separated list.
 If so, it represents the set of valid accounting groups a user can
-opt into.  If the user does not set an acounting group in the submit file
+opt into.  If the user does not set an accounting group in the submit file
 the first entry in the list will be used.
 

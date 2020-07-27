@@ -992,6 +992,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 //************* End of changes for EC2 Jobs *****************//
 
+// Provisioner jobs
+#define ATTR_PROVISIONER_STATE "ProvisionerState"
+#define ATTR_PROVISIONER_RESOURCE_ID "ProvisionerResourceID"
+
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
@@ -1130,6 +1134,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_START_EXPR  "StartExpr"
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
+#define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
 
 #define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 

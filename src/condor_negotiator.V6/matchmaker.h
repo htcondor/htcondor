@@ -534,7 +534,7 @@ class Matchmaker : public Service
 					PreemptState candidatePreemptState,
 					const string &candidateDslotClaims);
 			void sort();
-			int length() { return adListLen - adListHead; }
+			int length() const { return adListLen - adListHead; }
 
 			MatchListType(int maxlen);
 			~MatchListType();

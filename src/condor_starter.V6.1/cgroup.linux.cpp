@@ -104,7 +104,7 @@ int CgroupManager::initialize()
  */
 int CgroupManager::initialize_controller(struct cgroup& cgroup, const ControllerFlags controller,
 	const char * controller_str, const bool required, const bool has_cgroup,
-	bool & changed_cgroup)
+	bool & changed_cgroup) const
 {
 	if (!isMounted(controller)) {
 		if (required) {

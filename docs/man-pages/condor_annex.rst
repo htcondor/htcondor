@@ -177,9 +177,9 @@ Examples
 To start an on-demand annex named 'MyFirstAnnex' with one core, using
 the default AMI and instance type, run
 
-::
+.. code-block:: console
 
-      condor_annex -count 1 -annex-name MyFirstAnnex
+      $ condor_annex -count 1 -annex-name MyFirstAnnex
 
 You will be asked to confirm that the defaults are what you want.
 
@@ -188,9 +188,9 @@ As of 2017-04-17, the following example will cost a minimum of $90.
 To start an on-demand annex with 100 GPUs that job owners 'big' and
 'little' may use (be sure to include yourself!), run
 
-::
+.. code-block:: console
 
-      condor_annex -count 100 -annex-name MySecondAnnex \
+      $ condor_annex -count 100 -annex-name MySecondAnnex \
         -aws-on-demand-instance-type p2.xlarge -owner "big, little"
 
 Exit Status

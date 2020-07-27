@@ -604,16 +604,16 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 	}
 
 	if( rval != 0 ) { 
-		MyString errmsg;
+		std::string errmsg;
 		if( rval < 0 ) {
 			errmsg = "my_spawnl returned ";
-			errmsg += IntToStr( rval );
+			errmsg += std::to_string( rval );
 		} else {
 			errmsg = "/bin/rm ";
 			statusString( rval, errmsg );
 		}
 		dprintf( D_FULLDEBUG, "Removing \"%s\" as %s failed: %s\n", path, 
-				 log_msg, errmsg.Value() );
+				 log_msg, errmsg.c_str() );
 		return false;
 	}
 	return true;

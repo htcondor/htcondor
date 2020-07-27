@@ -287,13 +287,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = one \"two\" 'three'
 
     Produces in Unix vanilla universe:
 
-    ::
+    .. code-block:: text
 
         argument 1: one
         argument 2: "two"
@@ -318,13 +318,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = "3 simple arguments"
 
     Produces:
 
-    ::
+    .. code-block:: text
 
         argument 1: 3
         argument 2: simple
@@ -332,13 +332,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Another example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = "one 'two with spaces' 3"
 
     Produces:
 
-    ::
+    .. code-block:: text
 
         argument 1: one
         argument 2: two with spaces
@@ -346,13 +346,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     And yet another example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = "one ""two"" 'spacey ''quoted'' argument'"
 
     Produces:
 
-    ::
+    .. code-block:: text
 
         argument 1: one
         argument 2: "two"
@@ -381,7 +381,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
        quote mark.
     #. Each environment entry has the form
 
-       ::
+       .. code-block:: text
 
            <name>=<value>
 
@@ -396,13 +396,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    ::
+    .. code-block:: condor-submit
 
         environment = "one=1 two=""2"" three='spacey ''quoted'' value'"
 
     Produces the following environment entries:
 
-    ::
+    .. code-block:: text
 
         one=1
         two="2"
@@ -412,7 +412,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     the environment specification. Each environment entry remains of the
     form
 
-    ::
+    .. code-block:: text
 
         <name>=<value>
 
@@ -427,13 +427,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     A Unix example:
 
-    ::
+    .. code-block:: condor-submit
 
         environment = one=1;two=2;three="quotes have no 'special' meaning"
 
     This produces the following:
 
-    ::
+    .. code-block:: text
 
         one=1
         two=2
@@ -500,9 +500,9 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Prior to HTCondor 8.9.7 ``getenv`` allows only ``True`` or ``False`` as values.
 
-    Examples
+    Examples:
 
-    ::
+    .. code-block:: condor-submit
 
         # import everything except PATH and INCLUDE (also path, include and other case-variants)
         getenv = !PATH, !INCLUDE
@@ -513,13 +513,11 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
         # Import every environment variable that starts with P or Q, except PATH
         getenv = !path, P*, Q*
 
-    ::
-
-		If the environment is set with the **environment** command and
-		**getenv** is also set, values specified with
-		**environment** override values in the submitter's environment
-		(regardless of the order of the **environment** and **getenv**
-		commands). :index:`input<single: input; submit commands>`
+    If the environment is set with the **environment** command and
+    **getenv** is also set, values specified with
+    **environment** override values in the submitter's environment
+    (regardless of the order of the **environment** and **getenv**
+    commands). :index:`input<single: input; submit commands>`
 
  input = <pathname>
     HTCondor assumes that its jobs are long-running, and that the user
@@ -585,7 +583,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     about a job. If not specified, HTCondor defaults to using the e-mail
     address defined by
 
-    ::
+    .. code-block:: text
 
         job-owner@UID_DOMAIN
 
@@ -594,7 +592,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     administrator. If ``UID_DOMAIN`` :index:`UID_DOMAIN` has not
     been specified, HTCondor sends the e-mail to:
 
-    ::
+    .. code-block:: text
 
         job-owner@submit-machine-name
 
@@ -754,10 +752,10 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     rank. HTCondor will give the job the machine with the highest rank.
     For example,
 
-    ::
+    .. code-block:: condor-submit
 
-                request_memory = max({60, Target.TotalSlotMemory})
-                rank = Memory
+        request_memory = max({60, Target.TotalSlotMemory})
+        rank = Memory
 
     asks HTCondor to find all available machines with more than 60
     megabytes of memory and give to the job the machine with the most
@@ -770,7 +768,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     A requested number of CPUs (cores). If not specified, the number
     requested will be 1. If specified, the expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (RequestCpus <= Target.Cpus)
 
@@ -788,7 +786,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     not specified, it will be set to the job ClassAd attribute
     ``DiskUsage``. The expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (RequestDisk <= Target.Disk)
 
@@ -827,7 +825,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     The expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (RequestMemory <= Target.Memory)
 
@@ -945,7 +943,7 @@ FILE TRANSFER COMMANDS
     **requirements** :index:`requirements<single: requirements; submit commands>`
     expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (TARGET.HasEncryptExecuteDirectory)
 
@@ -1151,18 +1149,20 @@ FILE TRANSFER COMMANDS
     specify ``aws_region``, if necessary; see below.  To use the S3 service
     provided by AWS, use S3 URLs of the following forms:
 
-    ::
+    .. code-block:: text
 
         # For older buckets that aren't region-specific.
         s3://<bucket>/<key>
+
         # For newer, region-specific buckets.
         s3://<bucket>.s3.<region>.amazonaws.com/<key>
 
     To use other S3 services, where ``<host>`` must contain a ``.``:
 
-    ::
+    .. code-block:: text
 
         s3://<host>/<key>
+
         # If necessary
         aws_region = <region>
 
@@ -1436,7 +1436,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     As an example, if the job is to be removed once the output is
     retrieved with *condor_transfer_data*, then use
 
-    ::
+    .. code-block:: text
 
         leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
                          (StageOutFinish == 0))
@@ -1473,7 +1473,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     on hold and an e-mail notification sent, instead of being allowed to
     leave the queue.
 
-    ::
+    .. code-block:: text
 
           on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
 
@@ -1522,7 +1522,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     command. Assume that the signal identifier for the segmentation
     fault is 11 on the platform where the job will be running.
 
-    ::
+    .. code-block:: text
 
           on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 
@@ -1538,7 +1538,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     **on_exit_remove** :index:`on_exit_remove<single: on_exit_remove; submit commands>`
     expression works well:
 
-    ::
+    .. code-block:: text
 
           on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 
@@ -2123,7 +2123,7 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
     may be either the platform-specific name or value of the signal.
     This example shows it both ways for a Linux signal:
 
-    ::
+    .. code-block:: text
 
         remove_kill_sig = SIGUSR1
         remove_kill_sig = 10
@@ -2144,7 +2144,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
 
     An example that specifies two disk files:
 
-    ::
+    .. code-block:: text
 
         vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
@@ -2552,7 +2552,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     defined is given by the integer value. The job ClassAds introduced
     are given as
 
-    ::
+    .. code-block:: text
 
         LastMatchName0 = "most-recent-Name"
         LastMatchName1 = "next-most-recent-Name"
@@ -2710,7 +2710,7 @@ and comments.
     HTCondor submit description files to provide textual substitution at
     submit time. Macros can be defined by lines in the form of
 
-    ::
+    .. code-block:: text
 
                 <macro_name> = <string>
 
@@ -2736,7 +2736,7 @@ and comments.
     Recursive definition of macros is permitted. An example of a
     construction that works is the following:
 
-    ::
+    .. code-block:: text
 
         foo = bar
         foo =  snap $(foo)
@@ -2745,7 +2745,7 @@ and comments.
 
     Note that both left- and right- recursion works, so
 
-    ::
+    .. code-block:: text
 
         foo = bar
         foo =  $(foo) snap
@@ -2754,14 +2754,14 @@ and comments.
 
     The construction
 
-    ::
+    .. code-block:: text
 
         foo = $(foo) bar
 
     by itself will not work, as it does not have an initial base case.
     Mutually recursive constructions such as:
 
-    ::
+    .. code-block:: text
 
         B = bar
         C = $(B)
@@ -2772,14 +2772,14 @@ and comments.
     A default value may be specified, for use if the macro has no
     definition. Consider the example
 
-    ::
+    .. code-block:: text
 
         D = $(E:24)
 
     Where ``E`` is not defined within the submit description file, the
     default value 24 is used, resulting in
 
-    ::
+    .. code-block:: text
 
         D = 24
 
@@ -2793,7 +2793,7 @@ and comments.
     To use the dollar sign character ($) as a literal, without macro
     expansion, use
 
-    ::
+    .. code-block:: console
 
         $(DOLLAR)
 
@@ -2805,7 +2805,7 @@ and comments.
     has been made) into specific commands within the submit description
     file. The substitution macro is of the form:
 
-    ::
+    .. code-block:: console
 
         $$(attribute)
 
@@ -2816,7 +2816,7 @@ and comments.
     A common use of this form of the substitution macro is for the
     heterogeneous submission of an executable:
 
-    ::
+    .. code-block:: text
 
         executable = povray.$$(OpSys).$$(Arch)
 
@@ -2828,7 +2828,7 @@ and comments.
     alternative string to use if the machine attribute within the
     substitution macro is undefined. The syntax appears as:
 
-    ::
+    .. code-block:: console
 
         $$(attribute:string_if_attribute_undefined)
 
@@ -2837,7 +2837,7 @@ and comments.
     locations on different machines, the file's path name is given as an
     argument to the program.
 
-    ::
+    .. code-block:: text
 
         arguments = $$(input_file_path:/usr/foo)
 
@@ -2851,7 +2851,7 @@ and comments.
     ClassAd expression into the substitution macro, square brackets are
     added to delimit the expression. The syntax appears as:
 
-    ::
+    .. code-block:: console
 
         $$([ClassAd expression])
 
@@ -2863,7 +2863,7 @@ and comments.
     this as a command line argument to the application. In the submit
     description file will be
 
-    ::
+    .. code-block:: text
 
         arguments = --memory $$([TARGET.Memory * 0.9])
 
@@ -2872,7 +2872,7 @@ and comments.
     To insert two dollar sign characters ($$) as literals into a ClassAd
     string, use
 
-    ::
+    .. code-block:: console
 
         $$(DOLLARDOLLAR)
 
@@ -2884,7 +2884,7 @@ and comments.
     variable to be used in setting a submit description file command.
     The syntax used is
 
-    ::
+    .. code-block:: console
 
         $ENV(variable)
 
@@ -2892,7 +2892,7 @@ and comments.
     functionality evaluates the submitter's home directory in order to
     set the path and file name of a log file:
 
-    ::
+    .. code-block:: text
 
         log = $ENV(HOME)/jobs/logfile
 
@@ -2906,7 +2906,7 @@ and comments.
     given list of parameters at submission time. For an expression, if
     some randomness needs to be generated, the macro may appear as
 
-    ::
+    .. code-block:: console
 
             $RANDOM_CHOICE(0,1,2,3,4,5,6)
 
@@ -3036,7 +3036,7 @@ Examples
    will use ``foo.out3`` for its standard output. Standard error output
    (if any) from all three programs will appear in ``foo.error``.
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -3067,7 +3067,7 @@ Examples
    Or you can get the same results as the above submit file by using a
    list of arguments with the Queue statement
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -3103,7 +3103,7 @@ Examples
    about where and when HTCondor runs, takes checkpoints, and migrates
    processes in this cluster will be written into file ``foo.log``.
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -3131,7 +3131,7 @@ Examples
    machines running more than one version of Linux, and this job needs
    the particular operating system to run correctly.
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -3154,9 +3154,9 @@ Examples
    and an error log file are specified. The submit description file is
    unchanged.
 
-   ::
+   .. code-block:: console
 
-       condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
+       $ condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
 
    Note that each of the added commands is contained within quote marks
    because there are space characters within the command.
@@ -3167,7 +3167,7 @@ Examples
 
    Including the command
 
-   ::
+   .. code-block:: text
 
           periodic_remove = CumulativeSuspensionTime >
                             ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)

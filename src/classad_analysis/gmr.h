@@ -35,7 +35,7 @@ public:
         classad::ClassAd         *portAd;
         Dependencies    dependencies;
     };
-    typedef vector<Port> Ports;
+    typedef std::vector<Port> Ports;
 
     classad::ClassAd             *parentAd;
     int                 key;

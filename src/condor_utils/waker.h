@@ -42,10 +42,10 @@ public:
 	//@{
 	
 	/// Constructor
-    WakerBase () throw ();
+    WakerBase () noexcept;
 	
     /// Destructor
-    virtual ~WakerBase () throw ();
+    virtual ~WakerBase () noexcept;
 
     //@}
 

@@ -43,8 +43,8 @@ class LinuxHibernator : public HibernatorBase
 {
   public:
 
-	LinuxHibernator(void) throw ();
-	virtual ~LinuxHibernator(void) throw ();
+	LinuxHibernator(void) noexcept;
+	virtual ~LinuxHibernator(void) noexcept;
 
 	/* Discover supported sleep states */
 	bool initialize( void );

@@ -1528,7 +1528,7 @@ Claim::starterExited( Starter* starter, int status)
 
 
 bool
-Claim::starterPidMatches( pid_t starter_pid )
+Claim::starterPidMatches( pid_t starter_pid ) const
 {
 	if (c_starter_pid && starter_pid == c_starter_pid) {
 		return true;
@@ -1654,7 +1654,7 @@ Claim::resumeClaim( void )
 
 
 bool
-Claim::starterKill( int sig )
+Claim::starterKill( int sig ) const
 {
 		// don't need to work about the state, since we don't use this
 		// method to send any signals that change the claim state...
@@ -1838,7 +1838,7 @@ Claim::verifyCODAttrs( ClassAd* req )
 
 
 bool
-Claim::publishStarterAd(ClassAd *cad)
+Claim::publishStarterAd(ClassAd *cad) const
 {
 	Starter * starter = NULL;
 	if (c_starter_pid) {
@@ -2076,7 +2076,7 @@ Claim::changeState( ClaimState s )
 }
 
 time_t
-Claim::getClaimAge()
+Claim::getClaimAge() const
 {
 	time_t now = time(NULL);
 	if(c_claim_started) {
@@ -2529,7 +2529,7 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 }
 
 bool
-Claim::waitingForActivation() {
+Claim::waitingForActivation() const {
 	time_t maxDrainingActivationDelay = param_integer( "MAX_DRAINING_ACTIVATION_DELAY", 20 );
 	return getClaimAge() < maxDrainingActivationDelay;
 }

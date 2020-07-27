@@ -26,9 +26,9 @@ Description
 meant to be used in conjunction with the **-spool** option of
 *condor_submit*, as in
 
-::
+.. code-block:: console
 
-    condor_submit -spool mysubmitfile
+    $ condor_submit -spool mysubmitfile
 
 Submission of a job with the **-spool** option causes HTCondor to spool
 all input files, the job event log, and any proxy across a connection to

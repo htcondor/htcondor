@@ -43,9 +43,9 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     be used to specify the network port of the *condor_collector*. The
     port is separated from the host name by a colon (':'). For example,
 
-    ::
+    .. code-block:: condor-config
 
-            COLLECTOR_HOST = $(CONDOR_HOST):1234
+        COLLECTOR_HOST = $(CONDOR_HOST):1234
 
 
     If no port is specified, the default port of 9618 is used. Using the
@@ -142,9 +142,9 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     Another possibility is to use the condor user's home directory,
     which may be specified with ``$(TILDE)``. For example:
 
-    ::
+    .. code-block:: condor-config
 
-            LOCAL_DIR = $(tilde)
+        LOCAL_DIR = $(tilde)
 
 
 :macro-def:`LOG`
@@ -245,23 +245,23 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     configuration files for the pool in a shared directory, each one
     named by host name. For example,
 
-    ::
+    .. code-block:: condor-config
 
-            LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
+        LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
 
 
     or,
 
-    ::
+    .. code-block:: condor-config
 
-            LOCAL_CONFIG_FILE = $(release_dir)/etc/$(hostname).local
+        LOCAL_CONFIG_FILE = $(release_dir)/etc/$(hostname).local
 
 
     or, not using the release directory
 
-    ::
+    .. code-block:: condor-config
 
-            LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
+        LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
 
 
     The value of ``LOCAL_CONFIG_FILE`` is treated as a list of files,
@@ -325,9 +325,9 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     The ability of a user to use this user-specified configuration file
     can be disabled by setting this variable to the empty string:
 
-    ::
+    .. code-block:: condor-config
 
-          USER_CONFIG_FILE =
+        USER_CONFIG_FILE =
 
 :macro-def:`LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`
     A regular expression that specifies file names to be ignored when
@@ -792,7 +792,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     Statistics attributes only for the *condor_schedd*, and do not
     publish any other Statistics attributes:
 
-    ::
+    .. code-block:: condor-config
 
           STATISTICS_TO_PUBLISH = SCHEDD:2
 
@@ -801,7 +801,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     lifetime values, where the ``DAEMONCORE`` includes all statistics at
     the verbose level:
 
-    ::
+    .. code-block:: condor-config
 
           STATISTICS_TO_PUBLISH = DEFAULT:1!L, DC:2RDZL
 
@@ -945,7 +945,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     that the third field will be a comma separated list of values. For
     example:
 
-    ::
+    .. code-block:: text
 
         # file: groups.mapdata
         * John  chemistry,physics,glassblowing
@@ -958,7 +958,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     submap for lookup, the first argument for userMap() should be
     "mapname.submap". For example:
 
-    ::
+    .. code-block:: text
 
         # mapdata 'groups' with submaps
         *   Bob   security
@@ -1203,7 +1203,7 @@ subsystem corresponding to the daemon.
     page for platform-specific details. If not defined, the default
     value is
 
-    ::
+    .. code-block:: text
 
            "%m/%d/%y %H:%M:%S"
 
@@ -1690,7 +1690,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     For example, if the *condor_startd* is to advertise a string macro,
     a numeric macro, and a boolean expression, do something similar to:
 
-    ::
+    .. code-block:: condor-config
 
             STRING = This is a string
             NUMBER = 666
@@ -1715,7 +1715,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     should define these shutdown expressions specific to each daemon,
     for example:
 
-    ::
+    .. code-block:: condor-config
 
             STARTD.DAEMON_SHUTDOWN = when to shutdown the startd
             MASTER.DAEMON_SHUTDOWN = when to shutdown the master
@@ -2362,7 +2362,7 @@ using a shared file system`.
     attempt to kill all processes owned by the dedicated execution
     account. Example:
 
-    ::
+    .. code-block:: condor-config
 
         SLOT1_USER = cndrusr1
         SLOT2_USER = cndrusr2
@@ -2373,7 +2373,7 @@ using a shared file system`.
     dedicated account, because it will print a line such as the
     following in its log file:
 
-    ::
+    .. code-block:: text
 
         Tracking process family by login "cndrusr1"
 
@@ -2441,7 +2441,7 @@ These macros control the *condor_master*.
     :ref:`admin-manual/introduction-to-configuration:pre-defined macros`).
     For example,
 
-    ::
+    .. code-block:: condor-config
 
           DAEMON_LIST = MASTER, STARTD, SCHEDD
 
@@ -2473,7 +2473,7 @@ These macros control the *condor_master*.
     before the first entry in the ``DC_DAEMON_LIST`` definition. For
     example:
 
-    ::
+    .. code-block:: condor-config
 
           DC_DAEMON_LIST = +NEW_DAEMON
 
@@ -2482,7 +2482,7 @@ These macros control the *condor_master*.
     want the *condor_master* to start, you must provide it with the
     full path to each of these binaries. For example:
 
-    ::
+    .. code-block:: condor-config
 
             MASTER          = $(SBIN)/condor_master
             STARTD          = $(SBIN)/condor_startd
@@ -2504,7 +2504,7 @@ These macros control the *condor_master*.
     seen by the *condor_schedd*, place the following in the
     configuration:
 
-    ::
+    .. code-block:: condor-config
 
           SCHEDD_ENVIRONMENT = "TMP=/new/value CONDOR_CONFIG=/special/config"
 
@@ -2538,7 +2538,7 @@ These macros control the *condor_master*.
     *condor_master* must be running as root in order to start processes
     as other users. Example configuration:
 
-    ::
+    .. code-block:: condor-config
 
         COLLECTOR_USERID = condor
         NEGOTIATOR_USERID = condor
@@ -2951,7 +2951,7 @@ section.
     Here is an example policy that puts jobs on hold that use too much
     virtual memory:
 
-    ::
+    .. code-block:: condor-config
 
         VIRTUAL_MEMORY_AVAILABLE_MB = (VirtualMemory*0.9)
         MEMORY_EXCEEDED = ImageSize/1024 > $(VIRTUAL_MEMORY_AVAILABLE_MB)
@@ -3066,9 +3066,9 @@ section.
     can be read with the *condor_history* command by passing the name
     of the file to the -file option of *condor_history*.
 
-    ::
+    .. code-block:: console
 
-        condor_history -file `condor_config_val LOG`/startd_history
+        $ condor_history -file `condor_config_val LOG`/startd_history
 
 :macro-def:`STARTER`
     This macro holds the full path to the *condor_starter* binary that
@@ -3111,7 +3111,7 @@ section.
     updates sent by a large number of *condor_startd* daemons. Defaults
     to zero. The example configuration
 
-    ::
+    .. code-block:: condor-config
 
           startd.UPDATE_INTERVAL = 300
           startd.UPDATE_OFFSET   = $RANDOM_INTEGER(0,300)
@@ -3323,9 +3323,9 @@ section.
     *condor_startd* daemon for the change to take effect. The command
     will be
 
-    ::
+    .. code-block:: console
 
-          condor_restart -startd
+          $ condor_restart -startd
 
 :macro-def:`MAX_NUM_CPUS`
     An integer value used as a ceiling for the number of CPUs detected
@@ -3338,9 +3338,9 @@ section.
     command. To change this, restart the *condor_startd* daemon for the
     change to take effect. The command will be
 
-    ::
+    .. code-block:: console
 
-          condor_restart -startd
+          $ condor_restart -startd
 
 :macro-def:`COUNT_HYPERTHREAD_CPUS`
     This configuration variable controls how HTCondor sees
@@ -3404,7 +3404,7 @@ section.
     formed in one of two ways. The first way explicitly specifies the
     name within the list with the syntax
 
-    ::
+    .. code-block:: condor-config
 
           STARTD_PUBLISH_WINREG = AttrName1 = KeyName1; AttrName2 = KeyName2
 
@@ -3434,7 +3434,7 @@ section.
 
     Here is a complete example of the configuration variable definition,
 
-    ::
+    .. code-block:: condor-config
 
             STARTD_PUBLISH_WINREG = HKLM\Software\Perl\BinDir; \
              BATFile_RunAs_Command = HKCR\batFile\shell\RunAs\command; \
@@ -3446,7 +3446,7 @@ section.
 
     which generates the following portion of a machine ClassAd:
 
-    ::
+    .. code-block:: condor-classad
 
           WINREG_Software_Perl_BinDir = "C:\Perl\bin\perl.exe"
           WINREG_BATFile_RunAs_Command = "%SystemRoot%\System32\cmd.exe /C \"%1\" %*"
@@ -3468,7 +3468,7 @@ section.
     processes. It is only visible to the job and the job's child
     processes. As an example:
 
-    ::
+    .. code-block:: condor-config
 
           MOUNT_UNDER_SCRATCH = ifThenElse(TARGET.UtsnameSysname ? "Linux", "/tmp,/var/tmp", "")
 
@@ -3616,14 +3616,14 @@ section for details.
     ClassAd of all the other slots within the machine. For example, if
     the configuration file for a 2-slot machine contains
 
-    ::
+    .. code-block:: condor-config
 
                 STARTD_SLOT_ATTRS = State, Activity, EnteredCurrentActivity
 
     then the machine ClassAd for both slots will contain attributes that
     will be of the form:
 
-    ::
+    .. code-block:: condor-classad
 
              slot1_State = "Claimed"
              slot1_Activity = "Busy"
@@ -3734,13 +3734,13 @@ needs.
     *condor_startd* daemon. The script is expected to output an
     attribute definition of the form
 
-    ::
+    .. code-block:: condor-classad
 
           Detected<xxx>=y
 
     or of the form
 
-    ::
+    .. code-block:: condor-classad
 
           Detected<xxx>="y, z, a, ..."
 
@@ -3757,7 +3757,7 @@ needs.
 
     The script may also output an attribute of the form
 
-    ::
+    .. code-block:: condor-classad
 
         Offline<xxx>="y, z"
 
@@ -3782,7 +3782,7 @@ needs.
 
     For example, with the configuration
 
-    ::
+    .. code-block:: condor-config
 
           ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS=/^/gpuid:/
 
@@ -3790,7 +3790,7 @@ needs.
     ``AssignedGPUs = "CUDA1, CUDA2"``, the job's environment will
     contain
 
-    ::
+    .. code-block:: condor-config
 
           VISIBLE_GPUS = gpuid:CUDA1, gpuid:CUDA2
 
@@ -3805,7 +3805,7 @@ needs.
 
     For example, where configuration is
 
-    ::
+    .. code-block:: condor-config
 
           ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS
           ENVIRONMENT_VALUE_FOR_UnAssignedGPUs = none
@@ -3813,7 +3813,7 @@ needs.
     and there is no machine ClassAd attribute ``AssignedGPUs``, the
     job's environment will contain
 
-    ::
+    .. code-block:: condor-config
 
           VISIBLE_GPUS = none
 
@@ -3832,7 +3832,7 @@ needs.
     before it used to provision a dynamic slot. The default value is
     given by
 
-    ::
+    .. code-block:: text
 
           quantize(RequestMemory,{128})
 
@@ -3843,7 +3843,7 @@ needs.
     before it used to provision a dynamic slot. The default value is
     given by
 
-    ::
+    .. code-block:: text
 
           quantize(RequestDisk,{1024})
 
@@ -3854,7 +3854,7 @@ needs.
     before it used to provision a dynamic slot. The default value is
     given by
 
-    ::
+    .. code-block:: text
 
           quantize(RequestCpus,{1})
 
@@ -3896,7 +3896,7 @@ section details consumption policies.
     are always advertised by *condor_startd*, and have the default
     values:
 
-    ::
+    .. code-block:: condor-config
 
         CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
         CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
@@ -4127,7 +4127,7 @@ details.
     and docker universes`). An example of the configuration for running the
     Docker CLI:
 
-    ::
+    .. code-block:: condor-config
 
           DOCKER = /usr/bin/docker
 
@@ -4201,7 +4201,7 @@ These macros control the *condor_schedd*.
     execute concurrently. The attribute ``TotalLocalJobsRunning`` is
     supplied by *condor_schedd* 's ClassAd:
 
-    ::
+    .. code-block:: condor-config
 
             START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 10
 
@@ -4211,7 +4211,7 @@ These macros control the *condor_schedd*.
     run for **local** universe jobs. This variable's value is defined in
     the initial configuration provided with HTCondor as
 
-    ::
+    .. code-block:: condor-config
 
           STARTER_LOCAL = $(SBIN)/condor_starter
 
@@ -4243,7 +4243,7 @@ These macros control the *condor_schedd*.
     execute concurrently. The attribute ``TotalSchedulerJobsRunning`` is
     supplied by *condor_schedd* 's ClassAd:
 
-    ::
+    .. code-block:: condor-config
 
             START_SCHEDULER_UNIVERSE = TotalSchedulerJobsRunning < 10
 
@@ -4285,7 +4285,7 @@ These macros control the *condor_schedd*.
 
     Here are example configurations:
 
-    ::
+    .. code-block:: condor-config
 
         ## Example 1:
         MAX_JOBS_RUNNING = 10000
@@ -4404,7 +4404,7 @@ These macros control the *condor_schedd*.
     ``"to"``, 1 or more spaces or tabs, and then the larger number.
     Example:
 
-    ::
+    .. code-block:: condor-config
 
           FILE_TRANSFER_DISK_LOAD_THROTTLE = 5 to 6.5
 
@@ -4946,7 +4946,7 @@ These macros control the *condor_schedd*.
     virtual memory ``ImageSize``, or have unreasonably large disk usage
     for an invented environment.
 
-    ::
+    .. code-block:: condor-config
 
         SYSTEM_PERIODIC_HOLD = \
           (JobStatus == 1 || JobStatus == 2) && \
@@ -4978,7 +4978,7 @@ These macros control the *condor_schedd*.
     the job, because the file system containing the job's executable is
     temporarily unavailable.
 
-    ::
+    .. code-block:: condor-config
 
         SYSTEM_PERIODIC_RELEASE = \
           (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
@@ -4993,7 +4993,7 @@ These macros control the *condor_schedd*.
     queue. Here is an example that removes jobs which have been on hold
     for 30 days:
 
-    ::
+    .. code-block:: condor-config
 
         SYSTEM_PERIODIC_REMOVE = \
           (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*24*30)
@@ -5042,7 +5042,7 @@ These macros control the *condor_schedd*.
     round the value of job ClassAd attribute ``foo`` up to the nearest
     100, set
 
-    ::
+    .. code-block:: condor-config
 
                 SCHEDD_ROUND_ATTR_foo = 2
 
@@ -5052,7 +5052,7 @@ These macros control the *condor_schedd*.
     be stored in attribute ``foo_RAW`` in the job ClassAd. The following
     are set by default:
 
-    ::
+    .. code-block:: condor-config
 
                 SCHEDD_ROUND_ATTR_ResidentSetSize = 25%
                 SCHEDD_ROUND_ATTR_ProportionalSetSizeKb = 25%
@@ -5204,7 +5204,7 @@ These macros control the *condor_schedd*.
     is ``True``. As an example, assume that *condor_schedd* statistics
     attributes are to be created for only user Einstein's jobs. Defining
 
-    ::
+    .. code-block:: condor-config
 
           SCHEDD_COLLECT_STATS_FOR_Einstein = (Owner=="einstein")
 
@@ -5218,7 +5218,7 @@ These macros control the *condor_schedd*.
     evaluated string. Each character not permitted in an attribute name
     will be converted to the underscore character. For example,
 
-    ::
+    .. code-block:: condor-config
 
           SCHEDD_COLLECT_STATS_BY_Host = splitSlotName(RemoteHost)[1]
 
@@ -5617,19 +5617,19 @@ These settings affect the *condor_starter*.
     For Bourne type shells (*sh*, *bash*, *ksh*), the last line should
     be:
 
-    ::
+    .. code-block:: bash
 
-                exec "$@"
+        exec "$@"
 
     For the C type shells (*csh*, *tcsh*), the last line should be:
 
-    ::
+    .. code-block:: csh
 
-                exec $*:q
+        exec $*:q
 
     On Windows, the end should look like:
 
-    ::
+    .. code-block:: bat
 
         REM set some environment variables
         set LICENSE_SERVER=192.168.1.202:5012
@@ -5663,13 +5663,13 @@ These settings affect the *condor_starter*.
     may be specified by a relative path, as long as the submit
     description file also contains:
 
-    ::
+    .. code-block:: condor-submit
 
                 +PreserveRelativeExecutable = True
 
     For example,
 
-    ::
+    .. code-block:: condor-submit
 
                 # Let this executable be resolved by user's path in the wrapper
                 cmd = sleep
@@ -5677,7 +5677,7 @@ These settings affect the *condor_starter*.
 
     Without this extra attribute:
 
-    ::
+    .. code-block:: condor-submit
 
                 # A typical fully-qualified executable path
                 cmd = /bin/sleep
@@ -5991,7 +5991,7 @@ condor_submit Configuration File Entries
     submit command. If this variable is not defined, then the default is
     defined by the expression
 
-    ::
+    .. code-block:: text
 
           ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
 
@@ -6243,12 +6243,6 @@ These macros affect the *condor_collector*.
     -  ``CKPT_SERVER_INTERVAL``
     -  ``DEFRAG_UPDATE_INTERVAL``
     -  ``HAD_UPDATE_INTERVAL``
-
-:macro-def:`MASTER_CHECK_INTERVAL`
-    This macro defines how often the collector should check for machines
-    that have ClassAds from some daemons, but not from the
-    *condor_master* (orphaned daemons) and send e-mail about it. It is
-    defined in seconds and defaults to 10800 (3 hours).
 
 :macro-def:`COLLECTOR_REQUIREMENTS`
     A boolean expression that filters out unwanted ClassAd updates. The
@@ -6525,7 +6519,7 @@ These macros affect the *condor_collector*.
     *condor_status* **-any**. The default forwarding behavior of the
     *condor_collector* is equivalent to
 
-    ::
+    .. code-block:: condor-config
 
           CONDOR_VIEW_CLASSAD_TYPES=Machine,Submitter
 
@@ -6730,7 +6724,7 @@ These macros affect the *condor_negotiator*.
     no effect on the ranking of matches. The default value prefers to
     match multi-core jobs to dynamic slots in a best fit manner:
 
-    ::
+    .. code-block:: condor-config
 
           NEGOTIATOR_PRE_JOB_RANK = (10000000 * My.Rank) + \
            (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
@@ -6747,7 +6741,7 @@ These macros affect the *condor_negotiator*.
     administrator to choose between machines that the job ranks equally.
     The default value is
 
-    ::
+    .. code-block:: condor-config
 
           NEGOTIATOR_POST_JOB_RANK = \
            (RemoteOwner =?= UNDEFINED) * \
@@ -6799,7 +6793,7 @@ These macros affect the *condor_negotiator*.
     user with the worst priority. Then, among the running jobs of that
     user, it chooses the job with the least accumulated run time:
 
-    ::
+    .. code-block:: condor-config
 
           PREEMPTION_RANK = (RemoteUserPrio * 1000000) - \
            ifThenElse(isUndefined(TotalJobRunTime), 0, TotalJobRunTime)
@@ -6930,7 +6924,7 @@ These macros affect the *condor_negotiator*.
     ClassAd will be given the prefix ``NegotiatorMatchExpr``, if the
     macro name does not already begin with that. Example:
 
-    ::
+    .. code-block:: condor-config
 
           NegotiatorName = "My Negotiator"
           NEGOTIATOR_MATCH_EXPRS = NegotiatorName
@@ -6939,7 +6933,7 @@ These macros affect the *condor_negotiator*.
     this *condor_negotiator* will contain the following attribute when
     they are sent to the *condor_startd*:
 
-    ::
+    .. code-block:: condor-config
 
           NegotiatorMatchExprNegotiatorName = "My Negotiator"
 
@@ -7038,7 +7032,7 @@ The following configuration macros affect negotiation for group users.
     is defined here must also have a quota, or the group will be
     ignored. Example:
 
-    ::
+    .. code-block:: condor-config
 
             GROUP_NAMES = group_physics, group_chemistry
 
@@ -7049,7 +7043,7 @@ The following configuration macros affect negotiation for group users.
     ``<groupname>``. It is meaningless to specify a non integer value,
     since only integral numbers of machines can be allocated. Example:
 
-    ::
+    .. code-block:: condor-config
 
             GROUP_QUOTA_group_physics = 20
             GROUP_QUOTA_group_chemistry = 10
@@ -7066,7 +7060,7 @@ The following configuration macros affect negotiation for group users.
     of 25% of the total machines are reserved for members of the
     group_biology group.
 
-    ::
+    .. code-block:: condor-config
 
            GROUP_QUOTA_DYNAMIC_group_biology = 0.25
 
@@ -7087,7 +7081,7 @@ The following configuration macros affect negotiation for group users.
     members of the group named group_physics inherit a default user
     priority factor of 2.0:
 
-    ::
+    .. code-block:: condor-config
 
             GROUP_PRIO_FACTOR_group_physics = 2.0
 
@@ -7360,7 +7354,7 @@ These macros affect the *condor_gridmanager*.
     if you want to isolate job going to different remote sites from each
     other, the following expression works:
 
-    ::
+    .. code-block:: condor-config
 
           GRIDMANAGER_SELECTION_EXPR = GridResource
 
@@ -7374,7 +7368,7 @@ These macros affect the *condor_gridmanager*.
     specific to grid types can be set by appending the name of the grid
     type to the configuration variable name, as the example
 
-    ::
+    .. code-block:: condor-config
 
           GRIDMANAGER_JOB_PROBE_INTERVAL_GT5 = 300
 
@@ -7389,7 +7383,7 @@ These macros affect the *condor_gridmanager*.
     be set by appending the name of the grid type to the configuration
     variable name, as the example
 
-    ::
+    .. code-block:: condor-config
 
           GRIDMANAGER_JOB_PROBE_RATE_GT5 = 15
 
@@ -7413,7 +7407,7 @@ These macros affect the *condor_gridmanager*.
     specify limits for specific remote resources. Each pair is a host
     name and the job limit for that host. Consider the example:
 
-    ::
+    .. code-block:: condor-config
 
           GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE = 200, foo.edu, 50, bar.com, 100
 
@@ -7425,7 +7419,7 @@ These macros affect the *condor_gridmanager*.
     Limits specific to grid types can be set by appending the name of
     the grid type to the configuration variable name, as the example
 
-    ::
+    .. code-block:: condor-config
 
           GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
 
@@ -7784,9 +7778,9 @@ These macros affect the *condor_job_router* daemon.
     ``RoutedBy`` from the old name to the new name. The following
     commands may be helpful:
 
-    ::
+    .. code-block:: console
 
-        condor_qedit -constraint 'RoutedToJobId =!= undefined && \
+        $ condor_qedit -constraint 'RoutedToJobId =!= undefined && \
           ManagedManager == "insert_old_name"' \
           ManagedManager '"insert_new_name"'
         condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
@@ -7873,14 +7867,14 @@ These macros affect the *condor_lease_manager*.
 
 The *condor_lease_manager* expects to use the syntax
 
-::
+.. code-block:: text
 
      <subsystem name>.<parameter name>
 
 in configuration. This allows multiple instances of the
 *condor_lease_manager* to be easily configured using the syntax
 
-::
+.. code-block:: text
 
      <subsystem name>.<local name>.<parameter name>
 
@@ -8478,14 +8472,14 @@ Log files
        file is unique for each DAG.** Therefore, the value should always
        include ``@(DAG_FILE)``. For example,
 
-       ::
+       .. code-block:: condor-config
 
              DAGMAN_DEFAULT_NODE_LOG = $(LOCAL_DIR)/log/@(DAG_FILE).nodes.log
 
 
        is okay, but
 
-       ::
+       .. code-block:: condor-config
 
              DAGMAN_DEFAULT_NODE_LOG = $(LOCAL_DIR)/log/dag.nodes.log
 
@@ -8684,13 +8678,13 @@ HTCondor attributes
     exit, consider changing to a less restrictive expression, as in the
     example
 
-    ::
+    .. code-block:: condor-classad-expr
 
           (ExitBySignal == false || ExitSignal =!= 9)
 
     If not defined, ``DAGMAN_ON_EXIT_REMOVE`` defaults to the expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 
@@ -8825,7 +8819,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
     ``GSI_DAEMON_DIRECTORY`` to construct the path and file name as
 
-    ::
+    .. code-block:: condor-config
 
           GSI_DAEMON_CERT  = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
 
@@ -8836,7 +8830,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
     ``GSI_DAEMON_DIRECTORY`` to construct the path and file name as
 
-    ::
+    .. code-block:: condor-config
 
           GSI_DAEMON_KEY  = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
 
@@ -8849,7 +8843,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     defined, and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
     ``GSI_DAEMON_DIRECTORY`` to construct the directory path as
 
-    ::
+    .. code-block:: condor-config
 
           GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
 
@@ -8960,7 +8954,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     explicitly set a short duration for tools and *condor_submit* and a
     longer duration for everything else:
 
-    ::
+    .. code-block:: condor-config
 
         SEC_DEFAULT_SESSION_DURATION = 50000
         TOOL.SEC_DEFAULT_SESSION_DURATION = 60
@@ -8969,7 +8963,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     Another example of how to safely change the session duration is to
     explicitly set the session duration for a specific daemon:
 
-    ::
+    .. code-block:: condor-config
 
         COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 
@@ -9320,7 +9314,7 @@ machine within the pool. They specify items related to the
     A string describing the type of networking, required and relevant
     only when ``VM_NETWORKING`` is ``True``. Defined strings are
 
-    ::
+    .. code-block:: text
 
             bridge
             nat
@@ -9332,7 +9326,7 @@ machine within the pool. They specify items related to the
     this optional configuration variable identifies which to use.
     Therefore, for
 
-    ::
+    .. code-block:: condor-config
 
           VM_NETWORKING_TYPE = nat, bridge
 
@@ -9434,7 +9428,7 @@ These macros affect the high availability operation of HTCondor.
     :ref:`admin-manual/introduction-to-configuration:pre-defined macros`).
     For example,
 
-    ::
+    .. code-block:: condor-config
 
                 MASTER_HA_LIST = SCHEDD
 
@@ -9461,7 +9455,7 @@ These macros affect the high availability operation of HTCondor.
     Availability *condor_schedd* processes sharing it, and setting the
     ``HA_LOCK_URL`` to point at this directory as well. For example:
 
-    ::
+    .. code-block:: condor-config
 
                 MASTER_HA_LIST = SCHEDD
                 SPOOL = /share/spool
@@ -9538,7 +9532,7 @@ These macros affect the high availability operation of HTCondor.
     configurations using *condor_had*. To configure the
     *condor_negotiator* controlled by *condor_had*:
 
-    ::
+    .. code-block:: condor-config
 
         MASTER_NEGOTIATOR_CONTROLLER = HAD
 
@@ -9585,7 +9579,7 @@ These macros affect the high availability operation of HTCondor.
     the *condor_had* daemon requires the port number it is to use. This
     argument is of the form
 
-    ::
+    .. code-block:: text
 
            -p $(HAD_PORT_NUMBER)
 
@@ -9627,7 +9621,7 @@ These macros affect the high availability operation of HTCondor.
     A full path and file name of the file protected by the replication
     mechanism. When not defined, the default path and file used is
 
-    ::
+    .. code-block:: console
 
           $(SPOOL)/Accountantnew.log
 
@@ -9659,7 +9653,7 @@ These macros affect the high availability operation of HTCondor.
     work, the *condor_replication* daemon requires the port number it
     is to use. This argument is of the form
 
-    ::
+    .. code-block:: text
 
           -p $(REPLICATION_PORT_NUMBER)
 
@@ -9987,7 +9981,7 @@ see :ref:`admin-manual/networking:reducing port usage with the
     non-default port number for the *condor_shared_port* daemon as in
     this example, which specifies port 4080:
 
-    ::
+    .. code-block:: condor-config
 
           SHARED_PORT_ARGS = -p 4080
 
@@ -10172,7 +10166,7 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     configuration macro names. This macro made other Daemon ClassAd Hook
     macros more readable and maintainable. A common example was
 
-    ::
+    .. code-block:: condor-config
 
            STARTD_CRON_NAME = HAWKEYE
 
@@ -10308,7 +10302,7 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     For example, if your custom resources are SQUIDs, and you detected
     four of them, your monitor might output the following:
 
-    ::
+    .. code-block:: text
 
         SlotMergeConstraint = StringListMember( "SQUID0", AssignedSQUIDs )
         UptimeSQUIDsSeconds = 5.0
@@ -10333,7 +10327,7 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
 
     You might specify the monitor in the example above as follows:
 
-    ::
+    .. code-block:: condor-config
 
         MACHINE_RESOURCE_INVENTORY_SQUIDs = /usr/local/bin/cmr-squid-discovery
 
@@ -10536,7 +10530,7 @@ general discussion of *condor_defrag* may be found in
 :macro-def:`DEFRAG_REQUIREMENTS`
     An expression that specifies which machines to drain. The default is
 
-    ::
+    .. code-block:: condor-classad-expr
 
           PartitionableSlot && Offline=!=True
 
@@ -10565,7 +10559,7 @@ general discussion of *condor_defrag* may be found in
     An expression that specifies which machines are already operating as
     whole machines. The default is
 
-    ::
+    .. code-block:: condor-classad-expr
 
           Cpus == TotalCpus && Offline=!=True
 
@@ -10709,7 +10703,7 @@ has.
     ``localhost`` to be the appropriate host name or IP address within
     this default string:
 
-    ::
+    .. code-block:: text
 
           gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 

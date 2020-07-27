@@ -491,7 +491,7 @@ class RemoteErrorEvent : public ULogEvent
 	void setExecuteHost(char const *host);
 	char const *getExecuteHost(void) {return execute_host;}
 
-	bool isCriticalError(void) {return critical_error;}
+	bool isCriticalError(void) const {return critical_error;}
 	void setCriticalError(bool f);
 
 	void setHoldReasonCode(int hold_reason_code);
@@ -1604,7 +1604,7 @@ public:
 
 		/** This flag defaults to true, and is set to false if a
 			NoReconnectReason is specified for the event */
-	bool canReconnect( void ) {return can_reconnect; };
+	bool canReconnect( void ) const {return can_reconnect; };
 
 private:
 	char *startd_addr;
@@ -2275,7 +2275,7 @@ class FileTransferEvent : public ULogEvent {
 		FileTransferEventType getType() const { return type; }
 
 		void setQueueingDelay( time_t duration ) { queueingDelay = duration; }
-		time_t getQueueingDelay() { return queueingDelay; }
+		time_t getQueueingDelay() const { return queueingDelay; }
 
 		void setHost( const std::string & h) { host = h; }
 		const std::string & getHost() { return host; }

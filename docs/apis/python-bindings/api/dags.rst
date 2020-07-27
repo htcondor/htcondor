@@ -17,6 +17,10 @@ Creating DAGs
    :members:
 
 .. autoclass:: WalkOrder
+   :members:
+
+   .. autoattribute:: BREADTH_FIRST
+   .. autoattribute:: DEPTH_FIRST
 
 
 Nodes and Node-likes
@@ -26,12 +30,16 @@ Nodes and Node-likes
    :members:
 
 .. autoclass:: NodeLayer
+   :show-inheritance:
    :members:
 
 .. autoclass:: SubDAG
+   :show-inheritance:
    :members:
 
 .. autoclass:: FinalNode
+   :show-inheritance:
+   :members:
 
 .. autoclass:: Nodes
    :members:
@@ -39,6 +47,9 @@ Nodes and Node-likes
 
 Edges
 +++++
+
+.. autoclass:: BaseEdge
+   :members:
 
 .. autoclass:: OneToOne
 .. autoclass:: ManyToMany
@@ -60,6 +71,7 @@ Writing a DAG to Disk
 .. autofunction:: write_dag
 
 .. autoclass:: NodeNameFormatter
+   :members:
 
 .. autoclass:: SimpleFormatter
 
@@ -74,6 +86,11 @@ DAG Configuration
 
 Rescue DAGs
 -----------
+
+:mod:`htcondor.dags` can read information from a DAGMan rescue file and apply
+it to your DAG as it is being constructed.
+
+See :ref:`rescue-dags` for more information on Rescue DAGs.
 
 .. autofunction:: rescue
 

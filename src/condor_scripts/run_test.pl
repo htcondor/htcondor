@@ -364,9 +364,33 @@ sub DoChild
         print "run_test $$: $testname is python, checking python bindings\n";
         SetupPythonPath();
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
-        $perl = "python";
+        $perl = "python3";
+
+        if ($iswindows) {
+            my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
+
+            # use 32 bit python if we have a 32 bit htcondor python module
+            my $reldir = `condor_config_val release_dir`; chomp $reldir;
+            my $relpy = "$reldir\\lib\\python";
+            if( -f "$relpy\\htcondor\\htcondor.cp36-win32.pyd" ) {
+                $regkey = "HKLM\\Software\\wow6432node\\Python\\PythonCore\\3.6\\InstallPath" 
+            }
+
+            my @reglines = `reg query $regkey /ve`;
+            for my $line (@reglines) {
+                if ($line =~ /REG_SZ\s+(.+)$/) {
+                    print "\tfound python 3.6 install dir : '$1'\n";
+                   	# Since we're using the full path, 'python.exe' will
+                   	# always by the right Python version, and some of the
+                   	# installs don't have a 'python3.exe'.
+                    $perl = "$1python.exe";
+                    last;
+                }
+            }
+        }
+
         print "\tPython version: ";
-        system ("python --version");
+        system ("$perl --version");
     }
     elsif (exists($needs->{pytest})) {
         print "run_test $$: $testname is pytest, checking python bindings and pytest\n";
@@ -584,7 +608,7 @@ sub StopTestPersonal {
 sub SetupPythonPath {
     my $reldir = `condor_config_val release_dir`; chomp $reldir;
     my $pathsep = ':';
-    my $relpy = "$reldir/lib/python";
+    my $relpy = "$reldir/lib/python3";
     if ($iswindows) { $relpy = "$reldir\\lib\\python"; $pathsep = ';'; }
 
     # debug code, show what is in release dir and lib and lib/python

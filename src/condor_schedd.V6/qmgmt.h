@@ -55,7 +55,7 @@ class QmgmtPeer {
 
 		bool setEffectiveOwner(char const *o);
 		bool setAllowProtectedAttrChanges(bool val);
-		bool getAllowProtectedAttrChanges() { return allow_protected_attr_changes_by_superuser; }
+		bool getAllowProtectedAttrChanges() const { return allow_protected_attr_changes_by_superuser; }
 		bool setReadOnly(bool val);
 		bool getReadOnly() const { return readonly; }
 
@@ -198,8 +198,8 @@ public:
 
 	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
 
-	int  Universe() { return universe; }
-	int  Status() { return status; }
+	int  Universe() const { return universe; }
+	int  Status() const { return status; }
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
@@ -250,9 +250,9 @@ public:
 	// NumProcs is a copy of the count of procs in the ClusterSizeHashTable.
 	// it will differ from the number of attached jobs when a createproc or destroyproc
 	// has been started but the transaction has not yet been committed.
-	int ClusterSize() { return cluster_size; }
+	int ClusterSize() const { return cluster_size; }
 	int SetClusterSize(int _cluster_size) { cluster_size = _cluster_size; return cluster_size; }
-	int getNumNotRunning() { return num_idle + num_held; }
+	int getNumNotRunning() const { return num_idle + num_held; }
 
 	bool HasAttachedJobs() { return ! qe.empty(); }
 	void AttachJob(JobQueueJob * job);
@@ -363,6 +363,7 @@ ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan)
 typedef unsigned int SetAttributeFlags_t;
 const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
 const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
+const SetAttributeFlags_t SetAttribute_Delete              = (1 << 18);
 
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
@@ -492,7 +493,7 @@ public:
 	TransactionWatcher(const TransactionWatcher&) = delete;
 	TransactionWatcher& operator=(const TransactionWatcher) = delete;
 
-	bool InTransaction() { return started && ! completed; }
+	bool InTransaction() const { return started && ! completed; }
 
 	// start a transaction, or continue one if we already started it
 	int BeginOrContinue(int id);
@@ -505,7 +506,7 @@ public:
 
 	// return the range of ids passed to BeginOrContinue
 	// returns true if ids were set.
-	bool GetIdRange(int & first, int & last) {
+	bool GetIdRange(int & first, int & last) const {
 		if (! started) return false;
 		first = firstid;
 		last = lastid;

@@ -72,7 +72,7 @@ seconds at each step. It writes a checkpoint file (containing the next number)
 after each nap, and exits with code 85 at count 3, 6, and 9. It exits
 with code 0 when complete.
 
-::
+.. code-block:: python
 
     #!/usr/bin/env python
 
@@ -108,7 +108,7 @@ in ``transfer_output_files``; otherwise HTCondor will not transfer it
 ``transfer_checkpoint_files``, as documented on
 the :doc:`/man-pages/condor_submit` man page.
 
-::
+.. code-block:: condor-submit
 
     checkpoint_exit_code        = 85
     transfer_output_files       = 85.checkpoint
@@ -190,26 +190,35 @@ For example, if your job is ID 635.0, and is logging to the file
 ``job.log``, you can copy the files in the checkpoint to a subdirectory of
 the current as follows:
 
-::
+.. code-block:: console
 
-    condor_vacate_job 635.0
+    $ condor_vacate_job 635.0
 
-    # Wait for the job to finish being evicted;
-    # hit CTRL-C when you see 'Job was evicted.'
-    tail --follow job.log
-    condor_hold 635.0
+Wait for the job to finish being evicted;
+hit CTRL-C when you see 'Job was evicted.'
+and immediately hold the job.
 
-    # Copy the checkpoint files from the spool.
-    # Note that _condor_stderr and _condor_stdout are the files corresponding
-    # to the job's output and error submit commands; they aren't named
-    # correctly until the the job finishes.
-    cp -a `condor_config_val SPOOL`/635/0/cluster635.proc0.subproc0 .
+.. code-block:: console
 
-    # Now examine the checkpoint files to see if they look right.
+    $ tail --follow job.log
+    $ condor_hold 635.0
 
-    # When you're done, release the job to see if it actually works right.
-    condor_release 635.0
-    condor_ssh_to_job 635.0
+Copy the checkpoint files from the spool.
+Note that _condor_stderr and _condor_stdout are the files corresponding
+to the job's output and error submit commands; they aren't named
+correctly until the the job finishes.
+
+.. code-block:: console
+
+    $ cp -a `condor_config_val SPOOL`/635/0/cluster635.proc0.subproc0 .
+
+Now examine the checkpoint files to see if they look right.
+When you're done, release the job to see if it actually works right.
+
+.. code-block:: console
+
+    $ condor_release 635.0
+    $ condor_ssh_to_job 635.0
 
 Working Around the Assumptions
 ------------------------------

@@ -47,7 +47,7 @@ Scheduler::~Scheduler()
 	m_consumer = NULL;
 }
 
-classad::ClassAdCollection *Scheduler::GetClassAds()
+classad::ClassAdCollection *Scheduler::GetClassAds() const
 {
 	return m_consumer->GetClassAds();
 }
@@ -56,7 +56,7 @@ void Scheduler::init() { m_mirror->init(); }
 void Scheduler::config() { m_mirror->config(); }
 void Scheduler::stop()  { m_mirror->stop(); }
 void Scheduler::poll()  { m_mirror->poll(); }
-int  Scheduler::id() { return m_id; }
+int  Scheduler::id() const { return m_id; }
 
 
 //-------------------------------------------------------------

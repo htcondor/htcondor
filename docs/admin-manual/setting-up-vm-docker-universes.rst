@@ -56,7 +56,7 @@ machine must be specified with the ``VM_TYPE`` :index:`VM_TYPE`
 variable. For now, only one type can be utilized per machine. For
 instance, the following tells HTCondor to use VMware:
 
-::
+.. code-block:: condor-config
 
     VM_TYPE = vmware
 
@@ -64,7 +64,7 @@ The location of the *condor_vm-gahp* and its log file must also be
 specified on the execute machine. On a Windows installation, these
 options would look like this:
 
-::
+.. code-block:: condor-config
 
     VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
     VM_GAHP_LOG = $(LOG)/VMGahpLog
@@ -75,7 +75,7 @@ VMware-Specific Configuration
 To use VMware, identify the location of the *Perl* executable on the
 execute machine. In most cases, the default value should suffice:
 
-::
+.. code-block:: condor-config
 
     VMWARE_PERL = perl
 
@@ -90,7 +90,7 @@ are jobs that do not have
 set to ``False``. Here is an example modification to the ``START``
 expression.
 
-::
+.. code-block:: condor-config
 
     START = ($(START)) && (!(TARGET.VMPARAM_VMware_SnapshotDisk =?= TRUE))
 
@@ -99,7 +99,7 @@ script used by the *condor_vm-gahp* on the execute machine to talk to
 the virtual machine hypervisor. It is located in HTCondor's ``sbin``
 directory:
 
-::
+.. code-block:: condor-config
 
     VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
 
@@ -110,7 +110,7 @@ HTCondor tries to run a **vm** universe VMware job using a path to a VMX
 file that contains a symbolic link. An example of an error message that
 may appear in such a job's event log:
 
-::
+.. code-block:: text
 
     Error from starter on master_vmuniverse_strtd@nostos.cs.wisc
     .edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con
@@ -139,9 +139,9 @@ Xen-Specific and KVM-Specific Configuration
 Once the configuration options have been set, restart the
 *condor_startd* daemon on that host. For example:
 
-::
+.. code-block:: console
 
-    > condor_restart -startd leovinus
+    $ condor_restart -startd leovinus
 
 The *condor_startd* daemon takes a few moments to exercise the VM
 capabilities of the *condor_vm-gahp*, query its properties, and then
@@ -149,9 +149,9 @@ advertise the machine to the pool as VM-capable. If the set up
 succeeded, then *condor_status* will reveal that the host is now
 VM-capable by printing the VM type and the version number:
 
-::
+.. code-block:: console
 
-    > condor_status -vm leovinus
+    $ condor_status -vm leovinus
 
 After a suitable amount of time, if this command does not give any
 output, then the *condor_vm-gahp* is having difficulty executing the VM
@@ -253,7 +253,7 @@ machine.
 
 For example,
 
-::
+.. code-block:: condor-config
 
     DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
     DOCKER_VOLUME_DIR_SOME_DIR = /path1
@@ -280,7 +280,7 @@ class ad expression, evaluated in the context of the job ad and the
 machine ad. Only when it evaluted to TRUE, is the volume mounted.
 Extending the above example,
 
-::
+.. code-block:: condor-config
 
     DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
     DOCKER_VOLUME_DIR_SOME_DIR = /path1
@@ -307,38 +307,38 @@ Enterprise Linux machine.
    the installations instructions from docker.com
 #. Set up the groups:
 
-   ::
+   .. code-block:: console
 
-         usermod -aG docker condor
+        $ usermod -aG docker condor
 
 #. Invoke the docker software:
 
-   ::
+   .. code-block:: console
 
-         systemctl start docker
-         systemctl enable docker
+         $ systemctl start docker
+         $ systemctl enable docker
 
 #. Reconfigure the execute machine, such that it can set the machine
    ClassAd attribute ``HasDocker``:
 
-   ::
+   .. code-block:: console
 
-         condor_reconfig
+         $ condor_reconfig
 
 #. Check that the execute machine properly advertises that it is
    docker-capable with:
 
-   ::
+   .. code-block:: console
 
-         condor_status -l | grep -i docker
+         $ condor_status -l | grep -i docker
 
    The output of this command line for a correctly-installed and
    docker-capable execute host will be similar to
 
-   ::
+   .. code-block:: condor-classad
 
-         HasDocker = true
-         DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
+        HasDocker = true
+        DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
 
 By default, HTCondor will keep the 8 most recently used Docker images
 on the local machine. This number may be controlled with the
@@ -368,8 +368,8 @@ reading or executing from the condor scratch directory. To fix this
 problem, an administrator will need to run the following command as root
 on the execute directories for all the startd machines:
 
-::
+.. code-block:: console
 
-    # chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
+    $ chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
 
 

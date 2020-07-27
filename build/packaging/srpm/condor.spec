@@ -404,6 +404,8 @@ Requires: python2-condor
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3-requests
 %endif
+Requires: python3-condor
+
 
 # Useful tools are using the Python bindings
 Requires: python3-condor

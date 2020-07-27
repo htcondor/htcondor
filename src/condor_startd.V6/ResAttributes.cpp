@@ -946,7 +946,7 @@ void MachAttributes::init_machine_resources() {
 }
 
 void
-MachAttributes::final_idle_dprintf()
+MachAttributes::final_idle_dprintf() const
 {
 	if (m_idle_interval >= 0) {
 		time_t my_timer = time(0);
@@ -1476,7 +1476,7 @@ CpuAttributes::reconfig_DevIds(int slot_id, int slot_sub_id) // release non-fung
 }
 
 void
-CpuAttributes::publish_dynamic(ClassAd* cp)
+CpuAttributes::publish_dynamic(ClassAd* cp) const
 {
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
 		cp->Assign( ATTR_DISK, c_disk );

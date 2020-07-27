@@ -56,7 +56,7 @@ DCMsg::setDeadlineTimeout(int timeout)
 }
 
 bool
-DCMsg::getDeadlineExpired()
+DCMsg::getDeadlineExpired() const
 {
 	if( m_deadline && m_deadline < time(NULL) ) {
 		return true;

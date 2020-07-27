@@ -574,6 +574,10 @@ ResState::eval_policy( void )
 		if( r_act == retiring_act ) {
 			if( resmgr->drainingIsComplete( rip ) ) {
 				resmgr->resetMaxJobRetirementTime();
+				// Only do this here if we want last drain stop time to be
+				// when the draining finished and not when it was cancelled
+				// (if it didn't auto-resume).
+				// resmgr->setLastDrainStopTime();
 				dprintf(D_ALWAYS,"State change: draining is complete.\n");
 				// TLM: STATE TRANSITION #33
 				change( drained_state, idle_act );
@@ -582,6 +586,9 @@ ResState::eval_policy( void )
 		}
 		else if( r_act == idle_act ) {
 			if( resmgr->considerResumingAfterDraining() ) {
+				// Only do this if we don't do it above, when the draining
+				// actually completes.
+				resmgr->setLastDrainStopTime();
 				return TRUE;
 			}
 		}
@@ -1310,7 +1317,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 }
 
 int
-ResState::activityTimeElapsed()
+ResState::activityTimeElapsed() const
 {
 	return time(NULL) - m_atime;
 }

@@ -60,13 +60,13 @@ is a list of items that administrators should be aware of.
 
    For pools with fair-share only:
 
-   ::
+   .. code-block:: condor-classad-expr
 
          RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2
 
    For pools with groups and quotas:
 
-   ::
+   .. code-block:: condor-classad-expr
 
          (SubmitterGroupResourcesInUse < SubmitterGroupQuota) && (RemoteGroupResourcesInUse > RemoteGroupQuota)
 

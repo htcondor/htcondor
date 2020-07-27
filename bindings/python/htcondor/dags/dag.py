@@ -30,6 +30,13 @@ logger.setLevel(logging.DEBUG)
 
 
 class DotConfig:
+    """
+    A :class:`DotConfig` holds the configuration options for whether and how
+    DAGMan will produce a DOT file representing its execution graph.
+
+    See :ref:`visualizing-dags-with-dot` for more information.
+    """
+
     def __init__(
         self,
         path: Path,
@@ -37,6 +44,20 @@ class DotConfig:
         overwrite: bool = True,
         include_file: Optional[Path] = None,
     ):
+        """
+        Parameters
+        ----------
+        path
+            The path to write the DOT file to.
+        update
+            If ``True``, the DOT file will be updated as the DAG executes.
+            If ``False``, it will be written once at startup.
+        overwrite
+            If ``True``, the DOT file will be updated in-place.
+            If ``False``, new DOT files will be created next to the original.
+        include_file
+            Include the contents of the file at this path in the DOT file.
+        """
         self.path = Path(path)
         self.update = update
         self.overwrite = overwrite
@@ -47,12 +68,31 @@ class DotConfig:
 
 
 class NodeStatusFile:
+    """
+    A :class:`NodeStatusFile` holds the configuration options for whether and how
+    DAGMan will write a file containing node status information.
+
+    See :ref:`node-status-file` for more information.
+    """
+
     def __init__(
         self,
         path: Path,
         update_time: Optional[int] = None,
         always_update: Optional[bool] = False,
     ):
+        """
+
+        Parameters
+        ----------
+        path
+            The path to write the node status file to.
+        update_time
+            The minimum interval to write new information to the node status file.
+        always_update
+            Always update the node status file after the ``update_time``, even
+            if there are no changes from the previous update.
+        """
         self.path = Path(path)
         self.update_time = update_time
         self.always_update = always_update
@@ -81,7 +121,9 @@ def _check_node_name_uniqueness(func):
 
 class DAG:
     """
-    This object represents the execution graph.
+    This object represents the entire DAGMan workflow, including both the
+    execution graph and miscellaneous configuration options.
+
     It contains the individual :class:`NodeLayer` and :class:`SubDAG` that are
     the "logical" nodes in the graph, created by the :meth:`layer` and
     :meth:`subdag` methods respectively.
@@ -108,14 +150,14 @@ class DAG:
             A mapping that describes the maximum number of jobs (values) that
             should be run simultaneously from each category (keys).
         dot_config
-            A :class:`DotConfig` that tells DAGMan how to write out DOT files
-            that describe the state of the DAG.
+            Configuration options for writing a DOT file,
+            as a :class:`DotConfig`.
         jobstate_log
             The path to the jobstate log. If not given, the jobstate log will
             not be written.
         node_status_file
-            The path to the node status file. If not given, the node status file
-            will not be written.
+            Configuration options for the node status file,
+            as a :class:`NodeStatusFile`.
         """
         self._nodes = NodeStore()
         self._edges = EdgeStore()
@@ -131,9 +173,11 @@ class DAG:
     def walk(self, order: WalkOrder = WalkOrder.DEPTH_FIRST) -> Iterator[node.BaseNode]:
         """
         Iterate over all of the nodes in the DAG, starting from the roots
-        (i.e., nodes with no parents), in some sensible order.
+        (i.e., the nodes with no parents),
+        in either depth-first or breadth-first order.
 
-        Sibling order is not specified.
+        Sibling order is not specified,
+        and may be different in different calls to this method.
 
         Parameters
         ----------
@@ -151,9 +195,11 @@ class DAG:
         """
         Iterate over all of the ancestors
         (i.e., parents, parents of parents, etc.)
-        of some node, in some sensible order.
+        of some node,
+        in either depth-first or breadth-first order.
 
-        Sibling order is not specified.
+        Sibling order is not specified,
+        and may be different in different calls to this method.
 
         Parameters
         ----------
@@ -176,9 +222,11 @@ class DAG:
         """
         Iterate over all of the descendants
         (i.e., children, children of children, etc.)
-        of some node, in some sensible order.
+        of some node,
+        in either depth-first or breadth-first order.
 
-        Sibling order is not specified.
+        Sibling order is not specified,
+        and may be different in different calls to this method.
 
         Parameters
         ----------
@@ -196,6 +244,7 @@ class DAG:
         )
 
     def _walk(self, initial_stack, add_to_stack, order):
+        """Private helper method for public walk* methods."""
         seen = set()
         stack = collections.deque(initial_stack)
 
@@ -220,7 +269,10 @@ class DAG:
     def edges(
         self,
     ) -> Iterator[Tuple[Tuple[node.BaseNode, node.BaseNode], edges.BaseEdge]]:
-        """Iterate over ``((parent, child), edge)`` tuples."""
+        """
+        Iterate over ``((parent, child), edge)`` tuples,
+        for every edge in the graph.
+        """
         yield from self._edges
 
     def __contains__(self, node) -> bool:
@@ -228,14 +280,20 @@ class DAG:
 
     @_check_node_name_uniqueness
     def layer(self, **kwargs) -> node.NodeLayer:
-        """Create a new :class:`NodeLayer` in the graph with no parents or children."""
+        """
+        Create a new :class:`NodeLayer` in the graph with no parents or children.
+        Keyword arguments are forwarded to :class:`NodeLayer`.
+        """
         n = node.NodeLayer(dag=self, **kwargs)
         self._nodes.add(n)
         return n
 
     @_check_node_name_uniqueness
     def subdag(self, **kwargs) -> node.SubDAG:
-        """Create a new :class:`SubDAG` in the graph with no parents or children."""
+        """
+        Create a new :class:`SubDAG` in the graph with no parents or children.
+        Keyword arguments are forwarded to :class:`SubDAG`.
+        """
         n = node.SubDAG(dag=self, **kwargs)
         self._nodes.add(n)
         return n
@@ -246,20 +304,28 @@ class DAG:
         Create the ``FINAL`` node of the DAG.
         A DAG can only have one ``FINAL`` node; if you call this method multiple
         times, it will override any previous calls.
-        Instead, mutate the :class:`FinalNode` instance that it returns.
+        To customize the ``FINAL`` node after creation,
+        modify the :class:`FinalNode` instance that it returns.
         """
         n = node.FinalNode(dag=self, **kwargs)
         self._final_node = n
         return n
 
     def select(self, selector: Callable[[node.BaseNode], bool]) -> node.Nodes:
-        """Return a :class:`Nodes` of the nodes in the DAG that satisfy ``selector``."""
+        """
+        Return a :class:`Nodes` of the nodes in the DAG that satisfy ``selector``.
+        ``selector`` should be a function which takes a single :class:`BaseNode`
+        and returns ``True`` (will be included) or ``False`` (will not be included).
+        """
         return node.Nodes(
             *(node for name, node in self._nodes.items() if selector(node))
         )
 
     def glob(self, pattern: str) -> node.Nodes:
-        """Return a :class:`Nodes` of the nodes in the DAG whose names match the glob ``pattern``."""
+        """
+        Return a :class:`Nodes` of the nodes in the DAG
+        whose names match the glob ``pattern``.
+        """
         return self.select(lambda node: fnmatch.fnmatchcase(node.name, pattern))
 
     @property
@@ -295,7 +361,7 @@ class DAG:
 
     @property
     def roots(self) -> node.Nodes:
-        """Return a :class:`Nodes` of the nodes in the DAG that have no parents."""
+        """A :class:`Nodes` of the nodes in the DAG that have no parents."""
         return node.Nodes(
             child
             for child, parents in self.node_to_parents.items()
@@ -304,7 +370,7 @@ class DAG:
 
     @property
     def leaves(self) -> node.Nodes:
-        """Return a :class:`Nodes` of the nodes in the DAG that have no children."""
+        """A :class:`Nodes` of the nodes in the DAG that have no children."""
         return node.Nodes(
             parent
             for parent, children in self.node_to_children.items()

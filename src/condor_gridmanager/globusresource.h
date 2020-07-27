@@ -46,7 +46,7 @@ class GlobusResource : public BaseResource
 	void Reconfig();
 	void UnregisterJob( BaseJob *job );
 
-	bool IsGt5() { return m_isGt5; }
+	bool IsGt5() const { return m_isGt5; }
 
 	bool RequestJM( GlobusJob *job, bool is_submit );
 	void JMComplete( GlobusJob *job );
@@ -54,9 +54,9 @@ class GlobusResource : public BaseResource
 	int GetJMLimit( bool for_submit )
 		{ return for_submit ? submitJMLimit : restartJMLimit; };
 
-	bool GridJobMonitorActive() { return monitorActive; }
-	int LastGridJobMonitorUpdate() { return jobStatusFileLastUpdate; }
-	bool GridMonitorFirstStartup() { return monitorFirstStartup; }
+	bool GridJobMonitorActive() const { return monitorActive; }
+	int LastGridJobMonitorUpdate() const { return jobStatusFileLastUpdate; }
+	bool GridMonitorFirstStartup() const { return monitorFirstStartup; }
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,

@@ -37,6 +37,7 @@
 #include "MyString.h"
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
+#include "dagman_classad.h"
 
 #include <queue>
 
@@ -136,7 +137,8 @@ class Dag {
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
-		 bool isSplice = false, const MyString &spliceScope = "root" );
+		 bool isSplice = false, DCSchedd *schedd = NULL,
+		 const MyString &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -477,6 +479,17 @@ class Dag {
 		*/
 	bool StartFinalNode();
 
+		/** Start the DAG's provisioner node if there is one.
+			@return true iff the provisioner node was actually started.
+		*/
+	bool StartProvisionerNode();
+
+		/** Get the status of the provisioner by querying the schedd and
+		    checking its job ad.
+			@return status of the provisioner
+		*/
+	MyString GetProvisionerJobAdState();
+
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
@@ -566,7 +579,7 @@ class Dag {
 	void SetDotIncludeFileName(const char *include_file_name);
 	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
-	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
+	bool GetDotFileUpdate(void) const                       { return _update_dot_file; }
 	void DumpDotFile(void);
 
 	void SetNodeStatusFileName( const char *statusFileName,
@@ -654,33 +667,33 @@ class Dag {
 		*/
 	void CheckThrottleCats();
 
-	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
+	int MaxJobsSubmitted(void) const { return _maxJobsSubmitted; }
 
-	bool UseDagDir(void) { return _useDagDir; }
+	bool UseDagDir(void) const { return _useDagDir; }
 
-	int MaxIdleJobProcs(void) { return _maxIdleJobProcs; }
-	int MaxPreScripts(void) { return _maxPreScripts; }
-	int MaxPostScripts(void) { return _maxPostScripts; }
+	int MaxIdleJobProcs(void) const { return _maxIdleJobProcs; }
+	int MaxPreScripts(void) const { return _maxPreScripts; }
+	int MaxPostScripts(void) const { return _maxPostScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
 	void SetMaxJobsSubmitted(int newMax);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
 
-	bool RetrySubmitFirst(void) { return m_retrySubmitFirst; }
+	bool RetrySubmitFirst(void) const { return m_retrySubmitFirst; }
 
-	bool RetryNodeFirst(void) { return m_retryNodeFirst; }
+	bool RetryNodeFirst(void) const { return m_retryNodeFirst; }
 
 	// do not free this pointer
 	const char* CondorRmExe(void) { return _condorRmExe; }
 
 	const CondorID* DAGManJobId(void) { return _DAGManJobId; }
 
-	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
+	bool SubmitDepthFirst(void) const { return _submitDepthFirst; }
 
 	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
-	bool GenerateSubdagSubmits(void) { return _generateSubdagSubmits; }
+	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
@@ -806,19 +819,9 @@ class Dag {
 	*/
 	bool IsHalted() const { return _dagIsHalted; }
 
-	enum dag_status {
-		DAG_STATUS_OK = 0,
-		DAG_STATUS_ERROR = 1, // Error not enumerated below
-		DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
-		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
-		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
-		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
-		DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
-	};
+	DagStatus _dagStatus;
 
-	dag_status _dagStatus;
-
-	// WARNING!  dag_status and dag_status_names just be kept in sync!
+	// WARNING!  DagStatus and _dag_status_names just be kept in sync!
 	static const char *_dag_status_names[];
 
 	const char *GetStatusName() const {
@@ -835,7 +838,7 @@ class Dag {
 		running (or has been run).
 		@return true iff the final node is running or has been run
 	*/
-	inline bool FinalNodeRun() { return _finalNodeRun; }
+	inline bool FinalNodeRun() const { return _finalNodeRun; }
 
 	/** Determine whether this DAG has a provisioner node.
 		@return true iff the DAG has a provisioner node.
@@ -987,7 +990,7 @@ class Dag {
 		// earlier in the submit command's stdout (which we stashed in
 		// the Job object)
 
-	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
+	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const;
 
 		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
@@ -1065,7 +1068,11 @@ private:
 		// for convenience.
 	Job* _final_job;
 
-	Job* _provisioner_node;
+	Job* _provisioner_node = NULL;
+
+	ProvisionerClassad* _provisionerClassad = NULL;
+
+	bool _provisioner_ready = false;
 
 	HashTable<MyString, Job *>		_nodeNameHash;
 
@@ -1356,6 +1363,9 @@ private:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
 	mutable ListIterator<Job> *_allNodesIt;
+
+		// The schedd we need to talk to to update the classad.
+	DCSchedd *_schedd;
 };
 
 #endif /* #ifndef DAG_H */

@@ -154,7 +154,7 @@ class CollectorEngine : public Service
 
 	void  housekeeper ();
 	int  housekeeperTimerID;
-	void cleanHashTable (CollectorHashTable &, time_t, HashFunc);
+	void cleanHashTable (CollectorHashTable &, time_t, HashFunc) const;
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
 						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
 						   const condor_sockaddr& );

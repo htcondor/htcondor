@@ -71,3 +71,5 @@ _deprecation.deprecate_8_9_8()
 # because of import caching, this respects the mutation we did above
 from .htcondor import *
 from .htcondor import _Param
+
+from ._job_status import JobStatus

@@ -895,11 +895,11 @@ CleanupClient::hookExited(int exit_status)
 	else
 	{
 		// Hook failed
-		MyString error_msg = "";
+		std::string error_msg;
 		statusString(exit_status, error_msg);
 		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited (%s): "
 			"HOOK_JOB_CLEANUP (%s) failed (%s)\n",
 			m_routed_job->JobDesc().c_str(), m_hook_path, 
-			error_msg.Value());
+			error_msg.c_str());
 	}
 }

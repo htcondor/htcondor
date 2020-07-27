@@ -61,7 +61,7 @@ class PrettyPrinter {
 			setby.ppArg = NULL;
 		}
 
-		int getDisplayWidth( bool * is_piped );
+		int getDisplayWidth( bool * is_piped ) const;
 		void setPPwidth();
 		int setPPstyle( ppOption pps, int arg_index, const char * argv );
 
@@ -82,7 +82,7 @@ class PrettyPrinter {
 
 		ppOption prettyPrintHeadings( bool any_ads );
 
-		int ppAdjustNameWidth( void * pv, Formatter * fmt );
+		int ppAdjustNameWidth( void * pv, Formatter * fmt ) const;
 		void prettyPrintAd( ppOption pps, ClassAd * ad, int output_index, StringList * whitelist, bool fHashOrder );
 
 		void printCustom( ClassAd * ad );
@@ -91,8 +91,8 @@ class PrettyPrinter {
 		AdTypes   setMode( int sm, int i, const char * arg );
 		AdTypes resetMode( int sm, int i, const char * arg );
 
-		void dumpPPMode( FILE * out );
-		const char * adtypeNameFromPPMode();
+		void dumpPPMode( FILE * out ) const;
+		const char * adtypeNameFromPPMode() const;
 
 		int set_status_print_mask_from_stream( const char * streamid, bool is_filename, const char ** pconstraint );
 

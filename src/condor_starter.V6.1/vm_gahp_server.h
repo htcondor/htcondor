@@ -44,7 +44,7 @@ class VMGahpServer : public Service {
 		bool cleanup(void);
 
 		void setPollInterval(unsigned int interval);
-		unsigned int getPollInterval(void);
+		unsigned int getPollInterval(void) const;
 
 		void cancelPendingRequest(int req_id);
 		bool isPendingRequest(int req_id);
@@ -59,7 +59,7 @@ class VMGahpServer : public Service {
 		void getPendingResult(int req_id, bool is_blocking);
 
 		// Return the pid of vmgahp
-		int getVMGahpServerPid(void) {return m_vmgahp_pid;}
+		int getVMGahpServerPid(void) const {return m_vmgahp_pid;}
 
 		// Return VM type 
 		const char* getVMType(void) {return m_vm_type.Value();}
@@ -80,8 +80,8 @@ class VMGahpServer : public Service {
 	protected:
 		bool read_argv(Gahp_Args &g_args);
 		bool read_argv(Gahp_Args *g_args) { return read_argv(*g_args);}
-		bool write_line(const char *command);
-		bool write_line(const char *command, int req, const char *args);
+		bool write_line(const char *command) const;
+		bool write_line(const char *command, int req, const char *args) const;
 		int pipe_ready(int pipe_end);
 		int err_pipe_ready(void);
 		int err_pipe_ready_from_pipe(int) { return err_pipe_ready(); }

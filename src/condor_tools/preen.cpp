@@ -319,8 +319,8 @@ public:
 	std::deque<std::string>::iterator begin() { return files.begin(); }
 	std::deque<std::string>::iterator end() { return files.end(); }
 
-	bool empty() { return jid_to_files.empty(); }
-	int  size() { return (int)jid_to_files.size(); }
+	bool empty() const { return jid_to_files.empty(); }
+	int  size() const { return (int)jid_to_files.size(); }
 
 	// append a filename, and add the index of that file to the jid_to_files map at the given key
 	void add(const JOB_ID_KEY & jid, const std::string & fn) {

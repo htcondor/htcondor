@@ -65,6 +65,7 @@ Interacting with Schedulers
 
 .. autoclass:: BulkQueryIterator
 
+.. autoclass:: JobStatus
 
 Submitting Jobs
 ---------------
@@ -94,7 +95,6 @@ Submitting Jobs
 Interacting with Negotiators
 ----------------------------
 
-.. deprecated:: 8.9.8
 .. autoclass:: Negotiator
 
    .. automethod:: deleteUser
@@ -239,3 +239,4 @@ be allowed to proceed normally.
 
 This locking may cause unexpected slowdowns when using ``htcondor`` from
 multiple threads simultaneously.
+

@@ -39,8 +39,8 @@ class UserDefinedToolsHibernator : public Service, public HibernatorBase
 
 public:
 
-	UserDefinedToolsHibernator ( const MyString &keyword ) throw ();
-	virtual ~UserDefinedToolsHibernator () throw ();
+	UserDefinedToolsHibernator ( const MyString &keyword ) noexcept;
+	virtual ~UserDefinedToolsHibernator () noexcept;
 
 	/** Get the name of the hibernation method used */
 	const char* getMethod ( void ) const;
@@ -63,7 +63,7 @@ private:
 	
 
 	/** Forbid the use of a default ctor */
-	UserDefinedToolsHibernator () throw ();
+	UserDefinedToolsHibernator () noexcept;
 
 	/** Configure supported sleep states */
 	void configure ();
