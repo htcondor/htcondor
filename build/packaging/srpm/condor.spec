@@ -187,7 +187,6 @@ Source117: unicoregahp-1.2.0.tar.gz
 Source118: voms-2.0.6.tar.gz
 %endif
 
-Patch1: old-sphinx.patch
 Patch2: el7-python2.patch
 
 #% if 0%osg
@@ -816,8 +815,6 @@ exit 0
 # For release tarballs
 %setup -q -n %{name}-%{tarball_version}
 %endif
-
-%patch1 -p1
 
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %patch2 -p1
