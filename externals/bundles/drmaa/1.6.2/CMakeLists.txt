@@ -33,7 +33,7 @@ if ( WITH_DRMAA )
 	condor_pre_external( DRMAA drmaa-1.6.2-p1 "lib;include" "include/drmaa.h")
 	
 	if (NOT WINDOWS)
-		set (DRMAA_CONFIGURE ./configure --prefix=${DRMAA_INSTALL_LOC})
+			set (DRMAA_CONFIGURE ./configure CFLAGS=-fcommon --prefix=${DRMAA_INSTALL_LOC})
 		set (DRMAA_MAKE make)
 		set (DRMAA_INSTALL cp libcondordrmaa.a ${DRMAA_INSTALL_LOC}/lib &&
 						   cp drmaa.h README ${DRMAA_INSTALL_LOC}/include/ )
