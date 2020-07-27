@@ -715,6 +715,8 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 	if ( ! rawval || ! rawval[0])
 		return true; // keep iterating
 
+	if( strcasecmp( name, "MACHINE_RESOURCE_NAMES" ) == 0 ) { return true; }
+
 	char * res_value = param(name);
 	if ( ! res_value)
 		return true; // keep iterating
