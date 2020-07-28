@@ -26,6 +26,13 @@ Bugs Fixed:
 - The shared port daemon no longer blocks during socket hand-off.
   :ticket:`7502`
 
+- When the *condor_master* chooses the port to assign to the *condor_shared_port* daemon
+  it will now ignore the ports specified in the ``COLLECTOR_LIST`` or ``COLLECTOR_HOST``
+  configuration variables unless it is starting a primary collector.
+  If it is not starting a primary collector (i.e. ``DAEMON_LIST`` does not have ``COLLECTOR``)
+  it will use the port specified in ``SHARED_PORT_PORT`` or the default port, which is 9618.
+  :ticket:`7697`
+
 - The ``DiskUsage`` attribute should once again reflect the job's peak disk
   usage, rather than its current or terminal usage.
   :ticket:`7207`
