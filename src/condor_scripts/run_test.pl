@@ -394,20 +394,15 @@ sub DoChild
     }
 
     if (exists($needs->{pytest})) {
-        print "run_test $$: $testname is pytest, checking pytest\n";
+        print "run_test $$: $testname is pytest, checking pytest version\n";
         if($iswindows){
-            system( "$perl -m pytest --version" );
             system( "$perl -m pytest -s --version" );
-            my $tmp = $perl;
-            $tmp =~ s/python\.exe/python3\.exe/;
-            system( "$tmp -m pytest --version" );
-            system( "$tmp -m pytest -s --version" );
         } else {
             system( "$perl -m pytest --version 2>&1" );
         }
         # This only works when a test file or directory is appended, because
         # --base-test-dir is an option our conftest.py adds.
-        $perl = "$perl -m pytest --base-test-dir ${BaseDir}/test-dirs/";
+        $perl = "$perl -m pytest -s --base-test-dir ${BaseDir}/test-dirs/";
     }
 
     my $test_starttime = time();
