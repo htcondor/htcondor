@@ -9,7 +9,7 @@ series.
 The details of each version are described below.
 
 Version 8.8.11
--------------
+--------------
 
 Release Notes:
 
@@ -23,7 +23,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
+  Additionally, the spurious warning about ``NAMES`` not being list as a
+  resource has been eliminated.
+  :ticket:`7755`
 
 Version 8.8.10
 --------------
@@ -76,6 +79,15 @@ Bugs Fixed:
 - For grid universe jobs of type ``batch``, stop using characters ``@``
   and ``#`` in temporary directory names.
   :ticket:`7730`
+
+- Prevent client tools from modifying special job id 0.0 in the job queue.
+  Modifications to this non-job ad can prevent the *condor_schedd* from
+  restarting.
+  :ticket:`7731`
+
+- Prevent client tools from deleting protected, immuatble, and secure
+  attributes in their job ads in the *condor_schedd* job queue.
+  :ticket:`7748`
 
 Version 8.8.9
 -------------
