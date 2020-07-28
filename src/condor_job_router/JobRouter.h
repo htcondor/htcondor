@@ -122,6 +122,16 @@ class JobRouter: public Service {
 	RoutingTable *m_routes; //key="route name"
 	std::list<std::string> m_route_order; // string="route name". the order in which routes should be considered
 
+	// m_routes->at() will throw if we try and lookup a route that's not in the list,
+	// we don't ever want to do that, we want NULL back for routes not found
+	JobRoute * safe_lookup_route(const std::string & name) const {
+		auto found = m_routes->find(name);
+		if (found != m_routes->end()) {
+			return found->second;
+		}
+		return NULL;
+	}
+
 	Scheduler *m_scheduler;        // provides us with a mirror of the real schedd's job collection
 	Scheduler *m_scheduler2;       // if non-NULL, mirror of job queue in destination schedd
 
