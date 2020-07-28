@@ -87,6 +87,11 @@ Bugs Fixed:
   rather than no ads.
   :ticket:`7727`
 
+- Fixed a bug in the *condor_startd* on Windows that resulted in jobs failing to start with permission
+  denied errors if ``ENCRYPT_EXECUTE_DIRECTORY`` was specified but the job did not have ``run_as_owner``
+  enabled.
+  :ticket:`7620`
+
 Version 8.8.9
 -------------
 
