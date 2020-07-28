@@ -392,15 +392,13 @@ sub DoChild
         print "\tPython version: ";
         system ("$perl --version");
     }
-    elsif (exists($needs->{pytest})) {
-        print "run_test $$: $testname is pytest, checking python bindings and pytest\n";
-        SetupPython3Path();
-        print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
-        $perl = "python3 -m pytest --base-test-dir $BaseDir/test-dirs/";
-        print "\tPython version: ";
-        system ("python3 --version");
-        print "\tPytest version: ";
-        system ("python3 -m pytest --version 2>&1");  # goes to stderr normally
+
+    if (exists($needs->{pytest})) {
+        print "run_test $$: $testname is pytest, checking pytest\n";
+        system ("$perl -m pytest --version 2>&1"); # goes to stderr normally
+        # This only works when a test file or directory is appended, because
+        # --base-test-dir is an option our conftest.py adds.
+        $perl = "$perl -m pytest --base-test-dir ${BaseDir}/test-dirs/";
     }
 
     my $test_starttime = time();
@@ -513,7 +511,10 @@ sub load_test_requirements
             # look at the shebang line to decide what executable to run with
             if($line =~ /^\#\!/) {
                 if ($line =~ /python/) { $requirements->{python} = 1; }
-                elsif ($line =~ /pytest/) { $requirements->{pytest} = 1; }
+                elsif ($line =~ /pytest/) {
+                    $requirements->{python} = 1;
+                    $requirements->{pytest} = 1;
+                }
                 next;
             }
 
@@ -631,41 +632,6 @@ sub SetupPythonPath {
         $pythonpath = $ENV{PYTHONPATH};
         print "\texisting PYTHONPATH=$pythonpath\n";
         { #if (index($pythonpath,$reldir) != -1) {
-            print "\tadding $relpy to PYTHONPATH\n";
-            $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
-        }
-    } else {
-        print "\tsetting PYTHONPATH to $relpy\n";
-        $ENV{PYTHONPATH} = $relpy;
-    }
-}
-
-sub SetupPython3Path {
-    my $reldir = `condor_config_val release_dir`; chomp $reldir;
-    my $pathsep = ':';
-    my $relpy = "$reldir/lib/python3";
-    if ($iswindows) { $relpy = "$reldir\\lib\\python3"; $pathsep = ';'; }
-
-    # debug code, show what is in release dir and lib and lib/python
-    # on windows, also interrogate the bitness of the python bindings
-    if ($iswindows) {
-        system("dir $reldir");
-        system("dir $reldir\\lib");
-        system("dir $relpy");
-        # system("dumpbin -headers $relpy\\classad.pyd");
-        # system("dumpbin -imports $relpy\\classad.pyd");
-    } else {
-        system("ls -l $reldir");
-        system("ls -l $reldir/lib");
-        print "contents of $relpy:\n";
-        system("ls -l $relpy");
-    }
-
-    my $pythonpath = "";
-    if (exists($ENV{PYTHONPATH})) {
-        $pythonpath = $ENV{PYTHONPATH};
-        print "\texisting PYTHONPATH=$pythonpath\n";
-        if (index($reldir,$pythonpath) != -1) {
             print "\tadding $relpy to PYTHONPATH\n";
             $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
         }
