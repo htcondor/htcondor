@@ -69,6 +69,17 @@ Bugs Fixed:
   attributes in their job ads in the *condor_schedd* job queue.
   :ticket:`7748`
 
+- When *condor_wait* is run without a limit on the number of jobs, it no
+  longer exits if the number of active jobs goes to zero but there are more
+  events in the log to read.  It now reads all existing events before deciding
+  that there are no active jobs that need to be waited for.
+  :ticket:`7653`
+
+- In the python bindings the ``query`` methods on the ``Schedd`` and ``Collector``
+  object now treat ``constraint=None`` having no constraint so all ads are returned
+  rather than no ads.
+  :ticket:`7727`
+
 Version 8.8.9
 -------------
 
