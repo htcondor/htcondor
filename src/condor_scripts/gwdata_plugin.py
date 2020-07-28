@@ -114,7 +114,7 @@ class GWDataPlugin:
     def get_urls(self, host, args):
 
         urls = []
-        
+
         # Parse the input arguments
         for arg in args:
             attr, value = arg.split("=")
@@ -167,7 +167,7 @@ class GWDataPlugin:
                 # Filename and metadata specific to this url
                 file_name = url.split("/")[-1]
                 metadata_tokens = file_name.split("-")
-                
+
                 # If this is the first url in the list, set a couple gps tracking variables
                 if url == urls[0]:
                     gps_start = int(metadata_tokens[2])
@@ -182,8 +182,7 @@ class GWDataPlugin:
                         gps_end = gps_counter
                         if url == urls[-1]:
                             gps_end = end_frame
-                        
-                        #print("{0} {1} {2} {3} {4} {5}".format( # debug
+
                         metadata_file.write("{0} {1} {2} {3} {4} {5}\n".format(
                             metadata_tokens[0],
                             metadata_tokens[1],
@@ -210,11 +209,6 @@ class GWDataPlugin:
 
         # First retrieve a list of urls to download from the gwdatafind server
         gwdata_urls = self.get_urls(gwdatafind_server, gwdata_args)
-
-        # MRC: This should go later in the function. We don't want a cache file if transfers failed.
-        # Check if the args list is requesting a cache file; if so, create it
-        if "cache" in url:
-            self.create_cache(gwdata_args, gwdata_urls)
 
         # Now transfer each url
         curl = pycurl.Curl()
@@ -265,6 +259,11 @@ class GWDataPlugin:
             if not transfer_success:
                 curl.close()
                 return transfer_stats, False
+
+        # Check if the args list is requesting a cache file; if so, create it
+        if "cache" in url:
+            self.create_cache(gwdata_args, gwdata_urls)
+
 
         # Looks like everything downloaded correctly. Exit success.
         curl.close()

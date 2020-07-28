@@ -283,7 +283,7 @@ public:
 
 	time_t	now( void ) const { return cur_time; };
 
-	StartdStats startd_stats;  
+	StartdStats startd_stats;
 
     class Stats {
 	public:
@@ -291,6 +291,7 @@ public:
        stats_recent_counter_timer WalkEvalState;
        stats_recent_counter_timer WalkUpdate;
        stats_recent_counter_timer WalkOther;
+       stats_recent_counter_timer Drain;
 
        // TJ: for now these stats will be registered in the DC pool.
        void Init(void);
@@ -338,6 +339,10 @@ public:
 	void checkForDrainCompletion();
 	int getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
+	void setLastDrainStopTime() {
+		last_drain_stop_time = time(NULL);
+		stats.Drain.Add( last_drain_stop_time - last_drain_start_time );
+	}
 
 private:
 	static void token_request_callback(bool success, void *miscdata);
@@ -421,6 +426,7 @@ private:
 	bool resume_on_completion_of_draining;
 	int draining_id;
 	time_t last_drain_start_time;
+	time_t last_drain_stop_time;
 	int expected_graceful_draining_completion;
 	int expected_quick_draining_completion;
 	int expected_graceful_draining_badput;

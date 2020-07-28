@@ -18,21 +18,21 @@ pushStringListBack( std::vector< YourString > & v, StringList & sl ) {
 	int count = 0;
 	if( sl.number() > 0 ) {
 		while( (text = sl.next()) ) {
-			v.push_back( text );
+			v.emplace_back(text );
 			++count;
 		}
 	}
 	ASSERT( count == sl.number() );
 
-	v.push_back( NULLSTRING );
+	v.emplace_back(NULLSTRING );
 }
 
 void
 pushVectorBack( std::vector< YourString > & arguments, const std::vector< std::string > & v ) {
 	for( unsigned i = 0; i < v.size(); ++i ) {
-		arguments.push_back( v[i] );
+		arguments.emplace_back(v[i] );
 	}
-	arguments.push_back( NULLSTRING );
+	arguments.emplace_back(NULLSTRING );
 }
 
 #define CHECK_COMMON_ARGUMENTS if( service_url.empty() || publickeyfile.empty() || privatekeyfile.empty() ) { return GAHPCLIENT_COMMAND_NOT_SUPPORTED; }
@@ -73,22 +73,22 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( ami_id );
-	arguments.push_back( keypair );
-	arguments.push_back( user_data );
-	arguments.push_back( user_data_file );
-	arguments.push_back( instance_type );
-	arguments.push_back( availability_zone );
-	arguments.push_back( vpc_subnet );
-	arguments.push_back( vpc_ip );
-	arguments.push_back( client_token );
-	arguments.push_back( block_device_mapping );
-	arguments.push_back( iam_profile_arn );
-	arguments.push_back( iam_profile_name );
+	arguments.emplace_back(ami_id );
+	arguments.emplace_back(keypair );
+	arguments.emplace_back(user_data );
+	arguments.emplace_back(user_data_file );
+	arguments.emplace_back(instance_type );
+	arguments.emplace_back(availability_zone );
+	arguments.emplace_back(vpc_subnet );
+	arguments.emplace_back(vpc_ip );
+	arguments.emplace_back(client_token );
+	arguments.emplace_back(block_device_mapping );
+	arguments.emplace_back(iam_profile_arn );
+	arguments.emplace_back(iam_profile_name );
 
 	std::string maxCountString;
 	formatstr( maxCountString, "%u", maxCount );
-	arguments.push_back( maxCountString );
+	arguments.emplace_back(maxCountString );
 
 	pushStringListBack( arguments, groupnames );
 	pushStringListBack( arguments, groupids );
@@ -122,7 +122,7 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 			}
 		} else if( rc == 0 ) {
 			for( int i = 2; i < result->argc; ++i ) {
-				instance_ids.push_back( result->argv[i] );
+				instance_ids.emplace_back(result->argv[i] );
 			}
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -154,7 +154,7 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( instance_id );
+	arguments.emplace_back(instance_id );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -203,7 +203,7 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 	PUSH_COMMON_ARGUMENTS;
 	// Assumes we have fewer than 1000 instances.
 	for( size_t i = 0; i < instance_ids.size(); ++i ) {
-		arguments.push_back( instance_ids[i] );
+		arguments.emplace_back(instance_ids[i] );
 	}
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -311,8 +311,8 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( filterName );
-	arguments.push_back( filerValue );
+	arguments.emplace_back(filterName );
+	arguments.emplace_back(filerValue );
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -450,11 +450,11 @@ int EC2GahpClient::ec2_vm_create_keypair(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( keyname );
+	arguments.emplace_back(keyname );
 	if ( outputfile.empty() ) {
-		arguments.push_back( NULL_FILE );
+		arguments.emplace_back(NULL_FILE );
 	} else {
-		arguments.push_back( outputfile );
+		arguments.emplace_back(outputfile );
 	}
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -508,7 +508,7 @@ int EC2GahpClient::ec2_vm_destroy_keypair(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( keyname );
+	arguments.emplace_back(keyname );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -562,8 +562,8 @@ int EC2GahpClient::ec2_associate_address( const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( instance_id );
-	arguments.push_back( elastic_ip );
+	arguments.emplace_back(instance_id );
+	arguments.emplace_back(elastic_ip );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return 0; }
 
@@ -622,7 +622,7 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( instance_id );
+	arguments.emplace_back(instance_id );
 	pushStringListBack( arguments, tags );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return 0; }
@@ -679,9 +679,9 @@ int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( volume_id );
-	arguments.push_back( instance_id );
-	arguments.push_back( device_id );
+	arguments.emplace_back(volume_id );
+	arguments.emplace_back(instance_id );
+	arguments.emplace_back(device_id );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return 0; }
 
@@ -754,18 +754,18 @@ int EC2GahpClient::ec2_spot_start( const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( ami_id );
-	arguments.push_back( spot_price );
-	arguments.push_back( keypair );
-	arguments.push_back( user_data );
-	arguments.push_back( user_data_file );
-	arguments.push_back( instance_type );
-	arguments.push_back( availability_zone );
-	arguments.push_back( vpc_subnet );
-	arguments.push_back( vpc_ip );
-	arguments.push_back( client_token );
-	arguments.push_back( iam_profile_arn );
-	arguments.push_back( iam_profile_name );
+	arguments.emplace_back(ami_id );
+	arguments.emplace_back(spot_price );
+	arguments.emplace_back(keypair );
+	arguments.emplace_back(user_data );
+	arguments.emplace_back(user_data_file );
+	arguments.emplace_back(instance_type );
+	arguments.emplace_back(availability_zone );
+	arguments.emplace_back(vpc_subnet );
+	arguments.emplace_back(vpc_ip );
+	arguments.emplace_back(client_token );
+	arguments.emplace_back(iam_profile_arn );
+	arguments.emplace_back(iam_profile_name );
 	pushStringListBack( arguments, groupnames );
 	pushStringListBack( arguments, groupids );
 	int cgf = callGahpFunction( command, arguments, result, low_prio );
@@ -819,7 +819,7 @@ int EC2GahpClient::ec2_spot_stop( const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( request_id );
+	arguments.emplace_back(request_id );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -1020,12 +1020,12 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( client_token );
-	arguments.push_back( spot_price );
-	arguments.push_back( target_capacity );
-	arguments.push_back( iam_fleet_role );
-	arguments.push_back( allocation_strategy );
-	arguments.push_back( valid_until );
+	arguments.emplace_back(client_token );
+	arguments.emplace_back(spot_price );
+	arguments.emplace_back(target_capacity );
+	arguments.emplace_back(iam_fleet_role );
+	arguments.emplace_back(allocation_strategy );
+	arguments.emplace_back(valid_until );
 	pushVectorBack( arguments, launch_configurations );
 
 	int cgf = callGahpFunction( command, arguments, result, low_prio );
@@ -1073,7 +1073,7 @@ int EC2GahpClient::bulk_stop(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( bulkRequestID );
+	arguments.emplace_back(bulkRequestID );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1159,9 +1159,9 @@ int EC2GahpClient::put_rule(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( ruleName );
-	arguments.push_back( scheduleExpression );
-	arguments.push_back( state );
+	arguments.emplace_back(ruleName );
+	arguments.emplace_back(scheduleExpression );
+	arguments.emplace_back(state );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1208,7 +1208,7 @@ int EC2GahpClient::delete_rule(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( ruleName );
+	arguments.emplace_back(ruleName );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1248,7 +1248,7 @@ int EC2GahpClient::get_function(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( functionARN );
+	arguments.emplace_back(functionARN );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1293,10 +1293,10 @@ int EC2GahpClient::put_targets(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( ruleName );
-	arguments.push_back( id );
-	arguments.push_back( arn );
-	arguments.push_back( input );
+	arguments.emplace_back(ruleName );
+	arguments.emplace_back(id );
+	arguments.emplace_back(arn );
+	arguments.emplace_back(input );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1336,8 +1336,8 @@ int EC2GahpClient::remove_targets(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( ruleName );
-	arguments.push_back( id );
+	arguments.emplace_back(ruleName );
+	arguments.emplace_back(id );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1386,9 +1386,9 @@ int EC2GahpClient::s3_upload(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( bucketName );
-	arguments.push_back( fileName );
-	arguments.push_back( path );
+	arguments.emplace_back(bucketName );
+	arguments.emplace_back(fileName );
+	arguments.emplace_back(path );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -1437,7 +1437,7 @@ int EC2GahpClient::describe_stacks(  const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( stackName );
+	arguments.emplace_back(stackName );
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
@@ -1500,9 +1500,9 @@ int EC2GahpClient::create_stack(
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( stackName );
-	arguments.push_back( templateURL );
-	arguments.push_back( capability );
+	arguments.emplace_back(stackName );
+	arguments.emplace_back(templateURL );
+	arguments.emplace_back(capability );
 	std::vector< std::string > plist;
 	for( auto i = parameters.begin(); i != parameters.end(); ++i ) {
 		plist.push_back( i->first );
@@ -1553,8 +1553,8 @@ int EC2GahpClient::call_function(	const std::string & service_url,
 	Gahp_Args * result = NULL;
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
-	arguments.push_back( functionARN );
-	arguments.push_back( argumentBlob );
+	arguments.emplace_back(functionARN );
+	arguments.emplace_back(argumentBlob );
 
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
