@@ -28,6 +28,10 @@ Bugs Fixed:
   resource has been eliminated.
   :ticket:`7755`
 
+- The D_SUB_SECOND debug format option will no longer produce timestamps
+  with four digits (``1000``) in the milliseconds field.
+  :ticket:`7685`
+
 Version 8.8.10
 --------------
 
