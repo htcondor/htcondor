@@ -684,7 +684,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				return;
 			}
 		} else {
-			dprintf (D_FULLDEBUG, "ZKM: did not find user %s.\n", canonical_user.Value());
+			dprintf (D_FULLDEBUG, "ZKM: did not find user %s.\n", authentication_name);
 		}
 	} else if (authentication_type == CAUTH_GSI) {
         // See notes above around the nameGssToLocal call about why we invoke GSI authorization here.
