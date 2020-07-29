@@ -617,6 +617,30 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			dprintf (D_SECURITY, "ZKM: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
 		}
 
+		// if the method is SCITOKENS and mapping failed, try again
+		// with a trailing '/'.  this is to assist admins who have
+		// misconfigured their mapfile.
+		//
+		// depending on the setting of SEC_SCITOKENS_ALLOW_EXTRA_SLASH
+		// (default false) we will either let it slide or print a loud
+		// warning to make it easier to identify the problem.
+		// 
+		// reminder: GetCanonicalization returns "true" on failure.
+		if (mapret && authentication_type == CAUTH_SCITOKENS) {
+			auth_name_to_map = auth_name_to_map + "/";
+			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.Value(), canonical_user);
+			if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
+				// just continue as if everything is fine.  we've now
+				// already updated canonical_user with the result. complain
+				// a little bit though so the admin can notice and fix it.
+				dprintf(D_SECURITY, "MAPFILE: WARNING: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. This was allowed because SEC_SCITOKENS_ALLOW_EXTRA_SLASH is set to TRUE.\n", authentication_name);
+				mapret = withslash_result;
+			} else {
+				// complain loudly
+				dprintf(D_ALWAYS, "MAPFILE: ERROR: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. Either correct the mapfile or set SEC_SCITOKENS_ALLOW_EXTRA_SLASH in the configuration.\n", authentication_name);
+			}
+		}
+
 		if (!mapret) {
 			// returns true on failure?
 			dprintf (D_FULLDEBUG, "ZKM: successful mapping to %s\n", canonical_user.Value());
@@ -660,7 +684,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				return;
 			}
 		} else {
-			dprintf (D_FULLDEBUG, "ZKM: did not find user %s.\n", canonical_user.Value());
+			dprintf (D_FULLDEBUG, "ZKM: did not find user %s.\n", authentication_name);
 		}
 	} else if (authentication_type == CAUTH_GSI) {
         // See notes above around the nameGssToLocal call about why we invoke GSI authorization here.
