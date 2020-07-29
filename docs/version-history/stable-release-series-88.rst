@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where setting Notification = error in the submit file
+  failed to send an email to the user when the job was held.
+  :ticket:`7763`
+  
 - Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
   Additionally, the spurious warning about ``NAMES`` not being list as a
   resource has been eliminated.
