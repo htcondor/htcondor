@@ -531,6 +531,8 @@ export_classad()
             )C0ND0R")
         .def("__len__", &ClassAdWrapper::size)
         .def("__contains__", &ClassAdWrapper::contains)
+        .def("__eq__", &ClassAdWrapper::__eq__)
+        .def("__ne__", &ClassAdWrapper::__ne__)
         .def("lookup", &ClassAdWrapper::LookupExpr, condor::classad_expr_return_policy<>(),
             R"C0ND0R(
             Look up the :class:`ExprTree` object associated with attribute.
