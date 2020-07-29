@@ -23,9 +23,22 @@ def ad():
     return classad.ClassAd()
 
 
-def ads_are_identical(ad1, ad2):
-    """To test classad equality, we need to convert them into dictionaries."""
-    return dict(ad1.items()) == dict(ad2.items())
+@pytest.mark.parametrize(
+    "a, b",
+    [
+        (classad.ClassAd(), classad.ClassAd()),
+        (classad.ClassAd({"foo": "bar"}), classad.ClassAd({"foo": "bar"})),
+    ],
+)
+def test_equality(a, b):
+    assert a == b
+
+
+@pytest.mark.parametrize(
+    "a, b", [(classad.ClassAd(), classad.ClassAd({"foo": "bar"})),]
+)
+def test_inequality(a, b):
+    assert a != b
 
 
 @pytest.mark.parametrize(
@@ -75,7 +88,7 @@ def test_round_trip_through_pickle(ad, value):
     pickled_ad = pickle.dumps(ad)
     loaded_ad = pickle.loads(pickled_ad)
 
-    assert ads_are_identical(ad, loaded_ad)
+    assert ad == loaded_ad
 
 
 def test_exprtree_repr(ad):
