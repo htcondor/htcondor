@@ -35,6 +35,7 @@ def condor(condor_config, test_dir):
     with Condor(test_dir / "condor", **condor_config) as condor:
         yield condor
 
+
 @action
 def job_parameters(path_to_sleep):
     return {
@@ -59,12 +60,13 @@ def jobs(condor, job_parameters):
     )
     return jobs
 
+
 @action
 def job_log(jobs, condor, test_dir):
     bID = str(jobs.state.by_name[JobStatus.IDLE][0])
     vIDs = [str(vID) for vID in jobs.state.by_name[JobStatus.RUNNING]]
 
-    rv = condor.run_command([ 'condor_now', '--flags', '1', bID, *vIDs ])
+    rv = condor.run_command(["condor_now", "--flags", "1", bID, *vIDs])
     assert rv.returncode == 0
 
     # Consider converting this into a wait() for these jobs to go idle, and
@@ -72,7 +74,7 @@ def job_log(jobs, condor, test_dir):
     # jobs.event_log.events.
     jel = htcondor.JobEventLog((test_dir / "condor_now_internals.log").as_posix())
 
-    num_evicted = 0;
+    num_evicted = 0
     for e in jel.events(60):
         if e.type == htcondor.JobEventType.JOB_EVICTED and e.cluster == jobs.clusterid:
             num_evicted += 1
@@ -94,7 +96,9 @@ def schedd_log(job_log, condor, jobs):
     idleJobID = str(jobs.state.by_name[JobStatus.IDLE][0])
     runningJobID = str(jobs.state.by_name[JobStatus.RUNNING][0])
 
-    rv = condor.run_command(['condor_now', '--flags', '2', str(idleJobID), str(runningJobID)])
+    rv = condor.run_command(
+        ["condor_now", "--flags", "2", str(idleJobID), str(runningJobID)]
+    )
     assert rv.returncode != 0
 
     return condor.schedd_log.open()
@@ -103,6 +107,5 @@ def schedd_log(job_log, condor, jobs):
 class TestCondorNowInternals:
     def test_internals(self, schedd_log):
         assert schedd_log.wait(
-            condition=lambda line: line.message == "pcccTest(): Succeeded.",
-            timeout=60,
+            condition=lambda line: line.message == "pcccTest(): Succeeded.", timeout=60,
         )

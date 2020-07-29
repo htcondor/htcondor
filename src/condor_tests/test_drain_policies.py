@@ -94,7 +94,6 @@ def job_parameters(job_file, kill_file):
     }
 
 
-
 # If we didn't remove the job during tear-down, Ornithology would have to
 # wait for its whole shutdown time-out, because HTCondor will be waiting
 # for MAX_JOB_RETIREMENT_TIME.  That saves us ~40 seconds per instance.
