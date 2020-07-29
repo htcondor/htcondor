@@ -883,6 +883,12 @@ default=false
 type=bool
 tags=shadow,remoteresource
 
+[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
+default=false
+type=bool
+usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
+tags=security
+
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
 type=bool
