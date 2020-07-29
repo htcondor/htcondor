@@ -49,6 +49,7 @@ typedef boost::transform_iterator<AttrPair, classad::AttrList::iterator> AttrIte
 // Look to see if a given function accepts a variable named "state".
 bool checkAcceptsState(boost::python::object pyFunc);
 
+struct ClassAdWrapper;
 struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassAd>
 {
     boost::python::object LookupWrap( const std::string &attr) const;
@@ -63,6 +64,9 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     bool matches(boost::python::object) const;
     bool symmetricMatch(boost::python::object) const;
+
+    bool __eq__(boost::python::object) const;
+    bool __ne__(boost::python::object) const;
 
     std::string toRepr() const;
 
