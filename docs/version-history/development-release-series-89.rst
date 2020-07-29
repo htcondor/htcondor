@@ -13,9 +13,14 @@ Release Notes:
 
 .. HTCondor version 8.8.9 released on Month Date, 2020.
 
+-  ``condor_q`` no longer prints misleading message about the matchmaker
+   when asked to analyze a job.
+   :ticket:`5834`
+
 New Features:
 
--  None.
+-  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
+   :ticket:`7726`
 
 Bugs Fixed:
 
@@ -32,9 +37,14 @@ Release Notes:
 
 -  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
    now tries to parse the entire string passed to it.  Failure results in a
-   ``SyntaxError``.  This prevents strings like ``foo = bar`` from silently
+   :class:`SyntaxError`.  This prevents strings like ``"foo = bar"`` from silently
    being parsed as just ``foo`` and causing unexpected results.
    :ticket:`7607`
+
+-  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
+   now accepts :class:`classad.ExprTree` (creating an identical copy)
+   in addition to strings, making it easier to handle inputs uniformly.
+   :ticket:`7654`
 
 -  API change in the Python bindings: we deprecated ``Schedd.negotiate()``.
    :ticket:`7524`
@@ -45,7 +55,35 @@ Release Notes:
    and ``htcondor.read_events()``.
    :ticket:`7690`
 
+- API change in the Python bindings: the methods
+  :meth:`htcondor.Schedd.query`,
+  :meth:`htcondor.Schedd.xquery`, and
+  :meth:`htcondor.Schedd.history`
+  now use the argument names ``constraint`` and ``projection``
+  (for the query condition and the attributes to return from the query)
+  consistently.
+  The old argument names (``requirements`` and ``attr_list``) are deprecated,
+  but will still work (raising a :class:`FutureWarning` when used) until a future
+  release.
+  :ticket:`7630`
+
 New Features:
+
+-  Added options ``-short-uuid`` and ``-uuid`` to the *condor_gpu_discovery*
+   tool. These options use the NVIDIA uuid assigned to each GPU to produce
+   stable identifiers for each GPU so that devices can be taken offline without
+   causing confusion about which of the remaining devices a job is using.
+   :ticket:`7696`
+
+-  Configuration variables of the form :macro:`OFFLINE_MACHINE_RESOURCE_<TAG>` such as
+   :macro:`OFFLINE_MACHINE_RESOURCE_GPUs` will now take effect on a *condor_reconfig*.
+   :ticket:`7651`
+
+-  The *condor_startd* now detects whether user namespaces can be created by
+   unprivileged processes.  If so, it advertises the classad attribute
+   ``HasUserNamespaces``. In this case, container managers like
+   singularity can be run without setuid root.
+   :ticket:`7625`
 
 -  Added a :macro:`SEC_CREDENTIAL_SWEEP_DELAY` configuration parameter which
    specifies how long, in seconds, we should wait before cleaning up unused
@@ -75,22 +113,45 @@ New Features:
    several known issues are summarized in the ticket.
    :ticket:`7343`
 
+-  Added a new Python bindings subpackage, :mod:`htcondor.dags`, which contains
+   tools for writing DAGMan input files programmatically using
+   high-level abstractions over the basic DAGMan constructs.
+   There is a new tutorial at :doc:`/apis/python-bindings/tutorials/index`
+   walking through a basic use case.
+   :mod:`htcondor.dags` is very new and its API has not fully stabilized;
+   it is possible that there will be deprecations and breaking changes
+   in the near future.
+   Bug reports and feature requests greatly encouraged!
+   :ticket:`7682`
+
 -  Improved the efficiency of process monitoring in macOS.
    :ticket:`7708`
 
+-  The *condor_startd* now handles :macro:`STARTD_SLOT_ATTRS` after
+   :macro:`STARTD_ATTRS` and :macro:`STARTD_PARTITIONABLE_SLOT_ATTRS`
+   so that custom slot attributes describing the resources of
+   dynamic children can be refered to by :macro:`STARTD_SLOT_ATTRS`
+   :ticket:`7588`
+
+-  When the *condor_master* starts in background mode, which is the default,
+   control is not returned until the background *condor_master* has created
+   the MasterLog and is ready to accept commands.
+   :ticket:`7667`
+
+-  Updated *condor_q* so when called with the ``-dag`` flag and a DAGMan job
+   ID, it will display all jobs running under any nested subdags.
+   :ticket:`7483`
+
+-  Direct job submission in *condor_dagman* now reports warning messages related
+   to job submission (for example, possible typos in submit arguments) to help
+   debug problems with jobs not running correctly.
+   :ticket:`7568`
+
 Bugs Fixed:
 
-- The Python bindings methods
-  :meth:`htcondor.Schedd.query`,
-  :meth:`htcondor.Schedd.xquery`, and
-  :meth:`htcondor.Schedd.history`
-  now use the argument names ``constraint`` and ``projection``
-  (for the query condition and the attributes to return from the query)
-  consistently.
-  The old argument names (``requirements`` and ``attr_list``) are deprecated,
-  but will still work (raising a deprecation warning when used) until a future
-  release.
-  :ticket:`7630`
+- Fixed a segfault in the schedd that could happen on some platforms
+  when handling certain startd failures after invoking ``condor_now``.
+  :ticket:`7692`
 
 - *classad_eval* no longer ignores trailing garbage in its first (ClassAd)
   argument.  This prevents  ``classad_eval 'x = y; y = 7' 'x'`` from
@@ -104,15 +165,27 @@ Bugs Fixed:
   starting with the number ``0``.
   :ticket:`7641`
 
+- Fixed a bug introduced in 8.9.3 that cause the `condor_chirp` tool to crash
+  when passed the argument getfile
+  :ticket:`7612`
+
 - Add ``OMP_THREAD_LIMIT`` to list of environment variable to let program like
   ``R`` know the maximum number of threads it should use.
   :ticket:`7649`
+
+- Fixed a bug in Docker Universe that prevented administrator defined bind 
+  mounts from working correctly
+  :ticket:`7635`
 
 - If the administrator of an execute machine has disabled file transfer plugins
   by setting :macro:`ENABLE_URL_TRANSFERS` to ``False``, then the machine Ad in
   the collector will no longer advertise support, which will prevent jobs from
   matching there and attempting to run.
   :ticket:`7707`
+
+- Fixed a bug in *condor_dagman* where completed jobs incorrectly showed a 
+  warning message related to job events.
+  :ticket:`7548`
 
 Version 8.9.7
 -------------
@@ -142,7 +215,7 @@ Release Notes:
 New Features:
 
 - You may now specify that HTCondor only transfer files when the job
-  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
+  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_output``
   to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
   job exits (in the sense of ``ON_EXIT``) with the specified success code.  This
   is intended to prevent unsuccessful jobs from going on hold because they
@@ -795,10 +868,10 @@ New Features:
   ``htcondor.Submit.from_dag()`` class creates a Submit description based on a
   .dag file:
 
-  ::
+  .. code-block:: python
 
-    dag_args = { "maxidle": 10, "maxpost": 5 }
-    dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
+        dag_args = { "maxidle": 10, "maxpost": 5 }
+        dag_submit = htcondor.Submit.from_dag("mydagfile.dag", dag_args)
 
   The resulting ``dag_submit`` object can be submitted to a *condor_schedd* and
   monitored just like any other Submit description object in the Python bindings.
@@ -1171,7 +1244,7 @@ changes.
    On most pools, the easiest way to get the previous behavior is to add
    the following to your configuration:
 
-   ::
+   .. code-block:: text
 
        ALLOW_READ = *
        ALLOW_DAEMON = $(ALLOW_WRITE)

@@ -52,7 +52,7 @@ protected:
 	int HandleChildAliveCommand(int command, Stream* stream);
 
 private:
-	int SendAliveToParent();
+	int SendAliveToParent() const;
 	void SendAliveToParentFromTimer() { (void)SendAliveToParent(); }
 	int KillHungChild(void* pidentry);
 	int ScanForHungChildren();

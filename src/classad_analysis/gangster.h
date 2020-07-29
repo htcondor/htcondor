@@ -52,7 +52,7 @@ protected:
 		int				boundDock;
 		bool			satisfied;
 	};
-	typedef vector<Dock> Docks;
+	typedef std::vector<Dock> Docks;
 
 	static int			nextContextNum;
 

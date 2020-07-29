@@ -50,7 +50,7 @@ configuration variable ``DAGMAN_SUPPRESS_NOTIFICATION``
 :index:`DAGMAN_SUPPRESS_NOTIFICATION` is its default value of
 ``True``, and a node job's submit description file contains
 
-::
+.. code-block:: condor-submit
 
       notification = Complete
 
@@ -348,33 +348,33 @@ Examples
 
 To run a single DAG:
 
-::
+.. code-block:: console
 
-    % condor_submit_dag diamond.dag
+    $ condor_submit_dag diamond.dag
 
 To run a DAG when it has already been run and the output files exist:
 
-::
+.. code-block:: console
 
-    % condor_submit_dag -force diamond.dag
+    $ condor_submit_dag -force diamond.dag
 
 To run a DAG, limiting the number of idle node jobs in the DAG to a
 maximum of five:
 
-::
+.. code-block:: console
 
-    % condor_submit_dag -maxidle 5 diamond.dag
+    $ condor_submit_dag -maxidle 5 diamond.dag
 
 To run a DAG, limiting the number of concurrent PRE scripts to 10 and
 the number of concurrent POST scripts to five:
 
-::
+.. code-block:: console
 
-    % condor_submit_dag -maxpre 10 -maxpost 5 diamond.dag
+    $ condor_submit_dag -maxpre 10 -maxpost 5 diamond.dag
 
 To run two DAGs, each of which is set up to run in its own directory:
 
-::
+.. code-block:: console
 
-    % condor_submit_dag -usedagdir dag1/diamond1.dag dag2/diamond2.dag
+    $ condor_submit_dag -usedagdir dag1/diamond1.dag dag2/diamond2.dag
 

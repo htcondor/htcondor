@@ -36,8 +36,8 @@ class Request {
 		Gahp_Args m_args;
 		std::string m_result;
 
-		static void * operator new( size_t i ) throw();
-		static void operator delete( void * v ) throw();
+		static void * operator new( size_t i ) noexcept;
+		static void operator delete( void * v ) noexcept;
 };
 
 #endif

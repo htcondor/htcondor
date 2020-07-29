@@ -60,8 +60,8 @@ public:
 	void set_timeout( timeval tv );
 	void unset_timeout();
 	void execute();
-	int select_retval();
-	int select_errno();
+	int select_retval() const;
+	int select_errno() const;
 	bool has_ready();
 	bool timed_out();
 	bool signalled();

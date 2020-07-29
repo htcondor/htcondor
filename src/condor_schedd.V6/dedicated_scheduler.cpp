@@ -114,7 +114,7 @@ AllocationNode::setClaimId( const char* new_id )
 
 
 void
-AllocationNode::display( void )
+AllocationNode::display( void ) const
 {
 	const int level = D_FULLDEBUG;
 	if( ! IsFulldebug(D_FULLDEBUG) ) {
@@ -3656,11 +3656,11 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 									   CAList* limbo, CAList* unclaimed, 
 									   CAList* busy )
 {
-	MyString msg;
-	msg.formatstr( "Satisfied job %d with ", cluster );
+	std::string msg;
+	formatstr( msg, "Satisfied job %d with ", cluster );
 	bool had_one = false;
 	if( idle && idle->Length() ) {
-		msg += IntToStr( idle->Length() );
+		msg += std::to_string( idle->Length() );
 		msg += " idle";
 		had_one = true;
 	}
@@ -3668,7 +3668,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( limbo->Length() );
+		msg += std::to_string( limbo->Length() );
 		msg += " limbo";
 		had_one = true;
 	}
@@ -3676,7 +3676,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( serial->Length() );
+		msg += std::to_string( serial->Length() );
 		msg += " serial";
 		had_one = true;
 	}
@@ -3684,7 +3684,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( unclaimed->Length() );
+		msg += std::to_string( unclaimed->Length() );
 		msg += " unclaimed";
 		had_one = true;
 	}
@@ -3692,12 +3692,12 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( busy->Length() );
+		msg += std::to_string( busy->Length() );
 		msg += " busy";
 		had_one = true;
 	}
 	msg += " resources";
-	dprintf( D_FULLDEBUG, "%s\n", msg.Value() );
+	dprintf( D_FULLDEBUG, "%s\n", msg.c_str() );
 
 	if( unclaimed && unclaimed->Length() ) {
 		dprintf( D_FULLDEBUG, "Generating %d resource requests for job %d\n", 

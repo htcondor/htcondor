@@ -1641,7 +1641,7 @@ Sock::setConnectFailureReason(char const *reason)
 }
 
 void
-Sock::reportConnectionFailure(bool timed_out)
+Sock::reportConnectionFailure(bool timed_out) const
 {
 	char const *reason = connect_state.connect_failure_reason;
 	char timeout_reason_buf[100];

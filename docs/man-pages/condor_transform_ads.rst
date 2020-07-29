@@ -98,7 +98,7 @@ Examples
 Here's a simple example that transforms the given input ClassAds
 according to the given rules:
 
-::
+.. code-block:: text
 
       # File: my_input
       ResidentSetSize = 500

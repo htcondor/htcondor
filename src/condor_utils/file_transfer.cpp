@@ -846,7 +846,7 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			}
 		}
 	}
-	dprintf(D_ALWAYS, "MRC [FileTransfer::IsDataflowJob] returning is_dataflow = %s\n", is_dataflow ? "true" : "false");
+
 	return is_dataflow;
 }
 
@@ -2607,12 +2607,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						classad::Value value;
 						if (!list_entry->Evaluate(value)) {
 							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry.\n");
-							signed_urls.push_back("");
+							signed_urls.emplace_back("");
 						}
 						else if (!value.IsStringValue(url_value))
 						{
 							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry to string.\n");
-							signed_urls.push_back("");
+							signed_urls.emplace_back("");
 						}
 						else if (sign_s3_urls && url_value.substr(0, 5) == "s3://")
 						{
@@ -2640,13 +2640,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								    result_ad.Assign( ATTR_HOLD_REASON, errorMessage.c_str() );
 								    dprintf( D_ALWAYS, "%s\n", errorMessage.c_str() );
 
-									signed_urls.push_back("");
+									signed_urls.emplace_back("");
 								} else {
 									signed_urls.push_back(signed_url);
 								}
 							} else {
 								dprintf(D_FULLDEBUG, "DoDownload: URL has invalid prefix: %s.\n", url_value.c_str());
-								signed_urls.push_back("");
+								signed_urls.emplace_back("");
 							}
 						}
 						else
@@ -3123,7 +3123,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 }
 
 void
-FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
+FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc) const
 {
 	if(!PeerDoesTransferAck) {
 		success = true;
@@ -5035,7 +5035,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
+FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
 {
 	int rc = upload_success ? 0 : -1;
 	bool download_success = false;
@@ -5188,7 +5188,7 @@ FileTransfer::abortActiveTransfer()
 }
 
 int
-FileTransfer::Suspend()
+FileTransfer::Suspend() const
 {
 	int result = TRUE;	// return TRUE if there currently is no thread
 
@@ -5201,7 +5201,7 @@ FileTransfer::Suspend()
 }
 
 int
-FileTransfer::Continue()
+FileTransfer::Continue() const
 {
 	int result = TRUE;	// return TRUE if there currently is no thread
 
@@ -5932,7 +5932,7 @@ MyString FileTransfer::GetSupportedMethods(CondorError &e) {
 	return method_list;
 }
 
-int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) {
+int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const {
 
 	if ( ! I_support_filetransfer_plugins ) {
 		return 0;

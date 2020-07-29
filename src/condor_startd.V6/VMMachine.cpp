@@ -69,7 +69,7 @@ VMMachine::updateTimeStamp(void)
 }
 
 int 
-VMMachine::getTimeStamp(void) 
+VMMachine::getTimeStamp(void) const 
 {
 	return m_last_time;
 }

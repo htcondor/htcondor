@@ -260,5 +260,5 @@ int my_spawnl( const char*, ... )
 
 END_C_DECLS
 
-void statusString( int, MyString & )
+void statusString( int, std::string & )
 { not_impl(); }

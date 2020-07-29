@@ -108,7 +108,7 @@ private:
 	// evaluate an expression in the daemon ad.
 	// If this is a regex metric, performs substitutions of regex groups
 	// into strings that reference them.
-	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,ExtArray<MyString> *regex_groups,char const *regex_attr=NULL);
+	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,ExtArray<MyString> *regex_groups,char const *regex_attr=NULL) const;
 	bool evaluateOptionalString(char const *attr_name,std::string &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,ExtArray<MyString> *regex_groups);
 };
 
@@ -149,7 +149,7 @@ class StatsD: Service {
 	// Apply an aggregate function to a data point.
 	void addToAggregateValue(Metric const &metric);
 
-	bool publishPerExecuteNodeMetrics() {return m_per_execute_node_metrics; }
+	bool publishPerExecuteNodeMetrics() const {return m_per_execute_node_metrics; }
 	bool isExecuteOnlyNode(std::string &machine) {return m_execute_only_nodes.count(machine)!=0;}
 
  protected:

@@ -93,19 +93,21 @@ def find_rescue_file(
     dag_dir: Path, dag_file_name: str = DEFAULT_DAG_FILE_NAME
 ) -> Optional[Path]:
     """
-    Finds the latest rescue file in a DAG directory (just like DAGMan itself would).
+    Finds the latest rescue file in a DAG directory
+    (just like DAGMan itself would).
 
     Parameters
     ----------
     dag_dir
         The directory to search in.
     dag_file_name
-        The base name of the DAG description file.
+        The base name of the DAG description file;
+        the same name you would pass to :func:`write_dag`.
 
     Returns
     -------
-    rescue_file
-        The :class:`pathlib.Path` to the latest rescue file.
+    rescue_file : :class:`pathlib.Path`
+        The path to the latest rescue file found in the ``dag_dir``.
     """
     dag_dir = Path(dag_dir)
     rescue_files = sorted(dag_dir.glob("{}.rescue*".format(dag_file_name)))

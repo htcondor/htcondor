@@ -920,20 +920,20 @@ RemoteResource::closeClaimSock( void )
 
 
 int
-RemoteResource::getExitReason()
+RemoteResource::getExitReason() const
 {
 	return exit_reason;
 }
 
 bool
-RemoteResource::claimIsClosing()
+RemoteResource::claimIsClosing() const
 {
 	return claim_is_closing;
 }
 
 
 int64_t
-RemoteResource::exitSignal( void )
+RemoteResource::exitSignal( void ) const
 {
 	if( exited_by_signal ) {
 		return exit_value;
@@ -943,7 +943,7 @@ RemoteResource::exitSignal( void )
 
 
 int64_t
-RemoteResource::exitCode( void )
+RemoteResource::exitCode( void ) const
 {
 	if( ! exited_by_signal ) {
 		return exit_value;
@@ -1237,7 +1237,7 @@ RemoteResource::setExitReason( int reason )
 
 
 float
-RemoteResource::bytesSent()
+RemoteResource::bytesSent() const
 {
 	float bytes = 0.0;
 
@@ -1257,7 +1257,7 @@ RemoteResource::bytesSent()
 
 
 float
-RemoteResource::bytesReceived()
+RemoteResource::bytesReceived() const
 {
 	float bytes = 0.0;
 
@@ -1580,6 +1580,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
 			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
+			&& it->first != ATTR_DISK_USAGE    // ditto
+			// the ATTR_JOB_*_CPU attributes don't end in "Usage"
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -2313,7 +2315,7 @@ RemoteResource::locateReconnectStarter( void )
 }
 
 void
-RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
+RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const
 {
 	upload_status = m_upload_xfer_status;
 	download_status = m_download_xfer_status;

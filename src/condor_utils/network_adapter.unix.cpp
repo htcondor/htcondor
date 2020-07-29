@@ -28,7 +28,7 @@
 ***************************************************************/
 
 /// Constructor
-UnixNetworkAdapter::UnixNetworkAdapter ( const condor_sockaddr& ip_addr ) throw ()
+UnixNetworkAdapter::UnixNetworkAdapter ( const condor_sockaddr& ip_addr ) noexcept
 {
 	m_found = false;
 	resetIpAddr( true );
@@ -43,7 +43,7 @@ UnixNetworkAdapter::UnixNetworkAdapter ( const condor_sockaddr& ip_addr ) throw 
 }
 
 /// Constructor
-UnixNetworkAdapter::UnixNetworkAdapter ( const char *name ) throw ()
+UnixNetworkAdapter::UnixNetworkAdapter ( const char *name ) noexcept
 {
 	m_found = false;
 	resetIpAddr( true );
@@ -58,7 +58,7 @@ UnixNetworkAdapter::UnixNetworkAdapter ( const char *name ) throw ()
 }
 
 /// Destructor
-UnixNetworkAdapter::~UnixNetworkAdapter (void) throw ()
+UnixNetworkAdapter::~UnixNetworkAdapter (void) noexcept
 {
 	resetName( );
 }

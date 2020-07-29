@@ -288,7 +288,7 @@ daemon::Recover()
 
 
 int
-daemon::NextStart()
+daemon::NextStart() const
 {
 	int seconds;
 	seconds = m_backoff_constant + (int)ceil(::pow(m_backoff_factor, restarts));
@@ -1098,7 +1098,7 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 }
 
 void
-daemon::DoActionAfterStartup()
+daemon::DoActionAfterStartup() const
 {
 	if( m_reload_shared_port_addr_after_startup ) {
 		daemonCore->ReloadSharedPortServerAddr();
@@ -1280,8 +1280,8 @@ daemon::HardKill()
 void
 daemon::Exited( int status )
 {
-	MyString msg;
-	msg.formatstr( "The %s (pid %d) ", name_in_config_file, pid );
+	std::string msg;
+	formatstr( msg, "The %s (pid %d) ", name_in_config_file, pid );
 	bool had_failure = true;
 	if (daemonCore->Was_Not_Responding(pid)) {
 		msg += "was killed because it was no longer responding";
@@ -1292,7 +1292,7 @@ daemon::Exited( int status )
 	}
 	else {
 		msg += "exited with status ";
-		msg += IntToStr( WEXITSTATUS(status) );
+		msg += std::to_string( WEXITSTATUS(status) );
 		if( WEXITSTATUS(status) == DAEMON_NO_RESTART ) {
 			had_failure = false;
 			msg += " (daemon will not restart automatically)";
@@ -1310,7 +1310,7 @@ daemon::Exited( int status )
 	if( had_failure ) {
 		d_flag |= D_FAILURE;
 	}
-	dprintf(d_flag, "%s\n", msg.Value());
+	dprintf(d_flag, "%s\n", msg.c_str());
 
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {
@@ -1505,7 +1505,7 @@ daemon::CancelRestartTimers()
 }
 
 time_t
-daemon::GetNextRestart()
+daemon::GetNextRestart() const
 {
 	if( start_tid != -1 ) {
 		return daemonCore->GetNextRuntime(start_tid);
@@ -1514,7 +1514,7 @@ daemon::GetNextRestart()
 }
 
 void
-daemon::Kill( int sig )
+daemon::Kill( int sig ) const
 {
 	if( (!pid) || (pid == -1) ) {
 		return;
@@ -1554,7 +1554,7 @@ daemon::Kill( int sig )
 
 
 void
-daemon::KillFamily( void ) 
+daemon::KillFamily( void ) const 
 {
 	if( pid == 0 ) {
 		return;

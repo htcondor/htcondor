@@ -82,12 +82,12 @@ class RoutedJob {
 
 	// return a description of the job keys, useful for debug trace messages
 	// Format: src=X,dest=X
-	std::string JobDesc();
+	std::string JobDesc() const;
 
 	bool SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection *ad_collection);
 	void SetDestJobAd(classad::ClassAd const *ad);
-	bool IsRunning() {return is_running;}
-	bool SawDestJob() {return saw_dest_job;}
+	bool IsRunning() const {return is_running;}
+	bool SawDestJob() const {return saw_dest_job;}
 
 	bool PrepareSharedX509UserProxy(JobRoute *route);
 	bool CleanupSharedX509UserProxy(JobRoute *route);
@@ -109,17 +109,17 @@ class JobRoute {
 #endif
 	char const *Name() {return m_name.c_str();}
 	char const *Source() {return m_source.c_str(); } // where the route was sourced, i.e. CMD, FILE or ROUTE
-	bool FromClassadSyntax() { return m_route_from_classad; }
-	bool UsePreRouteTransform() { return m_use_pre_route_transform; }
-	int MaxJobs() {return m_max_jobs;}
-	int MaxIdleJobs() {return m_max_idle_jobs;}
-	int CurrentRoutedJobs() {return m_num_jobs;}
-	int TargetUniverse() {return m_target_universe;}
+	bool FromClassadSyntax() const { return m_route_from_classad; }
+	bool UsePreRouteTransform() const { return m_use_pre_route_transform; }
+	int MaxJobs() const {return m_max_jobs;}
+	int MaxIdleJobs() const {return m_max_idle_jobs;}
+	int CurrentRoutedJobs() const {return m_num_jobs;}
+	int TargetUniverse() const {return m_target_universe;}
 	char const *GridResource() {return m_grid_resource.c_str();}
 #ifdef USE_XFORM_UTILS
 	classad::ExprTree *RouteRequirementExpr() { return m_route.getRequirements(); }
 	char const *RouteRequirementsString() { return m_route.getRequirementsStr(); }
-	bool UsesPreRouteTransform() { return m_use_pre_route_transform; }
+	bool UsesPreRouteTransform() const { return m_use_pre_route_transform; }
 	std::string RouteString() {
 		std::string str;
 		if (m_route.getText()) { str = m_route.getText(); } else { str = ""; }
@@ -171,21 +171,21 @@ class JobRoute {
 	bool ApplyRoutingJobEdits(classad::ClassAd *src_ad);
 #endif
 
-	bool AcceptingMoreJobs();
+	bool AcceptingMoreJobs() const;
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}
 	void IncrementRoutedJobs() {IncrementCurrentRoutedJobs(); m_recent_jobs_routed++;}
 	void ResetCurrentRoutedJobs() {m_num_jobs = 0;m_num_running_jobs=0;}
 
 	void IncrementCurrentRunningJobs() {m_num_running_jobs++;}
-	int CurrentRunningJobs() {return m_num_running_jobs;}
-	int CurrentIdleJobs() {return m_num_jobs - m_num_running_jobs;}
+	int CurrentRunningJobs() const {return m_num_running_jobs;}
+	int CurrentIdleJobs() const {return m_num_jobs - m_num_running_jobs;}
 	void IncrementSuccesses() {m_recent_jobs_succeeded++;}
 	void IncrementFailures() {m_recent_jobs_failed++;}
-	int RecentRoutedJobs() {return m_recent_jobs_routed;}
-	int RecentSuccesses() {return m_recent_jobs_succeeded;}
-	int RecentFailures() {return m_recent_jobs_failed;}
+	int RecentRoutedJobs() const {return m_recent_jobs_routed;}
+	int RecentSuccesses() const {return m_recent_jobs_succeeded;}
+	int RecentFailures() const {return m_recent_jobs_failed;}
 	void AdjustFailureThrottles();
-	double Throttle() {return m_throttle;}
+	double Throttle() const {return m_throttle;}
 	std::string ThrottleDesc();
 	std::string ThrottleDesc(double throttle);
 
@@ -194,7 +194,7 @@ class JobRoute {
 
 		// true if this entry is intended to override an entry with the
 		// same name further up in the routing table definition
-	int OverrideRoutingEntry() { return m_override_routing_entry; }
+	int OverrideRoutingEntry() const { return m_override_routing_entry; }
 
  private:
 	int m_num_jobs;                // current number of jobs on this route

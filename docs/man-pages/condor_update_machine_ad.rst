@@ -29,7 +29,7 @@ Contents of the file or ``stdin`` must contain a complete ClassAd. Each
 line must be terminated by a newline character, including the last line
 of the file. Lines are of the form
 
-::
+.. code-block:: text
 
     <attribute> = <value>
 
@@ -64,24 +64,24 @@ To re-enable matching with the VM universe jobs, place on ``stdin`` a
 complete ClassAd (including the ending newline character) to change the
 value of ClassAd attribute ``HasVM``:
 
-::
+.. code-block:: console
 
-    echo "HasVM = True 
+    $ echo "HasVM = True
     " | condor_update_machine_ad
 
 To prevent vm universe jobs from matching with the machine:
 
-::
+.. code-block:: console
 
-    echo "HasVM = False 
+    $ echo "HasVM = False
     " | condor_update_machine_ad
 
 To prevent vm universe jobs from matching with the machine and specify a
 reason:
 
-::
+.. code-block:: console
 
-    echo "HasVM = False 
+    $ echo "HasVM = False
     VMOfflineReason = \"Cosmic rays.\" 
     " | condor_update_machine_ad
 

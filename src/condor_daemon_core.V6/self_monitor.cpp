@@ -131,7 +131,7 @@ void SelfMonitorData::CollectData(void)
     return;
 }
 
-bool SelfMonitorData::ExportData(ClassAd *ad, bool verbose /*=false*/)
+bool SelfMonitorData::ExportData(ClassAd *ad, bool verbose /*=false*/) const
 {
     bool      success;
     MyString  attribute;

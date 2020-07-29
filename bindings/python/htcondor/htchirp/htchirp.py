@@ -72,10 +72,9 @@ class HTChirp:
     A Chirp client compatible with the HTCondor Chirp implementation.
 
     If the host and port of a Chirp server are not specified, you are assumed
-    to be running in a HTCondor ``My.WantIOProxy = true`` job and that
+    to be running in a HTCondor job with ``WantIOProxy = true`` and therefore that
     ``$_CONDOR_SCRATCH_DIR/.chirp.config`` contains the host, port, and cookie for
     connecting to the embedded chirp proxy.
-
     """
 
     # static reference variables
@@ -91,14 +90,12 @@ class HTChirp:
     # initialize
 
     def __init__(self, host=None, port=None, auth=["cookie"], cookie=None, timeout=10):
-        """Chirp client initialization
-
+        """
         :param host: the hostname or ip of the Chirp server
         :param port: the port of the Chirp server
         :param auth: a list of authentication methods to try
         :param cookie: the cookie string, if trying cookie authentication
         :param timeout: socket timeout, in seconds
-
         """
 
         # initialize storage variables
@@ -110,11 +107,11 @@ class HTChirp:
         except KeyError:
             pass
 
-        if host and port:  # don't read chirp_config if host and port are set
+        if host and port:
+            # don't read chirp_config if host and port are set
             pass
-        elif (
-            ("cookie" in auth) and (not cookie) and os.path.isfile(chirp_config)
-        ):  # read chirp_config
+        elif ("cookie" in auth) and (not cookie) and os.path.isfile(chirp_config):
+            # read chirp_config
             try:
                 with open(chirp_config, "r") as f:
                     (host, port, cookie) = f.read().rstrip().split()
@@ -123,7 +120,7 @@ class HTChirp:
                 raise
         else:
             raise ValueError(
-                (".chirp.config must be present or you must provide a host and port")
+                ".chirp.config must be present or you must provide a host and port"
             )
 
         # store connection parameters
@@ -1319,14 +1316,15 @@ class HTChirp:
 def condor_chirp(chirp_args, return_exit_code=False):
     """Call HTChirp methods using condor_chirp-style commands
 
-    :param chirp_args: List or string of arguments as would be passed to condor_chirp
-    :param return_exit_code: If True, format and print return value in condor_chirp-style,
-        and return 0 (success) or 1 (failure) [default: False]
-
-    :returns: Return value from the HTChirp method called, unless return_exit_code is True
-
     See https://htcondor.readthedocs.io/en/latest/man-pages/condor_chirp.html
-    for a list of commands, or use a Python interpreter to run "htchirp.py --help".
+    for a list of commands, or use a Python interpreter to run ``htchirp.py --help``.
+
+    :param chirp_args: List or string of arguments as would be passed to condor_chirp
+    :param return_exit_code: If ``True``, format and print return value in condor_chirp-style,
+        and return 0 (success) or 1 (failure) (defaults to ``False``).
+
+    :returns: Return value from the HTChirp method called,
+        unless ``return_exit_code=True`` (see above).
 
     """
 

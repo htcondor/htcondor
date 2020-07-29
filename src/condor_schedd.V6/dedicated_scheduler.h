@@ -63,7 +63,7 @@ class AllocationNode {
 		// Methods
 	void addResource( ClassAd* r, int proc );
 	void setClaimId( const char* new_claim_id );
-	void display( void );
+	void display( void ) const;
 
 		// Data
 	int status;

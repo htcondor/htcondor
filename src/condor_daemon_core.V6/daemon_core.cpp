@@ -168,6 +168,8 @@ const int DaemonCore::ERRNO_EXIT = 666669;
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 
+#include <memory>
+
 int
 tdp_wait_stopped_child (pid_t pid)
 {
@@ -691,7 +693,7 @@ int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
 							handler_descrip, s, TRUE) );
 }
 
-int DaemonCore::RegisteredSocketCount()
+int DaemonCore::RegisteredSocketCount() const
 {
 	return nRegisteredSocks + nPendingSockets;
 }
@@ -1467,7 +1469,7 @@ DaemonCore::superUserNetworkIpAddr(void) {
 }
 
 bool
-DaemonCore::Is_Command_From_SuperUser( Stream *s )
+DaemonCore::Is_Command_From_SuperUser( Stream *s ) const
 {
 	if (m_super_dc_port < 0) {
 		// This daemon does not have a super user command port
@@ -2914,7 +2916,7 @@ class DCThreadState : public Service {
  public:
 	DCThreadState(int tid) 
 		{m_tid=tid; m_dataptr=NULL; m_regdataptr=NULL;}
-	int get_tid() { return m_tid; }
+	int get_tid() const { return m_tid; }
 	void* *m_dataptr;
 	void* *m_regdataptr;
  private:
@@ -4782,7 +4784,7 @@ void DCSignalMsg::reportSuccess( DCMessenger * )
 			theSignal(),signalName(),thePid());
 }
 
-char const *DCSignalMsg::signalName()
+char const *DCSignalMsg::signalName() const
 {
 	switch(theSignal()) {
 	case SIGUSR1:
@@ -5357,7 +5359,7 @@ int DaemonCore::Continue_Thread(int tid)
 #endif
 }
 
-int DaemonCore::Suspend_Process(pid_t pid)
+int DaemonCore::Suspend_Process(pid_t pid) const
 {
 	dprintf(D_DAEMONCORE,"called DaemonCore::Suspend_Process(%d)\n",
 		pid);
@@ -5711,7 +5713,7 @@ public:
 		const sigset_t *the_sigmask,
 		size_t *core_hard_limit,
 		long    as_hard_limit,
-		int		*affinity_mask,
+		const int		*affinity_mask,
 		FilesystemRemap *fs_remap
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
@@ -5749,8 +5751,8 @@ public:
 	void exec();
 	static int clone_fn( void *arg );
 
-	pid_t clone_safe_getpid();
-	pid_t clone_safe_getppid();
+	pid_t clone_safe_getpid() const;
+	pid_t clone_safe_getppid() const;
 
 	void writeTrackingGid(gid_t tracking_gid);
 	void writeExecError(int exec_errno,int failed_op=0);
@@ -5820,7 +5822,7 @@ static int stack_direction() {
 }
 #endif
 
-pid_t CreateProcessForkit::clone_safe_getpid() {
+pid_t CreateProcessForkit::clone_safe_getpid() const {
 #if HAVE_CLONE
 		// In some broken threading implementations (e.g. PPC SUSE 9 tls),
 		// getpid() in the child branch of clone(CLONE_VM) returns
@@ -5848,7 +5850,7 @@ pid_t CreateProcessForkit::clone_safe_getpid() {
 	return ::getpid();
 #endif
 }
-pid_t CreateProcessForkit::clone_safe_getppid() {
+pid_t CreateProcessForkit::clone_safe_getppid() const {
 #if HAVE_CLONE
 		// See above comment for clone_safe_getpid() for explanation of
 		// why we need to do this.
@@ -6459,7 +6461,7 @@ void CreateProcessForkit::exec() {
 		}
 
 	} else {
-		MyString msg = "Just closed standard file fd(s): ";
+		std::string msg = "Just closed standard file fd(s): ";
 
 			// If we don't want to re-map these, close 'em.
 
@@ -6482,11 +6484,11 @@ void CreateProcessForkit::exec() {
 				// Now, if we didn't find it in the inherit list, close it
 			if ( ( ! found ) && ( close ( q ) != -1 ) ) {
 				closed_fds[num_closed++] = q;
-				msg += IntToStr( q );
+				msg += std::to_string( q );
 				msg += ' ';
 			}
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {
@@ -6629,12 +6631,12 @@ void CreateProcessForkit::exec() {
 	if( IsDebugLevel( D_DAEMONCORE ) ) {
 			// This MyString is scoped to free itself before the call to
 			// exec().  Otherwise, it would be a leak.
-		MyString msg = "Printing fds to inherit: ";
+		std::string msg = "Printing fds to inherit: ";
 		for ( int a=0 ; a<m_numInheritFds ; a++ ) {
-			msg += IntToStr( m_inheritFds[a] );
+			msg += std::to_string( m_inheritFds[a] );
 			msg += ' ';
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 	}
 
 	// Set up the hard limit core size this process should get.
@@ -8409,7 +8411,7 @@ public:
 
 	void CallReaper();
 
-	int FakeThreadID() { return m_tid; }
+	int FakeThreadID() const { return m_tid; }
 
 private:
 	int m_tid; // timer id
@@ -9200,7 +9202,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			int desired_size;
 
 				// Dynamically construct the log message.
-			MyString msg;
+			std::string msg;
 
 			if ( it->has_safesock()) {
 					// set the UDP (ssock) read size to be large, so we do
@@ -9208,7 +9210,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 				desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
 											 10000 * 1024, 1024);
 				int final_udp = it->ssock()->set_os_buffers(desired_size);
-				msg += IntToStr(final_udp / 1024);
+				msg += std::to_string(final_udp / 1024);
 				msg += "k (UDP), ";
 			}
 
@@ -9219,12 +9221,12 @@ DaemonCore::InitDCCommandSocket( int command_port )
 											 128 * 1024, 1024 );
 				int final_tcp = it->rsock()->set_os_buffers( desired_size, true );
 
-				msg += IntToStr(final_tcp / 1024);
+				msg += std::to_string(final_tcp / 1024);
 				msg += "k (TCP)";
 			}
-			if( !msg.IsEmpty() ) {
+			if( !msg.empty() ) {
 				dprintf(D_FULLDEBUG,
-						"Reset OS socket buffer size to %s\n", msg.Value());
+						"Reset OS socket buffer size to %s\n", msg.c_str());
 			}
 		}
 
@@ -10790,7 +10792,7 @@ bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
 }
 
 bool
-DaemonCore::GetPeacefulShutdown() {
+DaemonCore::GetPeacefulShutdown() const {
 	return peaceful_shutdown;
 }
 
@@ -11017,7 +11019,7 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 
 
 bool
-DaemonCore::wantsRestart()
+DaemonCore::wantsRestart() const
 {
 	return m_wants_restart;
 }
@@ -11202,7 +11204,7 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	return 0;
 }
 
-void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) {
+void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) const {
 	if ( !sinful ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
 		return;
@@ -11244,7 +11246,7 @@ bool DaemonCore::SockPair::has_relisock(bool b) {
 		EXCEPT("Internal error: DaemonCore::SockPair::has_relisock must never be called with false as an argument.");
 	}
 	if(!m_rsock) {
-		m_rsock = std::shared_ptr<ReliSock>(new ReliSock);
+		m_rsock = std::make_shared<ReliSock>();
 	}
 	return true;
 }
@@ -11254,7 +11256,7 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		EXCEPT("Internal error: DaemonCore::SockPair::has_safesock must never be called with false as an argument.");
 	}
 	if(!m_ssock) {
-		m_ssock = std::shared_ptr<SafeSock>(new SafeSock);
+		m_ssock = std::make_shared<SafeSock>();
 	}
 	return true;
 }

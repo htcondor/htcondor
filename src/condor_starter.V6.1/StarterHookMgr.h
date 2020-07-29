@@ -77,7 +77,7 @@ public:
 		 */
 	int tryHookJobExit(ClassAd* job_info, const char* exit_reason);
 
-	int getExitHookTimeout() { return m_hook_job_exit_timeout; };
+	int getExitHookTimeout() const { return m_hook_job_exit_timeout; };
 
 private:
 

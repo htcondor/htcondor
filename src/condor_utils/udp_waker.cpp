@@ -53,7 +53,7 @@ UdpWakeOnLanWaker::default_port = 9;
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     char const     *mac,
     char const     *subnet,
-    unsigned short port ) throw ()
+    unsigned short port ) noexcept
 	: WakerBase (), 
 	m_port ( port )
 {
@@ -71,7 +71,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 }
 
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
-    ClassAd *ad ) throw ()
+    ClassAd *ad ) noexcept
 	: WakerBase ()
 {
 
@@ -160,7 +160,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
 }
 
-UdpWakeOnLanWaker::~UdpWakeOnLanWaker () throw ()
+UdpWakeOnLanWaker::~UdpWakeOnLanWaker () noexcept
 {
 }
 

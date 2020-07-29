@@ -46,7 +46,7 @@ class ResourceRequestCluster {
 	size_t size() { return m_job_ids.size(); }
 
 		// returns the auto cluster id for this cluster
-	int getAutoClusterId() { return m_auto_cluster_id; }
+	int getAutoClusterId() const { return m_auto_cluster_id; }
  private:
 
 	int m_auto_cluster_id;

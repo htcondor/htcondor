@@ -301,7 +301,7 @@ void GahpServer::GahpStatistics::Unpublish( ClassAd & ad ) const
 // GAHP_DEBUG_HIDE_SENSITIVE_DATA to see if sensitive data should be
 // sanitized.
 void
-GahpServer::write_line(const char *command, const char *debug_cmd)
+GahpServer::write_line(const char *command, const char *debug_cmd) const
 {
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
@@ -325,7 +325,7 @@ GahpServer::write_line(const char *command, const char *debug_cmd)
 }
 
 void
-GahpServer::write_line(const char *command, int req, const char *args)
+GahpServer::write_line(const char *command, int req, const char *args) const
 {
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
@@ -481,7 +481,7 @@ GahpServer::buffered_read( int fd, void *buf, int count )
 
 // Return the number of bytes in the buffer used by buffered_read().
 int
-GahpServer::buffered_peek()
+GahpServer::buffered_peek() const
 {
 	return m_buffer_end - m_buffer_pos;
 }
@@ -1546,7 +1546,7 @@ GahpServer::setPollInterval(unsigned int interval)
 }
 
 unsigned int
-GahpServer::getPollInterval()
+GahpServer::getPollInterval() const
 {
 	return m_pollInterval;
 }

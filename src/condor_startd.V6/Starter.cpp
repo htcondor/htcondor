@@ -1192,7 +1192,7 @@ Starter::cleanupAfterGlexec(Claim * claim)
 #endif
 
 bool
-Starter::active()
+Starter::active() const
 {
 	return( (s_pid != 0) );
 }

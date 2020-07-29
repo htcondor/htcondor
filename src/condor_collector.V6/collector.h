@@ -43,7 +43,7 @@ class CollectorUniverseStats {
 	void Reset( void );
 	void accumulate( int univ );
 	int getValue( int univ );
-	int getCount( void );
+	int getCount( void ) const;
 	int setMax( CollectorUniverseStats & );
 	const char *getName( int univ );
 	int publish( const char *label, ClassAd *cad );

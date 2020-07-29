@@ -974,6 +974,6 @@ void BoincJob::GetInputFilenames( vector<pair<std::string, std::string> > &files
 		} else {
 			formatstr( tmp_str, "%s/%s", iwd.c_str(), filename );
 		}
-		files.push_back( pair<std::string, std::string>( tmp_str, condor_basename(filename) ) );
+		files.emplace_back( tmp_str, condor_basename(filename) );
 	}
 }

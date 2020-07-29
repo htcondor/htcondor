@@ -263,6 +263,11 @@ Machine ClassAd Attributes
     entries`.
     :index:`Has_sse4_1<single: Has_sse4_1; ClassAd machine attribute>`
 
+``HasUserNamespaces``
+    A boolean value that when ``True`` identifies that the jobs on this machine
+    can create user namespaces without root privileges.
+    :index:`HasUserNamespaces<single: HasUserNamespaces; ClassAd machine attribute>`
+
 ``Has_sse4_1``
     A boolean value set to ``True`` if the machine being advertised
     supports the SSE 4.1 instructions, and ``Undefined`` otherwise.
@@ -588,7 +593,7 @@ Machine ClassAd Attributes
     number. Could be used the the startd to refuse to start jobs in
     offline universes:
 
-    ::
+    .. code-block:: condor-config
 
         START = OfflineUniverses is undefined || (! member( JobUniverse, OfflineUniverses ))
 
@@ -967,7 +972,7 @@ Machine ClassAd Attributes
     For SMP machines, the integer that identifies the slot. The value
     will be X for the slot with
 
-    ::
+    .. code-block:: condor-config
 
         name="slotX@full.hostname"
 

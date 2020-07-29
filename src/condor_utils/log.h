@@ -51,7 +51,7 @@ public:
 	
 	LogRecord();
 	virtual ~LogRecord();
-	int get_op_type() { return op_type; }
+	int get_op_type() const { return op_type; }
 
 	int Write(FILE *fp);
 	int Read(FILE *fp);
@@ -70,7 +70,7 @@ protected:
 	int op_type;	/* This is the type of operation being performed */
 
 private:
-	int WriteHeader(FILE *fp);
+	int WriteHeader(FILE *fp) const;
 	virtual int WriteBody(FILE *) { return 0; }
 	int WriteTail(FILE *fp);
 };

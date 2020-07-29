@@ -40,7 +40,7 @@ void parseSetDoNameMunge(bool doit);
  *     and includes)
  */
 bool parse (Dag *dag, const char * filename, bool useDagDir,
-			bool incrementDagNum = true );
+			DCSchedd *schedd, bool incrementDagNum = true );
 
 /**
  * Determine whether the given token is a DAGMan reserved word.

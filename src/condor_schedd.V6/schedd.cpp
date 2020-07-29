@@ -339,6 +339,7 @@ size_t UserIdentity::HashFcn(const UserIdentity & index)
 	return hashFunction(index.m_username) + hashFunction(index.m_domain) + hashFunction(index.m_auxid);
 }
 
+//PRAGMA_REMIND("Owner/user change to take fully qualified user as a single string, remove separate domain string")
 UserIdentity::UserIdentity(const char *user, const char *domainname, 
 						   ClassAd *ad):
 	m_username(user), 
@@ -1266,7 +1267,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 			if ( !str.empty() ) {
 				str += ",";
 			}
-			str += IntToStr( *rit );
+			str += std::to_string( *rit );
 			num_entries++;
 		}
 		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str);
@@ -2129,7 +2130,7 @@ static const std::string & attrjoin(std::string & buf, const char * prefix, cons
 	return buf;
 }
 
-void LiveJobCounters::publish(ClassAd & ad, const char * prefix)
+void LiveJobCounters::publish(ClassAd & ad, const char * prefix) const
 {
 	std::string buf;
 	ad.InsertAttr(attrjoin(buf,prefix,"Jobs"), (long long)(JobsIdle + JobsRunning + JobsHeld + JobsRemoved + JobsCompleted + JobsSuspended));
@@ -2704,7 +2705,7 @@ clear_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 	// This function, given a job, calculates the "weight", or cost
 	// of the slot for accounting purposes.  Usually the # of cpus
 double 
-Scheduler::calcSlotWeight(match_rec *mrec) {
+Scheduler::calcSlotWeight(match_rec *mrec) const {
 	if (!mrec) {
 		// shouldn't ever happen, but be defensive
 		return 1;
@@ -8213,7 +8214,7 @@ PostInitJobQueue()
 
 
 void
-Scheduler::ExpediteStartJobs()
+Scheduler::ExpediteStartJobs() const
 {
 	if( startjobsid == -1 ) {
 		return;
@@ -12590,11 +12591,11 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"(%d.%d) User policy requested unknown action of %d. "
 				"Putting job on hold. (Reason: %s)\n",
 				 job_id.cluster, job_id.proc, action, reason.Value());
-			MyString reason2 = "Unknown action (";
-			reason2 += IntToStr( action );
+			std::string reason2 = "Unknown action (";
+			reason2 += std::to_string( action );
 			reason2 += ") ";
 			reason2 += reason;
-			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
+			holdJob(job_id.cluster, job_id.proc, reason2.c_str(),
 					CONDOR_HOLD_CODE_JobPolicyUndefined, 0,
 				true,false,false,true);
 			break;
@@ -14587,7 +14588,7 @@ sendAlive( match_rec* mrec )
 }
 
 int
-Scheduler::receive_startd_alive(int cmd, Stream *s)
+Scheduler::receive_startd_alive(int cmd, Stream *s) const
 {
 	// Received a keep-alive from a startd.  
 	// Protocol: startd sends up the match id, and we send back 
@@ -15487,7 +15488,6 @@ moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			 bool verbose )
 {
 	int value;
-	MyString new_value;
 	int rval;
 
 	if( GetAttributeInt(job_id.cluster, job_id.proc, old_attr, &value) < 0 ) {
@@ -15498,10 +15498,8 @@ moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 		return false;
 	}
 	
-	new_value += IntToStr( value );
-
 	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
-						 new_value.Value() ); 
+						 std::to_string(value).c_str() );
 
 	if( rval < 0 ) { 
 		if( verbose ) {

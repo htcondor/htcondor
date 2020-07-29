@@ -83,9 +83,9 @@ Examples
 
 For a user to remove all their jobs that are not currently running:
 
-::
+.. code-block:: console
 
-    % condor_rm -constraint 'JobStatus =!= 2'
+    $ condor_rm -constraint 'JobStatus =!= 2'
 
 Exit Status
 -----------

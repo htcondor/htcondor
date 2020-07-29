@@ -63,15 +63,15 @@ Options
 Examples
 --------
 
-::
+.. code-block:: console
 
-    % condor_qedit -name north.cs.wisc.edu -pool condor.cs.wisc.edu 249.0 answer 42 
+    $ condor_qedit -name north.cs.wisc.edu -pool condor.cs.wisc.edu 249.0 answer 42 
     Set attribute "answer". 
-    % condor_qedit -name perdita 1849.0 In '"myinput"' 
+    $ condor_qedit -name perdita 1849.0 In '"myinput"' 
     Set attribute "In". 
-    % condor_qedit jbasney NiceUser TRUE 
+    $ condor_qedit jbasney NiceUser TRUE 
     Set attribute "NiceUser". 
-    % condor_qedit -constraint 'JobUniverse == 1' Requirements '(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)' 
+    $ condor_qedit -constraint 'JobUniverse == 1' Requirements '(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)' 
     Set attribute "Requirements".
 
 General Remarks
@@ -79,9 +79,9 @@ General Remarks
 
 A job's ClassAd attributes may be viewed with
 
-::
+.. code-block:: console
 
-      condor_q -long
+      $ condor_q -long
 
 Exit Status
 -----------

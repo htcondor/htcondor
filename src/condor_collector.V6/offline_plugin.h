@@ -35,7 +35,7 @@ class OfflineCollectorPlugin : public Service {
 
 public:
 
-    OfflineCollectorPlugin () throw ();
+    OfflineCollectorPlugin () noexcept;
     virtual ~OfflineCollectorPlugin ();
 
     /* Methods */

@@ -1149,6 +1149,12 @@ default=false
 type=bool
 tags=daemon_core
 
+[SEC_CREDENTIAL_SWEEP_INTERVAL]
+default=300
+type=int
+description=Period to check for old (marked) credentials
+tags=security
+
 [SEC_CREDENTIAL_SWEEP_DELAY]
 default=3600
 type=int

@@ -85,9 +85,9 @@ Examples
 
 The example Unix command
 
-::
+.. code-block:: console
 
-    condor_ping  -address "<127.0.0.1:9618>" -table READ WRITE DAEMON
+    $ condor_ping  -address "<127.0.0.1:9618>" -table READ WRITE DAEMON
 
 places double quote marks around the sinful string to prevent the less
 than and the greater than characters from causing redirect of input and

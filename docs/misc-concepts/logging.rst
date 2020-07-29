@@ -56,9 +56,9 @@ daemon logs
     location and file name of the daemon log. For example, to display
     the location of the log for the *condor_collector* daemon, use
 
-    ::
+    .. code-block:: console
 
-          condor_config_val COLLECTOR_LOG
+          $ condor_config_val COLLECTOR_LOG
 
 job queue log
     The job queue log is a transactional representation of the current

@@ -1,25 +1,34 @@
  ###############################################################
- # 
- # Copyright 2011 Red Hat, Inc. 
- # 
- # Licensed under the Apache License, Version 2.0 (the "License"); you 
- # may not use this file except in compliance with the License.  You may 
- # obtain a copy of the License at 
- # 
- #    http://www.apache.org/licenses/LICENSE-2.0 
- # 
- # Unless required by applicable law or agreed to in writing, software 
- # distributed under the License is distributed on an "AS IS" BASIS, 
+ #
+ # Copyright 2011 Red Hat, Inc.
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License"); you
+ # may not use this file except in compliance with the License.  You may
+ # obtain a copy of the License at
+ #
+ #    http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and 
- # limitations under the License. 
- # 
- ############################################################### 
+ # See the License for the specific language governing permissions and
+ # limitations under the License
+ #
+ ###############################################################
 
 ##########################################################################
 # Set project
 project(CONDOR)
 cmake_minimum_required(VERSION 2.8)
+
+# We can set these and remove the C++11 options from CondorConfigure.cmake
+
+# when we have cmake3 everywhere.
+# Exactly c++ 11 for all platforms
+#set(CMAKE_CXX_STANDARD 11)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_CXX_EXTENSIONS OFF)
+#set(PREFER_CPP11 ON) # Still have some ifdefs on this
 
 ##########################################################################
 #Setup package meta-data (used in packaging)
@@ -122,7 +131,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man")
 	if (NOT WANT_MAN_PAGES OR ${SPHINXBUILD} STREQUAL "SPHINXBUILD-NOTFOUND")
 		message(STATUS "NOTE: Skipping man-pages")
 	else()
-		
+
 		message(STATUS "NOTE: Will try building man-pages")
 		# NOTE: deps are not configured to detect file changes.
 		add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/man1/condor_on.1
@@ -131,7 +140,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man")
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs )
 
 		add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/man1/condor_on.1 )
-		
+
 		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man/ DESTINATION ${C_MAN} )
 	endif()
 

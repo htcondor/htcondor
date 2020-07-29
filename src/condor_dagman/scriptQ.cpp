@@ -162,7 +162,7 @@ ScriptQ::RunWaitingScripts( bool justOne )
 }
 
 int
-ScriptQ::NumScriptsRunning()
+ScriptQ::NumScriptsRunning() const
 {
 	return _numScriptsRunning;
 }

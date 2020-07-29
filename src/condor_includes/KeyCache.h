@@ -50,11 +50,11 @@ class KeyCacheEntry {
 	const condor_sockaddr*         addr();
     KeyInfo*              key();
     ClassAd*              policy();
-    int                   expiration();
-	char const *          expirationType();
+    int                   expiration() const;
+	char const *          expirationType() const;
 	void                  setExpiration(int new_expiration);
 	void                  setLingerFlag(bool flag) { _lingering = flag; }
-	bool                  getLingerFlag() { return _lingering; }
+	bool                  getLingerFlag() const { return _lingering; }
 
 	void                  renewLease();
  private:

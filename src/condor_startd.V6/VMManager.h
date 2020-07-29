@@ -34,7 +34,7 @@ public:
 	virtual ~VMManager();
 
 	bool isRegistered(const char *,int);
-	int numOfVM(void);
+	int numOfVM(void) const;
 	void attach(VMMachine *);
 	void detach(VMMachine *);
 	void allNotify(const char *, int cmd, void *data);

@@ -30,7 +30,7 @@ public:
 	void	push( int num, float val );
 	void	clear();
 	float	avg();
-	int		size() { return q_size; };
+	int		size() const { return q_size; };
 	void	setval( float val );
 	void	display( Resource* rip );
 

@@ -60,7 +60,7 @@ RemoveAllProfiles( )
 }
 
 bool MultiProfile::
-IsLiteral( )
+IsLiteral( ) const
 {
 	return isLiteral;
 }

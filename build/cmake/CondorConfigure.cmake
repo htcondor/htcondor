@@ -35,7 +35,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 	    add_definitions(-DNTDDI_VERSION=NTDDI_WIN7)
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	
+
 	if(NOT (MSVC_VERSION LESS 1700))
 		set(PREFER_CPP11 TRUE)
 	endif()
@@ -53,7 +53,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 		dprint("**** OUT OF SOURCE BUILDS ****")
 		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 	endif()
-    
+
 	# means user did not specify, so change the default.
 	if ( ${CMAKE_INSTALL_PREFIX} MATCHES "Program Files" )
 		# mimic *nix for consistency
@@ -69,7 +69,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 
 endif()
 
-  
+
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
 message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX}")
@@ -81,7 +81,7 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 # To find python in Windows we will use alternate technique
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 if(NOT WINDOWS)
-    if((${OS_NAME} STREQUAL "DARWIN") OR WANT_PYTHON_WHEELS)
+    if(WANT_PYTHON_WHEELS)
         include (FindPythonInterp)
         message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
         # As of cmake 2.8.8, the variable below is defined by FindPythonInterp.
@@ -92,13 +92,20 @@ if(NOT WINDOWS)
         endif()
         include (FindPythonLibs)
         message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
-	if (PYTHON_EXECUTABLE)
-	  execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
-	endif()
+        if (PYTHON_EXECUTABLE)
+            execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
+        endif()
     else()
         # We need to do this the hard way for both python2 and python3 support in the same build
         # This will be easier in cmake 3
-        find_program(PYTHON_EXECUTABLE python2)
+
+        if(${OS_NAME} STREQUAL "DARWIN")
+            find_program(PYTHON_EXECUTABLE python)
+        else()
+            find_program(PYTHON_EXECUTABLE python2)
+        endif()
+
+message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
         if (PYTHON_EXECUTABLE)
             set(PYTHONINTERP_FOUND TRUE)
             set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
@@ -112,9 +119,10 @@ if(NOT WINDOWS)
             set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
             set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
             set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
-	    set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+            set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+            set(PYTHON_QUERY_PART_13 "print(sys.prefix)")
 
-            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}")
+            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}${PYTHON_QUERY_PART_13}")
             execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
                             RESULT_VARIABLE _PYTHON_SUCCESS
                             OUTPUT_VARIABLE _PYTHON_VALUES
@@ -133,8 +141,18 @@ if(NOT WINDOWS)
             list(GET _PYTHON_VALUES 6 PYTHON_MULTIARCH)
             list(GET _PYTHON_VALUES 7 PYTHON_LIB)
             #list(GET _PYTHON_VALUES 8 C_PYTHONARCHLIB)
-	    list(GET _PYTHON_VALUES 9 PYTHON_MODULE_EXTENSION)
+            list(GET _PYTHON_VALUES 9 PYTHON_MODULE_EXTENSION)
+            list(GET _PYTHON_VALUES 10 PYTHON_PREFIX)
             #set(C_PYTHONARCHLIB ${C_PYTHONARCHLIB})
+
+			if(${OS_NAME} STREQUAL "DARWIN")
+				set(PYTHON_LIBDIR "${PYTHON_PREFIX}/lib")
+				set(PYTHON_LIB "libpython${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.dylib")
+			endif()
+
+message(STATUS "PYTHON_LIBDIR = ${PYTHON_LIBDIR}")
+message(STATUS "PYTHON_LIB = ${PYTHON_LIB}")
+
             if(EXISTS "${PYTHON_LIBDIR}/${PYTHON_LIB}")
                 set(PYTHON_LIBRARIES "${PYTHON_LIBDIR}/${PYTHON_LIB}")
                 set(PYTHONLIBS_FOUND TRUE)
@@ -145,7 +163,7 @@ if(NOT WINDOWS)
             endif()
             set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
             set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
-	    set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+            set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
 
             message(STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
             message(STATUS "PYTHON_INCLUDE_PATH = ${PYTHON_INCLUDE_PATH}")
@@ -165,9 +183,10 @@ if(NOT WINDOWS)
             set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
             set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
             set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
-	    set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+            set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+            set(PYTHON_QUERY_PART_13 "print(sys.prefix)")
 
-            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}")
+            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}${PYTHON_QUERY_PART_13}")
             execute_process(COMMAND "${PYTHON3_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
                             RESULT_VARIABLE _PYTHON_SUCCESS
                             OUTPUT_VARIABLE _PYTHON_VALUES
@@ -186,8 +205,15 @@ if(NOT WINDOWS)
             list(GET _PYTHON_VALUES 6 PYTHON3_MULTIARCH)
             list(GET _PYTHON_VALUES 7 PYTHON3_LIB)
             #list(GET _PYTHON_VALUES 8 C_PYTHON3ARCHLIB)
-	    list(GET _PYTHON_VALUES 9 PYTHON3_MODULE_EXTENSION)
+            list(GET _PYTHON_VALUES 9 PYTHON3_MODULE_EXTENSION)
+            list(GET _PYTHON_VALUES 10 PYTHON3_PREFIX)
             #set(C_PYTHON3ARCHLIB ${C_PYTHON3ARCHLIB})
+
+			if(${OS_NAME} STREQUAL "DARWIN")
+				set(PYTHON3_LIBDIR "${PYTHON3_PREFIX}/lib")
+				set(PYTHON3_LIB "libpython${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR}.dylib")
+			endif()
+
             if(EXISTS "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
                 set(PYTHON3_LIBRARIES "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
                 set(PYTHON3LIBS_FOUND TRUE)
@@ -198,7 +224,7 @@ if(NOT WINDOWS)
             endif()
             set(PYTHON3_INCLUDE_PATH "${PYTHON3_INCLUDE_DIRS}")
             set(PYTHON3LIBS_VERSION_STRING "${PYTHON3_VERSION_STRING}")
-	    set(PYTHON3_MODULE_SUFFIX "${PYTHON3_MODULE_EXTENSION}")
+            set(PYTHON3_MODULE_SUFFIX "${PYTHON3_MODULE_EXTENSION}")
 
             message(STATUS "PYTHON3_LIBRARIES = ${PYTHON3_LIBRARIES}")
             message(STATUS "PYTHON3_INCLUDE_PATH = ${PYTHON3_INCLUDE_PATH}")
@@ -223,7 +249,7 @@ if(NOT WINDOWS)
 				get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
 				message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 			endif()
-		
+
 			message(STATUS "  Looking for python 3.6 in HKLM\\Software\\Wow3264Node")
 			get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
 			message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
@@ -256,11 +282,11 @@ if(NOT WINDOWS)
 				set(PYTHON_QUERY_PART_09 "print(hasattr(sys, 'gettotalrefcount')+0);")
 				set(PYTHON_QUERY_PART_10 "print(struct.calcsize('@P'));")
 				set(PYTHON_QUERY_PART_11 "print(s.get_config_var('LDVERSION') or s.get_config_var('VERSION'));")
-				
+
 				set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}")
-				
+
 				if( NOT "${PYTHON_INSTALL_DIR}" MATCHES "registry")
-					execute_process(COMMAND "${PYTHON_INSTALL_DIR}\\python.exe" "-c" "${PYTHON_QUERY_COMMAND}" 
+					execute_process(COMMAND "${PYTHON_INSTALL_DIR}\\python.exe" "-c" "${PYTHON_QUERY_COMMAND}"
 									RESULT_VARIABLE _PYTHON_SUCCESS
 									OUTPUT_VARIABLE _PYTHON_VALUES
 									ERROR_VARIABLE _PYTHON_ERROR_VALUE
@@ -626,19 +652,7 @@ if( NOT WINDOWS)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 	endif()
 
-	if (NOT PREFER_CPP11)
 
-	  # Some early 4.0 g++'s have unordered maps, but their iterators don't work
-	  check_cxx_source_compiles("
-		#include <tr1/unordered_map>
-		int main() {
-			std::tr1::unordered_map<int, int>::const_iterator ci;
-			return 0;
-		}
-		" PREFER_TR1 )
-
-	endif(NOT PREFER_CPP11)
-	
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
@@ -844,7 +858,7 @@ endif()
 
 #####################################
 # ssh_to_job option
-if (NOT WINDOWS) 
+if (NOT WINDOWS)
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 if ( HAVE_SSH_TO_JOB )
@@ -900,7 +914,7 @@ endif()
 # I'd like this to apply to classads build as well, so I put it
 # above the addition of the .../src/classads subdir:
 if (LINUX
-    AND PROPER 
+    AND PROPER
     AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     AND NOT (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.4.6))
 
@@ -981,7 +995,7 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1)
   endif()
-  
+
   # DRMAA currently punted on Windows until we can figure out correct build
   #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
@@ -989,7 +1003,11 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+  if (DARWIN)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+  else()
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+  endif()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
@@ -1056,7 +1074,7 @@ if (NOT WINDOWS)
 else (NOT WINDOWS)
 	add_custom_target( ALL_EXTERN DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
-endif (NOT WINDOWS)	
+endif (NOT WINDOWS)
 endif(CONDOR_EXTERNALS)
 
 ######### special case for contrib
@@ -1180,12 +1198,12 @@ if (OPENMP_FOUND)
 endif()
 
 if(MSVC)
-	#disable autolink settings 
+	#disable autolink settings
 	add_definitions(-DBOOST_ALL_NO_LIB)
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FC")      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
-		# turn on code analysis. 
+		# turn on code analysis.
 		# also disable 6211 (leak because of exception). we use new but not catch so this warning is just noise
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /analyze /wd6211") # turn on code analysis (level 6 warnings)
 	endif(MSVC_ANALYZE)
@@ -1194,7 +1212,7 @@ if(MSVC)
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4275")  #
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4996")  # deprecation warnings
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4273")  # inconsistent dll linkage
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd6334") # inclusion warning from boost. 
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd6334") # inclusion warning from boost.
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
@@ -1270,7 +1288,7 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=unused-local-typedefs")
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
 
-	# check compiler flag not working for this flag.  
+	# check compiler flag not working for this flag.
 	if (NOT CMAKE_C_COMPILER_VERSION VERSION_LESS "4.8")
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
 	if (c_Wdeprecated_declarations)

@@ -54,10 +54,10 @@ public:
 	//@{
 
 	/// Constructor
-	HibernatorBase( void ) throw ();
+	HibernatorBase( void ) noexcept;
 
 	/// Destructor
-	virtual ~HibernatorBase( void ) throw ();
+	virtual ~HibernatorBase( void ) noexcept;
 
 	/// Initializer
 	virtual bool initialize( void ) = 0;

@@ -29,9 +29,9 @@ will keep going, and try the priority 9 job next.
 
 The job priority may be specified in the submit description file by setting
 
-::
+.. code-block:: condor-submit
 
-       priority = 15
+    priority = 15
 
 If no priority is set, the default is 0. See the Dagman section for ways that dagman
 can automatically set the priority of any or all jobs in a dag.

@@ -63,11 +63,11 @@ public:
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
-    bool hadAuthFailure() { return m_hadAuthFailure; }
+    bool hadAuthFailure() const { return m_hadAuthFailure; }
 
-	bool ServerTypeQueried( EC2Job *job = NULL );
-	bool ClientTokenWorks( EC2Job *job = NULL );
-	bool ShuttingDownTrusted( EC2Job *job = NULL );
+	bool ServerTypeQueried( EC2Job *job = NULL ) const;
+	bool ClientTokenWorks( EC2Job *job = NULL ) const;
+	bool ShuttingDownTrusted( EC2Job *job = NULL ) const;
 
     std::string authFailureMessage;
 
