@@ -131,6 +131,12 @@ New Features:
    more details.
    :ticket:`7352`
 
+-  Improved messaging for the *condor_drain* tool to indicate that it is only
+   draining the single specified *condor_startd*. If the target host has 
+   multiple *condor_startd* daemons running, the other instances will not be
+   drained.
+   :ticket:`7664`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
