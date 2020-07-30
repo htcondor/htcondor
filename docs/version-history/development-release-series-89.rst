@@ -45,6 +45,11 @@ Release Notes:
   release.
   :ticket:`7630`
 
+-  Removed the *condor_dagman* ``node_scheduler`` module, which contains
+   earlier implementations of several DAGMan components and has not been used
+   in a long time.
+   :ticket:`7674`
+
 New Features:
 
 -  Added options ``-short-uuid`` and ``-uuid`` to the *condor_gpu_discovery*
