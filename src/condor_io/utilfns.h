@@ -19,14 +19,10 @@
 #ifndef __CEDAR_UTIL_FNS__
 #define __CEDAR_UTIL_FNS__
 
-extern "C" {
-
 int errno_num_encode( int errno_num );
 int errno_num_decode( int errno_num );
 
 int open_flags_encode(int old_flags);
 int open_flags_decode(int old_flags);
-
-}
 
 #endif

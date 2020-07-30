@@ -41,10 +41,6 @@
 #include "ipv6_hostname.h"
 #include "condor_sockfunc.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 
 const char *
 sock_to_string(SOCKET sockd)
@@ -436,8 +432,6 @@ int generate_sinful(char* buf, int len, const char* ip, int port) {
 	}
 }
 
-#if defined(__cplusplus)
-}
 
 MyString generate_sinful(const char* ip, int port) {
 	MyString buf;
@@ -457,5 +451,3 @@ bool sinful_to_ipstr(const char * addr, MyString & ipout)
 	ipout = sa.to_ip_string();
 	return true;
 }
-
-#endif

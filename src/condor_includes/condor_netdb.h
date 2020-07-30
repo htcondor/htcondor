@@ -23,16 +23,8 @@
 
 #include "condor_common.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 
 int
 condor_gethostname(char *name, size_t namelen);
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif

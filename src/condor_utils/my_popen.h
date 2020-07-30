@@ -50,8 +50,6 @@ int my_system( const char *cmd );
 
 END_C_DECLS
 
-#if defined(__cplusplus)
-
 // ArgList and Env versions only available from C++
 #include "condor_arglist.h"
 #include "env.h"
@@ -174,7 +172,5 @@ private:
 	MyPopenTimer& operator=(const MyPopenTimer & that);
 };
 
-
-#endif // __cplusplus
 
 #endif

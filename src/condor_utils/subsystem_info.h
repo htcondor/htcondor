@@ -126,9 +126,6 @@ typedef enum {
 	SUBSYSTEM_CLASS_JOB,
 } SubsystemClass;
 
-// Declare C++ things
-#if defined(__cplusplus)
-
 class SubsystemInfoLookup;		// pre declaration, internal only
 class SubsystemInfoTable;		// pre declaration, internal only
 class SubsystemInfo
@@ -203,8 +200,6 @@ SubsystemInfo* has_mySubSystem(); // returns true if subsystem has been initiali
 SubsystemInfo* get_mySubSystem();
 void set_mySubSystem( const char *subsystem_name,
 					  SubsystemType _type = SUBSYSTEM_TYPE_AUTO );
-
-#endif	// C++
 
 
 // "C" accessors

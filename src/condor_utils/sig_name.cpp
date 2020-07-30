@@ -80,8 +80,6 @@ static const struct SigTable SigNameArray_local[] = {
 	{ -1, "\0" }
 };
 
-extern "C" {
-
 int
 signalNumber( const char* signame )
 {
@@ -108,12 +106,8 @@ signalName( int sig )
 	return NULL;
 }
 
-} // end of extern "C"
-
 #else /* WIN32 */
 
-
-extern "C" {
 
 int
 signalNumber( const char* )
@@ -127,7 +121,5 @@ signalName( int )
 {
 	return NULL;
 }
-
-} // end of extern "C"
 
 #endif /* WIN32 */

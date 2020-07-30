@@ -25,10 +25,6 @@
 #include "condor_getmnt.h"
 #include "condor_header_features.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 char* getExecPath( void );
 
 int rotate_file(const char *old_filename, const char *new_filename);
@@ -40,9 +36,5 @@ int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 
 //Only daemon_core_main need this
 void detach ( void );
-
-#if defined(__cplusplus)
-}		/* End of extern "C" declaration */
-#endif
 
 #endif

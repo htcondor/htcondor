@@ -21,10 +21,6 @@
 #ifndef LIMIT_H
 #define LIMIT_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 enum thingy {
 	CONDOR_SOFT_LIMIT = 0,
 	CONDOR_HARD_LIMIT = 1,
@@ -33,10 +29,6 @@ enum thingy {
 
 #ifndef WIN32
 void limit( int resource, rlim_t limit, int limit_type, char const *resource_desc);
-#endif
-
-#if defined(__cplusplus)
-}
 #endif
 
 #endif

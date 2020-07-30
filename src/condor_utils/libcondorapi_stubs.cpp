@@ -84,7 +84,6 @@ int condor_fdatasync(int, const char*)
 	return 0;
 }
 
-BEGIN_C_DECLS
 void
 config( int, bool )
 {
@@ -117,7 +116,7 @@ int param_boolean_int(const char *, int default_value)
 	return default_value;
 }
 
-int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_val*/ )
+int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_val*/, bool /*use_param_table*/ )
 {
 	return default_value;
 }
@@ -126,7 +125,6 @@ int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_
 int reconfig_user_maps() { return 0; }
 bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }
 
-END_C_DECLS
 int param_integer(const char *, int default_value, int, int, ClassAd *, 
 	ClassAd *, bool)
 {

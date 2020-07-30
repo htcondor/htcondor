@@ -46,7 +46,7 @@ static char *formatTimeHeader(struct tm *tm) {
 }
 
 
-extern "C" void
+void
 dprintf(int, const char* format, ...)
 {
 	if (debug_fn && !strcmp(debug_fn, "SYSLOG")) {
@@ -77,7 +77,7 @@ int	_EXCEPT_Line;
 const char*	_EXCEPT_File;
 int	_EXCEPT_Errno;
 
-extern "C" void
+void
 _EXCEPT_(const char* format, ...)
 {
 	if (debug_fn && !strcmp(debug_fn, "SYSLOG")) {

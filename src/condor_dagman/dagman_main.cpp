@@ -46,7 +46,7 @@ void ExitSuccess();
 	// (I think because of the name mangling).  wenger 2007-02-09.
 //extern "C" void process_config_source( char* file, const char* name,
 //			char* host, int required );
-extern "C" bool is_piped_command(const char* filename);
+bool is_piped_command(const char* filename);
 
 static char* lockFileName = NULL;
 

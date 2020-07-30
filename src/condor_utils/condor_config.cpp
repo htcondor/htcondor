@@ -99,8 +99,6 @@
 // define this to parse for #opt:newcomment/#opt:oldcomment to decide commenting rules
 #define PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
 
-extern "C" {
-	
 // Function prototypes
 bool real_config(const char* host, int wantsQuiet, int config_options, const char * root_config);
 //int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
@@ -116,10 +114,6 @@ void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
 void do_smart_auto_use(int options);
-
-// External variables
-//extern int	ConfigLineNo;
-}  /* End extern "C" */
 
 static const char* find_global(int options, MyString & config_file);
 static const char* find_file(const char*, const char*, int config_options, MyString & config_file);
@@ -2719,7 +2713,7 @@ expand_param(const char *str, const char * localname, const char *subsys, int us
 ** If the value is not defined or not a valid, then
 ** return the default_value argument.
 */
-extern "C" int
+int
 param_boolean_int( const char *name, int default_value ) {
     bool default_bool;
     default_bool = default_value == 0 ? false : true;
@@ -3388,8 +3382,6 @@ set_runtime_config(char *admin, char *config)
 }
 
 
-extern "C" {
-
 static bool Check_config_source_security(FILE* conf_fp, const char * config_source)
 {
 #ifndef WIN32
@@ -3548,8 +3540,6 @@ process_dynamic_configs()
 	}
 	return 0;
 }
-
-} // end of extern "C"
 
 struct _write_macros_args {
 	FILE * fh;

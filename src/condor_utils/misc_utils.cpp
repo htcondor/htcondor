@@ -23,8 +23,6 @@
 #include "condor_config.h"
 #include <time.h>
 
-extern "C" {
-
 /* 
    This converts the given int into a string, and tacks on "st", "nd",
    "rd", or "th", as appropriate.  The value is returned in a static
@@ -141,6 +139,3 @@ my_timezone(int isdst)
 #endif
 
 }
-
-
-} // extern "C"

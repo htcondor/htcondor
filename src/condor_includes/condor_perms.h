@@ -67,8 +67,6 @@ DCpermission getPermissionFromString( const char * permstring );
 
 END_C_DECLS
 
-#if defined(__cplusplus)
-
 class DCpermissionHierarchy {
 
 private:
@@ -171,8 +169,6 @@ public:
 		m_config_perms[i] = LAST_PERM;
 	}
 };
-
-#endif
 
 
 #endif /* _CONDOR_PERMS_H_ */

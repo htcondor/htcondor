@@ -124,9 +124,7 @@ gperf_case_strcmp (const char *s1, const char *s2)
 #ifdef __GNUC__
 __inline
 #else
-#ifdef __cplusplus
 inline
-#endif
 #endif
 static unsigned int
 mime_hash (const char *str, unsigned int len)

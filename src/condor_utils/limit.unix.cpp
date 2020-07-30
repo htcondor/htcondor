@@ -22,8 +22,6 @@
 #include "condor_debug.h"
 #include "limit.h"
 
-extern "C" {
-
 void
 limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 {
@@ -178,5 +176,3 @@ limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 		}
 	}
 }
-
-} /* extern "C" */

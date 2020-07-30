@@ -17,10 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef CONFIG_H
-#define CONFIG_H
-
-#if defined(__cplusplus)
+#ifndef _CONDOR_CONFIG_H
+#define _CONDOR_CONFIG_H
 
 #include "condor_classad.h"
 #include "MyString.h"
@@ -36,12 +34,6 @@ typedef std::vector<const char *> MACRO_SOURCES;
 class CondorError;
 namespace condor_params { typedef struct key_value_pair key_value_pair; }
 typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
-#else // ! __cplusplus
-typedef void* MACRO_SOURCES; // placeholder for use in C
-typedef void  CondorError;   // placeholder for use in C
-typedef struct key_value_pair { const char * key; const void * def; } key_value_pair;
-typedef const struct key_value_pair MACRO_DEF_ITEM;
-#endif
 
 #include "pool_allocator.h"
 //#include "param_info.h"
@@ -102,12 +94,11 @@ typedef struct macro_set {
 	MACRO_SOURCES sources;
 	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
 	CondorError * errors; // optional error stack, if non NULL, use instead of fprintf to stderr
-#ifdef __cplusplus
+
 	// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 	// the preface is printed with fprintf but not with the errors stack.
 	void push_error(FILE * fh, int code, const char* preface, const char* format, ... ) CHECK_PRINTF_FORMAT(5,6);
 	void initialize(int opts);
-#endif
 } MACRO_SET;
 
 // Used as the header for a MACRO_SET checkpoint, the actual allocation is larger than this.
@@ -127,16 +118,14 @@ typedef struct macro_eval_context {
 	char use_mask;
 	char also_in_config; // also do lookups in the config hashtable (used by submit)
 	char is_context_ex;
-#if defined(__cplusplus)
+
 	void init(const char * sub, char mask=2) {
 		memset(this, 0, sizeof(*this));
 		this->subsys = sub;
 		this->use_mask = mask;
 	}
-#endif
 } MACRO_EVAL_CONTEXT;
 
-#if defined(__cplusplus)
 typedef struct macro_eval_context_ex : macro_eval_context {
 	// to do lookups of last resort into the given Ad, set these. they are useually null.
 	const char *adname; // name prefix for lookups into the ad
@@ -148,10 +137,8 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 		this->is_context_ex = true;
 	}
 } MACRO_EVAL_CONTEXT_EX;
-#endif
 
 
-#if defined(__cplusplus)
 	extern MyString global_config_source;
 	extern MyString global_root_config_source;
 	extern StringList local_config_sources;
@@ -342,10 +329,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 
 	bool get_config_dir_file_list( char const *dirpath, class StringList &files );
 
-/* here we provide C linkage to C++ defined functions. This seems a bit
-	odd since if a .c file includes this, these prototypes technically don't
-	exist.... */
-extern "C" {
 	#define CONFIG_OPT_WANT_META      0x01   // also keep metdata about config
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
@@ -387,7 +370,6 @@ extern "C" {
 		// where can_switch_ids() is true; set daemon_ok = false if calling this from a root-level
 		// condor.
 	bool find_user_file(MyString & filename, const char * basename, bool check_access, bool daemon_ok);
-} // end extern "C"
 
 
 // the HASHITER can only be defined with c++ linkage
@@ -478,16 +460,11 @@ int write_config_file(const char* pathname, int options);
 	void init_global_config_table(int options);
 	void clear_global_config_table(void);
 
-#endif // __cplusplus
-
-BEGIN_C_DECLS
-
 	char * get_tilde(void);
 	char * param ( const char *name );
 	// do param lookup with explicit subsys and localname
 	char * param_with_context ( const char *name, const char *subsys, const char *localname, const char * cwd );
 
-#ifdef __cplusplus
 	// do param lookup with explicit subsys and localname
 	char * param_ctx (const char *name, MACRO_EVAL_CONTEXT & ctx);
 
@@ -659,7 +636,7 @@ BEGIN_C_DECLS
 	};
 
 	// this must be C++ linkage because condor_string already has a c linkage function by this name.
-	extern "C++" char * getline_trim(MacroStream & ms, int mode=0); // see condor_string.h for mode values
+	char * getline_trim(MacroStream & ms, int mode=0); // see condor_string.h for mode values
 
 	// populate a MACRO_SET from either a config file or a submit file.
 	#define READ_MACROS_SUBMIT_SYNTAX           0x01
@@ -706,8 +683,6 @@ BEGIN_C_DECLS
 
 	int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set, int parsing_return_val);
 
-#endif // __cplusplus
-
 
 	struct _macro_stats {
 		int cbStrings;
@@ -741,7 +716,5 @@ BEGIN_C_DECLS
 */
 void condor_auth_config(int is_daemon);
 
-END_C_DECLS
-
-#endif /* CONFIG_H */
+#endif /* _CONDOR_CONFIG_H */
 

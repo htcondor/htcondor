@@ -20,10 +20,6 @@
 #ifndef _CONDOR_RANDOM_NUM
 #define _CONDOR_RANDOM_NUM
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 // First, the "insecure" variants: these generate numbers that are
 // well-distributed across the presecribed intervals but may be easy
 // to guess the next in the sequence given a small number of values.
@@ -49,9 +45,5 @@ unsigned int get_csrng_uint(void);
 // We do not currently have a true RNG (i.e., /dev/random on linux); those
 // are more suitable for long-term key material, which HTCondor does not
 // currently use.
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif /* _CONDOR_RANDOM_NUM */

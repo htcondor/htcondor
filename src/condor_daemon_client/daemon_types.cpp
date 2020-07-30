@@ -43,8 +43,6 @@ static const char* daemon_names[] = {
 	"generic"
 };
 
-extern "C" {
-
 const char*
 daemonString( daemon_t dt )
 {	
@@ -66,5 +64,3 @@ stringToDaemonType( const char* name )
 	}
 	return DT_NONE;
 }
-
-} /* extern "C" */

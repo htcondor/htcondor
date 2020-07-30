@@ -116,11 +116,8 @@ enum {
 //#define IsDebugLevel(cat)    (DebugLevels & (3<<((cat)*2))) != 0)
 
 
-#ifdef __cplusplus
 #include <string>
 #include <map>
-extern "C" {
-#endif
 
 #if _MSC_VER >= 1400 /* VC++ 2005 version */
 #define PREFAST_NORETURN __declspec(noreturn)
@@ -151,10 +148,7 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 typedef unsigned long long DPF_IDENT;
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-#ifdef __cplusplus
-}
 void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
-extern "C" {
 // parse config files and use them to fill out the array of dprintf_output_settings
 // one for each output log file. returns the number of entries needed in p_info, (may be larger than c_info!)
 // if p_info is NULL, then dprintf_set_outputs is called with the dprintf_output_settings array.  if != NULL, then
@@ -191,7 +185,6 @@ void _condor_parse_merge_debug_flags(
 
 bool dprintf_to_term_check();
 
-#endif
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
@@ -301,12 +294,6 @@ extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean
 extern void (*_EXCEPT_Reporter)(const char * msg, int line, const char * file); /* called instead of dprintf if non-NULL */
 extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 
-#if defined(__cplusplus)
-}
-#endif
-
-#if defined(__cplusplus)
-
 class dprintf_on_function_exit {
 public:
 	dprintf_on_function_exit(bool on_entry, int _flags, const char * fmt, ...);
@@ -367,8 +354,6 @@ public:
 // caller must supply the buffer and must insure that it is at least datalen*3+1
 // this is intended to provide a way to add small hex dumps to dprintf logging
 extern const char * debug_hex_dump(char * buf, const char * data, int datalen);
-
-#endif // defined(__cplusplus)
 
 #ifndef CONDOR_ASSERT
 #define CONDOR_ASSERT(cond) \

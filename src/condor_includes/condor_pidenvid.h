@@ -118,8 +118,6 @@ typedef struct PidEnvID_s
 
 } PidEnvID;
 
-BEGIN_C_DECLS
-
 /* initialize the structure above */
 void pidenvid_init(PidEnvID *penvid);
 
@@ -168,8 +166,6 @@ void pidenvid_shuffle_to_front(char **env);
    (e.g. this calls pidenvid_shuffle_to_front() under Linux)
 */
 void pidenvid_optimize_final_env(char **env);
-
-END_C_DECLS
 
 #endif
 

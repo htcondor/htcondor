@@ -20,9 +20,6 @@
 #if !defined(MATCH_PREFIX)
 #define MATCH_PREFIX
 
-#ifdef __cplusplus
-extern "C"
-#endif /* __cplusplus */
 // returns 1 if N characters of s1 and s2 match, where N is
 // the length of the shortest string.  note that this will permit
 // garbage at the end of argument names, use is_arg_prefix() to prevent this.
