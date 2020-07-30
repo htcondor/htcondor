@@ -125,6 +125,12 @@ New Features:
    debug problems with jobs not running correctly.
    :ticket:`7568`
 
+-  *condor_dagman* now allows jobs to be described with an inline submit
+   description, instead of referencing a separate submit file. See the
+   :ref:`users-manual/dagman-workflows:inline submit descriptions` section for
+   more details.
+   :ticket:`7352`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
