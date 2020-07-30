@@ -966,14 +966,6 @@ main(int argc, const char* argv[])
 	ClassAd *ad = NULL;
 	std::vector<ClassAd> accountingAds;
 
-	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
-	c.locate();
-	const char *v = c.version();
-	CondorVersionInfo cvi(v);
-	if (!cvi.built_since_version(8,5,2)) {
-		fromCollector = false;	
-	}
-
 	if (fromCollector) {
 		CondorQuery query(ACCOUNTING_AD);
 		ClassAdList ads;
