@@ -38,6 +38,11 @@ Release Notes:
 
 .. HTCondor version 8.8.8 released on Month Date, 2020.
 
+-  HTCondor now supports setting an upper bound on the number of cores user can
+   be given.  This is called the submitter ceiling. The ceiling can be set with
+   the condor_userprio -setceiling command line option.
+   :ticket:`7702`
+
 -  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
    now tries to parse the entire string passed to it.  Failure results in a
    :class:`SyntaxError`.  This prevents strings like ``"foo = bar"`` from silently
@@ -112,6 +117,12 @@ New Features:
    expression's ad; use the ``-quiet`` flag to disable.
    :ticket:`7341`
 
+-  Added a new Python bindings subpackage, :mod:`htcondor.htchirp`.
+   This subpackage provides the :class:`HTChirp` and :func:`condor_chirp`
+   objects for using the Chirp protocol inside a ``+WantIOProxy =
+   true`` job.
+   :ticket:`7330`
+
 -  Added a new tool, *condor_watch_q*, a live-updating job status tracker
    that does not repeatedly query the *condor_schedd* like ``watch condor_q``
    would. It includes options for colored output, progress bars, and a minimal
@@ -167,6 +178,25 @@ New Features:
    drained.
    :ticket:`7664`
 
+-  Added new authentication method names ``FAMILY`` and ``MATCH``.
+   These represent automated establishment of trust between daemons.
+   They can not be used as values for configuration parameters such as
+   :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`.
+   ``FAMILY`` represents a security session between daemons within the same
+   family of OS processes.
+   ``MATCH`` represents a security session between daemons mediated through
+   a central manager (*condor_collector* and *condor_negotiator*) that both
+   daemons trust.
+   These values will be most visible in the attribute
+   ``AuthenticationMethod`` in ClassAds advertised in the *condor_collector*.
+   :ticket:`7683`
+
+- Docker jobs now respect CPU Affinity.
+  :ticket:`7627`
+
+- Added a ``debug`` option to *bosco_cluster* to help diagnose ssh failures.
+  :ticket:`7712`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
@@ -189,7 +219,7 @@ Bugs Fixed:
   when passed the argument getfile
   :ticket:`7612`
 
-- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let program like
+- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let programs like
   ``R`` know the maximum number of threads it should use.
   :ticket:`7649`
 
@@ -206,6 +236,25 @@ Bugs Fixed:
 - Fixed a bug in *condor_dagman* where completed jobs incorrectly showed a 
   warning message related to job events.
   :ticket:`7548`
+
+- Stopped HTCondor from sweeping OAuth credentials too aggressively, during the
+  window between credential creation and job submission.  The *condor_credd*
+  will now wait :macro:`SEC_CREDENTIAL_SWEEP_INTERVAL` seconds before cleaning
+  them up, and the default is 300 seconds.
+  :ticket:`7484`
+
+- When authenticating, clients now only suggest methods that it supports,
+  rather than providing a list of methods where it will reject some. This
+  improves the initial security handshake.
+  :ticket:`7500`
+
+- For RPM installations, the HTCondor Python bindings RPM will now be
+  automatically installed whenever the `condor` RPM is installed.
+  :ticket:`7647`
+
+- Bosco will use the newer version (1.3) of the tarballs on Enterprise Linux
+  7 and 8.
+  :ticket:`7753`
 
 Version 8.9.7
 -------------
