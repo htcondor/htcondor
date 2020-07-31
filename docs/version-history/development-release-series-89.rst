@@ -147,6 +147,19 @@ New Features:
    drained.
    :ticket:`7664`
 
+-  Added new authentication method names ``FAMILY`` and ``MATCH``.
+   These represent automated establishment of trust between daemons.
+   They can not be used as values for configuration parameters such as
+   :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`.
+   ``FAMILY`` represents a security session between daemons within the same
+   family of OS processes.
+   ``MATCH`` represents a security session between daemons mediated through
+   a central manager (*condor_collector* and *condor_negotiator*) that both
+   daemons trust.
+   These values will be most visible in the attribute
+   ``AuthenticationMethod`` in ClassAds advertised in the *condor_collector*.
+   :ticket:`7683`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
