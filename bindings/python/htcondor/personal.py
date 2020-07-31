@@ -337,6 +337,9 @@ class PersonalPool:
         ):
             dir.mkdir(parents=True, exist_ok=True)
 
+        self.passwords_dir.chmod(0o700)
+        self.tokens_dir.chmod(0o700)
+
     def _write_config(self, overwrite: bool = True) -> None:
         if not overwrite and self.config_file.exists():
             raise FileExistsError(
