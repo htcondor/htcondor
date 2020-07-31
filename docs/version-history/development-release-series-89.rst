@@ -19,6 +19,9 @@ Release Notes:
 
 New Features:
 
+-  The :class:`classad.ClassAd` class now defines equality and inequality.
+   :ticket:`7760`
+
 -  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
    :ticket:`7726`
 
