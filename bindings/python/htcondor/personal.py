@@ -180,6 +180,7 @@ class PersonalPool:
         self.spool_dir = self.local_dir / "spool"
         self.passwords_dir = self.local_dir / "passwords.d"
         self.tokens_dir = self.local_dir / "tokens.d"
+        self.system_tokens_dir = self.local_dir / "system_tokens.d"
 
         self.config_file = self.local_dir / "condor_config"
 
@@ -334,11 +335,13 @@ class PersonalPool:
             self.spool_dir,
             self.passwords_dir,
             self.tokens_dir,
+            self.system_tokens_dir,
         ):
             dir.mkdir(parents=True, exist_ok=True)
 
         self.passwords_dir.chmod(0o700)
         self.tokens_dir.chmod(0o700)
+        self.system_tokens_dir.chmod(0o700)
 
     def _write_config(self, overwrite: bool = True) -> None:
         if not overwrite and self.config_file.exists():
@@ -370,7 +373,8 @@ class PersonalPool:
             "RUN": self.run_dir.as_posix(),
             "SPOOL": self.spool_dir.as_posix(),
             "SEC_PASSWORD_DIRECTORY": self.passwords_dir.as_posix(),
-            "SEC_TOKEN_SYSTEM_DIRECTORY": self.tokens_dir.as_posix(),
+            "SEC_TOKEN_DIRECTORY": self.tokens_dir.as_posix(),
+            "SEC_TOKEN_SYSTEM_DIRECTORY": self.system_tokens_dir.as_posix(),
         }
 
         param_lines += ["# BASE PARAMS"]
@@ -674,7 +678,7 @@ class PersonalPool:
         Get the value of a configuration macro.
         The value will be "evaluated", meaning that other configuration macros
         or functions inside it will be expanded.
-        
+
         Parameters
         ----------
         macro
