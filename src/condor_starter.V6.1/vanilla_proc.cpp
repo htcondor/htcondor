@@ -722,19 +722,20 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 	static unsigned int max_rss = 0;
 
-	ProcFamilyUsage* usage;
-	ProcFamilyUsage cur_usage;
-	if (m_proc_exited) {
-		usage = &m_final_usage;
-	}
-	else {
-		if (daemonCore->Get_Family_Usage(JobPid, cur_usage) == FALSE) {
+	ProcFamilyUsage current_usage;
+	if( m_proc_exited ) {
+		current_usage = m_final_usage;
+	} else {
+		if (daemonCore->Get_Family_Usage(JobPid, current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
 			return false;
 		}
-		usage = &cur_usage;
 	}
+
+	ProcFamilyUsage reported_usage = m_checkpoint_usage;
+	reported_usage += current_usage;
+	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
     m_statistics.Tick();
@@ -846,11 +847,12 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
-	// For the same reason that we call recordFinalUsage() from the reaper
-	// in normal exit cases, we should get the final usage of the checkpointed
-	// process now, add it to the running total of checkpointed processes,
-	// and then add the running total to the current when we publish the
-	// update ad.  FIXME (#4971)
+	ProcFamilyUsage last_usage;
+	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
+		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
+			"VanillaProc::restartCheckpointedJob()\n", JobPid );
+	}
+	m_checkpoint_usage += last_usage;
 
 	if( Starter->jic->uploadWorkingFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
@@ -865,6 +867,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// would behave differently during ssh-to-job, which seems bad.
 	// killFamilyIfWarranted();
 
+	m_proc_exited = false;
 	StartJob();
 }
 

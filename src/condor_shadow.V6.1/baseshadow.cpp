@@ -940,10 +940,12 @@ void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 {
 	struct rusage run_remote_rusage;
+	struct rusage total_remote_rusage;
 	JobTerminatedEvent event;
 	MyString corefile;
 
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+	memset( &total_remote_rusage, 0, sizeof(struct rusage) );
 
 	switch( exitReason ) {
 	case JOB_EXITED:
@@ -982,9 +984,16 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
 			run_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		}
-
 		event.run_remote_rusage = run_remote_rusage;
-		event.total_remote_rusage = run_remote_rusage;
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+		event.total_remote_rusage = total_remote_rusage;
 	
 		/*
 		  Both the job ad and the terminated event record bytes
@@ -1014,6 +1023,18 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	run_remote_rusage = getRUsage();
 	
+		/* grab usage information out of job ad */
+		double real_value;
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+
+
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signalNumber = exitSignal();
@@ -1026,7 +1047,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		// event.run_local_rusage = r;
 	event.run_remote_rusage = run_remote_rusage;
 		// event.total_local_rusage = r;
-	event.total_remote_rusage = run_remote_rusage;
+	event.total_remote_rusage = total_remote_rusage;
 	
 		/*
 		  we want to log the events from the perspective of the user
