@@ -353,10 +353,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
-	int param_integer_c( const char *name, int default_value,
-					   int min_value, int max_value, bool use_param_table = true );
-    //int  param_boolean_int( const char *name, int default_value, bool use_param_table = true );
-    int  param_boolean_int_with_default( const char *name );
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
@@ -697,9 +693,6 @@ int write_config_file(const char* pathname, int options);
 	int  get_config_stats(struct _macro_stats *pstats);
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
-	int  param_boolean_int( const char *name, int default_value );
-	int  param_boolean_int_with_default( const char* name );
-	int  param_boolean_int_without_default( const char* name, int default_value );
 	
 	// Process an additional chunk of file
 	void process_config_source(const char* filename, int depth, const char* sourcename, const char* host, int required);

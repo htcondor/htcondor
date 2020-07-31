@@ -2390,12 +2390,6 @@ param_integer( const char *name, int default_value,
 	return result;
 }
 
-int param_integer_c( const char *name, int default_value,
-					   int min_value, int max_value, bool use_param_table )
-{
-	return param_integer( name, default_value, min_value, max_value, use_param_table );
-}
-
 // require that the attribute I'm looking for is defined in the config file.
 char* param_or_except(const char *attr)
 {
@@ -2704,20 +2698,6 @@ expand_param(const char *str, const char * localname, const char *subsys, int us
 	if (ctx.localname && ! ctx.localname[0]) ctx.localname = NULL;
 	if (ctx.subsys && ! ctx.subsys[0]) ctx.subsys = NULL;
 	return expand_macro(str, ConfigMacroSet, ctx);
-}
-
-/*
-** Same as param_boolean but for C -- returns 0 or 1
-** The parameter value is expected to be set to the string
-** "TRUE" or "FALSE" (no quotes, case insensitive).
-** If the value is not defined or not a valid, then
-** return the default_value argument.
-*/
-int
-param_boolean_int( const char *name, int default_value ) {
-    bool default_bool;
-    default_bool = default_value == 0 ? false : true;
-    return param_boolean(name, default_bool) ? 1 : 0;
 }
 
 const char * param_append_location(const MACRO_META * pmet, MyString & value)

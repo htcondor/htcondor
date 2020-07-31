@@ -828,7 +828,7 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 	// calling this function on something that doesn't have VOMS attributes
 	// should return error 1.  when the config knob disables VOMS, behave the
 	// same way.
-	if (!param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
+	if (!param_boolean("USE_VOMS_ATTRIBUTES", true)) {
 		return 1;
 	}
 
@@ -1398,7 +1398,7 @@ x509_send_delegation( const char *source_file,
 	}
 
 	// see if this should be made a limited proxy
-	is_limited = !(param_boolean_int("DELEGATE_FULL_JOB_GSI_CREDENTIALS", 0));
+	is_limited = !(param_boolean("DELEGATE_FULL_JOB_GSI_CREDENTIALS", false));
 	if (is_limited) {
 		result = (*globus_gsi_proxy_handle_set_is_limited_ptr)( new_proxy, GLOBUS_TRUE);
 		if ( result != GLOBUS_SUCCESS ) {

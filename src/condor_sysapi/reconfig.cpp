@@ -45,13 +45,13 @@ time_t _sysapi_last_x_event = 0;
 
 /* needed by free_fs_blocks.c */
 #ifndef WIN32
-long long _sysapi_reserve_afs_cache = FALSE;
+bool _sysapi_reserve_afs_cache = false;
 #endif
 long long _sysapi_reserve_disk = 0;
 
 /* needed by idle_time.C */
 #ifndef WIN32
-int _sysapi_startd_has_bad_utmp = FALSE;
+bool _sysapi_startd_has_bad_utmp = false;
 #endif
 
 #ifdef LINUX
@@ -77,7 +77,7 @@ int _sysapi_memory = 0;
 int _sysapi_reserve_memory = 0;
 
 /* needed by load_avg.c */
-int _sysapi_getload = 0;
+bool _sysapi_getload = false;
 
 bool _sysapi_net_devices_cached = false;
 bool _sysapi_opsys_is_versioned = false;
@@ -139,33 +139,33 @@ sysapi_reconfig(void)
         free( tmp );
     }
 
-	_sysapi_startd_has_bad_utmp = param_boolean_int( "STARTD_HAS_BAD_UTMP", FALSE );
+	_sysapi_startd_has_bad_utmp = param_boolean( "STARTD_HAS_BAD_UTMP", false );
 
 	/* configuration setup for free_fs_blocks.c */
-	_sysapi_reserve_afs_cache = param_boolean_int( "RESERVE_AFS_CACHE", FALSE );
+	_sysapi_reserve_afs_cache = param_boolean( "RESERVE_AFS_CACHE", false );
 #endif /* ! WIN32 */
 
-	_sysapi_reserve_disk = param_integer_c( "RESERVED_DISK", 0, INT_MIN, INT_MAX );
+	_sysapi_reserve_disk = param_integer( "RESERVED_DISK", 0, INT_MIN, INT_MAX );
 	_sysapi_reserve_disk *= 1024;    /* Parameter is in meg */
 
 #if 1
 	// _sysapi_detected_phys_cpus;
 	// _sysapi_detected_hyper_cpus;
 #else
-	_sysapi_ncpus = param_integer_c( "NUM_CPUS", 0, 0, INT_MAX );
+	_sysapi_ncpus = param_integer( "NUM_CPUS", 0, 0, INT_MAX );
 
-	_sysapi_max_ncpus = param_integer_c( "MAX_NUM_CPUS", 0, 0, INT_MAX );
+	_sysapi_max_ncpus = param_integer( "MAX_NUM_CPUS", 0, 0, INT_MAX );
 	if(_sysapi_max_ncpus < 0) {
 		_sysapi_max_ncpus = 0;
 	}
 #endif
 
 
-	_sysapi_memory = param_integer_c( "MEMORY", 0, 0, INT_MAX );
+	_sysapi_memory = param_integer( "MEMORY", 0, 0, INT_MAX );
 
-	_sysapi_reserve_memory = param_integer_c( "RESERVED_MEMORY", 0, INT_MIN, INT_MAX );
+	_sysapi_reserve_memory = param_integer( "RESERVED_MEMORY", 0, INT_MIN, INT_MAX );
 
-	_sysapi_getload = param_boolean_int("SYSAPI_GET_LOADAVG",1);
+	_sysapi_getload = param_boolean("SYSAPI_GET_LOADAVG",true);
 
 #ifdef LINUX
 	/* Should we count hyper threads? */

@@ -38,7 +38,7 @@ using std::string;
 extern char		*DebugLock;
 extern const char* const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
 extern int		DebugContinueOnOpenFailure;
-extern int		log_keep_open;
+extern bool		log_keep_open;
 extern char*	DebugTimeFormat;
 extern int		DebugLockIsMutex;
 extern char*	DebugLogDir;
@@ -137,7 +137,7 @@ dprintf_config_tool(const char* subsys, int /*flags*/, const char * logfile /*=N
 	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 	instead of the standard date format in all the log messages
 	*/
-	int UseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	bool UseTimestamps = param_boolean( "LOGS_USE_TIMESTAMP", false );
 	if (UseTimestamps) HeaderOpts |= D_TIMESTAMP;
 	char * time_format = param( "DEBUG_TIME_FORMAT" );
 	if (time_format) {
@@ -261,7 +261,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	char pname[ BUFSIZ ];
 	char *pval = NULL;
 	//static int first_time = 1;
-	int log_open_default = TRUE;
+	bool log_open_default = true;
 	long long def_max_log = 1024*1024*10;  // default to 10 Mb
 	bool def_max_log_by_time = false;
 
@@ -334,9 +334,9 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		 * 2) O_APPEND doesn't guarantee atomic writes in Windows
 		 */
 	DebugShouldLockToAppend = 1;
-	DebugLockIsMutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);//dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+	DebugLockIsMutex = (int)param_boolean("FILE_LOCK_VIA_MUTEX", true);//dprintf_param_funcs->param_boolean("FILE_LOCK_VIA_MUTEX", true);
 #else
-	DebugShouldLockToAppend = param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+	DebugShouldLockToAppend = (int)param_boolean("LOCK_DEBUG_LOG_TO_APPEND",false);
 	DebugLockIsMutex = FALSE;
 #endif
 
@@ -349,20 +349,20 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 #ifndef WIN32
 	if((strcmp(subsys, "SHADOW") == 0) || (strcmp(subsys, "GRIDMANAGER") == 0))
 	{
-		log_open_default = FALSE;
+		log_open_default = false;
 	}
 #endif
 
 	if(!DebugLock) {
 		(void)sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
-		log_keep_open = param_boolean_int(pname, log_open_default);//dprintf_param_funcs->param_boolean_int(pname, log_open_default);
+		log_keep_open = param_boolean(pname, log_open_default);//dprintf_param_funcs->param_boolean(pname, log_open_default);
 	}
 
 	/*
 	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 	instead of the standard date format in all the log messages
 	*/
-	int UseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );//dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	bool UseTimestamps = param_boolean( "LOGS_USE_TIMESTAMP", false );//dprintf_param_funcs->param_boolean( "LOGS_USE_TIMESTAMP", false );
 	if (UseTimestamps) HeaderOpts |= D_TIMESTAMP;
 	char * time_format = param( "DEBUG_TIME_FORMAT" );//dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
 	if (time_format) {
@@ -509,7 +509,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		}
 
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys_and_level.c_str());
-		DebugParams[param_index].want_truncate = param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;//dprintf_param_funcs->param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;
+		DebugParams[param_index].want_truncate = param_boolean(pname, DebugParams[param_index].want_truncate) ? 1 : 0;//dprintf_param_funcs->param_boolean(pname, DebugParams[param_index].want_truncate) ? 1 : 0;
 
 		//PRAGMA_REMIND("TJ: move initialization of DebugLock")
 		if (debug_level == D_ALWAYS) {

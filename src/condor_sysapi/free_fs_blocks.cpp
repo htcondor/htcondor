@@ -88,7 +88,7 @@ reserve_for_afs_cache()
 	FILE	*fp;
 	const char	*args[] = {FS_PROGRAM, FS_COMMAND, NULL};
 	int		cache_size, cache_in_use;
-	int		do_it;
+	bool	do_it;
 
 	/* See if we're configured to deal with an AFS cache */
 	do_it = _sysapi_reserve_afs_cache;

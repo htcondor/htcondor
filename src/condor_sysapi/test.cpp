@@ -109,11 +109,11 @@ sysapi_test_dump_internal_vars(void)
 	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_last_x_event = %d\n", static_cast<int>(_sysapi_last_x_event));
 	dprintf(D_ALWAYS, "SysAPI: _sysapi_reserve_afs_cache = %s\n",
-		_sysapi_reserve_afs_cache==TRUE?"TRUE":"FALSE");
+		_sysapi_reserve_afs_cache?"TRUE":"FALSE");
 	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_reserve_disk = %d\n", _sysapi_reserve_disk);
 	dprintf(D_ALWAYS, "SysAPI: _sysapi_startd_has_bad_utmp = %s\n",
-		_sysapi_startd_has_bad_utmp==TRUE?"TRUE":"FALSE");
+		_sysapi_startd_has_bad_utmp?"TRUE":"FALSE");
 }
 
 /* this function calls every function in sysapi that makes sense to call and
@@ -510,7 +510,7 @@ sysapi_test_dump_all(int argc, char** argv)
 
 			// Calculate the total # of CPUs
 			if ( linux_processors ) {
-				if ( param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1) ) {
+				if ( param_boolean("COUNT_HYPERTHREAD_CPUS", true) ) {
 					linux_cpus = linux_processors;
 				}
 				else {

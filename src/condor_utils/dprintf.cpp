@@ -217,7 +217,7 @@ int		(*DebugId)(char **buf,int *bufpos,int *buflen);
 
 int		LockFd = -1;
 
-int		log_keep_open = 0;
+bool	log_keep_open = false;
 
 static bool DebugRotateLog = true;
 
@@ -1130,15 +1130,15 @@ debug_open_lock(void)
 	if ( DebugLockIsMutex == -1 ) {
 #ifdef WIN32
 		// Use a mutex by default on Win32
-		//DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		//DebugLockIsMutex = (int)dprintf_param_funcs->param_boolean("FILE_LOCK_VIA_MUTEX", true);
 //PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
 		DebugLockIsMutex = TRUE;
 #else
 		// Use file locking by default on Unix.  We should 
-		// call param_boolean_int here, but since locking via
+		// call param_boolean here, but since locking via
 		// a mutex is not yet implemented on Unix, we will force it
 		// to always be FALSE no matter what the config file says.
-		// DebugLockIsMutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", FALSE);
+		// DebugLockIsMutex = (int)param_boolean("FILE_LOCK_VIA_MUTEX", false);
 		DebugLockIsMutex = FALSE;
 #endif
 	}
@@ -2450,7 +2450,7 @@ dprintf_init_fork_child( bool cloned ) {
 	// file.
 	DebugRotateLog = false;
 	if ( !cloned ) {
-		log_keep_open = 0;
+		log_keep_open = false;
 		std::vector<DebugFileInfo>::iterator it;
 		for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
 			if ( it->outputTarget == FILE_OUT ) {

@@ -111,16 +111,6 @@ int param_integer(const char *, int default_value)
 	return default_value;
 }
 
-int param_boolean_int(const char *, int default_value)
-{
-	return default_value;
-}
-
-int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_val*/, bool /*use_param_table*/ )
-{
-	return default_value;
-}
-
 // stubs for classad_usermap.cpp functions needed by compat_classad
 int reconfig_user_maps() { return 0; }
 bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }

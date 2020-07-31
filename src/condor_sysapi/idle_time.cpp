@@ -138,7 +138,7 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		// associated with active logins.  If not, stat /dev/tty* and
 		// /dev/pty* to make sure we get it right.
 
-	if (_sysapi_startd_has_bad_utmp == TRUE) {
+	if (_sysapi_startd_has_bad_utmp) {
 		m_idle = all_pty_idle_time( now );
 	} else {
 		m_idle = utmp_pty_idle_time( now );
