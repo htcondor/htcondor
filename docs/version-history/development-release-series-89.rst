@@ -182,6 +182,13 @@ Bugs Fixed:
   warning message related to job events.
   :ticket:`7548`
 
+- Stopped HTCondor from sweeping OAuth credentials too aggressively, during the
+  window between credential creation and job submission.  The *condor_credd*
+  will now wait :macro:`SEC_CREDENTIAL_SWEEP_INTERVAL` seconds before cleaning
+  them up, and the default is 300 seconds.
+  :ticket:`7484`
+
+
 Version 8.9.7
 -------------
 
