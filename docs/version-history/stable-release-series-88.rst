@@ -108,6 +108,9 @@ Bugs Fixed:
   GPUs.
   :ticket:`7711`
 
+- The *sshd.sh* helper script no longer generates DSA keys when FIPS mode is enabled.
+  :ticket:`7645`
+
 Version 8.8.9
 -------------
 
