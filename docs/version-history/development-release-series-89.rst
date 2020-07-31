@@ -13,6 +13,11 @@ Release Notes:
 
 .. HTCondor version 8.8.8 released on Month Date, 2020.
 
+-  HTCondor now supports setting an upper bound on the number of cores user can
+   be given.  This is called the submitter ceiling. The ceiling can be set with
+   the condor_userprio -setceiling command line option.
+   :ticket:`7702`
+
 -  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
    now tries to parse the entire string passed to it.  Failure results in a
    :class:`SyntaxError`.  This prevents strings like ``"foo = bar"`` from silently
