@@ -166,6 +166,12 @@ New Features:
    ``AuthenticationMethod`` in ClassAds advertised in the *condor_collector*.
    :ticket:`7683`
 
+- Docker jobs now respect CPU Affinity.
+  :ticket:`7627`
+
+- Added a ``debug`` option to *bosco_cluster* to help diagnose ssh failures.
+  :ticket:`7712`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
@@ -188,7 +194,7 @@ Bugs Fixed:
   when passed the argument getfile
   :ticket:`7612`
 
-- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let program like
+- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let programs like
   ``R`` know the maximum number of threads it should use.
   :ticket:`7649`
 
@@ -212,6 +218,18 @@ Bugs Fixed:
   them up, and the default is 300 seconds.
   :ticket:`7484`
 
+- When authenticating, clients now only suggest methods that it supports,
+  rather than providing a list of methods where it will reject some. This
+  improves the initial security handshake.
+  :ticket:`7500`
+
+- For RPM installations, the HTCondor Python bindings RPM will now be
+  automatically installed whenever the `condor` RPM is installed.
+  :ticket:`7647`
+
+- Bosco will use the newer version (1.3) of the tarballs on Enterprise Linux
+  7 and 8.
+  :ticket:`7753`
 
 Version 8.9.7
 -------------
