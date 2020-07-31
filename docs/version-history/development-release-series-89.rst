@@ -92,6 +92,12 @@ New Features:
    expression's ad; use the ``-quiet`` flag to disable.
    :ticket:`7341`
 
+-  Added a new Python bindings subpackage, :mod:`htcondor.htchirp`.
+   This subpackage provides the :class:`HTChirp` and :func:`condor_chirp`
+   objects for using the Chirp protocol inside a ``+WantIOProxy =
+   true`` job.
+   :ticket:`7330`
+
 -  Added a new tool, *condor_watch_q*, a live-updating job status tracker
    that does not repeatedly query the *condor_schedd* like ``watch condor_q``
    would. It includes options for colored output, progress bars, and a minimal
