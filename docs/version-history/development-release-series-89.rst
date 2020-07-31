@@ -67,6 +67,11 @@ Release Notes:
   release.
   :ticket:`7630`
 
+-  Removed the *condor_dagman* ``node_scheduler`` module, which contains
+   earlier implementations of several DAGMan components and has not been used
+   in a long time.
+   :ticket:`7674`
+
 New Features:
 
 -  Added options ``-short-uuid`` and ``-uuid`` to the *condor_gpu_discovery*
@@ -146,6 +151,18 @@ New Features:
    to job submission (for example, possible typos in submit arguments) to help
    debug problems with jobs not running correctly.
    :ticket:`7568`
+
+-  *condor_dagman* now allows jobs to be described with an inline submit
+   description, instead of referencing a separate submit file. See the
+   :ref:`users-manual/dagman-workflows:inline submit descriptions` section for
+   more details.
+   :ticket:`7352`
+
+-  Improved messaging for the *condor_drain* tool to indicate that it is only
+   draining the single specified *condor_startd*. If the target host has 
+   multiple *condor_startd* daemons running, the other instances will not be
+   drained.
+   :ticket:`7664`
 
 Bugs Fixed:
 
