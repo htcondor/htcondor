@@ -104,7 +104,8 @@ Bugs Fixed:
 - *condor_gpu_discovery* now reports CoresPerCU for nVidia Volta and later GPUs.
   :ticket:`7704`
 
-- Update *condor_gpu_discovery* to know about nVidia Ampere GPUs
+- Update *condor_gpu_discovery* to know how many CoresPerCU for nVidia Ampere
+  GPUs.
   :ticket:`7711`
 
 Version 8.8.9
