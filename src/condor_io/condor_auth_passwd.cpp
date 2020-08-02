@@ -190,6 +190,11 @@ findTokens(const std::string &issuer,
 		return true;
 	}
 
+	auto subsys = get_mySubSystem();
+
+		// If we are supposed to retrieve a token on behalf of a user, then
+		// owner will be set and we will use PRIV_USER.  In all other cases,
+		// if we are a daemon we should read the token as PRIV_CONDOR.
 	TemporaryPrivSentry tps( !owner.empty() );
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
@@ -197,6 +202,8 @@ findTokens(const std::string &issuer,
 			return false;
 		}
 		set_user_priv();
+	} else if (subsys->isDaemon()) {
+		set_priv(PRIV_CONDOR);
 	}
 
 	// Note we reuse the exclude regexp from the configuration subsys.
@@ -248,7 +255,7 @@ findTokens(const std::string &issuer,
 	const char *file;
 	std::vector<std::string> tokens;
 	std::string subsys_token_file;
-	std::string subsys_agt_name = get_mySubSystemName();
+	std::string subsys_agt_name = subsys->getName();
 	subsys_agt_name += "_auto_generated_token";
 
 	while ( (file = dir.Next()) ) {
