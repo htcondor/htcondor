@@ -116,11 +116,13 @@ bool checkToken(const std::string &line,
 		}
 		const std::string &tmp_key_id = decoded_jwt.get_key_id();
 		if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it was signed with key %s (not known to the server).\n", tmp_key_id.c_str());
 			return false;
 		}
 		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
 		const std::string &tmp_issuer = decoded_jwt.get_issuer();
 		if (!issuer.empty() && issuer != tmp_issuer) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it is from trust domain %s (server trust domain is %s).\n", tmp_issuer.c_str(), issuer.c_str());
 			return false;
 		}
 		if (!decoded_jwt.has_subject()) {
@@ -147,7 +149,7 @@ bool findToken(const std::string &tokenfilename,
 	std::string &token,
 	std::string &signature)
 {
-	dprintf(D_SECURITY, "TOKEN: Will use tokens found in %s.\n", tokenfilename.c_str());
+	dprintf(D_SECURITY, "IDTOKENS: Examining %s for valid tokens from issuer %s.\n", tokenfilename.c_str(), issuer.c_str());
 
 	std::unique_ptr<FILE,decltype(&fclose)> 
 		f(safe_fopen_no_create( tokenfilename.c_str(), "r" ), fclose);
