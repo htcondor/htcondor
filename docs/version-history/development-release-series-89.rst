@@ -178,6 +178,10 @@ New Features:
   from authentication.
   :ticket:`7662`
 
+- The *condor_store_cred* tool can now be used to manage different
+  kinds of credentials, including Password, Kerberos, and OAuth.
+  :ticket:`6868`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
