@@ -29,6 +29,7 @@
 #include "condor_attributes.h"
 #include "exit.h"
 #include "condor_uid.h"
+#include "basename.h"
 
 
 extern CStarter *Starter;
@@ -85,7 +86,7 @@ ScriptProc::StartJob()
 		// didn't transfer files so that we don't prepend the wrong
 		// path to the binary, and don't try to chmod it.
 	MyString exe_path = "";
-	if( tmp != NULL && tmp[0] != DIR_DELIM_CHAR ) {
+	if( tmp != NULL && !fullpath( tmp ) ) {
 		exe_path += Starter->GetWorkingDir();
 		exe_path += DIR_DELIM_CHAR;
 	}
