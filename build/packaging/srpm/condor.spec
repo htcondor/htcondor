@@ -667,6 +667,27 @@ the ClassAd library and HTCondor from python
 %endif
 
 
+%if 0%{?rhel} == 7
+#######################
+%package -n condor-credmon-oauth
+Summary: OAuth2 credmon for HTCondor.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: python2-condor
+Requires: python2-requests-oauthlib
+Requires: python-six
+Requires: python-flask
+Requires: python2-cryptography
+Requires: python2-scitokens
+Requires: httpd
+Requires: mod_wsgi
+
+%description -n condor-credmon-oauth
+The OAuth2 credmon allows users to obtain credentials from configured
+OAuth2 endpoints and to use those credentials securely inside running jobs.
+%endif
+
+
 #######################
 %package bosco
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
@@ -1096,6 +1117,13 @@ rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
 %endif
+
+# Move oauth credmon WSGI scripts out of libexec to somewhere they can run
+mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
+mv %{buildroot}/%{_libexecdir}/scitokens-credmon.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+
+# Move oauth credmon credential directory README
+mv %{buildroot}/etc/examples/condor_oauth_credmon/README.credentials %{_var}/lib/condor/oauth_credentials/README.credentials
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1734,6 +1762,18 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 %endif
 %endif
+%endif
+
+%if 0%{?rhel} == 7
+%files -n condor-credmon-oauth
+%_sbindir/condor_credmon_oauth
+%_sbindir/scitokens_credential_producer
+%_libexecdir/condor/credmon
+%_var/lib/condor/oauth_credentials/README.credentials
+%ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
+%ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
+%ghost %_var/lib/condor/oauth_credentials/pid
+%_var/www/wsgi-scripts/scitokens-credmon
 %endif
 
 %files bosco
