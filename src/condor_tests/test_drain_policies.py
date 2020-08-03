@@ -4,6 +4,7 @@
 # Reimplements cmd_drain_policies.run.
 #
 
+import sys
 import time
 import textwrap
 from pathlib import Path
@@ -81,12 +82,12 @@ def kill_file(test_dir):
 @action
 def job_parameters(job_file, kill_file):
     return {
-        "executable": "/usr/bin/env",
+        "executable": sys.executable,
         "transfer_executable": "false",
         "should_transfer_files": "true",
         "transfer_input_files": str(job_file),
         "universe": "vanilla",
-        "arguments": "python {} {}.$(CLUSTER).$(PROCESS) 3600".format(
+        "arguments": "{} {}.$(CLUSTER).$(PROCESS) 3600".format(
             str(job_file), kill_file
         ),
         "request_memory": 1,
