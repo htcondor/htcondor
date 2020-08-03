@@ -84,8 +84,11 @@ ScriptProc::StartJob()
 		// TODO: make it smart in cases we're not the gridshell and/or
 		// didn't transfer files so that we don't prepend the wrong
 		// path to the binary, and don't try to chmod it.
-	MyString exe_path = Starter->GetWorkingDir();
-	exe_path += DIR_DELIM_CHAR;
+	MyString exe_path = "";
+	if( tmp != NULL && tmp[0] != DIR_DELIM_CHAR ) {
+		exe_path += Starter->GetWorkingDir();
+		exe_path += DIR_DELIM_CHAR;
+	}
 	exe_path += tmp;
 	free( tmp ); 
 	tmp = NULL;
