@@ -953,6 +953,25 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
         * Bob   security
         * Alice security,math
 
+    Here is simple example showing how to configure ``CLASSAD_USER_MAPDATA_<name>``
+    for testing and experimentation.
+
+    ::
+
+        # configuration statements to create a simple userMap that
+        # can be used by the Schedd as well as by tools like condor_q
+        #
+        SCHEDD_CLASSAD_USER_MAP_NAMES = Trust $(SCHEDD_CLASSAD_USER_MAP_NAMES)
+        TOOL_CLASSAD_USER_MAP_NAMES = Trust $(TOOL_CLASSAD_USER_MAP_NAMES)
+        CLASSAD_USER_MAPDATA_Trust @=end
+          * Bob   User
+          * Alice Admin
+          * /.*/  Nobody
+        @end
+        #
+        # test with
+        #   condor_q -af:j 'Owner' 'userMap("Trust",Owner)'
+
     **Optional submaps:** If the first field of the mapfile contains
     something other than \*, then a submap is defined. To select a
     submap for lookup, the first argument for userMap() should be
