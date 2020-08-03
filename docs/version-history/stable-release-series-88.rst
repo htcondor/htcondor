@@ -111,6 +111,10 @@ Bugs Fixed:
 - The *sshd.sh* helper script no longer generates DSA keys when FIPS mode is enabled.
   :ticket:`7645`
 
+- *condor_ssh_to_job* now works much better with Singularity. It allocates
+  a pty and copies in the environment.
+  :ticket:`7666`
+
 Version 8.8.9
 -------------
 
@@ -175,7 +179,7 @@ Bugs Fixed:
    :ticket:`7596`
 
 -  Fixed a bug that prevented *condor_ssh_to_job* from working when the
-   job was in a container and there was a submit file argument
+   job was in a container and there was a submit file argument.
    :ticket:`7506`
 
 -  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
