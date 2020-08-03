@@ -172,6 +172,12 @@ New Features:
 - Added a ``debug`` option to *bosco_cluster* to help diagnose ssh failures.
   :ticket:`7712`
 
+- The *condor_submit* executable will not abort if the submitting user has a
+  gid of 0.  Jobs still will not run with root privs, but this allows jobs to
+  be submitted which are assigned an ``Owner`` via the result of user mapping
+  from authentication.
+  :ticket:`6868`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
