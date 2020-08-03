@@ -23,9 +23,51 @@ def ad():
     return classad.ClassAd()
 
 
-def ads_are_identical(ad1, ad2):
-    """To test classad equality, we need to convert them into dictionaries."""
-    return dict(ad1.items()) == dict(ad2.items())
+EQUAL_ADS = [
+    (classad.ClassAd(), classad.ClassAd()),
+    (classad.ClassAd({"foo": "bar"}), classad.ClassAd({"foo": "bar"})),
+]
+
+UNEQUAL_ADS = [
+    (classad.ClassAd(), classad.ClassAd({"foo": "bar"})),
+    (classad.ClassAd(), None),
+    (classad.ClassAd(), {}),
+    (classad.ClassAd(), []),
+    (classad.ClassAd({"foo": "2"}), classad.ClassAd({"foo": 2})),
+    (classad.ClassAd({"foo": classad.ExprTree("1 + 1")}), classad.ClassAd({"foo": 2})),
+    ("foo", classad.ClassAd({"foo": "bar"})),
+    ({"foo": "bar"}, classad.ClassAd({"foo": "bar"})),
+    (1, classad.ClassAd({"foo": "bar"})),
+    (1.2, classad.ClassAd({"foo": "bar"})),
+    (True, classad.ClassAd({"foo": "bar"})),
+    (False, classad.ClassAd({"foo": "bar"})),
+    (None, classad.ClassAd({"foo": "bar"})),
+    (None, classad.ClassAd({"foo": classad.Value.Undefined})),
+]
+
+
+@pytest.mark.parametrize("a, b", EQUAL_ADS)
+def test_equality(a, b):
+    assert a == b
+    assert b == a
+
+
+@pytest.mark.parametrize("a, b", UNEQUAL_ADS)
+def test_equality_bad(a, b):
+    assert not a == b
+    assert not b == a
+
+
+@pytest.mark.parametrize("a, b", UNEQUAL_ADS)
+def test_inequality(a, b):
+    assert a != b
+    assert b != a
+
+
+@pytest.mark.parametrize("a, b", EQUAL_ADS)
+def test_inequality_bad(a, b):
+    assert not a != b
+    assert not b != a
 
 
 @pytest.mark.parametrize(
@@ -75,7 +117,7 @@ def test_round_trip_through_pickle(ad, value):
     pickled_ad = pickle.dumps(ad)
     loaded_ad = pickle.loads(pickled_ad)
 
-    assert ads_are_identical(ad, loaded_ad)
+    assert ad == loaded_ad
 
 
 def test_exprtree_repr(ad):

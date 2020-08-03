@@ -10,29 +10,29 @@ import optparse
 
 UNKNOWN="UNKNOWN"
 UNSUPPORTED="UNSUPPORTED"
-RH6="RH6"
 RH7="RH7"
 RH8="RH8"
 OSX="MAC"
 OSX_UNSUPPORTED="UNSUPPORTED"
-DEB8="DEB8"
 DEB9="DEB9"
 DEB10="DEB10"
 UBUNTU16="UBUNTU16"
 UBUNTU18="UBUNTU18"
+UBUNTU20="UBUNTU20"
 
-SUPPORTED_OSX = ['10.10', '10.11', '10.12', '10.13', '10.14', '10.15']
-SUPPORTED_PLATFORMS = [ RH6, RH7, RH8, OSX, DEB8, DEB9, DEB10, UBUNTU16, UBUNTU18 ]
+SUPPORTED_OSX = ['10.13', '10.14', '10.15']
+SUPPORTED_PLATFORMS = [ RH7, RH8, OSX, DEB9, DEB10, UBUNTU16, UBUNTU18, UBUNTU20 ]
 
 # download URLs for the different platforms
 URL_DICT={
   DEB9: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian9.tar.gz",
   DEB10: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian10.tar.gz",
   OSX: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
-  RH7: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_RedHat7.tar.gz",
-  RH8: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_RedHat8.tar.gz",
+  RH7: "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat7.tar.gz",
+  RH8: "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat8.tar.gz",
   UBUNTU16: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
   UBUNTU18: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu18.tar.gz",
+  UBUNTU20: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu20.tar.gz",
 }
 
 BIT32="32bit"
@@ -72,8 +72,6 @@ def findversion_redhat(detail=False):
   for line in lines:
     if detail and 'release'in line:
       return line
-    if 'release 6.' in line:
-      return RH6
     if 'release 7.' in line:
       return RH7
     if 'release 8.' in line:
@@ -121,6 +119,8 @@ Codename:    oneiric
           retv=UBUNTU16
         if line[len('DISTRIB_RELEASE='):].startswith('18.'):
           retv=UBUNTU18
+        if line[len('DISTRIB_RELEASE='):].startswith('20.'):
+          retv=UBUNTU20
   return retv
 
 def findversion():
@@ -140,8 +140,6 @@ def findversion():
     mydist = platform.dist()
     if mydist[0]:
       if mydist[0].lower()=='redhat':
-        if mydist[1].startswith('6.'):
-          return RH6
         if mydist[1].startswith('7.'):
           return RH7
         if mydist[1].startswith('8.'):
@@ -158,11 +156,15 @@ def findversion():
           return UBUNTU16
         if mydist[1].startswith('18'):
           return UBUNTU18
+        if mydist[1].startswith('20'):
+          return UBUNTU20
       if mydist[0].lower()=='linuxmint':
         if mydist[1].startswith('18'):
           return UBUNTU16
         if mydist[1].startswith('19'):
           return UBUNTU18
+        if mydist[1].startswith('20'):
+          return UBUNTU20
     if os.path.isfile('/etc/redhat-release'):
       return findversion_redhat()
     elif os.path.isfile('/etc/lsb-release'):
