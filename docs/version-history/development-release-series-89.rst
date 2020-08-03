@@ -241,6 +241,12 @@ Bugs Fixed:
   7 and 8.
   :ticket:`7753`
 
+- HTCondor no longer probes the file transfer plugins except in the starter
+  and then only if they are actually being used.  This was potentially adding
+  delays to starting individual shadows, which when starting a lot of shadows
+  could lead to scalability issues on a submit machine.
+  :ticket:`7688`
+
 Version 8.9.7
 -------------
 
