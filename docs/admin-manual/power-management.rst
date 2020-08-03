@@ -36,7 +36,7 @@ To put the machine in a low power state rapidly after it has become
 idle, consider checking each slot's state frequently, as in the example
 configuration:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     HIBERNATE_CHECK_INTERVAL = 20
 
@@ -59,7 +59,7 @@ set to always be ``True``. This permits an easy determination whether or
 not the machine is in an Unclaimed state through the use of an auxiliary
 macro called ``ShouldHibernate``.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     TimeToWait  = (2 * $(HOUR))
     ShouldHibernate = ( (KeyboardIdle > $(StartIdleTime)) \
@@ -76,7 +76,7 @@ The sample ``HIBERNATE`` expression that enters the power state called
 "RAM", if ``ShouldHibernate`` evaluates to ``True``, and remains in its
 current state otherwise is
 
-.. code-block:: text
+.. code-block:: condor-config
 
     HibernateState  = "RAM"
     HIBERNATE = ifThenElse($(ShouldHibernate), $(HibernateState), "NONE" )

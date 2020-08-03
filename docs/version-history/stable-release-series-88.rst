@@ -8,6 +8,34 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.11
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.11 not yet released.
+
+.. HTCondor version 8.8.11 released on Month Date, 2020.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where setting Notification = error in the submit file
+  failed to send an email to the user when the job was held.
+  :ticket:`7763`
+  
+- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
+  Additionally, the spurious warning about ``NAMES`` not being list as a
+  resource has been eliminated.
+  :ticket:`7755`
+
+- The D_SUB_SECOND debug format option will no longer produce timestamps
+  with four digits (``1000``) in the milliseconds field.
+  :ticket:`7685`
+
 Version 8.8.10
 --------------
 
@@ -19,9 +47,27 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added support for Ubuntu 20.04 (focal Fossa).
+  :ticket:`7673`
+
+- Added support for Amazon Linux 2.
+  :ticket:`7430`
 
 Bugs Fixed:
+
+- The shared port daemon no longer blocks during socket hand-off.
+  :ticket:`7502`
+
+- When the *condor_master* chooses the port to assign to the *condor_shared_port* daemon
+  it will now ignore the ports specified in the ``COLLECTOR_LIST`` or ``COLLECTOR_HOST``
+  configuration variables unless it is starting a primary collector.
+  If it is not starting a primary collector (i.e. ``DAEMON_LIST`` does not have ``COLLECTOR``)
+  it will use the port specified in ``SHARED_PORT_PORT`` or the default port, which is 9618.
+  :ticket:`7697`
+
+- The ``DiskUsage`` attribute should once again reflect the job's peak disk
+  usage, rather than its current or terminal usage.
+  :ticket:`7207`
 
 - HTCondor daemons used to discard the private network name and address of
   daemons they were attempting to contact via the contactee's public
@@ -32,7 +78,7 @@ Bugs Fixed:
   places where they had not previously.
   :ticket:`7582`
 
-- Allow `SINGULARITY_EXTRA_ARGUMENTS` to override the default -C option
+- Allow ``SINGULARITY_EXTRA_ARGUMENTS`` to override the default -C option
   condor passes to singularity exec to allow administrators to tell
   condor not to contain certain resoures.
   :ticket:`7719`
@@ -45,9 +91,53 @@ Bugs Fixed:
   ``nfs-client.target``.
   :ticket:`7638`
 
-- Increased ``TasksMax`` and ``LimitNOFILE`` to ``infinity`` in HTCondor's
+- Increased ``TasksMax`` to ``4194303`` in HTCondor's
   systemd unit file so more than 32k shadows can run on a submit node.
   :ticket:`7650`
+
+- For grid universe jobs of type ``batch``, stop using characters ``@``
+  and ``#`` in temporary directory names.
+  :ticket:`7730`
+
+- Prevent client tools from modifying special job id 0.0 in the job queue.
+  Modifications to this non-job ad can prevent the *condor_schedd* from
+  restarting.
+  :ticket:`7731`
+
+- Prevent client tools from deleting protected, immuatble, and secure
+  attributes in their job ads in the *condor_schedd* job queue.
+  :ticket:`7748`
+
+- When *condor_wait* is run without a limit on the number of jobs, it no
+  longer exits if the number of active jobs goes to zero but there are more
+  events in the log to read.  It now reads all existing events before deciding
+  that there are no active jobs that need to be waited for.
+  :ticket:`7653`
+
+- In the python bindings the ``query`` methods on the ``Schedd`` and ``Collector``
+  object now treat ``constraint=None`` having no constraint so all ads are returned
+  rather than no ads.
+  :ticket:`7727`
+
+- Fixed a bug in the *condor_startd* on Windows that resulted in jobs failing to start with permission
+  denied errors if ``ENCRYPT_EXECUTE_DIRECTORY`` was specified but the job did not have ``run_as_owner``
+  enabled.
+  :ticket:`7620`
+
+- Fixed a bug that prevented the *condor_schedd* from effectively flocking
+  to pools when resource request list prefetching is enabled, which is the
+  default in HTCondor version 8.8
+  :ticket:`7754`
+
+- *condor_gpu_discovery* now reports CoresPerCU for nVidia Volta and later GPUs.
+  :ticket:`7704`
+
+- Update *condor_gpu_discovery* to know how many CoresPerCU for nVidia Ampere
+  GPUs.
+  :ticket:`7711`
+
+- The *sshd.sh* helper script no longer generates DSA keys when FIPS mode is enabled.
+  :ticket:`7645`
 
 Version 8.8.9
 -------------

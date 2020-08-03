@@ -4784,7 +4784,7 @@ void DCSignalMsg::reportSuccess( DCMessenger * )
 			theSignal(),signalName(),thePid());
 }
 
-char const *DCSignalMsg::signalName()
+char const *DCSignalMsg::signalName() const
 {
 	switch(theSignal()) {
 	case SIGUSR1:
@@ -6461,7 +6461,7 @@ void CreateProcessForkit::exec() {
 		}
 
 	} else {
-		MyString msg = "Just closed standard file fd(s): ";
+		std::string msg = "Just closed standard file fd(s): ";
 
 			// If we don't want to re-map these, close 'em.
 
@@ -6484,11 +6484,11 @@ void CreateProcessForkit::exec() {
 				// Now, if we didn't find it in the inherit list, close it
 			if ( ( ! found ) && ( close ( q ) != -1 ) ) {
 				closed_fds[num_closed++] = q;
-				msg += IntToStr( q );
+				msg += std::to_string( q );
 				msg += ' ';
 			}
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {
@@ -6631,12 +6631,12 @@ void CreateProcessForkit::exec() {
 	if( IsDebugLevel( D_DAEMONCORE ) ) {
 			// This MyString is scoped to free itself before the call to
 			// exec().  Otherwise, it would be a leak.
-		MyString msg = "Printing fds to inherit: ";
+		std::string msg = "Printing fds to inherit: ";
 		for ( int a=0 ; a<m_numInheritFds ; a++ ) {
-			msg += IntToStr( m_inheritFds[a] );
+			msg += std::to_string( m_inheritFds[a] );
 			msg += ' ';
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 	}
 
 	// Set up the hard limit core size this process should get.
@@ -9202,7 +9202,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			int desired_size;
 
 				// Dynamically construct the log message.
-			MyString msg;
+			std::string msg;
 
 			if ( it->has_safesock()) {
 					// set the UDP (ssock) read size to be large, so we do
@@ -9210,7 +9210,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 				desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
 											 10000 * 1024, 1024);
 				int final_udp = it->ssock()->set_os_buffers(desired_size);
-				msg += IntToStr(final_udp / 1024);
+				msg += std::to_string(final_udp / 1024);
 				msg += "k (UDP), ";
 			}
 
@@ -9221,12 +9221,12 @@ DaemonCore::InitDCCommandSocket( int command_port )
 											 128 * 1024, 1024 );
 				int final_tcp = it->rsock()->set_os_buffers( desired_size, true );
 
-				msg += IntToStr(final_tcp / 1024);
+				msg += std::to_string(final_tcp / 1024);
 				msg += "k (TCP)";
 			}
-			if( !msg.IsEmpty() ) {
+			if( !msg.empty() ) {
 				dprintf(D_FULLDEBUG,
-						"Reset OS socket buffer size to %s\n", msg.Value());
+						"Reset OS socket buffer size to %s\n", msg.c_str());
 			}
 		}
 

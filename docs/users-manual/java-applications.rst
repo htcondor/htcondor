@@ -64,7 +64,7 @@ Submission to HTCondor requires a submit description file. If submitting
 where files are accessible using a shared file system, this simple
 submit description file works:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       ####################
       #
@@ -91,7 +91,7 @@ argument to the program.
 If submitting the job where a shared file system is not accessible, the
 submit description file becomes:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       ####################
       #
@@ -131,7 +131,7 @@ Less Simple Java Specifications
     consist of more than one ``.class`` file, identify the files in the
     submit description file:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         executable = Stooges.class
         transfer_input_files = Larry.class,Curly.class,Moe.class
@@ -158,7 +158,7 @@ Less Simple Java Specifications
     For this example that collected all the class files into a single
     JAR file, the submit description file contains:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         executable = Library.jar
         jar_files = Library.jar
@@ -175,7 +175,7 @@ Less Simple Java Specifications
     specifies the JAR file that contains the program's entry point. This
     file is also listed with the **jar_files** command:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         executable = sortmerge.jar
         jar_files = sortmerge.jar,statemap.jar
@@ -188,7 +188,7 @@ Less Simple Java Specifications
     JAR file has been placed in the same directory with the other JAR
     files, then the submit description file contains
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         executable = sortmerge.jar
         jar_files = sortmerge.jar,statemap.jar,commons-lang-2.1.jar
@@ -198,7 +198,7 @@ Less Simple Java Specifications
     point in the
     **arguments** :index:`arguments<single: arguments; submit commands>` command:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         executable = anexecutable.jar
         jar_files  = anexecutable.jar
@@ -231,7 +231,7 @@ Less Simple Java Specifications
     description file. Partial contents of that file Java universe submit
     file will appear as
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           universe   = java
           executable =  OneJarFile.jar
@@ -258,7 +258,7 @@ Less Simple Java Specifications
 
     Therefore, the submit description file for this example will contain
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = hpc.CondorDriver
 
@@ -270,7 +270,7 @@ Less Simple Java Specifications
     For example, to require version 3.2, add to the submit description
     file:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         requirements = (JavaVersion=="3.2")
 
@@ -286,7 +286,7 @@ Less Simple Java Specifications
     ``rank`` or ``requirements`` in the submit description file. As an
     example, to execute only on machines of a minimum speed:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         requirements = (JavaMFlops>4.5)
 
@@ -294,7 +294,7 @@ Less Simple Java Specifications
     Options to the JVM itself are specified in the submit description
     file:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         java_vm_args = -DMyProperty=Value -verbose:gc -Xmx1024m
 
@@ -419,7 +419,7 @@ The Chirp JAR file must be specified in the submit description file.
 Here is an example submit description file that works for both of the
 given test programs:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     universe = java
     executable = TestChirp.class

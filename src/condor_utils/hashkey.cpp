@@ -180,7 +180,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 		int	slot;
 		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
 			hk.name += ":";
-			hk.name += IntToStr( slot );
+			hk.name += std::to_string( slot );
 		}
 	}
 

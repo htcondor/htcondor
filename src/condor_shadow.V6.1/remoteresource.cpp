@@ -1237,7 +1237,7 @@ RemoteResource::setExitReason( int reason )
 
 
 float
-RemoteResource::bytesSent()
+RemoteResource::bytesSent() const
 {
 	float bytes = 0.0;
 
@@ -1257,7 +1257,7 @@ RemoteResource::bytesSent()
 
 
 float
-RemoteResource::bytesReceived()
+RemoteResource::bytesReceived() const
 {
 	float bytes = 0.0;
 
@@ -1580,6 +1580,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
 			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
+			&& it->first != ATTR_DISK_USAGE    // ditto
+			// the ATTR_JOB_*_CPU attributes don't end in "Usage"
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);

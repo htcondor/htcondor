@@ -7,7 +7,7 @@ Note: This documentation is very basic and needs improvement!
 
 Here's an example configuration file:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       # Only set if singularity is not in $PATH.
       #SINGULARITY = /opt/singularity/bin/singularity
@@ -28,7 +28,7 @@ This provides the user with no opportunity to select a specific image.
 Here are some changes to the above example to allow the user to specify
 an image path:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SINGULARITY_JOB = !isUndefined(TARGET.SingularityImage)
       SINGULARITY_IMAGE_EXPR = TARGET.SingularityImage
@@ -36,20 +36,20 @@ an image path:
 Then, users could add the following to their submit file (note the
 quoting):
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       +SingularityImage = "/cvmfs/cernvm-prod.cern.ch/cvm3"
 
-Finally, let's pick an image based on the OS - not the filename:
+Finally, let's pick an image based on the OS -- not the filename:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SINGULARITY_JOB = (TARGET.DESIRED_OS isnt MY.OpSysAndVer) && ((TARGET.DESIRED_OS is "CentOS6") || (TARGET.DESIRED_OS is "CentOS7"))
       SINGULARITY_IMAGE_EXPR = (TARGET.DESIRED_OS is "CentOS6") ? "/cvmfs/cernvm-prod.cern.ch/cvm3" : "/cvmfs/cms.cern.ch/rootfs/x86_64/centos7/latest"
 
 Then, the user adds to their submit file:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       +DESIRED_OS="CentOS6"
 
@@ -71,14 +71,14 @@ directories to mount.
 So, to always bind mount a directory named /nfs into the image, and
 administrator could set
 
-.. code-block:: text
+.. code-block:: condor-config
 
      SINGULARITY_BIND_EXPR = "/nfs"
 
 Or, if a trusted user is allowed to bind mount anything on the host, an
 expression could be
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SINGULARITY_BIND_EXPR = (Owner == "TrustedUser") ? SomeExpressionFromJob : ""
 
@@ -94,14 +94,14 @@ parameters to be passed to the singularity exec command. For example, to
 pass the -nv argument, to allow the GPUs on the host to be visible
 inside the container, an administrator could set
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SINGULARITY_EXTRA_ARGUMENTS = --nv
 
 If Singularity is installed as non-setuid, the following flag must be
 set for *condor_ssh_to_job* to work.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SINGULARITY_IS_SETUID = false
 

@@ -86,7 +86,7 @@ class JobRouter: public Service {
 	void config();
 	void set_schedds(Scheduler* schedd, Scheduler* schedd2); // let the tool mode push simulated schedulers
 	void dump_routes(FILE* hf); // dump the routing information to the given file.
-	bool isEnabled() { return m_enable_job_routing; }
+	bool isEnabled() const { return m_enable_job_routing; }
 	void init();
 
 	//The JobRouter name is used to distinguish this daemon from
@@ -130,6 +130,16 @@ class JobRouter: public Service {
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
 	std::list<std::string> m_route_order; // string="route name". the order in which routes should be considered
+
+	// m_routes->at() will throw if we try and lookup a route that's not in the list,
+	// we don't ever want to do that, we want NULL back for routes not found
+	JobRoute * safe_lookup_route(const std::string & name) const {
+		auto found = m_routes->find(name);
+		if (found != m_routes->end()) {
+			return found->second;
+		}
+		return NULL;
+	}
 
 	Scheduler *m_scheduler;        // provides us with a mirror of the real schedd's job collection
 	Scheduler *m_scheduler2;       // if non-NULL, mirror of job queue in destination schedd

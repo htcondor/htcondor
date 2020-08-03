@@ -72,4 +72,4 @@ _deprecation.deprecate_8_9_8()
 from .htcondor import *
 from .htcondor import _Param
 
-from ._JobStatus import *
+from ._job_status import JobStatus

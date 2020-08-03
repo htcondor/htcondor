@@ -1506,8 +1506,9 @@ struct Schedd {
         // job_spec can either be a list of job id's (as strings) or a constraint expression
         StringList ids;
         std::string constraint, reason_str, reason_code;
+        boost::python::extract<std::string> str_obj(job_spec);
         bool use_ids = false;
-        if (PyList_Check(job_spec.ptr())) {
+        if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
             int id_len = py_len(job_spec);
             for (int i=0; i<id_len; i++)
             {
@@ -1515,8 +1516,12 @@ struct Schedd {
                 ids.append(str.c_str());
             }
             use_ids = true;
-        } else if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
-            THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
+        } else {
+            if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
+                THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
+            }
+            // act does not allow empty or null constraint argument, so use "true" instead
+            if (constraint.empty()) { constraint = "true"; }
         }
 
         DCSchedd schedd(m_addr.c_str());

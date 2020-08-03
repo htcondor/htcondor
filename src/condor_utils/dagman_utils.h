@@ -46,6 +46,16 @@ const int MAX_RESCUE_DAG_DEFAULT = 100;
 // is normally configured lower).
 const int ABS_MAX_RESCUE_DAG_NUM = 999;
 
+enum DagStatus {
+    DAG_STATUS_OK = 0,
+    DAG_STATUS_ERROR = 1, // Error not enumerated below
+    DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
+    DAG_STATUS_ABORT = 3, // Hit special DAG abort value
+    DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
+    DAG_STATUS_CYCLE = 5, // A cycle in the DAG
+    DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
+};
+
 class EnvFilter : public Env
 {
 public:

@@ -20,7 +20,7 @@ Dictionaries are marked by square brackets and lists by braces;
 dictionaries separate elements with semicolons,
 and lists separate elements with commas.
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     attribute_name  = "attribute-value"
     pi              = 3.141
@@ -42,7 +42,7 @@ An expression consists of literals (from the data syntax) and attribute
 references composed with operators and functions.  The value of a ClassAd
 attribute may be an expression.
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     MY.count < 10 && regexp( ".*example.*", attribute_name )
 
@@ -54,7 +54,7 @@ when determining if two ClassAds match, an expression may specify which
 ad's value is used by prefixing it with ``MY.`` or ``TARGET.``.  Attribute
 references are case-insensitive.
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     MY.count
     TARGET.machine
@@ -63,7 +63,7 @@ An element of a dictionary is referenced by using the subscript operator
 (``[]``) with an expression that evaluates to a string *or* with a dot
 (``.``), as follows:
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     MY.structured_attr.hostnames
     MY.structured_attr["hostnames"]
@@ -71,7 +71,7 @@ An element of a dictionary is referenced by using the subscript operator
 Note that the following references the attribute named by the attribute
 ``hostnames``, not the attribute named hostnames:
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     MY.structured_attr[hostnames]
 
@@ -88,7 +88,7 @@ An attribute may be set to either explicitly, but these values typically
 result from referring to an attribute that doesn't exist, or asking
 for something impossible:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     undefined_reference = MY.undefined_attribute
     explicitly_undefined = UNDEFINED
@@ -227,7 +227,7 @@ Only Run on a Particular Machine
 If you want your job to run only on a particular machine named 'special',
 add the following to your submit file's ``requirements`` line:
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
     Machine == "special"
 

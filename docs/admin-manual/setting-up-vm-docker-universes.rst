@@ -56,7 +56,7 @@ machine must be specified with the ``VM_TYPE`` :index:`VM_TYPE`
 variable. For now, only one type can be utilized per machine. For
 instance, the following tells HTCondor to use VMware:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     VM_TYPE = vmware
 
@@ -64,7 +64,7 @@ The location of the *condor_vm-gahp* and its log file must also be
 specified on the execute machine. On a Windows installation, these
 options would look like this:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
     VM_GAHP_LOG = $(LOG)/VMGahpLog
@@ -75,7 +75,7 @@ VMware-Specific Configuration
 To use VMware, identify the location of the *Perl* executable on the
 execute machine. In most cases, the default value should suffice:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     VMWARE_PERL = perl
 
@@ -90,7 +90,7 @@ are jobs that do not have
 set to ``False``. Here is an example modification to the ``START``
 expression.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     START = ($(START)) && (!(TARGET.VMPARAM_VMware_SnapshotDisk =?= TRUE))
 
@@ -99,7 +99,7 @@ script used by the *condor_vm-gahp* on the execute machine to talk to
 the virtual machine hypervisor. It is located in HTCondor's ``sbin``
 directory:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
 
@@ -253,7 +253,7 @@ machine.
 
 For example,
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
     DOCKER_VOLUME_DIR_SOME_DIR = /path1
@@ -280,7 +280,7 @@ class ad expression, evaluated in the context of the job ad and the
 machine ad. Only when it evaluted to TRUE, is the volume mounted.
 Extending the above example,
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
     DOCKER_VOLUME_DIR_SOME_DIR = /path1
@@ -335,7 +335,7 @@ Enterprise Linux machine.
    The output of this command line for a correctly-installed and
    docker-capable execute host will be similar to
 
-   .. code-block:: text
+   .. code-block:: condor-classad
 
         HasDocker = true
         DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"

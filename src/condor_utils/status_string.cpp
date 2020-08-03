@@ -22,13 +22,13 @@
 #include "MyString.h"
 
 void
-statusString( int status, MyString& str )
+statusString( int status, std::string& str )
 {
 	if( WIFSIGNALED(status) ) {
 		str += "died with signal ";
-		str += IntToStr( WTERMSIG(status) );
+		str += std::to_string( WTERMSIG(status) );
 	} else {
 		str += "exited with status ";
-		str += IntToStr( WEXITSTATUS(status) );
+		str += std::to_string( WEXITSTATUS(status) );
 	}
 }

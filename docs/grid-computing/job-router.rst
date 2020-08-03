@@ -91,7 +91,7 @@ for routing.
    write output files. In the submit description file, to enable file
    transfer, there will be a set of commands similar to
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
        should_transfer_files = YES
        when_to_transfer_output = ON_EXIT
@@ -124,7 +124,7 @@ for routing.
    ``WantJobRouter``, then the job identifies itself as a job that may
    be routed by placing in the submit description file:
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
        +WantJobRouter = True
 
@@ -132,14 +132,14 @@ for routing.
    be rejected within the local pool, before being a candidate for Job
    Routing:
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
        +WantJobRouter = LastRejMatchTime =!= UNDEFINED
 
 -  As appropriate to the potential grid site, create a grid proxy, and
    specify it in the submit description file:
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
        x509userproxy = /tmp/x509up_u275
 
@@ -154,7 +154,7 @@ Job submission does not change for jobs that may be routed.
 
 where ``job1.sub`` might contain:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     universe = vanilla
     executable = my_executable
@@ -231,7 +231,7 @@ for more details).
 The list of enabled routes is specfied by ``JOB_ROUTER_ROUTE_NAMES``, routes
 will be considered in the order given by this configuration variable.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # define a global constraint, only jobs that match this will be considered for routing
     JOB_ROUTER_SOURCE_JOB_CONSTRAINT = WantJobRouter
@@ -442,7 +442,7 @@ may appear in a Routing Table entry.
     Sets the value of ``<ATTR>`` if the value is currently missing or undefined.
     This is equivalent to
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
       if ! defined MY.<Attr>
         SET <Attr> <value>
@@ -530,7 +530,7 @@ are returned.
 Once you are satisfied that the routing table constructed by the script
 is what you want, configure the *condor_job_router* daemon to use it:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # command to build the routing table
     JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
@@ -582,7 +582,7 @@ configured by specifying `JOB_ROUTER_ROUTE_NAMES`.  Prior to that version
 the order in which routes were considered could not be specified and
 so routes were normally given mutually exclusive requirements.
 
-.. code-block:: text
+.. code-block:: condor-config
 
 
     # These settings become the default settings for all routes

@@ -249,7 +249,7 @@ CronJob::StartOnDemand( void )
 
 // Send HUP to job
 int
-CronJob::SendHup( void )
+CronJob::SendHup( void ) const
 {
 
 	// Don't send the HUP before it's first output block

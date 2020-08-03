@@ -401,7 +401,7 @@ string identifying the reason that a particular job is in the Hold state
 may be displayed by invoking *condor_q* -hold. For the example job ID 16.0,
 use:
 
-.. code-block:: text
+.. code-block:: console
 
       $ condor_q  -hold  16.0
 

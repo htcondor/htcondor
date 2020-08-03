@@ -200,7 +200,7 @@ CollectorDaemon::schedd_token_request(int, Stream *stream)
 		authz_list.rewind();
 		const char *authz_name;
 		while ( (authz_name = authz_list.next()) ) {
-			authz_bounding_set.push_back(authz_name);
+			authz_bounding_set.emplace_back(authz_name);
 		}
 	}
 	int requested_lifetime = -1;
@@ -1903,7 +1903,7 @@ void CollectorDaemon::Config()
                 vhsock = new SafeSock();
             }
 
-            vc_list.push_back(vc_entry());
+            vc_list.emplace_back();
             vc_list.back().name = vhost;
             vc_list.back().collector = vhd;
             vc_list.back().sock = vhsock;

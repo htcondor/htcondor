@@ -1515,7 +1515,7 @@ VMProc::reportErrorToStartd()
 	}
 
 	// Send pid of this starter
-	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
+	ssock.put( std::to_string( (int)daemonCore->getpid() ) );
 
 	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
@@ -1560,7 +1560,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	}
 
 	// Send the pid of this starter
-	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
+	ssock.put( std::to_string( (int)daemonCore->getpid() ) );
 
 	// Send vm info 
 	ssock.put(value);
@@ -1611,10 +1611,10 @@ VMProc::setVMPID(int vm_pid)
 	// Get initial usage of the process	
 	updateUsageOfVM();
 
-	MyString pid_string = IntToStr( (int)m_vm_pid );
+	std::string pid_string = std::to_string( (int)m_vm_pid );
 
 	// Report this PID to local startd
-	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.Value());
+	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.c_str());
 }
 
 void

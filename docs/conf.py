@@ -15,27 +15,6 @@
 import sys
 import os
 
-import re
-
-from pathlib import Path
-
-ON_RTD = os.environ.get('READTHEDOCS') == 'True'
-if ON_RTD:
-    print("ON RTD, THEREFORE INSTALLING HTCONDOR PACKAGE")
-    text = (Path(__file__).parent.parent / 'CMakeLists.txt').read_text()
-    match = re.search(r"^\s*set ?\( ?VERSION \"(\d+\.\d+\.\d+)-?\d*\" ?\)", text, re.MULTILINE)
-    if match is not None:
-        version = match.group(1)
-        pre = version + 'a0'
-        post = version + '.post999'
-        print("DETECTED VERSION {}".format(version))
-        cmd = "{} -m pip install 'htcondor>={},<{}'".format(sys.executable, pre, post)
-        print("EXECUTING COMMAND: {}".format(cmd))
-        os.system(cmd)
-        print("INSTALLED HTCONDOR PACKAGE")
-    else:
-        print('ERROR: regex did not match, check regex and root CMakeLists.txt')
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -51,18 +30,11 @@ sys.path.append(os.path.abspath('extensions'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autosectionlabel',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'sphinx_autodoc_typehints',
-    'nbsphinx',
     'ticket',
     'macro',
     'macro-def',
     'index',
 ]
-autosectionlabel_prefix_document = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -132,132 +104,6 @@ pygments_style = 'colorful'
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 # keep_warnings = False
-
-
-# -- Options for HTML output ----------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-# html_theme_options = {}
-
-# Add any paths that contain custom themes here, relative to this directory.
-# html_theme_path = []
-
-# The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
-# html_title = None
-
-# A shorter title for the navigation bar.  Default is the same as html_title.
-# html_short_title = None
-
-# The name of an image file (relative to this directory) to place at the top
-# of the sidebar.
-# html_logo = None
-
-# The name of an image file (within the static path) to use as favicon of the
-# docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
-# pixels large.
-# html_favicon = None
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
-
-# Add any extra paths that contain custom files (such as robots.txt or
-# .htaccess) here, relative to this directory. These files are copied
-# directly to the root of the documentation.
-# html_extra_path = []
-
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
-# using the given strftime format.
-# html_last_updated_fmt = '%b %d, %Y'
-
-# If true, SmartyPants will be used to convert quotes and dashes to
-# typographically correct entities.
-# html_use_smartypants = True
-
-# Custom sidebar templates, maps document names to template names.
-# html_sidebars = {}
-
-# Additional templates that should be rendered to pages, maps page names to
-# template names.
-# html_additional_pages = {}
-
-# If false, no module index is generated.
-# html_domain_indices = True
-
-# If false, no index is generated.
-# html_use_index = True
-
-# If true, the index is split into individual pages for each letter.
-# html_split_index = False
-
-# If true, links to the reST sources are added to the pages.
-# html_show_sourcelink = True
-
-# If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
-# html_show_sphinx = True
-
-# If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-# html_show_copyright = True
-
-# If true, an OpenSearch description file will be output, and all pages will
-# contain a <link> tag referring to it.  The value of this option must be the
-# base URL from which the finished HTML is served.
-# html_use_opensearch = ''
-
-# This is the file name suffix for HTML files (e.g. ".xhtml").
-# html_file_suffix = None
-
-# Output file base name for HTML help builder.
-htmlhelp_basename = 'ReadtheDocsTemplatedoc'
-
-# -- Options for LaTeX output ---------------------------------------------
-
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    # 'papersize': 'letterpaper',
-
-    # The font size ('10pt', '11pt' or '12pt').
-    # 'pointsize': '10pt',
-
-    # Additional stuff for the LaTeX preamble.
-    # 'preamble': '',
-}
-
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    ('index', 'HTCondorManual.tex', u'HTCondor Manual',
-     u'HTCondor Team', 'manual'),
-]
-
-# The name of an image file (relative to this directory) to place at the top of
-# the title page.
-# latex_logo = None
-
-# For "manual" documents, if this is true, then toplevel headings are parts,
-# not chapters.
-# latex_use_parts = False
-
-# If true, show page references after internal links.
-# latex_show_pagerefs = False
-
-# If true, show URL addresses after external links.
-# latex_show_urls = False
-
-# Documents to append as an appendix to all manuals.
-# latex_appendices = []
-
-# If false, no module index is generated.
-# latex_domain_indices = True
 
 
 # -- Options for manual page output ---------------------------------------
@@ -351,127 +197,9 @@ man_pages = [
 # If true, show URL addresses after external links.
 # man_show_urls = False
 
-
-# -- Options for Texinfo output -------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-    ('index', 'HTCondorManual', u'HTCondor Manual',
-     u'HTCondor Team', 'HTCondorManual', 'HTCondor Project',
-     'Miscellaneous'),
-]
-
-# Documents to append as an appendix to all manuals.
-# texinfo_appendices = []
-
-# If false, no module index is generated.
-# texinfo_domain_indices = True
-
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-# texinfo_show_urls = 'footnote'
-
-# If true, do not generate a @detailmenu in the "Top" node's menu.
-# texinfo_no_detailmenu = False
-
-# intersphinx
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
-
-# autodoc settings
-autoclass_content = 'both'
-
-
-def modify_docstring(app, what, name, obj, options, lines):
-    """
-    Hook function that has a chance to modify whatever comes out of autodoc.
-
-    Parameters
-    ----------
-    app
-        The Sphinx application object
-    what
-        The type of the object which the docstring belongs to
-        "module", "class", "exception", "function", "method", "attribute"
-    name
-        The fully qualified name of the object
-    obj
-        The object itself
-    options
-        The autodoc options
-    lines
-        The actual lines: modify in-place!
-    """
-    # strip trailing C++ signature text
-    for i, line in enumerate(lines):
-        if 'C++ signature :' in line:
-            for _ in range(len(lines) - i):
-                lines.pop()
-            break
-
-    # this is Boost's dumb way of saying an object has no __init__
-    for i, line in enumerate(lines):
-        if line == 'Raises an exception':
-            lines[i] = ''
-            lines[i + 1] = ''
-
-    # strip leading spaces
-    if len(lines) > 0:
-        first_indent_len = len(lines[0]) - len(lines[0].lstrip())
-        for i, line in enumerate(lines):
-            if len(line) > first_indent_len:
-                lines[i] = line[first_indent_len:]
-
-
-remove_types_from_signatures = re.compile(r' \([^)]*\)')
-remove_trailing_brackets = re.compile(r']*\)$')
-cleanup_commas = re.compile(r'\s*,\s*')
-
-
-def modify_signature(app, what, name, obj, options, signature, return_annotation):
-    """
-    Hook function that has a chance to modify whatever comes out of autodoc.
-
-    Parameters
-    ----------
-    app
-        The Sphinx application object
-    what
-        The type of the object which the docstring belongs to
-        "module", "class", "exception", "function", "method", "attribute"
-    name
-        The fully qualified name of the object
-    obj
-        The object itself
-    options
-        The autodoc options
-    signature
-        the function signature, of the form "(parameter_1, parameter_2)"
-        or None if there was no return annotation
-    return_annotation
-        the function return annotation, of the form
-        " -> annotation", or None if there is no return annotation
-
-    Returns
-    -------
-    (signature, return_annotation)
-    """
-    if signature is not None:
-        signature = re.sub(remove_types_from_signatures, ' ', signature)
-        signature = re.sub(remove_trailing_brackets, ')', signature)
-        signature = signature.replace('[,', ',')
-        signature = re.sub(cleanup_commas, ', ', signature)
-        signature = signature.replace('self', '')
-        signature = signature.replace('( ', '(')
-        signature = signature.replace('(, ', '(')
-
-    if return_annotation == 'None :' and what == 'class':
-        return_annotation = ''
-
-    return signature, return_annotation
-
-
-def setup(app):
-    app.add_stylesheet('css/htcondor-manual.css')
-    app.connect('autodoc-process-docstring', modify_docstring)
-    app.connect('autodoc-process-signature', modify_signature)
+# -- conf.py contains common configuration and man pages configuration
+# -- full_conf.py contains configuration for the whole manual
+sys.path.append(os.path.dirname(__file__))
+MANPAGES = os.environ.get('MANPAGES') == 'True'
+if not MANPAGES:
+    from full_conf import *

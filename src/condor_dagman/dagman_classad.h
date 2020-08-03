@@ -23,17 +23,70 @@
 
 #include "condor_common.h"
 #include "condor_id.h"
-#include "dag.h"
 #include "dagman_stats.h"
 #include "condor_qmgr.h"
+#include "../condor_utils/dagman_utils.h"
 
 class DCSchedd;
 
-class DagmanClassad {
+class ScheddClassad {
+
+  public:
+		/** Open a connection to the schedd.
+		@return Qmgr_connection An opaque connection object -- NULL
+				if connection fails.
+		*/
+	Qmgr_connection *OpenConnection() const;
+
+		/** Close the given connection to the schedd.
+			@param Qmgr_connection An opaque connection object.
+		*/
+	void CloseConnection( Qmgr_connection *queue );
+
+		/** Set an attribute in this DAGMan's classad.
+			@param attrName The name of the attribute to set.
+			@param attrVal The value of the attribute.
+		*/
+	void SetAttribute( const char *attrName, int attrVal ) const;
+
+		/** Set an attribute in this DAGMan's classad.
+			@param attrName The name of the attribute to set.
+			@param attrVal The value of the attribute.
+		*/
+	void SetAttribute( const char *attrName, const MyString &value ) const;
+
+		/** Set a nested ClassAd attribute in this DAGMan's classad.
+			@param attrName The name of the attribute to set.
+			@param ad The ClassAd to set.
+		*/
+	void SetAttribute( const char *attrName, const ClassAd &ad ) const;
+
+		/** Get the specified attribute (string) value from our ClassAd.
+			@param attrName: The name of the attribute.
+			@param attrVal: A MyString to receive the attribute value.
+			@param printWarning: Whether to print a warning if we
+				can't get the requested attribute.
+			@return true if we got the requested attribute, false otherwise
+		*/
+	bool GetAttribute( const char *attrName, MyString &attrVal,
+				bool printWarning = true ) const;
+
+	bool GetAttribute( const char *attrName, int &attrVal,
+				bool printWarning = true ) const;
+
+		// The condor ID for this connection client.
+	CondorID _jobId;
+
+		// The schedd we need to talk to to update the classad.
+	DCSchedd *_schedd;
+
+};
+
+class DagmanClassad : public ScheddClassad {
   public:
 	/** Constructor.
 	*/
-	DagmanClassad( const CondorID &DAGManJobId );
+	DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd );
 	
 	/** Destructor.
 	*/
@@ -64,7 +117,7 @@ class DagmanClassad {
 	*/
 	void Update( int total, int done, int pre, int submitted, int post,
 				int ready, int failed, int unready,
-				Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats,
+				DagStatus dagStatus, bool recovery, const DagmanStats &stats,
 				int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts );
 
 		/** Get information we need from our own ClassAd.
@@ -91,47 +144,6 @@ class DagmanClassad {
 		*/
 	void InitializeMetrics();
 
-		/** Open a connection to the schedd.
-			@return Qmgr_connection An opaque connection object -- NULL
-					if connection fails.
-		*/
-	Qmgr_connection *OpenConnection();
-
-		/** Close the given connection to the schedd.
-			@param Qmgr_connection An opaque connection object.
-		*/
-	void CloseConnection( Qmgr_connection *queue );
-
-		/** Set an attribute in this DAGMan's classad.
-			@param attrName The name of the attribute to set.
-			@param attrVal The value of the attribute.
-		*/
-	void SetDagAttribute( const char *attrName, int attrVal ) const;
-
-		/** Set an attribute in this DAGMan's classad.
-			@param attrName The name of the attribute to set.
-			@param attrVal The value of the attribute.
-		*/
-	void SetDagAttribute( const char *attrName, const MyString &value ) const;
-
-		/** Set a nested ClassAd attribute in this DAGMan's classad.
-			@param attrName The name of the attribute to set.
-			@param ad The ClassAd to set.
-		*/
-	void SetDagAttribute( const char *attrName, const ClassAd &ad ) const;
-
-		/** Get the specified attribute (string) value from our ClassAd.
-			@param attrName: The name of the attribute.
-			@param attrVal: A MyString to receive the attribute value.
-			@param printWarning: Whether to print a warning if we
-				can't get the requested attribute.
-			@return true if we got the requested attribute, false otherwise
-		*/
-	bool GetDagAttribute( const char *attrName, MyString &attrVal,
-				bool printWarning = true ) const;
-
-	bool GetDagAttribute( const char *attrName, int &attrVal,
-				bool printWarning = true ) const;
 
 		// Whether this object is valid.
 	bool _valid;
@@ -139,9 +151,26 @@ class DagmanClassad {
 		// The HTCondor ID for this DAGMan -- that's the classad we'll
 		// update.
 	CondorID _dagmanId;
-
-		// The schedd we need to talk to to update the classad.
-	DCSchedd *_schedd;
 };
+
+
+class ProvisionerClassad : public ScheddClassad {
+  public:
+	/** Constructor.
+	*/
+	ProvisionerClassad( const CondorID &JobId, DCSchedd *schedd );
+
+	/** Destructor.
+	*/
+	~ProvisionerClassad();
+
+		// Returns the state of a provisioner, represented as a string
+	MyString GetProvisionerState();
+
+		// Whether this object is valid.
+	bool _valid;
+
+};
+
 
 #endif /* #ifndef DAGMAN_CLASSAD_H */

@@ -966,14 +966,6 @@ main(int argc, const char* argv[])
 	ClassAd *ad = NULL;
 	std::vector<ClassAd> accountingAds;
 
-	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
-	c.locate();
-	const char *v = c.version();
-	CondorVersionInfo cvi(v);
-	if (!cvi.built_since_version(8,5,2)) {
-		fromCollector = false;	
-	}
-
 	if (fromCollector) {
 		CondorQuery query(ACCOUNTING_AD);
 		ClassAdList ads;
@@ -1501,7 +1493,7 @@ static const struct {
    { DetailUseTime1,  16, "Usage\0Start Time" },
    { DetailUseTime2,  16, "Last\0Usage Time" },
    { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
-   { DetailRequested, 10, "Requested\0Resources" },
+   { DetailRequested, 10, "Weighted\0Requested" }
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 

@@ -52,32 +52,28 @@ might look like this when run from the shell prompt.
 
       $ ./myexe SomeArgument
 
-      
 The corresponding submit description file might look like the following
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      ####################
-      #
-      # Example 1
-      # Simple HTCondor submit description file
-      # Everything with a leading # is a comment
-      ####################
+    # Example 1
+    # Simple HTCondor submit description file
+    # Everything with a leading # is a comment
 
-      executable   = myexe
+    executable   = myexe
+    arguments    = SomeArgument
 
-      arguments    = SomeArgument
+    output       = outputfile
+    error        = errorfile
+    log          = myexe.log
 
-      output       = outputfile
-      error        = errorfile
-      log          = myexe.log
+    request_cpus   = 1
+    request_memory = 1024
+    request_disk   = 10240
 
-      request_cpus   = 1
-      request_memory = 1024
-      request_disk   = 10240
-      
-      should_transfer_files = yes
-      queue
+    should_transfer_files = yes
+
+    queue
 
 The standard output for this job will go to the file
 ``outputfile``, as specified by the
@@ -119,32 +115,28 @@ input file is passed to the program as the only argument.  We prepare
 150 copies of this input file in the current directory, and name them
 input_file.0, input_file.1 ... up to input_file.149.  Using transfer_input_files,
 we tell HTCondor which input file to send to each instance of the program.
-.. code-block:: text
 
-      ####################
-      #
-      # Example 2: Show off some fancy features including
-      # the use of pre-defined macros.
-      #
-      ####################
+.. code-block:: condor-submit
 
-      Executable     = foo
-      arguments      = input_file.$(Process)
+    # Example 2: Show off some fancy features,
+    # including the use of pre-defined macros.
 
-      
-      request_memory = 4096
-      request_cpus   = 1
-      request_disk   = 16383
+    executable     = foo
+    arguments      = input_file.$(Process)
 
-      error   = err.$(Process)
-      output  = out.$(Process)
-      log     = foo.log
+    request_memory = 4096
+    request_cpus   = 1
+    request_disk   = 16383
 
-      should_transfer_files = yes
-      transfer_input_files = input_file.$(Process)
+    error   = err.$(Process)
+    output  = out.$(Process)
+    log     = foo.log
 
-      # submit 150 instances of this job 
-      queue 150
+    should_transfer_files = yes
+    transfer_input_files = input_file.$(Process)
+
+    # submit 150 instances of this job
+    queue 150
 
 :index:`examples<single: examples; submit description file>`
 
@@ -200,7 +192,7 @@ Here are a set of examples.
 
 **Example 1**
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       transfer_input_files = $(filename)
       arguments            = -infile $(filename)
@@ -217,7 +209,7 @@ job queued. That macro value is then substituted into the **arguments**
 and **transfer_input_files** commands. The **queue** command expands
 to
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       transfer_input_files = initial.dat
       arguments            = -infile initial.dat
@@ -229,11 +221,9 @@ to
       arguments            = -infile ending.dat
       queue
 
-
-
 **Example 2**
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       queue 1 input in A, B, C
 
@@ -241,7 +231,7 @@ Variable ``input`` is set to each of the 3 items in the list, and one
 job is queued for each. For this example the **queue** command expands
 to
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       input = A
       queue
@@ -253,9 +243,9 @@ to
 
 **Example 3**
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      queue input,arguments from (
+      queue input, arguments from (
         file1, -a -b 26
         file2, -c -d 92
       )
@@ -264,7 +254,7 @@ Using the ``from`` form of the options, each of the two variables
 specified is given a value from the list of items. For this example the
 **queue** command expands to
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       input = file1
       arguments = -a -b 26
@@ -275,13 +265,13 @@ specified is given a value from the list of items. For this example the
 
 **Example 4**
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       queue from seq 7 9 |
       
 feeds the list of items to queue with the output of ``seq 7 9``:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       item = 7
       queue
@@ -342,7 +332,7 @@ automatic variables are identified.
 
 This example queues six jobs.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     queue 3 in (A, B)
 
@@ -367,7 +357,7 @@ Including Submit Commands Defined Elsewhere
 Externally defined submit commands can be incorporated into the submit
 description file using the syntax
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       include : <what-to-include>
 
@@ -389,7 +379,7 @@ nesting is discovered and thwarted, while still permitting nesting.
 
 Consider the example
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       include : list-infiles.sh |
 
@@ -398,7 +388,7 @@ script ``list-infiles.sh`` to be invoked, and the output of the script
 is parsed and incorporated into the submit description file. If this
 bash script is in the PATH when submit is run, and contains
 
-.. code-block:: text
+.. code-block:: bash
 
       #!/bin/sh
 
@@ -410,7 +400,7 @@ transfer to the execute host. For example, if directory ``infiles``
 contains the three files ``A.dat``, ``B.dat``, and ``C.dat``, then the
 submit command
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       transfer_input_files = infiles/A.dat, infiles/B.dat, infiles/C.dat
 
@@ -426,7 +416,7 @@ Using Conditionals in the Submit Description File
 Conditional if/else semantics are available in a limited form. The
 syntax:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       if <simple condition>
          <statement>
@@ -448,7 +438,7 @@ character (!) to represent the not operation, followed by
    expanded input. If the variable is not defined, the statement(s) are
    not incorporated into the expanded input. As an example,
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
          if defined MY_UNDEFINED_VARIABLE
             X = 12
@@ -475,7 +465,7 @@ character (!) to represent the not operation, followed by
 
    As an example,
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
          if version >= 8.1.6
             DO_X = True
@@ -496,7 +486,7 @@ character (!) to represent the not operation, followed by
 
 The syntax
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       if <simple condition>
          <statement>
@@ -510,7 +500,7 @@ The syntax
 
 is the same as syntax
 
-.. code-block:: text
+.. code-block:: condor-submit
 
       if <simple condition>
          <statement>
@@ -528,40 +518,40 @@ Here is an example use of a conditional in the submit description file.
 A portion of the ``sample.sub`` submit description file uses the if/else
 syntax to define command line arguments in one of two ways:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      if defined X
-        arguments = -n $(X)
-      else
-        arguments = -n 1 -debug
-      endif
+    if defined X
+      arguments = -n $(X)
+    else
+      arguments = -n 1 -debug
+    endif
 
 Submit variable ``X`` is defined on the *condor_submit* command line
 with
 
 .. code-block:: console
 
-      $ condor_submit  X=3  sample.sub
+    $ condor_submit  X=3  sample.sub
 
 This command line incorporates the submit command ``X = 3`` into the
 submission before parsing the submit description file. For this
 submission, the command line arguments of the submitted job become
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-        -n 3
+    arguments = -n 3
 
 If the job were instead submitted with the command line
 
 .. code-block:: console
 
-      $ condor_submit  sample.sub
+    $ condor_submit  sample.sub
 
 then the command line arguments of the submitted job become
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-        -n 1 -debug
+    arguments = -n 1 -debug
 
 
 Function Macros in the Submit Description File
@@ -591,9 +581,9 @@ as given in these definitions.
     :default-value is used; in which case it evaluates to default-value.
     For example,
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
-          A = $ENV(HOME)
+        A = $ENV(HOME)
 
     binds ``A`` to the value of the ``HOME`` environment variable.
 
@@ -652,9 +642,9 @@ as given in these definitions.
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
 
-    .. code-block:: console
+    .. code-block:: text
 
-          $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
+        $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
 ``$RANDOM_INTEGER(min, max [, step])``
     :index:`in configuration<single: in configuration; $RANDOM_INTEGER()>` A random integer
@@ -663,9 +653,9 @@ as given in these definitions.
     to the value 1. For example, to randomly chose an even integer in
     the range 0-8 (inclusive):
 
-    .. code-block:: console
+    .. code-block:: text
 
-          $RANDOM_INTEGER(0, 8, 2)
+        $RANDOM_INTEGER(0, 8, 2)
 
 ``$REAL(item-to-convert)`` or ``$REAL(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
@@ -683,9 +673,9 @@ as given in these definitions.
     A negative value of length eliminates use of characters from the end
     of the string. Here are some examples that all assume
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
-          Name = abcdef
+        Name = abcdef
 
     -  ``$SUBSTR(Name, 2)`` is ``cdef``.
     -  ``$SUBSTR(Name, 0, -2)`` is ``abcd``.
@@ -705,10 +695,10 @@ function macros.
 Generate a range of numerical values for a set of jobs, where values
 other than those given by $(Process) are desired.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      MyIndex     = $(Process) + 1
-      initial_dir = run-$INT(MyIndex,%04d)
+    MyIndex     = $(Process) + 1
+    initial_dir = run-$INT(MyIndex,%04d)
 
 Assuming that there are three jobs queued, such that $(Process) becomes
 0, 1, and 2, ``initial_dir`` will evaluate to the directories
@@ -720,11 +710,11 @@ Assuming that there are three jobs queued, such that $(Process) becomes
 This variation on Example 1 generates a file name extension which is a
 3-digit integer value.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      Values     = $(Process) * 10
-      Extension  = $INT(Values,%03d)
-      input      = X.$(Extension)
+    Values     = $(Process) * 10
+    Extension  = $INT(Values,%03d)
+    input      = X.$(Extension)
 
 Assuming that there are four jobs queued, such that $(Process) becomes
 0, 1, 2, and 3, ``Extension`` will evaluate to 000, 010, 020, and 030,
@@ -740,13 +730,13 @@ function to specify a job input file that is within a subdirectory on
 the submit host, but will be placed into a single, flat directory on the
 execute host.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      arguments            = $Fnx(FILE)
-      transfer_input_files = $(FILE)
-      queue  FILE  MATCHING (
-           samplerun/*.dat
-           )
+    arguments            = $Fnx(FILE)
+    transfer_input_files = $(FILE)
+    queue FILE matching (
+        samplerun/*.dat
+    )
 
 Assume that two files that end in ``.dat``, ``A.dat`` and ``B.dat``, are
 within the directory ``samplerun``. Macro ``FILE`` expands to
@@ -838,32 +828,32 @@ The following ``Rank`` expressions provide examples to follow.
 
 For a job that desires the machine with the most available memory:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-       Rank = memory
+    Rank = memory
 
 For a job that prefers to run on a friend's machine on Saturdays and
 Sundays:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-       Rank = ( (clockday == 0) || (clockday == 6) )
-              && (machine == "friend.cs.wisc.edu")
+    Rank = ( (clockday == 0) || (clockday == 6) )
+           && (machine == "friend.cs.wisc.edu")
 
 For a job that prefers to run on one of three specific machines:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-       Rank = (machine == "friend1.cs.wisc.edu") ||
-              (machine == "friend2.cs.wisc.edu") ||
-              (machine == "friend3.cs.wisc.edu")
+    Rank = (machine == "friend1.cs.wisc.edu") ||
+           (machine == "friend2.cs.wisc.edu") ||
+           (machine == "friend3.cs.wisc.edu")
 
 For a job that wants the machine with the best floating point
 performance (on Linpack benchmarks):
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-       Rank = kflops
+    Rank = kflops
 
 This particular example highlights a difficulty with ``Rank`` expression
 evaluation as currently defined. While all machines have floating point
@@ -894,30 +884,30 @@ defined, use
 
 For a job that prefers specific machines in a specific order:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-       Rank = ((machine == "friend1.cs.wisc.edu")*3) +
-              ((machine == "friend2.cs.wisc.edu")*2) +
-               (machine == "friend3.cs.wisc.edu")
+    Rank = ((machine == "friend1.cs.wisc.edu")*3) +
+           ((machine == "friend2.cs.wisc.edu")*2) +
+            (machine == "friend3.cs.wisc.edu")
 
 If the machine being ranked is ``friend1.cs.wisc.edu``, then the
 expression
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
-       (machine == "friend1.cs.wisc.edu")
+    (machine == "friend1.cs.wisc.edu")
 
 is true, and gives the value 1.0. The expressions
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
-       (machine == "friend2.cs.wisc.edu")
+    (machine == "friend2.cs.wisc.edu")
 
 and
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
-       (machine == "friend3.cs.wisc.edu")
+    (machine == "friend3.cs.wisc.edu")
 
 are false, and give the value 0.0. Therefore, ``Rank`` evaluates to the
 value 3.0. In this way, machine ``friend1.cs.wisc.edu`` is ranked higher
@@ -989,10 +979,10 @@ the jobs, she needs to tell HTCondor to send them to machines that have
 access to that shared data, so she specifies a different
 ``requirements`` expression than the default:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-       Requirements = TARGET.UidDomain == "cs.wisc.edu" && \
-                      TARGET.FileSystemDomain == "cs.wisc.edu"
+    Requirements = TARGET.UidDomain == "cs.wisc.edu" && \
+                   TARGET.FileSystemDomain == "cs.wisc.edu"
 
 WARNING: If there is no shared file system, or the HTCondor pool
 administrator does not configure the ``FileSystemDomain`` setting
@@ -1010,16 +1000,16 @@ Jobs That Require GPUs
 A job that needs GPUs to run identifies the number of GPUs needed in the
 submit description file by adding the submit command
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      request_GPUs = <n>
+    request_GPUs = <n>
 
 where ``<n>`` is replaced by the integer quantity of GPUs required for
 the job. For example, a job that needs 1 GPU uses
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      request_GPUs = 1
+    request_GPUs = 1
 
 Because there are different capabilities among GPUs, the job might need
 to further qualify which GPU of available ones is required. Do this by
@@ -1029,10 +1019,10 @@ command. As an example, assume that the job needs a speed and capacity
 of a CUDA GPU that meets or exceeds the value 1.2. In the submit
 description file, place
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-      request_GPUs = 1
-      requirements = (CUDACapability >= 1.2) && $(requirements:True)
+    request_GPUs = 1
+    requirements = (CUDACapability >= 1.2) && $(requirements:True)
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the
@@ -1066,9 +1056,9 @@ enabled.
 
 Each interactive job will have a job ClassAd attribute of
 
-.. code-block:: text
+.. code-block:: condor-classad
 
-      InteractiveJob = True
+    InteractiveJob = True
 
 Submission of an interactive job specifies the option **-interactive**
 on the *condor_submit* command line.

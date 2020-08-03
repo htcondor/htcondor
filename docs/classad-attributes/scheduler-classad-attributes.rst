@@ -257,7 +257,7 @@ Scheduler ClassAd Attributes
     A Statistics attribute defining the predefined bucket boundaries for
     histogram statistics that classify run times. Defined as
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
           JobsRuntimesHistogramBuckets = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr,
                   6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day"
@@ -293,7 +293,7 @@ Scheduler ClassAd Attributes
     A Statistics attribute defining the predefined bucket boundaries for
     histogram statistics that classify image sizes. Defined as
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
           JobsSizesHistogramBuckets = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb,
                   1Gb, 4Gb, 16Gb, 64Gb, 256Gb"

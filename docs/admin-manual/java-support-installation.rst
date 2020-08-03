@@ -63,7 +63,7 @@ its properties.
 
 This command will display a short list of cryptic properties, such as:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     IsDaemonCore = True
     HasFileTransfer = True
@@ -73,7 +73,7 @@ This command will display a short list of cryptic properties, such as:
 If the Java configuration is correct, there will also be a short list of
 Java properties, such as:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     JavaVendor = "Sun Microsystems Inc."
     JavaVersion = "1.2.2"
@@ -89,7 +89,7 @@ value. The administrator can change this value through configuration by
 setting a different value for ``JAVA_EXTRA_ARGUMENTS``
 :index:`JAVA_EXTRA_ARGUMENTS`.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     JAVA_EXTRA_ARGUMENTS = -Xmx1024m
 

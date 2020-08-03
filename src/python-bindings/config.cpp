@@ -614,16 +614,16 @@ void configWrapper() {
 	// environment for variables on interest to HTCondor's config(), and
 	// copying them into the C runtime environment.
 	char *env_str = GetEnvironmentStrings();
-	const char *ptr = env_str;
-	while ( *ptr != '\0' ) {
-		if (strncasecmp("CONDOR_CONFIG=",ptr,14)==0 ||
-			strncasecmp("_CONDOR_",ptr,8)==0)
-		{
-			_putenv(ptr);
-		}
-		ptr += strlen(ptr) + 1;
-	}
 	if (env_str) {
+        const char *ptr = env_str;
+        while ( *ptr != '\0' ) {
+            if (strncasecmp("CONDOR_CONFIG=",ptr,14)==0 ||
+                strncasecmp("_CONDOR_",ptr,8)==0)
+            {
+                _putenv(ptr);
+            }
+            ptr += strlen(ptr) + 1;
+        }
 		FreeEnvironmentStrings(env_str);
 		env_str = NULL;
 	}
