@@ -176,7 +176,7 @@ New Features:
   gid of 0.  Jobs still will not run with root privs, but this allows jobs to
   be submitted which are assigned an ``Owner`` via the result of user mapping
   from authentication.
-  :ticket:`6868`
+  :ticket:`7662`
 
 Bugs Fixed:
 
