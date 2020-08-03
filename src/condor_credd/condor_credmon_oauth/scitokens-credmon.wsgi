@@ -2,11 +2,15 @@
 # Configure Logging
 #
 
-from credmon.utils import setup_logging
 import os
 import logging
 
+# credmon library in libexec
 import htcondor
+import sys
+sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
+
+from credmon.utils import setup_logging
 
 log_path = htcondor.param.get("SEC_CREDENTIAL_MONITOR_OAUTH_LOG",
                htcondor.param.get("SEC_CREDENTIAL_MONITOR_LOG",

@@ -1,16 +1,21 @@
 #!/usr/bin/env python
 
-from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
-from credmon.CredentialMonitors.LocalCredmon import LocalCredmon
-from credmon.utils import setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete, create_credentials
 import signal
-import sys
 from functools import partial
 from multiprocessing import Process
 import multiprocessing
 import Queue
 from optparse import OptionParser, OptionGroup
 import logging
+
+# credmon library in libexec
+import htcondor
+import sys
+sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
+
+from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
+from credmon.CredentialMonitors.LocalCredmon import LocalCredmon
+from credmon.utils import setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete, create_credentials
 
 parser = OptionParser()
 parser.add_option('-c', '--cred-dir', action='store', type='string', dest='cred_dir',
