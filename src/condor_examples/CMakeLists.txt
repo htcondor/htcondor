@@ -68,6 +68,7 @@ install (FILES
 		condor.socket
 		condor-tmpfiles.conf
 		condor-annex-ec2.service
+		interactive.sub
 		00-minicondor
 		50ec2.config
 		DESTINATION ${C_ETC_EXAMPLES})
@@ -83,7 +84,6 @@ install (FILES
 install (FILES 
 	condor_limits_wrapper.sh
 	condor_schedd.init
-	interactive.sub
 	DESTINATION ${C_LIBEXEC}
 	PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 
