@@ -189,55 +189,55 @@ Email::init()
 
 
 void
-Email::sendHold( ClassAd* ad, const char* reason )
+Email::sendHold( ClassAd* ad, const char* reason)
 {
-	sendAction( ad, reason, "put on hold" );
+	sendAction( ad, reason, "put on hold", JOB_SHOULD_HOLD);
 }
 
 
 void
-Email::sendRemove( ClassAd* ad, const char* reason )
+Email::sendRemove( ClassAd* ad, const char* reason)
 {
-	sendAction( ad, reason, "removed" );
+	sendAction( ad, reason, "removed", -1);
 }
 
 void
-Email::sendRelease( ClassAd* ad, const char* reason )
+Email::sendRelease( ClassAd* ad, const char* reason)
 {
-	sendAction( ad, reason, "released from hold" );
+	sendAction( ad, reason, "released from hold", -1);
 }
 
 void
-Email::sendHoldAdmin( ClassAd* ad, const char* reason )
+Email::sendHoldAdmin( ClassAd* ad, const char* reason)
 {
 	email_admin = true;
-	sendAction( ad, reason, "put on hold" );
+	sendAction( ad, reason, "put on hold", JOB_SHOULD_HOLD);
 }
 
 void
 Email::sendRemoveAdmin( ClassAd* ad, const char* reason )
 {
 	email_admin = true;
-	sendAction( ad, reason, "removed" );
+	sendAction( ad, reason, "removed", -1);
 }
 
 void
 Email::sendReleaseAdmin( ClassAd* ad, const char* reason )
 {
 	email_admin = true;
-	sendAction( ad, reason, "released from hold" );
+	sendAction( ad, reason, "released from hold", -1);
 }
 
 
 void
 Email::sendAction( ClassAd* ad, const char* reason,
-						const char* action )
+						const char* action, int exit_code)
 {
 	if( ! ad ) {
 		EXCEPT( "Email::sendAction() called with NULL ad!" );
 	}
 
-	if( ! open_stream(ad, -1, action) ) {
+	if( ! open_stream(ad, exit_code, action) ) {
 			// nothing to do
 		return;
 	}

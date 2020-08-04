@@ -953,6 +953,25 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
         * Bob   security
         * Alice security,math
 
+    Here is simple example showing how to configure ``CLASSAD_USER_MAPDATA_<name>``
+    for testing and experimentation.
+
+    ::
+
+        # configuration statements to create a simple userMap that
+        # can be used by the Schedd as well as by tools like condor_q
+        #
+        SCHEDD_CLASSAD_USER_MAP_NAMES = Trust $(SCHEDD_CLASSAD_USER_MAP_NAMES)
+        TOOL_CLASSAD_USER_MAP_NAMES = Trust $(TOOL_CLASSAD_USER_MAP_NAMES)
+        CLASSAD_USER_MAPDATA_Trust @=end
+          * Bob   User
+          * Alice Admin
+          * /.*/  Nobody
+        @end
+        #
+        # test with
+        #   condor_q -af:j 'Owner' 'userMap("Trust",Owner)'
+
     **Optional submaps:** If the first field of the mapfile contains
     something other than \*, then a submap is defined. To select a
     submap for lookup, the first argument for userMap() should be
@@ -4759,7 +4778,9 @@ These macros control the *condor_schedd*.
 :macro-def:`QUEUE_SUPER_USERS`
     A comma and/or space separated list of user names on a given machine
     that are given super-user access to the job queue, meaning that they
-    can modify or delete the job ClassAds of other users. When not on
+    can modify or delete the job ClassAds of other users. These should be
+    of form ``USER@DOMAIN``; if the domain is not present in the username,
+    HTCondor will assume the default ``UID_DOMAIN``. When not on
     this list, users can only modify or delete their own ClassAds from
     the job queue. Whatever user name corresponds with the UID that
     HTCondor is running as - usually user condor - will automatically be
@@ -4775,8 +4796,10 @@ These macros control the *condor_schedd*.
     members of the user group are given super-user access.
 
 :macro-def:`QUEUE_SUPER_USER_MAY_IMPERSONATE`
-    A regular expression that matches the user names (that is, job owner
-    names) that the queue super user may impersonate when managing jobs.
+    A regular expression that matches the operating system user names
+    (that is, job owners in the form ``USER``) that the queue super user
+    may impersonate when managing jobs.  This allows the admin to limit
+    the operating system users a super user can launch jobs as.
     When not set, the default behavior is to allow impersonation of any
     user who has had a job in the queue during the life of the
     *condor_schedd*. For proper functioning of the *condor_shadow*,

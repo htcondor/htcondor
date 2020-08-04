@@ -28,7 +28,7 @@
 
 //---------------------------------------------------------------------------
 Qmgr_connection *
-ScheddClassad::OpenConnection()
+ScheddClassad::OpenConnection() const
 {
 		// Open job queue
 	CondorError errstack;
@@ -58,7 +58,7 @@ ScheddClassad::CloseConnection( Qmgr_connection *queue )
 
 //---------------------------------------------------------------------------
 void
-ScheddClassad::SetAttribute( const char *attrName, int attrVal )
+ScheddClassad::SetAttribute( const char *attrName, int attrVal ) const
 {
 	if ( SetAttributeInt( _jobId._cluster, _jobId._proc,
 						  attrName, attrVal ) != 0 ) {
@@ -70,7 +70,7 @@ ScheddClassad::SetAttribute( const char *attrName, int attrVal )
 
 //---------------------------------------------------------------------------
 void
-ScheddClassad::SetAttribute( const char *attrName, const MyString &value )
+ScheddClassad::SetAttribute( const char *attrName, const MyString &value ) const
 {
 	if ( SetAttributeString( _jobId._cluster, _jobId._proc,
 						  attrName, value.Value() ) != 0 ) {
@@ -82,7 +82,7 @@ ScheddClassad::SetAttribute( const char *attrName, const MyString &value )
 
 //---------------------------------------------------------------------------
 void
-ScheddClassad::SetAttribute( const char *attrName, const ClassAd &ad )
+ScheddClassad::SetAttribute( const char *attrName, const ClassAd &ad ) const
 {
 	if ( SetAttributeExpr( _jobId._cluster, _jobId._proc,
 						  attrName, &ad ) != 0 ) {
@@ -95,7 +95,7 @@ ScheddClassad::SetAttribute( const char *attrName, const ClassAd &ad )
 //---------------------------------------------------------------------------
 bool
 ScheddClassad::GetAttribute( const char *attrName, MyString &attrVal,
-			bool printWarning )
+			bool printWarning ) const
 {
 	char *val;
 	if ( GetAttributeStringNew( _jobId._cluster, _jobId._proc,
@@ -115,7 +115,7 @@ ScheddClassad::GetAttribute( const char *attrName, MyString &attrVal,
 //---------------------------------------------------------------------------
 bool
 ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
-			bool printWarning )
+			bool printWarning ) const
 {
 	int val;
 	if ( GetAttributeInt( _jobId._cluster, _jobId._proc,

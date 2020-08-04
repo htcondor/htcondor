@@ -41,6 +41,7 @@ Interacting with Schedulers
    .. automethod:: submit
    .. automethod:: submitMany
    .. automethod:: spool
+   .. automethod:: retrieve
    .. automethod:: refreshGSIProxy
    .. automethod:: reschedule
 

@@ -19,6 +19,9 @@ Release Notes:
 
 New Features:
 
+-  The :class:`classad.ClassAd` class now defines equality and inequality.
+   :ticket:`7760`
+
 -  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
    :ticket:`7726`
 
@@ -34,6 +37,11 @@ Release Notes:
 -  HTCondor version 8.9.8 not yet released.
 
 .. HTCondor version 8.8.8 released on Month Date, 2020.
+
+-  HTCondor now supports setting an upper bound on the number of cores user can
+   be given.  This is called the submitter ceiling. The ceiling can be set with
+   the condor_userprio -setceiling command line option.
+   :ticket:`7702`
 
 -  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
    now tries to parse the entire string passed to it.  Failure results in a
@@ -66,6 +74,11 @@ Release Notes:
   but will still work (raising a :class:`FutureWarning` when used) until a future
   release.
   :ticket:`7630`
+
+-  Removed the *condor_dagman* ``node_scheduler`` module, which contains
+   earlier implementations of several DAGMan components and has not been used
+   in a long time.
+   :ticket:`7674`
 
 New Features:
 
@@ -103,6 +116,12 @@ New Features:
    the expression's result, unless doing so would repeat the previous
    expression's ad; use the ``-quiet`` flag to disable.
    :ticket:`7341`
+
+-  Added a new Python bindings subpackage, :mod:`htcondor.htchirp`.
+   This subpackage provides the :class:`HTChirp` and :func:`condor_chirp`
+   objects for using the Chirp protocol inside a ``+WantIOProxy =
+   true`` job.
+   :ticket:`7330`
 
 -  Added a new tool, *condor_watch_q*, a live-updating job status tracker
    that does not repeatedly query the *condor_schedd* like ``watch condor_q``
@@ -147,6 +166,47 @@ New Features:
    debug problems with jobs not running correctly.
    :ticket:`7568`
 
+-  *condor_dagman* now allows jobs to be described with an inline submit
+   description, instead of referencing a separate submit file. See the
+   :ref:`users-manual/dagman-workflows:inline submit descriptions` section for
+   more details.
+   :ticket:`7352`
+
+-  Improved messaging for the *condor_drain* tool to indicate that it is only
+   draining the single specified *condor_startd*. If the target host has 
+   multiple *condor_startd* daemons running, the other instances will not be
+   drained.
+   :ticket:`7664`
+
+-  Added new authentication method names ``FAMILY`` and ``MATCH``.
+   These represent automated establishment of trust between daemons.
+   They can not be used as values for configuration parameters such as
+   :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`.
+   ``FAMILY`` represents a security session between daemons within the same
+   family of OS processes.
+   ``MATCH`` represents a security session between daemons mediated through
+   a central manager (*condor_collector* and *condor_negotiator*) that both
+   daemons trust.
+   These values will be most visible in the attribute
+   ``AuthenticationMethod`` in ClassAds advertised in the *condor_collector*.
+   :ticket:`7683`
+
+- Docker jobs now respect CPU Affinity.
+  :ticket:`7627`
+
+- Added a ``debug`` option to *bosco_cluster* to help diagnose ssh failures.
+  :ticket:`7712`
+
+- The *condor_submit* executable will not abort if the submitting user has a
+  gid of 0.  Jobs still will not run with root privs, but this allows jobs to
+  be submitted which are assigned an ``Owner`` via the result of user mapping
+  from authentication.
+  :ticket:`7662`
+
+- The *condor_store_cred* tool can now be used to manage different
+  kinds of credentials, including Password, Kerberos, and OAuth.
+  :ticket:`6868`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
@@ -169,7 +229,7 @@ Bugs Fixed:
   when passed the argument getfile
   :ticket:`7612`
 
-- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let program like
+- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let programs like
   ``R`` know the maximum number of threads it should use.
   :ticket:`7649`
 
@@ -186,6 +246,31 @@ Bugs Fixed:
 - Fixed a bug in *condor_dagman* where completed jobs incorrectly showed a 
   warning message related to job events.
   :ticket:`7548`
+
+- Stopped HTCondor from sweeping OAuth credentials too aggressively, during the
+  window between credential creation and job submission.  The *condor_credd*
+  will now wait :macro:`SEC_CREDENTIAL_SWEEP_INTERVAL` seconds before cleaning
+  them up, and the default is 300 seconds.
+  :ticket:`7484`
+
+- When authenticating, clients now only suggest methods that it supports,
+  rather than providing a list of methods where it will reject some. This
+  improves the initial security handshake.
+  :ticket:`7500`
+
+- For RPM installations, the HTCondor Python bindings RPM will now be
+  automatically installed whenever the `condor` RPM is installed.
+  :ticket:`7647`
+
+- Bosco will use the newer version (1.3) of the tarballs on Enterprise Linux
+  7 and 8.
+  :ticket:`7753`
+
+- HTCondor no longer probes the file transfer plugins except in the starter
+  and then only if they are actually being used.  This was potentially adding
+  delays to starting individual shadows, which when starting a lot of shadows
+  could lead to scalability issues on a submit machine.
+  :ticket:`7688`
 
 Version 8.9.7
 -------------
@@ -215,7 +300,7 @@ Release Notes:
 New Features:
 
 - You may now specify that HTCondor only transfer files when the job
-  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_files``
+  succeeds (as defined by ``success_exit_code``).  Set ``when_to_transfer_output``
   to ``ON_SUCCESS``.  When you do, HTCondor will transfer files only when the
   job exits (in the sense of ``ON_EXIT``) with the specified success code.  This
   is intended to prevent unsuccessful jobs from going on hold because they

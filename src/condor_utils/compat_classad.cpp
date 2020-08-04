@@ -2624,12 +2624,8 @@ void TrimReferenceNames( classad::References &ref_set, bool external )
 				name += 1;
 			}
 		}
-		const char *end = strchr( name, '.' );
-		if ( end ) {
-			new_set.insert( std::string( name, end-name ) );
-		} else {
-			new_set.insert( name );
-		}
+		size_t spn = strcspn( name, ".[" );
+		new_set.insert( std::string( name, spn ) );
 	}
 	ref_set.swap( new_set );
 }

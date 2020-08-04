@@ -140,6 +140,22 @@ extern char *DebugLock;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 
+// the attribute name we use for the "owner" of the job, historically ATTR_OWNER 
+// but switching to ATTR_USER as we move to using fully qualified usernames
+std::string ownerinfo_attr_name;
+const std::string & attr_JobUser = ownerinfo_attr_name;
+bool user_is_the_new_owner = false;
+bool ignore_domain_mismatch_when_setting_owner = false;
+inline const char * EffectiveUser(Sock * sock) {
+	if (!sock) return "";
+	if (user_is_the_new_owner) {
+		return sock->getFullyQualifiedUser();
+	} else {
+		return sock->getOwner();
+	}
+	return "";
+}
+
 // priority records
 extern prio_rec *PrioRec;
 extern int N_PrioRecs;
@@ -218,7 +234,9 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 		return;
 	}
 
-	if ( !strcmp( get_condor_username(), sock.getOwner() ) ||
+	const char *schedd_uid_domain = scheduler.uidDomain();
+	const char *uid_domain = schedd_uid_domain ? schedd_uid_domain : "";
+	if ( (!strcmp( get_condor_username(), sock.getOwner() ) && !strcmp(uid_domain, sock.getDomain())) ||
 	     !strcmp( CONDOR_CHILD_FQU, sock.getFullyQualifiedUser() ) ) {
 		return;
 	}
@@ -337,6 +355,7 @@ size_t UserIdentity::HashFcn(const UserIdentity & index)
 	return hashFunction(index.m_username) + hashFunction(index.m_domain) + hashFunction(index.m_auxid);
 }
 
+//PRAGMA_REMIND("Owner/user change to take fully qualified user as a single string, remove separate domain string")
 UserIdentity::UserIdentity(const char *user, const char *domainname, 
 						   ClassAd *ad):
 	m_username(user), 
@@ -1270,8 +1289,12 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str);
 	}
 
-	formatstr(str, "%s@%s", Owner.Name(), UidDomain);
-	pAd.Assign(ATTR_NAME, str);
+	if (user_is_the_new_owner) {
+		pAd.Assign(ATTR_NAME, Owner.Name());
+	} else {
+		formatstr(str, "%s@%s", Owner.Name(), UidDomain);
+		pAd.Assign(ATTR_NAME, str);
+	}
 
 	return true;
 }
@@ -1404,12 +1427,22 @@ Scheduler::count_jobs()
 	matches->startIterations();
 	match_rec *rec;
 	while(matches->iterate(rec) == 1) {
-		char *at_sign = strchr(rec->user, '@');
-		if (at_sign) *at_sign = '\0';
-		SubmitterData * SubDat = insert_submitter(rec->user);
+		SubmitterData * SubDat;
+		if (user_is_the_new_owner) {
+			SubDat = insert_submitter(rec->user);
+		} else {
+			char *at_sign = strchr(rec->user, '@');
+			if ( ! at_sign) {
+				SubDat = insert_submitter(rec->user);
+			} else {
+				// TJ, I don't think we ever get here but just in case, we preserve the old (pre 8.9) behavior
+				*at_sign = '\0';
+				SubDat = insert_submitter(rec->user);
+				*at_sign = '@';
+			}
+		}
 		SubDat->num.Hits += 1;
 		SubDat->LastHitTime = current_time;
-		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && rec->getPool().empty()) {
 				// Sum up the # of cpus claimed by this user and advertise it as
 				// WeightedJobsRunning. 
@@ -1678,8 +1711,8 @@ Scheduler::count_jobs()
 		SubmitterData & SubDat = it->second;
 		const char * owner_name = SubDat.Name();
 		if (SubDat.num.Hits == 0 && SubDat.absentUpdateSent) {
-			dprintf( D_FULLDEBUG, "Skipping send ad to collectors for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
-				owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+			dprintf( D_FULLDEBUG, "Skipping send ad to collectors for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
+				owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			continue;
 		}
 		if ( !fill_submitter_ad(pAd, SubDat, "", -1) ) continue;
@@ -1688,15 +1721,19 @@ Scheduler::count_jobs()
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
+		if (user_is_the_new_owner) {
+			SubmitterMap.AddSubmitter("", SubDat.name, time_now);
+		} else {
 			// Note the submitter; the negotiator uses user@uid_domain when
 			// referring the submitter when it requests to negotiate.
-		SubmitterMap.AddSubmitter("", SubDat.name + "@" + UidDomain, time_now);
+			SubmitterMap.AddSubmitter("", SubDat.name + "@" + UidDomain, time_now);
+		}
 		// Update non-flock collectors
 		num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 		SubDat.lastUpdateTime = update_time;
 		SubDat.absentUpdateSent = (SubDat.num.Hits == 0);
-		dprintf( D_FULLDEBUG, "Sent ad to %d collectors for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
-			num_updates, owner_name, UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+		dprintf( D_FULLDEBUG, "Sent ad to %d collectors for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
+			num_updates, owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -1742,12 +1779,16 @@ Scheduler::count_jobs()
 					pAd.InsertAttr(ATTR_CAPABILITY, capability);
 				}
 
-				SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name + "@" + UidDomain, time_now);
+				if (user_is_the_new_owner) {
+					SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name, time_now);
+				} else {
+					SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name + "@" + UidDomain, time_now);
+				}
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
 
-				dprintf( D_FULLDEBUG, "Sent ad to flocked collector %s for %s@%s Hit=%d Tot=%d Idle=%d Run=%d\n",
-					flock_col->name(), SubDat.name.c_str(), UidDomain, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+				dprintf( D_FULLDEBUG, "Sent ad to flocked collector %s for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
+					flock_col->name(), SubDat.name.c_str(), SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			}
 		}
 	}
@@ -1843,7 +1884,11 @@ Scheduler::count_jobs()
 		// we don't want to send the, so we continue to the next
 		if (SubDat.num.Hits > 0) continue;
 
-		formatstr(submitter_name, "%s@%s", SubDat.Name(), UidDomain);
+		if (user_is_the_new_owner) {
+			submitter_name = SubDat.Name();
+		} else {
+			formatstr(submitter_name, "%s@%s", SubDat.Name(), UidDomain);
+		}
 		int old_flock_level = SubDat.OldFlockLevel;
 
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
@@ -2365,8 +2410,11 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		}
 		const char * p0wn = rsock->getOwner();
 		if (p0wn && ( ! authenticated || MATCH == strcasecmp(p0wn, "unauthenticated"))) p0wn = NULL;
+		if (user_is_the_new_owner) {
+			p0wn = rsock->getFullyQualifiedUser();
+		}
 		if (IsDebugCatAndVerbosity(dpf_level)) {
-			dprintf(dpf_level, "QUERY_JOB_ADS detected owner = %s\n", p0wn ? p0wn : "<null>");
+			dprintf(dpf_level, "QUERY_JOB_ADS detected %s = %s\n", attr_JobUser.c_str(), p0wn ? p0wn : "<null>");
 		}
 
 		long long val;
@@ -2407,7 +2455,8 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		// and that means we can construct the correct my_jobs_expr contraint expression
 		if (my_jobs_expr) {
 			MyString sub_expr;
-			sub_expr.formatstr("(owner == \"%s\")", owner.c_str());
+			bool fully_qualified = owner.find('@') != std::string::npos;
+			sub_expr.formatstr("(%s == \"%s\")", fully_qualified ? ATTR_USER : ATTR_OWNER, owner.c_str());
 			classad::ClassAdParser parser;
 			my_jobs_expr = parser.ParseExpression(sub_expr.c_str());
 			my_jobs_name = owner;
@@ -3307,7 +3356,7 @@ Scheduler::get_ownerinfo(JobQueueJob * job)
 	if ( ! job) return NULL;
 	if ( ! job->ownerinfo) {
 		std::string real_owner;
-		if ( ! job->LookupString(ATTR_OWNER,real_owner) ) {
+		if ( ! job->LookupString(attr_JobUser,real_owner) ) {
 			return NULL;
 		}
 		const char *owner = real_owner.c_str();
@@ -3335,7 +3384,7 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	// and update the cached pointers to ownerinfo and submitterdata
 
 	std::string real_owner;
-	if ( ! job->LookupString(ATTR_OWNER,real_owner) ) {
+	if ( ! job->LookupString(attr_JobUser,real_owner) ) {
 		return NULL;
 	}
 	const char *owner = real_owner.c_str();
@@ -3351,6 +3400,7 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	std::string alias;
 	job->LookupString(ATTR_ACCOUNTING_GROUP,alias); // TODDCORE
 	if ( ! alias.empty() && (alias != real_owner)) {
+		if (user_is_the_new_owner) { alias += std::string("@") + UidDomain; }
 		submitter = alias.c_str();
 	}
 
@@ -5248,9 +5298,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// to do so.
 					// cuz only the owner of a job (or queue super user) 
 					// is allowed to transfer data to/from a job.
-				MyString job_owner;
-				GetAttributeString(a_job.cluster,a_job.proc,ATTR_OWNER,job_owner);
-				if (OwnerCheck2(NULL,rsock->getOwner(),job_owner.c_str())) {
+				std::string job_user;
+				GetAttributeString(a_job.cluster, a_job.proc, attr_JobUser.c_str(), job_user);
+				if (UserCheck2(NULL, EffectiveUser(rsock), job_user.c_str())) {
 					(*jobs)[i] = a_job;
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 
@@ -5301,7 +5351,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			while (tmp_ad) {
 				if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,a_job.cluster) &&
 					tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
-					OwnerCheck2(tmp_ad,rsock->getOwner()) )
+					UserCheck2(tmp_ad, EffectiveUser(rsock)) )
 				{
 					(*jobs)[JobAdsArrayLen++] = a_job;
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
@@ -5494,7 +5544,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// cuz only the owner of a job (or queue super user) is allowed
 		// to transfer data to/from a job.
 	bool authorized = false;
-	if (OwnerCheck2(jobad,rsock->getOwner())) {
+	if (UserCheck2(jobad, EffectiveUser(rsock))) {
 		authorized = true;
 	}
 	if ( !authorized ) {
@@ -5854,7 +5904,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( ! reason.empty() ) {
 			// patch up the reason they gave us to include who did
 			// it. 
-		const char *owner = rsock->getOwner();
+		const char *owner = EffectiveUser(rsock);
 		reason += " (by user "; reason += owner; reason += ")";
 	}
 
@@ -6059,20 +6109,20 @@ Scheduler::actOnJobs(int, Stream* s)
 			// Check to make sure the job's status makes sense for
 			// the command we're trying to perform
 		int status;
-		MyString job_owner;
+		std::string job_user;
 		int on_release_status = IDLE;
 		int hold_reason_code = -1;
 		if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
 							ATTR_JOB_STATUS, &status) < 0 ||
 			GetAttributeString(tmp_id.cluster, tmp_id.proc,
-							   ATTR_OWNER, job_owner) < 0)
+							   attr_JobUser.c_str(), job_user) < 0)
 		{
 			results.record( tmp_id, AR_NOT_FOUND );
 			jobs[i].cluster = -1;
 			continue;
 		}
 		// Check that this user is allowed to modify this job.
-		if( !OwnerCheck2(NULL, rsock->getOwner(), job_owner.Value()) ) {
+		if( !UserCheck2(NULL, EffectiveUser(rsock), job_user.c_str()) ) {
 			results.record( tmp_id, AR_PERMISSION_DENIED );
 			jobs[i].cluster = -1;
 			continue;
@@ -6227,7 +6277,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_HOLD_JOBS:
 			if (clusterad->factory) {
-				if (OwnerCheck2(clusterad, rsock->getOwner()) == false ||
+				if (UserCheck2(clusterad, EffectiveUser(rsock)) == false ||
 					SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
@@ -6244,7 +6294,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_RELEASE_JOBS:
 			if (clusterad->factory) {
-				if (OwnerCheck2(clusterad, rsock->getOwner()) == false ||
+				if (UserCheck2(clusterad, EffectiveUser(rsock)) == false ||
 					SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
@@ -6264,7 +6314,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			if (clusterad->factory) {
 				// check to see if we are allowed to pause this factory, but don't actually change it's
 				// pause state, the mmClusterRemoved pause mode is a runtime-only schedd state.
-				if (OwnerCheck2(clusterad, rsock->getOwner()) == false ||
+				if (UserCheck2(clusterad, EffectiveUser(rsock)) == false ||
 					SetAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, "3", SetAttribute_QueryOnly) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					clusters[i].cluster = -1;
@@ -6299,7 +6349,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// Finally, let them know if the user running this command is
 		// a queue super user here
 	response_ad->Assign( ATTR_IS_QUEUE_SUPER_USER,
-			 isQueueSuperUser(rsock->getOwner()) ? true : false );
+			 isQueueSuperUser(EffectiveUser(rsock)) ? true : false );
 	
 	rsock->encode();
 	if( ! (putClassAd(rsock, *response_ad) && rsock->end_of_message()) ) {
@@ -6892,7 +6942,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	JobQueueJob *job = GetJobAd(job_id);
 	if (scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// TODO: try a different owner??
-		FindRunnableJob(job_id, &match_ad, getOwner());
+		FindRunnableJob(job_id, &match_ad, getMatchUser());
 
 		// we may have found a new job. but FindRunnableJob doesn't check to see
 		// if we hit the shadow limit, so we need to do that here.
@@ -6955,7 +7005,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 	match_rec *mrec = scheduler.AddMrec(
 		claim_id, startd.addr(), &job_id, &match_ad,
-		getOwner(), getRemotePool() );
+		getMatchUser(), getRemotePool() );
 
 	if( !mrec ) {
 			// There is already a match for this claim id.
@@ -7013,7 +7063,7 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	// Negotiator has asked us to send it RRL, but not started negotiation proper
 	// don't consider negotiation finished.
 	if (RRLRequestIsPending()) {
-		dprintf(D_ALWAYS,"Finished sending RRL for %s\n", getOwner());
+		dprintf(D_ALWAYS,"Finished sending RRL for %s\n", getMatchUser());
 		return;
 	}
 
@@ -7022,12 +7072,12 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	char const *remote_pool = getRemotePool();
 
 	dprintf(D_ALWAYS,"Finished negotiating for %s%s%s: %d matched, %d rejected\n",
-			getOwner(),
+			getMatchUser(),
 			remote_pool ? " in pool " : "",
 			remote_pool ? remote_pool : " in local pool",
 			getNumJobsMatched(), getNumJobsRejected() );
 
-	scheduler.negotiationFinished( getOwner(), remote_pool, satisfied );
+	scheduler.negotiationFinished( getMatchUser(), remote_pool, satisfied );
 
 }
 
@@ -7036,7 +7086,7 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 {
 	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner) {
-		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
+		dprintf(D_ALWAYS, "Can't find owner \"%s\" in Owners array!\n", owner);
 		return;
 	}
 
@@ -7406,9 +7456,15 @@ Scheduler::negotiate(int command, Stream* s)
 
 	JobsStarted = 0;
 
+	// owner here is the ATTR_OWNER from the negotiator, which is really the Submitter (i.e. accounting group, etc)
+	if (user_is_the_new_owner) {
+		// SubmitterData is keyed by fully qualified names
+	} else {
+		// SubmitterData is keyed by bare names, so truncate owner at '@'
+		char *at_sign = strchr(owner, '@');
+		if (at_sign) *at_sign = '\0';
+	}
 	// find owner in the Owners array
-	char *at_sign = strchr(owner, '@');
-	if (at_sign) *at_sign = '\0';
 	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
@@ -7429,7 +7485,7 @@ Scheduler::negotiate(int command, Stream* s)
 		prio_rec *prec = &PrioRec[job_index];
 
 		// make sure owner matches what negotiator wants
-		if(strcmp(owner,prec->owner)!=0)
+		if (strcmp(owner, prec->submitter) != 0)
 		{
 			jobs--;
 			continue;
@@ -7971,7 +8027,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	int cluster = job->cluster;
 	int proc = job->proc;
 	char* pool = NULL;
-	char* owner = NULL;
+	std::string user;
 	char* claim_id = NULL;
 	char* startd_addr = NULL;
 	char* startd_name = NULL;
@@ -7979,16 +8035,19 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	// NOTE: match_ad could be deallocated when this function returns,
 	// so if we need to keep it around, we must make our own copy of it.
-	if( GetAttributeStringNew(cluster, proc, ATTR_ACCOUNTING_GROUP, &owner) < 0 ) {
-		if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
+	if( GetAttributeString(cluster, proc, ATTR_ACCOUNTING_GROUP, user) < 0 ) {
+		if( GetAttributeString(cluster, proc, attr_JobUser.c_str(), user) < 0 ) {
 				// we've got big trouble, just give up.
 			dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
-					 ATTR_OWNER, cluster, proc );
+					 attr_JobUser.c_str(), cluster, proc );
 			mark_job_stopped( job );
 			scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 			scheduler.stats.JobsRestartReconnectsFailed += 1;
 			return;
 		}
+	} else if (user_is_the_new_owner) {
+		// if using fully qualified usernames, we have to append the domain to accounting groups
+		user += std::string("@") + UidDomain;
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_CLAIM_ID, &claim_id) < 0 ) {
 			//
@@ -7997,7 +8056,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				ATTR_CLAIM_ID, cluster, proc );
 		mark_job_stopped( job );
-		free( owner );
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
@@ -8010,7 +8068,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 				ATTR_REMOTE_HOST, cluster, proc );
 		mark_job_stopped( job );
 		free( claim_id );
-		free( owner );
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
@@ -8058,7 +8115,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	}
 
 	dprintf( D_FULLDEBUG, "Adding match record for disconnected job %d.%d "
-			 "(owner: %s)\n", cluster, proc, owner );
+			 "(%s: %s)\n", cluster, proc, attr_JobUser.c_str(), user.c_str() );
 	ClaimIdParser idp( claim_id );
 	dprintf( D_FULLDEBUG, "ClaimId: %s\n", idp.publicClaimId() );
 	if( pool ) {
@@ -8066,7 +8123,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	}
 		// note: AddMrec will makes its own copy of match_ad
 	match_rec *mrec = AddMrec( claim_id, startd_addr, job, match_ad, 
-							   owner, pool );
+							   user.c_str(), pool );
 
 		// authorize this startd for READ access
 	if (startd_principal != NULL) {
@@ -8103,10 +8160,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	if( pool ) {
 		free( pool );
 		pool = NULL;
-	}
-	if( owner ) {
-		free( owner );
-		owner = NULL;
 	}
 	if( startd_addr ) {
 		free( startd_addr );
@@ -12779,6 +12832,15 @@ Scheduler::Init()
 			jobSets = new JobSets();
 			ASSERT(jobSets);
 		}
+		// setup the global attribute name we will use as the canonical 'owner' of a job
+		// historically this was "Owner", but in 8.9 we switch to "User" so that we use
+		// the fully qualified name and can handle jobs from other domains in the schedd
+		user_is_the_new_owner = param_boolean("USER_IS_THE_NEW_OWNER", false);
+		if (user_is_the_new_owner) {
+			ownerinfo_attr_name = ATTR_USER;
+		} else {
+			ownerinfo_attr_name = ATTR_OWNER;
+		}
 	}
 	if (jobSets) {
 		jobSets->reconfig();
@@ -12804,6 +12866,7 @@ Scheduler::Init()
 		// in get_local_fqdn() if it's not defined in the file.
 		// See if the value of this changes, since if so, we've got
 		// work to do...
+	ignore_domain_mismatch_when_setting_owner = param_boolean("TRUST_UID_DOMAIN", false);
 	char* oldUidDomain = UidDomain;
 	UidDomain = param( "UID_DOMAIN" );
 	if( oldUidDomain ) {
@@ -12816,7 +12879,7 @@ Scheduler::Init()
 				// this very often. :)
 			dprintf( D_FULLDEBUG, "UID_DOMAIN has changed.  "
 					 "Inserting new ATTR_USER into all classads.\n" );
-			WalkJobQueue(fixAttrUser);
+			WalkJobQueue2(fixAttrUser, oldUidDomain);
 			dirtyJobQueue();
 		}
 			// we're done with the old version, so don't leak memory 
@@ -14133,8 +14196,12 @@ Scheduler::invalidate_ads()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & Owner = it->second;
 		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
-		std::string submitter;
-		formatstr(submitter, "%s@%s", Owner.Name(), UidDomain);
+		std::string submitter = Owner.Name();
+		if (user_is_the_new_owner) {
+			// owner names are already fully qualified
+		} else {
+			submitter += "@"; submitter += UidDomain;
+		}
 		cad->Assign( ATTR_NAME, submitter );
 
 		formatstr( line, "TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
@@ -15151,9 +15218,9 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		goto error_wrapup;
 	}
 
-	if( !OwnerCheck2(jobad,sock->getOwner()) ) {
+	if( !UserCheck2(jobad,EffectiveUser(sock)) ) {
 		formatstr(error_msg, "%s is not authorized for access to the starter for job %d.%d",
-						  sock->getOwner(), jobid.cluster, jobid.proc);
+						  EffectiveUser(sock), jobid.cluster, jobid.proc);
 		goto error_wrapup;
 	}
 
@@ -15371,22 +15438,45 @@ Scheduler::dumpState(int, Stream* s) {
 }
 
 int
-fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
+fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *oldUidDomain_raw)
 {
+	const char *oldUidDomain = static_cast<char *>(oldUidDomain_raw);
 	int nice_user = 0;
 	std::string owner;
 	std::string user;
-	
+	std::string old_user;
+	std::string old_expected_user;
+
 	if( ! job->LookupString(ATTR_OWNER, owner) ) {
 			// No ATTR_OWNER!
 		return 0;
 	}
+
 		// if it's not there, nice_user will remain 0
 	job->LookupInteger( ATTR_NICE_USER, nice_user );
 
 	formatstr( user, "%s%s@%s",
 			 (nice_user) ? "nice-user." : "", owner.c_str(),
-			 scheduler.uidDomain() );  
+			 scheduler.uidDomain() );
+
+	if (user_is_the_new_owner) {
+
+		// Ignore retval; LookupString will leave things empty
+		// and we handle the case below.
+		if (job->LookupString(ATTR_USER, old_user) && !old_user.empty()) {
+
+			formatstr(old_expected_user, "%s%s@%s",
+				(nice_user) ? "nice-user." : "", owner.c_str(),
+				oldUidDomain);
+
+			// If this job's owner was not previously in our default UID_DOMAIN,
+			// we don't want to update it for the new domain
+			if (old_user != old_expected_user) {
+				return 0;
+			}
+		}
+	}
+
 	job->Assign( ATTR_USER, user );
 	return 0;
 }
@@ -16159,7 +16249,7 @@ Scheduler::claimLocalStartd()
 	int number_of_claims = 0;
 	char claim_id[155];	
 	std::string slot_state;
-	char job_owner[150];
+	char job_owner[200];
 
 	if ( NegotiationRequestTime==0 ) {
 		// We aren't expecting any negotiation cycle
@@ -16260,12 +16350,12 @@ Scheduler::claimLocalStartd()
 		ASSERT( jobad );
 
 		job_owner[0]='\0';
-		jobad->LookupString(ATTR_OWNER,job_owner,sizeof(job_owner));
+		jobad->LookupString(attr_JobUser,job_owner,sizeof(job_owner));
 		ASSERT(job_owner[0]);
 
 		match_rec* mrec = AddMrec( claim_id, startd_addr, &matching_jobid, machine_ad,
 						job_owner,	// special Owner name
-						NULL	// optional negotiator name
+						NULL			// optional negotiator name
 						);
 
 		if( mrec ) {		
@@ -16796,17 +16886,20 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 		// verify that whoever is running this command is either the
 		// queue super user or the owner of the claim
-	char const *cmd_user = sock->getOwner();
+	char const *cmd_user = EffectiveUser(sock);
+	const char * match_user = mrec->user;
 	std::string match_owner;
-	char const *at_sign = strchr(mrec->user,'@');
-	if( at_sign ) {
-		match_owner.append(mrec->user,at_sign-mrec->user);
-	}
-	else {
-		match_owner = mrec->user;
+	if (user_is_the_new_owner) {
+		// UserCheck wants fully qualified users
+	} else {
+		char const *at_sign = strchr(mrec->user,'@');
+		if( at_sign ) {
+			match_owner.append(mrec->user,at_sign-mrec->user);
+			match_user = match_owner.c_str();
+		}
 	}
 
-	if( !OwnerCheck2(NULL,cmd_user,match_owner.c_str()) ) {
+	if( !UserCheck2(NULL, cmd_user, match_user) ) {
 		dprintf(D_ALWAYS,
 				"RecycleShadow() called by %s failed authorization check!\n",
 				cmd_user ? cmd_user : "(unauthenticated)");
@@ -17400,7 +17493,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 		handleReassignSlotError( sock, "no such job (now-job)" );
 		return FALSE;
 	}
-	if(! OwnerCheck2( bAd, sock->getOwner() )) {
+	if(! UserCheck2( bAd, EffectiveUser(sock) )) {
 		handleReassignSlotError( sock, "you must own the now-job" );
 		return FALSE;
 	}
@@ -17425,7 +17518,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 			handleReassignSlotError( sock, "no such job (vacate-job)" );
 			return FALSE;
 		}
-		if(! OwnerCheck2( vAd, sock->getOwner() )) {
+		if(! UserCheck2( vAd, EffectiveUser(sock) )) {
 			handleReassignSlotError( sock, "you must own the vacate-job" );
 			return FALSE;
 		}
