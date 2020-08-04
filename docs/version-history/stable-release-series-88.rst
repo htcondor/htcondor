@@ -71,14 +71,13 @@ Bugs Fixed:
   and ``#`` in temporary directory names.
   :ticket:`7730`
 
-- Prevent client tools from modifying special job id 0.0 in the job queue.
-  Modifications to this non-job ad can prevent the *condor_schedd* from
-  restarting.
-  :ticket:`7731`
-
-- Prevent client tools from deleting protected, immuatble, and secure
-  attributes in their job ads in the *condor_schedd* job queue.
-  :ticket:`7748`
+- Fixed some issues with the SchedD validating attribute values and actions from
+  condor_qedit. Certain edits could cause the SchedD to enter an invalid state
+  and in some cases would required editing of the job queue to restore the SchedD
+  to operation. While no security exploits are known to be possible, mischevious
+  users could potentially disrupt the operation of the SchedD. A more detailed
+  description and workaround for these issues can be found in the ticket.
+  :ticket:`7784` 
 
 - When *condor_wait* is run without a limit on the number of jobs, it no
   longer exits if the number of active jobs goes to zero but there are more
