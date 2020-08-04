@@ -6051,7 +6051,7 @@ default : @fin
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
-	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group", RequestedAcctGroup)
+	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group ", RequestedAcctGroup)
 @fin
 
 
