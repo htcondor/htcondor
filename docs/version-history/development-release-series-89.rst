@@ -166,6 +166,10 @@ New Features:
    ``AuthenticationMethod`` in ClassAds advertised in the *condor_collector*.
    :ticket:`7683`
 
+- Added a new submit file option, ``docker_network_type = none``, which
+  causes a docker universe job to not have any network connectivity.
+  :ticket:`7701`
+
 - Docker jobs now respect CPU Affinity.
   :ticket:`7627`
 

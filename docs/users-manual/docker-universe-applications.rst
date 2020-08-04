@@ -102,15 +102,26 @@ Docker and Networking
 :index:`docker<single: docker; networking>`
 
 By default, docker universe jobs will be run with a private, NATed
-network interface. In the job submit file, if the user specifies
+network interface.
+
+In the job submit file, if the user specifies
+
+::
+
+    docker_network_type = none
+
+then no networking will be available to the job.
+    
+In the job submit file, if the user specifies
 
 ::
 
     docker_network_type = host
 
-then, instead of at NATted interface, the job will use the host's
+then, instead of a NATed interface, the job will use the host's
 network interface, just like a vanilla universe job.
 :index:`docker universe`
+
 
 If the *host* network type is unavailable, you can ask Docker to forward one
 or more ports on the host into the container.  In the following example, we
