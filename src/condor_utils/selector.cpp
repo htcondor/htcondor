@@ -156,14 +156,6 @@ Selector::fd_select_size()
 		// descriptors whose value is less than 1024). We set max_fds to
 		// 1024 (FD_SETSIZE) as a reasonable approximation.
 		_fd_select_size = FD_SETSIZE;
-#elif defined(Solaris)
-		// Solaris's select() can't handle fds greater than FD_SETSIZE.
-		int max_fds = getdtablesize();
-		if ( max_fds < FD_SETSIZE ) {
-			_fd_select_size = max_fds;
-		} else {
-			_fd_select_size = FD_SETSIZE;
-		}
 #else
 		_fd_select_size = getdtablesize();
 #endif

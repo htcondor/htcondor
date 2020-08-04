@@ -128,7 +128,7 @@ if (BUILD_TESTING)
 	endif()
 
 	# negative matches. test on everything but this
-	if(NOT SOLARIS AND NOT WINDOWS)
+	if(NOT WINDOWS)
 		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/NetworkTestConfigs.pm;${CMAKE_BINARY_DIR}/src/condor_tests/test_sinful")
 		add_dependencies(unit_test_sinful test_sinful)
 		condor_pl_test(job_core_killsignal_sched "Scheduler: Verify the specified input file is used" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_core_killsignal_sched.cmd;${CMAKE_BINARY_DIR}/src/condor_tests/x_trapsig.exe")
@@ -440,7 +440,7 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_ccv_set_rset "condor_config_val set/rset" "core;quick;full" CTEST)
 	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "core;quick;full" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
-	if(NOT SOLARIS AND NOT DARWIN)
+	if(NOT DARWIN)
 	# globbiing only firs not supported on these platforms
 	condor_pl_test(job_foreach_submit-initialdir "submit file usage InitialDir" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_getsandbox.pl")
 	condor_pl_test(job_foreach_submit-initialdir-run "submit file usage InitialDir - run submit file" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/x_getsandbox.pl")

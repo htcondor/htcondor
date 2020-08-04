@@ -6829,7 +6829,7 @@ int DaemonCore::Create_Process(
 	time_t time_of_fork;
 	unsigned int mii;
 	pid_t forker_pid;
-	//Security session ID and key for daemon core processes.  Not used on Solaris.
+	//Security session ID and key for daemon core processes.
 	std::string session_id;
 	MyString privateinheritbuf;
 
@@ -7088,12 +7088,6 @@ int DaemonCore::Create_Process(
 	}
 	inheritbuf += " 0";
 	/*
-	Due to the belief that on Solaris there are no private environments, the passing of
-	security keys through the environment is a bad idea.  Thus we do not attempt this on
-	Solaris.
-	*/
-#ifndef Solaris
-	/*
 	Currently there is no way to detect if we are starting a daemon core process
 	or not.  The closest thing is so far all daemons the master starts will receive
 	a command port, whereas non-daemon core processes would not know what to do with
@@ -7177,7 +7171,6 @@ int DaemonCore::Create_Process(
 		privateinheritbuf += " FamilySessionKey:";
 		privateinheritbuf += claimId.claimId();
 	}
-#endif
 	// now process fd_inherit_list, which allows the caller the specify
 	// arbitrary file descriptors to be passed through to the child process
 	// (currently only implemented on UNIX)
@@ -9049,13 +9042,7 @@ DaemonCore::Inherit( void )
 		}
 
 	}	// end of if we read out CONDOR_INHERIT ok
-	/*
-	This environment variable is never set on Solaris so
-	don't check for it.  Since environments are apparently
-	public on Solaris, we can't use it to securely pass
-	information around.
-	*/
-#ifndef Solaris
+
 	std::string family_session_info;
 	const char *privEnvName = EnvGetName( ENV_PRIVATE );
 	const char *privTmp = GetEnv( privEnvName );
@@ -9157,7 +9144,6 @@ DaemonCore::Inherit( void )
 			ipv->PunchHole(CLIENT_PERM, CONDOR_FAMILY_FQU);
 		}
 	}
-#endif
 }
 
 void

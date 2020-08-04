@@ -33,10 +33,6 @@
 //#cmakedefine Darwin_10_3
 ///* Define if on OS X 10.4 */
 //#cmakedefine Darwin_10_4
-//* Define if on Solaris28 (USED)*/
-//#cmakedefine Solaris28
-///* Define if on Solaris29 (USED)*/
-//#cmakedefine Solaris29
 //////////////////////////////////////////////////
 
 //////////////////////////////////////////////////

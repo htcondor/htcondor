@@ -104,35 +104,6 @@ linux_getExecPath( void )
 #endif /* defined(LINUX) */
 
 
-#if defined( Solaris )
-char*
-solaris_getExecPath( void )
-{
-	const char* name;
-	char* cwd = NULL;
-	char* full_path = NULL;
-	int size;
-
-	name = getexecname();
-	if( name[0] == '/' ) {
-		return strdup(name);
-	}
-		/*
-		  if we're still here, we didn't get the full path, and the
-		  man pages say we can prepend the output of getcwd() to find
-		  the real value...
-		*/ 
-	cwd = getcwd( NULL, MAXPATHLEN );
-	size = strlen(cwd) + strlen(name) + 2;
-	full_path = (char *) malloc(size);
-	snprintf( full_path, size, "%s/%s", cwd, name );
-	free( cwd );
-	cwd = NULL;
-	return full_path;
-}
-#endif /* defined(Solaris) */
-
-
 #if defined( WIN32 )
 #include <psapi.h>
 char*
@@ -344,8 +315,6 @@ getExecPath( void )
 	char* rval = NULL;
 #if defined( LINUX )
 	rval = linux_getExecPath();
-#elif defined( Solaris )
-	rval= solaris_getExecPath();
 #elif defined( Darwin )
 	rval = darwin_getExecPath();
 #elif defined(CONDOR_FREEBSD4) || defined(CONDOR_FREEBSD5) || defined(CONDOR_FREEBSD6) || defined(CONDOR_FREEBSD7)

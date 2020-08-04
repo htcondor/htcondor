@@ -54,24 +54,6 @@ sysapi_kernel_memory_model_raw(void)
 		_sysapi_kernel_memory_model = strdup("normal");
 	}
 
-#elif defined(Solaris)
-#  if defined(Solaris10) || defined(Solaris11)
-	// We don't do standard universe on Solaris anymore anyway,
-	// so do nothing (falls through to "normal", below)
-	
-	/* stolen from stack_end_addr() */
-#  elif defined(X86)
-	_sysapi_kernel_memory_model = strdup("0x8048000");
-#  elif defined(Solaris29)
-	/* XXX educated guess */
-	_sysapi_kernel_memory_model = strdup("0xFFC00000");
-#  elif defined(Solaris27) || defined(Solaris28) 
-	_sysapi_kernel_memory_model = strdup("0xFFBF0000");
-#  elif defined(Solaris26)
-	_sysapi_kernel_memory_model = strdup("0xF0000000");
-#  else
-#	error Please port sysapi_kernel_memory_model_raw() to this OS/ARCH!
-#  endif
 #endif
 
 	/* The other OSes can just use this for now. */

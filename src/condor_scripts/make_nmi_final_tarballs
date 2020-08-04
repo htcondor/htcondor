@@ -137,14 +137,6 @@ $realskel="condor_release";
 
 # Convert from AFS @sys names to our names for the tarballs.
 %opsysname = (
-  "sun4x_55"      => "solaris251",
-  "sun4x_56"      => "solaris26",
-  "sun4x_57"      => "solaris27",
-  "sun4x_58"      => "solaris28",
-  "sun4x_59"      => "solaris29",
-  "sunx86_55"     => "solaris251",
-  "sunx86_56"     => "solaris26",
-  "sunx86_57"     => "solaris27",
   "i386_linux2"   => "linux",
   "i386_linux22"  => "linux",
   "i386_linux3"   => "linux",
@@ -159,14 +151,6 @@ $realskel="condor_release";
 );
 
 %archname = (
-  "sun4x_55"      => "Sparc",
-  "sun4x_56"      => "Sparc",
-  "sun4x_57"      => "Sparc",
-  "sun4x_58"      => "Sparc",
-  "sun4x_59"      => "Sparc",
-  "sunx86_55"     => "x86",
-  "sunx86_56"     => "x86",
-  "sunx86_57"     => "x86",
   "i386_linux2"   => "x86",
   "i386_linux22"  => "x86",
   "i386_rh62"     => "x86",

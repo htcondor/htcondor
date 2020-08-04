@@ -29,10 +29,6 @@
 #include "daemon.h"
 #include "condor_sinful.h"
 
-#ifndef INADDR_NONE		/* Solaris */
-#  define INADDR_NONE	((in_addr_t) 0xffffffff)
-#endif
-
 /***************************************************************
  * UdpWakeOnLanWaker constants
  ***************************************************************/
