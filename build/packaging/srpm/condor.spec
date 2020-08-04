@@ -1120,7 +1120,7 @@ rm -f %{buildroot}/%{_bindir}/condor_watch_q
 
 # Move oauth credmon WSGI scripts out of libexec to somewhere they can run
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
-mv %{buildroot}/%{_libexecdir}/scitokens-credmon.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+mv %{buildroot}/%{_libexecdir}/condor/scitokens-credmon.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 
 # Move oauth credmon credential directory README
 mv %{buildroot}/etc/examples/condor_oauth_credmon/README.credentials %{_var}/lib/condor/oauth_credentials/README.credentials
