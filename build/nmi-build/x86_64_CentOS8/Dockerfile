@@ -253,7 +253,7 @@ RUN dnf install -y \
     'gcc-c++' \
     'glibc-static' \
     'krb5-devel' \
-    'libcgroup' \
+    'libcgroup-devel' \
     'libcurl-devel' \
     'libstdc++-static' \
     'libtool' \
@@ -283,6 +283,35 @@ RUN dnf install -y \
     'sqlite-devel' \
     'systemd-devel' \
     'systemd-units' \
+    && dnf clean all
+
+# Additional dependencies for OSG style build
+RUN dnf install -y \
+    globus-callout-devel \
+    globus-common-devel \
+    globus-ftp-client-devel \
+    globus-ftp-control-devel \
+    globus-gass-server-ez-devel \
+    globus-gass-transfer-devel \
+    globus-gram-client-devel \
+    globus-gram-protocol \
+    globus-gsi-callback-devel \
+    globus-gsi-cert-utils-devel \
+    globus-gsi-credential-devel \
+    globus-gsi-openssl-error-devel \
+    globus-gsi-proxy-core-devel \
+    globus-gsi-proxy-ssl-devel \
+    globus-gsi-sysconfig-devel \
+    globus-gss-assist-devel \
+    globus-gssapi-error-devel \
+    globus-gssapi-gsi-devel \
+    globus-io-devel \
+    globus-openssl-module-devel \
+    globus-rsl-devel \
+    globus-xio-devel \
+    munge-devel \
+    scitokens-cpp-devel \
+    voms-devel \
     && dnf clean all
 
 RUN pip3 install pytest pytest-httpserver

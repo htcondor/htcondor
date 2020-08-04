@@ -2,8 +2,8 @@
 
 # optionally define any of these, here or externally
 # % define fedora   16
-# % define osg      0
-# % define uw_build 1
+%define osg      1
+%define uw_build 0
 
 %define plumage 0
 %define systemd 0
@@ -294,7 +294,7 @@ BuildRequires: mongodb-devel >= 1.6.4-3
 
 %if %cgroups
 %if 0%{?rhel} >= 8
-BuildRequires: libcgroup
+BuildRequires: libcgroup-devel
 Requires: libcgroup
 %else
 # libcgroup < 0.37 has a bug that invalidates our accounting.
@@ -910,7 +910,7 @@ cmake \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_HDFS:BOOL=FALSE \
        -DWITH_ZLIB:BOOL=FALSE \
-       -DWANT_CONTRIB:BOOL=ON \
+       -DWANT_CONTRIB:BOOL=FALSE \
        -DWITH_PIGEON:BOOL=FALSE \
 %if %plumage
        -DWITH_PLUMAGE:BOOL=TRUE \

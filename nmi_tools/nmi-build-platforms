@@ -1,11 +1,11 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-zdev:x86_64_AmazonLinux2
+docker://timtheisen/nmi-zdev:x86_64_AmazonLinux2
 # Using 64-bit CentOS 7 hardware for IPv6 tests
 x86_64_CentOS7
-docker://htcondor/nmi-zdev:x86_64_CentOS7
-docker://htcondor/nmi-zdev:x86_64_CentOS8
+docker://timtheisen/nmi-zdev:x86_64_CentOS7
+docker://timtheisen/nmi-zdev:x86_64_CentOS8
 docker://htcondor/nmi-zdev:x86_64_Debian9
 docker://htcondor/nmi-zdev:x86_64_Debian10
 x86_64_MacOSX15
@@ -20,4 +20,4 @@ x86_64_Windows10
 docker://htcondor/nmi-zdev:x86_CentOS7
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-zdev:x86_64_Fedora32
+docker://timtheisen/nmi-zdev:x86_64_Fedora32
