@@ -301,7 +301,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {
