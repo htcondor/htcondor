@@ -25,6 +25,7 @@
 #include "../condor_procapi/procapi.h"
 
 #include <vector>
+#include <algorithm>
 
 // command identifiers for communication with the ProcD
 //
