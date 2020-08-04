@@ -1123,7 +1123,7 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
 mv %{buildroot}/%{_libexecdir}/condor/scitokens-credmon.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 
 # Move oauth credmon credential directory README
-mv %{buildroot}/etc/examples/condor_oauth_credmon/README.credentials %{_var}/lib/condor/oauth_credentials/README.credentials
+mv %{buildroot}/etc/examples/condor_oauth_credmon/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
