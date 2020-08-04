@@ -155,6 +155,7 @@ public:
 	void	initial_compute() { 
 		r_reqexp->config();
 		r_attr->compute_virt_mem();
+		r_attr->compute_disk();
 	}
 		// called only by resmgr::compute()
 	void	compute_unshared();
