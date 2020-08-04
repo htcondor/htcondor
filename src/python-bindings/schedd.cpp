@@ -3829,7 +3829,7 @@ void export_schedd()
             Retrieve the output sandbox from one or more jobs.
 
             :param job_spec: An expression matching the list of job output sandboxes to retrieve.
-            :type job_spec: list[:class:`~classad.ClassAd`]
+            :type job_spec: str or list[:class:`~classad.ClassAd`]
             )C0ND0R")
         .def("edit", &Schedd::edit,
             R"C0ND0R(
