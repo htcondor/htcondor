@@ -197,6 +197,16 @@ New Features:
 - Added a ``debug`` option to *bosco_cluster* to help diagnose ssh failures.
   :ticket:`7712`
 
+- The *condor_submit* executable will not abort if the submitting user has a
+  gid of 0.  Jobs still will not run with root privs, but this allows jobs to
+  be submitted which are assigned an ``Owner`` via the result of user mapping
+  from authentication.
+  :ticket:`7662`
+
+- The *condor_store_cred* tool can now be used to manage different
+  kinds of credentials, including Password, Kerberos, and OAuth.
+  :ticket:`6868`
+
 Bugs Fixed:
 
 - Fixed a segfault in the schedd that could happen on some platforms
@@ -255,6 +265,12 @@ Bugs Fixed:
 - Bosco will use the newer version (1.3) of the tarballs on Enterprise Linux
   7 and 8.
   :ticket:`7753`
+
+- HTCondor no longer probes the file transfer plugins except in the starter
+  and then only if they are actually being used.  This was potentially adding
+  delays to starting individual shadows, which when starting a lot of shadows
+  could lead to scalability issues on a submit machine.
+  :ticket:`7688`
 
 Version 8.9.7
 -------------
