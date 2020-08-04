@@ -236,7 +236,6 @@ my $realskel="condor_release";
 
 # Convert from AFS @sys names to our names for the tarballs.
 my %opsysname = (
-  "alpha_rh72"    => "linux",
   "condor_ppc_rhel3" => "linux",
   "condor_ppc_sles9" => "linux",
   "condor_ppc_yd30" => "linux",
@@ -298,7 +297,6 @@ my %opsysname = (
 );
 
 my %archname = (
-  "alpha_rh72"    => "Alpha",
   "condor_ppc_rhel3" => "PPC",
   "condor_ppc_sles9" => "PPC",
   "condor_ppc_yd30" => "PPC",
@@ -365,7 +363,6 @@ my %archname = (
 # seperate values, or else we get identically named files and that's
 # no good at all!
 my %libcname = (
-  "alpha_rh72"  => "glibc22",
   "condor_ppc_rhel3" => "glibc23",
   "condor_ppc_sles9" => "sles9",
   "condor_ppc_yd30" => "yd30",

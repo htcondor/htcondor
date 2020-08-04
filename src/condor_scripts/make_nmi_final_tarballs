@@ -143,11 +143,7 @@ $realskel="condor_release";
   "i386_rh62"     => "linux",
   "i386_rh71"     => "linux",
   "i386_rh72"     => "linux",
-  "ia64_linux24"  => "linux",
-  "alpha_linux3"  => "linux",
-  "alpha_linux22" => "linux",
-  "hp_ux102"      => "hpux10.20",
-  "hp_ux110"      => "hpux11.00"
+  "ia64_linux24"  => "linux"
 );
 
 %archname = (
@@ -157,11 +153,7 @@ $realskel="condor_release";
   "i386_rh71"     => "x86",
   "i386_rh72"     => "x86",
   "i386_linux3"   => "x86",
-  "ia64_linux24"  => "ia64",
-  "alpha_linux3"  => "Alpha",
-  "alpha_linux22" => "Alpha",
-  "hp_ux102"      => "HPPAR",
-  "hp_ux110"      => "HPPAR"
+  "ia64_linux24"  => "ia64"
 );
 
 
@@ -173,9 +165,7 @@ $realskel="condor_release";
   "i386_rh62"   => "glibc21",
   "i386_rh71"   => "glibc22",
   "i386_rh72"   => "glibc22",
-  "ia64_linux24" => "glibc22",
-  "alpha_linux3"  => "glibc20",
-  "alpha_linux22" => "glibc21"
+  "ia64_linux24" => "glibc22"
 );
 
 
@@ -239,8 +229,8 @@ foreach $module ( @modules ) {
 		} else {
 	   	 $dest = $file;
 		}
-		# under linux, or hpux11(with fileutils), use the GNU fileutils flags
-		if( $libc =~ /.*glibc22.*/ || $opsys =~ /.*hp_ux110.*/) {	
+		# under linux, use the GNU fileutils flags
+		if( $libc =~ /.*glibc22.*/ ) {	
 			`cp -rL $src $skel/$release/$dest`;
 		} else {
 			`cp -r $src $skel/$release/$dest`;

@@ -30,12 +30,7 @@
 
 #include "XInterface.unix.h"
 #include "condor_config.h"
-//#include <paths.h>
-#if USES_UTMPX  /* SGI IRIX 62/65 */
-#	include <utmpx.h>
-#else 
-#	include <utmp.h>
-#endif
+#include <utmp.h>
 
 #ifdef HAVE_XSS
 #include "X11/extensions/scrnsaver.h"
@@ -190,11 +185,7 @@ XInterface::~XInterface()
 
 void
 XInterface::ReadUtmp() {
-#if USES_UTMPX
-	struct utmpx utmp_entry;
-#else
 	struct utmp utmp_entry;
-#endif
 
 	if ( logged_on_users ) {
 		for (size_t foo =0; foo < logged_on_users->size(); foo++) {
@@ -215,11 +206,7 @@ XInterface::ReadUtmp() {
 	}                                 
  
 	while(fread((char *)&utmp_entry,
-#if USES_UTMPX
-		sizeof( struct utmpx ),
-#else
 		sizeof( struct utmp ),
-#endif
 		1, utmp_fp)) {
 
 		if (utmp_entry.ut_type == USER_PROCESS) {
