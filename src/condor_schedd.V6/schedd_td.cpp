@@ -32,6 +32,19 @@
 #include "spooled_job_files.h"
 #include "condor_url.h"
 
+
+extern const std::string & attr_JobUser; // the attribute name we use for the "owner" of the job, historically ATTR_OWNER 
+extern bool user_is_the_new_owner; // set in schedd.cpp at startup
+inline const char * EffectiveUser(Sock * sock) {
+	if (!sock) return "";
+	if (user_is_the_new_owner) {
+		return sock->getFullyQualifiedUser();
+	} else {
+		return sock->getOwner();
+	}
+	return "";
+}
+
 /* In this service function, the client tells the schedd a bunch of jobs
 	it would like to perform a transfer for into/out of a sandbox. The
 	schedd will hold open the connection back to the client
@@ -205,8 +218,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		//////////////////////
 		for (size_t i = 0; i < jobs->size(); i++) {
 			MyString job_owner = "";
-			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, ATTR_USER, job_owner);
-			if (UserCheck2(NULL, rsock->getFullyQualifiedUser(), job_owner.c_str())) {
+			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, attr_JobUser.c_str(), job_owner);
+			if (UserCheck2(NULL, EffectiveUser(rsock), job_owner.c_str())) {
 				// only allow the user to manipulate jobs it is entitled to.
 				// structure copy...
 				modify_allow_jobs->push_back((*jobs)[i]);
@@ -279,7 +292,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		tmp_ad = GetNextJobByConstraint(constraint_string.c_str(), 1);
 		while (tmp_ad) {
 			PROC_ID job_id;
-			if ( UserCheck2(tmp_ad, rsock->getFullyQualifiedUser()) )
+			if ( UserCheck2(tmp_ad, EffectiveUser(rsock)) )
 			{
 				modify_allow_jobs->push_back(job_id);
 			}

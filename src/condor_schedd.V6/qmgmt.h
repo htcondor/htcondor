@@ -68,16 +68,17 @@ class QmgmtPeer {
 		const char* getDomain() const;
 		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;
-		std::string getEffectiveFullyQualifiedUser() const;
 		int isAuthenticated() const;
 		bool isAuthorizationInBoundingSet(const char *authz) const {return sock->isAuthorizationInBoundingSet(authz);}
+
+		friend inline const char * EffectiveUser(QmgmtPeer * qsock);
 
 	protected:
 
 		char *owner;  
 		bool allow_protected_attr_changes_by_superuser;
 		bool readonly;
-		std::string fquser;  // owner@domain
+		char * fquser;  // owner@domain
 		char *myendpoint; 
 		condor_sockaddr addr;
 		ReliSock *sock; 
@@ -93,6 +94,19 @@ class QmgmtPeer {
 		QmgmtPeer & operator=(const QmgmtPeer & rhs);
 };
 
+extern bool user_is_the_new_owner; // set in schedd.cpp at startup
+extern bool ignore_domain_mismatch_when_setting_owner;
+inline const char * EffectiveUser(QmgmtPeer * peer) {
+	if (peer) {
+		if (user_is_the_new_owner) {
+			if (peer->sock) return peer->sock->getFullyQualifiedUser();
+			if (peer->fquser && peer->fquser[0]) return peer->fquser;
+		} else {
+			return peer->getOwner();
+		}
+	}
+	return "";
+}
 
 #define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
 //#define TJ_REFACTOR_CLUSTER_REFCOUNTING 1 // move cluster ref counting from a qmgmt hashtable into the JobQueueCluster object
