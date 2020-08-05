@@ -520,9 +520,6 @@ protected:
 	/// get timeout time for pending connect operation;
 	time_t connect_timeout_time() const;
 
-	///
-	int move_descriptor_up();
-
     /// called whenever the bound or connected state changes
     void addr_changed();
 

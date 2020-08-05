@@ -513,16 +513,6 @@ int Sock::set_inheritable( int flag )
 }
 #endif	// of WIN32
 
-int Sock::move_descriptor_up()
-{
-	/* This function must be called IMMEDIATELY after a call to
-	 * socket() or accept().  It gives CEDAR an opportunity to 
-	 * move the descriptor if needed on this platform
-	 */
-
-	return TRUE;
-}
-
 //
 // Moving all assignments of INVALID_SOCKET into their own function
 // dramatically simplifies the logic for assign()ing sockets without
@@ -667,13 +657,6 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 			_condor_fd_panic( __LINE__, __FILE__ ); /* Calls dprintf_exit! */
 		}
 #endif
-		return FALSE;
-	}
-
-	// move the underlying descriptor if we need to on this platform
-	if ( !move_descriptor_up() ) {
-		::closesocket(_sock);
-		_sock = INVALID_SOCKET;
 		return FALSE;
 	}
 
