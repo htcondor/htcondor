@@ -1969,6 +1969,12 @@ fi
 %endif
 
 %changelog
+* Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.10-1
+- condor_qedit can no longer be used to disrupt the condor_schedd
+- Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
+- Ubuntu 20.04 and Amazon Linux 2 are now supported
+- In MacOSX, HTCondor now requires LibreSSL, available since MacOSX 10.13
+
 * Wed May 20 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.7-1
 - Multiple enhancements in the file transfer code
 - Support for more regions in s3:// URLs

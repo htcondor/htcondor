@@ -1,3 +1,12 @@
+condor (8.8.10-1) stable; urgency=medium
+
+  * condor_qedit can no longer be used to disrupt the condor_schedd
+  * Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
+  * Ubuntu 20.04 and Amazon Linux 2 are now supported
+  * In MacOSX, HTCondor now requires LibreSSL, available since MacOSX 10.13
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 04 Aug 2020 20:55:25 -0500
+
 condor (8.9.7-1) unstable; urgency=medium
 
   * Multiple enhancements in the file transfer code
