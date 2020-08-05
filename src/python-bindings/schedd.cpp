@@ -4136,9 +4136,11 @@ void export_schedd()
             submitted via the normal Python bindings submit machinery.
 
             :param str filename: The path to the DAG description file.
-            :param dict options: Additional arguments to *condor_submit_dag*,
-                such as ``maxidle`` or ``maxpost``, as a dictionary of
-                key-value pairs, like ``{'maxidle': 10}``.
+            :param dict options: Additional arguments to *condor_submit_dag*.
+                Currently supports ``maxidle`` *(int)*, ``maxjobs`` *(int)*,
+                ``maxpre`` *(int)*, ``maxpost`` *(int)*, ``autorescue`` *(int)*
+                where 0 = False, 1 = True, ``dorescuefrom`` *(int)*,
+                ``force`` *(int)* where 0 = False, 1 = True.
             :return: A :class:`Submit` description for the DAG described in ``filename``
             :rtype: :class:`Submit`
             )C0ND0R",
