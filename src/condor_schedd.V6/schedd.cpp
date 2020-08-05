@@ -3404,6 +3404,7 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 		submitter = alias.c_str();
 	}
 
+#ifdef NO_DEPRECATED_NICE_USER
 	// With NiceUsers, we build a yet another submitter name
 	// so we can account for nice jobs independently of regular jobs
 	int niceUser = 0;
@@ -3412,6 +3413,7 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 		formatstr(alias, "%s.%s", NiceUserName, tmp.c_str());
 		submitter = alias.c_str();
 	}
+#endif
 
 	// lookup/insert a submitterdata record for this submitter name and cache the resulting pointer in the job object.
 	job->submitterdata = scheduler.insert_submitter(submitter);
@@ -13068,7 +13070,9 @@ Scheduler::Init()
 	}
 	MinimalSigAttrs.insert(ATTR_REQUIREMENTS);
 	MinimalSigAttrs.insert(ATTR_RANK);
+#ifdef NO_DEPRECATED_NICE_USER
 	MinimalSigAttrs.insert(ATTR_NICE_USER);
+#endif
 	MinimalSigAttrs.insert(ATTR_CONCURRENCY_LIMITS);
 	MinimalSigAttrs.insert(ATTR_FLOCK_TO);
 
@@ -15442,7 +15446,9 @@ int
 fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *oldUidDomain_raw)
 {
 	const char *oldUidDomain = static_cast<char *>(oldUidDomain_raw);
+#ifdef NO_DEPRECATED_NICE_USER
 	int nice_user = 0;
+#endif
 	std::string owner;
 	std::string user;
 	std::string old_user;
@@ -15453,12 +15459,16 @@ fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *oldUidDomain_raw
 		return 0;
 	}
 
+#ifdef NO_DEPRECATED_NICE_USER
 		// if it's not there, nice_user will remain 0
 	job->LookupInteger( ATTR_NICE_USER, nice_user );
 
 	formatstr( user, "%s%s@%s",
 			 (nice_user) ? "nice-user." : "", owner.c_str(),
 			 scheduler.uidDomain() );
+#else
+	user = owner + "@" + scheduler.uidDomain();
+#endif
 
 	if (user_is_the_new_owner) {
 
@@ -15466,9 +15476,13 @@ fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *oldUidDomain_raw
 		// and we handle the case below.
 		if (job->LookupString(ATTR_USER, old_user) && !old_user.empty()) {
 
+	#ifdef NO_DEPRECATED_NICE_USER
 			formatstr(old_expected_user, "%s%s@%s",
 				(nice_user) ? "nice-user." : "", owner.c_str(),
 				oldUidDomain);
+	#else
+			old_expected_user = owner + "@" + oldUidDomain;
+	#endif
 
 			// If this job's owner was not previously in our default UID_DOMAIN,
 			// we don't want to update it for the new domain

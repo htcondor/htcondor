@@ -1737,11 +1737,15 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				ad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner.c_str()));
 
 				// Figure out what ATTR_USER *should* be for this job
+				#ifdef NO_DEPRECATE_NICE_USER
 				int nice_user = 0;
 				ad->LookupInteger( ATTR_NICE_USER, nice_user );
 				formatstr( correct_user, "%s%s@%s",
 						 (nice_user) ? "nice-user." : "", owner.c_str(),
 						 scheduler.uidDomain() );
+				#else
+				correct_user = owner + "@" + scheduler.uidDomain();
+				#endif
 
 				if (user.empty()) {
 					dprintf( D_FULLDEBUG,
@@ -3810,7 +3814,9 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_JOB_PRIO,           catDirtyPrioRec),
 	FILL(ATTR_JOB_STATUS,         catStatus | catCallbackTrigger),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
+#ifdef NO_DEPRECATED_NICE_USER
 	FILL(ATTR_NICE_USER,          catSubmitterIdent),
+#endif
 	FILL(ATTR_NUM_JOB_RECONNECTS, 0),
 	FILL(ATTR_OWNER,              0),
 	FILL(ATTR_PROC_ID,            catJobId),
@@ -4299,6 +4305,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// ATTR_OWNER to be set.  However, now, we should try to
 				// insert a value for ATTR_USER, too, so that's always in
 				// the job queue.
+		#ifdef NO_DEPRECATED_NICE_USER
 			int nice_user = 0;
 			MyString user;
 
@@ -4307,6 +4314,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 					 owner, scheduler.uidDomain() );
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags, nullptr );
+		#else
+			auto new_user = std::string("\"") + owner + "@" + scheduler.uidDomain() + "\"";
+			SetAttribute(cluster_id, proc_id, ATTR_USER, new_user.c_str());
+		#endif
 		}
 
 			// Also update the owner history hash table to track all OS usernames
@@ -4319,6 +4330,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			job->dirty_flags |= JQJ_CACHE_DIRTY_SUBMITTERDATA;
 		}
 	}
+#ifdef NO_DEPRECATE_NICE_USER
 	else if (attr_id == idATTR_NICE_USER) {
 			// Because we're setting a new value for nice user, we
 			// should create a new value for ATTR_USER while we're at
@@ -4350,6 +4362,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 		}
 	}
+#endif
 	else if (attr_id == idATTR_USER) {
 
 		const char * sock_user = Q_SOCK->getFullyQualifiedUser();
@@ -7614,6 +7627,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 
 	char * powner = owner;
 	int cremain = sizeof(owner);
+#ifdef NO_DEPRECATED_NICE_USER
 	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
 		strcpy(powner,NiceUserName);
 		strcat(powner,".");
@@ -7621,6 +7635,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		powner += cch;
 		cremain -= cch;
 	}
+#endif
 		// Note, we should use this method instead of just looking up
 		// ATTR_USER directly, since that includes UidDomain, which we
 		// don't want for this purpose...

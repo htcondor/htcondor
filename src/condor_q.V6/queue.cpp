@@ -2205,6 +2205,7 @@ render_owner(std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 	if ( ! ad->LookupString(ATTR_OWNER, out))
 		return false;
 
+#ifdef NO_DEPRECATE_NICE_USER
 	int niceUser;
 	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
 		char tmp[sizeof(NiceUserName)+2];
@@ -2212,6 +2213,7 @@ render_owner(std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 		strcat(tmp, ".");
 		out.insert(0, tmp);
 	}
+#endif
 	max_owner_name = MAX(max_owner_name, (int)out.length());
 	return true;
 }
@@ -4860,7 +4862,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "BUFFER_IO_MISC",  ATTR_JOB_UNIVERSE, 0, render_buffer_io_misc, ATTR_FILE_SEEK_COUNT "\0" ATTR_BUFFER_SIZE "\0" ATTR_BUFFER_BLOCK_SIZE "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" },
 	{ "CPU_UTIL",        ATTR_JOB_REMOTE_USER_CPU, "%.1f", render_cpu_util, ATTR_JOB_COMMITTED_TIME "\0" },
-	{ "DAG_OWNER",       ATTR_OWNER, 0, render_dag_owner, ATTR_NICE_USER "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
+	{ "DAG_OWNER",       ATTR_OWNER, 0, render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
 	{ "GLOBUS_HOST",     ATTR_GRID_RESOURCE, 0, render_globusHostAndJM, NULL },
 	{ "GLOBUS_STATUS",   ATTR_GLOBUS_STATUS, 0, render_globusStatus, NULL },
 	{ "GRID_JOB_ID",     ATTR_GRID_JOB_ID, 0, render_gridJobId, ATTR_GRID_RESOURCE "\0" },
@@ -4873,7 +4875,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, 0, format_job_status_raw, NULL },
 	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, 0, format_job_universe, NULL },
 	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, "%.1f", render_memory_usage, ATTR_MEMORY_USAGE "\0" },
-	{ "OWNER",           ATTR_OWNER, 0, render_owner, ATTR_NICE_USER "\0" },
+	{ "OWNER",           ATTR_OWNER, 0, render_owner, ATTR_NICE_USER_deprecated "\0" },
 	{ "QDATE",           ATTR_Q_DATE, "%Y", format_q_date, NULL },
 	{ "READABLE_BYTES",  ATTR_BYTES_RECVD, 0, format_readable_bytes, NULL },
 	{ "READABLE_KB",     ATTR_REQUEST_DISK, 0, format_readable_kb, NULL },

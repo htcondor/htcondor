@@ -3645,7 +3645,7 @@ int SubmitHash::SetAutoAttributes()
 	// Nice jobs and standard universe jobs get a MaxJobRetirementTime of 0 if they don't specify one
 	if ( ! job->Lookup(ATTR_MAX_JOB_RETIREMENT_TIME)) {
 		bool is_nice = false;
-		job->LookupBool(ATTR_NICE_USER, is_nice);
+		job->LookupBool(ATTR_NICE_USER_deprecated, is_nice);
 		if (is_nice || (JobUniverse == CONDOR_UNIVERSE_STANDARD)) {
 			// Regardless of the startd graceful retirement policy,
 			// nice_user and standard universe jobs that do not specify
@@ -3697,10 +3697,12 @@ int SubmitHash::SetAutoAttributes()
 	}
 
 #if 1 // hacks to make it easier to see unintentional differences
+	#ifdef NO_DEPRECATE_NICE_USER
 	// formerly SetNiceUser
 	if ( ! job->Lookup(ATTR_NICE_USER)) {
 		AssignJobVal(ATTR_NICE_USER, false);
 	}
+	#endif
 
 	// formerly SetEncryptExecuteDir
 	if ( ! job->Lookup(ATTR_ENCRYPT_EXECUTE_DIRECTORY)) {
@@ -4940,8 +4942,10 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// formerly SetDescription
 	{SUBMIT_KEY_Description, ATTR_JOB_DESCRIPTION, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_BatchName, ATTR_JOB_BATCH_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+	#ifdef NO_DEPRECATE_NICE_USER
 	// formerly SetNiceUser
 	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER, SimpleSubmitKeyword::f_as_bool},
+	#endif
 	// formerly SetMaxJobRetirementTime
 	{SUBMIT_KEY_MaxJobRetirementTime, ATTR_MAX_JOB_RETIREMENT_TIME, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJobLease
