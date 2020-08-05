@@ -23,18 +23,23 @@ New Features:
 
 Bugs Fixed:
 
+- Vanilla-univese jobs which set ``CheckpointExitCode`` (or otherwise make
+  use of HTCondor's support for self-checkpointing) now report the total
+  user and system CPU usage, not just the usage since the last checkpoint.
+  :ticket:`4971`
+
 - Fixed a bug where setting Notification = error in the submit file
   failed to send an email to the user when the job was held.
   :ticket:`7763`
-  
-- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
-  Additionally, the spurious warning about ``NAMES`` not being list as a
-  resource has been eliminated.
-  :ticket:`7755`
 
 - The D_SUB_SECOND debug format option will no longer produce timestamps
   with four digits (``1000``) in the milliseconds field.
   :ticket:`7685`
+
+- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
+  Additionally, the spurious warning about ``NAMES`` not being list as a
+  resource has been eliminated.
+  :ticket:`7755`
 
 Version 8.8.10
 --------------
