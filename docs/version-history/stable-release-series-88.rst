@@ -47,7 +47,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added support for Ubuntu 20.04 (focal Fossa).
+  :ticket:`7673`
+
+- Added support for Amazon Linux 2.
+  :ticket:`7430`
 
 Bugs Fixed:
 
@@ -119,6 +123,21 @@ Bugs Fixed:
   denied errors if ``ENCRYPT_EXECUTE_DIRECTORY`` was specified but the job did not have ``run_as_owner``
   enabled.
   :ticket:`7620`
+
+- Fixed a bug that prevented the *condor_schedd* from effectively flocking
+  to pools when resource request list prefetching is enabled, which is the
+  default in HTCondor version 8.8
+  :ticket:`7754`
+
+- *condor_gpu_discovery* now reports CoresPerCU for nVidia Volta and later GPUs.
+  :ticket:`7704`
+
+- Update *condor_gpu_discovery* to know how many CoresPerCU for nVidia Ampere
+  GPUs.
+  :ticket:`7711`
+
+- The *sshd.sh* helper script no longer generates DSA keys when FIPS mode is enabled.
+  :ticket:`7645`
 
 Version 8.8.9
 -------------

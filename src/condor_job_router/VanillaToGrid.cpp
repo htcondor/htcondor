@@ -73,7 +73,9 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_CORE_SIZE);
 	ad->Delete(ATTR_GLOBAL_JOB_ID); // Store in different ATTR here?
 	//ad->Delete(ATTR_OWNER); // How does schedd filter?
-	ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN
+		// User may be from non-default UID_DOMAIN; if so, we want to keep this
+		// for the grid job.
+	// ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN.
 	ad->Delete(ATTR_Q_DATE);
 	ad->Delete(ATTR_JOB_REMOTE_WALL_CLOCK);
 	ad->Delete(ATTR_SERVER_TIME);
