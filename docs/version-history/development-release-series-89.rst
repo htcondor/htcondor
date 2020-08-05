@@ -27,10 +27,7 @@ New Features:
 
 Bugs Fixed:
 
--  Vanilla-univese jobs which set ``CheckpointExitCode`` (or otherwise make
-   use of HTCondor's support for self-checkpointing) now report the total
-   user and system CPU usage, not just the usage since the last checkpoint.
-   :ticket:`4971`
+-  None.
 
 Version 8.9.8
 -------------
