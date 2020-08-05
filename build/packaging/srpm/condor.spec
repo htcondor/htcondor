@@ -1969,6 +1969,13 @@ fi
 %endif
 
 %changelog
+* Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.8-1
+- Added htcondor.dags and htcondor.htchirp to the HTCondor Python bindings
+- New condor_watch_q tool that efficiently provides live job status updates
+- Added support for marking a GPU offline while other jobs continue
+- The condor_master command does not return until it is fully started
+- Deprecated several Python interfaces in the Python bindings
+
 * Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.10-1
 - condor_qedit can no longer be used to disrupt the condor_schedd
 - Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
