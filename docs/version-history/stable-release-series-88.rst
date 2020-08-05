@@ -13,9 +13,20 @@ Version 8.8.10
 
 Release Notes:
 
-- HTCondor version 8.8.10 not yet released.
+- HTCondor version 8.8.10 released on August 6, 2020.
 
-.. HTCondor version 8.8.10 released on Month Date, 2020.
+- Users can no longer use the *condor_qedit* command to disrupt the
+  operations of the *condor_schedd*.
+  :ticket:`7784`
+
+- The ``SHARED_PORT_PORT`` setting is now honored. If you are using
+  a non-standard port on machines other than the Central Manager, this
+  bug fix will a require configuration change in order to specify
+  the non-standard port.
+  :ticket:`7697`
+
+- On MacOSX, HTCondor now requires LibreSSL to function. MacOSX 10.13 and
+  later are supported.
 
 New Features:
 
@@ -27,8 +38,13 @@ New Features:
 
 Bugs Fixed:
 
-- The shared port daemon no longer blocks during socket hand-off.
-  :ticket:`7502`
+- Fixed some issues with the *condor_schedd* validating attribute values and actions from
+  *condor_qedit*. Certain edits could cause the *condor_schedd* to enter an invalid state
+  and in some cases would required editing of the job queue to restore the *condor_schedd*
+  to operation. While no security exploits are known to be possible, mischievous
+  users could potentially disrupt the operation of the *condor_schedd*. A more detailed
+  description and workaround for these issues can be found in the ticket.
+  :ticket:`7784`
 
 - When the *condor_master* chooses the port to assign to the *condor_shared_port* daemon
   it will now ignore the ports specified in the ``COLLECTOR_LIST`` or ``COLLECTOR_HOST``
@@ -36,6 +52,9 @@ Bugs Fixed:
   If it is not starting a primary collector (i.e. ``DAEMON_LIST`` does not have ``COLLECTOR``)
   it will use the port specified in ``SHARED_PORT_PORT`` or the default port, which is 9618.
   :ticket:`7697`
+
+- The shared port daemon no longer blocks during socket hand-off.
+  :ticket:`7502`
 
 - The ``DiskUsage`` attribute should once again reflect the job's peak disk
   usage, rather than its current or terminal usage.
@@ -52,12 +71,19 @@ Bugs Fixed:
 
 - Allow ``SINGULARITY_EXTRA_ARGUMENTS`` to override the default -C option
   condor passes to singularity exec to allow administrators to tell
-  condor not to contain certain resoures.
+  condor not to contain certain resources.
   :ticket:`7719`
 
 - *condor_gpu_discovery* no longer crashes if passed just the
   ``-dynamic`` flag.
   :ticket:`7639`
+
+- *condor_gpu_discovery* now reports CoresPerCU for nVidia Volta and later GPUs.
+  :ticket:`7704`
+
+- Update *condor_gpu_discovery* to know how many CoresPerCU for nVidia Ampere
+  GPUs.
+  :ticket:`7711`
 
 - Fix typographic error in ``condor.service`` file to wait for
   ``nfs-client.target``.
@@ -70,14 +96,6 @@ Bugs Fixed:
 - For grid universe jobs of type ``batch``, stop using characters ``@``
   and ``#`` in temporary directory names.
   :ticket:`7730`
-
-- Fixed some issues with the SchedD validating attribute values and actions from
-  condor_qedit. Certain edits could cause the SchedD to enter an invalid state
-  and in some cases would required editing of the job queue to restore the SchedD
-  to operation. While no security exploits are known to be possible, mischevious
-  users could potentially disrupt the operation of the SchedD. A more detailed
-  description and workaround for these issues can be found in the ticket.
-  :ticket:`7784` 
 
 - When *condor_wait* is run without a limit on the number of jobs, it no
   longer exits if the number of active jobs goes to zero but there are more
@@ -97,15 +115,8 @@ Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_schedd* from effectively flocking
   to pools when resource request list prefetching is enabled, which is the
-  default in HTCondor version 8.8
+  default in HTCondor version 8.8.
   :ticket:`7754`
-
-- *condor_gpu_discovery* now reports CoresPerCU for nVidia Volta and later GPUs.
-  :ticket:`7704`
-
-- Update *condor_gpu_discovery* to know how many CoresPerCU for nVidia Ampere
-  GPUs.
-  :ticket:`7711`
 
 - The *sshd.sh* helper script no longer generates DSA keys when FIPS mode is enabled.
   :ticket:`7645`
