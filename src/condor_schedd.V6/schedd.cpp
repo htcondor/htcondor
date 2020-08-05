@@ -9998,6 +9998,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	if( ! rval ) {
 		dprintf( D_ALWAYS|D_FAILURE, "Can't spawn local starter for "
 				 "job %d.%d\n", job_id->cluster, job_id->proc );
+		shadowsByProcID->remove(srec->job_id);
 		mark_job_stopped( job_id );
 		delete srec;
 		return;
