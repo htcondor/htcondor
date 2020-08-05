@@ -95,6 +95,7 @@
 #include "condor_secman.h"
 #include "token_utils.h"
 #include "jobsets.h"
+#include "metric_units.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -12810,6 +12811,17 @@ size_t pidHash(const int &pid)
 }
 
 
+int64_t SpoolMinFree = 0;
+
+void
+Scheduler::CheckMinSpoolFree() {
+    long long spoolFree = sysapi_disk_space( Spool );
+    if( spoolFree < SpoolMinFree ) {
+        // This should probably do something more useful.
+        EXCEPT( "SPOOL free less than SPOOL_MIN_FREE" );
+    }
+}
+
 // initialize the configuration parameters and classad.  Since we call
 // this again when we reconfigure, we have to be careful not to leak
 // memory. 
@@ -12850,6 +12862,16 @@ Scheduler::Init()
 	if( !(Spool = param("SPOOL")) ) {
 		EXCEPT( "No spool directory specified in config file" );
 	}
+
+    std::string SPOOL_MIN_FREE;
+    param( SPOOL_MIN_FREE, "SPOOL_MIN_FREE", "0" );
+    if(! SPOOL_MIN_FREE.empty()) {
+        // Disk metrics are always in KiB, probably for 32-bit raisins.
+        if(! parse_int64_bytes( SPOOL_MIN_FREE.c_str(), SpoolMinFree, 1024 )) {
+            EXCEPT( "Invalid SPOOL_MIN_FREE specified in config file" );
+        }
+    }
+    CheckMinSpoolFree();
 
 	if( CondorAdministrator ) free( CondorAdministrator );
 	if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
@@ -13827,6 +13849,13 @@ Scheduler::RegisterTimers()
 	static int cleanid = -1, wallclocktid = -1;
 	// Note: aliveid is a data member of the Scheduler class
 	static int oldQueueCleanInterval = -1;
+
+    static int minSpoolFreeID = -1;
+    if( minSpoolFreeID < 0 ) {
+        minSpoolFreeID = daemonCore->Register_Timer( 60, 60,
+           (TimerHandlercpp)& Scheduler::CheckMinSpoolFree,
+           "CheckMinSpoolFree", this );
+    }
 
 	Timeslice start_jobs_timeslice;
 

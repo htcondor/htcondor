@@ -805,6 +805,8 @@ class Scheduler : public Service
 
 private:
 
+    void CheckMinSpoolFree();
+
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
 
 	// Setup a new security session for a remote negotiator.
