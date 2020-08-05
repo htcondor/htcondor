@@ -1556,6 +1556,18 @@ win32_default=$(SBIN)\condor_c-gahp.exe
 type=path
 tags=gridmanager,condorresource
 
+[C_GAHP_CONTACT_SCHEDD_DELAY]
+default=5
+type=int
+
+[CGAHP_SCHEDD_INTERACTION_TIME]
+default=5
+type=int
+
+[C_GAHP_MAX_FILE_REQUESTS]
+default=10
+type=int
+
 [JAVA_EXTRA_ARGUMENTS]
 default=
 type=string

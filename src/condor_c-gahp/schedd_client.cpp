@@ -126,6 +126,9 @@ doContactSchedd()
 	int failure_line_num = 0;
 	int failure_errno = 0;
 	std::set< std::string, classad::CaseIgnLTStr > filter_attrs;
+	bool rerun_immediately = false;
+	int max_file_requests = param_integer("C_GAHP_MAX_FILE_REQUESTS", 10);
+	int curr_file_requests = 0;
 
 	// Try connecting to schedd
 	DCSchedd dc_schedd ( ScheddAddr, ScheddPool );
@@ -352,6 +355,7 @@ doContactSchedd()
 
 	// JOB_STAGE_IN
 	int MAX_BATCH_SIZE=1; // This should be a config param
+	curr_file_requests = 0;
 
 	SimpleList <SchedDRequest*> stage_in_batch;
 	do {
@@ -372,7 +376,8 @@ doContactSchedd()
 					 current_command->proc_id);
 
 			stage_in_batch.Append (current_command);
-			if (stage_in_batch.Number() >= MAX_BATCH_SIZE)
+			curr_file_requests++;
+			if (stage_in_batch.Number() >= MAX_BATCH_SIZE || curr_file_requests > max_file_requests)
 				break;
 		}
 
@@ -413,16 +418,21 @@ doContactSchedd()
 				}
 			} // elihw (command_queue)
 		} // fi has STAGE_IN requests
-	} while (stage_in_batch.Number() > 0);
+	} while (stage_in_batch.Number() > 0 && curr_file_requests < max_file_requests);
+
+	if (curr_file_requests >= max_file_requests) {
+		rerun_immediately = true;
+	}
 
 	dprintf (D_FULLDEBUG, "Processing JOB_STAGE_OUT requests\n");
 	
 
 	// JOB_STAGE_OUT
 	SimpleList <SchedDRequest*> stage_out_batch;
+	curr_file_requests = 0;
 
 	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
+	while (command_queue.Next(current_command) && curr_file_requests < max_file_requests) {
 
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
@@ -432,6 +442,11 @@ doContactSchedd()
 
 
 		stage_out_batch.Append (current_command);
+		curr_file_requests++;
+	}
+
+	if (curr_file_requests >= max_file_requests) {
+		rerun_immediately = true;
 	}
 
 	if (stage_out_batch.Number() > 0) {
@@ -495,14 +510,17 @@ doContactSchedd()
 	}
 
 	// JOB_REFRESH_PROXY
+	curr_file_requests = 0;
 	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
+	while (command_queue.Next(current_command) && curr_file_requests < max_file_requests) {
 
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
 
 		if (current_command->command != SchedDRequest::SDC_JOB_REFRESH_PROXY)
 			continue;
+
+		curr_file_requests++;
 
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(current_command->classad);
 		time_t result_expiration_time = 0;
@@ -550,6 +568,13 @@ doContactSchedd()
 
 	}
 
+	if ( curr_file_requests >= max_file_requests ) {
+		rerun_immediately = true;
+	}
+
+	if ( rerun_immediately ) {
+		dprintf(D_FULLDEBUG, "Maxed out file requests, will rerun immediately\n");
+	}
 
 	// Now do all the QMGMT transactions
 	error = FALSE;
@@ -557,7 +582,6 @@ doContactSchedd()
 	// Limit the time we spend connected to the schedd
 	int interaction_time = param_integer("CGAHP_SCHEDD_INTERACTION_TIME", 5);
 	time_t starttime = time(NULL);
-	bool rerun_immediately = false;
 
 	// Try connecting to the queue
 	Qmgr_connection * qmgr_connection;
