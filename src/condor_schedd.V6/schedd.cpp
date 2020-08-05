@@ -189,7 +189,7 @@ schedd_runtime_probe WalkJobQ_add_runnable_local_jobs_runtime;
 schedd_runtime_probe WalkJobQ_fixAttrUser_runtime;
 schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
 
-int	WallClockCkptInterval = 0;
+int WallClockCkptInterval = 0;
 int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 
 void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
@@ -12812,10 +12812,12 @@ size_t pidHash(const int &pid)
 
 
 int64_t SpoolMinFree = 0;
+int checkMinSpoolFreeInterval = 60;
 
 void
 Scheduler::CheckMinSpoolFree() {
     long long spoolFree = sysapi_disk_space( Spool );
+    dprintf( D_STATUS, "SPOOL free %lld KiB (%ld KiB required)\n", spoolFree, SpoolMinFree );
     if( spoolFree < SpoolMinFree ) {
         // This should probably do something more useful.
         EXCEPT( "SPOOL free less than SPOOL_MIN_FREE" );
@@ -13009,6 +13011,9 @@ Scheduler::Init()
 
 	// default every hour
 	WallClockCkptInterval = param_integer( "WALL_CLOCK_CKPT_INTERVAL",60*60 );
+
+	// default every minute
+	checkMinSpoolFreeInterval = param_integer( "SPOOL_MIN_FREE_INTERVAL", 60 );
 
 	JobStartDelay = param_integer( "JOB_START_DELAY", 0 );
 	
@@ -13850,12 +13855,15 @@ Scheduler::RegisterTimers()
 	// Note: aliveid is a data member of the Scheduler class
 	static int oldQueueCleanInterval = -1;
 
-    static int minSpoolFreeID = -1;
-    if( minSpoolFreeID < 0 ) {
-        minSpoolFreeID = daemonCore->Register_Timer( 60, 60,
-           (TimerHandlercpp)& Scheduler::CheckMinSpoolFree,
-           "CheckMinSpoolFree", this );
-    }
+	static int checkMinSpoolFreeID = -1;
+	if( checkMinSpoolFreeID >= 0 ) {
+		daemonCore->Cancel_Timer( checkMinSpoolFreeID );
+		checkMinSpoolFreeID = -1;
+	}
+	checkMinSpoolFreeID = daemonCore->Register_Timer(
+		checkMinSpoolFreeInterval, checkMinSpoolFreeInterval,
+		(TimerHandlercpp)& Scheduler::CheckMinSpoolFree, "CheckMinSpoolFree",
+		this );
 
 	Timeslice start_jobs_timeslice;
 
