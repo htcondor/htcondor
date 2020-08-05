@@ -1992,6 +1992,10 @@ SecManStartCommand::authenticate_inner_finish()
 		SecMan::sec_feat_act will_enable_enc   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_ENCRYPTION );
 		SecMan::sec_feat_act will_enable_mac   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_INTEGRITY );
 
+			// We've successfully authenticated; clear out any prior authentication errors
+			// so they don't affect future messages in the stack.
+		m_errstack->clear();
+
 		if (will_enable_mac == SecMan::SEC_FEAT_ACT_YES) {
 
 			if (!m_private_key) {
