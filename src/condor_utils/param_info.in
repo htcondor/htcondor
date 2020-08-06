@@ -387,7 +387,7 @@ tags=vm-gahp
 
 [PROCD_ADDRESS]
 default=$(LOCK)/procd_pipe
-win32_default=\\.\pipe\condor_procd_pipe
+win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
 

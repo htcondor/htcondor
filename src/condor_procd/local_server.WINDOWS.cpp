@@ -31,6 +31,11 @@ bool
 LocalServer::initialize(const char* pipe_addr)
 {
 	ASSERT(!m_initialized);
+	ASSERT(pipe_addr != NULL);
+
+	if( strlen(pipe_addr) >= 256 ) {
+		dprintf( D_ALWAYS, "LocalServer::initialize(%s): pipe address is too long.\n", pipe_addr );
+	}
 
 	// TODO: create the named pipe with a security descriptor that denies
 	// access to NT AUTHORITY\NETWORK and grants access to the "condor"
