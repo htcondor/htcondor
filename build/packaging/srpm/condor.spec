@@ -990,7 +990,7 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_ssh
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %endif
-%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
