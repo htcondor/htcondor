@@ -32,6 +32,8 @@ from . import job_queue, env, cmd, daemons, handles
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+unique_identifier = 0
+
 DEFAULT_PARAMS = {
     "LOCAL_CONFIG_FILE": "",
     "COLLECTOR_HOST": "$(CONDOR_HOST):0",
@@ -220,6 +222,15 @@ class Condor:
             "SEC_TOKEN_SYSTEM_DIRECTORY": self.tokens_dir.as_posix(),
             "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND",
         }
+
+        # The need to do this is arguably a HTCondor bug.
+        global unique_identifier
+        unique_identifier += 1
+        if htcondor.param["PROCD_ADDRESS"] == r"\\.\pipe\condor_procd_pipe":
+            base_config["PROCD_ADDRESS"] = "{}_{}_{}_{}".format(
+                htcondor.param["PROCD_ADDRESS"], os.getpid(),
+                time.time(), unique_identifier
+            )
 
         param_lines += ["#", "# BASE PARAMS", "#"]
         param_lines += ["{} = {}".format(k, v) for k, v in base_config.items()]
