@@ -34,14 +34,21 @@ Version 8.9.8
 
 Release Notes:
 
--  HTCondor version 8.9.8 not yet released.
+- HTCondor version 8.9.8 released on August 6, 2020.
 
-.. HTCondor version 8.8.8 released on Month Date, 2020.
+- Fixed some issues with the *condor_schedd* validating attribute values and actions from
+  *condor_qedit*. Certain edits could cause the *condor_schedd* to enter an invalid state
+  and in some cases would required editing of the job queue to restore the *condor_schedd*
+  to operation. While no security exploits are known to be possible, mischievous
+  users could potentially disrupt the operation of the *condor_schedd*. A more detailed
+  description and workaround for these issues can be found in the ticket.
+  :ticket:`7784`
 
--  HTCondor now supports setting an upper bound on the number of cores user can
-   be given.  This is called the submitter ceiling. The ceiling can be set with
-   the condor_userprio -setceiling command line option.
-   :ticket:`7702`
+- The ``SHARED_PORT_PORT`` setting is now honored. If you are using
+  a non-standard port on machines other than the Central Manager, this
+  bug fix will a require configuration change in order to specify
+  the non-standard port.
+  :ticket:`7697`
 
 -  API change in the Python bindings.  The :class:`classad.ExprTree` constructor
    now tries to parse the entire string passed to it.  Failure results in a
@@ -82,6 +89,37 @@ Release Notes:
 
 New Features:
 
+-  Added a new Python bindings sub-package, :mod:`htcondor.dags`, which contains
+   tools for writing DAGMan input files programmatically using
+   high-level abstractions over the basic DAGMan constructs.
+   There is a new tutorial at :doc:`/apis/python-bindings/tutorials/index`
+   walking through a basic use case.
+   :mod:`htcondor.dags` is very new and its API has not fully stabilized;
+   it is possible that there will be deprecations and breaking changes
+   in the near future.
+   Bug reports and feature requests greatly encouraged!
+   :ticket:`7682`
+
+-  Added a new Python bindings subpackage, :mod:`htcondor.htchirp`.
+   This subpackage provides the :class:`HTChirp` and :func:`condor_chirp`
+   objects for using the Chirp protocol inside a ``+WantIOProxy =
+   true`` job.
+   :ticket:`7330`
+
+-  Added a new tool, *condor_watch_q*, a live-updating job status tracker
+   that does not repeatedly query the *condor_schedd* like ``watch condor_q``
+   would. It includes options for colored output, progress bars, and a minimal
+   language for exiting when certain conditions are met.
+   The man page can be found here: :ref:`condor_watch_q`.
+   *condor_watch_q* is still under development;
+   several known issues are summarized in the ticket.
+   :ticket:`7343`
+
+-  When the *condor_master* starts in background mode, which is the default,
+   control is not returned until the background *condor_master* has created
+   the MasterLog and is ready to accept commands.
+   :ticket:`7667`
+
 -  Added options ``-short-uuid`` and ``-uuid`` to the *condor_gpu_discovery*
    tool. These options use the NVIDIA uuid assigned to each GPU to produce
    stable identifiers for each GPU so that devices can be taken offline without
@@ -92,8 +130,13 @@ New Features:
    :macro:`OFFLINE_MACHINE_RESOURCE_GPUs` will now take effect on a *condor_reconfig*.
    :ticket:`7651`
 
+-  HTCondor now supports setting an upper bound on the number of cores user can
+   be given.  This is called the submitter ceiling. The ceiling can be set with
+   the condor_userprio -setceiling command line option.
+   :ticket:`7702`
+
 -  The *condor_startd* now detects whether user namespaces can be created by
-   unprivileged processes.  If so, it advertises the classad attribute
+   unprivileged processes.  If so, it advertises the ClassAd attribute
    ``HasUserNamespaces``. In this case, container managers like
    singularity can be run without setuid root.
    :ticket:`7625`
@@ -117,48 +160,17 @@ New Features:
    expression's ad; use the ``-quiet`` flag to disable.
    :ticket:`7341`
 
--  Added a new Python bindings subpackage, :mod:`htcondor.htchirp`.
-   This subpackage provides the :class:`HTChirp` and :func:`condor_chirp`
-   objects for using the Chirp protocol inside a ``+WantIOProxy =
-   true`` job.
-   :ticket:`7330`
-
--  Added a new tool, *condor_watch_q*, a live-updating job status tracker
-   that does not repeatedly query the *condor_schedd* like ``watch condor_q``
-   would. It includes options for colored output, progress bars, and a minimal
-   language for exiting when certain conditions are met.
-   The man page can be found here: :ref:`condor_watch_q`.
-   *condor_watch_q* is still under development;
-   several known issues are summarized in the ticket.
-   :ticket:`7343`
-
--  Added a new Python bindings subpackage, :mod:`htcondor.dags`, which contains
-   tools for writing DAGMan input files programmatically using
-   high-level abstractions over the basic DAGMan constructs.
-   There is a new tutorial at :doc:`/apis/python-bindings/tutorials/index`
-   walking through a basic use case.
-   :mod:`htcondor.dags` is very new and its API has not fully stabilized;
-   it is possible that there will be deprecations and breaking changes
-   in the near future.
-   Bug reports and feature requests greatly encouraged!
-   :ticket:`7682`
-
 -  Improved the efficiency of process monitoring in macOS.
    :ticket:`7708`
 
 -  The *condor_startd* now handles :macro:`STARTD_SLOT_ATTRS` after
    :macro:`STARTD_ATTRS` and :macro:`STARTD_PARTITIONABLE_SLOT_ATTRS`
    so that custom slot attributes describing the resources of
-   dynamic children can be refered to by :macro:`STARTD_SLOT_ATTRS`
+   dynamic children can be referred to by :macro:`STARTD_SLOT_ATTRS`
    :ticket:`7588`
 
--  When the *condor_master* starts in background mode, which is the default,
-   control is not returned until the background *condor_master* has created
-   the MasterLog and is ready to accept commands.
-   :ticket:`7667`
-
 -  Updated *condor_q* so when called with the ``-dag`` flag and a DAGMan job
-   ID, it will display all jobs running under any nested subdags.
+   ID, it will display all jobs running under any nested sub-DAGs.
    :ticket:`7483`
 
 -  Direct job submission in *condor_dagman* now reports warning messages related
@@ -191,6 +203,10 @@ New Features:
    ``AuthenticationMethod`` in ClassAds advertised in the *condor_collector*.
    :ticket:`7683`
 
+- Added a new submit file option, ``docker_network_type = none``, which
+  causes a docker universe job to not have any network connectivity.
+  :ticket:`7701`
+
 - Docker jobs now respect CPU Affinity.
   :ticket:`7627`
 
@@ -198,7 +214,7 @@ New Features:
   :ticket:`7712`
 
 - The *condor_submit* executable will not abort if the submitting user has a
-  gid of 0.  Jobs still will not run with root privs, but this allows jobs to
+  gid of 0.  Jobs still will not run with root privileges, but this allows jobs to
   be submitted which are assigned an ``Owner`` via the result of user mapping
   from authentication.
   :ticket:`7662`
@@ -209,8 +225,8 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a segfault in the schedd that could happen on some platforms
-  when handling certain startd failures after invoking ``condor_now``.
+- Fixed a segmentation fault in the *condor_schedd* that could happen on some platforms
+  when handling certain *condor_startd* failures after invoking ``condor_now``.
   :ticket:`7692`
 
 - *classad_eval* no longer ignores trailing garbage in its first (ClassAd)
@@ -226,15 +242,15 @@ Bugs Fixed:
   :ticket:`7641`
 
 - Fixed a bug introduced in 8.9.3 that cause the `condor_chirp` tool to crash
-  when passed the argument getfile
+  when passed the ``getfile`` argument.
   :ticket:`7612`
 
-- Add ``OMP_THREAD_LIMIT`` to list of environment variable to let programs like
+- Added ``OMP_THREAD_LIMIT`` to list of environment variables to let programs like
   ``R`` know the maximum number of threads it should use.
   :ticket:`7649`
 
-- Fixed a bug in Docker Universe that prevented administrator defined bind 
-  mounts from working correctly
+- Fixed a bug in Docker Universe that prevented administrator-defined
+  bind-mounts from working correctly.
   :ticket:`7635`
 
 - If the administrator of an execute machine has disabled file transfer plugins
@@ -680,7 +696,7 @@ Bugs Fixed:
    to run.
    :ticket:`7367`
 
--  The Python 3 bindings no longer segfault when putting a
+-  The Python 3 bindings no longer cause a segmentation fault when putting a
    :class:`~classad.ClassAd` constructed from a Python dictionary into another
    :class:`~classad.ClassAd`.
    :ticket:`7371`
