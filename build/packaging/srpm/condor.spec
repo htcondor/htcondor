@@ -2178,6 +2178,12 @@ fi
 %endif
 
 %changelog
+* Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.10-1
+- condor_qedit can no longer be used to disrupt the condor_schedd
+- Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
+- Ubuntu 20.04 and Amazon Linux 2 are now supported
+- In MacOSX, HTCondor now requires LibreSSL, available since MacOSX 10.13
+
 * Thu May 07 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.9-1
 - Proper tracking of maximum memory used by Docker universe jobs
 - Fixed preempting a GPU slot for a GPU job when all GPUs are in use
