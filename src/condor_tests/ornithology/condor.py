@@ -24,6 +24,7 @@ import functools
 import shlex
 import re
 import textwrap
+import os
 
 import htcondor
 
