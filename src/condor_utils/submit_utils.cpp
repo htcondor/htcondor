@@ -5099,6 +5099,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ConcurrencyLimits, ATTR_CONCURRENCY_LIMITS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_concurr},
 	{SUBMIT_KEY_ConcurrencyLimitsExpr, ATTR_CONCURRENCY_LIMITS, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_concurr | SimpleSubmitKeyword::f_alt_err},
 	// invoke SetAccountingGroup
+	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER_deprecated, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_acctgroup},
 	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	//{ "+" ATTR_ACCOUNTING_GROUP, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
@@ -6497,8 +6498,39 @@ int SubmitHash::SetAccountingGroup()
 {
 	RETURN_IF_ABORT();
 
+	// if nice-user is not a prefix, then it conflicts with accounting_group
+	// TODO? should this be a knob?
+	bool nice_user_is_prefix = false;
+
 	// is a group setting in effect?
 	auto_free_ptr group(submit_param(SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP));
+
+	// as of 8.9.9, nice_user is just a shorthand for accounting_group = nice-user
+	bool nice_user = submit_param_bool(SUBMIT_KEY_NiceUser, ATTR_NICE_USER_deprecated, false);
+	if (nice_user) {
+		if (!group) {
+			group.set(param("NICE_USER_ACCOUNTING_GROUP_NAME"));
+		} else {
+			MyString nicegroup;
+			param(nicegroup, "NICE_USER_ACCOUNTING_GROUP_NAME");
+			if (nicegroup != group) {
+				if ( ! nice_user_is_prefix) {
+					push_warning(stderr,
+						SUBMIT_KEY_NiceUser " conflicts with "  SUBMIT_KEY_AcctGroup ". "
+						SUBMIT_KEY_NiceUser " will be ignored");
+				} else if ( ! nicegroup.empty()) {
+					// append accounting group to nice-user group
+					nicegroup += ".";
+					nicegroup += group.ptr();
+					group.set(nicegroup.StrDup());
+				}
+			}
+		}
+		// backward compat hack - nice_user jobs are pre-emptable
+		// we assign a default of 0 here, but a user-specified value will overwrite this
+		// when SetSimpleJobExprs is called.
+		AssignJobVal(ATTR_MAX_JOB_RETIREMENT_TIME, 0);
+	}
 
 	// look for the group user setting, or default to owner
 	auto_free_ptr gu(submit_param(SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER));

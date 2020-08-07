@@ -832,6 +832,12 @@ default=1e10
 type=double
 tags=accountant
 
+[NICE_USER_ACCOUNTING_GROUP_NAME]
+default=nice-user
+type=string
+tags=accountant,submit
+
+
 [REMOTE_PRIO_FACTOR]
 default=1e7
 type=double

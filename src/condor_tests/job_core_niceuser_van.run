@@ -27,12 +27,10 @@ use warnings;
 my $testname = "job_core_niceuser_van";
 my $debuglevel = 2;
 
-# where am I running
-#my $currenthost = CondorTest::getFqdnHost();
 my $pid = $$;
 
 # ---  TESTING STRATEGY ----
-#  submit a cluster with 2 procs to a single slot pool
+#  submit a cluster with at least 2 procs to a single slot pool
 #  proc0 has nice_user=true, proc1 does not
 #  verify that proc1 runs before proc0 by having the jobs
 #  append a message to a common file, and then reading the file
@@ -56,20 +54,6 @@ CondorTest::StartCondorWithParams(
     condorlocalsrc => "$configfile",
 );
 
-# where am I running
-#$currenthost = CondorTest::getFqdnHost();
-
-
-#my @sdata =
-#(
-#"1",
-#"8",
-#"3",
-#"10",
-#"5",
-#"2"
-#);
-
 my @vdata =
 (
 "rude",
@@ -80,20 +64,16 @@ my @vdata =
 
 my @skiplines = ();
 my $datafile = "job_core_niceuser_van$pid.data";
-
-
-my $doonlyonce = "";
 my $count = 4;
-
 
 my $ExitSuccess = sub 
 {
 	my %info = @_;
 
-	print "Job Completed.....\n";
+	my $jid = $info{ 'cluster' } . "." . $info{ 'job' };
 	$count = $count - 1;
+	TLOG("Job $jid Completed..... remaining jobs: $count\n");
 
-	print "Count now $count\n";
 	if( $count != 0 )
 	{
 		return(0);
@@ -109,19 +89,6 @@ my $ExitSuccess = sub
 
 CreateEmptyFile("$datafile");
 
-# this is inserted just before the first queue statement
-my $submitextras = '
-	nice_user = true
-';
-
-# this is inserted after the first queue statement
-my $multiqueue = "
-	nice_user = false
-	arguments = 1 $datafile
-	queue
-";
-
-
 SimpleJob::RunCheck(
     runthis=>"x_do_niceuser.pl",
 	duration=>'$(accounting_group) ' . $datafile,
@@ -131,8 +98,6 @@ SimpleJob::RunCheck(
 	transfer_output_files=>"$datafile",
 	on_success=>$ExitSuccess,
 	queue_sz=>"accounting_group in (nice-user, rude, rude, nice-user)"
-#	append_submit_commands=>"$submitextras",
-#	multi_queue=>$multiqueue,
 );
 
 CondorTest::EndTest();
