@@ -37,10 +37,10 @@ def good_url(server):
 
 
 @action
-def job_with_good_url(default_condor, good_url, test_dir):
+def job_with_good_url(default_condor, good_url, test_dir, path_to_sleep):
     job = default_condor.submit(
         {
-            "executable": "/bin/sleep",
+            "executable": path_to_sleep,
             "arguments": "1",
             "log": (test_dir / "good_url.log").as_posix(),
             "transfer_input_files": good_url,
