@@ -38,8 +38,8 @@ NUM_PERIODS = 3
             "NUM_CPUS": "16",
             "NUM_SLOTS": "16",
             "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
-            "MACHINE_RESOURCE_INVENTORY_XXX": "$(TEST_DIR)/discovery",
-            "STARTD_CRON_XXX_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor",
+            "MACHINE_RESOURCE_INVENTORY_XXX": "$(TEST_DIR)/discovery.py",
+            "STARTD_CRON_XXX_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor.py",
             "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) XXX_MONITOR",
             "STARTD_CRON_XXX_MONITOR_MODE": "periodic",
             "STARTD_CRON_XXX_MONITOR_PERIOD": str(MONITOR_PERIOD),
@@ -61,7 +61,7 @@ def discovery_script(resources):
     return format_script(
         """
         #!/usr/bin/python3
-        
+
         print('DetectedXXX="{res}"')
         """.format(
             res=", ".join(resources.keys())
@@ -95,8 +95,8 @@ def num_resources(resources):
 
 @standup
 def condor(test_dir, slot_config, discovery_script, monitor_script):
-    write_file(test_dir / "discovery", discovery_script)
-    write_file(test_dir / "monitor", monitor_script)
+    write_file(test_dir / "discovery.py", discovery_script)
+    write_file(test_dir / "monitor.py", monitor_script)
 
     with Condor(
         local_dir=test_dir / "condor",
