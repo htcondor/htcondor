@@ -1578,7 +1578,7 @@ negotiationTime ()
 							NegotiatorInterval);
 		dprintf(D_FULLDEBUG,
 			"New cycle requested but just finished one -- delaying %lu secs\n",
-			cycle_delay - elapsed);
+			static_cast<long unsigned>(cycle_delay - elapsed));
 		return;
 	}
 
