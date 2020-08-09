@@ -32,18 +32,19 @@ def custom_attribute_value(request):
 
 
 @action
-def dag_description(custom_attribute_value):
+def dag_description(path_to_sleep, custom_attribute_value):
     # the {{ and }} are escaped { and } because they are f-string delimiters
     return textwrap.dedent(
         """
         JOB HelloInlineSubmit {{
-            executable = /bin/echo
-            arguments = Hello, inline submit!
+            executable = {}
+            arguments = 1
             output = inline.out
             MY.CustomAttribute = {}
         }}
     """.format(
-            custom_attribute_value
+            path_to_sleep,
+            custom_attribute_value,
         )
     )
 
