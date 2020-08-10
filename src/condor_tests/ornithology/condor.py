@@ -229,8 +229,10 @@ class Condor:
         unique_identifier += 1
         if htcondor.param["PROCD_ADDRESS"] == r"\\.\pipe\condor_procd_pipe":
             base_config["PROCD_ADDRESS"] = "{}_{}_{}_{}".format(
-                htcondor.param["PROCD_ADDRESS"], os.getpid(),
-                time.time(), unique_identifier
+                htcondor.param["PROCD_ADDRESS"],
+                os.getpid(),
+                time.time(),
+                unique_identifier,
             )
 
         param_lines += ["#", "# BASE PARAMS", "#"]
@@ -590,7 +592,7 @@ class Condor:
 
         with self.use_config():
             result = self.get_local_schedd().query(
-                constraint=constraint, attr_list=projection, limit=limit, opts=opts
+                constraint=constraint, projection=projection, limit=limit, opts=opts
             )
 
         logger.debug(

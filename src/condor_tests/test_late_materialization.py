@@ -216,7 +216,7 @@ class TestLateMaterializationItemdata:
             ads = schedd.query(
                 constraint="clusterid == {}".format(clusterid_for_itemdata),
                 # the My. doesn't end up being part of the key in the jobad
-                attr_list=["clusterid", "procid", "foo"],
+                projection=["clusterid", "procid", "foo"],
             )
 
         actual = [ad["foo"] for ad in sorted(ads, key=lambda ad: int(ad["procid"]))]
