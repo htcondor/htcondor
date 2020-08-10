@@ -124,6 +124,9 @@ class PersonalPoolState(str, enum.Enum):
     STOPPED = "STOPPED"
 
 
+PROCD_COUNTER = 0
+
+
 class PersonalPool:
     """
     A :class:`PersonalPool` is responsible for managing the lifecycle of a
@@ -376,6 +379,17 @@ class PersonalPool:
             "SEC_TOKEN_DIRECTORY": self.tokens_dir.as_posix(),
             "SEC_TOKEN_SYSTEM_DIRECTORY": self.system_tokens_dir.as_posix(),
         }
+
+        # See https://htcondor-wiki.cs.wisc.edu/index.cgi/tktview?tn=7789
+        global PROCD_COUNTER
+        PROCD_COUNTER += 1
+        if htcondor.param["PROCD_ADDRESS"] == r"\\.\pipe\condor_procd_pipe":
+            base_config["PROCD_ADDRESS"] = "{}_{}_{}_{}".format(
+                htcondor.param["PROCD_ADDRESS"],
+                os.getpid(),
+                time.time(),
+                PROCD_COUNTER,
+            )
 
         param_lines += ["# BASE PARAMS"]
         param_lines += ["{} = {}".format(k, v) for k, v in base_config.items()]
