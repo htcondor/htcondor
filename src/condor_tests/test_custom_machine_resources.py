@@ -151,7 +151,7 @@ def startd_log_file(condor):
 @action
 def num_busy_slots_history(startd_log_file, handle, num_resources):
     logger.debug("Checking Startd log file...")
-    logger.debug("Expected Job IDs are:", handle.job_ids)
+    logger.debug("Expected Job IDs are: {}".format(handle.job_ids))
 
     active_claims_history = track_quantity(
         startd_log_file.read(),
