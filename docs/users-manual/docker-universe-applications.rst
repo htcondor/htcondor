@@ -106,7 +106,7 @@ network interface.
 
 In the job submit file, if the user specifies
 
-::
+.. code-block:: condor-submit
 
     docker_network_type = none
 
