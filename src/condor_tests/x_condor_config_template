@@ -1185,13 +1185,6 @@ JAVA_CLASSPATH_ARGUMENT = -classpath
 
 JAVA_CLASSPATH_SEPARATOR = :
 
-##  JAVA_BENCHMARK_TIME describes the number of seconds for which
-##  to run Java benchmarks.  A longer time yields a more accurate
-##  benchmark, but consumes more otherwise useful CPU time.
-##  If this time is zero or undefined, no Java benchmarks will be run.
-
-JAVA_BENCHMARK_TIME = 2
-
 ##  If your JVM requires any special arguments not mentioned in
 ##  the options above, then give them here.
 
