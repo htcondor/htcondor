@@ -1743,7 +1743,7 @@ JAVA = /usr/bin/java
 ## them here.  However, do not remove the existing entries, as Condor
 ## needs them.
 
-JAVA_CLASSPATH_DEFAULT = $(SHARE) $(SHARE)/scimark2lib.jar .
+JAVA_CLASSPATH_DEFAULT = $(SHARE) .
 
 ##  JAVA_CLASSPATH_ARGUMENT describes the command-line parameter
 ##  used to introduce a new classpath:

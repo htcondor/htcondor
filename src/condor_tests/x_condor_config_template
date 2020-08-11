@@ -1173,7 +1173,7 @@ JAVA_MAXHEAP_ARGUMENT = -Xmx
 ## them here.  However, do not remove the existing entries, as Condor
 ## needs them.
 
-JAVA_CLASSPATH_DEFAULT = $(LIB) $(LIB)/scimark2lib.jar .
+JAVA_CLASSPATH_DEFAULT = $(LIB) .
 
 ##  JAVA_CLASSPATH_ARGUMENT describes the command-line parameter
 ##  used to introduce a new classpath:

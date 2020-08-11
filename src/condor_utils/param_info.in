@@ -2337,8 +2337,8 @@ type=string
 tags=java_config
 
 [JAVA_CLASSPATH_DEFAULT]
-default=$(LIB) $(LIB)/scimark2lib.jar .
-win32_default=$(BIN) $(BIN)/scimark2lib.jar .
+default=$(LIB) .
+win32_default=$(BIN) .
 type=string
 tags=java_config
 
