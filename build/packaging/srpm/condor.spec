@@ -1118,12 +1118,24 @@ rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
 %endif
 
-# Move oauth credmon WSGI scripts out of libexec to somewhere they can run
-mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
-mv %{buildroot}/%{_libexecdir}/condor/scitokens-credmon.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+# Move oauth credmon WSGI script out of libexec to /var/www
+mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
+mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
 
-# Move oauth credmon credential directory README
-mv %{buildroot}/etc/examples/condor_oauth_credmon/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
+# Move oauth credmon config files out of examples and into config.d
+mv %{buildroot}/etc/examples/condor_credmon_oauth/examples/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/examples/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
+
+###
+# Backwards compatibility with the previous versions and configs of scitokens-credmon
+%if 0%{?rhel} == 7
+ln -s %{buildroot}/%{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
+ln -s %{buildroot}/%{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
+mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
+ln -s %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+%endif
+###
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1766,14 +1778,23 @@ rm -rf %{buildroot}
 
 %if 0%{?rhel} == 7
 %files -n condor-credmon-oauth
+%doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
 %_sbindir/scitokens_credential_producer
+%_var/www/wsgi-scripts/condor_oauth_credmon
 %_libexecdir/condor/credmon
 %_var/lib/condor/oauth_credentials/README.credentials
+%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-credmon.conf
+%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-tokens.conf
 %ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
+###
+# Backwards compatibility with the previous versions and configs of scitokens-credmon
+%_bindir/condor_credmon_oauth
+%_bindir/scitokens_credential_producer
 %_var/www/wsgi-scripts/scitokens-credmon
+###
 %endif
 
 %files bosco
