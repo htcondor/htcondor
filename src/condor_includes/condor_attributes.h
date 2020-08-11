@@ -487,7 +487,11 @@
 #define ATTR_MY_CURRENT_TIME  "MyCurrentTime"
 #define ATTR_MY_TYPE  "MyType"
 #define ATTR_NAME  "Name"
-#define ATTR_NICE_USER  "NiceUser"
+#define ATTR_NICE_USER_deprecated  "NiceUser"
+#ifdef NO_DEPRECATE_NICE_USER
+#define ATTR_NICE_USER ATTR_NICE_USER_deprecated
+#endif
+
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"

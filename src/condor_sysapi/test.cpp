@@ -41,7 +41,7 @@
 #define	DUMP			0x0400
 //#define	CKPTPLTFRM		0x0800
 #define	KERN_VERS		0x1000
-#define	KERN_MEMMOD		0x2000
+//#define	KERN_MEMMOD		0x2000
 #define	TEST_ALL		0xFFFF
 #define	TEST_NONE		0x0000
 
@@ -213,8 +213,6 @@ sysapi_test_dump_all(int argc, char** argv)
 		}
 		if (strcmp(argv[i], "--arch") == 0)
 			tests |= ARCH;
-		else if (strcmp(argv[i], "--kern_memmod") == 0)
-			tests |= KERN_MEMMOD;
 		else if (strcmp(argv[i], "--kern_vers") == 0)
 			tests |= KERN_VERS;
 		else if (strcmp(argv[i], "--dump") == 0)
@@ -279,7 +277,6 @@ sysapi_test_dump_all(int argc, char** argv)
 			printf("--debug <D_xxx>\n");
 			printf("--arch\n");
 			printf("--kern_vers\n");
-			printf("--kern_memmod\n");
 			printf("--dump\n");
 			printf("--free_fs_blocks [dir]\n");
 			printf("--idle_time\n");
@@ -296,13 +293,6 @@ sysapi_test_dump_all(int argc, char** argv)
 #		  endif
 			return 0;
 		}
-	}
-
-	if ((tests & KERN_MEMMOD) == KERN_MEMMOD) {
-		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
-		dprintf(D_ALWAYS, "SysAPI: Kernel memory model: %s\n",
-			sysapi_kernel_memory_model());
-		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
 
 	if ((tests & KERN_VERS) == KERN_VERS) {

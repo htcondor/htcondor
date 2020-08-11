@@ -513,46 +513,6 @@ int Sock::set_inheritable( int flag )
 }
 #endif	// of WIN32
 
-int Sock::move_descriptor_up()
-{
-	/* This function must be called IMMEDIATELY after a call to
-	 * socket() or accept().  It gives CEDAR an opportunity to 
-	 * move the descriptor if needed on this platform
-	 */
-
-#ifdef Solaris
-	/* On Solaris, the silly stdio library will fail if the underlying
-	 * file descriptor is > 255.  Thus if we have lots of sockets open,
-	 * calls to safe_fopen_wrapper() will start to fail on Solaris.  In Condor, this 
-	 * usually means dprintf() will EXCEPT.  So to avoid this, we reserve
-	 * sockets between 101 and 255 to be ONLY for files/pipes, and NOT
-	 * for network sockets.  We acheive this by moving the underlying
-	 * descriptor above 255 if it falls into the reserved range. We don't
-	 * bother moving descriptors until they are > 100 --- this prevents us
-	 * from doing anything in the common case that the process has less
-	 * than 100 active descriptors.  We also do not do anything if the
-	 * file descriptor table is too small; the application should limit
-	 * network socket usage to some sensible percentage of the file
-	 * descriptor limit anyway.
-	 */
-	SOCKET new_fd = -1;
-	if ( _sock > 100 && _sock < 256 && getdtablesize() > 256 ) {
-		new_fd = fcntl(_sock, F_DUPFD, 256);
-		if ( new_fd >= 256 ) {
-			::closesocket(_sock);
-			_sock = new_fd;
-		} else {
-			// the fcntl must have failed
-			dprintf(D_NETWORK, "Sock::move_descriptor_up failed: %s\n", 
-								strerror(errno));
-			return FALSE;
-		}
-	}
-#endif
-
-	return TRUE;
-}
-
 //
 // Moving all assignments of INVALID_SOCKET into their own function
 // dramatically simplifies the logic for assign()ing sockets without
@@ -697,13 +657,6 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 			_condor_fd_panic( __LINE__, __FILE__ ); /* Calls dprintf_exit! */
 		}
 #endif
-		return FALSE;
-	}
-
-	// move the underlying descriptor if we need to on this platform
-	if ( !move_descriptor_up() ) {
-		::closesocket(_sock);
-		_sock = INVALID_SOCKET;
 		return FALSE;
 	}
 

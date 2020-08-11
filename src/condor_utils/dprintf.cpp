@@ -1297,8 +1297,6 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 
 	#ifdef WIN32
 		length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);
-	#elif Solaris
-		length = llseek(fileno(debug_file_ptr), 0, SEEK_END);
 	#elif Linux
 		length = lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 	#else
@@ -1631,9 +1629,7 @@ _condor_fd_panic( int line, const char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-#if Solaris
-	llseek(fileno(debug_file_ptr), 0, SEEK_END);
-#elif Linux
+#if Linux
 	lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 #else
 	lseek(fileno(debug_file_ptr), 0, SEEK_END);

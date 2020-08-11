@@ -502,7 +502,6 @@ if(NOT WINDOWS)
 		flock.unix.cpp
 		getdtablesize.unix.cpp
 		getmnt.unix.cpp
-		getpagesize.unix.cpp
 		limit.unix.cpp
 		network_adapter.unix.cpp
 		network_adapter.unix.h

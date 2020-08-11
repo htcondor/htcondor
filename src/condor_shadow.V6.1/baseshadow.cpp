@@ -989,7 +989,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		}
 		event.total_remote_rusage = total_remote_rusage;
-
 		/*
 		  Both the job ad and the terminated event record bytes
 		  transferred from the perspective of the job, not the shadow.
@@ -1019,7 +1018,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
-
 		/* grab usage information out of job ad */
 		double real_value;
 
