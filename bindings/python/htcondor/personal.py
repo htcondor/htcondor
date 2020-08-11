@@ -349,7 +349,7 @@ class PersonalPool:
     def _write_config(self, overwrite: bool = True) -> None:
         if not overwrite and self.config_file.exists():
             raise FileExistsError(
-                f"Found existing config file; refusing to write config because overwrite={overwrite}."
+                "Found existing config file; refusing to write config because overwrite={}.".format(overwrite)
             )
 
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -410,7 +410,7 @@ class PersonalPool:
     def _start_condor(self):
         if self._is_ready():
             raise Exception(
-                f"Cannot start a {type(self).__name__} in the same local_dir as an already-running {type(self).__name__}."
+                "Cannot start a {t} in the same local_dir as an already-running {t}.".format(t=type(self).__name__)
             )
 
         with SetCondorConfig(self.config_file):
