@@ -301,6 +301,7 @@
 #define ATTR_INACTIVE  "Inactive"
 #define ATTR_JAR_FILES  "JarFiles"
 #define ATTR_JAVA_MFLOPS  "JavaMFlops"
+#define ATTR_JAVA_SPECIFICATION_VERSION  "JavaSpecificationVersion"
 #define ATTR_JAVA_VENDOR  "JavaVendor"
 #define ATTR_JAVA_VERSION  "JavaVersion"
 #define ATTR_JOB_ACTION  "JobAction"

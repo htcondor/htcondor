@@ -127,8 +127,8 @@ printClassAd( void )
 			str = 0;
 			gotone++;
 		}
-		if(ad->LookupString("JavaSpecificationVersion",&str)) {
-			printf("JavaSpecificationVersion = \"%s\"\n",str);
+		if(ad->LookupString(ATTR_JAVA_SPECIFICATION_VERSION,&str)) {
+			printf("%s = \"%s\"\n",ATTR_JAVA_SPECIFICATION_VERSION,str);
 			free(str);
 			str = 0;
 			gotone++;
