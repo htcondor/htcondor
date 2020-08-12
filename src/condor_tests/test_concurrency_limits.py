@@ -2,6 +2,7 @@
 
 # this test replicates job_concurrency_limitsP
 
+import re
 import logging
 
 from ornithology import (
@@ -96,7 +97,7 @@ def concurrency_limit(request):
 
 
 @action
-def handle(condor, concurrency_limit, path_to_sleep):
+def all_jobs_ran(condor, concurrency_limit, path_to_sleep):
     handle = condor.submit(
         description={
             "executable": path_to_sleep,
@@ -129,9 +130,9 @@ def handle(condor, concurrency_limit, path_to_sleep):
 
 
 @action
-def num_jobs_running_history(condor, handle, concurrency_limit):
+def num_jobs_running_history(condor, all_jobs_ran, concurrency_limit):
     return track_quantity(
-        condor.job_queue.filter(lambda j, e: j in handle.job_ids),
+        condor.job_queue.filter(lambda j, e: j in all_jobs_ran.job_ids),
         increment_condition=lambda id_event: id_event[-1]
         == SetJobStatus(JobStatus.RUNNING),
         decrement_condition=lambda id_event: id_event[-1]
@@ -147,9 +148,9 @@ def startd_log_file(condor):
 
 
 @action
-def num_busy_slots_history(startd_log_file, handle, concurrency_limit):
+def num_busy_slots_history(startd_log_file, all_jobs_ran, concurrency_limit):
     logger.debug("Checking Startd log file...")
-    logger.debug("Expected Job IDs are: {}".format(handle.job_ids))
+    logger.debug("Expected Job IDs are: {}".format(all_jobs_ran.job_ids))
 
     active_claims_history = track_quantity(
         startd_log_file.read(),
@@ -162,9 +163,28 @@ def num_busy_slots_history(startd_log_file, handle, concurrency_limit):
     return active_claims_history
 
 
+@action
+def negotiator_log(all_jobs_ran, condor):
+    return condor.negotiator_log.open()
+
+
+@action
+def concurrency_limits_hit(negotiator_log):
+    limits_hit = dict()
+    for entry in negotiator_log.read():
+        match = re.match(
+            r"^\s*Rejected .*: concurrency limit (.*) reached$", entry.message
+        )
+        if match:
+            limit = match.group(1).lower()
+            value = limits_hit.setdefault(limit, 0)
+            limits_hit[limit] = value + 1
+    return limits_hit
+
+
 class TestConcurrencyLimits:
-    def test_all_jobs_ran(self, condor, handle):
-        for jobid in handle.job_ids:
+    def test_all_jobs_ran(self, condor, all_jobs_ran):
+        for jobid in all_jobs_ran.job_ids:
             assert in_order(
                 condor.job_queue.by_jobid[jobid],
                 [
@@ -191,3 +211,7 @@ class TestConcurrencyLimits:
 
     def test_num_busy_slots_hits_limit(self, num_busy_slots_history, concurrency_limit):
         assert concurrency_limit["max-running"] in num_busy_slots_history
+
+    def test_negotiator_hits_limit(self, concurrency_limit, concurrency_limits_hit):
+        limit_name_in_log = concurrency_limit["submit-value"].lower().split(":")[0]
+        assert limit_name_in_log in concurrency_limits_hit
