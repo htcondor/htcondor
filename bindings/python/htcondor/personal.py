@@ -462,8 +462,8 @@ class PersonalPool:
             )
             if who.stdout.strip() == "":
                 logger.debug(
-                    "condor_who stdout was unexpectedly blank for {}, retrying in 1 second (giving up in {} seconds).".format(
-                        self, time_to_give_up
+                    "condor_who stdout was unexpectedly blank for {}, retrying in 1 second (giving up in {} seconds). condor_who stderr:\n{}".format(
+                        self, time_to_give_up, who.stderr
                     )
                 )
                 time.sleep(1)
