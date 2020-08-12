@@ -391,7 +391,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
 				int micros = info.tv.tv_usec + 500;
-				if( micros >= 1000000 ) { micros = 0; info.tm += 1; }
+				if( micros >= 1000000 ) {
+					micros = 0;
+					if( info.tm != NULL ) { info.tm->tm_sec += 1; }
+				}
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), micros / 1000 );
 				#endif
 			} else {
