@@ -1780,7 +1780,7 @@ rm -rf %{buildroot}
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
 %_sbindir/scitokens_credential_producer
-%_var/www/wsgi-scripts/condor_oauth_credmon
+%_var/www/wsgi-scripts/condor_credmon_oauth
 %_libexecdir/condor/credmon
 %_var/lib/condor/oauth_credentials/README.credentials
 %config(noreplace) %_sysconfdir/condor/config.d/40-oauth-credmon.conf
