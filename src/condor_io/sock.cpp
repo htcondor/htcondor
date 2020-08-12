@@ -2129,7 +2129,7 @@ char * Sock::serializeCryptoInfo() const
 
     // NOTE:
     // currently we are not serializing the ivec.  this works because the
-    // crypto state (including ivec) is rest to zero after inheriting.
+    // crypto state (including ivec) is reset to zero after inheriting.
 
     // here we want to save our state into a buffer
     char * outbuf = NULL;
@@ -2198,7 +2198,7 @@ const char * Sock::serializeCryptoInfo(const char * buf)
 
     // NOTE:
     // currently we are not serializing the ivec.  this works because the
-    // crypto state (including ivec) is rest to zero after inheriting.
+    // crypto state (including ivec) is reset to zero after inheriting.
 
     int citems = sscanf(ptmp, "%d*", &encoded_len);
     if ( citems == 1 && encoded_len > 0 ) {

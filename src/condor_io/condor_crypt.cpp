@@ -91,8 +91,8 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
 
 Condor_Crypto_State::~Condor_Crypto_State() {
     if(m_ivec) free(m_ivec);
-    // CURRENTLY UNUSED: if(m_additional) free(m_additional);
     if(m_method_key_data) free(m_method_key_data);
+    // CURRENTLY UNUSED: if(m_additional) free(m_additional);
 }
 
 void Condor_Crypto_State::reset() {
