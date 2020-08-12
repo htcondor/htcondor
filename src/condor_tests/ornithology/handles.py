@@ -363,9 +363,7 @@ class ClusterHandle(ConstraintHandle):
                 return False
 
             if timeout is not None and time.time() > start_time + timeout:
-                logger.warning(
-                    "Wait for handle {} timed out".format(self)
-                )
+                logger.warning("Wait for handle {} timed out".format(self))
                 return False
 
             time.sleep(1)

@@ -43,8 +43,7 @@ def dag_description(path_to_sleep, custom_attribute_value):
             MY.CustomAttribute = {}
         }}
     """.format(
-            path_to_sleep,
-            custom_attribute_value,
+            path_to_sleep, custom_attribute_value,
         )
     )
 
