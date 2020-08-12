@@ -1336,7 +1336,6 @@ rm -rf %{buildroot}
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
 %_datadir/condor/CondorJavaWrapper.class
-%_datadir/condor/scimark2lib.jar
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif

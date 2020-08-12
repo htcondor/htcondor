@@ -786,7 +786,6 @@ main (int argc, char *argv[])
 		query->addANDConstraint (buffer);
 
 		projList.insert(ATTR_HAS_JAVA);
-		projList.insert(ATTR_JAVA_MFLOPS);
 		projList.insert(ATTR_JAVA_VENDOR);
 		projList.insert(ATTR_JAVA_VERSION);
 	}
