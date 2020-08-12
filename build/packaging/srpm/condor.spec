@@ -1123,8 +1123,8 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
 mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
 
 # Move oauth credmon config files out of examples and into config.d
-mv %{buildroot}/etc/examples/condor_credmon_oauth/examples/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
-mv %{buildroot}/etc/examples/condor_credmon_oauth/examples/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
 mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
 
 ###
