@@ -2842,6 +2842,10 @@ Sock::isAuthenticated() const
 	return strcmp(_fqu,UNAUTHENTICATED_FQU) != 0;
 }
 
+/*
+
+// debug functions for crypto
+
 char zkm_buf[256];
 char* zkm_dump(const unsigned char* d, int l) {
 
@@ -2881,7 +2885,6 @@ Sock::zkm_wrap(const unsigned char* d_in,int l_in,
     return coded;
 }
 
-
 bool 
 Sock::zkm_unwrap(const unsigned char* d_in,int l_in,
                       unsigned char*& d_out, int& l_out)
@@ -2895,9 +2898,9 @@ Sock::zkm_unwrap(const unsigned char* d_in,int l_in,
     dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
     return coded;
 }
+*/
 
-//*
- bool 
+bool 
 Sock::wrap(const unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
 {    
@@ -2907,9 +2910,6 @@ Sock::wrap(const unsigned char* d_in,int l_in,
         coded = crypto_->encrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
 #endif
-    dprintf(D_ALWAYS, "ZKM_WRAP: got %d bytes:\n", l_in);
-    dprintf(D_ALWAYS, "ZKM_WRAP: IN:  %s\n", zkm_dump(d_in, l_in));
-    dprintf(D_ALWAYS, "ZKM_WRAP: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
     return coded;
 }
 
@@ -2923,13 +2923,8 @@ Sock::unwrap(const unsigned char* d_in,int l_in,
         coded = crypto_->decrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
 #endif
-    dprintf(D_ALWAYS, "ZKM_UNWRAP: got %d bytes:\n", l_in);
-    dprintf(D_ALWAYS, "ZKM_UNWRAP: IN:  %s\n", zkm_dump(d_in, l_in));
-    dprintf(D_ALWAYS, "ZKM_UNWRAP: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
-
     return coded;
 }
-// */
 
 void Sock::resetCrypto()
 {
