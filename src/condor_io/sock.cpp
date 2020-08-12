@@ -2985,16 +2985,13 @@ bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 
 const KeyInfo& Sock :: get_crypto_key() const
 {
-#ifdef HAVE_EXT_OPENSSL
-    // ZKM TODO FIXME
     if (crypto_state_) {
         return crypto_state_->getkey();
     } else {
         dprintf(D_ALWAYS, "ZKM: get_crypto_key: no crypto_state_\n");
     }
-#endif
     ASSERT(0);	// This does not return...
-	return  crypto_state_->getkey();  // just to make compiler happy...
+    return  crypto_state_->getkey();  // just to make compiler happy...
 }
 
 const KeyInfo& Sock :: get_md_key() const
