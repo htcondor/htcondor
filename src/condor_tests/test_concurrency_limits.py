@@ -50,8 +50,13 @@ def condor(test_dir, slot_config):
         config={
             **slot_config,
             **concurrency_limit_config,
-            # make the sure the negotiator runs many times within a single job duration
-            "NEGOTIATOR_INTERVAL": "1",
+            # The negotiator determines if a concurrency limit is in use by
+            # checking the machine ads, so it will overcommit tokens if its
+            # cycle time is shorter than the claim-and-report cycle.
+            #
+            # I'm not sure why the claim-and-report cycle is so long.
+            "NEGOTIATOR_INTERVAL": "4",
+            "NEGOTIATOR_CYCLE_DELAY": "4",
         },
     ) as condor:
         yield condor
@@ -114,7 +119,8 @@ def handle(condor, concurrency_limit, path_to_sleep):
             ]
             for jobid in handle.job_ids
         },
-        timeout=60,
+        # On my unloaded machine, it takes ~48 seconds for the longest test.
+        timeout=180,
     )
 
     yield handle
