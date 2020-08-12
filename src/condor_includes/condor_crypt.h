@@ -34,27 +34,26 @@ public:
     ~Condor_Crypto_State();
 
     void reset();
-    const KeyInfo& getkey() { return keyInfo_; }
+    const KeyInfo& getkey() { return m_keyInfo; }
 
     // the KeyInfo holds:
     // protocol
     // key length
     // key data
     // duration
-    KeyInfo       keyInfo_;
+    KeyInfo       m_keyInfo;
 
-    int ivec_len;
-    unsigned char *ivec;
+    int m_ivec_len;
+    unsigned char *m_ivec;
 
-    int num;
+    int m_num;
 
     // holds key data specific to the method (e.g. key schedules for DES)
-    int method_key_data_len;
-    unsigned char *method_key_data;
+    int m_method_key_data_len;
+    unsigned char *m_method_key_data;
 
-    // currently unused
-    int additional_len;
-    unsigned char *additional;
+    // CURRENTLY UNUSED: int m_additional_len;
+    // CURRENTLY UNUSED: unsigned char *m_additional;
 
 private:
     Condor_Crypto_State() {} ;
@@ -87,13 +86,13 @@ class Condor_Crypt_Base {
     //------------------------------------------
 
     virtual bool encrypt(Condor_Crypto_State *s,
-                         const unsigned char *   input,
+                         const unsigned char *input,
                          int               input_len, 
                          unsigned char *&  output, 
                          int&              output_len) = 0;
 
     virtual bool decrypt(Condor_Crypto_State *s,
-                         const unsigned char *  input,
+                         const unsigned char *input,
                          int              input_len, 
                          unsigned char *& output, 
                          int&             output_len) = 0;

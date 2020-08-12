@@ -30,18 +30,20 @@
 #include <openssl/des.h>
 #include <openssl/blowfish.h>
 
-Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
+Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
+    m_keyInfo(key)
+{
 
-    // store key (includes: protocol, len, data, duration)
-    keyInfo_ = key;
+    // m_keyInfo (initialized above) stores the key object,
+    // which includes: protocol, len, data, duration
 
     // zero everything;
-    additional_len = 0;
-    additional = NULL;
-    ivec_len = 0;
-    ivec = NULL;
-    method_key_data_len = 0;
-    method_key_data = NULL;
+    // CURRENTLY UNUSED: m_additional_len = 0;
+    // CURRENTLY UNUSED: m_additional = NULL;
+    m_ivec_len = 0;
+    m_ivec = NULL;
+    m_method_key_data_len = 0;
+    m_method_key_data = NULL;
 
     // there should probably be a static function in each crypto object to do
     // these conversions so that the state object doesn't need any specifc
@@ -51,30 +53,30 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
         case CONDOR_3DES: {
             // triple des requires a key of 8 x 3 = 24 bytes
             // so pad the key out to at least 24 bytes if needed
-            unsigned char * keyData = keyInfo_.getPaddedKeyData(24);
+            unsigned char * keyData = m_keyInfo.getPaddedKeyData(24);
             ASSERT(keyData);
 
             const int des_ks = sizeof(DES_key_schedule);
-            method_key_data_len = 3*des_ks;
-            method_key_data = (unsigned char*)malloc(method_key_data_len);
-            DES_set_key((DES_cblock *)  keyData    , (DES_key_schedule*)(method_key_data));
-            DES_set_key((DES_cblock *) (keyData+8) , (DES_key_schedule*)(method_key_data + des_ks));
-            DES_set_key((DES_cblock *) (keyData+16), (DES_key_schedule*)(method_key_data + 2*des_ks));
+            m_method_key_data_len = 3*des_ks;
+            m_method_key_data = (unsigned char*)malloc(m_method_key_data_len);
+            DES_set_key((DES_cblock *)  keyData    , (DES_key_schedule*)(m_method_key_data));
+            DES_set_key((DES_cblock *) (keyData+8) , (DES_key_schedule*)(m_method_key_data + des_ks));
+            DES_set_key((DES_cblock *) (keyData+16), (DES_key_schedule*)(m_method_key_data + 2*des_ks));
 
             free(keyData);
 
-            ivec_len = 8;
-            ivec = (unsigned char*)malloc(ivec_len);
+            m_ivec_len = 8;
+            m_ivec = (unsigned char*)malloc(m_ivec_len);
             break;
         }
         case CONDOR_BLOWFISH: {
             const int bf_ks = sizeof(BF_KEY);
-            method_key_data_len = bf_ks;
-            method_key_data = (unsigned char*)malloc(method_key_data_len);
-            BF_set_key((BF_KEY*)method_key_data, keyInfo_.getKeyLength(), keyInfo_.getKeyData());
+            m_method_key_data_len = bf_ks;
+            m_method_key_data = (unsigned char*)malloc(m_method_key_data_len);
+            BF_set_key((BF_KEY*)m_method_key_data, m_keyInfo.getKeyLength(), m_keyInfo.getKeyData());
 
-            ivec_len = 8;
-            ivec = (unsigned char*)malloc(ivec_len);
+            m_ivec_len = 8;
+            m_ivec = (unsigned char*)malloc(m_ivec_len);
             break;
         }
         default:
@@ -82,25 +84,25 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) {
             break;
     }
 
-    // zero ivec and num
+    // zero m_ivec and m_num
     reset();
 
 }
 
 Condor_Crypto_State::~Condor_Crypto_State() {
-    if(ivec) free(ivec);
-    if(additional) free(additional);
-    if(method_key_data) free(method_key_data);
+    if(m_ivec) free(m_ivec);
+    // CURRENTLY UNUSED: if(m_additional) free(m_additional);
+    if(m_method_key_data) free(m_method_key_data);
 }
 
 void Condor_Crypto_State::reset() {
-    dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: resetting ivec(len %i) and num\n", ivec_len);
+    dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: resetting m_ivec(len %i) and m_num\n", m_ivec_len);
 
-    if(ivec) {
-	bzero(ivec, ivec_len);
+    if(m_ivec) {
+	memset(m_ivec, 0, m_ivec_len);
     }
    
-    num = 0;
+    m_num = 0;
 }
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)

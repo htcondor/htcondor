@@ -33,7 +33,7 @@ bool Condor_Crypt_Blowfish :: encrypt(Condor_Crypto_State *cs,
     output = (unsigned char *) malloc(output_len);
 
     if (output) {
-        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->method_key_data, cs->ivec, &cs->num, BF_ENCRYPT);
+        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->m_method_key_data, cs->m_ivec, &cs->m_num, BF_ENCRYPT);
         return true;
     }
     else {
@@ -52,7 +52,7 @@ bool Condor_Crypt_Blowfish :: decrypt(Condor_Crypto_State *cs,
     output = (unsigned char *) malloc(output_len);
 
     if (output) {
-        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->method_key_data, cs->ivec, &cs->num, BF_DECRYPT);
+        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->m_method_key_data, cs->m_ivec, &cs->m_num, BF_DECRYPT);
         return true;
     }
     else {

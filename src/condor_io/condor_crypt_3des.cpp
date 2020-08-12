@@ -35,10 +35,10 @@ bool Condor_Crypt_3des :: encrypt(Condor_Crypto_State *cs,
     const int des_ks = sizeof(DES_key_schedule);
     if (output) {
         DES_ede3_cfb64_encrypt(input, output, output_len,
-                               (DES_key_schedule*)(cs->method_key_data),
-                               (DES_key_schedule*)(cs->method_key_data + des_ks),
-                               (DES_key_schedule*)(cs->method_key_data + 2*des_ks),
-                               (DES_cblock *)cs->ivec, &cs->num, DES_ENCRYPT);
+                               (DES_key_schedule*)(cs->m_method_key_data),
+                               (DES_key_schedule*)(cs->m_method_key_data + des_ks),
+                               (DES_key_schedule*)(cs->m_method_key_data + 2*des_ks),
+                               (DES_cblock *)cs->m_ivec, &cs->m_num, DES_ENCRYPT);
         return true;   
     }
     else {
@@ -59,10 +59,10 @@ bool Condor_Crypt_3des :: decrypt(Condor_Crypto_State *cs,
 
         const int des_ks = sizeof(DES_key_schedule);
         DES_ede3_cfb64_encrypt(input, output, output_len,
-                               (DES_key_schedule*)(cs->method_key_data),
-                               (DES_key_schedule*)(cs->method_key_data + des_ks),
-                               (DES_key_schedule*)(cs->method_key_data + 2*des_ks),
-                               (DES_cblock *)cs->ivec, &cs->num, DES_DECRYPT);
+                               (DES_key_schedule*)(cs->m_method_key_data),
+                               (DES_key_schedule*)(cs->m_method_key_data + des_ks),
+                               (DES_key_schedule*)(cs->m_method_key_data + 2*des_ks),
+                               (DES_cblock *)cs->m_ivec, &cs->m_num, DES_DECRYPT);
         
         return true;           // Should be changed
     }

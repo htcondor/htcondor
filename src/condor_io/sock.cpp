@@ -58,22 +58,6 @@
 #define closesocket close
 #endif
 
-
-struct SockCryptoState {
-	bool initialized;
-
-	int crypto_method_type;
-	std::string crypto_method_name;
-
-	KeyInfo key;
-
-	unsigned char IV[256];
-	unsigned char *additional_data;
-
-	// more?
-};
-
-
 void dprintf ( int flags, const Sock & sock, const char *fmt, ... )
 {
     va_list args;
@@ -2143,18 +2127,17 @@ char * Sock::serializeCryptoInfo() const
         len = get_crypto_key().getKeyLength();
     }
 
-    // ZKM TODO FIX ME
-    // serialize ENTIRE crypto_state_
-    dprintf(D_ALWAYS, "ZKM: serialize crypto state!\n");
+    // NOTE:
+    // currently we are not serializing the ivec.  this works because the
+    // crypto state (including ivec) is rest to zero after inheriting.
 
-
-	// here we want to save our state into a buffer
-	char * outbuf = NULL;
+    // here we want to save our state into a buffer
+    char * outbuf = NULL;
     if (len > 0) {
         int buflen = len*2+32;
         outbuf = new char[buflen];
         sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
-				(int)get_encryption());
+                (int)get_encryption());
 
         // Hex encode the binary key
         char * ptr = outbuf + strlen(outbuf);
@@ -2167,7 +2150,7 @@ char * Sock::serializeCryptoInfo() const
         memset(outbuf, 0, 2);
         sprintf(outbuf,"%d",0);
     }
-	return( outbuf );
+    return( outbuf );
 }
 
 char * Sock::serializeMdInfo() const
@@ -2213,9 +2196,9 @@ const char * Sock::serializeCryptoInfo(const char * buf)
     // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
-    // ZKM FIXME TODO
-    // deserialize ENTIRE crypto_state_
-    dprintf(D_ALWAYS, "ZKM: deserialize crypto state!\n");
+    // NOTE:
+    // currently we are not serializing the ivec.  this works because the
+    // crypto state (including ivec) is rest to zero after inheriting.
 
     int citems = sscanf(ptmp, "%d*", &encoded_len);
     if ( citems == 1 && encoded_len > 0 ) {
