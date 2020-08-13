@@ -1130,10 +1130,10 @@ mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot
 ###
 # Backwards compatibility with the previous versions and configs of scitokens-credmon
 %if 0%{?rhel} == 7
-ln -s %{buildroot}/%{_sbindir}/condor_credmon_oauth          %{_bindir}/condor_credmon_oauth
-ln -s %{buildroot}/%{_sbindir}/scitokens_credential_producer %{_bindir}/scitokens_credential_producer
+ln -s %{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
+ln -s %{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
-ln -s %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+ln -s %{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 %endif
 ###
 
