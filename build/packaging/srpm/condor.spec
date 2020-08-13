@@ -669,7 +669,7 @@ the ClassAd library and HTCondor from python
 
 %if 0%{?rhel} == 7
 #######################
-%package condor-credmon-oauth
+%package credmon-oauth
 Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
@@ -682,7 +682,7 @@ Requires: python2-scitokens
 Requires: httpd
 Requires: mod_wsgi
 
-%description -n condor-credmon-oauth
+%description credmon-oauth
 The OAuth2 credmon allows users to obtain credentials from configured
 OAuth2 endpoints and to use those credentials securely inside running jobs.
 %endif
@@ -1776,7 +1776,7 @@ rm -rf %{buildroot}
 %endif
 
 %if 0%{?rhel} == 7
-%files condor-credmon-oauth
+%files credmon-oauth
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
 %_sbindir/scitokens_credential_producer
