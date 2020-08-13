@@ -669,7 +669,7 @@ the ClassAd library and HTCondor from python
 
 %if 0%{?rhel} == 7
 #######################
-%package -n condor-credmon-oauth
+%package condor-credmon-oauth
 Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
@@ -1776,7 +1776,7 @@ rm -rf %{buildroot}
 %endif
 
 %if 0%{?rhel} == 7
-%files -n condor-credmon-oauth
+%files condor-credmon-oauth
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
 %_sbindir/scitokens_credential_producer
