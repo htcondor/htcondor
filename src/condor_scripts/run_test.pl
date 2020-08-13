@@ -389,7 +389,7 @@ sub DoChild
         print "\tPython exe: ";
         system ("$perl -c \"import sys; print(sys.executable)\"");
         print "\tPython-bindings version: ";
-        system ("$perl -v -c \"import htcondor; print(htcondor.version())\"");
+        system ("$perl -c \"import htcondor; print(htcondor.version())\"");
     }
 
     my $test_starttime = time();
