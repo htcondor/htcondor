@@ -48,6 +48,7 @@
 #include "HashTable.h"
 #include <set>
 #include "dagman_metrics.h"
+#include "enum_utils.h"
 
 using namespace std;
 
@@ -1605,10 +1606,10 @@ Dag::StartProvisionerNode()
 }
 
 //-------------------------------------------------------------------------
-MyString
+int
 Dag::GetProvisionerJobAdState()
 {
-	MyString provisionerState;
+	int provisionerState = -1;
 	if (_provisionerClassad) {
 		provisionerState = _provisionerClassad->GetProvisionerState();
 	}
@@ -1666,8 +1667,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	if ( HasProvisionerNode() && !_provisioner_ready ) {
 			// If we just moved into a provisioned state, we can start
 			// submitting the other jobs in the dag
-		MyString state = GetProvisionerJobAdState();
-		if ( GetProvisionerJobAdState() == "ProvisionerState.PROVISIONING_COMPLETE" ) {
+		if ( GetProvisionerJobAdState() == ProvisionerState::PROVISIONING_COMPLETE ) {
 			_provisioner_ready = true;
 			Job* job;
 			ListIterator<Job> jobs (_jobs);
