@@ -1118,7 +1118,7 @@ rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
 %endif
 
-# Move oauth credmon WSGI script out of libexec to /var/www
+# For EL7, move oauth credmon WSGI script out of libexec to /var/www
 %if 0%{?rhel} == 7
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
 mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
@@ -1129,8 +1129,17 @@ mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.
 mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
 %endif
 
+# For non-EL7, remove oauth credmon from the buildroot
+%if 0%{?rhel} >= 7 || 0%{?fedora}
+rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
+rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
+rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
+rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
+rm -rf %{buildroot}/etc/examples/condor_credmon_oauth
+%endif
+
 ###
-# Backwards compatibility with the previous versions and configs of scitokens-credmon
+# Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
 %if 0%{?rhel} == 7
 ln -s %{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
 ln -s %{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
