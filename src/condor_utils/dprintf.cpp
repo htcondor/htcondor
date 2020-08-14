@@ -396,9 +396,14 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
+				struct tm * then = info.tm;
 				int micros = info.tv.tv_usec + 500;
-				if( micros >= 1000000 ) { micros = 0; info.tm += 1; }
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), micros / 1000 );
+				if( micros >= 1000000 ) {
+					micros = 0;
+					time_t seconds = clock_now + 1;
+					then = localtime(& seconds);
+				}
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(then), micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));
