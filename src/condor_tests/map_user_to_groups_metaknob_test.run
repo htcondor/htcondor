@@ -50,6 +50,10 @@ my $submit_file = "$testname$pid.sub";
 my $submit_content = 
 "executable = x_sleep.pl
 arguments = 600
+# If the schedd starts running the job, `condor_rm -all`
+# may take an unknown amount of time to remove - causing
+# a race condition.
+hold = True
 queue";
 my $submitfile = "$testname$pid.sub";
 emit_dag_files($testname, $submit_content, $pid);

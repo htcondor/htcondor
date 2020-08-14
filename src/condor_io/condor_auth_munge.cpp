@@ -43,7 +43,7 @@ bool Condor_Auth_MUNGE::m_initSuccess = false;
 
 Condor_Auth_MUNGE :: Condor_Auth_MUNGE(ReliSock * sock)
     : Condor_Auth_Base    ( sock, CAUTH_MUNGE ),
-	m_crypto(NULL)
+	m_crypto(NULL), m_crypto_state(NULL)
 {
 	ASSERT( Initialize() == true );
 }
@@ -250,6 +250,8 @@ Condor_Auth_MUNGE::setupCrypto(const unsigned char* key, const int keylen)
 	// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
 
 	if ( !key || !keylen ) {
 		// cannot setup anything without a key
@@ -258,7 +260,16 @@ Condor_Auth_MUNGE::setupCrypto(const unsigned char* key, const int keylen)
 
 	// This could be 3des -- maybe we should use "best crypto" indirection.
 	KeyInfo thekey(key,keylen,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
+
 	return m_crypto ? true : false;
 }
 
@@ -277,6 +288,12 @@ Condor_Auth_MUNGE::decrypt(const unsigned char* input, int input_len, unsigned c
 bool
 Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, const unsigned char* input, int input_len, unsigned char* &output, int &output_len)
 {
+
+	// what is going on here?  munge has 3DES hard-coded to do wrap/unwrap.
+	// this isn't negotiated or configurable.  i'm working on #7725 so not
+	// digging more into this now.
+	return false;
+
 	bool result;
 
 	// clean up any old buffers that perhaps were left over
@@ -290,17 +307,17 @@ Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, const unsigned char* in
 	}
 
 	// make certain we got a crypto object
-	if (!m_crypto) {
-		dprintf(D_SECURITY, "In Condor_Auth_MUNGE.  No m_crypto!\n");
+	if (!m_crypto || !m_crypto_state) {
+		dprintf(D_SECURITY, "In Condor_Auth_MUNGE.  Found NULL m_crypto or m_crypto_state!\n");
 		return false;
 	}
 
 	// do the work
-	m_crypto->resetState();
+	m_crypto_state->reset();
 	if (want_encrypt) {
-		result = m_crypto->encrypt(input,input_len,output,output_len);
+		result = m_crypto->encrypt(m_crypto_state, input,input_len,output,output_len);
 	} else {
-		result = m_crypto->decrypt(input,input_len,output,output_len);
+		result = m_crypto->decrypt(m_crypto_state, input,input_len,output,output_len);
 	}
 
 	// mark output_len as zero upon failure

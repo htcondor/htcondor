@@ -63,20 +63,6 @@ sub get_platform_defaults {
 	  $console_devs="";
 	  last SWITCH;
       }
-      if(/^SunOS/) {
-	  $mail_path="/usr/ucb/mail";
-	  $ps_path="/usr/ucb/ps auwx";
-
-	  $_ = $mach;
-	  if( /^i86pc/ ) {
-	      $console_devs="kdmouse, vt00, tty00";
-	      $arch_name="INTEL";
-	  } else {
-	      # Sparc
-	      $console_devs="mouse, kbd";
-	  }
-	  last SWITCH;
-      }
       if(/^HP-UX/) {
 	  $ps_path="/bin/ps -ef";
 	  $console_devs="ps2mouse, ps2kbd, hil1, hil2, hil3, hil4, hil5, hil6, hil7";

@@ -293,7 +293,7 @@ class DAGWriter:
 
     def get_indexes_to_node_names(self, n: node.BaseNode) -> Dict[int, str]:
         if isinstance(n, node.SubDAG):
-            return {0: n.name}
+            return {0: self.get_node_name(n, 0)}
         elif isinstance(n, node.NodeLayer):
             return {idx: self.get_node_name(n, idx) for idx in range(len(n.vars))}
         else:

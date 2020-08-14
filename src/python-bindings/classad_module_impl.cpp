@@ -531,8 +531,15 @@ export_classad()
             )C0ND0R")
         .def("__len__", &ClassAdWrapper::size)
         .def("__contains__", &ClassAdWrapper::contains)
-        .def("__eq__", &ClassAdWrapper::__eq__)
-        .def("__ne__", &ClassAdWrapper::__ne__)
+        .def("__eq__", &ClassAdWrapper::__eq__,
+            R"C0ND0R(
+            One ClassAd is equivalent to another if they have the same number
+            of attributes, and each attribute is the :func:`~ExprTree.sameAs` the other.
+            )C0ND0R")
+        .def("__ne__", &ClassAdWrapper::__ne__,
+            R"C0ND0R(
+            The opposite of :func:`__eq__`.
+            )C0ND0R")
         .def("lookup", &ClassAdWrapper::LookupExpr, condor::classad_expr_return_policy<>(),
             R"C0ND0R(
             Look up the :class:`ExprTree` object associated with attribute.

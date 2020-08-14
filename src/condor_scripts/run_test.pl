@@ -391,6 +391,10 @@ sub DoChild
 
         print "\tPython version: ";
         system ("$perl --version");
+        print "\tPython exe: ";
+        system ("$perl -c \"import sys; print(sys.executable)\"");
+        print "\tPython-bindings version: ";
+        system ("$perl -c \"import htcondor; print(htcondor.version())\"");
     }
 
     if (exists($needs->{pytest})) {
@@ -621,9 +625,9 @@ sub SetupPythonPath {
     if ($iswindows) {
         system("dir $reldir");
         system("dir $reldir\\lib");
+        print "contents of $relpy:\n";
         system("dir $relpy");
-        #system("dumpbin -headers $relpy\\classad.pyd");
-        #system("dumpbin -imports $relpy\\classad.pyd");
+        $relpy .= ";$reldir\\bin";
     } else {
         system("ls -l $reldir");
         system("ls -l $reldir/lib");

@@ -1,3 +1,22 @@
+condor (8.9.8-1) unstable; urgency=medium
+
+  * Added htcondor.dags and htcondor.htchirp to the HTCondor Python bindings
+  * New condor_watch_q tool that efficiently provides live job status updates
+  * Added support for marking a GPU offline while other jobs continue
+  * The condor_master command does not return until it is fully started
+  * Deprecated several Python interfaces in the Python bindings
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 05 Aug 2020 13:47:06 -0500
+
+condor (8.8.10-1) stable; urgency=medium
+
+  * condor_qedit can no longer be used to disrupt the condor_schedd
+  * Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
+  * Ubuntu 20.04 and Amazon Linux 2 are now supported
+  * In MacOSX, HTCondor now requires LibreSSL, available since MacOSX 10.13
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 04 Aug 2020 20:55:25 -0500
+
 condor (8.9.7-1) unstable; urgency=medium
 
   * Multiple enhancements in the file transfer code

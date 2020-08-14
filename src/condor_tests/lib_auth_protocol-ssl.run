@@ -24,9 +24,6 @@ use Cwd;
 
 use Check::SimpleJob;
 
-# whoami is in /usr/ucb on solaris
-$ENV{PATH}="$ENV{PATH}:/usr/ucb";
-
 my $topleveldir = getcwd();
 my $name4test = `whoami`;
 CondorUtils::fullchomp($name4test);

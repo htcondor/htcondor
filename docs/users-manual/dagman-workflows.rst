@@ -545,6 +545,59 @@ DAGMan supports jobs with queues of multiple procs, so for example:
 
 will queue 500 procs as expected.
 
+Inline Submit Descriptions
+''''''''''''''''''''''''''
+
+Instead of using a submit description file, you can alternatively include an
+inline submit description directly inside the .dag file. An inline submit
+description should be wrapped in ``{`` and ``}`` braces, with each argument
+appearing on a separate line, just like the contents of a regular submit file.
+Using the previous diamond-shaped DAG example, the diamond.dag file would look
+like this:
+
+.. code-block:: condor-dagman
+
+        # File name: diamond.dag
+
+        JOB  A  {
+            executable   = /path/diamond.exe
+            output       = diamond.out.$(cluster)
+            error        = diamond.err.$(cluster)
+            log          = diamond_condor.log
+            universe     = vanilla
+        }
+        JOB  B  {
+            executable   = /path/diamond.exe
+            output       = diamond.out.$(cluster)
+            error        = diamond.err.$(cluster)
+            log          = diamond_condor.log
+            universe     = vanilla
+        }
+        JOB  C  {
+            executable   = /path/diamond.exe
+            output       = diamond.out.$(cluster)
+            error        = diamond.err.$(cluster)
+            log          = diamond_condor.log
+            universe     = vanilla
+        }
+        JOB  D  {
+            executable   = /path/diamond.exe
+            output       = diamond.out.$(cluster)
+            error        = diamond.err.$(cluster)
+            log          = diamond_condor.log
+            universe     = vanilla
+        }
+        PARENT A CHILD B C
+        PARENT B C CHILD D
+
+This can be helpful when trying to manage lots of submit descriptions, so they
+can all be described in the same file instead of needed to regularly shift
+between many files.
+
+The main drawback of using inline submit descriptions is that they do not
+support the ``queue`` statement or any variations thereof. Any job described 
+inline in the .dag file will only have a single instance submitted.
+
 
 DAG Submission
 --------------

@@ -31,6 +31,8 @@ objects, which correspond to un-evaluated ClassAd expressions.
    .. automethod:: ClassAd.symmetricMatch
    .. automethod:: ClassAd.externalRefs
    .. automethod:: ClassAd.internalRefs
+   .. automethod:: ClassAd.__eq__
+   .. automethod:: ClassAd.__ne__
 
 
 .. autoclass:: ExprTree

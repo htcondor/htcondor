@@ -140,7 +140,6 @@ my @default_build_configure_args =
 # x86_64_RedHat5
 # x86_64_RedHat6
 # x86_64_SL6
-# x86_64_Solaris11
 # x86_64_Ubuntu10
 # x86_64_Ubuntu12
 # x86_64_Windows7
@@ -572,33 +571,6 @@ our %submit_info = (
 	'x86_64_fedora_27'				=> 'x86_64_Fedora',
 	'x86_64_fedora_28'				=> 'x86_64_Fedora',
 
-
-	##########################################################################
-	# Platform Solaris 11 on x86_64
-	# Building openssl is problematic on this platform.	 There is
-	# some confusion betwen 64-bit and 32-bit, which causes linkage
-	# problems.	 Since ssh_to_job depends on openssl's base64 functions,
-	# that is also disabled.
-	##########################################################################
-	'x86_64_Solaris11'	=> {
-		'build' => {
-			# we can use ssh_to_job on solaris if we use the proper kerberose
-			# this is OK since we build kerberose only for batlab.
-			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_CURL:BOOL' => 'OFF',
-								  #'-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [],
-			'xtests'	=> undef,
-		},  
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-	'x86_64_sol_5.11'	=> 'x86_64_Solaris11',
 
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86_64

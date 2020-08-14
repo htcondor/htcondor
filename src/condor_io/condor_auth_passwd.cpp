@@ -116,11 +116,13 @@ bool checkToken(const std::string &line,
 		}
 		const std::string &tmp_key_id = decoded_jwt.get_key_id();
 		if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it was signed with key %s (not known to the server).\n", tmp_key_id.c_str());
 			return false;
 		}
 		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
 		const std::string &tmp_issuer = decoded_jwt.get_issuer();
 		if (!issuer.empty() && issuer != tmp_issuer) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it is from trust domain %s (server trust domain is %s).\n", tmp_issuer.c_str(), issuer.c_str());
 			return false;
 		}
 		if (!decoded_jwt.has_subject()) {
@@ -147,7 +149,7 @@ bool findToken(const std::string &tokenfilename,
 	std::string &token,
 	std::string &signature)
 {
-	dprintf(D_SECURITY, "TOKEN: Will use tokens found in %s.\n", tokenfilename.c_str());
+	dprintf(D_SECURITY, "IDTOKENS: Examining %s for valid tokens from issuer %s.\n", tokenfilename.c_str(), issuer.c_str());
 
 	std::unique_ptr<FILE,decltype(&fclose)> 
 		f(safe_fopen_no_create( tokenfilename.c_str(), "r" ), fclose);
@@ -190,6 +192,11 @@ findTokens(const std::string &issuer,
 		return true;
 	}
 
+	auto subsys = get_mySubSystem();
+
+		// If we are supposed to retrieve a token on behalf of a user, then
+		// owner will be set and we will use PRIV_USER.  In all other cases,
+		// if we are a daemon we should read the token as PRIV_CONDOR.
 	TemporaryPrivSentry tps( !owner.empty() );
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
@@ -197,6 +204,8 @@ findTokens(const std::string &issuer,
 			return false;
 		}
 		set_user_priv();
+	} else if (subsys->isDaemon()) {
+		set_priv(PRIV_CONDOR);
 	}
 
 	// Note we reuse the exclude regexp from the configuration subsys.
@@ -248,7 +257,7 @@ findTokens(const std::string &issuer,
 	const char *file;
 	std::vector<std::string> tokens;
 	std::string subsys_token_file;
-	std::string subsys_agt_name = get_mySubSystemName();
+	std::string subsys_agt_name = subsys->getName();
 	subsys_agt_name += "_auto_generated_token";
 
 	while ( (file = dir.Next()) ) {
@@ -385,6 +394,7 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_TOKEN),
     m_crypto(NULL),
+    m_crypto_state(NULL),
 	m_client_status(0),
 	m_server_status(0),
 	m_ret_value(0),
@@ -410,6 +420,7 @@ Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
 {
     if(m_crypto) delete(m_crypto);
+    if(m_crypto_state) delete(m_crypto_state);
     if (m_k) free(m_k);
     if (m_k_prime) free(m_k_prime);
 }
@@ -690,6 +701,8 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 		// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
 
 	if ( !key || !keylen ) {
 		// cannot setup anything without a key
@@ -698,7 +711,16 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
 	KeyInfo thekey(key,keylen,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
+
 	return m_crypto ? true : false;
 }
 
@@ -736,16 +758,16 @@ Condor_Auth_Passwd::encrypt_or_decrypt(bool want_encrypt,
 	}
 	
 		// make certain we got a crypto object
-	if (!m_crypto) {
+	if (!m_crypto || !m_crypto_state) {
 		return false;
 	}
 
 		// do the work
-	m_crypto->resetState();
+	m_crypto_state->reset();
 	if (want_encrypt) {
-		result = m_crypto->encrypt(input,input_len,output,output_len);
+		result = m_crypto->encrypt(m_crypto_state, input,input_len,output,output_len);
 	} else {
-		result = m_crypto->decrypt(input,input_len,output,output_len);
+		result = m_crypto->decrypt(m_crypto_state, input,input_len,output,output_len);
 	}
 	
 		// mark output_len as zero upon failure
@@ -773,7 +795,7 @@ Condor_Auth_Passwd::wrap(const char *   input,
 	bool result;
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::wrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -791,7 +813,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::unwrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::unwrap.\n");
 	result = decrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -2727,7 +2749,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 
 int Condor_Auth_Passwd :: isValid() const
 {
-	if ( m_crypto ) {
+	if ( m_crypto && m_crypto_state) {
 		return TRUE;
 	} else {
 		return FALSE;
@@ -2755,6 +2777,9 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
 
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
+
 		// Calculate W based on K'
 	if (m_version == 1) {
 		hmac( t_buf->rb, AUTH_PW_KEY_LEN,
@@ -2774,7 +2799,15 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
 	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
 
 	if ( key ) free(key);	// KeyInfo makes a copy of the key
 

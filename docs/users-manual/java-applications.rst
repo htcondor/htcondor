@@ -274,22 +274,6 @@ Less Simple Java Specifications
 
         requirements = (JavaVersion=="3.2")
 
- Benchmark speeds.
-    Each machine with Java capability in an HTCondor pool will execute a
-    benchmark to determine its speed. The benchmark is taken when
-    HTCondor is started on the machine, and it uses the SciMark2
-    (`http://math.nist.gov/scimark2 <http://math.nist.gov/scimark2>`_)
-    benchmark. The result of the benchmark is held as an attribute
-    within the machine ClassAd. The attribute is called ``JavaMFlops``.
-    Jobs that are run under the Java universe (as all other HTCondor
-    jobs) may prefer or require a machine of a specific speed by setting
-    ``rank`` or ``requirements`` in the submit description file. As an
-    example, to execute only on machines of a minimum speed:
-
-    .. code-block:: condor-submit
-
-        requirements = (JavaMFlops>4.5)
-
  JVM options.
     Options to the JVM itself are specified in the submit description
     file:

@@ -3871,8 +3871,6 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
 			// Initialize the rest of the Resource
 		new_rip->initial_compute(rip);
-		//TJ:2020 - initial_compute already does this, so commenting it out
-		//new_rip->compute( A_TIMEOUT | A_UPDATE, 0 ); // Compute disk space
 		new_rip->init_classad();
 		new_rip->refresh_classad_evaluated(); 
 		new_rip->refresh_classad_slot_attrs(); 
