@@ -27,7 +27,9 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+-  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
+  would make every job go on hold.
+  :ticket:`7797`
 
 Version 8.9.8
 -------------
