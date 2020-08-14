@@ -364,6 +364,8 @@
 #define ATTR_JOB_LOCAL_CPU  "LocalCpu"
 #define ATTR_JOB_MANAGED  "Managed"
 #define ATTR_JOB_MANAGED_MANAGER  "ManagedManager"
+#define ATTR_JOB_MANIFEST_DESIRED "ManifestDesired"
+#define ATTR_JOB_MANIFEST_DIR "ManifestDir"
 #define ATTR_JOB_MATCHED  "Matched"
 #define ATTR_JOB_NONESSENTIAL  "Nonessential"
 #define ATTR_JOB_NOOP  "IsNoopJob"
