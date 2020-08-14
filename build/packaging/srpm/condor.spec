@@ -1130,7 +1130,7 @@ mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot
 %endif
 
 # For non-EL7, remove oauth credmon from the buildroot
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if 0%{?rhel} > 7 || 0%{?fedora}
 rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
 rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
 rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
