@@ -1292,7 +1292,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	if (user_is_the_new_owner) {
 		pAd.Assign(ATTR_NAME, Owner.Name());
 	} else {
-		formatstr(str, "%s@%s", Owner.Name(), UidDomain);
+		formatstr(str, "%s@%s", Owner.Name(), AccountingDomain.c_str());
 		pAd.Assign(ATTR_NAME, str);
 	}
 
@@ -1726,7 +1726,7 @@ Scheduler::count_jobs()
 		} else {
 			// Note the submitter; the negotiator uses user@uid_domain when
 			// referring the submitter when it requests to negotiate.
-			SubmitterMap.AddSubmitter("", SubDat.name + "@" + UidDomain, time_now);
+			SubmitterMap.AddSubmitter("", SubDat.name + "@" + AccountingDomain, time_now);
 		}
 		// Update non-flock collectors
 		num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
@@ -1782,7 +1782,7 @@ Scheduler::count_jobs()
 				if (user_is_the_new_owner) {
 					SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name, time_now);
 				} else {
-					SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name + "@" + UidDomain, time_now);
+					SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name + "@" + AccountingDomain, time_now);
 				}
 
 				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
@@ -1887,7 +1887,7 @@ Scheduler::count_jobs()
 		if (user_is_the_new_owner) {
 			submitter_name = SubDat.Name();
 		} else {
-			formatstr(submitter_name, "%s@%s", SubDat.Name(), UidDomain);
+			formatstr(submitter_name, "%s@%s", SubDat.Name(), AccountingDomain.c_str());
 		}
 		int old_flock_level = SubDat.OldFlockLevel;
 
@@ -3387,6 +3387,12 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	if ( ! job->LookupString(attr_JobUser,real_owner) ) {
 		return NULL;
 	}
+	if (strcmp(UidDomain, AccountingDomain.c_str())) {
+		auto last_at = real_owner.find_last_of('@');
+		if (last_at != std::string::npos) {
+			real_owner = real_owner.substr(0, last_at) + "@" + AccountingDomain;
+		}
+	}
 	const char *owner = real_owner.c_str();
 	if ( ! job->ownerinfo) {
 		job->ownerinfo = scheduler.insert_ownerinfo(owner);
@@ -3400,7 +3406,7 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	std::string alias;
 	job->LookupString(ATTR_ACCOUNTING_GROUP,alias); // TODDCORE
 	if ( ! alias.empty() && (alias != real_owner)) {
-		if (user_is_the_new_owner) { alias += std::string("@") + UidDomain; }
+		if (user_is_the_new_owner) { alias += std::string("@") + AccountingDomain; }
 		submitter = alias.c_str();
 	}
 
@@ -8049,7 +8055,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		}
 	} else if (user_is_the_new_owner) {
 		// if using fully qualified usernames, we have to append the domain to accounting groups
-		user += std::string("@") + UidDomain;
+		user += std::string("@") + AccountingDomain;
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_CLAIM_ID, &claim_id) < 0 ) {
 			//
@@ -12888,6 +12894,7 @@ Scheduler::Init()
 			// we're done with the old version, so don't leak memory 
 		free( oldUidDomain );
 	}
+	param(AccountingDomain, "ACCOUNTING_DOMAIN");
 
 		////////////////////////////////////////////////////////////////////
 		// Grab all the optional parameters from the config file.
@@ -14205,7 +14212,7 @@ Scheduler::invalidate_ads()
 		if (user_is_the_new_owner) {
 			// owner names are already fully qualified
 		} else {
-			submitter += "@"; submitter += UidDomain;
+			submitter += "@"; submitter += AccountingDomain;
 		}
 		cad->Assign( ATTR_NAME, submitter );
 
@@ -15064,6 +15071,7 @@ Scheduler::publish( ClassAd *cad ) {
 	}
 	cad->Assign( "AccountantName", AccountantName );
 	cad->Assign( "UidDomain", UidDomain );
+	cad->Assign( "AccountingDomain", AccountingDomain );
 	cad->Assign( "MaxFlockLevel", MaxFlockLevel );
 	cad->Assign( "FlockLevel", FlockLevel );
 	cad->Assign( "MaxExceptions", MaxExceptions );
