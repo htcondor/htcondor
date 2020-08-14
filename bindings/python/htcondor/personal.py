@@ -88,6 +88,9 @@ INHERIT = {
     "AUTH_SSL_SERVER_KEYFILE",
 }
 
+INHERITED_PARAMS = {k: v for k, v in htcondor.param.items() if k in INHERIT}
+
+
 
 def _skip_if(*states):
     """Should only be applied to PersonalPool methods that return self."""
@@ -357,10 +360,7 @@ class PersonalPool:
         param_lines = []
 
         param_lines += ["#", "# INHERITED", "#"]
-        for k, v in htcondor.param.items():
-            if k not in INHERIT:
-                continue
-            param_lines += ["{} = {}".format(k, v)]
+        param_lines += ["{} = {}".format(k, v) for k, v in INHERITED_PARAMS.items()]
 
         param_lines += ["#", "# ROLES", "#"]
         param_lines += ["use ROLE: {}".format(role) for role in ROLES]
