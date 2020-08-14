@@ -30,9 +30,6 @@
 %define debug 1
 %endif
 
-# define these to 1 if you want to include externals in source rpm
-%define bundle_uw_externals 0
-
 # Things not turned on, or don't have Fedora packages yet
 %define qmf 0
 
@@ -166,25 +163,6 @@ Source90: find-requires.sh
 %if %uw_build
 %define __find_requires %{SOURCE90}
 %define _use_internal_dependency_generator 0
-%endif
-
-%if %bundle_uw_externals
-Source101: blahp-1.16.5.1.tar.gz
-Source102: boost_1_49_0.tar.gz
-Source103: c-ares-1.3.0.tar.gz
-Source105: drmaa-1.6.1.tar.gz
-Source106: glite-ce-cream-client-api-c-1.14.0-4.sl6.tar.gz
-Source107: glite-ce-wsdl-1.14.0-4.sl6.tar.gz
-Source108: glite-lbjp-common-gsoap-plugin-3.1.2-2.src.tar.gz
-Source109: glite-lbjp-common-gss-3.1.3-2.src.tar.gz
-Source110: gridsite-1.6.0.src.tar.gz
-Source111: gsoap-2.7.10.tar.gz
-Source112: gsoap_2.7.16.zip
-Source113: gt5.2.5-all-source-installer.tar.gz
-Source114: libcgroup-0.37.tar.bz2
-Source116: log4cpp-1.0-3.tar.gz
-Source117: unicoregahp-1.2.0.tar.gz
-Source118: voms-2.0.6.tar.gz
 %endif
 
 Patch2: el7-python2.patch
@@ -850,9 +828,6 @@ cmake \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DUW_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-%if %bundle_uw_externals
-       -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
-%endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=FALSE \
        -DHAVE_BACKFILL:BOOL=FALSE \
@@ -896,9 +871,6 @@ cmake \
 %else
 
 %cmake -DBUILD_TESTING:BOOL=FALSE \
-%if %bundle_uw_externals
-       -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
-%endif
 %if 0%{?fedora}
        -DBUILDID:STRING=RH-%{version}-%{release} \
        -D_VERBOSE:BOOL=TRUE \
