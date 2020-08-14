@@ -426,6 +426,8 @@ JICShadow::transferOutput( bool &transient_failure )
 		return true;
 	}
 
+    recordSandboxContents( "_condor_manifest_out" );
+
 	bool spool_on_evict = true, tmp_value;
 	if (job_ad->EvaluateAttrBool("SpoolOnEvict", tmp_value))
 	{
@@ -2572,6 +2574,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// Now that we're done, let our parent class do its thing.
 	JobInfoCommunicator::setupJobEnvironment();
 
+    recordSandboxContents( "_condor_manifest_in" );
 	return TRUE;
 }
 
@@ -3259,3 +3262,33 @@ void
 JICShadow::setJobFailed( void ) {
 	job_failed = true;
 }
+
+void
+JICShadow::recordSandboxContents( const char * filename ) {
+	ASSERT(filename != NULL);
+
+	// Assumes we're in the root of the sandbox.
+	FILE * file = fopen( filename, "w" );
+	if( file == NULL ) {
+		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open log: %d (%s)\n",
+			filename, errno, strerror(errno) );
+		return;
+	}
+
+	// Assumes we're in the root of the sandbox.
+	DIR * dir = opendir(".");
+	if( dir == NULL ) {
+		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open sandbox directory: %d (%s)\n",
+			filename, errno, strerror(errno) );
+		return;
+	}
+
+	struct dirent * e;
+	while( (e = readdir(dir)) != NULL ) {
+		if( strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0 ) { continue; }
+		fprintf( file, "%s\n", e->d_name );
+	}
+	closedir(dir);
+	fclose(file);
+}
+
