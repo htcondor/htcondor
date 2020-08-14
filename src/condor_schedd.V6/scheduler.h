@@ -35,6 +35,9 @@
 #include <unordered_map>
 #include <queue>
 
+// switch to using User (fully qualified) over Owner as the main job identity
+#define USER_IS_THE_NEW_OWNER 1
+
 #include "dc_collector.h"
 #include "daemon.h"
 #include "daemon_list.h"

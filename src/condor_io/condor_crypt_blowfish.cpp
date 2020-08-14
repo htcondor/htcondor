@@ -20,82 +20,43 @@
 
 #include "condor_common.h"
 #include "condor_crypt_blowfish.h"
-//#include <string.h>
-//#include <malloc.h>
+#include "condor_debug.h"
 
-#ifdef HAVE_EXT_OPENSSL
-
-Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
-#if !defined(SKIP_AUTHENTICATION)
-    : Condor_Crypt_Base(CONDOR_BLOWFISH, key)
-{
-    // initialize 
-    resetState();
-
-    // Generate the key
-    KeyInfo k(key);
-    BF_set_key(&key_, k.getKeyLength(), k.getKeyData());
-}
-#else
-{
-    resetState();
-}
-#endif
-
-Condor_Crypt_Blowfish :: ~Condor_Crypt_Blowfish()
-{
-}
-
-void Condor_Crypt_Blowfish:: resetState()
-{
-     memset(ivec_, 0, 8);
-     num_=0;
-}
-
-bool Condor_Crypt_Blowfish :: encrypt(const unsigned char *  input,
+bool Condor_Crypt_Blowfish :: encrypt(Condor_Crypto_State *cs,
+                                      const unsigned char *  input,
                                       int              input_len, 
                                       unsigned char *& output, 
                                       int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(output_len);
 
     if (output) {
-        // Now, encrypt
-        BF_cfb64_encrypt(input, output, output_len, &key_, ivec_, &num_, BF_ENCRYPT);
+        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->m_method_key_data, cs->m_ivec, &cs->m_num, BF_ENCRYPT);
         return true;
     }
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
-bool Condor_Crypt_Blowfish :: decrypt(const unsigned char *  input,
+bool Condor_Crypt_Blowfish :: decrypt(Condor_Crypto_State *cs,
+                                      const unsigned char *  input,
                                       int              input_len, 
                                       unsigned char *& output, 
                                       int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(output_len);
 
     if (output) {
-        // Now, encrypt
-        BF_cfb64_encrypt(input, output, output_len, &key_, ivec_, &num_, BF_DECRYPT);
+        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->m_method_key_data, cs->m_ivec, &cs->m_num, BF_DECRYPT);
         return true;
     }
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
-#endif /*HAVE_EXT_OPENSSL*/

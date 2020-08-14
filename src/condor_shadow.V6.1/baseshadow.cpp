@@ -935,10 +935,12 @@ void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 {
 	struct rusage run_remote_rusage;
+	struct rusage total_remote_rusage;
 	JobTerminatedEvent event;
 	std::string corefile;
 
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+	memset( &total_remote_rusage, 0, sizeof(struct rusage) );
 
 	switch( exitReason ) {
 	case JOB_EXITED:
@@ -977,10 +979,16 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
 			run_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		}
-
 		event.run_remote_rusage = run_remote_rusage;
-		event.total_remote_rusage = run_remote_rusage;
 
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+		event.total_remote_rusage = total_remote_rusage;
 		/*
 		  Both the job ad and the terminated event record bytes
 		  transferred from the perspective of the job, not the shadow.
@@ -1010,6 +1018,17 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
+		/* grab usage information out of job ad */
+		double real_value;
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+
 
 	if( exitedBySignal() ) {
 		event.normal = false;
@@ -1023,8 +1042,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		// event.run_local_rusage = r;
 	event.run_remote_rusage = run_remote_rusage;
 		// event.total_local_rusage = r;
-	event.total_remote_rusage = run_remote_rusage;
-	
+	event.total_remote_rusage = total_remote_rusage;
+
 		/*
 		  we want to log the events from the perspective of the user
 		  job, so if the shadow *sent* the bytes, then that means the
@@ -1035,7 +1054,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	event.total_recvd_bytes = prev_run_bytes_recvd + bytesSent();
 	event.total_sent_bytes = prev_run_bytes_sent + bytesReceived();
-	
+
 	if( exitReason == JOB_COREDUMPED ) {
 		event.setCoreFile( core_file_name );
 	}

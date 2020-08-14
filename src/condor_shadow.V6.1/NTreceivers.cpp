@@ -33,10 +33,6 @@
 #include "directory_util.h"
 
 
-#if defined(Solaris)
-#include <sys/statvfs.h>
-#endif
-
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
@@ -74,23 +70,14 @@ static int stat_string( char *line, struct stat *info )
 	);
 }
 
-#if defined(Solaris)
-static int statfs_string( char *line, struct statvfs *info )
-#else
 static int statfs_string( char *line, struct statfs *info )
-#endif
 {
 #ifdef WIN32
 	return 0;
 #else
 	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld\n",
-#  if defined(Solaris)
-		(long long) info->f_fsid,
-		(long long) info->f_frsize,
-#  else
 		(long long) info->f_type,
 		(long long) info->f_bsize,
-#  endif
 		(long long) info->f_blocks,
 		(long long) info->f_bfree,
 		(long long) info->f_bavail,
@@ -1568,13 +1555,8 @@ case CONDOR_getdir:
 		ASSERT( result );
 
 		errno = 0;
-#if defined(Solaris)
-		struct statvfs statfs_buf;
-		rval = fstatvfs(fd, &statfs_buf);
-#else
 		struct statfs statfs_buf;
 		rval = fstatfs(fd, &statfs_buf);
-#endif
 		terrno = (condor_errno_t)errno;
 		char line[1024];
 		memset( line, 0, sizeof(line) );
@@ -1833,13 +1815,8 @@ case CONDOR_getdir:
 		ASSERT( result );
 		
 		errno = 0;
-#if defined(Solaris)
-		struct statvfs statfs_buf;
-		rval = statvfs(path, &statfs_buf);
-#else
 		struct statfs statfs_buf;
 		rval = statfs(path, &statfs_buf);
-#endif
 		terrno = (condor_errno_t)errno;
 		char line[1024];
 		memset( line, 0, sizeof(line) );

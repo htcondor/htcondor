@@ -1098,6 +1098,26 @@ void ClassAdWrapper::InsertAttrObject( const std::string &attr, boost::python::o
     return;
 }
 
+bool ClassAdWrapper::__eq__( boost::python::object other ) const
+{
+    boost::python::extract<ClassAdWrapper &> e(other);
+    if( e.check() ) {
+        return (*(ClassAd *)this) == (ClassAd)(e());
+    } else {
+        return false;
+    }
+}
+
+bool ClassAdWrapper::__ne__( boost::python::object other ) const
+{
+    boost::python::extract<ClassAdWrapper &> e(other);
+    if( e.check() ) {
+        return !((*(ClassAd *)this) == (ClassAd)(e()));
+    } else {
+        return true;
+    }
+}
+
 std::string ClassAdWrapper::toRepr() const
 {
     classad::ClassAdUnParser up;

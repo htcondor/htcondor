@@ -58,6 +58,6 @@
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +
-+JAVA_CLASSPATH_DEFAULT = $(SHARE) $(SHARE)/scimark2lib.jar .
++JAVA_CLASSPATH_DEFAULT = $(SHARE) .
 +
 +##  Install the minicondor package to run HTCondor on a single node

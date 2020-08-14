@@ -822,7 +822,7 @@ bool doJobRunAnalysis (
 
 	// setup submitter info
 	if (prio) {
-		if ( ! request->LookupInteger(ATTR_NICE_USER, prio->niceUser)) { prio->niceUser = 0; }
+		if ( ! request->LookupInteger(ATTR_NICE_USER_deprecated, prio->niceUser)) { prio->niceUser = 0; }
 		prio->ixSubmittor = findSubmittor(fixSubmittorName(user.c_str(), prio->niceUser));
 		if (prio->ixSubmittor >= 0) {
 			request->Assign(ATTR_SUBMITTOR_PRIO, prioTable[prio->ixSubmittor].prio);

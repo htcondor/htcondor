@@ -22,9 +22,6 @@
 
 /* Generate a coredump. */
 
-#if defined( Solaris27 ) || defined( Solaris26 )
-#define __EXTENSIONS__
-#endif
 #if defined( LINUX )
 #define _XOPEN_SOURCE
 #endif

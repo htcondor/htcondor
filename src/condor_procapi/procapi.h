@@ -169,9 +169,6 @@ typedef long birthday_t;
     WITH THE EXCEPTION OF MAJ/MIN FAULTS:
     <ul>
      <li> Linux returns a reasonable-looking number.
-     <li> Solaris 2.5.1 and 2.6 *Sometimes* returns small number of major 
-        faults, and I've only seen a 0 for minor faults.  The documentation
-        claims that they are inexact values, anyway.
     </ul>
     
     In the case of a 'family' of pids ( given a pid, return info on that

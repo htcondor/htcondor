@@ -52,14 +52,6 @@ Machine ClassAd Attributes
     ``"IA64"``
         Intel Itanium
 
-    ``"SUN4u"``
-        Sun UltraSparc CPU
-
-    ``"SUN4x"``
-        A Sun Sparc CPU other than an UltraSparc, i.e. sun4m or sun4c
-        CPU found in older Sparc workstations such as the Sparc 10,
-        Sparc 20, IPC, IPX, etc.
-
     ``"PPC"``
         32-bit PowerPC
 
@@ -617,18 +609,6 @@ Machine ClassAd Attributes
         for FreeBSD 8
      ``"WINDOWS"``
         for all versions of Windows
-     ``"SOLARIS5.10"``
-        for Solaris 2.10 or 5.10
-     ``"SOLARIS5.11"``
-        for Solaris 2.11 or 5.11
-
-    These strings show definitions for operating systems no longer
-    supported:
-
-     ``"SOLARIS28"``
-        for Solaris 2.8 or 5.8
-     ``"SOLARIS29"``
-        for Solaris 2.9 or 5.9
 
     :index:`OpSysAndVer<single: OpSysAndVer; ClassAd machine attribute>`
 
@@ -688,14 +668,6 @@ Machine ClassAd Attributes
      ``"FREEBSD8"``
         for FreeBSD version 8
 
-    For Solaris Unix operating systems, it is the same value as the
-    ``OpSys`` attribute:
-
-     ``"SOLARIS5.10"``
-        for Solaris 2.10 or 5.10
-     ``"SOLARIS5.11"``
-        for Solaris 2.11 or 5.11
-
     For Windows operating systems, it is the value of the ``OpSys``
     attribute concatenated with the string version of the
     ``OpSysMajorVer`` attribute:
@@ -728,10 +700,6 @@ Machine ClassAd Attributes
         for FreeBSD version 7
      ``"FREEBSD8"``
         for FreeBSD version 8
-     ``"SOLARIS5.10"``
-        for Solaris 2.10 or 5.10
-     ``"SOLARIS5.11"``
-        for Solaris 2.11 or 5.11
      ``"WINDOWS"``
         for all versions of Windows
 
@@ -762,10 +730,6 @@ Machine ClassAd Attributes
         for MacOS version 10.7.3 (Lion)
      ``"FreeBSD8.2-RELEASE-p3"``
         for FreeBSD version 8
-     ``"SOLARIS5.10"``
-        for Solaris 2.10 or 5.10
-     ``"SOLARIS5.11"``
-        for Solaris 2.11 or 5.11
      ``"Windows XP SP3"``
         for Windows XP
      ``"Windows 7 SP2"``
@@ -801,8 +765,6 @@ Machine ClassAd Attributes
         for FreeBSD version 7
      ``8``
         for FreeBSD version 8
-     ``5``
-        for Solaris 2.10, 5.10, 2.11, or 5.11
      ``501``
         for Windows XP
      ``600``
@@ -829,10 +791,6 @@ Machine ClassAd Attributes
         for MacOS version 10.7.3 (Lion)
      ``"FREEBSD"``
         for FreeBSD version 7 or 8
-     ``"SOLARIS5.10"``
-        for Solaris 2.10 or 5.10
-     ``"SOLARIS5.11"``
-        for Solaris 2.11 or 5.11
      ``"WindowsXP"``
         for Windows XP
      ``"WindowsVista"``
@@ -864,10 +822,6 @@ Machine ClassAd Attributes
         10.7.3 (Lion)
      ``"FreeBSD"``
         for FreeBSD version 7 or 8
-     ``"SOLARIS5.10"``
-        for Solaris 2.10 or 5.10
-     ``"SOLARIS5.11"``
-        for Solaris 2.11 or 5.11
      ``"XP"``
         for Windows XP
      ``"Vista"``

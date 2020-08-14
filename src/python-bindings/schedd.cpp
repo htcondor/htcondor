@@ -30,6 +30,7 @@
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "module_lock.h"
+#include "daemon_location.h"
 #include "query_iterator.h"
 #include "submit_utils.h"
 #include "condor_arglist.h"
@@ -1297,8 +1298,7 @@ struct Schedd {
 
     friend struct ConnectionSentry;
 
-    Schedd()
-     : m_connection(NULL)
+    void use_local_schedd()
     {
         Daemon schedd( DT_SCHEDD, 0, 0 );
 
@@ -1323,21 +1323,33 @@ struct Schedd {
         }
     }
 
-    Schedd(const ClassAdWrapper &ad)
+
+    Schedd()
+     : m_connection(NULL)
+    {
+        use_local_schedd();
+    }
+
+
+    Schedd(boost::python::object loc)
       : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
     {
-        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
-        {
-            PyErr_SetString(PyExc_ValueError, "Schedd address not specified.");
-            throw_error_already_set();
-        }
-        ad.EvaluateAttrString(ATTR_NAME, m_name);
-        ad.EvaluateAttrString(ATTR_VERSION, m_version);
+		int rv = construct_for_location(loc, DT_SCHEDD, m_addr, m_version, &m_name);
+		if (rv == 0) {
+			use_local_schedd();
+		} else if (rv < 0) {
+			if (rv == -2) { boost::python::throw_error_already_set(); }
+			THROW_EX(RuntimeError, "Unknown type");
+		}
     }
 
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+    }
+
+    boost::python::object location() const {
+        return make_daemon_location(DT_SCHEDD, m_addr, m_version);
     }
 
     boost::shared_ptr<ScheddNegotiate> negotiate(const std::string &owner, boost::python::object ad_obj)
@@ -3589,15 +3601,21 @@ void export_schedd()
             R"C0ND0R(
             Client object for a *condor_schedd*.
             )C0ND0R",
-        init<const ClassAdWrapper &>(
+        init<boost::python::object>(
             boost::python::args("self", "location_ad"),
             R"C0ND0R(
             :param location_ad: An Ad describing the location of the remote *condor_schedd*
-                daemon, as returned by the :meth:`Collector.locate` method. If the parameter is omitted,
+                daemon, as returned by the :meth:`Collector.locate` method, or a tuple
+                of type DaemonLocation as returned by :meth:`Schedd.location`. If the parameter is omitted,
                 the local *condor_schedd* daemon is used.
-            :type location_ad: :class:`~classad.ClassAd`
+            :type location_ad: :class:`~classad.ClassAd` or :class:`DaemonLocation`
             )C0ND0R"))
         .def(boost::python::init<>(boost::python::args("self")))
+        .add_property("location", &Schedd::location,
+            R"C0ND0R(
+            The schedd to query.
+            :rtype: location :class:`DaemonLocation`
+            )C0ND0R")
         .def("query", &Schedd::query, query_overloads(
             R"C0ND0R(
             Query the *condor_schedd* daemon for job ads.
@@ -3811,7 +3829,7 @@ void export_schedd()
             Retrieve the output sandbox from one or more jobs.
 
             :param job_spec: An expression matching the list of job output sandboxes to retrieve.
-            :type job_spec: list[:class:`~classad.ClassAd`]
+            :type job_spec: str or list[:class:`~classad.ClassAd`]
             )C0ND0R")
         .def("edit", &Schedd::edit,
             R"C0ND0R(
@@ -4118,9 +4136,11 @@ void export_schedd()
             submitted via the normal Python bindings submit machinery.
 
             :param str filename: The path to the DAG description file.
-            :param dict options: Additional arguments to *condor_submit_dag*,
-                such as ``maxidle`` or ``maxpost``, as a dictionary of
-                key-value pairs, like ``{'maxidle': 10}``.
+            :param dict options: Additional arguments to *condor_submit_dag*.
+                Currently supports ``maxidle`` *(int)*, ``maxjobs`` *(int)*,
+                ``maxpre`` *(int)*, ``maxpost`` *(int)*, ``autorescue`` *(int)*
+                where 0 = False, 1 = True, ``dorescuefrom`` *(int)*,
+                ``force`` *(int)* where 0 = False, 1 = True.
             :return: A :class:`Submit` description for the DAG described in ``filename``
             :rtype: :class:`Submit`
             )C0ND0R",

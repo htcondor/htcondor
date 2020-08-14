@@ -25,17 +25,13 @@ def replace_queue_statement_in_file(file_name, new):
                 file.write(line)
 
 
-#
-# Read submit_file and write dag_submit_file, which is identical except
-# with $(Process) and $(ProcID) case-insensitively replaced with $(job_index).
-#
-def convert_process_variables(submit_file_name, dag_submit_file_name):
+def copy(submit_file_name, dag_submit_file_name):
     with open(submit_file_name) as submit_file:
         lines = submit_file.readlines()
 
     with open(dag_submit_file_name, "w") as dag_submit_file:
         for line in lines:
-            dag_submit_file.write(re.sub("(\$\(Process\)|\$\(ProcId\))", "$(job_index)", line, re.I))
+            dag_submit_file.write(line)
 
 
 #
@@ -62,6 +58,7 @@ def convert_queue_from_file(queue_statement, submit_file_name):
         var_names = vars_string.split(',')
 
     item_data = []
+    item_indices = None
     if item_data_file_name is not None:
         with open(item_data_file_name) as item_data_file:
             item_data_lines = item_data_file.readlines()
@@ -82,25 +79,38 @@ def convert_queue_from_file(queue_statement, submit_file_name):
                 stop = int(stop)
             if step is not None:
                 step = int(step)
-            slice = itertools.islice(item_data, start, stop, step)
-            item_data = [i for i in slice]
+            slice = itertools.islice(range(len(item_data_lines)), start, stop, step)
+            item_indices = [i for i in slice]
+        else:
+            item_indices = range(0, len(item_data_lines))
     else:
         item_data = ["one-single-job"]
+        item_indices = [0]
 
     dag_file_name = "generated.dag"
     with open(dag_file_name, "w") as dag_file:
         job_index = 0
-        for item in item_data:
+        for item_index in item_indices:
+            item = item_data[item_index]
             for i in range(count):
                 dag_file.write(' JOB {} {}\n'.format(job_index, dag_submit_file_name))
-                dag_file.write('VARS {} {}="{}"\n'.format(job_index, "job_index", job_index))
+
+                # This next line doesn't work in any version of HTCondor yet.
+                dag_file.write('VARS {} {}="{}"\n'.format(job_index, "Process", job_index))
+                dag_file.write('VARS {} {}="{}"\n'.format(job_index, "ProcID", job_index))
+
+                dag_file.write('VARS {} {}="{}"\n'.format(job_index, "Step", i))
+
+                dag_file.write('VARS {} {}="{}"\n'.format(job_index, "ItemIndex", item_index))
+                dag_file.write('VARS {} {}="{}"\n'.format(job_index, "Row", item_index))
+
                 if var_names is not None:
                     for var in var_names:
                         dag_file.write('VARS {} {}="{}"\n'.format(job_index, var, item[var]))
                 dag_file.write('\n')
                 job_index += 1
 
-    convert_process_variables(submit_file_name, dag_submit_file_name)
+    copy(submit_file_name, dag_submit_file_name)
     replace_queue_statement_in_file(dag_submit_file_name, "queue 1")
 
 

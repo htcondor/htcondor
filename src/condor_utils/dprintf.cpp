@@ -390,9 +390,14 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
+				struct tm * then = info.tm;
 				int micros = info.tv.tv_usec + 500;
-				if( micros >= 1000000 ) { micros = 0; info.tm += 1; }
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), micros / 1000 );
+				if( micros >= 1000000 ) {
+					micros = 0;
+					time_t seconds = clock_now + 1;
+					then = localtime(& seconds);
+				}
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(then), micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));
@@ -1297,8 +1302,6 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 
 	#ifdef WIN32
 		length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);
-	#elif Solaris
-		length = llseek(fileno(debug_file_ptr), 0, SEEK_END);
 	#elif Linux
 		length = lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 	#else
@@ -1631,9 +1634,7 @@ _condor_fd_panic( int line, const char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-#if Solaris
-	llseek(fileno(debug_file_ptr), 0, SEEK_END);
-#elif Linux
+#if Linux
 	lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 #else
 	lseek(fileno(debug_file_ptr), 0, SEEK_END);
