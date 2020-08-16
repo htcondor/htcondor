@@ -256,8 +256,6 @@ condor_threads.h
 condor_timeslice.cpp
 condor_timeslice.h
 condor_universe.cpp
-condor_unsetenv.cpp
-condor_unsetenv.h
 condor_url.cpp
 condor_url.h
 condor_user_policy.cpp
