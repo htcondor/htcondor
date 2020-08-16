@@ -497,7 +497,6 @@ if(NOT WINDOWS)
 		ClassAdLogPluginManager.unix.cpp
 		detach.unix.cpp
 		fdpass.unix.cpp
-		flock.unix.cpp
 		getdtablesize.unix.cpp
 		getmnt.unix.cpp
 		limit.unix.cpp

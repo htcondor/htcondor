@@ -686,7 +686,6 @@ set(SIZEOF_VOIDPTR "${VOIDPTR}")
 ##################################################
 ##################################################
 # Now checking *nix OS based options
-set(HAS_FLOCK ON)
 set(DOES_SAVE_SIGSTATE OFF)
 
 if(${OS_NAME} STREQUAL "LINUX")
