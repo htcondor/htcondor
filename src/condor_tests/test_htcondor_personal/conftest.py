@@ -18,6 +18,8 @@ import pytest
 
 from pathlib import Path
 
+from htcondor.personal import PersonalPool
+
 
 @pytest.fixture(scope="function")
 def local_dir(tmp_path):
@@ -25,3 +27,15 @@ def local_dir(tmp_path):
     d.mkdir()
 
     return d
+
+
+@pytest.fixture(scope="function")
+def pool(local_dir):
+    with PersonalPool(local_dir=local_dir) as pool:
+        yield pool
+
+
+@pytest.fixture(scope="function")
+def another_pool(tmp_path):
+    with PersonalPool(local_dir=tmp_path / "another_local_dir") as pool:
+        yield pool

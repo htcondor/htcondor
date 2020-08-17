@@ -91,7 +91,6 @@ INHERIT = {
 INHERITED_PARAMS = {k: v for k, v in htcondor.param.items() if k in INHERIT}
 
 
-
 def _skip_if(*states):
     """Should only be applied to PersonalPool methods that return self."""
     states = set(states)
@@ -233,23 +232,27 @@ class PersonalPool:
         """
         return SetCondorConfig(self.config_file)
 
-    @contextlib.contextmanager
-    def schedd(self):
-        """
-        Returns a context manager that provides the
-        :class:`htcondor.Schedd` for the personal pool's schedd.
-        """
-        with self.use_config():
-            yield htcondor.Schedd()
-
-    @contextlib.contextmanager
+    @property
     def collector(self):
         """
-        Returns a context manager that provides the
-        :class:`htcondor.Collector` for the personal pool's collector.
+        The :class:`htcondor.Collector` for the personal pool's collector.
         """
         with self.use_config():
-            yield htcondor.Collector()
+            # This odd construction ensure that the Collector we return
+            # doesn't just point to "the local collector" - that could be
+            # overridden by changing CONDOR_CONFIG after the Collector
+            # was initialized. Locating first keeps it stable.
+            return htcondor.Collector(
+                htcondor.Collector().locate(htcondor.DaemonTypes.Collector)
+            )
+
+    @property
+    def schedd(self):
+        """
+        The :class:`htcondor.Schedd` for the personal pool's schedd.
+        """
+        with self.use_config():
+            return htcondor.Schedd()
 
     def __enter__(self):
         self.use_config().set()
@@ -352,7 +355,9 @@ class PersonalPool:
     def _write_config(self, overwrite: bool = True) -> None:
         if not overwrite and self.config_file.exists():
             raise FileExistsError(
-                "Found existing config file; refusing to write config because overwrite={}.".format(overwrite)
+                "Found existing config file; refusing to write config because overwrite={}.".format(
+                    overwrite
+                )
             )
 
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -410,7 +415,9 @@ class PersonalPool:
     def _start_condor(self):
         if self._is_ready():
             raise Exception(
-                "Cannot start a {t} in the same local_dir as an already-running {t}.".format(t=type(self).__name__)
+                "Cannot start a {t} in the same local_dir as an already-running {t}.".format(
+                    t=type(self).__name__
+                )
             )
 
         with SetCondorConfig(self.config_file):
