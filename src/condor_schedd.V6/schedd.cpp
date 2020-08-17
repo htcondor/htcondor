@@ -12953,6 +12953,7 @@ Scheduler::Init()
 	SchedDInterval.setMaxInterval( SchedDInterval.getDefaultInterval() );
 
 	SchedDInterval.setMinInterval( param_integer("SCHEDD_MIN_INTERVAL",5) );
+	SchedDInterval.setInitialInterval( 0 );
 
 	SchedDInterval.setTimeslice( param_double("SCHEDD_INTERVAL_TIMESLICE",0.05,0,1) );
 
