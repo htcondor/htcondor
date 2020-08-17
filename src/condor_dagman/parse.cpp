@@ -502,7 +502,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		}
 
 		// Handle a SCRIPT spec
-		// Example Syntax is:  SCRIPT (PRE|POST) [DEFER status time] JobName ScriptName Args ...
+		// Example Syntax is:  SCRIPT (PRE|POST|HOLD) [DEFER status time] JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
 			parsed_line_successfully = parse_script(endline, dag, 
 				filename, lineNumber);
@@ -939,7 +939,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFile,
 //
 // Function: parse_script
 // Purpose:  Parse a line of the format:
-//             SCRIPT [DEFER status time] (PRE|POST) JobName ScriptName Args ...
+//             SCRIPT [DEFER status time] (PRE|POST|HOLD) JobName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
 static bool 
@@ -949,15 +949,15 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT [DEFER status time] (PRE|POST) JobName Script Args ...";
+	const char * example = "SCRIPT [DEFER status time] (PRE|POST|HOLD) JobName Script Args ...";
 
 	//
 	// Second keyword is either PRE, POST or DEFER
 	//
-	char * prepost = strtok( NULL, DELIMITERS );
-	if ( !prepost ) {
+	char * type_name = strtok( NULL, DELIMITERS );
+	if ( !type_name ) {
 		debug_printf( DEBUG_QUIET,
-					"ERROR: %s (line %d): Missing PRE, POST, or DEFER\n",
+					"ERROR: %s (line %d): Missing PRE, POST, HOLD, or DEFER\n",
 					filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -965,7 +965,7 @@ parse_script(
 
 	int defer_status = SCRIPT_DEFER_STATUS_NONE;
 	int defer_time = 0;
-	if ( !strcasecmp( prepost, "DEFER" ) ) {
+	if ( !strcasecmp( type_name, "DEFER" ) ) {
 			// Our script has a defer statement.
 		char *token = strtok( NULL, DELIMITERS );
 		if ( token == NULL ) {
@@ -1002,26 +1002,28 @@ parse_script(
 			return false;
 		}
 
-			// The next token must be PRE or POST.
-		prepost = strtok( NULL, DELIMITERS );
-		if ( !prepost ) {
+			// The next token must be PRE, POST or HOLD.
+		type_name = strtok( NULL, DELIMITERS );
+		if ( !type_name ) {
 			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): Missing PRE or POST\n",
+						"ERROR: %s (line %d): Missing PRE, POST or HOLD\n",
 						filename, lineNumber );
 			exampleSyntax( example );
 			return false;
 		}
 	}
 
-	bool   post;
-	if ( !strcasecmp (prepost, "PRE" ) ) {
-		post = false;
-	} else if ( !strcasecmp (prepost, "POST") ) {
-		post = true;
+	ScriptType scriptType;
+	if ( !strcasecmp (type_name, "PRE" ) ) {
+		scriptType = ScriptType::PRE;
+	} else if ( !strcasecmp (type_name, "POST") ) {
+		scriptType = ScriptType::POST;
+	} else if ( !strcasecmp (type_name, "HOLD") ) {
+		scriptType = ScriptType::HOLD;
 	} else {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "After specifying \"SCRIPT\", you must "
-					  "indicate if you want \"PRE\" or \"POST\" "
+					  "indicate if you want \"PRE\", \"POST\", \"HOLD\" "
 					  "(or DEFER)\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
@@ -1066,7 +1068,7 @@ parse_script(
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
-					  filename, lineNumber, post ? "POST" : "PRE", 
+					  filename, lineNumber, type_name, 
 					  jobNameOrig );
 		exampleSyntax( example );
 		return false;
@@ -1087,7 +1089,7 @@ parse_script(
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
-					  filename, lineNumber, post ? "POST" : "PRE", 
+					  filename, lineNumber, type_name, 
 					  jobNameOrig );
 		exampleSyntax( example );
 		return false;
@@ -1102,10 +1104,10 @@ parse_script(
 
 		MyString whynot;
 			// This fails if the node already has a script.
-		if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
+		if( !job->AddScript( scriptType, rest, defer_status, defer_time, whynot ) ) {
 			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  	"failed to add %s script to node %s: %s\n",
-					  	filename, lineNumber, post ? "POST" : "PRE",
+					  	filename, lineNumber, type_name,
 					  	job->GetJobName(), whynot.Value() );
 			return false;
 		}

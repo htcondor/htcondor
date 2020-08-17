@@ -23,12 +23,18 @@
 
 #define SCRIPT_DEFER_STATUS_NONE (-1)
 
+enum ScriptType {
+    PRE,
+    POST,
+    HOLD
+};
+
 class Job;
 
 class Script {
   public:
-    // True is this script is a POST script, false if a PRE script
-    bool _post;
+    // Type of script: PRE, POST or HOLD
+    ScriptType _type;
 
     // Return value of the PRE script; it is only valid in the POST script.
     int  _retValScript;
@@ -36,27 +42,36 @@ class Script {
     // Return value of the job run.  Only valid of POST script
     int  _retValJob;
 
-	// pid of running script, or 0 if not currently running
-	int _pid;
+    // pid of running script, or 0 if not currently running
+    int _pid;
 
-	// has this script been run yet?
-	bool _done;
+    // has this script been run yet?
+    bool _done;
 
-	// Return value which indicates this should be deferred until later.
-	int _deferStatus;
+    // Return value which indicates this should be deferred until later.
+    int _deferStatus;
 
-	// How long to sleep when deferred.
-	time_t _deferTime;
+    // How long to sleep when deferred.
+    time_t _deferTime;
 
-	// The next time at which we're eligible to run (0 means any time).
-	time_t _nextRunTime;
+    // The next time at which we're eligible to run (0 means any time).
+    time_t _nextRunTime;
 
-	int BackgroundRun( int reaperId, int dagStatus, int failedCount );
-	const char* GetNodeName();
-	Job *GetNode() { return _node; }
+    int BackgroundRun( int reaperId, int dagStatus, int failedCount );
+    const char* GetNodeName();
+    Job *GetNode() { return _node; }
+    
+    const char* GetScriptName() {
+        switch( _type ) {
+            case ScriptType::PRE: return "PRE";
+            case ScriptType::POST: return "POST";
+            case ScriptType::HOLD: return "HOLD";
+        }
+        return "";
+    }
 
     inline const char* GetCmd() const { return _cmd; }
-    Script( bool post, const char* cmd, int deferStatus, time_t deferTime,
+    Script( ScriptType type, const char* cmd, int deferStatus, time_t deferTime,
     			Job* node );
     ~Script();
 

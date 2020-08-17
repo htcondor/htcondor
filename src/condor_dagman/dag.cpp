@@ -1533,7 +1533,6 @@ Dag::StartNode( Job *node, bool isRetry )
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
 	// actual job to HTCondor if/when the script exits successfully
-
     if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
 		node->SetStatus( Job::STATUS_PRERUN );
 		_preRunNodeCount++;
@@ -2537,13 +2536,18 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 void
 Dag::WriteScriptToRescue( FILE *fp, Script *script )
 {
-	const char *prepost = script->_post ? "POST" : "PRE";
+	const char *type;
+	switch( script->_type ) {
+		case ScriptType::PRE: type = "PRE"; break;
+		case ScriptType::POST: type = "POST"; break;
+		case ScriptType::HOLD: type = "HOLD"; break;
+	}
 	fprintf( fp, "SCRIPT " );
 	if ( script->_deferStatus != SCRIPT_DEFER_STATUS_NONE ) {
 		fprintf( fp, "DEFER %d %d ", script->_deferStatus,
 					(int)script->_deferTime );
 	}
-	fprintf( fp, "%s %s %s\n", prepost, script->GetNode()->GetJobName(),
+	fprintf( fp, "%s %s %s\n", type, script->GetNode()->GetJobName(),
 				script->GetCmd() );
 }
 

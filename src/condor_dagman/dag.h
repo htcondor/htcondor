@@ -574,6 +574,7 @@ class Dag {
 	// max number of PRE & POST scripts to run at once (0 means no limit)
     int _maxPreScripts;
     int _maxPostScripts;
+	int _maxHoldScripts;
 
 	void SetDotFileName(const char *dot_file_name);
 	void SetDotIncludeFileName(const char *include_file_name);
