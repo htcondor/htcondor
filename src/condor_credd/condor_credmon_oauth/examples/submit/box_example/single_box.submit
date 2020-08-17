@@ -1,0 +1,10 @@
+executable = /bin/sleep
+transfer_executable = false
+arguments = 300
+
+# Get a single Box token
+use_oauth_services = box
+
+# Successful submission will result in token:
+# $_CONDOR_CREDS/box.use
+queue
