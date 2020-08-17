@@ -150,6 +150,9 @@
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 
+#define SUBMIT_KEY_ManifestDesired "manifest"
+#define SUBMIT_KEY_ManifestDir "manifest_dir"
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
     #define SUBMIT_KEY_PublicInputFiles "public_input_files"
 #endif

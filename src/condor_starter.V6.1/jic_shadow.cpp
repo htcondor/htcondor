@@ -426,8 +426,10 @@ JICShadow::transferOutput( bool &transient_failure )
 		return true;
 	}
 
+	std::string dummy;
 	bool want_manifest = false;
-	if( job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest ) {
+	if( job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dummy ) ||
+		(job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
 		recordSandboxContents( "out" );
 	}
 
@@ -2577,8 +2579,10 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// Now that we're done, let our parent class do its thing.
 	JobInfoCommunicator::setupJobEnvironment();
 
+	std::string dummy;
 	bool want_manifest = false;
-	if( job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest ) {
+	if( job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dummy ) ||
+		(job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
 		recordSandboxContents( "in" );
 	}
 
@@ -3274,13 +3278,14 @@ void
 JICShadow::recordSandboxContents( const char * filename ) {
 	ASSERT(filename != NULL);
 
-	std::string dirname = ".condor_manifest";
+	std::string dirname = "_condor_manifest";
 	int cluster, proc;
 	if( job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster ) && job_ad->LookupInteger( ATTR_PROC_ID, proc ) ) {
 		formatstr( dirname, "%d_%d_manifest", cluster, proc );
 	}
 	job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dirname );
 	mkdir( dirname.c_str(), 0700 );
+	addToOutputFiles( dirname.c_str() );
 	std::string f = dirname + DIR_DELIM_CHAR + filename;
 
 	// Assumes we're in the root of the sandbox.
