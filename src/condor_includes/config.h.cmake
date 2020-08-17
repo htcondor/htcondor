@@ -115,9 +115,6 @@
 // configurable options.
 /////////////////////////////////////////
 
-/* Define if we save sigstate*/
-#cmakedefine DOES_SAVE_SIGSTATE 1
-
 /* Define if HAS_INET_NTOA*/
 #cmakedefine HAS_INET_NTOA 1
 

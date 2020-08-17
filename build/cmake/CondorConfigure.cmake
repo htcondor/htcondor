@@ -686,8 +686,6 @@ set(SIZEOF_VOIDPTR "${VOIDPTR}")
 ##################################################
 ##################################################
 # Now checking *nix OS based options
-set(DOES_SAVE_SIGSTATE OFF)
-
 if(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
@@ -695,7 +693,6 @@ if(${OS_NAME} STREQUAL "LINUX")
 
 	find_so_name(LIBLTDL_SO ${HAVE_LIBLTDL})
 
-	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
 	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)
