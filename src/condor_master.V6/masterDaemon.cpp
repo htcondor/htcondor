@@ -1082,6 +1082,7 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 			wait = true;
 			dprintf(D_ALWAYS,"Waiting for %s to appear.\n",
 					m_after_startup_wait_for_file.Value() );
+			Sleep(100);
 		}
 		else if( !first_time ) {
 			dprintf(D_ALWAYS,"Found %s.\n",
@@ -2394,7 +2395,7 @@ Daemons::ScheduleRetryStartAllDaemons()
 {
 	if( m_retry_start_all_daemons_tid == -1 ) {
 		m_retry_start_all_daemons_tid = daemonCore->Register_Timer(
-			1,
+			0,
 			(TimerHandlercpp)&Daemons::RetryStartAllDaemons,
 			"Daemons::RetryStartAllDaemons",
 			this);
