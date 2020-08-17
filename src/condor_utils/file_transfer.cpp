@@ -1229,7 +1229,7 @@ FileTransfer::FindChangedFiles()
 
 		// for now, skip all subdirectory names until we add
 		// subdirectory support into FileTransfer.
-		if ( dir.IsDirectory() ) {
+		if ( dir.IsDirectory() && (! (OutputFiles && OutputFiles->file_contains(f))) ) {
 			dprintf( D_FULLDEBUG, "Skipping dir %s\n", f );
 			continue;
 		}
