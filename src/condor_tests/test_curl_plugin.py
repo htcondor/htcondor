@@ -1,6 +1,7 @@
 #!/usr/bin/env pytest
 
 import logging
+import os
 from pathlib import Path
 
 from pytest_httpserver import HTTPServer
@@ -16,6 +17,12 @@ from ornithology import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Unset HTTP_PROXY for correct operation in Docker containers
+lowered = dict()
+for k in os.environ:
+    lowered[k.lower()] = k
+os.environ.pop(lowered.get("http_proxy", "http_proxy"), None)
 
 
 @action
@@ -53,10 +60,10 @@ def job_with_good_url(default_condor, good_url, test_dir, path_to_sleep):
 
 
 @action
-def job_with_bad_url(default_condor, bad_url, test_dir):
+def job_with_bad_url(default_condor, bad_url, test_dir, path_to_sleep):
     job = default_condor.submit(
         {
-            "executable": "/bin/sleep",
+            "executable": path_to_sleep,
             "arguments": "1",
             "log": (test_dir / "bad_url.log").as_posix(),
             "transfer_input_files": bad_url,
