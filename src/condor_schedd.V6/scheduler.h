@@ -1120,5 +1120,16 @@ int jobIsFinished( int cluster, int proc, void* vptr = NULL );
 int jobIsFinishedDone( int cluster, int proc, void* vptr = NULL,
 					   int exit_status = 0 );
 
+/* Returns true if an external manager (e.g. gridmanager, job router) has
+ * indicated it is handling this job.
+ */
+bool jobExternallyManaged(ClassAd * ad);
+
+/* Returns true if an external manager (e.g. gridmanager, job router) has
+ * finished handling this job, the job is now in a terminal state
+ * (COMPELTED, REMOVED), and the manager doesn't need to see the job again.
+ */
+bool jobManagedDone(ClassAd * ad);
+
 
 #endif /* _CONDOR_SCHED_H_ */

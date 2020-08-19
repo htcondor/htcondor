@@ -153,7 +153,6 @@ extern "C" {
 
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
-extern	bool	jobExternallyManaged(ClassAd * ad);
 static QmgmtPeer *Q_SOCK = NULL;
 
 // Hash table with an entry for every job owner that
@@ -7062,9 +7061,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
 	time_t * pbDay = (time_t*)pvArg;
 	job->Assign(ATTR_SCHEDD_BIRTHDATE, *pbDay);
 
-	std::string managed_status;
-	job->LookupString(ATTR_JOB_MANAGED, managed_status);
-	if ( managed_status == MANAGED_EXTERNAL ) {
+	if ( jobExternallyManaged(job) ) {
 		// if a job is externally managed, don't touch a damn
 		// thing!!!  the gridmanager or schedd-on-the-side is
 		// in control.  stay out of its way!  -Todd 9/13/02
@@ -7086,7 +7083,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
 		if ( universe == CONDOR_UNIVERSE_GRID ) {
-			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) )
+			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) && !jobManagedDone(job) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.
