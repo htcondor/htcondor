@@ -743,11 +743,11 @@ void NordugridJob::doEvaluateState()
 			} break;
 		case GM_FAILED: {
 			myResource->CancelSubmit( this );
-			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteJobId( NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;

@@ -1679,12 +1679,12 @@ void GlobusJob::doEvaluateState()
 			if ( jobContact != NULL ) {
 				myResource->JMComplete( this );
 				myResource->CancelSubmit( this );
-				GlobusSetRemoteJobId( NULL, false );
 				jmDown = false;
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				GlobusSetRemoteJobId( NULL, false );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -2106,12 +2106,12 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				myResource->CancelSubmit( this );
 				myResource->JMComplete( this );
 				jmDown = false;
-				GlobusSetRemoteJobId( NULL, false );
 				requestScheddUpdate( this, false );
 
 				if ( condorState == REMOVED ) {
 					gmState = GM_DELETE;
 				} else {
+					GlobusSetRemoteJobId( NULL, false );
 					gmState = GM_CLEAR_REQUEST;
 				}
 

@@ -546,7 +546,6 @@ void BoincJob::doEvaluateState()
 			}
 
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
-				SetRemoteBatchName( NULL );
 				gmState = GM_DELETE;
 			} else {
 				// Clear the contact string here because it may not get
@@ -577,7 +576,6 @@ void BoincJob::doEvaluateState()
 				break;
 			}
 
-			SetRemoteBatchName( NULL );
 			remoteState = BOINC_JOB_STATUS_UNSET;
 			SetRemoteJobStatus( NULL );
 			requestScheddUpdate( this, false );
@@ -606,6 +604,7 @@ void BoincJob::doEvaluateState()
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteBatchName( NULL );
 				gmState= GM_HOLD;
 			}
 		} break;
