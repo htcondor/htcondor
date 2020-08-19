@@ -126,12 +126,12 @@ use policy : HOLD_IF_MEMORY_EXCEEDED
 	# Step (1).
 	killfile = os.getcwd() + "/killfile-cdp"
 	jobArgs = {
-		"executable":				jobFile,
+		"executable":				sys.executable,
 		"transfer_executable":		"false",
 		# Wouldn't it be nice if these could be literal bools, instead?
 		"should_transfer_files":	"true",
 		"universe":					"vanilla",
-		"arguments":				killfile + ".$(CLUSTER).$(PROCESS) 3600",
+		"arguments":				jobFile + " " + killfile + ".$(CLUSTER).$(PROCESS) 3600",
 		# Wouldn't it be nice if this could be a literal bool, instead?
 		"request_memory":			"1",
 		"log":						"cmd_drain_policies.log"

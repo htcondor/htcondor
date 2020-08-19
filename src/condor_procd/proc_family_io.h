@@ -141,13 +141,13 @@ struct ProcFamilyUsage {
 		// These are job maxima.  (Although we only document max_image_size,
 		// total_resident_set_size, and total_proportional_set_size_available
 		// as such, that's because those are the only ones we report.)
-		max_image_size = std::max( max_image_size, other.max_image_size );
-		total_image_size = std::max( total_image_size, other.total_image_size) ;
-		total_resident_set_size = std::max( total_resident_set_size, other.total_resident_set_size );
+		max_image_size = MAX( max_image_size, other.max_image_size );
+		total_image_size = MAX( total_image_size, other.total_image_size) ;
+		total_resident_set_size = MAX( total_resident_set_size, other.total_resident_set_size );
 
 #if HAVE_PSS
-		total_proportional_set_size = std::max( total_proportional_set_size, other.total_proportional_set_size );
-		total_proportional_set_size_available = std::max( total_proportional_set_size_available, total_proportional_set_size_available );
+		total_proportional_set_size = MAX( total_proportional_set_size, other.total_proportional_set_size );
+		total_proportional_set_size_available = MAX( total_proportional_set_size_available, total_proportional_set_size_available );
 #endif
 
 		return *this;

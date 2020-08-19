@@ -256,8 +256,6 @@ condor_threads.h
 condor_timeslice.cpp
 condor_timeslice.h
 condor_universe.cpp
-condor_unsetenv.cpp
-condor_unsetenv.h
 condor_url.cpp
 condor_url.h
 condor_user_policy.cpp
@@ -499,10 +497,8 @@ if(NOT WINDOWS)
 		ClassAdLogPluginManager.unix.cpp
 		detach.unix.cpp
 		fdpass.unix.cpp
-		flock.unix.cpp
 		getdtablesize.unix.cpp
 		getmnt.unix.cpp
-		getpagesize.unix.cpp
 		limit.unix.cpp
 		network_adapter.unix.cpp
 		network_adapter.unix.h

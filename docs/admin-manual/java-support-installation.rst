@@ -77,7 +77,6 @@ Java properties, such as:
 
     JavaVendor = "Sun Microsystems Inc."
     JavaVersion = "1.2.2"
-    JavaMFlops = 9.279696
     HasJava = True
 
 If the Java installation is incorrect, then any error messages from the

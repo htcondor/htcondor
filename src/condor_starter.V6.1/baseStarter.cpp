@@ -3109,13 +3109,6 @@ CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 		found_one = true;
 	}
 	
-	// Update the state.
-	if (m_deferred_job_update)
-	{
-		MyString buf;
-		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
-	}
-	
 	UserProc *job;
 	proc_list->Rewind();
 	while ((job = proc_list->Next()) != NULL) {

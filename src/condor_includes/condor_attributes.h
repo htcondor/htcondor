@@ -300,7 +300,7 @@
 #define ATTR_IS_WAKEABLE  "IsWakeAble"
 #define ATTR_INACTIVE  "Inactive"
 #define ATTR_JAR_FILES  "JarFiles"
-#define ATTR_JAVA_MFLOPS  "JavaMFlops"
+#define ATTR_JAVA_SPECIFICATION_VERSION  "JavaSpecificationVersion"
 #define ATTR_JAVA_VENDOR  "JavaVendor"
 #define ATTR_JAVA_VERSION  "JavaVersion"
 #define ATTR_JOB_ACTION  "JobAction"
@@ -487,7 +487,11 @@
 #define ATTR_MY_CURRENT_TIME  "MyCurrentTime"
 #define ATTR_MY_TYPE  "MyType"
 #define ATTR_NAME  "Name"
-#define ATTR_NICE_USER  "NiceUser"
+#define ATTR_NICE_USER_deprecated  "NiceUser"
+#ifdef NO_DEPRECATE_NICE_USER
+#define ATTR_NICE_USER ATTR_NICE_USER_deprecated
+#endif
+
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
@@ -774,7 +778,6 @@
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
-#define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"

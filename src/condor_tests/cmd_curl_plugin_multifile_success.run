@@ -68,7 +68,7 @@ def main():
 
     # Setup a new test job
     job_args = {
-        "executable":               "cmd_curl_plugin_multifile_success.py",
+        "executable":               "x_echostring.pl",
         "arguments":                "Testing multifile_curl_plugin success",
         "output":                   "cmd_curl_plugin_multifile_success.out",
         "transfer_input_files":     file1_url + ", " + file2_url + ", " + file3_url,

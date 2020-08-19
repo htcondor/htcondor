@@ -102,8 +102,8 @@ class ScheddNegotiate: public DCMsg {
 		// significant attributes, etc).
 	void negotiate(Sock *sock);
 
-		// returns the job owner name (or accounting group) we are serving
-	char const *getOwner();
+		// returns the job owner/user name (or accounting group) we are serving
+	char const *getMatchUser();
 
 		// returns name of remote pool or NULL if none
 	char const *getRemotePool();

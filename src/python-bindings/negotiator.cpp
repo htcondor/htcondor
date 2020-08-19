@@ -12,6 +12,7 @@
 #include "old_boost.h"
 #include "classad_wrapper.h"
 #include "module_lock.h"
+#include "daemon_location.h"
 
 using namespace boost::python;
 
@@ -49,7 +50,7 @@ toList(const boost::shared_ptr<classad::ClassAd> ad, const std::vector<std::stri
 
 struct Negotiator {
 
-    Negotiator()
+    void use_local_negotiator()
     {
         Daemon neg( DT_NEGOTIATOR, 0, 0 );
         bool result;
@@ -66,9 +67,8 @@ struct Negotiator {
             }
             else
             {
-                THROW_EX(RuntimeError, "Unable to locate schedd address.");
+                THROW_EX(RuntimeError, "Unable to locate negotiator address.");
             }
-            m_name = neg.name() ? neg.name() : "Unknown";
             m_version = neg.version() ? neg.version() : "";
         }
         else
@@ -77,19 +77,29 @@ struct Negotiator {
         }
     }
 
-    Negotiator(const ClassAdWrapper &ad)
-      : m_addr(), m_name("Unknown"), m_version("")
-    {
-        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
-        {
-            THROW_EX(ValueError, "Negotiator address not specified.");
-        }
-        ad.EvaluateAttrString(ATTR_NAME, m_name);
-        ad.EvaluateAttrString(ATTR_VERSION, m_version);
+
+    Negotiator() {
+        use_local_negotiator();
     }
+
+    Negotiator(boost::python::object loc)
+      : m_addr(), m_version("")
+    {
+		int rv = construct_for_location(loc, DT_NEGOTIATOR, m_addr, m_version);
+		if (rv == 0) {
+			use_local_negotiator();
+		} else if (rv < 0) {
+			if (rv == -2) { boost::python::throw_error_already_set(); }
+			THROW_EX(RuntimeError, "Unknown type");
+		}
+	}
 
     ~Negotiator()
     {
+    }
+
+    boost::python::object location() const {
+        return make_daemon_location(DT_NEGOTIATOR, m_addr, m_version);
     }
 
     void setPriority(const std::string &user, float prio)
@@ -290,7 +300,6 @@ private:
 
 
     std::string m_addr;
-    std::string m_name;
     std::string m_version;
 
 };
@@ -304,14 +313,19 @@ void export_negotiator()
             This class provides a query interface to the *condor_negotiator*.
             It primarily allows one to query and set various parameters in the fair-share accounting.
             )C0ND0R",
-        init<const ClassAdWrapper &>(
+        init<boost::python::object>(
             R"C0ND0R(
-            :param ad: A ClassAd describing the claim and the *condor_negotiator*
-                location.  If omitted, the default pool negotiator is assumed.
-            :type ad: :class:`~classad.ClassAd`
+            :param location_ad: A ClassAd or DaemonLocation describing the *condor_negotiator*
+                location and version.  If omitted, the default pool negotiator is assumed.
+            :type location_ad: :class:`~classad.ClassAd` or :class:`DaemonLocation`
             )C0ND0R",
             boost::python::args("self", "ad")))
         .def(boost::python::init<>(boost::python::args("self")))
+        .add_property("location", &Negotiator::location,
+            R"C0ND0R(
+            The negotiator to query or send commands to
+            :rtype: location :class:`DaemonLocation`
+            )C0ND0R")
         .def("setPriority", &Negotiator::setPriority,
             R"C0ND0R(
             Set the real priority of a specified user.

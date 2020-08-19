@@ -549,7 +549,6 @@ if( NOT WINDOWS)
 	check_function_exists("res_init" HAVE_DECL_RES_INIT)
 	check_function_exists("strcasestr" HAVE_STRCASESTR)
 	check_function_exists("strsignal" HAVE_STRSIGNAL)
-	check_function_exists("unsetenv" HAVE_UNSETENV)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
 	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
 	check_function_exists("readdir64" HAVE_READDIR64)
@@ -687,41 +686,13 @@ set(SIZEOF_VOIDPTR "${VOIDPTR}")
 ##################################################
 ##################################################
 # Now checking *nix OS based options
-set(HAS_FLOCK ON)
-set(DOES_SAVE_SIGSTATE OFF)
-
-if (${OS_NAME} STREQUAL "SUNOS")
-	set(SOLARIS ON)
-	set(NEEDS_64BIT_SYSCALLS ON)
-	set(NEEDS_64BIT_STRUCTS ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(HAS_FLOCK OFF)
-	add_definitions(-DSolaris)
-	if (${OS_VER} STREQUAL "5.9")
-		add_definitions(-DSolaris29)
-	elseif(${OS_VER} STREQUAL "5.10")
-		add_definitions(-DSolaris10)
-	elseif(${OS_VER} STREQUAL "5.11")
-		add_definitions(-DSolaris11)
-	else()
-		message(FATAL_ERROR "unknown version of Solaris")
-	endif()
-	add_definitions(-D_STRUCTURED_PROC)
-	set(HAS_INET_NTOA ON)
-	include_directories( "/usr/include/kerberosv5" )
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lnsl -lsocket")
-
-	#update for solaris builds to use pre-reqs namely binutils in this case
-	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -B$ENV{PATH}")
-
-elseif(${OS_NAME} STREQUAL "LINUX")
+if(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 
 	find_so_name(LIBLTDL_SO ${HAVE_LIBLTDL})
 
-	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
 	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)

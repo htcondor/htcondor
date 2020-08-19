@@ -239,6 +239,8 @@ public:
         // RETURNS: true -- success; false -- failure
         //------------------------------------------
 
+        bool zkm_wrap(const unsigned char* input, int input_len,
+                  unsigned char*& output, int& outputlen);
         bool wrap(const unsigned char* input, int input_len,
                   unsigned char*& output, int& outputlen);
         //------------------------------------------
@@ -248,6 +250,8 @@ public:
         // RETURNS: TRUE -- success, FALSE -- failure
         //------------------------------------------
 
+        bool zkm_unwrap(const unsigned char* input, int input_len,
+                    unsigned char*& output, int& outputlen);
         bool unwrap(const unsigned char* input, int input_len,
                     unsigned char*& output, int& outputlen);
         //------------------------------------------
@@ -520,9 +524,6 @@ protected:
 	/// get timeout time for pending connect operation;
 	time_t connect_timeout_time() const;
 
-	///
-	int move_descriptor_up();
-
     /// called whenever the bound or connected state changes
     void addr_changed();
 
@@ -566,7 +567,8 @@ protected:
 	// Buffer to hold the string version of our own IP address. 
 	mutable char _my_ip_buf[IP_STRING_BUF_SIZE];
 
-	Condor_Crypt_Base * crypto_;         // The actual crypto
+	Condor_Crypt_Base    * crypto_;         // The actual crypto object
+	Condor_Crypto_State  * crypto_state_;   // The object state
 	CONDOR_MD_MODE      mdMode_;        // MAC mode
 	KeyInfo           * mdKey_;
 

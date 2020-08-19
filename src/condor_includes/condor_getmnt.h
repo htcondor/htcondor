@@ -20,13 +20,8 @@
 #ifndef _CONDOR_GETMNT_H
 #define _CONDOR_GETMNT_H
 
-#if !defined(Solaris) && !defined(WIN32) && !defined(Darwin) && !defined(CONDOR_FREEBSD)
+#if !defined(WIN32) && !defined(Darwin) && !defined(CONDOR_FREEBSD)
 #	include <mntent.h>
-#endif
-
-/* Solaris specific change ..dhaval 6/26 */
-#if defined(Solaris)
-#include <sys/mnttab.h>
 #endif
 
 #if !defined(NMOUNT)

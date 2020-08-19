@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block body %}
+
+
+<div class="jumbotron jumbotron-fluid">
+  <div class="container">
+    <h1 class="display-3">Service Providers</h1>
+    {% if session['logged_in'] == False %}
+    <p class="lead">Logging into the below service providers allows HTCondor to manage the credentials for those providers. HTCondor can then read &amp; write into the resources provided by these service providers.</p>
+    {% else %}
+    <p class="lead">You have logged in to all service providers indicated by your job. You may close this window and resubmit your HTCondor job (if necessary).</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container">
+  {% for provider in session['providers']|sort %}
+  <div class="row">
+    <div class="col-12">
+      <div class="card" style="width: 20rem;">
+        <div class="card-body">
+          <h4 class="card-title">{{ provider }} Login</h4>
+	  {% if session['providers'][provider]['logged_in'] == True %}
+	    {% if session['providers'][provider]['username'] == 'Unknown' %}
+	    Logged in
+	    {% else %}
+	    Logged in as: {{ session['providers'][provider]['username'] }}
+	    {% endif %}
+          {% else %}
+          <a href="{{ url_for('oauth_login', provider=provider) }}" class="btn btn-primary">Login</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+    
+  <div class="row">
+    <div class="col-12">
+      <div class="alert alert-danger invisible" id="alertmessage" role="alert">
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

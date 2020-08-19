@@ -737,6 +737,9 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 	static unsigned int max_rss = 0;
+#if HAVE_PSS
+	static unsigned int max_pss = 0;
+#endif
 
 	ProcFamilyUsage current_usage;
 	if( m_proc_exited ) {
@@ -774,7 +777,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 #if HAVE_PSS
 	if( usage->total_proportional_set_size_available ) {
-		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );
+		if (usage->total_proportional_set_size > max_pss) {
+			max_pss = usage->total_proportional_set_size;
+		}
+		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, max_pss );
 	}
 #endif
 
