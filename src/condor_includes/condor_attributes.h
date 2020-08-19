@@ -778,7 +778,6 @@
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
-#define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"

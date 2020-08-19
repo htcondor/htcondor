@@ -7707,11 +7707,6 @@ extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
 {
-		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
-		// pointer to birthday is passed as an argument...
-	time_t * pbDay = (time_t*)pvArg;
-	job->Assign(ATTR_SCHEDD_BIRTHDATE, *pbDay);
-
 	std::string managed_status;
 	job->LookupString(ATTR_JOB_MANAGED, managed_status);
 	if ( managed_status == MANAGED_EXTERNAL ) {
