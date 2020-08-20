@@ -132,8 +132,6 @@
 #include <math.h>
 #include <utime.h>
 
-#include "condor_unsetenv.h"
-
 #endif /* UNIX */
 
 
