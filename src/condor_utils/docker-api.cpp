@@ -1393,10 +1393,12 @@ DockerAPI::getServicePorts( const std::string & container,
 void build_env_for_docker_cli(Env &env) {
 			env.Clear();
 			env.Import();
+#ifdef LINUX
 			env.DeleteEnv("HOME");
 			struct passwd *pw = getpwuid(get_condor_uid());
 			if (pw) {
 				env.SetEnv("HOME", pw->pw_dir);
 			}
+#endif
 }
 
