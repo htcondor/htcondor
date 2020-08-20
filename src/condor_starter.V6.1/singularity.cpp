@@ -9,6 +9,7 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
+#include "stat_wrapper.h"
 
 using namespace htcondor;
 
@@ -216,6 +217,18 @@ Singularity::setup(ClassAd &machineAd,
 		binds.rewind();
 		char *next_bind;
 		while ( (next_bind=binds.next()) ) {
+			std::string bind_src_dir(next_bind);
+			// BIND exprs can be src:dst:ro 
+			size_t colon = bind_src_dir.find(':');
+			if (colon != std::string::npos) {
+				bind_src_dir = bind_src_dir.substr(0, colon);
+			}
+			StatWrapper sw(bind_src_dir.c_str());
+			sw.Stat();
+			if (! sw.IsBufValid()) {
+				dprintf(D_ALWAYS, "Skipping invalid singularity bind directory %s\n", next_bind);
+				continue;
+			} 
 			sing_args.AppendArg("-B");
 			sing_args.AppendArg(next_bind);
 		}
