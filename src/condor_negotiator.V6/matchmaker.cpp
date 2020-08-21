@@ -3712,9 +3712,8 @@ Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
 	auto accounting_domain = submitter_name.substr(last_at + 1);
 
 	std::vector<classad::ExprTree*> args;
-	args.reserve(2);
-	args.push_back(classad::Literal::MakeString("GROUP_PREFIX"));
-	args.push_back(classad::Literal::MakeString(accounting_domain));
+	args.emplace_back(classad::Literal::MakeString("GROUP_PREFIX"));
+	args.emplace_back(classad::Literal::MakeString(accounting_domain));
 	std::unique_ptr<ExprTree> fnCall(classad::FunctionCall::MakeFunctionCall("userMap", args));
 
 	classad::Value val;
