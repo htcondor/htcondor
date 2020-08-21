@@ -150,6 +150,9 @@
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 
+#define SUBMIT_KEY_UseOAuthServices "use_oauth_services"
+#define SUBMIT_KEY_UseOAuthServicesAlt "UseOAuthServices"
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
     #define SUBMIT_KEY_PublicInputFiles "public_input_files"
 #endif
@@ -476,15 +479,15 @@ public:
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 
-	char * submit_param( const char* name, const char* alt_name );
-	char * submit_param( const char* name ); // call param with NULL as the alt
-	bool submit_param_exists(const char* name, const char * alt_name, std::string & value);
-	bool submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false);
-	int submit_param_int(const char* name, const char * alt_name, int def_value);
-	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL);
-	MyString submit_param_mystring( const char * name, const char * alt_name );
-	char * expand_macro(const char* value) { return ::expand_macro(value, SubmitMacroSet, mctx); }
-	const char * lookup(const char* name) { return lookup_macro(name, SubmitMacroSet, mctx); }
+	char * submit_param( const char* name, const char* alt_name ) const;
+	char * submit_param( const char* name ) const; // call param with NULL as the alt
+	bool submit_param_exists(const char* name, const char * alt_name, std::string & value) const;
+	bool submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false) const;
+	int submit_param_int(const char* name, const char * alt_name, int def_value) const;
+	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL) const;
+	MyString submit_param_mystring( const char * name, const char * alt_name ) const;
+	char * expand_macro(const char* value) const { return ::expand_macro(value, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
+	const char * lookup(const char* name) const { return lookup_macro(name, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
 
 	void set_submit_param( const char* name, const char* value);
 	void set_submit_param_used( const char* name);
@@ -629,6 +632,12 @@ public:
 	void setup_macro_defaults(); // setup live defaults table
 	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
 
+	// check to see if the job needs OAuth services, returns TRUE if it does
+	// the list of service handles is returned as a comma separated list  
+	// in the formed needed to set the value of the OAuthServicesNeeded job attribute
+	// if a request_ads collection is provided, it will be populated with OAuth service ads
+	// and ads_error be set to describe any required but missing attributes in the request_ads
+	bool NeedsOAuthServices(std::string & services, ClassAdList * request_ads=NULL, std::string * ads_error=NULL) const;
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse() const  { return JobUniverse; }
@@ -652,9 +661,10 @@ protected:
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
 
-	int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
-	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
-	const char * abort_raw_macro_val;
+	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
+	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
+	mutable const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
+	mutable const char * abort_raw_macro_val;
 
 	// keep track of whether we have turned the baseJob into a cluster ad yet, and what cluster it is
 	int base_job_is_cluster_ad;
@@ -756,12 +766,16 @@ protected:
 	int SetRequestResources(); /* n attrs, prunable by pattern */
 	int SetConcurrencyLimits();  /* 2 attrs, prunable */
 	int SetAccountingGroup();  /* 3 attrs, prunable */
+	int SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	int SetSimpleJobExprs(); /* run always */
 	int SetAutoAttributes(); /* run always */
 	int ReportCommonMistakes(); /* run always */
 
 	int SetJobDeferral();  /* run always */
+
+	// For now, just handles port-forwarding.
+	int SetContainerSpecial();
 
 	// a LOT of the above functions must happen before SetTransferFiles, which in turn must be before SetRequirements
 	int SetTransferFiles();
@@ -780,9 +794,6 @@ protected:
 	// otherwise it is the name of the attribute that tells us we need job deferral
 	const char * NeedsJobDeferral();
 
-    // For now, just handles port-forwarding.
-    int SetContainerSpecial();
-
 	int CheckStdFile(
 		_submit_file_role role,
 		const char * value, // in: filename to use, may be NULL
@@ -792,6 +803,7 @@ protected:
 		bool & stream_it);  // in,out: whether we expect to stream it or not
 
 	// private helper functions
+	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
 	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest

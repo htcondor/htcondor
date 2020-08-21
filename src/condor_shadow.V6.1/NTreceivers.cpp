@@ -2173,7 +2173,7 @@ case CONDOR_getdir:
 		// the ones required for this job.  we will need to get that
 		// list of names from the Job Ad.
 		std::string services_needed;
-		ad->LookupString("OAuthServicesNeeded", services_needed);
+		ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed);
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
 		bool had_error = false;
