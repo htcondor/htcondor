@@ -219,6 +219,7 @@ FunctionCall( )
 		functionTable["versionGT"   ] = (void*)compareVersion;
 		// Not identical to str1 =?= str2 because it won't eat undefined.
 		functionTable["versionEQ"   ] = (void*)compareVersion;
+		functionTable["version_in_range"] = (void*)versionInRange;
 
 			// pattern matching (regular expressions)
 #if defined USE_POSIX_REGEX || defined USE_PCRE
@@ -1875,6 +1876,49 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	str.assign( buf, offset, len );
 	result.SetStringValue( str );
 	return( true );
+}
+
+bool FunctionCall::
+versionInRange( const char * name, const ArgumentList & argList,
+  EvalState & state, Value & result ) {
+	if( argList.size() != 3 ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	Value test, min, max;
+	if(!argList[0]->Evaluate(state, test) ||
+	   !argList[1]->Evaluate(state, min) ||
+	   !argList[2]->Evaluate(state, max)) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// It seems like the version*() functions are more useful this way.
+	if(min.IsUndefinedValue() || max.IsUndefinedValue()) {
+		result.SetUndefinedValue();
+		return true;
+	}
+
+	Value cTest, cMin, cMax;
+	std::string sTest, sMin, sMax;
+	if(  convertValueToStringValue( test, cTest )
+	  && convertValueToStringValue( min, cMin )
+	  && convertValueToStringValue( max, cMax )
+	  && cTest.IsStringValue(sTest)
+	  && cMin.IsStringValue(sMin)
+	  && cMax.IsStringValue(sMax) ) {
+		int l = natural_cmp( sMin.c_str(), sTest.c_str() );
+		int r = natural_cmp( sTest.c_str(), sMax.c_str() );
+
+		result.SetBooleanValue( l <= 0 && r <= 0 );
+		return true;
+	} else {
+		result.SetErrorValue();
+		return true;
+	}
+
+	return true;
 }
 
 bool FunctionCall::
