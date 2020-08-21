@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from htcondor.personal import PersonalPool, PersonalPoolState
 
 
@@ -107,3 +106,10 @@ def test_can_start_stop_start_stop(local_dir):
     pool = PersonalPool(local_dir=local_dir).start().stop().start().stop()
 
     assert pool.state is PersonalPoolState.STOPPED
+
+
+def test_can_start_two_pools(local_dir, another_local_dir):
+    with PersonalPool(local_dir=local_dir) as pool:
+        with PersonalPool(local_dir=another_local_dir) as another_pool:
+            assert pool.state is PersonalPoolState.READY
+            assert another_pool.state is PersonalPoolState.READY

@@ -13,27 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Mapping, List, Set
-
-import logging
 import atexit
+import enum
+import functools
+import logging
 import os
 import shlex
+import signal
 import subprocess
-import functools
 import textwrap
 import time
 from pathlib import Path
-import enum
-import contextlib
-import signal
+from typing import List, Mapping, Optional, Set
 
-import htcondor
 import classad
+import htcondor
 
 __all__ = ["PersonalPool", "PersonalPoolState", "SetCondorConfig"]
 
 logger = logging.getLogger(__name__)
+
+IS_WINDOWS = os.name == "nt"
+
+AUTH_METHODS = ["FS" if not IS_WINDOWS else "NTSSPI", "PASSWORD", "IDTOKENS"]
 
 DEFAULT_CONFIG = {
     "LOCAL_CONFIG_FILE": "",
@@ -49,9 +51,10 @@ DEFAULT_CONFIG = {
     "STARTER_INITIAL_UPDATE_INTERVAL": "2",
     "NEGOTIATOR_CYCLE_DELAY": "2",
     # SECURITY
+    # TODO: revisit security; it would be much better to not hand-roll this
     "SEC_DAEMON_AUTHENTICATION": "REQUIRED",
     "SEC_CLIENT_AUTHENTICATION": "REQUIRED",
-    "SEC_DEFAULT_AUTHENTICATION_METHODS": "FS, PASSWORD, IDTOKENS",
+    "SEC_DEFAULT_AUTHENTICATION_METHODS": ", ".join(AUTH_METHODS),
     "self": "$(USERNAME)@$(UID_DOMAIN) $(USERNAME)@$(IPV4_ADDRESS) $(USERNAME)@$(IPV6_ADDRESS) $(USERNAME)@$(FULL_HOSTNAME) $(USERNAME)@$(HOSTNAME)",
     "ALLOW_READ": "$(self)",
     "ALLOW_WRITE": "$(self)",
@@ -124,9 +127,6 @@ class PersonalPoolState(str, enum.Enum):
     READY = "READY"
     STOPPING = "STOPPING"
     STOPPED = "STOPPED"
-
-
-PROCD_COUNTER = 0
 
 
 class PersonalPool:
@@ -221,7 +221,8 @@ class PersonalPool:
             ),
             key=len,
         )
-        return "{}(local_dir = {}, state = {})".format(
+
+        return "{}(local_dir={}, state={})".format(
             type(self).__name__, shortest_path, self.state
         )
 
@@ -364,13 +365,13 @@ class PersonalPool:
 
         param_lines = []
 
-        param_lines += ["#", "# INHERITED", "#"]
+        param_lines += ["# INHERITED"]
         param_lines += ["{} = {}".format(k, v) for k, v in INHERITED_PARAMS.items()]
 
-        param_lines += ["#", "# ROLES", "#"]
+        param_lines += ["# ROLES"]
         param_lines += ["use ROLE: {}".format(role) for role in ROLES]
 
-        param_lines += ["#", "# FEATURES", "#"]
+        param_lines += ["# FEATURES"]
         param_lines += ["use FEATURE: {}".format(feature) for feature in FEATURES]
 
         base_config = {
@@ -385,17 +386,6 @@ class PersonalPool:
             "SEC_TOKEN_SYSTEM_DIRECTORY": self.system_tokens_dir.as_posix(),
         }
 
-        # See https://htcondor-wiki.cs.wisc.edu/index.cgi/tktview?tn=7789
-        global PROCD_COUNTER
-        PROCD_COUNTER += 1
-        if htcondor.param["PROCD_ADDRESS"] == r"\\.\pipe\condor_procd_pipe":
-            base_config["PROCD_ADDRESS"] = "{}_{}_{}_{}".format(
-                htcondor.param["PROCD_ADDRESS"],
-                os.getpid(),
-                time.time(),
-                PROCD_COUNTER,
-            )
-
         param_lines += ["# BASE PARAMS"]
         param_lines += ["{} = {}".format(k, v) for k, v in base_config.items()]
 
@@ -408,8 +398,10 @@ class PersonalPool:
         param_lines += ["# RAW PARAMS"]
         param_lines += textwrap.dedent(self._raw_config).splitlines()
 
+        params = "\n".join(param_lines)
+
         with self.config_file.open(mode="a") as f:
-            f.write("\n".join(param_lines))
+            f.write(params)
 
     @_skip_if(PersonalPoolState.STARTING, PersonalPoolState.READY)
     def _start_condor(self):
@@ -584,7 +576,7 @@ class PersonalPool:
 
         logger.debug("condor_off succeeded for {}: {}".format(self, off.stdout))
 
-    def _wait_for_master_to_terminate(self, kill_after=60, timeout=120):
+    def _wait_for_master_to_terminate(self, kill_after: int = 60, timeout: int = 120):
         logger.debug(
             "Waiting for condor_master (pid {}) for {} to terminate".format(
                 self._master_pid(), self
@@ -654,7 +646,7 @@ class PersonalPool:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines: bool = True,
-        **kwargs,
+        **kwargs
     ) -> subprocess.CompletedProcess:
         """
         Execute a command in a subprocess against this personal pool,

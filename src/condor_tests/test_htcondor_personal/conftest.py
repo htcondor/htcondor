@@ -12,30 +12,71 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import itertools
 
 import pytest
 
 from pathlib import Path
+import time
+import os
 
+import htcondor
 from htcondor.personal import PersonalPool
 
 
+TEST_COUNTER = itertools.count()
+
+
 @pytest.fixture(scope="function")
-def local_dir(tmp_path):
-    d = Path(str(tmp_path / "local_dir"))
-    d.mkdir()
+def test_dir(request, tmp_path):
+    # set in test_htcondor_personal.run
+    if "ON_BATLAB" in os.environ:
+        path = Path.cwd() / "test_htcondor_personal-test-dirs"
+    else:
+        path = tmp_path
+
+    path = path / "{}-{}-{}".format(request.node.name, next(TEST_COUNTER), time.time())
+    path.mkdir(parents=True)
+
+    return path
+
+
+@pytest.fixture(scope="function")
+def local_dir(test_dir):
+    d = test_dir / "local_dir"
+    d.mkdir(parents=True)
 
     return d
 
 
 @pytest.fixture(scope="function")
+def another_local_dir(test_dir):
+    d = test_dir / "another_local_dir"
+    d.mkdir(parents=True)
+
+    return d
+
+
+# Pool fixtures sleep before yielding because we can remove some flakiness
+# by trying to make sure that the collector has actually gotten ads from all
+# of the daemons. For example, some tests would ephemerally fail in
+# Collector.locate because the test runs so fast that the schedd hasn't had
+# time to send an ad to the collector yet.
+# If the flakiness returns, either increase the delay,
+# or find a cleverer way to wait for the pool to be really-actually-ready.
+
+POOL_DELAY = 3
+
+
+@pytest.fixture(scope="function")
 def pool(local_dir):
     with PersonalPool(local_dir=local_dir) as pool:
+        time.sleep(POOL_DELAY)
         yield pool
 
 
 @pytest.fixture(scope="function")
-def another_pool(tmp_path):
-    with PersonalPool(local_dir=tmp_path / "another_local_dir") as pool:
-        yield pool
+def another_pool(another_local_dir):
+    with PersonalPool(local_dir=another_local_dir) as another_pool:
+        time.sleep(POOL_DELAY)
+        yield another_pool
