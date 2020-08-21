@@ -69,6 +69,7 @@ classad/lexer.h
 classad/lexerSource.h
 classad/literals.h
 classad/matchClassad.h
+classad/natural_cmp.h
 classad/operators.h
 classad/query.h
 classad/sink.h
@@ -101,6 +102,7 @@ lexer.cpp
 lexerSource.cpp
 literals.cpp
 matchClassad.cpp
+natural_cmp.cpp
 operators.cpp
 query.cpp
 shared.cpp
