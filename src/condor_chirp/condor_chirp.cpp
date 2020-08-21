@@ -48,7 +48,7 @@ void abort_handler(int /*signum*/) { exit(1); }
 #define CONNECT_STARTER(client) \
 	(client) = chirp_client_connect_starter(); \
 	if (!(client)) { \
-		fprintf(stderr, "cannot chirp_connect to shadow\n"); \
+		fprintf(stderr, "cannot chirp_connect to condor_starter\n"); \
 		return -1; \
 	}
 
