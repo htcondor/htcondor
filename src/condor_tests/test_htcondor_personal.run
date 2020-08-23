@@ -57,5 +57,5 @@ if (exists($ENV{PYTHONPATH})) {
 
 $ENV{ON_BATLAB} = 'true';
 
-my $rv = runCommandCarefully( undef, $pypgm, '-m', 'pytest', 'test_htcondor_dags' );
+my $rv = runCommandCarefully( undef, $pypgm, '-m', 'pytest', 'test_htcondor_personal' );
 exit $rv->{"exitcode"}

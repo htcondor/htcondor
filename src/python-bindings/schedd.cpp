@@ -2941,8 +2941,6 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
-#if 1
-
 		if (factory_submit) {
 
 			// force re-initialization (and a new cluster) if this hash is used again.
@@ -3047,59 +3045,6 @@ public:
 				++num_jobs;
 			}
 		}
-#else
-		for (int idx=0; idx<count; idx++)
-		{
-			int procid = -99;
-			if (factory_submit) {
-				procid = 0;
-			} else {
-				condor::ModuleLock ml;
-				procid = NewProc(cluster);
-			}
-			if (procid < 0) {
-				THROW_EX(RuntimeError, "Failed to create new proc ID.");
-			}
-
-			JOB_ID_KEY jid(cluster, procid);
-			ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
-			process_submit_errstack(m_hash.error_stack());
-			if (!proc_ad) {
-				THROW_EX(RuntimeError, "Failed to create new job ad");
-			}
-
-			// before sending procid 0, also send the cluster ad.
-			int rval = 0;
-			if ((procid == 0) || factory_submit) {
-				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
-				if (clusterad) {
-					rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
-				}
-			}
-			// send the proc ad
-			if ((rval >= 0) && ! factory_submit) {
-				rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
-			}
-			process_submit_errstack(m_hash.error_stack());
-			if (rval < 0) {
-				THROW_EX(ValueError, "Failed to create send job attributes");
-			}
-
-			if (keep_results) {
-				boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
-				results_ad->CopyFromChain(*proc_ad);
-				ad_results.attr("append")(results_ad);
-			}
-
-			// For factory submits, we don't actually loop over the queue number
-			// and we want a new cluster (i.e. factory) for each queue statement.
-			if (factory_submit) {
-				// force re-initialization if this hash is used again.
-				m_hash.reset();
-				break;
-			}
-		}
-#endif
 
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
@@ -3260,6 +3205,31 @@ public:
 		boost::shared_ptr<SubmitResult> result(new SubmitResult(JOB_ID_KEY(cluster,0), num_jobs, m_hash.get_cluster_ad()));
 
 		return result;
+	}
+
+	object
+	needs_oauth_services()
+	{
+		boost::python::list retval;
+		std::string tokens, requests_error;
+		ClassAdList requests;
+		if (m_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+			if (! requests_error.empty()) {
+				THROW_EX(RuntimeError, requests_error.c_str());
+			}
+			requests.Rewind();
+			classad::ClassAd *ad;
+			while ((ad = requests.Next())) {
+				boost::shared_ptr<ClassAdWrapper> wrap(new ClassAdWrapper());
+				wrap->CopyFrom(*ad);
+			#if 0 // expose as dict
+				retval.append(boost::python::dict(wrap));
+			#else // expose as classad
+				retval.append(wrap);
+			#endif
+			}
+		}
+		return retval;
 	}
 
 // (boost::python::arg("self"),
@@ -4025,6 +3995,15 @@ void export_schedd()
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object())
+            )
+        .add_property("oauth_services", &Submit::needs_oauth_services,
+            R"C0ND0R(
+            Returns a request list of the OAuth services need to run the job
+
+            :return: A list of OAuth service request ClassAds
+            :rtype: list
+            :raises RuntimeError: if service requests are incomplete
+            )C0ND0R"
             )
         .def("jobs", &Submit::iterjobs,
             R"C0ND0R(
