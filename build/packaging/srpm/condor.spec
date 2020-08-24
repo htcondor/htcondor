@@ -1725,6 +1725,7 @@ rm -rf %{buildroot}
 %_includedir/classad/lexerSource.h
 %_includedir/classad/literals.h
 %_includedir/classad/matchClassad.h
+%_includedir/classad/natural_cmp.h
 %_includedir/classad/operators.h
 %_includedir/classad/query.h
 %_includedir/classad/sink.h
