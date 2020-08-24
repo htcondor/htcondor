@@ -34,7 +34,7 @@
 #include "error_utils.h"
 #include "condor_distribution.h"
 #include "condor_version.h"
-#include "natural_cmp.h"
+#include "classad/natural_cmp.h"
 #include "classad/jsonSource.h"
 #include "classad_helpers.h"
 #include "prettyPrint.h"
