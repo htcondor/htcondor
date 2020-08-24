@@ -1310,6 +1310,9 @@ populate %{_libdir}/condor %{buildroot}/%{_libdir}/libgetpwnam.so
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 
+# htcondor/personal.py only works with Python3
+rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
+
 %clean
 rm -rf %{buildroot}
 

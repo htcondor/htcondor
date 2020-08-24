@@ -25,6 +25,14 @@ New Features:
 -  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
    :ticket:`7726`
 
+- Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
+  feature is the :class:`htcondor.personal.PersonalPool` class, which is
+  responsible for managing the lifecycle of a "personal" single-machine
+  HTCondor pool. A personal pool can (for example) be used for testing and
+  development of HTCondor workflows before deploying to a larger pool.
+  Personal pools do not require administrator/root privileges.
+  HTCondor itself must still be installed on your system.
+
 Bugs Fixed:
 
 -  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd

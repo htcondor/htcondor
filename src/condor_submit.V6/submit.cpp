@@ -607,6 +607,9 @@ main( int argc, const char *argv[] )
 							sim_current_condor_version = true;
 							sim_starting_cluster = atoi(strchr(opt, '=') + 1);
 							sim_starting_cluster = MAX(sim_starting_cluster - 1, 0);
+						} else if (starts_with(opt, "oauth=")) {
+							// log oauth request, 4 = succeed, 2 = fail
+							DashDryRun = atoi(strchr(opt,'=')+1) ? 4 : 2;
 						} else {
 							int optval = atoi(opt);
 							// if the argument is -dry:<number> and number is > 0x10,
@@ -2613,10 +2616,33 @@ init_params()
 }
 
 
-// The code below needs work before it can build on Windows or older Macs
+#if 1
+bool credd_has_tokens(std::string & tokens, MyString & URL) {
 
+	URL.clear();
+	tokens.clear();
+
+	std::string requests_error;
+	ClassAdList requests;
+	if (submit_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+		if ( ! requests_error.empty()) {
+			printf ("%s\n", requests_error.c_str());
+			exit(1);
+		}
+	} else {
+		return false;
+	}
+
+	if (IsDebugLevel(D_SECURITY)) {
+		char *myname = my_username();
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", tokens.c_str(), myname);
+		free(myname);
+	}
+
+	StringList unique_names(tokens.c_str());
+
+#else
 MyString credd_has_tokens(MyString m) {
-
 	if (IsDebugLevel(D_SECURITY)) {
 			char *myname = my_username();
 			dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), myname);
@@ -2811,10 +2837,67 @@ MyString credd_has_tokens(MyString m) {
 		requests.Insert(request_ad);
 	}
 
+	MyString URL;
+#endif
+
 	// PHASE 3
 	//
 	// Send all the requests to the CREDD
 	//
+	if (DashDryRun & (2|4)) {
+		std::string buf;
+		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
+		requests.Rewind();
+		for (const char * name = unique_names.first(); name != NULL; name = unique_names.next()) {
+			fprintf(stdout, "# %s \n%s\n", name, formatAd(buf, *requests.Next(), "\t"));
+			buf.clear();
+		}
+	#if 1
+		if (! (DashDryRun & 4)) {
+			URL = "http://getcreds.example.com";
+		}
+		return true;
+	#else
+		buf.clear();
+		if (! (DashDryRun & 4)) {
+			buf = "http://getcreds.example.com";
+		}
+		return buf;
+	#endif
+	}
+
+#if 1
+	// build a vector of the request ads from the classad list.
+	std::vector<const classad::ClassAd*> req_ads;
+	requests.Rewind();
+	classad::ClassAd * ad;
+	while ((ad = requests.Next())) { req_ads.push_back(ad); }
+
+	std::string url;
+	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
+	if (rv > 0) { URL = url; }
+	else if (rv < 0) {
+		// this little bit of nonsense preserves the pre 8.9.9 error messages to stdout
+		// do_check_oauth_creds will also dprintf the same(ish) messages
+		switch (rv) {
+		case -1:
+			fprintf( stderr, "\nCRED: invalid request to credd!\n");
+			break;
+		case -2: // could not locate
+			fprintf( stderr, "\nCRED: locate(credd) failed!\n");
+			break;
+		case -3: // start command failed
+			fprintf( stderr, "\nCRED: startCommand to CredD failed!\n");
+			break;
+		case -4: // communication failure (timeout of protocol mismatch)
+			fprintf( stderr, "\nCRED: communication failure!\n");
+			break;
+		}
+		exit(1);
+	}
+
+	return true;
+#else
 	Daemon my_credd(DT_CREDD);
 	if (my_credd.locate()) {
 		CondorError e;
@@ -2835,7 +2918,6 @@ MyString credd_has_tokens(MyString m) {
 		}
 		r->end_of_message();
 		r->decode();
-		MyString URL;
 		r->code(URL);
 		r->end_of_message();
 		r->close();
@@ -2845,6 +2927,7 @@ MyString credd_has_tokens(MyString m) {
 		fprintf( stderr, "\nCRED: locate(credd) failed!\n");
 		exit( 1 );
 	}
+#endif
 }
 
 
@@ -2866,11 +2949,16 @@ int process_job_credentials()
 		// create a "request file" and provide a URL that references
 		// it.  we forward this URL to the user so they can obtain the
 		// tokens needed.
-
+#if 1
+		MyString URL;
+		std::string tokens_needed;
+		if (credd_has_tokens(tokens_needed, URL)) {
+#else
 		MyString tokens_needed = submit_hash.submit_param_mystring("UseOAuthServices", "use_oauth_services");
 
 		if (!tokens_needed.empty()) {
 			MyString URL = credd_has_tokens(tokens_needed);
+#endif
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL

@@ -424,6 +424,7 @@
 #define ATTR_JOB_VM_VNC  "JobVMVNCConsole"
 #define ATTR_JOB_VM_CPU_UTILIZATION  "JobVMCpuUtilization"
 #define ATTR_JOB_SEND_CREDENTIAL  "SendCredential"
+#define ATTR_OAUTH_SERVICES_NEEDED "OAuthServicesNeeded"
 #define ATTR_KEYBOARD_IDLE  "KeyboardIdle"
 #define ATTR_KEYSTORE_FILE  "KeystoreFile"
 #define ATTR_KEYSTORE_ALIAS  "KeystoreAlias"
