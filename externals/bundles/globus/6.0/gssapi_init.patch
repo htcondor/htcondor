@@ -1,0 +1,18 @@
+--- globus_toolkit-6.0.1506371041/gsi/gssapi/source/library/init_sec_context.c	2017-09-25 15:35:57.000000000 -0500
++++ globus_toolkit-6.0.1506371041-patched/gsi/gssapi/source/library/init_sec_context.c	2020-08-24 15:27:50.000000000 -0500
+@@ -382,10 +382,13 @@
+          * have any more data to send, we can send the flag
+          * now. i.e. fall through without break,
+          * Otherwise, we will wait for the null byte
+-         * to get back in sync which we will ignore
++         * to get back in sync which we will ignore.
++         * We can't check output_token->length, since we haven't
++         * extracted the output payload yet, so look directly
++         * in context->gss_wbio.
+          */
+ 
+-        if (output_token->length != 0)
++        if (BIO_pending(context->gss_wbio) != 0)
+         {
+             context->gss_state=GSS_CON_ST_FLAGS;
+             break;
