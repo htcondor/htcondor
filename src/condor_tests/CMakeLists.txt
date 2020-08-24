@@ -211,6 +211,9 @@ if (BUILD_TESTING)
 
 		# htcondor-dags test suite
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "core;quick;full;quicknolink")
+
+		# htcondor.personal test suite
+		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "core;quick;full;quicknolink")
 	endif()
 
 	if(WITH_GANGLIA)

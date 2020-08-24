@@ -1004,7 +1004,6 @@ void CondorJob::doEvaluateState()
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
-				SetRemoteJobId( NULL );
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
@@ -1053,11 +1052,11 @@ void CondorJob::doEvaluateState()
 										 now + lastRemoveAttempt );
 				break;
 			}
-			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteJobId( NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -1425,7 +1424,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
 	submit_ad->Delete( ATTR_STAGE_IN_START );
-	submit_ad->Delete( ATTR_SCHEDD_BIRTHDATE );
 	submit_ad->Delete( ATTR_FILE_SYSTEM_DOMAIN );
 	submit_ad->Delete( ATTR_ULOG_FILE );
 	submit_ad->Delete( ATTR_ULOG_USE_XML );

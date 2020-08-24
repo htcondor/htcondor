@@ -2729,7 +2729,7 @@ JICShadow::initUserCredentials() {
 	// check to see if the job needs any OAuth services (scitokens)
 	// if so, call the function that does that.
 	std::string services_needed;
-	if (job_ad->LookupString("OAuthServicesNeeded", services_needed)) {
+	if (job_ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed)) {
 		dprintf(D_ALWAYS, "initUserCredentials: job needs OAuth services %s\n", services_needed.c_str());
 		if ( ! refreshSandboxCredentialsOAuth()) {
 			return false;

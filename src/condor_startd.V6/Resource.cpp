@@ -1328,10 +1328,8 @@ Resource::update( void )
 	if (r_no_collector_updates)
 		return;
 
-	// If we haven't already queued an update, queue one.  Wait three
-	// seconds before sending an update to allow the startd's state
-	// to quiesce; we'll implicitly coalesce the updates.
-	int delay = 3;
+	// If we haven't already queued an update, queue one.
+	int delay = 0;
 	int updateSpreadTime = param_integer( "UPDATE_SPREAD_TIME", 0 );
 	if( update_tid == -1 ) {
 		if( r_id > 0 && updateSpreadTime > 0 ) {

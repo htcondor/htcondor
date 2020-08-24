@@ -1,0 +1,16 @@
+executable = /bin/sleep
+arguments = 300
+transfer_executable = false
+
+# Ask for Box tokens
+use_oauth_services = box
+
+# Use blank permissions string with unique handles
+# to have HTCondor ask for two tokens.
+box_oauth_permissions_work = 
+box_oauth_permissions_personal = 
+
+# Successful submission will result in tokens:
+# $_CONDOR_CREDS/box_work.use
+# $_CONDOR_CREDS/box_personal.use
+queue

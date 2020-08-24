@@ -424,6 +424,7 @@
 #define ATTR_JOB_VM_VNC  "JobVMVNCConsole"
 #define ATTR_JOB_VM_CPU_UTILIZATION  "JobVMCpuUtilization"
 #define ATTR_JOB_SEND_CREDENTIAL  "SendCredential"
+#define ATTR_OAUTH_SERVICES_NEEDED "OAuthServicesNeeded"
 #define ATTR_KEYBOARD_IDLE  "KeyboardIdle"
 #define ATTR_KEYSTORE_FILE  "KeystoreFile"
 #define ATTR_KEYSTORE_ALIAS  "KeystoreAlias"
@@ -778,7 +779,6 @@
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
-#define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"

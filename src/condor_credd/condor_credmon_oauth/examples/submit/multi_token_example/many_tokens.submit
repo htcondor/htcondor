@@ -1,0 +1,22 @@
+executable = /bin/sleep
+arguments = 300
+transfer_executable = false
+
+# Get tokens from Box and a SciTokens issuer called "mytokens"
+use_oauth_services = box, mytokens
+
+# Ask mytokens issuer to issue first token with read permissions to
+# "/public" on "datastore.example.edu"
+mytokens_oauth_permissions_read = read:/public
+mytokens_oauth_resource_read = https://datastore.example.edu/
+
+# Ask mytokens issuer to issue second token with write permissions to
+# "/home/tokenuser" on "tokenuser.example.edu"
+mytokens_oauth_permissions_write = write:/public
+mytokens_oauth_resource_write = https://tokenuser.example.edu/
+
+# Successful submission will result in tokens:
+# $_CONDOR_CREDS/box.use
+# $_CONDOR_CREDS/mytokens_read.use
+# $_CONDOR_CREDS/mytokens_write.use
+queue
