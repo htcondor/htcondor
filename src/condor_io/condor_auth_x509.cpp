@@ -850,6 +850,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         // Now, wait for final signal
         mySock_->decode();
         if (!mySock_->code(status) || !mySock_->end_of_message()) {
+			status = 0;
 			errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
 					"Failed to authenticate with server.  Unable to receive server status");
             dprintf(D_SECURITY, "Unable to receive final confirmation for GSI Authentication!\n");
