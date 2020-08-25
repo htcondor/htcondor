@@ -194,26 +194,30 @@ if (BUILD_TESTING)
 		condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 		condor_pl_test(lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
 
-		# Ornithology
-		condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full")
-		condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "core;quick;full")
-		condor_pl_test(test_condor_now_internals "Test condow_now internals" "core;quick;full")
-		condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "core;quick;full")
-		condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full")
-		condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "core;quick;full")
-		condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full")
-		condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "core;quick;full")
-		condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "core;quick;full")
-		condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "core;quick;full")
-		condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "core;quick;full")
-		condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "core;quick;full")
-		condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "core;quick;full")
-
 		# htcondor-dags test suite
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "core;quick;full;quicknolink")
 
 		# htcondor.personal test suite
 		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "core;quick;full;quicknolink")
+
+		# Ornithology - partial merge - not yet reliable.
+		# condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full")
+		# condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "core;quick;full")
+		# condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full")
+		# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full")
+		# condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "core;quick;full")
+		# condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "core;quick;full")
+
+		# Ornithology - partial merge - Windows and MacOSX problems.
+		if(LINUX)
+			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "core;quick;full")
+			condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "core;quick;full")
+			condor_pl_test(test_condor_now_internals "Test condow_now internals" "core;quick;full")
+			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "core;quick;full")
+			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "core;quick;full")
+			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "core;quick;full")
+			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "core;quick;full")
+		endif()
 	endif()
 
 	if(WITH_GANGLIA)
