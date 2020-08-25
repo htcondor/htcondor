@@ -127,15 +127,17 @@ Making Assertions
 
 Every test should function should ideally make one (or more, but hopefully just one)
 **assertion**. ``pytest`` reuses Python's built-in assertion mechanism, which
-is the ``assert`` keyword, documented `here <https://docs.python.org/3/reference/simple_stmts.html#assert>`_.
+is the ``assert`` keyword, documented
+`here <https://docs.python.org/3/reference/simple_stmts.html#assert>`_.
 
 An assertion looks like ``assert <statement>``.
 If the ``<statement>`` is "truthy", the assertion passes;
 if it is "falsey", an ``AssertionError`` is raised.
 ``pytest`` catches the ``AssertionError`` and produces detailed error output.
 
-Truthiness is fairly complicated in Python, and use of implicity truthiness
-can make tests hard to read. We recommend **always explicitly producing a boolean value to assert on**.
+Truthiness is fairly complicated in Python, and use of implicit truthiness
+can make tests hard to read.
+We recommend **always explicitly producing a boolean value to assert on**.
 For example, if you want to assert that a list ``x`` is not empty,
 write ``assert len(x) > 0``,
 **not** ``assert x`` (even though a non-empty list is "truthy").
