@@ -12,14 +12,24 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
+
+sys.path.insert(0, os.path.abspath("../.."))
+
+
+ON_RTD = os.environ.get("READTHEDOCS") == "True"
+if ON_RTD:
+    print("ON RTD, THEREFORE INSTALLING HTCONDOR PACKAGE")
+    cmd = "{} -m pip install 'htcondor'".format(sys.executable)
+    print("EXECUTING COMMAND: {}".format(cmd))
+    os.system(cmd)
+    print("INSTALLED HTCONDOR PACKAGE")
 
 # -- Project information -----------------------------------------------------
 
 project = "Ornithology"
-copyright = '1990-2020, Center for High Throughput Computing, Computer \
+copyright = "1990-2020, Center for High Throughput Computing, Computer \
 Sciences Department, University of Wisconsin-Madison, Madison, WI, US. \
-Licensed under the Apache License, Version 2.0.'
+Licensed under the Apache License, Version 2.0."
 
 # -- General configuration ---------------------------------------------------
 
@@ -37,12 +47,12 @@ extensions = [
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+# templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["**/.ipynb_checkpoints"]
+# exclude_patterns = ["**/.ipynb_checkpoints"]
 
 pygments_style = "colorful"
 
