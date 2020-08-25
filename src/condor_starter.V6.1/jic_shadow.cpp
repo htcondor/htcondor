@@ -3274,6 +3274,7 @@ JICShadow::setJobFailed( void ) {
 	job_failed = true;
 }
 
+#if !defined(WINDOWS)
 void
 JICShadow::recordSandboxContents( const char * filename ) {
 	ASSERT(filename != NULL);
@@ -3312,4 +3313,9 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	closedir(dir);
 	fclose(file);
 }
-
+#else
+void
+JICShadow::recordSandboxContents( const char * filename ) {
+	ASSERT(filename != NULL);
+}
+#endif
