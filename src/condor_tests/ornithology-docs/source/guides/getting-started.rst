@@ -111,69 +111,50 @@ We recommend reading through :doc:`test_curl_plugin` to get a feel for how to
 build an Ornithology test from the ground up.
 
 
-Running Ornithology Tests Locally
----------------------------------
+Running Ornithology Tests
+-------------------------
 
-Running tests locally during development is a good way to quickly iterate on
-the design of a test.
+To run the Ornithology tests, you must be using Python 3 and have the
+Python 3 HTCondor/ClassAd libraries in your ``PYTHONPATH``.  Assuming you set
+``CMAKE_INSTALL_PREFIX`` to ``~/install``, after ``make install`` finishes,
+you'll set ``PYTHONPATH`` to ``~/install/lib/python3``.  Make sure that your
+installed ``bin`` directory is in your ``PATH`` (before any system version of
+HTCondor), and that ``CONDOR_CONFIG`` points to HTCondor under test.
+[#which_condor]_
 
-To run Ornithology tests locally, first follow these steps:
-
-#. Install HTCondor (perhaps by building it). Ornithology will use the system
-   HTCondor configuration to find the HTCondor binaries, but does not otherwise
-   need a running HTCondor pool on the machine.
-#. Install Python. Ornithology requires Python >=3.5, Python >=3.6 preferred.
-   We recommend using `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_.
-#. Install Ornithology's dependencies by running
-   ``pip install -r src/condor_tests/requirements.txt``.
-
-Now that Ornithology is installed, you can run Ornithology tests using the
-``pytest`` command, passing it the path to the test file.
-For example, to the run the ``test_hold_and_release.py`` test shown above,
-you would run ``pytest test_hold_and_release.py``:
+You'll need PyTest and one extension to run the Ornithology tests.  The
+easiest way to handle this is with Pip, although you can use your system
+``pytest`` (and ``pytest-httpserver``), or Miniconda, if you desire:
 
 .. code-block:: console
 
-    $ pytest src/condor_tests/test_hold_and_release.py
-    ================================================= test session starts ==================================================
-    platform linux -- Python 3.6.8, pytest-6.0.1, py-1.9.0, pluggy-0.13.1 -- /usr/bin/python3
-    cachedir: .pytest_cache
-    rootdir: /home/build/htcondor/src/condor_tests, configfile: pytest.ini
-    plugins: httpserver-0.3.5
+  $ cd condor_tests
+  $ pip3 install --user -r requirements.txt
 
-    Base per-test directory: /tmp/condor-tests-1598380756-5052
-    Platform:
-    Linux-5.4.0-42-generic-x86_64-with-centos-7.8.2003-Core
-    Python version:
-    3.6.8 (default, Apr  2 2020, 13:34:55)
-    [GCC 4.8.5 20150623 (Red Hat 4.8.5-39)]
-    Python bindings version:
-    $CondorVersion: 8.9.9 Aug 25 2020 PRE-RELEASE-UWCS $
-    HTCondor version:
-    $CondorVersion: 8.9.9 Aug 25 2020 PRE-RELEASE-UWCS $
-    $CondorPlatform: X86_64-CentOS_7.8 $
+This may install a ``pytest`` executable early enough in your ``PATH`` to be
+useful, but assuming it doesn't, you can start a specific Ornithology test
+in the following way:
 
-    collected 2 items
+.. code-block:: console
 
-    test_hold_and_release.py::TestCanHoldAndReleaseJob::test_job_queue_events_in_correct_order PASSED                [ 50%]
-    test_hold_and_release.py::TestCanHoldAndReleaseJob::test_hold_reason_code_was_1 PASSED                           [100%]
+  $ python3 -m pytest test_run_sleep_job.py
 
-    ================================================== 2 passed in 25.25s ==================================================
+One of the lines early in the output will look like the following:
 
-By default, Ornithology puts the temporary directories used for its tests
-under the system temporary directory.
-The local directory for personal pools will be under the test directory;
-its specific location is often mentioned in
-log messages, so they should be easy to find and inspect.
-Ornithology does not remove these directories when the tests finish
-(whether they succeeded or failed).
+.. code-block:: text
 
+  Base per-test directory: /tmp/condor-tests-1598380839-15666
+
+which will not be cleaned up after the test runs, for your debugging
+convenience.
 
 Running Ornithology Tests in the BaTLab
 ---------------------------------------
 
 Ornithology tests can run as part of the standard BaTLab/Metronome test process.
+
 Which tests are run is controlled by ``src/condor_tests/CMakeLists.txt``.
+
 The line which runs the ``test_hold_and_release.py`` test above is
 
 .. code-block:: text
@@ -184,3 +165,6 @@ The line which runs the ``test_hold_and_release.py`` test above is
 
 When running on the BaTLab, Ornithology test directories are available
 in the test results tarball under ``condor_tests/test-dirs``.
+
+.. [#which_condor] This may require as little as setting ``RELEASE_DIR`` properly.
+
