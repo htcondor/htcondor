@@ -1083,6 +1083,9 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 
+# remove junk man page (Fedora 32 build)
+rm -f %{buildroot}/%{_mandir}/man1/_static/graphviz.css
+
 # Remove python-based tools when no python bindings
 %if ! %python
 rm -f %{buildroot}/%{_bindir}/condor_top

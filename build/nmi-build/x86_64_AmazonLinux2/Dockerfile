@@ -320,4 +320,8 @@ RUN yum install -y \
     voms-devel \
     && yum clean all
 
+RUN yum install -y \
+    python3-pip \
+    && yum clean all
+
 RUN pip3 install pytest pytest-httpserver

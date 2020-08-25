@@ -36,8 +36,8 @@ New Features:
 Bugs Fixed:
 
 -  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
-  would make every job go on hold.
-  :ticket:`7797`
+   would make every job go on hold.
+   :ticket:`7797`
 
 Version 8.9.8
 -------------
@@ -502,7 +502,7 @@ New Features:
 - Made some performance improvements in the *condor_collector*.
   This includes new configuration parameter
   :macro:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`, which reduces the amount
-  of data forwarded between *condor_collector*s.
+  of data forwarded between *condor_collector*\ s.
   :ticket:`7440`
   :ticket:`7423`
 

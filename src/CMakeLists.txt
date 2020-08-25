@@ -76,7 +76,14 @@ if (BUILD_TESTING)
 	ENDFOREACH (test)
 	# copy rules for pl tests
 	FOREACH (test IN LISTS CONDOR_PL_TESTS)
-		FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run\" \n")
+		IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run)
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run\" \n")
+		ELSEIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.py)
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.py\" \n")
+		ELSE()
+			# hack to trigger the same "cannot find file" as would appear with no .py check
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run\" \n")
+		ENDIF()
 	ENDFOREACH (test)
 	# copy rules for tests helper scripts
 	FOREACH (script IN LISTS CONDOR_TEST_HELPER_SCRIPTS)
