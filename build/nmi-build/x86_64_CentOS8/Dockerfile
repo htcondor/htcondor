@@ -236,6 +236,7 @@ RUN dnf install -y \
 RUN dnf install -y \
     rpm-build \
     make \
+    patchelf \
     && dnf clean all
 
 # HTCondor build dependencies

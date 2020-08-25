@@ -237,6 +237,7 @@ RUN yum install -y \
 # Tools needed for building
 RUN yum install -y \
     make \
+    patchelf \
     rpm-build \
     && yum clean all
 

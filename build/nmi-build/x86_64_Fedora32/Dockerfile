@@ -227,6 +227,7 @@ RUN dnf install -y \
 # Tools needed for building
 RUN dnf install -y \
     make \
+    patchelf \
     rpm-build \
     && dnf clean all
 

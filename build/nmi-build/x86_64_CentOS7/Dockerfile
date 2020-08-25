@@ -210,6 +210,7 @@ RUN mkdir -p /usr/local/condor/etc/examples && \
 # Add tools to add the HTCondor repository
 RUN yum install -y \
     epel-release \
+    centos-release-scl \
     wget \
     && yum clean all
 
@@ -229,7 +230,9 @@ RUN yum install -y \
 
 # Tools needed for building
 RUN yum install -y \
+    devtoolset-8 \
     make \
+    patchelf \
     rpm-build \
     && yum clean all
 
@@ -245,6 +248,7 @@ RUN yum install -y \
     'byacc' \
     'c-ares-devel' \
     'cmake' \
+    'cmake3' \
     'expat-devel' \
     'flex' \
     'gcc-c++' \
