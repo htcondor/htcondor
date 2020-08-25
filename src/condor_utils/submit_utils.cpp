@@ -883,19 +883,19 @@ static bool validate_disk_param(const char *pszDisk, int min_params, int max_par
 
 // lookup and expand an item from the submit hashtable
 //
-char * SubmitHash::submit_param( const char* name)
+char * SubmitHash::submit_param( const char* name) const
 {
 	return submit_param(name, NULL);
 }
 
 // lookup and expand an item from the submit hashtable
 //
-char * SubmitHash::submit_param( const char* name, const char* alt_name )
+char * SubmitHash::submit_param( const char* name, const char* alt_name ) const
 {
 	if (abort_code) return NULL;
 
 	bool used_alt = false;
-	const char *pval = lookup_macro(name, SubmitMacroSet, mctx);
+	const char *pval = lookup_macro(name, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx));
 	char * pval_expanded = NULL;
 
 #ifdef SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM
@@ -911,7 +911,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 #endif
 
 	if( ! pval && alt_name ) {
-		pval = lookup_macro(alt_name, SubmitMacroSet, mctx);
+		pval = lookup_macro(alt_name, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx));
 		used_alt = true;
 	}
 
@@ -954,7 +954,7 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name )
 	return  pval_expanded;
 }
 
-bool SubmitHash::submit_param_exists(const char* name, const char * alt_name, std::string & value)
+bool SubmitHash::submit_param_exists(const char* name, const char * alt_name, std::string & value) const
 {
 	auto_free_ptr result(submit_param(name, alt_name));
 	if ( ! result)
@@ -970,7 +970,7 @@ void SubmitHash::set_submit_param( const char *name, const char *value )
 	insert_macro(name, value, SubmitMacroSet, DefaultMacro, ctx);
 }
 
-MyString SubmitHash::submit_param_mystring( const char * name, const char * alt_name )
+MyString SubmitHash::submit_param_mystring( const char * name, const char * alt_name ) const
 {
 	char * result = submit_param(name, alt_name);
 	MyString ret = result;
@@ -978,7 +978,7 @@ MyString SubmitHash::submit_param_mystring( const char * name, const char * alt_
 	return ret;
 }
 
-bool SubmitHash::submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range /*=false*/)
+bool SubmitHash::submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range /*=false*/) const
 {
 	auto_free_ptr result(submit_param(name, alt_name));
 	if ( ! result)
@@ -994,7 +994,7 @@ bool SubmitHash::submit_param_long_exists(const char* name, const char * alt_nam
 	return true;
 }
 
-int SubmitHash::submit_param_int(const char* name, const char * alt_name, int def_value)
+int SubmitHash::submit_param_int(const char* name, const char * alt_name, int def_value) const
 {
 	long long value = def_value;
 	if ( ! submit_param_long_exists(name, alt_name, value, true)) {
@@ -1004,7 +1004,7 @@ int SubmitHash::submit_param_int(const char* name, const char * alt_name, int de
 }
 
 
-int SubmitHash::submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists)
+int SubmitHash::submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists) const
 {
 	char * result = submit_param(name, alt_name);
 	if ( ! result) {
@@ -2741,6 +2741,37 @@ int SubmitHash::SetKillSig()
 	}
 	return 0;
 }
+
+int SubmitHash::SetContainerSpecial()
+{
+	RETURN_IF_ABORT();
+
+	if( IsDockerJob ) {
+		auto_free_ptr serviceList( submit_param( SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES ));
+		if( serviceList ) {
+			AssignJobString( ATTR_CONTAINER_SERVICE_NAMES, serviceList );
+
+			const char * service = NULL;
+			StringList sl(serviceList);
+
+			sl.rewind();
+			while( (service = sl.next()) != NULL ) {
+				std::string attrName;
+				formatstr( attrName, "%s%s", service, SUBMIT_KEY_ContainerPortSuffix );
+				int portNo = submit_param_int( attrName.c_str(), NULL, -1 );
+				if( 0 <= portNo && portNo <= 65535 ) {
+					formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
+					AssignJobVal( attrName.c_str(), portNo );
+				} else {
+					push_error( stderr, "Requested container service '%s' was not assigned a port, or the assigned port was not valid.\n", service );
+					ABORT_AND_RETURN( 1 );
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 
 // When submitting from condor_submit, we allow SUBMIT_ATTRS to have +Attr
 // which wins over a user defined value.  If we are doing late materialization
@@ -5106,6 +5137,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	//{ "+" ATTR_ACCOUNTING_GROUP, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
+	// invoke SetOAuth
+	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER_deprecated, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_acctgroup},
 	// invoke SetStdin
 	{SUBMIT_KEY_TransferInput, ATTR_TRANSFER_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin},
 	{SUBMIT_KEY_StreamInput, ATTR_STREAM_INPUT, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_stdin},
@@ -6578,6 +6611,17 @@ int SubmitHash::SetAccountingGroup()
 	return 0;
 }
 
+int SubmitHash::SetOAuth()
+{
+	RETURN_IF_ABORT();
+	std::string tokens;
+	if (NeedsOAuthServices(tokens)) {
+		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens.c_str());
+	}
+
+	return 0;
+}
+
 
 // this function must be called after SetUniverse
 int SubmitHash::SetVMParams()
@@ -7628,6 +7672,203 @@ int SubmitHash::FixupTransferInputFiles()
 }
 
 
+// check to see if the job needs OAuth services, returns TRUE if it does
+// if a services_ads collection is provided, it will be populated with OAuth service ads
+// if return value is true, but *ads_error is not empty() then the request ads have missing fields
+// that are required by configuration.
+bool SubmitHash::NeedsOAuthServices(
+	std::string & services,   // out: comma separated list of services names for OAuthServicesNeeded job attribute
+	ClassAdList * request_ads /*=NULL*/, // out: optional list of request classads for the services
+	std::string * ads_error /*=NULL*/) const // out: error message from building request_ads
+{
+	if (request_ads) { request_ads->Clear(); }
+	if (ads_error) { ads_error->clear(); }
+	services.clear();
+
+	auto_free_ptr tokens_needed(submit_param(SUBMIT_KEY_UseOAuthServices, SUBMIT_KEY_UseOAuthServicesAlt));
+	if (tokens_needed.empty()) {
+		return false;
+	}
+
+	// enabled services it the bare service names from the use_oauth_services
+	// these may not be the actual services names
+	// because the use of handles modifies the effective service name
+	classad::References enabled_services, services_with_handles;
+	StringTokenIterator sti(tokens_needed);
+	for (auto name = sti.first(); name != NULL; name = sti.next()) {
+		enabled_services.insert(name);
+	}
+
+	// this will be populated with the fully qualifed service names
+	// that have been enabled, these names will include the handle suffix
+	classad::References service_names;
+
+	// scan the submit keys for things that match the form
+	// <service>_OAUTH_[PERMISSIONS|RESOURCE](_<handle>)?
+	// and create a list of individual tokens (with handles)
+	// that we need to have.
+
+	const char *errptr;
+	int erroffset;
+	pcre * re = pcre_compile("_oauth_(permissions|resource)", PCRE_CASELESS, &errptr, &erroffset, NULL);
+	if ( ! re) {
+		dprintf(D_ALWAYS, "could not compile Oauth key regex!\n");
+		return true;
+	}
+	const int ocount = 2; // 1 for (permissions|resource) capture group, and 1 for whole pattern
+	int ovec[3 * ocount];
+	const int ovec_service_end = 0;  // index into ovec for the end of the service name (start of pattern)
+	const int ovec_handle_start = 1; // index into ovec for the start of the handle (end of the pattern)
+
+	std::string service;
+
+	// scan the keys in the hashtable, looking for keys that match the pattern
+	// if we find any, check to see if they have a handle suffix.
+	// so we can store <service>*<handle> as the actual service name
+	HASHITER it = hash_iter_begin(const_cast<MACRO_SET&>(SubmitMacroSet));
+	for (; !hash_iter_done(it); hash_iter_next(it)) {
+		const char *key = hash_iter_key(it);
+		if (*key == '+' || starts_with_ignore_case(key, "MY.")) continue;	// ignore job attrs, we care only about submit keywords
+		int cch = (int)strlen(key);
+		int onum = pcre_exec(re, NULL, key, cch, 0, PCRE_NOTBOL, ovec, ocount);
+		if (onum >= 0 && ovec[ovec_service_end] > 0) {
+			service.assign(key, ovec[ovec_service_end]);
+			if (enabled_services.count(service) > 0) {
+
+				// does this key have a handle suffix? of so append the suffix to the service name
+				if (key[ovec[ovec_handle_start]]) {
+					// add this to the list of services that have specialized names
+					services_with_handles.insert(service);
+
+					// now mutate the service name to include the handle
+					service += "*";
+					service += key + ovec[ovec_handle_start] + 1;
+				}
+
+				// store the effective service name
+				service_names.insert(service);
+			}
+		}
+	}
+	hash_iter_delete(&it);
+	pcre_free(re);
+
+	// The services names that did *not* have a PERMISSIONS or RESOURCE key have not yet been added
+	// we want to add these only if that service has not already been added with a handle
+	for (auto name = enabled_services.begin(); name != enabled_services.end(); ++name) {
+		if (services_with_handles.count(*name) > 0) continue;
+		service_names.insert(*name);
+	}
+
+	// return the string that we will use for the OAuthServicesNeeded job attribute
+	for (auto name = service_names.begin(); name != service_names.end(); ++name){
+		if (!services.empty()) services += ",";
+		services += *name;
+	}
+
+	// at this point, service_names has the list fully qualified service names, including the handle suffix
+	// now we need to build services ads for these
+	if (request_ads) {
+		build_oauth_service_ads(service_names, *request_ads, *ads_error);
+	}
+	return true;
+}
+
+// fill out token request ads for the needed oauth services
+// returns -1 and fills out error if the SubmitHash is missing a required field
+// returns 0 on success
+int SubmitHash::build_oauth_service_ads (
+	classad::References & unique_names,
+	ClassAdList & requests,
+	std::string & error) const
+{
+	MyString param_name;
+	MyString config_param_name;
+	MyString param_val;
+
+	error.clear();
+
+	for (auto it = unique_names.begin(); it != unique_names.end(); ++it) {
+		const char * token = it->c_str();
+		ClassAd *request_ad = new ClassAd();
+		MyString token_MyS = token;
+
+		MyString service_name;
+		MyString handle;
+		int starpos = token_MyS.FindChar('*');
+		if(starpos == -1) {
+			// no handle, just service
+			service_name = token_MyS;
+		} else {
+			// no split into two
+			service_name = token_MyS.substr(0,starpos);
+			handle = token_MyS.substr(starpos+1,token_MyS.Length());
+		}
+		request_ad->Assign("Service", service_name);
+		if ( ! handle.empty()) { request_ad->Assign("Handle", handle); }
+
+
+		// get permissions (scopes) from submit file or config file if needed
+		param_name.formatstr("%s_OAUTH_PERMISSIONS", service_name.c_str());
+		if (handle.Length()) {
+			param_name += "_";
+			param_name += handle;
+		}
+		param_val = submit_param_mystring(param_name.c_str(), NULL);
+		if(param_val.Length() == 0) {
+			// not specified: is this required?
+			config_param_name.formatstr("%s_USER_DEFINE_SCOPES", service_name.c_str());
+			param_val  = param(config_param_name.c_str());
+			if (param_val[0] == 'R') {
+				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
+				return -1;
+			}
+			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
+			param_val = param(config_param_name.c_str());
+		}
+		if (!param_val.empty()) { request_ad->Assign("Scopes", param_val); }
+
+		// get resource (audience) from submit file or config file if needed
+		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
+		if (handle.Length()) {
+			param_name += "_";
+			param_name += handle;
+		}
+		param_val = submit_param_mystring(param_name.c_str(), NULL);
+		if (param_val.Length() == 0) {
+			// not specified: is this required?
+			config_param_name.formatstr("%s_USER_DEFINE_AUDIENCE", service_name.c_str());
+			param_val  = param(config_param_name.c_str());
+			if (param_val[0] == 'R') {
+				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
+				return -1;
+			}
+			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
+			param_val = param(config_param_name.c_str());
+		}
+		if ( ! param_val.empty()) { request_ad->Assign("Audience", param_val); }
+
+		// right now, we only ever want to obtain creds for the user
+		// principal as determined by the CredD.  omitting username
+		// tells the CredD to take the authenticated user from the
+		// socket and use that.
+		//
+		// NOTE: this will fail when talking to a pre-8.9.7 CredD
+		// because it is expecting this username and does not know to
+		// use the authenticated from the socket.
+		//
+		// in the future, if we wish to obtain credentials on behalf of
+		// another user, you would fill in this attribute, presumably
+		// with some value obtained from the submit file.
+		//
+		// request_ad->Assign("Username", "<username>");
+
+		requests.Insert(request_ad);
+	}
+
+	return 0;
+}
+
 
 void SubmitHash::delete_job_ad()
 {
@@ -7977,6 +8218,7 @@ ClassAd* SubmitHash::make_job_ad (
 	SetRequestResources(); /* n attrs, prunable by pattern, factory:ok */
 	SetConcurrencyLimits(); /* 2 attrs, prunable, factory:ok */
 	SetAccountingGroup(); /* 3 attrs, prunable, factory:ok */
+	SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	SetSimpleJobExprs();
 
@@ -8028,35 +8270,6 @@ ClassAd* SubmitHash::make_job_ad (
 	return procAd;
 }
 
-int SubmitHash::SetContainerSpecial()
-{
-	RETURN_IF_ABORT();
-
-	if( IsDockerJob ) {
-		auto_free_ptr serviceList( submit_param( SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES ));
-		if( serviceList ) {
-			AssignJobString( ATTR_CONTAINER_SERVICE_NAMES, serviceList );
-
-			const char * service = NULL;
-			StringList sl(serviceList);
-
-			sl.rewind();
-			while( (service = sl.next()) != NULL ) {
-				std::string attrName;
-				formatstr( attrName, "%s%s", service, SUBMIT_KEY_ContainerPortSuffix );
-				int portNo = submit_param_int( attrName.c_str(), NULL, -1 );
-				if( 0 <= portNo && portNo <= 65535 ) {
-					formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
-					AssignJobVal( attrName.c_str(), portNo );
-				} else {
-					push_error( stderr, "Requested container service '%s' was not assigned a port, or the assigned port was not valid.\n", service );
-					ABORT_AND_RETURN( 1 );
-				}
-			}
-		}
-	}
-	return 0;
-}
 
 void SubmitHash::insert_source(const char * filename, MACRO_SOURCE & source)
 {

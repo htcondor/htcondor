@@ -10,6 +10,4 @@ Overview
    exceptional-features
    availability
    contributions-and-acknowledgments
-   support-downloads-bug-reports  
-
-      
+   support-downloads-bug-reports

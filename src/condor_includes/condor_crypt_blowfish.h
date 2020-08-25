@@ -23,49 +23,27 @@
 
 #ifdef HAVE_EXT_OPENSSL
 
+#include "condor_common.h"
 #include "condor_crypt.h"          // base class
 #include <openssl/blowfish.h>
 
 class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_Blowfish(const KeyInfo& key);
-    //------------------------------------------
-    // PURPOSE: Cryto base class constructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
+    Condor_Crypt_Blowfish() {}
+    ~Condor_Crypt_Blowfish() {}
 
-    ~Condor_Crypt_Blowfish();
-    //------------------------------------------
-    // PURPOSE: Crypto base class destructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
-
-    void resetState();
-
-
-    bool encrypt(const unsigned char * input,
+    bool encrypt(Condor_Crypto_State *s,
+                 const unsigned char * input,
                  int          input_len, 
                  unsigned char *&      output, 
                  int&         output_len);
 
-    bool decrypt(const unsigned char * input,
+    bool decrypt(Condor_Crypto_State *s,
+                 const unsigned char * input,
                  int          input_len, 
                  unsigned char *&      output, 
                  int&         output_len);
-
- private:
-    Condor_Crypt_Blowfish();
-    //------------------------------------------
-    // Private constructor
-    //------------------------------------------
-
-    int             num_;            // For stream encryption
-    BF_KEY          key_;
-    unsigned char   ivec_[8];
-
 };
 
 #endif

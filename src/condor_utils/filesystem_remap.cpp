@@ -554,7 +554,11 @@ int FilesystemRemap::PerformMappings() {
 
 	// do mounts for RemapProc()
 	if ((!retval) && m_remap_proc) {
+    	TemporaryPrivSentry sentry(PRIV_ROOT);
 		retval = mount("proc", "/proc", "proc", 0, NULL);
+		if (retval < 0) {
+			dprintf(D_ALWAYS, "Cannot remount proc, errno is %d\n", errno);
+		}
 	}
 #endif
 	return retval;

@@ -173,8 +173,6 @@ bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
-bool jobExternallyManaged(ClassAd * ad);
-bool jobManagedDone(ClassAd * ad);
 int  count_a_job( JobQueueJob *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
@@ -12953,6 +12951,7 @@ Scheduler::Init()
 	SchedDInterval.setMaxInterval( SchedDInterval.getDefaultInterval() );
 
 	SchedDInterval.setMinInterval( param_integer("SCHEDD_MIN_INTERVAL",5) );
+	SchedDInterval.setInitialInterval( 0 );
 
 	SchedDInterval.setTimeslice( param_double("SCHEDD_INTERVAL_TIMESLICE",0.05,0,1) );
 

@@ -2004,6 +2004,106 @@ int queryCredential( const char* user, Daemon *d ) {
 }
 */
 
+int do_check_oauth_creds (
+	const classad::ClassAd* request_ads[],
+	int num_ads,
+	std::string & outputURL,
+	Daemon* d /* = NULL*/)
+{
+	ReliSock * sock;
+	CondorError err;
+	MyString daemonid;
+
+	outputURL.clear();
+	if (num_ads < 0) {
+		return -1;
+	}
+	if (num_ads == 0) {
+		return 0;
+	}
+
+	if (! d) {
+		Daemon my_credd(DT_CREDD);
+		if (my_credd.locate()) {
+			sock = (ReliSock*)my_credd.startCommand(CREDD_CHECK_CREDS, Stream::reli_sock, 20, &err);
+			if (! sock) { daemonid = my_credd.idStr(); }
+		} else {
+			dprintf(D_ALWAYS, "could not find local CredD\n");
+			return -2;
+		}
+	} else if (d->locate()) {
+		sock = (ReliSock*)d->startCommand(CREDD_CHECK_CREDS, Stream::reli_sock, 20, &err);
+		if (! sock) { daemonid = d->idStr(); }
+	} else {
+		daemonid = d->idStr();
+		dprintf(D_ALWAYS, "could not locate %s\n", daemonid.c_str());
+		return -2;
+	}
+
+	if (! sock) {
+		dprintf(D_ALWAYS, "startCommand(CREDD_CHECK_CREDS) failed to %s\n", daemonid.c_str());
+		return -3;
+	}
+
+	bool sent = false;
+	sock->encode();
+	if ( ! sock->put(num_ads)) {
+		sent = false;
+	} else {
+		sent = true;
+		for (int ii = 0; ii < num_ads; ++ii) {
+			// to insure backward compability, there are 3 fields that *must* be set to empty strings
+			// if they are missing or undefined. 8.9.9 and later will handle missing fields correctly
+			// but 8.9.* < 8.9.9 will leak values from one attribute to the other 
+			// if Handle, Scope, or Audience are not present or are set to undefined.
+			// which can happen if the python-bindings or 8.9.8 submit is making the call
+			classad::ClassAd ad(*request_ads[ii]);
+			static const char * const fix_fields[] = { "Handle", "Scopes", "Audience" };
+			for (int ii = 0; ii < (int)(sizeof(fix_fields) / sizeof(fix_fields[0])); ++ii) {
+				const char * attr = fix_fields[ii];
+				classad::Value val;
+				val.SetUndefinedValue();
+				if (! ad.EvaluateAttr(attr, val) || val.IsUndefinedValue()) {
+					ad.Assign(attr, "");
+				}
+			}
+			if (! putClassAd(sock, ad)) {
+				sent = false;
+				break;
+			}
+		}
+	}
+	// did we send the query payload? then send EOM also, of that fails the other end probably closed the socket
+	if (sent) {
+		if ( ! sock->end_of_message()) {
+			sent = false;
+		}
+	}
+
+	// if we sent a the request, no wait for a response
+	// and then close the socket.
+	if (sent) {
+		sock->decode();
+		if ( ! sock->get(outputURL) || ! sock->end_of_message()) {
+			sent = false;
+		}
+	}
+	sock->close();
+	delete sock;
+
+	// report any failures
+	if ( ! sent) {
+		dprintf(D_ALWAYS, "Failed to query OAuth from the CredD\n");
+		return -4;
+	}
+
+	// return 0 or positive values for success
+	// an empty URL indicates that the creds are already stored
+	// a non-empty URL must be visited to create the requested creds
+	return (int)outputURL.size();
+}
+
+
 #if !defined(WIN32)
 
 // helper routines for UNIX keyboard input
