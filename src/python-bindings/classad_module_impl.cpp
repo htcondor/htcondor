@@ -142,11 +142,11 @@ struct exprtree_pickle_suite : boost::python::pickle_suite
 bool ValueBool(classad::Value::ValueType val) {
     switch (val) {
         case classad::Value::ERROR_VALUE:
-            THROW_EX(RuntimeError, "Expression evaluated to ClassAd ERROR value.")
+            THROW_EX(ClassAdEvaluationError, "Expression evaluated to ClassAd ERROR value.")
         case classad::Value::UNDEFINED_VALUE:
             return false;
         default:
-            THROW_EX(RuntimeError, "Unrecognized ClassAd value.");
+            THROW_EX(ClassAdInternalError, "Unrecognized ClassAd value.");
     };
     return false;
 }

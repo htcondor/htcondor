@@ -21,6 +21,8 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
+
+#include "htcondor.h"
 #include "old_boost.h"
 
 #include "daemon_location.h"
@@ -60,7 +62,7 @@ int construct_for_location(boost::python::object loc, daemon_t mydt, std::string
 	if (extract_ad.check()) {
 		const ClassAdWrapper ad = extract_ad();
 		if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr)) {
-			PyErr_SetString(PyExc_ValueError, "address not specified.");
+			PyErr_SetString(PyExc_HTCondorValueError, "address not specified.");
 			return -2;
 		}
 		ad.EvaluateAttrString(ATTR_VERSION, version);
@@ -82,7 +84,7 @@ int construct_for_location(boost::python::object loc, daemon_t mydt, std::string
 		boost::python::tuple location = try_extract_tuple();
 		if (py_len(location) < 3)
 		{
-			PyErr_SetString(PyExc_ValueError, "tuple is not a daemon location");
+			PyErr_SetString(PyExc_HTCondorValueError, "tuple is not a daemon location");
 			return -2; // tell the caller we set the error
 		}
 		daemon_t dt = boost::python::extract<daemon_t>(location[0]);
@@ -97,13 +99,13 @@ int construct_for_location(boost::python::object loc, daemon_t mydt, std::string
 			dt = DT_COLLECTOR;
 		}
 		if (dt != mydt && dt != DT_NONE && dt != DT_ANY) {
-			PyErr_SetString(PyExc_ValueError, "Incorrect daemon_type in location tuple");
+			PyErr_SetString(PyExc_HTCondorValueError, "Incorrect daemon_type in location tuple");
 			return -2;
 		}
 		addr = boost::python::extract<std::string>(location[1]);
 		version = boost::python::extract<std::string>(location[2]);
 		if (!version.empty() && version[0] != '$') {
-			PyErr_SetString(PyExc_ValueError, "bad version in Location tuple");
+			PyErr_SetString(PyExc_HTCondorValueError, "bad version in Location tuple");
 			return -2;
 		}
 		if (name && py_len(location) > 3) {

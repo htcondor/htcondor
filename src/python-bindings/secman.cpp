@@ -83,14 +83,14 @@ public:
 
     std::string request_id() const {
         if (m_reqid.empty()) {
-            THROW_EX(RuntimeError, "Request ID requested prior to submitting request!");
+            THROW_EX(HTCondorIOError, "Request ID requested prior to submitting request!");
         }
         return m_reqid;
     }
 
     void submit(boost::python::object ad_obj) {
         if (m_daemon) {
-            THROW_EX(RuntimeError, "Token request already submitted.");
+            THROW_EX(HTCondorIOError, "Token request already submitted.");
         }
 
         if (ad_obj.ptr() == Py_None) {
@@ -100,12 +100,12 @@ public:
             std::string ad_type_str;
             if (!ad.EvaluateAttrString(ATTR_MY_TYPE, ad_type_str))
             {
-                THROW_EX(ValueError, "Daemon type not available in location ClassAd.");
+                THROW_EX(HTCondorValueError, "Daemon type not available in location ClassAd.");
             }
             int ad_type = AdTypeFromString(ad_type_str.c_str());
             if (ad_type == NO_AD)
             {
-                THROW_EX(ValueError, "Unknown ad type.");
+                THROW_EX(HTCondorEnumError, "Unknown ad type.");
             }
             daemon_t d_type;
             switch (ad_type) {
@@ -116,7 +116,7 @@ public:
                 case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
                 default:
                     d_type = DT_NONE;
-                    THROW_EX(ValueError, "Unknown daemon type.");
+                    THROW_EX(HTCondorEnumError, "Unknown daemon type.");
             }
 
             ClassAd ad_copy; ad_copy.CopyFrom(ad);
@@ -130,7 +130,7 @@ public:
             m_client_id, m_token, m_reqid, &err))
         {
             m_client_id = "";
-            THROW_EX(RuntimeError, err.getFullText().c_str());
+            THROW_EX(HTCondorIOError, err.getFullText().c_str());
         }
     }
 
@@ -140,7 +140,7 @@ public:
         }
         CondorError err;
         if (!m_daemon->finishTokenRequest(m_client_id, m_reqid, m_token, &err)) {
-            THROW_EX(RuntimeError, err.getFullText().c_str());
+            THROW_EX(HTCondorIOError, err.getFullText().c_str());
         }
         return !m_token.empty();
     }
@@ -148,7 +148,7 @@ public:
     Token result(time_t timeout)
     {
         if (m_client_id.empty()) {
-            THROW_EX(RuntimeError, "Request has not been submitted to a remote daemon");
+            THROW_EX(HTCondorIOError, "Request has not been submitted to a remote daemon");
         }
         bool infinite_loop = timeout == 0;
         bool last_iteration = false;
@@ -175,7 +175,7 @@ public:
             if (last_iteration) {
                 if (done()) {
                     return Token(m_token);                                                                                              } else {
-                    THROW_EX(RuntimeError, "Timed out waiting for token approval");
+                    THROW_EX(HTCondorIOError, "Timed out waiting for token approval");
                 }
             }
         }

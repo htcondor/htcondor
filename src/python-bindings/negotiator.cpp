@@ -90,7 +90,7 @@ struct Negotiator {
 			use_local_negotiator();
 		} else if (rv < 0) {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
-			THROW_EX(RuntimeError, "Unknown type");
+			THROW_EX(HTCondorValueError, "Unknown type");
 		}
 	}
 

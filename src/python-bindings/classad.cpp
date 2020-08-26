@@ -252,7 +252,7 @@ ExprTreeHolder::eval( boost::python::object scope, classad::Value & value ) cons
         rv = m_expr->Evaluate(state, value);
     }
     if( PyErr_Occurred() ) { boost::python::throw_error_already_set(); }
-    if(! rv) { THROW_EX(TypeError, "Unable to evaluate expression" ); }
+    if(! rv) { THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression" ); }
 }
 
 boost::python::object

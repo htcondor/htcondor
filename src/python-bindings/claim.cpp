@@ -18,6 +18,8 @@
 #include "globus_utils.h"
 #include "classad/source.h"
 
+#include "htcondor.h"
+
 #include "old_boost.h"
 #include "module_lock.h"
 #include "classad_wrapper.h"
@@ -48,7 +50,7 @@ struct Claim
 
         if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
-            THROW_EX(ValueError, "No contact string in ClassAd");
+            THROW_EX(HTCondorValueError, "No contact string in ClassAd");
         }
     }
 
@@ -100,7 +102,7 @@ struct Claim
     void
     release(VacateType vacate_type)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -121,7 +123,7 @@ struct Claim
     void
     activate(boost::python::object ad_obj)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
         if (ad.find(ATTR_JOB_KEYWORD) == ad.end())
@@ -146,7 +148,7 @@ struct Claim
     void
     deactivate(VacateType vacate_type)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -165,7 +167,7 @@ struct Claim
     void
     suspend()
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -184,7 +186,7 @@ struct Claim
     void
     renew()
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -203,7 +205,7 @@ struct Claim
     void
     resume()
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -222,7 +224,7 @@ struct Claim
     void
     delegateGSI(boost::python::object fname)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         std::string proxy_file;
         if (fname.ptr() == Py_None)

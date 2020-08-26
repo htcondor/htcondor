@@ -1,4 +1,5 @@
 #include "python_bindings_common.h"
+
 #include "old_boost.h"
 
 #include <classad/source.h>
@@ -203,7 +204,7 @@ OldClassAdIterator::OldClassAdIterator(boost::python::object source)
 {
     if (!m_source_has_next && !PyIter_Check(m_source.ptr()))
     {
-        THROW_EX(TypeError, "Source object is not iterable")
+        THROW_EX(ClassAdTypeError, "Source object is not iterable")
     }
 }
 
@@ -434,7 +435,7 @@ obj_iternext(PyObject *self)
         try
         {
             boost::python::object obj(boost::python::borrowed(self));
-            if (!py_hasattr(obj, NEXT_FN)) { THROW_EX(TypeError, "instance has no " NEXT_FN "() method"); }
+            if (!py_hasattr(obj, NEXT_FN)) { THROW_EX(ClassAdTypeError, "instance has no " NEXT_FN "() method"); }
             boost::python::object result = obj.attr(NEXT_FN)();
             return boost::python::incref(result.ptr());
         }
@@ -478,7 +479,7 @@ obj_getiter(PyObject* self)
     {
         return PySeqIter_New(self);
     }
-    PyErr_SetString(PyExc_TypeError, "iteration over non-sequence");
+    PyErr_SetString(PyExc_ClassAdTypeError, "iteration over non-sequence");
     return NULL;
 }
 

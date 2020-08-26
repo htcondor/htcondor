@@ -14,7 +14,7 @@ Exception
     |- classad.ClassAdException
         |- classad.ClassAdEnumError         ->  TypeError
         |- classad.ClassAdEvaluationError   ->  TypeErrror, RuntimeError
-        |- classad.ClassAdInternalError     ->  ValueError
+        |- classad.ClassAdInternalError     ->  ValueError, RuntimeError
         |- classad.ClassAdParseError        ->  ValueError, SyntaxError, RuntimeError
         |- classad.ClassAdValueError        ->  ValueError, RuntimeError, TypeError, RuntimeError
         |- classad.ClassAdTypeError         ->  TypeError, ValueError

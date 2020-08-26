@@ -29,7 +29,7 @@ quote_classads_string(const std::string &input)
     classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeLiteral(val));
     if (!expr.get())
     {
-        THROW_EX(MemoryError, "Failed to allocate a new ClassAds expression.");
+        THROW_EX(HTCondorInternalError, "Failed to allocate a new ClassAds expression.");
     }
     classad::ClassAdUnParser sink;
     std::string result;
@@ -349,7 +349,7 @@ private:
     {
         std::string constraint;
         if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
-            THROW_EX(ValueError, "Invalid constraint.");
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
         }
 
         CondorQuery query(ad_type);

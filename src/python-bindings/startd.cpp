@@ -56,7 +56,7 @@ struct Startd
     {
 		std::string check_expr;
 		if ( ! convert_python_to_constraint(check_obj, check_expr, true)) {
-			THROW_EX(ValueError, "Invalid check expression");
+			THROW_EX(HTCondorValueError, "Invalid check expression");
 		}
 		const char * check_expr_ptr = nullptr;
 		if ( ! check_expr.empty()) { check_expr_ptr = check_expr.c_str(); }

@@ -26,6 +26,8 @@
 #include <boost/version.hpp>
 #include <boost/python/raw_function.hpp>
 
+#include "htcondor.h"
+
 #include "old_boost.h"
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
@@ -33,7 +35,6 @@
 #include "daemon_location.h"
 #include "query_iterator.h"
 #include "submit_utils.h"
-#include "htcondor.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
 #include "history_iterator.h"
@@ -291,7 +292,7 @@ struct HistoryIterator
         long long intVal;
         if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
         { // Last ad.
-            if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Unable to close remote socket");
+            if (!m_sock->end_of_message()) THROW_EX(HTCondorIOError, "Unable to close remote socket");
             m_sock->close();
             std::string errorMsg;
             if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
@@ -335,12 +336,12 @@ history_query(boost::python::object requirement, boost::python::list projection,
 				req_expr.set(expr); // take ownership of the new expression
 			} else {
 				classad::ExprTree * expr_copy = expr->Copy();
-				if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+				if (!expr_copy) THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
 				req_expr.set(expr_copy);
 			}
 		}
 	} else {
-		THROW_EX(ValueError, "Unable to parse requirements expression");
+		THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
 	}
 
 	classad::ExprList *projList(new classad::ExprList());
@@ -349,7 +350,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	{
 		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
 		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-		if (!entry) THROW_EX(ValueError, "Unable to create copy of list entry.")
+		if (!entry) THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
 			projList->push_back(entry);
 	}
 
@@ -368,7 +369,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		std::string since_str = since_string_extract();
 		classad::ClassAdParser parser;
 		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
-			THROW_EX(ValueError, "Unable to parse since argument as an expression or as a job id.");
+			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
 		} else {
 			classad::Value val;
 			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
@@ -391,7 +392,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	} else if (since_exprtree_extract.check()) {
 		since_expr_copy = since_exprtree_extract().get()->Copy();
 	} else if (since.ptr() != Py_None) {
-		THROW_EX(ValueError, "invalid since argument");
+		THROW_EX(HTCondorValueError, "invalid since argument");
 	}
 
 
@@ -425,11 +426,11 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		if ( ! msg || ! msg[0]) {
 			msg = want_startd ? "Unable to connect to startd" : "Unable to connect to schedd";
 		}
-		THROW_EX(RuntimeError, msg);
+		THROW_EX(HTCondorIOError, msg);
 	}
 	boost::shared_ptr<Sock> sock_sentry(sock);
 
-	if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+	if (!putClassAdAndEOM(*sock, ad)) THROW_EX(HTCondorIOError, "Unable to send request classad to schedd");
 
 	boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
 	return iter;
@@ -721,7 +722,7 @@ struct SubmitStepFromPyIter {
 #endif
 		if ( ! PyErr_Occurred()) {
 			const char * err = errmsg();
-			PyErr_SetString(PyExc_RuntimeError, err ? err : "invalid iterator");
+			PyErr_SetString(PyExc_HTCondorInternalError, err ? err : "invalid iterator");
 		}
 		throw_error_already_set();
 	}
@@ -1341,7 +1342,7 @@ query_process_callback(void * data, ClassAd* ad)
     }
     catch (...)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Uncaught C++ exception encountered.");
+        PyErr_SetString(PyExc_HTCondorInternalError, "Uncaught C++ exception encountered.");
     }
     helper->ml->acquire();
     return true;
@@ -1414,7 +1415,7 @@ struct Schedd {
     {
         std::string constraint;
         if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
-            THROW_EX(ValueError, "Invalid constraint.");
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
         }
 
         CondorQ q;
@@ -1578,7 +1579,7 @@ struct Schedd {
             use_ids = true;
         } else {
             if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
-                THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
+                THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
             }
             // act does not allow empty or null constraint argument, so use "true" instead
             if (constraint.empty()) { constraint = "true"; }
@@ -1801,7 +1802,7 @@ struct Schedd {
 
         // report SetAttribute errors
         if (setattr_result == -1) {
-            THROW_EX(ValueError, failed_attr.c_str());
+            THROW_EX(HTCondorValueError, failed_attr.c_str());
         }
 
         orig_cluster_ad = cluster_ad;
@@ -1876,7 +1877,7 @@ struct Schedd {
 
             // report any errors of SetAttribute
             if (-1 == setattr_result) {
-                PyErr_SetString(PyExc_ValueError, failed_attr.c_str());
+                PyErr_SetString(PyExc_HTCondorValueError, failed_attr.c_str());
                 throw_error_already_set();
             }
             if (keep_results)
@@ -2003,7 +2004,7 @@ struct Schedd {
             use_ids = true;
         }
         else if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
-            THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
+            THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
         }
 
         std::string val_str;
@@ -2539,7 +2540,7 @@ public:
     rawInit(boost::python::tuple args, boost::python::dict kwargs) {
         boost::python::object self = args[0];
         if (py_len(args) > 2) {
-            THROW_EX(TypeError, "Keyword constructor cannot take more than one positional argument");
+            THROW_EX(HTCondorTypeError, "Keyword constructor cannot take more than one positional argument");
         } else if (py_len(args) == 1) {
             return self.attr("__init__")(kwargs);
         } else {
@@ -2785,13 +2786,13 @@ public:
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.
         if ( !dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts) ) {
-            THROW_EX(RuntimeError, "Unable to write condor_dagman output files");
+            THROW_EX(HTCondorIOError, "Unable to write condor_dagman output files");
         }
 
         // Write out the .condor.sub file we need to submit the DAG
         dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
         if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
-            THROW_EX(RuntimeError, "Unable to write condor_dagman submit file");
+            THROW_EX(HTCondorIOError, "Unable to write condor_dagman submit file");
         }
 
         // Now write the submit file and open it
@@ -3080,7 +3081,7 @@ public:
 				if (procid < 0) {
 				    THROW_EX(HTCondorIOError, "Failed to create new proc ID.");
 				}
-				if (procid != jid.proc) { THROW_EX(RuntimeError, "Internal error: newProc does not match iterator procid"); }
+				if (procid != jid.proc) { THROW_EX(HTCondorInternalError, "Internal error: newProc does not match iterator procid"); }
 
 				ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
 				process_submit_errstack(m_hash.error_stack());
@@ -3293,7 +3294,7 @@ public:
 		ClassAdList requests;
 		if (m_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
 			if (! requests_error.empty()) {
-				THROW_EX(RuntimeError, requests_error.c_str());
+				THROW_EX(HTCondorIOError, requests_error.c_str());
 			}
 			requests.Rewind();
 			classad::ClassAd *ad;
