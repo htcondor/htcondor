@@ -147,6 +147,7 @@ Dagman::Dagman() :
 	_doRecovery(false),
 	_suppressJobLogs(false),
 	_batchName(""),
+	_batchId(""),
 	_dagmanClassad(NULL),
 	_removeNodeJobs(true)
 {
@@ -914,6 +915,8 @@ void main_init (int argc, char ** const argv) {
 
 	dagman._dagmanClassad->Initialize( dagman.maxJobs, dagman.maxIdle, 
 				dagman.maxPreScripts, dagman.maxPostScripts );
+
+	dagman._dagmanClassad->GetSetBatchId( dagman._batchId );
 
 	dagman._dagmanClassad->GetSetBatchName( dagman.primaryDagFile,
 				dagman._batchName );

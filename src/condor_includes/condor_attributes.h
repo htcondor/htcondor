@@ -399,6 +399,7 @@
 #define ATTR_JOB_SET_NAME "SetMemberNames"
 #define ATTR_JOB_SUBMISSION  "Submission"
 #define ATTR_JOB_SUBMISSION_ID  "SubmissionId"
+#define ATTR_JOB_BATCH_ID "JobBatchId"
 #define ATTR_JOB_BATCH_NAME "JobBatchName"
 #define ATTR_JOB_START  "JobStart"
 #define ATTR_JOB_START_DATE  "JobStartDate"

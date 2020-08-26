@@ -114,6 +114,26 @@ ScheddClassad::GetAttribute( const char *attrName, MyString &attrVal,
 
 //---------------------------------------------------------------------------
 bool
+ScheddClassad::GetAttribute( const char *attrName, std::string &attrVal,
+			bool printWarning ) const
+{
+	char *val;
+	if ( GetAttributeStringNew( _jobId._cluster, _jobId._proc,
+				attrName, &val ) == -1 ) {
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+					"Warning: failed to get attribute %s\n", attrName );
+		}
+		return false;
+	}
+
+	attrVal = val;
+	free( val );
+	return true;
+}
+
+//---------------------------------------------------------------------------
+bool
 ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
 			bool printWarning ) const
 {
@@ -257,6 +277,34 @@ DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
 	CloseConnection( queue );
 
 	return;
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanClassad::GetSetBatchId( std::string &batchId )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	if ( !GetAttribute( ATTR_JOB_BATCH_ID, batchId, false ) ) {
+		batchId = std::to_string( _jobId._cluster );
+		batchId += ".";
+		batchId += std::to_string( _jobId._proc );
+		SetAttribute( ATTR_JOB_BATCH_ID, batchId );
+	}
+
+	CloseConnection( queue );
+
+	debug_printf( DEBUG_VERBOSE, "Workflow batch-id: <%s>\n",
+				batchId.c_str() );
 }
 
 //---------------------------------------------------------------------------

@@ -217,7 +217,8 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   Job * node, int priority, int retry,
 #endif
 			   const char* directory, const char *workflowLogFile,
-			   bool hold_claim, const MyString &batchName )
+			   bool hold_claim, const MyString &batchName,
+			   std::string &batchId )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -267,6 +268,11 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	if ( batchName != "" ) {
 		args.AppendArg( "-batch-name" );
 		args.AppendArg( batchName.Value() );
+	}
+		// Pass the batch ID to lower levels.
+	if ( batchId != "" ) {
+		args.AppendArg( "-batch-id" );
+		args.AppendArg( batchId.c_str() );
 	}
 
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
@@ -448,7 +454,8 @@ static void init_dag_vars(SubmitHash * submitHash,
 	const Dagman &dm, Job* node,
 	const char *workflowLogFile,
 	const MyString & parents,
-	const char *batchName)
+	const char *batchName,
+	const char *batchId)
 {
 	const char* DAGNodeName = node->GetJobName();
 	int priority = node->_effectivePriority;
@@ -466,6 +473,9 @@ static void init_dag_vars(SubmitHash * submitHash,
 
 	if (batchName && batchName[0]) {
 		submitHash->set_arg_variable(SUBMIT_KEY_BatchName, batchName);
+	}
+	if (batchId && batchId[0]) {
+		submitHash->set_arg_variable(SUBMIT_KEY_BatchId, batchId);
 	}
 
 	std::string submitEventNotes = std::string("DAG Node: ") + std::string(DAGNodeName);
@@ -550,6 +560,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	const char *workflowLogFile,
 	const MyString & parents,
 	const char *batchName,
+	const char *batchId,
 	CondorID& condorID)
 {
 	const char* cmdFile = node->GetCmdFile();
@@ -619,7 +630,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 	// set submit keywords defined by dagman and VARS
-	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName);
+	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId);
 
 	submitHash->init_base_ad(time(NULL), owner);
 

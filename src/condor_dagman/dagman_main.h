@@ -251,6 +251,9 @@ class Dagman {
 		// Batch-name for this workflow.
 	MyString _batchName;
 
+		// Batch ID for this workflow
+	std::string _batchId;
+
 	DagmanClassad *_dagmanClassad;
 
 		// True iff we should remove node jobs ourself when we are

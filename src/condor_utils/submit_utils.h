@@ -42,6 +42,7 @@
 #define SUBMIT_KEY_Cluster "Cluster"
 #define SUBMIT_KEY_Process "Process"
 #define SUBMIT_KEY_BatchName "batch_name"
+#define SUBMIT_KEY_BatchId "batch_id"
 #define SUBMIT_KEY_Hold "hold"
 #define SUBMIT_KEY_Priority "priority"
 #define SUBMIT_KEY_Prio "prio"

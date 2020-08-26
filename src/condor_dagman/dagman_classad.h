@@ -71,6 +71,9 @@ class ScheddClassad {
 	bool GetAttribute( const char *attrName, MyString &attrVal,
 				bool printWarning = true ) const;
 
+	bool GetAttribute( const char *attrName, std::string &attrVal,
+				bool printWarning = true ) const;
+
 	bool GetAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true ) const;
 
@@ -125,6 +128,12 @@ class DagmanClassad : public ScheddClassad {
 			@param nodeName: A MyString to receive the DAGNodeName value.
 		*/
 	void GetInfo( MyString &owner, MyString &nodeName );
+
+		/** Get the JobBatchId value from our ClassAd (setting it
+		    to the default if it's not already set).
+			@param batchId: An int to receive the JobBatchId value
+		*/
+	void GetSetBatchId( std::string &batchId );
 
 		/** Get the JobBatchName value from our ClassAd (setting it
 		    to the default if it's not already set).
