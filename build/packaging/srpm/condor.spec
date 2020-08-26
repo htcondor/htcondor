@@ -22,10 +22,8 @@
 
 %if 0%{?fedora}
 %define blahp 0
-%define drmaa 0
 %else
 %define blahp 1
-%define drmaa 1
 %endif
 
 %if 0%{?hcc}
@@ -720,11 +718,7 @@ cmake \
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
        -DWITH_CREAM:BOOL=FALSE \
-%if %drmaa
-       -DWITH_DRMAA:BOOL=TRUE \
-%else
        -DWITH_DRMAA:BOOL=FALSE \
-%endif
 %ifarch %{ix86}
 %if 0%{?rhel} >= 7
        -DWITH_PYTHON_BINDINGS:BOOL=FALSE \
@@ -1003,7 +997,6 @@ rm -rf %{buildroot}%{_datadir}/condor/ExecuteLock.pm
 rm -rf %{buildroot}%{_datadir}/condor/FileLock.pm
 rm -rf %{buildroot}%{_usrsrc}/chirp/chirp_*
 rm -rf %{buildroot}%{_usrsrc}/startd_factory
-rm -rf %{buildroot}%{_usrsrc}/drmaa/drmaa-*
 rm -rf %{buildroot}/usr/DOC
 rm -rf %{buildroot}/usr/INSTALL
 rm -rf %{buildroot}/usr/LICENSE-2.0.txt
@@ -1031,7 +1024,6 @@ rm -rf %{buildroot}%{_includedir}/condor_exprtype.h
 rm -rf %{buildroot}%{_includedir}/condor_parser.h
 rm -rf %{buildroot}%{_includedir}/write_user_log.h
 rm -rf %{buildroot}%{_includedir}/condor_ast.h
-rm -rf %{buildroot}%{_includedir}/drmaa.h
 rm -rf %{buildroot}%{_includedir}/README
 rm -rf %{buildroot}%{_libexecdir}/condor/bgp_*
 rm -rf %{buildroot}%{_datadir}/condor/libchirp_client.a
@@ -1080,10 +1072,6 @@ install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-rest
 %endif
 
 %if %uw_build
-%if %drmaa
-populate %{_libdir}/condor %{buildroot}/%{_libdir}/libdrmaa.so
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcondordrmaa.a
-%endif
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libglobus*.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libvomsapi*.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libSciTokens.so*
@@ -1596,10 +1584,6 @@ rm -rf %{buildroot}
 
 %files external-libs
 %dir %_libdir/condor
-%if %drmaa
-%_libdir/condor/libcondordrmaa.a
-%_libdir/condor/libdrmaa.so
-%endif
 %_libdir/condor/libglobus*.so*
 %_libdir/condor/libvomsapi*.so*
 %_libdir/condor/libSciTokens.so*
