@@ -970,18 +970,6 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	ASSERT( errstack );
 	ASSERT( m_gss_server_name );
 	ASSERT( ip );
-	if( !fqh || !fqh[0] ) {
-		std::string msg;
-		formatstr(msg,"Failed to look up server host address for GSI connection to server with IP %s and DN %s.  Is DNS correctly configured?  This server name check can be bypassed by making GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or by disabling all hostname checks by setting GSI_SKIP_HOST_CHECK=true or defining GSI_DAEMON_NAME.",ip,server_dn);
-		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
-		return false;
-	}
-
-	std::string connect_name;
-	gss_buffer_desc gss_connect_name_buf;
-	gss_name_t gss_connect_name;
-	OM_uint32 major_status = 0;
-	OM_uint32 minor_status = 0;
 
 	char const *connect_addr = sock->get_connect_addr();
 	std::string alias_buf;
@@ -994,6 +982,19 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 			fqh = alias_buf.c_str();
 		}
 	}
+
+	if( !fqh || !fqh[0] ) {
+		std::string msg;
+		formatstr(msg,"Failed to look up server host address for GSI connection to server with IP %s and DN %s.  Is DNS correctly configured?  This server name check can be bypassed by making GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or by disabling all hostname checks by setting GSI_SKIP_HOST_CHECK=true or defining GSI_DAEMON_NAME.",ip,server_dn);
+		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
+		return false;
+	}
+
+	std::string connect_name;
+	gss_buffer_desc gss_connect_name_buf;
+	gss_name_t gss_connect_name;
+	OM_uint32 major_status = 0;
+	OM_uint32 minor_status = 0;
 
 	formatstr(connect_name,"%s/%s",fqh,sock->peer_ip_str());
 
