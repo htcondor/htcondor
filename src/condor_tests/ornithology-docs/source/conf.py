@@ -24,6 +24,13 @@ if ON_RTD:
     os.system(cmd)
     print("INSTALLED HTCONDOR PACKAGE")
 
+    print("ON RTD, THEREFORE INSTALLING TEST STUFF")
+    dev_reqs = os.path.abspath("../../requirements.txt")
+    cmd = "{} -m pip install -r {}".format(sys.executable, dev_reqs)
+    print("EXECUTING COMMAND: {}".format(cmd))
+    os.system(cmd)
+    print("INSTALLED TEST STUFF")
+
 # -- Project information -----------------------------------------------------
 
 project = "Ornithology"

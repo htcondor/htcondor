@@ -150,6 +150,9 @@
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 
+#define SUBMIT_KEY_ManifestDesired "manifest"
+#define SUBMIT_KEY_ManifestDir "manifest_dir"
+
 #define SUBMIT_KEY_UseOAuthServices "use_oauth_services"
 #define SUBMIT_KEY_UseOAuthServicesAlt "UseOAuthServices"
 
