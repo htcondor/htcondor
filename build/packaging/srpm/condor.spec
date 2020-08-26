@@ -5,15 +5,11 @@
 %define osg      1
 %define uw_build 0
 
-%define systemd 0
 %define cgroups 0
 %define python 0
 
 %if 0%{?rhel} >= 6 || 0%{?fedora}
 %define cgroups 1
-%endif
-%if 0%{?rhel} >= 7 || 0%{?fedora}
-%define systemd 1
 %endif
 
 # default to uw_build if neither osg nor fedora is enabled
@@ -144,11 +140,7 @@ Source0: %{name}-%{tarball_version}.tar.gz
 Source1: generate-tarball.sh
 %endif
 
-# % if % systemd
 Source3: osg-env.conf
-# % else
-Source4: condor.osg-sysconfig
-# % endif
 Source5: condor_config.local.dedicated.resource
 
 Source6: 10-batch_gahp_blahp.config
@@ -323,11 +315,9 @@ Requires: libuuid
 BuildRequires: qpid-qmf-devel
 %endif
 
-%if %systemd
 BuildRequires: systemd-devel
 BuildRequires: systemd-units
 Requires: systemd
-%endif
 
 %if 0%{?rhel} == 6
 %ifarch %{ix86}
@@ -386,17 +376,10 @@ Requires: initscripts
 
 Requires(pre): shadow-utils
 
-%if %systemd
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
 Requires(post): systemd-sysv
-%else
-Requires(post):/sbin/chkconfig
-Requires(preun):/sbin/chkconfig
-Requires(preun):/sbin/service
-Requires(postun):/sbin/service
-%endif
 
 %if 0%{?rhel} == 7
 Requires(post): policycoreutils-python
@@ -729,32 +712,18 @@ Configures HTCondor to make an EC2 image annex-compatible.  Do NOT install
 on a non-EC2 image.
 
 %files annex-ec2
-%if %systemd
 %_libexecdir/condor/condor-annex-ec2
 %{_unitdir}/condor-annex-ec2.service
-%else
-%_initrddir/condor-annex-ec2
-%endif
 %config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
 %config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
 
 %post annex-ec2
-%if %systemd
 /bin/systemctl enable condor-annex-ec2
-%else
-/sbin/chkconfig --add condor-annex-ec2
-%endif
 
 %preun annex-ec2
-%if %systemd
 if [ $1 == 0 ]; then
     /bin/systemctl disable condor-annex-ec2
 fi
-%else
-if [ $1 == 0 ]; then
-    /sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
-fi
-%endif
 
 %package all
 Summary: All condor packages in a typical installation
@@ -1094,7 +1063,6 @@ ln -s %{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
 rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
-%if %systemd
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
 install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
@@ -1110,17 +1078,6 @@ install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}
 # Set condor service enviroment variables for LCMAPS on OSG systems
 mkdir -p %{buildroot}%{_unitdir}/condor.service.d
 install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.conf
-%endif
-%else
-# install the lsb init script
-install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
-install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
-%if 0%{?osg} || 0%{?hcc}
-# Set condor service enviroment variables for LCMAPS on OSG systems
-install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
-%endif
-mkdir %{buildroot}%{_sysconfdir}/sysconfig/
-install -Dp -m 0644 %{buildroot}/etc/examples/condor.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/condor
 %endif
 
 %if 0%{?rhel} >= 7
@@ -1273,7 +1230,6 @@ rm -rf %{buildroot}
 %doc LICENSE-2.0.txt NOTICE.txt examples
 %dir %_sysconfdir/condor/
 %config %_sysconfdir/condor/condor_config
-%if %systemd
 %{_tmpfilesdir}/%{name}.conf
 %{_unitdir}/condor.service
 %if 0%{?osg} || 0%{?hcc}
@@ -1281,13 +1237,6 @@ rm -rf %{buildroot}
 %endif
 # Disabled until HTCondor security fixed.
 # % {_unitdir}/condor.socket
-%else
-%_initrddir/condor
-%if 0%{?osg} || 0%{?hcc}
-/usr/share/osg/sysconfig/condor
-%endif
-%config(noreplace) /etc/sysconfig/condor
-%endif
 %dir %_datadir/condor/
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
@@ -1858,8 +1807,6 @@ rm -rf %{buildroot}
 
 %endif
 
-%if %systemd
-
 %post
 %if 0%{?fedora}
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
@@ -1903,65 +1850,6 @@ fi
 
 /sbin/chkconfig --del condor >/dev/null 2>&1 || :
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
-
-%else
-%post -n condor
-/sbin/chkconfig --add condor
-/sbin/ldconfig
-
-%posttrans -n condor
-# If there is a saved condor_config.local, recover it
-if [ -f /etc/condor/condor_config.local.rpmsave ]; then
-    if [ ! -f /etc/condor/condor_config.local ]; then
-        mv /etc/condor/condor_config.local.rpmsave \
-           /etc/condor/condor_config.local
-
-        # Drop a README file to tell what we have done
-        # Make sure that we don't overwrite a previous README
-        if [ ! -f /etc/condor/README.condor_config.local ]; then
-            file="/etc/condor/README.condor_config.local"
-        else
-            i="1"
-            while [ -f /etc/condor/README.condor_config.local.$i ]; do
-                i=$((i+1))
-            done
-            file="/etc/condor/README.condor_config.local.$i"
-        fi
-
-cat <<EOF > $file
-On `date`, while installing or upgrading to
-HTCondor %version, the /etc/condor directory contained a file named
-"condor_config.local.rpmsave" but did not contain one named
-"condor_config.local".  This situation may be the result of prior
-modifications to "condor_config.local" that were preserved after the
-HTCondor RPM stopped including that file.  In any case, the contents
-of the old "condor_config.local.rpmsave" file may still be useful.
-So after the install it was moved back into place and this README
-file was created.  Here is a directory listing for the restored file
-at that time:
-
-`ls -l /etc/condor/condor_config.local`
-
-See the "Configuration" section (3.3) of the HTCondor manual for more
-information on configuration files.
-EOF
-
-    fi
-fi
-
-%preun -n condor
-if [ $1 = 0 ]; then
-  /sbin/service condor stop >/dev/null 2>&1 || :
-  /sbin/chkconfig --del condor
-fi
-
-
-%postun -n condor
-# Note we don't try to restart - HTCondor will automatically notice the
-# binary has changed and do graceful or peaceful restart, based on its
-# configuration
-/sbin/ldconfig
-%endif
 
 %changelog
 * Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.8-1
