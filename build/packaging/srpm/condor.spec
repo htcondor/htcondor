@@ -22,17 +22,14 @@
 
 %if 0%{?fedora}
 %define blahp 0
-%define cream 0
 %define drmaa 0
 %else
 %define blahp 1
-%define cream 1
 %define drmaa 1
 %endif
 
 %if 0%{?hcc}
 %define blahp 0
-%define cream 0
 %endif
 
 # Python on 64-bit platform or rhel6
@@ -41,22 +38,6 @@
 %endif
 %if 0%{?rhel} == 6
 %define python 1
-%endif
-
-# Don't bother building CREAM for 32-bit RHEL7
-%ifarch %{ix86}
-%if 0%{?rhel} >= 7
-%define cream 0
-%endif
-%endif
-
-%if 0%{?osg} && 0%{?rhel} == 7
-%define cream 0
-%endif
-
-# cream support is going away, skip for EL8
-%if 0%{?rhel} >= 8 || 0%{?amzn}
-%define cream 0
 %endif
 
 %define glexec 1
@@ -252,17 +233,6 @@ BuildRequires: libtool-ltdl-devel
 BuildRequires: libcgroup-devel
 Requires: libcgroup
 
-%if %cream && %uw_build
-BuildRequires: c-ares-devel
-%endif
-
-%if %cream && ! %uw_build
-BuildRequires: glite-ce-cream-client-devel
-BuildRequires: glite-lbjp-common-gsoap-plugin-devel
-BuildRequires: log4cpp-devel
-BuildRequires: gridsite-devel
-%endif
-
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 %ifarch x86_64
 BuildRequires: python36-devel
@@ -379,10 +349,6 @@ Obsoletes: condor-static < 7.2.0
 # Standard Universe discontinued as of 8.9.0
 Obsoletes: condor-std-universe < 8.9.0
 
-%if ! %cream
-Obsoletes: condor-cream-gahp <= %{version}
-%endif
-
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
@@ -481,22 +447,6 @@ Requires: %name-classads = %{version}-%{release}
 
 %description test
 A collection of tests to verify that HTCondor is operating properly.
-
-#######################
-%if %cream
-%package cream-gahp
-Summary: HTCondor's CREAM Gahp
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: %name-classads = %{version}-%{release}
-%if %uw_build
-Requires: %name-external-libs%{?_isa} = %version-%release
-%endif
-
-%description cream-gahp
-The condor-cream-gahp enables CREAM interoperability for HTCondor.
-
-%endif
 
 #######################
 %if %parallel_setup
@@ -698,9 +648,6 @@ Requires: %name-procd = %version-%release
 Requires: %name-kbdd = %version-%release
 Requires: %name-vm-gahp = %version-%release
 Requires: %name-classads = %version-%release
-%if %cream
-Requires: %name-cream-gahp = %version-%release
-%endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
@@ -772,11 +719,7 @@ cmake \
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-%if %cream
-       -DWITH_CREAM:BOOL=TRUE \
-%else
        -DWITH_CREAM:BOOL=FALSE \
-%endif
 %if %drmaa
        -DWITH_DRMAA:BOOL=TRUE \
 %else
@@ -829,11 +772,7 @@ cmake \
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-%if %cream
-       -DWITH_CREAM:BOOL=TRUE \
-%else
        -DWITH_CREAM:BOOL=FALSE \
-%endif
 %if %glexec
        -DWANT_GLEXEC:BOOL=TRUE \
 %else
@@ -1544,13 +1483,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
-
-%if %cream
-%files cream-gahp
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_sbindir/cream_gahp
-%endif
 
 %if %parallel_setup
 %files parallel-setup
