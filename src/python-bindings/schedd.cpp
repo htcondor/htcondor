@@ -2719,6 +2719,12 @@ public:
 
         dagman_utils.usingPythonBindings = true;
 
+        // Check if the specified dag file exists
+        FILE* dag_fp = safe_fopen_wrapper_follow(dag_filename.c_str(), "r");
+        if(dag_fp == NULL) {
+            THROW_ERRNO(IOError);
+        }
+
         // Setting any submit options that may have been passed in (ie. max idle, max post)
         shallow_opts.dagFiles.insert(dag_filename.c_str());
         shallow_opts.primaryDagFile = dag_filename;
@@ -2733,14 +2739,13 @@ public:
         // Write out the .condor.sub file we need to submit the DAG
         dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
         if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
-            THROW_EX(RuntimeError, "Unable to write condor_dagman submit file");
+            THROW_ERRNO(IOError);
         }
 
         // Now write the submit file and open it
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
         if(sub_fp == NULL) {
-            printf("ERROR: Could not read generated DAG submit file %s\n", sub_filename.c_str());
-            return NULL;
+            THROW_ERRNO(IOError);
         }
 
         // Determine size of the file and store its contents in a buffer
