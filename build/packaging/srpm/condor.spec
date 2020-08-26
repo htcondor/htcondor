@@ -5,7 +5,6 @@
 %define osg      1
 %define uw_build 0
 
-%define plumage 0
 %define systemd 0
 %define cgroups 0
 %define python 0
@@ -266,10 +265,6 @@ BuildRequires: voms-devel
 %endif
 BuildRequires: libtool-ltdl-devel
 
-%if %plumage
-BuildRequires: mongodb-devel >= 1.6.4-3
-%endif
-
 %if %cgroups
 %if 0%{?rhel} >= 8
 BuildRequires: libcgroup-devel
@@ -457,21 +452,6 @@ Obsoletes: condor-qmf-plugins
 
 %description qmf
 Components to connect HTCondor to the QMF management bus.
-%endif
-
-#######################
-%if %plumage
-%package plumage
-Summary: HTCondor Plumage components
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: condor-classads = %{version}-%{release}
-Requires: mongodb >= 1.6.4
-Requires: pymongo >= 1.9
-Requires: python-dateutil >= 1.4.1
-
-%description plumage
-Components to provide a NoSQL operational data store for HTCondor.
 %endif
 
 #######################
@@ -905,11 +885,6 @@ cmake \
        -DWITH_ZLIB:BOOL=FALSE \
        -DWANT_CONTRIB:BOOL=FALSE \
        -DWITH_PIGEON:BOOL=FALSE \
-%if %plumage
-       -DWITH_PLUMAGE:BOOL=TRUE \
-%else
-       -DWITH_PLUMAGE:BOOL=FALSE \
-%endif
        -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
 %if %qmf
        -DWITH_TRIGGERD:BOOL=TRUE \
@@ -1041,14 +1016,6 @@ populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/50ec2.config
 %if %qmf
 # Install condor-qmf's base plugin configuration
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/60condor-qmf.config
-%endif
-
-%if %plumage
-# Install condor-plumage's base plugin configuration
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/62plumage.config
-rm -f %{buildroot}/%{_bindir}/ods_job_etl_tool
-rm -f %{buildroot}/%{_sbindir}/ods_job_etl_server
-mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/ViewHist
 %endif
 
 mkdir -p -m0755 %{buildroot}/%{_var}/run/condor
@@ -1628,27 +1595,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_trigger_config
 %_sbindir/condor_triggerd
 %_sbindir/condor_job_server
-%endif
-
-#################
-%if %plumage
-%files plumage
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_sysconfdir/condor/config.d/62plumage.config
-%dir %_libdir/condor/plugins
-%_libdir/condor/plugins/PlumageCollectorPlugin-plugin.so
-%dir %_datadir/condor/plumage
-%_sbindir/plumage_job_etl_server
-%_bindir/plumage_history_load
-%_bindir/plumage_stats
-%_bindir/plumage_history
-%_datadir/condor/plumage/README
-%_datadir/condor/plumage/SCHEMA
-%_datadir/condor/plumage/plumage_accounting
-%_datadir/condor/plumage/plumage_scheduler
-%_datadir/condor/plumage/plumage_utilization
-%defattr(-,condor,condor,-)
 %endif
 
 #################
