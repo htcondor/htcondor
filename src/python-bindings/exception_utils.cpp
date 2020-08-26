@@ -34,3 +34,30 @@ CreateExceptionInModule( const char * qualifiedName, const char * name, PyObject
 
 	return exception;
 }
+
+PyObject *
+CreateExceptionInModule( const char * qualifiedName, const char * name,
+  PyObject * base1, PyObject * base2 ) {
+    PyObject * tuple = PyTuple_Pack( 2, base1, base2 );
+    PyObject * e = CreateExceptionInModule( qualifiedName, name, tuple );
+    Py_XDECREF(tuple);
+    return e;
+}
+
+PyObject *
+CreateExceptionInModule( const char * qualifiedName, const char * name,
+  PyObject * base1, PyObject * base2, PyObject * base3 ) {
+    PyObject * tuple = PyTuple_Pack( 3, base1, base2, base3 );
+    PyObject * e = CreateExceptionInModule( qualifiedName, name, tuple );
+    Py_XDECREF(tuple);
+    return e;
+}
+
+PyObject *
+CreateExceptionInModule( const char * qualifiedName, const char * name,
+  PyObject * base1, PyObject * base2, PyObject * base3, PyObject * base4 ) {
+    PyObject * tuple = PyTuple_Pack( 4, base1, base2, base3, base4 );
+    PyObject * e = CreateExceptionInModule( qualifiedName, name, tuple );
+    Py_XDECREF(tuple);
+    return e;
+}
