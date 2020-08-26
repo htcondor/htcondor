@@ -379,8 +379,6 @@ my_popen.cpp
 my_popen.h
 named_classad.cpp
 named_classad_list.cpp
-natural_cmp.cpp
-natural_cmp.h
 NegotiationUtils.cpp
 NegotiationUtils.h
 net_string_list.cpp

@@ -7546,7 +7546,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     char    owner[100];
     int     cur_hosts;
     int     max_hosts;
-    int     niceUser;
     int     universe;
 
 	ASSERT(job);
@@ -7704,7 +7703,7 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 
 extern void mark_job_stopped(PROC_ID* job_id);
 
-int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
+int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 {
 	if ( jobExternallyManaged(job) ) {
 		// if a job is externally managed, don't touch a damn

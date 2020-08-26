@@ -38,7 +38,6 @@ enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 }
 
 static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
-static char printable_digit(unsigned char n) { return (n >= ' ' && n <= '~') ? n : '.'; }
 static const char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
 	char *p = buf;
 	char *endp = buf + bufsiz -1;
