@@ -20,9 +20,6 @@
 %define debug 1
 %endif
 
-# Things not turned on, or don't have Fedora packages yet
-%define qmf 0
-
 %if 0%{?fedora}
 %define blahp 0
 %define cream 0
@@ -298,10 +295,6 @@ BuildRequires: libuuid-devel
 Requires: libuuid
 %endif
 
-%if %qmf
-BuildRequires: qpid-qmf-devel
-%endif
-
 BuildRequires: systemd-devel
 BuildRequires: systemd-units
 Requires: systemd
@@ -408,21 +401,6 @@ Group: Applications/System
 %description procd
 A daemon for tracking child processes started by a parent.
 Part of HTCondor, but able to be stand-alone
-
-#######################
-%if %qmf
-%package qmf
-Summary: HTCondor QMF components
-Group: Applications/System
-Requires: %name = %version-%release
-#Requires: qmf >= %{qmf_version}
-Requires: python-qmf >= 0.7.946106
-Requires: %name-classads = %{version}-%{release}
-Obsoletes: condor-qmf-plugins
-
-%description qmf
-Components to connect HTCondor to the QMF management bus.
-%endif
 
 #######################
 %package kbdd
@@ -842,15 +820,9 @@ cmake \
        -DWANT_CONTRIB:BOOL=FALSE \
        -DWITH_PIGEON:BOOL=FALSE \
        -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
-%if %qmf
-       -DWITH_TRIGGERD:BOOL=TRUE \
-       -DWITH_MANAGEMENT:BOOL=TRUE \
-       -DWITH_QPID:BOOL=TRUE \
-%else
        -DWITH_TRIGGERD:BOOL=FALSE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
        -DWITH_QPID:BOOL=FALSE \
-%endif
 %if %blahp
        -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
        -DWITH_BLAHP:BOOL=TRUE \
@@ -925,10 +897,6 @@ if [ -d %{buildroot}%{_datadir}/condor/python2.6 ]; then
     mv %{buildroot}%{_datadir}/condor/python2.6 %{buildroot}%{_libdir}/
 fi
 
-%if %qmf
-populate %{_libdir}/condor/plugins %{buildroot}/%{_usr}/libexec/*-plugin.so
-%endif
-
 # It is proper to put HTCondor specific libexec binaries under libexec/condor/
 populate %_libexecdir/condor %{buildroot}/usr/libexec/*
 
@@ -966,11 +934,6 @@ populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-small-shadow
 
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/50ec2.config
-
-%if %qmf
-# Install condor-qmf's base plugin configuration
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/60condor-qmf.config
-%endif
 
 mkdir -p -m0755 %{buildroot}/%{_var}/run/condor
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
@@ -1512,24 +1475,6 @@ rm -rf %{buildroot}
 %_mandir/man1/procd_ctl.1.gz
 %_mandir/man1/gidd_alloc.1.gz
 %_mandir/man1/condor_procd.1.gz
-
-#################
-%if %qmf
-%files qmf
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_sysconfdir/condor/config.d/60condor-qmf.config
-%dir %_libdir/condor/plugins
-%_libdir/condor/plugins/MgmtCollectorPlugin-plugin.so
-%_libdir/condor/plugins/MgmtMasterPlugin-plugin.so
-%_libdir/condor/plugins/MgmtNegotiatorPlugin-plugin.so
-%_libdir/condor/plugins/MgmtScheddPlugin-plugin.so
-%_libdir/condor/plugins/MgmtStartdPlugin-plugin.so
-%_bindir/get_trigger_data
-%_sbindir/condor_trigger_config
-%_sbindir/condor_triggerd
-%_sbindir/condor_job_server
-%endif
 
 #################
 %files kbdd
