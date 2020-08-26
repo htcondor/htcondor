@@ -5,12 +5,7 @@
 %define osg      1
 %define uw_build 0
 
-%define cgroups 0
 %define python 0
-
-%if 0%{?rhel} >= 6 || 0%{?fedora}
-%define cgroups 1
-%endif
 
 # default to uw_build if neither osg nor fedora is enabled
 %if %undefined uw_build
@@ -257,16 +252,8 @@ BuildRequires: voms-devel
 %endif
 BuildRequires: libtool-ltdl-devel
 
-%if %cgroups
-%if 0%{?rhel} >= 8
 BuildRequires: libcgroup-devel
 Requires: libcgroup
-%else
-# libcgroup < 0.37 has a bug that invalidates our accounting.
-BuildRequires: libcgroup-devel >= 0.37
-Requires: libcgroup >= 0.37
-%endif
-%endif
 
 %if %cream && %uw_build
 BuildRequires: c-ares-devel
@@ -882,10 +869,8 @@ cmake \
 %endif
        -DWITH_GLOBUS:BOOL=TRUE \
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
-%if %cgroups
-        -DWITH_LIBCGROUP:BOOL=TRUE \
-        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
-%endif
+       -DWITH_LIBCGROUP:BOOL=TRUE \
+       -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
 %endif
 
 # Patch condor_config.generic for 64-bit rpm
