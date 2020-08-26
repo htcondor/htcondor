@@ -80,6 +80,12 @@ public:
 	///
 	~IpVerify();
 
+	/** Params information out of the condor_config file and
+		sets up the initial permission hash table
+		@return Not_Yet_Ducumented
+	*/
+	int Init();
+
 	/** Tell IpVerify() to reconfigure itself.
 	 *  This also happens to clear cached authorization information,
 	 *  which serves as our "DNS cache".
@@ -153,12 +159,6 @@ private:
 		}
 		~PermTypeEntry(); 
 	};
-
-	/** Params information out of the condor_config file and
-		sets up the initial permission hash table
-		@return Not_Yet_Ducumented
-	*/
-	int Init();
 
     bool has_user(UserPerm_t * , const char *, perm_mask_t &);
 	bool LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask);

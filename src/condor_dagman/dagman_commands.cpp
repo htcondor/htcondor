@@ -24,6 +24,7 @@
 #include "debug.h"
 #include "parse.h"
 #include "dagman_commands.h"
+#include "submit_utils.h"
 
 bool
 PauseDag(Dagman &dm)
@@ -59,24 +60,24 @@ ResumeDag(Dagman &dm)
 	return true;
 }
 
-bool
+Job*
 AddNode( Dag *dag, const char *name,
 		 const char* directory,
 		 const char* submitFile,
 		 bool noop,
-		 bool done, bool isFinal,
+		 bool done, NodeType type,
 		 MyString &failReason )
 {
 	MyString why;
 	if( !IsValidNodeName( dag, name, why ) ) {
 		failReason = why;
-		return false;
+		return NULL;
 	}
 	if( !IsValidSubmitFileName( submitFile, why ) ) {
 		failReason = why;
-		return false;
+		return NULL;
 	}
-	if( done && isFinal) {
+	if( done && type == NodeType::FINAL ) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
 					name );
         debug_printf( DEBUG_QUIET, "%s", failReason.Value() );
@@ -89,23 +90,23 @@ AddNode( Dag *dag, const char *name,
 			// we already know we're out of memory, so filling in
 			// FailReason will likely fail, but give it a shot...
 		failReason = "out of memory!";
-		return false;
+		return NULL;
 	}
 	node->SetNoop( noop );
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
-	node->SetFinal( isFinal );
+	node->SetType( type );
 	ASSERT( dag != NULL );
 	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding ";
-		failReason += isFinal? "Final " : "";
+		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
 		failReason += "node to DAG";
 		delete node;
-		return false;
+		return NULL;
 	}
 	failReason = "n/a";
-	return true;
+	return node;
 }
 
 bool
@@ -155,6 +156,16 @@ IsValidSubmitFileName( const char *name, MyString &whynot )
 	}
 	if( strlen( name ) == 0 ) {
 		whynot = "empty submit file name (name == \"\")";
+		return false;
+	}
+	return true;
+}
+
+bool
+IsValidSubmitDescription( SubmitHash *desc, MyString &whynot )
+{
+	if( desc == NULL ) {
+		whynot = "missing submit file and/or description";
 		return false;
 	}
 	return true;

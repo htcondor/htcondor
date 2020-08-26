@@ -16,26 +16,33 @@
  # 
  ############################################################### 
 
-MACRO (CONDOR_DAEMON _CNDR_TARGET _REMOVE_ELEMENTS _LINK_LIBS _INSTALL_LOC )
+# example call
+# Note that all argument values are single arguments strings, perhaps containing ; separated lists
+# condor_daemon(EXE condor_schedd SOURCES foo.cpp;bar.cpp LIBRARIES libfoo INSTALL "$(C_SBIN"))
 
-	set(${_CNDR_TARGET}_REMOVE_ELEMENTS ${_REMOVE_ELEMENTS})
+FUNCTION(CONDOR_DAEMON)
 
-	condor_glob( ${_CNDR_TARGET}HDRS ${_CNDR_TARGET}SRCS "${${_CNDR_TARGET}_REMOVE_ELEMENTS}" )
+	# Define the positional args
 
-	if ( CONDOR_BUILD_SHARED_LIBS )
-		list(APPEND ${_CNDR_TARGET}SRCS ${CMAKE_SOURCE_DIR}/src/condor_utils/condor_version.cpp)
-	endif()
+	# EXE, INSTALL are named value arguments with just one value
+	set(oneValueArgs EXE INSTALL)	
+
+	# SOURCES is the named value argument with many values
+	set(multiValueArgs SOURCES LIBRARIES)
+	cmake_parse_arguments(CONDOR_DAEMON "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
+	# Should check ${CONDOR_DAEMON_UNPARSED_ARGS} for anything
 
 	#Add the executable target.
-	condor_exe( condor_${_CNDR_TARGET} "${${_CNDR_TARGET}HDRS};${${_CNDR_TARGET}SRCS}" ${_INSTALL_LOC} "${_LINK_LIBS}" ON)
+	condor_exe( "${CONDOR_DAEMON_EXE}" "${CONDOR_DAEMON_SOURCES}" "${CONDOR_DAEMON_INSTALL}" "${CONDOR_DAEMON_LIBRARIES}" ON)
 
-        # full relro and PIE for daemons/setuid/setgid applications
-        if (cxx_full_relro_and_pie)
-            # full relro:
-            append_target_property_flag(condor_${_CNDR_TARGET} LINK_FLAGS ${cxx_full_relro_arg})
-            # PIE:
-            append_target_property_flag(condor_${_CNDR_TARGET} COMPILE_FLAGS "-fPIE -DPIE")
-            append_target_property_flag(condor_${_CNDR_TARGET} LINK_FLAGS "-pie")
-        endif()
+	# full relro and PIE for daemons/setuid/setgid applications
+    if (cxx_full_relro_and_pie)
+       # full relro:
+       append_target_property_flag(${CONDOR_DAEMON_EXE} LINK_FLAGS ${cxx_full_relro_arg})
+       # PIE:
+       append_target_property_flag(${CONDOR_DAEMON_EXE} COMPILE_FLAGS "-fPIE -DPIE")
+       append_target_property_flag(${CONDOR_DAEMON_EXE} LINK_FLAGS "-pie")
+    endif()
 	
-ENDMACRO (CONDOR_DAEMON)
+ENDFUNCTION (CONDOR_DAEMON)

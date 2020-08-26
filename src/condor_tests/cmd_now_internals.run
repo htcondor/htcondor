@@ -1,12 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
+#testreq: personal
+#endtestreq
 
 import sys
 
-from pytest.CondorCluster import CondorCluster
-from pytest.CondorTest import CondorTest
-from pytest.Globals import *
-from pytest.PersonalCondor import PersonalCondor
-from pytest.Utils import Utils
+from pytest_old.CondorCluster import CondorCluster
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.PersonalCondor import PersonalCondor
+from pytest_old.Utils import Utils
 
 from htcondor import JobEventType
 import htcondor
@@ -82,7 +84,7 @@ use feature : PartitionableSlot
 	# There's only three jobs in the queue right now, so at least one of the
 	# previous victim jobs must end up running.
 	if not victimCluster.WaitUntil( [ JobEventType.EXECUTE ],
-		[ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE ], 60, -1, 1 ):
+		[ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ], 60, -1, 1 ):
 		CondorTest.RegisterFailure( "pcccTest", "no job started executing" )
 		sys.exit(1)
 

@@ -649,7 +649,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 			switch( attrExplain->suggestion ) {
 			case AttributeExplain::MODIFY: {
 				numModAttrs++;
-				strncpy( attr, attrExplain->attribute.c_str( ), 64 );
+				strncpy( attr, attrExplain->attribute.c_str( ), 63 );
 				if( attrExplain->isInterval ) {
 					double lower = 0;
 					double upper = 0;
@@ -688,7 +688,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 					suggest_s += value_s;
 					value_s = "";
 				}
-				strncpy( suggest, suggest_s.c_str( ), 64 ); 
+				strncpy( suggest, suggest_s.c_str( ), 63 ); 
 				sprintf( formatted, "%-24s%s\n", attr, suggest );
 				result_add_suggestion(suggestion(suggestion::MODIFY_ATTRIBUTE, attr, suggest_s));
 				tempBuff += formatted;
@@ -804,7 +804,7 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 		profile->Rewind( );
 		while( profile->NextCondition( condition ) ) {
 			condition->ToString( cond_s );
-			strncpy( cond, cond_s.c_str( ), 1024 );
+			strncpy( cond, cond_s.c_str( ), 1023 );
 			cond_s = "";
 
 			if( condition->explain.match ) {
@@ -812,7 +812,7 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 			} else {
 				value_s = "is false";
 			}
-			strncpy( value, value_s.c_str( ), 64 );
+			strncpy( value, value_s.c_str( ), 63 );
 			value_s = "";
 
 			sprintf( formatted, "    %-25s%s\n", cond, value );
@@ -1280,7 +1280,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 
 		contexts.Rewind( );
 		for( int col = 0; col < numContexts; col++ ) {
-			contexts.Next( context );
+			(void) contexts.Next( context );
 			classad::Value c_val;
 			if( tooComplex[row] ){
 				BoolValue result;
@@ -1293,7 +1293,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 				}
 			}
 			else {
-				context->EvaluateAttr( attr, c_val );
+				(void) context->EvaluateAttr( attr, c_val );
 			}
 			vt.SetValue( col, row, c_val );
 		}
@@ -1948,7 +1948,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	abvList.Rewind( );
 	allHyperRectangles.Rewind( );
 	while( allHyperRectangles.Next( hrs ) ) {
-		abvList.Next( currentABV );
+		(void) abvList.Next( currentABV );
 		for( int i = 0; i < hrs->getsize( ); i++ ) {
 			currHR = ( *hrs )[i];
 			currHR->GetIndexSet( hasContext );
@@ -2167,7 +2167,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 				i1->openUpper = false;
 				i2->openUpper = false;
 				if( vr->IsInitialized( ) ) {
-					vr->Intersect( i1, i2, false );
+					vr->Intersect2( i1, i2, false );
 				}
 				else {
 					vr->Init( i1, i2, false );
@@ -2267,18 +2267,18 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 			i2->openUpper = false;
 			if( vr->IsInitialized( ) ) {
 				if( op == classad::Operation::ISNT_OP ) {
-					vr->Intersect( i1, i2, true );
+					vr->Intersect2( i1, i2, true );
 				}
 				else {
-					vr->Intersect( i1, i2, undef );
+					vr->Intersect2( i1, i2, undef );
 				}
 			}
 			else {
 				if( op == classad::Operation::ISNT_OP ) {
-					vr->Init( i1, i2, true );
+					vr->Init2( i1, i2, true );
 				}
 				else {
-					vr->Init( i1, i2, undef );
+					vr->Init2( i1, i2, undef );
 				}
 			}
 			delete i1;

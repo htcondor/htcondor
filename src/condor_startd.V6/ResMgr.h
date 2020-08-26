@@ -63,6 +63,10 @@ typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
 
+namespace htcondor {
+class DataReuseDirectory;
+}
+
 // Statistics to publish global to the startd
 class StartdStats {
 public:
@@ -143,10 +147,14 @@ public:
 	void	init_resources( void );
 	bool	reconfig_resources( void );
 
-	void	compute( amask_t );
-	void	publish( ClassAd*, amask_t );
-	void	publishSlotAttrs( ClassAd* );
-	void    refresh_benchmarks();
+private:
+	void	compute_dead( amask_t );
+public:
+	void	compute_static();
+	void	compute_dynamic(bool for_update, Resource * rip=NULL);
+	void	publish_static(ClassAd* cp) { starter_mgr.publish(cp); }
+	void	publish_dynamic(ClassAd*);
+	void	publishSlotAttrs( ClassAd* cap );
 
 	void	assign_load( void );
 	void	assign_keyboard( void );
@@ -154,9 +162,9 @@ public:
 	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
-	int		num_cpus( void ) { return m_attr->num_cpus(); }
-	int		num_real_cpus( void ) { return m_attr->num_real_cpus(); }
-	int		numSlots( void ) { return nresources; }
+	int		num_cpus( void ) const { return m_attr->num_cpus(); }
+	int		num_real_cpus( void ) const { return m_attr->num_real_cpus(); }
+	int		numSlots( void ) const { return nresources; }
 
 	int		send_update( int, ClassAd*, ClassAd*, bool nonblocking );
 	void	final_update( void );
@@ -222,11 +230,12 @@ public:
 	Resource*	get_by_cur_id(const char* id);	// Find rip by ClaimId of r_cur
 	Resource*	get_by_any_id(const char* id, bool move_cp_claim = false);	// Find rip by any claim id
 	Resource*	get_by_name(const char*);		// Find rip by r_name
+	Resource*	get_by_name_prefix(const char*); // Find rip by slot prefix part of r_name (everything before the @)
 	Resource*	get_by_slot_id(int);	// Find rip by r_id
 	State		state( void );			// Return the machine state
 
 
-	void report_updates( void );	// Log updates w/ dprintf()
+	void report_updates( void ) const;	// Log updates w/ dprintf()
 
 	MachAttributes*	m_attr;		// Machine-wide attribute object
 	
@@ -243,10 +252,13 @@ public:
 	void		deleteResource( Resource* );
 
 		//Make a list of the ClassAds from each slot we represent.
-	void		makeAdList( ClassAdList*, ClassAd * pqueryAd=NULL );
+	void		makeAdList( ClassAdList& ads, ClassAd & queryAd );
+
+		// count the number of resources owned by this user
+	int			claims_for_this_user(const char * user);
 
 	void		markShutdown() { is_shutting_down = true; };
-	bool		isShuttingDown() { return is_shutting_down; };
+	bool		isShuttingDown() const { return is_shutting_down; };
 
 	StarterMgr starter_mgr;
 
@@ -265,13 +277,13 @@ public:
 #if HAVE_HIBERNATION
 	HibernationManager const& getHibernationManager () const;
 	void updateHibernateConfiguration ();
-    int disableResources ( const MyString &state );
+    int disableResources ( const std::string &state );
 	bool hibernating () const;
 #endif /* HAVE_HIBERNATION */
 
-	time_t	now( void ) { return cur_time; };
+	time_t	now( void ) const { return cur_time; };
 
-	StartdStats startd_stats;  
+	StartdStats startd_stats;
 
     class Stats {
 	public:
@@ -279,6 +291,7 @@ public:
        stats_recent_counter_timer WalkEvalState;
        stats_recent_counter_timer WalkUpdate;
        stats_recent_counter_timer WalkOther;
+       stats_recent_counter_timer Drain;
 
        // TJ: for now these stats will be registered in the DC pool.
        void Init(void);
@@ -293,9 +306,7 @@ public:
 	int nextId( void ) { return id_disp->next(); };
 
 		// returns true if specified slot is draining
-	bool isSlotDraining(Resource *rip);
-
-	bool getDrainingRequestId( Resource *rip, std::string &request_id );
+	bool isSlotDraining(Resource *rip) const;
 
 		// return number of seconds after which we want
 		// to transition to fast eviction of jobs
@@ -314,22 +325,27 @@ public:
 
 	bool cancelDraining(std::string request_id,std::string &error_msg,int &error_code);
 
-	void publish_draining_attrs( Resource *rip, ClassAd *cap, amask_t mask );
+	void publish_draining_attrs(Resource *rip, ClassAd *cap);
 
-	void compute_draining_attrs( int how_much );
+	void compute_draining_attrs();
 
 		// badput is in seconds
 	void addToDrainingBadput( int badput );
 
-	bool typeNumCmp( int* a, int* b );
+	bool typeNumCmp( const int* a, const int* b ) const;
 
 	void calculateAffinityMask(Resource *rip);
 
 	void checkForDrainCompletion();
-	int getMaxJobRetirementTimeOverride() { return max_job_retirement_time_override; }
+	int getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
+	void setLastDrainStopTime() {
+		last_drain_stop_time = time(NULL);
+		stats.Drain.Add( last_drain_stop_time - last_drain_start_time );
+	}
 
 private:
+	static void token_request_callback(bool success, void *miscdata);
 
 	Resource**	resources;		// Array of pointers to Resource objects
 	int			nresources;		// Size of the array
@@ -373,7 +389,15 @@ private:
 		*/
 	void check_use( void );
 
-	void sweep_timer_handler( void );
+	void sweep_timer_handler( void ) const;
+
+	void try_token_request();
+
+		// State of the in-flight token request; for now, we only allow
+		// one at a time.
+	std::string m_token_request_id;
+	std::string m_token_client_id;
+	Daemon *m_token_daemon{nullptr};
 
 #if HAVE_BACKFILL
 	bool backfillConfig( void );
@@ -391,7 +415,7 @@ private:
 	int					m_hibernate_tid;
 	bool				m_hibernating;
 	void checkHibernate(void);
-	int	 allHibernating( MyString &state_str ) const;
+	int	 allHibernating( std::string &state_str ) const;
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();
@@ -402,6 +426,7 @@ private:
 	bool resume_on_completion_of_draining;
 	int draining_id;
 	time_t last_drain_start_time;
+	time_t last_drain_stop_time;
 	int expected_graceful_draining_completion;
 	int expected_quick_draining_completion;
 	int expected_graceful_draining_badput;
@@ -409,10 +434,16 @@ private:
 	int total_draining_badput;
 	int total_draining_unclaimed;
 	int max_job_retirement_time_override;
+
+	DCTokenRequester m_token_requester;
+	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
 };
 
 
 // Comparison function for sorting resources:
+
+// natural order is slotid / slot_sub_id
+int naturalSlotOrderCmp(const void*, const void*);
 
 // Sort on State, with Owner state resources coming first, etc.
 int ownerStateCmp( const void*, const void* );
@@ -432,6 +463,92 @@ int claimedRankCmp( const void*, const void* );
      machine Rank for its claim
 */
 int newCODClaimCmp( const void*, const void* );
+
+bool OtherSlotEval(const char * /*name*/,
+	const classad::ArgumentList &arg_list,
+	classad::EvalState &state,
+	classad::Value &result);
+bool ExprTreeIsSlotEval(classad::ExprTree * expr);
+int ExprHasSlotEval(classad::ExprTree * expr);
+
+namespace classad {
+
+	/// This converts a ClassAd into a string representing the %ClassAd
+	/// except for SlotEval function calls, those are evaluated and then unparsed
+	class SlotEvalUnParser : public ClassAdUnParser
+	{
+	public:
+		/// Constructor
+		SlotEvalUnParser(const ClassAd * scope_ad) : ClassAdUnParser(), evs(), indirect(true) { evs.SetScopes(scope_ad); }
+
+		/// Destructor
+		virtual ~SlotEvalUnParser() {}
+
+		/// Function unparser
+		///   This uses the normal classad unparser unless it is a SlotEval function
+		///   For a SlotEval function, the expression is evaluated against that slot
+		///   and the result is unparsed and inserted into the output buffer
+		virtual void UnparseAux(
+			std::string &buffer,
+			std::string &fnName,
+			std::vector<ExprTree*>& args)
+		{
+			if (MATCH == strcasecmp(fnName.c_str(), "SlotEval")) {
+				classad::Value val;
+				std::string attr, rhs;
+				if (!OtherSlotEval("SlotEval", args, evs, val)) {
+					attr = "error";
+				} else {
+					ClassAdUnParser::UnparseAux(rhs, val, classad::Value::NumberFactor::NO_FACTOR);
+					if (indirect) {
+						classad::Value attrval;
+						if(!OtherSlotEval("*", args, evs, attrval)||!attrval.IsStringValue(attr)) {
+							attr = "error";
+							rhs.clear();
+						} else {
+							if (ends_with(attr, "_expr_")) {
+								formatstr_cat(attr, "%03d", (int)slot_attrs.size());
+							}
+							slot_attrs[attr] = rhs;
+						}
+					} else {
+						attr = rhs;
+					}
+				}
+				buffer += attr;
+			} else {
+				ClassAdUnParser::UnparseAux(buffer, fnName, args);
+			}
+		}
+
+		// clear the indirect intermediate values
+		void ClearSlotAttrs() { slot_attrs.clear(); }
+
+		// assign the indirect intermediate values
+		// into the given ad
+		void AssignSlotAttrs(ClassAd & ad) {
+			for (auto it = slot_attrs.begin(); it != slot_attrs.end(); ++it) {
+				ad.AssignExpr(it->first, it->second.c_str());
+			}
+		}
+
+		// toggle the direct vs. indirect replacement strategy
+		bool setIndirectThroughAttr(bool ind) {
+			bool tmp = indirect;
+			indirect = ind;
+			return tmp;
+		}
+
+	protected:
+		EvalState evs;
+		// when doing indirect replacement, intermediate attributes are added to this collection
+		std::map<std::string, std::string, CaseIgnLTStr> slot_attrs;
+		// when true, use indirect replacement of SlotEval function calls
+		// when false, do direct replacement
+		bool indirect;
+	};
+}
+
 
 
 #endif /* _CONDOR_RESMGR_H */

@@ -20,6 +20,8 @@
 #ifndef STAT_INFO_H
 #define STAT_INFO_H
 
+#include "condor_common.h"
+#include "condor_sys_types.h"
 #include "condor_uid.h"
 
 #ifndef WIN32
@@ -108,7 +110,7 @@ public:
 		SINoFile or SIFailure.
 		@return The errno from getting info for this StatInfo object.
 	*/
-	int Errno() { return si_errno; };
+	int Errno() const { return si_errno; };
 
 	/** Get the full path to the file.
 		@return A string containing the full path of this file.
@@ -135,22 +137,22 @@ public:
 	/** Get last access time.
 		@return time in seconds since 00:00:00 UTC, January 1, 1970
     */
-	time_t GetAccessTime() { return access_time; }
+	time_t GetAccessTime() const { return access_time; }
 
 	/** Get last modification time.
 		@return time in seconds since 00:00:00 UTC, January 1, 1970
     */
-	time_t GetModifyTime() { return modify_time; }
+	time_t GetModifyTime() const { return modify_time; }
 
 	/** Get creation time.
 		@return time in seconds since 00:00:00 UTC, January 1, 1970
     */
-	time_t GetCreateTime() { return create_time; }
+	time_t GetCreateTime() const { return create_time; }
 
 	/** Get file size.
 		@return size of the file in bytes
 	*/
-	filesize_t GetFileSize() { return file_size; }
+	filesize_t GetFileSize() const { return file_size; }
 
 		/// Return the file's permission mode
 	mode_t GetMode();
@@ -160,34 +162,34 @@ public:
 		that point to directories.
 		@return true if the file is a subdirectory name, false if not
 	*/
-	bool IsDirectory() { return m_isDirectory; }
+	bool IsDirectory() const { return m_isDirectory; }
 
 	/** Determine if the file is has the execute bit set at all.
 		@return true if the file has the user, group or other execute bit
 		set; false if the execute bit is not set.
 	*/
-	bool IsExecutable() { return m_isExecutable; }
+	bool IsExecutable() const { return m_isExecutable; }
 
 	/** Determinen if the file is a symbolic link
 		@return true if the file is a symbolic link, false if not
 	*/
-	bool IsSymlink() { return m_isSymlink; }
+	bool IsSymlink() const { return m_isSymlink; }
 
 	/** Determine if the file is a domain socket
 		@return true if the file is a domain socket, false if not
 	*/
-	bool IsDomainSocket() { return m_isDomainSocket; }
+	bool IsDomainSocket() const { return m_isDomainSocket; }
 
 #ifndef WIN32
 	/** Get the owner of the entry.
 		@return the uid of the entry's owner
 	*/
-	uid_t GetOwner();
+	uid_t GetOwner() const;
 
 	/** Get the group owner of the entry.
 		@return the gid of the entry's group id
 	*/
-	gid_t GetGroup();
+	gid_t GetGroup() const;
 #endif
 
 private:

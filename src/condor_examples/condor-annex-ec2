@@ -31,218 +31,314 @@
 # Check that HTCondor is configured to run
 chkconfig condor || exit 1
 
-function getSpotFleetRequestID() {
-    # If I was started by a Spot Fleet Request, that request's ID will be in the
-    # 'aws:ec2spot:fleet-request-id' tag.
-    tags=$(aws --region ${region} ec2 describe-instances \
-        --instance-id ${EC2InstanceID} | egrep '("Value"|"Key")')
-    oldIFS=${IFS}
-    IFS='
-'
-
-    for line in $tags; do
-        v=$(echo ${line} | grep '"Value":')
-        if [ -n "${v}" ]; then
-            value=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
-        fi
-        v=$(echo ${line} | grep '"Key":')
-        if [ -n "${v}" ]; then
-            key=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
-        fi
-
-        if [ -n "${key}" -a -n "${value}" ]; then
-            if [ ${key} = "aws:ec2spot:fleet-request-id" ]; then
-                sfrID=${value};
-                break;
-            fi
-
-            key=""
-            value=""
-        fi
-    done
-    IFS=${oldIFS}
-}
-
-fetchAndExtract() {
-    cd /etc/condor
-    url=s3://$(echo ${1} | sed -e's/^arn:aws:s3::://')
-    url=$(echo $url | sed -e's/\*/'${annexID}'/')
-    if aws --region ${region} s3 cp ${url} . >& /dev/null; then
-        file=`basename ${url}`
-        echo "# Fetched '${file}' from '${url}'."
-        tarfile=`echo ${file} | awk '/.tar.gz$/{print $1}'`
-        if [ -n "${tarfile}" ]; then
-            tar --no-same-owner -C /etc/condor/config.d -x -z -f ${file}
-        fi
-        return 0
-    fi
-    echo "# Failed to download ${url}..."
-    return 1
-}
-
 start() {
-    echo -n $"Configuring HTCondor to be an EC2 annex: "
-
-    # Acquire the public IP and instance ID of this from the metadata server.
-    EC2InstanceID=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id)
-    EC2PublicIP=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-
-    # If we were installed but for some reason aren't running on EC2, do nothing.
-    if [ "${EC2InstanceID}"x == x ]; then
-        echo "not running on EC2, aborting."
-        return 1
-    fi
-
-    # Set values expected by HTCondor when running on EC2.
-    echo "EC2PublicIP = ${EC2PublicIP}" >> /etc/condor/config.d/49ec2-instance.config
-    echo "EC2InstanceID = \"${EC2InstanceID}\"" >> /etc/condor/config.d/49ec2-instance.config
-
-    #
-    # Annex-specific code begins here.
-    #
-
-    # Configure iptables to deny any nonroot user access to the metadata server.
-    # This will prevent them from using the credentials located there.
-    /sbin/iptables -A OUTPUT \
-        -m owner --destination 169.254.169.254 ! --uid-owner 0 \
-        -j REJECT
-
-    # If I was started by condor_annex (directly, as an on-demand instance) then
-    # my client token will contain an '_'.
-    region=$(/usr/bin/curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | grep \"region\" | sed -e's/"[^"]*$//' | sed -e's/.*"//')
-    clientToken=$(aws ec2 describe-instances --region ${region} --instance-id ${EC2InstanceID} | grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
-    annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
-
-    # Otherwise, wait until the Spot Fleet Request has tagged me with its ID.
-    if [ "${annexID}" == "${clientToken}" ]; then
-        sfrID=""
-        getSpotFleetRequestID
-        count=0
-
-        echo -n "waiting for Spot Fleet to tag me: "
-        # Don't wait longer than the hour you've already been charged for,
-        # with a substantial buffer for slow start-up and/or shut-down.
-        while [ -z "${sfrID}" ]; do
-            count=$((count + 1))
-            if [ ${count} -gt 150 ]; then
-                /sbin/shutdown -h now
-            fi
-            sleep 20
-            getSpotFleetRequestID
-        done
-        echo -n "OK "
-
-        #
-        # If you launch as few as 100 instances at a time, it's possible to
-        # exceed AWS' rate limit on describe-spot-fleet-requests.
-        #
-        totalSlept=0
-        while true; do
-            toSleep=$((RANDOM%10))
-            sleep $toSleep
-            totalSlept=$((totalSlelpt+toSleep))
-            aws ec2 --region ${region} describe-spot-fleet-requests \
-                --spot-fleet-request-id ${sfrID} > /tmp/out 2> /tmp/err
-            if [ grep RequestLimitExceeded /tmp/err &> /dev/null ]; then
-                if [ $totalSlept -ge 300 ]; then
-                    shutdown -h now
-                else
-                    continue
-                fi
-            else
-                clientToken=`grep \"ClientToken\" /tmp/out | sed -e's/\", *$//' | sed -e's/.*"//'`
-                break
-            fi
-        done
-        rm /tmp/err /tmp/out
-
-        annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
-    fi
+    echo -n "Configuring HTCondor to be an EC2 annex: "
 
 (
-    INSTANCE_PROFILE_ARN=`curl -s http://169.254.169.254/latest/meta-data/iam/info \
-        | awk '/InstanceProfileArn/{print $3}' | sed -e's/"//' | sed -e's/",//'`
-    if [ -z ${INSTANCE_PROFILE_ARN} ]; then
-        return 1
-    fi
-    echo "# Found instance profile ARN '${INSTANCE_PROFILE_ARN}'."
+# Acquire the public IP and instance ID of this from the metadata server.
+EC2PublicIP=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+EC2InstanceID=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
-    INSTANCE_PROFILE_NAME=`echo ${INSTANCE_PROFILE_ARN} | sed -e's#.*/##'`
-    if [ -z ${INSTANCE_PROFILE_NAME} ]; then
-        return 1
-    fi
-    echo "# Found instance profile name '${INSTANCE_PROFILE_NAME}'."
+# If we were installed but for some reason aren't running on EC2, do nothing.
+if [ "${EC2InstanceID}"x == x ]; then
+	exit 1
+fi
 
-    INSTANCE_PROFILE_ROLES=`aws iam get-instance-profile --instance-profile-name \
-        ${INSTANCE_PROFILE_NAME} | awk '/RoleName/{print $2}' |
-        sed -e's/"//' | sed -e's/",//'`
-    echo "# Found instance profile roles: ${INSTANCE_PROFILE_ROLES}"
+# Configure iptables to deny any nonroot user access to the metadata server.
+# This will prevent them from using the credentials located there.
+/sbin/iptables -A OUTPUT \
+	-m owner --destination 169.254.169.254 ! --uid-owner 0 \
+	-j REJECT
 
-    for role in ${INSTANCE_PROFILE_ROLES}; do
-        echo "# Considering instance profile role '${role}'..."
+# Set the EC2PublicIP and EC2InstanceID macros.  The example EC2 configuration
+# uses these values (advertises the latter and sets TCP_FORWARDING_HOST to
+# the former).
+echo "EC2PublicIP = ${EC2PublicIP}"
+echo "EC2InstanceID = \"${EC2InstanceID}\""
 
-        # Check the inline policies.
-        inlinePolicyNames=`aws iam list-role-policies --role-name ${role} \
-            | grep -v '[]{}[]' \
-            | sed -e's/"//' | sed -e's/",//' | sed -e's/"//'`
+#
+# Determine the annex ID, so that I know which config file to download.
+#
 
-        for policy in ${inlinePolicyNames}; do
-            echo "# Found inline policy '${policy}'."
-            lines=`aws iam get-role-policy --role-name ${role} --policy-name ${policy} | sed -e's/[]{}[]//g'`
-            resourceList=""
-            inResourceList=0
-            for line in $lines; do
-                if [ ${inResourceList} -eq 1 -a ${line} = ',' ]; then
-                    inResourceList=0
-                fi
-                if [ ${inResourceList} = 1 ]; then
-                    line=`echo ${line} | sed -e's/^"//g' | sed -e's/".*$//g'`
-                    resourceList="${resourceList} ${line}"
-                fi
-                if [ "${line}" = '"Resource":' ]; then
-                    inResourceList=1
-                fi
-            done
+# The AWS command-line tool needs this.
+region=$(/usr/bin/curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | grep \"region\" | sed -e's/"[^"]*$//' | sed -e's/.*"//')
 
-            for resource in ${resourceList}; do
-                echo "# Found resource: ${resource}"
-                # If resource is an S3 ARN, fetch that file and exit.
-                arn=`echo ${resource} | awk '/^arn:aws:s3:::[^/]*\/config-\*\.tar\.gz/{ print $0 }'`
-                if [ "${arn}"x != x ]; then
-                    fetchAndExtract ${arn}
-                    return $?
-                fi
-            done
-        done
+totalSlept=0
+function exponentialRetry() {
+	local checkVar=$1; shift
+	local duration=2
 
-        attachedPolicyArns=`aws iam list-attached-role-policies --role-name ${role} \
-            | awk '/PolicyArn/{print $2}' \
-            | sed -e's/"//' | sed -e's/"//'`
+	unset $checkVar; eval "$@"
+	while [[ ${!checkVar} == "" ]]; do
+		if [[ $totalSlept -gt 3000 ]]; then
+			# Since AWS charges by the hour, try for most of an hour before
+			# giving up, so you won't save anything by giving up earlier.
+			/sbin/shutdown -h now
+			exit 1
+		fi
+		duration=$(((duration * 2) + RANDOM%duration))
+		echo "# ... failed, sleeping for ${duration} seconds."
+		sleep ${duration}
+		totalSlept=$((totalSlept + duration))
+		eval "$@"
+	done
+}
 
-        for policyArn in ${attachedPolicyArns}; do
-            echo "# Found attached policy '${policyArn}'."
-            version=`aws iam get-policy --policy-arn ${policyArn} \
-                | awk '/DefaultVersionId/{print $2}' \
-                | sed -e's/"//' | sed -e's/",//'`
-            echo -n "# Checking version '${version}'... "
-            resource=`aws iam get-policy-version --policy-arn ${policyArn} \
-                --version-id ${version} \
-                | awk '/Resource/{print $2}' \
-                | sed -e's/"//' | sed -e's/",//'`
-            if [ -z "${resource}" ]; then
-                echo "found no resources."
-                continue
-            fi
-            echo "# Found resource: ${resource}"
+function askForSpotFleetRequestID() {
+	# If I was started by a Spot Fleet Request, that request's ID will be in the
+	# 'aws:ec2spot:fleet-request-id' tag.
+	tags=$(aws --region ${region} ec2 describe-instances \
+		--instance-id ${EC2InstanceID} | egrep '("Value"|"Key")')
+	oldIFS=${IFS}
+	IFS='
+'
+	for line in $tags; do
+		v=$(echo ${line} | grep '"Value":')
+		if [ -n "${v}" ]; then
+			value=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
+		fi
+		v=$(echo ${line} | grep '"Key":')
+		if [ -n "${v}" ]; then
+			key=$(echo ${line} | sed -e's/\",* *$//' | sed -e's/.*"//')
+		fi
 
-            # If resource is an S3 ARN, fetch that file and exit.
-            arn=`echo ${resource} | awk '/^arn:aws:s3:::[^/]*\/config-\*\.tar\.gz/{ print $0 }'`
-            if [ "${arn}"x != x ]; then
-                fetchAndExtract ${arn}
-                return $?
-            fi
-        done
-    done
+		if [ -n "${key}" -a -n "${value}" ]; then
+			if [ ${key} = "aws:ec2spot:fleet-request-id" ]; then
+				sfrID=${value};
+				break;
+			fi
+			key=""
+			value=""
+		fi
+	done
+	IFS=${oldIFS}
+}
+
+function getSpotFleetRequestID() {
+	echo "# getSpotFleetRequestID()"
+	exponentialRetry tags askForSpotFleetRequestID
+}
+
+function askForClientToken() {
+	clientToken=$(aws ec2 describe-instances --region ${region} --instance-id ${EC2InstanceID} | grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
+}
+
+function getClientToken() {
+	echo "# getClientToken()"
+	exponentialRetry clientToken askForClientToken
+}
+
+function askForClientTokenFromSFD() {
+	clientToken=`aws ec2 --region ${region} describe-spot-fleet-requests \
+		--spot-fleet-request-id ${sfrID} | \
+		grep \"ClientToken\" | \
+		sed -e's/\", *$//' | sed -e's/.*"//'`
+}
+
+function getClientTokenFromSpotFleetRequestID() {
+	echo "# getClientTokenFromSpotFleetRequestID()"
+	exponentialRetry clientToken askForClientTokenFromSFD
+}
+
+
+#
+# If I was started by condor_annex (directly, as an on-demand instance) then
+# my client token will contain an '_'.
+#
+getClientToken
+annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
+
+#
+# Otherwise, wait until the Spot Fleet Request has tagged me with its ID
+# and extract the client token from it.
+#
+if [ "${annexID}" == "${clientToken}" ]; then
+	sfrID=""
+	getSpotFleetRequestID
+	clientToken=""
+	getClientTokenFromSpotFleetRequestID
+	annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
+fi
+
+#
+# If we have read permission to a particular file in an S3 bucket,
+# and that file is an archive we know how to unzip, download it and
+# do so in /etc/condor.  Otherwise, exit non-zero, so that we don't
+# force the master to restart pointlessly.
+#
+function fetchAndExtract() {
+	cd /etc/condor
+	url=s3://$(echo ${1} | sed -e's/^arn:aws:s3::://')
+	url=$(echo $url | sed -e's/\*/'${annexID}'/')
+	if aws --region ${region} s3 cp ${url} . >& /dev/null; then
+		file=`basename ${url}`
+		echo "# Fetched '${file}' from '${url}'."
+		tarfile=`echo ${file} | awk '/.tar.gz$/{print $1}'`
+		if [ -n "${tarfile}" ]; then
+			tar --no-same-owner -C /etc/condor/config.d -x -z -f ${file}
+		fi
+		exit 0
+	fi
+	echo "# Failed to download ${url}..."
+}
+
+
+INSTANCE_PROFILE_ARN=`curl -s http://169.254.169.254/latest/meta-data/iam/info \
+	| awk '/InstanceProfileArn/{print $3}' | sed -e's/"//' | sed -e's/",//'`
+if [ -z ${INSTANCE_PROFILE_ARN} ]; then
+	exit 1
+fi
+echo "# Found instance profile ARN '${INSTANCE_PROFILE_ARN}'."
+
+INSTANCE_PROFILE_NAME=`echo ${INSTANCE_PROFILE_ARN} | sed -e's#.*/##'`
+if [ -z ${INSTANCE_PROFILE_NAME} ]; then
+	exit 1
+fi
+echo "# Found instance profile name '${INSTANCE_PROFILE_NAME}'."
+
+function askForInstanceProfileRoles() {
+	INSTANCE_PROFILE_ROLES=`aws iam get-instance-profile --instance-profile-name \
+		${INSTANCE_PROFILE_NAME} | awk '/RoleName/{print $2}' |
+		sed -e's/"//' | sed -e's/",//'`
+}
+
+function getInstanceProfileRoles() {
+	echo "# getInstanceProfileRoles()"
+	exponentialRetry INSTANCE_PROFILE_ROLES askForInstanceProfileRoles
+}
+
+#
+# Unlike the other retry functions, it's OK for this group to succeed in
+# asking AWS for something, but not find it.
+#
+
+function askForInlinePolicyNames() {
+	inlinePolicyNames=`aws iam list-role-policies --role-name ${role}`
+}
+
+function getInlinePolicyNames() {
+	echo "# getInlinePolicyNames()"
+	exponentialRetry inlinePolicyNames askForInlinePolicyNames
+	inlinePolicyNames=`<<< "$inlinePolicyNames" \
+		  grep -v '[]{}[]' \
+		| sed -e's/"//' | sed -e's/",//' | sed -e's/"//'`
+}
+
+function askForRolePolicy() {
+	lines=`aws iam get-role-policy --role-name ${role} --policy-name ${policy}`
+}
+
+function getRolePolicy() {
+	echo "# getRolePolicy()"
+	exponentialRetry lines askForRolePolicy
+	lines=`<<< "$lines" sed -e's/[]{}[]//g'`
+}
+
+function askForAttachedPolicyARNs() {
+	attachedPolicyArns=`aws iam list-attached-role-policies --role-name ${role}`
+}
+
+function getAttachedPolicyARNs() {
+	echo "# getAttachedPolicyARNs()"
+	exponentialRetry attachedPolicyArns askForAttachedPolicyARNs
+	attachedPolicyArns=`<<< "$attachedPolicyArns" \
+		  awk '/PolicyArn/{print $2}' \
+		| sed -e's/"//' | sed -e's/"//'`
+
+}
+
+function askForAttachedPolicyVersion() {
+	version=`aws iam get-policy --policy-arn ${policyArn}`
+}
+
+function getAtttachedPolicyVersion() {
+	echo "# getAttachedPolicyVersion()"
+	exponentialRetry version askForAttachedPolicyVersion
+	version=`<<< "$version" \
+		  awk '/DefaultVersionId/{print $2}' \
+		| sed -e's/"//' | sed -e's/",//'`
+}
+
+function askForResourceFromPolicy() {
+	resource=`aws iam get-policy-version --policy-arn ${policyArn} \
+		--version-id ${version}`
+}
+
+function getResourceFromPolicy() {
+	echo "# getResourceFromPolicy()"
+	exponentialRetry resource askForResourceFromPolicy
+	resource=`<<< "$resource" \
+		  awk '/Resource/{print $2}' \
+		| sed -e's/"//' | sed -e's/",//'`
+}
+
+getInstanceProfileRoles
+echo "# Found instance profile roles: ${INSTANCE_PROFILE_ROLES}"
+
+function downloadFromRoles() {
+	echo "# downloadFromRoles() ..."
+
+	for role in ${INSTANCE_PROFILE_ROLES}; do
+		echo "# Considering instance profile role '${role}'..."
+
+		getAttachedPolicyARNs
+		for policyArn in ${attachedPolicyArns}; do
+			echo "# Found attached policy '${policyArn}'."
+			getAttachedPolicyVersion
+			echo "# Checking version '${version}'... "
+			getResourceFromPolicy
+			if [ -z "${resource}" ]; then
+				echo "# ... found no resources."
+				continue
+			fi
+			echo "# ... found resource: ${resource}"
+
+			# If resource is an S3 ARN, fetch that file and exit.
+			arn=`echo ${resource} | awk '/^arn:aws:s3:::[^/]*\/config-\*\.tar\.gz/{ print $0 }'`
+			if [ "${arn}"x != x ]; then
+				fetchAndExtract ${arn}
+			fi
+		done
+
+		getInlinePolicyNames
+		for policy in ${inlinePolicyNames}; do
+			echo "# Found inline policy '${policy}'."
+			getRolePolicy
+			resourceList=()
+			inResourceList=0
+			for line in $lines; do
+				if [ ${inResourceList} -eq 1 -a ${line} = ',' ]; then
+					inResourceList=0
+				fi
+				if [ ${inResourceList} = 1 ]; then
+					line=`echo ${line} | sed -e's/^"//g' | sed -e's/".*$//g'`
+					resourceList+=("${line}")
+				fi
+				if [ "${line}" = '"Resource":' ]; then
+					inResourceList=1
+				fi
+			done
+
+			for resource in "${resourceList[@]}"; do
+				echo "# Found resource: ${resource}"
+				# If resource is an S3 ARN, fetch that file and exit.
+				arn=`echo ${resource} | awk '/^arn:aws:s3:::[^/]*\/config-\*\.tar\.gz/{ print $0 }'`
+				if [ "${arn}"x != x ]; then
+					fetchAndExtract ${arn}
+				fi
+			done
+		done
+	done
+}
+
+#
+# It's pointless to exit this script before extracting a config tarball,
+# so just keep trying until the first hour is (almost) up.
+#
+exponentialRetry infiniteloop downloadFromRoles
+
+exit 1
+
 ) >> /etc/condor/config.d/49ec2-instance.config
 
     RVAL=$?

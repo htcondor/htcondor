@@ -24,12 +24,10 @@
 
 #include "HashTable.h"
 
-namespace compat_classad {
-
 // The SortFunction returns a 1 if the first classad is
 // "smaller than" the second classad. Do not assume
 // about other return values.
-typedef int (*SortFunctionType)(compat_classad::ClassAd*,compat_classad::ClassAd*,void*);
+typedef int (*SortFunctionType)(ClassAd*,ClassAd*,void*);
 
 class ClassAdListItem {
 public:
@@ -79,7 +77,7 @@ protected:
 			 * @return true if a comes before b in sorted order,
 			 *  false otherwise.
 			 */
-		bool operator() (compat_classad::ClassAdListItem* a, compat_classad::ClassAdListItem* b)
+		bool operator() (ClassAdListItem* a, ClassAdListItem* b)
 		{
 			int res = this->smallerThan(a->ad,b->ad,this->userInfo);
 			if (res == 1) return true;
@@ -114,8 +112,6 @@ public:
 
     // Count classads satisfying constraint.  Optionally remove ads that don't.
     int CountMatches(classad::ExprTree* constraint);
-
-	void fPrintAttrListList(FILE* f, bool use_xml = false, StringList *attr_white_list = NULL);
 };
 
 /* ClassAdList is just like ClassAdListDoesNotDeleteAds, except it
@@ -133,7 +129,5 @@ class ClassAdList: public ClassAdListDoesNotDeleteAds
 	int Delete(ClassAd* cad);
 	virtual void Clear();
 };
-
-} // namespace compat_classad
 
 #endif

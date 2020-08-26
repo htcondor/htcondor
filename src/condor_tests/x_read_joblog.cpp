@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
 						}
 
 						// print a attribute which is always there
-						classad::ClassAd * ad = reinterpret_cast<classad::ClassAd*>(info->toClassAd());
+						classad::ClassAd * ad = reinterpret_cast<classad::ClassAd*>(info->toClassAd(true));
 						if ( ! ad) { printf("toClassAd failed!\n"); break; }
 
 						int rmem = -1, memu = -1, mem = -1;

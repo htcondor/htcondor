@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "condor_network.h"
 #include "condor_io.h"
 #include "get_daemon_name.h"
 #include "internet.h"
@@ -746,8 +745,8 @@ mayUserForceRm( )
 
 	free(tmp);
 
-	int is_okay = 0;
-	if(tmpAd.EvalBool(TESTNAME, 0, is_okay)) {
+	bool is_okay = false;
+	if(tmpAd.LookupBool(TESTNAME, is_okay)) {
 		return is_okay;
 	} else {
 		// Something went wrong.  May be undefined because

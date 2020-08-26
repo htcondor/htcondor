@@ -1,4 +1,4 @@
-#/bin/sh
+#!/bin/bash
 
 # Acquire the public IP and instance ID of this from the metadata server.
 EC2PublicIP=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
@@ -28,9 +28,30 @@ echo "EC2InstanceID = \"${EC2InstanceID}\""
 # The AWS command-line tool needs this.
 region=$(/usr/bin/curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | grep \"region\" | sed -e's/"[^"]*$//' | sed -e's/.*"//')
 
-function getSpotFleetRequestID() {
+totalSlept=0
+function exponentialRetry() {
+	local checkVar=$1; shift
+	local duration=2
+
+	unset $checkVar; eval "$@"
+	while [[ ${!checkVar} == "" ]]; do
+		if [[ $totalSlept -gt 3000 ]]; then
+			# Since AWS charges by the hour, try for most of an hour before
+			# giving up, so you won't save anything by giving up earlier.
+			/sbin/shutdown -h now
+			exit 1
+		fi
+		duration=$(((duration * 2) + RANDOM%duration))
+		echo "# ... failed, sleeping for ${duration} seconds."
+		sleep ${duration}
+		totalSlept=$((totalSlept + duration))
+		eval "$@"
+	done
+}
+
+function askForSpotFleetRequestID() {
 	# If I was started by a Spot Fleet Request, that request's ID will be in the
-	# 'aws:ec2spot:fleet-request-id' tag. 
+	# 'aws:ec2spot:fleet-request-id' tag.
 	tags=$(aws --region ${region} ec2 describe-instances \
 		--instance-id ${EC2InstanceID} | egrep '("Value"|"Key")')
 	oldIFS=${IFS}
@@ -58,52 +79,49 @@ function getSpotFleetRequestID() {
 	IFS=${oldIFS}
 }
 
+function getSpotFleetRequestID() {
+	echo "# getSpotFleetRequestID()"
+	exponentialRetry tags askForSpotFleetRequestID
+}
+
+function askForClientToken() {
+	clientToken=$(aws ec2 describe-instances --region ${region} --instance-id ${EC2InstanceID} | grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
+}
+
+function getClientToken() {
+	echo "# getClientToken()"
+	exponentialRetry clientToken askForClientToken
+}
+
+function askForClientTokenFromSFD() {
+	clientToken=`aws ec2 --region ${region} describe-spot-fleet-requests \
+		--spot-fleet-request-id ${sfrID} | \
+		grep \"ClientToken\" | \
+		sed -e's/\", *$//' | sed -e's/.*"//'`
+}
+
+function getClientTokenFromSpotFleetRequestID() {
+	echo "# getClientTokenFromSpotFleetRequestID()"
+	exponentialRetry clientToken askForClientTokenFromSFD
+}
+
+
 #
-# If I was started by condor_annex (directly, as an on-deman instance) then
+# If I was started by condor_annex (directly, as an on-demand instance) then
 # my client token will contain an '_'.
 #
-clientToken=$(aws ec2 describe-instances --region ${region} --instance-id ${EC2InstanceID} | grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
+getClientToken
 annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
 
-# Otherwise, wait until the Spot Fleet Request has tagged me with its ID.
+#
+# Otherwise, wait until the Spot Fleet Request has tagged me with its ID
+# and extract the client token from it.
+#
 if [ "${annexID}" == "${clientToken}" ]; then
 	sfrID=""
 	getSpotFleetRequestID
-	count=0
-	while [ -z "${sfrID}" ]; do
-		count=$((count + 1))
-		if [ ${count} -gt 150 ]; then
-			# Give up, I'm out of here.
-			/sbin/shutdown -h now
-		fi
-		sleep 20
-		getSpotFleetRequestID
-	done
-
-        #
-        # If you launch as few as 100 instances at a time, it's possible to
-        # exceed AWS' rate limit on describe-spot-fleet-requests.
-        #
-        totalSlept=0
-        while true; do
-            toSleep=$((RANDOM%10))
-            sleep $toSleep
-            totalSlept=$((totalSlelpt+toSleep))
-            aws ec2 --region ${region} describe-spot-fleet-requests \
-                --spot-fleet-request-id ${sfrID} > /tmp/out 2> /tmp/err
-            if [ grep RequestLimitExceeded /tmp/err &> /dev/null ]; then
-                if [ $totalSlept -ge 300 ]; then
-                    shutdown -h now
-                else
-                    continue
-                fi
-            else
-                clientToken=`grep \"ClientToken\" /tmp/out | sed -e's/\", *$//' | sed -e's/.*"//'`
-                break
-            fi
-        done
-        rm /tmp/err /tmp/out
-
+	clientToken=""
+	getClientTokenFromSpotFleetRequestID
 	annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
 fi
 
@@ -143,75 +161,145 @@ if [ -z ${INSTANCE_PROFILE_NAME} ]; then
 fi
 echo "# Found instance profile name '${INSTANCE_PROFILE_NAME}'."
 
-INSTANCE_PROFILE_ROLES=`aws iam get-instance-profile --instance-profile-name \
-	${INSTANCE_PROFILE_NAME} | awk '/RoleName/{print $2}' |
-	sed -e's/"//' | sed -e's/",//'`
+function askForInstanceProfileRoles() {
+	INSTANCE_PROFILE_ROLES=`aws iam get-instance-profile --instance-profile-name \
+		${INSTANCE_PROFILE_NAME} | awk '/RoleName/{print $2}' |
+		sed -e's/"//' | sed -e's/",//'`
+}
+
+function getInstanceProfileRoles() {
+	echo "# getInstanceProfileRoles()"
+	exponentialRetry INSTANCE_PROFILE_ROLES askForInstanceProfileRoles
+}
+
+#
+# Unlike the other retry functions, it's OK for this group to succeed in
+# asking AWS for something, but not find it.
+#
+
+function askForInlinePolicyNames() {
+	inlinePolicyNames=`aws iam list-role-policies --role-name ${role}`
+}
+
+function getInlinePolicyNames() {
+	echo "# getInlinePolicyNames()"
+	exponentialRetry inlinePolicyNames askForInlinePolicyNames
+	inlinePolicyNames=`<<< "$inlinePolicyNames" \
+		  grep -v '[]{}[]' \
+		| sed -e's/"//' | sed -e's/",//' | sed -e's/"//'`
+}
+
+function askForRolePolicy() {
+	lines=`aws iam get-role-policy --role-name ${role} --policy-name ${policy}`
+}
+
+function getRolePolicy() {
+	echo "# getRolePolicy()"
+	exponentialRetry lines askForRolePolicy
+	lines=`<<< "$lines" sed -e's/[]{}[]//g'`
+}
+
+function askForAttachedPolicyARNs() {
+	attachedPolicyArns=`aws iam list-attached-role-policies --role-name ${role}`
+}
+
+function getAttachedPolicyARNs() {
+	echo "# getAttachedPolicyARNs()"
+	exponentialRetry attachedPolicyArns askForAttachedPolicyARNs
+	attachedPolicyArns=`<<< "$attachedPolicyArns" \
+		  awk '/PolicyArn/{print $2}' \
+		| sed -e's/"//' | sed -e's/"//'`
+
+}
+
+function askForAttachedPolicyVersion() {
+	version=`aws iam get-policy --policy-arn ${policyArn}`
+}
+
+function getAtttachedPolicyVersion() {
+	echo "# getAttachedPolicyVersion()"
+	exponentialRetry version askForAttachedPolicyVersion
+	version=`<<< "$version" \
+		  awk '/DefaultVersionId/{print $2}' \
+		| sed -e's/"//' | sed -e's/",//'`
+}
+
+function askForResourceFromPolicy() {
+	resource=`aws iam get-policy-version --policy-arn ${policyArn} \
+		--version-id ${version}`
+}
+
+function getResourceFromPolicy() {
+	echo "# getResourceFromPolicy()"
+	exponentialRetry resource askForResourceFromPolicy
+	resource=`<<< "$resource" \
+		  awk '/Resource/{print $2}' \
+		| sed -e's/"//' | sed -e's/",//'`
+}
+
+getInstanceProfileRoles
 echo "# Found instance profile roles: ${INSTANCE_PROFILE_ROLES}"
 
-for role in ${INSTANCE_PROFILE_ROLES}; do
-	echo "# Considering instance profile role '${role}'..."
+function downloadFromRoles() {
+	echo "# downloadFromRoles() ..."
 
-	# Check the inline policies.
-	inlinePolicyNames=`aws iam list-role-policies --role-name ${role} \
-		| grep -v '[]{}[]' \
-		| sed -e's/"//' | sed -e's/",//' | sed -e's/"//'`
+	for role in ${INSTANCE_PROFILE_ROLES}; do
+		echo "# Considering instance profile role '${role}'..."
 
-	for policy in ${inlinePolicyNames}; do
-		echo "# Found inline policy '${policy}'."
-		lines=`aws iam get-role-policy --role-name ${role} --policy-name ${policy} \
-			| sed -e's/[]{}[]//g'`
-		resourceList=""
-		inResourceList=0
-		for line in $lines; do
-			if [ ${inResourceList} -eq 1 -a ${line} = ',' ]; then
-				inResourceList=0
+		getAttachedPolicyARNs
+		for policyArn in ${attachedPolicyArns}; do
+			echo "# Found attached policy '${policyArn}'."
+			getAttachedPolicyVersion
+			echo "# Checking version '${version}'... "
+			getResourceFromPolicy
+			if [ -z "${resource}" ]; then
+				echo "# ... found no resources."
+				continue
 			fi
-			if [ ${inResourceList} = 1 ]; then
-				line=`echo ${line} | sed -e's/^"//g' | sed -e's/".*$//g'`
-				resourceList="${resourceList} ${line}"
-			fi
-			if [ "${line}" = '"Resource":' ]; then
-				inResourceList=1
-			fi
-		done
+			echo "# ... found resource: ${resource}"
 
-		for resource in ${resourceList}; do
-			echo "# Found resource: ${resource}"
 			# If resource is an S3 ARN, fetch that file and exit.
 			arn=`echo ${resource} | awk '/^arn:aws:s3:::[^/]*\/config-\*\.tar\.gz/{ print $0 }'`
 			if [ "${arn}"x != x ]; then
 				fetchAndExtract ${arn}
 			fi
 		done
+
+		getInlinePolicyNames
+		for policy in ${inlinePolicyNames}; do
+			echo "# Found inline policy '${policy}'."
+			getRolePolicy
+			resourceList=()
+			inResourceList=0
+			for line in $lines; do
+				if [ ${inResourceList} -eq 1 -a ${line} = ',' ]; then
+					inResourceList=0
+				fi
+				if [ ${inResourceList} = 1 ]; then
+					line=`echo ${line} | sed -e's/^"//g' | sed -e's/".*$//g'`
+					resourceList+=("${line}")
+				fi
+				if [ "${line}" = '"Resource":' ]; then
+					inResourceList=1
+				fi
+			done
+
+			for resource in "${resourceList[@]}"; do
+				echo "# Found resource: ${resource}"
+				# If resource is an S3 ARN, fetch that file and exit.
+				arn=`echo ${resource} | awk '/^arn:aws:s3:::[^/]*\/config-\*\.tar\.gz/{ print $0 }'`
+				if [ "${arn}"x != x ]; then
+					fetchAndExtract ${arn}
+				fi
+			done
+		done
 	done
+}
 
-	# Check attached policies, too.
-	attachedPolicyArns=`aws iam list-attached-role-policies --role-name ${role} \
-		| awk '/PolicyArn/{print $2}' \
-		| sed -e's/"//' | sed -e's/"//'`
-
-	for policyArn in ${attachedPolicyArns}; do
-		echo "# Found attached policy '${policyArn}'."
-		version=`aws iam get-policy --policy-arn ${policyArn} \
-			| awk '/DefaultVersionId/{print $2}' \
-			| sed -e's/"//' | sed -e's/",//'`
-		echo -n "# Checking version '${version}'... "
-		resource=`aws iam get-policy-version --policy-arn ${policyArn} \
-			--version-id ${version} \
-			| awk '/Resource/{print $2}' \
-			| sed -e's/"//' | sed -e's/",//'`
-		if [ -z "${resource}" ]; then
-			echo "found no resources."
-			continue
-		fi
-		echo "# Found resource: ${resource}"
-
-		# If resource is an S3 ARN, fetch that file and exit.
-		arn=`echo ${resource} | awk '/^arn:aws:s3:::[^/]*\/config-\*\.tar\.gz/{ print $0 }'`
-		if [ "${arn}"x != x ]; then
-			fetchAndExtract ${arn}
-		fi
-	done
-done
+#
+# It's pointless to exit this script before extracting a config tarball,
+# so just keep trying until the first hour is (almost) up.
+#
+exponentialRetry infiniteloop downloadFromRoles
 
 exit 1

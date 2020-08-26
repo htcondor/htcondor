@@ -34,6 +34,11 @@
 #endif
 
 #include <string>
+#include <chrono>
+
+namespace ToE {
+    class Tag;
+}
 
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a
@@ -45,10 +50,7 @@
 namespace classad {
 	class ClassAd;
 }
-namespace compat_classad {
-  class ClassAd;
-}
-using namespace compat_classad;
+using classad::ClassAd;
 
 
 class MyString; // potential forward reference.
@@ -57,7 +59,8 @@ class MyString; // potential forward reference.
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
-	(in condor_event.C)
+	(in condor_event.cpp) and the python enums (in
+	src/python-bindings/JobEventLog.cpp).
 	WARNING: DO NOT CHANGE THE NUMBERS OF EXISTING EVENTS !!!
 	         ^^^^^^           
 */
@@ -103,6 +106,12 @@ enum ULogEventNumber {
 	/** Factory resumed           */  ULOG_FACTORY_RESUMED			= 38,
 	/** For the Python bindings   */  ULOG_NONE						= 39,
 	/** File transfer             */  ULOG_FILE_TRANSFER			= 40,
+	/** Reserve space for xfer    */ ULOG_RESERVE_SPACE				= 41,
+	/** Release reserved space    */ ULOG_RELEASE_SPACE				= 42,
+	/** File xfer completed       */ ULOG_FILE_COMPLETE				= 43,
+	/** Data reused               */ ULOG_FILE_USED					= 44,
+	/** File removed from reuse   */ ULOG_FILE_REMOVED				= 45,
+	/** Dataflow job skipped      */ ULOG_DATAFLOW_JOB_SKIPPED		= 46,
 };
 
 //----------------------------------------------------------------------------
@@ -187,7 +196,10 @@ class ULogEvent {
 	 *  @param out string to which the formatted text should be appended
 	 *  @return false for failure, true for success
 	 */
-	bool formatEvent( std::string &out );
+	bool formatEvent( std::string &out, int options );
+	// Flags for the formatting options for formatEvent and formatHeader
+	enum formatOpt { XML = 0x0001, JSON = 0x0002, CLASSAD = 0x0003, ISO_DATE=0x0010, UTC=0x0020, SUB_SECOND=0x0040, };
+	static int parse_opts(const char * fmt, int default_opts);
 
 		// returns a pointer to the current event name char[], or NULL
 	const char* eventName(void) const;
@@ -198,8 +210,8 @@ class ULogEvent {
 		ULogEvent::toClassAd to do the things common to all implementations.
 		@return NULL for failure, or the ClassAd pointer for success
 	*/
-	virtual ClassAd* toClassAd(void);
-	    
+	virtual ClassAd* toClassAd(bool event_time_utc);
+
 	/** Initialize from this ClassAd. This is implemented differently in each
 		of the known (by John Bethencourt as of 6/5/02) subclasses of
 		ULogEvent. Each implementation also calls ULogEvent::initFromClassAd
@@ -215,7 +227,13 @@ class ULogEvent {
 		but keeping that in sync with the eventclock was a problem, so we got rid of it
 		@return The time at which this event occurred.
 	*/
-	time_t GetEventTime() const { return eventclock; }
+	time_t GetEventTime(struct timeval *tv=NULL) const {
+		if (tv) {
+			tv->tv_sec = eventclock;
+			tv->tv_usec = event_usec;
+		}
+		return eventclock;
+	}
 
 	/** Get the time at which this event occurred, in the form
 	    of a time_t.
@@ -284,7 +302,7 @@ class ULogEvent {
      *  @param out string to which the header should be appended
      *  @return false for failure, true for success
      */
-    bool formatHeader( std::string &out );
+    bool formatHeader( std::string &out, int options );
 
 	// helper functions
 
@@ -312,7 +330,10 @@ class ULogEvent {
   private:
     /// The time this event occurred as a UNIX timestamp
 	time_t				eventclock;
+	long				event_usec;
 };
+
+#define USERLOG_FORMAT_DEFAULT ULogEvent::formatOpt::ISO_DATE
 
 //----------------------------------------------------------------------------
 /** Instantiates an event object based on the given event number.
@@ -352,7 +373,7 @@ class FutureEvent : public ULogEvent
 	/** Return a ClassAd representation of this SubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -401,7 +422,7 @@ class SubmitEvent : public ULogEvent
 	/** Return a ClassAd representation of this SubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -453,7 +474,7 @@ class RemoteErrorEvent : public ULogEvent
 	/** Return a ClassAd representation of this RemoteErrorEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -470,7 +491,7 @@ class RemoteErrorEvent : public ULogEvent
 	void setExecuteHost(char const *host);
 	char const *getExecuteHost(void) {return execute_host;}
 
-	bool isCriticalError(void) {return critical_error;}
+	bool isCriticalError(void) const {return critical_error;}
 	void setCriticalError(bool f);
 
 	void setHoldReasonCode(int hold_reason_code);
@@ -523,7 +544,7 @@ class GenericEvent : public ULogEvent
 	/** Return a ClassAd representation of this GenericEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -570,7 +591,7 @@ class ExecuteEvent : public ULogEvent
 	/** Return a ClassAd representation of this ExecuteEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -629,7 +650,7 @@ class ExecutableErrorEvent : public ULogEvent
 	/** Return a ClassAd representation of this ExecutableErrorEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -667,7 +688,7 @@ class CheckpointedEvent : public ULogEvent
 	/** Return a ClassAd representation of this CheckpointedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -709,7 +730,7 @@ class JobAbortedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobAbortedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -719,8 +740,11 @@ class JobAbortedEvent : public ULogEvent
 	const char* getReason(void) const;
 	void setReason( const char* );
 
+	void setToeTag( classad::ClassAd * toeTag );
+
  private:
 	char* reason;
+	ToE::Tag * toeTag;
 };
 
 
@@ -797,7 +821,7 @@ class JobEvictedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobEvictedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -921,6 +945,14 @@ class TerminatedEvent : public ULogEvent
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
 
+	// Subclasses wishing to be more efficient can override this to store
+	// the values in the toeTag that they care about in member variables.
+	// This method just makes a copy of toeTag (if it's not NULL).
+	virtual void setToeTag( classad::ClassAd * toeTag );
+
+ protected:
+	classad::ClassAd * toeTag;
+
  private:
 
 	char* core_file;
@@ -964,7 +996,7 @@ class JobTerminatedEvent : public TerminatedEvent
 	/** Return a ClassAd representation of this JobTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -996,7 +1028,7 @@ class NodeTerminatedEvent : public TerminatedEvent
 	/** Return a ClassAd representation of this NodeTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1031,7 +1063,7 @@ class PostScriptTerminatedEvent : public ULogEvent
 	/** Return a ClassAd representation of this PostScriptTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1088,7 +1120,7 @@ class GlobusSubmitEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusSubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1134,7 +1166,7 @@ class GlobusSubmitFailedEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusSubmitFailedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1169,7 +1201,7 @@ class GlobusResourceUpEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusResourceUpEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1204,7 +1236,7 @@ class GlobusResourceDownEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusResourceDownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1243,7 +1275,7 @@ class JobImageSizeEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobImageSize.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1284,7 +1316,7 @@ class ShadowExceptionEvent : public ULogEvent
 	/** Return a ClassAd representation of this ShadowExceptionEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1327,7 +1359,7 @@ class JobSuspendedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobSuspendedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1365,7 +1397,7 @@ class JobUnsuspendedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobUnsuspendedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1406,7 +1438,7 @@ class JobHeldEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobHeldEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1460,7 +1492,7 @@ class JobReleasedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobReleasedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1503,7 +1535,7 @@ class NodeExecuteEvent : public ULogEvent
 	/** Return a ClassAd representation of this NodeExecuteEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1548,7 +1580,7 @@ public:
     */
     virtual bool formatBody( std::string &out );
 
-	virtual ClassAd* toClassAd( void );
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	virtual void initFromClassAd( ClassAd* ad );
 
@@ -1572,7 +1604,7 @@ public:
 
 		/** This flag defaults to true, and is set to false if a
 			NoReconnectReason is specified for the event */
-	bool canReconnect( void ) {return can_reconnect; };
+	bool canReconnect( void ) const {return can_reconnect; };
 
 private:
 	char *startd_addr;
@@ -1597,7 +1629,7 @@ public:
     */
     virtual bool formatBody( std::string &out );
 
-	virtual ClassAd* toClassAd( void );
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	virtual void initFromClassAd( ClassAd* ad );
 
@@ -1634,7 +1666,7 @@ public:
     */
     virtual bool formatBody( std::string &out );
 
-	virtual ClassAd* toClassAd( void );
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	virtual void initFromClassAd( ClassAd* ad );
 
@@ -1676,7 +1708,7 @@ class GridResourceUpEvent : public ULogEvent
 	/** Return a ClassAd representation of this GridResourceUpEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1711,7 +1743,7 @@ class GridResourceDownEvent : public ULogEvent
 	/** Return a ClassAd representation of this GridResourceDownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1751,7 +1783,7 @@ class GridSubmitEvent : public ULogEvent
 	/** Return a ClassAd representation of this GridSubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1793,7 +1825,7 @@ class JobAdInformationEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobAdInformationEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1846,7 +1878,7 @@ class JobStatusUnknownEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobStatusUnknownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1882,7 +1914,7 @@ class JobStatusKnownEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobStatusKnownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1917,7 +1949,7 @@ class JobStageInEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobStageInEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1952,7 +1984,7 @@ class JobStageOutEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobStageOutEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1987,7 +2019,7 @@ class AttributeUpdate : public ULogEvent
 	/** Return a ClassAd representation of this AttributeUpdate event.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -2038,7 +2070,7 @@ class PreSkipEvent : public ULogEvent
 	/** Return a ClassAd representation of this PreSkipEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -2053,21 +2085,21 @@ class PreSkipEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Factory Submit Log Event object.  Below is an example
-    Factory Submit Log entry from Condor v8. <p>
+/** Framework for a Cluster Submit Log Event object.  Below is an example
+    Cluster Submit Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Factory submitted from host: <128.105.165.12:32779>
+000 (172.000.000) 10/20 16:56:54 Cluster submitted from host: <128.105.165.12:32779>
 ...
 </PRE>
 */
-class FactorySubmitEvent : public ULogEvent
+class ClusterSubmitEvent : public ULogEvent
 {
   public:
     ///
-    FactorySubmitEvent(void);
+    ClusterSubmitEvent(void);
     ///
-    ~FactorySubmitEvent(void);
+    ~ClusterSubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -2084,7 +2116,7 @@ class FactorySubmitEvent : public ULogEvent
     /** Return a ClassAd representation of this SubmitEvent.
         @return NULL for failure, the ClassAd pointer otherwise
     */
-    virtual ClassAd* toClassAd(void);
+    virtual ClassAd* toClassAd(bool event_time_utc);
 
     /** Initialize from this ClassAd.
         @param a pointer to the ClassAd to initialize from
@@ -2104,21 +2136,21 @@ class FactorySubmitEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Factory Remove Log Event object.  Below is an example
-    Factory Remove Log entry from Condor v8. <p>
+/** Framework for a Cluster Remove Log Event object.  Below is an example
+    Cluster Remove Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Factory removed
+000 (172.000.000) 10/20 16:56:54 Cluster removed
 ...
 </PRE>
 */
-class FactoryRemoveEvent : public ULogEvent
+class ClusterRemoveEvent : public ULogEvent
 {
   public:
     ///
-    FactoryRemoveEvent(void);
+    ClusterRemoveEvent(void);
     ///
-    ~FactoryRemoveEvent(void);
+    ~ClusterRemoveEvent(void);
 
 /** Read the body of the next Submit event.
     @param file the non-NULL readable log file
@@ -2135,7 +2167,7 @@ virtual bool formatBody( std::string &out );
 /** Return a ClassAd representation of this SubmitEvent.
     @return NULL for failure, the ClassAd pointer otherwise
 */
-virtual ClassAd* toClassAd(void);
+virtual ClassAd* toClassAd(bool event_time_utc);
 
 /** Initialize from this ClassAd.
     @param a pointer to the ClassAd to initialize from
@@ -2173,7 +2205,7 @@ public:
 	virtual bool formatBody( std::string &out );
 
 	// Return a ClassAd representation of this event
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 
 	// initialize this class from the given ClassAd
 	virtual void initFromClassAd(ClassAd* ad);
@@ -2202,7 +2234,7 @@ public:
 	// Format the body of this event, and append to the given std::string
 	virtual bool formatBody( std::string &out );
 	// Return a ClassAd representation of this event
-	virtual ClassAd* toClassAd(void);
+	virtual ClassAd* toClassAd(bool event_time_utc);
 	// initialize this class from the given ClassAd
 	virtual void initFromClassAd(ClassAd* ad);
 
@@ -2223,7 +2255,7 @@ class FileTransferEvent : public ULogEvent {
 		virtual int readEvent( FILE * f, bool & got_sync_line );
 		virtual bool formatBody( std::string & out );
 
-		virtual ClassAd * toClassAd();
+		virtual ClassAd * toClassAd(bool event_time_utc);
 		virtual void initFromClassAd( ClassAd * ad );
 
 		enum FileTransferEventType {
@@ -2243,7 +2275,7 @@ class FileTransferEvent : public ULogEvent {
 		FileTransferEventType getType() const { return type; }
 
 		void setQueueingDelay( time_t duration ) { queueingDelay = duration; }
-		time_t getQueueingDelay() { return queueingDelay; }
+		time_t getQueueingDelay() const { return queueingDelay; }
 
 		void setHost( const std::string & h) { host = h; }
 		const std::string & getHost() { return host; }
@@ -2255,5 +2287,186 @@ class FileTransferEvent : public ULogEvent {
 };
 
 
-#endif // __CONDOR_EVENT_H__
+class ReserveSpaceEvent final : public ULogEvent {
+public:
+	ReserveSpaceEvent() {eventNumber = ULOG_RESERVE_SPACE;}
+	~ReserveSpaceEvent() {};
 
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setExpirationTime(const std::chrono::system_clock::time_point &expiry) {m_expiry = expiry;}
+	std::chrono::system_clock::time_point getExpirationTime() const {return m_expiry;}
+
+	void setReservedSpace(size_t space) {m_reserved_space = space;}
+	size_t getReservedSpace() const {return m_reserved_space;}
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	std::string generateUUID();
+	const std::string &getUUID() const {return m_uuid;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+
+private:
+	std::chrono::system_clock::time_point m_expiry;
+	size_t m_reserved_space{0};
+	std::string m_uuid;
+	std::string m_tag;
+};
+
+
+class ReleaseSpaceEvent final : public ULogEvent {
+public:
+	ReleaseSpaceEvent() {eventNumber = ULOG_RELEASE_SPACE;}
+	~ReleaseSpaceEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	const std::string &getUUID() const {return m_uuid;}
+
+private:
+	std::string m_uuid;
+};
+
+
+class FileCompleteEvent final : public ULogEvent {
+public:
+	FileCompleteEvent() : m_size(0) {eventNumber = ULOG_FILE_COMPLETE;}
+	~FileCompleteEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setUUID(const std::string &uuid) {m_uuid = uuid;}
+	const std::string &getUUID() const {return m_uuid;}
+
+	void setSize(size_t size) {m_size = size;}
+	size_t getSize() const {return m_size;}
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+private:
+	size_t m_size;
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_uuid;
+};
+
+
+class FileUsedEvent final : public ULogEvent {
+public:
+	FileUsedEvent() {eventNumber = ULOG_FILE_USED;}
+	~FileUsedEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+private:
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_tag;
+};
+
+
+class FileRemovedEvent final : public ULogEvent {
+public:
+	FileRemovedEvent() : m_size(0) {eventNumber = ULOG_FILE_REMOVED;}
+	~FileRemovedEvent() {};
+
+	virtual int readEvent( FILE * f, bool & got_sync_line ) override;
+	virtual bool formatBody( std::string & out ) override;
+
+	virtual ClassAd * toClassAd(bool event_time_utc) override;
+	virtual void initFromClassAd( ClassAd * ad ) override;
+
+	void setSize(size_t size) {m_size = size;}
+	size_t getSize() const {return m_size;}
+
+	void setChecksumType(const std::string &type) {m_checksum_type = type;}
+	const std::string &getChecksumType() const {return m_checksum_type;}
+
+	void setChecksum(const std::string &value) {m_checksum = value;}
+	const std::string &getChecksum() const {return m_checksum;}
+
+	void setTag(const std::string &tag) {m_tag = tag;}
+	const std::string &getTag() const {return m_tag;}
+private:
+	size_t m_size;
+	std::string m_checksum;
+	std::string m_checksum_type;
+	std::string m_tag;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a DataflowJobSkipped Event object.
+ *  Occurs when a dataflow job is detected and then s kipped.
+*/
+class DataflowJobSkippedEvent : public ULogEvent
+{
+  public:
+    ///
+    DataflowJobSkippedEvent(void);
+    ///
+    ~DataflowJobSkippedEvent(void);
+
+    /** Read the body of the next JobAborted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *, bool & got_sync_line);
+
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
+
+	/** Return a ClassAd representation of this JobAbortedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd(bool event_time_utc);
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+	const char* getReason(void) const;
+	void setReason( const char* );
+
+	void setToeTag( classad::ClassAd * toeTag );
+
+ private:
+	char* reason;
+	ToE::Tag * toeTag;
+};
+
+
+#endif // __CONDOR_EVENT_H__

@@ -74,7 +74,7 @@ if ( WITH_VOMS AND WITH_GLOBUS )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )
 		endif()
 
-		condor_post_external( voms include OFF )
+		condor_post_external( voms include OFF "${VOMS_FOUND_STATIC};${VOMS_FOUND}" )
 
 		if ( LINUX )
 			# Install the VOMS libraries manually.

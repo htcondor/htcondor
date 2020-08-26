@@ -1,10 +1,11 @@
-      
-
 Monitoring
 ==========
 
-Information that the *condor\_collector* collects can be used to monitor
-a pool. The *condor\_status* command can be used to display snapshot of
+:index:`monitoring<single: monitoring; pool management>`
+:index:`monitoring pools` :index:`pool monitoring`
+
+Information that the *condor_collector* collects can be used to monitor
+a pool. The *condor_status* command can be used to display snapshot of
 the current state of the pool. Monitoring systems can be set up to track
 the state over time, and they might go further, to alert the system
 administrator about exceptional conditions.
@@ -12,64 +13,73 @@ administrator about exceptional conditions.
 Ganglia
 -------
 
+:index:`with Ganglia<single: with Ganglia; Monitoring>`
+:index:`Ganglia monitoring`
+:index:`condor_gangliad daemon`
+
 Support for the Ganglia monitoring system
-(`http://ganglia.info/ <http://ganglia.info/>`__) is integral to
-HTCondor. Nagios (`http://www.nagios.org/ <http://www.nagios.org/>`__)
+(`http://ganglia.info/ <http://ganglia.info/>`_) is integral to
+HTCondor. Nagios (`http://www.nagios.org/ <http://www.nagios.org/>`_)
 is often used to provide alerts based on data from the Ganglia
-monitoring system. The *condor\_gangliad* daemon provides an efficient
+monitoring system. The *condor_gangliad* daemon provides an efficient
 way to take information from an HTCondor pool and supply it to the
 Ganglia monitoring system.
 
-The *condor\_gangliad* gathers up data as specified by its
+The *condor_gangliad* gathers up data as specified by its
 configuration, and it streamlines getting that data to the Ganglia
 monitoring system. Updates sent to Ganglia are done using the Ganglia
 shared libraries for efficiency.
 
 If Ganglia is already deployed in the pool, the monitoring of HTCondor
-is enabled by running the *condor\_gangliad* daemon on a single machine
-within the pool. If the machine chosen is the one running Ganglia’s
+is enabled by running the *condor_gangliad* daemon on a single machine
+within the pool. If the machine chosen is the one running Ganglia's
 *gmetad*, then the HTCondor configuration consists of adding
 ``GANGLIAD`` to the definition of configuration variable ``DAEMON_LIST``
-on that machine. It may be advantageous to run the *condor\_gangliad*
-daemon on the same machine as is running the *condor\_collector* daemon,
+on that machine. It may be advantageous to run the *condor_gangliad*
+daemon on the same machine as is running the *condor_collector* daemon,
 because on a large pool with many ClassAds, there is likely to be less
-network traffic. If the *condor\_gangliad* daemon is to run on a
-different machine than the one running Ganglia’s *gmetad*, modify
-configuration variable ``GANGLIA_GSTAT_COMMAND`` to get the list of
-monitored hosts from the master *gmond* program.
+network traffic. If the *condor_gangliad* daemon is to run on a
+different machine than the one running Ganglia's *gmetad*, modify
+configuration variable ``GANGLIA_GSTAT_COMMAND``
+:index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts
+from the master *gmond* program.
 
 If the pool does not use Ganglia, the pool can still be monitored by a
 separate server running Ganglia.
 
-By default, the *condor\_gangliad* will only propagate metrics to hosts
+By default, the *condor_gangliad* will only propagate metrics to hosts
 that are already monitored by Ganglia. Set configuration variable
-``GANGLIA_SEND_DATA_FOR_ALL_HOSTS`` to ``True`` to set up a Ganglia host
-to monitor a pool not monitored by Ganglia or have a heterogeneous pool
-where some hosts are not monitored. In this case, default graphs that
-Ganglia provides will not be present. However, the HTCondor metrics will
-appear.
+``GANGLIA_SEND_DATA_FOR_ALL_HOSTS``
+:index:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a
+Ganglia host to monitor a pool not monitored by Ganglia or have a
+heterogeneous pool where some hosts are not monitored. In this case,
+default graphs that Ganglia provides will not be present. However, the
+HTCondor metrics will appear.
 
 On large pools, setting configuration variable
-``GANGLIAD_PER_EXECUTE_NODE_METRICS`` to ``False`` will reduce the
-amount of data sent to Ganglia. The execute node data is the least
-important to monitor. One can also limit the amount of data by setting
-configuration variable ``GANGLIAD_REQUIREMENTS`` . Be aware that
-aggregate sums over the entire pool will not be accurate if this
-variable limits the ClassAds queried.
+``GANGLIAD_PER_EXECUTE_NODE_METRICS``
+:index:`GANGLIAD_PER_EXECUTE_NODE_METRICS` to ``False`` will
+reduce the amount of data sent to Ganglia. The execute node data is the
+least important to monitor. One can also limit the amount of data by
+setting configuration variable ``GANGLIAD_REQUIREMENTS``
+:index:`GANGLIAD_REQUIREMENTS`. Be aware that aggregate sums over
+the entire pool will not be accurate if this variable limits the
+ClassAds queried.
 
 Metrics to be sent to Ganglia are specified in all files within the
 directory specified by configuration variable
-``GANGLIAD_METRICS_CONFIG_DIR`` . Each file in the directory is read,
-and the format within each file is that of New ClassAds. Here is an
-example of a single metric definition given as a New ClassAd:
+``GANGLIAD_METRICS_CONFIG_DIR``
+:index:`GANGLIAD_METRICS_CONFIG_DIR`. Each file in the directory
+is read, and the format within each file is that of New ClassAds. Here
+is an example of a single metric definition given as a New ClassAd:
 
-::
+.. code-block:: condor-classad
 
-    [ 
-      Name   = "JobsSubmitted"; 
-      Desc   = "Number of jobs submitted"; 
-      Units  = "jobs"; 
-      TargetType = "Scheduler"; 
+    [
+      Name   = "JobsSubmitted";
+      Desc   = "Number of jobs submitted";
+      Units  = "jobs";
+      TargetType = "Scheduler";
     ]
 
 A nice set of default metrics is in file:
@@ -90,12 +100,13 @@ Recognized metric attribute names and their use:
  Verbosity
     The integer verbosity level of this metric. Metrics with a higher
     verbosity level than that specified by configuration variable
-    ``GANGLIA_VERBOSITY`` will not be published.
+    ``GANGLIA_VERBOSITY`` :index:`GANGLIA_VERBOSITY` will not be
+    published.
  TargetType
     A string containing a comma-separated list of daemon ClassAd types
     that this metric monitors. The specified values should match the
     value of ``MyType`` of the daemon ClassAd. In addition, there are
-    special values that may be included. "Machine\_slot1" may be
+    special values that may be included. "Machine_slot1" may be
     specified to monitor the machine ClassAd for slot 1 only. This is
     useful when monitoring machine-wide attributes. The special value
     "ANY" matches any type of ClassAd.
@@ -107,14 +118,15 @@ Recognized metric attribute names and their use:
     The graph title used for this metric. The default is the metric
     name.
  Group
-    A string specifying the name of this metric’s group. Metrics are
+    A string specifying the name of this metric's group. Metrics are
     arranged by group within a Ganglia web page. The default is
     determined by the daemon type. Metrics in different groups must have
     unique names.
  Cluster
     A string specifying the cluster name for this metric. The default
     cluster name is taken from the configuration variable
-    ``GANGLIAD_DEFAULT_CLUSTER`` .
+    ``GANGLIAD_DEFAULT_CLUSTER``
+    :index:`GANGLIAD_DEFAULT_CLUSTER`.
  Units
     A string describing the units of this metric.
  Scale
@@ -173,25 +185,27 @@ Recognized metric attribute names and their use:
     ClassAds, make the metric name an expression that is unique to each
     type. The default ``AggregateGroup`` would be set accordingly. Note
     that the assumption is still that the result is a pool-wide metric,
-    so by default it is associated with the *condor\_collector* daemon’s
+    so by default it is associated with the *condor_collector* daemon's
     host. To group by machine and publish the result into the Ganglia
     page associated with each machine, make the ``AggregateGroup``
     contain the machine name and override the default ``Machine``
-    attribute to be the daemon’s machine name, rather than the
-    *condor\_collector* daemon’s machine name.
+    attribute to be the daemon's machine name, rather than the
+    *condor_collector* daemon's machine name.
  Machine
     The name of the host associated with this metric. If configuration
-    variable ``GANGLIAD_DEFAULT_MACHINE`` is not specified, the default
-    is taken from the ``Machine`` attribute of the daemon ClassAd. If
-    the daemon name is of the form name@hostname, this may indicate that
-    there are multiple instances of HTCondor running on the same
-    machine. To avoid the metrics from these instances overwriting each
-    other, the default machine name is set to the daemon name in this
-    case. For aggregate metrics, the default value of ``Machine`` will
-    be the name of the *condor\_collector* host.
+    variable ``GANGLIAD_DEFAULT_MACHINE``
+    :index:`GANGLIAD_DEFAULT_MACHINE` is not specified, the
+    default is taken from the ``Machine`` attribute of the daemon
+    ClassAd. If the daemon name is of the form name@hostname, this may
+    indicate that there are multiple instances of HTCondor running on
+    the same machine. To avoid the metrics from these instances
+    overwriting each other, the default machine name is set to the
+    daemon name in this case. For aggregate metrics, the default value
+    of ``Machine`` will be the name of the *condor_collector* host.
  IP
     A string containing the IP address of the host associated with this
-    metric. If ``GANGLIAD_DEFAULT_IP`` is not specified, the default is
+    metric. If ``GANGLIAD_DEFAULT_IP``
+    :index:`GANGLIAD_DEFAULT_IP` is not specified, the default is
     extracted from the ``MyAddress`` attribute of the daemon ClassAd.
     This value must be unique for each machine published to Ganglia. It
     need not be a valid IP address. If the value of ``Machine`` contains
@@ -202,43 +216,49 @@ Recognized metric attribute names and their use:
 Absent ClassAds
 ---------------
 
+:index:`absent ClassAds<single: absent ClassAds; pool management>`
+:index:`absent ClassAd` :index:`absent ClassAd<single: absent ClassAd; ClassAd>`
+
 By default, HTCondor assumes that resources are transient: the
-*condor\_collector* will discard ClassAds older than
-``CLASSAD_LIFETIME`` seconds. Its default configuration value is 15
-minutes, and as such, the default value for ``UPDATE_INTERVAL`` will
-pass three times before HTCondor forgets about a resource. In some
-pools, especially those with dedicated resources, this approach may make
-it unnecessarily difficult to determine what the composition of the pool
+*condor_collector* will discard ClassAds older than
+``CLASSAD_LIFETIME`` :index:`CLASSAD_LIFETIME` seconds. Its
+default configuration value is 15 minutes, and as such, the default
+value for ``UPDATE_INTERVAL`` :index:`UPDATE_INTERVAL` will pass
+three times before HTCondor forgets about a resource. In some pools,
+especially those with dedicated resources, this approach may make it
+unnecessarily difficult to determine what the composition of the pool
 ought to be, in the sense of knowing which machines would be in the
 pool, if HTCondor were properly functioning on all of them.
 
 This assumption of transient machines can be modified by the use of
 absent ClassAds. When a machine ClassAd would otherwise expire, the
-*condor\_collector* evaluates the configuration variable
-``ABSENT_REQUIREMENTS`` against the machine ClassAd. If ``True``, the
-machine ClassAd will be saved in a persistent manner and be marked as
-absent; this causes the machine to appear in the output of
-``condor_status -absent``. When the machine returns to the pool, its
-first update to the *condor\_collector* will invalidate the absent
-machine ClassAd.
+*condor_collector* evaluates the configuration variable
+``ABSENT_REQUIREMENTS`` :index:`ABSENT_REQUIREMENTS` against the
+machine ClassAd. If ``True``, the machine ClassAd will be saved in a
+persistent manner and be marked as absent; this causes the machine to
+appear in the output of ``condor_status -absent``. When the machine
+returns to the pool, its first update to the *condor_collector* will
+invalidate the absent machine ClassAd.
 
 Absent ClassAds, like offline ClassAds, are stored to disk to ensure
-that they are remembered, even across *condor\_collector* crashes. The
-configuration variable ``COLLECTOR_PERSISTENT_AD_LOG`` defines the file
-in which the ClassAds are stored, and replaces the no longer used
-variable ``OFFLINE_LOG``. Absent ClassAds are retained on disk as
-maintained by the *condor\_collector* for a length of time in seconds
-defined by the configuration variable ``ABSENT_EXPIRE_ADS_AFTER`` . A
-value of 0 for this variable means that the ClassAds are never
-discarded, and the default value is thirty days.
+that they are remembered, even across *condor_collector* crashes. The
+configuration variable ``COLLECTOR_PERSISTENT_AD_LOG``
+:index:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
+ClassAds are stored, and replaces the no longer used variable
+``OFFLINE_LOG``. Absent ClassAds are retained on disk as maintained by
+the *condor_collector* for a length of time in seconds defined by the
+configuration variable ``ABSENT_EXPIRE_ADS_AFTER``
+:index:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable
+means that the ClassAds are never discarded, and the default value is
+thirty days.
 
-Absent ClassAds are only returned by the *condor\_collector* and
-displayed when the **-absent** option to *condor\_status* is specified,
+Absent ClassAds are only returned by the *condor_collector* and
+displayed when the **-absent** option to *condor_status* is specified,
 or when the absent machine ClassAd attribute is mentioned on the
-*condor\_status* command line. This renders absent ClassAds invisible to
+*condor_status* command line. This renders absent ClassAds invisible to
 the rest of the HTCondor infrastructure.
 
-A daemon may inform the *condor\_collector* that the daemon’s ClassAd
+A daemon may inform the *condor_collector* that the daemon's ClassAd
 should not expire, but should be removed right away; the daemon asks for
 its ClassAd to be invalidated. It may be useful to place an invalidated
 ClassAd in the absent state, instead of having it removed as an
@@ -246,8 +266,43 @@ invalidated ClassAd. An example of a ClassAd that could benefit from
 being absent is a system with an uninterruptible power supply that shuts
 down cleanly but unexpectedly as a result of a power outage. To cause
 all invalidated ClassAds to become absent instead of invalidated, set
-``EXPIRE_INVALIDATED_ADS`` to ``True``. Invalidated ClassAds will
-instead be treated as if they expired, including when evaluating
-``ABSENT_REQUIREMENTS``.
+``EXPIRE_INVALIDATED_ADS`` :index:`EXPIRE_INVALIDATED_ADS` to
+``True``. Invalidated ClassAds will instead be treated as if they
+expired, including when evaluating ``ABSENT_REQUIREMENTS``.
 
-      
+GPUs
+----
+
+:index:`monitoring GPUS`
+:index:`GPU monitoring`
+
+HTCondor supports monitoring GPU utilization for NVidia GPUs.  This feature
+is enabled by default if you set ``use feature : GPUs`` in your configuration
+file.
+
+Doing so will cause the startd to run the ``condor_gpu_utilization`` tool.
+This tool polls the (NVidia) GPU device(s) in the system and records their
+utilization and memory usage values.  At regular intervals, the tool reports
+these values to the *condor_startd*, assigning them to each device's usage
+to the slot(s) to which those devices have been assigned.
+
+Please note that ``condor_gpu_utilization`` can not presently assign GPU
+utilization directly to HTCondor jobs.  As a result, jobs sharing a GPU
+device, or a GPU device being used by from outside HTCondor, will result
+in GPU usage and utilization being misreported accordingly.
+
+However, this approach does simplify monitoring for the owner/administrator
+of the GPUs, because usage is reported by the *condor_startd* in addition
+to the jobs themselves.
+
+:index:`DeviceGPUsAverageUsage<single: DeviceGPUsAverageUsage; machine attribute>`
+
+  ``DeviceGPUsAverageUsage``
+    The number of seconds executed by GPUs assigned to this slot,
+    divided by the number of seconds since the startd started up.
+
+:index:`DeviceGPUsMemoryPeakUsage<single: DeviceGPUsMemoryPeakUsage; machine attribute>`
+
+  ``DeviceGPUsMemoryPeakUsage``
+    The largest amount of GPU memory used GPUs assigned to this slot,
+    since the startd started up.

@@ -178,11 +178,11 @@ class RemoteResource : public Service {
 		/** Return the reason this host exited.
 			@return The exit reason for this host.
 		*/ 
-	int  getExitReason();
+	int  getExitReason() const;
 
 		/** @return true if startd is not accepting more jobs on this claim.
 		*/ 
-	bool claimIsClosing();
+	bool claimIsClosing() const;
 
 		/** Return a pointer to our DCStartd object, so callers can
 			access information in there directly, without having to
@@ -254,12 +254,12 @@ class RemoteResource : public Service {
 	void setMachineName( const char *machineName );
 
 		/// The number of bytes sent to this resource.
-	float bytesSent();
+	float bytesSent() const;
 		
 		/// The number of bytes received from this resource.
-	float bytesReceived();
+	float bytesReceived() const;
 
-	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
+	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const;
 
 	FileTransfer filetrans;
 	FileTransferStatus m_upload_xfer_status;
@@ -271,13 +271,13 @@ class RemoteResource : public Service {
 	virtual void updateFromStarter( ClassAd* update_ad );
 	virtual void incrementJobCompletionCount();
 
-	int64_t getImageSize( int64_t & memory_usage_out, int64_t & rss, int64_t & pss  ) { 
+	int64_t getImageSize( int64_t & memory_usage_out, int64_t & rss, int64_t & pss  ) const { 
 		memory_usage_out = memory_usage_mb;
 		rss = remote_rusage.ru_maxrss;
 		pss = proportional_set_size_kb;
 		return image_size_kb; 
 	};
-	int getDiskUsage( void ) { return disk_usage; };
+	int64_t getDiskUsage( void ) const { return disk_usage; };
 	struct rusage getRUsage( void ) { return remote_rusage; };
 
 		/** Return the state that this resource is in. */
@@ -318,27 +318,27 @@ class RemoteResource : public Service {
 	virtual bool writeULogEvent( ULogEvent* event );
 
 		/// Did the job on this resource exit with a signal?
-	bool exitedBySignal( void ) { return exited_by_signal; };
+	bool exitedBySignal( void ) const { return exited_by_signal; };
 
         /** Return true if we already asked the startd to deactivate
             the claim (aka kill the starter), false if not.
             @return true if claim deactivated, false if not
          */
-    bool wasClaimDeactivated( void ) {
+    bool wasClaimDeactivated( void ) const {
        return already_killed_graceful || already_killed_fast; };
 
 		/** Return true if we received a job_exit syscall from the
 			starter, false if not.
 		*/
-	bool gotJobExit() { return m_got_job_exit; };
+	bool gotJobExit() const { return m_got_job_exit; };
 
 		/** If the job on this resource exited with a signal, return
 			the signal.  If not, return -1. */
-	int exitSignal( void );
+	int64_t exitSignal( void ) const;
 
 		/** If the job on this resource exited normally, return the
 			exit code.  If it was killed by a signal, return -1. */ 
-	int exitCode( void );
+	int64_t exitCode( void ) const;
 
 		/** This method is called when the job at the remote resource
 			has finally started to execute.  We use this to log the
@@ -408,14 +408,14 @@ class RemoteResource : public Service {
 	ReliSock *claim_sock;
 	int exit_reason;
 	bool claim_is_closing;
-	int exit_value;
+	int64_t exit_value;
 	bool exited_by_signal;
 
 	bool m_want_chirp;
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
-	classad::References m_delayed_update_prefixes;
+	StringList m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 
 		// If we specially create a security session for file transfer,
@@ -449,7 +449,8 @@ class RemoteResource : public Service {
 	int64_t			image_size_kb;
 	int64_t			memory_usage_mb;
 	int64_t			proportional_set_size_kb;
-	int 			disk_usage;
+	int64_t			disk_usage;
+	int64_t			scratch_dir_file_count;
 
 	DCStartd* dc_startd;
 
@@ -477,7 +478,7 @@ private:
 	int next_reconnect_tid;
 	int proxy_check_tid;
 
-	MyString proxy_path;
+	std::string proxy_path;
 	time_t last_proxy_timestamp;
 
 	time_t m_remote_proxy_expiration;

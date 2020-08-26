@@ -550,7 +550,7 @@ void BaseResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 	ping_succeeded = true;
 }
 
-time_t BaseResource::GetLeaseExpiration( const BaseJob *job )
+time_t BaseResource::GetLeaseExpiration( const BaseJob *job ) const
 {
 	// Without a job to consider, just return the shared lease
 	// expiration, if we have one.
@@ -571,7 +571,7 @@ time_t BaseResource::GetLeaseExpiration( const BaseJob *job )
 	return new_expiration;
 }
 
-void BaseResource::RequestUpdateLeases()
+void BaseResource::RequestUpdateLeases() const
 {
 	if ( updateLeasesTimerId != TIMER_UNSET ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, 0 );

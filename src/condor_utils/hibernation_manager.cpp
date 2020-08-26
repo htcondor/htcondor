@@ -38,7 +38,7 @@
  ***************************************************************/
 
 HibernationManager::HibernationManager( HibernatorBase *hibernator )
-	throw ()
+	noexcept
 		: m_primary_adapter( NULL ),
 		  m_hibernator ( hibernator ),
 		  m_interval ( 0 ),
@@ -48,7 +48,7 @@ HibernationManager::HibernationManager( HibernatorBase *hibernator )
 	update ();
 }
 
-HibernationManager::~HibernationManager ( void ) throw ()
+HibernationManager::~HibernationManager ( void ) noexcept
 {
 	if ( m_hibernator ) {
 		delete m_hibernator;

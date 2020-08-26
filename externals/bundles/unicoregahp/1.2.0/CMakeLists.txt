@@ -37,7 +37,7 @@ if ( WITH_UNICOREGAHP AND NOT PROPER )
 
 	message (STATUS "external configured (unicoregahp)")
 
-	condor_post_external( unicoregahp OFF OFF )
+	condor_post_external( unicoregahp OFF OFF "" )
 	install(FILES "${UNICOREGAHP_INSTALL_LOC}/usr/share/java/ugahp.jar" DESTINATION ${C_LIB})
 
 else()

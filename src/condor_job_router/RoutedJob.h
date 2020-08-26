@@ -23,7 +23,7 @@
 //#include "condor_common.h"
 
 //uncomment this to have the job router use the XFORM_UTILS library (i.e. the same code as schedd's job transforms)
-//#define USE_XFORM_UTILS 1
+#define USE_XFORM_UTILS 1
 #ifdef USE_XFORM_UTILS
 #include <xform_utils.h>
 #endif
@@ -82,12 +82,12 @@ class RoutedJob {
 
 	// return a description of the job keys, useful for debug trace messages
 	// Format: src=X,dest=X
-	std::string JobDesc();
+	std::string JobDesc() const;
 
 	bool SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection *ad_collection);
 	void SetDestJobAd(classad::ClassAd const *ad);
-	bool IsRunning() {return is_running;}
-	bool SawDestJob() {return saw_dest_job;}
+	bool IsRunning() const {return is_running;}
+	bool SawDestJob() const {return saw_dest_job;}
 
 	bool PrepareSharedX509UserProxy(JobRoute *route);
 	bool CleanupSharedX509UserProxy(JobRoute *route);
@@ -97,7 +97,7 @@ class RoutedJob {
 
 class JobRoute {
  public:
-	JobRoute();
+	JobRoute(const char * source);
 	virtual ~JobRoute();
 
 #ifdef USE_XFORM_UTILS
@@ -108,14 +108,18 @@ class JobRoute {
 	classad::ClassAd *RouteAd() {return &m_route_ad;}
 #endif
 	char const *Name() {return m_name.c_str();}
-	int MaxJobs() {return m_max_jobs;}
-	int MaxIdleJobs() {return m_max_idle_jobs;}
-	int CurrentRoutedJobs() {return m_num_jobs;}
-	int TargetUniverse() {return m_target_universe;}
+	char const *Source() {return m_source.c_str(); } // where the route was sourced, i.e. CMD, FILE or ROUTE
+	bool FromClassadSyntax() const { return m_route_from_classad; }
+	bool UsePreRouteTransform() const { return m_use_pre_route_transform; }
+	int MaxJobs() const {return m_max_jobs;}
+	int MaxIdleJobs() const {return m_max_idle_jobs;}
+	int CurrentRoutedJobs() const {return m_num_jobs;}
+	int TargetUniverse() const {return m_target_universe;}
 	char const *GridResource() {return m_grid_resource.c_str();}
 #ifdef USE_XFORM_UTILS
 	classad::ExprTree *RouteRequirementExpr() { return m_route.getRequirements(); }
 	char const *RouteRequirementsString() { return m_route.getRequirementsStr(); }
+	bool UsesPreRouteTransform() const { return m_use_pre_route_transform; }
 	std::string RouteString() {
 		std::string str;
 		if (m_route.getText()) { str = m_route.getText(); } else { str = ""; }
@@ -143,7 +147,13 @@ class JobRoute {
 	void CopyState(JobRoute *route);
 
 #ifdef USE_XFORM_UTILS
-	bool ParseNext(const std::string & routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements);
+	bool ParseNext(
+		const std::string & routing_string,
+		int &offset,
+		classad::ClassAd const *router_defaults_ad,
+		bool allow_empty_requirements,
+		const char * config_name,
+		std::string & errmsg);
 #else
 	bool ParseClassAd(std::string routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements);
 #endif
@@ -152,23 +162,30 @@ class JobRoute {
 	// resubmitting it.  It does so by having attributes of the following form:
 	//   set_XXX = Value   (assigns XXX = Value in job ad, replace existing)
 	//   copy_XXX = YYY    (copies value of XXX to attribute YYY in job ad)
+#ifdef USE_XFORM_UTILS
+	bool ApplyRoutingJobEdits(
+		ClassAd *src_ad,
+		SimpleList<MacroStreamXFormSource*>& pre_route_xfms,
+		SimpleList<MacroStreamXFormSource*>& post_route_xfms);
+#else
 	bool ApplyRoutingJobEdits(classad::ClassAd *src_ad);
+#endif
 
-	bool AcceptingMoreJobs();
+	bool AcceptingMoreJobs() const;
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}
 	void IncrementRoutedJobs() {IncrementCurrentRoutedJobs(); m_recent_jobs_routed++;}
 	void ResetCurrentRoutedJobs() {m_num_jobs = 0;m_num_running_jobs=0;}
 
 	void IncrementCurrentRunningJobs() {m_num_running_jobs++;}
-	int CurrentRunningJobs() {return m_num_running_jobs;}
-	int CurrentIdleJobs() {return m_num_jobs - m_num_running_jobs;}
+	int CurrentRunningJobs() const {return m_num_running_jobs;}
+	int CurrentIdleJobs() const {return m_num_jobs - m_num_running_jobs;}
 	void IncrementSuccesses() {m_recent_jobs_succeeded++;}
 	void IncrementFailures() {m_recent_jobs_failed++;}
-	int RecentRoutedJobs() {return m_recent_jobs_routed;}
-	int RecentSuccesses() {return m_recent_jobs_succeeded;}
-	int RecentFailures() {return m_recent_jobs_failed;}
+	int RecentRoutedJobs() const {return m_recent_jobs_routed;}
+	int RecentSuccesses() const {return m_recent_jobs_succeeded;}
+	int RecentFailures() const {return m_recent_jobs_failed;}
 	void AdjustFailureThrottles();
-	double Throttle() {return m_throttle;}
+	double Throttle() const {return m_throttle;}
 	std::string ThrottleDesc();
 	std::string ThrottleDesc(double throttle);
 
@@ -177,7 +194,7 @@ class JobRoute {
 
 		// true if this entry is intended to override an entry with the
 		// same name further up in the routing table definition
-	int OverrideRoutingEntry() { return m_override_routing_entry; }
+	int OverrideRoutingEntry() const { return m_override_routing_entry; }
 
  private:
 	int m_num_jobs;                // current number of jobs on this route
@@ -192,12 +209,15 @@ class JobRoute {
 
 #ifdef USE_XFORM_UTILS
 	MacroStreamXFormSource m_route;
+	bool m_route_from_classad;
+	bool m_use_pre_route_transform;
 #else
 	classad::ClassAd m_route_ad;   // ClassAd describing the route
 #endif
 
 	// stuff extracted from the route_ad:
 	std::string m_name;           // name distinguishing this route from others
+	std::string m_source;         // source of route. one of cmd:n, file:n or jre:n
 	int m_target_universe;        // universe of routed job
 	std::string m_grid_resource;  // if routing to grid universe, the grid site
 	int m_max_jobs;               // maximum jobs to route

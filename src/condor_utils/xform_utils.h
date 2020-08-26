@@ -49,7 +49,7 @@ Load a transform source
   MacroStreamXFormSource xfm;
   xfm.load(FILE*, source)
 or
-  xfm.open(StringList & statements, source) (or XFormLoadFromJobRouterRoute() which calls this)
+  xfm.open(StringList & statements, source) (or XFormLoadFromClassadJobRouterRoute() which calls this)
  
 Save the hashtable state (so we can revert changes before each time we transform)
   chkpt = mset.save_state();
@@ -86,14 +86,18 @@ public:
 	//   > 0 = number of statements in MacroStreamCharSource, outmsg is TRANSFORM statement or empty
 	// 
 	int load(FILE* fp, MACRO_SOURCE & source, std::string & errmsg);
+	int open(const char * statements, int & offset, std::string & errmsg);
+private:
 	int open(StringList & statements, const MACRO_SOURCE & source, std::string & errmsg);
+public:
+
 	//bool open(const char * src_string, const MACRO_SOURCE & source); // this is the base class method...
 
 	bool matches(ClassAd * candidate_ad);
 
 	const char * getName() { return name.c_str(); }
 	const char * setName(const char * nam) { name = nam; return getName(); }
-	int getUniverse() { return universe; }
+	int getUniverse() const { return universe; }
 	int setUniverse(int uni) { universe=uni; return universe; }
 	int setUniverse(const char * uni);
 
@@ -109,7 +113,7 @@ public:
 		if (iterate_init_state <= 1) return iterate_init_state;
 		return init_iterator(mset, errmsg);
 	}
-	bool iterate_init_pending() { return iterate_init_state > 1; }
+	bool iterate_init_pending() const { return iterate_init_state > 1; }
 	bool first_iteration(XFormHash &mset); // returns true if next_iteration should be called
 	bool next_iteration(XFormHash &mset);  // returns true if there was a next
 	void clear_iteration(XFormHash &mset); // clean up iteration variables in the hashtable
@@ -149,7 +153,7 @@ protected:
 //
 class XFormHash {
 public:
-	XFormHash();
+	XFormHash(int options = 0);
 	~XFormHash();
 
 	void init();
@@ -181,7 +185,7 @@ public:
 	void set_live_variable(const char* name, const char* live_value, MACRO_EVAL_CONTEXT & ctx);
 	void set_iterate_step(int step, int proc);
 	void set_iterate_row(int row, bool iterating);
-	void clear_live_variables();
+	void clear_live_variables() const;
 
 	const char * get_RulesFilename();
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, LocalMacroSet); }
@@ -189,8 +193,8 @@ public:
 	void warn_unused(FILE* out, const char *app);
 
 	void dump(FILE* out, int flags);
-	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
-	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
+	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 
 	MACRO_SET& macros() { return LocalMacroSet; }
 	MACRO_SET_CHECKPOINT_HDR * save_state();
@@ -225,18 +229,21 @@ bool ValidateXForm (
 	XFormHash & mset,              // the hashtable used as temporary storage
 	std::string & errmsg);          // holds parse errors on failure
 
-// load a MacroStreamXFormSource from a jobrouter style route.
-int XFormLoadFromJobRouterRoute (
+// load a MacroStreamXFormSource from a jobrouter classad style route.
+// returns < 0 on failure, >= 0 on success (positive values are number of statements in the route)
+int XFormLoadFromClassadJobRouterRoute (
 	MacroStreamXFormSource & xform,
 	const std::string & routing_string,
 	int & offset,
 	const classad::ClassAd & base_route_ad,
 	int options);
 
-// load a MacroStreamXFormSource statements  from a jobrouter style route
+// load a MacroStreamXFormSource statements  from a jobrouter classad style route
 // use this function rather than the one above if you want to ammend the
 // statements before initializing the xform with them.
-int ConvertJobRouterRouteToXForm (
+// reads a new-classad style ad from routing_string starting at offset, and updates offset
+// returns 0 if the routing_string does not parse, 1 if it does
+int ConvertClassadJobRouterRouteToXForm (
 	StringList & statements,
 	const char * config_name, // name from config
 	const std::string & routing_string,

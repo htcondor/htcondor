@@ -27,33 +27,461 @@
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
 
+#ifdef EVP_PKEY_HKDF
+#include <openssl/kdf.h>
+#endif
+
 #include "condor_auth.h"
 #include "CryptKey.h"
 #include "store_cred.h"
 #include "my_username.h"
 #include "MyString.h"
 #include "condor_config.h"
+#include "classad/source.h"
+#include "condor_attributes.h"
+#include "condor_base64.h"
+#include "Regex.h"
+#include "directory.h"
+#include "subsystem_info.h"
+#include "secure_file.h"
+#include "condor_secman.h"
+#include "compat_classad_util.h"
+#include "classad/exprTree.h"
 
 #include "condor_auth_passwd.h"
 
-Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock)
-    : Condor_Auth_Base(sock, CAUTH_PASSWORD)
+bool Condor_Auth_Passwd::m_should_search_for_tokens = true;
+bool Condor_Auth_Passwd::m_tokens_avail = false;
+
+
+// The GCC_DIAG_OFF() disables warnings so that we can build on our
+// -Werror platforms.
+//
+// Older Clang compilers on macOS define __cpp_attributes but not
+//   __has_cpp_attribute.
+// LibreSSL advertises itself as OpenSSL 2.0.0
+//   (OPENSSL_VERSION_NUMBER 0x20000000L), but doesn't have some
+//   functions introduced in OpenSSL 1.1.0.
+// OpenSSL 0.9.8 (used on older macOS versions) doesn't have
+//    RSA_verify_PKCS1_PSS_mgf1() or RSA_padding_add_PKCS1_PSS_mgf1().
+//    But since jwt calls them using the same value for the Hash and
+//    mgf1Hash arguments, we can use the non-mgf1 versions of these
+//    functions, which are available.
+
+#if defined(LIBRESSL_VERSION_NUMBER)
+#define OPENSSL10
+#endif
+
+#if defined(__cpp_attributes) && !defined(__has_cpp_attribute)
+#undef __cpp_attributes
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+#include <openssl/rsa.h>
+static int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash,
+        const EVP_MD *Hash, const EVP_MD *mgf1Hash,
+        const unsigned char *EM, int sLen)
+{ return RSA_verify_PKCS1_PSS(rsa, mHash, Hash, EM, sLen); }
+static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
+        const unsigned char *mHash,
+        const EVP_MD *Hash, const EVP_MD *mgf1Hash, int sLen)
+{ return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
+#endif
+
+GCC_DIAG_OFF(float-equal)
+GCC_DIAG_OFF(cast-qual)
+#include "jwt-cpp/jwt.h"
+GCC_DIAG_ON(float-equal)
+GCC_DIAG_ON(cast-qual)
+
+#include <sstream>
+#include <fstream>
+#include <stdio.h>
+
+namespace {
+
+bool checkToken(const std::string &line,
+	const std::string &issuer,
+	const std::set<std::string> &server_key_ids,
+	const std::string &tokenfilename,
+	std::string &username,
+	std::string &token,
+	std::string &signature)
 {
-	m_crypto = NULL;
+	try {
+		auto decoded_jwt = jwt::decode(line);
+		if (!decoded_jwt.has_key_id()) {
+			dprintf(D_SECURITY, "Decoded JWT has no key ID; skipping.\n");
+			return false;
+		}
+		const std::string &tmp_key_id = decoded_jwt.get_key_id();
+		if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it was signed with key %s (not known to the server).\n", tmp_key_id.c_str());
+			return false;
+		}
+		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
+		const std::string &tmp_issuer = decoded_jwt.get_issuer();
+		if (!issuer.empty() && issuer != tmp_issuer) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it is from trust domain %s (server trust domain is %s).\n", tmp_issuer.c_str(), issuer.c_str());
+			return false;
+		}
+		if (!decoded_jwt.has_subject()) {
+			dprintf(D_ALWAYS, "JWT is missing a subject claim.\n");
+			return false;
+		}
+		username = decoded_jwt.get_subject();
+		token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
+		signature = decoded_jwt.get_signature();
+	} catch (...) {
+		if (!tokenfilename.empty()) {
+			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Failed to decode provided JWT; ignoring.\n");
+		}
+	}
+	return true;
+}
+
+bool findToken(const std::string &tokenfilename,
+	const std::string &issuer,
+	const std::set<std::string> &server_key_ids,
+	std::string &username,
+	std::string &token,
+	std::string &signature)
+{
+	dprintf(D_SECURITY, "IDTOKENS: Examining %s for valid tokens from issuer %s.\n", tokenfilename.c_str(), issuer.c_str());
+
+	std::unique_ptr<FILE,decltype(&fclose)> 
+		f(safe_fopen_no_create( tokenfilename.c_str(), "r" ), fclose);
+
+	if( f.get() == NULL ) {
+		dprintf(D_ALWAYS, "Failed to open token file '%s': %d (%s)\n",
+		    tokenfilename.c_str(), errno, strerror(errno));
+		return false;
+	}
+    for( std::string line; readLine( line, f.get(), false ); ) {
+		if (line.empty() || line[0] == '#') continue;
+		if (line[line.size()-1] == '\n') line.erase( line.length() - 1, 1 );
+		line.erase(line.begin(),
+			std::find_if(line.begin(),
+				line.end(),
+				[](int ch) {return !isspace(ch);}));
+		if (line.empty() || line[0] == '#') {
+			continue;
+		}
+		bool good_token = checkToken(line, issuer, server_key_ids, tokenfilename, username, token, signature);
+		if (good_token) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+findTokens(const std::string &issuer,
+        const std::set<std::string> &server_key_ids,
+	const std::string &owner,
+        std::string &username,
+        std::string &token,
+        std::string &signature)
+{
+	const std::string &token_contents = SecMan::getToken();
+	if (!token_contents.empty() &&
+		checkToken(token_contents, issuer, server_key_ids, "", username, token, signature))
+	{
+		return true;
+	}
+
+	auto subsys = get_mySubSystem();
+
+		// If we are supposed to retrieve a token on behalf of a user, then
+		// owner will be set and we will use PRIV_USER.  In all other cases,
+		// if we are a daemon we should read the token as PRIV_CONDOR.
+	TemporaryPrivSentry tps( !owner.empty() );
+	if (!owner.empty()) {
+		if (!init_user_ids(owner.c_str(), NULL)) {
+			dprintf(D_FAILURE, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
+			return false;
+		}
+		set_user_priv();
+	} else if (subsys->isDaemon()) {
+		set_priv(PRIV_CONDOR);
+	}
+
+	// Note we reuse the exclude regexp from the configuration subsys.
+	std::string dirpath;
+	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
+		MyString file_location;
+			// Only utilize a "user_file" if the owner is set.
+		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
+			if (!owner.empty()) {
+				dprintf(D_FULLDEBUG, "findTokens(%s): Unable to find any tokens for owner.\n", owner.c_str());
+				return false;
+			}
+			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
+		} else {
+			dirpath = file_location;
+		}
+	}
+	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
+
+	const char* _errstr;
+	int _erroffset;
+	std::string excludeRegex;
+		// We simply fail invalid regex as the config subsys should have EXCEPT'd
+		// in this case.
+	if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
+		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
+		return false;
+	}
+	Regex excludeFilesRegex;
+	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
+			"config parameter is not a valid "
+			"regular expression.  Value: %s,  Error: %s",
+			excludeRegex.c_str(), _errstr ? _errstr : "");
+		return false;
+	}
+	if(!excludeFilesRegex.isInitialized() ) {
+		dprintf(D_FULLDEBUG, "Failed to initialize exclude files regex.");
+		return false;
+	}
+
+	Directory dir(dirpath.c_str());
+	if (!dir.Rewind()) {
+		dprintf(D_SECURITY, "Cannot open %s: %s (errno=%d)\n",
+			dirpath.c_str(), strerror(errno), errno);
+			return false;
+	}
+
+	const char *file;
+	std::vector<std::string> tokens;
+	std::string subsys_token_file;
+	std::string subsys_agt_name = subsys->getName();
+	subsys_agt_name += "_auto_generated_token";
+
+	while ( (file = dir.Next()) ) {
+		if (dir.IsDirectory()) {
+			continue;
+		}
+		if(!excludeFilesRegex.match(file)) {
+			tokens.emplace_back(dir.GetFullPath());
+			if (!strcasecmp(file, subsys_agt_name.c_str())) {
+				subsys_token_file = dir.GetFullPath();
+			}
+		} else {
+			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring token file "
+				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
+				"'%s'\n", dir.GetFullPath());
+		}
+	}
+	std::sort(tokens.begin(), tokens.end());
+
+	if (!subsys_token_file.empty() && findToken(subsys_token_file, issuer,
+		server_key_ids, username, token, signature))
+	{
+		return true;
+	}
+
+	for (const auto &token_filename : tokens) {
+		if (findToken(token_filename, issuer, server_key_ids,
+			username, token, signature))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+}
+
+// HKDF_Extract and HKDF_Expand functions taken from OpenSSL 1.1.0 implementation.
+// Licensed under the OpenSSL license.
+//
+// These implementations should be removed once OpenSSL 1.1.0 is available on all
+// platforms.
+#ifndef EVP_PKEY_HKDF
+static unsigned char *HKDF_Extract(const EVP_MD *evp_md,
+                                   const unsigned char *salt, size_t salt_len,
+                                   const unsigned char *key, size_t key_len,
+                                   unsigned char *prk, size_t *prk_len)
+{
+    unsigned int tmp_len;
+
+    if (!HMAC(evp_md, salt, salt_len, key, key_len, prk, &tmp_len))
+        return NULL;
+
+    *prk_len = tmp_len;
+    return prk;
+}
+
+// In OpenSSL 0.9.8, several of the HMAC functions returned void.
+// This macro lets us fake a successful return code when using these
+// crusty versions of OpenSSL, but use the real return code when using
+// newer versions.
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+#define FAKE_RC(x) ((x), 1)
+#else
+#define FAKE_RC(x) x
+#endif
+
+static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
+                                  const unsigned char *prk, size_t prk_len,
+                                  const unsigned char *info, size_t info_len,
+                                  unsigned char *okm, size_t okm_len)
+{
+    HMAC_CTX hmac;
+
+    unsigned int i;
+
+    unsigned char prev[EVP_MAX_MD_SIZE];
+
+    size_t done_len = 0, dig_len = EVP_MD_size(evp_md);
+
+    size_t n = okm_len / dig_len;
+    if (okm_len % dig_len)
+        n++;
+
+    if (n > 255 || okm == NULL)
+        return NULL;
+
+    HMAC_CTX_init(&hmac);
+
+    if (!FAKE_RC(HMAC_Init_ex(&hmac, prk, prk_len, evp_md, NULL)))
+        goto err;
+
+    for (i = 1; i <= n; i++) {
+        size_t copy_len;
+        const unsigned char ctr = i;
+
+        if (i > 1) {
+            if (!FAKE_RC(HMAC_Init_ex(&hmac, NULL, 0, NULL, NULL)))
+                goto err;
+
+            if (!FAKE_RC(HMAC_Update(&hmac, prev, dig_len)))
+                goto err;
+        }
+
+        if (!FAKE_RC(HMAC_Update(&hmac, info, info_len)))
+            goto err;
+
+        if (!FAKE_RC(HMAC_Update(&hmac, &ctr, 1)))
+            goto err;
+
+        if (!FAKE_RC(HMAC_Final(&hmac, prev, NULL)))
+            goto err;
+
+        copy_len = (done_len + dig_len > okm_len) ?
+                       okm_len - done_len :
+                       dig_len;
+
+        memcpy(okm + done_len, prev, copy_len);
+
+        done_len += copy_len;
+    }
+
+    HMAC_CTX_cleanup(&hmac);
+    return okm;
+
+ err:
+    HMAC_CTX_cleanup(&hmac);
+    return NULL;
+}
+#endif
+
+
+Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
+    : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_TOKEN),
+    m_crypto(NULL),
+    m_crypto_state(NULL),
+	m_client_status(0),
+	m_server_status(0),
+	m_ret_value(0),
+	m_sk({0,0,0,0,0,0}),
+    m_version(version),
+    m_k(NULL),
+    m_k_prime(NULL),
+    m_k_len(0),
+    m_k_prime_len(0),
+	m_state(ServerRec1)
+{
+	if (m_version == 2) {
+		std::string blacklist_param;
+		classad::ExprTree *expr = nullptr;
+		if (param(blacklist_param, "SEC_TOKEN_BLACKLIST_EXPR") &&
+			!ParseClassAdRvalExpr(blacklist_param.c_str(), expr))
+		{
+			m_token_blacklist_expr.reset(expr);
+		}
+	}
 }
 
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
 {
     if(m_crypto) delete(m_crypto);
+    if(m_crypto_state) delete(m_crypto_state);
+    if (m_k) free(m_k);
+    if (m_k_prime) free(m_k_prime);
 }
 
+// Determine the password to use for key derivation.
+// - For protocol version 1, the password is the pool password concatenated twice.
+//   - The intent appears to have been to allow multiple users within this protocol and to concatenate
+//     the two unique passwords from two unique users.  This was never implemented.
+// - For protocol version 2, the token is decoded and the key id ('kid' claim in the header) is used
+//   as the password name; the corresponding named credential is fetched.
 char *
-Condor_Auth_Passwd::fetchPassword(const char* nameA,const char* nameB)
+Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, const char* nameB)
 {
 	char *name, *domain, *passwordA, *passwordB;
 
 	if ( !nameA || !nameB ) {
 		return NULL;
+	}
+
+	if (!token.empty()) {
+		std::string key_id;
+		try {
+				// Append a '.' to the token; we only send the <header>.<payload>, while
+				// a valid token is <header>.<payload>.<signature>.  The resulting string
+				// does not have a valid signature, of course... but we'll generate that
+				// later.
+			auto decoded_jwt = jwt::decode(token + ".");
+			if (!decoded_jwt.has_key_id()) {
+				dprintf(D_SECURITY, "Client JWT is missing a key ID.\n");
+				return nullptr;
+			}
+			key_id = decoded_jwt.get_key_id();
+		} catch (...) {
+			dprintf(D_SECURITY, "Failed to decode JWT for determining the signing key.\n");
+			return nullptr;
+		}
+		if (key_id.empty()) {
+			// At one point, we considered allowing an empty key ID (which would imply POOL);
+			// we decided against this as explicit is better than implicit.
+			dprintf(D_SECURITY, "Client JWT has empty key ID\n");
+			return nullptr;
+		}
+		std::string shared_key;
+		CondorError err;
+		if (key_id == "POOL") {
+			std::unique_ptr<char> pool_passwd(getStoredPassword(POOL_PASSWORD_USERNAME, ""));
+			if (!pool_passwd.get()) {
+				return nullptr;
+			}
+			auto pw_len = strlen(pool_passwd.get());
+			auto result = reinterpret_cast<char*>(malloc(2*pw_len + 1));
+			memcpy(result, pool_passwd.get(), pw_len);
+			memcpy(result + pw_len, pool_passwd.get(), pw_len);
+			result[2*pw_len] = '\0';
+			return result;
+		}
+		if (!getNamedCredential(key_id, shared_key, &err)) {
+			dprintf(D_SECURITY, "Failed to fetch key named %s: %s\n", key_id.c_str(), err.getFullText().c_str());
+			return nullptr;
+		}
+		return strdup(shared_key.c_str());
 	}
 
 		// Split nameA into name and domain, then get password
@@ -64,7 +492,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA,const char* nameB)
 		*domain = '\0';
 		domain++;
 	}
-	passwordA = getStoredCredential(name,domain);
+	//TODO: the 'password here on Unix is actually the cred converted to base64. is that right?
+	passwordA = getStoredPassword(name,domain);
 	free(name);
 
 		// Split nameB into name and domain, then get password
@@ -75,7 +504,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA,const char* nameB)
 		*domain = '\0';
 		domain++;
 	}
-	passwordB = getStoredCredential(name,domain);
+	//TODO: the 'password' here on Unix is actually the cred converted to base64. is that right?
+	passwordB = getStoredPassword(name,domain);
 	free(name);
 
 		// If we failed to find either password, fail.
@@ -105,6 +535,151 @@ char *
 Condor_Auth_Passwd::fetchLogin()
 {
 	// return malloc-ed string "user@domain" that represents who we are.
+	//
+	// If we are a client of the password v2 protocol, we may have a token instead.
+	if (m_version == 2 && mySock_->isClient()) {
+		std::string username;
+		std::string token;
+		std::string signature;
+
+		auto found_token = findTokens(m_server_issuer,
+					m_server_keys,
+					SecMan::getTagCredentialOwner(),
+					username,
+					token,
+					signature);
+
+		if (!found_token && SecMan::getTagCredentialOwner().empty()) {
+			// Check to see if we have access to the master key and generate a token accordingly.
+			std::string issuer;
+			param(issuer, "TRUST_DOMAIN");
+			issuer = issuer.substr(0, issuer.find_first_of(", \t"));
+			if (m_server_issuer == issuer && !m_server_keys.empty()) {
+					// We use the same issuer; iterate through compatible keys.
+				std::vector<std::string> local_creds;
+				CondorError err;
+				if (!listNamedCredentials(local_creds, &err)) {
+					dprintf(D_SECURITY, "Failed to determine available credentials: %s\n", err.getFullText().c_str());
+					return nullptr;
+				}
+				std::string match_key;
+				for (auto const &server_key : m_server_keys) {
+					for ( auto const &local_key : local_creds ) {
+						if (server_key == local_key) {
+							match_key = local_key;
+							break;
+						}
+					}
+					if (!match_key.empty()) {
+						break;
+					}
+				}
+				if (!match_key.empty()) {
+					CondorError err;
+					std::string identity = POOL_PASSWORD_USERNAME; identity += "@";
+					std::vector<std::string> authz_list;
+					int lifetime = 60;
+					std::string local_token;
+						// Note we don't log the token generation here as it is an ephemeral token
+						// used server-side to complete the secret generation process.
+					if (!Condor_Auth_Passwd::generate_token(identity, match_key,
+						authz_list, lifetime, local_token, 0, &err))
+					{
+						dprintf(D_SECURITY, "Failed to generate a token: %s\n",
+							err.getFullText().c_str());
+					}
+					else {
+						username = identity;
+						auto decoded_jwt = jwt::decode(local_token);
+						signature = decoded_jwt.get_signature();
+						token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
+						found_token = true;
+					}
+				} else {
+					dprintf(D_SECURITY, "No compatible security key found.\n");
+				}
+			}
+			if (!found_token) {
+				dprintf(D_ALWAYS, "TOKEN: No token found.\n");
+				return nullptr;
+			}
+		}
+
+		size_t key_size = AUTH_PW_KEY_LEN + token.size();
+		auto seed_ka = (unsigned char *)malloc(key_size);
+		auto seed_kb = (unsigned char *)malloc(key_size);
+		auto ka = (unsigned char *)malloc(key_strength_bytes());
+		auto kb = (unsigned char *)malloc(key_strength_bytes());
+		if (!seed_ka || !seed_kb || !ka || !kb) {
+			dprintf(D_ALWAYS, "TOKEN: Failed to allocate memory buffers.\n");
+			if (seed_ka) free(seed_ka);
+			if (seed_kb) free(seed_kb);
+			if (ka) free(ka);
+			if (kb) free(kb);
+			return nullptr;
+		}
+		memcpy(seed_ka + AUTH_PW_KEY_LEN, token.c_str(), token.size());
+		memcpy(seed_kb + AUTH_PW_KEY_LEN, token.c_str(), token.size());
+
+		setup_seed(seed_ka, seed_kb);
+		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
+			&seed_ka[0], key_size,
+			(const unsigned char *)"master ka", 9,
+			&ka[0],
+			key_strength_bytes_v2()))
+		{
+			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K\n");
+			free(ka);
+			free(kb);
+			free(seed_ka);
+			free(seed_kb);
+			return nullptr;
+		}
+		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
+			&seed_kb[0], key_size,
+			(const unsigned char *)"master kb", 9,
+			&kb[0],
+			key_strength_bytes_v2()))
+		{
+			dprintf(D_SECURITY, "TOKEN: Failed to generate master key K'\n");
+			free(ka);
+			free(kb);
+			free(seed_ka);
+			free(seed_kb);
+			return nullptr;
+		}
+
+		m_k_len = 0;
+		free(m_k); m_k = nullptr;
+		if (!(m_k = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
+			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K\n");
+			free(ka);
+			free(kb);
+			free(seed_ka);
+			free(seed_kb);
+			return nullptr;
+		}
+		memcpy(m_k, &ka[0], key_strength_bytes_v2());
+		m_k_len = key_strength_bytes_v2();
+		m_k_prime_len = 0;
+		free(m_k_prime); m_k_prime = nullptr;
+		if (!(m_k_prime = reinterpret_cast<unsigned char *>(malloc(key_strength_bytes_v2())))) {
+			dprintf(D_SECURITY, "TOKEN: Failed to allocate new copy of K'\n");
+			free(ka);
+			free(kb);
+			free(seed_ka);
+			free(seed_kb);
+			return nullptr;
+		}
+		memcpy(m_k_prime, &kb[0], key_strength_bytes_v2());
+		m_k_prime_len = key_strength_bytes_v2();
+		m_keyfile_token = token;
+		free(ka);
+		free(kb);
+		free(seed_ka);
+		free(seed_kb);
+		return strdup(username.c_str());
+	}
 
 	MyString login;
 	
@@ -126,6 +701,8 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 		// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
 
 	if ( !key || !keylen ) {
 		// cannot setup anything without a key
@@ -134,7 +711,16 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
 	KeyInfo thekey(key,keylen,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
+
 	return m_crypto ? true : false;
 }
 
@@ -172,16 +758,16 @@ Condor_Auth_Passwd::encrypt_or_decrypt(bool want_encrypt,
 	}
 	
 		// make certain we got a crypto object
-	if (!m_crypto) {
+	if (!m_crypto || !m_crypto_state) {
 		return false;
 	}
 
 		// do the work
-	m_crypto->resetState();
+	m_crypto_state->reset();
 	if (want_encrypt) {
-		result = m_crypto->encrypt(input,input_len,output,output_len);
+		result = m_crypto->encrypt(m_crypto_state, input,input_len,output,output_len);
 	} else {
-		result = m_crypto->decrypt(input,input_len,output,output_len);
+		result = m_crypto->decrypt(m_crypto_state, input,input_len,output,output_len);
 	}
 	
 		// mark output_len as zero upon failure
@@ -209,7 +795,7 @@ Condor_Auth_Passwd::wrap(const char *   input,
 	bool result;
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::wrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -227,7 +813,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::unwrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::unwrap.\n");
 	result = decrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -236,7 +822,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 }
 
 bool
-Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk) 
+Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init_text)
 {
 	if ( sk->shared_key == NULL ) {
 		return false;
@@ -247,16 +833,18 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
 		// keys K and K' (referred to here as ka and kb,
 		// respectively).  We derive these ka and kb by hmacing the
 		// shared key with these two seed keys.
-    unsigned char *seed_ka = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
-    unsigned char *seed_kb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
+		//
+    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : init_text.size());
+    unsigned char *seed_ka = (unsigned char *)malloc(key_size);
+    unsigned char *seed_kb = (unsigned char *)malloc(key_size);
     
 		// These are the keys K and K' referred to in the AKEP2
 		// description.
-    unsigned char *ka = (unsigned char *)malloc(EVP_MAX_MD_SIZE);
-    unsigned char *kb = (unsigned char *)malloc(EVP_MAX_MD_SIZE);
+    unsigned char *ka = (unsigned char *)malloc(key_strength_bytes());
+    unsigned char *kb = (unsigned char *)malloc(key_strength_bytes());
 
-    unsigned int ka_len = 0;
-    unsigned int kb_len = 0;
+    unsigned int ka_len = key_strength_bytes();
+    unsigned int kb_len = key_strength_bytes();
 
 		// If any are NULL, free the others...
     if( !seed_ka || !seed_kb || !ka || !kb ) {
@@ -271,16 +859,117 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
 		// Fill in the data for the seed keys.
     setup_seed(seed_ka, seed_kb);
 
+		// Copy the text seed into the key.
+	if (m_version == 2) {
+		memcpy(seed_ka + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
+		memcpy(seed_kb + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
+	}
+
     sk->len = strlen(sk->shared_key);
 
 		// Generate the shared keys K and K'
-    hmac((unsigned char *)sk->shared_key, sk->len,
-		 seed_ka, AUTH_PW_KEY_LEN, 
-		 ka, &ka_len );
+	if (m_version == 1) {
+		hmac((unsigned char *)sk->shared_key, sk->len,
+			 seed_ka, key_size,
+			 ka, &ka_len );
 
-    hmac((unsigned char *)sk->shared_key, sk->len,
-		 seed_kb, AUTH_PW_KEY_LEN, 
-		 kb, &kb_len );
+		hmac((unsigned char *)sk->shared_key, sk->len,
+			 seed_kb, key_size,
+			 kb, &kb_len );
+	} else {
+		// Re-derive the signing key
+		std::vector<unsigned char> jwt_key; jwt_key.reserve(key_strength_bytes_v2());
+		if (hkdf((unsigned char *)sk->shared_key, sk->len,
+			reinterpret_cast<const unsigned char *>("htcondor"), 8,
+			(const unsigned char *)"master jwt", 10,
+			&jwt_key[0], key_strength_bytes_v2()))
+		{
+			free(seed_ka);
+			free(seed_kb);
+			free(ka);
+			free(kb);
+			return false;
+		}
+		std::string jwt_key_str(reinterpret_cast<char *>(&jwt_key[0]), key_strength_bytes_v2());
+
+		// Verify known keys and Sign the JWT.
+		std::string token = init_text + ".";
+		std::string signature;
+		try {
+			auto jwt = jwt::decode(token);
+
+			int max_age = -1;
+			auto now = std::chrono::system_clock::now();
+			if (jwt.has_issued_at() && (max_age = param_integer("SEC_TOKEN_MAX_AGE", -1))) {
+				auto iat = jwt.get_issued_at();
+				auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
+				if ((max_age != -1) && age > max_age) {
+					dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", (long)age, max_age);
+					free(ka);
+					free(kb);
+					free(seed_ka);
+					free(seed_kb);
+					return false;
+				}
+			}
+			if (jwt.has_expires_at()) {
+				auto expiry = jwt.get_expires_at();
+				auto expired_for = std::chrono::duration_cast<std::chrono::seconds>(now - expiry).count();
+				if (expired_for > 0) {
+					dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", (long)expired_for);
+					free(ka);
+					free(kb);
+					free(seed_ka);
+					free(seed_kb);
+					return false;
+				}
+			}
+			dprintf(D_AUDIT, mySock_->getUniqueId(),
+				"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
+
+			if (isTokenBlacklisted(jwt)) {
+				dprintf(D_SECURITY, "User token with payload %s has been blacklisted.\n", jwt.get_payload().c_str());
+				free(ka);
+				free(kb);
+				free(seed_ka);
+				free(seed_kb);
+				return false;
+			}
+
+			const std::string& algo = jwt.get_algorithm();
+			if (algo == "HS256") {
+				auto signer = jwt::algorithm::hs256{jwt_key_str};
+				signature = signer.sign(init_text);
+			} else if (algo == "HS384") {
+				auto signer = jwt::algorithm::hs384{jwt_key_str};
+				signature = signer.sign(init_text);
+			} else if (algo == "HS512") {
+				auto signer = jwt::algorithm::hs512{jwt_key_str};
+				signature = signer.sign(init_text);
+			}
+		} catch (...) {
+			dprintf(D_SECURITY, "Failed to deserialize JWT.\n");
+			return false;
+		}
+
+		// Derive K and K' from the JWT's signature.
+		if (hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
+			seed_ka, key_size,
+			(const unsigned char *)"master ka", 9,
+			ka, AUTH_PW_KEY_STRENGTH) ||
+		hkdf(reinterpret_cast<const unsigned char *>(signature.c_str()), signature.size(),
+			seed_kb, key_size,
+			(const unsigned char *)"master kb", 9,
+			kb, AUTH_PW_KEY_STRENGTH))
+		{
+			free(seed_ka);
+			free(seed_kb);
+			free(ka);
+			free(kb);
+			dprintf(D_SECURITY, "Can't authenticate: HKDF error.\n");
+			return false;
+		}
+	}
 
 	free(seed_ka);
 	free(seed_kb);
@@ -291,6 +980,63 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
 
     return true;
 }
+
+
+bool
+Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
+{
+	if (!m_token_blacklist_expr) {
+		return false;
+	}
+	classad::ClassAd ad;
+	auto claims = jwt.get_payload_claims();
+	for (const auto &pair : claims) {
+		bool inserted = true;
+		const auto &claim = pair.second;
+		switch (claim.get_type()) {
+		case jwt::claim::type::null:
+			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+			break;
+		case jwt::claim::type::boolean:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
+			break;
+		case jwt::claim::type::int64:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
+			break;
+		case jwt::claim::type::number:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
+			break;
+		case jwt::claim::type::string:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
+			break;
+		// TODO: these are not currently supported
+		case jwt::claim::type::array: // fallthrough
+		case jwt::claim::type::object: // fallthrough
+		default:
+			break;
+		}
+
+			// If, somehow, we can't build the ad, be paranoid,
+			// and assume blacklisted. "abundance of caution"
+		if (!inserted) {
+			return true;
+		}
+	}
+
+	classad::EvalState state;
+	state.SetScopes(&ad);
+	classad::Value val;
+	bool blacklisted = true;
+		// Out of an abundance of caution, if we fail to evaluate the
+		// expression or it doesn't evaluate to something boolean-like,
+		// we consider the token potentially suspect.
+	if (!m_token_blacklist_expr->Evaluate(state, val) ||
+		!val.IsBooleanValueEquiv(blacklisted)) {
+		return true;
+	}
+	return blacklisted;
+}
+
 
 void
 Condor_Auth_Passwd::setup_seed(unsigned char *ka, unsigned char *kb) 
@@ -820,6 +1566,136 @@ Condor_Auth_Passwd::hmac(unsigned char *sk, int sk_len,
     HMAC(EVP_sha1(), key, key_len, sk, sk_len, result, result_len);
 }
 
+int
+Condor_Auth_Passwd::hkdf(const unsigned char *sk, size_t sk_len,
+	const unsigned char *salt, size_t salt_len,
+	const unsigned char *info, size_t info_len,
+	unsigned char *result, size_t result_len)
+{
+#ifdef EVP_PKEY_HKDF
+	// I had to fix two simple syntax errors in this code before
+	// it would build.  I rather suspect it's never been tested.
+	// Also had to insert four const_cast<>s, which is worrisome.
+	// The last three may have been correctable by changing the
+	// argument types, but we can worry about that later.
+	// See ticket #6962.
+	EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+	if (EVP_PKEY_derive_init(pctx) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set_hkdf_md(pctx, const_cast<void *>((const void *)EVP_sha256())) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, const_cast<void *>((const void *)salt), salt_len) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set1_hkdf_key(pctx, const_cast<void *>((const void *)sk), sk_len) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_add1_hkdf_info(pctx, const_cast<void *>((const void *)info), info_len) <= 0) {goto fail;}
+	if (EVP_PKEY_derive(pctx, result, &result_len) <= 0) {goto fail;}
+	EVP_PKEY_CTX_free(pctx);
+	return 0;
+
+fail:
+	EVP_PKEY_CTX_free(pctx);
+	return -1;
+#else
+	// Implementation taken from OpenSSL 1.1.0; see license note at the definition
+	// of extract / expand above.
+	unsigned char prk[EVP_MAX_MD_SIZE];
+	unsigned char *ret;
+	size_t prk_len;
+
+	if (!HKDF_Extract(EVP_sha256(), salt, salt_len, sk, sk_len, prk, &prk_len)) {
+		return -1;
+	}
+
+	ret = HKDF_Expand(EVP_sha256(), prk, prk_len, info, info_len, result, result_len);
+	OPENSSL_cleanse(prk, sizeof(prk));
+
+	return ret ? 0 : -1;
+#endif
+}
+
+
+bool
+Condor_Auth_Passwd::generate_token(const std::string & id,
+	const std::string &key_id,
+	const std::vector<std::string> &authz_list,
+	long lifetime,
+	std::string &token,
+	int ident,
+	CondorError *err)
+{
+	std::string example_username(POOL_PASSWORD_USERNAME);
+	example_username += "@";
+	std::string master_password_str;
+	std::unique_ptr<char> master_password;
+	if (key_id.empty() || key_id == "POOL") {
+		master_password.reset(fetchPassword(example_username.c_str(), "", example_username.c_str()));
+		if (master_password.get() == nullptr) {
+			err->push("PASSWD", 1, "No master pool password setup in SEC_PASSWORD_FILE");
+			return false;
+		}
+	} else if (!getNamedCredential(key_id, master_password_str, err)) {
+		return false;
+	}
+	const char *passwd_ref = master_password.get() ? master_password.get() : master_password_str.c_str();
+	size_t master_password_len = strlen(passwd_ref);
+	std::vector<unsigned char> shared_key; shared_key.reserve(master_password_len);
+	memcpy(&shared_key[0], passwd_ref, master_password_len);
+
+	std::vector<unsigned char> jwt_key; jwt_key.reserve(key_strength_bytes_v2());
+	if (hkdf(&shared_key[0], master_password_len,
+		reinterpret_cast<const unsigned char *>("htcondor"), 8,
+		(const unsigned char *)"master jwt", 10,
+		&jwt_key[0],
+		key_strength_bytes_v2()))
+	{
+		if (err) err->push("PASSWD", 1, "Failed to derive key for JWT signature");
+		return false;
+	}
+
+	std::string issuer;
+	if (!param(issuer, "TRUST_DOMAIN")) {
+		if (err) err->push("PASSWD", 1, "Issuer namespace is not set");
+		return false;
+	}
+	issuer = issuer.substr(0, issuer.find_first_of(", \t"));
+
+	std::string jwt_key_str(reinterpret_cast<const char *>(&jwt_key[0]), key_strength_bytes_v2());
+	auto jwt_builder = jwt::create()
+		.set_issuer(issuer)
+		.set_subject(id)
+		.set_issued_at(std::chrono::system_clock::now())
+		.set_key_id(key_id.empty() ? "POOL" : key_id);
+
+	if (!authz_list.empty()) {
+		std::stringstream ss;
+		for (const auto &authz : authz_list) {
+			std::string authz_full = "condor:/" + authz;
+			ss << authz_full << " ";
+		}
+		const std::string &authz_set = ss.str();
+		jwt_builder.set_payload_claim("scope", authz_set.substr(0, authz_set.size()-1));
+	}
+	if (lifetime >= 0) {
+		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
+	}
+		// Set a unique JTI so we can identify the token we issued later on.
+	std::unique_ptr<char,decltype(&::free)> hexkey( Condor_Crypt_Base::randomHexKey(16), free );
+	if (hexkey) {
+		jwt_builder.set_id(hexkey.get());
+	}
+
+	try {
+		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
+		token = jwt_token;
+		if (ident && IsDebugCategory( D_AUDIT )) {
+			// Annoyingly, there's no way to get the payload from the jwt_builder object.
+			auto decoded_jwt = jwt::decode(token);
+			dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
+		}
+	} catch (...) {
+		return false;
+	}
+	return true;
+}
+
+
 void
 Condor_Auth_Passwd::init_sk(struct sk_buf *sk) 
 {       
@@ -916,6 +1792,10 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// learns my name.
 		dprintf(D_SECURITY, "PW: getting name.\n");
 		m_t_client.a = fetchLogin();
+		if (!m_t_client.a) {
+			dprintf(D_SECURITY, "PW: Failed to fetch a login name\n");
+		}
+		m_t_client.a_token = m_keyfile_token;
 
 			// We complete the entire protocol even if there's an
 			// error, but there's no point trying to actually do any
@@ -954,10 +1834,20 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// Now that we've received the server's name, we can go
 			// ahead and setup the keys.
 		if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
-			m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
-			dprintf(D_SECURITY, "PW: Client setting keys.\n");
-			if(!setup_shared_keys(&m_sk)) {
-				m_client_status = AUTH_PW_ERROR;
+			// If we have a pre-derived key, use that.
+			if (m_k && m_k_prime) {
+				dprintf(D_SECURITY, "PW: Client using pre-derived key of length %lu.\n", m_k_len);
+				m_sk.ka = m_k; m_k = NULL;
+				m_sk.ka_len = m_k_len; m_k_len = 0;
+				m_sk.kb = m_k_prime; m_k_prime = NULL;
+				m_sk.kb_len = m_k_prime_len; m_k_prime_len = 0;
+			} else {
+				dprintf(D_SECURITY, "PW: Client using pool password.\n");
+				m_sk.shared_key = fetchPassword(m_t_client.a, "", m_t_server.b);
+				dprintf(D_SECURITY, "PW: Client setting keys.\n");
+				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
+					m_client_status = AUTH_PW_ERROR;
+				}
 			}
 		}
 
@@ -1088,8 +1978,12 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 	if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
 		m_t_server.b = fetchLogin();
 		dprintf(D_SECURITY, "PW: Server fetching password.\n");
-		m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
-		if(!setup_shared_keys(&m_sk)) {
+			// In version 2, we always want to forcibly fetch the pool password.
+			// However, the client ID might not actually be condor_pool@whatever;
+			// hence, in this case we just use the server name twice (which is
+			// mandated to be the pool username).
+		m_sk.shared_key = fetchPassword(m_version == 2 ? m_t_server.b : m_t_client.a, m_t_client.a_token, m_t_server.b);
+		if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
 			dprintf(D_SECURITY, "PW: Server generating rb.\n");
@@ -1195,6 +2089,46 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 
 		setRemoteUser(login);
 		setRemoteDomain(domain);
+
+		if (!m_t_client.a_token.empty()) {
+			std::vector<std::string> authz;
+			time_t expiry = 0;
+			try {
+				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
+				if (decoded_jwt.has_payload_claim("scope")) {
+						// throws std::bad_cast if this isn't a string; caught below.
+					const std::string &scopes = decoded_jwt.get_payload_claim("scope").as_string();
+					StringList scope_list(scopes.c_str());
+					scope_list.rewind();
+					const char *scope;
+					while ( (scope = scope_list.next()) ) {
+						if (strncmp(scope, "condor:/", 8)) {
+							continue;
+						}
+						scope += 8;
+						authz.emplace_back(scope);
+					}
+				}
+				if (decoded_jwt.has_expires_at()) {
+					auto token_expiry = decoded_jwt.get_expires_at();
+					expiry = std::chrono::duration_cast<std::chrono::seconds>(token_expiry.time_since_epoch()).count();
+				}
+			} catch (...) {
+				dprintf(D_SECURITY, "PW: Unable to parse final token.\n");
+			}
+			classad::ClassAd ad;
+			if (!authz.empty()) {
+				std::stringstream ss;
+				for (const auto &auth : authz) {
+					ss << auth << ",";
+				}
+				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
+			}
+			if (expiry > 0) {
+				ad.InsertAttr("TokenExpirationTime", expiry);
+			}
+			mySock_->setPolicyAd(ad);
+		}
 	}
 
 	destroy_t_buf(&m_t_client);
@@ -1744,9 +2678,11 @@ int Condor_Auth_Passwd::client_send_one(int client_status, msg_t_buf *t_client)
 			client_status, send_a_len, send_a, send_b_len);
 
 	mySock_->encode();
+	std::string &init_token = t_client->a_token;
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(send_a_len)
 		|| !mySock_->code(send_a)
+		|| !(m_version == 1 || mySock_->code(init_token))
 		|| !mySock_->code(send_b_len)
 		|| !(send_b_len == mySock_->put_bytes(send_b, send_b_len))
 		|| !(mySock_->end_of_message())) {
@@ -1765,6 +2701,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	int a_len         = 0;
 	unsigned char *ra = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
 	int ra_len        = 0;
+	std::string init_token;
 
 	if(!ra) {
 		dprintf(D_SECURITY, "Malloc error 6.\n");
@@ -1777,6 +2714,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(a_len)
 		|| !mySock_->code(a) 
+		|| !(m_version == 1 || mySock_->code(init_token))
 		|| !mySock_->code(ra_len)
 		|| !(ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len == mySock_->get_bytes(ra, ra_len))
@@ -1800,6 +2738,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	if(client_status == AUTH_PW_A_OK && *server_status == AUTH_PW_A_OK) {
 		t_client->a = a;
 		t_client->ra = ra;
+		t_client->a_token = init_token;
 		return client_status;
 	}
  server_receive_one_abort:
@@ -1810,7 +2749,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 
 int Condor_Auth_Passwd :: isValid() const
 {
-	if ( m_crypto ) {
+	if ( m_crypto && m_crypto_state) {
 		return TRUE;
 	} else {
 		return FALSE;
@@ -1820,8 +2759,8 @@ int Condor_Auth_Passwd :: isValid() const
 bool
 Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 {
-	unsigned char *key = (unsigned char *)malloc(EVP_MAX_MD_SIZE);
-	unsigned int key_len = 0;
+	unsigned char *key = (unsigned char *)malloc(key_strength_bytes());
+	unsigned int key_len = key_strength_bytes();
 	
 	dprintf(D_SECURITY, "Setting session key.\n");
 
@@ -1832,21 +2771,43 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 		return false;
 	}
 	
-	memset(key, 0, EVP_MAX_MD_SIZE);
+	memset(key, 0, key_strength_bytes());
 
 		// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
 
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
+
 		// Calculate W based on K'
-	hmac( t_buf->rb, AUTH_PW_KEY_LEN,
-		  sk->kb, sk->kb_len,
-		  key, &key_len );
+	if (m_version == 1) {
+		hmac( t_buf->rb, AUTH_PW_KEY_LEN,
+			  sk->kb, sk->kb_len,
+			  key, &key_len );
+	} else {
+		if (hkdf( t_buf->rb, AUTH_PW_KEY_LEN,
+			(const unsigned char *)"session key", 11,
+			(const unsigned char *)"htcondor", 8,
+			key, key_strength_bytes()))
+		{
+			free(key);
+			return false;
+		}
+	}
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
 	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
 
 	if ( key ) free(key);	// KeyInfo makes a copy of the key
 
@@ -1854,5 +2815,130 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 }
 
 
+int
+Condor_Auth_Passwd::key_strength_bytes() const
+{
+	if (m_version == 1) {
+		return EVP_MAX_MD_SIZE;
+	} else {
+		return key_strength_bytes_v2();
+	}
+}
+
+
+bool
+Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
+{
+	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
+	std::vector<std::string> creds;
+	CondorError err;
+	if (!listNamedCredentials(creds, &err)) {
+		dprintf(D_SECURITY, "Failed to determine available credentials: %s\n", err.getFullText().c_str());
+		return false;
+	}
+	if (!creds.empty()) {
+		std::stringstream ss;
+		for (const auto & name: creds) {
+			ss << name << ",";
+		}
+		const std::string &creds_str = ss.str();
+		ad.InsertAttr(ATTR_SEC_ISSUER_KEYS, creds_str.c_str(), creds_str.size()-1);
+	}
+	return true;
+}
+
+void
+Condor_Auth_Passwd::create_pool_password_if_needed()
+{
+	// This method is invoked by DaemonCore upon startup and a reconfig.
+
+	// Currently only the Collector will generate a pool password by default...
+	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
+		return;
+	}
+
+	std::string pool_password;
+	if (!param(pool_password, "SEC_PASSWORD_FILE")) {
+		return;
+	}
+
+		// Try to create the pool password file if it doesn't exist.
+	int fd = -1;
+	{
+#ifdef WIN32
+		const int open_flags = O_WRONLY | O_CREAT | O_EXCL | O_BINARY;
+#else
+		const int open_flags = O_WRONLY | O_CREAT | O_EXCL;
+#endif
+		mode_t access_mode = 0600;
+
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		fd = safe_open_wrapper_follow(pool_password.c_str(), open_flags, access_mode);
+	}
+	if (fd < 0) {
+		return;
+	} else {
+		close(fd);
+	}
+
+		// Generate a password.
+	char password_buffer[65];
+	password_buffer[64] = '\0';
+	if (!RAND_bytes(reinterpret_cast<unsigned char *>(password_buffer), 64)) {
+		// Insufficient entropy available; bail out!
+		return;
+	}
+
+		// Write out the password.
+	if (TRUE == write_password_file(pool_password.c_str(), password_buffer)) {
+		dprintf(D_ALWAYS, "Created a pool password in file %s\n", pool_password.c_str());
+	}
+	else {
+		dprintf(D_ALWAYS, "WARNING: Failed to create a pool password in file %s\n", pool_password.c_str());
+	}
+}
+
+
+bool
+Condor_Auth_Passwd::should_try_auth()
+{
+	bool has_named_creds = false;
+	std::vector<std::string> creds;
+	CondorError err;
+	if (listNamedCredentials(creds, &err)) {
+		has_named_creds = !creds.empty();
+	}
+	if (has_named_creds) {
+		dprintf(D_SECURITY|D_FULLDEBUG,
+			"Can try token auth because we have at least one named credential.\n");
+		return true;
+	}
+
+		// Did we perform the search recently?  If so,
+		// we should just return the prior result.
+	if (!m_should_search_for_tokens) {
+		return m_tokens_avail;
+	}
+	m_should_search_for_tokens = false;
+
+	std::string issuer;
+	std::set<std::string> server_key_ids;
+	std::string username, token, signature;
+
+	m_tokens_avail = findTokens(issuer, server_key_ids, SecMan::getTagCredentialOwner(), username, token, signature);
+	if (m_tokens_avail) {
+		dprintf(D_SECURITY|D_FULLDEBUG,
+			"Can try token auth because we have at least one token.\n");
+	}
+	return m_tokens_avail;
+}
+
+
+void
+Condor_Auth_Passwd::set_remote_keys(const std::vector<std::string> &keys) {
+	for (const auto &key : keys) {
+		m_server_keys.insert(key);
+	}
+}
 
 #endif	// of if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)

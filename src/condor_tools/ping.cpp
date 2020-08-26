@@ -72,7 +72,7 @@ void process_err_stack(CondorError *errstack) {
 
 
 void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
-	MyString  val;
+	std::string  val;
 
 	if(!rv) {
 		printf("%s failed!  Use -verbose for more information.\n", name.Value());
@@ -82,17 +82,17 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 	printf("%s using (", name.Value());
 
 	ad->LookupString("encryption", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no encryption");
 	} else {
 		ad->LookupString("cryptomethods", val);
-		printf("%s", val.Value());
+		printf("%s", val.c_str());
 	}
 
 	printf(", ");
 
 	ad->LookupString("integrity", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no integrity");
 	} else {
 #ifdef FIPS_MODE
@@ -105,11 +105,11 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 	printf(", and ");
 
 	ad->LookupString("authentication", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no authentication");
 	} else {
 		ad->LookupString("authmethods", val);
-		printf("%s", val.Value());
+		printf("%s", val.c_str());
 	}
 
 	printf(") ");
@@ -121,14 +121,14 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 	printf(" as ");
 
 	ad->LookupString("myremoteusername", val);
-	printf("%s", val.Value());
+	printf("%s", val.c_str());
 
 	printf ("\n");
 }
 
 
 void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
-	MyString  val;
+	std::string  val;
 
 	if(!rv) {
 		printf("%s failed!\n", name.Value());
@@ -138,26 +138,26 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 	}
 
 	ad->LookupString("remoteversion", val);
-	printf("Remote Version:              %s\n", val.Value());
+	printf("Remote Version:              %s\n", val.c_str());
 	val = CondorVersion();
-	printf("Local  Version:              %s\n", val.Value());
+	printf("Local  Version:              %s\n", val.c_str());
 
 	ad->LookupString("sid", val);
-	printf("Session ID:                  %s\n", val.Value());
+	printf("Session ID:                  %s\n", val.c_str());
 	printf("Instruction:                 %s\n", name.Value());
 	printf("Command:                     %i\n", cmd);
 
 
 	ad->LookupString("encryption", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Encryption:                  none\n");
 	} else {
 		ad->LookupString("cryptomethods", val);
-		printf("Encryption:                  %s\n", val.Value());
+		printf("Encryption:                  %s\n", val.c_str());
 	}
 
 	ad->LookupString("integrity", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Integrity:                   none\n");
 	} else {
 #ifdef FIPS_MODE
@@ -168,17 +168,17 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 	}
 
 	ad->LookupString("authentication", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Authentication:              none\n");
 	} else {
 		ad->LookupString("authmethods", val);
-		printf("Authenticated using:         %s\n", val.Value());
+		printf("Authenticated using:         %s\n", val.c_str());
 		ad->LookupString("authmethodslist", val);
-		printf("All authentication methods:  %s\n", val.Value());
+		printf("All authentication methods:  %s\n", val.c_str());
 	}
 
 	ad->LookupString("myremoteusername", val);
-	printf("Remote Mapping:              %s\n", val.Value());
+	printf("Remote Mapping:              %s\n", val.c_str());
 
 	bool bval;
 	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
@@ -196,7 +196,7 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 
 
 void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
-	MyString  val;
+	std::string  val;
 
 	printf("%20s", name.Value());
 
@@ -206,23 +206,23 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 	}
 
 	ad->LookupString("authentication", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
 	} else {
 		ad->LookupString("authmethods", val);
 	}
-	printf("%15s", val.Value());
+	printf("%15s", val.c_str());
 
 	ad->LookupString("encryption", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
 	} else {
 		ad->LookupString("cryptomethods", val);
 	}
-	printf("%11s", val.Value());
+	printf("%11s", val.c_str());
 
 	ad->LookupString("integrity", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
+	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
 	} else {
 #ifdef FIPS_MODE
@@ -231,14 +231,14 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 		val = "MD5";
 #endif
 	}
-	printf("%10s", val.Value());
+	printf("%10s", val.c_str());
 
 	bool bval;
 	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
 	printf(bval ? "    ALLOW " : "     DENY ");
 
 	ad->LookupString("myremoteusername", val);
-	printf("%s", val.Value());
+	printf("%s", val.c_str());
 
 	printf("\n");
 }

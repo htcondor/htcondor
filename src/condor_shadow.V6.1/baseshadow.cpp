@@ -73,6 +73,7 @@ BaseShadow::BaseShadow() {
 	m_RunAsNobody = false;
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
+	m_committed_time_finalized = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -156,8 +157,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	// Calling init_user_ids() while in user priv causes badness.
 	// Make sure we're in another priv state.
 	set_condor_priv();
-	if ( !init_user_ids(owner.Value(), domain.Value())) {
-		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n",owner.Value() );
+	if ( !init_user_ids(owner.c_str(), domain.c_str())) {
+		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n",owner.c_str() );
 		// uids.C will EXCEPT when we set_user_priv() now
 		// so there's not much we can do at this point
 		
@@ -167,14 +168,14 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			dprintf(D_ALWAYS, "trying init_user_ids() as user nobody\n" );
 			
 			owner="nobody";
-			domain=NULL;
-			if (!init_user_ids(owner.Value(), domain.Value()))
+			domain="";
+			if (!init_user_ids(owner.c_str(), domain.c_str()))
 			{
 				dprintf(D_ALWAYS, "init_user_ids() failed!\n");
 			}
 			else
 			{
-				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, "FALSE" );
+				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, false );
 				m_RunAsNobody=true;
 				dprintf(D_ALWAYS, "init_user_ids() now running as user nobody\n");
 			}
@@ -228,19 +229,19 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// If we need to claim the startd before activating the claim
-	int wantClaiming = 0;
+	bool wantClaiming = false;
 	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 	if (wantClaiming) {
-		MyString startdSinful;
-		MyString claimid;
+		std::string startdSinful;
+		std::string claimid;
 
 			// Pull startd addr and claimid out of the jobad
 		jobAd->LookupString(ATTR_STARTD_IP_ADDR, startdSinful);
 		jobAd->LookupString(ATTR_CLAIM_ID, claimid);
 
-		dprintf(D_ALWAYS, "%s is true, trying to claim startd %s\n", ATTR_CLAIM_STARTD, startdSinful.Value());
+		dprintf(D_ALWAYS, "%s is true, trying to claim startd %s\n", ATTR_CLAIM_STARTD, startdSinful.c_str());
 
-		classy_counted_ptr<DCStartd> startd = new DCStartd("description", NULL, startdSinful.Value(), claimid.Value());
+		classy_counted_ptr<DCStartd> startd = new DCStartd("description", NULL, startdSinful.c_str(), claimid.c_str());
 	
 		classy_counted_ptr<DCMsgCallback> cb = 
 			new DCMsgCallback((DCMsgCallback::CppFunction)&BaseShadow::startdClaimedCB,
@@ -299,14 +300,14 @@ int BaseShadow::cdToIwd() {
 		p = set_root_priv();
 #endif
 	
-	if (chdir(iwd.Value()) < 0) {
+	if (chdir(iwd.c_str()) < 0) {
 		int chdir_errno = errno;
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
 		MyString hold_reason;
 		hold_reason.formatstr("Cannot access initial working directory %s: %s",
-		                    iwd.Value(), strerror(chdir_errno));
+		                    iwd.c_str(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		iRet = -1;
@@ -358,7 +359,7 @@ BaseShadow::shutDown( int reason )
 
 
 int
-BaseShadow::nextReconnectDelay( int attempts )
+BaseShadow::nextReconnectDelay( int attempts ) const
 {
 	if( ! attempts ) {
 			// first time, do it right away
@@ -445,7 +446,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 }
 
 void
-BaseShadow::mockTerminateJob( MyString exit_reason, 
+BaseShadow::mockTerminateJob( std::string exit_reason,
 		bool exited_by_signal, int exit_code, int exit_signal, 
 		bool core_dumped )
 {
@@ -462,7 +463,7 @@ BaseShadow::mockTerminateJob( MyString exit_reason,
 			 exit_code,
 			 exit_signal,
 			 core_dumped ? "TRUE" : "FALSE",
-			 exit_reason.Value());
+			 exit_reason.c_str());
 
 	if( ! jobAd ) {
 		dprintf(D_ALWAYS, "BaseShadow::mockTerminateJob(): NULL JobAd! "
@@ -638,7 +639,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
     int int_value = (last_ckpt_time > current_start_time) ?
                         last_ckpt_time : current_start_time;
 
-    if( int_value > 0 ) {
+    if( int_value > 0 && !m_committed_time_finalized ) {
         int job_committed_time = 0;
         jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 		int delta = (int)time(NULL) - int_value;
@@ -651,6 +652,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
 		slot_time += slot_weight * delta;
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
+
+		m_committed_time_finalized = true;
     }
 
 	CommitSuspensionTime(jobAd);
@@ -805,51 +808,21 @@ BaseShadow::emailRemoveEvent( const char* reason )
 
 void BaseShadow::initUserLog()
 {
-	std::string logfilename,dagmanLogFile;
-	int  use_xml;
-
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
 		// the log
 	ASSERT( job_updater );
 
-	std::vector<const char*> logfiles;
-	if ( getPathToUserLog(jobAd, logfilename) ) {
-		logfiles.push_back(logfilename.c_str());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.c_str());
-	}
-	if ( getPathToUserLog(jobAd, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		logfiles.push_back(dagmanLogFile.c_str());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.c_str());
-	}
-	if( !logfiles.empty()) {
-		if( !uLog.initialize (logfiles, cluster, proc, 0)) {
-			MyString hold_reason;
-			hold_reason.formatstr("Failed to initialize user log to %s%s%s",
-				logfilename.c_str(), logfiles.size() == 1 ? "" : " or ",
-				dagmanLogFile.c_str());
-			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJobAndExit(hold_reason.Value(),
-					CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-				// holdJobAndExit() should not return, but just in case it does
-				// EXCEPT
-			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
-		}
-		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) &&
-			use_xml);
-		if(logfiles.size() > 1) {
-			MyString msk;
-			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
-			Tokenize(msk.Value());
-			dprintf(D_FULLDEBUG, "Mask is \"%s\"\n", msk.Value());
-			while(const char* mask = GetNextToken(",",true)) {
-				dprintf(D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
-				uLog.AddToMask(ULogEventNumber(atoi(mask)));
-			}
-		}
-	} else {
-		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
-		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
+	if( !uLog.initialize(*jobAd) ) {
+		// TODO Should we keep inclusion of filename in hold message?
+		std::string hold_reason;
+		formatstr(hold_reason,"Failed to initialize user log");
+		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
+		holdJobAndExit(hold_reason.c_str(),
+				CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+			// holdJobAndExit() should not return, but just in case it does
+			// EXCEPT
+		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
 	}
 }
 
@@ -902,7 +875,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
 			classad::Value value;
 			attr = res + "Provisioned";	 // provisioned value
-			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
@@ -910,20 +883,46 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			}
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
 			attr = "Request"; attr += res;   	// requested value
-			if (jobAd->EvalAttr(attr.c_str(), NULL, value)&& (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value)&& (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
-			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
-			attr = res + "Usage"; // usage value
-			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+			// /*for debugging*/ else { puAd->Assign(attr, 99); }
+
+			attr = res + "Usage"; // (implicitly) peak usage value
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
+
+			attr = res + "AverageUsage"; // average usage
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
+			attr = res + "MemoryUsage"; // special case for GPUs.
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
+			attr = res + "MemoryAverageUsage"; // just in case.
+			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
 			attr = "Assigned"; attr += res;
 			CopyAttribute( attr, *puAd, *jobAd );
 		}
@@ -936,10 +935,12 @@ void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 {
 	struct rusage run_remote_rusage;
+	struct rusage total_remote_rusage;
 	JobTerminatedEvent event;
-	MyString corefile;
+	std::string corefile;
 
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+	memset( &total_remote_rusage, 0, sizeof(struct rusage) );
 
 	switch( exitReason ) {
 	case JOB_EXITED:
@@ -978,10 +979,16 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
 			run_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		}
-
 		event.run_remote_rusage = run_remote_rusage;
-		event.total_remote_rusage = run_remote_rusage;
-	
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+		event.total_remote_rusage = total_remote_rusage;
 		/*
 		  Both the job ad and the terminated event record bytes
 		  transferred from the perspective of the job, not the shadow.
@@ -991,12 +998,14 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		event.total_recvd_bytes = event.recvd_bytes;
 		event.total_sent_bytes = event.sent_bytes;
-	
+
 		if( exited_by_signal == TRUE ) {
 			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
-			event.setCoreFile( corefile.Value() );
+			event.setCoreFile( corefile.c_str() );
 		}
 
+		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
+		event.setToeTag( toeTag );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1009,7 +1018,18 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
-	
+		/* grab usage information out of job ad */
+		double real_value;
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+
+
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signalNumber = exitSignal();
@@ -1022,8 +1042,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		// event.run_local_rusage = r;
 	event.run_remote_rusage = run_remote_rusage;
 		// event.total_local_rusage = r;
-	event.total_remote_rusage = run_remote_rusage;
-	
+	event.total_remote_rusage = total_remote_rusage;
+
 		/*
 		  we want to log the events from the perspective of the user
 		  job, so if the shadow *sent* the bytes, then that means the
@@ -1034,7 +1054,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	event.total_recvd_bytes = prev_run_bytes_recvd + bytesSent();
 	event.total_sent_bytes = prev_run_bytes_sent + bytesReceived();
-	
+
 	if( exitReason == JOB_COREDUMPED ) {
 		event.setCoreFile( core_file_name );
 	}
@@ -1054,29 +1074,33 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		reslist.rewind();
 		char * resname = NULL;
 		while ((resname = reslist.next()) != NULL) {
-			MyString attr;
+			std::string attr;
 			int64_value = -1;
-			attr.formatstr("%s", resname); // provisioned value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(resname, int64_value);
+			attr = resname; // provisioned value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			} 
-			// /*for debugging*/ else { puAd->Assign(resname, 42); }
+			// /*for debugging*/ else { puAd->Assign(attr, 42); }
 			int64_value = -2;
-			attr.formatstr("Request%s", resname);	// requested value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = "Request";
+			attr += resname; // requested value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			}
-			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			// /*for debugging*/ else { puAd->Assign(attr, 99); }
 			int64_value = -3;
-			attr.formatstr("%sUsage", resname); // usage value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = resname;
+			attr += "Usage"; // usage value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			}
 		}
 		event.pusageAd = puAd;
 	}
 #endif
-	
+
+	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
+	event.setToeTag( toeTag );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");
@@ -1173,6 +1197,16 @@ BaseShadow::logRequeueEvent( const char* reason )
 	
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
+				 "(and requeued) event\n" );
+	}
+}
+
+void
+BaseShadow::logDataflowJobSkippedEvent()
+{
+	DataflowJobSkippedEvent event;
+	if (!uLog.writeEvent (&event, jobAd)) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_DATAFLOW_JOB_SKIPPED "
 				 "(and requeued) event\n" );
 	}
 }

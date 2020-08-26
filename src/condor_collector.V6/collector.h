@@ -21,6 +21,7 @@
 #define _COLLECTOR_DAEMON_H_
 
 #include <vector>
+#include <queue>
 
 #include "condor_classad.h"
 #include "totals.h"
@@ -30,7 +31,6 @@
 #include "collector_stats.h"
 #include "dc_collector.h"
 #include "offline_plugin.h"
-#include "Queue.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -43,7 +43,7 @@ class CollectorUniverseStats {
 	void Reset( void );
 	void accumulate( int univ );
 	int getValue( int univ );
-	int getCount( void );
+	int getCount( void ) const;
 	int setMax( CollectorUniverseStats & );
 	const char *getName( int univ );
 	int publish( const char *label, ClassAd *cad );
@@ -96,12 +96,12 @@ public:
 	virtual void Exit();             // main__shutdown_fast
 	virtual void Shutdown();         // main_shutdown_graceful
 	// command handlers
-	static int receive_query_cedar(Service*, int, Stream*);
+	static int receive_query_cedar(int, Stream*);
 	static int receive_query_cedar_worker_thread(void *, Stream*);
 	static AdTypes receive_query_public( int );
-	static int receive_invalidation(Service*, int, Stream*);
-	static int receive_update(Service*, int, Stream*);
-    static int receive_update_expect_ack(Service*, int, Stream*);
+	static int receive_invalidation(int, Stream*);
+	static int receive_update(int, Stream*);
+    static int receive_update_expect_ack(int, Stream*);
 
 	static void process_query_public(AdTypes, ClassAd*, List<ClassAd>*);
 	static ClassAd * process_global_query( const char *constraint, void *arg );
@@ -116,8 +116,6 @@ public:
 	static int reportSubmittorScanFunc(ClassAd*);
 	static int reportMiniStartdScanFunc(ClassAd *cad);
 
-	static void reportToDevelopers();
-
 	static int sigint_handler(Service*, int);
 	static void unixsigint_handler();
 	
@@ -126,6 +124,10 @@ public:
 
 	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 	static void send_classad_to_sock(int cmd, ClassAd* theAd);	
+
+		// Take an incoming session and forward a token request to the schedd.
+	static int schedd_token_request(int, Stream *stream);
+
 
 	// A get method to support SOAP
 	static CollectorEngine & getCollector( void ) { return collector; };
@@ -154,10 +156,10 @@ public:
 		char subsys[15];
 	} pending_query_entry_t;
 
-	static Queue<pending_query_entry_t *> query_queue_high_prio;
-	static Queue<pending_query_entry_t *> query_queue_low_prio;
+	static std::queue<pending_query_entry_t *> query_queue_high_prio;
+	static std::queue<pending_query_entry_t *> query_queue_low_prio;
 	static int ReaperId;
-	static int QueryReaper(Service *, int pid, int exit_status);
+	static int QueryReaper(int pid, int exit_status);
 	static int max_query_workers;  // from config file
 	static int max_pending_query_workers;  // from config file
 	static int max_query_worktime;  // from config file
@@ -202,7 +204,6 @@ protected:
 
 	static ClassAd *ad;
 	static CollectorList* collectorsToUpdate;
-	static DCCollector* worldCollector;
 	static int UpdateTimerId;
 
 	static int stashSocket( ReliSock* sock );
@@ -210,6 +211,7 @@ protected:
 	static class CCBServer *m_ccb_server;
 
 	static bool filterAbsentAds;
+	static bool forwardClaimedPrivateAds;
 
 private:
 

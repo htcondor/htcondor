@@ -23,10 +23,11 @@
 #include "condor_config.h"
 #include "sshd_proc.h"
 #include "starter.h"
+#include "directory.h"
 
 extern CStarter *Starter;
 
-SSHDProc::SSHDProc(ClassAd* job_ad, bool delete_ad) : VanillaProc(job_ad)
+SSHDProc::SSHDProc(ClassAd* job_ad, const std::string &sess, bool delete_ad) : VanillaProc(job_ad), session_dir(sess)
 {
 	m_deleteJobAd = delete_ad;
 }
@@ -67,8 +68,10 @@ SSHDProc::JobReaper(int pid, int status)
 	dprintf(D_FULLDEBUG,"in SSHDProc::JobReaper()\n");
 
 	if (pid == JobPid) {
-			// Could remove sshd session directory, but for now, we leave
-			// it there for easier debugging.
+		Directory d(session_dir.c_str());
+		dprintf(D_ALWAYS, "Removing %s\n",session_dir.c_str());
+		TemporaryPrivSentry s(PRIV_USER);
+		d.Remove_Full_Path(session_dir.c_str());
 	}
 
 	bool interactive = false;
@@ -80,6 +83,7 @@ SSHDProc::JobReaper(int pid, int status)
 		dprintf(D_ALWAYS, "Ssh exitting from interactive docker job, shutting down\n");
 		Starter->RemoteRemove(0);
 		VanillaProc::JobReaper(pid, status);
+		Starter->ShutdownFast();
 		return true;
 	}
 

@@ -37,7 +37,7 @@
 /***************************************************************
  * Base NetworkAdapterBase class
  ***************************************************************/
-NetworkAdapterBase::NetworkAdapterBase (void) throw ()
+NetworkAdapterBase::NetworkAdapterBase (void) noexcept
 {
 	wolResetSupportBits( );
 	wolResetEnableBits( );
@@ -45,7 +45,7 @@ NetworkAdapterBase::NetworkAdapterBase (void) throw ()
 	m_is_primary = false;
 }
 
-NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
+NetworkAdapterBase::~NetworkAdapterBase (void) noexcept
 {
 }
 
@@ -120,7 +120,7 @@ NetworkAdapterBase::doInitialize ()
 }
 
 void
-NetworkAdapterBase::publish ( ClassAd &ad )
+NetworkAdapterBase::publish ( ClassAd &ad ) const
 {
     ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
     ad.Assign ( ATTR_SUBNET_MASK, subnetMask () );
@@ -128,7 +128,7 @@ NetworkAdapterBase::publish ( ClassAd &ad )
 	ad.Assign ( ATTR_IS_WAKE_ENABLED, isWakeEnabled () );
 	ad.Assign ( ATTR_IS_WAKEABLE, isWakeable() );
 
-	MyString tmp;
+	std::string tmp;
 	ad.Assign ( ATTR_WAKE_SUPPORTED_FLAGS, wakeSupportedString(tmp) );
 	ad.Assign ( ATTR_WAKE_ENABLED_FLAGS, wakeEnabledString(tmp) );
 }
@@ -163,20 +163,10 @@ static WolTable wol_table [] =
 
 };
 
-char*
-NetworkAdapterBase::getWolString ( unsigned bits, char *buf, int bufsize ) const
+std::string&
+NetworkAdapterBase::getWolString ( unsigned bits, std::string &s ) const
 {
-	MyString	s;
-	getWolString( bits, s );
-	strncpy( buf, s.Value(), bufsize );
-	buf[bufsize-1] = '\0';
-	return buf;
-}
-
-MyString&
-NetworkAdapterBase::getWolString ( unsigned bits, MyString &s ) const
-{
-	s = "";
+	s.clear();
 	int	count = 0;
 
 	for( unsigned bit = 0;  wol_table[bit].string;  bit++ ) {
@@ -217,8 +207,8 @@ NetworkAdapterBase::wakeSupportedBits () const
 	return m_wol_support_bits;
 }
 
-MyString&
-NetworkAdapterBase::wakeSupportedString ( MyString &s ) const
+std::string&
+NetworkAdapterBase::wakeSupportedString ( std::string &s ) const
 {
 	return getWolString ( m_wol_support_bits, s );
 }
@@ -235,8 +225,8 @@ NetworkAdapterBase::wakeEnabledBits () const
 	return m_wol_enable_bits;
 }
 
-MyString&
-NetworkAdapterBase::wakeEnabledString ( MyString &s ) const
+std::string&
+NetworkAdapterBase::wakeEnabledString ( std::string &s ) const
 {
 	return getWolString ( m_wol_enable_bits, s );
 }
@@ -248,7 +238,7 @@ NetworkAdapterBase::isWakeable () const
 }
 
 bool
-NetworkAdapterBase::getInitStatus ()
+NetworkAdapterBase::getInitStatus () const
 {
 	return m_initialization_status;
 }

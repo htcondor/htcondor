@@ -31,7 +31,7 @@ GenerateConfigFile::operator() () {
 	MyString userConfigSource;
 	param( userConfigName, "USER_CONFIG_FILE" );
 	if(! userConfigName.empty()) {
-		find_user_file( userConfigSource, userConfigName.c_str(), false );
+		find_user_file( userConfigSource, userConfigName.c_str(), false, false );
 		if(! userConfigSource.empty()) {
 			// Create the containing directory if necessary, and only the
 			// containing directory -- don't do anything stupid if the
@@ -85,7 +85,7 @@ GenerateConfigFile::operator() () {
 	std::string value;
 	for( auto i = mapping.begin(); i != mapping.end(); ++i ) {
 		value.clear();
-		scratchpad->LookupString( i->first.c_str(), value );
+		scratchpad->LookupString( i->first, value );
 		if(! value.empty()) {
 			fprintf( configFile, "%s%s%s = %s\n",
 				safeRegion ? safeRegion : "",

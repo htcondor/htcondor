@@ -189,55 +189,55 @@ Email::init()
 
 
 void
-Email::sendHold( ClassAd* ad, const char* reason )
+Email::sendHold( ClassAd* ad, const char* reason)
 {
-	sendAction( ad, reason, "put on hold" );
+	sendAction( ad, reason, "put on hold", JOB_SHOULD_HOLD);
 }
 
 
 void
-Email::sendRemove( ClassAd* ad, const char* reason )
+Email::sendRemove( ClassAd* ad, const char* reason)
 {
-	sendAction( ad, reason, "removed" );
+	sendAction( ad, reason, "removed", -1);
 }
 
 void
-Email::sendRelease( ClassAd* ad, const char* reason )
+Email::sendRelease( ClassAd* ad, const char* reason)
 {
-	sendAction( ad, reason, "released from hold" );
+	sendAction( ad, reason, "released from hold", -1);
 }
 
 void
-Email::sendHoldAdmin( ClassAd* ad, const char* reason )
+Email::sendHoldAdmin( ClassAd* ad, const char* reason)
 {
 	email_admin = true;
-	sendAction( ad, reason, "put on hold" );
+	sendAction( ad, reason, "put on hold", JOB_SHOULD_HOLD);
 }
 
 void
 Email::sendRemoveAdmin( ClassAd* ad, const char* reason )
 {
 	email_admin = true;
-	sendAction( ad, reason, "removed" );
+	sendAction( ad, reason, "removed", -1);
 }
 
 void
 Email::sendReleaseAdmin( ClassAd* ad, const char* reason )
 {
 	email_admin = true;
-	sendAction( ad, reason, "released from hold" );
+	sendAction( ad, reason, "released from hold", -1);
 }
 
 
 void
 Email::sendAction( ClassAd* ad, const char* reason,
-						const char* action )
+						const char* action, int exit_code)
 {
 	if( ! ad ) {
 		EXCEPT( "Email::sendAction() called with NULL ad!" );
 	}
 
-	if( ! open_stream(ad, -1, action) ) {
+	if( ! open_stream(ad, exit_code, action) ) {
 			// nothing to do
 		return;
 	}
@@ -327,10 +327,10 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
 
-	int had_core = FALSE;
+	bool had_core = false;
 	if( ! ad->LookupBool(ATTR_JOB_CORE_DUMPED, had_core) ) {
 		if( exit_reason == JOB_COREDUMPED ) {
-			had_core = TRUE;
+			had_core = true;
 		}
 	}
 
@@ -365,11 +365,11 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	time_t now = time(NULL);
 
 	writeJobId( ad );
-	MyString msg;
+	std::string msg;
 	if( ! printExitString(ad, exit_reason, msg)	) {
 		msg += "exited in an unknown way";
 	}
-	fprintf( fp, "%s\n", msg.Value() );
+	fprintf( fp, "%s\n", msg.c_str() );
 
 	if( had_core ) {
 			// TODO!
@@ -499,7 +499,7 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 	}
 
 	int ad_cluster = 0, ad_proc = 0;
-	int exit_by_signal = FALSE;
+	bool exit_by_signal = false;
 	int code = -1, status = -1;
 	int exitCode = 0, successExitCode = 0;
 

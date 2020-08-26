@@ -1,4 +1,5 @@
-set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp )
+# We'll be deprecating event.cpp shortly.
+set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp daemon_location.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp credd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp exception_utils.cpp )
 
 if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
@@ -46,10 +47,10 @@ if(WINDOWS)
 				#set(PYTHON_LIBRARY_BOOST_TWO_D ${BOOST_LD}/libboost_python-${BOOST_LIB_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib)
 
 				set(THE_BOOST_LIBS
-					optimized ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-						debug ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-					optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-						debug ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 
@@ -64,12 +65,12 @@ if(WINDOWS)
 				get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
 				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
 				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-					set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+				  set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 				else()
-					message(FATAL_ERROR "Can't determine HTCondor version!")
+				  message(FATAL_ERROR "Can't determine HTCondor version!")
 				endif()
 
-				condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+				condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h exception_utils.cpp )
 				target_link_libraries( pyclassad ${CLASSADS_FOUND} ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
 				set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
 				target_include_directories( pyclassad PUBLIC ${PYTHON_INCLUDE_DIRS} )
@@ -97,7 +98,8 @@ if(WINDOWS)
 				target_include_directories( htcondor PUBLIC ${PYTHON_INCLUDE_DIRS} )
 
 				install ( TARGETS pyclassad DESTINATION ${C_LIB} )
-				install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
+				install ( TARGETS htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+				install ( TARGETS classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
 			endif(DEFINED PYTHON_VERSION_STRING) # python27 was found
 
 			if (DEFINED PYTHON3_VERSION_STRING) # python36 was found
@@ -123,16 +125,16 @@ if(WINDOWS)
 				get_filename_component(PYTHON3_LIBRARY_FILENAME ${PYTHON3_LIBRARIES} NAME)
 				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON3_VERSION_STRING})
 				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-					set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+				  set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 				else()
-					message(FATAL_ERROR "Can't determine HTCondor version!")
+				  message(FATAL_ERROR "Can't determine HTCondor version!")
 				endif()
 
 				set(THE_BOOST_LIBS
-					optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-						debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-					optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-						debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 				condor_shared_lib( py3classad classad.cpp classad_wrapper.h exprtree_wrapper.h )
@@ -145,7 +147,8 @@ if(WINDOWS)
 				# the 'debug' keyword indicates that the library following it is for debug builds only
 				add_library( py3classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
 				target_link_libraries( py3classad_module py3classad ${PCRE_FOUND}  ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
-				set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad PDB_NAME py3classad)
+				set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME py3classad PDB_NAME py3classad)
+				set_target_properties(py3classad_module PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
 				target_include_directories( py3classad_module PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
@@ -160,12 +163,14 @@ if(WINDOWS)
 
 				add_library( py3htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} )
 				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
-				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME htcondor PDB_NAME py3htcondor)
+				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME py3htcondor PDB_NAME py3htcondor)
+				set_target_properties( py3htcondor PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME htcondor PDB_NAME py3htcondor)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
 				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
 				install ( TARGETS py3classad DESTINATION ${C_LIB} )
-				install ( TARGETS py3htcondor py3classad_module DESTINATION ${C_PYTHONARCHLIB} )
+				install ( TARGETS py3htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+				install ( TARGETS py3classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
 
 			endif(DEFINED PYTHON3_VERSION_STRING) # python36 was found
 
@@ -173,37 +178,11 @@ if(WINDOWS)
 		if ( WANT_PYTHON_WHEELS )
 			message(STATUS "Setting up python wheels on Windows is not yet supported")
 		endif()
-
-            string( COMPARE EQUAL ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} INSOURCEBUILD)
-            if (BUILD_TESTING)
-              if(NOT INSOURCEBUILD)
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/event_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/event_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/event_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/event_tests.py )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/job.log DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/job.log COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/job.log ${CMAKE_CURRENT_BINARY_DIR}/tests/job.log )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/log_reader_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/log_reader_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/log_reader_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/log_reader_tests.py )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/job_queue.log DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/job_queue.log COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/job_queue.log ${CMAKE_CURRENT_BINARY_DIR}/tests/job_queue.log )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/classad_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/classad_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/classad_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/classad_tests.py )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_version_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_version_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_version_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_version_tests.py )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_tests.py )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update_tests.py )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test.old.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.old.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.old.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test.old.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.old.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.old.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.old.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.old.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_submit.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_submit.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_submit.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_submit.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/submit.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/submit.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_sleep.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_sleep.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_sleep.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_sleep.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_large.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_large.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_large.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_large.ad )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update.py ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update.py )
-                add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test_log.txt DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_log.txt COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_log.txt ${CMAKE_CURRENT_BINARY_DIR}/tests/test_log.txt )
-              endif()
-              add_custom_target ( python_bindings_tests ALL DEPENDS tests/log_reader_tests.py tests/event_tests.py tests/job_queue.log tests/job.log tests/classad_tests.py tests/htcondor_version_tests.py tests/htcondor_tests.py tests/delayed_update_tests.py tests/test.ad tests/test_multiple.ad tests/test.old.ad tests/test_multiple.old.ad tests/submit.ad tests/submit_sleep.ad tests/submit_large.ad tests/delayed_submit.ad tests/delayed_update.py tests/test_log.txt ${CMAKE_CURRENT_BINARY_DIR}/test_driver )
-              enable_testing()
-            endif()
-        endif()
+      endif()
     endif(NOT (MSVC_VERSION LESS 1700))
   endif()
 else()
-  if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT SOLARIS )
+  if ( WITH_PYTHON_BINDINGS AND ( PYTHONLIBS_FOUND OR PYTHON3LIBS_FOUND ) )
     configure_file (
       "${PROJECT_SOURCE_DIR}/src/python-bindings/test_driver.in"
       "${CMAKE_CURRENT_BINARY_DIR}/test_driver"
@@ -216,100 +195,211 @@ else()
       add_definitions ( -DBOOST_NO_AUTO_PTR )
     endif()
 
-    set ( CMAKE_LIBRARY_PATH_ORIG ${CMAKE_LIBRARY_PATH} )
-    set ( CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib64 )
-    set ( CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH_ORIG)
-
-    if ("${PYTHON_VERSION_MAJOR}" MATCHES "3")
-      set ( PYTHON_BOOST_LIB boost_python3 )
-    else()
-      set ( PYTHON_BOOST_LIB boost_python )
+    if (DARWIN)
+        # This is probably a sign that something else needs fixing.
+        # Note that you can NOT set this to DARWIN, because CMake's parser
+        # is terrible.  (It will silently dereference the quoted string
+        # "DARWIN" as the variable in some situations.)
+        set(SYSTEM_NAME "darwin")
     endif()
 
-    include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
-    link_directories(${BOOST_LD})
-
-    get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
-    string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
-    if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-      set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
-    else()
-      message(FATAL_ERROR "Can't determine HTCondor version!")
-    endif()
-    condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h exception_utils.cpp )
-    target_link_libraries( pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
-    set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
-    set_target_properties( pyclassad PROPERTIES COMPILE_FLAGS "-fPIC")
-
-    # Note we do not use condor_shared_lib below because we want a separate install target.
-    add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-    target_link_libraries( classad_module pyclassad -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
-    set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
-    set_target_properties(classad_module PROPERTIES SUFFIX ".so" )
-    if ( NOT CMAKE_SKIP_RPATH )
-      set_target_properties(classad_module PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
-    endif()
-
-    # This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
-    # python functions.
-    add_library( classad_python_user SHARED classad_python_user.cpp )
-    target_link_libraries( classad_python_user condor_utils pyclassad )
-    set_target_properties(classad_python_user PROPERTIES SUFFIX ".so" )
-    if ( NOT CMAKE_SKIP_RPATH )
-      set_target_properties(classad_python_user PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
-    endif()
-    install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
-
-    if ( LINUX )
-      # This is to be used as a collector plugin module which invoke python functions.
-      add_library( collector_python_plugin SHARED collector_plugin.cpp )
-      target_link_libraries( collector_python_plugin condor_utils pyclassad )
-      set_target_properties( collector_python_plugin PROPERTIES SUFFIX ".so" )
-      if ( NOT CMAKE_SKIP_RPATH )
-        set_target_properties( collector_python_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
+    if (DEFINED PYTHON_VERSION_STRING AND PYTHONLIBS_FOUND)
+      if (NOT DEFINED PYTHON_BOOST_LIB )
+        set ( PYTHON_BOOST_LIB boost_python )
+        if (DEFINED SYSTEM_NAME)
+          if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu")
+            set ( PYTHON_BOOST_LIB "boost_python-py${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
+          endif()
+          if (${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2" OR ${SYSTEM_NAME} MATCHES "fc3[0-9]" OR ${SYSTEM_NAME} MATCHES "Debian.*10" OR WANT_PYTHON_WHEELS)
+            set ( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
+          endif()
+          if (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" )
+            set ( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}" )
+          endif()
+          if (${SYSTEM_NAME} MATCHES "fc2[0-9]" )
+            set ( PYTHON_BOOST_LIB "boost_python" )
+          endif()
+          if (${SYSTEM_NAME} MATCHES "darwin")
+              set( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
+          endif()
+        endif()
       endif()
-      install ( TARGETS collector_python_plugin DESTINATION "${C_LIBEXEC}" )
+      include_directories(${BOOST_INCLUDE})
+      link_directories(${BOOST_LD})
+
+      get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
+      string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
+      string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON3_VERSION ${PYTHON3_VERSION_STRING})
+      if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
+        set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+        set( PYCLASSAD3_LIB_NAME "pyclassad${_PYTHON3_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+      else()
+        message(FATAL_ERROR "Can't determine HTCondor version!")
+      endif()
+      condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+      target_include_directories( pyclassad PUBLIC ${PYTHON_INCLUDE_DIRS} )
+      target_link_libraries( pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
+      set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
+      set_target_properties( pyclassad PROPERTIES COMPILE_FLAGS "-fPIC")
+
+      # Note we do not use condor_shared_lib below because we want a separate install target.
+      add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
+      target_include_directories( classad_module PUBLIC ${PYTHON_INCLUDE_DIRS} )
+      target_link_libraries( classad_module pyclassad -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
+      set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
+      set_target_properties(classad_module PROPERTIES SUFFIX "${PYTHON_MODULE_SUFFIX}" )
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties(classad_module PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+      endif()
+
+      # This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
+      # python functions.
+      add_library( classad_python_user SHARED classad_python_user.cpp )
+      target_include_directories( classad_python_user PUBLIC ${PYTHON_INCLUDE_DIRS} )
+      target_link_libraries( classad_python_user condor_utils pyclassad )
+      set_target_properties(classad_python_user PROPERTIES SUFFIX "${PYTHON_MODULE_SUFFIX}" )
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties(classad_python_user PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
+      endif()
+      install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
+
+      if ( LINUX )
+        # This is to be used as a collector plugin module which invoke python functions.
+        add_library( collector_python_plugin SHARED collector_plugin.cpp )
+        target_include_directories( collector_python_plugin PUBLIC ${PYTHON_INCLUDE_DIRS} )
+        target_link_libraries( collector_python_plugin condor_utils pyclassad )
+        set_target_properties( collector_python_plugin PROPERTIES SUFFIX "${PYTHON_MODULE_SUFFIX}" )
+        if ( NOT CMAKE_SKIP_RPATH )
+          set_target_properties( collector_python_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
+        endif()
+        install ( TARGETS collector_python_plugin DESTINATION "${C_LIBEXEC}" )
+      endif()
+
+      # See note below about deprecating log_reader.cpp.
+      set_source_files_properties( dc_tool.cpp classad.cpp classad_module.cpp classad_parsers.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
+      # We should probably deprecate log_reader.cpp (shortly after we deprecate event.cpp).
+      add_library( htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
+      target_include_directories( htcondor PUBLIC ${PYTHON_INCLUDE_DIRS} )
+      target_link_libraries( htcondor pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
+      set_target_properties( htcondor PROPERTIES PREFIX "" )
+      set_target_properties( htcondor PROPERTIES SUFFIX "${PYTHON_MODULE_SUFFIX}" )
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties(htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+      endif()
+
+      install ( TARGETS htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+      install ( TARGETS classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
+
+      if ( DARWIN )
+          set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/classad/classad${PYTHON_MODULE_SUFFIX})" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/htcondor/htcondor${PYTHON_MODULE_SUFFIX})" )
+      endif()
     endif()
 
-    # We'll deprecate log_reader.cpp at some point.
-    set_source_files_properties( dc_tool.cpp classad.cpp classad_module.cpp classad_parsers.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
-    add_library( htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
-    target_link_libraries( htcondor pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
-    set_target_properties( htcondor PROPERTIES PREFIX "" )
-    set_target_properties( htcondor PROPERTIES SUFFIX ".so" )
-    if ( NOT CMAKE_SKIP_RPATH )
-      set_target_properties(htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+    if (DARWIN)
+        # This is probably a sign that something else needs fixing.
+        # Note that you can NOT set this to DARWIN, because CMake's parser
+        # is terrible.  (It will silently dereference the quoted string
+        # "DARWIN" as the variable in some situations.)
+        set(SYSTEM_NAME "darwin")
     endif()
 
-    install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
+    if (DEFINED PYTHON3_VERSION_STRING AND PYTHON3LIBS_FOUND AND NOT ${SYSTEM_NAME} MATCHES "fc27")
+      if (NOT DEFINED PYTHON3_BOOST_LIB)
+        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu")
+          set ( PYTHON3_BOOST_LIB "boost_python-py${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
+        endif()
+        if (${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2" OR ${SYSTEM_NAME} MATCHES "fc3[0-9]" OR ${SYSTEM_NAME} MATCHES "Debian.*10" OR ${SYSTEM_NAME} MATCHES "Ubuntu.*20" OR WANT_PYTHON_WHEELS)
+          set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
+        endif()
+        if (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "fc2[0-9]" )
+          set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}" )
+        endif()
+        if (${SYSTEM_NAME} MATCHES "darwin")
+            set( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
+        endif()
+      endif()
+      include_directories(${BOOST_INCLUDE})
+      link_directories(${BOOST_LD})
 
-    if ( DARWIN )
-        set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
-        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
-        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/classad.so)" )
-        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/htcondor.so)" )
+      get_filename_component(PYTHON3_LIBRARY_FILENAME ${PYTHON3_LIBRARIES} NAME)
+      string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON3_VERSION ${PYTHON3_VERSION_STRING})
+      if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
+          set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON3_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+      else()
+        message(FATAL_ERROR "Can't determine HTCondor version!")
+      endif()
+      condor_shared_lib( py3classad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+      target_include_directories( py3classad PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries( py3classad ${CLASSADS_FOUND} -l${PYTHON3_BOOST_LIB} ${PYTHON3_LIBRARIES} )
+      set_target_properties( py3classad PROPERTIES OUTPUT_NAME "${PY3CLASSAD_LIB_NAME}" )
+      set_target_properties( py3classad PROPERTIES COMPILE_FLAGS "-fPIC")
+
+      # Note we do not use condor_shared_lib below because we want a separate install target.
+      add_library( py3classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
+      target_include_directories( py3classad_module PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries( py3classad_module py3classad -l${PYTHON3_BOOST_LIB} ${PYTHON3_LIBRARIES} )
+      set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
+      set_target_properties(py3classad_module PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties(py3classad_module PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+      endif()
+
+      # This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
+      # python functions.
+      add_library( classad_python3_user SHARED classad_python_user.cpp )
+      target_include_directories( classad_python3_user PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries( classad_python3_user condor_utils py3classad )
+      set_target_properties( classad_python3_user PROPERTIES OUTPUT_NAME classad_python_user )
+      set_target_properties( classad_python3_user PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties( classad_python3_user PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}" )
+      endif()
+      install ( TARGETS classad_python3_user DESTINATION "${C_LIBEXEC}" )
+
+      if ( LINUX )
+        # This is to be used as a collector plugin module which invoke python functions.
+        add_library( collector_python3_plugin SHARED collector_plugin.cpp )
+        target_include_directories( collector_python3_plugin PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+        target_link_libraries( collector_python3_plugin condor_utils py3classad )
+	set_target_properties( collector_python3_plugin PROPERTIES OUTPUT_NAME collector_python_plugin )
+        set_target_properties( collector_python3_plugin PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+        if ( NOT CMAKE_SKIP_RPATH )
+          set_target_properties( collector_python3_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
+        endif()
+        install ( TARGETS collector_python3_plugin DESTINATION "${C_LIBEXEC}" )
+      endif()
+
+      # See note below about deprecating log_reader.cpp.
+      set_source_files_properties( dc_tool.cpp classad.cpp classad_module.cpp classad_parsers.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
+      # We should probably deprecate log_reader.cpp (shortly after we deprecate event.cpp).
+      add_library( py3htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
+      target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries( py3htcondor py3classad condor_utils -l${PYTHON3_BOOST_LIB} ${PYTHON3_LIBRARIES} )
+      set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME htcondor )
+      set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties(py3htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+      endif()
+
+      install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
+      install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
+
+      if ( DARWIN )
+          set_target_properties( py3classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD3_LIB_NAME}.dylib)" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad${PYTHON3_MODULE_SUFFIX})" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor/htcondor${PYTHON3_MODULE_SUFFIX})" )
+      endif()
     endif()
+
 
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
-
-      # first, check if building in source
-      set( PYPI_BUILD_DIR "${CMAKE_BINARY_DIR}/build/packaging/pypi" )
-      set( PYPI_SOURCE_DIR "${CMAKE_SOURCE_DIR}/build/packaging/pypi" )
-      string( COMPARE EQUAL ${PYPI_BUILD_DIR} ${PYPI_SOURCE_DIR} INSOURCEBUILD)
-
-      # next, set up the directory structure
-      add_custom_target( pypi_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPI_BUILD_DIR}" )
-      add_custom_target( pypi_classad_dir DEPENDS pypi_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPI_BUILD_DIR}/classad" )
-      add_custom_target( pypi_htcondor_dir DEPENDS pypi_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPI_BUILD_DIR}/htcondor" )
-
-      if( NOT INSOURCEBUILD ) # if not building in source, copy over the wheel packaging files
-        add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/setup.py ${PYPI_BUILD_DIR}/setup.py )
-        add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/setup.cfg ${PYPI_BUILD_DIR}/setup.cfg )
-        add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/README.rst ${PYPI_BUILD_DIR}/README.rst )
-        add_custom_command( TARGET pypi_classad_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/classad/__init__.py ${PYPI_BUILD_DIR}/classad/__init__.py )
-        add_custom_command( TARGET pypi_htcondor_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/htcondor/__init__.py ${PYPI_BUILD_DIR}/htcondor/__init__.py )
-      endif()
+      set ( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
+      include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
 
       # the pyclassad library and the classad and htcondor modules should not link libpython
       # instead, the user's python interpreter will look for any such missing symbols
@@ -322,75 +412,37 @@ else()
       endif()
 
       # build libpyclassad *not* linked against libpython
-      add_library( _pyclassad SHARED classad.cpp classad_wrapper.h exprtree_wrapper.h )
-      target_link_libraries( _pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
+      add_library( wheel_pyclassad SHARED classad.cpp classad_wrapper.h exprtree_wrapper.h )
+      target_link_libraries( wheel_pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       if ( DARWIN )
-        set_target_properties( _pyclassad PROPERTIES SUFFIX ".dylib" )
-        set_target_properties( _pyclassad PROPERTIES INSTALL_NAME_DIR "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
+        set_target_properties( wheel_pyclassad PROPERTIES SUFFIX ".dylib" )
+        set_target_properties( wheel_pyclassad PROPERTIES INSTALL_NAME_DIR "${WHEEL_BINARY_DIR}/htcondor/htcondor_libs" )
       else()
-        set_target_properties( _pyclassad PROPERTIES SUFFIX ".so" )
-        set_target_properties( _pyclassad PROPERTIES INSTALL_RPATH "$ORIGIN" )
+        set_target_properties( wheel_pyclassad PROPERTIES SUFFIX ".so" )
+        set_target_properties( wheel_pyclassad PROPERTIES INSTALL_RPATH "$ORIGIN" )
       endif()
-      set_target_properties( _pyclassad PROPERTIES PREFIX "lib" OUTPUT_NAME "${PYCLASSAD_LIB_NAME}_wheel" )
-      set_target_properties( _pyclassad PROPERTIES COMPILE_FLAGS "-fPIC" )
+      set_target_properties( wheel_pyclassad PROPERTIES PREFIX "lib" OUTPUT_NAME "${PYCLASSAD_LIB_NAME}_wheel" )
+      set_target_properties( wheel_pyclassad PROPERTIES COMPILE_FLAGS "-fPIC" )
 
       # next, build the classad module *not* linked against libpython
-      add_library( _classad_module SHARED _classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-      add_dependencies( _classad_module pypi_classad_dir )
-      target_link_libraries( _classad_module _pyclassad -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
-      set_target_properties( _classad_module PROPERTIES PREFIX "" OUTPUT_NAME "_classad" )
-      set_target_properties( _classad_module PROPERTIES SUFFIX ".so" )
-      set_target_properties( _classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/classad" )
+      add_library( wheel_classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
+      target_link_libraries( wheel_classad_module wheel_pyclassad -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
+      set_target_properties( wheel_classad_module PROPERTIES PREFIX "" OUTPUT_NAME "classad" SUFFIX ".so")
+      set_target_properties( wheel_classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad" )
       if ( NOT DARWIN )
-        set_target_properties( _classad_module PROPERTIES INSTALL_RPATH "$ORIGIN/../htcondor/condor_libs" )
+        set_target_properties( wheel_classad_module PROPERTIES INSTALL_RPATH "$ORIGIN/../htcondor/htcondor_libs" )
       endif()
 
       # finally, build the htcondor module *not* linked against libpython
       # See note above about deprecating log_reader.cpp.
-      add_library( _htcondor SHARED _htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
-      add_dependencies( _htcondor pypi_htcondor_dir )
-      target_link_libraries( _htcondor _pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
-      set_target_properties( _htcondor PROPERTIES PREFIX "" )
-      set_target_properties( _htcondor PROPERTIES SUFFIX ".so" )
-      set_target_properties( _htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/htcondor" )
+      add_library( wheel_htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
+      target_link_libraries( wheel_htcondor wheel_pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
+      set_target_properties( wheel_htcondor PROPERTIES PREFIX "" OUTPUT_NAME "htcondor" SUFFIX ".so")
+      set_target_properties( wheel_htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor" )
       if ( NOT DARWIN )
-        set_target_properties( _htcondor PROPERTIES INSTALL_RPATH "$ORIGIN/condor_libs" )
+        set_target_properties( wheel_htcondor PROPERTIES INSTALL_RPATH "$ORIGIN/htcondor_libs" )
       endif()
 
     endif()
-
-    string( COMPARE EQUAL ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} INSOURCEBUILD)
-    if (BUILD_TESTING)
-      if(NOT INSOURCEBUILD)
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/event_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/event_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/event_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/event_tests.py )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/job.log DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/job.log COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/job.log ${CMAKE_CURRENT_BINARY_DIR}/tests/job.log )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/log_reader_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/log_reader_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/log_reader_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/log_reader_tests.py )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/job_queue.log DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/job_queue.log COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/job_queue.log ${CMAKE_CURRENT_BINARY_DIR}/tests/job_queue.log )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/classad_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/classad_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/classad_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/classad_tests.py )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_version_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_version_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_version_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_version_tests.py )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/htcondor_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/htcondor_tests.py )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update_tests.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update_tests.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update_tests.py ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update_tests.py )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test.old.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.old.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.old.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test.old.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.old.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.old.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.old.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.old.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_multiple.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/test_multiple.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_submit.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_submit.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_submit.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_submit.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/submit.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/submit.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_sleep.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_sleep.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_sleep.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_sleep.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_large.ad DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_large.ad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/submit_large.ad ${CMAKE_CURRENT_BINARY_DIR}/tests/submit_large.ad )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update.py COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/delayed_update.py ${CMAKE_CURRENT_BINARY_DIR}/tests/delayed_update.py )
-        add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/tests/test_log.txt DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_log.txt COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_log.txt ${CMAKE_CURRENT_BINARY_DIR}/tests/test_log.txt )
-      endif()
-      add_custom_target ( python_bindings_tests ALL DEPENDS tests/log_reader_tests.py tests/event_tests.py tests/job_queue.log tests/job.log tests/classad_tests.py tests/htcondor_version_tests.py tests/htcondor_tests.py tests/delayed_update_tests.py tests/test.ad tests/test_multiple.ad tests/test.old.ad tests/test_multiple.old.ad tests/submit.ad tests/submit_sleep.ad tests/submit_large.ad tests/delayed_submit.ad tests/delayed_update.py tests/test_log.txt ${CMAKE_CURRENT_BINARY_DIR}/test_driver )
-      enable_testing()
-      if ( LINUX OR DARWIN )
-        if ( ${SYSTEM_NAME} MATCHES "rhel5" )
-            message(STATUS "classad_test python bindings tests removed for RedHat 5 OS")
-        else()
-            add_test(python_classad_tests test_driver tests/classad_tests.py -v)
-            add_test(python_htcondor_version_tests test_driver tests/htcondor_version_tests.py -v)
-        endif()
-      endif ( LINUX OR DARWIN )
-    endif (BUILD_TESTING)
-  endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT SOLARIS )
+  endif ( WITH_PYTHON_BINDINGS AND ( PYTHONLIBS_FOUND OR PYTHON3LIBS_FOUND ) )
 endif(WINDOWS)

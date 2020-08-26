@@ -135,10 +135,10 @@ protected:
 						   StringList &other,
 						   StringList &all,
 						   int &selfId );
-    bool  checkList(List<int>*);
+    bool  checkList(List<int>*) const;
     static void removeAllFromList(List<int>*);
     void clearBuffers(void);
-    void printStep(const char *curState,const char *nextState);
+    void printStep(const char *curState,const char *nextState) const;
     //char* commandToString(int command);
 
     void init(void);
@@ -173,9 +173,9 @@ protected:
     // timer handler
     void updateCollectors(void);
     // updates collectors upon changing from/to leader state
-    void updateCollectorsClassAd( const MyString& isHadActive );
+    void updateCollectorsClassAd( const std::string& isHadActive );
 
-	MyString    m_name;
+	std::string    m_name;
 	ClassAd		m_classAd;
 
     // info about our central manager

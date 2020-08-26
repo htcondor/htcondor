@@ -27,23 +27,18 @@
 
 ClassAd * java_detect()
 {
-	MyString path;
+	std::string path;
 	ArgList args;
-	MyString command;
-	MyString args_string;
-	MyString args_error;
 
 #ifndef WIN32
 	sigset_t mask;
 #endif
 
 	if(!java_config(path,&args,0)) return 0;
-	int benchmark_time = param_integer("JAVA_BENCHMARK_TIME",0);
 
-	args.InsertArg(path.Value(),0);
+	args.InsertArg(path.c_str(),0);
 	args.AppendArg("CondorJavaInfo");
 	args.AppendArg("old");
-	args.AppendArg(benchmark_time);
 
 	/*
 	N.B. Certain version of Java do not set up their own signal

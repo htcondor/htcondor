@@ -1,4 +1,0 @@
-Reference Index
-===============
-
-.. reference-index::

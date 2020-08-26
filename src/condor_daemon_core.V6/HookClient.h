@@ -31,10 +31,10 @@ public:
 	virtual ~HookClient();
 
 		// Functions to retrieve data about this client.
-	int getPid() {return m_pid;};
+	int getPid() const {return m_pid;};
 	const char* path() {return (const char*)m_hook_path;};
 	HookType type() {return m_hook_type;};
-	bool wantsOutput() {return m_wants_output;};
+	bool wantsOutput() const {return m_wants_output;};
 	MyString* getStdOut();
 	MyString* getStdErr();
 

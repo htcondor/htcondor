@@ -34,6 +34,7 @@ public:
 	~addrinfo_iterator();
 	addrinfo* next();
 	addrinfo_iterator& operator= (const addrinfo_iterator& rhs);
+	addrinfo_iterator & operator=(addrinfo_iterator &&rhs) noexcept ;
 	void reset();
 protected:
 	shared_context* cxt_;

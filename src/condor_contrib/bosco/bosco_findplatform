@@ -1,5 +1,7 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #Marco Mambelli - first version 10/8/2012 
+
+from __future__ import print_function
 
 import sys
 import os
@@ -10,27 +12,29 @@ UNKNOWN="UNKNOWN"
 UNSUPPORTED="UNSUPPORTED"
 RH6="RH6"
 RH7="RH7"
+RH8="RH8"
 OSX="MAC"
 OSX_UNSUPPORTED="UNSUPPORTED"
-DEB8="DEB8"
 DEB9="DEB9"
-UBUNTU14="UBUNTU14"
+DEB10="DEB10"
 UBUNTU16="UBUNTU16"
 UBUNTU18="UBUNTU18"
+UBUNTU20="UBUNTU20"
 
-SUPPORTED_OSX = ['10.10', '10.11', '10.12', '10.13', '10.14']
-SUPPORTED_PLATFORMS = [ RH6, RH7, OSX, DEB8, DEB9, UBUNTU14, UBUNTU16, UBUNTU18 ]
+SUPPORTED_OSX = ['10.13', '10.14', '10.15']
+SUPPORTED_PLATFORMS = [ RH6, RH7, RH8, OSX, DEB9, DEB10, UBUNTU16, UBUNTU18, UBUNTU20 ]
 
 # download URLs for the different platforms
 URL_DICT={
-  DEB8: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Debian8.tar.gz",
-  DEB9: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Debian9.tar.gz",
-  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
-  RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
-  RH7: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat7.tar.gz",
-  UBUNTU14: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu14.tar.gz",
-  UBUNTU16: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
-  UBUNTU18: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu18.tar.gz",
+  DEB9: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian9.tar.gz",
+  DEB10: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian10.tar.gz",
+  OSX: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
+  RH6: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
+  RH7: "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat7.tar.gz",
+  RH8: "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat8.tar.gz",
+  UBUNTU16: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
+  UBUNTU18: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu18.tar.gz",
+  UBUNTU20: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu20.tar.gz",
 }
 
 BIT32="32bit"
@@ -74,6 +78,8 @@ def findversion_redhat(detail=False):
       return RH6
     if 'release 7.' in line:
       return RH7
+    if 'release 8.' in line:
+      return RH8
     return UNSUPPORTED
   return UNKNOWN
 
@@ -111,12 +117,14 @@ Codename:    oneiric
           retv=DEB8
         if line[len('DISTRIB_RELEASE='):].startswith('9.'):
           retv=DEB9
-        if line[len('DISTRIB_RELEASE='):].startswith('14.'):
-          retv=UBUNTU14
+        if line[len('DISTRIB_RELEASE='):].startswith('10.'):
+          retv=DEB10
         if line[len('DISTRIB_RELEASE='):].startswith('16.'):
           retv=UBUNTU16
         if line[len('DISTRIB_RELEASE='):].startswith('18.'):
           retv=UBUNTU18
+        if line[len('DISTRIB_RELEASE='):].startswith('20.'):
+          retv=UBUNTU20
   return retv
 
 def findversion():
@@ -140,18 +148,29 @@ def findversion():
           return RH6
         if mydist[1].startswith('7.'):
           return RH7
+        if mydist[1].startswith('8.'):
+          return RH8
       if mydist[0].lower()=='debian':
         if mydist[1].startswith('8.'):
           return DEB8
         if mydist[1].startswith('9.'):
           return DEB9
+        if mydist[1].startswith('10.'):
+          return DEB10
       if mydist[0].lower()=='ubuntu':
-        if mydist[1].startswith('14'):
-          return UBUNTU14
         if mydist[1].startswith('16'):
           return UBUNTU16
         if mydist[1].startswith('18'):
           return UBUNTU18
+        if mydist[1].startswith('20'):
+          return UBUNTU20
+      if mydist[0].lower()=='linuxmint':
+        if mydist[1].startswith('18'):
+          return UBUNTU16
+        if mydist[1].startswith('19'):
+          return UBUNTU18
+        if mydist[1].startswith('20'):
+          return UBUNTU20
     if os.path.isfile('/etc/redhat-release'):
       return findversion_redhat()
     elif os.path.isfile('/etc/lsb-release'):
@@ -179,14 +198,14 @@ def install(platform, multiuser=False, options=None):
   import commands
   # make tmp dir
   if not platform in SUPPORTED_PLATFORMS:
-      print "Your system is not supported. Aborting the installation."
+      print("Your system is not supported. Aborting the installation.")
       sys.exit(1)
   try:
     tmp_dir = tempfile.mkdtemp() # create dir
     # download bosco and save directly to file
     condor_dir = ""
     try:
-      print "Downloading BOSCO from %s" % URL_DICT[platform]
+      print("Downloading BOSCO from %s" % URL_DICT[platform])
       response = urllib2.urlopen(URL_DICT[platform])
       fname = os.path.join(tmp_dir, 'bosco-download.tar.gz')
       f = open(fname, 'wb')
@@ -201,10 +220,10 @@ def install(platform, multiuser=False, options=None):
     except:
       (etype, evalue, etraceback) = sys.exc_info()
       if evalue:
-        print evalue
+        print(evalue)
       condor_dir_list = []
     if not condor_dir_list:
-      print "The download and extraction of BOSCO failed. Aborting the installation."
+      print("The download and extraction of BOSCO failed. Aborting the installation.")
       sys.exit(1)
     # run bosco_install (pass parameters)
     options_list = ""
@@ -213,11 +232,11 @@ def install(platform, multiuser=False, options=None):
     if not options_list:
       if multiuser:
         options_list = "--prefix=/opt/bosco"
-        print "Installing BOSCO in /opt/bosco"
+        print("Installing BOSCO in /opt/bosco")
       else:
-        print "Installing BOSCO in ~/bosco"
+        print("Installing BOSCO in ~/bosco")
     else:
-      print "Installing BOSCO with: ./bosco_install %s" % options_list
+      print("Installing BOSCO with: ./bosco_install %s" % options_list)
     cmd_list = [#"curl -s -o %s/bosco-download.tar.gz %s" % (tmp_dir, URL_DICT[platform]),
                 #"tar xzf %s/bosco-download.tar.gz -C %s" % (tmp_dir, tmp_dir),
                 "cd %s/%s; ./bosco_install %s" % (tmp_dir, condor_dir_list[0], options_list)
@@ -225,20 +244,20 @@ def install(platform, multiuser=False, options=None):
     for cmd in cmd_list:
       ec, out = commands.getstatusoutput(cmd)
       if ec != 0:
-        print "Error installing BOSCO"
-        print "Command %s failed:\n%s" % (cmd, out)
-        print "Aborting BOSCO installation"
+        print("Error installing BOSCO")
+        print("Command %s failed:\n%s" % (cmd, out))
+        print("Aborting BOSCO installation")
         sys.exit(1)
       else:
-        print out
+        print(out)
   finally:
     try:
       shutil.rmtree(tmp_dir) # delete directory
-    except OSError, e:
+    except OSError as e:
       if e.errno != 2: # code 2 - no such file or directory
         raise
   # rm itself and exit or not?  
-  print "Congratulations, you installed BOSCO succesfully!"
+  print("Congratulations, you installed BOSCO succesfully!")
   return
    
 if __name__ == "__main__":
@@ -263,35 +282,35 @@ if __name__ == "__main__":
                      "       %s [install options]" % INSTALLER_NAME
                     ]) 
   parser = optparse.OptionParser(usage=usage)
-  parser.add_option('-u', '--url', help='return the download URL for the current platform', dest='url', \
+  parser.add_option('-u', '--url', help='return the download URL for the current platform', dest='url',
                     default=False, action='store_true')
-  parser.add_option('-b', '--bit', help='return if the architecture is 32bit or 64bit', dest='bit', \
+  parser.add_option('-b', '--bit', help='return if the architecture is 32bit or 64bit', dest='bit',
                     default=False, action='store_true')
-  parser.add_option('-f', '--full', help='return the full version string form the OS', dest='details', \
+  parser.add_option('-f', '--full', help='return the full version string form the OS', dest='details',
                     default=False, action='store_true')
-  parser.add_option('--force', help='force a specific platform %s' % SUPPORTED_PLATFORMS, dest='force', \
+  parser.add_option('--force', help='force a specific platform %s' % SUPPORTED_PLATFORMS, dest='force',
                     )
-  parser.add_option('-i', '--install', help='basic bosco installation for the current platform', dest='install', \
+  parser.add_option('-i', '--install', help='basic bosco installation for the current platform', dest='install',
                     default=False, action='store_true')
   (opts, args) = parser.parse_args(my_par)
   # options consistency
   if opts.force and not opts.force in SUPPORTED_PLATFORMS:
-    print "The platform %s is not supported.\n" % opts.force
+    print("The platform %s is not supported.\n" % opts.force)
     parser.print_help()
     sys.exit(-1)
   if opts.details and opts.bit:
-    print "Option full and bit are mutually exclusive\n"
+    print("Option full and bit are mutually exclusive\n")
     parser.print_help()
     sys.exit(-1)
   # run
   if opts.bit:
     if platform.architecture()[0]=='64bit':
-      print BIT64
+      print(BIT64)
     else:
-      print BIT32
+      print(BIT32)
     sys.exit(0)
   elif opts.details:
-    print findversion_detail()
+    print(findversion_detail())
   else:
     if opts.force:
       res = opts.force
@@ -301,6 +320,6 @@ if __name__ == "__main__":
       install(res, False, install_par)
       sys.exit(0)
     elif opts.url:
-      print URL_DICT[res]
+      print(URL_DICT[res])
     else:
-      print res
+      print(res)

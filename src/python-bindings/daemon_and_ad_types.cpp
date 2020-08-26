@@ -7,7 +7,48 @@ using namespace boost::python;
 
 void export_daemon_and_ad_types()
 {
-    enum_<daemon_t>("DaemonTypes")
+    enum_<daemon_t>("DaemonTypes",
+            R"C0ND0R(
+            An enumeration of different types of daemons available to HTCondor.
+
+            The values of the enumeration are:
+
+            .. attribute:: None
+            .. attribute:: Any
+
+                Any type of daemon; useful when specifying queries where all matching
+                daemons should be returned.
+
+            .. attribute:: Master
+
+                Ads representing the *condor_master*.
+
+            .. attribute:: Schedd
+
+                Ads representing the *condor_schedd*.
+
+            .. attribute:: Startd
+
+                Ads representing the resources on a worker node.
+
+            .. attribute:: Collector
+
+                Ads representing the *condor_collector*.
+
+            .. attribute:: Negotiator
+
+                Ads representing the *condor_negotiator*.
+
+            .. attribute:: HAD
+
+                Ads representing the high-availability daemons (*condor_had*).
+
+            .. attribute:: Generic
+
+                All other ads that are not categorized as above.
+
+            .. attribute:: Credd
+            )C0ND0R")
         .value("None", DT_NONE)
         .value("Any", DT_ANY)
         .value("Master", DT_MASTER)
@@ -20,7 +61,71 @@ void export_daemon_and_ad_types()
         .value("Credd", DT_CREDD)
         ;
 
-    enum_<AdTypes>("AdTypes")
+    enum_<AdTypes>("AdTypes",
+            R"C0ND0R(
+            A list of different types of ads that may be kept in the *condor_collector*.
+
+            The values of the enumeration are:
+
+            .. attribute:: None
+            .. attribute:: Any
+
+                Type representing any matching ad.  Useful for queries that match everything
+                in the collector.
+
+            .. attribute:: Generic
+
+                Generic ads, associated with no particular daemon.
+
+            .. attribute:: Startd
+
+                Startd ads, produced by the *condor_startd* daemon.  Represents the
+                available slots managed by the startd.
+
+            .. attribute:: StartdPrivate
+
+                The "private" ads, containing the claim IDs associated with a particular
+                slot.  These require additional authorization to read as the claim ID
+                may be used to run jobs on the slot.
+
+            .. attribute:: Schedd
+
+                Schedd ads, produced by the *condor_schedd* daemon.
+
+            .. attribute:: Master
+
+                Master ads, produced by the *condor_master* daemon.
+
+            .. attribute:: Collector
+
+                Ads from the *condor_collector* daemon.
+
+            .. attribute:: Negotiator
+
+                Negotiator ads, produced by the *condor_negotiator* daemon.
+
+            .. attribute:: Submitter
+
+                Ads describing the submitters with available jobs to run; produced by
+                the *condor_schedd* and read by the *condor_negotiator* to determine
+                which users need a new negotiation cycle.
+
+            .. attribute:: Grid
+
+                Ads associated with the grid universe.
+
+            .. attribute:: HAD
+
+                Ads produced by the *condor_had*.
+
+            .. attribute:: License
+
+                License ads. These do not appear to be used by any modern HTCondor daemon.
+
+            .. attribute:: Credd
+            .. attribute:: Defrag
+            .. attribute:: Accounting
+            )C0ND0R")
         .value("None", NO_AD)
         .value("Any", ANY_AD)
         .value("Generic", GENERIC_AD)

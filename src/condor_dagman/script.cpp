@@ -86,16 +86,16 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
 
-		MyString arg;
+		std::string arg;
 
 		if ( !strcasecmp( token, "$JOB" ) ) {
 			arg += _node->GetJobName();
 
 		} else if ( !strcasecmp( token, "$RETRY" ) ) {
-            arg += IntToStr( _node->GetRetries() );
+            arg += std::to_string( _node->GetRetries() );
 
 		} else if ( !strcasecmp( token, "$MAX_RETRIES" ) ) {
-            arg += IntToStr( _node->GetRetryMax() );
+            arg += std::to_string( _node->GetRetryMax() );
 
         } else if ( !strcasecmp( token, "$JOBID" ) ) {
 			if ( !_post ) {
@@ -104,9 +104,9 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 				check_warning_strictness( DAG_STRICT_1 );
 				arg += token;
 			} else {
-				arg += IntToStr( _node->GetCluster() );
+				arg += std::to_string( _node->GetCluster() );
             	arg += '.';
-				arg += IntToStr( _node->GetProc() );
+				arg += std::to_string( _node->GetProc() );
 			}
 
         } else if (!strcasecmp(token, "$RETURN")) {
@@ -115,7 +115,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 							"not be used as a PRE script argument!\n" );
 				check_warning_strictness( DAG_STRICT_1 );
 			}
-			arg += IntToStr( _retValJob );
+			arg += std::to_string( _retValJob );
 
 		} else if (!strcasecmp( token, "$PRE_SCRIPT_RETURN" ) ) {
 			if ( !_post ) {
@@ -123,13 +123,13 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 						"not be used as a PRE script argument!\n" );
 				check_warning_strictness( DAG_STRICT_1 );
 			}
-			arg += IntToStr( _retValScript );
+			arg += std::to_string( _retValScript );
 
 		} else if (!strcasecmp(token, "$DAG_STATUS")) {
-			arg += IntToStr( dagStatus );
+			arg += std::to_string( dagStatus );
 
 		} else if (!strcasecmp(token, "$FAILED_COUNT")) {
-			arg += IntToStr( failedCount );
+			arg += std::to_string( failedCount );
 
 		} else if (token[0] == '$') {
 			// This should probably be a fatal error when -strict is
@@ -143,7 +143,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 			arg += token;
 		}
 
-		args.AppendArg(arg.Value());
+		args.AppendArg(arg.c_str());
     }
 
 	_pid = daemonCore->Create_Process( cmd, args,

@@ -172,8 +172,13 @@ if(@testlist) {
     # we were explicitly given a # list on the command-line
     foreach my $test (@testlist) {
         debug("    $test\n", 6);
-        if($test !~ /.*\.run$/) {
-            $test = "$test.run";
+        if($test !~ /.*\.\w+$/) {  # i.e., no extension
+            if (-s "$test.run") {
+                $test = "$test.run";
+            }
+            elsif (-s "$test.py") {
+                $test = "$test.py";
+            }
         }
 
         push(@test_suite, $test);
@@ -326,10 +331,10 @@ sub DoChild
     }
 
     $_ = $test_program;
-    s/\.run//;
+    s/\.\w+$//;
     my $testname = $_;
 
-    my $needs = load_test_requirements($testname);
+    my $needs = load_test_requirements($testname, $test_program);
     if(exists($needs->{personal})) {
         print "run_test $$: $testname requires a running HTCondor, checking...\n";
         print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
@@ -359,9 +364,49 @@ sub DoChild
         print "run_test $$: $testname is python, checking python bindings\n";
         SetupPythonPath();
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
-        $perl = "python";
+        $perl = "python3";
+
+        if ($iswindows) {
+            my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
+
+            # use 32 bit python if we have a 32 bit htcondor python module
+            my $reldir = `condor_config_val release_dir`; chomp $reldir;
+            my $relpy = "$reldir\\lib\\python";
+            if( -f "$relpy\\htcondor\\htcondor.cp36-win32.pyd" ) {
+                $regkey = "HKLM\\Software\\wow6432node\\Python\\PythonCore\\3.6\\InstallPath" 
+            }
+
+            my @reglines = `reg query $regkey /ve`;
+            for my $line (@reglines) {
+                if ($line =~ /REG_SZ\s+(.+)$/) {
+                    print "\tfound python 3.6 install dir : '$1'\n";
+                   	# Since we're using the full path, 'python.exe' will
+                   	# always by the right Python version, and some of the
+                   	# installs don't have a 'python3.exe'.
+                    $perl = "$1python.exe";
+                    last;
+                }
+            }
+        }
+
         print "\tPython version: ";
-        system ("python --version");
+        system ("$perl --version");
+        print "\tPython exe: ";
+        system ("$perl -c \"import sys; print(sys.executable)\"");
+        print "\tPython-bindings version: ";
+        system ("$perl -c \"import htcondor; print(htcondor.version())\"");
+    }
+
+    if (exists($needs->{pytest})) {
+        print "run_test $$: $testname is pytest, checking pytest version\n";
+        if($iswindows){
+            system( "$perl -m pytest -s --version" );
+        } else {
+            system( "$perl -m pytest --version 2>&1" );
+        }
+        # This only works when a test file or directory is appended, because
+        # --base-test-dir is an option our conftest.py adds.
+        $perl = "$perl -m pytest -s --base-test-dir ${BaseDir}/test-dirs/";
     }
 
     my $test_starttime = time();
@@ -387,8 +432,6 @@ sub DoChild
     my $runout = "";
     my $cmdout = "";
 
-    my $test_program_out = "";
-
     alarm($test_retirement);
     if(defined $test_id) {
         $log = $testname . ".$test_id" . ".log";
@@ -397,7 +440,6 @@ sub DoChild
         $err = $testname . ".$test_id" . ".err";
         $runout = $testname . ".$test_id" . ".run.out";
         $cmdout = $testname . ".$test_id" . ".cmd.out";
-        $test_program_out = "$test_program.$test_id.out";
     } else {
         $log = $testname . ".log";
         $cmd = $testname . ".cmd";
@@ -405,7 +447,6 @@ sub DoChild
         $err = $testname . ".err";
         $runout = $testname . ".run.out";
         $cmdout = $testname . ".cmd.out";
-        $test_program_out = "$test_program.out";
     }
 
     my $res;
@@ -414,10 +455,10 @@ sub DoChild
         my $dtm = ""; if (defined $ENV{TIMED_CMD_DEBUG_WAIT}) {$dtm = ":$ENV{TIMED_CMD_DEBUG_WAIT}";}
         my $verb = ($hush == 0) ? "" : "-v";
         my $timeout = "-t 12M";
-        $res = system("timed_cmd.exe -jgd$dtm $verb -o $test_program_out $timeout $perl $test_program");
+        $res = system("timed_cmd.exe -jgd$dtm $verb -o $runout $timeout $perl $test_program");
     } else {
-        if( $hush == 0 ) { debug( "Child Starting: $perl $test_program > $test_program_out\n",6); }
-        $res = system("$perl $test_program > $test_program_out 2>&1");
+        if( $hush == 0 ) { debug( "Child Starting: $perl $test_program > $runout\n",6); }
+        $res = system("$perl $test_program > $runout 2>&1");
     }
 
     my $newlog =  $piddir . "/" . $log;
@@ -426,7 +467,6 @@ sub DoChild
     my $newerr =  $piddir . "/" . $err;
     my $newrunout =  $piddir . "/" . $runout;
     my $newcmdout =  $piddir . "/" . $cmdout;
-
 
     # generate file names
     copy($log, $newlog);
@@ -458,9 +498,10 @@ sub debug {
 sub load_test_requirements
 {
     my $name = shift;
+    my $program = shift;
     my $requirements;
 
-    if (open(TF, "<${name}.run")) {
+    if (open(TF, "<${program}")) {
         my $record = 0;
         my $triplequote = 0;
         my $conf = "";
@@ -475,12 +516,17 @@ sub load_test_requirements
                 }
             }
 
+            # look at the shebang line to decide what executable to run with
             if($line =~ /^\#\!/) {
                 if ($line =~ /python/) { $requirements->{python} = 1; }
+                elsif ($line =~ /pytest/) {
+                    $requirements->{python} = 1;
+                    $requirements->{pytest} = 1;
+                }
                 next;
             }
 
-            if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
+            if($line =~ /<<['"]?CONDOR_TESTREQ_CONFIG/) {
                 $record = 1;
                 if ($line =~ /"""/) { $triplequote = 1; }
                 next;
@@ -571,7 +617,7 @@ sub StopTestPersonal {
 sub SetupPythonPath {
     my $reldir = `condor_config_val release_dir`; chomp $reldir;
     my $pathsep = ':';
-    my $relpy = "$reldir/lib/python";
+    my $relpy = "$reldir/lib/python3";
     if ($iswindows) { $relpy = "$reldir\\lib\\python"; $pathsep = ';'; }
 
     # debug code, show what is in release dir and lib and lib/python
@@ -579,9 +625,9 @@ sub SetupPythonPath {
     if ($iswindows) {
         system("dir $reldir");
         system("dir $reldir\\lib");
+        print "contents of $relpy:\n";
         system("dir $relpy");
-        system("dumpbin -headers $relpy\\classad.pyd");
-        system("dumpbin -imports $relpy\\classad.pyd");
+        $relpy .= ";$reldir\\bin";
     } else {
         system("ls -l $reldir");
         system("ls -l $reldir/lib");
@@ -593,7 +639,7 @@ sub SetupPythonPath {
     if (exists($ENV{PYTHONPATH})) {
         $pythonpath = $ENV{PYTHONPATH};
         print "\texisting PYTHONPATH=$pythonpath\n";
-        if (index($reldir,$pythonpath) != -1) {
+        { #if (index($pythonpath,$reldir) != -1) {
             print "\tadding $relpy to PYTHONPATH\n";
             $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
         }

@@ -22,9 +22,6 @@
 
 
 #include "condor_classad.h"
-// #include "classad_log.h"
-
-#include "MyString.h"
 #include "HashTable.h"
 
 #include "condor_state.h"
@@ -63,51 +60,53 @@ public:
 
   void Initialize(GroupEntry* group);  // Configuration
 
-  int GetResourcesUsed(const MyString& CustomerName); // get # of used resources (unweighted by SlotWeight)
-  float GetWeightedResourcesUsed(const MyString& CustomerName);
-  float GetPriority(const MyString& CustomerName); // get priority for a customer
-  void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
+  int   GetResourcesUsed(const string& CustomerName); // get # of used resources (unweighted by SlotWeight)
+  float GetWeightedResourcesUsed(const string& CustomerName);
+  float GetPriority(const string& CustomerName); // get priority for a customer
+  int   GetCeiling(const string& CustomerName); // get Ceiling for a customer
+  void  SetPriority(const string& CustomerName, float Priority); // set priority for a customer
+  void  SetCeiling(const string& CustomerName, int Ceiling); // set Ceiling for a customer
 
-  void SetAccumUsage(const MyString& CustomerName, float AccumUsage); // set accumulated usage for a customer
-  void SetBeginTime(const MyString& CustomerName, int BeginTime); // set begin usage time for a customer
-  void SetLastTime(const MyString& CustomerName, int LastTime); // set Last usage time for a customer
-  float GetPriorityFactor(const MyString& CustomerName); // get priority factor for a customer
+  void SetAccumUsage(const string& CustomerName, float AccumUsage); // set accumulated usage for a customer
+  void SetBeginTime(const string& CustomerName, int BeginTime); // set begin usage time for a customer
+  void SetLastTime(const string& CustomerName, int LastTime); // set Last usage time for a customer
+  float GetPriorityFactor(const string& CustomerName); // get priority factor for a customer
 
-  void SetPriorityFactor(const MyString& CustomerName, float PriorityFactor);
-  void ResetAccumulatedUsage(const MyString& CustomerName);
-  void DeleteRecord(const MyString& CustomerName); 
+  void SetPriorityFactor(const string& CustomerName, float PriorityFactor);
+  void ResetAccumulatedUsage(const string& CustomerName);
+  void DeleteRecord(const string& CustomerName);
   void ResetAllUsage();
 
-  void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
-  void RemoveMatch(const MyString& ResourceName); // remove a match
+  void AddMatch(const string& CustomerName, ClassAd* ResourceAd); // Add new match
+  void RemoveMatch(const string& ResourceName); // remove a match
 
-  float GetSlotWeight(ClassAd *candidate);
+  float GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
   int GetLastUpdateTime() const { return LastUpdateTime; }
 
-  double GetLimit(const MyString& limit);
-  double GetLimitMax(const MyString& limit);
+  double GetLimit(const string& limit);
+  double GetLimitMax(const string& limit);
   void ReportLimits(ClassAd *attrList);
 
   ClassAd* ReportState(bool rollup = false);
-  ClassAd* ReportState(const MyString& CustomerName);
+  ClassAd* ReportState(const string& CustomerName);
 
   void CheckResources(const string& CustomerName, int& NumResources, float& NumResourcesRW);
 
   void DisplayLog();
   void DisplayMatches();
 
-  ClassAd* GetClassAd(const MyString& Key);
+  ClassAd* GetClassAd(const string& Key);
 
   // This maps submitter names to their assigned accounting group.
   // When called with a defined group name, it maps that group name to itself.
-  GroupEntry* GetAssignedGroup(const MyString& CustomerName);
-  GroupEntry* GetAssignedGroup(const MyString& CustomerName, bool& IsGroup);
+  GroupEntry* GetAssignedGroup(const string& CustomerName);
+  GroupEntry* GetAssignedGroup(const string& CustomerName, bool& IsGroup);
 
-  bool UsingWeightedSlots();
+  bool UsingWeightedSlots() const;
 
   struct ci_less {
       bool operator()(const string& a, const string& b) const {
@@ -121,20 +120,20 @@ private:
   // Private methods Methods
   //--------------------------------------------------------
   
-  void RemoveMatch(const MyString& ResourceName, time_t T);
+  void RemoveMatch(const string& ResourceName, time_t T);
 
   void LoadLimits(ClassAdListDoesNotDeleteAds &resourceList);
   void ClearLimits();
   void DumpLimits();
 
-  void IncrementLimit(const MyString& limit);
-  void DecrementLimit(const MyString& limit);
+  void IncrementLimit(const string& limit);
+  void DecrementLimit(const string& limit);
 
-  void IncrementLimits(const MyString& limits);
-  void DecrementLimits(const MyString& limits);
+  void IncrementLimits(const string& limits);
+  void DecrementLimits(const string& limits);
 
   // Get group priority helper function.
-  float getGroupPriorityFactor(const MyString& CustomerName); 
+  float getGroupPriorityFactor(const string& CustomerName);
 
   //--------------------------------------------------------
   // Configuration variables
@@ -144,9 +143,9 @@ private:
   float NiceUserPriorityFactor;
   float RemoteUserPriorityFactor;
   float DefaultPriorityFactor;
-  MyString AccountantLocalDomain;
+  string AccountantLocalDomain;
   float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
-  MyString LogFileName;      // Name of Log file
+  string LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
   bool  DiscountSuspendedResources;
   bool  UseSlotWeights; 
@@ -158,7 +157,7 @@ private:
   ClassAdLog<std::string, ClassAd*> * AcctLog;
   int LastUpdateTime;
 
-  HashTable<MyString, double> concurrencyLimits;
+  HashTable<string, double> concurrencyLimits;
 
   GroupEntry* hgq_root_group;
   map<string, GroupEntry*, ci_less> hgq_submitter_group_map;
@@ -167,32 +166,30 @@ private:
   // Static values
   //--------------------------------------------------------
 
-  static MyString AcctRecord;
-  static MyString CustomerRecord;
-  static MyString ResourceRecord;
+  static string AcctRecord;
+  static string CustomerRecord;
+  static string ResourceRecord;
 
   //--------------------------------------------------------
   // Utility functions
   //--------------------------------------------------------
 
-  static MyString GetResourceName(ClassAd* Resource);
+  static string GetResourceName(ClassAd* Resource);
   bool GetResourceState(ClassAd* Resource, State& state);
-  int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
-  int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
-  static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList);
-  static MyString GetDomain(const MyString& CustomerName);
+  int IsClaimed(ClassAd* ResourceAd, string& CustomerName);
+  int CheckClaimedOrMatched(ClassAd* ResourceAd, const string& CustomerName);
+//  static ClassAd* FindResourceAd(const string& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList);
+  static string GetDomain(const string& CustomerName);
 
-  bool DeleteClassAd(const MyString& Key);
+  bool DeleteClassAd(const string& Key);
 
-  void SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue);
-  void SetAttributeFloat(const MyString& Key, const MyString& AttrName, float AttrValue);
-  void SetAttributeString(const MyString& Key, const MyString& AttrName, const MyString& AttrValue);
+  void SetAttributeInt(const string& Key, const string& AttrName, int AttrValue);
+  void SetAttributeFloat(const string& Key, const string& AttrName, float AttrValue);
+  void SetAttributeString(const string& Key, const string& AttrName, const string& AttrValue);
 
-  bool GetAttributeInt(const MyString& Key, const MyString& AttrName, int& AttrValue);
-  bool GetAttributeFloat(const MyString& Key, const MyString& AttrName, float& AttrValue);
-  bool GetAttributeString(const MyString& Key, const MyString& AttrName, MyString& AttrValue);
-
-  bool LoadState(const MyString& OldLogFileName);
+  bool GetAttributeInt(const string& Key, const string& AttrName, int& AttrValue);
+  bool GetAttributeFloat(const string& Key, const string& AttrName, float& AttrValue);
+  bool GetAttributeString(const string& Key, const string& AttrName, string& AttrValue);
 
   void ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<string, int>& gnmap);
 };

@@ -1,7 +1,9 @@
-      
+      
 
 Job Monitor/Log Viewer
 ======================
+
+:index:`Job monitor` :index:`log files<single: log files; viewing>`
 
 The HTCondor Job Monitor is a Java application designed to allow users
 to view user log files. It is identified as the Contrib Module called
@@ -11,7 +13,7 @@ To view a user log file, select it using the open file command in the
 File menu. After the file is parsed, it will be visually represented.
 Each horizontal line represents an individual job. The x-axis is time.
 Whether a job is running at a particular time is represented by its
-color at that time – white for running, black for idle. For example, a
+color at that time - white for running, black for idle. For example, a
 job which appears predominantly white has made efficient progress,
 whereas a job which appears predominantly black has received an
 inordinately small proportion of computational time.
@@ -90,4 +92,4 @@ Keyboard and Mouse Shortcuts
    -  Control + Right click - zoom out
    -  Shift + left click - re-center
 
-      
+      

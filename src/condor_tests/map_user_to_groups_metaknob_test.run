@@ -33,8 +33,14 @@ my $map_content;
 my $map_file = "$testname.map";
 my $path = File::Spec->rel2abs($map_file);
 
-my $append_config;
-$append_config = "
+#testreq: personal
+my $base_config = <<CONDOR_TESTREQ_CONFIG;
+	SUBMIT_SHOULD_SET_LOCAL_OWNER = true
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+# add this to the config use use when we start a secondary personal condor
+my $append_config = "
 	use FEATURE : AssignAccountingGroup($path)
 ";
 
@@ -42,8 +48,12 @@ $append_config = "
 my $pid = $$;
 my $submit_file = "$testname$pid.sub";
 my $submit_content = 
-"executable = sleep.exe
+"executable = x_sleep.pl
 arguments = 600
+# If the schedd starts running the job, `condor_rm -all`
+# may take an unknown amount of time to remove - causing
+# a race condition.
+hold = True
 queue";
 my $submitfile = "$testname$pid.sub";
 emit_dag_files($testname, $submit_content, $pid);

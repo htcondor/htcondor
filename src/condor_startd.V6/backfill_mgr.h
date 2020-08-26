@@ -47,7 +47,7 @@ public:
 	BackfillSlot( int slot_id );
 	virtual ~BackfillSlot() = 0;
 
-	int getSlotID() { return m_slot_id; };
+	int getSlotID() const { return m_slot_id; };
 	virtual bool init() = 0;
 	virtual bool start() = 0;
 	virtual bool suspend() = 0;

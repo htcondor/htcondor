@@ -292,7 +292,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 ParserErrCode
 ClassAdLogParser::getNewClassAdBody(char*& key, 
 									char*& mytype, 
-									char*& targettype)
+									char*& targettype) const
 {
 	if (curCALogEntry.op_type != CondorLogOp_NewClassAd) {
 		return PARSER_FAILURE;
@@ -308,7 +308,7 @@ ClassAdLogParser::getNewClassAdBody(char*& key,
 	\warning each pointer must be freed by a calling funtion
 */
 ParserErrCode
-ClassAdLogParser::getDestroyClassAdBody(char*& key)
+ClassAdLogParser::getDestroyClassAdBody(char*& key) const
 {
 	if (curCALogEntry.op_type != CondorLogOp_DestroyClassAd) {
 		return PARSER_FAILURE;
@@ -323,7 +323,7 @@ ClassAdLogParser::getDestroyClassAdBody(char*& key)
 	\warning each pointer must be freed by a calling funtion
 */
 ParserErrCode
-ClassAdLogParser::getSetAttributeBody(char*& key, char*& name, char*& value)
+ClassAdLogParser::getSetAttributeBody(char*& key, char*& name, char*& value) const
 {
 	if (curCALogEntry.op_type != CondorLogOp_SetAttribute) {
 		return PARSER_FAILURE;
@@ -340,7 +340,7 @@ ClassAdLogParser::getSetAttributeBody(char*& key, char*& name, char*& value)
 	\warning each pointer must be freed by a calling funtion
 */
 ParserErrCode
-ClassAdLogParser::getDeleteAttributeBody(char*& key, char*& name)
+ClassAdLogParser::getDeleteAttributeBody(char*& key, char*& name) const
 {
 	if (curCALogEntry.op_type != CondorLogOp_DeleteAttribute) {
 		return PARSER_FAILURE;
@@ -356,7 +356,7 @@ ClassAdLogParser::getDeleteAttributeBody(char*& key, char*& name)
 	\warning each pointer must be freed by a calling funtion
 */
 ParserErrCode
-ClassAdLogParser::getLogHistoricalSNBody(char*& seqnum, char*& timestamp)
+ClassAdLogParser::getLogHistoricalSNBody(char*& seqnum, char*& timestamp) const
 {
 	if (curCALogEntry.op_type != CondorLogOp_LogHistoricalSequenceNumber) {
 		return PARSER_FAILURE;
@@ -488,8 +488,12 @@ ClassAdLogParser::readEndTransactionBody(FILE *fp)
 
 	ch = fgetc(fp);
 
-	if( ch == EOF || ch != '\n' ) {
+	if( ch == EOF || (ch != '\n' && ch != '#')) {
 		return( -1 );
+	}
+	// if the next character is a #, the remaineder of the line is a comment
+	if (ch == '#') {
+		readline(fp, curCALogEntry.value);
 	}
 	return( 1 );
 }

@@ -76,9 +76,14 @@ typedef enum {
 typedef int uid_t;
 typedef int gid_t;
 HANDLE priv_state_get_handle();
+#else
+#include <sys/types.h>
 #endif
 
-const char *get_user_loginname(void); 
+const char *get_user_loginname(void);
+#ifdef WIN32
+const char *get_user_domainname(void);
+#endif
 int can_switch_ids( void );
 int set_priv_initialize(void); // called by deamonCore to conditionally enable priv switching, returns TRUE if switching is enabled
 void clear_passwd_cache(void);

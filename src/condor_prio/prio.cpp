@@ -212,8 +212,6 @@ compute_adj( char *arg )
 	}
 }
 
-extern "C" int SetSyscalls( int foo ) { return foo; }
-
 void UpdateJobAd(int cluster, int proc)
 {
 	int old_prio, new_prio;

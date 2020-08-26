@@ -55,7 +55,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_syscall_mode.h"
 #include "pool_allocator.h"
 #include "condor_config.h"
 #include "string_list.h"
@@ -103,28 +102,27 @@
 extern "C" {
 	
 // Function prototypes
-bool real_config(const char* host, int wantsQuiet, int config_options);
+bool real_config(const char* host, int wantsQuiet, int config_options, const char * root_config);
 //int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
 bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
-int SetSyscalls(int);
-static char* find_global(int options);
-static char* find_file(const char*, const char*, int config_options);
 void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
-void clear_config();
 void reinsert_specials(const char* host);
 void process_config_source(const char*, int depth, const char*, const char*, int);
 void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
-void check_params();
+void do_smart_auto_use(int options);
 
 // External variables
 //extern int	ConfigLineNo;
 }  /* End extern "C" */
+
+static const char* find_global(int options, MyString & config_file);
+static const char* find_file(const char*, const char*, int config_options, MyString & config_file);
 
 // pull from config.cpp
 extern "C++" void param_default_set_use(const char * name, int use, MACRO_SET & set);
@@ -531,7 +529,6 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 
 	if ( ! reqdAttrs.isEmpty()) {
-		MyString buffer;
 
 		for (const char * attr = reqdAttrs.first(); attr; attr = reqdAttrs.next()) {
 			auto_free_ptr expr(NULL);
@@ -543,12 +540,11 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 				expr.set(param(attr));
 			}
 			if ( ! expr) continue;
-			buffer.formatstr("%s = %s", attr, expr.ptr());
 
-			if ( ! ad->Insert(buffer.Value())) {
+			if ( ! ad->AssignExpr(attr, expr.ptr())) {
 				dprintf(D_ALWAYS,
-						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), subsys);
+						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+						attr, expr.ptr(), subsys);
 			}
 		}
 	}
@@ -593,8 +589,8 @@ void optimize_macros(MACRO_SET & set)
 		return;
 
 	// the metadata table has entries that give the index of the corresponding
-	// entry in the param table so that we can sort it. So we have to sort
-	// sort the metadata the metadata first, then the param table itself
+	// entry in the param table so that we can sort it. So we have to
+	// sort the metadata first, then the param table itself
 	// and finally then fixup the indexes in the metadata table.
 	//
 	MACRO_SORTER sorter(set);
@@ -646,7 +642,9 @@ bool validate_config(bool abort_if_invalid, int opt)
 	if (deprecation_check) {
 		int err = 0; const char * pszMsg = 0;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
-		re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS);
+		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS)) {
+			EXCEPT("Programmer error in condor_config: invalid regexp\n");
+		}
 	}
 
 	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
@@ -764,7 +762,7 @@ bool config_ex(int config_options)
 	//dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
 #endif
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
-	bool result = real_config(NULL, wantsQuiet, config_options);
+	bool result = real_config(NULL, wantsQuiet, config_options, NULL);
 	if (!result) { return result; }
 	int validate_opt = config_options & (CONFIG_OPT_DEPRECATION_WARNINGS | CONFIG_OPT_WANT_QUIET);
 	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT), validate_opt);
@@ -772,10 +770,10 @@ bool config_ex(int config_options)
 
 
 bool
-config_host(const char* host, int config_options)
+config_host(const char* host, int config_options, const char * root_config)
 {
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
-	return real_config(host, wantsQuiet, config_options);
+	return real_config(host, wantsQuiet, config_options, root_config);
 }
 
 /* This function initialize GSI (maybe other) authentication related
@@ -900,11 +898,11 @@ condor_auth_config(int is_daemon)
 }
 
 bool
-real_config(const char* host, int wantsQuiet, int config_options)
+real_config(const char* host, int wantsQuiet, int config_options, const char * root_config)
 {
-	char* config_source = NULL;
+	const char* config_source = root_config;
+	MyString config_file_tmp; // used as a temp buffer by find_global
 	char* tmp = NULL;
-	int scm;
 
 	#ifdef WARN_COLON_FOR_PARAM_ASSIGN
 	config_options |= CONFIG_OPT_COLON_IS_META_ONLY;
@@ -913,11 +911,11 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	static bool first_time = true;
 	if( first_time ) {
 		first_time = false;
-		init_config(config_options);
+		init_global_config_table(config_options);
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
-		clear_config();
+		clear_global_config_table();
 	}
 
 	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
@@ -925,13 +923,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
-
-		/*
-		  N.B. if we are using the yellow pages, system calls which are
-		  not supported by either remote system calls or file descriptor
- 		  mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
-		*/
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
 		// Try to find user "condor" in the passwd file.
 	init_tilde();
@@ -959,15 +950,23 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	fill_attributes();
 
 		// Try to find the global config source
-
-	char* env = getenv( EnvGetName(ENV_CONFIG) );
-	if( env && strcasecmp(env, "ONLY_ENV") == MATCH ) {
+	if (config_options & CONFIG_OPT_USE_THIS_ROOT_CONFIG) {
+		if (config_source && strcasecmp(config_source, "ONLY_ENV") == MATCH) {
 			// special case, no config source desired
-		have_config_source = false;
+			have_config_source = false;
+		}
+	} else {
+		char* env = getenv( EnvGetName(ENV_CONFIG) );
+		if( env && strcasecmp(env, "ONLY_ENV") == MATCH ) {
+				// special case, no config source desired
+			have_config_source = false;
+		} else {
+			config_source = NULL; // scan the usual places for the root config
+		}
 	}
 
-	if( have_config_source && 
-		! (config_source = find_global(config_options)) &&
+	if( have_config_source && ! config_source &&
+		! (config_source = find_global(config_options, config_file_tmp)) &&
 		! continue_if_no_config)
 	{
 		if( wantsQuiet ) {
@@ -1010,7 +1009,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	if( config_source ) {
 		process_config_source( config_source, 0, "global config source", NULL, true );
 		global_config_source = config_source;
-		free( config_source );
 		config_source = NULL;
 	}
 
@@ -1061,7 +1059,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
 	if (!user_config_name.empty()) {
-		if (find_user_file(user_config_source, user_config_name.c_str(), true)) {
+		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
 			local_config_sources.append(user_config_source.c_str());
@@ -1077,7 +1075,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	magic_prefix += "_";
 	magic_prefix += myDistro->Get();
 	magic_prefix += "_";
-	int prefix_len = magic_prefix.size();
+	int prefix_len = (int)magic_prefix.size();
 
 	for( int i = 0; my_environ[i]; i++ ) {
 		// proceed only if we see the magic prefix
@@ -1125,10 +1123,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 	process_dynamic_configs();
 
-	if (config_source) {
-		free( config_source );
-	}
-
 	CondorError errorStack;
 	if(! init_network_interfaces( & errorStack )) {
 		const char * subsysName = get_mySubSystem()->getName();
@@ -1161,13 +1155,19 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	check_domain_attributes();
 
 		// once the config table is fully populated, we can optimize it.
-		// WARNING!! if you insert new params after this, the able *might*
+		// WARNING!! if you insert new params after this, the table *might*
 		// be de-optimized.
 	optimize_macros(ConfigMacroSet);
 
-		// We have to do some platform-specific checking to make sure
-		// all the parameters we think are defined really are.
-	check_params();
+
+		// now process knobs of the pattern AUTO_USE_<catgory>_<metaknob>
+	if ( ! (config_options & CONFIG_OPT_NO_SMART_AUTO_USE)) {
+		do_smart_auto_use(config_options);
+		// re-sort the macros if we added any
+		if (ConfigMacroSet.sorted < ConfigMacroSet.size) {
+			optimize_macros(ConfigMacroSet);
+		}
+	}
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
 
@@ -1182,10 +1182,8 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	if(!condor_fsync_on)
 		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
 
-	(void)SetSyscalls( scm );
-
 		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
-	ClassAd::Reconfig();
+	ClassAdReconfig();
 
 	return true;
 }
@@ -1283,6 +1281,75 @@ process_locals( const char* param_name, const char* host )
 		free(sources_value);
 	}
 }
+
+
+template <class T> bool re_match(const char * str, pcre * re, int options, T& tags)
+{
+	if ( ! re) return false;
+
+	const size_t ctags = sizeof(tags) / sizeof(tags[0]);
+	const int cvec = (int)(3 * (1 + ctags));
+	int ovec[cvec];
+
+	int rc = pcre_exec(re, NULL, str, (int)strlen(str), 0, options, ovec, cvec);
+
+	for (int ii = 1; ii < rc; ++ii) {
+		tags[ii-1].set(str + ovec[ii * 2], ovec[ii * 2 + 1] - ovec[ii * 2]);
+	}
+	return rc > 0;
+}
+
+void do_smart_auto_use(int /*options*/)
+{
+	int erroffset = 0; const char * errmsg = 0;
+	pcre * re = pcre_compile("AUTO_USE_([A-Za-z]+)_(.+)",
+		PCRE_CASELESS | PCRE_ANCHORED,
+		&errmsg, &erroffset, NULL);
+	ASSERT(re);
+
+	MyString tags[2];
+	MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
+	MACRO_SOURCE src = {true, false, -1, -2, -1, -2};
+	std::string errstring;
+	std::string args;
+
+	HASHITER it = hash_iter_begin(ConfigMacroSet);
+	for (; !hash_iter_done(it); hash_iter_next(it)) {
+		const char *name = hash_iter_key(it);
+		if (re_match(name, re, PCRE_NOTEMPTY, tags)) {
+			// check trigger
+			auto_free_ptr trigger(param(name));
+			bool trigger_value = false;
+			if ( ! trigger) // an empty trigger does not fire
+				continue;
+			if ( ! Test_config_if_expression(trigger, trigger_value, errstring, ConfigMacroSet, ctx)) {
+				fprintf(stderr, "Configuration error while interpreting %s : %s\n", name, errstring.c_str());
+				continue;
+			}
+			if ( ! trigger_value)
+				continue;
+
+			int meta_id = param_default_get_source_meta_id(tags[0].c_str(), tags[1].c_str());
+			if (meta_id < 0) {
+				fprintf(stderr, "Configuration error while interpreting %s : no template named %s:%s\n",
+					name, tags[0].c_str(), tags[1].c_str());
+				continue;
+			}
+			// register the pseudo filename "AUTO_USE_<cat>_<tag>"
+			insert_source(name, ConfigMacroSet, src);
+			src.meta_id = (short int)meta_id;
+
+			MACRO_DEF_ITEM * mdi = param_meta_source_by_id(src.meta_id);
+			ASSERT(mdi && mdi->def && mdi->def->psz);
+
+			auto_free_ptr expanded(expand_meta_args(mdi->def->psz, args));
+			Parse_config_string(src, 1, expanded, ConfigMacroSet, ctx);
+		}
+	}
+	hash_iter_delete(&it);
+	pcre_free(re);
+}
+
 
 int compareFiles(const void *a, const void *b) {
 	 return strcmp(*(char *const*)a, *(char *const*)b);
@@ -1476,12 +1543,12 @@ get_tilde()
 }
 
 
-char*
-find_global(int config_options)
+const char*
+find_global(int config_options, MyString & config_file)
 {
 	MyString	file;
 	file.formatstr( "%s_config", myDistro->Get() );
-	return find_file( EnvGetName(ENV_CONFIG), file.Value(), config_options );
+	return find_file( EnvGetName(ENV_CONFIG), file.Value(), config_options, config_file);
 }
 
 // Find user-specific location of a file
@@ -1490,13 +1557,13 @@ find_global(int config_options)
 // if basename is a fully qualified path, then it is used as-is. otherwise
 // it is prefixed with ~/.condor/ to create the effective file location
 bool
-find_user_file(MyString &file_location, const char * basename, bool check_access)
+find_user_file(MyString &file_location, const char * basename, bool check_access, bool daemon_ok)
 {
 	file_location.clear();
 	if ( ! basename || ! basename[0])
 		return false;
 
-	if (can_switch_ids())
+	if (!daemon_ok && can_switch_ids())
 		return false;
 	if ( fullpath(basename)) {
 		file_location = basename;
@@ -1533,27 +1600,28 @@ find_user_file(MyString &file_location, const char * basename, bool check_access
 	return true;
 }
 
-// Find location of specified file
-char*
-find_file(const char *env_name, const char *file_name, int config_options)
+// Find location of specified file, filename is written into buffer config_file
+// and also returned as the return value of this function. if file not found
+// then NULL is returned or the process is exited depending on the config_options
+const char*
+find_file(const char *env_name, const char *file_name, int config_options, MyString & config_file)
 {
-	char* config_source = NULL;
+	const char * config_source = NULL;
 	char* env = NULL;
 	int fd = 0;
 
 		// If we were given an environment variable name, try that first.
 	if( env_name && (env = getenv( env_name )) ) {
-		config_source = strdup( env );
+		config_file = env;
+		config_source = config_file.c_str();
 		StatInfo si( config_source );
 		switch( si.Error() ) {
 		case SIGood:
 			if( si.IsDirectory() ) {
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" is a directory.  "
-						 "Please specify a file.\n", env_name,
-						 config_source );
-				free( config_source );
-				config_source = NULL;
+						 "Please specify a file.\n", env_name, env );
+				config_file.clear(); config_source = NULL;
 				if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 				exit( 1 );
 			}
@@ -1568,19 +1636,19 @@ find_file(const char *env_name, const char *file_name, int config_options)
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" does not exist.\n",
 						 env_name, config_source );
-				free( config_source );
+				config_file.clear(); config_source = NULL;
 				if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 				exit( 1 );
 				break;
 			}
 			// Otherwise, we're happy
-			return config_source;
+			return config_file.c_str();
 
 		case SIFailure:
 			fprintf( stderr, "Cannot stat file specified in %s "
 					 "environment variable:\n\"%s\", errno: %d\n",
-					 env_name, config_source, si.Errno() );
-			free( config_source );
+					 env_name, config_file.c_str(), si.Errno() );
+			config_file.clear(); config_source = NULL;
 			if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 			exit( 1 );
 			break;
@@ -1611,10 +1679,10 @@ find_file(const char *env_name, const char *file_name, int config_options)
 				// Only use this file if the path isn't empty and
 				// if we can read it properly.
 			if (!locations[ctr].IsEmpty()) {
-				config_source = strdup(locations[ctr].Value());
+				config_file = locations[ctr];
+				config_source = config_file.c_str();
 				if ((fd = safe_open_wrapper_follow(config_source, O_RDONLY)) < 0) {
-					free(config_source);
-					config_source = NULL;
+					config_file.clear(); config_source = NULL;
 				} else {
 					close(fd);
 					dprintf(D_FULLDEBUG, "Reading condor configuration "
@@ -1649,7 +1717,8 @@ find_file(const char *env_name, const char *file_name, int config_options)
 			// confirm it is a string value with something there
 			if ( valType == REG_SZ && the_path[0] ) {
 				// got it!  whoohooo!
-				config_source = strdup(the_path);
+				config_file = the_path;
+				config_source = config_file.c_str();
 
 				if ( strncmp(config_source, "\\\\", 2 ) == 0 ) {
 					// UNC Path, so run a 'net use' on it first.
@@ -1696,8 +1765,7 @@ find_file(const char *env_name, const char *file_name, int config_options)
 				if( !(is_piped_command(config_source) &&
 					  is_valid_command(config_source)) &&
 					(fd = safe_open_wrapper_follow( config_source, O_RDONLY)) < 0 ) {
-
-					free( config_source );
+					config_file.clear();
 					config_source = NULL;
 				} else {
 					if (fd != 0) {
@@ -1918,7 +1986,7 @@ const char * set_live_param_value(const char * name, const char * live_value)
 
 
 void
-init_config(int config_options)
+init_global_config_table(int config_options)
 {
 	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
 	ConfigMacroSet.size = 0;
@@ -1935,7 +2003,7 @@ init_config(int config_options)
 	ConfigMacroSet.table = new MACRO_ITEM[512];
 	if (ConfigMacroSet.table) {
 		ConfigMacroSet.allocation_size = 512;
-		clear_config(); // to zero-init the table.
+		clear_global_config_table(); // to zero-init the table.
 	}
 	if (ConfigMacroSet.defaults) {
 		// Initialize the default table.
@@ -1958,7 +2026,7 @@ init_config(int config_options)
 }
 
 void
-clear_config()
+clear_global_config_table()
 {
 	if (ConfigMacroSet.table) {
 		memset(ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
@@ -2103,7 +2171,7 @@ string_is_long_param(
 
 		if( !rhs.AssignExpr( name, string ) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
-		} else if( !rhs.EvalInteger(name,target,result) ) {
+		} else if( !EvalInteger(name,&rhs,target,result) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
 		} else {
 			valid = true;
@@ -2224,6 +2292,92 @@ param_integer( const char *name, int &value,
 }
 
 
+bool
+param_longlong( const char *name, long long int &value,
+			   bool use_default, long long default_value,
+			   bool check_ranges, long long min_value, long long max_value,
+			   ClassAd *me, ClassAd *target,
+			   bool use_param_table )
+{
+	if(use_param_table) {
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		int was_truncated = false;
+		int is_long = 0;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long, &was_truncated);
+		bool tbl_check_ranges = 
+			(param_range_long(name, &min_value, &max_value)==-1) 
+				? false : true;
+
+
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
+		if (def_valid) {
+			use_default = true;
+			default_value = tbl_default_value;
+		}
+		if (tbl_check_ranges) {
+			check_ranges = true;
+		}
+	}
+	
+	long long long_result;
+	char *string = NULL;
+
+	ASSERT( name );
+	string = param( name );
+	if( ! string ) {
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %lld\n",
+				 name, default_value );
+		if ( use_default ) {
+			value = default_value;
+		}
+		return false;
+	}
+
+	int err_reason = 0;
+	bool valid = string_is_long_param(string, long_result, me, target, name, &err_reason);
+	if ( ! valid) {
+		if (err_reason == PARAM_PARSE_ERR_REASON_ASSIGN) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %lld to %lld "
+				   "(default %lld).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if (err_reason == PARAM_PARSE_ERR_REASON_EVAL) {
+			EXCEPT("Invalid result (not an integer) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %lld to %lld "
+				   "(default %lld).",
+				   name,string,min_value,max_value,default_value);
+		}
+		long_result = default_value;
+	}
+
+	if ( check_ranges  &&  ( long_result < min_value )  ) {
+		EXCEPT( "%s in the condor configuration is too low (%s)."
+				"  Please set it to an integer in the range %lld to %lld"
+				" (default %lld).",
+				name, string, min_value, max_value, default_value );
+	}
+	else if ( check_ranges  && ( long_result > max_value )  ) {
+		EXCEPT( "%s in the condor configuration is too high (%s)."
+				"  Please set it to an integer in the range %lld to %lld"
+				" (default %lld).",
+				name, string, min_value, max_value, default_value );
+	}
+	free( string );
+
+	value = long_result;
+	return true;
+}
+
+
 /*
 ** Return the integer value associated with the named paramter.
 ** If the value is not defined or not a valid integer, then
@@ -2297,7 +2451,7 @@ bool string_is_double_param(
 		if ( ! rhs.AssignExpr( name, string )) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
 		}
-		else if ( ! rhs.EvalFloat(name,target,result) ) {
+		else if ( ! EvalFloat(name,&rhs,target,result) ) {
 			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
 		} else {
 			valid = true;
@@ -2327,7 +2481,7 @@ param_double( const char *name, double default_value,
 		double tbl_default_value = param_default_double(name, subsys, &def_valid);
 
 		// if the min_value & max_value are changed, we use it.
-		param_range_double(name, &min_value, &max_value);
+
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
@@ -2448,7 +2602,6 @@ bool string_is_boolean_param(const char * string, bool& result, ClassAd *me /*= 
 		// For efficiency, we first tried to read the value as a
 		// simple literal.  Since that didn't work, now try parsing it
 		// as an expression.
-		int int_value = result;
 		ClassAd rhs;
 		if( me ) {
 			rhs = *me;
@@ -2456,9 +2609,8 @@ bool string_is_boolean_param(const char * string, bool& result, ClassAd *me /*= 
 		if ( ! name) { name = "CondorBool"; }
 
 		if( rhs.AssignExpr( name, string ) &&
-			rhs.EvalBool(name,target,int_value) )
+			EvalBool(name,&rhs,target,result) )
 		{
-			result = (int_value != 0);
 			valid = true;
 		}
 	}
@@ -2921,37 +3073,6 @@ int  get_config_stats(struct _macro_stats *pstats)
 	return macro_stats(ConfigMacroSet, *pstats);
 }
 
-
-void
-check_params()
-{
-#if defined( HPUX )
-		// Only on HPUX does this check matter...
-	char* tmp;
-	if( !(tmp = param("ARCH")) ) {
-			// Arch isn't defined.  That means the user didn't define
-			// it _and_ the special file we use that maps workstation
-			// models to CPU types doesn't exist either.  Print a
-			// verbose message and exit.  -Derek Wright 8/14/98
-		fprintf( stderr, "ERROR: %s must know if you are running "
-				 "on an HPPA1 or an HPPA2 CPU.\n",
-				 myDistro->Get() );
-		fprintf( stderr, "Normally, we look in %s for your model.\n",
-				 "/opt/langtools/lib/sched.models" );
-		fprintf( stderr, "This file lists all HP models and the "
-				 "corresponding CPU type.  However,\n" );
-		fprintf( stderr, "this file does not exist on your machine "
-				 "or your model (%s)\n", sysapi_uname_arch() );
-		fprintf( stderr, "was not listed.  You should either explicitly "
-				 "set the ARCH parameter\n" );
-		fprintf( stderr, "in your config source, or install the "
-				 "sched.models file.\n" );
-		exit( 1 );
-	} else {
-		free( tmp );
-	}
-#endif
-}
 
 /* Begin code for runtime support for modifying a daemon's config source.
    See condor_daemon_core.V6/README.config for more details. */
@@ -3562,7 +3683,7 @@ bool param_eval_string(std::string &buf, const char *param_name, const char *def
 {
 	if (!param(buf, param_name, default_value)) {return false;}
 
-	compat_classad::ClassAd rhs;
+	ClassAd rhs;
 	if (me) {
 		rhs = *me;
 	}
@@ -3570,7 +3691,7 @@ bool param_eval_string(std::string &buf, const char *param_name, const char *def
 	classad::ExprTree *expr_raw = parser.ParseExpression(buf);
 
 	std::string result;
-	if( rhs.Insert( "_condor_bool", expr_raw) && rhs.EvalString("_condor_bool", target, result) ) {
+	if( rhs.Insert( "_condor_bool", expr_raw) && EvalString("_condor_bool", &rhs, target, result) ) {
 		buf = result;
 		return true;
 	}

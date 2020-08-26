@@ -30,16 +30,14 @@ class Daemon;
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_classad.h"
-#include "condor_collector.h"
 #include "condor_secman.h"
-#include "condor_network.h" // For the port numbers...
 #include "daemon_types.h"
 #include "KeyCache.h"
 #include "CondorError.h"
 #include "command_strings.h"
 #include "dc_message.h"
 
-template <class p> class counted_ptr; // Forward declaration
+#define COLLECTOR_PORT					9618
 
 /** 
   Class used to pass around and store information about a given
@@ -238,7 +236,7 @@ public:
 		  documentation for this class for details on exactly what
 		  "local" means for the different types of daemons.
 		  */
-	bool isLocal( void )			{ return _is_local; }
+	bool isLocal( void ) const			{ return _is_local; }
 
 		/** Returns a descriptive string for error messages.  This has
 		  all the logic about printing out an appropriate string to
@@ -567,6 +565,98 @@ public:
 		 */
 	bool getInstanceID( std::string & instanceID );
 
+		/*
+		 * Request a token from the remote daemon.
+		 *
+		 * Caller can optionally request a maximum token lifetime; if none is desired,
+		 * then set `lifetime` to -1.
+		 */
+	bool getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
+		std::string &token, CondorError *err=NULL );
+
+		/*
+		 * Start a token request workflow from the remote daemon, potentially as an
+		 * unauthenticated user.
+		 *
+		 * As with `getSessionToken`, the user can request limits on the token's
+		 * capabilities (maximum lifetime, bounding set) and additionally request a
+		 * specific identity.
+		 *
+		 * The caller should provide a human-friendly ID (not necessarily unique; may
+		 * be the hostname) that will help the request approver to identify the request.
+		 *
+		 * If we are able to authenticate, then the token may be issued immediately;
+		 * in that case, the function will set the `token` parameter to a non-empty string
+		 * and return true.  If we are unable to authenticate (or have insufficient
+		 * permissions at the server-side), then the `request_id` parameter will be
+		 * set; use `finishTokenRequest` to poll for completion.
+		 *
+		 * Returns true on success or false on failure.
+		 */
+	bool startTokenRequest( const std::string &identity,
+		const std::vector<std::string> &authz_bounding_set, int lifetime,
+		const std::string &client_id, std::string &token, std::string &request_id,
+		CondorError *err=NULL ) noexcept;
+
+		/**
+		 * Poll for and finish a token request.
+		 *
+		 * The `request_id` is the ID returned by a prior call to `startTokenRequest`.
+		 */
+	bool finishTokenRequest( const std::string &client_id, const std::string &request_id,
+		std::string &token, CondorError *err=nullptr ) noexcept;
+
+		/**
+		 * List all the token requests in the system.
+		 *
+		 * The `request_id`, if non-empty, causes only a given request to be returned;
+		 * otherwise, all requests are returned.
+		 */
+	bool listTokenRequest( const std::string &request_id, std::vector<classad::ClassAd> &results,
+		CondorError *err=nullptr ) noexcept;
+
+		/**
+		 * Approve a specific token request.
+		 *
+		 * The `request_id` and `client_id` must match a given request.
+		 */
+	bool approveTokenRequest( const std::string &client_id, const std::string &request_id,
+		CondorError *err=nullptr ) noexcept;
+
+		/**
+		 * Create a rule to auto-approve future requests.
+		 *
+		 * The `netblock` (example: 192.168.0.1/24) and `lifetime` (seconds)
+		 * define the tool we are to install.
+		 */
+	bool autoApproveTokens( const std::string &netblock, time_t lifetime,
+		CondorError *err=nullptr ) noexcept;
+
+		/**
+		 * Exchange a SciToken for a HTCondor token.
+		 */
+	bool exchangeSciToken( const std::string &scitoken, std::string &token, CondorError &err ) noexcept;
+
+		/**
+		 * When authentication fails - but TOKEN is a valid method - this is set to true.
+		 */
+	bool shouldTryTokenRequest() const {return m_should_try_token_request;};
+
+		/**
+		 * Last recorded trust domain from this daemon.
+		 */
+	std::string getTrustDomain() const {return m_trust_domain;}
+
+		// Set the owner for this daemon; if possible, always
+		// authenticate with the remote daemon as this owner.
+	void setOwner(const std::string &owner) {m_owner = owner;}
+	const std::string &getOwner() const {return m_owner;}
+
+		// Set the authentication methods to use with this daemon object;
+		// overrides those built-in to the param table.
+	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods;}
+	const std::vector<std::string> &getAuthenticationMethods() const {return m_methods;}
+
 protected:
 	// Data members
 	char* _name;
@@ -588,7 +678,8 @@ protected:
 	bool _tried_locate;
 	bool _tried_init_hostname;
 	bool _tried_init_version;
-	bool _is_configured; 
+	bool _is_configured;
+	bool m_should_try_token_request{false};
 	SecMan _sec_man;
 	StringList daemon_list;
 
@@ -713,7 +804,6 @@ protected:
 			@return true if we found everything in the ad, false if not
 		 */
 	bool getInfoFromAd( const ClassAd* ad );
-	bool getInfoFromAd( counted_ptr<class ClassAd>& ad );
 
 		/** Initialize one of our values from the given ClassAd* and
 			attribute name.  This is shared code when we query the
@@ -731,9 +821,6 @@ protected:
 		*/
 	bool initStringFromAd( const ClassAd* ad, const char* attrname,
 						   char** value_str );
-
-	bool initStringFromAd(counted_ptr<class ClassAd>& ad, const char* attrname, 
-		char** value_str );
 
 		/* 
 		   These helpers prevent memory leaks.  Whenever we want to
@@ -813,8 +900,14 @@ protected:
 		   Internal function used by public versions of startCommand().
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
+
+		   This function previously was also named `startCommand`; it
+		   was fairly confusing because there is also the non-static
+		   `startCommand`; the `_internal` suffix was added to help
+		   differentiate between the 6 different variants (besides the
+		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id );
+	static StartCommandResult startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -844,6 +937,13 @@ private:
 
 	ClassAd *m_daemon_ad_ptr;
 
+	std::string m_trust_domain;
+
+		// The virtual 'owner' of this collector object
+	std::string m_owner;
+
+		// Authentication method overrides
+	std::vector<std::string> m_methods;
 };
 
 /** This helper class is derived from the Daemon class; it allows

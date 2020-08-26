@@ -98,7 +98,7 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 					result += "\n";
 				}
 				break;
-					
+
 			case Value::REAL_VALUE:
 				if(value.IsRealValue(doubleValue)) {
 							char buf[24];
@@ -115,12 +115,15 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 				break;
 			case Value::STRING_VALUE:
 				if(value.IsStringValue(stringValue)) {
-					result += stringValue;	
+					result += stringValue;
 					result += "\n";
 				}
 				break;
 			case Value::CLASSAD_VALUE:
 				result += "CLASSAD\n";
+				break;
+			case Value::SCLASSAD_VALUE:
+				result += "SCLASSAD\n";
 				break;
 			case Value::LIST_VALUE:
 				result += "LIST\n";

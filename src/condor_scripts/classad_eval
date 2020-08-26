@@ -1,0 +1,75 @@
+#!/usr/bin/python3
+
+import sys
+import classad
+import htcondor
+
+def makeClassAd(adString):
+    try:
+        return classad.ClassAd(adString)
+    except SyntaxError:
+        modifiedAdString = "[" + adString + "]"
+        return classad.ClassAd(modifiedAdString)
+
+def evaluateAndPrint(argv):
+    quiet = False
+
+    if len(argv) < 2:
+        print("Usage: {0} [-file <file>] <expr|assignment>[ <expr|assignment>]*".format(argv[0]))
+        print("Evaluate ClassAd expressions.")
+        print("Assignments modify the ClassAd context.");
+        print("")
+        print("Options:")
+        print("\t-file <file>\tA file containing the initial ClassAd context");
+        print("")
+        print("Flags may replace expressions or assignments:")
+        print("\t-quiet      \tDon't print the ClassAd context after this flag");
+        return -1
+
+    adString = argv[1]
+    adStringFileName = None
+    if adString == "-file":
+        argv.pop(1)
+        adStringFileName = argv[1]
+        adString = open(adStringFileName).read()
+
+    try:
+        ad = makeClassAd(adString)
+        argv.pop(1)
+    except SyntaxError:
+        if adStringFileName is not None:
+            sys.exit("Unable to turn file '" + adStringFileName + "' into a ClassAd.")
+        else:
+            ad = classad.ClassAd()
+
+    updated = True
+    for i in range(1,len(argv)):
+        if argv[i] == "-quiet":
+            quiet = True
+            continue
+
+        try:
+            newAd = makeClassAd(argv[i])
+            ad.update(newAd)
+            updated = True
+        except SyntaxError:
+            try:
+                if updated:
+                    updated = False
+                    if not quiet:
+                        print(repr(ad))
+                expr = classad.ExprTree(argv[i])
+            except SyntaxError:
+                sys.exit("Unable to turn '" + argv[i] + "' into a ClassAd or an expression.")
+
+            result = expr.simplify(ad)
+            print(repr(result))
+
+    return 0
+
+
+def main():
+    return evaluateAndPrint(sys.argv)
+
+if __name__ == "__main__":
+    exit(main())

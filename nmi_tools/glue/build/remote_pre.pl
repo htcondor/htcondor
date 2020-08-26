@@ -49,7 +49,8 @@ my %defines = (
     listvars => "-LA",
     #noregen => "-DCMAKE_SUPPRESS_REGENERATION:BOOL=TRUE",
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
-    mirror => "-DEXTERNALS_SOURCE_URL:URL=http://mirror.batlab.org/pub/export/externals",
+    mirror => "-DEXTERNALS_SOURCE_URL:URL=http://parrot.cs.wisc.edu/externals",
+    #mirror => "-DEXTERNALS_SOURCE_URL:URL=http://mirror.batlab.org/pub/export/externals",
     );
 
 # autoflush our STDOUT
@@ -61,7 +62,7 @@ if ($boos) { $CloneDir =~ s/userdir/sources/; }
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
-	my $enable_x64 = 0;
+	my $enable_x64 = 1;
 	my $use_latest_vs = 1;
 	my $use_cmake3 = 1;
 
@@ -69,10 +70,8 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
 
-	#uncomment to build x64 on Win7 platform (the rest of the build will follow this)
-	if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_x64 = 1; }
-
-	if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; $use_latest_vs = 1; $use_cmake3 = 1; }
+	#uncomment to build x86 on Win8 platform (the rest of the build will follow this)
+	#if ($ENV{NMI_PLATFORM} =~ /Windows8/i) { $enable_x64 = 0; }
 
 	if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';

@@ -154,8 +154,9 @@ void PandadClassAdLogPlugin::setAttribute( const char * key, const char * attrib
 			ExprTree * valueExpr = NULL;
 			const char * attribute = NULL;
 
-			clusterAd->ResetExpr();
-			while( clusterAd->NextExpr( attribute, valueExpr ) ) {
+			for( auto itr = clusterAd->begin(); itr != clusterAd->end(); itr++ ) {
+				attribute = itr->first.c_str();
+				valueExpr = itr->second;
 				dprintf( D_FULLDEBUG, "PANDA: found %s in cluster ad.\n", attribute );
 				if( shouldIgnoreAttribute( attribute ) ) { continue; }
 				std::string valueString;

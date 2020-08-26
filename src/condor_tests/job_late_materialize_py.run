@@ -40,7 +40,7 @@ CONDOR_TESTREQ_CONFIG
 #endtestreq
 """
 
-from pytest.Utils import Utils
+from pytest_old.Utils import Utils
 
 testname = os.path.basename(__file__)[:-4]
 
@@ -188,8 +188,8 @@ else :
 sub = htcondor.Submit("""
 	executable = x_sleep.pl
 	arguments = 1
-	notification = never	
-	max_idle = 6
+	notification = never
+	max_idle = 3
 	My.Foo = "$(Item)"
 	log = %s.$(ClusterId).log
 	queue in (A, B, C, D, E, F, G, H, I, J, K, L)
@@ -224,8 +224,11 @@ if timed_out:
 	exit(1)
 
 Utils.TLog("cluster %d completed, checking results:" % cluster)
-if peak_idle != int(sub['max_idle']):
-	Utils.Log("FAILURE: peak_idle({0}) != max_idle({1})".format(peak_idle, sub['max_idle']))
+if peak_idle < int(sub['max_idle']):
+	Utils.Log("FAILURE: peak_idle({0}) < max_idle({1})".format(peak_idle, sub['max_idle']))
+	retval = 1
+elif peak_idle > 2*int(sub['max_idle']):
+	Utils.Log("FAILURE: peak_idle({0}) > 2*max_idle({1})".format(peak_idle, sub['max_idle']))
 	retval = 1
 elif total_materialized != num_items:
 	Utils.Log("FAILURE: total_materialized({0}) != {1}".format(total_materialized, num_items))
@@ -272,6 +275,7 @@ items = [
 ]
 num_items = 6
 sub['hold'] = 'true'
+sub['max_idle'] = str(num_items)
 
 def all_materialized(event):
 	global num_items

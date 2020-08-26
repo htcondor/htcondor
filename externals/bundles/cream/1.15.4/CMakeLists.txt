@@ -60,7 +60,7 @@ if ( WITH_CREAM )
 			INSTALL_COMMAND make install &&
 				touch ${CREAMSOAP_INSTALL_LOC}/done )
 
-		condor_post_external( creamsoap OFF OFF )
+		condor_post_external( creamsoap OFF OFF "${CREAMSOAP_INSTALL_LOC}/lib/libgsoapssl++.a" )
 
 #########################################
 
@@ -80,7 +80,7 @@ if ( WITH_CREAM )
 			#--install Step ----------
 			INSTALL_DIR ${LOG4CPP_INSTALL_LOC}
 			INSTALL_COMMAND make install )
-		condor_post_external( log4cpp include OFF )
+		condor_post_external( log4cpp include OFF "${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a" )
 
 ######################################### cream/gss packages.
 
@@ -104,7 +104,7 @@ if ( WITH_CREAM )
 			INSTALL_DIR ${CANL_C_INSTALL_LOC}
 			INSTALL_COMMAND make install &&
 				touch ${CANL_C_INSTALL_LOC}/done )
-		condor_post_external( canl_c OFF OFF )
+		condor_post_external( canl_c OFF OFF "${CANL_C_INSTALL_LOC}/lib/libcanl_c.a" )
 
 #########################################
 
@@ -128,7 +128,7 @@ if ( WITH_CREAM )
 				libtool --mode=install install libgridsite.la ${GRIDSITE_INSTALL_LOC}/lib &&
 				cp -f ../interface/gridsite-gacl.h ../interface/gridsite.h ${GRIDSITE_INSTALL_LOC}/include &&
 				touch ${GRIDSITE_INSTALL_LOC}/done )
-		condor_post_external( gridsite OFF OFF )
+		condor_post_external( gridsite OFF OFF  "${GRIDSITE_INSTALL_LOC}/lib/libgridsite.a" )
 
 #########################################
 
@@ -153,7 +153,7 @@ if ( WITH_CREAM )
 				cp interface/glite_gss.h ${GLITE_SECURITY_INSTALL_LOC}/include/glite/security &&
 				cp libglite_security_gss.a ${GLITE_SECURITY_INSTALL_LOC}/lib &&
 				touch ${GLITE_SECURITY_INSTALL_LOC}/done )
-		condor_post_external( glite_security include OFF )
+		condor_post_external( glite_security include OFF "${GLITE_SECURITY_INSTALL_LOC}/lib/libglite_security_gss.a" )
 
 #########################################
 
@@ -177,7 +177,7 @@ if ( WITH_CREAM )
 				cp libglite_security_gsoap_plugin_cxx.a ${CREAM_SOAP_PLUGIN_INSTALL_LOC}/lib &&
 				cp interface/glite_gsplugin.h interface/glite_gsplugin-int.h ${CREAM_SOAP_PLUGIN_INSTALL_LOC}/include/glite/security &&
 				touch ${CREAM_SOAP_PLUGIN_INSTALL_LOC}/done )
-		condor_post_external( cream_soap_plugin include OFF )
+		condor_post_external( cream_soap_plugin include OFF "${CREAM_SOAP_PLUGIN_INSTALL_LOC}/lib/libglite_security_gsoap_plugin_cxx.a" )
 
 		condor_pre_external( CREAM_WSDL glite-ce-wsdl-1.15.1 "lib;include" "done")
 		ExternalProject_Add(cream_wsdl
@@ -196,20 +196,25 @@ if ( WITH_CREAM )
 				cp -r CREAM ${CREAM_WSDL_INSTALL_LOC}/share/wsdl/cream-ce &&
 				cp -r ES ${CREAM_WSDL_INSTALL_LOC}/share/wsdl/cream-ce/es &&
 				touch ${CREAM_WSDL_INSTALL_LOC}/done )
-		condor_post_external( cream_wsdl OFF OFF )
+		condor_post_external( cream_wsdl OFF OFF "" )
 
 #########################################
 
 		# build cream c api library
 		condor_pre_external( CREAM glite-ce-cream-client-api-c-1.15.4-p1 "lib;include;include/glite/security;opt" "done")
 
-		if(BOOST_INSTALL_LOC)
-			set (BOOST_PATH ${BOOST_INSTALL_LOC})
-			set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a ${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a ${BOOST_INSTALL_LOC}/lib/libboost_system.a)
-		else()
-			set (BOOST_PATH /usr)
-			set (BOOST_LIB libboost_thread.a libbosst_filesystem.a libboost_system.a)
-		endif()
+        if(BOOST_INSTALL_LOC)
+            set (BOOST_INCLUDE_PATH ${BOOST_INSTALL_LOC}/include)
+            set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a ${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a ${BOOST_INSTALL_LOC}/lib/libboost_system.a)
+        else()
+            set (BOOST_INCLUDE_PATH "/usr/include")
+            set (BOOST_LIB libboost_thread.a libboost_filesystem.a libboost_system.a)
+        endif()
+
+        if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
+            set (BOOST_LIB ${BOOST_LD}/libboost_thread.a ${BOOST_LD}/libboost_filesystem.a ${BOOST_LD}/libboost_system.a)
+        endif()
+
 
 		set (CREAM_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch -p1)
 		if ( PREFER_CPP11 )
@@ -231,11 +236,11 @@ if ( WITH_CREAM )
 				-DLOG4CPP_INCLUDE_DIRS:string=${LOG4CPP_INSTALL_LOC}/include 
 				-DVOMS_INCLUDE_DIRS:string=${VOMS_INSTALL_LOC}/include 
 				-DGRIDSITE_OPENSSL_INCLUDE_DIRS:string=${GRIDSITE_INSTALL_LOC}/include 
-				-DCLASSAD_INCLUDE_DIRS:string=${CLASSADS_INSTALL_LOC}/include 
+				-DCLASSAD_INCLUDE_DIRS:string=$<TARGET_FILE_DIR:classads>/../include
 				-DGLOBUS_GSSAPI_GSI_INCLUDE_DIRS:string=${GLOBUS_INSTALL_LOC}/include/globus 
 				-DGLITE_GSS_INCLUDE_DIRS:string=${GLITE_SECURITY_INSTALL_LOC}/include 
 				-DGLITE_PLUGIN_INCLUDE_DIRS:string=${CREAM_SOAP_PLUGIN_INSTALL_LOC}/include 
-				-DBoost_INCLUDE_DIRS:string=${BOOST_PATH}/include .
+                -DBoost_INCLUDE_DIRS:string=${BOOST_INCLUDE_PATH} .
 			#--Build Step ----------
 			BUILD_COMMAND PATH=${CREAMSOAP_INSTALL_LOC}/bin:$ENV{PATH} make
 			BUILD_IN_SOURCE 1
@@ -249,7 +254,7 @@ if ( WITH_CREAM )
 
 		set(CREAM_FOUND "${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_soap.a;${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_util.a;${CREAM_SOAP_PLUGIN_INSTALL_LOC}/lib/libglite_security_gsoap_plugin_cxx.a;${GLITE_SECURITY_INSTALL_LOC}/lib/libglite_security_gss.a;${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a;${GRIDSITE_INSTALL_LOC}/lib/libgridsite.a;${CANL_C_INSTALL_LOC}/lib/libcanl_c.a;${CREAMSOAP_INSTALL_LOC}/lib/libgsoapssl++.a;${HAVE_LIBCARES};${LIBXML2_FOUND};${BOOST_LIB}")
 
-		condor_post_external( cream include OFF )
+		condor_post_external( cream include OFF "${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_soap.a;${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_util.a" )
 
 	else( NOT PROPER )
 

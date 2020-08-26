@@ -135,8 +135,7 @@ errno_num_encode( int errno_num )
 #if defined(ENOSYS)
 	case ENOSYS:	return 40;
 #endif
-/* ENOTEMPTY is equal to EEXIST under AIX */
-#if defined(ENOTEMPTY) && !defined(AIX) 
+#if defined(ENOTEMPTY)
 	case ENOTEMPTY:	return 41;
 #endif
 #if defined(EILSEQ)

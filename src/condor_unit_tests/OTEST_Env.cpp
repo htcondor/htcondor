@@ -3730,7 +3730,7 @@ static bool test_insert_env_into_classad_v1_empty() {
 	env.MergeFromV1Raw(V1R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL);
-	char* actual;
+	char* actual = NULL;
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -3755,7 +3755,7 @@ static bool test_insert_env_into_classad_v2_empty() {
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL);
-	char* actual;
+	char* actual = NULL;
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -3778,7 +3778,7 @@ static bool test_insert_env_into_classad_v1_v1_replace() {
 		"variables from an Env object in V1 format into the ClassAd with a V1 "
 		"Environment.");
 	Env env;
-	char* actual;
+	char* actual = NULL;
 	env.MergeFromV1Raw(V1R_REP, NULL);
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
@@ -3805,7 +3805,7 @@ static bool test_insert_env_into_classad_v1_v2_replace() {
 		"variables from an Env object in V1 format into the ClassAd with a V2 "
 		"Environment.");
 	Env env;
-	char* actual;
+	char* actual = NULL;
 	env.MergeFromV1Raw(V1R_REP, NULL);
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
@@ -3832,7 +3832,7 @@ static bool test_insert_env_into_classad_v2_v1_replace() {
 		"variables from an Env object in V2 format into the ClassAd with a V1 "
 		"Environment.");
 	Env env;
-	char* actual;
+	char* actual = NULL;
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
@@ -3859,7 +3859,7 @@ static bool test_insert_env_into_classad_v2_v2_replace() {
 		"variables from an Env object in V2 format into the ClassAd with a V2 "
 		"Environment.");
 	Env env;
-	char* actual;
+	char* actual = NULL;
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
@@ -3886,7 +3886,7 @@ static bool test_insert_env_into_classad_version_v1() {
 		"CondorVersionInfo requires V1 format.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
@@ -3915,7 +3915,7 @@ static bool test_insert_env_into_classad_version_v1_os_winnt() {
 		"CondorVersionInfo requires V1 format and the target OS is WINNT.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL, "WINNT", &info);
@@ -3944,7 +3944,7 @@ static bool test_insert_env_into_classad_version_v1_os_win32() {
 		"CondorVersionInfo requires V1 format and the target OS is WIN32.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL, "WIN32", &info);
@@ -3973,7 +3973,7 @@ static bool test_insert_env_into_classad_version_v1_os_unix() {
 		"CondorVersionInfo requires V1 format and the target OS is UNIX.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL, "UNIX", &info);
@@ -4003,7 +4003,7 @@ static bool test_insert_env_into_classad_version_v1_semi() {
 		"a semicolon as a delimiter.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
@@ -4034,7 +4034,7 @@ static bool test_insert_env_into_classad_version_v1_line() {
 		"a '|' as a delimiter.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
 	initAdFromString(AD_V1_WIN, classad);
@@ -4065,7 +4065,7 @@ static bool test_insert_env_into_classad_version_v1_current() {
 		"current OS.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
@@ -4096,7 +4096,7 @@ static bool test_insert_env_into_classad_version_v1_error_v2() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	MyString error;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
 	ClassAd classad;
@@ -4126,7 +4126,7 @@ static bool test_insert_env_into_classad_version_v1_error() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	MyString error;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
 	ClassAd classad;
@@ -4154,7 +4154,7 @@ static bool test_insert_env_into_classad_version_v2() {
 		"CondorVersionInfo doesn't require V1 format.");
 	Env env;
 	CondorVersionInfo info("$CondorVersion: 7.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual, *version = info.get_version_string();
+	char *actual = NULL, *version = info.get_version_string();
 	env.MergeFromV1Raw(V1R, NULL);
 	ClassAd classad;
 	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);

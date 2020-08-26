@@ -29,7 +29,6 @@
 #include <vector>
 #include <map>
 #include <set>
-#define XML_USERLOG_DEFAULT 0
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -46,6 +45,22 @@ class FileLock;
 class StatWrapper;
 class ReadUserLogHeader;
 class WriteUserLogState;
+class CondorError;
+
+/*
+	This function tells the caller if a UserLog object should be
+	constructed or not, and if so, says where the user wants the user
+	log file to go. The difference between this function and simply
+	doing a LookupString() on ATTR_ULOG_FILE is that A) the result is
+	combined with IWD if necessary to form an absolute path, and B) if
+	EVENT_LOG is defined in the condor_config file, then the result
+	will be /dev/null even if ATTR_ULOG_FILE is not defined (since we
+	still want a UserLog object in this case so the global event log
+	is updated). Return function is true if ATTR_ULOG_FILE is found or
+	if EVENT_LOG is defined, else false.
+*/
+bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
+                      const char* ulog_path_attr = NULL);
 
 
 /** API for writing a log file.  Since an API for reading a log file
@@ -94,48 +109,14 @@ class WriteUserLog
       ~log_file(); 
       log_file& operator=(const log_file& rhs);
       void set_user_priv_flag(bool v) { user_priv_flag = v; }
-      bool get_user_priv_flag() { return user_priv_flag; }
+      bool get_user_priv_flag() const { return user_priv_flag; }
     };
 
     typedef std::map<std::string, log_file*> log_file_cache_map_t;
 
-    ///
-    WriteUserLog( bool disable_event_log = false );
+    WriteUserLog();
     
-    /** Constructor
-        @param owner Username of the person whose job is being logged
-        @param file the path name of the log file to be written (copied)
-        @param clu  condorID cluster to put into each ULogEvent
-        @param proc condorID proc    to put into each ULogEvent
-        @param subp condorID subproc to put into each ULogEvent
-		@param xml  make this true to write XML logs, false to use the old form
-    */
-    WriteUserLog(const char *owner, const char *domain,
-				 const std::vector<const char*>& file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
-    WriteUserLog(const char *owner, const char *domain,
-				 const char* file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
-    
-    WriteUserLog(const char *owner, const char *file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
-    WriteUserLog(const char *owner, const std::vector<const char *>& file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
-    ///
     virtual ~WriteUserLog();
-    
-    /** Initialize the log file, if not done by constructor.
-        @param file the path name of the log file to be written (copied)
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(const char *owner, const char *domain,
-			   const std::vector<const char *>& file,
-			   int c, int p, int s);
-    bool initialize(const char *owner, const char *domain,
-			   const char *file, int c, int p, int s);
     
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
@@ -144,34 +125,24 @@ class WriteUserLog
         @param s the condor ID subproc to put into each ULogEvent
 		@return true on success
     */
-    bool initialize(const char *file, int c, int p, int s);
+    bool initialize(const char *file, int c, int p, int s, int format_opts = USERLOG_FORMAT_DEFAULT);
+private:
     bool initialize(const std::vector<const char *>& file, int c, int p, int s);
-   
-#if !defined(WIN32)
-    /** Initialize the log file (PrivSep mode only)
-        @param uid the user's UID
-        @param gid the user's GID
-        @param vector of filenames of log files to be written
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(uid_t, gid_t, const std::vector<const char *>&, int, int, int);
-    bool initialize(uid_t u, gid_t g, const char *f, int c, int p, int s) {
-			return initialize(u,g,std::vector<const char*>(1,f),c,p,s);
-		}
-#endif
+public:
 
-    /** Initialize the condorID, which will fill in the condorID
-        for each ULogEvent passed to writeEvent().
+	/* Initialize the log writer based on the given job ad.
+	 * Check for the user log, dagman log, and global event log.
+	 * Switch to user/condor priv for file I/O.
+	 * If init_user=true, call init_user_ids() (uninit_user_ids() will
+	 * then be called in the destructor).
+	 * Return true on success (even if no files will be written to).
+	 */
+	bool initialize(const ClassAd &job_ad, bool init_user = false);
 
-        @param c the condor ID cluster to put into each ULogEvent
-        @param p the condor ID proc    to put into each ULogEvent
-        @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
-    */
-    bool initialize(int c, int p, int s);
+    /* Set the job id, which will used for each ULogEvent passed to
+     * writeEvent(). Does not do any other initialization.
+     */
+    void setJobId(int c, int p, int s);
 
 	/** Read in the configuration parameters
 		@param force Force a reconfigure; otherwise Configure() will
@@ -180,7 +151,7 @@ class WriteUserLog
 	*/
 	bool Configure( bool force = true );
 
-	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
+	void setUseCLASSAD(int fmt_type); // 0 = not key value pair, 1 = XML, 2 = JSON
 
 	/** Enable / disable writing of user or global logs
 	 */
@@ -200,11 +171,9 @@ class WriteUserLog
     void setLogFileCache(log_file_cache_map_t* cache) { log_file_cache = cache; }
     void freeLogs();
 
-
-	/** Verify that the event log is initialized
-		@return true on success
-	 */
-	bool isInitialized( void ) const {
+	// Returns whether any files are configured to be written to.
+	// I.e. will a call to writeEvent() try to write anything.
+	bool willWrite() const {
 		return ( !logs.empty() || (m_global_fd >= 0) );
 	};
 
@@ -236,7 +205,7 @@ class WriteUserLog
 	void setEnableFsync(bool enabled);
 
 	/**@return false if disabled, true if enabled*/
-	bool getEnableFsync();
+	bool getEnableFsync() const;
 
 	/** APIs for testing */
 	int getGlobalSequence( void ) const { return m_global_sequence; };
@@ -308,6 +277,8 @@ class WriteUserLog
 		mask.push_back(e);
 	}
 
+	FileLockBase *getLock(CondorError &err);
+
   private:
 
 	///
@@ -329,7 +300,8 @@ class WriteUserLog
 				   int & fd );
 
 
-	bool doWriteEvent( int fd, ULogEvent *event, bool do_use_xml );
+	// options are flags from the ULogEvent::formatOpt enum
+	bool doWriteEvent( int fd, ULogEvent *event, int format_options );
 	void GenerateGlobalId( MyString &id );
 
 	bool checkGlobalLogRotation(void);
@@ -354,11 +326,11 @@ class WriteUserLog
 		WriteUserLog::log_file& log,
 		bool is_global_event,
 		bool is_header_event,
-		bool use_xml,
+		int format_opts,
 		ClassAd *ad);
 	void writeJobAdInfoEvent(char const *attrsToWrite,
 		WriteUserLog::log_file& log, ULogEvent *event, ClassAd *param_jobad,
-		bool is_global_event, bool use_xml );
+		bool is_global_event, int format_opts );
 
 	std::vector<log_file*> logs;
     log_file_cache_map_t* log_file_cache;
@@ -372,7 +344,7 @@ class WriteUserLog
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  int        m_global_fd;
     /** The global log file lock     */  FileLockBase *m_global_lock;
-	/** Whether we use XML or not    */  bool       m_global_use_xml;
+	/** ULogEvent::formatOpt flags   */  int        m_global_format_opts; // formerly m_global_use_xml
 	/** The log file uniq ID base    */  char     * m_global_id_base;
 	/** The current sequence number  */  int        m_global_sequence;
 	/** Count event log events?      */  bool       m_global_count_events;
@@ -387,16 +359,12 @@ class WriteUserLog
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
     /** The global log file lock     */  FileLockBase *m_rotation_lock;
 
-	/** Whether we use XML or not    */  bool       m_use_xml;
-
-#if !defined(WIN32)
-	/** PrivSep: the user's UID      */  uid_t      m_privsep_uid;
-	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
-#endif
+	/** ULogEvent::formatOpt flags   */  int        m_format_opts; // formerly m_use_xml
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
 	/** called init_user_ids()?      */  bool       m_init_user_ids;
+	/** switch to user priv?         */  bool       m_set_user_priv;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 	/** Mask for events              */  std::vector<ULogEventNumber> mask;
 };

@@ -70,7 +70,7 @@ if (WITH_GLOBUS)
 					INSTALL_COMMAND make install &&
 						touch ${LIBTOOL_INSTALL_LOC}/done)
 
-			condor_post_external( libtool OFF OFF )
+			condor_post_external( libtool OFF OFF "" )
 			set( GLOBUS_DEPENDS ${LIBTOOL_REF} )
 			set( GLOBUS_FLAGS CPPFLAGS=-I${GLOBUS_INSTALL_LOC}/include LDFLAGS=-L${GLOBUS_INSTALL_LOC}/lib )
 		else()
@@ -200,7 +200,7 @@ if (WITH_GLOBUS)
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
 		endif()
 
-		condor_post_external( globus include/globus OFF )
+		condor_post_external( globus include/globus OFF "${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_GT2};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND}" )
 
 		if ( LINUX )
 			# Install the Globus libraries manually.

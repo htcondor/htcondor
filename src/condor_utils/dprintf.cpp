@@ -71,6 +71,17 @@
 
 #include <sstream>
 
+// call when you want to insure that dprintfs are thread safe on Linux regardless of
+// wether daemon core threads are enabled. thread safety cannot be disabled once enabled
+#ifdef WIN32
+static bool _dprintf_expect_threads = true;
+#else
+static bool _dprintf_expect_threads = false;
+#endif
+void dprintf_make_thread_safe() {
+	_dprintf_expect_threads = true;
+}
+
 // define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
 // this is useful mostly when trying to put log entries from multiple daemons on the same
 // machine in order
@@ -203,7 +214,6 @@ char	*DebugLock = NULL;
 int		DebugLockIsMutex = -1;
 
 int		(*DebugId)(char **buf,int *bufpos,int *buflen);
-int		SetSyscalls(int mode);
 
 int		LockFd = -1;
 
@@ -250,11 +260,7 @@ double _condor_debug_get_time_double()
 {
 #if defined(HAVE_CLOCK_GETTIME)
 	struct timespec tm;
-	#ifdef HAVE_CLOCK_MONOTONIC_RAW
-	clock_gettime(CLOCK_MONOTONIC_RAW, &tm);
-	#else
 	clock_gettime(CLOCK_MONOTONIC, &tm);
-	#endif
 	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
 #elif defined(WIN32)
 	LARGE_INTEGER li;
@@ -280,6 +286,26 @@ double _condor_debug_get_time_double()
 #endif
 }
 
+// print hex bytes from data into buf, up to a maximum of datalen bytes
+// caller must supply the buffer and must insure that it is at least datalen*3+1
+// this is intended to provide a way to add small hex dumps to dprintf logging
+static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+const char * debug_hex_dump(char * buf, const char * data, int datalen)
+{
+	if (!buf) return "";
+	const unsigned char * d = (const unsigned char *)data;
+	char * p = buf;
+	char * endp = buf;
+	while (datalen-- > 0) {
+		unsigned char ch = *d++;
+		*p++ = hex_digit((ch >> 4) & 0xF);
+		*p++ = hex_digit(ch & 0xF);
+		endp = p;
+		*p++ = ' ';
+	}
+	*endp = 0;
+	return buf;
+}
 
 DebugFileInfo::~DebugFileInfo()
 {
@@ -348,7 +374,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, (int)info.tv.tv_usec );
 				#else
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", (int)clock_now, (int)(info.tv.tv_usec+500)/1000 );
+				int seconds = (int)clock_now;
+				int micros = info.tv.tv_usec + 500;
+				if( micros >= 1000000 ) { micros = 0; seconds += 1; }
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d ", (int)clock_now );
@@ -361,7 +390,14 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), (int)(info.tv.tv_usec+500)/1000 );
+				struct tm * then = info.tm;
+				int micros = info.tv.tv_usec + 500;
+				if( micros >= 1000000 ) {
+					micros = 0;
+					time_t seconds = clock_now + 1;
+					then = localtime(& seconds);
+				}
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(then), micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));
@@ -570,7 +606,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 				buffer[bufpos-1] = ' ';
 				for (int jj = 0; jj < info.num_backtrace; ++jj) {
 					const char * fmt = (jj+1 == info.num_backtrace) ? "%p\n" : "%p, ";
-					rc = sprintf_realloc(&buffer, &bufpos, &buflen, fmt, info.backtrace[jj]);
+					sprintf_realloc(&buffer, &bufpos, &buflen, fmt, info.backtrace[jj]);
 				}
 			}
 		}
@@ -799,7 +835,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	//time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
-	mode_t		old_umask;
 #endif
 	int saved_errno;
 	priv_state	priv;
@@ -838,7 +873,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	art.is_enabled = true;
 #endif
 
-#if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
+#if !defined(WIN32) /* signals don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
 	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
@@ -850,11 +885,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
-
-		/* Make sure our umask is reasonable, in case we're the shadow
-		   and the remote job has tried to set its umask or
-		   something.  -Derek Wright 6/11/98 */
-	old_umask = umask( 022 );
 #endif
 
 	/* We want dprintf to be thread safe.  For now, we achieve this
@@ -876,7 +906,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	 * with mutiple threads.  But on Unix, lets bother w/ mutexes if and only
 	 * if we are running w/ threads.
 	 */
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_lock(&_condor_dprintf_critsec);
 	}
 #endif
@@ -893,7 +923,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		   log anything when we're in PRIV_USER_FINAL, to avoid
 		   exit(DPRINTF_ERROR). */
 	if (get_priv() == PRIV_USER_FINAL) {
-		/* Ensure to undo the signal blocking/umask code for unix and
+		/* Ensure to undo the signal blocking code for unix and
 			leave the critical section for windows. */
 		goto cleanup;
 	}
@@ -994,16 +1024,11 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 	errno = saved_errno;
 
-#if !defined(WIN32) // umasks don't exist in WIN32
-		/* restore umask */
-	(void)umask( old_umask );
-#endif
-
 	/* Release mutex.  Note: we MUST do this before we renable signals */
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+	if ( _dprintf_expect_threads || CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
 		pthread_mutex_unlock(&_condor_dprintf_critsec);
 	}
 #endif
@@ -1127,7 +1152,8 @@ debug_open_lock(void)
 	if( DebugLock ) {
 		if ( ! DebugLockIsMutex) {
 			if (LockFd > 0 ) {
-				fstat(LockFd, &fstatus);
+					// fstat can't possibly fail, right?			
+				(void) fstat(LockFd, &fstatus);
 				if (fstatus.st_nlink == 0){
 					close(LockFd);
 					LockFd = -1;
@@ -1276,8 +1302,6 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 
 	#ifdef WIN32
 		length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);
-	#elif Solaris
-		length = llseek(fileno(debug_file_ptr), 0, SEEK_END);
 	#elif Linux
 		length = lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 	#else
@@ -1456,7 +1480,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	int			file_there = 0;
 	FILE		*debug_file_ptr = (*it).debugFP;
 	std::string		filePath = (*it).logPath;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX + MAXPATHLEN + 4];
 
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -1513,7 +1537,6 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 		if (stat (filePath.c_str(), &statbuf) >= 0)
 		{
 			file_there = 1;
-			save_errno = errno;
 			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
 					 filePath.c_str() );
 			/* We should not exit here - file did rotate but something else created it newly. We
@@ -1574,7 +1597,7 @@ void
 _condor_fd_panic( int line, const char* file )
 {
 	int i;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX * 2];
 	char panic_msg[DPRINTF_ERR_MAX];
 	int save_errno;
 	std::vector<DebugFileInfo>::iterator it;
@@ -1611,9 +1634,7 @@ _condor_fd_panic( int line, const char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-#if Solaris
-	llseek(fileno(debug_file_ptr), 0, SEEK_END);
-#elif Linux
+#if Linux
 	lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 #else
 	lseek(fileno(debug_file_ptr), 0, SEEK_END);
@@ -1835,7 +1856,7 @@ dprintf_touch_log()
 			the mtime of the file.  This way, we can differentiate
 			a "heartbeat" touch from a append touch
 		*/
-			chmod( it->logPath.c_str(), 0644);
+			(void) chmod( it->logPath.c_str(), 0644);
 #endif
 		}
 	}
@@ -2123,8 +2144,10 @@ safe_async_log_open()
 			uid_t condor_uid = 0;
 			gid_t condor_gid = 0;
 			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
-				did_seteuid = (setegid(condor_gid) == 0)
-				           || (seteuid(condor_uid) == 0);
+				// The if statements are to quiet a compiler warning.
+				if(setegid(condor_gid)) {}
+				if(seteuid(condor_uid)) {}
+				did_seteuid = true;
 			}
 			else if( orig_euid != getuid() || orig_egid != getgid() ) {
 				// To keep things simple, we do not bother trying to
@@ -2133,8 +2156,10 @@ safe_async_log_open()
 				// probably either the same as our effective id
 				// (no-op) or root.
 
-				did_seteuid = (setegid(getgid()) == 0)
-				           || (seteuid(getuid()) == 0);
+				// The if statements are to quiet a compiler warning.
+				if(setegid(getgid())) {}
+				if(seteuid(getuid())) {}
+				did_seteuid = true;
 					// Do not open with O_CREAT in this case, so
 					// we don't leave behind a file owned by root,
 					// which could cause the daemon to fail to
@@ -2150,11 +2175,9 @@ safe_async_log_open()
 
 #if !defined(WIN32)
 		if( did_seteuid ) {
-			if (0 != setegid(orig_egid) ||
-			    0 != seteuid(orig_euid)) {
-				// what can we do about this???
-				create_log = false; // do something harmless and pointless so that fedora shuts up.
-			}
+			// The if statements are to quiet a compiler warning.
+			if(setegid(orig_egid)) {}
+			if(seteuid(orig_euid)) {}
 		}
 #endif
 

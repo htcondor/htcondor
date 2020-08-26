@@ -37,7 +37,7 @@ class ClaimIdParser {
 	ClaimIdParser(char const *session_id,char const *session_info,char const *session_key):
 		m_suppress_session(false)
 	{
-		m_claim_id.formatstr("%s#%s%s",
+		formatstr(m_claim_id,"%s#%s%s",
 						   session_id ? session_id : "",
 						   session_info ? session_info : "",
 						   session_key ? session_key : "");
@@ -50,11 +50,11 @@ class ClaimIdParser {
 		m_public_part = "";
 	}
 	char const *claimId() {
-		return m_claim_id.Value();
+		return m_claim_id.c_str();
 	}
 	char const *startdSinfulAddr() {
-		if( m_sinful_part.IsEmpty() ) {
-			char const *str = m_claim_id.Value();
+		if( m_sinful_part.empty() ) {
+			char const *str = m_claim_id.c_str();
 			char const *end;
 			if ( str[0] == '<' ) {
 				end = strchr(str, '>');
@@ -64,19 +64,20 @@ class ClaimIdParser {
 			} else {
 				end = strchr(str, '#');
 			}
-			int length = end ? end - str : 0;
-			m_sinful_part.formatstr("%.*s",length,str);
+			if (end) m_sinful_part.assign(str,end);
 		}
-		return m_sinful_part.Value();
+		return m_sinful_part.c_str();
 	}
 	char const *publicClaimId() {
-		if( m_public_part.IsEmpty() ) {
-			char const *str = m_claim_id.Value();
+		if( m_public_part.empty() ) {
+			char const *str = m_claim_id.c_str();
 			char const *end = strrchr(str,'#');
-			int length = end ? end - str : 0;
-			m_public_part.formatstr("%.*s#...",length,str);
+			if (end) {
+				m_public_part.assign(str,end);
+				m_public_part += "#...";
+			}
 		}
-		return m_public_part.Value();
+		return m_public_part.c_str();
 	}
 
 	char const *secSessionId(bool ignore_session_info=false) {
@@ -93,17 +94,16 @@ class ClaimIdParser {
 				// startCommand().
 			return NULL;
 		}
-		if( m_session_id.IsEmpty() ) {
-			char const *str = m_claim_id.Value();
+		if( m_session_id.empty() ) {
+			char const *str = m_claim_id.c_str();
 			char const *end = strrchr(str,'#');
-			int length = end ? end - str : 0;
-			m_session_id.formatstr("%.*s",length,str);
+			if (end) m_session_id.assign(str,end);
 		}
-		return m_session_id.Value();
+		return m_session_id.c_str();
 	}
 	char const *secSessionKey() {
 			// expected format: blah#blah#...#[session_info]SESSION_KEY
-		char const *str = m_claim_id.Value();
+		char const *str = m_claim_id.c_str();
 		char const *ptr = strrchr(str,'#');
 		if(ptr) {
 			ptr+=1;
@@ -120,8 +120,8 @@ class ClaimIdParser {
 	}
 	char const *secSessionInfo() {
 			// expected format: blah#blah#...#[session_info]SESSION_KEY
-		if( m_session_info.IsEmpty() ) {
-			char const *str = m_claim_id.Value();
+		if( m_session_info.empty() ) {
+			char const *str = m_claim_id.c_str();
 			char const *ptr = strrchr(str,'#');
 			char const *endptr;
 			if( !ptr ) {
@@ -135,14 +135,14 @@ class ClaimIdParser {
 			if(!endptr || endptr < ptr) {
 				return NULL;
 			}
-			m_session_info.formatstr("%.*s",(int)(endptr+1-ptr),ptr);
+			m_session_info.assign(ptr,endptr+1);
 		}
 
-		if( m_session_info.IsEmpty() ) {
+		if( m_session_info.empty() ) {
 				// returning NULL here is a convenience for call sites
 			return NULL;
 		}
-		return m_session_info.Value();
+		return m_session_info.c_str();
 	}
 	void setSecSessionInfo(char const *session_info) {
 		if(session_info) {
@@ -151,29 +151,28 @@ class ClaimIdParser {
 			ASSERT(strchr(session_info,'#') == NULL);
 		}
 
-		MyString new_claim_id = secSessionId(true);
+		std::string new_claim_id(secSessionId(true));
 		char const *session_key = secSessionKey();
-		new_claim_id.formatstr_cat("#%s%s",
+		formatstr_cat(new_claim_id,"#%s%s",
 			session_info ? session_info : "",
 			session_key ? session_key : "");
 
 			// reset everything using the new claim id
-		*this = ClaimIdParser(new_claim_id.Value());
+		*this = ClaimIdParser(new_claim_id.c_str());
 	}
 	void suppressSecSession( bool toggle ) {
 		m_suppress_session = toggle;
 	}
 
  private:
-	MyString m_claim_id;
-	MyString m_public_part;
-	MyString m_sinful_part;
+	std::string m_claim_id;
+	std::string m_public_part;
+	std::string m_sinful_part;
 
 		// The following fields are for SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION
 	bool m_suppress_session; // if true, secSessionId() always returns NULL
-	MyString m_session_id;
-	MyString m_session_key;
-	MyString m_session_info;
+	std::string m_session_id;
+	std::string m_session_info;
 };
 
 #endif

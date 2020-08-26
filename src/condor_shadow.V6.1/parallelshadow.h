@@ -82,7 +82,7 @@ class ParallelShadow : public BaseShadow
 
 	int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss );
 
-	int getDiskUsage( void );
+	int64_t getDiskUsage( void );
 
 	int getExitReason( void );
 
@@ -127,6 +127,8 @@ class ParallelShadow : public BaseShadow
 	virtual void gracefulShutDown( void );
 
 	virtual void resourceBeganExecution( RemoteResource* rr );
+
+	virtual void resourceDisconnected( RemoteResource* ) { }
 
 	virtual void resourceReconnected( RemoteResource* rr );
 

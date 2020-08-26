@@ -38,7 +38,7 @@ class ReadUserLogFileState
   public:
 	// Log file type
 	enum UserLogType {
-		LOG_TYPE_UNKNOWN = 0, LOG_TYPE_OLD, LOG_TYPE_XML
+		LOG_TYPE_UNKNOWN = -1, LOG_TYPE_NORMAL=0, LOG_TYPE_XML, LOG_TYPE_JSON
 	};
 
 	// Make things 8 bytes
@@ -181,7 +181,7 @@ public:
 	filesize_t EventNum( const ReadUserLog::FileState &state ) const;
 
 	// Get/set maximum rotations
-	int MaxRotations( void ) { return m_max_rotations; }
+	int MaxRotations( void ) const { return m_max_rotations; }
 	int MaxRotations( int max_rotations )
 		{ Update(); return m_max_rotations = max_rotations; }
 
@@ -251,8 +251,10 @@ public:
 		{ return m_log_type; };
 	void LogType( ReadUserLogFileState::UserLogType t )
 		{ Update(); m_log_type = t; };
-	bool IsLogType( ReadUserLogFileState::UserLogType t ) const
-		{ return m_log_type == t; };
+	bool IsClassadLogType() const
+		{ return m_log_type > UserLogType::LOG_TYPE_NORMAL; };
+	bool IsUnknownLogType() const
+		{ return m_log_type < UserLogType::LOG_TYPE_NORMAL; };
 
 	// Set the score factors
 	enum ScoreFactors {

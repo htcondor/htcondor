@@ -29,19 +29,20 @@ HashTable <std::string, INFNBatchResource *>
     INFNBatchResource::ResourcesByName( hashFunction );
 
 const char * INFNBatchResource::HashName( const char * batch_type,
-		const char * resource_name )
+		const char * gahp_args )
 {
 	static std::string hash_name;
 	formatstr( hash_name, "batch %s", batch_type );
-	if ( resource_name && resource_name[0] ) {
-		formatstr_cat( hash_name, " %s", resource_name );
+	if ( gahp_args && gahp_args[0] ) {
+		formatstr_cat( hash_name, " %s", gahp_args );
 	}
 	return hash_name.c_str();
 }
 
 
 INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_type, 
-	const char * resource_name )
+	const char * resource_name,
+	const char * gahp_args )
 {
 	int rc;
 	INFNBatchResource *resource = NULL;
@@ -49,13 +50,16 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 	if ( resource_name == NULL ) {
 		resource_name = "";
 	}
+    if ( gahp_args == NULL ) {
+		gahp_args = "";
+    }
 
-	rc = ResourcesByName.lookup( HashName( batch_type, resource_name ), resource );
+	rc = ResourcesByName.lookup( HashName( batch_type, gahp_args ), resource );
 	if ( rc != 0 ) {
-		resource = new INFNBatchResource( batch_type, resource_name );
+		resource = new INFNBatchResource( batch_type, resource_name, gahp_args );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashName( batch_type, resource_name ), resource );
+		ResourcesByName.insert( HashName( batch_type, gahp_args ), resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -65,13 +69,14 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 
 
 INFNBatchResource::INFNBatchResource( const char *batch_type, 
-	const char * resource_name )
+	const char *resource_name, const char *gahp_args )
 	: BaseResource( resource_name ),
 	  m_xfer_gahp( NULL ),
 	  m_gahpCanRefreshProxy( false ),
 	  m_gahpRefreshProxyChecked( false )
 {
 	m_batchType = batch_type;
+	m_gahpArgs = gahp_args;
 	m_gahpIsRemote = false;
 
 	m_remoteHostname = resource_name;
@@ -83,8 +88,8 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 	gahp = NULL;
 
 	std::string gahp_name = batch_type;
-	if ( resource_name && *resource_name ) {
-		formatstr_cat( gahp_name, "/%s", resource_name );
+	if ( *gahp_args ) {
+		formatstr_cat( gahp_name, "/%s", gahp_args );
 		m_gahpIsRemote = true;
 	}
 
@@ -108,7 +113,7 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 
 INFNBatchResource::~INFNBatchResource()
 {
-	ResourcesByName.remove( HashName( m_batchType.c_str(), resourceName ) );
+	ResourcesByName.remove( HashName( m_batchType.c_str(), m_gahpArgs.c_str() ) );
 	if ( gahp ) delete gahp;
 	delete m_xfer_gahp;
 }
@@ -127,7 +132,7 @@ const char *INFNBatchResource::ResourceType()
 
 const char *INFNBatchResource::GetHashName()
 {
-	return HashName( m_batchType.c_str(), resourceName );
+	return HashName( m_batchType.c_str(), m_gahpArgs.c_str() );
 }
 
 void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )
@@ -159,6 +164,7 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 	ping_delay = 0;
 	
 		// TODO Is there a meaning ping command we can perform?
+/* comment out to calm coverity
 	int rc = 0;
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -169,9 +175,10 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 		ping_succeeded = false;
 	} 
 	else {
+*/
 		ping_complete = true;
 		ping_succeeded = true;
-	}
+//	}
 
 	return;
 }

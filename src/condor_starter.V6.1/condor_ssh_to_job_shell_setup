@@ -18,8 +18,10 @@ done
 # kill the dummy sleep job if this is an interactive job
 if grep -q '^InteractiveJob = true' "${_CONDOR_SCRATCH_DIR}/.job.ad"; then
   if [ "${_CONDOR_JOB_PIDS}" != "" ]; then
-    kill "${_CONDOR_JOB_PIDS}" 2>/dev/null
-	_CONDOR_JOB_PIDS=""
+	if [ ! -S ${_CONDOR_SCRATCH_DIR}/.docker_sock ]; then
+    		kill "${_CONDOR_JOB_PIDS}" 2>/dev/null
+		_CONDOR_JOB_PIDS=""
+	fi
   fi
 fi
 
@@ -43,7 +45,9 @@ else
   then
 	CONDOR_CONFIG=/dev/null
 	export CONDOR_CONFIG
-	exec /usr/bin/condor_docker_enter
+	
+	cd $_CONDOR_SCRATCH_DIR
+	exec "$_CONDOR_BIN"/condor_docker_enter
   fi
   # start a shell for the user
   if [ "${_CONDOR_SHELL}" != "" ]; then

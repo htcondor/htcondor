@@ -44,7 +44,7 @@ public:
 	int size();
 	void clear();
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
-	bool hasJobIds() { return keep_job_ids; }
+	bool hasJobIds() const { return keep_job_ids; }
 	void collect_garbage(bool brute_force); // free the deleted clusters
 #endif
 

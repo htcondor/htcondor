@@ -17,19 +17,27 @@
  ############################################################### 
 
 
-if (NOT WIN_EXEC_NODE_ONLY)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-	include_directories(${CMAKE_CURRENT_BINARY_DIR})
+## create targets
+set( collectorElements
+collector_main.cpp
+offline_plugin.cpp
+)
 
-	## create targets
-	file( GLOB collectorRmvElements Example* )
 
-	condor_selective_glob( "CollectorPlugin*;collector_stats.*;collector_engine.*;view_server.*;collector.*" CollectorLibSrcs)
-	condor_static_lib ( collectorlib "${CollectorLibSrcs}")
+set(CollectorLibSrcs
+	CollectorPluginManager.cpp
+	collector_stats.cpp
+	collector_engine.cpp
+	view_server.cpp
+	collector.cpp
+)
 
-	condor_daemon ( collector
-			"${collectorRmvElements};${CollectorLibSrcs}"
-			"${CONDOR_LIBS};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
-			${C_SBIN} )
+#
+#condor_static_lib ( collectorlib "${CollectorLibSrcs}")
 
-endif(NOT WIN_EXEC_NODE_ONLY)
+condor_daemon ( EXE condor_collector
+  SOURCES "${collectorElements};${CollectorLibSrcs}"
+  LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}"
+  INSTALL ${C_SBIN} )

@@ -63,14 +63,6 @@ FILE *my_popen( const ArgList &args,
 				const char *write_data = NULL);
 int my_system( const ArgList &args, const Env *env_ptr = NULL );
 
-// PrivSep version
-#if !defined(WIN32)
-FILE *privsep_popen( ArgList &args,
-                     const char * mode,
-                     int want_stderr,
-                     uid_t uid,
-					 Env *env_ptr = NULL);
-#endif
 
 // run a command and return its output in a buffer
 // the program is killed if the timeout expires.

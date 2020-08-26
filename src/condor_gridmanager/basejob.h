@@ -38,7 +38,7 @@ class BaseJob : public Service
 	static void BaseJobReconfig();
 
 	virtual void Reconfig() {}
-	void SetEvaluateState();
+	void SetEvaluateState() const;
 	virtual void doEvaluateState();
 	virtual BaseResource *GetResource();
 
@@ -73,8 +73,8 @@ class BaseJob : public Service
 	static int m_checkRemoteStatusTid;
 	void CheckRemoteStatus();
 
-	void UpdateJobTime( float *old_run_time, bool *old_run_time_dirty );
-	void RestoreJobTime( float old_run_time, bool old_run_time_dirty );
+	void UpdateJobTime( float *old_run_time, bool *old_run_time_dirty ) const;
+	void RestoreJobTime( float old_run_time, bool old_run_time_dirty ) const;
 
 	virtual void RequestPing();
 	virtual void NotifyResourceDown();
@@ -104,9 +104,9 @@ class BaseJob : public Service
 	bool deleteFromGridmanager;
 	bool deleteFromSchedd;
 
-	int wantResubmit;
+	bool wantResubmit;
 	int doResubmit;
-	int wantRematch;
+	bool wantRematch;
 
 	bool resourceDown;
 	bool resourceStateKnown;

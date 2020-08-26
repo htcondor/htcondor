@@ -41,22 +41,6 @@
 ##  Pool is: "UW-Madison CS" (you don't need to put in the " marks).
 #COLLECTOR_NAME		= Short Description of your pool
 
-##  By default, every pool sends periodic updates to a central
-##  condor_collector at UW-Madison with basic information about the
-##  status of your pool.  This includes only the number of total
-##  machines, the number of jobs submitted, the number of machines
-##  running jobs, the hostname of your central manager, and the
-##  "COLLECTOR_NAME" specified above.  These updates help us see how
-##  Condor is being used around the world.  By default, they will be
-##  sent to condor.cs.wisc.edu.  If you don't want these updates sent
-##  from your pool, uncomment the following entry:
-#CONDOR_DEVELOPERS_COLLECTOR = NONE
-
-##  Additional reporting (like that described above) can be sent via
-##  email.  By default, it is sent to "condor-admin@cs.wisc.edu".  If
-##  you wish to disable this reporting, uncomment this entry.
-#CONDOR_DEVELOPERS = NONE
-
 ##  What daemons do you want to run on your central manager?  
 ##  NOTE: For it to be the central manager, you need the NEGOTIATOR
 ##  and COLLECTOR to run.  It's optional whether or not you want to
@@ -84,11 +68,6 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  discarded as stale information?  (Defaults to 15 minutes.  The 
 ##  daemons send updates every 5 minutes by default).
 #CLASSAD_LIFETIME	= 900
-
-##  How often should the collector check for machines that don't have
-##  ClassAds from the condor_master and send email about it? (3
-##  hours by default).
-#MASTER_CHECK_INTERVAL	= 10800
 
 ##  Network timeout when talking to daemons that are sending an
 ##  update: 

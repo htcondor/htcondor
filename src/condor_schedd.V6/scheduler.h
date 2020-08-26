@@ -31,6 +31,12 @@
 
 #include <map>
 #include <set>
+#include <unordered_set>
+#include <unordered_map>
+#include <queue>
+
+// switch to using User (fully qualified) over Owner as the main job identity
+#define USER_IS_THE_NEW_OWNER 1
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -42,7 +48,6 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "list.h"
-#include "Queue.h"
 #include "write_user_log.h"
 #include "autocluster.h"
 #include "shadow_mgr.h"
@@ -60,6 +65,7 @@
 #include "schedd_stats.h"
 #include "condor_holdcodes.h"
 #include "job_transforms.h"
+#include "history_queue.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -159,7 +165,7 @@ struct LiveJobCounters {
   int SchedulerJobsCompleted;
   int SchedulerJobsHeld;
   void clear_counters() { memset(this, 0, sizeof(*this)); }
-  void publish(ClassAd & ad, const char * prefix);
+  void publish(ClassAd & ad, const char * prefix) const;
   LiveJobCounters()
 	: JobsSuspended(0)
 	, JobsIdle(0)
@@ -175,16 +181,21 @@ struct LiveJobCounters {
   {}
 };
 
+struct SubmitterFlockCounters {
+  int JobsRunning{0};
+  int WeightedJobsRunning{0};
+  int JobsIdle{0};
+  int WeightedJobsIdle{0};
+};
+
 // counters within the SubmitterData struct that are cleared and re-computed by count_jobs.
 struct SubmitterCounters {
   int JobsRunning;
   int JobsIdle;
-  int WeightedJobsRunning;
-  int WeightedJobsIdle;
+  double WeightedJobsRunning;
+  double WeightedJobsIdle;
   int JobsHeld;
   int JobsFlocked;
-  int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
-  int WeightedJobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
   int SchedulerJobsRunning; // Scheduler Universe (i.e dags)
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
@@ -200,8 +211,6 @@ struct SubmitterCounters {
 	, WeightedJobsIdle(0)
 	, JobsHeld(0)
 	, JobsFlocked(0)
-	, JobsFlockedHere(0)
-	, WeightedJobsFlockedHere(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
 	, Hits(0)
@@ -218,6 +227,8 @@ struct SubmitterData {
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
   SubmitterCounters num;
+  std::unordered_map<std::string, SubmitterFlockCounters> flock; // Per-pool flock information
+  std::unordered_set<std::string> owners; // Number of unique owners observed using this submitter.
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
   // Time of most recent change in flocking level or
   // successful negotiation at highest current flocking
@@ -292,7 +303,7 @@ class match_rec: public ClaimIdParser
 	~match_rec();
 
     char*   		peer; //sinful address of startd
-	MyString        m_description;
+	std::string        m_description;
 
 		// cluster of the job we used to obtain the match
 	int				origcluster; 
@@ -311,7 +322,6 @@ class match_rec: public ClaimIdParser
 	int				entered_current_status;
 	ClassAd*		my_match_ad;
 	char*			user;
-	char*			pool;		// negotiator hostname if flocking; else NULL
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
@@ -336,11 +346,16 @@ class match_rec: public ClaimIdParser
 	void	setStatus( int stat );
 
 	void makeDescription();
-	char const *description() {
-		return m_description.Value();
+	char const *description() const {
+		return m_description.c_str();
 	}
 
+	const std::string & getPool() const {return m_pool;}
+
 	PROC_ID m_now_job;
+
+private:
+	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
 class UserIdentity {
@@ -407,6 +422,51 @@ typedef enum {
 	NO_SHADOW_VM,
 } NoShadowFailure_t;
 
+
+namespace std
+{
+	template<> struct hash<std::pair<std::string, std::string>>
+	{
+		typedef std::pair<std::string, std::string> argument_type;
+		typedef std::size_t result_type;
+		result_type operator()(argument_type const& input) const noexcept
+		{
+			result_type const h1 ( std::hash<std::string>{}(input.first) );
+			result_type const h2 ( std::hash<std::string>{}(input.second) );
+			return h1 ^ (h2 << 1);
+		}
+	};
+}
+
+class PoolSubmitterMap
+{
+public:
+	void AddSubmitter(const std::string &pool, const std::string &submitter, time_t now) {
+		m_map[std::make_pair(pool, submitter)] = now + 1200;
+	}
+
+	bool IsSubmitterValid(const std::string &pool, const std::string &submitter, time_t now) const {
+		auto iter = m_map.find({pool, submitter});
+		if (iter == m_map.end()) {
+			return false;
+		}
+		return iter->second > now;
+	}
+
+	void Cleanup(time_t now) {
+		for (auto it = m_map.begin(); it != m_map.end();) {
+			if (it->second <= now) {
+				it = m_map.erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
+private:
+	std::unordered_map<std::pair<std::string, std::string>, time_t> m_map;
+};
+
 // These are the args to contactStartd that get stored in the queue.
 class ContactStartdArgs
 {
@@ -417,7 +477,7 @@ public:
 	char*		claimId( void )		{ return csa_claim_id; };
 	char*		extraClaims( void )	{ return csa_extra_claims; };
 	char*		sinful( void )		{ return csa_sinful; }
-	bool		isDedicated()		{ return csa_is_dedicated; }
+	bool		isDedicated() const		{ return csa_is_dedicated; }
 
 private:
 	char *csa_claim_id;
@@ -426,35 +486,6 @@ private:
 	bool csa_is_dedicated;
 };
 
-class HistoryHelperState
-{
-public:
-	HistoryHelperState(Stream &stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_streamresults(false), m_stream_ptr(&stream), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match)
-	{}
-
-	HistoryHelperState(classad_shared_ptr<Stream> stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_streamresults(false), m_stream_ptr(NULL), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_stream(stream)
-	{}
-
-	~HistoryHelperState() { if (m_stream.get() && m_stream.unique()) daemonCore->Cancel_Socket(m_stream.get()); }
-
-	Stream * GetStream() const { return m_stream_ptr ? m_stream_ptr : m_stream.get(); }
-
-	const std::string & Requirements() const { return m_reqs; }
-	const std::string & Since() const { return m_since; }
-	const std::string & Projection() const { return m_proj; }
-	const std::string & MatchCount() const { return m_match; }
-	bool m_streamresults;
-
-private:
-	Stream *m_stream_ptr;
-	std::string m_reqs;
-	std::string m_since;
-	std::string m_proj;
-	std::string m_match;
-	classad_shared_ptr<Stream> m_stream;
-};
 
 #define USE_VANILLA_START 1
 
@@ -473,6 +504,8 @@ class VanillaMatchAd : public ClassAd
 private:
 	ClassAd owner_ad;
 };
+
+class JobSets; // forward reference - declared in jobsets.h
 
 class Scheduler : public Service
 {
@@ -556,7 +589,7 @@ class Scheduler : public Service
     match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
 	// support for START_VANILLA_UNIVERSE
 	ExprTree *      flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo* powni);
-	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char *&because); // returns true when START_VANILLA allows this job to run on this match
+	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const std::string &pool, const char *&because); // returns true when START_VANILLA allows this job to run on this match
 	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
 	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
 	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
@@ -576,7 +609,7 @@ class Scheduler : public Service
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
 	int				AlreadyMatched(PROC_ID*);
 	int				AlreadyMatched(JobQueueJob * job, int universe);
-	void			ExpediteStartJobs();
+	void			ExpediteStartJobs() const;
 	void			StartJobs();
 	void			StartJob(match_rec *rec);
 	void			sendAlives();
@@ -602,10 +635,10 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
-	bool			WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
-	int				receive_startd_alive(int cmd, Stream *s);
+	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
 	void            checkContactQueue();
@@ -656,15 +689,17 @@ class Scheduler : public Service
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
-	int				aliveInterval( void ) { return alive_interval; };
+	int				aliveInterval( void ) const { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
-	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
-	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
-	int				getMaxJobsRunning() { return MaxJobsRunning; }
-	int				getJobsTotalAds() { return JobsTotalAds; };
-	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
-	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
-	int				getMaxJobsPerSubmission() { return MaxJobsPerSubmission; }
+	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
+	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
+	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
+	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
+	int				getMaxJobsRunning() const { return MaxJobsRunning; }
+	int				getJobsTotalAds() const { return JobsTotalAds; };
+	int				getMaxJobsSubmitted() const { return MaxJobsSubmitted; };
+	int				getMaxJobsPerOwner() const { return MaxJobsPerOwner; }
+	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
 		// Used by the UserIdentity class and some others
 	const ExprTree*	getGridParsedSelectionExpr() const 
@@ -765,7 +800,25 @@ class Scheduler : public Service
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
+	// Class to manage sets of Job 
+	JobSets *jobSets;
+
 private:
+
+	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
+
+	// Setup a new security session for a remote negotiator.
+	// Returns a capability that can be included in an ad sent to the collector.
+	bool SetupNegotiatorSession(unsigned duration, const std::string &remote_pool,
+		std::string &capability);
+
+	// Setup a new security session for a trusted collector.
+	// As with SetupNegotiator session, it returns a capability for embedding in the schedd ad.
+	bool SetupCollectorSession(unsigned duration, std::string &capability);
+
+	// Negotiator & collector sessions have claim IDs, which includes a sequence number
+	uint64_t m_negotiator_seq{0};
+	time_t m_scheduler_startup{0};
 
 	// We have to evaluate requirements in the listed order to maintain
 	// user sanity, so the submit requirements data structure must ordered.
@@ -808,6 +861,8 @@ private:
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
+	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
+	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
@@ -845,7 +900,7 @@ private:
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
-	Queue<shadow_rec*> RunnableJobQueue;
+	std::queue<shadow_rec*> RunnableJobQueue;
 	int				StartJobTimer;
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
@@ -857,7 +912,7 @@ private:
 
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
-	Queue<ContactStartdArgs*> startdContactQueue;
+	std::queue<ContactStartdArgs*> startdContactQueue;
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
 	int num_pending_startd_contacts;
 	int max_pending_startd_contacts;
@@ -916,13 +971,10 @@ private:
 
 	// utility functions
 	int			count_jobs();
-	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int debug_level);
+	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
-	int			command_history(int, Stream* stream);
-	int			history_helper_launcher(const HistoryHelperState &state);
-	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
@@ -947,8 +999,8 @@ private:
 	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
-	int			calcSlotWeight(match_rec *mrec);
-	int			guessJobSlotWeight(JobQueueJob * job);
+	double			calcSlotWeight(match_rec *mrec) const;
+	double			guessJobSlotWeight(JobQueueJob * job);
 	
 	// -----------------------------------------------
 	// CronTab Jobs
@@ -977,7 +1029,7 @@ private:
 		// CronTab execution scheduling
 		// This is used by processCronTabClusterIds()
 		//
-	Queue<int> cronTabClusterIds;
+	std::set<int> cronTabClusterIds;
 	// -----------------------------------------------
 
 		/** We begin the process of opening a non-blocking ReliSock
@@ -1007,6 +1059,8 @@ private:
 	
 	void			expand_mpi_procs(StringList *, StringList *);
 
+	static void		token_request_callback(bool success, void *miscdata);
+
 	HashTable <std::string, match_rec *> *matches;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
@@ -1015,6 +1069,11 @@ private:
 	int				numMatches;
 	int				numShadows;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
+	std::unordered_set<std::string> FlockPools; // Names of all "default" flocked collectors.
+	std::unordered_map<std::string, std::unique_ptr<DCCollector>> FlockExtra; // User-provided flock targets.
+
+	PoolSubmitterMap		SubmitterMap;  // Map between remote pools and advertised submitters
+
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
@@ -1045,6 +1104,9 @@ private:
    int local_startd_reaper(int pid, int status);
    int launch_local_startd();
 
+		// Command handler for collector token requests.
+	int handle_collector_token_request(int, Stream *s);
+
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
 	int sent_shadow_failure_email;
@@ -1069,12 +1131,13 @@ private:
     void userlog_file_cache_erase(const int& cluster, const int& proc);
 
 	// State for the history helper queue.
-	std::vector<HistoryHelperState> m_history_helper_queue;
-	unsigned m_history_helper_max;
-	unsigned m_history_helper_count;
-	int m_history_helper_rid;
+	// object to manage history queries in flight
+	HistoryHelperQueue HistoryQue;
 
 	bool m_matchPasswordEnabled;
+
+	bool m_include_default_flock_param{true};
+	DCTokenRequester m_token_requester;
 
 	friend class DedicatedScheduler;
 };
@@ -1148,6 +1211,17 @@ int jobIsFinished( int cluster, int proc, void* vptr = NULL );
 */
 int jobIsFinishedDone( int cluster, int proc, void* vptr = NULL,
 					   int exit_status = 0 );
+
+/* Returns true if an external manager (e.g. gridmanager, job router) has
+ * indicated it is handling this job.
+ */
+bool jobExternallyManaged(ClassAd * ad);
+
+/* Returns true if an external manager (e.g. gridmanager, job router) has
+ * finished handling this job, the job is now in a terminal state
+ * (COMPELTED, REMOVED), and the manager doesn't need to see the job again.
+ */
+bool jobManagedDone(ClassAd * ad);
 
 
 #endif /* _CONDOR_SCHED_H_ */

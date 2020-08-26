@@ -32,6 +32,7 @@ enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE,
 class CAList {
 public:
 	CAList() {};
+	virtual ~CAList() {};
 
 	// Instead of deriving from List, have-a list internally instead
 	// allows us to controll access and replace List with std::list
@@ -62,7 +63,7 @@ class AllocationNode {
 		// Methods
 	void addResource( ClassAd* r, int proc );
 	void setClaimId( const char* new_claim_id );
-	void display( void );
+	void display( void ) const;
 
 		// Data
 	int status;
@@ -224,7 +225,7 @@ class DedicatedScheduler : public Service {
 	void listDedicatedResources( int debug_level, ClassAdList* resources );
 
 		// Used for claiming/releasing startds we control
-	bool releaseClaim( match_rec* m_rec, bool use_tcp = true );
+	bool releaseClaim( match_rec* m_rec );
 	bool deactivateClaim( match_rec* m_rec );
 	void sendAlives( void );
 
@@ -412,6 +413,7 @@ class DedicatedScheduler : public Service {
 	ExtArray<int>*		idle_clusters;	// Idle cluster ids
 
 	ClassAdList*		resources;		// All dedicated resources 
+	int					total_cores;    // sum of all cores above
 
 
 		// All resources, sorted by the time they'll next be available 

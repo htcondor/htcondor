@@ -21,7 +21,6 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "Queue.h"
 #include "env.h"
 
 #include "condor_cron_job_params.h"
@@ -125,7 +124,7 @@ class CronJob : public Service
 	void SetState( CronJobState state ) {
 		m_state = state;
 	};
-	int SendHup( void );
+	int SendHup( void ) const;
 	void CancelRunTimer( void );
 	unsigned Period( void ) const { return m_params->GetPeriod(); };
 

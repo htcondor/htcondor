@@ -51,7 +51,9 @@ $ExitSuccess = sub
 	}
 	# clean up
 	CondorTest::debug("Expected logfile found<$goal>\n",1);
-	runcmd("rm -rf initd_sched");
+	# the test suite has open file handles to the event log, causing
+	# the following command to fail on NFS-based workign directories.
+	runcmd("rm -rf initd_sched || :");
 };
 
 

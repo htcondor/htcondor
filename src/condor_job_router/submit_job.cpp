@@ -58,10 +58,10 @@ public:
 		}
 		names += " at ";
 		if(pool_name) {
-			names = "pool ";
+			names += "pool ";
 			names += pool_name;
 		} else {
-			names = "local pool";
+			names += "local pool";
 		}
 	}
 
@@ -73,7 +73,7 @@ public:
 		}
 		if(qmgr) { DisconnectQ( qmgr, false /* don't commit */); }
 
-		MyString msg;
+		std::string msg;
 		msg = "ERROR ";
 		if(names.Length()) {
 			msg += "(";
@@ -83,24 +83,24 @@ public:
 
 		if(cluster != -1) {
 			msg += "(";
-			msg += IntToStr( cluster );
+			msg += std::to_string( cluster );
 			if(proc != -1) {
 				msg += ".";
-				msg += IntToStr( proc );
+				msg += std::to_string( proc );
 			}
 			msg += ") ";
 		}
 		va_list args;
 		va_start(args,fmt);
-		msg.vformatstr_cat(fmt,args);
+		vformatstr_cat(msg,fmt,args);
 		va_end(args);
 
 
 		if( save_error_msg ) {
-			*save_error_msg = msg.Value();
+			*save_error_msg = msg.c_str();
 		}
 		else {
-			dprintf(D_ALWAYS, "%s", msg.Value());
+			dprintf(D_ALWAYS, "%s", msg.c_str());
 		}
 	}
 private:
@@ -181,10 +181,10 @@ static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &sc
 static Qmgr_connection *open_job(ClassAd &job,DCSchedd &schedd,FailObj &failobj)
 {
 		// connect to the q as the owner of this job
-	MyString effective_owner;
+	std::string effective_owner;
 	job.LookupString(ATTR_OWNER,effective_owner);
 
-	return open_q_as_owner(effective_owner.Value(),schedd,failobj);
+	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
 }
 
 static Qmgr_connection *open_job(classad::ClassAd const &job,DCSchedd &schedd,FailObj &failobj)
@@ -488,13 +488,14 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	ExprTree * tree;
 	const char *lhstr = 0;
 	const char *rhstr = 0;
-	src.ResetExpr();
-	while( src.NextExpr(lhstr, tree) ) {
+	for( auto itr = src.begin(); itr != src.end(); itr++ ) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 			continue;
 		}
 		rhstr = ExprTreeToString( tree );
-		if( !lhstr || !rhstr) { 
+		if( !rhstr) { 
 			failobj.fail("Problem processing classad\n");
 			return false;
 		}
@@ -546,12 +547,6 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 	uninit_user_ids();
 
 	return success;
-}
-
-bool submit_job(const std::string & owner, const std::string &domain, classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
-{
-	ClassAd src2 = src;
-	return submit_job(owner, domain, src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
 }
 
 /*
@@ -873,45 +868,6 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 	return success;
 }
 
-bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool *no_ulog )
-{
-	int cluster, proc;
-	std::string owner;
-	std::string userLogFile;
-	std::string domain;
-	std::string dagmanLogFile;
-	bool use_xml = false;
-
-	ASSERT(ulog);
-	ASSERT(no_ulog);
-
-	userLogFile[0] = '\0';
-	dagmanLogFile[0] = '\0';
-	std::vector<const char*> logfiles;
-	if ( getPathToUserLog( &job_ad, userLogFile ) ) {
-		logfiles.push_back( userLogFile.c_str());
-	}
-	if ( getPathToUserLog( &job_ad, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG ) ) {
-		logfiles.push_back( dagmanLogFile.c_str() );
-	}
-	*no_ulog = logfiles.empty();
-	if(*no_ulog) {
-		return true;
-	}
-
-	job_ad.EvaluateAttrString(ATTR_OWNER,owner);
-	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
-	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
-	job_ad.EvaluateAttrString( ATTR_NT_DOMAIN, domain );
-	job_ad.EvaluateAttrBool( ATTR_ULOG_USE_XML, use_xml );
-
-	if(!ulog->initialize(owner.c_str(), domain.c_str(), logfiles, cluster, proc, 0)) {
-		return false;
-	}
-	ulog->setUseXML( use_xml );
-	return true;
-}
-
 bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job_ad )
 {
 	int cluster, proc;
@@ -1039,15 +995,14 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 {
 	WriteUserLog ulog;
-	bool no_ulog = false;
 
-	if(!InitializeUserLog(ad,&ulog,&no_ulog)) {
+	if ( ! ulog.initialize(ad, true) ) {
 		dprintf( D_FULLDEBUG,
 				 "(%d.%d) Unable to open user log (event %d)\n",
 				 event.cluster, event.proc, event.eventNumber );
 		return false;
 	}
-	if(no_ulog) {
+	if ( ! ulog.willWrite() ) {
 		return true;
 	}
 

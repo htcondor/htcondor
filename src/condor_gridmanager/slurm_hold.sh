@@ -30,10 +30,16 @@ fi
 
 requested=`echo $1 | sed 's/^.*\///'`
 
-cmdout=`${slurm_binpath}/scontrol hold $requested 2>&1`
+cluster_name=`echo $requested | cut -s -f2 -d@`
+if [ $cluster_name != "" ] ; then
+  requested=`echo $requested | cut -f1 -d@`
+  cluster_arg="-M $cluster_name"
+fi
+
+cmdout=`${slurm_binpath}/scontrol $cluster_arg hold $requested 2>&1`
 retcode=$?
 if echo "$cmdout" | grep -q 'Job is no longer pending execution' ; then
-  cmdout=`${slurm_binpath}/scontrol requeuehold $requested 2>&1`
+  cmdout=`${slurm_binpath}/scontrol $cluster_arg requeuehold $requested 2>&1`
   retcode=$?
 fi
 

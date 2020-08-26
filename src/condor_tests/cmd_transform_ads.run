@@ -30,7 +30,7 @@ my $testname = "cmd_transform_ads";
 
 my $ClusterId = 100;
 my $pid = $$;
-my $executable = "sleep.exe";
+my $executable = "x_sleep.pl";
 my $arguments = 600;
 my $submit_content;
 my $submitfile;

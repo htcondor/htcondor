@@ -48,7 +48,7 @@ int
 TransferD::write_files_handler(int /* cmd */, Stream *sock) 
 {
 	ReliSock *rsock = (ReliSock*)sock;
-	MyString capability;
+	std::string capability;
 	int protocol = FTP_UNKNOWN;
 	TransferRequest *treq = NULL;
 	MyString fquser;
@@ -117,7 +117,7 @@ TransferD::write_files_handler(int /* cmd */, Stream *sock)
 
 		dprintf(D_ALWAYS, "Client identity '%s' tried to write some files "
 			"using capability '%s', but there was no such capability. "
-			"Access denied.\n", fquser.Value(), capability.Value());
+			"Access denied.\n", fquser.Value(), capability.c_str());
 		return CLOSE_STREAM;
 	}
 
@@ -283,7 +283,7 @@ TransferD::write_files_thread(void *targ, Stream *sock)
 			return EXIT_FAILURE;
 		}
 
-		ftrans.setPeerVersion(treq->get_peer_version().Value());
+		ftrans.setPeerVersion(treq->get_peer_version().c_str());
 
 		// We're "downloading" from the client to here.
 		result = ftrans.DownloadFiles();
@@ -332,7 +332,7 @@ int
 TransferD::write_files_reaper(int tid, int exit_status)
 {
 	TransferRequest *treq = NULL;
-	MyString str;
+	std::string str;
 	ClassAd result;
 	int exit_code;
 	int signal;
@@ -368,7 +368,7 @@ TransferD::write_files_reaper(int tid, int exit_status)
 		dprintf(D_ALWAYS, "Thread exited with signal: %d\n", signal);
 
 		result.Assign(ATTR_TREQ_UPDATE_STATUS, "NOT OK");
-		str.formatstr("Died with signal %d", signal);
+		formatstr(str, "Died with signal %d", signal);
 		result.Assign(ATTR_TREQ_UPDATE_REASON, str);
 		result.Assign(ATTR_TREQ_SIGNALED, TRUE);
 
@@ -386,7 +386,7 @@ TransferD::write_files_reaper(int tid, int exit_status)
 
 			default:
 				result.Assign(ATTR_TREQ_UPDATE_STATUS, "NOT OK");
-				str.formatstr("Exited with bad exit code %d", exit_code);
+				formatstr(str, "Exited with bad exit code %d", exit_code);
 				result.Assign(ATTR_TREQ_UPDATE_REASON, str);
 				result.Assign(ATTR_TREQ_SIGNALED, FALSE);
 				result.Assign(ATTR_TREQ_EXIT_CODE, exit_code);

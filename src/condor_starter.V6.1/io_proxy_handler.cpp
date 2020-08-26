@@ -234,9 +234,9 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			dprintf(D_SYSCALLS,"Directed to use url %s\n",url);
 			ASSERT( strlen(url) < CHIRP_LINE_MAX );
 			if(!strncmp(url,"remote:",7)) {
-				strncpy(path,url+7,CHIRP_LINE_MAX);
+				strncpy(path,url+7,CHIRP_LINE_MAX-1);
 			} else if(!strncmp(url,"buffer:remote:",14)) {
-				strncpy(path,url+14,CHIRP_LINE_MAX);
+				strncpy(path,url+14,CHIRP_LINE_MAX-1);
 			} else {
 				// Condor 7.9.6 dropped the remote: and buffer:remote prefix for the vanilla shadow
 				// so it's not longer correct to assert then these prefixes are missing.
@@ -248,7 +248,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 				if (vi && ! vi->built_since_version(7,9,6)) {
 					EXCEPT("File %s maps to url %s, which I don't know how to open.",path,url);
 				}
-				strncpy(path,url,CHIRP_LINE_MAX);
+				strncpy(path,url,CHIRP_LINE_MAX-1);
 			}
 		} else {
 			EXCEPT("Unable to map file %s to a url: %s",path,strerror(errno));
@@ -477,7 +477,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		// setInfoText truncates name to 128 bytes
 		event.setInfoText( name );
 
-		ad = event.toClassAd();
+		ad = event.toClassAd(true);
 		ASSERT(ad);
 
 		result = REMOTE_CONDOR_ulog( ad );
@@ -853,8 +853,7 @@ int IOProxyHandler::convert( int result, int unix_errno )
 			return CHIRP_ERROR_IS_DIR;
 		case ENOTDIR:
 			return CHIRP_ERROR_NOT_DIR;
-/* ENOTEMPTY is equal to EEXIST under AIX */
-#if defined(ENOTEMPTY) && !defined(AIX) 
+#if defined(ENOTEMPTY)
 		case ENOTEMPTY:
 			return CHIRP_ERROR_NOT_EMPTY;
 #endif

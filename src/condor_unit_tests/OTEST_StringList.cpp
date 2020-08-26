@@ -93,14 +93,14 @@ static bool test_remove_anycase_empty(void);
 static bool test_remove_anycase_first(void);
 static bool test_remove_anycase_last(void);
 static bool test_remove_anycase_many(void);
-static bool test_substring_return_false_invalid(void);
-static bool test_substring_return_false_almost(void);
-static bool test_substring_return_false_reverse(void);
-static bool test_substring_return_false_case(void);
-static bool test_substring_return_true_identical(void);
-static bool test_substring_return_true_many(void);
-static bool test_substring_current_single(void);
-static bool test_substring_current_multiple(void);
+static bool test_prefix_return_false_invalid(void);
+static bool test_prefix_return_false_almost(void);
+static bool test_prefix_return_false_reverse(void);
+static bool test_prefix_return_false_case(void);
+static bool test_prefix_return_true_identical(void);
+static bool test_prefix_return_true_many(void);
+static bool test_prefix_current_single(void);
+static bool test_prefix_current_multiple(void);
 static bool test_contains_withwildcard_return_false(void);
 static bool test_contains_withwildcard_return_false_substring(void);
 static bool test_contains_withwildcard_return_false_case(void);
@@ -309,14 +309,14 @@ bool OTEST_StringList(void) {
 	driver.register_function(test_remove_anycase_first);
 	driver.register_function(test_remove_anycase_last);
 	driver.register_function(test_remove_anycase_many);
-	driver.register_function(test_substring_return_false_invalid);
-	driver.register_function(test_substring_return_false_almost);
-	driver.register_function(test_substring_return_false_reverse);
-	driver.register_function(test_substring_return_false_case);
-	driver.register_function(test_substring_return_true_identical);
-	driver.register_function(test_substring_return_true_many);
-	driver.register_function(test_substring_current_single);
-	driver.register_function(test_substring_current_multiple);
+	driver.register_function(test_prefix_return_false_invalid);
+	driver.register_function(test_prefix_return_false_almost);
+	driver.register_function(test_prefix_return_false_reverse);
+	driver.register_function(test_prefix_return_false_case);
+	driver.register_function(test_prefix_return_true_identical);
+	driver.register_function(test_prefix_return_true_many);
+	driver.register_function(test_prefix_current_single);
+	driver.register_function(test_prefix_current_multiple);
 	driver.register_function(test_contains_withwildcard_return_false);
 	driver.register_function(test_contains_withwildcard_return_false_substring);
 	driver.register_function(test_contains_withwildcard_return_false_case);
@@ -1969,13 +1969,13 @@ static bool test_remove_anycase_many() {
 	PASS;
 }
 
-static bool test_substring_return_false_invalid() {
+static bool test_prefix_return_false_invalid() {
 	emit_test("Does substring() return false when passed a string not in the "
 		"StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	const char* check = "d";
-	bool retVal = sl.substring(check);
+	bool retVal = sl.prefix(check);
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -1991,13 +1991,13 @@ static bool test_substring_return_false_invalid() {
 	PASS;
 }
 
-static bool test_substring_return_false_almost() {
+static bool test_prefix_return_false_almost() {
 	emit_test("Does substring() return false when the StringList contains a "
 		"string that is almost a substring of the string?");
 	StringList sl("abc;b;c", ";");
 	char* orig = sl.print_to_string();
 	const char* check = "abd";
-	bool retVal = sl.substring(check);
+	bool retVal = sl.prefix(check);
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2013,13 +2013,13 @@ static bool test_substring_return_false_almost() {
 	PASS;
 }
 
-static bool test_substring_return_false_reverse() {
+static bool test_prefix_return_false_reverse() {
 	emit_test("Does substring() return false when the passed string is a "
 		"substring of one of the StringList's strings?");
 	StringList sl("aah;boo;car", ";");
 	char* orig = sl.print_to_string();
 	const char* check = "bo";
-	bool retVal = sl.substring(check);
+	bool retVal = sl.prefix(check);
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2035,13 +2035,13 @@ static bool test_substring_return_false_reverse() {
 	PASS;
 }
 
-static bool test_substring_return_false_case() {
+static bool test_prefix_return_false_case() {
 	emit_test("Does substring() return false when the StringList contains a "
 		"string that is a substring of the string when ignoring case?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	const char* check = "B";
-	bool retVal = sl.substring(check);
+	bool retVal = sl.prefix(check);
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2058,13 +2058,13 @@ static bool test_substring_return_false_case() {
 }
 
 
-static bool test_substring_return_true_identical() {
+static bool test_prefix_return_true_identical() {
 	emit_test("Does substring() return true when the passed string is in "
 		"the StringList?");
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	const char* check = "a";
-	bool retVal = sl.substring(check);
+	bool retVal = sl.prefix(check);
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check);
@@ -2080,7 +2080,7 @@ static bool test_substring_return_true_identical() {
 	PASS;
 }
 
-static bool test_substring_return_true_many() {
+static bool test_prefix_return_true_many() {
 	emit_test("Does substring() return true when the StringList contains "
 		"substrings of the string for multiple calls?");
 	StringList sl("a;b;c", ";");
@@ -2088,8 +2088,8 @@ static bool test_substring_return_true_many() {
 	const char* check1 = "car";
 	const char* check2 = "bar";
 	const char* check3 = "aar";
-	bool retVal = sl.substring(check1) && sl.substring(check2) 
-		&& sl.substring(check3);
+	bool retVal = sl.prefix(check1) && sl.prefix(check2) 
+		&& sl.prefix(check3);
 	emit_input_header();
 	emit_param("StringList", orig);
 	emit_param("STRING", check1);
@@ -2107,7 +2107,7 @@ static bool test_substring_return_true_many() {
 	PASS;
 }
 
-static bool test_substring_current_single() {
+static bool test_prefix_current_single() {
 	emit_test("Does substring() change current to point to the location of "
 		"the single match?");
 	emit_comment("To test that current points to the correct string, "
@@ -2116,7 +2116,7 @@ static bool test_substring_current_single() {
 	StringList sl("a;b;c", ";");
 	char* orig = sl.print_to_string();
 	const char* check = "are";
-	sl.substring(check); 
+	sl.prefix(check); 
 	char* next = sl.next();
 	const char* expect = "b";
 	emit_input_header();
@@ -2134,7 +2134,7 @@ static bool test_substring_current_single() {
 	PASS;
 }
 
-static bool test_substring_current_multiple() {
+static bool test_prefix_current_multiple() {
 	emit_test("Does substring() change current to point to the location of "
 		"the first match when there are multiple matches?");	
 	emit_comment("To test that current points to the correct string, "
@@ -2143,7 +2143,7 @@ static bool test_substring_current_multiple() {
 	StringList sl("a;b;a;b", ";");
 	char* orig = sl.print_to_string();
 	const char* check = "are";
-	sl.substring(check); 
+	sl.prefix(check); 
 	sl.deleteCurrent();
 	char* changed = sl.print_to_string();
 	const char* expect = "b,a,b";

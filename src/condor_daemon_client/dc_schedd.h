@@ -46,6 +46,10 @@ typedef enum {
 	AR_TOTALS = 2	// want totals for each possible result
 } action_result_type_t;
 
+// Callback after an impersonation token command
+//
+typedef void ImpersonationTokenCallbackType(bool success, const std::string &token, const CondorError &err,
+	void *misc_data);
 
 /** This is the Schedd-specific class derived from Daemon.  It
 	implements some of the schedd's daemonCore command interface.  
@@ -308,14 +312,14 @@ public:
 							char const *session_info,
 							int timeout,
 							CondorError *errstack,
-							MyString &starter_addr,
-							MyString &starter_claim_id,
-							MyString &starter_version,
-							MyString &slot_name,
-							MyString &error_msg,
+							std::string &starter_addr,
+							std::string &starter_claim_id,
+							std::string &starter_version,
+							std::string &slot_name,
+							std::string &error_msg,
 							bool &retry_is_sensible,
 							int &job_status,
-							MyString &hold_reason);
+							std::string &hold_reason);
 
 
 		/** Request the schedd to initiate a negoitation cycle.
@@ -329,7 +333,7 @@ public:
 	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);
 
 
-	bool register_transferd(MyString sinful, MyString id, int timeout, 
+	bool register_transferd(const std::string &sinful, const std::string &id, int timeout, 
 		ReliSock **regsock_ptr, CondorError *errstack);
 	
 
@@ -364,6 +368,15 @@ public:
 		// If no new job found, returns true with *new_job_ad=NULL
 	bool recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, MyString &error_msg );
 
+
+		/*
+		 * Retrieve a token with someone else's identity from a remote schedd,
+		 * based on an existing session.
+		 */
+	bool requestImpersonationTokenAsync(const std::string &identity,
+		const std::vector<std::string> &authz_bounding_set, int lifetime,
+		ImpersonationTokenCallbackType callback, void *misc_data, CondorError &err);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
@@ -393,6 +406,11 @@ private:
 						const char* reason_code, const char* reason_code_attr,
 						action_result_type_t result_type,
 						CondorError * errstack );
+
+	void requestImpersonationTokenContinued(bool success, Sock *sock, CondorError *errstack,
+		const std::string &trust_domain, bool should_try_token_request, void *misc_data);
+
+	int requestImpersonationTokenFinish(Stream *stream);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );
@@ -441,12 +459,12 @@ public:
 		*/
 	void record( PROC_ID job_id, action_result_t result );
 
-	int numError( void ) { return ar_error; };
-	int numSuccess( void ) { return ar_success; };
-	int numNotFound( void ) { return ar_not_found; };
-	int numBadStatus( void ) { return ar_bad_status; };
-	int numAlreadyDone( void ) { return ar_already_done; };
-	int numPermissionDenied( void ) { return ar_permission_denied; }; 
+	int numError( void ) const { return ar_error; };
+	int numSuccess( void ) const { return ar_success; };
+	int numNotFound( void ) const { return ar_not_found; };
+	int numBadStatus( void ) const { return ar_bad_status; };
+	int numAlreadyDone( void ) const { return ar_already_done; };
+	int numPermissionDenied( void ) const { return ar_permission_denied; }; 
 
 		/** Return the result code for the given job.
 			@param job_id The job you care about

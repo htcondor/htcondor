@@ -44,27 +44,30 @@ public:
 	void	set_dprintf_prefix(const char * prefix) { if (prefix) { s_dpf = prefix; } else { s_dpf.clear(); } }
 
 	char*	path() {return s_path;};
-	time_t	birthdate( void ) {return s_birthdate;};
+	time_t	birthdate( void ) const {return s_birthdate;};
+	time_t	got_update(void) const {return s_last_update_time;}
+	bool	got_final_update(void) const {return s_got_final_update;}
 	bool	kill(int);
 	bool	killpg(int);
 	void	killkids(int);
 	void	exited(Claim *, int status);
 	int 	spawn(Claim *, time_t now, Stream* s );
-	pid_t	pid() {return s_pid;};
-	bool	is_dc() {return s_is_dc;};
-	bool	active();
+	pid_t	pid() const {return s_pid;};
+	bool	is_dc() const {return s_is_dc;};
+	bool	active() const;
 	const ProcFamilyUsage & updateUsage(void);
 
 
 	void	setReaperID( int reaper_id ) { s_reaper_id = reaper_id; };
-	bool    notYetReaped() { return (s_pid != 0) && ! s_was_reaped; }
+	bool    notYetReaped() const { return (s_pid != 0) && ! s_was_reaped; }
 	void    setOrphanedJob(ClassAd * job);
 
 	void    setExecuteDir( char const * dir ) { s_execute_dir = dir; }
 		// returns NULL if no execute directory set, o.w. returns the value
 		// of EXECUTE that is passed to the starter
+		// If encryption is enabled, this may be different than the value
+		// originally set.
 	char const *executeDir();
-	char const *encryptedExecuteDir();
 
 	bool	killHard( int timeout );
 	bool	killSoft( int timeout, bool state_change = false );
@@ -81,7 +84,7 @@ public:
 		// Called by our softkill timer
 	void softkillTimeout( void );
 	
-	void	publish( ClassAd* ad, amask_t mask, StringList* list );
+	void	publish( ClassAd* ad, StringList* list );
 
 	bool	satisfies( ClassAd* job_ad, ClassAd* mach_ad );
 	bool	provides( const char* ability );
@@ -91,11 +94,9 @@ public:
 	void	setIsDC( bool is_dc );
 
 #if HAVE_BOINC
-	bool	isBOINC( void ) { return s_is_boinc; };
+	bool	isBOINC( void ) const { return s_is_boinc; };
 	void	setIsBOINC( bool is_boinc ) { s_is_boinc = is_boinc; };
 #endif /* HAVE_BOINC */
-
-	void	setPorts( int, int );
 
 	void	printInfo( int debug_level );
 
@@ -109,7 +110,6 @@ private:
 
 		// methods
 	bool	reallykill(int, int);
-	int		execOldStarter( Claim * );
 	int		execJobPipeStarter( Claim * );
 	int		execDCStarter( Claim *, Stream* s );
 		// claim is optional here, and may be NULL (e.g. boinc) but it may NOT be null when glexec is enabled. (sigh)
@@ -153,26 +153,26 @@ private:
 	pid_t           s_pid;
 	ProcFamilyUsage s_usage;
 	time_t          s_birthdate;
+	time_t          s_last_update_time;
 	double          s_vm_cpu_usage;
 	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
 	int             s_hold_timeout;
-	int             s_port1;
-	int             s_port2;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;
 #endif /* HAVE_BOINC */
 	bool            s_was_reaped;
+	bool            s_created_execute_dir; // should we cleanup s_execute_dir
+	bool            s_got_final_update;
 	int             s_reaper_id;
 	int             s_exit_status;
 	ClassAd *       s_orphaned_jobad;  // the job ad is transferred from the Claim to here if the claim is deleted before the starter is reaped.
 	ReliSock*       s_job_update_sock;
-	MyString        s_execute_dir;
-	MyString        s_encrypted_execute_dir;
+	std::string     s_execute_dir;
 	DCMsgCallback*  m_hold_job_cb;
-	MyString        m_starter_addr;
+	std::string     m_starter_addr;
 };
 
 // living (or unreaped) starters live in a global data structure and can be looked up by PID.

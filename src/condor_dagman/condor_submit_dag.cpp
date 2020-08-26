@@ -65,10 +65,10 @@ int parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 int setUpOptions( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts,
 			StringList &dagFileAttrLines );
-#endif
 void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts);
-int getOldSubmitFlags( SubmitDagShallowOptions &shallowOpts );
+#endif
+			int getOldSubmitFlags( SubmitDagShallowOptions &shallowOpts );
 int parseArgumentsLine( const MyString &subLine,
 			SubmitDagShallowOptions &shallowOpts );
 #if 0 // Moved to dagman_utils
@@ -141,7 +141,9 @@ int main(int argc, char *argv[])
 		// Check whether the output files already exist; if so, we may
 		// abort depending on the -f flag and whether we're running
 		// a rescue DAG.
-	ensureOutputFilesExist( deepOpts, shallowOpts );
+	if ( !dagmanUtils.ensureOutputFilesExist( deepOpts, shallowOpts ) ) {
+		exit( 1 );
+	}
 
 		// Make sure that all node jobs have log files, the files
 		// aren't on NFS, etc.
@@ -155,7 +157,9 @@ int main(int argc, char *argv[])
 	}
 
 		// Write the actual submit file for DAGMan.
-	dagmanUtils.writeSubmitFile( deepOpts, shallowOpts, dagFileAttrLines );
+	if ( !dagmanUtils.writeSubmitFile( deepOpts, shallowOpts, dagFileAttrLines ) ) {
+		exit( 1 );
+	}
 
 	return submitDag( shallowOpts );
 }
@@ -447,6 +451,7 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 	return 0;
 }
 
+#if 0 // Moved to dagman_utils
 //---------------------------------------------------------------------------
 bool fileExists(const MyString &strFile)
 {
@@ -561,6 +566,7 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 	    exit( 1 );
 	}
 }
+#endif
 
 //---------------------------------------------------------------------------
 /** Get the command-line options we want to preserve from the .condor.sub
@@ -573,7 +579,7 @@ int
 getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 {
 		// It's not an error for the submit file to not exist.
-	if ( fileExists( shallowOpts.strSubFile ) ) {
+	if ( dagmanUtils.fileExists( shallowOpts.strSubFile ) ) {
 		MultiLogFiles::FileReader reader;
 		MyString error = reader.Open( shallowOpts.strSubFile );
 		if ( error != "" ) {

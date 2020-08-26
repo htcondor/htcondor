@@ -16,18 +16,30 @@
  # 
  ############################################################### 
 
-file( GLOB SysApiRmvElements *_t.* *.t.* dhry* clinpack* *_main.cpp test.* )
+set(SysapiSourceFiles
+${CMAKE_CURRENT_SOURCE_DIR}/arch.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/free_fs_blocks.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/idle_time.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/kernel_version.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/last_x_event.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/load_avg.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/ncpus.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/net_dev_info.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/partition_id.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/phys_mem.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/processor_flags.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/reconfig.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/resource_limits.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/virt_mem.cpp
+)
 
-
-condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
-
-# clinpack comes from a 3rd party, we don't every want to touch it, even
+# clinpack comes from a 3rd party, we don't ever want to touch it, even
 # to fix warnings.
 if (UNIX)
 set_source_files_properties(clinpack.cpp PROPERTIES COMPILE_FLAGS "-w")
 endif(UNIX)
 
-set( SYSAPI_UTIL_SRCS "${SysapiHeaderFiles};${SysapiSourceFiles}" PARENT_SCOPE )
+set( SYSAPI_UTIL_SRCS "${SysapiSourceFiles}" PARENT_SCOPE )
 
 # there was a test target which was never used.
 # it makes the most sense to hook in a UT here instead of integ test

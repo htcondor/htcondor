@@ -37,7 +37,7 @@ if (WINDOWS)
 
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 		set(BOOST_SHORTVER 1.66 PARENT_SCOPE)
-		condor_post_external( boost "boost" "lib" )
+		condor_post_external( boost "boost" "lib" "" )
 	endif(BOOST_DOWNLOAD_WIN)
 
 else (WINDOWS)
@@ -58,14 +58,42 @@ else (WINDOWS)
 	endif()
 
 	# The following is helpful if you are trying to debug cmake find module
-	#  set (Boost_DEBUG TRUE)
+    # set (Boost_DEBUG TRUE)
+
+    message (STATUS "SYSTEM_NAME: ${SYSTEM_NAME}" )
+    if (DEFINED SYSTEM_NAME)
+        if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
+            if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2")
+                message (STATUS "Using system boost169 for 64-bit EL7" )
+                # If you look for python on cmake 2.8.12.2 it fails.
+                # Looking for thread finds boost for python for me.
+                set (BOOST_COMPONENTS thread)
+                set(BOOST_INCLUDEDIR "/usr/include/boost169")
+                set(BOOST_LIBRARYDIR "/usr/lib64/boost169")
+                set(Boost_INCLUDE_DIR "/usr/include/boost169")
+                set(Boost_LIBRARY_DIR "/usr/lib64/boost169")
+                set(USE_SYSTEM_BOOST True)
+            endif()
+        endif()
+        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8")
+            set(USE_SYSTEM_BOOST True)
+        endif()
+        if (${SYSTEM_NAME} MATCHES "fc")
+            set(USE_SYSTEM_BOOST True)
+        endif()
+        if (${SYSTEM_NAME} MATCHES "Ubuntu-20")
+            # BOOST_COMPONENTS breaks CMake boost detection on Ubuntu 20.04
+            set(BOOST_COMPONENTS "" )
+        endif()
+    endif()
+
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
 	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible
 	if(Boost_FOUND)
 
-		if (NOT PREFER_CPP11 AND NOT PREFER_TR1)
+		if (NOT PREFER_CPP11)
 			check_cxx_source_compiles("
 				#include <boost/unordered_map.hpp>
 				int main() {
@@ -88,12 +116,15 @@ else (WINDOWS)
 			set (BOOST_VER ${Boost_VERSION})
 			set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
 			set (BOOST_LD ${Boost_LIBRARY_DIRS})
+            if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
+                set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
+            endif()
 		endif()
 
 	endif(Boost_FOUND)
 
 	# we only use our version of boost if the system is not good enough
-	if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
+    if (NOT PROPER AND NOT USE_SYSTEM_BOOST)
 
 		if (WINDOWS)
 			# building boost on windows here doesn't work right now. must use the pre-built boost external.
@@ -111,7 +142,7 @@ else (WINDOWS)
 			# This only appears to affect Python 3.
 			# NOTE: This will fail if PYTHON_INCLUDE_DIRS
 			#   has multiple directories.
-			if(${PYTHONLIBS_VERSION_STRING} VERSION_LESS "3.0.0")
+			if("${PYTHONLIBS_VERSION_STRING}" VERSION_LESS "3.0.0")
 				set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
 			else()
 				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
@@ -177,9 +208,9 @@ else (WINDOWS)
 			#set(BOOST_SHORTVER 1.66 PARENT_SCOPE)
 			#condor_post_external( boost "include/boost-1.66" "lib" )
 		else()
-			condor_post_external( boost "include" "lib" )
+			condor_post_external( boost "include" "lib" "${BOOST_INSTALL_LOC}/lib/libboost_thread.a;${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a;${BOOST_INSTALL_LOC}/lib/libboost_system.a" )
 		endif()
-	endif(NOT PROPER)
+	endif()
 endif(WINDOWS)
 
 

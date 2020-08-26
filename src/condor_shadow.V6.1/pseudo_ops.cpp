@@ -195,6 +195,7 @@ pseudo_job_exit(int status, int reason, ClassAd* ad)
 	fix_update_ad(*ad);
 	thisRemoteResource->updateFromStarter( ad );
 	thisRemoteResource->resourceExit( reason, status );
+	Shadow->updateJobInQueue( U_STATUS );
 	return 0;
 }
 
@@ -205,7 +206,7 @@ pseudo_job_termination( ClassAd *ad )
 	bool core_dumped = false;
 	int exit_signal = 0;
 	int exit_code = 0;
-	MyString exit_reason;
+	std::string exit_reason;
 
 	ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL,exited_by_signal);
 	ad->LookupBool(ATTR_JOB_CORE_DUMPED,core_dumped);
@@ -274,7 +275,7 @@ the file from.  For example, joe/data might become buffer:remote:/usr/joe/data
 
 int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 {
-	MyString remap_list;
+	std::string remap_list;
 	MyString	split_dir;
 	MyString	split_file;
 	MyString	full_path;
@@ -295,9 +296,9 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	/* Any name comparisons must check the logical name, the simple name, and the full path */
 
 	if(Shadow->getJobAd()->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list.Value(), logical_name, remap ) ||
-	   filename_remap_find( remap_list.Value(), split_file.Value(), remap ) ||
-	   filename_remap_find( remap_list.Value(), full_path.Value(), remap ))) {
+	  (filename_remap_find( remap_list.c_str(), logical_name, remap ) ||
+	   filename_remap_find( remap_list.c_str(), split_file.Value(), remap ) ||
+	   filename_remap_find( remap_list.c_str(), full_path.Value(), remap ))) {
 
 		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap.Value());
 
@@ -320,13 +321,6 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 
 	/* Now, we have a full pathname. */
 	/* Figure out what url modifiers to slap on it. */
-
-#ifdef HPUX
-	/* I have no idea why this is happening, but I have seen it happen many
-	 * times on the HPUX version, so here is a quick hack -Todd 5/19/95 */
-	if ( full_path == "/usr/lib/nls////strerror.cat" )
-		full_path = "/usr/lib/nls/C/strerror.cat\0";
-#endif
 
 	if( use_local_access(full_path.Value()) ) {
 		method = "local";
@@ -362,7 +356,7 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 
 static void append_buffer_info( MyString &url, const char *method, char const *path )
 {
-	MyString buffer_list;
+	std::string buffer_list;
 	MyString buffer_string;
 	MyString dir;
 	MyString file;
@@ -381,8 +375,8 @@ static void append_buffer_info( MyString &url, const char *method, char const *p
 	/* These lines have the same syntax as a remap list */
 
 	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
-		if( filename_remap_find(buffer_list.Value(),path,buffer_string) ||
-		    filename_remap_find(buffer_list.Value(),file.Value(),buffer_string) ) {
+		if( filename_remap_find(buffer_list.c_str(),path,buffer_string) ||
+		    filename_remap_find(buffer_list.c_str(),file.Value(),buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			url += "buffer:";
@@ -408,12 +402,12 @@ static void append_buffer_info( MyString &url, const char *method, char const *p
 static int attr_list_has_file( const char *attr, const char *path )
 {
 	char const *file;
-	MyString str;
+	std::string str;
 
 	file = condor_basename(path);
 
 	Shadow->getJobAd()->LookupString(attr,str);
-	StringList list(str.Value());
+	StringList list(str.c_str());
 
 	if( list.contains_withwildcard(path) || list.contains_withwildcard(file) ) {
 		return 1;
@@ -602,7 +596,7 @@ pseudo_phase( char *phase )
 	eventtext += phase;
 	event.setInfoText( eventtext.Value() );
 
-	ead = event.toClassAd();
+	ead = event.toClassAd(true);
 	ASSERT(ead);
 
 	// write the event

@@ -44,10 +44,10 @@ CCBServer::CCBIDFromString(CCBID &ccbid,char const *ccbid_str)
 }
 
 static char const *
-CCBIDToString(CCBID ccbid,MyString &ccbid_str)
+CCBIDToString(CCBID ccbid,std::string &ccbid_str)
 {
-	ccbid_str.formatstr("%lu",ccbid);
-	return ccbid_str.Value();
+	formatstr(ccbid_str,"%lu",ccbid);
+	return ccbid_str.c_str();
 }
 
 static bool
@@ -62,9 +62,9 @@ CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 }
 
 void
-CCBServer::CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
+CCBServer::CCBIDToContactString(char const *my_address,CCBID ccbid,std::string &ccb_contact)
 {
-	ccb_contact.formatstr("%s#%lu",my_address,ccbid);
+	formatstr(ccb_contact,"%s#%lu",my_address,ccbid);
 }
 
 CCBServer::CCBServer():
@@ -117,13 +117,21 @@ CCBServer::RegisterHandlers()
 	}
 	m_registered_handlers = true;
 
+		// Note that we allow several different permission levels to
+		// register; however, the DAEMON permission level is the primary
+		// in terms of determining policy.
+	std::vector<DCpermission> alternate_perms{ADVERTISE_STARTD_PERM, ADVERTISE_SCHEDD_PERM, ADVERTISE_MASTER_PERM};
 	int rc = daemonCore->Register_CommandWithPayload(
 		CCB_REGISTER,
 		"CCB_REGISTER",
 		(CommandHandlercpp)&CCBServer::HandleRegistration,
 		"CCBServer::HandleRegistration",
 		this,
-		DAEMON);
+		DAEMON,
+		D_COMMAND,
+		false,
+		STANDARD_COMMAND_PAYLOAD_TIMEOUT,
+		&alternate_perms);
 	ASSERT( rc >= 0 );
 
 	rc = daemonCore->Register_CommandWithPayload(
@@ -193,8 +201,8 @@ CCBServer::InitAndReconfig()
 			spool,
 			DIR_DELIM_CHAR,
 			myHost,
-			my_addr.getPort() ? my_addr.getPort() : "0");
-dprintf( D_ALWAYS, "m_reconnect_fname = %s\n", m_reconnect_fname.Value() );
+			my_addr.getSharedPortID() ?	my_addr.getSharedPortID() :
+				my_addr.getPort() ? my_addr.getPort() : "0" );
 
 		free( myHost );
 		free( spool );
@@ -430,22 +438,22 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 
 	SetSmallBuffers(sock);
 
-	MyString name;
+	std::string name;
 	if( msg.LookupString(ATTR_NAME,name) ) {
 			// target daemon name is purely for debugging purposes
-		name.formatstr_cat(" on %s",sock->peer_description());
-		sock->set_peer_description(name.Value());
+		formatstr_cat(name, " on %s", sock->peer_description());
+		sock->set_peer_description(name.c_str());
 	}
 
 	CCBTarget *target = new CCBTarget(sock);
 
-	MyString reconnect_cookie_str,reconnect_ccbid_str;
+	std::string reconnect_cookie_str,reconnect_ccbid_str;
 	CCBID reconnect_cookie,reconnect_ccbid;
 	bool reconnected = false;
 	if( msg.LookupString(ATTR_CLAIM_ID,reconnect_cookie_str) &&
-		CCBIDFromString(reconnect_cookie,reconnect_cookie_str.Value()) &&
+		CCBIDFromString(reconnect_cookie,reconnect_cookie_str.c_str()) &&
 		msg.LookupString( ATTR_CCBID,reconnect_ccbid_str) &&
-		CCBIDFromContactString(reconnect_ccbid,reconnect_ccbid_str.Value()) )
+		CCBIDFromContactString(reconnect_ccbid,reconnect_ccbid_str.c_str()) )
 	{
 		target->setCCBID( reconnect_ccbid );
 		reconnected = ReconnectTarget( target, reconnect_cookie );
@@ -461,7 +469,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	sock->encode();
 
 	ClassAd reply_msg;
-	MyString ccb_contact;
+	std::string ccb_contact;
 
 
 		// We send our address as part of the CCB contact string, rather
@@ -473,9 +481,9 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 
 	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
 
-	reply_msg.Assign(ATTR_CCBID,ccb_contact.Value());
+	reply_msg.Assign(ATTR_CCBID,ccb_contact);
 	reply_msg.Assign(ATTR_COMMAND,CCB_REGISTER);
-	reply_msg.Assign(ATTR_CLAIM_ID,reconnect_cookie_str.Value());
+	reply_msg.Assign(ATTR_CLAIM_ID,reconnect_cookie_str);
 
 	if( !putClassAd( sock, reply_msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
@@ -490,7 +498,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 }
 
 void
-CCBServer::SetSmallBuffers(Sock *sock)
+CCBServer::SetSmallBuffers(Sock *sock) const
 {
 		// Adjust socket buffers so we can have loads of these sockets
 		// without chewing up too much memory.  We expect to just send
@@ -519,15 +527,15 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 		return FALSE;
 	}
 
-	MyString name;
+	std::string name;
 	if( msg.LookupString(ATTR_NAME,name) ) {
 			// client name is purely for debugging purposes
-		name.formatstr_cat(" on %s",sock->peer_description());
-		sock->set_peer_description(name.Value());
+		formatstr_cat(name, " on %s", sock->peer_description());
+		sock->set_peer_description(name.c_str());
 	}
-	MyString target_ccbid_str;
-	MyString return_addr;
-	MyString connect_id; // id target daemon should present to requester
+	std::string target_ccbid_str;
+	std::string return_addr;
+	std::string connect_id; // id target daemon should present to requester
 	CCBID target_ccbid;
 
 		// NOTE: using ATTR_CLAIM_ID for connect id so that it is
@@ -547,10 +555,10 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 				sock->peer_description(), ad_str.Value() );
 		return FALSE;
 	}
-	if( !CCBIDFromString(target_ccbid,target_ccbid_str.Value()) ) {
+	if( !CCBIDFromString(target_ccbid,target_ccbid_str.c_str()) ) {
 		dprintf(D_ALWAYS,
 				"CCB: request from %s contains invalid CCBID %s\n",
-				sock->peer_description(), target_ccbid_str.Value() );
+				sock->peer_description(), target_ccbid_str.c_str() );
 		return FALSE;
 	}
 
@@ -560,13 +568,13 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 			"CCB: rejecting request from %s for ccbid %s because no daemon is "
 			"currently registered with that id "
 			"(perhaps it recently disconnected).\n",
-			sock->peer_description(), target_ccbid_str.Value());
+			sock->peer_description(), target_ccbid_str.c_str());
 
 		MyString error_msg;
 		error_msg.formatstr(
 			"CCB server rejecting request for ccbid %s because no daemon is "
 			"currently registered with that id "
-			"(perhaps it recently disconnected).", target_ccbid_str.Value());
+			"(perhaps it recently disconnected).", target_ccbid_str.c_str());
 		RequestReply( sock, false, error_msg.Value(), 0, target_ccbid );
 		return FALSE;
 	}
@@ -577,8 +585,8 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 		new CCBServerRequest(
 			sock,
 			target_ccbid,
-			return_addr.Value(),
-			connect_id.Value() );
+			return_addr.c_str(),
+			connect_id.c_str() );
 	AddRequest( request, target );
 
 	dprintf(D_FULLDEBUG,
@@ -586,7 +594,7 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 			"(registered as %s)\n",
 			request->getRequestID(),
 			request->getSock()->peer_description(),
-			target_ccbid_str.Value(),
+			target_ccbid_str.c_str(),
 			target->getSock()->peer_description());
 
 	ForwardRequestToTarget( request, target );
@@ -631,16 +639,16 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 	target->decPendingRequestResults();
 
 	bool success = false;
-	MyString error_msg;
-	MyString reqid_str;
+	std::string error_msg;
+	std::string reqid_str;
 	CCBID reqid;
-	MyString connect_id;
+	std::string connect_id;
 	msg.LookupBool( ATTR_RESULT, success );
 	msg.LookupString( ATTR_ERROR_STRING, error_msg );
 	msg.LookupString( ATTR_REQUEST_ID, reqid_str );
 	msg.LookupString( ATTR_CLAIM_ID, connect_id );
 
-	if( !CCBIDFromString( reqid, reqid_str.Value() ) ) {
+	if( !CCBIDFromString( reqid, reqid_str.c_str() ) ) {
 		MyString msg_str;
 		sPrintAd(msg_str, msg);
 		dprintf(D_ALWAYS,
@@ -672,7 +680,7 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 				"request %s from %s.\n",
 				sock->peer_description(),
 				target->getCCBID(),
-				reqid_str.Value(),
+				reqid_str.c_str(),
 				request_desc);
 	}
 	else {
@@ -681,9 +689,9 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 				"request %s from %s: %s\n",
 				sock->peer_description(),
 				target->getCCBID(),
-				reqid_str.Value(),
+				reqid_str.c_str(),
 				request_desc,
-				error_msg.Value());
+				error_msg.c_str());
 	}
 
 	if( !request ) {
@@ -694,7 +702,7 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 		dprintf( D_FULLDEBUG,
 				 "CCB: client for request %s to target daemon %s with ccbid "
 				 "%lu disappeared before receiving error details.\n",
-				 reqid_str.Value(),
+				 reqid_str.c_str(),
 				 sock->peer_description(),
 				 target->getCCBID());
 		return;
@@ -706,15 +714,15 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 				 "CCB: received wrong connect id (%s) from target daemon %s "
 				 "with ccbid %lu for "
 				 "request %s\n",
-				 connect_id.Value(),
+				 connect_id.c_str(),
 				 sock->peer_description(),
 				 target->getCCBID(),
-				 reqid_str.Value());
+				 reqid_str.c_str());
 		RemoveTarget( target );
 		return;
 	}
 
-	RequestFinished( request, success, error_msg.Value() );
+	RequestFinished( request, success, error_msg.c_str() );
 }
 
 void
@@ -751,7 +759,7 @@ CCBServer::ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target 
 	// for easier debugging
 	msg.Assign( ATTR_NAME, request->getSock()->peer_description() );
 
-	MyString reqid_str;
+	std::string reqid_str;
 	CCBIDToString( request->getRequestID(), reqid_str);
 	msg.Assign( ATTR_REQUEST_ID, reqid_str );
 
@@ -954,7 +962,7 @@ CCBServer::AddTarget( CCBTarget *target )
 
 	// generate reconnect info for this new target daemon so that it
 	// can reclaim its CCBID
-	CCBID reconnect_cookie = get_random_uint();
+	CCBID reconnect_cookie = get_csrng_uint();
 	CCBReconnectInfo *reconnect_info = new CCBReconnectInfo(
 		target->getCCBID(),
 		reconnect_cookie,
@@ -1313,7 +1321,7 @@ CCBServer::SaveReconnectInfo(CCBReconnectInfo *reconnect_info)
 		return false;
 	}
 
-	MyString ccbid_str,cookie_str;
+	std::string ccbid_str,cookie_str;
 	rc = fprintf(m_reconnect_fp,"%s %s %s\n",
 		reconnect_info->getPeerIP(),
 		CCBIDToString(reconnect_info->getCCBID(),ccbid_str),

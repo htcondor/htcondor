@@ -28,6 +28,7 @@
 #include "CryptKey.h"                 // KeyInfo
 #include "condor_ver_info.h"
 #include "classy_counted_ptr.h"
+#include "cedar_enums.h"
 
 enum CONDOR_MD_MODE {
     MD_OFF        = 0,         // off
@@ -42,9 +43,6 @@ const int ENCRYPTION_IS_ON = 2;
 const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
 
 #include "proc.h"
-#include "condor_old_shadow_types.h"
-
-#include "startup.h"
 
 /** @name Special Types
     We need to define a special code() method for certain integer arguments.
@@ -234,12 +232,6 @@ public:
     //@{
     ///
 	int code(PROC_ID &);
-    ///
-	int code(STARTUP_INFO &);
-    ///
-	int code(PORTS &);
-    ///
-	int code(StartdRec &);
     //@}
 
 	/** @name UNIX Types
@@ -249,40 +241,10 @@ public:
     ///
 	int code(open_flags_t &);
     ///
-	int code(struct stat &);
-    ///
 	int code(condor_errno_t &);
 
-#if !defined(WIN32)
-    ///
-	int code(condor_signal_t &);
-    ///
-	int code(fcntl_cmd_t &);
-    ///
-	int code(struct rusage &);
-    ///
-	int code(struct statfs &);
-    ///
-	int code(struct timezone &);
-    ///
-	int code(struct timeval &);
-    ///
-	int code(struct utimbuf &);
-    ///
-	int code(struct rlimit &);
-    ///
-	int code_array(gid_t *&array, int &len);
-    ///
-#endif // !defined(WIN32)
 	///
 	int code(condor_mode_t &);
-
-#if HAS_64BIT_STRUCTS
-    ///
-	int code(struct stat64 &);
-    ///
-	int code(struct rlimit64 &);
-#endif
     //@}
 
 	/** @name Pointer Types.
@@ -310,45 +272,12 @@ public:
 	int code(double *x) 			{ return code(*x); }
     ///
 	int code(PROC_ID *x)			{ return code(*x); }
-    ///
-	int code(STARTUP_INFO *x)		{ return code(*x); }
-    ///
-	int code(PORTS *x)				{ return code(*x); }
-    ///
-	int code(StartdRec *x)			{ return code(*x); }
 
-    ///
-	int code(struct stat *x)		{ return code(*x); }
     ///
 	int code(open_flags_t *x)		{ return code(*x); }
     ///
 	int code(condor_errno_t *x)		{ return code(*x); }
 
-#if !defined(WIN32)
-    ///
-	int code(condor_signal_t *x)			{ return code(*x); }
-    ///
-	int code(fcntl_cmd_t *x) 		{ return code(*x); }
-    ///
-	int code(struct rusage *x)		{ return code(*x); }
-    ///
-	int code(struct statfs *x)		{ return code(*x); }
-    ///
-	int code(struct timezone *x)	{ return code(*x); }
-    ///
-	int code(struct timeval *x)		{ return code(*x); }
-    ///
-	int code(struct utimbuf *x)		{ return code(*x); }
-    ///
-	int code(struct rlimit *x)		{ return code(*x); }
-#endif // !defined(WIN32)
-
-#if HAS_64BIT_STRUCTS
-    ///
-	int code(struct stat64 *x)		{ return code(*x); }
-    ///
-	int code(struct rlimit64 *x)	{ return code(*x); }
-#endif
     //@}
 
     //@}

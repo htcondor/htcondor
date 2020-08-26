@@ -38,7 +38,7 @@
 #include "my_popen.h"
 
 
-StarterMgr::StarterMgr()
+StarterMgr::StarterMgr() : _haveStandardUni(false)
 {
 }
 
@@ -132,16 +132,13 @@ StarterMgr::printStarterInfo( int debug_level )
 
 
 void
-StarterMgr::publish( ClassAd* ad, amask_t mask )
+StarterMgr::publish(ClassAd* ad)  // all of this should be IS_STATIC()
 {
-	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
-		return;
-	}
 	Starter *tmp_starter;
 	StringList ability_list;
 	starters.Rewind();
 	while( starters.Next(tmp_starter) ) {
-		tmp_starter->publish( ad, mask, &ability_list );
+		tmp_starter->publish( ad, &ability_list );
 	}
 		// finally, print out all the abilities we added into the
 		// classad so that other folks can know what we did.
@@ -265,9 +262,15 @@ StarterMgr::registerStarter( const char* path )
 	new_starter = new Starter();
 	new_starter->setAd( ad );
 	new_starter->setPath( path );
-	int is_dc = 0;
+	bool is_dc = false;
 	ad->LookupBool( ATTR_IS_DAEMON_CORE, is_dc );
-	new_starter->setIsDC( (bool)is_dc );
+	new_starter->setIsDC( is_dc );
+
+	bool has_checkpoint = false;
+	ad->LookupBool( ATTR_HAS_CHECKPOINTING, has_checkpoint);
+	if (has_checkpoint) {
+		_haveStandardUni = true;
+	}
 
 	return new_starter;
 }

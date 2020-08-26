@@ -79,7 +79,7 @@ ClassAdLogProber::setLastModifiedTime(time_t t)
 
 
 time_t
-ClassAdLogProber::getLastModifiedTime()
+ClassAdLogProber::getLastModifiedTime() const
 {
 	return last_mod_time;
 }
@@ -92,13 +92,13 @@ ClassAdLogProber::setLastSize(size_t s)
 
 
 size_t
-ClassAdLogProber::getLastSize()
+ClassAdLogProber::getLastSize() const
 {
 	return last_size;
 }
 
 long int
-ClassAdLogProber::getLastSequenceNumber() 
+ClassAdLogProber::getLastSequenceNumber() const 
 {
 	return last_seq_num;
 }
@@ -110,7 +110,7 @@ ClassAdLogProber::setLastSequenceNumber(long int seq_num)
 }
 
 time_t
-ClassAdLogProber::getLastCreationTime() 
+ClassAdLogProber::getLastCreationTime() const 
 {
 	return last_creation_time;
 }
@@ -122,12 +122,12 @@ ClassAdLogProber::setLastCreationTime(time_t ctime)
 }
 
 long int
-ClassAdLogProber::getCurProbedSequenceNumber() {
+ClassAdLogProber::getCurProbedSequenceNumber() const {
 	return cur_probed_seq_num;
 }
 
 long int
-ClassAdLogProber::getCurProbedCreationTime() {
+ClassAdLogProber::getCurProbedCreationTime() const {
 	return cur_probed_creation_time;
 }
 

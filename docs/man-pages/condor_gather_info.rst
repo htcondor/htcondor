@@ -1,20 +1,21 @@
-      
+      
 
-*condor\_gather\_info*
+*condor_gather_info*
 ======================
 
 Gather information about an HTCondor installation and a queued job
+:index:`condor_gather_info<single: condor_gather_info; HTCondor commands>`\ :index:`condor_gather_info command`
 
 Synopsis
 --------
 
-**condor\_gather\_info** [--**jobid** *ClusterId.ProcId*] [--**scratch**
+**condor_gather_info** [--**jobid** *ClusterId.ProcId*] [--**scratch**
 */path/to/directory*]
 
 Description
 -----------
 
-*condor\_gather\_info* is a Linux-only tool that will collect and output
+*condor_gather_info* is a Linux-only tool that will collect and output
 information about the machine it is run upon, about the HTCondor
 installation local to the machine, and optionally about a specified
 HTCondor job. The information gathered by this tool is most often used
@@ -33,7 +34,7 @@ of information can be extensive, this information is placed into a
 compressed tar file. The file is placed into the current working
 directory, and it is named using the format
 
-::
+.. code-block:: text
 
     cgi-<username>-jid<ClusterId>.<ProcId>-<year>-<month>-<day>-<hour>_<minute>_<second>-<TZ>.tar.gz
 
@@ -42,7 +43,7 @@ of this potentially large tar file can require a fair amount of
 temporary space. If the --**scratch** option is specified, it identifies
 a directory in which to build the tar file. If the --**scratch** option
 is not specified, then the directory will be ``/tmp/cgi-<PID>``, where
-the process ID is that of the *condor\_gather\_info* executable.
+the process ID is that of the *condor_gather_info* executable.
 
 The information gathered by this tool:
 
@@ -58,11 +59,11 @@ The information gathered by this tool:
    -  Contents of ``$(LOG)/MasterLog``
    -  Contents of ``$(LOG)/ShadowLog``
    -  Contents of ``$(LOG)/SchedLog``
-   -  Output of ``ps -auxww –forest``
+   -  Output of ``ps -auxww -forest``
    -  Output of ``df -h``
    -  Output of ``iptables -L``
-   -  Output of ``ls ‘condor_config_val LOG‘``
-   -  Output of ``ldd ‘condor_config_val SBIN‘/condor_schedd``
+   -  Output of ``ls 'condor_config_val LOG'``
+   -  Output of ``ldd 'condor_config_val SBIN'/condor_schedd``
    -  Contents of ``/etc/hosts``
    -  Contents of ``/etc/nsswitch.conf``
    -  Output of ``ulimit -a``
@@ -85,27 +86,27 @@ The information gathered by this tool:
 
       -  Only events pertaining to the job ID
 
-   -  If *condor\_gather\_info* has the proper permissions, it runs
-      *condor\_fetchlog* on the machine where the job most recently ran,
-      and includes the contents of the logs from the *condor\_master*,
-      *condor\_startd*, and *condor\_starter*.
+   -  If *condor_gather_info* has the proper permissions, it runs
+      *condor_fetchlog* on the machine where the job most recently ran,
+      and includes the contents of the logs from the *condor_master*,
+      *condor_startd*, and *condor_starter*.
 
 Options
 -------
 
- **—jobid **\ *<ClusterId.ProcId>*
+ **-jobid** *<ClusterId.ProcId>*
     Data mine information about this HTCondor job from the local
-    HTCondor installation and *condor\_schedd*.
- **—scratch **\ */path/to/directory*
+    HTCondor installation and *condor_schedd*.
+ **-scratch** */path/to/directory*
     A path to temporary space needed when building the output tar file.
     Defaults to ``/tmp/cgi-<PID>``, where ``<PID>`` is replaced by the
-    process ID of *condor\_gather\_info*.
+    process ID of *condor_gather_info*.
 
 Files
 -----
 
 -  ``condor-profile.txt`` The Identity portion of the information
-   gathered when *condor\_gather\_info* is run without arguments.
+   gathered when *condor_gather_info* is run without arguments.
 -  ``cgi-<username>-jid<cluster>.<proc>-<year>-<month>-<day>-<hour>_<minute>_<second>-<TZ>.tar.gz``
    The output file which contains all of the information produced by
    this tool.
@@ -113,19 +114,6 @@ Files
 Exit Status
 -----------
 
-*condor\_gather\_info* will exit with a status value of 0 (zero) upon
+*condor_gather_info* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin–Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

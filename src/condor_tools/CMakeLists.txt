@@ -17,6 +17,7 @@
  ############################################################### 
 
 # condor_exe(condor_userlog_tail "userlog_tail.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_evicted_files "evicted_files.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_now "now.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_update_machine_ad "update_machine_ad.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -32,8 +33,17 @@ condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_transform_ads "transform_ads.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_create "token_create.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_fetch "token_fetch.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_list "token_list.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_request "token_request.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_request_approve "token_request_approve.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_request_list "token_request_list.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_token_request_auto_approve "token_request_auto_approve.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_scitoken_exchange "scitoken_exchange.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 if (LINUX)
 condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_nsenter "nsenter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
 
 
@@ -74,33 +84,10 @@ if (WANT_FULL_DEPLOYMENT)
 endif(WANT_FULL_DEPLOYMENT)
 clone_install(condor_vacate "${C_BIN}" "condor_reschedule" "${C_BIN}")
 
-if (NOT WINDOWS)
-	if (STD_UNIVERSE)
-		clone_install(condor_vacate "${C_BIN}" "condor_checkpoint" "${C_BIN}")
-		src_target_ref( ckpt "maps" CKPT_REFS)
-		# condor_exe(condor_ckpt_probe "probe_process.cpp;${CKPT_REFS}" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS}" OFF)
-		#
-		# Statically link condor_ckpt_probe; see #2901.
-		#
-		# This is wasteful, since we've already built three of these source
-		# files, but it's a lot simpler than figuring out how to link the
-		# object files.
-		set( _orig_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} )
-		set( CMAKE_FIND_LIBRARY_SUFFIXES .a )
-		find_library( HAVE_STATIC_LIBDL dl )
-		set( CMAKE_FIND_LIBRARY_SUFFIXES ${_orig_CMAKE_FIND_LIBRARY_SUFFIXES} )
-		if (NOT HAVE_STATIC_LIBDL)
-			message( FATAL_ERROR "Can't find libdl.a, needed for condor_ckpt_probe" )
-		endif()
-		add_executable( condor_ckpt_probe probe_process.cpp ../condor_ckpt/maps.c ../condor_utils/condor_pers.cpp ../safefile/safe_open.c )
-		install( TARGETS condor_ckpt_probe DESTINATION "${C_LIBEXEC}" )
-        set_property( TARGET condor_ckpt_probe PROPERTY COMPILE_FLAGS -static )
-        set_property( TARGET condor_ckpt_probe PROPERTY LINK_FLAGS -static )
-	endif(STD_UNIVERSE)
-else(NOT WINDOWS)
+if (WINDOWS)
 	clone_install(condor_cod "${C_BIN}" "condor_cod_request" "${C_BIN}")
 	clone_install(condor_vacate "${C_BIN}" "condor_squawk" "${C_BIN}")
-endif(NOT WINDOWS)
+endif(WINDOWS)
 
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
@@ -119,7 +106,7 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	set( BIN_DIR ${CMAKE_BINARY_DIR} )
 	install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
 	install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/condor_tools/condor_version ${SRC_DIR}/src/condor_scripts/syslib-patterns
-		 COMMAND xargs -isrc cp src ${CMAKE_INSTALL_PREFIX}/lib/condor
+	COMMAND xargs -isrc ${CMAKE_COMMAND} -E copy_if_different src ${CMAKE_INSTALL_PREFIX}/lib/condor
 		 )" )
 	# This is required for opensuse, where the system's libssl and
 	# libcrypto files don't have owner write permission.
@@ -130,10 +117,12 @@ endif()
 ############################################################
 # GPU Support
 ############################################################
-if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-	condor_exe( condor_gpu_utilization "condor_gpu_utilization.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-else ()
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
-	condor_exe( condor_gpu_utilization "condor_gpu_utilization.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
+condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CMAKE_DL_LIBS}" OFF )
+
+###########################################################
+# condor_ssh_to_job hackery
+##########################################################
+if ( LINUX )
+condor_shared_lib( libgetpwnam "getpwnam.cpp" )
+set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
 endif()

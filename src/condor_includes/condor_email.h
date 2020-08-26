@@ -21,15 +21,12 @@
 #ifndef _CONDOR_EMAIL_H
 #define _CONDOR_EMAIL_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+#include <stdio.h>
+#include "condor_classad.h"
 
 FILE * email_nonjob_open( const char *email_addr, const char *subject );
 
 FILE * email_admin_open(const char *subject);
-
-FILE * email_developers_open(const char *subject);
 
 void email_close(FILE *mailer);
 
@@ -38,15 +35,6 @@ void email_asciifile_tail( FILE* mailer, const char* filename,
 
 void email_corefile_tail( FILE* mailer, const char* subsystem_name );
 
-#if defined(__cplusplus)
-}
-#endif
-
-/* I, Alain Roy, moved the declaration for this down from where it was
- * above.  It's a bad move to include c++ header files within an
- * extern C.  */
-#if defined(__cplusplus)
-#include "condor_classad.h"
 
 void email_custom_attributes( FILE* mailer, ClassAd* job_ad );
 
@@ -139,13 +127,10 @@ private:
 			@param action String describing the action we're taking
 		*/
 	void sendAction( ClassAd* ad, const char* reason,
-					 const char* action );
+					 const char* action, int exit_code);
 
 	bool shouldSend( ClassAd* ad, int exit_reason = -1,
 					 bool is_error = false );
 };
-
-
-#endif /* defined(__cplusplus) */
 
 #endif /* _CONDOR_EMAIL_H */

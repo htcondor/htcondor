@@ -56,6 +56,7 @@ void Usage(const char* name, int iExitCode)
 		"\n   where [source] is one of\n"
 		"\t-file <file>\t\tRead history data from specified file\n"
 		"\t-local\t\tRead history data from the configured files\n"
+		"\t-startd\t\tRead history data for the Startd\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
@@ -103,7 +104,7 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false);
 static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
@@ -143,6 +144,7 @@ static bool abort_transfer = false;
 static StringList projection;
 static classad::References whitelist;
 static ExprTree *sinceExpr = NULL;
+static bool want_startd_history = false;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
@@ -158,7 +160,7 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 
 	std::string psinful;
 	StringList remaining_items; // for the remainder which we expect to be empty.
-	int cSocks = extractInheritedSocks(inherit, ppid, psinful, socks, cMaxSocks, remaining_items);
+	int cSocks = extractInheritedSocks(inherit, ppid, psinful, socks, (int)cMaxSocks, remaining_items);
 	UnsetEnv(envName); // prevent this from being passed on to children.
 	return cSocks;
 }
@@ -275,6 +277,14 @@ main(int argc, const char* argv[])
 		}
 		readfromfile = true;
 		dash_local = true;
+	}
+	else if (is_dash_arg_prefix(argv[i],"startd",3)) {
+		// causes "STARTD_HISTORY" to be queried, rather than "HISTORY"
+		want_startd_history = true;
+	}
+	else if (is_dash_arg_prefix(argv[i],"schedd",3)) {
+		// causes "HISTORY" to be queried, this is the default
+		want_startd_history = false;
 	}
 	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) {
 		streamresults = true;
@@ -531,11 +541,11 @@ main(int argc, const char* argv[])
   }
 
   if (writetosocket && streamresults) {
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 1);
 	ad.InsertAttr("StreamResults", true);
 	dprintf(D_FULLDEBUG, "condor_history: sending streaming ACK header ad:\n");
-	dPrintAd(D_FULLDEBUG, ad, false);
+	dPrintAd(D_FULLDEBUG, ad);
 	if ( ! putClassAd(socks[0], ad) || ! socks[0]->end_of_message()) {
 		dprintf(D_ALWAYS, "condor_history: Failed to write streaming ACK header ad\n");
 		exit(1);
@@ -550,17 +560,17 @@ main(int argc, const char* argv[])
       readHistoryFromFiles(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
   }
   else {
-      readHistoryRemote(constraintExpr);
+      readHistoryRemote(constraintExpr, want_startd_history);
   }
 
   if (writetosocket) {
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 0);
 	ad.InsertAttr(ATTR_NUM_MATCHES, matchCount);
 	ad.InsertAttr("MalformedAds", writetosocket_failcount);
 	ad.InsertAttr("AdCount", adCount);
 	dprintf(D_FULLDEBUG, "condor_history: sending final ad:\n");
-	dPrintAd(D_FULLDEBUG, ad, false);
+	dPrintAd(D_FULLDEBUG, ad);
 	if ( ! putClassAd(socks[0], ad) || ! socks[0]->end_of_message()) {
 		dprintf(D_ALWAYS, "condor_history: Failed to write final ad to client\n");
 		exit(1);
@@ -585,8 +595,8 @@ static bool
 render_hist_runtime (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 {
 	double utime;
-	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
-		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
+	if(!ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,utime)) {
+		if(!ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,utime)) {
 			utime = 0;
 		}
 	}
@@ -676,8 +686,8 @@ static bool
 render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
 	int clusterId, procId;
-	if( ! ad->EvalInteger(ATTR_CLUSTER_ID,NULL,clusterId)) clusterId = 0;
-	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,procId)) procId = 0;
+	if( ! ad->LookupInteger(ATTR_CLUSTER_ID,clusterId)) clusterId = 0;
+	if( ! ad->LookupInteger(ATTR_PROC_ID,procId)) procId = 0;
 	formatstr(val, "%4d.%-3d", clusterId, procId);
 	return true;
 }
@@ -685,12 +695,12 @@ render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 static bool
 render_job_cmd_and_args(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
-	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, val))
+	if ( ! ad->LookupString(ATTR_JOB_CMD, val))
 		return false;
 
 	char * args;
-	if (ad->EvalString (ATTR_JOB_ARGUMENTS1, NULL, &args) || 
-		ad->EvalString (ATTR_JOB_ARGUMENTS2, NULL, &args)) {
+	if (ad->LookupString (ATTR_JOB_ARGUMENTS1, &args) || 
+		ad->LookupString (ATTR_JOB_ARGUMENTS2, &args)) {
 		val += " ";
 		val += args;
 		free(args);
@@ -702,14 +712,14 @@ static void AddPrintColumn(const char * heading, int width, int opts, const char
 {
 	mask.set_heading(heading);
 
-	int wid = width ? width : strlen(heading);
+	int wid = width ? width : (int)strlen(heading);
 	mask.registerFormat("%v", wid, opts, expr);
 }
 
 static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, const CustomFormatFn & fmt)
 {
 	mask.set_heading(heading);
-	int wid = width ? width : strlen(heading);
+	int wid = width ? width : (int)strlen(heading);
 	mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
 
@@ -798,12 +808,12 @@ static void printFooter()
 	}
 }
 
-// Read history from a remote schedd
-static void readHistoryRemote(classad::ExprTree *constraintExpr)
+// Read history from a remote schedd or startd
+static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd)
 {
 	printHeader(); // this has the side effect of setting the projection for the default output
 
-	compat_classad::ClassAd ad;
+	ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
@@ -815,38 +825,63 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	}
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr);
+	// we may or may not be able to do the projection, we will decide after knowing the daemon version
+	bool do_projection = ! projection.isEmpty();
 
-	DCSchedd schedd(g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
-	if (!schedd.locate(Daemon::LOCATE_FOR_LOOKUP)) {
+	daemon_t dt = DT_SCHEDD;
+	const char * daemon_type = "schedd";
+	int history_cmd = QUERY_SCHEDD_HISTORY;
+	if (want_startd) {
+		dt = DT_STARTD;
+		daemon_type = "startd";
+		history_cmd = GET_HISTORY;
+	}
+
+	Daemon daemon(dt, g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
+	if (!daemon.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 		fprintf(stderr, "Unable to locate remote schedd (name=%s, pool=%s).\n", g_name.c_str(), g_pool.c_str());
 		exit(1);
 	}
 
-	// now that we know the schedd version, we know if we can send a projection successfully
-	if ( ! projection.isEmpty() && schedd.version()) {
-		CondorVersionInfo v(schedd.version());
-		if (v.built_since_version(8,5,5) || (v.built_since_version(8,4,7) && ! v.built_since_version(8,5,0))) {
-			auto_free_ptr proj_string(projection.print_to_delimed_string(","));
-			ad.Assign(ATTR_PROJECTION, proj_string.ptr());
+	// do some version checks
+	if (daemon.version()) {
+		CondorVersionInfo v(daemon.version());
+		// some versions of the schedd can't handle the projection, we need to check theversion
+		if (dt == DT_SCHEDD) {
+			if (v.built_since_version(8, 5, 5) || (v.built_since_version(8, 4, 7) && ! v.built_since_version(8, 5, 0))) {
+			} else {
+				do_projection = false;
+			}
+		} else if (dt == DT_STARTD) {
+			// remote history to the startd was added in 8.9.7
+			if (!v.built_since_version(8, 9, 7)) {
+				fprintf(stderr, "The version of the startd does not support remote history");
+				exit(1);
+			}
 		}
 	}
 
+	if (do_projection) {
+		auto_free_ptr proj_string(projection.print_to_delimed_string(","));
+		ad.Assign(ATTR_PROJECTION, proj_string.ptr());
+	}
+
 	Sock* sock;
-	if (!(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0))) {
-		fprintf(stderr, "Unable to send history command to remote schedd;\n"
-			"Typically, either the schedd is not responding, does not authorize you, or does not support remote history.\n");
+	if (!(sock = daemon.startCommand(history_cmd, Stream::reli_sock, 0))) {
+		fprintf(stderr, "Unable to send history command to remote %s;\n"
+			"Typically, either the %s is not responding, does not authorize you, or does not support remote history.\n", daemon_type, daemon_type);
 		exit(1);
 	}
 	classad_shared_ptr<Sock> sock_sentry(sock);
 
 	if (!putClassAd(sock, ad) || !sock->end_of_message()) {
-		fprintf(stderr, "Unable to send request to remote schedd; likely a server or network error.\n");
+		fprintf(stderr, "Unable to send request to remote %s; likely a server or network error.\n", daemon_type);
 		exit(1);
 	}
 
 	bool eom_after_each_ad = false;
 	while (true) {
-		compat_classad::ClassAd ad;
+		ClassAd ad;
 		if (!getClassAd(sock, ad)) {
 			fprintf(stderr, "Failed to receive remote ad.\n");
 			exit(1);
@@ -924,15 +959,12 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
         int numHistoryFiles;
         const char **historyFiles;
 
-        historyFiles = findHistoryFiles("HISTORY", &numHistoryFiles);
+		const char * knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
+        historyFiles = findHistoryFiles(knob, &numHistoryFiles);
 		if (!historyFiles) {
 			fprintf( stderr, "Error: No history file is defined\n");
-			fprintf(stderr, "\n");
-			print_wrapped_text("Extra Info: " 
-						   "The variable HISTORY is not defined in "
-						   "your config file. If you want Condor to "
-						   "keep a history of past jobs, you must "
-						   "define HISTORY in your config file", stderr );
+			fprintf(stderr, "\nExtra Info: The variable %s is not defined in your config file. If you want Condor to "
+						   "keep a history of past jobs, you must define %s in your config file\n", knob, knob );
 			exit(1);
 		}
         if (historyFiles && numHistoryFiles > 0) {
@@ -1023,7 +1055,10 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 		exit(1);
 	}
 
-    buf.readLine(fd);
+    if (!buf.readLine(fd)) {
+		fprintf(stderr, "Error %d: cannot read from history file %s\n", errno, filename);
+		exit(1);
+	}
   
     owner = (char *) malloc(buf.Length() * sizeof(char)); 
 
@@ -1055,8 +1090,16 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
             }
 
             // Find previous delimiter + summary
-            fseek(fd, prevOffset, SEEK_SET);
-            buf.readLine(fd);
+            int ret = fseek(fd, prevOffset, SEEK_SET);
+			if (ret < 0) {
+				fprintf(stderr, "Cannot seek in history file to find delimiter\n");
+				exit(1);
+			}
+
+            if (!buf.readLine(fd)) {
+				fprintf(stderr, "Cannot read history file\n");
+				exit(1);
+			}
 
             void * pvner = realloc (owner, buf.Length() * sizeof(char));
             ASSERT( pvner != NULL );
@@ -1148,7 +1191,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					printf( "\t*** Error: Can't seek inside history file: errno %d\n", errno);
 					exit(1);
 				}
-                buf.readLine(LogFile); // Read one line to skip delimiter and adjust to actual offset of ad
+				// Read one line to skip delimiter and adjust to actual offset of ad
+                if (!buf.readLine(LogFile)) {
+					printf( "\t*** Error: Can't read delimiter inside history file: errno %d\n", errno);
+					exit(1);
+				}
             } else { // Offset set to 0
                 BOF = true;
                 if (fseek(LogFile, offset, SEEK_SET) < 0) {
@@ -1180,7 +1227,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         }
-        if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
+        if (!constraint || constraint[0]=='\0' || EvalExprBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
 					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
@@ -1312,12 +1359,12 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	}
 	++adCount;
 
-	if (sinceExpr && EvalBool(&ad, sinceExpr)) {
+	if (sinceExpr && EvalExprBool(&ad, sinceExpr)) {
 		maxAds = adCount; // this will force us to stop scanning
 		return;
 	}
 
-	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
+	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
 	}

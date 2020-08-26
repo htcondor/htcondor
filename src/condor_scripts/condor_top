@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import htcondor
 import classad
@@ -399,8 +399,11 @@ def computeRuntimeStats(old, new):
 
             # compare current runtime/count to lifetime max/min range
             if (R_['Max'] is not None) and (R_['Min'] is not None):
-                R_pct_max = 100. * ( (R_curr - R_['Min']) /
-                                         float(R_['Max'] - R_['Min']) )
+                if R_['Max'] == R_['Min']:
+                    R_pct_max = 100.
+                else:
+                    R_pct_max = 100. * ( (R_curr - R_['Min']) /
+                                             float(R_['Max'] - R_['Min']) )
 
             # compare difference between current and lifetime runtime/count
             # to the lifetime standard deviation in runtime/count
@@ -481,8 +484,8 @@ def getRuntimeColFmts(col_name, table, fmt_type):
 
     # the "largest" number could be negative, so check both max and min
     i = COL_NAMES.index(col_name)
-    max_val = max(table, key=itemgetter(i))[i]
-    min_val = min(table, key=itemgetter(i))[i]
+    max_val = max(table, key=lambda row: row[i] if row[i] is not None else 0)[i]
+    min_val = min(table, key=lambda row: row[i] if row[i] is not None else 0)[i]
 
     try:
         max_width = len('{0:d}'.format(int(max_val)))
@@ -532,7 +535,7 @@ def formatMemorySize(size):
     # ClassAds report memory in KB, so start with K
     suffixes = ['K', 'M', 'G', 'T', 'P']
 
-    for i in xrange(len(suffixes)):
+    for i in range(len(suffixes)):
         if size/(10**(i*3)) < 1000:
             break
 
@@ -706,7 +709,7 @@ def printRuntimeTable(old, new, col_set = COL_SET, sort_col = SORT_COL, lines = 
             # if the value can't be formatted, it's probably None ("n/a")
             try:
                 cols.append(col_fmts[col_name][1].format(col_value))
-            except ValueError:
+            except (ValueError, TypeError):
                 cols.append(col_fmts[col_name][0].format('n/a'))
 
         # merge the column list into a single string

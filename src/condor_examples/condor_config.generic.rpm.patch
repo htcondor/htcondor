@@ -1,5 +1,5 @@
---- condor_config.generic	2018-11-15 15:52:29.926003002 -0600
-+++ condor_config.patched	2018-11-15 15:54:05.437598314 -0600
+--- condor_config.generic	2019-08-04 17:15:38.663989094 -0500
++++ condor_config.patched	2019-08-04 17:16:45.739011862 -0500
 @@ -19,25 +19,23 @@
  ######################################################################
  
@@ -31,7 +31,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,30 @@
+@@ -50,5 +48,28 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -58,8 +58,6 @@
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +
-+JAVA_CLASSPATH_DEFAULT = $(SHARE) $(SHARE)/scimark2lib.jar .
-+
-+SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = /etc/condor/condor_ssh_to_job_sshd_config_template
++JAVA_CLASSPATH_DEFAULT = $(SHARE) .
 +
 +##  Install the minicondor package to run HTCondor on a single node

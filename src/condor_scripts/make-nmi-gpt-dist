@@ -87,22 +87,6 @@ if ($Config{'archname'} =~ m!ia64-linux!)
 	}
 }
 
-if ($Config{'archname'} =~ m!solaris!)
-{
-	$ENV{'PATH'} = ".:/usr/local/sbin:/usr/local/bin:" . $ENV{'PATH'};
-    #$ENV{PATH} = '.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
-	print "Adjusting component build for solaris\n";
-	$TargetDir = sun4x_58;
-}
-
-if ($Config{'archname'} =~ m!alpha-dec_osf!)
-{
-	$ENV{'PATH'} = ".:/usr/local/gcc296:/usr/local/gnu/bin:/usr/local/sbin:/usr/local/bin:" . $ENV{'PATH'};
-    #$ENV{PATH} = '/usr/local/gcc296:/usr/local/gnu/bin:/usr/local/bin:.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
-	print "Adjusting component build for osf1\n";
-	$Compiler = "-compiler=gcc64";
-	$TargetDir = alpha_osf1;
-}
 my $VERSION = " make-gpt-dist 1.0 ";
 
 my $log, $version, $method;

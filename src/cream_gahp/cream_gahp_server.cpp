@@ -1882,7 +1882,7 @@ int handle_results( char **input_line )
 
 	results_pending = false; // Reset results pending
 	
-	gahp_printf( "S %d\n", resultQueue.size( ));
+	gahp_printf( "S %lu\n", resultQueue.size( ));
 	
 	while ( !resultQueue.empty( )) {
 		gahp_printf( "%s\n", (resultQueue.front()).c_str( ));

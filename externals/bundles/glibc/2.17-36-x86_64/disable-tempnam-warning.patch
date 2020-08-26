@@ -1,9 +1,0 @@
---- tmpnam.c.orig	2012-01-28 19:16:43.000000000 -0600
-+++ glibc-2.5-20061008T1257-x86_64-p0/stdio-common/tmpnam.c	2012-01-28 19:17:06.000000000 -0600
-@@ -47,6 +47,3 @@
- 
-   return s;
- }
--
--link_warning (tmpnam,
--	      "the use of `tmpnam' is dangerous, better use `mkstemp'")

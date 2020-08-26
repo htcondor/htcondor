@@ -31,7 +31,6 @@
 #include "daemon_types.h"
 #include "directory.h"
 #include "condor_environ.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "vmuniverse_mgr.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
@@ -161,7 +160,7 @@ VMStarterInfo::addProcessForVM(pid_t vm_pid)
 }
 
 pid_t
-VMStarterInfo::getProcessForVM(void)
+VMStarterInfo::getProcessForVM(void) const
 {
 	return m_vm_pid;
 }
@@ -191,7 +190,7 @@ VMStarterInfo::getIPForVM(void)
 }
 
 void 
-VMStarterInfo::publishVMInfo(ClassAd* ad, amask_t  /*mask*/ )
+VMStarterInfo::publishVMInfo(ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -293,7 +292,7 @@ VMUniverseMgr::printVMGahpInfo( int debug_level )
 }
 
 void
-VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
+VMUniverseMgr::publish( ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -315,11 +314,12 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 	}
 
 	// we will publish all information provided by vmgahp server
-	m_vmgahp_info.ResetExpr();
 
 	ExprTree* expr = NULL;
 	const char *attr_name = NULL;
-	while(m_vmgahp_info.NextExpr(attr_name, expr)) {
+	for( auto itr = m_vmgahp_info.begin(); itr != m_vmgahp_info.end(); itr++ ) {
+		attr_name = itr->first.c_str();
+		expr = itr->second;
 		// we need to adjust available vm memory
 		if( strcasecmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
 			int freemem = getFreeVMMemSize();
@@ -571,7 +571,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 }
 
 int
-VMUniverseMgr::getFreeVMMemSize()
+VMUniverseMgr::getFreeVMMemSize() const
 {
 	return (m_vm_max_memory - m_vm_used_memory);
 }
@@ -925,11 +925,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
 	}
 
-	MyString matchstring;
-	std::string workingdir;
-
-	formatstr(workingdir, "%s%cdir_%ld", info->m_execute_dir.c_str(),
-	                   DIR_DELIM_CHAR, (long)info->m_pid);
+	std::string matchstring;
 
 	if( (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
@@ -940,7 +936,8 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	}else {
 		// Except Xen, we need the path of working directory of Starter
 		// in order to destroy VM.
-		matchstring = workingdir;
+		formatstr(matchstring, "%s%cdir_%ld", info->m_execute_dir.c_str(),
+	                   DIR_DELIM_CHAR, (long)info->m_pid);
 	}
 
 	killVM( matchstring.c_str() );
@@ -1060,7 +1057,7 @@ VMUniverseMgr::getIPForVM(pid_t s_pid)
 }
 
 void
-VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask )
+VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -1071,6 +1068,6 @@ VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask )
 		return;
 	}
 
-	info->publishVMInfo(ad, mask);
+	info->publishVMInfo(ad);
 	return;
 }

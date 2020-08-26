@@ -1,28 +1,30 @@
-      
+      
 
-*condor\_reschedule*
+*condor_reschedule*
 ====================
 
 Update scheduling information to the central manager
+:index:`condor_reschedule<single: condor_reschedule; HTCondor commands>`
+:index:`condor_reschedule command`
 
 Synopsis
 --------
 
-**condor\_reschedule** [**-help \| -version**\ ]
+**condor_reschedule** [**-help | -version** ]
 
-**condor\_reschedule** [**-debug**\ ]
-[**-pool  **\ *centralmanagerhostname[:portnumber]*] [
-**-name **\ *hostname* \| *hostname* \| **-addr **\ *"<a.b.c.d:port>"*
-\| *"<a.b.c.d:port>"* \| **-constraint **\ *expression* \| **-all** ]
+**condor_reschedule** [**-debug** ]
+[**-pool** *centralmanagerhostname[:portnumber]*] [
+**-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
+| *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
 
 Description
 -----------
 
-*condor\_reschedule* updates the information about a set of machines’
+*condor_reschedule* updates the information about a set of machines'
 resources and jobs to the central manager. This command is used to force
 an update before viewing the current status of a machine. Viewing the
-status of a machine is done with the *condor\_status* command.
-*condor\_reschedule* also starts a new negotiation cycle between
+status of a machine is done with the *condor_status* command.
+*condor_reschedule* also starts a new negotiation cycle between
 resource owners and resource providers on the central managers, so that
 jobs can be matched with machines right away. This can be useful in
 situations where the time between negotiation cycles is somewhat long,
@@ -43,18 +45,18 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-pool **\ *centralmanagerhostname[:portnumber]*
-    Specify a pool by giving the central manager’s host name and an
+ **-pool** *centralmanagerhostname[:portnumber]*
+    Specify a pool by giving the central manager's host name and an
     optional port number
- **-name **\ *hostname*
+ **-name** *hostname*
     Send the command to a machine identified by *hostname*
  *hostname*
     Send the command to a machine identified by *hostname*
- **-addr **\ *"<a.b.c.d:port>"*
-    Send the command to a machine’s master located at *"<a.b.c.d:port>"*
+ **-addr** *"<a.b.c.d:port>"*
+    Send the command to a machine's master located at *"<a.b.c.d:port>"*
  *"<a.b.c.d:port>"*
     Send the command to a machine located at *"<a.b.c.d:port>"*
- **-constraint **\ *expression*
+ **-constraint** *expression*
     Apply this command only to machines matching the given ClassAd
     *expression*
  **-all**
@@ -63,7 +65,7 @@ Options
 Exit Status
 -----------
 
-*condor\_reschedule* will exit with a status value of 0 (zero) upon
+*condor_reschedule* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
 Examples
@@ -71,9 +73,9 @@ Examples
 
 To update the information on three named machines:
 
-::
+.. code-block:: console
 
-    % condor_reschedule robin cardinal bluejay
+    $ condor_reschedule robin cardinal bluejay
 
 To reschedule on a machine within a pool other than the local pool, use
 the **-pool** option. The argument is the name of the central manager
@@ -82,20 +84,7 @@ specified as the targets for the command. This command reschedules the
 single machine named **cae17** within the pool of machines that has
 **condor.cae.wisc.edu** as its central manager:
 
-::
+.. code-block:: console
 
-    % condor_reschedule -pool condor.cae.wisc.edu -name cae17
+    $ condor_reschedule -pool condor.cae.wisc.edu -name cae17
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin–Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

@@ -55,9 +55,9 @@ struct Options {
 	char *release_dir;
 	char *smtpserver;
 	char *condoremail;
-	char *hostallowread;
-	char *hostallowwrite;
-	char *hostallowadministrator;
+	char *allowread;
+	char *allowwrite;
+	char *allowadministrator;
 	char *vmmaxnumber;
 	char *vmversion;
 	char *vmmemory;
@@ -72,9 +72,9 @@ const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:w:x:y:z:q:f:k:g:b:
 static struct option long_options[] =
 { 
 	{"acctdomain",              required_argument, 0, 'a'},
-	{"hostallowread",           required_argument, 0, 'e'},
-	{"hostallowwrite",          required_argument, 0, 't'},
-	{"hostallowadministrator",  required_argument, 0, 'i'},
+	{"allowread",               required_argument, 0, 'e'},
+	{"allowwrite",              required_argument, 0, 't'},
+	{"allowadministrator",      required_argument, 0, 'i'},
 	{"newpool",                 required_argument, 0, 'n'},
 	{"runjobs",                 required_argument, 0, 'r'},
 	{"vacatejobs",              required_argument, 0, 'v'},
@@ -330,14 +330,14 @@ set_daemonlist() {
 
 void
 set_hostpermissions() {
-	if ( Opt.hostallowread != NULL ) {
-		set_option("ALLOW_READ", Opt.hostallowread);
+	if ( Opt.allowread != NULL ) {
+		set_option("ALLOW_READ", Opt.allowread);
 	}
-	if ( Opt.hostallowwrite != NULL ) {
-		set_option("ALLOW_WRITE", Opt.hostallowwrite);
+	if ( Opt.allowwrite != NULL ) {
+		set_option("ALLOW_WRITE", Opt.allowwrite);
 	}
-	if ( Opt.hostallowadministrator != NULL ) {
-		set_option("ALLOW_ADMINISTRATOR", Opt.hostallowadministrator);
+	if ( Opt.allowadministrator != NULL ) {
+		set_option("ALLOW_ADMINISTRATOR", Opt.allowadministrator);
 	}
 }
 
@@ -384,19 +384,19 @@ parse_args(int argc, char** argv) {
 
 			case 'e':
 				if (!isempty(my_optarg)) {
-					Opt.hostallowread = strdup(my_optarg);
+					Opt.allowread = strdup(my_optarg);
 				}
 			break;
 
 			case 't':
 				if (!isempty(my_optarg)) {
-					Opt.hostallowwrite = strdup(my_optarg);
+					Opt.allowwrite = strdup(my_optarg);
 				}
 			break;
 
 			case 'i':
 				if (!isempty(my_optarg)) {
-					Opt.hostallowadministrator = strdup(my_optarg);
+					Opt.allowadministrator = strdup(my_optarg);
 				}
 			break;
 

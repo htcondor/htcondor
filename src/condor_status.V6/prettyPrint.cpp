@@ -91,7 +91,7 @@ format_readable_kb(const classad::Value &val, Formatter &)
 	return metric_units(kb);
 }
 
-int PrettyPrinter::getDisplayWidth(bool * is_piped) {
+int PrettyPrinter::getDisplayWidth(bool * is_piped) const {
 	if (is_piped) *is_piped = false;
 	if (forced_display_width <= 0) {
 		int width = getConsoleWindowSize();
@@ -241,7 +241,7 @@ struct _adjust_widths_info {
 	int & ixCol_Machine;
 };
 
-int PrettyPrinter::ppAdjustNameWidth( void * pv, Formatter * fmt )
+int PrettyPrinter::ppAdjustNameWidth( void * pv, Formatter * fmt ) const
 {
 	struct _adjust_widths_info * pi = (struct _adjust_widths_info *)pv;
 	if (fmt->options & FormatOptionSpecial001) {
@@ -387,7 +387,7 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, S
 		classad::References attrs;
 		classad::References *proj = NULL;
 		if (PP_IS_LONGish(pps) && ( ! fHashOrder || whitelist)) {
-			sGetAdAttrs(attrs, *ad, false, whitelist);
+			sGetAdAttrs(attrs, *ad, true, whitelist);
 			proj = &attrs;
 		}
 
@@ -1053,7 +1053,7 @@ int PrettyPrinter::ppSetNegotiatorNormalCols (int)
 // be necessary, but it's convenient.
 const char * const annexInstance_PrintFormat = "SELECT\n"
 	// ATTR_ANNEX_NAME " AS 'Annex missing Instance' WIDTH -27\n"
-	"EC2InstanceID AS 'Instance ID' WIDTH 18\n"
+	"EC2InstanceID AS 'Instance ID' WIDTH 19\n"
 	ATTR_ANNEX_NAME " AS 'not in Annex'\n"
 	ATTR_GRID_JOB_STATUS " AS 'Status'\n"
 	ATTR_EC2_STATUS_REASON_CODE " AS 'Reason (if known)' PRINTF %s OR -\n"
@@ -1593,7 +1593,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "ACTIVITY_CODE", ATTR_ACTIVITY, 0, renderActivityCode, ATTR_STATE "\0" },
 	{ "ACTIVITY_TIME", ATTR_ENTERED_CURRENT_ACTIVITY, "%T", renderActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
 	{ "CONDOR_PLATFORM", "CondorPlatform", 0, renderCondorPlatform, NULL },
-	{ "CONDOR_VERSION", "CondorVersion", 0, renderVersion, NULL },
+	{ "CONDOR_VERSION", ATTR_CONDOR_VERSION, 0, renderVersion, NULL },
 	{ "DATE",         NULL, 0, formatRealDate, NULL },
 	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, "%Y", renderDueDate, ATTR_LAST_HEARD_FROM "\0" },
 	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, "%T", renderElapsedTime, ATTR_LAST_HEARD_FROM "\0" },

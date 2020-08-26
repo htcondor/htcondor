@@ -1,15 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import htcondor
 import os
 import sys
 
-from pytest.CondorCluster import CondorCluster
-from pytest.CondorTest import CondorTest
-from pytest.Globals import *
-from pytest.HTTPServer import HTTPServer
-from pytest.PersonalCondor import PersonalCondor
-from pytest.Utils import Utils
+from pytest_old.CondorCluster import CondorCluster
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.HTTPServer import HTTPServer
+from pytest_old.PersonalCondor import PersonalCondor
+from pytest_old.Utils import Utils
 
 def SuccessCallback():
     Utils.TLog("Job successful as expected. Now checking for correct log contents.")
@@ -19,12 +19,12 @@ def SuccessCallback():
     # This assumes that this instance of the test is the only one which has
     # used this personal condor, which is inconvenient for development work.
     for line in starter_log_content:
-        if "invoking" in line and "multifile_curl_plugin" in line:
+        if "invoking" in line and "curl_plugin" in line:
             multifile_curl_plugin_invokes += 1
     if multifile_curl_plugin_invokes != 1:
-        Utils.TLog("Wrong number of multifile_curl_plugin invocations, test failed.")
+        Utils.TLog("Wrong number of curl_plugin invocations, test failed.")
         sys.exit(TEST_FAILURE)
-    Utils.TLog("Correct number of multifile_curl_plugin invocations, test succeeded.")
+    Utils.TLog("Correct number of curl_plugin invocations, test succeeded.")
     sys.exit(TEST_SUCCESS)
 
 def FailureCallback():
@@ -42,7 +42,7 @@ def HttpSuccessUrlHandler(request):
 def main():
     test_params = {
         "ENABLE_MULTIFILE_TRANSFER_PLUGINS":    "true",
-        "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/multifile_curl_plugin",
+        "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/curl_plugin",
         "STARTER_LOG_NAME_APPEND":              "false"
     }
 
@@ -68,7 +68,7 @@ def main():
 
     # Setup a new test job
     job_args = {
-        "executable":               "cmd_curl_plugin_multifile_success.py",
+        "executable":               "x_echostring.pl",
         "arguments":                "Testing multifile_curl_plugin success",
         "output":                   "cmd_curl_plugin_multifile_success.out",
         "transfer_input_files":     file1_url + ", " + file2_url + ", " + file3_url,
@@ -89,4 +89,13 @@ def main():
 
 
 if __name__ == "__main__":
+    # The curl plug-in will respect HTTP_PROXY if it's set, but doing so
+    # causes this test to fail when run in a Docker container.  If we
+    # want to test this working via a proxy, we should do so explicitly.
+    # The second line in this looks super-goofy, but pop() barfs on
+    # non-strings and on the empty string, so...
+    lowered = dict()
+    for k in os.environ:
+        lowered[k.lower()] = k
+    os.environ.pop(lowered.get("http_proxy", "http_proxy"), None)
     main()

@@ -593,7 +593,6 @@ main(int argc, const char *argv[])
 
 #ifdef NEW_ARG_PARSING
 	// TODO: do the transaction
-	int match_count = 0;
 	const char * dry_tag = "";
 	SetAttributeFlags_t setflags = SETDIRTY;
 	if (only_my_jobs) setflags |= SetAttribute_OnlyMyJobs;
@@ -616,6 +615,7 @@ main(int argc, const char *argv[])
 	for (std::map<std::string, std::string>::iterator it = kvp_list.begin(); it != kvp_list.end(); ++it) {
 		const char * attr = it->first.c_str();
 		const char * value = it->second.empty() ? "undefined" : it->second.c_str();
+		int match_count = 0;
 
 		if ( ! jobids.empty()) {
 			for (std::set<JOB_ID_KEY>::iterator jid = jobids.begin(); jid != jobids.end(); ++jid) {

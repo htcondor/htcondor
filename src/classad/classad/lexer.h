@@ -135,14 +135,14 @@ class Lexer
 					f = factor;
 				}
 
-				void GetBoolValue( bool& b ) {
+				void GetBoolValue( bool& b ) const {
 					b = boolValue;
 				}
 
 				void GetStringValue( std::string &str ) {
 					str = strValue;	
 				}
-				void GetQuotedExpr( bool &quoted ) {
+				void GetQuotedExpr( bool &quoted ) const {
 					quoted = quotedExpr;
 				}
 
@@ -174,7 +174,7 @@ class Lexer
 		bool Initialize(LexerSource *source);
 		bool Reinitialize(void);
         
-        bool WasInitialized(void);
+        bool WasInitialized(void) const;
 
 		bool SetOldClassAdLex( bool do_old );
 		bool SetJsonLex( bool do_json );
@@ -215,7 +215,6 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		unsigned int			lexBufferCount;				// current offset in lexBuffer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		bool		jsonLex;
@@ -227,9 +226,10 @@ class Lexer
 		bool		tokenConsumed;				// has the token been consumed?
 
 		// internal lexing functions
-		void 		wind(void);					// consume character from source
+		void 		wind(bool fetch = true);	// consume character from source
 		void 		mark(void);					// mark()s beginning of a token
 		void 		cut(void);					// delimits token
+		void		fetch();					// fetch next character if ch is empty
 
 		// to tokenize the various tokens
 		int 		tokenizeNumber (void);		// integer or real

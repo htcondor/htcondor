@@ -91,7 +91,7 @@ class BaseShadow : public Service
 		 */
 	virtual void spawn( void ) = 0;
 
-	bool waitingToUpdateSchedd() { return m_cleanup_retry_tid != -1; }
+	bool waitingToUpdateSchedd() const { return m_cleanup_retry_tid != -1; }
 
 		/** Shadow should attempt to reconnect to a disconnected
 			starter that might still be running for this job.  
@@ -106,7 +106,7 @@ class BaseShadow : public Service
 		/** Given our config parameters, figure out how long we should
 			delay until our next attempt to reconnect.
 		*/
-	int nextReconnectDelay( int attempts );
+	int nextReconnectDelay( int attempts ) const;
 
 		/**	Called by any part of the shadow that finally decides the
 			reconnect has completely failed, we should give up, try
@@ -119,9 +119,7 @@ class BaseShadow : public Service
 
 	virtual bool shouldAttemptReconnect(RemoteResource *) { return true;};
 
-		/** Here, we param for lots of stuff in the config file.  Things
-			param'ed for are: SPOOL, FILESYSTEM_DOMAIN, UID_DOMAIN, 
-			USE_AFS, USE_NFS, and CKPT_SERVER_HOST.
+		/** Here, we param for lots of stuff in the config file.
 		*/
 	virtual void config();
 
@@ -204,7 +202,7 @@ class BaseShadow : public Service
 			how the job exited. So this call places how the job exited into
 			the jobad, but doesn't write any events about it.
 		*/
-	void mockTerminateJob( MyString exit_reason, bool exited_by_signal, 
+	void mockTerminateJob( std::string exit_reason, bool exited_by_signal,
 		int exit_code, int exit_signal, bool core_dumped );
 
 		/** Set a timer to call terminateJob() so we retry
@@ -299,17 +297,17 @@ class BaseShadow : public Service
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }
 		/// Returns this job's cluster number
-	int getCluster() { return cluster; }
+	int getCluster() const { return cluster; }
 		/// Returns this job's proc number
-	int getProc() { return proc; }
+	int getProc() const { return proc; }
 		/// Returns this job's GlobalJobId string
 	const char* getGlobalJobId() { return gjid; }
 		/// Returns the schedd address
 	char *getScheddAddr() { return scheddAddr; }
         /// Returns the current working dir for the job
-    char const *getIwd() { return iwd.Value(); }
+    char const *getIwd() { return iwd.c_str(); }
         /// Returns the owner of the job - found in the job ad
-    char const *getOwner() { return owner.Value(); }
+    char const *getOwner() { return owner.c_str(); }
 		/// Returns true if job requests graceful removal
 	bool jobWantsGracefulRemoval();
 
@@ -338,7 +336,7 @@ class BaseShadow : public Service
 
 	virtual int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss ) = 0;
 
-	virtual int getDiskUsage( void ) = 0;
+	virtual int64_t getDiskUsage( void ) = 0;
 
 	virtual struct rusage getRUsage( void ) = 0;
 
@@ -395,6 +393,8 @@ class BaseShadow : public Service
 
 	virtual void resourceBeganExecution( RemoteResource* rr ) = 0;
 
+	virtual void resourceDisconnected( RemoteResource* rr ) = 0;
+
 	virtual void resourceReconnected( RemoteResource* rr ) = 0;
 
 		/** Start a timer to do periodic updates of the job queue for
@@ -413,6 +413,10 @@ class BaseShadow : public Service
 			Used to determine if shadow exits with RECONNECT_FAILED
 			or just with JOB_SHOULD_REQUEUE. */
 	bool attemptingReconnectAtStartup;
+
+	bool isDataflowJob = false;
+
+	void logDataflowJobSkippedEvent();
 
  protected:
 
@@ -475,9 +479,9 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char* gjid;
-	MyString owner;
-	MyString domain;
-	MyString iwd;
+	std::string owner;
+	std::string domain;
+	std::string iwd;
 	char *scheddAddr;
 	char *core_file_name;
 	MyString m_xfer_queue_contact_info;
@@ -496,6 +500,10 @@ class BaseShadow : public Service
 
 		// Insist on a fast shutdown of the starter?
 	bool m_force_fast_starter_shutdown;
+
+		// Has CommittedTime in the job ad been updated to reflect
+		// job termination?
+	bool m_committed_time_finalized;
 
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );

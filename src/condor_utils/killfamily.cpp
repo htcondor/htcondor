@@ -122,7 +122,7 @@ KillFamily::get_cpu_usage(long & sys_time, long & user_time)
 }
 
 void
-KillFamily::get_max_imagesize(unsigned long & max_image )
+KillFamily::get_max_imagesize(unsigned long & max_image ) const
 {
 	max_image = max_image_size;
 }

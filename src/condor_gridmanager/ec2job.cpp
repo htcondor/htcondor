@@ -260,7 +260,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
 				std::replace( jobAdName.begin(), jobAdName.end(), '.', '_' );
 				formatstr( jobAdName, "%s_%s", ATTR_EC2_PARAM_PREFIX, jobAdName.c_str() );
 
-				jobAd->LookupString( jobAdName.c_str(), paramValue );
+				jobAd->LookupString( jobAdName, paramValue );
 				if( paramValue.empty() ) {
 					dprintf( D_ALWAYS, "EC2 parameter '%s' had no corresponding value, ignoring.\n", paramName );
 					continue;
@@ -458,7 +458,7 @@ EC2Job::EC2Job( ClassAd *classad ) :
  error_exit:
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 		jobAd->Assign( ATTR_HOLD_REASON_CODE, holdReasonCode );
 		jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, holdReasonSubCode );
 	}
@@ -523,11 +523,11 @@ void EC2Job::doEvaluateState()
 		gahp_error_code = "";
 
 		// JEF: Crash the gridmanager if requested by the job
-		int should_crash = 0;
+		bool should_crash = false;
 		jobAd->Assign( "GMState", gmState );
 		jobAd->MarkAttributeClean( "GMState" );
 
-		if ( jobAd->EvalBool( "CrashGM", NULL, should_crash ) && should_crash ) {
+		if ( jobAd->LookupBool( "CrashGM", should_crash ) && should_crash ) {
 			EXCEPT( "Crashing gridmanager at the request of job %d.%d",
 					procID.cluster, procID.proc );
 		}
@@ -1067,18 +1067,18 @@ void EC2Job::doEvaluateState()
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
 				if ( !m_remoteJobId.empty() && condorState != REMOVED
-					 && wantResubmit == 0 && doResubmit == 0 ) {
+					 && wantResubmit == false && doResubmit == 0 ) {
 					gmState = GM_HOLD;
 					break;
 				}
 
 				// Only allow a rematch *if* we are also going to perform a resubmit
 				if ( wantResubmit || doResubmit ) {
-					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 				}
 
 				if ( wantResubmit ) {
-					wantResubmit = 0;
+					wantResubmit = false;
 					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
 				}
@@ -1123,7 +1123,7 @@ void EC2Job::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 					// Set ad attributes so the schedd finds a new match.
-					int dummy;
+					bool dummy;
 					if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 						jobAd->Assign( ATTR_JOB_MATCHED, false );
 						jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -1194,7 +1194,7 @@ void EC2Job::doEvaluateState()
 					// dprintf( D_ALWAYS, "DEBUG: m_state_reason_code = %s (assuming 'NULL')\n", m_state_reason_code.c_str() );
 					if( ! m_state_reason_code.empty() ) {
 						// Send the user a copy of the reason code.
-						jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+						jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 						requestScheddUpdate( this, false );
 
 							//
@@ -1451,6 +1451,7 @@ void EC2Job::doEvaluateState()
 					|| condorState == COMPLETED
 					|| ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
 
+					ASSERT(gahp != nullptr);
 					if( m_keypair_created && ! m_key_pair.empty() ) {
 						rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
 									m_public_key_file, m_private_key_file,
@@ -2200,7 +2201,7 @@ void EC2Job::associate_n_attach()
 			string tagAttr(ATTR_EC2_TAG_PREFIX);
 			tagAttr.append(tagName);
 			char *value = NULL;
-			if (!jobAd->LookupString(tagAttr.c_str(), &value)) {
+			if (!jobAd->LookupString(tagAttr, &value)) {
 				dprintf(D_ALWAYS, "(%d.%d) Error: %s not defined, no value for tag, skipping\n",
 						procID.cluster, procID.proc,
 						tagAttr.c_str());
@@ -2347,14 +2348,14 @@ void EC2Job::StatusUpdate( const char * instanceID,
 		if( m_state_reason_code != stateReasonCode ) {
 			// dprintf( D_FULLDEBUG, "(%d.%d) Updating state reason code to from '%s' to '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), stateReasonCode, m_remoteJobId.c_str() );
 			m_state_reason_code = stateReasonCode;
-			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 			requestScheddUpdate( this, false );
 		}
 	} else {
 		if(! m_state_reason_code.empty()) {
 			// dprintf( D_FULLDEBUG, "(%d.%d) Clearing old state reason code of '%s' for job '%s'.\n", procID.cluster, procID.proc, m_state_reason_code.c_str(), m_remoteJobId.c_str() );
 			m_state_reason_code.clear();
-			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+			jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code );
 			requestScheddUpdate( this, false );
 		}
 	}

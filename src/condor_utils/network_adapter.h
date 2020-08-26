@@ -24,7 +24,6 @@
  * Headers
  ***************************************************************/
 
-#include "MyString.h"
 #include "condor_classad.h"
 #include "condor_sockaddr.h"
 
@@ -62,10 +61,10 @@ public:
 	//@{
 
     /// Constructor
-	NetworkAdapterBase () throw ();
+	NetworkAdapterBase () noexcept;
 
     /// Destructor
-	virtual ~NetworkAdapterBase () throw ();
+	virtual ~NetworkAdapterBase () noexcept;
 
 	//@}
 
@@ -114,7 +113,7 @@ public:
 	/** Returns a string list of the supported types WOL types
 		@return comma separated list
 	 */
-	MyString& wakeSupportedString ( MyString &s ) const;
+	std::string& wakeSupportedString ( std::string &s ) const;
 
     /** Ensures that the adapter "waking" is enabled.
 		@return true if the adapter waking is enabled; otherwise, false.
@@ -129,7 +128,7 @@ public:
 	/** Returns a string list of the supported types WOL types
 		@return comma separated list
 	 */
-	MyString& wakeEnabledString ( MyString &s ) const;;
+	std::string& wakeEnabledString ( std::string &s ) const;;
 
 	/** Returns the adapter's logical name
 		@return a string with the logical name
@@ -151,12 +150,12 @@ public:
 
     /** Published the network adapter's's information into the given ad
         */
-    void publish ( ClassAd &ad );
+    void publish ( ClassAd &ad ) const;
 
 	/** Get the status of the initialization.
 		@return true:success, false:failed
 	 */
-	bool getInitStatus ();
+	bool getInitStatus () const;
 
 
     /** We use this to create adapter objects so we don't need to deal
@@ -176,8 +175,7 @@ protected:
 	unsigned wolSetBit ( WOL_TYPE type, WOL_BITS bit );
 
 	// Get string representations of the supported / enabled bits
-	MyString& getWolString ( unsigned bits, MyString &s ) const;
-	char* getWolString ( unsigned bits, char *buf, int bufsize ) const;
+	std::string& getWolString ( unsigned bits, std::string &s ) const;
 
 
   private:

@@ -214,6 +214,19 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 	return *this;
 }
 
+addrinfo_iterator &
+addrinfo_iterator::operator=(addrinfo_iterator &&rhs)  noexcept {
+	// First, destroy my current self
+	if (cxt_) cxt_->release();
+
+	this->cxt_ = rhs.cxt_;
+	rhs.cxt_ = nullptr;
+
+	this->current_ = rhs.current_;
+	return *this;
+}
+
+
 addrinfo* addrinfo_iterator::next()
 {
 	if( ! current_ ) {
@@ -295,6 +308,9 @@ int ipv6_getaddrinfo(const char *node, const char *service,
 	int e = getaddrinfo(node, service, &hint, &res );
 	double timediff = _condor_debug_get_time_double() - begin;
 	getaddrinfo_runtime += timediff;
+	if (timediff > getaddrinfo_slow_limit) {
+		dprintf(D_ALWAYS, "WARNING: Saw slow DNS query, which may impact entire system: getaddrinfo(%s) took %f seconds.\n", node, timediff);
+	}
 	if (e!=0) {
 		getaddrinfo_fail_runtime += timediff;
 		return e;

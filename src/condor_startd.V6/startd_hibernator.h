@@ -31,8 +31,8 @@ class StartdHibernator : public HibernatorBase
 {
   public:
 
-	StartdHibernator(void) throw ();
-	virtual ~StartdHibernator(void) throw ();
+	StartdHibernator(void) noexcept;
+	virtual ~StartdHibernator(void) noexcept;
 
 	/* Discover supported sleep states */
 	bool initialize( void );

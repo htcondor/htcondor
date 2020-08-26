@@ -1,11 +1,12 @@
-Administrators’ Manual
-----------------------
+Administrators' Manual
+======================
 
 .. toctree::
    :maxdepth: 2
    :glob:
-   
+
    introduction-admin-manual
+   quick-start-condor-pool
    installation-startup-shutdown-reconfiguration
    introduction-to-configuration
    configuration-templates
@@ -14,7 +15,6 @@ Administrators’ Manual
    policy-configuration
    security
    networking
-   checkpoint-server
    daemoncore
    monitoring
    high-availability
@@ -22,4 +22,4 @@ Administrators’ Manual
    java-support-installation
    setting-up-vm-docker-universes
    singularity-support
-   power-management      
+   power-management      

@@ -27,49 +27,87 @@
 
 use CondorTest;
 use CondorUtils;
+use strict;
+use warnings;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my @submitfiles =
-(
-	"cmd_submit_coverage1.cmd",
-);
-
-my $ClusterId = 0;
-
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	XSW_LIMIT = 2
-	ALL_DEBUG = D_ALWAYS
 	MACHINE_RESOURCE_Boats = 30
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdsubmitcoverage");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "basickill",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-my $executecount = 0;
 my $result = 1;
 my $testname = "cmd_submit_coverage";
 
-my $on_execute = sub {
-	print "********************************** OnExecute *****************************\n";
-};
+# we will emit this string into a submit file for use in our testing
+#
+my $coverage_sub_content = <<COVERAGE_SUB_CONTENT;
+accounting_group = fw
+arguments =  3600
+concurrency_limits = XSW
+copy_to_spool = false
+coresize = 1000000
+cron_day_of_the_month = 5
+cron_day_of_the_week = 2
+cron_hour = 4
+cron_minute = 5
+cron_month = 5
+cron_prep_time = 60
+cron_window = 60
+dagman_log = dagman_log
+deferral_time = 100
+deferral_window = 1000
+description = "my test job"
+dont_encrypt_input_files = one,two
+dont_encrypt_output_files = three,four
+encrypt_input_files = five,six
+encrypt_output_files = seven,eight
+env = MEMORY=$$(memory)|MACHINE=$$(machine)|WONTBE=$$(wontbethere:/be/here/now)
+environment = "food=good school=hard"
+error = job_core_initialdir_van.err
+executable = x_sleep.pl
+getenv=true
+initialdir = .
+job_lease_duration = 3600
+job_max_vacate_time = 120
+kill_sig = 3
+log = job_core_initialdir_van.log
+log_xml = false
+match_list_length = 5
+max_job_retirement_time = (60 * 60 * 48)
+max_transfer_input_mb = 1000
+max_transfer_output_mb = 1000
+nice_user = false
+Notification = NEVER
+output = job_core_initialdir_van.out
+priority = 10
+rank = Memory
+request_Boats = 1
+request_cpus = 1
+request_memory = 25
+request_disk = 10000
+requirements = (Target.name =?= bonanza)
+submit_event_notes = "just tracking time"
+stack_size = 2048
+universe   = vanilla
+want_gracefule_removal = true
+foo			= Foo1
+foo			= Foo2
+bar			= Bar
+bar			= foo
+foo			= bar
+foobar		= $(bar)$(foo)
++foo		= "bar"
++bar		= "foo"
++last		= "first"
++done		= FALSE
+queue
+COVERAGE_SUB_CONTENT
 
-my $on_hold = sub {
-	print "Expected to be on hold\n Calling CheckForSigTermIgnore \n";
-	runToolNTimes("condor_rm $ClusterId", 1);
-};
-
-my $on_evictedwithoutcheckpoint = sub {
-	print "Evicted Without Checkpoint\n";
-};
+my $ClusterId = 0;
 
 my $submitted = sub {
 	print "Submit occured\n";
@@ -98,21 +136,18 @@ my $GetClusterId = sub {
 TLOG "Testing if SimpleJob runs\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 
-#CondorTest::RegisterExecute($testname, $executed);
-#CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+TLOG "Creating $testname.sub for coverage test\n";
+emit_file("$testname.sub", $coverage_sub_content);
+
 CondorTest::RegisterAbort( $testname, $aborted );
-#CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
-my $res = 0;
-foreach my $file (@submitfiles) {
-	$res = CondorTest::RunTest($testname, $file, 0, $GetClusterId);
-	CondorTest::RegisterResult($res, "test_name", $testname);
-	if($res == 1) {
-		CondorTest::debug("$testname: SUCCESS\n",1);
-	} else {
-		CondorTest::debug("$testname: FAILED\n",1);
-	}
+my $res = CondorTest::RunTest($testname, "$testname.sub", 0, $GetClusterId);
+CondorTest::RegisterResult($res, "test_name", $testname);
+if($res == 1) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+} else {
+	CondorTest::debug("$testname: FAILED\n",1);
 }
 
 # check command line attribute assignment
@@ -139,7 +174,7 @@ close( SUBMIT );
 # remember runCondorTool returns 1 for success.
 my $succeeded = 0;
 my @ads = ();
-my $res = runCondorTool( "condor_submit -dry-run - $submit_fname $submit_append", \@ads, 2, {emit_output=>0} );
+$res = runCondorTool( "condor_submit -dry-run - $submit_fname $submit_append", \@ads, 2, {emit_output=>0} );
 if ( ! $res) {
 	$succeeded = 0;
 } else {
@@ -167,6 +202,18 @@ if ( ! $res) {
 	# this line gives success with broken -append on queue line for 8.4.0
 	#$succeeded = ($found == 4 && $ids eq '01' && $args eq '01');
 }
-RegisterResult($succeeded,test_name=>$handle, check_name=>"submit_dash_append");
+RegisterResult($succeeded,test_name=>$testname, check_name=>"submit_dash_append");
 
 CondorTest::EndTest();
+
+# Helper function to create a file from a string
+sub emit_file {
+	my $fname = shift;
+	my $content = shift;
+
+	open (FH, ">$fname") || die "error writing to $fname: $!\n";
+	print FH $content;
+	close (FH);
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
+}
+

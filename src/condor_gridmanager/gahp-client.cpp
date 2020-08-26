@@ -301,7 +301,7 @@ void GahpServer::GahpStatistics::Unpublish( ClassAd & ad ) const
 // GAHP_DEBUG_HIDE_SENSITIVE_DATA to see if sensitive data should be
 // sanitized.
 void
-GahpServer::write_line(const char *command, const char *debug_cmd)
+GahpServer::write_line(const char *command, const char *debug_cmd) const
 {
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
@@ -325,7 +325,7 @@ GahpServer::write_line(const char *command, const char *debug_cmd)
 }
 
 void
-GahpServer::write_line(const char *command, int req, const char *args)
+GahpServer::write_line(const char *command, int req, const char *args) const
 {
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
@@ -359,7 +359,7 @@ GahpServer::write_line(const char *command, int req, const char *args)
 }
 
 int
-GahpServer::Reaper(Service *,int pid,int status)
+GahpServer::Reaper(int pid,int status)
 {
 	/* This should be much better.... for now, if our Gahp Server
 	   goes away for any reason, we EXCEPT. */
@@ -481,7 +481,7 @@ GahpServer::buffered_read( int fd, void *buf, int count )
 
 // Return the number of bytes in the buffer used by buffered_read().
 int
-GahpServer::buffered_peek()
+GahpServer::buffered_peek() const
 {
 	return m_buffer_end - m_buffer_pos;
 }
@@ -847,10 +847,8 @@ GahpServer::Startup()
 	if ( m_reaperid == -1 ) {
 		m_reaperid = daemonCore->Register_Reaper(
 				"GAHP Server",					
-				(ReaperHandler)&GahpServer::Reaper,	// handler
-				"GahpServer::Reaper",
-				NULL
-				);
+				&GahpServer::Reaper,	// handler
+				"GahpServer::Reaper");
 	}
 
 		// Create two pairs of pipes which we will use to 
@@ -1068,6 +1066,25 @@ GahpServer::Initialize( Proxy *proxy )
 	return true;
 }
 
+
+bool
+GenericGahpClient::UpdateToken( const std::string &token )
+{
+	return server->UpdateToken(token);
+}
+
+
+bool
+GahpServer::UpdateToken( const std::string &token )
+{
+	if ( !command_update_token_from_file( token ) ) {
+		dprintf( D_ALWAYS, "GAHP: Failed to update GAHP with token from file %s\n", token.c_str() );
+		return false;
+	}
+	return true;
+}
+
+
 bool
 GenericGahpClient::CreateSecuritySession()
 {
@@ -1094,7 +1111,8 @@ GahpServer::CreateSecuritySession()
 
 	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
 										session_id, session_key, NULL,
-										CONDOR_CHILD_FQU, NULL, 0 ) ) {
+										AUTH_METHOD_FAMILY,
+										CONDOR_CHILD_FQU, NULL, 0, nullptr ) ) {
 		free( session_id );
 		free( session_key );
 		return false;
@@ -1528,7 +1546,7 @@ GahpServer::setPollInterval(unsigned int interval)
 }
 
 unsigned int
-GahpServer::getPollInterval()
+GahpServer::getPollInterval() const
 {
 	return m_pollInterval;
 }
@@ -1747,8 +1765,12 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			// as well, but this should be one of the first lines in
 			// stderr and shouldn't be split across multiple reads.
 			if ( m_ssh_forward_port == 0 ) {
-				sscanf( prev_line, "Allocated port %d for remote forward to",
-						&m_ssh_forward_port );
+				int forward_port = 0;
+				int matches = sscanf( prev_line, "Allocated port %d for remote forward to",
+						&forward_port );
+				if (matches > 0) {
+					m_ssh_forward_port = forward_port;
+				}
 			}
 			prev_line = newline + 1;
 			m_gahp_error_buffer = "";
@@ -1789,6 +1811,38 @@ GahpServer::command_initialize_from_file(const char *proxy_path,
 			reason = "Unspecified error";
 		}
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",command,reason);
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+GahpServer::command_update_token_from_file(const std::string &token_path)
+{
+	static const std::string command = "UPDATE_TOKEN";
+
+	if (token_path.empty()) {
+		dprintf(D_ALWAYS, "GAHP command recieved with empty token file %s.\n",
+			token_path.c_str());
+	}
+
+	std::string buf;
+	auto x = formatstr(buf, "%s %s", command.c_str(), escapeGahpString(token_path.c_str()));
+	ASSERT( x > 0 );
+	write_line(buf.c_str());
+
+	Gahp_Args result;
+	read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		const char *reason;
+		if ( result.argc > 1 ) {
+			reason = result.argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf(D_ALWAYS, "GAHP command '%s' failed: %s\n", command.c_str(), reason);
 		return false;
 	}
 
@@ -6357,6 +6411,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 									 const std::string &metadata_file,
 									 bool preemptible,
 									 const std::string &json_file,
+									 const std::vector< std::pair< std::string, std::string > > & labels,
 									 std::string &instance_id )
 {
 	static const char* command = "GCE_INSTANCE_INSERT";
@@ -6386,6 +6441,15 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	reqline += preemptible ? "true" : "false";
 	reqline += " ";
 	reqline += json_file.empty() ? NULLSTRING : escapeGahpString( json_file );
+
+	for( auto i : labels ) {
+		reqline += " ";
+		reqline += i.first;
+		reqline += " ";
+		reqline += i.second;
+	}
+	reqline += " ";
+	reqline += NULLSTRING;
 
 	const char *buf = reqline.c_str();
 

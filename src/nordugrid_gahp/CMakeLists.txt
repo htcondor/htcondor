@@ -24,17 +24,23 @@ if (HAVE_EXT_GLOBUS)
 
 	add_definitions(-DLDAP_DEPRECATED)
 
-	condor_glob( HeaderFiles SourceFiles "" )
+	set(SourceFiles
+		nordugrid_gahp.c
+	)
 
 	# Globus forces a zillion "local variable shadows global" warnings
 
 	set_source_files_properties(${SourceFiles} PROPERTIES COMPILE_FLAGS "-Wno-shadow -Wno-unused-parameter -Wno-unused-variable")
 
 	condor_exe( nordugrid_gahp
-				"${HeaderFiles};${SourceFiles}"
+				"${SourceFiles}"
 				${C_SBIN}
-				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}"
+				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND};${CMAKE_DL_LIBS}"
 				OFF )
+
+	if ( NOT PROPER AND GLOBUS_REF )
+		add_dependencies(nordugrid_gahp ${GLOBUS_REF})
+	endif()
 
 	# Check nordugrid_gahp's shared library dependencies and copy a
 	# specific subset of those libraries into <release>/lib/condor

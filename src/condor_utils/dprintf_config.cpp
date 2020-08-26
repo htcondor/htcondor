@@ -98,7 +98,7 @@ dprintf_config_tool_on_error(int cat_and_flags)
 }
 
 int
-dprintf_config_tool(const char* subsys, int /*flags*/)
+dprintf_config_tool(const char* subsys, int /*flags*/, const char * logfile /*=NULL*/)
 {
 	char *pval = NULL;
 	char pname[ BUFSIZ ];
@@ -155,7 +155,7 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 		}
 	}
 
-	tool_output[0].logPath = "2>";
+	tool_output[0].logPath = (logfile&&logfile[0]) ? logfile : "2>";
 	tool_output[0].HeaderOpts = HeaderOpts;
 	tool_output[0].VerboseCats = verbose;
 	int cOutputs = 1;
@@ -165,7 +165,7 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 	return 0;
 }
 
-static bool parse_size_with_unit(
+bool dprintf_parse_log_size (
 	const char * input,
 	long long  & value,
 	bool       & is_time)
@@ -294,7 +294,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	if (pval) {
 		long long maxlog = 0;
 		bool unit_is_time = false;
-		bool r = parse_size_with_unit(pval, maxlog, unit_is_time);
+		bool r = dprintf_parse_log_size(pval, maxlog, unit_is_time);
 		if (!r || (maxlog < 0)) {
 			std::string m;
 			formatstr(m, "Invalid config %s = %s: %s must be an integer literal >= 0 and may be followed by a units value\n", pname, pval, pname);
@@ -525,7 +525,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		if (pval != NULL) {
 			long long maxlog = 0;
 			bool unit_is_time = false;
-			bool r = parse_size_with_unit(pval, maxlog, unit_is_time);
+			bool r = dprintf_parse_log_size(pval, maxlog, unit_is_time);
 			if (!r || (maxlog < 0)) {
 				std::string m;
 				formatstr(m, "Invalid config %s = %s: %s must be an integer literal >= 0 and may be followed by a units value\n", pname, pval, pname);

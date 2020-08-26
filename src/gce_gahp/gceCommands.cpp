@@ -133,6 +133,7 @@ bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting
 			}
 		} else if ( isdigit( *ptr ) ) {
 			if ( value.empty() ) {
+				value += *ptr;
 				in_value_int = true;
 			}
 		} else if ( *ptr == '{' || *ptr == '[' ) {
@@ -223,7 +224,7 @@ void AddInstanceToResult( vector<string> &result, string &id,
 	result.push_back( name );
 	result.push_back( status );
 	if ( status_msg.empty() ) {
-		result.push_back( string( "NULL" ) );
+		result.emplace_back( "NULL" );
 	} else {
 		result.push_back( status_msg );
 	}
@@ -235,6 +236,7 @@ void AddInstanceToResult( vector<string> &result, string &id,
 
 
 struct AuthInfo {
+	ClassAd m_json_data;
 	string m_auth_file;
 	string m_account;
 	string m_access_token;
@@ -330,6 +332,8 @@ bool ReadCredData( AuthInfo &auth_info, const classad::ClassAd &cred_ad )
 		struct tm expiration_tm;
 		if ( strptime(token_expiry.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
 			expiration = timegm(&expiration_tm);
+		} else if ( strptime(token_expiry.c_str(), "%Y-%m-%d %T", &expiration_tm ) != NULL ) {
+			expiration = timegm(&expiration_tm);
 		}
 	}
 
@@ -337,6 +341,10 @@ bool ReadCredData( AuthInfo &auth_info, const classad::ClassAd &cred_ad )
 		// This is a service credential
 		if ( access_token.empty() ) {
 			auth_info.m_err_msg = "Failed to find refresh_token or access_token in credentials file";
+			return false;
+		}
+		if ( expiration == 0 ) {
+			auth_info.m_err_msg = "Failed to parse expiration: " + token_expiry;
 			return false;
 		}
 		if ( expiration < time(NULL) ) {
@@ -370,8 +378,7 @@ int SqliteCredFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
 		return 0;
 	}
 	classad::ClassAdJsonParser parser;
-	classad::ClassAd cred_ad;
-	if ( ! parser.ParseClassAd(argv[1], cred_ad, true) ) {
+	if ( ! parser.ParseClassAd(argv[1], auth_info->m_json_data, true) ) {
 		auth_info->m_err_msg = "Invalid JSON data";
 		return 0;
 	}
@@ -382,9 +389,6 @@ int SqliteCredFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
 	}
 	// Clear the not-found error message set before the query.
 	auth_info->m_err_msg.clear();
-	// If ReadCredData() fails, it'll set auth_info->m_err_msg.
-	// No need to take any further action here.
-	ReadCredData( *auth_info, cred_ad );
 	return 0;
 }
 
@@ -399,13 +403,8 @@ int SqliteAccessFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
 	// Clear the not-found error message set before the query.
 	auth_info->m_err_msg.clear();
 
-	auth_info->m_access_token = argv[1];
-	// Parse token expiry time in (UTC) format
-	// "2016-07-27T18:44:12Z"
-	struct tm expiration_tm;
-	if ( strptime(argv[2], "%Y-%m-%d %T", &expiration_tm ) != NULL) {
-		auth_info->m_expiration = timegm(&expiration_tm);
-	}
+	auth_info->m_json_data.Assign( "access_token", argv[1] );
+	auth_info->m_json_data.Assign( "token_expiry", argv[2] );
 	return 0;
 }
 
@@ -428,6 +427,7 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 	int rc;
 	char *query_stmt;
 
+	auth_info.m_json_data.Clear();
 	if ( auth_info.m_account.empty() ) {
 		rc = asprintf(&query_stmt, "select * from credentials limit 1;");
 	} else {
@@ -501,6 +501,11 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 	if ( ! auth_info.m_err_msg.empty() ) {
 		return CRED_FILE_FAILURE;
 	}
+
+	ReadCredData(auth_info, auth_info.m_json_data);
+	if ( ! auth_info.m_err_msg.empty() ) {
+		return CRED_FILE_FAILURE;
+	}
 	return CRED_FILE_SUCCESS;
 }
 
@@ -510,21 +515,21 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 int ReadCredFileJson( AuthInfo &auth_info )
 {
 	auth_info.m_err_msg.clear();
+	auth_info.m_json_data.Clear();
 	FILE *fp = safe_fopen_wrapper_follow(auth_info.m_auth_file.c_str(), "r");
 	if ( fp == NULL ) {
 		auth_info.m_err_msg = "Failed to open credentials file";
 		return CRED_FILE_FAILURE;
 	}
 	classad::ClassAdJsonParser parser;
-	classad::ClassAd file_ad;
-	if ( ! parser.ParseClassAd(fp, file_ad, true) ) {
+	if ( ! parser.ParseClassAd(fp, auth_info.m_json_data, true) ) {
 		auth_info.m_err_msg = "Invalid JSON data";
 		fclose(fp);
 		return CRED_FILE_BAD_FORMAT;
 	}
 	fclose(fp);
 	classad::ExprTree *tree;
-	tree = file_ad.Lookup("data");
+	tree = auth_info.m_json_data.Lookup("data");
 	if ( tree == NULL || tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
 		auth_info.m_err_msg = "Invalid JSON data";
 		return CRED_FILE_FAILURE;
@@ -690,7 +695,8 @@ bool GetAccessToken( const string &auth_file_in, const string &account_in,
 // err_msg and returns false. On success, stores targetId value in
 // instance_id (if non-NULL) and returns true.
 bool verifyRequest( const string &serviceUrl, const string &auth_file,
-					string &err_msg, string *instance_id = NULL )
+                    const string &account, string &err_msg,
+                    string *instance_id = NULL )
 {
 	string status;
 	bool in_err = false;
@@ -706,7 +712,7 @@ bool verifyRequest( const string &serviceUrl, const string &auth_file,
 		op_request.serviceURL = serviceUrl;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, "", op_request.accessToken, err_msg ) ) {
+		if ( !GetAccessToken( auth_file, account, op_request.accessToken, err_msg ) ) {
 			return false;
 		}
 
@@ -1119,23 +1125,40 @@ bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 
 // ---------------------------------------------------------------------------
 
+// https://cloud.google.com/compute/docs/labeling-resources says
+// "Keys and values can only contain lowercase letters, numeric characters,
+// underscores, and dashes. International characters are allowed."
+// We're ignoring the second sentence until someone complains, in part
+// because it's not clear how it interacts with the first sentence.
+
+bool
+isLabelSafe( const std::string & korv ) {
+	for( size_t i = 0; i < korv.length(); ++i ) {
+		char c = korv[i];
+		if(! (std::islower(c) || std::isdigit(c) || c == '_' || c == '-' )) {
+			return false;
+		}
+	}
+	return true;
+}
+
 GceInstanceInsert::GceInstanceInsert() { }
 
 GceInstanceInsert::~GceInstanceInsert() { }
 
 // Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
-//     <preemptible> <json_file>
+//     <preemptible> <json_file> <tag=value>* NULLSTRING
 bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_INSERT" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 14 ) ) {
+	if( ! verify_min_number_args( argc, 15 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 14, argv[0] );
+				 argc, 15, argv[0] );
 		return false;
 	}
 
@@ -1183,6 +1206,56 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += " \"machineType\": \"";
 	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
+
+	// This is documented incorrectly at https://cloud.google.com/compute/docs/labeling-resources;
+	// the actual API is the sane one you'd expect.
+	int endOfTagList = 14;
+	if( strcasecmp( argv[endOfTagList], NULLSTRING ) ) {
+		insert_request.requestBody += " \"labels\": {";
+		for( ; endOfTagList < argc - 2; endOfTagList += 2 ) {
+			if( strcasecmp( argv[endOfTagList], NULLSTRING ) == 0 ) { break; }
+			std::string key = argv[endOfTagList];
+			std::string value = argv[endOfTagList + 1];
+
+			if( key.length() >= 64 || value.length() >= 64 ) {
+				result_string = create_failure_result( requestID,
+					"Label key or value too long" );
+				return true;
+			}
+
+			if( key.empty() ) {
+				result_string = create_failure_result( requestID,
+					"Label keys may not be empty" );
+				return true;
+			}
+
+			// ibid., "Label keys must start with a lowercase letter and
+			// international characters are allowed."  See comment about
+			// isLabelSafe().
+			if(! std::islower(key[0])) {
+				result_string = create_failure_result( requestID,
+					"Label keys must start with a lower case letter" );
+				return true;
+			}
+
+			if( (!isLabelSafe( key )) || (!isLabelSafe( value )) ) {
+				result_string = create_failure_result( requestID,
+					"Invalid label key or value" );
+				return true;
+			}
+
+			insert_request.requestBody +=
+				"\"" + key + "\": \"" + value + "\",";
+		}
+		if( strcasecmp( argv[endOfTagList], NULLSTRING ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse labels" );
+			return true;
+		}
+		insert_request.requestBody.erase( insert_request.requestBody.length() - 1 );
+		insert_request.requestBody += "},\n";
+	}
+
 	insert_request.requestBody += " \"name\": \"";
 	insert_request.requestBody += argv[7];
 	insert_request.requestBody += "\",\n";
@@ -1308,7 +1381,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
+		if ( !GetAccessToken( auth_file, argv[4], op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1439,7 +1512,7 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
+		if ( !GetAccessToken( auth_file, argv[4], op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1739,7 +1812,8 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, argv[4], insert_request.accessToken,
+	string account = argv[4];
+	if ( !GetAccessToken( auth_file, account, insert_request.accessToken,
 						  insert_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   insert_request.errorMessage.c_str() );
@@ -1776,7 +1850,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[5];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
-	if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+	if ( verifyRequest( opUrl, auth_file, account, err_msg ) == false ) {
 		result_string = create_failure_result( requestID, err_msg.c_str() );
 		return true;
 	}
@@ -1809,7 +1883,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	group_request.requestBody += "}\n";
 
 
-	if ( !GetAccessToken( auth_file, "", group_request.accessToken,
+	if ( !GetAccessToken( auth_file, account, group_request.accessToken,
 						  group_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   group_request.errorMessage.c_str() );
@@ -1840,7 +1914,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[6];
 	opUrl += "/operations/";
 	opUrl += op_name;
-	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+	if ( verifyRequest( opUrl, auth_file, account, err_msg ) ) {
 		result_string = create_success_result( requestID, NULL );
 	} else {
 		result_string = create_failure_result( requestID, err_msg.c_str() );
@@ -1884,7 +1958,8 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	group_request.requestMethod = "DELETE";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, argv[4], group_request.accessToken,
+	string account = argv[4];
+	if ( !GetAccessToken( auth_file, account, group_request.accessToken,
 						  group_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   group_request.errorMessage.c_str() );
@@ -1927,7 +2002,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 		opUrl += argv[6];
 		opUrl += "/operations/";
 		opUrl += op_name;
-		if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+		if ( verifyRequest( opUrl, auth_file, account, err_msg ) == false ) {
 			result_string = create_failure_result( requestID, err_msg.c_str() );
 			return true;
 		}
@@ -1943,7 +2018,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	delete_request.serviceURL += "-template";
 	delete_request.requestMethod = "DELETE";
 
-	if ( !GetAccessToken( auth_file, "", delete_request.accessToken,
+	if ( !GetAccessToken( auth_file, account, delete_request.accessToken,
 						  delete_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   delete_request.errorMessage.c_str() );
@@ -1975,7 +2050,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[5];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
-	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+	if ( verifyRequest( opUrl, auth_file, account, err_msg ) ) {
 		result_string = create_success_result( requestID, NULL );
 	} else {
 		result_string = create_failure_result( requestID, err_msg.c_str() );

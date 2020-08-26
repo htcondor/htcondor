@@ -33,9 +33,9 @@ if ( WITH_BLAHP )
 		endif()
 
 		if (PREFER_CPP11)
-			set( CPP11_FLAG -std=c++11 )
+			set( CPP11_FLAG "-fcommon -std=c++11" )
 		else()
-			set( CPP11_FLAG "-I${BOOST_INCLUDE}" )
+			set( CPP11_FLAG "-fcommon -I${BOOST_INCLUDE}" )
 		endif()
 
 		if ( BUILDING_OPENSSL )
@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p25 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p26 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -100,10 +100,11 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-proxy.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/runtime-project.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/bash-source.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/kill-job.patch -p0 &&
 							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&
-							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
+							./bootstrap && ./configure --with-classads-prefix=$<TARGET_FILE_DIR:classads>/..
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg
@@ -129,7 +130,7 @@ if ( WITH_BLAHP )
 				COMMAND xargs strip)" )
 		endif()
 
-		condor_post_external( blahp OFF OFF )
+		condor_post_external( blahp OFF OFF "" )
 
 		set(BLAHP_FOUND ON)
 

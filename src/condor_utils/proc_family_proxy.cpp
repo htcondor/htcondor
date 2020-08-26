@@ -27,7 +27,6 @@
 #include "setenv.h"
 #include "directory.h"
 #include "basename.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "procd_config.h"
 
 // enable PROCAPI profileing code.
@@ -43,7 +42,7 @@ class ProcFamilyProxyReaperHelper : public Service {
 public:
 	ProcFamilyProxyReaperHelper(ProcFamilyProxy* ptr) : m_ptr(ptr) { }
 
-	int procd_reaper(int pid, int status)
+	int procd_reaper(int pid, int status) const
 	{
 		return m_ptr->procd_reaper(pid, status);
 	}
@@ -53,9 +52,12 @@ public:
 
 int ProcFamilyProxy::s_instantiated = false;
 
-ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix) :
-	m_procd_pid(-1),
-	m_reaper_id(FALSE)
+ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix)
+	: m_procd_pid(-1)
+	, m_former_procd_pid(-1)
+	, m_reaper_id(FALSE)
+	, m_reaper_notify(NULL)
+	, m_reaper_notify_me(NULL)
 {
 	// only one of these should be instantiated
 	//
@@ -336,6 +338,16 @@ ProcFamilyProxy::continue_family(pid_t pid)
 bool
 ProcFamilyProxy::unregister_family(pid_t pid)
 {
+	//dprintf(D_ALWAYS, "ProcFamilyProxy::unregister_family(%d)\n", pid);
+
+	// if we just stopped the procd, quietly ignore a request to unregister a pid
+	// since stopping the procd unregisters everthing. In normal operation, we hit
+	// this code for shared-port and for the procd itself during master shutdown and restart.
+	if ((m_former_procd_pid != -1) && (m_procd_pid == -1)) {
+		// procd is gone, so unregister is successful by definition. ;)
+		return true;
+	}
+
 	bool response;
 	if (!m_client->unregister_family(pid, response)) {
 		dprintf(D_ALWAYS, "unregister_subfamily: ProcD communication error\n");
@@ -356,6 +368,20 @@ ProcFamilyProxy::use_glexec_for_family(pid_t pid, const char* proxy)
 		return false;
 	}
 	return response;
+}
+
+bool
+ProcFamilyProxy::quit(void(*notify)(void*me, int pid, int status), void* me)
+{
+	if (m_procd_pid != -1) {
+		m_reaper_notify = notify;
+		m_reaper_notify_me = me;
+		bool stopping = stop_procd();
+		UnsetEnv("CONDOR_PROCD_ADDRESS_BASE");
+		UnsetEnv("CONDOR_PROCD_ADDRESS");
+		return stopping;
+	}
+	return false;
 }
 
 bool
@@ -386,22 +412,48 @@ ProcFamilyProxy::start_procd()
 	args.AppendArg("-A");
 	args.AppendArg(m_procd_addr);
 
+	// parse the (optional) procd log file size
+	// we do this here so that we can have a log size of 0 disable logging.
+	//
+	int log_size = -1; // -1 means infinite
+	char *max_procd_log = param("MAX_PROCD_LOG");
+	if (max_procd_log) {
+		long long maxlog = 0;
+		bool unit_is_time = false;
+		bool r = dprintf_parse_log_size(max_procd_log, maxlog, unit_is_time);
+		if (!r) {
+			dprintf(D_ALWAYS, "Invalid config! MAX_PROCD_LOG = %s: must be an integer literal and may be followed by a units value\n", max_procd_log);
+			maxlog = 1*1000*1000; // use the default of 1Mb
+		}
+		if (unit_is_time) {
+			dprintf(D_ALWAYS, "Invalid config! MAX_PROCD_LOG must be a size, not a time in this version of HTCondor.\n");
+			maxlog = 1*1000*1000; // use the default of 1Mb
+		}
+
+		// the procd takes it's maxlog as an integer, so only pass the param if it is 0, or a positive value that is in range
+		// the procd treats -1 as INFINITE, and that is the default, so we don't need to pass large values on
+		// we will also treat log size of 0 as a special case that just disables the log entirely.
+		// 
+		if (maxlog >= 0 && maxlog < INT_MAX) { log_size = (int)maxlog; }
+		free(max_procd_log);
+	}
+
 	// the (optional) procd log file
 	//
-	if (m_procd_log.Length() > 0) {
+	if (m_procd_log.Length() > 0 && log_size != 0) {
 		args.AppendArg("-L");
 		args.AppendArg(m_procd_log);
-	}
 	
-	// the (optional) procd log file size
-	//
-	char *procd_log_size = param("MAX_PROCD_LOG");
-	if (procd_log_size != NULL) {
-		args.AppendArg("-R");
-		args.AppendArg(procd_log_size);
-		free(procd_log_size);
+		// pass a log size arg if it is > 0 (-1 is the internal default, and 0 means to disable the log)
+		if (log_size > 0) {
+			MyString size_arg;
+			size_arg.serialize_int(log_size);
+			args.AppendArg("-R");
+			args.AppendArg(size_arg.Value());
+		}
 	}
-	
+
+
 	Env env;
 	// The procd can't param, so pass this via the environment
 	if (param_boolean("USE_PSS", false)) {
@@ -456,10 +508,10 @@ ProcFamilyProxy::start_procd()
 	// config file
 	//
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() && !privsep_enabled()) {
+		if (!can_switch_ids()) {
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
-			           "root or using PrivSep");
+			           "root");
 		}
 		int min_tracking_gid = param_integer("MIN_TRACKING_GID", 0);
 		if (min_tracking_gid == 0) {
@@ -542,25 +594,17 @@ ProcFamilyProxy::start_procd()
 
 	// use Create_Process to start the procd
 	//
-	if (privsep_enabled()) {
-		m_procd_pid = privsep_spawn_procd(exe.Value(),
-		                                  args,
-		                                  std_io,
-		                                  m_reaper_id);
-	}
-	else {
-		m_procd_pid = daemonCore->Create_Process(exe.Value(),
-		                                         args,
-		                                         PRIV_ROOT,
-		                                         m_reaper_id,
-		                                         FALSE,
-		                                         FALSE,
-		                                         &env,
-		                                         NULL,
-		                                         NULL,
-		                                         NULL,
-		                                         std_io);
-	}
+	m_procd_pid = daemonCore->Create_Process(exe.Value(),
+	                                         args,
+	                                         PRIV_ROOT,
+	                                         m_reaper_id,
+	                                         FALSE,
+	                                         FALSE,
+	                                         &env,
+	                                         NULL,
+	                                         NULL,
+	                                         NULL,
+	                                         std_io);
 	if (m_procd_pid == FALSE) {
 		dprintf(D_ALWAYS, "start_procd: unable to execute the procd\n");
 		daemonCore->Close_Pipe(pipe_ends[0]);
@@ -609,18 +653,28 @@ ProcFamilyProxy::start_procd()
 	return true;
 }
 
-void
+bool
 ProcFamilyProxy::stop_procd()
 {
-	bool response;
+	//dprintf(D_ALWAYS, "stop_procd(). pid = %d, former_pid=%d\n", m_procd_pid, m_former_procd_pid);
+
+	bool response=false;
 	if (!m_client->quit(response)) {
 		dprintf(D_ALWAYS, "error telling ProcD to exit\n");
+	}
+
+	// remember the procd pid before we overwrite it
+	// so that we can quietly ignore a subsequent request to unregister it from daemoncore
+	if (m_procd_pid != -1) {
+		m_former_procd_pid = m_procd_pid;
 	}
 
 	// set m_procd_pid back to -1 so the reaper expects to see
 	// the ProcD exit
 	//
 	m_procd_pid = -1;
+	//dprintf(D_ALWAYS, "return %d from stop_procd() pid = %d, former_pid=%d\n", response, m_procd_pid, m_former_procd_pid);
+	return response;
 }
 
 void
@@ -703,6 +757,12 @@ ProcFamilyProxy::procd_reaper(int pid, int status)
 		        status);
 		recover_from_procd_error();
 	}
+
+	// do one-time reaping callback if one was requested.
+	if (m_reaper_notify) {
+		m_reaper_notify(m_reaper_notify_me, pid, status);
+	}
+	m_reaper_notify = NULL;
 
 	return 0;
 }

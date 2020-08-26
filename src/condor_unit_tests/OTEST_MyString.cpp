@@ -907,17 +907,17 @@ static bool set_char_last() {
 
 //in test_mystring.cpp 578
 static bool random_string_one_char() {
-	emit_test("Does randomlyGenerate() work when passed only one char?");
-	MyString rnd;
-	rnd.randomlyGenerate("1", 5);
+	emit_test("Does randomlyGenerateInsecure() work when passed only one char?");
+	std::string rnd;
+	randomlyGenerateInsecure(rnd, "1", 5);
 	emit_input_header();
 	emit_param("set", "%s", "1");
 	emit_param("len", "%d", 5);
 	emit_output_expected_header();
 	emit_retval("%s", "11111");
 	emit_output_actual_header();
-	emit_retval("%s", rnd.Value());
-	if(strcmp(rnd.Value(), "11111") != MATCH) {
+	emit_retval("%s", rnd.c_str());
+	if(strcmp(rnd.c_str(), "11111") != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -925,87 +925,87 @@ static bool random_string_one_char() {
 
 //in test_mystring.cpp 586
 static bool random_string_many_chars() {
-	emit_test("Does randomlyGenerate() work when passed a 10 char set?");
-	MyString rnd;
-	rnd.randomlyGenerate("0123456789", 64);
+	emit_test("Does randomlyGenerateInsecure() work when passed a 10 char set?");
+	std::string rnd;
+	randomlyGenerateInsecure(rnd, "0123456789", 64);
 	emit_input_header();
 	emit_param("set", "%s", "0123456789");
 	emit_param("len", "%d", 64);
 	emit_output_expected_header();
 	emit_param("Length", "%d", 64);
 	emit_output_actual_header();
-	emit_param("Length", "%d", rnd.Length());
-	if(rnd.Length() != 64) {
+	emit_param("Length", "%d", rnd.length());
+	if(rnd.length() != 64) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool random_string_existing() {
-	emit_test("Does randomlyGenerate() work on a non empty MyString?");
-	MyString rnd("foo");
-	rnd.randomlyGenerate("0123456789", 64);
+	emit_test("Does randomlyGenerateInsecure() work with a non empty string?");
+	std::string rnd("foo");
+	randomlyGenerateInsecure(rnd, "0123456789", 64);
 	emit_input_header();
 	emit_param("set", "%s", "0123456789");
 	emit_param("len", "%d", 64);
 	emit_output_expected_header();
 	emit_param("Length", "%d", 64);
 	emit_output_actual_header();
-	emit_param("Length", "%d", rnd.Length());
-	if(rnd.Length() != 64) {
+	emit_param("Length", "%d", rnd.length());
+	if(rnd.length() != 64) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool random_string_empty_set() {
-	emit_test("Does randomlyGenerate() work when passed an empty set when "
-		"called on an empty MyString?");
-	MyString rnd;
-	rnd.randomlyGenerate(NULL, 64);
+	emit_test("Does randomlyGenerateInsecure() work when passed an empty set when "
+		"called with an empty string?");
+	std::string rnd;
+	randomlyGenerateInsecure(rnd, NULL, 64);
 	emit_input_header();
 	emit_param("set", "%s", "");
 	emit_param("len", "%d", 64);
 	emit_output_expected_header();
 	emit_retval("%s", "");
 	emit_output_actual_header();
-	emit_retval("%s", rnd.Value());
-	if(strcmp(rnd.Value(), "") != MATCH) {
+	emit_retval("%s", rnd.c_str());
+	if(strcmp(rnd.c_str(), "") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool random_string_empty_set_existing() {
-	emit_test("Does randomlyGenerate() work when passed an empty set when "
-		"called on a non empty MyString?");
-	MyString rnd("foo");
-	rnd.randomlyGenerate(NULL, 64);
+	emit_test("Does randomlyGenerateInsecure() work when passed an empty set when "
+		"called with a non empty string?");
+	std::string rnd("foo");
+	randomlyGenerateInsecure(rnd, NULL, 64);
 	emit_input_header();
 	emit_param("set", "%s", "");
 	emit_param("len", "%d", 64);
 	emit_output_expected_header();
 	emit_retval("%s", "");
 	emit_output_actual_header();
-	emit_retval("%s", rnd.Value());
-	if(strcmp(rnd.Value(), "") != MATCH) {
+	emit_retval("%s", rnd.c_str());
+	if(strcmp(rnd.c_str(), "") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool random_string_length_zero() {
-	emit_test("Does randomlyGenerate() work when passed a length of zero?");
-	MyString rnd;
-	rnd.randomlyGenerate("0123", 0);
+	emit_test("Does randomlyGenerateInsecure() work when passed a length of zero?");
+	std::string rnd;
+	randomlyGenerateInsecure(rnd, "0123", 0);
 	emit_input_header();
 	emit_param("set", "%s", "0123");
 	emit_param("len", "%d", 0);
 	emit_output_expected_header();
 	emit_retval("%s", "");
 	emit_output_actual_header();
-	emit_retval("%s", rnd.Value());
-	if(strcmp(rnd.Value(), "") != MATCH) {
+	emit_retval("%s", rnd.c_str());
+	if(strcmp(rnd.c_str(), "") != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1013,33 +1013,33 @@ static bool random_string_length_zero() {
 
 static bool random_string_negative_length() {
 	emit_test("Does randomlyGenerate() work when passed a negative length?");
-	MyString rnd;
-	rnd.randomlyGenerate("0123", -1);
+	std::string rnd;
+	randomlyGenerateInsecure(rnd, "0123", -1);
 	emit_input_header();
 	emit_param("set", "%s", "0123");
 	emit_param("len", "%d", -1);
 	emit_output_expected_header();
 	emit_retval("%s", "");
 	emit_output_actual_header();
-	emit_retval("%s", rnd.Value());
-	if(strcmp(rnd.Value(), "") != MATCH) {
+	emit_retval("%s", rnd.c_str());
+	if(strcmp(rnd.c_str(), "") != MATCH) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool random_string_hex() {
-	emit_test("Does randomlyGenerateHex() modify the string to the given "
+	emit_test("Does randomlyGenerateInsecureHex() modify the string to the given "
 		"length?");
-	MyString rnd;
-	rnd.randomlyGenerateHex(10);
+	std::string rnd;
+	randomlyGenerateInsecureHex(rnd, 10);
 	emit_input_header();
 	emit_param("len", "%d", 10);
 	emit_output_expected_header();
 	emit_param("Length", "%d", 10);
 	emit_output_actual_header();
-	emit_param("Length", "%d", rnd.Length());
-	if(rnd.Length() != 10) {
+	emit_param("Length", "%d", rnd.length());
+	if(rnd.length() != 10) {
 		FAIL;
 	}
 	PASS;

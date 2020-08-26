@@ -226,17 +226,6 @@ ALLOW_WRITE = $(FULL_HOSTNAME), $(IP_ADDRESS)
 #ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #DENY_WRITE = bad-machine.your.domain
 
-##  Are you upgrading to a new version of Condor and confused about
-##  why the above ALLOW_WRITE setting is causing Condor to refuse to
-##  start up?  If you are upgrading from a configuration that uses
-##  HOSTALLOW/HOSTDENY instead of ALLOW/DENY we recommend that you
-##  convert all uses of the former to the latter.  The syntax of the
-##  authorization settings is identical.  They both support
-##  unauthenticated IP-based authorization as well as authenticated
-##  user-based authorization.  To avoid confusion, the use of
-##  HOSTALLOW/HOSTDENY is discouraged.  Support for it may be removed
-##  in the future.
-
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
 ALLOW_NEGOTIATOR = $(CONDOR_HOST), $(IP_ADDRESS)
@@ -1056,7 +1045,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 ##  checkpoint server or custom user daemons)?
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
-#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
+#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, \
 #JOB_ROUTER, ROOSTER, LEASEMANAGER, SHARED_PORT, \
 #DEFRAG, GANGLIAD, ANNEXD
 
@@ -1148,25 +1137,6 @@ PREEN_ARGS			= -m -r
 #MASTER_RECOVER_FACTOR		= 300
 
 
-##--------------------------------------------------------------------
-##  condor_collector
-##--------------------------------------------------------------------
-## Address to which Condor will send a weekly e-mail with basic
-## non-specific information about your pool. See
-## http://htcondor.org/privacy.html for more information.
-## To disable this behavior, uncomment the below line to
-## explicitly set CONDOR_DEVELOPERS to NONE.
-#CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
-#CONDOR_DEVELOPERS = NONE
-
-## Global Collector to periodically advertise basic
-## non-specific information about your pool. See
-## http://htcondor.org/privacy.html for more information.
-## To disable this behavior, uncomment the below line to
-## explicitly set CONDOR_DEVELOPERS_COLLECTOR to NONE.
-#CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
-#CONDOR_DEVELOPERS_COLLECTOR = NONE
-
 ##  When the collector starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the collector.  This
@@ -1205,9 +1175,8 @@ COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 ##  condor_startd
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
-STARTER_LIST = STARTER, STARTER_STANDARD
+STARTER_LIST = STARTER
 STARTER			= $(SBIN)/condor_starter
-STARTER_STANDARD	= $(SBIN)/condor_starter.std
 STARTER_LOCAL		= $(SBIN)/condor_starter
 
 ##  When the startd starts up, it can place it's address (IP and port)
@@ -1449,18 +1418,12 @@ benchmarks_kflops_job_load = 1.0
 ##  nodes, just increase this parameter.
 #DISCONNECTED_KEYBOARD_IDLE_BOOST = 1200
 
-##	CKPT_PROBE is the location of a program which computes aspects of the
-##	CheckpointPlatform classad attribute. By default the location of this
-##	executable will be here: $(LIBEXEC)/condor_ckpt_probe
-CKPT_PROBE = $(LIBEXEC)/condor_ckpt_probe
-
 ##--------------------------------------------------------------------
 ##  condor_schedd
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
-SHADOW_LIST = SHADOW, SHADOW_STANDARD
+SHADOW_LIST = SHADOW
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_STANDARD		= $(SBIN)/condor_shadow.std
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1664,8 +1627,8 @@ PROCD_LOG = $(LOG)/ProcLog
 PROCD_MAX_SNAPSHOT_INTERVAL = 60
 
 # On Windows, we send a process a "soft kill" via a WM_CLOSE message.
-# This binary is used by the ProcD (and other Condor daemons if PRIVSEP
-# is not enabled) to help when sending soft kills.
+# This binary is used by the ProcD (and other Condor daemons)
+# to help when sending soft kills.
 WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 
 ##--------------------------------------------------------------------
@@ -1739,7 +1702,7 @@ JAVA = /usr/bin/java
 ## them here.  However, do not remove the existing entries, as Condor
 ## needs them.
 
-JAVA_CLASSPATH_DEFAULT = $(LIB) $(LIB)/scimark2lib.jar .
+JAVA_CLASSPATH_DEFAULT = $(LIB) .
 
 ##  JAVA_CLASSPATH_ARGUMENT describes the command-line parameter
 ##  used to introduce a new classpath:
@@ -1750,13 +1713,6 @@ JAVA_CLASSPATH_ARGUMENT = -classpath
 ##  one path element from another:
 
 JAVA_CLASSPATH_SEPARATOR = :
-
-##  JAVA_BENCHMARK_TIME describes the number of seconds for which
-##  to run Java benchmarks.  A longer time yields a more accurate
-##  benchmark, but consumes more otherwise useful CPU time.
-##  If this time is zero or undefined, no Java benchmarks will be run.
-
-JAVA_BENCHMARK_TIME = 2
 
 ##  If your JVM requires any special arguments not mentioned in
 ##  the options above, then give them here.

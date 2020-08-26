@@ -276,24 +276,6 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 #USE_AFS		= False
 
 ##--------------------------------------------------------------------
-##  Checkpoint server:
-##--------------------------------------------------------------------
-##  Do you want to use a checkpoint server if one is available?  If a
-##  checkpoint server isn't available or USE_CKPT_SERVER is set to
-##  False, checkpoints will be written to the local SPOOL directory on
-##  the submission machine.
-#USE_CKPT_SERVER	= True
-
-##  What's the hostname of this machine's nearest checkpoint server?
-#CKPT_SERVER_HOST	= checkpoint-server-hostname.your.domain
-
-##  Do you want the starter on the execute machine to choose the
-##  checkpoint server?  If False, the CKPT_SERVER_HOST set on
-##  the submit machine is used.  Otherwise, the CKPT_SERVER_HOST set
-##  on the execute machine is used.  The default is true.
-#STARTER_CHOOSES_CKPT_SERVER = True
-
-##--------------------------------------------------------------------
 ##  Miscellaneous:
 ##--------------------------------------------------------------------
 ##  Try to save this much swap space by not starting new shadows.  
@@ -824,9 +806,8 @@ NEGOTIATOR_INTERVAL = 15
 ##  condor_startd
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
-STARTER_LIST = STARTER, STARTER_STANDARD
+STARTER_LIST = STARTER
 STARTER			= $(SBIN)/condor_starter
-STARTER_STANDARD	= $(SBIN)/condor_starter.std
 
 ##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1012,9 +993,8 @@ NUM_VIRTUAL_MACHINES = 1
 ##  condor_schedd
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
-SHADOW_LIST = SHADOW, SHADOW_STANDARD
+SHADOW_LIST = SHADOW
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_STANDARD		= $(SBIN)/condor_shadow.std
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1091,32 +1071,6 @@ QUEUE_SUPER_USERS	= root, condor
 
 
 ##--------------------------------------------------------------------
-##  condor_shadow
-##--------------------------------------------------------------------
-##  If the shadow is unable to read a checkpoint file from the
-##  checkpoint server, it keeps trying only if the job has accumulated
-##  more than MAX_DISCARDED_RUN_TIME seconds of CPU usage.  Otherwise,
-##  the job is started from scratch.  Defaults to 1 hour.  This
-##  setting is only used if USE_CKPT_SERVER (from above) is True.
-#MAX_DISCARDED_RUN_TIME = 3600 
-
-##  Should periodic checkpoints be compressed?
-#COMPRESS_PERIODIC_CKPT = False
-
-##  Should vacate checkpoints be compressed?
-#COMPRESS_VACATE_CKPT = False
-
-##  Should we commit the application's dirty memory pages to swap
-##  space during a periodic checkpoint?
-#PERIODIC_MEMORY_SYNC = False
-
-##  Should we write vacate checkpoints slowly?  If nonzero, this
-##  parameter specifies the speed at which vacate checkpoints should
-##  be written, in kilobytes per second.
-#SLOW_CKPT_SPEED = 0
-
-
-##--------------------------------------------------------------------
 ##  condor_starter
 ##--------------------------------------------------------------------
 ##  The condor_starter can renice the processes from remote Condor
@@ -1125,11 +1079,6 @@ QUEUE_SUPER_USERS	= root, condor
 ##  jobs. (1-19)  The larger the number, the lower priority the
 ##  process gets on your machines.
 #JOB_RENICE_INCREMENT	= 10
-
-##  Should the starter do local logging to its own log file, or send
-##  debug information back to the condor_shadow where it will end up
-##  in the ShadowLog? 
-#STARTER_LOCAL_LOGGING	= TRUE
 
 ##  If the UID_DOMAIN settings match on both the execute and submit
 ##  machines, but the UID of the user who submitted the job isn't in
@@ -1224,7 +1173,7 @@ JAVA_MAXHEAP_ARGUMENT = -Xmx
 ## them here.  However, do not remove the existing entries, as Condor
 ## needs them.
 
-JAVA_CLASSPATH_DEFAULT = $(LIB) $(LIB)/scimark2lib.jar .
+JAVA_CLASSPATH_DEFAULT = $(LIB) .
 
 ##  JAVA_CLASSPATH_ARGUMENT describes the command-line parameter
 ##  used to introduce a new classpath:
@@ -1235,13 +1184,6 @@ JAVA_CLASSPATH_ARGUMENT = -classpath
 ##  one path element from another:
 
 JAVA_CLASSPATH_SEPARATOR = :
-
-##  JAVA_BENCHMARK_TIME describes the number of seconds for which
-##  to run Java benchmarks.  A longer time yields a more accurate
-##  benchmark, but consumes more otherwise useful CPU time.
-##  If this time is zero or undefined, no Java benchmarks will be run.
-
-JAVA_BENCHMARK_TIME = 2
 
 ##  If your JVM requires any special arguments not mentioned in
 ##  the options above, then give them here.

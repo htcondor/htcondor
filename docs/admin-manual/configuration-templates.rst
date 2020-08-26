@@ -1,7 +1,8 @@
-      
-
 Configuration Templates
 =======================
+
+:index:`configuration-templates<single: configuration-templates; HTCondor>`
+:index:`configuration: templates`
 
 Achieving certain behaviors in an HTCondor pool often requires setting
 the values of a number of configuration macros in concert with each
@@ -17,20 +18,23 @@ a configuration template can be overridden by setting that configuration
 macro later in the configuration.
 
 Detailed information about configuration templates (such as the macros
-they set) can be obtained using the *condor\_config\_val* ``use`` option
-(see `condor\_configval <../man-pages/condor_config_val.html>`__). (This
+they set) can be obtained using the *condor_config_val* ``use`` option
+(see the :doc:`/man-pages/condor_config_val` manual page). (This
 document does not contain such information because the
-*condor\_config\_val* command is a better way to obtain it.)
+*condor_config_val* command is a better way to obtain it.)
 
 Configuration Templates: Using Predefined Sets of Configuration
 ---------------------------------------------------------------
 
+:index:`USE syntax<single: USE syntax; configuration>`
+:index:`USE configuration syntax`
+
 Predefined sets of configuration can be identified and incorporated into
 the configuration using the syntax
 
-::
+.. code-block:: text
 
-      use <category name> : <template name>
+      use <category name> : <template name>
 
 The ``use`` key word is case insensitive. There are no requirements for
 white space characters surrounding the colon character. More than one
@@ -54,7 +58,7 @@ There are four ``<category name>`` values. Within a category, a
 predefined, case insensitive name identifies the set of configuration it
 incorporates.
 
- ``ROLE category``
+``ROLE category``
     Describes configuration for the various roles that a machine might
     play within an HTCondor pool. The configuration will identify which
     daemons are running on a machine.
@@ -79,24 +83,26 @@ incorporates.
        manager for the pool. May be combined with ``Submit`` and
        ``Execute`` roles.
 
- ``FEATURE category``
+``FEATURE category``
     Describes configuration for implemented features.
 
     -  ``Remote_Runtime_Config``
 
-       Enables the use of *condor\_config\_val* **-rset** to the machine
+       Enables the use of *condor_config_val* **-rset** to the machine
        with this configuration. Note that there are security
        implications for use of this configuration, as it potentially
        permits the arbitrary modification of configuration. Variable
-       ``SETTABLE_ATTRS_CONFIG`` must also be defined.
+       ``SETTABLE_ATTRS_CONFIG`` :index:`SETTABLE_ATTRS_CONFIG`
+       must also be defined.
 
     -  ``Remote_Config``
 
-       Enables the use of *condor\_config\_val* **-set** to the machine
+       Enables the use of *condor_config_val* **-set** to the machine
        with this configuration. Note that there are security
        implications for use of this configuration, as it potentially
        permits the arbitrary modification of configuration. Variable
-       ``SETTABLE_ATTRS_CONFIG`` must also be defined.
+       ``SETTABLE_ATTRS_CONFIG`` :index:`SETTABLE_ATTRS_CONFIG`
+       must also be defined.
 
     -  ``VMware``
 
@@ -106,7 +112,7 @@ incorporates.
     -  ``GPUs``
 
        Sets configuration based on detection with the
-       *condor\_gpu\_discovery* tool, and defines a custom resource
+       *condor_gpu_discovery* tool, and defines a custom resource
        using the name ``GPUs``. Supports both OpenCL and CUDA, if
        detected. Automatically includes the ``GPUsMonitor`` feature.
 
@@ -118,87 +124,86 @@ incorporates.
 
        Configures a custom machine resource monitor with the given name,
        mode, period, executable, and metrics. See
-       `Hooks <../misc-concepts/hooks.html>`__ for the definitions of
+       :ref:`misc-concepts/hooks:daemon classad hooks` for the definitions of
        these terms.
 
     -  ``PartitionableSlot( slot_type_num [, allocation] )``
 
        Sets up a partitionable slot of the specified slot type number
-       and allocation (defaults for slot\_type\_num and allocation are 1
-       and 100% respectively). See \ `Policy Configuration for Execute
-       Hosts and for Submit
-       Hosts <../admin-manual/policy-configuration.html>`__ for
-       information on partitionalble slot policies.
+       and allocation (defaults for slot_type_num and allocation are 1
+       and 100% respectively). See the 
+       :ref:`admin-manual/policy-configuration:*condor_startd* policy
+       configuration` for information on partitionalble slot policies.
 
     -  ``AssignAccountingGroup( map_filename )`` Sets up a
-       *condor\_schedd* job transform that assigns an accounting group
+       *condor_schedd* job transform that assigns an accounting group
        to each job as it is submitted. The accounting is determined by
        mapping the Owner attribute of the job using the given map file.
     -  ``ScheddUserMapFile( map_name, map_filename )`` Defines a
-       *condor\_schedd* usermap named map\_name using the given map
+       *condor_schedd* usermap named map_name using the given map
        file.
     -  ``SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )``
-       Sets up a *condor\_schedd* job transform that sets the dst\_attr
-       attribute of each job as it is submitted. The value of dst\_attr
-       is determined by mapping the src\_attr of the job using the
-       usermap named map\_name. If the optional map\_filename argument
-       is specifed, then this metaknob also defines a *condor\_schedd*
-       usermap named map\_Name using the given map file.
+       Sets up a *condor_schedd* job transform that sets the dst_attr
+       attribute of each job as it is submitted. The value of dst_attr
+       is determined by mapping the src_attr of the job using the
+       usermap named map_name. If the optional map_filename argument
+       is specifed, then this metaknob also defines a *condor_schedd*
+       usermap named map_Name using the given map file.
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
-       Create a one-shot *condor\_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       Create a one-shot *condor_startd* job hook.
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
 
-       Create a periodic-shot *condor\_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       Create a periodic-shot *condor_startd* job hook.
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
 
-       Create a (nearly) continuous *condor\_startd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       Create a (nearly) continuous *condor_startd* job hook.
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
 
-       Create a one-shot *condor\_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       Create a one-shot *condor_schedd* job hook.
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
 
-       Create a periodic-shot *condor\_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       Create a periodic-shot *condor_schedd* job hook.
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
 
-       Create a (nearly) continuous *condor\_schedd* job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       Create a (nearly) continuous *condor_schedd* job hook.
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
 
        Create a one-shot job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
-    -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe          [,hook_args] )``
+    -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )``
 
        Create a periodic job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
-    -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args]          )``
+    -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )``
 
        Create a (nearly) continuous job hook.
-       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
+       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
-        
+
 
     -  ``UWCS_Desktop_Policy_Values``
 
@@ -209,14 +214,14 @@ incorporates.
        ``POLICY : UWCS_Desktop`` uses the
        ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
 
- ``POLICY category``
+``POLICY category``
     Describes configuration for the circumstances under which machines
     choose to run jobs.
 
     -  ``Always_Run_Jobs``
 
        Always start jobs and run them to completion, without
-       consideration of *condor\_negotiator* generated preemption or
+       consideration of *condor_negotiator* generated preemption or
        suspension. This is the default policy, and it is intended to be
        used with dedicated resources. If this policy is used together
        with the ``Limit_Job_Runtimes`` policy, order the specification
@@ -275,9 +280,6 @@ incorporates.
        ``HOLD_REASON_CPU_EXCEEDED`` and ``HOLD_SUBCODE_CPU_EXCEEDED``
        respectively.
 
-       Standard universe jobs can’t be held by startd policy
-       expressions, so this metaknob automatically ignores them.
-
     -  ``Preempt_If_Memory_Exceeded``
 
        If the startd observes the memory usage of the job exceed the
@@ -295,9 +297,6 @@ incorporates.
        ``HOLD_REASON_MEMORY_EXCEEDED`` and
        ``HOLD_SUBCODE_MEMORY_EXCEEDED`` respectively.
 
-       Standard universe jobs can’t be held by startd policy
-       expressions, so this metaknob automatically ignores them.
-
     -  ``Preempt_If( policy_variable )``
 
        Preempt jobs according to the specified policy.
@@ -305,19 +304,18 @@ incorporates.
        containing an expression that evaluates to ``True`` if the job
        should be preempted.
 
-       See an example here:  `3.4.4 <#x32-1860003.4.4>`__.
+       See an example here:
+       :ref:`admin-manual/configuration-templates:configuration template examples`.
 
     -  ``Want_Hold_If( policy_variable, subcode, reason_text )``
 
        Add the given policy to the ``WANT_HOLD`` expression; if the
        ``WANT_HOLD`` expression is defined, ``policy_variable`` is
        prepended to the existing expression; otherwise ``WANT_HOLD`` is
-       simply set to the value of the textttpolicy\_variable macro.
+       simply set to the value of the textttpolicy_variable macro.
 
-       Standard universe jobs can’t be held by startd policy
-       expressions, so this metaknob automatically ignores them.
-
-       See an example here:  `3.4.4 <#x32-1860003.4.4>`__.
+       See an example here:
+       :ref:`admin-manual/configuration-templates:configuration template examples`.
 
     -  ``Startd_Publish_CpusUsage``
 
@@ -326,7 +324,7 @@ incorporates.
        average number of cores used by the job over the past minute,
        sampling every 5 seconds.
 
- ``SECURITY category``
+``SECURITY category``
     Describes configuration for an implemented security model.
 
     -  ``Host_Based``
@@ -359,59 +357,53 @@ misinterpreted, syntax. Newer daemons will ignore the extra syntax.
 Placing the @ character before the ``use`` key word causes the older
 daemons to fail when they attempt to parse this syntax.
 
-As an example, consider the *condor\_startd* as it starts up. A
-*condor\_startd* previous to HTCondor version 8.1.6 fails to start when
+As an example, consider the *condor_startd* as it starts up. A
+*condor_startd* previous to HTCondor version 8.1.6 fails to start when
 it sees:
 
-::
+.. code-block:: condor-config
 
-    @use feature : GPUs
+    @use feature : GPUs
 
-Running an older *condor\_config\_val* also identifies the ``@use`` line
-as being bad. A *condor\_startd* of HTCondor version 8.1.6 or more
+Running an older *condor_config_val* also identifies the ``@use`` line
+as being bad. A *condor_startd* of HTCondor version 8.1.6 or more
 recent sees
 
-::
+.. code-block:: condor-config
 
-    use feature : GPUs
+    use feature : GPUs
 
 Configuration Template Examples
 -------------------------------
 
 -  Preempt a job if its memory usage exceeds the requested memory:
 
-   ::
+   .. code-block:: condor-config
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
-           
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+        use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
 
 -  Put a job on hold if its memory usage exceeds the requested memory:
 
-   ::
+   .. code-block:: condor-config
 
-       MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
-       use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
-           
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+        use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
 
 -  Update dynamic GPU information every 15 minutes:
 
-   ::
+   .. code-block:: condor-config
 
-       use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic) 
-           
+        use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic)
 
    where ``dynamic_gpu_info.pl`` is a simple perl script that strips off
-   the DetectedGPUs line from textttcondor\_gpu\_discovery:
+   the DetectedGPUs line from *condor_gpu_discovery*:
 
-   ::
+   .. code-block:: perl
 
-       #!/usr/bin/env perl 
-       my @attrs = `@ARGV`; 
-       for (@attrs) { 
-       next if ($_ =~ /^Detected/i); 
-       print $_; 
-       } 
-           
-
-      
+        #!/usr/bin/env perl
+        my @attrs = `@ARGV`; 
+        for (@attrs) { 
+            next if ($_ =~ /^Detected/i); 
+            print $_; 
+        } 

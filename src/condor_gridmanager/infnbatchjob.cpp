@@ -287,7 +287,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
-														  gahp_args.GetArg(0) );
+		gahp_args.GetArg(0), args_str.c_str() );
 	myResource->RegisterJob( this );
 	if ( remoteJobId ) {
 		myResource->AlreadySubmitted( this );
@@ -311,7 +311,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -385,7 +385,7 @@ void INFNBatchJob::doEvaluateState()
 				std::string error_string = "Failed to start GAHP: ";
 				error_string += gahp->getGahpStderr();
 
-				jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+				jobAd->Assign( ATTR_HOLD_REASON, error_string );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -400,7 +400,7 @@ void INFNBatchJob::doEvaluateState()
 					std::string error_string = "Failed to start transfer GAHP: ";
 					error_string += gahp->getGahpStderr();
 
-					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+					jobAd->Assign( ATTR_HOLD_REASON, error_string );
 					gmState = GM_HOLD;
 					break;
 				}
@@ -477,7 +477,7 @@ void INFNBatchJob::doEvaluateState()
 				if ( errorString == "" ) {
 					std::string error_string = "Attempts to submit failed: ";
 					error_string += gahp->getGahpStderr();
-					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+					jobAd->Assign( ATTR_HOLD_REASON, error_string );
 				}
 				gmState = GM_HOLD;
 				break;
@@ -1497,18 +1497,24 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// Remove all remote_* attributes from the new ad before
 		// translating remote_* attributes from the original ad.
 		// See gittrac #376 for why we have two loops here.
-	const char *next_name;
-	submit_ad->ResetName();
-	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
-		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
-			 strlen( next_name ) > 7 ) {
+	auto itr = submit_ad->begin();
+	while ( itr != submit_ad->end() ) {
+		// This convoluted setup is an attempt to avoid invalidating
+		// the iterator when deleting the attribute.
+		if ( strncasecmp( itr->first.c_str(), "REMOTE_", 7 ) == 0 &&
+		     itr->first.size() > 7 ) {
 
-			submit_ad->Delete( next_name );
+			std::string name = itr->first;
+			itr++;
+			submit_ad->Delete( name );
+		} else {
+			itr++;
 		}
 	}
 
-	jobAd->ResetExpr();
-	while ( jobAd->NextExpr(next_name, next_expr) ) {
+	const char *next_name;
+	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
+		next_name = itr->first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
@@ -1544,7 +1550,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			ExprTree * pTree = next_expr->Copy();
+			ExprTree * pTree = itr->second->Copy();
 			submit_ad->Insert( attr_name, pTree );
 		}
 	}
@@ -1689,14 +1695,14 @@ ClassAd *INFNBatchJob::buildTransferAd()
 		}
 	}
 
-	jobAd->ResetExpr();
-	while ( jobAd->NextExpr(next_name, next_expr) ) {
+	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
+		next_name = itr->first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
 			char const *attr_name = &(next_name[7]);
 
-			ExprTree * pTree = next_expr->Copy();
+			ExprTree * pTree = itr->second->Copy();
 			xfer_ad->Insert( attr_name, pTree );
 		}
 	}
@@ -1743,6 +1749,11 @@ void INFNBatchJob::CreateSandboxId()
 	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
 	std::string job_id;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+	size_t pos = 0;
+	while ( (pos = job_id.find_first_of("@#", pos)) != std::string::npos ) {
+		job_id[pos] = '_';
+		pos++;
+	}
 
 	std::string unique_id;
 	formatstr( unique_id, "%s_%s", pool_name, job_id.c_str() );

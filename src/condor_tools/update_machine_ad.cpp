@@ -57,9 +57,22 @@ int main( int argc, char ** argv ) {
 			return 0;
 		} else
 		if( is_arg_prefix( argv[i], "-pool" ) ) {
-			pool = argv[i];
+			++i;
+			if( i < argc ) {
+				pool = argv[i];
+			} else {
+				usage( argv[0] );
+				return 0;
+			}
 		} else
 		if( is_arg_prefix( argv[i], "-name" ) ) {
+			++i;
+			if( i < argc ) {
+				name = argv[i];
+			} else {
+				usage( argv[0] );
+				return 0;
+			}
 			name = argv[i];
 		} else {
 			file = argv[i];

@@ -39,6 +39,23 @@
 #define valgrind_exe "valgrind"
 #endif
 
+// The default maximum rescue DAG number.
+const int MAX_RESCUE_DAG_DEFAULT = 100;
+
+// The absolute maximum allowed rescue DAG number (the real maximum
+// is normally configured lower).
+const int ABS_MAX_RESCUE_DAG_NUM = 999;
+
+enum DagStatus {
+    DAG_STATUS_OK = 0,
+    DAG_STATUS_ERROR = 1, // Error not enumerated below
+    DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
+    DAG_STATUS_ABORT = 3, // Hit special DAG abort value
+    DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
+    DAG_STATUS_CYCLE = 5, // A cycle in the DAG
+    DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
+};
+
 class EnvFilter : public Env
 {
 public:
@@ -125,6 +142,7 @@ struct SubmitDagDeepOptions
     bool useDagDir;
     MyString strOutfileDir;
     MyString batchName; // optional value from -batch-name argument, will be double quoted if it exists.
+    std::string batchId;
     bool autoRescue;
     int doRescueFrom;
     bool allowVerMismatch;
@@ -157,9 +175,12 @@ struct SubmitDagDeepOptions
 class DagmanUtils {
 
 public:
-    void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
+
+    bool usingPythonBindings = false;
+
+    bool writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         /* const */ SubmitDagShallowOptions &shallowOpts,
-        /* const */ StringList &dagFileAttrLines );
+        /* const */ StringList &dagFileAttrLines ) const;
     
     int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
         const char *dagFile, const char *directory, int priority,
@@ -173,6 +194,24 @@ public:
         MyString &configFile, StringList &attrLines, MyString &errMsg );
 
     bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
+
+    int FindLastRescueDagNum(const char *primaryDagFile,
+        bool multiDags, int maxRescueDagNum);
+
+    bool fileExists(const MyString &strFile);
+
+    bool ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
+        SubmitDagShallowOptions &shallowOpts);
+
+    MyString RescueDagName(const char *primaryDagFile,
+        bool multiDags, int rescueDagNum);
+
+    void RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags, 
+        int rescueDagNum, int maxRescueDagNum);
+
+    MyString HaltFileName( const MyString &primaryDagFile );
+
+    void tolerant_unlink( const char *pathname );
 
 };
 

@@ -1,0 +1,429 @@
+==basic.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+queue 2
+
+==argsin.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+queue arguments in (10s, 20s, 30s)
+
+==allprune.sub
+universe=vanilla
+executable=$Fp(SUBMIT_FILE)basic.cmd
+next_job_start_delay = 2*60
+keep_claim_idle = 3*60
+job_ad_information_attrs = MemoryUsage, DiskUsage
+max_idle = 4
+job_machine_attrs = Machine, SlotId, Cpus, Disk, Memory
+job_machine_attrs_history_length = 1
+notify_user = bt@cs.wisc.edu
+email_attributes = not, spam
+remote_initialdir = sandbox
+remote_grid_resource = condor stuff
+remote_globus_rsl = what goes here
+remote_nordugrid_rsl = or here
+remote_remote_grid_resource = condor remoter stuff
+remote_remote_globus_rsl = what goes over there
+remote_remote_nordugrid_rsl = or over there
+output_destination = /scratch/output/$(cluster)
+want_graceful_removal = true
+job_max_vacate_time = 5*60
+encrypt_execute_directory = true
+encrypt_input_files = a.dat, b.dat
+encrypt_output_files = a.out
+dont_encrypt_input_files = plain.dat
+dont_encrypt_output_files = plain.out
+load_profile = true
+buffer_files = false
+buffer_size = 100000
+buffer_block_size = 200
+fetch_files = d.dat
+compress_files = c.dat
+append_files = cluster.log
+local_files = local.file
+log = $(cluster).log
+dagman_log = dagman.log
+noop_job = false
+noop_job_exit_signal = false
+noop_job_exit_code = 5
+dag_node_name = node2
+match_list_length = 4
+dagman_job_id = 44
+submit_event_notes = ipso lorem
+submit_event_user_notes = user ipso lorem
+stack_size = 1024*1024
+jar_files = basic.jar, stuff.jar
+parallel_script_shadow = shadow.cmd
+parallel_script_starter = starter.cmd
+cron_minute = 10
+cron_hour = 13
+cron_day_of_month = 2
+cron_month = 2
+cron_day_of_week = 1
+description = all prunable submit keywords
+batch_name = prune
+max_job_retirement_time = 6*60
+job_lease_duration = 7*60
+core_size = 34*1024
+priority = 3
+want_remote_io = false
+run_as_owner = false
+queue 3
+
+==gpu.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+Request_GPUs=1
+queue 2
+
+==docker.sub
+universe=docker
+docker_image=ubuntu
+executable=$Fp(SUBMIT_FILE)basic.cmd
+queue arguments in (10s, 20s, 30s)
+
+==docker-noexe.sub
+universe=docker
+docker_image=ubuntu
+queue 3
+
+==grid_azure.sub
+universe = grid
+grid_resource = azure 4843bf93-0ebe-422e-b6ef-c877f6740099
+executable = jfrey-test
+azure_auth_file = azure-jfrey.creds
+azure_location = centralus
+azure_size = Standard_DS1_V2
+azure_image = linux-ubuntu-latest
+azure_admin_username = jfrey
+azure_admin_key = /Users/jfrey/.ssh/azure_rsa.pub
+log = azure.log
+queue
+
+==grid_condorc.sub
+universe=grid
+grid_resource=condor jfrey@here 127.0.0.1
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=60
+output=out.$(cluster).$(process)
+error=err.$(cluster).$(process)
+log=condorc.log
+notification=NEVER
+should_transfer_files=YES
+when_to_transfer_output=ON_EXIT
+queue
+
+==grid_ec2.sub
+universe = grid
+executable = TestSIR
+
+grid_resource = ec2 https://ec2.amazonaws.com/
+ec2_access_key_id = Amazon.accessKeyFile
+ec2_secret_access_key = Amazon.secretKeyFile
+ec2_ami_id = ami-00000006
+ec2_instance_type = m1.small
+
+ec2_user_data_file = ec2_user_data
+
+ec2_spot_price = 0.011
+ec2_keypair_file = ssh_key_pair.$(Cluster).$(Process)
+
+queue
+
+==grid_gce.sub
+universe = grid
+grid_resource = gce https://www.googleapis.com/compute/v1 jfrey-condor us-central1-a
+executable = Test
+gce_account = jamesfrey@wisc.edu
+gce_image = https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-7-wheezy-v20150112
+gce_machine_type = https://www.googleapis.com/compute/v1/projects/devrel-htcondor-demo/zones/us-west1-a/machineTypes/n1-standard-666
+gce_metadata = "one=1 two=""2"" three='spacey ''quoted'' value'"
+gce_metadata_file = gce.metadata
+gce_json_file=gce.json
+log = gce.log
+queue
+
+==xfer0.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+transfer_input_files = FTP://foo/bar
+queue 2
+
+==xfer1.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = $Ffpu(SUBMIT_FILE)../Multilevel_Thesis_WheatData
+transfer_output_files = results.out
+output=$Fn(SUBMIT_FILE).$(ClusterId).out
+error=$Fn(SUBMIT_FILE).$(ClusterId).err
+log=$(ClusterId).log
+queue 10
+
+==xfer2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = $Fp(SUBMIT_FILE)../Multilevel_Thesis_WheatData, HTTP://example.com/file1, HTTPS://example.com/file2
+transfer_output_files = results.out
+output_destination = $(ClusterId)/$(ProcId)
+output=$Fn(SUBMIT_FILE).out
+error=$Fn(SUBMIT_FILE).err
+queue 2
+
+==xfer3.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+should_transfer_files = IF_NEEDED
+when_to_transfer_output = ON_EXIT
+transfer_input_files = $Fp(SUBMIT_FILE)../$(datafile), HTTP://example.com/file1, HTTPS://example.com/file2
+transfer_output_files = results.out, checkpoint.dat
+output=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).out
+error=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).err
+log=$Ffu(SUBMIT_FILE).log
+queue datafile from (
+	run1 data.csv
+	run2 data.csv
+	run3 large data file
+)
+
+==xfer4.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=$(datafile)
+should_transfer_files = NO
+output=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).out
+error=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).err
+log=$Ffu(SUBMIT_FILE).log
+queue datafile from (
+	run1 data.csv
+	run2 data.csv
+	run3 large data file
+)
+
+==xfer5.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+output=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).out
+error=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).err
+transfer_output = true
+transfer_error = true
+queue
+
+==xfer6.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+output=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).out
+error=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).err
+transfer_output = false
+transfer_error = false
+queue
+
+==xfer7.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+output=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).out
+error=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).err
+transfer_output = true
+stream_error = true
+queue
+
+==xfer8.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+output=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).out
+error=$Ffu(SUBMIT_FILE).$(ClusterId)_$(ProcId).err
+stream_output = true
+transfer_error = true
+queue
+
+==periodic.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+
+hold_for_time = (time() - QDate) > 3600
+hold_for_size = MemoryUsage > RequestMemory
+periodic_hold = $(hold_for_time) || $(hold_for_size)
+periodic_hold_reason = "exceeded 1 Hour in queue"
+periodic_hold_subcode = IfThenElse($(hold_for_time),92,93)
+
+periodic_release=HoldSubCode == 93
+
+periodic_remove = $(hold_for_time) * 2
+
+on_exit_hold = ExitCode > 42
+on_exit_hold_subcode = 43
+on_exit_hold_reason = "job fooled by succeeding to well"
+
+queue 2
+
+==x509.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+
+x509UserProxy = $Fp(SUBMIT_FILE)proxy
+use_x509userproxy = true
+delegate_job_gsi_credentials_lifetime = 2600
+myProxyHost = example
+myProxyServerDN = example.com
+myProxyCredentialName = bob
+myProxyPassword = really-secure-huh
+myProxyRefreshThreshold = 2*60
+myProxyNewProxyLifetime = 1*60+20
+
+queue 2
+
+==notify.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+
+notify_user = bt@cs.wisc.edu
+email_attributes = the quick red fox
+want_graceful_removal = Currentime>22
+
+queue 2
+
+==args.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+args="The Quick Red Fox"
+
+queue 1
+
+==argsv2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+args=The Quick Red Fox
+arguments2="The Quicker, Redder Fox"
+allow_arguments_v1=true
+
+queue 1
+
+==args_spaces.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments="-one 'The Quicker, Redder Fox' '-two other stuff'"
+
+queue 1
+
+==retries.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+
+max_retries = 3
+on_exit_hold = ExitCode > 42
+on_exit_hold_subcode = 43
+on_exit_hold_reason = "job fooled by succeeding to well"
+
+queue
+
+==success.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+
+success_exit_code = 5
+
+queue
+
+==parallel.sub
+universe=parallel
+machine_count = 5
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+queue
+
+==parasched.sub
+wantparallelscheduling=true
+node_count = 5
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+queue
+
+==basicres.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+Request_Cpus=max({TARGET.TotalCpus - 1, 3})
+Request_Disk=3Gb
+Request_Memory=2.2Gb
+
+queue
+
+==customattr.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+MY.CustomString="Ipso Lorem"
++CustomExpr=99/Bottles || Beer
+MY.CustomInt=23
++CustomReal=20.0
+queue
+
+==kvm.sub
+universe                = vm
+executable              = Test VM job
+vm_type                 = kvm
+vm_memory               = 1024
+vm_disk                 = $Fp(SUBMIT_FILE)dummy.qcow2:sda1:w:qcow2,$Fp(SUBMIT_FILE)dummy2.qcow2:sdb1:w:qcow2
+vm_networking           = true
+vm_networking_type      = nat
++JobVMVNCConsole        = true
+log                     = vmu.log
+
+queue
+
+==hold.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+hold=true
+queue 2
+
+==wheat.sub
+universe=vanilla
+arguments=$(paramset) $(chunk)
+executable=$Fp(SUBMIT_FILE)basic.cmd
+initialdir=$Fp(SUBMIT_FILE)Multilevel_Thesis_WheatData/$(paramset)
+
+output=prediction_script_data_$(paramset).out
+error=prediction_script_data_$(paramset)_$(Process).err
+log=prediction_script_data_$(paramset).log
+
+materialize_max_idle=2000
+max_retries=5
+periodic_hold=(NumJobCompletions > 10)
+
+request_cpus=1
+request_disk=700MB
+request_memory=1.7GB
+requirements=(OpSysMajorVer == 7)
+
+should_transfer_files=YES
+transfer_input_files=$(chunk).txt, grid_i.txt, my_env.RData, ../../R_v2.tar.gz, ../prediction_script_data.R, ../../SLIBS.tar.gz
+when_to_transfer_output=ON_EXIT
+
+queue paramset,chunk from (
+70 110
+70 121
+216 142
+240 133
+)
+
+==ref.sub
+universe=vanilla
+arguments=$(paramset) $(chunk) $INT(argsum)
+executable=$Fp(SUBMIT_FILE)basic.cmd
+
+argsum = $(paramset) + $(chunk)
+output=data_$(paramset).out
+error=data_$(paramset)_$(Process).err
+log=data_$(paramset).log
+
+request_cpus=1
+request_disk=700MB
+request_memory=1.7GB
+
+should_transfer_files=YES
+transfer_input_files=$(chunk).txt, grid_i.txt
+
+queue paramset,chunk from (
+70 110
+70 121
+216 142
+240 133
+)

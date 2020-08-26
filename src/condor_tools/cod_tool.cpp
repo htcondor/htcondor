@@ -240,9 +240,8 @@ fillRequirements( ClassAd* req )
 	}
 	jic_req += "==TRUE";
 
-	MyString require;
-	require = ATTR_REQUIREMENTS;
-	require += "=(";
+	std::string require;
+	require = "(";
 
 	if (requirements) {
 		require += requirements;
@@ -258,14 +257,14 @@ fillRequirements( ClassAd* req )
 		require += "TARGET.";
 		require += ATTR_SLOT_ID;
 		require += "==";
-		require += IntToStr( slot_id );
+		require += std::to_string( slot_id );
 		require += ")&&(";
 	}
 
 	require += jic_req;
 	require += ')';
 
-	if( ! req->Insert(require.Value()) ) {
+	if( ! req->AssignExpr(ATTR_REQUIREMENTS, require.c_str()) ) {
 		fprintf( stderr, "ERROR: can't parse requirements '%s'\n",
 				 requirements );
 		exit( 1 );

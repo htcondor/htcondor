@@ -6,7 +6,7 @@
 # client connects.
 #
 universe = vanilla
-executable = /bin/sleep
+executable = /bin/sh
 #
 # Sleep for 180 seconds (3 minutes), which should be plenty of time for
 # the ssh client to connect. If it does not connect before
@@ -14,7 +14,7 @@ executable = /bin/sleep
 # event that the user simply kills the ssh client before the job
 # is launched, the job will only consume the slot for three minutes.
 #
-arguments = 180
+arguments = "-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'"
 #
 # Most shells (such as bash) will honor the TMOUT environment variable,
 # which tells the shell to exit after TMOUT seconds of inactivity.

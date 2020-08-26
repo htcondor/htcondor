@@ -105,7 +105,7 @@ class Features
 			m_uses_stdin = b;
 		}
 
-		int get_uses_stdin(void)
+		int get_uses_stdin(void) const
 		{
 			return m_uses_stdin;
 		}
@@ -115,7 +115,7 @@ class Features
 			m_timeout = tout;
 		}
 
-		time_t get_timeout(void)
+		time_t get_timeout(void) const
 		{
 			return m_timeout;
 		}
@@ -215,7 +215,7 @@ class TransferD : public Service
 
 		// a periodic timer to calculate whether or not the transferd should
 		// exit due to having an empty queue for too long.
-		void exit_due_to_inactivity_timer(void);
+		void exit_due_to_inactivity_timer(void) const;
 
 		// handler for any exiting process.
 		int reaper_handler(int pid, int exit_status);
@@ -251,7 +251,7 @@ class TransferD : public Service
 		int active_shadow_transfer_completed( FileTransfer *ftrans );
 
 		// generate a capability unique to the capabilities currently known
-		MyString gen_capability(void);
+		std::string gen_capability(void);
 
 		////////////////////////////////////////////////////////////////////
 		// Private variables
@@ -267,7 +267,7 @@ class TransferD : public Service
 		// The list of transfers that have been requested of me to do when
 		// someone contacts me.
 		// Key: capability, Value: TransferRequest
-		HashTable<MyString, TransferRequest*> m_treqs;
+		HashTable<std::string, TransferRequest*> m_treqs;
 
 		// Associate a pid with a transfer request so the reaper can
 		// figure out which transfer request failed/succeeded.

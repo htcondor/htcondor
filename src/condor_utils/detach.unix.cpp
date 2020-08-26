@@ -23,13 +23,9 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 
-#ifndef LINT
-#endif /* LINT */
-
 void
 detach( void )
 {
-#if !defined(HPUX) && !defined(Solaris)
 	int		fd;
 	if( (fd=safe_open_wrapper_follow("/dev/tty",O_RDWR,0)) < 0 ) {
 			/* There's no /dev/tty, nothing to detach from */
@@ -43,5 +39,4 @@ detach( void )
 		return;
 	}
 	(void)close( fd );
-#endif
 }

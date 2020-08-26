@@ -13,7 +13,7 @@ for filename in "$@" ; do
   type=`file -h $filename`
   if echo $type | grep -q -e 'dynamically linked shared library' -e 'executable' ; then
     basefile=`basename $filename`
-    libraries=`otool -L $filename | grep '^[[:space:]][^@]' | sed 's|^.\([^ ]*\) .*|\1|' | grep -v '^/usr/lib' | grep -v '^/System/' | grep -v "$basefile "`
+    libraries=`otool -L $filename | grep '^[[:space:]][^@]' | sed 's|^.\([^ ]*\) .*|\1|' | grep -v '^/usr/lib' | grep -v '^/System/' | grep -v '^/Library/' | grep -v "$basefile "`
     external_resolver="@executable_path/../lib/condor"
     internal_resolver="@executable_path/../lib"
     if echo $type | grep -q -e 'dynamically linked shared library' ; then
@@ -26,9 +26,9 @@ for filename in "$@" ; do
         internal_resolver="@loader_path/.."
       fi
     fi
-    if echo $filename | grep -q -e 'htcondor.so' -e 'classad.so' ; then
-      external_resolver="@loader_path/../condor"
-      internal_resolver="@loader_path/.."
+    if echo $filename | grep -q -e 'htcondor.*\.so' -e 'classad.*\.so' ; then
+      external_resolver="@loader_path/../../condor"
+      internal_resolver="@loader_path/../.."
     fi
     
     for lib in $libraries ; do

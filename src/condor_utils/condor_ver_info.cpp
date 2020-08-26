@@ -19,10 +19,12 @@
 
 
 #include "condor_common.h"
+#include "condor_attributes.h"
 #include "condor_ver_info.h"
 #include "subsystem_info.h"
 #include "condor_debug.h"
 #include "filename_tools.h"
+#include "stl_string_utils.h"
 
 extern "C" char *CondorVersion(void);
 extern "C" char *CondorPlatform(void);
@@ -377,28 +379,17 @@ CondorVersionInfo::get_platform_from_file(const char* filename,
 char *
 CondorVersionInfo::get_version_string() const
 {
-	return VersionData_to_string( myversion );
+	return strdup(get_version_stdstring().c_str());
 }
 
-char *
-CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
-{
-	const int buflen = 256;
-	char *buf = (char *)malloc(buflen);
-	if( !buf ) {
-		return NULL;
-	}
-
-	int n = snprintf(buf,buflen,"$%s: %d.%d.%d %s $", 
-					 "CondorVersion", // avoid having false "$CondorVersion: ..." show up in strings
-					 ver.MajorVer, ver.MinorVer, ver.SubMinorVer,
-					 ver.Rest.c_str());
-	if( n>=buflen || n<0 ) {
-		free(buf);
-		return NULL;
-	}
-	buf[buflen-1] = '\0';
-	return buf;
+std::string
+CondorVersionInfo::get_version_stdstring() const {
+	std::string result;
+	formatstr(result,"$%s: %d.%d.%d %s $", 
+					 ATTR_CONDOR_VERSION, // avoid having false "$CondorVersion: ..." show up in strings
+					 myversion.MajorVer, myversion.MinorVer, myversion.SubMinorVer,
+					 myversion.Rest.c_str());
+	return result;
 }
 
 bool

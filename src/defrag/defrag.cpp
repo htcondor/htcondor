@@ -37,6 +37,58 @@
 #include <sstream>
 #include "defrag.h"
 
+#include <list>
+#include <tuple>
+#define LOG_LENGTH 10
+class DefragLog {
+	public:
+		void record_drain( const std::string & name, const std::string & schedule );
+
+		void record_cancel( const std::string & name );
+
+		void write_to_ad( ClassAd * ad ) const;
+
+	private:
+		std::list< std::tuple< time_t, std::string, std::string > > drains;
+		std::list< std::tuple< time_t, std::string > > cancels;
+};
+
+void
+DefragLog::record_drain( const std::string & name, const std::string & schedule ) {
+	drains.emplace_back( time(NULL), name, schedule );
+	if( drains.size() > LOG_LENGTH ) { drains.pop_front(); }
+}
+
+void
+DefragLog::record_cancel( const std::string & name ) {
+	cancels.emplace_back( time(NULL), name );
+	if( cancels.size() > LOG_LENGTH ) { cancels.pop_front(); }
+}
+
+void
+DefragLog::write_to_ad(ClassAd * ad) const {
+	std::string buffer;
+
+	std::string list = "{ ";
+	for( auto i = drains.crbegin(); i != drains.crend(); ++i ) {
+		formatstr( buffer, "[ when = %ld; who = \"%s\"; what = \"%s\" ],",
+			std::get<0>(*i), std::get<1>(*i).c_str(), std::get<2>(*i).c_str() );
+		list += buffer;
+	}
+	list[list.length() - 1] = '}';
+	ad->AssignExpr( "RecentDrainsList", list.c_str() );
+
+	list = "{ ";
+	for( auto i = cancels.crbegin(); i != cancels.crend(); ++i ) {
+		formatstr( buffer, "[ when = %ld; who = \"%s\" ],",
+			std::get<0>(*i), std::get<1>(*i).c_str() );
+		list += buffer;
+	}
+	list[list.length() - 1] = '}';
+	ad->AssignExpr( "RecentCancelsList", list.c_str() );
+}
+
+DefragLog defrag_log;
 
 static char const * const ATTR_LAST_POLL = "LastPoll";
 static char const * const DRAINING_CONSTRAINT = "Draining && Offline=!=True";
@@ -225,8 +277,8 @@ static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
 
 	float rank1 = 0;
 	float rank2 = 0;
-	rank_ad->EvalFloat(ATTR_RANK,ad1,rank1);
-	rank_ad->EvalFloat(ATTR_RANK,ad2,rank2);
+	EvalFloat(ATTR_RANK,rank_ad,ad1,rank1);
+	EvalFloat(ATTR_RANK,rank_ad,ad2,rank2);
 
 	return rank1 > rank2;
 }
@@ -820,14 +872,16 @@ Defrag::drain(const ClassAd &startd_ad)
 	std::string request_id;
 	bool resume_on_completion = true;
 	bool rval = startd.drainJobs( m_draining_schedule, resume_on_completion, draining_check_expr.c_str(), m_draining_start_expr.c_str(), request_id );
+
 	if( !rval ) {
 		dprintf(D_ALWAYS,"Failed to send request to drain %s: %s\n",startd.name(),startd.error());
 		m_stats.DrainFailures += 1;
-		return false;
+	} else {
+		m_stats.DrainSuccesses += 1;
 	}
-	m_stats.DrainSuccesses += 1;
 
-	return true;
+	defrag_log.record_drain( name, m_draining_schedule_str );
+	return rval ? true : false;
 }
 
 bool
@@ -837,8 +891,7 @@ Defrag::cancel_drain(const ClassAd &startd_ad)
 	std::string name;
 	startd_ad.LookupString(ATTR_NAME,name);
 
-	dprintf(D_ALWAYS,"Initiating %s draining of %s.\n",
-		m_draining_schedule_str.c_str(),name.c_str());
+	dprintf(D_ALWAYS, "Cancel draining of %s.\n", name.c_str());
 
 	DCStartd startd( &startd_ad );
 
@@ -848,6 +901,8 @@ Defrag::cancel_drain(const ClassAd &startd_ad)
 	} else {
 		dprintf(D_ALWAYS, "Unable to cancel draining on %s: %s\n", startd.name(), startd.error());
 	}
+
+	defrag_log.record_cancel( startd.name() );
 	return rval;
 }
 
@@ -862,7 +917,9 @@ Defrag::publish(ClassAd *ad)
 	SetMyTypeName(*ad, "Defrag");
 	SetTargetTypeName(*ad, "");
 
-	ad->Assign(ATTR_NAME,m_daemon_name.c_str());
+	ad->Assign(ATTR_NAME,m_daemon_name);
+
+	defrag_log.write_to_ad(ad);
 
 	m_stats.Tick();
 	m_stats.Publish(*ad);
@@ -885,6 +942,6 @@ Defrag::invalidatePublicAd() {
 
 	formatstr(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
-	invalidate_ad.Assign(ATTR_NAME, m_daemon_name.c_str());
+	invalidate_ad.Assign(ATTR_NAME, m_daemon_name);
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }

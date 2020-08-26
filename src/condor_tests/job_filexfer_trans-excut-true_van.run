@@ -19,86 +19,75 @@
 ##
 ##**************************************************************
 
+use strict;
+use warnings;
+
 use CondorTest;
+use CondorUtils;
 use Check::SimpleJob;
+use Check::CondorLog;
 
-$testname = "job_filexfer_trans-excut-true_van";
-print "running a simple job before the test:$testname\n";
+# Request that a personal HTCondor with the following config appending is
+# started before running this test
+#testreq: personal
 
-SimpleJob::RunCheck();
+my $testname = "job_filexfer_trans-excut-true_van";
 my $pid = $$;
-#my $teststatus = CondorTest::verbose_system("./job_filexfer_trans-excut-true_van.pl");
-# truly const variables in perl
-sub IDLE{1};
-sub HELD{5};
-sub RUNNING{2};
 
-my $alreadydone=0;
-
-$execute = sub {
+my $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	CondorTest::debug("Running $cluster\n",1);
+	TLOG("BAD. Job $cluster is executing.  Submit should have failed.\n");
 
 };
 
-$abort = sub {
-	die "Job is gone now, cool.\n";
+my $abort = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG("Job $cluster is gone now.\n");
 };
 
-$hold = sub
-{
+my $hold = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",1);
+	TLOG("BAD. Job $cluster is held. Submit should have failed.\n");
 };
 
-$release = sub
-{
+my $release = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
-
 };
 
-$success = sub
-{
-	die "Base file transfer job!\n";
+my $success = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG("BAD: Job $cluster clmpleted. Submit should have failed.\n");
 };
 
-$wanterror = sub
-{
-	CondorTest::debug("Base file transfer job, submit supposed to fail...error 1 ..!\n",1);
+my $wanterror = sub {
 	my %args = @_;
 	my $errmsg = $args{"ErrorMessage"};
 
     if($errmsg =~ /^.*died abnormally.*$/) {
-        CondorTest::debug("BAD. Submit died was to fail but with error 1\n",1);
-        CondorTest::debug("$testname: Failure\n",1);
+        TLOG("BAD. job terminated abnormally, but submit should have failed with error 1\n");
         return(1);
     } elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
         if($1 == 1) {
-            CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
-            CondorTest::debug("$testname: SUCCESS\n",1);
+            TLOG("SUCCESS. Submit should fail when File Transfer is off and input files requested\n");
             return(0);
         } else {
-            CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
-            CondorTest::debug("$testname: Failure\n",1);
+            TLOG("BAD. Submit should fail but with error 1 not <<$1>>\n");
             return(1);
         }
     } else {
-            CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
-            CondorTest::debug("$testname: Failure\n",1);
-            return(1);
+        TLOG("BAD. Unexpected failure: $errmsg\n");
+        return(1);
     }
 };
 
-$timed = sub
-{
-	die "Job should have ended by now. file transfer broken!\n";
-};
-
+# submit commands that contradict each other.
 my $transfercmds = '
 transfer_input = false
 transfer_error = false
@@ -108,6 +97,7 @@ should_transfer_files = NO
 when_to_transfer_output = NONE
 ';
 
+TLOG("Attempting to submit a job with should_..=NO but transfer_...=true. Submit should fail.\n");
 SimpleJob::RunCheck(
     runthis=>"x_job_filexfer_testjob.pl",
     duration=>"--noextrainput",
@@ -121,14 +111,7 @@ SimpleJob::RunCheck(
 );
 
 CondorTest::EndTest();
-print scalar localtime() . "\n";
 
-my $result = 0;
-if( $result != 0 )
-{
-    exit(1);
-}
-
-CondorTest::debug("$testname SUCCESS\n",1);
+TLOG ("$testname SUCCESS\n");
 exit(0);
 

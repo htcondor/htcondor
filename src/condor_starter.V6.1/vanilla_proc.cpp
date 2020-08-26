@@ -23,11 +23,9 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "condor_syscall_mode.h"
 #include "exit.h"
 #include "vanilla_proc.h"
 #include "starter.h"
-#include "syscall_numbers.h"
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
@@ -180,9 +178,9 @@ VanillaProc::StartJob()
 										  MATCH == strcasecmp ( ".com", extension ) ) ),
 				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
 	ArgList		arguments;
-	MyString	filename,
-				jobname, 
-				error;
+	std::string	filename;
+	std::string	jobname;
+	MyString	error;
 	
 	if ( extension && !java_universe && !binary_executable ) {
 
@@ -224,12 +222,12 @@ VanillaProc::StartJob()
 				a the correct extension before it will run. */
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
-					condor_basename ( jobname.Value () ) ) ) {
-				filename.formatstr ( "condor_exec%s", extension );
-				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
+					condor_basename ( jobname.c_str () ) ) ) {
+				formatstr ( filename, "condor_exec%s", extension );
+				if (rename(CONDOR_EXEC, filename.c_str()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 
-							CONDOR_EXEC, filename.Value() );
+							CONDOR_EXEC, filename.c_str() );
 				}
 			} else {
 				filename = jobname;
@@ -272,7 +270,7 @@ VanillaProc::StartJob()
 				will stop the file transfer mechanism from considering
 				it for transfer back to its submitter */
 			Starter->jic->removeFromOutputFiles (
-				filename.Value () );
+				filename.c_str () );
 
 		}
 			
@@ -314,12 +312,11 @@ VanillaProc::StartJob()
 	//
 	gid_t tracking_gid = 0;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
-		if (!can_switch_ids() &&
-		    (Starter->condorPrivSepHelper() == NULL))
+		if (!can_switch_ids())
 		{
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, but can't modify "
 			           "the group list of our children unless running as "
-			           "root or using PrivSep");
+			           "root");
 		}
 		fi.group_ptr = &tracking_gid;
 	}
@@ -358,7 +355,7 @@ VanillaProc::StartJob()
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
-		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
+		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
 		if (starter_name.size() == 0) {
 			char buf[16];
 			sprintf(buf, "%d", getpid());
@@ -385,7 +382,7 @@ VanillaProc::StartJob()
 	{
         // Have Condor manage a chroot
        std::string requested_chroot_name;
-       JobAd->EvalString("RequestedChroot", NULL, requested_chroot_name);
+       JobAd->LookupString("RequestedChroot", requested_chroot_name);
        const char * allowed_root_dirs = param("NAMED_CHROOT");
        if (requested_chroot_name.size()) {
                dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
@@ -503,7 +500,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = Starter->GetWorkingDir();
+		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
 			StringList mount_list(mount_under_scratch);
@@ -555,8 +552,12 @@ VanillaProc::StartJob()
 
 #if defined(LINUX)
 	// On Linux kernel 2.6.24 and later, we can give each
-	// job its own PID namespace
-	if (param_boolean("USE_PID_NAMESPACES", false) && !htcondor::Singularity::job_enabled(*Starter->jic->machClassAd(), *JobAd)) {
+	// job its own PID namespace.
+	static bool previously_setup_for_pid_namespace = false;
+
+	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", false))
+			&& !htcondor::Singularity::job_enabled(*Starter->jic->machClassAd(), *JobAd) ) 
+	{
 		if (!can_switch_ids()) {
 			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
 				"call in Linux unless running as root.");
@@ -572,21 +573,33 @@ VanillaProc::StartJob()
 		// When PID Namespaces are enabled, need to run the job
 		// under the condor_pid_ns_init program, so that signals
 		// propagate through to the child.  
+		// Be aware that StartJob() can be called repeatedly in the
+		// case of a self-checkpointing job, so be careful to only make
+		// modifications to the job classad once.
 
 		// First tell the program where to log output status
 		// via an environment variable
-		if (param_boolean("USE_PID_NAMESPACE_INIT", true)) {
+		if (!previously_setup_for_pid_namespace && param_boolean("USE_PID_NAMESPACE_INIT", true)) {
 			Env env;
 			MyString env_errors;
 			MyString arg_errors;
 			std::string filename;
 
-			filename = Starter->GetWorkingDir();
+			filename = Starter->GetWorkingDir(0);
 			filename += "/.condor_pid_ns_status";
 		
-			env.MergeFrom(JobAd, &env_errors);
+			if (!env.MergeFrom(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
-			env.InsertEnvIntoClassAd(JobAd, &env_errors);
+
+			if (!env.InsertEnvIntoClassAd(JobAd, &env_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 
 			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
 			this->m_pid_ns_status_filename = filename;
@@ -599,16 +612,27 @@ VanillaProc::StartJob()
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
 			args.AppendArg(cmd);
-			args.AppendArgsFromClassAd(JobAd, &arg_errors);
-			args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors);
+			if (!args.AppendArgsFromClassAd(JobAd, &arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
+
+			if (!args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors)) {
+				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
+				delete fs_remap;
+				return 0;
+			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {
 				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
+				delete fs_remap;
 				return 0;
 			}
 			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
 			JobAd->Assign(ATTR_JOB_CMD, c_p_n_i);
+			previously_setup_for_pid_namespace = true;
 		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
@@ -713,20 +737,24 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 	static unsigned int max_rss = 0;
+#if HAVE_PSS
+	static unsigned int max_pss = 0;
+#endif
 
-	ProcFamilyUsage* usage;
-	ProcFamilyUsage cur_usage;
-	if (m_proc_exited) {
-		usage = &m_final_usage;
-	}
-	else {
-		if (daemonCore->Get_Family_Usage(JobPid, cur_usage) == FALSE) {
+	ProcFamilyUsage current_usage;
+	if( m_proc_exited ) {
+		current_usage = m_final_usage;
+	} else {
+		if (daemonCore->Get_Family_Usage(JobPid, current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
 			return false;
 		}
-		usage = &cur_usage;
 	}
+
+	ProcFamilyUsage reported_usage = m_checkpoint_usage;
+	reported_usage += current_usage;
+	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
     m_statistics.Tick();
@@ -749,12 +777,15 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 #if HAVE_PSS
 	if( usage->total_proportional_set_size_available ) {
-		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );
+		if (usage->total_proportional_set_size > max_pss) {
+			max_pss = usage->total_proportional_set_size;
+		}
+		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, max_pss );
 	}
 #endif
 
-	if (usage->block_read_bytes >= 0)  {
-        	m_statistics.BlockReadBytes = usage->block_read_bytes;
+	if (usage->block_read_bytes >= 0) {
+		m_statistics.BlockReadBytes = usage->block_read_bytes;
 		ad->Assign(ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes / 1024l);
 	}
 	if (usage->block_write_bytes >= 0) {
@@ -763,11 +794,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	if (usage->block_reads >= 0) {
-        	m_statistics.BlockReads = usage->block_reads;
+		m_statistics.BlockReads = usage->block_reads;
 		ad->Assign(ATTR_BLOCK_READS, usage->block_reads);
 	}
 	if (usage->block_writes >= 0) {
-        	m_statistics.BlockWrites = usage->block_writes;
+		m_statistics.BlockWrites = usage->block_writes;
 		ad->Assign(ATTR_BLOCK_WRITES, usage->block_writes);
 	}
 
@@ -838,13 +869,14 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
-	// For the same reason that we call recordFinalUsage() from the reaper
-	// in normal exit cases, we should get the final usage of the checkpointed
-	// process now, add it to the running total of checkpointed processes,
-	// and then add the running total to the current when we publish the
-	// update ad.  FIXME (#4971)
+	ProcFamilyUsage last_usage;
+	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
+		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
+			"VanillaProc::restartCheckpointedJob()\n", JobPid );
+	}
+	m_checkpoint_usage += last_usage;
 
-	if( Starter->jic->uploadWorkingFiles() ) {
+	if( Starter->jic->uploadCheckpointFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
 	} else {
 			// We assume this is a transient failure and will try
@@ -857,6 +889,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// would behave differently during ssh-to-job, which seems bad.
 	// killFamilyIfWarranted();
 
+	m_proc_exited = false;
 	StartJob();
 }
 
@@ -1132,7 +1165,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		// will be killed, and when it does, this job will get unfrozen
 		// and continue running.
 
-		if (usage < m_memory_limit) {
+		if (usage < (0.9 * m_memory_limit)) {
 			long long oomData = 0xdeadbeef;
 			int efd = -1;
 			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
@@ -1385,7 +1418,7 @@ bool VanillaProc::Ckpt() {
 
 	if( isSoftKilling ) { return false; }
 
-	int wantCheckpointSignal = 0;
+	bool wantCheckpointSignal = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpointSignal );
 	if( wantCheckpointSignal && ! isCheckpointing ) {
 		int periodicCheckpointSignal = findCheckpointSig( JobAd );
@@ -1404,11 +1437,13 @@ bool VanillaProc::Ckpt() {
 }
 
 int VanillaProc::outputOpenFlags() {
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
-	if( wantCheckpoint || wantsFileTransferOnCheckpointExit ) {
+	bool dontAppend = true;
+	JobAd->LookupBool( ATTR_DONT_APPEND, dontAppend );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
 	} else {
 		return this->OsProc::outputOpenFlags();
@@ -1416,11 +1451,13 @@ int VanillaProc::outputOpenFlags() {
 }
 
 int VanillaProc::streamingOpenFlags( bool isOutput ) {
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
-	if( wantCheckpoint || wantsFileTransferOnCheckpointExit ) {
+	bool dontAppend = true;
+	JobAd->LookupBool( ATTR_DONT_APPEND, dontAppend );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit || (!dontAppend) ) {
 		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
 	} else {
 		return this->OsProc::streamingOpenFlags( isOutput );

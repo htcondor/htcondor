@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "stringSpace.h"
 #include "iso_dates.h"
 #define HAVE_DLOPEN 1
 #ifdef HAVE_DLOPEN // Used to be CLASSAD_FUNCTIONS
@@ -35,7 +34,6 @@
 
 #define LARGE_NUMBER_OF_CLASSADS 10000
 
-extern StringSpace classad_string_space; // for debugging only!
 
 #define NUMBER_OF_CLASSAD_STRINGS (sizeof(classad_strings)/sizeof(char *))
 char *classad_strings[] = 
@@ -387,7 +385,7 @@ main(
 		expression = (char *) malloc(50000);
 		sprintf(expression, "%s = \"%s\"", variable, string);
 		
-		classads[0]->Insert(expression);
+		classads[0]->Assign(variable, string);
 		
 		test_string_value(classads[0], variable, string, __LINE__, &test_results);
 
@@ -509,7 +507,6 @@ main(
 	*/
 
 	test_results.PrintResults();
-	//classad_string_space.dump();
 
 #endif
 	// Clean up when we're done.
@@ -1337,7 +1334,7 @@ test_dirty_attribute(
 	}
 
 	// Add an attribute
-	classad->Insert("C = 3");
+	classad->Assign("C", 3);
 
 	// Now we should have exactly one dirty attribute, C.
 	classad->ResetExpr();
@@ -1362,7 +1359,7 @@ test_dirty_attribute(
 	}
 
 	// Add an attribute
-	classad->Insert("D = 4");
+	classad->Assign("D", 4);
 
 	// Now we should have two dirty attributes, C & D
 	classad->ResetExpr();

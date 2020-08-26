@@ -305,14 +305,7 @@ email_open_implementation(char *Mailer, const char * final_args[])
 
 	/* Want the letter to come from "condor" if possible */
 	priv = set_condor_priv();
-	/* there are some oddities with how popen can open a pipe. In some
-		arches, popen will create temp files for locking and they need to
-		be of the correct perms in order to be deleted. So the umask is
-		set to something useable for the open operation. -pete 9/11/99
-	*/
-	prev_umask = umask(022);
 	mailerstream = my_popenv(final_args,EMAIL_POPEN_FLAGS,FALSE);
-	umask(prev_umask);
 
 	/* Set priv state back */
 	set_priv(priv);
@@ -358,39 +351,6 @@ email_admin_open(const char *subject)
 	return email_nonjob_open(NULL,subject);
 }
 
-FILE *
-email_developers_open(const char *subject)
-{
-	char *tmp;
-	FILE *mailer;
-
-	/* 
-	** According to the docs, if CONDOR_DEVELOPERS is not
-	** in the config file, it defaults to UW.  If it is "NONE", 
-	** nothing should be emailed.
-	*/
-    tmp = param ("CONDOR_DEVELOPERS");
-    if (tmp == NULL) {
-		/* we strdup here since we always call free below */
-#ifdef NO_PHONE_HOME
-		tmp = strdup("NONE");
-#else
-        tmp = strdup("condor-admin@cs.wisc.edu");
-#endif
-    }
-
-    if (strcasecmp (tmp, "NONE") == 0) {
-        free (tmp);
-        return NULL;
-    }
-
-	mailer = email_nonjob_open(tmp,subject);
-
-	/* Don't forget to free tmp! */
-	free(tmp);
-	return mailer;
-}
-
 /* 
 ** Close the stream to the mailer.  It'd be nice to return the exit
 ** status from the mailer here, but on many platforms we cannot safely
@@ -400,7 +360,6 @@ void
 email_close(FILE *mailer)
 {
 	char *temp;
-	mode_t prev_umask;
 	priv_state priv;
 	char *customSig;
 
@@ -438,12 +397,6 @@ email_close(FILE *mailer)
 	}
 
 	fflush(mailer);
-	/* there are some oddities with how pclose can close a file. In some
-		arches, pclose will create temp files for locking and they need to
-		be of the correct perms in order to be deleted. So the umask is
-		set to something useable for the close operation. -pete 9/11/99
-	*/
-	prev_umask = umask(022);
 	/*
 	** we fclose() on UNIX, pclose on win32
 	*/
@@ -471,7 +424,6 @@ email_close(FILE *mailer)
 #else
 	(void)fclose( mailer );
 #endif
-	umask(prev_umask);
 
 	/* Set priv state back */
 	set_priv(priv);

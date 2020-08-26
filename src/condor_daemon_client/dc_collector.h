@@ -37,8 +37,8 @@
 class DCCollectorAdSeq {
 public:
 	DCCollectorAdSeq() : sequence(0), last_advance(0) {}
-	long long getSequence() { return sequence; }
-	time_t    lastAdvance() { return last_advance; }
+	long long getSequence() const { return sequence; }
+	time_t    lastAdvance() const { return last_advance; }
 	long long advance(time_t now) {
 		//if ( ! now) now = time(NULL);
 		last_advance = now;
@@ -93,7 +93,7 @@ public:
 			@param ad ClassAd you want to use for the update
 			file)
 		*/
-	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking );
+	bool sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& seq, ClassAd* ad2, bool nonblocking, StartCommandCallbackType=nullptr, void *miscdata=nullptr );
 
 	void reconfig( void );
 
@@ -103,8 +103,17 @@ public:
 	void blacklistMonitorQueryStarted();
 	void blacklistMonitorQueryFinished( bool success );
 
-	bool useTCPForUpdates() { return use_tcp; }
+	bool useTCPForUpdates() const { return use_tcp; }
 
+	time_t getStartTime() const { return startTime; }
+	time_t getReconfigTime() const { return reconfigTime; }
+
+		/** Request that the collector get an identity token from the specified
+		 *  schedd.
+		 */
+	bool requestScheddToken(const std::string &schedd_name,
+		const std::vector<std::string> &authz_bounding_set,
+		int lifetime, std::string &token, CondorError &err);
 
 private:
 
@@ -121,15 +130,15 @@ private:
 	std::deque<class UpdateData*> pending_update_list;
 	friend class UpdateData;
 
-	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
-	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void* miscdata );
+	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
 
-	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2 );
+	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, StartCommandCallbackType callback_fn, void *miscdata );
 
 	void parseTCPInfo( void );
 	void initDestinationStrings( void );
 
-	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );
 
 	char* update_destination;
 

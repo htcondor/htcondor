@@ -112,14 +112,14 @@ Shadow::~Shadow()
 bool
 Shadow::provides( const char* ability )
 {
-	int has_it = 0;
+	bool has_it = false;
 	if( ! s_ad ) {
 		return false;
 	}
-	if( ! s_ad->EvalBool(ability, NULL, has_it) ) { 
-		has_it = 0;
+	if( ! s_ad->LookupBool(ability, has_it) ) {
+		has_it = false;
 	}
-	return (bool)has_it;
+	return has_it;
 }
 
 
@@ -195,7 +195,7 @@ ShadowMgr::init( void )
 	tmp = param( "SHADOW_LIST" );
 	if( ! tmp ) {
 			// Not defined, give them a default
-		tmp = strdup( "SHADOW, SHADOW_STANDARD" );
+		tmp = strdup( "SHADOW" );
 		dprintf(D_ALWAYS,
 				"WARNING: SHADOW_LIST not defined in config file, "
 				"using default: %s\n", tmp);

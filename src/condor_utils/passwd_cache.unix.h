@@ -104,7 +104,7 @@ class passwd_cache {
 		/* also for testing.
 		 * Returns maximum lifetime of a cache entry, in seconds.
 		 */
-		time_t get_entry_lifetime() { return Entry_lifetime; }
+		time_t get_entry_lifetime() const { return Entry_lifetime; }
 
 		// builds a string in the format expected for the
 		// configuration variable USERID_MAP

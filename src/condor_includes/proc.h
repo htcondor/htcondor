@@ -54,7 +54,7 @@ typedef struct PROC_ID {
 	// the negative numbers for future expansion.
 	PROC_ID() : cluster( 0 ), proc( 11 ) {}
 	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
-	bool isValid() { return cluster != 0 && proc != 1; }
+	bool isValid() const { return cluster != 0 && proc != 1; }
 	void invalidate() { cluster = 0; proc = 1; }
 #endif
 } PROC_ID;
@@ -142,6 +142,10 @@ typedef struct JOB_ID_KEY {
 		if ( ! diff) diff = this->proc - cp.proc;
 		return diff < 0;
 	}
+	JOB_ID_KEY operator+(int i) const { return {cluster, proc + i}; }
+	JOB_ID_KEY operator-(int i) const { return {cluster, proc - i}; }
+	JOB_ID_KEY &operator++() { ++proc; return *this; }
+	JOB_ID_KEY &operator--() { --proc; return *this; }
 	JOB_ID_KEY() : cluster(0), proc(0) {}
 	JOB_ID_KEY(int c, int p) : cluster(c), proc(p) {}
 	JOB_ID_KEY(const PROC_ID & rhs) : cluster(rhs.cluster), proc(rhs.proc) {}
@@ -151,12 +155,11 @@ typedef struct JOB_ID_KEY {
 	operator std::string() const;
 	void sprint(MyString &s) const;
 	bool set(const char * job_id_str) { return StrIsProcId(job_id_str, this->cluster, this->proc, NULL); }
-	static size_t hash(const JOB_ID_KEY &);
+	static size_t hash(const JOB_ID_KEY &) noexcept;
 } JOB_ID_KEY;
 
 inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
 size_t hashFunction(const JOB_ID_KEY &);
-
 
 #endif
 

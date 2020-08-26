@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,11 +18,12 @@
 ##
 ##**************************************************************
 
+from __future__ import print_function
+
 import sys
 import os
 import getopt
 import time
-import string
 
 class SiteSummary:
 	name = None
@@ -44,7 +45,7 @@ USAGE: condor_router_history [OPTIONS]
 	sys.stderr.write(msg)
 
 def ReadHistoryFile(history_file,class_ads):
-	F = file(history_file,"r")
+	F = open(history_file,"r")
 
 	current_ad = {}
 
@@ -53,7 +54,7 @@ def ReadHistoryFile(history_file,class_ads):
 		if not line:
 			break
 
-		if string.find(line,"***") == 0:
+		if line.find("***") == 0:
 			cluster = current_ad.get("clusterid")
 			proc = current_ad.get("procid")
 			if cluster and proc:
@@ -61,10 +62,10 @@ def ReadHistoryFile(history_file,class_ads):
 			current_ad = {}
 			continue
 
-		fields = string.split(line,"=",1)
+		fields = line.split("=",1)
 		if len(fields) == 2:
-			attribute = string.strip(string.lower(fields[0]))
-			value = string.strip(fields[1])
+			attribute = fields[0].lower().strip()
+			value = fields[1].strip()
 			current_ad[attribute] = value
 
 	cluster = current_ad.get("clusterid")
@@ -83,11 +84,11 @@ def ShowSummary(site_summaries):
 		sort_val = site_info.hours.get("C")
 		sorted_summary.append([sort_val,site_info])
 		for key in site_info.hours.keys():
-			if not total.hours.has_key(key):
+			if key not in  total.hours:
 				total.hours[key] = 0
 			total.hours[key] += site_info.hours[key]
 		for key in site_info.jobs.keys():
-			if not total.jobs.has_key(key):
+			if key not in total.jobs:
 				total.jobs[key] = 0
 			total.jobs[key] += site_info.jobs[key]
 
@@ -95,9 +96,9 @@ def ShowSummary(site_summaries):
 	sorted_summary.reverse()
 	sorted_summary.append([0,total])
 
-	print "%-15s %5s %7s %7s" % ("Site","Hours","Jobs","Runs")
-	print "%-15s %5s %7s %5s" % ("","","Completed","Aborted")
-	print "-------------------------------------------------------"
+	print("%-15s %5s %7s %7s" % ("Site", "Hours", "Jobs", "Runs"))
+	print("%-15s %5s %7s %5s" % ("", "", "Completed", "Aborted"))
+	print("-------------------------------------------------------")
 
 	for sort_val,site_info in sorted_summary:
 		c_hours = int(round(site_info.hours.get("C",0)))
@@ -107,8 +108,8 @@ def ShowSummary(site_summaries):
 			if code == "C": continue
 			x_jobs += site_info.jobs[code]
 		if site_info.name == "TOTAL":
-			print "-------------------------------------------------------"
-		print "%-15s %5s %7s %5s" % (site_info.name,c_hours,c_jobs,x_jobs)
+			print("-------------------------------------------------------")
+		print("%-15s %5s %7s %5s" % (site_info.name, c_hours, c_jobs, x_jobs))
 
 
 long_options = [
@@ -147,7 +148,7 @@ try:
             show_records = 1
         if option == "--show_iwd":
             show_iwd = 1
-except Exception, e:
+except Exception as e:
     sys.stderr.write("Command line argument error: %s\n" % (e))
     Usage()
     sys.exit(1)
@@ -158,7 +159,7 @@ if not start_timestamp:
 	start_timestamp = end_timestamp - report_period
 
 spool_dir = os.popen("condor_config_val SPOOL").read()
-spool_dir = string.strip(spool_dir)
+spool_dir = spool_dir.strip()
 if not spool_dir:
 	sys.stderr.write("Cannot find spool directory with 'condor_config_val SPOOL'\n")
 	sys.exit(1)
@@ -166,19 +167,19 @@ if not spool_dir:
 start_time_desc = time.strftime("%Y-%m-%d %H:%M",time.localtime(start_timestamp))
 end_time_desc = time.strftime("%Y-%m-%d %H:%M",time.localtime(end_timestamp))
 
-print "Routed job history from " + start_time_desc + " to " + end_time_desc
-print
+print("Routed job history from " + start_time_desc + " to " + end_time_desc)
+print()
 
 if show_records:
-	print "JobID", "Status", "Site", "Runtime",
+	print("JobID", "Status", "Site", "Runtime", end = ' ')
 	if show_iwd:
-		print "IWD",
-	print
+		print("IWD", end = ' ')
+	print()
 
 class_ads = {}
 
 for fname in os.listdir(spool_dir):
-	if string.find(fname,"history") == 0:
+	if fname.find("history") == 0:
 		history_file = os.path.join(spool_dir,fname)
 		mtime = os.stat(history_file)[8]
 		if mtime < start_timestamp:
@@ -198,7 +199,7 @@ for jobid in class_ads.keys():
 		if not route:
 			continue
 
-	route = string.replace(route,'"','')
+	route = route.replace('"','')
 
 	cdate = float(ad.get("completiondate"))
 	if cdate < start_timestamp:
@@ -211,7 +212,7 @@ for jobid in class_ads.keys():
 	status_code = job_status_codes[int(jobstatus)]
 
 	remote_walltime = ad.get("remotewallclocktime",0)
-	remote_walltime = long(round(float(remote_walltime)))
+	remote_walltime = int(round(float(remote_walltime)))
 
 	site_sum = site_summaries.get(route)
 	if not site_sum:
@@ -232,10 +233,10 @@ for jobid in class_ads.keys():
 			if iwd[0] == '"' and iwd[-1] == '"':
 				iwd = iwd[1:-1]
 	if show_records:
-		print jobid, status_code, route, remote_walltime,
+		print(jobid, status_code, route, remote_walltime, end = ' ')
 		if show_iwd:
-			print iwd,
-		print
+			print(iwd, end = ' ')
+		print()
 
 if show_summary:
 	ShowSummary(site_summaries)

@@ -54,7 +54,7 @@ ResState::ResState( Resource* res_ip )
 
 
 void
-ResState::publish( ClassAd* cp, amask_t  /*how_much*/ ) 
+ResState::publish( ClassAd* cp ) 
 {
 	cp->Assign( ATTR_STATE, state_to_string(r_state) );
 
@@ -150,8 +150,9 @@ ResState::change( State new_state, Activity new_act )
 	}
 
 		// Note our current state and activity in the classad
-	this->publish( rip->r_classad, A_ALL );
+	this->publish( rip->r_classad );
 
+	//PRAGMA_REMIND("this triggers an update to the collector, rethink?")
 		// We want to update the CM on every state or activity change
 	rip->update();   
 
@@ -170,7 +171,7 @@ ResState::change( State new_state, Activity new_act )
 	if( r_act == retiring_act || r_act == idle_act ) {
 		// When we enter retirement or idleness, check right away to
 		// see if we should be preempting instead.
-		this->eval();
+		this->eval_policy();
 	}
 
 	return;
@@ -202,24 +203,12 @@ ResState::change( State new_state )
 
 
 int
-ResState::eval( void )
+ResState::eval_policy( void )
 {
 	int want_suspend;
 #if HAVE_BACKFILL
 	int kill_rval; 
 #endif /* HAVE_BACKFILL */
-
-		// we may need to modify the load average in our internal
-		// policy classad if we're currently running a COD job or have
-		// been running 1 in the last minute.  so, give our rip a
-		// chance to modify the load, if necessary, before we evaluate
-		// anything.  
-	rip->hackLoadForCOD();
-
-		// also, since we might be an SMP where other slots just changed
-		// their state, we also want to re-publish the shared slot
-		// attributes so that other slots can see those results.
-	rip->refreshSlotAttrs();
 
 	updateActivityAverages();
 
@@ -585,6 +574,10 @@ ResState::eval( void )
 		if( r_act == retiring_act ) {
 			if( resmgr->drainingIsComplete( rip ) ) {
 				resmgr->resetMaxJobRetirementTime();
+				// Only do this here if we want last drain stop time to be
+				// when the draining finished and not when it was cancelled
+				// (if it didn't auto-resume).
+				// resmgr->setLastDrainStopTime();
 				dprintf(D_ALWAYS,"State change: draining is complete.\n");
 				// TLM: STATE TRANSITION #33
 				change( drained_state, idle_act );
@@ -593,6 +586,9 @@ ResState::eval( void )
 		}
 		else if( r_act == idle_act ) {
 			if( resmgr->considerResumingAfterDraining() ) {
+				// Only do this if we don't do it above, when the draining
+				// actually completes.
+				resmgr->setLastDrainStopTime();
 				return TRUE;
 			}
 		}
@@ -743,7 +739,7 @@ ResState::enter_action( State s, Activity a,
 		if( statechange ) {
 			rip->r_cur->beginClaim();	
 				// Update important attributes into the classad.
-			rip->r_cur->publish( rip->r_classad, A_PUBLIC );
+			rip->r_cur->publish( rip->r_classad );
 				// Generate a preempting claim object
 			rip->r_pre = new Claim( rip );
 		}
@@ -1321,7 +1317,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 }
 
 int
-ResState::activityTimeElapsed()
+ResState::activityTimeElapsed() const
 {
 	return time(NULL) - m_atime;
 }

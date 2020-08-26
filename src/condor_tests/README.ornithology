@@ -1,0 +1,34 @@
+See ornithology.readthedocs.io for complete documentation.
+
+--------------------------------------------------------------------------------
+
+Running Ornithology Tests
+
+    To run the Ornithology tests, you must be using Python 3 and have the
+Python 3 HTCondor/ClassAd libraries in your PYTHONPATH.  Assuming you set
+CMAKE_INSTALL_PREFIX to ~/install, after 'make install' finishes, you'll
+set PYTHONPATH to ~/install/lib/python3.  Make sure that your installed
+bin/ directory is in your PATH (before any system version of HTCondor),
+and that CONDOR_CONFIG points to HTCondor under test.*
+
+    You'll need PyTest and one extension to run the Ornithology tests.  The
+easiest way to handle this is with Pip, although you can use your system
+PyTest (and pytest-httpserver) if you desire:
+
+$ cd condor_tests
+$ pip3 install --user -r requirements.txt
+
+    This may install a 'pytest' executable early enough in your PATH to be
+useful, but assuming it doesn't, you can start a specific Ornithology test
+in the following way:
+
+$ python3 -m pytest test_run_sleep_job.py
+
+    One of the early lines in the output will look like the following:
+
+Base per-test directory: /tmp/condor-tests-1598380839-15666
+
+which will not be cleaned up after the test runs, for your debugging
+convenience.
+
+*: This may require as little as setting RELEASE_DIR properly.

@@ -33,10 +33,10 @@ MpiResource::MpiResource( BaseShadow *base_shadow ) :
 void 
 MpiResource::printExit( FILE *fp )
 {
-	MyString line;
-	line.formatstr( "%25s    ", machineName ? machineName : "Unknown machine" );
+	std::string line;
+	formatstr( line, "%25s    ", machineName ? machineName : "Unknown machine" );
 	printExitString( jobAd, exit_reason, line );
-	fprintf( fp, "%s\n", line.Value() );
+	fprintf( fp, "%s\n", line.c_str() );
 }
 
 void
@@ -72,7 +72,7 @@ MpiResource::resourceExit( int reason, int status )
 				event.returnValue = exit_value;
 			}
 			
-			int had_core = 0;
+			bool had_core = false;
 			jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 			if( had_core ) {
 				event.setCoreFile( shadow->getCoreName() );
@@ -115,13 +115,9 @@ bool
 MpiResource::writeULogEvent( ULogEvent* event )
 {
 	bool rval;
-	// FIXME - we dont' have the gjid here (grr) so pass NULL to initialize
-	// the userlog
-	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), node_num );
+	shadow->uLog.setJobId( shadow->getCluster(), shadow->getProc(), node_num );
 	rval = RemoteResource::writeULogEvent( event );
-	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), 0 );
+	shadow->uLog.setJobId( shadow->getCluster(), shadow->getProc(), 0 );
 	return rval;
 }
 

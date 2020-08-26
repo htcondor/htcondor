@@ -17,9 +17,7 @@
  ############################################################### 
 
 
-if (NOT HPUX)
-  option(WITH_KRB5 "Compiling with support for KRB5" ON)
-endif()
+option(WITH_KRB5 "Compiling with support for KRB5" ON)
   
 if (WITH_KRB5)
 
@@ -111,7 +109,7 @@ if (WITH_KRB5)
 			endif()
 		endif()
 
-		condor_post_external( krb5 include OFF )
+		condor_post_external( krb5 include OFF "" )
 
 	endif( )
 

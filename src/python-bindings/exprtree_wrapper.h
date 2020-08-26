@@ -16,15 +16,18 @@ ExprTreeHolder __ ##pykind##__() const {return apply_unary_operator(classad::Ope
 
 struct ExprTreeHolder
 {
-    ExprTreeHolder(const std::string &str);
+    ExprTreeHolder(boost::python::object expr_obj);
 
-    ExprTreeHolder(classad::ExprTree *expr, bool owns=false);
+    ExprTreeHolder(classad::ExprTree *expr, bool owns);
 
     ~ExprTreeHolder();
 
     bool ShouldEvaluate() const;
 
-    boost::python::object Evaluate(boost::python::object scope=boost::python::object()) const;
+    boost::python::object Evaluate(
+        boost::python::object scope=boost::python::object() ) const;
+    ExprTreeHolder simplify(
+        boost::python::object scope=boost::python::object() ) const;
 
     std::string toRepr() const;
 
@@ -54,6 +57,7 @@ struct ExprTreeHolder
     THIS_ROPERATOR(SUBTRACTION_OP, sub)
     THIS_ROPERATOR(MULTIPLICATION_OP, mul)
     THIS_ROPERATOR(DIVISION_OP, div)
+    THIS_ROPERATOR(DIVISION_OP, truediv)
     THIS_ROPERATOR(MODULUS_OP, mod)
     THIS_OPERATOR(LOGICAL_AND_OP, land)
     THIS_OPERATOR(LOGICAL_OR_OP, lor)
@@ -72,6 +76,8 @@ struct ExprTreeHolder
     static void init();
 
 private:
+    void eval( boost::python::object scope, classad::Value & v ) const;
+
     classad::ExprTree *m_expr;
     boost::shared_ptr<classad::ExprTree> m_refcount;
     bool m_owns;

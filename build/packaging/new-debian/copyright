@@ -175,7 +175,6 @@ Files: *.cmake
  src/condor_startd.V6/*StartdPlugin*
  src/condor_schedd.V6/*Plugin*
  src/condor_utils/*Plugin*
- src/condor_utils/ClassAdReevaluator*
  src/condor_utils/ConcurrencyLimitUtils.*
  src/condor_negotiator.V6/*NegotiatorPlugin*
  src/condor_mail/AssemblyInfo.cpp

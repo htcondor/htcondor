@@ -19,13 +19,38 @@
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*;history_helper.cpp" qmgmtElements )
-file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
+set(qmgmtElements
+	${CMAKE_CURRENT_SOURCE_DIR}/qmgmt_send_stubs.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/qmgr_lib_support.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/qmgr_job_updater.cpp
+)
 
-if (NOT WIN_EXEC_NODE_ONLY)
-	condor_daemon( schedd "${scheddRmvElements}"
-		"${CONDOR_LIBS};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}")
+set(scheddElements
+autocluster.cpp
+dedicated_scheduler.cpp
+grid_universe.cpp
+ickpt_share.cpp
+jobsets.cpp
+job_transforms.cpp
+pccc.cpp
+qmgmt_common.cpp
+qmgmt.cpp
+qmgmt_factory.cpp
+qmgmt_receivers.cpp
+schedd.cpp
+schedd_cron_job.cpp
+schedd_cron_job_mgr.cpp
+schedd_main.cpp
+schedd_negotiate.cpp
+ScheddPluginManager.cpp
+schedd_stats.cpp
+schedd_td.cpp
+shadow_mgr.cpp
+tdman.cpp
+transfer_queue.cpp
+)
 
-endif(NOT WIN_EXEC_NODE_ONLY)
+condor_daemon( EXE condor_schedd SOURCES "${scheddElements}"
+  LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}")
 
 set( QMGMT_UTIL_SRCS "${qmgmtElements};${CMAKE_CURRENT_SOURCE_DIR}/qmgmt_common.cpp" PARENT_SCOPE )

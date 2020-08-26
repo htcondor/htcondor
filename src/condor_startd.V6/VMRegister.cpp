@@ -56,7 +56,6 @@ VMRegister::~VMRegister()
 static bool 
 _requestVMRegister(const char *addr)
 {
-	char *buffer = NULL;
 	Daemon hstartd(DT_STARTD, addr);
 
 	//Using TCP
@@ -79,8 +78,8 @@ _requestVMRegister(const char *addr)
 	if ( !ssock.put(daemonCore->InfoCommandSinfulString()) ) {
 		dprintf( D_FULLDEBUG,
 				 "Failed to send VM_REGISTER command's arguments to "
-				 "host startd %s: %s\n",
-				 addr, buffer );
+				 "host startd %s\n",
+				 addr);
 		return FALSE;
 	}
 
@@ -238,17 +237,14 @@ VMRegister::requestHostClassAds(void)
 
 	// Get each Attribute from the classAd
 	// added "HOST_" in front of each Attribute name
-	const char *name;
-	ExprTree *expr;
 
-	ad->ResetExpr();
-	while( ad->NextExpr(name, expr) ) {
+	for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
 		std::string attr;
 		attr += "HOST_";
-		attr += name;
+		attr += itr->first;
 
 		// Insert or Update an attribute to host_classAd in a VMRegister object
-		ExprTree * pTree = expr->Copy();
+		ExprTree * pTree = itr->second->Copy();
 		host_classad->Insert(attr, pTree);
 	}
 }

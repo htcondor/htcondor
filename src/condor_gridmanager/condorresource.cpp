@@ -201,7 +201,7 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 	std::string buff;
 
 	formatstr( buff, "condor %s %s", resourceName, poolName );
-	resource_ad->Assign( ATTR_NAME, buff.c_str() );
+	resource_ad->Assign( ATTR_NAME, buff );
 	if ( proxySubject ) {
 		resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
 	}

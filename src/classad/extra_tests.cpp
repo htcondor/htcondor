@@ -486,7 +486,7 @@ static void test_chaining(void)
 	} else {
 		cout << "  B is now undefined.\n";
 	}
-	cout << *child << endl;
+	cout << child << endl;
 
 	child->Unchain();
 
@@ -501,6 +501,8 @@ static void test_dirty(void)
 	classad = parser.ParseClassAd(dirty_classad_text);
 
 	cout << "Testing dirty attributes...\n";
+
+	classad->EnableDirtyTracking();
 
 	if (classad->IsAttributeDirty("A")) {
 		cout << "  Failed: A is dirty just after construction.\n";

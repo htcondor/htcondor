@@ -1,5 +1,5 @@
 Grid Computing
---------------
+==============
 
 .. toctree::
    :maxdepth: 2
@@ -8,4 +8,4 @@ Grid Computing
    introduction-grid-computing
    connecting-pools-with-flocking
    grid-universe
-   job-router     
+   job-router     

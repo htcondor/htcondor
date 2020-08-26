@@ -586,10 +586,10 @@ REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
 }
 
 
-int
+off_t
 REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
 {
-        int     rval;
+        off_t     rval;
         condor_errno_t     terrno;
 		int result = 0;
 
@@ -956,7 +956,7 @@ REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char co
 	event.setCriticalError( true );
 	event.setHoldReasonCode( hold_reason_code );
 	event.setHoldReasonSubCode( hold_reason_subcode );
-	ad = event.toClassAd();
+	ad = event.toClassAd(true);
 	ASSERT(ad);
 	int retval = REMOTE_CONDOR_ulog( ad );
 	delete ad;
@@ -1590,7 +1590,7 @@ REMOTE_CONDOR_getdir(char *path, char *&buffer)
 	syscall_sock->decode();
 	result = ( syscall_sock->code(rval) );
 	ON_ERROR_RETURN( result );
-	if( rval <= 0 ) {
+	if( rval < 0 ) {
 		result = ( syscall_sock->code(terrno) );
 		ON_ERROR_RETURN( result );
 		result = ( syscall_sock->end_of_message() );
@@ -2515,24 +2515,25 @@ REMOTE_CONDOR_dprintf_stats(const char *message)
 }
 
 
-// take NO parameters.  the shadow knows which creds belong to the job
-// and will only give out those creds.  the creds are ALWAYS written to
-// the SEC_CREDENTIAL_DIRECTORY so no path is needed either.
+// takes the directory that creds should be written into.  the shadow knows
+// which creds belong to the job and will only give out those creds.
 //
 // on the wire, for future compatibility, we send a string.  currently
 // this is ignored by the receiver.
 int
-REMOTE_CONDOR_getcreds()
+REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
 {
 	int result = 0;
 
 	if(!(syscall_sock->get_encryption())) {
-		dprintf ( D_ALWAYS, "ERROR: Can't do CONDOR_getcreds, syscall_sock not encrypted\n" );
-		// fail
-		return -1;
+		if (can_switch_ids() || ! param_boolean("ALLOW_OAUTH_WITHOUT_ENCRYPTION", false)) {
+			dprintf(D_ALWAYS, "ERROR: Can't do CONDOR_getcreds, syscall_sock not encrypted\n");
+			// fail
+			return -1;
+		}
 	}
 
-	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds\n" );
+	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds into path %s\n", creds_receive_dir );
 
 	CurrentSysCall = CONDOR_getcreds;
 	char empty[1] = "";
@@ -2552,23 +2553,8 @@ REMOTE_CONDOR_getcreds()
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 
-	// send response
+	// receive response
 	syscall_sock->decode();
-
-	MyString cred_dir_name;
-	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return -1;
-	}
-	MyString pid_s;
-	pid_s.formatstr("%i", getpid());
-	cred_dir_name += DIR_DELIM_CHAR;
-	cred_dir_name += pid_s;
-
-	// create dir to hold creds
-	priv_state p = set_root_priv();
-	mkdir(cred_dir_name.Value(), 0700);
-	set_priv(p);
 
 	// driver:  receive int.  -1 == error, 0 == done, 1 == cred classad coming
 	int cmd;
@@ -2586,43 +2572,43 @@ REMOTE_CONDOR_getcreds()
 		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
 		dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
 
-		MyString fname, b64;
+		std::string fname, b64;
 		ad.LookupString("Service", fname);
 		ad.LookupString("Data", b64);
 
-		MyString full_name = cred_dir_name;
+		std::string full_name = creds_receive_dir;
 		full_name += DIR_DELIM_CHAR;
 		full_name += fname;
 
-		MyString tmpname = full_name;
+		std::string tmpname = full_name;
 		tmpname += ".tmp";
 
 		// contents of pw are base64 encoded.  decode now just before they go
 		// into the file.
 		int rawlen = -1;
 		unsigned char* rawbuf = NULL;
-		zkm_base64_decode(b64.Value(), &rawbuf, &rawlen);
+		zkm_base64_decode(b64.c_str(), &rawbuf, &rawlen);
 
 		if (rawlen <= 0) {
 			EXCEPT("Failed to decode credential sent by shadow!");
 		}
 
 		// write temp file
-		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.Value());
-		bool rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
+		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.c_str());
+		// 4th param false means "as user"  (as opposed to as root)
+		bool rc = write_secure_file(tmpname.c_str(), rawbuf, rawlen, false);
 
 		// caller of condor_base64_decode is responsible for freeing buffer
 		free(rawbuf);
 
 		if (rc != true) {
-			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpname.Value());
+			dprintf(D_ALWAYS, "REMOTE_CONDOR_getcreds: failed to write secure temp file %s\n", tmpname.c_str());
 			EXCEPT("failure");
 		}
 
-		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.Value(), full_name.Value());
-		priv_state priv = set_root_priv();
-		rename(tmpname.Value(), full_name.Value());
-		set_priv (priv);
+		// do this as the user (no priv switching to root)
+		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.c_str(), full_name.c_str());
+		rename(tmpname.c_str(), full_name.c_str());
 	}
 
 	result = ( syscall_sock->end_of_message() );

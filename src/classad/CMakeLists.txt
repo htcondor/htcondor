@@ -16,13 +16,7 @@
  # 
  ############################################################### 
  
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/classad/classad_stl.h.in ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h.tmp)
-# only update config.h if it is necessary b/c it causes massive rebuilding.
-exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h.tmp ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h )
- 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${BOOST_INCLUDE})
 
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
@@ -45,12 +39,6 @@ if (HAVE_DLFCN_H)
 	add_definitions(-DHAVE_DLFCN_H)
 endif()
 
-if (HAVE_LIBDL)
-	set (DL_FOUND -ldl)
-endif (HAVE_LIBDL)
-
-dprint("classad_BOOST_INCLUDE=${BOOST_INCLUDE}")
-
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
 		-DCLASSAD_VERSION_MAJOR=${CMAKE_MATCH_1}
@@ -58,72 +46,118 @@ if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 		-DCLASSAD_VERSION_PATCH=${CMAKE_MATCH_3} )
 endif()
 
-file( GLOB Headers classad/*.h )
-set( Headers "${Headers};${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h" )
+set( Headers
+classad/attrrefs.h
+classad/cclassad.h
+classad/classadCache.h
+classad/classad_containers.h
+classad/classad_distribution.h
+classad/classadErrno.h
+classad/classad.h
+classad/classadItor.h
+classad/collectionBase.h
+classad/collection.h
+classad/common.h
+classad/debug.h
+classad/exprList.h
+classad/exprTree.h
+classad/fnCall.h
+classad/indexfile.h
+classad/jsonSink.h
+classad/jsonSource.h
+classad/lexer.h
+classad/lexerSource.h
+classad/literals.h
+classad/matchClassad.h
+classad/natural_cmp.h
+classad/operators.h
+classad/query.h
+classad/sink.h
+classad/source.h
+classad/transaction.h
+classad/util.h
+classad/value.h
+classad/view.h
+classad/xmlLexer.h
+classad/xmlSink.h
+classad/xmlSource.h
+)
 
-##
+set (ClassadSrcs
+attrrefs.cpp
+classadCache.cpp
+classad.cpp
+collectionBase.cpp
+collection.cpp
+common.cpp
+cxi.cpp
+debug.cpp
+exprList.cpp
+exprTree.cpp
+fnCall.cpp
+indexfile.cpp
+jsonSink.cpp
+jsonSource.cpp
+lexer.cpp
+lexerSource.cpp
+literals.cpp
+matchClassad.cpp
+natural_cmp.cpp
+operators.cpp
+query.cpp
+shared.cpp
+sink.cpp
+source.cpp
+transaction.cpp
+util.cpp
+value.cpp
+view.cpp
+xmlLexer.cpp
+xmlSink.cpp
+xmlSource.cpp
+)
+
 #####################################################################
 
-#####################################################################
-# treat like an external for others to use
-condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysbuild")
-#####################################################################
+add_library(classads_objects OBJECT ${ClassadSrcs})
+set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
+add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one which all of condor depends upon
+target_link_libraries( classads PUBLIC ${PCRE_FOUND};${CMAKE_DL_LIBS})
+set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
-if (NOT WINDOWS)
-
-  condor_selective_glob("attrrefs.*;classad.*;classadCache.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;jsonSink.*;jsonSource.*;cclassad.*;common.*" ClassadSrcs)
-  add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
-  set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
-
-  if (LINUX OR DARWIN)  
-  	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
-	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 10 )
-	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
-	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
-  endif()
-  if ( DARWIN )
-	set_target_properties( classad PROPERTIES INSTALL_NAME_DIR ${CLASSADS_INSTALL_LOC}/lib )
-	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB_PUBLIC}/libclassad.${PACKAGE_VERSION}.dylib)" )
-  endif()
-
-  if ( LINUX OR DARWIN )
-	# set external reference to the shared library for linux
-	set (CLASSADS_FOUND classad)
-	set (CLASSADS_FOUND_STATIC classads)
-  else()
-	# set external reference to the static library for non-linux
-	set (CLASSADS_FOUND classads)
-	set (CLASSADS_FOUND_STATIC classads)
-  endif()
-
-  ##condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
-  add_executable( classad_functional_tester "classad_functional_tester.cpp" )
-  condor_set_link_libs( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
-  install (TARGETS classad_functional_tester DESTINATION ${C_BIN} )
-  
-  ##condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
-  add_executable( classad_version "classad_version.cpp" )
-  condor_set_link_libs( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
-  install (TARGETS classad_version DESTINATION ${C_BIN} )
-  
-  ###### Install elements with our distribution
-  install( TARGETS classads DESTINATION ${C_LIB_PUBLIC} )
-  install( FILES ${Headers} DESTINATION ${C_INCLUDE_PUBLIC}/classad )
-
-else()	
-	# windows specific configuration.
-	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;classadCache.*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*;json*" ClassadSrcs)
-	add_library( classads STATIC ${ClassadSrcs} )
-	set (CLASSADS_FOUND classads)
-	set (CLASSADS_FOUND_STATIC classads)
-
+if (LINUX OR DARWIN)  
+  add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
+  set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 12 )
+  target_link_libraries( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
+  install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
+endif()
+if ( DARWIN )
+  set_target_properties( classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib )
+  install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB_PUBLIC}/libclassad.${PACKAGE_VERSION}.dylib)" )
 endif()
 
+if ( LINUX OR DARWIN )
+  # set external reference to the shared library for linux
+  set (CLASSADS_FOUND classad)
+else()
+  # set external reference to the static library for non-linux
+  set (CLASSADS_FOUND classads)
+endif()
+
+add_executable( classad_functional_tester "classad_functional_tester.cpp" )
+target_link_libraries( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
+install (TARGETS classad_functional_tester DESTINATION ${C_BIN} )
+
+add_executable( classad_version "classad_version.cpp" )
+target_link_libraries( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
+install (TARGETS classad_version DESTINATION ${C_BIN} )
+
+###### Install elements with our distribution
+install( TARGETS classads DESTINATION ${C_LIB_PUBLIC} )
+install( FILES ${Headers} DESTINATION ${C_INCLUDE_PUBLIC}/classad )
+
+
 set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
-set( CLASSADS_FOUND_STATIC ${CLASSADS_FOUND_STATIC} PARENT_SCOPE )
-
-
-condor_post_external( classads include OFF )
 
 # standard output message used to slog users.  
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
@@ -135,34 +169,19 @@ if (NOT PROPER)
 	add_dependencies( classads ${PCRE_REF} )
   endif()
 
-  # On Mac, we build our own pcre, unlike linux, so need to 
-  # have a dependency here so we build pcre before classads
-  if ( DARWIN AND PCRE_REF)
-	add_dependencies( classad ${PCRE_REF} )
-  endif()
-
-  if (BOOST_REF)
-	  add_dependencies( classads ${BOOST_REF} )
-	  if ( LINUX OR DARWIN )
-		  add_dependencies( classad ${BOOST_REF} )
-	  endif()
-  endif()
-
   if (NOT WINDOWS)
 	############################################################################## 
-	# the only reason this exists is b/c our externals depend on it
-	# (blahp & creame)
-	file( COPY ${Headers} DESTINATION ${CLASSADS_INSTALL_LOC}/include/classad )
+	file( COPY ${Headers} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/classad )
 	set_target_properties( classads
-		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
-		LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
-		RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib 
+		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
+		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
 		OUTPUT_NAME classad)
 	if ( LINUX OR DARWIN )
 		set_target_properties( classad
-			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
-			LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
-			RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib)
+			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib 
+			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
+			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 	endif()
 
   endif()
@@ -170,5 +189,5 @@ if (NOT PROPER)
 endif(NOT PROPER)
 
 ###### Test executables
-condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
-condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
+condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)

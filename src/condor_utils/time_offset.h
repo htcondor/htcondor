@@ -56,7 +56,7 @@ bool time_offset_range_cedar_stub( Stream*, long&, long& );
 // calculation or collecting offset information
 //
 bool time_offset_send_cedar_stub( Stream*, TimeOffsetPacket&, TimeOffsetPacket& );
-int time_offset_receive_cedar_stub( Service*, int, Stream* );
+int time_offset_receive_cedar_stub(int, Stream* );
 bool time_offset_codePacket_cedar( TimeOffsetPacket&, Stream* );
 
 // --------------------------------------------

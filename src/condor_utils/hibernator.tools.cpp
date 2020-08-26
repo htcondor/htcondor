@@ -32,7 +32,7 @@
  * UserDefinedToolsHibernator class
  ***************************************************************/
 
-UserDefinedToolsHibernator::UserDefinedToolsHibernator () throw ()
+UserDefinedToolsHibernator::UserDefinedToolsHibernator () noexcept
 	: HibernatorBase (),
 	m_keyword ( "HIBERNATE" ),
 	m_reaper_id ( -1 )
@@ -43,7 +43,7 @@ UserDefinedToolsHibernator::UserDefinedToolsHibernator () throw ()
 	configure ();
 }
 
-UserDefinedToolsHibernator::UserDefinedToolsHibernator ( const MyString &keyword ) throw () 
+UserDefinedToolsHibernator::UserDefinedToolsHibernator ( const MyString &keyword ) noexcept 
 	: HibernatorBase (),
 	m_keyword ( keyword ),
 	m_reaper_id ( -1 )
@@ -54,7 +54,7 @@ UserDefinedToolsHibernator::UserDefinedToolsHibernator ( const MyString &keyword
 	configure ();
 }
 
-UserDefinedToolsHibernator::~UserDefinedToolsHibernator () throw () 
+UserDefinedToolsHibernator::~UserDefinedToolsHibernator () noexcept 
 {
 	for ( unsigned i = 1; i <= 10; ++i ) {
 		if ( NULL != m_tool_paths[i] ) {
@@ -185,7 +185,7 @@ void UserDefinedToolsHibernator::configure ()
 				D_FULLDEBUG,
 				"UserDefinedToolsHibernator::configure: the executable "
 				"(%s) defined in the configuration file is invalid.\n",
-				m_tool_paths[i] );
+				name.Value());
 
 		}
 	}

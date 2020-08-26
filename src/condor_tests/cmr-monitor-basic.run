@@ -38,6 +38,8 @@ use CustomMachineResource;
 my $config = <<CONDOR_TESTREQ_CONFIG;
 NUM_CPUS = 16
 
+ADVERTISE_CMR_UPTIME_SECONDS = TRUE
+
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
 
 STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) SQUIDs_MONITOR
@@ -48,9 +50,9 @@ STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs
 
 SCHEDD_CLUSTER_INITIAL_VALUE = 1000
 
-UPDATE_INTERVAL = 20
-STARTER_UPDATE_INTERVAL = 20
-SHADOW_QUEUE_UPDATE_INTERVAL = 20
+UPDATE_INTERVAL = 2
+STARTER_UPDATE_INTERVAL = 2
+SHADOW_QUEUE_UPDATE_INTERVAL = 2
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
@@ -60,6 +62,7 @@ my $testDescription = 'Custom Machine Resources - Monitor Test Basic';
 #
 # Verify the configuration before running the test.
 #
+sleep(5);
 CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
 
 #

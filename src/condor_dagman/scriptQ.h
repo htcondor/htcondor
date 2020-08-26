@@ -24,7 +24,7 @@
 #include <utility>
 
 #include "HashTable.h"
-#include "Queue.h"
+#include <queue>
 
 #include "condor_daemon_core.h"
 
@@ -58,7 +58,7 @@ class ScriptQ : public Service {
 	/** Return the number of scripts actually running (does not include
 	    scripts that are queued to run but have been deferred).
 	*/
-    int NumScriptsRunning();
+    int NumScriptsRunning() const;
 
     // reaper function for PRE & POST script completion
     int ScriptReaper( int pid, int status );
@@ -77,7 +77,7 @@ class ScriptQ : public Service {
 	HashTable<int, Script*> *_scriptPidTable;
 
 	// queue of scripts waiting to be run
-	Queue<Script*> *_waitingQueue;
+	std::queue<Script*> *_waitingQueue;
 
 	// daemonCore reaper id for PRE/POST script reaper function
 	int _scriptReaperId;

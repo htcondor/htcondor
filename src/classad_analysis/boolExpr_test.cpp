@@ -21,106 +21,107 @@
 #include "condor_common.h"
 #include "analysis.h"
 
-static bool GetOpName( Operation::OpKind, string & );
-static bool GetTypeName( Value::ValueType, string & );
+static bool GetOpName( classad::Operation::OpKind, std::string & );
+static bool GetTypeName( classad::Value::ValueType, std::string & );
 
 int main( ) {
-	PrettyPrint pp;
-	ClassAdParser parser;
-	string buffer = "";
-	string condString = "( ( MemoryRequirements < 234 ) || ( MemoryRequirements =?= undefined ) )";
+	classad::PrettyPrint pp;
+	classad::ClassAdParser parser;
+	std::string buffer = "";
+	std::string condString = "( ( MemoryRequirements < 234 ) || ( MemoryRequirements =?= undefined ) )";
 
-	cout << "-------------" << endl;
-	cout << "BOOLEXPR TEST" << endl;
-	cout << "-------------" << endl;
-	cout << "condString = " << condString << endl;
-	cout << endl;
+	std::cout << "-------------" << std::endl;
+	std::cout << "BOOLEXPR TEST" << std::endl;
+	std::cout << "-------------" << std::endl;
+	std::cout << "condString = " << condString << std::endl;
+	std::cout << std::endl;
 
 	ExprTree *condTree = NULL;
 	if( !( condTree =  parser.ParseExpression( condString ) ) ) {
-		cerr << "error parsing expression" << endl;
+		std::cerr << "error parsing expression" << std::endl;
 	}
 
 	Condition *cond = new Condition( );
 	if( !( BoolExpr::ExprToCondition( condTree, cond ) ) ) {
-		cerr << "error with ExprToCondition" << endl;
+		std::cerr << "error with ExprToCondition" << std::endl;
 	}
 
 	cond->ToString( buffer );
-	cout << "cond.ToString( ) = " << buffer << endl;
+	std::cout << "cond.ToString( ) = " << buffer << std::endl;
 	buffer = "";
-	cout << endl;
+	std::cout << std::endl;
 
-	string attr;
-	Operation::OpKind op1 = Operation::__NO_OP__;
-	Operation::OpKind op2 = Operation::__NO_OP__;
-	Value val1, val2;
-	Value::ValueType type;
+	std::string attr;
+	classad::Operation::OpKind op1 = classad::Operation::__NO_OP__;
+	classad::Operation::OpKind op2 = classad::Operation::__NO_OP__;
+	classad::Value val1, val2;
+	classad::Value::ValueType type;
 
 	cond->GetAttr( attr );
-	cout << "attr = " << attr << endl;
+	std::cout << "attr = " << attr << std::endl;
 
 	cond->GetOp( op1 );
 	GetOpName( op1, buffer );
-	cout << "op1 = " << buffer << endl;
-	cout << "op1 is op number " << (int)op1 << endl;
+	std::cout << "op1 = " << buffer << std::endl;
+	std::cout << "op1 is op number " << (int)op1 << std::endl;
 	buffer = "";
 
 	cond->GetOp2( op2 );
 	GetOpName( op2, buffer );
-	cout << "op2 = " << buffer << endl;
+	std::cout << "op2 = " << buffer << std::endl;
 	buffer = "";
 
 	cond->GetVal( val1 );
 	pp.Unparse( buffer, val1 );
-	cout << "val1 = " << buffer << endl;
+	std::cout << "val1 = " << buffer << std::endl;
 	buffer = "";
 
 	cond->GetVal2( val2 );
 	pp.Unparse( buffer, val2 );
-	cout << "val2 = " << buffer << endl;
+	std::cout << "val2 = " << buffer << std::endl;
 	buffer = "";
 
 	cond->GetType( type );
 	GetTypeName( type, buffer );
-	cout << "type = " << buffer << endl;
+	std::cout << "type = " << buffer << std::endl;
 	buffer = "";
 	
 }
 
 static bool
-GetOpName( Operation::OpKind op, string &result )
+GetOpName( classad::Operation::OpKind op, std::string &result )
 {
 	switch( op ) {
-	case Operation::__NO_OP__: { result = "NO_OP"; return true; }
-	case Operation::LESS_THAN_OP: { result = "<"; return true; }
-	case Operation::LESS_OR_EQUAL_OP: { result = "<="; return true; }
-	case Operation::NOT_EQUAL_OP: { result = "!="; return true; }
-	case Operation::EQUAL_OP: { result = "=="; return true; }
-	case Operation::GREATER_OR_EQUAL_OP: { result = ">="; return true; }
-	case Operation::GREATER_THAN_OP: { result = ">"; return true; }
-	case Operation::IS_OP: { result = "is"; return true; }
-	case Operation::ISNT_OP: { result = "isnt"; return true; }
+	case classad::Operation::__NO_OP__: { result = "NO_OP"; return true; }
+	case classad::Operation::LESS_THAN_OP: { result = "<"; return true; }
+	case classad::Operation::LESS_OR_EQUAL_OP: { result = "<="; return true; }
+	case classad::Operation::NOT_EQUAL_OP: { result = "!="; return true; }
+	case classad::Operation::EQUAL_OP: { result = "=="; return true; }
+	case classad::Operation::GREATER_OR_EQUAL_OP: { result = ">="; return true; }
+	case classad::Operation::GREATER_THAN_OP: { result = ">"; return true; }
+	case classad::Operation::IS_OP: { result = "is"; return true; }
+	case classad::Operation::ISNT_OP: { result = "isnt"; return true; }
 	default: { result = "non-comp"; return true; }
 	}
 }
 	
 static bool
-GetTypeName( Value::ValueType type, string &result )
+GetTypeName( classad::Value::ValueType type, std::string &result )
 {
 	switch( type ) {
-	case Value::NULL_VALUE: { result = "NULL"; return true; }
-	case Value::ERROR_VALUE: { result = "Error"; return true; }
-	case Value::UNDEFINED_VALUE: { result = "Undefined"; return true; }
-	case Value::BOOLEAN_VALUE: { result = "Boolean"; return true; }
-	case Value::INTEGER_VALUE: { result = "Integer"; return true; }
-	case Value::REAL_VALUE: { result = "Real"; return true; }
-	case Value::RELATIVE_TIME_VALUE: { result = "Relative Time"; return true; }
-	case Value::ABSOLUTE_TIME_VALUE: { result = "Absolute Time"; return true; }
-	case Value::STRING_VALUE: { result = "String"; return true; }
-	case Value::CLASSAD_VALUE: { result = "ClassAd"; return true; }
-	case Value::SLIST_VALUE:
-	case Value::LIST_VALUE: { result = "List"; return true; }
+	case classad::Value::NULL_VALUE: { result = "NULL"; return true; }
+	case classad::Value::ERROR_VALUE: { result = "Error"; return true; }
+	case classad::Value::UNDEFINED_VALUE: { result = "Undefined"; return true; }
+	case classad::Value::BOOLEAN_VALUE: { result = "Boolean"; return true; }
+	case classad::Value::INTEGER_VALUE: { result = "Integer"; return true; }
+	case classad::Value::REAL_VALUE: { result = "Real"; return true; }
+	case classad::Value::RELATIVE_TIME_VALUE: { result = "Relative Time"; return true; }
+	case classad::Value::ABSOLUTE_TIME_VALUE: { result = "Absolute Time"; return true; }
+	case classad::Value::STRING_VALUE: { result = "String"; return true; }
+	case classad::Value::SCLASSAD_VALUE:
+	case classad::Value::CLASSAD_VALUE: { result = "ClassAd"; return true; }
+	case classad::Value::SLIST_VALUE:
+	case classad::Value::LIST_VALUE: { result = "List"; return true; }
 	default:  { result = "Unknown"; return true; }
 	}
 }

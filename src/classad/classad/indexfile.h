@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
-#include "classad/classad_stl.h"
+#include "classad/classad_containers.h"
 #include <sys/types.h>
 
 namespace classad {
@@ -56,7 +56,7 @@ class IndexFile {
 	bool UpdateIndex(std::string key, int offset);
 	int First(std::string &key);
 	int Next(std::string &key);
-	std::string GetClassadFromFile(std::string key, int offset);
+	std::string GetClassadFromFile(std::string key, int offset) const;
 	bool  TruncateStorageFile();
 	int  dump_index();
  private:

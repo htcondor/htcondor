@@ -99,6 +99,7 @@ int condor_recvfrom(int sockfd, void* buf, size_t buf_size, int flags,
 	return ret;
 }
 
+static double getnameinfo_slow_limit = 2.0;
 int condor_getnameinfo (const condor_sockaddr& addr,
 		                char * __host, socklen_t __hostlen,
 		                char * __serv, socklen_t __servlen,
@@ -108,7 +109,12 @@ int condor_getnameinfo (const condor_sockaddr& addr,
 	socklen_t len = addr.get_socklen();
 	int ret;
 
+	double begin = _condor_debug_get_time_double();
 	ret = getnameinfo( sa, len, __host, __hostlen, __serv, __servlen, __flags);
+	double timediff = _condor_debug_get_time_double() - begin;
+	if (timediff > getnameinfo_slow_limit) {
+		dprintf(D_ALWAYS, "WARNING: Saw slow DNS query, which may impact entire system: getnameinfo(%s) took %f seconds.\n", addr.to_ip_string().Value(), timediff);
+	}
 	return ret;
 }
 

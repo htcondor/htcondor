@@ -25,6 +25,7 @@
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "docker_proc.h"
+#include "remote_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
@@ -53,8 +54,10 @@
 #include "my_username.h"
 #include <Regex.h>
 #include "starter_util.h"
+#include "condor_random_num.h"
+#include "data_reuse.h"
+#include "authentication.h"
 
-extern "C" int get_random_int();
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
@@ -69,27 +72,31 @@ extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 /* CStarter class implementation */
 
-CStarter::CStarter()
+CStarter::CStarter() : 
+	jic(NULL),
+	m_deferred_job_update(false),
+	job_exit_status(0),
+	jobUniverse(CONDOR_UNIVERSE_VANILLA),
+	Execute(NULL),
+	orig_cwd(NULL),
+	is_gridshell(false),
+#ifdef WIN32
+	has_encrypted_working_dir(false),
+#endif
+	ShuttingDown(FALSE),
+	starter_stdin_fd(-1),
+	starter_stdout_fd(-1),
+	starter_stderr_fd(-1),
+	suspended(false),
+	deferral_tid(-1),
+	pre_script(NULL),
+	post_script(NULL),
+	m_privsep_helper(NULL),
+	m_configured(false),
+	m_job_environment_is_ready(false),
+	m_all_jobs_done(false),
+	m_shutdown_exit_code(STARTER_EXIT_NORMAL)
 {
-	Execute = NULL;
-	orig_cwd = NULL;
-	is_gridshell = false;
-	ShuttingDown = FALSE;
-	jic = NULL;
-	jobUniverse = CONDOR_UNIVERSE_VANILLA;
-	pre_script = NULL;
-	post_script = NULL;
-	starter_stdin_fd = -1;
-	starter_stdout_fd = -1;
-	starter_stderr_fd = -1;
-	deferral_tid = -1;
-	suspended = false;
-	m_privsep_helper = NULL;
-	m_configured = false;
-	m_job_environment_is_ready = false;
-	m_all_jobs_done = false;
-	m_deferred_job_update = false;
-	m_shutdown_exit_code = STARTER_EXIT_NORMAL;
 }
 
 
@@ -276,9 +283,16 @@ CStarter::StarterExit( int code )
 
 void CStarter::FinalCleanup()
 {
-	removeCredentials();
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
+#ifdef WIN32
+	/* If we loaded the user's profile, then we should dump it now */
+	if (m_owner_profile.loaded()) {
+		m_owner_profile.unload ();
+		// TODO: figure out how we can avoid doing this..
+		m_owner_profile.destroy ();
+	}
+#endif
 }
 
 
@@ -299,7 +313,6 @@ CStarter::Config()
 		}
 	}
 	if (!m_configured) {
-		bool ps = privsep_enabled();
 		bool gl = param_boolean("GLEXEC_JOB", false);
 #if !defined(LINUX)
 		dprintf(D_ALWAYS,
@@ -307,20 +320,22 @@ CStarter::Config()
 		            "ignoring\n");
 		gl = false;
 #endif
-		if (ps && gl) {
-			EXCEPT("can't support both "
-			           "PRIVSEP_ENABLED and GLEXEC_JOB");
-		}
-		if (ps) {
-			m_privsep_helper = new CondorPrivSepHelper;
-			ASSERT(m_privsep_helper != NULL);
-		}
-		else if (gl) {
+		if (gl) {
 #if defined(LINUX)
 			m_privsep_helper = new GLExecPrivSepHelper;
 			ASSERT(m_privsep_helper != NULL);
 #endif
 		}
+	}
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, false));
+		}
+		m_reuse_dir->PrintInfo(true);
+	} else {
+		m_reuse_dir.reset();
 	}
 
 		// Tell our JobInfoCommunicator to reconfig, too.
@@ -393,10 +408,10 @@ CStarter::ShutdownGraceful( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownGraceful when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return 0;
 }
 
@@ -404,10 +419,10 @@ CStarter::ShutdownGraceful( void )
  * DC Shutdown Fast Wrapper
  * We notify our JIC that we got a shutdown fast call
  * then invoke ShutdownFast() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
- */ 
+ */
 int
 CStarter::RemoteShutdownFast(int)
 {
@@ -465,10 +480,10 @@ CStarter::ShutdownFast( void )
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 				"Got ShutdownFast when no jobs running.\n");
 		return ( this->allJobsDone() );
-	}	
+	}
 	return ( false );
 }
 
@@ -476,7 +491,7 @@ CStarter::ShutdownFast( void )
  * DC Remove Job Wrapper
  * We notify our JIC that we got a remove call
  * then invoke Remove() which does the real work
- * 
+ *
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
@@ -497,7 +512,7 @@ CStarter::RemoteRemove( int )
 		dprintf( D_FULLDEBUG, "Got Remove when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -570,11 +585,11 @@ CStarter::RemoteHold( int )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
-int 
+int
 CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 {
 		// A Condor daemon on the submit side (e.g. schedd) wishes to
@@ -586,11 +601,11 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		// the job and facilitates the creation of a security session
 		// between the starter and the tool.
 
-	MyString fqu;
+	std::string fqu;
 	getJobOwnerFQUOrDummy(fqu);
-	ASSERT( !fqu.IsEmpty() );
+	ASSERT( !fqu.empty() );
 
-	MyString error_msg;
+	std::string error_msg;
 	ClassAd input;
 	s->decode();
 	if( !getClassAd(s, input) || !s->end_of_message() ) {
@@ -601,11 +616,11 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		// In order to ensure that we are really talking to the schedd
 		// that is managing this job, check that the schedd has provided
 		// the correct secret claim id.
-	MyString job_claim_id;
-	MyString input_claim_id;
+	std::string job_claim_id;
+	std::string input_claim_id;
 	getJobClaimId(job_claim_id);
 	input.LookupString(ATTR_CLAIM_ID,input_claim_id);
-	if( job_claim_id != input_claim_id || job_claim_id.IsEmpty() ) {
+	if( job_claim_id != input_claim_id || job_claim_id.empty() ) {
 		dprintf(D_ALWAYS,
 				"Claim ID provided to createJobOwnerSecSession does not match "
 				"expected value!  Rejecting connection from %s\n",
@@ -616,7 +631,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	char *session_id = Condor_Crypt_Base::randomHexKey();
 	char *session_key = Condor_Crypt_Base::randomHexKey();
 
-	MyString session_info;
+	std::string session_info;
 	input.LookupString(ATTR_SESSION_INFO,session_info);
 
 		// Create an authorization rule so that the job owner can
@@ -643,41 +658,45 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 			READ,
 			session_id,
 			session_key,
-			session_info.Value(),
-			fqu.Value(),
+			session_info.c_str(),
+			AUTH_METHOD_MATCH,
+			fqu.c_str(),
 			NULL,
-			0 );
+			0,
+			nullptr );
 	}
 	if( rc ) {
 			// get the final session parameters that were chosen
 		session_info = "";
+		MyString tmp;
 		rc = daemonCore->getSecMan()->ExportSecSessionInfo(
 			session_id,
-			session_info );
+			tmp );
+		session_info = tmp.Value();
 	}
 
 	ClassAd response;
 	response.Assign(ATTR_VERSION,CondorVersion());
 	if( !rc ) {
-		if( error_msg.IsEmpty() ) {
+		if( error_msg.empty() ) {
 			error_msg = "Failed to create security session.";
 		}
 		response.Assign(ATTR_RESULT,false);
 		response.Assign(ATTR_ERROR_STRING,error_msg);
 		dprintf(D_ALWAYS,
-				"createJobOwnerSecSession failed: %s\n", error_msg.Value());
+				"createJobOwnerSecSession failed: %s\n", error_msg.c_str());
 	}
 	else {
 		// We use a "claim id" string to hold the security session info,
 		// because it is a convenient container.
 
-		ClaimIdParser claimid(session_id,session_info.Value(),session_key);
+		ClaimIdParser claimid(session_id,session_info.c_str(),session_key);
 		response.Assign(ATTR_RESULT,true);
 		response.Assign(ATTR_CLAIM_ID,claimid.claimId());
 		response.Assign(ATTR_STARTER_IP_ADDR,daemonCore->publicNetworkIpAddr());
 
 		dprintf(D_FULLDEBUG,"Created security session for job owner (%s).\n",
-				fqu.Value());
+				fqu.c_str());
 	}
 
 	if( !putClassAd(s, response) || !s->end_of_message() ) {
@@ -694,14 +713,14 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 int
 CStarter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char const *fmt,va_list args)
 {
-	MyString error_msg;
-	error_msg.vformatstr( fmt, args );
+	std::string error_msg;
+	vformatstr( error_msg, fmt, args );
 
 		// old classads cannot handle a string ending in a double quote
 		// followed by a newline, so strip off any trailing newline
-	error_msg.trim();
+	trim(error_msg);
 
-	dprintf(D_ALWAYS,"%s failed: %s\n", prefix.c_str(), error_msg.Value());
+	dprintf(D_ALWAYS,"%s failed: %s\n", prefix.c_str(), error_msg.c_str());
 
 	ClassAd response;
 	response.Assign(ATTR_RESULT,false);
@@ -785,7 +804,7 @@ static bool extract_delimited_data_as_base64(
 	int input_len,
 	char const *begin_marker,
 	char const *end_marker,
-	MyString &output_buffer,
+	std::string &output_buffer,
 	MyString *error_msg)
 {
 	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
@@ -817,7 +836,7 @@ static bool extract_delimited_data(
 	int input_len,
 	char const *begin_marker,
 	char const *end_marker,
-	MyString &output_buffer,
+	std::string &output_buffer,
 	MyString *error_msg)
 {
 	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
@@ -837,7 +856,7 @@ static bool extract_delimited_data(
 		}
 		return false;
 	}
-	output_buffer.formatstr("%.*s",end-start,input_buffer+start);
+	formatstr(output_buffer,"%.*s",end-start,input_buffer+start);
 	return true;
 }
 
@@ -850,7 +869,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	MyString error_msg;
 	ReliSock *s = (ReliSock*)sock;
 	char const *fqu = s->getFullyQualifiedUser();
-	MyString job_owner;
+	std::string job_owner;
 	getJobOwnerFQUOrDummy(job_owner);
 	if( !fqu || job_owner != fqu )
 	{
@@ -858,15 +877,15 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		return false;
 	}
 
-	compat_classad::ClassAd input;
+	ClassAd input;
 	s->decode();
 	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS, "Failed to read request for peeking at logs.\n");
 		return false;
 	}
 
-	compat_classad::ClassAd *jobad = NULL;
-	compat_classad::ClassAd *machinead = NULL;
+	ClassAd *jobad = NULL;
+	ClassAd *machinead = NULL;
         if( jic )
 	{
                 jobad = jic->jobClassAd();
@@ -879,25 +898,25 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 
 	if( !jic || !jobad ) {
-		return PeekRetry(s, "Rejecting request, because job not yet initialized.");
+		return PeekRetry(s, "Retrying request, because job not yet initialized.");
 	}
 
 	if( !m_job_environment_is_ready ) {
 		// This can happen if file transfer is still in progress.
-		return PeekRetry(s, "Rejecting request, because the job execution environment is not yet ready.");
+		return PeekRetry(s, "Retrying request, because the job execution environment is not yet ready.");
 	}
 	if( m_all_jobs_done ) {
 		return PeekFailed(s, "Rejecting request, because the job is finished.");
 	}
  
 	if( !jic->userPrivInitialized() ) {
-		return PeekRetry(s, "Rejecting request, because job execution account not yet established.");
+		return PeekRetry(s, "Retrying request, because job execution account not yet established.");
 	}
 
 	ssize_t max_xfer = -1;
 	input.EvaluateAttrInt(ATTR_MAX_TRANSFER_BYTES, max_xfer);
 
-	const char *jic_iwd = GetWorkingDir();
+	const char *jic_iwd = GetWorkingDir(0);
 	if (!jic_iwd) return PeekFailed(s, "Unknown job remote IWD.");
 	std::string iwd = jic_iwd;
 	std::vector<char> real_iwd; real_iwd.reserve(MAXPATHLEN+1);
@@ -1107,7 +1126,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		}
 		if (offset > 0 && size < static_cast<size_t>(offset))
 		{
-			offset = size;
+			offset = (int)size;
 			*it2 = offset;
 			classad::Value value; value.SetIntegerValue(*it2);
 			off_expr_list[idx] = classad::Literal::MakeLiteral(value);
@@ -1158,7 +1177,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 	}
 
-	compat_classad::ClassAd reply;
+	ClassAd reply;
 	reply.InsertAttr(ATTR_RESULT, true);
 	classad::ExprTree *list = classad::ExprList::MakeExprList(file_expr_list);
 	if (!reply.Insert("TransferFiles", list))
@@ -1223,7 +1242,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	MyString error_msg;
 	Sock *sock = (Sock*)s;
 	char const *fqu = sock->getFullyQualifiedUser();
-	MyString job_owner;
+	std::string job_owner;
 	getJobOwnerFQUOrDummy(job_owner);
 	if( !fqu || job_owner != fqu ) {
 		dprintf(D_ALWAYS,"Unauthorized attempt to start sshd by '%s'\n",
@@ -1255,12 +1274,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	}
 
 	if( !jic || !jobad ) {
-		return SSHDRetry(s,"Rejecting request, because job not yet initialized.");
+		return SSHDRetry(s,"Retrying request, because job not yet initialized.");
 	}
 	if( !m_job_environment_is_ready ) {
 			// This can happen if file transfer is still in progress.
 			// At this stage, the sandbox might not even be owned by the user.
-		return SSHDRetry(s,"Rejecting request, because the job execution environment is not yet ready.");
+		return SSHDRetry(s,"Retrying request, because the job execution environment is not yet ready.");
 	}
 	if( m_all_jobs_done ) {
 		return SSHDFailed(s,"Rejecting request, because the job is finished.");
@@ -1272,14 +1291,14 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		return SSHDRetry(s,"This slot is currently suspended.");
 	}
 
-	MyString preferred_shells;
+	std::string preferred_shells;
 	input.LookupString(ATTR_SHELL,preferred_shells);
 
-	MyString slot_name;
+	std::string slot_name;
 	input.LookupString(ATTR_NAME,slot_name);
 
 	if( !jic->userPrivInitialized() ) {
-		return SSHDRetry(s,"Rejecting request, because job execution account not yet established.");
+		return SSHDRetry(s,"Retrying request, because job execution account not yet established.");
 	}
 
 	MyString libexec;
@@ -1327,9 +1346,9 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 						  error_msg.Value());
 	}
 
-	MyString client_keygen_args;
+	std::string client_keygen_args;
 	input.LookupString(ATTR_SSH_KEYGEN_ARGS,client_keygen_args);
-	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.Value(),&error_msg) ) {
+	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.c_str(),&error_msg) ) {
 		return SSHDFailed(s,
 						  "Failed to produce ssh-keygen arg list: %s",
 						  error_msg.Value());
@@ -1363,8 +1382,8 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			s,"Failed to get job environment: %s",error_msg.Value());
 	}
 
-	if( !slot_name.IsEmpty() ) {
-		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
+	if( !slot_name.empty() ) {
+		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.c_str());
 	}
 
     int setup_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
@@ -1372,10 +1391,10 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
         setup_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
     }
 
-	if( !preferred_shells.IsEmpty() ) {
+	if( !preferred_shells.empty() ) {
 		dprintf(D_FULLDEBUG,
-				"Checking preferred shells: %s\n",preferred_shells.Value());
-		StringList shells(preferred_shells.Value(),",");
+				"Checking preferred shells: %s\n",preferred_shells.c_str());
+		StringList shells(preferred_shells.c_str(),",");
 		shells.rewind();
 		char *shell;
 		while( (shell=shells.next()) ) {
@@ -1389,7 +1408,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	ArgList setup_args;
 	setup_args.AppendArg(ssh_to_job_sshd_setup.Value());
-	setup_args.AppendArg(GetWorkingDir());
+	setup_args.AppendArg(GetWorkingDir(0));
 	setup_args.AppendArg(ssh_to_job_shell_setup.Value());
 	setup_args.AppendArg(sshd_config_template.Value());
 	setup_args.AppendArg(ssh_keygen_cmd.Value());
@@ -1404,7 +1423,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			ssh_to_job_sshd_setup.Value(),
 			setup_args,
 			setup_env,
-			GetWorkingDir(),
+			GetWorkingDir(0),
 			setup_std_fds,
 			NULL,
 			0,
@@ -1422,7 +1441,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			FALSE,
 			FALSE,
 			&setup_env,
-			GetWorkingDir(),
+			GetWorkingDir(0),
 			NULL,
 			NULL,
 			setup_std_fds,
@@ -1473,7 +1492,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// from the pipe to sshd_setup.
 
 	bool rc = true;
-	MyString session_dir;
+	std::string session_dir;
 	if( rc ) {
 		rc = extract_delimited_data(
 			setup_output,
@@ -1484,7 +1503,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			&error_msg);
 	}
 
-	MyString sshd_user;
+	std::string sshd_user;
 	if( rc ) {
 		rc = extract_delimited_data(
 			setup_output,
@@ -1495,7 +1514,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			&error_msg);
 	}
 
-	MyString public_host_key;
+	std::string public_host_key;
 	if( rc ) {
 		rc = extract_delimited_data_as_base64(
 			setup_output,
@@ -1506,7 +1525,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			&error_msg);
 	}
 
-	MyString private_client_key;
+	std::string private_client_key;
 	if( rc ) {
 		rc = extract_delimited_data_as_base64(
 			setup_output,
@@ -1526,17 +1545,17 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			error_msg.Value());
 	}
 
-	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.Value());
+	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.c_str());
 
 	MyString sshd_config_file;
-	sshd_config_file.formatstr("%s%csshd_config",session_dir.Value(),DIR_DELIM_CHAR);
+	sshd_config_file.formatstr("%s%csshd_config",session_dir.c_str(),DIR_DELIM_CHAR);
 
 
 
-	MyString sshd;
+	std::string sshd;
 	param(sshd,"SSH_TO_JOB_SSHD","/usr/sbin/sshd");
-	if( access(sshd.Value(),X_OK)!=0 ) {
-		return SSHDFailed(s,"Failed, because sshd not correctly configured (SSH_TO_JOB_SSHD=%s): %s.",sshd.Value(),strerror(errno));
+	if( access(sshd.c_str(),X_OK)!=0 ) {
+		return SSHDFailed(s,"Failed, because sshd not correctly configured (SSH_TO_JOB_SSHD=%s): %s.",sshd.c_str(),strerror(errno));
 	}
 
 	ArgList sshd_arglist;
@@ -1580,7 +1599,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 
 	ClassAd *sshd_ad = new ClassAd(*jobad);
-	sshd_ad->Assign(ATTR_JOB_CMD,sshd.Value());
+	sshd_ad->Assign(ATTR_JOB_CMD,sshd);
 	CondorVersionInfo ver_info;
 	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {
 		return SSHDFailed(s,
@@ -1591,11 +1610,27 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// matter what we pass here.  Instead, we depend on sshd_shell_init
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
+
+		// Use LD_PRELOAD to force an implementation of getpwnam
+		// into the process that returns a valid shell
+#ifdef LINUX
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
+		std::string lib;
+		param(lib, "LIB");
+		std::string getpwnampath = lib + "/libgetpwnam.so";
+		if (access(getpwnampath.c_str(), F_OK) == 0) {
+			dprintf(D_ALWAYS, "Setting LD_PRELOAD=%s for sshd\n", getpwnampath.c_str());
+			setup_env.SetEnv("LD_PRELOAD", getpwnampath.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
+		}
+	}
 	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.Value());
 	}
+#endif
 
 
 
@@ -1605,8 +1640,8 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	ClassAd response;
 	response.Assign(ATTR_RESULT,true);
 	response.Assign(ATTR_REMOTE_USER,sshd_user);
-	response.Assign(ATTR_SSH_PUBLIC_SERVER_KEY,public_host_key.Value());
-	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
+	response.Assign(ATTR_SSH_PUBLIC_SERVER_KEY,public_host_key);
+	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key);
 
 	s->encode();
 	if( !putClassAd(s, response) || !s->end_of_message() ) {
@@ -1618,7 +1653,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	MyString sshd_log_fname;
 	sshd_log_fname.formatstr(
-		"%s%c%s",session_dir.Value(),DIR_DELIM_CHAR,"sshd.log");
+		"%s%c%s",session_dir.c_str(),DIR_DELIM_CHAR,"sshd.log");
 
 
 	int std[3];
@@ -1631,7 +1666,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	std_fname[2] = sshd_log_fname.Value();
 
 
-	SSHDProc *proc = new SSHDProc(sshd_ad, true);
+	SSHDProc *proc = new SSHDProc(sshd_ad, session_dir, true);
 	if( !proc ) {
 		dprintf(D_ALWAYS,"Failed to create SSHDProc.\n");
 		return FALSE;
@@ -1706,7 +1741,7 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		this->allJobsDone();
 		return ( true );
-	}	
+	}
 	return ( false );
 }
 
@@ -1749,6 +1784,43 @@ CStarter::Hold( void )
 	return ( !jobRunning );
 }
 
+#ifdef WIN32
+bool CStarter::loadUserRegistry(const ClassAd * JobAd)
+{
+	m_owner_profile.update ();
+	MyString username(m_owner_profile.username());
+
+	/*************************************************************
+	NOTE: We currently *ONLY* support loading slot-user profiles.
+	This limitation will be addressed shortly, by allowing regular
+	users to load their registry hive - Ben [2008-09-31]
+	**************************************************************/
+	bool run_as_owner = false;
+	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+	if (run_as_owner) {
+		return true;
+	}
+
+	bool load_profile = has_encrypted_working_dir;
+	if ( ! load_profile) {
+		// If we don't *need* to load the user registry let the job decide that it wants to
+		JobAd->LookupBool(ATTR_JOB_LOAD_PROFILE, load_profile);
+	}
+
+	// load the slot user registry if it is wanted or needed. This can take about 30 seconds to load
+	if (load_profile) {
+		dprintf(D_FULLDEBUG, "Loading registry hives for %s\n", username.Value());
+		if ( ! m_owner_profile.load()) {
+			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n", username.Value());
+			return false;
+		} else {
+			dprintf(D_ALWAYS, "Loaded Registry hives for %s\n", username.Value());
+		}
+	}
+
+	return true;
+}
+#endif
 
 bool
 CStarter::createTempExecuteDir( void )
@@ -1798,32 +1870,23 @@ CStarter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
-	if (cpsh != NULL) {
-		// the privsep switchboard now ALWAYS creates directories with
-		// permissions 0700.
-		cpsh->initialize_sandbox(WorkingDir.Value());
-		WriteAdFiles();
-	} else {
-		// we can only get here if we are not using *CONDOR* PrivSep.  but we
-		// might be using glexec.  glexec relies on being able to read the
-		// contents of the execute directory as a non-condor user, so in that
-		// case, use 0755.  for all other cases, use the more-restrictive 0700.
+	// we might be using glexec.  glexec relies on being able to read the
+	// contents of the execute directory as a non-condor user, so in that
+	// case, use 0755.  for all other cases, use the more-restrictive 0700.
 
-		int dir_perms = 0700;
+	int dir_perms = 0700;
 
-		// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
-		// defines permissions on execute directory (subject to umask)
-		char *who = param("JOB_EXECDIR_PERMISSIONS");
-		if(who != NULL)	{
-			if(!strcasecmp(who, "user"))
-				dir_perms = 0700;
-			else if(!strcasecmp(who, "group"))
-				dir_perms = 0750;
-			else if(!strcasecmp(who, "world"))
-				dir_perms = 0755;
-			free(who);
-		}
+	// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
+	// defines permissions on execute directory (subject to umask)
+	char *who = param("JOB_EXECDIR_PERMISSIONS");
+	if(who != NULL)	{
+		if(!strcasecmp(who, "user"))
+			dir_perms = 0700;
+		else if(!strcasecmp(who, "group"))
+			dir_perms = 0750;
+		else if(!strcasecmp(who, "world"))
+			dir_perms = 0755;
+		free(who);
 
 #if defined(LINUX)
 		if(glexecPrivSepHelper()) {
@@ -1838,8 +1901,8 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-		WriteAdFiles();
 #if !defined(WIN32)
+		WriteAdFiles();
 		if (use_chown) {
 			priv_state p = set_root_priv();
 			if (chown(WorkingDir.Value(),
@@ -1873,15 +1936,14 @@ CStarter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-	}
 	
-	// if the admin or the user wants the execute directory encrypted,
-	// go ahead and set that up now too
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
-	if (!encrypt_execdir && jic && jic->jobClassAd()) {
-		jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
+		// if the admin or the user wants the execute directory encrypted,
+		// go ahead and set that up now too
+		bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+		if (!encrypt_execdir && jic && jic->jobClassAd()) {
+			jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+		}
+		if (encrypt_execdir) {
 		
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(
@@ -1913,24 +1975,34 @@ CStarter::createTempExecuteDir( void )
 				size_t cch = WorkingDir.Length()+1;
 				wchar_t *WorkingDir_w = new wchar_t[cch];
 				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.Value());
+
 				EncryptionDisable(WorkingDir_w, FALSE);
-				delete[] WorkingDir_w;
 				
 				if ( EncryptFile(WorkingDir.Value()) == 0 ) {
-					dprintf(D_ALWAYS, "Could not encrypt execute directory "
-							"(err=%li)\n", GetLastError());
+					dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", GetLastError());
+				} else {
+					has_encrypted_working_dir = true;
+					dprintf(D_ALWAYS, "Encrypting execute directory \"%s\" to user %s\n", WorkingDir.Value(), nobody_login);
 				}
 
+				delete[] WorkingDir_w;
 				FreeLibrary(advapi); // don't leak the dll library handle
 
 			} else {
 				// tell the user it didn't work out
-				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, "
-						"but the Encryption" " functions are unavailable!");
+				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, but the Encryption functions are unavailable!");
 			}
 
-	} // ENCRYPT_EXECUTE_DIRECTORY is True
-	
+		} // ENCRYPT_EXECUTE_DIRECTORY is True
+	}
+
+	// We might need to load registry hives for encrypted execute dir to work
+	// so give the jic a chance to do that now. Also if the job has load_profile = true
+	// this is where we honor that.  Note that a registry create/load can take multiple seconds
+	loadUserRegistry(jic->jobClassAd());
+
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
 
 #endif /* WIN32 */
 
@@ -1967,14 +2039,14 @@ CStarter::jobEnvironmentReady( void )
 		//
 	GLExecPrivSepHelper* gpsh = glexecPrivSepHelper();
 	if (gpsh != NULL) {
-		MyString proxy_path;
+		std::string proxy_path;
 		if (!jic->jobClassAd()->LookupString(ATTR_X509_USER_PROXY,
 		                                     proxy_path))
 		{
 			EXCEPT("configuration specifies use of glexec, "
 			           "but job has no proxy");
 		}
-		const char* proxy_name = condor_basename(proxy_path.Value());
+		const char* proxy_name = condor_basename(proxy_path.c_str());
 		gpsh->initialize(proxy_name, WorkingDir.Value());
 	}
 #endif
@@ -2071,7 +2143,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 		 	// Make sure that the expression evaluated and we 
 		 	// got a positive integer. Otherwise we'll have to kick out
 		 	//
-		if ( ! jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime ) ) {
+		if ( ! jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime ) ) {
 			error.formatstr( "Invalid deferred execution time for Job %d.%d.",
 							this->jic->jobCluster(),
 							this->jic->jobProc() );
@@ -2116,8 +2188,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 				// So if the deferralTime is less than the currenTime,
 				// but within this window, we'll still run the job
 				//
-			if ( jobAd->LookupExpr( ATTR_DEFERRAL_WINDOW ) != NULL &&
-				 jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow ) ) {
+			if ( jobAd->LookupInteger( ATTR_DEFERRAL_WINDOW, deferralWindow ) ) {
 				dprintf( D_FULLDEBUG, "Job %d.%d has a deferral window of "
 				                      "%d seconds\n", 
 							this->jic->jobCluster(),
@@ -2222,7 +2293,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 		this->allJobsDone();
 		ret = false;
 	}
-	
+
 	return ( ret );
 }
 
@@ -2287,11 +2358,11 @@ CStarter::SpawnPreScript( void )
 		// first, see if we're going to need any pre and post scripts
 	ClassAd* jobAd = jic->jobClassAd();
 	char* tmp = NULL;
-	MyString attr;
+	std::string attr;
 
 	attr = "Pre";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		pre_script = new ScriptProc( jobAd, "Pre" );
@@ -2299,7 +2370,7 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Post";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		post_script = new ScriptProc( jobAd, "Post" );
@@ -2329,18 +2400,18 @@ CStarter::SpawnPreScript( void )
 	}
 }
 
-void CStarter::getJobOwnerFQUOrDummy(MyString &result)
+void CStarter::getJobOwnerFQUOrDummy(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
 		jobAd->LookupString(ATTR_USER,result);
 	}
-	if( result.IsEmpty() ) {
+	if( result.empty() ) {
 		result = "job-owner@submit-domain";
 	}
 }
 
-bool CStarter::getJobClaimId(MyString &result)
+bool CStarter::getJobClaimId(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -2361,7 +2432,7 @@ CStarter::SpawnJob( void )
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
 	ClassAd* jobAd = jic->jobClassAd();
-	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) < 1 ) {
+	if ( ! jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) || jobUniverse < 1 ) {
 		dprintf( D_ALWAYS, 
 				 "Job doesn't specify universe, assuming VANILLA\n" ); 
 	}
@@ -2374,11 +2445,15 @@ CStarter::SpawnJob( void )
 	{
 		case CONDOR_UNIVERSE_LOCAL:
 		case CONDOR_UNIVERSE_VANILLA: {
-			int wantDocker = 0;
+			bool wantDocker = false;
 			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+			std::string remote_cmd;
+			bool wantRemote = param(remote_cmd, "STARTER_REMOTE_CMD");
 
 			if( wantDocker ) {
 				job = new DockerProc( jobAd );
+			} else if ( wantRemote ) {
+				job = new RemoteProc( jobAd );
 			} else {
 				job = new VanillaProc( jobAd );
 			}
@@ -2390,9 +2465,9 @@ CStarter::SpawnJob( void )
 			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
-			int is_master = FALSE;
-			if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
-				is_master = FALSE;
+			bool is_master = false;
+			if ( ! jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master )) {
+				is_master = false;
 			}
 			if ( is_master ) {
 				dprintf ( D_FULLDEBUG, "Starting a MPIMasterProc\n" );
@@ -2670,7 +2745,7 @@ CStarter::PeriodicCkpt( void )
 {
 	dprintf(D_ALWAYS, "Periodic Checkpointing all jobs.\n");
 
-	int wantCheckpoint = 0;
+	bool wantCheckpoint = false;
 	if( jobUniverse == CONDOR_UNIVERSE_VM ) {
 		wantCheckpoint = 1;
 	} else if( jobUniverse == CONDOR_UNIVERSE_VANILLA ) {
@@ -2684,34 +2759,7 @@ CStarter::PeriodicCkpt( void )
 	while ((job = m_job_list.Next()) != NULL) {
 		if( job->Ckpt() ) {
 
-			CondorPrivSepHelper* cpsh = condorPrivSepHelper();
-			if (cpsh != NULL) {
-				PrivSepError err;
-				if( !cpsh->chown_sandbox_to_condor(err) ) {
-					jic->notifyStarterError(
-						err.holdReason(),
-						false,
-						err.holdCode(),
-						err.holdSubCode());
-					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint\n");
-					return false;
-				}
-			}
-
 			bool transfer_ok = jic->uploadWorkingFiles();
-
-			if (cpsh != NULL) {
-				PrivSepError err;
-				if( !cpsh->chown_sandbox_to_user(err) ) {
-					jic->notifyStarterError(
-						err.holdReason(),
-						true,
-						err.holdCode(),
-						err.holdSubCode());
-					EXCEPT("failed to restore sandbox to user ownership after checkpoint");
-					return false;
-				}
-			}
 
 			// checkpoint files are successfully generated
 			// We need to upload those files by using condor file transfer.
@@ -2738,6 +2786,15 @@ CStarter::PeriodicCkpt( void )
 	}
 
 	return true;
+}
+
+void copyProcList( List<UserProc> & from, List<UserProc> & to ) {
+	to.Clear();
+	from.Rewind();
+	UserProc * job = NULL;
+	while( (job = from.Next()) != NULL ) {
+		to.Append( job );
+	}
 }
 
 
@@ -2827,16 +2884,36 @@ CStarter::Reaper(int pid, int exit_status)
 		return TRUE;
 	}
 
+	//
+	// The ToE tag code, via CStarter::publishUpdateAd() -- and in the
+	// future, maybe other features via and/or means in the future --
+	// calls Rewind() on m_job_list as well.  Rather than fixing only
+	// the ToE tag code and leaving this landmine, copy m_job_list
+	// before calling any of the JobReaper()s.  Because of this problem,
+	// we know that none of the other existing JobReaper() methods
+	// look at m_job_list or m_reaped_job_list, since they'd have the
+	// same problem, so it's safe to save updating those for the end.
+	//
 
-	m_job_list.Rewind();
-	while ((job = m_job_list.Next()) != NULL) {
+	// Is there a good reason to have neither assignment nor copy ctor?
+	List<UserProc> stable_job_list;
+	List<UserProc> stable_reaped_job_list;
+
+	copyProcList( m_job_list, stable_job_list );
+	copyProcList( m_reaped_job_list, stable_reaped_job_list );
+
+	stable_job_list.Rewind();
+	while ((job = stable_job_list.Next()) != NULL) {
 		all_jobs++;
 		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
 			handled_jobs++;
-			m_job_list.DeleteCurrent();
-			m_reaped_job_list.Append(job);
+			stable_job_list.DeleteCurrent();
+			stable_reaped_job_list.Append(job);
 		}
 	}
+
+	copyProcList( stable_reaped_job_list, m_reaped_job_list );
+	copyProcList( stable_job_list, m_job_list );
 
 	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
 			 all_jobs, handled_jobs, ShuttingDown );
@@ -2902,7 +2979,7 @@ CStarter::allJobsDone( void )
 			// JIC::allJobsDone returned true: we're ready to move on.
 		bRet=transferOutput();
 	}
-	
+
 	if (m_deferred_job_update){
 		jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, 0 );
 	}
@@ -2917,6 +2994,14 @@ CStarter::transferOutput( void )
 {
 	UserProc *job;
 	bool transient_failure = false;
+
+	if( recorded_job_exit_status ) {
+		bool exitStatusSpecified = false;
+		int desiredExitStatus = computeDesiredExitStatus( "", this->jic->jobClassAd(), & exitStatusSpecified );
+		if( exitStatusSpecified && job_exit_status != desiredExitStatus ) {
+			jic->setJobFailed();
+		}
+	}
 
 	if (jic->transferOutput(transient_failure) == false) {
 
@@ -3024,13 +3109,6 @@ CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 		found_one = true;
 	}
 	
-	// Update the state.
-	if (m_deferred_job_update)
-	{
-		MyString buf;
-		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
-	}
-	
 	UserProc *job;
 	proc_list->Rewind();
 	while ((job = proc_list->Next()) != NULL) {
@@ -3131,6 +3209,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
+		// put the value of BIN into the environment; used by sshd to find
+		// condor_config_val. also helpful to find condor_chirp.
+	std::string condorBinDir;
+	param(condorBinDir,"BIN");
+	if (!condorBinDir.empty()) {
+		proc_env->SetEnv("_CONDOR_BIN",condorBinDir.c_str());
+	}
+
 		// put in environment variables specific to the type (universe) of job
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
@@ -3164,13 +3250,13 @@ CStarter::PublishToEnv( Env* proc_env )
 		// variable with the same value.
 	ClassAd * mad = jic->machClassAd();
 	if (mad) {
-		MyString restags;
+		std::string restags;
 		if (mad->LookupString(ATTR_MACHINE_RESOURCES, restags)) {
 			StringList tags(restags.c_str());
 			tags.rewind();
 			const char *tag;
 			while ((tag = tags.next())) {
-				MyString attr("Assigned"); attr += tag;
+				std::string attr("Assigned"); attr += tag;
 
 				// we need to publish Assigned resources in the environment. the rules are 
 				// a bit wierd here. we publish if there are any assigned, we also always
@@ -3180,8 +3266,8 @@ CStarter::PublishToEnv( Env* proc_env )
 				MyString param_name("ENVIRONMENT_FOR_"); param_name += attr;
 				param(env_name, param_name.c_str());
 
-				MyString assigned;
-				bool is_assigned = mad->LookupString(attr.c_str(), assigned);
+				std::string assigned;
+				bool is_assigned = mad->LookupString(attr, assigned);
 				if (is_assigned || (mad->Lookup(tag) &&  ! env_name.empty())) {
 
 					if ( ! is_assigned) {
@@ -3201,18 +3287,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
-	if(param_boolean("CREDD_OAUTH_MODE", false)) {
-		const char* sandbox_cred_dir = jic->getCredPath();
-		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
-	} else {
-		// kerberos credential cache (in sandbox)
-		const char* krb5ccname = jic->getCredPath();
-		if( krb5ccname && (krb5ccname[0] != '\0') ) {
-			// using env_name as env_value
-			env_name = "FILE:";
-			env_name += krb5ccname;
-			proc_env->SetEnv( "KRB5CCNAME", env_name );
-		}
+	// put OAuth creds directory into the environment
+	if (jic->getCredPath()) {
+		proc_env->SetEnv("_CONDOR_CREDS", jic->getCredPath());
+	}
+
+	// kerberos credential cache (in sandbox)
+	const char* krb5ccname = jic->getKrb5CCName();
+	if( krb5ccname && (krb5ccname[0] != '\0') ) {
+		// using env_name as env_value
+		env_name = "FILE:";
+		env_name += krb5ccname;
+		proc_env->SetEnv( "KRB5CCNAME", env_name );
 	}
 
 		// path to the output ad, if any
@@ -3226,7 +3312,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// job scratch space
 	env_name = base.Value();
 	env_name += "SCRATCH_DIR";
-	proc_env->SetEnv( env_name.Value(), GetWorkingDir() );
+	proc_env->SetEnv( env_name.Value(), GetWorkingDir(true) );
 
 		// slot identifier
 	env_name = base.Value();
@@ -3240,26 +3326,26 @@ CStarter::PublishToEnv( Env* proc_env )
 		// port regulation stuff.  assume the outgoing port range.
 	int low, high;
 	if (get_port_range (TRUE, &low, &high) == TRUE) {
-		MyString tmp_port_number;
+		std::string tmp_port_number;
 
-		tmp_port_number = IntToStr( high );
+		tmp_port_number = std::to_string( high );
 		env_name = base.Value();
 		env_name += "HIGHPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
 
-		tmp_port_number = IntToStr( low );
+		tmp_port_number = std::to_string( low );
 		env_name = base.Value();
 		env_name += "LOWPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
     }
 
 		// set environment variables for temporary directories
 		// Condor will clean these up on job exits, and there's
 		// no chance of file collisions with other running slots
 
-	proc_env->SetEnv("TMPDIR", GetWorkingDir());
-	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
-	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
+	proc_env->SetEnv("TMPDIR", GetWorkingDir(true));
+	proc_env->SetEnv("TEMP", GetWorkingDir(true)); // Windows
+	proc_env->SetEnv("TMP", GetWorkingDir(true)); // Windows
 
 		// Programs built with OpenMP (including matlab, gnu sort
 		// and others) look at OMP_NUM_THREADS
@@ -3267,19 +3353,29 @@ CStarter::PublishToEnv( Env* proc_env )
 		// Cpus, to encourage jobs to stay within the number
 		// of requested cpu cores.  But trust the user, if it has
 		// already been set in the job.
+		// In addition, besides just OMP_NUM_THREADS, set an environment
+		// variable for each var name listed in STARTER_NUM_THREADS_ENV_VARS.
 
 	ClassAd * mach = jic->machClassAd();
-	MyString jobNumThreads;
-
-	proc_env->GetEnv("OMP_NUM_THREADS", jobNumThreads);
-	if (mach && (jobNumThreads.Length() == 0)) {
-		int cpus = 0;
-		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
-			if (cpus > 0) {
-				proc_env->SetEnv("OMP_NUM_THREADS", IntToStr( cpus ));
+	int cpus = 0;
+	if (mach) {
+		mach->LookupInteger(ATTR_CPUS, cpus);
+	}
+	char* cpu_vars_param = param("STARTER_NUM_THREADS_ENV_VARS");
+	if (cpus > 0 && cpu_vars_param) {
+		MyString jobNumThreads;
+		StringList cpu_vars_list(cpu_vars_param);
+		cpu_vars_list.remove("");
+		cpu_vars_list.rewind();
+		char *var = NULL;
+		while ((var = cpu_vars_list.next())) {
+			proc_env->GetEnv(var, jobNumThreads);
+			if (jobNumThreads.Length() == 0) {
+				proc_env->SetEnv(var, std::to_string(cpus));
 			}
 		}
 	}
+	free(cpu_vars_param);
 
 		// If using a job wrapper, set environment to location of
 		// wrapper failure file.
@@ -3289,7 +3385,7 @@ CStarter::PublishToEnv( Env* proc_env )
 			// setenv only if wrapper actually exists
 		if ( access(wrapper,X_OK) >= 0 ) {
 			MyString wrapper_err;
-			wrapper_err.formatstr("%s%c%s", GetWorkingDir(),
+			wrapper_err.formatstr("%s%c%s", GetWorkingDir(0),
 						DIR_DELIM_CHAR,
 						JOB_WRAPPER_FAILURE_FILE);
 			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
@@ -3302,7 +3398,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// so they will also appear in ssh_to_job environments.
 
 	MyString path;
-	path.formatstr("%s%c%s", GetWorkingDir(),
+	path.formatstr("%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
@@ -3315,7 +3411,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
 	}
 
-	path.formatstr("%s%c%s", GetWorkingDir(),
+	path.formatstr("%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
@@ -3397,8 +3493,8 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			break;
 		}
 
-		// HACK! special magic for CUDA_VISIBLE_DEVICES
-		if (env_name == "CUDA_VISIBLE_DEVICES") {
+		// HACK! special magic for CUDA_VISIBLE_DEVICES with no pattern supplied
+		if (env_name == "CUDA_VISIBLE_DEVICES" && pat.empty()) {
 			// strip everthing but digits and , from the assigned gpus value
 			for (const char * p = assigned; *p; ++p) {
 				if (isdigit(*p) || *p == ',') rhs += *p;
@@ -3585,7 +3681,7 @@ CStarter::closeSavedStderr( void )
 
 
 int
-CStarter::classadCommand( int, Stream* s )
+CStarter::classadCommand( int, Stream* s ) const
 {
 	ClassAd ad;
 	ReliSock* rsock = (ReliSock*)s;
@@ -3627,45 +3723,6 @@ CStarter::updateX509Proxy( int cmd, Stream* s )
 }
 
 
-
-
-
-bool
-CStarter::removeCredentials( void )
-{
-	if (!param_boolean("CREDD_OAUTH_MODE", false)) {
-		// nothing to do...  success?
-		return true;
-	}
-
-	MyString cred_dir_name;
-	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-		dprintf(D_ALWAYS, "CREDMON: removeCredentials doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return false;
-	}
-
-	Directory cred_dir( cred_dir_name.Value(), PRIV_ROOT );
-
-	MyString pid_name;
-	pid_name = IntToStr( daemonCore->getpid() );
-	if ( cred_dir.Find_Named_Entry( pid_name.Value() ) ) {
-		dprintf( D_FULLDEBUG, "CREDMON: Removing %s%c%s\n", cred_dir_name.Value(), DIR_DELIM_CHAR, pid_name.Value() );
-		if (!cred_dir.Remove_Current_File()) {
-			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.Value(), DIR_DELIM_CHAR, pid_name.Value() );
-			return false;
-		}
-	} else {
-		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", pid_name.Value(), cred_dir_name.Value());
-		return false;
-	}
-
-	// success
-	return true;
-}
-
-
-
-
 bool
 CStarter::removeTempExecuteDir( void )
 {
@@ -3675,21 +3732,7 @@ CStarter::removeTempExecuteDir( void )
 	}
 
 	MyString dir_name = "dir_";
-	dir_name += IntToStr( daemonCore->getpid() );
-
-#if !defined(WIN32)
-	if (condorPrivSepHelper() != NULL) {
-		MyString path_name;
-		path_name.formatstr("%s/%s", Execute, dir_name.Value());
-		if (!privsep_remove_dir(path_name.Value())) {
-			dprintf(D_ALWAYS,
-			        "privsep_remove_dir failed for %s\n",
-			        path_name.Value());
-			return false;
-		}
-		return true;
-	}
-#endif
+	dir_name += std::to_string( daemonCore->getpid() );
 
 #if defined(LINUX)
 	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&
@@ -3771,11 +3814,11 @@ CStarter::exitAfterGlexec( int code )
 #endif
 
 bool
-CStarter::WriteAdFiles()
+CStarter::WriteAdFiles() const
 {
 
 	ClassAd* ad;
-	const char* dir = this->GetWorkingDir();
+	const char* dir = this->GetWorkingDir(0);
 	MyString ad_str, filename;
 	FILE* fp;
 	bool ret_val = true;
@@ -3795,7 +3838,12 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.Value(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3820,7 +3868,12 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			fPrintAd(fp, *ad, true);
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.Value(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
 			fclose(fp);
 		}
 	}
@@ -3858,4 +3911,10 @@ CStarter::WriteAdFiles()
 	}
 
 	return ret_val;
+}
+
+void
+CStarter::RecordJobExitStatus(int status) {
+	recorded_job_exit_status = true;
+	job_exit_status = status;
 }

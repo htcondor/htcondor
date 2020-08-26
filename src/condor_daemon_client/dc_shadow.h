@@ -69,14 +69,25 @@ public:
 		*/
 	bool updateJobInfo( ClassAd* ad, bool insure_update = false );
 
-		/** Get a magic user credential from the shadow that will be neeed
-			to run the job.
+		/** Get the password from the shadow that will be needed to run the job.
+
+			This is obsolete, use getUserCredential (with a mode argument) instead.
+
 			@param user The username under which to find the credential
 			@param domain The domain under which to find the credential
 			@param credential The result of fetching the credential
 			@return true on success, false on failure
 		*/
-	bool getUserCredential( const char* user, const char* domain, MyString& credential);
+	bool getUserPassword( const char* user, const char* domain, MyString& passwd);
+
+	/** Get the credential from the shadow that will be needed to run the job.
+
+	@param user The username under which to find the credential
+	@param domain The domain under which to find the credential
+	@param type of credential to fetch. one of STORE_CRED_USER_KRB, STORE_CRED_USER_PWD or STORE_CRED_USER_OAUTH
+	@return true on success, false on failure
+	*/
+	bool getUserCredential(const char *user, const char *domain, int mode, unsigned char* & cred, int & credlen);
 
  private:
 	bool is_initialized;

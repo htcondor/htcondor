@@ -192,8 +192,8 @@ while (!$done) {
 	} elsif (/termination \(signal (\d+)\)/) {
 	    print STDERR "Condor job killed by signal ", $1 , ".\n";
 	    $done = 1;
-        } elsif ( /^009/ && /Job was aborted by the user/ ) {
-	    print STDERR "The job was aborted by the user";
+        } elsif ( /^009/ && /Job was aborted/ ) {
+	    print STDERR "The job was aborted";
 	    $done = 1;
 	}
     }

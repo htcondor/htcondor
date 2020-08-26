@@ -38,7 +38,7 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
 	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
-	daemonCore->Cancel_Command( CREDD_GET_PASSWD );
+	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }
 
 
@@ -131,12 +131,11 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, DAEMON );
 
-		// Register command which the starter uses to fetch a user
-		// credential if it needs to.
+		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
 	daemonCore->
-		Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD",
-						  (CommandHandler)&get_cred_handler,
-						  "get_cred_handler", NULL, DAEMON, D_COMMAND,
+		Register_Command( CREDD_GET_CRED, "CREDD_GET_CRED",
+						  &cred_get_cred_handler,
+						  "cred_get_cred_handler", DAEMON, D_COMMAND,
 						  true /*force authentication*/ );
 }
 
@@ -213,6 +212,9 @@ UniShadow::gracefulShutDown( void )
 int
 UniShadow::getExitReason( void )
 {
+	if ( isDataflowJob ) {
+		return JOB_EXITED;
+	}
 	if( remRes ) {
 		return remRes->getExitReason();
 	}
@@ -233,7 +235,7 @@ void
 UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 {
 	Email mailer;
-	float recvd_bytes, sent_bytes;
+	float recvd_bytes = 0, sent_bytes = 0;
 
 	if (kind == US_TERMINATE_PENDING) {
 		/* I don't have a remote resource, so get the values directly from
@@ -264,8 +266,6 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 
 void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	/*int iPrevExitReason=*/ remRes->getExitReason();
-	
 	remRes->setExitReason( JOB_SHOULD_HOLD );
 	BaseShadow::holdJob(reason, hold_reason_code, hold_reason_subcode);
 }
@@ -366,7 +366,7 @@ UniShadow::getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss )
 }
 
 
-int
+int64_t
 UniShadow::getDiskUsage( void )
 {
 	return remRes->getDiskUsage();
@@ -390,6 +390,9 @@ UniShadow::exitSignal( void )
 int
 UniShadow::exitCode( void )
 {
+	if (isDataflowJob) {
+		return 0;
+	}
 	return remRes->exitCode();
 }
 
@@ -407,6 +410,30 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 	BaseShadow::resourceBeganExecution(rr);
 }
 
+
+void
+UniShadow::resourceDisconnected( RemoteResource* rr )
+{
+	ASSERT( rr == remRes );
+
+	const char* txt = "Socket between submit and execute hosts "
+		"closed unexpectedly";
+	logDisconnectedEvent( txt );
+
+	int now = time(NULL);
+	jobAd->Assign(ATTR_JOB_DISCONNECTED_DATE, now);
+
+	if (m_lazy_queue_update) {
+			// For lazy update, we just want to make sure the
+			// job_updater object knows about this attribute (which we
+			// already updated our copy of).
+		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
+	}
+	else {
+			// They want it now, so do the qmgmt operation directly.
+		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, now);
+	}
+}
 
 void
 UniShadow::resourceReconnected( RemoteResource* rr )
@@ -429,16 +456,19 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 	jobAd->LookupInteger(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
 	job_reconnect_cnt++;
 	jobAd->Assign(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+	jobAd->AssignExpr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
 
 	if (m_lazy_queue_update) {
 			// For lazy update, we just want to make sure the
 			// job_updater object knows about this attribute (which we
 			// already updated our copy of).
 		job_updater->watchAttribute(ATTR_NUM_JOB_RECONNECTS);
+		job_updater->watchAttribute(ATTR_JOB_DISCONNECTED_DATE);
 	}
 	else {
 			// They want it now, so do the qmgmt operation directly.
 		updateJobAttr(ATTR_NUM_JOB_RECONNECTS, job_reconnect_cnt);
+		updateJobAttr(ATTR_JOB_DISCONNECTED_DATE, "Undefined");
 	}
 
 		// if we're trying to remove this job, now that connection is
@@ -565,7 +595,7 @@ UniShadow::exitDelayed( int &reason ) {
 }
 
 void
-UniShadow::exitLeaseHandler() {
+UniShadow::exitLeaseHandler() const {
 	DC_Exit( delayedExitReason );
 }
 

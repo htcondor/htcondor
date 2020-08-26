@@ -1,5 +1,5 @@
 Application Programming Interfaces (APIs)
------------------------------------------
+=========================================
 
 There are several ways of interacting with the HTCondor system.
 Depending on your application and resources, the interfaces to HTCondor
@@ -9,9 +9,6 @@ python bindings are the easiest approach. Chirp provides a convenient
 way for a running job to update information about itself to its job ad,
 or to remotely read or write files from the executing job on the worker
 node to/from the submitting machine.
-
-Older programs which have SOAP bindings may find the HTCondor SOAP
-interfaces useful.
 
 If you have developed an interface to HTCondor, please consider sharing
 it with the HTCondor community.
@@ -26,4 +23,4 @@ it with the HTCondor community.
    command-line-interface
    drmaa-api
 
-      
+      

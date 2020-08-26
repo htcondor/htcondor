@@ -31,7 +31,7 @@
 #undef IOV_MAX 
 #include "globus_gss_assist.h"
 
-#include "classad/classad_stl.h"
+#include "classad/classad.h"
 
 const char STR_GSI_DAEMON_DIRECTORY[] = "GSI_DAEMON_DIRECTORY";
 const char STR_GSI_DAEMON_PROXY[]     = "GSI_DAEMON_PROXY";

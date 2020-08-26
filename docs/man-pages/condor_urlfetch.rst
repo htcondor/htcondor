@@ -1,32 +1,33 @@
-      
+      
 
-*condor\_urlfetch*
+*condor_urlfetch*
 ==================
 
 fetch configuration given a URL
+:index:`condor_urlfetch<single: condor_urlfetch; HTCondor commands>`\ :index:`condor_urlfetch command`
 
 Synopsis
 --------
 
-**condor\_urlfetch** [**-<daemon>**\ ] *url* *local-url-cache-file*
+**condor_urlfetch** [**-<daemon>** ] *url* *local-url-cache-file*
 
 Description
 -----------
 
-Depending on the command line arguments, *condor\_urlfetch* sends the
+Depending on the command line arguments, *condor_urlfetch* sends the
 result of a query from the *url* to both standard output and to a file
 specified by *local-url-cache-file*, or it sends the contents of the
 file specified by *local-url-cache-file* to standard output.
 
-*condor\_urlfetch* is intended to be used as the program to run when
+*condor_urlfetch* is intended to be used as the program to run when
 defining configuration, such as in the nonfunctional example:
 
-::
+.. code-block:: condor-config
 
-    LOCAL_CONFIG_FILE = $(LIBEXEC)/condor_urlfetch -$(SUBSYSTEM) \ 
-      http://www.example.com/htcondor-baseconfig  local.config |
+    LOCAL_CONFIG_FILE = $(LIBEXEC)/condor_urlfetch -$(SUBSYSTEM) \
+      http://www.example.com/htcondor-baseconfig  local.config |
 
-The pipe character (\|) at the end of this definition of the location of
+The pipe character (|) at the end of this definition of the location of
 a configuration file changes the use of the definition. It causes the
 command listed on the right hand side of this assignment statement to be
 invoked, and standard output becomes the configuration. The value of
@@ -58,19 +59,6 @@ Options
 Exit Status
 -----------
 
-*condor\_urlfetch* will exit with a status value of 0 (zero) upon
+*condor_urlfetch* will exit with a status value of 0 (zero) upon
 success and non zero otherwise.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin–Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

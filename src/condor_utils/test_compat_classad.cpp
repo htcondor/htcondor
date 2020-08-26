@@ -21,8 +21,8 @@
 #include "condor_attributes.h"
 
 #include "classad/classad_distribution.h"
-#include "classad_oldnew.h"
 #include "compat_classad.h"
+#include "compat_classad_util.h"
 
 #include "classad/sink.h"
 
@@ -34,22 +34,22 @@
 
 using namespace std;
 
-bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose);
-bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose);
-bool test_fPrintAdAsXML(compat_classad::ClassAd *c1, int verbose);
+bool test_sPrintExpr(ClassAd *c1, int verbose);
+bool test_IsValidAttrValue(ClassAd *c1, int verbose);
+bool test_fPrintAdAsXML(ClassAd *c1, int verbose);
 bool test_sPrintAdAsXML(int verbose); //I guess if fPrintAdAsXML works, 
                                      //this does too
 
-bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3, int verbose);
-bool test_EvalStringCharStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
-bool test_EvalStringCharStarStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
-bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
-bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose);
+bool test_ChainCollapse(ClassAd *c2, ClassAd *c3, int verbose);
+bool test_EvalStringCharStar(ClassAd *c1, ClassAd *c2, int verbose);
+bool test_EvalStringCharStarStar(ClassAd *c1, ClassAd *c2, int verbose);
+bool test_EvalStringMyString(ClassAd *c1, ClassAd *c2, int verbose);
+bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose);
 
-bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose);
-bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose);
+bool test_NextDirtyExpr(ClassAd *c1, int verbose);
+bool test_QuoteAdStringValue(ClassAd *c1, int verbose);
 
-bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2,int verbose);
+bool test_EvalExprTree(ClassAd *c1, ClassAd *c2,int verbose);
 
 void setAllFalse(bool* b);
 
@@ -200,8 +200,8 @@ GIRTestCase::runTests(void)
 }
 
 //{{{setUpCompatClassAd()
-void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::ClassAd** compC2,
-        compat_classad::ClassAd** compC3, compat_classad::ClassAd** compC4,
+void setUpCompatClassAds(ClassAd** compC1, ClassAd** compC2,
+        ClassAd** compC3, ClassAd** compC4,
         int verbose)
 {
 
@@ -213,19 +213,19 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
     classad::ClassAd* c;
     
     c = parser.ParseClassAd("[A = 1; B = 2;]");
-    (*compC1) = new compat_classad::ClassAd(*c);
+    (*compC1) = new ClassAd(*c);
     delete c;
     
     c = parser.ParseClassAd("[A = 1; B = 3;]");
-    (*compC2) = new compat_classad::ClassAd(*c);
+    (*compC2) = new ClassAd(*c);
     delete c;
 
     c = parser.ParseClassAd("[B = 1241; C = 3; D = 4;]");
-    (*compC3) = new compat_classad::ClassAd(*c);
+    (*compC3) = new ClassAd(*c);
     delete c;
 
     c = parser.ParseClassAd("[A = \"hello\";E = 5;F=\"abc\\\"\\\\efg\\\\\" ]");
-    (*compC4) = new compat_classad::ClassAd(*c);
+    (*compC4) = new ClassAd(*c);
     delete c;
 
     SetMyTypeName(*(*compC1), "compC1");
@@ -242,7 +242,7 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
 //}}}
 
 //{{{ test_sPrintExpr
-bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose)
+bool test_sPrintExpr(ClassAd *c1, int verbose)
 {
     /* c1 should have 2 attributes:
      *  A = 1
@@ -286,7 +286,7 @@ bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose)
 //}}}
 
 //{{{test_IsValidAttrValue
-bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
+bool test_IsValidAttrValue(ClassAd *c1, int verbose)
 {
     bool passedReal = false, passedSlashN = false, passed = false;
     bool passedNonReal = false;
@@ -330,7 +330,7 @@ bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
 //}}}
 
 //{{{test_fPrintAdAsXML
-bool test_fPrintAdAsXML(compat_classad::ClassAd *c1, int verbose)
+bool test_fPrintAdAsXML(ClassAd *c1, int verbose)
 {
     bool passed = false;
     FILE* compC1XML;
@@ -365,7 +365,7 @@ bool test_sPrintAdAsXML(int verbose)
 //}}}
 
 //{{{ test_ChainCollapse
-bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3, int verbose)
+bool test_ChainCollapse(ClassAd *c2, ClassAd *c3, int verbose)
 {
     /* ok, so this test sucks. It doesn't really check to see if 
      *  the ChainCollapse worked, it just checks to see if 
@@ -432,7 +432,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
 //}}}
 
 //{{{test_EvalStringCharStar
-bool test_EvalStringCharStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringCharStar(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -514,7 +514,7 @@ bool test_EvalStringCharStar(compat_classad::ClassAd *c1, compat_classad::ClassA
 //}}}
 
 //{{{test_EvalStringCharStarStar
-bool test_EvalStringCharStarStar(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringCharStarStar(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -596,7 +596,7 @@ bool test_EvalStringCharStarStar(compat_classad::ClassAd *c1, compat_classad::Cl
 //}}}
 
 //{{{test_EvalStringMyString
-bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringMyString(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -669,7 +669,7 @@ bool test_EvalStringMyString(compat_classad::ClassAd *c1, compat_classad::ClassA
 //}}}
 
 //{{{test_EvalStringStdString
-bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -742,7 +742,7 @@ bool test_EvalStringStdString(compat_classad::ClassAd *c1, compat_classad::Class
 //}}}
 
 //{{{NextDirtyExpr
-bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose)
+bool test_NextDirtyExpr(ClassAd *c1, int verbose)
 {
 	const char *name;
 	classad::ExprTree *expr;
@@ -806,7 +806,7 @@ bool test_NextDirtyExpr(compat_classad::ClassAd *c1, int verbose)
 //}}}
 
 //{{{ test_QuoteAdStringValue
-bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose)
+bool test_QuoteAdStringValue(ClassAd *c1, int verbose)
 {
     bool passed = true;
 
@@ -861,8 +861,8 @@ bool test_QuoteAdStringValue(compat_classad::ClassAd *c1, int verbose)
 }
 //}}}
 
-//{{{ test_EvalTree
-bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int verbose)
+//{{{ test_EvalExprTree
+bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedShortHand = false, passedNullTarget = false;
@@ -878,7 +878,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     classad::Value tmpVal;
 
     //should succeed
-    passedShortHand = EvalTree(itr->second, c1, &tmpVal);
+    passedShortHand = EvalExprTree(itr->second, c1, tmpVal);
 
     if(passedShortHand)
     {
@@ -887,7 +887,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
 
     if(verbose)
     {
-        printf("First EvalTree (shorthand) %s.\n", passedShortHand ? "passed" : "failed");
+        printf("First EvalExprTree (shorthand) %s.\n", passedShortHand ? "passed" : "failed");
         if(passedShortHand && verbose == 2)
         {
             printf("tmpVal is %s.\n", buf.c_str() ); 
@@ -899,7 +899,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     
     //should succeed
 
-    passedNullTarget = EvalTree(itr->second, c1,NULL, &tmpVal);
+    passedNullTarget = EvalExprTree(itr->second, c1,NULL, tmpVal);
 
     if(passedNullTarget)
     {
@@ -908,7 +908,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
 
     if(verbose)
     {
-        printf("Second EvalTree (null target) %s.\n", passedNullTarget ? "passed" : "failed");
+        printf("Second EvalExprTree (null target) %s.\n", passedNullTarget ? "passed" : "failed");
         if(passedNullTarget && verbose == 2)
         {
             printf("tmpVal is %s.\n", buf.c_str() ); 
@@ -919,27 +919,27 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     tmpVal.Clear();
 
     //should fail.
-    if(!EvalTree(itr->second, NULL,NULL, &tmpVal) )
+    if(!EvalExprTree(itr->second, NULL,NULL, tmpVal) )
     {
         passedNullMine = true;
     }
 
     if(verbose)
     {
-        printf("Third EvalTree (null mine) %s.\n", passedNullMine ? "passed" : "failed");
+        printf("Third EvalExprTree (null mine) %s.\n", passedNullMine ? "passed" : "failed");
     }
 
     tmpVal.Clear();
 
     //this should also fail
-    if(!EvalTree(itr->second, NULL,c2, &tmpVal) )
+    if(!EvalExprTree(itr->second, NULL,c2, tmpVal) )
     {
         passedNullMineRealTarget = true;
     }
 
     if(verbose)
     {
-        printf("Fourth EvalTree (null mine) %s.\n", passedNullMineRealTarget
+        printf("Fourth EvalExprTree (null mine) %s.\n", passedNullMineRealTarget
                 ? "passed" : "failed");
     }
 
@@ -947,7 +947,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
     itr = c2->begin();
     itr++;
     //should pass
-    passedReal = EvalTree(itr->second, c1, c2, &tmpVal);
+    passedReal = EvalExprTree(itr->second, c1, c2, tmpVal);
 
     if(passedReal)
     {
@@ -967,7 +967,7 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
 
     if(verbose)
     {
-        printf("Fifth EvalTree (Real) %s.\n", passedReal ? "passed" : "failed");
+        printf("Fifth EvalExprTree (Real) %s.\n", passedReal ? "passed" : "failed");
         if(!wasRightNumber)
         {
             printf("But the number was not what was expected. Expected 3 and got %s.\n", buf.c_str());
@@ -1423,7 +1423,7 @@ void setUpAndRun(int verbose)
 
 
 
-    compat_classad::ClassAd *compC1, *compC2, *compC3, *compC4;
+    ClassAd *compC1, *compC2, *compC3, *compC4;
 
     setUpCompatClassAds(&compC1, &compC2, &compC3, &compC4, verbose);
 
@@ -1486,9 +1486,9 @@ void setUpAndRun(int verbose)
     printf("-------------\n");
 
 
-    printf("Testing EvalTree...\n");
-    passedTest[9] = test_EvalTree(compC4,compC2, verbose);
-    printf("EvalTree %s.\n", passedTest[10] ? "passed" : "failed");
+    printf("Testing EvalExprTree...\n");
+    passedTest[9] = test_EvalExprTree(compC4,compC2, verbose);
+    printf("EvalExprTree %s.\n", passedTest[10] ? "passed" : "failed");
     printf("-------------\n");
 
     printf("Testing GetInternalReferences...\n");

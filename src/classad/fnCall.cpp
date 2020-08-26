@@ -27,6 +27,7 @@
 #include "classad/source.h"
 #include "classad/sink.h"
 #include "classad/util.h"
+#include "classad/natural_cmp.h"
 
 #ifdef WIN32
  #if _MSC_VER < 1900
@@ -81,7 +82,7 @@ FunctionCall( )
 	function = NULL;
 
 	if( !initialized ) {
-        FuncTable &functionTable = getFunctionTable();
+		FuncTable &functionTable = getFunctionTable();
 
 		// load up the function dispatch table
 			// type predicates
@@ -118,11 +119,11 @@ FunctionCall( )
 		*/
 
 			// time management
-        functionTable["time"        ] = (void*)epochTime;
-        functionTable["currenttime"	] =	(void*)currentTime;
+		functionTable["time"        ] = (void*)epochTime;
+		functionTable["currenttime"	] =	(void*)currentTime;
 		functionTable["timezoneoffset"] =(void*)timeZoneOffset;
 		functionTable["daytime"		] =	(void*)dayTime;
-        //functionTable["makedate"	] =	(void*)makeDate;
+		//functionTable["makedate"	] =	(void*)makeDate;
 		functionTable["getyear"		] =	(void*)getField;
 		functionTable["getmonth"	] =	(void*)getField;
 		functionTable["getdayofyear"] =	(void*)getField;
@@ -132,26 +133,36 @@ FunctionCall( )
 		functionTable["gethours"	] =	(void*)getField;
 		functionTable["getminutes"	] =	(void*)getField;
 		functionTable["getseconds"	] =	(void*)getField;
-        functionTable["splittime"   ] = (void*)splitTime;
-        functionTable["formattime"  ] = (void*)formatTime;
-        //functionTable["indays"		] =	(void*)inTimeUnits;
+		functionTable["splittime"   ] = (void*)splitTime;
+		functionTable["formattime"  ] = (void*)formatTime;
+		//functionTable["indays"		] =	(void*)inTimeUnits;
 		//functionTable["inhours"		] =	(void*)inTimeUnits;
 		//functionTable["inminutes"	] =	(void*)inTimeUnits;
 		//functionTable["inseconds"	] =	(void*)inTimeUnits;
-		
+
 			// string manipulation
 		functionTable["strcat"		] =	(void*)strCat;
 		functionTable["join"		] =	(void*)strCat;
 		functionTable["toupper"		] =	(void*)changeCase;
 		functionTable["tolower"		] =	(void*)changeCase;
 		functionTable["substr"		] =	(void*)subString;
-        functionTable["strcmp"      ] = (void*)compareString;
-        functionTable["stricmp"     ] = (void*)compareString;
+		functionTable["strcmp"      ] = (void*)compareString;
+		functionTable["stricmp"     ] = (void*)compareString;
 
-			// pattern matching (regular expressions) 
+			// version comparison
+		functionTable["versioncmp"  ] = (void*)compareVersion;
+		functionTable["versionLE"   ] = (void*)compareVersion;
+		functionTable["versionLT"   ] = (void*)compareVersion;
+		functionTable["versionGE"   ] = (void*)compareVersion;
+		functionTable["versionGT"   ] = (void*)compareVersion;
+		// Not identical to str1 =?= str2 because it won't eat undefined.
+		functionTable["versionEQ"   ] = (void*)compareVersion;
+		functionTable["version_in_range"] = (void*)versionInRange;
+
+			// pattern matching (regular expressions)
 #if defined USE_POSIX_REGEX || defined USE_PCRE
 		functionTable["regexp"		] =	(void*)matchPattern;
-        functionTable["regexpmember"] =	(void*)matchPatternMember;
+		functionTable["regexpmember"] =	(void*)matchPatternMember;
 		functionTable["regexps"     ] = (void*)substPattern;
 		functionTable["replace"     ] = (void*)substPattern;
 		functionTable["replaceall"  ] = (void*)substPattern;
@@ -164,8 +175,8 @@ FunctionCall( )
 		functionTable["bool"		] =	(void*)convBool;
 		functionTable["absTime"		] =	(void*)convTime;
 		functionTable["relTime"		] = (void*)convTime;
-		
-		// turn the contents of an expression into a string 
+
+		// turn the contents of an expression into a string
 		// but *do not* evaluate it
 		functionTable["unparse"		] =	(void*)unparse;
 
@@ -177,7 +188,7 @@ FunctionCall( )
 		functionTable["pow" 		] =	(void*)doMath2;
 		//functionTable["log" 		] =	(void*)doMath2;
 		functionTable["quantize"	] =	(void*)doMath2;
-        functionTable["random"      ] = (void*)random;
+		functionTable["random"      ] = (void*)random;
 
 			// for compatibility with old classads:
 		functionTable["ifThenElse"  ] = (void*)ifThenElse;
@@ -188,7 +199,7 @@ FunctionCall( )
 			// Note that many other string list functions are defined
 			// externally in the Condor classad compatibility layer.
 		functionTable["stringListsIntersect" ] = (void*)stringListsIntersect;
-        functionTable["debug"      ] = (void*)debug;
+		functionTable["debug"      ] = (void*)debug;
 
 		initialized = true;
 	}
@@ -1808,6 +1819,101 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 }
 
 bool FunctionCall::
+versionInRange( const char * name, const ArgumentList & argList,
+  EvalState & state, Value & result ) {
+	if( argList.size() != 3 ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	Value test, min, max;
+	if(!argList[0]->Evaluate(state, test) ||
+	   !argList[1]->Evaluate(state, min) ||
+	   !argList[2]->Evaluate(state, max)) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// It seems like the version*() functions are more useful this way.
+	if(min.IsUndefinedValue() || max.IsUndefinedValue()) {
+		result.SetUndefinedValue();
+		return true;
+	}
+
+	Value cTest, cMin, cMax;
+	std::string sTest, sMin, sMax;
+	if(  convertValueToStringValue( test, cTest )
+	  && convertValueToStringValue( min, cMin )
+	  && convertValueToStringValue( max, cMax )
+	  && cTest.IsStringValue(sTest)
+	  && cMin.IsStringValue(sMin)
+	  && cMax.IsStringValue(sMax) ) {
+		int l = natural_cmp( sMin.c_str(), sTest.c_str() );
+		int r = natural_cmp( sTest.c_str(), sMax.c_str() );
+
+		result.SetBooleanValue( l <= 0 && r <= 0 );
+		return true;
+	} else {
+		result.SetErrorValue();
+		return true;
+	}
+
+	return true;
+}
+
+bool FunctionCall::
+compareVersion( const char * name, const ArgumentList & argList,
+  EvalState & state, Value & result ) {
+	if( argList.size() != 2 ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	Value 	left, right;
+	if(!argList[0]->Evaluate(state, left) ||
+	   !argList[1]->Evaluate(state, right)) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// It seems like the version*() functions are more useful this way.
+	if(left.IsUndefinedValue() || right.IsUndefinedValue()) {
+		result.SetUndefinedValue();
+		return true;
+	}
+
+	Value cLeft, cRight;
+	std::string sLeft, sRight;
+	if(  convertValueToStringValue( left, cLeft )
+	  && convertValueToStringValue( right, cRight )
+	  && cLeft.IsStringValue(sLeft)
+	  && cRight.IsStringValue(sRight) ) {
+		int r = natural_cmp( sLeft.c_str(), sRight.c_str() );
+		if( 0 == strcasecmp( name, "versioncmp" ) ) {
+			result.SetIntegerValue(r);
+		} else if( 0 == strcmp( name, "versionLE" ) ) {
+			result.SetBooleanValue( r <= 0 );
+		} else if( 0 == strcmp( name, "versionLT" ) ) {
+			result.SetBooleanValue( r < 0 );
+		} else if( 0 == strcmp( name, "versionGE" ) ) {
+			result.SetBooleanValue( r >= 0 );
+		} else if( 0 == strcmp( name, "versionGT" ) ) {
+			result.SetBooleanValue( r > 0 );
+		} else if( 0 == strcmp( name, "versionEQ" ) ) {
+			result.SetBooleanValue( r == 0 );
+		} else {
+			// This should never happen.
+			result.SetErrorValue();
+		}
+	} else {
+		result.SetErrorValue();
+		return true;
+	}
+
+	return true;
+}
+
+bool FunctionCall::
 compareString( const char*name, const ArgumentList &argList, EvalState &state, 
 	Value &result )
 {
@@ -1971,6 +2077,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::ABSOLUTE_TIME_VALUE:
@@ -2001,11 +2108,15 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 			{
 				string buf;
 				arg.IsStringValue( buf );
-				if( strcasecmp( "false", buf.c_str( ) ) || buf == "" ) {
+				if (strcasecmp("false", buf.c_str()) == 0) { 
 					result.SetBooleanValue( false );
-				} else {
+					return( true );
+				} 
+				if (strcasecmp("true", buf.c_str()) == 0) { 
 					result.SetBooleanValue( true );
-				}
+					return( true );
+				} 
+				result.SetUndefinedValue();
 				return( true );
 			}
 
@@ -2086,6 +2197,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
+		case Value::SCLASSAD_VALUE:
 		case Value::LIST_VALUE:
 		case Value::SLIST_VALUE:
 		case Value::BOOLEAN_VALUE:
@@ -2424,6 +2536,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 
 	case Value::ERROR_VALUE:
 	case Value::CLASSAD_VALUE:
+	case Value::SCLASSAD_VALUE:
 	case Value::LIST_VALUE:
 	case Value::SLIST_VALUE:
 	case Value::STRING_VALUE:
@@ -2793,6 +2906,7 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
     result.SetBooleanValue(false);
     
     ExprTree *target_expr;
+	bool couldBeUndefined = false;
     ExprList::const_iterator list_iter = target_list->begin();
     while (list_iter != target_list->end()) {
         Value target_value;
@@ -2803,9 +2917,18 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
                 result.SetErrorValue();
                 return true;
             }
+
+			// If the list element is not a string, result is error
+			// unless it is undefined, then total result is either
+			// true (if one matches) or undefined
             if (!target_value.IsStringValue(target)) {
-                result.SetErrorValue();
-                return true;
+				if (target_value.IsUndefinedValue()) {
+					couldBeUndefined = true;
+				} else {
+					// Some non-string, not-undefined value, error and give up
+                	result.SetErrorValue();
+                	return true;
+				}
             } else {
                 bool have_match;
                 bool success = regexp_helper(pattern, target, NULL, have_options, options_string, have_match_value);
@@ -2825,6 +2948,9 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
         }
         list_iter++;
     }
+	if (couldBeUndefined) {
+		result.SetUndefinedValue();
+	}
     return true;
 }
 

@@ -22,6 +22,10 @@
 #include "condor_debug.h"
 #include "sysapi.h"
 
+#if defined(LINUX)
+#  include <sys/sysinfo.h>
+#endif
+
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
@@ -82,127 +86,6 @@ sysapi_swap_space_raw()
 	return (int)free_swap;
 }
 
-#elif defined(HPUX)
-
-/* here's the deal:  Using any number in pst_getdynamic seems to be
-   *way* to small for our purposes.  Those silly writers of HPUX return
-   'free memory paging space' (a small region of physical system memory 
-   that can be used for paging if all other swap areas are full 
-   (aka "psuedo-swap")) in the pst_vm field returned in pstat_getdynamic.
-   This number is wrong.  What we *really* want is the sum of the free
-   space in 'dev' (the swap device) and 'localfs' (any file system 
-   swapping set up).  So....
-
-   I can use pstat_getswap for this.  It returns a number of structures, 
-   one for each "swap pool".  These structures will either be 
-   "Block Device Fields" or "File System Fields" (dev or localfs).  I'll
-   sum up their 'pss_nfpgs' fields, multiply by pagesize,  and return.
-
-   On the cae HPs, two swap spaces are returned, one of each type.
-   The localfs 'nfpgs' field is 0 on cae machines.  Grrr.  Hopefully, it
-   might work somewhere else.  Who knows...
-
-   For more information, see /usr/include/sys/pstat.h and the
-   pstat and swapinfo manual pages.
-
-   -Mike Yoder 9-28-98
-*/
-#include <sys/pstat.h>
-
-int
-sysapi_swap_space_raw ()
-{
-  int pagesize;  /* in kB */
-  double virt_mem_size = 0;  /* the so-called virtual memory size we seek */
-  struct pst_static s;
-  struct pst_swapinfo pss[10];
-  int count, i;
-  int idx = 0; /* index within the context */
-
-	sysapi_internal_reconfig();
-  if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-    pagesize = s.page_size / 1024;   /* it's right here.... */
-  }
-  else {
-    dprintf ( D_ALWAYS,
-		"sysapi_swap_space_raw(): Error getting pagesize. Errno = %d\n",errno);
-    return -1;
-  }
-
-  /* loop until count == 0, will occur when we've got 'em all */
-  while ((count = pstat_getswap(pss, sizeof(pss[0]), 10, idx)) > 0) {
-    /* got 'count' entries.  process them. */
-
-    for ( i = 0 ; i < count ; i++ ) {
-
-      /* first ensure that it's enabled */
-      if ( (pss[i].pss_flags & 1) == 1 ) {
-        /* now make sure it's a SW_BLOCK or FS_BLOCK*/
-        /* FS_BLOCK has always returned a 0 for pss_nfpgs on cae hpuxs.
-	   Grrr.  It's here in case it works somewhere else. */
-	if (((pss[i].pss_flags & 2) == 2) || ((pss[i].pss_flags & 4) == 4)) {
-          /* add free pages to total */
-          virt_mem_size += (double)pss[i].pss_nfpgs * (double)pagesize;
-        }
-      }
-    }
-
-    idx = pss[count-1].pss_idx+1;
-  }
-
-  if (count == -1)
-    dprintf ( D_ALWAYS,
-		"sysapi_swap_space_raw(): Error in pstat_getswap().  Errno = %d\n",
-		errno );
-
-	/* under HP-UX, it is considered an error if virt_mem_size == 0 */
-  if ( virt_mem_size != 0 ) {
-  	if (virt_mem_size > INT_MAX) {
-		return INT_MAX;
-	}
-    return (int)virt_mem_size;
-  } else {
-    /* Print an error */
-    dprintf ( D_ALWAYS, 
-		"sysapi_swapspace_raw(): Error virt_mem_size == 0.\n");
-    return -1;
-  }
-}
-
-#elif defined(Solaris)
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/swap.h>
-
-/*
-** Try to determine the swap space available on our own machine.  The answer
-** is in kilobytes.
-*/
-int
-sysapi_swap_space_raw()
-{
-	struct anoninfo 	ai;
-	double avail;
-	int factor;
-
-	sysapi_internal_reconfig();
-
-	factor = sysconf(_SC_PAGESIZE) >> 10;
-
-	memset( &ai, 0, sizeof(ai) );
-	if( swapctl(SC_AINFO, &ai) >= 0 ) {
-		avail = (double)(ai.ani_max - ai.ani_resv) * (double)factor;
-		if (avail > INT_MAX) {
-			return INT_MAX;
-		}
-		return (int)avail;
-	} else {
-		dprintf( D_FULLDEBUG, "swapctl call failed, errno = %d\n", errno );
-		return -1;
-	}
-}
-
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>
 int
@@ -215,103 +98,6 @@ sysapi_swap_space_raw() {
         len = sizeof(usermem);   
         sysctl(mib, 2, &usermem, &len, NULL, 0);   
 	return usermem / 1024;
-}
-
-#elif defined(AIX)
-
-int
-sysapi_swap_space_raw() {
-    struct pginfo p;
-    int ret;
-
-    CLASS_SYMBOL cuat;
-    struct CuAt paging_ent;
-    struct CuAt *pret = NULL;
-    unsigned long free_swap_space = 0;
-	char buf[1024];
-	char *path = NULL;
-
-    if (odm_initialize() < 0)
-    {
-		/* This is quite terrible if it happens */
-        dprintf(D_ALWAYS, 
-			"sysapi_swap_space_raw(): Could not initialize the ODM database: "
-			"%d\n", odmerrno);
-		return -1;
-    }
-
-	/* remember to free this memory just before I leave this function */
-    path = odm_set_path("/etc/objrepos");
-	if (path == (char*)-1) /* eewww */
-	{
-        dprintf(D_ALWAYS, "sysapi_swap_space_raw(): Could not set class path! "
-			"%d\n", odmerrno);
-		return -1;
-	}
-
-	/* open up a predefined class symbol found in libcfg.a */
-    cuat = odm_open_class(CuAt_CLASS);
-    if (cuat == NULL)
-    {
-        dprintf(D_ALWAYS, "sysapi_swap_space_raw(): Could not open CuAt! %d\n",
-			odmerrno);
-    	if (odm_terminate() < 0)
-    	{
-        	dprintf(D_ALWAYS, "Could not terminate using the ODM database: "
-				"%d\n", odmerrno);
-			free(path);
-			return -1;
-    	}
-		free(path);
-		return -1;
-    }
-
-    /* odm_get_list() is scary cause I can't tell if it is going to actually
-        remove the entries from the ODM when it returns them to me or not.
-        So I'm traversing the list in the safe way that I know how */
-
-    /* get me the objects that are paging devices */
-    pret = (struct CuAt *)odm_get_obj(cuat, "value='paging'", &paging_ent, ODM_FIRST);
-    while(pret != NULL && (int)pret != -1)
-    {
-		memset(buf, 0, 1024);
-		snprintf(buf, 1024, "%s/%s", "/dev", paging_ent.name);
-
-		ret = swapqry(buf, &p);
-        if (ret == -1)
-        {
-			/* XXX when non root, some swap partitions cannot be inspected,
-				so skip them. */
-        	pret = (struct CuAt *)odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
-			continue;
-        }
-
-        free_swap_space += p.free;
-
-        pret = (struct CuAt *)odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
-    }
-
-    if (odm_close_class(cuat) < 0)
-    {
-        dprintf(D_ALWAYS, "Could not close CuAt in the ODM database: %d\n",
-			odmerrno);
-		free(path);
-		return -1;
-    }
-
-    if (odm_terminate() < 0)
-    {
-        dprintf(D_ALWAYS, "Could not terminate using the ODM database: %d\n",
-			odmerrno);
-		free(path);
-		return -1;
-    }
-
-	free(path);
-
-	/* the free_swap_space unit is in PAGESIZE blocks */
-	/* so convert it into bytes, and then convert it into KB units */
-    return (free_swap_space * PAGESIZE) / 1024;
 }
 
 #else

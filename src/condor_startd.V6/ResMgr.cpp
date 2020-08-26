@@ -28,12 +28,20 @@
 #include "overflow.h"
 #include <math.h>
 #include "credmon_interface.h"
+#include "condor_auth_passwd.h"
+#include "condor_netdb.h"
+#include "token_utils.h"
+#include "data_reuse.h"
 
 #include "slot_builder.h"
 
 #include "strcasestr.h"
 
-ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
+
+ResMgr::ResMgr() :
+	extras_classad( NULL ),
+	max_job_retirement_time_override(-1),
+	m_token_requester(&ResMgr::token_request_callback, this)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -46,6 +54,7 @@ ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
 	resume_on_completion_of_draining = false;
 	draining_id = 0;
 	last_drain_start_time = 0;
+	last_drain_stop_time = 0;
 	expected_graceful_draining_completion = 0;
 	expected_quick_draining_completion = 0;
 	expected_graceful_draining_badput = 0;
@@ -113,6 +122,7 @@ void ResMgr::Stats::Init()
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkEvalState, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkUpdate, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkOther, IF_VERBOSEPUB);
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", Drain, IF_VERBOSEPUB);
 }
 
 double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
@@ -500,11 +510,20 @@ ResMgr::init_resources( void )
 	m_hook_mgr = new StartdHookMgr;
 	m_hook_mgr->initialize();
 #endif
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
+		}
+	} else {
+		m_reuse_dir.reset();
+	}
 }
 
 
 bool
-ResMgr::typeNumCmp( int* a, int* b )
+ResMgr::typeNumCmp( const int* a, const int* b ) const
 {
 	int i;
 	for( i=0; i<max_types; i++ ) {
@@ -525,6 +544,8 @@ ResMgr::reconfig_resources( void )
 	Resource*** sorted_resources;	// Array of arrays of pointers.
 	Resource* rip;
 
+	dprintf(D_ALWAYS, "beginning reconfig_resources\n");
+
 #if HAVE_BACKFILL
 	backfillConfig();
 #endif
@@ -538,6 +559,8 @@ ResMgr::reconfig_resources( void )
 #if HAVE_HIBERNATION
 	updateHibernateConfiguration();
 #endif /* HAVE_HIBERNATE */
+
+	m_attr->ReconfigOfflineDevIds();
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -554,6 +577,7 @@ ResMgr::reconfig_resources( void )
 	if( typeNumCmp(new_type_nums, type_nums) ) {
 			// We want the same number of each slot type that we've got
 			// now.  We're done!
+		dprintf(D_ALWAYS, "no change to slot type config, exiting reconfig_resources\n");
 		delete [] new_type_nums;
 		new_type_nums = NULL;
 		return true;
@@ -656,6 +680,16 @@ ResMgr::reconfig_resources( void )
 					  "State change: resource no longer needed by configuration\n" );
 		rip->set_destination_state( delete_state );
 	}
+
+	std::string reuse_dir;
+	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
+		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
+			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
+		}
+	} else {
+		m_reuse_dir.reset();
+	}
+
 
 		// Finally, call our helper, so that if all the slots we need to
 		// get rid of are gone by now, we'll allocate the new ones.
@@ -881,7 +915,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	if( ! resources ) {
 		return NULL;
 	}
-	int requirements;
+	bool requirements;
 	int i;
 
 		/*
@@ -902,14 +936,18 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 
 		// find the first one that matches our requirements
 	for( i = 0; i < nresources; i++ ) {
-		if( ad->EvalBool( ATTR_REQUIREMENTS, resources[i]->r_classad,
+		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
 						  requirements ) == 0 ) {
-			requirements = 0;
+			requirements = false;
 		}
 		if( requirements ) {
 			return resources[i];
 		}
 	}
+
+	// put the resources back into a "natural" order
+	resource_sort(naturalSlotOrderCmp);
+
 	return NULL;
 }
 
@@ -983,6 +1021,34 @@ ResMgr::get_by_name(const char* name )
 	return NULL;
 }
 
+Resource*
+ResMgr::get_by_name_prefix(const char* name )
+{
+	if( ! resources ) {
+		return NULL;
+	}
+	int len = (int)strlen(name);
+	for (int i = 0; i < nresources; i++ ) {
+		const char * pat = strchr(resources[i]->r_name, '@');
+		if (pat && (int)(pat - resources[i]->r_name) == len && strncasecmp(name, resources[i]->r_name, len) == MATCH) {
+			return resources[i];
+		}
+	}
+
+	// not found, print possible names
+	StringList names;
+	for(int i = 0; i < nresources; i++ ) {
+		names.append(resources[i]->r_name);
+		if( !strcmp(resources[i]->r_name, name) ) {
+			return resources[i];
+		}
+	}
+	auto_free_ptr namelist(names.print_to_string());
+	dprintf(D_ALWAYS, "%s not found, slot names are %s\n", name, namelist ? namelist.ptr() : "<empty>");
+
+	return NULL;
+}
+
 
 Resource*
 ResMgr::get_by_slot_id( int id )
@@ -1052,12 +1118,14 @@ int
 ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 					 bool nonblock )
 {
+	static bool first_time = true;
+
 		// Increment the resmgr's count of updates.
 	num_updates++;
-		// Actually do the updates, and return the # of updates sent.
-	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
 
-	static bool first_time = true;
+	int res = daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock, &m_token_requester,
+		DCTokenRequester::default_identity, "ADVERTISE_STARTD");
+
 	if (first_time) {
 		first_time = false;
 		dprintf( D_ALWAYS, "Initial update sent to collector(s)\n");
@@ -1101,10 +1169,14 @@ ResMgr::update_all( void )
 		// process is split here. The Resource::update will only be
 		// called on resources that are still alive. - matt 1 Oct 09
 
-		// Evaluate the state of this resource.
+		// Evaluate the state change policy expressions (like PREEMPT)
+		// For certain changes this will trigger an update to the collector
+		// (all that really does is register a timer)
 	walk( &Resource::eval_state );
+
 		// If we didn't update b/c of the eval_state, we need to
-		// actually do the update now.
+		// actually do the update now. Tj 2020 sez: this is a lie, was it ever true?
+		// What this actually does is insure that the update timers have been registered for all slots
 	walk( &Resource::update );
 
 	report_updates();
@@ -1119,7 +1191,7 @@ ResMgr::eval_and_update_all( void )
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
 #endif
-		compute( A_TIMEOUT | A_UPDATE );
+		compute_dynamic(true);
 		update_all();
 #if HAVE_HIBERNATION
 	}
@@ -1134,7 +1206,7 @@ ResMgr::eval_all( void )
 	if ( !hibernating () ) {
 #endif
 		num_updates = 0;
-		compute( A_TIMEOUT );
+		compute_dynamic(false);
 		walk( &Resource::eval_state );
 		report_updates();
 		check_polling();
@@ -1145,7 +1217,7 @@ ResMgr::eval_all( void )
 
 
 void
-ResMgr::report_updates( void )
+ResMgr::report_updates( void ) const
 {
 	if( !num_updates ) {
 		return;
@@ -1166,22 +1238,30 @@ ResMgr::report_updates( void )
 	}
 }
 
-void
-ResMgr::refresh_benchmarks()
+void ResMgr::compute_static()
 {
-	if( ! resources ) {
-		return;
-	}
-
-	walk( &Resource::refresh_classad, A_TIMEOUT );
+	// each time we reconfig (or on startup) we must populate
+	// static machine attributes and per-slot config that depends on resource allocation
+	m_attr->compute_config();
+	walk(&Resource::initial_compute);
 }
 
+// Resource is passed when creating a new d-slot
+//
 void
-ResMgr::compute( amask_t how_much )
+ResMgr::compute_dynamic(bool for_update, Resource * rip)
 {
 	if( ! resources ) {
 		return;
 	}
+
+	Resource * parent = NULL;
+	if (rip) {
+		parent = rip->get_parent();
+	}
+
+	//PRAGMA_REMIND("tj: is this where we clear out the r_classad ?")
+	//tj: Not until we make it so rollup happens in a separate layer and cross-slot doesn't depend on stale values to work
 
     double runtime = stats.BeginRuntime(stats.Compute);
 
@@ -1189,12 +1269,58 @@ ResMgr::compute( amask_t how_much )
 		// the kernel once and share the value...
 	cur_time = time( 0 );
 
-	compute_draining_attrs( how_much );
+	compute_draining_attrs();
 
-	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
-	walk( &Resource::compute, (how_much & ~(A_SHARED)) );
-	m_attr->compute( (how_much & ~(A_SHARED)) | A_SUMMED );
-	walk( &Resource::compute, (how_much | A_SHARED) );
+	// for updates, we recompute some machine attributes (like virtual mem)
+	// and that may require a recompute of the resources that reference them
+	if (for_update) {
+		m_attr->compute_for_update();
+		if (rip) {
+			rip->compute_shared();
+			if (parent) parent->compute_shared();
+		} else {
+			walk(&Resource::compute_shared);
+
+			//TODO: Tj can I kill this? I'm pretty sure the vmapi stuff doesn't work anymore if it ever did
+			if (vmapi_is_virtual_machine()) {
+				vmapi_request_host_classAd();
+			}
+		}
+	}
+
+	// update machine load and idle values, also dynamic WinReg attributes
+	m_attr->compute_for_policy();
+
+	// update per-slot disk and cpu usage/load values
+	if (rip) {
+		rip->compute_unshared();
+		if (parent) parent->compute_unshared();
+	} else {
+		walk(&Resource::compute_unshared);	// how_much & ~(A_SHARED)
+	}
+
+	// now sum the updated slot load values to get a system wide load value
+	m_attr->update_condor_load(sum(&Resource::condor_load));
+
+	// if Resource was passed, that's because it's a new slot, or one that just changed
+	// state and we want a quick init/refresh pass on it.  So instead of walking
+	// all of the resources, update just the slot and it's parent (if it has one)
+	if (rip) {
+		rip->refresh_classad_for_update();
+		if (parent) parent->refresh_classad_for_update();
+		rip->compute_evaluated();
+		if (parent) parent->compute_evaluated();
+		rip->refresh_classad_evaluated();
+		if (parent) parent->refresh_classad_evaluated();
+
+		// TODO: it's hard to know what the correct order of thse two is
+		// it depends on specifically *what* slot attrs that we want to cross post
+		rip->refresh_classad_slot_attrs();
+		if (parent) parent->refresh_classad_slot_attrs();
+
+		// if passed a resource, refresh ONLY that resource's ad
+		return;
+	}
 
 		// Sort the resources so when we're assigning owner load
 		// average and keyboard activity, we get to them in the
@@ -1205,65 +1331,60 @@ ResMgr::compute( amask_t how_much )
 	assign_load();
 	assign_keyboard();
 
-	if( vmapi_is_virtual_machine() == TRUE ) {
-		ClassAd* host_classad;
-		vmapi_request_host_classAd();
-		host_classad = vmapi_get_host_classAd();
-		if( host_classad ) {
-			int i;
-			for( i = 0; i < nresources; i++ ) {
-				if( resources[i]->r_classad )
-					MergeClassAds( resources[i]->r_classad, host_classad, true );
-			}
-		}
-
+	if (for_update) {
+		// this does A_UPDATE and also A_TIMEOUT
+		walk(&Resource::refresh_classad_for_update);
+	} else {
+		walk(&Resource::refresh_classad_for_policy);
 	}
-
-		// Now that everything has actually been computed, we can
-		// refresh our internal classad with all the current values of
-		// everything so that when we evaluate our state or any other
-		// expressions, we've got accurate data to evaluate.
-	walk( &Resource::refresh_classad, how_much );
 
 		// Now that we have an updated internal classad for each
 		// resource, we can "compute" anything where we need to
 		// evaluate classad expressions to get the answer.
-	walk( &Resource::compute, A_EVALUATED );
+	walk( &Resource::compute_evaluated );
 
 		// Next, we can publish any results from that to our internal
 		// classads to make sure those are still up-to-date
-	walk( &Resource::refresh_classad, A_EVALUATED );
+	walk( &Resource::refresh_classad_evaluated );
 
 		// Finally, now that all the internal classads are up to date
 		// with all the attributes they could possibly have, we can
 		// publish the cross-slot attributes desired from
 		// STARTD_SLOT_ATTRS into each slots's internal ClassAd.
-	walk( &Resource::refresh_classad, A_SHARED_SLOT );
+	walk( &Resource::refresh_classad_slot_attrs );
 
+	if (IsFulldebug(D_FULLDEBUG) && for_update && m_attr->always_recompute_disk()) {
+		// on update (~10min) we report the new value of DISK 
+		walk(&Resource::display_total_disk);
+	}
+	if (IsDebugLevel(D_LOAD) || IsDebugLevel(D_KEYBOARD)) {
 		// Now that we're done, we can display all the values.
-	walk( &Resource::display, how_much );
+		walk(&Resource::display_load, for_update ? A_UPDATE : 0);
+	}
+
+	// put the resources back into a "natural" order
+	resource_sort(naturalSlotOrderCmp);
 
     stats.EndRuntime(stats.Compute, runtime);
 }
 
 
 void
-ResMgr::publish( ClassAd* cp, amask_t how_much )
+ResMgr::publish_dynamic(ClassAd* cp)
 {
-	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
-		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
+	cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
+	if (m_reuse_dir) {
+		m_reuse_dir->Publish(*cp);
 	}
-
-	starter_mgr.publish( cp, how_much );
-	m_vmuniverse_mgr.publish(cp, how_much);
+	m_vmuniverse_mgr.publish(cp);
 	startd_stats.Publish(*cp, 0);
 	startd_stats.Tick(time(0));
 
 #if HAVE_HIBERNATION
-    m_hibernation_manager->publish( *cp );
+    m_hibernation_manager->publish(*cp);
 #endif
 
-	if( extras_classad ) { cp->Update( * extras_classad ); }
+	if (extras_classad) { cp->Update(*extras_classad); }
 }
 
 
@@ -1288,10 +1409,11 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 	// of the machine.
 	//
 
-	cap->ResetExpr();
 	ExprTree * expr = NULL;
 	const char * attr = NULL;
-	while( cap->NextExpr( attr, expr ) ) {
+	for ( auto itr = cap->begin(); itr != cap->end(); itr++ ) {
+		attr = itr->first.c_str();
+		expr = itr->second;
 		//
 		// Copy the whole ad over, excepting special or computed attributes.
 		//
@@ -1322,21 +1444,21 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonTime = universeName + "OfflineTime";
 		std::string reasonName = universeName + "OfflineReason";
 
-		int universeOnline = 0;
+		bool universeOnline = false;
 		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName );
-			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
+			extras_classad->Assign( reasonTime, time( NULL ) );
 
 			std::string reason = "[unknown reason]";
-			cap->LookupString( reasonName.c_str(), reason );
-			extras_classad->Assign( reasonName.c_str(), reason.c_str() );
+			cap->LookupString( reasonName, reason );
+			extras_classad->Assign( reasonName, reason );
 		} else {
 			// The universe is online, so it can't have an offline reason
 			// or a time that it entered the offline state.
 			offlineUniverses.erase( universeName );
-			extras_classad->Assign( reasonTime.c_str(), "undefined" );
-			extras_classad->Assign( reasonName.c_str(), "undefined" );
+			extras_classad->AssignExpr( reasonTime, "undefined" );
+			extras_classad->AssignExpr( reasonName, "undefined" );
 		}
 	}
 
@@ -1366,9 +1488,12 @@ ResMgr::publishSlotAttrs( ClassAd* cap )
 	if( ! resources ) {
 		return;
 	}
+	// experimental flags new for 8.9.7, evaluate STARTD_SLOT_ATTRS and insert valid literals only
+	bool as_literal = param_boolean("STARTD_EVAL_SLOT_ATTRS", false);
+	bool valid_only = ! param_boolean("STARTD_EVAL_SLOT_ATTRS_DEBUG", false);
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		resources[i]->publishSlotAttrs( cap );
+		resources[i]->publishSlotAttrs( cap, as_literal, valid_only );
 	}
 }
 
@@ -1471,13 +1596,12 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void )
+ResMgr::sweep_timer_handler( void ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
-#ifndef WIN32
-	credmon_sweep_creds();
-#endif  // WIN32
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+	credmon_sweep_creds(cred_dir, credmon_type_KRB);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
 
@@ -1485,18 +1609,13 @@ int
 ResMgr::start_sweep_timer( void )
 {
 	// only sweep if we have a cred dir
-	auto_free_ptr p(param("SEC_CREDENTIAL_DIRECTORY"));
+	auto_free_ptr p(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
 	if(!p) {
 		return TRUE;
 	}
 
-	// only sweep if not in TOKENS mode
-	if (!param_boolean("CREDD_OAUTH_MODE", false)) {
-		return TRUE;
-	}
-
 	dprintf(D_FULLDEBUG, "STARTD: setting start_sweep_timer()\n");
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 							(TimerHandlercpp)&ResMgr::sweep_timer_handler,
 							"sweep_timer_handler", this );
@@ -1585,7 +1704,7 @@ ResMgr::reset_timers( void )
 								 update_interval );
 	}
 
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	if( m_cred_sweep_tid != -1 ) {
 		daemonCore->Reset_Timer( m_cred_sweep_tid, sec_cred_sweep_interval,
 								 sec_cred_sweep_interval );
@@ -1595,6 +1714,12 @@ ResMgr::reset_timers( void )
 	resetHibernateTimer();
 #endif /* HAVE_HIBERNATE */
 
+		// Clear out any pending token requests.
+	m_token_client_id = "";
+	m_token_request_id = "";
+
+		// This is a borrowed reference; do not delete.
+	m_token_daemon = nullptr;
 }
 
 
@@ -1631,7 +1756,7 @@ ResMgr::addResource( Resource *rip )
 	nresources++;
 
 	// if this newly added slot is part of a pair, fixup the pair pointers
-	dprintf(D_ALWAYS, "Setting up slot pairings\n");
+	dprintf(D_FULLDEBUG, "Setting up slot pairings\n");
 	if (rip->r_pair_name && rip->r_pair_name[0] == '#') {
 		int slot_type = atoi(rip->r_pair_name+1);
 		dprintf(D_ALWAYS, "\t searching for type %d to pair with %s (%s)\n", slot_type, rip->r_id_str, rip->r_pair_name);
@@ -1662,7 +1787,6 @@ ResMgr::addResource( Resource *rip )
 }
 
 
-//PRAGMA_REMIND("tj: re-write this silly function so that it doesn't allocate a new resources array just to remove a resource...")
 bool
 ResMgr::removeResource( Resource* rip )
 {
@@ -1796,26 +1920,184 @@ ResMgr::deleteResource( Resource* rip )
 	}
 }
 
+// return the count of claims on this machine associated with this user
+// used to decide when to delete credentials
+int ResMgr::claims_for_this_user(const char * user)
+{
+	if ( ! user || ! user[0]) {
+		return 0;
+	}
+	int num_matches = 0;
+
+	for (int ii = 0; ii < nresources; ++ii) {
+		Resource * res = resources[ii];
+		if (res && res->r_cur && res->r_cur->client() && res->r_cur->client()->user()) {
+			if (MATCH == strcmp(res->r_cur->client()->user(), user)) {
+				num_matches += 1;
+			}
+		}
+	}
+	return num_matches;
+}
+
+static void clean_private_attrs(ClassAd & ad)
+{
+	for (auto i = ad.begin(); i != ad.end(); ++i) {
+		const std::string & name = i->first;
+
+		if (ClassAdAttributeIsPrivate(name)) {
+			// TODO: redact these while still providing some info, perhaps return the HASH?
+			ad.Assign(name, "<redacted>");
+		}
+	}
+}
 
 void
-ResMgr::makeAdList( ClassAdList *list, ClassAd *  /*pqueryAd =NULL*/ )
+ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 {
-	ClassAd* ad;
-	int i;
 
-		// Make sure everything is current
-	compute( A_TIMEOUT | A_UPDATE );
+	std::string stats_config;
+	int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
+	queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
+	if ( ! stats_config.empty()) {
+#if 0 // HACK to test swapping claims without a schedd
+		dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
+		if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
+			StringList swap_args(stats_config.c_str()+5);
+			hack_test_claim_swap(swap_args);
+		} else
+#endif
+			daemonCore->dc_stats.PublishFlags = 
+			generic_stats_ParseConfigString(stats_config.c_str(), 
+				"DC", "DAEMONCORE", 
+				dc_publish_flags);
+	}
+
+	bool snapshot = false;
+	if (!queryAd.LookupBool("Snapshot", snapshot)) {
+		snapshot = false;
+	}
+	int limit_results = -1;
+	if (!queryAd.LookupInteger(ATTR_LIMIT_RESULTS, limit_results)) {
+		limit_results = -1;
+	}
+
+		// Make sure everything is current unless we have been asked for a snapshot of the current internal state
+	Resource::Purpose purp = Resource::Purpose::for_query;
+	if (snapshot) {
+		purp = Resource::Purpose::for_snap;
+	} else {
+		purp = Resource::Purpose::for_query;
+		compute_dynamic(true);
+	}
+
+	// we will put the Machine ads we intend to return here temporarily
+	std::map <YourString, ClassAd*, CaseIgnLTYourString> ads;
+	// these get filled in with Resource and Job(Claim) ads only when snapshot == true
+	std::map <YourString, ClassAd*, CaseIgnLTYourString> res_ads;
+	std::map <YourString, ClassAd*, CaseIgnLTYourString> cfg_ads;
+	std::map <YourString, ClassAd*, CaseIgnLTYourString> claim_ads;
 
 		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
 		// collector normally does this, so if we're servicing a
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
 		// some timing stuff won't work.
-	for( i=0; i<nresources; i++ ) {
-		ad = new ClassAd;
-		resources[i]->publish( ad, A_ALL_PUB );
-		ad->Assign( ATTR_LAST_HEARD_FROM, (int)cur_time );
-		list->Insert( ad );
+	int num_ads = 0;
+	for (int ii=0; ii<nresources; ++ii) {
+		if (limit_results >= 0 && num_ads >= limit_results) {
+			dprintf(D_ALWAYS, "result limit of %d reached, completing direct query\n", num_ads);
+			break;
+		}
+
+		ClassAd * res_ad = NULL;
+		if (snapshot && resources[ii]->r_classad) {
+			resources[ii]->r_classad->Unchain();
+			res_ad = new ClassAd(*resources[ii]->r_classad);
+			resources[ii]->r_classad->ChainToAd(resources[ii]->r_config_classad);
+			SetMyTypeName(*res_ad, "Slot.State");
+			res_ad->Assign(ATTR_NAME, resources[ii]->r_name); // stuff a name because the name attribute is in the base ad
+		}
+		ClassAd * cfg_ad = NULL;
+		if (snapshot && resources[ii]->r_config_classad) {
+			cfg_ad = new ClassAd(*resources[ii]->r_config_classad);
+			SetMyTypeName(*cfg_ad, "Slot.Config");
+		}
+		ClassAd * claim_ad = NULL;
+		if (snapshot && resources[ii]->r_cur && resources[ii]->r_cur->ad()) {
+			claim_ad = new ClassAd(*resources[ii]->r_cur->ad());
+			clean_private_attrs(*claim_ad);
+			SetMyTypeName(*claim_ad, "Slot.Claim");
+		}
+
+		ClassAd * ad = new ClassAd;
+		resources[ii]->publish_single_slot_ad(*ad, cur_time, purp);
+
+		if (IsAHalfMatch(&queryAd, ad) /* || (claim_ad && IsAHalfMatch(&queryAd, claim_ad))*/) {
+			ads[resources[ii]->r_name] = ad;
+			if (res_ad) { res_ads[resources[ii]->r_name] = res_ad; }
+			if (cfg_ad) { cfg_ads[resources[ii]->r_name] = cfg_ad; }
+			if (claim_ad) { claim_ads[resources[ii]->r_name] = claim_ad; }
+			++num_ads;
+		} else {
+			delete ad;
+			delete res_ad;
+			delete cfg_ad;
+			delete claim_ad;
+		}
 	}
+
+	// put Machine ads and their associated snapshot ads into the return
+	// as we do this we erase the snap ads so that we can detect any leftover snap ads
+	if ( ! ads.empty()) {
+		for (auto it = ads.begin(); it != ads.end(); ++it) {
+			list.Insert(it->second);
+			auto foundb = cfg_ads.find(it->first);
+			if (foundb != cfg_ads.end()) {
+				list.Insert(foundb->second);
+				cfg_ads.erase(foundb);
+			}
+			auto foundr = res_ads.find(it->first);
+			if (foundr != res_ads.end()) {
+				list.Insert(foundr->second);
+				res_ads.erase(foundr);
+			}
+			auto foundj = claim_ads.find(it->first);
+			if (foundj != claim_ads.end()) {
+				list.Insert(foundj->second);
+				claim_ads.erase(foundj);
+			}
+		}
+	}
+
+	// also return any leftover snap ads, this puts leftover snap ads at the end
+	for (auto it = res_ads.begin(); it != res_ads.end(); ++it) {
+		list.Insert(it->second);
+	}
+	for (auto it = cfg_ads.begin(); it != cfg_ads.end(); ++it) {
+		list.Insert(it->second);
+	}
+	for (auto it = claim_ads.begin(); it != claim_ads.end(); ++it) {
+		list.Insert(it->second);
+	}
+
+	// also return the raw STARTD cron ads
+	if (snapshot) {
+		for (auto it = extra_ads.Enum().begin(); it != extra_ads.Enum().end(); ++it) {
+			ClassAd * named_ad = (*it)->GetAd();
+			if (named_ad) {
+				ClassAd * ad = new ClassAd(*named_ad);
+				SetMyTypeName(*ad, "Machine.Extra");
+				ad->Assign(ATTR_NAME, (*it)->GetName());
+				list.Insert(ad);
+			}
+		}
+	}
+
+	// restore the dc stats publish flags
+	if ( ! stats_config.empty()) {
+		daemonCore->dc_stats.PublishFlags = dc_publish_flags;
+	}
+
 }
 
 
@@ -1874,7 +2156,7 @@ void ResMgr::updateHibernateConfiguration() {
 
 
 int
-ResMgr::allHibernating( MyString &target ) const
+ResMgr::allHibernating( std::string &target ) const
 {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
@@ -1889,7 +2171,7 @@ ResMgr::allHibernating( MyString &target ) const
 		// We take largest value as the representative
 		// hibernation level for this machine
 	target = "";
-	MyString str;
+	std::string str;
 	int level = 0;
 	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
@@ -1900,11 +2182,11 @@ ResMgr::allHibernating( MyString &target ) const
 		}
 
 		int tmp = m_hibernation_manager->stringToSleepState (
-			str.Value () );
+			str.c_str () );
 
 		dprintf ( D_FULLDEBUG,
 			"allHibernating: resource #%d: '%s' (0x%x)\n",
-			i + 1, str.Value (), tmp );
+			i + 1, str.c_str (), tmp );
 
 		if ( 0 == tmp ) {
 			activity = true;
@@ -1931,7 +2213,7 @@ ResMgr::checkHibernate( void )
 
 		// If all resources have gone unused for some time
 		// then put the machine to sleep
-	MyString	target;
+	std::string target;
 	int level = allHibernating( target );
 	if( level > 0 ) {
 
@@ -2043,7 +2325,7 @@ ResMgr::cancelHibernateTimer( void )
 
 
 int
-ResMgr::disableResources( const MyString &state_str )
+ResMgr::disableResources( const std::string &state_str )
 {
 
 	dprintf (
@@ -2054,7 +2336,7 @@ ResMgr::disableResources( const MyString &state_str )
 
 	/* set the sleep state so the plugin will pickup on the
 	fact that we are sleeping */
-	m_hibernation_manager->setTargetState ( state_str.Value() );
+	m_hibernation_manager->setTargetState ( state_str.c_str() );
 
 	/* update the CM */
 	bool ok = true;
@@ -2125,6 +2407,17 @@ ResMgr::check_use( void )
 		dprintf( D_ALWAYS, "Shutting down Condor on this machine.\n" );
 		daemonCore->Send_Signal( daemonCore->getppid(), SIGTERM );
 	}
+}
+
+int
+naturalSlotOrderCmp( const void* a, const void* b )
+{
+	const Resource *rip1 = *((Resource* const *)a);
+	const Resource *rip2 = *((Resource* const *)b);
+
+	int diff = rip1->r_id - rip2->r_id;
+	if (diff) { return diff; }
+	return rip1->r_sub_id - rip2->r_sub_id;
 }
 
 
@@ -2311,9 +2604,11 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 	// retirement expression uses them.
 	for( int i = 0; i < nresources; i++ ) {
 		ClassAd &ad = *(resources[i]->r_classad);
+		// put these into the resources ClassAd now, they are also set by this->publish
 		ad.InsertAttr( ATTR_DRAINING, true );
 		ad.InsertAttr( ATTR_DRAINING_REQUEST_ID, new_request_id );
 		ad.InsertAttr( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
+		ad.InsertAttr( ATTR_LAST_DRAIN_STOP_TIME, last_drain_stop_time );
 	}
 
 	if( how_fast <= DRAIN_GRACEFUL ) {
@@ -2375,6 +2670,11 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 	}
 
 	draining = false;
+	// If we want to record when a non-resuming drain actually finished, we
+	// should only call this here if we've started draining since the last
+	// time we stopped.
+	// if( last_drain_start_time > last_drain_stop_time ) { setLastDrainStopTime(); }
+	setLastDrainStopTime();
 
 	walk(&Resource::enable);
 	update_all();
@@ -2382,7 +2682,7 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 }
 
 bool
-ResMgr::isSlotDraining(Resource * /*rip*/)
+ResMgr::isSlotDraining(Resource * /*rip*/) const
 {
 	return draining;
 }
@@ -2464,33 +2764,20 @@ ResMgr::considerResumingAfterDraining()
 	return true;
 }
 
-bool
-ResMgr::getDrainingRequestId( Resource * /*rip*/, std::string &request_id )
-{
-	if( !draining ) {
-		return false;
-	}
-	formatstr(request_id,"%d",draining_id);
-	return true;
-}
-
 void
-ResMgr::publish_draining_attrs( Resource *rip, ClassAd *cap, amask_t mask )
+ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 {
-	if( !IS_PUBLIC(mask) ) {
-		return;
-	}
-
 	if( isSlotDraining(rip) ) {
 		cap->Assign( ATTR_DRAINING, true );
 
 		std::string request_id;
-		resmgr->getDrainingRequestId( rip, request_id );
+		if (draining) { formatstr(request_id, "%d", draining_id); }
 		cap->Assign( ATTR_DRAINING_REQUEST_ID, request_id );
 	}
 	else {
-		cap->Delete( ATTR_DRAINING );
-		cap->Delete( ATTR_DRAINING_REQUEST_ID );
+		// in case we are writing into resource->r_classad, do a deep delete
+		caDeleteThruParent(cap, ATTR_DRAINING );
+		caDeleteThruParent(cap, ATTR_DRAINING_REQUEST_ID );
 	}
 
 	cap->Assign( ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT, expected_graceful_draining_badput );
@@ -2506,10 +2793,13 @@ ResMgr::publish_draining_attrs( Resource *rip, ClassAd *cap, amask_t mask )
 	if( last_drain_start_time != 0 ) {
 		cap->Assign( ATTR_LAST_DRAIN_START_TIME, (int)last_drain_start_time );
 	}
+	if( last_drain_stop_time != 0 ) {
+	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, (int)last_drain_stop_time );
+	}
 }
 
 void
-ResMgr::compute_draining_attrs( int /*how_much*/ )
+ResMgr::compute_draining_attrs()
 {
 		// Using long long for int math in this function so
 		// MaxJobRetirementTime=MAX_INT or MaxVacateTime=MAX_INT do
@@ -2617,7 +2907,200 @@ ResMgr::checkForDrainCompletion() {
 	// Set MAXJOBRETIREMENTTIME to 0.  This will be reset in ResState::eval()
 	// when draining completes.
 	this->max_job_retirement_time_override = 0;
-	walk( & Resource::refresh_classad, A_PUBLIC );
+	walk( & Resource::refresh_draining_attrs );
 	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
+}
+
+
+void
+ResMgr::token_request_callback(bool success, void *miscdata)
+{
+	auto self = reinterpret_cast<ResMgr *>(miscdata);
+		// In the successful case, instantly re-fire the timer
+		// that will send an update to the collector.
+	if (success && (self->up_tid != -1)) {
+		daemonCore->Reset_Timer( self->up_tid, update_offset,
+			update_interval );
+	}
+}
+
+bool OtherSlotEval( const char * name,
+	const classad::ArgumentList &arg_list,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	classad::Value arg;
+	std::string slotname;
+
+	ASSERT( resmgr );
+
+	dprintf(D_MACHINE|D_VERBOSE, "OtherSlotEval called\n");
+
+	// Must have two argument
+	if ( arg_list.size() != 2 ) {
+		result.SetErrorValue();
+		return( true );
+	}
+
+	// Evaluate slotname argument
+	if( !arg_list[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If argument isn't a string, then the result is an error.
+	if( !arg.IsStringValue( slotname ) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	// this is an invocation intended to produce a slot<n>_<attr> name
+	if (*name == '*') {
+		classad::ExprTree * expr = arg_list[1];
+		if (! expr) {
+			result.SetErrorValue();
+		} else {
+			std::string attr("");
+			if (!ExprTreeIsAttrRef(expr, attr)) {
+				attr = "expr_";
+			}
+			slotname += "_";
+			slotname += attr;
+			result.SetStringValue(slotname);
+		}
+		return true;
+	}
+
+	Resource* res = resmgr->get_by_name_prefix(slotname.c_str());
+	if (! res) {
+		result.SetUndefinedValue();
+		dprintf(D_MACHINE|D_VERBOSE, "OtherSlotEval(%s) - slot not found\n", slotname.c_str());
+	} else {
+		classad::ExprTree * expr = arg_list[1];
+		if (! expr) {
+			result.SetErrorValue();
+			dprintf(D_MACHINE|D_VERBOSE, "OtherSlotEval(%s) - empty expr\n", slotname.c_str());
+		} else {
+			std::string attr("");
+			if (ExprTreeIsAttrRef(expr, attr) && starts_with_ignore_case(attr, "Child") && false) {	 // fetch attr, but disable special Child* processing
+				attr = attr.substr(5); // strip "Child" prefix
+			#if 0 // TODO: parse expr and insert it into result value, or change rollup so it returns an ExprList?
+				std::string expr;
+				res->rollupChildAttrs(expr, attr);
+				classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
+				ASSERT(lst);
+				//lst->push_back(classad::Literal::MakeLiteral(first));
+				result.SetSListValue(lst);
+			#endif
+			} else {
+				const classad::ClassAd * parent = expr->GetParentScope();
+				res->r_classad->EvaluateExpr(expr, result);
+				expr->SetParentScope(parent); // put the parent scope back to where it was
+
+				if (IsDebugCatAndVerbosity((D_MACHINE|D_VERBOSE))) {
+					dprintf(D_MACHINE|D_VERBOSE, "OtherSlotEval(%s,expr) %s evalutes to %s\n",
+							slotname.c_str(), attr.c_str(), ClassAdValueToString(result));
+				}
+			}
+		}
+	}
+	return true;
+}
+
+// check to see if an expr tree is just a single SlotEval function call
+bool ExprTreeIsSlotEval(classad::ExprTree * tree)
+{
+	if (! tree || tree->GetKind() != classad::ExprTree::FN_CALL_NODE)
+		return false;
+	std::string fnName;
+	std::vector<classad::ExprTree*> args;
+	((const classad::FunctionCall*)tree)->GetComponents( fnName, args );
+	return (MATCH == strcasecmp(fnName.c_str(), "SlotEval"));
+}
+
+// walk an ExprTree, calling a function each time a ATTRREF_NODE is found.
+//
+int ExprHasSlotEval(classad::ExprTree * tree)
+{
+	int iret = 0;
+	if ( ! tree) return 0;
+	switch (tree->GetKind()) {
+	case classad::ExprTree::LITERAL_NODE:
+	break;
+
+	case classad::ExprTree::ATTRREF_NODE: {
+		const classad::AttributeReference* atref = reinterpret_cast<const classad::AttributeReference*>(tree);
+		classad::ExprTree *expr;
+		std::string ref;
+		std::string tmp;
+		bool absolute;
+		atref->GetComponents(expr, ref, absolute);
+		// if there is a non-trivial left hand side (something other than X from X.Y attrib ref)
+		// then recurse it.
+		if (expr && ! ExprTreeIsAttrRef(expr, tmp)) {
+			iret += ExprHasSlotEval(expr);
+		}
+	}
+	break;
+
+	case classad::ExprTree::OP_NODE: {
+		classad::Operation::OpKind	op;
+		classad::ExprTree *t1, *t2, *t3;
+		((const classad::Operation*)tree)->GetComponents( op, t1, t2, t3 );
+		if (t1) iret += ExprHasSlotEval(t1);
+		//if (iret && stop_on_first_match) return iret;
+		if (t2) iret += ExprHasSlotEval(t2);
+		//if (iret && stop_on_first_match) return iret;
+		if (t3) iret += ExprHasSlotEval(t3);
+	}
+	break;
+
+	case classad::ExprTree::FN_CALL_NODE: {
+		std::string fnName;
+		std::vector<classad::ExprTree*> args;
+		((const classad::FunctionCall*)tree)->GetComponents( fnName, args );
+		if (MATCH == strcasecmp(fnName.c_str(), "SlotEval")) {
+			iret += 1;
+			break; // no need to look deeper
+		}
+		for (std::vector<classad::ExprTree*>::iterator it = args.begin(); it != args.end(); ++it) {
+			iret += ExprHasSlotEval(*it);
+			if (iret) return iret;
+		}
+	}
+	break;
+
+	case classad::ExprTree::CLASSAD_NODE: {
+		std::vector< std::pair<std::string, classad::ExprTree*> > attrs;
+		((const classad::ClassAd*)tree)->GetComponents(attrs);
+		for (std::vector< std::pair<std::string, classad::ExprTree*> >::iterator it = attrs.begin(); it != attrs.end(); ++it) {
+			iret += ExprHasSlotEval(it->second);
+			if (iret) return iret;
+		}
+	}
+	break;
+
+	case classad::ExprTree::EXPR_LIST_NODE: {
+		std::vector<classad::ExprTree*> exprs;
+		((const classad::ExprList*)tree)->GetComponents( exprs );
+		for (std::vector<classad::ExprTree*>::iterator it = exprs.begin(); it != exprs.end(); ++it) {
+			iret += ExprHasSlotEval(*it);
+			if (iret) return iret;
+		}
+	}
+	break;
+
+	case classad::ExprTree::EXPR_ENVELOPE: {
+		classad::ExprTree * expr = SkipExprEnvelope(const_cast<classad::ExprTree*>(tree));
+		if (expr) iret += ExprHasSlotEval(expr);
+	}
+	break;
+
+	default:
+		// unknown or unallowed node.
+		ASSERT(0);
+		break;
+	}
+	return iret;
 }

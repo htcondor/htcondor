@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import classad
 import datetime
@@ -11,14 +11,31 @@ import types
 import unittest
 import warnings
 
-from pytest.CondorTest import CondorTest
-from pytest.Globals import *
-from pytest.Utils import Utils
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.Utils import Utils
 
 _long_type = int if sys.version_info > (3,) else long
 
+
+def assertIs(val1, val2, subtest, msg=""):
+    if val1 is val2:
+        CondorTest.RegisterSuccess(subtest, "Value " + str(val1) + " is " + str(val2) + ", as expected")
+    else:
+        failureMessage = "Value " + str(val1) + " is not " + str(val2)
+        if msg != "": failureMessage = msg
+        CondorTest.RegisterFailure(subtest, failureMessage)
+
+def assertIsNot(val1, val2, subtest, msg=""):
+    if val1 is not val2:
+        CondorTest.RegisterSuccess(subtest, "Value " + str(val1) + " is not " + str(val2) + ", as expected")
+    else:
+        failureMessage = "Value " + str(val1) + " is " + str(val2)
+        if msg != "": failureMessage = msg
+        CondorTest.RegisterFailure(subtest, failureMessage)
+
 def assertEqual(val1, val2, subtest, msg=""):
-    if val1 == val2: 
+    if val1 == val2:
         CondorTest.RegisterSuccess(subtest, "Values " + str(val1) + " and " + str(val2) + " are equal, as expected")
     else:
         failureMessage = "Values " + str(val1) + " and " + str(val2) + " not equal"
@@ -26,7 +43,7 @@ def assertEqual(val1, val2, subtest, msg=""):
         CondorTest.RegisterFailure(subtest, failureMessage)
 
 def assertNotEqual(val1, val2, subtest, msg=""):
-    if val1 == val2: 
+    if val1 == val2:
         failureMessage = "Values " + str(val1) + " and " + str(val2) + " are equal"
         if msg != "": failureMessage = msg
         CondorTest.RegisterFailure(subtest, failureMessage)
@@ -69,7 +86,7 @@ def new_ads_verify(ads, subtest):
     assertEqual(len(ads), 2, subtest)
     ad1, ad2 = ads
     assertEqual(ad1["foo"], "bar", subtest)
-    assertEqual(ad1["baz"], classad.Value.Undefined, subtest)
+    assertIs(ad1["baz"], classad.Value.Undefined, subtest)
     assertEqual(ad2["bar"], 1, subtest)
     assertEqual(len(ad1), 2, subtest)
     assertEqual(len(ad2), 1, subtest)
@@ -92,7 +109,7 @@ def test_classad_constructor():
     ad = classad.ClassAd('[foo = "1"; bar = 2]')
     assertEqual(ad['foo'], "1", "test_classad_constructor-1")
     assertEqual(ad['bar'], 2, "test_classad_constructor-2")
-    assertRaises(KeyError, ad.__getitem__, "test_classad_constructor-3", 'baz')
+    assertRaises(KeyError, ad.__getitem__, "test_classad_constructor-3", "baz")
 
 def test_pickle():
     ad = classad.ClassAd({"one": 1})
@@ -109,13 +126,13 @@ def test_load_classad_from_file():
         warnings.simplefilter("ignore")
         ad = classad.parse(open("python_bindings/test.ad"))
     assertEqual(ad["foo"], "bar", "test_load_classad_from_file-1")
-    assertEqual(ad["baz"], classad.Value.Undefined, "test_load_classad_from_file-2")
+    assertIs(ad["baz"], classad.Value.Undefined, "test_load_classad_from_file-2")
     assertRaises(KeyError, ad.__getitem__, "test_load_classad_from_file-3", "bar")
 
 def test_load_classad_from_file_v2():
     ad = classad.parseOne(open("python_bindings/test.ad"))
     assertEqual(ad["foo"], "bar", "test_load_classad_from_file_v2-1")
-    assertEqual(ad["baz"], classad.Value.Undefined, "test_load_classad_from_file_v2-2")
+    assertIs(ad["baz"], classad.Value.Undefined, "test_load_classad_from_file_v2-2")
     assertRaises(KeyError, ad.__getitem__, "test_load_classad_from_file_v2-3", "bar")
 
 def test_parse_one():
@@ -277,9 +294,9 @@ def test_ad_special_values():
     ad = classad.ClassAd()
     ad["foo"] = classad.ExprTree('regexp(12, 34)')
     ad["bar"] = classad.Value.Undefined
-    assertEqual(ad["foo"].eval(), classad.Value.Error, "test_ad_special_values-1")
-    assertNotEqual(ad["foo"].eval(), ad["bar"], "test_ad_special_values-2")
-    assertEqual(classad.Value.Undefined, ad["bar"], "test_ad_special_values-3")
+    assertIs(ad["foo"].eval(), classad.Value.Error, "test_ad_special_values-1")
+    assertIsNot(ad["foo"].eval(), ad["bar"], "test_ad_special_values-2")
+    assertIs(classad.Value.Undefined, ad["bar"], "test_ad_special_values-3")
 
 # FIXME: Doesn't work in Windows
 def test_ad_iterator():
@@ -288,8 +305,8 @@ def test_ad_iterator():
     ad["barl"] = 2
     assertEqual(len(ad), 2, "test_ad_iterator-1")
     assertEqual(len(list(ad)), 2, "test_ad_iterator-2")
-    assertEqual(list(ad)[1], "foo", "test_ad_iterator-3")
-    assertEqual(list(ad)[0], "bar", "test_ad_iterator-4")
+    assertEqual(list(ad)[1], "fool", "test_ad_iterator-3")
+    assertEqual(list(ad)[0], "barl", "test_ad_iterator-4")
     assertEqual(list(ad.items())[1][1], 1, "test_ad_iterator-5")
     assertEqual(list(ad.items())[0][1], 2, "test_ad_iterator-6")
     assertEqual(list(ad.values())[1], 1, "test_ad_iterator-7")
@@ -299,7 +316,7 @@ def test_ad_lookup():
     ad = classad.ClassAd()
     ad["foo"] = classad.Value.Error
     assertTrue(isinstance(ad.lookup("foo"), classad.ExprTree), "test_ad_lookup-1")
-    assertEqual(ad.lookup("foo").eval(), classad.Value.Error, "test_ad_lookup-2")
+    assertIs(ad.lookup("foo").eval(), classad.Value.Error, "test_ad_lookup-2")
 
 def test_get():
     ad = classad.ClassAd()
@@ -331,16 +348,16 @@ def test_update():
 
 def test_invalid_ref():
     expr = classad.ExprTree("foo")
-    assertEqual(classad.Value.Undefined, expr.eval(), "test_invalid_ref-1")
+    assertIs(classad.Value.Undefined, expr.eval(), "test_invalid_ref-1")
 
 def test_temp_scope():
     expr = classad.ExprTree("foo")
-    assertEqual("bar", expr.eval({"foo": "bar"}), "test_temp_scope-1")
+    assertEqual("bar", expr.eval(classad.ClassAd({"foo": "bar"})), "test_temp_scope-1")
     ad = classad.ClassAd({"foo": "baz", "test": classad.ExprTree("foo")})
     expr = ad["test"]
     assertEqual("baz", expr.eval(), "test_temp_scope-2")
-    assertEqual("bar", expr.eval({"foo": "bar"}), "test_temp_scope-3")
-    assertEqual("bar", expr.eval({"foo": "bar"}), "test_temp_scope-4")
+    assertEqual("bar", expr.eval(classad.ClassAd({"foo": "bar"})), "test_temp_scope-3")
+    assertEqual("bar", expr.eval(classad.ClassAd({"foo": "bar"})), "test_temp_scope-4")
     assertEqual("baz", expr.eval(), "test_temp_scope-5")
 
 def test_abstime():
@@ -397,7 +414,7 @@ def test_subscript():
     ad = classad.ClassAd({'foo': [0,1,2,3]})
     expr = classad.Attribute("foo")._get(2)
     assertTrue(isinstance(expr, classad.ExprTree), "test_subscript-1")
-    assertEqual(expr.eval(), classad.Value.Undefined, "test_subscript-2")
+    assertIs(expr.eval(), classad.Value.Undefined, "test_subscript-2")
     assertEqual(expr.eval(ad), 2, "test_subscript-3")
 
 def test_function():
@@ -405,7 +422,7 @@ def test_function():
     assertTrue(isinstance(expr, classad.ExprTree), "test_function-1")
     assertEqual(expr.eval(), "hello world", "test_function-2")
     expr = classad.Function("regexp", ".*")
-    assertEqual(expr.eval(), classad.Value.Error, "test_function-3")
+    assertIs(expr.eval(), classad.Value.Error, "test_function-3")
 
 def test_flatten():
     expr = classad.Attribute("foo") == classad.Attribute("bar")
@@ -424,7 +441,7 @@ def test_matches():
 
 def test_bool():
     assertTrue(bool( classad.ExprTree('true || false') ), "test_bool-1")
-    assertTrue(bool( classad.Literal(True).or_(False) ), "test_bool-2") 
+    assertTrue(bool( classad.Literal(True).or_(False) ), "test_bool-2")
     assertFalse(bool( classad.ExprTree('true && false') ), "test_bool-3")
     assertFalse(bool( classad.Literal(True).and_(False) ), "test_bool-4")
 
@@ -447,8 +464,8 @@ def test_register():
     assertEqual(3, classad.ExprTree('myAdd2(1, 2)').eval(), "test_register-2")
     assertRaises(BadException, classad.ExprTree('myBad(1, 2)').eval, "test_register-3")
     assertRaises(TypeError, classad.ExprTree('myComplex(1)').eval, "test_register-4")
-    assertEqual(classad.Value.Undefined, classad.ExprTree('myExpr()').eval(), "test_register-5")
-    assertEqual(classad.ExprTree('myExpr()').eval({"foo": 2}), 2, "test_register-6")
+    assertIs(classad.Value.Undefined, classad.ExprTree('myExpr()').eval(), "test_register-5")
+    assertEqual(classad.ExprTree('myExpr()').eval(classad.ClassAd({"foo": 2})), 2, "test_register-6")
     # FIXME: myAdd requires 2 arguments; only one is given.
     # assertRaises(TypeError, classad.ExprTree('myAdd(1)').eval, "test_register-7")
     assertEqual(classad.ExprTree('myFoo([foo = 1])').eval(), 1, "test_register-8")
@@ -505,18 +522,17 @@ def test_pipes():
     wfd.close()
     ad = classad.parseNext(rfd ,parser=classad.Parser.New)
     assertEqual(tuple(dict(ad).items()), (('foo', 1),), "test_pipes-1")
-    # TODO: Fix the following subtest
-    # assertRaises(StopIteration, classad.parseNext, "test_pipes", rfd, classad.Parser.New)
+    # TODO: Fix the following test.
+    # The reason it's failing is because the classad.Parser.New keyword isn't getting passed to the function call.
+    #assertRaises(StopIteration, classad.parseNext, "test_pipes-2", [rfd, classad.Parser.New])
     rfd.close()
     r, w = os.pipe()
     rfd = os.fdopen(r, 'r')
     wfd = os.fdopen(w, 'w')
     wfd.write("[foo = 1]")
     wfd.close()
-    assertRaises(ValueError, classad.parseNext, "test_pipes-2", rfd)
+    assertRaises(ValueError, classad.parseNext, "test_pipes-3", rfd)
     rfd.close()
-
-
 
 def main():
 

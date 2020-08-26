@@ -122,7 +122,7 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 	reply->Assign( "AlternateReply", "Lease updated." );
 	ReplyAndClean * last = new ReplyAndClean( reply, replyStream,
-		NULL, scratchpad, eventsGahp, commandState, commandID, NULL );
+		NULL, scratchpad, eventsGahp, commandState, commandID, NULL, NULL );
 
 	FunctorSequence * fs = new FunctorSequence( { pr, pt }, last,
 		commandState, commandID, scratchpad );

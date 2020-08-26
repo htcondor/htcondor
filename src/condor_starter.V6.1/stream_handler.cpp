@@ -66,7 +66,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 		flags = flags & (~O_APPEND);
 	}
 
-	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0777);
+	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0666);
 	if(remote_fd<0) {
 		dprintf(D_ALWAYS,"Couldn't open %s to stream %s: %s\n",filename.Value(),streamname.Value(),strerror(errno));
 		return false;
@@ -250,7 +250,7 @@ int StreamHandler::Handler( int  /* fd */)
 	return KEEP_STREAM;
 }
 
-int StreamHandler::GetJobPipe()
+int StreamHandler::GetJobPipe() const
 {
 	return job_pipe;
 }
@@ -291,7 +291,7 @@ StreamHandler::Reconnect() {
 	// Never permit truncation on a reconnect; what sense does that make?
 	flags = flags & (~O_TRUNC);
 
-	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0777);
+	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0666);
 	if(remote_fd<0) {
 		EXCEPT("Couldn't reopen %s to stream %s: %s",filename.Value(),streamname.Value(),strerror(errno));
 	}

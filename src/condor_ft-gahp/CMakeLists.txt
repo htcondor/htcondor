@@ -16,10 +16,9 @@
  # 
  ############################################################### 
 
-if (NOT WIN_EXEC_NODE_ONLY)
-
-	condor_selective_glob( "Pipe*;io*;ftgahp*" FTGahpSrcs )
-
-	condor_exe( condor_ft-gahp "${FTGahpSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
-
-endif(NOT WIN_EXEC_NODE_ONLY)
+set(FTGahpSrcs
+	PipeBuffer.cpp
+	io_loop.cpp
+	ftgahp_common.cpp
+)
+condor_exe( condor_ft-gahp "${FTGahpSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )

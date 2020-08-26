@@ -112,9 +112,8 @@ class TransferRequest
 		// What is the version string of the peer I'm talking to?
 		// This could be the empty string if there is no version.
 		// this will make a copy when you assign it to something.
-		void set_peer_version(MyString &pv);
-		void set_peer_version(char *pv);
-		MyString get_peer_version(void);
+		void set_peer_version(const std::string &pv);
+		std::string get_peer_version(void);
 
 		// what version is the info packet
 		void set_protocol_version(int);
@@ -131,9 +130,8 @@ class TransferRequest
 		bool get_used_constraint(void);
 
 		// Should this request be handled Passively, Actively, or Active Shadow
-		void set_transfer_service(TreqMode mode);
-		void set_transfer_service(MyString &str);
-		void set_transfer_service(const char *str);
+		//void set_transfer_service(TreqMode mode);
+		void set_transfer_service(const std::string &str);
 		TreqMode get_transfer_service(void);
 
 		// How many transfers am I going to process? Each transfer is on
@@ -167,18 +165,18 @@ class TransferRequest
 		void set_client_sock(ReliSock *rsock);
 		ReliSock* get_client_sock(void);
 
-		void set_capability(MyString &capability);
-		MyString get_capability(void);
+		void set_capability(const std::string &capability);
+		const std::string& get_capability(void);
 
 		/////////////////////////////////////////////////////////////////////
 		// Various kinds of status this request can be in 
 		/////////////////////////////////////////////////////////////////////
 
 		void set_rejected(bool val);
-		bool get_rejected(void);
+		bool get_rejected(void) const;
 
-		void set_rejected_reason(MyString &reason);
-		MyString get_rejected_reason(void);
+		void set_rejected_reason(const std::string &reason);
+		const std::string& get_rejected_reason(void);
 
 		/////////////////////////////////////////////////////////////////////
 		// Callback at various processing points of this request so the 
@@ -232,12 +230,12 @@ class TransferRequest
 		ReliSock *m_client_sock;
 
 		// Allow the stashing of a capability a td gave for this request here.
-		MyString m_cap;
+		std::string m_cap;
 
 		// If the transferd rejects this request, this is for the schedd
 		// to record that fact.
 		bool m_rejected;
-		MyString m_rejected_reason;
+		std::string m_rejected_reason;
 
 		// the various callbacks
 		MyString m_pre_push_func_desc;

@@ -32,7 +32,7 @@ public:
 	bool match(const char *);
 	void print(void);
 	void updateTimeStamp(void);
-	int getTimeStamp(void);
+	int getTimeStamp(void) const;
 	char *getVMSinful(void);
 
 private:

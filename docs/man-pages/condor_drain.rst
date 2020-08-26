@@ -1,26 +1,25 @@
-      
-
-*condor\_drain*
+*condor_drain*
 ===============
 
 Control draining of an execute machine
+:index:`condor_drain<single: condor_drain; HTCondor commands>`\ :index:`condor_drain command`
 
 Synopsis
 --------
 
-**condor\_drain** [**-help**\ ]
+**condor_drain** [**-help** ]
 
-**condor\_drain** [**-debug**\ ] [**-pool  **\ *pool-name*] [**-graceful
-\| -quick \| -fast**\ ] [**-resume-on-completion**\ ]
-[**-check  **\ *expr*] [**-start  **\ *expr*] *machine-name*
+**condor_drain** [**-debug** ] [**-pool** *pool-name*] [**-graceful
+| -quick | -fast** ] [**-resume-on-completion** ]
+[**-check** *expr*] [**-start** *expr*] *machine-name*
 
-**condor\_drain** [**-debug**\ ] [**-pool  **\ *pool-name*] **-cancel**
-[**-request-id  **\ *id*] *machine-name*
+**condor_drain** [**-debug** ] [**-pool** *pool-name*] **-cancel**
+[**-request-id** *id*] *machine-name*
 
 Description
 -----------
 
-*condor\_drain* is an administrative command used to control the
+*condor_drain* is an administrative command used to control the
 draining of all slots on an execute machine. When a machine is draining,
 it will not accept any new jobs unless the **-start** expression
 specifies otherwise. Which machine to drain is specified by the argument
@@ -53,11 +52,11 @@ gracefully-draining machine, some jobs may finish retiring before
 others. By default, the resources used by the newly-retired jobs do not
 become available for use by other jobs until the machine exits the
 draining state (see below). The **-start** expression you supply
-replaces the draining machine’s normal ``START`` expression for the
+replaces the draining machine's normal ``START`` expression for the
 duration of the draining state, potentially making those resources
-available. See section `Policy Configuration for Execute Hosts and for
-Submit Hosts <../admin-manual/policy-configuration.html>`__ for more
-information.
+available. See the
+:ref:`admin-manual/policy-configuration:*condor_startd* Policy Configuration`
+section for more information.
 
 Once draining is complete, the machine will enter the Drained/Idle
 state. To resume normal operation (negotiation) at that time or any
@@ -76,7 +75,7 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
- **-pool **\ *pool-name*
+ **-pool** *pool-name*
     Specify an alternate HTCondor pool, if the default one is not
     desired.
  **-graceful**
@@ -89,34 +88,21 @@ Options
  **-resume-on-completion**
     When done draining, resume normal operation, such that potentially
     the whole machine could be claimed.
- **-check **\ *expr*
+ **-check** *expr*
     Abort draining, if ``expr`` is not true for all slots to be drained.
- **-start **\ *expr*
+ **-start** *expr*
     The ``START`` expression to use while the machine is draining. You
-    can’t reference the machine’s existing ``START`` expression.
+    can't reference the machine's existing ``START`` expression.
  **-cancel**
-    Cancel a prior draining request, to permit the *condor\_negotiator*
+    Cancel a prior draining request, to permit the *condor_negotiator*
     to use the machine again.
- **-request-id **\ *id*
+ **-request-id** *id*
     Specify a specific draining request to cancel, where *id* is given
     by the ``DrainingRequestId`` machine ClassAd attribute.
 
 Exit Status
 -----------
 
-*condor\_drain* will exit with a non-zero status value if it fails and
+*condor_drain* will exit with a non-zero status value if it fails and
 zero status if it succeeds.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin–Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

@@ -236,15 +236,17 @@ LPCTSTR ExceptionHandler::GetExceptionString(DWORD dwCode, LPTSTR szBuf, size_t 
 
 	// If not one of the "known" exceptions, try to get the string
 	// from NTDLL.DLL's message table.
-	FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+	DWORD cch = FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
 		GetModuleHandle(_T("NTDLL.DLL")),
 		dwCode, 0, szBuf, (DWORD)cchBuf, 0);
+	if ( ! cch) szBuf[0] = 0;
 	return szBuf;
 }
 
 LPCTSTR ExceptionHandler::GetExceptionInfo(PEXCEPTION_RECORD per, LPTSTR szBuf, size_t cchBuf)
 {
 	DWORD dwCode = per->ExceptionCode;
+	szBuf[0] = 0; // return "" if we have nothing to say
 
 	// two of the most common exceptions have useful information in the ExceptionInformation
 	if ((EXCEPTION_ACCESS_VIOLATION == dwCode) || (EXCEPTION_IN_PAGE_ERROR == dwCode)) {
@@ -275,7 +277,7 @@ LPCTSTR ExceptionHandler::GetExceptionInfo(PEXCEPTION_RECORD per, LPTSTR szBuf, 
 		#endif
 			*p = 0;
 			if (per->NumberParameters >= 3 && cchBuf >= 70) {
-				sprintf(p, _T(" NTStatus: %d"), access, (NTSTATUS)(per->ExceptionInformation[2]));
+				sprintf(p, _T(" NTStatus: %d"), (NTSTATUS)(per->ExceptionInformation[2]));
 			}
 			return szBuf;
 		}
@@ -309,7 +311,7 @@ BOOL ExceptionHandler::GetLogicalAddress(PVOID addr, PTSTR szModule, DWORD len, 
             i++, pSection++ )    {
         DWORD sectionStart = pSection->VirtualAddress;
         DWORD sectionEnd = sectionStart
-                    + max(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
+                    + MAX(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
         // Is the address in this section???
         if ( (rva >= sectionStart) && (rva <= sectionEnd) ) {
             // Yes, address is in the section.  Calculate section and offset,

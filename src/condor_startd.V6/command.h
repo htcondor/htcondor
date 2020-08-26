@@ -29,7 +29,7 @@ class Service;
   resource the ClaimId matched.  None of the commands send
   anything other than the command and the ClaimId.  
 */
-int command_handler( Service*, int, Stream* );
+int command_handler(int, Stream* );
 
 /*
   command_handler reads a ClaimId and classad off the socket, tries to find
@@ -37,28 +37,28 @@ int command_handler( Service*, int, Stream* );
   command, and calls the proper action with the pointer to the
   resource the ClaimId matched.
 */
-int command_with_opts_handler( Service*, int, Stream* );
+int command_with_opts_handler(int, Stream* );
 
 /*
   ACTIVATE_CLAIM is a special case of the above case, in that more
   stuff is sent over the wire than just the command and the
   ClaimId, and if anything goes wrong, the shadow wants a reply. 
 */
-int command_activate_claim( Service*, int, Stream* );
+int command_activate_claim(int, Stream* );
 
 /*
   SUSPEND_CLAIM is a special case of the above case, in that more
   stuff is sent over the wire than just the command and the
   ClaimId, and if anything goes wrong, the shadow wants a reply. 
 */
-int command_suspend_claim( Service*, int, Stream* );
+int command_suspend_claim(int, Stream* );
 
 /*
   CONTINUE_CLAIM is a special case of the above case, in that more
   stuff is sent over the wire than just the command and the
   ClaimId, and if anything goes wrong, the shadow wants a reply. 
 */
-int command_continue_claim( Service*, int, Stream* );
+int command_continue_claim(int, Stream* );
 
 #if !defined(WIN32)
 /*
@@ -68,7 +68,7 @@ int command_continue_claim( Service*, int, Stream* );
   glexec needs the user proxy to determine what user to run the starter
   as.
 */
-int command_delegate_gsi_cred( Service*, int, Stream* );
+int command_delegate_gsi_cred(int, Stream* );
 #endif
 
 /*
@@ -76,35 +76,35 @@ int command_delegate_gsi_cred( Service*, int, Stream* );
   be for the preempting match.  Therefore, they must be handled 
   differently.
 */
-int command_request_claim( Service*, int, Stream* );
-int command_match_info( Service*, int, Stream* );
-int command_release_claim( Service*, int, Stream* );
+int command_request_claim(int, Stream* );
+int command_match_info(int, Stream* );
+int command_release_claim(int, Stream* );
 
 /* 
    These commands all act startd-wide, and therefore, should be handled
    seperately. 
 */
-int command_vacate_all( Service*, int, Stream* );
-int command_pckpt_all( Service*, int, Stream* );
-int command_x_event( Service*, int, Stream* );
-int	command_give_state( Service*, int, Stream* );
-int	command_give_totals_classad( Service*, int, Stream* );
-int command_give_request_ad( Service*, int, Stream* );
-int command_query_ads( Service*, int, Stream* );
-int command_vm_register( Service*, int, Stream* );
-int command_vm_universe( Service*, int, Stream* );
+int command_vacate_all(int, Stream* );
+int command_pckpt_all(int, Stream* );
+int command_x_event(int, Stream* );
+int	command_give_state(int, Stream* );
+int	command_give_totals_classad( int, Stream* );
+int command_give_request_ad(int, Stream* );
+int command_query_ads(int, Stream* );
+int command_vm_register( int, Stream* );
+int command_vm_universe( int, Stream* );
 
 /*
    This command handler deals with commands that send a name as part
    of the protocol to specify which resource they should effect,
    instead of a ClaimId.
 */
-int command_name_handler( Service*, int, Stream* );
+int command_name_handler(int, Stream* );
 
 /*
    Command handler for dealing w/ ClassAd-only protocol commands
 */
-int command_classad_handler( Service*, int, Stream* );
+int command_classad_handler(int, Stream* );
 
 /*
   Since the protocol is complex and what we have to do so
@@ -118,18 +118,18 @@ int match_info( Resource*, char* );
 int request_claim( Resource*, Claim *, char*, Stream* ); 
 
 // Accept claim from schedd agent
-bool accept_request_claim( Resource* , Claim * = NULL, bool and_pair = false );
+bool accept_request_claim( Resource* , bool secure_claim_id = true, Claim * = NULL, bool and_pair = false );
 
 // Activate a claim with a given starter
 int activate_claim( Resource*, Stream* ); 
 
 // Start draining jobs
-int command_drain_jobs( Service*, int dc_cmd, Stream* s );
+int command_drain_jobs(int dc_cmd, Stream* s );
 
 // Cancel prior request to drain jobs
-int command_cancel_drain_jobs( Service*, int dc_cmd, Stream* s );
+int command_cancel_drain_jobs(int dc_cmd, Stream* s );
 
 // ...
-int command_coalesce_slots( Service *, int, Stream * stream );
+int command_coalesce_slots(int, Stream * stream );
 
 #endif /* _STARTD_COMMAND_H */

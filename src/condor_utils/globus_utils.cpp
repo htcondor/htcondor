@@ -867,6 +867,31 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 
 	ret = (*VOMS_Retrieve_ptr)(cert, chain, RECURSE_CHAIN,
 						voms_data, &voms_err);
+
+	// If verification was requested and no extensions were returned,
+	// try again without verification. If we get extensions that time,
+	// then verification failed. In that case, issue a warning, then
+	// act as if there were no extensions.
+	if (ret == 0 && verify_type != 0 ) {
+		ret = (*VOMS_SetVerificationType_ptr)( VERIFY_NONE, voms_data, &voms_err );
+		if (ret == 0) {
+			(*VOMS_ErrorMessage_ptr)(voms_data, voms_err, NULL, 0);
+			ret = voms_err;
+			goto end;
+		}
+
+		ret = (*VOMS_Retrieve_ptr)(cert, chain, RECURSE_CHAIN,
+						voms_data, &voms_err);
+		if (ret != 0) {
+			dprintf(D_ALWAYS, "WARNING! X.509 certificate '%s' has VOMS "
+					"extensions that can't be verified. Ignoring them. "
+					"(To silence this warning, set USE_VOMS_ATTRIBUTES=False)\n",
+					subject_name);
+		}
+		// Report no (verified) VOMS extensions
+		ret = 1;
+		goto end;
+	}
 	if (ret == 0) {
 		if (voms_err == VERR_NOEXT) {
 			// No VOMS extensions present
@@ -1696,7 +1721,7 @@ cleanup:
 	}
 
 	// Else, we block and finish up immediately.
-	return x509_receive_delegation_finish(recv_data_func, recv_data_ptr, &st);
+	return x509_receive_delegation_finish(recv_data_func, recv_data_ptr, st);
 #endif
 }
 

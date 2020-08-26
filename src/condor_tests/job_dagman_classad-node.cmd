@@ -1,6 +1,6 @@
-executable   = ./job_dagman_classad-node.pl
+executable   = job_dagman_classad-node.pl
 arguments    = $(DAGManJobId) $(NODE)
-universe     = scheduler
+universe     = local
 output       = job_dagman_classad-node$(NODE).out
 error        = job_dagman_classad-node$(NODE).err
 # Note: we need getenv = true for the node job to talk to the schedd of

@@ -399,7 +399,7 @@ void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate 
 
 	time_t now = time( NULL );
 	struct tm * ns = localtime( & now );
-	char nowString[] = "YYYY-MM-DD HH:MM:SS";
+	char nowString[72] = "YYYY-MM-DD HH:MM:SS";
 	snprintf( nowString, sizeof( nowString ), "%4d-%02d-%02d %02d:%02d:%02d",
 			  ns->tm_year + 1900, ns->tm_mon + 1, ns->tm_mday,
 			  ns->tm_hour, ns->tm_min, ns->tm_sec );

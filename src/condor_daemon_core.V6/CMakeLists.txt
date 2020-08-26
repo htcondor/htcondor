@@ -16,11 +16,37 @@
  # 
  ############################################################### 
 
-file( GLOB DCRmvElements condor_softkill*)
+# These are all referenced in condor_utils, we we need absolute paths
+set(DAEMON_CORE_UTIL_SRCS_LOCAL
+${CMAKE_CURRENT_SOURCE_DIR}/condor_lock_base.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/condor_lock.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/condor_lock_file.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/condor_lock_implementation.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/daemon_command.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/daemon_core.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/daemon_core_main.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/daemon_keep_alive.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/datathread.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/HookClient.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/HookClientMgr.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/self_draining_queue.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/self_monitor.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/timer_manager.cpp
+)
 
-condor_glob( DCHeaderFiles DCSourceFiles "${DCRmvElements};mimetypes.cpp" )
+# List APPEND only appends to a local scoped variable
+if(WINDOWS)
+list(APPEND DAEMON_CORE_UTIL_SRCS_LOCAL
+${CMAKE_CURRENT_SOURCE_DIR}/exception_handling.WINDOWS.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/pipe.WINDOWS.cpp
+)
+endif()
 
-set( DAEMON_CORE_UTIL_SRCS "${DCHeaderFiles};${DCSourceFiles}" PARENT_SCOPE )
+# and propogate this variable up to the parent scope
+set(DAEMON_CORE_UTIL_SRCS 
+	${DAEMON_CORE_UTIL_SRCS_LOCAL}
+	PARENT_SCOPE
+)
 
 if (WINDOWS)
 	condor_exe( condor_softkill "condor_softkill.WINDOWS.cpp;condor_softkill.h" ${C_SBIN} "${CONDOR_TOOL_LIBS};psapi" OFF )

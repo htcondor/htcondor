@@ -46,7 +46,6 @@
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
-#include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
@@ -182,6 +181,10 @@ main( int argc, char *argv[] )
 				argv++;
 				Max = atoi(*argv);
 				Range = (Max - Min);
+				if (Range == 0) {
+					printf("Range must be non-negative\n");
+					exit(1);
+				}
 				//fprintf( stderr, "random sleep range requested: %d - %d\n", Min, Max );
 				break;
 
@@ -274,9 +277,6 @@ grab_val( const char *str, const char *pattern )
 	}
 	return -1;
 }
-
-extern "C" int
-SetSyscalls( int foo ) { return foo; }
 
 /*
   Initialize information from the configuration files.

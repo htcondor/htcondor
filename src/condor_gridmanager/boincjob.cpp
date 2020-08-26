@@ -275,7 +275,7 @@ BoincJob::BoincJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( !error_string.empty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -299,7 +299,7 @@ void BoincJob::Reconfig()
 
 void BoincJob::doEvaluateState()
 {
-	bool connect_failure = false;
+	const bool connect_failure = false;
 	int old_gm_state;
 	std::string old_remote_state;
 	bool reevaluate_state = true;
@@ -542,7 +542,6 @@ void BoincJob::doEvaluateState()
 			}
 
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
-				SetRemoteBatchName( NULL );
 				gmState = GM_DELETE;
 			} else {
 				// Clear the contact string here because it may not get
@@ -573,7 +572,6 @@ void BoincJob::doEvaluateState()
 				break;
 			}
 
-			SetRemoteBatchName( NULL );
 			remoteState = BOINC_JOB_STATUS_UNSET;
 			SetRemoteJobStatus( NULL );
 			requestScheddUpdate( this, false );
@@ -602,6 +600,7 @@ void BoincJob::doEvaluateState()
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteBatchName( NULL );
 				gmState= GM_HOLD;
 			}
 		} break;
@@ -629,7 +628,7 @@ void BoincJob::doEvaluateState()
 			if ( ( remoteJobName != NULL ||
 				   remoteState == BOINC_JOB_STATUS_ERROR ) 
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 
+					 && wantResubmit == false 
 					 && doResubmit == 0 ) {
 				if(remoteJobName == NULL) {
 					dprintf(D_FULLDEBUG,
@@ -649,10 +648,10 @@ void BoincJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
-				wantResubmit = 0;
+				wantResubmit = false;
 				dprintf(D_ALWAYS,
 						"(%d.%d) Resubmitting to BOINC because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
@@ -686,7 +685,7 @@ void BoincJob::doEvaluateState()
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 				// Set ad attributes so the schedd finds a new match.
-				int dummy;
+				bool dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					jobAd->Assign( ATTR_JOB_MATCHED, false );
 					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
@@ -974,6 +973,6 @@ void BoincJob::GetInputFilenames( vector<pair<std::string, std::string> > &files
 		} else {
 			formatstr( tmp_str, "%s/%s", iwd.c_str(), filename );
 		}
-		files.push_back( pair<std::string, std::string>( tmp_str, condor_basename(filename) ) );
+		files.emplace_back( tmp_str, condor_basename(filename) );
 	}
 }

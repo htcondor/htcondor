@@ -41,7 +41,7 @@ public:
     int         job_prio;
     int         status;
     int         qdate;
-    char        owner[MAX_CONDOR_USERNAME_LEN];
+    char        submitter[MAX_CONDOR_USERNAME_LEN];
 	int			auto_cluster_id;
 
 	prio_rec() {
@@ -50,7 +50,7 @@ public:
 		job_prio = 0;
 		status = 0;
 		qdate = 0;
-		*owner='\0';
+		submitter[0] = 0;
 		auto_cluster_id = 0;
 		pre_job_prio1 = 0;
 		pre_job_prio2 = 0;

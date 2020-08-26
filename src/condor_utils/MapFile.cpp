@@ -74,7 +74,7 @@ public:
 	CanonicalMapEntry(char typ) : next(NULL), entry_type(typ) { memset(spare, 0, sizeof(spare)); }
 	~CanonicalMapEntry();
 	bool matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon);
-	bool is_hash_type() { return entry_type == 2; }
+	bool is_hash_type() const { return entry_type == 2; }
 protected:
 	friend class MapFile;
 	char entry_type; // 0 = base, 1 = CanonicalMapRegexEntry, 2 = CanonicalMapHashEntry

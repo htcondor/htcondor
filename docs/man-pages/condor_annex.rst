@@ -1,93 +1,93 @@
-      
-
-*condor\_annex*
+*condor_annex*
 ===============
 
 Add cloud resources to the pool.
+:index:`condor_annex<single: condor_annex; HTCondor commands>`\ :index:`condor_annex command`
 
 Synopsis
 --------
 
-**condor\_annex** **-help**
+**condor_annex** **-help**
 
-**condor\_annex** [**-aws-region  **\ *<region>*]
-**-setup **\ *[/full/path/to/access/key/file
-[/full/path/to/secret/key/file]]*
+**condor_annex** [**-aws-region** *<region>*] **-setup** *[FROM
+INSTANCE|[/full/path/to/access/key/file
+[/full/path/to/secret/key/file]]]*
 
-**condor\_annex** [**-aws-on-demand**\ ] **-annex-name **\ *<name of the
-annex>* **-count **\ *<integer number of instances>*
-[**-aws-on-demand-\***\ ] [**common options**\ ]
+**condor_annex** [**-aws-on-demand** ] **-annex-name** *<name of the
+annex>* **-count** *<integer number of instances>*
+[**-aws-on-demand-\*** ] [**common options** ]
 
-**condor\_annex** [**-aws-spot-fleet**\ ] **-annex-name **\ *<name of
-the annex>* **-slots **\ *<integer weight>* [**-aws-spot-fleet-\***\ ]
-[**common options**\ ]
+**condor_annex** [**-aws-spot-fleet** ] **-annex-name** *<name of
+the annex>* **-slots** *<integer weight>* [**-aws-spot-fleet-\*** ]
+[**common options** ]
 
-**condor\_annex** **-annex-name **\ *<name of the annex>*
-**-duration **\ *hours*
+**condor_annex** **-annex-name** *<name of the annex>*
+**-duration** *hours*
 
-**condor\_annex** [**-annex-name  **\ *<name of the annex>*] **-status**
-[**-classad**\ ]
+**condor_annex** [**-annex-name** *<name of the annex>*] **-status**
+[**-classad** ]
 
-**condor\_annex** **-check-setup**
+**condor_annex** **-check-setup**
 
-**condor\_annex** <condor\_annex options> **status** <condor\_status
+**condor_annex** <condor_annex options> **status** <condor_status
 options>
 
 Description
 -----------
 
-*condor\_annex* adds clouds resources to the pool. (“The pool” is
+*condor_annex* adds clouds resources to the pool. ("The pool" is
 determined in the usual manner for HTCondor daemons and tools.) This
-version supports only Amazon Web Services (‘AWS’). To add “on-demand”
-instances, use the third form listed above; to add “spot” instances, use
+version supports only Amazon Web Services ('AWS'). To add "on-demand"
+instances, use the third form listed above; to add "spot" instances, use
 the fourth. For an explanation of terms, consult either the HTCondor
-manual (chapter `Cloud Computing <../cloud-computing/index.html>`__) or
+manual in the :doc:`/cloud-computing/index` chapter or
 the AWS documentation.
 
-Using *condor\_annex* with AWS requires a one-time setup procedure
-performed by invoking *condor\_annex* with the **-setup** flag (the
+Using *condor_annex* with AWS requires a one-time setup procedure
+performed by invoking *condor_annex* with the **-setup** flag (the
 second form listed above). You may check if this procedure has been
 performed with the **-check-setup** flag (the seventh form listed
-above).
+above). If you use the setup flag on an instance whose role gives it
+sufficient privileges, you may, instead of specifying your API keys,
+pass ``FROM INSTANCE`` to **-setup** to ask *condor_annex* to use the
+instance's role credentials.
 
-To reset the lease on an existing annex, invoke *condor\_annex* with
+To reset the lease on an existing annex, invoke *condor_annex* with
 only the **-annex-name** option and **-duration** flag (the fifth form
 listed above).
 
 To determine which of the instances previously requested for a
-particular annex are not currently in the pool, invoke *condor\_annex*
+particular annex are not currently in the pool, invoke *condor_annex*
 with the **-status** flag and the **-annex-name** option (the sixth form
 listed above). The output of this command is intended to be
 human-readable; specifying the **-classad** flag will produce the same
 information in ClassAd format. If you omit **-annex-name**, information
 for all annexes will be returned.
 
-Starting in 8.7.3, you may instead invoke *condor\_annex* with
+Starting in 8.7.3, you may instead invoke *condor_annex* with
 **status** as a command argument (the eighth form listed above). This
-will cause *condor\_annex* to use *condor\_status* to present annex
+will cause *condor_annex* to use *condor_status* to present annex
 instance data. Arguments and options on the command line after
-**status** will be passed unmodified to *condor\_status*, but not all
+**status** will be passed unmodified to *condor_status*, but not all
 arguments and options will behave as expected. (See below.)
-*condor\_annex* will construct an ad for each annex instance and pass
-that information to *condor\_status*; *condor\_status* will (unless you
+*condor_annex* will construct an ad for each annex instance and pass
+that information to *condor_status*; *condor_status* will (unless you
 specify otherwise using its command line) query the collector for more
 information about the instances. Information from the collector will be
 presented as usual; instances which did not have ads in the collector
 will be presented last, in their own table. These instances can not be
 presented in the usual way because the annex instance ads generated by
-*condor\_annex* do not (and can not) have the same information in them
-as ads generated by a *condor\_startd* running in the instance. See the
-*condor\_status* documentation
-(section `condor\_status <../man-pages/condor_status.html>`__) for
-details about the “merge” mode of *condor\_status* used by this command
-argument. Note that both *condor\_annex* and *condor\_status* have
-**-annex-name** options; if you’re interested in a particular annex, put
-this flag on the command line before the **status** command argument to
-avoid confusing results.
+*condor_annex* do not (and can not) have the same information in them
+as ads generated by a *condor_startd* running in the instance. See the
+:doc:`/man-pages/condor_status` manual page for details about the "merge" mode
+of *condor_status* used by this command argument. Note that both *condor_annex*
+and *condor_status* have **-annex-name** options; if you're interested in a
+particular annex, put this flag on the command line before the **status**
+command argument to avoid confusing results.
 
 Common options are listed first, followed by options specific to AWS,
-followed by options specific to AWS’ on-demand instances, followed by
-options specific to AWS’ spot instances, followed by options intended
+followed by options specific to AWS' on-demand instances, followed by
+options specific to AWS' spot instances, followed by options intended
 for use by experts.
 
 Options
@@ -95,73 +95,72 @@ Options
 
  **-help**
     Print a usage reminder.
- **-setup **\ *[/full/path/to/access/key/file
-/full/path/to/secret/key/file]*
+ **-setup** *[/full/path/to/access/key/file/full/path/to/secret/key/file]*
     Do the first-time setup.
- **-duration **\ *hours*
+ **-duration** *hours*
     Set the maximum lease duration in decimal *hours*. After this amount
     of time, all instances will terminated, regardless of their
     idleness. Defaults to 50 minutes.
- **-idle **\ *hours*
+ **-idle** *hours*
     Set the maximum idle duration in decimal *hours*. An instance idle
     for longer than this duration will terminate itself. Defaults to 15
     minutes.
- **-config-dir **\ */full/path/to/directory*
-    Copy the contents of */full/path/to/directory* to each instance’s
+ **-config-dir** */full/path/to/directory*
+    Copy the contents of */full/path/to/directory* to each instance's
     configuration directory.
- **-owner **\ *owner[, owner]\**
+ **-owner** *owner[, owner]\**
     Configure the annex so that only *owner* may start jobs there. By
     default, configure the annex so that only the user running
-    *condor\_annex* may start jobs there.
+    *condor_annex* may start jobs there.
  **-no-owner**
     Configure the annex so that anyone in the pool may use the annex.
- **-aws-region **\ *region*
+ **-aws-region** *region*
     Specify the region in which to create the annex.
- **-aws-user-data **\ *user-data*
+ **-aws-user-data** *user-data*
     Set the instance user data to *user-data*.
- **-aws-user-data-file **\ */full/path/to/file*
+ **-aws-user-data-file** */full/path/to/file*
     Set the instance user data to the contents of the file
     */full/path/to/file*.
- **-aws-default-user-data **\ *user-data*
-    Set the instance user data to *user-data*, if it’s not already set.
+ **-aws-default-user-data** *user-data*
+    Set the instance user data to *user-data*, if it's not already set.
     Only applies to spot fleet requests.
- **-aws-default-user-data-file **\ */full/path/to/file*
+ **-aws-default-user-data-file** */full/path/to/file*
     Set the instance user data to the contents of the file
-    */full/path/to/file*, if it’s not already set. Only applies to spot
+    */full/path/to/file*, if it's not already set. Only applies to spot
     fleet requests.
- **-aws-on-demand-instance-type **\ *instance-type*
+ **-aws-on-demand-instance-type** *instance-type*
     This annex will requests instances of type *instance-type*. The
-    default for v8.7.1 is ‘m4.large’.
- **-aws-on-demand-ami-id **\ *ami-id*
+    default for v8.7.1 is 'm4.large'.
+ **-aws-on-demand-ami-id** *ami-id*
     This annex will start instances of the AMI *ami-id*. The default for
-    v8.7.1 is ‘ami-35b13223’, a GPU-compatible Amazon Linux image with
+    v8.7.1 is 'ami-35b13223', a GPU-compatible Amazon Linux image with
     HTCondor pre-installed.
- **-aws-on-demand-security-group-ids **\ *group-id[,group-id]*
+ **-aws-on-demand-security-group-ids** *group-id[,group-id]*
     This annex will start instances with the listed security group IDs.
     The default is the security group created by **-setup**.
- **-aws-on-demand-key-name **\ *key-name*
+ **-aws-on-demand-key-name** *key-name*
     This annex will start instances with the key pair named *key-name*.
     The default is the key pair created by **-setup**.
- **-aws-spot-fleet-config-file **\ */full/path/to/file*
+ **-aws-spot-fleet-config-file** */full/path/to/file*
     Use the JSON blob in */full/path/to/file* for the spot fleet
     request.
- **-aws-access-key-file **\ */full/path/to/access-key-file*
+ **-aws-access-key-file** */full/path/to/access-key-file*
     Experts only.
- **-aws-secret-key-file **\ */full/path/to/secret-key-file*
+ **-aws-secret-key-file** */full/path/to/secret-key-file*
     Experts only.
- **-aws-ec2-url **\ *https://ec2.<region>.amazonaws.com*
+ **-aws-ec2-url** *https://ec2.<region>.amazonaws.com*
     Experts only.
- **-aws-events-url **\ *https://events.<region>.amazonaws.com*
+ **-aws-events-url** *https://events.<region>.amazonaws.com*
     Experts only.
- **-aws-lambda-url **\ *https://lambda.<region>.amazonaws.com*
+ **-aws-lambda-url** *https://lambda.<region>.amazonaws.com*
     Experts only.
- **-aws-s3-url **\ *https://s3.<region>.amazonaws.com*
+ **-aws-s3-url** *https://s3.<region>.amazonaws.com*
     Experts only.
- **-aws-spot-fleet-lease-function-arn **\ *sfr-lease-function-arn*
+ **-aws-spot-fleet-lease-function-arn** *sfr-lease-function-arn*
     Developers only.
- **-aws-on-demand-lease-function-arn **\ *odi-lease-function-arn*
+ **-aws-on-demand-lease-function-arn** *odi-lease-function-arn*
     Developers only.
- **-aws-on-demand-instance-profile-arn **\ *instance-profile-arn*
+ **-aws-on-demand-instance-profile-arn** *instance-profile-arn*
     Developers only.
 
 General Remarks
@@ -169,46 +168,33 @@ General Remarks
 
 Currently, only AWS is supported. The AMI configured by setup runs
 HTCondor v8.6.10 on Amazon Linux 2016.09, and the default instance type
-is “m4.large”. The default AMI has the appropriate drivers for AWS’ GPU
+is "m4.large". The default AMI has the appropriate drivers for AWS' GPU
 instance types.
 
 Examples
 --------
 
-To start an on-demand annex named ‘MyFirstAnnex’ with one core, using
+To start an on-demand annex named 'MyFirstAnnex' with one core, using
 the default AMI and instance type, run
 
-::
+.. code-block:: console
 
-      condor_annex -count 1 -annex-name MyFirstAnnex
+      $ condor_annex -count 1 -annex-name MyFirstAnnex
 
 You will be asked to confirm that the defaults are what you want.
 
 As of 2017-04-17, the following example will cost a minimum of $90.
 
-To start an on-demand annex with 100 GPUs that job owners ‘big’ and
-‘little’ may use (be sure to include yourself!), run
+To start an on-demand annex with 100 GPUs that job owners 'big' and
+'little' may use (be sure to include yourself!), run
 
-::
+.. code-block:: console
 
-      condor_annex -count 100 -annex-name MySecondAnnex \ 
-        -aws-on-demand-instance-type p2.xlarge -owner "big, little"
+      $ condor_annex -count 100 -annex-name MySecondAnnex \
+        -aws-on-demand-instance-type p2.xlarge -owner "big, little"
 
 Exit Status
 -----------
 
-*condor\_annex* will exit with a status value of 0 (zero) on success.
+*condor_annex* will exit with a status value of 0 (zero) on success.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin–Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

@@ -26,7 +26,7 @@ my %special_int=(
  UWCMS_CVMFS_CacheUsedKB=>1, AFSCacheUsed=>1, UWCMS_CVMFS_CacheSizeKB=>1, AFSCacheAvail=>1,
  KeyboardIdle=>1, ConsoleIdle=>1, TotalCondorLoadAvg=>1, CondorLoadAvg=>1, LoadAvg=>1, TotalLoadAvg=>1,
  DaemonStartTime=>1, LastBenchmark=>1, LastUpdate=>1,
- JavaMFlops=>1, Mips=>1, KFlops=>1,
+ Mips=>1, KFlops=>1,
  Disk=>1, TotalDisk=>1, TotalSlotDisk=>1, ImageSize=>1,
  TotalMemory=>1, DetectedMemory=>1, TotalSlotMemory=>1, Memory=>1, TotalVirtualMemory=>1, VirtualMemory=>1,
  TotalClaimRunTime=>1, TotalTimeClaimedBusy=>1, TotalJobRunTime=>1,

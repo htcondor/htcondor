@@ -107,6 +107,9 @@ class TimerManager
     ///
     ~TimerManager();
 
+    // Invoked by daemonCore on a reconfig and also on startup
+    void reconfig();
+
     /** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
         @param handler        Not_Yet_Documented.
@@ -264,6 +267,20 @@ class TimerManager
     Timer*  in_timeout;
     bool    did_reset;
 	bool    did_cancel;
+
+    /* max_timer_events_per_cycle sets the maximum number of timer handlers
+    we will invoke per call to Timeout().  This limit prevents timers
+    from starving other kinds other DC handlers (i.e. it make certain
+    that we make it back to the Driver() loop occasionally.  The higher
+    the number, the more "timely" timer callbacks will be.  The lower
+    the number, the more responsive non-timer calls (like commands)
+    will be in the face of many timers coming due.
+    A value of zero means invoke every timer callback that is due at the
+    time we first enter Timeout(), but do not invoke new timers registered/reset
+    during the timeout.
+    */
+    int max_timer_events_per_cycle;
+
 };
 
 #endif

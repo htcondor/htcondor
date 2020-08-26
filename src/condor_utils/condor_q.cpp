@@ -41,11 +41,17 @@ static const char *intKeywords[] =
 };
 
 
-static const char *strKeywords[] =
+static const char *strKeywordsOld[] =
 {
-	ATTR_OWNER
+	ATTR_OWNER,
+	"(" ATTR_ACCOUNTING_GROUP " is undefined ? " ATTR_OWNER " : " ATTR_ACCOUNTING_GROUP ")"
 };
 
+static const char *strKeywordsModern[] =
+{
+	ATTR_OWNER,
+	"(" ATTR_ACCOUNTING_GROUP "?:" ATTR_OWNER ")"
+};
 
 static const char *fltKeywords[] = 
 {
@@ -60,22 +66,21 @@ static const char *fltKeywords[] =
 
 
 CondorQ::
-CondorQ( void )
+CondorQ(void)
 {
-	connect_timeout = 20; 
-	query.setNumIntegerCats (CQ_INT_THRESHOLD);
-	query.setNumStringCats (CQ_STR_THRESHOLD);
-	query.setNumFloatCats (CQ_FLT_THRESHOLD);
-	query.setIntegerKwList (const_cast<char **>(intKeywords));
-	query.setStringKwList (const_cast<char **>(strKeywords));
-	query.setFloatKwList (const_cast<char **>(fltKeywords));
+	connect_timeout = 20;
+	query.setNumIntegerCats(CQ_INT_THRESHOLD);
+	query.setNumStringCats(CQ_STR_THRESHOLD);
+	query.setNumFloatCats(CQ_FLT_THRESHOLD);
+	query.setIntegerKwList(const_cast<char **>(intKeywords));
+	query.setFloatKwList(const_cast<char **>(fltKeywords));
 
 	clusterprocarraysize = 128;
-	clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));
-	procarray = (int *) malloc(clusterprocarraysize * sizeof(int));
-	ASSERT( clusterarray != NULL && procarray != NULL );
+	clusterarray = (int *)malloc(clusterprocarraysize * sizeof(int));
+	procarray = (int *)malloc(clusterprocarraysize * sizeof(int));
+	ASSERT(clusterarray != NULL && procarray != NULL);
 	int i;
-	for(i=0; i < clusterprocarraysize; i++) { 
+	for (i = 0; i < clusterprocarraysize; i++) {
 		clusterarray[i] = -1;
 		procarray[i] = -1;
 	}
@@ -85,7 +90,19 @@ CondorQ( void )
 	owner[0] = '\0';
 	schedd[0] = '\0';
 	scheddBirthdate = 0;
+	useDefaultingOperator(false);
 }
+
+void CondorQ::useDefaultingOperator(bool enable)
+{
+	defaulting_operator = enable;
+	if (defaulting_operator) {
+		query.setStringKwList(const_cast<char **>(strKeywordsModern));
+	} else {
+		query.setStringKwList(const_cast<char **>(strKeywordsOld));
+	}
+}
+
 
 
 CondorQ::
@@ -159,6 +176,8 @@ add (CondorQStrCategories cat, const char *value)
 	case CQ_OWNER:
 		strncpy(owner, value, MAXOWNERLEN - 1);
 		break;
+	case CQ_SUBMITTER:
+		strncpy(owner, value, MAXOWNERLEN - 1);
 	default:
 		break;
 	}

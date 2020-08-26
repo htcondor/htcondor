@@ -18,12 +18,6 @@
 
 condor_exe( condor_power_state "power_state.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
 
-if (NOT WIN_EXEC_NODE_ONLY)
+condor_exe( condor_power "power.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )
 
-	condor_exe( condor_power "power.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )
-
-	condor_selective_glob( "rooster*" ROOSTER )
-
-	condor_exe( condor_rooster "${ROOSTER}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
-
-endif()
+condor_exe( condor_rooster "rooster.cpp;rooster_main.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )

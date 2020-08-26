@@ -730,7 +730,7 @@ ProcFamilyClient::quit(bool& response)
 {
 	assert(m_initialized);
 
-	dprintf(D_PROCFAMILY, "About to tell the ProcD to exit\n");
+	dprintf(D_ALWAYS, "About to tell the ProcD to exit\n");
 
 	proc_family_command_t command = PROC_FAMILY_QUIT;
 

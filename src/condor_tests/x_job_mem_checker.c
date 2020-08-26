@@ -25,10 +25,6 @@ void sleep(int sec) { Sleep(sec * 1000); }
 #include <unistd.h> // for sleep and getpid
 #endif
 
-#if defined(Solaris)
-#include <procfs.h>
-#endif
-
 #ifdef Darwin
 #include <sys/sysctl.h>
 #include <mach/mach.h>
@@ -470,42 +466,6 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 }
 #endif
 
-#if defined(Solaris)
-
-void
-get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
-{
-	char path[64];
-	FILE *fp;
-	psinfo_t psinfo;
-	int fd;
-	size_t dataread = 0;
-
-	sprintf( path, "/proc/%d/psinfo", jobpid );
-	fp = fopen(path,"r");
-	if(!fp) {
-		printf("Failed to open /proc/self/status\n");
-	} else {
-		printf("Opened psinfo file\n");
-		//size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream)
-		dataread = fread(&psinfo, sizeof(psinfo_t), 1, fp);
-		//dataread = read(fd, &psinfo, sizeof(psinfo_t));
-		if( dataread != 1 ) {
-			printf("Failed to get full read of psinfo_t\n Got %d Wanted %d\n",dataread,sizeof(psinfo_t));
-		} else {
-			printf("Got full read of psinfo_t\n");
-			printf("Size %u RSSS %u\n",(psinfo.pr_size),(psinfo.pr_rssize));
-			*vmpeak = 0;
-			*vmsize = (psinfo.pr_size);
-			*vmhwm = 0;
-			*vmrss = (psinfo.pr_rssize);
-		}
-	}
-	fclose(fp);
-}
-
-#endif
-
 #if defined(Darwin)
 
 /*
@@ -682,7 +642,7 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 	}
   
 	// fill in the values we got from the kernel
-	procRaw.imgsize = (u_long)ti.virtual_size;
+	procRaw.imgsize = (unsigned long)ti.virtual_size;
 	procRaw.rssize = ti.resident_size;
 	procRaw.user_time_1 = ti.user_time.seconds;
 	procRaw.user_time_2 = 0;

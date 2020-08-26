@@ -54,7 +54,6 @@ IsValidCheckpointPlatform = (TARGET.JobUniverse =!= 1 || ((MY.CheckpointPlatform
 IsWakeAble = false
 IsWakeOnLanEnabled = false
 IsWakeOnLanSupported = false
-JavaMFlops = 1227.188843
 JavaSpecificationVersion = "1.7"
 JavaVendor = "Oracle Corporation"
 JavaVersion = "1.7.0_65"
@@ -204,7 +203,6 @@ IsValidCheckpointPlatform = (TARGET.JobUniverse =!= 1 || ((MY.CheckpointPlatform
 IsWakeAble = false
 IsWakeOnLanEnabled = false
 IsWakeOnLanSupported = false
-JavaMFlops = 1227.188843
 JavaSpecificationVersion = "1.7"
 JavaVendor = "Oracle Corporation"
 JavaVersion = "1.7.0_65"
@@ -364,7 +362,6 @@ IsValidCheckpointPlatform = (TARGET.JobUniverse =!= 1 || ((MY.CheckpointPlatform
 IsWakeAble = false
 IsWakeOnLanEnabled = false
 IsWakeOnLanSupported = false
-JavaMFlops = 1227.188843
 JavaSpecificationVersion = "1.7"
 JavaVendor = "Oracle Corporation"
 JavaVersion = "1.7.0_65"
@@ -522,7 +519,6 @@ IsValidCheckpointPlatform = (TARGET.JobUniverse =!= 1 || ((MY.CheckpointPlatform
 IsWakeAble = false
 IsWakeOnLanEnabled = false
 IsWakeOnLanSupported = false
-JavaMFlops = 1227.188843
 JavaSpecificationVersion = "1.7"
 JavaVendor = "Oracle Corporation"
 JavaVersion = "1.7.0_65"
@@ -680,7 +676,6 @@ IsValidCheckpointPlatform = (TARGET.JobUniverse =!= 1 || ((MY.CheckpointPlatform
 IsWakeAble = false
 IsWakeOnLanEnabled = false
 IsWakeOnLanSupported = false
-JavaMFlops = 1227.188843
 JavaSpecificationVersion = "1.7"
 JavaVendor = "Oracle Corporation"
 JavaVersion = "1.7.0_65"

@@ -40,7 +40,7 @@ enum vm_status {
 class VMType
 {
 public:
-	static bool createVMName(ClassAd *ad, MyString& vmname);
+	static bool createVMName(ClassAd *ad, std::string& vmname);
 
 	VMType(const char* prog_for_script, const char* scriptname, 
 			const char* workingpath, ClassAd *ad);
@@ -67,9 +67,9 @@ public:
 
 	virtual bool CreateConfigFile() = 0;
 
-	int getVMId(void) { return m_vm_id; }
+	int getVMId(void) const { return m_vm_id; }
 
-	int PidOfVM(void) { return m_vm_pid; }
+	int PidOfVM(void) const { return m_vm_pid; }
 
 	vm_status getVMStatus(void);
 
@@ -87,7 +87,7 @@ protected:
 	bool isTransferedFile(const char* file_name, MyString& fullname);
 
 	MyString m_vmtype;
-	MyString m_vm_name;
+	std::string m_vm_name;
 	int m_vm_id;
 
 	int	m_vm_pid;	// PID of acutal vmware process for this VM
@@ -110,7 +110,7 @@ protected:
 	ClassAd m_classAd;
 	int m_vm_mem;  // VM memory requested in Job classAd
 	bool m_vm_networking;
-	MyString m_vm_networking_type;
+	std::string m_vm_networking_type;
 	bool m_vm_checkpoint;
 	bool m_vm_no_output_vm;
 	bool m_vm_hardware_vt;
@@ -149,7 +149,7 @@ protected:
 	time_t m_last_status_time;
 	MyString m_last_status_result;
 	int m_vcpus;
-	MyString m_vm_job_mac;
+	std::string m_vm_job_mac;
 
 	priv_state m_file_owner;
 private:

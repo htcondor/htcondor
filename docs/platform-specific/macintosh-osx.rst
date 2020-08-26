@@ -1,7 +1,7 @@
-      
-
 Macintosh OS X
 ==============
+
+:index:`Macintosh OS X<single: Macintosh OS X; platform-specific information>`
 
 This section provides information specific to the Macintosh OS X port of
 HTCondor. The Macintosh port of HTCondor is more accurately a port of
@@ -18,5 +18,3 @@ HTCondor on the Macintosh has a few shortcomings:
 -  No Macintosh-based installer is provided.
 -  The example start up scripts do not follow Macintosh conventions.
 -  Kerberos is not supported.
-
-      

@@ -194,6 +194,31 @@ JICLocal::disconnect()
 	return;
 }
 
+bool
+JICLocal::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
+{
+	dprintf( D_FULLDEBUG, "Entering JICLocal::peridocJobUpdate()\n" );
+
+	ClassAd local_ad;
+	ClassAd* ad;
+	if( update_ad ) {
+			// we already have the update info, so don't bother trying
+			// to publish another one.
+		ad = update_ad;
+	} else {
+		ad = &local_ad;
+		if( ! publishUpdateAd(ad) ) {
+			dprintf( D_FULLDEBUG, "JICLocal::periodicJobUpdate(): "
+			         "Didn't find any info to update!\n" );
+			return false;
+		}
+	}
+	bool r1, r2;
+	r1 = writeUpdateAdFile(ad);
+	r2 = JobInfoCommunicator::periodicJobUpdate(ad, insure_update);
+	return (r1 && r2);
+}
+
 void
 JICLocal::notifyJobPreSpawn( void )
 {
@@ -322,10 +347,6 @@ JICLocal::initUserPriv( void )
 		dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 				 "passwd database for a local job\n", owner ); 
 	} else {
-		CondorPrivSepHelper* psh = Starter->condorPrivSepHelper();
-		if (psh != NULL) {
-			psh->initialize_user(owner);
-		}
 		rval = true;
 		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 				 owner );
@@ -370,8 +391,8 @@ JICLocal::initJobInfo( void )
 		// stash the iwd name in orig_job_iwd
 	if( ! job_ad->LookupString(ATTR_JOB_IWD, &orig_job_iwd) ) {
 		dprintf(D_ALWAYS, "%s not found in job ad, setting to %s\n",
-				ATTR_JOB_IWD, Starter->GetWorkingDir());
-		job_ad->Assign(ATTR_JOB_IWD, Starter->GetWorkingDir());
+				ATTR_JOB_IWD, Starter->GetWorkingDir(0));
+		job_ad->Assign(ATTR_JOB_IWD, Starter->GetWorkingDir(0));
 	} else {
 			// put the orig job iwd in class ad
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
@@ -407,7 +428,7 @@ JICLocal::initJobInfo( void )
 			// add the job's iwd to the job_cmd, so exec will work. 
 		dprintf( D_FULLDEBUG, "warning: %s not specified as full path, "
 				 "prepending job's IWD (%s)\n", ATTR_JOB_CMD, job_iwd );
-		MyString job_cmd;
+		std::string job_cmd;
 		formatstr( job_cmd, "%s%c%s", job_iwd, DIR_DELIM_CHAR, orig_job_name );
 		job_ad->Assign( ATTR_JOB_CMD, job_cmd );
 	}

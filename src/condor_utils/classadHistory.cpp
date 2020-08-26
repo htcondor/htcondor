@@ -34,6 +34,7 @@ static FILE *HistoryFile_fp = NULL;
 static int HistoryFile_RefCount = 0;
 
 char* JobHistoryFileName = NULL;
+char* JobHistoryParamName = NULL;
 bool        DoHistoryRotation = true;
 bool        DoDailyHistoryRotation = true;
 bool        DoMonthlyHistoryRotation = true;
@@ -59,6 +60,10 @@ void
 InitJobHistoryFile(const char *history_param, const char *per_job_history_param) {
 
 	CloseJobHistoryFile();
+	if( history_param ) {
+		free(JobHistoryParamName);
+		JobHistoryParamName = strdup(history_param);
+	}
 	if( JobHistoryFileName ) free( JobHistoryFileName );
 	if( ! (JobHistoryFileName = param(history_param)) ) {
 		  dprintf(D_FULLDEBUG, "No %s file specified in config file\n", history_param );
@@ -70,8 +75,10 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     DoDailyHistoryRotation = param_boolean("ROTATE_HISTORY_DAILY", false);
     DoMonthlyHistoryRotation = param_boolean("ROTATE_HISTORY_MONTHLY", false);
 
-    MaxHistoryFileSize = param_integer("MAX_HISTORY_LOG", 
-                                       20 * 1024 * 1024); // 20MB is default
+	long long default_history = 20 * 1024 * 1024;
+	long long history_filesize = 0;
+    param_longlong("MAX_HISTORY_LOG", history_filesize, true, default_history);
+	MaxHistoryFileSize = history_filesize;
     NumberBackupHistoryFiles = param_integer("MAX_HISTORY_ROTATIONS", 
                                           2,  // default
                                           1); // minimum
@@ -144,7 +151,7 @@ AppendHistory(ClassAd* ad)
 		  failed = true;
 	  } else {
 		  int cluster, proc, completion;
-		  MyString owner;
+		  std::string owner;
 
 		  if (!ad->LookupInteger("ClusterId", cluster)) {
 			  cluster = -1;
@@ -160,7 +167,7 @@ AppendHistory(ClassAd* ad)
 		  }
 		  fprintf(LogFile,
                       "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
-				  offset, cluster, proc, owner.Value(), completion);
+				  offset, cluster, proc, owner.c_str(), completion);
 		  fflush( LogFile );
       }
   }
@@ -180,17 +187,19 @@ AppendHistory(ClassAd* ad)
 
 	  // Send email to the admin.
 	  if ( !sent_mail_about_bad_history ) {
-		  FILE* email_fp = email_admin_open("Failed to write to HISTORY file");
+		  std::string msg;
+		  formatstr(msg, "Failed to write to %s file", JobHistoryParamName);
+		  FILE* email_fp = email_admin_open(msg.c_str());
 		  if ( email_fp ) {
 			sent_mail_about_bad_history = true;
 			fprintf(email_fp,
-			 "Failed to write completed job class ad to HISTORY file:\n"
+			 "Failed to write completed job class ad to %s file:\n"
 			 "      %s\n"
 			 "If you do not wish for Condor to save completed job ClassAds\n"
 			 "for later viewing via the condor_history command, you can \n"
-			 "remove the 'HISTORY' parameter line specified in the condor_config\n"
+			 "remove the '%s' parameter line specified in the condor_config\n"
 			 "file(s) and issue a condor_reconfig command.\n"
-			 ,JobHistoryFileName);
+			 ,JobHistoryParamName,JobHistoryFileName,JobHistoryParamName);
 			email_close(email_fp);
 		  }
 	  }
@@ -224,10 +233,10 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	MyString file_name;
 	MyString temp_file_name;
 	if (useGjid) {
-		MyString gjid;
+		std::string gjid;
 		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.Value());
-		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.Value());
+		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.c_str());
+		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.c_str());
 	} else {
 		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
 		temp_file_name.formatstr("%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
@@ -516,7 +525,7 @@ IsHistoryFilename(const char *filename, time_t *backup_time)
         struct tm file_time;
         bool is_utc;
 
-        iso8601_to_time(filename + history_base_length + 1, &file_time, &is_utc);
+        iso8601_to_time(filename + history_base_length + 1, &file_time, NULL, &is_utc);
         if (   file_time.tm_year != -1 && file_time.tm_mon != -1 
             && file_time.tm_mday != -1 && file_time.tm_hour != -1
             && file_time.tm_min != -1  && file_time.tm_sec != -1
@@ -543,18 +552,17 @@ RotateHistory(void)
     // for the current time.
     time_t     current_time;
     struct tm  *local_time;
-    char       *iso_time;
+    char       iso_time[ISO8601_DateAndTimeBufferMax];
 
     current_time = time(NULL);
     local_time = localtime(&current_time);
-    iso_time = time_to_iso8601(*local_time, ISO8601_BasicFormat, 
+    time_to_iso8601(iso_time, *local_time, ISO8601_BasicFormat, 
                                ISO8601_DateAndTime, false);
 
     // First, select a name for the rotated history file
     MyString   rotated_history_name(JobHistoryFileName);
     rotated_history_name += '.';
     rotated_history_name += iso_time;
-    free(iso_time); // It was malloced by time_to_iso8601()
 
 	CloseJobHistoryFile();
 

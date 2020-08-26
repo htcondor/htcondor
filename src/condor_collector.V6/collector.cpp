@@ -27,7 +27,6 @@
 #include "status_types.h"
 #include "totals.h"
 
-#include "condor_collector.h"
 #include "collector_engine.h"
 #include "hashkey.h"
 
@@ -35,6 +34,9 @@
 #include "condor_universe.h"
 #include "ipv6_hostname.h"
 #include "condor_threads.h"
+
+#include "condor_claimid_parser.h"
+#include "authentication.h"
 
 #include "collector.h"
 
@@ -47,6 +49,8 @@
 #ifdef TRACK_QUERIES_BY_SUBSYS
 #include "subsystem_info.h" // so we can track query by client subsys
 #endif
+
+#include "dc_schedd.h"
 
 using std::vector;
 using std::string;
@@ -89,7 +93,6 @@ int CollectorDaemon::startdNumAds;
 
 ClassAd* CollectorDaemon::ad = NULL;
 CollectorList* CollectorDaemon::collectorsToUpdate = NULL;
-DCCollector* CollectorDaemon::worldCollector = NULL;
 int CollectorDaemon::UpdateTimerId;
 
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
@@ -98,9 +101,10 @@ StringList *viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
+bool CollectorDaemon::forwardClaimedPrivateAds = true;
 
-Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
-Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
+std::queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
+std::queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
 int CollectorDaemon::ReaperId = -1;
 int CollectorDaemon::max_query_workers = 4;
 int CollectorDaemon::reserved_for_highprio_query_workers = 1;
@@ -123,6 +127,178 @@ extern "C"
 {
 	void schedule_event ( int month, int day, int hour, int minute, int second, SIGNAL_HANDLER );
 }
+
+
+struct TokenRequestContinuation {
+	std::unique_ptr<DCSchedd> m_schedd;
+	std::string m_peer_location;
+	ReliSock *m_requester;
+
+	static
+	void finish(bool success, const std::string &token, const CondorError &err, void *misc_data)
+	{
+		auto continuation_ptr = static_cast<TokenRequestContinuation*>(misc_data);
+		std::unique_ptr<TokenRequestContinuation> continuation(continuation_ptr);
+		classad::ClassAd result_ad;
+		if (!success) {
+			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+			if (!putClassAd(continuation->m_requester, result_ad) ||
+				!continuation->m_requester->end_of_message())
+			{
+				dprintf(D_FULLDEBUG, "schedd_token_request: failed to send error"
+					" response ad to client.\n");
+			}
+			return;
+		}
+
+		result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+		dprintf(D_ALWAYS, "Token issued for user %s from %s for schedd %s.\n",
+			continuation->m_requester->getFullyQualifiedUser(),
+			continuation->m_peer_location.c_str(),
+			continuation->m_schedd->addr());
+
+		if (!putClassAd(continuation->m_requester, result_ad) ||
+			!continuation->m_requester->end_of_message())
+		{
+			dprintf(D_FULLDEBUG, "schedd_token_request: failed to send token back "
+				"to peer %s.\n",
+				continuation->m_peer_location.c_str());
+			return;
+		}
+		return;
+	}
+};
+
+
+int
+CollectorDaemon::schedd_token_request(int, Stream *stream)
+{
+	classad::ClassAd ad;
+	if (!getClassAd(stream, ad) ||
+		!stream->end_of_message())
+	{
+		dprintf(D_FULLDEBUG, "schedd_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	int error_code = 0;
+	std::string error_string;
+
+	const char *fqu = static_cast<Sock*>(stream)->getFullyQualifiedUser();
+	if (!fqu || !strlen(fqu)) {
+		error_code = 1;
+		error_string = "Missing requester identity.";
+	}
+
+	std::string authz_list_str;
+	ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str);
+	std::vector<std::string> authz_bounding_set;
+	if (!authz_list_str.empty())
+	{
+		StringList authz_list(authz_list_str.c_str());
+		authz_list.rewind();
+		const char *authz_name;
+		while ( (authz_name = authz_list.next()) ) {
+			authz_bounding_set.emplace_back(authz_name);
+		}
+	}
+	int requested_lifetime = -1;
+	if (!ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
+		requested_lifetime = -1;
+	}
+
+	if (!stream->get_encryption()) {
+		error_code = 3;
+		error_string = "Request to server was not encrypted.";
+	}
+
+		// Lookup schedd ad
+	std::string schedd_name;
+	if (!ad.EvaluateAttrString(ATTR_NAME, schedd_name)) {
+		error_code = 4;
+		error_string = "No schedd target specified.";
+	}
+	std::string capability, schedd_addr;
+	if (!error_code && !collector.walkConcreteTable(SCHEDD_AD, [&](ClassAd *ad) -> int {
+			std::string local_schedd_name;
+			if (!ad ||
+				!ad->EvaluateAttrString(ATTR_NAME, local_schedd_name) ||
+				(schedd_name != local_schedd_name) ||
+				!ad->EvaluateAttrString(ATTR_CAPABILITY, capability) ||
+				!ad->EvaluateAttrString(ATTR_MY_ADDRESS, schedd_addr))
+			{
+				return 1;
+			}
+			return 0;
+		}))
+	{
+		error_code = 4;
+		error_string = "Failed to walk the schedd table.";
+	}
+	if (!error_code && schedd_addr.empty()) {
+		error_code = 5;
+		formatstr(error_string, "Schedd %s is not known to the collector.",
+			schedd_name.c_str());
+	}
+
+	auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
+
+	classad::ClassAd result_ad;
+	classad::ClassAd request_ad;
+	if (error_code) {
+		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
+		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
+		// Bail out early if we had an error.
+		if (!putClassAd(stream, result_ad) ||
+			!stream->end_of_message())
+		{
+			dprintf(D_FULLDEBUG, "schedd_token_request: failed to send response ad to client.\n");
+			return false;
+		}
+		return true;
+	}
+
+		// Install the capability for this session.
+	ClaimIdParser cidp(capability.c_str());
+	auto secman = daemonCore->getSecMan();
+	secman->CreateNonNegotiatedSecuritySession(
+		CLIENT_PERM,
+		cidp.secSessionId(),
+		cidp.secSessionKey(),
+		cidp.secSessionInfo(),
+		AUTH_METHOD_MATCH,
+		SUBMIT_SIDE_MATCHSESSION_FQU,
+		schedd_addr.c_str(),
+		1200,
+		nullptr
+	);
+
+
+	std::unique_ptr<DCSchedd> schedd(new DCSchedd(schedd_addr.c_str()));
+	std::unique_ptr<TokenRequestContinuation> continuation(new TokenRequestContinuation());
+	continuation->m_schedd = std::move(schedd);
+	continuation->m_peer_location = peer_location;
+	continuation->m_requester = static_cast<ReliSock*>(stream);
+
+	CondorError err;
+	if (!continuation->m_schedd->requestImpersonationTokenAsync(fqu, authz_bounding_set,
+		requested_lifetime,
+		static_cast<ImpersonationTokenCallbackType*>(&TokenRequestContinuation::finish),
+		continuation.get(), err))
+	{
+		result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+		result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+		if (!putClassAd(stream, result_ad) || !stream->end_of_message())
+		{
+			dprintf(D_FULLDEBUG, "schedd_token_request: failed to send error response"
+				" ad to client.\n");
+		}
+		return false;
+	}
+	continuation.release();
+	return KEEP_STREAM;
+}
  
 //----------------------------------------------------------------
 
@@ -136,134 +312,131 @@ void CollectorDaemon::Init()
 	viewCollectorTypes = NULL;
 	UpdateTimerId=-1;
 	collectorsToUpdate = NULL;
-	worldCollector = NULL;
 	Config();
-
-	/* TODO: Eval notes and refactor when time permits.
-	 * 
-	 * per-review <tstclair> this is a really unintuive and I would consider unclean.
-	 * Maybe if we care about cron like events we should develop a clean mechanism
-	 * which doesn't indirectly hook into daemon-core timers. */
-
-    // setup routine to report to condor developers
-    // schedule reports to developers
-	schedule_event( -1, 1,  0, 0, 0, reportToDevelopers );
-	schedule_event( -1, 8,  0, 0, 0, reportToDevelopers );
-	schedule_event( -1, 15, 0, 0, 0, reportToDevelopers );
-	schedule_event( -1, 23, 0, 0, 0, reportToDevelopers );
 
 	// install command handlers for queries
 	daemonCore->Register_CommandWithPayload(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
+		receive_query_cedar,"receive_query_cedar",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_CKPT_SRVR_ADS,"QUERY_CKPT_SRVR_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	if(param_boolean("PROTECT_COLLECTOR_ADS", false)) {
 		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-			(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,ADMINISTRATOR);
+			receive_query_cedar,"receive_query_cedar",ADMINISTRATOR);
 	} else {
 		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-			(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+			receive_query_cedar,"receive_query_cedar",READ);
 	}
 	daemonCore->Register_CommandWithPayload(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_ACCOUNTING_ADS,"QUERY_ACCOUNTING_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_HAD_ADS,"QUERY_HAD_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_ANY_ADS,"QUERY_ANY_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
     daemonCore->Register_CommandWithPayload(QUERY_GRID_ADS,"QUERY_GRID_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+		receive_query_cedar,"receive_query_cedar",READ);
 	
 	// install command handlers for invalidations
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_STARTD_PERM);
+		receive_invalidation,"receive_invalidation",ADVERTISE_STARTD_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
+		receive_invalidation,"receive_invalidation",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_MASTER_PERM);
+		receive_invalidation,"receive_invalidation",ADVERTISE_MASTER_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_CKPT_SRVR_ADS,
-		"INVALIDATE_CKPT_SRVR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_CKPT_SRVR_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_SUBMITTOR_ADS,
-		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
+		"INVALIDATE_SUBMITTOR_ADS", receive_invalidation,
+		"receive_invalidation",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_LICENSE_ADS,
-		"INVALIDATE_LICENSE_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_LICENSE_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_COLLECTOR_ADS,
-		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_COLLECTOR_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STORAGE_ADS,
-		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_STORAGE_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_ACCOUNTING_ADS,
-		"INVALIDATE_ACCOUNTING_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,NEGOTIATOR);
+		"INVALIDATE_ACCOUNTING_ADS", receive_invalidation,
+		"receive_invalidation",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_NEGOTIATOR_ADS,
-		"INVALIDATE_NEGOTIATOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,NEGOTIATOR);
+		"INVALIDATE_NEGOTIATOR_ADS", receive_invalidation,
+		"receive_invalidation",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_HAD_ADS,
-		"INVALIDATE_HAD_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_HAD_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_ADS_GENERIC,
-		"INVALIDATE_ADS_GENERIC", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"INVALIDATE_ADS_GENERIC", receive_invalidation,
+		"receive_invalidation",DAEMON);
     daemonCore->Register_CommandWithPayload(INVALIDATE_GRID_ADS,
-        "INVALIDATE_GRID_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+        "INVALIDATE_GRID_ADS", receive_invalidation,
+		"receive_invalidation",DAEMON);
 
 	// install command handlers for updates
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
+		receive_update,"receive_update",ADVERTISE_STARTD_PERM);
 	daemonCore->Register_CommandWithPayload(MERGE_STARTD_AD,"MERGE_STARTD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+		receive_update,"receive_update",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
+		receive_update,"receive_update",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
+		receive_update,"receive_update",ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(UPDATE_LICENSE_AD,"UPDATE_LICENSE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_MASTER_PERM);
+		receive_update,"receive_update",ADVERTISE_MASTER_PERM);
 	daemonCore->Register_CommandWithPayload(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
+		receive_update,"receive_update",ALLOW);
 	daemonCore->Register_CommandWithPayload(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+		receive_update,"receive_update",NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(UPDATE_HAD_AD,"UPDATE_HAD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
-		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
+		receive_update,"receive_update", DAEMON);
     daemonCore->Register_CommandWithPayload(UPDATE_GRID_AD,"UPDATE_GRID_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		receive_update,"receive_update",DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_ACCOUNTING_AD,"UPDATE_ACCOUNTING_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+		receive_update,"receive_update",NEGOTIATOR);
+	std::vector<DCpermission> allow_perms{ALLOW};
+		// Users may advertise their own submitter ads.  If they do, there are additional
+		// restrictions to their contents (such as the user must be authenticated, not
+		// unmapped, and must match the Owner attribute).
+	daemonCore->Register_CommandWithPayload(UPDATE_OWN_SUBMITTOR_AD,"UPDATE_OWN_SUBMITTOR_AD",
+		receive_update,"receive_update", DAEMON, D_COMMAND, false,
+		0, &allow_perms);
+		//
+	daemonCore->Register_CommandWithPayload(IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST",
+		schedd_token_request, "schedd_token_request", DAEMON,
+		D_COMMAND, true, 0, &allow_perms);
 
     // install command handlers for updates with acknowledgement
 
     daemonCore->Register_CommandWithPayload(
 		UPDATE_STARTD_AD_WITH_ACK,
 		"UPDATE_STARTD_AD_WITH_ACK",
-		(CommandHandler)receive_update_expect_ack,
-		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
+		receive_update_expect_ack,
+		"receive_update_expect_ack",ADVERTISE_STARTD_PERM);
 
     // add all persisted ads back into the collector's store
     // process the given command
@@ -298,8 +471,8 @@ void CollectorDaemon::Init()
 	// add a reaper for our query threads spawned off via Create_Thread
 	if ( ReaperId == -1 ) {
 		ReaperId = daemonCore->Register_Reaper("CollectorDaemon::QueryReaper",
-						(ReaperHandler)&CollectorDaemon::QueryReaper,
-						"CollectorDaemon::QueryReaper()",NULL);
+						&CollectorDaemon::QueryReaper,
+						"CollectorDaemon::QueryReaper()");
 	}	
 }
 
@@ -321,8 +494,7 @@ public:
 };
 
 
-int CollectorDaemon::receive_query_cedar(Service* /*s*/,
-										 int command,
+int CollectorDaemon::receive_query_cedar(int command,
 										 Stream* sock)
 {
 	int return_status = TRUE;
@@ -462,7 +634,13 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 				query_entry->subsys[COUNTOF(query_entry->subsys)-1] = 0;
 			}
 		}
-		if ( clientSubsys == SUBSYSTEM_ID_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
+		// TODO Giving high-priority to queries from a collector is a hack
+		//   to work around the fact that queries from the negotiator get
+		//   flagged is coming from a collector when the family security
+		//   session is used.
+		//   Better identification of the peer when a non-negotiated
+		//   security session is used is the real solution.
+		if ( clientSubsys == SUBSYSTEM_ID_NEGOTIATOR || clientSubsys == SUBSYSTEM_ID_COLLECTOR || daemonCore->Is_Command_From_SuperUser(sock) )
 		{
 			high_prio_query = true;
 		}
@@ -473,15 +651,15 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			  (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers - reserved_for_highprio_query_workers))
 			 ||
 			 ((high_prio_query==true) &&
-			  (active_query_workers - reserved_for_highprio_query_workers + query_queue_high_prio.Length() <  max_query_workers + max_pending_query_workers))
+			  (active_query_workers - reserved_for_highprio_query_workers + (int)query_queue_high_prio.size() <  max_query_workers + max_pending_query_workers))
 		   )
 		{
 			if ( high_prio_query ) {
-				query_queue_high_prio.enqueue( query_entry );
+				query_queue_high_prio.push( query_entry );
 			} else {
-				query_queue_low_prio.enqueue( query_entry );
+				query_queue_low_prio.push( query_entry );
 			}
-			did_we_fork = QueryReaper(NULL, -1, -1);
+			did_we_fork = QueryReaper(-1, -1);
 			cad = NULL; // set this to NULL so we won't delete it below; our reaper will remove it
 			query_entry = NULL; // set this to NULL so we won't free it below; daemoncore will remove it
 			return_status = KEEP_STREAM; // tell daemoncore to not mess with socket when we return
@@ -527,7 +705,7 @@ END:
 
 
 // Return 1 if forked a worker, 0 if not, and -1 upon an error.
-int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
+int CollectorDaemon::QueryReaper(int pid, int /* exit_status */ )
 {
 	if ( pid >= 0 ) {
 		dprintf(D_FULLDEBUG,
@@ -545,24 +723,25 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 		// Pull of an entry from our high_prio queue; if nothing there, grab
 		// one from our low prio queue.  Ignore "stale" (old) requests.
 
-		high_prio_query = query_queue_high_prio.Length() > 0;
+		high_prio_query = query_queue_high_prio.size() > 0;
 
 		// Dequeue a high priority entry if worker slots available.
+		// If high priority queue is empty, dequeue a low priority entry
+		// if a worker slot (minus those reserved only for high prioirty) is available.
 		if ( active_query_workers < max_query_workers ) {
-			query_queue_high_prio.dequeue(query_entry);
-			// If high priority queue is empty, dequeue a low priority entry
-			// if a worker slot (minus those reserved only for high prioirty) is available.
-			if ((query_entry == NULL) &&
-			    (active_query_workers < (max_query_workers - reserved_for_highprio_query_workers)))
-			{
-				query_queue_low_prio.dequeue(query_entry);
+			if ( !query_queue_high_prio.empty() ) {
+				query_entry = query_queue_high_prio.front();
+				query_queue_high_prio.pop();
+			} else if ( !query_queue_low_prio.empty() && active_query_workers < (max_query_workers - reserved_for_highprio_query_workers) ) {
+				query_entry = query_queue_low_prio.front();
+				query_queue_low_prio.pop();
 			}
 		}
 
 		// Update our pending stats counters.  Note we need to do this regardless
 		// of if query_entry==NULL, since we may be here because something was either
 		// recently added into the queue, or recently removed from the queue.
-		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
+		pending_query_workers = query_queue_high_prio.size() + query_queue_low_prio.size();
 		collectorStats.global.PendingQueries = pending_query_workers;
 
 		// If query_entry==NULL, we are not forking anything now, so we're done for now
@@ -663,11 +842,29 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	double begin = condor_gettimestamp_double();
 	List<ClassAd> results;
 
+		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
+		// trust it to handle our capabilities.
+	bool filter_private_ads = true;
+	auto *verinfo = sock->get_peer_version();
+	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
+		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
+			// Given failure here is non-fatal, do not log at D_ALWAYS.
+		if (static_cast<Sock*>(sock)->isAuthorizationInBoundingSet("NEGOTIATOR") &&
+			(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser(), D_SECURITY|D_FULLDEBUG))) {
+			filter_private_ads = false;
+		}
+	}
+
 	// Pull out relavent state from query_entry
 	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
 	ClassAd *cad = query_entry->cad;
 	bool is_locate = query_entry->is_locate;
 	AdTypes whichAds = query_entry->whichAds;
+
+		// Always send private attributes in private ads.
+	if (whichAds == STARTD_PVT_AD) {
+		filter_private_ads = false;
+	}
 
 	// Perform the query
 
@@ -712,14 +909,14 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_ad)) {
 			dprintf(D_ALWAYS,"Query includes collector's self ad\n");
 			// update stats in the collector ad before we return it.
-			MyString stats_config;
+			std::string stats_config;
 			cad->LookupString("STATISTICS_TO_PUBLISH",stats_config);
 			if (stats_config != "stored") {
-				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.Value());
+				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.c_str());
 				stats_ad = new ClassAd();
-				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
+				daemonCore->dc_stats.Publish(*stats_ad, stats_config.c_str());
 				daemonCore->monitor_data.ExportData(stats_ad, true);
-				collectorStats.publishGlobal(stats_ad, stats_config.Value());
+				collectorStats.publishGlobal(stats_ad, stats_config.c_str());
 				stats_ad->ChainToAd(curr_ad);
 				curr_ad = stats_ad; // send the stats ad instead of the self ad.
 			}
@@ -728,14 +925,14 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		if (evaluate_projection) {
 			proj.clear();
 			projection.clear();
-			if (cad->EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
+			if (EvalString(ATTR_PROJECTION, cad, curr_ad, projection) && ! projection.empty()) {
 				StringTokenIterator list(projection);
 				const std::string * attr;
 				while ((attr = list.next_string())) { proj.insert(*attr); }
 			}
 		}
 
-		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj));
+		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, filter_private_ads ? PUT_CLASSAD_NO_PRIVATE : 0, proj.empty() ? NULL : &proj));
         
 		if (stats_ad) {
 			stats_ad->Unchain();
@@ -775,7 +972,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	end_write = condor_gettimestamp_double();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}; filter_private_ads=%d\n",
 			 __numAds__,
 			 __failed__,
 			 end_query - begin,
@@ -786,7 +983,8 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			 (__resultLimit__ == INT_MAX) ? 0 : __resultLimit__,
 			 query_entry->subsys,
 			 sock->peer_description(),
-			 projection.c_str());
+			 projection.c_str(),
+			 filter_private_ads);
 END:
 	
 	// All done.  Deallocate memory allocated in this method.  Note that DaemonCore 
@@ -887,8 +1085,7 @@ CollectorDaemon::receive_query_public( int command )
 	return whichAds;
 }
 
-int CollectorDaemon::receive_invalidation(Service* /*s*/,
-										  int command,
+int CollectorDaemon::receive_invalidation(int command,
 										  Stream* sock)
 {
 	AdTypes whichAds;
@@ -1020,18 +1217,22 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 
 
 collector_runtime_probe CollectorEngine_receive_update_runtime;
+#ifdef PROFILE_RECEIVE_UPDATE
 collector_runtime_probe CollectorEngine_ru_pre_collect_runtime;
 collector_runtime_probe CollectorEngine_ru_collect_runtime;
 collector_runtime_probe CollectorEngine_ru_plugins_runtime;
 collector_runtime_probe CollectorEngine_ru_forward_runtime;
 collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
+#endif
 
-int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
+int CollectorDaemon::receive_update(int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_receive_update_runtime);
+#ifdef PROFILE_RECEIVE_UPDATE
 	double rt_last = rt.begin;
+#endif
 
 	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
@@ -1041,7 +1242,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	// get endpoint
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_pre_collect_runtime += rt.tick(rt_last);
+#endif
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
 	{
@@ -1064,10 +1267,18 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 				command);
 		}
 
+		if (insert == -4)
+		{
+			// Rejected by COLLECTOR_REQUIREMENTS in validateClassad(),
+			// which already does all the necessary logging.
+		}
+
 		return FALSE;
 
 	}
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_collect_runtime += rt.tick(rt_last);
+#endif
 
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
@@ -1076,7 +1287,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	CollectorPluginManager::Update(command, *cad);
 #endif
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
+#endif
 
 	if (viewCollectorTypes) {
 		forward_classad_to_view_collector(command,
@@ -1086,12 +1299,16 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
         send_classad_to_sock(command, cad);
 	}
 
+#ifdef PROFILE_RECEIVE_UPDATE
 	CollectorEngine_ru_forward_runtime += rt.tick(rt_last);
+#endif
 
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
 		int rv = stashSocket( (ReliSock *)sock );
+#ifdef PROFILE_RECEIVE_UPDATE
 		CollectorEngine_ru_stash_socket_runtime += rt.tick(rt_last);
+#endif
 		return rv;
 	}
 
@@ -1099,8 +1316,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	return TRUE;
 }
 
-int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
-												int command,
+int CollectorDaemon::receive_update_expect_ack(int command,
 												Stream *stream )
 {
 
@@ -1535,82 +1751,6 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
     return iRet;
 }
 
-void CollectorDaemon::reportToDevelopers (void)
-{
-	char	buffer[128];
-	FILE	*mailer;
-	TrackTotals	totals( PP_STARTD_NORMAL );
-
-    // compute machine information
-    machinesTotal = 0;
-    machinesUnclaimed = 0;
-    machinesClaimed = 0;
-    machinesOwner = 0;
-    startdNumAds = 0;
-	ustatsAccum.Reset( );
-
-    if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
-            dprintf (D_ALWAYS, "Error counting machines in devel report \n");
-    }
-
-	// If we don't have any machines reporting to us, bail out early
-	if (machinesTotal == 0) return;
-
-	// Accumulate our monthly maxes
-	ustatsMonthly.setMax( ustatsAccum );
-
-	sprintf( buffer, "Collector (%s):  Monthly report",
-			 get_local_fqdn().Value() );
-	if( ( mailer = email_developers_open(buffer) ) == NULL ) {
-		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
-		return;
-	}
-
-	fprintf( mailer , "This Collector has the following IDs:\n");
-	fprintf( mailer , "    %s\n", CondorVersion() );
-	fprintf( mailer , "    %s\n\n", CondorPlatform() );
-
-	normalTotals = &totals;
-
-	if (!collector.walkHashTable (STARTD_AD, reportStartdScanFunc)) {
-		dprintf (D_ALWAYS, "Error making monthly report (startd scan) \n");
-	}
-
-	normalTotals = NULL;
-
-	// output totals summary to the mailer
-	totals.displayTotals( mailer, 20 );
-
-	// now output information about submitted jobs
-	submittorRunningJobs = 0;
-	submittorIdleJobs = 0;
-	submittorNumAds = 0;
-	if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
-		dprintf( D_ALWAYS, "Error making monthly report (submittor scan)\n" );
-	}
-	fprintf( mailer , "%20s\t%20s\n" , ATTR_RUNNING_JOBS , ATTR_IDLE_JOBS );
-	fprintf( mailer , "%20d\t%20d\n" , submittorRunningJobs,submittorIdleJobs );
-
-	// If we've got any, find the maxes
-	if ( ustatsMonthly.getCount( ) ) {
-		fprintf( mailer , "\n%20s\t%20s\n" , "Universe", "Max Running Jobs" );
-		int		univ;
-		for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
-			const char	*name = ustatsMonthly.getName( univ );
-			if ( name ) {
-				fprintf( mailer, "%20s\t%20d\n",
-						 name, ustatsMonthly.getValue(univ) );
-			}
-		}
-		fprintf( mailer, "%20s\t%20d\n",
-				 "All", ustatsMonthly.getCount( ) );
-	}
-	ustatsMonthly.Reset( );
-	
-	email_close( mailer );
-	return;
-}
-	
 void CollectorDaemon::Config()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Config()\n");
@@ -1681,8 +1821,6 @@ void CollectorDaemon::Config()
 		EXCEPT( "Unable to determine my own address, aborting rather than hang.  You may need to make sure the shared port daemon is running first." );
 	}
 	Sinful mySinful( myself );
-	Sinful mySharedPortDaemonSinful = mySinful;
-	mySharedPortDaemonSinful.setSharedPortID( NULL );
 	while( collectorsToUpdate->next( daemon ) ) {
 		const char * current = daemon->addr();
 		if( current == NULL ) { continue; }
@@ -1692,57 +1830,8 @@ void CollectorDaemon::Config()
 			collectorsToUpdate->deleteCurrent();
 			continue;
 		}
-
-		// addressPointsToMe() doesn't know that the shared port daemon
-		// forwards connections that otherwise don't ask to be forwarded
-		// to the collector.  This means that COLLECTOR_HOST doesn't need
-		// to include ?sock=collector, but also that mySinful has a
-		// shared port address and currentSinful may not.  Since we know
-		// that we're trying to contact the collector here -- that is, we
-		// can tell we're not contacting the shared port daemon in the
-		// process of doing something else -- we can safely assume that
-		// any currentSinful without a shared port ID intends to connect
-		// to the default collector.
-		dprintf( D_FULLDEBUG, "checking for self: '%s', '%s, '%s'\n", mySinful.getSharedPortID(), mySharedPortDaemonSinful.getSinful(), currentSinful.getSinful() );
-		if( mySinful.getSharedPortID() != NULL && mySharedPortDaemonSinful.addressPointsToMe( currentSinful ) ) {
-			// Check to see if I'm the default collector.
-			std::string collectorSPID;
-			param( collectorSPID, "SHARED_PORT_DEFAULT_ID" );
-			if(! collectorSPID.size()) { collectorSPID = "collector"; }
-			if( strcmp( mySinful.getSharedPortID(), collectorSPID.c_str() ) == 0 ) {
-				dprintf( D_FULLDEBUG, "Skipping sending update to myself via my shared port daemon.\n" );
-				collectorsToUpdate->deleteCurrent();
-			}
-		}
 	}
 
-	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
-	if (tmp == NULL) {
-#ifdef NO_PHONE_HOME
-		tmp = strdup("NONE");
-#else
-		tmp = strdup("condor.cs.wisc.edu");
-#endif
-	}
-	if (strcasecmp(tmp,"NONE") == 0 ) {
-		free(tmp);
-		tmp = NULL;
-	}
-
-	if( worldCollector ) {
-		// FIXME: WTF does this mean w/r/t using TCP for collectorsToUpdate?
-		// we should just delete it.  since we never use TCP
-		// for these updates, we don't really loose anything
-		// by destroying the object and recreating it...
-		delete worldCollector;
-		worldCollector = NULL;
-	}
-	if ( tmp ) {
-		worldCollector = new DCCollector( tmp, DCCollector::UDP );
-	}
-
-	free( tmp );
-	
 	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
 	if( UpdateTimerId < 0 ) {
 		UpdateTimerId = daemonCore->
@@ -1814,7 +1903,7 @@ void CollectorDaemon::Config()
                 vhsock = new SafeSock();
             }
 
-            vc_list.push_back(vc_entry());
+            vc_list.emplace_back();
             vc_list.back().name = vhost;
             vc_list.back().collector = vhd;
             vc_list.back().sock = vhsock;
@@ -1897,6 +1986,7 @@ void CollectorDaemon::Config()
 		filterAbsentAds = false;
 	}
 
+	forwardClaimedPrivateAds = param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true);
 	return;
 }
 
@@ -1918,7 +2008,6 @@ void CollectorDaemon::Exit()
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;
-	delete worldCollector;
 	delete m_ccb_server;
 	return;
 }
@@ -1941,7 +2030,6 @@ void CollectorDaemon::Shutdown()
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;
-	delete worldCollector;
 	delete m_ccb_server;
 	return;
 }
@@ -2016,20 +2104,6 @@ void CollectorDaemon::sendCollectorAd()
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 
-	// update the world ad, but only if there are some machines. You oftentimes
-	// see people run a collector on each macnine in their pool. Duh.
-	if ( worldCollector && machinesTotal > 0) {
-		char update_addr_default [] = "(null)";
-		const char *update_addr = worldCollector->addr();
-		if (!update_addr) update_addr = update_addr_default;
-		if( ! worldCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, collectorsToUpdate->getAdSeq(), NULL, false) ) {
-			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
-					 "(%s): %s\n", update_addr,
-					 worldCollector->error() );
-		}
-	}
-
-
 }
 
 void CollectorDaemon::init_classad(int interval)
@@ -2047,17 +2121,17 @@ void CollectorDaemon::init_classad(int interval)
         free( tmp );
     }
 
-    MyString id;
+    std::string id;
     if( CollectorName ) {
             if( strchr( CollectorName, '@' ) ) {
-               id.formatstr( "%s", CollectorName );
+               formatstr( id, "%s", CollectorName );
             } else {
-               id.formatstr( "%s@%s", CollectorName, get_local_fqdn().Value() );
+               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().Value() );
             }
     } else {
-            id.formatstr( "%s", get_local_fqdn().Value() );
+            formatstr( id, "%s", get_local_fqdn().Value() );
     }
-    ad->Assign( ATTR_NAME, id.Value() );
+    ad->Assign( ATTR_NAME, id );
 
     ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
 
@@ -2113,6 +2187,12 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
 		AdNameHashKey hk;
 		ASSERT( makeStartdAdHashKey (hk, theAd) );
 		pvtAd = collector.lookup(STARTD_PVT_AD,hk);
+		if (pvtAd && !forwardClaimedPrivateAds){
+			std::string state;
+			if (theAd->LookupString(ATTR_STATE, state) && state == "Claimed") {
+				pvtAd = NULL;
+			}
+		}
 	}
 
 	bool should_forward = true;
@@ -2145,12 +2225,12 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
                 if (view_sock->type() == Stream::reli_sock) {
 	                view_sock_timeslice.setStartTimeNow();
                 }
-                view_coll->connectSock(view_sock,20);
+                int r = view_coll->connectSock(view_sock,20);
                 if (view_sock->type() == Stream::reli_sock) {
 	                view_sock_timeslice.setFinishTimeNow();
                 }
 
-                if (!view_sock->is_connected()) {
+                if (!view_sock->is_connected() || (!r)) {
                     dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s so not forwarding ad.\n", view_name);
                     continue;
                 }
@@ -2264,7 +2344,7 @@ CollectorUniverseStats::getValue (int univ )
 }
 
 int
-CollectorUniverseStats::getCount ( void )
+CollectorUniverseStats::getCount ( void ) const
 {
 	return count;
 }
@@ -2295,18 +2375,20 @@ int
 CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 {
 	int	univ;
-	char line[100];
+	std::string attrn;
 
 	// Loop through, publish all universes with a name
 	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
 		const char *name = getName( univ );
 		if ( name ) {
-			sprintf( line, "%s%s = %d", label, name, getValue( univ ) );
-			ad->Insert(line);
+			attrn = label;
+			attrn += name;
+			ad->Assign(attrn, getValue(univ));
 		}
 	}
-	sprintf( line, "%s%s = %d", label, "All", count );
-	ad->Insert(line);
+	attrn = label;
+	attrn += "All";
+	ad->Assign(attrn, count);
 
 	return 0;
 }

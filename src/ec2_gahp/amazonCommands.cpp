@@ -30,6 +30,7 @@
 #include "vm_univ_utils.h"
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
+#include "AWSv4-utils.h"
 
 #include "condor_base64.h"
 #include <sstream>
@@ -56,46 +57,9 @@ const char * nullStringIfEmpty( const std::string & str ) {
     else { return str.c_str(); }
 }
 
-//
-// This function should not be called for anything in query_parameters,
-// except for by AmazonQuery::SendRequest().
-//
 std::string amazonURLEncode( const std::string & input )
 {
-    /*
-     * See http://docs.amazonwebservices.com/AWSEC2/2010-11-15/DeveloperGuide/using-query-api.html
-     *
-     *
-     * Since the GAHP protocol is defined to be ASCII, we're going to ignore
-     * UTF-8, and hope it goes away.
-     *
-     */
-    std::string output;
-    for( unsigned i = 0; i < input.length(); ++i ) {
-        // "Do not URL encode ... A-Z, a-z, 0-9, hyphen ( - ),
-        // underscore ( _ ), period ( . ), and tilde ( ~ ).  Percent
-        // encode all other characters with %XY, where X and Y are hex
-        // characters 0-9 and uppercase A-F.  Percent encode extended
-        // UTF-8 characters in the form %XY%ZA..."
-        if( ('A' <= input[i] && input[i] <= 'Z')
-         || ('a' <= input[i] && input[i] <= 'z')
-         || ('0' <= input[i] && input[i] <= '9')
-         || input[i] == '-'
-         || input[i] == '_'
-         || input[i] == '.'
-         || input[i] == '~' ) {
-            char uglyHack[] = "X";
-            uglyHack[0] = input[i];
-            output.append( uglyHack );
-        } else {
-            char percentEncode[4];
-            int written = snprintf( percentEncode, 4, "%%%.2hhX", input[i] );
-            ASSERT( written == 3 );
-            output.append( percentEncode );
-        }
-    }
-
-    return output;
+    return AWSv4Impl::amazonURLEncode( input );
 }
 
 //
@@ -124,31 +88,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 // Utility function; inefficient.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
-
-    if( fd < 0 ) {
-        dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n",
-            fileName.c_str(), strerror( errno ), errno );
-        return false;
-    }
-
-    StatWrapper sw( fd );
-    unsigned long fileSize = sw.GetBuf()->st_size;
-
-    char * rawBuffer = (char *)malloc( fileSize + 1 );
-    assert( rawBuffer != NULL );
-    unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-    close( fd );
-    if( totalRead != fileSize ) {
-        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-            fileName.c_str(), fileSize, totalRead );
-        free( rawBuffer );
-        return false;
-    }
-    contents.assign( rawBuffer, fileSize );
-    free( rawBuffer );
-
-    return true;
+	return AWSv4Impl::readShortFile( fileName, contents );
 }
 
 //
@@ -181,7 +121,6 @@ AmazonRequest::~AmazonRequest() { }
         this->errorMessage = "curl_easy_setopt( " #B " ) failed."; \
         dprintf( D_ALWAYS, "curl_easy_setopt( %s ) failed (%d): '%s', failing.\n", \
             #B, rv##B, curl_easy_strerror( rv##B ) ); \
-        curl_easy_cleanup( A ); \
         return false; \
     } \
 }
@@ -211,7 +150,7 @@ class Throttle {
 
         // This function is called without the big mutex.  Do NOT add
         // dprintf() statements or refers to globals other than 'this'.
-        bool isValid() { return when.tv_sec != 0; }
+        bool isValid() const { return when.tv_sec != 0; }
 
         // This function is called without the big mutex.  Do NOT add
         // dprintf() statements or refers to globals other than 'this'.
@@ -393,27 +332,7 @@ bool AmazonRequest::SendRequest() {
 }
 
 std::string AmazonRequest::canonicalizeQueryString() {
-    std::string canonicalQueryString;
-    for( auto i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
-        // Step 1A: The map sorts the query parameters for us.  Strictly
-        // speaking, we should encode into a different AttributeValueMap
-        // and then compose the string out of that, in case amazonURLEncode()
-        // changes the sort order, but we don't specify parameters like that.
-
-        // Step 1B: Encode the parameter names and values.
-        std::string name = amazonURLEncode( i->first );
-        std::string value = amazonURLEncode( i->second );
-
-        // Step 1C: Separate parameter names from values with '='.
-        canonicalQueryString += name + '=' + value;
-
-        // Step 1D: Separate name-value pairs with '&';
-        canonicalQueryString += '&';
-    }
-
-    // We'll always have a superflous trailing ampersand.
-    canonicalQueryString.erase( canonicalQueryString.end() - 1 );
-    return canonicalQueryString;
+    return AWSv4Impl::canonicalizeQueryString( query_parameters );
 }
 
 bool parseURL(	const std::string & url,
@@ -436,60 +355,19 @@ void convertMessageDigestToLowercaseHex(
 		const unsigned char * messageDigest,
 		unsigned int mdLength,
 		std::string & hexEncoded ) {
-	char * buffer = (char *)malloc( (mdLength * 2) + 1 );
-	ASSERT( buffer );
-	char * ptr = buffer;
-	for( unsigned int i = 0; i < mdLength; ++i, ptr += 2 ) {
-		sprintf( ptr, "%02x", messageDigest[i] );
-	}
-	hexEncoded.assign( buffer, mdLength * 2 );
-	free(buffer);
+	AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest,
+		mdLength, hexEncoded );
 }
 
 
 bool doSha256(	const std::string & payload,
 				unsigned char * messageDigest,
 				unsigned int * mdLength ) {
-	EVP_MD_CTX * mdctx = EVP_MD_CTX_create();
-	if( mdctx == NULL ) { return false; }
-
-	if(! EVP_DigestInit_ex( mdctx, EVP_sha256(), NULL )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestUpdate( mdctx, payload.c_str(), payload.length() )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	if(! EVP_DigestFinal_ex( mdctx, messageDigest, mdLength )) {
-		EVP_MD_CTX_destroy( mdctx );
-		return false;
-	}
-
-	EVP_MD_CTX_destroy( mdctx );
-	return true;
+	return AWSv4Impl::doSha256( payload, messageDigest, mdLength );
 }
 
 std::string pathEncode( const std::string & original ) {
-	std::string segment;
-	std::string encoded;
-	const char * o = original.c_str();
-
-	size_t next = 0;
-	size_t offset = 0;
-	size_t length = strlen( o );
-	while( offset < length ) {
-		next = strcspn( o + offset, "/" );
-		if( next == 0 ) { encoded += "/"; offset += 1; continue; }
-
-		segment = std::string( o + offset, next );
-		encoded += amazonURLEncode( segment );
-
-		offset += next;
-	}
-	return encoded;
+    return AWSv4Impl::pathEncode( original );
 }
 
 bool AmazonMetadataQuery::SendRequest( const std::string & uri ) {
@@ -1153,8 +1031,9 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
-    CURL * curl = curl_easy_init();
-    if( curl == NULL ) {
+    std::unique_ptr<CURL,decltype(&curl_easy_cleanup)> curl(curl_easy_init(), &curl_easy_cleanup);
+
+    if( curl.get() == NULL ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_init() failed.";
         dprintf( D_ALWAYS, "curl_easy_init() failed, failing.\n" );
@@ -1162,54 +1041,50 @@ bool AmazonRequest::sendPreparedRequest(
     }
 
     char errorBuffer[CURL_ERROR_SIZE];
-    rv = curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errorBuffer );
+    rv = curl_easy_setopt( curl.get(), CURLOPT_ERRORBUFFER, errorBuffer );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        curl_easy_cleanup( curl );
         return false;
     }
 
 
 /*
-    rv = curl_easy_setopt( curl, CURLOPT_DEBUGFUNCTION, debug_callback );
+    rv = curl_easy_setopt( curl.get(), CURLOPT_DEBUGFUNCTION, debug_callback );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_DEBUGFUNCTION ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_DEBUGFUNCTION ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        curl_easy_cleanup( curl );
         return false;
     }
 
     // CURLOPT_DEBUGFUNCTION does nothing without CURLOPT_DEBUG set.
-    rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
+    rv = curl_easy_setopt( curl.get(), CURLOPT_VERBOSE, 1 );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_VERBOSE ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_VERBOSE ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        curl_easy_cleanup( curl );
         return false;
     }
 */
 
 
     // dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
-    rv = curl_easy_setopt( curl, CURLOPT_URL, uri.c_str() );
+    rv = curl_easy_setopt( curl.get(), CURLOPT_URL, uri.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_URL ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_URL ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        curl_easy_cleanup( curl );
         return false;
     }
 
 	if( httpVerb == "POST" ) {
-		rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
+		rv = curl_easy_setopt( curl.get(), CURLOPT_POST, 1 );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
@@ -1219,7 +1094,7 @@ bool AmazonRequest::sendPreparedRequest(
 		}
 
 		// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
-		rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, payload.c_str() );
+		rv = curl_easy_setopt( curl.get(), CURLOPT_POSTFIELDS, payload.c_str() );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
@@ -1230,7 +1105,7 @@ bool AmazonRequest::sendPreparedRequest(
 	}
 
 	if( httpVerb == "PUT" ) {
-		rv = curl_easy_setopt( curl, CURLOPT_UPLOAD, 1 );
+		rv = curl_easy_setopt( curl.get(), CURLOPT_UPLOAD, 1 );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_UPLOAD ) failed.";
@@ -1239,7 +1114,7 @@ bool AmazonRequest::sendPreparedRequest(
 			return false;
 		}
 
-		rv = curl_easy_setopt( curl, CURLOPT_READDATA, & payload );
+		rv = curl_easy_setopt( curl.get(), CURLOPT_READDATA, & payload );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
@@ -1248,7 +1123,7 @@ bool AmazonRequest::sendPreparedRequest(
 			return false;
 		}
 
-		rv = curl_easy_setopt( curl, CURLOPT_READFUNCTION, read_callback );
+		rv = curl_easy_setopt( curl.get(), CURLOPT_READFUNCTION, read_callback );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_READFUNCTION ) failed.";
@@ -1258,18 +1133,17 @@ bool AmazonRequest::sendPreparedRequest(
 		}
 	}
 
-    rv = curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1 );
+    rv = curl_easy_setopt( curl.get(), CURLOPT_NOPROGRESS, 1 );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        curl_easy_cleanup( curl );
         return false;
     }
 
     if ( includeResponseHeader ) {
-        rv = curl_easy_setopt( curl, CURLOPT_HEADER, 1 );
+        rv = curl_easy_setopt( curl.get(), CURLOPT_HEADER, 1 );
         if( rv != CURLE_OK ) {
             this->errorCode = "E_CURL_LIB";
             this->errorMessage = "curl_easy_setopt( CURLOPT_HEADER ) failed.";
@@ -1279,31 +1153,29 @@ bool AmazonRequest::sendPreparedRequest(
         }
     }
 
-    rv = curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, & appendToString );
+    rv = curl_easy_setopt( curl.get(), CURLOPT_WRITEFUNCTION, & appendToString );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        curl_easy_cleanup( curl );
         return false;
     }
 
-    rv = curl_easy_setopt( curl, CURLOPT_WRITEDATA, & this->resultString );
+    rv = curl_easy_setopt( curl.get(), CURLOPT_WRITEDATA, & this->resultString );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEDATA ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEDATA ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        curl_easy_cleanup( curl );
         return false;
     }
 
     //
     // Set security options.
     //
-    SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYPEER, 1 );
-    SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYHOST, 2 );
+    SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_SSL_VERIFYPEER, 1 );
+    SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_SSL_VERIFYHOST, 2 );
 
     // NB: Contrary to libcurl's manual, it doesn't strdup() strings passed
     // to it, so they MUST remain in scope until after we call
@@ -1339,12 +1211,12 @@ bool AmazonRequest::sendPreparedRequest(
 
     if( ! CAPath.empty() ) {
         dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
+        SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_CAPATH, CAPath.c_str() );
     }
 
     if( ! CAFile.empty() ) {
         dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAINFO, CAFile.c_str() );
+        SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_CAINFO, CAFile.c_str() );
     }
 
     if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
@@ -1357,11 +1229,11 @@ bool AmazonRequest::sendPreparedRequest(
     if( protocol == "x509" ) {
         dprintf( D_FULLDEBUG, "Configuring x.509...\n" );
 
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEYTYPE, "PEM" );
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEY, this->secretKeyFile.c_str() );
+        SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_SSLKEYTYPE, "PEM" );
+        SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_SSLKEY, this->secretKeyFile.c_str() );
 
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
+        SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_SSLCERTTYPE, "PEM" );
+        SET_CURL_SECURITY_OPTION( curl.get(), CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
     }
 
 
@@ -1379,7 +1251,7 @@ bool AmazonRequest::sendPreparedRequest(
 		}
 	}
 
-	rv = curl_easy_setopt( curl, CURLOPT_HTTPHEADER, header_slist );
+	rv = curl_easy_setopt( curl.get(), CURLOPT_HTTPHEADER, header_slist );
 	if( rv != CURLE_OK ) {
 		this->errorCode = "E_CURL_LIB";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_HTTPHEADER ) failed.";
@@ -1416,7 +1288,6 @@ bool AmazonRequest::sendPreparedRequest(
         this->errorCode = "E_DEADLINE_WOULD_BE_EXCEEDED";
         this->errorMessage = "Signature would have expired before next permissible time to use it.";
         if( header_slist ) { curl_slist_free_all( header_slist ); }
-        curl_easy_cleanup( curl );
 
         pthread_mutex_unlock( & globalCurlMutex );
         return false;
@@ -1430,13 +1301,13 @@ retry:
 
     Throttle::now( & this->requestBegan );
     if( failureMode == NULL ) {
-        rv = curl_easy_perform( curl );
+        rv = curl_easy_perform( curl.get() );
     } else if( strcmp( failureMode, "0" ) == 0 ) {
-        rv = curl_easy_perform( curl );
+        rv = curl_easy_perform( curl.get() );
     } else {
         switch( failureMode[0] ) {
             default:
-                rv = curl_easy_perform( curl );
+                rv = curl_easy_perform( curl.get() );
                 break;
 
             case '1':
@@ -1449,7 +1320,7 @@ retry:
                       requestCommand != "EC2_VM_SERVER_TYPE" ) {
                     rv = CURLE_OK;
                 } else {
-                    rv = curl_easy_perform( curl );
+                    rv = curl_easy_perform( curl.get() );
                 }
                 break;
 
@@ -1460,10 +1331,10 @@ retry:
                     if( failureCount < 3 && requestID % 2 ) {
                         rv = CURLE_OK;
                     } else {
-                        rv = curl_easy_perform( curl );
+                        rv = curl_easy_perform( curl.get() );
                     }
                 } else {
-                    rv = curl_easy_perform( curl );
+                    rv = curl_easy_perform( curl.get() );
                 }
                 break;
 
@@ -1472,7 +1343,7 @@ retry:
                      requestCommand != "EC2_VM_STOP" ) {
                     rv = CURLE_OK;
                 } else {
-                    rv = curl_easy_perform( curl );
+                    rv = curl_easy_perform( curl.get() );
                 }
                 break;
         }
@@ -1514,14 +1385,13 @@ retry:
         dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
         dprintf( D_FULLDEBUG, "%s\n", errorBuffer );
         if( header_slist ) { curl_slist_free_all( header_slist ); }
-        curl_easy_cleanup( curl );
 
         pthread_mutex_unlock( & globalCurlMutex );
         return false;
     }
 
     responseCode = 0;
-    rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & responseCode );
+    rv = curl_easy_getinfo( curl.get(), CURLINFO_RESPONSE_CODE, & responseCode );
     if( rv != CURLE_OK ) {
         // So we contacted the server but it returned such gibberish that
         // CURL couldn't identify the response code.  Let's assume that's
@@ -1534,7 +1404,6 @@ retry:
         dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         if( header_slist ) { curl_slist_free_all( header_slist ); }
-        curl_easy_cleanup( curl );
 
         pthread_mutex_unlock( & globalCurlMutex );
         return false;
@@ -1588,7 +1457,6 @@ retry:
             formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
             this->errorMessage = resultString;
 	        if( header_slist ) { curl_slist_free_all( header_slist ); }
-            curl_easy_cleanup( curl );
 
             pthread_mutex_unlock( & globalCurlMutex );
             return false;
@@ -1603,7 +1471,6 @@ retry:
     }
 
     if( header_slist ) { curl_slist_free_all( header_slist ); }
-    curl_easy_cleanup( curl );
 
     if( responseCode != 200 ) {
         formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
@@ -3557,7 +3424,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 	for( int i = 11; i < argc; ++i ) {
 		if( strcmp( argv[i], NULLSTRING ) == 0 ) { break; }
 
-		int lcIndex = i - 11;
+		int lcIndex = i - 10;
 
 		// argv[i] is a JSON blob, because otherwise things got complicated.
 		// Luckily, we don't have handle generic JSON, just the single-level
@@ -3608,7 +3475,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 				ss << lcIndex << ".";
 
 				// Once again, the AWS documentation has this wrong.
-				ss << "tagSpecificationSet.1.";
+				ss << "TagSpecificationSet.1.";
 				request.query_parameters[ ss.str() + "ResourceType" ] = "instance";
 				ss << "Tag." << i << ".";
 
@@ -3624,12 +3491,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "SecurityGroupNames" ].c_str() );
 			sl.rewind();
 			char * groupName = NULL;
-			for( unsigned i = 0; (groupName = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (groupName = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "groupSet." << i << ".GroupName";
+				ss << "GroupSet." << i << ".GroupName";
 				request.query_parameters[ ss.str() ] = groupName;
 			}
 		}
@@ -3638,12 +3505,12 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "SecurityGroupIDs" ].c_str() );
 			sl.rewind();
 			char * groupID = NULL;
-			for( unsigned i = 0; (groupID = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (groupID = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "groupSet." << i << ".GroupId";
+				ss << "GroupSet." << i << ".GroupId";
 				request.query_parameters[ ss.str() ] = groupID;
 			}
 		}
@@ -3652,7 +3519,7 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			StringList sl( blob[ "BlockDeviceMapping" ].c_str() );
 			sl.rewind();
 			char * mapping = NULL;
-			for( unsigned i = 0; (mapping = sl.next()) != NULL; ++i ) {
+			for( unsigned i = 1; (mapping = sl.next()) != NULL; ++i ) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";

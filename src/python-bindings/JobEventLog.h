@@ -64,7 +64,17 @@ class JobEvent {
 
 class JobEventLog;
 
+class JobEventLogPickler : public boost::python::pickle_suite {
+	public:
+		static boost::python::tuple getinitargs( JobEventLog & self );
+		static boost::python::tuple getstate( boost::python::object & self );
+		static void setstate( boost::python::object & self,
+			boost::python::tuple & state );
+};
+
 class JobEventLog {
+	friend class JobEventLogPickler;
+
 	public:
 		JobEventLog( const std::string & filename );
 		virtual ~JobEventLog();
@@ -84,6 +94,8 @@ class JobEventLog {
 			boost::python::object & exceptionType,
 			boost::python::object & exceptionValue,
 			boost::python::object & traceback );
+
+		std::string Py_Repr();
 
 	private:
 		time_t deadline;

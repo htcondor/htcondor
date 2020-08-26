@@ -64,8 +64,8 @@ class TransferQueueContactInfo {
 		// queue server
 	char const *GetAddress() { return m_addr.c_str(); }
 
-	bool GetUnlimitedUploads() { return m_unlimited_uploads; }
-	bool GetUnlimitedDownloads() { return m_unlimited_downloads; }
+	bool GetUnlimitedUploads() const { return m_unlimited_uploads; }
+	bool GetUnlimitedDownloads() const { return m_unlimited_downloads; }
 
  private:
 	std::string m_addr;
@@ -102,7 +102,7 @@ public:
 		// Remove current request for permission to transfer.
 	void ReleaseTransferQueueSlot();
 
-	bool GoAheadAlways( bool downloading );
+	bool GoAheadAlways( bool downloading ) const;
 
 	void AddBytesSent(long v)     { if( v>0 ) m_recent_bytes_sent      += v; }
 	void AddBytesReceived(long v) { if( v>0 ) m_recent_bytes_received  += v; }

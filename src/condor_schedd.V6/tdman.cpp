@@ -112,21 +112,12 @@ TransferDaemon::get_schedd_sinful()
 }
 
 void
-TransferDaemon::set_sinful(MyString sinful)
+TransferDaemon::set_sinful(const std::string &sinful)
 {
 	m_sinful = sinful;
 }
 
-void
-TransferDaemon::set_sinful(char *sinful)
-{
-	MyString sin;
-	sin = sinful;
-
-	set_sinful(sin);
-}
-
-MyString
+const std::string &
 TransferDaemon::get_sinful()
 {
 	return m_sinful;
@@ -167,8 +158,8 @@ TransferDaemon::push_transfer_requests(void)
 {
 	TransferRequest *treq = NULL;
 	TreqAction ret;
-	MyString capability;
-	MyString rej_reason;
+	std::string capability;
+	std::string rej_reason;
 	char encap[] = "ENCAPSULATION_METHOD_OLD_CLASSADS\n";
 	ClassAd respad;
 	int invalid;
@@ -279,7 +270,10 @@ TransferDaemon::push_transfer_requests(void)
 		//	ATTR_TREQ_INVALID_REQUEST (set to false)
 		//	ATTR_TREQ_CAPABILITY
 		//
-		getClassAd(m_treq_sock, respad);
+		if (!getClassAd(m_treq_sock, respad)) {
+			dprintf(D_ALWAYS, "Transferd could not get response ad from client\n");
+			return false;
+		}
 		m_treq_sock->end_of_message();
 
 		/////////////////////////////////////////////////
@@ -379,7 +373,7 @@ TransferDaemon::push_transfer_requests(void)
 bool
 TransferDaemon::update_transfer_request(ClassAd *update)
 {
-	MyString cap;
+	std::string cap;
 	TransferRequest *treq = NULL;
 	int ret;
 	TransferDaemon *td = NULL;
@@ -455,7 +449,7 @@ TransferDaemon::reap_all_transfer_requests(void)
 {
 	TransferRequest *treq = NULL;
 	TreqAction ret;
-	MyString key;
+	std::string key;
 
 	////////////////////////////////////////////////////////////////////////
 	// For each transfer request, call the associated reaper for it.
@@ -850,9 +844,9 @@ int
 TDMan::transferd_registration(int cmd, Stream *sock)
 {
 	ReliSock *rsock = (ReliSock*)sock;
-	MyString td_sinful;
-	MyString td_id;
-	MyString fquser;
+	std::string td_sinful;
+	std::string td_id;
+	std::string fquser;
 	TDUpdateContinuation *tdup = NULL;
 	TransferDaemon *td = NULL;
 	TdAction ret;
@@ -919,7 +913,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 
 	dprintf(D_ALWAYS, "Transferd %s, id: %s, owned by '%s' "
 		"attempting to register!\n",
-		td_sinful.Value(), td_id.Value(), fquser.Value());
+		td_sinful.c_str(), td_id.c_str(), fquser.c_str());
 
 	///////////////////////////////////////////////////////////////
 	// Determine if I requested a transferd for this identity. Close if not.
@@ -1013,7 +1007,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	dprintf(D_ALWAYS, "Creating TransferRequest channel to transferd.\n");
 	CondorError errstack;
 	ReliSock *td_req_sock = NULL;
-	DCTransferD dctd(td_sinful.Value());
+	DCTransferD dctd(td_sinful.c_str());
 
 	// XXX This connect in here should be non-blocking....
 	if (dctd.setup_treq_channel(&td_req_sock, 20, &errstack) == false) {
@@ -1117,9 +1111,9 @@ TDMan::transferd_update(Stream *sock)
 	ReliSock *rsock = (ReliSock*)sock;
 	TDUpdateContinuation *tdup = NULL;
 	ClassAd update;
-	MyString cap;
-	MyString status;
-	MyString reason;
+	std::string cap;
+	std::string status;
+	std::string reason;
 	TransferDaemon *td = NULL;
 
 	/////////////////////////////////////////////////////////////////////////
@@ -1157,7 +1151,7 @@ TDMan::transferd_update(Stream *sock)
 	update.LookupString(ATTR_TREQ_UPDATE_REASON, reason);
 
 	dprintf(D_ALWAYS, "Update was: cap = %s, status = %s,  reason = %s\n",
-		cap.Value(), status.Value(), reason.Value());
+		cap.c_str(), status.c_str(), reason.c_str());
 
 	/////////////////////////////////////////////////////////////////////////
 	// Find the matching transfer daemon with the id in question.

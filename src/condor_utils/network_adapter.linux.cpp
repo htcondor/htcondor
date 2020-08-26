@@ -59,14 +59,14 @@
 ***************************************************************/
 
 /// Constructor
-LinuxNetworkAdapter::LinuxNetworkAdapter ( const condor_sockaddr& ip_addr ) throw ()
+LinuxNetworkAdapter::LinuxNetworkAdapter ( const condor_sockaddr& ip_addr ) noexcept
 		: UnixNetworkAdapter( ip_addr )
 {
 	m_wol_support_mask = 0;
 	m_wol_enable_mask = 0;
 }
 
-LinuxNetworkAdapter::LinuxNetworkAdapter ( const char *name ) throw()
+LinuxNetworkAdapter::LinuxNetworkAdapter ( const char *name ) noexcept
 		: UnixNetworkAdapter( name )
 {
 	m_wol_support_mask = 0;
@@ -74,7 +74,7 @@ LinuxNetworkAdapter::LinuxNetworkAdapter ( const char *name ) throw()
 }
 
 /// Destructor
-LinuxNetworkAdapter::~LinuxNetworkAdapter ( void ) throw()
+LinuxNetworkAdapter::~LinuxNetworkAdapter ( void ) noexcept
 {
 }
 
@@ -286,7 +286,7 @@ LinuxNetworkAdapter::detectWOL ( void )
 	// Fill in the WOL request and the ioctl request
 	wolinfo.cmd = ETHTOOL_GWOL;
 	getName( ifr );
-	ifr.ifr_data = (caddr_t)(& wolinfo);
+	ifr.ifr_data = (char *)(& wolinfo);
 
 	priv_state saved_priv = set_priv( PRIV_ROOT );
 	err = ioctl(sock, SIOCETHTOOL, &ifr);

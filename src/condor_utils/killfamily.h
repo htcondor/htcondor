@@ -46,7 +46,7 @@ public:
 		// get the maxmimum family image size, in kbytes, seen
 		// across all snapshots.  note this does _not_ generate
 		// a call to takesnapshot() itself.
-	void get_max_imagesize(unsigned long & max_image );
+	void get_max_imagesize(unsigned long & max_image ) const;
 
 	void takesnapshot();
 
@@ -55,7 +55,7 @@ public:
 		// number of pids  in the family.  The array must be
 		// deallocated with delete.
 	int		currentfamily( pid_t* & );	
-	int		size() { return family_size; };
+	int		size() const { return family_size; };
 	
 	void	display();		// dprintf's the existing pid family
 

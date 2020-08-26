@@ -59,7 +59,7 @@ private:
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int, bool multiple_slots, Resource* _parent = NULL);
+	Resource( CpuAttributes*, int id, bool multiple_slots, Resource* _parent = NULL);
 	~Resource();
 
 		// override param by slot_type
@@ -112,6 +112,8 @@ public:
 	void	releaseAllClaimsReversibly( void );
 	void	killAllClaims( void );
 
+	void	dropAdInLogFile( void );
+
         void	setBadputCausedByDraining();
         bool	getBadputCausedByDraining() { return r_cur->getBadputCausedByDraining();}
 
@@ -130,7 +132,10 @@ public:
 	void	change_state( State s , Activity a ) {r_state->change(s, a);};
 	State		state( void ) const    {return r_state->state();};
 	Activity	activity( void ) const {return r_state->activity();};
-	void		eval_state( void )		{r_state->eval();};
+
+	// refresh ad and evaluate state change policy
+	void	eval_state(void);
+
 		// does this resource need polling frequency for compute/eval?
 	bool	needsPolling( void );
 	bool	hasOppClaim( void );
@@ -143,14 +148,57 @@ public:
 	void	resumeForCOD( void );
 
 		// Methods for computing and publishing resource attributes 
-	void	compute( amask_t mask);
-	void	publish( ClassAd*, amask_t );
+
+		// called when creating a d-slot
+	void	initial_compute(Resource * pslot);
+		// called only by initialize_resource, when a slot is created
+	void	initial_compute() { 
+		r_reqexp->config();
+		r_attr->compute_virt_mem();
+		r_attr->compute_disk();
+	}
+		// called only by resmgr::compute()
+	void	compute_unshared();
+		// called only by resmgr::compute()
+	void	compute_shared() {
+		r_attr->compute_virt_mem();
+	}
+	// called by resmgr::compute()  and by main_init()
+	void	compute_evaluated() {
+		// Evaluate the CpuBusy expression and compute CpuBusyTime
+		// and CpuIsBusy.
+		compute_cpu_busy();
+	}
+	void    display_total_disk() {
+		dprintf(D_FULLDEBUG, "Total execute space: %llu\n", r_attr->get_total_disk());
+	}
+
+	void	publish_static(ClassAd* ad);
+	void	publish_dynamic(ClassAd* ad, bool for_update);
+			// publish to internal classad
+	void	publish_dynamic() { publish_dynamic(r_classad, false); }
+
+	void	refresh_sandbox_ad(ClassAd* ad);
+
+	// publish a full ad for update or writing to disk etc
+	// do NOT pass r_classad into this function!!
+	typedef enum _purpose { for_update, for_req_claim, for_cod, for_workfetch, for_query, for_snap } Purpose;
+	void    publish_single_slot_ad(ClassAd & ad, time_t cur_time, Purpose perp);
+
 	void    publish_private( ClassAd *ad );
     void	publishDeathTime( ClassAd* cap );
-	void	publishSlotAttrs( ClassAd* );
-	void	refreshSlotAttrs( void );
+	void	publishSlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_values = true );
 	void	publishDynamicChildSummaries( ClassAd *cap);
-	void    rollupDynamicAttrs(ClassAd *cap, std::string &name) const;
+
+	struct ResourceLess {
+		bool operator()(Resource *lhs, Resource *rhs) const {
+			return strcmp(lhs->r_name, rhs->r_name) < 0;
+		}
+	};
+	static void rollupAttrs(std::string &value, std::set<Resource *,ResourceLess> & children, const std::string &name);
+	void	rollupChildAttrs(std::string & value, const std::string &name) {
+		rollupAttrs(value, m_children, name);
+	}
 
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};
@@ -160,7 +208,10 @@ public:
 	void	compute_cpu_busy( void );
 	time_t	cpu_busy_time( void );
 
-	void	display( amask_t m ) {r_attr->display(m);}
+	void	display_load(amask_t how_much) {
+		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
+		r_attr->display(IS_UPDATE(how_much) ? 0 : D_VERBOSE);
+	}
 
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
@@ -208,16 +259,32 @@ public:
 	void	leave_preempting_state( void );
 
 		// Methods to initialize and refresh the resource classads.
-	void	init_classad( void );		
-	void	refresh_classad( amask_t mask );	
+	void	init_classad( void );
+
+	#if 0 // not curently used
+	void	refresh_classad_static() {
+		if (r_config_classad) this->publish_static(r_config_classad);
+	}
+	#endif
+
+	void	refresh_classad_for_update() { // low freqency refresh, used only by ResMgr::compute_dynamic
+		if (r_classad) this->publish_dynamic(r_classad, true);
+	}
+	void	refresh_classad_for_policy() { // high frequency refresh, used only by ResMgr::compute_dynamic
+		if (r_classad) this->publish_dynamic(r_classad, false);
+	}
+	void	refresh_classad_resources(); // called when the resource bag of a slot has changed (p-slot or coalesced slot)
+	void	refresh_classad_evaluated();
+	void	refresh_classad_slot_attrs(); // refresh cross-slot attrs into r_classad
+	void	refresh_draining_attrs();    // specialized refresh for changes caused by draining
+	void	refresh_startd_cron_attrs(); // got startd cron updates, refresh now
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
-	void	init_total_disk(const Resource * pslot);
 
 	void	update( void );		// Schedule to update the central manager.
-	void		do_update( void );			// Actually update the CM
+	void	do_update( void );			// Actually update the CM
+	void    process_update_ad(ClassAd & ad, int snapshot=0); // change the update ad before we send it 
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK
-    void    publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad );
 	void	final_update( void );		// Send a final update to the CM
 									    // with Requirements = False.
 
@@ -264,7 +331,7 @@ public:
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_HIBERNATION
-	bool	evaluateHibernate( MyString &state ) const;
+	bool	evaluateHibernate( std::string &state ) const;
 #endif /* HAVE_HIBERNATION */
 
 	int     evalMaxVacateTime();
@@ -279,7 +346,8 @@ public:
 
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
-	ClassAd*		r_classad;	// Resource classad (contains everything in config file)
+	ClassAd*		r_config_classad; // Static/Base Resource classad (contains everything in config file)
+	ClassAd*		r_classad;  // Chained child of r_config_classad, cleaned out and rebuild frequently, publish writes into this one
 	Claim*			r_cur;		// Info about the current claim
 	Claim*			r_pre;		// Info about the possibly preempting claim
 	Claim*			r_pre_pre;	// Info about the preempting preempting claim
@@ -325,6 +393,9 @@ public:
 	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
 	ResourceFeature	get_feature( void ) { return m_resource_feature; }
 
+	bool is_partitionable_slot() const { return m_resource_feature == PARTITIONABLE_SLOT; }
+	bool is_dynamic_slot() const { return m_resource_feature == DYNAMIC_SLOT; }
+
 	void set_parent( Resource* rip );
     Resource* get_parent() { return m_parent; }
 
@@ -344,12 +415,6 @@ private:
 	Resource*	m_parent;
 
 	// Only partitionable slots have children
-
-    struct ResourceLess {
-        bool operator()(Resource *lhs, Resource *rhs) const {
-            return strcmp(lhs->r_name, rhs->r_name) < 0;
-        }
-    };
 	std::set<Resource *, ResourceLess> m_children;
 
 	IdDispenser* m_id_dispenser;

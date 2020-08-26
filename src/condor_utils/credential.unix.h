@@ -52,7 +52,7 @@ public:
   const char * GetName();
   void SetName(const char *);
 
-  int GetType();
+  int GetType() const;
   virtual const char * GetTypeString() = 0;
 
   const char * GetOwner();

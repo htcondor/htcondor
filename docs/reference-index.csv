@@ -1,4 +1,0 @@
-TEST_MACRO,users-manual/dagman
-ANOTHER_MACRO,users-manual/dagman
-THIRD_MACRO,users-manual/dagman
-CONDOR_SUBMIT_MACRO,man-pages/condor_submit

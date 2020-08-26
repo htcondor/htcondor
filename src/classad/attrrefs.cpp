@@ -371,7 +371,6 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 {
 	const ClassAd *current=NULL;
 	const ExprList *adList = NULL;
-	Value	val;
 	bool	rval;
 
 	sig = NULL;
@@ -384,6 +383,8 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 			return EVAL_FAIL;					// NAC
 		}										// NAC
 	} else {
+		Value	val;
+
 		// "expr.attr"
 		rval=wantSig?expr->Evaluate(state,val,sig):expr->Evaluate(state,val);
 		if( !rval ) {
@@ -399,54 +400,54 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		if( !val.IsClassAdValue( current ) && !val.IsListValue( adList ) ) {
 			return( EVAL_ERROR );
 		}
-	}
 
-	if( val.IsListValue( ) ) {
-		vector< ExprTree *> eVector;
-		const ExprTree *currExpr;
-			// iterate through exprList and apply attribute reference
-			// to each exprTree
-		for(ExprListIterator itr(adList);!itr.IsAfterLast( );itr.NextExpr( )){
- 			currExpr = itr.CurrentExpr( );
-			if( currExpr == NULL ) {
-				return( EVAL_FAIL );
-			} else {
-				AttributeReference *attrRef = NULL;
-				attrRef = MakeAttributeReference( currExpr->Copy( ),
+		if( val.IsListValue( ) ) {
+			vector< ExprTree *> eVector;
+			const ExprTree *currExpr;
+				// iterate through exprList and apply attribute reference
+				// to each exprTree
+			for(ExprListIterator itr(adList);!itr.IsAfterLast( );itr.NextExpr( )){
+ 				currExpr = itr.CurrentExpr( );
+				if( currExpr == NULL ) {
+					return( EVAL_FAIL );
+				} else {
+					AttributeReference *attrRef = NULL;
+					attrRef = MakeAttributeReference( currExpr->Copy( ),
 												  attributeStr,
 												  false );
-				val.Clear( );
-					// Create new EvalState, within this scope, because
-					// attrRef is only temporary, so we do not want to
-					// cache the evaluated result in the outer state object.
-				EvalState tstate;
-				tstate.SetScopes(state.curAd);
-				rval = wantSig ? attrRef->Evaluate( tstate, val, sig )
-					: attrRef->Evaluate( tstate, val );
-				delete attrRef;
-				if( !rval ) {
-					return( EVAL_FAIL );
-				}
+					val.Clear( );
+						// Create new EvalState, within this scope, because
+						// attrRef is only temporary, so we do not want to
+						// cache the evaluated result in the outer state object.
+					EvalState tstate;
+					tstate.SetScopes(state.curAd);
+					rval = wantSig ? attrRef->Evaluate( tstate, val, sig )
+						: attrRef->Evaluate( tstate, val );
+					delete attrRef;
+					if( !rval ) {
+						return( EVAL_FAIL );
+					}
 				
-				ClassAd *evaledAd = NULL;
-				const ExprList *evaledList = NULL;
-				if( val.IsClassAdValue( evaledAd ) ) {
-					eVector.push_back( evaledAd );
-					continue;
-				}
-				else if( val.IsListValue( evaledList ) ) {
-					eVector.push_back( evaledList->Copy( ) );
-					continue;
-				}
-				else {
-					eVector.push_back( Literal::MakeLiteral( val ) );
+					ClassAd *evaledAd = NULL;
+					const ExprList *evaledList = NULL;
+					if( val.IsClassAdValue( evaledAd ) ) {
+						eVector.push_back( evaledAd );
+						continue;
+					}
+					else if( val.IsListValue( evaledList ) ) {
+						eVector.push_back( evaledList->Copy( ) );
+						continue;
+					}
+					else {
+						eVector.push_back( Literal::MakeLiteral( val ) );
+					}
 				}
 			}
+			tree = ExprList::MakeExprList( eVector );
+			ClassAd *newRoot = new ClassAd( );
+			((ExprList*)tree)->SetParentScope( newRoot );
+			return EVAL_OK;
 		}
-		tree = ExprList::MakeExprList( eVector );
-		ClassAd *newRoot = new ClassAd( );
-		((ExprList*)tree)->SetParentScope( newRoot );
-		return EVAL_OK;
 	}
 		// lookup with scope; this may side-affect state		
 

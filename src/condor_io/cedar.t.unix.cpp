@@ -20,10 +20,8 @@
 #include "condor_common.h"
 
 #include "condor_config.h"
-#include "condor_network.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "test.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -31,6 +29,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
+
+#define SERVER_PORT 7678
 
 using namespace std;
 

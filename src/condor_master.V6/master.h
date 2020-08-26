@@ -68,6 +68,7 @@ public:
 	time_t	timeStamp;		// Timestamp of this daemon's binary.
 	time_t	startTime;		// Time this daemon was started
 	bool	isDC;
+	bool	use_collector_port; // true for daemon's that are SHARED_PORT in front of a COLLECTOR
 
 	Env     env;			// Environment of daemon.
 
@@ -76,13 +77,13 @@ public:
 	char*	config_info_file;				// for config server
 #endif
 
-	time_t		GetNextRestart();
-	int		NextStart();
+	time_t		GetNextRestart() const;
+	int		NextStart() const;
 	int		Start( bool never_forward = false );
 	int		RealStart();
 	int		Restart();
 	void    Hold( bool on_hold, bool never_forward = false );
-	int		OnHold( void ) { return on_hold; };
+	int		OnHold( void ) const { return on_hold; };
 	bool	WaitingforStartup(bool & for_file) { for_file = ! m_after_startup_wait_for_file.empty(); return m_waiting_for_startup; }
 	void	Stop( bool never_forward = false );
 	void	StopFast( bool never_forward = false );
@@ -93,8 +94,8 @@ public:
 	void	Obituary( int );
 	void	CancelAllTimers();
 	void	CancelRestartTimers();
-	void	Kill( int );
-	void	KillFamily( void );
+	void	Kill( int ) const;
+	void	KillFamily( void ) const;
 	void	Reconfig();
 	void	InitParams();
 	void	SetReadyState(const char * state);
@@ -104,13 +105,13 @@ public:
 	int		RegisterControllee( class daemon * );
 	void		DeregisterControllee( class daemon * );
 
-	bool	IsHA( void ) { return is_ha; };
+	bool	IsHA( void ) const { return is_ha; };
 
 	bool WaitBeforeStartingOtherDaemons(bool first_time);
 
 		// true if this daemon needs to run right up until just before
 		// the master shuts down (e.g. shared port server)
-	bool OnlyStopWhenMasterStops() { return m_only_stop_when_master_stops; }
+	bool OnlyStopWhenMasterStops() const { return m_only_stop_when_master_stops; }
 
 private:
 
@@ -121,7 +122,7 @@ private:
 	int		SetupHighAvailability( void );
 	int		HaLockAcquired( LockEventSrc src );
 	int		HaLockLost( LockEventSrc src );
-	void	DoActionAfterStartup();
+	void	DoActionAfterStartup() const;
 
 	int		start_tid;
 	int		recover_tid;
@@ -155,6 +156,8 @@ private:
 	bool m_never_use_shared_port;
 	bool m_waiting_for_startup;
 	bool m_only_stop_when_master_stops;
+
+	std::string localName;
 };
 
 
@@ -248,6 +251,7 @@ private:
 	int m_retry_start_all_daemons_tid;
 	int m_deferred_query_ready_tid;
 	std::list<DeferredQuery*> deferred_queries;
+	DCTokenRequester m_token_requester;
 
 	void ScheduleRetryStartAllDaemons();
 	void CancelRetryStartAllDaemons();
@@ -260,6 +264,10 @@ private:
 
 		// returns true if there are no remaining daemons
 	bool StopDaemonsBeforeMasterStops();
+
+	static void ProcdStopped(void*, int pid, int status);
+
+	static void token_request_callback(bool success, void *miscdata);
 };
 
 #endif /* _CONDOR_MASTER_H */

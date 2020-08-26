@@ -42,19 +42,27 @@ mv ../condor-${condor_version}.tgz ./condor_${condor_version}.orig.tar.gz
 tar xfpz condor_${condor_version}.orig.tar.gz
 cd condor-${condor_version}
 
+# copy srpm files from condor sources into the SOURCES directory
+cp -pr build/packaging/new-debian debian
+
 if $(grep -qi stretch /etc/os-release); then
     dist='stretch'
+elif $(grep -qi buster /etc/os-release); then
+    dist='buster'
 elif $(grep -qi xenial /etc/os-release); then
     dist='xenial'
 elif $(grep -qi bionic /etc/os-release); then
     dist='bionic'
+elif $(grep -qi focal /etc/os-release); then
+    dist='focal'
+    mv debian/control.focal debian/control
+    mv debian/htcondor.install.focal debian/htcondor.install
+    mv debian/rules.focal debian/rules
+    mv debian/patches/series.focal debian/patches/series
 else
     dist='unstable'
 fi
 echo "Distribution is $dist"
-
-# copy srpm files from condor sources into the SOURCES directory
-cp -pr build/packaging/new-debian debian
 
 # Nightly build changelog
 dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"

@@ -25,6 +25,8 @@
 #include "dc_collector.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
+#include "condor_daemon_core.h"
+
 #include <vector>
 
 DaemonList::DaemonList()
@@ -67,6 +69,19 @@ DaemonList::init( daemon_t type, const char* host_list, const char* pool_list )
 		tmp = buildDaemon( type, host, pool );
 		append( tmp );
 	}
+}
+
+
+bool
+DaemonList::shouldTryTokenRequest()
+{
+	list.Rewind();
+	Daemon *daemon = nullptr;
+	bool try_token_request = false;
+	while( list.Next(daemon) ) {
+		try_token_request |= daemon->shouldTryTokenRequest();
+	}
+	return try_token_request;
 }
 
 
@@ -259,7 +274,10 @@ DCCollectorAdSequences & CollectorList::getAdSeq()
 }
 
 int
-CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocking) {
+CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocking,
+	DCTokenRequester *token_requester, const std::string &identity,
+	const std::string authz_name)
+{
 	int success_count = 0;
 
 	if ( ! adSeq) {
@@ -278,7 +296,14 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 		dprintf( D_FULLDEBUG, 
 				 "Trying to update collector %s\n", 
 				 daemon->addr() );
-		if( daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking) ) {
+		void *data = nullptr;
+		if (token_requester && daemon->name()) {
+			data = token_requester->createCallbackData(daemon->name(),
+				identity, authz_name);
+		}
+		if( daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking,
+			DCTokenRequester::daemonUpdateCallback, data) )
+		{
 			success_count++;
 		} 
 	}
@@ -299,6 +324,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 	QueryResult result = Q_COMMUNICATION_ERROR;
 
 	bool problems_resolving = false;
+	bool random_order = ! param_boolean("HAD_USE_PRIMARY", false);
 
 	// switch containers for easier random access.
 	this->rewind();
@@ -308,7 +334,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 
 	while ( vCollectors.size() ) {
 		// choose a random collector in the list to query.
-		unsigned int idx = get_random_int() % vCollectors.size() ;
+		unsigned int idx = random_order ? (get_random_int_insecure() % vCollectors.size()) : 0;
 		daemon = vCollectors[idx];
 
 		if ( ! daemon->addr() ) {

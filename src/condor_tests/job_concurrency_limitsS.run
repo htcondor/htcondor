@@ -53,7 +53,7 @@ my $append_condor_config = '
 	CONCURRENCY_LIMIT_DEFAULT = 2
 	CONCURRENCY_LIMIT_DEFAULT_SMALL = 3
 	CONCURRENCY_LIMIT_DEFAULT_LARGE = 2
-	NEGOTIATOR_INTERVAL = 5
+	NEGOTIATOR_INTERVAL = 2
 	NUM_CPUS = 12
 ';
 
@@ -111,7 +111,7 @@ $queuesize = 3;
 $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	no_wait => 1,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
@@ -131,6 +131,7 @@ $taskname = "";
 
 # clean queue bwtween all checks
 @RES = `condor_rm -all`;
+sleep(2);
 
 $append_submit_commands = '
 concurrency_limits = UNDEFINED:2
@@ -144,7 +145,7 @@ $queuesize = 2;
 $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	no_wait => 1,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
@@ -162,6 +163,7 @@ if($waitforitres == 1) {
 
 # clean queue bwtween all checks
 @RES = `condor_rm -all`;
+sleep(2);
 
 $append_submit_commands = '
 concurrency_limits = large.license
@@ -175,7 +177,7 @@ $queuesize = 3;
 $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	no_wait => 1,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
@@ -193,6 +195,7 @@ if($waitforitres == 1) {
 
 # clean queue bwtween all checks
 @RES = `condor_rm -all`;
+sleep(2);
 
 $append_submit_commands = '
 concurrency_limits = small.license
@@ -206,7 +209,7 @@ $queuesize = 4;
 $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	no_wait => 1,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands

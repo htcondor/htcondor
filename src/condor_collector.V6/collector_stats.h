@@ -28,6 +28,10 @@
 #include "subsystem_info.h"
 #endif
 
+// Enable a series of fine-grained timing probes of the details of the
+// receive_update() CEDAR command handler.
+//#define PROFILE_RECEIVE_UPDATE 1
+
 #define DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL (3600*4)
 
 // probes for doing timing analysis, enable one, the probe is more detailed.
@@ -43,13 +47,13 @@ class CollectorBaseStats
 	int updateStats( bool sequened, int dropped );
 	void reset( void );
 	int setHistorySize( int size );
-	int getTotal( void ) { return updatesTotal; };
-	int getSequenced( void ) { return updatesSequenced; };
-	int getDropped( void ) { return updatesDropped; };
+	int getTotal( void ) const { return updatesTotal; };
+	int getSequenced( void ) const { return updatesSequenced; };
+	int getDropped( void ) const { return updatesDropped; };
 	//char *getHistoryString( void );
 	char *getHistoryString( char * );
-	int getHistoryStringLen( void ) { return 1 + ( (historySize + 3) / 4 ); };
-	bool wasRecentlyUpdated() { return m_recently_updated; }
+	int getHistoryStringLen( void ) const { return 1 + ( (historySize + 3) / 4 ); };
+	bool wasRecentlyUpdated() const { return m_recently_updated; }
 	void setRecentlyUpdated(bool value) { m_recently_updated=value; }
 
   private:
@@ -107,7 +111,7 @@ class StatsHashKey
     MyString name;
     MyString ip_addr;
     friend bool operator== (const StatsHashKey &, const StatsHashKey &);
-	void getstr( MyString & );
+	void getstr( MyString & ) const;
   private:
 };
 
@@ -217,7 +221,7 @@ class CollectorStats
 					int daemon_history_size );
 	virtual ~CollectorStats( void );
 	int update( const char *className, ClassAd *oldAd, ClassAd *newAd );
-	int publishGlobal( ClassAd *Ad, const char * config );
+	int publishGlobal( ClassAd *Ad, const char * config ) const;
 	int setDaemonStats( bool );
 	int setDaemonHistorySize( int size );
 	void setGarbageCollectionInterval( time_t interval ) {

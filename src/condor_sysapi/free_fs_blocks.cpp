@@ -156,35 +156,19 @@ long long sysapi_disk_space_raw( const char *filename);
 long long sysapi_disk_space_raw();
 #endif
 
-#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(LINUX) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>
 
-#if defined(AIX)
-#include <sys/statfs.h>
-#elif defined(Solaris)
-#include <sys/statvfs.h>
-#endif
-
 long long sysapi_disk_space_raw(const char * filename)
 {
-#if defined(Solaris)
-	struct statvfs statfsbuf;
-#else
 	struct statfs statfsbuf;
-#endif
 	long long free_kbytes;
 	double kbytes_per_block;
 
 	sysapi_internal_reconfig();
 
-#if defined(Solaris)
-	if(statvfs(filename, &statfsbuf) < 0) {
-#elif defined(AIX)
-	if(statfs((char *)filename, &statfsbuf) < 0) {
-#else
 	if(statfs(filename, &statfsbuf) < 0) {
-#endif
 		if (errno != EOVERFLOW) {
 			dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,%p) failed\n",
 													filename, &statfsbuf );
@@ -206,14 +190,7 @@ long long sysapi_disk_space_raw(const char * filename)
 	/* overflow problem fixed by using doubles to hold result - 
 		Keller 05/17/99 */
 
-#if defined(Solaris)
-		/* On Solaris, we need to use f_frsize, the "fundamental
-		   filesystem block size", not f_bsize, the "preferred file
-		   system block size".  3/25/98  Derek Wright */
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / 1024.0 );
-#else
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / 1024.0 );
-#endif
 
 	free_kbytes = (long long)(statfsbuf.f_bavail * kbytes_per_block);
 

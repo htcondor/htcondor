@@ -37,7 +37,7 @@ passwd_cache::passwd_cache() {
 		/* set the number of seconds until a cache entry expires */
 		// Randomize this timer a bit to decrease chances of lots of
 		// processes all pounding on NIS at the same time.
-	int default_lifetime = 72000 + get_random_int() % 60;
+	int default_lifetime = 72000 + get_random_int_insecure() % 60;
 	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", default_lifetime );
 	loadConfig();
 }
@@ -301,14 +301,9 @@ passwd_cache::cache_uid(const char* user) {
 			
 			// Under linux, getpwnam sets errno to ENOENT the former case, so
 			// we consider that as well.
-
-			// Under AIX, getpwnam sets errno to ESRCH the former case, so
-			// we consider that as well.
 		if( errno == 0 
 #if defined(LINUX)
 			|| errno == ENOENT
-#elif defined(AIX)
-			|| errno == ESRCH
 #endif
 		) 
 		{

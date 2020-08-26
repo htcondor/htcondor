@@ -163,7 +163,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 
 
 		// calculate the request's rank of the offer
-		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
+		if(!EvalFloat(ATTR_RANK,&request,candidate,tmp)) {
 			tmp = 0.0;
 		}
 		candidateRankValue = tmp;
@@ -301,8 +301,6 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 	}
 #endif
 		
-	requestAd.Assign(ATTR_JOB_LOCAL_USER_CPU, 0.0);
-	requestAd.Assign(ATTR_JOB_LOCAL_SYS_CPU, 0.0);
 	requestAd.Assign(ATTR_JOB_REMOTE_USER_CPU, 0.0);
 	requestAd.Assign(ATTR_JOB_REMOTE_SYS_CPU, 0.0);
 	requestAd.Assign(ATTR_JOB_EXIT_STATUS, 0);
@@ -532,9 +530,8 @@ main(int argc, char *argv[])
 			ad->LookupString( ATTR_REMOTE_USER , remoteUser, sizeof(remoteUser) )) 
 		{
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
-				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+				ad->Assign( ATTR_REMOTE_USER_PRIO,
 							prioTable[index].prio );
-				ad->Insert( buffer );
 			}
 		}
 	}

@@ -19,7 +19,6 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
 		-DPROPER:BOOL=ON \
-		-DCLIPPED:BOOL=ON \
 		-DUW_BUILD:BOOL=OFF \
 		-D_DEBUG:BOOL=TRUE \
 		-DBUILDID:STRING="Debian-$(debver)"\
@@ -43,6 +42,7 @@ override_dh_auto_configure:
 		-DWANT_CONTRIB:BOOL=OFF \
 		-DWITH_BOSCO:BOOL=OFF \
 		-DWITH_PYTHON_BINDINGS:BOOL=ON \
+		-DWITH_SCITOKENS:BOOL=OFF \
 		-DWITH_CAMPUSFACTORY:BOOL=OFF
 		# upstream says: tests aren't reliable enough yet
 		#-DBUILD_TESTS:BOOL=OFF \
@@ -69,12 +69,12 @@ override_dh_shlibdeps:
 
 doc/build:
 	mkdir -p $@
-	# Need a more recent version htlatex for this
+	# TODO: Build the manual now that we are using Sphinx
 	# $(MAKE) -C doc ref.html
 	# mv doc/ref.html $@/html
-	$(MAKE) -C doc just-man-pages
+	$(MAKE) -C docs man
 	mkdir -p $@/man
-	mv doc/man/man1/* $@/man
+	mv docs/_build/man/* $@/man
 
 
 override_dh_auto_install:
@@ -112,7 +112,7 @@ override_dh_auto_clean:
 		src/condor_tests/batch_test.pl
 	-rm src/condor_utils/param_info.c
 	# docs
-	$(MAKE) -C doc clean
+	$(MAKE) -C docs clean
 	-rm -f doc/condor-*-Manual.tar
 	-rm -rf doc/just-man-pages
 	-rm -rf doc/build

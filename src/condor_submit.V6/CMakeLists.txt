@@ -18,4 +18,7 @@
 
 include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
-condor_exe( condor_submit "submit.cpp;submit_protocol.cpp;submit_factory.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )
+condor_exe( condor_submit "submit.cpp;submit_simulate.cpp;submit_factory.cpp;submit_help.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )
+
+# simple program to test"late" materialization outside of the schedd 
+condor_exe_test( test_job_factory.exe "factory_test.cpp" "${CONDOR_TOOL_LIBS}" )

@@ -23,7 +23,7 @@
 
 # the 2nd arg is prio order for symbols ripping to prevent .o copy-mindging within the std:u
 add_subdirectories("${CONDOR_SOURCE_DIR}/src"
-	"${CONDOR_SOURCE_DIR}/src/bash_completion.d;${CONDOR_SOURCE_DIR}/src/classad_analysis;${CONDOR_SOURCE_DIR}/src/ccb;${CONDOR_SOURCE_DIR}/src/condor_io;${CONDOR_SOURCE_DIR}/src/condor_ckpt_server;${CONDOR_SOURCE_DIR}/src/condor_daemon_client;${CONDOR_SOURCE_DIR}/src/condor_daemon_core.V6;${CONDOR_SOURCE_DIR}/src/condor_privsep;${CONDOR_SOURCE_DIR}/src/condor_procapi;${CONDOR_SOURCE_DIR}/src/condor_procd;${CONDOR_SOURCE_DIR}/src/condor_schedd.V6;${CONDOR_SOURCE_DIR}/src/condor_sysapi;${CONDOR_SOURCE_DIR}/src/condor_utils;${CONDOR_SOURCE_DIR}/src/condor_ckpt;${CONDOR_SOURCE_DIR}/src/condor_io.std;${CONDOR_SOURCE_DIR}/src/condor_syscall_lib"
+	"${CONDOR_SOURCE_DIR}/src/bash_completion.d;${CONDOR_SOURCE_DIR}/src/classad_analysis;${CONDOR_SOURCE_DIR}/src/ccb;${CONDOR_SOURCE_DIR}/src/condor_io;${CONDOR_SOURCE_DIR}/src/condor_daemon_client;${CONDOR_SOURCE_DIR}/src/condor_daemon_core.V6;${CONDOR_SOURCE_DIR}/src/condor_procapi;${CONDOR_SOURCE_DIR}/src/condor_procd;${CONDOR_SOURCE_DIR}/src/condor_schedd.V6;${CONDOR_SOURCE_DIR}/src/condor_sysapi;${CONDOR_SOURCE_DIR}/src/condor_utils"
 	"${CONDOR_SOURCE_DIR}/src/classad;${CONDOR_SOURCE_DIR}/src/safefile")
 
 #if (BUILD_TESTING AND NOT WINDOWS)
@@ -76,7 +76,14 @@ if (BUILD_TESTING)
 	ENDFOREACH (test)
 	# copy rules for pl tests
 	FOREACH (test IN LISTS CONDOR_PL_TESTS)
-		FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run\" \n")
+		IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run)
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run\" \n")
+		ELSEIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.py)
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.py\" \n")
+		ELSE()
+			# hack to trigger the same "cannot find file" as would appear with no .py check
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run\" \n")
+		ENDIF()
 	ENDFOREACH (test)
 	# copy rules for tests helper scripts
 	FOREACH (script IN LISTS CONDOR_TEST_HELPER_SCRIPTS)

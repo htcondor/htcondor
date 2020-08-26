@@ -53,8 +53,7 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
         if (MATCH == strcasecmp(asset, "swap")) continue;
         string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
-        ClassAd::iterator f(resource.find(ca));
-        if (f == resource.end()) return false;
+        if (! resource.Lookup(ca)) return false;
     }
 
     return true;
@@ -80,7 +79,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         formatstr(coa, "_condor_%s", ra.c_str());
         bool override = false;
         double ov=0;
-        if (job.EvalFloat(coa.c_str(), NULL, ov)) {
+        if (job.LookupFloat(coa, ov)) {
             // Allow _condor_RequestedXXX to override RequestedXXX
             // this case is intended to be operative when a scheduler has set 
             // such values and sent them on to the startd that owns this resource
@@ -88,16 +87,15 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
             string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
             CopyAttribute(ta, job, ra);
-            job.Assign(ra.c_str(), ov);
+            job.Assign(ra, ov);
             override = true;
         }
 
         // get the requested asset value
         bool missing = false;
-        ClassAd::iterator f(job.find(ra));
-        if (f == resource.end()) {
+        if (!job.Lookup(ra)) {
             // a RequestXxx attribute not present - default to zero
-            job.Assign(ra.c_str(), 0);
+            job.Assign(ra, 0);
             missing = true;
         }
 
@@ -105,7 +103,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
         double cv = 0;
-        if (!resource.EvalFloat(ca.c_str(), &job, cv) || (cv < 0)) {
+        if (!EvalFloat(ca.c_str(), &resource, &job, cv) || (cv < 0)) {
             string name;
             resource.LookupString(ATTR_NAME, name);
             dprintf(D_ALWAYS, "WARNING: consumption policy for %s on resource %s failed to evaluate to a non-negative numeric value\n", ca.c_str(), name.c_str());
@@ -174,7 +172,7 @@ double cp_deduct_assets(ClassAd& job, ClassAd& resource, bool test) {
 
     // slot weight before asset deductions
     double w0 = 0;
-    if (!resource.EvalFloat(ATTR_SLOT_WEIGHT, NULL, w0)) {
+    if (!resource.LookupFloat(ATTR_SLOT_WEIGHT, w0)) {
         EXCEPT("Failed to evaluate %s", ATTR_SLOT_WEIGHT);
     }
 
@@ -190,7 +188,7 @@ double cp_deduct_assets(ClassAd& job, ClassAd& resource, bool test) {
 
     // slot weight after deductions
     double w1 = 0;
-    if (!resource.EvalFloat(ATTR_SLOT_WEIGHT, NULL, w1)) {
+    if (!resource.LookupFloat(ATTR_SLOT_WEIGHT, w1)) {
         EXCEPT("Failed to evaluate %s", ATTR_SLOT_WEIGHT);
     }
 
@@ -222,8 +220,7 @@ void cp_override_requested(ClassAd& job, ClassAd& resource, consumption_map_t& c
         formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
 
         // If there was no RequestXXX to begin with, don't screw things up by creating one
-        ClassAd::iterator f(job.find(ra));
-        if (job.end() == f) continue;
+        if (!job.Lookup(ra)) continue;
 
         string oa;
         formatstr(oa, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, asset);

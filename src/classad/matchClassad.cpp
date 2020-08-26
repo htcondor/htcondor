@@ -67,6 +67,9 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 {
 	ClassAdParser parser;
 
+	// don't need this and just slows down matchmaking
+	this->DisableDirtyTracking();
+
 		// clear out old info
 	Clear( );
 	lad = rad = NULL;

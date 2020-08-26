@@ -37,6 +37,8 @@ use CustomMachineResource;
 my $config = <<CONDOR_TESTREQ_CONFIG;
 NUM_CPUS = 16
 
+ADVERTISE_CMR_UPTIME_SECONDS = TRUE
+
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
 use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-both, SUM:SQUIDs, PEAK:SQUIDsMemory )
 
@@ -55,6 +57,7 @@ my $testDescription = 'Custom Machine Resources - Monitor Test Usage & Memory';
 #
 # Verify the configuration before running the test.
 #
+sleep(5);
 CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
 
 #

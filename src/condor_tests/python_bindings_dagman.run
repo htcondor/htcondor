@@ -1,0 +1,74 @@
+#!/usr/bin/python3
+
+import htcondor
+import os
+import sys
+import time
+
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.HTTPServer import HTTPServer
+from pytest_old.Utils import Utils
+
+def main():
+
+    # Start by writing out whatever dag/submit files we'll need
+    dagFile = """JOB Job1 python_bindings_dagman.sub
+JOB Job2 python_bindings_dagman.sub
+PARENT Job1 CHILD Job2
+"""
+    if not Utils.WriteFile("python_bindings_dagman.dag", dagFile):
+        Utils.TLog("Failed to write test file python_bindings_dagman.dag, aborting.\n")
+        sys.exit(TEST_FAILURE)
+
+    # TODO: Fix the bug that causes a segfault if last line of the subFile string is non-empty
+    subFile = """executable = x_echostring.pl
+arguments = Test for echo
+output = python_bindings_dagman.out
+queue
+"""
+    if not Utils.WriteFile("python_bindings_dagman.sub", subFile):
+        Utils.TLog("Failed to write test file python_bindings_dagman.sub, aborting.\n")
+        sys.exit(TEST_FAILURE)
+
+    # Stand up a PersonalCondor
+    personal_handle = CondorTest.StartPersonalCondor("python_bindings_dagman")
+    if not personal_handle:
+        Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
+        sys.exit( TEST_FAILURE )
+    else:
+        Utils.TLog("PersonalCondor environment started successfully")
+
+    # Create a DAG submit object and queue it up at the schedd
+    schedd = htcondor.Schedd()
+    dag_submit = htcondor.Submit.from_dag("python_bindings_dagman.dag")
+    with schedd.transaction() as txn:
+        cluster_id = dag_submit.queue(txn, 1)
+        print("Submitted DAG with cluster_id = " + str(cluster_id))
+
+    # Wait for the DAGMan job to finish
+    for i in range(230):
+        time.sleep(1)
+        ads = schedd.query("ClusterId == %d" % cluster_id, ["JobStatus"])
+        Utils.TLog("Ads = " + str(ads))
+        #event_log = htcondor.JobEventLog("python_bindings_dagman)
+        if len(ads) == 0:
+            print("DAGMan job is complete!")
+            break
+
+    # Verify that we have the output file we expect
+    try:
+        out_file = open("python_bindings_dagman.out", "r")
+    except:
+        CondorTest.RegisterFailure("python-dagman-submit-success", "Unable to open the DAG output file")
+        sys.exit(TEST_FAILURE)
+
+    out_contents = out_file.read()
+    if "Test for echo" in out_contents:
+        CondorTest.RegisterSuccess("python-dagman-submit-success", "DAG ran correctly as expected")
+    else:
+        CondorTest.RegisterFailure("python-dagman-submit-success", "DAG output file did noes not contain correct data")
+
+
+if __name__ == "__main__":
+    main()

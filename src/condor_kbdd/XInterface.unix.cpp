@@ -30,12 +30,7 @@
 
 #include "XInterface.unix.h"
 #include "condor_config.h"
-//#include <paths.h>
-#if USES_UTMPX  /* SGI IRIX 62/65 */
-#	include <utmpx.h>
-#else 
-#	include <utmp.h>
-#endif
+#include <utmp.h>
 
 #ifdef HAVE_XSS
 #include "X11/extensions/scrnsaver.h"
@@ -74,13 +69,11 @@ CatchFalseAlarm(Display *display, XErrorEvent *err)
 }
 
 static int 
-CatchIOFalseAlarm(Display *display, XErrorEvent *err)
+CatchIOFalseAlarm(Display *)
 {
-	char msg[80];
 	g_connected = false;
 		
-	XGetErrorText(display, err->error_code, msg, 80);
-	dprintf(D_FULLDEBUG, "Caught Error code(%d): %s\n", err->error_code, msg);
+	dprintf(D_FULLDEBUG, "Caught IOError\n");
 
 	longjmp(jmp, 0);
 	return 0;
@@ -115,7 +108,9 @@ XInterface::TryUser(const char *user)
 	if (strcmp(user, "root") == 0) {
 		set_root_priv();
 	} else {
-		init_user_ids( user, NULL );
+		if (!init_user_ids( user, NULL )) {
+			dprintf(D_ALWAYS, "init_user_ids failed\n");
+		}
 		set_user_priv();
 		need_uninit = true;
 	}
@@ -190,11 +185,7 @@ XInterface::~XInterface()
 
 void
 XInterface::ReadUtmp() {
-#if USES_UTMPX
-	struct utmpx utmp_entry;
-#else
 	struct utmp utmp_entry;
-#endif
 
 	if ( logged_on_users ) {
 		for (size_t foo =0; foo < logged_on_users->size(); foo++) {
@@ -215,23 +206,22 @@ XInterface::ReadUtmp() {
 	}                                 
  
 	while(fread((char *)&utmp_entry,
-#if USES_UTMPX
-		sizeof( struct utmpx ),
-#else
 		sizeof( struct utmp ),
-#endif
 		1, utmp_fp)) {
 
 		if (utmp_entry.ut_type == USER_PROCESS) {
 			bool _found_it = false;
+			char user[UT_NAMESIZE + 1];
 			for (size_t i=0; (i<logged_on_users->size()) && (! _found_it); i++) {
-				if (!strcmp(utmp_entry.ut_user, (*logged_on_users)[i])) {
+				memcpy(user, utmp_entry.ut_user, UT_NAMESIZE);
+				user[UT_NAMESIZE] = 0;
+				if (!strcmp(user, (*logged_on_users)[i])) {
 					_found_it = true;
 				}
 			}
 			if (! _found_it) {
 				dprintf(D_FULLDEBUG, "User %s is logged in.\n",
-					utmp_entry.ut_user );
+					user );
 				logged_on_users->push_back(strdup( utmp_entry.ut_user ));
 			}
 		}

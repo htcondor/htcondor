@@ -93,7 +93,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 
 	shutdownPolicy = ParallelShadow::WAIT_FOR_NODE0;
 
-	MyString policy;
+	std::string policy;
 	job_ad->LookupString(ATTR_PARALLEL_SHUTDOWN_POLICY, policy);
 	if (policy == "WAIT_FOR_ALL") {
 		dprintf(D_ALWAYS, "Setting parallel shutdown policy to WAIT_FOR_ALL\n");
@@ -455,7 +455,7 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	size_t i;
 	FILE* mailer;
 	Email msg;
-	MyString str;
+	std::string str;
 	char *s;
 
 	mailer = msg.open_stream( jobAd, exitReason );
@@ -479,7 +479,7 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// This should be a more rare case in any event.
 
 		jobAd->LookupString(ATTR_REMOTE_HOSTS, str);
-		StringList slist(str.Value());
+		StringList slist(str.c_str());
 
 		slist.rewind();
 		while((s = slist.next()) != NULL)
@@ -701,15 +701,14 @@ ParallelShadow::handleJobRemoval( int sig ) {
 void
 ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
-	ExprTree *tree = NULL;
 	char node[9];
 	const char *lhstr, *rhstr;
 
 	snprintf( node, 9, "%d", nodenum );
 
-	ad->ResetExpr();
-	while( ad->NextExpr(lhstr, tree) ) {
-		rhstr = ExprTreeToString(tree);
+	for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+		lhstr = itr->first.c_str();
+		rhstr = ExprTreeToString(itr->second);
 		if( !lhstr || !rhstr ) {
 			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;
@@ -763,7 +762,7 @@ ParallelShadow::updateFromStarterClassAd(ClassAd* update_ad)
 		return FALSE;
 	}
 
-	int prev_disk = getDiskUsage();
+	int64_t prev_disk = getDiskUsage();
 	struct rusage prev_rusage = getRUsage();
 
 
@@ -775,7 +774,7 @@ ParallelShadow::updateFromStarterClassAd(ClassAd* update_ad)
 		// want to store the maximum in there?  Seperate stuff for
 		// each node?  
 
-    int cur_disk = getDiskUsage();
+	int64_t cur_disk = getDiskUsage();
     if( cur_disk > prev_disk ) {
 		job_ad->Assign(ATTR_DISK_USAGE, cur_disk);
     }
@@ -843,11 +842,11 @@ ParallelShadow::getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & p
 }
 
 
-int
+int64_t
 ParallelShadow::getDiskUsage( void )
 {
 	MpiResource* mpi_res;
-	int max = 0, val;
+	int64_t max = 0, val;
 	for( size_t i=0; i<ResourceList.size() ; i++ ) {
 		mpi_res = ResourceList[i];
 		val = mpi_res->getDiskUsage();

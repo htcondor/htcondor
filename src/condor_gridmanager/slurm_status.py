@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #  File:     slurm_status.py
 #
@@ -28,6 +28,8 @@ Internally, it creates a cache of the SLURM response for all jobs and
 will reuse this for subsequent queries.
 """
 
+from __future__ import print_function
+
 import os
 import re
 import pwd
@@ -52,7 +54,7 @@ def log(msg):
     A very lightweight log - not meant to be used in production, but helps
     when debugging scale tests
     """
-    print >> sys.stderr, time.strftime("%x %X"), os.getpid(), msg
+    print(time.strftime("%x %X"), os.getpid(), msg, file = sys.stderr)
 
 def createCacheDir():
     uid = os.geteuid()
@@ -60,8 +62,8 @@ def createCacheDir():
     cache_dir = os.path.join("/var/tmp", "slurm_cache_%s" % username)
     
     try:
-        os.mkdir(cache_dir, 0755)
-    except OSError, oe:
+        os.mkdir(cache_dir, 0o755)
+    except OSError as oe:
         if oe.errno != errno.EEXIST:
             raise
         s = os.stat(cache_dir)
@@ -115,7 +117,7 @@ def ExclusiveLock(fd, timeout=120):
         try:
             fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return
-        except IOError, ie:
+        except IOError as ie:
             if not ((ie.errno == errno.EACCES) or (ie.errno == errno.EAGAIN)):
                 raise
             if check_lock(fd, timeout):
@@ -128,7 +130,7 @@ def ExclusiveLock(fd, timeout=120):
                 try:
                     fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                     return
-                except IOError, ie:
+                except IOError as ie:
                     if not ((ie.errno == errno.EACCES) or (ie.errno == errno.EAGAIN)):
                         raise
         sleeptime = random.random()
@@ -200,11 +202,11 @@ def get_lock_pid(fd):
         else:
             arg = struct.pack(linux_struct_flock, fcntl.F_WRLCK, 0, 0, 0, 0)
         result = fcntl.fcntl(fd, fcntl.F_GETLK, arg)
-    except IOError, ie:
+    except IOError as ie:
         if ie.errno != errno.EINVAL:
             raise
-        log("Unable to determine which PID has the lock due to a " \
-            "python portability failure.  Contact the developers with your" \
+        log("Unable to determine which PID has the lock due to a "
+            "python portability failure.  Contact the developers with your"
             " platform information for support.")
         return False
     if sys.platform == "darwin":
@@ -218,7 +220,7 @@ def get_pid_age(pid):
     st = os.stat("/proc/%d" % pid)
     return now - st.st_ctime
 
-def call_scontrol(jobid=""):
+def call_scontrol(jobid="", cluster=""):
     """
     Call scontrol directly for a jobid.
     If none is specified, query all jobid's.
@@ -226,6 +228,8 @@ def call_scontrol(jobid=""):
     Returns a python dictionary with the job info.
     """
     scontrol = get_slurm_location('scontrol')
+    if cluster != "":
+        scontrol += " -M %s" % cluster
 
     starttime = time.time()
     log("Starting scontrol.")
@@ -247,7 +251,7 @@ def call_scontrol(jobid=""):
     # If the job has completed...
     if jobid is not "" and "JobStatus" in result[jobid] and (result[jobid]["JobStatus"] == '4' or result[jobid]["JobStatus"] == '3'):
         # Get the finished job stats and update the result
-        finished_job_stats = get_finished_job_stats(jobid)
+        finished_job_stats = get_finished_job_stats(jobid, cluster)
         result[jobid].update(finished_job_stats)
     
     return result
@@ -289,7 +293,7 @@ def convert_cpu_to_seconds(cpu_string):
         secs += int(elem[-4]) * 86400
     return secs
 
-def get_finished_job_stats(jobid):
+def get_finished_job_stats(jobid, cluster):
     """
     Get a completed job's statistics such as used RAM and cpu usage.
     """
@@ -299,6 +303,8 @@ def get_finished_job_stats(jobid):
 
     # Next, query the appropriate interfaces for the completed job information
     sacct = get_slurm_location('sacct')
+    if cluster != "":
+        sacct += " -M %s" % cluster
     log("Querying sacct for completed job for jobid: %s" % (str(jobid)))
     child_stdout = os.popen("%s -j %s -l --noconvert -P" % (sacct, str(jobid)))
     sacct_data = child_stdout.readlines()
@@ -306,13 +312,13 @@ def get_finished_job_stats(jobid):
 
     if ret:
         # retry without --noconvert for slurm < 15.8
-        child_stdout = os.popen("sacct -j %s -l -P" % (str(jobid)))
+        child_stdout = os.popen("%s -j %s -l -P" % (sacct, str(jobid)))
         sacct_data = child_stdout.readlines()
         child_stdout.close()
 
     try:
         reader = csv.DictReader(sacct_data, delimiter="|")
-    except Exception, e:
+    except Exception as e:
         log("Unable to read in CSV output from sacct: %s" % str(e))
         return return_dict
            
@@ -411,9 +417,9 @@ def job_dict_to_string(info):
     result = ["%s=%s;" % (i[0], i[1]) for i in info.items()]
     return "[" + " ".join(result) + " ]"
 
-def fill_cache(cache_location):
+def fill_cache(cache_location, cluster):
     log("Starting query to fill cache.")
-    results = call_scontrol()
+    results = call_scontrol("", cluster)
     log("Finished query to fill cache.")
     (fd, filename) = tempfile.mkstemp(dir = "/var/tmp")
     # Open the file with a proper python file object
@@ -442,24 +448,26 @@ def cache_to_status(jobid, fd):
         if row[0] == jobid:
             return pickle.loads(row[1])
 
-def check_cache(jobid, recurse=True):
+def check_cache(jobid, cluster, recurse=True):
     uid = os.geteuid()
     username = pwd.getpwuid(uid).pw_name
     cache_dir = os.path.join("/var/tmp", "slurm_cache_%s" % username)
     if recurse:
         try:
             s = os.stat(cache_dir)
-        except OSError, oe:
+        except OSError as oe:
             if oe.errno != 2:
                 raise
-            os.mkdir(cache_dir, 0755)
+            os.mkdir(cache_dir, 0o755)
             s = os.stat(cache_dir)
         if s.st_uid != uid:
             raise Exception("Unable to check cache because it is owned by UID %d" % s.st_uid)
     cache_location = os.path.join(cache_dir, "blahp_results_cache")
+    if cluster != "":
+        cache_location += "-%s" % cluster
     try:
         fd = open(cache_location, "a+")
-    except IOError, ie:
+    except IOError as ie:
         if ie.errno != 2:
             raise
         # Create an empty file so we can hold the file lock
@@ -468,10 +476,10 @@ def check_cache(jobid, recurse=True):
         # If someone grabbed the lock between when we opened and tried to
         # acquire, they may have filled the cache
         if os.stat(cache_location).st_size == 0:
-            fill_cache(cache_location)
+            fill_cache(cache_location, cluster)
         fd.close()
         if recurse:
-            return check_cache(jobid, recurse=False)
+            return check_cache(jobid, cluster, recurse=False)
         else:
             return None
     ExclusiveLock(fd)
@@ -483,9 +491,9 @@ def check_cache(jobid, recurse=True):
         # grabbed the lock, we may not need to fill the cache.
         s2 = os.stat(cache_location)
         if (s2.st_size == 0) or (launchtime - s2.st_mtime > cache_timeout):
-            fill_cache(cache_location)
+            fill_cache(cache_location, cluster)
         if recurse:
-            return check_cache(jobid, recurse=False)
+            return check_cache(jobid, cluster, recurse=False)
         else:
             return None
     return cache_to_status(jobid, fd)
@@ -501,36 +509,42 @@ def main():
     elif len(sys.argv) == 3 and sys.argv[1] == "-w":
         jobid_arg = sys.argv[2]
     else:
-        print "1Usage: slurm_status.py slurm/<date>/<jobid>"
+        print("1Usage: slurm_status.py slurm/<date>/<jobid>")
         return 1
-    jobid = jobid_arg.split("/")[-1].split(".")[0]
+    jobid = jobid_arg.split("/")[-1]
+    cluster = ""
+    jobid_list = jobid.split("@")
+    if len( jobid_list ) > 1:
+        jobid = jobid_list[0]
+        cluster = jobid_list[1]
     log("Checking cache for jobid %s" % jobid)
+    log("Job in in remote cluster %s" % cluster)
     cache_contents = None
     try:
-        cache_contents = check_cache(jobid)
-    except Exception, e:
+        cache_contents = check_cache(jobid, cluster)
+    except Exception as e:
         msg = "1ERROR: Internal exception, %s" % str(e)
         log(msg)
         #print msg
     if not cache_contents:
         log("Jobid %s not in cache; querying SLURM" % jobid)
-        results = call_scontrol(jobid)
+        results = call_scontrol(jobid, cluster)
         log("Finished querying SLURM for jobid %s" % jobid)
         if not results or jobid not in results:
             log("1ERROR: Unable to find job %s" % jobid)
-            print "1ERROR: Unable to find job %s" % jobid
+            print("1ERROR: Unable to find job %s" % jobid)
         else:
             log("0%s" % job_dict_to_string(results[jobid]))
-            print "0%s" % job_dict_to_string(results[jobid])
+            print("0%s" % job_dict_to_string(results[jobid]))
     else:
         log("Jobid %s in cache." % jobid)
         log("0%s" % job_dict_to_string(cache_contents))
         
         if cache_contents["JobStatus"] == '4' or cache_contents["JobStatus"] == '3':
-            finished_job_stats = get_finished_job_stats(jobid)
+            finished_job_stats = get_finished_job_stats(jobid, cluster)
             cache_contents.update(finished_job_stats)
             
-        print "0%s" % job_dict_to_string(cache_contents)
+        print("0%s" % job_dict_to_string(cache_contents))
     return 0
 
 if __name__ == "__main__":
@@ -538,6 +552,6 @@ if __name__ == "__main__":
         sys.exit(main())
     except SystemExit:
         raise
-    except Exception, e:
-        print "1ERROR: %s" % str(e).replace("\n", "\\n")
+    except Exception as e:
+        print("1ERROR: %s" % str(e).replace("\n", "\\n"))
         sys.exit(0)

@@ -65,6 +65,7 @@ my $partitionable_condor_config = '
   SLOT_TYPE_1 = 100%
   NUM_SLOTS_TYPE_1 = 1
   SLOT_TYPE_1_PARTITIONABLE = true
+  SHARED_PORT_PORT = 0
 ' . "  COLLECTOR_HOST = $pool1_collector\n";
 
 # Start up 3 partitionable startds, all reporting to pool1.

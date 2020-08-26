@@ -22,11 +22,12 @@
 #define SOCK_H
 
 #include "condor_common.h"
-#include "condor_socket_types.h"
 #include "stream.h"
 #include "CondorError.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
+
+#include <unordered_set>
 
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
@@ -55,12 +56,6 @@ class SockInitializer {
 		void init();
 };
 #endif  /* of WIN32 */
-
-/*
-We want to define a callback function to be invoked when certain actions happen upon a stream.  CedarHandler is the type of a callback function.   The following notation is a little strange.  It reads: Define a new type called "CedarHandler" to be "a function returning void with single argument pointer to Stream"
-*/
-
-typedef void (CedarHandler) (Stream *s);
 
 namespace classad {
 class ClassAd;
@@ -91,6 +86,7 @@ public:
 	friend class SharedPortListener;
 	friend class SharedPortEndpoint;
 	friend class DockerProc;
+	friend class OsProc;
 
 	/*
 	**	Methods
@@ -137,9 +133,6 @@ public:
 		return connect(host,getportbyserv(service),do_not_block);
 	}
 
-
-	/** Install this function as the asynchronous handler.  When a handler is installed, it is invoked whenever data arrives on the socket.  Setting the handler to zero disables asynchronous notification.  */
-	int set_async_handler( CedarHandler *handler );
 
 	//
 	// This set of functions replaces assign().
@@ -246,6 +239,8 @@ public:
         // RETURNS: true -- success; false -- failure
         //------------------------------------------
 
+        bool zkm_wrap(const unsigned char* input, int input_len,
+                  unsigned char*& output, int& outputlen);
         bool wrap(const unsigned char* input, int input_len,
                   unsigned char*& output, int& outputlen);
         //------------------------------------------
@@ -255,6 +250,8 @@ public:
         // RETURNS: TRUE -- success, FALSE -- failure
         //------------------------------------------
 
+        bool zkm_unwrap(const unsigned char* input, int input_len,
+                    unsigned char*& output, int& outputlen);
         bool unwrap(const unsigned char* input, int input_len,
                     unsigned char*& output, int& outputlen);
         //------------------------------------------
@@ -382,6 +379,8 @@ public:
 	void setAuthenticatedName(char const *auth_name);
 	const char *getAuthenticatedName() const;
 
+	bool isAuthorizationInBoundingSet(const std::string &);
+
 	void setCryptoMethodUsed(char const *crypto_method);
 	const char* getCryptoMethodUsed() const;
 
@@ -389,6 +388,7 @@ public:
 	const std::string &getSessionID() const {return _session;}
 
 	void getPolicyAd(classad::ClassAd &ad) const;
+	const classad::ClassAd *getPolicyAd() const {return _policy_ad;}
 	void setPolicyAd(const classad::ClassAd &ad);
 
 		/// True if socket has tried to authenticate or socket is
@@ -401,6 +401,15 @@ public:
 	bool triedAuthentication() const { return _tried_authentication; }
 
 	void setTriedAuthentication(bool toggle) { _tried_authentication = toggle; }
+
+		// True if the socket failed to authenticate with the remote
+		// server but may succeed with a token request workflow.
+	bool shouldTryTokenRequest() const { return _should_try_token_request; }
+	void setShouldTryTokenRequest(bool val) { _should_try_token_request = val; }
+
+		// Trust domain of the remote host (empty if unknown).
+	void setTrustDomain(const std::string &trust_domain) { _trust_domain = trust_domain; }
+	const std::string &getTrustDomain() const { return _trust_domain; }
 
 		/// Returns true if the fully qualified user name is
 		/// a non-anonymous user name (i.e. something not from
@@ -493,7 +502,7 @@ protected:
 
 	void set_connect_addr(char const *addr);
 
-	inline SOCKET get_socket (void) { return _sock; }
+	inline SOCKET get_socket (void) const { return _sock; }
 	const char * serialize(const char *);
 	static void close_serialized_socket(char const *buf);
 	char * serialize() const;
@@ -514,9 +523,6 @@ protected:
 	bool test_connection();
 	/// get timeout time for pending connect operation;
 	time_t connect_timeout_time() const;
-
-	///
-	int move_descriptor_up();
 
     /// called whenever the bound or connected state changes
     void addr_changed();
@@ -552,13 +558,17 @@ protected:
 	std::string     _session;
 	classad::ClassAd *_policy_ad;
 	bool            _tried_authentication;
+	bool            _should_try_token_request{false};
+	std::string	_trust_domain;
+	std::unordered_set<std::string> m_authz_bound;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
 
 	// Buffer to hold the string version of our own IP address. 
 	mutable char _my_ip_buf[IP_STRING_BUF_SIZE];
 
-	Condor_Crypt_Base * crypto_;         // The actual crypto
+	Condor_Crypt_Base    * crypto_;         // The actual crypto object
+	Condor_Crypto_State  * crypto_state_;   // The object state
 	CONDOR_MD_MODE      mdMode_;        // MAC mode
 	KeyInfo           * mdKey_;
 
@@ -651,7 +661,7 @@ private:
 	   setConnectFailureErrno.
 	   @param timed_out True if we failed due to timeout.
 	**/
-	void reportConnectionFailure(bool timed_out);
+	void reportConnectionFailure(bool timed_out) const;
 
 	/**
 	   This function puts the socket back in a state suitable for another

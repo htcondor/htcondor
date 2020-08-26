@@ -58,52 +58,7 @@ sysapi_kernel_version_raw(void)
 	} else {
 		_sysapi_kernel_version = strdup(buf.release);
 	}
-#elif defined(Solaris)
-	if (strcmp(buf.release, "2.10") == MATCH ||
-		strcmp(buf.release, "5.10") == MATCH)
-	{
-		_sysapi_kernel_version = strdup("2.10");
-
-	} else if (strcmp(buf.release, "2.9") == MATCH ||
-			strcmp(buf.release, "5.9") == MATCH)
-	{
-		_sysapi_kernel_version = strdup("2.9");
-
-	} else if (strcmp(buf.release, "2.8") == MATCH ||
-				strcmp(buf.release, "5.8") == MATCH)
-	{
-		_sysapi_kernel_version = strdup("2.8");
-
-	} else if (strcmp(buf.release, "2.7") == MATCH ||
-				strcmp(buf.release, "5.7") == MATCH)
-	{
-		_sysapi_kernel_version = strdup("2.7");
-
-	} else if(strcmp(buf.release, "5.6") == MATCH ||
-				strcmp(buf.release, "2.6") == MATCH)
-	{
-		_sysapi_kernel_version = strdup("2.6");
-
-	} else if (strcmp(buf.release, "5.5.1") == MATCH ||
-				strcmp(buf.release, "2.5.1") == MATCH)
-	{
-		_sysapi_kernel_version = strdup("2.5.1");
-
-	} else if (strcmp(buf.release, "5.5") == MATCH ||
-				strcmp(buf.release, "2.5") == MATCH)
-	{
-		_sysapi_kernel_version = strdup("2.5");
-
-	} else {
-		_sysapi_kernel_version = strdup(buf.release);
-
-	}
-
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
-	_sysapi_kernel_version = strdup(buf.release);
-#elif defined(AIX)
-	_sysapi_kernel_version = strdup(buf.release);
-#elif defined(HPUX)
 	_sysapi_kernel_version = strdup(buf.release);
 #elif defined(WIN32)
 	_sysapi_kernel_version = strdup("Unknown");

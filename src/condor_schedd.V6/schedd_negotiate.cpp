@@ -103,7 +103,7 @@ ScheddNegotiate::negotiate(Sock *sock)
 }
 
 char const *
-ScheddNegotiate::getOwner()
+ScheddNegotiate::getMatchUser()
 {
 	return m_owner.c_str();
 }
@@ -245,7 +245,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	ASSERT( match_ad );
 	ASSERT( job_ad );
 
-	int is_partitionable = 0;
+	bool is_partitionable = false;
 	match_ad->LookupBool(ATTR_SLOT_PARTITIONABLE,is_partitionable);
 	if (!is_partitionable) {
 		return true;
@@ -274,11 +274,11 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	int cpus, memory, disk;
 
 	cpus = 1;
-	job_ad->EvalInteger(ATTR_REQUEST_CPUS, match_ad, cpus);
+	EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
 	match_ad->Assign(ATTR_CPUS, cpus);
 
 	memory = -1;
-	if (job_ad->EvalInteger(ATTR_REQUEST_MEMORY, match_ad, memory)) {
+	if (EvalInteger(ATTR_REQUEST_MEMORY, job_ad, match_ad, memory)) {
 		match_ad->Assign(ATTR_MEMORY, memory);
 	} else {
 		dprintf(D_ALWAYS, "No memory request in job %d.%d, skipping match to partitionable slot %s\n", job_id.cluster, job_id.proc, slot_name);
@@ -286,7 +286,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	}
 
 	disk = 1;
-	if (job_ad->EvalInteger(ATTR_REQUEST_DISK, match_ad, disk)) {
+	if (EvalInteger(ATTR_REQUEST_DISK, job_ad, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
 		disk = (MAX((int) ceil((disk / total_disk) * 100), 1)) *
@@ -313,7 +313,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		std::string req_str;
 		int req_val = 0;
 		formatstr( req_str, "%s%s", ATTR_REQUEST_PREFIX, res );
-		job_ad->LookupInteger( req_str.c_str(), req_val );
+		job_ad->LookupInteger( req_str, req_val );
 		match_ad->Assign( res, req_val );
     }
 
@@ -583,8 +583,8 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		m_match_ad.LookupString(ATTR_NAME,slot_name_buf);
 		char const *slot_name = slot_name_buf.c_str();
 
-		int offline = false;
-		m_match_ad.EvalBool(ATTR_OFFLINE,NULL,offline);
+		bool offline = false;
+		m_match_ad.LookupBool(ATTR_OFFLINE,offline);
 
 		if( offline ) {
 			dprintf(D_ALWAYS,"Job %d.%d (delivered=%d) matched to offline machine %s.\n",
@@ -604,8 +604,12 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 	}
 
 	case END_NEGOTIATE:
-		dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
-				 m_jobs_matched );
+		if (RRLRequestIsPending()) {
+			dprintf(D_ALWAYS, "Finished sending rrls to negotiator\n");
+		} else {
+			dprintf( D_ALWAYS, "Negotiation ended - %d jobs matched\n",
+					 m_jobs_matched );
+		}
 
 		m_negotiation_finished = true;
 		break;

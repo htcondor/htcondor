@@ -115,14 +115,14 @@ class BaseUserPolicy : public Service
 		 * any stale time values. The point that is passed in
 		 * while have the old run time for a job that was updated
 		 **/
-	void updateJobTime( float *old_run_time );
+	void updateJobTime(double *old_run_time);
 	
 		/**
 		 * Undos the time updates of updateJobTime()
 		 * The method must be given the old run time to be put
 		 * back into the ClassAd
 		 **/
-	void restoreJobTime( float old_run_time );
+	void restoreJobTime(double old_run_time);
 
 		// Data
 	UserPolicy user_policy;

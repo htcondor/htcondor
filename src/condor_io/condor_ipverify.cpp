@@ -107,6 +107,9 @@ IpVerify::~IpVerify()
 int
 IpVerify::Init()
 {
+	if (did_init) {
+		return TRUE;
+	}
 	char *pAllow = NULL, *pDeny = NULL;
 	DCpermission perm;
 	const char* const ssysname = get_mySubSystem()->getName();	

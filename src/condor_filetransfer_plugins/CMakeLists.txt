@@ -24,16 +24,15 @@
 
 #condor_exe( condor_hdfs_hook "${HOOK}" ${C_SBIN} "hdfs;${CONDOR_TOOL_LIBS}" OFF)
 
-dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up with this? it's not in packages...")
-
 #  Curl isn't linking properly on windows, turn it as a short term hackaround
 if (CURL_FOUND)
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
   if (WINDOWS)
-    condor_exe( curl_plugin "curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
-    condor_exe( multifile_curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+    condor_exe( legacy_curl_plugin "curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+    condor_exe( curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
   else ()
-    condor_exe( curl_plugin "curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
-    condor_exe( multifile_curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
+    condor_exe( legacy_curl_plugin "curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
+    condor_exe( curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
   endif ()
 endif()
 

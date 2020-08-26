@@ -1,1 +1,6 @@
 _build
+extensions/*.pyc
+extensions/__pycache__
+utils/html-cleanup/src/*
+utils/html-cleanup/dst/*
+__pycache__

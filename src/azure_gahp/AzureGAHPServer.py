@@ -1,4 +1,6 @@
-#!/usr/bin/env python -u
+#!/usr/bin/env python3 -u
+
+from __future__ import print_function
 
 import platform
 
@@ -3061,6 +3063,6 @@ while(True):
             continue
         print(s_alphabet)
     else:
-        print("E Unsupported command: To see a list of valid commands use COMMANDS");
+        print("E Unsupported command: To see a list of valid commands use COMMANDS")
 
 ##### END MAIN PROGRAM ##############

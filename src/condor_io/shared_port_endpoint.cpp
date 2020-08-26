@@ -22,8 +22,10 @@
 #include "shared_port_endpoint.h"
 #include "subsystem_info.h"
 #include "condor_daemon_core.h"
-#include "counted_ptr.h"
+#include <memory>
 #include "basename.h"
+#include "utc_time.h"
+#include "ipv6_hostname.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -49,7 +51,7 @@ bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 MyString
-SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
+SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
 	static unsigned short rand_tag = 0;
 	static unsigned int sequence = 0;
 	if( !rand_tag ) {
@@ -57,7 +59,7 @@ SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
 		// re-used the PID of a daemon that recently ran and
 		// somebody tries to connect to that daemon, they are
 		// unlikely to connect to us.
-		rand_tag = (unsigned short)(get_random_float()*(((float)0xFFFF)+1));
+		rand_tag = (unsigned short)(get_random_float_insecure()*(((float)0xFFFF)+1));
 	}
 
 	MyString buffer;
@@ -70,7 +72,7 @@ SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
 	}
 
 	MyString m_local_id;
-	if( !sequence ) {
+	if( (sequence == 0) || (! addSequenceNo) ) {
 		m_local_id.formatstr("%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
 	}
 	else {
@@ -263,6 +265,11 @@ SharedPortEndpoint::StopListener()
 	if( m_retry_remote_addr_timer != -1 ) {
 		if (daemonCore) daemonCore->Cancel_Timer( m_retry_remote_addr_timer );
 		m_retry_remote_addr_timer = -1;
+	}
+
+	if( daemonCore && m_socket_check_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_socket_check_timer );
+		m_socket_check_timer = -1;
 	}
 #endif
 	m_listening = false;
@@ -521,6 +528,28 @@ void ThreadSafeLogError(const char * msg, int err) {
 #define ThreadSafeLogError (void)
 #endif
 
+// a thread safe accumulation of messages
+static void sldprintf(MyString &str, const char * fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+
+	if (str.Length() > 10000) {
+		// set an upper limit on the number of messages that can be appended.
+		return;
+	}
+
+	struct tm tm;
+	struct timeval tv;
+	condor_gettimestamp(tv);
+	time_t now = tv.tv_sec;
+	localtime_r(&now, &tm);
+	str.formatstr_cat("\t%02d:%02d:%02d.%03d ", tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+	str.vformatstr_cat(fmt, args);
+
+	va_end(args);
+}
+
 /*
   The following function runs in its own thread.  We must therefore be
   very careful about what we do here.  Much of condor code is not
@@ -532,6 +561,12 @@ void ThreadSafeLogError(const char * msg, int err) {
 void
 SharedPortEndpoint::PipeListenerThread()
 {
+	// temp variables for use in debug logging
+	void *dst = NULL, *src = NULL;
+	int dst_fd = 0, src_fd = 0;
+	MyString msgs;
+	MyString wake_status;
+
 	while(true)
 	{
 		// a bit wierd, but ConnectNamedPipe returns true on success. OR it
@@ -572,6 +607,8 @@ SharedPortEndpoint::PipeListenerThread()
 			EXCEPT("SharedPortEndpoint: Failed to write PID, error value: %d", error);
 		}
 		//FlushFileBuffers(pipe_end);
+
+		sldprintf(msgs, "SharedPortEndpoint: Pipe connected and pid %u sent\n", pID);
 
 		int expected = sizeof(WSAPROTOCOL_INFO) + sizeof(int);
 		int buffSize = expected;
@@ -617,16 +654,50 @@ SharedPortEndpoint::PipeListenerThread()
 			WSAPROTOCOL_INFO *last_rec = (WSAPROTOCOL_INFO *)HeapAlloc(GetProcessHeap(), 0, sizeof(WSAPROTOCOL_INFO));
 			memcpy_s(last_rec, sizeof(WSAPROTOCOL_INFO), storeBuff+sizeof(int), sizeof(WSAPROTOCOL_INFO));
 			ThreadSafeLogError("SharedPortEndpoint: Copied WSAPROTOCOL_INFO", wake_select_dest ? 1 : 0);
-			
+
+			if (!wake_select_dest) {
+				if (IsDebugLevel(D_PERF_TRACE)) {
+					bool woke = daemonCore->AsyncInfo_Wake_up_select(dst, dst_fd, src, src_fd);
+					sldprintf(msgs, "SharedPortEndpoint: Got WSAPROTOCOL_INFO, queueing pump work. wake dst(%p=%d), src(%p=%d) %d\n", dst, dst_fd, src, src_fd, woke);
+				}
+			} else {
+				if (IsDebugLevel(D_PERF_TRACE)) {
+					sldprintf(msgs, "SharedPortEndpoint: Got WSAPROTOCOL_INFO, waking up select. dst(%p=%d), src(%p=%d)\n",
+						wake_select_source, wake_select_source->get_file_desc(),
+						wake_select_dest, wake_select_dest->get_file_desc()
+					);
+				}
+			}
+
 			EnterCriticalSection(&received_lock);
 			received_sockets.push(last_rec);
 			LeaveCriticalSection(&received_lock);
 			
 			if(!wake_select_dest)
 			{
+				char * msg = msgs.detach_buffer();
 				ThreadSafeLogError("SharedPortEndpoint: Registering Pump worker to move the socket", 0);
-				int status = daemonCore->Register_PumpWork_TS(SharedPortEndpoint::PipeListenerHelper, this, NULL);
+				int status = daemonCore->Register_PumpWork_TS(SharedPortEndpoint::PipeListenerHelper, this, msg);
 				ThreadSafeLogError("SharedPortEndpoint: back from Register_PumpWork_TS with status", status);
+
+				// debug logging, we expect the wakeup select socket to be hot now. this is a bit of a race
+				// but if it is not hot AND select does not log the above pumpwork immediately, then we have a problem.
+				if (IsDebugLevel(D_PERF_TRACE)) {
+					int hotness = daemonCore->Async_test_Wake_up_select(dst, dst_fd, src, src_fd, wake_status);
+					if (!(hotness & 1)) {
+						sldprintf(msgs, "SharedPortEndpoint: WARNING wake socket not hot dst(%p=%d), src(%p=%d) %d %s\n",
+							dst, dst_fd, src, src_fd, hotness, wake_status.c_str());
+						msg = msgs.detach_buffer();
+						daemonCore->Register_PumpWork_TS(SharedPortEndpoint::DebugLogHelper, this, msg);
+					} else {
+					#if 0
+						sldprintf(msgs, "SharedPortEndpoint: OK wake socket is hot dst(%p=%d), src(%p=%d) %d %s\n",
+							dst, dst_fd, src, src_fd, hotness, wake_status.c_str());
+						msg = msgs.detach_buffer();
+						daemonCore->Register_PumpWork_TS(SharedPortEndpoint::DebugLogHelper, this, msg);
+					#endif
+					}
+				}
 			}
 			else
 			{
@@ -657,11 +728,33 @@ SharedPortEndpoint::PipeListenerThread()
 /* static */
 int SharedPortEndpoint::PipeListenerHelper(void* pv, void* data)
 {
+	if (data) {
+		char * msgs = (char*)data;
+		if (msgs) {
+			dprintf(D_FULLDEBUG, "SharedPort PipeListenerHelper got messages from Listener thread:\n%s", msgs);
+			delete[] msgs;
+		}
+	}
 	SharedPortEndpoint * pthis = (SharedPortEndpoint *)pv;
 	//dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside PumpWork PipeListenerHelper\n");
 	ThreadSafeLogError("SharedPortEndpoint: Inside PipeListenerHelper", 0);
 	pthis->DoListenerAccept(NULL);
 	ThreadSafeLogError("SharedPortEndpoint: Inside PipeListenerHelper returning", 0);
+	return 0;
+}
+
+/* static */
+int SharedPortEndpoint::DebugLogHelper(void* /*pv*/, void* data)
+{
+	if (data) {
+		char * msgs = (char*)data;
+		if (msgs) {
+			dprintf(D_FULLDEBUG, "SharedPort PipeListenerHelper got messages from Listener thread:\n%s", msgs);
+			delete[] msgs;
+		} else {
+			dprintf(D_FULLDEBUG, "SharedPort PipeListenerHelper got NULL debug messages from Listener thread!\n");
+		}
+	}
 	return 0;
 }
 
@@ -737,7 +830,7 @@ SharedPortEndpoint::InitRemoteAddress()
 	fclose( fp );
 
 		// avoid leaking ad when returning from this function
-	counted_ptr<ClassAd> smart_ad_ptr(ad);
+	std::unique_ptr<ClassAd> smart_ad_ptr(ad);
 
 	if( errorReadingAd ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to read ad from %s.\n",
@@ -745,7 +838,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		return false;
 	}
 
-	MyString public_addr;
+	std::string public_addr;
 	if( !ad->LookupString(ATTR_MY_ADDRESS,public_addr) ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to find %s in ad from %s.\n",
@@ -753,7 +846,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		return false;
 	}
 
-	Sinful sinful(public_addr.Value());
+	Sinful sinful(public_addr.c_str());
 	sinful.setSharedPortID( m_local_id.Value() );
 
 		// if there is a private address, set the shared port id on that too
@@ -918,7 +1011,9 @@ SharedPortEndpoint::GetMyLocalAddress()
 			// and daemons who can then form a connection to us via
 			// direct access to our named socket.
 		sinful.setPort("0");
-		sinful.setHost(my_ip_string());
+		// TODO: Picking IPv4 arbitrarily.
+		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		sinful.setHost(my_ip.Value());
 		sinful.setSharedPortID( m_local_id.Value() );
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {
@@ -1127,16 +1222,6 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	dprintf(D_FULLDEBUG|D_COMMAND,
 			"SharedPortEndpoint: received forwarded connection from %s.\n",
 			remote_sock->peer_description());
-
-
-		// See the comment in SharedPortClient::PassSocket() explaining
-		// why this ACK is here.
-	int status=0;
-	named_sock->encode();
-	named_sock->timeout(5);
-	if( !named_sock->put(status) || !named_sock->end_of_message() ) {
-		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to send final status (success) for SHARED_PORT_PASS_SOCK\n");
-	}
 
 
 	if( !return_remote_sock ) {

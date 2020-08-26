@@ -67,7 +67,7 @@ public:
 	
 	virtual ~ClassAdCache(){ m_destroyed = true; };
 
-#ifndef WIN32
+#ifdef HAVE_COW_STRING
 	pCacheData cache( std::string & szName, ExprTree * pVal)
 #else
 	pCacheData cache(const std::string & szName, ExprTree * pVal)
@@ -84,7 +84,7 @@ public:
 	}
 
 	///< cache's a local attribute->ExpTree
-#ifndef WIN32
+#ifdef HAVE_COW_STRING
 	pCacheData cache( std::string & szName, const std::string & szValue , ExprTree * pVal)
 #else
 	pCacheData cache(const std::string & szName, const std::string & szValue , ExprTree * pVal)
@@ -98,7 +98,7 @@ public:
 		if (itr != m_Cache.end()) {
 			bValidName = true;
 			value_iterator vtr = itr->second.find(szValue);
-#ifndef WIN32 // this just wastes time on windows
+#ifdef HAVE_COW_STRING
 			szName = itr->first;
 #endif
 
@@ -137,7 +137,7 @@ public:
 		return pRet;
 	}
 
-#ifndef WIN32
+#ifdef HAVE_COW_STRING
 	pCacheData insert_lazy( std::string & szName, const std::string & szValue)
 #else
 	pCacheData insert_lazy(const std::string & szName, const std::string & szValue)
@@ -151,7 +151,7 @@ public:
 		if (itr != m_Cache.end()) {
 			bValidName = true;
 			value_iterator vtr = itr->second.find(szValue);
-#ifndef WIN32 // this just wastes time on windows
+#ifdef HAVE_COW_STRING
 			szName = itr->first;
 #endif
 
@@ -318,7 +318,7 @@ public:
 		fprintf( fp, "Hits:%lu (%.2f%%) Misses: %lu (%.2f%%) Querys: %lu\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_QueryCount ); 
 	};
 
-	void get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse) {
+	void get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse) const {
 		hits = m_HitCount;
 		misses = m_MissCount;
 		querys = m_QueryCount;
@@ -347,7 +347,7 @@ CacheEntry::~CacheEntry()
 }
 
 
-#ifndef WIN32
+#ifdef HAVE_COW_STRING
 ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree, const std::string & szValue)
 #else
 ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTree, const std::string & szValue)
@@ -365,7 +365,7 @@ ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTre
 
 	case EXPR_LIST_NODE:
 	case CLASSAD_NODE:
-#ifndef WIN32 // this just wastes time on windows.
+#ifdef HAVE_COW_STRING
 		// for classads the values are already cached but we still should string space the name
 		check_hit (pName, szValue);
 #endif
@@ -382,7 +382,7 @@ ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTre
 	return pRet;
 }
 
-#ifndef WIN32
+#ifdef HAVE_COW_STRING
 ExprTree * CachedExprEnvelope::cache_lazy (std::string & pName, const std::string & szValue)
 #else
 ExprTree * CachedExprEnvelope::cache_lazy (const std::string & pName, const std::string & szValue)

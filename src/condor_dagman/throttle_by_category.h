@@ -36,8 +36,8 @@ public:
 		const MyString *_category;
 		// Note: MyString::FindChar() returns the index of the
 		// first instance of the character, if any (-1 if none).
-		bool			isGlobal() { return _category->FindChar('+') == 0; }
-		bool			isSet() { return _maxJobs != noThrottleSetting; }
+		bool			isGlobal() const { return _category->FindChar('+') == 0; }
+		bool			isSet() const { return _maxJobs != noThrottleSetting; }
 
 		int				_totalJobs; // total # of jobs in this category
 		int				_maxJobs; // max jobs in this cat that can run

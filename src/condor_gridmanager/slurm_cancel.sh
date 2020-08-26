@@ -35,7 +35,12 @@ for job in  $@ ; do
 done
 for  job in  $@ ; do
         requested=`echo $job | sed 's/^.*\///'`
-        cmdout=`${slurm_binpath}/scancel $requested 2>&1`
+        cluster_name=`echo $requested | cut -s -f2 -d@`
+        if [ $cluster_name != "" ] ; then
+            requested=`echo $requested | cut -f1 -d@`
+            cluster_arg="-M $cluster_name"
+        fi
+        cmdout=`${slurm_binpath}/scancel $cluster_arg $requested 2>&1`
         retcode=$?
         # If the job is already completed or no longer in the queue,
         # treat it as successfully deleted.

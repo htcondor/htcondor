@@ -63,12 +63,12 @@ sub timed_callback {
             # I require that I see all slot matches in single cycle, so quit
             # first cycle-end after I see first match:
             if ($started && ($line =~ /Finished/)) { last; } 
-            if ($line =~ /matched with/) { 
+            if ($line =~ /matched with\s+([^@]+)@/) { 
                 $nt++;
                 $started = 1;
-                my @f = split / +/, $line;
-                my @f2 = split /@/, $f[5];
-                my $k = $f2[0];
+                #print "$line";
+                my $k = $1;
+                print "matched with $k\n";
                 if ($k ne $last) {
                     # Part of negotiator-side resource consumption is that
                     # each slot gets used repeatedly until it runs out, so
@@ -108,10 +108,10 @@ sub timed_callback {
         #my @res = `condor_status -constraint "SlotTypeID > 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
 		my @res = ();
 		my $result = 0;
-		$result = runCondorTool("condor_status -constraint \"SlotTypeID > 0\" -af SlotTypeID -af SlotWeight -af Cpus -af  Memory -af Tokens",\@res,2,{em-t_output=>1});
+		$result = runCondorTool("condor_status -constraint \"SlotTypeID > 0\" -af SlotTypeID SlotWeight Cpus Memory Tokens",\@res,2,{emit_output=>1});
         my %hist = ();
         foreach $rec (@res) {
-            chomp $rec;
+            fullchomp($rec);
             print "1    $rec\n";
             if (defined $hist{$rec}) {
                 $hist{$rec}++;
@@ -120,13 +120,13 @@ sub timed_callback {
             }
         }
 
-        #my @res2 = `condor_status -constraint "SlotTypeID < 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
+        #my @res2 = `condor_status -constraint "SlotTypeID < 0" -af SlotTypeID SlotWeight Cpus Memory Tokens`;
 		my @res2 = ();
 		my $result2 = 0;
-		$result2 = runCondorTool("condor_status -constraint \"SlotTypeID < 0\" -af SlotTypeID -af SlotWeight -af Cpus -af Memory -af Tokens",\@res2,2,{emit_output=>1});
+		$result2 = runCondorTool("condor_status -constraint \"SlotTypeID < 0\" -af SlotTypeID SlotWeight Cpus Memory Tokens",\@res2,2,{emit_output=>1});
         my %hist2 = ();
         foreach $rec (@res2) {
-            chomp $rec;
+            fullchomp($rec);
             print "2    $rec\n";
             if (defined $hist2{$rec}) {
                 $hist2{$rec}++;
@@ -151,7 +151,7 @@ sub timed_callback {
     }
 
     if ($slot_test_passed_or_failed && !$execute_test_passed) {
-        my @res = `condor_q -format "%s\n" ProcID -constraint 'JobStatus == 2'`;
+        my @res = `condor_q -run -af ProcID`;
         if (scalar(@res) == 13) {
             print "execute test passed\n";
             $execute_test_passed = 1;
@@ -281,7 +281,7 @@ NEGOTIATOR_CONSIDER_PREEMPTION = False
 NEGOTIATOR_MATCHLIST_CACHING = False
 
 # verbose logging
-ALL_DEBUG = D_FULLDEBUG |  D_MACHINE
+ALL_DEBUG = D_FULLDEBUG D_MACHINE:1 D_CAT
 
 # reduce daemon update latencies
 NEGOTIATOR_INTERVAL = 30
@@ -306,7 +306,7 @@ CondorTest::StartCondorWithParams(
 my $submit_body = "
 universe = vanilla
 executable = x_sleep.pl
-arguments = 0
+arguments = 3600
 request_cpus = 1
 request_memory = 1
 request_disk = 1

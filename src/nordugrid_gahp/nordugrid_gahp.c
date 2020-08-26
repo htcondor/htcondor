@@ -43,12 +43,6 @@
 #define strcasecmp(s1, s2) _stricmp(s1, s2)
 #endif
 
-/* Solaris doesn't have unsetenv */
-#ifndef HAVE_UNSETENV
-void unsetenv(const char* name);
-char * __findenv(const char *name, int *offset);
-#endif
-
 #ifndef true
 #define true 1
 #endif
@@ -662,11 +656,11 @@ void clean_ftp_handles( void *arg )
 									curr_elem );
 
 				result = globus_ftp_client_operationattr_destroy( curr_handle->op_attr );
-				assert( result == GLOBUS_SUCCESS );
+				if (result) assert( result == GLOBUS_SUCCESS );
 				free( curr_handle->op_attr );
 
 				result = globus_ftp_client_handle_destroy( curr_handle->handle );
-				assert( result == GLOBUS_SUCCESS );
+				if (result) assert( result == GLOBUS_SUCCESS );
 				free( curr_handle->handle );
 
 				if ( curr_handle->cred ) {
@@ -726,12 +720,12 @@ void dispatch_ftp_command( ftp_cache_entry_t *entry )
 
 		result = globus_ftp_client_handle_init( next_cmd->handle,
 												&ftp_handle_attr );
-		assert( result == GLOBUS_SUCCESS );
+		if (result) assert( result == GLOBUS_SUCCESS );
 
 		next_cmd->op_attr = (globus_ftp_client_operationattr_t*)malloc( sizeof(globus_ftp_client_operationattr_t) );
 
 		result = globus_ftp_client_operationattr_init( next_cmd->op_attr );
-		assert( result == GLOBUS_SUCCESS );
+		if (result) assert( result == GLOBUS_SUCCESS );
 
 		if ( next_cmd->cred ) {
 			result = globus_ftp_client_operationattr_set_authorization(
@@ -741,7 +735,7 @@ void dispatch_ftp_command( ftp_cache_entry_t *entry )
 														NULL,
 														NULL,
 														NULL );
-			assert( result == GLOBUS_SUCCESS );
+			if (result) assert( result == GLOBUS_SUCCESS );
 		}
 	}
 
@@ -1444,7 +1438,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 	}
 
 	pos = lseek( user_arg->fd, 0, SEEK_CUR );
-	assert( pos == (offset + (globus_off_t)length) );
+	if (pos) assert( pos == (offset + (globus_off_t)length) );
 
 	if ( eof ) {
 		free( buffer );
@@ -1680,7 +1674,7 @@ void nordugrid_stage_out2_read_callback( void *arg,
 	}
 
 	pos = lseek( user_arg->fd, 0, SEEK_CUR );
-	assert( pos == offset );
+	if (pos) assert( pos == offset );
 	while ( written < length ) {
 		int rc = write( user_arg->fd, buffer + written, length - written );
 		if ( rc < 0 ) {
@@ -2380,7 +2374,7 @@ void gridftp_transfer_write_callback( void *arg,
 	}
 
 	pos = lseek( user_arg->fd, 0, SEEK_CUR );
-	assert( pos == (offset + (globus_off_t)length) );
+	if (pos) assert( pos == (offset + (globus_off_t)length) );
 
 	if ( eof ) {
 		free( buffer );
@@ -2435,7 +2429,7 @@ void gridftp_transfer_read_callback( void *arg,
 	}
 
 	pos = lseek( user_arg->fd, 0, SEEK_CUR );
-	assert( pos == offset );
+	if (pos) assert( pos == offset );
 	while ( written < length ) {
 		int rc = write( user_arg->fd, buffer + written, length - written );
 		if ( rc < 0 ) {
@@ -3375,40 +3369,3 @@ int main(int argc, char ** argv)
 	_exit(0);
 }
 
-#ifndef HAVE_UNSETENV
-
-/* swiped right out of the bsd libc */
-char *
-__findenv(const char *name, int *offset)
-{
-        extern char **environ;
-        register int len;
-        register const char *np;
-        register char **p, *c;
-
-        if (name == NULL || environ == NULL)
-                return (NULL);
-        for (np = name; *np && *np != '='; ++np)
-                continue;
-        len = np - name;
-        for (p = environ; (c = *p) != NULL; ++p)
-                if (strncmp(c, name, len) == 0 && c[len] == '=') {
-                        *offset = p - environ;
-                        return (c + len + 1);
-                }
-        return (NULL);
-}
-
-void
-unsetenv(const char *name)
-{
-        extern char **environ;
-        register char **p;
-        int offset;
-
-        while (__findenv(name, &offset))        /* if set multiple times */
-                for (p = &environ[offset];; ++p)
-                        if (!(*p = *(p + 1)))
-                                break;
-}
-#endif

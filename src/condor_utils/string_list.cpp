@@ -308,14 +308,29 @@ StringList::remove_anycase(const char *str)
 }
 
 bool
-StringList::substring( const char *st )
+StringList::prefix( const char *st )
 {
 	char    *x;
-	
+
 	m_strings.Rewind ();
 	while( (x = m_strings.Next()) ) {
 		size_t len = strlen(x);
 		if( strncmp(st, x, len) == MATCH ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+StringList::prefix_anycase( const char *st )
+{
+	char    *x;
+
+	m_strings.Rewind ();
+	while( (x = m_strings.Next()) ) {
+		size_t len = strlen(x);
+		if( strncasecmp(st, x, len) == MATCH ) {
 			return true;
 		}
 	}
@@ -636,7 +651,7 @@ StringList::shuffle() {
 	}
 
 	for (i = 0; i+1 < count; i++) {
-		unsigned int j = (unsigned int)(i + (get_random_float() * (count-i)));
+		unsigned int j = (unsigned int)(i + (get_random_float_insecure() * (count-i)));
 		// swap m_strings at i and j
 		str = list[i];
 		list[i] = list[j];

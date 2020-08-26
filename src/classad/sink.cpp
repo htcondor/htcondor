@@ -32,23 +32,6 @@ namespace classad {
 
 static bool identifierNeedsQuoting( const string & );
 
-ClassAdUnParser::
-ClassAdUnParser()
-{
-	oldClassAd = false;
-	xmlUnparse = false;
-	delimiter = '\"';
-	oldClassAdValue = false;
-	return;
-}
-
-
-ClassAdUnParser::
-~ClassAdUnParser()
-{
-	return;
-}
-
 
 // should be in same order as OpKind enumeration in common.h
 const char *ClassAdUnParser::opString[] =
@@ -237,6 +220,7 @@ Unparse( string &buffer, const Value &val )
 	  
 			return;
 		}
+		case Value::SCLASSAD_VALUE:
 		case Value::CLASSAD_VALUE: {
 			const ClassAd *ad = NULL;
 			vector< pair<string,ExprTree*> > attrs;
@@ -565,7 +549,7 @@ SetOldClassAd( bool old_syntax, bool attr_value )
 }
 
 bool ClassAdUnParser::
-GetOldClassAd()
+GetOldClassAd() const
 {
 	return oldClassAd;
 }

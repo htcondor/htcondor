@@ -31,30 +31,30 @@
 
 void build_job_env(Env &job_env, const ClassAd & ad, bool using_file_transfer)
 {
-	MyString Iwd;
+	std::string Iwd;
 	if( ! ad.LookupString(ATTR_JOB_IWD, Iwd) ) {
 		ASSERT(0);
 		dprintf(D_ALWAYS, "Job ClassAd lacks required attribute %s.  Job's environment may be incorrect.\n", ATTR_JOB_IWD);
 		return;
 	}
 
-	MyString X509Path;
+	std::string X509Path;
 	if(ad.LookupString(ATTR_X509_USER_PROXY, X509Path)) {
 		if(using_file_transfer) {
 			// The X509 proxy was put into the IWD, effectively flattening
 			// any relative or absolute paths it might have.  So chomp it down.
 			// (Don't try to do this in one line; the old string might be deleted
 			// before the copy.)
-			MyString tmp = condor_basename(X509Path.Value());
+			std::string tmp = condor_basename(X509Path.c_str());
 			X509Path = tmp; 
 		}
-		if( ! fullpath(X509Path.Value()) ) {
+		if( ! fullpath(X509Path.c_str()) ) {
 			// It's not a full path, so glob on the IWD onto the front
-			MyString tmp = X509Path.Value();
-			dircat(Iwd.Value(), tmp.Value(), X509Path);
-
+			MyString tmp;
+			dircat(Iwd.c_str(), X509Path.c_str(), tmp);
+			X509Path = tmp;
 		}
-		job_env.SetEnv(X509_USER_PROXY, X509Path.Value());
+		job_env.SetEnv(X509_USER_PROXY, X509Path.c_str());
 	}
 }
 

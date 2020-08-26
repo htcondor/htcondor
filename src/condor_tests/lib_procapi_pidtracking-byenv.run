@@ -29,18 +29,6 @@ $datafile = "lib_procapi_pidtracking-byenv.data";
 $kiddatafile = "lib_procapi_pidtracking-byenv.data.kids";
 $worked = "yes";
 
-# the following operating system will be passed because they
-# are still expected to be broken
-
-#my %broken = 
-#(
-	#"AIX52" => "broken",
-	#"HPUX10" => "broken",
-	#"OSX_UNK" => "broken",
-	#"SOLARIS28" => "broken",
-	#"SOLARIS29" => "broken",
-#);
-
 $execute = sub
 {
 	CondorTest::debug(
@@ -192,25 +180,6 @@ $ExitSuccess = sub
 		CondorTest::debug("Test Worked......\n",1);
 	}
 
-
-	#if($worked eq "no")
-	#{
-		## lets get the operating system as some are expected to fail still
-		#open(PULL, "condor_config_val opsys 2>&1 |") || die "condor_config_val opsys failed: $!\n";
-		#while(<PULL>)
-		#{
-			#CondorUtils::fullchomp();
-			#my $line = $_;
-			#if(exists $broken{"$line"})
-			#{
-				#print "Operating System($line) expected to have forked process cleanup problems: PASS\n";;
-				#exit(0);
-			#}
-		#}
-
-		#print "$testname: FAILED\n";
-		#exit(1);
-	#}
 };
 
 

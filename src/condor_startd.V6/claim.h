@@ -93,8 +93,8 @@ public:
 	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
     char*   rmtgrp() {return c_rmtgrp;}
     char*   neggrp() {return c_neggrp;}
-    bool    autorg() {return c_autorg;}
-	int     numPids() {return c_numPids;};
+    bool    autorg() const {return c_autorg;}
+	int     numPids() const {return c_numPids;};
 
 	void	setuser(const char* user);
 	void	setowner(const char* owner);
@@ -139,8 +139,8 @@ public:
 	void vacate();	// Send a vacate command to the client of this claim
 	void alive( bool alive_from_schedd = false );	// Process a keep alive for this claim
 
-	void publish( ClassAd*, amask_t );
-	void publishPreemptingClaim( ClassAd* ad, amask_t how_much );
+	void publish( ClassAd* );
+	void publishPreemptingClaim( ClassAd* ad );
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
@@ -196,8 +196,8 @@ public:
 	void scheddClosedClaim();
 
 		// Functions that return data
-	float		rank()			{return c_rank;};
-	float		oldrank()		{return c_oldrank;};
+	float		rank() const			{return c_rank;};
+	float		oldrank() const		{return c_oldrank;};
 	ClaimType	type()			{return c_type;};
 	char*		codId()			{return c_id->codId();};
     char*       id();
@@ -207,24 +207,24 @@ public:
 	Client* 	client() 		{return c_client;};
 	Resource* 	rip()			{return c_rip;};
 	ClassAd*	ad() 			{return c_jobad;};
-	int			universe()		{return c_universe;};
-	int			cluster()		{return c_cluster;};
-	int			proc()			{return c_proc;};
+	int			universe() const		{return c_universe;};
+	int			cluster() const		{return c_cluster;};
+	int			proc() const			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
-	int			getaliveint()	{return c_aliveint;};
+	int			getaliveint() const	{return c_aliveint;};
 	ClaimState	state()			{return c_state;};
 	void		updateUsage(double & percentCpuUsage, long long & imageSize);
 	CODMgr*		getCODMgr( void );
-	bool		hasPendingCmd() {return c_pending_cmd != -1;};
+	bool		hasPendingCmd() const {return c_pending_cmd != -1;};
 	bool		hasJobAd();
-	int  		pendingCmd()	{return c_pending_cmd;};
-	bool		wantsRemove()	{return c_wants_remove;};
+	int  		pendingCmd() const	{return c_pending_cmd;};
+	bool		wantsRemove() const	{return c_wants_remove;};
 	time_t      getJobTotalRunTime();
-	time_t      getClaimAge();
-	bool        mayUnretire()   {return c_may_unretire;}
-	bool        getRetirePeacefully() {return c_retire_peacefully;}
+	time_t      getClaimAge() const;
+	bool        mayUnretire() const   {return c_may_unretire;}
+	bool        getRetirePeacefully() const {return c_retire_peacefully;}
 	bool        preemptWasTrue() const {return c_preempt_was_true;}
-	int         getPledgedMachineMaxVacateTime() {return c_pledged_machine_max_vacate_time;}
+	int         getPledgedMachineMaxVacateTime() const {return c_pledged_machine_max_vacate_time;}
 
 		// Functions that set the values of data
 	void setrank(float therank)	{c_rank=therank;};
@@ -240,28 +240,28 @@ public:
 	bool getBadputCausedByDraining() const {return c_badput_caused_by_draining;}
 	void setBadputCausedByPreemption() {c_badput_caused_by_preemption=true;}
 	bool getBadputCausedByPreemption() const {return c_badput_caused_by_preemption;}
-	int activationCount() {return c_activation_count;}
+	int activationCount() const {return c_activation_count;}
 
 		// starter-related functions
 	int	 spawnStarter( Starter* starter, ClassAd * job, Stream* = NULL );
 	void starterExited( Starter* starter, int status );
-	bool starterPidMatches( pid_t starter_pid );
+	bool starterPidMatches( pid_t starter_pid ) const;
 	bool isDeactivating( void );
 	bool isActive( void );
 	bool isRunning( void );	
 	bool deactivateClaim( bool graceful );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
-	bool starterKill( int sig );
+	bool starterKill( int sig ) const;
 	bool starterKillPg( int sig );
 	bool starterKillSoft( bool state_change = false );
 	bool starterKillHard( void );
 	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
-	bool publishStarterAd( ClassAd* ad );
+	bool publishStarterAd( ClassAd* ad ) const;
 
-	const char * executeDir() {
+	const char * executeDir() const {
 		Starter * s = findStarterByPid( c_starter_pid );
 		if( s ) { return s->executeDir(); }
 		else { return NULL; }
@@ -305,7 +305,7 @@ public:
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
-	bool waitingForActivation();
+	bool waitingForActivation() const;
 	void invalidateID();
 
 private:
@@ -351,7 +351,7 @@ private:
 	bool		c_startd_sends_alives; // set by param with override by schedd via an attribute in the job.
 
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
-	int			c_has_job_ad;	// Do we have a job ad for the COD claim?
+	bool		c_has_job_ad;	// Do we have a job ad for the COD claim?
 
 	ClaimState	c_state;		// the state of this claim
 	ClaimState	c_last_state;	// the state when a release was requested

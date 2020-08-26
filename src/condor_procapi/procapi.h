@@ -37,11 +37,6 @@
 #include <sys/types.h>     // various types needed.
 #include <time.h>          // use of time() for process age. 
 
-#ifdef HPUX                // hpux has to be different, of course.
-#include <sys/param.h>     // used in pstat().
-#include <sys/pstat.h>
-#endif
-
 #ifdef Darwin
 #include <sys/sysctl.h>
 #include <mach/mach.h>
@@ -58,18 +53,6 @@
 #include <sys/proc.h>
 #include <sys/user.h>
 #endif 
-
-#ifdef AIX
-#include <procinfo.h>
-#include <sys/types.h>
-BEGIN_C_DECLS
-/* For being the "new" interface for AIX, this isn't defined in the headers. */
-extern int getprocs64(struct procentry64*, int, struct fdsinfo64*, int,
-        pid_t*, int);
-END_C_DECLS
-/* AIX # defines the following symbol, which we use later as a formal param*/
-#undef l_name
-#endif
 
 #else // It's WIN32...
 // Warning: WIN32 stuff below.
@@ -185,10 +168,7 @@ typedef long birthday_t;
     calls don't have to be made.  All OS's support the given information,
     WITH THE EXCEPTION OF MAJ/MIN FAULTS:
     <ul>
-     <li> Linux and Hpux return a reasonable-looking number.
-     <li> Solaris 2.5.1 and 2.6 *Sometimes* returns small number of major 
-        faults, and I've only seen a 0 for minor faults.  The documentation
-        claims that they are inexact values, anyway.
+     <li> Linux returns a reasonable-looking number.
     </ul>
     
     In the case of a 'family' of pids ( given a pid, return info on that
@@ -341,15 +321,6 @@ typedef struct procInfoRaw{
 #endif //LINUX
 }procInfoRaw;
 
-/* The pidlist struct is used for getting all the pids on a machine
-   at once.  It is used by getpidlist() */
-
-struct pidlist {
-  pid_t pid;               // the pid of a process
-  struct pidlist *next;    // the next pid.
-};
-typedef struct pidlist * pidlistPTR;
-
 /** procHashNode is used to hold information in the hashtable.  It is used
     to save the state of certain things that need to be sampled over time.
     For instance, the number of page faults is always given as a number 
@@ -435,7 +406,7 @@ class ProcAPI {
 
   /** getProcInfo returns information about one process.  Information 
       can be retrieved on any process owned by the same user, and on some
-      systems (Linux, HPUX, Sol2.6) information can be gathered from all 
+      systems (Linux, Sol2.6) information can be gathered from all 
       processes.  
 
       @param pid The pid of the process you want info on.
@@ -445,6 +416,9 @@ class ProcAPI {
       @see procInfo
   */
   static int getProcInfo ( pid_t pid, piPTR& pi, int &status );
+#if defined(DARWIN)
+  static int getProcInfo_impl ( pid_t pid, piPTR& pi, int &status );
+#endif
 
   /** Feed this function a procInfo struct and it'll print it out for you. 
 
@@ -631,12 +605,12 @@ class ProcAPI {
 #endif
 								 );
 
+#if !defined(DARWIN) && !defined(WIN32)
   static int buildPidList();                      // just what it says
+#endif
   static int buildProcInfoList();                 // ditto.
   static long secsSinceEpoch();                   // used for wall clock age
   static double convertTimeval ( struct timeval );// convert timeval to double
-  static pid_t getAndRemNextPid();                // used in pidList deconstruction
-  static void deallocPidList();                   // these deallocate their
   static void deallocAllProcInfos();              // respective lists.
 
   public:
@@ -700,7 +674,7 @@ private:
                              // whose /proc information is available.
 
 #ifndef WIN32
-  static pidlistPTR pidList;      // this will be a linked list of all processes
+  static std::vector<pid_t> pidList;      // this will be a linked list of all processes
                                   // in the system.  Built by buildpidlist()
 
   static int pagesize;     // pagesize is the size of memory pages, in k.

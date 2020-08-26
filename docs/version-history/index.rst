@@ -1,5 +1,5 @@
 Version History and Release Notes
----------------------------------
+=================================
 
 .. toctree::
    :maxdepth: 2
@@ -11,4 +11,4 @@ Version History and Release Notes
    stable-release-series-88
    development-release-series-87
    stable-release-series-86
-      
+      

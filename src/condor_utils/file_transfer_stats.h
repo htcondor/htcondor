@@ -21,7 +21,6 @@
  #define __FILETRANSFER_STATS_H__
  
  #include "condor_classad.h"
- #include "condor_collector.h"
  #include "hashkey.h"
  #include "extArray.h"
  #include "generic_stats.h"
@@ -35,11 +34,12 @@
 		bool TransferSuccess;
 		
 		double ConnectionTimeSeconds;
+		int LibcurlReturnCode;
 		time_t TransferEndTime;
 		time_t TransferStartTime;
 		
 		long TransferFileBytes;
-		long TransferReturnCode;
+		long TransferHTTPStatusCode;
 		long TransferTotalBytes;
 		long TransferTries;
 		

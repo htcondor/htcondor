@@ -48,9 +48,6 @@ struct Claim
 
         if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
-			// To quote the Python docs: "If you have an argument whose value
-			// must be in a particular range or must satisfy other conditions,
-			// PyExc_ValueError is appropriate."
             THROW_EX(ValueError, "No contact string in ClassAd");
         }
     }
@@ -68,7 +65,7 @@ struct Claim
             std::string constraint_str = constraint_extract();
             classad::ExprTree *expr_tmp = NULL;
             if (!parser.ParseExpression(constraint_str, expr_tmp)) {
-            	THROW_EX(ClassAdParseError, "Failed to parse request requirements expression");
+                THROW_EX(ClassAdParseError, "Failed to parse request requirements expression");
             }
             constraint.reset(expr_tmp);
         }
@@ -77,7 +74,7 @@ struct Claim
             constraint.reset(convert_python_to_exprtree(constraint_obj));
         }
 
-        compat_classad::ClassAd ad, reply;
+        ClassAd ad, reply;
         if (constraint.get())
         {
             classad::ExprTree *expr_tmp = constraint->Copy();
@@ -91,11 +88,11 @@ struct Claim
             rval = startd.requestClaim(CLAIM_COD, &ad, &reply, 20);
         }
         if (!rval) {
-        	THROW_EX(HTCondorIOError, "Failed to request claim from startd.");
+            THROW_EX(HTCondorIOError, "Failed to request claim from startd.");
         }
 
         if (!reply.EvaluateAttrString(ATTR_CLAIM_ID, m_claim)) {
-        	THROW_EX(HTCondorIOError, "Startd did not return a ClaimId.");
+            THROW_EX(HTCondorIOError, "Startd did not return a ClaimId.");
         }
     }
 
@@ -107,14 +104,14 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
             rval = startd.releaseClaim(vacate_type, &reply, 20);
         }
         if (!rval) {
-        	THROW_EX(HTCondorIOError, "Startd failed to release claim.");
+            THROW_EX(HTCondorIOError, "Startd failed to release claim.");
         }
 
         m_claim = "";
@@ -126,7 +123,7 @@ struct Claim
     {
         if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
 
-        compat_classad::ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
+        ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
         if (ad.find(ATTR_JOB_KEYWORD) == ad.end())
         {
             ad.InsertAttr(ATTR_HAS_JOB_AD, true);
@@ -134,14 +131,14 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         int irval;
         {
             condor::ModuleLock ml;
             irval = startd.activateClaim(&ad, &reply, 20);
         }
         if (irval != OK) {
-        	THROW_EX(HTCondorIOError, "Startd failed to activate claim.");
+            THROW_EX(HTCondorIOError, "Startd failed to activate claim.");
         }
     }
 
@@ -153,14 +150,14 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
             rval = startd.deactivateClaim(vacate_type, &reply, 20);
         }
         if (!rval) {
-        	THROW_EX(HTCondorIOError, "Startd failed to deactivate claim.");
+            THROW_EX(HTCondorIOError, "Startd failed to deactivate claim.");
         }
     }
 
@@ -172,14 +169,14 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
             rval = startd.suspendClaim(&reply, 20);
         }
         if (!rval) {
-        	THROW_EX(HTCondorIOError, "Startd failed to suspend claim.");
+            THROW_EX(HTCondorIOError, "Startd failed to suspend claim.");
         }
     }
 
@@ -191,14 +188,14 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
             rval = startd.renewLeaseForClaim(&reply, 20);
         }
         if (!rval) {
-        	THROW_EX(HTCondorIOError, "Startd failed to renew claim.");
+            THROW_EX(HTCondorIOError, "Startd failed to renew claim.");
         }
     }
 
@@ -210,14 +207,14 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
             rval = startd.resumeClaim(&reply, 20);
         }
         if (!rval) {
-        	THROW_EX(HTCondorIOError, "Startd failed to resume claim.");
+            THROW_EX(HTCondorIOError, "Startd failed to resume claim.");
         }
     }
 
@@ -239,14 +236,14 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         int irval;
         {
             condor::ModuleLock ml;
             irval = startd.delegateX509Proxy(proxy_file.c_str(), 0, NULL);
         }
         if (irval != OK) {
-        	THROW_EX(HTCondorIOError, "Startd failed to delegate GSI proxy.");
+            THROW_EX(HTCondorIOError, "Startd failed to delegate GSI proxy.");
         }
     }
 
@@ -267,45 +264,120 @@ private:
 void
 export_claim()
 {
-    boost::python::enum_<VacateType>("VacateTypes")
+    boost::python::enum_<VacateType>("VacateTypes",
+            R"C0ND0R(
+            Vacate policies that can be sent to a *condor_startd*.
+
+            The values of the enumeration are:
+
+            .. attribute:: Fast
+            .. attribute:: Graceful
+            )C0ND0R")
         .value("Fast", VACATE_FAST)
         .value("Graceful", VACATE_GRACEFUL)
         ;
 
-#if BOOST_VERSION >= 103400
-    boost::python::docstring_options doc_options;
-    doc_options.disable_cpp_signatures();
-#endif
+    boost::python::class_<Claim>("Claim",
+            R"C0ND0R(
+            The :class:`Claim` class provides access to HTCondor's Compute-on-Demand
+            facilities.  The class represents a claim of a remote resource; it allows
+            the user to manually activate a claim (start a job) or release the associated
+            resources.
 
-    boost::python::class_<Claim>("Claim", "A client class for Claims in HTCondor")
-        .def(boost::python::init<>())
-        .def(boost::python::init<boost::python::object>(":param ad: An ad describing the Claim (optionally) and a Startd location."))
-        .def("requestCOD", &Claim::requestCOD, "Request a COD claim from the remote Startd."
-            ":param constraint: A constraint on the remote slot to use (defaults to 'true')"
-            ":param lease_duration: Time, in seconds, of the claim's lease.  Defaults to -1",
+            The claim comes with a finite lifetime - the *lease*.  The lease may be
+            extended for as long as the remote resource (the Startd) allows.
+
+            To create a :class:`Claim` object for a given remote resource,
+            you need to provide an ad which contains a description of the resource,
+            as returned by :meth:`Collector.locate`.
+
+            This only stores the remote resource's location; it is not
+            contacted until :meth:`requestCOD` is invoked.
+            )C0ND0R",
+        boost::python::init<boost::python::object>(
+            R"C0ND0R(
+            :param ad: An ad describing the Claim (optionally) and a Startd location.
+            :type ad: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "ad")))
+        .def(boost::python::init<>(boost::python::args("self")))
+        .def("requestCOD", &Claim::requestCOD,
+            R"C0ND0R(
+            Request a claim from the *condor_startd* represented by this object.
+
+            On success, the :class:`Claim` object will represent a valid claim on the
+            remote startd; other methods, such as :meth:`activate` should now function.
+
+            :param str constraint:  ClassAd expression that pecifies which slot in
+                the startd should be claimed.  Defaults to ``'true'``, which will
+                result in the first slot becoming claimed.
+            :param int lease_duration: Indicates how long the claim should be valid.
+                Defaults to ``-1``, which indicates to lease the resource for as long as the Startd allows.
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint")=boost::python::object(), boost::python::arg("lease_duration")=-1)
 #else
             (boost::python::arg("self"), boost::python::arg("constraint")=boost::python::object(), boost::python::arg("lease_duration")=-1)
 #endif
             )
-        .def("release", &Claim::release, "Release startd from the claim.",
-            ":param vacate_type: Type of vacate to perform (Fast or Graceful); must be from VacateTypes enum.",
+        .def("release", &Claim::release,
+            R"C0ND0R(
+            Release the remote *condor_startd* from this claim; shut down any running job.
+
+            :param vacate_type: The type of vacate to perform for the
+              running job.
+            :type vacate_type: :class:`VacateTypes`
+            )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("vacate_type")=VACATE_GRACEFUL)
 #else
             (boost::python::arg("self"), boost::python::arg("vacate_type")=VACATE_GRACEFUL)
 #endif
             )
-        .def("activate", &Claim::activate, "Activate an existing claim.\n"
-            ":param ad: Ad describing job to activate.")
-        .def("suspend", &Claim::suspend, "Suspend an activated claim.")
-        .def("renew", &Claim::renew, "Renew the lease on an existing claim.")
-        .def("resume", &Claim::resume, "Resume a suspended claim.")
-        .def("deactivate", &Claim::deactivate, "Deactivate a claim.")
-        .def("delegateGSIProxy", &Claim::delegateGSI, "Delegate a GSI proxy to the claim.\n"
-            ":param filename: Filename of GSI proxy; defaults to the Globus proxy detection logic",
-            (boost::python::arg("filename")=boost::python::object()))
+        .def("activate", &Claim::activate,
+            R"C0ND0R(
+            Activate a claim using a given job ad.
+
+            :param ad: Description of the job to launch; this uses similar, *but not identical*
+                attribute names as *condor_submit*.  See
+                the HTCondor manual for a description of the job language.
+            )C0ND0R",
+            boost::python::args("self", "ad"))
+        .def("suspend", &Claim::suspend,
+            R"C0ND0R(
+            Temporarily suspend the remote execution of the COD application.
+            On Unix systems, this is done using ``SIGSTOP``.
+            )C0ND0R",
+            boost::python::args("self"))
+        .def("renew", &Claim::renew,
+            R"C0ND0R(
+            Renew the lease on an existing claim.
+            The renewal should last for the value of the ``lease_duration``.
+            )C0ND0R",
+            boost::python::args("self"))
+        .def("resume", &Claim::resume,
+            R"C0ND0R(
+            Resume the temporarily suspended execution.
+            On Unix systems, this is done using ``SIGCONT``.
+            )C0ND0R",
+            boost::python::args("self"))
+        .def("deactivate", &Claim::deactivate,
+            R"C0ND0R(
+            Deactivate a claim; shuts down the currently running job,
+            but holds onto the claim for future activation.
+
+            :param vacate_type: The type of vacate to perform for the
+              running job.
+            :type vacate_type: :class:`VacateTypes`
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("vacate_type")=VACATE_GRACEFUL))
+        .def("delegateGSIProxy", &Claim::delegateGSI,
+            R"C0ND0R(
+            Send an X509 proxy credential to an activated claim.
+
+            :param str filename: Filename of the X509 proxy to send to the active claim.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("filename")=boost::python::object()))
         .def("__repr__", &Claim::toString)
         .def("__str__", &Claim::toString)
         ;

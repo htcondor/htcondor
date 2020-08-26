@@ -159,8 +159,8 @@ bool write_secure_file(const char* path, const void* data, size_t len, bool as_r
 		dprintf(D_ALWAYS,
 			"ERROR: write_secure_file(%s): open() failed: %s (%d)\n",
 			path,
-			strerror(errno),
-				errno);
+			strerror(save_errno),
+				save_errno);
 		return false;
 	}
 	FILE *fp = fdopen(fd, fdopen_format);
@@ -342,6 +342,59 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root, int v
 	*buf = fbuf;
 	*len = fsize;
 
+	return true;
+}
+
+// write a secure temp file, then rename/replace it over the given file 
+bool replace_secure_file(const char* path, const char * tmpext, const void* data, size_t len, bool as_root, bool group_readable)
+{
+	// build the temp filename by appending tmpext to path
+	std::string tmpfile;
+	tmpfile.reserve(strlen(path) + strlen(tmpext));
+	tmpfile = path;
+	tmpfile += tmpext;
+	const char * tmpfilename = tmpfile.c_str();
+
+	int rc = -1;
+#ifdef WIN32
+	DWORD err = 0;
+#else
+	int err = 0;
+#endif
+
+	if ( ! write_secure_file(tmpfilename, data, len, as_root, group_readable)) {
+		dprintf(D_ALWAYS, "Failed to write secure temp file %s\n", tmpfilename);
+		return false;
+	}
+
+	// now move into place
+	dprintf(D_SECURITY, "Renaming secure temp file %s to %s\n", tmpfilename, path);
+	priv_state priv;
+	if (as_root) { priv = set_root_priv(); }
+#ifdef WIN32
+	if (MoveFileEx(tmpfilename, path, MOVEFILE_REPLACE_EXISTING)) {
+		rc = 0;
+	} else {
+		rc = -1;
+		err = GetLastError();
+	}
+#else
+	rc = rename(tmpfilename, path);
+	if (rc == -1) {
+		err = errno;
+	}
+#endif
+	if (as_root) { set_priv(priv); }
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "Failed to rename secure temp file %s to %s, error=%d : %s\n",
+#ifdef WIN32
+			tmpfilename, path, err, GetLastErrorString(err));
+#else
+			tmpfilename, path, err, strerror(err));
+#endif
+		unlink(tmpfilename);
+		return false;
+	}
 	return true;
 }
 

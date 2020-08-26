@@ -63,7 +63,7 @@ private:
 
 	int initialize();
 
-	int initialize_controller(struct cgroup& cgroup, ControllerFlags controller, const char * controller_str, const bool required, const bool has_cgroup, bool &changed_cgroup);
+	int initialize_controller(struct cgroup& cgroup, ControllerFlags controller, const char * controller_str, const bool required, const bool has_cgroup, bool &changed_cgroup) const;
 
 	ControllerFlags m_cgroup_mounts;
 

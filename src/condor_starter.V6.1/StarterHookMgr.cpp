@@ -282,7 +282,7 @@ void
 HookPrepareJobClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
 	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
-		MyString status_msg = "";
+		std::string status_msg;
 		statusString(exit_status, status_msg);
 		int subcode;
 		if (WIFSIGNALED(exit_status)) {
@@ -293,7 +293,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		}
 		MyString err_msg;
 		err_msg.formatstr("HOOK_PREPARE_JOB (%s) failed (%s)", m_hook_path,
-						status_msg.Value());
+						status_msg.c_str());
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
 				err_msg.Value());
@@ -310,14 +310,8 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		dPrintAd(D_FULLDEBUG, updateAd);
 
 			// Insert each expr from the update ad into the job ad
-		updateAd.ResetExpr();
 		ClassAd* job_ad = Starter->jic->jobClassAd();
-		const char *name;
-		ExprTree *et;
-		while (updateAd.NextExpr(name, et)) {
-			ExprTree *pCopy = et->Copy();
-			job_ad->Insert(name, pCopy);
-		}
+		job_ad->Update(updateAd);
 		dprintf(D_FULLDEBUG, "After Prepare hook: merged job classad:\n");
 		dPrintAd(D_FULLDEBUG, *job_ad);
 		Starter->jobEnvironmentReady();

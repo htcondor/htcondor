@@ -55,7 +55,7 @@ SetOldClassAd( bool old_syntax )
 }
 
 bool ClassAdParser::
-GetOldClassAd()
+GetOldClassAd() const
 {
 	return oldClassAd;
 }
@@ -248,14 +248,7 @@ ParseClassAd(LexerSource *lexer_source, ClassAd &classad, bool full)
 		success = parseClassAd(classad, full);
 	}
 
-	if (success) {
-		// The lexer swallows one extra character, so if we have
-		// two classads back to back we need to make sure to unread
-		// one of the characters.
-		if (lexer_source->ReadPreviousCharacter() != -1) {
-			lexer_source->UnreadCharacter();
-		} 
-	} else {
+	if (! success) {
 		classad.Clear();
 	}
 
@@ -338,11 +331,6 @@ ParseClassAd(LexerSource *lexer_source, bool full)
 					delete ad;
 					ad = NULL;
 				}
-			} else if (lexer_source->ReadPreviousCharacter() != -1) {
-				// The lexer swallows one extra character, so if we have
-				// two classads back to back we need to make sure to unread
-				// one of the characters.
-				lexer_source->UnreadCharacter();
 			}
 		}
 	}
@@ -1172,7 +1160,6 @@ parseClassAd( ClassAd &ad , bool full )
 	string				s;
 
 	ad.Clear( );
-	ad.DisableDirtyTracking();
 
 	if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_OPEN_BOX ) return false;
 	tt = lexer.PeekToken();
@@ -1241,7 +1228,6 @@ parseClassAd( ClassAd &ad , bool full )
 		return false;
 	}
 
-	ad.EnableDirtyTracking();
 	return true;
 }
 

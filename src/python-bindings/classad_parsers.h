@@ -4,7 +4,8 @@
 enum ParserType {
   CLASSAD_AUTO,
   CLASSAD_OLD,
-  CLASSAD_NEW
+  CLASSAD_NEW,
+  CLASSAD_JSON
 };
 
 ClassAdWrapper *parseString(const std::string &str);

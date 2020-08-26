@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_syscall_mode.h"
 #include "limit.h"
 
 extern "C" {
@@ -28,12 +27,9 @@ extern "C" {
 void
 limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 {
-	int		scm;
 	struct	rlimit current = {0,0};
 	struct	rlimit desired = {0,0};
 	char const *kind_str = "";
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
 	/* Find out current limit for this resource */
 	if( getrlimit(resource, &current) < 0 ) {
@@ -167,7 +163,7 @@ limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 			/* if this is something other than a permission problem
 				given the legal use of the setrlimit() interface */
 
-			EXCEPT( "Failed to set %s limits for %s. "
+			dprintf(D_ALWAYS, "Failed to set %s limits for %s. "
 			"setrlimit(%d, new = [rlim_cur = %lu, rlim_max = %lu]) : "
 			"old = [rlim_cur = %lu, rlim_max = %lu], errno: %d(%s). \n",
 			kind_str,
@@ -181,8 +177,6 @@ limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 			strerror(errno) );
 		}
 	}
-
-	(void)SetSyscalls( scm );
 }
 
 } /* extern "C" */

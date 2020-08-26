@@ -9,6 +9,7 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
+#include "stat_wrapper.h"
 
 using namespace htcondor;
 
@@ -37,7 +38,7 @@ static bool find_singularity(std::string &exec)
 
 
 bool
-Singularity::advertise(classad::ClassAd &ad)
+Singularity::advertise(ClassAd &ad)
 {
 	if (m_enabled && ad.InsertAttr("HasSingularity", true)) {
 		return false;
@@ -122,7 +123,7 @@ Singularity::detect(CondorError &err)
 }
 
 bool
-Singularity::job_enabled(compat_classad::ClassAd &machineAd, compat_classad::ClassAd &jobAd)
+Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
 	return param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd);
 }
@@ -131,7 +132,7 @@ Singularity::job_enabled(compat_classad::ClassAd &machineAd, compat_classad::Cla
 Singularity::result
 Singularity::setup(ClassAd &machineAd,
 		ClassAd &jobAd,
-		MyString &exec,
+		std::string &exec,
 		ArgList &job_args,
 		const std::string &job_iwd,
 		const std::string &execute_dir,
@@ -163,7 +164,7 @@ Singularity::setup(ClassAd &machineAd,
 	std::string orig_exec_val = exec;
 	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
 		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
-		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.Value());
+		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.c_str());
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
 	sing_args.AppendArg("exec");
@@ -204,22 +205,8 @@ Singularity::setup(ClassAd &machineAd,
 			sing_args.AppendArg(target_dir.c_str());
 		}
 		// Update the environment variables
-		job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
-		job_env.SetEnv("TEMP", target_dir.c_str());
-		job_env.SetEnv("TMP", target_dir.c_str());
-		std::string chirp = target_dir + "/.chirp.config";
-		std::string machine_ad = target_dir + "/.machine.ad";
-		std::string job_ad = target_dir + "/.job.ad";
-		job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
-		job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
-		job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
-		MyString proxy_file;
-		if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
-		     strncmp( execute_dir.c_str(), proxy_file.Value(),
-                      execute_dir.length() ) == 0 ) {
-			std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
-			job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
-		}
+		retargetEnvs(job_env, target_dir, execute_dir);
+
 	}
 	sing_args.AppendArg("-B");
 	sing_args.AppendArg(bind_spec.c_str());
@@ -230,10 +217,28 @@ Singularity::setup(ClassAd &machineAd,
 		binds.rewind();
 		char *next_bind;
 		while ( (next_bind=binds.next()) ) {
+			std::string bind_src_dir(next_bind);
+			// BIND exprs can be src:dst:ro 
+			size_t colon = bind_src_dir.find(':');
+			if (colon != std::string::npos) {
+				bind_src_dir = bind_src_dir.substr(0, colon);
+			}
+			StatWrapper sw(bind_src_dir.c_str());
+			sw.Stat();
+			if (! sw.IsBufValid()) {
+				dprintf(D_ALWAYS, "Skipping invalid singularity bind directory %s\n", next_bind);
+				continue;
+			} 
 			sing_args.AppendArg("-B");
 			sing_args.AppendArg(next_bind);
 		}
 	}
+
+	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
+		sing_args.AppendArg("--no-home");
+	}
+
+	sing_args.AppendArg("-C");
 
 	MyString args_error;
 	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
@@ -253,17 +258,16 @@ Singularity::setup(ClassAd &machineAd,
 		sing_args.AppendArg("--nv");
 	}
 
-	sing_args.AppendArg("-C");
 	sing_args.AppendArg(image.c_str());
 
-	sing_args.AppendArg(exec.Value());
+	sing_args.AppendArg(exec.c_str());
 	sing_args.AppendArgsFromArgList(job_args);
 
 	MyString args_string;
 	job_args = sing_args;
 	job_args.GetArgsStringForDisplay(&args_string, 1);
 	exec = sing_exec_str;
-	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.Value(), args_string.Value());
+	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.Value());
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
@@ -276,7 +280,36 @@ envToList(void *list, const MyString &Name, const MyString & /*value*/) {
 	return true;
 }
 
-bool 
+bool
+Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
+
+	// if SINGULARITY_TARGET_DIR is set, we need to reset
+	// all the job's environment variables that refer to the scratch dir
+
+	MyString oldScratchDir;
+	job_env.GetEnv("_CONDOR_SCRATCH_DIR", oldScratchDir);
+	job_env.SetEnv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER", oldScratchDir);
+
+	job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
+	job_env.SetEnv("TEMP", target_dir.c_str());
+	job_env.SetEnv("TMP", target_dir.c_str());
+	job_env.SetEnv("TMPDIR", target_dir.c_str());
+	std::string chirp = target_dir + "/.chirp.config";
+	std::string machine_ad = target_dir + "/.machine.ad";
+	std::string job_ad = target_dir + "/.job.ad";
+	job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
+	job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
+	job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
+	MyString proxy_file;
+	if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
+	     strncmp( execute_dir.c_str(), proxy_file.Value(),
+	      execute_dir.length() ) == 0 ) {
+		std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
+		job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
+	}
+	return true;
+}
+bool
 Singularity::convertEnv(Env *job_env) {
 	std::list<std::string> envNames;
 	job_env->Walk(envToList, (void *)&envNames);

@@ -125,14 +125,14 @@ public:
 	}
 
 	Stream::stream_type getStreamType() {return m_stream_type;}
-	int getTimeout() {return m_timeout;}
-	time_t getDeadline() {return m_deadline;}
-	bool getDeadlineExpired();
-	bool getRawProtocol() {return m_raw_protocol;}
+	int getTimeout() const {return m_timeout;}
+	time_t getDeadline() const {return m_deadline;}
+	bool getDeadlineExpired() const;
+	bool getRawProtocol() const {return m_raw_protocol;}
 	char const *getSecSessionId() {
 		return m_sec_session_id.c_str()[0] ? m_sec_session_id.c_str() : NULL;
 	}
-	int getCommand() {return m_cmd;}
+	int getCommand() const {return m_cmd;}
 
 
 	enum MessageClosureEnum {
@@ -203,11 +203,11 @@ public:
 		/* override default debug level (0 --> never) */
 	void setCancelDebugLevel(int level) {m_msg_cancel_debug_level = level;}
 
-	int successDebugLevel() {return m_msg_success_debug_level;}
+	int successDebugLevel() const {return m_msg_success_debug_level;}
 
-	int failureDebugLevel() {return m_msg_failure_debug_level;}
+	int failureDebugLevel() const {return m_msg_failure_debug_level;}
 
-	int cancelDebugLevel() {return m_msg_cancel_debug_level;}
+	int cancelDebugLevel() const {return m_msg_cancel_debug_level;}
 
 		/* add an error message to the error stack */
 	void addError( int code, char const *format, ... );
@@ -325,7 +325,7 @@ public:
 	friend class DCMsg;
 private:
 		// This is called by DaemonClient when startCommand has finished.
-	static void connectCallback(bool success, Sock *sock, CondorError *errstack, void *misc_data);
+	static void connectCallback(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 		// This is called by DaemonCore when the sock has data.
 	int receiveMsgCallback(Stream *sock);

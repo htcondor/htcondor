@@ -67,9 +67,9 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 	// if there is a SlotMergeContraint in the source, then merge into slots
 	// for which the constraint evaluates to true, and don't merge otherwise.
 	if (merge_from->Lookup(ATTR_SLOT_MERGE_CONSTRAINT)) {
-		int matches = false;
+		bool matches = false;
 		if (pattr_used) *pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
-		merge_from->EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_into, matches);
+		(void) EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_from, merge_into, matches);
 		return matches;
 	}
 
@@ -174,8 +174,10 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 			//
 
 			std::string perJobAttributeName;
+			std::string perJobAvgAttr;
 			if( StartdCronJobParams::attributeIsSumMetric( name ) ) {
 				perJobAttributeName = "StartOfJob" + name;
+				perJobAvgAttr = name + "AverageUsage";
 			} else if( StartdCronJobParams::attributeIsPeakMetric( name ) ) {
 				if(! StartdCronJobParams::getResourceNameFromAttributeName( name, perJobAttributeName )) { continue; }
 				perJobAttributeName += "Usage";
@@ -201,6 +203,25 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 			// Record for each resource when we last updated it.
 			std::string lastUpdateName = "LastUpdate" + name;
 			CopyAttribute( lastUpdateName, *to, "LastUpdate", *from );
+
+			// for SUM metrics, inject an expression for the average over a job lifetime
+			// we do this so that policy expressions can access it. 
+			// The ad that gets sent to the Collector will overwrite this with a calculated value
+			// but that happens much less frequently than 
+			if (! perJobAvgAttr.empty()) {
+
+				// Note that we calculate the usage rate only for full
+				// sample intervals.  This eliminates the imprecision of
+				// the sample interval in which the job started; since we
+				// can't include the usage from the sample interval in
+				// which the job ended, we also don't include the time
+				// the job was running in that interval.  The computation
+				// is thus exact for its time period.
+				std::string avgExpr;
+				formatstr(avgExpr, "(%s - StartOfJob%s)/(LastUpdate%s - FirstUpdate%s)", name.c_str(), name.c_str(), name.c_str(), name.c_str());
+				to->AssignExpr(perJobAvgAttr, avgExpr.c_str());
+			}
+
 		} else if( name.find( "StartOfJob" ) == 0 ) {
 			// dprintf( D_FULLDEBUG, "Aggregate(): skipping StartOfJob* attribute '%s'\n", name.c_str() );
 		} else if( name == "ResetStartOfJob" ) {
@@ -363,7 +384,7 @@ StartdNamedClassAd::reset_monitor() {
 				// persist.  Instead, make sure that the persistent resource
 				// instance ad we're modifying here will stomp on the value
 				// by instead setting usageName to undefined explicitly.
-				from->AssignExpr( usageName.c_str(), "undefined" );
+				from->AssignExpr( usageName, "undefined" );
 			} else {
 				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
 			}

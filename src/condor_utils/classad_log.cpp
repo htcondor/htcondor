@@ -547,7 +547,6 @@ bool WriteClassAdLogState(
 {
 	LogRecord	*log=NULL;
 	ExprTree	*expr=NULL;
-	const char	*attr_name = NULL;
 
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
@@ -575,15 +574,13 @@ bool WriteClassAdLogState(
 			// not all the exprs in the chained ad as well.
 		classad::ClassAd *chain = ad->GetChainedParentAd();
 		ad->Unchain();
-		ad->ResetName();
-		attr_name = ad->NextNameOriginal();
-		while (attr_name) {
-			expr = ad->LookupExpr(attr_name);
+		for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
+			expr = itr->second;
 				// This conditional used to check whether the ExprTree is
 				// invisible, but no codepath sets any attributes
 				// invisible for this call.
 			if (expr) {
-				log = new LogSetAttribute(key, attr_name,
+				log = new LogSetAttribute(key, itr->first.c_str(),
 										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {
 					errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
@@ -592,7 +589,6 @@ bool WriteClassAdLogState(
 				}
 				delete log;
 			}
-			attr_name = ad->NextNameOriginal();
 		}
 			// ok, now that we're done writing out this ad, restore the chain
 		ad->ChainToAd(chain);
@@ -1009,13 +1005,37 @@ LogEndTransaction::Play(void *) {
 	return 1;
 }
 
+
+int
+LogEndTransaction::WriteBody(FILE* fp)
+{
+	int rval = 0;
+	if (comment) {
+		int len = (int)strlen(comment);
+		if (len > 0) {
+			fputc('#', fp);
+			rval = fwrite(comment, sizeof(char), len, fp);
+			if (rval < len) {
+				return -1;
+			}
+			rval += 1; // account for the # character
+		}
+	}
+	return rval;
+}
+
 int 
 LogEndTransaction::ReadBody( FILE* fp )
 {
 	char 	ch;
 	int		rval = fread( &ch, sizeof(char), 1, fp );
-	if( rval < 1 || ch != '\n' ) {
+	if( rval < 1 || (ch != '\n' && ch != '#') ) {
 		return( -1 );
+	}
+	if (ch == '#') {
+		int cch = readline(fp, comment);
+		if (cch < 0)
+			return -1;
 	}
 	return( 1 );
 }
@@ -1099,9 +1119,6 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
 		int		op;
 
 		delete log_rec;
-		if( !fp ) {
-			EXCEPT("Error: failed fdopen() while recovering from corrupt log record %lu", recnum);
-		}
 
         // check if this bogus record is in the midst of a transaction
 	    // (try to find a CloseTransaction log record)

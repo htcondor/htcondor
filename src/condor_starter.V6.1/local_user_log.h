@@ -58,25 +58,16 @@ public:
 		// Initialization
 		// // // // // // // // // // // //
 
-		/** Initialize ourselves with all the info we need already
-			proccessed and handed to use directly
-			@param filename Full path to userlog to write
-		*/
-	bool init( const std::vector<const char*>& filename, bool is_xml, 
-			   int cluster, int proc, int subproc );
-
 		/** Initialize ourselves with the info in the given job ad.
+		    If starter_ulog=true, then we will write to the log file
+		    given by ATTR_STARTER_ULOG_FILE.
+		    If starter_ulog=false, then we will write to the user,
+		    dagman, and global event logs as part of the local universe.
 		*/
-	bool initFromJobAd( ClassAd* ad,
-						const char* path_attr = ATTR_STARTER_ULOG_FILE,
-						const char* xml_attr = ATTR_STARTER_ULOG_USE_XML,
-						bool write_event_log = false );
-
-		/// Initialize ourselves such that we won't write a user log 
-	bool initNoLogging( void );
+	bool initFromJobAd( ClassAd* ad, bool starter_ulog = true );
 
 		/// Do we want to be writing a log or not?
-	bool wantsLog( void ) { return should_log; };
+	bool wantsLog( void ) const { return should_log; };
 
 		// // // // // // // // // // // //
 		// Writing Events
