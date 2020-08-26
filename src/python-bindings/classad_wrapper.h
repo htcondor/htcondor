@@ -56,6 +56,8 @@ extern PyObject * PyExc_ClassAdEvaluationError;
 extern PyObject * PyExc_ClassAdInternalError;
 extern PyObject * PyExc_ClassAdParseError;
 extern PyObject * PyExc_ClassAdValueError;
+extern PyObject * PyExc_ClassAdTypeError;
+extern PyObject * PyExc_ClassAdOSError;
 
 struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassAd>
 {

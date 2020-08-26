@@ -78,7 +78,6 @@ ClassAdWrapper *parseOld(boost::python::object input)
 
         if (!wrapper->InsertViaCache(name, szValue))
         {
-            // FIXME: ..?
             THROW_EX(ClassAdParseError, line_str.c_str());
         }
     }
@@ -158,7 +157,7 @@ boost::shared_ptr<ClassAdWrapper> parseOne(boost::python::object input, ParserTy
                 if (PyErr_Occurred()) { throw boost::python::error_already_set(); }
             }
             else {
-                THROW_EX(TypeError, "Unable to iterate through ads.");
+                THROW_EX(ClassAdTypeError, "Unable to iterate through ads.");
             }
         }
         catch (const boost::python::error_already_set&)
@@ -194,7 +193,7 @@ boost::python::object parseNext(boost::python::object source, ParserType type)
         if (PyErr_Occurred()) { throw boost::python::error_already_set(); }
         return next_obj;
     }
-    THROW_EX(TypeError, "Unable to iterate through ads.");
+    THROW_EX(ClassAdTypeError, "Unable to iterate through ads.");
     return boost::python::object();
 }
 
@@ -325,7 +324,6 @@ OldClassAdIterator::next()
         std::string szValue = line_str.substr(vpos);
         if (!m_ad->InsertViaCache(name, szValue))
         {
-            // FIXME: ..?
             THROW_EX(ClassAdParseError, line_str.c_str());
         }
     }

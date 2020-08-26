@@ -518,7 +518,7 @@ void ClassAdWrapper::update(boost::python::object source)
         return this->update(source.attr("items")());
     }
     if (!PyObject_HasAttrString(source.ptr(), "__iter__")) {
-        THROW_EX(TypeError, "Must provide a dictionary-like object to update()");
+        THROW_EX(ClassAdTypeError, "Must provide a dictionary-like object to update()");
     }
 
     boost::python::object iter = source.attr("__iter__")();

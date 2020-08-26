@@ -15,8 +15,11 @@ PyObject * PyExc_HTCondorEnumError = NULL;
 PyObject * PyExc_HTCondorInternalError = NULL;
 PyObject * PyExc_HTCondorIOError = NULL;
 PyObject * PyExc_HTCondorLocateError = NULL;
-PyObject * PyExc_HTCondorReplyError = NULL;
+PyObject * PyExc_HTCondorReplyErorr = NULL;
 PyObject * PyExc_HTCondorValueError = NULL;
+PyObject * PyExc_HTCondorTypeError = NULL;
+PyObject * PyExc_HTCondorAssertionError = NULL;
+PyObject * PyExc_HTCondorNotImplementedError = NULL;
 
 BOOST_PYTHON_MODULE(htcondor)
 {
@@ -61,6 +64,18 @@ BOOST_PYTHON_MODULE(htcondor)
         "htcondor.HTCondorLocateError", "HTCondorLocateError",
         PyExc_HTCondorException );
     PyExc_HTCondorValueError = CreateExceptionInModule(
+        "htcondor.HTCondorReplyError", "HTCondorReplyError",
+        PyExc_HTCondorException );
+    PyExc_HTCondorValueError = CreateExceptionInModule(
         "htcondor.HTCondorValueError", "HTCondorValueError",
+        PyExc_HTCondorException );
+    PyExc_HTCondorTypeError = CreateExceptionInModule(
+        "htcondor.HTCondorTypeError", "HTCondorTypeError",
+        PyExc_HTCondorException );
+    PyExc_HTCondorAssertionError = CreateExceptionInModule(
+        "htcondor.HTCondorAssertionError", "HTCondorAssertionError",
+        PyExc_HTCondorException );
+    PyExc_HTCondorNotImplementedError = CreateExceptionInModule(
+        "htcondor.HTCondorNotImplementedError", "HTCondorNotImplementedError",
         PyExc_HTCondorException );
 }

@@ -27,4 +27,10 @@ BOOST_PYTHON_MODULE(classad)
 	PyExc_ClassAdValueError = CreateExceptionInModule(
 		"classad.ClassAdValueError", "ClassAdValueError",
 		PyExc_ClassAdException );
+	PyExc_ClassAdTypeError = CreateExceptionInModule(
+		"classad.ClassAdTypeError", "ClassAdTypeError",
+		PyExc_ClassAdException );
+	PyExc_ClassAdOSError = CreateExceptionInModule(
+		"classad.ClassAdOSError", "ClassAdOSError",
+		PyExc_ClassAdException );
 }

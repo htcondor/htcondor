@@ -510,7 +510,7 @@ struct QueueItemsIterator {
 		}
 		if (rval < 0) {
 		    // FIXME: No idea.
-		    THROW_EX(RuntimeError, errmsg.c_str());
+		    THROW_EX(HTCondorInternalError, errmsg.c_str());
 		}
 		return 0;
 	}
@@ -1512,6 +1512,7 @@ struct Schedd {
             // FIXME: this is only true if all the enum's values have been
             // listed above as cases.  Otherwise, don't use NotImplementedError,
             // since that's reserve for abstract base classes.
+            // FIXME: this used to be NotImplementedError
             THROW_EX(HTCondorEnumError, "Job action not implemented.");
         }
         if (!result)
@@ -1925,6 +1926,7 @@ struct Schedd {
         classad::ExprTree *expr_copy = expr->Copy();
         if (!expr_copy) {
             // FIXME: Is this actually a MemoryError?
+            // FIXME: this used to be a ValueError
             THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
         }
 
@@ -1938,6 +1940,7 @@ struct Schedd {
 		    // FIXME: This should probably check to see if the extracted value
 		    // was actually a string and throw an TypeError if it  wasn't, and
 		    //then throw an HTCondorInternalError if it couldn't convert it.
+            // FIXME: this used to be a ValueError
 		    THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
 		}
 		projList->push_back(entry);
@@ -2058,6 +2061,7 @@ struct Schedd {
         classad::ExprTree *expr_copy = expr ? expr->Copy() : NULL;
         if (!expr_copy) {
             // FIXME: probably MemoryError
+            // FIXME: this used to be a ValueError
             THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
         }
 
@@ -2069,6 +2073,7 @@ struct Schedd {
                 classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
                 if (!entry) {
                     // FIXME: See comment about extraction above.
+                    // FIXME: this used to be a ValueError
                     THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.");
                 }
                 projList->push_back(entry);
@@ -2524,7 +2529,7 @@ public:
             return this->update(source.attr("items")());
         }
         if (!PyObject_HasAttrString(source.ptr(), "__iter__")) {
-            THROW_EX(TypeError, "Must provide a dictionary-like object to update()");
+            THROW_EX(HTCondorTypeError, "Must provide a dictionary-like object to update()");
         }
 
         boost::python::object iter = source.attr("__iter__")();
@@ -2661,7 +2666,7 @@ public:
 			if (m_qargs.empty()) {
 				ssi.begin(JOB_ID_KEY(cluster, first_procid), count);
 			} else {
-				if (ssi.begin(JOB_ID_KEY(cluster, first_procid), m_qargs.c_str()) != 0) { 
+				if (ssi.begin(JOB_ID_KEY(cluster, first_procid), m_qargs.c_str()) != 0) {
 				    THROW_EX(HTCondorValueError, "Invalid QUEUE statement");
 				}
 				else {
@@ -2763,7 +2768,7 @@ public:
 			// send the submit digest to the schedd. the schedd will parse the digest at this point
 			// and return success or failure.
 			if (SetJobFactory(cluster, (int)max_materialize, NULL, submit_digest.c_str()) < 0) {
-			    // FIXME: ..?
+				// FIXME: ..?
 				THROW_EX(HTCondorIOError, "Failed to send job factory for max_materilize.");
 			}
 
@@ -3019,6 +3024,7 @@ public:
 				}
 				process_submit_errstack(m_hash.error_stack());
 				if (rval < 0) {
+					// FIXME: this used to be a ValueError
 					THROW_EX(HTCondorIOError, "Failed to send job attributes");
 				}
 

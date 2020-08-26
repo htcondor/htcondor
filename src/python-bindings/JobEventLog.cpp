@@ -51,7 +51,7 @@ JobEventLog::events( boost::python::object & self, boost::python::object & deadl
 		if( deadlineExtractor.check() ) {
 			jel->deadline = time(NULL) + deadlineExtractor();
 		} else {
-			THROW_EX( TypeError, "deadline must be an integer" );
+			THROW_EX( HTCondorTypeError, "deadline must be an integer" );
 		}
 	}
 	return self;
@@ -140,10 +140,12 @@ JobEventLog::next() {
 		break;
 
 		case ULOG_RD_ERROR:
+			// FIXME: this used to be a RuntimeError
 			THROW_EX( HTCondorIOError, "ULOG_RD_ERROR" );
 		break;
 
 		case ULOG_MISSED_EVENT:
+			// FIXME: this used to be a RuntimeError
 			THROW_EX( HTCondorIOError, "ULOG_MISSED_EVENT" );
 		break;
 
@@ -253,6 +255,7 @@ JobEvent::Py_Values() {
 			l.append( convert_value_to_python( v ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
+			// FIXME: this used to be a type error
 			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	}
@@ -322,6 +325,7 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
+			// FIXME: this used to be a type error
 			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	} else {
@@ -346,6 +350,7 @@ JobEvent::Py_GetItem( const std::string & k ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
+			// FIXME: this used to be a type error
 			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	} else {

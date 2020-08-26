@@ -31,7 +31,7 @@ few guidelines to help avoid that in the future.
   exception string, but if you expect the user to (routinely) write string-
   parsing code for your exceptions, you're doing it wrong.  Instead, include
   the useful, broken-out information as attributes of the exception class.
-  This may be compliated to do via Boost.
+  This may be complicated to do via Boost.
 * Much of the time, when the bindings throw an exception, it is in response
   to a particular C++ return code.  This makes it easy to throw an exception
   even for the very common return codes for which it may make more sense to

@@ -91,13 +91,11 @@ struct Claim
             rval = startd.requestClaim(CLAIM_COD, &ad, &reply, 20);
         }
         if (!rval) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Failed to request claim from startd.");
+        	THROW_EX(HTCondorIOError, "Failed to request claim from startd.");
         }
 
         if (!reply.EvaluateAttrString(ATTR_CLAIM_ID, m_claim)) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Startd did not return a ClaimId.");
+        	THROW_EX(HTCondorIOError, "Startd did not return a ClaimId.");
         }
     }
 
@@ -116,8 +114,7 @@ struct Claim
             rval = startd.releaseClaim(vacate_type, &reply, 20);
         }
         if (!rval) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Startd failed to release claim.");
+        	THROW_EX(HTCondorIOError, "Startd failed to release claim.");
         }
 
         m_claim = "";
@@ -144,8 +141,7 @@ struct Claim
             irval = startd.activateClaim(&ad, &reply, 20);
         }
         if (irval != OK) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Startd failed to activate claim.");
+        	THROW_EX(HTCondorIOError, "Startd failed to activate claim.");
         }
     }
 
@@ -164,8 +160,7 @@ struct Claim
             rval = startd.deactivateClaim(vacate_type, &reply, 20);
         }
         if (!rval) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Startd failed to deactivate claim.");
+        	THROW_EX(HTCondorIOError, "Startd failed to deactivate claim.");
         }
     }
 
@@ -184,8 +179,7 @@ struct Claim
             rval = startd.suspendClaim(&reply, 20);
         }
         if (!rval) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Startd failed to suspend claim.");
+        	THROW_EX(HTCondorIOError, "Startd failed to suspend claim.");
         }
     }
 
@@ -204,8 +198,7 @@ struct Claim
             rval = startd.renewLeaseForClaim(&reply, 20);
         }
         if (!rval) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Startd failed to renew claim.");
+        	THROW_EX(HTCondorIOError, "Startd failed to renew claim.");
         }
     }
 
@@ -224,8 +217,7 @@ struct Claim
             rval = startd.resumeClaim(&reply, 20);
         }
         if (!rval) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Sartd failed to resume claim.");
+        	THROW_EX(HTCondorIOError, "Startd failed to resume claim.");
         }
     }
 
@@ -254,8 +246,7 @@ struct Claim
             irval = startd.delegateX509Proxy(proxy_file.c_str(), 0, NULL);
         }
         if (irval != OK) {
-        	// FIXME: ..?
-        	THROW_EX(IOError, "Startd failed to delegate GSI proxy.");
+        	THROW_EX(HTCondorIOError, "Startd failed to delegate GSI proxy.");
         }
     }
 

@@ -275,8 +275,7 @@ struct Collector {
 
         if (command == UPDATE_STARTD_AD_WITH_ACK)
         {
-            // FIXME: This error is reserved for abstract methods.
-            THROW_EX(NotImplementedError, "Startd-with-ack protocol is not implemented at this time.");
+            THROW_EX(HTCondorNotImplementedError, "Startd-with-ack protocol is not implemented at this time.");
         }
 
         int list_len = py_len(ads);
@@ -318,6 +317,7 @@ struct Collector {
                 }
                 }
                 if (result != 2) {
+                    // FIXME: this used to be a ValueError
                     THROW_EX(HTCondorIOError, "Failed to advertise to collector");
                 }
             }
@@ -399,7 +399,8 @@ private:
         case Q_COMMUNICATION_ERROR:
             THROW_EX(HTCondorIOError, "Failed communication with collector.");
         case Q_INVALID_QUERY:
-            THROW_EX(HTCondorEnumError, "Invalid query.");
+            // FIXME: originally a RuntimeError
+            THROW_EX(FIXME, "Invalid query.");
         case Q_NO_COLLECTOR_HOST:
             THROW_EX(HTCondorLocateError, "Unable to determine collector host.");
 

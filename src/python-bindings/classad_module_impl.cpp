@@ -35,7 +35,7 @@ void RegisterLibrary(const std::string &libraryName)
 {
     if (!classad::FunctionCall::RegisterSharedLibraryFunctions(libraryName.c_str()))
     {
-        THROW_EX(OSError, "Failed to load shared library.");
+        THROW_EX(ClassAdOSError, "Failed to load shared library.");
     }
 }
 

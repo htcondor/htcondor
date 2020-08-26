@@ -90,12 +90,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
     default:
         d_type = DT_NONE;
-        // FIXME: If there's an ad types for which there is no corresponding
-        // daemon type, that's probably HTCondorInternalError.  If there's
-        // an ad type for which we don't implement send_command(), we should
-        // throw appropriately for that, instead.  But HTCondorValueError is
-        // almost certainly wrong.
-        THROW_EX(HTCondorValueError, "Unknown daemon type.");
+        THROW_EX(HTCondorEnumError, "Unknown daemon type.");
     }
 
     ClassAd ad_copy; ad_copy.CopyFrom(ad);

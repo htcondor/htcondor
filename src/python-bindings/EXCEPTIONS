@@ -1,0 +1,21 @@
+Exception
+    |- htcondor.HTCondorException
+        |- htcondor.HTCondorEnumError       ->  ValueError, RuntimeError, NotImplementedError
+        |- htcondor.HTCondorInternalError   ->  RuntimeError, TypeError, ValueError
+        |- htcondor.HTCondorIOError         ->  IOError, RuntimeError, ValueError
+        |- htcondor.HTCondorLocateError     ->  IOError, ValueError, RuntimeError
+        |- htcondor.HTCondorReplyError      ->  RuntimeError, ValueError
+        |- htcondor.HTCondorValueError      ->  ValueError, RuntimeError
+        |- htcondor.HTCondorTypeError       ->  TypeError, RuntimeError, ValueError
+        |- htcondor.HTCondorAssertionError  ->  RuntimeError
+        |- htcondor.HTCondorNotImplementedError  ->  NotImplementedError
+
+Exception
+    |- classad.ClassAdException
+        |- classad.ClassAdEnumError         ->  TypeError
+        |- classad.ClassAdEvaluationError   ->  TypeErrror, RuntimeError
+        |- classad.ClassAdInternalError     ->  ValueError
+        |- classad.ClassAdParseError        ->  ValueError, SyntaxError, RuntimeError
+        |- classad.ClassAdValueError        ->  ValueError, RuntimeError, TypeError, RuntimeError
+        |- classad.ClassAdTypeError         ->  TypeError, ValueError
+        |- classad.ClassAdOSError           ->  OSError, RuntimeError
