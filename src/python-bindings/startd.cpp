@@ -97,7 +97,6 @@ struct Startd
         DCStartd startd(m_addr.c_str());
         bool rval = startd.cancelDrainJobs( request_id );
         if (!rval) {
-            // FIXME: see q above
             THROW_EX(HTCondorReplyError, "Startd failed to cancel draining jobs.");
         }
     }

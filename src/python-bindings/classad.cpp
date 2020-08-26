@@ -844,9 +844,6 @@ convert_python_to_exprtree(boost::python::object value)
             classad_value.SetUndefinedValue();
             return classad::Literal::MakeLiteral(classad_value);
         }
-        // FIXME: is ValueType strongly-typed enough that this an internal
-        // error (because we gave the user back one that's not valid) or
-        // is it some sort of enum that could confuse Boost?
         THROW_EX(ClassAdInternalError, "Unknown ClassAd Value type.");
     }
     if (PyBool_Check(value.ptr()))

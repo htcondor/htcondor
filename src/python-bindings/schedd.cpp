@@ -176,7 +176,6 @@ make_requirements(const ClassAd &jobAd, ExprTree *reqs, ShouldTransferFiles_t st
         reqs_copy = reqs->Copy();
     if (!reqs_copy)
     {
-        // FIXME: Is this actually a MemoryError?
         THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression.");
     }
     std::unique_ptr<ExprTree> result(reqs_copy);
@@ -478,7 +477,6 @@ struct RequestIterator
     void getNextRequest()
     {
         if (!m_parent->negotiating()) {
-            // FIXME: Maybe a ValueError instead?
             THROW_EX(HTCondorIOError, "Tried to continue negotiation after disconnect.");
         }
 
@@ -590,7 +588,6 @@ struct QueueItemsIterator {
 		if (qargs) {
 			std::string errmsg;
 			if (h.parse_q_args(qargs, m_fea, errmsg) != 0) {
-			    // FIXME: No idea.
 			    THROW_EX(HTCondorValueError, errmsg.c_str());
 			}
 		}
@@ -636,7 +633,6 @@ struct QueueItemsIterator {
 			rval = h.load_external_q_foreach_items(m_fea, false, errmsg);
 		}
 		if (rval < 0) {
-		    // FIXME: No idea.
 		    THROW_EX(HTCondorInternalError, errmsg.c_str());
 		}
 		return 0;
@@ -961,7 +957,6 @@ struct SubmitJobsIterator {
 				int rv = m_ssqa.load_items(ms_inline_items, false, errmsg);
 				ms_inline_items.rewind_to(ix, line);
 				if (rv != 0) {
-				    // FIXME: No idea.
 				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 			}
@@ -1024,7 +1019,6 @@ struct SubmitJobsIterator {
 		}
 
 		if ( ! job) {
-		    // FIXME: No idea.
 			THROW_EX(HTCondorInternalError, "Failed to get next job");
 		}
 
@@ -1128,7 +1122,6 @@ void
 ScheddNegotiate::sendClaim(boost::python::object claim, boost::python::object offer_obj, boost::python::object request_obj)
 {
     if (!m_negotiating) {
-        // FIXME: See previous comment about m_negotiating.
         THROW_EX(HTCondorIOError, "Not currently negotiating with schedd");
     }
     if (!m_sock.get()) {
@@ -1157,7 +1150,6 @@ boost::shared_ptr<RequestIterator>
 ScheddNegotiate::getRequests()
 {
     if (!m_negotiating) {
-        // FIXME: See previous comment about m_negotiating.
         THROW_EX(HTCondorIOError, "Not currently negotiating with schedd");
     }
     if (m_request_iter.get()) {
@@ -1657,10 +1649,6 @@ struct Schedd {
             DO_ACTION(continueJobs)
             break;
         default:
-            // FIXME: this is only true if all the enum's values have been
-            // listed above as cases.  Otherwise, don't use NotImplementedError,
-            // since that's reserve for abstract base classes.
-            // FIXME: this used to be NotImplementedError
             THROW_EX(HTCondorEnumError, "Job action not implemented.");
         }
         if (!result)
@@ -1862,7 +1850,6 @@ struct Schedd {
             }
             if (procid < 0)
             {
-                // FIXME: ..?
                 THROW_EX(HTCondorInternalError, "Failed to create new proc id.");
             }
             proc_ad.InsertAttr(ATTR_CLUSTER_ID, cluster);
@@ -1983,7 +1970,6 @@ struct Schedd {
             // error handling.
             int result = x509_proxy_seconds_until_expire(proxy_filename.c_str());
             if (result < 0) {
-                // FIXME: Is this the user's fault?
                 THROW_EX(HTCondorValueError, "Unable to determine proxy expiration time");
             }
             return result;
@@ -2093,8 +2079,6 @@ struct Schedd {
         }
         classad::ExprTree *expr_copy = expr->Copy();
         if (!expr_copy) {
-            // FIXME: Is this actually a MemoryError?
-            // FIXME: this used to be a ValueError
             THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
         }
 
@@ -2105,10 +2089,6 @@ struct Schedd {
 		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
 		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
 		if (!entry) {
-		    // FIXME: This should probably check to see if the extracted value
-		    // was actually a string and throw an TypeError if it  wasn't, and
-		    //then throw an HTCondorInternalError if it couldn't convert it.
-            // FIXME: this used to be a ValueError
 		    THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
 		}
 		projList->push_back(entry);
@@ -2229,8 +2209,6 @@ struct Schedd {
         }
         classad::ExprTree *expr_copy = expr ? expr->Copy() : NULL;
         if (!expr_copy) {
-            // FIXME: probably MemoryError
-            // FIXME: this used to be a ValueError
             THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
         }
 
@@ -2241,8 +2219,6 @@ struct Schedd {
                 classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
                 classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
                 if (!entry) {
-                    // FIXME: See comment about extraction above.
-                    // FIXME: this used to be a ValueError
                     THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.");
                 }
                 projList->push_back(entry);
@@ -2294,7 +2270,6 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
     if (schedd.m_connection)
     {
         if (transaction && !continue_txn) {
-            // FIXME: maybe HTCondorValueError?
             THROW_EX(HTCondorIOError, "Transaction already in progress for schedd.");
         }
         return;
@@ -2606,7 +2581,6 @@ public:
 			char * qline = NULL;
 			int rval = m_hash.parse_up_to_q_line(ms, errmsg, &qline);
 			if (rval != 0) {
-			    // FIXME: ..?
 			    THROW_EX(HTCondorValueError, errmsg.c_str());
 			}
 			if (qline) {
@@ -2942,7 +2916,6 @@ public:
     {
         if (!txn.get() || !txn->transaction())
         {
-            // FIXME: maybe a constraint error for this sort of thing?
             THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
         }
 
@@ -2982,7 +2955,6 @@ public:
 
 			if (m_hash.init_base_ad(time(NULL), txn->owner().c_str())) {
 				process_submit_errstack(m_hash.error_stack());
-				// FIXME: is this an IO error?
 				THROW_EX(HTCondorInternalError, "Failed to create a cluster ad");
 			}
 			process_submit_errstack(m_hash.error_stack());
@@ -3009,7 +2981,6 @@ public:
 					int rv = ssi.load_items(m_ms_inline, false, errmsg);
 					m_ms_inline.rewind_to(ix, line);
 					if (rv != 0) {
-					    // FIXME: I have no idea
 					    THROW_EX(HTCondorValueError, errmsg.c_str());
 					}
 				}
@@ -3062,7 +3033,6 @@ public:
 				rval = -1;
 			}
 			if (rval < 0) {
-			    // FIXME: maybe?
 			    THROW_EX(HTCondorIOError, "Failed to create send job attributes");
 			}
 
@@ -3075,7 +3045,6 @@ public:
 			if (ssi.has_items()) {
 				MyString items_filename;
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
-				    // FIXME: ..?
 					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
 				}
 
@@ -3099,7 +3068,6 @@ public:
 			// send the submit digest to the schedd. the schedd will parse the digest at this point
 			// and return success or failure.
 			if (SetJobFactory(cluster, (int)max_materialize, NULL, submit_digest.c_str()) < 0) {
-				// FIXME: ..?
 				THROW_EX(HTCondorIOError, "Failed to send job factory for max_materilize.");
 			}
 
@@ -3110,7 +3078,6 @@ public:
 
 				int procid = txn->newProc();
 				if (procid < 0) {
-				    // FIXME: ..?
 				    THROW_EX(HTCondorIOError, "Failed to create new proc ID.");
 				}
 				if (procid != jid.proc) { THROW_EX(RuntimeError, "Internal error: newProc does not match iterator procid"); }
@@ -3118,7 +3085,6 @@ public:
 				ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
 				process_submit_errstack(m_hash.error_stack());
 				if ( ! proc_ad) {
-				    // FIXME: ..?
 					THROW_EX(HTCondorInternalError, "Failed to create new job ad");
 				}
 
@@ -3163,7 +3129,6 @@ public:
 	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from)
 	{
 		if (!txn.get() || !txn->transaction()) {
-		    // FIXME: Maybe a constraint error for this sort of thing?
 		    THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
 		}
 
@@ -3187,7 +3152,6 @@ public:
 
 		if (m_hash.init_base_ad(time(NULL), txn->owner().c_str())) {
 			process_submit_errstack(m_hash.error_stack());
-			// FIXME: ..?
 			THROW_EX(HTCondorInternalError, "Failed to create a cluster ad");
 		}
 		process_submit_errstack(m_hash.error_stack());
@@ -3300,7 +3264,6 @@ public:
 				}
 				process_submit_errstack(m_hash.error_stack());
 				if (rval < 0) {
-					// FIXME: this used to be a ValueError
 					THROW_EX(HTCondorIOError, "Failed to send job attributes");
 				}
 
@@ -3445,7 +3408,6 @@ public:
 		if (qit) {
 			qit->init(m_hash, pqargs);
 			if (qit->needs_submit_lines() && ! use_remainder) {
-			    // FIXME: ..?
 				THROW_EX(HTCondorValueError, "inline items not available");
 			}
 

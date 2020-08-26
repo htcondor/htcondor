@@ -334,7 +334,6 @@ struct Collector {
                 }
                 }
                 if (result != 2) {
-                    // FIXME: this used to be a ValueError
                     THROW_EX(HTCondorIOError, "Failed to advertise to collector");
                 }
             }
@@ -396,17 +395,13 @@ private:
 
         // We think that these can't happen.
         // case Q_INVALID_CATEGORY:
-            // THROW_EX(FIXME, "Category not supported by query type.");
         // case Q_MEMORY_ERROR:
-            // THROW_EX(MemoryError, "Memory allocation error.");
         // case Q_PARSE_ERROR:
-            // THROW_EX(ClassAdParseError, "Query constraints could not be parsed.");
 
         case Q_COMMUNICATION_ERROR:
             THROW_EX(HTCondorIOError, "Failed communication with collector.");
         case Q_INVALID_QUERY:
-            // FIXME: originally a RuntimeError
-            THROW_EX(FIXME, "Invalid query.");
+            THROW_EX(HTCondorIOError, "Invalid query.");
         case Q_NO_COLLECTOR_HOST:
             THROW_EX(HTCondorLocateError, "Unable to determine collector host.");
 

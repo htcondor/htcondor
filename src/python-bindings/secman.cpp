@@ -304,7 +304,6 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // IMPORTANT: this hashtable returns 0 on success!
         if ((SecMan::command_map).lookup(cmd_map_ent, session_id))
         {
-            // FIXME: ..?
             THROW_EX(HTCondorValueError, "No valid entry in command map hash table!");
         }
         // Session cache lookup is tag-dependent; hence, we may need to temporarily override
@@ -314,7 +313,6 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
-            // FIXME: ..?
             THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");
         }
         if (m_tag_set) {SecMan::setTag(origTag);}

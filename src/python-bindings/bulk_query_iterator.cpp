@@ -116,14 +116,12 @@ public:
 
         if (m_selector.timed_out())
         {
-            // FIXME: this was a RuntimeError
             THROW_EX(HTCondorIOError, "Timeout when waiting for remote host");
         }
 
         if (m_selector.failed())
         {
             // FIXME: if m_selector has an errno and/or errstr, set it here.
-            // FIXME: this was a RuntimeError
             THROW_EX(HTCondorInternalError, "select() failed.");
         }
 

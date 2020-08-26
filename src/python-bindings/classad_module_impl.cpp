@@ -86,7 +86,6 @@ void *convert_to_FILEptr(PyObject* obj) {
     int flags = fcntl(fd, F_GETFL);
     if (flags == -1)
     {
-        // FIXME
         THROW_ERRNO(IOError);
     }
 #endif

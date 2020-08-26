@@ -34,7 +34,6 @@ toList(const boost::shared_ptr<classad::ClassAd> ad, const std::vector<std::stri
             if ((expr = ad->Lookup(attr.str())))
             {
                 classad::ExprTree *copy = expr->Copy();
-                // FIXME: This may be a MemoryError, instead.
                 if (!copy) { THROW_EX(HTCondorInternalError, "Unable to create copy of ClassAd expression"); }
                 if (!nextAd->Insert(*it, copy)) { THROW_EX(HTCondorInternalError, "Unable to copy attribute into destination ClassAd"); }
                 hasattr = true;

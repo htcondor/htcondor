@@ -42,7 +42,6 @@ do_start_command(int cmd, ReliSock &rsock, const ClassAdWrapper &ad)
 
     if (connect_error)
     {
-        // FIXME: this used to be a RuntimeError
         THROW_EX(HTCondorIOError, "Failed to connect to daemon");
     }
     target.startCommand(cmd, &rsock, 30);
@@ -58,17 +57,17 @@ set_remote_param(const ClassAdWrapper &ad, std::string param, std::string value)
     do_start_command(DC_CONFIG_RUNTIME, rsock, ad);
 
     rsock.encode();
-    if (!rsock.code(param)) { /* FIXME: this was a RuntimeError */ THROW_EX(HTCondorIOError, "Can't send param name.");}
+    if (!rsock.code(param)) {THROW_EX(HTCondorIOError, "Can't send param name.");}
     std::stringstream ss;
     ss << param << " = " << value;
-    if (!rsock.put(ss.str())) { /* FIXME: this was a RuntimeError */ THROW_EX(HTCondorIOError, "Can't send parameter value.");}
-    if (!rsock.end_of_message()) { /* FIXME: this was a RuntimeError */ THROW_EX(HTCondorIOError, "Can't send EOM for param set.");}
+    if (!rsock.put(ss.str())) {THROW_EX(HTCondorIOError, "Can't send parameter value.");}
+    if (!rsock.end_of_message()) {THROW_EX(HTCondorIOError, "Can't send EOM for param set.");}
 
     int rval = 0;
     rsock.decode();
-    if (!rsock.code(rval)) { /* FIXME: this was a RuntimeError */ THROW_EX(HTCondorIOError, "Can't get parameter set response.");}
-    if (!rsock.end_of_message()) { /* FIXME: this was a RuntimeError */ THROW_EX(HTCondorIOError, "Can't get EOM for parameter set.");}
-    if (rval < 0) { /* FIXME: this was a RuntimeError */ THROW_EX(HTCondorReplyError, "Failed to set remote daemon parameter.");}
+    if (!rsock.code(rval)) {THROW_EX(HTCondorIOError, "Can't get parameter set response.");}
+    if (!rsock.end_of_message()) {THROW_EX(HTCondorIOError, "Can't get EOM for parameter set.");}
+    if (rval < 0) {THROW_EX(HTCondorReplyError, "Failed to set remote daemon parameter.");}
 }
 
 
@@ -81,12 +80,10 @@ get_remote_param(const ClassAdWrapper &ad, std::string param)
     rsock.encode();
     if (!rsock.code(param))
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Can't send requested param name.");
     }
     if (!rsock.end_of_message())
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Can't send EOM for param name.");
     }
 
@@ -94,12 +91,10 @@ get_remote_param(const ClassAdWrapper &ad, std::string param)
     rsock.decode();
     if (!rsock.code(val))
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Can't receive reply from daemon for param value.");
     }
     if (!rsock.end_of_message())
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Can't receive EOM from daemon for param value.");
     }
 
@@ -120,12 +115,10 @@ get_remote_names(const ClassAdWrapper &ad)
     std::string names = "?names";
     if (!rsock.put(names))
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Failed to send request for parameter names.");
     }
     if (!rsock.end_of_message())
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Failed to send EOM for parameter names.");
     }
 
@@ -133,14 +126,12 @@ get_remote_names(const ClassAdWrapper &ad)
     std::string val;
     if (!rsock.code(val))
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Cannot receive reply for parameter names.");
     }
     if (val == "Not defined")
     {
         if (!rsock.end_of_message())
         {
-            // FIXME: this was a RuntimeError
             THROW_EX(HTCondorIOError, "Unable to receive EOM from remote daemon (unsupported version).");
         }
         if (get_remote_param(ad, "MASTER") == "Not defined")
@@ -162,14 +153,12 @@ get_remote_names(const ClassAdWrapper &ad)
     {
         if (!rsock.code(val))
         {
-            // FIXME: this was a RuntimeError
             THROW_EX(HTCondorIOError, "Failed to read parameter name.");
         }
         retval.attr("append")(val);
     }
     if (!rsock.end_of_message())
     {
-        // FIXME: this was a RuntimeError
         THROW_EX(HTCondorIOError, "Failed to receive final EOM for parameter names");
     }
     return retval;
@@ -382,7 +371,6 @@ struct Param
         {
             std::string result;
             if (!param(result, attr)) {
-                // FIXME: ..?
                 THROW_EX(HTCondorValueError, ("Unable to convert value for param " + std::string(attr) + " to string (raw value " + raw_string + ")").c_str());
             }
             pyresult = object(result);
