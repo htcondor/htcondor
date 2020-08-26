@@ -16,6 +16,6 @@ Exception
         |- classad.ClassAdEvaluationError   ->  TypeErrror, RuntimeError
         |- classad.ClassAdInternalError     ->  ValueError, RuntimeError
         |- classad.ClassAdParseError        ->  ValueError, SyntaxError, RuntimeError
-        |- classad.ClassAdValueError        ->  ValueError, RuntimeError, TypeError, RuntimeError
+        |- classad.ClassAdValueError        ->  ValueError, RuntimeError, TypeError
         |- classad.ClassAdTypeError         ->  TypeError, ValueError
         |- classad.ClassAdOSError           ->  OSError, RuntimeError

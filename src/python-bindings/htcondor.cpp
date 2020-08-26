@@ -59,29 +59,38 @@ BOOST_PYTHON_MODULE(htcondor)
 
     PyExc_HTCondorEnumError = CreateExceptionInModule(
         "htcondor.HTCondorEnumError", "HTCondorEnumError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException,
+        PyExc_ValueError,
+        PyExc_NotImplementedError // is a subclass of RuntimeError, so
+        // we can't mention RuntimeError explicitly.
+        );
+
     PyExc_HTCondorInternalError = CreateExceptionInModule(
         "htcondor.HTCondorInternalError", "HTCondorInternalError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_RuntimeError, PyExc_TypeError,
+        PyExc_ValueError );
     PyExc_HTCondorIOError = CreateExceptionInModule(
         "htcondor.HTCondorIOError", "HTCondorIOError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_IOError, PyExc_RuntimeError,
+        PyExc_ValueError );
     PyExc_HTCondorLocateError = CreateExceptionInModule(
         "htcondor.HTCondorLocateError", "HTCondorLocateError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_IOError, PyExc_RuntimeError,
+        PyExc_ValueError );
     PyExc_HTCondorReplyError = CreateExceptionInModule(
         "htcondor.HTCondorReplyError", "HTCondorReplyError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_RuntimeError, PyExc_ValueError );
     PyExc_HTCondorValueError = CreateExceptionInModule(
         "htcondor.HTCondorValueError", "HTCondorValueError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_ValueError, PyExc_RuntimeError );
     PyExc_HTCondorTypeError = CreateExceptionInModule(
         "htcondor.HTCondorTypeError", "HTCondorTypeError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_TypeError, PyExc_RuntimeError,
+        PyExc_ValueError );
     PyExc_HTCondorAssertionError = CreateExceptionInModule(
         "htcondor.HTCondorAssertionError", "HTCondorAssertionError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_RuntimeError );
     PyExc_HTCondorNotImplementedError = CreateExceptionInModule(
         "htcondor.HTCondorNotImplementedError", "HTCondorNotImplementedError",
-        PyExc_HTCondorException );
+        PyExc_HTCondorException, PyExc_NotImplementedError );
 }
