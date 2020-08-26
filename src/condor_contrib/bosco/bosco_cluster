@@ -45,6 +45,7 @@ commands:
  -s|--status [host]         Get status of installed cluster
  -t|--test [host]           Test the installed cluster (all clusters)
  -o|--override directory    Override the bosco installation with a directory structure
+ -b|--base-dir directory    Set the name of the remote base install directory (default: bosco)
  -d|--debug                 Display debugging output
  -h|--help                  Show this help message
 
@@ -738,7 +739,7 @@ if [ `uname` = "Darwin" ] ; then
     # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
     TEMP="$@"
 else
-    TEMP=`getopt -a -o a:ls:t:r:dhp:o: --longoptions add:,platform:,list,status:,test:,remove:,debug,help,override:  -n 'bosco_cluster' -- "$@"`
+    TEMP=`getopt -a -o a:ls:t:r:dhp:o:b: --longoptions add:,platform:,list,status:,test:,remove:,debug,help,override:,base-dir:  -n 'bosco_cluster' -- "$@"`
 
     if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 fi
@@ -764,7 +765,7 @@ while true; do
         -t|--test) test_cluster $2; exit 0 ;;
         -r|--remove) remove_cluster $2; exit 0;;
         -o|--override) override_dir=$2; shift 2;;
-        
+        -b|--base-dir) remote_base_dir_host=$2; shift 2;;
         --) echo "No command found" >&2; usage; exit 1;;
         *) echo "Unknown option: $1" >&2; usage; exit 1;;
     esac
@@ -941,9 +942,9 @@ fi
 #TODO: do we need a separate sandbox for each cluster?
 remote_base_dir_root="bosco/cluster"
 remote_base_dir_default="$remote_base_dir_root/default"
-remote_base_dir_host="bosco"
+[[ $remote_base_dir_host ]] || remote_base_dir_host=bosco
 tmp_install_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
-mkdir -p $tmp_install_dir/$remote_base_dir_host
+mkdir -p "$tmp_install_dir/$remote_base_dir_host"
 local_install_dir=$tmp_install_dir/$remote_base_dir_host
 remote_sandbox_dir=$remote_base_dir_host/sandbox
 
