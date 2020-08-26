@@ -122,7 +122,7 @@ installed ``bin`` directory is in your ``PATH`` (before any system version of
 HTCondor), and that ``CONDOR_CONFIG`` points to HTCondor under test.
 [#which_condor]_
 
-You'll need PyTest and one extension to run the Ornithology tests.  The
+You'll need ``pytest`` and one extension to run the Ornithology tests.  The
 easiest way to handle this is with Pip, although you can use your system
 ``pytest`` (and ``pytest-httpserver``), or Miniconda, if you desire:
 
@@ -148,6 +148,13 @@ One of the lines early in the output will look like the following:
 which will not be cleaned up after the test runs, for your debugging
 convenience.
 
+Ornithology tests can also be run under ``ctest``.
+In that case, the test directory will end up under
+``src/condor_tests/${TEST_NAME}_ctest/tests-dirs``.
+Note that ``ctest`` will use your system Python, so you must install
+``pytest`` to your system Python.
+
+
 Running Ornithology Tests in the BaTLab
 ---------------------------------------
 
@@ -159,7 +166,7 @@ The line which runs the ``test_hold_and_release.py`` test above is
 
 .. code-block:: text
 
-    condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full")
+    condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 ... which looks like any other test declaration.
 

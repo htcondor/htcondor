@@ -267,7 +267,7 @@ class Condor:
         daemons = set(
             self.run_command(
                 ["condor_config_val", "DAEMON_LIST"], echo=False
-            ).stdout.split(" ")
+            ).stdout.replace(",", " ").split(" ")
         )
         master_log_path = self.master_log.path
 
