@@ -46,6 +46,8 @@ public:
 	// any item in the list is a prefix of the given string.
 	bool prefix( const char * );
 	bool prefix_anycase( const char * );
+	bool prefix_withwildcard(const char *);
+	bool prefix_anycase_withwildcard(const char *);
 	bool contains( const char * );
 	bool contains_anycase( const char * );
 	bool contains_withwildcard( const char *str );
@@ -143,6 +145,7 @@ protected:
     const char * contains_withwildcard( const char *string,
 										bool anycase,
 										StringList *matches=NULL) ;
+	bool prefix_wildcard_impl(const char *string, bool anycase);
 	List<char>	 m_strings;
 	char		*m_delimiters;
 
