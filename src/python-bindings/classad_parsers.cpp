@@ -158,7 +158,7 @@ boost::shared_ptr<ClassAdWrapper> parseOne(boost::python::object input, ParserTy
                 if (PyErr_Occurred()) { throw boost::python::error_already_set(); }
             }
             else {
-                THROW_EX(ClassAdTypeError, "Unable to iterate through ads.");
+                THROW_EX(ClassAdInternalError, "ClassAd parsed successfully, but result was invalid");
             }
         }
         catch (const boost::python::error_already_set&)
@@ -194,7 +194,7 @@ boost::python::object parseNext(boost::python::object source, ParserType type)
         if (PyErr_Occurred()) { throw boost::python::error_already_set(); }
         return next_obj;
     }
-    THROW_EX(ClassAdTypeError, "Unable to iterate through ads.");
+    THROW_EX(ClassAdInternalError, "ClassAd parsed successfully, but result was invalid");
     return boost::python::object();
 }
 
