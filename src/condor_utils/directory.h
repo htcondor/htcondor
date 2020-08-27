@@ -131,8 +131,10 @@ public:
 	/** Get the size of all the files and all the files in all subdirectories,
 		starting with the directory specified by the constructor.
 		@return the size of bytes (if we receive an error trying to determine
-		the size of any file, we consider that file to have a size of zero). */
-	filesize_t GetDirectorySize();
+		the size of any file, we consider that file to have a size of zero). 
+		we optionally return the number of files+dirs also
+		*/
+	filesize_t GetDirectorySize(size_t * number_of_entries=NULL);
 
 	/** Get full path name to the current file.  If there is no current file,
 		return NULL.

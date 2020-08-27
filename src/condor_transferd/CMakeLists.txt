@@ -17,7 +17,15 @@
  ############################################################### 
 
 if (NOT WINDOWS)
-	condor_glob(transHdrs transSrcs "td_instantiate.cpp")
+	set(transSrcs
+td_active.cpp
+td_init.cpp
+td_main.cpp
+td_maint.cpp
+td_read_files.cpp
+td_utils.cpp
+td_write_files.cpp
+)
 
-	condor_exe( condor_transferd "${transHdrs};${transSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
+	condor_exe( condor_transferd "${transSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
 endif(NOT WINDOWS)

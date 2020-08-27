@@ -170,7 +170,8 @@ bool handleFTL( const char * reason ) {
 	// to force the startd to advertise this fact so other jobs can avoid
 	// this machine.
 	//
-	DCStartd startd( (const char * const)NULL, (const char * const)NULL );
+	const char *nullString = nullptr;
+	DCStartd startd( nullString);
 	if( ! startd.locate() ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
 		return false;
@@ -278,9 +279,7 @@ VMProc::StartJob()
     char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		MyString reniceAttr = "Renice = ";
-		reniceAttr += ptmp;
-		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting OsProc::StartJob...\n" );
 			free( ptmp );
@@ -360,7 +359,7 @@ VMProc::StartJob()
 	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
 		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		priv_state oldpriv = set_user_priv();
-		if ( chmod( Starter->GetWorkingDir(), 0755 ) == -1 ) {
+		if ( chmod( Starter->GetWorkingDir(0), 0755 ) == -1 ) {
 			set_priv( oldpriv );
 			dprintf( D_ALWAYS, "Failed to chmod execute directory for Xen/KVM job: %s\n", strerror( errno ) );
 			return false;
@@ -374,7 +373,7 @@ VMProc::StartJob()
 		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		ASSERT( create_name_for_VM( JobAd, vm_name ) );
 	} else {
-		vm_name = Starter->GetWorkingDir();
+		vm_name = Starter->GetWorkingDir(0);
 	}
 	recovery_ad.Assign( "JobVMId", vm_name );
 	Starter->WriteRecoveryFile( &recovery_ad );
@@ -392,7 +391,7 @@ VMProc::StartJob()
 	ASSERT(m_vmgahp);
 
 	m_vmgahp->start_err_msg = "";
-	if( m_vmgahp->startUp(&job_env, Starter->GetWorkingDir(), nice_inc,
+	if( m_vmgahp->startUp(&job_env, Starter->GetWorkingDir(0), nice_inc,
 				&fi) == false ) {
 		JobPid = -1;
 		err_msg = "Failed to start vm-gahp server";
@@ -429,7 +428,7 @@ VMProc::StartJob()
 				break;
 			case 1:
 			default:
-				p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir() );
+				p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir(0) );
 				break;
 			case 2:
 				p_result = VMGAHP_REQ_COMMAND_TIMED_OUT;
@@ -445,7 +444,7 @@ VMProc::StartJob()
 				break;
 		}
 	} else {
-		p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir() );
+		p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir(0) );
 	}
 
 
@@ -1516,7 +1515,7 @@ VMProc::reportErrorToStartd()
 	}
 
 	// Send pid of this starter
-	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
+	ssock.put( std::to_string( (int)daemonCore->getpid() ) );
 
 	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
@@ -1561,7 +1560,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	}
 
 	// Send the pid of this starter
-	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
+	ssock.put( std::to_string( (int)daemonCore->getpid() ) );
 
 	// Send vm info 
 	ssock.put(value);
@@ -1612,10 +1611,10 @@ VMProc::setVMPID(int vm_pid)
 	// Get initial usage of the process	
 	updateUsageOfVM();
 
-	MyString pid_string = IntToStr( (int)m_vm_pid );
+	std::string pid_string = std::to_string( (int)m_vm_pid );
 
 	// Report this PID to local startd
-	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.Value());
+	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.c_str());
 }
 
 void

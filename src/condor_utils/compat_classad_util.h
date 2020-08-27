@@ -85,23 +85,23 @@ classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind, classad
 // note: do NOT pass an envelope node to this function!! it's fine to pass the output of ParseClassAdRvalExpr
 classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad::Operation::OpKind op);
 
-bool EvalExprBool(compat_classad::ClassAd *ad, const char *constraint);
+bool EvalExprBool(ClassAd *ad, const char *constraint);
 
-bool EvalExprBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
+bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree);
 
-bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
+bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 
-int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, classad::Value &result,
+int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
+				  ClassAd *target, classad::Value &result,
 				  const std::string & sourceAlias = "",
 				  const std::string & targetAlias = "" );
 
 //ad2 treated as candidate to match against ad1, so we want to find a match for ad1
-bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );
+bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
 
-bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target );
+bool IsAHalfMatch( ClassAd *my, ClassAd *target );
 
-bool ParallelIsAMatch(compat_classad::ClassAd *ad1, std::vector<compat_classad::ClassAd*> &candidates, std::vector<compat_classad::ClassAd*> &matches, int threads, bool halfMatch = false);
+bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);
@@ -183,7 +183,7 @@ protected:
 	mutable char * exprstr;
 };
 
-typedef compat_classad::CondorClassAdFileParseHelper ClassAdFileParseType;
+typedef CondorClassAdFileParseHelper ClassAdFileParseType;
 ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type);
 
 #endif // __cplusplus

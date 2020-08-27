@@ -49,7 +49,7 @@ namespace etl {
         
         // ODSClassAdOps
         bool createAd(mongo::BSONObjBuilder& key);
-        bool updateAd(mongo::BSONObjBuilder& key, compat_classad::ClassAd* ad);
+        bool updateAd(mongo::BSONObjBuilder& key, ClassAd* ad);
         bool deleteAd(mongo::BSONObjBuilder& key);
         
         // raw record write

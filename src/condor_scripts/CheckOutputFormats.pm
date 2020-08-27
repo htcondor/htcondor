@@ -2185,9 +2185,9 @@ sub check_transform {
 	}
 	if ($option eq 'regex'){
 		for my $i (0..$index-1){
-			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{LocalUser} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{PeriodicHold} || defined $Attr{$i}{PeriodicRelease} || defined $Attr{$i}{PeriodicRemove}){
+			if ($Attr{$i}{TotalSuspensions} ne $Attr{$i}{MaxHosts} || defined $Attr{$i}{NiceUser} || defined $Attr{$i}{RemoteUser} || defined $Attr{$i}{PeriodicHold} || defined $Attr{$i}{PeriodicRelease} || defined $Attr{$i}{PeriodicRemove}){
 				return 0;
-			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestLocalUser} && defined $Attr{$i}{TestNiceUser} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeHold} && defined $Attr{$i}{TimeRelease} && defined $Attr{$i}{TimeRemove}){
+			} elsif (defined $Attr{$i}{User} && defined $Attr{$i}{TestRemoteUser} && defined $Attr{$i}{TimeHold} && defined $Attr{$i}{TimeRelease} && defined $Attr{$i}{TimeRemove}){
 				return 1;
 			} else {return 0;}
 		}

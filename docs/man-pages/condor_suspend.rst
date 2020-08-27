@@ -68,22 +68,9 @@ Examples
 
 To suspend all jobs except for a specific user:
 
-::
+.. code-block:: console
 
-    % condor_suspend -constraint 'Owner =!= "foo"'
+    $ condor_suspend -constraint 'Owner =!= "foo"'
 
 Run *condor_continue* to continue execution.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

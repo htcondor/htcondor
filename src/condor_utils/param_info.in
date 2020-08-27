@@ -387,7 +387,7 @@ tags=vm-gahp
 
 [PROCD_ADDRESS]
 default=$(LOCK)/procd_pipe
-win32_default=\\.\pipe\condor_procd_pipe
+win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
 
@@ -416,21 +416,11 @@ tags=starter
 default=true
 type=bool
 
-[STARTER_LOCAL_LOGGING]
-default=
-type=string
-tags=starter
-
 [FILESYSTEM_DOMAIN]
 default=$(FULL_HOSTNAME)
 type=string
 usage=Used to indicate a shared file system, or to specify that each machine has its own file system.
 tags=schedd,starter
-
-[CKPT_SERVER_HOST]
-default=
-type=string
-tags=starter
 
 [ARCH]
 default=
@@ -801,61 +791,6 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
-[CKPT_SERVER_DIR]
-default=
-type=string
-tags=ckpt_server
-
-[CKPT_SERVER_REPLICATION_LEVEL]
-default=0
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_INTERVAL]
-default=300
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_CLASSAD_FILE]
-default=
-type=string
-tags=ckpt_server
-
-[CKPT_SERVER_CLEAN_INTERVAL]
-default=86400
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_CHECK_PARENT_INTERVAL]
-default=120
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_SOCKET_BUFSIZE]
-default=65536
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_STORE_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_MAX_RESTORE_PROCESSES]
-default=50
-type=int
-tags=ckpt_server
-
-[CKPT_SERVER_HOSTS]
-default=
-type=string
-tags=ckpt_server
-
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
@@ -896,6 +831,12 @@ tags=accountant
 default=1e10
 type=double
 tags=accountant
+
+[NICE_USER_ACCOUNTING_GROUP_NAME]
+default=nice-user
+type=string
+tags=accountant,submit
+
 
 [REMOTE_PRIO_FACTOR]
 default=1e7
@@ -948,6 +889,12 @@ default=false
 type=bool
 tags=shadow,remoteresource
 
+[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
+default=false
+type=bool
+usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
+tags=security
+
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
 type=bool
@@ -980,17 +927,6 @@ default=
 type=string
 tags=shadow,pseudo_ops
 
-[USE_CKPT_SERVER]
-default=
-type=string
-tags=shadow,baseshadow
-
-[ALWAYS_USE_LOCAL_CKPT_SERVER]
-default=false
-type=bool
-tags=shadow,baseshadow
-restart=true
-
 [RECONNECT_BACKOFF_CEILING]
 default=300
 type=int
@@ -1010,6 +946,11 @@ tags=shadow,baseshadow
 default=true
 type=bool
 tags=shadow,baseshadow
+
+[RESERVED_MEMORY]
+default=0
+type=int
+tags=startd
 
 [RESERVED_SWAP]
 default=0
@@ -1084,11 +1025,6 @@ tags=sysapi,reconfig
 [RESERVE_AFS_CACHE]
 default=false
 type=bool
-tags=sysapi,reconfig
-
-[CHECKPOINT_PLATFORM]
-default=
-type=string
 tags=sysapi,reconfig
 
 [SYSAPI_GET_LOADAVG]
@@ -1224,6 +1160,18 @@ tags=daemon_core
 default=false
 type=bool
 tags=daemon_core
+
+[SEC_CREDENTIAL_SWEEP_INTERVAL]
+default=300
+type=int
+description=Period to check for old (marked) credentials
+tags=security
+
+[SEC_CREDENTIAL_SWEEP_DELAY]
+default=3600
+type=int
+description=Default delay before sweeping unused credentials
+tags=security
 
 [SEC_CREDENTIAL_REFRESH_INTERVAL]
 default=-1
@@ -1569,6 +1517,18 @@ default=$(SBIN)/condor_c-gahp
 win32_default=$(SBIN)\condor_c-gahp.exe
 type=path
 tags=gridmanager,condorresource
+
+[C_GAHP_CONTACT_SCHEDD_DELAY]
+default=5
+type=int
+
+[CGAHP_SCHEDD_INTERACTION_TIME]
+default=5
+type=int
+
+[C_GAHP_MAX_FILE_REQUESTS]
+default=10
+type=int
 
 [JAVA_EXTRA_ARGUMENTS]
 default=
@@ -1945,7 +1905,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, MemoryUsage, DiskUsage
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -2020,11 +1980,6 @@ tags=startd,claim
 
 [START]
 default=True
-type=string
-tags=startd,Reqexp
-
-[IS_VALID_CHECKPOINT_PLATFORM]
-default=
 type=string
 tags=startd,Reqexp
 
@@ -2103,6 +2058,12 @@ tags=submit
 [SUBMIT_SKIP_FILECHECKS]
 default=true
 type=string
+tags=submit
+
+[SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS]
+description=Submit should generate requirements clauses for job attribues that begin with Request
+default=true
+type=bool
 tags=submit
 
 [SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
@@ -2376,8 +2337,8 @@ type=string
 tags=java_config
 
 [JAVA_CLASSPATH_DEFAULT]
-default=$(LIB) $(LIB)/scimark2lib.jar .
-win32_default=$(BIN) $(BIN)/scimark2lib.jar .
+default=$(LIB) .
+win32_default=$(BIN) .
 type=string
 tags=java_config
 
@@ -2417,7 +2378,7 @@ type=string
 tags=sshd_wrapper
 
 [CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY]
-default=false
+default=true
 type=bool
 tags=condor_ssh_to_job
 
@@ -2682,7 +2643,7 @@ type=string
 tags=starter
 
 [STARTER_NUM_THREADS_ENV_VARS]
-default=OMP_NUM_THREADS NUMEXPR_NUM_THREADS MKL_NUM_THREADS CUBACORES JULIA_NUM_THREADS GOMAXPROCS
+default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT
 type=string
 tags=starter
 
@@ -2716,12 +2677,6 @@ tags=schedd,starter
 default=
 type=string
 tags=starter,StarterHookMgr
-
-[JAVA_BENCHMARK_TIME]
-default=2
-type=int
-usage=If this time is zero or undefined, no Java benchmarks will be run.
-tags=starter,java_detect
 
 [VM_STATUS_INTERVAL]
 default=60
@@ -3015,41 +2970,6 @@ default=
 type=string
 tags=tools,store_cred_main
 
-[STARTER_CHOOSES_CKPT_SERVER]
-default=
-type=string
-tags=shadow,shadow
-
-[MAX_DISCARDED_RUN_TIME]
-default=3600
-type=int
-tags=shadow,shadow
-
-[COMPRESS_PERIODIC_CKPT]
-default=false
-type=bool
-tags=shadow,shadow
-
-[PERIODIC_MEMORY_SYNC]
-default=false
-type=bool
-tags=shadow,shadow
-
-[COMPRESS_VACATE_CKPT]
-default=false
-type=bool
-tags=shadow,shadow
-
-[SLOW_CKPT_SPEED]
-default=0
-type=int
-tags=shadow,shadow
-
-[SHADOW_ALLOW_UNSAFE_REMOTE_EXEC]
-default=
-type=string
-tags=shadow,pseudo_ops
-
 [JOB_ROUTER_SOURCE_JOB_CONSTRAINT]
 default=
 type=string
@@ -3128,7 +3048,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType
+default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType User
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -4110,6 +4030,12 @@ version=8.1.1
 type=bool
 customization=expert
 
+[AUTO_INCLUDE_CREDD_IN_DAEMON_LIST]
+default=false
+version=8.9.7
+type=bool
+customization=expert
+
 [COLLECTOR_USES_SHARED_PORT]
 default=true
 version=8.1.4
@@ -4309,12 +4235,6 @@ default=false
 type=bool
 tags=shadow
 restart=true
-
-[SHADOW_SKIP_DATAFLOW_JOBS]
-default=false
-type=bool
-tags=shadow,dataflow
-description=Skip dataflow jobs (output files exist, more recent than input files)?
 
 [SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
 default=25%
@@ -4671,6 +4591,13 @@ version=7.9.2
 type=int
 description=Maximum size of transferred output files
 tags=schedd
+
+[MAX_REMAP_RECURSIONS]
+default=128
+version=8.8.9
+type=int
+description=Maximum number of filetransfer remaps to apply before aborting
+tags=file_transfer
 
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
@@ -5249,12 +5176,6 @@ win32_default=$(SBIN)\condor_collector.exe
 description=Path to Collector daemon binary
 type=path
 
-[CKPT_SERVER]
-default=$(SBIN)/condor_ckpt_server
-win32_default=$(SBIN)\condor_ckpt_server.exe
-description=Path to Checkpoint server binary
-type=path
-
 [JOB_ROUTER]
 default=$(LIBEXEC)/condor_job_router
 win32_default=$(LIBEXEC)\condor_job_router.exe
@@ -5520,9 +5441,6 @@ type=path
 [CREDD_PORT]
 default=9620
 
-[CRED_STORE_DIR]
-default=$(LOCAL_DIR)/cred_dir
-type=path
 [CREDD_ARGS]
 default=-p $(CREDD_PORT) -f
 [CREDD_LOG]
@@ -5537,6 +5455,45 @@ default=$(MAX_DEFAULT_LOG)
 [CREDD_OAUTH_MODE]
 default=true
 type=bool
+
+[CREDMON_KRB]
+default=$(SBIN)/condor_credmon_krb
+win32_default=
+type=path
+
+[CREDMON_OAUTH]
+default=$(SBIN)/condor_credmon_oauth
+win32_default=
+type=path
+
+# standard API endpoints for common OAuth token providers
+[BOX_AUTHORIZATION_URL]
+default=https://account.box.com/api/oauth2/authorize
+type=string
+[BOX_TOKEN_URL]
+default=https://api.box.com/oauth2/token
+type=string
+
+[GDRIVE_AUTHORIZATION_URL]
+default=https://accounts.google.com/o/oauth2/v2/auth
+type=string
+[GDRIVE_TOKEN_URL]
+default=https://oauth2.googleapis.com/token
+type=string
+
+[ONEDRIVE_AUTHORIZATION_URL]
+default=https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+type=string
+[ONEDRIVE_TOKEN_URL]
+default=https://login.microsoftonline.com/common/oauth2/v2.0/token
+type=string
+
+[DROPBOX_AUTHORIZATION_URL]
+default=https://www.dropbox.com/oauth2/authorize
+type=string
+[DROPBOX_TOKEN_URL]
+default=https://api.dropboxapi.com/oauth2/token
+type=string
 
 # benchmarking knobs
 [BenchmarkTimer]
@@ -6023,7 +5980,6 @@ default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
-	JAVA_BENCHMARK_TIME=0
 @end
 
 [$ROLE.Execute]
@@ -6043,13 +5999,6 @@ description=Settings for HTCondor Central Manager
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
 @end
-
-[$ROLE.Checkpoint]
-friendly_name=Settings for HTCondor Checkpoint Server
-default : @end
-	DAEMON_LIST=$(DAEMON_LIST) CKPT_SERVER
-@end
-review=?
 
 # default security policy
 [$SECURITY.HOST_BASED]
@@ -6119,7 +6068,7 @@ default : @fin
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
-	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group", RequestedAcctGroup)
+	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group ", RequestedAcctGroup)
 @fin
 
 
@@ -6186,10 +6135,10 @@ default : @end
 @end
 
 [$FEATURE.GPUs]
-description=Settings to detect and use GPUs as custom resources
+description=Settings to detect and use GPUs as custom resources, args:(optional-discovery-args)
 default : @end
-	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
-	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
+	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery $(1) -properties $(GPU_DISCOVERY_EXTRA)
+	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 
 	use feature : GPUsMonitor
@@ -6408,11 +6357,7 @@ win32_default : @end
 	UNICORE_GAHP
 	NORDUGRID_GAHP
 	CREAM_GAHP
-	DELTACLOUD_GAHP
 	LIBVIRT_XML_SCRIPT
-	STARTER_STANDARD
-	SHADOW_STANDARD
-	CKPT_PROBE
 @end
 
 # use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
@@ -6478,6 +6423,29 @@ win32_default : @end
 	VMWARE_NETWORKING_TYPE=nat
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
+
+[$FEATURE.KRB]
+description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
+default : @end
+	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/cred_producer_krb
+	SEC_CREDENTIAL_MONITOR_KRB_LOG=$(LOG)/CredMonKrbLog
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
+	USE_KEYRING_SESSIONS=True
+@end
+
+
+[$FEATURE.OAUTH]
+description=Enable the daemons and features need to support running jobs with OAuth
+default : @end
+	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
+	SEC_CREDENTIAL_MONITOR_OAUTH_LOG=$(LOG)/CredMonOAuthLog
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
+	TRUST_CREDENTIAL_DIRECTORY=True
 @end
 
 

@@ -23,7 +23,7 @@ endif(UNIX)
 
 if (WITH_SCITOKENS)
 
-	if ( NOT PROPER )
+	if ( NOT PROPER OR WANT_SCITOKENS_EXTERNAL )
 
 		# On macOS, force the SciTokens build to use the OS-supplied
 		# SSL library, ignoring any from MacPorts (which CMake likes
@@ -113,7 +113,7 @@ if (WITH_SCITOKENS)
 			find_so_name( SCITOKENS_SO ${SCITOKENS_FOUND} )
 		endif()
 
-	endif(NOT PROPER)
+	endif(NOT PROPER OR WANT_SCITOKENS_EXTERNAL)
 
 	if ( SCITOKENS_FOUND )
 		message( STATUS "external configured (SCITOKENS_FOUND=${SCITOKENS_FOUND})" )

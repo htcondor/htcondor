@@ -127,7 +127,7 @@ Job ClassAd Attributes
     this includes time the job spent in a suspended state, so the total
     committed wall time spent running is
 
-    ::
+    .. code-block:: condor-classad-expr
 
         CommittedTime - CommittedSuspensionTime
 
@@ -210,7 +210,7 @@ Job ClassAd Attributes
     example, if a node job has two parents with *JobName* s B and C,
     the *condor_submit* command line will contain
 
-    ::
+    .. code-block:: text
 
           -append +DAGParentNodeNames=B,C
 
@@ -282,7 +282,7 @@ Job ClassAd Attributes
     at the job's request, placing into the job's submit description file
     a setting such as
 
-    ::
+    .. code-block:: condor-submit
 
           # 1 megabyte initial value
           +DiskUsage = 1024
@@ -493,7 +493,7 @@ Job ClassAd Attributes
     its current status So for example, if the job is on hold, the
     ClassAd expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
             time() - EnteredCurrentStatus
 
@@ -648,7 +648,7 @@ Job ClassAd Attributes
 ``HoldReason``
     A string containing a human-readable message about why a job is on
     hold. This is the message that will be displayed in response to the
-    command condor_q -hold. It can be used to determine if a job should
+    command ``condor_q -hold``. It can be used to determine if a job should
     be released or not.
     :index:`HoldReasonCode<single: HoldReasonCode; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; HoldReasonCode>`
@@ -1221,18 +1221,6 @@ Job ClassAd Attributes
     :index:`LocalSysCpu<single: LocalSysCpu; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; LocalSysCpu>`
 
-``LocalSysCpu``
-    An accumulated number of seconds of system CPU time that the job
-    caused to the machine upon which the job was submitted.
-    :index:`LocalUserCpu<single: LocalUserCpu; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; LocalUserCpu>`
-
-``LocalUserCpu``
-    An accumulated number of seconds of user CPU time that the job
-    caused to the machine upon which the job was submitted.
-    :index:`MachineAttr<single: MachineAttr; ClassAd job attribute>`
-    :index:`job ClassAd attribute<single: job ClassAd attribute; MachineAttr>`
-
 ``MachineAttr<X><N>``
     Machine attribute of name ``<X>`` that is placed into this job
     ClassAd, as specified by the configuration variable
@@ -1427,9 +1415,9 @@ Job ClassAd Attributes
     also removed. The string is an expression that defines a constraint
     equivalent to the one implied by the command
 
-    ::
+    .. code-block:: console
 
-          condor_rm -constraint <constraint>
+          $ condor_rm -constraint <constraint>
 
     This attribute is used for jobs managed with *condor_dagman* to
     ensure that node jobs of the DAG are removed when the
@@ -1677,6 +1665,11 @@ Job ClassAd Attributes
     :index:`definition for a submitted job<single: definition for a submitted job; process>`
     :index:`process identifier<single: process identifier; job ID>`
 
+``PreserveRelativePaths``
+    When ``True``, entries in the file transfer lists that are relative
+    paths will be transferred to the same relative path on the destination
+    machine (instead of the basename).
+
 ``ProcId``
     Integer process identifier for this job. Within a cluster of many
     jobs, each job has the same ``ClusterId``, but will have a unique
@@ -1783,7 +1776,7 @@ Job ClassAd Attributes
     This also includes time spent in suspension (if any), so the total
     real time spent running is
 
-    ::
+    .. code-block:: condor-classad-expr
 
         RemoteWallClockTime - CumulativeSuspensionTime
 
@@ -1833,16 +1826,14 @@ Job ClassAd Attributes
 
 ``Requirements``
     A classad expression evaluated by the *condor_negotiator*,
-    *condor_schedd*, and {Condorstartd in the context of slot ad. If
-    true, this job is eligible to run on that slot. If the job
-    requirements does not mention the (startd) attribute ``OPSYS``
-    :index:`OPSYS`, the schedd will append a clause to
-    Requirements forcing the job to match the same ``OPSYS``
-    :index:`OPSYS` as the submit machine. The schedd appends a
-    simliar clause to match the ``ARCH`` :index:`ARCH`. The schedd
-    parameter ``APPEND_REQUIREMENTS``
-    :index:`APPEND_REQUIREMENTS`, will, if set, append that value
-    to every job's requirements expression.
+    *condor_schedd*, and *condor_startd* in the context of slot ad.  If
+    true, this job is eligible to run on that slot.  If the job
+    requirements does not mention the (startd) attribute ``OPSYS``,
+    the schedd will append a clause to Requirements forcing the job to
+    match the same ``OPSYS`` as the submit machine. :index:`OPSYS`
+    The schedd appends a simliar clause to match the ``ARCH``. :index:`ARCH`
+    The schedd parameter ``APPEND_REQUIREMENTS``, will, if set, append that
+    value to every job's requirements expression. :index:`APPEND_REQUIREMENTES`
     :index:`ResidentSetSize<single: ResidentSetSize; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; ResidentSetSize>`
 
@@ -1856,6 +1847,13 @@ Job ClassAd Attributes
     :index:`ScitokensFile`
     :index:`ScitokensFile<single: ScitokensFile; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; ScitokensFile>`
+
+``ScratchDirFileCount``
+    Number of files and directories in the jobs' Scratch directory.  The value is updated
+    periodically while the job is running.
+    :index:`ScratchDirFileCount`
+    :index:`ScratchDirFileCount<single: ScratchDirFileCount; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; ScratchDirFileCount>`
 
 ``StackSize``
     Utilized for Linux jobs only, the number of bytes allocated for
@@ -2003,6 +2001,12 @@ Job ClassAd Attributes
 ``TotalSuspensions``
     A count of the number of times this job has been suspended during
     its lifetime. :index:`TransferErr<single: TransferErr; ClassAd job attribute>`
+    :index:`job ClassAd attribute<single: job ClassAd attribute; TransferCheckpoint>`
+
+``TransferCheckpoint``
+    A string attribute containing a comma separated list of directories
+    and/or files that should be transferred from the execute machine to the
+    submit machine's spool when the job successfully checkpoints.
     :index:`job ClassAd attribute<single: job ClassAd attribute; TransferErr>`
 
 ``TransferErr``

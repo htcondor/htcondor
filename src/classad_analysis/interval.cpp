@@ -682,7 +682,7 @@ AddAllIndeces( )
 }
 
 bool IndexSet::
-GetCardinality( int &result )
+GetCardinality( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -716,7 +716,7 @@ Equals( IndexSet &is )
 }
 
 bool IndexSet::
-IsEmpty( )
+IsEmpty( ) const
 {
 	if( !initialized ) {
 		cerr << "IndexSet::IsEmpty: IndexSet not initialized" << endl;
@@ -2260,7 +2260,7 @@ ToString( string &buffer )
 }
 
 bool ValueRange::
-IsInitialized( )
+IsInitialized( ) const
 {
 	return initialized;
 }
@@ -2336,7 +2336,7 @@ GetValueRange( int col, int row, ValueRange *&vr )
 }
 
 bool ValueRangeTable::
-GetNumRows( int &result )
+GetNumRows( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -2346,7 +2346,7 @@ GetNumRows( int &result )
 }
 
 bool ValueRangeTable::
-GetNumColumns( int &result )
+GetNumColumns( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -2524,7 +2524,7 @@ GetValue( int col, int row, classad::Value &val )
 }
 
 bool ValueTable::
-GetNumRows( int &result )
+GetNumRows( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -2534,7 +2534,7 @@ GetNumRows( int &result )
 }
 
 bool ValueTable::
-GetNumColumns( int &result )
+GetNumColumns( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -2760,7 +2760,7 @@ FillIndexSet( )
 }
 
 bool HyperRect::
-GetDimensions( int &result )
+GetDimensions( int &result ) const
 {
 	if( !initialized ) {
 		return false;
@@ -2770,7 +2770,7 @@ GetDimensions( int &result )
 }
 
 bool HyperRect::
-GetNumContexts( int &result )
+GetNumContexts( int &result ) const
 {
 	if( !initialized ) {
 		return false;

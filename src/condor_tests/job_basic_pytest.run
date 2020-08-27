@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import os
 import sys
@@ -7,11 +7,11 @@ import sys
 # If your test just needs to have HTCondor running, you can use testreq/CONDOR_TESTREQ_CONFIG comment mechanism instead.
 # see job_late_materialize_py for an example of the testreq mechanism
 
-from pytest.CondorCluster import CondorCluster
-from pytest.CondorTest import CondorTest
-from pytest.PersonalCondor import PersonalCondor
-from pytest.Utils import Utils
-from pytest.Globals import *
+from pytest_old.CondorCluster import CondorCluster
+from pytest_old.CondorTest import CondorTest
+from pytest_old.PersonalCondor import PersonalCondor
+from pytest_old.Utils import Utils
+from pytest_old.Globals import *
 
 
 def submit_callback():

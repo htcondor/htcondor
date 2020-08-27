@@ -47,17 +47,14 @@ int
 TransferD::dump_state_handler(int  /*cmd*/, Stream *sock)
 {
 	ClassAd state;
-	MyString tmp;
 
 	dprintf(D_ALWAYS, "Got a DUMP_STATE!\n");
 
 	// what uid am I running under?
-	tmp.formatstr("Uid = %d", getuid());
-	state.Insert(tmp.Value());
+	state.Assign("Uid", getuid());
 
 	// count how many pending requests I've had
-	tmp.formatstr("OutstandingTransferRequests = %d", m_treqs.getNumElements());
-	state.Insert(tmp.Value());
+	state.Assign("OutstandingTransferRequests", (int)m_treqs.getNumElements());
 
 	// add more later
 
@@ -74,7 +71,7 @@ TransferD::dump_state_handler(int  /*cmd*/, Stream *sock)
 // inspect the transfer request data structures and exit if they have been
 // empty for too long.
 void
-TransferD::exit_due_to_inactivity_timer(void)
+TransferD::exit_due_to_inactivity_timer(void) const
 {
 	time_t now;
 

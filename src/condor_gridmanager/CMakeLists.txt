@@ -16,15 +16,37 @@
  # 
  ############################################################### 
 
-
-if ( LINUX )
-   file( GLOB RmvSrcs *_gahp_wrapper* )
-elseif( DARWIN OR WINDOWS )
-   file( GLOB RmvSrcs *_gahp_wrapper* )
-else()
-   file( GLOB RmvSrcs *_gahp_wrapper* *ec2* *gce* )
-endif()
- condor_glob( GMHDRS GMSRCS "${RmvSrcs}" )
+set(GMSRCS
+azurejob.cpp
+azureresource.cpp
+basejob.cpp
+baseresource.cpp
+boinc-client.cpp
+boincjob.cpp
+boincresource.cpp
+condorjob.cpp
+condorresource.cpp
+creamjob.cpp
+creamresource.cpp
+ec2-gahp-client.cpp
+ec2job.cpp
+ec2resource.cpp
+gahp-client.cpp
+gcejob.cpp
+gceresource.cpp
+generic-gahp-client.cpp
+globusjob.cpp
+globusresource.cpp
+gridmanager.cpp
+gridmanager_main.cpp
+infnbatchjob.cpp
+infnbatchresource.cpp
+nordugridjob.cpp
+nordugridresource.cpp
+proxymanager.cpp
+transferrequest.cpp
+unicorejob.cpp
+)
 
 if ( LINUX )
    if ( NOT LIBUUID_FOUND )
@@ -34,9 +56,9 @@ if ( LINUX )
      message(FATAL_ERROR "gridmanager requires uuid header")
    endif()
    include_directories("${HAVE_UUID_UUID_H}")
-   condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${CONDOR_TOOL_LIBS};${LIBUUID_FOUND}" OFF )
+   condor_exe( condor_gridmanager "${GMSRCS}" ${C_SBIN} "${CONDOR_TOOL_LIBS};${LIBUUID_FOUND}" OFF )
 else()
-   condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
+   condor_exe( condor_gridmanager "${GMSRCS}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
  endif()
 
 if (NOT WINDOWS)

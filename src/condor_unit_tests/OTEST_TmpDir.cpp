@@ -162,12 +162,10 @@ static void setup() {
 
 	if ( PATH_MAX >= 4096 ) {
 		long_dir_depth = 10;
-	} else {
-#if defined(Solaris)
-		long_dir_depth = 3;
-#else
+	} else if ( PATH_MAX > 1024 ) {
 		long_dir_depth = 4;
-#endif
+	} else {
+		long_dir_depth = 3;
 	}
 
 	//Get current working directory

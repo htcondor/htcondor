@@ -1090,7 +1090,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 ##  checkpoint server or custom user daemons)?
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
-#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
+#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, \
 #JOB_ROUTER, ROOSTER, LEASEMANAGER, SHARED_PORT, \
 #DEFRAG, GANGLIAD, ANNEXD
 
@@ -1743,7 +1743,7 @@ JAVA = /usr/bin/java
 ## them here.  However, do not remove the existing entries, as Condor
 ## needs them.
 
-JAVA_CLASSPATH_DEFAULT = $(SHARE) $(SHARE)/scimark2lib.jar .
+JAVA_CLASSPATH_DEFAULT = $(SHARE) .
 
 ##  JAVA_CLASSPATH_ARGUMENT describes the command-line parameter
 ##  used to introduce a new classpath:
@@ -1754,13 +1754,6 @@ JAVA_CLASSPATH_ARGUMENT = -classpath
 ##  one path element from another:
 
 JAVA_CLASSPATH_SEPARATOR = :
-
-##  JAVA_BENCHMARK_TIME describes the number of seconds for which
-##  to run Java benchmarks.  A longer time yields a more accurate
-##  benchmark, but consumes more otherwise useful CPU time.
-##  If this time is zero or undefined, no Java benchmarks will be run.
-
-JAVA_BENCHMARK_TIME = 2
 
 ##  If your JVM requires any special arguments not mentioned in
 ##  the options above, then give them here.

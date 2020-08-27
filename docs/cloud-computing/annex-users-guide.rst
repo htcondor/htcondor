@@ -80,7 +80,7 @@ the prompt to start an annex; if you do not, *condor_annex* will print
 out instructions about how to change whatever you may not like about
 what it said it was going to do, and then exit.
 
-::
+.. code-block:: console
 
     $ condor_annex -count 1 -annex-name MyFirstAnnex
     Will request 1 m4.large on-demand instance for 0.83 hours. Each instance will
@@ -127,7 +127,7 @@ specifying an annex name and a duration, but not a count. When you do
 so, the new duration is set starting at the current time. For example,
 if you'd like "MyFirstAnnex" to expire eight hours from now:
 
-::
+.. code-block:: console
 
     $ condor_annex -annex-name MyFirstAnnex -duration 8
     Lease updated.
@@ -168,7 +168,7 @@ Monitor your Annex
 You can find out if an instance has successfully joined the pool in the
 following way:
 
-::
+.. code-block:: console
 
     $ condor_annex status
     Name                               OpSys      Arch   State     Activity     Load
@@ -187,7 +187,7 @@ it finds on start-up.)
 
 You may instead use *condor_status*:
 
-::
+.. code-block:: console
 
     $ condor_status -annex MyFirstAnnex
     slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
@@ -200,7 +200,7 @@ You may instead use *condor_status*:
 You can also get a report about the instances which have not joined your
 pool:
 
-::
+.. code-block:: console
 
     $ condor_annex -annex MyFirstAnnex -status
     STATE          COUNT
@@ -215,7 +215,7 @@ Monitoring Multiple Annexes
 The following command reports on all annex instance which have joined
 the pool, regardless of which annex they're from:
 
-::
+.. code-block:: console
 
     $ condor_status -annex
     slot1@ip-172-31-48-84.ec2.internal  LINUX     X86_64 Unclaimed Idle 0.640 3767
@@ -230,7 +230,7 @@ the pool, regardless of which annex they're from:
 The following command reports about instance which have not joined the
 pool, regardless of which annex they're from:
 
-::
+.. code-block:: console
 
     $ condor_annex -status
     NAME                        TOTAL running
@@ -250,7 +250,7 @@ has been truncated.
 
 The following command combines these two reports:
 
-::
+.. code-block:: console
 
     $ condor_annex status
     Name                               OpSys      Arch   State     Activity     Load
@@ -288,7 +288,7 @@ submit file somewhere before the queue command. To allow an existing job
 to run in the annex, use condor_q_edit. For instance, if you'd like
 cluster 1234 to run on AWS:
 
-::
+.. code-block:: console
 
     $ condor_qedit 1234 "MayUseAWS = TRUE"
     Set attribute "MayUseAWS" for 21 matching jobs.
@@ -301,7 +301,7 @@ if you're using the default annex image, doing so causes each instance
 to shut itself down. HTCondor does not provide a direct method
 terminating *condor_annex* instances.
 
-::
+.. code-block:: console
 
     $ condor_off -annex MyFirstAnnex
     Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal
@@ -312,7 +312,7 @@ Stopping Multiple Annexes
 The following command turns off all annex instances in your pool,
 regardless of which annex they're from:
 
-::
+.. code-block:: console
 
     $ condor_off -annex
     Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal

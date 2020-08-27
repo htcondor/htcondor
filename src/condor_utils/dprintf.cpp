@@ -286,6 +286,26 @@ double _condor_debug_get_time_double()
 #endif
 }
 
+// print hex bytes from data into buf, up to a maximum of datalen bytes
+// caller must supply the buffer and must insure that it is at least datalen*3+1
+// this is intended to provide a way to add small hex dumps to dprintf logging
+static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+const char * debug_hex_dump(char * buf, const char * data, int datalen)
+{
+	if (!buf) return "";
+	const unsigned char * d = (const unsigned char *)data;
+	char * p = buf;
+	char * endp = buf;
+	while (datalen-- > 0) {
+		unsigned char ch = *d++;
+		*p++ = hex_digit((ch >> 4) & 0xF);
+		*p++ = hex_digit(ch & 0xF);
+		endp = p;
+		*p++ = ' ';
+	}
+	*endp = 0;
+	return buf;
+}
 
 DebugFileInfo::~DebugFileInfo()
 {
@@ -354,7 +374,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, (int)info.tv.tv_usec );
 				#else
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", (int)clock_now, (int)(info.tv.tv_usec+500)/1000 );
+				int seconds = (int)clock_now;
+				int micros = info.tv.tv_usec + 500;
+				if( micros >= 1000000 ) { micros = 0; seconds += 1; }
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d ", (int)clock_now );
@@ -367,7 +390,14 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), (int)(info.tv.tv_usec+500)/1000 );
+				struct tm * then = info.tm;
+				int micros = info.tv.tv_usec + 500;
+				if( micros >= 1000000 ) {
+					micros = 0;
+					time_t seconds = clock_now + 1;
+					then = localtime(& seconds);
+				}
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(then), micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));
@@ -1122,7 +1152,8 @@ debug_open_lock(void)
 	if( DebugLock ) {
 		if ( ! DebugLockIsMutex) {
 			if (LockFd > 0 ) {
-				fstat(LockFd, &fstatus);
+					// fstat can't possibly fail, right?			
+				(void) fstat(LockFd, &fstatus);
 				if (fstatus.st_nlink == 0){
 					close(LockFd);
 					LockFd = -1;
@@ -1271,8 +1302,6 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 
 	#ifdef WIN32
 		length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);
-	#elif Solaris
-		length = llseek(fileno(debug_file_ptr), 0, SEEK_END);
 	#elif Linux
 		length = lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 	#else
@@ -1451,7 +1480,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	int			file_there = 0;
 	FILE		*debug_file_ptr = (*it).debugFP;
 	std::string		filePath = (*it).logPath;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX + MAXPATHLEN + 4];
 
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -1568,7 +1597,7 @@ void
 _condor_fd_panic( int line, const char* file )
 {
 	int i;
-	char msg_buf[DPRINTF_ERR_MAX];
+	char msg_buf[DPRINTF_ERR_MAX * 2];
 	char panic_msg[DPRINTF_ERR_MAX];
 	int save_errno;
 	std::vector<DebugFileInfo>::iterator it;
@@ -1605,9 +1634,7 @@ _condor_fd_panic( int line, const char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-#if Solaris
-	llseek(fileno(debug_file_ptr), 0, SEEK_END);
-#elif Linux
+#if Linux
 	lseek64(fileno(debug_file_ptr), 0, SEEK_END);
 #else
 	lseek(fileno(debug_file_ptr), 0, SEEK_END);

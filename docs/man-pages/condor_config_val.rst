@@ -209,67 +209,67 @@ Here is a set of examples to show a sequence of operations using
 perdita to display the value of the ``MAX_JOBS_RUNNING`` configuration
 variable:
 
-::
+.. code-block:: console
 
-       % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
        500
 
 To request the *condor_schedd* daemon on host perdita to set the value
 of the ``MAX_JOBS_RUNNING`` configuration variable to the value 10.
 
-::
+.. code-block:: console
 
-       % condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10" 
+       $ condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10" 
        Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
        schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
 
 A command that will implement the change just set in the previous
 example.
 
-::
+.. code-block:: console
 
-       % condor_reconfig -schedd perdita 
+       $ condor_reconfig -schedd perdita 
        Sent "Reconfig" command to schedd perdita.cs.wisc.edu
 
 A re-check of the configuration variable reflects the change
 implemented:
 
-::
+.. code-block:: console
 
-       % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
        10
 
 To set the configuration variable ``MAX_JOBS_RUNNING`` back to what it
 was before the command to set it to 10:
 
-::
+.. code-block:: console
 
-       % condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING 
        Successfully unset configuration "MAX_JOBS_RUNNING" on 
        schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
 
 A command that will implement the change just set in the previous
 example.
 
-::
+.. code-block:: console
 
-       % condor_reconfig -schedd perdita 
+       $ condor_reconfig -schedd perdita 
        Sent "Reconfig" command to schedd perdita.cs.wisc.edu
 
 A re-check of the configuration variable reflects that variable has gone
 back to is value before initial set of the variable:
 
-::
+.. code-block:: console
 
-       % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
+       $ condor_config_val -name perdita -schedd MAX_JOBS_RUNNING 
        500
 
 Getting a list of template_names for the **role** configuration
 template category:
 
-::
+.. code-block:: console
 
-       % condor_config_val use role 
+       $ condor_config_val use role 
        use ROLE accepts 
          CentralManager 
          Execute 
@@ -278,25 +278,12 @@ template category:
 
 Getting the definition of **role:personal** configuration template:
 
-::
+.. code-block:: console
 
-       % condor_config_val use role:personal 
+       $ condor_config_val use role:personal 
        use ROLE:Personal is 
            CONDOR_HOST=127.0.0.1 
        COLLECTOR_HOST=$(CONDOR_HOST):0 
        DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD 
        RunBenchmarks=0
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

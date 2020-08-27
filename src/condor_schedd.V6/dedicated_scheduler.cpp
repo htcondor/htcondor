@@ -114,7 +114,7 @@ AllocationNode::setClaimId( const char* new_id )
 
 
 void
-AllocationNode::display( void )
+AllocationNode::display( void ) const
 {
 	const int level = D_FULLDEBUG;
 	if( ! IsFulldebug(D_FULLDEBUG) ) {
@@ -767,7 +767,7 @@ DedicatedScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	char const *remote_pool = getRemotePool();
 
 	dprintf(D_ALWAYS,"Finished negotiating for %s%s%s: %d matched, %d rejected\n",
-			getOwner(),
+			getMatchUser(),
 			remote_pool ? " in pool " : "",
 			remote_pool ? remote_pool : " in local pool",
 			getNumJobsMatched(), getNumJobsRejected() );
@@ -1746,10 +1746,10 @@ DedicatedScheduler::sortResources( void )
 				if( !oexpr ) {
 					continue;
 				}
-				ExprTree *nexpr = res->LookupExpr(itr->first.c_str());
+				ExprTree *nexpr = res->LookupExpr(itr->first);
 				if (!nexpr) {
 					const char *oexprStr = ExprTreeToString(oexpr);
-					res->AssignExpr(itr->first.c_str(), oexprStr);
+					res->AssignExpr(itr->first, oexprStr);
 
 					dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from existing match record.\n", 
 					         resname.c_str(), itr->first.c_str(), oexprStr);
@@ -2888,8 +2888,11 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		job = idle_candidates_jobs->Next();
 
 		    // And the proc for the job
-		int proc;
+		int proc = -1;
 		job->LookupInteger(ATTR_PROC_ID, proc);
+		if (proc == -1) {
+			EXCEPT("illegal value for proc: %d in dedicated cluster id %d\n", proc, cluster);
+		}
 
 			// Get the match record
 		if( ! (mrec = getMrec(machine, buf)) ) {
@@ -3242,7 +3245,7 @@ static void update_negotiator_attrs_for_partitionable_slots(ClassAd* match_ad)
 		negotiator_attr_cache_entry_t::const_iterator mend = atm.end();
 		for (mit = atm.begin(); mit!=mend; ++mit) {
 
-			match_ad->AssignExpr(mit->first.c_str(), mit->second.c_str());
+			match_ad->AssignExpr(mit->first, mit->second.c_str());
 			dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from previous partitionable slot match record.\n", 
 				partitionable_slot_name.c_str(),
 				mit->first.c_str(), mit->second.c_str());
@@ -3577,11 +3580,11 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// want to rank it, and require that the minimum claim time is
 		// >= the duration of the job...
 
-	MyString buf;
-	buf.formatstr( "%s = (Target.DedicatedScheduler == \"%s\") && "
+	std::string buf;
+	formatstr( buf, "(Target.DedicatedScheduler == \"%s\") && "
 				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
-				 ATTR_REQUIREMENTS, name(), name(), rhs );
-	req->Insert( buf.Value() );
+				 name(), name(), rhs );
+	req->AssignExpr( ATTR_REQUIREMENTS, buf.c_str() );
 
 	return req;
 }
@@ -3653,11 +3656,11 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 									   CAList* limbo, CAList* unclaimed, 
 									   CAList* busy )
 {
-	MyString msg;
-	msg.formatstr( "Satisfied job %d with ", cluster );
+	std::string msg;
+	formatstr( msg, "Satisfied job %d with ", cluster );
 	bool had_one = false;
 	if( idle && idle->Length() ) {
-		msg += IntToStr( idle->Length() );
+		msg += std::to_string( idle->Length() );
 		msg += " idle";
 		had_one = true;
 	}
@@ -3665,7 +3668,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( limbo->Length() );
+		msg += std::to_string( limbo->Length() );
 		msg += " limbo";
 		had_one = true;
 	}
@@ -3673,7 +3676,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( serial->Length() );
+		msg += std::to_string( serial->Length() );
 		msg += " serial";
 		had_one = true;
 	}
@@ -3681,7 +3684,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( unclaimed->Length() );
+		msg += std::to_string( unclaimed->Length() );
 		msg += " unclaimed";
 		had_one = true;
 	}
@@ -3689,12 +3692,12 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += IntToStr( busy->Length() );
+		msg += std::to_string( busy->Length() );
 		msg += " busy";
 		had_one = true;
 	}
 	msg += " resources";
-	dprintf( D_FULLDEBUG, "%s\n", msg.Value() );
+	dprintf( D_FULLDEBUG, "%s\n", msg.c_str() );
 
 	if( unclaimed && unclaimed->Length() ) {
 		dprintf( D_FULLDEBUG, "Generating %d resource requests for job %d\n", 

@@ -432,18 +432,22 @@ void export_event_log() {
 	// Could use some DocTest blocks too, probably.
 	boost::python::class_<JobEventLog, boost::noncopyable>("JobEventLog",
             R"C0ND0R(
-            Reads job event (user) logs.
+            Reads user job event logs from ``filename``.
 
             By default, it waits for new events, but it may be used to
-            poll for them, as follows: ::
+            poll for them:
+
+            .. code-block:: python
 
                 import htcondor
+
                 jel = htcondor.JobEventLog("file.log")
+
                 # Read all currently-available events without blocking.
-                for event in jel.events(0):
+                for event in jel.events(stop_after=0):
                     print(event)
-                else:
-                    print("We found the the end of file")
+
+                print("We found the the end of file")
 
             A pickled :class:`JobEventLog` resumes iterating over events
             where it left off if and only if, after being unpickled, the
@@ -451,7 +455,7 @@ void export_event_log() {
             )C0ND0R",
         boost::python::init<const std::string &>(
 	        R"C0ND0R(
-	        :param str filename: A file containing a job event (user) log.
+	        :param str filename: A file containing a user job event log.
             )C0ND0R",
             boost::python::args("self", "filename")))
 		.def(NEXT_FN, &JobEventLog::next,
@@ -463,7 +467,8 @@ void export_event_log() {
             Return an iterator over :class:`JobEvent` objects from the filename given in the constructor.
 
             :param int stop_after: After how many seconds should the iterator
-                stop waiting for new events?  If ``None``, wait forever.
+                stop waiting for new events?
+                If ``None`` (the default), wait forever.
                 If ``0``, never wait.
             )C0ND0R",
             boost::python::args("self", "stop_after"))

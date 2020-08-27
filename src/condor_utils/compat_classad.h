@@ -24,6 +24,8 @@
 #include "MyString.h"
 #include "classad_oldnew.h"
 
+using classad::ClassAd;
+
 class StringList;
 class Stream;
 
@@ -40,8 +42,6 @@ class Stream;
 
 class MapFile; // forward ref
 
-namespace compat_classad {
-
 
 class ClassAdFileParseHelper;
 
@@ -53,7 +53,7 @@ typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
 		@param file The file handle to print to.
 		@return TRUE
 	*/
-int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL);
+int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = true, StringList *attr_white_list = NULL);
 
 	/** Print the ClassAd as an old ClasAd with dprintf
 		@param level The dprintf level.
@@ -64,13 +64,15 @@ void dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private = tru
 		@param output The MyString to write into
 		@return TRUE
 	*/
-int sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
+int sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list = NULL );
+int sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list = NULL );
 
 	/** Format the ClassAd as an old ClassAd into the std::string.
 		@param output The std::string to write into
 		@return TRUE
 	*/
-int sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
+int sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list = NULL );
+int sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, StringList *attr_white_list = NULL );
 
 	/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
 		This version if the classad function prints the attributes in sorted order and allows for an optional
@@ -78,13 +80,13 @@ int sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_priv
 		@param output The std::string to write into
 		@return std::string.c_str()
 	*/
-const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent = NULL, StringList *attr_white_list = NULL, bool exclude_private = false);
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent = NULL, StringList *attr_white_list = NULL, bool exclude_private = true);
 
 	/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
 		@param attrs the set of attrs to insert into. This is set is NOT cleared first.
 		@return TRUE
 	*/
-int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL, bool ignore_parent = false );
+int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private = true, StringList *attr_white_list = NULL, bool ignore_parent = false );
 
 	/** Format the given attributes from the ClassAd as an old ClassAd into the given string
 		@param output The std::string to write into
@@ -179,178 +181,10 @@ int EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target,
  */
 int EvalBool  (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool &value);
 
-class ClassAd : public classad::ClassAd
-{
- public:
-	ClassAd();
-
-	ClassAd( const ClassAd &ad );
-
-	ClassAd( const classad::ClassAd &ad );
-
-	virtual ~ClassAd();
-
-	ClassAd &operator=(const ClassAd &rhs)
-		{ classad::ClassAd::operator=(rhs); return *this; }
-
- 	ClassAd &operator=(ClassAd &&rhs) {
-		classad::ClassAd::operator=(rhs);
-		return *this;
-	}
-
-		/**@name Deprecated functions (only for use within Condor) */
-		//@{
-
-		/* This is a pass-through to ClassAd::Insert(). Because we define
-		 * our own Insert() below, our parent's Insert() won't be found
-		 * by users of this class.
-		 */
-	bool Insert( const std::string &attrName, classad::ExprTree * expr );
-
-		/** Insert an attribute/value into the ClassAd 
-		 *  @param str A string of the form "Attribute = Value"
-		 */
-	bool Insert(const char *str);
-	bool Insert(const std::string &str); // somewhat faster than above
-
-		/* Insert an attribute/value into the Classad
-		 */
-	bool AssignExpr(const std::string &name, const char *value);
-
-		/* Insert an attribute/value into the Classad with the
-		 * appropriate type.
-		 */
-	bool Assign(const std::string &name, const MyString &value)
-	{ return InsertAttr(name, value.Value()); }
-
-	bool Assign(const std::string &name, const std::string &value)
-	{ return InsertAttr(name, value); }
-
-	bool Assign(const std::string &name,char const *value);
-
-	bool Assign(const std::string &name, int value)
-	{ return InsertAttr(name, value); }
-
-	bool Assign(const std::string &name, unsigned int value)
-	{ return InsertAttr(name, (long long)value); }
-
-	bool Assign(const std::string &name,long value)
-	{ return InsertAttr(name, value); }
-
-	bool Assign(const std::string &name, long long value)
-	{ return InsertAttr(name, value); }
-
-	bool Assign(const std::string &name, unsigned long value)
-	{ return InsertAttr(name, (long long)value); }
-
-	bool Assign(const std::string &name, unsigned long long value)
-	{ return InsertAttr(name, (long long)value); }
-
-	bool Assign(const std::string &name, float value)
-	{ return InsertAttr(name, (double)value); }
-
-	bool Assign(const std::string &name, double value)
-	{ return InsertAttr(name, value); }
-
-	bool Assign(const std::string &name, bool value)
-	{ return InsertAttr(name, value); }
-
-		// lookup values in classads  (for simple assignments)
-	classad::ExprTree* LookupExpr(const std::string &name) const
-	{ return Lookup( name ); }
-
-		/** Lookup (don't evaluate) an attribute that is a string.
-		 *  @param name The attribute
-		 *  @param value The string, copied with strncpy
-		 *  @param max_len The maximum number of bytes in the string to copy
-		 *  @return true if the attribute exists and is a string, false otherwise
-		 */
-	bool LookupString(const std::string &name, char *value, int max_len) const
-	{ return EvaluateAttrString( name, value, max_len ); }
-
-		/** Lookup (don't evaluate) an attribute that is a string.
-		 *  @param name The attribute
-		 *  @param value The string, allocated with malloc() not new.
-		 *  @return true if the attribute exists and is a string, false otherwise
-		 */
-	bool LookupString(const std::string &name, char **value) const
-	{
-		std::string sval;
-		bool rc = EvaluateAttrString(name, sval);
-		if ( rc ) *value = strdup(sval.c_str());
-		return rc;
-	}
-
-		/** Lookup (don't evaluate) an attribute that is a string.
-		 *  @param name The attribute
-		 *  @param value The string
-		 *  @return true if the attribute exists and is a string, false otherwise
-		 */
-	bool LookupString(const std::string &name, MyString &value) const
-	{
-		std::string sval;
-		bool rc = EvaluateAttrString(name, sval);
-		if ( rc ) value = sval;
-		return rc;
-	}
-
-		/** Lookup (don't evaluate) an attribute that is a string.
-		 *  @param name The attribute
-		 *  @param value The string
-		 *  @return true if the attribute exists and is a string, false otherwise
-		 */
-	bool LookupString(const std::string &name, std::string &value) const
-	{ return EvaluateAttrString( name, value ); }
-
-		/** Lookup (don't evaluate) an attribute that is an integer.
-		 *  @param name The attribute
-		 *  @param value The integer
-		 *  @return true if the attribute exists and is an integer, false otherwise
-		 */
-	bool LookupInteger(const std::string &name, int &value) const
-	{ return EvaluateAttrNumber(name, value); }
-	bool LookupInteger(const std::string &name, long &value) const
-	{ return EvaluateAttrNumber(name, value); }
-	bool LookupInteger(const std::string &name, long long &value) const
-	{ return EvaluateAttrNumber(name, value); }
-
-		/** Lookup (don't evaluate) an attribute that is a float.
-		 *  @param name The attribute
-		 *  @param value The integer
-		 *  @return true if the attribute exists and is a float, false otherwise
-		 */
-	bool LookupFloat(const std::string &name, float &value) const
-	{
-		double dval;
-		bool rc = EvaluateAttrNumber(name, dval);
-		if ( rc ) value = dval;
-		return rc;
-	}
-	bool LookupFloat(const std::string &name, double &value) const
-	{ return EvaluateAttrNumber(name, value); }
-
-		/** Lookup (don't evaluate) an attribute that can be considered a boolean
-		 *  @param name The attribute
-		 *  @param value false if the attribute is 0, true otherwise
-		 *  @return true if the attribute exists and is a boolean/integer, false otherwise
-		 */
-
-	bool LookupBool(const std::string &name, bool &value) const
-	{ return EvaluateAttrBoolEquiv(name, value); }
-
-	static void Reconfig();
-	static bool m_initConfig;
-	static bool m_strictEvaluation;
-
- private:
-
-	// poison Assign of ExprTree* type for public users
-	// otherwise the compiler will resolve against the bool overload 
-	// and quietly leak the tree.
-	bool Assign(const std::string &name,classad::ExprTree * tree)
-	{ return Insert(name, tree); }
-
-};
+// (Re)Initialize configuration related to ClassAds.
+// This includes setting the evaluation mode, setting use of caching, and
+// registering additional ClassAd functions
+void ClassAdReconfig();
 
 class ClassAdFileParseHelper
 {
@@ -467,12 +301,12 @@ public:
 	// these return < 0 on failure, 0 if nothing written, 1 if non-empty ad is written.
 	int writeAd(const ClassAd & ad, FILE * out, StringList * whitelist=NULL, bool hash_order=false);
 	int appendAd(const ClassAd & ad, std::string & buf, StringList * whitelist=NULL, bool hash_order=false);
-	// write the footer if one is needed. 
+	// write the footer if one is needed.
 	int writeFooter(FILE* out, bool xml_always_write_header_footer=true);
 	int appendFooter(std::string & buf, bool xml_always_write_header_footer=true);
 
-	int getNumAds() { return cNonEmptyOutputAds; } // returns number of ads in output list.
-	bool needsFooter() { return needs_footer; } // returns true if a header was previously written and footer has not yet been.
+	int getNumAds() const { return cNonEmptyOutputAds; } // returns number of ads in output list.
+	bool needsFooter() const { return needs_footer; } // returns true if a header was previously written and footer has not yet been.
 
 protected:
 	std::string buffer; // internal buffer used by writeAd & writeFooter
@@ -609,7 +443,5 @@ void TrimReferenceNames( classad::References &ref_set, bool external = false );
 
 
 typedef classad::ExprTree ExprTree;
-
-} // namespace compat_classad
 
 #endif

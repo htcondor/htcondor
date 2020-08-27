@@ -54,17 +54,17 @@ Examples
 
 To begin running job 17.3 as soon as possible using job 4.2's slot:
 
-::
+.. code-block:: console
 
-      condor_now 17.3 4.2
+      $ condor_now 17.3 4.2
 
 To try to figure out why that doesn't work for the 'magic' scheduler in
 the 'gandalf' pool, set the environment variable _CONDOR_TOOL_DEBUG
 to 'D_FULLDEBUG' and then:
 
-::
+.. code-block:: console
 
-      condor_now -debug -schedd magic -pool gandalf 17.3 4.2
+      $ condor_now -debug -schedd magic -pool gandalf 17.3 4.2
 
 Exit Status
 -----------
@@ -73,16 +73,3 @@ Exit Status
 accepts its request to vacate the vacate-job and start the now-job in
 its place. It does not wait for the now-job to have started running.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

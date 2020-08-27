@@ -116,7 +116,7 @@ $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	no_wait => 1,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
@@ -150,7 +150,7 @@ $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	no_wait => 1,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
@@ -182,7 +182,7 @@ $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	no_wait => 1,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
@@ -213,7 +213,7 @@ $result = SimpleJob::RunCheck(
 	test_name => $testname,
 	no_wait => 1,
 	queue_sz => $queuesize,
-	duration => 0,
+	duration => 3600,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );

@@ -369,7 +369,7 @@ BaseShadow::shutDown( int reason )
 
 
 int
-BaseShadow::nextReconnectDelay( int attempts )
+BaseShadow::nextReconnectDelay( int attempts ) const
 {
 	if( ! attempts ) {
 			// first time, do it right away
@@ -896,16 +896,16 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value)&& (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
-			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			// /*for debugging*/ else { puAd->Assign(attr, 99); }
 
 			attr = res + "Usage"; // (implicitly) peak usage value
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -913,7 +913,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -921,7 +921,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -929,7 +929,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
-					puAd->Insert(attr.c_str(), plit);
+					puAd->Insert(attr, plit);
 				}
 			}
 
@@ -945,10 +945,12 @@ void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 {
 	struct rusage run_remote_rusage;
+	struct rusage total_remote_rusage;
 	JobTerminatedEvent event;
 	std::string corefile;
 
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+	memset( &total_remote_rusage, 0, sizeof(struct rusage) );
 
 	switch( exitReason ) {
 	case JOB_EXITED:
@@ -987,10 +989,16 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
 			run_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		}
-
 		event.run_remote_rusage = run_remote_rusage;
-		event.total_remote_rusage = run_remote_rusage;
 
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+		event.total_remote_rusage = total_remote_rusage;
 		/*
 		  Both the job ad and the terminated event record bytes
 		  transferred from the perspective of the job, not the shadow.
@@ -1020,6 +1028,17 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
+		/* grab usage information out of job ad */
+		double real_value;
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, real_value) ) {
+			total_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, real_value) ) {
+			total_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		}
+
 
 	if( exitedBySignal() ) {
 		event.normal = false;
@@ -1033,8 +1052,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		// event.run_local_rusage = r;
 	event.run_remote_rusage = run_remote_rusage;
 		// event.total_local_rusage = r;
-	event.total_remote_rusage = run_remote_rusage;
-	
+	event.total_remote_rusage = total_remote_rusage;
+
 		/*
 		  we want to log the events from the perspective of the user
 		  job, so if the shadow *sent* the bytes, then that means the
@@ -1045,7 +1064,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	event.total_recvd_bytes = prev_run_bytes_recvd + bytesSent();
 	event.total_sent_bytes = prev_run_bytes_sent + bytesReceived();
-	
+
 	if( exitReason == JOB_COREDUMPED ) {
 		event.setCoreFile( core_file_name );
 	}
@@ -1065,23 +1084,25 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		reslist.rewind();
 		char * resname = NULL;
 		while ((resname = reslist.next()) != NULL) {
-			MyString attr;
+			std::string attr;
 			int64_value = -1;
-			attr.formatstr("%s", resname); // provisioned value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(resname, int64_value);
+			attr = resname; // provisioned value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			} 
-			// /*for debugging*/ else { puAd->Assign(resname, 42); }
+			// /*for debugging*/ else { puAd->Assign(attr, 42); }
 			int64_value = -2;
-			attr.formatstr("Request%s", resname);	// requested value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = "Request";
+			attr += resname; // requested value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			}
-			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			// /*for debugging*/ else { puAd->Assign(attr, 99); }
 			int64_value = -3;
-			attr.formatstr("%sUsage", resname); // usage value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = resname;
+			attr += "Usage"; // usage value
+			if (jobAd->LookupInteger(attr, int64_value)) {
+				puAd->Assign(attr, int64_value);
 			}
 		}
 		event.pusageAd = puAd;
@@ -1186,6 +1207,16 @@ BaseShadow::logRequeueEvent( const char* reason )
 	
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
+				 "(and requeued) event\n" );
+	}
+}
+
+void
+BaseShadow::logDataflowJobSkippedEvent()
+{
+	DataflowJobSkippedEvent event;
+	if (!uLog.writeEvent (&event, jobAd)) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_DATAFLOW_JOB_SKIPPED "
 				 "(and requeued) event\n" );
 	}
 }

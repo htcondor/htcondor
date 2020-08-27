@@ -73,35 +73,35 @@ jobs, via the **-num** option.
 Examples
 --------
 
-::
+.. code-block:: console
 
-    condor_wait logfile
+    $ condor_wait logfile
 
 This command waits for all jobs that exist in ``logfile`` to complete.
 
-::
+.. code-block:: console
 
-    condor_wait logfile 40
+    $ condor_wait logfile 40
 
 This command waits for all jobs that exist in ``logfile`` with a job
 ClassAd attribute ``ClusterId`` of 40 to complete.
 
-::
+.. code-block:: console
 
-    condor_wait -num 2 logfile
+    $ condor_wait -num 2 logfile
 
 This command waits for any two jobs that exist in ``logfile`` to
 complete.
 
-::
+.. code-block:: console
 
-    condor_wait logfile 40.1
+    $ condor_wait logfile 40.1
 
 This command waits for job 40.1 that exists in ``logfile`` to complete.
 
-::
+.. code-block:: console
 
-    condor_wait -wait 3600 logfile 40.1
+    $ condor_wait -wait 3600 logfile 40.1
 
 This waits for job 40.1 to complete by watching ``logfile``, but it will
 not wait more than one hour (3600 seconds).
@@ -114,16 +114,3 @@ have completed or aborted. *condor_wait* returns 1 if unrecoverable
 errors occur, such as a missing log file, if the job does not exist in
 the log file, or the user-specified waiting time has expired.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

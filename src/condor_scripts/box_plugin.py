@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -11,6 +11,9 @@ except ImportError:
 import posixpath
 import json
 
+from hashlib import sha1
+from base64 import b64encode
+
 import requests
 import classad
 
@@ -19,10 +22,15 @@ TOKEN_FILE_EXT = '.use'
 
 DEFAULT_TIMEOUT = 30
 
-BOX_PLUGIN_VERSION = '1.0.0'
+BOX_PLUGIN_VERSION = '1.1.0'
 
 BOX_API_VERSION = '2.0'
 BOX_API_BASE_URL = 'https://api.box.com/' + BOX_API_VERSION
+
+# Two methods of uploading, depending on file size:
+#   https://developer.box.com/guides/uploads/direct/
+#   https://developer.box.com/guides/uploads/chunked/
+DIRECT_UPLOAD_CUTOFF_MB = 35
 
 def print_help(stream = sys.stderr):
     help_msg = '''Usage: {0} -infile <input-filename> -outfile <output-filename>
@@ -340,6 +348,133 @@ class BoxPlugin:
 
     def upload_file(self, url, local_file_path):
 
+        # Determine file upload method
+        local_file_size_mb = float(os.stat(local_file_path).st_size) / 1e6
+        if local_file_size_mb > DIRECT_UPLOAD_CUTOFF_MB:
+            transfer_stats = self.upload_file_chunked(url, local_file_path)
+        else:
+            transfer_stats = self.upload_file_direct(url, local_file_path)
+
+        return transfer_stats
+
+    def upload_file_chunked(self, url, local_file_path):
+
+        file_size = os.stat(local_file_path).st_size
+        start_time = time.time()
+
+        # Check if file exists
+        file_id = None
+        try:
+            file_id = self.get_file_id(url)
+        except IOError:
+            (filename, folder_tree) = self.parse_url(url)
+            parent_ids = self.get_parent_folders_ids(folder_tree, create_if_missing = True)
+            parent_id = parent_ids[-1]
+
+        if file_id is None:
+
+            # Upload a new file
+            data = {
+                "folder_id": parent_id,
+                "file_size": file_size,
+                "file_name": filename,
+            }
+            session_url = 'https://upload.box.com/api/2.0/files/upload_sessions'
+
+        else:
+
+            # Upload a new version of the file
+            data = {"file_size": file_size}
+            session_url = 'https://upload.box.com/api/2.0/files/{0}/upload_sessions'.format(file_id)
+
+        # initialize the session
+        self.reload_token()
+        headers = self.headers.copy()
+        connection_start_time = time.time()
+        response = requests.post(session_url, headers = headers, json = data)
+        response.raise_for_status()
+        session = response.json()
+
+        # upload the file in parts defined by the session
+        session_id = session['id']
+        upload_url = session['session_endpoints']['upload_part']
+        part_size = session['part_size']
+        parts = []
+        with open(local_file_path, 'rb') as f:
+            file_sha1 = sha1()
+            while True:
+                part = f.read(part_size)
+                if not part:
+                    break
+                file_sha1.update(part)
+                part_sha1 = sha1(part)
+
+                digest = "sha={0}".format(b64encode(part_sha1.digest()).decode('utf-8'))
+                content_range = "bytes {0}-{1}/{2}".format(len(parts) * part_size, len(parts) * part_size + len(part) - 1, file_size)
+                content_type = "application/octet-stream"
+
+                for part_tries in range(3):
+                    self.reload_token()
+                    headers = self.headers.copy()
+                    headers['Digest'] = digest
+                    headers['Content-Range'] = content_range
+                    headers['Content-Type'] = content_type
+
+                    # retry each part up to three times
+                    try:
+                        response = requests.put(upload_url, headers = headers, data = part)
+                        response.raise_for_status()
+                    except Exception as err:
+                        if part_tries >= 2:
+                            raise err
+                        else:
+                            pass
+                    else:
+                        try:
+                            parts.append(response.json()['part'])
+                        except Exception as err:
+                            if part_tries >= 2:
+                                raise err
+                            else:
+                                pass
+                        else:
+                            break
+
+        # commit the session
+        commit_url = session['session_endpoints']['commit']
+        digest = "sha={0}".format(b64encode(file_sha1.digest()).decode('utf-8'))
+        data = {'parts': parts}
+
+        self.reload_token()
+        headers = self.headers.copy()
+        headers['Digest'] = digest
+
+        response = requests.post(commit_url, headers = headers, json = data)
+        response.raise_for_status()
+
+        file_size = int(response.json()['entries'][0]['size'])
+
+        end_time = time.time()
+
+        transfer_stats = {
+            'TransferSuccess': True,
+            'TransferProtocol': 'https',
+            'TransferType': 'upload',
+            'TransferFileName': local_file_path,
+            'TransferFileBytes': file_size,
+            'TransferTotalBytes': file_size,
+            'TransferStartTime': int(start_time),
+            'TransferEndTime': int(end_time),
+            'ConnectionTimeSeconds': end_time - connection_start_time,
+            'TransferHostName': urlparse(str(upload_url)).netloc,
+            'TransferLocalMachineName': socket.gethostname(),
+            'TransferUrl': 'https://upload.box.com/api/2.0/files/upload_sessions',
+        }
+
+        return transfer_stats
+
+    def upload_file_direct(self, url, local_file_path):
+
         start_time = time.time()
 
         # Check if file exists
@@ -384,11 +519,10 @@ class BoxPlugin:
             content_length = int(response.request.headers['Content-Length'])
         except (ValueError, KeyError):
             content_length = False
-        file_size = response.json()['entries'][0]['size']
+        file_size = int(response.json()['entries'][0]['size'])
 
         end_time = time.time()
 
-        # Including TransferUrl makes little sense here, too.
         transfer_stats = {
             'TransferSuccess': True,
             'TransferProtocol': 'https',
@@ -399,9 +533,9 @@ class BoxPlugin:
             'TransferStartTime': int(start_time),
             'TransferEndTime': int(end_time),
             'ConnectionTimeSeconds': end_time - connection_start_time,
-            'TransferHostName': urlparse(upload_url).netloc,
+            'TransferHostName': urlparse(str(upload_url)).netloc,
             'TransferLocalMachineName': socket.gethostname(),
-            'TransferUrl': 'https://upload.box.com/api/2.0/files',
+            'TransferUrl': 'https://upload.box.com/api/2.0/files/content',
         }
 
         return transfer_stats
@@ -416,6 +550,11 @@ if __name__ == '__main__':
     # Exiting -1 without an outfile thus means one of two things:
     # 1. Couldn't parse arguments.
     # 2. Couldn't open outfile for writing.
+
+    try:
+        del os.environ['HTTPS_PROXY']
+    except Exception:
+        pass
 
     try:
         args = parse_args()
@@ -437,6 +576,7 @@ if __name__ == '__main__':
         running_plugins = {}
         with open(args['outfile'], 'w') as outfile:
             for ad in infile_ads:
+                tries = 0
                 try:
                     token_name = get_token_name(ad['Url'])
                     token_path = get_token_path(token_name)
@@ -450,10 +590,21 @@ if __name__ == '__main__':
                         box = BoxPlugin(token_path)
                         running_plugins[token_path] = box
 
-                    if not args['upload']:
-                        outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
-                    else:
-                        outfile_dict = box.upload_file(ad['Url'], ad['LocalFileName'])
+                    while tries < 3:
+                        tries += 1
+                        try:
+                            if not args['upload']:
+                                outfile_dict = box.download_file(ad['Url'], ad['LocalFileName'])
+                            else:
+                                outfile_dict = box.upload_file(ad['Url'], ad['LocalFileName'])
+                        except IOError as err:
+                            # Retry on socket closed unexpectedly
+                            if (err.errno == 32) and (tries < 3):
+                                pass
+                            else:
+                                raise err
+                        else:
+                            break
 
                     outfile.write(str(classad.ClassAd(outfile_dict)))
 
@@ -463,7 +614,13 @@ if __name__ == '__main__':
                         outfile.write(str(classad.ClassAd(outfile_dict)))
                     except Exception:
                         pass
-                    sys.exit(-1)
+
+                    # Ask condor_starter to retry on 401
+                    if (isinstance(err, requests.exceptions.HTTPError)
+                        and err.response.status_code == 401):
+                        sys.exit(1)
+                    else:
+                        sys.exit(-1)
 
     except Exception:
         sys.exit(-1)

@@ -13,6 +13,7 @@
 #include "classad_wrapper.h"
 
 #include "module_lock.h"
+#include "daemon_location.h"
 
 using namespace boost::python;
 
@@ -77,10 +78,20 @@ struct Collector {
     Collector(boost::python::object pool = boost::python::object())
       : m_collectors(NULL), m_default(false)
     {
-        if (pool.ptr() == Py_None)
+        std::string addr, version;
+        int rv = construct_for_location(pool, DT_COLLECTOR, addr, version);
+        if (rv == -2) { boost::python::throw_error_already_set(); } // pool was an invalid classad or DaemonLocation
+        else if (rv == -1) { PyErr_Clear(); } // pool was not a classad or DaemonLocation, just fall thorough
+
+        if (rv == 0) // pool is None
         {
             m_collectors = CollectorList::create();
             m_default = true;
+        }
+        else if (rv == 1)
+        {
+             // pool is actually a location ad or DaemonLocation, so addr was set
+             m_collectors = CollectorList::create(addr.c_str());
         }
         else if (PyBytes_Check(pool.ptr()) || PyUnicode_Check(pool.ptr()))
         {
@@ -97,6 +108,7 @@ struct Collector {
         }
         else
         {
+            PyErr_Clear();
             StringList collector_list;
             boost::python::object my_iter = pool.attr("__iter__")();
             if (!PyIter_Check(my_iter.ptr())) {
@@ -142,6 +154,11 @@ struct Collector {
         if (m_collectors) delete m_collectors;
     }
 
+    boost::python::object location() const {
+		// PRAGMA_REMIND("TODO: handle the case of a non-default collector list")
+        return boost::python::object();
+    }
+
     boost::python::object directquery(daemon_t d_type, const std::string &name="", boost::python::list attrs=boost::python::list(), const std::string &statistics="")
     {
         boost::python::object daemon_ad = locate(d_type, name);
@@ -162,7 +179,7 @@ struct Collector {
         boost::python::list attrlist;
         attrlist.append("MyAddress");
         attrlist.append("AddressV1");
-        attrlist.append("CondorVersion");
+        attrlist.append(ATTR_CONDOR_VERSION);
         attrlist.append("CondorPlatform");
         attrlist.append("Name");
         attrlist.append("Machine");
@@ -176,7 +193,7 @@ struct Collector {
         boost::python::list attrlist;
         attrlist.append("MyAddress");
         attrlist.append("AddressV1");
-        attrlist.append("CondorVersion");
+        attrlist.append(ATTR_CONDOR_VERSION);
         attrlist.append("CondorPlatform");
         attrlist.append("Name");
         attrlist.append("Machine");
@@ -292,7 +309,7 @@ struct Collector {
         if (!list_len)
             return;
 
-        compat_classad::ClassAd ad;
+        ClassAd ad;
         while (m_collectors->next(collector))
         {
             if(!collector->locate()) {
@@ -343,18 +360,9 @@ private:
     object query_internal(AdTypes ad_type, boost::python::object constraint_obj, boost::python::list attrs, const std::string &statistics, std::string locationName)
     {
         std::string constraint;
-        extract<std::string> constraint_extract(constraint_obj);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
+        if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
+            THROW_EX(ValueError, "Invalid constraint.");
         }
-        else
-        {
-            classad::ClassAdUnParser printer;
-            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
-            printer.Unparse(constraint, expr.get());
-        }
-
 
         CondorQuery query(ad_type);
         if (constraint.length())
@@ -364,14 +372,12 @@ private:
         if (statistics.size())
         {
             std::string result = quote_classads_string(statistics);
-            result = "STATISTICS_TO_PUBLISH = " + result;
-            query.addExtraAttribute(result.c_str());
+            query.addExtraAttribute("STATISTICS_TO_PUBLISH", result.c_str());
         }
         if (locationName.size())
         {
             std::string result = quote_classads_string(locationName);
-            result = "LocationQuery = " + result;
-            query.addExtraAttribute(result.c_str());
+            query.addExtraAttribute(ATTR_LOCATION_QUERY, result.c_str());
         }
 
         int len_attrs = py_len(attrs);
@@ -449,12 +455,12 @@ void export_collector()
 {
     class_<Collector>("Collector",
             R"C0ND0R(
-            Client object for a remote ``condor_collector``.  The interaction with the
-            collector broadly has three aspects:
+            Client object for a remote *condor_collector*.
+            The :class:`Collector` can be used to:
 
-            * Locating a daemon.
-            * Query the collector for one or more specific ClassAds.
-            * Advertise a new ad to the ``condor_collector``.
+            * Locate a daemon.
+            * Query the *condor_collector* for one or more specific ClassAds.
+            * Advertise a new ad to the *condor_collector*.
             )C0ND0R",
         init<boost::python::object>(
             boost::python::args("self", "pool"),
@@ -465,6 +471,11 @@ void export_collector()
             :type pool: str or list[str]
             )C0ND0R"))
         .def(init<>(boost::python::args("self")))
+        .add_property("location", &Collector::location,
+            R"C0ND0R(
+            The collector to query.  None indicates use the default collector list specified in :macro:`COLLECTOR_HOST`
+            :rtype: None or :class:`~htcondor.DaemonLocation`
+            )C0ND0R") // PRAGMA_REMIND("TODO: remove this or handle a list of collectors")
         .def("query", &Collector::query, query_overloads(
             R"C0ND0R(
             Query the contents of a condor_collector daemon. Returns a list of ClassAds that match the constraint parameter.
@@ -489,7 +500,7 @@ void export_collector()
              ))
         .def("directQuery", &Collector::directquery, directquery_overloads(
             R"C0ND0R(
-            Query the specified daemon directly for a ClassAd, instead of using the ClassAd from the ``condor_collector`` daemon.
+            Query the specified daemon directly for a ClassAd, instead of using the ClassAd from the *condor_collector* daemon.
             Requires the client library to first locate the daemon in the collector, then querying the remote daemon.
 
             :param daemon_type: Specifies the type of the remote daemon to query.
@@ -511,7 +522,7 @@ void export_collector()
         .def("locate", &Collector::locate, locate_overloads(
             (boost::python::arg("self"), boost::python::arg("daemon_type"), boost::python::arg("name")),
             R"C0ND0R(
-            Query the ``condor_collector`` for a particular daemon.
+            Query the *condor_collector* for a particular daemon.
 
             :param daemon_type: The type of daemon to locate.
             :type daemon_type: :class:`DaemonTypes`
@@ -537,7 +548,7 @@ void export_collector()
 
             :param ad_list: :class:`~classad.ClassAds` to advertise.
             :type ad_list: list[:class:`~classad.ClassAds`]
-            :param str command: An advertise command for the remote ``condor_collector``.
+            :param str command: An advertise command for the remote *condor_collector*.
                 It defaults to ``UPDATE_AD_GENERIC``.
                 Other commands, such as ``UPDATE_STARTD_AD``, may require different authorization levels with the remote daemon.
             :param bool use_tcp: When set to ``True``, updates are sent via TCP.  Defaults to ``True``.

@@ -22,99 +22,52 @@
 #include "condor_crypt_3des.h"
 #include "condor_debug.h"
 
-#ifdef HAVE_EXT_OPENSSL
-
-Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
-#if !defined(SKIP_AUTHENTICATION)
-    : Condor_Crypt_Base(CONDOR_3DES, key)
-{
-    KeyInfo k(key);
-    
-		// triple des requires a key of 8 x 3 = 24 bytes
-		// so pad the key out to at least 24 bytes if needed
-	unsigned char * keyData = k.getPaddedKeyData(24);
-	ASSERT(keyData);
-
-    DES_set_key((DES_cblock *)  keyData    , &keySchedule1_);
-    DES_set_key((DES_cblock *) (keyData+8) , &keySchedule2_);
-    DES_set_key((DES_cblock *) (keyData+16), &keySchedule3_);
-
-    // initialize ivsec
-    resetState();
-
-	free(keyData);
-}
-#else
-{
-    resetState();
-}
-#endif
-
-Condor_Crypt_3des :: ~Condor_Crypt_3des()
-{
-}
-
-void Condor_Crypt_3des:: resetState()
-{
-     memset(ivec_, 0, 8);
-     num_=0;
-}
-
-bool Condor_Crypt_3des :: encrypt(const unsigned char *  input,
+bool Condor_Crypt_3des :: encrypt(Condor_Crypto_State *cs,
+                                  const unsigned char *  input,
                                   int              input_len, 
                                   unsigned char *& output, 
                                   int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(input_len);
 
+    const int des_ks = sizeof(DES_key_schedule);
     if (output) {
         DES_ede3_cfb64_encrypt(input, output, output_len,
-                               &keySchedule1_, &keySchedule2_, &keySchedule3_,
-                               (DES_cblock *)ivec_, &num_, DES_ENCRYPT);
+                               (DES_key_schedule*)(cs->m_method_key_data),
+                               (DES_key_schedule*)(cs->m_method_key_data + des_ks),
+                               (DES_key_schedule*)(cs->m_method_key_data + 2*des_ks),
+                               (DES_cblock *)cs->m_ivec, &cs->m_num, DES_ENCRYPT);
         return true;   
     }
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
-bool Condor_Crypt_3des :: decrypt(const unsigned char *  input,
+bool Condor_Crypt_3des :: decrypt(Condor_Crypto_State *cs,
+                                  const unsigned char *  input,
                                   int              input_len, 
                                   unsigned char *& output, 
                                   int&             output_len)
 {
-#if !defined(SKIP_AUTHENTICATION)
     output = (unsigned char *) malloc(input_len);
 
     if (output) {
         output_len = input_len;
 
+        const int des_ks = sizeof(DES_key_schedule);
         DES_ede3_cfb64_encrypt(input, output, output_len,
-                               &keySchedule1_, &keySchedule2_, &keySchedule3_,
-                               (DES_cblock *)ivec_, &num_, DES_DECRYPT);
+                               (DES_key_schedule*)(cs->m_method_key_data),
+                               (DES_key_schedule*)(cs->m_method_key_data + des_ks),
+                               (DES_key_schedule*)(cs->m_method_key_data + 2*des_ks),
+                               (DES_cblock *)cs->m_ivec, &cs->m_num, DES_DECRYPT);
         
         return true;           // Should be changed
     }
     else {
         return false;
     }
-#else
-	return true;
-#endif
 }
 
-Condor_Crypt_3des :: Condor_Crypt_3des()
-{
-	memset(&keySchedule1_.ks,0,sizeof(keySchedule1_));
-	memset(&keySchedule2_.ks,0,sizeof(keySchedule2_));
-	memset(&keySchedule3_.ks,0,sizeof(keySchedule3_));
-	resetState();
-}
-
-#endif /*HAVE_EXT_OPENSSL*/

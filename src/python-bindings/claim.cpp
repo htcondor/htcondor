@@ -72,7 +72,7 @@ struct Claim
             constraint.reset(convert_python_to_exprtree(constraint_obj));
         }
 
-        compat_classad::ClassAd ad, reply;
+        ClassAd ad, reply;
         if (constraint.get())
         {
             classad::ExprTree *expr_tmp = constraint->Copy();
@@ -98,7 +98,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -115,7 +115,7 @@ struct Claim
     {
         if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
 
-        compat_classad::ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
+        ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
         if (ad.find(ATTR_JOB_KEYWORD) == ad.end())
         {
             ad.InsertAttr(ATTR_HAS_JOB_AD, true);
@@ -123,7 +123,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         int irval;
         {
             condor::ModuleLock ml;
@@ -140,7 +140,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -157,7 +157,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -174,7 +174,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -191,7 +191,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         bool rval;
         {
             condor::ModuleLock ml;
@@ -218,7 +218,7 @@ struct Claim
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
-        compat_classad::ClassAd reply;
+        ClassAd reply;
         int irval;
         {
             condor::ModuleLock ml;
@@ -246,7 +246,7 @@ export_claim()
 {
     boost::python::enum_<VacateType>("VacateTypes",
             R"C0ND0R(
-            Vacate policies that can be sent to a ``condor_startd``.
+            Vacate policies that can be sent to a *condor_startd*.
 
             The values of the enumeration are:
 
@@ -283,7 +283,7 @@ export_claim()
         .def(boost::python::init<>(boost::python::args("self")))
         .def("requestCOD", &Claim::requestCOD,
             R"C0ND0R(
-            Request a claim from the ``condor_startd`` represented by this object.
+            Request a claim from the *condor_startd* represented by this object.
 
             On success, the :class:`Claim` object will represent a valid claim on the
             remote startd; other methods, such as :meth:`activate` should now function.
@@ -302,7 +302,7 @@ export_claim()
             )
         .def("release", &Claim::release,
             R"C0ND0R(
-            Release the remote ``condor_startd`` from this claim; shut down any running job.
+            Release the remote *condor_startd* from this claim; shut down any running job.
 
             :param vacate_type: The type of vacate to perform for the
               running job.
@@ -319,7 +319,7 @@ export_claim()
             Activate a claim using a given job ad.
 
             :param ad: Description of the job to launch; this uses similar, *but not identical*
-                attribute names as ``condor_submit``.  See
+                attribute names as *condor_submit*.  See
                 the HTCondor manual for a description of the job language.
             )C0ND0R",
             boost::python::args("self", "ad"))

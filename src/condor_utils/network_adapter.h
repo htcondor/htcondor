@@ -61,10 +61,10 @@ public:
 	//@{
 
     /// Constructor
-	NetworkAdapterBase () throw ();
+	NetworkAdapterBase () noexcept;
 
     /// Destructor
-	virtual ~NetworkAdapterBase () throw ();
+	virtual ~NetworkAdapterBase () noexcept;
 
 	//@}
 
@@ -150,12 +150,12 @@ public:
 
     /** Published the network adapter's's information into the given ad
         */
-    void publish ( ClassAd &ad );
+    void publish ( ClassAd &ad ) const;
 
 	/** Get the status of the initialization.
 		@return true:success, false:failed
 	 */
-	bool getInitStatus ();
+	bool getInitStatus () const;
 
 
     /** We use this to create adapter objects so we don't need to deal

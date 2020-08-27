@@ -392,6 +392,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	exit_value = -1;
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
 	disk_usage = 0;
+	scratch_dir_file_count = -1; // -1 for 'unspecified'
 	image_size_kb = 0;
 	memory_usage_mb = -1;
 	proportional_set_size_kb = -1;
@@ -728,11 +729,11 @@ RemoteResource::dprintfSelf( int debugLevel )
 	shadow->dprintf( debugLevel, "\texited_by_signal: %s\n", 
 					 exited_by_signal ? "True" : "False" );
 	if( exited_by_signal ) {
-		shadow->dprintf( debugLevel, "\texit_signal: %d\n", 
-						 exit_value );
+		shadow->dprintf( debugLevel, "\texit_signal: %lld\n", 
+						 (long long)exit_value );
 	} else {
-		shadow->dprintf( debugLevel, "\texit_code: %d\n", 
-						 exit_value );
+		shadow->dprintf( debugLevel, "\texit_code: %lld\n", 
+						 (long long)exit_value );
 	}
 }
 
@@ -920,20 +921,20 @@ RemoteResource::closeClaimSock( void )
 
 
 int
-RemoteResource::getExitReason()
+RemoteResource::getExitReason() const
 {
 	return exit_reason;
 }
 
 bool
-RemoteResource::claimIsClosing()
+RemoteResource::claimIsClosing() const
 {
 	return claim_is_closing;
 }
 
 
-int
-RemoteResource::exitSignal( void )
+int64_t
+RemoteResource::exitSignal( void ) const
 {
 	if( exited_by_signal ) {
 		return exit_value;
@@ -942,8 +943,8 @@ RemoteResource::exitSignal( void )
 }
 
 
-int
-RemoteResource::exitCode( void )
+int64_t
+RemoteResource::exitCode( void ) const
 {
 	if( ! exited_by_signal ) {
 		return exit_value;
@@ -1028,6 +1029,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				m_claim_session.secSessionId(),
 				m_claim_session.secSessionKey(),
 				m_claim_session.secSessionInfo(),
+				AUTH_METHOD_MATCH,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				dc_startd->addr(),
 				0 /*don't expire*/,
@@ -1068,6 +1070,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				filetrans_session_id.Value(),
 				m_filetrans_session.secSessionKey(),
 				NULL,
+				AUTH_METHOD_MATCH,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				NULL,
 				0 /*don't expire*/,
@@ -1235,7 +1238,7 @@ RemoteResource::setExitReason( int reason )
 
 
 float
-RemoteResource::bytesSent()
+RemoteResource::bytesSent() const
 {
 	float bytes = 0.0;
 
@@ -1255,7 +1258,7 @@ RemoteResource::bytesSent()
 
 
 float
-RemoteResource::bytesReceived()
+RemoteResource::bytesReceived() const
 {
 	float bytes = 0.0;
 
@@ -1284,8 +1287,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 		// ImageSizeEvent everytime we start running, even if the
 		// image size hasn't changed at all...
 
-	int int_value;
-	int64_t int64_value;
+	int64_t long_value;
 	double real_value;
 
 	// REMOTE_SYS_CPU and REMOTE_USER_CPU reflect usage for this execution only.
@@ -1296,29 +1298,40 @@ RemoteResource::setJobAd( ClassAd *jA )
 	jA->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	jA->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 			
-	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
-		image_size_kb = int64_value;
+	if( jA->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
+		image_size_kb = long_value;
 	}
 
-	if( jA->LookupInteger(ATTR_MEMORY_USAGE, int64_value) ) {
-		memory_usage_mb = int64_value;
+	if( jA->LookupInteger(ATTR_MEMORY_USAGE, long_value) ) {
+		memory_usage_mb = long_value;
 	}
 
-	if( jA->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
-		remote_rusage.ru_maxrss = int_value;
+	if( jA->LookupInteger(ATTR_RESIDENT_SET_SIZE, long_value) ) {
+		remote_rusage.ru_maxrss = long_value;
 	}
 
-	if( jA->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int64_value) ) {
-		proportional_set_size_kb = int64_value;
+	if( jA->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, long_value) ) {
+		proportional_set_size_kb = long_value;
 	}
 
-			
-	if( jA->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
-		disk_usage = int_value;
+	// DiskUsage and ScratchDirFileCount should reflect the usage for this single execution
+	// so we *don't* propagate the values from the initial job ad
+#if 1
+	disk_usage = 0;
+	scratch_dir_file_count = -1; // -1 because the starter may never send us a value
+#else
+
+	if( jA->LookupInteger(ATTR_DISK_USAGE, long_value) ) {
+		disk_usage = long_value;
 	}
 
-	if( jA->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, int_value) ) {
-		last_job_lease_renewal = (time_t)int_value;
+	if( jA->LookupInteger(ATTR_SCRATCH_DIR_FILE_COUNT, long_value) ) {
+		scratch_dir_file_count = long_value;
+	}
+#endif
+
+	if( jA->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, long_value) ) {
+		last_job_lease_renewal = (time_t)long_value;
 	}
 
 	jA->LookupBool( ATTR_WANT_IO_PROXY, m_want_chirp );
@@ -1349,8 +1362,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
-	int int_value;
-	int64_t int64_value;
+	int64_t long_value;
 	std::string string_value;
 	bool bool_value;
 
@@ -1398,18 +1410,18 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}
 
-	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
-		if( int64_value > image_size_kb ) {
-			image_size_kb = int64_value;
+	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
+		if( long_value > image_size_kb ) {
+			image_size_kb = long_value;
 			jobAd->Assign(ATTR_IMAGE_SIZE, image_size_kb);
 		}
 	}
 
 	// Update memory_usage_mb, which should be the maximum value seen
 	// in the update ad for ATTR_MEMORY_USAGE
-	if( EvalInteger(ATTR_MEMORY_USAGE, update_ad, NULL, int64_value) ) {
-		if( int64_value > memory_usage_mb ) {
-			memory_usage_mb = int64_value;
+	if( EvalInteger(ATTR_MEMORY_USAGE, update_ad, NULL, long_value) ) {
+		if( long_value > memory_usage_mb ) {
+			memory_usage_mb = long_value;
 		}
 	}
 	// Now update MemoryUsage in the job ad.  If the update ad sent us 
@@ -1432,19 +1444,19 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, real_value);
 	}
 
-	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
-		int rss = remote_rusage.ru_maxrss;
-		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {
-			remote_rusage.ru_maxrss = int_value;
-			jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
+	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, long_value) ) {
+		int64_t rss = remote_rusage.ru_maxrss;
+		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < long_value ) {
+			remote_rusage.ru_maxrss = long_value;
+			jobAd->Assign(ATTR_RESIDENT_SET_SIZE, long_value);
 		}
 	}
 
-	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int64_value) ) {
+	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, long_value) ) {
 		int64_t pss = proportional_set_size_kb;
-		if( !jobAd->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE,pss) || pss < int64_value ) {
-			proportional_set_size_kb = int64_value;
-			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int64_value);
+		if( !jobAd->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE,pss) || pss < long_value ) {
+			proportional_set_size_kb = long_value;
+			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, long_value);
 		}
 	}
 
@@ -1495,10 +1507,17 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("RecentWindowMaxStarter", *jobAd, "RecentWindowMax", *update_ad);
     CopyAttribute("RecentStatsTickTimeStarter", *jobAd, "RecentStatsTickTime", *update_ad);
 
-	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
-		if( int_value > disk_usage ) {
-			disk_usage = int_value;
-			jobAd->Assign(ATTR_DISK_USAGE, int_value);
+	if( update_ad->LookupInteger(ATTR_DISK_USAGE, long_value) ) {
+		if( long_value > disk_usage ) {
+			disk_usage = long_value;
+			jobAd->Assign(ATTR_DISK_USAGE, disk_usage);
+		}
+	}
+
+	if( update_ad->LookupInteger(ATTR_SCRATCH_DIR_FILE_COUNT, long_value) ) {
+		if( long_value > scratch_dir_file_count ) {
+			scratch_dir_file_count = long_value;
+			jobAd->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, scratch_dir_file_count);
 		}
 	}
 
@@ -1518,14 +1537,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal);
 	}
 
-	if( update_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_value) ) {
-		jobAd->Assign(ATTR_ON_EXIT_SIGNAL, int_value);
-		exit_value = int_value;
+	if( update_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, long_value) ) {
+		jobAd->Assign(ATTR_ON_EXIT_SIGNAL, long_value);
+		exit_value = long_value;
 	}
 
-	if( update_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_value) ) {
-		jobAd->Assign(ATTR_ON_EXIT_CODE, int_value);
-		exit_value = int_value;
+	if( update_ad->LookupInteger(ATTR_ON_EXIT_CODE, long_value) ) {
+		jobAd->Assign(ATTR_ON_EXIT_CODE, long_value);
+		exit_value = long_value;
 	}
 
 	if( update_ad->LookupString(ATTR_EXIT_REASON,string_value) ) {
@@ -1561,6 +1580,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
+			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
+			&& it->first != ATTR_DISK_USAGE    // ditto
+			// the ATTR_JOB_*_CPU attributes don't end in "Usage"
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -2294,7 +2316,7 @@ RemoteResource::locateReconnectStarter( void )
 }
 
 void
-RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
+RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const
 {
 	upload_status = m_upload_xfer_status;
 	download_status = m_download_xfer_status;
@@ -2330,7 +2352,11 @@ RemoteResource::initFileTransfer()
 	ASSERT(jobAd);
 	int spool_time = 0;
 	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
-	filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+	int r = filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+	if (r == 0) {
+		// filetransfer Init failed
+		EXCEPT( "RemoteResource::initFileTransfer  Init failed\n");
+	}
 
 	filetrans.RegisterCallback(
 		(FileTransferHandlerCpp)&RemoteResource::transferStatusUpdateCallback,

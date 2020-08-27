@@ -69,11 +69,6 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  daemons send updates every 5 minutes by default).
 #CLASSAD_LIFETIME	= 900
 
-##  How often should the collector check for machines that don't have
-##  ClassAds from the condor_master and send email about it? (3
-##  hours by default).
-#MASTER_CHECK_INTERVAL	= 10800
-
 ##  Network timeout when talking to daemons that are sending an
 ##  update: 
 #CLIENT_TIMEOUT		= 30

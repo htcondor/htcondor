@@ -18,7 +18,12 @@
 
 
 
-condor_selective_glob( "procapi.h;procapi.cpp;processid.*;procapi_killfamily.cpp" ProcAPISrcs)
+set(ProcAPISrcs
+	${CMAKE_CURRENT_SOURCE_DIR}/procapi.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/processid.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/procapi_killfamily.cpp
+)
+
 set( PROCAPI_UTIL_SRCS "${ProcAPISrcs}" PARENT_SCOPE )
 
 # there was a test target which was never used.

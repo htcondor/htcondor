@@ -97,7 +97,7 @@ public:
 	SecMan(const SecMan &);
 	~SecMan();
 	const SecMan & operator=(const SecMan &);
-	SecMan &operator=(SecMan &&);
+	SecMan &operator=(SecMan &&) noexcept ;
 
 		// A struct to order all the startCommand parameters below (as opposed
 		// to having 10 parameters to a single function).
@@ -207,15 +207,14 @@ public:
 	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = NULL);
-	MyString			ReconcileMethodLists( char * cli_methods, char * srv_methods );
+	std::string			ReconcileMethodLists( char * cli_methods, char * srv_methods );
 
 
 	static  void			key_printf(int debug_levels, KeyInfo *k);
 
 	static	int 			getAuthBitmask ( const char * methods );
-	static void             getAuthenticationMethods( DCpermission perm, MyString *result );
+	static  std::string		getAuthenticationMethods( DCpermission perm );
 
-	static	MyString 		getDefaultAuthenticationMethods( DCpermission perm );
 	static	MyString 		getDefaultCryptoMethods();
 	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
 	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
@@ -243,7 +242,7 @@ public:
 	bool 					sec_is_negotiable (sec_req r);
 	SecMan::sec_feat_act 	sec_req_to_feat_act (sec_req r);
 
-	static	int 			sec_char_to_auth_method( char* method );
+	static	int 			sec_char_to_auth_method( const char* method );
 
 	bool 					sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const char* attr );
 
@@ -270,7 +269,7 @@ public:
 		// If additional attributes should be copied into the session policy,
 		// these can be copied into the policy parameter:
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
-		char const *exported_session_info, char const *peer_fqu, char const *peer_sinful, int duration,
+		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
 		classad::ClassAd *policy);
 
 		// Get security session info to send to our peer so that peer
@@ -293,6 +292,7 @@ public:
 
  private:
 	void invalidateOneExpiredCache(KeyCache *session_cache);
+	static  std::string		filterAuthenticationMethods(DCpermission perm, const std::string &input_methods);
 
     void                    remove_commands(KeyCacheEntry * keyEntry);
 

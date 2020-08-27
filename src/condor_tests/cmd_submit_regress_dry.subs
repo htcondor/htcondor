@@ -62,7 +62,6 @@ cron_month = 2
 cron_day_of_week = 1
 description = all prunable submit keywords
 batch_name = prune
-nice_user = true
 max_job_retirement_time = 6*60
 job_lease_duration = 7*60
 core_size = 34*1024

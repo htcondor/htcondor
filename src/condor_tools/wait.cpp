@@ -250,6 +250,7 @@ int main( int argc, char *argv[] )
 		EXIT_FAILURE;
 	}
 
+	bool initial_scan = true;
 	while( 1 ) {
 		int timeout_ms = -1;
 		if(! dont_wait) {
@@ -263,7 +264,7 @@ int main( int argc, char *argv[] )
 
 		ULogEventOutcome outcome;
 		ULogEvent * event;
-		outcome = wful.readEvent( event, timeout_ms );
+		outcome = wful.readEvent( event, initial_scan ? 0 : timeout_ms );
 		if( outcome == ULOG_OK ) {
 			char key[1024];
 			sprintf(key,"%d.%d.%d",event->cluster,event->proc,event->subproc);
@@ -318,12 +319,19 @@ int main( int argc, char *argv[] )
 				EXIT_SUCCESS;
 			}
 
-			if( table.size() == 0 && submitted > 0 && (!minjobs) ) {
+			if( table.size() == 0 && submitted > 0 && (!minjobs) && !initial_scan) {
 				printf( "All jobs done.\n" );
 				EXIT_SUCCESS;
 			}
 		} else if( outcome == ULOG_NO_EVENT ) {
-			if( table.size() == 0 && submitted == 0 ) {
+			if (initial_scan) {
+				// we are done with the initial scan when we find no events without waiting.
+				initial_scan = false;
+				if (table.size() == 0 && !minjobs) {
+					printf("All jobs done.\n");
+					EXIT_SUCCESS;
+				}
+			} else if (table.size() == 0 && submitted == 0) {
 				if( cluster == ANY_NUMBER ) {
 					fprintf(stderr,"This log does not mention any jobs!\n");
 				} else {

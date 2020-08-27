@@ -173,7 +173,7 @@ class TransferRequest
 		/////////////////////////////////////////////////////////////////////
 
 		void set_rejected(bool val);
-		bool get_rejected(void);
+		bool get_rejected(void) const;
 
 		void set_rejected_reason(const std::string &reason);
 		const std::string& get_rejected_reason(void);

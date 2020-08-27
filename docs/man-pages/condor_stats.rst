@@ -99,9 +99,9 @@ specification as given by an argument.
     information displayed includes the number of running jobs and the
     number of idle jobs. An example argument appears as
 
-    ::
+    .. code-block:: text
 
-            -userquery jondoe@sample.com/onemachine.sample.com
+        -userquery jondoe@sample.com/onemachine.sample.com
 
  **-userlist**
     Queries for the list of all submitters for which the
@@ -144,16 +144,3 @@ Exit Status
 *condor_stats* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

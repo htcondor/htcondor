@@ -1004,7 +1004,6 @@ void CondorJob::doEvaluateState()
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
-				SetRemoteJobId( NULL );
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
@@ -1053,11 +1052,11 @@ void CondorJob::doEvaluateState()
 										 now + lastRemoveAttempt );
 				break;
 			}
-			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteJobId( NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -1285,8 +1284,6 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
 		ATTR_JOB_LAST_START_DATE,
 		ATTR_SHADOW_BIRTHDATE,
-		ATTR_JOB_LOCAL_SYS_CPU,
-		ATTR_JOB_LOCAL_USER_CPU,
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_CKPTS,
@@ -1305,6 +1302,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_RESIDENT_SET_SIZE,
 		ATTR_PROPORTIONAL_SET_SIZE,
 		ATTR_DISK_USAGE,
+		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
 		NULL };		// list must end with a NULL
 
@@ -1426,7 +1424,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
 	submit_ad->Delete( ATTR_STAGE_IN_START );
-	submit_ad->Delete( ATTR_SCHEDD_BIRTHDATE );
 	submit_ad->Delete( ATTR_FILE_SYSTEM_DOMAIN );
 	submit_ad->Delete( ATTR_ULOG_FILE );
 	submit_ad->Delete( ATTR_ULOG_USE_XML );
@@ -1441,7 +1438,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( "CondorPlatform" );
-	submit_ad->Delete( "CondorVersion" );
+	submit_ad->Delete( ATTR_CONDOR_VERSION );
 	submit_ad->Delete( ATTR_WANT_CLAIMING );
 	submit_ad->Delete( ATTR_WANT_MATCHING );
 	submit_ad->Delete( ATTR_HOLD_REASON );
@@ -1470,8 +1467,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, 0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
@@ -1527,24 +1522,22 @@ ClassAd *CondorJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 	}
 
-	formatstr( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
-				  COMPLETED );
+	formatstr( expr, "%s == %d", ATTR_JOB_STATUS, COMPLETED );
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
 		formatstr_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
 	}
 
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_JOB_LEAVE_IN_QUEUE, expr.c_str() );
 
-	formatstr( expr, "%s = Undefined", ATTR_OWNER );
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_OWNER, "Undefined" );
 
 	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
-	formatstr( expr, "%s = (%s > 0) =!= True && time() > %s + %d",
-				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
+	formatstr( expr, "(%s > 0) =!= True && time() > %s + %d",
+				  ATTR_STAGE_IN_FINISH,
 				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
-	submit_ad->Insert( expr.c_str() );
+	submit_ad->AssignExpr( ATTR_PERIODIC_REMOVE_CHECK, expr.c_str() );
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 

@@ -3,7 +3,7 @@
 *condor_token_fetch*
 ======================
 
-obtain a token from a remote daemon for the TOKEN authentication method
+obtain a token from a remote daemon for the IDTOKENS authentication method
 :index:`condor_token_fetch<single: condor_token_fetch; HTCondor commands>`\ :index:`condor_token_fetch command`
 
 Synopsis
@@ -83,26 +83,26 @@ Examples
 
 To obtain a token with a lifetime of 10 minutes from the default *condor_schedd*:
 
-::
+.. code-block:: console
 
-    % condor_token_fetch -lifetime 600
+    $ condor_token_fetch -lifetime 600
     eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYX...ii7lAfCA
 
 To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 ``WRITE``:
 
-::
+.. code-block:: console
 
-    % condor_token_fetch -name bird.cs.wisc.edu \
+    $ condor_token_fetch -name bird.cs.wisc.edu \
                           -authz READ -authz WRITE
     eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYX...lJTj54
 
 To create a token from the collector in the ``htcondor.cs.wisc.edu`` pool
 and then to save it to ``~/.condor/tokens.d/friend``:
 
-::
+.. code-block:: console
 
-    % condor_token_fetch -identity friend@cs.wisc.edu -lifetime 600 -token friend
+    $ condor_token_fetch -identity friend@cs.wisc.edu -lifetime 600 -token friend
 
 Exit Status
 -----------

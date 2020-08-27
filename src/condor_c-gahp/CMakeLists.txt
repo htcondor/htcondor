@@ -16,10 +16,20 @@
  # 
  ############################################################### 
 
-condor_selective_glob( "Pipe*;io*;cgahp*" CGahpSrcs )
+set(CGahpSrcs
+	PipeBuffer.cpp
+	io_loop.cpp
+	cgahp_common.cpp
+)
  
 condor_exe( condor_c-gahp "${CGahpSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
 
-condor_selective_glob("Pipe*;schedd*;Sched*;cgahp*" CGahpWorkerSrcs)
+set(CGahpWorkerSrcs
+	PipeBuffer.cpp
+	cgahp_common.cpp
+	schedd_client.cpp
+	schedd_client_main.cpp
+	SchedDCommands.cpp
+)
 
 condor_exe( condor_c-gahp_worker_thread "${CGahpWorkerSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )

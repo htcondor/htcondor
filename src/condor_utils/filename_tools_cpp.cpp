@@ -133,7 +133,7 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 	dprintf( D_FULLDEBUG, "REMAP: %i: %s\n", cur_remap_level, filename );
 
 	// if remaps create a loop, this will break it
-	int max_remap_level = param_integer("MAX_REMAP_RECURSIONS", 20);
+	int max_remap_level = param_integer("MAX_REMAP_RECURSIONS", 128);
 	if (cur_remap_level > max_remap_level) {
 		dprintf( D_FULLDEBUG, "REMAP: aborting after %i iterations\n", cur_remap_level);
 		output.formatstr("<abort>");

@@ -87,14 +87,15 @@ sub TestUptimeResourceSeconds {
 	my $directAds = parseDirectMachineAds( "Assigned${resourceName}s", "Uptime${resourceName}sSeconds" );
 
 	my $multiplier = undef;
+	my $uptimeCount = 0;
 	foreach my $ad (@{$directAds}) {
 		my $value = $ad->{ "Uptime${resourceName}sSeconds" };
 		if( $value eq "undefined" ) { next; }
+		++$uptimeCount;
 
 		my $total = 0;
 		my $assignedRESOURCEs = $ad->{ "Assigned${resourceName}s" };
 		foreach my $RESOURCE (split( /[, ]+/, $assignedRESOURCEs )) {
-			# my $increment = $RESOURCEIncrements{ $RESOURCE };
 			my $increment = $increments{ $resourceName }->{ $RESOURCE };
 
 			if(! defined( $increment )) {
@@ -117,6 +118,10 @@ sub TestUptimeResourceSeconds {
 				die( "Failure: '${assignedRESOURCEs}' has a different sample count (" . $value / $total . " != " . $multiplier . ").\n" );
 			}
 		}
+	}
+
+	if( $uptimeCount <= 0 ) {
+		die( "Failure: did not find any Uptime${resourceName}sSeconds attributes.\n" );
 	}
 
 	RegisterResult( 1, check_name => "Uptime${resourceName}sSeconds",

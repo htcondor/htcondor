@@ -1,11 +1,17 @@
-# HTCondor Build Dockerfiles
+# HTCondor Dockerfiles
 
-This directory contains Dockerfiles to create images on supported platforms 
+This directory contains Dockerfiles for an HTCondor build image (can be
+used for building HTCondor) and service images (can be used for running the
+HTCondor daemons.)
+
+## HTCondor Build Dockerfiles
+
+The centos7/ directory contains Dockerfiles to create images on CentOS 7
 containing all the dependencies needed to build all the HTCondor 
 packages, tarballs, and documentation from source, as released on htcondor.org.
 
 
-## Building HTCondor Inside a Container
+### Building HTCondor Inside a Container
 
 No matter which of the below methods you'll use, you should start by running
 ```shell
@@ -28,7 +34,7 @@ absolute latest version of HTCondor (i.e., whatever is on `master`) for CentOS 7
 Replace the image name appropriately if you are targeting some other platform.
 
 
-### Building Without Local Source
+#### Building Without Local Source
 
 If you don't have a local clone of the HTCondor git repository, the container
 can automatically fetch one for you.
@@ -43,7 +49,7 @@ After a few moments, you'll be in the container, sitting above the HTCondor sour
 TODO: build instructions
 
 
-### Building From Local Source
+#### Building From Local Source
 
 If you already have a local clone of the HTCondor git repository, you can 
 bind-mount it into the container and build from it.
@@ -56,7 +62,7 @@ This will leave you in the container, sitting above the HTCondor source.
 From there you can configure and run the build as normal.
 
 
-## Extracting Build Artifacts from the Container
+### Extracting Build Artifacts from the Container
 
 You may need to get some build artifact (like a tarballed release directory)
 out of the container and back onto your host machine.
@@ -72,7 +78,7 @@ Note the trailing `.`: this is the path where Docker will put the extracted file
 (in this case, the current working directory).
 
 
-## Working on the Documentation
+### Working on the Documentation
 
 The build container includes `sphinx-autobuild` for convenient editing of the
 documentation.
@@ -96,3 +102,9 @@ sphinx-autobuild --host 0.0.0.0 --port 8000 "$HTCONDOR_REPO_DIR/docs/" ~/docs
 This will start the webserver and give you a link to click on.
 For that link to work, you must bind a port on the container when you run it by
 adding `-p 8000:8000` to your `docker run` arguments.
+
+
+## HTCondor Service Dockerfiles
+
+These are Dockerfiles and supporting files in the `services/` directory tree.
+See `services/README.md` for information.

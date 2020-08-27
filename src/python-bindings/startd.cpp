@@ -19,7 +19,11 @@
 
 #include "old_boost.h"
 #include "module_lock.h"
+#include "daemon_location.h"
 #include "classad_wrapper.h"
+#include "history_iterator.h"
+
+using namespace boost::python;
 
 /*
  * Object representing a claim on a remote startd.
@@ -34,30 +38,28 @@ struct Startd
     Startd() {}
 
 
-    Startd(boost::python::object ad_obj)
-    {
-        ClassAdWrapper ad = boost::python::extract<ClassAdWrapper>(ad_obj);
-        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
-        {
-            THROW_EX(ValueError, "No contact string in ClassAd");
-        }
+	Startd(boost::python::object loc)
+	{
+		int rv = construct_for_location(loc, DT_STARTD, m_addr, m_version);
+		if (rv < 0) {
+			if (rv == -2) { boost::python::throw_error_already_set(); }
+			THROW_EX(RuntimeError, "Unknown type");
+		}
+	}
+
+    boost::python::object location() const {
+        return make_daemon_location(DT_STARTD, m_addr, m_version);
     }
 
     std::string
     drain_jobs(int how_fast=DRAIN_GRACEFUL, bool resume_on_completion=false, boost::python::object check_obj=boost::python::object(""), boost::python::object start_obj = boost::python::object() )
     {
-        std::string check_expr;
-        boost::python::extract<std::string> expr_extract(check_obj);
-        if (expr_extract.check())
-        {
-            check_expr = expr_extract();
-        }
-        else
-        {
-            classad::ClassAdUnParser printer;
-            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(check_obj));
-            printer.Unparse(check_expr, expr.get());
-        }
+		std::string check_expr;
+		if ( ! convert_python_to_constraint(check_obj, check_expr, true)) {
+			THROW_EX(ValueError, "Invalid check expression");
+		}
+		const char * check_expr_ptr = nullptr;
+		if ( ! check_expr.empty()) { check_expr_ptr = check_expr.c_str(); }
 
 		std::string start_expr;
 		boost::python::extract<std::string> start_extract( start_obj );
@@ -72,7 +74,7 @@ struct Startd
         std::string request_id;
 
         DCStartd startd(m_addr.c_str());
-        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr.c_str(), start_expr.c_str(), request_id);
+        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr_ptr, start_expr.c_str(), request_id);
         if (!rval) {THROW_EX(RuntimeError, "Startd failed to begin draining jobs.");}
         return request_id;
     }
@@ -97,9 +99,15 @@ struct Startd
         if (!rval) {THROW_EX(RuntimeError, "Startd failed to cancel draining jobs.");}
     }
 
+	boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection = boost::python::list(), int match = -1, boost::python::object since = boost::python::object())
+	{
+		return history_query(requirement, projection, match, since, GET_HISTORY, m_addr);
+	}
+
 private:
 
     std::string m_addr;
+    std::string m_version;
 };
 
 // declare a formal enum so that python doesn't think all ints are DrainTypes (sigh)
@@ -114,7 +122,7 @@ export_startd()
 {
     boost::python::enum_<DrainTypes>("DrainTypes",
             R"C0ND0R(
-            Draining policies that can be sent to a ``condor_startd``.
+            Draining policies that can be sent to a *condor_startd*.
 
             The values of the enumeration are:
 
@@ -139,12 +147,17 @@ export_startd()
             )C0ND0R",
         boost::python::init<boost::python::object>(
             R"C0ND0R(
-            :param ad: A ClassAd describing the claim and the startd location.
+            :param locaton_ad: A ClassAd or DaemonLocation describing the the startd location and version.
                 If omitted, the local startd is assumed.
-            :type ad: :class:`~classad.ClassAd`
+            :type location_ad: :class:`~classad.ClassAd` or :class:`DaemonLocation`
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("ad")=boost::python::object())))
         .def(boost::python::init<>(boost::python::args("self")))
+        .add_property("location", &Startd::location,
+            R"C0ND0R(
+            The startd to query or send commands to
+            :rtype: location :class:`~htcondor.DaemonLocation`
+            )C0ND0R")
         .def("drainJobs", &Startd::drain_jobs,
             R"C0ND0R(
             Begin draining jobs from the startd.
@@ -180,6 +193,28 @@ export_startd()
                 boost::python::arg("request_id")=""
                )
            )
+        .def("history", &Startd::history,
+            R"C0ND0R(
+            Fetch history records from the *condor_startd* daemon.
+
+            :param requirements: Query constraint; only jobs matching this constraint will be returned;
+                defaults to ``'true'``.
+            :type constraint: str or :class:`class.ExprTree`
+            :param projection: Attributes that are to be included for each returned job.
+                The empty list causes all attributes to be included.
+            :type projection: list[str]
+            :param int match: An limit on the number of jobs to include; the default (``-1``)
+                indicates to return all matching jobs.
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
+               (SELFARG
+                boost::python::arg("requirements"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+                boost::python::arg("since")=boost::python::object())
+            )
+
         ;
+
 }
 

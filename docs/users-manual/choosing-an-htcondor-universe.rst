@@ -2,9 +2,9 @@ Choosing an HTCondor Universe
 =============================
 
 A universe in HTCondor
-:index:`universe` :index:`universe<single: universe; HTCondor>` defines an
-execution environment. HTCondor Version 8.9.1 supports several different
-universes for user jobs:
+:index:`universe` :index:`universe<single: universe; HTCondor>` defines
+an execution environment for a job. HTCondor supports several different
+universes:
 
 -  vanilla
 -  grid
@@ -29,7 +29,7 @@ universe allows users to run jobs written for the Java Virtual Machine
 (JVM). The scheduler universe allows users to submit lightweight jobs to
 be spawned by the program known as a daemon on the submit host itself.
 :index:`parallel<single: parallel; universe>` The parallel universe is for programs
-that require multiple machines for one job. See the 
+that require multiple machines for one job. See the
 :doc:`/users-manual/parallel-applications` section for more
 about the Parallel universe. :index:`vm<single: vm; universe>` The vm universe
 allows users to run jobs where the job is no longer a simple executable,
@@ -42,7 +42,7 @@ Vanilla Universe
 :index:`vanilla<single: vanilla; universe>`
 
 The vanilla universe in HTCondor is intended for most programs.
-Shell scripts are another case where the vanilla universe is useful. 
+Shell scripts are another case where the vanilla universe is useful.
 
 Access to the job's input and output files is a concern for vanilla
 universe jobs. One option is for HTCondor to rely on a shared file system,

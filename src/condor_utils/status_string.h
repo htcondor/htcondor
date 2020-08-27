@@ -22,6 +22,6 @@
 
 #include "MyString.h"
 
-void statusString( int status, MyString &str );
+void statusString( int status, std::string &str );
 
 #endif /* _STATUS_STRING_H */

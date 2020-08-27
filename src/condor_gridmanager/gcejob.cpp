@@ -189,9 +189,9 @@ GCEJob::GCEJob( ClassAd *classad ) :
 
 			// Labels don't have to have values.
 			std::string labelValue;
-			jobAd->LookupString( labelAttr.c_str(), labelValue );
+			jobAd->LookupString( labelAttr, labelValue );
 
-            m_labels.push_back( std::make_pair( labelName, labelValue ) );
+            m_labels.emplace_back( labelName, labelValue );
 		}
 	}
 

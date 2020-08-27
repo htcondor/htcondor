@@ -287,7 +287,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
-														  gahp_args.GetArg(0) );
+		gahp_args.GetArg(0), args_str.c_str() );
 	myResource->RegisterJob( this );
 	if ( remoteJobId ) {
 		myResource->AlreadySubmitted( this );
@@ -1749,6 +1749,11 @@ void INFNBatchJob::CreateSandboxId()
 	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
 	std::string job_id;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+	size_t pos = 0;
+	while ( (pos = job_id.find_first_of("@#", pos)) != std::string::npos ) {
+		job_id[pos] = '_';
+		pos++;
+	}
 
 	std::string unique_id;
 	formatstr( unique_id, "%s_%s", pool_name, job_id.c_str() );

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include <string>
 #include <vector>
@@ -36,10 +37,30 @@ enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 	return true;
 }
 
+static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+static const char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
+	char *p = buf;
+	char *endp = buf + bufsiz -1;
+	for (int ix = 0; ix < 16; ++ix) {
+		if (ix == 4 || ix == 6 || ix == 8 || ix == 10) *p++ = '-';
+		unsigned char ch = uuid[ix];
+		*p++ = hex_digit((ch >> 4) & 0xF);
+		*p++ = hex_digit(ch & 0xF);
+		if (p >= endp) break;
+	}
+	*p = 0;
+	return buf;
+}
+
 BasicProps::BasicProps() : totalGlobalMem(0), ccMajor(0), ccMinor(0), multiProcessorCount(0), clockRate(0), ECCEnabled(0) {
 	memset( uuid, 0, sizeof(uuid) );
 	memset( pciId, 0, sizeof(pciId) );
 }
+
+const char * BasicProps::printUUID(char* buf, int bufsiz) {
+	return print_uuid(buf, bufsiz, uuid);
+}
+
 
 // ----------------------------------------------------------------------------
 
@@ -136,10 +157,14 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 	cudev dev;
 	cudaError_t res = cuDeviceGet(&dev, devID);
 	if (cudaSuccess == res) {
-		char name[256];
-		memset(name, 0, sizeof(name));
-		cuDeviceGetName(name, sizeof(name), dev);
+		// for some reason PowerPC was having trouble with a stack buffer for cuGetDeviceName
+		// so we switch to malloc and a larger buffer, and we overdo the null termination.
+		char * name = (char*)malloc(1028);
+		memset(name, 0, 1028);
+		cuDeviceGetName(name, 1024, dev);
+		name[1024] = 0; // this shouldn't be necessary, but it can't hurt.
 		p->name = name;
+		free(name);
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);

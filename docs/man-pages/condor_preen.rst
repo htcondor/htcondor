@@ -67,16 +67,3 @@ of 2 indicates that *condor_preen* attempted to send email about deleted
 files but was unable to. This usually indicates an error in the configuration
 for sending email.  An exit status of 1 indicates a general failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

@@ -19,8 +19,9 @@
 
 if (LINUX)
 
-file( GLOB RmvSrcs topic_* daemonReader.* )
-condor_glob( Hdrs Srcs "${RmvSrcs}" )
+set(Srcs
+modTrial.cpp
+)
 
 condor_exe( daemonReader "daemonReader.cpp" "${C_SBIN}" "condorPigeon;${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" OFF )
 condor_exe( condor_pigeon_topic_publisher "topic_publisher.cpp;${Srcs}" "${C_BIN}" "condorapi;${CONDOR_TOOL_LIBS};${QPID_FOUND}" OFF )

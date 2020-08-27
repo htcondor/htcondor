@@ -23,8 +23,8 @@
 
 int numAttrs = 0;
 const int NUM_OPS = 6;
-string* attrs = NULL;
-string operators[NUM_OPS] = { "<", "<=", "==", "!=", ">=", ">" };
+std::string* attrs = NULL;
+std::string operators[NUM_OPS] = { "<", "<=", "==", "!=", ">=", ">" };
 
 void usage( char *myName );
 bool generateAttributes( );
@@ -43,7 +43,7 @@ int main ( int argc, char *argv[] )
 	classad::ClassAd* offer = NULL;
 	ClassAdList offerList;
 	ClassAdAnalyzer analyzer;
-	string buffer = "";
+	std::string buffer = "";
 //	int starttime = 0;
 //	int endtime = 0;
 
@@ -60,31 +60,31 @@ int main ( int argc, char *argv[] )
 	else {
 		numAttrs = atoi( argv[2] );
 		if( numAttrs <= 0 ) {
-			cerr << argv[0] << ": bad value for number of attributes: "
-				 << numAttrs << endl;
+			std::cerr << argv[0] << ": bad value for number of attributes: "
+				 << numAttrs << std::endl;
 			exit( 1 );
 		}
 		if( !generateAttributes( ) ) {
-			cerr << argv[0] << ": error in generateAttributes( )" << endl;
+			std::cerr << argv[0] << ": error in generateAttributes( )" << std::endl;
 			exit( 1 );
 		}
 
 		requestReqLen = atoi( argv[3] );
 		if( requestReqLen <= 0 ) {
-			cerr << argv[0] << ": bad value for request requirements length: "
-				 << requestReqLen << endl;
+			std::cerr << argv[0] << ": bad value for request requirements length: "
+				 << requestReqLen << std::endl;
 			exit( 1 );
 		}
 		if( !generateClassAd( requestReqLen, request ) ) {
-			cerr << argv[0] << ": error in generateClassAd( " <<
-					requestReqLen << ", request )" << endl;
+			std::cerr << argv[0] << ": error in generateClassAd( " <<
+					requestReqLen << ", request )" << std::endl;
 			exit( 1 );
 		}
 
 		offerReqLen = atoi( argv[4] );
 		if( offerReqLen <= 0 ) {
-			cerr << argv[0] << ": bad value for offer requirements length: "
-				 << offerReqLen << endl;
+			std::cerr << argv[0] << ": bad value for offer requirements length: "
+				 << offerReqLen << std::endl;
 			exit( 1 );
 		}
 
@@ -95,11 +95,11 @@ int main ( int argc, char *argv[] )
 			}
 				// TEST AnalyzeExpressionToBuffer
 			if( !generateClassAd( offerReqLen, offer ) ) {
-				cerr << argv[0] << ": error in generateClassAd( " <<
-					offerReqLen << ", offer )" << endl;
+				std::cerr << argv[0] << ": error in generateClassAd( " <<
+					offerReqLen << ", offer )" << std::endl;
 				exit( 1 );
 			}
-			string attr = argv[5];
+			std::string attr = argv[5];
 //  			pp.Unparse( buffer, request );
 //  			cout << "mainAd = " << buffer << endl;
 //  			buffer = "";
@@ -113,9 +113,9 @@ int main ( int argc, char *argv[] )
 			gettimeofday( tvStart, tz );
 			analyzer.AnalyzeExprToBuffer( request, offer, attr, buffer );
 			gettimeofday( tvEnd, tz );
-			cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
+			std::cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
 							 + ( tvEnd->tv_usec - tvStart->tv_usec ) / 10000 )
-					  / 100 ) << endl;
+					  / 100 ) << std::endl;
 //  			cout << buffer;
 			return 0;
 		}
@@ -126,21 +126,21 @@ int main ( int argc, char *argv[] )
 		else {
 			numOffers = atoi( argv[5] );
 			if( numOffers <= 0 ) {
-				cerr << argv[0] << ": bad value for number of offers: "
-					 << numOffers << endl;
+				std::cerr << argv[0] << ": bad value for number of offers: "
+					 << numOffers << std::endl;
 				exit( 1 );
 			}
 			numUniqueOfferReqs = atoi( argv[6] );
 			if( numUniqueOfferReqs <= 0 || numUniqueOfferReqs > numOffers ) {
-				cerr << argv[0] << ": bad value for number of unique offer requirements: "
-					 << numUniqueOfferReqs << endl;
+				std::cerr << argv[0] << ": bad value for number of unique offer requirements: "
+					 << numUniqueOfferReqs << std::endl;
 				exit( 1 );
 			}
 			if ( !generateClassAdList( numOffers, offerReqLen, 
 									   numUniqueOfferReqs, offerList ) ) {
-				cerr << argv[0] << ": error in generateClassAdList( "
+				std::cerr << argv[0] << ": error in generateClassAdList( "
 					 << numOffers << ", " << offerReqLen << ", "
-					 << numUniqueOfferReqs << ", offerList )" << endl;
+					 << numUniqueOfferReqs << ", offerList )" << std::endl;
 				exit( 1 );
 			}
 
@@ -153,9 +153,9 @@ int main ( int argc, char *argv[] )
 				analyzer.AnalyzeJobReqToBuffer( toOldClassAd( request ), 
 												offerList, buffer );
 				gettimeofday( tvEnd, tz );
-				cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
+				std::cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
 								 + ( tvEnd->tv_usec - tvStart->tv_usec )/10000)
-						  / 100 ) << endl;
+						  / 100 ) << std::endl;
 //  				cout << buffer;
 				return 0;
 			}
@@ -168,10 +168,10 @@ int main ( int argc, char *argv[] )
 				analyzer.AnalyzeJobAttrsToBuffer( toOldClassAd( request ), 
 												  offerList, buffer );
 				gettimeofday( tvEnd, tz );
-				cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
+				std::cout << ( round( ( tvEnd->tv_sec - tvStart->tv_sec ) * 100
 								 + ( tvEnd->tv_usec - tvStart->tv_usec )/10000)
 								 
-						  / 100 ) << endl;
+						  / 100 ) << std::endl;
 //  				cout << buffer;
 				return 0;				
 			}
@@ -197,7 +197,7 @@ generateAttributes( )
 	if( numAttrs <= 0 ) {
 		return false;
 	}
-	attrs = new string[numAttrs];
+	attrs = new std::string[numAttrs];
 	char tempAttr[32];
 	for( int i = 0; i < numAttrs; i++ ){
 		sprintf( tempAttr, "attr%i", i );
@@ -233,8 +233,8 @@ bool generateClassAd( int reqLen, classad::ClassAd *&ad )
 		return false;
 	}
 	classad::ClassAdParser parser;
-	string adString = "";
-	string reqString = "";
+	std::string adString = "";
+	std::string reqString = "";
 	char tempString[64];
 
 	adString += '[';
@@ -260,7 +260,7 @@ bool generateClassAd( int reqLen, classad::ClassAd *&ad )
 
 	adString += ']';
 	if( !( ad = parser.ParseClassAd( adString ) ) ) {
-		cerr << "ad = " << adString;
+		std::cerr << "ad = " << adString;
 		return false;
 	}
 	else {

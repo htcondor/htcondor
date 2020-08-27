@@ -6,6 +6,7 @@ ClassAd Attributes
    :glob:
    
    classad-types
+   accounting-classad-attributes
    job-classad-attributes
    machine-classad-attributes
    daemon-master-classad-attributes

@@ -93,10 +93,11 @@ executing job that may be useful.
    USER_JOB_WRAPPER. If this file exists, HTCondor assumes that the
    job wrapper has failed and copies the contents of the file to the
    StarterLog for the administrator to debug the problem.
--  ``OMP_NUM_THREADS`` is set to the number of cpu cores provisioned to this job.  Should be
+-  ``CUBACORES`` ``GOMAXPROCS`` ``JULIA_NUM_THREADS`` ``MKL_NUM_THREADS`` ``NUMEXPR_NUM_THREADS`` ``OMP_NUM_THREADS`` ``OMP_THREAD_LIMIT``
+   are set to the number of cpu cores provisioned to this job.  Should be
    at least RequestCpus, but HTCondor may match a job to a bigger slot.  Jobs should not 
    spawn more than this number of cpu-bound threads, or their performance will suffer.
-   Many third party libraries like OpenMP obey this environment variable.
+   Many third party libraries like OpenMP obey these environment variables.
 -  ``X509_USER_PROXY``
    :index:`X509_USER_PROXY environment variable`\ :index:`X509_USER_PROXY<single: X509_USER_PROXY; environment variables>`
    gives the full path to the X.509 user proxy file if one is associated

@@ -1,3 +1,78 @@
+condor (8.9.8-1) unstable; urgency=medium
+
+  * Added htcondor.dags and htcondor.htchirp to the HTCondor Python bindings
+  * New condor_watch_q tool that efficiently provides live job status updates
+  * Added support for marking a GPU offline while other jobs continue
+  * The condor_master command does not return until it is fully started
+  * Deprecated several Python interfaces in the Python bindings
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 05 Aug 2020 13:47:06 -0500
+
+condor (8.8.10-1) stable; urgency=medium
+
+  * condor_qedit can no longer be used to disrupt the condor_schedd
+  * Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
+  * Ubuntu 20.04 and Amazon Linux 2 are now supported
+  * In MacOSX, HTCondor now requires LibreSSL, available since MacOSX 10.13
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 04 Aug 2020 20:55:25 -0500
+
+condor (8.9.7-1) unstable; urgency=medium
+
+  * Multiple enhancements in the file transfer code
+  * Support for more regions in s3:// URLs
+  * Much more flexible job router language
+  * Jobs may now specify cuda_version to match equally-capable GPUs
+  * TOKENS are now called IDTOKENS to differentiate from SCITOKENS
+  * Added the ability to blacklist TOKENS via an expression
+  * Can simultaneously handle Kerberos and OAUTH credentials
+  * The getenv submit command now supports a blacklist and whitelist
+  * The startd supports a remote history query similar to the schedd
+  * condor_q -submitters now works with accounting groups
+  * Fixed a bug reading service account credentials for Google Compute Engine
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 19 May 2020 14:56:05 -0500
+
+condor (8.8.9-1) stable; urgency=medium
+
+  * Proper tracking of maximum memory used by Docker universe jobs
+  * Fixed preempting a GPU slot for a GPU job when all GPUs are in use
+  * Fixed a Python crash when queue_item_data iterator raises an exception
+  * Fixed a bug where slot attribute overrides were ignored
+  * Calculates accounting group quota correctly when more than 1 CPU requested
+  * Updated HTCondor Annex to accommodate API change for AWS Spot Fleet
+  * Fixed a problem where HTCondor would not start on AWS Fargate
+  * Fixed where the collector could wait forever for a partial message
+  * Fixed streaming output to large files (>2Gb) when using the 32-bit shadow
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 06 May 2020 07:36:28 -0500
+
+condor (8.9.6-1) unstable; urgency=high
+
+  * Fixes addressing CVE-2019-18823
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 18 Mar 2020 15:40:28 -0500
+
+condor (8.8.8-1) stable; urgency=high
+
+  * Fixes addressing CVE-2019-18823
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Mar 2020 11:05:03 -0500
+
+condor (8.9.5-2) unstable; urgency=medium
+
+  * Fixed the installation of the HTCondor Python bindings on Debian/Ubuntu
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 19 Feb 2020 19:43:10 -0600
+
 condor (8.9.5-1) unstable; urgency=medium
 
   * Added a new mode that skips jobs whose outputs are newer than their inputs

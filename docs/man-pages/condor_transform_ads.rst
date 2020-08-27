@@ -98,7 +98,7 @@ Examples
 Here's a simple example that transforms the given input ClassAds
 according to the given rules:
 
-::
+.. code-block:: text
 
       # File: my_input
       ResidentSetSize = 500
@@ -124,17 +124,4 @@ according to the given rules:
       NumCheckPoints = 0
       RequestDisk = ( 5000000 / 1024 )
       ResidentSetSize = 500
-
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
 

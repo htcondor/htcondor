@@ -1,6 +1,0 @@
-condor (@PACKAGE_VERSION@-@PACKAGE_REVISION@) stable; urgency=low
-
-  * Please see version history at http://www.cs.wisc.edu/condor/manual/v@PACKAGE_VERSION@/8_Version_History.html
-
- -- Condor Team <condor-users@cs.wisc.edu>  @DEB_DATE@
-

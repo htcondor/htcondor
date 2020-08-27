@@ -38,8 +38,8 @@ class ForkWorker
 	virtual ~ForkWorker( void );
 
 	ForkStatus Fork( void );
-	pid_t getPid( void ) { return pid; };
-	pid_t getParent( void ) { return parent; };
+	pid_t getPid( void ) const { return pid; };
+	pid_t getParent( void ) const { return parent; };
 
   private:
 	pid_t		pid;
@@ -61,8 +61,8 @@ class ForkWork : public Service
 	// # of worker stats
 	void setMaxWorkers( int max_workers );
 	int getNumWorkers( void ) { return workerList.Number(); };
-	int getMaxWorkers( void ) { return maxWorkers; };
-	int getPeakWorkers( void ) { return peakWorkers; };
+	int getMaxWorkers( void ) const { return maxWorkers; };
+	int getPeakWorkers( void ) const { return peakWorkers; };
 
 	int DeleteAll( void );
 	int KillAll( bool force );

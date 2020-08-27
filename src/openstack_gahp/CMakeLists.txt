@@ -23,10 +23,16 @@ if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_PTHREADS )
 	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/rapidjson.src/include")
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-	condor_glob( HeaderFiles SourceFiles "" )
+	set(SourceFiles
+		io_loop_pthread.cpp
+		openstackCommands.cpp
+		openstackgahp_common.cpp
+		openstack_io_checkfn.cpp
+		PipeBuffer.cpp
+	)
 
 	condor_exe( openstack_gahp
-		"${HeaderFiles};${SourceFiles}" ${C_SBIN}
+		"${SourceFiles}" ${C_SBIN}
 		"${CONDOR_TOOL_LIBS};${CURL_FOUND}"
 		OFF )
 

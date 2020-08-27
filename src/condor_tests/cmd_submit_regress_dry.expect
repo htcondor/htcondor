@@ -61,7 +61,6 @@ LoadProfile=true
 LocalFiles="local.file"
 MaxJobRetirementTime=6 * 60
 NextJobStartDelay=2 * 60
-NiceUser=true
 NoopJobExitCode=5
 NoopJobExitSignal=false
 NotifyUser="bt@cs.wisc.edu"

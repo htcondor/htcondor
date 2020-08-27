@@ -27,6 +27,7 @@
 #include "directory.h"
 #include "view_server.h"
 #include "extArray.h"
+#include "util_lib_proto.h" // for rotate_file
 
 //-------------------------------------------------------------------
 
@@ -84,30 +85,30 @@ void ViewServer::Init()
 	// install command handlers for queries
 
     daemonCore->Register_Command(QUERY_HIST_STARTD,"QUERY_HIST_STARTD",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_STARTD_LIST,"QUERY_HIST_STARTD_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTOR,"QUERY_HIST_SUBMITTOR",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTOR_LIST,"QUERY_HIST_SUBMITTOR_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTORGROUPS,"QUERY_HIST_SUBMITTORGROUPS",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_SUBMITTORGROUPS_LIST,"QUERY_HIST_SUBMITTORGROUPS_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_GROUPS,"QUERY_HIST_GROUPS",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_GROUPS_LIST,"QUERY_HIST_GROUPS_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_CKPTSRVR,"QUERY_HIST_CKPTSRVR",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
     daemonCore->Register_Command(QUERY_HIST_CKPTSRVR_LIST,"QUERY_HIST_CKPTSRVR_LIST",
-        (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
+        ReceiveHistoryQuery,"ReceiveHistoryQuery",READ);
 
 	int InitialDelay=param_integer("UPDATE_INTERVAL",300);
 
 	// Add View Server Flag to class ad
-	ad->Insert("ViewServer = True");
+	ad->Assign("ViewServer",  true);
 
 	// Register timer for logging information to history files
 	HistoryTimer = daemonCore->Register_Timer(InitialDelay,HistoryInterval,
@@ -219,7 +220,7 @@ void ViewServer::Shutdown()
 // HandleQuery to take care of replying to the query
 //-------------------------------------------------------------------
 
-int ViewServer::ReceiveHistoryQuery(Service* /*s*/, int command, Stream* sock)
+int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 {
 	dprintf(D_ALWAYS,"Got history query %d\n",command);
 
@@ -768,9 +769,9 @@ void ViewServer::WriteHistory()
 				EXCEPT("Could not check data file size!!!");
 			}
 			if (statbuf.st_size>MaxFileSize) {
-				int r = rename(DataSet[i][j].NewFileName.Value(),DataSet[i][j].OldFileName.Value());
+				int r = rotate_file(DataSet[i][j].NewFileName.Value(), DataSet[i][j].OldFileName.Value());
 				if (r < 0) {
-					dprintf(D_ALWAYS,"Could not rename %s to %s (%d)\n", DataSet[i][j].OldFileName.Value(), DataSet[i][j].NewFileName.Value(), errno);
+					dprintf(D_ALWAYS,"Could not rename %s to %s (%d)\n", DataSet[i][j].NewFileName.Value(), DataSet[i][j].OldFileName.Value(), errno);
 					EXCEPT("Could not rename data file");
 				}
 				int newFileIndex = -1;

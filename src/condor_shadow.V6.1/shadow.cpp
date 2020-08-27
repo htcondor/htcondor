@@ -38,7 +38,7 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
 	daemonCore->Cancel_Command( SHADOW_UPDATEINFO );
-	daemonCore->Cancel_Command( CREDD_GET_PASSWD );
+	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }
 
 
@@ -131,12 +131,11 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, DAEMON );
 
-		// Register command which the starter uses to fetch a user
-		// credential if it needs to.
+		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
 	daemonCore->
-		Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD",
-						  (CommandHandler)&get_cred_handler,
-						  "get_cred_handler", NULL, DAEMON, D_COMMAND,
+		Register_Command( CREDD_GET_CRED, "CREDD_GET_CRED",
+						  &cred_get_cred_handler,
+						  "cred_get_cred_handler", DAEMON, D_COMMAND,
 						  true /*force authentication*/ );
 }
 
@@ -367,7 +366,7 @@ UniShadow::getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss )
 }
 
 
-int
+int64_t
 UniShadow::getDiskUsage( void )
 {
 	return remRes->getDiskUsage();
@@ -596,7 +595,7 @@ UniShadow::exitDelayed( int &reason ) {
 }
 
 void
-UniShadow::exitLeaseHandler() {
+UniShadow::exitLeaseHandler() const {
 	DC_Exit( delayedExitReason );
 }
 

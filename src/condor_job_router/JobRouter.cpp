@@ -669,7 +669,7 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 	// print the enabled routes in the order that they will be used
 	int ixRoute = 1;
 	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
-		JobRoute *route = m_routes->at(*it);
+		JobRoute *route = safe_lookup_route(*it);
 		if ( ! route) continue;
 		remaining_names.erase(route->Name());
 		/*
@@ -714,7 +714,7 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 	if ( ! remaining_names.empty()) {
 		fprintf(hf, "Disabled routes:\n");
 		for (auto it = remaining_names.begin(); it != remaining_names.end(); ++it) {
-			JobRoute * route = m_routes->at(*it);
+			JobRoute * route = safe_lookup_route(*it);
 			if ( ! route) continue;
 			fprintf(hf, "Name         : \"%s\"\n", route->Name());
 			fprintf(hf, "Source       : %s\n", route->Source());
@@ -1261,7 +1261,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 			auto rt = m_routes->find(name);
 			if (rt != m_routes->end()) {
 				route = rt->second;
-				m_route_order.push_back(route->Name());
+				m_route_order.emplace_back(route->Name());
 				remaining_names.erase(route->Name());
 			} else {
 				dprintf(D_ALWAYS, "route '%s' from JOB_ROUTER_ROUTE_NAMES not found in the routing table.\n", name);
@@ -1655,7 +1655,7 @@ JobRouter::GetCandidateJobs() {
 		dbuf += "\n";
 	}
 	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
-		route = m_routes->at(*it);
+		route = safe_lookup_route(*it);
 		if ( ! route) continue;
 		formatstr_cat(dbuf, "%-24s %-11s %7d/%7d %7d/%7d %8s",
 		      route->Name(),
@@ -1843,7 +1843,7 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 	JobRoute *route=NULL;
 	*all_routes_full = true;
 	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
-		route = m_routes->at(*it);
+		route = safe_lookup_route(*it);
 		if ( ! route) continue;
 #ifdef USE_XFORM_UTILS
 		if(!route->AcceptingMoreJobs()) continue;
@@ -1899,7 +1899,7 @@ JobRouter::UpdateRouteStats() {
 	m_jobs.startIterations();
 	while(m_jobs.iterate(job)) {
 		if(!job->route_name.empty()) {
-			route = m_routes->at(job->route_name);
+			route = safe_lookup_route(job->route_name);
 			if (route) {
 				route->IncrementCurrentRoutedJobs();
 				if(job->IsRunning()) {
@@ -3009,7 +3009,7 @@ JobRoute::JobRoute(const char * source) : m_source(source) {
 
 JobRoute::~JobRoute() {
 }
-bool JobRoute::AcceptingMoreJobs()
+bool JobRoute::AcceptingMoreJobs() const
 {
 	if( m_throttle > 0 && m_throttle <= m_recent_jobs_routed) {
 		return false;
@@ -3249,7 +3249,7 @@ JobRoute::ParseNext(
 	while (offset < (int)routing_string.size() && isspace(routing_string[offset])) ++offset;
 	if (offset >= (int)routing_string.size()) return false;
 
-#if 1 // new for 8.9.6 
+#if 1 // new for 8.9.7
 	if (routing_string[offset] == '[') {
 		// parse as new classad, use an empty defaults ad if none was provided
 		ClassAd dummy;
@@ -3516,7 +3516,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 #endif
 
 std::string
-RoutedJob::JobDesc() {
+RoutedJob::JobDesc() const {
 	std::string desc;
 	if(!src_key.empty()) {
 		desc += "src=";

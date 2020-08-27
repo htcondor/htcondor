@@ -31,10 +31,10 @@ int main ( int argc, char *argv[] )
 	std::string testAdStr = "[ a = 12; b = 5; c = ( d < 5 ) && ( b + e < 6); f = target.g]";
 	classad::ClassAd *testAd = parser.ParseClassAd( testAdStr ); 
 	classad::ClassAd *newTestAd = AddExplicitTargets( testAd );
-	cout << "testAd = " << testAdStr << endl;
+	std::cout << "testAd = " << testAdStr << std::endl;
 	pp.Unparse( buffer, newTestAd );
-	cout << "newTestAd = " << buffer << endl;
-	cout << endl;
+	std::cout << "newTestAd = " << buffer << std::endl;
+	std::cout << std::endl;
 	buffer = "";
 		// MatchClassAd test
 
@@ -63,86 +63,86 @@ int main ( int argc, char *argv[] )
 	newMachineAd = AddExplicitTargets( machineAd );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "ReplaceLeftAd( jobAd )" << endl;
+	std::cout << "ReplaceLeftAd( jobAd )" << std::endl;
 
 	mad.ReplaceLeftAd( jobAd );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "ReplaceRightAd( machineAd )" << endl;
+	std::cout << "ReplaceRightAd( machineAd )" << std::endl;
 
 	mad.ReplaceRightAd( machineAd );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 
 	mad.EvaluateAttrBool( "rightMatchesLeft", match );
 	if( match ) {
-		cout << "MatchClassAd matches" << endl;
+		std::cout << "MatchClassAd matches" << std::endl;
 	}
 	else {
-		cout << "MatchClassAd doesn't match" << endl;
+		std::cout << "MatchClassAd doesn't match" << std::endl;
 	}
 
-	cout << "RemoveLeftAd( )" << endl;
+	std::cout << "RemoveLeftAd( )" << std::endl;
 
 	mad.RemoveLeftAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "RemoveRightAd( )" << endl;
+	std::cout << "RemoveRightAd( )" << std::endl;
 
 	mad.RemoveRightAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 
-	cout << "----------------------------------------" << endl;
+	std::cout << "----------------------------------------" << std::endl;
 
 	match = false;
 
-	cout << "ReplaceLeftAd( newJobAd )" << endl;
+	std::cout << "ReplaceLeftAd( newJobAd )" << std::endl;
 
 	mad.ReplaceLeftAd( newJobAd );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "ReplaceRightAd( newMachineAd )" << endl;
+	std::cout << "ReplaceRightAd( newMachineAd )" << std::endl;
 
 	mad.ReplaceRightAd( newMachineAd );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 
 	mad.EvaluateAttrBool( "rightMatchesLeft", match );
 	if( match ) {
-		cout << "MatchClassAd + target matches" << endl;
+		std::cout << "MatchClassAd + target matches" << std::endl;
 	}
 	else {
-		cout << "MatchClassAd + target doesn't match" << endl;
+		std::cout << "MatchClassAd + target doesn't match" << std::endl;
 	}
 
-	cout << "RemoveLeftAd( )" << endl;
+	std::cout << "RemoveLeftAd( )" << std::endl;
 
 	mad.RemoveLeftAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
-	cout << "RemoveRightAd( )" << endl;
+	std::cout << "RemoveRightAd( )" << std::endl;
 
 	mad.RemoveRightAd( );
 
 	pp.Unparse( buffer, &mad );
-	cout << "mad = " << buffer << endl;
+	std::cout << "mad = " << buffer << std::endl;
 	buffer = "";
 }
 

@@ -55,33 +55,33 @@ Instead of specifying an argument of *request*, *release*, *activate*,
 *condor_cod* tool by appending an underscore followed by one of these
 arguments. As an example, the following two commands are equivalent:
 
-::
+.. code-block:: console
 
-        condor_cod release -id "<128.105.121.21:49973>#1073352104#4"
+        $ condor_cod release -id "<128.105.121.21:49973>#1073352104#4"
 
-::
+.. code-block:: console
 
-        condor_cod_release -id "<128.105.121.21:49973>#1073352104#4"
+        $ condor_cod_release -id "<128.105.121.21:49973>#1073352104#4"
 
 To make these extended-name commands work, hard link the extended name
 to the *condor_cod* executable. For example on a Unix machine:
 
-::
+.. code-block:: console
 
-    ln condor_cod_request condor_cod
+    $ ln condor_cod_request condor_cod
 
 The *request* argument gives a claim ID, and the other commands
 (*release*, *activate*, *deactivate*, *suspend*, and *resume*) use the
 claim ID. The claim ID is given as the last line of output for a
 *request*, and the output appears of the form:
 
-::
+.. code-block:: text
 
     ID of new claim is: "<a.b.c.d:portnumber>#x#y"
 
 An actual example of this line of output is
 
-::
+.. code-block:: text
 
     ID of new claim is: "<128.105.121.21:49973>#1073352104#4"
 
@@ -133,16 +133,3 @@ Exit Status
 *condor_cod* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

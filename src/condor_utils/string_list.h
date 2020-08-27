@@ -133,7 +133,7 @@ public:
 	const List<char> &getList( void ) const { return m_strings; };
 	const char *getDelimiters(void) const { return m_delimiters; };
 
-	StringList &operator=(StringList &&rhs) {
+	StringList &operator=(StringList &&rhs)  noexcept {
 		clearAll();
 		free(m_delimiters);
 		this->m_strings = std::move(rhs.m_strings);

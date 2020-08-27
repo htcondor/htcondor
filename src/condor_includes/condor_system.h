@@ -52,8 +52,6 @@
 
 #if defined(LINUX)
 #	include "condor_sys_linux.h"
-#elif defined(Solaris)
-#	include "condor_sys_solaris.h"
 #elif defined(Darwin)
 #	include "condor_sys_bsd.h"
 #elif defined(CONDOR_FREEBSD)
@@ -133,8 +131,6 @@
 #include <float.h>
 #include <math.h>
 #include <utime.h>
-
-#include "condor_unsetenv.h"
 
 #endif /* UNIX */
 

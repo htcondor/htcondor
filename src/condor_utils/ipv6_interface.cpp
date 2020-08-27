@@ -71,7 +71,7 @@ uint32_t ipv6_get_scope_id() {
 }
 
 #else
-	// Win32, Solaris
+	// Win32
 uint32_t ipv6_get_scope_id() {
 	// TODO
 	EXCEPT("ipv6_get_scope_id is not implemented on this platform.  In practice this means IPv6 does not work on Windows.");

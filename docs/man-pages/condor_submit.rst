@@ -287,13 +287,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = one \"two\" 'three'
 
     Produces in Unix vanilla universe:
 
-    ::
+    .. code-block:: text
 
         argument 1: one
         argument 2: "two"
@@ -318,13 +318,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = "3 simple arguments"
 
     Produces:
 
-    ::
+    .. code-block:: text
 
         argument 1: 3
         argument 2: simple
@@ -332,13 +332,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Another example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = "one 'two with spaces' 3"
 
     Produces:
 
-    ::
+    .. code-block:: text
 
         argument 1: one
         argument 2: two with spaces
@@ -346,13 +346,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     And yet another example:
 
-    ::
+    .. code-block:: condor-submit
 
         arguments = "one ""two"" 'spacey ''quoted'' argument'"
 
     Produces:
 
-    ::
+    .. code-block:: text
 
         argument 1: one
         argument 2: "two"
@@ -381,7 +381,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
        quote mark.
     #. Each environment entry has the form
 
-       ::
+       .. code-block:: text
 
            <name>=<value>
 
@@ -396,13 +396,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     Example:
 
-    ::
+    .. code-block:: condor-submit
 
         environment = "one=1 two=""2"" three='spacey ''quoted'' value'"
 
     Produces the following environment entries:
 
-    ::
+    .. code-block:: text
 
         one=1
         two="2"
@@ -412,7 +412,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     the environment specification. Each environment entry remains of the
     form
 
-    ::
+    .. code-block:: text
 
         <name>=<value>
 
@@ -427,13 +427,13 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
 
     A Unix example:
 
-    ::
+    .. code-block:: condor-submit
 
         environment = one=1;two=2;three="quotes have no 'special' meaning"
 
     This produces the following:
 
-    ::
+    .. code-block:: text
 
         one=1
         two=2
@@ -442,7 +442,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     If the environment is set with the
     **environment** :index:`environment<single: environment; submit commands>`
     command and **getenv** :index:`getenv<single: getenv; submit commands>` is
-    also set to true, values specified with **environment** override
+    also set, values specified with **environment** override
     values in the submitter's environment (regardless of the order of
     the **environment** and **getenv** commands).
     :index:`error<single: error; submit commands>`
@@ -476,17 +476,45 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     as the *condor_submit* command is issued.
     :index:`getenv<single: getenv; submit commands>`
 
- getenv = <True | False>
+ getenv = <<matchlist> | True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,
     then *condor_submit* will copy all of the user's current shell
     environment variables at the time of job submission into the job
     ClassAd. The job will therefore execute with the same set of
     environment variables that the user had at submit time. Defaults to
-    ``False``.
+    ``False``.  A wholesale import of the user's environment is very likely to lead
+    to problems executing the job on a remote machine unless there is a shared 
+    file system for users' home directories between the submit machine and execute machine.
+    So rather than setting getenv to ``True``, it is much better to set it to a list
+    of environment variables to import. 
+
+    Matchlist is a comma, semicolon or space separated list of environment variable names and name patterns that
+    match or reject names.
+    Matchlist members are matched case-insensitively to each name
+    in the environment and those that match are imported. Matchlist members can contain ``*`` as wildcard
+    character which matches anything at that postion.  Members can have two ``*`` characters if one of them
+    is at the end. Members can be prefixed with ``!``
+    to force a matching environment variable to not be imported.  The order of members in the Matchlist
+    has no effect on the result.  ``getenv = true`` is equivalent to ``getenv = *``
+
+    Prior to HTCondor 8.9.7 ``getenv`` allows only ``True`` or ``False`` as values.
+
+    Examples:
+
+    .. code-block:: condor-submit
+
+        # import everything except PATH and INCLUDE (also path, include and other case-variants)
+        getenv = !PATH, !INCLUDE
+
+        # import everything with CUDA in the name
+        getenv = *cuda*
+
+        # Import every environment variable that starts with P or Q, except PATH
+        getenv = !path, P*, Q*
 
     If the environment is set with the **environment** command and
-    **getenv** is also set to true, values specified with
+    **getenv** is also set, values specified with
     **environment** override values in the submitter's environment
     (regardless of the order of the **environment** and **getenv**
     commands). :index:`input<single: input; submit commands>`
@@ -555,7 +583,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     about a job. If not specified, HTCondor defaults to using the e-mail
     address defined by
 
-    ::
+    .. code-block:: text
 
         job-owner@UID_DOMAIN
 
@@ -564,7 +592,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     administrator. If ``UID_DOMAIN`` :index:`UID_DOMAIN` has not
     been specified, HTCondor sends the e-mail to:
 
-    ::
+    .. code-block:: text
 
         job-owner@submit-machine-name
 
@@ -724,10 +752,10 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     rank. HTCondor will give the job the machine with the highest rank.
     For example,
 
-    ::
+    .. code-block:: condor-submit
 
-                request_memory = max({60, Target.TotalSlotMemory})
-                rank = Memory
+        request_memory = max({60, Target.TotalSlotMemory})
+        rank = Memory
 
     asks HTCondor to find all available machines with more than 60
     megabytes of memory and give to the job the machine with the most
@@ -740,7 +768,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     A requested number of CPUs (cores). If not specified, the number
     requested will be 1. If specified, the expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (RequestCpus <= Target.Cpus)
 
@@ -758,7 +786,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     not specified, it will be set to the job ClassAd attribute
     ``DiskUsage``. The expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (RequestDisk <= Target.Disk)
 
@@ -797,7 +825,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
     The expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (RequestMemory <= Target.Memory)
 
@@ -819,7 +847,21 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     ``<name>`` that this job needs. The custom machine resource is
     defined in the machine's configuration. Machines that have available
     GPUs will define ``<name>`` to be ``GPUs``.
+    ``<name>`` must be at least two characters, and must not begin with ``_``.
+    If ``<name>`` is either ``Cpu`` or ``Gpu`` a warning will be printed since these are common typos.
+    :index:`CUDA version<single: CUDA version; submit commands>`
+
+ cuda_version = <version>
+    The version of the CUDA runtime, if any, used or required by this job,
+    specified as ``<major>.<minor>`` (for example, ``9.1``).  If the minor
+    version number is zero, you may specify only the major version number.
+    A single version number of 1000 or higher is assumed to be the
+    integer-coded version number (``major * 1000 + (minor % 100)``).
+
+    This does *not* arrange for the CUDA runtime to be present, only for
+    the job to run on a machine whose driver supports the specified version.
     :index:`requirements<single: requirements; submit commands>`
+
  requirements = <ClassAd Boolean Expression>
     The requirements command is a boolean ClassAd expression which uses
     C-like operators. In order for any job in this cluster to run on a
@@ -901,7 +943,7 @@ FILE TRANSFER COMMANDS
     **requirements** :index:`requirements<single: requirements; submit commands>`
     expression
 
-    ::
+    .. code-block:: condor-classad-expr
 
           && (TARGET.HasEncryptExecuteDirectory)
 
@@ -1107,18 +1149,20 @@ FILE TRANSFER COMMANDS
     specify ``aws_region``, if necessary; see below.  To use the S3 service
     provided by AWS, use S3 URLs of the following forms:
 
-    ::
+    .. code-block:: text
 
         # For older buckets that aren't region-specific.
         s3://<bucket>/<key>
+
         # For newer, region-specific buckets.
-        s3://<bucket>.s3-<region>.amazonaws.com/<key>
+        s3://<bucket>.s3.<region>.amazonaws.com/<key>
 
     To use other S3 services, where ``<host>`` must contain a ``.``:
 
-    ::
+    .. code-block:: text
 
         s3://<host>/<key>
+
         # If necessary
         aws_region = <region>
 
@@ -1189,8 +1233,35 @@ FILE TRANSFER COMMANDS
 
     Symbolic links to files are transferred as the files they point to.
     Transfer of symbolic links to directories is not currently
-    supported. :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
+    supported.
 
+    :index:`transfer_checkpoint_files<single: transfer_checkpoint_files; submit commands>`
+ transfer_checkpoint_files = < file1,file2,file3... >
+    If present, this command defines the list of files and/or directories
+    which constitute the job's checkpoint.  When the job successfully
+    checkpoints -- see ``checkpoint_exit_code`` -- these files will be
+    transferred to the submit node's spool.
+
+    If this command is absent, the output is transferred instead.
+
+    If no files or directories are specified, nothing will be transferred.
+    This is generally not useful.
+
+    The list is interpreted like ``transfer_output_files``, but there is
+    no corresponding ``remaps`` command.
+
+    :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
+ preserve_relative_paths = < True | False >
+    This command modifies the behavior of the file transfer commands.  When
+    set to true, the destination for an entry that is a relative path in a
+    file transfer list becomes its relative path, not its basename.  For
+    example, ``input_data/b`` (and its contents, if it is a directory) will
+    be transferred to ``input_data/b``, not ``b``.  This applies to the input,
+    output, and checkpoint lists.
+
+    Trailing slashes are ignored when ``preserve_relative_paths`` is set.
+
+    :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
  transfer_output_remaps = < " name = newname ; name2 = newname2 ... ">
     This specifies the name (and optionally path) to use when
     downloading output files from the completed job. Normally, output
@@ -1211,7 +1282,7 @@ FILE TRANSFER COMMANDS
     **transfer_output_files**. Listing a file in
     **transfer_output_remaps** is not sufficient to cause it to be
     transferred.
-    :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
+    :index:`transfer_plugins<single: transfer_plugins; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins that should be transferred along with
@@ -1219,30 +1290,38 @@ FILE TRANSFER COMMANDS
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
     Plugins transfered in this way must support the multi-file transfer plugin syntax.
+    :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
- when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT >
-    Setting
-    **when_to_transfer_output** :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
-    equal to *ON_EXIT* will cause HTCondor to transfer the job's output
-    files back to the submitting machine only when the job completes
-    (exits on its own).  If a job is evicted and started again 
-    the subsequent execution will start with only the executable and 
-    input files in the scratch directory sandbox.
+ when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
+    Setting ``when_to_transfer_output`` to ``ON_EXIT`` will cause HTCondor
+    to transfer the job's output files back to the submitting machine when
+    the job completes (exits on its own).  If a job is evicted and started
+    again, the subsequent execution will start with only the executable and
+    input files in the scratch directory sandbox.  If ``transfer_output_files``
+    is not set, HTCondor considers all new files in the sandbox's top-level
+    directory to be the output; subdirectories and their contents will not
+    be transferred.
 
-    The *ON_EXIT_OR_EVICT* option is intended for jobs
-    which periodically save their own state and can restart where they
-    left off. In this case, files are spooled to the submit machine any
-    time the job was evicted by the HTCondor system for any reason prior to
-    job completion. The files spooled back are placed in a directory
-    defined by the value of the ``SPOOL`` configuration variable. Any
-    such files transferred back to the submit machine are
-    automatically sent back out again as input files if the job
-    restarts.  The set of files transfered back is the same set that would
-    be transfered if the job completed.  If *transfer_output_files* is not 
-    set, all files in the top level scratch directory will be saved.  Files
-    in subdirectories will not be preserved.  If *transfer_output_files* is set
-    only those files are saved.  If a file listed in *transfer_output_files* 
-    does not exist at evict time, the job will go on hold.
+    Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
+    HTCondor to transfer the job's output files when the job completes
+    (exits on its own) and when the job is evicted.  When the job is evicted,
+    HTCondor will transfer the output files to a temporary directory on the
+    submit node (determined by the ``SPOOL`` configuration variable).  When
+    the job restarts, these files will be transferred instead of the input
+    files.  If ``transfer_output_files`` is not set, HTCondor considers all
+    files in the sandbox's top-level directory to be the output;
+    subdirectories and their contents will not be transferred.
+
+    Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
+    to transfer the job's output files when the job completes succesfully.
+    Success is defined by the ``success_exit_code`` command, which must be
+    set, even if the successful value is the default ``0``.  If
+    ``transfer_output_files`` is not set, HTCondor considers all new files
+    in the sandbox's top-level directory to be the output; subdirectories
+    and their contents will not be transferred.
+
+    In all three cases, the job will go on hold if ``transfer_output_files``
+    specifies a file which does not exist at transfer time.
 
  aws_access_key_id_file
     Required if you specify an S3 URL, this command specifies the file containing
@@ -1291,8 +1370,9 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
-    **Note: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs.**
+    **Note**: non-zero values of success_exit_code should generally not be
+    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into
     account the value of **success_exit_code**. This means that, if
@@ -1356,7 +1436,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     As an example, if the job is to be removed once the output is
     retrieved with *condor_transfer_data*, then use
 
-    ::
+    .. code-block:: text
 
         leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
                          (StageOutFinish == 0))
@@ -1393,7 +1473,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     on hold and an e-mail notification sent, instead of being allowed to
     leave the queue.
 
-    ::
+    .. code-block:: text
 
           on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
 
@@ -1442,7 +1522,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     command. Assume that the signal identifier for the segmentation
     fault is 11 on the platform where the job will be running.
 
-    ::
+    .. code-block:: text
 
           on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 
@@ -1458,7 +1538,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     **on_exit_remove** :index:`on_exit_remove<single: on_exit_remove; submit commands>`
     expression works well:
 
-    ::
+    .. code-block:: text
 
           on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 
@@ -2043,7 +2123,7 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
     may be either the platform-specific name or value of the signal.
     This example shows it both ways for a Linux signal:
 
-    ::
+    .. code-block:: text
 
         remove_kill_sig = SIGUSR1
         remove_kill_sig = 10
@@ -2064,7 +2144,7 @@ COMMANDS FOR THE VM UNIVERSE :index:`vm_disk<single: vm_disk; submit commands>`
 
     An example that specifies two disk files:
 
-    ::
+    .. code-block:: text
 
         vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
@@ -2166,6 +2246,12 @@ COMMANDS FOR THE DOCKER UNIVERSE
     Defines the name of the Docker image that is the basis for the
     docker container.
 
+ docker_network_type = < host | none >
+    If docker_network_type is set to the string host, then the job is run
+    using the host's network. If docker_network_type is set to the string none,
+    then the job is run with no network. If this is not set, each job gets
+    a private network interface.
+
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
     Each *service-name*
@@ -2186,13 +2272,10 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     accounting groups.
     :index:`accounting_group_user<single: accounting_group_user; submit commands>`
  accounting_group_user = <accounting-group-user-name>
-    Sets the user name associated with the accounting group name for
-    resource usage accounting purposes. If not set, defaults to the
-    value of the job ClassAd attribute ``Owner``. This value is
-    advertised in the job ClassAd as ``AcctGroupUser``. If an accounting
-    group has not been set with the
-    **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
-    command, this command is ignored.
+    Sets the name associated with this job to be used for resource usage accounting purposes, such as
+    computation of fair-share priority and reporting via ``condor_userprio``.  If not set, defaults to the
+    value of the job ClassAd attribute ``User``. This value is
+    advertised in the job ClassAd as ``AcctGroupUser``. 
     :index:`concurrency_limits<single: concurrency_limits; submit commands>`
  concurrency_limits = <string-list>
     A list of resources that this job needs. The resources are presumed
@@ -2467,7 +2550,7 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     defined is given by the integer value. The job ClassAds introduced
     are given as
 
-    ::
+    .. code-block:: text
 
         LastMatchName0 = "most-recent-Name"
         LastMatchName1 = "next-most-recent-Name"
@@ -2625,7 +2708,7 @@ and comments.
     HTCondor submit description files to provide textual substitution at
     submit time. Macros can be defined by lines in the form of
 
-    ::
+    .. code-block:: text
 
                 <macro_name> = <string>
 
@@ -2651,7 +2734,7 @@ and comments.
     Recursive definition of macros is permitted. An example of a
     construction that works is the following:
 
-    ::
+    .. code-block:: text
 
         foo = bar
         foo =  snap $(foo)
@@ -2660,7 +2743,7 @@ and comments.
 
     Note that both left- and right- recursion works, so
 
-    ::
+    .. code-block:: text
 
         foo = bar
         foo =  $(foo) snap
@@ -2669,14 +2752,14 @@ and comments.
 
     The construction
 
-    ::
+    .. code-block:: text
 
         foo = $(foo) bar
 
     by itself will not work, as it does not have an initial base case.
     Mutually recursive constructions such as:
 
-    ::
+    .. code-block:: text
 
         B = bar
         C = $(B)
@@ -2687,14 +2770,14 @@ and comments.
     A default value may be specified, for use if the macro has no
     definition. Consider the example
 
-    ::
+    .. code-block:: text
 
         D = $(E:24)
 
     Where ``E`` is not defined within the submit description file, the
     default value 24 is used, resulting in
 
-    ::
+    .. code-block:: text
 
         D = 24
 
@@ -2708,7 +2791,7 @@ and comments.
     To use the dollar sign character ($) as a literal, without macro
     expansion, use
 
-    ::
+    .. code-block:: console
 
         $(DOLLAR)
 
@@ -2720,7 +2803,7 @@ and comments.
     has been made) into specific commands within the submit description
     file. The substitution macro is of the form:
 
-    ::
+    .. code-block:: console
 
         $$(attribute)
 
@@ -2731,7 +2814,7 @@ and comments.
     A common use of this form of the substitution macro is for the
     heterogeneous submission of an executable:
 
-    ::
+    .. code-block:: text
 
         executable = povray.$$(OpSys).$$(Arch)
 
@@ -2743,7 +2826,7 @@ and comments.
     alternative string to use if the machine attribute within the
     substitution macro is undefined. The syntax appears as:
 
-    ::
+    .. code-block:: console
 
         $$(attribute:string_if_attribute_undefined)
 
@@ -2752,7 +2835,7 @@ and comments.
     locations on different machines, the file's path name is given as an
     argument to the program.
 
-    ::
+    .. code-block:: text
 
         arguments = $$(input_file_path:/usr/foo)
 
@@ -2766,7 +2849,7 @@ and comments.
     ClassAd expression into the substitution macro, square brackets are
     added to delimit the expression. The syntax appears as:
 
-    ::
+    .. code-block:: console
 
         $$([ClassAd expression])
 
@@ -2778,7 +2861,7 @@ and comments.
     this as a command line argument to the application. In the submit
     description file will be
 
-    ::
+    .. code-block:: text
 
         arguments = --memory $$([TARGET.Memory * 0.9])
 
@@ -2787,7 +2870,7 @@ and comments.
     To insert two dollar sign characters ($$) as literals into a ClassAd
     string, use
 
-    ::
+    .. code-block:: console
 
         $$(DOLLARDOLLAR)
 
@@ -2799,7 +2882,7 @@ and comments.
     variable to be used in setting a submit description file command.
     The syntax used is
 
-    ::
+    .. code-block:: console
 
         $ENV(variable)
 
@@ -2807,7 +2890,7 @@ and comments.
     functionality evaluates the submitter's home directory in order to
     set the path and file name of a log file:
 
-    ::
+    .. code-block:: text
 
         log = $ENV(HOME)/jobs/logfile
 
@@ -2821,7 +2904,7 @@ and comments.
     given list of parameters at submission time. For an expression, if
     some randomness needs to be generated, the macro may appear as
 
-    ::
+    .. code-block:: console
 
             $RANDOM_CHOICE(0,1,2,3,4,5,6)
 
@@ -2951,7 +3034,7 @@ Examples
    will use ``foo.out3`` for its standard output. Standard error output
    (if any) from all three programs will appear in ``foo.error``.
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -2982,7 +3065,7 @@ Examples
    Or you can get the same results as the above submit file by using a
    list of arguments with the Queue statement
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -3018,7 +3101,7 @@ Examples
    about where and when HTCondor runs, takes checkpoints, and migrates
    processes in this cluster will be written into file ``foo.log``.
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -3046,7 +3129,7 @@ Examples
    machines running more than one version of Linux, and this job needs
    the particular operating system to run correctly.
 
-   ::
+   .. code-block:: text
 
              ####################
              #
@@ -3069,9 +3152,9 @@ Examples
    and an error log file are specified. The submit description file is
    unchanged.
 
-   ::
+   .. code-block:: console
 
-       condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
+       $ condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
 
    Note that each of the added commands is contained within quote marks
    because there are space characters within the command.
@@ -3082,7 +3165,7 @@ Examples
 
    Including the command
 
-   ::
+   .. code-block:: text
 
           periodic_remove = CumulativeSuspensionTime >
                             ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
@@ -3112,17 +3195,4 @@ See Also
 --------
 
 HTCondor User Manual
-
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
 

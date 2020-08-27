@@ -27,17 +27,21 @@ ExprTreeHolder::init()
     PyDateTime_IMPORT;
 }
 
-ExprTreeHolder::ExprTreeHolder(const std::string &str)
+ExprTreeHolder::ExprTreeHolder(boost::python::object expr_obj)
     : m_expr(NULL), m_owns(true)
 {
-    classad::ClassAdParser parser;
-    classad::ExprTree *expr = NULL;
-    if (!parser.ParseExpression(str, expr))
-    {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into a ClassAd.");
-        boost::python::throw_error_already_set();
+    boost::python::extract<ExprTreeHolder&>expr_extract(expr_obj);
+    if (expr_extract.check()) {
+        m_expr = expr_extract().get()->Copy();
+    } else {
+        const std::string str = boost::python::extract<std::string>(expr_obj);
+        classad::ClassAdParser parser;
+        if (!parser.ParseExpression(str, m_expr, true))
+        {
+            PyErr_SetString(PyExc_SyntaxError, "Unable to parse string as an expression.");
+            boost::python::throw_error_already_set();
+        }
     }
-    m_expr = expr;
     m_refcount.reset(m_expr);
 }
 
@@ -46,6 +50,7 @@ ExprTreeHolder::ExprTreeHolder(classad::ExprTree *expr, bool owns)
      : m_expr(expr), m_refcount(owns ? expr : NULL), m_owns(owns)
 {
 }
+
 
 ExprTreeHolder::~ExprTreeHolder()
 {
@@ -307,7 +312,7 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
             idx = exprlist->size() + idx;
         }
         exprlist->GetComponents(exprs);
-        ExprTreeHolder holder(exprs[idx]);
+        ExprTreeHolder holder(exprs[idx], false);
         if (holder.ShouldEvaluate()) { return holder.Evaluate(); }
         return boost::python::object(holder);
     }
@@ -356,18 +361,18 @@ ExprTreeHolder::apply_this_operator(classad::Operation::OpKind kind, boost::pyth
         {
                 if (kind == classad::Operation::OpKind::EQUAL_OP || kind == classad::Operation::OpKind::IS_OP) {
                     PyErr_Clear();
-                    ExprTreeHolder holder(classad::Literal::MakeBool(false));
+                    ExprTreeHolder holder(classad::Literal::MakeBool(false), true);
                     return holder;
                 } else if (kind == classad::Operation::OpKind::NOT_EQUAL_OP || kind == classad::Operation::OpKind::ISNT_OP) {
                     PyErr_Clear();
-                    ExprTreeHolder holder(classad::Literal::MakeBool(true));
+                    ExprTreeHolder holder(classad::Literal::MakeBool(true), true);
                     return holder;
                 }
         }
         throw;
     }
     classad::ExprTree *expr = classad::Operation::MakeOperation(kind, get(), right);
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, true);
     return holder;
 }
 
@@ -376,7 +381,7 @@ ExprTreeHolder::apply_this_roperator(classad::Operation::OpKind kind, boost::pyt
 {
     classad::ExprTree *left = convert_python_to_exprtree(obj);
     classad::ExprTree *expr = classad::Operation::MakeOperation(kind, left, get());
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, true);
     return holder;
 }
 
@@ -384,7 +389,7 @@ ExprTreeHolder
 ExprTreeHolder::apply_unary_operator(classad::Operation::OpKind kind) const
 {
     classad::ExprTree *expr = classad::Operation::MakeOperation(kind, get());
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, true);
     return holder;
 }
 
@@ -448,7 +453,7 @@ classad::ExprTree *ExprTreeHolder::get() const
 
 AttrPairToSecond::result_type AttrPairToSecond::operator()(AttrPairToSecond::argument_type p) const
 {
-    ExprTreeHolder holder(p.second);
+    ExprTreeHolder holder(p.second, false);
     if (holder.ShouldEvaluate())
     {
         return holder.Evaluate();
@@ -460,7 +465,7 @@ AttrPairToSecond::result_type AttrPairToSecond::operator()(AttrPairToSecond::arg
 
 AttrPair::result_type AttrPair::operator()(AttrPair::argument_type p) const
 {
-    ExprTreeHolder holder(p.second);
+    ExprTreeHolder holder(p.second, false);
     boost::python::object result(holder);
     if (holder.ShouldEvaluate())
     {
@@ -478,7 +483,7 @@ boost::python::object ClassAdWrapper::LookupWrap(const std::string &attr) const
         PyErr_SetString(PyExc_KeyError, attr.c_str());
         boost::python::throw_error_already_set();
     }
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, false);
     if (holder.ShouldEvaluate()) return EvaluateAttrObject(attr);
     return boost::python::object(holder);
 }
@@ -490,7 +495,7 @@ boost::python::object ClassAdWrapper::get(const std::string attr, boost::python:
     {
         return default_result;
     }
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, false);
     if (holder.ShouldEvaluate()) return EvaluateAttrObject(attr);
     boost::python::object result(holder);
     return result;
@@ -505,7 +510,7 @@ boost::python::object ClassAdWrapper::setdefault(const std::string attr, boost::
         return default_result;
     }
     if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) return EvaluateAttrObject(attr);
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, false);
     boost::python::object result(holder);
     return result;
 }
@@ -619,7 +624,7 @@ ExprTreeHolder ClassAdWrapper::LookupExpr(const std::string &attr) const
         PyErr_SetString(PyExc_KeyError, attr.c_str());
         boost::python::throw_error_already_set();
     }
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, false);
     return holder;
 }
 
@@ -630,7 +635,7 @@ boost::python::object ClassAdWrapper::EvaluateAttrObject(const std::string &attr
         PyErr_SetString(PyExc_KeyError, attr.c_str());
         boost::python::throw_error_already_set();
     }
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, false);
     return holder.Evaluate();
 }
 
@@ -667,7 +672,8 @@ literal(boost::python::object value)
         ExprTreeHolder holder(expr, true);
         return holder;
     }
-    ExprTreeHolder holder(expr);
+	//PRAGMA_REMIND("LEAK CHECK! expr is probably a new object, but *might* be the value passed in!")
+    ExprTreeHolder holder(expr, true);
     return holder;
 }
 
@@ -695,7 +701,7 @@ function(boost::python::tuple args, boost::python::dict /*kw*/)
         }
     }
     classad::ExprTree *func = classad::FunctionCall::MakeFunctionCall(fnName.c_str(), argList);
-    ExprTreeHolder holder(func);
+    ExprTreeHolder holder(func, true);
     return holder;
 }
 
@@ -945,6 +951,142 @@ convert_python_to_exprtree(boost::python::object value)
     return NULL;
 }
 
+// convert a python object to a constraint expression.
+// returns true if conversion was successful
+// if value is true or None, constraint is nullptr
+// otherwise constraint is an ExprTree pointer and new_object is set to true if the caller now owns the ExprTree
+// this is mostly a helper function for the second form below, which returns a string as most condor API expect
+bool convert_python_to_constraint(boost::python::object value, classad::ExprTree * & constraint, bool & new_object)
+{
+	constraint = nullptr;
+	new_object = false;
+
+	if (value.ptr() == Py_None) {
+		return true;
+	}
+	if (PyBool_Check(value.ptr())) {
+		bool cppvalue = boost::python::extract<bool>(value);
+		classad::Value val; val.SetBooleanValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+	if (PyLong_Check(value.ptr())) {
+		long long cppvalue = boost::python::extract<long long>(value);
+		classad::Value val; val.SetIntegerValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+#if PY_VERSION_HEX < 0x03000000
+	if (PyInt_Check(value.ptr())) {
+		long int cppvalue = boost::python::extract<long int>(value);
+		classad::Value val; val.SetIntegerValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+#endif
+	if (PyFloat_Check(value.ptr())) {
+		double cppvalue = boost::python::extract<double>(value);
+		classad::Value val; val.SetRealValue(cppvalue);
+		constraint = classad::Literal::MakeLiteral(val);
+		new_object = true;
+		return true;
+	}
+	boost::python::extract<ExprTreeHolder&> expr_obj(value);
+	if (expr_obj.check()) {
+		constraint = expr_obj().get();
+		new_object = false;
+		return true;
+	}
+	boost::python::extract<std::string> str_obj(value);
+	if (str_obj.check()) {
+		std::string str = str_obj();
+		if (str.empty()) {
+			return true;
+		}
+		classad::ClassAdParser parser;
+		parser.SetOldClassAd(true);
+		if (parser.ParseExpression(str, constraint, true)) {
+			new_object = true;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	return false;
+}
+
+// convert a python object to an unparsed constraint expression, 
+// returns true if conversion was successful, althrough the result may be the empty string
+// if value is NULL or true constraint will be the empty string
+bool convert_python_to_constraint(boost::python::object value, std::string & constraint, bool validate /*=false*/)
+{
+	constraint.clear();
+
+	// strings pass through unmodified if validate is false
+	if ( ! validate) {
+		boost::python::extract<std::string> str_obj(value);
+		if (str_obj.check()) {
+			constraint = str_obj();
+			return true;
+		}
+	}
+
+	classad::ExprTree * expr = nullptr;
+	bool new_expr = false;
+	if ( ! convert_python_to_constraint(value, expr, new_expr)) {
+		return false;
+	}
+
+	if (expr) {
+		// treat a simple literal true as no constraint
+		// literals that don't convert to bool are error
+		// we go ahead and unparse false, int and real and pass those as constraints
+		// rather than treating those as errors, because these *might* be intended
+		// to contact the daemon but get no results
+		bool has_constraint = true;
+		if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) {
+			classad::Value::NumberFactor factor;
+			classad::Value lvalue;
+			bool bvalue = false;
+			((classad::Literal*)expr)->GetComponents(lvalue, factor);
+			if (lvalue.IsBooleanValue(bvalue) && bvalue) {
+				has_constraint = false;
+			} else {
+				classad::Value::ValueType vt = lvalue.GetType();
+				if (vt != classad::Value::INTEGER_VALUE && 
+					vt != classad::Value::REAL_VALUE && 
+					vt != classad::Value::BOOLEAN_VALUE && // bool false ends up here
+					vt != classad::Value::UNDEFINED_VALUE) {
+					// literal constraints that are not bool or convertable to bool (like lists and nested ads) are not valid. 
+					if (new_expr) {
+						delete expr;
+						expr = NULL;
+					}
+					return false;
+				}
+			}
+		}
+
+		if (has_constraint) {
+			classad::ClassAdUnParser unparser;
+			unparser.SetOldClassAd(true, true);
+			unparser.Unparse(constraint, expr);
+		}
+
+		if (new_expr) {
+			delete expr;
+			expr = NULL;
+		}
+	}
+
+	return true;
+}
+
+
 void ClassAdWrapper::InsertAttrObject( const std::string &attr, boost::python::object value)
 {
     ExprTree *result = convert_python_to_exprtree(value);
@@ -954,6 +1096,26 @@ void ClassAdWrapper::InsertAttrObject( const std::string &attr, boost::python::o
         boost::python::throw_error_already_set();
     }
     return;
+}
+
+bool ClassAdWrapper::__eq__( boost::python::object other ) const
+{
+    boost::python::extract<ClassAdWrapper &> e(other);
+    if( e.check() ) {
+        return (*(ClassAd *)this) == (ClassAd)(e());
+    } else {
+        return false;
+    }
+}
+
+bool ClassAdWrapper::__ne__( boost::python::object other ) const
+{
+    boost::python::extract<ClassAdWrapper &> e(other);
+    if( e.check() ) {
+        return !((*(ClassAd *)this) == (ClassAd)(e()));
+    } else {
+        return true;
+    }
 }
 
 std::string ClassAdWrapper::toRepr() const

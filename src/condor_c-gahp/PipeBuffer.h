@@ -45,13 +45,13 @@ public:
 	std::string * GetNextLine();
 	int Write (const char * toWrite = NULL);
 
-	int getPipeEnd() { return pipe_end; }
+	int getPipeEnd() const { return pipe_end; }
 	void setPipeEnd(const int _pipe_end) { pipe_end = _pipe_end; }
 	const char * getBuffer() { return buffer.c_str(); }
 
 	int IsEmpty();
-	bool IsError() { return error; }
-	bool IsEOF() { return eof; }
+	bool IsError() const { return error; }
+	bool IsEOF() const { return eof; }
 
 protected:
 	int pipe_end;

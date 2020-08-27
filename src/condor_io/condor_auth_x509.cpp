@@ -615,8 +615,8 @@ StringList * getDaemonList(char const *param_name,char const *fqh)
             memset(buf, 0, totalLen);
 
             // First, copy the part up to $$
-            strncpy(buf, entry, strlen(entry) - strlen(tmp));
-            tmp = buf + strlen(buf);
+            strcpy(buf, entry);
+            tmp = buf + strlen(entry) - strlen(tmp);
 
             // Next, copy the expanded host name
             strcpy(tmp, fqh);

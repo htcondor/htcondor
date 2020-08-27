@@ -816,10 +816,10 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 		m_xml += m_vm_name;
 		m_xml += "</name>";
 		m_xml += "<memory>";
-		m_xml += IntToStr( m_vm_mem * 1024 );
+		m_xml += std::to_string( m_vm_mem * 1024 );
 		m_xml += "</memory>";
 		m_xml += "<vcpu>";
-		m_xml += IntToStr( m_vcpus );
+		m_xml += std::to_string( m_vcpus );
 		m_xml += "</vcpu>";
 		m_xml += "<os><type>hvm</type></os>";
 		m_xml += "<devices>";
@@ -875,10 +875,10 @@ XenType::CreateVirshConfigFile(const char* filename)
 		m_xml += m_vm_name;
 		m_xml += "</name>";
 		m_xml += "<memory>";
-		m_xml += IntToStr( m_vm_mem * 1024 );
+		m_xml += std::to_string( m_vm_mem * 1024 );
 		m_xml += "</memory>";
 		m_xml += "<vcpu>";
-		m_xml += IntToStr( m_vcpus );
+		m_xml += std::to_string( m_vcpus );
 		m_xml += "</vcpu>";
 		m_xml += "<os><type>linux</type>";
 

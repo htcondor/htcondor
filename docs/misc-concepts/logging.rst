@@ -56,9 +56,9 @@ daemon logs
     location and file name of the daemon log. For example, to display
     the location of the log for the *condor_collector* daemon, use
 
-    ::
+    .. code-block:: console
 
-          condor_config_val COLLECTOR_LOG
+          $ condor_config_val COLLECTOR_LOG
 
 job queue log
     The job queue log is a transactional representation of the current
@@ -78,8 +78,6 @@ job queue log
     Configuration variables that affect the job queue log are
 
      ``SCHEDD_BACKUP_SPOOL`` :index:`SCHEDD_BACKUP_SPOOL`
-     ``ROTATE_HISTORY_DAILY`` :index:`ROTATE_HISTORY_DAILY`
-     ``ROTATE_HISTORY_MONTHLY`` :index:`ROTATE_HISTORY_MONTHLY`
      ``QUEUE_CLEAN_INTERVAL`` :index:`QUEUE_CLEAN_INTERVAL`
      ``MAX_JOB_QUEUE_LOG_ROTATIONS`` :index:`MAX_JOB_QUEUE_LOG_ROTATIONS`
 
@@ -176,6 +174,8 @@ history log
      ``ENABLE_HISTORY_ROTATION`` :index:`ENABLE_HISTORY_ROTATION`
      ``MAX_HISTORY_LOG`` :index:`MAX_HISTORY_LOG`
      ``MAX_HISTORY_ROTATIONS`` :index:`MAX_HISTORY_ROTATIONS`
+     ``ROTATE_HISTORY_DAILY`` :index:`ROTATE_HISTORY_DAILY`
+     ``ROTATE_HISTORY_MONTHLY`` :index:`ROTATE_HISTORY_MONTHLY`
 
 DAGMan Logs
 -----------

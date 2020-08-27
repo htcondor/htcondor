@@ -92,21 +92,21 @@ Examples
 
 To vacate job 23.0:
 
-::
+.. code-block:: console
 
-    % condor_vacate_job 23.0
+    $ condor_vacate_job 23.0
 
 To vacate all jobs of a user named Mary:
 
-::
+.. code-block:: console
 
-    % condor_vacate_job mary
+    $ condor_vacate_job mary
 
 To vacate all vanilla universe jobs owned by Mary:
 
-::
+.. code-block:: console
 
-    % condor_vacate_job -constraint 'JobUniverse == 5 && Owner == "mary"'
+    $ condor_vacate_job -constraint 'JobUniverse == 5 && Owner == "mary"'
 
 Note that the entire constraint, including the quotation marks, must be
 enclosed in single quote marks for most shells.
@@ -117,16 +117,3 @@ Exit Status
 *condor_vacate_job* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

@@ -89,7 +89,7 @@ class GahpServer : public Service {
 	int m_buffer_pos;
 	int m_buffer_end;
 	int buffered_read( int fd, void *buf, int count );
-	int buffered_peek();
+	int buffered_peek() const;
 
 	int m_deleteMeTid;
 
@@ -97,7 +97,7 @@ class GahpServer : public Service {
 
 	static int m_reaperid;
 
-	static int Reaper(Service *,int pid,int status);
+	static int Reaper(int pid,int status);
 
 	class GahpStatistics {
 	public:
@@ -125,8 +125,8 @@ class GahpServer : public Service {
 
 	void read_argv(Gahp_Args &g_args);
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
-	void write_line(const char *command, const char *debug_cmd = NULL);
-	void write_line(const char *command,int req,const char *args);
+	void write_line(const char *command, const char *debug_cmd = NULL) const;
+	void write_line(const char *command,int req,const char *args) const;
 	int pipe_ready(int pipe_end);
 	int err_pipe_ready(int pipe_end);
 
@@ -157,7 +157,7 @@ class GahpServer : public Service {
 		the Gahp server supports async notification).
 		@see setPollInterval
 	*/
-	unsigned int getPollInterval();
+	unsigned int getPollInterval() const;
 
 	/** Immediately poll the Gahp Server for results.  Normally,
 		this method is invoked automatically either by a timer set
@@ -273,10 +273,10 @@ class GenericGahpClient : public Service {
 		mode getMode() { return m_mode; }
 
 		void setTimeout( int t ) { m_timeout = t; }
-		unsigned int getTimeout() { return m_timeout; }
+		unsigned int getTimeout() const { return m_timeout; }
 
 		void setNotificationTimerId( int tid ) { user_timerid = tid; }
-		int getNotificationTimerId() { return user_timerid; }
+		int getNotificationTimerId() const { return user_timerid; }
 
 		void PublishStats( ClassAd * ad );
 

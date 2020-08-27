@@ -54,7 +54,7 @@ made to the local configuration of any and all machines that are able to
 run the *condor_schedd* daemon (becoming the single pool submission
 point):
 
-::
+.. code-block:: condor-config
 
     MASTER_HA_LIST = SCHEDD
     SPOOL = /share/spool
@@ -108,9 +108,9 @@ Working with Remote Job Submission
 Remote job submission requires identification of the job queue,
 submitting with a command similar to:
 
-::
+.. code-block:: console
 
-      % condor_submit -remote condor@example.com myjob.submit
+      $ condor_submit -remote condor@example.com myjob.submit
 
 This implies the identification of a single *condor_schedd* daemon,
 running on a single machine. With the high availability of the job
@@ -127,15 +127,15 @@ configuration file macros` section for defaults and composition of valid values
 for ``SCHEDD_NAME``. As an example, include in each local configuration a value
 similar to:
 
-::
+.. code-block:: condor-config
 
     SCHEDD_NAME = had-schedd@
 
 Then, with this sample configuration, the submit command appears as:
 
-::
+.. code-block:: console
 
-      % condor_submit -remote had-schedd@  myjob.submit
+      $ condor_submit -remote had-schedd@  myjob.submit
 
 High Availability of the Central Manager
 ----------------------------------------
@@ -275,7 +275,7 @@ daemons to detect a change in the pool state such as an active central
 manager failure or network partition, and recover from this change. It
 may be computed using the following formula:
 
-::
+.. code-block:: text
 
     stabilization period = 12 * (number of central managers) *
                               $(HAD_CONNECTION_TIMEOUT)
@@ -339,7 +339,7 @@ be central managers.
 The following shared-port configuration is for the central manager
 machines.
 
-::
+.. code-block:: condor-config
 
     ## THE FOLLOWING MUST BE IDENTICAL ON ALL CENTRAL MANAGERS
 
@@ -388,7 +388,7 @@ machines.
 The following shared-port configuration is for the machines which that
 will not be central managers.
 
-::
+.. code-block:: condor-config
 
     CENTRAL_MANAGER1 = cm1.domain.name
     CENTRAL_MANAGER2 = cm2.domain.name
@@ -397,7 +397,7 @@ will not be central managers.
 The following configuration sets fixed port numbers for the central
 manager machines.
 
-::
+.. code-block:: condor-config
 
     ##########################################################################
     # A sample configuration file for central managers, to enable the        #
@@ -507,7 +507,7 @@ manager machines.
 The configuration for machines that will not be central managers is
 identical for the fixed- and shared- port cases.
 
-::
+.. code-block:: condor-config
 
     ##########################################################################
     # Sample configuration relating to high availability for machines        #

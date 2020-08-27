@@ -1,0 +1,14 @@
+universe = vanilla
+
+output = scitokens_test.$(cluster).$(process).out
+error = scitokens_test.$(cluster).$(process).err
+log = scitokens_test.$(cluster).log
+
+executable = test.sh
+
+use_oauth_services = scitokens
+
+scitokens_oauth_permissions = read:/public
+scitokens_oauth_resource = requested.resource.address
+
+queue

@@ -385,7 +385,7 @@ main(
 		expression = (char *) malloc(50000);
 		sprintf(expression, "%s = \"%s\"", variable, string);
 		
-		classads[0]->Insert(expression);
+		classads[0]->Assign(variable, string);
 		
 		test_string_value(classads[0], variable, string, __LINE__, &test_results);
 
@@ -1334,7 +1334,7 @@ test_dirty_attribute(
 	}
 
 	// Add an attribute
-	classad->Insert("C = 3");
+	classad->Assign("C", 3);
 
 	// Now we should have exactly one dirty attribute, C.
 	classad->ResetExpr();
@@ -1359,7 +1359,7 @@ test_dirty_attribute(
 	}
 
 	// Add an attribute
-	classad->Insert("D = 4");
+	classad->Assign("D", 4);
 
 	// Now we should have two dirty attributes, C & D
 	classad->ResetExpr();

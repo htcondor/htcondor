@@ -1,0 +1,61 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2020, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+my $iswindows = CondorUtils::is_windows();
+
+my $reldir = `condor_config_val release_dir`; chomp $reldir;
+my $pathsep = ':';
+my $relpy = "$reldir/lib/python3";
+my $pypgm = "python3";
+if ($iswindows) {
+    $relpy = "$reldir\\lib\\python"; $pathsep = ';';
+    my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
+    # use 32 bit python if we have a 32 bit htcondor python module
+    $regkey = "HKLM\\Software\\wow6432node\\Python\\PythonCore\\3.6\\InstallPath" if -f "$relpy\\htcondor\\htcondor.cp36-win32.pyd";
+    my @reglines = `reg query $regkey /ve`;
+    for my $line (@reglines) {
+       if ($line =~ /REG_SZ\s+(.+)$/) {
+          print "\tfound python 3.6 install dir : '$1'\n";
+          $pypgm = "$1python3.exe";
+          last;
+       }
+    }
+}
+
+my $pythonpath = "";
+if (exists($ENV{PYTHONPATH})) {
+    $pythonpath = $ENV{PYTHONPATH};
+    print "\texisting PYTHONPATH=$pythonpath\n";
+    if (index($reldir,$pythonpath) < 0) {
+        print "\tadding $relpy to PYTHONPATH\n";
+        $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
+    }
+} else {
+    print "\tsetting PYTHONPATH to $relpy\n";
+    $ENV{PYTHONPATH} = $relpy;
+}
+
+$ENV{ON_BATLAB} = 'true';
+
+my $rv = runCommandCarefully( undef, $pypgm, '-m', 'pytest', 'test_htcondor_personal' );
+exit $rv->{"exitcode"}

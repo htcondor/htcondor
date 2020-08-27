@@ -41,6 +41,7 @@ my $firstappend_condor_config = '
 ';
 
 my $secondappend_condor_config = '
+	SHARED_PORT_PORT = 0
 	DAEMON_LIST = MASTER,SCHEDD,STARTD
 	MAX_SCHEDD_LOG = 5000000000
 	WANT_SUSPEND = False
@@ -133,14 +134,14 @@ sub SetUp
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);
@@ -191,14 +192,14 @@ sub SetUp
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);
 
 	SimpleJob::RunCheck(
 		no_wait => 1,
-		duration => 0,
+		duration => 3600,
 		on_abort => $on_abort,
 		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	);

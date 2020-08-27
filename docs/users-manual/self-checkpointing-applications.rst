@@ -14,11 +14,13 @@ up to you or your software provider.
 How To Run Self-Checkpointing Jobs
 ----------------------------------
 
-The best way to run self-checkpointing code is to set
-``checkpoint_exit_code`` in your submit file. If the ``executable`` exits
+The best way to run self-checkpointing code is to set ``checkpoint_exit_code``
+in your submit file.  (Any exit code will work, but if you can choose,
+consider error code ``85``.  On Linux systems, this is ``ERESTART``, which
+seems appropriate.)  If the ``executable`` exits
 with ``checkpoint_exit_code``, HTCondor will transfer the checkpoint to
 the submit node, and then immediately restart the ``executable`` in the
-same sandbox on the same machine, with same the ``arguments``. This
+same sandbox on the same machine, with same the ``arguments``.  This
 immediate transfer makes the checkpoint available for continuing the job
 even if the job is interrupted in a way that doesn't allow for files to
 be transferred (e.g., power failure), or if the file transfer doesn't
@@ -64,13 +66,13 @@ Assumptions`_ and/or the `Other Options`_.
 Using checkpoint_exit_code
 --------------------------
 
-The following Python script (``77.py``) is a toy example of code that
+The following Python script (``85.py``) is a toy example of code that
 checkpoints itself. It counts from 0 to 10 (exclusive), sleeping for 10
 seconds at each step. It writes a checkpoint file (containing the next number)
-after each nap, and exits with code 77 at count 3, 6, and 9. It exits
+after each nap, and exits with code 85 at count 3, 6, and 9. It exits
 with code 0 when complete.
 
-::
+.. code-block:: python
 
     #!/usr/bin/env python
 
@@ -79,7 +81,7 @@ with code 0 when complete.
 
     value = 0
     try:
-        with open('77.checkpoint', 'r') as f:
+        with open('85.checkpoint', 'r') as f:
             value = int(f.read())
     except IOError:
         pass
@@ -89,40 +91,43 @@ with code 0 when complete.
         print("Computing timestamp {0}".format(value))
         time.sleep(10)
         value += 1
-        with open('77.checkpoint', 'w') as f:
+        with open('85.checkpoint', 'w') as f:
             f.write("{0}".format(value))
         if value%3 == 0:
-            sys.exit(77)
+            sys.exit(85)
 
     print("Computation complete")
     sys.exit(0)
 
-The following submit file (``77.submit``) commands HTCondor to transfer the
-file ``77.checkpoint`` to the submit node whenever the script exits with code
-77. If interrupted, the job will resume from the most recent of those
-checkpoints. Note that you *must* include your checkpoint file(s) in
-``transfer_output_files``; otherwise HTCondor will not transfer it
-(them).
+The following submit file (``85.submit``) commands HTCondor to transfer the
+file ``85.checkpoint`` to the submit node whenever the script exits with code
+85.  If interrupted, the job will resume from the most recent of those
+checkpoints.  Before version 8.9.8, you *must* include your checkpoint file(s)
+in ``transfer_output_files``; otherwise HTCondor will not transfer it
+(them).  Starting with version 8.9.8, you may instead use
+``transfer_checkpoint_files``, as documented on
+the :doc:`/man-pages/condor_submit` man page.
 
-::
+.. code-block:: condor-submit
 
-    checkpoint_exit_code        = 77
-    transfer_output_files       = 77.checkpoint
+    checkpoint_exit_code        = 85
+    transfer_output_files       = 85.checkpoint
     should_transfer_files       = yes
 
-    executable                  = 77.py
+    executable                  = 85.py
     arguments                   =
 
-    output                      = 77.out
-    error                       = 77.err
-    log                         = 77.log
+    output                      = 85.out
+    error                       = 85.err
+    log                         = 85.log
 
     queue 1
 
 This example does not remove the "checkpoint file" generated for
-timestep 9 when the executable completes. This could be done in
-``77.py`` immediately before it exits, but that would cause the
-final file transfer to fail. The script could instead remove the file
+timestep 9 when the executable completes.  This could be done in
+``85.py`` immediately before it exits, but that would cause the
+final file transfer to fail, if you specified the file in
+``transfer_output_files``.  The script could instead remove the file
 and then re-create it empty, it desired.
 
 How Frequently to Checkpoint
@@ -185,26 +190,35 @@ For example, if your job is ID 635.0, and is logging to the file
 ``job.log``, you can copy the files in the checkpoint to a subdirectory of
 the current as follows:
 
-::
+.. code-block:: console
 
-    condor_vacate_job 635.0
+    $ condor_vacate_job 635.0
 
-    # Wait for the job to finish being evicted;
-    # hit CTRL-C when you see 'Job was evicted.'
-    tail --follow job.log
-    condor_hold 635.0
+Wait for the job to finish being evicted;
+hit CTRL-C when you see 'Job was evicted.'
+and immediately hold the job.
 
-    # Copy the checkpoint files from the spool.
-    # Note that _condor_stderr and _condor_stdout are the files corresponding
-    # to the job's output and error submit commands; they aren't named
-    # correctly until the the job finishes.
-    cp -a `condor_config_val SPOOL`/635/0/cluster635.proc0.subproc0 .
+.. code-block:: console
 
-    # Now examine the checkpoint files to see if they look right.
+    $ tail --follow job.log
+    $ condor_hold 635.0
 
-    # When you're done, release the job to see if it actually works right.
-    condor_release 635.0
-    condor_ssh_to_job 635.0
+Copy the checkpoint files from the spool.
+Note that _condor_stderr and _condor_stdout are the files corresponding
+to the job's output and error submit commands; they aren't named
+correctly until the the job finishes.
+
+.. code-block:: console
+
+    $ cp -a `condor_config_val SPOOL`/635/0/cluster635.proc0.subproc0 .
+
+Now examine the checkpoint files to see if they look right.
+When you're done, release the job to see if it actually works right.
+
+.. code-block:: console
+
+    $ condor_release 635.0
+    $ condor_ssh_to_job 635.0
 
 Working Around the Assumptions
 ------------------------------
@@ -335,8 +349,8 @@ you.
 Periodic Signals
 ~~~~~~~~~~~~~~~~
 
-HTCondor supports transferring checkpoint file(s) for
-``executable``s which take a checkpoint when sent a particular signal, if the ``executable``
+HTCondor supports transferring checkpoint file(s) for an ``executable``
+which takes a checkpoint when sent a particular signal, if the ``executable``
 then exits in a unique way. Set ``+WantCheckpointSignal`` to ``TRUE`` to
 periodically receive checkpoint signals, and ``+CheckpointSig`` to
 specify which one. (The interval is specified by the administrator of

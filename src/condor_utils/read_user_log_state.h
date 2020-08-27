@@ -181,7 +181,7 @@ public:
 	filesize_t EventNum( const ReadUserLog::FileState &state ) const;
 
 	// Get/set maximum rotations
-	int MaxRotations( void ) { return m_max_rotations; }
+	int MaxRotations( void ) const { return m_max_rotations; }
 	int MaxRotations( int max_rotations )
 		{ Update(); return m_max_rotations = max_rotations; }
 

@@ -22,11 +22,18 @@ if( EXPAT_FOUND AND HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAV
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-    condor_glob( HeaderFiles SourceFiles "queryAPI-sim.cpp" )
+	set(SourceFiles
+	amazonCommands.cpp
+	amazongahp_common.cpp
+	amazon_io_checkfn.cpp
+	io_loop_pthread.cpp
+	PipeBuffer_no_dc.cpp
+	request.cpp
+	)
 
     # Build the GAHP; curl requires libz on some systems.
 	condor_exe( ec2_gahp
-    	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
+    	"${SourceFiles}"	${C_SBIN}
 	    "${CONDOR_TOOL_LIBS};${EXPAT_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
     	OFF )
 

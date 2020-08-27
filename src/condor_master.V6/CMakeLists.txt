@@ -18,5 +18,14 @@
 
 
 file( GLOB MasterRmvElements Example* )
+set(masterElements
+master.cpp
+masterDaemon.cpp
+MasterPluginManager.cpp
+)
 
-condor_daemon(master "${MasterRmvElements}" "${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}")
+if (WINDOWS)
+list(APPEND masterElements service.WINDOWS.cpp)
+endif(WINDOWS)
+
+condor_daemon(EXE condor_master SOURCES "${masterElements}" LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}")

@@ -93,7 +93,10 @@ main( int argc, char *argv[] )
 		std::string request_id;
 		rval = startd.drainJobs( how_fast, resume_on_completion, draining_check_expr, draining_start_expr, request_id );
 		if( rval ) {
-			printf("Sent request to drain %s\n",startd.name());
+			printf("Sent request to drain the startd %s with %s. This only "
+				"affects the single startd; any other startds running on the "
+				"same host will not be drained.\n", startd.addr(), 
+				startd.name());
 			if (dash_verbose && ! request_id.empty()) { printf("\tRequest id: %s\n", request_id.c_str()); }
 		}
 	}

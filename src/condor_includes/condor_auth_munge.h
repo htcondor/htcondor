@@ -79,6 +79,7 @@ private:
 
 	// the shared session key produced as output of the protocol
 	Condor_Crypt_3des* m_crypto;
+	Condor_Crypto_State* m_crypto_state;
 
 	// Produce the shared key object from raw key material.
 	bool setupCrypto(const unsigned char* key, const int keylen);

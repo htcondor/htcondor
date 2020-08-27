@@ -88,7 +88,7 @@ print "Executing task '$taskname' on host '$hostname'\n";
 
 # Build with warnings == errors on Fedora
 my $werror="";
-if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
+if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[123][0-9]/i) {
     $werror = "-DCONDOR_C_FLAGS:STRING=-Werror";
 }
 
@@ -154,7 +154,7 @@ elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb($is_debug);
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|centos|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|sl)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
         $execstr = create_rpm($is_debug);
     }
@@ -173,7 +173,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "Detected OS is Debian.  Validating Deb package.\n";
         $execstr = check_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|centos|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|sl)/i) {
         print "Detected OS is Red Hat.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
@@ -188,10 +188,10 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
-	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2019.09/bin";
+	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2020.06/bin";
 	$execstr = get_cmake_args();
 	$execstr .= " -DBUILD_TESTING:bool=false ";
-	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /usr/local/coverity/.p`";
+	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
 }
 
 
@@ -236,6 +236,7 @@ else {
     $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
     $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
     $ENV{DYLD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+    $ENV{PYTHONPATH} ="$BaseDir/release_dir/lib/python";
 }
 
 ######################################################################
@@ -303,7 +304,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {
@@ -338,11 +339,11 @@ sub check_deb {
     my $debs;
     for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
     if ( ! defined $debs) { $debs = "*.deb"; }
-    if ($ENV{NMI_PLATFORM} =~ /(Debian9|Ubuntu16|Ubuntu18)/) {
-        # return "lintian $debs";
-        return "dpkg-deb -W $debs";
-    } else {
+    if ($ENV{NMI_PLATFORM} =~ /Debian8/) {
         # Only works with a single deb
         return "dpkg-deb -I $debs";
+    } else {
+        # return "lintian $debs";
+        return "dpkg-deb -W $debs";
     }
 }

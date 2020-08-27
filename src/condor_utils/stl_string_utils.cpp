@@ -151,25 +151,6 @@ int formatstr_cat(MyString& s, const char* format, ...) {
     return r;
 }
 
-template <typename T> std::string IntToStr( T val )
-{
-	char buf[64];
-	if (std::numeric_limits<T>::is_signed) {
-		snprintf( buf, sizeof(buf), "%lld", (long long)val );
-	} else {
-		snprintf( buf, sizeof(buf), "%llu", (unsigned long long)val );
-	}
-	return std::string( buf );
-}
-
-// force instantiation of the StrToInt functions that users of condor_utils will need
-template std::string IntToStr<int>(int val);
-template std::string IntToStr<long>(long val);
-template std::string IntToStr<long long>(long long val);
-template std::string IntToStr<unsigned int>(unsigned int val);
-template std::string IntToStr<unsigned long>(unsigned long val);
-template std::string IntToStr<unsigned long long>(unsigned long long val);
-
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& str, FILE *fp, bool append)
 {
@@ -276,6 +257,31 @@ void title_case( std::string &str )
 		}
 		upper = isspace(str[i]);
 	}
+}
+
+std::string EscapeChars(const std::string& src, const std::string& Q, char escape)
+{
+	// create a result string.  may as well reserve the length to
+	// begin with to minimize reallocations.
+	std::string S;
+	S.reserve(src.length());
+
+	// go through each char in the string src
+	for (size_t i = 0; i < src.length(); i++) {
+
+		// if it is in the set of chars to escape,
+		// drop an escape onto the end of the result
+		if (strchr(Q.c_str(), src[i])) {
+			// this character needs escaping
+			S += escape;
+		}
+
+		// put this char into the result
+		S += src[i];
+	}
+
+	// thats it!
+	return S;
 }
 
 bool ends_with(const std::string& str, const std::string& post) {

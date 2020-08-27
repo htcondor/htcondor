@@ -30,10 +30,12 @@
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "module_lock.h"
+#include "daemon_location.h"
 #include "query_iterator.h"
 #include "submit_utils.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
+#include "history_iterator.h"
 
 #include <algorithm>
 #include <string>
@@ -265,6 +267,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 	return getClassAd(&sock, ad);
 }
 
+#if 0
 struct HistoryIterator
 {
     HistoryIterator(boost::shared_ptr<Sock> sock)
@@ -305,6 +308,123 @@ private:
     boost::shared_ptr<Sock> m_sock;
 };
 
+#endif
+
+boost::shared_ptr<HistoryIterator>
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int cmd, const std::string & addr)
+{
+	bool want_startd = (cmd == GET_HISTORY);
+
+	ConstraintHolder req_expr;	// insure that we don't leak the expr if we throw
+	classad::ExprTree * expr = NULL;
+	bool new_expr = false;
+	if (convert_python_to_constraint(requirement, expr, new_expr)) {
+		// if requirements is None, we can get back success, but expr==NULL
+		if (expr) {
+			if (new_expr) {
+				req_expr.set(expr); // take ownership of the new expression
+			} else {
+				classad::ExprTree * expr_copy = expr->Copy();
+				if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+				req_expr.set(expr_copy);
+			}
+		}
+	} else {
+		THROW_EX(ValueError, "Unable to parse requirements expression");
+	}
+
+	classad::ExprList *projList(new classad::ExprList());
+	unsigned len_attrs = py_len(projection);
+	for (unsigned idx = 0; idx < len_attrs; idx++)
+	{
+		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
+		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+		if (!entry) THROW_EX(ValueError, "Unable to create copy of list entry.")
+			projList->push_back(entry);
+	}
+
+	// decode the since argument, this can either be an expression, or a string
+	// containing either an expression, a cluster id or a full job id.
+	classad::ExprTree *since_expr_copy = NULL;
+	extract<ExprTreeHolder &> since_exprtree_extract(since);
+	extract<std::string> since_string_extract(since);
+	extract<int>  since_cluster_extract(since);
+	if (since_cluster_extract.check()) {
+		std::string expr_str;
+		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
+		classad::ClassAdParser parser;
+		parser.ParseExpression(expr_str, since_expr_copy);
+	} else if (since_string_extract.check()) {
+		std::string since_str = since_string_extract();
+		classad::ClassAdParser parser;
+		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
+			THROW_EX(ValueError, "Unable to parse since argument as an expression or as a job id.");
+		} else {
+			classad::Value val;
+			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+				delete since_expr_copy; since_expr_copy = NULL;
+				// if the stop constraint is a numeric literal.
+				// then there are a few special cases...
+				// it might be a job id. or it might (someday) be a time value
+				PROC_ID jid;
+				const char * pend;
+				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
+					if (jid.proc >= 0) {
+						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
+					} else {
+						formatstr(since_str, "ClusterId == %d", jid.cluster);
+					}
+					parser.ParseExpression(since_str, since_expr_copy);
+				}
+			}
+		}
+	} else if (since_exprtree_extract.check()) {
+		since_expr_copy = since_exprtree_extract().get()->Copy();
+	} else if (since.ptr() != Py_None) {
+		THROW_EX(ValueError, "invalid since argument");
+	}
+
+
+	classad::ClassAd ad;
+	if (!req_expr.empty()) {
+		ad.Insert(ATTR_REQUIREMENTS, req_expr.detach());
+	}
+	ad.InsertAttr(ATTR_NUM_MATCHES, match);
+	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
+
+	// PRAGMA_REMIND("projection should be a string, not a classad list")
+	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
+	ad.Insert(ATTR_PROJECTION, projTree);
+
+	daemon_t dt = DT_SCHEDD;
+	if (want_startd) {
+		dt = DT_STARTD;
+	}
+
+	Daemon daemon(dt, addr.c_str());
+	CondorError errstack;
+	Sock* sock;
+	bool result;
+	{
+		condor::ModuleLock ml;
+		result = !(sock = daemon.startCommand(cmd, Stream::reli_sock, 0, &errstack));
+	}
+	if (result)
+	{
+		const char * msg = errstack.message(0);
+		if ( ! msg || ! msg[0]) {
+			msg = want_startd ? "Unable to connect to startd" : "Unable to connect to schedd";
+		}
+		THROW_EX(RuntimeError, msg);
+	}
+	boost::shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+
+	boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
+	return iter;
+}
+
 
 struct RequestIterator;
 
@@ -318,7 +438,7 @@ public:
     static boost::shared_ptr<ScheddNegotiate> enter(boost::shared_ptr<ScheddNegotiate> obj) {return obj;}
     static bool exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/);
 
-    bool negotiating() {return m_negotiating;}
+    bool negotiating() const {return m_negotiating;}
 
     void disconnect();
 
@@ -417,7 +537,7 @@ private:
         if (m_use_rrc) {m_num_to_fetch = param_integer("NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE");}
     }
 
-    bool needs_end_negotiate()
+    bool needs_end_negotiate() const
     {
         if (!m_done) {return true;}
         return m_use_rrc ? m_got_job_info : false;
@@ -477,7 +597,7 @@ struct QueueItemsIterator {
 		return row;
 	}
 
-	int row_count() { return num_rows; }
+	int row_count() const { return num_rows; }
 
 	int load_items(SubmitHash & h, MacroStreamMemoryFile &ms)
 	{
@@ -505,9 +625,9 @@ struct SubmitResult {
 		if (clusterAd) m_ad.Update(*clusterAd);
 	}
 
-	int cluster() { return m_id.cluster; }
-	int first_procid() { return m_id.proc; }
-	int num_procs() { return m_num; }
+	int cluster() const { return m_id.cluster; }
+	int first_procid() const { return m_id.proc; }
+	int num_procs() const { return m_num; }
 	boost::shared_ptr<ClassAdWrapper> clusterad() {
 		//PRAGMA_REMIND("does the ref counting work if our m_ad is actually a shared_ptr<ClassAdWrapper> ?")
 		boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
@@ -520,7 +640,7 @@ struct SubmitResult {
 		std::string str;
 		formatstr(str, "Submitted %d jobs into cluster %d,%d :\n", m_num, m_id.cluster, m_id.proc);
 		classad::References attrs;
-		sGetAdAttrs(attrs, m_ad, false, NULL);
+		sGetAdAttrs(attrs, m_ad);
 		sPrintAdAttrs(str, m_ad, attrs);
 		return str;
 	}
@@ -561,10 +681,22 @@ struct SubmitStepFromPyIter {
 		unset_live_vars();
 	}
 
-	bool done() { return m_done; }
+	bool done() const { return m_done; }
 	bool has_items() { return m_items; }
 	int  step_size() { return m_fea.queue_num ? m_fea.queue_num : 1; }
 	const char * errmsg() { if ( ! m_errmsg.empty()) { return m_errmsg.c_str(); } return NULL;}
+#if defined WIN32 || __cplusplus >= 201101
+	[[noreturn]]
+	void throw_error() {
+#else
+	void throw_error() __attribute__((noreturn)) {
+#endif
+		if ( ! PyErr_Occurred()) {
+			const char * err = errmsg();
+			PyErr_SetString(PyExc_RuntimeError, err ? err : "invalid iterator");
+		}
+		throw_error_already_set();
+	}
 
 	// returns < 0 on error
 	// returns 0 if done iterating
@@ -637,6 +769,9 @@ struct SubmitStepFromPyIter {
 	{
 		PyObject *obj = PyIter_Next(m_items);
 		if ( ! obj) {
+			if (PyErr_Occurred()) {
+				return -1;
+			}
 			return 0;
 		}
 
@@ -709,8 +844,8 @@ struct SubmitStepFromPyIter {
 	{
 		// so that the separator and line terminators can be \0, we make the size strlen()
 		// unless the first character is \0, then the size is 1
-		int cchSep = sep ? (sep[0] ? strlen(sep) : 1) : 0;
-		int cchEol = eol ? (eol[0] ? strlen(eol) : 1) : 0;
+		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
+		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
 		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
@@ -831,7 +966,9 @@ struct SubmitJobsIterator {
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
 			rval = m_sspi.next(jid, item_index, step);
-			if (rval < 0) { THROW_EX(RuntimeError, m_sspi.errmsg()); }
+			if (rval < 0) {
+				m_sspi.throw_error();
+			}
 		}
 		if (rval == 0)  { THROW_EX(StopIteration, "All ads processed"); }
 
@@ -958,11 +1095,11 @@ ScheddNegotiate::sendClaim(boost::python::object claim, boost::python::object of
     ClassAdWrapper offer_ad = boost::python::extract<ClassAdWrapper>(offer_obj);
     ClassAdWrapper request_ad = boost::python::extract<ClassAdWrapper>(request_obj);
 
-    compat_classad::CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
-    compat_classad::CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
-    compat_classad::CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
-    compat_classad::CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
-    compat_classad::CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
+    CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
+    CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
+    CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
+    CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
+    CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
 
     m_sock->encode();
     m_sock->put(PERMISSION_AND_AD);
@@ -1161,8 +1298,7 @@ struct Schedd {
 
     friend struct ConnectionSentry;
 
-    Schedd()
-     : m_connection(NULL)
+    void use_local_schedd()
     {
         Daemon schedd( DT_SCHEDD, 0, 0 );
 
@@ -1187,21 +1323,33 @@ struct Schedd {
         }
     }
 
-    Schedd(const ClassAdWrapper &ad)
+
+    Schedd()
+     : m_connection(NULL)
+    {
+        use_local_schedd();
+    }
+
+
+    Schedd(boost::python::object loc)
       : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
     {
-        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
-        {
-            PyErr_SetString(PyExc_ValueError, "Schedd address not specified.");
-            throw_error_already_set();
-        }
-        ad.EvaluateAttrString(ATTR_NAME, m_name);
-        ad.EvaluateAttrString(ATTR_VERSION, m_version);
+		int rv = construct_for_location(loc, DT_SCHEDD, m_addr, m_version, &m_name);
+		if (rv == 0) {
+			use_local_schedd();
+		} else if (rv < 0) {
+			if (rv == -2) { boost::python::throw_error_already_set(); }
+			THROW_EX(RuntimeError, "Unknown type");
+		}
     }
 
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+    }
+
+    boost::python::object location() const {
+        return make_daemon_location(DT_SCHEDD, m_addr, m_version);
     }
 
     boost::shared_ptr<ScheddNegotiate> negotiate(const std::string &owner, boost::python::object ad_obj)
@@ -1214,16 +1362,8 @@ struct Schedd {
     object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs)
     {
         std::string constraint;
-        extract<std::string> constraint_extract(constraint_obj);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
-        }
-        else
-        {
-            classad::ClassAdUnParser printer;
-            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
-            printer.Unparse(constraint, expr.get());
+        if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
+            THROW_EX(ValueError, "Invalid constraint.");
         }
 
         CondorQ q;
@@ -1374,27 +1514,28 @@ struct Schedd {
         {
             reason = object("Python-initiated action");
         }
+
+        // job_spec can either be a list of job id's (as strings) or a constraint expression
         StringList ids;
-        std::vector<std::string> ids_list;
         std::string constraint, reason_str, reason_code;
+        boost::python::extract<std::string> str_obj(job_spec);
         bool use_ids = false;
-        extract<std::string> constraint_extract(job_spec);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
-        }
-        else
-        {
+        if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
             int id_len = py_len(job_spec);
-            ids_list.reserve(id_len);
             for (int i=0; i<id_len; i++)
             {
                 std::string str = extract<std::string>(job_spec[i]);
-                ids_list.push_back(str);
-                ids.append(ids_list[i].c_str());
+                ids.append(str.c_str());
             }
             use_ids = true;
+        } else {
+            if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
+                THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
+            }
+            // act does not allow empty or null constraint argument, so use "true" instead
+            if (constraint.empty()) { constraint = "true"; }
         }
+
         DCSchedd schedd(m_addr.c_str());
         ClassAd *result = NULL;
         VacateType vacate_type;
@@ -1706,14 +1847,14 @@ struct Schedd {
     void spool(object jobs)
     {
         int len = py_len(jobs);
-        std::vector<compat_classad::ClassAd*> job_array;
-        std::vector<boost::shared_ptr<compat_classad::ClassAd> > job_tmp_array;
+        std::vector<ClassAd*> job_array;
+        std::vector<boost::shared_ptr<ClassAd> > job_tmp_array;
         job_array.reserve(len);
         job_tmp_array.reserve(len);
         for (int i=0; i<len; i++)
         {
             const ClassAdWrapper wrapper = extract<ClassAdWrapper>(jobs[i]);
-            boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
+            boost::shared_ptr<ClassAd> tmp_ad(new ClassAd());
             job_tmp_array.push_back(tmp_ad);
             tmp_ad->CopyFrom(wrapper);
             job_array.push_back(job_tmp_array[i].get());
@@ -1799,12 +1940,7 @@ struct Schedd {
         std::vector<int> procs;
         std::string constraint;
         bool use_ids = false;
-        extract<std::string> constraint_extract(job_spec);
-        if (constraint_extract.check())
-        {
-            constraint = constraint_extract();
-        }
-        else
+        if (PyList_Check(job_spec.ptr()))
         {
             int id_len = py_len(job_spec);
             clusters.reserve(id_len);
@@ -1821,6 +1957,9 @@ struct Schedd {
                 procs.push_back(extract<int>(long_(id_list[1])));
             }
             use_ids = true;
+        }
+        else if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
+            THROW_EX(ValueError, "job_spec is not a valid constraint expression.")
         }
 
         std::string val_str;
@@ -1870,6 +2009,9 @@ struct Schedd {
 
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
+#if 1
+		return history_query(requirement, projection, match, since, QUERY_SCHEDD_HISTORY, m_addr);
+#else
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
@@ -1973,6 +2115,7 @@ struct Schedd {
 
         boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
         return iter;
+#endif
     }
 
 
@@ -2230,7 +2373,7 @@ ConnectionSentry::disconnect()
         if (result)
         {
             if (PyErr_Occurred()) {return;}
-            std::string errmsg = "Failed to commmit and disconnect from queue.";
+            std::string errmsg = "Failed to commit and disconnect from queue.";
             std::string esMsg = errstack.getFullText();
             if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
             THROW_EX(RuntimeError, errmsg.c_str());
@@ -2274,15 +2417,15 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             boost::python::throw_error_already_set();
         }
 
-        // Wrestle the key-value pair out of the dict object and save them
-        // both as string objects. 
-        // We can assume the key is a string type, but the the value can be 
-        // a string or an int (or other?)
+        // Retrieve the key-value pair out of the dict object
+        // Key is always a string type
+        // Value can be a string, int or bool, but is always stored as a string
         std::string key, value;
         boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
         key = boost::python::extract<std::string>(key_obj);
         boost::python::object value_obj = boost::python::extract<boost::python::object>(opts[key]);
         std::string value_type = boost::python::extract<std::string>(value_obj.attr("__class__").attr("__name__"));
+
         if(value_type == "str") {
             value = boost::python::extract<std::string>(opts[key]);
         }
@@ -2290,11 +2433,25 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             int value_int = boost::python::extract<int>(opts[key]);
             value = std::to_string(value_int);
         }
+        else if(value_type == "bool") {
+            bool value_bool = boost::python::extract<bool>(opts[key]);
+            value = value_bool ? "true" : "false";
+        }
 
         // Set shallowOpts or deepOpts variables as appropriate
         std::string key_lc = key;
         std::transform(key_lc.begin(), key_lc.end(), key_lc.begin(), ::tolower);
-        if (key_lc == "maxidle") 
+        if (key_lc == "dagman")
+            deep_opts.strDagmanPath = value.c_str();
+        else if (key_lc == "force")
+            deep_opts.bForce = (value == "true") ? true : false;
+        else if (key_lc == "schedd-daemon-ad-file")
+            shallow_opts.strScheddDaemonAdFile = value.c_str();
+        else if (key_lc == "schedd-address-file")
+            shallow_opts.strScheddAddressFile = value.c_str();
+        else if (key_lc == "alwaysrunpost")
+            shallow_opts.bPostRun = (value == "true") ? true : false;
+        else if (key_lc == "maxidle") 
             shallow_opts.iMaxIdle = atoi(value.c_str());
         else if (key_lc == "maxjobs") 
             shallow_opts.iMaxJobs = atoi(value.c_str());
@@ -2302,12 +2459,38 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             shallow_opts.iMaxPre = atoi(value.c_str());
         else if (key_lc == "maxpost")
             shallow_opts.iMaxPre = atoi(value.c_str());
+        else if (key_lc == "usedagdir")
+            deep_opts.useDagDir = (value == "true") ? true : false;
+        else if (key_lc == "debug")
+            shallow_opts.iDebugLevel = atoi(value.c_str());
+        else if (key_lc == "outfile_dir")
+            deep_opts.strOutfileDir = value.c_str();
+        else if (key_lc == "config")
+            shallow_opts.strConfigFile = value.c_str();
+        else if (key_lc == "batch-name")
+            deep_opts.batchName = value.c_str();
         else if (key_lc == "autorescue")
-            deep_opts.autoRescue = atoi(value.c_str()) != 0;
+            deep_opts.autoRescue = (value == "true") ? true : false;
         else if (key_lc == "dorescuefrom")
             deep_opts.doRescueFrom = atoi(value.c_str());
-        else if (key_lc == "force")
-            deep_opts.bForce = atoi(value.c_str()) == 1;
+        else if (key_lc == "allowversionmismatch")
+            deep_opts.allowVerMismatch = (value == "true") ? true : false;
+        else if (key_lc == "do_recurse")
+            deep_opts.recurse = (value == "true") ? true : false;
+        else if (key_lc == "update_submit")
+            deep_opts.updateSubmit = (value == "true") ? true : false;
+        else if (key_lc == "import_env")
+            deep_opts.importEnv = (value == "true") ? true : false;
+        else if (key_lc == "dumprescue")
+            shallow_opts.dumpRescueDag = (value == "true") ? true : false;
+        else if (key_lc == "valgrind")
+            shallow_opts.runValgrind = (value == "true") ? true : false;
+        else if (key_lc == "priority")
+            shallow_opts.priority = atoi(value.c_str());
+        else if (key_lc == "suppress_notification")
+            deep_opts.suppress_notification = (value == "true") ? true : false;
+        else if (key_lc == "dorecov")
+            deep_opts.suppress_notification = (value == "true") ? true : false;
         else
             printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
     }
@@ -2576,24 +2759,33 @@ public:
 
         dagman_utils.usingPythonBindings = true;
 
+        // Check if the specified dag file exists
+        FILE* dag_fp = safe_fopen_wrapper_follow(dag_filename.c_str(), "r");
+        if(dag_fp == NULL) {
+            THROW_ERRNO(IOError);
+        }
+
         // Setting any submit options that may have been passed in (ie. max idle, max post)
         shallow_opts.dagFiles.insert(dag_filename.c_str());
         shallow_opts.primaryDagFile = dag_filename;
         SetDagOptions(opts, shallow_opts, deep_opts);
 
         // Make sure we can actually submit this DAG with the given options.
-        // If we can't, ensureOutputFilesExist() will abort and exit.
-        dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts);
+        // If we can't, throw an exception and exit.
+        if ( !dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts) ) {
+            THROW_EX(RuntimeError, "Unable to write condor_dagman output files");
+        }
 
         // Write out the .condor.sub file we need to submit the DAG
         dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
-        dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines);
+        if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
+            THROW_ERRNO(IOError);
+        }
 
         // Now write the submit file and open it
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
         if(sub_fp == NULL) {
-            printf("ERROR: Could not read generated DAG submit file %s\n", sub_filename.c_str());
-            return NULL;
+            THROW_ERRNO(IOError);
         }
 
         // Determine size of the file and store its contents in a buffer
@@ -2794,8 +2986,6 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
-#if 1
-
 		if (factory_submit) {
 
 			// force re-initialization (and a new cluster) if this hash is used again.
@@ -2900,59 +3090,6 @@ public:
 				++num_jobs;
 			}
 		}
-#else
-		for (int idx=0; idx<count; idx++)
-		{
-			int procid = -99;
-			if (factory_submit) {
-				procid = 0;
-			} else {
-				condor::ModuleLock ml;
-				procid = NewProc(cluster);
-			}
-			if (procid < 0) {
-				THROW_EX(RuntimeError, "Failed to create new proc ID.");
-			}
-
-			JOB_ID_KEY jid(cluster, procid);
-			ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
-			process_submit_errstack(m_hash.error_stack());
-			if (!proc_ad) {
-				THROW_EX(RuntimeError, "Failed to create new job ad");
-			}
-
-			// before sending procid 0, also send the cluster ad.
-			int rval = 0;
-			if ((procid == 0) || factory_submit) {
-				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
-				if (clusterad) {
-					rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
-				}
-			}
-			// send the proc ad
-			if ((rval >= 0) && ! factory_submit) {
-				rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
-			}
-			process_submit_errstack(m_hash.error_stack());
-			if (rval < 0) {
-				THROW_EX(ValueError, "Failed to create send job attributes");
-			}
-
-			if (keep_results) {
-				boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
-				results_ad->CopyFromChain(*proc_ad);
-				ad_results.attr("append")(results_ad);
-			}
-
-			// For factory submits, we don't actually loop over the queue number
-			// and we want a new cluster (i.e. factory) for each queue statement.
-			if (factory_submit) {
-				// force re-initialization if this hash is used again.
-				m_hash.reset();
-				break;
-			}
-		}
-#endif
 
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
@@ -3014,7 +3151,7 @@ public:
 
 			// get the first rowdata, we need that to build the submit digest, etc
 			rval = ssi.next(jid, item_index, step);
-			if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+			if (rval < 0) { ssi.throw_error(); }
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
@@ -3102,7 +3239,7 @@ public:
 
 		}
 
-		if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+		if (rval < 0) { ssi.throw_error(); }
 
 		if (param_boolean("SUBMIT_SEND_RESCHEDULE",true)) {
 			txn->reschedule();
@@ -3113,6 +3250,31 @@ public:
 		boost::shared_ptr<SubmitResult> result(new SubmitResult(JOB_ID_KEY(cluster,0), num_jobs, m_hash.get_cluster_ad()));
 
 		return result;
+	}
+
+	object
+	needs_oauth_services()
+	{
+		boost::python::list retval;
+		std::string tokens, requests_error;
+		ClassAdList requests;
+		if (m_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+			if (! requests_error.empty()) {
+				THROW_EX(RuntimeError, requests_error.c_str());
+			}
+			requests.Rewind();
+			classad::ClassAd *ad;
+			while ((ad = requests.Next())) {
+				boost::shared_ptr<ClassAdWrapper> wrap(new ClassAdWrapper());
+				wrap->CopyFrom(*ad);
+			#if 0 // expose as dict
+				retval.append(boost::python::dict(wrap));
+			#else // expose as classad
+				retval.append(wrap);
+			#endif
+			}
+		}
+		return retval;
 	}
 
 // (boost::python::arg("self"),
@@ -3364,13 +3526,13 @@ void export_schedd()
 
             .. attribute:: NonDurable
 
-                Non-durable transactions are changes that may be lost when the ``condor_schedd``
+                Non-durable transactions are changes that may be lost when the *condor_schedd*
                 crashes.  ``NonDurable`` is used for performance, as it eliminates extra ``fsync()`` calls.
 
             .. attribute:: SetDirty
 
                 This marks the changed ClassAds as dirty, causing an update notification to be sent
-                to the ``condor_shadow`` and the ``condor_gridmanager``, if they are managing the job.
+                to the *condor_shadow* and the *condor_gridmanager*, if they are managing the job.
 
             .. attribute:: ShouldLog
 
@@ -3384,13 +3546,13 @@ void export_schedd()
 
     enum_<CondorQ::QueryFetchOpts>("QueryOpts",
             R"C0ND0R(
-            Enumerated flags sent to the ``condor_schedd`` during a query to alter its behavior.
+            Enumerated flags sent to the *condor_schedd* during a query to alter its behavior.
 
             The values of the enumeration are:
 
             .. attribute:: Default
 
-                Queries should use all default behaviors.
+                Queries should use default behaviors, and return jobs for all users.
 
             .. attribute:: AutoCluster
 
@@ -3398,11 +3560,21 @@ void export_schedd()
 
             .. attribute:: GroupBy
 
+                Instead of returning job ads, return an ad for each unique combination of values for the attributes in the projection.
+                Similar to AutoCluster, but using the projection as the significant attributes for auto-clustering.
+
             .. attribute:: DefaultMyJobsOnly
+
+                Queries should use all default behaviors, and return jobs only for the current user.
 
             .. attribute:: SummaryOnly
 
+                Instead of returning job ads, return only the final summary ad.
+
             .. attribute:: IncludeClusterAd
+
+                Query should return raw cluster ads as well as job ads if the cluster ads match the query constraint.
+
             )C0ND0R")
         .value("Default", CondorQ::fetch_Jobs)
         .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
@@ -3442,55 +3614,132 @@ void export_schedd()
 #endif
     class_<Schedd>("Schedd",
             R"C0ND0R(
-            Client object for a ``condor_schedd``.
+            Client object for a *condor_schedd*.
             )C0ND0R",
-        init<const ClassAdWrapper &>(
+        init<boost::python::object>(
             boost::python::args("self", "location_ad"),
             R"C0ND0R(
-            :param location_ad: An Ad describing the location of the remote ``condor_schedd``
-                daemon, as returned by the :meth:`Collector.locate` method. If the parameter is omitted,
-                the local ``condor_schedd`` daemon is used.
-            :type location_ad: :class:`~classad.ClassAd`
+            :param location_ad: An Ad describing the location of the remote *condor_schedd*
+                daemon, as returned by the :meth:`Collector.locate` method, or a tuple
+                of type DaemonLocation as returned by :meth:`Schedd.location`. If the parameter is omitted,
+                the local *condor_schedd* daemon is used.
+            :type location_ad: :class:`~classad.ClassAd` or :class:`DaemonLocation`
             )C0ND0R"))
         .def(boost::python::init<>(boost::python::args("self")))
+        .add_property("location", &Schedd::location,
+            R"C0ND0R(
+            The schedd to query.
+            :rtype: location :class:`DaemonLocation`
+            )C0ND0R")
         .def("query", &Schedd::query, query_overloads(
             R"C0ND0R(
-            Query the ``condor_schedd`` daemon for jobs.
+            Query the *condor_schedd* daemon for job ads.
 
-            .. warning:: This returns a *list* of :class:`~classad.ClassAd` objects, meaning all results must
-                be buffered in memory.  This may be memory-intensive for large responses; we strongly recommend
-                to utilize the :meth:`xquery`
+            .. warning::
 
-            :param constraint: Query constraint; only jobs matching this constraint will be returned; defaults to ``'true'``.
+                This returns a *list* of :class:`~classad.ClassAd` objects,
+                meaning all results must be held in memory simultaneously.
+                This may be memory-intensive for queries that return
+                many and/or large jobs ads.
+                If you are retrieving many large ads, consider using
+                :meth:`xquery` instead to reduce memory requirements.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                Defaults to ``'true'``, which means all jobs will be returned.
             :type constraint: str or :class:`~classad.ExprTree`
-            :param attr_list: Attributes for the ``condor_schedd`` daemon to project along.
-                At least the attributes in this list will be returned.
-                The default behavior is to return all attributes.
-            :type attr_list: list[str]
+            :param projection: Attributes that will be returned for each job in the query.
+                At least the attributes in this list will be returned, but additional ones may be returned as well.
+                An empty list (the default) returns all attributes.
+            :type projection: list[str]
             :param callback: A callable object; if provided, it will be invoked for each ClassAd.
                 The return value (if not ``None``) will be added to the returned list instead of the ad.
             :param int limit: The maximum number of ads to return; the default (``-1``) is to return all ads.
-            :param opts: Additional flags for the query; these may affect the behavior of the ``condor_schedd``.
+            :param opts: Additional flags for the query; these may affect the behavior of the *condor_schedd*.
             :type opts: :class:`QueryOpts`.
             :return: ClassAds representing the matching jobs.
             :rtype: list[:class:`~classad.ClassAd`]
             )C0ND0R",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
+            (boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #endif
             ))
+        .def("xquery", &Schedd::xquery,
+            R"C0ND0R(
+            Query the *condor_schedd* daemon for job ads.
+
+            .. warning::
+
+                This returns an *iterator* of :class:`~classad.ClassAd` objects,
+                which means you may not need to hold all of the ads returned by
+                the query in memory simultaneously.
+                However, this method holds a connection open to the schedd,
+                and a fork of the schedd will remain active, until you finish
+                iterating.
+                If you are **not** retrieving many large ads, consider using
+                :meth:`query` instead to reduce load on the schedd.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                Defaults to ``'true'``, which means all jobs will be returned.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: Attributes that will be returned for each job in the query.
+                At least the attributes in this list will be returned, but additional ones may be returned as well.
+                An empty list (the default) returns all attributes.
+            :type projection: list[str]
+            :param int limit: A limit on the number of matches to return.  The default (``-1``) indicates all
+                matching jobs should be returned.
+            :param opts: Additional flags for the query, from :class:`QueryOpts`.
+            :type opts: :class:`QueryOpts`
+            :param str name: A tag name for the returned query iterator. This string will always be
+                returned from the :meth:`QueryIterator.tag` method of the returned iterator.
+                The default value is the *condor_schedd*'s name. This tag is useful to identify
+                different queries when using the :func:`poll` function.
+            :return: An iterator for the matching job ads
+            :rtype: :class:`~htcondor.QueryIterator`
+            )C0ND0R",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
+#else
+            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
+#endif
+            )
+        .def("history", &Schedd::history,
+            R"C0ND0R(
+            Fetch history records from the *condor_schedd* daemon.
+
+            :param constraint: A query constraint.
+                Only jobs matching this constraint will be returned.
+                Defaults to ``'true'``, which means all jobs will be returned.
+            :type constraint: str or :class:`~classad.ExprTree`
+            :param projection: Attributes that will be returned for each job in the query.
+                At least the attributes in this list will be returned, but additional ones may be returned as well.
+                An empty list (the default) returns all attributes.
+            :type projection: list[str]
+            :param int match: An limit on the number of jobs to include; the default (``-1``)
+                indicates to return all matching jobs.
+            :return: All matching ads in the Schedd history, with attributes according to the
+                ``projection`` keyword.
+            :rtype: :class:`HistoryIterator`
+            )C0ND0R",
+#if BOOST_VERSION >= 103400
+             (boost::python::arg("self"),
+#endif
+             boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+             boost::python::arg("since")=boost::python::object())
+            )
         .def("act", &Schedd::actOnJobs,
             R"C0ND0R(
-            Change status of job(s) in the ``condor_schedd`` daemon. The return value is a ClassAd object
+            Change status of job(s) in the *condor_schedd* daemon. The return value is a ClassAd object
             describing the number of jobs changed.
 
             This will throw an exception if no jobs are matched by the constraint.
 
             :param action: The action to perform; must be of the enum JobAction.
             :type action: :class:`JobAction`
-            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+            :param job_spec: The job specification. It can either be a list of job IDs, or an ExprTree or string specifying a constraint.
                 Only jobs matching this description will be acted upon.
             :type job_spec: list[str] or str
             :param reason: The reason for the action.
@@ -3501,7 +3750,7 @@ void export_schedd()
         .def("act", &Schedd::actOnJobs2)
         .def("submit", &Schedd::submit, submit_overloads(
             R"C0ND0R(
-            Submit one or more jobs to the ``condor_schedd`` daemon.
+            Submit one or more jobs to the *condor_schedd* daemon.
 
             This method requires the invoker to provide a ClassAd for the new job cluster;
             such a ClassAd contains attributes with different names than the commands in a
@@ -3520,8 +3769,8 @@ void export_schedd()
             :param int count: The number of jobs to submit to the job cluster. Defaults to ``1``.
             :param bool spool: If ``True``, the clinent inserts the necessary attributes
                 into the job for it to have the input files spooled to a remote
-                ``condor_schedd`` daemon. This parameter is necessary for jobs submitted
-                to a remote ``condor_schedd`` that use HTCondor file transfer.
+                *condor_schedd* daemon. This parameter is necessary for jobs submitted
+                to a remote *condor_schedd* that use HTCondor file transfer.
             :param ad_results: If set to a list, the list object will contain the job ads
                 resulting from the job submission.
                 These are needed for interacting with the job spool after submission.
@@ -3536,7 +3785,7 @@ void export_schedd()
 #endif
         .def("submitMany", &Schedd::submitMany,
             R"C0ND0R(
-            Submit multiple jobs to the ``condor_schedd`` daemon, possibly including
+            Submit multiple jobs to the *condor_schedd* daemon, possibly including
             several distinct processes.
 
             :param cluster_ad: The base ad for the new job cluster; this is the same format
@@ -3547,8 +3796,8 @@ void export_schedd()
                 both ``cluster_ad`` and ``proc_ad``.
             :param bool spool: If ``True``, the clinent inserts the necessary attributes
                 into the job for it to have the input files spooled to a remote
-                ``condor_schedd`` daemon. This parameter is necessary for jobs submitted
-                to a remote ``condor_schedd`` that use HTCondor file transfer.
+                *condor_schedd* daemon. This parameter is necessary for jobs submitted
+                to a remote *condor_schedd* that use HTCondor file transfer.
             :param ad_results: If set to a list, the list object will contain the job ads
                 resulting from the job submission.
                 These are needed for interacting with the job spool after submission.
@@ -3563,7 +3812,7 @@ void export_schedd()
         .def("spool", &Schedd::spool,
             R"C0ND0R(
             Spools the files specified in a list of job ClassAds
-            to the ``condor_schedd``.
+            to the *condor_schedd*.
 
             :param ad_list: A list of job descriptions; typically, this is the list
                 filled by the ``ad_results`` argument of the :meth:`submit` method call.
@@ -3573,7 +3822,7 @@ void export_schedd()
             boost::python::args("self", "ad_list"))
         .def("transaction", &Schedd::transaction, transaction_overloads(
             R"C0ND0R(
-            Start a transaction with the ``condor_schedd``.
+            Start a transaction with the *condor_schedd*.
 
             Starting a new transaction while one is ongoing is an error unless the ``continue_txn``
             flag is set.
@@ -3595,7 +3844,7 @@ void export_schedd()
             Retrieve the output sandbox from one or more jobs.
 
             :param job_spec: An expression matching the list of job output sandboxes to retrieve.
-            :type job_spec: list[:class:`~classad.ClassAd`]
+            :type job_spec: str or list[:class:`~classad.ClassAd`]
             )C0ND0R")
         .def("edit", &Schedd::edit,
             R"C0ND0R(
@@ -3618,28 +3867,6 @@ void export_schedd()
             Send reschedule command to the schedd.
             )C0ND0R",
             boost::python::args("self"))
-        .def("history", &Schedd::history,
-            R"C0ND0R(
-            Fetch history records from the ``condor_schedd`` daemon.
-
-            :param requirements: Query constraint; only jobs matching this constraint will be returned;
-                defaults to ``'true'``.
-            :type constraint: str or :class:`class.ExprTree`
-            :param projection: Attributes that are to be included for each returned job.
-                The empty list causes all attributes to be included.
-            :type projection: list[str]
-            :param int match: An limit on the number of jobs to include; the default (``-1``)
-                indicates to return all matching jobs.
-            :return: All matching ads in the Schedd history, with attributes according to the
-                ``projection`` keyword.
-            :rtype: :class:`HistoryIterator`
-            )C0ND0R",
-#if BOOST_VERSION >= 103400
-             (boost::python::arg("self"),
-#endif
-             boost::python::arg("requirements"), boost::python::arg("projection"), boost::python::arg("match")=-1,
-             boost::python::arg("since")=boost::python::object())
-            )
         .def("refreshGSIProxy", &Schedd::refreshGSIProxy,
             R"C0ND0R(
             Refresh the GSI proxy of a job; the job's proxy will be replaced the contents
@@ -3657,33 +3884,6 @@ void export_schedd()
                 ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``.
             )C0ND0R",
             boost::python::args("self", "cluster", "proc", "proxy_filename", "lifetime"))
-        .def("xquery", &Schedd::xquery,
-            R"C0ND0R(
-            Query the ``condor_schedd`` daemon for jobs.
-
-            As opposed to :meth:`query`, this returns an *iterator*, meaning only one ad is buffered in memory at a time.
-
-            :param requirements: provides a constraint for filtering out jobs. It defaults to ``'true'``.
-            :type requirements: str or :class:`~classad.ExprTree`
-            :param projection: The attributes to return; an empty list (the default) signifies all attributes.
-            :type projection: list[str]
-            :param int limit: A limit on the number of matches to return.  The default (``-1``) indicates all
-                matching jobs should be returned.
-            :param opts: Additional flags for the query, from :class:`QueryOpts`.
-            :type opts: :class:`QueryOpts`
-            :param str name: A tag name for the returned query iterator. This string will always be
-                returned from the :meth:`QueryIterator.tag` method of the returned iterator.
-                The default value is the ``condor_schedd``'s name. This tag is useful to identify
-                different queries when using the :func:`poll` function.
-            :return: An iterator for the matching job ads
-            :rtype: :class:`~htcondor.QueryIterator`
-            )C0ND0R",
-#if BOOST_VERSION < 103400
-            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
-#else
-            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
-#endif
-            )
         .def("negotiate", &Schedd::negotiate, boost::python::with_custodian_and_ward_postcall<1, 0>(),
             R"C0ND0R(
             Begin a negotiation cycle with the remote schedd for a given user.
@@ -3692,7 +3892,7 @@ void export_schedd()
                 automatically destroying the negotiation session when the context is left.
 
             :param str accounting_name: Determines which user the client will start negotiating with.
-            :return: An iterator which yields resource request ClassAds from the ``condor_schedd``.
+            :return: An iterator which yields resource request ClassAds from the *condor_schedd*.
                 Each resource request represents a set of jobs that are next in queue for the schedd
                 for this user.
             :rtype: :class:`ScheddNegotiate`
@@ -3745,7 +3945,7 @@ void export_schedd()
     class_<Submit>("Submit",
             R"C0ND0R(
             An object representing a job submit description.  It uses the same submit
-            language as ``condor_submit``.
+            language as *condor_submit*.
 
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
@@ -3753,21 +3953,48 @@ void export_schedd()
             )C0ND0R", boost::python::no_init)
         .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
             R"C0ND0R(
-            Construct the Submit object from a number of ``key = value`` keyword arguments.
-            )C0ND0R")
-        .def(init<boost::python::dict>(
-            R"C0ND0R(
-            :param input: ``key = value`` pairs as a dictionary or string for initializing the submit description,
-                or a string containing the text of a submit file.
-                If a string is used, the text should consist of valid *condor_submit*
-                statments optionally followed by a a single *condor_submit* ``QUEUE``
-                statement. The arguments to the QUEUE statement will be stored
-                in the ``QArgs`` member of this class and used when the :method:`Submit.queue()`
-                method is called.
-                If omitted, the submit object is initially empty.
+            :param input: Submit descriptors as
+                ``key = value`` pairs in a dictionary,
+                or as keyword arguments,
+                or as a string containing the text of a submit file.
+                For example, these calls all produce identical
+                submit descriptions:
+
+                .. code-block:: python
+
+                    from_file = htcondor.Submit(
+                        """
+                        executable = /bin/sleep
+                        arguments = 5s
+                        My.CustomAttribute = "foobar"
+                        """
+                    )
+
+                    # we need to quote the string "foobar" correctly
+                    from_dict = htcondor.Submit({
+                        "executable": "/bin/sleep",
+                        "arguments": "5s",
+                        "My.CustomAttribute": classad.quote("foobar"),
+                    })
+
+                    # the **{} is a trick to get a keyword argument that contains a .
+                    from_kwargs = htcondor.Submit(
+                        executable = "/bin/sleep",
+                        arguments = "5s",
+                        **{
+                            "My.CustomAttribute": classad.quote("foobar"),
+                        }
+                    )
+
+                If a string is used, it may include a single *condor_submit* ``QUEUE``
+                statement.
+                The arguments to the ``QUEUE`` statement will be stored
+                in the ``QArgs`` member of this class and used when :meth:`Submit.queue`
+                or :meth:`Submit.queue_with_itemdata` are called.
+                If omitted, the submit description is initially empty.
             :type input: dict or str
-            )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
+            )C0ND0R")
+        .def(init<boost::python::dict>((boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
         .def(init<std::string>())
         //.def_pickle(submit_pickle_suite())
         .def("expand", &Submit::expand,
@@ -3814,6 +4041,15 @@ void export_schedd()
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object())
             )
+        .add_property("oauth_services", &Submit::needs_oauth_services,
+            R"C0ND0R(
+            Returns a request list of the OAuth services need to run the job
+
+            :return: A list of OAuth service request ClassAds
+            :rtype: list
+            :raises RuntimeError: if service requests are incomplete
+            )C0ND0R"
+            )
         .def("jobs", &Submit::iterjobs,
             R"C0ND0R(
             Turn the current object into a sequence of simulated job ClassAds
@@ -3853,7 +4089,7 @@ void export_schedd()
 
             For example ``itemdata("matching *.dat")`` would return an iterator
             of filenames that end in ``.dat`` from the current directory.
-            This is the same iterator used by ``condor_submit`` when processing
+            This is the same iterator used by *condor_submit* when processing
             ``QUEUE`` statements.
 
             :param str queue: a submit queue statement, or the arguments to a submit queue statement.
@@ -3914,20 +4150,31 @@ void export_schedd()
         .def("from_dag", &Submit::from_dag,
             R"C0ND0R(
             Constructs a new :class:`Submit` that could be used to submit the
-            DAG described by the file at ``dag_filename``.
+            DAG described by the file found at ``filename``.
 
             This static method essentially does the first half of the work
-            that ``condor_submit_dag`` does: it produces the submit description
+            that *condor_submit_dag* does: it produces the submit description
             for the DAGMan job that will execute the DAG. However, in addition
             to writing this submit description to disk, it also produces a
             :class:`Submit` object with the same information that can be
-            submitted via the normal bindings submit machinery.
+            submitted via the normal Python bindings submit machinery.
 
             :param str filename: The path to the DAG description file.
-            :param dict options: Additional arguments to ``condor_submit_dag``,
-                such as ``maxidle`` or ``maxpost``, as key-value pairs, like
-                ``{'maxidle': 10}``.
-            :return: :class:`Submit` description for a ``.dag`` file
+            :param dict options: Additional arguments to *condor_submit_dag*.
+                Supports ``dagman`` *(str)*, ``force`` *(bool)*,
+                ``schedd-daemon-ad-file`` *(str)*,
+                ``schedd-address-file`` *(str)*, ``AlwaysRunPost`` *(bool)*,
+                ``maxidle`` *(int)*, ``maxjobs`` *(int)*, ``MaxPre`` *(int)*,
+                ``MaxPost`` *(int)*, ``UseDagDir`` *(bool)*, ``debug`` *(int)*,
+                ``outfile_dir`` *(str)*, ``config`` *(str)*,
+                ``batch-name`` *(str)*, ``AutoRescue`` *(bool)*,
+                ``DoRescueFrom`` *(int)*, ``AllowVersionMismatch`` *(bool)*,
+                ``do_recurse`` *(bool)*, ``update_submit`` *(bool)*,
+                ``import_env`` *(bool)*, ``DumpRescue`` *(bool)*,
+                ``valgrind`` *(bool)*, ``priority`` *(int)*,
+                ``suppress_notification`` *(bool)*, ``DoRecov`` *(bool)*
+            :return: A :class:`Submit` description for the DAG described in ``filename``
+            :rtype: :class:`Submit`
             )C0ND0R",
             (boost::python::arg("filename"), boost::python::arg("options")=boost::python::dict())
             )

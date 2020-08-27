@@ -15,6 +15,17 @@ void registerFunction(boost::python::object function, boost::python::object name
 
 classad::ExprTree* convert_python_to_exprtree(boost::python::object value);
 
+// convert a python object to a constraint expression.
+// returns true if conversion was successful
+// if value is true or None, constraint is nullptr
+// otherwise constraint is an ExprTree pointer and new_object is set to true if the caller now owns the constraint
+// this is mostly a helper function for the second form, which returns a string as most condor api expect
+bool convert_python_to_constraint(boost::python::object value, classad::ExprTree * & constraint, bool & new_object);
+// convert a python object to an unparsed constraint expression, 
+// returns true if conversion was successful, althrough the result may be the empty string
+// if value is NULL or true constraint will be the empty string
+bool convert_python_to_constraint(boost::python::object value, std::string & constraint, bool validate=false);
+
 struct ExprTreeHolder;
 
 struct AttrPairToFirst :
@@ -49,6 +60,7 @@ typedef boost::transform_iterator<AttrPair, classad::AttrList::iterator> AttrIte
 // Look to see if a given function accepts a variable named "state".
 bool checkAcceptsState(boost::python::object pyFunc);
 
+struct ClassAdWrapper;
 struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassAd>
 {
     boost::python::object LookupWrap( const std::string &attr) const;
@@ -63,6 +75,9 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     bool matches(boost::python::object) const;
     bool symmetricMatch(boost::python::object) const;
+
+    bool __eq__(boost::python::object) const;
+    bool __ne__(boost::python::object) const;
 
     std::string toRepr() const;
 

@@ -50,10 +50,7 @@ namespace ToE {
 namespace classad {
 	class ClassAd;
 }
-namespace compat_classad {
-	class ClassAd;
-}
-using namespace compat_classad;
+using classad::ClassAd;
 
 
 class MyString; // potential forward reference.
@@ -114,6 +111,7 @@ enum ULogEventNumber {
 	/** File xfer completed       */ ULOG_FILE_COMPLETE				= 43,
 	/** Data reused               */ ULOG_FILE_USED					= 44,
 	/** File removed from reuse   */ ULOG_FILE_REMOVED				= 45,
+	/** Dataflow job skipped      */ ULOG_DATAFLOW_JOB_SKIPPED		= 46,
 };
 
 //----------------------------------------------------------------------------
@@ -493,7 +491,7 @@ class RemoteErrorEvent : public ULogEvent
 	void setExecuteHost(char const *host);
 	char const *getExecuteHost(void) {return execute_host;}
 
-	bool isCriticalError(void) {return critical_error;}
+	bool isCriticalError(void) const {return critical_error;}
 	void setCriticalError(bool f);
 
 	void setHoldReasonCode(int hold_reason_code);
@@ -1606,7 +1604,7 @@ public:
 
 		/** This flag defaults to true, and is set to false if a
 			NoReconnectReason is specified for the event */
-	bool canReconnect( void ) {return can_reconnect; };
+	bool canReconnect( void ) const {return can_reconnect; };
 
 private:
 	char *startd_addr;
@@ -2277,7 +2275,7 @@ class FileTransferEvent : public ULogEvent {
 		FileTransferEventType getType() const { return type; }
 
 		void setQueueingDelay( time_t duration ) { queueingDelay = duration; }
-		time_t getQueueingDelay() { return queueingDelay; }
+		time_t getQueueingDelay() const { return queueingDelay; }
 
 		void setHost( const std::string & h) { host = h; }
 		const std::string & getHost() { return host; }
@@ -2425,5 +2423,50 @@ private:
 	std::string m_checksum_type;
 	std::string m_tag;
 };
+
+//----------------------------------------------------------------------------
+/** Framework for a DataflowJobSkipped Event object.
+ *  Occurs when a dataflow job is detected and then s kipped.
+*/
+class DataflowJobSkippedEvent : public ULogEvent
+{
+  public:
+    ///
+    DataflowJobSkippedEvent(void);
+    ///
+    ~DataflowJobSkippedEvent(void);
+
+    /** Read the body of the next JobAborted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *, bool & got_sync_line);
+
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
+
+	/** Return a ClassAd representation of this JobAbortedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd(bool event_time_utc);
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+	const char* getReason(void) const;
+	void setReason( const char* );
+
+	void setToeTag( classad::ClassAd * toeTag );
+
+ private:
+	char* reason;
+	ToE::Tag * toeTag;
+};
+
 
 #endif // __CONDOR_EVENT_H__

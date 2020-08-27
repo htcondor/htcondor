@@ -338,7 +338,7 @@ $counter = 0;
 #friendly_name=Settings for to detect and use GPUs as custom resources
 #default : @end
 	#MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
-	#ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
+	#ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES==/CUDA//
 	#ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 #@end
 #review=?
@@ -360,7 +360,7 @@ CondorTest::StartCondorWithParams(
 	do_not_start => "TRUE",
 );
 
-$expected = "$lookups{LIBEXEC}/condor_gpu_discovery -properties ";
+$expected = "$lookups{LIBEXEC}/condor_gpu_discovery  -properties ";
 $reply = ccv_getval(MACHINE_RESOURCE_INVENTORY_GPUs);
 
 if($expected ne $reply) {
@@ -374,7 +374,7 @@ if($expected ne $reply) {
 	$counter += 1;
 }
 
-$expected = "GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES";
+$expected = "GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//";
 $reply = ccv_getval(ENVIRONMENT_FOR_AssignedGPUs);
 
 if($expected ne $reply) {

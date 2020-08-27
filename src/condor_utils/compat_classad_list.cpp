@@ -24,8 +24,6 @@
 #include <vector>
 #include <algorithm>
 
-namespace compat_classad {
-
 static size_t
 ptr_hash_fn(ClassAd* const &index)
 {
@@ -244,5 +242,3 @@ int ClassAdListDoesNotDeleteAds::CountMatches(classad::ExprTree* constraint)
 	}
 	return matchCount;
 }
-
-} // namespace compat_classad

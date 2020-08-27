@@ -762,7 +762,7 @@ ParallelShadow::updateFromStarterClassAd(ClassAd* update_ad)
 		return FALSE;
 	}
 
-	int prev_disk = getDiskUsage();
+	int64_t prev_disk = getDiskUsage();
 	struct rusage prev_rusage = getRUsage();
 
 
@@ -774,7 +774,7 @@ ParallelShadow::updateFromStarterClassAd(ClassAd* update_ad)
 		// want to store the maximum in there?  Seperate stuff for
 		// each node?  
 
-    int cur_disk = getDiskUsage();
+	int64_t cur_disk = getDiskUsage();
     if( cur_disk > prev_disk ) {
 		job_ad->Assign(ATTR_DISK_USAGE, cur_disk);
     }
@@ -842,11 +842,11 @@ ParallelShadow::getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & p
 }
 
 
-int
+int64_t
 ParallelShadow::getDiskUsage( void )
 {
 	MpiResource* mpi_res;
-	int max = 0, val;
+	int64_t max = 0, val;
 	for( size_t i=0; i<ResourceList.size() ; i++ ) {
 		mpi_res = ResourceList[i];
 		val = mpi_res->getDiskUsage();

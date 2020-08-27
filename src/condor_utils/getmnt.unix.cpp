@@ -64,47 +64,6 @@ getmnt( int * /*start*/, struct fs_data buf[], unsigned /*bufsize*/,
 	return n_entries;
 }
 
-#elif defined(Solaris)
-	/* Solaris specific change ..dhaval
-	6/26 */
-
-/*FILE			*setmntent();*/
-
-int
-getmnt( int * start, struct fs_data buf[], unsigned bufsize,
-		int mode, char * path )
-{
-	FILE			*tab;
-	int			check;
-	struct mnttab		*ent;	
-	struct stat		st_buf;
-	int				i;
-	int				lim;
-
-/*	if( (tab=setmntent("/etc/mnttab","r")) == NULL ) {
-		perror( "setmntent" );
-		exit( 1 );
-	} */
-
-	if( (tab=safe_fopen_wrapper("/etc/mnttab","r",0644)) == NULL ) {
-		perror( "setmntent" );
-		exit( 1 );
-	}
-
-	lim = bufsize / sizeof(struct fs_data);
-	for( i=0; (i < lim) && (check=getmntent(tab,ent)); i++ ) {
-		if( stat(ent->mnt_mountp,&st_buf) < 0 ) {
-			buf[i].fd_req.dev = 0;
-		} else {
-			buf[i].fd_req.dev = st_buf.st_dev;
-		}
-		buf[i].fd_req.devname = strdup(ent->mnt_special);
-		buf[i].fd_req.path = strdup(ent->mnt_mountp);
-	}
-	return i;
-}
-
-
 #else
 
 	/* BEGIN !ULTRIX, !AIX  version - use setmntent() and getmntent()  */

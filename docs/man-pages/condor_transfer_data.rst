@@ -26,9 +26,9 @@ Description
 meant to be used in conjunction with the **-spool** option of
 *condor_submit*, as in
 
-::
+.. code-block:: console
 
-    condor_submit -spool mysubmitfile
+    $ condor_submit -spool mysubmitfile
 
 Submission of a job with the **-spool** option causes HTCondor to spool
 all input files, the job event log, and any proxy across a connection to
@@ -72,16 +72,3 @@ Exit Status
 *condor_transfer_data* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

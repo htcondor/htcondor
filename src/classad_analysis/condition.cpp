@@ -206,13 +206,13 @@ GetAttrPos( Condition::AttrPos &result )
 }
 
 bool Condition::
-IsComplex( )
+IsComplex( ) const
 {
 	return isComplex;
 }
 
 bool Condition::
-HasMultipleAttrs( )
+HasMultipleAttrs( ) const
 {
 	return multiAttr;
 }

@@ -10,10 +10,10 @@
 %define cgroups 0
 %define python 0
 
-%if 0%{?rhel} >= 6
+%if 0%{?rhel} >= 6 || 0%{?fedora}
 %define cgroups 1
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %define systemd 1
 %endif
 
@@ -37,11 +37,13 @@
 %define qmf 0
 
 %if 0%{?fedora}
-%define blahp 1
+%define blahp 0
 %define cream 0
+%define drmaa 0
 %else
 %define blahp 1
 %define cream 1
+%define drmaa 1
 %endif
 
 %if 0%{?hcc}
@@ -69,7 +71,7 @@
 %endif
 
 # cream support is going away, skip for EL8
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?amzn}
 %define cream 0
 %endif
 
@@ -146,7 +148,7 @@ Source0: %{name}-%{tarball_version}.tar.gz
 Source1: generate-tarball.sh
 %endif
 
-# % if %systemd
+# % if % systemd
 Source3: osg-env.conf
 # % else
 Source4: condor.osg-sysconfig
@@ -185,8 +187,7 @@ Source117: unicoregahp-1.2.0.tar.gz
 Source118: voms-2.0.6.tar.gz
 %endif
 
-Patch1: old-sphinx.patch
-Patch2: python-shebang.patch
+Patch2: el7-python2.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -249,7 +250,7 @@ BuildRequires: expat-devel
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 BuildRequires: python3-devel
 %else
 BuildRequires: python-devel
@@ -313,7 +314,7 @@ BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
 
-%if 0%{?rhel} == 7
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 %ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
@@ -326,10 +327,20 @@ BuildRequires: boost-static
 %endif
 
 %if 0%{?rhel} >= 6 || 0%{?fedora}
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 BuildRequires: boost-python3-devel
 %else
+%if 0%{?fedora} >= 30
+BuildRequires: boost-python2-devel
+%else
+%if ! 0%{?amzn}
 BuildRequires: boost-python
+%else
+BuildRequires: python3-devel
+BuildRequires: boost169-python2-devel
+BuildRequires: boost169-python3-devel
+%endif
+%endif
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
@@ -365,6 +376,9 @@ BuildRequires: python-sphinx python-sphinx_rtd_theme
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
+# openssh-server needed for condor_ssh_to_job
+Requires: openssh-server
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
@@ -382,12 +396,18 @@ Requires: blahp >= 1.16.1
 Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python-requests
+Requires: python2-condor
 %endif
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3-requests
 %endif
+Requires: python3-condor
+
+
+# Useful tools are using the Python bindings
+Requires: python3-condor
 
 Requires: initscripts
 
@@ -410,7 +430,7 @@ Requires(post): policycoreutils-python
 Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires(post): python3-policycoreutils
 Requires(post): selinux-policy-targeted
 %endif
@@ -421,7 +441,7 @@ Requires(post): selinux-policy-targeted
 Obsoletes: condor-static < 7.2.0
 
 # Standard Universe discontinued as of 8.9.0
-Obsoletes: condor-std-universe
+Obsoletes: condor-std-universe < 8.9.0
 
 %if ! %cream
 Obsoletes: condor-cream-gahp <= %{version}
@@ -590,7 +610,7 @@ host as the DedicatedScheduler.
 
 #######################
 %if %python
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %package -n python2-condor
 Summary: Python bindings for HTCondor.
 Group: Applications/System
@@ -624,7 +644,7 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 #######################
 %package -n python3-condor
@@ -639,17 +659,6 @@ Requires: boost-python3
 Requires: python3
 %endif
 
-#%if 0%{?rhel} >= 7 && ! %uw_build
-# auto provides generator does not pick these up for some reason
-#    %ifarch x86_64
-#Provides: classad.so()(64bit)
-#Provides: htcondor.so()(64bit)
-#    %else
-#Provides: classad.so
-#Provides: htcondor.so
-#    %endif
-#%endif
-
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
@@ -658,12 +667,33 @@ the ClassAd library and HTCondor from python
 %endif
 
 
+%if 0%{?rhel} == 7
+#######################
+%package credmon-oauth
+Summary: OAuth2 credmon for HTCondor.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: python2-condor
+Requires: python2-requests-oauthlib
+Requires: python-six
+Requires: python-flask
+Requires: python2-cryptography
+Requires: python2-scitokens
+Requires: httpd
+Requires: mod_wsgi
+
+%description credmon-oauth
+The OAuth2 credmon allows users to obtain credentials from configured
+OAuth2 endpoints and to use those credentials securely inside running jobs.
+%endif
+
+
 #######################
 %package bosco
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
 Url: https://osg-bosco.github.io/docs/
 Group: Applications/System
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3
 %else
 Requires: python >= 2.2
@@ -685,10 +715,7 @@ multiple clusters.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} <= 7
-Requires: python2-condor = %version-%release
-%endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
 
@@ -782,10 +809,7 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
-%if 0%{?rhel} <= 7
-Requires: python2-condor = %version-%release
-%endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
@@ -813,8 +837,7 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
-%patch1 -p1
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %patch2 -p1
 %endif
 
@@ -855,10 +878,20 @@ cmake \
        -DBUILD_TESTING:BOOL=FALSE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
+%if %blahp
+       -DWITH_BLAHP:BOOL=TRUE \
+%else
+       -DWITH_BLAHP:BOOL=FALSE \
+%endif
 %if %cream
        -DWITH_CREAM:BOOL=TRUE \
 %else
        -DWITH_CREAM:BOOL=FALSE \
+%endif
+%if %drmaa
+       -DWITH_DRMAA:BOOL=TRUE \
+%else
+       -DWITH_DRMAA:BOOL=FALSE \
 %endif
 %ifarch %{ix86}
 %if 0%{?rhel} >= 7
@@ -974,12 +1007,12 @@ mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
 # And the Python bindings
 %if %python
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %endif
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
-populate /usr/lib64/python3.6/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
+populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
 %endif
 %endif
@@ -1020,6 +1053,8 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
 mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
+mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/passwords.d
+mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -1051,6 +1086,9 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
+mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/krb_credentials
+mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
+
 
 # not packaging deployment tools
 rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
@@ -1073,11 +1111,45 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 
-# Remove condor_top with no python bindings
+# remove junk man page (Fedora 32 build)
+rm -f %{buildroot}/%{_mandir}/man1/_static/graphviz.css
+
+# Remove python-based tools when no python bindings
 %if ! %python
 rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
+rm -f %{buildroot}/%{_bindir}/condor_watch_q
 %endif
+
+# For EL7, move oauth credmon WSGI script out of libexec to /var/www
+%if 0%{?rhel} == 7
+mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
+mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
+
+# Move oauth credmon config files out of examples and into config.d
+mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
+%endif
+
+# For non-EL7, remove oauth credmon from the buildroot
+%if 0%{?rhel} > 7 || 0%{?fedora}
+rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
+rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
+rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
+rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
+rm -rf %{buildroot}/etc/examples/condor_credmon_oauth
+%endif
+
+###
+# Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
+%if 0%{?rhel} == 7
+ln -s %{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
+ln -s %{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
+mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
+ln -s %{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+%endif
+###
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1225,16 +1297,24 @@ install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-rest
 %endif
 
 %if %uw_build
+%if %drmaa
 populate %{_libdir}/condor %{buildroot}/%{_libdir}/libdrmaa.so
+populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcondordrmaa.a
+%endif
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libglobus*.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libvomsapi*.so*
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libSciTokens.so*
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcondordrmaa.a
 # these probably belong elsewhere
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 %endif
 
 populate %{_libdir}/condor %{buildroot}/%{_libdir}/libgetpwnam.so
+
+# htcondor/dags only works with Python3
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
+
+# htcondor/personal.py only works with Python3
+rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
 
 %clean
 rm -rf %{buildroot}
@@ -1261,7 +1341,7 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service.d/osg-env.conf
 %endif
 # Disabled until HTCondor security fixed.
-# %{_unitdir}/condor.socket
+# % {_unitdir}/condor.socket
 %else
 %_initrddir/condor
 %if 0%{?osg} || 0%{?hcc}
@@ -1273,10 +1353,13 @@ rm -rf %{buildroot}
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
 %_datadir/condor/CondorJavaWrapper.class
-%_datadir/condor/scimark2lib.jar
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif
+%dir %_sysconfdir/condor/passwords.d/
+%defattr(-,condor,condor,-)
+%dir %_sysconfdir/condor/tokens.d/
+%defattr(-,root,root,-)
 %dir %_sysconfdir/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
@@ -1293,6 +1376,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/sshd.sh
 %_libexecdir/condor/get_orted_cmd.sh
 %_libexecdir/condor/orted_launcher.sh
+%_libexecdir/condor/set_batchtok_cmd
+%_libexecdir/condor/cred_producer_krb
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
@@ -1338,7 +1423,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && ! 0%{?fedora}
 %_libexecdir/condor/box_plugin.pyc
 %_libexecdir/condor/box_plugin.pyo
 %_libexecdir/condor/gdrive_plugin.pyc
@@ -1483,11 +1568,13 @@ rm -rf %{buildroot}
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
 %_bindir/condor_annex
+%_bindir/condor_nsenter
 %_bindir/condor_evicted_files
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
 %_sbindir/condor_aklog
+%_sbindir/condor_credmon_krb
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
@@ -1534,11 +1621,15 @@ rm -rf %{buildroot}
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
 %dir %_var/lib/condor/execute/
-%dir %_var/log/condor/
 %dir %_var/lib/condor/spool/
+%dir %_var/log/condor/
 %dir %_var/lock/condor
 %dir %_var/lock/condor/local
 %dir %_var/run/condor
+%defattr(-,root,condor,-)
+%dir %_var/lib/condor/oauth_credentials
+%defattr(-,root,root,-)
+%dir %_var/lib/condor/krb_credentials
 
 #################
 %files procd
@@ -1637,6 +1728,7 @@ rm -rf %{buildroot}
 %_includedir/classad/lexerSource.h
 %_includedir/classad/literals.h
 %_includedir/classad/matchClassad.h
+%_includedir/classad/natural_cmp.h
 %_includedir/classad/operators.h
 %_includedir/classad/query.h
 %_includedir/classad/sink.h
@@ -1670,11 +1762,12 @@ rm -rf %{buildroot}
 %endif
 
 %if %python
-%if 0%{?rhel} <= 7
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %files -n python2-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
 %_bindir/classad_eval
+%_bindir/condor_watch_q
 %_libdir/libpyclassad2*.so
 %_libexecdir/condor/libclassad_python_user.so
 %_libexecdir/condor/libcollector_python_plugin.so
@@ -1683,20 +1776,42 @@ rm -rf %{buildroot}
 %{python_sitearch}/htcondor-*.egg-info/
 %endif
 
-%if 0%{?rhel} >= 7
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
 %_bindir/classad_eval
+%_bindir/condor_watch_q
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
-/usr/lib64/python3.6/site-packages/classad/
-/usr/lib64/python3.6/site-packages/htcondor/
-/usr/lib64/python3.6/site-packages/htcondor-*.egg-info/
+/usr/lib64/python%{python3_version}/site-packages/classad/
+/usr/lib64/python%{python3_version}/site-packages/htcondor/
+/usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 %endif
 %endif
+%endif
+
+%if 0%{?rhel} == 7
+%files credmon-oauth
+%doc examples/condor_credmon_oauth
+%_sbindir/condor_credmon_oauth
+%_sbindir/scitokens_credential_producer
+%_var/www/wsgi-scripts/condor_credmon_oauth
+%_libexecdir/condor/credmon
+%_var/lib/condor/oauth_credentials/README.credentials
+%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-credmon.conf
+%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-tokens.conf
+%ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
+%ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
+%ghost %_var/lib/condor/oauth_credentials/pid
+###
+# Backwards compatibility with the previous versions and configs of scitokens-credmon
+%_bindir/condor_credmon_oauth
+%_bindir/scitokens_credential_producer
+%_var/www/wsgi-scripts/scitokens-credmon
+###
 %endif
 
 %files bosco
@@ -1752,8 +1867,10 @@ rm -rf %{buildroot}
 
 %files external-libs
 %dir %_libdir/condor
+%if %drmaa
 %_libdir/condor/libcondordrmaa.a
 %_libdir/condor/libdrmaa.so
+%endif
 %_libdir/condor/libglobus*.so*
 %_libdir/condor/libvomsapi*.so*
 %_libdir/condor/libSciTokens.so*
@@ -1929,6 +2046,57 @@ fi
 %endif
 
 %changelog
+* Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.8-1
+- Added htcondor.dags and htcondor.htchirp to the HTCondor Python bindings
+- New condor_watch_q tool that efficiently provides live job status updates
+- Added support for marking a GPU offline while other jobs continue
+- The condor_master command does not return until it is fully started
+- Deprecated several Python interfaces in the Python bindings
+
+* Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.10-1
+- condor_qedit can no longer be used to disrupt the condor_schedd
+- Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
+- Ubuntu 20.04 and Amazon Linux 2 are now supported
+- In MacOSX, HTCondor now requires LibreSSL, available since MacOSX 10.13
+
+* Wed May 20 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.7-1
+- Multiple enhancements in the file transfer code
+- Support for more regions in s3:// URLs
+- Much more flexible job router language
+- Jobs may now specify cuda_version to match equally-capable GPUs
+- TOKENS are now called IDTOKENS to differentiate from SCITOKENS
+- Added the ability to blacklist TOKENS via an expression
+- Can simultaneously handle Kerberos and OAUTH credentials
+- The getenv submit command now supports a blacklist and whitelist
+- The startd supports a remote history query similar to the schedd
+- condor_q -submitters now works with accounting groups
+- Fixed a bug reading service account credentials for Google Compute Engine
+
+* Thu May 07 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.9-1
+- Proper tracking of maximum memory used by Docker universe jobs
+- Fixed preempting a GPU slot for a GPU job when all GPUs are in use
+- Fixed a Python crash when queue_item_data iterator raises an exception
+- Fixed a bug where slot attribute overrides were ignored
+- Calculates accounting group quota correctly when more than 1 CPU requested
+- Updated HTCondor Annex to accommodate API change for AWS Spot Fleet
+- Fixed a problem where HTCondor would not start on AWS Fargate
+- Fixed where the collector could wait forever for a partial message
+- Fixed streaming output to large files (>2Gb) when using the 32-bit shadow
+
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
+- Fixes addressing CVE-2019-18823
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
+* Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
+- Fixes addressing CVE-2019-18823
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+
 * Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
 - Added a new mode that skips jobs whose outputs are newer than their inputs
 - Added command line tool to help debug ClassAd expressions

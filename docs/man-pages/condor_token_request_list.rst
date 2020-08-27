@@ -10,7 +10,7 @@ Synopsis
 --------
 
 **condor_token_request_list**
-[**-pool** *pool_name*] [**-name** hostname] [**-type** *type*]
+[**-pool** *pool_name*] [**-name** hostname] [**-type** *type*] [**-json**]
 [**-debug**]
 
 **condor_token_request_list** [**-help** ]
@@ -42,6 +42,8 @@ Options
     the locally-running daemons will be used.
  **-pool** *pool_name*
     Request a token from a daemon in a non-default pool *pool_name*.
+ **-json**
+    Causes all pending requests to be printed as JSON objects.
  **-type** *type*
     Request a token from a specific daemon type *type*.  If not given, a
     *condor_collector* is used.
@@ -51,9 +53,9 @@ Examples
 
 To list the tokens at the default *condor_collector*:
 
-::
+.. code-block:: console
 
-    % condor_token_request_list
+    $ condor_token_request_list
     RequestId = "4303687"
     ClientId = "worker0000.wisc.edu-960"
     PeerLocation = "10.0.4.13"

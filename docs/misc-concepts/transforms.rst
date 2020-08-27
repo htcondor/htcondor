@@ -5,7 +5,7 @@ ClassAd Transforms
 
 HTCondor has a general purpose language for transforming ClassAds,
 this language is used by the *condor_schedd* for submit transforms,
-and as of version 8.9.6 by the job router for routes and pre and post route transforms.
+and as of version 8.9.7 by the job router for routes and pre and post route transforms.
 
 There is also a stand alone tool ``condor_transform_ads`` than can
 read ClassAds from a file or pipe, transform them, and write the
@@ -80,7 +80,8 @@ Transform Commands
     that ClassAd does not currently have ``<attr>`` or if it is currently set to ``undefined``.  This
     is equivalent to
 
-    ::
+    .. code-block:: condor-config
+
       if ! defined MY.<Attr>
         SET <Attr> <value>
       endif
@@ -106,7 +107,8 @@ Transform Commands
     portions of the original attribute name. ``\0`` Is the entire attribute name, and ``\1`` is the first capture, etc.
     For example
 
-    ::
+    .. code-block:: condor-config
+
       # copy all attributes whose names begin with Resource to new attribute with names that begin with OriginalResource
       COPY /Resource(.+)/ OriginalResource\1
 

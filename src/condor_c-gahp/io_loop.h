@@ -60,7 +60,7 @@ struct inter_thread_io_t {
 
 };
 
-int stdin_pipe_handler(Service*, int);
+int stdin_pipe_handler(int);
 int result_pipe_handler(int);
 
 
@@ -83,7 +83,7 @@ int verify_number_args (const int, const int);
 void flush_request (int worker_id, const char * request);
 void flush_pending_requests();
 
-int worker_thread_reaper (Service*, int pid, int exit_status);
+int worker_thread_reaper(int pid, int exit_status);
 
 class Worker : public Service {
  public:

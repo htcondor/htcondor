@@ -178,9 +178,9 @@ VanillaProc::StartJob()
 										  MATCH == strcasecmp ( ".com", extension ) ) ),
 				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
 	ArgList		arguments;
-	MyString	filename,
-				jobname, 
-				error;
+	std::string	filename;
+	std::string	jobname;
+	MyString	error;
 	
 	if ( extension && !java_universe && !binary_executable ) {
 
@@ -222,12 +222,12 @@ VanillaProc::StartJob()
 				a the correct extension before it will run. */
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
-					condor_basename ( jobname.Value () ) ) ) {
-				filename.formatstr ( "condor_exec%s", extension );
-				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
+					condor_basename ( jobname.c_str () ) ) ) {
+				formatstr ( filename, "condor_exec%s", extension );
+				if (rename(CONDOR_EXEC, filename.c_str()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 
-							CONDOR_EXEC, filename.Value() );
+							CONDOR_EXEC, filename.c_str() );
 				}
 			} else {
 				filename = jobname;
@@ -270,7 +270,7 @@ VanillaProc::StartJob()
 				will stop the file transfer mechanism from considering
 				it for transfer back to its submitter */
 			Starter->jic->removeFromOutputFiles (
-				filename.Value () );
+				filename.c_str () );
 
 		}
 			
@@ -500,7 +500,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = Starter->GetWorkingDir();
+		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
 			StringList mount_list(mount_under_scratch);
@@ -585,7 +585,7 @@ VanillaProc::StartJob()
 			MyString arg_errors;
 			std::string filename;
 
-			filename = Starter->GetWorkingDir();
+			filename = Starter->GetWorkingDir(0);
 			filename += "/.condor_pid_ns_status";
 		
 			if (!env.MergeFrom(JobAd, &env_errors)) {
@@ -737,20 +737,24 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 	static unsigned int max_rss = 0;
+#if HAVE_PSS
+	static unsigned int max_pss = 0;
+#endif
 
-	ProcFamilyUsage* usage;
-	ProcFamilyUsage cur_usage;
-	if (m_proc_exited) {
-		usage = &m_final_usage;
-	}
-	else {
-		if (daemonCore->Get_Family_Usage(JobPid, cur_usage) == FALSE) {
+	ProcFamilyUsage current_usage;
+	if( m_proc_exited ) {
+		current_usage = m_final_usage;
+	} else {
+		if (daemonCore->Get_Family_Usage(JobPid, current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
 			return false;
 		}
-		usage = &cur_usage;
 	}
+
+	ProcFamilyUsage reported_usage = m_checkpoint_usage;
+	reported_usage += current_usage;
+	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
     m_statistics.Tick();
@@ -773,12 +777,15 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 #if HAVE_PSS
 	if( usage->total_proportional_set_size_available ) {
-		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );
+		if (usage->total_proportional_set_size > max_pss) {
+			max_pss = usage->total_proportional_set_size;
+		}
+		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, max_pss );
 	}
 #endif
 
-	if (usage->block_read_bytes >= 0)  {
-        	m_statistics.BlockReadBytes = usage->block_read_bytes;
+	if (usage->block_read_bytes >= 0) {
+		m_statistics.BlockReadBytes = usage->block_read_bytes;
 		ad->Assign(ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes / 1024l);
 	}
 	if (usage->block_write_bytes >= 0) {
@@ -787,11 +794,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	if (usage->block_reads >= 0) {
-        	m_statistics.BlockReads = usage->block_reads;
+		m_statistics.BlockReads = usage->block_reads;
 		ad->Assign(ATTR_BLOCK_READS, usage->block_reads);
 	}
 	if (usage->block_writes >= 0) {
-        	m_statistics.BlockWrites = usage->block_writes;
+		m_statistics.BlockWrites = usage->block_writes;
 		ad->Assign(ATTR_BLOCK_WRITES, usage->block_writes);
 	}
 
@@ -862,13 +869,14 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
-	// For the same reason that we call recordFinalUsage() from the reaper
-	// in normal exit cases, we should get the final usage of the checkpointed
-	// process now, add it to the running total of checkpointed processes,
-	// and then add the running total to the current when we publish the
-	// update ad.  FIXME (#4971)
+	ProcFamilyUsage last_usage;
+	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
+		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
+			"VanillaProc::restartCheckpointedJob()\n", JobPid );
+	}
+	m_checkpoint_usage += last_usage;
 
-	if( Starter->jic->uploadWorkingFiles() ) {
+	if( Starter->jic->uploadCheckpointFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
 	} else {
 			// We assume this is a transient failure and will try
@@ -881,6 +889,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// would behave differently during ssh-to-job, which seems bad.
 	// killFamilyIfWarranted();
 
+	m_proc_exited = false;
 	StartJob();
 }
 

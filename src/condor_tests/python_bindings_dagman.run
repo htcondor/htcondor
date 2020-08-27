@@ -1,17 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import htcondor
 import os
 import sys
 import time
 
-from pytest.CondorTest import CondorTest
-from pytest.Globals import *
-from pytest.HTTPServer import HTTPServer
-from pytest.Utils import Utils
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.HTTPServer import HTTPServer
+from pytest_old.Utils import Utils
 
 def main():
-    
+
     # Start by writing out whatever dag/submit files we'll need
     dagFile = """JOB Job1 python_bindings_dagman.sub
 JOB Job2 python_bindings_dagman.sub
@@ -62,7 +62,7 @@ queue
     except:
         CondorTest.RegisterFailure("python-dagman-submit-success", "Unable to open the DAG output file")
         sys.exit(TEST_FAILURE)
-    
+
     out_contents = out_file.read()
     if "Test for echo" in out_contents:
         CondorTest.RegisterSuccess("python-dagman-submit-success", "DAG ran correctly as expected")

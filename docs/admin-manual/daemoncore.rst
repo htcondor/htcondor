@@ -102,7 +102,8 @@ These arguments and what they do are described below:
     Causes the daemon to start up in the background. When a DaemonCore
     process starts up with this option, it disassociates itself from the
     terminal and forks itself, so that it runs in the background. This
-    is the default behavior for HTCondor daemons.
+    is the default behavior for the *condor_master*. Prior to 8.9.7 it
+    was the default for all HTCondor daemons.
 
 \-c filename
     Causes the daemon to use the specified **filename** as a full path
@@ -132,9 +133,10 @@ These arguments and what they do are described below:
 
 \-f
     Causes the daemon to start up in the foreground. Instead of forking,
-    the daemon runs in the foreground.
+    the daemon runs in the foreground. Since 8.9.7, this has been the default
+    for all daemons other than the *condor_master*.
 
-    NOTE: When the *condor_master* starts up daemons, it does so with
+    NOTE: Before 8.9.7, When the *condor_master* started up daemons, it would do so with
     the **-f** option, as it has already forked a process for the new
     daemon. There will be a **-f** in the argument list for all HTCondor
     daemons that the *condor_master* spawns.

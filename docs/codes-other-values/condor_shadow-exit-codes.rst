@@ -7,13 +7,13 @@ When a *condor_shadow* daemon exits, the *condor_shadow* exit code is
 recorded in the *condor_schedd* log, and it identifies why the job
 exited. Prose in the log appears of the form
 
-::
+.. code-block:: text
 
     Shadow pid XXXXX for job XX.X exited with status YYY
 
 where ``YYY`` is the exit code, or
 
-::
+.. code-block:: text
 
     Shadow pid XXXXX for job XX.X reports job exit reason 100.
 

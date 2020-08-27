@@ -56,7 +56,7 @@ class IndexFile {
 	bool UpdateIndex(std::string key, int offset);
 	int First(std::string &key);
 	int Next(std::string &key);
-	std::string GetClassadFromFile(std::string key, int offset);
+	std::string GetClassadFromFile(std::string key, int offset) const;
 	bool  TruncateStorageFile();
 	int  dump_index();
  private:

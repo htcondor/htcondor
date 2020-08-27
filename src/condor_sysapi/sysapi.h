@@ -139,23 +139,9 @@ void sysapi_get_windows_info( void );
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( int stack_size );
 
-/* check the magic number of the given executable */
-int sysapi_magic_check( char* executable );
-
-/* make sure the given executable is linked with Condor */
-int sysapi_symbol_main_check( char* executable );
-
 /* determine a canonical kernel version */
 const char* sysapi_kernel_version_raw( void );
 const char* sysapi_kernel_version( void );
-
-/* determine a canonical memory model for the kernel */
-const char* sysapi_kernel_memory_model_raw( void );
-const char* sysapi_kernel_memory_model( void );
-
-/* determine a checkpointing signature for a particular platform */
-const char* sysapi_ckptpltfrm_raw( void );
-const char* sysapi_ckptpltfrm( void );
 
 /* determine the instruction set extensions on x86 machines */
 /* Would like to just use a classad here, but were in a 
@@ -173,10 +159,6 @@ struct sysapi_cpuinfo {
 
 const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void );
 const struct sysapi_cpuinfo *sysapi_processor_flags( void );
-
-/* determine the syscall gate address on machines where that makes sense */
-const char * sysapi_vsyscall_gate_addr_raw( void );
-const char * sysapi_vsyscall_gate_addr( void );
 
 /* Produce a unique identifier for the disk partition containing the
    specified path.  Caller should free result.  The caller could use

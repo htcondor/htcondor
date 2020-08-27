@@ -181,6 +181,10 @@ main( int argc, char *argv[] )
 				argv++;
 				Max = atoi(*argv);
 				Range = (Max - Min);
+				if (Range == 0) {
+					printf("Range must be non-negative\n");
+					exit(1);
+				}
 				//fprintf( stderr, "random sleep range requested: %d - %d\n", Min, Max );
 				break;
 

@@ -33,7 +33,7 @@ instead of a local file.
 Jobs that use *condor_chirp* must have the attribute ``WantIOProxy``
 set to ``True`` in the job ClassAd. To do this, place
 
-::
+.. code-block:: condor-submit
 
     +WantIOProxy = true
 
@@ -126,7 +126,7 @@ Chirp Commands
  **chown** *RemotePath UID GID*
     Change the ownership of *RemotePath* to *UID* and *GID*. Changes the
     target of *RemotePath*, if it is a symbolic link.
- **chown** *RemotePath UID GID*
+ **lchown** *RemotePath UID GID*
     Change the ownership of *RemotePath* to *UID* and *GID*. Changes the
     link, if *RemotePath* is a symbolic link.
  **truncate** *RemoteFileName Length*
@@ -141,16 +141,16 @@ Examples
 To copy a file from the submit machine to the execute machine while the
 user job is running, run
 
-::
+.. code-block:: console
 
-      condor_chirp fetch remotefile localfile
+      $ condor_chirp fetch remotefile localfile
 
 To print to standard output the value of the ``Requirements`` expression
 from within a running job, run
 
-::
+.. code-block:: console
 
-      condor_chirp get_job_attr Requirements
+      $ condor_chirp get_job_attr Requirements
 
 Note that the remote (submit-side) directory path is relative to the
 submit directory, and the local (execute-side) directory is relative to
@@ -159,15 +159,15 @@ the current directory of the running program.
 To append the word "foo" to a file called ``RemoteFile`` on the submit
 machine, run
 
-::
+.. code-block:: console
 
-      echo foo | condor_chirp put -mode wa - RemoteFile
+      $ echo foo | condor_chirp put -mode wa - RemoteFile
 
 To append the message "Hello World" to the job event log, run
 
-::
+.. code-block:: console
 
-      condor_chirp ulog "Hello World"
+      $ condor_chirp ulog "Hello World"
 
 Exit Status
 -----------
@@ -175,16 +175,3 @@ Exit Status
 *condor_chirp* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

@@ -364,6 +364,7 @@ main(int argc, const char* argv[])
   int DeleteUser=0;
   int SetFactor=0;
   int SetPrio=0;
+  int SetCeiling=0;
   int SetAccum=0;
   int SetBegin=0;
   int SetLast=0;
@@ -393,6 +394,11 @@ main(int argc, const char* argv[])
     else if (IsArg(argv[i],"setfactor")) {
       if (i+2>=argc) usage(argv[0]);
       SetFactor=i;
+      i+=2;
+    }
+    else if (IsArg(argv[i],"setceiling")) {
+      if (i+2>=argc) usage(argv[0]);
+      SetCeiling=i;
       i+=2;
     }
     else if (IsArg(argv[i],"setbegin")) {
@@ -660,6 +666,42 @@ main(int argc, const char* argv[])
 
   }
 
+  else if (SetCeiling) { // set ceiling
+
+	const char* tmp;
+	if( ! (tmp = strchr(argv[SetCeiling+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the submittor you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto update the ceiling of (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+    long ceiling = strtol(argv[SetCeiling+2], nullptr, 10);
+	if (ceiling < 0) {
+		fprintf( stderr, "Ceiling must be greater than or equal to "
+				 "1.\n");
+		exit(1);
+	}
+
+    // send request
+    Sock* sock;
+    if( !(sock = negotiator.startCommand(SET_CEILING,
+										 Stream::reli_sock, 0) ) ||
+        !sock->put(argv[SetCeiling+1]) ||
+        !sock->put(ceiling) ||
+        !sock->end_of_message()) {
+      fprintf( stderr, "failed to send SET_CEILING command to negotiator\n" );
+      exit(1);
+    }
+
+    sock->close();
+    delete sock;
+
+    printf("The ceiling of %s was set to %ld\n",argv[SetCeiling+1],ceiling);
+
+  }
+
   else if (SetAccum) { // set accumulated usage
 
 	const char* tmp;
@@ -924,14 +966,6 @@ main(int argc, const char* argv[])
 	ClassAd *ad = NULL;
 	std::vector<ClassAd> accountingAds;
 
-	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
-	c.locate();
-	const char *v = c.version();
-	CondorVersionInfo cvi(v);
-	if (!cvi.built_since_version(8,5,2)) {
-		fromCollector = false;	
-	}
-
 	if (fromCollector) {
 		CondorQuery query(ACCOUNTING_AD);
 		ClassAdList ads;
@@ -1108,8 +1142,8 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 {
   char  attrName[64], attrPrio[64], attrResUsed[64], attrWtResUsed[64], attrFactor[64], attrBeginUsage[64], attrAccUsage[64], attrRequested[64];
   char  attrLastUsage[64];
-  MyString attrAcctGroup;
-  MyString attrIsAcctGroup;
+  std::string attrAcctGroup;
+  std::string attrIsAcctGroup;
   char  name[128], policy[32];
   float priority = 0, Factor = 0, AccUsage = -1;
   int   resUsed = 0, BeginUsage = 0;
@@ -1151,8 +1185,8 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     sprintf( attrBeginUsage , "BeginUsageTime%s", strI );
     sprintf( attrLastUsage , "LastUsageTime%s", strI );
     sprintf( attrAccUsage , "WeightedAccumulatedUsage%s", strI );
-    attrAcctGroup.formatstr("AccountingGroup%s", strI);
-    attrIsAcctGroup.formatstr("IsAccountingGroup%s", strI);
+    formatstr(attrAcctGroup, "AccountingGroup%s", strI);
+    formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
 
     if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
@@ -1177,10 +1211,10 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 		LR[i-1].HasDetail |= DetailWtResUsed;
 	}
 
-    if (!ad->LookupString(attrAcctGroup.Value(), AcctGroup)) {
+    if (!ad->LookupString(attrAcctGroup, AcctGroup)) {
         AcctGroup = "<none>";
     }
-    if (!ad->LookupBool(attrIsAcctGroup.Value(), IsAcctGroup)) {
+    if (!ad->LookupBool(attrIsAcctGroup, IsAcctGroup)) {
         IsAcctGroup = false;
     }
 
@@ -1413,7 +1447,7 @@ static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const ch
 static char * FormatFloat(char * pszDest, int width, int decimal, float value)
 {
    char sz[60];
-   char fmt[10] = "%";
+   char fmt[16] = "%";
    sprintf(fmt+1, "%d.%df", width, decimal);
    sprintf(sz, fmt, value);
    int cch = strlen(sz);
@@ -1454,12 +1488,12 @@ static const struct {
    { DetailPriority,  12, "Effective\0Priority" },
    { DetailRealPrio,   8, "Real\0Priority" },
    { DetailFactor,     9, "Priority\0Factor" },
-   { DetailResUsed,    6, "Res\0In Use" },
+   { DetailResUsed,    6, "Wghted\0In Use" },
    { DetailWtResUsed, 12, "Total Usage\0(wghted-hrs)" },
    { DetailUseTime1,  16, "Usage\0Start Time" },
    { DetailUseTime2,  16, "Last\0Usage Time" },
    { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
-   { DetailRequested, 10, "Requested\0Resources" },
+   { DetailRequested, 10, "Weighted\0Requested" }
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
@@ -1754,6 +1788,7 @@ static void usage(const char* name) {
      "\t-delete <user>\t\tRemove a user record from the accountant\n"
      "\t-setprio <user> <val>\tSet priority for <user>\n"
      "\t-setfactor <user> <val>\tSet priority factor for <user>\n"
+     "\t-setceiling <user> <val>\tSet ceiling for <user>\n"
      "\t-setaccum <user> <val>\tSet Accumulated usage for <user>\n"
      "\t-setbegin <user> <val>\tset last first date for <user>\n"
      "\t-setlast <user> <val>\tset last active date for <user>\n"

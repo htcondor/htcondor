@@ -136,7 +136,7 @@ class MyString
 	MyString& operator=(const MyString& S);
 
 	/** Destructively moves a MyString guts from rhs to this */
-	MyString& operator=(MyString &&rhs);
+	MyString& operator=(MyString &&rhs) noexcept ;
 
 	/** Copies a std::string into the object */
 	MyString& operator=(const std::string& S);
@@ -437,7 +437,7 @@ class MyStringTokener
 public:
   MyStringTokener();
   // MyStringTokener(const char * str);
-  MyStringTokener &operator=(MyStringTokener &&rhs);
+  MyStringTokener &operator=(MyStringTokener &&rhs) noexcept ;
   ~MyStringTokener();
   void Tokenize(const char * str);
   void Tokenize(const MyString & str) { Tokenize(str.Value()); }
@@ -452,7 +452,7 @@ class MyStringWithTokener : public MyString
 public:
 	MyStringWithTokener(const MyString &S);
 	MyStringWithTokener(const char *s);
-	MyStringWithTokener &operator=(MyStringWithTokener &&rhs);
+	MyStringWithTokener &operator=(MyStringWithTokener &&rhs) noexcept ;
 	~MyStringWithTokener() {}
 
 	// ----------------------------------------

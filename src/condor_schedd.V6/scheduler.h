@@ -35,6 +35,9 @@
 #include <unordered_map>
 #include <queue>
 
+// switch to using User (fully qualified) over Owner as the main job identity
+#define USER_IS_THE_NEW_OWNER 1
+
 #include "dc_collector.h"
 #include "daemon.h"
 #include "daemon_list.h"
@@ -62,6 +65,7 @@
 #include "schedd_stats.h"
 #include "condor_holdcodes.h"
 #include "job_transforms.h"
+#include "history_queue.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -161,7 +165,7 @@ struct LiveJobCounters {
   int SchedulerJobsCompleted;
   int SchedulerJobsHeld;
   void clear_counters() { memset(this, 0, sizeof(*this)); }
-  void publish(ClassAd & ad, const char * prefix);
+  void publish(ClassAd & ad, const char * prefix) const;
   LiveJobCounters()
 	: JobsSuspended(0)
 	, JobsIdle(0)
@@ -342,7 +346,7 @@ class match_rec: public ClaimIdParser
 	void	setStatus( int stat );
 
 	void makeDescription();
-	char const *description() {
+	char const *description() const {
 		return m_description.c_str();
 	}
 
@@ -473,7 +477,7 @@ public:
 	char*		claimId( void )		{ return csa_claim_id; };
 	char*		extraClaims( void )	{ return csa_extra_claims; };
 	char*		sinful( void )		{ return csa_sinful; }
-	bool		isDedicated()		{ return csa_is_dedicated; }
+	bool		isDedicated() const		{ return csa_is_dedicated; }
 
 private:
 	char *csa_claim_id;
@@ -482,35 +486,6 @@ private:
 	bool csa_is_dedicated;
 };
 
-class HistoryHelperState
-{
-public:
-	HistoryHelperState(Stream &stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_streamresults(false), m_stream_ptr(&stream), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match)
-	{}
-
-	HistoryHelperState(classad_shared_ptr<Stream> stream, const std::string &reqs, const std::string &since, const std::string &proj, const std::string &match)
-	 : m_streamresults(false), m_stream_ptr(NULL), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_stream(stream)
-	{}
-
-	~HistoryHelperState() { if (m_stream.get() && m_stream.unique()) daemonCore->Cancel_Socket(m_stream.get()); }
-
-	Stream * GetStream() const { return m_stream_ptr ? m_stream_ptr : m_stream.get(); }
-
-	const std::string & Requirements() const { return m_reqs; }
-	const std::string & Since() const { return m_since; }
-	const std::string & Projection() const { return m_proj; }
-	const std::string & MatchCount() const { return m_match; }
-	bool m_streamresults;
-
-private:
-	Stream *m_stream_ptr;
-	std::string m_reqs;
-	std::string m_since;
-	std::string m_proj;
-	std::string m_match;
-	classad_shared_ptr<Stream> m_stream;
-};
 
 #define USE_VANILLA_START 1
 
@@ -634,7 +609,7 @@ class Scheduler : public Service
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
 	int				AlreadyMatched(PROC_ID*);
 	int				AlreadyMatched(JobQueueJob * job, int universe);
-	void			ExpediteStartJobs();
+	void			ExpediteStartJobs() const;
 	void			StartJobs();
 	void			StartJob(match_rec *rec);
 	void			sendAlives();
@@ -663,7 +638,7 @@ class Scheduler : public Service
 	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
-	int				receive_startd_alive(int cmd, Stream *s);
+	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
 	void            checkContactQueue();
@@ -714,17 +689,17 @@ class Scheduler : public Service
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
-	int				aliveInterval( void ) { return alive_interval; };
+	int				aliveInterval( void ) const { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
-	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
-	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
-	bool			getNonDurableLateMaterialize() { return NonDurableLateMaterialize; }
-	bool			getEnableJobQueueTimestamps() { return EnableJobQueueTimestamps; }
-	int				getMaxJobsRunning() { return MaxJobsRunning; }
-	int				getJobsTotalAds() { return JobsTotalAds; };
-	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
-	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
-	int				getMaxJobsPerSubmission() { return MaxJobsPerSubmission; }
+	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
+	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
+	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
+	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
+	int				getMaxJobsRunning() const { return MaxJobsRunning; }
+	int				getJobsTotalAds() const { return JobsTotalAds; };
+	int				getMaxJobsSubmitted() const { return MaxJobsSubmitted; };
+	int				getMaxJobsPerOwner() const { return MaxJobsPerOwner; }
+	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
 		// Used by the UserIdentity class and some others
 	const ExprTree*	getGridParsedSelectionExpr() const 
@@ -1000,9 +975,6 @@ private:
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
-	int			command_history(int, Stream* stream);
-	int			history_helper_launcher(const HistoryHelperState &state);
-	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
@@ -1027,7 +999,7 @@ private:
 	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
-	double			calcSlotWeight(match_rec *mrec);
+	double			calcSlotWeight(match_rec *mrec) const;
 	double			guessJobSlotWeight(JobQueueJob * job);
 	
 	// -----------------------------------------------
@@ -1159,10 +1131,8 @@ private:
     void userlog_file_cache_erase(const int& cluster, const int& proc);
 
 	// State for the history helper queue.
-	std::vector<HistoryHelperState> m_history_helper_queue;
-	unsigned m_history_helper_max;
-	unsigned m_history_helper_count;
-	int m_history_helper_rid;
+	// object to manage history queries in flight
+	HistoryHelperQueue HistoryQue;
 
 	bool m_matchPasswordEnabled;
 
@@ -1241,6 +1211,17 @@ int jobIsFinished( int cluster, int proc, void* vptr = NULL );
 */
 int jobIsFinishedDone( int cluster, int proc, void* vptr = NULL,
 					   int exit_status = 0 );
+
+/* Returns true if an external manager (e.g. gridmanager, job router) has
+ * indicated it is handling this job.
+ */
+bool jobExternallyManaged(ClassAd * ad);
+
+/* Returns true if an external manager (e.g. gridmanager, job router) has
+ * finished handling this job, the job is now in a terminal state
+ * (COMPELTED, REMOVED), and the manager doesn't need to see the job again.
+ */
+bool jobManagedDone(ClassAd * ad);
 
 
 #endif /* _CONDOR_SCHED_H_ */

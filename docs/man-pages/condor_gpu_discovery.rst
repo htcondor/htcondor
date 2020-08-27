@@ -37,16 +37,31 @@ comma and space separated list of the GPUs discovered, where each is
 given a name further used as the *prefix string* in other attribute
 names. Where there is more than one GPU of a particular type, the
 *prefix string* includes an integer value numbering the device; these
-integer values monotonically increase from 0 (unless otherwise specified
-in the environment; see above). For example, a discovery of two GPUs may
+integer values monotonically increase from 0 unless the ``-uuid`` or ``-short-uuid``
+option is used or unless otherwise specified
+in the environment; see above. For example, a discovery of two GPUs may
 output
 
-::
+.. code-block:: condor-classad
 
     DetectedGPUs="CUDA0, CUDA1"
 
 Further command line options use ``"CUDA"`` either with or without one
 of the integer values 0 or 1 as the *prefix string* in attribute names.
+
+For machines with more than one or two NVIDIA devices, it is recommended that you
+also use the ``-short-uuid`` or ``-uuid`` option.  The uuid value assigned by
+NVIDA to each GPU is unique, so  using this option provides stable device
+identifiers for your devices. The ``--short-uuid`` option uses only part of the
+uuid, but it is highly likely to still be unique for devices on a single machine.
+When ``-short-uuid`` is used, discovery of two GPUs may look like this
+
+.. code-block:: condor-classad
+
+    DetectedGPUs="GPU-ddc1c098, GPU-9dc7c6d6"
+
+Any NVIDA runtime library later than 9.0 will accept the above identifiers in the
+``CUDA_VISIBLE_DEVICES`` environment variable.
 
 Options
 -------
@@ -92,7 +107,15 @@ Options
  **-prefix** *str*
     When naming attributes, use *str* as the *prefix string*. When this
     option is not specified, the *prefix string* is either ``CUDA`` or
-    ``OCL``.
+    ``OCL`` unless ``-uuid`` or ``-short-uuid`` is also used.
+ **-short-uuid**
+    Use the first 8 characters of the NVIDIA uuid as the device identifier.
+    When this option is used, devices will be shown as ``GPU-<xxxxxxxx>`` where
+    <xxxxxxxx> is the first 8 hex digits of the NVIDIA device uuid.  Unlike device
+    indices, the uuid of a device will not change of other devices are taken offline
+    or drained.
+ **-uuid**
+    Use the full NVIDIA uuid as the device identifier rather than the device index.
  **-simulate:D,N**
     For testing purposes, assume that N devices of type D were detected.
     No discovery software is invoked. If D is 0, it refers to GeForce GT
@@ -117,10 +140,12 @@ Options
     option with the **-dynamic** option to periodically refresh the
     dynamic Gpu information such as temperature. For example, to refresh
     GPU temperatures every 5 minutes
+ **-verbose**
+    Also print detection progress. This option is for interactive use only.
 
-    ::
+    .. code-block:: condor-config
 
-          use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron) 
+        use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron)
           
 
  **-verbose**
@@ -135,16 +160,3 @@ Exit Status
 *condor_gpu_discovery* will exit with a status value of 0 (zero) upon
 success, and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

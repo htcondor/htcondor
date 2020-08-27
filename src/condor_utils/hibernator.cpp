@@ -31,14 +31,14 @@
  * Base Hibernator class
  ***************************************************************/
 
-HibernatorBase::HibernatorBase () throw ()
+HibernatorBase::HibernatorBase () noexcept
 		: m_states ( NONE ),
 		  m_initialized( false )
 {
 }
 
 
-HibernatorBase::~HibernatorBase () throw ()
+HibernatorBase::~HibernatorBase () noexcept
 {
 }
 

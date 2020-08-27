@@ -66,7 +66,7 @@ ScriptQ::Run( Script *script )
 		// and run POST scripts so we don't "waste" the fact that the
 		// job completed).  (Allow PRE script for final node, though.)
 	if ( _dag->IsHalted() && !script->_post &&
-				!script->GetNode()->GetFinal() ) {
+				!( script->GetNode()->GetType() == NodeType::FINAL ) ) {
 		debug_printf( DEBUG_DEBUG_1,
 					"Deferring %s script of node %s because DAG is halted\n",
 					prefix, script->GetNodeName() );
@@ -162,7 +162,7 @@ ScriptQ::RunWaitingScripts( bool justOne )
 }
 
 int
-ScriptQ::NumScriptsRunning()
+ScriptQ::NumScriptsRunning() const
 {
 	return _numScriptsRunning;
 }

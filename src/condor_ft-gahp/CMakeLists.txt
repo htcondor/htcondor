@@ -16,6 +16,9 @@
  # 
  ############################################################### 
 
-condor_selective_glob( "Pipe*;io*;ftgahp*" FTGahpSrcs )
+set(FTGahpSrcs
+	PipeBuffer.cpp
+	io_loop.cpp
+	ftgahp_common.cpp
+)
 condor_exe( condor_ft-gahp "${FTGahpSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
-

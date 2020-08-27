@@ -87,15 +87,15 @@ void help( void );
 int  findCommand( char * );
 
 
-ClassAdCollectionServer collection;
+classad::ClassAdCollectionServer collection;
 
 int main( void )
 {
 	char			cmdString[32], buffer1[2048], buffer2[2048];
-	string			currentXaction;
+	std::string			currentXaction;
 	int				command;
 	Source			src;
-	Sink			snk;
+	link;			snk;
 	FormatOptions	fo;
 	
 	snk.SetSink( stdout );
@@ -104,14 +104,14 @@ int main( void )
 
 	if( !collection.InitializeFromLog( "log.log" ) ) {
 		fprintf( stderr, "Failed to initialize from log; error=%d: %s\n", 
-			CondorErrno, CondorErrMsg.c_str( ) );
+			classad::CondorErrno, classad::CondorErrMsg.c_str( ) );
 		exit( 1 );
 	}
 
 	printf( "'h' for help" );
 	while( 1 ) {
-		CondorErrMsg = "";
-		CondorErrno = ERR_OK;
+		classad::CondorErrMsg = "";
+		classad::CondorErrno = classad::ERR_OK;
 		printf("\n%s: ",currentXaction.empty()?"(none)":currentXaction.c_str());
 		scanf( "%s", cmdString );
 		command = findCommand( cmdString );
@@ -122,8 +122,8 @@ int main( void )
 				scanf( "%s", buffer1 );
 				if( !collection.OpenTransaction( buffer1 ) ) {
 					fprintf(stderr,"Failed to open transaction: %s\n",buffer1 );
-					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
-					CondorErrMsg = "";
+					fprintf( stderr, "%s\n", classad::CondorErrMsg.c_str( ) );
+					classad::CondorErrMsg = "";
 					continue;
 				} else {
 					currentXaction = buffer1;
@@ -134,11 +134,11 @@ int main( void )
 			case COMMIT_XACTION: {
 				int	outcome;
 				if(!collection.CloseTransaction(currentXaction,true,outcome)||
-						outcome == XACTION_ABORTED ){
+						outcome == classad::ClassAdCollectionInterface::XACTION_ABORTED ){
 					fprintf( stderr, "Failed to commit transaction: %s\n",
 						currentXaction.c_str( ) );
-					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
-					CondorErrMsg = "";
+					fprintf( stderr, "%s\n", classad::CondorErrMsg.c_str( ) );
+					classad::CondorErrMsg = "";
 				}
 				currentXaction = "";
 				break;
@@ -147,18 +147,18 @@ int main( void )
 			case ABORT_XACTION: {
 				int outcome;
 				if(!collection.CloseTransaction( currentXaction,false,outcome)||
-						outcome != XACTION_ABORTED ){
+						outcome != classad::ClassAdCollectionInterface::XACTION_ABORTED ){
 					fprintf( stderr, "Failed to abort transaction: %s\n",
 						currentXaction.c_str( ) );
-					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
-					CondorErrMsg = "";
+					fprintf( stderr, "%s\n", classad::CondorErrMsg.c_str( ) );
+					classad::CondorErrMsg = "";
 				}
 				currentXaction = "";
 				break;
 			}
 			
 			case SET_XACTION: {
-				string	s;
+				std::string	s;
 				scanf( "%s", buffer1 );
 				if( *buffer1 == '-' ) {
 					currentXaction = "";
@@ -169,7 +169,7 @@ int main( void )
 					currentXaction = s;
 				} else {
 					fprintf( stderr, "Failed to set transaction: %s\n",
-						CondorErrMsg.c_str( ) );
+						classad::CondorErrMsg.c_str( ) );
 				}
 				break;
 			}
@@ -178,7 +178,7 @@ int main( void )
 			case ADD_CLASSAD: 
 			case UPDATE_CLASSAD:
 			case MODIFY_CLASSAD: {
-				ClassAd	*ad=NULL;
+				classad::ClassAd	*ad=NULL;
 
 				if( scanf( "%s", buffer1 ) != 1 ) {
 					fprintf( stderr, "Error reading key\n" );
@@ -196,16 +196,16 @@ int main( void )
 					if( !collection.AddClassAd(buffer1,ad)){
 						fprintf( stderr, "Failed to add classad %s: %s\n", 
 							buffer1, buffer2 );
-						fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
-						CondorErrMsg = "";
+						fprintf( stderr, "%s\n", classad::CondorErrMsg.c_str( ) );
+						classad::CondorErrMsg = "";
 						break;
 					}
 				} else if( command == UPDATE_CLASSAD ) {
 					if(!collection.UpdateClassAd(buffer1, ad)){
 						fprintf( stderr, "Failed to update classad %s: %s\n", 
 							buffer1, buffer2 );
-						fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
-						CondorErrMsg = "";
+						fprintf( stderr, "%s\n", classad::CondorErrMsg.c_str( ) );
+						classad::CondorErrMsg = "";
 						break;
 					}
 				} else if( command == MODIFY_CLASSAD ) {

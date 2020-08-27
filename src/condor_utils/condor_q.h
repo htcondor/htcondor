@@ -62,6 +62,7 @@ enum CondorQIntCategories
 enum CondorQStrCategories
 {
 	CQ_OWNER,
+	CQ_SUBMITTER,
 
 	CQ_STR_THRESHOLD
 };
@@ -100,6 +101,8 @@ class CondorQ
 	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
 	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
 
+	void useDefaultingOperator(bool enable);
+
 	// option flags for fetchQueueFromHost* functions, these can modify the meaning of attrs
 	// use only one of the choices < fetch_FromMask, optionally OR'd with one or more fetch flags
 	// currently only fetch_Jobs accepts flags.
@@ -137,6 +140,7 @@ class CondorQ
 	int numprocs;
 	char owner[MAXOWNERLEN];
 	char schedd[MAXSCHEDDLEN];
+	bool defaulting_operator;
 	time_t scheddBirthdate;
 	
 	// helper functions

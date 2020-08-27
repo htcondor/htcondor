@@ -65,7 +65,7 @@ int ProcAPI::getProcInfoListStats(double & sOverall,
 
 
 #ifndef WIN32
-pidlistPTR ProcAPI::pidList = NULL;
+std::vector<pid_t> ProcAPI::pidList;
 int ProcAPI::pagesize		= 0;
 #ifdef LINUX
 long unsigned ProcAPI::boottime	= 0;
@@ -121,7 +121,7 @@ procHashNode::procHashNode()
 ProcAPI::~ProcAPI() {
         // deallocate stuff like crazy.
 #ifndef WIN32
-    deallocPidList();
+    pidList.clear();
 #endif
     deallocAllProcInfos();
 
@@ -145,227 +145,7 @@ ProcAPI::~ProcAPI() {
 // Each platform gets its own function unless two are so similar that you can
 // ifdef between them.
 
-#if defined(Solaris)
-// This is the version of getProcInfo for Solaris 2.6 - 2.11
-
-int
-ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 
-{
-	// This *could* allocate memory and make pi point to it if pi == NULL.
-	// It is up to the caller to get rid of it.
-	initpi ( pi );
-
-		// assume sucess
-	status = PROCAPI_OK;
-
-	// get the raw system process data
-	procInfoRaw procRaw;
-	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
-	
-		// if a failure occured
-	if( retVal != 0 ){
-			// return failure
-			// status is set by getProcInfoRaw(...)
-		return PROCAPI_FAILURE;
-	}
-
-		/* clean up and convert raw data */
-
-		// compute the age
-	pi->age = procRaw.sample_time - procRaw.creation_time;
-
-		// compute cpu time
-	double cpu_time = 
-		( procRaw.user_time_1 + 
-		  (procRaw.user_time_2 * 1.0e-9) ) +
-		( procRaw.sys_time_1 + 
-		  (procRaw.sys_time_2 * 1.0e-9) ); 
-
-
-		// copy the remainder of the fields
-	pi->pid		= procRaw.pid;
-	pi->ppid	= procRaw.ppid;
-	pi->owner = procRaw.owner;
-	pi->creation_time = procRaw.creation_time;
-	pi->birthday    = procRaw.creation_time;
-	pi->imgsize	= procRaw.imgsize;    // already in k!
-	pi->rssize	= procRaw.rssize;  // already in k!
-#if HAVE_PSS
-	pi->pssize = procRaw.pssize;
-	pi->pssize_available = procRaw.pssize_available;
-#endif
-	pi->user_time= procRaw.user_time_1;
-	pi->sys_time = procRaw.sys_time_1;
-	
-  /* Now we do that sampling hashtable thing to convert page faults
-     into page faults per second */
-	do_usage_sampling( pi, cpu_time, procRaw.majfault, procRaw.minfault );
-
-		// success
-	return PROCAPI_SUCCESS;
-}
-
-size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time)
-{
-	int status;
-	procInfoRaw procRaw;
-	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
-	if (retVal != 0){
-		//on failure, set everything to 0.
-		initProcInfoRaw(procRaw);
-	}
-
-	if (puser_time) {
-		*puser_time = procRaw.user_time_1 + (procRaw.user_time_2 * 1.0e-9);
-	}
-	if (psys_time) {
-		*psys_time = procRaw.sys_time_1 + (procRaw.sys_time_2 * 1.0e-9);
-	}
-
-	return (size_t)procRaw.imgsize * 1024;
-}
-
-
-/* Fills ProcInfoRaw with the following units:
-   imgsize		: KB
-   rssize		: KB
-   pssize		: KB
-   minfault		: total minor faults
-   majfault		: total major faults
-   user_time_1	: seconds
-   user_time_2	: nanos
-   sys_time_1	: seconds
-   sys_time_2	: nanos
-   creation_time: seconds since epoch
-   sample_time	: seconds since epoch
-
-*/
-
-int
-ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status ) 
-{
-	char path[64];
-	int fd;
-	psinfo_t psinfo;
-	prusage_t prusage;
-
-		// assume success
-	status = PROCAPI_OK;
-
-		// clear the memory of procRaw
-	initProcInfoRaw(procRaw);
-
-		// set the sample time
-	procRaw.sample_time = secsSinceEpoch();
-
-		// pids, memory usage, and age can be found in 'psinfo':
-	sprintf( path, "/proc/%d/psinfo", pid );
-	if( (fd = safe_open_wrapper_follow(path, O_RDONLY)) < 0 ) {
-
-		switch(errno) {
-			case ENOENT:
-				// pid doesn't exist
-				status = PROCAPI_NOPID;
-				dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n",
-						pid );
-				break;
-
-			case EACCES:
-				status = PROCAPI_PERM;
-				dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
-					 	path );
-				break;
-
-			default:
-				status = PROCAPI_UNSPECIFIED;
-				dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
-					 path, errno );
-				break;
-		}
-
-		return PROCAPI_FAILURE;
-	} 
-
-	// grab the information from the file descriptor.
-	if( read(fd, &psinfo, sizeof(psinfo_t)) != sizeof(psinfo_t) ) {
-		dprintf( D_ALWAYS, 
-			"ProcAPI: Unexpected short read while reading %s.\n", path );
-
-		status = PROCAPI_GARBLED;
-
-		return PROCAPI_FAILURE;
-	}
-
-	// grab the process owner uid
-	procRaw.owner = getFileOwner(fd);
-
-	close( fd );
-
-	// grab the information out of what the kernel told us. 
-	procRaw.imgsize	= psinfo.pr_size;
-	procRaw.rssize	= psinfo.pr_rssize;
-#if HAVE_PSS
-#error PSS not implemented on this platform
-#endif
-	procRaw.pid		= psinfo.pr_pid;
-	procRaw.ppid	= psinfo.pr_ppid;
-	procRaw.creation_time = psinfo.pr_start.tv_sec;
-
-  // maj/min page fault info and user/sys time is found in 'usage':
-  // I have never seen minor page faults return anything 
-  // other than '0' in 2.6.  I have seen a value returned for 
-  // major faults, but not that often.  These values are suspicious.
-	sprintf( path, "/proc/%d/usage", pid );
-	if( (fd = safe_open_wrapper_follow(path, O_RDONLY) ) < 0 ) {
-
-		switch(errno) {
-			case ENOENT:
-				// pid doesn't exist
-				status = PROCAPI_NOPID;
-				dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n",
-						pid );
-				break;
-
-			case EACCES:
-				status = PROCAPI_PERM;
-				dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
-					 	path );
-				break;
-
-			default:
-				status = PROCAPI_UNSPECIFIED;
-				dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
-					 path, errno );
-				break;
-		}
-
-		return PROCAPI_FAILURE;
-
-	}
-
-	if( read(fd, &prusage, sizeof(prusage_t)) != sizeof(prusage_t) ) {
-
-		dprintf( D_ALWAYS, 
-			"ProcAPI: Unexpected short read while reading %s.\n", path );
-
-		status = PROCAPI_GARBLED;
-
-		return PROCAPI_FAILURE;
-	}
-
-	close( fd );
-
-	procRaw.minfault = prusage.pr_minf;
-	procRaw.majfault = prusage.pr_majf;
-	procRaw.user_time_1 = prusage.pr_utime.tv_sec;
-	procRaw.user_time_2 = prusage.pr_utime.tv_nsec;
-	procRaw.sys_time_1 = prusage.pr_stime.tv_sec;
-	procRaw.sys_time_2 = prusage.pr_stime.tv_nsec;
-
-	return PROCAPI_SUCCESS;
-}
-
-#elif defined(LINUX)
+#if defined(LINUX)
 
 int
 ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 
@@ -1018,8 +798,21 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		// It is up to the caller to get rid of it.
 	initpi(pi);
 
+	return getProcInfo_impl(pid, pi, status);
+}
+
+int
+ProcAPI::getProcInfo_impl( pid_t pid, piPTR& pi, int &status )
+{
 		// get the raw system process data
 	procInfoRaw procRaw;
+		// Some internal callers can pre-fill the data that's obtained
+		// from sysctl(). They will indicate this by setting pi->pid to
+		// match the pid argument.
+		// If procRaw.pid matches the pid argument, then
+		// getProcInfoRaw() will not call sysctl() and leave those fields
+		// unfilled.
+	procRaw.pid = pi->pid;
 	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
 	
 		// if a failure occurred
@@ -1035,21 +828,29 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->imgsize = procRaw.imgsize / 1024;
 	pi->rssize = procRaw.rssize / 1024;
 
-		// compute the age
-	pi->age = procRaw.sample_time - procRaw.creation_time;
-
 		// compute the cpu time
 	double cpu_time = procRaw.user_time_1 + procRaw.sys_time_1;
 
 		// copy the remainder of the fields
 	pi->user_time = procRaw.user_time_1;
 	pi->sys_time = procRaw.sys_time_1;
-	pi->creation_time = procRaw.creation_time;
-	pi->birthday = procRaw.creation_time;
-	pi->pid = procRaw.pid;
-	pi->ppid = procRaw.ppid;
-	pi->owner = procRaw.owner;
+		// Some internal callers can pre-fill this data that's obtained
+		// from sysctl(). They will indicate this by setting pi->pid to
+		// match the pid argument. In that case, preserve the values that
+		// are already present.
+	if ( pi->pid != pid ) {
+		pi->creation_time = procRaw.creation_time;
+		pi->birthday = procRaw.creation_time;
+		pi->pid = procRaw.pid;
+		pi->ppid = procRaw.ppid;
+		pi->owner = procRaw.owner;
+	}
 	
+		// compute the age
+		// Use creation_time from pi, since getProcInfoRaw() may not
+		// have filled out procRaw.creation_time.
+	pi->age = procRaw.sample_time - pi->creation_time;
+
 		// convert the number of page faults into a rate
 	do_usage_sampling(pi, cpu_time, procRaw.majfault, procRaw.minfault);
 
@@ -1092,8 +893,9 @@ int
 ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status ) 
 {
 	int mib[4];
-	struct kinfo_proc *kp, *kprocbuf;
-	size_t bufSize = 0;
+	struct kinfo_proc kp;
+	size_t bufSize = sizeof(struct kinfo_proc);
+	bool call_sysctl = pid != procRaw.pid;
 
 		// assume success
 	status = PROCAPI_OK;
@@ -1105,60 +907,37 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.sample_time = secsSinceEpoch();
 	
 		/* Collect the data from the system */
-	
-		// First, let's get the BSD task info for this stucture. This
-		// will tell us things like the pid, ppid, etc. 
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_PROC;    
-    mib[2] = KERN_PROC_PID;
-    mib[3] = pid;
-    if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
-		if (errno == ESRCH) {
-			// No such process
-			status = PROCAPI_NOPID;
-		} else if (errno == EPERM) {
-			// Operation not permitted
-			status = PROCAPI_PERM;
-		} else {
-			status = PROCAPI_UNSPECIFIED;
+
+	if ( call_sysctl ) {
+			// First, let's get the BSD task info for this stucture. This
+			// will tell us things like the pid, ppid, etc.
+		mib[0] = CTL_KERN;
+		mib[1] = KERN_PROC;
+		mib[2] = KERN_PROC_PID;
+		mib[3] = pid;
+		if (sysctl(mib, 4, &kp, &bufSize, NULL, 0) < 0) {
+			if (errno == ESRCH) {
+				// No such process
+				status = PROCAPI_NOPID;
+			} else if (errno == EPERM) {
+				// Operation not permitted
+				status = PROCAPI_PERM;
+			} else {
+				status = PROCAPI_UNSPECIFIED;
+			}
+			dprintf( D_FULLDEBUG,
+				"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
+				pid, errno, strerror(errno) );
+
+			return PROCAPI_FAILURE;
 		}
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
-			pid, errno, strerror(errno) );
-
-        return PROCAPI_FAILURE;
-    }
-
-    kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
-	if (kp == NULL) {
-		EXCEPT("ProcAPI: getProcInfo() Out of memory!");
-	}
-
-    if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-		if (errno == ESRCH) {
-			// No such process
+		if ( bufSize == 0 ) {
 			status = PROCAPI_NOPID;
-		} else if (errno == EPERM) {
-			// Operation not permitted
-			status = PROCAPI_PERM;
-		} else {
-			status = PROCAPI_UNSPECIFIED;
+			dprintf( D_FULLDEBUG,
+				"ProcAPI: sysctl() on pid %d returned no data\n",
+				pid );
+			return PROCAPI_FAILURE;
 		}
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
-			pid, errno, strerror(errno) );
-
-		free(kp);
-
-        return PROCAPI_FAILURE;
-    }
-	if ( bufSize == 0 ) {
-		status = PROCAPI_NOPID;
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: sysctl() (pass 2) on pid %d returned no data\n",
-			pid );
-		free(kp);
-		return PROCAPI_FAILURE;
 	}
 
 	// figure out the image,rss size and the sys/usr time for the process.
@@ -1187,18 +966,103 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.sys_time_2 = ru.ri_system_time % 1000000000;
 
 	// add in the rest
-	procRaw.creation_time = kp->kp_proc.p_starttime.tv_sec;
 	procRaw.pid = pid;
-	procRaw.ppid = kp->kp_eproc.e_ppid;
-	procRaw.owner = kp->kp_eproc.e_pcred.p_ruid; 
+	if ( call_sysctl ) {
+		procRaw.creation_time = kp.kp_proc.p_starttime.tv_sec;
+		procRaw.ppid = kp.kp_eproc.e_ppid;
+		procRaw.owner = kp.kp_eproc.e_pcred.p_ruid;
+	}
 
 	// We don't know the page faults
 	procRaw.majfault = 0;
 	procRaw.minfault = 0;
-	
-	free(kp);
 
 	// success
+	return PROCAPI_SUCCESS;
+}
+
+int
+ProcAPI::buildProcInfoList()
+{
+	int mib[4];
+	struct kinfo_proc *kp = NULL;
+	size_t bufSize = 0;
+	int nentries;
+	int rc = -1;
+	int ntries = 5;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_ALL;
+	mib[3] = 0;
+
+	do {
+		ntries--;
+		//
+		// Returns back the size of the kinfo_proc struct
+		//
+		if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+			dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
+					strerror(errno));
+			free( kp );
+			return PROCAPI_FAILURE;
+		}
+
+		ASSERT( bufSize );
+		kp = (struct kinfo_proc *)realloc(kp, bufSize);
+
+		rc = sysctl(mib, 4, kp, &bufSize, NULL, 0);
+	} while ( ntries >= 0 && ( ( rc == -1 && errno == ENOMEM ) || ( rc == 0 && bufSize == 0 ) ) );
+
+	if ( rc == -1 || bufSize == 0 ) {
+		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
+				strerror(errno));
+		free(kp);
+		return PROCAPI_FAILURE;
+	}
+
+	nentries = bufSize / sizeof(struct kinfo_proc);
+
+	piPTR current;
+	piPTR temp;
+	int status;
+
+		// make a header node for ease of list construction:
+	deallocAllProcInfos();
+	allProcInfos = new procInfo;
+	current = allProcInfos;
+	current->next = NULL;
+
+	temp = NULL;
+	for(int i = 0; i < nentries; i++) {
+			// Pid 0 is not a real process. It represents the kernel.
+		if ( kp[i].kp_proc.p_pid == 0 ) {
+			continue;
+		}
+		initpi(temp);
+		temp->pid = kp[i].kp_proc.p_pid;
+		temp->ppid = kp[i].kp_eproc.e_ppid;
+		temp->owner = kp[i].kp_eproc.e_pcred.p_ruid;
+		temp->creation_time = kp[i].kp_proc.p_starttime.tv_sec;
+		temp->birthday = kp[i].kp_proc.p_starttime.tv_sec;
+		if( getProcInfo_impl(temp->pid, temp, status) == PROCAPI_SUCCESS) {
+			current->next = temp;
+			current = temp;
+			temp = NULL;
+		}
+		else if (temp != NULL) {
+			delete temp;
+			temp = NULL;
+		}
+	}
+
+		// we're done; remove header node.
+	temp = allProcInfos;
+	allProcInfos = allProcInfos->next;
+	delete temp;
+
+	free(kp);
+
 	return PROCAPI_SUCCESS;
 }
 
@@ -1975,23 +1839,11 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 procInfo*
 ProcAPI::getProcInfoList()
 {
-#if !defined(WIN32)
-	if (buildPidList() != PROCAPI_SUCCESS) {
-		dprintf(D_ALWAYS, "ProcAPI: error retrieving list of processes\n");
-		deallocAllProcInfos();
-		return NULL;
-	}
-#endif
-
 	if (buildProcInfoList() != PROCAPI_SUCCESS) {
 		dprintf(D_ALWAYS,
 		        "ProcAPI: error retrieving list of process data\n");
 		deallocAllProcInfos();
 	}
-
-#if !defined(WIN32)
-	deallocPidList();
-#endif
 
 	procInfo* ret = allProcInfos;
 	allProcInfos = NULL;
@@ -2045,27 +1897,6 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
 
 #ifndef WIN32
 
-/* This function returns the next pid in the pidlist.  That pid is then 
-   removed from the pidList.  A -1 is returned when there are no more pids.
- */
-
-pid_t
-ProcAPI::getAndRemNextPid () {
-
-	pidlistPTR temp;
-	pid_t tpid;
-
-	if( pidList == NULL ) {
-		return -1;
-	}
-	temp = pidList;
-	tpid = pidList->pid;
-	pidList = pidList->next;
-	delete temp;
-
-	return tpid;
-}
-
 /* Wonderfully enough, this works for all OS'es except OS X and HPUX. 
    OS X has it's own version, HP-UX never calls it.
    This function opens
@@ -2079,139 +1910,44 @@ int
 ProcAPI::buildPidList() {
 
 	condor_DIR *dirp;
-	pidlistPTR current;
-	pidlistPTR temp;
 
-		// make a header node for the pidList:
-	deallocPidList();
-	pidList = new pidlist;
-
-	current = pidList;
+	pidList.clear();
 
 	dirp = condor_opendir("/proc");
 	if( dirp != NULL ) {
+		int total_entries = 0;
+		int pid_entries = 0;
 			// NOTE: this will use readdir64() when available to avoid
 			// skipping over directories with an inode value that
 			// doesn't happen to fit in the 32-bit ino_t
 		condor_dirent *direntp;
+		errno = 0;
 		while( (direntp = condor_readdir(dirp)) != NULL ) {
+			total_entries++;
 			if( isdigit(direntp->d_name[0]) ) {   // check for first char digit
-				temp = new pidlist;
-				temp->pid = (pid_t) atol ( direntp->d_name );
-				temp->next = NULL;
-				current->next = temp;
-				current = temp;
+				pid_entries++;
+				pidList.push_back((pid_t)atol(direntp->d_name));
 			}
+		}
+		if( errno != 0 ) {
+			dprintf(D_ALWAYS, "ProcAPI: readdir() failed: errno %d (%s)\n",
+			        errno, strerror(errno));
 		}
 		condor_closedir( dirp );
     
-		temp = pidList;
-		pidList = pidList->next;
-		delete temp;           // remove header node.
-
+		dprintf(D_FULLDEBUG,"ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 		return PROCAPI_SUCCESS;
 	} 
 
-	delete pidList;        // remove header node.
-	pidList = NULL;
-
 	return PROCAPI_FAILURE;
 }
-#endif
-/* 
-   The darwin/OS X version of this code - it should work just fine on 
-   FreeBSD as well, but FreeBSD does have a /proc that it could look at
- */
-
-#ifdef Darwin
-int
-ProcAPI::buildPidList() {
-
-	pidlistPTR current;
-	pidlistPTR temp;
-
-		// make a header node for the pidList:
-	deallocPidList();
-	pidList = new pidlist;
-
-	current = pidList;
-
-	int mib[4];
-	struct kinfo_proc *kp = NULL;
-	size_t bufSize = 0;
-	int nentries;
-	int rc = -1;
-	int ntries = 5;
-
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_PROC;
-	mib[2] = KERN_PROC_ALL;
-	mib[3] = 0;
-
-	do {
-		ntries--;
-		//
-		// Returns back the size of the kinfo_proc struct
-		//
-		if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
-			dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
-					strerror(errno));
-			deallocPidList();
-			free( kp );
-			return PROCAPI_FAILURE;
-		}
-
-		ASSERT( bufSize );
-		kp = (struct kinfo_proc *)realloc(kp, bufSize);
-
-		rc = sysctl(mib, 4, kp, &bufSize, NULL, 0);
-	} while ( ntries >= 0 && ( ( rc == -1 && errno == ENOMEM ) || ( rc == 0 && bufSize == 0 ) ) );
-
-	if ( rc == -1 || bufSize == 0 ) {
-		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
-				strerror(errno));
-		free(kp);
-		deallocPidList();
-		return PROCAPI_FAILURE;
-	}
-
-	nentries = bufSize / sizeof(struct kinfo_proc);
-
-	for(int i = 0; i < nentries; i++) {
-			// Pid 0 is not a real process. It represents the kernel.
-		if ( kp[i].kp_proc.p_pid == 0 ) {
-			continue;
-		}
-		temp = new pidlist;
-		temp->pid = (pid_t) kp[i].kp_proc.p_pid;
-		temp->next = NULL;
-		current->next = temp;
-		current = temp;
-	}
-    
-	temp = pidList;
-	pidList = pidList->next;
-	delete temp;           // remove header node.
-
-	free(kp);
-
-	return PROCAPI_SUCCESS;
-}
-
 #endif
 
 #if defined(CONDOR_FREEBSD)
 int
 ProcAPI::buildPidList() {
 
-	pidlistPTR current;
-	pidlistPTR temp;
-
-		// make a header node for the pidList:
-	deallocPidList();
-	pidList = new pidlist;
-
-	current = pidList;
+	pidList.clear();
 
 	int mib[4];
 	struct kinfo_proc *kp = NULL;
@@ -2227,7 +1963,6 @@ ProcAPI::buildPidList() {
 	if (sysctl(mib, 3, NULL, &bufSize, NULL, 0) < 0) {
 		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 				strerror(errno));
-		deallocPidList();
 		return PROCAPI_FAILURE;
 	}	
 
@@ -2242,50 +1977,47 @@ ProcAPI::buildPidList() {
 		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 				strerror(errno));
 		free(kp);
-		deallocPidList();
 		return PROCAPI_FAILURE;
 	}
 
 	nentries = bufSize / sizeof(struct kinfo_proc);
 
 	for(int i = 0; i < nentries; i++) {
-		temp = new pidlist;
 #if defined(CONDOR_FREEBSD4)
-		temp->pid = (pid_t) kp[i].kp_proc.p_pid;
+		pidList.push_back((pid_t) kp[i].kp_proc.p_pid);
 #else
-		temp->pid = kp[i].ki_pid;
+		pidList.push_back(kp[i].ki_pid);
 #endif
-		temp->next = NULL;
-		current->next = temp;
-		current = temp;
 	}
     
-	temp = pidList;
-	pidList = pidList->next;
-	delete temp;           // remove header node.
-
 	free(kp);
 
 	return PROCAPI_SUCCESS;
 }
 #endif
 
+#if !defined(WIN32) && !defined(DARWIN)
 int
 ProcAPI::buildProcInfoList() {
   
 	piPTR current;
 	piPTR temp;
-	pid_t thispid;
 	int status;
 
-		// make a header node for ease of list construction:
 	deallocAllProcInfos();
+
+	if (buildPidList() != PROCAPI_SUCCESS) {
+		dprintf(D_ALWAYS, "ProcAPI: error retrieving list of processes\n");
+		return PROCAPI_FAILURE;
+	}
+
+		// make a header node for ease of list construction:
 	allProcInfos = new procInfo;
 	current = allProcInfos;
 	current->next = NULL;
 
 	temp = NULL;
-	while( (thispid = getAndRemNextPid()) >= 0 ) {
+	for( pid_t thispid : pidList ) {
 		if( getProcInfo(thispid, temp, status) == PROCAPI_SUCCESS) {
 			current->next = temp;
 			current = temp;
@@ -2302,8 +2034,11 @@ ProcAPI::buildProcInfoList() {
 	allProcInfos = allProcInfos->next;
 	delete temp;
 
+	pidList.clear();
+
 	return PROCAPI_SUCCESS;
 }
+#endif
 
 /* sec_since_epoch() gets the number of seconds since the 
    epoch.  Used to find the age of a process.  It uses the 
@@ -2364,21 +2099,6 @@ ProcAPI::getFileOwner(int fd) {
 	return si.st_uid;
 }
 
-
- 
-void
-ProcAPI::deallocPidList() {
-	if( pidList != NULL ) {
-		pidlistPTR prev;
-		pidlistPTR temp = pidList;
-		while( temp != NULL ) {
-			prev = temp;
-			temp = temp->next;
-			delete prev;
-		}
-		pidList = NULL;
-	}
-}
 
 #endif // not defined WIN32
 

@@ -110,7 +110,7 @@ printClassAds(	const std::map< std::string, std::string > & instances,
 
 		// If these ever become evaluated ClassAds, we could stop tracking
 		// these and instead just make the attribute value 'size(...)'
-		annexAd.Assign( ("NumInstances" + attr).c_str(), i->second );
+		annexAd.Assign( ("NumInstances" + attr), i->second );
 		if( attr == "InPool" ) { continue; }
 
 		std::string expr;
@@ -120,7 +120,7 @@ printClassAds(	const std::map< std::string, std::string > & instances,
 			formatstr( expr, "%s, \"%s\"", expr.c_str(), instanceList[j].c_str() );
 		}
 		expr += " }";
-		annexAd.AssignExpr( (attr + "InstancesList").c_str(), expr.c_str() );
+		annexAd.AssignExpr( (attr + "InstancesList"), expr.c_str() );
 	}
 
 	std::string ncaFormat;
@@ -321,19 +321,19 @@ StatusReply::operator() () {
 				formatstr( iName, "Instance%d", count );
 
 				std::string instanceID;
-				scratchpad->LookupString( (iName + ".instanceID").c_str(), instanceID );
+				scratchpad->LookupString( (iName + ".instanceID"), instanceID );
 				if( instanceID.empty() ) { break; }
 				++count;
 
 				// fprintf( stderr, "Found instance ID %s.\n", instanceID.c_str() );
 
 				std::string status;
-				scratchpad->LookupString( (iName + ".status").c_str(), status );
+				scratchpad->LookupString( (iName + ".status"), status );
 				ASSERT(! status.empty());
 				instances[ instanceID ] = status;
 
 				std::string annexName;
-				scratchpad->LookupString( (iName + ".annexName").c_str(), annexName );
+				scratchpad->LookupString( (iName + ".annexName"), annexName );
 				ASSERT(! annexName.empty() );
 				annexes[ instanceID ] = annexName;
 			} while( true );
@@ -370,7 +370,6 @@ StatusReply::operator() () {
 			QueryResult qr = collectors->query( q, cal, & errStack );
 			if (qr != Q_OK) {
 				fprintf( stderr, "Status check failed -- cannot contact collector\n");
-				
 			}
 			delete collectors;
 

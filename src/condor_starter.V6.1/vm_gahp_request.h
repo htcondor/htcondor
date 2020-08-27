@@ -64,17 +64,17 @@ class VMGahpRequest : public Service {
 		const char* getCommand() { return m_command.Value(); }
 		void setMode(reqmode m);
 		void setTimeout(int t);
-		int getTimeout();
+		int getTimeout() const;
 
 		void setNotificationTimerId(int tid);
-		int getNotificationTimerId();
+		int getNotificationTimerId() const;
 		int resetUserTimer();
 		bool isPendingTimeout();
 
 		void detachVMGahpServer();
 		VMGahpServer* getVMGahpServer();
 
-		int getReqId();
+		int getReqId() const;
 		Gahp_Args* getResult();
 		bool hasValidResult();
 		bool checkResult(MyString& errmsg);

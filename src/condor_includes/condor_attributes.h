@@ -51,9 +51,6 @@
 #define ATTR_APPEND_FILES  "AppendFiles"
 #define ATTR_DONT_APPEND "EraseOutputAndErrorOnRestart"
 #define ATTR_ARCH  "Arch"
-#define ATTR_AVAIL_BANDWIDTH_TO_SUBMIT_MACHINE  "AvailBandwidthToSubmitMachine"
-#define ATTR_AVAIL_BANDWIDTH_TO_LAST_CKPT_SERVER  "AvailBandwidthToLastCkptServer"
-#define ATTR_AVAIL_BANDWIDTH_TO_CKPT_SERVER  "AvailBandwidthToCkptServer"
 #define ATTR_AZURE_ADMIN_USERNAME  "AzureAdminUsername"
 #define ATTR_AZURE_ADMIN_KEY  "AzureAdminKey"
 #define ATTR_AZURE_AUTH_FILE  "AzureAuthFile"
@@ -64,9 +61,6 @@
 #define ATTR_AZURE_VM_ID  "AzureVmId"
 #define ATTR_BADPUT_CAUSED_BY_DRAINING  "BadputCausedByDraining"
 #define ATTR_BADPUT_CAUSED_BY_PREEMPTION  "BadputCausedByPreemption"
-#define ATTR_BANDWIDTH_TO_SUBMIT_MACHINE  "BandwidthToSubmitMachine"
-#define ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER  "BandwidthToLastCkptServer"
-#define ATTR_BANDWIDTH_TO_CKPT_SERVER  "BandwidthToCkptServer"
 #define ATTR_BATCH_QUEUE  "BatchQueue"
 #define ATTR_BOINC_AUTHENTICATOR_FILE "BoincAuthenticatorFile"
 #define ATTR_BUFFER_SIZE  "BufferSize"
@@ -79,7 +73,6 @@
 #define ATTR_CAN_HIBERNATE  "CanHibernate"
 #define ATTR_CAPABILITY  "Capability"
 #define ATTR_CE_REQUIREMENTS  "CERequirements"
-#define ATTR_CKPT_SERVER  "CkptServer"
 #define ATTR_CLAIM_STARTD  "ClaimStartd"
 #define ATTR_COD_CLAIMS  "CODClaims"
 #define ATTR_COLLECTOR_HOST  "CollectorHost"
@@ -172,6 +165,7 @@
 #define ATTR_DESTINATION  "Destination"
 #define ATTR_DISK  "Disk"
 #define ATTR_DISK_USAGE  "DiskUsage"
+#define ATTR_SCRATCH_DIR_FILE_COUNT "ScratchDirFileCount"
 #define ATTR_DOCKER_IMAGE "DockerImage"
 #define ATTR_DOCKER_NETWORK_TYPE "DockerNetworkType"
 #define ATTR_DOCKER_VOLUMES "DockerVolumes"
@@ -277,6 +271,7 @@
 #define ATTR_HAS_SINGULARITY "HasSingularity"
 #define ATTR_HAS_TDP  "HasTDP"
 #define ATTR_HAS_TRANSFER_INPUT_REMAPS "HasTransferInputRemaps"
+#define ATTR_HAS_USER_NAMESPACES "HasUserNamespaces"
 #define ATTR_HAS_WIN_RUN_AS_OWNER  "HasWindowsRunAsOwner"
 #define ATTR_HAS_VM  "HasVM"
 #define ATTR_HELD_JOBS  "HeldJobs"
@@ -305,7 +300,7 @@
 #define ATTR_IS_WAKEABLE  "IsWakeAble"
 #define ATTR_INACTIVE  "Inactive"
 #define ATTR_JAR_FILES  "JarFiles"
-#define ATTR_JAVA_MFLOPS  "JavaMFlops"
+#define ATTR_JAVA_SPECIFICATION_VERSION  "JavaSpecificationVersion"
 #define ATTR_JAVA_VENDOR  "JavaVendor"
 #define ATTR_JAVA_VERSION  "JavaVersion"
 #define ATTR_JOB_ACTION  "JobAction"
@@ -368,10 +363,10 @@
 #define ATTR_JOB_RUNAS_OWNER  "RunAsOwner"
 #define ATTR_JOB_LOAD_USER_PROFILE  "LoadUserProfile"
 #define ATTR_JOB_LOCAL_CPU  "LocalCpu"
-#define ATTR_JOB_LOCAL_SYS_CPU  "LocalSysCpu"
-#define ATTR_JOB_LOCAL_USER_CPU  "LocalUserCpu"
 #define ATTR_JOB_MANAGED  "Managed"
 #define ATTR_JOB_MANAGED_MANAGER  "ManagedManager"
+#define ATTR_JOB_MANIFEST_DESIRED "ManifestDesired"
+#define ATTR_JOB_MANIFEST_DIR "ManifestDir"
 #define ATTR_JOB_MATCHED  "Matched"
 #define ATTR_JOB_NONESSENTIAL  "Nonessential"
 #define ATTR_JOB_NOOP  "IsNoopJob"
@@ -407,6 +402,7 @@
 #define ATTR_JOB_SET_NAME "SetMemberNames"
 #define ATTR_JOB_SUBMISSION  "Submission"
 #define ATTR_JOB_SUBMISSION_ID  "SubmissionId"
+#define ATTR_JOB_BATCH_ID "JobBatchId"
 #define ATTR_JOB_BATCH_NAME "JobBatchName"
 #define ATTR_JOB_START  "JobStart"
 #define ATTR_JOB_START_DATE  "JobStartDate"
@@ -432,6 +428,7 @@
 #define ATTR_JOB_VM_VNC  "JobVMVNCConsole"
 #define ATTR_JOB_VM_CPU_UTILIZATION  "JobVMCpuUtilization"
 #define ATTR_JOB_SEND_CREDENTIAL  "SendCredential"
+#define ATTR_OAUTH_SERVICES_NEEDED "OAuthServicesNeeded"
 #define ATTR_KEYBOARD_IDLE  "KeyboardIdle"
 #define ATTR_KEYSTORE_FILE  "KeystoreFile"
 #define ATTR_KEYSTORE_ALIAS  "KeystoreAlias"
@@ -442,7 +439,6 @@
 #define ATTR_KILL_SIG_TIMEOUT  "KillSigTimeout"
 #define ATTR_LAST_AVAIL_INTERVAL  "LastAvailInterval"
 #define ATTR_LAST_BENCHMARK  "LastBenchmark"
-#define ATTR_LAST_CKPT_SERVER  "LastCkptServer"
 #define ATTR_LAST_CKPT_TIME  "LastCkptTime"
 #define ATTR_LAST_PUBLIC_CLAIM_ID  "LastPublicClaimId"
 #define ATTR_LAST_PUBLIC_CLAIM_IDS  "LastPublicClaimIds"
@@ -479,6 +475,7 @@
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
 #define ATTR_PARENT_SLOT_ID "ParentSlotId"
+#define ATTR_DSLOT_ID "DSlotId"
 #define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_CURB_MATCHMAKING "CurbMatchmaking"
@@ -495,7 +492,11 @@
 #define ATTR_MY_CURRENT_TIME  "MyCurrentTime"
 #define ATTR_MY_TYPE  "MyType"
 #define ATTR_NAME  "Name"
-#define ATTR_NICE_USER  "NiceUser"
+#define ATTR_NICE_USER_deprecated  "NiceUser"
+#ifdef NO_DEPRECATE_NICE_USER
+#define ATTR_NICE_USER ATTR_NICE_USER_deprecated
+#endif
+
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
@@ -524,9 +525,6 @@
 #define ATTR_NUM_GLOBUS_SUBMITS  "NumGlobusSubmits"
 #define ATTR_NUM_MATCHES  "NumJobMatches"
 #define ATTR_LIMIT_RESULTS "LimitResults"
-#define ATTR_NUM_HOPS_TO_SUBMIT_MACHINE  "NumHopsToSubmitMachine"
-#define ATTR_NUM_HOPS_TO_LAST_CKPT_SERVER  "NumHopsToLastCkptServer"
-#define ATTR_NUM_HOPS_TO_CKPT_SERVER  "NumHopsToCkptServer"
 #define ATTR_NUM_JOB_STARTS  "NumJobStarts"
 #define ATTR_NUM_JOB_COMPLETIONS "NumJobCompletions"
 #define ATTR_NUM_JOB_RECONNECTS  "NumJobReconnects"
@@ -593,6 +591,7 @@
 #define ATTR_REMOVE_REASON  "RemoveReason"
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
+#define ATTR_CUDA_VERSION "CUDAVersion"
 #define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
@@ -773,9 +772,6 @@
 #define ATTR_WANT_REMOTE_IO  "WantRemoteIO"
 #define ATTR_WANT_SCHEDD_COMPLETION_VISA  "WantCompletionVisaFromSchedD"
 #define ATTR_WANT_STARTER_EXECUTION_VISA  "WantExecutionVisaFromStarter"
-#define ATTR_WANT_SUBMIT_NET_STATS  "WantSubmitNetStats"
-#define ATTR_WANT_LAST_CKPT_SERVER_NET_STATS  "WantLastCkptServerNetStats"
-#define ATTR_WANT_CKPT_SERVER_NET_STATS  "WantCkptServerNetStats"
 #define ATTR_WANT_AD_REVAULATE  "WantAdRevaluate"
 #define ATTR_WANT_DOCKER  "WantDocker"
 #define ATTR_COLLECTOR_IP_ADDR  "CollectorIpAddr"
@@ -787,7 +783,6 @@
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
-#define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
@@ -816,6 +811,11 @@
 #define ATTR_ENCRYPT_OUTPUT_FILES  "EncryptOutputFiles"
 #define ATTR_DONT_ENCRYPT_INPUT_FILES  "DontEncryptInputFiles"
 #define ATTR_DONT_ENCRYPT_OUTPUT_FILES  "DontEncryptOutputFiles"
+
+#define ATTR_CONDOR_VERSION "CondorVersion"
+#define ATTR_CHECKPOINT_FILES "TransferCheckpoint"
+#define ATTR_PRESERVE_RELATIVE_PATHS "PreserveRelativePaths"
+
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"
 #define ATTR_SERVER_TIME  "ServerTime"
 #define ATTR_SHADOW_BIRTHDATE  "ShadowBday"
@@ -870,6 +870,7 @@
 #define ATTR_SEC_SID  "Sid"
 #define ATTR_SEC_SUBSYSTEM  "Subsystem"
 #define ATTR_SEC_REMOTE_VERSION  "RemoteVersion"
+#define ATTR_SEC_SHORT_VERSION  "ShortVersion"
 #define ATTR_SEC_SERVER_ENDPOINT  "ServerEndpoint"
 #define ATTR_SEC_SERVER_COMMAND_SOCK  "ServerCommandSock"
 #define ATTR_SEC_SERVER_PID  "ServerPid"
@@ -905,10 +906,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_UPDATESTATS_SEQUENCED  "UpdatesSequenced"
 #define ATTR_UPDATESTATS_LOST  "UpdatesLost"
 #define ATTR_UPDATESTATS_HISTORY  "UpdatesHistory"
-
-#define ATTR_CHECKPOINT_PLATFORM  "CheckpointPlatform"
-#define ATTR_LAST_CHECKPOINT_PLATFORM  "LastCheckpointPlatform"
-#define ATTR_IS_VALID_CHECKPOINT_PLATFORM  "IsValidCheckpointPlatform"
 
 #define ATTR_CHECKPOINT_EXIT_CODE  "SuccessCheckpointExitCode"
 #define ATTR_CHECKPOINT_EXIT_SIGNAL  "SuccessCheckpointExitSignal"
@@ -1002,6 +999,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_AWS_REGION "AWSRegion"
 
 //************* End of changes for EC2 Jobs *****************//
+
+// Provisioner jobs
+#define ATTR_PROVISIONER_STATE "ProvisionerState"
+#define ATTR_PROVISIONER_RESOURCE_ID "ProvisionerResourceID"
 
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
@@ -1099,6 +1100,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 #define ATTR_HASH_NAME  "HashName"
 #define ATTR_AUTHENTICATED_IDENTITY  "AuthenticatedIdentity"
+#define ATTR_AUTHENTICATION_METHOD  "AuthenticationMethod"
 #define ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME  "DelegateJobGSICredentialsLifetime"
 
 #define ATTR_DOTNET_VERSIONS  "DotNetVersions"
@@ -1140,6 +1142,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_START_EXPR  "StartExpr"
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
+#define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
 
 #define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 
@@ -1169,6 +1172,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SIZE "Size"
 #define ATTR_CHECKSUM "Checksum"
 #define ATTR_CHECKSUM_TYPE "ChecksumType"
+
+// Attributes related to dataflow jobs
+#define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
+#define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

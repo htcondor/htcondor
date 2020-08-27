@@ -53,7 +53,7 @@ automounter is configured to mount a volume at mount point
 ``/home/johndoe`` is accessed. Adding the following line to the submit
 description file solves the problem.
 
-::
+.. code-block:: condor-submit
 
       initialdir = /home/johndoe
 
@@ -67,7 +67,7 @@ visible on the submit machine. Since the flush operation can require
 multiple round trips to the NFS server, it is expensive. Therefore, a
 job may disable the flushing by setting
 
-::
+.. code-block:: condor-submit
 
       +IwdFlushNFSCache = False
 
@@ -93,9 +93,9 @@ root access, or has decided not to run the daemons as root. That is
 unfortunate, since HTCondor is designed to be run as root. To see if
 HTCondor is running as root on a specific machine, use the command
 
-::
+.. code-block:: console
 
-      condor_status -master -l <machine-name>
+      $ condor_status -master -l <machine-name>
 
 where <machine-name> is the name of the specified machine. This command
 displays the full condor_master ClassAd; if the attribute ``RealUid``
@@ -166,7 +166,7 @@ beginning.
 
 As a special case, a submit description file setting of
 
-::
+.. code-block:: condor-submit
 
      job_lease_duration = 0
 
@@ -197,7 +197,7 @@ executable compiled for a 32-bit Intel processor running Windows Vista,
 submitted from an Intel architecture running Linux would add the
 ``requirement``
 
-::
+.. code-block:: condor-submit
 
       requirements = Arch == "INTEL" && OpSys == "WINDOWS"
 
@@ -218,7 +218,7 @@ after an available machine is chosen.
 A special-purpose Machine Ad substitution macro can be used in string
 attributes in the submit description file. The macro has the form
 
-::
+.. code-block:: text
 
       $$(MachineAdAttribute)
 
@@ -235,14 +235,14 @@ for running the job is chosen. These executables must therefore be named
 based on the machine attributes that describe a platform. The
 executables named
 
-::
+.. code-block:: text
 
       povray.LINUX.INTEL
       povray.LINUX.X86_64
 
 will work correctly for the macro
 
-::
+.. code-block:: text
 
       povray.$$(OpSys).$$(Arch)
 
@@ -250,31 +250,27 @@ The executables or links to executables with this name are placed into
 the initial working directory so that they may be found by HTCondor. A
 submit description file that queues three jobs for this example:
 
-::
+.. code-block:: condor-submit
 
-      ####################
-      #
       # Example of heterogeneous submission
-      #
-      ####################
 
       universe     = vanilla
-      Executable   = povray.$$(OpSys).$$(Arch)
-      Log          = povray.log
-      Output       = povray.out.$(Process)
-      Error        = povray.err.$(Process)
+      executable   = povray.$$(OpSys).$$(Arch)
+      log          = povray.log
+      output       = povray.out.$(Process)
+      error        = povray.err.$(Process)
 
-      Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+      requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
                      (Arch == "X86_64" && OpSys =="LINUX")
 
-      Arguments    = +W1024 +H768 +Iimage1.pov
-      Queue
+      arguments    = +W1024 +H768 +Iimage1.pov
+      queue
 
-      Arguments    = +W1024 +H768 +Iimage2.pov
-      Queue
+      arguments    = +W1024 +H768 +Iimage2.pov
+      queue
 
-      Arguments    = +W1024 +H768 +Iimage3.pov
-      Queue
+      arguments    = +W1024 +H768 +Iimage3.pov
+      queue
 
 These jobs are submitted to the vanilla universe to assure that once a
 job is started on a specific platform, it will finish running on that
@@ -299,13 +295,9 @@ Vanilla Universe Example for Execution on Differing Operating Systems
 The addition of several related OpSys attributes assists in selection of
 specific operating systems and versions in heterogeneous pools.
 
-::
+.. code-block:: condor-submit
 
-      ####################
-      #
       # Example targeting only RedHat platforms
-      #
-      ####################
 
       universe     = vanilla
       Executable   = /bin/date
@@ -317,41 +309,33 @@ specific operating systems and versions in heterogeneous pools.
 
       Queue
 
-::
+.. code-block:: condor-submit
 
-      ####################
-      #
       # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
-      #
-      ####################
 
       universe     = vanilla
-      Executable   = /bin/date
-      Log          = distro.log
-      Output       = distro.out
-      Error        = distro.err
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
 
-      Requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6)
+      requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6 )
 
-      Queue
+      queue
 
 Here is a more compact way to specify a RedHat 6 platform.
 
-::
+.. code-block:: condor-submit
 
-      ####################
-      #
       # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
-      #
-      ####################
 
       universe     = vanilla
-      Executable   = /bin/date
-      Log          = distro.log
-      Output       = distro.out
-      Error        = distro.err
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
 
-      Requirements = ( OpSysAndVer == "RedHat6")
+      requirements = (OpSysAndVer == "RedHat6")
 
-      Queue
+      queue
 

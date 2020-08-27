@@ -173,22 +173,22 @@ Options
 Examples
 --------
 
-::
+.. code-block:: console
 
-    % condor_ssh_to_job 32.0 
+    $ condor_ssh_to_job 32.0 
     Welcome to slot2@tonic.cs.wisc.edu! 
     Your condor job is running with pid(s) 65881. 
-    % gdb -p 65881 
+    $ gdb -p 65881
     (gdb) where 
     ... 
-    % logout 
+    $ logout
     Connection to condor-job.tonic.cs.wisc.edu closed.
 
 To upload or download files interactively with *sftp*:
 
-::
+.. code-block:: console
 
-    % condor_ssh_to_job -ssh sftp 32.0 
+    $ condor_ssh_to_job -ssh sftp 32.0 
     Connecting to condor-job.tonic.cs.wisc.edu... 
     sftp> ls 
     ... 
@@ -200,9 +200,9 @@ not necessary to insert the correct remote host name, or even a valid
 one, because the connection to the job is created automatically.
 Therefore, the placeholder string "remote" is perfectly fine.
 
-::
+.. code-block:: console
 
-    % condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
+    $ condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
 
 This example uses *condor_ssh_to_job* to accomplish the task of
 running *rsync* to synchronize a local file with a remote file in the
@@ -210,16 +210,16 @@ job's working directory. Job id 32.0 is used in place of a host name in
 this example. This causes *rsync* to insert the expected job id in the
 arguments to *condor_ssh_to_job*.
 
-::
+.. code-block:: console
 
-    % rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
+    $ rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
 
 Note that *condor_ssh_to_job* was added to HTCondor in version 7.3.
 If one uses *condor_ssh_to_job* to connect to a job on an execute
 machine running a version of HTCondor older than the 7.3 series, the
 command will fail with the error message
 
-::
+.. code-block:: text
 
     Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter
 
@@ -230,16 +230,3 @@ Exit Status
 fails to set up an ssh session. If it succeeds, it will exit with the
 status value of the remote command or shell.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      
