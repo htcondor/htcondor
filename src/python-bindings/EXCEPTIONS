@@ -8,7 +8,6 @@ Exception
         |- htcondor.HTCondorValueError      ->  ValueError, RuntimeError
         |- htcondor.HTCondorTypeError       ->  TypeError, RuntimeError, ValueError
         |- htcondor.HTCondorAssertionError  ->  RuntimeError
-        |- htcondor.HTCondorNotImplementedError  ->  NotImplementedError
 
 Exception
     |- classad.ClassAdException

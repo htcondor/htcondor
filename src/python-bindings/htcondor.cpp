@@ -19,7 +19,6 @@ PyObject * PyExc_HTCondorReplyError = NULL;
 PyObject * PyExc_HTCondorValueError = NULL;
 PyObject * PyExc_HTCondorTypeError = NULL;
 PyObject * PyExc_HTCondorAssertionError = NULL;
-PyObject * PyExc_HTCondorNotImplementedError = NULL;
 
 BOOST_PYTHON_MODULE(htcondor)
 {
@@ -62,7 +61,8 @@ BOOST_PYTHON_MODULE(htcondor)
         PyExc_HTCondorException,
         PyExc_ValueError,
         PyExc_NotImplementedError // is a subclass of RuntimeError, so
-        // we can't mention RuntimeError explicitly.
+        // we can't mention RuntimeError explicitly (Python will throw
+        // an exception we don't catch).
         );
 
     PyExc_HTCondorInternalError = CreateExceptionInModule(
@@ -90,7 +90,4 @@ BOOST_PYTHON_MODULE(htcondor)
     PyExc_HTCondorAssertionError = CreateExceptionInModule(
         "htcondor.HTCondorAssertionError", "HTCondorAssertionError",
         PyExc_HTCondorException, PyExc_RuntimeError );
-    PyExc_HTCondorNotImplementedError = CreateExceptionInModule(
-        "htcondor.HTCondorNotImplementedError", "HTCondorNotImplementedError",
-        PyExc_HTCondorException, PyExc_NotImplementedError );
 }

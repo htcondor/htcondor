@@ -292,7 +292,7 @@ struct Collector {
 
         if (command == UPDATE_STARTD_AD_WITH_ACK)
         {
-            THROW_EX(HTCondorNotImplementedError, "Startd-with-ack protocol is not implemented at this time.");
+            THROW_EX(NotImplementedError, "Startd-with-ack protocol is not implemented at this time.");
         }
 
         int list_len = py_len(ads);

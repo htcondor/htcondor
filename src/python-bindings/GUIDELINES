@@ -1,12 +1,13 @@
 The first time we did this, we got all of the exceptions wrong.  Here's a
 few guidelines to help avoid that in the future.
 
-* Never throw a stock Python exception.  (Three exceptions: (1) if the
+* Never throw a stock Python exception.  (Four exceptions: (1) if the
   Python spec requires you do (e.g.: when implementing an iterator,
   throw StopIteration, when implementing a dictionary, throw KeyError);
   (2) if a malloc() or new() fails, throw MemoryError; (3) if you're
   type-checking a python object and it's the wrong type (e.g., not an
-  iterator), throw TypeError.)
+  iterator), throw TypeError; and (4) you may throw NotImplementedError
+  if we really haven't implemented something.)
 * Never throw an HTCondor* exception from a function in the ClassAd
   module.  We may find it necessary to throw a ClassAd* exception from
   an HTCondor module (e.g., you passed in an invalid constraint).
