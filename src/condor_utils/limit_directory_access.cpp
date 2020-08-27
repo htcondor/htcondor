@@ -25,6 +25,7 @@
 #include "basename.h"
 #include "condor_getcwd.h"
 #include "directory_util.h"
+#include "limit_directory_access.h"
 
 
 bool allow_shadow_access(const char *path, bool init, const char *job_ad_whitelist, const char *spool_dir)
