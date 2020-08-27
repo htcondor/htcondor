@@ -18,7 +18,6 @@ PyObject * PyExc_HTCondorLocateError = NULL;
 PyObject * PyExc_HTCondorReplyError = NULL;
 PyObject * PyExc_HTCondorValueError = NULL;
 PyObject * PyExc_HTCondorTypeError = NULL;
-PyObject * PyExc_HTCondorAssertionError = NULL;
 
 BOOST_PYTHON_MODULE(htcondor)
 {
@@ -87,7 +86,4 @@ BOOST_PYTHON_MODULE(htcondor)
         "htcondor.HTCondorTypeError", "HTCondorTypeError",
         PyExc_HTCondorException, PyExc_TypeError, PyExc_RuntimeError,
         PyExc_ValueError );
-    PyExc_HTCondorAssertionError = CreateExceptionInModule(
-        "htcondor.HTCondorAssertionError", "HTCondorAssertionError",
-        PyExc_HTCondorException, PyExc_RuntimeError );
 }

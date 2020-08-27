@@ -10,6 +10,5 @@ extern PyObject * PyExc_HTCondorLocateError;
 extern PyObject * PyExc_HTCondorReplyError;
 extern PyObject * PyExc_HTCondorValueError;
 extern PyObject * PyExc_HTCondorTypeError;
-extern PyObject * PyExc_HTCondorAssertionError;
 
 #endif /* _PYTHON_BINDINGS_HTCONDOR_H */

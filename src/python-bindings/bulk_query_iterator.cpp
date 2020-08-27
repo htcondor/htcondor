@@ -147,7 +147,7 @@ public:
             return queryit;
         }
         if (!m_count) {THROW_EX(StopIteration, "All ads are processed");}
-        THROW_EX(HTCondorAssertionError, "Logic error in poll implementation.");
+        THROW_EX(HTCondorInternalError, "Logic error in poll implementation.");
         return queryit;
     }
 
