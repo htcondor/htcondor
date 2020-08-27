@@ -22,7 +22,7 @@ Exception
 
 * htcondor.HTCondorException
 
-    The parent class of all exceptions thrown by the HTCondor module, with
+    The parent class of all exceptions thrown by the htcondor module, with
 four exceptions (see GUIDELINES).  Never throw this exception; it is for the
 convenience of our users, not ourselves.
 
@@ -86,7 +86,7 @@ a TypeError."
 
 * classad.ClassAdException
 
-    The parent class of all exceptions thrown by the HTCondor module, with
+    The parent class of all exceptions thrown by the classad module, with
 four exceptions (see GUIDELINES).  Never throw this exception; it is for the
 convenience of our users, not ourselves.
 
