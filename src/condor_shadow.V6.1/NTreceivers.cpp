@@ -1260,8 +1260,15 @@ case CONDOR_getfile:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		
-		errno = 0;
-		fd = safe_open_wrapper_follow( path, O_RDONLY | _O_BINARY );
+		if (read_access(path)) {
+			errno = 0;
+			fd = safe_open_wrapper_follow(path, O_RDONLY | _O_BINARY);
+		}
+		else {
+			errno = EACCES;
+			fd = -1;
+		}
+
 		if(fd >= 0) {
 			struct stat info;
 			int rc = stat(path, &info);
@@ -1311,8 +1318,14 @@ case CONDOR_putfile:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		
-		errno = 0;
-		fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
+		if (write_access(path)) {
+			errno = 0;
+			fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
+		}
+		else {
+			errno = EACCES;
+			fd = -1;
+		}
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		
