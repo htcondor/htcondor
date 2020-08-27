@@ -19,6 +19,7 @@
 #include "condor_attributes.h"
 #include "command_strings.h"
 #include "daemon.h"
+#include "condor_claimid_parser.h"
 
 #include "old_boost.h"
 
@@ -173,7 +174,8 @@ public:
             }
             if (last_iteration) {
                 if (done()) {
-                    return Token(m_token);                                                                                              } else {
+                    return Token(m_token);
+                } else {
                     THROW_EX(RuntimeError, "Timed out waiting for token approval");
                 }
             }
@@ -386,6 +388,27 @@ bool SecManWrapper::applyThreadLocalConfigOverrides(ConfigOverrides & old)
         if (man) { man->m_config_overrides.apply(&old); return true; }
         return false;
 }
+
+void SecManWrapper::setFamilySession(const std::string & sess)
+{
+    if ( ! m_key_allocated) return;
+
+    SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+    if (man) { 
+        ClaimIdParser claimid(sess.c_str());
+        bool rc = man->m_secman.CreateNonNegotiatedSecuritySession(
+                DAEMON,
+                claimid.secSessionId(),
+                claimid.secSessionKey(),
+                claimid.secSessionInfo(),
+                "FAMILY",
+                "condor@family",
+                NULL,
+                0,
+                nullptr);
+    }
+}
+
 
 const char *
 SecManWrapper::getThreadLocalToken()

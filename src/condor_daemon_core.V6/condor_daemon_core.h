@@ -194,6 +194,7 @@ const int DCJOBOPT_NEVER_USE_SHARED_PORT   = (1<<3);
 const int DCJOBOPT_NO_UDP           = (1<<4);
 const int DCJOBOPT_NO_CONDOR_ENV_INHERIT = (1<<5);   // do not pass CONDOR_INHERIT to the child
 const int DCJOBOPT_USE_SYSTEMD_INET_SOCKET = (1<<6);	     // Pass the reli sock from systemd as the command socket.
+const int DCJOBOPT_INHERIT_FAMILY_SESSION = (1<<7);
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
@@ -201,6 +202,7 @@ const int DCJOBOPT_USE_SYSTEMD_INET_SOCKET = (1<<6);	     // Pass the reli sock 
 #define HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(mask) ((mask)&DCJOBOPT_NEVER_USE_SHARED_PORT)
 #define HAS_DCJOBOPT_NO_UDP(mask) ((mask)&DCJOBOPT_NO_UDP)
 #define HAS_DCJOBOPT_CONDOR_ENV_INHERIT(mask)  (!((mask)&DCJOBOPT_NO_CONDOR_ENV_INHERIT))
+#define HAS_DCJOBOPT_INHERIT_FAMILY_SESSION(mask)  ((mask)&DCJOBOPT_INHERIT_FAMILY_SESSION)
 #define HAS_DCJOBOPT_USE_SYSTEMD_INET_SOCKET(mask) ((mask)&DCJOBOPT_USE_SYSTEMD_INET_SOCKET)
 
 // structure to be used as an argument to Create_Process for tracking process
