@@ -123,6 +123,11 @@ class Dagman {
 		// wenger 2008-02-27
 	MyString primaryDagFile;
 
+		// Working directory where condor_dagman is invoked from.
+		// We want to keep a record of this in case the working directory
+		// gets hijacked by daemoncore.
+	MyString workingDir;
+
 		// The list of all DAG files to be run by this invocation of
 		// condor_dagman.
 	StringList dagFiles;

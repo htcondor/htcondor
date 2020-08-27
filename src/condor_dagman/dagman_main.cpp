@@ -48,7 +48,7 @@ void ExitSuccess();
 //			char* host, int required );
 extern "C" bool is_piped_command(const char* filename);
 
-static char* lockFileName = NULL;
+static std::string lockFileName;
 
 static Dagman dagman;
 
@@ -596,7 +596,7 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 	}
 	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
 	dagman.PublishStats();
-	dagmanUtils.tolerant_unlink( lockFileName ); 
+	dagmanUtils.tolerant_unlink( lockFileName.c_str() ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit( exitVal );
@@ -620,7 +620,7 @@ void ExitSuccess() {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	dagman.dag->ReportMetrics( EXIT_OKAY );
 	dagman.PublishStats();
-	dagmanUtils.tolerant_unlink( lockFileName ); 
+	dagmanUtils.tolerant_unlink( lockFileName.c_str() ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
 }
@@ -644,6 +644,9 @@ void main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
 
+	MyString tmpcwd;
+	condor_getcwd( tmpcwd );
+
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
@@ -660,6 +663,12 @@ void main_init (int argc, char ** const argv) {
 								  main_shutdown_remove,
 								 "main_shutdown_remove");
 
+	// Reclaim the working directory
+	if ( chdir( dagman.workingDir.Value() ) != 0 ) {
+		debug_printf( DEBUG_NORMAL, "WARNING: Failed to change working "
+			"directory to %s\n", dagman.workingDir.Value() );
+	}
+
 /****** FOR TESTING *******
 	daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
 								  main_testing_stub,
@@ -667,16 +676,18 @@ void main_init (int argc, char ** const argv) {
 ****** FOR TESTING ********/
 	debug_progname = condor_basename(argv[0]);
 
-		// condor_submit_dag version from .condor.sub
+		// Version of this condor_dagman binary.
+	CondorVersionInfo dagmanVersion;
+
+		// Version of this condor_submit_dag binary.
+		//.Defaults to same version as condor_dagman, updated by input args
 	bool allowVerMismatch = false;
-	const char *csdVersion = "undefined";
+	const char *csdVersion = dagmanVersion.get_version_string();
 
 	int i;
 	for (i = 0 ; i < argc ; i++) {
 		debug_printf( DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i] );
 	}
-
-	if (argc < 2) Usage();  //  Make sure an input file was specified
 
 	DagmanMetrics::SetStartTime();
 
@@ -716,7 +727,11 @@ void main_init (int argc, char ** const argv) {
 	bool alwaysRunPostSet = false;
 
 	for (i = 1; i < argc; i++) {
-		if( !strcasecmp( "-Debug", argv[i] ) ) {
+		// If argument is not a flag/option, assume it's a dag filename
+		if( argv[i][0] != '-') {
+			dagman.dagFiles.append( argv[i] );
+		}
+		else if( !strcasecmp( "-Debug", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
 				debug_printf( DEBUG_SILENT, "No debug level specified\n" );
@@ -732,7 +747,7 @@ void main_init (int argc, char ** const argv) {
 			lockFileName = argv[i];
 		} else if( !strcasecmp( "-Help", argv[i] ) ) {
 			Usage();
-		} else if (!strcasecmp( "-Dag", argv[i] ) ) {
+		} else if ( !strcasecmp( "-Dag", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
 				debug_printf( DEBUG_SILENT, "No DAG specified\n" );
@@ -908,6 +923,12 @@ void main_init (int argc, char ** const argv) {
 		}
 	}
 
+	// We expect at the very least to have a dag filename specified
+	// If not, show the Usage details and exit now.
+	if( dagman.dagFiles.number() == 0 ) {
+		Usage();
+	}
+
 	dagman.dagFiles.rewind();
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
@@ -938,9 +959,6 @@ void main_init (int argc, char ** const argv) {
 
 		// Version of the condor_submit_dag that created our submit file.
 	CondorVersionInfo submitFileVersion( csdVersion );
-
-		// Version of this condor_dagman binary.
-	CondorVersionInfo dagmanVersion;
 
 		// Just generate this message fragment in one place.
 	MyString versionMsg;
@@ -992,14 +1010,20 @@ void main_init (int argc, char ** const argv) {
 						versionMsg.Value(), CondorVersion() );
 		}
 	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Set a few default values for environment variables and arguments that
+	// might not have been provided.
+
+		// If lockFileName not provided in arguments, set a default
+	if (lockFileName == NULL) {
+		lockFileName = std::string(dagman.primaryDagFile.Value()) + ".lock";
+	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	if( dagman.primaryDagFile == "" ) {
 		debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
-		Usage();
-	}
-	if (lockFileName == NULL) {
-		debug_printf( DEBUG_SILENT, "No DAG lock file was specified\n" );
 		Usage();
 	}
 	if( dagman.maxJobs < 0 ) {
@@ -1087,7 +1111,7 @@ void main_init (int argc, char ** const argv) {
 	// ...done checking arguments.
 	//
 	debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
-				   lockFileName );
+				   lockFileName.c_str() );
 	if ( dagman.dagFiles.number() == 1 ) {
 		debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
 				  	dagman.primaryDagFile.Value() );
@@ -1189,6 +1213,7 @@ void main_init (int argc, char ** const argv) {
 	// Parse the input files.  The parse() routine
 	// takes care of adding jobs and dependencies to the DagMan
 	//
+
 	dagman.mungeNodeNames = (dagman.dagFiles.number() > 1);
 	parseSetDoNameMunge( dagman.mungeNodeNames );
    	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
@@ -1221,7 +1246,7 @@ void main_init (int argc, char ** const argv) {
 			// introducing a syntax error, and then did condor_release).
 			// (wenger 2014-10-28)
 			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
-			dagmanUtils.tolerant_unlink( lockFileName );
+			dagmanUtils.tolerant_unlink( lockFileName.c_str() );
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
@@ -1286,7 +1311,7 @@ void main_init (int argc, char ** const argv) {
 			// rescue DAG) file introducing a syntax error, and then
 			// did condor_release). (wenger 2014-10-28)
 			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
-			dagmanUtils.tolerant_unlink( lockFileName );
+			dagmanUtils.tolerant_unlink( lockFileName.c_str() );
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
@@ -1353,18 +1378,18 @@ void main_init (int argc, char ** const argv) {
 	// I don't know what this comment means.  wenger 2013-09-11
   
 	{
-		bool recovery = access(lockFileName,  F_OK) == 0;
+		bool recovery = access(lockFileName.c_str(),  F_OK) == 0;
 	  
 		if (recovery) {
 			debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
-						   lockFileName);
+						   lockFileName.c_str());
 			if (dagman.abortDuplicates) {
-				if (util_check_lock_file(lockFileName) == 1) {
+				if (util_check_lock_file(lockFileName.c_str()) == 1) {
 					debug_printf( DEBUG_QUIET, "Aborting because it "
 							"looks like another instance of DAGMan is "
 							"currently running on this DAG; if that is "
 							"not the case, delete the lock file (%s) "
-							"and re-submit the DAG.\n", lockFileName );
+							"and re-submit the DAG.\n", lockFileName.c_str() );
 					dagman.dag->GetJobstateLog().
 								WriteDagmanFinished( EXIT_RESTART );
 					dagman.CleanUp();
@@ -1386,7 +1411,7 @@ void main_init (int argc, char ** const argv) {
 			// If this DAGMan continues, it should overwrite the lock
 			// file if it exists.
 			//
-		util_create_lock_file(lockFileName, dagman.abortDuplicates);
+		util_create_lock_file(lockFileName.c_str(), dagman.abortDuplicates);
 
 		debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
 		if( !dagman.dag->Bootstrap( recovery ) ) {
@@ -1836,7 +1861,7 @@ void condor_event_timer () {
 
 
 void
-main_pre_dc_init( int, char*[] )
+main_pre_dc_init (int argc, char ** const argv)
 {
 	DC_Skip_Auth_Init();
 	DC_Skip_Core_Init();
@@ -1860,6 +1885,48 @@ main_pre_dc_init( int, char*[] )
 					errno, strerror(errno) );
 		}
 	}
+
+		// If a log filename is still not set, assign it a default based on the 
+		// dag filename provided in command-line arguments
+	if ( !GetEnv( "_CONDOR_DAGMAN_LOG" ) ) {
+		MyString currentDir;
+		MyString dagFilename;
+		if ( condor_getcwd( currentDir ) ) {
+			MyString newLogFile(currentDir);
+			newLogFile += DIR_DELIM_STRING;
+			// Parse command-line arguments
+			int i;
+			for (i = 1; i < argc; i++) {
+				// If argument is not a flag/option, assume it's a dag filename
+				if( argv[i][0] != '-') {
+					dagFilename = argv[i];
+					break;
+				}
+				else if (!strcasecmp( "-Dag", argv[i] ) ) {
+					i++;
+					if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+						debug_printf( DEBUG_SILENT, "No DAG specified\n" );
+						Usage();
+					}
+					dagFilename = argv[i];
+				}
+				// Skip all other arguments
+				else {
+					// If the argument proceeding this is not a flag, skip it also
+					if( argc > ( i + 1 ) ) {
+						if( argv[i+1][0] != '-' ) {
+							i++;
+						}
+					}
+				}
+			}
+			newLogFile += dagFilename + ".dagman.out";
+			SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
+		} else {
+			debug_printf( DEBUG_NORMAL, "ERROR: unable to get cwd: %d, %s\n",
+					errno, strerror(errno) );
+		}
+	}
 }
 
 void
@@ -1871,7 +1938,11 @@ main_pre_command_sock_init()
 int
 main( int argc, char **argv )
 {
+
 	set_mySubSystem( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
+
+		// Record the workingDir before invoking daemoncore (which hijacks it)
+	condor_getcwd( dagman.workingDir );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;
@@ -1879,6 +1950,7 @@ main( int argc, char **argv )
 	dc_main_shutdown_graceful = main_shutdown_graceful;
 	dc_main_pre_dc_init = main_pre_dc_init;
 	dc_main_pre_command_sock_init = main_pre_command_sock_init;
+
 	return dc_main( argc, argv );
 }
 
