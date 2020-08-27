@@ -176,6 +176,9 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define ETIMEDOUT ERROR_TIMEOUT
 #endif
 
+/* Win32 equal for realpath() - note inversion of argument order... */
+#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
+
 /* Some missing ERRNO values.... */
 #ifndef ETXTBSY
 #	define ETXTBSY EBUSY

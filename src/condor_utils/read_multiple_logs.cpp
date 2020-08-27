@@ -31,11 +31,6 @@
 
 #include "fs_util.h"
 
-#ifdef WIN32
-// Note inversion of argument order...
-#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
-#endif
-
 #define DEBUG_LOG_FILES 0 //TEMP
 #if DEBUG_LOG_FILES
 #  define D_LOG_FILES D_ALWAYS
