@@ -33,6 +33,10 @@
 // we are doing" and fixing them correctly would require too much 
 // time from one of us. (Maybe this should be a student exercise.)
 #pragma warning( disable : 4244 )
+// And disable loss of data warnings converting from size_t, even
+// though these probably are actual bugs we should fix some day, but
+// for now it creates a lot of noise on Win32.
+#pragma warning( disable : 4267 )
 
 // Disable warnings about macros that are not defined or defined 
 // differently after the pre-compiled header.  This is typically
