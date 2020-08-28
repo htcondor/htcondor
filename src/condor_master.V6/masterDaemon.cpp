@@ -915,6 +915,9 @@ int daemon::RealStart( )
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 60);
 
 	int jobopts = 0;
+	// give the family session to all daemons, not just those that get command ports
+	// we do this so that the credmon(s) can use python send_alive and set_ready_state methods
+	jobopts = DCJOBOPT_INHERIT_FAMILY_SESSION;
 	if( m_never_use_shared_port ) {
 		jobopts |= DCJOBOPT_NEVER_USE_SHARED_PORT;
 	}
@@ -1979,7 +1982,11 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		if (dmn->pid) {
 			bool hung = false;
 			int num_alive_msgs = 1;
-			if (dmn->type != DT_MASTER) num_alive_msgs = daemonCore->Got_Alive_Messages(dmn->pid, hung);
+			if (dmn->type != DT_MASTER) {
+				num_alive_msgs = daemonCore->Got_Alive_Messages(dmn->pid, hung);
+				// treat a 'ready' message as evidence of life
+				if (dmn->ready_state && !num_alive_msgs) { num_alive_msgs += 1; }
+			}
 			if ( ! num_alive_msgs) all_daemons_alive = false;
 			if (hung) {
 				++num_hung;

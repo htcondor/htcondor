@@ -88,7 +88,7 @@ print "Executing task '$taskname' on host '$hostname'\n";
 
 # Build with warnings == errors on Fedora
 my $werror="";
-if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
+if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[123][0-9]/i) {
     $werror = "-DCONDOR_C_FLAGS:STRING=-Werror";
 }
 

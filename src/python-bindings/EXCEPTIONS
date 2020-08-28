@@ -1,0 +1,114 @@
+Exception
+    |- htcondor.HTCondorException
+        |- htcondor.HTCondorEnumError       ->  ValueError, RuntimeError, NotImplementedError
+        |- htcondor.HTCondorInternalError   ->  RuntimeError, TypeError, ValueError
+        |- htcondor.HTCondorIOError         ->  IOError, RuntimeError, ValueError
+        |- htcondor.HTCondorLocateError     ->  IOError, ValueError, RuntimeError
+        |- htcondor.HTCondorReplyError      ->  RuntimeError, ValueError
+        |- htcondor.HTCondorValueError      ->  ValueError, RuntimeError
+        |- htcondor.HTCondorTypeError       ->  TypeError, RuntimeError, ValueError
+
+Exception
+    |- classad.ClassAdException
+        |- classad.ClassAdEnumError         ->  TypeError
+        |- classad.ClassAdEvaluationError   ->  TypeErrror, RuntimeError
+        |- classad.ClassAdInternalError     ->  ValueError, RuntimeError
+        |- classad.ClassAdParseError        ->  ValueError, SyntaxError, RuntimeError
+        |- classad.ClassAdValueError        ->  ValueError, RuntimeError, TypeError
+        |- classad.ClassAdTypeError         ->  TypeError, ValueError
+        |- classad.ClassAdOSError           ->  OSError, RuntimeError
+
+-------------------------------------------------------------------------------
+
+* htcondor.HTCondorException
+
+    The parent class of all exceptions thrown by the htcondor module, with
+four exceptions (see GUIDELINES).  Never throw this exception; it is for the
+convenience of our users, not ourselves.
+
+* htcondor.HTCondorEnumError
+
+    HTCondor's C++ API uses enumerations all over the place.  Throw this
+error if a value that should be a member of a specific enumeration isn't.
+
+* htcondor.HTCondorInternalError
+
+    If something goes wrong that isn't the user's fault, throw this
+exception.  Examples include "failed to convert event to class ad" and
+"logic error in poll implementation".  Do not use for failures to parse
+or evaluate ClassAds; see the classad.ClassAd* errors then.  User errors
+are almost certainly HTCondorTypeError or HTCondorValueError, if one of
+the other, more-specific, exceptions don't apply.
+
+    Two tricky examples: in htcondor.JobEventLog, "unable to evaluate
+expression" is an internal error because the ClassAds produced by job events
+should always be constants.  In htcondor.Collector, "unable to locate
+daemon address" is an internal error because the error message is mostly
+wrong; the call to locate() has already succeeded at that point.  I didn't
+change the text for either of these -- and we shouldn't until 9.1 -- because
+the previous implementation basically required users to look at the text
+programatically.  One benefit of the more-specific HTCondor* or ClassAd*
+exceptions is that we do _not_ consider the text a component of compability.
+
+* htcondor.HTCondorIOError
+
+    Throw this exception when you encounter an I/O error.  This may include
+any type of failure in another process.  If you've received a reply, consider
+using HTCondorReplyError, instead.  Prefer to use HTCondorLocateError if it's
+appropriate.
+
+* htcondor.HTCondorLocateError
+
+    Throw this exception when you fail to locate a daemon.
+
+* htcondor.HTCondorReplyError
+
+    Throw this exception when you receive a reply (from an HTCondor daemon),
+but there's something wrong with the reply (e.g., the ClassAd is missing an
+attribute), or the reply indicates an error on the far side.  Replies
+indicating failure should probably be returned as failures.
+
+* htcondor.HTCondorValueError
+
+    Make sure this isn't either HTCondorEnumError or one of the
+classad.ClassAd* errors.  A good example is "credential may not be empty",
+or "user priority must be non-negative".  Prefer HTCondorValueError over
+ValueError until further notice (for consistency).  Use when "a function
+receives an rgument that has the right type but an inappropriate value,
+and the situation is not described by a more precise exception."
+
+* htcondor.HTCondorTypeError
+
+    Prefer HTCondorTypeError over TypeError until further notice (for
+consistency).  "Passing arguments of the wrong type should result in
+a TypeError."
+
+
+* classad.ClassAdException
+
+    The parent class of all exceptions thrown by the classad module, with
+four exceptions (see GUIDELINES).  Never throw this exception; it is for the
+convenience of our users, not ourselves.
+
+* classad.ClassAdEnumError
+* classad.ClassAdValueError
+* classad.ClassAdTypeError
+* classad.ClassAdInternalError
+
+    Identical to the corresponding htcondor.HTCondor* errors, except thrown by
+the classad module.
+
+* classad.ClassAdParseError
+
+    Use when we fail to parse a ClassAd.
+
+* classad.ClassAdEvaluationError
+
+    Use when a we fail to evaluate a ClassAd.  Should not, generally, be
+thrown directly from the htcondor module; the classad module function being
+called to do the evaluation should throw it instead.
+
+* classad.ClassAdOSError
+
+    Prefer ClassAdOSError over OSError until further notice (for
+consistency).  You should almost never need to use this exception.

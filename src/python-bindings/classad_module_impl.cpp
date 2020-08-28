@@ -35,7 +35,7 @@ void RegisterLibrary(const std::string &libraryName)
 {
     if (!classad::FunctionCall::RegisterSharedLibraryFunctions(libraryName.c_str()))
     {
-        THROW_EX(RuntimeError, "Failed to load shared library.");
+        THROW_EX(ClassAdOSError, "Failed to load shared library.");
     }
 }
 
@@ -53,13 +53,19 @@ std::string unquote(std::string input)
 {
     classad::ClassAdParser source;
     classad::ExprTree *expr = NULL;
-    if (!source.ParseExpression(input, expr, true)) THROW_EX(ValueError, "Invalid string to unquote");
+    if (!source.ParseExpression(input, expr, true)) {
+        THROW_EX(ClassAdParseError, "Invalid string to unquote");
+    }
     classad_shared_ptr<classad::ExprTree> expr_guard(expr);
-    if (!expr || expr->GetKind() != classad::ExprTree::LITERAL_NODE) THROW_EX(ValueError, "String does not parse to ClassAd string literal");
+    if (!expr || expr->GetKind() != classad::ExprTree::LITERAL_NODE) {
+        THROW_EX(ClassAdParseError, "String does not parse to ClassAd string literal");
+    }
     classad::Literal &literal = *static_cast<classad::Literal *>(expr);
     classad::Value val; literal.GetValue(val);
     std::string result;
-    if (!val.IsStringValue(result)) THROW_EX(ValueError, "ClassAd literal is not string value");
+    if (!val.IsStringValue(result)) {
+        THROW_EX(ClassAdParseError, "ClassAd literal is not string value");
+    }
     return result;
 }
 
@@ -74,16 +80,16 @@ void *convert_to_FILEptr(PyObject* obj) {
         return nullptr;
     }
 #ifdef WIN32
-	// for now, support only readonly, since we have no way to query the open state of the fd
-	int flags = O_RDONLY | O_BINARY;
+    // for now, support only readonly, since we have no way to query the open state of the fd
+    int flags = O_RDONLY | O_BINARY;
 #else
-	int flags = fcntl(fd, F_GETFL);
+    int flags = fcntl(fd, F_GETFL);
     if (flags == -1)
     {
         THROW_ERRNO(IOError);
     }
 #endif
-	const char * file_flags = (flags&O_RDWR) ? "w+" : ( (flags&O_WRONLY) ? "w" : "r" );
+    const char * file_flags = (flags&O_RDWR) ? "w+" : ( (flags&O_WRONLY) ? "w" : "r" );
     FILE* fp = fdopen(fd, file_flags);
     setbuf(fp, NULL);
     return fp;
@@ -136,11 +142,11 @@ struct exprtree_pickle_suite : boost::python::pickle_suite
 bool ValueBool(classad::Value::ValueType val) {
     switch (val) {
         case classad::Value::ERROR_VALUE:
-            THROW_EX(RuntimeError, "Expression evaluated to ClassAd ERROR value.")
+            THROW_EX(ClassAdEvaluationError, "Expression evaluated to ClassAd ERROR value.")
         case classad::Value::UNDEFINED_VALUE:
             return false;
         default:
-            THROW_EX(RuntimeError, "Unrecognized ClassAd value.");
+            THROW_EX(ClassAdInternalError, "Unrecognized ClassAd value.");
     };
     return false;
 }
@@ -670,12 +676,12 @@ export_classad()
             R"C0ND0R(
             Evaluate the expression and return as a :class:`ExprTree`.
 
-            .. warning ::
+            .. warning::
 
                 If ``scope`` is passed and is not the :class:`ClassAd` this :class:`ExprTree`
                 might belong to, this method is not thread-safe.
 
-            .. warning ::
+            .. warning::
 
                 It is erroneous for ``scope`` to be a temporary; the
                 lifetime of the returned object may depend on the lifetime
@@ -696,7 +702,7 @@ export_classad()
             Evaluate the expression and return as a ClassAd value,
             typically a Python object.
 
-            .. warning ::
+            .. warning::
 
                 If ``scope`` is passed and is not the :class:`ClassAd` this :class:`ExprTree`
                 might belong to, this method is not thread-safe.

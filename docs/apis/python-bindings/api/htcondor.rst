@@ -222,6 +222,24 @@ Esoteric Functionality
 .. autofunction:: set_subsystem
 .. autoclass:: SubsystemType
 
+
+Exceptions
+----------
+
+For backwards-compatibility, the exceptions in this module inherit
+from the built-in exceptions raised in earlier (pre-v8.9.9) versions.
+
+.. autoclass:: HTCondorException
+
+.. autoclass:: HTCondorEnumError
+.. autoclass:: HTCondorInternalError
+.. autoclass:: HTCondorIOError
+.. autoclass:: HTCondorLocateError
+.. autoclass:: HTCondorReplyError
+.. autoclass:: HTCondorTypeError
+.. autoclass:: HTCondorValueError
+
+
 .. _python-bindings-thread-safety:
 
 Thread Safety

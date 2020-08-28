@@ -351,6 +351,8 @@ KeyCache.cpp
 killfamily.cpp
 killfamily.h
 limit.h
+limit_directory_access.cpp
+limit_directory_access.h
 linebuffer.cpp
 link.cpp
 link.h

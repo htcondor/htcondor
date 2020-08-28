@@ -12,6 +12,7 @@
 #include "old_boost.h"
 #include "classad_wrapper.h"
 #include "module_lock.h"
+#include "htcondor.h"
 #include "daemon_location.h"
 
 using namespace boost::python;
@@ -33,8 +34,8 @@ toList(const boost::shared_ptr<classad::ClassAd> ad, const std::vector<std::stri
             if ((expr = ad->Lookup(attr.str())))
             {
                 classad::ExprTree *copy = expr->Copy();
-                if (!copy) THROW_EX(RuntimeError, "Unable to create copy of ClassAd expression");
-                if (!nextAd->Insert(*it, copy)) THROW_EX(RuntimeError, "Unable to copy attribute into destination ClassAd");
+                if (!copy) { THROW_EX(HTCondorInternalError, "Unable to create copy of ClassAd expression"); }
+                if (!nextAd->Insert(*it, copy)) { THROW_EX(HTCondorInternalError, "Unable to copy attribute into destination ClassAd"); }
                 hasattr = true;
             }
         }
@@ -67,16 +68,15 @@ struct Negotiator {
             }
             else
             {
-                THROW_EX(RuntimeError, "Unable to locate negotiator address.");
+                THROW_EX(HTCondorLocateError, "Unable to locate negotiator address.");
             }
             m_version = neg.version() ? neg.version() : "";
         }
         else
         {
-            THROW_EX(RuntimeError, "Unable to locate local daemon");
+            THROW_EX(HTCondorLocateError, "Unable to locate local daemon");
         }
     }
-
 
     Negotiator() {
         use_local_negotiator();
@@ -90,7 +90,7 @@ struct Negotiator {
 			use_local_negotiator();
 		} else if (rv < 0) {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
-			THROW_EX(RuntimeError, "Unknown type");
+			THROW_EX(HTCondorValueError, "Unknown type");
 		}
 	}
 
@@ -104,19 +104,19 @@ struct Negotiator {
 
     void setPriority(const std::string &user, float prio)
     {
-        if (prio < 0) THROW_EX(ValueError, "User priority must be non-negative");
+        if (prio < 0) THROW_EX(HTCondorValueError, "User priority must be non-negative");
         sendUserValue(SET_PRIORITY, user, prio);
     }
 
     void setFactor(const std::string &user, float factor)
     {
-        if (factor<1) THROW_EX(ValueError, "Priority factors must be >= 1");
+        if (factor<1) THROW_EX(HTCondorValueError, "Priority factors must be >= 1");
         sendUserValue(SET_PRIORITYFACTOR, user, factor);
     }
 
     void setUsage(const std::string &user, float usage)
     {
-        if (usage < 0) THROW_EX(ValueError, "Usage must be non-negative.");
+        if (usage < 0) THROW_EX(HTCondorValueError, "Usage must be non-negative.");
         sendUserValue(SET_ACCUMUSAGE, user, usage);
     }
 
@@ -150,7 +150,7 @@ struct Negotiator {
         }
         if (!result)
         {
-                THROW_EX(RuntimeError, "Failed to send RESET_ALL_USAGE command");
+                THROW_EX(HTCondorIOError, "Failed to send RESET_ALL_USAGE command");
         }
     }
 
@@ -164,7 +164,7 @@ struct Negotiator {
             !sock->end_of_message())
         {
             sock->close();
-            THROW_EX(RuntimeError, "Failed to send GET_RESLIST command to negotiator" );
+            THROW_EX(HTCondorIOError, "Failed to send GET_RESLIST command to negotiator" );
         }
         sock->decode();
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
@@ -176,7 +176,7 @@ struct Negotiator {
         if (result)
         {
             sock->close();
-            THROW_EX(RuntimeError, "Failed to get classad from negotiator");
+            THROW_EX(HTCondorIOError, "Failed to get classad from negotiator");
         }
         sock->close();
 
@@ -201,7 +201,7 @@ struct Negotiator {
         if (result)
         {
             sock->close();
-            THROW_EX(RuntimeError, "Failed to get classad from negotiator");
+            THROW_EX(HTCondorIOError, "Failed to get classad from negotiator");
         }
         sock->close();
 
@@ -227,7 +227,7 @@ private:
     {
         if( user.find('@') == std::string::npos )
         {
-            THROW_EX(ValueError, "You must specify the full name of the submittor you wish (user@uid.domain)");
+            THROW_EX(HTCondorValueError, "You must specify the full name of the submittor you wish (user@uid.domain)");
         }
     }
 
@@ -240,7 +240,7 @@ private:
         raw_sock = negotiator.startCommand(cmd, Stream::reli_sock, 0);
         }
         boost::shared_ptr<Sock> sock(raw_sock);
-        if (!sock.get()) THROW_EX(RuntimeError, "Unable to connect to the negotiator");
+        if (!sock.get()) { THROW_EX(HTCondorIOError, "Unable to connect to the negotiator"); }
         return sock;
     }
 
@@ -257,7 +257,7 @@ private:
         if (retval)
         {
             sock->close();
-            THROW_EX(RuntimeError, "Failed to send command to negotiator\n" );
+            THROW_EX(HTCondorIOError, "Failed to send command to negotiator\n" );
         }
         sock->close();
     }
@@ -275,7 +275,7 @@ private:
         if (retval)
         {
             sock->close();
-            THROW_EX(RuntimeError, "Failed to send command to negotiator\n" );
+            THROW_EX(HTCondorIOError, "Failed to send command to negotiator\n" );
         }
         sock->close();
     }
@@ -293,7 +293,7 @@ private:
         if (retval)
         {
             sock->close();
-            THROW_EX(RuntimeError, "Failed to send command to negotiator\n" );
+            THROW_EX(HTCondorIOError, "Failed to send command to negotiator\n" );
         }
         sock->close();
     }

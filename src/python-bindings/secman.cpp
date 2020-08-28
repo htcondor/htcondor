@@ -19,8 +19,10 @@
 #include "condor_attributes.h"
 #include "command_strings.h"
 #include "daemon.h"
+#include "condor_claimid_parser.h"
 
 #include "old_boost.h"
+#include "htcondor.h"
 
 using namespace boost::python;
 
@@ -82,14 +84,14 @@ public:
 
     std::string request_id() const {
         if (m_reqid.empty()) {
-            THROW_EX(RuntimeError, "Request ID requested prior to submitting request!");
+            THROW_EX(HTCondorIOError, "Request ID requested prior to submitting request!");
         }
         return m_reqid;
     }
 
     void submit(boost::python::object ad_obj) {
         if (m_daemon) {
-            THROW_EX(RuntimeError, "Token request already submitted.");
+            THROW_EX(HTCondorIOError, "Token request already submitted.");
         }
 
         if (ad_obj.ptr() == Py_None) {
@@ -99,12 +101,12 @@ public:
             std::string ad_type_str;
             if (!ad.EvaluateAttrString(ATTR_MY_TYPE, ad_type_str))
             {
-                THROW_EX(ValueError, "Daemon type not available in location ClassAd.");
+                THROW_EX(HTCondorValueError, "Daemon type not available in location ClassAd.");
             }
             int ad_type = AdTypeFromString(ad_type_str.c_str());
             if (ad_type == NO_AD)
             {
-                THROW_EX(ValueError, "Unknown ad type.");
+                THROW_EX(HTCondorEnumError, "Unknown ad type.");
             }
             daemon_t d_type;
             switch (ad_type) {
@@ -115,7 +117,7 @@ public:
                 case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
                 default:
                     d_type = DT_NONE;
-                    THROW_EX(ValueError, "Unknown daemon type.");
+                    THROW_EX(HTCondorEnumError, "Unknown daemon type.");
             }
 
             ClassAd ad_copy; ad_copy.CopyFrom(ad);
@@ -129,7 +131,7 @@ public:
             m_client_id, m_token, m_reqid, &err))
         {
             m_client_id = "";
-            THROW_EX(RuntimeError, err.getFullText().c_str());
+            THROW_EX(HTCondorIOError, err.getFullText().c_str());
         }
     }
 
@@ -139,7 +141,7 @@ public:
         }
         CondorError err;
         if (!m_daemon->finishTokenRequest(m_client_id, m_reqid, m_token, &err)) {
-            THROW_EX(RuntimeError, err.getFullText().c_str());
+            THROW_EX(HTCondorIOError, err.getFullText().c_str());
         }
         return !m_token.empty();
     }
@@ -147,7 +149,7 @@ public:
     Token result(time_t timeout)
     {
         if (m_client_id.empty()) {
-            THROW_EX(RuntimeError, "Request has not been submitted to a remote daemon");
+            THROW_EX(HTCondorIOError, "Request has not been submitted to a remote daemon");
         }
         bool infinite_loop = timeout == 0;
         bool last_iteration = false;
@@ -173,8 +175,9 @@ public:
             }
             if (last_iteration) {
                 if (done()) {
-                    return Token(m_token);                                                                                              } else {
-                    THROW_EX(RuntimeError, "Timed out waiting for token approval");
+                    return Token(m_token);
+                } else {
+                    THROW_EX(HTCondorIOError, "Timed out waiting for token approval");
                 }
             }
         }
@@ -216,7 +219,7 @@ int getCommand(object command)
     {
         return extract_int();
     }
-    THROW_EX(ValueError, "Unable to determine DaemonCore command value")
+    THROW_EX(HTCondorEnumError, "Unable to determine DaemonCore command value")
     return 0;
 }
 
@@ -243,7 +246,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
             ClassAdWrapper& ad = ad_extract();
             if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr))
             {
-                THROW_EX(ValueError, "Daemon address not specified.");
+                THROW_EX(HTCondorValueError, "Daemon address not specified.");
             }
         }
         else
@@ -253,7 +256,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         Daemon daemon(DT_ANY, addr.c_str(), NULL);
         if (!daemon.locate())
         {
-            THROW_EX(RuntimeError, "Unable to find daemon.");
+            THROW_EX(HTCondorLocateError, "Unable to find daemon.");
         }
 
         CondorError errstack;
@@ -264,18 +267,18 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         if (!(sock = (ReliSock*) daemon.makeConnectedSocket( Stream::reli_sock, 0, 0, &errstack )))
         {
             ml.release();
-            THROW_EX(RuntimeError, "Unable to connect to daemon.");
+            THROW_EX(HTCondorIOError, "Unable to connect to daemon.");
         }
         if (!(daemon.startSubCommand(DC_SEC_QUERY, num, sock, 0, &errstack)))
         {
             ml.release();
-            THROW_EX(RuntimeError, "Unable to send security query to daemon.");
+            THROW_EX(HTCondorIOError, "Unable to send security query to daemon.");
         }
         sock->decode();
         if (!getClassAd(sock, *authz_ad.get()) || !sock->end_of_message())
         {
             ml.release();
-            THROW_EX(RuntimeError, "Failed to get security session information from remote daemon.");
+            THROW_EX(HTCondorIOError, "Failed to get security session information from remote daemon.");
         }
         // Replace addr with the sinful string that ReliSock has associated with the socket,
         // since this is what the SecMan object will do, and we need to do the same thing
@@ -303,7 +306,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // IMPORTANT: this hashtable returns 0 on success!
         if ((SecMan::command_map).lookup(cmd_map_ent, session_id))
         {
-            THROW_EX(RuntimeError, "No valid entry in command map hash table!");
+            THROW_EX(HTCondorValueError, "No valid entry in command map hash table!");
         }
         // Session cache lookup is tag-dependent; hence, we may need to temporarily override
         std::string origTag = SecMan::getTag();
@@ -312,7 +315,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
-            THROW_EX(RuntimeError, "No valid entry in session map hash table!");
+            THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");
         }
         if (m_tag_set) {SecMan::setTag(origTag);}
         policy = k->policy();
@@ -386,6 +389,27 @@ bool SecManWrapper::applyThreadLocalConfigOverrides(ConfigOverrides & old)
         if (man) { man->m_config_overrides.apply(&old); return true; }
         return false;
 }
+
+void SecManWrapper::setFamilySession(const std::string & sess)
+{
+    if ( ! m_key_allocated) return;
+
+    SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
+    if (man) { 
+        ClaimIdParser claimid(sess.c_str());
+        bool rc = man->m_secman.CreateNonNegotiatedSecuritySession(
+                DAEMON,
+                claimid.secSessionId(),
+                claimid.secSessionKey(),
+                claimid.secSessionInfo(),
+                "FAMILY",
+                "condor@family",
+                NULL,
+                0,
+                nullptr);
+    }
+}
+
 
 const char *
 SecManWrapper::getThreadLocalToken()

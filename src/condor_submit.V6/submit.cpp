@@ -155,6 +155,7 @@ int		sim_starting_cluster=0;			// initial clusterId value for a SimSchedd
 char* RunAsOwnerCredD = NULL;
 #endif
 char * batch_name_line = NULL;
+char * batch_id_line = NULL;
 bool sent_credential_to_credd = false;
 bool allow_crlf_script = false;
 
@@ -735,6 +736,23 @@ main( int argc, const char *argv[] )
 				// freeing something behind the back of the extraLines
 				batch_name_line = strdup(tmp.c_str());
 				extraLines.Append(batch_name_line);
+			} else if (is_dash_arg_prefix(ptr[0], "batch-id", 1)) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -batch-id requires another argument\n",
+							 MyName );
+					exit( 1 );
+				}
+				const char * bid = *ptr;
+				MyString tmp; // if -batch-id was specified, this holds the string 'MY.JobBatchId = "id"'
+				if (*bid == '"') {
+					tmp.formatstr("MY.%s = %s", ATTR_JOB_BATCH_ID, bid);
+				} else {
+					tmp.formatstr("MY.%s = \"%s\"", ATTR_JOB_BATCH_ID, bid);
+				}
+				// if batch_id_line is not NULL,  we will leak a bit here, but that's better than
+				// freeing something behind the back of the extraLines
+				batch_id_line = strdup(tmp.c_str());
+				extraLines.Append(batch_id_line);
 			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
 				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
 					fprintf( stderr, "%s: -queue requires at least one argument\n",

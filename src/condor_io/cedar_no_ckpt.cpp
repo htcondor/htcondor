@@ -45,6 +45,7 @@
 #include "ipv6_hostname.h"
 #include "condor_fsync.h"
 #include "dc_transfer_queue.h"
+#include "limit_directory_access.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -72,9 +73,15 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 		flags |= O_CREAT | O_TRUNC;
 	}
 
-	// Open the file
-	errno = 0;
-	fd = ::safe_open_wrapper_follow( destination, flags, 0600 );
+	if (allow_shadow_access(destination)) {
+		// Open the file
+		errno = 0;
+		fd = ::safe_open_wrapper_follow(destination, flags, 0600);
+	}
+	else {
+		fd = -1;
+		errno = EACCES;
+	}
 
 	// Handle open failure; it's bad....
 	if ( fd < 0 )
@@ -323,7 +330,15 @@ ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset, fil
 	int result;
 
 	// Open the file, handle failure
-	fd = safe_open_wrapper_follow(source, O_RDONLY | O_LARGEFILE | _O_BINARY | _O_SEQUENTIAL, 0);
+	if (allow_shadow_access(source)) {
+		errno = 0;
+		fd = safe_open_wrapper_follow(source, O_RDONLY | O_LARGEFILE | _O_BINARY | _O_SEQUENTIAL, 0);
+	}
+	else {
+		fd = -1;
+		errno = EACCES;
+	}
+
 	if ( fd < 0 )
 	{
 		dprintf(D_ALWAYS,

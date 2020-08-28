@@ -10,6 +10,12 @@ import json
 import re
 import logging
 
+from requests_oauthlib import __version__ as _requests_oauthlib_version
+_requests_oauthlib_version = tuple([int(x) for x in _requests_oauthlib_version.split('.')])
+fetch_token_kwargs = {}
+if _requests_oauthlib_version >= (1,2,0):
+    fetch_token_kwargs['include_client_id'] = True
+
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
@@ -259,7 +265,8 @@ def oauth_return(provider):
     token = oauth.fetch_token(token_url,
         authorization_response=updated_url,
         client_secret=client_secret,
-        method='POST')
+        method='POST',
+        **fetch_token_kwargs)
     print('Got {0} token for user {1}'.format(provider, session['local_username']))
 
     # get user info if available

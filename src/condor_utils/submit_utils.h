@@ -42,6 +42,7 @@
 #define SUBMIT_KEY_Cluster "Cluster"
 #define SUBMIT_KEY_Process "Process"
 #define SUBMIT_KEY_BatchName "batch_name"
+#define SUBMIT_KEY_BatchId "batch_id"
 #define SUBMIT_KEY_Hold "hold"
 #define SUBMIT_KEY_Priority "priority"
 #define SUBMIT_KEY_Prio "prio"
@@ -149,6 +150,9 @@
 #define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+
+#define SUBMIT_KEY_ManifestDesired "manifest"
+#define SUBMIT_KEY_ManifestDir "manifest_dir"
 
 #define SUBMIT_KEY_UseOAuthServices "use_oauth_services"
 #define SUBMIT_KEY_UseOAuthServicesAlt "UseOAuthServices"
