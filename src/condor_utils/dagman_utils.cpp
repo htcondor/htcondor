@@ -986,7 +986,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 				 "file and continue.\n" );
 		}
 		else {
-			fprintf( stderr, "Either rename them,\nor set the { \"force\" : 1 }"
+			fprintf( stderr, "Either rename them,\nor set the { \"force\" : True }"
 				" option to force them to be overwritten.\n" );
 		}
 		return false;

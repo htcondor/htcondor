@@ -2474,15 +2474,15 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             boost::python::throw_error_already_set();
         }
 
-        // Wrestle the key-value pair out of the dict object and save them
-        // both as string objects. 
-        // We can assume the key is a string type, but the the value can be 
-        // a string or an int (or other?)
+        // Retrieve the key-value pair out of the dict object
+        // Key is always a string type
+        // Value can be a string, int or bool, but is always stored as a string
         std::string key, value;
         boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
         key = boost::python::extract<std::string>(key_obj);
         boost::python::object value_obj = boost::python::extract<boost::python::object>(opts[key]);
         std::string value_type = boost::python::extract<std::string>(value_obj.attr("__class__").attr("__name__"));
+
         if(value_type == "str") {
             value = boost::python::extract<std::string>(opts[key]);
         }
@@ -2490,11 +2490,25 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             int value_int = boost::python::extract<int>(opts[key]);
             value = std::to_string(value_int);
         }
+        else if(value_type == "bool") {
+            bool value_bool = boost::python::extract<bool>(opts[key]);
+            value = value_bool ? "true" : "false";
+        }
 
         // Set shallowOpts or deepOpts variables as appropriate
         std::string key_lc = key;
         std::transform(key_lc.begin(), key_lc.end(), key_lc.begin(), ::tolower);
-        if (key_lc == "maxidle") 
+        if (key_lc == "dagman")
+            deep_opts.strDagmanPath = value.c_str();
+        else if (key_lc == "force")
+            deep_opts.bForce = (value == "true") ? true : false;
+        else if (key_lc == "schedd-daemon-ad-file")
+            shallow_opts.strScheddDaemonAdFile = value.c_str();
+        else if (key_lc == "schedd-address-file")
+            shallow_opts.strScheddAddressFile = value.c_str();
+        else if (key_lc == "alwaysrunpost")
+            shallow_opts.bPostRun = (value == "true") ? true : false;
+        else if (key_lc == "maxidle") 
             shallow_opts.iMaxIdle = atoi(value.c_str());
         else if (key_lc == "maxjobs") 
             shallow_opts.iMaxJobs = atoi(value.c_str());
@@ -2502,12 +2516,38 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             shallow_opts.iMaxPre = atoi(value.c_str());
         else if (key_lc == "maxpost")
             shallow_opts.iMaxPre = atoi(value.c_str());
+        else if (key_lc == "usedagdir")
+            deep_opts.useDagDir = (value == "true") ? true : false;
+        else if (key_lc == "debug")
+            shallow_opts.iDebugLevel = atoi(value.c_str());
+        else if (key_lc == "outfile_dir")
+            deep_opts.strOutfileDir = value.c_str();
+        else if (key_lc == "config")
+            shallow_opts.strConfigFile = value.c_str();
+        else if (key_lc == "batch-name")
+            deep_opts.batchName = value.c_str();
         else if (key_lc == "autorescue")
-            deep_opts.autoRescue = atoi(value.c_str()) != 0;
+            deep_opts.autoRescue = (value == "true") ? true : false;
         else if (key_lc == "dorescuefrom")
             deep_opts.doRescueFrom = atoi(value.c_str());
-        else if (key_lc == "force")
-            deep_opts.bForce = atoi(value.c_str()) == 1;
+        else if (key_lc == "allowversionmismatch")
+            deep_opts.allowVerMismatch = (value == "true") ? true : false;
+        else if (key_lc == "do_recurse")
+            deep_opts.recurse = (value == "true") ? true : false;
+        else if (key_lc == "update_submit")
+            deep_opts.updateSubmit = (value == "true") ? true : false;
+        else if (key_lc == "import_env")
+            deep_opts.importEnv = (value == "true") ? true : false;
+        else if (key_lc == "dumprescue")
+            shallow_opts.dumpRescueDag = (value == "true") ? true : false;
+        else if (key_lc == "valgrind")
+            shallow_opts.runValgrind = (value == "true") ? true : false;
+        else if (key_lc == "priority")
+            shallow_opts.priority = atoi(value.c_str());
+        else if (key_lc == "suppress_notification")
+            deep_opts.suppress_notification = (value == "true") ? true : false;
+        else if (key_lc == "dorecov")
+            deep_opts.suppress_notification = (value == "true") ? true : false;
         else
             printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
     }
@@ -2778,6 +2818,12 @@ public:
 
         dagman_utils.usingPythonBindings = true;
 
+        // Check if the specified dag file exists
+        FILE* dag_fp = safe_fopen_wrapper_follow(dag_filename.c_str(), "r");
+        if(dag_fp == NULL) {
+            THROW_ERRNO(IOError);
+        }
+
         // Setting any submit options that may have been passed in (ie. max idle, max post)
         shallow_opts.dagFiles.insert(dag_filename.c_str());
         shallow_opts.primaryDagFile = dag_filename;
@@ -2792,14 +2838,14 @@ public:
         // Write out the .condor.sub file we need to submit the DAG
         dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
         if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
+            // FIXME: include errno.
             THROW_EX(HTCondorIOError, "Unable to write condor_dagman submit file");
         }
 
         // Now write the submit file and open it
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
         if(sub_fp == NULL) {
-            printf("ERROR: Could not read generated DAG submit file %s\n", sub_filename.c_str());
-            return NULL;
+            THROW_ERRNO(IOError);
         }
 
         // Determine size of the file and store its contents in a buffer
@@ -4203,10 +4249,18 @@ void export_schedd()
 
             :param str filename: The path to the DAG description file.
             :param dict options: Additional arguments to *condor_submit_dag*.
-                Currently supports ``maxidle`` *(int)*, ``maxjobs`` *(int)*,
-                ``maxpre`` *(int)*, ``maxpost`` *(int)*, ``autorescue`` *(int)*
-                where 0 = False, 1 = True, ``dorescuefrom`` *(int)*,
-                ``force`` *(int)* where 0 = False, 1 = True.
+                Supports ``dagman`` *(str)*, ``force`` *(bool)*,
+                ``schedd-daemon-ad-file`` *(str)*,
+                ``schedd-address-file`` *(str)*, ``AlwaysRunPost`` *(bool)*,
+                ``maxidle`` *(int)*, ``maxjobs`` *(int)*, ``MaxPre`` *(int)*,
+                ``MaxPost`` *(int)*, ``UseDagDir`` *(bool)*, ``debug`` *(int)*,
+                ``outfile_dir`` *(str)*, ``config`` *(str)*,
+                ``batch-name`` *(str)*, ``AutoRescue`` *(bool)*,
+                ``DoRescueFrom`` *(int)*, ``AllowVersionMismatch`` *(bool)*,
+                ``do_recurse`` *(bool)*, ``update_submit`` *(bool)*,
+                ``import_env`` *(bool)*, ``DumpRescue`` *(bool)*,
+                ``valgrind`` *(bool)*, ``priority`` *(int)*,
+                ``suppress_notification`` *(bool)*, ``DoRecov`` *(bool)*
             :return: A :class:`Submit` description for the DAG described in ``filename``
             :rtype: :class:`Submit`
             )C0ND0R",

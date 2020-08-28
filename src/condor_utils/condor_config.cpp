@@ -89,11 +89,6 @@
 #include <algorithm> // for std::sort
 #include "CondorError.h"
 
-#ifdef WIN32
-// Note inversion of argument order...
-#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
-#endif
-
 // define this to keep param who's values match defaults from going into to runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
 // define this to parse for #opt:newcomment/#opt:oldcomment to decide commenting rules
