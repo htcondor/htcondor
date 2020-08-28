@@ -185,10 +185,10 @@ void set_ready_state(const std::string & state)
 {
     std::string master_sinful;
     char *inherit_var = getenv("CONDOR_INHERIT");
-    if (!inherit_var) {THROW_EX(RuntimeError, "CONDOR_INHERIT not in environment.");}
+    if (!inherit_var) {THROW_EX(HTCondorValueError, "CONDOR_INHERIT not in environment.");}
     pid_t ppid;
     extractParentSinful(inherit_var, ppid, master_sinful);
-    if (master_sinful.empty()) {THROW_EX(RuntimeError, "CONDOR_INHERIT environment variable malformed.");}
+    if (master_sinful.empty()) {THROW_EX(HTCondorValueError, "CONDOR_INHERIT environment variable malformed.");}
 
     std::string family_session;
     get_family_session(family_session);
@@ -210,7 +210,7 @@ void set_ready_state(const std::string & state)
     }
     if (msg->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED)
     {
-        THROW_EX(RuntimeError, "Failed to deliver ready message.");
+        THROW_EX(HTCondorIOError, "Failed to deliver ready message.");
     }
 }
 

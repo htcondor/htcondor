@@ -2821,7 +2821,8 @@ public:
         // Check if the specified dag file exists
         FILE* dag_fp = safe_fopen_wrapper_follow(dag_filename.c_str(), "r");
         if(dag_fp == NULL) {
-            THROW_ERRNO(IOError);
+            // FIXME: include errno, dag_filename.c_str().
+            THROW_EX(HTCondorIOError, "Could not read DAG file" );
         }
 
         // Setting any submit options that may have been passed in (ie. max idle, max post)
@@ -2845,7 +2846,8 @@ public:
         // Now write the submit file and open it
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
         if(sub_fp == NULL) {
-            THROW_ERRNO(IOError);
+            // FIXME: include errno, sub_filename.c_str().
+            THROW_EX(HTCondorIOError, "Could not read generated DAG submit file" );
         }
 
         // Determine size of the file and store its contents in a buffer
