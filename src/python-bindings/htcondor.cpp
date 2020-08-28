@@ -4,7 +4,20 @@
 #include "old_boost.h"
 #include "export_headers.h"
 
+#include "htcondor.h"
+#include "exception_utils.h"
+
 using namespace boost::python;
+
+PyObject * PyExc_HTCondorException = NULL;
+
+PyObject * PyExc_HTCondorEnumError = NULL;
+PyObject * PyExc_HTCondorInternalError = NULL;
+PyObject * PyExc_HTCondorIOError = NULL;
+PyObject * PyExc_HTCondorLocateError = NULL;
+PyObject * PyExc_HTCondorReplyError = NULL;
+PyObject * PyExc_HTCondorValueError = NULL;
+PyObject * PyExc_HTCondorTypeError = NULL;
 
 BOOST_PYTHON_MODULE(htcondor)
 {
@@ -38,4 +51,57 @@ BOOST_PYTHON_MODULE(htcondor)
     export_query_iterator();
 
     def("enable_classad_extensions", enable_classad_extensions, "Register the HTCondor-specific extensions to the ClassAd library.");
+
+    PyExc_HTCondorException = CreateExceptionInModule(
+        "htcondor.HTCondorException", "HTCondorException",
+        PyExc_Exception,
+        "Never raised.  The parent class of all exceptions raised by this module."
+    );
+
+    // NotImplementedError is a subclass of RuntimeError, so
+    // we can't mention RuntimeError explicitly (Python will throw
+    // an exception we don't catch).
+    PyExc_HTCondorEnumError = CreateExceptionInModule(
+        "htcondor.HTCondorEnumError", "HTCondorEnumError",
+        PyExc_HTCondorException,
+        PyExc_ValueError,
+        PyExc_NotImplementedError,
+        "Raised when a value must be in an enumeration, but isn't."
+        );
+
+    PyExc_HTCondorInternalError = CreateExceptionInModule(
+        "htcondor.HTCondorInternalError", "HTCondorInternalError",
+        PyExc_HTCondorException, PyExc_RuntimeError, PyExc_TypeError, PyExc_ValueError,
+        "Raised when HTCondor encounters an internal error."
+        );
+
+    PyExc_HTCondorIOError = CreateExceptionInModule(
+        "htcondor.HTCondorIOError", "HTCondorIOError",
+        PyExc_HTCondorException, PyExc_IOError, PyExc_RuntimeError, PyExc_ValueError,
+        "Raised instead of :class:`IOError` for backwards compatibility."
+    );
+
+    PyExc_HTCondorLocateError = CreateExceptionInModule(
+        "htcondor.HTCondorLocateError", "HTCondorLocateError",
+        PyExc_HTCondorException, PyExc_IOError, PyExc_RuntimeError, PyExc_ValueError,
+        "Raised when HTCondor cannot locate a daemon."
+    );
+
+    PyExc_HTCondorReplyError = CreateExceptionInModule(
+        "htcondor.HTCondorReplyError", "HTCondorReplyError",
+        PyExc_HTCondorException, PyExc_RuntimeError, PyExc_ValueError,
+        "Raised when HTCondor received an invalid reply from a daemon, or the daemon's reply indicated that it encountered an error."
+    );
+
+    PyExc_HTCondorValueError = CreateExceptionInModule(
+        "htcondor.HTCondorValueError", "HTCondorValueError",
+        PyExc_HTCondorException, PyExc_ValueError, PyExc_RuntimeError,
+        "Raised instead of :class:`ValueError` for backwards compatibility."
+    );
+
+    PyExc_HTCondorTypeError = CreateExceptionInModule(
+        "htcondor.HTCondorTypeError", "HTCondorTypeError",
+        PyExc_HTCondorException, PyExc_TypeError, PyExc_RuntimeError, PyExc_ValueError,
+        "Raised instead of :class:`TypeError` for backwards compatibility."
+    );
 }

@@ -21,6 +21,7 @@
 #include "module_lock.h"
 #include "daemon_location.h"
 #include "classad_wrapper.h"
+#include "htcondor.h"
 #include "history_iterator.h"
 
 using namespace boost::python;
@@ -35,15 +36,14 @@ struct Startd
 {
 
 
-    Startd() {}
-
+	Startd() {}
 
 	Startd(boost::python::object loc)
 	{
 		int rv = construct_for_location(loc, DT_STARTD, m_addr, m_version);
 		if (rv < 0) {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
-			THROW_EX(RuntimeError, "Unknown type");
+			THROW_EX(HTCondorValueError, "Unknown type");
 		}
 	}
 
@@ -56,7 +56,7 @@ struct Startd
     {
 		std::string check_expr;
 		if ( ! convert_python_to_constraint(check_obj, check_expr, true)) {
-			THROW_EX(ValueError, "Invalid check expression");
+			THROW_EX(HTCondorValueError, "Invalid check expression");
 		}
 		const char * check_expr_ptr = nullptr;
 		if ( ! check_expr.empty()) { check_expr_ptr = check_expr.c_str(); }
@@ -75,7 +75,7 @@ struct Startd
 
         DCStartd startd(m_addr.c_str());
         bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr_ptr, start_expr.c_str(), request_id);
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to begin draining jobs.");}
+        if (!rval) {THROW_EX(HTCondorReplyError, "Startd failed to begin draining jobs.");}
         return request_id;
     }
 
@@ -96,7 +96,9 @@ struct Startd
 
         DCStartd startd(m_addr.c_str());
         bool rval = startd.cancelDrainJobs( request_id );
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to cancel draining jobs.");}
+        if (!rval) {
+            THROW_EX(HTCondorReplyError, "Startd failed to cancel draining jobs.");
+        }
     }
 
 	boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection = boost::python::list(), int match = -1, boost::python::object since = boost::python::object())

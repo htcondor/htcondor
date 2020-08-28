@@ -20,6 +20,8 @@
 
 #include <boost/version.hpp>
 
+#include "htcondor.h"
+
 #include "old_boost.h"
 #include "event.h"
 #include "inotify_sentry.h"
@@ -152,7 +154,7 @@ EventIterator::wait_internal(int timeout_ms)
     }
     if (r == -1)
     {
-        THROW_EX(IOError, "Failure when checking file size of event log.");
+        THROW_EX(HTCondorIOError, "Failure when checking file size of event log.");
     }
     reset_to(prev_done);
 }
@@ -173,7 +175,6 @@ int
 EventIterator::watch()
 {
 #ifdef WIN32
-	//THROW_EX(RuntimeError, "watch() not availble on Windows");
 	return -1;
 #else
     if (!m_watch.get())
@@ -282,7 +283,7 @@ EventIterator::next()
         case ULOG_MISSED_EVENT:
         case ULOG_UNK_ERROR:
         default:
-            THROW_EX(ValueError, "Unable to parse input stream into a HTCondor event.");
+            THROW_EX(HTCondorValueError, "Unable to parse input stream into a HTCondor event.");
     }
     return output;
 }
@@ -333,7 +334,7 @@ public:
         }
         else
         {
-            THROW_EX(TypeError, "LockFile must be used with a file object.");
+            THROW_EX(HTCondorTypeError, "LockFile must be used with a file object.");
         }
 
         // Which locking protocol to use (old/new) is left up to the caller; this replicates the
@@ -360,11 +361,11 @@ public:
     {
         if (!m_file_lock.get())
         {
-            THROW_EX(RuntimeError, "Trying to obtain a lock on an invalid LockFile object");
+            THROW_EX(HTCondorInternalError, "Trying to obtain a lock on an invalid LockFile object");
         }
         if (!m_file_lock->obtain(m_lock_type))
         {
-            THROW_EX(RuntimeError, "Unable to obtain a file lock.");
+            THROW_EX(HTCondorIOError, "Unable to obtain a file lock.");
         }
     }
 
@@ -372,7 +373,7 @@ public:
     {
         if (!m_file_lock.get())
         {
-            THROW_EX(RuntimeError, "Trying to release a lock on an invalid LockFile object");
+            THROW_EX(HTCondorInternalError, "Trying to release a lock on an invalid LockFile object");
         }
         m_file_lock->release();
     }

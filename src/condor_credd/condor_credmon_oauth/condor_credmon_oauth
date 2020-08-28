@@ -4,7 +4,10 @@ import signal
 from functools import partial
 from multiprocessing import Process
 import multiprocessing
-import Queue
+try:
+    import queue as Queue
+except ImportError:
+    import Queue
 from optparse import OptionParser, OptionGroup
 import logging
 

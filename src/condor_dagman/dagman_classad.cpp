@@ -32,6 +32,12 @@ ScheddClassad::OpenConnection() const
 {
 		// Open job queue
 	CondorError errstack;
+	if ( !_schedd ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Queue manager not initialized, "
+			"cannot publish updates to ClassAd.\n");
+		check_warning_strictness( DAG_STRICT_3 );
+		return NULL;
+	}
 	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
 				&errstack, NULL, _schedd->version() );
 	if ( !queue ) {

@@ -81,7 +81,7 @@ class ScheddClassad {
 	CondorID _jobId;
 
 		// The schedd we need to talk to to update the classad.
-	DCSchedd *_schedd;
+	DCSchedd *_schedd = NULL;
 
 };
 
