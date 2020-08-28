@@ -111,34 +111,45 @@ double ExprTreeHolder::toDouble() const
     const classad::ClassAd *origParent = m_expr->GetParentScope();
     bool evalresult;
     if (origParent) {
+        fprintf( stderr, "1!\n" );
         evalresult = m_expr->Evaluate(val);
     } else {
+        fprintf( stderr, "2!\n" );
         classad::EvalState state;
         evalresult = m_expr->Evaluate(state, val);
     }
-    if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
+    if (PyErr_Occurred()) {
+        fprintf( stderr, "3!\n" );
+        boost::python::throw_error_already_set();
+    }
     if (!evalresult)
     {
+        fprintf( stderr, "4!\n" );
         THROW_EX(ClassAdEvaluationError, "Unable to evaluate expression");
     }
     double retDouble;
     std::string retStr;
+    fprintf( stderr, "5!\n" );
     if (val.IsNumber(retDouble)) {return retDouble;}
     else if (val.IsStringValue(retStr)) {
         errno = 0;
         char *endptr;
         double val = strtod(retStr.c_str(), &endptr);
         if (errno == ERANGE) {
+            fprintf( stderr, "6!\n" );
             // Any small value will indicate underflow.
             if (fabs(val) < 1.0) { THROW_EX(ClassAdValueError, "Underflow when converting to integer.");}
             else { THROW_EX(ClassAdValueError, "Overflow when converting to integer.");}
         }
         if (endptr != (retStr.c_str() + retStr.size())) {
+            fprintf( stderr, "7!\n" );
             THROW_EX(ClassAdValueError, "Unable to convert string to integer.");
         }
         return val;
     }
+    fprintf( stderr, "8! %p\n", PyExc_ClassAdValueError );
     THROW_EX(ClassAdValueError, "Unable to convert expression to numeric type.");
+    fprintf( stderr, "9!\n" );
     return 0;  // Should never get here
 }
 

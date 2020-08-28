@@ -3,21 +3,6 @@
 
 #include <string>
 
-//
-// These can't be classad_module.cpp, where you'd expect, because the htcondor
-// module depends on an internal library, not the classad module proper.
-//
-
-PyObject * PyExc_ClassAdException = NULL;
-
-PyObject * PyExc_ClassAdEnumError = NULL;
-PyObject * PyExc_ClassAdEvaluationError = NULL;
-PyObject * PyExc_ClassAdInternalError = NULL;
-PyObject * PyExc_ClassAdParseError = NULL;
-PyObject * PyExc_ClassAdValueError = NULL;
-PyObject * PyExc_ClassAdTypeError = NULL;
-PyObject * PyExc_ClassAdOSError = NULL;
-
 PyObject *
 CreateExceptionInModule( const char * qualifiedName, const char * name,
   PyObject * base,
