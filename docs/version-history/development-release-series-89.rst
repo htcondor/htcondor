@@ -17,6 +17,14 @@ Release Notes:
    when asked to analyze a job.
    :ticket:`5834`
 
+-  We deprecated the exceptions raised by the
+   :ref:`apis/python-bindings/index:Python Bindings`.  The new
+   exceptions all inherit from :class:`~htcondor.HTCondorException` or
+   :class:`~classad.ClassAdException`, according to the originating module.  For
+   backwards-compatibility, the new exceptions all also inherit the class
+   of each exception type they replaced.
+   :ticket:`6935`
+
 New Features:
 
 -  The :class:`classad.ClassAd` class now defines equality and inequality.
