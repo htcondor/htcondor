@@ -47,6 +47,10 @@ Bugs Fixed:
    would make every job go on hold.
    :ticket:`7797`
 
+-  *condor_watch_q* now correctly groups jobs submitted by DAGMan after
+   *condor_watch_q* has started running.
+   :ticket:`7800`
+
 Version 8.9.8
 -------------
 
