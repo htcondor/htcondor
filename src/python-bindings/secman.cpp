@@ -397,7 +397,7 @@ void SecManWrapper::setFamilySession(const std::string & sess)
     SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
     if (man) { 
         ClaimIdParser claimid(sess.c_str());
-        bool rc = man->m_secman.CreateNonNegotiatedSecuritySession(
+        man->m_secman.CreateNonNegotiatedSecuritySession(
                 DAEMON,
                 claimid.secSessionId(),
                 claimid.secSessionKey(),
