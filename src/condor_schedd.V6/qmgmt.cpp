@@ -6269,11 +6269,6 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
-	if ( cluster_id == 0 && proc_id == 0 ) {
-		errno = EACCES;
-		return -1;
-	}
-
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
 
