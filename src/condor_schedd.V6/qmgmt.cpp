@@ -297,6 +297,19 @@ KeyToId(JobQueueKey &key,int & cluster,int & proc)
 	proc = key.proc;
 }
 
+static inline bool IsSpecialJobId( int cluster_id, int /* proc_id */ )
+{
+	// Return true if job id is special and should NOT be edited by
+	// the end user.  Currently this means job 0.0 (header ad) 
+	// and JobSet ads which are cluster 0 and a negative proc.
+	//
+	if (cluster_id == 0) {
+		return true;
+	}
+
+	return false;
+}
+
 ClassAd* ConstructClassAdLogTableEntry<JobQueueJob*>::New(const char * key, const char * /* mytype */) const
 {
 	JOB_ID_KEY jid(key);
@@ -3312,8 +3325,8 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueueKeyBuf		key;
 	JobQueueJob			*ad = NULL;
 
-	// cannot destroy the header ad 0.0
-	if ( cluster_id == 0 && proc_id == 0 ) {
+	// cannot destroy any SpecialJobIds like the header ad 0.0
+	if ( IsSpecialJobId(cluster_id,proc_id) ) {
 		errno = EINVAL;
 		return DESTROYPROC_ERROR;
 	}
@@ -3916,9 +3929,9 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		return -1;
 	}
 
-	// job id 0.0 is special and cannot normally be modified.
-	if ( key.cluster == 0 && key.proc == 0 ) {
-		dprintf(D_ALWAYS, "%s attempt to edit special ad 0.0\n", func_name);
+	// job id 0.0 and maybe some other ids are special and cannot normally be modified.
+	if ( IsSpecialJobId(key.cluster,key.proc) ) {
+		dprintf(D_ALWAYS, "WARNING: %s attempt to edit special ad %d.%d\n", func_name,key.cluster,key.proc);
 		errno = EACCES;
 		return -1;
 	}
