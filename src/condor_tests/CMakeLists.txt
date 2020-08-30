@@ -169,6 +169,7 @@ if (BUILD_TESTING)
 
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
+    condor_pl_test(test_classad_version_comparison "Test ClassAd version comparison functions" "core;quick;full;quicknolink")
 	if (WITH_PYTHON_BINDINGS)
 		# An example test that depends on python bindings.
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
