@@ -169,8 +169,12 @@ if (BUILD_TESTING)
 
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
-    condor_pl_test(test_classad_version_comparison "Test ClassAd version comparison functions" "core;quick;full;quicknolink")
 	if (WITH_PYTHON_BINDINGS)
+	    # This test does not require the Python bindings, but it _is_ a PyTest,
+	    # and PyTest can't be configured to ignore conftest.py, which _does_
+	    # require the bindings.  Fail.
+        condor_pl_test(test_classad_version_comparison "Test ClassAd version comparison functions" "core;quick;full;quicknolink")
+
 		# An example test that depends on python bindings.
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
 
