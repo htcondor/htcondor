@@ -1159,7 +1159,7 @@ Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_
 		whynot = "missing script name";
 		return false;
 	}
-
+	debug_printf(DEBUG_NORMAL, "MRC [Job::AddScript] script_type = %d, cmd = %s\n", script_type, cmd);
 	const char *script_name;
 	const char *type_name;
 	switch( script_type ) {

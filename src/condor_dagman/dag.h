@@ -675,11 +675,13 @@ class Dag {
 	int MaxIdleJobProcs(void) const { return _maxIdleJobProcs; }
 	int MaxPreScripts(void) const { return _maxPreScripts; }
 	int MaxPostScripts(void) const { return _maxPostScripts; }
+	int MaxHoldScripts(void) const { return _maxHoldScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
 	void SetMaxJobsSubmitted(int newMax);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
+	void SetMaxHoldScripts(int maxHoldScripts) { _maxHoldScripts = maxHoldScripts; };
 
 	bool RetrySubmitFirst(void) const { return m_retrySubmitFirst; }
 
@@ -903,6 +905,14 @@ class Dag {
     */
 	bool RunPostScript( Job *job, bool ignore_status, int status,
 				bool incrementRunCount = true );
+
+	/* A helper function to run the HOLD script, if one exists.
+           @param The job owning the POST script
+           @param Whether to increment the run count when we run the
+				script
+			@return true if successful, false otherwise
+    */
+	bool RunHoldScript( Job *job, bool incrementRunCount = true );
 
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -1137,12 +1147,17 @@ private:
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
+	ScriptQ* _holdScriptQ;
 
 		// Number of nodes currently in status Job::STATUS_PRERUN.
 	int		_preRunNodeCount;
 
 		// Number of nodes currently in status Job::STATUS_POSTRUN.
 	int		_postRunNodeCount;
+
+		// Number of nodes currently running HOLD scripts.
+		// We do not have a special status for these nodes.
+	int		_holdRunNodeCount;
 	
 	int DFS_ORDER;
 	int _graph_width;

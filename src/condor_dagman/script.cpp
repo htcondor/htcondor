@@ -64,6 +64,7 @@ const char *Script::GetNodeName()
 int
 Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 {
+	debug_printf(DEBUG_NORMAL, "MRC [Script::BackgroundRun] called\n");
 	TmpDir		tmpDir;
 	MyString	errMsg;
 	if ( !tmpDir.Cd2TmpDir( _node->GetDirectory(), errMsg ) ) {
@@ -145,7 +146,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 
 		args.AppendArg(arg.c_str());
     }
-
+	debug_printf(DEBUG_NORMAL, "MRC [Script::BackgroundRun] calling daemoncore Create_Process with cmd = %s, reaperId = %d\n", cmd, reaperId);
 	_pid = daemonCore->Create_Process( cmd, args,
 									   PRIV_UNKNOWN, reaperId, FALSE, FALSE,
 									   NULL, NULL, NULL, NULL, NULL, 0 );
@@ -157,6 +158,6 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 				errMsg.Value() );
 		return 0;
 	}
-
+	debug_printf(DEBUG_NORMAL, "MRC [Script::BackgroundRun] returning _pid = %d\n", _pid);
 	return _pid;
 }

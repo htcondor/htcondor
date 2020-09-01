@@ -114,6 +114,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_DAGManJobId		  (DAGManJobID),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
+	_holdRunNodeCount	  (0),
 	_checkCondorEvents    (),
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
@@ -235,6 +236,7 @@ Dag::~Dag()
 
     delete _preScriptQ;
     delete _postScriptQ;
+	delete _holdScriptQ;
     delete _submitQ;
     delete _readyQ;
 
@@ -261,6 +263,7 @@ Dag::RunWaitingScripts()
 {
 	_preScriptQ->RunWaitingScripts();
 	_postScriptQ->RunWaitingScripts();
+	_holdScriptQ->RunWaitingScripts();
 }
 
 //-------------------------------------------------------------------------
@@ -1253,7 +1256,7 @@ Dag::ProcessNotIdleEvent( Job *job, int proc ) {
 // multi-process jobs.
 void
 Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
-
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessHeldEvent] called\n");
 	if ( !job ) {
 		return;
 	}
@@ -1272,6 +1275,13 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 						event->cluster, job->GetJobName(), _maxJobHolds );
 			RemoveBatchJob( job );
 		}
+	}
+
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessHeldEvent] job->GetHoldScriptName = %s\n", job->GetHoldScriptName());
+	if( job->_scriptHold != NULL ) {
+		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessHeldEvent] let's run the hold script\n");
+		// MRC TODO: Does running a HOLD script warrant a separate helper function?
+		RunHoldScript( job, true );
 	}
 }
 
@@ -1934,6 +1944,27 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 
 	return true;
 }
+
+//---------------------------------------------------------------------------
+// Run a HOLD script.
+
+bool Dag::RunHoldScript( Job *job, bool incrementRunCount )
+{
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::RunHoldScript] job = %s\n", job->GetJobName());
+	// Make sure we are allowed to run this script.
+	if( !job->_scriptHold ) {
+		return false;
+	}
+	// Run the HOLD script. This is a best-effort attempt that does not change
+	// the node status.
+	if ( incrementRunCount ) {
+		_holdRunNodeCount++;
+	}
+	_holdScriptQ->Run( job->_scriptHold );
+
+	return true;
+}
+
 //---------------------------------------------------------------------------
 // Note that the actual handling of the post script's exit status is
 // done not when the reaper is called, but in ProcessLogEvents when
@@ -3540,6 +3571,13 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 					"of -MaxPost limit (%d) or DEFER\n",
 					_postScriptQ->GetScriptDeferredCount(),
 					_maxPostScripts );
+	}
+
+	if( _holdScriptQ->GetScriptDeferredCount() > 0 || force ) {
+		debug_printf( level, "Note: %d total HOLD script deferrals because "
+					"of -MaxPost limit (%d) or DEFER\n",
+					_holdScriptQ->GetScriptDeferredCount(),
+					_maxHoldScripts );
 	}
 }
 
