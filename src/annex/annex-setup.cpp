@@ -96,14 +96,30 @@ check_account_setup( const std::string & publicKeyFile, const std::string & priv
 }
 
 int
-check_setup() {
+check_setup( const char * cloudFormationURL, const char * serviceURL ) {
 	int rv = 0;
 
-	std::string accessKeyFile, secretKeyFile, cfURL, ec2URL;
+	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
+	if( cfURL.empty() ) {
+		param( cfURL, "ANNEX_DEFAULT_CF_URL" );
+	}
+	if( cfURL.empty() ) {
+		fprintf( stderr, "No CloudFormation URL specified on command-line and ANNEX_DEFAULT_CF_URL is not set or empty in configuration.\n" );
+		return 1;
+	}
+
+	std::string ec2URL = serviceURL ? serviceURL : "";
+	if( ec2URL.empty() ) {
+		param( ec2URL, "ANNEX_DEFAULT_EC2_URL" );
+	}
+	if( ec2URL.empty() ) {
+		fprintf( stderr, "No EC2 URL specified on command-line and ANNEX_DEFAULT_EC2_URL is not set or empty in configuration.\n" );
+		return 1;
+	}
+
+	std::string accessKeyFile, secretKeyFile;
 	checkOneParameter( "ANNEX_DEFAULT_ACCESS_KEY_FILE", rv, accessKeyFile );
 	checkOneParameter( "ANNEX_DEFAULT_SECRET_KEY_FILE", rv, secretKeyFile );
-	checkOneParameter( "ANNEX_DEFAULT_CF_URL", rv, cfURL );
-	checkOneParameter( "ANNEX_DEFAULT_EC2_URL", rv, ec2URL );
 
 	checkOneParameter( "ANNEX_DEFAULT_S3_BUCKET", rv );
 	checkOneParameter( "ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS", rv );
