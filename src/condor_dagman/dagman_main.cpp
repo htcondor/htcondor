@@ -1019,7 +1019,7 @@ void main_init (int argc, char ** const argv) {
 	// might not have been provided.
 
 		// If lockFileName not provided in arguments, set a default
-	if (lockFileName == NULL) {
+	if (lockFileName.empty()) {
 		lockFileName = std::string(dagman.primaryDagFile.Value()) + ".lock";
 	}
 

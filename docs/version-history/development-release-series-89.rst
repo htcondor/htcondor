@@ -27,11 +27,8 @@ Release Notes:
 
 New Features:
 
--  The :class:`classad.ClassAd` class now defines equality and inequality.
-   :ticket:`7760`
-
--  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
-   :ticket:`7726`
+- Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
+  :ticket:`7726`
 
 - Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
   feature is the :class:`htcondor.personal.PersonalPool` class, which is

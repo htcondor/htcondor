@@ -169,7 +169,6 @@ if (BUILD_TESTING)
 
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
-    condor_pl_test(test_classad_version_comparison.py "Test ClassAd version comparison functions" "core;quick;full;quicknolink")
 	if (WITH_PYTHON_BINDINGS)
 		# An example test that depends on python bindings.
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
@@ -192,14 +191,17 @@ if (BUILD_TESTING)
 		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_now_internals "testing condor_now internals" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_now "condor_now functional tests" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
-		condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
-		condor_pl_test(lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test (job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test (lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
 
 		# htcondor-dags test suite
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "core;quick;full;quicknolink")
 
 		# htcondor.personal test suite
 		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "core;quick;full;quicknolink")
+
+		# ClassAds test suite
+		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "core;quick;full;quicknolink")
 
 		# Ornithology - partial merge - not yet reliable.
 		# condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
