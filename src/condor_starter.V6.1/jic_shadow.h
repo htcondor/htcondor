@@ -255,6 +255,8 @@ public:
 
 private:
 
+	void recordSandboxContents( const char * filename );
+
 		// // // // // // // // // // // //
 		// Private helper methods
 		// // // // // // // // // // // //

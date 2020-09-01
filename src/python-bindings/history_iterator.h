@@ -18,19 +18,19 @@ struct HistoryIterator
 		if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
 		boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-		if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
+		if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(HTCondorIOError, "Failed to receive remote ad.");
 		long long intVal;
 		if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
 		{ // Last ad.
-			if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Unable to close remote socket");
+			if (!m_sock->end_of_message()) THROW_EX(HTCondorIOError, "Unable to close remote socket");
 			m_sock->close();
 			std::string errorMsg;
 			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
 			{
-				THROW_EX(RuntimeError, errorMsg.c_str());
+				THROW_EX(HTCondorIOError, errorMsg.c_str());
 			}
-			if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
-				if (!ad->EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
+			if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(HTCondorValueError, "Remote side had parse errors on history file")
+				if (!ad->EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != m_count)) THROW_EX(HTCondorValueError, "Incorrect number of ads returned");
 
 			// Everything checks out!
 			m_count = -1;

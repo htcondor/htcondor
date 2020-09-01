@@ -22,6 +22,9 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
 :doc:`api/dags`
     Documentation for :mod:`htcondor.dags`.
 
+:doc:`api/personal`
+     Documentation for :mod:`htcondor.personal`.
+
 
 .. toctree::
    :maxdepth: 2
@@ -33,3 +36,4 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
    api/htcondor
    api/htchirp
    api/dags
+   api/personal

@@ -1,3 +1,12 @@
+The 10-14 year-old README is reproduced below.
+
+For Ornithology, see the getting started guide --
+https://ornithology.readthedocs.io/en/master/guides/getting-started.html
+and then the tutorial --
+https://ornithology.readthedocs.io/en/master/guides/test_curl_plugin.html
+
+--------------------------------------------------------------------------------
+
 The README files in this directory will help you figure out what's
 going on and to understand where and how to add new tests to the test
 suite.  For maximum clarity, these files should be read in the

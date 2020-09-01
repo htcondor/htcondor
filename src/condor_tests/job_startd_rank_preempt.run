@@ -24,7 +24,7 @@ use Check::SimpleJob;
 use Check::CondorLog;
 
 my $append_condor_config = '
-  RANK = TARGET.NiceUser =?= True
+  RANK = TARGET.TimeSensitive =?= True
   MaxJobRetirementTime = 0
   PREEMPTION_REQUIREMENTS = False
   NUM_CPUS = 1
@@ -37,9 +37,9 @@ CondorTest::StartCondorWithParams(
 
 my $testname = CondorTest::GetDefaultTestName();
 
-my $not_nice_submit = CondorTest::TempFileName("$testname.not_nice.submit");
+my $normal_submit = CondorTest::TempFileName("$testname.normal.submit");
 
-open( SUBMIT, ">$not_nice_submit" ) || die "error writing to $not_nice_submit: $!\n";
+open( SUBMIT, ">$normal_submit" ) || die "error writing to $normal_submit: $!\n";
 print SUBMIT "universe = vanilla\n";
 print SUBMIT "executable = x_sleep.pl\n";
 print SUBMIT "arguments = 600\n";
@@ -47,11 +47,17 @@ print SUBMIT "notification = never\n";
 print SUBMIT "queue\n";
 close( SUBMIT );
 
-my $not_nice_jobid = Condor::Submit($not_nice_submit);
+my $normal_jobid = Condor::Submit($normal_submit);
 
-# verify that a nice_user job runs
+my $append_submit_info = '
++TimeSensitive = true
+# this forces the negotiator to start the other job first
+accounting_group = nice-user
+';
+
+# verify that a time sensitive job runs
 SimpleJob::RunCheck(
-    append_submit_commands => "nice_user = true"
+    append_submit_commands => $append_submit_info
 );
 
 # verify that the startd preempted a job based on machine rank

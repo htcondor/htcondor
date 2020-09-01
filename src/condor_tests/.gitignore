@@ -2,3 +2,5 @@ job_core_bigenv.cndr.exe
 job_core_compressfiles.cndr.exe
 job_core_coredump.cndr.exe
 __pycache__
+*.pyc
+!ornithology-docs/Makefile

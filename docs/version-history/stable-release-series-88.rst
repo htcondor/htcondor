@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+- The Python bindings now define equality and inequality operators for
+  ClassAd objects.
+  :ticket:`7760`
+
 - Vanilla-univese jobs which set ``CheckpointExitCode`` (or otherwise make
   use of HTCondor's support for self-checkpointing) now report the total
   user and system CPU usage, not just the usage since the last checkpoint.
@@ -432,7 +436,7 @@ Release Notes:
 
 New Features:
 
--  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
+-  Added a new argument to *condor_config_val*.  ``-summary`` reads the configuration
    files and prints out a summary of the values that differ from the defaults.
    :ticket:`7286`
 
@@ -488,7 +492,7 @@ Bugs Fixed:
    for several minutes if there are a lot of job files spooled in the spool directory.
    :ticket:`7320`
 
--  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
+-  Fixed a bug where *condor_submit* would fail when arguments were supplied
    but no submit file, and the arguments were sufficient that no submit file
    was needed.
    :ticket:`7249`
@@ -783,7 +787,7 @@ Bugs Fixed:
    restart of the *condor_schedd*.
    :ticket:`7033`
 
--  Fixed a bug that prevented *condor_submit* ``-i`` from working with
+-  Fixed a bug that prevented ``condor_submit -i`` from working with
    a Singularity container environment for more than three minutes.
    :ticket:`7018`
 
@@ -803,7 +807,7 @@ Bugs Fixed:
    :ticket:`7010`
 
 -  Fixed a bug that prevented HTCondor from being started inside a docker
-   container with the condor_master as PID 1.  HTCondor could start
+   container with the *condor_master* as PID 1.  HTCondor could start
    if the master was launched from a script.
    :ticket:`7017`
 

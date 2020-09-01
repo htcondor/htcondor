@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2020, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -32,6 +32,7 @@
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "globus_utils.h"
+#include "limit_directory_access.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -2796,7 +2797,7 @@ RemoteResource::getSecSessionInfo(
 bool
 RemoteResource::allowRemoteReadFileAccess( char const * filename )
 {
-	bool response = m_want_chirp || m_want_streaming_io;
+	bool response = (m_want_chirp || m_want_streaming_io) && allow_shadow_access(filename);
 	logRemoteAccessCheck(response,"read access to file",filename);
 	return response;
 }
@@ -2804,7 +2805,7 @@ RemoteResource::allowRemoteReadFileAccess( char const * filename )
 bool
 RemoteResource::allowRemoteWriteFileAccess( char const * filename )
 {
-	bool response = m_want_chirp || m_want_streaming_io;
+	bool response = (m_want_chirp || m_want_streaming_io) && allow_shadow_access(filename);
 	logRemoteAccessCheck(response,"write access to file",filename);
 	return response;
 }

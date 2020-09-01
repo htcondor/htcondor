@@ -73,7 +73,7 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	daemonCore->Register_Command( CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS",
 								(CommandHandlercpp)&CredDaemon::check_creds_handler,
 								"check_creds_handler", this, WRITE,
-								D_FULLDEBUG );
+								D_FULLDEBUG, true);
 
 		// set timer to periodically advertise ourself to the collector
 	daemonCore->Register_Timer(0, m_update_collector_interval,
@@ -355,15 +355,19 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			req->LookupString("Service", service);
 			ad.Assign("Provider", service);
 
+			tmpvalue.clear();
 			req->LookupString("Username", tmpvalue);
 			ad.Assign("LocalUser", tmpvalue);
 
+			tmpvalue.clear();
 			req->LookupString("Handle", tmpvalue);
 			ad.Assign("Handle", tmpvalue);
 
+			tmpvalue.clear();
 			req->LookupString("Scopes", tmpvalue);
 			ad.Assign("Scopes", tmpvalue);
 
+			tmpvalue.clear();
 			req->LookupString("Audience", tmpvalue);
 			ad.Assign("Audience", tmpvalue);
 

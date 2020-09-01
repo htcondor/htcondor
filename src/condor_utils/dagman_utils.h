@@ -142,6 +142,7 @@ struct SubmitDagDeepOptions
     bool useDagDir;
     MyString strOutfileDir;
     MyString batchName; // optional value from -batch-name argument, will be double quoted if it exists.
+    std::string batchId;
     bool autoRescue;
     int doRescueFrom;
     bool allowVerMismatch;

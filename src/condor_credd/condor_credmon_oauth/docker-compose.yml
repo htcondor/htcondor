@@ -1,0 +1,18 @@
+version: '3'
+services:
+  scitokens-htcondor:
+    image: scitokens/htcondor-submit
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+    tmpfs:
+      - /run
+      - /run/lock
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    ports:
+      - "443:443"
+    hostname: localhost.localdomain
+    domainname: localdomain

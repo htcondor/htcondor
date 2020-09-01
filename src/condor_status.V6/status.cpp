@@ -34,7 +34,7 @@
 #include "error_utils.h"
 #include "condor_distribution.h"
 #include "condor_version.h"
-#include "natural_cmp.h"
+#include "classad/natural_cmp.h"
 #include "classad/jsonSource.h"
 #include "classad_helpers.h"
 #include "prettyPrint.h"
@@ -786,7 +786,6 @@ main (int argc, char *argv[])
 		query->addANDConstraint (buffer);
 
 		projList.insert(ATTR_HAS_JAVA);
-		projList.insert(ATTR_JAVA_MFLOPS);
 		projList.insert(ATTR_JAVA_VENDOR);
 		projList.insert(ATTR_JAVA_VERSION);
 	}

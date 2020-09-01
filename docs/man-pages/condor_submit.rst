@@ -2272,13 +2272,10 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     accounting groups.
     :index:`accounting_group_user<single: accounting_group_user; submit commands>`
  accounting_group_user = <accounting-group-user-name>
-    Sets the user name associated with the accounting group name for
-    resource usage accounting purposes. If not set, defaults to the
+    Sets the name associated with this job to be used for resource usage accounting purposes, such as
+    computation of fair-share priority and reporting via ``condor_userprio``.  If not set, defaults to the
     value of the job ClassAd attribute ``User``. This value is
-    advertised in the job ClassAd as ``AcctGroupUser``. If an accounting
-    group has not been set with the
-    **accounting_group** :index:`accounting_group<single: accounting_group; submit commands>`
-    command, this command is ignored.
+    advertised in the job ClassAd as ``AcctGroupUser``. 
     :index:`concurrency_limits<single: concurrency_limits; submit commands>`
  concurrency_limits = <string-list>
     A list of resources that this job needs. The resources are presumed

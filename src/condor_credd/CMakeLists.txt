@@ -22,3 +22,4 @@ condor_exe( condor_credd
 			"${CONDOR_LIBS}"
 			ON )
 
+add_subdirectory( condor_credmon_oauth )
