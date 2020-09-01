@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+- The Python bindings now define equality and inequality operators for
+  ClassAd objects.
+  :ticket:`7760`
+
 - Vanilla-univese jobs which set ``CheckpointExitCode`` (or otherwise make
   use of HTCondor's support for self-checkpointing) now report the total
   user and system CPU usage, not just the usage since the last checkpoint.
