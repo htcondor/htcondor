@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 import htcondor
 
 
@@ -25,6 +27,16 @@ def test_can_use_schedd(pool):
     # there shouldn't be any jobs in the pool
     # (but really we just want to make sure that the query goes through)
     assert len(pool.schedd.query(constraint="true")) == 0
+
+
+@pytest.mark.parametrize("queue_method", ["queue", "queue_with_itemdata"])
+def test_can_submit_a_job(pool, queue_method):
+    sub = htcondor.Submit({"executable": "foobar"})
+
+    # make sure the schedd doesn't get garbage collected out from under us
+    schedd = pool.schedd
+    with schedd.transaction() as txn:
+        cluster_id = getattr(sub, queue_method)(txn)
 
 
 def test_different_pools_have_different_collectors(pool, another_pool):
