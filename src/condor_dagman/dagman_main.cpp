@@ -726,6 +726,7 @@ void main_init (int argc, char ** const argv) {
 	// Process command-line arguments
 	//
 	bool alwaysRunPostSet = false;
+	bool onlyDumpDot = false;
 
 	for (i = 1; i < argc; i++) {
 		// If argument is not a flag/option, assume it's a dag filename
@@ -858,6 +859,9 @@ void main_init (int argc, char ** const argv) {
 
 		} else if( !strcasecmp( "-DumpRescue", argv[i] ) ) {
 			dagman.dumpRescueDag = true;
+
+		} else if( !strcasecmp( "-Dot", argv[i] ) ) {
+			onlyDumpDot = true;
 
 		} else if( !strcasecmp( "-verbose", argv[i] ) ) {
 			dagman._submitDagDeepOpts.bVerbose = true;
@@ -1358,6 +1362,15 @@ void main_init (int argc, char ** const argv) {
 	}
 
 	dagman.dag->DumpDotFile();
+	if ( onlyDumpDot ) {
+		if ( !dagman.dag->GetDotFileName() ) {
+			printf("Unable to write .dot file, no DOT filename specified\n");
+		}
+		else {
+			printf("Writing .dot file: %s\n", dagman.dag->GetDotFileName() );
+		}
+		ExitSuccess();
+	}
 
 	if ( dagman.dumpRescueDag ) {
 		debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
