@@ -289,8 +289,6 @@ sub StartTestOutput
     if($isXML) {
         print XML "<test_result>\n<name>$test_program</name>\n<description></description>\n";
         printf("%40s ", $test_program );
-    } else {
-        printf("%40s ", $test_program );
     }
 }
 
@@ -598,13 +596,13 @@ sub StartTestPersonal {
         $firstappend_condor_config = $testconf;
     }
 
-    my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
+    my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remote_task.$test");
 
     CondorTest::StartCondorWithParams(
-        condor_name => "remotetask$test",
+        condor_name => "condor",
         fresh_local => "TRUE",
-        condorlocalsrc => "$configfile"
-        #test_glue => "TRUE",
+        condorlocalsrc => "$configfile",
+        test_name => "$test",
     );
 }
 

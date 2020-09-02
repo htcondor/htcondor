@@ -359,26 +359,35 @@ sub StartCondorWithParams
 	$mpid = "pdir$mpid";
 	my $config_and_port = "";
 	my $winpath = "";
+	my $now = time();
 
 	if(exists $personal_condor_params{"test_glue"}) {
-		system("mkdir -p $topleveldir/condor_tests/$testname.saveme/$mpid/$mpid$version");
-    	$topleveldir = "$topleveldir/condor_tests/$testname.saveme/$mpid/$mpid$version";
+		system("mkdir -p $topleveldir/condor_tests/$testname.saveme/$mpid$version");
+		$topleveldir = "$topleveldir/condor_tests/$testname.saveme/$mpid$version";
+		#system("mkdir -p $topleveldir/condor_tests/$testname.saveme/$mpid/$mpid$version");
+		#$topleveldir = "$topleveldir/condor_tests/$testname.saveme/$mpid/$mpid$version";
 	} else {
 		if(is_windows() && is_windows_native_perl()) {
-			CreateDir("-p $topleveldir\\$testname.saveme\\$mpid\\$mpid$version");
-    		$topleveldir = "$topleveldir\\$testname.saveme\\$mpid\\$mpid$version";
+			CreateDir("-p $topleveldir\\$testname.saveme\\$mpid$version");
+			$topleveldir = "$topleveldir\\$testname.saveme\\$mpid$version";
+			#CreateDir("-p $topleveldir\\$testname.saveme\\$mpid\\$mpid$version");
+			#$topleveldir = "$topleveldir\\$testname.saveme\\$mpid\\$mpid$version";
 		} elsif(is_windows() && is_cygwin_perl()) {
-			CreateDir("-p $topleveldir/$testname.saveme/$mpid/$mpid$version");
-    		my $tmp1 = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
-    		$topleveldir = `cygpath -m $tmp1`;
+			CreateDir("-p $topleveldir/$testname.saveme/$mpid$version");
+			my $tmp1 = "$topleveldir/$testname.saveme/$mpid$version";
+			#CreateDir("-p $topleveldir/$testname.saveme/$mpid/$mpid$version");
+			#my $tmp1 = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
+			$topleveldir = `cygpath -m $tmp1`;
 			CondorUtils::fullchomp($topleveldir);
 		} else {
-			CreateDir("-p $topleveldir/$testname.saveme/$mpid/$mpid$version");
-    		$topleveldir = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
+			CreateDir("-p $topleveldir/$testname.saveme/$mpid$version");
+			$topleveldir = "$topleveldir/$testname.saveme/$mpid$version";
+			#CreateDir("-p $topleveldir/$testname.saveme/$mpid/$mpid$version");
+			#$topleveldir = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
 		}
 	}
 
-	$procdaddress = $mpid . $version;
+	$procdaddress = $mpid . $now . $version;
 
 
 	if(exists $personal_condor_params{"personaldir"}) {

@@ -29,21 +29,23 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
+use File::Spec;
 
 my $testname = "lib_include_cmd_config";
 
-my $firstappend_condor_config = '
+my $firstappend_condor_config = 'TEST_FILE = ' . File::Spec->rel2abs(__FILE__) . '
+	TEST_DIR = $Fpb(TEST_FILE)
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	include : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPS1 |
-	include : $(LOCAL_DIR)/../../../lib_include_cmd_config1.txt
-	include: $(LOCAL_DIR)/../../../lib_include_cmd_config2.txt
-	include :$(LOCAL_DIR)/../../../lib_include_cmd_config3.txt
-	@include :$(LOCAL_DIR)/../../../lib_include_cmd_config4.txt
-	@INCLUDE : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT1 |
-	INCLUDE : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPS2 |
-	@INCLUDE: $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT2 |
-	@INCLUDE :$(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT3 |
-	@INCLUDE : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT4|
+	include : $(TEST_DIR)/lib_include_cmd_config.pl CAPS1 |
+	include : $(TEST_DIR)/lib_include_cmd_config1.txt
+	include: $(TEST_DIR)/lib_include_cmd_config2.txt
+	include :$(TEST_DIR)/lib_include_cmd_config3.txt
+	@include :$(TEST_DIR)/lib_include_cmd_config4.txt
+	@INCLUDE : $(TEST_DIR)/lib_include_cmd_config.pl CAPSAT1 |
+	INCLUDE : $(TEST_DIR)/lib_include_cmd_config.pl CAPS2 |
+	@INCLUDE: $(TEST_DIR)/lib_include_cmd_config.pl CAPSAT2 |
+	@INCLUDE :$(TEST_DIR)/lib_include_cmd_config.pl CAPSAT3 |
+	@INCLUDE : $(TEST_DIR)/lib_include_cmd_config.pl CAPSAT4|
 ';
 
 # Interpretation ie expectd results

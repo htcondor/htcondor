@@ -41,7 +41,9 @@ use warnings;
 use File::Copy;
 use File::Basename;
 
-my $force_cygwin = 0;
+# set to 1 if this script should start a personal condor when Test_Requirements indicates one is needed
+# set to 0 to leave that to run_test.pl to handle
+my $start_personal_if = 0;
 
 BEGIN {
 	my $dir = dirname($0);
@@ -128,7 +130,7 @@ else {
 }
 
 ######################################################################
-# run the test using batch_test.pl
+# run the test using run_test.pl
 ######################################################################
 
 if (1) {
@@ -180,9 +182,11 @@ if( exists( $requirements->{ IPv4 } ) ) {
 	}
 }
 
-if( exists( $requirements->{ personal } ) ) {
-	out("'$testname' requires a personal HTCondor, starting one now.");
-	StartTestPersonal($testname, $requirements->{testconf});
+if ($start_personal_if) {
+	if( exists( $requirements->{ personal } ) ) {
+		out("'$testname' requires a personal HTCondor, starting one now.");
+		StartTestPersonal($testname, $requirements->{testconf});
+	}
 }
 
 # Now that we stash all debug messages, we'll only dump them all
@@ -226,49 +230,59 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     #out("PATH is now\n$newpath");
 }
 
-out("RUNNING run_test.pl '$testname'\n---------");
+out("RUNNING run_test.pl '$testname'\n    -X-X-X-X-X-X- run_test.pl output -X-X-X-X-X-X-");
 my $batchteststatus = system("$perl_exe run_test.pl $testname");
-print "---------\n"; # we print here rather than using out() in order to bracket the batch test output with ----- above and below.
+print "    -X-X-X-X-X-X- end of run_test.pl output -X-X-X-X-X-X-\n"; # we print here rather than using out() in order to bracket the run_test output with ----- above and below.
 my @returns = TestGlue::ProcessReturn($batchteststatus);
 
 $batchteststatus = $returns[0];
 my $signal = $returns[1];
 my $signalmsg = $signal ? " and signal $signal" : "";
-out("run_test returned $batchteststatus" . $signalmsg);
+out("run_test.pl '$testname' returned $batchteststatus" . $signalmsg);
 
 # if we started a personal HTCondor, stop it now, if we can't, then fail the test.
 #
 my $teststatus = $batchteststatus;
-if(exists $requirements->{personal}) {
-	out("Stopping personal HTCondor for '$testname'");
-	my $personalstatus = StopTestPersonal($testname);
-	if($personalstatus != 0 && $teststatus == 0) {
-		print "\tTest succeeded, but condor failed to shut down or there were\n";
-		print "\tcore files or error messages in the logs. see CondorTest::EndTest\n";
-		$teststatus = $personalstatus;
+if ($start_personal_if) {
+	if(exists $requirements->{personal}) {
+		out("Stopping personal HTCondor for '$testname'");
+		my $personalstatus = StopTestPersonal($testname);
+		if($personalstatus != 0 && $teststatus == 0) {
+			print "\tTest succeeded, but condor failed to shut down or there were\n";
+			print "\tcore files or error messages in the logs. see CondorTest::EndTest\n";
+			$teststatus = $personalstatus;
+		}
 	}
 }
 
 # report here figure if the test passed or failed.
-my $run_success = $batchteststatus ? 0 : 1; # 0 is success for batch test, but 1 is success for RegisterResult
-CondorTest::RegisterResult($run_success,test_name=>$testname, check_name=>"run_test");
+my $run_success = $batchteststatus ? 0 : 1; # 0 is success for run_test.pl, but 1 is success for RegisterResult
+CondorTest::RegisterResult($run_success,test_name=>"remote_task.pl", check_name=>$testname);
 
 ######################################################################
 # print output from .run script to stdout of this task, and final exit
 ######################################################################
 
-my $compiler_path = File::Spec->catpath($test_dir, $compiler);
-chdir($compiler_path) || c_die("Can't chdir($compiler_path): $!\n");
 my $run_out       = "$testname.run.out";
-my $run_out_path  = File::Spec->catfile($compiler_path, $run_out);
 my $test_out      = "$testname.out";
-my $test_out_path = File::Spec->catfile($compiler_path, $test_out);
 my $test_err      = "$testname.err";
-my $test_err_path = File::Spec->catfile($compiler_path, $test_err);
+out("Looking for $testname.run.out and $testname.out/.err files");
 
-out("Looking for run.out file");
-print "\tcompiler_path: $compiler_path\n\trun_out: $run_out\n\trun_out_path: $run_out_path\n\tcompiler_path: $compiler_path\n";
-print "\ttest_out: $test_out\n\ttest_out_path: $test_out_path\n\ttest_err: $test_err\n\ttest_err_path: $test_err_path\n";
+my $run_out_path  = $run_out;
+my $test_out_path = $test_out;
+my $test_err_path = $test_err;
+
+if ($compiler ne '.') {
+	# TJ 2020, obsolete?
+	my $compiler_path = File::Spec->catpath($test_dir, $compiler);
+	chdir($compiler_path) || c_die("Can't chdir($compiler_path): $!\n");
+	$run_out_path  = File::Spec->catfile($compiler_path, $run_out);
+	$test_out_path = File::Spec->catfile($compiler_path, $test_out);
+	$test_err_path = File::Spec->catfile($compiler_path, $test_err);
+
+	print "\tcompiler_path: $compiler_path\n\trun_out: $run_out\n\trun_out_path: $run_out_path\n\tcompiler_path: $compiler_path\n";
+	print "\ttest_out: $test_out\n\ttest_out_path: $test_out_path\n\ttest_err: $test_err\n\ttest_err_path: $test_err_path\n";
+}
 #print "Here now:\n";
 #system("pwd;ls -lh $run_out_path");
 
@@ -288,12 +302,12 @@ if( ! -f $run_out_path ) {
 else {
     # spit out the contents of the run.out file to the stdout of the task
     if( open(RES, '<', $run_out_path) ) {
-        out("Printing test output...\n\n----- Start of $run_out -----");
+        out("\n    -X-X-X-X-X-X- Start of $run_out -X-X-X-X-X-X-");
         while(<RES>) {
             print "$_";
         }
         close RES;
-        print "\n----- End of $run_out -----\n";
+        print "\n    -X-X-X-X-X-X- End of $run_out -X-X-X-X-X-X-\n";
     }
     else {
         out("Printing test output...  ERROR: failed to open $run_out_path: $!");
