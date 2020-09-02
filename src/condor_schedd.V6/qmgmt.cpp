@@ -7652,12 +7652,12 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		auto last_at = job_user.find_last_of('@');
 		auto accounting_domain = scheduler.accountingDomain();
 		if (last_at != std::string::npos && !accounting_domain.empty()) {
-			strncat(powner, job_user.substr(0, last_at).c_str(), cremain);
+			strncat(powner, job_user.substr(0, last_at).c_str(), cremain - 1);
 			cremain -= last_at;
 			strncat(powner, "@", cremain); cremain--;
 			strncat(powner, accounting_domain.c_str(), cremain);
 		} else {
-			strncat(powner, job_user.c_str(), cremain);
+			strncat(powner, job_user.c_str(), cremain - 1);
 		}
 	} else if (user_is_the_new_owner) {
 		// AccountingGroup does not include a domain, but it needs to for this code
