@@ -220,6 +220,7 @@ my $USESHARERPORT = 0;
 my $RunningTimeStamp = 0;
 
 my $topleveldir = getcwd();
+   $topleveldir =~ s/condor_tests$/test-runs/;
 my $home = $topleveldir;
 my $localdir;
 my $condorlocaldir;
@@ -361,6 +362,11 @@ sub StartCondorWithParams
 	my $winpath = "";
 	my $now = time();
 
+	if(exists $personal_condor_params{"runs_dir"}) {
+		$topleveldir = $personal_condor_params{"runs_dir"};
+		debug( "USING $topleveldir as topleveldir for test runs\n",$debuglevel);
+	}
+
 	if(exists $personal_condor_params{"test_glue"}) {
 		system("mkdir -p $topleveldir/condor_tests/$testname.saveme/$mpid$version");
 		$topleveldir = "$topleveldir/condor_tests/$testname.saveme/$mpid$version";
@@ -393,7 +399,7 @@ sub StartCondorWithParams
 	if(exists $personal_condor_params{"personaldir"}) {
 		$topleveldir = $personal_condor_params{"personaldir"};
 		debug( "SETTING $topleveldir as topleveldir\n",$debuglevel);
-		system("mkdir -p $topleveldir");
+		CreateDir("-p $topleveldir");
 	}
 
 	# if we are wrapping tests, publish log location
