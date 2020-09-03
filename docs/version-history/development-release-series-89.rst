@@ -43,6 +43,12 @@ New Features:
 
 Bugs Fixed:
 
+-  ``condor_annex -check-setup`` now respects the configuration setting
+   ``ANNEX_DEFAULT_AWS_REGION``.  In addition, ``condor_annex -setup`` now
+   sets ``ANNEX_DEFAULT_AWS_REGION`` if it hasn't already been set.  This
+   makes first-time setup in a nondefault region much less confusing.
+   :ticket:`7832`
+
 -  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
    would make every job go on hold.
    :ticket:`7797`
