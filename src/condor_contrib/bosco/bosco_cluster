@@ -945,8 +945,8 @@ remote_base_dir_default="$remote_base_dir_root/default"
 [[ $remote_base_dir_host ]] || remote_base_dir_host=bosco
 tmp_install_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
 mkdir -p "$tmp_install_dir/$remote_base_dir_host"
-local_install_dir=$tmp_install_dir/$remote_base_dir_host
-remote_sandbox_dir=$remote_base_dir_host/sandbox
+local_install_dir="$tmp_install_dir/$remote_base_dir_host"
+remote_sandbox_dir="$remote_base_dir_host/sandbox"
 
 # TODO: uncomment to enable subdirs
 #remote_base_dir_host="$remote_base_dir_root/$remote_host"
