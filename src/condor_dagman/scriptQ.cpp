@@ -57,10 +57,9 @@ ScriptQ::~ScriptQ()
 int
 ScriptQ::Run( Script *script )
 {
-	debug_printf(DEBUG_NORMAL, "MRC [ScriptQ::Run] called\n");
 	//TEMP -- should ScriptQ object know whether it's pre or post?
 	const char *prefix = script->GetScriptName();
-	debug_printf(DEBUG_NORMAL, "MRC [ScriptQ::Run] script = %s\n", script->GetScriptName());
+
 	bool deferScript = false;
 
 		// Defer PRE scripts if the DAG is halted (we need to go ahead
@@ -102,7 +101,6 @@ ScriptQ::Run( Script *script )
 				  prefix, script->GetNodeName() );
 	_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
 				( script->_type == ScriptType::HOLD ) );
-	debug_printf(DEBUG_NORMAL, "MRC [ScriptQ::Run] attempting to start script\n");
 	if( int pid = script->BackgroundRun( _scriptReaperId,
 				_dag->_dagStatus, _dag->NumNodesFailed() ) ) {
 		_numScriptsRunning++;
@@ -126,7 +124,7 @@ ScriptQ::Run( Script *script )
 		_dag->PreScriptReaper( script->GetNode(), returnVal );
 	} else if( script->_type == ScriptType::POST ) {
 		_dag->PostScriptReaper( script->GetNode(), returnVal );
-	}
+	} 
 
 	return 0;
 }

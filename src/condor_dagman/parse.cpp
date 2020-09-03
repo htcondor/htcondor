@@ -2076,6 +2076,7 @@ parse_splice(
 							dag->MaxJobsSubmitted(),
 							dag->MaxPreScripts(),
 							dag->MaxPostScripts(),
+							dag->MaxHoldScripts(),
 							dag->UseDagDir(),
 							dag->MaxIdleJobProcs(),
 							dag->RetrySubmitFirst(),

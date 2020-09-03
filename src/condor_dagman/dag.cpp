@@ -84,6 +84,7 @@ void touch (const char * filename) {
 Dag::Dag( /* const */ StringList &dagFiles,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
+		  const int maxHoldScripts,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const CondorID *DAGManJobID,
@@ -93,6 +94,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  DCSchedd *schedd, const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
+	_maxHoldScripts       (maxHoldScripts),
 	MAX_SIGNAL			  (64),
 	_splices              (hashFunction),
 	_dagFiles             (dagFiles),
@@ -165,12 +167,14 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	if (_isSplice == false) {
 		_preScriptQ = new ScriptQ( this );
 		_postScriptQ = new ScriptQ( this );
+		_holdScriptQ = new ScriptQ( this );
 		if( !_preScriptQ || !_postScriptQ ) {
 			EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 		}
 	} else {
 		_preScriptQ = NULL;
 		_postScriptQ = NULL;
+		_holdScriptQ = NULL;
 	}
 
 	debug_printf( DEBUG_DEBUG_4, "_maxJobsSubmitted = %d, "
@@ -1256,7 +1260,7 @@ Dag::ProcessNotIdleEvent( Job *job, int proc ) {
 // multi-process jobs.
 void
 Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessHeldEvent] called\n");
+
 	if ( !job ) {
 		return;
 	}
@@ -1277,10 +1281,8 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 		}
 	}
 
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessHeldEvent] job->GetHoldScriptName = %s\n", job->GetHoldScriptName());
 	if( job->_scriptHold != NULL ) {
-		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessHeldEvent] let's run the hold script\n");
-		// MRC TODO: Does running a HOLD script warrant a separate helper function?
+		// TODO: Does running a HOLD script warrant a separate helper function?
 		RunHoldScript( job, true );
 	}
 }
@@ -1950,7 +1952,6 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 
 bool Dag::RunHoldScript( Job *job, bool incrementRunCount )
 {
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::RunHoldScript] job = %s\n", job->GetJobName());
 	// Make sure we are allowed to run this script.
 	if( !job->_scriptHold ) {
 		return false;
@@ -3575,7 +3576,7 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 
 	if( _holdScriptQ->GetScriptDeferredCount() > 0 || force ) {
 		debug_printf( level, "Note: %d total HOLD script deferrals because "
-					"of -MaxPost limit (%d) or DEFER\n",
+					"of -MaxHold limit (%d) or DEFER\n",
 					_holdScriptQ->GetScriptDeferredCount(),
 					_maxHoldScripts );
 	}

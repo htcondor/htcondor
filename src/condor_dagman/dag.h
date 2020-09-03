@@ -130,7 +130,8 @@ class Dag {
 
     Dag( /* const */ StringList &dagFiles,
 		 const int maxJobsSubmitted,
-		 const int maxPreScripts, const int maxPostScripts, 
+		 const int maxPreScripts, const int maxPostScripts,
+		 const int maxHoldScripts,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const CondorID *DAGManJobId,
@@ -426,6 +427,12 @@ class Dag {
 	 */
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
+
+	/** @return the number of nodes currently running a HOLD script.
+	 *          These nodes do not have any special status.
+	 */
+	inline int HoldRunNodeCount() const
+		{ return _holdRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
 	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN (whether or not

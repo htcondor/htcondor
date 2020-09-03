@@ -1159,31 +1159,27 @@ Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_
 		whynot = "missing script name";
 		return false;
 	}
-	debug_printf(DEBUG_NORMAL, "MRC [Job::AddScript] script_type = %d, cmd = %s\n", script_type, cmd);
-	const char *script_name;
+
+	// Check if a script of the same type has already been assigned to this node
+	const char *old_script_name = NULL;
 	const char *type_name;
 	switch( script_type ) {
-		case ScriptType::PRE: 
-			script_name = GetPreScriptName();
+		case ScriptType::PRE:
+			old_script_name = GetPreScriptName();
 			type_name = "PRE";
-		case ScriptType::POST: 
-			script_name = GetPostScriptName();
+		case ScriptType::POST:
+			old_script_name = GetPostScriptName();
 			type_name = "POST";
 		case ScriptType::HOLD:
-			script_name = GetHoldScriptName();
+			old_script_name = GetHoldScriptName();
 			type_name = "HOLD";
 	}
-	/*
-	if( post ? _scriptPost : _scriptPre ) {
-		const char *prePost = post ? "POST" : "PRE";
-		const char *script = post ? GetPostScriptName() : GetPreScriptName();
+	if( old_script_name ) {
 		debug_printf( DEBUG_NORMAL,
-					"Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
-					GetJobName(), prePost, script, cmd );
-		check_warning_strictness( DAG_STRICT_3 );
-		delete (post ? _scriptPost : _scriptPre);
+			"Warning: node %s already has %s script <%s> assigned; changing "
+			"to <%s>\n", GetJobName(), type_name, old_script_name, cmd );
 	}
-	*/
+
 	Script* script = new Script( script_type, cmd, defer_status, defer_time, this );
 	if( !script ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );

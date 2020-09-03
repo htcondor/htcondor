@@ -82,9 +82,9 @@ class ScriptQ : public Service {
 	// daemonCore reaper id for PRE/POST script reaper function
 	int _scriptReaperId;
 
-	// Total count of scripts deferred because of MaxPre or MaxPost limit
-	// (note that a single script getting deferred multiple times is counted
-	// multiple times).  Also includes scripts deferred by the new
+	// Total count of scripts deferred because of MaxPre, MaxPost or MaxHold 
+	// limit (note that a single script getting deferred multiple times is
+	// counted multiple times).  Also includes scripts deferred by the new
 	// DEFER feature.
 	int _scriptDeferredCount;
 };
