@@ -2052,6 +2052,16 @@ MACRO_SET * param_get_macro_set()
 	return &ConfigMacroSet;
 }
 
+bool param_defined_by_config(const char *name)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	ctx.without_default = true;
+
+	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
+	return pval != NULL;
+}
+
 const char * param_unexpanded(const char *name)
 {
 	MACRO_EVAL_CONTEXT ctx;
