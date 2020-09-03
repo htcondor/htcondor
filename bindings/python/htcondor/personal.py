@@ -398,10 +398,8 @@ class PersonalPool:
         param_lines += ["# RAW PARAMS"]
         param_lines += textwrap.dedent(self._raw_config).splitlines()
 
-        params = "\n".join(param_lines)
-
-        with self.config_file.open(mode="a") as f:
-            f.write(params)
+        params = "\n".join(param_lines + [""])
+        self.config_file.write_text(params)
 
     @_skip_if(PersonalPoolState.STARTING, PersonalPoolState.READY)
     def _start_condor(self):

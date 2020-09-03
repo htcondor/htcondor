@@ -583,6 +583,7 @@ class Dag {
     int _maxPostScripts;
 	int _maxHoldScripts;
 
+	char* GetDotFileName(void) { return _dot_file_name; }
 	void SetDotFileName(const char *dot_file_name);
 	void SetDotIncludeFileName(const char *include_file_name);
 	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }

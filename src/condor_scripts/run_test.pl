@@ -102,6 +102,7 @@ my $iswindows = CondorUtils::is_windows();
 # configuration options
 my $test_retirement = 1800;	# seconds for an individual test timeout - 30 minutes
 my $BaseDir = getcwd();
+my $RunsDir = $BaseDir; $RunsDir =~ s/condor_tests$/test-runs/;
 my $hush = 1;
 
 # set up to recover from tests which hang
@@ -185,12 +186,12 @@ if(@testlist) {
     }
 }
 
-my $ResultDir;
+my $XmlResultDir;
 # set up base directory for storing test results
 if($isXML) {
-    CondorTest::verbose_system ("mkdir -p $BaseDir/results",{emit_output=>0});
-    $ResultDir = "$BaseDir/results";
-    open( XML, ">$ResultDir/ncondor_testsuite.xml" ) || die "error opening \"ncondor_testsuite.xml\": $!\n";
+    CondorTest::verbose_system ("mkdir -p $RunsDir/results",{emit_output=>0});
+    $XmlResultDir = "$RunsDir/results";
+    open( XML, ">$XmlResultDir/ncondor_testsuite.xml" ) || die "error opening \"ncondor_testsuite.xml\": $!\n";
     print XML "<\?xml version=\"1.0\" \?>\n<test_suite>\n";
 }
 
@@ -289,8 +290,6 @@ sub StartTestOutput
     if($isXML) {
         print XML "<test_result>\n<name>$test_program</name>\n<description></description>\n";
         printf("%40s ", $test_program );
-    } else {
-        printf("%40s ", $test_program );
     }
 }
 
@@ -307,10 +306,10 @@ sub CompleteTestOutput
     @statret = CondorUtils::ProcessReturn($status);
 
     if($isXML) {
-        print "Copying to $ResultDir ...\n";
+        print "Copying to $XmlResultDir ...\n";
 
         # possibly specify exact files in future - for now bring back all
-        system ("cp $test_name.* $ResultDir/.");
+        system ("cp $test_name.* $XmlResultDir/.");
 
         print XML "<data_file>$$test_name.run.out</data_file>\n<error>";
         print XML "</error>\n<output>";
@@ -406,7 +405,7 @@ sub DoChild
         }
         # This only works when a test file or directory is appended, because
         # --base-test-dir is an option our conftest.py adds.
-        $perl = "$perl -m pytest -s --base-test-dir ${BaseDir}/test-dirs/";
+        $perl = "$perl -m pytest -s --base-test-dir ${RunsDir}/";
     }
 
     my $test_starttime = time();
@@ -420,10 +419,11 @@ sub DoChild
     # add test core file
 
     # make sure pid storage directory exists
-    my $save = $testname . ".saveme";
-    my $piddir = $save . "/pdir$$";
+    my $save = $RunsDir . "/" . $testname . ".saveme";
     CreateDir("-p $save");
-    CreateDir("-p $piddir");
+    my $piddir = $save;
+    #$piddir .= "/pdir$$";
+    #CreateDir("-p $piddir");
 
     my $log = "";
     my $cmd = "";
@@ -598,13 +598,14 @@ sub StartTestPersonal {
         $firstappend_condor_config = $testconf;
     }
 
-    my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
+    my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remote_task.$test");
 
     CondorTest::StartCondorWithParams(
-        condor_name => "remotetask$test",
+        condor_name => "condor",
         fresh_local => "TRUE",
-        condorlocalsrc => "$configfile"
-        #test_glue => "TRUE",
+        condorlocalsrc => "$configfile",
+        test_name => "$test",
+        runs_dir => "$RunsDir"
     );
 }
 
