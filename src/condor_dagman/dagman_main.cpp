@@ -726,6 +726,7 @@ void main_init (int argc, char ** const argv) {
 	// Process command-line arguments
 	//
 	bool alwaysRunPostSet = false;
+	bool onlyDumpDot = false;
 
 	for (i = 1; i < argc; i++) {
 		// If argument is not a flag/option, assume it's a dag filename
@@ -858,6 +859,9 @@ void main_init (int argc, char ** const argv) {
 
 		} else if( !strcasecmp( "-DumpRescue", argv[i] ) ) {
 			dagman.dumpRescueDag = true;
+
+		} else if( !strcasecmp( "-Dot", argv[i] ) ) {
+			onlyDumpDot = true;
 
 		} else if( !strcasecmp( "-verbose", argv[i] ) ) {
 			dagman._submitDagDeepOpts.bVerbose = true;
@@ -1358,6 +1362,15 @@ void main_init (int argc, char ** const argv) {
 	}
 
 	dagman.dag->DumpDotFile();
+	if ( onlyDumpDot ) {
+		if ( !dagman.dag->GetDotFileName() ) {
+			printf("Unable to write .dot file, no DOT filename specified\n");
+		}
+		else {
+			printf("Writing .dot file: %s\n", dagman.dag->GetDotFileName() );
+		}
+		ExitSuccess();
+	}
 
 	if ( dagman.dumpRescueDag ) {
 		debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
@@ -1864,7 +1877,7 @@ void condor_event_timer () {
 
 
 void
-main_pre_dc_init (int argc, char ** const argv)
+main_pre_dc_init ( int, char*[] )
 {
 	DC_Skip_Auth_Init();
 	DC_Skip_Core_Init();
@@ -1872,63 +1885,29 @@ main_pre_dc_init (int argc, char ** const argv)
 	_setmaxstdio(2048);
 #endif
 
-		// Convert the DAGMan log file name to an absolute path if it's
-		// not one already, so that we'll log things to the right file
-		// if we change to a different directory.
-	const char *	logFile = GetEnv( "_CONDOR_DAGMAN_LOG" );
-	if ( logFile && !fullpath( logFile ) ) {
-		MyString	currentDir;
-		if ( condor_getcwd( currentDir ) ) {
-			MyString newLogFile(currentDir);
-			newLogFile += DIR_DELIM_STRING;
-			newLogFile += logFile;
-			SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
-		} else {
-			debug_printf( DEBUG_NORMAL, "ERROR: unable to get cwd: %d, %s\n",
-					errno, strerror(errno) );
-		}
+		// Get the current directory
+	MyString currentDir = "";
+	if ( condor_getcwd( currentDir ) ) {
+		currentDir += DIR_DELIM_STRING;
+	}
+	else {
+		debug_printf( DEBUG_NORMAL, "ERROR: unable to get cwd: %d, %s\n",
+				errno, strerror(errno) );
 	}
 
-		// If a log filename is still not set, assign it a default based on the 
-		// dag filename provided in command-line arguments
+		// Convert the DAGMan log file name to an absolute path if it's
+		// not one already
+	MyString newLogFile;
+	const char*	logFile = GetEnv( "_CONDOR_DAGMAN_LOG" );
+	if ( logFile && !fullpath( logFile ) ) {
+		newLogFile = currentDir + logFile;
+		SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
+	}
+
+		// If a log filename is still not set, assign it a default
 	if ( !GetEnv( "_CONDOR_DAGMAN_LOG" ) ) {
-		MyString currentDir;
-		MyString dagFilename;
-		if ( condor_getcwd( currentDir ) ) {
-			MyString newLogFile(currentDir);
-			newLogFile += DIR_DELIM_STRING;
-			// Parse command-line arguments
-			int i;
-			for (i = 1; i < argc; i++) {
-				// If argument is not a flag/option, assume it's a dag filename
-				if( argv[i][0] != '-') {
-					dagFilename = argv[i];
-					break;
-				}
-				else if (!strcasecmp( "-Dag", argv[i] ) ) {
-					i++;
-					if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
-						debug_printf( DEBUG_SILENT, "No DAG specified\n" );
-						Usage();
-					}
-					dagFilename = argv[i];
-				}
-				// Skip all other arguments
-				else {
-					// If the argument proceeding this is not a flag, skip it also
-					if( argc > ( i + 1 ) ) {
-						if( argv[i+1][0] != '-' ) {
-							i++;
-						}
-					}
-				}
-			}
-			newLogFile += dagFilename + ".dagman.out";
-			SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
-		} else {
-			debug_printf( DEBUG_NORMAL, "ERROR: unable to get cwd: %d, %s\n",
-					errno, strerror(errno) );
-		}
+		newLogFile = currentDir + ".condor_dagman.out";
+		SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
 	}
 }
 
