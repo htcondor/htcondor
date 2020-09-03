@@ -1248,8 +1248,15 @@ case CONDOR_getfile:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		
-		errno = 0;
-		fd = safe_open_wrapper_follow( path, O_RDONLY | _O_BINARY );
+		if (read_access(path)) {
+			errno = 0;
+			fd = safe_open_wrapper_follow(path, O_RDONLY | _O_BINARY);
+		}
+		else {
+			errno = EACCES;
+			fd = -1;
+		}
+
 		if(fd >= 0) {
 			struct stat info;
 			int rc = stat(path, &info);
@@ -1304,8 +1311,14 @@ case CONDOR_putfile:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		
-		errno = 0;
-		fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
+		if (write_access(path)) {
+			errno = 0;
+			fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
+		}
+		else {
+			errno = EACCES;
+			fd = -1;
+		}
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		
@@ -2173,7 +2186,7 @@ case CONDOR_getdir:
 		// the ones required for this job.  we will need to get that
 		// list of names from the Job Ad.
 		std::string services_needed;
-		ad->LookupString("OAuthServicesNeeded", services_needed);
+		ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed);
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
 		bool had_error = false;

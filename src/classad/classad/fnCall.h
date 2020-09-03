@@ -187,7 +187,13 @@ class FunctionCall : public ExprTree
 						  Value&);
 	static bool compareString(const char*,const ArgumentList&,EvalState&,
 						  Value&);
-	
+
+	static bool compareVersion( const char * name, const ArgumentList & args,
+		EvalState & state, Value & result );
+
+	static bool versionInRange( const char * name, const ArgumentList & args,
+		EvalState & state, Value & result );
+
 	// pattern matching
 	static bool matchPattern(const char*,const ArgumentList&,EvalState&,
 							 Value&);

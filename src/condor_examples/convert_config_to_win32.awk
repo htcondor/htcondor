@@ -157,12 +157,6 @@ BEGIN {
 	next
 }
 
-# Win32 has the jar files located in the bin directory.
-/^JAVA_CLASSPATH_DEFAULT/ {
-	print "JAVA_CLASSPATH_DEFAULT = $(BIN) $(BIN)/scimark2lib.jar ."
-	next
-}
-
 # There's no reasonable default place to put log files for
 # daemons that run as a user (on Unix we use /tmp). Use NUL.
 /(^C_GAHP_LOG)|(^C_GAHP_LOCK)|(^C_GAHP_WORKER_THREAD_LOG)|(^C_GAHP_WORKER_THREAD_LOCK)|(^VM_GAHP_LOG)/ {

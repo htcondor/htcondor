@@ -87,29 +87,16 @@ bool printToken(const std::string &tokenfilename) {
 
 	dprintf(D_SECURITY|D_FULLDEBUG, "TOKEN: Will use examine tokens found in %s.\n",
 		tokenfilename.c_str());
-/*
-	std::ifstream tokenfile(tokenfilename, std::ifstream::in);
-	if (!tokenfile) {
-		dprintf(D_ALWAYS, "Failed to open token file %s\n", tokenfilename.c_str());
-		return false;
-	}
-
-*/
+	
 	FILE * f = safe_fopen_no_create( tokenfilename.c_str(), "r" );
 	if( f == NULL ) {
 		dprintf(D_ALWAYS, "Failed to open token file '%s': %d (%s)\n",
 			tokenfilename.c_str(), errno, strerror(errno));
 		return false;
 	}
-/*
-	for (std::string line; std::getline(tokenfile, line); ) {
-*/
-    for( std::string line; readLine( line, f, false ); ) {
-	    line.erase( line.length() - 1, 1 );
-		line.erase(line.begin(),
-			std::find_if(line.begin(),
-				line.end(),
-				[](int ch) {return !isspace(ch);}));
+    
+	for( std::string line; readLine( line, f, false ); ) {
+		trim(line);  // remove leading and trailing whitespace incl ending /r and /n
 		if (line.empty() || line[0] == '#') {
 			continue;
 		}

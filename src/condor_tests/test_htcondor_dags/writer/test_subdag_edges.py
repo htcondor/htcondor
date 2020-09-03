@@ -22,7 +22,7 @@ def test_one_parent_one_child(dag, writer):
     parent = dag.subdag(name="parent", dag_file="parent.dag")
     child = parent.child_subdag(name="child", dag_file="child.dag")
 
-    assert "PARENT parent CHILD child" in dagfile_lines(writer)
+    assert "PARENT parent{s}0 CHILD child{s}0".format(s=s) in dagfile_lines(writer)
 
 
 def test_two_parents_one_child(dag, writer):
@@ -32,8 +32,8 @@ def test_two_parents_one_child(dag, writer):
     child.add_parents(parent2)
 
     lines = dagfile_lines(writer)
-    assert "PARENT parent1 CHILD child" in lines
-    assert "PARENT parent2 CHILD child" in lines
+    assert "PARENT parent1{s}0 CHILD child{s}0".format(s=s) in lines
+    assert "PARENT parent2{s}0 CHILD child{s}0".format(s=s) in lines
 
 
 def test_one_parent_two_children(dag, writer):
@@ -42,5 +42,5 @@ def test_one_parent_two_children(dag, writer):
     child2 = parent1.child_subdag(name="child2", dag_file="child.dag")
 
     lines = dagfile_lines(writer)
-    assert "PARENT parent CHILD child1" in lines
-    assert "PARENT parent CHILD child2" in lines
+    assert "PARENT parent{s}0 CHILD child1{s}0".format(s=s) in lines
+    assert "PARENT parent{s}0 CHILD child2{s}0".format(s=s) in lines

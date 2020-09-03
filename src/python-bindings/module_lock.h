@@ -55,7 +55,7 @@ public:
     void acquire();
     void release();
     static void initialize();
-
+    void useFamilySession(const std::string & sess);
 
 private:
 

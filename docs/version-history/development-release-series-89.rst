@@ -13,9 +13,17 @@ Release Notes:
 
 .. HTCondor version 8.8.9 released on Month Date, 2020.
 
--  ``condor_q`` no longer prints misleading message about the matchmaker
+-  *condor_q* no longer prints misleading message about the matchmaker
    when asked to analyze a job.
    :ticket:`5834`
+
+-  We deprecated the exceptions raised by the
+   :ref:`apis/python-bindings/index:Python Bindings`.  The new
+   exceptions all inherit from :class:`~htcondor.HTCondorException` or
+   :class:`~classad.ClassAdException`, according to the originating module.  For
+   backwards-compatibility, the new exceptions all also inherit the class
+   of each exception type they replaced.
+   :ticket:`6935`
 
 New Features:
 
@@ -25,9 +33,23 @@ New Features:
 -  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
    :ticket:`7726`
 
+- Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
+  feature is the :class:`htcondor.personal.PersonalPool` class, which is
+  responsible for managing the lifecycle of a "personal" single-machine
+  HTCondor pool. A personal pool can (for example) be used for testing and
+  development of HTCondor workflows before deploying to a larger pool.
+  Personal pools do not require administrator/root privileges.
+  HTCondor itself must still be installed on your system.
+
 Bugs Fixed:
 
--  None.
+-  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
+   would make every job go on hold.
+   :ticket:`7797`
+
+-  *condor_watch_q* now correctly groups jobs submitted by DAGMan after
+   *condor_watch_q* has started running.
+   :ticket:`7800`
 
 Version 8.9.8
 -------------
@@ -132,7 +154,7 @@ New Features:
 
 -  HTCondor now supports setting an upper bound on the number of cores user can
    be given.  This is called the submitter ceiling. The ceiling can be set with
-   the condor_userprio -setceiling command line option.
+   the ``condor_userprio -setceiling`` command line option.
    :ticket:`7702`
 
 -  The *condor_startd* now detects whether user namespaces can be created by
@@ -226,7 +248,7 @@ New Features:
 Bugs Fixed:
 
 - Fixed a segmentation fault in the *condor_schedd* that could happen on some platforms
-  when handling certain *condor_startd* failures after invoking ``condor_now``.
+  when handling certain *condor_startd* failures after invoking *condor_now*.
   :ticket:`7692`
 
 - *classad_eval* no longer ignores trailing garbage in its first (ClassAd)
@@ -237,11 +259,11 @@ Bugs Fixed:
 - An ID token at the end of a file lacking a trailing newline is no longer ignored.
   :ticket:`7499`
 
-- ``condor_token_request_list`` will now correctly list requests with request IDs
+- *condor_token_request_list* will now correctly list requests with request IDs
   starting with the number ``0``.
   :ticket:`7641`
 
-- Fixed a bug introduced in 8.9.3 that cause the `condor_chirp` tool to crash
+- Fixed a bug introduced in 8.9.3 that cause the *condor_chirp* tool to crash
   when passed the ``getfile`` argument.
   :ticket:`7612`
 
@@ -390,11 +412,11 @@ New Features:
   to import and not just ``True`` or ``False``.
   :ticket:`7572`
 
-- The ``condor_history`` command now has a ``startd`` option to query the *condor_startd*
+- The *condor_history* command now has a ``startd`` option to query the *condor_startd*
   history file.  This works for both local and remote queries.
   :ticket:`7538`
 
-- The ``-submitters`` argument to ``condor_q`` now correctly shows jobs for the
+- The ``-submitters`` argument to *condor_q`* now correctly shows jobs for the
   given submitter name, even when the submitter name is an accounting group.
   :ticket:`7616`
 
@@ -492,7 +514,7 @@ New Features:
 - Made some performance improvements in the *condor_collector*.
   This includes new configuration parameter
   :macro:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`, which reduces the amount
-  of data forwarded between *condor_collectors*.
+  of data forwarded between *condor_collector*\ s.
   :ticket:`7440`
   :ticket:`7423`
 
@@ -723,7 +745,7 @@ Bugs Fixed:
    :ticket:`7435`
 
 -  Fixed a bug where the library that is pre-loaded to provide a sane passwd
-   entry when using ``condor_ssh_to_job`` was placed in the wrong directory
+   entry when using *condor_ssh_to_job* was placed in the wrong directory
    in the RPM packaging.
    :ticket:`7408`
 
@@ -860,7 +882,7 @@ Bugs Fixed:
   supported methods.
   :ticket:`7357`
 
--  Fixed a bug where condor_ssh_to_job to a Docker universe job landed
+-  Fixed a bug where *condor_ssh_to_job* to a Docker universe job landed
    outside the container if the container had not completely started.
    :ticket:`7246`
 
@@ -870,7 +892,7 @@ Bugs Fixed:
   to shut down cleanly.
   :ticket:`7247`
 
-- ``condor_submit`` and the python bindings ``Submit`` object will no longer treat
+- *condor_submit* and the python bindings ``Submit`` object will no longer treat
   submit commands that begin with ``request_<tag>`` as custom resource requests unless
   ``<tag>`` does not begin with an underscore, and is at least 2 characters long.
   :ticket:`7172`
@@ -929,7 +951,7 @@ Release Notes:
 
 - The Log file specified by a job, and by the :macro:`EVENT_LOG` configuration variable
   will now have the year in the event time. Formerly, only the day and month were
-  printed.  This change makes these logs unreadable by versions of DAGMan and ``condor_wait``
+  printed.  This change makes these logs unreadable by versions of DAGMan and *condor_wait*
   that are older 8.8.4 or 8.9.2.  The configuration variable :macro:`DEFAULT_USERLOG_FORMAT_OPTIONS`
   can be used to revert to the old time format or to opt in to UTC time and/or fractional seconds.
   :ticket:`6940`

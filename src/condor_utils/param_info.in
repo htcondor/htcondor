@@ -387,7 +387,7 @@ tags=vm-gahp
 
 [PROCD_ADDRESS]
 default=$(LOCK)/procd_pipe
-win32_default=\\.\pipe\condor_procd_pipe
+win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
 
@@ -831,6 +831,12 @@ tags=accountant
 default=1e10
 type=double
 tags=accountant
+
+[NICE_USER_ACCOUNTING_GROUP_NAME]
+default=nice-user
+type=string
+tags=accountant,submit
+
 
 [REMOTE_PRIO_FACTOR]
 default=1e7
@@ -2331,8 +2337,8 @@ type=string
 tags=java_config
 
 [JAVA_CLASSPATH_DEFAULT]
-default=$(LIB) $(LIB)/scimark2lib.jar .
-win32_default=$(BIN) $(BIN)/scimark2lib.jar .
+default=$(LIB) .
+win32_default=$(BIN) .
 type=string
 tags=java_config
 
@@ -2671,12 +2677,6 @@ tags=schedd,starter
 default=
 type=string
 tags=starter,StarterHookMgr
-
-[JAVA_BENCHMARK_TIME]
-default=2
-type=int
-usage=If this time is zero or undefined, no Java benchmarks will be run.
-tags=starter,java_detect
 
 [VM_STATUS_INTERVAL]
 default=60
@@ -5980,7 +5980,6 @@ default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
-	JAVA_BENCHMARK_TIME=0
 @end
 
 [$ROLE.Execute]

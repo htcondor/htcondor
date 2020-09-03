@@ -256,8 +256,6 @@ condor_threads.h
 condor_timeslice.cpp
 condor_timeslice.h
 condor_universe.cpp
-condor_unsetenv.cpp
-condor_unsetenv.h
 condor_url.cpp
 condor_url.h
 condor_user_policy.cpp
@@ -353,6 +351,8 @@ KeyCache.cpp
 killfamily.cpp
 killfamily.h
 limit.h
+limit_directory_access.cpp
+limit_directory_access.h
 linebuffer.cpp
 link.cpp
 link.h
@@ -381,8 +381,6 @@ my_popen.cpp
 my_popen.h
 named_classad.cpp
 named_classad_list.cpp
-natural_cmp.cpp
-natural_cmp.h
 NegotiationUtils.cpp
 NegotiationUtils.h
 net_string_list.cpp
@@ -499,7 +497,6 @@ if(NOT WINDOWS)
 		ClassAdLogPluginManager.unix.cpp
 		detach.unix.cpp
 		fdpass.unix.cpp
-		flock.unix.cpp
 		getdtablesize.unix.cpp
 		getmnt.unix.cpp
 		limit.unix.cpp

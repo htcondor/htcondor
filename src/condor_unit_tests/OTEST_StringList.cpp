@@ -98,6 +98,8 @@ static bool test_prefix_return_false_almost(void);
 static bool test_prefix_return_false_reverse(void);
 static bool test_prefix_return_false_case(void);
 static bool test_prefix_return_true_identical(void);
+static bool test_prefix_withwildcard_return_true(void);
+static bool test_prefix_withwildcard_return_false(void);
 static bool test_prefix_return_true_many(void);
 static bool test_prefix_current_single(void);
 static bool test_prefix_current_multiple(void);
@@ -109,6 +111,10 @@ static bool test_contains_withwildcard_return_true_no_wild(void);
 static bool test_contains_withwildcard_return_true_only_wild(void);
 static bool test_contains_withwildcard_return_true_start(void);
 static bool test_contains_withwildcard_return_true_mid(void);
+static bool test_contains_withwildcard_return_true_mid_and_end(void);
+static bool test_contains_withwildcard_return_true_start_and_end(void);
+static bool test_contains_withwildcard_return_false_mid_and_end(void);
+static bool test_contains_withwildcard_return_false_start_and_end(void);
 static bool test_contains_withwildcard_return_true_end(void);
 static bool test_contains_withwildcard_return_true_same_wild(void);
 static bool test_contains_withwildcard_return_true_multiple(void);
@@ -314,6 +320,8 @@ bool OTEST_StringList(void) {
 	driver.register_function(test_prefix_return_false_reverse);
 	driver.register_function(test_prefix_return_false_case);
 	driver.register_function(test_prefix_return_true_identical);
+	driver.register_function(test_prefix_withwildcard_return_true);
+	driver.register_function(test_prefix_withwildcard_return_false);
 	driver.register_function(test_prefix_return_true_many);
 	driver.register_function(test_prefix_current_single);
 	driver.register_function(test_prefix_current_multiple);
@@ -325,6 +333,10 @@ bool OTEST_StringList(void) {
 	driver.register_function(test_contains_withwildcard_return_true_only_wild);
 	driver.register_function(test_contains_withwildcard_return_true_start);
 	driver.register_function(test_contains_withwildcard_return_true_mid);
+	driver.register_function(test_contains_withwildcard_return_true_mid_and_end);
+	driver.register_function(test_contains_withwildcard_return_true_start_and_end);
+	driver.register_function(test_contains_withwildcard_return_false_mid_and_end);
+	driver.register_function(test_contains_withwildcard_return_false_start_and_end);
 	driver.register_function(test_contains_withwildcard_return_true_end);
 	driver.register_function(test_contains_withwildcard_return_true_same_wild);
 	driver.register_function(test_contains_withwildcard_return_true_multiple);
@@ -2057,6 +2069,47 @@ static bool test_prefix_return_false_case() {
 	PASS;
 }
 
+static bool test_prefix_withwildcard_return_true() {
+	emit_test("Does prefix_withwildcard() return true when it should?");
+	StringList sl("/home/*/aaa;b;/home/*/htc", ";");
+	char* orig = sl.print_to_string();
+	const char* check = "/home/tannenba/htc";
+	bool retVal = sl.prefix_withwildcard(check);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if (!retVal) {
+		free(orig);
+		FAIL;
+	}
+	free(orig);
+	PASS;
+}
+
+static bool test_prefix_withwildcard_return_false() {
+	emit_test("Does prefix_withwildcard() return false when it should?");
+	StringList sl("/home/*/aaa/*;b;/home/*/hpc", ";");
+	char* orig = sl.print_to_string();
+	const char* check = "/home/tannenba/htc";
+	bool retVal = sl.prefix_withwildcard(check);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if (retVal) {
+		free(orig);
+		FAIL;
+	}
+	free(orig);
+	PASS;
+}
 
 static bool test_prefix_return_true_identical() {
 	emit_test("Does substring() return true when the passed string is in "
@@ -2338,6 +2391,96 @@ static bool test_contains_withwildcard_return_true_mid() {
 	free(orig);
 	PASS;
 }
+
+static bool test_contains_withwildcard_return_true_mid_and_end() {
+	emit_test("Does contains_withwildcard() return true when StringList "
+		"contains the string with a wildcard in the middle and end of the string?");
+	StringList sl("a;b*r*;c", ";");
+	char* orig = sl.print_to_string();
+	const char* check = "bartbarboozehound";
+	bool retVal = sl.contains_withwildcard(check);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if (!retVal) {
+		free(orig);
+		FAIL;
+	}
+	free(orig);
+	PASS;
+}
+
+static bool test_contains_withwildcard_return_true_start_and_end() {
+	emit_test("Does contains_withwildcard() return true when StringList "
+		"contains the string with a wildcard at the start and end of the string?");
+	StringList sl("a;*bar*;c", ";");
+	char* orig = sl.print_to_string();
+	const char* check = "thebarboozebarhound";
+	bool retVal = sl.contains_withwildcard(check);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("TRUE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if (!retVal) {
+		free(orig);
+		FAIL;
+	}
+	free(orig);
+	PASS;
+}
+
+
+static bool test_contains_withwildcard_return_false_mid_and_end() {
+	emit_test("Does contains_withwildcard() return false when StringList "
+		"does NOT contain the string with a wildcard in the middle and end of the string?");
+	StringList sl("a;b*r*;c", ";");
+	char* orig = sl.print_to_string();
+	const char* check = "batbaboozehound";
+	bool retVal = sl.contains_withwildcard(check);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if (retVal) {
+		free(orig);
+		FAIL;
+	}
+	free(orig);
+	PASS;
+}
+
+static bool test_contains_withwildcard_return_false_start_and_end() {
+	emit_test("Does contains_withwildcard() return false when StringList "
+		"does NOT contain the string with a wildcard at the start and end of the string?");
+	StringList sl("a;*bar*;c", ";");
+	char* orig = sl.print_to_string();
+	const char* check = "thebaarboozebathoundba";
+	bool retVal = sl.contains_withwildcard(check);
+	emit_input_header();
+	emit_param("StringList", orig);
+	emit_param("STRING", check);
+	emit_output_expected_header();
+	emit_retval("FALSE");
+	emit_output_actual_header();
+	emit_retval(tfstr(retVal));
+	if (retVal) {
+		free(orig);
+		FAIL;
+	}
+	free(orig);
+	PASS;
+}
+
 
 static bool test_contains_withwildcard_return_true_end() {
 	emit_test("Does contains_withwildcard() return true when StringList "

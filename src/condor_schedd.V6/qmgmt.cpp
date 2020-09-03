@@ -154,7 +154,6 @@ extern "C" {
 
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
-extern	bool	jobExternallyManaged(ClassAd * ad);
 static QmgmtPeer *Q_SOCK = NULL;
 extern const std::string & attr_JobUser; // the attribute name we use for the "owner" of the job, historically ATTR_OWNER 
 
@@ -296,6 +295,19 @@ KeyToId(JobQueueKey &key,int & cluster,int & proc)
 {
 	cluster = key.cluster;
 	proc = key.proc;
+}
+
+static inline bool IsSpecialJobId( int cluster_id, int /* proc_id */ )
+{
+	// Return true if job id is special and should NOT be edited by
+	// the end user.  Currently this means job 0.0 (header ad) 
+	// and JobSet ads which are cluster 0 and a negative proc.
+	//
+	if (cluster_id == 0) {
+		return true;
+	}
+
+	return false;
 }
 
 ClassAd* ConstructClassAdLogTableEntry<JobQueueJob*>::New(const char * key, const char * /* mytype */) const
@@ -3313,8 +3325,8 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueueKeyBuf		key;
 	JobQueueJob			*ad = NULL;
 
-	// cannot destroy the header ad 0.0
-	if ( cluster_id == 0 && proc_id == 0 ) {
+	// cannot destroy any SpecialJobIds like the header ad 0.0
+	if ( IsSpecialJobId(cluster_id,proc_id) ) {
 		errno = EINVAL;
 		return DESTROYPROC_ERROR;
 	}
@@ -3917,9 +3929,9 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		return -1;
 	}
 
-	// job id 0.0 is special and cannot normally be modified.
-	if ( key.cluster == 0 && key.proc == 0 ) {
-		dprintf(D_ALWAYS, "%s attempt to edit special ad 0.0\n", func_name);
+	// job id 0.0 and maybe some other ids are special and cannot normally be modified.
+	if ( IsSpecialJobId(key.cluster,key.proc) ) {
+		dprintf(D_ALWAYS, "WARNING: %s attempt to edit special ad %d.%d\n", func_name,key.cluster,key.proc);
 		errno = EACCES;
 		return -1;
 	}
@@ -6257,11 +6269,6 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
-	if ( cluster_id == 0 && proc_id == 0 ) {
-		errno = EACCES;
-		return -1;
-	}
-
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
 
@@ -7547,7 +7554,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     char    owner[100];
     int     cur_hosts;
     int     max_hosts;
-    int     niceUser;
     int     universe;
 
 	ASSERT(job);
@@ -7705,16 +7711,9 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 
 extern void mark_job_stopped(PROC_ID* job_id);
 
-int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
+int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 {
-		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
-		// pointer to birthday is passed as an argument...
-	time_t * pbDay = (time_t*)pvArg;
-	job->Assign(ATTR_SCHEDD_BIRTHDATE, *pbDay);
-
-	std::string managed_status;
-	job->LookupString(ATTR_JOB_MANAGED, managed_status);
-	if ( managed_status == MANAGED_EXTERNAL ) {
+	if ( jobExternallyManaged(job) ) {
 		// if a job is externally managed, don't touch a damn
 		// thing!!!  the gridmanager or schedd-on-the-side is
 		// in control.  stay out of its way!  -Todd 9/13/02
@@ -7736,7 +7735,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
 		if ( universe == CONDOR_UNIVERSE_GRID ) {
-			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) )
+			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) && !jobManagedDone(job) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.

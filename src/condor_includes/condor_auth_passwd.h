@@ -210,6 +210,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 			the protocol. 
 		*/
 	Condor_Crypt_3des* m_crypto;
+	Condor_Crypto_State* m_crypto_state;
 
 		/** Produce the shared key object from raw key material.
 		 */

@@ -1,0 +1,40 @@
+The first time we did this, we got all of the exceptions wrong.  Here's a
+few guidelines to help avoid that in the future.
+
+* Never throw a stock Python exception.  (Four exceptions: (1) if the
+  Python spec requires you do (e.g.: when implementing an iterator,
+  throw StopIteration, when implementing a dictionary, throw KeyError);
+  (2) if a malloc() or new() fails, throw MemoryError; (3) if you're
+  type-checking a python object and it's the wrong type (e.g., not an
+  iterator), throw TypeError; and (4) you may throw NotImplementedError
+  if we really haven't implemented something.)
+* Never throw an HTCondor* exception from a function in the ClassAd
+  module.  We may find it necessary to throw a ClassAd* exception from
+  an HTCondor module (e.g., you passed in an invalid constraint).
+* If you need a new exception, follow the existing examples to add one.
+* For string constants, I find using the THROW_EX() to be cleaner than
+  calling PyErr_SetString() and then boost::python::throw_error_already_set().
+* Using PyErr_Format() may be more convenient better-formatted strings.
+* The exceptions are documented in the EXCEPTIONS file.
+* Don't go overboard with specificity.  We distinguish between, for example,
+  HTCondorLocateError and HTCondorIOError because the former may indicate a
+  problem with the arguments (and thus retrying might not be useful) but
+  the latter may indicate a network problem (for which retrying might be
+  useful).  On the other hand, while checking for and throwing a different
+  exception for each change you make to a ClassAd may be good for debugging,
+  but if the exceptions aren't all *InternalError types, you've just made the
+  user's life harder for something they won't care about at all.
+* Never throw a module's root exception class (HTCondorException,
+  ClassAdException).  Those exist so users can elect to deal with the
+  expections that we throw in the same way, not so that you don't have to
+  think about which subclass is the proper one.
+* You can include as much information as you find appropriate in the
+  exception string, but if you expect the user to (routinely) write string-
+  parsing code for your exceptions, you're doing it wrong.  Instead, include
+  the useful, broken-out information as attributes of the exception class.
+  This may be complicated to do via Boost.
+* Much of the time, when the bindings throw an exception, it is in response
+  to a particular C++ return code.  This makes it easy to throw an exception
+  even for the very common return codes for which it may make more sense to
+  return a value, instead.  Consider the following factors when throwing an
+  exception: [FIXME].

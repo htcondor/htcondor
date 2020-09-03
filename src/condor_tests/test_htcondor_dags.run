@@ -55,5 +55,7 @@ if (exists($ENV{PYTHONPATH})) {
     $ENV{PYTHONPATH} = $relpy;
 }
 
+$ENV{ON_BATLAB} = 'true';
+
 my $rv = runCommandCarefully( undef, $pypgm, '-m', 'pytest', 'test_htcondor_dags' );
 exit $rv->{"exitcode"}

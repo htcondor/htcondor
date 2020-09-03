@@ -555,10 +555,10 @@ appearing on a separate line, just like the contents of a regular submit file.
 Using the previous diamond-shaped DAG example, the diamond.dag file would look
 like this:
 
-::
+.. code-block:: condor-dagman
 
         # File name: diamond.dag
-        #
+
         JOB  A  {
             executable   = /path/diamond.exe
             output       = diamond.out.$(cluster)
