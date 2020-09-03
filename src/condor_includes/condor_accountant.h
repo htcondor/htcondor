@@ -82,6 +82,7 @@ public:
 
   float GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
+  void UpdateOnePriority(int T, int TimePassed, float AgingFactor, const char *key, ClassAd *ad); // Help function for above
 
   void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
