@@ -488,7 +488,7 @@ class Dag {
 		    checking its job ad.
 			@return status of the provisioner
 		*/
-	MyString GetProvisionerJobAdState();
+	int GetProvisionerJobAdState();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -575,6 +575,7 @@ class Dag {
     int _maxPreScripts;
     int _maxPostScripts;
 
+	char* GetDotFileName(void) { return _dot_file_name; }
 	void SetDotFileName(const char *dot_file_name);
 	void SetDotIncludeFileName(const char *include_file_name);
 	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }

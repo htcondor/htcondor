@@ -32,6 +32,12 @@ ScheddClassad::OpenConnection() const
 {
 		// Open job queue
 	CondorError errstack;
+	if ( !_schedd ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Queue manager not initialized, "
+			"cannot publish updates to ClassAd.\n");
+		check_warning_strictness( DAG_STRICT_3 );
+		return NULL;
+	}
 	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
 				&errstack, NULL, _schedd->version() );
 	if ( !queue ) {
@@ -103,6 +109,26 @@ ScheddClassad::GetAttribute( const char *attrName, MyString &attrVal,
 		if ( printWarning ) {
 			debug_printf( DEBUG_QUIET,
 					  	"Warning: failed to get attribute %s\n", attrName );
+		}
+		return false;
+	}
+
+	attrVal = val;
+	free( val );
+	return true;
+}
+
+//---------------------------------------------------------------------------
+bool
+ScheddClassad::GetAttribute( const char *attrName, std::string &attrVal,
+			bool printWarning ) const
+{
+	char *val;
+	if ( GetAttributeStringNew( _jobId._cluster, _jobId._proc,
+				attrName, &val ) == -1 ) {
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+					"Warning: failed to get attribute %s\n", attrName );
 		}
 		return false;
 	}
@@ -261,6 +287,34 @@ DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
 
 //---------------------------------------------------------------------------
 void
+DagmanClassad::GetSetBatchId( std::string &batchId )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	if ( !GetAttribute( ATTR_JOB_BATCH_ID, batchId, false ) ) {
+		batchId = std::to_string( _jobId._cluster );
+		batchId += ".";
+		batchId += std::to_string( _jobId._proc );
+		SetAttribute( ATTR_JOB_BATCH_ID, batchId );
+	}
+
+	CloseConnection( queue );
+
+	debug_printf( DEBUG_VERBOSE, "Workflow batch-id: <%s>\n",
+				batchId.c_str() );
+}
+
+//---------------------------------------------------------------------------
+void
 DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 			MyString &batchName )
 {
@@ -366,10 +420,10 @@ ProvisionerClassad::~ProvisionerClassad()
 }
 
 //---------------------------------------------------------------------------
-MyString
+int
 ProvisionerClassad::GetProvisionerState()
 {
-	MyString state = "";
+	int state = -1;
 
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -384,8 +438,8 @@ ProvisionerClassad::GetProvisionerState()
 	}
 
 	GetAttribute( ATTR_PROVISIONER_STATE, state, false );
-	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%s>\n",
-				state.Value() );
+	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%d>\n",
+				state );
 
 	CloseConnection( queue );
 

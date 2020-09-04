@@ -217,7 +217,8 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   Job * node, int priority, int retry,
 #endif
 			   const char* directory, const char *workflowLogFile,
-			   bool hold_claim, const MyString &batchName )
+			   bool hold_claim, const MyString &batchName,
+			   std::string &batchId )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -251,22 +252,31 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	args.AppendArg( nodeName.Value() );
 
 		// append a line adding the parent DAGMan's cluster ID to the job ad
-	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	std::string dagJobId = std::string( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
-				std::to_string( dm.DAGManJobId._cluster );
-	args.AppendArg( dagJobId.c_str() );
+	if ( dm.DAGManJobId._cluster > 0 ) {
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
+		std::string dagJobId = std::string( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
+					std::to_string( dm.DAGManJobId._cluster );
+		args.AppendArg( dagJobId.c_str() );
+	}
 
 		// now we append a line setting the same thing as a submit-file macro
 		// (this is necessary so the user can reference it in the priority)
-	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	std::string dagJobIdMacro = std::string( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
-				std::to_string( dm.DAGManJobId._cluster );
-	args.AppendArg( dagJobIdMacro.c_str() );
+	if ( dm.DAGManJobId._cluster > 0 ) {
+		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
+		std::string dagJobIdMacro = std::string( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
+					std::to_string( dm.DAGManJobId._cluster );
+		args.AppendArg( dagJobIdMacro.c_str() );
+	}
 
 		// Pass the batch name to lower levels.
 	if ( batchName != "" ) {
 		args.AppendArg( "-batch-name" );
 		args.AppendArg( batchName.Value() );
+	}
+		// Pass the batch ID to lower levels.
+	if ( batchId != "" ) {
+		args.AppendArg( "-batch-id" );
+		args.AppendArg( batchId.c_str() );
 	}
 
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
@@ -448,7 +458,8 @@ static void init_dag_vars(SubmitHash * submitHash,
 	const Dagman &dm, Job* node,
 	const char *workflowLogFile,
 	const MyString & parents,
-	const char *batchName)
+	const char *batchName,
+	const char *batchId)
 {
 	const char* DAGNodeName = node->GetJobName();
 	int priority = node->_effectivePriority;
@@ -462,10 +473,15 @@ static void init_dag_vars(SubmitHash * submitHash,
 	// submit many DAGs to the same schedd, all the ready jobs from
 	// one DAG complete before any jobs from another begin.
 	submitHash->set_arg_variable(ATTR_DAG_NODE_NAME_ALT, DAGNodeName);
-	submitHash->set_arg_variable(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster).c_str());
+	if (dm.DAGManJobId._cluster > 0) {
+		submitHash->set_arg_variable(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster).c_str());
+	}
 
 	if (batchName && batchName[0]) {
 		submitHash->set_arg_variable(SUBMIT_KEY_BatchName, batchName);
+	}
+	if (batchId && batchId[0]) {
+		submitHash->set_arg_variable(SUBMIT_KEY_BatchId, batchId);
 	}
 
 	std::string submitEventNotes = std::string("DAG Node: ") + std::string(DAGNodeName);
@@ -550,6 +566,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	const char *workflowLogFile,
 	const MyString & parents,
 	const char *batchName,
+	const char *batchId,
 	CondorID& condorID)
 {
 	const char* cmdFile = node->GetCmdFile();
@@ -619,7 +636,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 	// set submit keywords defined by dagman and VARS
-	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName);
+	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId);
 
 	submitHash->init_base_ad(time(NULL), owner);
 

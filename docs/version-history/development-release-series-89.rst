@@ -17,6 +17,14 @@ Release Notes:
    when asked to analyze a job.
    :ticket:`5834`
 
+-  We deprecated the exceptions raised by the
+   :ref:`apis/python-bindings/index:Python Bindings`.  The new
+   exceptions all inherit from :class:`~htcondor.HTCondorException` or
+   :class:`~classad.ClassAdException`, according to the originating module.  For
+   backwards-compatibility, the new exceptions all also inherit the class
+   of each exception type they replaced.
+   :ticket:`6935`
+
 New Features:
 
 -  The :class:`classad.ClassAd` class now defines equality and inequality.
@@ -35,9 +43,19 @@ New Features:
 
 Bugs Fixed:
 
+-  ``condor_annex -check-setup`` now respects the configuration setting
+   ``ANNEX_DEFAULT_AWS_REGION``.  In addition, ``condor_annex -setup`` now
+   sets ``ANNEX_DEFAULT_AWS_REGION`` if it hasn't already been set.  This
+   makes first-time setup in a nondefault region much less confusing.
+   :ticket:`7832`
+
 -  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
    would make every job go on hold.
    :ticket:`7797`
+
+-  *condor_watch_q* now correctly groups jobs submitted by DAGMan after
+   *condor_watch_q* has started running.
+   :ticket:`7800`
 
 Version 8.9.8
 -------------

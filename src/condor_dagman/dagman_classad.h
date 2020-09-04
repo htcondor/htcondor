@@ -71,6 +71,9 @@ class ScheddClassad {
 	bool GetAttribute( const char *attrName, MyString &attrVal,
 				bool printWarning = true ) const;
 
+	bool GetAttribute( const char *attrName, std::string &attrVal,
+				bool printWarning = true ) const;
+
 	bool GetAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true ) const;
 
@@ -78,7 +81,7 @@ class ScheddClassad {
 	CondorID _jobId;
 
 		// The schedd we need to talk to to update the classad.
-	DCSchedd *_schedd;
+	DCSchedd *_schedd = NULL;
 
 };
 
@@ -126,6 +129,12 @@ class DagmanClassad : public ScheddClassad {
 		*/
 	void GetInfo( MyString &owner, MyString &nodeName );
 
+		/** Get the JobBatchId value from our ClassAd (setting it
+		    to the default if it's not already set).
+			@param batchId: An int to receive the JobBatchId value
+		*/
+	void GetSetBatchId( std::string &batchId );
+
 		/** Get the JobBatchName value from our ClassAd (setting it
 		    to the default if it's not already set).
 			@param batchName: A MyString to receive the JobBatchName value
@@ -165,7 +174,7 @@ class ProvisionerClassad : public ScheddClassad {
 	~ProvisionerClassad();
 
 		// Returns the state of a provisioner, represented as a string
-	MyString GetProvisionerState();
+	int GetProvisionerState();
 
 		// Whether this object is valid.
 	bool _valid;

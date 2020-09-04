@@ -112,6 +112,8 @@ int		master_backoff_ceiling = 3600;
 float	master_backoff_factor = 2.0;		// exponential factor
 int		master_recover_time = 300;			// recover factor
 
+bool	 DaemonStartFastPoll = true;
+
 char	*FS_Preen = NULL;
 int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 
@@ -1068,6 +1070,17 @@ init_params()
 {
 	char	*tmp;
 	static	int	master_name_in_config = 0;
+
+	// To do fast polling for a daemon's address file, the master sleeps
+	// for 100ms before registering a 0-second timer for the next file
+	// existence check. On Darwin, this is causing the shared port daemon's
+	// child-alive message to be lost frequently. So Darwin gets the old
+	// 1 second check interval that doesn't include a sleep in the master.
+#if defined(DARWIN)
+	DaemonStartFastPoll = false;
+#else
+	DaemonStartFastPoll = true;
+#endif
 
 	if( ! master_name_in_config ) {
 			// First time, or we know it's not in the config file. 

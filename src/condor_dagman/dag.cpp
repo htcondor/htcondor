@@ -48,6 +48,7 @@
 #include "HashTable.h"
 #include <set>
 #include "dagman_metrics.h"
+#include "enum_utils.h"
 
 using namespace std;
 
@@ -1605,10 +1606,10 @@ Dag::StartProvisionerNode()
 }
 
 //-------------------------------------------------------------------------
-MyString
+int
 Dag::GetProvisionerJobAdState()
 {
-	MyString provisionerState;
+	int provisionerState = -1;
 	if (_provisionerClassad) {
 		provisionerState = _provisionerClassad->GetProvisionerState();
 	}
@@ -1666,8 +1667,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	if ( HasProvisionerNode() && !_provisioner_ready ) {
 			// If we just moved into a provisioned state, we can start
 			// submitting the other jobs in the dag
-		MyString state = GetProvisionerJobAdState();
-		if ( GetProvisionerJobAdState() == "ProvisionerState.PROVISIONING_COMPLETE" ) {
+		if ( GetProvisionerJobAdState() == ProvisionerState::PROVISIONING_COMPLETE ) {
 			_provisioner_ready = true;
 			Job* job;
 			ListIterator<Job> jobs (_jobs);
@@ -4367,18 +4367,25 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			// " " to *not* override batch names specified at a lower
 			// level.
 		const char *batchName;
+		std::string batchId;
 		if ( !node->GetDagFile() && dm._batchName == " " ) {
 			batchName = "";
 		} else {
 			batchName = dm._batchName.Value();
 		}
+		if ( !node->GetDagFile() && dm._batchId == " " ) {
+			batchId = "";
+		} else {
+			batchId = dm._batchId.c_str();
+		}
+
 		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents.c_str(),
 					node, node->_effectivePriority,
 					node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
 					( ! node->NoChildren()) && dm._claim_hold_time > 0,
-					batchName );
+					batchName, batchId );
 	} else {
 #ifdef DEAD_CODE
 		MyString parents = ParentListString(node);
@@ -4400,14 +4407,20 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// " " to *not* override batch names specified at a lower
 		// level.
 		const char *batchName;
+		const char *batchId;
 		if (!node->GetDagFile() && dm._batchName == " ") {
 			batchName = "";
 		} else {
 			batchName = dm._batchName.Value();
 		}
+				if ( !node->GetDagFile() && dm._batchId == " " ) {
+			batchId = "";
+		} else {
+			batchId = dm._batchId.c_str();
+		}
 
 		submit_success = direct_condor_submit(dm, node,
-			_defaultNodeLog, parents.c_str(), batchName, condorID);
+			_defaultNodeLog, parents.c_str(), batchName, batchId, condorID);
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;

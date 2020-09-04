@@ -33,6 +33,8 @@
 #include "classad_helpers.h"
 #include "classad_merge.h"
 #include "dc_startd.h"
+#include "limit_directory_access.h"
+#include "spooled_job_files.h"
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
@@ -187,6 +189,14 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	daemonCore->Register_Priv_State( PRIV_USER );
 
 	dumpClassad( "BaseShadow::baseInit()", this->jobAd, D_JOB );
+
+		// initialize for LIMIT_DIRECTORY_ACCESS
+	{
+		std::string job_ad_whitelist, spoolDir;
+		jobAd->EvaluateAttrString(ATTR_JOB_LIMIT_DIRECTORY_ACCESS,job_ad_whitelist);
+		SpooledJobFiles::getJobSpoolPath(jobAd, spoolDir);
+		allow_shadow_access(NULL, true, job_ad_whitelist.c_str(),spoolDir.c_str());
+	}
 
 		// initialize the UserPolicy object
 	shadow_user_policy.init( jobAd, this );

@@ -95,6 +95,10 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		fprintf(pSubFile, "+%s\t= \"%s\"\n", ATTR_JOB_BATCH_NAME,
 					deepOpts.batchName.c_str());
 	}
+	if ( ! deepOpts.batchId.empty() ) {
+		fprintf(pSubFile, "+%s\t= \"%s\"\n", ATTR_JOB_BATCH_ID,
+					deepOpts.batchId.c_str());
+	}
 #if !defined ( WIN32 )
 	fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif
@@ -982,7 +986,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 				 "file and continue.\n" );
 		}
 		else {
-			fprintf( stderr, "Either rename them,\nor set the { \"force\" : 1 }"
+			fprintf( stderr, "Either rename them,\nor set the { \"force\" : True }"
 				" option to force them to be overwritten.\n" );
 		}
 		return false;

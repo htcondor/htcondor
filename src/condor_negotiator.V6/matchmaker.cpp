@@ -63,6 +63,7 @@
 static int comparisonFunction (ClassAd *, ClassAd *, void *);
 #include "matchmaker.h"
 
+extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 
 static int jobsInSlot(ClassAd &job, ClassAd &offer);
 
@@ -529,7 +530,7 @@ initialize (const char *neg_name)
 			"DELETE_USER_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITYFACTOR, "SetPriorityFactor",
             (CommandHandlercpp) &Matchmaker::SET_PRIORITYFACTOR_commandHandler,
-			"SET_PRIORITYFACTOR_commandHandler", this, ADMINISTRATOR);
+			"SET_PRIORITYFACTOR_commandHandler", this, WRITE);
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
             (CommandHandlercpp) &Matchmaker::SET_PRIORITY_commandHandler,
 			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
@@ -1001,12 +1002,38 @@ RESET_USAGE_commandHandler (int, Stream *strm)
 	return TRUE;
 }
 
+namespace {
+
+bool returnPrioFactor(Stream *strm, CondorError &errstack)
+{
+	auto version = strm->get_peer_version();
+	if (version && version->built_since_version(8, 9, 9)) {
+		classad::ClassAd ad;
+		if (errstack.empty()) {
+			ad.InsertAttr(ATTR_ERROR_CODE, 0);
+		} else {
+			dprintf(D_ALWAYS, "Failed to set priority factor: %s\n", errstack.message());
+			ad.InsertAttr(ATTR_ERROR_CODE, errstack.code());
+			ad.InsertAttr(ATTR_ERROR_STRING, errstack.message());
+		}
+		strm->encode();
+		if (!putClassAd(strm, ad) || strm->end_of_message()) {
+			dprintf(D_ALWAYS, "Failed to send response for SET_PRIORITY_FACTOR command.\n");
+			return false;
+		}
+	} else if (!errstack.empty()) {
+		dprintf(D_ALWAYS, "Failed to set priority factor: %s\n", errstack.message());
+	}
+	return errstack.empty();
+}
+
+}
 
 int Matchmaker::
 SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 {
 	float	priority;
-    std::string submitter;
+	std::string submitter;
 
 	// read the required data off the wire
 	if (!strm->get(submitter) 	||
@@ -1014,14 +1041,63 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 		!strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not read submitter name and priority factor\n");
-		return FALSE;
+		return false;
+	}
+
+	const char *peer_identity = static_cast<Sock*>(strm)->getFullyQualifiedUser();
+
+	// If we have admin, we can always set the priority.  Otherwise, we need to
+	// check our group mapping.
+	bool has_admin = static_cast<Sock*>(strm)->isAuthorizationInBoundingSet("ADMINISTRATOR") &&
+		daemonCore->Verify("set prio factor", ADMINISTRATOR,
+		static_cast<ReliSock*>(strm)->peer_addr(),
+		peer_identity);
+
+	CondorError errstack;
+	bool authorized = has_admin;
+	if (!has_admin) {
+
+		dprintf(D_FULLDEBUG, "Will check if the authenticated user %s is authorized to edit submitter %s prio factor.\n",
+			peer_identity ? peer_identity : "(unknown)", submitter.c_str());
+		std::string map_names;
+		if (!param(map_names, "NEGOTIATOR_CLASSAD_USER_MAP_NAMES")) {
+			errstack.pushf("NEGOTIATOR", 1, "Not an administrator and authorization maps (NEGOTIATOR_CLASSAD_USER_MAP_NAMES) is not set.");
+			return returnPrioFactor(strm, errstack);
+		}
+		StringList map_names_list(map_names.c_str());
+		if (!map_names_list.contains("PRIORITY_FACTOR_AUTHORIZATION")) {
+			errstack.pushf("NEGOTIATOR", 2, "Not an administrator and PRIORITY_FACTOR_AUTHORIZATION not a configured map file.");
+			return returnPrioFactor(strm, errstack);
+		}
+
+		if (!peer_identity) {
+			errstack.pushf("NEGOTIATOR", 3, "Not an administrator and client is not authenticated.");
+			return returnPrioFactor(strm, errstack);
+		}
+
+		MyString map_output;
+		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
+			StringList items(map_output.Value(), ",");
+			items.rewind();
+			char * item;
+			while ( (item = items.next()) ) {
+				if (!strncmp(item, submitter.c_str(), strlen(item))) {
+					authorized = true;
+				}
+			}
+		}
+	}
+	if (!authorized) {
+		errstack.pushf("NEGOTIATOR", 4, "Client %s requested to set the priority factor of %s but is not authorized.",
+			peer_identity ? peer_identity : "(unknown)", submitter.c_str());
+		return returnPrioFactor(strm, errstack);
 	}
 
 	// set the priority
 	dprintf(D_ALWAYS,"Setting the priority factor of %s to %f\n", submitter.c_str(), priority);
 	accountant.SetPriorityFactor(submitter, priority);
 	
-	return TRUE;
+	return returnPrioFactor(strm, errstack);
 }
 
 int Matchmaker::
@@ -3612,6 +3688,59 @@ sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, Ex
 	return sum;
 }
 
+
+bool
+Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
+{
+	std::string map_names;
+	if (!param(map_names, "NEGOTIATOR_CLASSAD_USER_MAP_NAMES")) {
+		return true;
+	}
+	StringList map_names_list(map_names.c_str());
+	if (!map_names_list.contains("GROUP_PREFIX")) {
+		return true;
+	}
+
+	std::string submitter_name;
+	if (!ad.EvaluateAttrString(ATTR_NAME, submitter_name)) {
+		return true;
+	}
+	auto last_at = submitter_name.find_last_of('@');
+	if (last_at == std::string::npos) {
+		return true;
+	}
+	auto accounting_domain = submitter_name.substr(last_at + 1);
+
+	std::vector<classad::ExprTree*> args;
+	args.emplace_back(classad::Literal::MakeString("GROUP_PREFIX"));
+	args.emplace_back(classad::Literal::MakeString(accounting_domain));
+	std::unique_ptr<ExprTree> fnCall(classad::FunctionCall::MakeFunctionCall("userMap", args));
+
+	classad::Value val;
+	fnCall->SetParentScope(&ad);
+	if (!fnCall->Evaluate(val)) {
+		return true;
+	}
+	fnCall->SetParentScope(nullptr);
+
+	std::string new_prefix;
+	if (!val.IsStringValue(new_prefix)) {
+		return true;
+	}
+
+	std::string name;
+	if (!ad.EvaluateAttrString(ATTR_NAME, name)) {
+		dprintf(D_FULLDEBUG, "Prefix cannot evaluate to a string.\n");
+		return false;
+	}
+	if (!ad.InsertAttr("OriginalName", name)) {
+		return false;
+	}
+	std::string new_name = new_prefix + "." + name;
+	dprintf(D_FULLDEBUG, "Negotiator maps submitter %s to %s.\n", name.c_str(), new_name.c_str());
+	return ad.InsertAttr("Name", new_name);
+}
+
 bool Matchmaker::
 obtainAdsFromCollector (
 						ClassAdList &allAds,
@@ -3847,6 +3976,11 @@ obtainAdsFromCollector (
             }
 			if ( !IsValidSubmitterName( subname.c_str() ) ) {
 				dprintf( D_ALWAYS, "WARNING: ignoring submitter ad with invalid name: %s\n", subname.c_str() );
+				continue;
+			}
+
+			if (!TransformSubmitterAd(*ad)) {
+				dprintf( D_ALWAYS, "WARNING: Failed to transform the submitter ad with name; %s\n", subname.c_str() );
 				continue;
 			}
 
@@ -4491,7 +4625,12 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		ClassAd negotiate_ad;
 		int jmin, jmax;
 		// Tell the schedd to limit negotiation to this owner
-		negotiate_ad.InsertAttr(ATTR_OWNER, submitter);
+		std::string orig_submitter;
+		if (submitterAd.EvaluateAttrString("OriginalName", orig_submitter)) {
+			negotiate_ad.InsertAttr(ATTR_OWNER, orig_submitter);
+		} else {
+			negotiate_ad.InsertAttr(ATTR_OWNER, submitter);
+		}
 		// Tell the schedd to limit negotiation to this job priority range
 		if (want_globaljobprio && submitterAd.LookupInteger("JOBPRIO_MIN", jmin))
 		{

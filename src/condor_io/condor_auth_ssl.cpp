@@ -370,12 +370,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 				} else {
 					for (std::string line; readLine(line, f.get(), false); ) {
 						// Strip out whitespace and ignore comments.
-						line.erase( line.length() - 1, 1 );
-						line.erase(line.begin(),
-							std::find_if(line.begin(), line.end(),
-								[](int ch) {return !isspace(ch);}));
-							if (line.empty() || line[0] == '#') { continue; }
-
+						trim(line);
+						if (line.empty() || line[0] == '#') { continue; }
 						scitoken = line;
 						ouch( "Found a SciToken to use for authentication.\n" );
 						break;

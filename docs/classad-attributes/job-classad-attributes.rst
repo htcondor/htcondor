@@ -212,7 +212,7 @@ Job ClassAd Attributes
 
     .. code-block:: text
 
-          -append +DAGParentNodeNames=B,C
+          -append +DAGParentNodeNames="B,C"
 
     :index:`DAGManNodesLog<single: DAGManNodesLog; ClassAd job attribute>`
     :index:`job ClassAd attribute<single: job ClassAd attribute; DAGManNodesLog>`

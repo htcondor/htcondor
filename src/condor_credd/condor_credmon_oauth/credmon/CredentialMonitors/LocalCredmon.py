@@ -53,7 +53,7 @@ class LocalCredmon(OAuthCredmon):
         # Serialize the token and write it to a file
         serialized_token = token.serialize(issuer=self.token_issuer, lifetime=int(self.token_lifetime))
 
-        oauth_response = {"access_token": serialized_token,
+        oauth_response = {"access_token": serialized_token.decode(),
                           "expires_in":   int(self.token_lifetime)}
 
         access_token_path = os.path.join(self.cred_dir, username, token_name + '.use')

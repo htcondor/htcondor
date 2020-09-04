@@ -7158,7 +7158,8 @@ int DaemonCore::Create_Process(
 		ClaimIdParser claimId(session_id_c_str, session_info.Value(), session_key_c_str);
 		privateinheritbuf += claimId.claimId();
 	}
-	if(want_command_port != FALSE && !m_family_session_id.empty() && priv != PRIV_USER_FINAL && priv != PRIV_CONDOR_FINAL)
+	if((want_command_port != FALSE || HAS_DCJOBOPT_INHERIT_FAMILY_SESSION(job_opt_mask)) 
+		&& !m_family_session_id.empty() && priv != PRIV_USER_FINAL && priv != PRIV_CONDOR_FINAL)
 	{
 		MyString family_session_info;
 		bool rc = getSecMan()->ExportSecSessionInfo(m_family_session_id.c_str(), family_session_info);

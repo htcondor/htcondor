@@ -169,30 +169,31 @@ if (BUILD_TESTING)
 
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
+    condor_pl_test(test_classad_version_comparison "Test ClassAd version comparison functions" "core;quick;full;quicknolink")
 	if (WITH_PYTHON_BINDINGS)
 		# An example test that depends on python bindings.
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
 
 		# Tests of the python bindings.
-		condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
-		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
-		condor_pl_test (python_bindings_dagman "Python bindings for dagman" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
-		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
-		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
+		condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test (python_bindings_dagman "Python bindings for dagman" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
 
 		# Tests of the pytest suite.
-		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
+		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
 
 		# Tests that require the python bindings.
-		condor_pl_test (cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_echostring.pl")
-		condor_pl_test (cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/cmd_curl_plugin_multifile_success.py")
-		condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
-		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
-		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
-		condor_pl_test (cmd_now_internals "testing condor_now internals" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
-		condor_pl_test (cmd_now "condor_now functional tests" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest;src/condor_tests/x_sleep.pl")
-		condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
-		condor_pl_test(lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest")
+		condor_pl_test (cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl")
+		condor_pl_test (cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/cmd_curl_plugin_multifile_success.py")
+		condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
+		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
+		condor_pl_test (cmd_now_internals "testing condor_now internals" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
+		condor_pl_test (cmd_now "condor_now functional tests" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
+		condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
+		condor_pl_test(lib_auth_protocol-token "TOKEN authentication test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/pytest_old")
 
 		# htcondor-dags test suite
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "core;quick;full;quicknolink")
@@ -201,22 +202,22 @@ if (BUILD_TESTING)
 		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "core;quick;full;quicknolink")
 
 		# Ornithology - partial merge - not yet reliable.
-		# condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full")
-		# condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "core;quick;full")
-		# condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full")
-		# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full")
-		# condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "core;quick;full")
-		# condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "core;quick;full")
+		# condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		# condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		# condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		# condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		# condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 		# Ornithology - partial merge - Windows and MacOSX problems.
 		if(LINUX)
-			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "core;quick;full")
-			condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "core;quick;full")
-			condor_pl_test(test_condor_now_internals "Test condow_now internals" "core;quick;full")
-			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "core;quick;full")
-			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "core;quick;full")
-			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "core;quick;full")
-			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "core;quick;full")
+			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_now_internals "Test condow_now internals" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 	endif()
 
