@@ -691,6 +691,7 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) const { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	std::string 		accountingDomain() const { return AccountingDomain; };
 	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
@@ -961,6 +962,7 @@ private:
 	char*			Mail;
 	char*			AccountantName;
     char*			UidDomain;
+	std::string		AccountingDomain;
 
 	// connection variables
 	struct sockaddr_in	From;

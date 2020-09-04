@@ -242,6 +242,11 @@ class Matchmaker : public Service
 		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds, double &max, double &normalFactor,
 										   double &maxAbs, double &normalAbsFactor);
 
+			// Take a submitter ad from the collector and apply any changes necessary.
+			// For example, we can change the submitter name based on the authenticated
+			// identity in the collector.
+		bool TransformSubmitterAd(classad::ClassAd &ad);
+
 		// Check to see if any concurrency limit is violated with the given set of limits.
 		// *Note* limits will be changed to lower-case.
 		bool rejectForConcurrencyLimits(std::string &limits);
