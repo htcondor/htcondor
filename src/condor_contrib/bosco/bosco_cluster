@@ -984,7 +984,7 @@ else
     export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
     export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
     show_progress "Creating BOSCO for the WN's" glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
-    rsync -aq  $tmp_dir/glideinExec.tar.gz $local_install_dir/campus_factory/ 2>/dev/null
+    rsync -aq  $tmp_dir/glideinExec.tar.gz "$local_install_dir/campus_factory/" 2>/dev/null
 fi
 
 cat >$remote_glite_dir/etc/condor_config.ft-gahp 2>/dev/null <<EOF
@@ -1020,18 +1020,18 @@ if [ ! -n "$PRIVATE_ON_MU" ]; then
         rm -r $tmp_dir
         exit 1
     fi 
-    rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_jobs 2>/dev/null
+    rsync -aq $bosco_passwd_file "$local_install_dir/campus_factory/share/glidein_jobs" 2>/dev/null
     rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
 fi
 
 # If patch is set, perform the patch
 if [ ! -z "${override_dir}" ]; then
     echo "Patching bosco installation from directory: $override_dir"
-    rsync -aq $override_dir/ $local_install_dir
+    rsync -aq $override_dir/ "$local_install_dir"
 fi
 
 # Do the actual rsync
-show_progress "Installing on cluster $remote_host" rsync -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" $local_install_dir $remote_host:
+show_progress "Installing on cluster $remote_host" rsync -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" "$local_install_dir" $remote_host:
 exit_code=$?
 
 rm -rf $tmp_install_dir
