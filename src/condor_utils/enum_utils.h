@@ -128,5 +128,14 @@ typedef enum {
 const char* getCronAutoPublishString( CronAutoPublish_t val );
 CronAutoPublish_t getCronAutoPublishNum( const char* string );
 
+// enum for provisioner job states
+enum ProvisionerState {
+	NEW = 0,
+	PROVISIONING_STARTED = 1,
+	PROVISIONING_COMPLETE = 2,
+	DEPROVISIONING_STARTED = 3,
+	DEPROVISIONING_COMPLETE = 4
+};
+
 
 #endif /* _CONDOR_ENUM_UTILS_H */

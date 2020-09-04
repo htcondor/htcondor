@@ -48,6 +48,7 @@ static char const *PriorityAttr="Priority";
 static char const *CeilingAttr="Ceiling";
 static char const *ResourcesUsedAttr="ResourcesUsed";
 static char const *WeightedResourcesUsedAttr="WeightedResourcesUsed";
+static char const *HierWeightedResourcesUsedAttr="HierWeightedResourcesUsed";
 static char const *UnchargedTimeAttr="UnchargedTime";
 static char const *WeightedUnchargedTimeAttr="WeightedUnchargedTime";
 static char const *AccumulatedUsageAttr="AccumulatedUsage";
@@ -652,18 +653,6 @@ void Accountant::AddMatch(const string& CustomerName, ClassAd* ResourceAd)
   float WeightedUnchargedTime=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
-  int GroupResourcesUsed=0;
-  float GroupWeightedResourcesUsed = 0.0;
-  int GroupUnchargedTime=0;
-  float WeightedGroupUnchargedTime=0.0;
-
-  string GroupName = GetAssignedGroup(CustomerName)->name;
-  dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
-
-  GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
-  GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-  GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-  GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   AcctLog->BeginTransaction(); 
   
@@ -680,9 +669,25 @@ void Accountant::AddMatch(const string& CustomerName, ClassAd* ResourceAd)
 
   // Do everything we just to update the customer's record a second time if
   // there is a group record to update
+  string GroupName = GetAssignedGroup(CustomerName)->name;
+
+
+  int GroupResourcesUsed=0;
+  float GroupWeightedResourcesUsed = 0.0;
+  int GroupUnchargedTime=0;
+  float WeightedGroupUnchargedTime=0.0;
+
+  dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
+
+  GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+  GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+  GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+
   // Update customer's group resource usage count
   GroupWeightedResourcesUsed += SlotWeight;
   GroupResourcesUsed += 1;
+
   dprintf(D_ACCOUNTANT, "GroupWeightedResourcesUsed=%f SlotWeight=%f\n", GroupWeightedResourcesUsed,SlotWeight);
   SetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
   SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
@@ -692,7 +697,23 @@ void Accountant::AddMatch(const string& CustomerName, ClassAd* ResourceAd)
   SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
   SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
-  // Set reosurce's info: user, and start-time
+  // If this is a nested group (group_a.b.c), update usage up the tree
+  while (GroupName.length() > 0) {
+	float GroupHierWeightedResourcesUsed = 0.0;
+  	GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+	GroupHierWeightedResourcesUsed += SlotWeight;
+  	SetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+
+  	size_t last_dot = GroupName.find_last_of(".");
+  	if (last_dot == std::string::npos) {
+		GroupName = "";
+  } else {
+		GroupName = GroupName.substr(0, last_dot);
+  }
+  }
+
+
+  // Set resource's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
@@ -760,6 +781,7 @@ void Accountant::RemoveMatch(const string& ResourceName, time_t T)
   float GroupWeightedResourcesUsed=0.0;
   int GroupUnchargedTime=0;
   float WeightedGroupUnchargedTime=0.0;
+  float HierWeightedResourcesUsed = 0.0;
   
   string GroupName = GetAssignedGroup(CustomerName)->name;
   dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
@@ -768,6 +790,7 @@ void Accountant::RemoveMatch(const string& ResourceName, time_t T)
   GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
   GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
   GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+  GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,HierWeightedResourcesUsed);
   
   AcctLog->BeginTransaction();
   // Update customer's resource usage count
@@ -794,6 +817,21 @@ void Accountant::RemoveMatch(const string& ResourceName, time_t T)
   GroupWeightedResourcesUsed -= SlotWeight;
   if(GroupWeightedResourcesUsed < 0.0) {
       GroupWeightedResourcesUsed = 0.0;
+  }
+  // If this is a nested group (group_a.b.c), update usage up the tree
+  while (GroupName.length() > 0) {
+	float GroupHierWeightedResourcesUsed = 0.0;
+  	GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+	GroupHierWeightedResourcesUsed -= SlotWeight;
+	if (GroupHierWeightedResourcesUsed < 0) GroupHierWeightedResourcesUsed = 0;
+  	SetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+
+  	size_t last_dot = GroupName.find_last_of(".");
+  	if (last_dot == std::string::npos) {
+		GroupName = "";
+  } else {
+		GroupName = GroupName.substr(0, last_dot);
+  }
   }
   dprintf(D_ACCOUNTANT, "GroupResourcesUsed =%d GroupWeightedResourcesUsed= %f SlotWeight=%f\n",
           GroupResourcesUsed ,GroupWeightedResourcesUsed,SlotWeight);
@@ -875,16 +913,6 @@ void Accountant::UpdatePriorities()
 
   std::string HK;
   ClassAd* ad;
-  float Priority, OldPrio, PriorityFactor;
-  int UnchargedTime;
-  float WeightedUnchargedTime;
-  float AccumulatedUsage, OldAccumulatedUsage;
-  float WeightedAccumulatedUsage, OldWeightedAccumulatedUsage;
-  float RecentUsage;
-  float WeightedRecentUsage;
-  int ResourcesUsed;
-  float WeightedResourcesUsed;
-  int BeginUsageTime;
 
 	  // Each iteration of the loop should be atomic for consistency,
 	  // but instead of doing one transaction per iteration, wrap the
@@ -893,10 +921,54 @@ void Accountant::UpdatePriorities()
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    char const *key = HK.c_str();
-    if (strncmp(CustomerRecord.c_str(),key,CustomerRecord.length())) continue;
+	char const *key = HK.c_str();
+	if (strncmp(CustomerRecord.c_str(),key,CustomerRecord.length())) continue;
+		UpdateOnePriority(T, TimePassed, AgingFactor, key, ad);
+  }
 
+  AcctLog->CommitTransaction();
+
+  // Check if the log needs to be truncated
+  struct stat statbuf;
+  if( stat(LogFileName.c_str(),&statbuf) ) {
+    dprintf( D_ALWAYS, "ERROR in Accountant::UpdatePriorities - "
+			 "can't stat database (%s)", LogFileName.c_str() );
+  } else if( statbuf.st_size > MaxAcctLogSize ) {
+	  AcctLog->TruncLog();
+	  dprintf( D_ACCOUNTANT, "Accountant::UpdatePriorities - "
+			   "truncating database (prev size=%lu)\n", 
+			   (unsigned long)statbuf.st_size ); 
+		  // Now that we truncated, check the size, and allow it to
+		  // grow to at least double in size before truncating again.
+	  if( stat(LogFileName.c_str(),&statbuf) ) {
+		  dprintf( D_ALWAYS, "ERROR in Accountant::UpdatePriorities - "
+				   "can't stat database (%s)", LogFileName.c_str() );
+	  } else {
+		  if( statbuf.st_size * 2 > MaxAcctLogSize ) {
+			  MaxAcctLogSize = statbuf.st_size * 2;
+			  dprintf( D_ACCOUNTANT, "Database has grown, expanding "
+					   "MAX_ACCOUNTANT_DATABASE_SIZE to %d\n", 
+					   MaxAcctLogSize );
+		  }
+	  }
+  }
+}
+
+void
+Accountant::UpdateOnePriority(int T, int TimePassed, float AgingFactor, const char *key, ClassAd *ad) {
+
+	float Priority, OldPrio, PriorityFactor;
+	int UnchargedTime;
+	float WeightedUnchargedTime;
+	float AccumulatedUsage, OldAccumulatedUsage;
+	float WeightedAccumulatedUsage, OldWeightedAccumulatedUsage;
+	float RecentUsage;
+	float WeightedRecentUsage;
+	int ResourcesUsed;
+	float WeightedResourcesUsed;
+	int BeginUsageTime;
     // lookup values in the ad
+	
     if (ad->LookupFloat(PriorityAttr,Priority)==0) Priority=0;
 	if (Priority<MinPriority) Priority=MinPriority;
     OldPrio=Priority;
@@ -919,7 +991,18 @@ void Accountant::UpdatePriorities()
 
     RecentUsage=float(ResourcesUsed)+float(UnchargedTime)/TimePassed;
     WeightedRecentUsage=float(WeightedResourcesUsed)+float(WeightedUnchargedTime)/TimePassed;
-    Priority=Priority*AgingFactor+WeightedRecentUsage*(1-AgingFactor);
+
+	// For groups that may have a hierarchy, use the sum of the usage in the hierarchy,
+	// not the usage at this one node in the group.
+	float HierWeightedResourcesUsed = 0.0;
+	if (ad->LookupFloat(HierWeightedResourcesUsedAttr,HierWeightedResourcesUsed)==0) HierWeightedResourcesUsed=0.0;
+	if (HierWeightedResourcesUsed > 0.0) {
+				WeightedRecentUsage = HierWeightedResourcesUsed;
+	}
+
+	// Age out the existing priority, and add in any new usage
+    Priority = Priority * AgingFactor + WeightedRecentUsage * (1 - AgingFactor);
+
 	if (Priority < MinPriority) {
 		Priority = MinPriority;
 	}
@@ -973,34 +1056,6 @@ void Accountant::UpdatePriorities()
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , WeightedResourcesUsed=%f\n",key,OldPrio,Priority,ResourcesUsed,WeightedResourcesUsed);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f (unweighted %8.3f), UnchargedTime=%8.3f (unweighted %d), AccumulatedUsage=%5.3f (unweighted %5.3f), BeginUsageTime=%d\n",WeightedRecentUsage,RecentUsage,WeightedUnchargedTime,UnchargedTime,WeightedAccumulatedUsage,AccumulatedUsage,BeginUsageTime);
 
-  }
-
-  AcctLog->CommitTransaction();
-
-  // Check if the log needs to be truncated
-  struct stat statbuf;
-  if( stat(LogFileName.c_str(),&statbuf) ) {
-    dprintf( D_ALWAYS, "ERROR in Accountant::UpdatePriorities - "
-			 "can't stat database (%s)", LogFileName.c_str() );
-  } else if( statbuf.st_size > MaxAcctLogSize ) {
-	  AcctLog->TruncLog();
-	  dprintf( D_ACCOUNTANT, "Accountant::UpdatePriorities - "
-			   "truncating database (prev size=%lu)\n", 
-			   (unsigned long)statbuf.st_size ); 
-		  // Now that we truncated, check the size, and allow it to
-		  // grow to at least double in size before truncating again.
-	  if( stat(LogFileName.c_str(),&statbuf) ) {
-		  dprintf( D_ALWAYS, "ERROR in Accountant::UpdatePriorities - "
-				   "can't stat database (%s)", LogFileName.c_str() );
-	  } else {
-		  if( statbuf.st_size * 2 > MaxAcctLogSize ) {
-			  MaxAcctLogSize = statbuf.st_size * 2;
-			  dprintf( D_ACCOUNTANT, "Database has grown, expanding "
-					   "MAX_ACCOUNTANT_DATABASE_SIZE to %d\n", 
-					   MaxAcctLogSize );
-		  }
-	  }
-  }
 }
 
 //------------------------------------------------------------------
@@ -1348,6 +1403,12 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
     formatstr(tmp, "AccumulatedUsage%d", gnum);
     ad->Assign(tmp, AccumulatedUsage);
+
+    float HierWeightedResourcesUsed = 0;
+    if (CustomerAd->LookupFloat(HierWeightedResourcesUsedAttr,HierWeightedResourcesUsed)==0) HierWeightedResourcesUsed=0;
+    formatstr(tmp, "HierWeightedResourcesUsed%d", gnum);
+    ad->Assign(tmp, HierWeightedResourcesUsed);
+    
     
     float WeightedAccumulatedUsage = 0;
     if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;

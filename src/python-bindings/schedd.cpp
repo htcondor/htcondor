@@ -3692,6 +3692,17 @@ void export_schedd()
         .value("NonBlocking", NonBlocking)
         ;
 
+    enum_<ProvisionerState>("ProvisionerState",
+            R"C0ND0R(
+            An enumeration describing the state of a provisioner job.
+            )C0ND0R")
+        .value("New", ProvisionerState::NEW)
+        .value("ProvisioningStarted", ProvisionerState::PROVISIONING_STARTED)
+        .value("ProvisioningComplete", ProvisionerState::PROVISIONING_COMPLETE)
+        .value("DeprovisioningStarted", ProvisionerState::DEPROVISIONING_STARTED)
+        .value("DeprovisioningComplete", ProvisionerState::DEPROVISIONING_COMPLETE)
+        ;
+
     class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
