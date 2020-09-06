@@ -1,21 +1,38 @@
 #!/usr/bin/env pytest
 
-# this test replicates job_concurrency_limitsP
+#
+# There's a race condition in the negotiator's handling of concurrency limits:
+# while the negotiator won't hand out more concurrency tokens than are
+# available in any one cycle, it depends on seeing all of those tokens in the
+# collector to avoid handing them out again in the next cycle.
+#
+# We could try to control the negoatiator cycle by setting a very short
+# NEGOTIATOR_CYCLE_DELAY, an "infinitely" long NEGOTIATOR_INTERVAL, and
+# then calling condor_reschedule, but it seems easier to control the number
+# of runnable jobs, instead.
+#
 
 import re
+import time
 import logging
+import datetime
+import htcondor
 
 from ornithology import (
     config,
     standup,
     action,
+
     Condor,
     SetJobStatus,
     JobStatus,
     in_order,
     track_quantity,
-    SCRIPTS,
+    ClusterState,
 )
+
+# This is awful.
+concurrency_limits_hit_first = None
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -24,43 +41,18 @@ logger.setLevel(logging.DEBUG)
 # jobs you plan to submit
 SLOT_CONFIGS = {
     "static_slots": {"NUM_CPUS": "12", "NUM_SLOTS": "12"},
-    "partitionable_slot": {
-        "NUM_CPUS": "12",
-        "SLOT_TYPE_1": "cpus=100%,memory=100%,disk=100%",
-        "SLOT_TYPE_1_PARTITIONABLE": "True",
-        "NUM_SLOTS_TYPE_1": "1",
-    },
+#    "partitionable_slot": {
+#        "NUM_CPUS": "12",
+#        "SLOT_TYPE_1": "cpus=100%,memory=100%,disk=100%",
+#        "SLOT_TYPE_1_PARTITIONABLE": "True",
+#        "NUM_SLOTS_TYPE_1": "1",
+#    },
 }
 
 
 @config(params=SLOT_CONFIGS)
 def slot_config(request):
     return request.param
-
-
-@standup
-def condor(test_dir, slot_config):
-    # set all of the concurrency limits for each slot config,
-    # so that we can run all the actual job submits against the same config
-    concurrency_limit_config = {
-        v["config-key"]: v["config-value"] for v in CONCURRENCY_LIMITS.values()
-    }
-
-    with Condor(
-        local_dir=test_dir / "condor",
-        config={
-            **slot_config,
-            **concurrency_limit_config,
-            # The negotiator determines if a concurrency limit is in use by
-            # checking the machine ads, so it will overcommit tokens if its
-            # cycle time is shorter than the claim-and-report cycle.
-            #
-            # I'm not sure why the claim-and-report cycle is so long.
-            "NEGOTIATOR_INTERVAL": "4",
-            "NEGOTIATOR_CYCLE_DELAY": "4",
-        },
-    ) as condor:
-        yield condor
 
 
 CONCURRENCY_LIMITS = {
@@ -91,38 +83,215 @@ CONCURRENCY_LIMITS = {
 }
 
 
-@action(params=CONCURRENCY_LIMITS)
+@config(params=CONCURRENCY_LIMITS)
 def concurrency_limit(request):
     return request.param
 
 
+@standup
+def condor(test_dir, slot_config, concurrency_limit):
+    # We don't want to share a startd for different concurrency limit tests,
+    # because doing so introduces another race condition where we need to
+    # startd to be totally idle before starting the next test.
+    concurrency_limit_config = {
+        concurrency_limit["config-key"]: concurrency_limit["config-value"]
+    }
+
+    with Condor(
+        local_dir=test_dir / "condor",
+        config={
+            **slot_config,
+            **concurrency_limit_config,
+            # The negotiator determines if a concurrency limit is in use by
+            # checking the machine ads, so it will overcommit tokens if its
+            # cycle time is shorter than the claim-and-report cycle.
+            #
+            # I'm not sure why the claim-and-report cycle is so long.
+            "NEGOTIATOR_INTERVAL": "1",
+            "NEGOTIATOR_CYCLE_DELAY": "1",
+            "UPDATE_INTERVAL": "1",
+            # This MUST include D_MATCH, which is the default.
+            "NEGOTIATOR_DEBUG": "D_MATCH D_CATEGORY D_SUB_SECOND",
+            "SCHEDD_DEBUG": "D_FULLDEBUG",
+            # Don't delay or decline to update the runnable job count for
+            # any reason after receiving the reschedule command.
+            "SCHEDD_MIN_INTERVAL": "0",
+            "SCHEDD_INTERVAL_TIMESLICE": "1",
+        },
+    ) as condor:
+        yield condor
+
+
+# This can't be the best way to do this.
+def wait_for_busy_slots_in_collector(condor, count, timeout=120):
+    deadline = time.time() + timeout
+    while True:
+        result = condor.status(
+            constraint='State == "Claimed" && Activity == "Busy"',
+            projection=["Name", "GlobalJobID"],
+        )
+        if count == len(result):
+            return
+        if count < len(result):
+            return
+        assert time.time() < deadline
+        time.sleep(1)
+
+
+def wait_for_next_negotiation_cycle(condor):
+    now = datetime.datetime.now()
+    negotiator_log = condor.negotiator_log.open()
+
+    assert negotiator_log.wait(
+        lambda entry: entry.timestamp > now
+    )
+    assert negotiator_log.wait(
+        lambda entry: "Started Negotiation Cycle" in entry
+    )
+    assert negotiator_log.wait(
+        lambda entry: "Finished Negotiation Cycle" in entry
+    )
+
+
+def wait_for_log_to_catch_up(log, when):
+    return log.wait(
+        lambda entry: entry.timestamp > when
+    )
+
+
 @action
-def all_jobs_ran(condor, concurrency_limit, path_to_sleep):
+def limit_exceeded(condor, concurrency_limit, path_to_sleep):
+    max_running = concurrency_limit["max-running"]
+
     handle = condor.submit(
         description={
             "executable": path_to_sleep,
-            "arguments": "5",
+            "arguments": "3600",
             "request_memory": "100MB",
             "request_disk": "10MB",
+            "hold": "true",
             "concurrency_limits": concurrency_limit["submit-value"],
+            "log": "test_concurrency_limits-{}.log".format(concurrency_limit["config-key"]),
         },
-        count=(concurrency_limit["max-running"] + 1) * 2,
+        count=(max_running + 1) * 2,
     )
 
-    condor.job_queue.wait_for_events(
-        {
-            jobid: [
-                (
-                    SetJobStatus(JobStatus.RUNNING),
-                    lambda j, e: condor.run_command(["condor_q"], echo=True),
-                ),
-                SetJobStatus(JobStatus.COMPLETED),
-            ]
-            for jobid in handle.job_ids
-        },
-        # On my unloaded machine, it takes ~48 seconds for the longest test.
+    #
+    # Release exactly the right number of jobs.
+    # FIXME: why is this the easiest way to do this?
+    #
+    condor.run_command(["condor_release", *handle.job_ids[:max_running]])
+
+    #
+    # Wait for enough jobs to be running.
+    #
+    assert handle.wait(
+        condition=ClusterState.running_exactly(max_running),
         timeout=180,
+        verbose=True,
+        fail_condition=lambda cs: cs.counts()[JobStatus.RUNNING] > max_running
     )
+
+    #
+    # Wait for those jobs' slots to report to the collector.
+    #
+    wait_for_busy_slots_in_collector(condor, max_running)
+
+    #
+    # Release the next job.
+    #
+    condor.run_command(["condor_release", handle.job_ids[max_running]])
+
+    #
+    # Because the schedd only periodically updates its table of runnable
+    # jobs, we need to force it to do so before we can assume that the
+    # negotiator will see the newly-idled job.
+    #
+    # FIXME: wait for the schedd log to say that it got this command?
+    #
+    condor.run_command(["condor_reschedule"])
+
+    #
+    # Wait until we've seen a start and then the end of a negotiation cycle.
+    #
+    wait_for_next_negotiation_cycle(condor)
+
+    #
+    # Put the extra job back on hold.
+    # FIXME: Why is this the easiest way to do this?
+    #
+    condor.run_command(["condor_hold", handle.job_ids[max_running]])
+
+    #
+    # Put one of the running jobs on hold.
+    # FIXME: Why is this the easiest way to do this?
+    #
+    condor.run_command(["condor_hold", handle.job_ids[0]])
+
+    # Avoid a race condition where we could successfully wait for four jobs
+    # to be running because the event log hadn't recorded this one going on
+    # hold yet.
+    assert handle.wait(
+        condition=lambda cs: cs[0] == JobStatus.HELD,
+        timeout=180,
+        verbose=True,
+    )
+
+    #
+    # At this point, we know that the negotiator won't hit the concurrency
+    # limit again until we release the job, so look for it doing so now.
+    #
+    now = datetime.datetime.now()
+    assert wait_for_log_to_catch_up(condor.negotiator_log.open(), now)
+    print("\nFirst concurrency limit hit should have happened by {}".format(now))
+
+    global concurrency_limits_hit_first
+    concurrency_limits_hit_first = find_concurrency_limits_hit(
+        condor.negotiator_log.open()
+    )
+
+    #
+    # Release the next job.
+    # FIXME: Why is this the easiest way to do this?
+    #
+    condor.run_command(["condor_release", handle.job_ids[max_running]])
+
+    #
+    # Wait for enough jobs to be running.
+    #
+    assert handle.wait(
+        condition=ClusterState.running_exactly(max_running),
+        timeout=180,
+        verbose=True,
+    )
+
+    #
+    # Wait for those job's slots to report to the collector.
+    #
+    wait_for_busy_slots_in_collector(condor, max_running)
+
+    #
+    # Release the first job.
+    # FIXME: Why is this the easiest way to do this?
+    #
+    condor.run_command(["condor_release", handle.job_ids[0]])
+
+    #
+    # Wait for job to be reported as released, to make sure the negotiator
+    # has a chance to play with it.
+    #
+    assert handle.wait(
+        condition=lambda cs: cs[0] == JobStatus.IDLE,
+        timeout=180,
+        verbose=True,
+    )
+
+    #
+    # Wait until we've seen a start and then the end of a negotiation cycle.
+    #
+    wait_for_next_negotiation_cycle(condor)
+    now = datetime.datetime.now()
+    print("Second concurrency limit hit should have happened by {}".format(now))
 
     yield handle
 
@@ -130,16 +299,39 @@ def all_jobs_ran(condor, concurrency_limit, path_to_sleep):
 
 
 @action
-def num_jobs_running_history(condor, all_jobs_ran, concurrency_limit):
-    return track_quantity(
-        condor.job_queue.filter(lambda j, e: j in all_jobs_ran.job_ids),
-        increment_condition=lambda id_event: id_event[-1]
-        == SetJobStatus(JobStatus.RUNNING),
-        decrement_condition=lambda id_event: id_event[-1]
-        == SetJobStatus(JobStatus.COMPLETED),
-        max_quantity=concurrency_limit["max-running"],
-        expected_quantity=concurrency_limit["max-running"],
+def num_jobs_running_history(condor, limit_exceeded, concurrency_limit):
+    job_queue_log = [t for t in condor.job_queue.read_transactions()]
+    job_status_events = condor.job_queue.filter(
+        lambda j, e: j in limit_exceeded.job_ids and e.attribute == "JobStatus"
     )
+
+    history = [0]
+    running_count = 0
+    job_status = dict()
+    for job_id, event in job_status_events:
+        new_status = event.value
+
+        if not job_id in job_status:
+            job_status[job_id] = new_status
+            continue
+
+        old_status = job_status[job_id]
+        job_status[job_id] = new_status
+
+        if new_status == JobStatus.RUNNING:
+            running_count += 1
+        elif new_status == JobStatus.IDLE:
+            if old_status == JobStatus.HELD:
+                continue
+            running_count -= 1
+        elif new_status == JobStatus.HELD:
+            if old_status == JobStatus.IDLE:
+                continue
+            running_count -= 1
+
+        history.append(running_count)
+
+    return history
 
 
 @action
@@ -148,9 +340,9 @@ def startd_log_file(condor):
 
 
 @action
-def num_busy_slots_history(startd_log_file, all_jobs_ran, concurrency_limit):
+def num_busy_slots_history(startd_log_file, limit_exceeded, concurrency_limit):
     logger.debug("Checking Startd log file...")
-    logger.debug("Expected Job IDs are: {}".format(all_jobs_ran.job_ids))
+    logger.debug("Expected Job IDs are: {}".format(limit_exceeded.job_ids))
 
     active_claims_history = track_quantity(
         startd_log_file.read(),
@@ -164,12 +356,12 @@ def num_busy_slots_history(startd_log_file, all_jobs_ran, concurrency_limit):
 
 
 @action
-def negotiator_log(all_jobs_ran, condor):
+def final_negotiator_log(limit_exceeded, condor):
     return condor.negotiator_log.open()
 
 
-@action
-def concurrency_limits_hit(negotiator_log):
+def find_concurrency_limits_hit(negotiator_log):
+    last_line = None
     limits_hit = dict()
     for entry in negotiator_log.read():
         match = re.match(
@@ -179,21 +371,16 @@ def concurrency_limits_hit(negotiator_log):
             limit = match.group(1).lower()
             value = limits_hit.setdefault(limit, 0)
             limits_hit[limit] = value + 1
+        last_line = entry.line
+    print("Last line seen in negotiator log was '{}'".format(last_line))
     return limits_hit
 
 
-class TestConcurrencyLimits:
-    def test_all_jobs_ran(self, condor, all_jobs_ran):
-        for jobid in all_jobs_ran.job_ids:
-            assert in_order(
-                condor.job_queue.by_jobid[jobid],
-                [
-                    SetJobStatus(JobStatus.IDLE),
-                    SetJobStatus(JobStatus.RUNNING),
-                    SetJobStatus(JobStatus.COMPLETED),
-                ],
-            )
+@action
+def concurrency_limits_hit(final_negotiator_log):
+    return find_concurrency_limits_hit(final_negotiator_log)
 
+class TestConcurrencyLimits:
     def test_never_more_jobs_running_than_limit(
         self, num_jobs_running_history, concurrency_limit
     ):
@@ -209,9 +396,23 @@ class TestConcurrencyLimits:
     ):
         assert max(num_busy_slots_history) <= concurrency_limit["max-running"]
 
-    def test_num_busy_slots_hits_limit(self, num_busy_slots_history, concurrency_limit):
+    def test_num_busy_slots_hits_limit(
+        self, num_busy_slots_history, concurrency_limit
+    ):
         assert concurrency_limit["max-running"] in num_busy_slots_history
 
-    def test_negotiator_hits_limit(self, concurrency_limit, concurrency_limits_hit):
+    #
+    # FIXME: We should check if the concurrency limit is hit twice: at least
+    # once before we remove a job, and at least once after.
+    #
+    def test_negotiator_hits_limit(
+        self, concurrency_limit, concurrency_limits_hit
+    ):
         limit_name_in_log = concurrency_limit["submit-value"].lower().split(":")[0]
+
+        global concurrency_limits_hit_first
+        assert limit_name_in_log in concurrency_limits_hit_first
+        initial_count = concurrency_limits_hit_first[limit_name_in_log]
         assert limit_name_in_log in concurrency_limits_hit
+        final_count = concurrency_limits_hit[limit_name_in_log]
+        assert final_count > initial_count
