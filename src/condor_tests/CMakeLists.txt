@@ -204,7 +204,6 @@ if (BUILD_TESTING)
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "core;quick;full;quicknolink")
 
 		# Ornithology - partial merge - not yet reliable.
-		# condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		# condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		# condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -220,6 +219,8 @@ if (BUILD_TESTING)
 			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+    		condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 	endif()
 
