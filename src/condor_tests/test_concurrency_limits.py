@@ -41,12 +41,12 @@ logger.setLevel(logging.DEBUG)
 # jobs you plan to submit
 SLOT_CONFIGS = {
     "static_slots": {"NUM_CPUS": "12", "NUM_SLOTS": "12"},
-#    "partitionable_slot": {
-#        "NUM_CPUS": "12",
-#        "SLOT_TYPE_1": "cpus=100%,memory=100%,disk=100%",
-#        "SLOT_TYPE_1_PARTITIONABLE": "True",
-#        "NUM_SLOTS_TYPE_1": "1",
-#    },
+    "partitionable_slot": {
+        "NUM_CPUS": "12",
+        "SLOT_TYPE_1": "cpus=100%,memory=100%,disk=100%",
+        "SLOT_TYPE_1_PARTITIONABLE": "True",
+        "NUM_SLOTS_TYPE_1": "1",
+    },
 }
 
 
