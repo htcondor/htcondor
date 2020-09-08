@@ -409,9 +409,9 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	reli_sock.decode();
 	ClassAd response_ad;
 	if( !getClassAd(&reli_sock, response_ad) || !reli_sock.end_of_message() ) {
-		dprintf( D_FULLDEBUG, "DCStartd::deactivateClaim: failed to read response ad.\n");
-			// The response ad is not critical and is expected to be missing
-			// if the startd is from before 7.0.5.
+		newError(CA_COMMUNICATION_ERROR,
+		         "DCStartd::deactivateClaim: failed to read response ad.");
+		return false;
 	}
 	else {
 		bool start = true;
