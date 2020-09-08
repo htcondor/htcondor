@@ -1262,6 +1262,7 @@ CCBServer::AddReconnectInfo( CCBReconnectInfo *reconnect_info )
 		return;
 	}
 
+	dprintf(D_ALWAYS, "CCBServer::AddReconnectInfo(): Found stale reconnect entry!\n");
 	ASSERT( m_reconnect_info.remove(reconnect_info->getCCBID()) == 0 );
 	ASSERT( m_reconnect_info.insert(reconnect_info->getCCBID(),reconnect_info) == 0);
 }
