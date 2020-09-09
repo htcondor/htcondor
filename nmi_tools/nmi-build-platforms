@@ -2,8 +2,7 @@
 
 # Officially supported platforms
 docker://htcondor/nmi-v88:x86_64_AmazonLinux2
-# Using 64-bit RedHat 6 hardware for std univ tests
-x86_64_RedHat6
+docker://htcondor/nmi-v88:x86_64_CentOS6
 # Using 64-bit CentOS 7 hardware for std univ tests
 x86_64_CentOS7
 docker://htcondor/nmi-v88:x86_64_CentOS8
@@ -21,7 +20,7 @@ x86_64_Windows10
 docker://htcondor/nmi-v88:x86_CentOS6
 docker://htcondor/nmi-v88:x86_CentOS7
 
-# Not yet officially supported.
+# Not officially supported.
 
 # We want to build all branches on Fedora because it is our "warning check" platform
 docker://htcondor/nmi-v88:x86_64_Fedora27
