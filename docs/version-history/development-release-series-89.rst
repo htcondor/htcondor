@@ -38,11 +38,11 @@ New Features:
 
    This features is not presently avaiable on Windows.
 
--  The :class:`classad.ClassAd` class now defines equality and inequality.
-   :ticket:`7760`
-
 -  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
    :ticket:`7726`
+
+- Added a family of version comparison functions to ClassAds.
+  :ticket:`7504`
 
 - Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
   feature is the :class:`htcondor.personal.PersonalPool` class, which is
