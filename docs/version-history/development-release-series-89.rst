@@ -38,6 +38,11 @@ New Features:
   Personal pools do not require administrator/root privileges.
   HTCondor itself must still be installed on your system.
 
+- Added the OAuth2 Credmon (aka "SciTokens Credmon") daemon
+  (*condor_credmon_oauth*), WSGI application, helper libraries, example
+  configuration, and documentation to HTCondor.
+  :ticket:`7741`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
