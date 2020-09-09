@@ -357,10 +357,10 @@ for a proxy server address; by setting this appropriately on execute
 nodes, a system can dramatically improve transfer speeds for commonly
 used files.
 
-.. _enabling_oauth_credentials
+.. _enabling_oauth_credentials:
 
 Enabling the Fetching and Use of OAuth2 Credentials
--------------------------------------------
+---------------------------------------------------
 
 HTCondor can be configured
 to allow users to request and securely store credentials

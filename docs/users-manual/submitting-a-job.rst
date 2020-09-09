@@ -995,7 +995,7 @@ the machine from which it was submitted.
 .. _jobs_that_require_credentials:
 
 Jobs That Require Credentials
-----------------------
+-----------------------------
 
 :index:`requesting OAuth credentials for a job<single: requesting OAuth credentials for a job; OAuth>`
 
