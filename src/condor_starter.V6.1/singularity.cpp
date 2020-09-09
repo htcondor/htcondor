@@ -10,6 +10,7 @@
 #include "CondorError.h"
 #include "basename.h"
 #include "stat_wrapper.h"
+#include "stat_info.h"
 
 using namespace htcondor;
 
@@ -226,9 +227,44 @@ Singularity::setup(ClassAd &machineAd,
 			StatWrapper sw(bind_src_dir.c_str());
 			sw.Stat();
 			if (! sw.IsBufValid()) {
-				dprintf(D_ALWAYS, "Skipping invalid singularity bind directory %s\n", next_bind);
+				dprintf(D_ALWAYS, "Skipping invalid singularity bind source directory %s\n", next_bind);
 				continue;
 			} 
+
+			// Older singularity versions that do not support underlay
+			// may require the target directory to exist.  OSG wants
+			// to ignore mount requests where this is the case.
+			if (param_boolean("SINGULARITY_IGNORE_MISSING_BIND_TARGET", false)) {
+				// We an only check this when the image format is a directory
+				// That's OK for OSG, that's all they use
+				StatInfo si(image.c_str());
+				if (si.IsDirectory()) {
+					// target dir is after the colon, if it exists
+					std::string target_dir;
+					char *colon = strchr(next_bind,':');
+					if (colon == nullptr) {
+						// "/dir"
+						target_dir = next_bind;
+					} else {
+						// "/dir:dir2"
+						target_dir = colon + 1;
+					}
+					size_t colon_pos = target_dir.find(':');
+					if (colon_pos != std::string::npos) {
+						target_dir = target_dir.substr(0, colon_pos);
+					}
+
+					std::string abs_target_dir = image + "/" + target_dir;
+					StatInfo td(abs_target_dir.c_str());
+					if (! td.IsDirectory()) {
+						dprintf(D_ALWAYS, "Target directory %s does not exist in image, skipping mount\n", abs_target_dir.c_str());
+						continue;
+					}
+
+				} else {
+					dprintf(D_ALWAYS, "Image %s is NOT directory, skipping test for missing bind target for %s\n", image.c_str(), next_bind);
+				}
+			}
 			sing_args.AppendArg("-B");
 			sing_args.AppendArg(next_bind);
 		}
