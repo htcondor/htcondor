@@ -29,6 +29,13 @@
  */
 
 #include "MyString.h"
+#include "dc_service.h"
+
+class StatisticsPool;
+void AddCCBStatsToPool(StatisticsPool& pool, int publevel);
+
+class Sock;
+class Stream;
 
 class CCBTarget;
 class CCBServerRequest;

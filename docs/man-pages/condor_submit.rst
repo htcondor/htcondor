@@ -2685,6 +2685,22 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     For DAGMan jobs, the string ``DAG Node:`` and the node's name is
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
+ use_oauth_services = <list of credential service names>
+    A comma-separated list of crendential-providing service names for
+    which the job should be provided credentials for the job execution
+    environment. The credential service providers must be configured by
+    the pool admin.
+ <credential_service_name>_oauth_permissions[_<handle>] = <scope>
+    A string containing the scope(s) that should be requested for
+    the credential named <credential_service_name>[_<handle>], where
+    <handle> is optionally provided to differentiate between multiple
+    credentials from the same credential service provider.
+ <credential_service_name>_oauth_resource[_<handle>] = <resource>
+    A string containing the resource (or "audience") that should be
+    requested for the credential named
+    <credential_service_name>[_<handle>], where <handle> is optionally
+    provided to differentiate between multiple credentials from the same
+    credential service provider.
  +<attribute> = <value>
     A line that begins with a '+' (plus) character instructs
     *condor_submit* to insert the given *attribute* into the job

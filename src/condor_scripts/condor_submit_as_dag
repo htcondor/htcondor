@@ -130,13 +130,16 @@ def simplify_complex_queue_statement(submit_file_name):
          '-digest', generated_digest_filename,
          submit_file_name,
         ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
     os.remove(generated_classad_filename)
 
     if cp.returncode != 0:
-        print("condor_submit failed to generate item data for {}".format(submit_file_name), file=sys.stderr)
+        # The extra newline is deliberate.
+        print("condor_submit failed to generate item data for {}, output follows.\n".format(submit_file_name), file=sys.stderr)
+        print(cp.stdout, file=sys.stderr)
         return None
 
     with open(generated_digest_filename) as generated_digest:
@@ -173,8 +176,11 @@ def main(argv):
 
     if not re.match("^queue \d+$", queue_statement, re.I):
         queue_statement = simplify_complex_queue_statement(submit_file_name)
+        if queue_statement is None:
+            return -4
 
     convert_queue_from_file(queue_statement, submit_file_name)
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

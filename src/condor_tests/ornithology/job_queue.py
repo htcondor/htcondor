@@ -123,17 +123,19 @@ class JobQueue:
         if self._job_queue_log_file is None:
             self._job_queue_log_file = self.condor.job_queue_log.open(mode="r")
 
-        acc = []
-        for jobid, event in map(parse_job_queue_log_line, self._job_queue_log_file):
+        transaction_accumulator = []
+        for line in buffered_readlines(self._job_queue_log_file):
+            jobid, event = parse_job_queue_log_line(line)
+
             if event is START_TRANSACTION:
-                acc = []
+                transaction_accumulator = []
             elif event is END_TRANSACTION:
-                t = JobQueueTransaction(acc)
+                t = JobQueueTransaction(transaction_accumulator)
                 self.transactions.append(t)
                 yield t
             elif isinstance(jobid, jobs.JobID) and isinstance(event, SetAttribute):
                 self.by_jobid[jobid].append(event)
-                acc.append((jobid, event))
+                transaction_accumulator.append((jobid, event))
 
     def wait_for_events(
         self,
@@ -291,6 +293,34 @@ class JobQueue:
 
 START_TRANSACTION = object()
 END_TRANSACTION = object()
+
+
+def buffered_readlines(file) -> Iterator[str]:
+    """
+    Because of the buffering semantics of the job queue log, we need to
+    do things more manually that we would like. The problem is that the
+    job queue log doesn't flush in the middle of a transaction, making
+    it possible to get partial lines if we read in the middle of a
+    transaction. Thus, we use a simple line-oriented buffer to avoid that.
+    """
+    buffer = ""
+    while True:
+        line = file.readline()
+
+        # If the buffer and line are both empty, this is the end of the file.
+        if buffer == "" and line == "":
+            break
+
+        buffer += line
+
+        # Oops! We read only part of a line.
+        # Wait a moment, then try again to see if we can get the full line.
+        if not buffer.endswith("\n"):
+            time.sleep(0.0001)
+            continue
+
+        yield buffer
+        buffer = ""
 
 
 def parse_job_queue_log_line(
