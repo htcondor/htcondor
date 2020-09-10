@@ -100,9 +100,10 @@ class DagmanClassad : public ScheddClassad {
 		@param maxIdle Maximum number of idle jobs
 		@param maxPreScripts Maximum number of active pre scripts
 		@param maxPostScripts Maximum number of active post scripts
+		@param maxHoldScripts Maximum number of active hold scripts
 	**/
 	void Initialize( int maxJobs, int maxIdle, int maxPreScripts,
-			int maxPostScripts );
+			int maxPostScripts, int maxHoldScripts );
 
 
 	/** Update the status information in the DAGMan job's classad.
@@ -111,6 +112,7 @@ class DagmanClassad : public ScheddClassad {
 		@param The number of nodes in the prerun state
 		@param The number of nodes submitted/queued
 		@param The number of nodes in the postrun state
+		@param The number of nodes in the hold state
 		@param The number of nodes that are ready (but not submitted, etc.)
 		@param The number of nodes that have failed
 		@param The number of nodes that are unready
@@ -119,9 +121,10 @@ class DagmanClassad : public ScheddClassad {
 		@param A ClassAd of DAGMan runtime statistics
 	*/
 	void Update( int total, int done, int pre, int submitted, int post,
-				int ready, int failed, int unready,
+				int hold, int ready, int failed, int unready,
 				DagStatus dagStatus, bool recovery, const DagmanStats &stats,
-				int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts );
+				int &maxJobs, int &maxIdle, int &maxPreScripts, 
+				int &maxPostScripts, int &maxHoldScripts );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A MyString to receive the Owner value.

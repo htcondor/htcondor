@@ -81,6 +81,7 @@ class Dagman {
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once
+	int maxHoldScripts;  // max. number of HOLD scripts to run at once
 	bool paused;
 
 	char* condorSubmitExe;

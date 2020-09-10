@@ -98,6 +98,7 @@ Job::~Job() {
 
 	delete _scriptPre;
 	delete _scriptPost;
+	delete _scriptHold;
 
 	free(_jobTag);
 }
@@ -106,6 +107,7 @@ Job::~Job() {
 Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	: _scriptPre(NULL)
 	, _scriptPost(NULL)
+	, _scriptHold(NULL)
 	, retry_max(0)
 	, retries(0)
 	, _submitTries(0)
@@ -240,6 +242,9 @@ void Job::Dump ( const Dag *dag ) const {
 	if( _scriptPost ) {
 		dprintf( D_ALWAYS, "    POST Script: %s\n", _scriptPost->GetCmd() );
 	}
+	if( _scriptHold ) {
+		dprintf( D_ALWAYS, "    HOLD Script: %s\n", _scriptHold->GetCmd() );
+	}
 	if( retry_max > 0 ) {
 		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
 	}
@@ -307,6 +312,15 @@ Job::GetPostScriptName() const
 		return NULL;
 	}
 	return _scriptPost->GetCmd();
+}
+
+const char*
+Job::GetHoldScriptName() const
+{
+	if( !_scriptHold ) {
+		return NULL;
+	}
+	return _scriptHold->GetCmd();
 }
 
 bool
@@ -1139,22 +1153,34 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 #endif
 
 bool
-Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
+Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
 {
 	if( !cmd || strcmp( cmd, "" ) == 0 ) {
 		whynot = "missing script name";
 		return false;
 	}
-	if( post ? _scriptPost : _scriptPre ) {
-		const char *prePost = post ? "POST" : "PRE";
-		const char *script = post ? GetPostScriptName() : GetPreScriptName();
-		debug_printf( DEBUG_NORMAL,
-					"Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
-					GetJobName(), prePost, script, cmd );
-		check_warning_strictness( DAG_STRICT_3 );
-		delete (post ? _scriptPost : _scriptPre);
+
+	// Check if a script of the same type has already been assigned to this node
+	const char *old_script_name = NULL;
+	const char *type_name;
+	switch( script_type ) {
+		case ScriptType::PRE:
+			old_script_name = GetPreScriptName();
+			type_name = "PRE";
+		case ScriptType::POST:
+			old_script_name = GetPostScriptName();
+			type_name = "POST";
+		case ScriptType::HOLD:
+			old_script_name = GetHoldScriptName();
+			type_name = "HOLD";
 	}
-	Script* script = new Script( post, cmd, defer_status, defer_time, this );
+	if( old_script_name ) {
+		debug_printf( DEBUG_NORMAL,
+			"Warning: node %s already has %s script <%s> assigned; changing "
+			"to <%s>\n", GetJobName(), type_name, old_script_name, cmd );
+	}
+
+	Script* script = new Script( script_type, cmd, defer_status, defer_time, this );
 	if( !script ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -1162,11 +1188,14 @@ Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time,
 		whynot = "out of memory!";
 		return false;
 	}
-	if( post ) {
+	if( script_type == ScriptType::POST ) {
 		_scriptPost = script;
 	}
-	else {
+	else if( script_type == ScriptType::PRE ) {
 		_scriptPre = script;
+	}
+	else if( script_type == ScriptType::HOLD ) {
+		_scriptHold = script;
 	}
 	whynot = "n/a";
 	return true;
