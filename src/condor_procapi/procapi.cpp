@@ -1307,8 +1307,8 @@ int
 ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status ) 
 {
 	int mib[4];
-	struct kinfo_proc *kp = NULL, *kprocbuf = NULL;
-	size_t bufSize = 0;
+	struct kinfo_proc kp;
+	size_t bufSize = sizeof(struct kinfo_proc);
 	bool call_sysctl = pid != procRaw.pid;
 	task_port_t task;
 	task_basic_info 	ti;
@@ -1388,7 +1388,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		mib[1] = KERN_PROC;
 		mib[2] = KERN_PROC_PID;
 		mib[3] = pid;
-		if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+		if (sysctl(mib, 4, &kp, &bufSize, NULL, 0) < 0) {
 			if (errno == ESRCH) {
 				// No such process
 				status = PROCAPI_NOPID;
@@ -1399,41 +1399,16 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 				status = PROCAPI_UNSPECIFIED;
 			}
 			dprintf( D_FULLDEBUG,
-				"ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
+				"ProcAPI: sysctl() on pid %d failed with %d(%s)\n",
 				pid, errno, strerror(errno) );
-
-			return PROCAPI_FAILURE;
-		}
-
-		kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
-		if (kp == NULL) {
-			EXCEPT("ProcAPI: getProcInfo() Out of memory!");
-		}
-
-		if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-			if (errno == ESRCH) {
-				// No such process
-				status = PROCAPI_NOPID;
-			} else if (errno == EPERM) {
-				// Operation not permitted
-				status = PROCAPI_PERM;
-			} else {
-				status = PROCAPI_UNSPECIFIED;
-			}
-			dprintf( D_FULLDEBUG,
-				"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
-				pid, errno, strerror(errno) );
-
-			free(kp);
 
 			return PROCAPI_FAILURE;
 		}
 		if ( bufSize == 0 ) {
 			status = PROCAPI_NOPID;
 			dprintf( D_FULLDEBUG,
-				"ProcAPI: sysctl() (pass 2) on pid %d returned no data\n",
+				"ProcAPI: sysctl() on pid %d returned no data\n",
 				pid );
-			free(kp);
 			return PROCAPI_FAILURE;
 		}
 	}
@@ -1530,7 +1505,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 					pid, results, mach_error_string(results) );
 
 				mach_port_deallocate(mach_task_self(), task);
-				free(kp);
 
 				return PROCAPI_FAILURE;
 			}
@@ -1551,17 +1525,15 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	// add in the rest
 	procRaw.pid = pid;
 	if ( call_sysctl ) {
-		procRaw.creation_time = kp->kp_proc.p_starttime.tv_sec;
-		procRaw.ppid = kp->kp_eproc.e_ppid;
-		procRaw.owner = kp->kp_eproc.e_pcred.p_ruid;
+		procRaw.creation_time = kp.kp_proc.p_starttime.tv_sec;
+		procRaw.ppid = kp.kp_eproc.e_ppid;
+		procRaw.owner = kp.kp_eproc.e_pcred.p_ruid;
 	}
 
 	// We don't know the page faults
 	procRaw.majfault = 0;
 	procRaw.minfault = 0;
 	
-	free(kp);
-
 	// success
 	return PROCAPI_SUCCESS;
 }
