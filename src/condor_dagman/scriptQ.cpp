@@ -39,9 +39,9 @@ ScriptQ::ScriptQ( Dag* dag ) :
         EXCEPT( "ERROR: out of memory!");
     }
 
- 	// register daemonCore reaper for PRE/POST script completion
+	// register daemonCore reaper for PRE/POST/HOLD script completion
     _scriptReaperId =
-		daemonCore->Register_Reaper( "PRE/POST Script Reaper",
+		daemonCore->Register_Reaper( "PRE/POST/HOLD Script Reaper",
 									 (ReaperHandlercpp)&ScriptQ::ScriptReaper,
 									 "ScriptQ::ScriptReaper", this );
 }
@@ -90,7 +90,6 @@ ScriptQ::Run( Script *script )
 					  prefix, script->GetNodeName() );
 		deferScript = true;
 	}
-
 	if ( deferScript ) {
 		_scriptDeferredCount++;
 		_waitingQueue->push( script );
@@ -206,6 +205,8 @@ ScriptQ::ScriptReaper( int pid, int status )
 			_dag->PreScriptReaper( script->GetNode(), status );
 		} else if( script->_type == ScriptType::POST ) {
 			_dag->PostScriptReaper( script->GetNode(), status );
+		} else if( script->_type == ScriptType::HOLD ) {
+			_dag->HoldScriptReaper( script->GetNode(), status );
 		}
 	}
 

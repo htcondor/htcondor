@@ -1948,25 +1948,6 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 }
 
 //---------------------------------------------------------------------------
-// Run a HOLD script.
-
-bool Dag::RunHoldScript( Job *job, bool incrementRunCount )
-{
-	// Make sure we are allowed to run this script.
-	if( !job->_scriptHold ) {
-		return false;
-	}
-	// Run the HOLD script. This is a best-effort attempt that does not change
-	// the node status.
-	if ( incrementRunCount ) {
-		_holdRunNodeCount++;
-	}
-	_holdScriptQ->Run( job->_scriptHold );
-
-	return true;
-}
-
-//---------------------------------------------------------------------------
 // Note that the actual handling of the post script's exit status is
 // done not when the reaper is called, but in ProcessLogEvents when
 // the log event (written by the reaper) is seen...
@@ -2022,6 +2003,34 @@ Dag::PostScriptReaper( Job *job, int status )
 			break;
 		}
 	}
+	return true;
+}
+
+//---------------------------------------------------------------------------
+// Run a HOLD script.
+
+bool Dag::RunHoldScript( Job *job, bool incrementRunCount )
+{
+	// Make sure we are allowed to run this script.
+	if( !job->_scriptHold ) {
+		return false;
+	}
+	// Run the HOLD script. This is a best-effort attempt that does not change
+	// the node status.
+	if ( incrementRunCount ) {
+		_holdRunNodeCount++;
+	}
+	_holdScriptQ->Run( job->_scriptHold );
+
+	return true;
+}
+
+int
+Dag::HoldScriptReaper( Job *job, int status )
+{
+	ASSERT( job != NULL );
+	_holdRunNodeCount--;
+
 	return true;
 }
 

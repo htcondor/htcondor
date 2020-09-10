@@ -557,6 +557,7 @@ class Dag {
 
 	int PreScriptReaper( Job *job, int status );
 	int PostScriptReaper( Job *job, int status );
+	int HoldScriptReaper( Job *job, int status );
 
 	void PrintReadyQ( debug_level_t level ) const;
 
