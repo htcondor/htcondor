@@ -27,6 +27,17 @@ Release Notes:
 
 New Features:
 
+-  You may now instruct HTCondor to record certain information about the
+   files present in the top level of a job's sandbox and the job's environment
+   variables.  The list of files is recorded when transfer-in completes
+   and again when transfer-out starts.  Set ``manifest`` to true in your
+   submit file to enable, or ``manifest_dir`` to specify where the lists
+   are recorded.  See the :ref:`man-pages/condor_submit:*condor_submit*`
+   man page for details.
+   :ticket:`7381`
+
+   This features is not presently avaiable on Windows.
+
 -  The :class:`classad.ClassAd` class now defines equality and inequality.
    :ticket:`7760`
 

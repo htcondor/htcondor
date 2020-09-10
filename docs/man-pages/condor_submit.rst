@@ -2582,7 +2582,33 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     requirements or preferences. For a job to only run on a machine with
     a minimum ``MachineMaxVacateTime``, or to preferentially run on such
     machines, explicitly specify this in the requirements and/or rank
-    expressions. :index:`max_job_retirement_time`
+    expressions.
+
+    :index:`manifest`
+    :index:`manifest<single: manifest; submit commands>`
+
+ manifest = <True | False>
+    For vanilla and Docker -universe jobs (and others that use the shadow),
+    specifies if HTCondor (the starter) should produce a "manifest", which
+    is directory containing three files: the list of files and directories
+    at the top level of the sandbox when file transfer in completes
+    (``in``), the same when file transfer out begins (``out``), and a dump
+    of the environment set for the job (``env``).
+
+    This feature is not presently available for Windows.
+
+    :index:`manifest_dir`
+    :index:`manifest_dir<single: manifest; submit commands>`
+
+ manifest_dir = <directory name>
+    For vanilla and Docker -universe jobs (and others that use the shadow),
+    specifies the directory in which to record the manifest.  Specifying
+    this enables the creation of a manifest.  By default, the manifest
+    directory is named ``<cluster>_<proc>_manifest``, to avoid conflicts.
+
+    This feature is not presently available for Windows.
+
+    :index:`max_job_retirement_time`
     :index:`max_job_retirement_time<single: max_job_retirement_time; submit commands>`
 
  max_job_retirement_time = <integer expression>
