@@ -179,7 +179,9 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
 	int rval;
 
 #ifndef HPUX
+#if !defined(DARWIN)
 	buildPidList();
+#endif
 #endif
 
 	buildProcInfoList();
@@ -475,7 +477,9 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	int fam_index = 0;
 
 #ifndef HPUX        // everyone except HPUX needs a pidlist built.
+#if !defined(DARWIN)
 	buildPidList();
+#endif
 #endif
 
 	buildProcInfoList();  // HPUX has its own version of this, too.
