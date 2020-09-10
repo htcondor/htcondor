@@ -702,9 +702,9 @@ main(int argc, const char* argv[])
 		exit(1);
 	}
     long ceiling = strtol(argv[SetCeiling+2], nullptr, 10);
-	if (ceiling < 0) {
+	if (ceiling < -1) {
 		fprintf( stderr, "Ceiling must be greater than or equal to "
-				 "1.\n");
+				 "-1.\n");
 		exit(1);
 	}
 
