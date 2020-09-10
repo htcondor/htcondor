@@ -27,6 +27,9 @@ Release Notes:
 
 New Features:
 
+- Added a family of version comparison functions to ClassAds.
+  :ticket:`7504`
+
 - Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
   :ticket:`7726`
 

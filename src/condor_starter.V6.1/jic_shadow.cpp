@@ -3302,6 +3302,7 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	if( dir == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open sandbox directory: %d (%s)\n",
 			filename, errno, strerror(errno) );
+		fclose(file);
 		return;
 	}
 

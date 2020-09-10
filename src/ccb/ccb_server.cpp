@@ -35,6 +35,7 @@ struct CCBStats {
 	stats_entry_abs<int> CCBReconnectInfos;
 	stats_entry_recent<int> CCBReconnects;
 	stats_entry_recent<int> CCBRequests;
+	stats_entry_recent<int> CCBRequestsNotFound;
 	stats_entry_recent<int> CCBRequestsSuccess;
 	stats_entry_recent<int> CCBRequestsFailure;
 
@@ -44,6 +45,7 @@ struct CCBStats {
 		STATS_POOL_ADD(pool, "", CCBReconnectInfos, publevel);
 		STATS_POOL_ADD(pool, "", CCBReconnects, publevel);
 		STATS_POOL_ADD(pool, "", CCBRequests, publevel);
+		STATS_POOL_ADD(pool, "", CCBRequestsNotFound, publevel);
 		STATS_POOL_ADD(pool, "", CCBRequestsSuccess, publevel);
 		STATS_POOL_ADD(pool, "", CCBRequestsFailure, publevel);
 	}
@@ -603,6 +605,8 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 			"currently registered with that id "
 			"(perhaps it recently disconnected).", target_ccbid_str.c_str());
 		RequestReply( sock, false, error_msg.Value(), 0, target_ccbid );
+		ccb_stats.CCBRequests += 1;
+		ccb_stats.CCBRequestsNotFound += 1;
 		return FALSE;
 	}
 
@@ -960,6 +964,7 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	ASSERT( m_targets.insert(target->getCCBID(),target) == 0 );
 	EpollAdd(target);
 
+	ccb_stats.CCBEndpoints += 1;
 	ccb_stats.CCBReconnects += 1;
 
 	dprintf(D_FULLDEBUG,"CCB: reconnected target daemon %s with ccbid %lu\n",
@@ -1256,9 +1261,8 @@ CCBServer::GetReconnectInfo(CCBID ccbid)
 void
 CCBServer::AddReconnectInfo( CCBReconnectInfo *reconnect_info )
 {
-	ccb_stats.CCBReconnectInfos += 1;
-
 	if( m_reconnect_info.insert(reconnect_info->getCCBID(),reconnect_info) == 0 ) {
+		ccb_stats.CCBReconnectInfos += 1;
 		return;
 	}
 
