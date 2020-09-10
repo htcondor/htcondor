@@ -3285,7 +3285,12 @@ JICShadow::recordSandboxContents( const char * filename ) {
 		formatstr( dirname, "%d_%d_manifest", cluster, proc );
 	}
 	job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dirname );
-	mkdir( dirname.c_str(), 0700 );
+	int r = mkdir( dirname.c_str(), 0700 );
+	if (r < 0) {
+		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to make directory %s: (%d) %s\n",
+			filename, dirname.c_str(), errno, strerror(errno));
+		return;
+	}
 	addToOutputFiles( dirname.c_str() );
 	std::string f = dirname + DIR_DELIM_CHAR + filename;
 
