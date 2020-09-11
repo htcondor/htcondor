@@ -742,18 +742,22 @@ cmake \
 
 %else
 
-%cmake -DBUILD_TESTING:BOOL=FALSE \
+%cmake3 -DBUILD_TESTING:BOOL=TRUE \
 %if 0%{?fedora}
        -DBUILDID:STRING=RH-%{version}-%{release} \
        -D_VERBOSE:BOOL=TRUE \
+%else
+       -D_VERBOSE:BOOL=FALSE \
 %endif
+       -DUW_BUILD:BOOL=FALSE \
+       -DPROPER:BOOL=TRUE \
+       -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_HDFS:BOOL=FALSE \
-       -DWITH_ZLIB:BOOL=FALSE \
        -DWANT_CONTRIB:BOOL=FALSE \
        -DWITH_PIGEON:BOOL=FALSE \
        -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
@@ -778,14 +782,11 @@ cmake \
        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
 %endif
 
-# Patch condor_config.generic for 64-bit rpm
-(cd src/condor_examples; patch < condor_config.generic.rpm.patch)
-
 %if %uw_build
 # build externals first to avoid dependency issues
 make %{?_smp_mflags} externals
 %endif
-make %{?_smp_mflags}
+make -j32
 
 %install
 # installation happens into a temporary location, this function is
@@ -800,10 +801,7 @@ rm -rf %{buildroot}
 echo ---------------------------- makefile ---------------------------------
 make install DESTDIR=%{buildroot}
 
-# The install target puts etc/ under usr/, let's fix that.
-mv %{buildroot}/usr/etc %{buildroot}/%{_sysconfdir}
-
-
+%if 0
 # Things in /usr/lib really belong in /usr/share/condor
 populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
 # Except for the shared libs
@@ -822,20 +820,17 @@ populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datad
 %endif
 %endif
 %endif
+%endif
 # Drop in a symbolic link for backward compatability
 ln -s %{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 
-# Only trigger on 32-bit RHEL6
-if [ -d %{buildroot}%{_datadir}/condor/python2.6 ]; then
-    mv %{buildroot}%{_datadir}/condor/python2.6 %{buildroot}%{_libdir}/
-fi
-
+%if 0
 # It is proper to put HTCondor specific libexec binaries under libexec/condor/
 populate %_libexecdir/condor %{buildroot}/usr/libexec/*
+%endif
 
-# man pages go under %{_mandir}
-mkdir -p %{buildroot}/%{_mandir}
-mv %{buildroot}/usr/man %{buildroot}/%{_mandir}/man1
+populate /usr/share/doc/condor-%{version}/examples %{buildroot}/usr/share/doc/condor-%{version}/etc/examples/*
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/etc
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
 # the default condor_config file is not architecture aware and thus
@@ -848,8 +843,9 @@ if [ "$LIB" = "%_libdir" ]; then
   echo "_libdir does not contain /usr, sed expression needs attention"
   exit 1
 fi
+ls %{buildroot}/usr/share/doc/condor-%{version}/examples
 sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
-  %{buildroot}/etc/examples/condor_config.generic \
+  %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_config.generic \
   > %{buildroot}/%{_sysconfdir}/condor/condor_config
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
@@ -861,12 +857,8 @@ mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
-%ifarch %{ix86}
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-small-shadow
-%endif
-
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-minicondor
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/50ec2.config
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
 mkdir -p -m0755 %{buildroot}/%{_var}/run/condor
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
@@ -916,9 +908,9 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
 mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
 
 # Move oauth credmon config files out of examples and into config.d
-mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
-mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
-mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
 %endif
 
 # For non-EL7, remove oauth credmon from the buildroot
@@ -927,7 +919,7 @@ rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
 rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
 rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
 rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
-rm -rf %{buildroot}/etc/examples/condor_credmon_oauth
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth
 %endif
 
 ###
@@ -946,15 +938,15 @@ rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
-install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
+install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
-install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_libexecdir}/condor/condor-annex-ec2
+install -Dp -m0755 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor-annex-ec2 %{buildroot}%{_libexecdir}/condor/condor-annex-ec2
 
 mkdir -p %{buildroot}%{_unitdir}
-install -m 0644 %{buildroot}/etc/examples/condor-annex-ec2.service %{buildroot}%{_unitdir}/condor-annex-ec2.service
-install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
+install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor-annex-ec2.service %{buildroot}%{_unitdir}/condor-annex-ec2.service
+install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
-# install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
+# install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 %if 0%{?osg} || 0%{?hcc}
 # Set condor service enviroment variables for LCMAPS on OSG systems
 mkdir -p %{buildroot}%{_unitdir}/condor.service.d
@@ -962,13 +954,31 @@ install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.
 %endif
 
 %if 0%{?rhel} >= 7
+mkdir %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 %endif
 
 # Install perl modules
 
+#Fixups for packaged build, should have been done by cmake
+
+mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
+mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
+mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
+mv %{buildroot}/usr/lib64/condor/libcondorapi.so %{buildroot}/usr/lib64
+mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
+%if 0%{?rhel} == 7
+mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
+%endif
+mv %{buildroot}/usr/lib64/condor/libpyclassad3*.so %{buildroot}/usr/lib64
+
+rm -rf %{buildroot}/usr/include/condor
+rm -rf %{buildroot}/usr/lib64/condor/libchirp_client.a
+rm -rf %{buildroot}/usr/lib64/condor/libcondorapi.a
+rm -rf %{buildroot}/usr/lib64/libclassad.a
+
 # we must place the config examples in builddir so %doc can find them
-mv %{buildroot}/etc/examples %_builddir/%name-%tarball_version
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarball_version
 
 # Remove stuff that comes from the full-deploy
 rm -rf %{buildroot}%{_sbindir}/cleanup_release
@@ -1078,8 +1088,6 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libSciTokens.s
 # these probably belong elsewhere
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 %endif
-
-populate %{_libdir}/condor %{buildroot}/%{_libdir}/libgetpwnam.so
 
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
