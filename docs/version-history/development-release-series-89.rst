@@ -27,11 +27,22 @@ Release Notes:
 
 New Features:
 
-- Added a family of version comparison functions to ClassAds.
-  :ticket:`7504`
+-  You may now instruct HTCondor to record certain information about the
+   files present in the top level of a job's sandbox and the job's environment
+   variables.  The list of files is recorded when transfer-in completes
+   and again when transfer-out starts.  Set ``manifest`` to true in your
+   submit file to enable, or ``manifest_dir`` to specify where the lists
+   are recorded.  See the :ref:`man-pages/condor_submit:*condor_submit*`
+   man page for details.
+   :ticket:`7381`
+
+   This features is not presently avaiable on Windows.
 
 - Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
   :ticket:`7726`
+
+- Added a family of version comparison functions to ClassAds.
+  :ticket:`7504`
 
 - Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
   feature is the :class:`htcondor.personal.PersonalPool` class, which is

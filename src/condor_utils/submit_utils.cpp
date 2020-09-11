@@ -936,7 +936,10 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name ) const
 
 	pval_expanded = expand_macro(pval);
 
-	if( pval == NULL ) {
+	abort_macro_name = NULL;
+	abort_raw_macro_val = NULL;
+
+	if( pval_expanded == NULL ) {
 		push_error(stderr, "Failed to expand macros in: %s\n",
 				 used_alt ? alt_name : name );
 		abort_code = 1;
@@ -948,8 +951,6 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name ) const
 		return NULL;
 	}
 
-	abort_macro_name = NULL;
-	abort_raw_macro_val = NULL;
 
 	return  pval_expanded;
 }
