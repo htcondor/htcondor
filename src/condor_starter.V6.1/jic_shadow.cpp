@@ -3286,7 +3286,7 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	}
 	job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dirname );
 	int r = mkdir( dirname.c_str(), 0700 );
-	if (r < 0) {
+	if (r < 0 && errno != 17) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to make directory %s: (%d) %s\n",
 			filename, dirname.c_str(), errno, strerror(errno));
 		return;
