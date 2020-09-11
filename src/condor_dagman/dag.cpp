@@ -1017,7 +1017,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						"POST script %s", errStr.Value() );
 
 				// Log post script success or failure if necessary.
-			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
 
 				//
 				// Deal with retries.
@@ -1068,7 +1068,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						"%scompleted successfully.\n", header.Value() );
 			job->retval = 0;
 				// Log post script success or failure if necessary.
-			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
 			TerminateJob( job, recovery );
 		}
 
@@ -1847,7 +1847,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		job->retval = 0;
 	}
 
-	_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+	_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::PRE );
 
 	if ( preScriptFailed ) {
 
@@ -2026,7 +2026,7 @@ bool Dag::RunHoldScript( Job *job, bool incrementRunCount )
 }
 
 int
-Dag::HoldScriptReaper( Job *job, int status )
+Dag::HoldScriptReaper( Job *job )
 {
 	ASSERT( job != NULL );
 	_holdRunNodeCount--;

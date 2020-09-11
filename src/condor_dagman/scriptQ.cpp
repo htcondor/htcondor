@@ -99,7 +99,7 @@ ScriptQ::Run( Script *script )
 	debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
 				  prefix, script->GetNodeName() );
 	_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
-				( script->_type == ScriptType::HOLD ) );
+				( script->_type ) );
 	if( int pid = script->BackgroundRun( _scriptReaperId,
 				_dag->_dagStatus, _dag->NumNodesFailed() ) ) {
 		_numScriptsRunning++;
@@ -206,7 +206,7 @@ ScriptQ::ScriptReaper( int pid, int status )
 		} else if( script->_type == ScriptType::POST ) {
 			_dag->PostScriptReaper( script->GetNode(), status );
 		} else if( script->_type == ScriptType::HOLD ) {
-			_dag->HoldScriptReaper( script->GetNode(), status );
+			_dag->HoldScriptReaper( script->GetNode() );
 		}
 	}
 

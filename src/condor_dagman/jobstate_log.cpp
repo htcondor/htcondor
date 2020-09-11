@@ -349,7 +349,7 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteScriptStarted( Job *node, bool isPost )
+JobstateLog::WriteScriptStarted( Job *node, ScriptType type )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -357,10 +357,15 @@ JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 
 	ASSERT( node );
 
-	const char *eventName = isPost ? POST_SCRIPT_STARTED_NAME :
-				PRE_SCRIPT_STARTED_NAME;
+	const char *eventName;
+	if ( type == ScriptType::POST ) {
+		eventName = POST_SCRIPT_STARTED_NAME;
+	} else if ( type == ScriptType::PRE ) {
+		eventName = PRE_SCRIPT_STARTED_NAME;
+	}
+
 	MyString condorID( "-" );
-	if ( isPost ) {
+	if ( type == ScriptType::POST ) {
 			// See Dag::PostScriptReaper().
 		int procID = node->GetNoop() ? node->GetProc() : 0;
 		CondorID2Str( node->GetCluster(), procID, condorID );
@@ -371,7 +376,7 @@ JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
+JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -380,16 +385,16 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 	ASSERT( node );
 
 	const char *eventName;
-	if ( isPost ) {
+	if ( type == ScriptType::POST ) {
 		eventName = (node->retval == 0) ? POST_SCRIPT_SUCCESS_NAME :
 					POST_SCRIPT_FAILURE_NAME;
-	} else {
+	} else if ( type == ScriptType::PRE ) {
 		eventName = (node->retval == 0) ? PRE_SCRIPT_SUCCESS_NAME :
 					PRE_SCRIPT_FAILURE_NAME;
 	}
 
 	MyString condorID( "-" );
-	if ( isPost ) {
+	if ( type == ScriptType::POST ) {
 			// See Dag::PostScriptReaper().
 		int procID = node->GetNoop() ? node->GetProc() : 0;
 		CondorID2Str( node->GetCluster(), procID, condorID );
