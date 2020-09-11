@@ -992,6 +992,126 @@ system calls (for example, a vanilla universe job), and the user does
 not enable HTCondor's File Transfer mechanism, the job will only run on
 the machine from which it was submitted.
 
+.. _jobs_that_require_credentials:
+
+Jobs That Require Credentials
+----------------------
+
+:index:`requesting OAuth credentials for a job<single: requesting OAuth credentials for a job; OAuth>`
+
+If the HTCondor pool administrator has configured the submit machine
+with one or more credential monitors,
+jobs submitted on that machine may automatically be provided with credentials
+and/or it may be possible for users to request and obtain credentials for their jobs.
+
+Suppose the administrator has configured the submit machine
+such that users may obtain credentials from a storage service called "CloudBoxDrive."
+A job that needs credentials from CloudBoxDrive
+should contain the submit command
+
+.. code-block:: condor-submit
+
+    use_oauth_services = cloudboxdrive
+
+Upon submitting this job for the first time,
+the user will be directed to a webpage hosted on the submit machine
+which will guide the user through the process of obtaining a CloudBoxDrive credential.
+The credential is then stored securely on the submit machine.
+(**Note that the original job will have to be re-submitted at this point!**)
+(Also note that at no point is the user's *password* stored on the submit machine.)
+Once a credential is stored on the submit machine,
+as long as it remains valid,
+it is transferred securely to all subsequently submitted jobs that contain ``use_oauth_services = cloudboxdrive``.
+
+When a job that contains credentials runs on an execute machine,
+the job's executable will have the environment variable ``_CONDOR_CREDS`` set,
+which points to the location of all of the credentials inside the job's sandbox.
+For credentials obtained via the ``use_oauth_services`` submit file command,
+the "access token" is stored under ``$_CONDOR_CREDS``
+in a JSON-encoded file
+named with the name of the service provider and with the extension ``.use``.
+For the "CloudBoxDrive" example,
+the access token would be located in ``$_CONDOR_CREDS/cloudboxdrive.use``.
+
+The HTCondor file transfer mechanism has built-in plugins
+for using user-obtained credentials
+to transfer files from some specific storage providers,
+see :ref:`file_transfer_using_a_url`.
+
+Some credential providers may require the user to provide
+a description of the permissions (often called "scopes") a user needs for a specific credential.
+Credential permission scoping is possible using the ``<service name>_oauth_permissions``
+submit file command.
+For example, suppose our CloudBoxDrive service has a ``/public`` directory,
+and the documentation for the service said that users must specify a ``read:<directory>`` scope
+in order to be able to read data out of ``<directory>``.
+The submit file would need to contain
+
+.. code-block:: condor-submit
+
+    use_oauth_services = cloudboxdrive
+    cloudboxdrive_oauth_permissions = read:/public
+
+Some credential providers may also require the user to provide
+the name of the resource (or "audience") that a credential should allow access to.
+Resource naming is done using the ``<service name>_oauth_resource`` submit file command.
+For example, if our CloudBoxDrive service has servers located at some unversities
+and the documentation says that we should pick one near us and specify it as the audience,
+the submit file might look like
+
+.. code-block:: condor-submit
+
+    use_oauth_services = cloudboxdrive
+    cloudboxdrive_oauth_permissions = read:/public
+    cloudboxdrive_oauth_resource = https://cloudboxdrive.myuni.edu
+
+It is possible for a single job to request and/or use credentials from multiple services
+by listing each service in the ``use_oauth_services`` command.
+Suppose the nearby university has a SciTokens service that provides credentials to access the ``localstorage.myuni.edu`` machine,
+and the HTCondor pool administrator has configured the submit machine to allow users to obtain credentials from this service,
+and that a user has write access to the `/foo` directory on the storage machine.
+A submit file that would result in a job that contains credentials
+that can read from CloudBoxDrive and write to the local university storage might look like
+
+.. code-block:: condor-submit
+
+    use_oauth_services = cloudboxdrive, myuni
+
+    cloudboxdrive_oauth_permissions = read:/public
+    cloudboxdrive_oauth_resource = https://cloudboxdrive.myuni.edu
+
+    myuni_oauth_permissions = write:/foo
+    myuni_oauth_resource = https://localstorage.myuni.edu
+
+A single job can also request multiple credentials from the same service provider
+by affixing handles to the ``<service>_oauth_permissions`` and (if necessary)
+``<service>_oauth_resource`` commands.
+For example, if a user wants separate read and write credentials for CloudBoxDrive
+
+.. code-block:: condor-submit
+
+    use_oauth_services = cloudboxdrive
+    cloudboxdrive_oauth_permissions_readpublic = read:/public
+    cloudboxdrive_oauth_permissions_writeprivate = write:/private
+
+    cloudboxdrive_oauth_resource_readpublic = https://cloudboxdrive.myuni.edu
+    cloudboxdrive_oauth_resource_writeprivate = https://cloudboxdrive.myuni.edu
+
+Submitting the above would result in a job with respective access tokens located in
+``$_CONDOR_CREDS/cloudboxdrive_readpublic.use`` and
+``$_CONDOR_CREDS/cloudboxdrive_writeprivate.use``.
+
+If a service provider does not require permissions or resources to be specified,
+a user can still request multiple credentials by affixing handles to
+``<service>_oauth_permissions`` commands with empty values
+
+.. code-block:: condor-submit
+
+    use_oauth_services = cloudboxdrive
+    cloudboxdrive_oauth_permissions_personal =
+    cloudboxdrive_oauth_permissions_public =
+
+
 Jobs That Require GPUs
 ----------------------
 

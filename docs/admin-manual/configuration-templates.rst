@@ -203,6 +203,13 @@ incorporates.
        (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
+    -  ``OAuth``
+
+       Sets configuration that enables the *condor_credd* and *condor_credmon_oauth* daemons,
+       which allow for the automatic renewal of user-supplied OAuth2 credentials.
+       Intended for submit nodes that are also configured
+       with the companion OAuth credmon WSGI application
+       running on a HTTPS-enabled web server.
 
 
     -  ``UWCS_Desktop_Policy_Values``
