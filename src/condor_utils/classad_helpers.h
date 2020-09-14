@@ -41,7 +41,7 @@ int findCheckpointSig( ClassAd* ad );
 
 // Based on info in the ClassAd and the given exit reason, construct
 // the appropriate string describing the fate of the job...
-bool printExitString( ClassAd* ad, int exit_reason, MyString &str );
+bool printExitString( ClassAd* ad, int exit_reason, std::string &str );
 
 // Remove/replace characters from the string so it can be used as an attribute name
 // it changes the string that is passed to it.  first leading an trailing spaces

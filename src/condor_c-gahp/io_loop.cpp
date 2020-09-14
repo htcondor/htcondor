@@ -413,8 +413,10 @@ stdin_pipe_handler(int) {
 				flush_request(0, command);
 				flush_request(1, command);
 				gahp_output_return_success();
-			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
-				flush_request (1, 	// worker for stage in requests
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0 ||
+					   strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_OUT) == 0 ||
+					   strcasecmp (args.argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY) == 0) {
+				flush_request (1, 	// worker for staging requests
 							   command);
 				gahp_output_return_success(); 
 			} else {

@@ -105,6 +105,7 @@ extern int			StartDaemons;
 extern int			GotDaemonsOff;
 extern int			MasterShuttingDown;
 extern char*		MasterName;
+extern bool			DaemonStartFastPoll;
 
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
@@ -142,6 +143,7 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	m_waiting_for_startup = false;
 	m_reload_shared_port_addr_after_startup = false;
 	m_never_use_shared_port = false;
+	use_collector_port = false;
 	m_only_stop_when_master_stops = false;
 	flag_in_config_file = NULL;
 	controller_name = NULL;
@@ -287,7 +289,7 @@ daemon::Recover()
 
 
 int
-daemon::NextStart()
+daemon::NextStart() const
 {
 	int seconds;
 	seconds = m_backoff_constant + (int)ceil(::pow(m_backoff_factor, restarts));
@@ -629,7 +631,7 @@ int daemon::RealStart( )
 	const bool wants_condor_priv = false;
 	bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
 		// Collector needs to listen on a well known port.
-	if ( daemon_is_collector || (daemon_is_shared_port && collector_uses_shared_port) ) {
+	if ( daemon_is_collector || (daemon_is_shared_port && use_collector_port) ) {
 
 			// Go through all of the
 			// collectors until we find the one for THIS machine. Then
@@ -717,6 +719,15 @@ int daemon::RealStart( )
 			dprintf (D_FULLDEBUG, "Starting Collector on port %d\n", command_port);
 		}
 
+	} else if (daemon_is_shared_port) {
+
+		command_port = param_integer("SHARED_PORT_PORT", COLLECTOR_PORT);
+		dprintf (D_ALWAYS, "Starting shared port with port: %d\n", command_port);
+
+		// If the user explicitly asked for command port 0, meaning "pick an ephemeral port",
+		// we need to pass 1 to CreateProcess, since it special cases command_port=1 to mean "any"
+		// and command_port=0 to mean 'no command port' (i.e. child is not DC)
+		if( command_port == 0 ) { command_port = 1; }
 
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
@@ -905,6 +916,9 @@ int daemon::RealStart( )
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 60);
 
 	int jobopts = 0;
+	// give the family session to all daemons, not just those that get command ports
+	// we do this so that the credmon(s) can use python send_alive and set_ready_state methods
+	jobopts = DCJOBOPT_INHERIT_FAMILY_SESSION;
 	if( m_never_use_shared_port ) {
 		jobopts |= DCJOBOPT_NEVER_USE_SHARED_PORT;
 	}
@@ -1072,6 +1086,9 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 			wait = true;
 			dprintf(D_ALWAYS,"Waiting for %s to appear.\n",
 					m_after_startup_wait_for_file.Value() );
+			if( DaemonStartFastPoll ) {
+				Sleep(100);
+			}
 		}
 		else if( !first_time ) {
 			dprintf(D_ALWAYS,"Found %s.\n",
@@ -1088,7 +1105,7 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 }
 
 void
-daemon::DoActionAfterStartup()
+daemon::DoActionAfterStartup() const
 {
 	if( m_reload_shared_port_addr_after_startup ) {
 		daemonCore->ReloadSharedPortServerAddr();
@@ -1270,8 +1287,8 @@ daemon::HardKill()
 void
 daemon::Exited( int status )
 {
-	MyString msg;
-	msg.formatstr( "The %s (pid %d) ", name_in_config_file, pid );
+	std::string msg;
+	formatstr( msg, "The %s (pid %d) ", name_in_config_file, pid );
 	bool had_failure = true;
 	if (daemonCore->Was_Not_Responding(pid)) {
 		msg += "was killed because it was no longer responding";
@@ -1282,7 +1299,7 @@ daemon::Exited( int status )
 	}
 	else {
 		msg += "exited with status ";
-		msg += IntToStr( WEXITSTATUS(status) );
+		msg += std::to_string( WEXITSTATUS(status) );
 		if( WEXITSTATUS(status) == DAEMON_NO_RESTART ) {
 			had_failure = false;
 			msg += " (daemon will not restart automatically)";
@@ -1300,7 +1317,7 @@ daemon::Exited( int status )
 	if( had_failure ) {
 		d_flag |= D_FAILURE;
 	}
-	dprintf(d_flag, "%s\n", msg.Value());
+	dprintf(d_flag, "%s\n", msg.c_str());
 
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {
@@ -1495,7 +1512,7 @@ daemon::CancelRestartTimers()
 }
 
 time_t
-daemon::GetNextRestart()
+daemon::GetNextRestart() const
 {
 	if( start_tid != -1 ) {
 		return daemonCore->GetNextRuntime(start_tid);
@@ -1504,7 +1521,7 @@ daemon::GetNextRestart()
 }
 
 void
-daemon::Kill( int sig )
+daemon::Kill( int sig ) const
 {
 	if( (!pid) || (pid == -1) ) {
 		return;
@@ -1544,7 +1561,7 @@ daemon::Kill( int sig )
 
 
 void
-daemon::KillFamily( void ) 
+daemon::KillFamily( void ) const 
 {
 	if( pid == 0 ) {
 		return;
@@ -1968,7 +1985,11 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		if (dmn->pid) {
 			bool hung = false;
 			int num_alive_msgs = 1;
-			if (dmn->type != DT_MASTER) num_alive_msgs = daemonCore->Got_Alive_Messages(dmn->pid, hung);
+			if (dmn->type != DT_MASTER) {
+				num_alive_msgs = daemonCore->Got_Alive_Messages(dmn->pid, hung);
+				// treat a 'ready' message as evidence of life
+				if (dmn->ready_state && !num_alive_msgs) { num_alive_msgs += 1; }
+			}
 			if ( ! num_alive_msgs) all_daemons_alive = false;
 			if (hung) {
 				++num_hung;
@@ -2384,7 +2405,7 @@ Daemons::ScheduleRetryStartAllDaemons()
 {
 	if( m_retry_start_all_daemons_tid == -1 ) {
 		m_retry_start_all_daemons_tid = daemonCore->Register_Timer(
-			1,
+			DaemonStartFastPoll ? 0 : 1,
 			(TimerHandlercpp)&Daemons::RetryStartAllDaemons,
 			"Daemons::RetryStartAllDaemons",
 			this);

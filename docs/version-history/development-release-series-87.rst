@@ -815,13 +815,13 @@ New Features:
    natural, is somewhat faster for the condor to parse, and saves space.
    That is, an expression that used to print like
 
-   ::
+   .. code-block:: text
 
        ( ( ( foo ) ) )
 
    now will print like this
 
-   ::
+   .. code-block:: text
 
        (((foo)))
 

@@ -58,7 +58,7 @@ const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
 const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
 const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
 
-// NOTE: this must be kept in sync with the dag_status enum
+// NOTE: this must be kept in sync with the DagStatus enum
 const char * Dag::_dag_status_names[] = {
     "DAG_STATUS_OK",
     "DAG_STATUS_ERROR",
@@ -90,7 +90,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
-		  const MyString &spliceScope ) :
+		  DCSchedd *schedd, const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
@@ -131,7 +131,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_alwaysRunPost		  (true),
 	_dry_run			  (0),
 	_dagPriority		  (0),
-	_metrics			  (NULL)
+	_metrics			  (NULL),
+	_schedd				  (schedd)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.Value() );
 
@@ -248,6 +249,9 @@ Dag::~Dag()
 	DeletePinList( _pinOuts );
 	delete _allNodesIt;
 
+	delete _provisionerClassad;
+	_provisionerClassad = NULL;
+
     return;
 }
 
@@ -275,7 +279,7 @@ Dag::ReportMetrics( int exitCode )
 		return;
 	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
 	if ( report_graph_metrics == true ) {
-		if (_dagStatus != dag_status::DAG_STATUS_CYCLE ) {
+		if (_dagStatus != DagStatus::DAG_STATUS_CYCLE ) {
 			_metrics->GatherGraphMetrics( this );
 		}
 	}
@@ -361,13 +365,19 @@ bool Dag::Bootstrap (bool recovery)
 		PrintReadyQ( DEBUG_DEBUG_2 );
     }	
     
+		// If we have a provisioner job, submit that before any other jobs
+	if( HasProvisionerNode() ) {
+		StartProvisionerNode();
+	}
 		// Note: we're bypassing the ready queue here...
-    jobs.ToBeforeFirst();
-    while( jobs.Next( job ) ) {
-		if( job->CanSubmit() ) {
-			StartNode( job, false );
+	else {
+		jobs.ToBeforeFirst();
+		while( jobs.Next( job ) ) {
+			if( job->CanSubmit() ) {
+				StartNode( job, false );
+			}
 		}
-    }
+	}
 
     return true;
 }
@@ -1164,6 +1174,13 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		}
 	}
 
+		// If this is a provisioner node, initialize the classad object
+		// that communicates with the schedd.
+	if ( job->GetType() == NodeType::PROVISIONER ) {
+		CondorID provisionerId = CondorID( job->GetCluster(), job->GetProc(), 0 );
+		_provisionerClassad = new ProvisionerClassad( provisionerId, _schedd );
+	}
+
 	PrintReadyQ( DEBUG_DEBUG_2 );
 }
 
@@ -1574,6 +1591,31 @@ Dag::StartFinalNode()
 }
 
 //-------------------------------------------------------------------------
+bool
+Dag::StartProvisionerNode()
+{
+	if ( _provisioner_node && _provisioner_node->GetStatus() == Job::STATUS_READY ) {
+		debug_printf( DEBUG_QUIET, "Starting provisioner node...\n" );
+		if ( StartNode( _provisioner_node, false ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+//-------------------------------------------------------------------------
+MyString
+Dag::GetProvisionerJobAdState()
+{
+	MyString provisionerState;
+	if (_provisionerClassad) {
+		provisionerState = _provisionerClassad->GetProvisionerState();
+	}
+	return provisionerState;
+}
+
+//-------------------------------------------------------------------------
 // returns number of jobs submitted
 int
 Dag::SubmitReadyJobs(const Dagman &dm)
@@ -1618,6 +1660,24 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// to fire up any PRE scripts that were deferred while we were
 			// halted.
 		_preScriptQ->RunWaitingScripts();
+	}
+
+		// Check if we are waiting for a provisioner node to become ready
+	if ( HasProvisionerNode() && !_provisioner_ready ) {
+			// If we just moved into a provisioned state, we can start
+			// submitting the other jobs in the dag
+		MyString state = GetProvisionerJobAdState();
+		if ( GetProvisionerJobAdState() == "ProvisionerState.PROVISIONING_COMPLETE" ) {
+			_provisioner_ready = true;
+			Job* job;
+			ListIterator<Job> jobs (_jobs);
+			jobs.ToBeforeFirst();
+			while( jobs.Next( job ) ) {
+				if( job->CanSubmit() ) {
+					StartNode( job, false );
+				}
+			}
+		}
 	}
 
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
@@ -3756,6 +3816,17 @@ bool Dag::Add( Job& job )
 		job.SetStatus( Job::STATUS_NOT_READY );
 		_final_job = &job;
 	}
+
+	if ( ( job.GetType() == NodeType::PROVISIONER ) ) {
+		if ( _provisioner_node ) {
+			debug_printf( DEBUG_QUIET, "Error: DAG already has a provisioner "
+						"node %s; attempting to add provisioner node %s\n",
+						_provisioner_node->GetJobName(), job.GetJobName() );
+			return false;
+		}
+		_provisioner_node = &job;
+	}
+
 	return _jobs.Append(&job);
 }
 
@@ -4156,7 +4227,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 // in the submit command's stdout (which we stashed in the Job object)
 
 bool
-Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
+Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const
 {
 		// Changed this if from "if( recovery )" during work on PR 806 --
 		// this is better because if you get two submit events for the
@@ -4296,18 +4367,25 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			// " " to *not* override batch names specified at a lower
 			// level.
 		const char *batchName;
+		std::string batchId;
 		if ( !node->GetDagFile() && dm._batchName == " " ) {
 			batchName = "";
 		} else {
 			batchName = dm._batchName.Value();
 		}
+		if ( !node->GetDagFile() && dm._batchId == " " ) {
+			batchId = "";
+		} else {
+			batchId = dm._batchId.c_str();
+		}
+
 		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents.c_str(),
 					node, node->_effectivePriority,
 					node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
 					( ! node->NoChildren()) && dm._claim_hold_time > 0,
-					batchName );
+					batchName, batchId );
 	} else {
 #ifdef DEAD_CODE
 		MyString parents = ParentListString(node);
@@ -4329,14 +4407,20 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// " " to *not* override batch names specified at a lower
 		// level.
 		const char *batchName;
+		const char *batchId;
 		if (!node->GetDagFile() && dm._batchName == " ") {
 			batchName = "";
 		} else {
 			batchName = dm._batchName.Value();
 		}
+				if ( !node->GetDagFile() && dm._batchId == " " ) {
+			batchId = "";
+		} else {
+			batchId = dm._batchId.c_str();
+		}
 
 		submit_success = direct_condor_submit(dm, node,
-			_defaultNodeLog, parents.c_str(), batchName, condorID);
+			_defaultNodeLog, parents.c_str(), batchName, batchId, condorID);
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
@@ -4398,7 +4482,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
+	if ( _dagStatus == DagStatus::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
 		max_submit_attempts = min( max_submit_attempts, 2 );
 	}
 

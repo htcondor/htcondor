@@ -737,7 +737,7 @@ CollectorDaemonStatsList::enable( bool nable )
 
 // Get string of the hash key (for debugging)
 void
-StatsHashKey::getstr( MyString &buf )
+StatsHashKey::getstr( MyString &buf ) const
 {
 	buf.formatstr( "'%s':'%s':'%s'",
 				 type.Value(), name.Value(), ip_addr.Value()  );
@@ -871,7 +871,7 @@ CollectorStats::update( const char *className,
 
 // Publish statistics into our ClassAd
 int 
-CollectorStats::publishGlobal( ClassAd *ad, const char * config )
+CollectorStats::publishGlobal( ClassAd *ad, const char * config ) const
 {
 	global.Publish(*ad, config);
 	return 0;

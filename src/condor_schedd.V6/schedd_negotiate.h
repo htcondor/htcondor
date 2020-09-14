@@ -46,7 +46,7 @@ class ResourceRequestCluster {
 	size_t size() { return m_job_ids.size(); }
 
 		// returns the auto cluster id for this cluster
-	int getAutoClusterId() { return m_auto_cluster_id; }
+	int getAutoClusterId() const { return m_auto_cluster_id; }
  private:
 
 	int m_auto_cluster_id;
@@ -102,8 +102,8 @@ class ScheddNegotiate: public DCMsg {
 		// significant attributes, etc).
 	void negotiate(Sock *sock);
 
-		// returns the job owner name (or accounting group) we are serving
-	char const *getOwner();
+		// returns the job owner/user name (or accounting group) we are serving
+	char const *getMatchUser();
 
 		// returns name of remote pool or NULL if none
 	char const *getRemotePool();

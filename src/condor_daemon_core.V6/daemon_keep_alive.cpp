@@ -136,7 +136,7 @@ DaemonKeepAlive::ScanForHungChildren()
 
 
 int 
-DaemonKeepAlive::SendAliveToParent()
+DaemonKeepAlive::SendAliveToParent() const
 {
 	std::string parent_sinful_string_buf;
 	char const *parent_sinful_string;

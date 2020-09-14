@@ -18,7 +18,7 @@ struct QueryIterator
 
     inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
 
-    bool done() {return m_count < 0;}
+    bool done() const {return m_count < 0;}
 
     boost::python::object next(BlockingMode mode=Blocking);
 

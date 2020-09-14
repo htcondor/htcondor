@@ -30,6 +30,7 @@ static int run_simple_docker_command(const std::string &command,
 static int gc_image(const std::string &image);
 static std::string makeHostname(ClassAd *machineAd, ClassAd *jobAd);
 static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, int original_error_code);
+static void build_env_for_docker_cli(Env &env);
 
 static std::string HTCondorLabel = "--label=org.htcondorproject=True";
 int DockerAPI::default_timeout = 120;
@@ -289,6 +290,9 @@ int DockerAPI::createContainer(
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
 	}
+	if (networkType == "none") {
+		runArgs.AppendArg("--network=none");
+	}
 
 	// Handle port forwarding.
 	std::string containerServiceNames;
@@ -347,10 +351,13 @@ int DockerAPI::createContainer(
 	// can't block, so we have a proxy process run attached for us.
 	//
 	FamilyInfo fi;
+	Env cliEnvironment;
+	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
+
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
-		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, NULL, "/",
-		& fi, NULL, childFDs );
+		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
+		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT );
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed.\n" );
@@ -379,10 +386,12 @@ int DockerAPI::startContainer(
 	dprintf( D_ALWAYS, "Runnning: %s\n", displayString.c_str() );
 
 	FamilyInfo fi;
+	Env cliEnvironment;
+	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 	int childPID = daemonCore->Create_Process( startArgs.GetArg(0), startArgs,
-		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, NULL, "/",
-		& fi, NULL, childFDs );
+		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
+		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT);
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed.\n" );
@@ -424,9 +433,11 @@ DockerAPI::execInContainer( const std::string &containerName,
 	dprintf( D_ALWAYS, "execing: %s\n", displayString.c_str() );
 
 	FamilyInfo fi;
+	Env cliEnvironment;
+	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 	int childPID = daemonCore->Create_Process( execArgs.GetArg(0), execArgs,
-		PRIV_CONDOR_FINAL, reaperid, FALSE, FALSE, NULL, "/",
+		PRIV_CONDOR_FINAL, reaperid, FALSE, FALSE, &cliEnvironment, "/",
 		& fi, NULL, childFDs );
 
 	if( childPID == FALSE ) {
@@ -1370,3 +1381,24 @@ DockerAPI::getServicePorts( const std::string & container,
 	return 0;
 #endif /* defined(WIN32) */
 }
+
+// When we run the docker cli, it looks at environment variables to make decisions.
+// Frequently, if condor is started by hand, HOME will be set to the user who started it, 
+// which is usually different than the user we run the cli as.  If condor is started as root
+// we run the cli as the condor user.  docker will look at the HOME environment variable, which 
+// won't match the euid, and report confusing errors.  However, there are some environment variables
+// like DOCKER_HOST, we which probably do want to obey.  So, we will pass to the cli (not the job inside
+// the cli, mind you, but to the cli) a copy of the starter's environment with HOME removed.
+//
+void build_env_for_docker_cli(Env &env) {
+			env.Clear();
+			env.Import();
+#ifdef LINUX
+			env.DeleteEnv("HOME");
+			struct passwd *pw = getpwuid(get_condor_uid());
+			if (pw) {
+				env.SetEnv("HOME", pw->pw_dir);
+			}
+#endif
+}
+

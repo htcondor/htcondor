@@ -366,7 +366,7 @@ TransferRequest::set_rejected(bool val)
 }
 
 bool 
-TransferRequest::get_rejected(void)
+TransferRequest::get_rejected(void) const
 {
 	return m_rejected;
 }

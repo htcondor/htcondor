@@ -305,8 +305,8 @@ public:
 	int writeFooter(FILE* out, bool xml_always_write_header_footer=true);
 	int appendFooter(std::string & buf, bool xml_always_write_header_footer=true);
 
-	int getNumAds() { return cNonEmptyOutputAds; } // returns number of ads in output list.
-	bool needsFooter() { return needs_footer; } // returns true if a header was previously written and footer has not yet been.
+	int getNumAds() const { return cNonEmptyOutputAds; } // returns number of ads in output list.
+	bool needsFooter() const { return needs_footer; } // returns true if a header was previously written and footer has not yet been.
 
 protected:
 	std::string buffer; // internal buffer used by writeAd & writeFooter

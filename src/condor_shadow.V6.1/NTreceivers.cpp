@@ -33,10 +33,6 @@
 #include "directory_util.h"
 
 
-#if defined(Solaris)
-#include <sys/statvfs.h>
-#endif
-
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
@@ -74,23 +70,14 @@ static int stat_string( char *line, struct stat *info )
 	);
 }
 
-#if defined(Solaris)
-static int statfs_string( char *line, struct statvfs *info )
-#else
 static int statfs_string( char *line, struct statfs *info )
-#endif
 {
 #ifdef WIN32
 	return 0;
 #else
 	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld\n",
-#  if defined(Solaris)
-		(long long) info->f_fsid,
-		(long long) info->f_frsize,
-#  else
 		(long long) info->f_type,
 		(long long) info->f_bsize,
-#  endif
 		(long long) info->f_blocks,
 		(long long) info->f_bfree,
 		(long long) info->f_bavail,
@@ -1261,8 +1248,15 @@ case CONDOR_getfile:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		
-		errno = 0;
-		fd = safe_open_wrapper_follow( path, O_RDONLY | _O_BINARY );
+		if (read_access(path)) {
+			errno = 0;
+			fd = safe_open_wrapper_follow(path, O_RDONLY | _O_BINARY);
+		}
+		else {
+			errno = EACCES;
+			fd = -1;
+		}
+
 		if(fd >= 0) {
 			struct stat info;
 			int rc = stat(path, &info);
@@ -1317,8 +1311,14 @@ case CONDOR_putfile:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		
-		errno = 0;
-		fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
+		if (write_access(path)) {
+			errno = 0;
+			fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
+		}
+		else {
+			errno = EACCES;
+			fd = -1;
+		}
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		
@@ -1568,13 +1568,8 @@ case CONDOR_getdir:
 		ASSERT( result );
 
 		errno = 0;
-#if defined(Solaris)
-		struct statvfs statfs_buf;
-		rval = fstatvfs(fd, &statfs_buf);
-#else
 		struct statfs statfs_buf;
 		rval = fstatfs(fd, &statfs_buf);
-#endif
 		terrno = (condor_errno_t)errno;
 		char line[1024];
 		memset( line, 0, sizeof(line) );
@@ -1833,13 +1828,8 @@ case CONDOR_getdir:
 		ASSERT( result );
 		
 		errno = 0;
-#if defined(Solaris)
-		struct statvfs statfs_buf;
-		rval = statvfs(path, &statfs_buf);
-#else
 		struct statfs statfs_buf;
 		rval = statfs(path, &statfs_buf);
-#endif
 		terrno = (condor_errno_t)errno;
 		char line[1024];
 		memset( line, 0, sizeof(line) );
@@ -2196,7 +2186,7 @@ case CONDOR_getdir:
 		// the ones required for this job.  we will need to get that
 		// list of names from the Job Ad.
 		std::string services_needed;
-		ad->LookupString("OAuthServicesNeeded", services_needed);
+		ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed);
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
 		bool had_error = false;

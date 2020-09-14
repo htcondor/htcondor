@@ -30,6 +30,7 @@
 
 unsigned char g_unset_iv[IV_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+/*
 Condor_Crypt_AESGCM::Condor_Crypt_AESGCM(const KeyInfo& key)
     : Condor_Crypt_Base(CONDOR_AESGCM, key)
 {
@@ -39,6 +40,7 @@ Condor_Crypt_AESGCM::Condor_Crypt_AESGCM(const KeyInfo& key)
 Condor_Crypt_AESGCM::~Condor_Crypt_AESGCM()
 {
 }
+*/
 
 void Condor_Crypt_AESGCM::resetState()
 {
@@ -80,7 +82,8 @@ int Condor_Crypt_AESGCM::ciphertext_size(int plaintext_size) const
     return ct_sz;
 }
 
-bool Condor_Crypt_AESGCM::encrypt(const unsigned char *aad,
+bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
+                                  const unsigned char *aad,
                                   int                  aad_len,
                                   const unsigned char *input,
                                   int                  input_len, 
@@ -161,12 +164,12 @@ bool Condor_Crypt_AESGCM::encrypt(const unsigned char *aad,
     dprintf(D_ALWAYS,"IO: Outgoing IV : %s\n",
         debug_hex_dump(hex, reinterpret_cast<char*>(iv), IV_SIZE));
 
-    if (get_key().getProtocol() != CONDOR_AESGCM) {
+    if (cs->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
         dprintf(D_NETWORK, "Failed to have correct AES-GCM key type.\n");
         return false;
     }
 
-    if (1 != EVP_EncryptInit_ex(ctx, NULL, NULL, get_key().getKeyData(), iv)) {
+    if (1 != EVP_EncryptInit_ex(ctx, NULL, NULL, cs->m_keyInfo.getKeyData(), iv)) {
         dprintf(D_NETWORK, "Failed to initialize key and IV.\n");
         return false;
     }
@@ -241,7 +244,8 @@ bool Condor_Crypt_AESGCM::encrypt(const unsigned char *aad,
     return true;
 }
 
-bool Condor_Crypt_AESGCM::decrypt(const unsigned char *  aad,
+bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
+                                  const unsigned char *aad,
                                   int                    aad_len,
                                   const unsigned char *  input,
                                   int                    input_len, 
@@ -276,7 +280,7 @@ bool Condor_Crypt_AESGCM::decrypt(const unsigned char *  aad,
         return false;
     }
 
-    if (get_key().getProtocol() != CONDOR_AESGCM) {
+    if (cs->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed due to the wrong protocol.\n");
         return false;
     }
@@ -315,16 +319,16 @@ bool Condor_Crypt_AESGCM::decrypt(const unsigned char *  aad,
     memcpy(iv + sizeof(ctr_enc), &ctr_enc_conn, sizeof(ctr_enc_conn));
     memcpy(iv + 2*sizeof(ctr_enc), m_state->m_iv_dec.iv + 2*sizeof(ctr_enc), IV_SIZE - 2*sizeof(ctr_enc));
 
+    const unsigned char *kdp = cs->m_keyInfo.getKeyData();
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt about to init key %0x %0x %0x %0x.\n",
-        *(get_key().getKeyData()), *(get_key().getKeyData() + 15),
-        *(get_key().getKeyData() + 16), *(get_key().getKeyData() + 31));
+        *(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
 
     char hex[3 * IV_SIZE + 1];
     dprintf(D_ALWAYS,"IO: Incoming IV : %s\n",
         debug_hex_dump(hex,
         reinterpret_cast<const char *>(iv), IV_SIZE));
 
-    if (!EVP_DecryptInit_ex(ctx, NULL, NULL, get_key().getKeyData(), iv)) {
+    if (!EVP_DecryptInit_ex(ctx, NULL, NULL, kdp, iv)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed due to failed init.\n");
         return false;
     }

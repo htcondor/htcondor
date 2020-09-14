@@ -8,14 +8,14 @@ series.
 
 The details of each version are described below.
 
-Version 8.8.10
+Version 8.8.11
 --------------
 
 Release Notes:
 
-- HTCondor version 8.8.10 not yet released.
+- HTCondor version 8.8.11 not yet released.
 
-.. HTCondor version 8.8.10 released on Month Date, 2020.
+.. HTCondor version 8.8.11 released on Month Date, 2020.
 
 New Features:
 
@@ -23,17 +23,144 @@ New Features:
 
 Bugs Fixed:
 
+- The Python bindings now define equality and inequality operators for
+  ClassAd objects.
+  :ticket:`7760`
+
+- Vanilla-univese jobs which set ``CheckpointExitCode`` (or otherwise make
+  use of HTCondor's support for self-checkpointing) now report the total
+  user and system CPU usage, not just the usage since the last checkpoint.
+  :ticket:`4971`
+
+- Fixed a bug where setting Notification = error in the submit file
+  failed to send an email to the user when the job was held.
+  :ticket:`7763`
+
+- The D_SUB_SECOND debug format option will no longer produce timestamps
+  with four digits (``1000``) in the milliseconds field.
+  :ticket:`7685`
+
+- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
+  Additionally, the spurious warning about ``NAMES`` not being list as a
+  resource has been eliminated.
+  :ticket:`7755`
+
+Version 8.8.10
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.10 released on August 6, 2020.
+
+- Users can no longer use the *condor_qedit* command to disrupt the
+  operations of the *condor_schedd*.
+  :ticket:`7784`
+
+- The ``SHARED_PORT_PORT`` setting is now honored. If you are using
+  a non-standard port on machines other than the Central Manager, this
+  bug fix will a require configuration change in order to specify
+  the non-standard port.
+  :ticket:`7697`
+
+- On MacOSX, HTCondor now requires LibreSSL to function. MacOSX 10.13 and
+  later are supported.
+
+New Features:
+
+- Added support for Ubuntu 20.04 (focal Fossa).
+  :ticket:`7673`
+
+- Added support for Amazon Linux 2.
+  :ticket:`7430`
+
+Bugs Fixed:
+
+- Fixed some issues with the *condor_schedd* validating attribute values and actions from
+  *condor_qedit*. Certain edits could cause the *condor_schedd* to enter an invalid state
+  and in some cases would required editing of the job queue to restore the *condor_schedd*
+  to operation. While no security exploits are known to be possible, mischievous
+  users could potentially disrupt the operation of the *condor_schedd*. A more detailed
+  description and workaround for these issues can be found in the ticket.
+  :ticket:`7784`
+
+- When the *condor_master* chooses the port to assign to the *condor_shared_port* daemon
+  it will now ignore the ports specified in the ``COLLECTOR_LIST`` or ``COLLECTOR_HOST``
+  configuration variables unless it is starting a primary collector.
+  If it is not starting a primary collector (i.e. ``DAEMON_LIST`` does not have ``COLLECTOR``)
+  it will use the port specified in ``SHARED_PORT_PORT`` or the default port, which is 9618.
+  :ticket:`7697`
+
+- The shared port daemon no longer blocks during socket hand-off.
+  :ticket:`7502`
+
+- The ``DiskUsage`` attribute should once again reflect the job's peak disk
+  usage, rather than its current or terminal usage.
+  :ticket:`7207`
+
+- HTCondor daemons used to discard the private network name and address of
+  daemons they were attempting to contact via the contactee's public
+  address; however, if the contact had been pre-authorized, this would
+  cause the contactee not to recognize the contacting daemon, and force it
+  to reauthenticate.  The HTCondor daemons no longer discard the private
+  network name and address; this will cause them to appear in the logs in
+  places where they had not previously.
+  :ticket:`7582`
+
+- Allow ``SINGULARITY_EXTRA_ARGUMENTS`` to override the default -C option
+  condor passes to singularity exec to allow administrators to tell
+  condor not to contain certain resources.
+  :ticket:`7719`
+
 - *condor_gpu_discovery* no longer crashes if passed just the
   ``-dynamic`` flag.
   :ticket:`7639`
+
+- *condor_gpu_discovery* now reports CoresPerCU for nVidia Volta and later GPUs.
+  :ticket:`7704`
+
+- Update *condor_gpu_discovery* to know how many CoresPerCU for nVidia Ampere
+  GPUs.
+  :ticket:`7711`
 
 - Fix typographic error in ``condor.service`` file to wait for
   ``nfs-client.target``.
   :ticket:`7638`
 
-- Increased ``TasksMax`` and ``LimitNOFILE`` to ``infinity`` in HTCondor's
+- Increased ``TasksMax`` to ``4194303`` in HTCondor's
   systemd unit file so more than 32k shadows can run on a submit node.
   :ticket:`7650`
+
+- For grid universe jobs of type ``batch``, stop using characters ``@``
+  and ``#`` in temporary directory names.
+  :ticket:`7730`
+
+- When *condor_wait* is run without a limit on the number of jobs, it no
+  longer exits if the number of active jobs goes to zero but there are more
+  events in the log to read.  It now reads all existing events before deciding
+  that there are no active jobs that need to be waited for.
+  :ticket:`7653`
+
+- In the python bindings the ``query`` methods on the ``Schedd`` and ``Collector``
+  object now treat ``constraint=None`` having no constraint so all ads are returned
+  rather than no ads.
+  :ticket:`7727`
+
+- Fixed a bug in the *condor_startd* on Windows that resulted in jobs failing to start with permission
+  denied errors if ``ENCRYPT_EXECUTE_DIRECTORY`` was specified but the job did not have ``run_as_owner``
+  enabled.
+  :ticket:`7620`
+
+- Fixed a bug that prevented the *condor_schedd* from effectively flocking
+  to pools when resource request list prefetching is enabled, which is the
+  default in HTCondor version 8.8.
+  :ticket:`7754`
+
+- The *sshd.sh* helper script no longer generates DSA keys when FIPS mode is enabled.
+  :ticket:`7645`
+
+- *condor_ssh_to_job* now works much better with Singularity. It allocates
+  a pty and copies in the environment.
+  :ticket:`7666`
 
 Version 8.8.9
 -------------
@@ -54,7 +181,7 @@ Bugs Fixed:
 
 -  Fixed a bug whereby the ``MemoryUsage`` attribute in the job ClassAd for a Docker Universe job
    failed to report the maximum memory usage of the job, but instead
-   reported either zero or the current memory usage. 
+   reported either zero or the current memory usage.
    :ticket:`7527`
 
 -  Fixed a bug that prevented the GPU from being re-assigned back to the Partitionable slot when a
@@ -99,11 +226,11 @@ Bugs Fixed:
    :ticket:`7596`
 
 -  Fixed a bug that prevented *condor_ssh_to_job* from working when the
-   job was in a container and there was a submit file argument
+   job was in a container and there was a submit file argument.
    :ticket:`7506`
 
 -  Fixed a bug where *condor_ssh_to_job* could fail for Docker Universe jobs if
-   the HTCondor binaries are installed in a non-default location. 
+   the HTCondor binaries are installed in a non-default location.
    :ticket:`7613`
 
 -  Fixed a bug in *condor_gpu_discovery* and *condor_gpu_utilization* that could result in a crash on PowerPC processors.
@@ -232,7 +359,7 @@ Bugs Fixed:
 -  Reverted an earlier change which prohibited certain characters in
    DAGMan node names. The period (.) character is now allowed again.
    We also added the ``DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS``
-   configuration option, which, when sent to true, allow any characters 
+   configuration option, which, when sent to true, allow any characters
    (even illegal ones) to be allowed in node names.
    :ticket:`7403`
 
@@ -309,7 +436,7 @@ Release Notes:
 
 New Features:
 
--  Added a new argument to ``condor_config_val``.  ``-summary`` reads the configuration
+-  Added a new argument to *condor_config_val*.  ``-summary`` reads the configuration
    files and prints out a summary of the values that differ from the defaults.
    :ticket:`7286`
 
@@ -358,14 +485,14 @@ Bugs Fixed:
    :ticket:`7253`
 
 -  Fixed a bug where *condor_preen* may mistakenly remove files from the
-   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive. 
+   the spool directory if the *condor_schedd* is heavily loaded or becomes unresponsive.
    :ticket:`7320`
 
 -  Fixed a bug where *condor_preen* could render the *condor_schedd* unresponsive once a day
    for several minutes if there are a lot of job files spooled in the spool directory.
    :ticket:`7320`
 
--  Fixed a bug where ``condor_submit`` would fail when arguments were supplied
+-  Fixed a bug where *condor_submit* would fail when arguments were supplied
    but no submit file, and the arguments were sufficient that no submit file
    was needed.
    :ticket:`7249`
@@ -660,7 +787,7 @@ Bugs Fixed:
    restart of the *condor_schedd*.
    :ticket:`7033`
 
--  Fixed a bug that prevented *condor_submit* ``-i`` from working with
+-  Fixed a bug that prevented ``condor_submit -i`` from working with
    a Singularity container environment for more than three minutes.
    :ticket:`7018`
 
@@ -680,7 +807,7 @@ Bugs Fixed:
    :ticket:`7010`
 
 -  Fixed a bug that prevented HTCondor from being started inside a docker
-   container with the condor_master as PID 1.  HTCondor could start
+   container with the *condor_master* as PID 1.  HTCondor could start
    if the master was launched from a script.
    :ticket:`7017`
 

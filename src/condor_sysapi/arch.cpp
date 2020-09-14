@@ -897,10 +897,7 @@ sysapi_translate_arch( const char *machine, const char *)
 
 		// Get ARCH
 		//mikeu: I modified this to also accept values from Globus' LDAP server
-	if( !strcmp(machine, "alpha") ) {
-		sprintf( tmp, "ALPHA" );
-	}
-	else if( !strcmp(machine, "i86pc") ) {
+	if( !strcmp(machine, "i86pc") ) {
 		sprintf( tmp, "INTEL" );
 	}
 	else if( !strcmp(machine, "i686") ) {
@@ -950,18 +947,6 @@ sysapi_translate_arch( const char *machine, const char *)
 	//
 	else if( !strcmp(machine, "amd64") ) {
 		sprintf( tmp, "X86_64" );
-	}
-	else if( !strcmp(machine, "sun4u") ) {
-		sprintf( tmp, "SUN4u" );
-	}
-	else if( !strcmp(machine, "sun4m") ) {
-		sprintf( tmp, "SUN4x" );
-	}
-	else if( !strcmp(machine, "sun4c") ) {
-		sprintf( tmp, "SUN4x" );
-	}
-	else if( !strcmp(machine, "sparc") ) { //LDAP entry
-		sprintf( tmp, "SUN4x" );
 	}
 	else if( !strcmp(machine, "Power Macintosh") ) { //LDAP entry
 		sprintf( tmp, "PPC" );

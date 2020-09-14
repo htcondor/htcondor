@@ -55,7 +55,7 @@ class QmgmtPeer {
 
 		bool setEffectiveOwner(char const *o);
 		bool setAllowProtectedAttrChanges(bool val);
-		bool getAllowProtectedAttrChanges() { return allow_protected_attr_changes_by_superuser; }
+		bool getAllowProtectedAttrChanges() const { return allow_protected_attr_changes_by_superuser; }
 		bool setReadOnly(bool val);
 		bool getReadOnly() const { return readonly; }
 
@@ -71,12 +71,14 @@ class QmgmtPeer {
 		int isAuthenticated() const;
 		bool isAuthorizationInBoundingSet(const char *authz) const {return sock->isAuthorizationInBoundingSet(authz);}
 
+		friend inline const char * EffectiveUser(QmgmtPeer * qsock);
+
 	protected:
 
 		char *owner;  
 		bool allow_protected_attr_changes_by_superuser;
 		bool readonly;
-		char *fquser;  // owner@domain
+		char * fquser;  // owner@domain
 		char *myendpoint; 
 		condor_sockaddr addr;
 		ReliSock *sock; 
@@ -92,6 +94,19 @@ class QmgmtPeer {
 		QmgmtPeer & operator=(const QmgmtPeer & rhs);
 };
 
+extern bool user_is_the_new_owner; // set in schedd.cpp at startup
+extern bool ignore_domain_mismatch_when_setting_owner;
+inline const char * EffectiveUser(QmgmtPeer * peer) {
+	if (peer) {
+		if (user_is_the_new_owner) {
+			if (peer->sock) return peer->sock->getFullyQualifiedUser();
+			if (peer->fquser && peer->fquser[0]) return peer->fquser;
+		} else {
+			return peer->getOwner();
+		}
+	}
+	return "";
+}
 
 #define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
 //#define TJ_REFACTOR_CLUSTER_REFCOUNTING 1 // move cluster ref counting from a qmgmt hashtable into the JobQueueCluster object
@@ -198,8 +213,8 @@ public:
 
 	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
 
-	int  Universe() { return universe; }
-	int  Status() { return status; }
+	int  Universe() const { return universe; }
+	int  Status() const { return status; }
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
@@ -250,9 +265,9 @@ public:
 	// NumProcs is a copy of the count of procs in the ClusterSizeHashTable.
 	// it will differ from the number of attached jobs when a createproc or destroyproc
 	// has been started but the transaction has not yet been committed.
-	int ClusterSize() { return cluster_size; }
+	int ClusterSize() const { return cluster_size; }
 	int SetClusterSize(int _cluster_size) { cluster_size = _cluster_size; return cluster_size; }
-	int getNumNotRunning() { return num_idle + num_held; }
+	int getNumNotRunning() const { return num_idle + num_held; }
 
 	bool HasAttachedJobs() { return ! qe.empty(); }
 	void AttachJob(JobQueueJob * job);
@@ -326,15 +341,15 @@ bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 bool isQueueSuperUser( const char* user );
 
 // Verify that the user issuing a command (test_owner) is authorized
-// to modify the given job.  In addition to everything OwnerCheck2()
+// to modify the given job.  In addition to everything UserCheck2()
 // does, this also calls IPVerify to check for WRITE authorization.
 // This call assumes Q_SOCK is set to a valid QmgmtPeer object.
-bool OwnerCheck( ClassAd *ad, const char *test_owner );
+bool UserCheck( ClassAd *ad, const char *test_owner );
 
 // Verify that the user issuing a command (test_owner) is authorized
 // to modify the given job.  Either ad or job_owner should be given
 // but not both.  If job_owner is NULL, the owner is looked up in the ad.
-bool OwnerCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
+bool UserCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
 
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
@@ -363,6 +378,7 @@ ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan)
 typedef unsigned int SetAttributeFlags_t;
 const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
 const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
+const SetAttributeFlags_t SetAttribute_Delete              = (1 << 18);
 
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
@@ -492,7 +508,7 @@ public:
 	TransactionWatcher(const TransactionWatcher&) = delete;
 	TransactionWatcher& operator=(const TransactionWatcher) = delete;
 
-	bool InTransaction() { return started && ! completed; }
+	bool InTransaction() const { return started && ! completed; }
 
 	// start a transaction, or continue one if we already started it
 	int BeginOrContinue(int id);
@@ -505,7 +521,7 @@ public:
 
 	// return the range of ids passed to BeginOrContinue
 	// returns true if ids were set.
-	bool GetIdRange(int & first, int & last) {
+	bool GetIdRange(int & first, int & last) const {
 		if (! started) return false;
 		first = firstid;
 		last = lastid;

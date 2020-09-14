@@ -82,16 +82,16 @@ Examples
 To get the *condor_negotiator* daemon's log from a host named
 ``head.example.com`` from within the current pool:
 
-::
+.. code-block:: console
 
-    condor_fetchlog head.example.com NEGOTIATOR
+    $ condor_fetchlog head.example.com NEGOTIATOR
 
 To get the *condor_startd* daemon's log from a host named
 ``execute.example.com`` from within the current pool:
 
-::
+.. code-block:: console
 
-    condor_fetchlog execute.example.com STARTD
+    $ condor_fetchlog execute.example.com STARTD
 
 This command requested the *condor_startd* daemon's log from the
 *condor_master*. If the *condor_master* has crashed or is
@@ -99,9 +99,9 @@ unresponsive, ask another daemon running on that computer to return the
 log. For example, ask the *condor_startd* daemon to return the
 *condor_master* 's log:
 
-::
+.. code-block:: console
 
-    condor_fetchlog -startd execute.example.com MASTER
+    $ condor_fetchlog -startd execute.example.com MASTER
 
 Exit Status
 -----------

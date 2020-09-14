@@ -97,7 +97,7 @@ public:
 	SecMan(const SecMan &);
 	~SecMan();
 	const SecMan & operator=(const SecMan &);
-	SecMan &operator=(SecMan &&);
+	SecMan &operator=(SecMan &&) noexcept ;
 
 		// A struct to order all the startCommand parameters below (as opposed
 		// to having 10 parameters to a single function).

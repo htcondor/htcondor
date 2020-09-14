@@ -442,7 +442,7 @@ void _condorPacket::reset()
 }
 
 /* Check if every data in the packet has been read */
-bool _condorPacket::consumed()
+bool _condorPacket::consumed() const
 {
 	return(curIndex == length);
 }
@@ -490,7 +490,7 @@ void _condorPacket::addExtendedHeader(unsigned char * mac)
     }
 }
 
-bool _condorPacket::full()
+bool _condorPacket::full() const
 {
     return (curIndex == USABLE_PACKET_SIZE);
 }
@@ -830,7 +830,7 @@ int _condorOutMsg::sendMsg(const int sock,
 }
 
 
-unsigned long _condorOutMsg::getAvgMsgSize()
+unsigned long _condorOutMsg::getAvgMsgSize() const
 {
 	return avgMsgSize;
 }
@@ -1262,7 +1262,7 @@ int _condorInMsg::peek(char &c)
 }
 
 /* Check if every data in all the bytes of the message have been read */
-bool _condorInMsg::consumed()
+bool _condorInMsg::consumed() const
 {
 	return(msgLen != 0 && msgLen == passed);
 }
@@ -1323,7 +1323,7 @@ void _condorInMsg :: resetMD()
     }
 }
 
-void _condorInMsg::dumpMsg()
+void _condorInMsg::dumpMsg() const
 {
     char str[10000];
     struct in_addr in;

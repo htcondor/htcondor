@@ -236,9 +236,9 @@ class FileTransfer final: public Service {
 
 	FileTransferInfo GetInfo() { return Info; }
 
-	inline bool IsServer() {return user_supplied_key == FALSE;}
+	inline bool IsServer() const {return user_supplied_key == FALSE;}
 
-	inline bool IsClient() {return user_supplied_key == TRUE;}
+	inline bool IsClient() const {return user_supplied_key == TRUE;}
 
 	static int HandleCommands(int command,Stream *s);
 
@@ -255,13 +255,13 @@ class FileTransfer final: public Service {
 		// the background, kill it.
 	void abortActiveTransfer();
 
-	int Suspend();
+	int Suspend() const;
 
-	int Continue();
+	int Continue() const;
 
-	float TotalBytesSent() { return bytesSent; }
+	float TotalBytesSent() const { return bytesSent; }
 
-	float TotalBytesReceived() { return bytesRcvd; };
+	float TotalBytesReceived() const { return bytesRcvd; };
 
 		/** Add the given filename to our list of output files to
 			transfer back.  If we're not managing a list of output
@@ -314,14 +314,16 @@ class FileTransfer final: public Service {
 
 	void InsertPluginMappings(MyString methods, MyString p);
 	void SetPluginMappings( CondorError &e, const char* path );
-	int InitializePlugins(CondorError &e);
-	int InitializeJobPlugins(const ClassAd &job, CondorError &e, StringList &infiles);
+	int InitializeSystemPlugins(CondorError &e);
+	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
+	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
 	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
 	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
     int OutputFileTransferStats( ClassAd &stats );
-	MyString GetSupportedMethods();
+	MyString GetSupportedMethods(CondorError &err);
+	void DoPluginConfiguration();
 
 		// Convert directories with a trailing slash to a list of the contents
 		// of the directory.  This is used so that ATTR_TRANSFER_INPUT_FILES
@@ -343,7 +345,7 @@ class FileTransfer final: public Service {
 	// filename_remap_find().
 	void AddDownloadFilenameRemaps(char const *remaps);
 
-	int GetUploadTimestamps(time_t * pStart, time_t * pEnd = NULL) {
+	int GetUploadTimestamps(time_t * pStart, time_t * pEnd = NULL) const {
 		if (uploadStartTime < 0)
 			return false;
 		if (pEnd) *pEnd = (time_t)uploadEndTime;
@@ -351,7 +353,7 @@ class FileTransfer final: public Service {
 		return true;
 	}
 
-	bool GetDownloadTimestamps(time_t * pStart, time_t * pEnd = NULL) {
+	bool GetDownloadTimestamps(time_t * pStart, time_t * pEnd = NULL) const {
 		if (downloadStartTime < 0)
 			return false;
 		if (pEnd) *pEnd = (time_t)downloadEndTime;
@@ -361,7 +363,7 @@ class FileTransfer final: public Service {
 
 	ClassAd *GetJobAd();
 
-	bool transferIsInProgress() { return ActiveTransferTid != -1; }
+	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
   protected:
 
@@ -493,13 +495,13 @@ class FileTransfer final: public Service {
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
 
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
-	int ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
+	int ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
 
 	// Send acknowledgment of success/failure after downloading files.
 	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
 
 	// Receive acknowledgment of success/failure after downloading files.
-	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc) const;
 
 	// Stash transfer success/failure info that will be propagated back to
 	// caller of file transfer operation, using GetInfo().

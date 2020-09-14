@@ -146,7 +146,7 @@ my $evictedwithoutchpt = sub {
 print "Start a long runniing job - ";
 
 my $runresult = SimpleJob::RunCheck(
-	duration => 0,
+	duration => 3600,
 	on_abort => $abort,
 	on_submit => $submit,
 	on_execute => $execute,

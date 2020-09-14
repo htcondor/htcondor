@@ -41,7 +41,7 @@ private:
 	void invalidate_ad();
 
 	int refresh_all_handler(int, Stream*);
-	void sweep_timer_handler( void );
+	void sweep_timer_handler( void ) const;
 
 	char* m_name;
 

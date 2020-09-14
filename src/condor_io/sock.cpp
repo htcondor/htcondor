@@ -96,6 +96,7 @@ Sock::Sock() : Stream(), _policy_ad(NULL) {
 	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
+    crypto_state_ = NULL;
     mdMode_ = MD_OFF;
     mdKey_ = 0;
 
@@ -139,6 +140,7 @@ Sock::Sock(const Sock & orig) : Stream(), _policy_ad(NULL) {
 	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
+    crypto_state_ = NULL;
     mdMode_ = MD_OFF;
     mdKey_ = 0;
 
@@ -183,6 +185,7 @@ Sock::~Sock()
 {
     delete crypto_;
 	crypto_ = NULL;
+	crypto_state_ = NULL;
     delete mdKey_;
 	mdKey_ = NULL;
 
@@ -512,46 +515,6 @@ int Sock::set_inheritable( int flag )
 }
 #endif	// of WIN32
 
-int Sock::move_descriptor_up()
-{
-	/* This function must be called IMMEDIATELY after a call to
-	 * socket() or accept().  It gives CEDAR an opportunity to 
-	 * move the descriptor if needed on this platform
-	 */
-
-#ifdef Solaris
-	/* On Solaris, the silly stdio library will fail if the underlying
-	 * file descriptor is > 255.  Thus if we have lots of sockets open,
-	 * calls to safe_fopen_wrapper() will start to fail on Solaris.  In Condor, this 
-	 * usually means dprintf() will EXCEPT.  So to avoid this, we reserve
-	 * sockets between 101 and 255 to be ONLY for files/pipes, and NOT
-	 * for network sockets.  We acheive this by moving the underlying
-	 * descriptor above 255 if it falls into the reserved range. We don't
-	 * bother moving descriptors until they are > 100 --- this prevents us
-	 * from doing anything in the common case that the process has less
-	 * than 100 active descriptors.  We also do not do anything if the
-	 * file descriptor table is too small; the application should limit
-	 * network socket usage to some sensible percentage of the file
-	 * descriptor limit anyway.
-	 */
-	SOCKET new_fd = -1;
-	if ( _sock > 100 && _sock < 256 && getdtablesize() > 256 ) {
-		new_fd = fcntl(_sock, F_DUPFD, 256);
-		if ( new_fd >= 256 ) {
-			::closesocket(_sock);
-			_sock = new_fd;
-		} else {
-			// the fcntl must have failed
-			dprintf(D_NETWORK, "Sock::move_descriptor_up failed: %s\n", 
-								strerror(errno));
-			return FALSE;
-		}
-	}
-#endif
-
-	return TRUE;
-}
-
 //
 // Moving all assignments of INVALID_SOCKET into their own function
 // dramatically simplifies the logic for assign()ing sockets without
@@ -696,13 +659,6 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 			_condor_fd_panic( __LINE__, __FILE__ ); /* Calls dprintf_exit! */
 		}
 #endif
-		return FALSE;
-	}
-
-	// move the underlying descriptor if we need to on this platform
-	if ( !move_descriptor_up() ) {
-		::closesocket(_sock);
-		_sock = INVALID_SOCKET;
 		return FALSE;
 	}
 
@@ -1640,7 +1596,7 @@ Sock::setConnectFailureReason(char const *reason)
 }
 
 void
-Sock::reportConnectionFailure(bool timed_out)
+Sock::reportConnectionFailure(bool timed_out) const
 {
 	char const *reason = connect_state.connect_failure_reason;
 	char timeout_reason_buf[100];
@@ -2123,13 +2079,17 @@ char * Sock::serializeCryptoInfo() const
         len = get_crypto_key().getKeyLength();
     }
 
-	// here we want to save our state into a buffer
-	char * outbuf = NULL;
+    // NOTE:
+    // currently we are not serializing the ivec.  this works because the
+    // crypto state (including ivec) is reset to zero after inheriting.
+
+    // here we want to save our state into a buffer
+    char * outbuf = NULL;
     if (len > 0) {
         int buflen = len*2+32;
         outbuf = new char[buflen];
         sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
-				(int)get_encryption());
+                (int)get_encryption());
 
         // Hex encode the binary key
         char * ptr = outbuf + strlen(outbuf);
@@ -2142,7 +2102,7 @@ char * Sock::serializeCryptoInfo() const
         memset(outbuf, 0, 2);
         sprintf(outbuf,"%d",0);
     }
-	return( outbuf );
+    return( outbuf );
 }
 
 char * Sock::serializeMdInfo() const
@@ -2187,6 +2147,10 @@ const char * Sock::serializeCryptoInfo(const char * buf)
     // it. As a result, kserial may contains not just the key, but
     // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
+
+    // NOTE:
+    // currently we are not serializing the ivec.  this works because the
+    // crypto state (including ivec) is reset to zero after inheriting.
 
     int citems = sscanf(ptmp, "%d*", &encoded_len);
     if ( citems == 1 && encoded_len > 0 ) {
@@ -2830,6 +2794,64 @@ Sock::isAuthenticated() const
 	return strcmp(_fqu,UNAUTHENTICATED_FQU) != 0;
 }
 
+/*
+
+// debug functions for crypto
+
+char zkm_buf[256];
+char* zkm_dump(const unsigned char* d, int l) {
+
+	// add terminator
+        if(l > 32) {
+		l = 32;
+	}
+
+	for (int i = 0; i < l; i++) {
+		if(d[i] >= 32 && d[i] < 127) {
+			zkm_buf[i] = d[i];
+		} else {
+			zkm_buf[i] = '.';
+		}
+	}
+
+
+        for (int i = 0; i < l; i++) {
+                sprintf(&zkm_buf[l+i*3], " %02X", d[i]);
+        }
+
+	zkm_buf[l*4] = '\0';
+        return &(zkm_buf[0]);
+}
+
+bool 
+Sock::zkm_wrap(const unsigned char* d_in,int l_in,
+                    unsigned char*& d_out,int& l_out)
+{    
+    d_out = (unsigned char *) malloc(l_out = l_in);
+    memcpy(d_out, d_in, l_out);
+
+    int coded = get_encryption();
+    dprintf(D_ALWAYS, "ZKM_WRAP REAL: got %d bytes:\n", l_in);
+    dprintf(D_ALWAYS, "ZKM_WRAP REAL: IN:  %s\n", zkm_dump(d_in, l_in));
+    dprintf(D_ALWAYS, "ZKM_WRAP REAL: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
+    return coded;
+}
+
+bool 
+Sock::zkm_unwrap(const unsigned char* d_in,int l_in,
+                      unsigned char*& d_out, int& l_out)
+{
+    d_out = (unsigned char *) malloc(l_out = l_in);
+    memcpy(d_out, d_in, l_out);
+
+    int coded = get_encryption();
+    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: got %d bytes:\n", l_in);
+    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: IN:  %s\n", zkm_dump(d_in, l_in));
+    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
+    return coded;
+}
+*/
+
 bool 
 Sock::wrap(const unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
@@ -2837,7 +2859,7 @@ Sock::wrap(const unsigned char* d_in,int l_in,
     bool coded = false;
 #ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
-        coded = crypto_->encrypt(d_in, l_in, d_out, l_out);
+        coded = crypto_->encrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
 #endif
     return coded;
@@ -2850,7 +2872,7 @@ Sock::unwrap(const unsigned char* d_in,int l_in,
     bool coded = false;
 #ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
-        coded = crypto_->decrypt(d_in, l_in, d_out, l_out);
+        coded = crypto_->decrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
 #endif
     return coded;
@@ -2859,8 +2881,8 @@ Sock::unwrap(const unsigned char* d_in,int l_in,
 void Sock::resetCrypto()
 {
 #ifdef HAVE_EXT_OPENSSL
-  if (crypto_) {
-    crypto_->resetState();
+  if (crypto_state_) {
+    crypto_state_->reset();
   }
 #endif
 }
@@ -2870,6 +2892,8 @@ Sock::initialize_crypto(KeyInfo * key)
 {
     delete crypto_;
     crypto_ = 0;
+    delete crypto_state_;
+    crypto_state_ = 0;
 	crypto_mode_ = false;
 
     // Will try to do a throw/catch later on
@@ -2878,16 +2902,16 @@ Sock::initialize_crypto(KeyInfo * key)
         {
         case CONDOR_BLOWFISH :
 			setCryptoMethodUsed("BLOWFISH");
-            crypto_ = new Condor_Crypt_Blowfish(*key);
+            crypto_ = new Condor_Crypt_Blowfish();
             break;
         case CONDOR_3DES:
 			setCryptoMethodUsed("3DES");
-            crypto_ = new Condor_Crypt_3des(*key);
+            crypto_ = new Condor_Crypt_3des();
             break;
         case CONDOR_AESGCM:
 			setCryptoMethodUsed("AESGCM");
             set_MD_mode(MD_OFF);
-            crypto_ = new Condor_Crypt_AESGCM(*key);
+            crypto_ = new Condor_Crypt_AESGCM();
                 // AES-GCM is incompatible with MD mode.
             break;
         default:
@@ -2895,12 +2919,17 @@ Sock::initialize_crypto(KeyInfo * key)
         }
     }
 
+    // if we made an object, make a state object as well
+    if(crypto_) {
+        crypto_state_ = new Condor_Crypto_State(key->getProtocol(), *key);
+    }
+
     return (crypto_ != 0);
 }
 
 bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 {
-    if (mode != MD_OFF && crypto_ && crypto_->protocol() == CONDOR_AESGCM) {
+    if (mode != MD_OFF && crypto_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
         set_MD_mode(MD_OFF);
     }
 
@@ -2916,13 +2945,13 @@ bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 
 const KeyInfo& Sock :: get_crypto_key() const
 {
-#ifdef HAVE_EXT_OPENSSL
-    if (crypto_) {
-        return crypto_->get_key();
+    if (crypto_state_) {
+        return crypto_state_->getkey();
+    } else {
+        dprintf(D_ALWAYS, "ZKM: get_crypto_key: no crypto_state_\n");
     }
-#endif
     ASSERT(0);	// This does not return...
-	return  crypto_->get_key();  // just to make compiler happy...
+    return  crypto_state_->getkey();  // just to make compiler happy...
 }
 
 const KeyInfo& Sock :: get_md_key() const
@@ -2951,6 +2980,8 @@ Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
         if (crypto_) {
             delete crypto_;
             crypto_ = 0;
+            delete crypto_state_;
+            crypto_state_ = 0;
 			crypto_mode_ = false;
         }
         ASSERT(keyId == 0);

@@ -145,6 +145,7 @@ chdir("$here");
 
 my $append_condor_config = '
 	DAEMON_LIST = MASTER,STARTD
+	SHARED_PORT_PORT = 0
 	NEGOTIATOR_INTERVAL = 20
 	NUM_CPUS = 20
 	SLOT_TYPE_1 = cpus=4

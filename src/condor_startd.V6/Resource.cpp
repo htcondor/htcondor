@@ -1328,10 +1328,8 @@ Resource::update( void )
 	if (r_no_collector_updates)
 		return;
 
-	// If we haven't already queued an update, queue one.  Wait three
-	// seconds before sending an update to allow the startd's state
-	// to quiesce; we'll implicitly coalesce the updates.
-	int delay = 3;
+	// If we haven't already queued an update, queue one.
+	int delay = 0;
 	int updateSpreadTime = param_integer( "UPDATE_SPREAD_TIME", 0 );
 	if( update_tid == -1 ) {
 		if( r_id > 0 && updateSpreadTime > 0 ) {
@@ -1369,6 +1367,10 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 	// would be evil, so do the collector filtering here.  Also,
 	// ClassAd iterators are broken, so delay attribute deletion until
 	// after the loop.
+	//
+	// It looks like attributes you add during an iteration may also be
+	// seen during that iteration.  This could cause problems later, but
+	// doesn't seem like it's worth fixing now.
 	std::vector< std::string > deleteList;
 	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
 		const std::string & name = i->first;
@@ -1386,7 +1388,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				unparser.setIndirectThroughAttr(false);
 				unparser.Unparse(unparse_buffer, i->second);
 			} else {
-				// if the expression *contains* a SlotEval, the unparser will 
+				// if the expression *contains* a SlotEval, the unparser will
 				// create an intermediate attribute to contain the value.
 				//    Foo = SlotEval("slot1",Activity) == "Idle"
 				// becomes
@@ -1425,7 +1427,9 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
-			deleteList.push_back( name );
+			if(! param_boolean( "ADVERTISE_CMR_UPTIME_SECONDS", false )) {
+			    deleteList.push_back( name );
+			}
 
 			classad::Value v;
 			double uptimeValue;
@@ -1452,7 +1456,6 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 
 			// Compute the SUM metrics' *Usage values.  The PEAK metrics
 			// have already inserted their *Usage values into the ad.
-		
 			std::string usageName;
 			std::string uptimeName = name.substr(10);
 			if (! StartdCronJobParams::getResourceNameFromAttributeName(uptimeName, usageName)) { continue; }
@@ -3866,8 +3869,6 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
 			// Initialize the rest of the Resource
 		new_rip->initial_compute(rip);
-		//TJ:2020 - initial_compute already does this, so commenting it out
-		//new_rip->compute( A_TIMEOUT | A_UPDATE, 0 ); // Compute disk space
 		new_rip->init_classad();
 		new_rip->refresh_classad_evaluated(); 
 		new_rip->refresh_classad_slot_attrs(); 

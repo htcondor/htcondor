@@ -64,17 +64,17 @@ public:
 	void			setJobQueueName(const char* jqn);
 	char*			getJobQueueName();
 	void			setLastModifiedTime(time_t t);
-	time_t			getLastModifiedTime();
+	time_t			getLastModifiedTime() const;
 	void			setLastSize(size_t s);
-	size_t			getLastSize();
+	size_t			getLastSize() const;
 
-	long int		getLastSequenceNumber();
+	long int		getLastSequenceNumber() const;
 	void			setLastSequenceNumber(long int seq_num);
-	time_t			getLastCreationTime();
+	time_t			getLastCreationTime() const;
 	void			setLastCreationTime(time_t ctime);
 
-	long int		getCurProbedSequenceNumber();
-	long int 		getCurProbedCreationTime();
+	long int		getCurProbedSequenceNumber() const;
+	long int 		getCurProbedCreationTime() const;
 
 private:
 		// information about a job_queue.log file and polling state

@@ -54,9 +54,9 @@ the machine in the machine's ClassAd to aid matchmaking with resource
 requests. The values of these attributes may be listed by using the
 command:
 
-::
+.. code-block:: console
 
-    condor_status -l hostname
+    $ condor_status -l hostname
 
 The ``START`` Expression
 ''''''''''''''''''''''''
@@ -94,7 +94,7 @@ reference job ClassAd attributes. When using the ``POLICY : Desktop``
 configuration template, the ``IS_OWNER`` expression is a function of the
 ``START`` expression:
 
-::
+.. code-block:: condor-classad-expr
 
     START =?= FALSE
 
@@ -115,7 +115,7 @@ reference only machine ClassAd attributes.
     HTCondor starts jobs on the machine with low priority. Then, further
     configure to set up the machines with:
 
-    ::
+    .. code-block:: condor-config
 
         START = True
         SUSPEND = False
@@ -152,9 +152,9 @@ group, set the ``RANK`` expression on the machines to reference the
 ``Owner`` attribute and prefer requests where that attribute matches one
 of the people in the group as in
 
-::
+.. code-block:: condor-config
 
-      RANK = Owner == "coltrane" || Owner == "tyner" \
+    RANK = Owner == "coltrane" || Owner == "tyner" \
         || Owner == "garrison" || Owner == "jones"
 
 The ``RANK`` expression is evaluated as a floating point number.
@@ -170,9 +170,9 @@ difference is that the machine owner has better priority on their own
 machine. To set this up for Garrison's machine (``bass``), place the
 following entry in the local configuration file of machine ``bass``:
 
-::
+.. code-block:: condor-config
 
-      RANK = (Owner == "coltrane") + (Owner == "tyner") \
+    RANK = (Owner == "coltrane") + (Owner == "tyner") \
         + ((Owner == "garrison") * 10) + (Owner == "jones")
 
 Note that the parentheses in this expression are important, because the
@@ -199,9 +199,9 @@ memory, and others with not much at all. Perhaps configure this
 large-memory machine to prefer to run jobs with larger memory
 requirements:
 
-::
+.. code-block:: condor-config
 
-      RANK = ImageSize
+    RANK = ImageSize
 
 That's all there is to it. The bigger the job, the more this machine
 wants to run it. It is an altruistic preference, always servicing the
@@ -209,9 +209,9 @@ largest of jobs, no matter who submitted them. A little less altruistic
 is the ``RANK`` on Coltrane's machine that prefers John Coltrane's jobs
 over those with the largest ``Imagesize``:
 
-::
+.. code-block:: condor-config
 
-      RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
+    RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
 
 This ``RANK`` does not work if a job is submitted with an image size of
 more 10\ :sup:`12` Kbytes. However, with that size, this ``RANK``
@@ -595,7 +595,7 @@ which is intended for dedicated resources. But when the
 ``POLICY : Desktop`` configuration template is used, the ``IS_OWNER``
 expression is optimized for a shared resource
 
-::
+.. code-block:: condor-classad-expr
 
     START =?= FALSE
 
@@ -627,7 +627,7 @@ goes into the Unclaimed State.
 Here is an example that assumes that the ``POLICY : Desktop``
 configuration template is in use. If the ``START`` expression is
 
-::
+.. code-block:: condor-config
 
     START = KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane"
 
@@ -636,7 +636,7 @@ the Owner state. Owner is undefined, and anything && FALSE is FALSE.
 
 If, however, the ``START`` expression is
 
-::
+.. code-block:: condor-config
 
     START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 
@@ -687,7 +687,7 @@ machine remains in the Unclaimed state. The default value of
 ``POLICY : Desktop`` configuration template is used, then the
 ``IS_OWNER`` expression is changed to
 
-::
+.. code-block:: condor-config
 
     START =?= FALSE
 
@@ -707,7 +707,7 @@ The startd automatically inserts an attribute, ``LastBenchmark``,
 whenever it runs benchmarks, so commonly ``RunBenchmarks`` is defined in
 terms of this attribute, for example:
 
-::
+.. code-block:: condor-config
 
     RunBenchmarks = (time() - LastBenchmark) >= (4 * $(HOUR))
 
@@ -793,7 +793,7 @@ In general, there are two sets of expressions that might take effect,
 depending on the universe of the job running on the claim: vanilla,
 and all others.  The normal expressions look like the following:
 
-::
+.. code-block:: condor-config
 
     WANT_SUSPEND            = True
     WANT_VACATE             = $(ActivationTimer) > 10 * $(MINUTE)
@@ -803,7 +803,7 @@ and all others.  The normal expressions look like the following:
 The vanilla expressions have the string"_VANILLA" appended to their
 names. For example:
 
-::
+.. code-block:: condor-config
 
     WANT_SUSPEND_VANILLA    = True
     WANT_VACATE_VANILLA     = True
@@ -1328,7 +1328,7 @@ These variable definitions exist in the example configuration file in
 order to help write legible expressions. They are not required, and
 perhaps will go unused by many configurations.
 
-::
+.. code-block:: condor-config
 
     ##  These macros are here to help write legible expressions:
     MINUTE          = 60
@@ -1354,7 +1354,7 @@ perhaps will go unused by many configurations.
 
 Preemption is disabled as a default. Always desire to start jobs.
 
-::
+.. code-block:: condor-config
 
     WANT_SUSPEND         = False
     WANT_VACATE          = False
@@ -1370,7 +1370,7 @@ Periodic checkpointing specifies that for jobs smaller than 60 Mbytes,
 take a periodic checkpoint every 6 hours. For larger jobs, only take a
 checkpoint every 12 hours.
 
-::
+.. code-block:: condor-config
 
     PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                                 ($(LastCkpt) > (6 * $(HOUR))) ) || \
@@ -1381,7 +1381,7 @@ checkpoint every 12 hours.
 At UW-Madison, we have a fast network. We simplify our expression
 considerably to
 
-::
+.. code-block:: condor-config
 
     PERIODIC_CHECKPOINT     = $(LastCkpt) > (3 * $(HOUR))
 
@@ -1399,7 +1399,7 @@ programs for testing purposes. The jobs should be executed right away.
 This works with any machine (or the whole pool, for that matter) by
 adding the following 5 expressions to the existing configuration:
 
-::
+.. code-block:: condor-config
 
       START      = ($(START)) || Owner == "coltrane"
       SUSPEND    = ($(SUSPEND)) && Owner != "coltrane"
@@ -1436,7 +1436,7 @@ to define the time periods when you want jobs to run or not run. For
 example, assume regular work hours at your site are from 8:00am until
 5:00pm, Monday through Friday:
 
-::
+.. code-block:: condor-config
 
     WorkHours = ( (ClockMin >= 480 && ClockMin < 1020) && \
                   (ClockDay > 0 && ClockDay < 6) )
@@ -1449,7 +1449,7 @@ of ``AfterHours`` :index:`AfterHours` and ``WorkHours``
 
 To force HTCondor jobs to stay off of your machines during work hours:
 
-::
+.. code-block:: condor-config
 
     # Only start jobs after hours.
     START = $(AfterHours)
@@ -1484,7 +1484,7 @@ approach.
 For ease of use, an entire policy is included in this example. Some of
 the expressions are just the usual default settings.
 
-::
+.. code-block:: condor-config
 
     # If "IsDesktop" is configured, make it an attribute of the machine ClassAd.
     STARTD_ATTRS = IsDesktop
@@ -1539,7 +1539,7 @@ the expressions are just the usual default settings.
 With this policy in the global configuration, the local configuration
 files for desktops can be easily configured with the following line:
 
-::
+.. code-block:: condor-config
 
     IsDesktop = True
 
@@ -1614,7 +1614,7 @@ policy:
 
 :index:`eval()<single: eval(); ClassAd functions>`
 
-::
+.. code-block:: condor-config
 
     # Lie to HTCondor, to achieve 2 slots for each real slot
     NUM_CPUS = $(DETECTED_CORES)*2
@@ -1662,7 +1662,7 @@ a job that wishes to be suspended must submit the job so that this
 attribute is defined. The following line should be placed in the job's
 submit description file:
 
-::
+.. code-block:: condor-submit
 
     +IsSuspendableJob = True
 
@@ -1673,7 +1673,7 @@ submit description file:
 Policy may be set based on whether a job is an interactive one or not.
 Each interactive job has the job ClassAd attribute
 
-::
+.. code-block:: condor-classad
 
     InteractiveJob = True
 
@@ -1683,13 +1683,13 @@ from all other jobs.
 As an example, presume that slot 1 prefers interactive jobs. Set the
 machine's ``RANK`` to show the preference:
 
-::
+.. code-block:: condor-config
 
     RANK = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
 Or, if slot 1 should be reserved for interactive jobs:
 
-::
+.. code-block:: condor-config
 
     START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 
@@ -1794,7 +1794,7 @@ Define slot types.
     For example, in a machine with 128 Mbytes of RAM, all the following
     definitions result in the same allocation amount.
 
-    ::
+    .. code-block:: condor-config
 
         SLOT_TYPE_1 = mem=64
 
@@ -1836,7 +1836,7 @@ Define slot types.
     resources. This configuration example also omits definitions of
     ``NUM_SLOTS_TYPE_<N>``, to define the number of each slot type.
 
-    ::
+    .. code-block:: condor-config
 
           SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
 
@@ -1862,7 +1862,7 @@ Define slot types.
     In both of the following examples, the disk share is set to
     ``auto``, number of cores is 1, and everything else is 50%:
 
-    ::
+    .. code-block:: condor-config
 
         SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
 
@@ -1883,7 +1883,7 @@ Define slot types.
     ``MACHINE_RESOURCE_<name>`` :index:`MACHINE_RESOURCE_<name>`,
     as shown in this example:
 
-    ::
+    .. code-block:: condor-config
 
         MACHINE_RESOURCE_gpu = 16
         MACHINE_RESOURCE_actuator = 8
@@ -1893,7 +1893,7 @@ Define slot types.
     enable and disable local machine resources, also add the resource
     names to this variable. For example:
 
-    ::
+    .. code-block:: condor-config
 
         if defined MACHINE_RESOURCE_NAMES
           MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator
@@ -1905,7 +1905,7 @@ Define slot types.
     following example demonstrates the definition of static and
     partitionable slot types with local machine resources:
 
-    ::
+    .. code-block:: condor-config
 
         # declare one partitionable slot with half of the GPUs, 6 actuators, and
         # 50% of all other resources:
@@ -1925,7 +1925,7 @@ Define slot types.
     policy configuration`. This example shows a portion of a submit description
     file that requests GPUs and an actuator:
 
-    ::
+    .. code-block:: condor-submit
 
         universe = vanilla
 
@@ -1962,9 +1962,9 @@ Define slot types.
     reconfiguration. To change any slot type definitions, use
     *condor_restart*
 
-    ::
+    .. code-block:: console
 
-        condor_restart -startd
+        $ condor_restart -startd
 
     for that change to take effect.
 
@@ -2042,7 +2042,7 @@ To set a different policy for the slots within a machine, incorporate
 the slot-specific machine ClassAd attribute ``SlotID``. A ``SUSPEND``
 policy that is different for each of the two slots will be of the form
 
-::
+.. code-block:: condor-config
 
     SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
               ( (SlotID == 2) && (PolicyForSlot2) )
@@ -2109,7 +2109,7 @@ system resources that are being gathered (with ``D_FULLDEBUG`` and
 ``D_LOAD`` turned on) on a 2-core machine with no HTCondor activity, and
 the keyboard connected to both slots:
 
-::
+.. code-block:: text
 
     11/25 18:15 Swap space: 131064
     11/25 18:15 number of Kbytes available for (/home/condor/execute): 1345063
@@ -2130,7 +2130,7 @@ If, on the other hand, this machine only had one slot connected to the
 keyboard and console, and the other slot was running a job, it might
 look something like this:
 
-::
+.. code-block:: text
 
     11/25 18:19 Load avg: 1.250000 0.910000 1.090000
     11/25 18:19 Idle Time: user= 0 , console= 0 seconds
@@ -2158,7 +2158,7 @@ machine ClassAd attributes advertise this availability. Both detection
 and advertisement are accomplished by having this configuration for each
 execute machine that has GPUs:
 
-::
+.. code-block:: text
 
       use feature : GPUs
 
@@ -2172,7 +2172,7 @@ This configuration template refers to macro ``GPU_DISCOVERY_EXTRA``,
 which can be used to define additional command line arguments for the
 *condor_gpu_discovery* tool. For example, setting
 
-::
+.. code-block:: text
 
       use feature : GPUs
       GPU_DISCOVERY_EXTRA = -extra
@@ -2195,7 +2195,7 @@ combining the lists in this order:
 
 For example, consider the following configuration:
 
-::
+.. code-block:: text
 
     STARTD_ATTRS = favorite_color, favorite_season
     SLOT1_STARTD_ATTRS = favorite_movie
@@ -2209,7 +2209,7 @@ values for ``favorite_color``, ``favorite_season``, and
 Attributes themselves in the ``STARTD_ATTRS`` list can also be defined
 on a per-slot basis. Here is another example:
 
-::
+.. code-block:: text
 
     favorite_color = "blue"
     favorite_season = "spring"
@@ -2221,21 +2221,21 @@ For this example, the *condor_startd* ClassAds are
 
 slot1:
 
-::
+.. code-block:: text
 
     favorite_color = "blue"
     favorite_season = "spring"
 
 slot2:
 
-::
+.. code-block:: text
 
     favorite_color = "green"
     favorite_season = "spring"
 
 slot3:
 
-::
+.. code-block:: text
 
     favorite_color = "blue"
     favorite_season = "summer"
@@ -2259,7 +2259,7 @@ than one job is or can be matched to a single slot. In this example,
 Slot1 is identified as a partitionable slot and has the following
 resources:
 
-::
+.. code-block:: text
 
     cpu = 10
     memory = 10240
@@ -2268,7 +2268,7 @@ resources:
 Assume that JobA is allocated to this slot. JobA includes the following
 requirements:
 
-::
+.. code-block:: text
 
     cpu = 3
     memory = 1024
@@ -2282,7 +2282,7 @@ substring ``Slot1_1``.
 After allocation, the partitionable Slot1 advertises that it has the
 following resources still available:
 
-::
+.. code-block:: text
 
     cpu = 7
     memory = 9216
@@ -2302,7 +2302,7 @@ most common cases the machine should be configured for one slot,
 managing all the resources on the machine. To do so, set the following
 configuration variables:
 
-::
+.. code-block:: text
 
     NUM_SLOTS = 1
     NUM_SLOTS_TYPE_1 = 1
@@ -2312,7 +2312,7 @@ configuration variables:
 In a pool using dynamic provisioning, jobs can have extra, and desired,
 resources specified in the submit description file:
 
-::
+.. code-block:: text
 
     request_cpus
     request_memory
@@ -2321,7 +2321,7 @@ resources specified in the submit description file:
 This example shows a portion of the job submit description file for use
 when submitting a job to a pool with dynamic provisioning.
 
-::
+.. code-block:: text
 
     universe = vanilla
 
@@ -2333,14 +2333,14 @@ when submitting a job to a pool with dynamic provisioning.
 
 Each partitionable slot will have the ClassAd attributes
 
-::
+.. code-block:: text
 
       PartitionableSlot = True
       SlotType = "Partitionable"
 
 Each dynamic slot will have the ClassAd attributes
 
-::
+.. code-block:: text
 
       DynamicSlot = True
       SlotType = "Dynamic"
@@ -2388,7 +2388,7 @@ returned to the partitionable slot for use by the new job.
 To enable pslot preemption, the following configuration variable must be
 set for the *condor_negotiator*:
 
-::
+.. code-block:: text
 
       ALLOW_PSLOT_PREEMPTION = True
 
@@ -2473,14 +2473,14 @@ All specification of the resources available is done by configuration of
 the partitionable slot. The machine is identified as having a resource
 consumption policy enabled with
 
-::
+.. code-block:: text
 
       CONSUMPTION_POLICY = True
 
 A defined slot type that is partitionable may override the machine value
 with
 
-::
+.. code-block:: text
 
       SLOT_TYPE_<N>_CONSUMPTION_POLICY = True
 
@@ -2489,7 +2489,7 @@ amount of memory, and amount of disk space. Availability of these three
 resources on a machine and within the partitionable slot is always
 defined and have these default values:
 
-::
+.. code-block:: text
 
       CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
       CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
@@ -2501,7 +2501,7 @@ that the resource this policy cares about allocating are the cores.
 Configuration for the machine includes the definition of the slot type
 and that it is partitionable.
 
-::
+.. code-block:: text
 
       SLOT_TYPE_1 = cpus=8
       SLOT_TYPE_1_PARTITIONABLE = True
@@ -2515,7 +2515,7 @@ that the only attributes valid within the ``SLOT_WEIGHT``
 :index:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
 must the set to the same value on all machines in the pool.
 
-::
+.. code-block:: text
 
       SLOT_TYPE_1_CONSUMPTION_POLICY = True
       SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
@@ -2526,7 +2526,7 @@ may be used in a consumption policy, by specifying the resource. Using a
 machine with 4 GPUs as an example custom resource, define the resource
 and include it in the definition of the partitionable slot:
 
-::
+.. code-block:: text
 
       MACHINE_RESOURCE_NAMES = gpus
       MACHINE_RESOURCE_gpus = 4
@@ -2536,7 +2536,7 @@ and include it in the definition of the partitionable slot:
 
 Add the consumption policy to incorporate availability of the GPUs:
 
-::
+.. code-block:: text
 
       SLOT_TYPE_2_CONSUMPTION_POLICY = True
       SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
@@ -2573,7 +2573,7 @@ lightweight daemon that should not require a lot of system resources.
 Here is an example configuration that puts the *condor_defrag* daemon
 to work:
 
-::
+.. code-block:: text
 
     DAEMON_LIST = $(DAEMON_LIST) DEFRAG
     DEFRAG_INTERVAL = 3600
@@ -2643,9 +2643,9 @@ ClassAd in the attributes ``AvgDrainingBadput`` and
 The following command may be used to view the *condor_defrag* daemon
 ClassAd:
 
-::
+.. code-block:: console
 
-    condor_status -l -any -constraint 'MyType == "Defrag"'
+    $ condor_status -l -any -constraint 'MyType == "Defrag"'
 
 :index:`configuration<single: configuration; SMP machines>`
 :index:`configuration<single: configuration; multi-core machines>`
@@ -2694,7 +2694,7 @@ automatically assigns an accounting group to jobs based on the
 submitting user, and one that shows one possible way to transform
 Vanilla jobs to Docker jobs.
 
-::
+.. code-block:: text
 
     JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
 
@@ -2738,7 +2738,7 @@ a major component of the default error message output if a user attempts
 to submit a job which fails to meet the requirements. Therefore, choose
 a descriptive name. For the three example submit requirements described:
 
-::
+.. code-block:: text
 
     SUBMIT_REQUIREMENT_NAMES = NotStandardUniverse, MinimalRequestMemory, NotChris
 
@@ -2749,7 +2749,7 @@ chosen name listed in ``SUBMIT_REQUIREMENT_NAMES``. The value is a
 boolean ClassAd expression. The three example criterion result in these
 configuration variable definitions:
 
-::
+.. code-block:: text
 
     SUBMIT_REQUIREMENT_NotStandardUniverse = JobUniverse != 1
     SUBMIT_REQUIREMENT_MinimalRequestMemory = RequestMemory > 512
@@ -2767,7 +2767,7 @@ Further configuration may associate a rejection reason with a submit
 requirement with the ``SUBMIT_REQUIREMENT_<Name>_REASON``
 :index:`SUBMIT_REQUIREMENT_<Name>_REASON`.
 
-::
+.. code-block:: text
 
     SUBMIT_REQUIREMENT_NotStandardUniverse_REASON = "This pool does not accept standard universe jobs."
     SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON = strcat( "The job only requested ", \
@@ -2788,7 +2788,7 @@ will include the ``<Name>`` chosen for the submit requirement.
 Completing the presentation of the example submit requirements, upon an
 attempt to submit a standard universe job, *condor_submit* would print
 
-::
+.. code-block:: text
 
     Submitting job(s).
     ERROR: Failed to commit job submission into the queue.
@@ -2814,7 +2814,7 @@ to allow HTCondor administrators to provide their users with advance
 warning of new submit requirements. For example, if you want to increase
 the minimum request memory, you could use the following configuration.
 
-::
+.. code-block:: text
 
     SUBMIT_REQUIREMENT_NAMES = OneGig $(SUBMIT_REQUIREMENT_NAMES)
     SUBMIT_REQUIREMENT_OneGig = RequestMemory > 1024
@@ -2825,7 +2825,7 @@ When a user runs *condor_submit* to submit a job with ``RequestMemory``
 between 512 and 1024, they will see (something like) the following,
 assuming that the job meets all the other requirements.
 
-::
+.. code-block:: text
 
     Submitting job(s).
     WARNING: Committed job submission into the queue with the following warning:
@@ -2835,7 +2835,7 @@ assuming that the job meets all the other requirements.
 
 The job will contain (something like) the following:
 
-::
+.. code-block:: text
 
     000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5>
         WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024.

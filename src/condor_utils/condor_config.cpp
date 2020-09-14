@@ -89,11 +89,6 @@
 #include <algorithm> // for std::sort
 #include "CondorError.h"
 
-#ifdef WIN32
-// Note inversion of argument order...
-#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
-#endif
-
 // define this to keep param who's values match defaults from going into to runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
 // define this to parse for #opt:newcomment/#opt:oldcomment to decide commenting rules
@@ -2055,6 +2050,16 @@ clear_global_config_table()
 MACRO_SET * param_get_macro_set()
 {
 	return &ConfigMacroSet;
+}
+
+bool param_defined_by_config(const char *name)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	ctx.without_default = true;
+
+	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
+	return pval != NULL;
 }
 
 const char * param_unexpanded(const char *name)

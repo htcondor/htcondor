@@ -317,7 +317,7 @@ testAPI( char* my_name, bool do_socks )
 			 host ? host : "(null)", 
 			 pool ? pool : "(null)", startd.port() );
 	dprintf( dflag, "IsLocal: %s, IsFound: %s, IdStr: %s, Error: %s\n", 
-			 startd.isLocal ? "Y" : "N",
+			 startd.isLocal() ? "Y" : "N",
 			 startd.isFound ? "Y" : "N",
 			 id ? id : "(null)",
 			 error ? error : "(null)" );

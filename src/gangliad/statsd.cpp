@@ -67,7 +67,7 @@ Metric::whichMetric() const {
 }
 
 bool
-Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,ExtArray<MyString> *regex_groups,char const *regex_attr)
+Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,ExtArray<MyString> *regex_groups,char const *regex_attr) const
 {
 	bool retval = true;
 	ExprTree *expr = NULL;

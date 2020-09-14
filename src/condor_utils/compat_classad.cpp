@@ -44,14 +44,6 @@ extern bool user_map_do_mapping(const char * mapname, const char * input, MyStri
 
 using namespace std;
 
-// gcc 4.3.4 doesn't seem to define FLT_MIN on OpenSolaris 2009.06
-#if !defined(FLT_MIN) && defined(__FLT_MIN__)
-  #define FLT_MIN  __FLT_MIN__
-#endif
-#if !defined(FLT_MAX) && defined(__FLT_MAX__)
-  #define FLT_MAX  __FLT_MAX__
-#endif
-
 // Utility to clarify a couple of evaluations
 static inline bool
 IsStringEnd(const char *str, unsigned off)
@@ -2624,12 +2616,8 @@ void TrimReferenceNames( classad::References &ref_set, bool external )
 				name += 1;
 			}
 		}
-		const char *end = strchr( name, '.' );
-		if ( end ) {
-			new_set.insert( std::string( name, end-name ) );
-		} else {
-			new_set.insert( name );
-		}
+		size_t spn = strcspn( name, ".[" );
+		new_set.insert( std::string( name, spn ) );
 	}
 	ref_set.swap( new_set );
 }

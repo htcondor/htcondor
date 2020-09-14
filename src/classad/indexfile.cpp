@@ -127,7 +127,7 @@ Next(string &key)
 }
 
 string IndexFile::
-GetClassadFromFile(string, int offset)
+GetClassadFromFile(string, int offset) const
 {
 	if (filed != 0){
 		int curset;

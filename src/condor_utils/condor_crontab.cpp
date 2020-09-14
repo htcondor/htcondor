@@ -116,27 +116,27 @@ CronTab::CronTab(	int minutes,
 	if ( minutes == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_MINUTES_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_MINUTES_IDX] = new MyString( IntToStr( minutes ) );
+		this->parameters[CRONTAB_MINUTES_IDX] = new MyString( std::to_string( minutes ) );
 	}
 	if ( hours == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_HOURS_IDX]	= new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_HOURS_IDX]	= new MyString( IntToStr( hours ) );
+		this->parameters[CRONTAB_HOURS_IDX]	= new MyString( std::to_string( hours ) );
 	}
 	if ( days_of_month == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_DOM_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_DOM_IDX] = new MyString( IntToStr( days_of_month ) );
+		this->parameters[CRONTAB_DOM_IDX] = new MyString( std::to_string( days_of_month ) );
 	}
 	if ( months == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_MONTHS_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_MONTHS_IDX] = new MyString( IntToStr( months ) );
+		this->parameters[CRONTAB_MONTHS_IDX] = new MyString( std::to_string( months ) );
 	}
 	if ( days_of_week == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_DOW_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_DOW_IDX] = new MyString( IntToStr( days_of_week ) );
+		this->parameters[CRONTAB_DOW_IDX] = new MyString( std::to_string( days_of_week ) );
 	}
 	this->init();
 }

@@ -99,7 +99,7 @@ decode( classad::ClassAd * ca, Tag & tag ) {
 }
 
 bool
-Tag::writeToString( std::string & out ) {
+Tag::writeToString( std::string & out ) const {
     return formatstr_cat( out,
         "\n\tJob terminated by %s at %s (using method %d: %s).\n",
         who.c_str(), when.c_str(), howCode, how.c_str() ) >= 0;

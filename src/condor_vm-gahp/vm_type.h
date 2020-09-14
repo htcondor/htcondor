@@ -67,9 +67,9 @@ public:
 
 	virtual bool CreateConfigFile() = 0;
 
-	int getVMId(void) { return m_vm_id; }
+	int getVMId(void) const { return m_vm_id; }
 
-	int PidOfVM(void) { return m_vm_pid; }
+	int PidOfVM(void) const { return m_vm_pid; }
 
 	vm_status getVMStatus(void);
 

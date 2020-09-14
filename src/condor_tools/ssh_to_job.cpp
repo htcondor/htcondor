@@ -72,13 +72,13 @@ public:
 	bool execute_proxy();
 
 		// get the exit status of ssh (encoded as for waitpid())
-	int getSSHExitStatus();
+	int getSSHExitStatus() const;
 
 		// return job id as malloced string; caller is responsible for calling free()
-	char* getJobId();
+	char* getJobId() const;
 
 		// should the job be removed on interrupt?
-	bool get_remove_on_interrupt() { return m_remove_on_interrupt; };
+	bool get_remove_on_interrupt() const { return m_remove_on_interrupt; };
 
 private:
 	PROC_ID m_jobid;
@@ -131,12 +131,12 @@ SSHToJob::~SSHToJob()
 	}
 }
 
-int SSHToJob::getSSHExitStatus()
+int SSHToJob::getSSHExitStatus() const
 {
 	return m_ssh_exit_status;
 }
 
-char* SSHToJob::getJobId()
+char* SSHToJob::getJobId() const
 {
 	MyString temp;
 	char *ret_val = NULL;

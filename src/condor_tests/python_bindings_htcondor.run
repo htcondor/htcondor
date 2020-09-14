@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import atexit
 import classad
@@ -12,16 +12,16 @@ import socket
 import sys
 import time
 
-from pytest.CondorTest import CondorTest
-from pytest.PersonalCondor import PersonalCondor
-from pytest.Utils import Utils
+from pytest_old.CondorTest import CondorTest
+from pytest_old.PersonalCondor import PersonalCondor
+from pytest_old.Utils import Utils
 
 if Utils.IsWindows is False:
     import pwd
 
 
 def assertEqual(val1, val2, subtest, msg=""):
-    if val1 == val2: 
+    if val1 == val2:
         CondorTest.RegisterSuccess(subtest, "Values " + str(val1) + " and " + str(val2) + " are equal, as expected")
     else:
         failureMessage = "Values " + str(val1) + " and " + str(val2) + " not equal"
@@ -29,7 +29,7 @@ def assertEqual(val1, val2, subtest, msg=""):
         CondorTest.RegisterFailure(subtest, failureMessage)
 
 def assertNotEqual(val1, val2, subtest, msg=""):
-    if val1 == val2: 
+    if val1 == val2:
         failureMessage = "Values " + str(val1) + " and " + str(val2) + " are equal"
         if msg != "": failureMessage = msg
         CondorTest.RegisterFailure(subtest, failureMessage)
@@ -90,7 +90,7 @@ def waitRemoteDaemon(dtype, dname, pool=None, timeout=5):
             pass
         time.sleep(1)
     return coll.locate(dtype, dname)
-     
+
 
 #
 # FIXME: Schedd.act() doesn't raise an exception when we see
@@ -99,8 +99,8 @@ def waitRemoteDaemon(dtype, dname, pool=None, timeout=5):
 #
 
 def testRemoteParam():
-    env_params = { 
-        "FOO": "BAR" 
+    env_params = {
+        "FOO": "BAR"
     }
     personal = CondorTest.StartPersonalCondor("testRemoteParam", env_params)
     coll = htcondor.Collector()
@@ -110,11 +110,11 @@ def testRemoteParam():
     assertEqual(rparam["FOO"], "BAR", "testRemoteParam-2")
     assertTrue(len(rparam.keys()) > 100, "testRemoteParam-3")
     CondorTest.StopPersonalCondor("testRemoteParam")
-    
+
     os.environ["_condor_FOO"] = ""
 
 def testRemoteSetParam():
-    env_params = { 
+    env_params = {
         "SETTABLE_ATTRS_READ": "OOF",
         "ENABLE_RUNTIME_CONFIG": "TRUE"
     }
@@ -138,7 +138,7 @@ def testRemoteSetParam():
     CondorTest.StopPersonalCondor("testRemoteSetParam")
 
 def testLocate():
-    env_params = { 
+    env_params = {
         "COLLECTOR_ARGS": "-port $(PORT)",
         "COLLECTOR_HOST": "$(CONDOR_HOST):$(PORT)"
     }
@@ -151,7 +151,7 @@ def testLocate():
     CondorTest.StopPersonalCondor("testLocate")
 
 def testLocateList():
-    env_params = { 
+    env_params = {
         "COLLECTOR_ARGS": "-port $(PORT)",
         "COLLECTOR_HOST": "$(CONDOR_HOST):$(PORT)"
     }
@@ -491,7 +491,7 @@ def testClaim():
         if len(ads) > 0: break
         time.sleep(1)
     job_common = { \
-        'Cmd': '/bin/sh', 
+        'Cmd': '/bin/sh',
         'JobUniverse': 5,
         'Iwd': os.getcwd(),
         'Out': 'testclaim.out',
@@ -608,7 +608,7 @@ def testTransaction():
             raise Exception("force abort")
     except:
         exctype, e = sys.exc_info()[:2]
-        if not issubclass(exctype, Exception): 
+        if not issubclass(exctype, Exception):
             raise
         assertEqual(str(e), "force abort", "testTransaction-11")
     ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar', 'baz'])

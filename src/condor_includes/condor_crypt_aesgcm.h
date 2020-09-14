@@ -26,31 +26,34 @@
 class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_AESGCM(const KeyInfo& key);
-
-    ~Condor_Crypt_AESGCM();
+//    Condor_Crypt_AESGCM();
+//    ~Condor_Crypt_AESGCM();
 
     void resetState();
     void resetState(std::shared_ptr<CryptoState>);
 
-    bool encrypt(const unsigned char *,
+    bool encrypt(Condor_Crypto_State *,
+                 const unsigned char *,
                  int                  ,
                  unsigned char *&     ,
                  int&                 ) {return false;}
 
-    bool decrypt(const unsigned char * ,
+    bool decrypt(Condor_Crypto_State *,
+                       const unsigned char *,
                        int             ,
                        unsigned char *&,
                        int&            ) {return false;}
 
-    bool encrypt(const unsigned char * aad_data,
+    bool encrypt(Condor_Crypto_State * cs,
+                 const unsigned char * aad_data,
                  int                   aad_data_len,
                  const unsigned char * input,
                  int                   input_len, 
                  unsigned char *       output, 
                  int                   output_len);
 
-    bool decrypt(const unsigned char * aad_data,
+    bool decrypt(Condor_Crypto_State * cs,
+                 const unsigned char * aad_data,
                  int                   aad_data_len,
                  const unsigned char * input,
                  int                   input_len, 
@@ -60,8 +63,7 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
     virtual int ciphertext_size(int plaintext) const;
 
  private:
-    Condor_Crypt_AESGCM();
-
+    // ZKM TODO FIXME: Move all this from m_state to the Condor_Crypto_State param
     std::shared_ptr<CryptoState> m_state;
 };
 

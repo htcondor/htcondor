@@ -70,7 +70,7 @@ public:
 		number_of_errors++; 
 		return;
 	}
-	void PrintErrors(void) 
+	void PrintErrors(void) const 
 	{
 		if (number_of_errors == 0) {
 			cout << "No errors were found.\n";

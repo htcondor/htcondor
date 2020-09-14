@@ -595,7 +595,7 @@ UniShadow::exitDelayed( int &reason ) {
 }
 
 void
-UniShadow::exitLeaseHandler() {
+UniShadow::exitLeaseHandler() const {
 	DC_Exit( delayedExitReason );
 }
 

@@ -54,19 +54,19 @@ public:
 
 	// accessor for the "root" process PID
 	//
-	pid_t get_root_pid() { return m_root_pid; };
+	pid_t get_root_pid() const { return m_root_pid; };
 
 	// accessor for the "root" process birthday
 	//
-	birthday_t get_root_birthday() { return m_root_birthday; }
+	birthday_t get_root_birthday() const { return m_root_birthday; }
 
 	// accessor for the "watcher" process PID
 	//
-	pid_t get_watcher_pid() { return m_watcher_pid; };
+	pid_t get_watcher_pid() const { return m_watcher_pid; };
 
 	// accessor for the requested maximum snapshot interval
 	//
-	int get_max_snapshot_interval() { return m_max_snapshot_interval; }
+	int get_max_snapshot_interval() const { return m_max_snapshot_interval; }
 
 	// since we maintain the tree of process families in
 	// ProcFamilyMonitor, not here, we need help in maintaining the
@@ -81,7 +81,7 @@ public:
 
 	// return the maximum image size
 	//
-	unsigned long get_max_image_size() { return m_max_image_size; }
+	unsigned long get_max_image_size() const { return m_max_image_size; }
 
 	// fill in usage information about this family
 	//

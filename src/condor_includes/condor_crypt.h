@@ -22,25 +22,51 @@
 #define CONDOR_CRYPTO
 
 #include "condor_common.h"
+#include "condor_debug.h"
 
 #include "CryptKey.h"
+
+
+class Condor_Crypto_State {
+
+public:
+    Condor_Crypto_State(Protocol proto, KeyInfo& key);
+    ~Condor_Crypto_State();
+
+    void reset();
+    const KeyInfo& getkey() { return m_keyInfo; }
+
+    // the KeyInfo holds:
+    // protocol
+    // key length
+    // key data
+    // duration
+    KeyInfo       m_keyInfo;
+
+    int m_ivec_len;
+    unsigned char *m_ivec;
+
+    int m_num;
+
+    // holds key data specific to the method (e.g. key schedules for DES)
+    int m_method_key_data_len;
+    unsigned char *m_method_key_data;
+
+    // CURRENTLY UNUSED: int m_additional_len;
+    // CURRENTLY UNUSED: unsigned char *m_additional;
+
+private:
+    Condor_Crypto_State() {} ;
+    Condor_Crypto_State(Condor_Crypto_State&) {};
+
+};
+
 
 class Condor_Crypt_Base {
 
  public:
-    Condor_Crypt_Base(Protocol, const KeyInfo& key);
-    //------------------------------------------
-    // PURPOSE: Cryto base class constructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
-
-    virtual ~Condor_Crypt_Base();
-    //------------------------------------------
-    // PURPOSE: Crypto base class destructor
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
+    Condor_Crypt_Base() {}
+    virtual ~Condor_Crypt_Base() {};
 
 		// Returns an array of random bytes.
 		// Caller should free returned buffer when done.
@@ -59,29 +85,14 @@ class Condor_Crypt_Base {
     // RETURNS: a buffer (malloc) with length 
     //------------------------------------------
 
-    Protocol protocol();
-    //------------------------------------------
-    // PURPOSE: return protocol 
-    // REQUIRE: None
-    // RETURNS: protocol
-    //------------------------------------------
-
-    const KeyInfo& get_key() { return keyInfo_; }
-
-    virtual void resetState() = 0;
-    //------------------------------------------
-    // PURPOSE: Reset encryption state. This is 
-    //          required for UPD encryption
-    // REQUIRE: None
-    // RETURNS: None
-    //------------------------------------------
-
-    virtual bool encrypt(const unsigned char *   input,
+    virtual bool encrypt(Condor_Crypto_State *s,
+                         const unsigned char *input,
                          int               input_len, 
                          unsigned char *&  output, 
                          int&              output_len) = 0;
 
-    virtual bool decrypt(const unsigned char *  input,
+    virtual bool decrypt(Condor_Crypto_State *s,
+                         const unsigned char *input,
                          int              input_len, 
                          unsigned char *& output, 
                          int&             output_len) = 0;
@@ -100,13 +111,6 @@ class Condor_Crypt_Base {
     // RETURNS: size of the cipher text
     //------------------------------------------
 
- protected:
-    Condor_Crypt_Base();
-    //------------------------------------------
-    // Pricate constructor
-    //------------------------------------------
- private:
-    KeyInfo       keyInfo_;
 };
 
 #endif

@@ -148,7 +148,7 @@ Source0: %{name}-%{tarball_version}.tar.gz
 Source1: generate-tarball.sh
 %endif
 
-# % if %systemd
+# % if % systemd
 Source3: osg-env.conf
 # % else
 Source4: condor.osg-sysconfig
@@ -187,8 +187,7 @@ Source117: unicoregahp-1.2.0.tar.gz
 Source118: voms-2.0.6.tar.gz
 %endif
 
-Patch1: old-sphinx.patch
-Patch2: python-shebang.patch
+Patch2: el7-python2.patch
 
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -399,10 +398,16 @@ Requires: %name-external-libs%{?_isa} = %version-%release
 
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 Requires: python-requests
+Requires: python2-condor
 %endif
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3-requests
 %endif
+Requires: python3-condor
+
+
+# Useful tools are using the Python bindings
+Requires: python3-condor
 
 Requires: initscripts
 
@@ -436,7 +441,7 @@ Requires(post): selinux-policy-targeted
 Obsoletes: condor-static < 7.2.0
 
 # Standard Universe discontinued as of 8.9.0
-Obsoletes: condor-std-universe
+Obsoletes: condor-std-universe < 8.9.0
 
 %if ! %cream
 Obsoletes: condor-cream-gahp <= %{version}
@@ -654,22 +659,32 @@ Requires: boost-python3
 Requires: python3
 %endif
 
-#%if 0%{?rhel} >= 7 && ! %uw_build
-# auto provides generator does not pick these up for some reason
-#    %ifarch x86_64
-#Provides: classad.so()(64bit)
-#Provides: htcondor.so()(64bit)
-#    %else
-#Provides: classad.so
-#Provides: htcondor.so
-#    %endif
-#%endif
-
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
 %endif
 %endif
+%endif
+
+
+%if 0%{?rhel} == 7
+#######################
+%package credmon-oauth
+Summary: OAuth2 credmon for HTCondor.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: python2-condor
+Requires: python2-requests-oauthlib
+Requires: python-six
+Requires: python-flask
+Requires: python2-cryptography
+Requires: python2-scitokens
+Requires: httpd
+Requires: mod_wsgi
+
+%description credmon-oauth
+The OAuth2 credmon allows users to obtain credentials from configured
+OAuth2 endpoints and to use those credentials securely inside running jobs.
 %endif
 
 
@@ -700,9 +715,6 @@ multiple clusters.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-Requires: python2-condor = %version-%release
-%endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
@@ -797,9 +809,6 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-Requires: python2-condor = %version-%release
-%endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
@@ -828,8 +837,7 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
-%patch1 -p1
-%if 0%{?rhel} >= 8 || 0%{?fedora}
+%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 %patch2 -p1
 %endif
 
@@ -1002,7 +1010,7 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_ssh
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
 populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
 %endif
-%if ( 0%{?rhel} >= 7 || 0%{?fedora} ) && ! 0%{?amzn}
+%if 0%{?rhel} >= 7 || 0%{?fedora}
 %ifarch x86_64
 populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
 %endif
@@ -1103,12 +1111,45 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 
+# remove junk man page (Fedora 32 build)
+rm -f %{buildroot}/%{_mandir}/man1/_static/graphviz.css
+
 # Remove python-based tools when no python bindings
 %if ! %python
 rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
 %endif
+
+# For EL7, move oauth credmon WSGI script out of libexec to /var/www
+%if 0%{?rhel} == 7
+mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
+mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
+
+# Move oauth credmon config files out of examples and into config.d
+mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
+mv %{buildroot}/etc/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
+%endif
+
+# For non-EL7, remove oauth credmon from the buildroot
+%if 0%{?rhel} > 7 || 0%{?fedora}
+rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
+rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
+rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
+rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
+rm -rf %{buildroot}/etc/examples/condor_credmon_oauth
+%endif
+
+###
+# Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
+%if 0%{?rhel} == 7
+ln -s %{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
+ln -s %{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
+mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
+ln -s %{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+%endif
+###
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1269,6 +1310,12 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 
 populate %{_libdir}/condor %{buildroot}/%{_libdir}/libgetpwnam.so
 
+# htcondor/dags only works with Python3
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
+
+# htcondor/personal.py only works with Python3
+rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
+
 %clean
 rm -rf %{buildroot}
 
@@ -1294,7 +1341,7 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service.d/osg-env.conf
 %endif
 # Disabled until HTCondor security fixed.
-# %{_unitdir}/condor.socket
+# % {_unitdir}/condor.socket
 %else
 %_initrddir/condor
 %if 0%{?osg} || 0%{?hcc}
@@ -1306,7 +1353,6 @@ rm -rf %{buildroot}
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
 %_datadir/condor/CondorJavaWrapper.class
-%_datadir/condor/scimark2lib.jar
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif
@@ -1682,6 +1728,7 @@ rm -rf %{buildroot}
 %_includedir/classad/lexerSource.h
 %_includedir/classad/literals.h
 %_includedir/classad/matchClassad.h
+%_includedir/classad/natural_cmp.h
 %_includedir/classad/operators.h
 %_includedir/classad/query.h
 %_includedir/classad/sink.h
@@ -1744,6 +1791,27 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 %endif
 %endif
+%endif
+
+%if 0%{?rhel} == 7
+%files credmon-oauth
+%doc examples/condor_credmon_oauth
+%_sbindir/condor_credmon_oauth
+%_sbindir/scitokens_credential_producer
+%_var/www/wsgi-scripts/condor_credmon_oauth
+%_libexecdir/condor/credmon
+%_var/lib/condor/oauth_credentials/README.credentials
+%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-credmon.conf
+%config(noreplace) %_sysconfdir/condor/config.d/40-oauth-tokens.conf
+%ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
+%ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
+%ghost %_var/lib/condor/oauth_credentials/pid
+###
+# Backwards compatibility with the previous versions and configs of scitokens-credmon
+%_bindir/condor_credmon_oauth
+%_bindir/scitokens_credential_producer
+%_var/www/wsgi-scripts/scitokens-credmon
+###
 %endif
 
 %files bosco
@@ -1978,6 +2046,19 @@ fi
 %endif
 
 %changelog
+* Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.8-1
+- Added htcondor.dags and htcondor.htchirp to the HTCondor Python bindings
+- New condor_watch_q tool that efficiently provides live job status updates
+- Added support for marking a GPU offline while other jobs continue
+- The condor_master command does not return until it is fully started
+- Deprecated several Python interfaces in the Python bindings
+
+* Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.10-1
+- condor_qedit can no longer be used to disrupt the condor_schedd
+- Fixed a bug where the SHARED_PORT_PORT configuration setting was ignored
+- Ubuntu 20.04 and Amazon Linux 2 are now supported
+- In MacOSX, HTCondor now requires LibreSSL, available since MacOSX 10.13
+
 * Wed May 20 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.7-1
 - Multiple enhancements in the file transfer code
 - Support for more regions in s3:// URLs

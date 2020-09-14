@@ -123,7 +123,8 @@ static void* dlsym(void* hlib, const char * symbol) {
 }
 #endif
 
-// this coded was stolen from helper_cuda.h in the cuda 5.5 sdk.
+// Function taken from helper_cuda.h in the CUDA SDK
+// https://github.com/NVIDIA/cuda-samples/blob/master/Common/helper_cuda.h
 int ConvertSMVer2Cores(int major, int minor)
 {
 	// Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
@@ -153,6 +154,7 @@ int ConvertSMVer2Cores(int major, int minor)
         { 0x70, 64 }, // Volta Generation (SM 7.0) GV100 class
         { 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
         { 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
+        { 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
         {   -1, -1 }
     };
 
@@ -277,7 +279,6 @@ struct _simulated_cuda_device {
 };
 struct _simulated_cuda_config {
 	int driverVer;
-	int runtimeVer;
 	int deviceCount;
 	const struct _simulated_cuda_device * device;
 };
@@ -285,8 +286,8 @@ struct _simulated_cuda_config {
 static const struct _simulated_cuda_device GeForceGTX480 = { "GeForce GTX 480", 0x20, 1400*1000, 15, 0, 1536*1024*1024 };
 static const struct _simulated_cuda_device GeForceGT330 = { "GeForce GT 330",  0x12, 1340*1000, 12,  0, 1024*1024*1024 };
 static const struct _simulated_cuda_config aSimConfig[] = {
-	{6000, 5050, 1, &GeForceGT330 },
-	{4020, 4010, 2, &GeForceGTX480 },
+	{6000, 1, &GeForceGT330 },
+	{4020, 2, &GeForceGTX480 },
 };
 const int sim_index_max = (int)(sizeof(aSimConfig)/sizeof(aSimConfig[0]));
 
@@ -311,13 +312,6 @@ cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
 		return cudaErrorInvalidValue;
 	int ix = sim_index < sim_index_max ? sim_index : 0;
 	*pver = aSimConfig[ix].driverVer;
-	return cudaSuccess; 
-}
-cudaError_t CUDACALL sim_cudaRuntimeGetVersion(int* pver) {
-	if (sim_index < 0 || sim_index > sim_index_max)
-		return cudaErrorInvalidValue;
-	int ix = sim_index < sim_index_max ? sim_index : 0;
-	*pver = aSimConfig[ix].runtimeVer;
 	return cudaSuccess; 
 }
 
@@ -1196,16 +1190,14 @@ main( int argc, const char** argv)
 	// lookup the function pointers we will need later from the cudart library
 	//
 	if ( !opt_simulate && cuda_handle) {
-		cuda_t cudaRuntimeGetVersion = NULL;
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cuDriverGetVersion");
-			cudaRuntimeGetVersion = cu_cudaRuntimeGetVersion;
 			getBasicProps = cu_getBasicProps;
 		} else {
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cudaDriverGetVersion");
-			cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
+			cuda_t cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
 			if (cudaRuntimeGetVersion) {
 				int runtimeVersion = 0;
 				cudaRuntimeGetVersion(&runtimeVersion);
@@ -1326,11 +1318,7 @@ main( int argc, const char** argv)
 				if (opt_extra) {
 					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
 					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-					if (bp.ccMajor <= 6) {
-						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
-					} else {
-						// CoresPerCU not meaningful for Architecture 7 and later
-					}
+					props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
 				}
 			}
 

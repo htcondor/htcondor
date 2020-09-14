@@ -22,6 +22,10 @@ RUN \
        useradd slot${n}; \
    done
 
+# Install docker repo and packages
+RUN yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
+	yum install -y docker-ce docker-ce-cli containerd.io
+
 # Install extra packages commonly used by jobs
 COPY execute/packagelist.txt /tmp/packagelist.txt
 RUN \

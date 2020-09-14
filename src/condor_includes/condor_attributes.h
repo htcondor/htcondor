@@ -300,7 +300,7 @@
 #define ATTR_IS_WAKEABLE  "IsWakeAble"
 #define ATTR_INACTIVE  "Inactive"
 #define ATTR_JAR_FILES  "JarFiles"
-#define ATTR_JAVA_MFLOPS  "JavaMFlops"
+#define ATTR_JAVA_SPECIFICATION_VERSION  "JavaSpecificationVersion"
 #define ATTR_JAVA_VENDOR  "JavaVendor"
 #define ATTR_JAVA_VERSION  "JavaVersion"
 #define ATTR_JOB_ACTION  "JobAction"
@@ -346,6 +346,7 @@
 #define ATTR_JOB_KEYWORD  "JobKeyword"
 #define ATTR_JOB_LEASE_DURATION  "JobLeaseDuration"
 #define ATTR_JOB_LEASE_EXPIRATION  "JobLeaseExpiration"
+#define ATTR_JOB_LIMIT_DIRECTORY_ACCESS "LimitDirectoryAccess"
 #define ATTR_JOB_SPOOL_EXECUTABLE  "SpoolExecutable"
 #define ATTR_JOB_EXIT_STATUS  "ExitStatus"
 #define ATTR_JOB_EXIT_REQUIREMENTS  "ExitRequirements"
@@ -364,6 +365,8 @@
 #define ATTR_JOB_LOCAL_CPU  "LocalCpu"
 #define ATTR_JOB_MANAGED  "Managed"
 #define ATTR_JOB_MANAGED_MANAGER  "ManagedManager"
+#define ATTR_JOB_MANIFEST_DESIRED "ManifestDesired"
+#define ATTR_JOB_MANIFEST_DIR "ManifestDir"
 #define ATTR_JOB_MATCHED  "Matched"
 #define ATTR_JOB_NONESSENTIAL  "Nonessential"
 #define ATTR_JOB_NOOP  "IsNoopJob"
@@ -399,6 +402,7 @@
 #define ATTR_JOB_SET_NAME "SetMemberNames"
 #define ATTR_JOB_SUBMISSION  "Submission"
 #define ATTR_JOB_SUBMISSION_ID  "SubmissionId"
+#define ATTR_JOB_BATCH_ID "JobBatchId"
 #define ATTR_JOB_BATCH_NAME "JobBatchName"
 #define ATTR_JOB_START  "JobStart"
 #define ATTR_JOB_START_DATE  "JobStartDate"
@@ -424,6 +428,7 @@
 #define ATTR_JOB_VM_VNC  "JobVMVNCConsole"
 #define ATTR_JOB_VM_CPU_UTILIZATION  "JobVMCpuUtilization"
 #define ATTR_JOB_SEND_CREDENTIAL  "SendCredential"
+#define ATTR_OAUTH_SERVICES_NEEDED "OAuthServicesNeeded"
 #define ATTR_KEYBOARD_IDLE  "KeyboardIdle"
 #define ATTR_KEYSTORE_FILE  "KeystoreFile"
 #define ATTR_KEYSTORE_ALIAS  "KeystoreAlias"
@@ -487,7 +492,11 @@
 #define ATTR_MY_CURRENT_TIME  "MyCurrentTime"
 #define ATTR_MY_TYPE  "MyType"
 #define ATTR_NAME  "Name"
-#define ATTR_NICE_USER  "NiceUser"
+#define ATTR_NICE_USER_deprecated  "NiceUser"
+#ifdef NO_DEPRECATE_NICE_USER
+#define ATTR_NICE_USER ATTR_NICE_USER_deprecated
+#endif
+
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
@@ -774,7 +783,6 @@
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
-#define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
@@ -992,6 +1000,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 //************* End of changes for EC2 Jobs *****************//
 
+// Provisioner jobs
+#define ATTR_PROVISIONER_STATE "ProvisionerState"
+#define ATTR_PROVISIONER_RESOURCE_ID "ProvisionerResourceID"
+
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
@@ -1130,6 +1142,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_START_EXPR  "StartExpr"
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
+#define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
 
 #define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 

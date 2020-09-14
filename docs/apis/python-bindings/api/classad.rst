@@ -31,6 +31,8 @@ objects, which correspond to un-evaluated ClassAd expressions.
    .. automethod:: ClassAd.symmetricMatch
    .. automethod:: ClassAd.externalRefs
    .. automethod:: ClassAd.internalRefs
+   .. automethod:: ClassAd.__eq__
+   .. automethod:: ClassAd.__ne__
 
 
 .. autoclass:: ExprTree
@@ -44,6 +46,7 @@ objects, which correspond to un-evaluated ClassAd expressions.
    .. automethod:: ExprTree.simplify
 
 .. autoclass:: Value
+
 
 Parsing and Creating ClassAds
 -----------------------------
@@ -82,6 +85,24 @@ Utility Functions
 -----------------
 
 .. autofunction:: version
+
+
+Exceptions
+----------
+
+For backwards-compatibility, the exceptions in this module inherit
+from the built-in exceptions raised in earlier (pre-v8.9.9) versions.
+
+.. autoclass:: ClassAdException
+
+.. autoclass:: ClassAdEnumError
+.. autoclass:: ClassAdEvaluationError
+.. autoclass:: ClassAdInternalError
+.. autoclass:: ClassAdOSError
+.. autoclass:: ClassAdParseError
+.. autoclass:: ClassAdTypeError
+.. autoclass:: ClassAdValueError
+
 
 Deprecated Functions
 --------------------

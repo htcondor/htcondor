@@ -35,14 +35,14 @@
 
 
 // Publich Linux hibernator class methods
-StartdHibernator::StartdHibernator( void ) throw ()
+StartdHibernator::StartdHibernator( void ) noexcept
 		: HibernatorBase (),
 		  m_plugin_args(NULL)
 {
 	update( );
 }
 
-StartdHibernator::~StartdHibernator( void ) throw ()
+StartdHibernator::~StartdHibernator( void ) noexcept
 {
 	if (m_plugin_args) {
 		delete m_plugin_args;

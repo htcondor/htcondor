@@ -73,7 +73,7 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	daemonCore->Register_Command( CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS",
 								(CommandHandlercpp)&CredDaemon::check_creds_handler,
 								"check_creds_handler", this, WRITE,
-								D_FULLDEBUG );
+								D_FULLDEBUG, true);
 
 		// set timer to periodically advertise ourself to the collector
 	daemonCore->Register_Timer(0, m_update_collector_interval,
@@ -85,7 +85,7 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	if (cred_dir_krb || cred_dir_oauth) {
 		// didn't need the value, just to see if it's defined.
 		dprintf(D_FULLDEBUG, "CREDD: setting sweep_timer_handler for KRB\n");
-		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+		int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 		m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 								(TimerHandlercpp)&CredDaemon::sweep_timer_handler,
 								"sweep_timer_handler", this );
@@ -138,7 +138,7 @@ CredDaemon::reconfig()
 }
 
 void
-CredDaemon::sweep_timer_handler( void )
+CredDaemon::sweep_timer_handler( void ) const
 {
 	dprintf(D_FULLDEBUG, "CREDD: calling and resetting sweep_timer_handler()\n");
 
@@ -146,7 +146,7 @@ CredDaemon::sweep_timer_handler( void )
 	credmon_sweep_creds(cred_dir, credmon_type_KRB);
 	cred_dir.set(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
 	credmon_sweep_creds(cred_dir, credmon_type_OAUTH);
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
 
@@ -355,15 +355,19 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			req->LookupString("Service", service);
 			ad.Assign("Provider", service);
 
+			tmpvalue.clear();
 			req->LookupString("Username", tmpvalue);
 			ad.Assign("LocalUser", tmpvalue);
 
+			tmpvalue.clear();
 			req->LookupString("Handle", tmpvalue);
 			ad.Assign("Handle", tmpvalue);
 
+			tmpvalue.clear();
 			req->LookupString("Scopes", tmpvalue);
 			ad.Assign("Scopes", tmpvalue);
 
+			tmpvalue.clear();
 			req->LookupString("Audience", tmpvalue);
 			ad.Assign("Audience", tmpvalue);
 

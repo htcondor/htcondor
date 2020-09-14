@@ -327,7 +327,7 @@ StatInfo::GetMode( void )
 
 #ifndef WIN32
 uid_t
-StatInfo::GetOwner( void )
+StatInfo::GetOwner( void ) const
 {
 	// This is defensive programming, but it's better than returning an
 	// undefined value.
@@ -339,7 +339,7 @@ StatInfo::GetOwner( void )
 }
 
 gid_t
-StatInfo::GetGroup( void )
+StatInfo::GetGroup( void ) const
 {
 	// This is defensive programming, but it's better than returning an
 	// undefined value.

@@ -344,7 +344,7 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	unsigned char * buf = NULL;
         
 	// First, encrypt the data if necessary
-	if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
+	if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
 		if (!wrap((const unsigned char *) buffer, length,  buf , l_out)) {
 			dprintf(D_SECURITY, "Encryption failed\n");
 			goto error;
@@ -448,7 +448,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	} 
 	else {
 		// See if it needs to be decrypted
-		if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
+		if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
 			unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
 			memcpy(buffer, buf, result);
 			free(buf);
@@ -527,7 +527,7 @@ ReliSock::end_of_message_internal()
 {
 	int ret_val = FALSE;
 
-	if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
+	if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
 		resetCrypto();
 	}
 	switch(_coding){
@@ -601,7 +601,7 @@ ReliSock::put_bytes(const void *data, int sz)
         // Check to see if we need to encrypt
         // Okay, this is a bug! H.W. 9/25/2001
 
-        if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
+        if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
         	unsigned char * dta = NULL;
 			int l_out;
             if (!wrap((const unsigned char *)(data), sz, dta , l_out)) {
@@ -689,7 +689,7 @@ ReliSock::get_bytes(void *dta, int max_sz)
 	bytes = rcv_msg.buf.get(dta, max_sz);
 
 	if (bytes > 0) {
-            if (get_encryption() && crypto_->protocol() != CONDOR_AESGCM) {
+            if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
                 unwrap((unsigned char *) dta, bytes, data, length);
                 memcpy(dta, data, bytes);
                 free(data);
@@ -934,8 +934,7 @@ read_packet:
 		}
 	*/}
 
-	if (p_sock->get_encryption() && p_sock->get_crypto()->protocol() == CONDOR_AESGCM) {
-		auto crypt = static_cast<Condor_Crypt_AESGCM*>(p_sock->get_crypto());
+	if (p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
 		int length = m_tmp->num_untouched();
 		Buf new_buf(p_sock, length);
 		new_buf.alloc_buf();
@@ -982,7 +981,9 @@ read_packet:
 			dprintf(D_NETWORK, "Expecting AAD with handshake digest %s\n",
 				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
 		}
-		if (!crypt->decrypt(
+
+		if ( ((Condor_Crypt_AESGCM*)p_sock->get_crypto())->decrypt(
+                        p_sock->crypto_state_,
 			aad_data,
 			aad_len,
 			static_cast<unsigned char *>(m_tmp->get_ptr()),
@@ -998,7 +999,7 @@ read_packet:
 	}
 
 		// For non-AES-GCM encryption or unexpectedly large headers, release the memory...
-	if (p_sock->m_recv_md_ctx && ((p_sock->get_encryption() && p_sock->get_crypto()->protocol() != CONDOR_AESGCM) ||
+	if (p_sock->m_recv_md_ctx && ((p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() != CONDOR_AESGCM) ||
 		(p_sock->m_finished_recv_header && p_sock->m_finished_send_header) || p_sock->_bytes_sent > 1024*1024))
 	{
 		p_sock->m_finished_recv_header = true;
@@ -1139,13 +1140,12 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 */		dprintf(D_NETWORK, "AESGCM: Send digest added %u + %d bytes \n", header_size, buf.num_untouched());
 	}
 
-	if (p_sock->get_encryption() && p_sock->get_crypto()->protocol() == CONDOR_AESGCM) {
+	if (p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
 		auto cipher_sz = p_sock->ciphertext_size(buf.num_untouched());
 		ns = cipher_sz;
 		len = (int) htonl(ns);
 
 		buf.grow_buf(cipher_sz);
-                auto crypt = static_cast<Condor_Crypt_AESGCM*>(p_sock->get_crypto());
 		Buf new_buf(p_sock, cipher_sz + header_size);
 		new_buf.alloc_buf();
 		memcpy(&hdr[1], &len, 4);
@@ -1191,7 +1191,9 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			dprintf(D_NETWORK, "Sending AAD with handshake digest %s\n",
 				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
 		}
-		if (!crypt->encrypt(
+
+		if ( ((Condor_Crypt_AESGCM*)p_sock->get_crypto())->encrypt(
+                        p_sock->crypto_state_,
 			aad_data,
 			aad_len,
                         static_cast<unsigned char *>(buf.get_ptr()),
@@ -1207,7 +1209,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 	}
 
 		// For non-AES-GCM encryption or unexpectedly large headers, release the memory...
-	if (p_sock->m_send_md_ctx && ((p_sock->get_encryption() && p_sock->get_crypto()->protocol() != CONDOR_AESGCM) ||
+	if (p_sock->m_send_md_ctx && ((p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() != CONDOR_AESGCM) ||
 		(p_sock->m_finished_recv_header && p_sock->m_finished_send_header) || p_sock->_bytes_sent > 1024*1024)) {
 		p_sock->m_finished_send_header = true;
 		p_sock->m_send_md_ctx.reset();

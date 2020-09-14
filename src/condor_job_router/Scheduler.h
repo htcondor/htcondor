@@ -30,12 +30,12 @@ class Scheduler {
 public:
 	Scheduler(char const *_alt_spool_param=NULL, int id=0);
 	~Scheduler();
-	classad::ClassAdCollection *GetClassAds();
+	classad::ClassAdCollection *GetClassAds() const;
 	void init();
 	void config();
 	void stop();
 	void poll();
-	int id();
+	int id() const;
 
 private:
 

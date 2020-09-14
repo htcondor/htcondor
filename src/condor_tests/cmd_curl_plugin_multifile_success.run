@@ -1,15 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 import htcondor
 import os
 import sys
 
-from pytest.CondorCluster import CondorCluster
-from pytest.CondorTest import CondorTest
-from pytest.Globals import *
-from pytest.HTTPServer import HTTPServer
-from pytest.PersonalCondor import PersonalCondor
-from pytest.Utils import Utils
+from pytest_old.CondorCluster import CondorCluster
+from pytest_old.CondorTest import CondorTest
+from pytest_old.Globals import *
+from pytest_old.HTTPServer import HTTPServer
+from pytest_old.PersonalCondor import PersonalCondor
+from pytest_old.Utils import Utils
 
 def SuccessCallback():
     Utils.TLog("Job successful as expected. Now checking for correct log contents.")
@@ -68,7 +68,7 @@ def main():
 
     # Setup a new test job
     job_args = {
-        "executable":               "cmd_curl_plugin_multifile_success.py",
+        "executable":               "x_echostring.pl",
         "arguments":                "Testing multifile_curl_plugin success",
         "output":                   "cmd_curl_plugin_multifile_success.out",
         "transfer_input_files":     file1_url + ", " + file2_url + ", " + file3_url,

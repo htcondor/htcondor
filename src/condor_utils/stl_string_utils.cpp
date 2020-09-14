@@ -151,25 +151,6 @@ int formatstr_cat(MyString& s, const char* format, ...) {
     return r;
 }
 
-template <typename T> std::string IntToStr( T val )
-{
-	char buf[64];
-	if (std::numeric_limits<T>::is_signed) {
-		snprintf( buf, sizeof(buf), "%lld", (long long)val );
-	} else {
-		snprintf( buf, sizeof(buf), "%llu", (unsigned long long)val );
-	}
-	return std::string( buf );
-}
-
-// force instantiation of the StrToInt functions that users of condor_utils will need
-template std::string IntToStr<int>(int val);
-template std::string IntToStr<long>(long val);
-template std::string IntToStr<long long>(long long val);
-template std::string IntToStr<unsigned int>(unsigned int val);
-template std::string IntToStr<unsigned long>(unsigned long val);
-template std::string IntToStr<unsigned long long>(unsigned long long val);
-
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& str, FILE *fp, bool append)
 {

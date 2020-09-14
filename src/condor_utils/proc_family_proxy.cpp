@@ -42,7 +42,7 @@ class ProcFamilyProxyReaperHelper : public Service {
 public:
 	ProcFamilyProxyReaperHelper(ProcFamilyProxy* ptr) : m_ptr(ptr) { }
 
-	int procd_reaper(int pid, int status)
+	int procd_reaper(int pid, int status) const
 	{
 		return m_ptr->procd_reaper(pid, status);
 	}

@@ -87,7 +87,9 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
-	printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	if(param_boolean("ENABLE_URL_TRANSFERS", true)) {
+		printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	}
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
@@ -110,7 +112,6 @@ printClassAd( void )
 	ClassAd *ad = java_detect();
 	if(ad) {
 		int gotone=0;
-		float mflops;
 		char *str = 0;
 
 		if(ad->LookupString(ATTR_JAVA_VENDOR,&str)) {
@@ -125,14 +126,10 @@ printClassAd( void )
 			str = 0;
 			gotone++;
 		}
-		if(ad->LookupString("JavaSpecificationVersion",&str)) {
-			printf("JavaSpecificationVersion = \"%s\"\n",str);
+		if(ad->LookupString(ATTR_JAVA_SPECIFICATION_VERSION,&str)) {
+			printf("%s = \"%s\"\n",ATTR_JAVA_SPECIFICATION_VERSION,str);
 			free(str);
 			str = 0;
-			gotone++;
-		}
-		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {
-			printf("%s = %f\n", ATTR_JAVA_MFLOPS,mflops);
 			gotone++;
 		}
 		if(gotone>0) printf( "%s = True\n",ATTR_HAS_JAVA);		
@@ -178,14 +175,12 @@ printClassAd( void )
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;
 	CondorError e;
-	ft.InitializePlugins(e);
-	if (e.code()) {
-		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
-	}
-
-	MyString method_list = ft.GetSupportedMethods();
+	MyString method_list = ft.GetSupportedMethods(e);
 	if (!method_list.IsEmpty()) {
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.Value());
+	}
+	if (e.code()) {
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
 
 #if defined(WIN32)

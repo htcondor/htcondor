@@ -28,7 +28,7 @@ To enable the file transfer mechanism, place this command in the job's
 submit description file:
 **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
 
-::
+.. code-block:: condor-submit
 
       should_transfer_files = YES
 
@@ -90,7 +90,7 @@ value ``NO``, then no output files will be transferred, and the value of
 
 Note that the combination of
 
-::
+.. code-block:: condor-submit
 
       should_transfer_files = IF_NEEDED
       when_to_transfer_output = ON_EXIT_OR_EVICT
@@ -121,7 +121,7 @@ directory, to set up the execution environment for the job before it is
 run. These files are placed in the same directory as the job's
 executable. For example:
 
-::
+.. code-block:: condor-submit
 
       executable = my_program
       input = my_input
@@ -171,7 +171,7 @@ even if they originate from different paths.
 If only a subset of the output sandbox should be transferred, the subset
 is specified by further adding a submit command of the form:
 
-::
+.. code-block:: condor-submit
 
     transfer_output_files = file1, file2
 
@@ -179,7 +179,7 @@ Here are examples of file transfer with HTCondor. Assume that the
 job produces the following structure within the remote scratch
 directory:
 
-::
+.. code-block:: text
 
           o1
           o2
@@ -189,13 +189,13 @@ directory:
 
 If the submit description file sets
 
-::
+.. code-block:: condor-submit
 
-       transfer_output_files = o1,o2,d1
+    transfer_output_files = o1,o2,d1
 
 then transferred back to the submit machine will be
 
-::
+.. code-block:: text
 
           o1
           o2
@@ -210,17 +210,17 @@ created by the job before exit, but is empty, this is not an error.
 
 If, instead, the submit description file sets
 
-::
+.. code-block:: condor-submit
 
-       transfer_output_files = o1,o2,d1/o3
+    transfer_output_files = o1,o2,d1/o3
 
 then transferred back to the submit machine will be
 
-::
+.. code-block:: text
 
-          o1
-          o2
-          o3
+    o1
+    o2
+    o3
 
 Note that only the base name is used in the naming and placement of the
 file specified with ``d1/o3``.
@@ -295,7 +295,7 @@ for this job are located in directory ``/scratch/test``.
 Here is the directory tree as it exists on the submit machine, for all
 the examples:
 
-::
+.. code-block:: text
 
     /scratch/test (directory)
           my_program.condor (the submit description file)
@@ -315,24 +315,25 @@ where the job is submitted. An output file specified in the
 ``out1``, is created when the job is executed. It will be
 transferred back into the directory ``/scratch/test``.
 
-::
+.. code-block:: condor-submit
 
     # file name:  my_program.condor
     # HTCondor submit description file for my_program
-    Executable      = my_program
-    Universe        = vanilla
-    Error           = logs/err.$(cluster)
-    Output          = logs/out.$(cluster)
-    Log             = logs/log.$(cluster)
+    executable      = my_program
+    universe        = vanilla
+    error           = logs/err.$(cluster)
+    output          = logs/out.$(cluster)
+    log             = logs/log.$(cluster)
 
     should_transfer_files = YES
     transfer_input_files = files/in1,files/in2
 
-    Arguments       = in1 in2 out1
-    Queue
+    arguments       = in1 in2 out1
 
-    The log file is written on the submit machine, and is not involved
-    with the file transfer mechanism.
+    queue
+
+The log file is written on the submit machine, and is not involved
+with the file transfer mechanism.
 
 **Example 2**
 
@@ -340,22 +341,23 @@ This second example is identical to Example 1, except that absolute
 paths to the input files are specified, instead of relative paths to
 the input files.
 
-::
+.. code-block:: condor-submit
 
     # file name:  my_program.condor
     # HTCondor submit description file for my_program
-    Executable      = my_program
-    Universe        = vanilla
-    Error           = logs/err.$(cluster)
-    Output          = logs/out.$(cluster)
-    Log             = logs/log.$(cluster)
+    executable      = my_program
+    universe        = vanilla
+    error           = logs/err.$(cluster)
+    output          = logs/out.$(cluster)
+    log             = logs/log.$(cluster)
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
     transfer_input_files = /scratch/test/files/in1,/scratch/test/files/in2
 
-    Arguments       = in1 in2 out1
-    Queue
+    arguments       = in1 in2 out1
+
+    queue
 
 **Example 3**
 
@@ -376,15 +378,15 @@ Therefore, the output file, ``out1``, will be placed in the files
 directory. Note that the ``logs2`` directory exists to make this
 example work correctly.
 
-::
+.. code-block:: condor-submit
 
     # file name:  my_program.condor
     # HTCondor submit description file for my_program
-    Executable      = my_program
-    Universe        = vanilla
-    Error           = logs2/err.$(cluster)
-    Output          = logs2/out.$(cluster)
-    Log             = logs2/log.$(cluster)
+    executable      = my_program
+    universe        = vanilla
+    error           = logs2/err.$(cluster)
+    output          = logs2/out.$(cluster)
+    log             = logs2/log.$(cluster)
 
     initialdir      = files
 
@@ -392,8 +394,9 @@ example work correctly.
     when_to_transfer_output = ON_EXIT
     transfer_input_files = in1,in2
 
-    Arguments       = in1 in2 out1
-    Queue
+    arguments       = in1 in2 out1
+
+    queue
 
 **Example 4 - Illustrates an Error**
 
@@ -408,26 +411,27 @@ submission side may utilize relative paths to files, however those
 files are placed into the single, flat, remote scratch directory on
 the execute machine.
 
-::
+.. code-block:: condor-submit
 
     # file name:  my_program.condor
     # HTCondor submit description file for my_program
-    Executable      = my_program
-    Universe        = vanilla
-    Error           = logs/err.$(cluster)
-    Output          = logs/out.$(cluster)
-    Log             = logs/log.$(cluster)
+    executable      = my_program
+    universe        = vanilla
+    error           = logs/err.$(cluster)
+    output          = logs/out.$(cluster)
+    log             = logs/log.$(cluster)
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
     transfer_input_files = files/in1,files/in2
 
-    Arguments       = files/in1 files/in2 files/out1
-    Queue
+    arguments       = files/in1 files/in2 files/out1
+
+    queue
 
 This example fails with the following error:
 
-::
+.. code-block:: text
 
     err: files/out1: No such file or directory.
 
@@ -436,26 +440,27 @@ This example fails with the following error:
 As with Example 4, this example illustrates a job that will fail.
 The executing program's use of absolute paths cannot work.
 
-::
+.. code-block:: condor-submit
 
     # file name:  my_program.condor
     # HTCondor submit description file for my_program
-    Executable      = my_program
-    Universe        = vanilla
-    Error           = logs/err.$(cluster)
-    Output          = logs/out.$(cluster)
-    Log             = logs/log.$(cluster)
+    executable      = my_program
+    universe        = vanilla
+    error           = logs/err.$(cluster)
+    output          = logs/out.$(cluster)
+    log             = logs/log.$(cluster)
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
     transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
 
-    Arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
-    Queue
+    arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
+
+    queue
 
 The job fails with the following error:
 
-::
+.. code-block:: text
 
     err: /scratch/test/files/out1: No such file or directory.
 
@@ -470,15 +475,15 @@ of the directories on the remote file system.
 The output file ``/tmp/out1`` is transferred back to the job's
 initial working directory as ``/scratch/test/out1``.
 
-::
+.. code-block:: condor-submit
 
     # file name:  my_program.condor
     # HTCondor submit description file for my_program
-    Executable      = my_program
-    Universe        = vanilla
-    Error           = logs/err.$(cluster)
-    Output          = logs/out.$(cluster)
-    Log             = logs/log.$(cluster)
+    executable      = my_program
+    universe        = vanilla
+    error           = logs/err.$(cluster)
+    output          = logs/out.$(cluster)
+    log             = logs/log.$(cluster)
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
@@ -486,20 +491,26 @@ initial working directory as ``/scratch/test/out1``.
     transfer_input_files = files/in1,files/in2
     transfer_output_files = /tmp/out1
 
-    Arguments       = in1 in2 /tmp/out1
-    Queue
+    arguments       = in1 in2 /tmp/out1
+
+    queue
 
 Dataflow Jobs
 '''''''''''''
 
 A **dataflow job** is a job that might not need to run because its desired
-outputs already exist. The *condor_shadow* can optionally skip these jobs by
-setting :macro:`SHADOW_SKIP_DATAFLOW_JOBS` to `True`.
+outputs already exist. To skip such a job, add the following line to your
+submit file:
+
+.. code-block:: condor-submit
+
+    skip_if_dataflow = True
 
 A dataflow job meets any of the following criteria:
-* Output files exist, are newer than input files
-* Execute file is newer than input files
-* Standard input file is newer than input files
+
+*   Output files exist, are newer than input files
+*   Execute file is newer than input files
+*   Standard input file is newer than input files
 
 Skipping dataflow jobs can potentially save large amounts of time in
 long-running workflows.
@@ -525,7 +536,7 @@ To specify files that use this feature, the submit file should include a
 command. This comma-separated list specifies files which HTCondor will
 transfer using the HTTP mechanism. For example:
 
-::
+.. code-block:: condor-submit
 
       should_transfer_files = YES
       when_to_transfer_output = ON_EXIT
@@ -609,7 +620,7 @@ In addition, the URL for any files specified with a URL are given in the
 command. An example portion of the submit description file for a job
 that has a single file specified with a URL:
 
-::
+.. code-block:: condor-submit
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
@@ -626,7 +637,7 @@ transfer, and the added
 command provides both the protocol to be used and the destination of the
 transfer.
 
-::
+.. code-block:: condor-submit
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
@@ -643,7 +654,7 @@ files to specific URLs when a job completes. To do this, set the
 destination for an output file to a URL instead of a filename. For
 example:
 
-::
+.. code-block:: condor-submit
 
     transfer_output_files = "myresults.dat = http://destination-server.com/myresults.dat"
 
@@ -661,7 +672,7 @@ with a + symbol. For example, to download the file
 https://download.com/bar using the ``cred`` credential, specify the
 following in the submit file:
 
-::
+.. code-block:: condor-submit
 
     transfer_input_files = cred+https://download.com/bar
 
@@ -678,7 +689,7 @@ its ``https`` plug-in.  To make use of this feature, specify a file containing
 your access key ID (and nothing else), a file containing your secret access
 key (and nothing else), and one or more S3 URLs in one of three forms:
 
-::
+.. code-block:: condor-submit
 
     aws_access_key_id_file = /home/example/secrets/accessKeyID
     aws_secret_access_key_file = /home/example/secrets/secretAccessKey

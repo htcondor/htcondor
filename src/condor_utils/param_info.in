@@ -387,7 +387,7 @@ tags=vm-gahp
 
 [PROCD_ADDRESS]
 default=$(LOCK)/procd_pipe
-win32_default=\\.\pipe\condor_procd_pipe
+win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
 
@@ -406,6 +406,12 @@ default=$(FULL_HOSTNAME)
 type=string
 usage=to specify that each machine has its own UID space.
 tags=starter
+
+[ACCOUNTING_DOMAIN]
+default=$(UID_DOMAIN)
+type=string
+usage=Specifies the accounting namespace for submitters.
+tags=schedd
 
 [TRUST_UID_DOMAIN]
 default=
@@ -832,6 +838,12 @@ default=1e10
 type=double
 tags=accountant
 
+[NICE_USER_ACCOUNTING_GROUP_NAME]
+default=nice-user
+type=string
+tags=accountant,submit
+
+
 [REMOTE_PRIO_FACTOR]
 default=1e7
 type=double
@@ -882,6 +894,12 @@ tags=matchmaker
 default=false
 type=bool
 tags=shadow,remoteresource
+
+[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
+default=false
+type=bool
+usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
+tags=security
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
@@ -1148,6 +1166,18 @@ tags=daemon_core
 default=false
 type=bool
 tags=daemon_core
+
+[SEC_CREDENTIAL_SWEEP_INTERVAL]
+default=300
+type=int
+description=Period to check for old (marked) credentials
+tags=security
+
+[SEC_CREDENTIAL_SWEEP_DELAY]
+default=3600
+type=int
+description=Default delay before sweeping unused credentials
+tags=security
 
 [SEC_CREDENTIAL_REFRESH_INTERVAL]
 default=-1
@@ -1493,6 +1523,18 @@ default=$(SBIN)/condor_c-gahp
 win32_default=$(SBIN)\condor_c-gahp.exe
 type=path
 tags=gridmanager,condorresource
+
+[C_GAHP_CONTACT_SCHEDD_DELAY]
+default=5
+type=int
+
+[CGAHP_SCHEDD_INTERACTION_TIME]
+default=5
+type=int
+
+[C_GAHP_MAX_FILE_REQUESTS]
+default=10
+type=int
 
 [JAVA_EXTRA_ARGUMENTS]
 default=
@@ -1869,7 +1911,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, MemoryUsage, DiskUsage, ScratchDirFileCount
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -2301,8 +2343,8 @@ type=string
 tags=java_config
 
 [JAVA_CLASSPATH_DEFAULT]
-default=$(LIB) $(LIB)/scimark2lib.jar .
-win32_default=$(BIN) $(BIN)/scimark2lib.jar .
+default=$(LIB) .
+win32_default=$(BIN) .
 type=string
 tags=java_config
 
@@ -2641,12 +2683,6 @@ tags=schedd,starter
 default=
 type=string
 tags=starter,StarterHookMgr
-
-[JAVA_BENCHMARK_TIME]
-default=2
-type=int
-usage=If this time is zero or undefined, no Java benchmarks will be run.
-tags=starter,java_detect
 
 [VM_STATUS_INTERVAL]
 default=60
@@ -3018,7 +3054,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType
+default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType User
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -5950,7 +5986,6 @@ default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
-	JAVA_BENCHMARK_TIME=0
 @end
 
 [$ROLE.Execute]
@@ -6039,7 +6074,7 @@ default : @fin
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
-	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group", RequestedAcctGroup)
+	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group ", RequestedAcctGroup)
 @fin
 
 

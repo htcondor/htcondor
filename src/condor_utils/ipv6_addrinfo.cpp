@@ -215,7 +215,7 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 }
 
 addrinfo_iterator &
-addrinfo_iterator::operator=(addrinfo_iterator &&rhs) {
+addrinfo_iterator::operator=(addrinfo_iterator &&rhs)  noexcept {
 	// First, destroy my current self
 	if (cxt_) cxt_->release();
 

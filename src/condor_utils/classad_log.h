@@ -249,8 +249,8 @@ public:
 	LogHistoricalSequenceNumber(unsigned long historical_sequence_number, time_t timestamp);
 	int Play(void *data_structure);
 
-	unsigned long get_historical_sequence_number() {return historical_sequence_number;}
-	time_t get_timestamp() {return timestamp;}
+	unsigned long get_historical_sequence_number() const {return historical_sequence_number;}
+	time_t get_timestamp() const {return timestamp;}
 
 private:
 	virtual int WriteBody(FILE *fp);

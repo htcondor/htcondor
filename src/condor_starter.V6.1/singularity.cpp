@@ -9,6 +9,7 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
+#include "stat_wrapper.h"
 
 using namespace htcondor;
 
@@ -216,6 +217,18 @@ Singularity::setup(ClassAd &machineAd,
 		binds.rewind();
 		char *next_bind;
 		while ( (next_bind=binds.next()) ) {
+			std::string bind_src_dir(next_bind);
+			// BIND exprs can be src:dst:ro 
+			size_t colon = bind_src_dir.find(':');
+			if (colon != std::string::npos) {
+				bind_src_dir = bind_src_dir.substr(0, colon);
+			}
+			StatWrapper sw(bind_src_dir.c_str());
+			sw.Stat();
+			if (! sw.IsBufValid()) {
+				dprintf(D_ALWAYS, "Skipping invalid singularity bind directory %s\n", next_bind);
+				continue;
+			} 
 			sing_args.AppendArg("-B");
 			sing_args.AppendArg(next_bind);
 		}
@@ -224,6 +237,8 @@ Singularity::setup(ClassAd &machineAd,
 	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
 		sing_args.AppendArg("--no-home");
 	}
+
+	sing_args.AppendArg("-C");
 
 	MyString args_error;
 	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
@@ -243,7 +258,6 @@ Singularity::setup(ClassAd &machineAd,
 		sing_args.AppendArg("--nv");
 	}
 
-	sing_args.AppendArg("-C");
 	sing_args.AppendArg(image.c_str());
 
 	sing_args.AppendArg(exec.c_str());
@@ -268,7 +282,7 @@ envToList(void *list, const MyString &Name, const MyString & /*value*/) {
 
 bool
 Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
-	
+
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
 
@@ -295,7 +309,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	}
 	return true;
 }
-bool 
+bool
 Singularity::convertEnv(Env *job_env) {
 	std::list<std::string> envNames;
 	job_env->Walk(envToList, (void *)&envNames);

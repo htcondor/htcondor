@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2020, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -32,6 +32,7 @@
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "globus_utils.h"
+#include "limit_directory_access.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -920,20 +921,20 @@ RemoteResource::closeClaimSock( void )
 
 
 int
-RemoteResource::getExitReason()
+RemoteResource::getExitReason() const
 {
 	return exit_reason;
 }
 
 bool
-RemoteResource::claimIsClosing()
+RemoteResource::claimIsClosing() const
 {
 	return claim_is_closing;
 }
 
 
 int64_t
-RemoteResource::exitSignal( void )
+RemoteResource::exitSignal( void ) const
 {
 	if( exited_by_signal ) {
 		return exit_value;
@@ -943,7 +944,7 @@ RemoteResource::exitSignal( void )
 
 
 int64_t
-RemoteResource::exitCode( void )
+RemoteResource::exitCode( void ) const
 {
 	if( ! exited_by_signal ) {
 		return exit_value;
@@ -1237,7 +1238,7 @@ RemoteResource::setExitReason( int reason )
 
 
 float
-RemoteResource::bytesSent()
+RemoteResource::bytesSent() const
 {
 	float bytes = 0.0;
 
@@ -1257,7 +1258,7 @@ RemoteResource::bytesSent()
 
 
 float
-RemoteResource::bytesReceived()
+RemoteResource::bytesReceived() const
 {
 	float bytes = 0.0;
 
@@ -1580,6 +1581,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			shadow->watchJobAttr(it->first);
 		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
 			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
+			&& it->first != ATTR_DISK_USAGE    // ditto
+			// the ATTR_JOB_*_CPU attributes don't end in "Usage"
 			&& offset == it->first.length() - 5 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -2313,7 +2316,7 @@ RemoteResource::locateReconnectStarter( void )
 }
 
 void
-RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
+RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const
 {
 	upload_status = m_upload_xfer_status;
 	download_status = m_download_xfer_status;
@@ -2794,7 +2797,7 @@ RemoteResource::getSecSessionInfo(
 bool
 RemoteResource::allowRemoteReadFileAccess( char const * filename )
 {
-	bool response = m_want_chirp || m_want_streaming_io;
+	bool response = (m_want_chirp || m_want_streaming_io) && allow_shadow_access(filename);
 	logRemoteAccessCheck(response,"read access to file",filename);
 	return response;
 }
@@ -2802,7 +2805,7 @@ RemoteResource::allowRemoteReadFileAccess( char const * filename )
 bool
 RemoteResource::allowRemoteWriteFileAccess( char const * filename )
 {
-	bool response = m_want_chirp || m_want_streaming_io;
+	bool response = (m_want_chirp || m_want_streaming_io) && allow_shadow_access(filename);
 	logRemoteAccessCheck(response,"write access to file",filename);
 	return response;
 }

@@ -42,6 +42,7 @@
 #define SUBMIT_KEY_Cluster "Cluster"
 #define SUBMIT_KEY_Process "Process"
 #define SUBMIT_KEY_BatchName "batch_name"
+#define SUBMIT_KEY_BatchId "batch_id"
 #define SUBMIT_KEY_Hold "hold"
 #define SUBMIT_KEY_Priority "priority"
 #define SUBMIT_KEY_Prio "prio"
@@ -149,6 +150,12 @@
 #define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+
+#define SUBMIT_KEY_ManifestDesired "manifest"
+#define SUBMIT_KEY_ManifestDir "manifest_dir"
+
+#define SUBMIT_KEY_UseOAuthServices "use_oauth_services"
+#define SUBMIT_KEY_UseOAuthServicesAlt "UseOAuthServices"
 
 #ifdef HAVE_HTTP_PUBLIC_FILES
     #define SUBMIT_KEY_PublicInputFiles "public_input_files"
@@ -363,19 +370,19 @@ public:
 	// x,y & z are integers, y and z are optional
 	char *set(char* str);
 	void clear() { flags = start = end = step = 0; }
-	bool  initialized() { return flags & 1; }
+	bool  initialized() const { return flags & 1; }
 
 	// convert ix based on slice start & step, returns true if translated ix is within slice start and length.
 	// input ix is assumed to be 0 based and increasing.
-	bool translate(int & ix, int len);
+	bool translate(int & ix, int len) const;
 
 	// check to see if ix is selected for by the slice. negative iteration is ignored 
-	bool selected(int ix, int len);
+	bool selected(int ix, int len) const;
 
 	// returns number of selected items for a list of the given length, result is never negative
-	int length_for(int len);
+	int length_for(int len) const;
 
-	int to_string(char * buf, int cch);
+	int to_string(char * buf, int cch) const;
 
 private:
 	int flags; // 1==initialized, 2==start set, 4==length set, 8==step set
@@ -427,7 +434,7 @@ public:
 	}
 
 	int  parse_queue_args(char* pqargs); // destructively parse queue line.
-	int  item_len();           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
+	int  item_len() const;           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
 	                           // the return does not take queue_num into account.
 
 	// destructively split the item, inserting \0 to terminate and trim
@@ -476,15 +483,15 @@ public:
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 
-	char * submit_param( const char* name, const char* alt_name );
-	char * submit_param( const char* name ); // call param with NULL as the alt
-	bool submit_param_exists(const char* name, const char * alt_name, std::string & value);
-	bool submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false);
-	int submit_param_int(const char* name, const char * alt_name, int def_value);
-	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL);
-	MyString submit_param_mystring( const char * name, const char * alt_name );
-	char * expand_macro(const char* value) { return ::expand_macro(value, SubmitMacroSet, mctx); }
-	const char * lookup(const char* name) { return lookup_macro(name, SubmitMacroSet, mctx); }
+	char * submit_param( const char* name, const char* alt_name ) const;
+	char * submit_param( const char* name ) const; // call param with NULL as the alt
+	bool submit_param_exists(const char* name, const char * alt_name, std::string & value) const;
+	bool submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false) const;
+	int submit_param_int(const char* name, const char * alt_name, int def_value) const;
+	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL) const;
+	MyString submit_param_mystring( const char * name, const char * alt_name ) const;
+	char * expand_macro(const char* value) const { return ::expand_macro(value, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
+	const char * lookup(const char* name) const { return lookup_macro(name, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
 
 	void set_submit_param( const char* name, const char* value);
 	void set_submit_param_used( const char* name);
@@ -629,13 +636,19 @@ public:
 	void setup_macro_defaults(); // setup live defaults table
 	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
 
+	// check to see if the job needs OAuth services, returns TRUE if it does
+	// the list of service handles is returned as a comma separated list  
+	// in the formed needed to set the value of the OAuthServicesNeeded job attribute
+	// if a request_ads collection is provided, it will be populated with OAuth service ads
+	// and ads_error be set to describe any required but missing attributes in the request_ads
+	bool NeedsOAuthServices(std::string & services, ClassAdList * request_ads=NULL, std::string * ads_error=NULL) const;
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
-	int getUniverse()  { return JobUniverse; }
-	int getClusterId() { return jid.cluster; }
-	int getProcId()    { return jid.proc; }
-	time_t getSubmitTime() { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
-	bool getSubmitOnHold(int & code) { code = SubmitOnHoldCode; return SubmitOnHold; }
+	int getUniverse() const  { return JobUniverse; }
+	int getClusterId() const { return jid.cluster; }
+	int getProcId() const    { return jid.proc; }
+	time_t getSubmitTime() const { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
+	bool getSubmitOnHold(int & code) const { code = SubmitOnHoldCode; return SubmitOnHold; }
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
@@ -652,9 +665,10 @@ protected:
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
 
-	int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
-	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
-	const char * abort_raw_macro_val;
+	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
+	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
+	mutable const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
+	mutable const char * abort_raw_macro_val;
 
 	// keep track of whether we have turned the baseJob into a cluster ad yet, and what cluster it is
 	int base_job_is_cluster_ad;
@@ -756,12 +770,16 @@ protected:
 	int SetRequestResources(); /* n attrs, prunable by pattern */
 	int SetConcurrencyLimits();  /* 2 attrs, prunable */
 	int SetAccountingGroup();  /* 3 attrs, prunable */
+	int SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	int SetSimpleJobExprs(); /* run always */
 	int SetAutoAttributes(); /* run always */
 	int ReportCommonMistakes(); /* run always */
 
 	int SetJobDeferral();  /* run always */
+
+	// For now, just handles port-forwarding.
+	int SetContainerSpecial();
 
 	// a LOT of the above functions must happen before SetTransferFiles, which in turn must be before SetRequirements
 	int SetTransferFiles();
@@ -780,9 +798,6 @@ protected:
 	// otherwise it is the name of the attribute that tells us we need job deferral
 	const char * NeedsJobDeferral();
 
-    // For now, just handles port-forwarding.
-    int SetContainerSpecial();
-
 	int CheckStdFile(
 		_submit_file_role role,
 		const char * value, // in: filename to use, may be NULL
@@ -792,11 +807,12 @@ protected:
 		bool & stream_it);  // in,out: whether we expect to stream it or not
 
 	// private helper functions
+	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
 	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
-	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
-	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
+	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
+	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 private:
 
 	int64_t calc_image_size_kb( const char *name);
@@ -834,9 +850,9 @@ struct SubmitStepFromQArgs {
 		unset_live_vars();
 	}
 
-	bool has_items() { return m_fea.items.number() > 0; }
-	bool done() { return m_done; }
-	int  step_size() { return m_step_size; }
+	bool has_items() const { return m_fea.items.number() > 0; }
+	bool done() const { return m_done; }
+	int  step_size() const { return m_step_size; }
 
 	// setup for iteration from the args of a QUEUE statement and (possibly) inline itemdata
 	int begin(const JOB_ID_KEY & id, const char * qargs)

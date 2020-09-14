@@ -54,6 +54,7 @@ ResMgr::ResMgr() :
 	resume_on_completion_of_draining = false;
 	draining_id = 0;
 	last_drain_start_time = 0;
+	last_drain_stop_time = 0;
 	expected_graceful_draining_completion = 0;
 	expected_quick_draining_completion = 0;
 	expected_graceful_draining_badput = 0;
@@ -121,6 +122,7 @@ void ResMgr::Stats::Init()
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkEvalState, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkUpdate, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkOther, IF_VERBOSEPUB);
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", Drain, IF_VERBOSEPUB);
 }
 
 double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
@@ -521,7 +523,7 @@ ResMgr::init_resources( void )
 
 
 bool
-ResMgr::typeNumCmp( int* a, int* b )
+ResMgr::typeNumCmp( const int* a, const int* b ) const
 {
 	int i;
 	for( i=0; i<max_types; i++ ) {
@@ -1215,7 +1217,7 @@ ResMgr::eval_all( void )
 
 
 void
-ResMgr::report_updates( void )
+ResMgr::report_updates( void ) const
 {
 	if( !num_updates ) {
 		return;
@@ -1594,12 +1596,12 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void )
+ResMgr::sweep_timer_handler( void ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
 	credmon_sweep_creds(cred_dir, credmon_type_KRB);
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	daemonCore->Reset_Timer (m_cred_sweep_tid, sec_cred_sweep_interval, sec_cred_sweep_interval);
 }
 
@@ -1613,7 +1615,7 @@ ResMgr::start_sweep_timer( void )
 	}
 
 	dprintf(D_FULLDEBUG, "STARTD: setting start_sweep_timer()\n");
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	m_cred_sweep_tid = daemonCore->Register_Timer( sec_cred_sweep_interval, sec_cred_sweep_interval,
 							(TimerHandlercpp)&ResMgr::sweep_timer_handler,
 							"sweep_timer_handler", this );
@@ -1702,7 +1704,7 @@ ResMgr::reset_timers( void )
 								 update_interval );
 	}
 
-	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 30);
+	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
 	if( m_cred_sweep_tid != -1 ) {
 		daemonCore->Reset_Timer( m_cred_sweep_tid, sec_cred_sweep_interval,
 								 sec_cred_sweep_interval );
@@ -2606,6 +2608,7 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		ad.InsertAttr( ATTR_DRAINING, true );
 		ad.InsertAttr( ATTR_DRAINING_REQUEST_ID, new_request_id );
 		ad.InsertAttr( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
+		ad.InsertAttr( ATTR_LAST_DRAIN_STOP_TIME, last_drain_stop_time );
 	}
 
 	if( how_fast <= DRAIN_GRACEFUL ) {
@@ -2667,6 +2670,11 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 	}
 
 	draining = false;
+	// If we want to record when a non-resuming drain actually finished, we
+	// should only call this here if we've started draining since the last
+	// time we stopped.
+	// if( last_drain_start_time > last_drain_stop_time ) { setLastDrainStopTime(); }
+	setLastDrainStopTime();
 
 	walk(&Resource::enable);
 	update_all();
@@ -2674,7 +2682,7 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 }
 
 bool
-ResMgr::isSlotDraining(Resource * /*rip*/)
+ResMgr::isSlotDraining(Resource * /*rip*/) const
 {
 	return draining;
 }
@@ -2784,6 +2792,9 @@ ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 	}
 	if( last_drain_start_time != 0 ) {
 		cap->Assign( ATTR_LAST_DRAIN_START_TIME, (int)last_drain_start_time );
+	}
+	if( last_drain_stop_time != 0 ) {
+	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, (int)last_drain_stop_time );
 	}
 }
 

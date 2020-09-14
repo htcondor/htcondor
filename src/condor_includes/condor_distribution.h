@@ -33,7 +33,7 @@ class Distribution
 	const char *Get(void) { return distribution; };
 	const char *GetUc() { return distribution_uc; };
 	const char *GetCap() { return distribution_cap; };
-	int GetLen() { return distribution_length; };
+	int GetLen() const { return distribution_length; };
 
 	Distribution( );
 	~Distribution( );

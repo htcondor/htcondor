@@ -161,7 +161,7 @@ BaseJob::~BaseJob()
 	}
 }
 
-void BaseJob::SetEvaluateState()
+void BaseJob::SetEvaluateState() const
 {
 	daemonCore->Reset_Timer( evaluateStateTid, 0 );
 }
@@ -913,7 +913,7 @@ void BaseJob::CheckRemoteStatus()
   any stale time values.  Currently, this is just RemoteWallClock.
 */
 void
-BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
+BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty ) const
 {
   float previous_run_time = 0, total_run_time = 0;
   int shadow_bday = 0;
@@ -938,7 +938,7 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
   called to restore time values to their original state.
 */
 void
-BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
+BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty ) const
 {
 	jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
 	if ( old_run_time_dirty ) {

@@ -36,15 +36,15 @@ $appendcontent = '
 ';
 
 TLOG("Initialize\n");
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-$result = SimpleJob::RunCheck();
+#$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy");
+#
+#CondorTest::StartCondorWithParams(
+#    condor_name => "ConfigPolicy",
+#    fresh_local => "TRUE",
+#    condorlocalsrc => "$configfile",
+#);
+#
+#$result = SimpleJob::RunCheck();
 
 my $on_success = sub {
 	print "Success in RunCheck\n";
@@ -72,6 +72,9 @@ $result = SimpleJob::RunCheck(
 
 RegisterResult(1, $testname, "ALWAYS_RUN_JOBS");
 
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
+
 print "---------------------------------------------------------------------------------------------------------\n";
 TLOG("Checking Policy2, DESKTOP\n");
 
@@ -90,6 +93,9 @@ $result = CondorTest::SearchCondorLog("STARTD", 'Daemon Log is logging');
 print "result is $result\n";
 
 RegisterResult($result, $testname, "DESKTOP");
+
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
 
 print "---------------------------------------------------------------------------------------------------------\n";
 TLOG("Checking Policy3, HOLD_IF_CPUS_EXCEEDED\n");
@@ -112,6 +118,9 @@ $result = SimpleJob::RunCheck(
 
 RegisterResult(1, $testname, "HOLD_IF_CPUS_EXCEEDED");
 
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
+
 print "---------------------------------------------------------------------------------------------------------\n";
 TLOG("Checking Policy4, HOLD_IF_MEMORY_EXCEEDED\n");
 
@@ -132,6 +141,9 @@ $result = SimpleJob::RunCheck(
 );
 
 RegisterResult(1, $testname, "HOLD_IF_MEMORY_EXCEEDED");
+
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
 
 print "---------------------------------------------------------------------------------------------------------\n";
 TLOG("Checking Policy5, LIMIT_JOB_RUNTIMES\n");
@@ -154,6 +166,9 @@ $result = SimpleJob::RunCheck(
 
 RegisterResult(1, $testname, "LIMIT_JOB_RUNTIMES");
 
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
+
 print "---------------------------------------------------------------------------------------------------------\n";
 TLOG("Checking Policy6, PREEMPT_IF_CPUS_EXCEEDED\n");
 
@@ -174,6 +189,9 @@ $result = SimpleJob::RunCheck(
 );
 
 RegisterResult(1, $testname, "PREEMPT_IF_CPUS_EXCEEDED");
+
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
 
 print "---------------------------------------------------------------------------------------------------------\n";
 TLOG("Checking Policy7, PREEMPT_IF_MEMORY_EXCEEDED\n");
@@ -196,6 +214,9 @@ $result = SimpleJob::RunCheck(
 
 RegisterResult(1, $testname, "PREEMPT_IF_MEMORY_EXCEEDED");
 
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
+
 print "---------------------------------------------------------------------------------------------------------\n";
 TLOG("Checking Policy8, UWCS_DESKTOP\n");
 
@@ -213,6 +234,9 @@ CondorTest::StartCondorWithParams(
 $result = CondorTest::SearchCondorLog("STARTD", "Daemon Log is logging");
 
 RegisterResult($result, $testname, "UWCS_DESKTOP");
+
+# get the shutdown of this pool started
+runCondorTool("condor_off -master");
 
 CondorTest::EndTest();
 exit(0);

@@ -236,7 +236,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => $targetjobcount,
 	GetClusterId => $GetClusterId,
-	duration => 0,
+	duration => 3600,
 );
 
 TLOG "******************** Test to do more within a negotiation cycle is $result\n";

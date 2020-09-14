@@ -91,7 +91,7 @@ format_readable_kb(const classad::Value &val, Formatter &)
 	return metric_units(kb);
 }
 
-int PrettyPrinter::getDisplayWidth(bool * is_piped) {
+int PrettyPrinter::getDisplayWidth(bool * is_piped) const {
 	if (is_piped) *is_piped = false;
 	if (forced_display_width <= 0) {
 		int width = getConsoleWindowSize();
@@ -241,7 +241,7 @@ struct _adjust_widths_info {
 	int & ixCol_Machine;
 };
 
-int PrettyPrinter::ppAdjustNameWidth( void * pv, Formatter * fmt )
+int PrettyPrinter::ppAdjustNameWidth( void * pv, Formatter * fmt ) const
 {
 	struct _adjust_widths_info * pi = (struct _adjust_widths_info *)pv;
 	if (fmt->options & FormatOptionSpecial001) {

@@ -2400,7 +2400,7 @@ CStarter::SpawnPreScript( void )
 	}
 }
 
-void CStarter::getJobOwnerFQUOrDummy(std::string &result)
+void CStarter::getJobOwnerFQUOrDummy(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -2411,7 +2411,7 @@ void CStarter::getJobOwnerFQUOrDummy(std::string &result)
 	}
 }
 
-bool CStarter::getJobClaimId(std::string &result)
+bool CStarter::getJobClaimId(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -3109,13 +3109,6 @@ CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 		found_one = true;
 	}
 	
-	// Update the state.
-	if (m_deferred_job_update)
-	{
-		MyString buf;
-		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
-	}
-	
 	UserProc *job;
 	proc_list->Rewind();
 	while ((job = proc_list->Next()) != NULL) {
@@ -3333,17 +3326,17 @@ CStarter::PublishToEnv( Env* proc_env )
 		// port regulation stuff.  assume the outgoing port range.
 	int low, high;
 	if (get_port_range (TRUE, &low, &high) == TRUE) {
-		MyString tmp_port_number;
+		std::string tmp_port_number;
 
-		tmp_port_number = IntToStr( high );
+		tmp_port_number = std::to_string( high );
 		env_name = base.Value();
 		env_name += "HIGHPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
 
-		tmp_port_number = IntToStr( low );
+		tmp_port_number = std::to_string( low );
 		env_name = base.Value();
 		env_name += "LOWPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
     }
 
 		// set environment variables for temporary directories
@@ -3378,7 +3371,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		while ((var = cpu_vars_list.next())) {
 			proc_env->GetEnv(var, jobNumThreads);
 			if (jobNumThreads.Length() == 0) {
-				proc_env->SetEnv(var, IntToStr(cpus));
+				proc_env->SetEnv(var, std::to_string(cpus));
 			}
 		}
 	}
@@ -3688,7 +3681,7 @@ CStarter::closeSavedStderr( void )
 
 
 int
-CStarter::classadCommand( int, Stream* s )
+CStarter::classadCommand( int, Stream* s ) const
 {
 	ClassAd ad;
 	ReliSock* rsock = (ReliSock*)s;
@@ -3739,7 +3732,7 @@ CStarter::removeTempExecuteDir( void )
 	}
 
 	MyString dir_name = "dir_";
-	dir_name += IntToStr( daemonCore->getpid() );
+	dir_name += std::to_string( daemonCore->getpid() );
 
 #if defined(LINUX)
 	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&
@@ -3821,7 +3814,7 @@ CStarter::exitAfterGlexec( int code )
 #endif
 
 bool
-CStarter::WriteAdFiles()
+CStarter::WriteAdFiles() const
 {
 
 	ClassAd* ad;

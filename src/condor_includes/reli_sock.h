@@ -220,9 +220,9 @@ public:
 	//                         requested time if source proxy expires sooner
 	int put_x509_delegation( filesize_t *size, const char *source, time_t expiration_time, time_t *result_expiration_time );
     ///
-	float get_bytes_sent() { return _bytes_sent; }
+	float get_bytes_sent() const { return _bytes_sent; }
     ///
-	float get_bytes_recvd() { return _bytes_recvd; }
+	float get_bytes_recvd() const { return _bytes_recvd; }
     ///
 	void reset_bytes_sent() { _bytes_sent = 0; }
     ///
@@ -303,6 +303,7 @@ protected:
         virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId);
         virtual bool set_encryption_id(const char * keyId);
 	Condor_Crypt_Base *get_crypto() {return crypto_;}
+	Condor_Crypto_State *get_crypto_state() {return crypto_state_;}
 
 	/*
 	**	Types

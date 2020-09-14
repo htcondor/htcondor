@@ -58,7 +58,7 @@ class Worker {
 	~Worker();
 
 	bool removeRequest(int req_id);
-	int numOfRequest(void) { return m_request_list.Number(); }
+	int numOfRequest(void) const { return m_request_list.Number(); }
 
 	int m_id;
 

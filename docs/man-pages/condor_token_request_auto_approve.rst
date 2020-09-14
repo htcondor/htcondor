@@ -67,9 +67,9 @@ Examples
 To automatically approve token requests to the default *condor_collector* coming from the
 ``10.0.0.0/26`` subnet for the next 10 minutes:
 
-::
+.. code-block:: console
 
-    % condor_token_request_auto_approve -lifetime 600 -netblock 10.0.0.0/26
+    $ condor_token_request_auto_approve -lifetime 600 -netblock 10.0.0.0/26
     Successfully installed auto-approval rule for netblock 10.0.0.0/26 with lifetime of 0.17 hours
     Remote daemon reports no un-approved requests pending.
 

@@ -18,6 +18,8 @@
 #include "globus_utils.h"
 #include "classad/source.h"
 
+#include "htcondor.h"
+
 #include "old_boost.h"
 #include "module_lock.h"
 #include "classad_wrapper.h"
@@ -48,7 +50,7 @@ struct Claim
 
         if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, m_addr))
         {
-            THROW_EX(ValueError, "No contact string in ClassAd");
+            THROW_EX(HTCondorValueError, "No contact string in ClassAd");
         }
     }
 
@@ -64,7 +66,9 @@ struct Claim
             classad::ClassAdParser parser;
             std::string constraint_str = constraint_extract();
             classad::ExprTree *expr_tmp = NULL;
-            if (!parser.ParseExpression(constraint_str, expr_tmp)) {THROW_EX(ValueError, "Failed to parse request requirements expression");}
+            if (!parser.ParseExpression(constraint_str, expr_tmp)) {
+                THROW_EX(ClassAdParseError, "Failed to parse request requirements expression");
+            }
             constraint.reset(expr_tmp);
         }
         else
@@ -85,16 +89,20 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.requestClaim(CLAIM_COD, &ad, &reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Failed to request claim from startd.");}
+        if (!rval) {
+            THROW_EX(HTCondorIOError, "Failed to request claim from startd.");
+        }
 
-        if (!reply.EvaluateAttrString(ATTR_CLAIM_ID, m_claim)) {THROW_EX(RuntimeError, "Startd did not return a ClaimId.");}
+        if (!reply.EvaluateAttrString(ATTR_CLAIM_ID, m_claim)) {
+            THROW_EX(HTCondorIOError, "Startd did not return a ClaimId.");
+        }
     }
 
 
     void
     release(VacateType vacate_type)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -104,7 +112,9 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.releaseClaim(vacate_type, &reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to release claim.");}
+        if (!rval) {
+            THROW_EX(HTCondorIOError, "Startd failed to release claim.");
+        }
 
         m_claim = "";
     }
@@ -113,7 +123,7 @@ struct Claim
     void
     activate(boost::python::object ad_obj)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
         if (ad.find(ATTR_JOB_KEYWORD) == ad.end())
@@ -129,14 +139,16 @@ struct Claim
             condor::ModuleLock ml;
             irval = startd.activateClaim(&ad, &reply, 20);
         }
-        if (irval != OK) {THROW_EX(RuntimeError, "Startd failed to activate claim.");}
+        if (irval != OK) {
+            THROW_EX(HTCondorIOError, "Startd failed to activate claim.");
+        }
     }
 
 
     void
     deactivate(VacateType vacate_type)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -146,14 +158,16 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.deactivateClaim(vacate_type, &reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to deactivate claim.");}
+        if (!rval) {
+            THROW_EX(HTCondorIOError, "Startd failed to deactivate claim.");
+        }
     }
 
 
     void
     suspend()
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -163,14 +177,16 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.suspendClaim(&reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to suspend claim.");}
+        if (!rval) {
+            THROW_EX(HTCondorIOError, "Startd failed to suspend claim.");
+        }
     }
 
 
     void
     renew()
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -180,14 +196,16 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.renewLeaseForClaim(&reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Startd failed to renew claim.");}
+        if (!rval) {
+            THROW_EX(HTCondorIOError, "Startd failed to renew claim.");
+        }
     }
 
 
     void
     resume()
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         DCStartd startd(m_addr.c_str());
         startd.setClaimId(m_claim);
@@ -197,14 +215,16 @@ struct Claim
             condor::ModuleLock ml;
             rval = startd.resumeClaim(&reply, 20);
         }
-        if (!rval) {THROW_EX(RuntimeError, "Sartd failed to resume claim.");}
+        if (!rval) {
+            THROW_EX(HTCondorIOError, "Startd failed to resume claim.");
+        }
     }
 
 
     void
     delegateGSI(boost::python::object fname)
     {
-        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+        if (m_claim.empty()) {THROW_EX(HTCondorValueError, "No claim set for object.");}
 
         std::string proxy_file;
         if (fname.ptr() == Py_None)
@@ -224,7 +244,9 @@ struct Claim
             condor::ModuleLock ml;
             irval = startd.delegateX509Proxy(proxy_file.c_str(), 0, NULL);
         }
-        if (irval != OK) {THROW_EX(RuntimeError, "Startd failed to delegate GSI proxy.");}
+        if (irval != OK) {
+            THROW_EX(HTCondorIOError, "Startd failed to delegate GSI proxy.");
+        }
     }
 
 
@@ -246,7 +268,7 @@ export_claim()
 {
     boost::python::enum_<VacateType>("VacateTypes",
             R"C0ND0R(
-            Vacate policies that can be sent to a ``condor_startd``.
+            Vacate policies that can be sent to a *condor_startd*.
 
             The values of the enumeration are:
 
@@ -283,7 +305,7 @@ export_claim()
         .def(boost::python::init<>(boost::python::args("self")))
         .def("requestCOD", &Claim::requestCOD,
             R"C0ND0R(
-            Request a claim from the ``condor_startd`` represented by this object.
+            Request a claim from the *condor_startd* represented by this object.
 
             On success, the :class:`Claim` object will represent a valid claim on the
             remote startd; other methods, such as :meth:`activate` should now function.
@@ -302,7 +324,7 @@ export_claim()
             )
         .def("release", &Claim::release,
             R"C0ND0R(
-            Release the remote ``condor_startd`` from this claim; shut down any running job.
+            Release the remote *condor_startd* from this claim; shut down any running job.
 
             :param vacate_type: The type of vacate to perform for the
               running job.
@@ -319,7 +341,7 @@ export_claim()
             Activate a claim using a given job ad.
 
             :param ad: Description of the job to launch; this uses similar, *but not identical*
-                attribute names as ``condor_submit``.  See
+                attribute names as *condor_submit*.  See
                 the HTCondor manual for a description of the job language.
             )C0ND0R",
             boost::python::args("self", "ad"))
@@ -362,4 +384,3 @@ export_claim()
         .def("__str__", &Claim::toString)
         ;
 }
-

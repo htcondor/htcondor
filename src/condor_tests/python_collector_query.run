@@ -35,29 +35,29 @@ append_config = """#<<CONDOR_TESTREQ_CONFIG
 """
 #endtestreq
 
-from pytest.CondorCluster import CondorCluster
-from pytest.Utils import Utils
+from pytest_old.CondorCluster import CondorCluster
+from pytest_old.Utils import Utils
 
 testname = os.path.basename(__file__)[:-4]
 
 logfile = "{0}{1}.log".format(testname, os.getpid())
 cluster = CondorCluster( {
 	"executable": "x_sleep.pl",
-	"arguments": "0",
+	"arguments": "3600",
 	"notification": "never",
 	"log": logfile
 	} )
 
 Utils.TLog("submitting sleep forever jobs, userlog is " + logfile)
-cluster.Submit( 20 )
+cluster.Submit()
 
-Utils.TLog("wait up to 2 min for a job to start")
+Utils.TLog("wait up to 2 min for the job to start")
 if not cluster.WaitUntilExecute( 2 * 60 ):
 	Utils.TLog("Timed out waiting for a job to start")
 	exit(1)
 
 retval = 0
-Utils.TLog("A job is running, now we can do status queries")
+Utils.TLog("The job is running, now we can do status queries")
 
 collector = htcondor.Collector()
 
@@ -100,8 +100,8 @@ if (counts['Submitter'] != 1) :
 if (counts['Accounting'] != 2) :
 	Utils.Log("FAILURE: expected 2 Accounting ads, got %d" % counts['Accounting'])
 	failchecks += 1
-if (counts['Machine'] != 4) :
-	Utils.Log("FAILURE: expected 4 Machine ads, got %d" % counts['Machine'])
+if not (counts['Machine'] == 4 or counts['Machine'] == 5) :
+	Utils.Log("FAILURE: expected 4 or 5 Machine ads, got %d" % counts['Machine'])
 	failchecks += 1
 
 Utils.TLog("Fetching Master ad:")
@@ -167,8 +167,8 @@ elif (len(accountingAds[1]) != 5) :
 Utils.TLog("Fetching Machine ads:")
 machineAds = collector.query(htcondor.AdTypes.Startd, True, ["MyType", "Name","MyAddress","PartitionableSlot","DynamicSlot","SlotID","Cpus","Memory","GPUs","AssignedGPUs","State","Activity"])
 for ad in machineAds : print(ad)
-if (len(machineAds) != 4) :
-	Utils.Log("FAILURE: expected 4 Machine ads, got %d" % len(machineAds))
+if not (len(machineAds) == 4 or len(machineAds) == 5) :
+	Utils.Log("FAILURE: expected 4 or 5 Machine ads, got %d" % len(machineAds))
 	failchecks += 1
 elif (len(machineAds[1]) < 9 or len(machineAds[1]) > 11) :
 	Utils.Log("FAILURE: expected 9 to 11 Machine ad attributes, got %d" % len(machineAds[1]))

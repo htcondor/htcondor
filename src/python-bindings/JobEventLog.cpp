@@ -28,13 +28,14 @@
 #include "wait_for_user_log.h"
 #include "classad_wrapper.h"
 #include "JobEventLog.h"
+#include "htcondor.h"
 
 #include <time.h>
 
 JobEventLog::JobEventLog( const std::string & filename ) :
   deadline( 0 ), wful( filename ) {
 	if(! wful.isInitialized()) {
-		THROW_EX( IOError, "JobEventLog not initialized.  Check the debug log, looking for ReadUserLog or FileModifiedTrigger.  (Or call htcondor.enable_debug() and try again.)" );
+		THROW_EX( HTCondorIOError, "JobEventLog not initialized.  Check the debug log, looking for ReadUserLog or FileModifiedTrigger.  (Or call htcondor.enable_debug() and try again.)" );
 	}
 }
 
@@ -50,7 +51,7 @@ JobEventLog::events( boost::python::object & self, boost::python::object & deadl
 		if( deadlineExtractor.check() ) {
 			jel->deadline = time(NULL) + deadlineExtractor();
 		} else {
-			THROW_EX( RuntimeError, "deadline must be an integer" );
+			THROW_EX( HTCondorTypeError, "deadline must be an integer" );
 		}
 	}
 	return self;
@@ -139,19 +140,19 @@ JobEventLog::next() {
 		break;
 
 		case ULOG_RD_ERROR:
-			THROW_EX( IOError, "ULOG_RD_ERROR" );
+			THROW_EX( HTCondorIOError, "ULOG_RD_ERROR" );
 		break;
 
 		case ULOG_MISSED_EVENT:
-			THROW_EX( RuntimeError, "ULOG_MISSED_EVENT" );
+			THROW_EX( HTCondorIOError, "ULOG_MISSED_EVENT" );
 		break;
 
 		case ULOG_UNK_ERROR:
-			THROW_EX( RuntimeError, "ULOG_UNK_ERROR" );
+			THROW_EX( HTCondorIOError, "ULOG_UNK_ERROR" );
 		break;
 
 		default:
-			THROW_EX( RuntimeError, "WaitForUserLog::readEvent() returned an unknown outcome." );
+			THROW_EX( HTCondorInternalError, "WaitForUserLog::readEvent() returned an unknown outcome." );
 		break;
 	}
 }
@@ -224,7 +225,7 @@ JobEvent::Py_Len() {
 	if( ad == NULL ) {
 		ad = event->toClassAd(false);
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -255,7 +256,7 @@ JobEvent::Py_Keys() {
 	if( ad == NULL ) {
 		ad = event->toClassAd(false);
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -273,7 +274,7 @@ JobEvent::Py_Values() {
 	if( ad == NULL ) {
 		ad = event->toClassAd(false);
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -290,7 +291,7 @@ JobEvent::Py_Values() {
 			l.append( convert_value_to_python( v ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	}
 
@@ -302,7 +303,7 @@ JobEvent::Py_Items() {
 	if( ad == NULL ) {
 		ad = event->toClassAd(false);
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -320,7 +321,7 @@ JobEvent::Py_Items() {
 			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	}
 
@@ -332,7 +333,7 @@ JobEvent::Py_Contains( const std::string & k ) {
 	if( ad == NULL ) {
 		ad = event->toClassAd(false);
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -352,7 +353,7 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 	if( ad == NULL ) {
 		ad = event->toClassAd(false);
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -368,7 +369,7 @@ JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	} else {
 		return d;
@@ -380,7 +381,7 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	if( ad == NULL ) {
 		ad = event->toClassAd(false);
 		if( ad == NULL ) {
-			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+			THROW_EX( HTCondorInternalError, "Failed to convert event to class ad" );
 		}
 	}
 
@@ -396,7 +397,7 @@ JobEvent::Py_GetItem( const std::string & k ) {
 			return convert_value_to_python( v );
 		} else {
 			// All the values in an event's ClassAd should be constants.
-			THROW_EX( TypeError, "Unable to evaluate expression" );
+			THROW_EX( HTCondorInternalError, "Unable to evaluate expression" );
 		}
 	} else {
 		THROW_EX( KeyError, k.c_str() );
@@ -432,18 +433,22 @@ void export_event_log() {
 	// Could use some DocTest blocks too, probably.
 	boost::python::class_<JobEventLog, boost::noncopyable>("JobEventLog",
             R"C0ND0R(
-            Reads job event (user) logs.
+            Reads user job event logs from ``filename``.
 
             By default, it waits for new events, but it may be used to
-            poll for them, as follows: ::
+            poll for them:
+
+            .. code-block:: python
 
                 import htcondor
+
                 jel = htcondor.JobEventLog("file.log")
+
                 # Read all currently-available events without blocking.
-                for event in jel.events(0):
+                for event in jel.events(stop_after=0):
                     print(event)
-                else:
-                    print("We found the the end of file")
+
+                print("We found the the end of file")
 
             A pickled :class:`JobEventLog` resumes iterating over events
             where it left off if and only if, after being unpickled, the
@@ -451,7 +456,7 @@ void export_event_log() {
             )C0ND0R",
         boost::python::init<const std::string &>(
 	        R"C0ND0R(
-	        :param str filename: A file containing a job event (user) log.
+	        :param str filename: A file containing a user job event log.
             )C0ND0R",
             boost::python::args("self", "filename")))
 		.def(NEXT_FN, &JobEventLog::next,
@@ -463,7 +468,8 @@ void export_event_log() {
             Return an iterator over :class:`JobEvent` objects from the filename given in the constructor.
 
             :param int stop_after: After how many seconds should the iterator
-                stop waiting for new events?  If ``None``, wait forever.
+                stop waiting for new events?
+                If ``None`` (the default), wait forever.
                 If ``0``, never wait.
             )C0ND0R",
             boost::python::args("self", "stop_after"))

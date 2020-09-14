@@ -130,7 +130,7 @@ findCheckpointSig( ClassAd* ad )
 }
 
 bool
-printExitString( ClassAd* ad, int exit_reason, MyString &str )
+printExitString( ClassAd* ad, int exit_reason, std::string &str )
 {
 		// first handle a bunch of cases that don't really need any
 		// info from the ClassAd at all.
@@ -165,7 +165,7 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 
 	default:
 		str += "has a strange exit reason code of ";
-		str += IntToStr( exit_reason );
+		str += std::to_string( exit_reason );
 		return true;
 		break;
 
@@ -226,12 +226,12 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 				str += reason_str;
 			} else {
 				str += "died on signal ";
-				str += IntToStr( exit_value );
+				str += std::to_string( exit_value );
 			}
 		}
 	} else {
 		str += "exited normally with status ";
-		str += IntToStr( exit_value );
+		str += std::to_string( exit_value );
 	}
 
 	if( ename ) {
@@ -302,7 +302,9 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 	job_ad->Assign( ATTR_JOB_PRIO, 0 );
+#ifdef NO_DEPRECATE_NICE_USER
 	job_ad->Assign( ATTR_NICE_USER, false );
+#endif
 
 	job_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
 

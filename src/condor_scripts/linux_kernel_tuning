@@ -26,11 +26,15 @@ LOGGER='/usr/bin/logger -t htcondor'
 # If necessary, you can change those values using the configuration variables
 # MAX_FILE_DESCRIPTORS and <SUBSYS>_MAX_FILE_DESCRIPTORS.
 #
+# This should match LimitNOFILE in the condor.service file for systemd
+#
 GLOBAL_MAX_FDS=32768
 
 #
 # Increase the maximum process ID.  By default, Linux process IDs wrap at
 # 32768, which isn't a lot of processes when you have one per running job.
+#
+# This should match the TasksMax in the condor.service file for systemd
 #
 GLOBAL_MAX_PROCESSES=4194303
 
