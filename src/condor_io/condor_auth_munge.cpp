@@ -286,7 +286,7 @@ Condor_Auth_MUNGE::decrypt(const unsigned char* input, int input_len, unsigned c
 }
 
 bool
-Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, const unsigned char* input, int input_len, unsigned char* &output, int &output_len)
+Condor_Auth_MUNGE::encrypt_or_decrypt(bool /*want_encrypt*/, const unsigned char* /*input*/, int /*input_len*/, unsigned char* &/*output*/, int &/*output_len*/)
 {
 
 	// what is going on here?  munge has 3DES hard-coded to do wrap/unwrap.
