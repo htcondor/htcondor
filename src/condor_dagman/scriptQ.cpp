@@ -79,9 +79,9 @@ ScriptQ::Run( Script *script )
 		// limit, instead of getting it from the Dag object.  wenger 2015-03-18
 	int maxScripts = 20; // TODO: Use better default value?
 	switch( script->_type ) {
-		case ScriptType::PRE: maxScripts = _dag->_maxPreScripts;
-		case ScriptType::POST: maxScripts = _dag->_maxPostScripts;
-		case ScriptType::HOLD: maxScripts = _dag->_maxHoldScripts;
+		case ScriptType::PRE: maxScripts = _dag->_maxPreScripts; break;
+		case ScriptType::POST: maxScripts = _dag->_maxPostScripts; break;
+		case ScriptType::HOLD: maxScripts = _dag->_maxHoldScripts; break;
 	}
 	if ( maxScripts != 0 && _numScriptsRunning >= maxScripts ) {
 			// max scripts already running
