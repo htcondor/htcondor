@@ -2940,6 +2940,15 @@ section.
     to replace it with one that will generate a better rank for the
     *condor_startd* daemon, or a user with a higher priority.
 
+:macro-def:`DEFAULT_DRAINING_START_EXPR`
+    An alternate ``START`` expression to use while draining when the
+    drain command is sent without a ``-start`` argument.  When this
+    confiuration parameter is not set and the drain command does not specify
+    a ``-start`` argument, ``START`` will have the value ``undefined``
+    and ``Requirements`` will be ``false`` while draining. This will prevent new
+    jobs from matching.  To allow evictable jobs to match while draining,
+    set this to an expression that matches only those jobs.
+
 :macro-def:`SUSPEND`
     A boolean expression that, when ``True``, causes HTCondor to suspend
     running an HTCondor job. The machine may still be claimed, but the

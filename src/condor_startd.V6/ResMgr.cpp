@@ -2633,7 +2633,16 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		// do the right thing if we drain without a START expression after
 		// draining with one.
 		delete globalDrainingStartExpr;
-		globalDrainingStartExpr = start_expr ? start_expr->Copy() : NULL;
+		if (start_expr) {
+			globalDrainingStartExpr = start_expr->Copy();
+		} else {
+			ConstraintHolder start(param("DEFAULT_DRAINING_START_EXPR"));
+			if (!start.empty() && !start.Expr()) {
+				dprintf(D_ALWAYS, "Warning: DEFAULT_DRAINING_START_EXPR is not valid : %s\n", start.c_str());
+			}
+			// if empty or invalid, detach() returns NULL, which is what we want here if the expr is invalid
+			globalDrainingStartExpr = start.detach();
+		}
 		walk(&Resource::releaseAllClaimsReversibly);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {
