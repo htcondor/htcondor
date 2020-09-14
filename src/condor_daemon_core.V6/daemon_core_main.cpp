@@ -3496,9 +3496,15 @@ int dc_main( int argc, char** argv )
 			}				  
 			break;
 		case 'd':		// Dynamic local directories
-			DynamicDirs = true;
-			dcargs++;
-			break;
+			if( strcmp( "-d", *ptr ) && strcmp( "-dynamic", *ptr ) ) {
+				done = true;
+				break;
+			}
+			else {
+				DynamicDirs = true;
+				dcargs++;
+				break;
+			}
 		case 'f':		// run in Foreground (default for all daemons other than condor_master)
 			Foreground = 1;
 			dcargs++;
@@ -4387,6 +4393,9 @@ bool dc_args_is_background(int argc, char** argv)
 			ptr++;
 			break;
 		case 'd':		// Dynamic local directories
+			if( strcmp( "-d", *ptr ) && strcmp( "-dynamic", *ptr ) ) {
+				done = true;
+			}
 			break;
 		case 't':		// log to Terminal (stderr), implies -f
 		case 'f':		// run in ForegroundFlag

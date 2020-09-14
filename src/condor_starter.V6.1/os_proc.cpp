@@ -388,7 +388,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 		JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir );
 		// Assumes we're in the root of the sandbox.
-		mkdir( manifest_dir.c_str(), 0700 );
+		int r = mkdir( manifest_dir.c_str(), 0700 );
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Cannot make manifest directory %s: %s\n", manifest_dir.c_str(), strerror(errno));
+		}
 		// jic->addToOutputFiles( manifest_dir.c_str() );
 		std::string f = manifest_dir + DIR_DELIM_CHAR + "environment";
 
