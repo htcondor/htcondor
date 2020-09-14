@@ -174,7 +174,7 @@ class ProvisionerClassad : public ScheddClassad {
 	~ProvisionerClassad();
 
 		// Returns the state of a provisioner, represented as a string
-	MyString GetProvisionerState();
+	int GetProvisionerState();
 
 		// Whether this object is valid.
 	bool _valid;

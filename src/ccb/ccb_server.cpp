@@ -24,10 +24,39 @@
 #include "condor_sinful.h"
 #include "util_lib_proto.h"
 #include "condor_open.h"
+#include "generic_stats.h"
 
 #ifdef CONDOR_HAVE_EPOLL
 #include <sys/epoll.h>
 #endif
+
+struct CCBStats {
+	stats_entry_abs<int> CCBEndpoints;
+	stats_entry_abs<int> CCBReconnectInfos;
+	stats_entry_recent<int> CCBReconnects;
+	stats_entry_recent<int> CCBRequests;
+	stats_entry_recent<int> CCBRequestsNotFound;
+	stats_entry_recent<int> CCBRequestsSuccess;
+	stats_entry_recent<int> CCBRequestsFailure;
+
+	void AddStatsToPool(StatisticsPool& pool, int publevel)
+	{
+		STATS_POOL_ADD(pool, "", CCBEndpoints, publevel);
+		STATS_POOL_ADD(pool, "", CCBReconnectInfos, publevel);
+		STATS_POOL_ADD(pool, "", CCBReconnects, publevel);
+		STATS_POOL_ADD(pool, "", CCBRequests, publevel);
+		STATS_POOL_ADD(pool, "", CCBRequestsNotFound, publevel);
+		STATS_POOL_ADD(pool, "", CCBRequestsSuccess, publevel);
+		STATS_POOL_ADD(pool, "", CCBRequestsFailure, publevel);
+	}
+};
+
+static CCBStats ccb_stats;
+
+void AddCCBStatsToPool(StatisticsPool& pool, int publevel)
+{
+	ccb_stats.AddStatsToPool(pool, publevel);
+}
 
 static size_t
 ccbid_hash(const CCBID &ccbid) {
@@ -576,6 +605,8 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 			"currently registered with that id "
 			"(perhaps it recently disconnected).", target_ccbid_str.c_str());
 		RequestReply( sock, false, error_msg.Value(), 0, target_ccbid );
+		ccb_stats.CCBRequests += 1;
+		ccb_stats.CCBRequestsNotFound += 1;
 		return FALSE;
 	}
 
@@ -667,6 +698,11 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 		// logs when we fail to write to it, delete the request now.
 		RemoveRequest( request );
 		request = NULL;
+		if (success) {
+			ccb_stats.CCBRequestsSuccess += 1;
+		} else {
+			ccb_stats.CCBRequestsFailure += 1;
+		}
 	}
 
 	char const *request_desc = "(client which has gone away)";
@@ -836,6 +872,11 @@ CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const 
 		request->getTargetCCBID() );
 
 	RemoveRequest( request );
+	if (success) {
+		ccb_stats.CCBRequestsSuccess += 1;
+	} else {
+		ccb_stats.CCBRequestsFailure += 1;
+	}
 }
 
 CCBServerRequest *
@@ -923,6 +964,9 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	ASSERT( m_targets.insert(target->getCCBID(),target) == 0 );
 	EpollAdd(target);
 
+	ccb_stats.CCBEndpoints += 1;
+	ccb_stats.CCBReconnects += 1;
+
 	dprintf(D_FULLDEBUG,"CCB: reconnected target daemon %s with ccbid %lu\n",
 			target->getSock()->peer_description(),
 			target->getCCBID());
@@ -970,6 +1014,8 @@ CCBServer::AddTarget( CCBTarget *target )
 	AddReconnectInfo( reconnect_info );
 	SaveReconnectInfo( reconnect_info );
 
+	ccb_stats.CCBEndpoints += 1;
+
 	dprintf(D_FULLDEBUG,"CCB: registered target daemon %s with ccbid %lu\n",
 			target->getSock()->peer_description(),
 			target->getCCBID());
@@ -985,6 +1031,7 @@ CCBServer::RemoveTarget( CCBTarget *target )
 		trequests->startIterations();
 		if( trequests->iterate(request) ) {
 			RemoveRequest( request );
+			ccb_stats.CCBRequestsFailure += 1;
 			// note that trequests may point to a deleted hash table
 			// at this point, so do not reference it anymore
 		}
@@ -998,6 +1045,8 @@ CCBServer::RemoveTarget( CCBTarget *target )
 			   target->getCCBID(), target->getSock()->peer_description());
 	}
 	EpollRemove(target);
+
+	ccb_stats.CCBEndpoints -= 1;
 
 	dprintf(D_FULLDEBUG,"CCB: unregistered target daemon %s with ccbid %lu\n",
 			target->getSock()->peer_description(),
@@ -1042,6 +1091,8 @@ CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
 	ASSERT( rc >= 0 );
 	rc = daemonCore->Register_DataPtr(request);
 	ASSERT( rc );
+
+	ccb_stats.CCBRequests += 1;
 }
 
 int
@@ -1049,6 +1100,7 @@ CCBServer::HandleRequestDisconnect( Stream * /*stream*/ )
 {
 	CCBServerRequest *request = (CCBServerRequest *)daemonCore->GetDataPtr();
 	RemoveRequest( request );
+	ccb_stats.CCBRequestsSuccess += 1;
 	return KEEP_STREAM;
 }
 
@@ -1210,9 +1262,11 @@ void
 CCBServer::AddReconnectInfo( CCBReconnectInfo *reconnect_info )
 {
 	if( m_reconnect_info.insert(reconnect_info->getCCBID(),reconnect_info) == 0 ) {
+		ccb_stats.CCBReconnectInfos += 1;
 		return;
 	}
 
+	dprintf(D_ALWAYS, "CCBServer::AddReconnectInfo(): Found stale reconnect entry!\n");
 	ASSERT( m_reconnect_info.remove(reconnect_info->getCCBID()) == 0 );
 	ASSERT( m_reconnect_info.insert(reconnect_info->getCCBID(),reconnect_info) == 0);
 }
@@ -1222,6 +1276,8 @@ CCBServer::RemoveReconnectInfo( CCBReconnectInfo *reconnect_info )
 {
 	ASSERT( m_reconnect_info.remove(reconnect_info->getCCBID()) == 0 );
 	delete reconnect_info;
+
+	ccb_stats.CCBReconnectInfos -= 1;
 }
 
 void

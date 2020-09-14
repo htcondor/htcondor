@@ -27,8 +27,22 @@ Release Notes:
 
 New Features:
 
+-  You may now instruct HTCondor to record certain information about the
+   files present in the top level of a job's sandbox and the job's environment
+   variables.  The list of files is recorded when transfer-in completes
+   and again when transfer-out starts.  Set ``manifest`` to true in your
+   submit file to enable, or ``manifest_dir`` to specify where the lists
+   are recorded.  See the :ref:`man-pages/condor_submit:*condor_submit*`
+   man page for details.
+   :ticket:`7381`
+
+   This features is not presently avaiable on Windows.
+
 - Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
   :ticket:`7726`
+
+- Added a family of version comparison functions to ClassAds.
+  :ticket:`7504`
 
 - Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
   feature is the :class:`htcondor.personal.PersonalPool` class, which is
@@ -38,7 +52,18 @@ New Features:
   Personal pools do not require administrator/root privileges.
   HTCondor itself must still be installed on your system.
 
+- Added the OAuth2 Credmon (aka "SciTokens Credmon") daemon
+  (*condor_credmon_oauth*), WSGI application, helper libraries, example
+  configuration, and documentation to HTCondor.
+  :ticket:`7741`
+
 Bugs Fixed:
+
+-  ``condor_annex -check-setup`` now respects the configuration setting
+   ``ANNEX_DEFAULT_AWS_REGION``.  In addition, ``condor_annex -setup`` now
+   sets ``ANNEX_DEFAULT_AWS_REGION`` if it hasn't already been set.  This
+   makes first-time setup in a nondefault region much less confusing.
+   :ticket:`7832`
 
 -  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
    would make every job go on hold.

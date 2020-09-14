@@ -127,9 +127,11 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 			// Make our fully qualified path canonical via realpath(), to get rid of
 			// dot-dots (e.g. /foo/../bar/xxx) and symlinks.
 			if (allow) {
-				rpath = realpath(path, NULL);
+				rpath = realpath(path, nullptr);
 				if (!rpath) {
-					rpath = realpath(condor_dirname(path), NULL);
+					char *d = condor_dirname(path);
+					rpath = realpath(d, nullptr);
+					free(d);
 					if (!rpath) {
 						allow = false;
 						dprintf(D_ALWAYS,

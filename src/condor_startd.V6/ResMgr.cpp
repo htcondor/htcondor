@@ -2632,7 +2632,17 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		// assign the NULL value here if that's what we got, so that we
 		// do the right thing if we drain without a START expression after
 		// draining with one.
-		globalDrainingStartExpr = start_expr ? start_expr->Copy() : NULL;
+		delete globalDrainingStartExpr;
+		if (start_expr) {
+			globalDrainingStartExpr = start_expr->Copy();
+		} else {
+			ConstraintHolder start(param("DEFAULT_DRAINING_START_EXPR"));
+			if (!start.empty() && !start.Expr()) {
+				dprintf(D_ALWAYS, "Warning: DEFAULT_DRAINING_START_EXPR is not valid : %s\n", start.c_str());
+			}
+			// if empty or invalid, detach() returns NULL, which is what we want here if the expr is invalid
+			globalDrainingStartExpr = start.detach();
+		}
 		walk(&Resource::releaseAllClaimsReversibly);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {
@@ -2900,6 +2910,7 @@ ResMgr::checkForDrainCompletion() {
 
 	dprintf( D_ALWAYS, "Initiating final draining (all original jobs complete).\n" );
 	// This (auto-reversibly) sets START to false when we release all claims.
+	delete globalDrainingStartExpr;
 	globalDrainingStartExpr = NULL;
 	// Invalidate all claim IDs.  This prevents the schedd from claiming
 	// resources that were negotiated before draining finished.

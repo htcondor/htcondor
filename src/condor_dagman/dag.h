@@ -488,7 +488,7 @@ class Dag {
 		    checking its job ad.
 			@return status of the provisioner
 		*/
-	MyString GetProvisionerJobAdState();
+	int GetProvisionerJobAdState();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed

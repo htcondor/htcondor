@@ -28,6 +28,7 @@
 #include "collector_stats.h"
 #include "condor_config.h"
 #include "classad/classadCache.h"
+#include "ccb_server.h"
 
 // The hash function to use
 static size_t hashFunction (const StatsHashKey &key)
@@ -454,6 +455,7 @@ void UpdatesStats::Init()
 	getClassAdEx_clearProfileStats();
 	getClassAdEx_addProfileStatsToPool(&Pool, prof_publevel);
 
+	AddCCBStatsToPool(Pool, IF_BASICPUB);
 }
 
 void UpdatesStats::Clear()

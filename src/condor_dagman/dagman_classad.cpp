@@ -420,10 +420,10 @@ ProvisionerClassad::~ProvisionerClassad()
 }
 
 //---------------------------------------------------------------------------
-MyString
+int
 ProvisionerClassad::GetProvisionerState()
 {
-	MyString state = "";
+	int state = -1;
 
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -438,8 +438,8 @@ ProvisionerClassad::GetProvisionerState()
 	}
 
 	GetAttribute( ATTR_PROVISIONER_STATE, state, false );
-	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%s>\n",
-				state.Value() );
+	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%d>\n",
+				state );
 
 	CloseConnection( queue );
 
