@@ -1167,12 +1167,15 @@ Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_
 		case ScriptType::PRE:
 			old_script_name = GetPreScriptName();
 			type_name = "PRE";
+			break;
 		case ScriptType::POST:
 			old_script_name = GetPostScriptName();
 			type_name = "POST";
+			break;
 		case ScriptType::HOLD:
 			old_script_name = GetHoldScriptName();
 			type_name = "HOLD";
+			break;
 	}
 	if( old_script_name ) {
 		debug_printf( DEBUG_NORMAL,
