@@ -414,7 +414,7 @@ New Features:
   when invoked with the ``-json`` flag. :ticket:`7454`
 
 - Request IDs used for *condor_token_request* are now zero-padded, ensuring
-  they are always a fixed-length. :ticket:`7461`
+  they are always a fixed length. :ticket:`7461`
 
 - All token generation and usage is now logged using HTCondor's audit log
   mechanism. :ticket:`7450`
@@ -824,7 +824,7 @@ New Features:
   job self-checkpoints.
   :ticket:`7189`
 
-- Added ``$(SUBMIT_TIME)``, ``$(YEAR), ``$(MONTH)``, and ``$(DAY)`` as
+- Added ``$(SUBMIT_TIME)``, ``$(YEAR)``, ``$(MONTH)``, and ``$(DAY)`` as
   built-in submit variables. These expand to the time of submission.
   :ticket:`7283`
 
@@ -1450,8 +1450,8 @@ New Features:
 
 -  In the Python bindings, the ``JobEventLog`` class now has a ``close``
    method. It is also now its own iterable context manager (implements
-   ``_enter__`` and ``_exit__``). The ``JobEvent`` class now
-   implements ``_str__`` and ``_repr__``. :ticket:`6814`
+   ``__enter__`` and ``__exit__``). The ``JobEvent`` class now
+   implements ``__str__`` and ``__repr__``. :ticket:`6814`
 
 -  the *condor_hdfs* daemon which allowed the hdfs daemons to run under
    the *condor_master* has been removed from the contributed source.
