@@ -478,7 +478,7 @@ class GahpClient : public GenericGahpClient {
 
 		int
 		condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
-								 const char *proxy_file);
+								 const char *proxy_file, time_t proxy_expiration);
 
 		int
 		condor_job_update_lease(const char *schedd_name,

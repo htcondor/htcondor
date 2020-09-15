@@ -548,8 +548,8 @@ verify_gahp_command(char ** argv, int argc) {
 
 		return TRUE;
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY) == 0) {
-		// Expecting:GAHP_COMMAND_JOB_REFRESH_PROXY <req_id> <schedd_name> <job_id> <proxy file>
-		return verify_number_args (argc, 5) &&
+		// Expecting:GAHP_COMMAND_JOB_REFRESH_PROXY <req_id> <schedd_name> <job_id> <proxy file> [<expiration time>]
+		return (verify_number_args (argc, 5) || verify_number_args (argc, 6)) &&
 				verify_request_id (argv[1]) &&
 				verify_schedd_name (argv[2]) &&
 				verify_job_id (argv[3]);

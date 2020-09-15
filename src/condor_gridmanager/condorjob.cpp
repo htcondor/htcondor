@@ -760,9 +760,11 @@ void CondorJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_SUBMITTED;
 			} else {
+				time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 				rc = gahp->condor_job_refresh_proxy( remoteScheddName,
 													 remoteJobId,
-													 jobProxy->proxy_filename );
+													 jobProxy->proxy_filename,
+													 proxy_expiration );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -793,7 +795,7 @@ void CondorJob::doEvaluateState()
 					}
 				} else {
 					lastProxyExpireTime = jobProxy->expiration_time;
-					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+					delegatedProxyExpireTime = proxy_expiration;
 					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
 					time_t actual_expiration = delegatedProxyExpireTime;
 					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
