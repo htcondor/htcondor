@@ -355,9 +355,12 @@ JobstateLog::WriteScriptStarted( Job *node, ScriptType type )
 		return;
 	}
 
+	// Do not log any HOLD script events
+	if ( type == ScriptType::HOLD ) return;
+
 	ASSERT( node );
 
-	const char *eventName;
+	const char *eventName = NULL;
 	if ( type == ScriptType::POST ) {
 		eventName = POST_SCRIPT_STARTED_NAME;
 	} else if ( type == ScriptType::PRE ) {
@@ -382,9 +385,12 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
 		return;
 	}
 
+	// Do not log any HOLD script events
+	if ( type == ScriptType::HOLD ) return;
+
 	ASSERT( node );
 
-	const char *eventName;
+	const char *eventName = NULL;
 	if ( type == ScriptType::POST ) {
 		eventName = (node->retval == 0) ? POST_SCRIPT_SUCCESS_NAME :
 					POST_SCRIPT_FAILURE_NAME;
