@@ -158,6 +158,7 @@ protected:
 		proc_id = -1;
 		reason = NULL;
 		proxy_file = NULL;
+		proxy_expiration = 0;
 		request_id = -1;
 		expirations = NULL;
 		num_jobs =0;
