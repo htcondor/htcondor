@@ -20,11 +20,6 @@ from ornithology import (
 )
 
 
-#
-# FIXME: obviously, these could be parameterized.
-#
-
-
 @action
 def test_script_contents():
     return format_script(
@@ -62,108 +57,66 @@ def test_job_hash(test_dir, path_to_python, test_script):
     }
 
 
+TEST_PARAMETERS = {
+    "no_manifest": {
+        "iwd": "completed_no_manifest_job",
+        "job_attrs": {},
+        "manifest_dir_name": None,
+    },
+    "manifest": {
+        "iwd": "completed_manifest_job",
+        "job_attrs": {"manifest": "True",},
+        "manifest_dir_name": "{}_0_manifest",
+    },
+    "manifest_dir": {
+        "iwd": "completed_manifest_dir",
+        "job_attrs": {"manifest_dir": "custom-dir-name",},
+        "manifest_dir_name": "custom-dir-name",
+    },
+}
+
+
+@action(params=TEST_PARAMETERS)
+def test_parameters(request):
+    return request.param
+
+
 @action
-def no_manifest_job_iwd(test_dir):
-    iwd = test_dir / "completed_no_manifest_job"
+def test_job_iwd(test_dir, test_parameters):
+    iwd = test_dir / test_parameters["iwd"]
     iwd.mkdir()
     return iwd
 
 
 @action
-def completed_no_manifest_job(no_manifest_job_iwd, default_condor, test_job_hash):
-    cnmj = default_condor.submit({
-        ** test_job_hash,
-        "iwd": no_manifest_job_iwd,
-        },
-        count=1
+def completed_test_job(test_job_iwd, default_condor, test_job_hash, test_parameters):
+    ctj = default_condor.submit(
+        {**test_job_hash, **test_parameters["job_attrs"], "iwd": test_job_iwd,}, count=1
     )
-    assert cnmj.wait(
+    assert ctj.wait(
         condition=ClusterState.all_terminal,
         timeout=60,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
-    return cnmj
-
-
-@action
-def manifest_job_iwd(test_dir):
-    iwd = test_dir / "completed_manifest_job"
-    iwd.mkdir()
-    return iwd
-
-
-@action
-def completed_manifest_job(manifest_job_iwd, default_condor, test_job_hash):
-    cmj = default_condor.submit({
-        ** test_job_hash,
-        "iwd": manifest_job_iwd,
-        "manifest": "True"
-        },
-        count=1
-    )
-    assert cmj.wait(
-        condition=ClusterState.all_terminal,
-        timeout=60,
-        verbose=True,
-        fail_condition=ClusterState.any_held,
-    )
-    return cmj
-
-
-@action
-def manifest_dir_job_iwd(test_dir):
-    iwd = test_dir / "completed_manifest_dir_job"
-    iwd.mkdir()
-    return iwd
-
-
-@action
-def completed_manifest_dir_job(manifest_dir_job_iwd, default_condor, test_job_hash):
-    cmdj = default_condor.submit({
-        ** test_job_hash,
-        "iwd": manifest_dir_job_iwd,
-        "manifest_dir": "custom-dir-name"
-        },
-        count=1
-    )
-    assert cmdj.wait(
-        condition=ClusterState.all_terminal,
-        timeout=60,
-        verbose=True,
-        fail_condition=ClusterState.any_held,
-    )
-    return cmdj
+    return ctj
 
 
 class TestManifest:
-    def test_no_manifest(self, completed_no_manifest_job, no_manifest_job_iwd):
-        manifest_dir_name = "{}_0_manifest".format(completed_no_manifest_job.clusterid)
-        manifest_dir = no_manifest_job_iwd / manifest_dir_name
-        assert manifest_dir not in no_manifest_job_iwd.iterdir()
+    def test_manifest_contents(self, completed_test_job, test_job_iwd, test_parameters):
+        # This is a little clumsy, but probably better than duplicating
+        # test_job_iwd and completed_test_job to avoid a conditional.
+        if test_parameters["manifest_dir_name"] is None:
+            manifest_dir_name = "{}_0_manifest".format(completed_test_job.clusterid)
+            manifest_dir = test_job_iwd / manifest_dir_name
+            assert manifest_dir not in test_job_iwd.iterdir()
+            return
 
-
-    # parameterize this and the following test
-    def test_manifest_contents(self, completed_manifest_job, manifest_job_iwd):
-        manifest_dir_name = "{}_0_manifest".format(completed_manifest_job.clusterid)
-        manifest_dir = manifest_job_iwd / manifest_dir_name
-        assert manifest_dir in manifest_job_iwd.iterdir()
-
-        file_names = [p.name for p in manifest_dir.iterdir()]
-        assert "out" in file_names
-        assert "in" in file_names
-        assert "environment" in file_names
-
-        with (manifest_dir / "in").open() as f:
-            assert "input_file\n" in f.readlines()
-        with (manifest_dir / "out").open() as f:
-            assert "new_output_file\n" in f.readlines()
-
-
-    def test_manifest_dir_specified(self, completed_manifest_dir_job, manifest_dir_job_iwd):
-        manifest_dir_name = "custom-dir-name"
-        manifest_dir = manifest_dir_job_iwd / manifest_dir_name
-        assert manifest_dir in manifest_dir_job_iwd.iterdir()
+        manifest_dir_name = test_parameters["manifest_dir_name"].format(
+            completed_test_job.clusterid
+        )
+        manifest_dir = test_job_iwd / manifest_dir_name
+        assert manifest_dir in test_job_iwd.iterdir()
 
         file_names = [p.name for p in manifest_dir.iterdir()]
         assert "out" in file_names
@@ -174,4 +127,3 @@ class TestManifest:
             assert "input_file\n" in f.readlines()
         with (manifest_dir / "out").open() as f:
             assert "new_output_file\n" in f.readlines()
-
