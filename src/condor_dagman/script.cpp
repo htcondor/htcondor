@@ -32,9 +32,9 @@
 extern DLL_IMPORT_MAGIC char **environ;
 
 //-----------------------------------------------------------------------------
-Script::Script( bool post, const char* cmd, int deferStatus, time_t deferTime,
+Script::Script( ScriptType type, const char* cmd, int deferStatus, time_t deferTime,
 			Job* node ) :
-    _post         (post),
+    _type         (type),
     _retValScript (-1),
     _retValJob    (-1),
 	_pid		  (0),
@@ -98,7 +98,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
             arg += std::to_string( _node->GetRetryMax() );
 
         } else if ( !strcasecmp( token, "$JOBID" ) ) {
-			if ( !_post ) {
+			if ( _type == ScriptType::PRE ) {
 				debug_printf( DEBUG_QUIET, "Warning: $JOBID macro should "
 							"not be used as a PRE script argument!\n" );
 				check_warning_strictness( DAG_STRICT_1 );
@@ -110,7 +110,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 			}
 
         } else if (!strcasecmp(token, "$RETURN")) {
-			if ( !_post ) {
+			if ( _type == ScriptType::PRE ) {
 				debug_printf( DEBUG_QUIET, "Warning: $RETURN macro should "
 							"not be used as a PRE script argument!\n" );
 				check_warning_strictness( DAG_STRICT_1 );
@@ -118,7 +118,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 			arg += std::to_string( _retValJob );
 
 		} else if (!strcasecmp( token, "$PRE_SCRIPT_RETURN" ) ) {
-			if ( !_post ) {
+			if ( _type == ScriptType::PRE ) {
 				debug_printf( DEBUG_QUIET, "Warning: $PRE_SCRIPT_RETURN macro should "
 						"not be used as a PRE script argument!\n" );
 				check_warning_strictness( DAG_STRICT_1 );
@@ -136,7 +136,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 			// implemented.
 			debug_printf( DEBUG_QUIET, "Warning: unrecognized macro %s "
 						"in node %s %s script arguments\n", token,
-						_node->GetJobName(), _post ? "POST" : "PRE" );
+						_node->GetJobName(), GetScriptName() );
 			check_warning_strictness( DAG_STRICT_1 );
 			arg += token;
         } else {

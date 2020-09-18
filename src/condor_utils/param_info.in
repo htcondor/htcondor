@@ -666,6 +666,13 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_MAX_HOLD_SCRIPTS]
+default=20
+type=int
+customization=normal
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_MAX_JOB_HOLDS]
 default=100
 type=int

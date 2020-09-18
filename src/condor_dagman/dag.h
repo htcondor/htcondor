@@ -130,7 +130,8 @@ class Dag {
 
     Dag( /* const */ StringList &dagFiles,
 		 const int maxJobsSubmitted,
-		 const int maxPreScripts, const int maxPostScripts, 
+		 const int maxPreScripts, const int maxPostScripts,
+		 const int maxHoldScripts,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const CondorID *DAGManJobId,
@@ -427,6 +428,12 @@ class Dag {
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
 
+	/** @return the number of nodes currently running a HOLD script.
+	 *          These nodes do not have any special status.
+	 */
+	inline int HoldRunNodeCount() const
+		{ return _holdRunNodeCount; }
+
 	/** @return the number of nodes currently in the status
 	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN (whether or not
 	 *			the script is actually running).
@@ -550,6 +557,7 @@ class Dag {
 
 	int PreScriptReaper( Job *job, int status );
 	int PostScriptReaper( Job *job, int status );
+	int HoldScriptReaper( Job *job );
 
 	void PrintReadyQ( debug_level_t level ) const;
 
@@ -574,6 +582,7 @@ class Dag {
 	// max number of PRE & POST scripts to run at once (0 means no limit)
     int _maxPreScripts;
     int _maxPostScripts;
+	int _maxHoldScripts;
 
 	char* GetDotFileName(void) { return _dot_file_name; }
 	void SetDotFileName(const char *dot_file_name);
@@ -675,11 +684,13 @@ class Dag {
 	int MaxIdleJobProcs(void) const { return _maxIdleJobProcs; }
 	int MaxPreScripts(void) const { return _maxPreScripts; }
 	int MaxPostScripts(void) const { return _maxPostScripts; }
+	int MaxHoldScripts(void) const { return _maxHoldScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
 	void SetMaxJobsSubmitted(int newMax);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
+	void SetMaxHoldScripts(int maxHoldScripts) { _maxHoldScripts = maxHoldScripts; };
 
 	bool RetrySubmitFirst(void) const { return m_retrySubmitFirst; }
 
@@ -903,6 +914,14 @@ class Dag {
     */
 	bool RunPostScript( Job *job, bool ignore_status, int status,
 				bool incrementRunCount = true );
+
+	/* A helper function to run the HOLD script, if one exists.
+           @param The job owning the POST script
+           @param Whether to increment the run count when we run the
+				script
+			@return true if successful, false otherwise
+    */
+	bool RunHoldScript( Job *job, bool incrementRunCount = true );
 
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -1137,12 +1156,17 @@ private:
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
+	ScriptQ* _holdScriptQ;
 
 		// Number of nodes currently in status Job::STATUS_PRERUN.
 	int		_preRunNodeCount;
 
 		// Number of nodes currently in status Job::STATUS_POSTRUN.
 	int		_postRunNodeCount;
+
+		// Number of nodes currently running HOLD scripts.
+		// We do not have a special status for these nodes.
+	int		_holdRunNodeCount;
 	
 	int DFS_ORDER;
 	int _graph_width;

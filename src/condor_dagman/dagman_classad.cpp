@@ -183,7 +183,7 @@ DagmanClassad::~DagmanClassad()
 //---------------------------------------------------------------------------
 void
 DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
-			int maxPostScripts )
+			int maxPostScripts, int maxHoldScripts )
 {
 	Qmgr_connection *queue = OpenConnection();
 	if ( !queue ) {
@@ -194,6 +194,7 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 	SetAttribute( ATTR_DAGMAN_MAXIDLE, maxIdle );
 	SetAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, maxPreScripts );
 	SetAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, maxPostScripts );
+	SetAttribute( ATTR_DAGMAN_MAXHOLDSCRIPTS, maxHoldScripts );
 
 	CloseConnection( queue );
 }
@@ -201,9 +202,10 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 //---------------------------------------------------------------------------
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
-			int post, int ready, int failed, int unready,
+			int post, int hold, int ready, int failed, int unready,
 			DagStatus dagStatus, bool recovery, const DagmanStats &stats,
-			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts )
+			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts,
+			int &maxHoldScripts )
 {
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -221,6 +223,7 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetAttribute( ATTR_DAG_NODES_PRERUN, pre );
 	SetAttribute( ATTR_DAG_NODES_QUEUED, submitted );
 	SetAttribute( ATTR_DAG_NODES_POSTRUN, post );
+	SetAttribute( ATTR_DAG_NODES_HOLDRUN, hold );
 	SetAttribute( ATTR_DAG_NODES_READY, ready );
 	SetAttribute( ATTR_DAG_NODES_FAILED, failed );
 	SetAttribute( ATTR_DAG_NODES_UNREADY, unready );
@@ -238,18 +241,21 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	int jobAdMaxJobs;
 	int jobAdMaxPreScripts;
 	int jobAdMaxPostScripts;
+	int jobAdMaxHoldScripts;
 
 	// Look up the current values of these properties in the condor_dagman job ad.
 	GetAttribute( ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle );
 	GetAttribute( ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs );
 	GetAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts );
 	GetAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts );
+	GetAttribute( ATTR_DAGMAN_MAXHOLDSCRIPTS, jobAdMaxHoldScripts );
 
 	// Update our internal dag values according to whatever is in the job ad.
 	maxIdle = jobAdMaxIdle;
 	maxJobs = jobAdMaxJobs;
 	maxPreScripts = jobAdMaxPreScripts;
 	maxPostScripts = jobAdMaxPostScripts;
+	maxHoldScripts = jobAdMaxHoldScripts;
 
 
 	CloseConnection( queue );

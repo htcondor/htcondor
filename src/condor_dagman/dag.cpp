@@ -85,6 +85,7 @@ void touch (const char * filename) {
 Dag::Dag( /* const */ StringList &dagFiles,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
+		  const int maxHoldScripts,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const CondorID *DAGManJobID,
@@ -94,6 +95,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  DCSchedd *schedd, const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
+	_maxHoldScripts       (maxHoldScripts),
 	MAX_SIGNAL			  (64),
 	_splices              (hashFunction),
 	_dagFiles             (dagFiles),
@@ -115,6 +117,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_DAGManJobId		  (DAGManJobID),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
+	_holdRunNodeCount	  (0),
 	_checkCondorEvents    (),
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
@@ -165,12 +168,14 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	if (_isSplice == false) {
 		_preScriptQ = new ScriptQ( this );
 		_postScriptQ = new ScriptQ( this );
+		_holdScriptQ = new ScriptQ( this );
 		if( !_preScriptQ || !_postScriptQ ) {
 			EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 		}
 	} else {
 		_preScriptQ = NULL;
 		_postScriptQ = NULL;
+		_holdScriptQ = NULL;
 	}
 
 	debug_printf( DEBUG_DEBUG_4, "_maxJobsSubmitted = %d, "
@@ -236,6 +241,7 @@ Dag::~Dag()
 
     delete _preScriptQ;
     delete _postScriptQ;
+	delete _holdScriptQ;
     delete _submitQ;
     delete _readyQ;
 
@@ -262,6 +268,7 @@ Dag::RunWaitingScripts()
 {
 	_preScriptQ->RunWaitingScripts();
 	_postScriptQ->RunWaitingScripts();
+	_holdScriptQ->RunWaitingScripts();
 }
 
 //-------------------------------------------------------------------------
@@ -1010,7 +1017,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						"POST script %s", errStr.Value() );
 
 				// Log post script success or failure if necessary.
-			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
 
 				//
 				// Deal with retries.
@@ -1061,7 +1068,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						"%scompleted successfully.\n", header.Value() );
 			job->retval = 0;
 				// Log post script success or failure if necessary.
-			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
 			TerminateJob( job, recovery );
 		}
 
@@ -1273,6 +1280,11 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 						event->cluster, job->GetJobName(), _maxJobHolds );
 			RemoveBatchJob( job );
 		}
+	}
+
+	if( job->_scriptHold != NULL ) {
+		// TODO: Does running a HOLD script warrant a separate helper function?
+		RunHoldScript( job, true );
 	}
 }
 
@@ -1534,7 +1546,6 @@ Dag::StartNode( Job *node, bool isRetry )
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
 	// actual job to HTCondor if/when the script exits successfully
-
     if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
 		node->SetStatus( Job::STATUS_PRERUN );
 		_preRunNodeCount++;
@@ -1836,7 +1847,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		job->retval = 0;
 	}
 
-	_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+	_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::PRE );
 
 	if ( preScriptFailed ) {
 
@@ -1935,6 +1946,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 
 	return true;
 }
+
 //---------------------------------------------------------------------------
 // Note that the actual handling of the post script's exit status is
 // done not when the reaper is called, but in ProcessLogEvents when
@@ -1991,6 +2003,34 @@ Dag::PostScriptReaper( Job *job, int status )
 			break;
 		}
 	}
+	return true;
+}
+
+//---------------------------------------------------------------------------
+// Run a HOLD script.
+
+bool Dag::RunHoldScript( Job *job, bool incrementRunCount )
+{
+	// Make sure we are allowed to run this script.
+	if( !job->_scriptHold ) {
+		return false;
+	}
+	// Run the HOLD script. This is a best-effort attempt that does not change
+	// the node status.
+	if ( incrementRunCount ) {
+		_holdRunNodeCount++;
+	}
+	_holdScriptQ->Run( job->_scriptHold );
+
+	return true;
+}
+
+int
+Dag::HoldScriptReaper( Job *job )
+{
+	ASSERT( job != NULL );
+	_holdRunNodeCount--;
+
 	return true;
 }
 
@@ -2537,13 +2577,18 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 void
 Dag::WriteScriptToRescue( FILE *fp, Script *script )
 {
-	const char *prepost = script->_post ? "POST" : "PRE";
+	const char *type;
+	switch( script->_type ) {
+		case ScriptType::PRE: type = "PRE"; break;
+		case ScriptType::POST: type = "POST"; break;
+		case ScriptType::HOLD: type = "HOLD"; break;
+	}
 	fprintf( fp, "SCRIPT " );
 	if ( script->_deferStatus != SCRIPT_DEFER_STATUS_NONE ) {
 		fprintf( fp, "DEFER %d %d ", script->_deferStatus,
 					(int)script->_deferTime );
 	}
-	fprintf( fp, "%s %s %s\n", prepost, script->GetNode()->GetJobName(),
+	fprintf( fp, "%s %s %s\n", type, script->GetNode()->GetJobName(),
 				script->GetCmd() );
 }
 
@@ -3536,6 +3581,13 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 					"of -MaxPost limit (%d) or DEFER\n",
 					_postScriptQ->GetScriptDeferredCount(),
 					_maxPostScripts );
+	}
+
+	if( _holdScriptQ->GetScriptDeferredCount() > 0 || force ) {
+		debug_printf( level, "Note: %d total HOLD script deferrals because "
+					"of -MaxHold limit (%d) or DEFER\n",
+					_holdScriptQ->GetScriptDeferredCount(),
+					_maxHoldScripts );
 	}
 }
 

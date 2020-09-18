@@ -69,6 +69,7 @@ static void Usage() {
 			"\t\t[-MaxJobs <int N>]\n"
 			"\t\t[-MaxPre <int N>]\n"
 			"\t\t[-MaxPost <int N>]\n"
+			"\t\t[-MaxHold <int N>]\n"
 			"\t\t(obsolete) [-NoEventChecks]\n"
 			"\t\t(obsolete) [-AllowLogError]\n"
 			"\t\t[-DontAlwaysRunPost]\n"
@@ -109,6 +110,7 @@ Dagman::Dagman() :
 	maxJobs (0),
 	maxPreScripts (20),
 	maxPostScripts (20),
+	maxHoldScripts (20),
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
@@ -341,6 +343,11 @@ Dagman::Config()
 				0, INT_MAX );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n",
 				maxPostScripts );
+
+	maxHoldScripts = param_integer( "DAGMAN_MAX_HOLD_SCRIPTS", maxHoldScripts,
+				0, INT_MAX );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_HOLD_SCRIPTS setting: %d\n",
+				maxHoldScripts );
 
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
 				mungeNodeNames );
@@ -793,6 +800,14 @@ void main_init (int argc, char ** const argv) {
 			}
 			dagman.maxPostScripts = atoi( argv[i] );
 
+		} else if( !strcasecmp( "-MaxHold", argv[i] ) ) {
+			i++;
+			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+				debug_printf( DEBUG_SILENT,
+							  "Integer missing after -MaxHold\n" );
+				Usage();
+			}
+			dagman.maxHoldScripts = atoi( argv[i] );
 		} else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
 			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
 						"ignored; please use the DAGMAN_ALLOW_EVENTS "
@@ -939,7 +954,8 @@ void main_init (int argc, char ** const argv) {
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
 
 	dagman._dagmanClassad->Initialize( dagman.maxJobs, dagman.maxIdle, 
-				dagman.maxPreScripts, dagman.maxPostScripts );
+				dagman.maxPreScripts, dagman.maxPostScripts,
+				dagman.maxHoldScripts );
 
 	dagman._dagmanClassad->GetSetBatchId( dagman._batchId );
 
@@ -1043,6 +1059,10 @@ void main_init (int argc, char ** const argv) {
 	}
 	if( dagman.maxPostScripts < 0 ) {
 		debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
+		Usage();
+	}
+	if( dagman.maxHoldScripts < 0 ) {
+		debug_printf( DEBUG_SILENT, "-MaxHold must be non-negative\n" );
 		Usage();
 	}
 	if( dagman.doRescueFrom < 0 ) {
@@ -1192,7 +1212,7 @@ void main_init (int argc, char ** const argv) {
 	// wenger 2010-03-25
 	dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dagman.useDagDir,
+						  dagman.maxHoldScripts, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,
@@ -1630,16 +1650,17 @@ jobad_update() {
 	int pre = dagman.dag->PreRunNodeCount();
 	int submitted = dagman.dag->NumJobsSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
+	int hold = dagman.dag->HoldRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
 	int unready = dagman.dag->NumNodesUnready( true );
 
 	if ( dagman._dagmanClassad ) {
 		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-					ready, failed, unready, dagman.dag->_dagStatus,
+					hold, ready, failed, unready, dagman.dag->_dagStatus,
 					dagman.dag->Recovery(), dagman._dagmanStats,
 					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
-					dagman.maxPostScripts );
+					dagman.maxPostScripts, dagman.maxHoldScripts );
 
 		// It's possible that certain DAGMan attributes were changed in the job ad.
 		// If this happened, update the internal values in our dagman data structure.
@@ -1647,6 +1668,7 @@ jobad_update() {
 		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
 		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
 		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
+		dagman.dag->SetMaxHoldScripts(dagman.maxHoldScripts);
 	}
 
 }

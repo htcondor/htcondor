@@ -1720,15 +1720,16 @@ struct Schedd {
         return cluster;
     }
 
-    int submit(const ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
+    boost::python::object submit(boost::python::object submitObj,
+        int count=0,
+        bool spool=false,
+        object result=object(),
+        object itemdata=object());
+
+    boost::python::object insertRaw(boost::python::object /*ads*/)
     {
-        boost::python::list proc_entry;
-        boost::shared_ptr<ClassAdWrapper> proc_ad(new ClassAdWrapper());
-        proc_entry.append(proc_ad);
-        proc_entry.append(count);
-        boost::python::list proc_ads;
-        proc_ads.append(proc_entry);
-        return submitMany(wrapper, proc_ads, spool, ad_results);
+        THROW_EX(NotImplementedError, "insertRaw not yet written");
+        return object();
     }
 
     int submit_cluster_internal(classad::ClassAd &orig_cluster_ad, bool spool)
@@ -2590,21 +2591,18 @@ public:
                 boost::python::dict input(args[1]);
                 self.attr("__init__")(input);
                 self.attr("update")(kwargs);
-                return boost::python::object();
             } catch (boost::python::error_already_set &) {
                 if (PyErr_ExceptionMatches(PyExc_ValueError)) {
                     PyErr_Clear();
                     boost::python::str input_str(args[1]);
                     self.attr("__init__")(input_str);
                     self.attr("update")(kwargs);
-                    return boost::python::object();
                 } else {
                     throw;
                 }
             }
-			// UNREACHABLE
-            //return boost::python::object();
         }
+        return boost::python::object();
     }
 
 
@@ -3546,11 +3544,42 @@ private:
     bool m_queue_may_append_to_cluster; // when true, the queue() method can add jobs to the existing cluster
 };
 
+boost::python::object Schedd::submit(boost::python::object submitObj, int count/*=0*/, bool spool/*=false*/, object result/*=object()*/, object itemdata/*=object()*/)
+{
+	boost::python::extract<const ClassAdWrapper &> ad(submitObj);
+	if (ad.check()) {
+		if (itemdata.ptr() != Py_None) {
+			THROW_EX(HTCondorValueError, "itemdata cannot be used when submitting raw ClassAds");
+		}
+		// if submit is a classad, this is the deprecated form of schedd.submit()
+		boost::shared_ptr<ClassAdWrapper> proc_ad(new ClassAdWrapper());
+		boost::python::list proc_entry;
+		proc_entry.append(proc_ad);
+		proc_entry.append(count?count:1);
+		boost::python::list proc_ads;
+		proc_ads.append(proc_entry);
+		int clusterId = submitMany(ad(), proc_ads, spool, result);
+		return boost::python::object(clusterId);
+	}
+
+	boost::python::extract<Submit &> extract_submit(submitObj);
+	if ( ! extract_submit.check()) {
+		THROW_EX(HTCondorValueError, "Not a Submit object");
+	}
+	Submit & sub(extract_submit());
+
+	boost::shared_ptr<ConnectionSentry> txn(new ConnectionSentry(*this, true)); // Automatically connects / disconnects.
+
+	return boost::python::object(sub.queue_from_iter(txn, count, itemdata));
+}
+
+
+
 // shared source for all instances of MacroStreamMemoryFile that have an empty stream
 MACRO_SOURCE Submit::EmptyMacroSrc = { false, false, 3, -2, -1, -2 };
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 5);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 5);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
 void export_schedd()
@@ -3853,37 +3882,60 @@ void export_schedd()
             R"C0ND0R(
             Submit one or more jobs to the *condor_schedd* daemon.
 
-            This method requires the invoker to provide a ClassAd for the new job cluster;
-            such a ClassAd contains attributes with different names than the commands in a
-            submit description file. As an example, the stdout file is referred to as ``output``
-            in the submit description file, but ``Out`` in the ClassAd.
+            This method requires the invoker to provide a :class:`~htcondor.Submit` object that
+            describes the jobs to submit.  The return value will be a :class::`~htcondor.SubmitResult`
+            that contains the cluster ID and ClassAd of the submitted jobs.
 
-            .. hint:: To generate an example ClassAd, take a sample submit description
-                file and invoke::
+            For backward compatibility, this method will also accept a :class:`~classad.ClassAd`
+            that describes a single job to submit, but use of this form of is deprecated.
+            Use submit_raw to submit raw job ClassAds.  If the deprecated form is used
+            the return value will be the cluster ID, and ad_results will optionally be the
+            actual job ClassAds that were submitted.
 
-                    condor_submit -dump <filename> [cmdfile]
-
-                Then, load the resulting contents of ``<filename>`` into Python.
-
-            :param ad: The ClassAd describing the job cluster.
-            :type ad: :class:`~classad.ClassAd`
+            :param description: The Submit description or ClassAd describing the job cluster.
+            :type description: :class:`~htcondor.Submit` (or deprecated :class:`~class.ClassAd`)
             :param int count: The number of jobs to submit to the job cluster. Defaults to ``1``.
-            :param bool spool: If ``True``, the clinent inserts the necessary attributes
-                into the job for it to have the input files spooled to a remote
-                *condor_schedd* daemon. This parameter is necessary for jobs submitted
-                to a remote *condor_schedd* that use HTCondor file transfer.
-            :param ad_results: If set to a list, the list object will contain the job ads
-                resulting from the job submission.
-                These are needed for interacting with the job spool after submission.
+            :param bool spool: If ``True``, jobs will be submitted in a spooling hold mode
+               so that input files can be spooled to a remote *condor_schedd* daemon before starting the jobs.
+               This parameter is necessary for jobs submitted to a remote *condor_schedd* that use HTCondor file transfer.
+            :param ad_results: deprecated. If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
+                that were submitted. These are passed to the spool method to send files to the remote Schedd.
             :type ad_results: list[:class:`~classad.ClassAd`]
-            :return: The newly created cluster ID.
-            :rtype: int
+            :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
+                range of Job ids of the submitted job(s).  If using the deprecated first argument, the return value
+                will be an int and ad_results may contain submitted jobs ClassAds.
+            :rtype: :class:`SubmitResult` or int
             )C0ND0R",
-#if BOOST_VERSION < 103400
-            (boost::python::arg("ad"), boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
-#else
-            (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
+#if BOOST_VERSION >= 103400
+            (boost::python::arg("self"),
 #endif
+             boost::python::arg("description"), boost::python::arg("count")=1,
+             boost::python::arg("spool")=false,
+             boost::python::arg("ad_results")=boost::python::object(),
+             boost::python::arg("itemdata")=boost::python::object()
+            )))
+        .def("insert_jobs", &Schedd::insertRaw,
+            R"C0ND0R(
+            Insert  one or more jobs to the *condor_schedd* daemon.
+
+            This method requires the invoker to provide a :class:`~classad.ClassAd` or an
+            iterable of :class:`~classad.ClassAd` that will be submitted as a single cluster, or an
+            iterable of iterables of :class:`~classad.ClassAd` which will be submitted as multiple clusters of jobs.
+            The ClusterId and ProcId attributes of the jobs will be set to what the Schedd dictates.  The job ClassAd
+            must otherwise be complete and valid.
+
+            hint::  To generate a valid job ClassAd, use the `jobs` method of a :class:`htcondor.Submit` object
+
+            :param ads: The job ClassAd that should be inserted into the *condor_schedd*
+            :type ads: :class:`~class.ClassAd`
+            :return: a :class:`InsertResult`, containing the cluster IDs and range of  Job Ids and range of Job ids of the submitted job(s).
+            :rtype: :class:`InsertResult`
+            )C0ND0R",
+#if BOOST_VERSION >= 103400
+            (boost::python::arg("self"),
+#endif
+             boost::python::arg("ads")
+            ))
         .def("submitMany", &Schedd::submitMany,
             R"C0ND0R(
             Submit multiple jobs to the *condor_schedd* daemon, possibly including
@@ -4285,6 +4337,7 @@ void export_schedd()
 
     class_<SubmitResult>("SubmitResult", no_init)
         .def("__str__", &SubmitResult::toString)
+        .def("__int__", &SubmitResult::cluster)
         .def("cluster", &SubmitResult::cluster,
             R"C0ND0R(
             :return: the ClusterID of the submitted jobs.
