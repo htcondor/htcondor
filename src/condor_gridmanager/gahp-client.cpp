@@ -3722,7 +3722,7 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(proxy_file) );
 	int x = formatstr(reqline, "%s %d.%d %s %d", esc1, job_id.cluster, job_id.proc,
-					  esc2, proxy_expiration);
+					  esc2, (int)proxy_expiration);
 	free(esc1);
 	free(esc2);
 	ASSERT( x > 0 );
