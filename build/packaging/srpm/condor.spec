@@ -753,6 +753,7 @@ cmake \
        -DPROPER:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
+       -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
@@ -786,7 +787,7 @@ cmake \
 # build externals first to avoid dependency issues
 make %{?_smp_mflags} externals
 %endif
-make -j32
+make %{?_smp_mflags}
 
 %install
 # installation happens into a temporary location, this function is
@@ -822,7 +823,7 @@ populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datad
 %endif
 %endif
 # Drop in a symbolic link for backward compatability
-ln -s %{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
+ln -s ../..%{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 
 %if 0
 # It is proper to put HTCondor specific libexec binaries under libexec/condor/
@@ -843,10 +844,6 @@ if [ "$LIB" = "%_libdir" ]; then
   echo "_libdir does not contain /usr, sed expression needs attention"
   exit 1
 fi
-ls %{buildroot}/usr/share/doc/condor-%{version}/examples
-sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
-  %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_config.generic \
-  > %{buildroot}/%{_sysconfdir}/condor/condor_config
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
@@ -925,10 +922,10 @@ rm -rf %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oaut
 ###
 # Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
 %if 0%{?rhel} == 7
-ln -s %{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
-ln -s %{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
+ln -s ../..%{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
+ln -s ../..%{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
-ln -s %{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
+ln -s ../../../..%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 %endif
 ###
 
