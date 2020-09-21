@@ -2,8 +2,8 @@
 
 # optionally define any of these, here or externally
 # % define fedora   16
-%define osg      1
-%define uw_build 0
+%define osg      0
+%define uw_build 1
 
 %define python 0
 
@@ -30,13 +30,7 @@
 %define blahp 0
 %endif
 
-# Python on 64-bit platform or rhel6
-%ifarch x86_64
 %define python 1
-%endif
-%if 0%{?rhel} == 6
-%define python 1
-%endif
 
 %define glexec 1
 
@@ -49,11 +43,6 @@
 # If building with git tarball, Fedora requests us to record the rev.  Use:
 # git log -1 --pretty=format:'%h'
 %define git_rev f9e8f64
-
-%if ! (0%{?fedora} > 12 || 0%{?rhel} > 5)
-%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
-%endif
 
 Summary: HTCondor: High Throughput Computing
 Name: condor
@@ -114,18 +103,10 @@ Source1: generate-tarball.sh
 Source3: osg-env.conf
 Source5: condor_config.local.dedicated.resource
 
-Source6: 10-batch_gahp_blahp.config
+Source6: 00-batch_gahp_blahp.config
 Source7: 00-restart_peaceful.config
 
 Source8: htcondor.pp
-
-# custom find-requires script for filtering stuff from condor-external-libs
-Source90: find-requires.sh
-
-%if %uw_build
-%define __find_requires %{SOURCE90}
-%define _use_internal_dependency_generator 0
-%endif
 
 Patch2: el7-python2.patch
 
@@ -164,17 +145,7 @@ BuildRequires: perl(Data::Dumper)
 %if %uw_build
 BuildRequires: cmake >= 2.8
 BuildRequires: gcc-c++
-%if 0%{?rhel} >= 6
-BuildRequires: glibc-static
-%if 0%{?rhel} >= 7
-# libstdc++.a moved to a separate -static package in EL7
-BuildRequires: libstdc++-static
-%endif
 BuildRequires: libuuid-devel
-%else
-BuildRequires: glibc-devel
-BuildRequires: /usr/include/uuid/uuid.h
-%endif
 BuildRequires: bison-devel
 BuildRequires: bison
 BuildRequires: byacc
@@ -199,7 +170,6 @@ BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
-%if ! %uw_build
 BuildRequires: globus-gssapi-gsi-devel
 BuildRequires: globus-gass-server-ez-devel
 BuildRequires: globus-gass-transfer-devel
@@ -225,7 +195,6 @@ BuildRequires: globus-ftp-control-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
 BuildRequires: voms-devel
-%endif
 BuildRequires: libtool-ltdl-devel
 
 BuildRequires: libcgroup-devel
@@ -243,7 +212,6 @@ BuildRequires: boost169-static
 BuildRequires: boost-static
 %endif
 
-%if 0%{?rhel} >= 6 || 0%{?fedora}
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 BuildRequires: boost-python3-devel
 %else
@@ -261,26 +229,13 @@ BuildRequires: boost169-python3-devel
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
-%endif
 
 BuildRequires: systemd-devel
 BuildRequires: systemd-units
 Requires: systemd
 
-%if 0%{?rhel} == 6
-%ifarch %{ix86}
-BuildRequires: python-sphinx10
-%else
-BuildRequires: python-sphinx10 python-sphinx_rtd_theme
-%endif
-%endif
-
 %if 0%{?rhel} == 7
-%ifarch %{ix86}
-BuildRequires: python-sphinx
-%else
 BuildRequires: python-sphinx python-sphinx_rtd_theme
-%endif
 %endif
 
 %if 0%{?rhel} >= 8
@@ -294,17 +249,8 @@ Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
-# ecryptfs was pulled from rhel 7
-%if (0%{?rhel} == 5 || 0%{?rhel} == 6)
-Requires: ecryptfs-utils
-%endif
-
-%if %blahp && ! %uw_build
+%if %blahp
 Requires: blahp >= 1.16.1
-%endif
-
-%if %uw_build
-Requires: %name-external-libs%{?_isa} = %version-%release
 %endif
 
 %if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
@@ -481,17 +427,6 @@ Provides: %{name}-python = %{version}-%{release}
 Provides: %{name}-python%{?_isa} = %{version}-%{release}
 Obsoletes: %{name}-python < %{version}-%{release}
 
-#%if 0%{?rhel} >= 7 && ! %uw_build
-## auto provides generator does not pick these up for some reason
-#    %ifarch x86_64
-#Provides: classad.so()(64bit)
-#Provides: htcondor.so()(64bit)
-#    %else
-#Provides: classad.so
-#Provides: htcondor.so
-#    %endif
-#%endif
-
 %description -n python2-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
@@ -578,41 +513,6 @@ This example configuration is good for trying out HTCondor for the first time.
 It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
-%if %uw_build
-
-%ifarch %{ix86}
-%package small-shadow
-Summary: 32-bit condor_shadow binary
-Group: Applications/System
-Requires: %name-external-libs%{?_isa} = %version-%release
-
-%description small-shadow
-Provides the 32-bit condor_shadow_s, which has a smaller private
-memory footprint per process.  This makes it possible to run more shadows
-on a single machine at once when memory is the limiting factor.
-%endif
-
-%package externals
-Summary: External packages built into HTCondor
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: %name-external-libs%{?_isa} = %version-%release
-Provides: blahp
-
-%description externals
-Includes the external packages built when UW_BUILD is enabled
-
-%package external-libs
-Summary: Libraries for external packages built into HTCondor
-Group: Applications/System
-# disable automatic provides generation to prevent conflicts with system libs
-AutoProv: 0
-
-%description external-libs
-Includes the libraries for external packages built when UW_BUILD is enabled
-
-%endif
-
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible.
 Group: Applications/System
@@ -650,10 +550,6 @@ Requires: %name-classads = %version-%release
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
-%if %uw_build
-Requires: %name-externals = %version-%release
-Requires: %name-external-libs = %version-%release
-%endif
 
 %description all
 Include dependencies for all condor packages in a typical installation
@@ -689,11 +585,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 # build man files
-%if 0%{?rhel} == 6
-make -C docs SPHINXBUILD=sphinx-1.0-build man
-%else
 make -C docs man
-%endif
 
 export CMAKE_PREFIX_PATH=/usr
 
@@ -703,10 +595,12 @@ export CMAKE_PREFIX_PATH=/usr
 %if %uw_build
 %define condor_build_id UW_development
 
-cmake \
+%cmake3 \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
-       -DUW_BUILD:BOOL=TRUE \
+       -DUW_BUILD:BOOL=FALSE \
+       -DPROPER:BOOL=TRUE \
+       -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=FALSE \
@@ -714,16 +608,12 @@ cmake \
        -DHAVE_BOINC:BOOL=FALSE \
 %if %blahp
        -DWITH_BLAHP:BOOL=TRUE \
+       -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
        -DWITH_CREAM:BOOL=FALSE \
        -DWITH_DRMAA:BOOL=FALSE \
-%ifarch %{ix86}
-%if 0%{?rhel} >= 7
-       -DWITH_PYTHON_BINDINGS:BOOL=FALSE \
-%endif
-%endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -742,7 +632,7 @@ cmake \
 
 %else
 
-%cmake3 -DBUILD_TESTING:BOOL=TRUE \
+%cmake3 -DBUILD_TESTING:BOOL=FALSE \
 %if 0%{?fedora}
        -DBUILDID:STRING=RH-%{version}-%{release} \
        -D_VERBOSE:BOOL=TRUE \
@@ -783,10 +673,6 @@ cmake \
        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
 %endif
 
-%if %uw_build
-# build externals first to avoid dependency issues
-make %{?_smp_mflags} externals
-%endif
 make %{?_smp_mflags}
 
 %install
@@ -1070,20 +956,12 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{bu
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
-%if %blahp && ! %uw_build
-install -p -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
+%if %blahp
+install -p -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/condor/config.d/00-batch_gahp_blahp.config
 %endif
 
 %if 0%{?osg} || 0%{?hcc}
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-restart_peaceful.config
-%endif
-
-%if %uw_build
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libglobus*.so*
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libvomsapi*.so*
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor/libSciTokens.so*
-# these probably belong elsewhere
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 %endif
 
 # htcondor/dags only works with Python3
@@ -1170,9 +1048,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/slurm_status.py
 %_libexecdir/condor/glite/bin/slurm_status.sh
 %_libexecdir/condor/glite/bin/slurm_submit.sh
-%if ! %uw_build
-%config(noreplace) %{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
-%endif
+%config(noreplace) %{_sysconfdir}/condor/config.d/00-batch_gahp_blahp.config
 %endif
 %if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %{_sysconfdir}/condor/config.d/00-restart_peaceful.config
@@ -1378,9 +1254,6 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
-%if %uw_build
-%_sbindir/boinc_gahp
-%endif
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware
@@ -1578,85 +1451,6 @@ rm -rf %{buildroot}
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
-
-%if %uw_build
-
-%ifarch %{ix86}
-%files small-shadow
-%{_sbindir}/condor_shadow_s
-%config(noreplace) %_sysconfdir/condor/config.d/00-small-shadow
-%endif
-
-%files external-libs
-%dir %_libdir/condor
-%_libdir/condor/libglobus*.so*
-%_libdir/condor/libvomsapi*.so*
-%_libdir/condor/libSciTokens.so*
-%_libdir/condor/ugahp.jar
-
-%files externals
-%_sbindir/unicore_gahp
-%if %blahp
-%_libexecdir/condor/glite/bin/BLClient
-%_libexecdir/condor/glite/bin/BLParserLSF
-%_libexecdir/condor/glite/bin/BLParserPBS
-%_libexecdir/condor/glite/bin/BNotifier
-%_libexecdir/condor/glite/bin/BPRclient
-%_libexecdir/condor/glite/bin/BPRserver
-%_libexecdir/condor/glite/bin/BUpdaterCondor
-%_libexecdir/condor/glite/bin/BUpdaterLSF
-%_libexecdir/condor/glite/bin/BUpdaterPBS
-%_libexecdir/condor/glite/bin/BUpdaterSGE
-%_libexecdir/condor/glite/bin/batch_gahp
-%_libexecdir/condor/glite/bin/batch_gahp_daemon
-%_libexecdir/condor/glite/bin/blah_check_config
-%_libexecdir/condor/glite/bin/blah_common_submit_functions.sh
-%_libexecdir/condor/glite/bin/blah_job_registry_add
-%_libexecdir/condor/glite/bin/blah_job_registry_dump
-%_libexecdir/condor/glite/bin/blah_job_registry_lkup
-%_libexecdir/condor/glite/bin/blah_job_registry_scan_by_subject
-%_libexecdir/condor/glite/bin/blah_load_config.sh
-%_libexecdir/condor/glite/bin/blparser_master
-%_libexecdir/condor/glite/bin/condor_cancel.sh
-%_libexecdir/condor/glite/bin/condor_hold.sh
-%_libexecdir/condor/glite/bin/condor_resume.sh
-%_libexecdir/condor/glite/bin/condor_status.sh
-%_libexecdir/condor/glite/bin/condor_submit.sh
-%_libexecdir/condor/glite/bin/lsf_cancel.sh
-%_libexecdir/condor/glite/bin/lsf_hold.sh
-%_libexecdir/condor/glite/bin/lsf_resume.sh
-%_libexecdir/condor/glite/bin/lsf_status.sh
-%_libexecdir/condor/glite/bin/lsf_submit.sh
-%_libexecdir/condor/glite/bin/pbs_cancel.sh
-%_libexecdir/condor/glite/bin/pbs_hold.sh
-%_libexecdir/condor/glite/bin/pbs_resume.sh
-%_libexecdir/condor/glite/bin/pbs_status.py
-%_libexecdir/condor/glite/bin/pbs_status.sh
-%_libexecdir/condor/glite/bin/pbs_submit.sh
-%_libexecdir/condor/glite/bin/runcmd.pl.template
-%_libexecdir/condor/glite/bin/sge_cancel.sh
-%_libexecdir/condor/glite/bin/sge_filestaging
-%_libexecdir/condor/glite/bin/sge_helper
-%_libexecdir/condor/glite/bin/sge_hold.sh
-%_libexecdir/condor/glite/bin/sge_local_submit_attributes.sh
-%_libexecdir/condor/glite/bin/sge_resume.sh
-%_libexecdir/condor/glite/bin/sge_status.sh
-%_libexecdir/condor/glite/bin/sge_submit.sh
-%_libexecdir/condor/glite/bin/test_condor_logger
-# does this really belong here?
-%dir %_libexecdir/condor/glite/etc
-%_libexecdir/condor/glite/etc/glite-ce-blahparser
-%_libexecdir/condor/glite/etc/glite-ce-blparser
-%_libexecdir/condor/glite/etc/glite-ce-check-blparser
-%_libexecdir/condor/glite/etc/batch_gahp.config
-%_libexecdir/condor/glite/etc/batch_gahp.config.template
-%_libexecdir/condor/glite/etc/blparser.conf.template
-%dir %_libexecdir/condor/glite/share
-%dir %_libexecdir/condor/glite/share/doc
-%_libexecdir/condor/glite/share/doc/glite-ce-blahp-@PVER@/LICENSE
-%endif
-
-%endif
 
 %post
 %if 0%{?fedora}
