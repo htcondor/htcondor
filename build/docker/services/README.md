@@ -48,6 +48,25 @@ dockerhost$ docker run --detach \
 ```
 
 
+### RESTD
+
+The minicondor container includes the experimental REST interface to HTCondor,
+[HTCondor-RESTD](https://github.com/htcondor/htcondor-restd).
+
+The RESTD runs on startup on port 8080.  To access it from outside the
+container, add `-p 8080:8080` to the `docker run` command above -- for example:
+```console
+dockerhost$ docker run --detach \
+                -p 8080:8080 \
+                --name=minicondor \
+                htcondor/mini:el7
+```
+You can send queries to the RESTD via `localhost:8080`.  See the
+[RESTD documentation](https://github.com/htcondor/htcondor-restd#readme)
+for more details.
+
+
+
 Using the Execute Node Container
 --------------------------------
 
