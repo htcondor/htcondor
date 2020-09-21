@@ -1387,6 +1387,7 @@ annex_main( int argc, char ** argv ) {
 			if( cloudFormationURL != NULL ) {
 				cfURL = cloudFormationURL;
 			} else {
+				fprintf( stdout, "Will do setup in region '%s'.\n", region );
 				formatstr( cfURL, "https://cloudformation.%s.amazonaws.com", region );
 			}
 
@@ -1398,6 +1399,7 @@ annex_main( int argc, char ** argv ) {
 			if( cloudFormationURL != NULL ) {
 				cfURL = cloudFormationURL;
 			} else {
+				fprintf( stdout, "Will check setup in region '%s'.\n", region );
 				formatstr( cfURL, "https://cloudformation.%s.amazonaws.com", region );
 			}
 
