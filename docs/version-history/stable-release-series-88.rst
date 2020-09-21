@@ -17,6 +17,13 @@ Release Notes:
 
 .. HTCondor version 8.8.11 released on Month Date, 2020.
 
+-  The GSI code now checks for a host alias before attempting to do a reverse
+   DNS look-up.  This means that hosts with valid certificates no longer need
+   a PTR record (although it must still be valid if it exists), if those hosts
+   set the ``HOST_ALIAS`` configuration value appropriately
+   (``$(FULL_HOSTNAME)``, usually).
+   :ticket:`7788`
+
 New Features:
 
 - None.
