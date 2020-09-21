@@ -936,7 +936,10 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name ) const
 
 	pval_expanded = expand_macro(pval);
 
-	if( pval == NULL ) {
+	abort_macro_name = NULL;
+	abort_raw_macro_val = NULL;
+
+	if( pval_expanded == NULL ) {
 		push_error(stderr, "Failed to expand macros in: %s\n",
 				 used_alt ? alt_name : name );
 		abort_code = 1;
@@ -948,8 +951,6 @@ char * SubmitHash::submit_param( const char* name, const char* alt_name ) const
 		return NULL;
 	}
 
-	abort_macro_name = NULL;
-	abort_raw_macro_val = NULL;
 
 	return  pval_expanded;
 }
@@ -4973,6 +4974,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// formerly SetDescription
 	{SUBMIT_KEY_Description, ATTR_JOB_DESCRIPTION, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_BatchName, ATTR_JOB_BATCH_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+	{SUBMIT_KEY_BatchId, ATTR_JOB_BATCH_ID, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	#ifdef NO_DEPRECATE_NICE_USER
 	// formerly SetNiceUser
 	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER, SimpleSubmitKeyword::f_as_bool},

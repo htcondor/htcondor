@@ -1387,14 +1387,24 @@ annex_main( int argc, char ** argv ) {
 			if( cloudFormationURL != NULL ) {
 				cfURL = cloudFormationURL;
 			} else {
+				fprintf( stdout, "Will do setup in region '%s'.\n", region );
 				formatstr( cfURL, "https://cloudformation.%s.amazonaws.com", region );
 			}
 
 			return setup( region, publicKeyFile, secretKeyFile, cfURL.c_str(), sURLy.c_str() );
 		}
 
-		case ct_check_setup:
-			return check_setup();
+		case ct_check_setup: {
+			std::string cfURL;
+			if( cloudFormationURL != NULL ) {
+				cfURL = cloudFormationURL;
+			} else {
+				fprintf( stdout, "Will check setup in region '%s'.\n", region );
+				formatstr( cfURL, "https://cloudformation.%s.amazonaws.com", region );
+			}
+
+			return check_setup( cfURL.c_str(), sURLy.c_str() );
+		}
 
 		case ct_create_annex:
 			switch( annexType ) {

@@ -248,6 +248,15 @@ zkm://128/r-data and a second command line argument giving the full path
 along with the file name ``r-data`` as the location for the plug-in to
 write 128 bytes of random data.
 
+URL plugins exist already for transferring files to/from
+Box.com accounts (``box://...``),
+Google Drive accounts (``gdrive://...``),
+and Microsoft OneDrive accounts (``onedrive://...``).
+These plugins require users to have obtained OAuth2 credentials
+for the relevant service(s) before they can be used.
+See :ref:`enabling_oauth_credentials` for how to enable users
+to fetch OAuth2 credentials.
+
 The transfer of output files in this manner was introduced in HTCondor
 version 7.6.0. Incompatibility and inability to function will result if
 the executables for the *condor_starter* and *condor_shadow* are
@@ -347,6 +356,102 @@ curl_plugin is invoked, it checks the environment variable http_proxy
 for a proxy server address; by setting this appropriately on execute
 nodes, a system can dramatically improve transfer speeds for commonly
 used files.
+
+.. _enabling_oauth_credentials:
+
+Enabling the Fetching and Use of OAuth2 Credentials
+---------------------------------------------------
+
+HTCondor can be configured
+to allow users to request and securely store credentials
+from most OAuth2 service providers.
+Users' jobs can then request these credentials
+to be securely transferred to job sandboxes,
+where they can be used by file transfer plugins
+or be accessed by the users' executable(s).
+
+There are three steps to setting up HTCondor
+to enable users to be able to request credentials
+from OAuth2 services:
+
+1. Enabling the *condor_credd* and *condor_credmon_oauth* daemons,
+2. Enabling the companion OAuth2 credmon WSGI application, and
+3. Setting up API clients and related configuration.
+
+First, to enable the *condor_credd* and *condor_credmon_oauth* daemons,
+one can use the ``use feature: oauth`` template.
+This template adds the *condor_credd* and *condor_credmon_oauth*
+to the ``DAEMON_LIST`` :index:`DAEMON_LIST`
+and sets up the ``SEC_CREDENTIAL_DIRECTORY_OAUTH`` :index:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
+with the default path of ``/var/lib/condor/oauth_credentials``.
+The directory specified in ``SEC_CREDENTIAL_DIRECTORY_OAUTH``
+must be owned by root:condor with full user and group permissions
+and must have the setgid flag set.
+
+Second, to enable the OAuth2 credmon WSGI application,
+the ``condor_credmon_oauth.wsgi`` script
+should be placed in a well-known location (e.g. ``/var/www/wsgi-scripts/condor_credmon_oauth``)
+and a HTTPS-enabled web server running on the submit machine
+should be configured to execute this script as the user ``condor``.
+
+Third, for each OAuth2 service that one wishes to configure,
+an OAuth2 client application should be registered for each submit machine
+on each service's API console.
+For example, for Box.com,
+a client can be registered by logging in to `<https://app.box.com/developers/console>`_,
+creating a new "Custom App",
+and selecting "Standard OAuth 2.0 (User Authentication)."
+
+For each client, store the client ID in the HTCondor configuration
+under ``<OAuth2ServiceName>_CLIENT_ID``.
+Store the client secret in a file only readable by root,
+then point to it using ``<OAuth2ServiceName>_CLIENT_SECRET_FILE``.
+For our Box.com example, this might look like:
+
+.. code-block:: condor-config
+
+    BOX_CLIENT_ID = ex4mpl3cl13nt1d
+    BOX_CLIENT_SECRET_FILE = /etc/condor/.secrets/box_client_secret
+
+.. code-block:: console
+
+    # ls -l /etc/condor/.secrets/box_client_secret
+    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/.secrets/box_client_secret
+    # cat /etc/condor/.secrets/box_client_secret
+    EXAmpL3ClI3NtS3cREt
+
+Each service will need to redirect users back
+to a known URL on the submit machine
+after each user has approved access to their credentials.
+For example, Box.com asks for the "OAuth 2.0 Redirect URI."
+This should be set to match ``<OAuth2ServiceName>_RETURN_URL_SUFFIX`` such that
+the user is returned to ``https://<submit_hostname>/<return_url_suffix>``.
+The return URL suffix should be composed using the directory where the WSGI application is running,
+the subdirectory ``return/``,
+and then the name of the OAuth2 service.
+For our Box.com example, if running the WSGI application at the root of the webserver (``/``),
+this should be ``BOX_RETURN_URL_SUFFIX = /return/box``.
+
+The *condor_credmon_oauth* and its companion WSGI application
+need to know where to send users to fetch their initial credentials
+and where to send API requests to refresh these credentials.
+Some well known service providers (``condor_config_val -dump TOKEN_URL``)
+already have their authorization and token URLs predefined in the default HTCondor config.
+Other service providers will require searching through API documentation to find these URLs,
+which then must be added to the HTCondor configuration.
+For example, if you search the Box.com API documentation,
+you should find the following authorization and token URLs,
+and these URLs could be added them to the HTCondor config as below:
+
+.. code-block:: condor-config
+
+    BOX_AUTHORIZATION_URL = https://account.box.com/api/oauth2/authorize
+    BOX_TOKEN_URL = https://api.box.com/oauth2/token
+
+After configuring OAuth2 clients,
+make sure users know which names (``<OAuth2ServiceName>s``) have been configured
+so that they know what they should put under ``use_oauth_services``
+in their job submit files.
 
 Configuring HTCondor for Multiple Platforms
 -------------------------------------------

@@ -81,6 +81,7 @@ class Dagman {
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once
+	int maxHoldScripts;  // max. number of HOLD scripts to run at once
 	bool paused;
 
 	char* condorSubmitExe;
@@ -122,6 +123,11 @@ class Dagman {
 		// that will get goofed up when the dagFiles list is cleared.
 		// wenger 2008-02-27
 	MyString primaryDagFile;
+
+		// Working directory where condor_dagman is invoked from.
+		// We want to keep a record of this in case the working directory
+		// gets hijacked by daemoncore.
+	MyString workingDir;
 
 		// The list of all DAG files to be run by this invocation of
 		// condor_dagman.
@@ -250,6 +256,9 @@ class Dagman {
 
 		// Batch-name for this workflow.
 	MyString _batchName;
+
+		// Batch ID for this workflow
+	std::string _batchId;
 
 	DagmanClassad *_dagmanClassad;
 

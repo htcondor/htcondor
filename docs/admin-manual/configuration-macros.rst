@@ -2940,6 +2940,15 @@ section.
     to replace it with one that will generate a better rank for the
     *condor_startd* daemon, or a user with a higher priority.
 
+:macro-def:`DEFAULT_DRAINING_START_EXPR`
+    An alternate ``START`` expression to use while draining when the
+    drain command is sent without a ``-start`` argument.  When this
+    confiuration parameter is not set and the drain command does not specify
+    a ``-start`` argument, ``START`` will have the value ``undefined``
+    and ``Requirements`` will be ``false`` while draining. This will prevent new
+    jobs from matching.  To allow evictable jobs to match while draining,
+    set this to an expression that matches only those jobs.
+
 :macro-def:`SUSPEND`
     A boolean expression that, when ``True``, causes HTCondor to suspend
     running an HTCondor job. The machine may still be claimed, but the
@@ -5405,6 +5414,50 @@ These macros control the *condor_schedd*.
     directory must already exist and have the same file ownership and
     permissions as the main ``SPOOL`` directory. Care must be taken that
     the value won't change during the lifetime of each job.
+
+:macro-def:`<OAuth2Service>_CLIENT_ID`
+    The client ID string for an OAuth2 service named ``<OAuth2Service>``.
+    The client ID is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_CLIENT_SECRET_FILE`
+    The path to the file containing the client secret string
+    for an OAuth2 service named ``<OAuth2Service>``.
+    The client secret is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_RETURN_URL_SUFFIX`
+    The path (``https://<hostname>/<path>``)
+    that an OAuth2 service named ``<OAuth2Service>``
+    should be directed when returning
+    after a user permits the submit host access
+    to their account.
+    Most often, this should be set to name of the OAuth2 service
+    (e.g. ``box``, ``gdrive``, ``onedrive``, etc.).
+    The dervied return URL is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_AUTHORIZATION_URL`
+    The URL that the companion OAuth2 credmon WSGI application
+    should redirect a user to
+    in order to request access for a user's credentials
+    for the OAuth2 service named ``<OAuth2Service>``.
+    This URL should be found in the service's API documentation.
+    The authorization URL is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_TOKEN_URL`
+    The URL that the *condor_credmon_oauth* should use
+    in order to refresh a user's tokens
+    for the OAuth2 service named ``<OAuth2Service>``.
+    This URL should be found in the service's API documentation.
+    The token URL is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
 
 condor_shadow Configuration File Entries
 -----------------------------------------
@@ -9254,6 +9307,10 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
     The number of seconds to wait before cleaning up unused credentials.
     Defaults to 3,600 seconds (1 hour).
+
+:macro-def:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
+    The directory that users' OAuth2 credentials should be stored in.
+    This directory must be owned by root:condor with the setgid flag enabled.
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------

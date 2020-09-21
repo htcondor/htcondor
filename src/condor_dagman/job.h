@@ -232,9 +232,10 @@ class Job {
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
+	const char* GetHoldScriptName() const;
 	static const char* JobTypeString() { return "HTCondor"; }
 
-	bool AddScript( bool post, const char *cmd, int defer_status,
+	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
 				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 
@@ -245,6 +246,7 @@ class Job {
 
 	Script * _scriptPre;
 	Script * _scriptPost;
+	Script * _scriptHold;
 
 
 #ifdef DEAD_CODE

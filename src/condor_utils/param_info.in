@@ -407,6 +407,12 @@ type=string
 usage=to specify that each machine has its own UID space.
 tags=starter
 
+[ACCOUNTING_DOMAIN]
+default=$(UID_DOMAIN)
+type=string
+usage=Specifies the accounting namespace for submitters.
+tags=schedd
+
 [TRUST_UID_DOMAIN]
 default=
 type=string
@@ -654,6 +660,13 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_HOLD_CLAIM_TIME]
+default=20
+type=int
+customization=normal
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_MAX_HOLD_SCRIPTS]
 default=20
 type=int
 customization=normal

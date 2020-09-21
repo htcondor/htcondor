@@ -11,11 +11,10 @@
 #include "condor_common.h"
 #include <boost/python/overloads.hpp>
 
-//#include "enum_utils.h"
 #include "condor_attributes.h"
 #include "dc_credd.h"
-//#include "globus_utils.h"
-//#include "classad/source.h"
+
+#include "htcondor.h"
 
 #include "old_boost.h"
 #include "module_lock.h"
@@ -113,7 +112,7 @@ struct Credd
 		int rv = construct_for_location(loc, DT_CREDD, m_addr, m_version);
 		if (rv < 0) {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
-			THROW_EX(RuntimeError, "Unknown type");
+			THROW_EX(HTCondorValueError, "Unknown type");
 		}
 	}
 
@@ -188,12 +187,12 @@ struct Credd
 		int mode = STORE_CRED_LEGACY_PWD | GENERIC_ADD;
 
 		if (password.empty()) {
-			THROW_EX(ValueError, "password may not be empty");
+			THROW_EX(HTCondorValueError, "password may not be empty");
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -201,7 +200,7 @@ struct Credd
 		delete daemon; daemon = NULL;
 
 		if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 	}
 
@@ -216,7 +215,7 @@ struct Credd
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -227,7 +226,7 @@ struct Credd
 			// no credential stored
 			return;
 		} else if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 	}
 
@@ -242,7 +241,7 @@ struct Credd
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -253,7 +252,7 @@ struct Credd
 			// no credential stored
 			return false;
 		} else if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 		return (result == SUCCESS);
 	}
@@ -275,11 +274,11 @@ struct Credd
 			mode |= credtype;
 			break;
 		case STORE_CRED_USER_KRB:
-			// TODO: make waiting an option? 
+			// TODO: make waiting an option?
 			mode |= credtype | STORE_CRED_WAIT_FOR_CREDMON;
 			break;
 		default:
-			THROW_EX(ValueError, "invalid credtype");
+			THROW_EX(HTCondorEnumError, "invalid credtype");
 			break;
 		}
 
@@ -288,7 +287,7 @@ struct Credd
 			auto_free_ptr producer(param("SEC_CREDENTIAL_PRODUCER"));
 			if (producer) {
 				if (strcasecmp(producer,"CREDENTIAL_ALREADY_STORED") == MATCH) {
-					THROW_EX(RuntimeError, producer.ptr());
+					THROW_EX(HTCondorIOError, producer.ptr());
 				}
 
 				// run the credential producer
@@ -300,22 +299,22 @@ struct Credd
 				const bool drop_privs = false;
 				MyPopenTimer pgm;
 				if (pgm.start_program(args, want_stderr, NULL, drop_privs) < 0) {
-					THROW_EX(RuntimeError, "could not run credential producer");
+					THROW_EX(HTCondorIOError, "could not run credential producer");
 				}
 				bool exited = pgm.wait_for_exit(timeout, &exit_status);
 				pgm.close_program(1); // close fp, wait 1 sec, then SIGKILL (does nothing if program already exited)
 				if ( ! exited) {
 					//exit_status = pgm.error_code();
-					THROW_EX(RuntimeError, "credential producer did not exit")
+					THROW_EX(HTCondorIOError, "credential producer did not exit")
 				}
 				if (exit_status) {
-					THROW_EX(RuntimeError, "credential producer non-zero exit code");
+					THROW_EX(HTCondorIOError, "credential producer non-zero exit code");
 				}
 
 				cred.set(pgm.output().Detach());
 				credlen = pgm.output_size();
 				if ( ! cred || ! credlen) {
-					THROW_EX(RuntimeError, "credential producer did not produce a credential");
+					THROW_EX(HTCondorIOError, "credential producer did not produce a credential");
 				}
 			}
 			
@@ -346,12 +345,12 @@ struct Credd
 			}
 		#else
 			if (!PyObject_CheckReadBuffer(py_credential.ptr())) {
-				THROW_EX(RuntimeError, "credendial not in a form usable by Credd binding");
+				THROW_EX(HTCondorValueError, "credendial not in a form usable by Credd binding");
 			}
 			const void * buf = NULL;
 			Py_ssize_t buflen = 0;
 			if (PyObject_AsReadBuffer(py_credential.ptr(), &buf, &buflen) < 0) {
-				THROW_EX(RuntimeError, "credendial not in usable format for python bindings");
+				THROW_EX(HTCondorValueError, "credendial not in usable format for python bindings");
 			}
 			if (buflen > 0) {
 				cred.set((char*)malloc(buflen));
@@ -362,12 +361,12 @@ struct Credd
 		}
 
 		if (!cred.ptr() || ! credlen) {
-			THROW_EX(ValueError, "credential may not be empty");
+			THROW_EX(HTCondorValueError, "credential may not be empty");
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -380,7 +379,7 @@ struct Credd
 		}
 
 		if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 	}
 
@@ -401,13 +400,13 @@ struct Credd
 			mode |= credtype;
 			break;
 		default:
-			THROW_EX(ValueError, "invalid credtype");
+			THROW_EX(HTCondorEnumError, "invalid credtype");
 			break;
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -415,7 +414,7 @@ struct Credd
 		delete daemon; daemon = NULL;
 
 		if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 	}
 
@@ -438,13 +437,13 @@ struct Credd
 			mode |= credtype | STORE_CRED_WAIT_FOR_CREDMON;
 			break;
 		default:
-			THROW_EX(ValueError, "invalid credtype");
+			THROW_EX(HTCondorEnumError, "invalid credtype");
 			break;
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -452,7 +451,7 @@ struct Credd
 		delete daemon; daemon = NULL;
 
 		if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 
 		return result;
@@ -492,7 +491,7 @@ struct Credd
 			mode |= credtype;
 			break;
 		default:
-			THROW_EX(ValueError, "invalid credtype");
+			THROW_EX(HTCondorEnumError, "invalid credtype");
 			break;
 		}
 
@@ -510,22 +509,22 @@ struct Credd
 				const bool drop_privs = false;
 				MyPopenTimer pgm;
 				if (pgm.start_program(args, want_stderr, NULL, drop_privs) < 0) {
-					THROW_EX(RuntimeError, "could not run credential producer");
+					THROW_EX(HTCondorIOError, "could not run credential producer");
 				}
 				bool exited = pgm.wait_for_exit(timeout, &exit_status);
 				pgm.close_program(1); // close fp, wait 1 sec, then SIGKILL (does nothing if program already exited)
 				if ( ! exited) {
 					//exit_status = pgm.error_code();
-					THROW_EX(RuntimeError, "credential producer did not exit")
+					THROW_EX(HTCondorIOError, "credential producer did not exit")
 				}
 				if (exit_status) {
-					THROW_EX(RuntimeError, "credential producer non-zero exit code");
+					THROW_EX(HTCondorIOError, "credential producer non-zero exit code");
 				}
 
 				cred.set(pgm.output().Detach());
 				credlen = pgm.output_size();
 				if ( ! cred || ! credlen) {
-					THROW_EX(RuntimeError, "credential producer did not produce a credential");
+					THROW_EX(HTCondorIOError, "credential producer did not produce a credential");
 				}
 			}
 		} else {
@@ -555,12 +554,12 @@ struct Credd
 			}
 		#else
 			if (!PyObject_CheckReadBuffer(py_credential.ptr())) {
-				THROW_EX(RuntimeError, "credendial not in a form usable by Credd binding");
+				THROW_EX(HTCondorValueError, "credendial not in a form usable by Credd binding");
 			}
 			const void * buf = NULL;
 			Py_ssize_t buflen = 0;
 			if (PyObject_AsReadBuffer(py_credential.ptr(), &buf, &buflen) < 0) {
-				THROW_EX(RuntimeError, "credendial not in usable format for python bindings");
+				THROW_EX(HTCondorValueError, "credendial not in usable format for python bindings");
 			}
 			if (buflen > 0) {
 				cred.set((char*)malloc(buflen));
@@ -571,16 +570,16 @@ struct Credd
 		}
 
 		if (!cred.ptr() || ! credlen) {
-			THROW_EX(ValueError, "credential may not be empty");
+			THROW_EX(HTCondorValueError, "credential may not be empty");
 		}
 
 		if (!cook_service_arg(service_ad, service, handle) || service_ad.size() == 0) {
-			THROW_EX(ValueError, "invalid service arg");
+			THROW_EX(HTCondorValueError, "invalid service arg");
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -588,7 +587,7 @@ struct Credd
 		delete daemon; daemon = NULL;
 
 		if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 
 	}
@@ -608,17 +607,17 @@ struct Credd
 			mode |= credtype;
 			break;
 		default:
-			THROW_EX(ValueError, "invalid credtype");
+			THROW_EX(HTCondorEnumError, "invalid credtype");
 			break;
 		}
 
 		if (!cook_service_arg(service_ad, service, handle) || service_ad.size() == 0) {
-			THROW_EX(ValueError, "invalid service arg");
+			THROW_EX(HTCondorValueError, "invalid service arg");
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -626,7 +625,7 @@ struct Credd
 		delete daemon; daemon = NULL;
 
 		if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 	}
 
@@ -646,17 +645,17 @@ struct Credd
 			mode |= credtype;
 			break;
 		default:
-			THROW_EX(ValueError, "invalid credtype");
+			THROW_EX(HTCondorEnumError, "invalid credtype");
 			break;
 		}
 
 		if (!cook_service_arg(service_ad, service, handle)) {
-			THROW_EX(ValueError, "invalid service arg");
+			THROW_EX(HTCondorValueError, "invalid service arg");
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -664,7 +663,7 @@ struct Credd
 		delete daemon; daemon = NULL;
 
 		if (store_cred_failed(result, mode, &errstr)) {
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 
 		boost::shared_ptr<CredStatus> status(new CredStatus(return_ad));
@@ -684,7 +683,7 @@ struct Credd
 			mode |= credtype;
 			break;
 		default:
-			THROW_EX(ValueError, "invalid credtype");
+			THROW_EX(HTCondorEnumError, "invalid credtype");
 			break;
 		}
 
@@ -706,7 +705,7 @@ struct Credd
 				// this also does minimal validation of the incoming request
 				service_name.clear();
 				if ( ! ad.LookupString("Service", service_name)) {
-					THROW_EX(ValueError, "request has no 'Service' attribute");
+					THROW_EX(HTCondorValueError, "request has no 'Service' attribute");
 				}
 				if (ad.LookupString("Handle", handle) && ! handle.empty()) {
 					service_name += "*";
@@ -717,13 +716,13 @@ struct Credd
 				// add the request to the vector
 				requests.push_back(&ad);
 			} else {
-				THROW_EX(ValueError, "service must be of type classad.ClassAd");
+				THROW_EX(HTCondorValueError, "service must be of type classad.ClassAd");
 			}
 		}
 
 		const char * user = cook_username_arg(user_in, fullusername, mode);
 		if (! user) {
-			THROW_EX(ValueError, "invalid user argument");
+			THROW_EX(HTCondorValueError, "invalid user argument");
 		}
 
 		daemon = cook_daemon_arg(mode);
@@ -737,7 +736,7 @@ struct Credd
 			case -3: errstr = "startCommand failed"; break;
 			case -4: errstr = "communication failure"; break;
 			}
-			THROW_EX(RuntimeError, errstr);
+			THROW_EX(HTCondorIOError, errstr);
 		}
 
 		std::string name_list;

@@ -118,13 +118,13 @@ public:
 	/** Write the [PRE|POST]_SCRIPT_STARTED "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WriteScriptStarted( Job *node, bool isPost );
+	void WriteScriptStarted( Job *node, ScriptType type );
 
 	/** Write the [PRE|POST]_SCRIPT_SUCCESS or [PRE|POST]_SCRIPT_FAILURE
 		"event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WriteScriptSuccessOrFailure( Job *node, bool isPost );
+	void WriteScriptSuccessOrFailure( Job *node, ScriptType type );
 
 	/** Write the SUBMIT_FAILED "event".
 		@param The DAG node corresponding to the "event".

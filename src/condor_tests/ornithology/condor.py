@@ -51,7 +51,7 @@ DEFAULT_PARAMS = {
     "MachineMaxVacateTime": "2",
     "RUNBENCHMARKS": "0",
     "JOB_QUEUE_LOG": "$(SPOOL)/job_queue.log",
-    "MAX_JOB_QUEUE_LOG_ROTATIONS": "0",
+    "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
 }
 
@@ -265,9 +265,9 @@ class Condor:
     @skip_if(condor_is_ready)
     def _wait_for_ready(self, timeout: int = 120, dump_logs_if_fail: bool = False):
         daemons = set(
-            self.run_command(
-                ["condor_config_val", "DAEMON_LIST"], echo=False
-            ).stdout.split(" ")
+            self.run_command(["condor_config_val", "DAEMON_LIST"], echo=False)
+            .stdout.replace(",", " ")
+            .split(" ")
         )
         master_log_path = self.master_log.path
 

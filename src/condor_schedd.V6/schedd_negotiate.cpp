@@ -271,7 +271,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		// once the claim is requested.
 
 	bool result = true;
-	int cpus, memory, disk;
+	int64_t cpus, memory, disk;
 
 	cpus = 1;
 	EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
@@ -289,8 +289,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	if (EvalInteger(ATTR_REQUEST_DISK, job_ad, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
-		disk = (MAX((int) ceil((disk / total_disk) * 100), 1)) *
-			int(total_disk/100.0);
+		disk = (MAX((int64_t) ceil((disk / total_disk) * 100), 1)) *
+			int64_t(total_disk/100.0);
 		match_ad->Assign(ATTR_DISK, disk);
 	} else {
 		dprintf(D_ALWAYS, "No disk request in job %d.%d, skipping match to partitionable slot %s\n", job_id.cluster, job_id.proc, slot_name);
@@ -328,7 +328,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		match_ad->Assign(ATTR_SLOT_TYPE, "Dynamic");
 		dprintf(D_FULLDEBUG,
 				"Partitionable slot %s adjusted for job %d.%d: "
-				"cpus = %d, memory = %d, disk = %d\n",
+				"cpus = %ld, memory = %ld, disk = %ld\n",
 				slot_name, job_id.cluster, job_id.proc, cpus, memory, disk);
 	}
 

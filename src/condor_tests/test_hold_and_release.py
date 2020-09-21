@@ -46,7 +46,7 @@ def job_queue_events_for_sleep_job(default_condor, path_to_sleep):
                 SetJobStatus(JobStatus.COMPLETED),
             ]
         },
-        timeout=120,
+        timeout=600,
     )
 
     return default_condor.job_queue.by_jobid[jobid]

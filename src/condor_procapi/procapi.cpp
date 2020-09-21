@@ -926,7 +926,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 				status = PROCAPI_UNSPECIFIED;
 			}
 			dprintf( D_FULLDEBUG,
-				"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
+				"ProcAPI: sysctl() on pid %d failed with %d(%s)\n",
 				pid, errno, strerror(errno) );
 
 			return PROCAPI_FAILURE;

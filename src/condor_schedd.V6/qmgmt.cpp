@@ -297,6 +297,19 @@ KeyToId(JobQueueKey &key,int & cluster,int & proc)
 	proc = key.proc;
 }
 
+static inline bool IsSpecialJobId( int cluster_id, int /* proc_id */ )
+{
+	// Return true if job id is special and should NOT be edited by
+	// the end user.  Currently this means job 0.0 (header ad) 
+	// and JobSet ads which are cluster 0 and a negative proc.
+	//
+	if (cluster_id == 0) {
+		return true;
+	}
+
+	return false;
+}
+
 ClassAd* ConstructClassAdLogTableEntry<JobQueueJob*>::New(const char * key, const char * /* mytype */) const
 {
 	JOB_ID_KEY jid(key);
@@ -3312,8 +3325,8 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueueKeyBuf		key;
 	JobQueueJob			*ad = NULL;
 
-	// cannot destroy the header ad 0.0
-	if ( cluster_id == 0 && proc_id == 0 ) {
+	// cannot destroy any SpecialJobIds like the header ad 0.0
+	if ( IsSpecialJobId(cluster_id,proc_id) ) {
 		errno = EINVAL;
 		return DESTROYPROC_ERROR;
 	}
@@ -3916,9 +3929,9 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		return -1;
 	}
 
-	// job id 0.0 is special and cannot normally be modified.
-	if ( key.cluster == 0 && key.proc == 0 ) {
-		dprintf(D_ALWAYS, "%s attempt to edit special ad 0.0\n", func_name);
+	// job id 0.0 and maybe some other ids are special and cannot normally be modified.
+	if ( IsSpecialJobId(key.cluster,key.proc) ) {
+		dprintf(D_ALWAYS, "WARNING: %s attempt to edit special ad %d.%d\n", func_name,key.cluster,key.proc);
 		errno = EACCES;
 		return -1;
 	}
@@ -6256,11 +6269,6 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
-	if ( cluster_id == 0 && proc_id == 0 ) {
-		errno = EACCES;
-		return -1;
-	}
-
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
 
@@ -7639,12 +7647,24 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		// don't want for this purpose...
 	job->LookupString(ATTR_ACCOUNTING_GROUP, powner, cremain);  // TODDCORE
 	if (*powner == '\0') {
-		job->LookupString(attr_JobUser, powner, cremain);
+		std::string job_user;
+		job->LookupString(attr_JobUser, job_user);
+		auto last_at = job_user.find_last_of('@');
+		auto accounting_domain = scheduler.accountingDomain();
+		if (last_at != std::string::npos && !accounting_domain.empty()) {
+			strncat(powner, job_user.substr(0, last_at).c_str(), cremain - 1);
+			cremain -= last_at;
+			strncat(powner, "@", cremain); cremain--;
+			strncat(powner, accounting_domain.c_str(), cremain);
+		} else {
+			strncat(powner, job_user.c_str(), cremain - 1);
+		}
 	} else if (user_is_the_new_owner) {
 		// AccountingGroup does not include a domain, but it needs to for this code
-		if (scheduler.uidDomain()) {
-			strcat(powner, "@");
-			strcat(powner, scheduler.uidDomain());
+		auto accounting_domain = scheduler.accountingDomain();
+		if (!accounting_domain.empty()) {
+			strncat(powner, "@", cremain); cremain--;
+			strncat(powner, accounting_domain.c_str(), cremain);
 		}
 	}
 

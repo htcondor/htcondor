@@ -32,6 +32,12 @@ ScheddClassad::OpenConnection() const
 {
 		// Open job queue
 	CondorError errstack;
+	if ( !_schedd ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Queue manager not initialized, "
+			"cannot publish updates to ClassAd.\n");
+		check_warning_strictness( DAG_STRICT_3 );
+		return NULL;
+	}
 	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
 				&errstack, NULL, _schedd->version() );
 	if ( !queue ) {
@@ -114,6 +120,26 @@ ScheddClassad::GetAttribute( const char *attrName, MyString &attrVal,
 
 //---------------------------------------------------------------------------
 bool
+ScheddClassad::GetAttribute( const char *attrName, std::string &attrVal,
+			bool printWarning ) const
+{
+	char *val;
+	if ( GetAttributeStringNew( _jobId._cluster, _jobId._proc,
+				attrName, &val ) == -1 ) {
+		if ( printWarning ) {
+			debug_printf( DEBUG_QUIET,
+					"Warning: failed to get attribute %s\n", attrName );
+		}
+		return false;
+	}
+
+	attrVal = val;
+	free( val );
+	return true;
+}
+
+//---------------------------------------------------------------------------
+bool
 ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
 			bool printWarning ) const
 {
@@ -157,7 +183,7 @@ DagmanClassad::~DagmanClassad()
 //---------------------------------------------------------------------------
 void
 DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
-			int maxPostScripts )
+			int maxPostScripts, int maxHoldScripts )
 {
 	Qmgr_connection *queue = OpenConnection();
 	if ( !queue ) {
@@ -168,6 +194,7 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 	SetAttribute( ATTR_DAGMAN_MAXIDLE, maxIdle );
 	SetAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, maxPreScripts );
 	SetAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, maxPostScripts );
+	SetAttribute( ATTR_DAGMAN_MAXHOLDSCRIPTS, maxHoldScripts );
 
 	CloseConnection( queue );
 }
@@ -175,9 +202,10 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 //---------------------------------------------------------------------------
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
-			int post, int ready, int failed, int unready,
+			int post, int hold, int ready, int failed, int unready,
 			DagStatus dagStatus, bool recovery, const DagmanStats &stats,
-			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts )
+			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts,
+			int &maxHoldScripts )
 {
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -195,6 +223,7 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetAttribute( ATTR_DAG_NODES_PRERUN, pre );
 	SetAttribute( ATTR_DAG_NODES_QUEUED, submitted );
 	SetAttribute( ATTR_DAG_NODES_POSTRUN, post );
+	SetAttribute( ATTR_DAG_NODES_HOLDRUN, hold );
 	SetAttribute( ATTR_DAG_NODES_READY, ready );
 	SetAttribute( ATTR_DAG_NODES_FAILED, failed );
 	SetAttribute( ATTR_DAG_NODES_UNREADY, unready );
@@ -212,18 +241,21 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	int jobAdMaxJobs;
 	int jobAdMaxPreScripts;
 	int jobAdMaxPostScripts;
+	int jobAdMaxHoldScripts;
 
 	// Look up the current values of these properties in the condor_dagman job ad.
 	GetAttribute( ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle );
 	GetAttribute( ATTR_DAGMAN_MAXJOBS, jobAdMaxJobs );
 	GetAttribute( ATTR_DAGMAN_MAXPRESCRIPTS, jobAdMaxPreScripts );
 	GetAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts );
+	GetAttribute( ATTR_DAGMAN_MAXHOLDSCRIPTS, jobAdMaxHoldScripts );
 
 	// Update our internal dag values according to whatever is in the job ad.
 	maxIdle = jobAdMaxIdle;
 	maxJobs = jobAdMaxJobs;
 	maxPreScripts = jobAdMaxPreScripts;
 	maxPostScripts = jobAdMaxPostScripts;
+	maxHoldScripts = jobAdMaxHoldScripts;
 
 
 	CloseConnection( queue );
@@ -257,6 +289,34 @@ DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
 	CloseConnection( queue );
 
 	return;
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanClassad::GetSetBatchId( std::string &batchId )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	if ( !GetAttribute( ATTR_JOB_BATCH_ID, batchId, false ) ) {
+		batchId = std::to_string( _jobId._cluster );
+		batchId += ".";
+		batchId += std::to_string( _jobId._proc );
+		SetAttribute( ATTR_JOB_BATCH_ID, batchId );
+	}
+
+	CloseConnection( queue );
+
+	debug_printf( DEBUG_VERBOSE, "Workflow batch-id: <%s>\n",
+				batchId.c_str() );
 }
 
 //---------------------------------------------------------------------------
@@ -366,10 +426,10 @@ ProvisionerClassad::~ProvisionerClassad()
 }
 
 //---------------------------------------------------------------------------
-MyString
+int
 ProvisionerClassad::GetProvisionerState()
 {
-	MyString state = "";
+	int state = -1;
 
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -384,8 +444,8 @@ ProvisionerClassad::GetProvisionerState()
 	}
 
 	GetAttribute( ATTR_PROVISIONER_STATE, state, false );
-	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%s>\n",
-				state.Value() );
+	debug_printf( DEBUG_VERBOSE, "Provisioner job state: <%d>\n",
+				state );
 
 	CloseConnection( queue );
 

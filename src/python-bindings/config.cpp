@@ -11,6 +11,7 @@
 #include "param_info.h"
 #include "old_boost.h"
 #include "classad_wrapper.h"
+#include "htcondor.h"
 
 using namespace boost::python;
 
@@ -20,7 +21,7 @@ do_start_command(int cmd, ReliSock &rsock, const ClassAdWrapper &ad)
     std::string addr_str;
     if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr_str))
     {
-        THROW_EX(ValueError, "Address not available in location ClassAd.");
+        THROW_EX(HTCondorValueError, "Address not available in location ClassAd.");
     }
     ClassAd ad_copy; ad_copy.CopyFrom(ad);
     Daemon target(&ad_copy, DT_GENERIC, NULL);
@@ -41,7 +42,7 @@ do_start_command(int cmd, ReliSock &rsock, const ClassAdWrapper &ad)
 
     if (connect_error)
     {
-        THROW_EX(RuntimeError, "Failed to connect to daemon");
+        THROW_EX(HTCondorIOError, "Failed to connect to daemon");
     }
     target.startCommand(cmd, &rsock, 30);
 }
@@ -50,23 +51,23 @@ do_start_command(int cmd, ReliSock &rsock, const ClassAdWrapper &ad)
 void
 set_remote_param(const ClassAdWrapper &ad, std::string param, std::string value)
 {
-    if (!is_valid_param_name(param.c_str())) {THROW_EX(ValueError, "Invalid parameter name.");}
+    if (!is_valid_param_name(param.c_str())) {THROW_EX(HTCondorValueError, "Invalid parameter name.");}
 
     ReliSock rsock;
     do_start_command(DC_CONFIG_RUNTIME, rsock, ad);
 
     rsock.encode();
-    if (!rsock.code(param)) {THROW_EX(RuntimeError, "Can't send param name.");}
+    if (!rsock.code(param)) {THROW_EX(HTCondorIOError, "Can't send param name.");}
     std::stringstream ss;
     ss << param << " = " << value;
-    if (!rsock.put(ss.str())) {THROW_EX(RuntimeError, "Can't send parameter value.");}
-    if (!rsock.end_of_message()) {THROW_EX(RuntimeError, "Can't send EOM for param set.");}
+    if (!rsock.put(ss.str())) {THROW_EX(HTCondorIOError, "Can't send parameter value.");}
+    if (!rsock.end_of_message()) {THROW_EX(HTCondorIOError, "Can't send EOM for param set.");}
 
     int rval = 0;
     rsock.decode();
-    if (!rsock.code(rval)) {THROW_EX(RuntimeError, "Can't get parameter set response.");}
-    if (!rsock.end_of_message()) {THROW_EX(RuntimeError, "Can't get EOM for parameter set.");}
-    if (rval < 0) {THROW_EX(RuntimeError, "Failed to set remote daemon parameter.");}
+    if (!rsock.code(rval)) {THROW_EX(HTCondorIOError, "Can't get parameter set response.");}
+    if (!rsock.end_of_message()) {THROW_EX(HTCondorIOError, "Can't get EOM for parameter set.");}
+    if (rval < 0) {THROW_EX(HTCondorReplyError, "Failed to set remote daemon parameter.");}
 }
 
 
@@ -79,22 +80,22 @@ get_remote_param(const ClassAdWrapper &ad, std::string param)
     rsock.encode();
     if (!rsock.code(param))
     {
-        THROW_EX(RuntimeError, "Can't send requested param name.");
+        THROW_EX(HTCondorIOError, "Can't send requested param name.");
     }
     if (!rsock.end_of_message())
     {
-        THROW_EX(RuntimeError, "Can't send EOM for param name.");
+        THROW_EX(HTCondorIOError, "Can't send EOM for param name.");
     }
 
     std::string val;
     rsock.decode();
     if (!rsock.code(val))
     {
-        THROW_EX(RuntimeError, "Can't receive reply from daemon for param value.");
+        THROW_EX(HTCondorIOError, "Can't receive reply from daemon for param value.");
     }
     if (!rsock.end_of_message())
     {
-        THROW_EX(RuntimeError, "Can't receive EOM from daemon for param value.");
+        THROW_EX(HTCondorIOError, "Can't receive EOM from daemon for param value.");
     }
 
     return val;
@@ -114,35 +115,35 @@ get_remote_names(const ClassAdWrapper &ad)
     std::string names = "?names";
     if (!rsock.put(names))
     {
-        THROW_EX(RuntimeError, "Failed to send request for parameter names.");
+        THROW_EX(HTCondorIOError, "Failed to send request for parameter names.");
     }
     if (!rsock.end_of_message())
     {
-        THROW_EX(RuntimeError, "Failed to send EOM for parameter names.");
+        THROW_EX(HTCondorIOError, "Failed to send EOM for parameter names.");
     }
 
     rsock.decode();
     std::string val;
     if (!rsock.code(val))
     {
-        THROW_EX(RuntimeError, "Cannot receive reply for parameter names.");
+        THROW_EX(HTCondorIOError, "Cannot receive reply for parameter names.");
     }
     if (val == "Not defined")
     {
         if (!rsock.end_of_message())
         {
-            THROW_EX(RuntimeError, "Unable to receive EOM from remote daemon (unsupported version).");
+            THROW_EX(HTCondorIOError, "Unable to receive EOM from remote daemon (unsupported version).");
         }
         if (get_remote_param(ad, "MASTER") == "Not defined")
         {
-            THROW_EX(RuntimeError, "Not authorized to query remote daemon.");
+            THROW_EX(HTCondorReplyError, "Not authorized to query remote daemon.");
         }
-        else {THROW_EX(RuntimeError, "Remote daemon is an unsupported version; 8.1.2 or later is required.");}
+        else {THROW_EX(HTCondorReplyError, "Remote daemon is an unsupported version; 8.1.2 or later is required.");}
     }
     if (val[0] == '!')
     {
         rsock.end_of_message();
-        THROW_EX(RuntimeError, "Remote daemon failed to get parameter name list");
+        THROW_EX(HTCondorReplyError, "Remote daemon failed to get parameter name list");
     }
     if (!val.empty())
     {
@@ -152,13 +153,13 @@ get_remote_names(const ClassAdWrapper &ad)
     {
         if (!rsock.code(val))
         {
-            THROW_EX(RuntimeError, "Failed to read parameter name.");
+            THROW_EX(HTCondorIOError, "Failed to read parameter name.");
         }
         retval.attr("append")(val);
     }
     if (!rsock.end_of_message())
     {
-        THROW_EX(RuntimeError, "Failed to receive final EOM for parameter names");
+        THROW_EX(HTCondorIOError, "Failed to receive final EOM for parameter names");
     }
     return retval;
 }
@@ -242,7 +243,7 @@ struct RemoteParam
         {
             return this->update(source.attr("items")());
         }
-        if (!py_hasattr(source, "__iter__")) { THROW_EX(ValueError, "Must provide a dictionary-like object to update()"); }
+        if (!py_hasattr(source, "__iter__")) { THROW_EX(HTCondorTypeError, "Must provide a dictionary-like object to update()"); }
 
         object iter = source.attr("__iter__")();
         while (true) {
@@ -369,7 +370,9 @@ struct Param
         case PARAM_TYPE_STRING:
         {
             std::string result;
-            if (!param(result, attr)) { THROW_EX(ValueError, ("Unable to convert value for param " + std::string(attr) + " to string (raw value " + raw_string + ")").c_str()); }
+            if (!param(result, attr)) {
+                THROW_EX(HTCondorValueError, ("Unable to convert value for param " + std::string(attr) + " to string (raw value " + raw_string + ")").c_str());
+            }
             pyresult = object(result);
             break;
         }
@@ -577,7 +580,7 @@ struct Param
         {
             return this->update(source.attr("items")());
         }
-        if (!py_hasattr(source, "__iter__")) { THROW_EX(ValueError, "Must provide a dictionary-like object to update()"); }
+        if (!py_hasattr(source, "__iter__")) { THROW_EX(HTCondorTypeError, "Must provide a dictionary-like object to update()"); }
 
         object iter = source.attr("__iter__")();
         while (true) {

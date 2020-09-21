@@ -28,7 +28,7 @@ TEST_COUNTER = itertools.count()
 
 
 @pytest.fixture(scope="function")
-def test_dir(request, tmp_path):
+def fn_test_dir(request, tmp_path):
     # set in test_htcondor_personal.run
     if "ON_BATLAB" in os.environ:
         path = Path.cwd() / "test_htcondor_personal-test-dirs"
@@ -42,16 +42,16 @@ def test_dir(request, tmp_path):
 
 
 @pytest.fixture(scope="function")
-def local_dir(test_dir):
-    d = test_dir / "local_dir"
+def local_dir(fn_test_dir):
+    d = fn_test_dir / "local_dir"
     d.mkdir(parents=True)
 
     return d
 
 
 @pytest.fixture(scope="function")
-def another_local_dir(test_dir):
-    d = test_dir / "another_local_dir"
+def another_local_dir(fn_test_dir):
+    d = fn_test_dir / "another_local_dir"
     d.mkdir(parents=True)
 
     return d

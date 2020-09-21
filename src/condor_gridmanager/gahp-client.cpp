@@ -3706,7 +3706,7 @@ GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
 
 int
 GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
-									 const char *proxy_file)
+									 const char *proxy_file, time_t proxy_expiration)
 {
 	static const char* command = "CONDOR_JOB_REFRESH_PROXY";
 
@@ -3721,8 +3721,8 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(proxy_file) );
-	int x = formatstr(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
-							 esc2);
+	int x = formatstr(reqline, "%s %d.%d %s %d", esc1, job_id.cluster, job_id.proc,
+					  esc2, (int)proxy_expiration);
 	free(esc1);
 	free(esc2);
 	ASSERT( x > 0 );

@@ -147,7 +147,7 @@ struct ProcFamilyUsage {
 
 #if HAVE_PSS
 		total_proportional_set_size = MAX( total_proportional_set_size, other.total_proportional_set_size );
-		total_proportional_set_size_available = MAX( total_proportional_set_size_available, total_proportional_set_size_available );
+		total_proportional_set_size_available = MAX( total_proportional_set_size_available, other.total_proportional_set_size_available );
 #endif
 
 		return *this;

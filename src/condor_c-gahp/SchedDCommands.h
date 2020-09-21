@@ -91,7 +91,8 @@ public:
 	static SchedDRequest * createRefreshProxyRequest (const int request_id,
 													  const int cluster_id,
 													  const int proc_id,
-													  const char * proxy_file);
+													  const char * proxy_file,
+													  time_t proxy_expiration);
 
 	static SchedDRequest * createUpdateLeaseRequest (const int request_id,
 													 const int num_jobs,
@@ -120,6 +121,7 @@ public:
 
 	char * reason;	// For release, remove, update
 	char * proxy_file;	// For refresh_proxy
+	time_t proxy_expiration;
 
 	int num_jobs;
 	job_expiration * expirations;
@@ -156,6 +158,7 @@ protected:
 		proc_id = -1;
 		reason = NULL;
 		proxy_file = NULL;
+		proxy_expiration = 0;
 		request_id = -1;
 		expirations = NULL;
 		num_jobs =0;
