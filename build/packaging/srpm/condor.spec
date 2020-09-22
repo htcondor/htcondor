@@ -110,7 +110,7 @@ Source8: htcondor.pp
 
 Patch2: el7-python2.patch
 
-#% if 0%osg
+#% if 0% osg
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
 
@@ -688,33 +688,8 @@ rm -rf %{buildroot}
 echo ---------------------------- makefile ---------------------------------
 make install DESTDIR=%{buildroot}
 
-%if 0
-# Things in /usr/lib really belong in /usr/share/condor
-populate %{_datadir}/condor %{buildroot}/%{_usr}/lib/*
-# Except for the shared libs
-populate %{_libdir}/ %{buildroot}/%{_datadir}/condor/libclassad.so*
-rm -f %{buildroot}/%{_datadir}/condor/libclassad.a
-mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
-populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_ssh_to_job_sshd_config_template
-# And the Python bindings
-%if %python
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-populate %{python_sitearch}/ %{buildroot}%{_datadir}/condor/python/*
-%endif
-%if 0%{?rhel} >= 7 || 0%{?fedora}
-%ifarch x86_64
-populate /usr/lib64/python%{python3_version}/site-packages/ %{buildroot}%{_datadir}/condor/python3/*
-%endif
-%endif
-%endif
-%endif
 # Drop in a symbolic link for backward compatability
 ln -s ../..%{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
-
-%if 0
-# It is proper to put HTCondor specific libexec binaries under libexec/condor/
-populate %_libexecdir/condor %{buildroot}/usr/libexec/*
-%endif
 
 populate /usr/share/doc/condor-%{version}/examples %{buildroot}/usr/share/doc/condor-%{version}/etc/examples/*
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/etc
@@ -845,6 +820,7 @@ cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 
 #Fixups for packaged build, should have been done by cmake
 
+mkdir -p %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
@@ -859,6 +835,9 @@ rm -rf %{buildroot}/usr/include/condor
 rm -rf %{buildroot}/usr/lib64/condor/libchirp_client.a
 rm -rf %{buildroot}/usr/lib64/condor/libcondorapi.a
 rm -rf %{buildroot}/usr/lib64/libclassad.a
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE-2.0.txt
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
 
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarball_version
