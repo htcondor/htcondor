@@ -249,6 +249,10 @@ Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
+%if %uw_build
+Requires: %name-externals%{?_isa} = %version-%release
+%endif
+
 %if %blahp
 Requires: blahp >= 1.16.1
 %endif
@@ -500,6 +504,7 @@ BOSCO provides an overlay system so the remote clusters appear to be a HTCondor
 cluster.  This allows the user to run their workflows using HTCondor tools across
 multiple clusters.
 
+#######################
 %package -n minicondor
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
@@ -513,6 +518,21 @@ This example configuration is good for trying out HTCondor for the first time.
 It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
+%if %uw_build
+
+#######################
+%package externals
+Summary: Empty package to ensure yum gets the blahp from its own package
+Group: Applications/System
+Requires: %name = %version-%release
+
+%description externals
+Dummy package to help yum out
+
+%endif
+
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible.
 Group: Applications/System
@@ -538,6 +558,7 @@ if [ $1 == 0 ]; then
     /bin/systemctl disable condor-annex-ec2
 fi
 
+#######################
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -550,6 +571,10 @@ Requires: %name-classads = %version-%release
 Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
+%if %uw_build
+Requires: %name-externals = %version-%release
+%endif
+
 
 %description all
 Include dependencies for all condor packages in a typical installation
@@ -960,6 +985,8 @@ rm -rf %{buildroot}
 
 #################
 %files all
+#################
+%files externals
 #################
 %files
 %exclude %_sbindir/openstack_gahp
