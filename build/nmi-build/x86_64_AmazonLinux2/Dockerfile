@@ -258,6 +258,7 @@ RUN yum install -y \
     'byacc' \
     'c-ares-devel' \
     'cmake' \
+    'cmake3' \
     'expat-devel' \
     'flex' \
     'gcc-c++' \
