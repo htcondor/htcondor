@@ -45,6 +45,11 @@ Bugs Fixed:
   resource has been eliminated.
   :ticket:`7755`
 
+- Fixed a bug where the *condor_gridmanager* could refresh the proxy of
+  grid-type *condor* jobs at the wrong time when
+  ``DelegateJobGSICredentialsLifetime`` is set in the job ad.
+  :ticket`7856`
+
 Version 8.8.10
 --------------
 
