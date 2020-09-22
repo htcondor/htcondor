@@ -2,8 +2,8 @@
 
 # optionally define any of these, here or externally
 # % define fedora   16
-%define osg      0
-%define uw_build 1
+# % define osg      0
+# % define uw_build 1
 
 %define python 0
 
@@ -107,8 +107,6 @@ Source6: 00-batch_gahp_blahp.config
 Source7: 00-restart_peaceful.config
 
 Source8: htcondor.pp
-
-Patch2: el7-python2.patch
 
 #% if 0% osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -257,20 +255,18 @@ Requires: %name-externals%{?_isa} = %version-%release
 Requires: blahp >= 1.16.1
 %endif
 
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-Requires: python-requests
+Requires: condor-boinc
+
+%if 0%{?rhel} == 7
+Requires: python36-requests
 Requires: python2-condor
 %endif
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3-requests
 %endif
-Requires: python3-condor
-
 
 # Useful tools are using the Python bindings
 Requires: python3-condor
-
-Requires: initscripts
 
 Requires(pre): shadow-utils
 
@@ -296,6 +292,16 @@ Obsoletes: condor-static < 7.2.0
 
 # Standard Universe discontinued as of 8.9.0
 Obsoletes: condor-std-universe < 8.9.0
+
+# Cream gahp discontinued as of 8.9.9
+Obsoletes: condor-cream-gahp < 8.9.9
+
+# 32-bit shadow discontinued as of 8.9.9
+Obsoletes: condor-small-shadow < 8.9.9
+
+# external packages discontinued as of 8.9.9
+Obsoletes: condor-externals < 8.9.9
+Obsoletes: condor-external-libs < 8.9.9
 
 %description
 HTCondor is a specialized workload management system for
@@ -593,10 +599,6 @@ exit 0
 %else
 # For release tarballs
 %setup -q -n %{name}-%{tarball_version}
-%endif
-
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-%patch2 -p1
 %endif
 
 %if 0%{?osg} || 0%{?hcc}
