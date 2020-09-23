@@ -248,7 +248,7 @@ Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
-Requires: %name-externals%{?_isa} = %version-%release
+Requires: %name-externals = %version-%release
 %endif
 
 %if %blahp
@@ -300,8 +300,8 @@ Obsoletes: condor-cream-gahp < 8.9.9
 Obsoletes: condor-small-shadow < 8.9.9
 
 # external packages discontinued as of 8.9.9
-Obsoletes: condor-externals < 8.9.9
-Obsoletes: condor-external-libs < 8.9.9
+#Obsoletes: condor-externals < 8.9.9
+#Obsoletes: condor-external-libs < 8.9.9
 
 %description
 HTCondor is a specialized workload management system for
@@ -531,12 +531,19 @@ shortens many timers to be more responsive.
 Summary: Empty package to ensure yum gets the blahp from its own package
 Group: Applications/System
 Requires: %name = %version-%release
+Requires: %name-external-libs = %version-%release
 
 %description externals
 Dummy package to help yum out
 
-%endif
+%package external-libs
+Summary: Empty package to ensure that the external libraries are removed
+Group: Applications/System
 
+%description external-libs
+Dummy package to help yum out
+
+%endif
 
 #######################
 %package annex-ec2
@@ -579,6 +586,7 @@ Requires: python3-condor = %version-%release
 Requires: %name-bosco = %version-%release
 %if %uw_build
 Requires: %name-externals = %version-%release
+Requires: %name-external-libs = %version-%release
 %endif
 
 
@@ -989,6 +997,8 @@ rm -rf %{buildroot}
 %files all
 #################
 %files externals
+#################
+%files external-libs
 #################
 %files
 %exclude %_sbindir/openstack_gahp
