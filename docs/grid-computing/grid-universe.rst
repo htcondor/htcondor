@@ -958,6 +958,29 @@ to tell it where to find
     the LSF binaries. ``lsf_confpath`` is the location of the LSF
     configuration file.
 
+The batch GAHP supports translating certain job classad attributes into the corresponding batch system submission parameters. However, note that not all parameters are supported.
+
+The following table summarizes how job classad attributes will be translated into the corresponding Slurm job parameters.
+
++-------------------+---------------------+
+| Classad           | Slurm               |
++===================+=====================+
+| ``RequestMemory`` | ``--mem``           |
++-------------------+---------------------+
+| ``BatchRuntime``  | ``--time``          |
++-------------------+---------------------+
+| ``BatchProject``  | ``--account``       |
++-------------------+---------------------+
+| ``Queue``         | ``--partition``     |
++-------------------+---------------------+
+| ``Queue``         | ``--clusters``      |
++-------------------+---------------------+
+| *Unsupported*     | ``--cpus-per-task`` |
++-------------------+---------------------+
+
+Note that for Slurm, ``Queue`` is used for both ``--partition`` and ``--clusters``. If you use the ``partition@cluster`` syntax, the partition will be set to whatever is before the ``@``, and the cluster to whatever is after the ``@``. If you only wish to set the cluster, leave out the partition (e.g. use ``@cluster``).
+
+
 :index:`PBS (Portable Batch System)`
 :index:`submitting jobs to PBS<single: submitting jobs to PBS; grid computing>`
 
