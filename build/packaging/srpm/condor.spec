@@ -285,6 +285,27 @@ Requires(post): python3-policycoreutils
 Requires(post): selinux-policy-targeted
 %endif
 
+# Require libraries that are dlopened
+Requires: globus-callout
+Requires: globus-common
+Requires: globus-gsi-callback
+Requires: globus-gsi-cert-utils
+Requires: globus-gsi-credential
+Requires: globus-gsi-openssl-error
+Requires: globus-gsi-proxy-core
+Requires: globus-gsi-proxy-ssl
+Requires: globus-gsi-sysconfig
+Requires: globus-gssapi-gsi
+Requires: globus-gss-assist
+Requires: globus-openssl-module
+Requires: globus-xio-gsi-driver
+Requires: krb5-libs
+Requires: libcom_err
+Requires: munge-libs
+Requires: openssl-libs
+Requires: scitokens-cpp
+Requires: voms
+
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
 

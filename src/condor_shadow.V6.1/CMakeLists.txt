@@ -33,9 +33,5 @@ uuid_stubs.cpp
 )
 
 
-# Build a small shadow on 32-bit Linux platforms
-if (LINUX AND (${BIT_MODE} MATCHES "32"))
-    condor_daemon( EXE condor_shadow_s SOURCES "${shadowElements}" LIBRARIES "${CONDOR_LIBS_FOR_SHADOW};${CMAKE_DL_LIBS}" INSTALL "${C_SBIN}" )
-endif()
 condor_daemon( EXE condor_shadow SOURCES "${shadowElements}" LIBRARIES "${CONDOR_LIBS_FOR_SHADOW};${CMAKE_DL_LIBS}" INSTALL "${C_SBIN}" )
 
