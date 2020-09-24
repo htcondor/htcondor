@@ -262,6 +262,7 @@ RUN dnf install -y \
     'perl(Archive::Tar)' \
     'perl(Data::Dumper)' \
     'perl(Digest::MD5)' \
+    'podman' \
     'python3-devel' \
     'python3-setuptools' \
     'python-devel' \
