@@ -917,7 +917,7 @@ endif()
 
 #####################################
 # Do we want to link in libssl and kerberos or dlopen() them at runtime?
-if (LINUX AND NOT PROPER AND NOT WANT_PYTHON_WHEELS)
+if (LINUX AND NOT WANT_PYTHON_WHEELS)
 	set( DLOPEN_SECURITY_LIBS TRUE )
 endif()
 
@@ -1060,7 +1060,7 @@ endif()
 
 #####################################
 # Do we want to link in the GSI libraries or dlopen() them at runtime?
-if (HAVE_EXT_GLOBUS AND LINUX AND NOT PROPER AND NOT WANT_PYTHON_WHEELS)
+if (HAVE_EXT_GLOBUS AND LINUX AND NOT WANT_PYTHON_WHEELS)
 	set( DLOPEN_GSI_LIBS TRUE )
 endif()
 
@@ -1147,7 +1147,7 @@ set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FO
 set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
 set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-if (LINUX AND NOT PROPER)
+if (LINUX)
   set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")

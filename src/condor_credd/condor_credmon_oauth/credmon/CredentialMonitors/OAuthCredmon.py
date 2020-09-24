@@ -55,11 +55,13 @@ class OAuthCredmon(AbstractCredentialMonitor):
                 if 'use_refresh_token' in token_metadata:
                     if token_metadata['use_refresh_token'] == False:
                         return False
+            lifetime_fraction = api_endpoints.token_lifetime_fraction(token_metadata['token_url'])
+        else:
+            lifetime_fraction = 0.5
 
         # compute token refresh time
         create_time = os.path.getctime(access_token_path)
-        refresh_time = create_time + (float(access_token['expires_in']) *
-            api_endpoints.token_lifetime_fraction(token_metadata['token_url']))
+        refresh_time = create_time + (float(access_token['expires_in']) * lifetime_fraction)
 
         # check if token is past its refresh time
         if time.time() > refresh_time:
