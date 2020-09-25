@@ -63,7 +63,7 @@ ResumeDag(Dagman &dm)
 Job*
 AddNode( Dag *dag, const char *name,
 		 const char* directory,
-		 const char* submitFile,
+		 const char* submitFileOrSubmitDesc,
 		 bool noop,
 		 bool done, NodeType type,
 		 MyString &failReason )
@@ -73,7 +73,7 @@ AddNode( Dag *dag, const char *name,
 		failReason = why;
 		return NULL;
 	}
-	if( !IsValidSubmitFileName( submitFile, why ) ) {
+	if( !IsValidSubmitName( submitFileOrSubmitDesc, why ) ) {
 		failReason = why;
 		return NULL;
 	}
@@ -84,7 +84,7 @@ AddNode( Dag *dag, const char *name,
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}
-	Job* node = new Job( name, directory, submitFile );
+	Job* node = new Job( name, directory, submitFileOrSubmitDesc );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -97,6 +97,16 @@ AddNode( Dag *dag, const char *name,
 		node->SetStatus( Job::STATUS_DONE );
 	}
 	node->SetType( type );
+
+		// At parse time, we don't know if submitFileOrSubmitDescName refers
+		// to a file (which might not exist yet).
+		// If there is a submit description matching this name, set a pointer
+		// from the job now. We'll decide which one to use at submit time.
+	if( dag->SubmitDescriptions.find( submitFileOrSubmitDesc ) != dag->SubmitDescriptions.end() ) {
+		SubmitHash* submitDesc = dag->SubmitDescriptions.at( submitFileOrSubmitDesc );
+		node->setSubmitDesc( submitDesc );
+	}
+
 	ASSERT( dag != NULL );
 	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding ";
@@ -148,7 +158,7 @@ IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 }
 
 bool
-IsValidSubmitFileName( const char *name, MyString &whynot )
+IsValidSubmitName( const char *name, MyString &whynot )
 {
 	if( name == NULL ) {
 		whynot = "missing submit file name";
@@ -156,16 +166,6 @@ IsValidSubmitFileName( const char *name, MyString &whynot )
 	}
 	if( strlen( name ) == 0 ) {
 		whynot = "empty submit file name (name == \"\")";
-		return false;
-	}
-	return true;
-}
-
-bool
-IsValidSubmitDescription( SubmitHash *desc, MyString &whynot )
-{
-	if( desc == NULL ) {
-		whynot = "missing submit file and/or description";
 		return false;
 	}
 	return true;
