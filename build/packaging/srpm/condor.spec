@@ -249,13 +249,12 @@ Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
 Requires: %name-externals = %version-%release
+Requires: condor-boinc
 %endif
 
 %if %blahp
 Requires: blahp >= 1.16.1
 %endif
-
-Requires: condor-boinc
 
 %if 0%{?rhel} == 7
 Requires: python36-requests
