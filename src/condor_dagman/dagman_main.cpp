@@ -738,7 +738,7 @@ void main_init (int argc, char ** const argv) {
 	for (i = 1; i < argc; i++) {
 		// If argument is not a flag/option, assume it's a dag filename
 		if( argv[i][0] != '-') {
-			dagman.dagFiles.append( argv[i] );
+			dagman.dagFiles.push_back( std::string(argv[i]) );
 		}
 		else if( !strcasecmp( "-Debug", argv[i] ) ) {
 			i++;
@@ -762,7 +762,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No DAG specified\n" );
 				Usage();
 			}
-			dagman.dagFiles.append( argv[i] );
+			dagman.dagFiles.push_back( std::string(argv[i]) );
 		} else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -945,13 +945,12 @@ void main_init (int argc, char ** const argv) {
 
 	// We expect at the very least to have a dag filename specified
 	// If not, show the Usage details and exit now.
-	if( dagman.dagFiles.number() == 0 ) {
+	if( dagman.dagFiles.size() == 0 ) {
 		Usage();
 	}
 
-	dagman.dagFiles.rewind();
-	dagman.primaryDagFile = dagman.dagFiles.next();
-	dagman.multiDags = (dagman.dagFiles.number() > 1);
+	dagman.primaryDagFile = dagman.dagFiles.front();
+	dagman.multiDags = (dagman.dagFiles.size() > 1);
 
 	dagman._dagmanClassad->Initialize( dagman.maxJobs, dagman.maxIdle, 
 				dagman.maxPreScripts, dagman.maxPostScripts,
@@ -1139,15 +1138,14 @@ void main_init (int argc, char ** const argv) {
 	//
 	debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
 				   lockFileName.c_str() );
-	if ( dagman.dagFiles.number() == 1 ) {
+	if ( dagman.dagFiles.size() == 1 ) {
 		debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
 				  	dagman.primaryDagFile.Value() );
 	} else {
 		MyString msg = "DAG Input files are ";
-		dagman.dagFiles.rewind();
-		const char *dagFile;
-		while ( (dagFile = dagman.dagFiles.next()) != NULL ) {
-			msg += dagFile;
+
+		for ( auto it = dagman.dagFiles.begin(); it != dagman.dagFiles.end(); ++it ) {
+			msg += it->c_str();
 			msg += " ";
 		}
 		msg += "\n";
@@ -1241,22 +1239,19 @@ void main_init (int argc, char ** const argv) {
 	// takes care of adding jobs and dependencies to the DagMan
 	//
 
-	dagman.mungeNodeNames = (dagman.dagFiles.number() > 1);
+	dagman.mungeNodeNames = (dagman.dagFiles.size() > 1);
 	parseSetDoNameMunge( dagman.mungeNodeNames );
-   	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
-		dagman.dagFiles.number() );
-	dagman.dagFiles.rewind();
-	char *dagFile;
+   	debug_printf( DEBUG_VERBOSE, "Parsing %zu dagfiles\n", 
+		dagman.dagFiles.size() );
 
 	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
 	// of the parsing, copies of the dagman.dagFile string list happen which
 	// mess up the iteration of this list.
-	StringList sl( dagman.dagFiles );
-	sl.rewind();
-	while ( (dagFile = sl.next()) != NULL ) {
-		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
+	std::list<std::string> sl( dagman.dagFiles );
+	for ( auto it = sl.begin(); it != sl.end(); ++it ) {
+		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", it->c_str() );
 
-		if( !parse( dagman.dag, dagFile, dagman.useDagDir, dagman._schedd ) ) {
+		if( !parse( dagman.dag, it->c_str(), dagman.useDagDir, dagman._schedd ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1278,7 +1273,7 @@ void main_init (int argc, char ** const argv) {
 			
 				// Note: debug_error calls DC_Exit().
 			debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
-					 	dagFile );
+					 	it->c_str() );
 		}
 	}
 	if( dagman.dag->GetDagPriority() != 0 ) {

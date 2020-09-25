@@ -26,7 +26,6 @@
 #include "condor_string.h"
 #include "env.h"
 #include "MyString.h"
-#include "string_list.h"
 
 
 #define DAG_SUBMIT_FILE_SUFFIX ".condor.sub"
@@ -81,12 +80,12 @@ struct SubmitDagShallowOptions
     int iMaxPre;
     int iMaxPost;
     MyString appendFile; // append to .condor.sub file before queue
-    StringList appendLines; // append to .condor.sub file before queue
+    std::list<std::string> appendLines; // append to .condor.sub file before queue
     MyString strConfigFile;
     bool dumpRescueDag;
     bool runValgrind;
     MyString primaryDagFile;
-    StringList    dagFiles;
+    std::list<std::string> dagFiles;
     bool doRecovery;
     bool bPostRun;
     bool bPostRunSet; // whether this was actually set on the command line
@@ -180,7 +179,7 @@ public:
 
     bool writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         /* const */ SubmitDagShallowOptions &shallowOpts,
-        /* const */ StringList &dagFileAttrLines ) const;
+        /* const */ std::list<std::string> &dagFileAttrLines ) const;
     
     int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
         const char *dagFile, const char *directory, int priority,
@@ -188,10 +187,10 @@ public:
 
     int setUpOptions( SubmitDagDeepOptions &deepOpts,
         SubmitDagShallowOptions &shallowOpts,
-        StringList &dagFileAttrLines );
+        std::list<std::string> &dagFileAttrLines );
 
-    bool GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir, 
-        MyString &configFile, StringList &attrLines, MyString &errMsg );
+    bool GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
+        MyString &configFile, std::list<std::string> &attrLines, MyString &errMsg );
 
     bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
 

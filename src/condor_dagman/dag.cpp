@@ -82,7 +82,7 @@ void touch (const char * filename) {
 }
 
 //---------------------------------------------------------------------------
-Dag::Dag( /* const */ StringList &dagFiles,
+Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
 		  const int maxHoldScripts,
@@ -150,7 +150,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 
 	// for the toplevel dag, emit the dag files we ended up using.
 	if (_isSplice == false) {
-		ASSERT( dagFiles.number() >= 1 );
+		ASSERT( dagFiles.size() >= 1 );
 		PrintDagFiles( dagFiles );
 	}
 
@@ -210,8 +210,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 
 	_dagIsHalted = false;
 	_dagIsAborted = false;
-	_dagFiles.rewind();
-	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.next() );
+	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.front() );
 	_dagStatus = DAG_STATUS_OK;
 
 	_allNodesIt = NULL;
@@ -1104,8 +1103,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		debug_printf( DEBUG_QUIET, "Error: DAG semantics violated!  "
 					"Node %s was submitted but has unfinished parents!\n",
 					job->GetJobName() );
-		_dagFiles.rewind();
-		char *dagFile = _dagFiles.next();
+		const char *dagFile = _dagFiles.front().c_str();
 		debug_printf( DEBUG_QUIET, "This may indicate log file corruption; "
 					"you may want to check the log files and re-run the "
 					"DAG in recovery mode by giving the command "
@@ -1514,15 +1512,13 @@ Dag::SetAllowEvents( int allowEvents)
 
 //-------------------------------------------------------------------------
 void
-Dag::PrintDagFiles( /* const */ StringList &dagFiles )
+Dag::PrintDagFiles( /* const */ std::list<std::string> &dagFiles )
 {
-	if ( dagFiles.number() > 1 ) {
+	if ( dagFiles.size() > 1 ) {
 		debug_printf( DEBUG_VERBOSE, "All DAG files:\n");
-		dagFiles.rewind();
-		char *dagFile;
 		int thisDagNum = 0;
-		while ( (dagFile = dagFiles.next()) != NULL ) {
-			debug_printf( DEBUG_VERBOSE, "  %s (DAG #%d)\n", dagFile,
+		for ( auto it = dagFiles.begin(); it != dagFiles.end(); ++it ) {
+			debug_printf( DEBUG_VERBOSE, "  %s (DAG #%d)\n", it->c_str(),
 						thisDagNum++);
 		}
 	}
@@ -3130,12 +3126,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// Print DAG file list.
 		//
 	fprintf( outfile, "  DagFiles = {\n" );
-	char *dagFile;
-	_dagFiles.rewind();
 	const char *separator = "";
-	while ( (dagFile = _dagFiles.next()) ) {
+	for ( auto it = _dagFiles.begin(); it != _dagFiles.end(); ++it ) {
 		fprintf( outfile, "%s    %s", separator,
-					EscapeClassadString( dagFile ) );
+					EscapeClassadString( it->c_str() ) );
 		separator = ",\n";
 	}
 	fprintf( outfile, "\n  };\n" );

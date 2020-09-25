@@ -2810,7 +2810,7 @@ public:
         size_t sub_size;
         std::string sub_args;
         std::string sub_filename = dag_filename + std::string(".condor.sub");
-        StringList dag_file_attr_lines;
+        std::list<std::string> dag_file_attr_lines;
         SubmitDagDeepOptions deep_opts;
         SubmitDagShallowOptions shallow_opts;
 
@@ -2824,7 +2824,7 @@ public:
         }
 
         // Setting any submit options that may have been passed in (ie. max idle, max post)
-        shallow_opts.dagFiles.insert(dag_filename.c_str());
+        shallow_opts.dagFiles.push_back(dag_filename.c_str());
         shallow_opts.primaryDagFile = dag_filename;
         SetDagOptions(opts, shallow_opts, deep_opts);
 

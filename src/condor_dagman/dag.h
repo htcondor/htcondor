@@ -128,7 +128,7 @@ class Dag {
 				"root" for the top-level DAG.
     */
 
-    Dag( /* const */ StringList &dagFiles,
+    Dag( /* const */ std::list<std::string> &dagFiles,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts,
 		 const int maxHoldScripts,
@@ -707,7 +707,7 @@ class Dag {
 
 	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
-	StringList& DagFiles(void) { return _dagFiles; }
+	std::list<std::string>& DagFiles(void) { return _dagFiles; }
 
 	/** Determine whether a job is a NOOP job based on the HTCondor ID.
 		@param the HTCondor ID of the job
@@ -883,7 +883,7 @@ class Dag {
 	HashTable<MyString, Dag*> _splices;
 
 	// A reference to something the dagman passes into the constructor
-	StringList& _dagFiles;
+	std::list<std::string>& _dagFiles;
 
 	// Internal instance of a DagmanUtils object
 	DagmanUtils _dagmanUtils;
@@ -891,7 +891,7 @@ class Dag {
 	/** Print a numbered list of the DAG files.
 	    @param The list of DAG files being run.
 	*/
-	void PrintDagFiles( /* const */ StringList &dagFiles );
+	void PrintDagFiles( /* const */ std::list<std::string> &dagFiles );
 
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()

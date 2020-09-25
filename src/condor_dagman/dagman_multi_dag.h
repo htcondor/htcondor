@@ -45,12 +45,12 @@ const int ABS_MAX_RESCUE_DAG_NUM = 999;
 			be set to that value before this method is called; the
 			value of configFile will be changed if it's not already
 			set and the DAG file(s) specify a configuration file
-	@param attrLines: a StringList to receive the submit attributes
+	@param attrLines: a std::list<std::string> to receive the submit attributes
 	@param errMsg: a MyString to receive any error message
 	@return true if the operation succeeded; otherwise false
 */
-bool GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir,
-			MyString &configFile, StringList &attrLines, MyString &errMsg );
+bool GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir,
+			MyString &configFile, std::list<std::string> &attrLines, MyString &errMsg );
 
 /** Make the given path into an absolute path, if it is not already.
 	@param filePath: the path to make absolute (filePath is changed)
