@@ -61,6 +61,12 @@ New Features:
   directory for the bind mount does not exist on the host machine
   :ticket:`7807`
 
+- Singularity jobs now ignore bind mount directories if the target
+  directory for the bind mount does not exist in the image and
+  SINGULARITY_IGNORE_MISSING_BIND_TARGET is set to true
+  (default is false).
+  :ticket:`7846`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
