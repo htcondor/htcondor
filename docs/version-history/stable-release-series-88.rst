@@ -60,6 +60,9 @@ Bugs Fixed:
 - Improved the efficiency of process monitoring in macOS.
   :ticket:`7851`
 
+- Fixed a bug in the ``-autoformat`` option when using lists and nested ads.
+  :ticket:`7750`
+
 Version 8.8.10
 --------------
 
