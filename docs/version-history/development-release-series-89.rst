@@ -87,6 +87,10 @@ Bugs Fixed:
    on an empty list returned undefined.  It now returns 0.
    :ticket:`7838`
 
+-  Fixed a bug in Docker Universe that caused a confusing warning message
+   about an unaccessible file in /root/.docker 
+   :ticket:`7805`
+
 Version 8.9.8
 -------------
 
