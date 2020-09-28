@@ -91,6 +91,10 @@ Bugs Fixed:
    about an unaccessible file in /root/.docker 
    :ticket:`7805`
 
+-  Fixed a bug in the *condor_collector* that caused it to handle queries
+   from the *condor_negotiator* at normal priority instead of high priority.
+   :ticket:`7729`
+
 Version 8.9.8
 -------------
 
