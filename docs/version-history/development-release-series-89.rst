@@ -73,6 +73,10 @@ Bugs Fixed:
    *condor_watch_q* has started running.
    :ticket:`7800`
 
+-  Fixed a bug in the classad library where calling the classad sum function
+   on an empty list returned undefined.  It now returns 0.
+   :ticket:`7838`
+
 Version 8.9.8
 -------------
 
