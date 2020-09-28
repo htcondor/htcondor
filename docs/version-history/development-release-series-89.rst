@@ -57,6 +57,10 @@ New Features:
   configuration, and documentation to HTCondor.
   :ticket:`7741`
 
+- Singularity jobs now ignore bind mount directories if the source
+  directory for the bind mount does not exist on the host machine
+  :ticket:`7807`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
