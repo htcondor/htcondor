@@ -67,6 +67,9 @@ New Features:
   (default is false).
   :ticket:`7846`
 
+- Improved startup time of the daemons.
+  :ticket:`7799`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
