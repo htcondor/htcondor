@@ -1075,6 +1075,11 @@ rm -rf %{buildroot}
 %endif
 %if %blahp
 %dir %_libexecdir/condor/glite/bin
+%_libexecdir/condor/glite/bin/kubernetes_cancel.sh
+%_libexecdir/condor/glite/bin/kubernetes_hold.sh
+%_libexecdir/condor/glite/bin/kubernetes_resume.sh
+%_libexecdir/condor/glite/bin/kubernetes_status.sh
+%_libexecdir/condor/glite/bin/kubernetes_submit.sh
 %_libexecdir/condor/glite/bin/nqs_cancel.sh
 %_libexecdir/condor/glite/bin/nqs_hold.sh
 %_libexecdir/condor/glite/bin/nqs_resume.sh
