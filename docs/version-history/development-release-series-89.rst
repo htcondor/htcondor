@@ -99,6 +99,9 @@ Bugs Fixed:
    ``ResidentSetSize`` in the slot ad.
    :ticket:`7787`
 
+-  Removed the java benchmark ``JavaMFlops`` from the machine ad.
+   :ticket:`7795`
+
 Version 8.9.8
 -------------
 
