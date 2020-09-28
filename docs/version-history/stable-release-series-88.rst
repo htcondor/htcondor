@@ -58,7 +58,7 @@ Bugs Fixed:
   :ticket`7856`
 
 - Improved the efficiency of process monitoring in macOS.
-  ticket:`7851`
+  :ticket:`7851`
 
 Version 8.8.10
 --------------
