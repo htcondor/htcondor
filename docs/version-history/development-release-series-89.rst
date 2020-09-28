@@ -95,6 +95,10 @@ Bugs Fixed:
    from the *condor_negotiator* at normal priority instead of high priority.
    :ticket:`7729`
 
+-  Fixed attribute ``ProportionalSetSizeKb`` to behave the same as
+   ``ResidentSetSize`` in the slot ad.
+   :ticket:`7787`
+
 Version 8.9.8
 -------------
 
