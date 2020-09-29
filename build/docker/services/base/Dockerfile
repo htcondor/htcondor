@@ -16,9 +16,9 @@ LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}${SUFFIX}" \
       org.label-schema.license="Apache-2.0"
 
 # Ensure that the 'condor' UID/GID matches across containers
-RUN groupadd -g 64 -r condor
-RUN useradd -r -g condor -d /var/lib/condor -s /sbin/nologin \
-    -u 64 -c "Owner of HTCondor Daemons" condor
+RUN groupadd -g 64 -r condor && \
+    useradd -r -g condor -d /var/lib/condor -s /sbin/nologin \
+      -u 64 -c "Owner of HTCondor Daemons" condor
 
 # EPEL is needed for supervisor
 # As of 2020-01-03, the GPG key must be downloaded separately
