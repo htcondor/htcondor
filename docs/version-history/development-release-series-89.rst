@@ -74,6 +74,19 @@ New Features:
   configuration, and documentation to HTCondor.
   :ticket:`7741`
 
+- Singularity jobs now ignore bind mount directories if the source
+  directory for the bind mount does not exist on the host machine
+  :ticket:`7807`
+
+- Singularity jobs now ignore bind mount directories if the target
+  directory for the bind mount does not exist in the image and
+  SINGULARITY_IGNORE_MISSING_BIND_TARGET is set to true
+  (default is false).
+  :ticket:`7846`
+
+- Improved startup time of the daemons.
+  :ticket:`7799`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
@@ -89,6 +102,25 @@ Bugs Fixed:
 -  *condor_watch_q* now correctly groups jobs submitted by DAGMan after
    *condor_watch_q* has started running.
    :ticket:`7800`
+
+-  Fixed a bug in the classad library where calling the classad sum function
+   on an empty list returned undefined.  It now returns 0.
+   :ticket:`7838`
+
+-  Fixed a bug in Docker Universe that caused a confusing warning message
+   about an unaccessible file in /root/.docker 
+   :ticket:`7805`
+
+-  Fixed a bug in the *condor_collector* that caused it to handle queries
+   from the *condor_negotiator* at normal priority instead of high priority.
+   :ticket:`7729`
+
+-  Fixed attribute ``ProportionalSetSizeKb`` to behave the same as
+   ``ResidentSetSize`` in the slot ad.
+   :ticket:`7787`
+
+-  Removed the java benchmark ``JavaMFlops`` from the machine ad.
+   :ticket:`7795`
 
 Version 8.9.8
 -------------

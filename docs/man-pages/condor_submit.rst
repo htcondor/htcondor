@@ -1252,7 +1252,8 @@ FILE TRANSFER COMMANDS
 
     :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
  preserve_relative_paths = < True | False >
-    This command modifies the behavior of the file transfer commands.  When
+    For vanilla and Docker -universe jobs (and others that use the shadow),
+    this command modifies the behavior of the file transfer commands.  When
     set to true, the destination for an entry that is a relative path in a
     file transfer list becomes its relative path, not its basename.  For
     example, ``input_data/b`` (and its contents, if it is a directory) will
