@@ -25,7 +25,14 @@ Release Notes:
    of each exception type they replaced.
    :ticket:`6935`
 
+-  We changed the default value of ``PROCD_ADDRESS`` on Windows to make it
+   less likely for multiple instances of HTCondor on the machine to collide.
+   :ticket:`7789`
+
 New Features:
+
+-  The Python API now includes the job status enumeration.
+   :ticket:`7726`
 
 -  You may now instruct HTCondor to record certain information about the
    files present in the top level of a job's sandbox and the job's environment
