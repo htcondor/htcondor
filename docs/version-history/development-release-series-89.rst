@@ -43,7 +43,7 @@ New Features:
    man page for details.
    :ticket:`7381`
 
-   This features is not presently avaiable on Windows.
+   This feature is not presently available on Windows.
 
 -  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
    :ticket:`7726`
