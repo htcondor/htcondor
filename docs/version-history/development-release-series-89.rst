@@ -15,7 +15,8 @@ Release Notes:
 
 New Features:
 
--  None.
+- Added statistics to the collector ad about CCB.
+  :ticket:`7842`
 
 Bugs Fixed:
 
