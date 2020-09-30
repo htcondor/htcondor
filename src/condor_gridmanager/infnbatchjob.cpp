@@ -1378,6 +1378,10 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		"StageCmd",
 		"BatchProject",
 		"BatchRuntime",
+		"GPUNumber",
+		"GPUMode",
+		"GPUModel",
+		"MICNumber",
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;
@@ -1463,6 +1467,12 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
 	if ( !expr.empty() ) {
 		submit_ad->Assign( "Queue", expr );
+	}
+
+	int gpus = 0;
+	jobAd->LookupInteger(ATTR_REQUEST_GPUS, gpus);
+	if ( gpus > 0 ) {
+		submit_ad->Assign("GPUNumber", gpus);
 	}
 
 	GetJobExecutable( jobAd, expr );

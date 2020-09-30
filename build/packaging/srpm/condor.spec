@@ -130,6 +130,7 @@ BuildRequires: /usr/include/curl/curl.h
 BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 %if 0%{?rhel} == 7
+BuildRequires: cmake3
 BuildRequires: python-devel
 BuildRequires: python-setuptools
 %endif
@@ -249,24 +250,26 @@ Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
 Requires: %name-externals = %version-%release
+Requires: condor-boinc
 %endif
 
 %if %blahp
 Requires: blahp >= 1.16.1
 %endif
 
-Requires: condor-boinc
-
+# Useful tools are using the Python bindings
+Requires: python3-condor
 %if 0%{?rhel} == 7
 Requires: python36-requests
-Requires: python2-condor
-%endif
-%if 0%{?rhel} >= 8 || 0%{?fedora}
+%else
 Requires: python3-requests
 %endif
 
-# Useful tools are using the Python bindings
-Requires: python3-condor
+%if 0%{?rhel} == 7
+Requires: python2-condor
+# For some reason OSG VMU tests need python-request
+Requires: python-requests
+%endif
 
 Requires(pre): shadow-utils
 
@@ -774,9 +777,7 @@ cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
-mkdir -p -m0755 %{buildroot}/%{_var}/run/condor
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
-mkdir -p -m0755 %{buildroot}/%{_var}/lock/condor
 mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
@@ -1016,11 +1017,13 @@ rm -rf %{buildroot}
 
 #################
 %files all
+%if %uw_build
 #################
 %files externals
 #################
 %files external-libs
 #################
+%endif
 %files
 %exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
@@ -1076,6 +1079,11 @@ rm -rf %{buildroot}
 %endif
 %if %blahp
 %dir %_libexecdir/condor/glite/bin
+%_libexecdir/condor/glite/bin/kubernetes_cancel.sh
+%_libexecdir/condor/glite/bin/kubernetes_hold.sh
+%_libexecdir/condor/glite/bin/kubernetes_resume.sh
+%_libexecdir/condor/glite/bin/kubernetes_status.sh
+%_libexecdir/condor/glite/bin/kubernetes_submit.sh
 %_libexecdir/condor/glite/bin/nqs_cancel.sh
 %_libexecdir/condor/glite/bin/nqs_hold.sh
 %_libexecdir/condor/glite/bin/nqs_resume.sh
@@ -1303,9 +1311,7 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/execute/
 %dir %_var/lib/condor/spool/
 %dir %_var/log/condor/
-%dir %_var/lock/condor
 %dir %_var/lock/condor/local
-%dir %_var/run/condor
 %defattr(-,root,condor,-)
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)

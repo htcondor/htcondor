@@ -82,6 +82,11 @@ if (NOT WINDOWS)
 
    if (HAVE_EXT_BLAHP)
      install (FILES
+       kubernetes_cancel.sh
+       kubernetes_hold.sh
+       kubernetes_resume.sh
+       kubernetes_status.sh
+       kubernetes_submit.sh
        nqs_cancel.sh
        nqs_hold.sh
        nqs_resume.sh

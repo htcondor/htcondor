@@ -6025,6 +6025,11 @@ These settings affect the *condor_starter*.
     A string value containing a list of bind mount specifications to be
     passed to Singularity. The default value is ``"SingularityBind"``.
 
+:macro-def:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
+    A boolean value defaulting to false.  If true, and the singularity
+    image is a directory, and the target of a bind mount doesn't exist in
+    the target, then skip this bind mount.
+
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value containing a list of extra arguments to be appended
     to the Singularity command line.
