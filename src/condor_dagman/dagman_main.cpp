@@ -151,7 +151,8 @@ Dagman::Dagman() :
 	_batchName(""),
 	_batchId(""),
 	_dagmanClassad(NULL),
-	_removeNodeJobs(true)
+	_removeNodeJobs(true),
+	_schedd(nullptr)
 {
 	debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
