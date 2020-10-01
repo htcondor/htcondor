@@ -85,6 +85,11 @@ New Features:
   invoked directly from the command line using ``condor_dagman mydag.dag``
   :ticket:`7806`
 
+- Added a ``-Dot`` argument to *condor_dagman* which tells DAGMan to simply
+  output a .dot file graphic representation of the dag, then exit immediately
+  without submitting any jobs.
+  :ticket:`7796`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
