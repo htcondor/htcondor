@@ -116,6 +116,12 @@ extern GridUniverseLogic* _gridlogic;
 #include "enum_utils.h"
 #include "credmon_interface.h"
 
+#ifdef WIN32
+#define DIR_DELIM_STR "\\"
+#else
+#define DIR_DELIM_STR "/"
+#endif
+
 extern "C"
 {
 	int prio_compar(prio_rec*, prio_rec*);
@@ -17214,8 +17220,8 @@ Scheduler::launch_local_startd() {
 
 	Env env;
 	env.Import(); // copy schedd's environment
-	env.SetEnv("_condor_STARTD_LOG", "$(LOG)/LocalStartLog");
-	env.SetEnv("_condor_EXECUTE", "$(SPOOL)/local_univ_execute");
+	env.SetEnv("_condor_STARTD_LOG", "$(LOG)" DIR_DELIM_STR "LocalStartLog");
+	env.SetEnv("_condor_EXECUTE", "$(SPOOL)" DIR_DELIM_STR "local_univ_execute");
 
 	// Force start expression to be START_LOCAL_UNIVERSE
 	char *localStartExpr = 0;

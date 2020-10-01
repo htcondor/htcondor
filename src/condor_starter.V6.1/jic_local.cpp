@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_version.h"
+#include "condor_config.h"
 
 #include "starter.h"
 #include "jic_local.h"
@@ -32,6 +33,7 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "basename.h"
+#include "secure_file.h"
 
 extern CStarter *Starter;
 
@@ -103,6 +105,13 @@ JICLocal::init( void )
 		// Drop a job ad "visa" into the job's IWD now if the job
 		// requested it
 	writeExecutionVisa(orig_ad);
+
+		// If the job requests a user credential (OAuthServicesNeeded is
+		// defined) then grab it the same way a shadow would.
+	if (initUserCredentials() < 0) {
+		return false;
+	}
+
 
 	return true;
 }
@@ -400,7 +409,7 @@ JICLocal::initJobInfo( void )
 		free(orig_job_iwd);
 	}
 
-	if( job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) < 1 ) {
+	if( ! job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) ) {
 		dprintf( D_ALWAYS, 
 				 "Job doesn't specify universe, assuming VANILLA\n" ); 
 		job_universe = CONDOR_UNIVERSE_VANILLA;
@@ -550,5 +559,126 @@ JICLocal::initLocalUserLog( void )
 {
 	return u_log->initFromJobAd( job_ad );
 }
+
+int
+JICLocal::initUserCredentials()
+{
+	// check to see if the job needs any OAuth services (scitokens)
+	// if so, call the function that does that.
+	std::string services_needed;
+	if (job_ad->LookupString(ATTR_OAUTH_SERVICES_NEEDED, services_needed)) {
+		dprintf(D_ALWAYS, "initUserCredentials: job needs OAuth services %s\n", services_needed.c_str());
+	} else {
+		return 0;
+	}
+
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+	if (!cred_dir) {
+		dprintf(D_ALWAYS, "WARNING: SEC_CREDENTIAL_DIRECTORY_OAUTH is not defined, but job needs OAuth services - how did we get here?\n");
+		return -1;
+	}
+	bool trust_cred_dir = param_boolean("TRUST_CREDENTIAL_DIRECTORY", false);
+
+	// Reach into the credential directory, and grab the creds
+	// we do this as root, and later switch into USER priv to store the creds in the sandbox
+	std::string user;
+	job_ad->LookupString("Owner", user);
+	MyString cred_dir_name;
+	dircat(cred_dir, user.c_str(), cred_dir_name);
+
+	// we will load the creds into this map of service -> binary-cred-data
+	struct _bindata { unsigned char* buf; size_t len; };
+	std::map<std::string, _bindata> creddata;
+
+	bool had_error = false;
+	StringList services_list(services_needed.c_str());
+	services_list.rewind();
+	char *curr;
+	while ((curr = services_list.next())) {
+		MyString fname, fullname;
+		fname.formatstr("%s.use", curr);
+
+		// change the '*' to an '_'.  These are stored that way
+		// so that the original service name can be cleanly
+		// separate if needed.  we don't care, so just change
+		// them all up front.
+		fname.replaceString("*", "_");
+
+		if (creddata.count(fname.c_str()) > 0) {
+			// we loaded this file already, services_list must have a repeat in it.
+			// we can safely ignore the repeated entries
+			continue;
+		}
+
+		dircat(cred_dir_name.c_str(), fname.c_str(), fullname);
+
+		dprintf(D_SECURITY, "creds: loading %s (from service name %s).\n", fullname.Value(), curr);
+		// read the file (fourth argument "true" means as_root)
+		struct _bindata data = { 0, 0 };
+		const bool as_root = true;
+		const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
+		bool rc = read_secure_file(fullname.Value(), (void**)(&data.buf), &data.len, as_root, verify_mode);
+		if (!rc) {
+			dprintf(D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value());
+			had_error = true;
+			break;
+		}
+
+		creddata[fname.c_str()] = data;
+	}
+	if (had_error) {
+		return -1;
+	}
+
+	// setup .condor_creds directory in sandbox (may already exist).
+	MyString sandbox_dir_name;
+	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
+
+	// from here on out, do everything as the user.
+	TemporaryPrivSentry mysentry(PRIV_USER);
+
+	// create dir to hold creds
+	int rc = 0;
+	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.Value());
+	rc = mkdir(sandbox_dir_name.Value(), 0700);
+
+	if(rc != 0) {
+		if(errno != 17) {
+			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
+			return false;
+		} else {
+			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.Value());
+		}
+	} else {
+		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.Value());
+	}
+
+	// store the creds in files in the sandbox cred dir and free the buffers
+	for (auto it = creddata.begin(); it!= creddata.end(); ++it) {
+		MyString fullname;
+		const char * fname = it->first.c_str();
+		dircat(sandbox_dir_name.c_str(), fname, fullname);
+		if ( ! replace_secure_file(fullname.c_str(), ".tmp", it->second.buf, it->second.len, false)) {
+			dprintf(D_ALWAYS, "failed to write OAuth cred file securely: %s\n", fullname.c_str());
+			had_error = true;
+		}
+		// zero out the cred data before we free the buffer
+		memset(it->second.buf, 0, it->second.len);
+		free(it->second.buf);
+	}
+	if (had_error) {
+		dprintf(D_ALWAYS, "Failed to copy all creds into the job sandbox.\n");
+		return -1;
+	}
+
+	// only need to do this once
+	if( ! getCredPath()) {
+		dprintf(D_SECURITY, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.Value());
+		setCredPath(sandbox_dir_name.Value());
+	}
+
+	return 1;
+}
+
 
 

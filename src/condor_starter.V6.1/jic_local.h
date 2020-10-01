@@ -241,6 +241,11 @@ protected:
 		/** Initialize our local UserLog-writing code.
 		 */
 	virtual bool initLocalUserLog( void );
+
+		/// If the job ad says so, acquire user credentials
+		// returns 0 if nothing to do, 1 if success < 0 on failure
+	int initUserCredentials();
+
 };
 
 

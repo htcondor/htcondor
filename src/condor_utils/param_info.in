@@ -3171,6 +3171,7 @@ tags=schedd
 
 [LOCAL_UNIV_EXECUTE]
 default=$(SPOOL)/local_univ_execute
+win32_default=$(SPOOL)\local_univ_execute
 type=string
 tags=schedd
 
