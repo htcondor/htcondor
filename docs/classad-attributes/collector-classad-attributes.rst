@@ -45,7 +45,7 @@ Collector ClassAd Attributes
     and the build identification number.
     :index:`CurrentForkWorkers<single: CurrentForkWorkers; ClassAd Collector attribute>`
 
-``CondorVersion``:
+``CurrentForkWorkers``:
     The current number of active forks of the Collector. The Windows
     version of the Collector does not fork and will not have this
     statistic.
