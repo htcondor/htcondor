@@ -762,8 +762,10 @@ make install DESTDIR=%{buildroot}
 ln -s ../..%{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 
 %if %uw_build
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 # Drop in a link for backward compatibility for small shadow
 ln -s condor_shadow %{buildroot}/%{_sbindir}/condor_shadow_s
+%endif
 %endif
 
 populate /usr/share/doc/condor-%{version}/examples %{buildroot}/usr/share/doc/condor-%{version}/etc/examples/*
