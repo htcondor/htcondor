@@ -77,6 +77,10 @@ New Features:
 - Improved startup time of the daemons.
   :ticket:`7799`
 
+- DAGMan now waits for ``PROVISIONER`` nodes to reach a ready status before 
+  submitting any other jobs.
+  :ticket:`7610`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
