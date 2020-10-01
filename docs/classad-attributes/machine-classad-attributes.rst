@@ -314,6 +314,30 @@ Machine ClassAd Attributes
     A boolean value set to ``True`` if the machine being advertised
     supports the avx instructions, and ``Undefined`` otherwise.
 
+:index:`has_avx2<single: has_avx; ClassAd machine attribute>`
+
+``has_avx2``
+    A boolean value set to ``True`` if the machine being advertised
+    supports the avx2 instructions, and ``Undefined`` otherwise.
+
+:index:`has_avx512f<single: has_avx512f ClassAd machine attribute>`
+
+``has_avx512f``
+    A boolean value set to ``True`` if the machine being advertised
+    support the avx512f (foundational) instructions.
+
+:index:`has_avx512dq<single: has_avx512dq ClassAd machine attribute>`
+
+``has_avx512dq``
+    A boolean value set to ``True`` if the machine being advertised
+    support the avx512dq instructions.
+
+:index:`has_avx512dnni<single: has_avx512dnni ClassAd machine attribute>`
+
+``has_avx512dnni``
+    A boolean value set to ``True`` if the machine being advertised
+    support the avx512dnni instructions.
+
 
 :index:`HasSelfCheckpointTransfers<single: HasSelfCheckpointTransfers; ClassAd machine attribute>`
 ``HasSelfCheckpointTransfers``
