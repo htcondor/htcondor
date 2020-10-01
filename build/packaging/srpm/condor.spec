@@ -551,6 +551,7 @@ shortens many timers to be more responsive.
 %if %uw_build
 
 #######################
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 %package small-shadow
 Summary: Compatibility package to deal with the absence of the 32-bit shadow
 Group: Applications/System
@@ -559,6 +560,7 @@ Requires: %name-external-libs = %version-%release
 %description small-shadow
 Provides a symbolic link to the standard condor_shadow.
 
+%endif
 #######################
 %package externals
 Summary: Empty package to ensure yum gets the blahp from its own package
@@ -1511,8 +1513,10 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
 %if %uw_build
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 %files small-shadow
 %{_sbindir}/condor_shadow_s
+%endif
 %endif
 
 %post
