@@ -81,6 +81,10 @@ New Features:
   submitting any other jobs.
   :ticket:`7610`
 
+- Set a variety of defaults into *condor_dagman* so it can now easily be
+  invoked directly from the command line using ``condor_dagman mydag.dag``
+  :ticket:`7806`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
