@@ -130,6 +130,9 @@ Bugs Fixed:
 -  Removed the java benchmark ``JavaMFlops`` from the machine ad.
    :ticket:`7795`
 
+-  Read IDTOKENS used by daemons with the correct UID.
+   :ticket:`7767`
+
 Version 8.9.8
 -------------
 
