@@ -38,13 +38,18 @@
 extern CStarter *Starter;
 
 
-JICLocal::JICLocal() : JobInfoCommunicator()
+JICLocal::JICLocal() 
+	: JobInfoCommunicator()
+	, m_refresh_sandbox_creds_tid(-1)
 {
 }
 
 
 JICLocal::~JICLocal()
 {
+	if (daemonCore && (m_refresh_sandbox_creds_tid != -1)) {
+		daemonCore->Cancel_Timer(m_refresh_sandbox_creds_tid);
+	}
 }
 
 
@@ -573,10 +578,28 @@ JICLocal::initUserCredentials()
 	}
 
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
-	if (!cred_dir) {
+	if ( ! cred_dir) {
 		dprintf(D_ALWAYS, "WARNING: SEC_CREDENTIAL_DIRECTORY_OAUTH is not defined, but job needs OAuth services - how did we get here?\n");
 		return -1;
 	}
+
+	// set/reset timer
+	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
+	if (sec_cred_refresh > 0) {
+		if (m_refresh_sandbox_creds_tid == -1) {
+			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
+				sec_cred_refresh,
+				(TimerHandlercpp)&JICLocal::refreshSandboxCredentials_from_timer,
+				"refreshSandboxCredentials",
+				this );
+		} else {
+			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
+		}
+		dprintf(D_SECURITY, "CREDS: will refresh credentials again in %i seconds\n", sec_cred_refresh);
+	} else {
+		dprintf(D_SECURITY, "CREDS: cred refresh is DISABLED.\n");
+	}
+
 	bool trust_cred_dir = param_boolean("TRUST_CREDENTIAL_DIRECTORY", false);
 
 	// Reach into the credential directory, and grab the creds
@@ -621,13 +644,9 @@ JICLocal::initUserCredentials()
 		if (!rc) {
 			dprintf(D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value());
 			had_error = true;
-			break;
 		}
 
 		creddata[fname.c_str()] = data;
-	}
-	if (had_error) {
-		return -1;
 	}
 
 	// setup .condor_creds directory in sandbox (may already exist).
@@ -655,8 +674,12 @@ JICLocal::initUserCredentials()
 
 	// store the creds in files in the sandbox cred dir and free the buffers
 	for (auto it = creddata.begin(); it!= creddata.end(); ++it) {
-		MyString fullname;
 		const char * fname = it->first.c_str();
+		if ( ! it->second.buf || ! it->second.len) {
+			// ignore empty entries
+			continue;
+		}
+		MyString fullname;
 		dircat(sandbox_dir_name.c_str(), fname, fullname);
 		if ( ! replace_secure_file(fullname.c_str(), ".tmp", it->second.buf, it->second.len, false)) {
 			dprintf(D_ALWAYS, "failed to write OAuth cred file securely: %s\n", fullname.c_str());
