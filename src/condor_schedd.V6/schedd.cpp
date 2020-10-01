@@ -3162,6 +3162,7 @@ Scheduler::find_ownerinfo(const char * owner)
 const OwnerInfo *
 Scheduler::lookup_owner_const(const char * owner)
 {
+	if ( ! owner) return NULL;
 	return find_ownerinfo(owner);
 }
 
