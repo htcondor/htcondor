@@ -90,6 +90,8 @@ New Features:
   without submitting any jobs.
   :ticket:`7796`
 
+
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
@@ -127,6 +129,10 @@ Bugs Fixed:
 
 -  Read IDTOKENS used by daemons with the correct UID.
    :ticket:`7767`
+
+-  Fixed the Python ``htcondor.Submit.from_dag()`` binding so it now throws an
+   ``IOError`` exception when the specified .dag file is not found.
+   :ticket:`7808`
 
 Version 8.9.8
 -------------
