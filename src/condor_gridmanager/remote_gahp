@@ -150,7 +150,7 @@ SSH_ARGS=()
 
 #echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
 if [ "${REMOTE_CMD}" = "batch_gahp" ] ; then
-    ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
     SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # We need to set up a tunnel from the remote machine for the file
@@ -176,7 +176,7 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     fi
     while ((tries-- > 0 && SSH_STATUS == 255)) ; do
         let port=${RANDOM}+32768
-        ssh ${SSH_ARGS[@]} -R $port:$GRIDMANAGER_ADDRESS $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+        ssh "${SSH_ARGS[@]}" -R $port:$GRIDMANAGER_ADDRESS $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
         SSH_STATUS=$?
     done
 else
