@@ -749,6 +749,7 @@ annex_main( int argc, char ** argv ) {
 	bool clUserDataWins = true;
 	std::string userData;
 	const char * userDataFileName = NULL;
+	std::vector< std::pair< std::string, std::string > > tags;
 
 	enum annex_t {
 		at_none = 0,
@@ -1007,6 +1008,24 @@ annex_main( int argc, char ** argv ) {
 			} else {
 				fprintf( stderr, "%s: -aws-s3-config-path requires an argument.\n", argv[0] );
 				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "tag", 3 ) ) {
+			++i;
+			char * tagName = NULL, * tagValue = NULL;
+			if( i < argc && argv[i] != NULL ) {
+				tagName = argv[i];
+
+				++i;
+				if( i < argc && argv[i] != NULL ) {
+					tagValue = argv[i];
+				}
+			}
+			if( tagName == NULL || tagValue == NULL ) {
+				fprintf( stderr, "%s: -tag requires two arguments.\n", argv[0] );
+				return 1;
+			} else {
+				tags.push_back( std::make_pair( tagName, tagValue ) );
+				continue;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "duration", 8 ) ) {
 			++i;
@@ -1277,6 +1296,26 @@ annex_main( int argc, char ** argv ) {
 			}
 			commandArguments.Assign( ATTR_ANNEX_NAME, annexName );
 			break;
+
+		default:
+			break;
+	}
+
+	switch( theCommand ) {
+		case ct_create_annex:
+		case ct_update_annex: {
+			StringList tagNames;
+			std::string attrName;
+			for( unsigned i = 0; i < tags.size(); ++i ) {
+				tagNames.append(tags[0].first.c_str());
+				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[0].first.c_str() );
+				commandArguments.Assign( attrName, tags[0].second.c_str() );
+			}
+
+			char * sl = tagNames.print_to_string();
+			commandArguments.Assign( ATTR_EC2_TAG_NAMES, sl );
+			free( sl );
+			} break;
 
 		default:
 			break;
