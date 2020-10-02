@@ -90,7 +90,9 @@ New Features:
   without submitting any jobs.
   :ticket:`7796`
 
-
+- Updated the ``htcondor.Submit.from_dag()`` Python binding to support the
+  full range of command-line arguments available to *condor_submit_dag*.
+  :ticket:`7823`
 
 Bugs Fixed:
 
