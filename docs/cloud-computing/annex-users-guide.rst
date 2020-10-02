@@ -145,6 +145,17 @@ specify a max idle time (in decimal hours) with the -idle flag.
 for a definition), so it won't get tricked by jobs with long quiescent
 periods.
 
+Tagging your Annex's Instances
+''''''''''''''''''''''''''''''
+
+By default, *condor_annex* adds a tag, ``htcondor:AnnexName``, to each
+instance in the annex; its value is the annex's name (as entered on the
+command line).  You may add additional tags via the command-line option
+``-tag``, which must be followed by a tag name and a value for that tag
+(as separate arguments).  You may specify any number of tags (up to the
+maximum supported by the cloud provider) by adding additional ``-tag``
+options to the command line.
+
 Starting Multiple Annexes
 '''''''''''''''''''''''''
 

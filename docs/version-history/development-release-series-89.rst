@@ -5,7 +5,7 @@ This is the development release series of HTCondor. The details of each
 version are described below.
 
 Version 8.9.10
--------------
+--------------
 
 Release Notes:
 
@@ -17,6 +17,10 @@ New Features:
 
 - Added statistics to the collector ad about CCB.
   :ticket:`7842`
+
+- You may now tag instances from the command line of `condor_annex`.  Use
+  the ``-tag <name> <value>`` command-line option once for each tag.
+  :ticket:`7834`
 
 Bugs Fixed:
 

@@ -340,6 +340,7 @@ Machine ClassAd Attributes
 
 
 :index:`HasSelfCheckpointTransfers<single: HasSelfCheckpointTransfers; ClassAd machine attribute>`
+
 ``HasSelfCheckpointTransfers``
     A boolean value set to ``True`` if the machine being advertised
     supports transferring (checkpoint) files (to the submit node)
