@@ -47,22 +47,35 @@ cp -pr build/packaging/new-debian debian
 
 if $(grep -qi stretch /etc/os-release); then
     dist='stretch'
+    build='full'
+    suffix=''
 elif $(grep -qi buster /etc/os-release); then
     dist='buster'
+    build='binary'
+    suffix='b1'
 elif $(grep -qi xenial /etc/os-release); then
     dist='xenial'
+    build='full'
+    suffix=''
 elif $(grep -qi bionic /etc/os-release); then
     dist='bionic'
+    build='binary'
+    suffix='b1'
 elif $(grep -qi focal /etc/os-release); then
     dist='focal'
+    build='full'
+    suffix='n1'
     mv debian/control.focal debian/control
     mv debian/htcondor.install.focal debian/htcondor.install
     mv debian/rules.focal debian/rules
     mv debian/patches/series.focal debian/patches/series
 else
     dist='unstable'
+    build='full'
+    suffix=''
 fi
 echo "Distribution is $dist"
+echo "Suffix is '$suffix'"
 
 # Nightly build changelog
 dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
@@ -70,10 +83,21 @@ dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nigh
 # Final release changelog
 #dch --release --distribution $dist ignored
 
-dpkg-buildpackage -uc -us
+if [ "$suffix" = '' ]; then
+    dpkg-buildpackage -uc -us
+elif [ "$suffix" = 'b1' ]; then
+    dch --distribution $dist --bin-nmu 'place holder entry'
+    dpkg-buildpackage --build=$build -uc -us
+elif [ "$suffix" = 'n1' ]; then
+    dch --distribution $dist --nmu 'place holder entry'
+    dpkg-buildpackage --build=$build -uc -us
+fi
 
 cd ..
 
-mv *.changes *.dsc *.debian.tar.xz *.orig.tar.gz *.deb "$dest_dir"
+if [ "$build" = 'full' ]; then
+    mv *.dsc *.debian.tar.xz *.orig.tar.gz "$dest_dir"
+fi
+mv *.changes *.deb "$dest_dir"
 ls -lh "$dest_dir"
 
