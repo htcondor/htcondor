@@ -46,7 +46,7 @@ Options: \n \
  --rgahp-nopass \t\tno passphrase protecting ssh private key (same as empty rgahp-pass)\n \
  --rgahp-glite PATH \tpath to the directory of the script (~/bosco/glite)\n \
  --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/batch_gahp)\n \
- --rgahp-nobatchmode \t\tDisable SSH BatchMode (yes)\n \
+ --rgahp-nobatchmode \t\tDisable SSH BatchMode \n \
  --help, -h \t\t\tprint this\n \
  remote_hostname: USER@HOST same string that can be used to ssh to the host\n \
  remote arguments are passed to the REMOTE_CMD
