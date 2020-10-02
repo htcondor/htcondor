@@ -325,7 +325,7 @@ Obsoletes: condor-cream-gahp < 8.9.9
 
 # external packages discontinued as of 8.9.9
 #Obsoletes: condor-externals < 8.9.9
-#Obsoletes: condor-external-libs < 8.9.9
+Obsoletes: condor-external-libs < 8.9.9
 
 %description
 HTCondor is a specialized workload management system for
@@ -550,12 +550,11 @@ shortens many timers to be more responsive.
 
 %if %uw_build
 
-#######################
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
+#######################
 %package small-shadow
 Summary: Compatibility package to deal with the absence of the 32-bit shadow
 Group: Applications/System
-Requires: %name-external-libs = %version-%release
 
 %description small-shadow
 Provides a symbolic link to the standard condor_shadow.
@@ -566,16 +565,8 @@ Provides a symbolic link to the standard condor_shadow.
 Summary: Empty package to ensure yum gets the blahp from its own package
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: %name-external-libs = %version-%release
 
 %description externals
-Dummy package to help yum out
-
-%package external-libs
-Summary: Empty package to ensure that the external libraries are removed
-Group: Applications/System
-
-%description external-libs
 Dummy package to help yum out
 
 %endif
@@ -621,7 +612,6 @@ Requires: python3-condor = %version-%release
 Requires: %name-bosco = %version-%release
 %if %uw_build
 Requires: %name-externals = %version-%release
-Requires: %name-external-libs = %version-%release
 %endif
 
 
@@ -1038,8 +1028,6 @@ rm -rf %{buildroot}
 %if %uw_build
 #################
 %files externals
-#################
-%files external-libs
 #################
 %endif
 %files
