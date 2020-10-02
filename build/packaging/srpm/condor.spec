@@ -321,11 +321,10 @@ Obsoletes: condor-std-universe < 8.9.0
 Obsoletes: condor-cream-gahp < 8.9.9
 
 # 32-bit shadow discontinued as of 8.9.9
-#Obsoletes: condor-small-shadow < 8.9.9
+Obsoletes: condor-small-shadow < 8.9.9
 
-# external packages discontinued as of 8.9.9
-#Obsoletes: condor-externals < 8.9.9
-#Obsoletes: condor-external-libs < 8.9.9
+# external-libs package discontinued as of 8.9.9
+Obsoletes: condor-external-libs < 8.9.9
 
 %description
 HTCondor is a specialized workload management system for
@@ -551,31 +550,12 @@ shortens many timers to be more responsive.
 %if %uw_build
 
 #######################
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-%package small-shadow
-Summary: Compatibility package to deal with the absence of the 32-bit shadow
-Group: Applications/System
-Requires: %name-external-libs = %version-%release
-
-%description small-shadow
-Provides a symbolic link to the standard condor_shadow.
-
-%endif
-#######################
 %package externals
 Summary: Empty package to ensure yum gets the blahp from its own package
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: %name-external-libs = %version-%release
 
 %description externals
-Dummy package to help yum out
-
-%package external-libs
-Summary: Empty package to ensure that the external libraries are removed
-Group: Applications/System
-
-%description external-libs
 Dummy package to help yum out
 
 %endif
@@ -621,7 +601,6 @@ Requires: python3-condor = %version-%release
 Requires: %name-bosco = %version-%release
 %if %uw_build
 Requires: %name-externals = %version-%release
-Requires: %name-external-libs = %version-%release
 %endif
 
 
@@ -1039,8 +1018,6 @@ rm -rf %{buildroot}
 #################
 %files externals
 #################
-%files external-libs
-#################
 %endif
 %files
 %exclude %_sbindir/openstack_gahp
@@ -1302,6 +1279,11 @@ rm -rf %{buildroot}
 %_sbindir/condor_schedd
 %_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
+%if %uw_build
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%{_sbindir}/condor_shadow_s
+%endif
+%endif
 %_sbindir/condor_sos
 %_sbindir/condor_startd
 %_sbindir/condor_starter
@@ -1514,12 +1496,6 @@ rm -rf %{buildroot}
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
-%if %uw_build
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-%files small-shadow
-%{_sbindir}/condor_shadow_s
-%endif
-%endif
 
 %post
 %if 0%{?fedora}

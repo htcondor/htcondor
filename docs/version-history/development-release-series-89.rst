@@ -99,6 +99,23 @@ New Features:
 - Improved startup time of the daemons.
   :ticket:`7799`
 
+- DAGMan now waits for ``PROVISIONER`` nodes to reach a ready status before 
+  submitting any other jobs.
+  :ticket:`7610`
+
+- Set a variety of defaults into *condor_dagman* so it can now easily be
+  invoked directly from the command line using ``condor_dagman mydag.dag``
+  :ticket:`7806`
+
+- Added a ``-Dot`` argument to *condor_dagman* which tells DAGMan to simply
+  output a .dot file graphic representation of the dag, then exit immediately
+  without submitting any jobs.
+  :ticket:`7796`
+
+- Updated the ``htcondor.Submit.from_dag()`` Python binding to support the
+  full range of command-line arguments available to *condor_submit_dag*.
+  :ticket:`7823`
+
 Bugs Fixed:
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
@@ -136,6 +153,10 @@ Bugs Fixed:
 
 -  Read IDTOKENS used by daemons with the correct UID.
    :ticket:`7767`
+
+-  Fixed the Python ``htcondor.Submit.from_dag()`` binding so it now throws an
+   ``IOError`` exception when the specified .dag file is not found.
+   :ticket:`7808`
 
 Version 8.9.8
 -------------
