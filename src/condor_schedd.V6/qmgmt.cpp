@@ -5217,7 +5217,13 @@ int TransactionWatcher::CommitIfAny(SetAttributeFlags_t flags, CondorError * err
 	int rval = 0;
 	if (started && ! completed) {
 		rval = CommitTransactionAndLive(flags, errorStack);
-		completed = true;
+		if (rval == 0) {
+			// Only set the completed flag if our CommitTransaction succeeded... if
+			// it failed (perhaps due to SUBMIT_REQUIREMENTS not met), we cannot mark it
+			// as completed because that means we will not abort it in the 
+			// Transactionwatcher::AbortIfAny() method below and will likely ASSERT.
+			completed = true;
+		}
 	}
 	return rval;
 }
@@ -5682,6 +5688,14 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 		int rval = CheckTransaction(new_ad_keys, errorStack);
 		if ( rval < 0 ) {
+			// This transaction failed checks (e.g. SUBMIT_REQUIREMENTS), so now the question
+			// is should we abort this transaction (that we refuse to commit) right now right here,
+			// or should we simply return an error an rely on our caller to abort the transaction?
+			// If we abort it now, our caller may get confused if they call AbortTransaction and it
+			// subsequently fails.  On the other hand, we don't want to leave a transaction pending
+			// that is never aborted in the event our caller never checks...
+			// Current thinking is do not call AbortTransaction here, let the caller do it so 
+			// that the logic in AbortTranscationAndRecomputeClusters() works correctly...
 			return rval;
 		}
 	}
