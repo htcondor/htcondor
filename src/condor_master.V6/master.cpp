@@ -1914,6 +1914,12 @@ main( int argc, char **argv )
                     dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
                 }
             }
+            if (stat("/var/lock/condor/local", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/lock/condor/local", 01777) == 0) {
+                    dummyGlobal = chown("/var/lock/condor/local", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor/local", 01777); // Override umask
+                }
+            }
         }
     }
 #endif

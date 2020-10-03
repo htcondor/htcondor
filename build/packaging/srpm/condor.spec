@@ -775,7 +775,6 @@ populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{versio
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
-mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
@@ -1311,7 +1310,6 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/execute/
 %dir %_var/lib/condor/spool/
 %dir %_var/log/condor/
-%dir %_var/lock/condor/local
 %defattr(-,root,condor,-)
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
