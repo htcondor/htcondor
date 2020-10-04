@@ -45,6 +45,7 @@ Build-Depends: autotools-dev,
                python3-sphinx,
                python3-sphinx-rtd-theme,
                uuid-dev,
+               voms-dev,
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 3.9.8

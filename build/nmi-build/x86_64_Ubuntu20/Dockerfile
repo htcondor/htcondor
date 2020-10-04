@@ -283,6 +283,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     python3-sphinx \
     python3-sphinx-rtd-theme \
     uuid-dev \
+    voms-dev \
     zlib1g-dev \
     && apt clean
 

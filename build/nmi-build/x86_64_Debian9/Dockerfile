@@ -285,6 +285,7 @@ RUN apt update && apt install -y \
     python-sphinx \
     python-sphinx-rtd-theme \
     uuid-dev \
+    voms-dev \
     zlib1g-dev \
     && apt clean
 
