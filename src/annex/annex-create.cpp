@@ -56,9 +56,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 
 	// Handle the instance tags.
-	char * buffer = NULL;
+    std::string buffer;
 	std::vector< std::pair< std::string, std::string > > tags;
-	if( command->LookupString( ATTR_EC2_TAG_NAMES, &buffer ) ) {
+	if( command->LookupString( ATTR_EC2_TAG_NAMES, buffer ) ) {
 		StringList tagNames( buffer );
 
 		char * tagName = NULL;
@@ -69,16 +69,13 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 			char * tagValue = NULL;
 			if(! command->LookupString(tagAttr, &tagValue)) {
-				free( buffer );
 				return FALSE;
 			}
 
 			tags.push_back( std::make_pair( tagName, tagValue ) );
 			free( tagValue );
 		}
-
-		free( buffer );
-	}
+    }
 
 
 	// Is this less of a hack than handing the command ad to ReplyAndClean?

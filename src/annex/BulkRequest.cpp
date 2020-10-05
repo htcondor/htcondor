@@ -102,8 +102,8 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 		formatstr( b, "%s=%s", "htcondor:AnnexName", annexID.c_str() );
 		taglist.append( b.c_str() );
 
-		char * buffer = NULL;
-		if( command->LookupString( ATTR_EC2_TAG_NAMES, &buffer ) ) {
+		std::string buffer;
+		if( command->LookupString( ATTR_EC2_TAG_NAMES, buffer ) ) {
 			StringList tagNames(buffer);
 
 			char * tagName = NULL;
@@ -114,7 +114,6 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 
 				char * tagValue = NULL;
 				if(! command->LookupString(tagAttr, &tagValue)) {
-					free( buffer );
 					return FALSE;
 				}
 
@@ -123,8 +122,6 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 
 				free( tagValue );
 			}
-
-			free( buffer );
 		}
 
 		char * s = taglist.print_to_string();
