@@ -6739,6 +6739,10 @@ These macros affect the *condor_negotiator*.
     :doc:`/admin-manual/user-priorities-negotiation`.
     Defaults to 10000000000.
 
+:macro-def:`NICE_USER_ACCOUNTING_GROUP_NAME`
+    Sets the name used for the nice-user accounting group by *condor_submit*.
+    Defaults to nice-user.
+
 :macro-def:`REMOTE_PRIO_FACTOR`
     Defines the priority factor for remote users, which are those users
     who who do not belong to the local domain. See

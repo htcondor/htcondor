@@ -33,7 +33,7 @@ Release Notes:
 
 -  HTCondor version 8.9.9 not yet released.
 
-.. HTCondor version 8.8.9 released on Month Date, 2020.
+.. HTCondor version 8.9.9 released on Month Date, 2020.
 
 -  *condor_q* no longer prints misleading message about the matchmaker
    when asked to analyze a job.
@@ -51,10 +51,40 @@ Release Notes:
    less likely for multiple instances of HTCondor on the machine to collide.
    :ticket:`7789`
 
+-  The *condor_schedd* will no longer modify a job's ``User`` attribute when the job's
+   ``NiceUser`` attribute is set.  The ``nice_user`` submit keyword is now implemented
+   entirely by *condor_submit*.   Because of this change the ``nice_user`` mechanism
+   will only work when *condor_submit* and the *condor_schedd* are both version 8.9.9 or later.
+   :ticket:`7783`
+
 New Features:
+
+-  The accounting group that the ``nice_user`` submit command puts jobs into is now
+   configurable by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` in the configuration
+   of *condor_submit*.
+   :ticket:`7792`
+
+-  Added `oauth-services` method to the python-bindings :class:`~htcondor.Submit` class. 
+   The python-bindings :class:`~htcondor.CredCheck` class can now be used to check if the
+   OAuth services that a job needs are present before the job is submitted.
+   :ticket:`7606`
+
+-  The Python API daemon objects :class:`~htcondor.Schedd`, :class:`~htcondor.Startd`,
+   :class:`~htcondor.Negotiator` and :class:`~htcondor.Credd` now have a location memmber
+   whose value can be passed to the contructor of a class of the same type to create a new
+   object pointing to the same HTCondor daemon.
+   :ticket:`7670`
+
+-  The Python API daemon object :class:`~htcondor.Schedd` constructor now accepts None
+   and interprets that to be the address of the local HTCondor Schedd.
+   :ticket:`7668`
 
 -  The Python API now includes the job status enumeration.
    :ticket:`7726`
+
+-  The Python API methods that take a constraint argument will now accept an :class:``~classad.ExprTree``
+   in addition to the native Python types, string, bool, int and None.
+   :ticket:`7657`
 
 -  You may now instruct HTCondor to record certain information about the
    files present in the top level of a job's sandbox and the job's environment
@@ -66,9 +96,6 @@ New Features:
    :ticket:`7381`
 
    This feature is not presently available on Windows.
-
-- Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
-  :ticket:`7726`
 
 - Added a family of version comparison functions to ClassAds.
   :ticket:`7504`
@@ -117,6 +144,10 @@ New Features:
   :ticket:`7823`
 
 Bugs Fixed:
+
+-  Fixed a bug that could cause the *condor_schedd* to abort if a SUBMIT_REQUIREMENT
+   prevented a late materialization job from materializing.
+   :ticket:`7874`
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
    ``ANNEX_DEFAULT_AWS_REGION``.  In addition, ``condor_annex -setup`` now
