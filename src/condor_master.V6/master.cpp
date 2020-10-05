@@ -1903,15 +1903,23 @@ main( int argc, char **argv )
         struct passwd *pwbuf = getpwnam("condor");
         if (pwbuf) {
             if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
-                dummyGlobal = mkdir("/var/run/condor", 0775);
+                if (mkdir("/var/run/condor", 0775) == 0) {
+                    dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
+                }
             }
-            dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
-            dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
             if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
-                dummyGlobal =mkdir("/var/lock/condor", 0775);
+                if (mkdir("/var/lock/condor", 0775) == 0) {
+                    dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
+                }
             }
-            dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
-            dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
+            if (stat("/var/lock/condor/local", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/lock/condor/local", 01777) == 0) {
+                    dummyGlobal = chown("/var/lock/condor/local", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor/local", 01777); // Override umask
+                }
+            }
         }
     }
 #endif
