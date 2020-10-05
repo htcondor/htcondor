@@ -47,18 +47,22 @@ New Features:
    OAuth services that a job needs are present before the job is submitted.
    :ticket:`7606`
 
--  The python-bindings daemon objects :class:`~htcondor.Schedd`, :class:`~htcondor.Startd`,
-   and :class:`~htcondor.Negotiator` and :class:`~htcondor.Credd` now have a location memmber
+-  The Python API daemon objects :class:`~htcondor.Schedd`, :class:`~htcondor.Startd`,
+   :class:`~htcondor.Negotiator` and :class:`~htcondor.Credd` now have a location memmber
    whose value can be passed to the contructor of a class of the same type to create a new
    object pointing to the same HTCondor daemon.
    :ticket:`7670`
 
--  The python-bindings :class:`~htcondor.Schedd` constructor now accepts None and interprets that
-   to be the address of the local HTCondor Schedd.
+-  The Python API daemon object :class:`~htcondor.Schedd` constructor now accepts None
+   and interprets that to be the address of the local HTCondor Schedd.
    :ticket:`7668`
 
 -  The Python API now includes the job status enumeration.
    :ticket:`7726`
+
+-  The Python API methods that take a constraint argument will now accept an :class:``~classad.ExprTree``
+   in addition to the native Python types, string, bool, int and None.
+   :ticket:`7657`
 
 -  You may now instruct HTCondor to record certain information about the
    files present in the top level of a job's sandbox and the job's environment
