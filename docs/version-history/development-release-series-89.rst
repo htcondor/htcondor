@@ -17,6 +17,10 @@ Release Notes:
    when asked to analyze a job.
    :ticket:`5834`
 
+-  Fixed a bug that could cause the *condor_schedd* to abort if a SUBMIT_REQUIREMENT
+   prevented a late materialization job from materializing.
+   :ticket:`7874`
+
 -  We deprecated the exceptions raised by the
    :ref:`apis/python-bindings/index:Python Bindings`.  The new
    exceptions all inherit from :class:`~htcondor.HTCondorException` or
@@ -33,6 +37,16 @@ Release Notes:
    The python-bindings :class:`~htcondor.CredCheck` class can now be used to check if the
    OAuth services that a job needs are present before the job is submitted.
    :ticket:`7606`
+
+-  The python-bindings daemon objects :class:`~htcondor.Schedd`, :class:`~htcondor.Startd`,
+   and :class:`~htcondor.Negotiator` and :class:`~htcondor.Credd` now have a location memmber
+   whose value can be passed to the contructor of a class of the same type to create a new
+   object pointing to the same HTCondor daemon.
+   :ticket:`7670`
+
+-  The python-bindings :class:`~htcondor.Schedd` constructor now accepts None and interprets that
+   to be the address of the local HTCondor Schedd.
+   :ticket:`7668`
 
 New Features:
 
