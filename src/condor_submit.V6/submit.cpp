@@ -143,7 +143,6 @@ int	  ProcId = -1;
 int		ClustersCreated = 0;
 int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
-bool    nice_user_setting = false;
 bool	NewExecutable = false;
 int		dash_remote=0;
 int		dash_factory=0;
