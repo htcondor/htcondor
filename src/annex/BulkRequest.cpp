@@ -123,6 +123,8 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 
 				free( tagValue );
 			}
+
+			free( buffer );
 		}
 
 		char * s = taglist.print_to_string();
