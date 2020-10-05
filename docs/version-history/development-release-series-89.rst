@@ -29,6 +29,11 @@ Release Notes:
    less likely for multiple instances of HTCondor on the machine to collide.
    :ticket:`7789`
 
+-  Added `oauth-services` method to the python-bindings :class:`~htcondor.Submit` class. 
+   The python-bindings :class:`~htcondor.CredCheck` class can now be used to check if the
+   OAuth services that a job needs are present before the job is submitted.
+   :ticket:`7606`
+
 New Features:
 
 -  The Python API now includes the job status enumeration.
