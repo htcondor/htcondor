@@ -49,7 +49,7 @@ Options: \n \
  --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/batch_gahp)\n \
  --rgahp-nobatchmode \t\tDisable SSH BatchMode \n \
  --help, -h \t\t\tprint this\n \
- remote_hostname: USER@HOST[:PORT] same string that can be used to ssh to the host\n \
+ remote_hostname: [USER@]HOST[:PORT] same string that can be used to ssh to the host\n \
  remote arguments are passed to the REMOTE_CMD
  REMOTE_CMD can be expressed as argument or option
 "
