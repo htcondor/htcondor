@@ -1599,11 +1599,11 @@ print_status( bool forceScheddUpdate ) {
 
 	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
 
-	debug_printf( DEBUG_VERBOSE, " Done	 Pre   Queued	Post   Ready   Un-Ready   Failed\n" );
+	debug_printf( DEBUG_VERBOSE, " Done     Pre   Queued    Post   Ready   Un-Ready   Failed\n" );
 
-	debug_printf( DEBUG_VERBOSE, "  ===	 ===	  ===	 ===	 ===		===	  ===\n" );
+	debug_printf( DEBUG_VERBOSE, "  ===     ===      ===     ===     ===        ===      ===\n" );
 
-	debug_printf( DEBUG_VERBOSE, "%5d   %5d	%5d   %5d   %5d	  %5d	%5d\n",
+	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
 				  done, pre, submitted, post, ready, unready, failed );
 	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
 				dagman.dag->NumHeldJobProcs() );
