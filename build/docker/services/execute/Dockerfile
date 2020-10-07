@@ -22,13 +22,12 @@ RUN \
        useradd slot${n}; \
    done
 
-# Install docker repo and packages
-RUN yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
-	yum install -y docker-ce docker-ce-cli containerd.io
-
 # Install extra packages commonly used by jobs
+# including the docker repo and packages
 COPY execute/packagelist.txt /tmp/packagelist.txt
 RUN \
+    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
+    yum install -y docker-ce docker-ce-cli containerd.io && \
     grep '^[A-Za-z]' /tmp/packagelist.txt \
     | xargs -r yum -y install; \
     yum clean all; \
