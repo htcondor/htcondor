@@ -346,8 +346,7 @@ DLLEXPORT void
 chirp_client_disconnect( struct chirp_client *c )
 {
 	fclose(c->rstream);
-	//TJ 2012 - fclose closes the stream and file, but rstream and wstream share a file so the second fclose ABORTs on Windows.
-	//fclose(c->wstream);
+	fclose(c->wstream);
 	c->rstream = c->wstream = NULL;
 	free(c);
 }
