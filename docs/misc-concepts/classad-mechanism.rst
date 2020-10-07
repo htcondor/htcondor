@@ -701,13 +701,52 @@ Optional parameters are given within square brackets.
     evaluates to ``ERROR`` or ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than 2 arguments are given.
-    
+
     :index:`stricmp()<single: stricmp(); ClassAd functions>`
 
 ``Integer stricmp(AnyType Expr1, AnyType Expr2)``
     This function is the same as ``strcmp``, except that letter case is
-    not significant. 
+    not significant.
+
+    :index:`versioncmp()<single: versioncmp(); ClassAd functions>`
+
+``Integer versioncmp(String left, String right)``
+    This function version-compares two strings.  It returns an integer
+
+    - less than zero if ``left`` is an earlier version than ``right``
+    - zero if the strings are identical
+    - more than zero if ``left`` is a later version than ``right``.
+
+    A version comparison is a lexicographic comparison unless the first
+    difference between the two strings occurs in a string of digits, in
+    which case, sort by the value of that number (assuming that more
+    leading zeroes mean smaller numbers).  Thus ``7.x`` is earlier than
+    ``7.y`` and ``7.01`` is earlier than ``7.10``.
+
+    :index:`versionGT()<single: versionGT(); ClassAd functions>`
+    :index:`versionLT()<single: versionLT(); ClassAd functions>`
+    :index:`versionGE()<single: versionGE(); ClassAd functions>`
+    :index:`versionLE()<single: versionLE(); ClassAd functions>`
+    :index:`versionEQ()<single: versionEQ(); ClassAd functions>`
+
+``Boolean versionGT(String left, String right)``
+``Boolean versionLT(String left, String right)``
+``Boolean versionGE(String left, String right)``
+``Boolean versionLE(String left, String right)``
+``Boolean versionEQ(String left, String right)``
+
+    As ``versioncmp()`` (above), but for a specific comparison and returning
+    a boolean.  The two letter codes stand for "Greater Than", "Less Than",
+    "Greater than or Equal", "Less than or Equal", and "EQual", respectively.
+
+    :index:`version_in_range()<single: version_in_range; ClassAd functions>`
+
+``Boolean version_in_range(String version, String min, String max)``
+
+    Equivalent to ``versionLE(min, version) && versionLE(version, max)``.
+
     :index:`toUpper()<single: toUpper(); ClassAd functions>`
+
 ``String toUpper(AnyType Expr)``
     The single argument is converted to type ``String`` by function
     ``string(Expr)``. The return value is this string, with all lower

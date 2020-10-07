@@ -5406,6 +5406,50 @@ These macros control the *condor_schedd*.
     permissions as the main ``SPOOL`` directory. Care must be taken that
     the value won't change during the lifetime of each job.
 
+:macro-def:`<OAuth2Service>_CLIENT_ID`
+    The client ID string for an OAuth2 service named ``<OAuth2Service>``.
+    The client ID is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_CLIENT_SECRET_FILE`
+    The path to the file containing the client secret string
+    for an OAuth2 service named ``<OAuth2Service>``.
+    The client secret is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_RETURN_URL_SUFFIX`
+    The path (``https://<hostname>/<path>``)
+    that an OAuth2 service named ``<OAuth2Service>``
+    should be directed when returning
+    after a user permits the submit host access
+    to their account.
+    Most often, this should be set to name of the OAuth2 service
+    (e.g. ``box``, ``gdrive``, ``onedrive``, etc.).
+    The dervied return URL is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_AUTHORIZATION_URL`
+    The URL that the companion OAuth2 credmon WSGI application
+    should redirect a user to
+    in order to request access for a user's credentials
+    for the OAuth2 service named ``<OAuth2Service>``.
+    This URL should be found in the service's API documentation.
+    The authorization URL is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
+:macro-def:`<OAuth2Service>_TOKEN_URL`
+    The URL that the *condor_credmon_oauth* should use
+    in order to refresh a user's tokens
+    for the OAuth2 service named ``<OAuth2Service>``.
+    This URL should be found in the service's API documentation.
+    The token URL is passed on to the *condor_credmon_oauth*
+    when a job requests OAuth2 credentials
+    for a configured OAuth2 service.
+
 condor_shadow Configuration File Entries
 -----------------------------------------
 
@@ -5971,6 +6015,11 @@ These settings affect the *condor_starter*.
 :macro-def:`SINGULARITY_BIND_EXPR`
     A string value containing a list of bind mount specifications to be
     passed to Singularity. The default value is ``"SingularityBind"``.
+
+:macro-def:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
+    A boolean value defaulting to false.  If true, and the singularity
+    image is a directory, and the target of a bind mount doesn't exist in
+    the target, then skip this bind mount.
 
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value containing a list of extra arguments to be appended
@@ -6680,6 +6729,10 @@ These macros affect the *condor_negotiator*.
     Sets the priority factor for nice users, as described in
     :doc:`/admin-manual/user-priorities-negotiation`.
     Defaults to 10000000000.
+
+:macro-def:`NICE_USER_ACCOUNTING_GROUP_NAME`
+    Sets the name used for the nice-user accounting group by *condor_submit*.
+    Defaults to nice-user.
 
 :macro-def:`REMOTE_PRIO_FACTOR`
     Defines the priority factor for remote users, which are those users
@@ -9254,6 +9307,10 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
     The number of seconds to wait before cleaning up unused credentials.
     Defaults to 3,600 seconds (1 hour).
+
+:macro-def:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
+    The directory that users' OAuth2 credentials should be stored in.
+    This directory must be owned by root:condor with the setgid flag enabled.
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------

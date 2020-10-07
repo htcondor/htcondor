@@ -66,7 +66,7 @@ Assumptions`_ and/or the `Other Options`_.
 Using checkpoint_exit_code
 --------------------------
 
-The following Python script (``85.py``) is a toy example of code that
+The following Python script (``example.py``) is a toy example of code that
 checkpoints itself. It counts from 0 to 10 (exclusive), sleeping for 10
 seconds at each step. It writes a checkpoint file (containing the next number)
 after each nap, and exits with code 85 at count 3, 6, and 9. It exits
@@ -81,7 +81,7 @@ with code 0 when complete.
 
     value = 0
     try:
-        with open('85.checkpoint', 'r') as f:
+        with open('example.checkpoint', 'r') as f:
             value = int(f.read())
     except IOError:
         pass
@@ -91,7 +91,7 @@ with code 0 when complete.
         print("Computing timestamp {0}".format(value))
         time.sleep(10)
         value += 1
-        with open('85.checkpoint', 'w') as f:
+        with open('example.checkpoint', 'w') as f:
             f.write("{0}".format(value))
         if value%3 == 0:
             sys.exit(85)
@@ -99,8 +99,8 @@ with code 0 when complete.
     print("Computation complete")
     sys.exit(0)
 
-The following submit file (``85.submit``) commands HTCondor to transfer the
-file ``85.checkpoint`` to the submit node whenever the script exits with code
+The following submit file (``example.submit``) commands HTCondor to transfer the
+file ``example.checkpoint`` to the submit node whenever the script exits with code
 85.  If interrupted, the job will resume from the most recent of those
 checkpoints.  Before version 8.9.8, you *must* include your checkpoint file(s)
 in ``transfer_output_files``; otherwise HTCondor will not transfer it
@@ -111,21 +111,21 @@ the :doc:`/man-pages/condor_submit` man page.
 .. code-block:: condor-submit
 
     checkpoint_exit_code        = 85
-    transfer_output_files       = 85.checkpoint
+    transfer_output_files       = example.checkpoint
     should_transfer_files       = yes
 
-    executable                  = 85.py
+    executable                  = example.py
     arguments                   =
 
-    output                      = 85.out
-    error                       = 85.err
-    log                         = 85.log
+    output                      = example.out
+    error                       = example.err
+    log                         = example.log
 
     queue 1
 
 This example does not remove the "checkpoint file" generated for
 timestep 9 when the executable completes.  This could be done in
-``85.py`` immediately before it exits, but that would cause the
+``example.py`` immediately before it exits, but that would cause the
 final file transfer to fail, if you specified the file in
 ``transfer_output_files``.  The script could instead remove the file
 and then re-create it empty, it desired.

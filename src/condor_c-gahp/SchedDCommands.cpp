@@ -174,13 +174,14 @@ SchedDRequest * SchedDRequest::createJobStageOutRequest (const int request_id,
 
 }
 
-SchedDRequest * SchedDRequest::createRefreshProxyRequest (const int request_id, int cluster_id, int proc_id, const char * proxy_file) {
+SchedDRequest * SchedDRequest::createRefreshProxyRequest (const int request_id, int cluster_id, int proc_id, const char * proxy_file, time_t proxy_expiration) {
 	SchedDRequest * req = new SchedDRequest;
 	req->cluster_id = cluster_id;
 	req->proc_id = proc_id;
 	req->classad = NULL;
 	req->constraint = NULL;
 	req->proxy_file = strdup(proxy_file);
+	req->proxy_expiration = proxy_expiration;
 
 	req->command = SDC_JOB_REFRESH_PROXY;
 	req->status = SDCS_NEW;

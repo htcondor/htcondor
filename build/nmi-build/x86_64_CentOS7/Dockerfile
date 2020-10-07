@@ -210,6 +210,7 @@ RUN mkdir -p /usr/local/condor/etc/examples && \
 # Add tools to add the HTCondor repository
 RUN yum install -y \
     epel-release \
+    centos-release-scl \
     wget \
     && yum clean all
 
@@ -229,7 +230,9 @@ RUN yum install -y \
 
 # Tools needed for building
 RUN yum install -y \
+    devtoolset-8 \
     make \
+    patchelf \
     rpm-build \
     && yum clean all
 
@@ -245,6 +248,7 @@ RUN yum install -y \
     'byacc' \
     'c-ares-devel' \
     'cmake' \
+    'cmake3' \
     'expat-devel' \
     'flex' \
     'gcc-c++' \
@@ -288,6 +292,35 @@ RUN yum install -y \
     'systemtap-runtime' \
     'systemtap-sdt-devel' \
     'which' \
+    && yum clean all
+
+# Additional dependencies for OSG style build
+RUN yum install -y \
+    globus-callout-devel \
+    globus-common-devel \
+    globus-ftp-client-devel \
+    globus-ftp-control-devel \
+    globus-gass-server-ez-devel \
+    globus-gass-transfer-devel \
+    globus-gram-client-devel \
+    globus-gram-protocol \
+    globus-gsi-callback-devel \
+    globus-gsi-cert-utils-devel \
+    globus-gsi-credential-devel \
+    globus-gsi-openssl-error-devel \
+    globus-gsi-proxy-core-devel \
+    globus-gsi-proxy-ssl-devel \
+    globus-gsi-sysconfig-devel \
+    globus-gss-assist-devel \
+    globus-gssapi-error-devel \
+    globus-gssapi-gsi-devel \
+    globus-io-devel \
+    globus-openssl-module-devel \
+    globus-rsl-devel \
+    globus-xio-devel \
+    munge-devel \
+    scitokens-cpp-devel \
+    voms-devel \
     && yum clean all
 
 RUN pip3 install pytest pytest-httpserver

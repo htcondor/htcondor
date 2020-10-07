@@ -911,7 +911,7 @@ sumAvg(const char *name, const ArgumentList &argList,
 
 	onlySum = (strcasecmp("sum", name) == 0 );
 	listIterator.Initialize(listToSum);
-	result.SetUndefinedValue();
+	result.SetIntegerValue(0); // sum({}) should be 0
 	len = 0;
 	first = true;
 

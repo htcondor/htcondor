@@ -121,7 +121,7 @@ if (WITH_SCITOKENS)
 		message( FATAL_ERROR "SciTokens enabled but supporting library (libSciTokens) not found." )
 	endif()
 	if( DLOPEN_SECURITY_LIBS )
-		set( SCITOKENS_FOUND "" )
+		set( SCITOKENS_FOUND "" CACHE STRING "SciTokens Found" FORCE )
 	endif()
 
 	set( HAVE_EXT_SCITOKENS ON PARENT_SCOPE )

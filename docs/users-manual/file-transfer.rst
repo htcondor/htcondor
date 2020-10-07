@@ -656,7 +656,7 @@ example:
 
 .. code-block:: condor-submit
 
-    transfer_output_files = "myresults.dat = http://destination-server.com/myresults.dat"
+    transfer_output_remaps = "myresults.dat = http://destination-server.com/myresults.dat"
 
 We use a HTTP PUT request to perform the upload, so the user is
 responsible for making sure that the destination server accepts PUT
@@ -675,6 +675,48 @@ following in the submit file:
 .. code-block:: condor-submit
 
     transfer_input_files = cred+https://download.com/bar
+
+**Transferring files using file transfer plugins**
+
+HTCondor comes with file transfer plugins
+that can communicate with Box.com, Google Drive, and Microsoft OneDrive.
+Using one of these plugins requires that the HTCondor pool administrator
+has set up the mechanism for HTCondor to gather credentials
+for the desired service,
+and requires that your submit file
+contains the proper commands
+to obtain credentials
+from the desired service (see :ref:`jobs_that_require_credentials`).
+
+To use a file transfer plugin,
+substitute ``https`` in a transfer URL with the service name
+(``box`` for Box.com,
+``gdrive`` for Google Drive, and
+``onedrive`` for Microsoft OneDrive)
+and reference a file path starting at the root directory of the service.
+For example, to download ``bar.txt`` from a Box.com account
+where ``bar.txt`` is in the ``foo`` folder, use:
+
+.. code-block:: condor-submit
+
+    use_oauth_services = box
+    transfer_input_files = box://foo/bar.txt
+
+If your job requests multiple credentials from the same service,
+use ``<handle>+<service>://path/to/file``
+to reference each specific credential.
+For example, for a job that uses Google Drive to
+download ``public_files/input.txt`` from one account (``public``)
+and to upload ``output.txt`` to ``my_private_files/output.txt`` on a second account (``private``):
+
+.. code-block:: condor-submit
+
+    use_oauth_services = gdrive
+    gdrive_oauth_permissions_public =
+    gdrive_oauth_permissions_private =
+
+    transfer_input_files = public+gdrive://public_files/input.txt
+    transfer_output_remaps = "output.txt = private+gdrive://my_private_files/output.txt"
 
 **Transferring files to and from S3**
 

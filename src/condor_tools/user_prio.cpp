@@ -659,6 +659,30 @@ main(int argc, const char* argv[])
       exit(1);
     }
 
+    auto version = sock->get_peer_version();
+    if (version && version->built_since_version(8, 9, 9)) {
+        sock->decode();
+        classad::ClassAd ad;
+        if (!getClassAd(sock, ad) || !sock->end_of_message()) {
+            fprintf(stderr, "failed to get priority factor response from negotiator\n");
+            exit(1);
+        }
+        int intVal;
+        if (!ad.EvaluateAttrInt(ATTR_ERROR_CODE, intVal)) {
+            fprintf(stderr, "failed to get error code from negotiator\n");
+            exit(1);
+        }
+        if (intVal) {
+            std::string errorMsg;
+            if (ad.EvaluateAttrString(ATTR_ERROR_STRING, errorMsg)) {
+                fprintf(stderr, "set priority factor failed: %s\n", errorMsg.c_str());
+            } else {
+                fprintf(stderr, "set priority factor failed with error code %d\n", intVal);
+            }
+            exit(1);
+        }
+    }
+
     sock->close();
     delete sock;
 
@@ -678,9 +702,9 @@ main(int argc, const char* argv[])
 		exit(1);
 	}
     long ceiling = strtol(argv[SetCeiling+2], nullptr, 10);
-	if (ceiling < 0) {
+	if (ceiling < -1) {
 		fprintf( stderr, "Ceiling must be greater than or equal to "
-				 "1.\n");
+				 "-1.\n");
 		exit(1);
 	}
 

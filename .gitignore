@@ -205,5 +205,7 @@ src/condor_shadow.V6.1/condor_shadow_s
 src/condor_tools/condor_tail
 src/condor_tests/cedar_test.exe
 
+__pycache__
+
 # Project exclude paths
 /_build/

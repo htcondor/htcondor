@@ -1252,7 +1252,8 @@ FILE TRANSFER COMMANDS
 
     :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
  preserve_relative_paths = < True | False >
-    This command modifies the behavior of the file transfer commands.  When
+    For vanilla and Docker -universe jobs (and others that use the shadow),
+    this command modifies the behavior of the file transfer commands.  When
     set to true, the destination for an entry that is a relative path in a
     file transfer list becomes its relative path, not its basename.  For
     example, ``input_data/b`` (and its contents, if it is a directory) will
@@ -2582,7 +2583,33 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     requirements or preferences. For a job to only run on a machine with
     a minimum ``MachineMaxVacateTime``, or to preferentially run on such
     machines, explicitly specify this in the requirements and/or rank
-    expressions. :index:`max_job_retirement_time`
+    expressions.
+
+    :index:`manifest`
+    :index:`manifest<single: manifest; submit commands>`
+
+ manifest = <True | False>
+    For vanilla and Docker -universe jobs (and others that use the shadow),
+    specifies if HTCondor (the starter) should produce a "manifest", which
+    is directory containing three files: the list of files and directories
+    at the top level of the sandbox when file transfer in completes
+    (``in``), the same when file transfer out begins (``out``), and a dump
+    of the environment set for the job (``env``).
+
+    This feature is not presently available for Windows.
+
+    :index:`manifest_dir`
+    :index:`manifest_dir<single: manifest; submit commands>`
+
+ manifest_dir = <directory name>
+    For vanilla and Docker -universe jobs (and others that use the shadow),
+    specifies the directory in which to record the manifest.  Specifying
+    this enables the creation of a manifest.  By default, the manifest
+    directory is named ``<cluster>_<proc>_manifest``, to avoid conflicts.
+
+    This feature is not presently available for Windows.
+
+    :index:`max_job_retirement_time`
     :index:`max_job_retirement_time<single: max_job_retirement_time; submit commands>`
 
  max_job_retirement_time = <integer expression>
@@ -2631,9 +2658,10 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     bottom-feeder job! This is very handy if a user has some jobs they
     wish to run, but do not wish to use resources that could instead be
     used to run other people's HTCondor jobs. Jobs submitted in this
-    fashion have ``"nice-user."`` prepended to the owner name when
-    viewed from *condor_q* or *condor_userprio*. The default value is
-    ``False``. :index:`noop_job<single: noop_job; submit commands>`
+    fashion have an accounting group.  The accounting group is configurable
+    by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` which defaults to ``nice-user``
+    The default value is ``False``. 
+    :index:`noop_job<single: noop_job; submit commands>`
  noop_job = <ClassAd Boolean Expression>
     When this boolean expression is ``True``, the job is immediately
     removed from the queue, and HTCondor makes no attempt at running the
@@ -2685,6 +2713,22 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     For DAGMan jobs, the string ``DAG Node:`` and the node's name is
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
+ use_oauth_services = <list of credential service names>
+    A comma-separated list of crendential-providing service names for
+    which the job should be provided credentials for the job execution
+    environment. The credential service providers must be configured by
+    the pool admin.
+ <credential_service_name>_oauth_permissions[_<handle>] = <scope>
+    A string containing the scope(s) that should be requested for
+    the credential named <credential_service_name>[_<handle>], where
+    <handle> is optionally provided to differentiate between multiple
+    credentials from the same credential service provider.
+ <credential_service_name>_oauth_resource[_<handle>] = <resource>
+    A string containing the resource (or "audience") that should be
+    requested for the credential named
+    <credential_service_name>[_<handle>], where <handle> is optionally
+    provided to differentiate between multiple credentials from the same
+    credential service provider.
  +<attribute> = <value>
     A line that begins with a '+' (plus) character instructs
     *condor_submit* to insert the given *attribute* into the job

@@ -17,6 +17,13 @@ Release Notes:
 
 .. HTCondor version 8.8.11 released on Month Date, 2020.
 
+-  The GSI code now checks for a host alias before attempting to do a reverse
+   DNS look-up.  This means that hosts with valid certificates no longer need
+   a PTR record (although it must still be valid if it exists), if those hosts
+   set the ``HOST_ALIAS`` configuration value appropriately
+   (``$(FULL_HOSTNAME)``, usually).
+   :ticket:`7788`
+
 New Features:
 
 - None.
@@ -44,6 +51,17 @@ Bugs Fixed:
   Additionally, the spurious warning about ``NAMES`` not being list as a
   resource has been eliminated.
   :ticket:`7755`
+
+- Fixed a bug where the *condor_gridmanager* could refresh the proxy of
+  grid-type *condor* jobs at the wrong time when
+  ``DelegateJobGSICredentialsLifetime`` is set in the job ad.
+  :ticket`7856`
+
+- Improved the efficiency of process monitoring in macOS.
+  :ticket:`7851`
+
+- Fixed a bug in the ``-autoformat`` option when using lists and nested ads.
+  :ticket:`7750`
 
 Version 8.8.10
 --------------

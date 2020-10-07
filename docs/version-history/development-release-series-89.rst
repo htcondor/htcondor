@@ -11,7 +11,7 @@ Release Notes:
 
 -  HTCondor version 8.9.9 not yet released.
 
-.. HTCondor version 8.8.9 released on Month Date, 2020.
+.. HTCondor version 8.9.9 released on Month Date, 2020.
 
 -  *condor_q* no longer prints misleading message about the matchmaker
    when asked to analyze a job.
@@ -25,13 +25,58 @@ Release Notes:
    of each exception type they replaced.
    :ticket:`6935`
 
+-  We changed the default value of ``PROCD_ADDRESS`` on Windows to make it
+   less likely for multiple instances of HTCondor on the machine to collide.
+   :ticket:`7789`
+
+-  The *condor_schedd* will no longer modify a job's ``User`` attribute when the job's
+   ``NiceUser`` attribute is set.  The ``nice_user`` submit keyword is now implemented
+   entirely by *condor_submit*.   Because of this change the ``nice_user`` mechanism
+   will only work when *condor_submit* and the *condor_schedd* are both version 8.9.9 or later.
+   :ticket:`7783`
+
 New Features:
 
--  The :class:`classad.ClassAd` class now defines equality and inequality.
-   :ticket:`7760`
+-  The accounting group that the ``nice_user`` submit command puts jobs into is now
+   configurable by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` in the configuration
+   of *condor_submit*.
+   :ticket:`7792`
 
--  Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
+-  Added `oauth-services` method to the python-bindings :class:`~htcondor.Submit` class. 
+   The python-bindings :class:`~htcondor.CredCheck` class can now be used to check if the
+   OAuth services that a job needs are present before the job is submitted.
+   :ticket:`7606`
+
+-  The Python API daemon objects :class:`~htcondor.Schedd`, :class:`~htcondor.Startd`,
+   :class:`~htcondor.Negotiator` and :class:`~htcondor.Credd` now have a location memmber
+   whose value can be passed to the contructor of a class of the same type to create a new
+   object pointing to the same HTCondor daemon.
+   :ticket:`7670`
+
+-  The Python API daemon object :class:`~htcondor.Schedd` constructor now accepts None
+   and interprets that to be the address of the local HTCondor Schedd.
+   :ticket:`7668`
+
+-  The Python API now includes the job status enumeration.
    :ticket:`7726`
+
+-  The Python API methods that take a constraint argument will now accept an :class:``~classad.ExprTree``
+   in addition to the native Python types, string, bool, int and None.
+   :ticket:`7657`
+
+-  You may now instruct HTCondor to record certain information about the
+   files present in the top level of a job's sandbox and the job's environment
+   variables.  The list of files is recorded when transfer-in completes
+   and again when transfer-out starts.  Set ``manifest`` to true in your
+   submit file to enable, or ``manifest_dir`` to specify where the lists
+   are recorded.  See the :ref:`man-pages/condor_submit:*condor_submit*`
+   man page for details.
+   :ticket:`7381`
+
+   This feature is not presently available on Windows.
+
+- Added a family of version comparison functions to ClassAds.
+  :ticket:`7504`
 
 - Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
   feature is the :class:`htcondor.personal.PersonalPool` class, which is
@@ -41,7 +86,52 @@ New Features:
   Personal pools do not require administrator/root privileges.
   HTCondor itself must still be installed on your system.
 
+- Added the OAuth2 Credmon (aka "SciTokens Credmon") daemon
+  (*condor_credmon_oauth*), WSGI application, helper libraries, example
+  configuration, and documentation to HTCondor.
+  :ticket:`7741`
+
+- Singularity jobs now ignore bind mount directories if the source
+  directory for the bind mount does not exist on the host machine
+  :ticket:`7807`
+
+- Singularity jobs now ignore bind mount directories if the target
+  directory for the bind mount does not exist in the image and
+  SINGULARITY_IGNORE_MISSING_BIND_TARGET is set to true
+  (default is false).
+  :ticket:`7846`
+
+- Improved startup time of the daemons.
+  :ticket:`7799`
+
+- DAGMan now waits for ``PROVISIONER`` nodes to reach a ready status before 
+  submitting any other jobs.
+  :ticket:`7610`
+
+- Set a variety of defaults into *condor_dagman* so it can now easily be
+  invoked directly from the command line using ``condor_dagman mydag.dag``
+  :ticket:`7806`
+
+- Added a ``-Dot`` argument to *condor_dagman* which tells DAGMan to simply
+  output a .dot file graphic representation of the dag, then exit immediately
+  without submitting any jobs.
+  :ticket:`7796`
+
+- Updated the ``htcondor.Submit.from_dag()`` Python binding to support the
+  full range of command-line arguments available to *condor_submit_dag*.
+  :ticket:`7823`
+
 Bugs Fixed:
+
+-  Fixed a bug that could cause the *condor_schedd* to abort if a SUBMIT_REQUIREMENT
+   prevented a late materialization job from materializing.
+   :ticket:`7874`
+
+-  ``condor_annex -check-setup`` now respects the configuration setting
+   ``ANNEX_DEFAULT_AWS_REGION``.  In addition, ``condor_annex -setup`` now
+   sets ``ANNEX_DEFAULT_AWS_REGION`` if it hasn't already been set.  This
+   makes first-time setup in a nondefault region much less confusing.
+   :ticket:`7832`
 
 -  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
    would make every job go on hold.
@@ -50,6 +140,32 @@ Bugs Fixed:
 -  *condor_watch_q* now correctly groups jobs submitted by DAGMan after
    *condor_watch_q* has started running.
    :ticket:`7800`
+
+-  Fixed a bug in the classad library where calling the classad sum function
+   on an empty list returned undefined.  It now returns 0.
+   :ticket:`7838`
+
+-  Fixed a bug in Docker Universe that caused a confusing warning message
+   about an unaccessible file in /root/.docker 
+   :ticket:`7805`
+
+-  Fixed a bug in the *condor_collector* that caused it to handle queries
+   from the *condor_negotiator* at normal priority instead of high priority.
+   :ticket:`7729`
+
+-  Fixed attribute ``ProportionalSetSizeKb`` to behave the same as
+   ``ResidentSetSize`` in the slot ad.
+   :ticket:`7787`
+
+-  Removed the java benchmark ``JavaMFlops`` from the machine ad.
+   :ticket:`7795`
+
+-  Read IDTOKENS used by daemons with the correct UID.
+   :ticket:`7767`
+
+-  Fixed the Python ``htcondor.Submit.from_dag()`` binding so it now throws an
+   ``IOError`` exception when the specified .dag file is not found.
+   :ticket:`7808`
 
 Version 8.9.8
 -------------
