@@ -86,7 +86,7 @@ while [ $# != 0 ] ; do
         -* ) break;;
         * )
             if [ "$REMOTE_HOSTNAME" = "" ] ; then
-                if  [[ $1 =~ ^(([A-Za-z0-9]*)@)?([A-Za-z0-9\.-]+)(:([0-9]*))?$ ]]; then
+                if  [[ $1 =~ ^(([A-Za-z_][A-Za-z0-9_-]*)@)?([A-Za-z0-9\.-]+)(:([0-9]*))?$ ]]; then
                     REMOTE_USER="${BASH_REMATCH[2]:-$REMOTE_USER}"
                     REMOTE_HOSTNAME="${BASH_REMATCH[3]:-$REMOTE_HOSTNAME}"
                     REMOTE_PORT="${BASH_REMATCH[5]:-$REMOTE_PORT}"
