@@ -1081,7 +1081,7 @@ ReliSock::do_shared_port_local_connect( char const *shared_port_id, bool nonbloc
 	// the (newly-created) socket here works around the problem.
 	//
 	static int liveness_hack = -1;
-	if( liveness_hack != 1 ) { ::close(liveness_hack); }
+	if( liveness_hack != -1 ) { ::close(liveness_hack); }
 	liveness_hack = dup( sock_to_pass.get_file_desc() );
 #endif
 
