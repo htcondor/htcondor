@@ -685,6 +685,7 @@ Scheduler::Scheduler() :
 	numShadows = 0;
 	FlockCollectors = NULL;
 	FlockNegotiators = NULL;
+	MinFlockLevel = 0;
 	MaxFlockLevel = 0;
 	FlockLevel = 0;
 	StartJobTimer=-1;
@@ -3319,6 +3320,9 @@ Scheduler::insert_submitter(const char * name)
 	if (Subdat) return Subdat;
 	Subdat = &Submitters[name];
 	Subdat->name = name;
+	Subdat->OldFlockLevel = MinFlockLevel;
+	Subdat->FlockLevel = MinFlockLevel;
+	Subdat->NegotiationTimestamp = time(NULL);
 	return Subdat;
 }
 
@@ -7137,7 +7141,10 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 
 	if( satisfied ) {
 		// We are out of jobs.  Stop flocking with less desirable pools.
-		if (Owner->FlockLevel > flock_level ) {
+		if (Owner->FlockLevel > flock_level && Owner->FlockLevel > MinFlockLevel) {
+			if (flock_level < MinFlockLevel) {
+				flock_level = MinFlockLevel;
+			}
 			dprintf(D_ALWAYS,
 					"Decreasing flock level for %s to %d from %d.\n",
 					owner, flock_level, Owner->FlockLevel);
@@ -13189,6 +13196,7 @@ Scheduler::Init()
 		FlockCollectors = new DaemonList();
 		FlockCollectors->init( DT_COLLECTOR, flock_collector_hosts );
 		MaxFlockLevel = FlockCollectors->number();
+		MinFlockLevel = param_integer("MIN_FLOCK_LEVEL", 0, 0, MaxFlockLevel);
 
 		if( FlockNegotiators ) {
 			delete FlockNegotiators;
@@ -13200,6 +13208,7 @@ Scheduler::Init()
 					"FLOCK_NEGOTIATOR_HOSTS lists are not the same size."
 					"Flocking disabled.\n");
 			MaxFlockLevel = 0;
+			MinFlockLevel = 0;
 		}
 	}
 	if (flock_collector_hosts) free(flock_collector_hosts);
@@ -15078,6 +15087,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "AccountantName", AccountantName );
 	cad->Assign( "UidDomain", UidDomain );
 	cad->Assign( "AccountingDomain", AccountingDomain );
+	cad->Assign( "MinFlockLevel", MinFlockLevel );
 	cad->Assign( "MaxFlockLevel", MaxFlockLevel );
 	cad->Assign( "FlockLevel", FlockLevel );
 	cad->Assign( "MaxExceptions", MaxExceptions );

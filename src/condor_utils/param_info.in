@@ -3289,6 +3289,16 @@ default=$(FLOCK_TO)
 type=string
 tags=schedd
 
+[FLOCK_INCREMENT]
+default=1
+type=int
+range=1,
+
+[MIN_FLOCK_LEVEL]
+default=0
+type=int
+range=0,
+
 [FLOCK_BY_DEFAULT]
 default=true
 type=bool
