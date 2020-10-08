@@ -1066,15 +1066,32 @@ ReliSock::do_shared_port_local_connect( char const *shared_port_id, bool nonbloc
 				peer_description());
 		return 0;
 	}
+
+#if defined(DARWIN)
+	//
+	// See GT#7866.  Summary: removing the blocking acknowledgement of the
+	// socket hand-off (#7502), if the master sleeps for 100ms instead of
+	// re-entering the event loop (check-in [60471]), then -- only on
+	// MacOS X and only for the shared port daemon -- the socket on which
+	// the childalive message was sent will arrive at the master with no
+	// data to read.  If other daemons are forced to use this function,
+	// and attempt to contact the master while it's sleeping, they also fail.
+	//
+	// We have not been able to further analyze this problem, but dup()ing
+	// the (newly-created) socket here works around the problem.
+	//
+	static int liveness_hack = -1;
+	if( liveness_hack != 1 ) { ::close(liveness_hack); }
+	liveness_hack = dup( sock_to_pass.get_file_desc() );
+#endif
+
 		// restore the original connect address, which got overwritten
 		// in connect_socketpair()
 	set_connect_addr(orig_connect_addr.c_str());
 
 	char const *request_by = "";
-	// ToddT: should we be passing nonblocking arg along to PassSocket() below?
-	// Probably not, because we only get here in rare instances (aka if the shared
-	// port service is not yet registered), but not sure....
-	if( !shared_port_client.PassSocket(&sock_to_pass,shared_port_id,request_by) ) {
+	// A nonblocking call here causes a segfault, so don't do that.
+	if( !shared_port_client.PassSocket(&sock_to_pass,shared_port_id,request_by, false) ) {
 		return 0;
 	}
 
