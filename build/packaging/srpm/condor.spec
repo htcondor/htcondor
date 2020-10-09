@@ -288,7 +288,8 @@ Requires(post): python3-policycoreutils
 Requires(post): selinux-policy-targeted
 %endif
 
-# Require libraries that are dlopened
+# Require libraries that we dlopen
+# Ganglia is optional as well as nVidia and cuda libraries
 Requires: globus-callout
 Requires: globus-common
 Requires: globus-gsi-callback
@@ -298,15 +299,17 @@ Requires: globus-gsi-openssl-error
 Requires: globus-gsi-proxy-core
 Requires: globus-gsi-proxy-ssl
 Requires: globus-gsi-sysconfig
-Requires: globus-gssapi-gsi
 Requires: globus-gss-assist
+Requires: globus-gssapi-gsi
 Requires: globus-openssl-module
 Requires: globus-xio-gsi-driver
 Requires: krb5-libs
 Requires: libcom_err
+Requires: libtool-ltdl
 Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
+Requires: systemd-libs
 Requires: voms
 
 #Provides: user(condor) = 43

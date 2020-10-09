@@ -200,7 +200,6 @@ private:
 	int freezer_cgroup(const char *);
 	int spree_cgroup(int);
 	int migrate_to_cgroup(pid_t);
-	void update_max_image_size_cgroup();
 	int get_cpu_usage_cgroup(long &user_cpu, long &sys_cpu);
 #endif
 };

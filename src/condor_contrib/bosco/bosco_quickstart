@@ -3,7 +3,7 @@
 
 # Download URL
 #INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/latest/boscoinstaller
-INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/1.2/boscoinstaller
+INSTALLER_URL=https://research.cs.wisc.edu/htcondor/bosco/1.2/boscoinstaller
 
 # Change this to download a patch for bosco_cluster
 #PATCH_B_CLUSTER_URL=https://twiki.grid.iu.edu/twiki/bin/viewfile/CampusGrids/BoscoQuickStart_draft/bosco_cluster
