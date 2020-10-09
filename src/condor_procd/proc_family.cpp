@@ -451,48 +451,6 @@ _check_stat_uint64(const struct cgroup_stat &stats, const char* name, u_int64_t*
 	return false;
 }
 
-void
-ProcFamily::update_max_image_size_cgroup()
-{
-	if (!m_cm.isMounted(CgroupManager::MEMORY_CONTROLLER) || !m_cgroup.isValid()) {
-		return;
-	}
-
-	int err;
-	u_int64_t max_image;
-	struct cgroup_controller *memct;
-	Cgroup memcg;
-	if (m_cm.create(m_cgroup_string, memcg, CgroupManager::MEMORY_CONTROLLER, CgroupManager::MEMORY_CONTROLLER) ||
-			!memcg.isValid()) {
-		dprintf(D_PROCFAMILY,
-			"Unable to create cgroup %s (ProcFamily %u).\n",
-			m_cgroup_string.c_str(), m_root_pid);
-		return;
-	}
-	if ((memct = cgroup_get_controller(&const_cast<struct cgroup &>(memcg.getCgroup()), MEMORY_CONTROLLER_STR)) == NULL) {
-		dprintf(D_PROCFAMILY,
-			"Unable to load memory controller for cgroup %s (ProcFamily %u).\n",
-			m_cgroup_string.c_str(), m_root_pid);
-		return;
-	}
-	if ((err = cgroup_get_value_uint64(memct, "memory.memsw.max_usage_in_bytes", &max_image))) {
-		// On newer nodes, swap accounting is disabled by default.
-		// In some cases, swap accounting causes a kernel oops at the time of writing.
-		// So, we check memory.max_usage_in_bytes instead.
-		int err2 = cgroup_get_value_uint64(memct, "memory.max_usage_in_bytes", &max_image);
-		if (err2) {
-			dprintf(D_PROCFAMILY,
-				"Unable to load max memory usage for cgroup %s (ProcFamily %u): %u %s\n",
-				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
-			return;
-		} else if (!have_warned_about_memsw) {
-			have_warned_about_memsw = true;
-			dprintf(D_ALWAYS, "Swap acounting is not available; only doing RAM accounting.\n");
-		}
-	}
-	m_max_image_size = max_image/1024;
-}
-
 int
 ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 {
@@ -729,10 +687,6 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	if (image/1024 > m_max_image_size) {
 		m_max_image_size = image/1024;
 	}
-	// Try updating the max size using cgroups
-	// Don't ever do this -- we reuse cgroups from job to job
-	// and this could return the max image from the *previous* job
-	//update_max_image_size_cgroup();
 
 	// Update CPU
 	get_cpu_usage_cgroup(usage->user_cpu_time, usage->sys_cpu_time);
