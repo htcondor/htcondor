@@ -46,24 +46,14 @@ cd condor-${condor_version}
 cp -pr build/packaging/new-debian debian
 
 if $(grep -qi stretch /etc/os-release); then
-    dist='stretch'
-    build='full'
     suffix=''
 elif $(grep -qi buster /etc/os-release); then
-    dist='buster'
-    build='binary'
     suffix='b1'
 elif $(grep -qi xenial /etc/os-release); then
-    dist='xenial'
-    build='full'
     suffix=''
 elif $(grep -qi bionic /etc/os-release); then
-    dist='bionic'
-    build='binary'
     suffix='b1'
 elif $(grep -qi focal /etc/os-release); then
-    dist='focal'
-    build='full'
     suffix='n1'
     mv debian/control.focal debian/control
     mv debian/htcondor.install.focal debian/htcondor.install
@@ -74,6 +64,13 @@ else
     build='full'
     suffix=''
 fi
+
+# Distribution should be one of experimental, unstable, testing, stable, oldstable, oldoldstable
+# unstable -> daily repo
+# testing -> rc repo
+# stable -> release repo
+
+dist='unstable'
 echo "Distribution is $dist"
 echo "Suffix is '$suffix'"
 
@@ -84,11 +81,14 @@ dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nigh
 #dch --release --distribution $dist ignored
 
 if [ "$suffix" = '' ]; then
+    build='full'
     dpkg-buildpackage -uc -us
 elif [ "$suffix" = 'b1' ]; then
+    build='binary'
     dch --distribution $dist --bin-nmu 'place holder entry'
     dpkg-buildpackage --build=$build -uc -us
 elif [ "$suffix" = 'n1' ]; then
+    build='full'
     dch --distribution $dist --nmu 'place holder entry'
     dpkg-buildpackage --build=$build -uc -us
 fi
