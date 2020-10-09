@@ -728,7 +728,7 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 			m_cgroup_string.c_str(), m_root_pid);
 	}
 	// The poor man's way of updating the max image size.
-	if (image > m_max_image_size) {
+	if (image/1024 > m_max_image_size) {
 		m_max_image_size = image/1024;
 	}
 	// XXX: Try again at using this at a later date.
