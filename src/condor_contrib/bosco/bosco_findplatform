@@ -26,7 +26,6 @@ SUPPORTED_PLATFORMS = [ RH6, RH7, RH8, OSX, DEB9, DEB10, UBUNTU16, UBUNTU18, UBU
 
 # download URLs for the different platforms
 URL_DICT={
-  DEB8: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian8.tar.gz",
   DEB9: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian9.tar.gz",
   DEB10: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian10.tar.gz",
   OSX: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
@@ -114,8 +113,6 @@ Codename:    oneiric
     if 'DISTRIB_RELEASE' in line:
         # TODO These checks need to to be conditioned on whether the
         #   distro is Debian or Ubuntu.
-        if line[len('DISTRIB_RELEASE='):].startswith('8.'):
-          retv=DEB8
         if line[len('DISTRIB_RELEASE='):].startswith('9.'):
           retv=DEB9
         if line[len('DISTRIB_RELEASE='):].startswith('10.'):
@@ -152,8 +149,6 @@ def findversion():
         if mydist[1].startswith('8.'):
           return RH8
       if mydist[0].lower()=='debian':
-        if mydist[1].startswith('8.'):
-          return DEB8
         if mydist[1].startswith('9.'):
           return DEB9
         if mydist[1].startswith('10.'):
