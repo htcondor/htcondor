@@ -690,53 +690,53 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	}
 
 	int err;
-	u_int64_t usage_in_bytes = 0;
-	struct cgroup_controller *memct;
+	struct cgroup_stat stats;
+	void *handle = NULL;
+	u_int64_t tmp = 0, image = 0;
+	bool found_rss = false;
 
 	// Update memory
 
-	Cgroup memcg;
-	if (m_cm.create(m_cgroup_string, memcg, CgroupManager::MEMORY_CONTROLLER, CgroupManager::MEMORY_CONTROLLER) ||
-			!memcg.isValid()) {
-		dprintf(D_PROCFAMILY,
-			"Unable to create cgroup %s (ProcFamily %u).\n",
-			m_cgroup_string.c_str(), m_root_pid);
-		return -1;
-	}
-
-	if ((memct = cgroup_get_controller(&const_cast<struct cgroup &>(memcg.getCgroup()), MEMORY_CONTROLLER_STR)) == NULL) {
-		dprintf(D_PROCFAMILY,
-			"Unable to load memory controller for cgroup %s (ProcFamily %u).\n",
-			m_cgroup_string.c_str(), m_root_pid);
-		return -1;
-	}
-
-	err = cgroup_get_value_uint64(memct, "memory.usage_in_bytes", &usage_in_bytes);
-	if (err != 0) {
-		dprintf(D_PROCFAMILY,
-			"Unable to read cgroup %s memory usage (ProcFamily %u): %u %s.\n",
-			m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
-	} else {
-
-		// Memory is ok
-		usage->total_image_size = usage_in_bytes/1024;
-		usage->total_resident_set_size = usage_in_bytes/1024;
-
-		// The poor man's way of updating the max image size.
-		if (usage_in_bytes > m_max_image_size) {
-			m_max_image_size = usage_in_bytes/1024;
+	err = cgroup_read_stats_begin(MEMORY_CONTROLLER_STR, m_cgroup_string.c_str(), &handle, &stats);
+	while (err != ECGEOF) {
+		if (err > 0) {
+			dprintf(D_PROCFAMILY,
+				"Unable to read cgroup %s memory stats (ProcFamily %u): %u %s.\n",
+				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
+			break;
 		}
-		// XXX: Try again at using this at a later date.
-		// Currently, it reports the max size *including* the page cache.
-		// Doh!
-		//
-		// Try updating the max size using cgroups
-		//update_max_image_size_cgroup();
+		if (_check_stat_uint64(stats, "total_rss", &tmp)) {
+			image += tmp;
+			usage->total_resident_set_size = tmp/1024;
+			found_rss = true;
+		} else if (_check_stat_uint64(stats, "total_mapped_file", &tmp)) {
+			image += tmp;
+		} 
+		err = cgroup_read_stats_next(&handle, &stats);
 	}
+	if (handle != NULL) {
+		cgroup_read_stats_end(&handle);
+	}
+	if (found_rss) {
+		usage->total_image_size = image/1024;
+	} else {
+		dprintf(D_PROCFAMILY,
+			"Unable to find all necesary memory structures for cgroup %s"
+			" (ProcFamily %u)\n",
+			m_cgroup_string.c_str(), m_root_pid);
+	}
+	// The poor man's way of updating the max image size.
+	if (image > m_max_image_size) {
+		m_max_image_size = image/1024;
+	}
+	// Try updating the max size using cgroups
+	// Don't ever do this -- we reuse cgroups from job to job
+	// and this could return the max image from the *previous* job
+	//update_max_image_size_cgroup();
 
 	// Update CPU
 	get_cpu_usage_cgroup(usage->user_cpu_time, usage->sys_cpu_time);
-	
+
 	aggregate_usage_cgroup_blockio(usage);
 	aggregate_usage_cgroup_blockio_io_serviced(usage);
 	aggregate_usage_cgroup_io_wait(usage);
