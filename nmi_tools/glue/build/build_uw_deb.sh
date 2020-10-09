@@ -47,14 +47,16 @@ cp -pr build/packaging/new-debian debian
 
 if $(grep -qi stretch /etc/os-release); then
     suffix=''
+    mv debian/control.stretch debian/control
 elif $(grep -qi buster /etc/os-release); then
-    suffix='b1'
+    suffix='n1'
 elif $(grep -qi xenial /etc/os-release); then
     suffix=''
+    mv debian/control.xenial debian/control
 elif $(grep -qi bionic /etc/os-release); then
-    suffix='b1'
-elif $(grep -qi focal /etc/os-release); then
     suffix='n1'
+elif $(grep -qi focal /etc/os-release); then
+    suffix='n2'
     mv debian/control.focal debian/control
     mv debian/htcondor.install.focal debian/htcondor.install
     mv debian/rules.focal debian/rules
@@ -87,8 +89,18 @@ elif [ "$suffix" = 'b1' ]; then
     build='binary'
     dch --distribution $dist --bin-nmu 'place holder entry'
     dpkg-buildpackage --build=$build -uc -us
+elif [ "$suffix" = 'b2' ]; then
+    build='binary'
+    dch --distribution $dist --bin-nmu 'place holder entry'
+    dch --distribution $dist --bin-nmu 'place holder entry'
+    dpkg-buildpackage --build=$build -uc -us
 elif [ "$suffix" = 'n1' ]; then
     build='full'
+    dch --distribution $dist --nmu 'place holder entry'
+    dpkg-buildpackage --build=$build -uc -us
+elif [ "$suffix" = 'n2' ]; then
+    build='full'
+    dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
     dpkg-buildpackage --build=$build -uc -us
 fi
