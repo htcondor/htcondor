@@ -28,6 +28,6 @@ license: Apache-2.0
 # Required.
 date-released: TBD
 # Required.
-version: 8.8.11
+version: 8.8.12
 # Strongly recommended.  Really ought to correspond to the version above.
 doi: TBD
