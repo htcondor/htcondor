@@ -434,11 +434,11 @@ Submit Commands Limitations
 The use of the CronTab functionality has all of the same limitations of
 deferral times, because the mechanism is based upon deferral times.
 
--  It is impossible to schedule vanilla and standard universe jobs at
+-  It is impossible to schedule vanilla universe jobs at
    intervals that are smaller than the interval at which HTCondor
    evaluates jobs. This interval is determined by the configuration
    variable ``SCHEDD_INTERVAL`` :index:`SCHEDD_INTERVAL`. As a
-   vanilla or standard universe job completes execution and is placed
+   vanilla universe job completes execution and is placed
    back into the job queue, it may not be placed in the idle state in
    time. This problem does not afflict local universe jobs.
 -  HTCondor cannot guarantee that a job will be matched in order to make

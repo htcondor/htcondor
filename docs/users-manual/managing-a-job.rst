@@ -221,14 +221,10 @@ A job in the queue may be placed on hold by running the command
 later released for execution by the command *condor_release*.
 
 Use of the *condor_hold* command causes a hard kill signal to be sent
-to a currently running job (one in the running state). For a standard
-universe job, this means that no checkpoint is generated before the job
-stops running and enters the hold state. When released, this standard
-universe job continues its execution using the most recent checkpoint
-available.
+to a currently running job (one in the running state). 
 
-Jobs in universes other than the standard universe that are running when
-placed on hold will start over from the beginning when released.
+Jobs that are running when placed on hold will start over from the 
+beginning when released.
 
 The :doc:`/man-pages/condor_hold` and the :doc:`/man-pages/condor_release`
 manual pages contain usage details.
