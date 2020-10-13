@@ -10296,7 +10296,9 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     These configuration variables are defined by a comma and/or white
     space separated list of job names to run. Each is the logical name
     of a job. This name must be unique; no two jobs may have the same
-    name.
+    name. The *condor_startd* reads this configuration variable on startup
+    and on reconfig.  The *condor_schedd* reads this variable and other 
+    ``SCHEDD_CRON_*`` variables only on startup.
 
 :macro-def:`STARTD_CRON_<JobName>_PREFIX`  and :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`  and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
     Specifies a string which is prepended by HTCondor to all attribute

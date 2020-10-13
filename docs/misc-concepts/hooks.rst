@@ -819,7 +819,8 @@ jobs, and ones that use the *condor_schedd*.
     BENCHMARKS_KFLOPS_JOB_LOAD = 1.0
 
     #
-    # Schedd Cron Stuff
+    # Schedd Cron Stuff. Unlike the Startd,
+    # a restart of the Schedd is required for changes to take effect
     #
     SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
     SCHEDD_CRON_JOBLIST =

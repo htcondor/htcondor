@@ -63,6 +63,10 @@ Bugs Fixed:
 - Fixed a bug in the ``-autoformat`` option when using lists and nested ads.
   :ticket:`7750`
 
+- Fixed a bug in the *condor_job_router* that could cause a crash when a route
+  was removed while jobs were still associated with it.
+  :ticket:`7590`
+
 Version 8.8.10
 --------------
 
