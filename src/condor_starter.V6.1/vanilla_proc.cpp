@@ -1093,7 +1093,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
 	Starter->jic->periodicJobUpdate( &updateAd, true );
-	int usage;
+	int usage = 0;
 	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
 
 		//
