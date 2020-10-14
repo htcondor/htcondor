@@ -70,6 +70,10 @@ Bugs Fixed:
   was removed while jobs were still associated with it.
   :ticket:`7590`
 
+- Fixed the ``PreCmd`` and ``PostCmd`` job attributes to work correctly with
+  absolute paths.
+  :ticket:`7770`
+
 Version 8.8.10
 --------------
 
