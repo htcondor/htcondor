@@ -74,6 +74,11 @@ Bugs Fixed:
   absolute paths.
   :ticket:`7770`
 
+- Improved the DaemonCore argument parser to look explicitly for ``-d`` or 
+  ``-dynamic`` when using dynamic directories. All other arguments beginning
+  with the letter *d* get passed on to the calling executable.
+  :ticket:`7848`
+
 Version 8.8.10
 --------------
 
