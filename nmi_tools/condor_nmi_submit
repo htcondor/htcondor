@@ -1104,6 +1104,7 @@ sub convertPlatformToKeys
 
 	if( $platform =~ m!^docker://(.*)! ) {
 		$platform_key = basename($1);
+		$platform_key =~ s/-\d+$//; # Trim off any tag version
 	}
 
 	# assume they are the same unless I can show otherwise.
