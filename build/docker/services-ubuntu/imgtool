@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Script for building and pushing the HTCondor Docker containers"""
+import locale
+import re
+import subprocess
+import sys
+import argparse
+import time
+import random
+from typing import Dict, Tuple
+
+
+SUPPORTED_DISTROS = [
+         "el7",
+         "el8",
+    "ubu18.04",
+    "ubu20.04",
+]
+
+
+# "base" must be first
+IMAGES = ["base", "mini", "execute", "submit", "cm"]
+
+
+REPO = "dockerreg.chtc.wisc.edu"
+# ^^ TODO default repo should be dockerhub
+
+
+def builddate():
+    return time.strftime("%Y%m%d", time.localtime())
+
+
+def parse_CondorVersion_date(in_date: str) -> time.struct_time:
+    """Convert the date from CondorVersion into a time object
+    >>> time.strftime("%Y%m%d", parse_CondorVersion_date("Jun 30 2020"))
+    '20200630'
+
+    """
+    return time.strptime(in_date, "%b %d %Y")
+
+
+def get_CondorVersion_and_CondorPlatform(tag: str, executable: str) -> Tuple[bytes, bytes]:
+    """Get the CondorVersion and CondorPlatform from a container by running `condor_version`.
+    The output of `condor_version` looks like:
+
+        $CondorVersion: 8.9.8 Jun 30 2020 BuildID: 508520 PackageID: 8.9.8-0.508520 $
+        $CondorPlatform: x86_64_Fedora32 $
+
+    which will result in
+        [b'8.9.8 Jun 30 2020 BuildID: 508520 PackageID: 8.9.8-0.508520',
+         b'x86_64_Fedora32']
+    (note: these are bytes, not str)
+
+    """
+    ret = subprocess.run(
+        [executable, "run", "--rm", tag, "condor_version"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+    try:
+        condor_version_b = (
+            re.search(rb"^[$]CondorVersion:\s*([^\n]+)[$]$", ret.stdout, re.MULTILINE)
+            .group(1)
+            .rstrip()
+        )
+        condor_platform_b = (
+            re.search(rb"^[$]CondorPlatform:\s*([^\n]+)[$]$", ret.stdout, re.MULTILINE)
+            .group(1)
+            .rstrip()
+        )
+    except AttributeError:
+        raise RuntimeError(
+            "Couldn't find CondorVersion or CondorPlatform in condor_version output"
+        )
+    return condor_version_b, condor_platform_b
+
+
+def parse_CondorVersion(condor_version_b: bytes) -> Dict[str,bytes]:
+    """Extract the various information from CondorVersion
+    (as returned by get_CondorVersion_and_CondorPlatform()).
+
+    >>> parse_CondorVersion(b'8.9.8 Jun 30 2020 BuildID: 508520 PackageID: 8.9.8-0.508520')
+    {'version': '8.9.8', 'date': 'Jun 30 2020', 'buildid': '508520', 'packageid': '8.9.8-0.508520'}
+
+    """
+    condor_version = condor_version_b.decode("latin-1")
+    match = re.match(r"""
+                     (?P<version>[0-9]+[.][0-9]+[.][0-9]+) \s+
+                     (?P<date>\w+\s+\d+\s+\d+) \s+
+                     BuildID:\s+(?P<buildid>\S+) \s+
+                     PackageID:\s+(?P<packageid>[^\n]+)
+                     $""",
+                     condor_version, re.X)
+    try:
+        return match.groupdict()
+    except AttributeError:
+        raise RuntimeError("Can't parse CondorVersion: %s" % condor_version)
+
+
+def docker_build(image, version, distro, executable):
+    ubu = None
+    el = None
+    cmd = [
+        executable,
+        "build",
+        f"--build-arg=VERSION={version}",
+        f"--build-arg=BUILDDATE={builddate()}",
+    ]
+    if distro.startswith("el"):
+        el = distro[2:]
+        cmd.append(f"--build-arg=EL={el}")
+        dockerfile = "Dockerfile-el"
+    elif distro.startswith("ubu"):
+        ubu = distro[3:]
+        cmd.append(f"--build-arg=UBU={ubu}")
+        dockerfile = "Dockerfile-ubu"
+    else:
+        assert False, "not one of the supported distros -- should have been caught"
+
+    tmptag = f"htcondor/{image}:tmp{random.randint(10000,99999)}"
+    cmd.extend(["-t", tmptag, "-f", f"{image}/{dockerfile}", "."])
+
+    subprocess.run(cmd, stdin=subprocess.DEVNULL, check=True)
+
+    try:
+        condor_version_b, condor_platform_b = get_CondorVersion_and_CondorPlatform(
+            tmptag, executable
+        )
+
+        realversion = parse_CondorVersion(condor_version_b)["version"]
+        if version:
+            if realversion != version:
+                print(f"WARNING: condor_version version {realversion} does not match requested version {version}")
+        else:
+            version = realversion
+
+        realtag = f"htcondor/{image}:{version}-{distro}"
+
+        dockerfile = b"""\
+FROM   %b
+LABEL  org.htcondor.condor-version="%b"  org.htcondor.condor-platform="%b"
+""" % (
+            tmptag.encode(),
+            condor_version_b,
+            condor_platform_b,
+        )
+        subprocess.run(
+            [executable, "build", "-t", realtag, "-f", "-", "."], input=dockerfile
+        )
+    finally:
+        subprocess.run([executable, "rmi", tmptag])
+
+
+def docker_push(image, version, distro, executable):
+    tag = f"htcondor/{image}:{version}-{distro}"
+    tag_with_repo = f"{REPO}/{tag}"
+
+    subprocess.run([executable, "tag", tag, tag_with_repo], check=True)
+    subprocess.run([executable, "push", tag_with_repo], check=True)
+    subprocess.run([executable, "rmi", tag_with_repo], check=False)
+
+
+def main(argv):
+    locale.setlocale(locale.LC_ALL, "C")  # no parsing surprises please
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", help="Command to run", choices=["build", "push"])
+    parser.add_argument("version", help="Version of HTCondor to install")
+    parser.add_argument(
+        "image",
+        help="Image to build/push (default %(default)s)",
+        choices=IMAGES + ["all"],
+        nargs="?",
+        default="all",
+    )
+    parser.add_argument(
+        "--distro",
+        help="Distribution to build/push for (default %(default)s)",
+        choices=SUPPORTED_DISTROS + ["all"],
+        default="ubu18.04",
+    )
+    parser.add_argument("--podman", action="store_true", help="Use podman")
+    args = parser.parse_args(argv[1:])
+
+    if not re.match(r"[0-9]+[.][0-9]+[.][0-9]+", args.version):
+        parser.error("Bad version '{args.version}' -- should be like '8.9.9'")
+
+    if args.image == "all":
+        images = IMAGES
+    else:
+        images = [args.image]
+    if args.distro == "all":
+        distros = SUPPORTED_DISTROS
+    else:
+        distros = [args.distro]
+
+    executable = "podman" if args.podman else "docker"
+
+    for image in images:
+        for distro in distros:
+            if args.command == "build":
+                docker_build(image, args.version, distro, executable=executable)
+            elif args.command == "push":
+                docker_push(image, args.version, distro, executable=executable)
+            else:
+                assert False, "invalid command -- should have been caught"
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

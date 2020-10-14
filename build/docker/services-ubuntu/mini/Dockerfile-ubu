@@ -1,0 +1,65 @@
+# This is a minicondor image; runs all the daemons for a single-node pool
+# Designed for interactive use and experimentation;
+# also includes htcondor-restd running on port 8080.
+
+# TODO: install man pages
+# TODO: can't use minihtcondor package because post-install script tries to start the service via systemctl which doesn't work in a container.
+
+# Become the "submituser" user to submit jobs.
+ARG UBU
+ARG VERSION
+ARG SUFFIX
+
+FROM htcondor/base:${VERSION}-ubu${UBU}${SUFFIX}
+
+ARG UBU
+ARG VERSION
+ARG BUILDDATE
+ARG SUFFIX
+
+# https://label-schema.org/rc1
+LABEL org.label-schema.name="htcondor/mini:${VERSION}-ubu${UBU}${SUFFIX}" \
+      org.label-schema.description="HTCondor ${VERSION} minicondor image for Ubuntu ${UBU}" \
+      org.label-schema.vendor="HTCondor" \
+      org.label-schema.license="Apache-2.0" \
+      org.label-schema.build-date="${BUILDDATE}"
+
+
+# perl is needed for condor_run.
+# git is needed for the restd; jq is too useful not to include.
+RUN \
+    export DEBIAN_FRONTEND=noninteractive  &&\
+    apt-get update -q &&\
+    version_release=$(apt-cache madison htcondor | grep -F ${VERSION} | awk '/Packages/ {print $3; exit}')  &&\
+    # ^^ get the version-release string because unlike RHEL I can't install with just the version
+    apt-get install -qy git jq perl  &&\
+    apt-get install -qy python3-pip  &&\
+    # apt-get install -qy minihtcondor=$version_release  &&\
+    rm -rf /var/lib/apt/lists/*  /var/cache/apt/*  &&\
+    :
+
+RUN useradd -m restd
+RUN useradd -m submituser
+
+# flask_restful is not available in repos
+RUN pip3 install flask_restful
+RUN pip3 install git+https://github.com/htcondor/htcondor-restd.git@master\#egg=htcondor-restd
+
+COPY mini/supervisord.conf /etc/supervisord.conf
+COPY mini/condor_restd.sh /usr/local/bin/condor_restd.sh
+COPY mini/start.sh /start.sh
+COPY mini/condor/*.conf /etc/condor/config.d/
+
+RUN chmod +x \
+    /start.sh \
+    /usr/local/bin/condor_restd.sh
+
+# Remove files from base image that are unused
+RUN rm -f \
+    /update-config \
+    /update-secrets \
+    /etc/condor/config.d/01-security.conf
+
+EXPOSE 8080
+
+CMD ["/start.sh"]

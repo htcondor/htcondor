@@ -1,0 +1,26 @@
+# This is a submit host image for HTCondor with a single user for submission
+ARG UBU
+ARG VERSION
+ARG SUFFIX
+
+FROM htcondor/base:${VERSION}-ubu${UBU}${SUFFIX}
+
+ARG UBU
+ARG SERIES
+ARG BUILDDATE
+ARG SUFFIX
+
+# https://label-schema.org/rc1
+LABEL org.label-schema.name="htcondor/submit:${VERSION}-ubu${UBU}${SUFFIX}" \
+      org.label-schema.description="HTCondor ${VERSION} submit host image for Ubuntu ${UBU}" \
+      org.label-schema.vendor="HTCondor" \
+      org.label-schema.license="Apache-2.0" \
+      org.label-schema.build-date="${BUILDDATE}"
+
+# Add a test submitter user
+RUN useradd -m submituser
+
+COPY submit/condor/*.conf /etc/condor/config.d/
+
+EXPOSE 9618
+

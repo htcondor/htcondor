@@ -1,0 +1,37 @@
+# This is an execute node image for HTCondor
+ARG UBU
+ARG VERSION
+ARG SUFFIX
+
+FROM htcondor/base:${VERSION}-ubu${UBU}${SUFFIX}
+
+ARG UBU
+ARG VERSION
+ARG BUILDDATE
+ARG SUFFIX
+
+# https://label-schema.org/rc1
+LABEL org.label-schema.name="htcondor/execute:${VERSION}-ubu${UBU}${SUFFIX}" \
+      org.label-schema.description="HTCondor ${VERSION} execute image for Ubuntu ${UBU}" \
+      org.label-schema.vendor="HTCondor" \
+      org.label-schema.license="Apache-2.0" \
+      org.label-schema.build-date="${BUILDDATE}"
+
+# Create slot users slot1 through slot64
+RUN \
+   for n in `seq 1 64`; do \
+       useradd slot${n}; \
+   done
+
+# Install extra packages commonly used by jobs
+COPY execute/packagelist-ubu.txt /tmp/packagelist.txt
+RUN \
+    export DEBIAN_FRONTEND=noninteractive  &&\
+    apt-get update -q  &&\
+    grep '^[A-Za-z]' /tmp/packagelist.txt \
+        | xargs -r apt-get install -qy  ;\
+    rm -rf /var/lib/apt/lists/*  /var/cache/apt/*  &&\
+    rm /tmp/packagelist.txt  &&\
+    :
+
+COPY execute/condor/*.conf /etc/condor/config.d/
