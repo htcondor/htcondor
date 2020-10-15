@@ -143,6 +143,9 @@ New Features:
   full range of command-line arguments available to *condor_submit_dag*.
   :ticket:`7823`
 
+- Python 3 bindings are now available on macOS. They are linked against
+  Python 3.8 provided by python.org.
+
 Bugs Fixed:
 
 -  Fixed a bug that could cause the *condor_schedd* to abort if a SUBMIT_REQUIREMENT
