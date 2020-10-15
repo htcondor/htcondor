@@ -80,9 +80,21 @@ Bugs Fixed:
 - Fixed a bug in the ``-autoformat`` option when using lists and nested ads.
   :ticket:`7750`
 
+- Fixed a rare bug that would cause the schedd to crash when trying to 
+  start a local universe jobs #7785
+
 - Fixed a bug in the *condor_job_router* that could cause a crash when a route
   was removed while jobs were still associated with it.
   :ticket:`7590`
+
+- Fixed the ``PreCmd`` and ``PostCmd`` job attributes to work correctly with
+  absolute paths.
+  :ticket:`7770`
+
+- Improved the DaemonCore argument parser to look explicitly for ``-d`` or 
+  ``-dynamic`` when using dynamic directories. All other arguments beginning
+  with the letter *d* get passed on to the calling executable.
+  :ticket:`7848`
 
 Version 8.8.10
 --------------
