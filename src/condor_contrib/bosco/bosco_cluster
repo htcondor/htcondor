@@ -155,7 +155,10 @@ start_ssh () {
     if [ -f $PASSPHRASE_LOCATION ]; then
         PASSPHRASE=`cat $PASSPHRASE_LOCATION`
     fi
-    
+
+    # Run stop_ssh on shell exit
+    trap stop_ssh EXIT
+
     # Start the ssh-agent
     eval `ssh-agent -s` > /dev/null
 
@@ -384,6 +387,9 @@ get_min_queue () {
 
 
 stop_ssh () {
+    # Remove on-exit call of stop_ssh
+    trap - EXIT
+
     # Shut down the master ssh socket
     if [ "x$ssh_master_connection" != "x" ]; then
         kill $ssh_master_connection
