@@ -65,7 +65,6 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_simpleNodesFailed( 0 ),
 	_subdagNodesSuccessful( 0 ),
 	_subdagNodesFailed( 0 ), 
-	_totalNodeJobTime( 0.0 ),
 	_graphHeight( 0 ),
 	_graphWidth( 0 ),
 	_graphNumEdges( 0 ),
@@ -112,34 +111,6 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 DagmanMetrics::~DagmanMetrics()
 {
 	free(_primaryDagFile);
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanMetrics::ProcStarted( const struct tm &eventTime )
-{
-		// Avoid possible mktime() craziness unless we really need the
-		// metrics -- see gittrac #2898.
-	if ( false ) {
-		double et = GetTime( eventTime );
-			// We decrement by et - _startTime instead of just et here to
-			// reduce numerical error.
-		_totalNodeJobTime -= ( et - _startTime );
-	}
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanMetrics::ProcFinished( const struct tm &eventTime )
-{
-		// Avoid possible mktime() craziness unless we really need the
-		// metrics -- see gittrac #2898.
-	if ( false ) {
-		double et = GetTime( eventTime );
-			// We increment by et - _startTime instead of just et here to
-			// reduce numerical error.
-		_totalNodeJobTime += ( et - _startTime );
-	}
 }
 
 //---------------------------------------------------------------------------
@@ -212,7 +183,6 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 	int totalNodesRun = _simpleNodesSuccessful + _simpleNodesFailed +
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
-	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
 
 	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
 	if ( report_graph_metrics == true ) {

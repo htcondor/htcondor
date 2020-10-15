@@ -409,6 +409,21 @@ Job::SetProcIsIdle( int proc, bool isIdle )
 
 //---------------------------------------------------------------------------
 void
+Job::SetProcEvent( int proc, int event )
+{
+	if ( GetNoop() ) {
+		proc = 0;
+	}
+
+	if (proc >= static_cast<int>(_gotEvents.size())) {
+			_gotEvents.resize(proc + 1, 0);
+	}
+
+	_gotEvents[proc] |= event;
+}
+
+//---------------------------------------------------------------------------
+void
 Job::PrintProcIsIdle()
 {
 #ifdef DEAD_CODE
@@ -1559,52 +1574,6 @@ Job::Release(int proc)
 		return true;
 	}
 	return false;
-}
-
-//---------------------------------------------------------------------------
-void
-Job::ExecMetrics( int proc, const struct tm & /*eventTime*/,
-			DagmanMetrics * /*metrics*/ )
-{
-	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
-		_gotEvents.resize( proc+1, 0 );
-	}
-
-	if ( _gotEvents[proc] & ABORT_TERM_MASK ) {
-		debug_printf( DEBUG_NORMAL,
-					"Warning for node %s: got execute event for proc %d, but already have terminated or aborted event!\n",
-					GetJobName(), proc );
-		check_warning_strictness( DAG_STRICT_2 );
-	}
-
-#if !defined(DISABLE_NODE_TIME_METRICS)
-	if ( !( _gotEvents[proc] & EXEC_MASK ) ) {
-		_gotEvents[proc] |= EXEC_MASK;
-		metrics->ProcStarted( eventTime );
-	}
-#endif
-
-}
-
-//---------------------------------------------------------------------------
-void
-Job::TermAbortMetrics( int proc, const struct tm &eventTime,
-			DagmanMetrics *metrics )
-{
-	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
-	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
-		debug_printf( DEBUG_NORMAL,
-					"Warning for node %s: got terminated or aborted event for proc %d, but no execute event!\n",
-					GetJobName(), proc );
-		check_warning_strictness( DAG_STRICT_2 );
-
-		_gotEvents.resize( proc+1, 0 );
-	}
-
-	if ( !( _gotEvents[proc] & ABORT_TERM_MASK ) ) {
-		_gotEvents[proc] |= ABORT_TERM_MASK;
-		metrics->ProcFinished( eventTime );
-	}
 }
 
 //---------------------------------------------------------------------------

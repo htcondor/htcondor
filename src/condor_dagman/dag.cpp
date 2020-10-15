@@ -607,20 +607,12 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_ABORTED:
-#if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->GetEventTime(),
-							_metrics );
-#endif
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent( job, event->proc );
 				ProcessAbortEvent(event, job, recovery);
 				break;
               
 			case ULOG_JOB_TERMINATED:
-#if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->GetEventTime(),
-							_metrics );
-#endif
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent( job, event->proc );
 				ProcessTerminatedEvent(event, job, recovery);
@@ -652,10 +644,6 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_EXECUTE:
-#if !defined(DISABLE_NODE_TIME_METRICS)
-				job->ExecMetrics( event->proc, event->GetEventTime(),
-							_metrics );
-#endif
 				ProcessNotIdleEvent( job, event->proc );
 				break;
 
@@ -718,6 +706,9 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
   // same *job* (not job proc).
 
 	if ( job ) {
+
+		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
+
 		DecrementProcCount( job );
 
 			// This code is here because if a held job is removed, we
@@ -762,6 +753,9 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
+
+		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
+
 		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -1249,6 +1243,8 @@ Dag::ProcessNotIdleEvent( Job *job, int proc ) {
 		check_warning_strictness( DAG_STRICT_2 );
 		_numIdleJobProcs = 0;
 	}
+
+	job->SetProcEvent( proc, EXEC_MASK );
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);

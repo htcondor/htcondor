@@ -31,11 +31,6 @@
 
 #include <unordered_map>
 
-// Note:  the code i Job::ExecMetrics() and Job::TermAbortMetrics() is
-// not compatible with NOOP nodes, which goofs up the really large DAG
-// test.  wenger 2013-07-09
-#define DISABLE_NODE_TIME_METRICS
-
 using namespace std;
 
 class DagmanMetrics {
@@ -169,9 +164,6 @@ private:
 	int _simpleNodesFailed;
 	int _subdagNodesSuccessful;
 	int _subdagNodesFailed;
-
-		// Total execute time of all node jobs.
-	double _totalNodeJobTime;
 
 		// Graph metrics
 	int _graphHeight;
