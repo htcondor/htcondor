@@ -24,7 +24,11 @@ New Features:
 
 Bugs Fixed:
 
--  None.
+- Fixed a bug specific to MacOS X which could cause the shared port daemon's
+  initial childalive message to be lost.  This would cause `condor_who` to
+  wrongly think that HTCondor hadn't started up until the shared port daemon
+  sent its second childalive message.
+  :ticket:`7866`
 
 Version 8.9.9
 -------------
