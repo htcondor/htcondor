@@ -4231,6 +4231,8 @@ void export_schedd()
                 be converted to a ClassAd expression, or an ExprTree object.  Be mindful of quoting
                 issues; to set the value to the string ``foo``, one would set the value to ``''foo''``
             :type value: str or :class:`~classad.ExprTree`
+            :return: An EditResult containing the number of jobs that were edited.
+            :rtype: :class:`EditResult`
             )C0ND0R",
             boost::python::args("self", "job_spec", "attr", "value"))
         .def("edit", &Schedd::mergeJobAd,
@@ -4244,6 +4246,8 @@ void export_schedd()
             :type job_spec: list[str] or str or ExprTree
             :param ad: A classad that should be merged into the jobs
             :type ad: :class:`~classad.ClassAd`
+            :return: An EditResult containing the number of jobs that were edited.
+            :rtype: :class:`EditResult`
             )C0ND0R",
             boost::python::args("self", "job_spec", "ad"))
         .def("edit_multiple", &Schedd::edit_multiple,
@@ -4252,6 +4256,8 @@ void export_schedd()
 
             :param list edits: list of tuples of (job_spec,classad) where job_spec can be a list of job ids or a constraint expression
                   and classad is a dict or a :class:`~classad.ClassAd` indicating the edits.
+            :return: An EditResult containing the number of jobs that were edited.
+            :rtype: :class:`EditResult`
             )C0ND0R",
             boost::python::args("self", "edits"))
         .def("reschedule", &Schedd::reschedule,
