@@ -79,6 +79,13 @@ Bugs Fixed:
   with the letter *d* get passed on to the calling executable.
   :ticket:`7848`
 
+- Re-eanble VOMS support in the Debian and Ubuntu .deb packages.
+  :ticket:`7875`
+
+- Update the *bosco_quickstart* script to download tarballs via ``httpd``
+  rather than ``ftp``.
+  :ticket:`7821`
+
 Version 8.8.10
 --------------
 
