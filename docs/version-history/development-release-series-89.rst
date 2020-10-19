@@ -181,6 +181,10 @@ Bugs Fixed:
    ``IOError`` exception when the specified .dag file is not found.
    :ticket:`7808`
 
+-  Fixed a bug that would cause a job to go on hold with a memory usage
+   exceeded message when the procd would crash.
+   :ticket:`7886`
+
 Version 8.9.8
 -------------
 
