@@ -1415,6 +1415,10 @@ EOF
 		$pre_all_args = $pre_all_args . " --skip-doc";
 	}
 
+	if (!defined($opt_workspace)) {
+		$pre_all_args = $pre_all_args . " --daily";
+	}
+
     if (defined($opt_version_buildid)) {
       $pre_all_args = $pre_all_args . "--version-buildid=$opt_version_buildid";
     }
