@@ -43,12 +43,14 @@ set(TEST_PACKAGE "condor_tests")
 set(VERSION "8.9.10")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
-#   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
-#   building a release candidate.  If you need to identify builds,
+#   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
+#   automated builds, "RC" for release candidates and OFF when
+#   building a final release.  If you need to identify builds,
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
 set(PRE_RELEASE "PRE-RELEASE-UWCS")
+#set(PRE_RELEASE "RC")
 #set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for

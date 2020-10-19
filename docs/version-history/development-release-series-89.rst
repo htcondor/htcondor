@@ -43,6 +43,17 @@ Release Notes:
    when asked to analyze a job.
    :ticket:`5834`
 
+-  When the *condor_startd* is running as root on a Linux machine,
+   unless CGROUP_MEMORY_LIMIT_POLICY is "none, HTCondor now always
+   sets both the soft and hard cgroup memory limit for a job. When
+   CGROUP_MEMORY_LIMIT_POLICY is "soft", the soft limit is set to the
+   slot size, and the hard limit is set to the TotalMemory of the whole
+   startd.  When CGROUP_MEMORY_LIMIT_POLICY is "hard", the hard limit
+   is set to the slots size, and the soft limit is set 90% lower.
+   Also added knob DISABLE_SWAP_FOR_JOB, which when set to true, 
+   prevents the job from using any swap space. This knob defaults to false
+   :ticket:`7882`
+
 -  We deprecated the exceptions raised by the
    :ref:`apis/python-bindings/index:Python Bindings`.  The new
    exceptions all inherit from :class:`~htcondor.HTCondorException` or
@@ -195,6 +206,10 @@ Bugs Fixed:
 -  Fixed the Python ``htcondor.Submit.from_dag()`` binding so it now throws an
    ``IOError`` exception when the specified .dag file is not found.
    :ticket:`7808`
+
+-  Fixed a bug that would cause a job to go on hold with a memory usage
+   exceeded message when the procd would crash.
+   :ticket:`7886`
 
 Version 8.9.8
 -------------
