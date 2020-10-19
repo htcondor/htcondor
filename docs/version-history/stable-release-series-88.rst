@@ -86,6 +86,10 @@ Bugs Fixed:
   rather than ``ftp``.
   :ticket:`7821`
 
+- Update the Debian and Ubuntu version tagging so that version numbers are
+  unique and increasing between Debian and Ubuntu releases.
+  :ticket:`7869`
+
 Version 8.8.10
 --------------
 
