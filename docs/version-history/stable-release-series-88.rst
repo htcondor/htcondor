@@ -79,6 +79,21 @@ Bugs Fixed:
   with the letter *d* get passed on to the calling executable.
   :ticket:`7848`
 
+- Re-eanble VOMS support in the Debian and Ubuntu .deb packages.
+  :ticket:`7875`
+
+- Update the *bosco_quickstart* script to download tarballs via ``httpd``
+  rather than ``ftp``.
+  :ticket:`7821`
+
+- Update the Debian and Ubuntu version tagging so that version numbers are
+  unique and increasing between Debian and Ubuntu releases.
+  :ticket:`7869`
+
+- Fixed a bug with *condor_chirp* that could result in *condor_chirp* returning
+  a non-zero exit code after a successful chirp command.
+  :ticket:`7880`
+
 Version 8.8.10
 --------------
 
