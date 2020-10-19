@@ -348,7 +348,7 @@ private:
     object query_internal(AdTypes ad_type, boost::python::object constraint_obj, boost::python::list attrs, const std::string &statistics, std::string locationName)
     {
         std::string constraint;
-        if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
+        if ( ! convert_python_to_constraint(constraint_obj, constraint, true, NULL)) {
             THROW_EX(HTCondorValueError, "Invalid constraint.");
         }
 

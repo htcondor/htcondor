@@ -1056,6 +1056,20 @@ private:
 	bool m_return_proc_ads;
 };
 
+struct EditResult {
+	EditResult(int _count=0) : change_count(_count) { }
+
+	std::string toString() const {
+		std::string str;
+		formatstr(str, "edited %d jobs", change_count);
+		return str;
+	}
+	int changes() const { return change_count; }
+
+private:
+	int change_count;
+};
+
 struct Schedd;
 struct ConnectionSentry
 {
@@ -1414,7 +1428,7 @@ struct Schedd {
     object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs)
     {
         std::string constraint;
-        if ( ! convert_python_to_constraint(constraint_obj, constraint, true)) {
+        if ( ! convert_python_to_constraint(constraint_obj, constraint, true, NULL)) {
             THROW_EX(HTCondorValueError, "Invalid constraint.");
         }
 
@@ -1578,11 +1592,23 @@ struct Schedd {
             }
             use_ids = true;
         } else {
-            if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
+            bool is_number = false;
+            if ( ! convert_python_to_constraint(job_spec, constraint, true, &is_number)) {
                 THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
             }
             // act does not allow empty or null constraint argument, so use "true" instead
             if (constraint.empty()) { constraint = "true"; }
+            else if (is_number) { // if the "constraint" string is really a number, treat it like a job id
+                extract<std::string> string_extract(job_spec);
+                if (string_extract.check()) {
+                    constraint = string_extract();
+                    JOB_ID_KEY jid;
+                    if (jid.set(constraint.c_str())) {
+                        ids.append(constraint.c_str());
+                        use_ids = true;
+                    }
+                }
+            }
         }
 
         DCSchedd schedd(m_addr.c_str());
@@ -1981,8 +2007,9 @@ struct Schedd {
 
 
     // TODO: allow user to specify flags.
-    void edit(object job_spec, std::string attr, object val)
+    boost::shared_ptr<EditResult> edit(object job_spec, std::string attr, object val)
     {
+        int match_count = 0;
         std::vector<int> clusters;
         std::vector<int> procs;
         std::string constraint;
@@ -2003,9 +2030,22 @@ struct Schedd {
                 procs.push_back(extract<int>(long_(id_list[1])));
             }
             use_ids = true;
-        }
-        else if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
-            THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+        } else {
+            if ( ! convert_python_to_constraint(job_spec, constraint, true, &use_ids)) {
+                THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+            }
+            // edit does not allow empty or null constraint argument, so use "true" instead
+            if (constraint.empty()) { constraint = "true"; }
+            else if (use_ids) { // if the "constraint" string is really a number, treat it like a job id
+                extract<std::string> string_extract(job_spec);
+                JOB_ID_KEY jid;
+                if (!string_extract.check() || !jid.set(string_extract().c_str())) {
+                    use_ids = false; // not a string or doesn't look like a job id. go ahead an used it is a constraint
+                } else {
+                    clusters.push_back(jid.cluster);
+                    procs.push_back(jid.proc);
+                }
+            }
         }
 
         std::string val_str;
@@ -2020,6 +2060,10 @@ struct Schedd {
             val_str = extract<std::string>(val);
         }
 
+        SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+        SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
+        if ( ! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
+
         ConnectionSentry sentry(*this);
 
         bool result;
@@ -2029,27 +2073,201 @@ struct Schedd {
             {
                 {
                 condor::ModuleLock ml;
-                result = -1 == SetAttribute(clusters[idx], procs[idx], attr.c_str(), val_str.c_str(), SetAttribute_NoAck);
+                result = -1 == SetAttribute(clusters[idx], procs[idx], attr.c_str(), val_str.c_str(), attr_flags);
                 }
                 if (result)
                 {
                     THROW_EX(HTCondorIOError, "Unable to edit job");
                 }
+                match_count += 1;
             }
         }
         else
         {
+            int rval;
             {
             condor::ModuleLock ml;
-            result = -1 == SetAttributeByConstraint(constraint.c_str(), attr.c_str(), val_str.c_str(), SetAttribute_NoAck);
+            rval = SetAttributeByConstraint(constraint.c_str(), attr.c_str(), val_str.c_str(), attr_flags | only_my_jobs_flag);
+            result = -1 == rval;
             }
             if (result)
             {
                 THROW_EX(HTCondorIOError, "Unable to edit jobs matching constraint");
             }
+            match_count += rval;
         }
+
+        boost::shared_ptr<EditResult> mc(new EditResult(match_count));
+        return mc;
     }
 
+	boost::shared_ptr<EditResult> mergeJobAd(boost::python::object job_spec, boost::python::object ad)
+	{
+		const ClassAdWrapper wrapper = extract<ClassAdWrapper>(ad);
+		int match_count = 0;
+
+		std::vector<JOB_ID_KEY> jids;
+		bool use_ids = false;
+		std::string constraint;
+		if (PyList_Check(job_spec.ptr())) {
+			int num_ids = py_len(job_spec);
+			jids.reserve(num_ids);
+			for (int ii = 0; ii < num_ids; ++ii)
+			{
+				std::string str = extract<std::string>(job_spec[ii]);
+				JOB_ID_KEY jid;
+				if (str.empty() || ! jid.set(str.c_str())) {
+					THROW_EX(HTCondorValueError, "Invalid ID");
+				}
+				jids.push_back(jid);
+			}
+			use_ids = true;
+		} else {
+			if ( ! convert_python_to_constraint(job_spec, constraint, true, &use_ids)) {
+				THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+			}
+			if (constraint.empty()) { constraint = true; }
+			extract<std::string> string_extract(job_spec);
+			JOB_ID_KEY jid;
+			if (!string_extract.check() || !jid.set(string_extract().c_str())) {
+				use_ids = false; // not a string or doesn't look like a job id. go ahead an used it is a constraint
+			} else {
+				jids.push_back(jid);
+			}
+		}
+
+
+		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
+		if (! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
+
+		classad::ClassAdUnParser unparser;
+		unparser.SetOldClassAd(true, true);
+		std::string rhs;
+
+		// open a write connection to the schedd, this will throw if there is already a transaction
+		ConnectionSentry sentry(*this, true);
+
+		if (use_ids) {
+			condor::ModuleLock ml;
+			for (auto jid = jids.begin(); jid != jids.end(); ++jid) {
+				for (auto it = wrapper.begin(); it != wrapper.end(); ++it) {
+					if (it->second) {
+						rhs.clear(); unparser.Unparse(rhs, it->second);
+						if (SetAttribute(jid->cluster, jid->proc, it->first.c_str(), rhs.c_str(), attr_flags) < 0) {
+							THROW_EX(HTCondorIOError, "Unable to edit job");
+						}
+					} else {
+						if (DeleteAttribute(jid->cluster, jid->proc, it->first.c_str()) < 0) {
+							THROW_EX(HTCondorIOError, "Unable to edit job");
+						}
+					}
+					++match_count;
+				}
+			}
+		} else {
+			for (auto it = wrapper.begin(); it != wrapper.end(); ++it) {
+				int rval = 0;
+				if (it->second) {
+					rhs.clear(); unparser.Unparse(rhs, it->second);
+					rval = SetAttributeByConstraint(constraint.c_str(), it->first.c_str(), rhs.c_str(), attr_flags | only_my_jobs_flag);
+					if (rval < 0) {
+						THROW_EX(HTCondorIOError, "Unable to edit jobs matching constraint");
+					}
+				} else {
+					THROW_EX(HTCondorIOError, "Cannot delete job attributes by constraint");
+				}
+				match_count += rval;
+			}
+		}
+
+		boost::shared_ptr<EditResult> result(new EditResult(match_count));
+		return result;
+	}
+
+	boost::shared_ptr<EditResult> edit_multiple(boost::python::object edits)
+	{
+		int match_count = 0;
+		if ( ! PyList_Check(edits.ptr())) {
+			THROW_EX(HTCondorValueError, "invalid edit list");
+		}
+
+#if 1
+		THROW_EX(NotImplementedError, "edit_multiple is not implemented at this time.");
+#else
+		std::map<std::string, std::map<JOB_ID_KEY, std::string>> edits_by_jid;
+		std::map<std::string, std::map<std::string, std::string>> edits_by_constr;
+
+		int num_edits = py_len(edits);
+		for (int nn = 0; nn < num_edits; ++nn) {
+			boost::python::object edit = edits[nn];
+			if ( ! PyList_Check(edit.ptr()) || py_len(edit) != 2) {
+				THROW_EX(HTCondorValueError, "edit members must have 2 items");
+			}
+			const ClassAdWrapper wrapper = extract<ClassAdWrapper>(edit[1]);
+
+		std::vector<JOB_ID_KEY> jids;
+		bool use_ids = false;
+		std::string constraint;
+		if (PyList_Check(job_spec.ptr())) {
+			int num_ids = py_len(job_spec);
+			jids.reserve(num_ids);
+			for (int ii = 0; ii < num_ids; ++ii)
+			{
+				std::string str = extract<std::string>(job_spec[ii]);
+				JOB_ID_KEY jid;
+				if (str.empty() || ! jid.set(str.c_str())) {
+					THROW_EX(HTCondorValueError, "Invalid ID");
+				}
+				jids.push_back(jid);
+			}
+			use_ids = true;
+		} else if ( ! convert_python_to_constraint(job_spec, constraint, true)) {
+			THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+		}
+
+
+		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		classad::ClassAdUnParser unparser;
+		unparser.SetOldClassAd(true, true);
+		std::string rhs;
+
+		// open a write connection to the schedd, this will throw if there is already a transaction
+		ConnectionSentry sentry(*this, true);
+
+		if (use_ids) {
+			condor::ModuleLock ml;
+			for (auto jid = jids.begin(); jid != jids.end(); ++jid) {
+				for (auto it = wrapper.begin(); it != wrapper.end(); ++it) {
+					if (it->second) {
+						rhs.clear(); unparser.Unparse(rhs, it->second);
+						if (SetAttribute(jid->cluster, jid->proc, it->first.c_str(), rhs.c_str(), attr_flags) < 0) {
+							THROW_EX(HTCondorIOError, "Unable to edit job");
+						}
+					} else {
+						if (DeleteAttribute(jid->cluster, jid->proc, it->first.c_str()) < 0) {
+							THROW_EX(HTCondorIOError, "Unable to edit job");
+						}
+					}
+				}
+			}
+		} else {
+			for (auto it = wrapper.begin(); it != wrapper.end(); ++it) {
+				if (it->second) {
+					rhs.clear(); unparser.Unparse(rhs, it->second);
+					if (SetAttributeByConstraint(constraint.c_str(), it->first.c_str(), rhs.c_str(), attr_flags) < 0) {
+						THROW_EX(HTCondorIOError, "Unable to edit jobs matching constraint");
+					}
+				} else {
+					THROW_EX(HTCondorIOError, "Cannot delete job attributes by constraint");
+				}
+			}
+		}
+#endif
+
+		boost::shared_ptr<EditResult> result(new EditResult(match_count));
+		return result;
+	}
 
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
@@ -4015,6 +4233,27 @@ void export_schedd()
             :type value: str or :class:`~classad.ExprTree`
             )C0ND0R",
             boost::python::args("self", "job_spec", "attr", "value"))
+        .def("edit", &Schedd::mergeJobAd,
+            R"C0ND0R(
+            Edit one or more jobs in the queue.
+
+            This will throw an exception if no jobs are matched by the ``job_spec`` constraint.
+
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str or ExprTree
+            :param ad: A classad that should be merged into the jobs
+            :type ad: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "job_spec", "ad"))
+        .def("edit_multiple", &Schedd::edit_multiple,
+            R"C0ND0R(
+            Edit one or more jobs in the queue.
+
+            :param list edits: list of tuples of (job_spec,classad) where job_spec can be a list of job ids or a constraint expression
+                  and classad is a dict or a :class:`~classad.ClassAd` indicating the edits.
+            )C0ND0R",
+            boost::python::args("self", "edits"))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.
@@ -4373,6 +4612,12 @@ void export_schedd()
             Return the Cluster ad that proc ads should be chained to.
             )C0ND0R")
         ;
+
+    class_<EditResult>("EditResult", no_init)
+        .def("__str__", &EditResult::toString)
+        .def("__int__", &EditResult::changes)
+        ;
+    register_ptr_to_python< boost::shared_ptr<EditResult>>();
 
     class_<QueueItemsIterator>("QueueItemsIterator",
             R"C0ND0R(
