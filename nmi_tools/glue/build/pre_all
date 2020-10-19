@@ -35,10 +35,11 @@
 use Cwd;
 
 use Getopt::Long;
-use vars qw/ $opt_version_buildid $opt_skip_doc/;
+use vars qw/ $opt_version_buildid $opt_skip_doc $opt_daily/;
 GetOptions(
   'version-buildid=s' => \$opt_version_buildid,
   'skip-doc' => \$opt_skip_doc,
+  'daily' => \$opt_daily,
 );
 
 # autoflush our STDOUT
@@ -88,6 +89,9 @@ while (<CM>) {
     }
 }
 close(CM);
+if (defined($opt_daily)) {
+    system("sed -i /^set/s/PRE-RELEASE-UWCS/DAILY/ CMakeLists.txt");
+}
 mkdir("/tmp/$runid/condor-$condor_version") ||
     die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
 
