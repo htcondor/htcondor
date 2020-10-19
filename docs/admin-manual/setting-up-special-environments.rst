@@ -1966,35 +1966,30 @@ require editing of system configuration files.
 To enable cgroup-based limits, first ensure that cgroup-based tracking
 is enabled, as it is by default on supported systems, as described in
 section  `3.14.13 <#x42-3790003.14.13>`_. Once set, the
-*condor_starter* will create a cgroup for each job, and set two
-attributes in that cgroup which control resource usage therein. These
-two attributes are the cpu.shares attribute in the cpu controller, and
-one of two attributes in the memory controller, either
-memory.limit_in_bytes, or memory.soft_limit_in_bytes. The
+*condor_starter* will create a cgroup for each job, and set
+attributes in that cgroup to control memory and cpu usage. These
+attributes are the cpu.shares attribute in the cpu controller, and
+two attributes in the memory controller, both
+memory.limit_in_bytes, and memory.soft_limit_in_bytes. The
 configuration variable ``CGROUP_MEMORY_LIMIT_POLICY``
-:index:`CGROUP_MEMORY_LIMIT_POLICY` controls whether the hard
-limit (the former) or the soft limit will be used. If
-``CGROUP_MEMORY_LIMIT_POLICY`` is set to the string ``hard``, the hard
-limit will be used. If set to ``soft``, the soft limit will be used.
-Otherwise, no limit will be set if the value is ``none``. The default is
+:index:`CGROUP_MEMORY_LIMIT_POLICY` controls this.
+If ``CGROUP_MEMORY_LIMIT_POLICY`` is set to the string ``hard``, the hard
+limit will be set to the slot size, and the soft limit to 90% of the
+slot size.. If set to ``soft``, the soft limit will be set to the slot
+size and the hard limit will be set to the memory size of the whole startd.
+By default, this whole size is the detected memory the size, minus
+RESERVED_MEMORY.  Or, if MEMORY is defined, that value is used..
+
+No limits will be set if the value is ``none``. The default is
 ``none``. If the hard limit is in force, then the total amount of
 physical memory used by the sum of all processes in this job will not be
-allowed to exceed the limit. If the processes try to allocate more
-memory, the allocation will succeed, and virtual memory will be
-allocated, but no additional physical memory will be allocated. The
-system will keep the amount of physical memory constant by swapping some
-page from that job out of memory. However, if the soft limit is in
-place, the job will be allowed to go over the limit if there is free
-memory available on the system. Only when there is contention between
-other processes for physical memory will the system force physical
-memory into swap and push the physical memory used towards the assigned
-limit. The memory size used in both cases is the machine ClassAd
+allowed to exceed the limit. If the process goes above the hard
+limit, the job will be put on hold.
+ The memory size used in both cases is the machine ClassAd
 attribute ``Memory``. Note that ``Memory`` is a static amount when using
 static slots, but it is dynamic when partitionable slots are used. That
 is, the limit is whatever the "Mem" column of condor_status reports for
-that slot. If the job exceeds both the physical memory and swap space,
-the job will be killed by the Linux Out-of-Memory killer, and HTCondor
-will put the job on hold with an appropriate message.
+that slot.
 
 If ``CGROUP_MEMORY_LIMIT_POLICY`` is set, HTCondor will also also use
 cgroups to limit the amount of swap space used by each job. By default,
@@ -2003,24 +1998,8 @@ of Virtual Memory in the slot, minus the amount of physical memory. Note
 that HTCondor measures virtual memory in kbytes, and physical memory in
 megabytes. To prevent jobs with high memory usage from thrashing and
 excessive paging, and force HTCondor to put them on hold instead, you
-can set a lower limit on the amount of swap space they are allowed to
-use. With partitionable slots, this is done in the per slot definition,
-and must be a percentage of the total swap space on the system. For
-example,
-
-.. code-block:: text
-
-    NUM_SLOTS_TYPE_1 = 1
-    SLOT_TYPE_1_PARTITIONABLE = true
-    SLOT_TYPE_1 = cpus=100%,swap=10%
-
-Optionally, if the administrator sets the config file setting
-``PROPORTIONAL_SWAP_ASSSIGNMENT``
-:index:`PROPORTIONAL_SWAP_ASSSIGNMENT` = true, the maximum amount
-of swap space per slot will be set to the same proportion of the total
-swap as as the proportion of physical memory. That is, if a slot (static
-or dyanmic) has half of the physical memory of the machine, it will be
-given half of the swap space.
+can tell condor that a job should never use swap, by setting
+DISABLE_SWAP_FOR_JOB to true (the default is false).
 
 In addition to memory, the *condor_starter* can also control the total
 amount of CPU used by all processes within a job. To do this, it writes
