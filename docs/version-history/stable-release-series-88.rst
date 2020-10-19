@@ -90,6 +90,10 @@ Bugs Fixed:
   unique and increasing between Debian and Ubuntu releases.
   :ticket:`7869`
 
+- Fixed a bug with *condor_chirp* that could result in *condor_chirp* returning
+  a non-zero exit code after a successful chirp command.
+  :ticket:`7880`
+
 Version 8.8.10
 --------------
 
