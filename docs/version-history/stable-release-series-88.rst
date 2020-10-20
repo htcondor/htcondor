@@ -110,6 +110,10 @@ Bugs Fixed:
   file, it now uses the correct name for the configuration parameter.
   :ticket:`7216`
 
+- When attempting to tell the *condor_startd* to stop a running job, the
+  *condor_shadow* will now retry if a network failure occurs.
+  :ticket:`7840`
+
 Version 8.8.10
 --------------
 
