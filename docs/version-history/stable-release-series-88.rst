@@ -106,6 +106,10 @@ Bugs Fixed:
   block high-priority tasks such as querying the status of the remote jobs.
   :ticket:`7782`
 
+- When HTCondor sends email about a failure to write to the *STARTD_HISTORY*
+  file, it now uses the correct name for the configuration parameter.
+  :ticket:`7216`
+
 Version 8.8.10
 --------------
 
