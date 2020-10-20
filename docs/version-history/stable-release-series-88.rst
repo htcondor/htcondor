@@ -102,6 +102,10 @@ Bugs Fixed:
   enters *Completed* or *Removed* status.
   :ticket:`6159`
 
+- Fixed the *condor_c-gahp* so that low-priority file transfer tasks don't
+  block high-priority tasks such as querying the status of the remote jobs.
+  :ticket:`7782`
+
 Version 8.8.10
 --------------
 
