@@ -1546,7 +1546,7 @@ void store_cred_handler_continue()
 		answer = FAILURE_CREDMON_TIMEOUT;
 	} else {
 		answer = ccfile_stat.st_mtime;
-		dprintf(D_ALWAYS, "Completion file %s exists. mtime=%lld", dptr->ccfile, (long long)answer);
+		dprintf(D_ALWAYS, "Completion file %s exists. mtime=%lld\n", dptr->ccfile, (long long)answer);
 	}
 
 	// regardless of SUCCESS or FAILURE, if we got here we need to finish
