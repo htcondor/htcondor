@@ -752,6 +752,7 @@ eval set -- "$TEMP"
 platform_force=
 override_dir=
 release_url=
+rc_url=
 daily_url=
 
 # test and remove could have 0 or 1 parameter
@@ -918,8 +919,11 @@ if [ -z "${release_url}" ]; then
     fi
 
     release_url="${url_base}${series}/${version}/release/condor-${version}-x86_64_${platform}-stripped.tar.gz"
-    if echo "${ver_str[*]}" | grep -q "PRE-RELEASE" ; then
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" ; then
         daily_url="${url_base}${series}/${version}/daily/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
+    fi
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " ; then
+        rc_url="${url_base}${series}/${version}/rc/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
     fi
 fi
 
@@ -932,7 +936,14 @@ if [ ! -z "$daily_url" ] ; then
     show_progress "Downloading daily build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $daily_url
     rc=$?
     if [ $rc -ne 0 ] ; then
-        echo "Failed to download daily build, will try to download release build."
+        echo "Failed to download daily build."
+    fi
+fi
+if [ ! -z "$rc_url" -a $rc -ne 0 ] ; then
+    show_progress "Downloading rc build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $rc_url
+    rc=$?
+    if [ $rc -ne 0 ] ; then
+        echo "Failed to download rc build."
     fi
 fi
 if [ $rc -ne 0 ] ; then
