@@ -1146,6 +1146,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
 #define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
 
+#define ATTR_RECENT_DRAINS_LIST  "RecentDrainsList"
+#define ATTR_RECENT_CANCELS_LIST "RecentCancelsList"
+
 #define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 
 // temporary attributes for raw utsname info
