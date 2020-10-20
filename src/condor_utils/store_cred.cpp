@@ -381,6 +381,32 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	return SUCCESS;
 }
 
+
+// this is a helper function massages the info enough that we can call the oauth store cred
+long long
+LOCAL_STORE_CRED(const char *username, const char *servicename, MyString &ccfile) {
+
+	// put the service name in an ad so the oauth code can extract it
+	ClassAd ad, ret;
+	ad.Assign("Service", servicename);
+
+	// username is passed through
+	//
+	// doesn't matter what the contents of the cred are, just that it exists,
+	// so we just store the username in there as the cred contents.
+	//
+	// mode is zero (not a QUERY or DELETE command).
+	//
+	// ad is constructed above.
+	//
+	// return value is not used because this is not a query.
+	//
+	// ccfile reference just passed through.
+
+	return OAUTH_STORE_CRED(username, (unsigned const char*)username, strlen(username), 0, &ad, ret, ccfile);
+}
+
+
 // handle ADD, DELETE, & QUERY for kerberos credential.
 // if command is ADD, and a credential is stored
 //   but the caller should wait for a .cc file before proceeding,
@@ -390,6 +416,22 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 {
 	dprintf(D_ALWAYS, "Krb store cred user %s len %i mode %i\n", username, credlen, mode);
 
+	// sanity check
+	if(!cred) {
+		dprintf(D_ALWAYS, "KRB_STORE_CRED: cred was NULL!  Error.\n");
+		return FAILURE;
+	}
+
+	// special case: if the credential starts with the magic string
+	// "LOCAL:", we are not actually going to store anything in the krb directory,
+	// but instead simply touch a file in the OAuth directory.  detect this right away
+	// and call that function instead.
+	if (strncmp((const char*)cred, "LOCAL:", 6) == MATCH) {
+		std::string servicename((const char*)&cred[6]);
+		dprintf(D_ALWAYS, "KRB_STORE_CRED: detected magic value with username \"%s\" and service name \"%s\".\n", username, servicename.c_str());
+		return LOCAL_STORE_CRED(username, servicename.c_str(), ccfile);
+	}
+	
 	// make sure that the cc filename is cleared
 	ccfile.clear();
 
