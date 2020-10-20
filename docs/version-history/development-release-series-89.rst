@@ -48,6 +48,13 @@ Release Notes:
 
 New Features:
 
+-  Added a machine-ad attribute, ``LastDrainStopTime``, which records the last
+   time a drain command was cancelled.  Added two attributes to the defrag
+   daemon's ad, ``RecentCancelsList`` and ``RecentDrainsList``, which record
+   information about the last ten cancel or drain commands, respectively,
+   that the defrag daemon sent.
+   :ticket:`7732`
+
 -  The accounting group that the ``nice_user`` submit command puts jobs into is now
    configurable by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` in the configuration
    of *condor_submit*.

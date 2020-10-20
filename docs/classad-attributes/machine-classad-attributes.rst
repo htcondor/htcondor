@@ -467,13 +467,18 @@ Machine ClassAd Attributes
 ``KFlops``
     Relative floating point performance as determined via a Linpack
     benchmark.
-    :index:`LastDrainStartTime<single: LastDrainStartTime; ClassAd machine attribute>`
 
+    :index:`LastDrainStartTime<single: LastDrainStartTime; ClassAd machine attribute>`
 ``LastDrainStartTime``
     Time when draining of this *condor_startd* was last initiated (e.g.
     due to *condor_defrag* or *condor_drain*).
-    :index:`LastHeardFrom<single: LastHeardFrom; ClassAd machine attribute>`
 
+    :index:`LastDrainStopTime<single: LastDrainStopTime; ClassAd machine attribute>`
+``LastDrainStopTime``
+    Time when draining of this *condor_startd* was last stopped (e.g.
+    by being cancelled).
+
+    :index:`LastHeardFrom<single: LastHeardFrom; ClassAd machine attribute>`
 ``LastHeardFrom``
     Time when the HTCondor central manager last received a status update
     from this machine. Expressed as the number of integer seconds since
