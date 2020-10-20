@@ -98,6 +98,10 @@ Bugs Fixed:
   when the X.509 proxy was refreshed.
   :ticket:`7825`
 
+- Attribute ``GridJobId`` is no longer removed from the job ad when the job
+  enters *Completed* or *Removed* status.
+  :ticket:`6159`
+
 Version 8.8.10
 --------------
 
