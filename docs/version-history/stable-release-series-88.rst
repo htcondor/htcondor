@@ -114,6 +114,11 @@ Bugs Fixed:
   *condor_shadow* will now retry if a network failure occurs.
   :ticket:`7840`
 
+- Fixed a bug where job attribute ``DelegateJobGSICredentialsLifetime``
+  was ignored when a Condor-C job's refreshed proxy was forwarded to the
+  remote *condor_schedd*.
+  :ticket:`7856`
+
 Version 8.8.10
 --------------
 
