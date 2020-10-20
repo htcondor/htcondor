@@ -94,6 +94,10 @@ Bugs Fixed:
   a non-zero exit code after a successful chirp command.
   :ticket:`7880`
 
+- Fixed a bug that could cause grid universe jobs of type *batch* to fail
+  when the X.509 proxy was refreshed.
+  :ticket:`7825`
+
 Version 8.8.10
 --------------
 
