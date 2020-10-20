@@ -3561,7 +3561,7 @@ Note that most of this information is also available in the
 ``dagman.out`` file as described in
 :ref:`users-manual/dagman-workflows:dag monitoring`.
 
-Utilizing the Power of DAGMan for Large Numbers of Jobs
+Managing Large Numbers of Jobs with DAGMan 
 -------------------------------------------------------
 
 :index:`large numbers of jobs<single: large numbers of jobs; DAGMan>`
