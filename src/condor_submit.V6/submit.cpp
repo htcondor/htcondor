@@ -2849,11 +2849,11 @@ int process_job_credentials()
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
 					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
 					if (store_cred_failed(result, mode, &err)) {
-						fprintf( stderr, "\nERROR: store_cred of Kerberose credential failed - %s\n", err ? err : "");
+						fprintf( stderr, "\nERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "");
 						exit(1);
 					}
 				} else {
-					fprintf( stderr, "\nERROR: Credd is too old to support storing of Kerberose credentials\n"
+					fprintf( stderr, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
 							"  Credd version: %s", cvi.get_version_string());
 					exit(1);
 				}
