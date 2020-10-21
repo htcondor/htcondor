@@ -1,3 +1,17 @@
+condor (8.8.11-1) stable; urgency=medium
+
+  * HTCondor now properly tracks usage over vanilla universe checkpoints
+  * New ClassAd equality and inequality operators in the Python bindings
+  * Fixed a bug where removing in-use routes could crash the job router
+  * Fixed a bug where condor_chirp would abort after success on Windows
+  * Fixed a bug where using MACHINE_RESOURCE_NAMES could crash the startd
+  * Improved condor c-gahp to prioritize commands over file transfers
+  * Fixed a rare crash in the schedd when running many local universe jobs
+  * With GSI, avoid unnecessary reverse DNS lookup when HOST_ALIAS is set
+  * Fix a bug that could cause grid universe jobs to fail upon proxy refresh
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 21 Oct 2020 06:38:00 -0500
+
 condor (8.8.10-1) stable; urgency=medium
 
   * condor_qedit can no longer be used to disrupt the condor_schedd

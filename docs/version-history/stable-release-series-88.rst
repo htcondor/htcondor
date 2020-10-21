@@ -13,16 +13,7 @@ Version 8.8.11
 
 Release Notes:
 
-- HTCondor version 8.8.11 not yet released.
-
-.. HTCondor version 8.8.11 released on Month Date, 2020.
-
--  The GSI code now checks for a host alias before attempting to do a reverse
-   DNS look-up.  This means that hosts with valid certificates no longer need
-   a PTR record (although it must still be valid if it exists), if those hosts
-   set the ``HOST_ALIAS`` configuration value appropriately
-   (``$(FULL_HOSTNAME)``, usually).
-   :ticket:`7788`
+- HTCondor version 8.8.11 released on October 21, 2020.
 
 New Features:
 
@@ -30,56 +21,75 @@ New Features:
 
 Bugs Fixed:
 
-- The Python bindings now define equality and inequality operators for
-  ClassAd objects.
-  :ticket:`7760`
-
-- Vanilla-univese jobs which set ``CheckpointExitCode`` (or otherwise make
+- Vanilla-universe jobs which set ``CheckpointExitCode`` (or otherwise make
   use of HTCondor's support for self-checkpointing) now report the total
   user and system CPU usage, not just the usage since the last checkpoint.
   :ticket:`4971`
 
-- Fixed a bug where setting Notification = error in the submit file
-  failed to send an email to the user when the job was held.
-  :ticket:`7763`
-
-- The D_SUB_SECOND debug format option will no longer produce timestamps
-  with four digits (``1000``) in the milliseconds field.
-  :ticket:`7685`
-
-- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on RHEL 8.
-  Additionally, the spurious warning about ``NAMES`` not being list as a
-  resource has been eliminated.
-  :ticket:`7755`
-
-- Fixed a bug where the *condor_gridmanager* could refresh the proxy of
-  grid-type *condor* jobs at the wrong time when
-  ``DelegateJobGSICredentialsLifetime`` is set in the job ad.
-  :ticket`7856`
-
-- Improved the efficiency of process monitoring in macOS.
-  :ticket:`7851`
-
-- Fixed a bug in the ``-autoformat`` option when using lists and nested ads.
-  :ticket:`7750`
-
-- Fixed a rare bug that would cause the schedd to crash when trying to 
-  start a local universe jobs #7785
+- The Python bindings now define equality and inequality operators for
+  ClassAd objects.
+  :ticket:`7760`
 
 - Fixed a bug in the *condor_job_router* that could cause a crash when a route
   was removed while jobs were still associated with it.
   :ticket:`7590`
 
-- Fixed the ``PreCmd`` and ``PostCmd`` job attributes to work correctly with
-  absolute paths.
-  :ticket:`7770`
+- Fixed a bug with *condor_chirp* that could result in *condor_chirp* returning
+  a non-zero exit code after a successful chirp command on Windows.
+  :ticket:`7880`
 
-- Improved the DaemonCore argument parser to look explicitly for ``-d`` or 
-  ``-dynamic`` when using dynamic directories. All other arguments beginning
-  with the letter *d* get passed on to the calling executable.
-  :ticket:`7848`
+- Using ``MACHINE_RESOURCE_NAMES`` will no longer cause crashes on Enterprise Linux 8.
+  Additionally, the spurious warning about ``NAMES`` not being list as a
+  resource has been eliminated.
+  :ticket:`7755`
 
-- Re-eanble VOMS support in the Debian and Ubuntu .deb packages.
+- Fixed the *condor_c-gahp* so that low-priority file transfer tasks don't
+  block high-priority tasks such as querying the status of the remote jobs.
+  :ticket:`7782`
+
+- Fixed a rarely occurring bug that would cause the *condor_schedd* to crash,
+  when trying to start a local universe job.
+  :ticket:`7785`
+
+- The GSI code now checks for a host alias before attempting to do a reverse
+  DNS look-up.  This means that hosts with valid certificates no longer need
+  a ``PTR`` record (although it must still be valid if it exists), if those hosts
+  set the ``HOST_ALIAS`` configuration value appropriately
+  (``$(FULL_HOSTNAME)``, usually).
+  :ticket:`7788`
+
+- Fixed a bug that can cause GSI authentication to fail with newer versions
+  of OpenSSL.
+  :ticket:`7332`
+
+- Fixed a bug that could cause grid universe jobs of type ``batch`` to fail
+  when the X.509 proxy was refreshed.
+  :ticket:`7825`
+
+- Fixed a bug where job attribute ``DelegateJobGSICredentialsLifetime``
+  was ignored when a Condor-C job's refreshed proxy was forwarded to the
+  remote *condor_schedd*.
+  :ticket:`7856`
+
+- Attribute ``GridJobId`` is no longer removed from the job ad when the job
+  enters ``Completed`` or ``Removed`` status.
+  :ticket:`6159`
+
+- When attempting to tell the *condor_startd* to stop a running job, the
+  *condor_shadow* will now retry if a network failure occurs.
+  :ticket:`7840`
+
+- Fixed a bug where setting ``Notification = error`` in the submit file
+  failed to send an email to the user when the job was held.
+  :ticket:`7763`
+
+- Fixed a bug in the ``-autoformat`` option when using lists and nested ads.
+  :ticket:`7750`
+
+- Improved the efficiency of process monitoring in macOS.
+  :ticket:`7851`
+
+- Re-enable VOMS support in the Debian and Ubuntu .deb packages.
   :ticket:`7875`
 
 - Update the *bosco_quickstart* script to download tarballs via ``httpd``
@@ -90,38 +100,22 @@ Bugs Fixed:
   unique and increasing between Debian and Ubuntu releases.
   :ticket:`7869`
 
-- Fixed a bug with *condor_chirp* that could result in *condor_chirp* returning
-  a non-zero exit code after a successful chirp command.
-  :ticket:`7880`
-
-- Fixed a bug that could cause grid universe jobs of type *batch* to fail
-  when the X.509 proxy was refreshed.
-  :ticket:`7825`
-
-- Attribute ``GridJobId`` is no longer removed from the job ad when the job
-  enters *Completed* or *Removed* status.
-  :ticket:`6159`
-
-- Fixed the *condor_c-gahp* so that low-priority file transfer tasks don't
-  block high-priority tasks such as querying the status of the remote jobs.
-  :ticket:`7782`
-
-- When HTCondor sends email about a failure to write to the *STARTD_HISTORY*
+- When HTCondor sends email about a failure to write to the ``STARTD_HISTORY``
   file, it now uses the correct name for the configuration parameter.
   :ticket:`7216`
 
-- When attempting to tell the *condor_startd* to stop a running job, the
-  *condor_shadow* will now retry if a network failure occurs.
-  :ticket:`7840`
+- Improved the DaemonCore argument parser to look explicitly for ``-d`` or 
+  ``-dynamic`` when using dynamic directories. All other arguments beginning
+  with the letter *d* get passed on to the calling executable.
+  :ticket:`7848`
 
-- Fixed a bug where job attribute ``DelegateJobGSICredentialsLifetime``
-  was ignored when a Condor-C job's refreshed proxy was forwarded to the
-  remote *condor_schedd*.
-  :ticket:`7856`
+- The D_SUB_SECOND debug format option will no longer produce timestamps
+  with four digits (``1000``) in the milliseconds field.
+  :ticket:`7685`
 
-- Fixed a bug that can cause GSI authentication to fail with newer versions
-  of OpenSSL.
-  :ticket:`7332`
+- Fixed the ``PreCmd`` and ``PostCmd`` job attributes to work correctly with
+  absolute paths.
+  :ticket:`7770`
 
 Version 8.8.10
 --------------

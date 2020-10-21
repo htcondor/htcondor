@@ -60,8 +60,6 @@ elif $(grep -qi focal /etc/os-release); then
     mv debian/rules.focal debian/rules
     mv debian/patches/series.focal debian/patches/series
 else
-    dist='unstable'
-    build='full'
     suffix=''
 fi
 
@@ -70,15 +68,15 @@ fi
 # testing -> rc repo
 # stable -> release repo
 
-dist='unstable'
+dist='stable'
 echo "Distribution is $dist"
 echo "Suffix is '$suffix'"
 
 # Nightly build changelog
-dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
+#dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
 
 # Final release changelog
-#dch --release --distribution $dist ignored
+dch --release --distribution $dist ignored
 
 if [ "$suffix" = '' ]; then
     build='full'
