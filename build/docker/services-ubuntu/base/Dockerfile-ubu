@@ -67,9 +67,12 @@ RUN \
 # A wrapper script is used to copy configs from a config volume mounted
 # at /root/config
 
+RUN mkdir /root/config
+
 COPY base/supervisord.conf /etc/supervisord.conf
 COPY base/condor/*.conf /etc/condor/config.d/
 COPY base/start.sh base/update-config base/update-secrets /
+COPY base/pre-exec.sh /root/config/pre-exec.sh
 
 CMD ["/bin/bash", "-x", "/start.sh"]
 
