@@ -119,6 +119,10 @@ Bugs Fixed:
   remote *condor_schedd*.
   :ticket:`7856`
 
+- Fixed a bug that can cause GSI authentication to fail with newer versions
+  of OpenSSL.
+  :ticket:`7332`
+
 Version 8.8.10
 --------------
 
