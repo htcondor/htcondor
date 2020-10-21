@@ -7605,6 +7605,12 @@ These macros affect the *condor_gridmanager*.
     send batched sets of commands to be executed on that remote
     *condor_schedd* daemon. The default value is 5.
 
+:macro-def:`C_GAHP_MAX_FILE_REQUESTS`
+    Limits the number of file transfer commands of each type (input,
+    output, proxy refresh) that are performed before other (potentially
+    higher-priority) commands are read and performed.
+    The default value is 10.
+
 :macro-def:`GLITE_LOCATION`
     The complete path to the directory containing the Glite software.
     The default value is ``$(LIBEXEC)``/glite. The necessary Glite
