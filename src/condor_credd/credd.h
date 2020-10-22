@@ -34,14 +34,14 @@ public:
 
 private:
 
-	int zkm_query_creds(int, Stream*);
+	int check_creds_handler(int, Stream*);
 	int nop_handler(int, Stream*);
 	void initialize_classad();
 	void update_collector();
 	void invalidate_ad();
 
 	int refresh_all_handler(int, Stream*);
-	void sweep_timer_handler( void );
+	void sweep_timer_handler( void ) const;
 
 	char* m_name;
 

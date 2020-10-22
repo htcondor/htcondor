@@ -103,7 +103,7 @@ ScheddNegotiate::negotiate(Sock *sock)
 }
 
 char const *
-ScheddNegotiate::getOwner()
+ScheddNegotiate::getMatchUser()
 {
 	return m_owner.c_str();
 }
@@ -271,7 +271,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		// once the claim is requested.
 
 	bool result = true;
-	int cpus, memory, disk;
+	int64_t cpus, memory, disk;
 
 	cpus = 1;
 	EvalInteger(ATTR_REQUEST_CPUS, job_ad, match_ad, cpus);
@@ -289,8 +289,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	if (EvalInteger(ATTR_REQUEST_DISK, job_ad, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
-		disk = (MAX((int) ceil((disk / total_disk) * 100), 1)) *
-			int(total_disk/100.0);
+		disk = (MAX((int64_t) ceil((disk / total_disk) * 100), 1)) *
+			int64_t(total_disk/100.0);
 		match_ad->Assign(ATTR_DISK, disk);
 	} else {
 		dprintf(D_ALWAYS, "No disk request in job %d.%d, skipping match to partitionable slot %s\n", job_id.cluster, job_id.proc, slot_name);
@@ -313,7 +313,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		std::string req_str;
 		int req_val = 0;
 		formatstr( req_str, "%s%s", ATTR_REQUEST_PREFIX, res );
-		job_ad->LookupInteger( req_str.c_str(), req_val );
+		job_ad->LookupInteger( req_str, req_val );
 		match_ad->Assign( res, req_val );
     }
 
@@ -328,7 +328,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		match_ad->Assign(ATTR_SLOT_TYPE, "Dynamic");
 		dprintf(D_FULLDEBUG,
 				"Partitionable slot %s adjusted for job %d.%d: "
-				"cpus = %d, memory = %d, disk = %d\n",
+				"cpus = %ld, memory = %ld, disk = %ld\n",
 				slot_name, job_id.cluster, job_id.proc, cpus, memory, disk);
 	}
 
@@ -604,8 +604,12 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 	}
 
 	case END_NEGOTIATE:
-		dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
-				 m_jobs_matched );
+		if (RRLRequestIsPending()) {
+			dprintf(D_ALWAYS, "Finished sending rrls to negotiator\n");
+		} else {
+			dprintf( D_ALWAYS, "Negotiation ended - %d jobs matched\n",
+					 m_jobs_matched );
+		}
 
 		m_negotiation_finished = true;
 		break;

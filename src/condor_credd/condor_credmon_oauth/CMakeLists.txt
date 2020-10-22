@@ -1,0 +1,6 @@
+install ( FILES condor_credmon_oauth DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES scitokens_credential_producer DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES condor_credmon_oauth.wsgi DESTINATION ${C_LIBEXEC} )
+install ( DIRECTORY credmon DESTINATION ${C_LIBEXEC} )
+install ( DIRECTORY examples/ DESTINATION ${C_ETC_EXAMPLES}/condor_credmon_oauth )
+install ( FILES README.credentials DESTINATION ${C_ETC_EXAMPLES}/condor_credmon_oauth )

@@ -28,6 +28,7 @@
 #include "collector_stats.h"
 #include "condor_config.h"
 #include "classad/classadCache.h"
+#include "ccb_server.h"
 
 // The hash function to use
 static size_t hashFunction (const StatsHashKey &key)
@@ -297,7 +298,7 @@ void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int fla
 	// this sort of probe is useful for counting lost updates
 	if (flags & PubValue) {
 		ad.Assign(pattr, (long long)value.Sum);
-		ad.Assign(rattr.c_str(), (long long)recent.Sum);
+		ad.Assign(rattr, (long long)recent.Sum);
 	}
 	if (flags & PubRatio) {
 		double avg = value.Avg();
@@ -454,6 +455,7 @@ void UpdatesStats::Init()
 	getClassAdEx_clearProfileStats();
 	getClassAdEx_addProfileStatsToPool(&Pool, prof_publevel);
 
+	AddCCBStatsToPool(Pool, IF_BASICPUB);
 }
 
 void UpdatesStats::Clear()
@@ -737,7 +739,7 @@ CollectorDaemonStatsList::enable( bool nable )
 
 // Get string of the hash key (for debugging)
 void
-StatsHashKey::getstr( MyString &buf )
+StatsHashKey::getstr( MyString &buf ) const
 {
 	buf.formatstr( "'%s':'%s':'%s'",
 				 type.Value(), name.Value(), ip_addr.Value()  );
@@ -871,7 +873,7 @@ CollectorStats::update( const char *className,
 
 // Publish statistics into our ClassAd
 int 
-CollectorStats::publishGlobal( ClassAd *ad, const char * config )
+CollectorStats::publishGlobal( ClassAd *ad, const char * config ) const
 {
 	global.Publish(*ad, config);
 	return 0;

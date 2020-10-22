@@ -48,12 +48,19 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 	return !ClassAdAttributeIsPrivate( attr_name );
 }
 
+	// When in NoAck mode for SetAttribute, we don't have any
+	// opportunity to send an error message back to the client;
+	// instead, we'll buffer errors here and send them back to
+	// the client at attempted commit.
+static std::unique_ptr<CondorError> g_transaction_error;
+
 int
-do_Q_request(ReliSock *syscall_sock,bool &may_fork)
+do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 {
 	int	request_num = -1;
-	int	rval;
+	int	rval = -1;
 
+	ReliSock *syscall_sock = Q_PEER.getReliSock();
 	syscall_sock->decode();
 
 	assert( syscall_sock->code(request_num) );
@@ -70,9 +77,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->triedAuthentication() ) {
 			if( IsDebugLevel(D_SECURITY) ) {
-				MyString methods;
-				SecMan::getAuthenticationMethods( WRITE, &methods );
-				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
+				auto methods = SecMan::getAuthenticationMethods(WRITE);
+				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.c_str());
 			}
 			CondorError errstack;
 			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
@@ -96,12 +102,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	{
 		// dprintf( D_ALWAYS, "InitializeReadOnlyConnection()\n" );
 
-		// Since InitializeConnection() does nothing, and we need
-		// to record the fact that this is a read-only connection,
-		// but we have to do it in the socket (since we don't have
-		// any other persistent data structure, and it's probably
-		// the right place anyway), set the FQU.
-		//
 		// We need to record if this is a read-only connection so that
 		// we can avoid expanding $$ in GetJobAd; simply checking if the
 		// connection is authenticated isn't sufficient, because the
@@ -109,7 +109,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// be authenticated by a previous authenticated connection from
 		// the same address (when using host-based security) less than
 		// the expiration period ago.
-		syscall_sock->setFullyQualifiedUser( "read-only" );
+		Q_PEER.setReadOnly(true);
 
 		// same as InitializeConnection but no authenticate()
 		InitializeConnection( NULL, NULL );
@@ -173,6 +173,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int terrno;
 
+		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -201,6 +202,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	  {
 		int cluster_id = -1;
 		int terrno;
+		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -394,7 +396,15 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			return -1;
 		}
 
-
+			// We are unable to send responses in NoAck mode and will always fail
+			// the transaction upon an attempted commit.  Hence, we ignore SetAttribute
+			// calls of this type after the first error.
+		if (g_transaction_error && !g_transaction_error->empty() &&
+			(flags & SetAttribute_NoAck))
+		{
+			dprintf( D_SYSCALLS, "\tIgnored due to previous error\n");
+			return 0;
+		}
 
 		// ckireyev:
 		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
@@ -410,7 +420,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		else {
 			errno = 0;
 
-			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value, flags );
+			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value, flags, g_transaction_error.get() );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 				// If we're modifying a previously-submitted job AND either
@@ -434,7 +444,11 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 		if( flags & SetAttribute_NoAck ) {
 			if( rval < 0 ) {
-				return -1;
+				// Failures are deferred until we try to commit
+				// Unlike SetAttribute with explicit Ack, this is error is going to be
+				// fatal to the transaction.  Hence we'll short circuit any subsequent
+				// SetAttribute_NoAck in this transaction.
+				return 0;
 			}
 		}
 		else {
@@ -590,6 +604,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_BeginTransaction:
 	  {
 		int terrno;
+		g_transaction_error.reset(new CondorError());
 
 		assert( syscall_sock->end_of_message() );;
 
@@ -611,6 +626,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_AbortTransaction:
 	{
 		int terrno;
+		g_transaction_error.reset();
 
 		assert( syscall_sock->end_of_message() );;
 
@@ -646,10 +662,19 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );
 
-		CondorError errstack;
-		errno = 0;
-		rval = CommitTransactionAndLive( flags, & errstack );
-		terrno = errno;
+		std::unique_ptr<CondorError> errstack;
+		if (g_transaction_error && !g_transaction_error->empty()) {
+			errstack = std::move(g_transaction_error);
+			AbortTransaction();
+			terrno = errstack->code();
+			if (terrno == 0) terrno = -1;
+			else if (terrno > 0) terrno = -terrno;
+		} else {
+			errstack.reset(new CondorError());
+			errno = 0;
+			rval = CommitTransactionAndLive( flags, errstack.get() );
+			terrno = errno;
+		}
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 
 		syscall_sock->encode();
@@ -664,9 +689,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			// Send a classad, for less backwards-incompatibility.
 			int code = 1;
 			const char * reason = "QMGMT rejected job submission.";
-			if(! errstack.empty()) {
+			if(! errstack->empty()) {
 				code = 2;
-				reason = errstack.message();
+				reason = errstack->message();
 			}
 
 			ClassAd reply;
@@ -677,8 +702,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			ClassAd reply;
 
 			std::string reason;
-			if(! errstack.empty()) {
-				reason = errstack.getFullText();
+			if(! errstack->empty()) {
+				reason = errstack->getFullText();
 				reply.Assign( "WarningReason", reason );
 			}
 
@@ -702,6 +727,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
+		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -740,7 +766,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
-		dprintf( D_SYSCALLS, "  attr_name = %s\n", attr_name.c_str());
+		dprintf( D_SYSCALLS, "\tattr_name = %s\n", attr_name.c_str() );
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -785,6 +811,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name));
+		dprintf(D_SYSCALLS, "\tattr_name = %s\n", attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -824,6 +851,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
+		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		char *value = NULL;
@@ -911,6 +939,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
+		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -948,8 +977,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// Only fetch the jobad for legal values of cluster/proc
 		if( cluster_id >= 1 ) {
 			if( proc_id >= 0 ) {
-				const char * fqu = syscall_sock->getFullyQualifiedUser();
-				if( fqu != NULL && strcmp( fqu, "read-only" ) != 0 ) {
+				if( !Q_PEER.getReadOnly() ) {
 					// expand $$() macros in the jobad as required by GridManager.
 					// The GridManager depends on the fact that the following call
 					// expands $$ and saves the expansions to disk in case of

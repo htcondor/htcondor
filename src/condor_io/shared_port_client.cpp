@@ -526,7 +526,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	// send any unsent data.
 
 	struct linger linger = {0,0};
-	setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
+	(void) setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 
 	ReliSock *named_sock = new ReliSock();
 	named_sock->assignDomainSocket( named_sock_fd );
@@ -539,7 +539,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	// socket (instead of a domain socket) and the TCP socket backlogs.
 	if (m_non_blocking) {
 		int flags = fcntl(named_sock_fd, F_GETFL, 0);
-		fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
+		(void) fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
 	}
 
 	int connect_rc = 0, connect_errno = 0, p_errno = 0;
@@ -629,7 +629,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 
 	if (m_non_blocking) {
 		int flags = fcntl(named_sock_fd, F_GETFL, 0);
-		fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
+		(void) fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
 	}
 
 	s = named_sock;
@@ -807,63 +807,10 @@ SharedPortState::HandleFD(Stream *&s)
 }
 
 SharedPortState::HandlerResult
-SharedPortState::HandleResp(Stream *&s)
+SharedPortState::HandleResp(Stream *&)
 {
-		// The following final ACK appears to be necessary on Mac OS X
-		// 10.5.8 (not sure of others).  It does not appear to be
-		// necessary on any version of linux that I have tried.  The
-		// observed problem that this solves is random failures where
-		// the endpoint sees the passed socket close right away.  It
-		// would be nice not to have an ACK, because then the whole
-		// PassSocket() protocol would be non-blocking.  Since the
-		// protocol is blocking with this ACK, it means we could
-		// temporarily deadlock if the endpoint we are passing the
-		// socket to is blocking on us on some other channel.  If
-		// this becomes a problem, we can at least make the ACK only
-		// happen on platforms that need it.  This protocol is always
-		// just local to the machine, so need to worry about keeping
-		// it compatible between different platforms.
-
-	ReliSock *sock = static_cast<ReliSock*>(s);
-	sock->decode();
-	int status = 0;
-	bool result;
-
-	bool read_would_block = false;
-	{
-		BlockingModeGuard guard(sock, m_non_blocking);
-		result = sock->code(status);
-		if ( m_non_blocking ) {
-			read_would_block = sock->clear_read_block_flag();
-		}
-	}
-	if (read_would_block)
-	{
-		if (sock->deadline_expired())
-		{
-			dprintf(D_ALWAYS, "SharedPortClient - server response deadline has passed for %s%s\n", m_sock_name.c_str(), m_requested_by.c_str());
-			return FAILED;
-		}
-		dprintf(D_ALWAYS, "SharedPortClient read would block; waiting for result for SHARED_PORT_PASS_FD to %s%s.\n", m_sock_name.c_str(), m_requested_by.c_str());
-		return WAIT;
-	}
-
-	if( !result || !sock->end_of_message() ) {
-		dprintf(D_ALWAYS,
-			"SharedPortClient: failed to receive result for SHARED_PORT_PASS_FD to %s%s: %s\n",
-			m_sock_name.c_str(),
-			m_requested_by.c_str(),
-			strerror(errno));
-		return FAILED;
-	}
-
-	if( status != 0 ) {
-		dprintf(D_ALWAYS,
-			"SharedPortClient: received failure response for SHARED_PORT_PASS_FD to %s%s\n",
-			m_sock_name.c_str(),
-			m_requested_by.c_str());
-		return FAILED;
-	}
+    // We no longer send an ACK, since it's no longer necessary on Mac OS X,
+    // and not doing so makes the protocol fully non-blocking.
 
 	dprintf(D_FULLDEBUG,
 		"SharedPortClient: passed socket to %s%s\n",

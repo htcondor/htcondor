@@ -154,7 +154,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	// check in ResMgr::adlist_publish(), which is the (only) update we
 	// actually want.  (We can't call it directly, because we need to
 	// update the internal ad for each Resource.)
-	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_UPDATE );
+	resmgr->walk( &Resource::refresh_startd_cron_attrs);
 	return rval;
 }
 

@@ -2,12 +2,10 @@
 #define _CONDOR_SINGULARITY_H
 
 #include <string>
+#include "condor_uid.h"
 
 // Fwd dec'ls
 class CondorError;
-namespace compat_classad {
-	class ClassAd;
-}
 namespace classad {
 	class ClassAd;
 }
@@ -30,11 +28,11 @@ public:
     FAILURE,   // Singularity job was requested but setup failed.
   };
 
-  static bool job_enabled(compat_classad::ClassAd &machineAd,
-                        compat_classad::ClassAd &jobAd);
+  static bool job_enabled(classad::ClassAd &machineAd,
+                        classad::ClassAd &jobAd);
 
-  static result setup(compat_classad::ClassAd &machineAd,
-			compat_classad::ClassAd &jobAd,
+  static result setup(classad::ClassAd &machineAd,
+			classad::ClassAd &jobAd,
 			std::string &exec,
 			ArgList &args,
 			const std::string &job_iwd,
@@ -49,6 +47,7 @@ public:
 	// if SINGULARITY_TARGET_DIR is set, reset environment variables
 	// for the scratch directory path as mounted inside the container
   static bool retargetEnvs(Env &job_env, const std::string &targetdir, const std::string &execute_dir);
+  static bool runTest(const std::string &JobName, const ArgList &args, const Env &env);
 
 
 private:

@@ -3,6 +3,7 @@
 #include "../condor_utils/file_transfer_stats.h"
 #include "../condor_utils/condor_url.h"
 #include "utc_time.h"
+#include "file_transfer.h"
 
 #ifdef WIN32
 #define CURL_STATICLIB // this has to match the way the curl library was built.
@@ -123,7 +124,11 @@ main( int argc, char **argv ) {
     curl_easy_cleanup(handle);
     curl_global_cleanup();
 
-    return rval;    // 0 on success
+    if ( rval != 0 ) {
+        return (int)TransferPluginResult::Error;
+    }
+
+    return (int)TransferPluginResult::Success;
 }
 
 /*

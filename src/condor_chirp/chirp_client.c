@@ -33,6 +33,7 @@ Chirp C Client
 
 /* Sockets */
 #if defined(WIN32)
+	#define _WINSOCK_DEPRECATED_NO_WARNINGS
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
 	#include <windows.h>
@@ -280,7 +281,8 @@ chirp_client_connect( const char *host, int port )
 	struct chirp_client *c;
 	int save_errno;
 	SOCKET fd;
-	int osfh;
+	int osfhr;
+	int osfhw;
 
 	c = (struct chirp_client*)malloc(sizeof(*c));
 	if(!c) return 0;
@@ -297,17 +299,19 @@ chirp_client_connect( const char *host, int port )
 #if defined(WIN32)
 	// This allows WinNT to get a file handle from a socket
 	// Note: this will not work on win95/98
-	osfh = _open_osfhandle(fd, _O_RDWR | _O_BINARY);
-	if(osfh < 0) {
+	osfhr = _open_osfhandle(fd, _O_RDWR | _O_BINARY);
+	if(osfhr < 0) {
 	    closesocket(fd);
 	    return 0;
 	}
+	osfhw = _dup(osfhr);
 #else
-	osfh = fd;
+	osfhr = fd;
+	osfhw = dup(osfhr);
 #endif
 
 
-	c->rstream = fdopen(osfh,"r");
+	c->rstream = fdopen(osfhr,"r");
 	if(!c->rstream) {
 		save_errno = errno;
 		closesocket(fd);
@@ -315,8 +319,10 @@ chirp_client_connect( const char *host, int port )
 		errno = save_errno;
 		return 0;
 	}
+	setbuf(c->rstream, NULL);
+	//setvbuf( c->rstream, NULL, _IONBF, 0 );
 
-	c->wstream = fdopen(osfh,"w");
+	c->wstream = fdopen(osfhw,"w");
 	if(!c->wstream) {
 		save_errno = errno;
 		fclose(c->rstream);
@@ -326,9 +332,7 @@ chirp_client_connect( const char *host, int port )
 		return 0;
 	}
 
-	setbuf(c->rstream, NULL);
 	setbuf(c->wstream, NULL);
-	//setvbuf( c->rstream, NULL, _IONBF, 0 );
 	//setvbuf( c->rstream, NULL, _IONBF, 0 );
 
 	return c;
@@ -342,8 +346,8 @@ DLLEXPORT void
 chirp_client_disconnect( struct chirp_client *c )
 {
 	fclose(c->rstream);
-	//TJ 2012 - fclose closes the stream and file, but rstream and wstream share a file so the second fclose ABORTs on Windows.
-	//fclose(c->wstream);
+	fclose(c->wstream);
+	c->rstream = c->wstream = NULL;
 	free(c);
 }
 
@@ -369,7 +373,7 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 	if(result>0) {
 		*url = (char*)malloc(result);
 		if(*url) {
-			actual = fread(*url,1,result,c->rstream);
+			actual = (int)fread(*url,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("lookup");
 		} else {
 			chirp_fatal_request("lookup");
@@ -395,7 +399,7 @@ chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr
 	if(result>0) {
 		*expr = (char*)malloc(result);
 		if(*expr) {
-			actual = fread(*expr,1,result,c->rstream);
+			actual = (int)fread(*expr,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("get_job_attr");
 		} else {
 			chirp_fatal_request("get_job_attr");
@@ -415,7 +419,7 @@ chirp_client_get_job_attr_delayed( struct chirp_client *c, const char *name, cha
 	if(result>0) {
 		*expr = (char*)malloc(result);
 		if(*expr) {
-			actual = fread(*expr,1,result,c->rstream);
+			actual = (int)fread(*expr,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("get_job_attr");
 		} else {
 			chirp_fatal_request("get_job_attr");
@@ -472,7 +476,7 @@ chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length )
 	result = simple_command(c,"read %d %d\n",fd,length);
 
 	if( result>0 ) {
-		actual = fread(buffer,1,result,c->rstream);
+		actual = (int)fread(buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("read");
 	}
 
@@ -498,7 +502,7 @@ chirp_client_write( struct chirp_client *c, int fd, const void *buffer, int leng
 	result = fflush(c->wstream);
 	if(result < 0) chirp_fatal_request("write");
 
-	actual = fwrite(buffer,1,length,c->wstream);
+	actual = (int)fwrite(buffer,1,length,c->wstream);
 	if(actual!=length) chirp_fatal_request("write");
 
 	return convert_result(get_result(c->rstream));
@@ -561,7 +565,7 @@ chirp_client_pread( struct chirp_client *c, int fd, void *buffer, int length,
 	result = simple_command(c,"pread %d %d %d\n",fd, length, offset);
 
 	if(result > 0) {
-		actual = fread(buffer,1,result,c->rstream);
+		actual = (int)fread(buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("pread");
 	}
 
@@ -587,7 +591,7 @@ chirp_client_pwrite( struct chirp_client *c, int fd, const void *buffer,
 	result = fflush(c->wstream);
 	if(result < 0) chirp_fatal_request("pwrite");
 
-	actual = fwrite(buffer,1,length,c->wstream);
+	actual = (int)fwrite(buffer,1,length,c->wstream);
 	if(actual != length) chirp_fatal_request("pwrite");
 
 	return convert_result(get_result(c->rstream));
@@ -604,7 +608,7 @@ chirp_client_sread( struct chirp_client *c, int fd, void *buffer, int length,
 		stride_length, stride_skip);
 
 	if(result > 0) {
-		actual = fread(buffer,1,result,c->rstream);
+		actual = (int)fread(buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("sread");
 	}
 
@@ -632,7 +636,7 @@ chirp_client_swrite( struct chirp_client *c, int fd, const void *buffer,
 	result = fflush(c->wstream);
 	if(result < 0) chirp_fatal_request("swrite");
 
-	actual = fwrite(buffer,1,length,c->wstream);
+	actual = (int)fwrite(buffer,1,length,c->wstream);
 	if(actual != length) chirp_fatal_request("swrite");
 
 	return convert_result(get_result(c->rstream));
@@ -706,7 +710,7 @@ chirp_client_getfile_buffer( struct chirp_client *c, const char *path,
 	if(result>=0) {
 		*buffer = (char*)malloc(result+1);
 		if(*buffer) {
-			actual = fread(*buffer,1,result,c->rstream);
+			actual = (int)fread(*buffer,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("getfile");
 			(*buffer)[result] = '\0';
 		}
@@ -734,7 +738,7 @@ chirp_client_putfile_buffer( struct chirp_client *c, const char *path,
 	if(result < 0) chirp_fatal_request("putfile");
 	
 	// Now send actual file
-	actual = fwrite(buffer,1,length,c->wstream);
+	actual = (int)fwrite(buffer,1,length,c->wstream);
 	if(actual!=length) chirp_fatal_request("putfile");
 	
 	return actual;
@@ -750,7 +754,7 @@ chirp_client_getlongdir( struct chirp_client *c, const char *path,
 	if(result< 0) chirp_fatal_request("getlongdir");
 	*buffer = (char*)malloc(result+1);
 	if(*buffer) {
-		actual = fread(*buffer,1,result,c->rstream);
+		actual = (int)fread(*buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("getlongdir");
 		(*buffer)[result] = '\0';
 	} else {
@@ -768,7 +772,7 @@ chirp_client_getdir( struct chirp_client *c, const char *path, char **buffer) {
 	if(result < 0) chirp_fatal_request("getdir");
 	*buffer = (char*)malloc(result+1);
 	if(*buffer) {
-		actual = fread(*buffer,1,result,c->rstream);
+		actual = (int)fread(*buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("getdir");
 		(*buffer)[result] = '\0';
 	} else {
@@ -784,7 +788,7 @@ chirp_client_whoami( struct chirp_client *c, char *buffer, int length) {
 
 	result = simple_command(c, "whoami %d\n", length);
 	if(result > 0) {
-		actual = fread(buffer,1,result,c->rstream);
+		actual = (int)fread(buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("whoami");
 	}
 
@@ -799,7 +803,7 @@ chirp_client_whoareyou( struct chirp_client *c, const char *rhost,
 
 	result = simple_command(c, "whoareyou %s %d\n", rhost, length);
 	if(result > 0) {
-		actual = fread(buffer,1,result,c->rstream);
+		actual = (int)fread(buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("whoareyou");
 	}
 
@@ -829,7 +833,7 @@ chirp_client_readlink( struct chirp_client *c, const char *path, int length,
 	result = simple_command(c,"readlink %s %d\n",path, length);
 	if(result > 0) {
 		*buffer = (char*)malloc(result);
-		actual = fread(*buffer,1,result,c->rstream);
+		actual = (int)fread(*buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("readlink");
 	}
 	return result;
@@ -1037,8 +1041,6 @@ tcp_connect( const char *host, int port )
 	int success;
 	SOCKET fd;
 	struct addrinfo hint;
-	int one = 1;
-	int r = 0;
 
 	union {
 		struct sockaddr_in6 v6;
@@ -1083,12 +1085,13 @@ tcp_connect( const char *host, int port )
 		return INVALID_SOCKET;
 	}
 
-	r = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	const int one = 1;
+	int r = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *)&one, sizeof(one));
 	if (r < 0) {
 		fprintf(stderr, "Warning: error %d settting SO_REUSEADDR\n", errno);
 	}
 
-	success = connect( fd, (struct sockaddr*)&sa.storage, result->ai_addrlen );
+	success = connect( fd, (struct sockaddr*)&sa.storage, (int)result->ai_addrlen );
 	freeaddrinfo(result);
 	if(success == SOCKET_ERROR) {
 		closesocket(fd);

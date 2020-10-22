@@ -9,7 +9,7 @@
 
 #include "old_boost.h"
 #include "query_iterator.h"
-
+#include "htcondor.h"
 
 struct BulkQueryIterator
 {
@@ -27,7 +27,7 @@ public:
         }
         if (!py_hasattr(input, "__iter__"))
         {
-            THROW_EX(ValueError, "Unable to iterate over query object.")
+            THROW_EX(HTCondorTypeError, "Unable to iterate over query object.")
         }
         boost::python::object iterable = input.attr("__iter__")();
 
@@ -53,7 +53,7 @@ public:
                 }
                 else
                 {
-                    THROW_EX(ValueError, "Unable to iterate through input.");
+                    THROW_EX(HTCondorTypeError, "Unable to iterate through input.");
                 }
             }
             catch (const boost::python::error_already_set&)
@@ -116,12 +116,13 @@ public:
 
         if (m_selector.timed_out())
         {
-            THROW_EX(RuntimeError, "Timeout when waiting for remote host");
+            THROW_EX(HTCondorIOError, "Timeout when waiting for remote host");
         }
 
         if (m_selector.failed())
         {
-            THROW_EX(RuntimeError, "select() failed.");
+            // FIXME: if m_selector has an errno and/or errstr, set it here.
+            THROW_EX(HTCondorInternalError, "select() failed.");
         }
 
         boost::python::object queryit;
@@ -146,7 +147,7 @@ public:
             return queryit;
         }
         if (!m_count) {THROW_EX(StopIteration, "All ads are processed");}
-        THROW_EX(RuntimeError, "Logic error in poll implementation.");
+        THROW_EX(HTCondorInternalError, "Logic error in poll implementation.");
         return queryit;
     }
 

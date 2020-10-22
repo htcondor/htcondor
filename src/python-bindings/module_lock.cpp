@@ -143,6 +143,13 @@ ModuleLock::~ModuleLock()
     release();
 }
 
+void ModuleLock::useFamilySession(const std::string & sess)
+{
+	if (! sess.empty()) {
+		SecManWrapper::setFamilySession(sess);
+	}
+}
+
 void
 ModuleLock::release()
 {

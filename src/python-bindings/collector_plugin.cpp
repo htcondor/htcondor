@@ -90,7 +90,7 @@ PythonCollectorPlugin::initialize()
     {
         boost::python::object module = py_import("classad");
     }
-    catch (boost::python::error_already_set)
+    catch (boost::python::error_already_set &)
     {
         if (PyErr_Occurred())
         {
@@ -121,7 +121,7 @@ PythonCollectorPlugin::initialize()
                 m_invalidate_funcs.push_back(module.attr("invalidate"));
             }
         }
-        catch (boost::python::error_already_set)
+        catch (boost::python::error_already_set &)
         {
             if (PyErr_Occurred())
             {
@@ -148,7 +148,7 @@ PythonCollectorPlugin::shutdown()
         {
             py_import("__main__").attr("__builtins__").attr("apply")(*iter, pyArgs, pyKw);
         }
-        catch (boost::python::error_already_set)
+        catch (boost::python::error_already_set &)
         {
             if (PyErr_Occurred())
             {
@@ -179,7 +179,7 @@ PythonCollectorPlugin::update(int command, const ClassAd &ad)
         pyArgs.append(command_str);
         pyArgs.append(adWrapper);
     }
-    catch (boost::python::error_already_set)
+    catch (boost::python::error_already_set &)
     {
         if (PyErr_Occurred())
         {
@@ -196,7 +196,7 @@ PythonCollectorPlugin::update(int command, const ClassAd &ad)
         {
             py_import("__main__").attr("__builtins__").attr("apply")(*iter, pyArgs, pyKw);
         }
-        catch (boost::python::error_already_set)
+        catch (boost::python::error_already_set &)
         {
             if (PyErr_Occurred())
             {
@@ -226,7 +226,7 @@ PythonCollectorPlugin::invalidate(int command, const ClassAd &ad)
         pyArgs.append(command_str);
         pyArgs.append(adWrapper);
     }
-    catch (boost::python::error_already_set)
+    catch (boost::python::error_already_set &)
     {
         if (PyErr_Occurred())
         {
@@ -243,7 +243,7 @@ PythonCollectorPlugin::invalidate(int command, const ClassAd &ad)
         {
             py_import("__main__").attr("__builtins__").attr("apply")(*iter, pyArgs, pyKw);
         }
-        catch (boost::python::error_already_set)
+        catch (boost::python::error_already_set &)
         {
             if (PyErr_Occurred())
             {

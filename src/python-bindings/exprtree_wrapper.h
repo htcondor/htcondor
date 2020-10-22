@@ -16,9 +16,9 @@ ExprTreeHolder __ ##pykind##__() const {return apply_unary_operator(classad::Ope
 
 struct ExprTreeHolder
 {
-    ExprTreeHolder(const std::string &str);
+    ExprTreeHolder(boost::python::object expr_obj);
 
-    ExprTreeHolder(classad::ExprTree *expr, bool owns=false);
+    ExprTreeHolder(classad::ExprTree *expr, bool owns);
 
     ~ExprTreeHolder();
 

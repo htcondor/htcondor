@@ -178,9 +178,9 @@ VanillaProc::StartJob()
 										  MATCH == strcasecmp ( ".com", extension ) ) ),
 				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
 	ArgList		arguments;
-	MyString	filename,
-				jobname, 
-				error;
+	std::string	filename;
+	std::string	jobname;
+	MyString	error;
 	
 	if ( extension && !java_universe && !binary_executable ) {
 
@@ -222,12 +222,12 @@ VanillaProc::StartJob()
 				a the correct extension before it will run. */
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
-					condor_basename ( jobname.Value () ) ) ) {
-				filename.formatstr ( "condor_exec%s", extension );
-				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
+					condor_basename ( jobname.c_str () ) ) ) {
+				formatstr ( filename, "condor_exec%s", extension );
+				if (rename(CONDOR_EXEC, filename.c_str()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 
-							CONDOR_EXEC, filename.Value() );
+							CONDOR_EXEC, filename.c_str() );
 				}
 			} else {
 				filename = jobname;
@@ -270,7 +270,7 @@ VanillaProc::StartJob()
 				will stop the file transfer mechanism from considering
 				it for transfer back to its submitter */
 			Starter->jic->removeFromOutputFiles (
-				filename.Value () );
+				filename.c_str () );
 
 		}
 			
@@ -500,7 +500,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = Starter->GetWorkingDir();
+		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
 			StringList mount_list(mount_under_scratch);
@@ -585,7 +585,7 @@ VanillaProc::StartJob()
 			MyString arg_errors;
 			std::string filename;
 
-			filename = Starter->GetWorkingDir();
+			filename = Starter->GetWorkingDir(0);
 			filename += "/.condor_pid_ns_status";
 		
 			if (!env.MergeFrom(JobAd, &env_errors)) {
@@ -652,68 +652,9 @@ VanillaProc::StartJob()
 	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
-		std::string mem_limit;
-		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "none");
-		bool mem_is_soft = mem_limit == "soft";
-		std::string cgroup_string = cgroup;
-		CgroupLimits climits(cgroup_string);
-		if (mem_is_soft || (mem_limit == "hard")) {
-			ClassAd * MachineAd = Starter->jic->machClassAd();
-			int MemMb;
-			if (MachineAd->LookupInteger(ATTR_MEMORY, MemMb)) {
-				// cgroups prevents us from setting hard limits lower
-				// than memsw limit.  If we are reusing this cgroup,
-				// we don't know what the previous values were
-				// So, set mem to 0, memsw to +inf, so that the real
-				// values can be set without interference
-
-				climits.set_memory_limit_bytes(0);
-				climits.set_memsw_limit_bytes(LONG_MAX);
-
-				uint64_t MemMb_big = MemMb;
-				m_memory_limit = MemMb_big;
-				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
-
-				// Note that ATTR_VIRTUAL_MEMORY on Linux
-				// is sum of memory and swap, in Kilobytes
-
-				int VMemKb;
-				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, VMemKb)) {
-
-					uint64_t memsw_limit = ((uint64_t)1024) * VMemKb;
-					if (VMemKb > 0) {
-						// we're not allowed to set memsw limit <
-						// the hard memory limit.  If we haven't set the hard
-						// memory limit, the default may be infinity.
-						// So, if we've set soft, set hard limit to memsw - one page
-						if (mem_is_soft) {
-							uint64_t hard_limit = memsw_limit - 4096;
-							climits.set_memory_limit_bytes(hard_limit, false);
-						}
-						climits.set_memsw_limit_bytes(memsw_limit);
-					}
-				} else {
-					dprintf(D_ALWAYS, "Not setting virtual memory limit in cgroup because "
-						"Virtual Memory attribute missing in machine ad.\n");
-				}
-			} else {
-				dprintf(D_ALWAYS, "Not setting memory limit in cgroup because "
-					"Memory attribute missing in machine ad.\n");
-			}
-		} else if (mem_limit == "none") {
-			dprintf(D_FULLDEBUG, "Not enforcing memory limit.\n");
-		} else {
-			dprintf(D_ALWAYS, "Invalid value of CGROUP_MEMORY_LIMIT_POLICY: %s.  Ignoring.\n", mem_limit.c_str());
-		}
-
-		// Now, set the CPU shares
-		ClassAd * MachineAd = Starter->jic->machClassAd();
-		int numCores = 1;
-		if (MachineAd->LookupInteger(ATTR_CPUS, numCores)) {
-			climits.set_cpu_shares(numCores*100);
-		} else {
-			dprintf(D_FULLDEBUG, "Invalid value of Cpus in machine ClassAd; ignoring.\n");
-		}
+#ifdef LINUX
+		setCgroupMemoryLimits(cgroup);
+#endif
 		setupOOMEvent(cgroup);
 	}
 
@@ -737,20 +678,24 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 	static unsigned int max_rss = 0;
+#if HAVE_PSS
+	static unsigned int max_pss = 0;
+#endif
 
-	ProcFamilyUsage* usage;
-	ProcFamilyUsage cur_usage;
-	if (m_proc_exited) {
-		usage = &m_final_usage;
-	}
-	else {
-		if (daemonCore->Get_Family_Usage(JobPid, cur_usage) == FALSE) {
+	ProcFamilyUsage current_usage;
+	if( m_proc_exited ) {
+		current_usage = m_final_usage;
+	} else {
+		if (daemonCore->Get_Family_Usage(JobPid, current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
 			return false;
 		}
-		usage = &cur_usage;
 	}
+
+	ProcFamilyUsage reported_usage = m_checkpoint_usage;
+	reported_usage += current_usage;
+	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
     m_statistics.Tick();
@@ -773,12 +718,15 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 #if HAVE_PSS
 	if( usage->total_proportional_set_size_available ) {
-		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );
+		if (usage->total_proportional_set_size > max_pss) {
+			max_pss = usage->total_proportional_set_size;
+		}
+		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, max_pss );
 	}
 #endif
 
-	if (usage->block_read_bytes >= 0)  {
-        	m_statistics.BlockReadBytes = usage->block_read_bytes;
+	if (usage->block_read_bytes >= 0) {
+		m_statistics.BlockReadBytes = usage->block_read_bytes;
 		ad->Assign(ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes / 1024l);
 	}
 	if (usage->block_write_bytes >= 0) {
@@ -787,11 +735,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	if (usage->block_reads >= 0) {
-        	m_statistics.BlockReads = usage->block_reads;
+		m_statistics.BlockReads = usage->block_reads;
 		ad->Assign(ATTR_BLOCK_READS, usage->block_reads);
 	}
 	if (usage->block_writes >= 0) {
-        	m_statistics.BlockWrites = usage->block_writes;
+		m_statistics.BlockWrites = usage->block_writes;
 		ad->Assign(ATTR_BLOCK_WRITES, usage->block_writes);
 	}
 
@@ -862,13 +810,14 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
-	// For the same reason that we call recordFinalUsage() from the reaper
-	// in normal exit cases, we should get the final usage of the checkpointed
-	// process now, add it to the running total of checkpointed processes,
-	// and then add the running total to the current when we publish the
-	// update ad.  FIXME (#4971)
+	ProcFamilyUsage last_usage;
+	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
+		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
+			"VanillaProc::restartCheckpointedJob()\n", JobPid );
+	}
+	m_checkpoint_usage += last_usage;
 
-	if( Starter->jic->uploadWorkingFiles() ) {
+	if( Starter->jic->uploadCheckpointFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
 	} else {
 			// We assume this is a transient failure and will try
@@ -881,6 +830,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// would behave differently during ssh-to-job, which seems bad.
 	// killFamilyIfWarranted();
 
+	m_proc_exited = false;
 	StartJob();
 }
 
@@ -1143,7 +1093,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
 	Starter->jic->periodicJobUpdate( &updateAd, true );
-	int usage;
+	int usage = 0;
 	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
 
 		//
@@ -1454,3 +1404,114 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 		return this->OsProc::streamingOpenFlags( isOutput );
 	}
 }
+
+#ifdef LINUX
+void 
+VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
+
+		ClassAd * MachineAd = Starter->jic->machClassAd();
+		std::string cgroup_string = cgroup;
+		CgroupLimits climits(cgroup_string);
+
+		// First, set the CPU shares
+		int numCores = 1;
+		if (MachineAd->LookupInteger(ATTR_CPUS, numCores)) {
+			climits.set_cpu_shares(numCores*100);
+		} else {
+			dprintf(D_FULLDEBUG, "Invalid value of Cpus in machine ClassAd; ignoring.\n");
+		}
+
+		// Now, set the memory limits
+		std::string mem_limit;
+		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "none");
+		if (mem_limit == "none") {
+			dprintf(D_ALWAYS, "Not enforcing cgroup memory limit because CGROUP_MEMORY_LIMIT_POLICY is \"none\".\n");
+			return;
+		}
+
+		if ((mem_limit != "hard") && (mem_limit != "soft") && (mem_limit != "custom")) {
+			dprintf(D_ALWAYS, "Not enforcing cgroup memory limit because CGROUP_MEMORY_LIMIT_POLICY is an unknown value: %s.\n", mem_limit.c_str());
+			return;
+		}
+
+		// The default hard memory limit -- the amount of memory in the slot
+		std::string hard_memory_limit_expr = "My.Memory";
+
+		// The default soft memory limit -- 90% of the amount of memory in the slot
+		std::string soft_memory_limit_expr = "0.9 * My.Memory";
+
+		if (mem_limit == "soft") {
+				// If the policy is soft, make the hard limit the total memory for this startd
+				hard_memory_limit_expr = "My.TotalMemory";
+				// If the policy is soft, make the soft limit the slot size
+				soft_memory_limit_expr = "My.Memory";
+		} else if (mem_limit == "custom") {
+				param(hard_memory_limit_expr, "CGROUP_HARD_MEMORY_LIMIT_EXPR", "");
+				if (hard_memory_limit_expr.empty()) {
+					dprintf(D_ALWAYS, "Missing CGROUP_HARD_MEMORY_LIMIT_EXPR, this must be set when CGROUP_MEMORY_LIMIT_POLICY is custom\n");
+					return;
+				}
+				param(soft_memory_limit_expr, "CGROUP_SOFT_MEMORY_LIMIT_EXPR", "");
+				if (soft_memory_limit_expr.empty()) {
+					dprintf(D_ALWAYS, "Missing CGROUP_SOFT_MEMORY_LIMIT_EXPR, this must be set when CGROUP_MEMORY_LIMIT_POLICY is custom\n");
+					return;
+				}
+		}
+
+		int64_t hard_limit = 0;
+		int64_t soft_limit = 0;
+
+		ExprTree *expr = nullptr;
+		::ParseClassAdRvalExpr(hard_memory_limit_expr.c_str(), expr);
+		if (expr == nullptr) {
+			dprintf(D_ALWAYS, "Can't parse CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
+			return;
+		}
+
+		classad::Value value;
+		int evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		if ((!evalRet) || (!value.IsNumber(hard_limit))) {
+			dprintf(D_ALWAYS, "Can't evaluate CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
+			delete expr;
+			return;
+		}
+
+		delete expr;
+		expr = nullptr;
+
+		::ParseClassAdRvalExpr(soft_memory_limit_expr.c_str(), expr);
+		if (expr == nullptr) {
+			dprintf(D_ALWAYS, "Can't parse CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
+			return;
+		}
+
+		evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		if ((!evalRet) || (!value.IsNumber(soft_limit))) {
+			dprintf(D_ALWAYS, "Can't evaluate CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
+			delete expr;
+			return;
+		}
+		delete expr;
+
+		// cgroups prevents us from setting hard limits above
+		// the memsw limit.  If we are reusing this cgroup,
+		// we don't know what the previous values were
+		// So, set mem to 0, memsw to +inf, so that the real
+		// values can be set without interference
+
+		climits.set_memory_limit_bytes(0, true);
+		climits.set_memsw_limit_bytes(LONG_MAX);
+
+		// If we get an OOM, check against this value to see if it our fault, or a global OOM
+		m_memory_limit = soft_limit;
+		climits.set_memory_limit_bytes(1024 * 1024 * hard_limit, false /* == hard */);
+		climits.set_memory_limit_bytes(1024 * 1024 * soft_limit, true /* == soft */);
+
+		// if DISABLE_SWAP_FOR_JOB is true, set swap to hard memory limit
+		// otherwise, leave at infinity
+
+		if (param_boolean("DISABLE_SWAP_FOR_JOB", false)) {
+			climits.set_memsw_limit_bytes(1024 * 1024 * hard_limit);
+		}
+}
+#endif

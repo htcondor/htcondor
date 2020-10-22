@@ -103,6 +103,8 @@ Starter::initRunData( void )
 {
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_birthdate = 0;
+	s_last_update_time = 0;
+	s_got_final_update = false;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
 	s_hold_timeout = -1;
@@ -240,12 +242,8 @@ Starter::setIsDC( bool updated_is_dc )
 
 
 void
-Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
+Starter::publish( ClassAd* ad, StringList* list )
 {
-	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
-		return;
-	}
-
 	StringList* ignored_attr_list = NULL;
 	ignored_attr_list = new StringList();
 	ignored_attr_list->append(ATTR_VERSION);
@@ -892,6 +890,8 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	ClassAd update_ad;
 	int final_update = 0;
 
+	s_last_update_time = time(NULL);
+
 		// It is expected that we will get here when the stream is closed.
 		// Unfortunately, log noise will be generated when we try to read
 		// from it.
@@ -949,6 +949,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;
 		s_job_update_sock = NULL;
+		s_got_final_update = true;
 	}
 	return KEEP_STREAM;
 }
@@ -1140,7 +1141,9 @@ int Starter::execDCStarter(
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
 
-	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "starter" );
+	std::string sockBaseName( "starter" );
+	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
+	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
@@ -1189,7 +1192,7 @@ Starter::cleanupAfterGlexec(Claim * claim)
 #endif
 
 bool
-Starter::active()
+Starter::active() const
 {
 	return( (s_pid != 0) );
 }

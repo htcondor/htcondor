@@ -34,7 +34,7 @@
 #include "error_utils.h"
 #include "condor_distribution.h"
 #include "condor_version.h"
-#include "natural_cmp.h"
+#include "classad/natural_cmp.h"
 #include "classad/jsonSource.h"
 #include "classad_helpers.h"
 #include "prettyPrint.h"
@@ -184,6 +184,7 @@ char		*myName;
 ClassadSortSpecs sortSpecs;
 bool			noSort = false; // set to true to disable sorting entirely
 bool			naturalSort = true;
+int				dash_snapshot = 0; // for direct query, just return current state, do *not* recompute anything
 
 classad::References projList;
 StringList dashAttributes; // Attributes specifically requested via the -attributes argument
@@ -417,12 +418,12 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				char keybuf[64] = " ";
 				const char * subtot_key = keybuf;
 				switch(thePP.ppTotalStyle) {
-					case PP_SUBMITTER_NORMAL: srod.getString(0, keybuf, sizeof(keybuf)); break;
+					case PP_SUBMITTER_NORMAL: srod.getString(0, keybuf, sizeof(keybuf)-1); break;
 					case PP_SCHEDD_NORMAL:
 					case PP_SCHEDD_DATA:
 					case PP_SCHEDD_RUN: subtot_key = NULL; break;
 					case PP_STARTD_STATE: subtot_key = NULL; break; /* use activity as key */
-					default: srod.getString(thePP.startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)); break;
+					default: srod.getString(thePP.startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)-1); break;
 				}
 				if (subtot_key) {
 					int len = strlen(subtot_key);
@@ -449,7 +450,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				if (ad->EvaluateAttr("Child" ATTR_STATE, lval) && lval.IsListValue(plst)) {
 					for (classad::ExprList::const_iterator it = plst->begin(); it != plst->end(); ++it) {
 						const classad::ExprTree * pexpr = *it;
-						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp))) {
+						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp)-1)) {
 							State st = string_to_state(tmp);
 							if (st >= no_state && st < _state_threshold_) {
 								if (consensus_state != st) {
@@ -471,7 +472,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				if (ad->EvaluateAttr("Child" ATTR_ACTIVITY, lval) && lval.IsListValue(plst)) {
 					for (classad::ExprList::const_iterator it = plst->begin(); it != plst->end(); ++it) {
 						const classad::ExprTree * pexpr = *it;
-						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp))) {
+						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp)-1)) {
 							Activity ac = string_to_activity(tmp);
 							if (ac >= no_act && ac < _act_threshold_) {
 								if (consensus_activity != ac) {
@@ -669,8 +670,8 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter
 	// merge the state/activity (for static slots, partitionable merge happens elsewhere)
 	if (thePP.startdCompact_ixCol_ActCode >= 0) {
 		char ast[4] = {0,0,0,0}, bst[4] = {0,0,0,0};
-		aa.getString(thePP.startdCompact_ixCol_ActCode, ast, sizeof(ast));
-		bb.getString(thePP.startdCompact_ixCol_ActCode, bst, sizeof(bst));
+		aa.getString(thePP.startdCompact_ixCol_ActCode, ast, sizeof(ast)-1);
+		bb.getString(thePP.startdCompact_ixCol_ActCode, bst, sizeof(bst)-1);
 		char asc = ast[0], bsc = bst[0], aac = ast[1], bac = bst[1];
 		if (asc != bsc) asc = '*';
 		if (aac != bac) aac = '*';
@@ -745,6 +746,10 @@ main (int argc, char *argv[])
 	if (result_limit > 0) {
 		query->setResultLimit(result_limit);
 	}
+	if (dash_snapshot) {
+		MyString snap; snap.formatstr("%d", dash_snapshot);
+		query->addExtraAttribute("snapshot", snap.c_str());
+	}
 
 		// if there was a generic type specified
 	if (genericType) {
@@ -781,7 +786,6 @@ main (int argc, char *argv[])
 		query->addANDConstraint (buffer);
 
 		projList.insert(ATTR_HAS_JAVA);
-		projList.insert(ATTR_JAVA_MFLOPS);
 		projList.insert(ATTR_JAVA_VENDOR);
 		projList.insert(ATTR_JAVA_VERSION);
 	}
@@ -1300,7 +1304,6 @@ main (int argc, char *argv[])
 	if (dash_group_by) {
 		std::string output;
 		output.reserve(16372);
-		StringList * whitelist = NULL;
 
 		AdAggregationResults<std::string> groups(ad_groups);
 		groups.rewind();
@@ -1308,7 +1311,7 @@ main (int argc, char *argv[])
 		while ((ad = groups.next()) != NULL) {
 			output.clear();
 			classad::References attrs;
-			sGetAdAttrs(attrs, *ad, false, whitelist);
+			sGetAdAttrs(attrs, *ad);
 			sPrintAdAttrs(output, *ad, attrs);
 			output += "\n";
 			fputs(output.c_str(), stdout);
@@ -1970,6 +1973,13 @@ firstPass (int argc, char *argv[])
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
 			mainPP.setPPstyle (PP_STARTD_STATE, i, argv[i]);
 		} else
+		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
+			if (pcolon) {
+				dash_snapshot = atoi(pcolon + 1);
+			} else {
+				dash_snapshot = 1;
+			}
+		} else
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			if( statistics ) {
 				free( statistics );
@@ -2285,11 +2295,11 @@ secondPass (int argc, char *argv[])
 
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			i += 2;
-			sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
+			sprintf(buffer,"\"%s\"", statistics);
 			if (diagnose) {
-				printf ("[%s]\n", buffer);
+				printf ("[STATISTICS_TO_PUBLISH = %s]\n", buffer);
 			}
-			query->addExtraAttribute(buffer);
+			query->addExtraAttribute("STATISTICS_TO_PUBLISH", buffer);
 			continue;
 		}
 

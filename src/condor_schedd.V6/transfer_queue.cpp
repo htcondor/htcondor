@@ -458,7 +458,7 @@ TransferQueueManager::HandleReport( Stream *sock )
 }
 
 bool
-TransferQueueRequest::ReadReport(TransferQueueManager *manager)
+TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 {
 	MyString report;
 	m_sock->decode();
@@ -1053,7 +1053,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 }
 
 bool
-TransferQueueManager::GetContactInfo(char const *command_sock_addr, std::string &contact_str)
+TransferQueueManager::GetContactInfo(char const *command_sock_addr, std::string &contact_str) const
 {
 	TransferQueueContactInfo contact(
 		command_sock_addr,

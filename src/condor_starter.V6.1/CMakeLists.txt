@@ -18,20 +18,66 @@
 
 include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
-file( GLOB starterRmvElements condor_pid_ns_init.cpp condor_rsh.cpp glexec_job_wrapper* )
+set( starterElements
+baseStarter.cpp
+cgroup_limits.cpp
+cgroup.linux.cpp
+docker_proc.cpp
+find_child_proc.cpp
+has_sysadmin_cap.cpp
+io_proxy.cpp
+io_proxy_handler.cpp
+java_detect.cpp
+java_proc.cpp
+jic_local_config.cpp
+jic_local.cpp
+jic_local_file.cpp
+jic_local_schedd.cpp
+jic_shadow.cpp
+job_info_communicator.cpp
+local_user_log.cpp
+mpi_comrade_proc.cpp
+mpi_master_proc.cpp
+NTsenders.cpp
+os_proc.cpp
+parallel_proc.cpp
+privsep_helper.cpp
+remote_proc.cpp
+script_proc.cpp
+singularity.cpp
+sshd_proc.cpp
+StarterHookMgr.cpp
+starter_user_policy.cpp
+starter_util.cpp
+starter_v61_main.cpp
+stream_handler.cpp
+tool_daemon_proc.cpp
+user_proc.cpp
+vanilla_proc.cpp
+vm_gahp_request.cpp
+vm_gahp_server.cpp
+vm_proc.cpp
+)
+
+if (LINUX)
+	list(APPEND starterElements
+		cgroup.linux.cpp  
+		glexec_privsep_helper.linux.cpp
+	)
+endif(LINUX)
 
 if (UNIX)
 set_source_files_properties(jic_shadow.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
 endif(UNIX)
 
-condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}")
+condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${CONDOR_LIBS};${LIBCGROUP_FOUND}" INSTALL "${C_SBIN}")
 
 if (HAVE_EXT_GLOBUS)
 	clone_install( condor_starter "${C_SBIN}" "condor_gridshell" "${C_SBIN}" )
 endif()
 
 # need to add all the other install targets for libexec.
-install ( FILES scimark2lib.jar CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
+install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
 
 if(LINUX AND WANT_GLEXEC)
 	install (FILES condor_glexec_setup condor_glexec_run condor_glexec_cleanup condor_glexec_kill condor_glexec_update_proxy DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
@@ -45,7 +91,7 @@ if (HAVE_SSH_TO_JOB)
 endif(HAVE_SSH_TO_JOB)
 
 if (LINUX)
-	condor_exe(condor_pid_ns_init "condor_pid_ns_init.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
+	condor_exe(condor_pid_ns_init "condor_pid_ns_init.cpp" ${C_LIBEXEC} "" OFF)
 endif()
 if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker_proc.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)

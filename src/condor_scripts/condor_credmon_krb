@@ -1,0 +1,157 @@
+#!/bin/bash
+###########################################
+# CHTC/DESY HTCondor Config               #
+###########################################
+VERSION="Version 2019/10/31 (19:00)"      #
+###########################################
+
+
+CONDOR_LOG=`condor_config_val LOG`
+CONDOR_LIBEXEC=`condor_config_val LIBEXEC`
+CREDDIR=`condor_config_val SEC_CREDENTIAL_DIRECTORY_KRB`
+
+LOGFILE="$CONDOR_LOG/CredMonLog"
+if [[ ! -f $LOGFILE ]]; then
+	touch $LOGFILE
+fi
+CREDSDONE=$CREDDIR/CREDMON_COMPLETE
+SIGNAL=$CREDDIR/CREDMON_SIGNAL
+TIMER=$CREDDIR/CREDMON_TIMER
+ATWORK=$CREDDIR/CREDMON_ATWORK
+OLDSIGNAL=$CREDDIR/CREDMON_OLDSIGNAL
+OLDTIMER=$CREDDIR/CREDMON_OLDTIMER
+PIDFILE=$CREDDIR/pid
+TOKENCMD=$CONDOR_LIBEXEC/set_batchtok_cmd
+
+COMMAND=$(basename $0)
+TIMEOUT="300"
+if condor_config_val DAEMON_LIST | grep -q STARTD
+then
+   WORKER="true"
+else
+   WORKER="false"
+fi
+
+
+function shepherding {
+	touch $ATWORK
+	DATE=$(date +'%T %x')
+	if [[ -f $SIGNAL ]]; then
+		echo "$DATE $COMMAND $1 signal" >> $LOGFILE
+	else
+		echo "$DATE $COMMAND $1" >> $LOGFILE
+	fi
+	echo "$DATE $COMMAND $1" >> $LOGFILE
+
+	until [[ ! -f $SIGNAL && ! -f $TIMER ]];
+	do
+		/bin/rm -f $SIGNAL $TIMER
+		for TICKET in "$CREDDIR"/*.cred
+		do
+			echo "$DATE PROCESSING $TICKET" >> $LOGFILE
+			[[ -e $TICKET ]] || continue
+			export USER=${TICKET%.cred}
+			export USER=${USER#/}
+			export USER=${USER##*/}
+			DATE=$(date +'%T %x')
+			if [[ ! -f ${TICKET%cred}cc ]]; then
+				# .cc file does not exist replace user ticket by new batch ticket
+				if [[ $WORKER = "true" ]]; then
+					ACTION="prolong"
+				else
+					ACTION="renew"
+				fi
+				echo "$DATE INVOKING $USER $TICKET $ACTION" >> $LOGFILE
+				$TOKENCMD $USER 86000 ${TICKET} $ACTION
+				cp $TICKET ${TICKET%cred}cc.tmp
+				mv ${TICKET%cred}cc.tmp ${TICKET%cred}cc
+				echo "$DATE $COMMAND created ($ACTION, worker=$WORKER) ${USER}.cc KRB5CCNAME($USER)=FILE:${TICKET}" >> $LOGFILE
+			else
+				# Check ticket
+				export KRB5CCNAME="FILE:$TICKET"
+				if [[ $WORKER = "true" ]]; then
+					# On worker only prolongation
+					ACTION="prolong"
+					echo "$DATE INVOKING $USER $TICKET $ACTION" >> $LOGFILE
+					$TOKENCMD $USER 86000 ${TICKET} prolong
+				else
+					# On scheduler full program
+					ACTION="default"
+					echo "$DATE INVOKING $USER $TICKET $ACTION" >> $LOGFILE
+					$TOKENCMD $USER 86000 ${TICKET}
+				fi
+				if [[ ${TICKET%cred}cc -ot $TICKET ]]; then
+					# .cc file exists and checked ticket is older than actual token
+					cp $TICKET ${TICKET%cred}cc.tmp
+					mv ${TICKET%cred}cc.tmp ${TICKET%cred}cc
+					echo "$DATE $COMMAND renewed ($ACTION, worker=$WORKER) ${USER}.cc KRB5CCNAME($USER)=$KRB5CCNAME" >> $LOGFILE
+				else
+					echo "$DATE $COMMAND checked ($ACTION, worker=$WORKER) ${USER}.cc KRB5CCNAME($USER)=$KRB5CCNAME" >> $LOGFILE
+				fi
+			fi
+		done
+		for TICKET in "$CREDDIR"/*.mark
+		do
+			[[ -e $TICKET ]] || continue
+			DATE=$(date +'%T %x')
+			export USER=${TICKET%.mark}
+			export USER=$(basename $USER)
+			echo "$DATE $COMMAND removed marked $USER" >> $LOGFILE
+			/bin/rm -f $TICKET ${TICKET%mark}cc ${TICKET%mark}cred
+			echo "$DATE $COMMAND removed marked ${USER}.cc ${USER}.cred ${USER}.mark" >> $LOGFILE
+		done
+	done
+	touch $CREDSDONE
+	/bin/rm -f $ATWORK
+}
+
+
+function signalling {
+	DATE=$(date +'%T %x')
+	touch $SIGNAL
+	if [[ -f $OLDSIGNAL ]]; then
+		echo "$DATE $COMMAND received signal (oldstyle run)" >> $LOGFILE
+		shepherding oldstyle
+	else
+		echo "$DATE $COMMAND received signal (new signal)" >> $LOGFILE
+	fi
+
+}
+
+if [[ -f $PIDFILE ]] ; then
+	rm $PIDFILE
+fi
+echo $$ > $PIDFILE
+
+DATE=$(date +'%T %x')
+if [[ -f $CREDSDONE ]]; then
+	echo "$DATE $COMMAND Startup: Exists $CREDSDONE" >> $LOGFILE
+else
+	echo "$DATE $COMMAND Startup: No $CREDSDONE" >> $LOGFILE
+fi
+DATE=$(date +'%T %x')
+echo "$DATE $COMMAND $VERSION" >> $LOGFILE
+shepherding startup
+DATE=$(date +'%T %x')
+echo "$DATE $COMMAND Startup: Touched $CREDSDONE" >> $LOGFILE
+
+trap 'signalling signal' SIGHUP
+
+while :
+do
+	sleep $TIMEOUT &
+	wait
+	if [[ -f $ATWORK ]]; then
+		DATE=$(date +'%T %x')
+		if [[ -f $OLDTIMER ]]; then
+			echo "$DATE $COMMAND timer: Already at work (continue)" >> $LOGFILE
+			continue
+		else
+			echo "$DATE $COMMAND timer: Already at work (oldstyle2)" >> $LOGFILE
+		fi
+	fi
+	touch $TIMER
+	shepherding timer
+done
+
+

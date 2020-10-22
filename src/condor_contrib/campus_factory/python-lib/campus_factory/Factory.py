@@ -1,4 +1,6 @@
 
+from __future__ import print_function
+
 import ConfigParser
 import sys
 import time
@@ -69,14 +71,14 @@ class Factory:
         
         self.cluster_list = []
         # Get the cluster lists
-        if get_option("clusterlist", "") is not "":
+        if get_option("clusterlist", "") != "":
             logging.debug("Using the cluster list in the campus factory configuration.")
             for cluster_id in get_option("clusterlist").split(','):
                 self.cluster_list.append(Cluster(cluster_id, useOffline = self.UseOffline))
         else:
             # Check for the bosco cluster command
             (stdout, stderr) = RunExternal("bosco_cluster -l")
-            if len(stdout) != 0 and stdout is not "No clusters configured":
+            if len(stdout) != 0 and stdout != "No clusters configured":
                 logging.debug("Using the cluster list installed with BOSCO")
                 for cluster_id in stdout.split("\n"):
                     if len(cluster_id) > 0 and cluster_id != "":
@@ -159,11 +161,11 @@ class Factory:
         
         # Hold then release the factory in the queue
         (stderr, stdout) = RunExternal("condor_hold %s" % factoryID)
-        print "Stderr = %s" % stderr.strip()
+        print("Stderr = %s" % stderr.strip())
         #print "Stdout = %s" % stdout.strip()
         
         (stderr, stdout) = RunExternal("condor_release %s" % factoryID)
-        print "Stderr = %s" % stderr.strip()
+        print("Stderr = %s" % stderr.strip())
         #print "Stdout = %s" % stdout.strip()
         
     
@@ -176,7 +178,7 @@ class Factory:
         
         # Remove the factory job
         (stderr, stdout) = RunExternal("condor_rm %s" % factoryID)
-        print "Stderr = %s" % stderr.strip()
+        print("Stderr = %s" % stderr.strip())
 
 
 
@@ -225,7 +227,7 @@ class Factory:
                 # Check if the cluster is able to submit jobs
                 try:
                     (idleslots, idlejobs) = cluster.ClusterMeetPreferences()
-                except ClusterPreferenceException, e:
+                except ClusterPreferenceException as e:
                     logging.debug("Received error from ClusterMeetPreferences")
                     logging.debug(e)
                     idleslots = idlejobs = None

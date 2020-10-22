@@ -382,12 +382,12 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	// insert the authenticated user into the ad itself
 	const char* authn_user = sock->getFullyQualifiedUser();
 	if (authn_user) {
-		clientAd->Assign("AuthenticatedIdentity", authn_user);
-		clientAd->Assign("AuthenticationMethod", sock->getAuthenticationMethodUsed());
+		clientAd->Assign(ATTR_AUTHENTICATED_IDENTITY, authn_user);
+		clientAd->Assign(ATTR_AUTHENTICATION_METHOD, sock->getAuthenticationMethodUsed());
 	} else {
 		// remove it from the ad if it's not authenticated.
-		clientAd->Delete("AuthenticatedIdentity");
-		clientAd->Delete("AuthenticationMethod");
+		clientAd->Delete(ATTR_AUTHENTICATED_IDENTITY);
+		clientAd->Delete(ATTR_AUTHENTICATION_METHOD);
 	}
 
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -650,12 +650,12 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			int n;
 			char newname[150],oldname[130];
 			oldname[0] = '\0';
-			clientAdToRepeat->LookupString("Name",oldname,sizeof(oldname));
+			clientAdToRepeat->LookupString(ATTR_NAME,oldname,sizeof(oldname));
 			for (n=0;n<repeatStartdAds;n++) {
 				fakeAd = new ClassAd(*clientAdToRepeat);
 				snprintf(newname,sizeof(newname),
-						 "Name=\"fake%d-%s\"",n,oldname);
-				fakeAd->Insert(newname);
+						 "fake%d-%s",n,oldname);
+				fakeAd->Assign(ATTR_NAME, newname);
 				makeStartdAdHashKey (hk, fakeAd);
 				hashString.Build( hk );
 				if (! updateClassAd (StartdAds, "StartdAd     ", "Start",
@@ -1243,7 +1243,7 @@ housekeeper()
 }
 
 void CollectorEngine::
-cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey)
+cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) const
 {
 	ClassAd  *ad;
 	int   	 timeStamp;

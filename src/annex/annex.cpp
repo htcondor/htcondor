@@ -407,6 +407,9 @@ help( const char * argv0 ) {
 		"To customize the annex's HTCondor configuration:\n"
 		"\t[-config-dir </full/path/to/config.d>]\n"
 		"\n"
+		"To tag the instances (repeat -tag for each tag):\n"
+		"\t[-tag tag-name tag-value]\n"
+		"\n"
 		"To set the instances' user data:\n"
 		"\t[-aws-[default-]user-data[-file] <data|/full/path/to/file> ]\n"
 		"\n"
@@ -749,6 +752,7 @@ annex_main( int argc, char ** argv ) {
 	bool clUserDataWins = true;
 	std::string userData;
 	const char * userDataFileName = NULL;
+	std::vector< std::pair< std::string, std::string > > tags;
 
 	enum annex_t {
 		at_none = 0,
@@ -1007,6 +1011,24 @@ annex_main( int argc, char ** argv ) {
 			} else {
 				fprintf( stderr, "%s: -aws-s3-config-path requires an argument.\n", argv[0] );
 				return 1;
+			}
+		} else if( is_dash_arg_prefix( argv[i], "tag", 3 ) ) {
+			++i;
+			char * tagName = NULL, * tagValue = NULL;
+			if( i < argc && argv[i] != NULL ) {
+				tagName = argv[i];
+
+				++i;
+				if( i < argc && argv[i] != NULL ) {
+					tagValue = argv[i];
+				}
+			}
+			if( tagName == NULL || tagValue == NULL ) {
+				fprintf( stderr, "%s: -tag requires two arguments.\n", argv[0] );
+				return 1;
+			} else {
+				tags.push_back( std::make_pair( tagName, tagValue ) );
+				continue;
 			}
 		} else if( is_dash_arg_prefix( argv[i], "duration", 8 ) ) {
 			++i;
@@ -1284,6 +1306,26 @@ annex_main( int argc, char ** argv ) {
 
 	switch( theCommand ) {
 		case ct_create_annex:
+		case ct_update_annex: {
+			StringList tagNames;
+			std::string attrName;
+			for( unsigned i = 0; i < tags.size(); ++i ) {
+				tagNames.append(tags[0].first.c_str());
+				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[0].first.c_str() );
+				commandArguments.Assign( attrName, tags[0].second.c_str() );
+			}
+
+			char * sl = tagNames.print_to_string();
+			commandArguments.Assign( ATTR_EC2_TAG_NAMES, sl );
+			free( sl );
+			} break;
+
+		default:
+			break;
+	}
+
+	switch( theCommand ) {
+		case ct_create_annex:
 			// Validate the spot fleet request config file.
 			if( annexType == at_sfr && sfrConfigFile == NULL ) {
 				sfrConfigFile = param( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
@@ -1387,14 +1429,24 @@ annex_main( int argc, char ** argv ) {
 			if( cloudFormationURL != NULL ) {
 				cfURL = cloudFormationURL;
 			} else {
+				fprintf( stdout, "Will do setup in region '%s'.\n", region );
 				formatstr( cfURL, "https://cloudformation.%s.amazonaws.com", region );
 			}
 
 			return setup( region, publicKeyFile, secretKeyFile, cfURL.c_str(), sURLy.c_str() );
 		}
 
-		case ct_check_setup:
-			return check_setup();
+		case ct_check_setup: {
+			std::string cfURL;
+			if( cloudFormationURL != NULL ) {
+				cfURL = cloudFormationURL;
+			} else {
+				fprintf( stdout, "Will check setup in region '%s'.\n", region );
+				formatstr( cfURL, "https://cloudformation.%s.amazonaws.com", region );
+			}
+
+			return check_setup( cfURL.c_str(), sURLy.c_str() );
+		}
 
 		case ct_create_annex:
 			switch( annexType ) {

@@ -62,7 +62,7 @@ if ($boos) { $CloneDir =~ s/userdir/sources/; }
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
-	my $enable_x64 = 0;
+	my $enable_x64 = 1;
 	my $use_latest_vs = 1;
 	my $use_cmake3 = 1;
 
@@ -70,10 +70,8 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
 
-	#uncomment to build x64 on Win7 platform (the rest of the build will follow this)
-	if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_x64 = 1; }
-
-	if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; $use_latest_vs = 1; $use_cmake3 = 1; }
+	#uncomment to build x86 on Win8 platform (the rest of the build will follow this)
+	#if ($ENV{NMI_PLATFORM} =~ /Windows8/i) { $enable_x64 = 0; }
 
 	if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';
@@ -112,24 +110,6 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	}
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
-}
-if ($ENV{NMI_PLATFORM} =~ /macos/i) {
-    # Bad hack for now. Versions of cmake older than 2.8.10 will use gcc and c++ for
-    # the C and C++ compilers. On older macs, these invoke different
-    # compilers (llvm gnu and clang, respectively). Setting CC and CXX
-    # is the best way to pick a consistent set of compilers.
-    if ($ENV{NMI_PLATFORM} =~ /macosx[91]/i) {
-        $ENV{CC} = "cc";
-        $ENV{CXX} = "c++";
-    } else {
-        $ENV{CC} = "gcc";
-        $ENV{CXX} = "g++";
-    }
-	# Hack. Some of the mac build machines have a python version in
-	# /usr/local/bin that cmake thinks won't work with the python
-	# library in /usr/lib. Prepend /usr/bin to the PATH to use that
-	# version of python.
-	$ENV{PATH} = "/usr/bin:$ENV{PATH}";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {

@@ -36,8 +36,6 @@ override_dh_auto_configure:
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_PCRE:BOOL=ON \
-		-DHAVE_EXT_VOMS:BOOL=OFF \
-		-DWITH_VOMS:BOOL=OFF \
 		-DWITH_LIBCGROUP:BOOL=ON \
 		-DWANT_CONTRIB:BOOL=OFF \
 		-DWITH_BOSCO:BOOL=OFF \
@@ -87,7 +85,6 @@ override_dh_auto_install:
 
 
 override_dh_fixperms-arch:
-	chmod -x debian/htcondor/etc/default/condor
 	chmod -x debian/htcondor/usr/lib/condor/libexec/interactive.sub
 
 

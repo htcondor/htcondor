@@ -34,10 +34,10 @@ class ClassAdUnParser
 {
 	public:
 		/// Constructor
-		ClassAdUnParser( );
+		ClassAdUnParser() : oldClassAd(false), xmlUnparse(false), delimiter('\"'), oldClassAdValue(false) {}
 
 		/// Destructor
-		virtual ~ClassAdUnParser( );
+		virtual ~ClassAdUnParser() {}
 
 		/** Function to be called by the ClassAdXMLUnParser with a true
 		 *     flag before doing an XMLUnparse
@@ -74,7 +74,7 @@ class ClassAdUnParser
 			// syntax (as well as any nested ads).
 		void SetOldClassAd( bool old_syntax );
 		void SetOldClassAd( bool old_syntax, bool attr_value );
-		bool GetOldClassAd();
+		bool GetOldClassAd() const;
 
 		virtual void UnparseAux( std::string &buffer,
 								 const Value&,Value::NumberFactor );

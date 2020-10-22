@@ -15,6 +15,32 @@
 #include "classad_wrapper.h"
 #include "old_boost.h"
 #include "module_lock.h"
+#include "htcondor.h"
+
+#if 0 // can't do this, it causes a conflict on the definition of pid_t
+#include "condor_daemon_core.h" // for extractInheritedSocks
+#else
+bool extractParentSinful(
+	const char * inherit,  // in: inherit string, usually from CONDOR_INHERIT environment variable
+	pid_t & ppid,          // out: pid of the parent
+	std::string & sinful) // out: sinful of the parent
+{
+	sinful.clear();
+	if (! inherit || ! inherit[0])
+		return false;
+
+	StringTokenIterator list(inherit, 100, " ");
+
+	// first is parent pid and sinful
+	const char * ptmp = list.first();
+	if (ptmp) {
+		ppid = atoi(ptmp);
+		ptmp = list.next();
+		if (ptmp) sinful = ptmp;
+	}
+	return ! sinful.empty();
+}
+#endif
 
 using namespace boost::python;
 
@@ -70,21 +96,17 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     std::string addr;
     if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr))
     {
-        PyErr_SetString(PyExc_ValueError, "Address not available in location ClassAd.");
-        throw_error_already_set();
+        THROW_EX(HTCondorValueError, "Address not available in location ClassAd.");
     }
     std::string ad_type_str;
     if (!ad.EvaluateAttrString(ATTR_MY_TYPE, ad_type_str))
     {
-        PyErr_SetString(PyExc_ValueError, "Daemon type not available in location ClassAd.");
-        throw_error_already_set();
+        THROW_EX(HTCondorValueError, "Daemon type not available in location ClassAd.");
     }
     int ad_type = AdTypeFromString(ad_type_str.c_str());
     if (ad_type == NO_AD)
     {
-        printf("ad type %s.\n", ad_type_str.c_str());
-        PyErr_SetString(PyExc_ValueError, "Unknown ad type.");
-        throw_error_already_set();
+        THROW_EX(HTCondorValueError, "Unknown ad type.");
     }
     daemon_t d_type;
     switch (ad_type) {
@@ -93,10 +115,10 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     case SCHEDD_AD: d_type = DT_SCHEDD; break;
     case NEGOTIATOR_AD: d_type = DT_NEGOTIATOR; break;
     case COLLECTOR_AD: d_type = DT_COLLECTOR; break;
+    case CREDD_AD: d_type = DT_CREDD; break;
     default:
         d_type = DT_NONE;
-        PyErr_SetString(PyExc_ValueError, "Unknown daemon type.");
-        throw_error_already_set();
+        THROW_EX(HTCondorEnumError, "Unknown daemon type.");
     }
 
     ClassAd ad_copy; ad_copy.CopyFrom(ad);
@@ -108,8 +130,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     }
     if (result)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Unable to locate daemon.");
-        throw_error_already_set();
+        THROW_EX(HTCondorLocateError, "Unable to locate daemon.");
     }
     ReliSock sock;
     {
@@ -118,8 +139,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     }
     if (result)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Unable to connect to the remote daemon");
-        throw_error_already_set();
+        THROW_EX(HTCondorIOError, "Unable to connect to the remote daemon");
     }
     {
     condor::ModuleLock ml;
@@ -127,26 +147,72 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     }
     if (result)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Failed to start command.");
-        throw_error_already_set();
+        THROW_EX(HTCondorIOError, "Failed to start command.");
     }
     if (target.size())
     {
         std::string target_to_send = target;
         if (!sock.code(target_to_send))
         {
-            PyErr_SetString(PyExc_RuntimeError, "Failed to send target.");
-            throw_error_already_set();
+            THROW_EX(HTCondorIOError, "Failed to send target.");
         }
         if (!sock.end_of_message())
         {
-            PyErr_SetString(PyExc_RuntimeError, "Failed to send end-of-message.");
-            throw_error_already_set();
+            THROW_EX(HTCondorIOError, "Failed to send end-of-message.");
         }
     }
     sock.close();
 }
 
+bool get_family_session(std::string sess)
+{
+	sess.empty();
+	char *ptmp;
+	char *private_var = getenv("CONDOR_PRIVATE_INHERIT");
+	StringList private_list(private_var, " ");
+	private_list.rewind();
+	while((ptmp = private_list.next()) != NULL)
+	{
+		if( strncmp(ptmp,"FamilySessionKey:",17)==0 ) {
+			sess = ptmp + 17;
+			break;
+		}
+	}
+	return ! sess.empty();
+}
+
+void set_ready_state(const std::string & state)
+{
+    std::string master_sinful;
+    char *inherit_var = getenv("CONDOR_INHERIT");
+    if (!inherit_var) {THROW_EX(HTCondorValueError, "CONDOR_INHERIT not in environment.");}
+    pid_t ppid;
+    extractParentSinful(inherit_var, ppid, master_sinful);
+    if (master_sinful.empty()) {THROW_EX(HTCondorValueError, "CONDOR_INHERIT environment variable malformed.");}
+
+    std::string family_session;
+    get_family_session(family_session);
+
+    ClassAd readyAd;
+    readyAd.Assign("DaemonPID", getpid());
+    readyAd.Assign("DaemonName", get_mySubSystemName()); // TODO: use localname?
+    if (state.empty()) {
+        readyAd.Assign("DaemonState", "Ready");
+    } else {
+        readyAd.Assign("DaemonState", state);
+    }
+    classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY,master_sinful.c_str());
+    classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(DC_SET_READY, readyAd);
+    {
+        condor::ModuleLock ml;
+        if (! family_session.empty()) { ml.useFamilySession(family_session); }
+        daemon->sendBlockingMsg(msg.get());
+    }
+    if (msg->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED)
+    {
+        THROW_EX(HTCondorIOError, "Failed to deliver ready message.");
+    }
+}
 
 void send_alive(boost::python::object ad_obj=boost::python::object(), boost::python::object pid_obj=boost::python::object(), boost::python::object timeout_obj=boost::python::object())
 {
@@ -154,19 +220,17 @@ void send_alive(boost::python::object ad_obj=boost::python::object(), boost::pyt
     if (ad_obj.ptr() == Py_None)
     {
         char *inherit_var = getenv("CONDOR_INHERIT");
-        if (!inherit_var) {THROW_EX(RuntimeError, "No location specified and $CONDOR_INHERIT not in Unix environment.");}
-        std::string inherit(inherit_var);
-        boost::python::object inherit_obj(inherit);
-        boost::python::object inherit_split = inherit_obj.attr("split")();
-        if (py_len(inherit_split) < 2) {THROW_EX(RuntimeError, "$CONDOR_INHERIT Unix environment variable malformed.");}
-        addr = boost::python::extract<std::string>(inherit_split[1]);
+        if (!inherit_var) {THROW_EX(HTCondorValueError, "No location specified and CONDOR_INHERIT not in environment.");}
+        pid_t ppid;
+        extractParentSinful(inherit_var, ppid, addr);
+        if (addr.empty()) {THROW_EX(HTCondorValueError, "CONDOR_INHERIT environment variable malformed.");}
     }
     else
     {
         const ClassAdWrapper ad = boost::python::extract<ClassAdWrapper>(ad_obj);
         if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr))
         {
-            THROW_EX(ValueError, "Address not available in location ClassAd.");
+            THROW_EX(HTCondorValueError, "Address not available in location ClassAd.");
         }
     }
     int pid = getpid();
@@ -194,7 +258,7 @@ void send_alive(boost::python::object ad_obj=boost::python::object(), boost::pyt
     }
         if (msg->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED)
         {
-            THROW_EX(RuntimeError, "Failed to deliver keepalive message.");
+            THROW_EX(HTCondorIOError, "Failed to deliver keepalive message.");
         }
 }
 
@@ -385,7 +449,7 @@ export_dc_tool()
         :type dc: :class:`DaemonCommands`
         :param str target: An additional command to send to a daemon. Some commands
             require additional arguments; for example, sending ``DaemonOff`` to a
-            ``condor_master`` requires one to specify which subsystem to turn off.
+            *condor_master* requires one to specify which subsystem to turn off.
         )C0ND0R",
         boost::python::args("ad", "dc", "target")))
         ;
@@ -395,7 +459,7 @@ export_dc_tool()
         Send a keep alive message to an HTCondor daemon.
 
         This is used when the python process is run as a child daemon under
-        the ``condor_master``.
+        the *condor_master*.
 
         :param ad: A :class:`~classad.ClassAd` specifying the location of the daemon.
             This ad is typically found by using :meth:`Collector.locate`.
@@ -408,6 +472,15 @@ export_dc_tool()
             variable ``NOT_RESPONDING_TIMEOUT``.
         )C0ND0R",
         (boost::python::arg("ad") = boost::python::object(), boost::python::arg("pid")=boost::python::object(), boost::python::arg("timeout")=boost::python::object()))
+        ;
+
+    def("set_ready_state", set_ready_state,
+        R"C0ND0R(
+        Tell the *condor_master* that the daemon is in a state.
+
+        :param str state: Name of the state to set the daemon to.
+        )C0ND0R",
+        boost::python::arg("state")=std::string("Ready"))
         ;
 
     def("set_subsystem", set_subsystem,

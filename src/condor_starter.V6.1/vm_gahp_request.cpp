@@ -361,7 +361,7 @@ VMGahpRequest::setTimeout(int t)
 }
 
 int 
-VMGahpRequest::getTimeout() 
+VMGahpRequest::getTimeout() const 
 {
 	return m_timeout;
 }
@@ -373,7 +373,7 @@ VMGahpRequest::setNotificationTimerId(int tid)
 }
 
 int 
-VMGahpRequest::getNotificationTimerId() 
+VMGahpRequest::getNotificationTimerId() const 
 {
 	return m_user_timer_id;
 }
@@ -391,7 +391,7 @@ VMGahpRequest::setReqId(int id)
 } 
 
 int 
-VMGahpRequest::getReqId() 
+VMGahpRequest::getReqId() const 
 {
 	return m_pending_reqid;
 } 

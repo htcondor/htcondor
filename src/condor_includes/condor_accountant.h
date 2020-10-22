@@ -60,10 +60,12 @@ public:
 
   void Initialize(GroupEntry* group);  // Configuration
 
-  int GetResourcesUsed(const string& CustomerName); // get # of used resources (unweighted by SlotWeight)
+  int   GetResourcesUsed(const string& CustomerName); // get # of used resources (unweighted by SlotWeight)
   float GetWeightedResourcesUsed(const string& CustomerName);
   float GetPriority(const string& CustomerName); // get priority for a customer
-  void SetPriority(const string& CustomerName, float Priority); // set priority for a customer
+  int   GetCeiling(const string& CustomerName); // get Ceiling for a customer
+  void  SetPriority(const string& CustomerName, float Priority); // set priority for a customer
+  void  SetCeiling(const string& CustomerName, int Ceiling); // set Ceiling for a customer
 
   void SetAccumUsage(const string& CustomerName, float AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const string& CustomerName, int BeginTime); // set begin usage time for a customer
@@ -78,8 +80,9 @@ public:
   void AddMatch(const string& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const string& ResourceName); // remove a match
 
-  float GetSlotWeight(ClassAd *candidate);
+  float GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
+  void UpdateOnePriority(int T, int TimePassed, float AgingFactor, const char *key, ClassAd *ad); // Help function for above
 
   void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
@@ -104,7 +107,7 @@ public:
   GroupEntry* GetAssignedGroup(const string& CustomerName);
   GroupEntry* GetAssignedGroup(const string& CustomerName, bool& IsGroup);
 
-  bool UsingWeightedSlots();
+  bool UsingWeightedSlots() const;
 
   struct ci_less {
       bool operator()(const string& a, const string& b) const {

@@ -37,6 +37,7 @@
 #include "MyString.h"
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
+#include "dagman_classad.h"
 
 #include <queue>
 
@@ -127,16 +128,18 @@ class Dag {
 				"root" for the top-level DAG.
     */
 
-    Dag( /* const */ StringList &dagFiles,
+    Dag( /* const */ std::list<std::string> &dagFiles,
 		 const int maxJobsSubmitted,
-		 const int maxPreScripts, const int maxPostScripts, 
+		 const int maxPreScripts, const int maxPostScripts,
+		 const int maxHoldScripts,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
-		 bool isSplice = false, const MyString &spliceScope = "root" );
+		 bool isSplice = false, DCSchedd *schedd = NULL,
+		 const MyString &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -425,6 +428,12 @@ class Dag {
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
 
+	/** @return the number of nodes currently running a HOLD script.
+	 *          These nodes do not have any special status.
+	 */
+	inline int HoldRunNodeCount() const
+		{ return _holdRunNodeCount; }
+
 	/** @return the number of nodes currently in the status
 	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN (whether or not
 	 *			the script is actually running).
@@ -476,6 +485,17 @@ class Dag {
 			@return true iff the final node was actually started.
 		*/
 	bool StartFinalNode();
+
+		/** Start the DAG's provisioner node if there is one.
+			@return true iff the provisioner node was actually started.
+		*/
+	bool StartProvisionerNode();
+
+		/** Get the status of the provisioner by querying the schedd and
+		    checking its job ad.
+			@return status of the provisioner
+		*/
+	int GetProvisionerJobAdState();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -537,8 +557,13 @@ class Dag {
 
 	int PreScriptReaper( Job *job, int status );
 	int PostScriptReaper( Job *job, int status );
+	int HoldScriptReaper( Job *job );
 
 	void PrintReadyQ( debug_level_t level ) const;
+
+	bool _removeJobsAfterLimitChange = false;
+
+	std::map<std::string, SubmitHash*> SubmitDescriptions;
 
 #if 0
 	bool RemoveNode( const char *name, MyString &whynot );
@@ -557,12 +582,14 @@ class Dag {
 	// max number of PRE & POST scripts to run at once (0 means no limit)
     int _maxPreScripts;
     int _maxPostScripts;
+	int _maxHoldScripts;
 
+	char* GetDotFileName(void) { return _dot_file_name; }
 	void SetDotFileName(const char *dot_file_name);
 	void SetDotIncludeFileName(const char *include_file_name);
 	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
-	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
+	bool GetDotFileUpdate(void) const                       { return _update_dot_file; }
 	void DumpDotFile(void);
 
 	void SetNodeStatusFileName( const char *statusFileName,
@@ -650,35 +677,37 @@ class Dag {
 		*/
 	void CheckThrottleCats();
 
-	int MaxJobsSubmitted(void) { return _maxJobsSubmitted; }
+	int MaxJobsSubmitted(void) const { return _maxJobsSubmitted; }
 
-	bool UseDagDir(void) { return _useDagDir; }
+	bool UseDagDir(void) const { return _useDagDir; }
 
-	int MaxIdleJobProcs(void) { return _maxIdleJobProcs; }
-	int MaxPreScripts(void) { return _maxPreScripts; }
-	int MaxPostScripts(void) { return _maxPostScripts; }
+	int MaxIdleJobProcs(void) const { return _maxIdleJobProcs; }
+	int MaxPreScripts(void) const { return _maxPreScripts; }
+	int MaxPostScripts(void) const { return _maxPostScripts; }
+	int MaxHoldScripts(void) const { return _maxHoldScripts; }
 
 	void SetMaxIdleJobProcs(int maxIdle) { _maxIdleJobProcs = maxIdle; };
-	void SetMaxJobsSubmitted(int maxJobs) { _maxJobsSubmitted = maxJobs; };
+	void SetMaxJobsSubmitted(int newMax);
 	void SetMaxPreScripts(int maxPreScripts) { _maxPreScripts = maxPreScripts; };
 	void SetMaxPostScripts(int maxPostScripts) { _maxPostScripts = maxPostScripts; };
+	void SetMaxHoldScripts(int maxHoldScripts) { _maxHoldScripts = maxHoldScripts; };
 
-	bool RetrySubmitFirst(void) { return m_retrySubmitFirst; }
+	bool RetrySubmitFirst(void) const { return m_retrySubmitFirst; }
 
-	bool RetryNodeFirst(void) { return m_retryNodeFirst; }
+	bool RetryNodeFirst(void) const { return m_retryNodeFirst; }
 
 	// do not free this pointer
 	const char* CondorRmExe(void) { return _condorRmExe; }
 
 	const CondorID* DAGManJobId(void) { return _DAGManJobId; }
 
-	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
+	bool SubmitDepthFirst(void) const { return _submitDepthFirst; }
 
 	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
-	bool GenerateSubdagSubmits(void) { return _generateSubdagSubmits; }
+	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
-	StringList& DagFiles(void) { return _dagFiles; }
+	std::list<std::string>& DagFiles(void) { return _dagFiles; }
 
 	/** Determine whether a job is a NOOP job based on the HTCondor ID.
 		@param the HTCondor ID of the job
@@ -802,19 +831,9 @@ class Dag {
 	*/
 	bool IsHalted() const { return _dagIsHalted; }
 
-	enum dag_status {
-		DAG_STATUS_OK = 0,
-		DAG_STATUS_ERROR = 1, // Error not enumerated below
-		DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
-		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
-		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
-		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
-		DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
-	};
+	DagStatus _dagStatus;
 
-	dag_status _dagStatus;
-
-	// WARNING!  dag_status and dag_status_names just be kept in sync!
+	// WARNING!  DagStatus and _dag_status_names just be kept in sync!
 	static const char *_dag_status_names[];
 
 	const char *GetStatusName() const {
@@ -831,7 +850,12 @@ class Dag {
 		running (or has been run).
 		@return true iff the final node is running or has been run
 	*/
-	inline bool FinalNodeRun() { return _finalNodeRun; }
+	inline bool FinalNodeRun() const { return _finalNodeRun; }
+
+	/** Determine whether this DAG has a provisioner node.
+		@return true iff the DAG has a provisioner node.
+	*/
+	inline bool HasProvisionerNode() const { return _provisioner_node != NULL; }
 
 	/** Determine whether the DAG is in recovery mode.
 		@return true iff the DAG is in recovery mode
@@ -859,7 +883,7 @@ class Dag {
 	HashTable<MyString, Dag*> _splices;
 
 	// A reference to something the dagman passes into the constructor
-	StringList& _dagFiles;
+	std::list<std::string>& _dagFiles;
 
 	// Internal instance of a DagmanUtils object
 	DagmanUtils _dagmanUtils;
@@ -867,7 +891,7 @@ class Dag {
 	/** Print a numbered list of the DAG files.
 	    @param The list of DAG files being run.
 	*/
-	void PrintDagFiles( /* const */ StringList &dagFiles );
+	void PrintDagFiles( /* const */ std::list<std::string> &dagFiles );
 
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
@@ -890,6 +914,14 @@ class Dag {
     */
 	bool RunPostScript( Job *job, bool ignore_status, int status,
 				bool incrementRunCount = true );
+
+	/* A helper function to run the HOLD script, if one exists.
+           @param The job owning the POST script
+           @param Whether to increment the run count when we run the
+				script
+			@return true if successful, false otherwise
+    */
+	bool RunHoldScript( Job *job, bool incrementRunCount = true );
 
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -978,7 +1010,7 @@ class Dag {
 		// earlier in the submit command's stdout (which we stashed in
 		// the Job object)
 
-	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
+	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const;
 
 		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
@@ -1056,6 +1088,12 @@ private:
 		// for convenience.
 	Job* _final_job;
 
+	Job* _provisioner_node = NULL;
+
+	ProvisionerClassad* _provisionerClassad = NULL;
+
+	bool _provisioner_ready = false;
+
 	HashTable<MyString, Job *>		_nodeNameHash;
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;
@@ -1089,6 +1127,9 @@ private:
 		// means unlimited.
     int _maxIdleJobProcs;
 
+		// Policy for how we respond to DAG edits.
+	std::string _editPolicy;
+
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts
 		// a node at the back of the ready queue.  (Default is true.)
@@ -1115,12 +1156,17 @@ private:
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
+	ScriptQ* _holdScriptQ;
 
 		// Number of nodes currently in status Job::STATUS_PRERUN.
 	int		_preRunNodeCount;
 
 		// Number of nodes currently in status Job::STATUS_POSTRUN.
 	int		_postRunNodeCount;
+
+		// Number of nodes currently running HOLD scripts.
+		// We do not have a special status for these nodes.
+	int		_holdRunNodeCount;
 	
 	int DFS_ORDER;
 	int _graph_width;
@@ -1342,6 +1388,9 @@ private:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
 	mutable ListIterator<Job> *_allNodesIt;
+
+		// The schedd we need to talk to to update the classad.
+	DCSchedd *_schedd;
 };
 
 #endif /* #ifndef DAG_H */

@@ -129,7 +129,7 @@ class SecEnvRequest:
 
     def save_state(self):
         if self.has_saved_state():
-            raise RuntimeError,"There is already a saved state! Restore that first."
+            raise RuntimeError("There is already a saved state! Restore that first.")
         filter={}
         for c in self.requests.keys():
             filter[c]=self.requests[c].keys()
@@ -187,10 +187,10 @@ class EnvProtoState(SecEnvState):
             # validate filter
             for c in filter.keys():
                 if not (c in CONDOR_CONTEXT_LIST):
-                    raise ValueError, "Invalid contex '%s'. Must be one of %s"%(c,CONDOR_CONTEXT_LIST)
+                    raise ValueError( "Invalid contex '%s'. Must be one of %s"%(c,CONDOR_CONTEXT_LIST))
                 for f in filter[c]:
                     if not (f in CONDOR_PROTO_FEATURE_LIST):
-                        raise ValueError, "Invalid feature '%s'. Must be one of %s"%(f,CONDOR_PROTO_FEATURE_LIST)
+                        raise ValueError( "Invalid feature '%s'. Must be one of %s"%(f,CONDOR_PROTO_FEATURE_LIST))
         else:
             # do not filter anything out... add all
             filter={}
@@ -209,18 +209,18 @@ class EnvProtoState(SecEnvState):
 class ProtoRequest(SecEnvRequest):
     def set(self,context,feature,value): # if value is None, remove the request
         if not (context in CONDOR_CONTEXT_LIST):
-            raise ValueError, "Invalid security context '%s'."%context
+            raise ValueError( "Invalid security context '%s'."%context)
         if not (feature in CONDOR_PROTO_FEATURE_LIST):
-            raise ValueError, "Invalid authentication feature '%s'."%feature
+            raise ValueError( "Invalid authentication feature '%s'."%feature)
         if not (value in (CONDOR_PROTO_VALUE_LIST+(UNSET_VALUE,))):
-            raise ValueError, "Invalid value type '%s'."%value
+            raise ValueError( "Invalid value type '%s'."%value)
         SecEnvRequest.set(self,context,feature,value)
 
     def get(self,context,feature):
         if not (context in CONDOR_CONTEXT_LIST):
-            raise ValueError, "Invalid security context '%s'."%context
+            raise ValueError( "Invalid security context '%s'."%context)
         if not (feature in CONDOR_PROTO_FEATURE_LIST):
-            raise ValueError, "Invalid authentication feature '%s'."%feature
+            raise ValueError( "Invalid authentication feature '%s'."%feature)
         return SecEnvRequest.get(self,context,feature)
 
 ########################################################################
@@ -247,7 +247,7 @@ class GSIRequest(ProtoRequest):
                 proto_requests[context]={}
             if proto_requests[context].has_key('AUTHENTICATION'):
                 if not ('GSI' in proto_requests[context]['AUTHENTICATION'].split(',')):
-                    raise ValueError,"Must specify GSI as one of the options"
+                    raise ValueError("Must specify GSI as one of the options")
             else:
                 proto_requests[context]['AUTHENTICATION']=auth_str
         
@@ -256,7 +256,7 @@ class GSIRequest(ProtoRequest):
 
         if x509_proxy is None:
             if not os.environ.has_key('X509_USER_PROXY'):
-                raise RuntimeError, "x509_proxy not provided and env(X509_USER_PROXY) undefined"
+                raise RuntimeError( "x509_proxy not provided and env(X509_USER_PROXY) undefined")
             x509_proxy=os.environ['X509_USER_PROXY']
 
         # Here I should probably check if the proxy is valid
@@ -267,7 +267,7 @@ class GSIRequest(ProtoRequest):
     ##############################################
     def save_state(self):
         if self.has_saved_state():
-            raise RuntimeError,"There is already a saved state! Restore that first."
+            raise RuntimeError("There is already a saved state! Restore that first.")
 
         if os.environ.has_key('X509_USER_PROXY'):
             self.x509_proxy_saved_state=os.environ['X509_USER_PROXY']

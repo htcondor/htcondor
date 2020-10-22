@@ -1,0 +1,143 @@
+# This is the service that names the ip address of the collector
+# All pods get an environment variable with this ip in it
+apiVersion: v1
+kind: Service
+metadata:
+  name: condor
+spec:
+  selector:
+    htcondor-role: cm
+  ports:
+    - protocol: TCP
+      port: 9618
+      targetPort: 9618
+---
+# This is pod yaml to desribe the single htcondor central manager
+apiVersion: v1
+kind: Pod
+metadata:
+ name: cm
+ labels:
+   htcondor-role: cm
+spec:
+ restartPolicy: Never
+ containers:
+  - name: cm
+    image: htcondor/cm:8.9.8-el7
+    imagePullPolicy: Always
+    resources:
+      limits:
+        cpu: "1"
+        memory: "10G"
+        ephemeral-storage: "10G"
+      requests:
+        cpu: "1"
+        memory: "10G"
+        ephemeral-storage: "10G"
+    volumeMounts:
+      - name: htcondor-pool-password
+        mountPath: /root/secrets
+        readOnly: true
+ volumes:
+  - name: htcondor-pool-password
+    secret:
+      secretName: htcondor-pool-password
+      items:
+      - key: htcondor-pool-password
+        path: pool_password
+---
+apiVersion: v1
+kind: Pod
+metadata:
+ name: submit2
+ labels:
+   htcondor-role: submit
+spec:
+ restartPolicy: Never
+ containers:
+  - name: submit-container
+    image: htcondor/submit:8.9.8-el7
+    imagePullPolicy: Always
+    resources:
+      limits:
+        cpu: "1"
+        memory: "10G"
+        ephemeral-storage: "10G"
+      requests:
+        cpu: "1"
+        memory: "10G"
+        ephemeral-storage: "10G"
+    volumeMounts:
+      - name: htcondor-pool-password
+        mountPath: /root/secrets
+        readOnly: true
+ volumes:
+  - name: htcondor-pool-password
+    secret:
+      secretName: htcondor-pool-password
+      items:
+      - key: htcondor-pool-password
+        path: pool_password
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workers-deployment
+  labels:
+    app: workers
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: workers
+  template:
+    metadata:
+      labels:
+        app: workers
+    spec:
+            containers:
+             - name: execute
+               image: htcondor/execute:8.9.8-el7
+               imagePullPolicy: Always
+               resources:
+                 limits:
+                   cpu: "1"
+                   memory: "10G"
+                   ephemeral-storage: "10G"
+                 requests:
+                   cpu: "1"
+                   memory: "10G"
+                   ephemeral-storage: "10G"
+               volumeMounts:
+                 - name: htcondor-pool-password
+                   mountPath: /root/secrets
+                   readOnly: true
+                 - name: docker-shared
+                   mountPath: /shared
+               env:
+                 - name: DOCKER_HOST
+                   value: unix:///shared/docker.sock
+             - name: dind-daemon
+               image: docker:dind
+               # 64 is the condor group
+               args: ["-G", "64"]
+               resources:
+                 limits:
+                   memory: "4G"
+               securityContext:
+                 privileged: true
+               env:
+                 - name: DOCKER_HOST
+                   value: unix:///shared/docker.sock
+               volumeMounts:
+                 - name: docker-shared
+                   mountPath: /shared
+            volumes:
+             - name: docker-shared
+               emptyDir: {}
+             - name: htcondor-pool-password
+               secret:
+                 secretName: htcondor-pool-password
+                 items:
+                 - key: htcondor-pool-password
+                   path: pool_password

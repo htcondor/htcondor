@@ -37,17 +37,17 @@ template <> void stats_entry_recent<double>::AdvanceBy(int cSlots) { this->Advan
 //
 template <class T>
 void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str;
+   std::string str;
       
-   str += this->value;
+   str += std::to_string(this->value);
    str += " ";
-   str += this->recent;
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   str += std::to_string(this->recent);
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
-         str += this->buf.pbuf[ix];
+         str += std::to_string(this->buf.pbuf[ix]);
          }
       str += "]";
       }
@@ -61,16 +61,16 @@ void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int f
 
 template <>
 void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str;
-   str += IntToStr( (long)this->value );
+   std::string str;
+   str += std::to_string( (long)this->value );
    str += " ";
-   str += IntToStr( (long)this->recent );
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   str += std::to_string( (long)this->recent );
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
-         str += IntToStr( (long)this->buf.pbuf[ix] );
+         str += std::to_string( (long)this->buf.pbuf[ix] );
          }
       str += "]";
       }
@@ -84,13 +84,13 @@ void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr,
 
 template <>
 void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str;
-   str.formatstr_cat("%g %g", this->value, this->recent);
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   std::string str;
+   formatstr_cat(str, "%g %g", this->value, this->recent);
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
-         str.formatstr_cat(!ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
+         formatstr_cat(str, !ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
          }
       str += "]";
       }
@@ -104,22 +104,22 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
 
 template <class T>
 void stats_entry_recent_histogram<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   MyString str("(");
+   std::string str("(");
    this->value.AppendToString(str);
    str += ") (";
    this->recent.AppendToString(str);
-   str.formatstr_cat(") {h:%d c:%d m:%d a:%d}", 
+   formatstr_cat(str, ") {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          // Note: this is tediously broken up into multiple lines because clang produces a format string
          // warning otherwise.
          if (!ix) {
-            str.formatstr_cat("[(");
+            formatstr_cat(str, "[(");
          } else if (ix == this->buf.cMax) {
-            str.formatstr_cat(")|(");
+            formatstr_cat(str, ")|(");
          } else {
-            str.formatstr_cat(") (");
+            formatstr_cat(str, ") (");
             }
          this->buf.pbuf[ix].AppendToString(str);
          }
@@ -357,28 +357,28 @@ void stats_entry_probe<T>::Publish(ClassAd & ad, const char * pattr, int flags) 
    // as accumulated runtime and the count of samples has no suffix.  This makes them interchangeable
    // with stats_recent_counter_timer probes.
    if (flags & IF_RT_SUM) {
-      ad.Assign(base.c_str(), (long long)this->value);
+      ad.Assign(base, (long long)this->value);
       base += "Runtime";
-      ad.Assign(base.c_str(), this->Sum);
+      ad.Assign(base, this->Sum);
    } else {
       // the default output for Miron probes is to use a std suffix for each bit of info.
       attr = base; attr += "Count";
-      ad.Assign(attr.c_str(), this->Count());
+      ad.Assign(attr, this->Count());
       attr = base; attr += "Sum";
-      ad.Assign(attr.c_str(), this->Sum);
+      ad.Assign(attr, this->Sum);
    }
    if (this->Count() > 0 || ((flags & IF_PUBLEVEL) == IF_HYPERPUB)) {
       attr = base; attr += "Avg";
-      ad.Assign(attr.c_str(), this->Avg());
+      ad.Assign(attr, this->Avg());
 
       attr = base; attr += "Min";
-      ad.Assign(attr.c_str(), this->Min);
+      ad.Assign(attr, this->Min);
 
       attr = base; attr += "Max";
-      ad.Assign(attr.c_str(), this->Max);
+      ad.Assign(attr, this->Max);
 
       attr = base; attr += "Std";
-      ad.Assign(attr.c_str(), this->Std());
+      ad.Assign(attr, this->Std());
    }
 }
 
@@ -615,19 +615,19 @@ template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pa
 template <>
 void stats_entry_recent<Probe>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const
 {
-   MyString str;
+   std::string str;
    MyString var1;
    MyString var2;
    ProbeToStringDebug(var1, this->value);
    ProbeToStringDebug(var2, this->recent);
 
-   str.formatstr_cat("(%s) (%s)", var1.Value(), var2.Value());
-   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
+   formatstr_cat(str, "(%s) (%s)", var1.Value(), var2.Value());
+   formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          ProbeToStringDebug(var1, this->buf.pbuf[ix]);
-         str.formatstr_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
+         formatstr_cat(str, !ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
          }
       str += "]";
       }

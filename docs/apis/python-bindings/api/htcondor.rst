@@ -41,14 +41,9 @@ Interacting with Schedulers
    .. automethod:: submit
    .. automethod:: submitMany
    .. automethod:: spool
+   .. automethod:: retrieve
    .. automethod:: refreshGSIProxy
-   .. automethod:: negotiate
    .. automethod:: reschedule
-
-.. autoclass:: ScheddNegotiate
-
-   .. automethod:: sendClaim
-   .. automethod:: disconnect
 
 .. autoclass:: JobAction
 
@@ -71,6 +66,7 @@ Interacting with Schedulers
 
 .. autoclass:: BulkQueryIterator
 
+.. autoclass:: JobStatus
 
 Submitting Jobs
 ---------------
@@ -125,23 +121,30 @@ Managing Starters and Claims
 
 .. autoclass:: DrainTypes
 
-.. autoclass:: Claim
-
-   .. automethod:: requestCOD
-   .. automethod:: activate
-   .. automethod:: release
-   .. automethod:: suspend
-   .. automethod:: resume
-   .. automethod:: renew
-   .. automethod:: deactivate
-   .. automethod:: delegateGSIProxy
-
-
 .. autoclass:: VacateTypes
 
 
 Security Management
 -------------------
+
+.. autoclass:: Credd
+
+    .. automethod:: add_password
+    .. automethod:: delete_password
+    .. automethod:: query_password
+    .. automethod:: add_user_cred
+    .. automethod:: delete_user_cred
+    .. automethod:: query_user_cred
+    .. automethod:: add_user_service_cred
+    .. automethod:: delete_user_service_cred
+    .. automethod:: query_user_service_cred
+    .. automethod:: check_user_service_creds
+
+.. autoclass:: CredTypes
+
+.. autoclass:: CredCheck
+
+.. autoclass:: CredStatus
 
 .. autoclass:: SecMan
 
@@ -194,7 +197,6 @@ HTCondor Configuration
 
    .. automethod:: refresh
 
-
 .. autofunction:: platform
 .. autofunction:: version
 
@@ -220,9 +222,23 @@ Esoteric Functionality
 .. autofunction:: set_subsystem
 .. autoclass:: SubsystemType
 
-.. .. autofunction:: lock
-.. .. autoclass:: FileLock
-.. .. autoclass:: LockType
+
+Exceptions
+----------
+
+For backwards-compatibility, the exceptions in this module inherit
+from the built-in exceptions raised in earlier (pre-v8.9.9) versions.
+
+.. autoclass:: HTCondorException
+
+.. autoclass:: HTCondorEnumError
+.. autoclass:: HTCondorInternalError
+.. autoclass:: HTCondorIOError
+.. autoclass:: HTCondorLocateError
+.. autoclass:: HTCondorReplyError
+.. autoclass:: HTCondorTypeError
+.. autoclass:: HTCondorValueError
+
 
 .. _python-bindings-thread-safety:
 
@@ -242,3 +258,4 @@ be allowed to proceed normally.
 
 This locking may cause unexpected slowdowns when using ``htcondor`` from
 multiple threads simultaneously.
+

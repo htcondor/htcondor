@@ -781,7 +781,7 @@ ClassAd * JobAggregationResults::next()
 		StringTokenIterator iter(it->first, 100, "\n");
 		const char * line;
 		while ((line = iter.next())) {
-			ad.Insert(line);
+			(void) ad.Insert(line);
 		}
 		if (this->is_def_autocluster) {
 			ad.Assign(ATTR_AUTO_CLUSTER_ID,it->second);

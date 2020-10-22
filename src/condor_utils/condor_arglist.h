@@ -164,7 +164,7 @@ class ArgList {
 	bool AppendArgsV1or2Raw(char const *args,MyString *error_msg);
 
 	bool AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg);
-	bool InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_string);
+	bool InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_string) const;
 
 		// Returns true if specified condor version requires V1 args syntax.
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
@@ -192,12 +192,12 @@ class ArgList {
 	bool GetArgsStringV2Raw(MyString *result,MyString *error_msg,int start_arg=0) const;
 
 		// Create V2Quoted args string (i.e. enclosed in double-quotes).
-	bool GetArgsStringV2Quoted(MyString *result,MyString *error_msg);
+	bool GetArgsStringV2Quoted(MyString *result,MyString *error_msg) const;
 
 		// Create V1Wacked args string if possible; o.w. V2Quoted.  In
 		// other words, if possible, produce a string that is
 		// backward-compatible with older versions of condor_submit.
-	bool GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg);
+	bool GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) const;
 
 		// Create a V1 args string if possible.  o.w. V2, with
 		// necessary markings to make it correctly recognized as V2
@@ -218,7 +218,7 @@ class ArgList {
 		// spaces.
 	bool GetArgsStringSystem(MyString *result,int skip_args,MyString *error_msg) const;
 
-	bool InputWasV1() {return input_was_unknown_platform_v1;}
+	bool InputWasV1() const {return input_was_unknown_platform_v1;}
 
 		// Return true if the string is a V2Quoted string.  Such
 		// strings begin and end with double-quotes, since that is not

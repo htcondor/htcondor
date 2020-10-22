@@ -12,7 +12,7 @@ typedef void* HANDLE;
 typedef void* HLOCAL;
 typedef int   BOOL;
 typedef unsigned int UINT;
-typedef struct _FILETIME { unsigned __int64 DateTime; } FILETIME; //
+typedef struct _FILETIME { unsigned __int64; DateTime; } FILETIME; //
 struct _qword {
    unsigned int lo; unsigned int hi;
    _qword(int l) : lo(l), hi((l < 0) ? -1 : 0) {}

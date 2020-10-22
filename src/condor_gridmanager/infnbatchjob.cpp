@@ -287,7 +287,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
-														  gahp_args.GetArg(0) );
+		gahp_args.GetArg(0), args_str.c_str() );
 	myResource->RegisterJob( this );
 	if ( remoteJobId ) {
 		myResource->AlreadySubmitted( this );
@@ -1378,6 +1378,10 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		"StageCmd",
 		"BatchProject",
 		"BatchRuntime",
+		"GPUNumber",
+		"GPUMode",
+		"GPUModel",
+		"MICNumber",
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;
@@ -1463,6 +1467,12 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
 	if ( !expr.empty() ) {
 		submit_ad->Assign( "Queue", expr );
+	}
+
+	int gpus = 0;
+	jobAd->LookupInteger(ATTR_REQUEST_GPUS, gpus);
+	if ( gpus > 0 ) {
+		submit_ad->Assign("GPUNumber", gpus);
 	}
 
 	GetJobExecutable( jobAd, expr );
@@ -1749,6 +1759,11 @@ void INFNBatchJob::CreateSandboxId()
 	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
 	std::string job_id;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+	size_t pos = 0;
+	while ( (pos = job_id.find_first_of("@#", pos)) != std::string::npos ) {
+		job_id[pos] = '_';
+		pos++;
+	}
 
 	std::string unique_id;
 	formatstr( unique_id, "%s_%s", pool_name, job_id.c_str() );

@@ -182,7 +182,7 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char *
 
 	// We don't filter out the (raw) Uptime* metrics here, because the
 	// starter needs them to compute the (per-job) *Usage metrics.  Instead,
-	// we filter them out in Resource::do_update().
+	// we filter them out in Resource::process_update_ad().
 	StartdNamedClassAd::Merge( merged_ad, & accumulator );
 	return 0;
 }

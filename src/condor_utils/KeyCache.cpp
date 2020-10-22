@@ -89,7 +89,7 @@ ClassAd* KeyCacheEntry::policy() {
 	return _policy;
 }
 
-int KeyCacheEntry::expiration() {
+int KeyCacheEntry::expiration() const {
 		// Return the sooner of the two expiration timestamps.
 		// A 0 timestamp indicates no expiration.
 	if( _expiration ) {
@@ -103,7 +103,7 @@ int KeyCacheEntry::expiration() {
 	return _lease_expiration;
 }
 
-char const *KeyCacheEntry::expirationType() {
+char const *KeyCacheEntry::expirationType() const {
 	if( _lease_expiration && (_lease_expiration < _expiration || !_expiration) ) {
 		return "lease";
 	}

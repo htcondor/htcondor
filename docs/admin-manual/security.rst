@@ -90,12 +90,12 @@ are no unprivileged users logged in to the submit hosts:
    a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.168.0.0/24``
    for the next hour (3600 seconds), run the following command from the central manager:
 
-   ::
+   .. code-block:: console
 
-        condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
+        $ condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
 
-3. Within the auto-approval rule's lifetime, start the *condor_schedd* and *condor_startd*
-   hosts inside the appropriate network.  The token requests for these daemons
+3. Within the auto-approval rule's lifetime, start the submit and execute
+   hosts inside the appropriate network.  The token requests for the corresponding daemons (the *condor_master*, *condor_startd*, and *condor_schedd*)
    will be automatically approved and installed into ``/etc/condor/tokens.d/``;
    this will authorize the daemon to advertise to the collector.  By default,
    auto-generated tokens do not have an expiration.
@@ -399,14 +399,14 @@ Configuration
 The configuration macro names that determine what features will be used
 during client-daemon communication follow the pattern:
 
-::
+.. code-block:: text
 
         SEC_<context>_<feature>
 
 The <feature> portion of the macro name determines which security
 feature's policy is being set. <feature> may be any one of
 
-::
+.. code-block:: text
 
         AUTHENTICATION
         ENCRYPTION
@@ -417,7 +417,7 @@ The <context> component of the security policy macros can be used to
 craft a fine-grained security policy based on the type of communication
 taking place. <context> may be any one of
 
-::
+.. code-block:: text
 
         CLIENT
         READ
@@ -435,7 +435,7 @@ taking place. <context> may be any one of
 Any of these constructed configuration macros may be set to any of the
 following values:
 
-::
+.. code-block:: text
 
         REQUIRED
         PREFERRED
@@ -448,7 +448,7 @@ desired security features in order to set a policy.
 As an example, consider Frida the scientist. Frida wants to avoid
 authentication when possible. She sets
 
-::
+.. code-block:: condor-config
 
         SEC_DEFAULT_AUTHENTICATION = OPTIONAL
 
@@ -456,7 +456,7 @@ The machine running the *condor_schedd* to which Frida will remotely
 submit jobs, however, is operated by a security-conscious system
 administrator who dutifully sets:
 
-::
+.. code-block:: condor-config
 
         SEC_DEFAULT_AUTHENTICATION = REQUIRED
 
@@ -537,7 +537,7 @@ to have all incoming administrative requests require authentication.
 Inquiries on pool status may not be so restrictive. To implement this,
 the administrator configures the policy:
 
-::
+.. code-block:: condor-config
 
     SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED
     SEC_READ_AUTHENTICATION          = OPTIONAL
@@ -559,7 +559,7 @@ security negotiation.
 The configuration macros that determine the methods to use for
 authentication and/or encryption are
 
-::
+.. code-block:: text
 
     SEC_<context>_AUTHENTICATION_METHODS
     SEC_<context>_CRYPTO_METHODS
@@ -580,7 +580,7 @@ whether authentication is to occur:
 :index:`SEC_DEFAULT_AUTHENTICATION`
 :index:`SEC_CLIENT_AUTHENTICATION`
 
-::
+.. code-block:: text
 
         SEC_DEFAULT_AUTHENTICATION
         SEC_CLIENT_AUTHENTICATION
@@ -599,7 +599,7 @@ level: :index:`SEC_DEFAULT_AUTHENTICATION`
 :index:`SEC_ADVERTISE_STARTD_AUTHENTICATION`
 :index:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION`
 
-::
+.. code-block:: text
 
         SEC_DEFAULT_AUTHENTICATION
         SEC_READ_AUTHENTICATION
@@ -616,7 +616,7 @@ level: :index:`SEC_DEFAULT_AUTHENTICATION`
 As an example, the macro defined in the configuration file for a daemon
 as
 
-::
+.. code-block:: condor-config
 
     SEC_WRITE_AUTHENTICATION = REQUIRED
 
@@ -624,7 +624,7 @@ signifies that the daemon must authenticate the client for any
 communication that requires the ``WRITE`` access level. If the daemon's
 configuration contains
 
-::
+.. code-block:: condor-config
 
     SEC_DEFAULT_AUTHENTICATION = REQUIRED
 
@@ -640,7 +640,7 @@ list of acceptable methods may be provided by the client, using the
 macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
 :index:`SEC_CLIENT_AUTHENTICATION_METHODS`
 
-::
+.. code-block:: text
 
         SEC_DEFAULT_AUTHENTICATION_METHODS
         SEC_CLIENT_AUTHENTICATION_METHODS
@@ -658,7 +658,7 @@ macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
 :index:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS`
 :index:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS`
 
-::
+.. code-block:: text
 
         SEC_DEFAULT_AUTHENTICATION_METHODS
         SEC_READ_AUTHENTICATION_METHODS
@@ -679,7 +679,7 @@ list indicates the highest preference. As not all of the authentication
 methods work on Windows platforms, which ones do not work on Windows are
 indicated in the following list of defined values:
 
-::
+.. code-block:: text
 
         GSI       (not available on Windows platforms)
         SSL
@@ -687,7 +687,7 @@ indicated in the following list of defined values:
         PASSWORD
         FS        (not available on Windows platforms)
         FS_REMOTE (not available on Windows platforms)
-        TOKEN
+        IDTOKENS
         SCITOKENS
         NTSSPI
         MUNGE
@@ -696,13 +696,13 @@ indicated in the following list of defined values:
 
 For example, a client may be configured with:
 
-::
+.. code-block:: condor-config
 
     SEC_CLIENT_AUTHENTICATION_METHODS = FS, GSI
 
 and a daemon the client is trying to contact with:
 
-::
+.. code-block:: condor-config
 
     SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
 
@@ -713,7 +713,7 @@ they will be tried in order until one succeeds.
 
 As another example, the macro
 
-::
+.. code-block:: condor-config
 
     SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
 
@@ -742,8 +742,8 @@ value of OPTIONAL. Authentication will be required for any operation
 which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
-Unix machine is FS, TOKEN, KERBEROS, GSI. This default value for a Windows
-machine is NTSSPI, TOKEN, KERBEROS, GSI.
+Unix machine is FS, IDTOKENS, KERBEROS, GSI. This default value for a Windows
+machine is NTSSPI, IDTOKENS, KERBEROS, GSI.
 
 GSI Authentication
 ''''''''''''''''''
@@ -802,7 +802,7 @@ locations.
        follows in its construction of the following configuration
        variables:
 
-       ::
+       .. code-block:: condor-config
 
            GSI_DAEMON_CERT           = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
            GSI_DAEMON_KEY            = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
@@ -840,7 +840,7 @@ locations.
     This is done with ``GSI_DAEMON_NAME``. This name is specified with
     the following format
 
-    ::
+    .. code-block:: condor-config
 
         GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
 
@@ -865,17 +865,16 @@ locations.
     entry in an X.509 map file. Entries must be on a single line; this
     example is broken onto two lines for formatting reasons.
 
-    ::
+    .. code-block:: text
 
-        "/C=US/O=Globus/O=University of Wisconsin/
-        OU=Computer Sciences Department/CN=Alice Smith" asmith
+        "/C=US/O=Globus/O=University of Wisconsin/OU=Computer Sciences Department/CN=Alice Smith" asmith
 
     HTCondor finds the map file in one of three ways. If the
     configuration variable ``GRIDMAP`` :index:`GRIDMAP` is
     defined, it gives the full path name to the map file. When not
     defined, HTCondor looks for the map file in
 
-    ::
+    .. code-block:: console
 
         $(GSI_DAEMON_DIRECTORY)/grid-mapfile
 
@@ -883,7 +882,7 @@ locations.
     not defined, then the third place HTCondor looks for the map file is
     given by
 
-    ::
+    .. code-block:: text
 
         /etc/grid-security/grid-mapfile
 
@@ -898,10 +897,9 @@ locations.
        program, which will place the proxy in the ``/tmp`` directory
        with the file name being determined by the format:
 
-       ::
+       .. code-block:: text
 
              /tmp/x509up_uXXXX
-
 
        The specific file name is given by substituting the XXXX
        characters with the UID of the user. Note that when a valid proxy
@@ -922,7 +920,7 @@ locations.
        certificate information, HTCondor uses a default directory for
        the user. This directory is given by
 
-       ::
+       .. code-block:: text
 
            $(HOME)/.globus
 
@@ -931,7 +929,7 @@ locations.
     enable and require GSI authentication, along with a minimal set of
     other variables to make it work.
 
-    ::
+    .. code-block:: condor-config
 
         SEC_DEFAULT_AUTHENTICATION = REQUIRED
         SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
@@ -965,9 +963,9 @@ locations.
     names to user names within HTCondor. For example, it might look like
     this:
 
-    ::
+    .. code-block:: condor-config
 
-        "/C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu" condor@cs.wisc.edu
+        GRIDMAP = "/C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu" condor@cs.wisc.edu
 
     Additional mappings would be needed for the users who submit jobs to
     the pool or who issue administrative commands.
@@ -1033,19 +1031,19 @@ the configuration variable ``KERBEROS_MAP_FILE``
 administrator-maintained Kerberos-specific map file. The configuration
 syntax is
 
-::
+.. code-block:: condor-config
 
     KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
 
 Lines within this map file have the syntax
 
-::
+.. code-block:: condor-config
 
        KERB.REALM = UID.domain.name
 
 Here are two lines from a map file to use as an example:
 
-::
+.. code-block:: condor-config
 
        CS.WISC.EDU   = cs.wisc.edu
        ENGR.WISC.EDU = ee.wisc.edu
@@ -1058,21 +1056,25 @@ the HTCondor UID domain.
 
 The configuration variable ``KERBEROS_SERVER_PRINCIPAL``
 :index:`KERBEROS_SERVER_PRINCIPAL` defines the name of a Kerberos
-principal. If ``KERBEROS_SERVER_PRINCIPAL`` is not defined, then the
-default value used is host. A principal specifies a unique name to which
-a set of credentials may be assigned.
+principal, to override the default ``host/<hostname>@<realm>``.
+A principal specifies a unique name to which a set of
+credentials may be assigned.
 
-HTCondor takes the specified (or default) principal and appends a slash
-character, the host name, an '@' (at sign character), and the Kerberos
-realm. As an example, the configuration
+The configuration variable ``KERBEROS_SERVER_SERVICE``
+:index:`KERBEROS_SERVER_SERVICE` defines a Kerberos service to override
+the default ``host``. HTCondor prefixes this to ``/<hostname>@<realm>``
+to obtain the default Kerberos principal.  Configuration variable
+``KERBEROS_SERVER_PRINCIPAL`` overrides ``KERBEROS_SERVER_SERVICE``.
 
-::
+As an example, the configuration
 
-    KERBEROS_SERVER_PRINCIPAL = condor-daemon
+.. code-block:: condor-config
+
+    KERBEROS_SERVER_SERVICE = condor-daemon
 
 results in HTCondor's use of
 
-::
+.. code-block:: text
 
     condor-daemon/the.host.name@YOUR.KERB.REALM
 
@@ -1082,7 +1084,7 @@ Here is an example of configuration settings that use Kerberos for
 authentication and require authentication of all communications of the
 write or administrator access level.
 
-::
+.. code-block:: condor-config
 
     SEC_WRITE_AUTHENTICATION                 = REQUIRED
     SEC_WRITE_AUTHENTICATION_METHODS         = KERBEROS
@@ -1116,16 +1118,16 @@ used for the pool password (see the
 Under Unix, the password file can be generated by using the following
 command to write directly to the password file:
 
-::
+.. code-block:: console
 
-    condor_store_cred -f /path/to/password/file
+    $ condor_store_cred -f /path/to/password/file
 
 Under Windows (or under Unix), storing the pool password is done with
 the **-c** option when using to *condor_store_cred* **add**. Running
 
-::
+.. code-block:: console
 
-    condor_store_cred -c add
+    $ condor_store_cred -c add
 
 prompts for the pool password and store it on the local machine, making
 it available for daemons to use in authentication. The *condor_master*
@@ -1136,7 +1138,7 @@ CONFIG-level access. For example, if the pool password should only be
 set locally, and only by root, the following would be placed in the
 global configuration file.
 
-::
+.. code-block:: condor-config
 
     ALLOW_CONFIG = root@mydomain/$(IP_ADDRESS)
 
@@ -1148,15 +1150,15 @@ ALLOW_CONFIG can be set to allow the HTCondor administrator (who in
 this example has an account condor common to all machines in the pool)
 to set the password from the central manager as follows.
 
-::
+.. code-block:: condor-config
 
     ALLOW_CONFIG = condor@mydomain/$(CONDOR_HOST)
 
 The HTCondor administrator then executes
 
-::
+.. code-block:: console
 
-    condor_store_cred -c -n host.mydomain add
+    $ condor_store_cred -c -n host.mydomain add
 
 from the central manager to store the password to a given machine. Since
 the condor account exists on both the central manager and host.mydomain,
@@ -1172,7 +1174,7 @@ from the daemon's configuration. The ALLOW_DAEMON and ALLOW_NEGOTIATOR
 configuration variables for authorization should restrict access using
 this name. For example,
 
-::
+.. code-block:: condor-config
 
     ALLOW_DAEMON = condor_pool@mydomain/*, condor@mydomain/$(IP_ADDRESS)
     ALLOW_NEGOTIATOR = condor_pool@mydomain/$(CONDOR_HOST)
@@ -1195,7 +1197,7 @@ The following example configuration uses pool password
 authentication and network message integrity checking for all
 communication between HTCondor daemons.
 
-::
+.. code-block:: condor-config
 
     SEC_PASSWORD_FILE = $(LOCK)/pool_password
     SEC_DAEMON_AUTHENTICATION = REQUIRED
@@ -1225,7 +1227,7 @@ In this example, only the *condor_startd* daemons in the local pool
 are required to have the pool password when they advertise
 themselves to the *condor_collector* daemon.
 
-::
+.. code-block:: condor-config
 
     SEC_PASSWORD_FILE = $(LOCK)/pool_password
     SEC_ADVERTISE_STARTD_AUTHENTICATION = REQUIRED
@@ -1263,9 +1265,9 @@ if that file is empty.
 To generate a token, the administrator may utilize the ``condor_token_create``
 command-line utility:
 
-::
+.. code-block:: console
 
-    # condor_token_create -identity frida@pool.example.com
+    $ condor_token_create -identity frida@pool.example.com
 
 The resulting token may be given to Frida and appended to a file in the directory
 specified by ``SEC_TOKEN_DIRECTORY`` (defaults to ``~/.condor/tokens.d``).  Subsequent
@@ -1284,9 +1286,9 @@ password contained in ``key1`` in host ``submit.example.com``.
 Unlike pool passwords, tokens can have a limited lifetime and can limit the
 authorizations allowed to the client.  For example,
 
-::
+.. code-block:: console
 
-    # condor_token_create -identity condor@pool.example.com \
+    $ condor_token_create -identity condor@pool.example.com \
           -lifetime 3600 \
           -authz ADVERTISE_STARTD
 
@@ -1308,6 +1310,10 @@ Importantly, neither user nor administrator is responsible
 for securely moving the token - e.g., there is no chance it will be leaked into
 an email archive.
 
+If a *condor_master*, *condor_startd*, or *condor_schedd* daemon cannot
+authenticate with the collector, it will automatically perform a token request
+from the collector.
+
 To use the token request workflow, the user needs a confidential channel to
 the server or an appropriate auto-approval rule needs to be in place.  The simplest
 way to establish a confidential channel is using :ref:`admin-manual/security:ssl authentication`
@@ -1315,9 +1321,9 @@ without a client certificate; configure the collector using a host certificate.
 
 Using the SSL authentication, the client can request a new authentication token:
 
-::
+.. code-block:: console
 
-    # condor_token_request
+    $ condor_token_request
     Token request enqueued.  Ask an administrator to please approve request 9235785.
 
 This will enqueue a request for a token corresponding to the superuser ``condor``;
@@ -1345,15 +1351,63 @@ the ``condor_token_fetch`` has no control over the mapped identity (but does not
 need to read the files in ``SEC_PASSWORD_DIRECTORY``).
 
 If no security authentication methods specified by the administrator - and the
-daemon or user has access to at least one token - then ``TOKEN`` authentication
+daemon or user has access to at least one token - then ``IDTOKENS`` authentication
 is automatically added to the list of valid authentication methods. Otherwise,
-to setup ``TOKEN`` authentication, enable it in the list of authentication methods:
+to setup ``IDTOKENS`` authentication, enable it in the list of authentication methods:
 
-::
+.. code-block:: condor-config
 
-    SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), TOKEN
-    SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), TOKEN
+    SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
+    SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
+**Blacklisting Token**: If a token is lost, stolen, or accidentally exposed,
+then the system administrator may use the token blacklisting mechanism in order
+to prevent unauthorized use.  Blacklisting can be accomplished by setting the
+``SEC_TOKEN_BLACKLIST_EXPR``; when set, the value of this parameter will be
+evaluated as a ClassAd expression against the token's contents.
+
+For example, consider the following token:
+
+.. code-block:: text
+
+    eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYXQiOjE1ODg0NzQ3MTksImlzcyI6ImhjYy1icmlhbnRlc3Q3LnVubC5lZHUiLCJqdGkiOiJjNzYwYzJhZjE5M2ExZmQ0ZTQwYmM5YzUzYzk2ZWU3YyIsInN1YiI6ImJib2NrZWxtQGhjYy1icmlhbnRlc3Q3LnVubC5lZHUifQ.fiqfgwjyTkxMSdxwm84xxMTVcGfearddEDj_rhiIbi4ummU
+
+When printed using ``condor_token_list``, the human-readable form is as follows
+(line breaks added for readability):
+
+.. code-block:: console
+
+    $ condor_token_list
+    Header: {"alg":"HS256","kid":"POOL"}
+    Payload: {
+        "iat": 1588474719,
+        "iss": "pool.example.com",
+        "jti": "c760c2af193a1fd4e40bc9c53c96ee7c",
+        "sub": "alice@pool.example.com"
+    }
+
+If we would like to blacklist this token, we could utilize any of the following
+values for ``SEC_TOKEN_BLACKLIST_EXPR``, depending on the desired breadth of
+the blacklist:
+
+.. code-block:: condor-config
+
+    # Blacklists all tokens from the user Alice:
+    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com"
+
+    # Blacklists all tokens from Alice issued before or after this one:
+    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com" && \
+        iat <= 1588474719
+
+    # Blacklists *only* this token:
+    SEC_TOKEN_BLACKLIST_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
+
+The blacklist only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
+set; to blacklist a token across the entire pool, set
+``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
+
+In order to invalidate all tokens issued by a given master password in
+``SEC_PASSWORD_DIRECTORY``, simply remove the password file from the directory.
 
 File System Authentication
 ''''''''''''''''''''''''''
@@ -1441,7 +1495,7 @@ Allowable authentication method names are the same as used to define any
 of the configuration variables ``SEC_*_AUTHENTICATION_METHODS``, as
 repeated here:
 
-::
+.. code-block:: text
 
         GSI
         SSL
@@ -1449,7 +1503,7 @@ repeated here:
         PASSWORD
         FS
         FS_REMOTE
-        TOKEN
+        IDTOKENS
         SCITOKENS
         NTSSPI
         MUNGE
@@ -1480,7 +1534,7 @@ preceded by a backslash.
 The default behavior of HTCondor when no map file is specified is to do
 the following mappings, with some additional logic noted below:
 
-::
+.. code-block:: text
 
     FS (.*) \1
     FS_REMOTE (.*) \1
@@ -1531,7 +1585,7 @@ The client uses one of two macros to enable or disable encryption:
 :index:`SEC_DEFAULT_ENCRYPTION`
 :index:`SEC_CLIENT_ENCRYPTION`
 
-::
+.. code-block:: text
 
     SEC_DEFAULT_ENCRYPTION
     SEC_CLIENT_ENCRYPTION
@@ -1547,7 +1601,7 @@ For the daemon, there are seven macros to enable or disable encryption:
 :index:`SEC_ADVERTISE_STARTD_ENCRYPTION`
 :index:`SEC_ADVERTISE_SCHEDD_ENCRYPTION`
 
-::
+.. code-block:: text
 
     SEC_DEFAULT_ENCRYPTION
     SEC_READ_ENCRYPTION
@@ -1564,14 +1618,14 @@ For the daemon, there are seven macros to enable or disable encryption:
 As an example, the macro defined in the configuration file for a daemon
 as
 
-::
+.. code-block:: condor-config
 
     SEC_CONFIG_ENCRYPTION = REQUIRED
 
 signifies that any communication that changes a daemon's configuration
 must be encrypted. If a daemon's configuration contains
 
-::
+.. code-block:: condor-config
 
     SEC_DEFAULT_ENCRYPTION = REQUIRED
 
@@ -1586,7 +1640,7 @@ list of acceptable methods may be provided by the client, using the
 macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 :index:`SEC_CLIENT_CRYPTO_METHODS`
 
-::
+.. code-block:: text
 
     SEC_DEFAULT_CRYPTO_METHODS
     SEC_CLIENT_CRYPTO_METHODS
@@ -1604,7 +1658,7 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 :index:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS`
 :index:`SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS`
 
-::
+.. code-block:: text
 
     SEC_DEFAULT_CRYPTO_METHODS
     SEC_READ_CRYPTO_METHODS
@@ -1623,7 +1677,7 @@ These variables list the encryption methods that are available to be
 used. The ordering of the list gives preference; the first item in the
 list indicates the highest preference. Possible values are
 
-::
+.. code-block:: text
 
     3DES
     BLOWFISH
@@ -1648,7 +1702,7 @@ The client uses one of two macros to enable or disable an integrity
 check: :index:`SEC_DEFAULT_INTEGRITY`
 :index:`SEC_CLIENT_INTEGRITY`
 
-::
+.. code-block:: text
 
     SEC_DEFAULT_INTEGRITY
     SEC_CLIENT_INTEGRITY
@@ -1664,7 +1718,7 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 :index:`SEC_ADVERTISE_STARTD_INTEGRITY`
 :index:`SEC_ADVERTISE_SCHEDD_INTEGRITY`
 
-::
+.. code-block:: text
 
     SEC_DEFAULT_INTEGRITY
     SEC_READ_INTEGRITY
@@ -1681,14 +1735,14 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 As an example, the macro defined in the configuration file for a daemon
 as
 
-::
+.. code-block:: condor-config
 
     SEC_CONFIG_INTEGRITY = REQUIRED
 
 signifies that any communication that changes a daemon's configuration
 must have its integrity assured. If a daemon's configuration contains
 
-::
+.. code-block:: condor-config
 
     SEC_DEFAULT_INTEGRITY = REQUIRED
 
@@ -1741,7 +1795,7 @@ authorization macros: :index:`ALLOW_READ`
 :index:`DENY_DAEMON` :index:`DENY_OWNER`
 :index:`DENY_NEGOTIATOR`
 
-::
+.. code-block:: text
 
     ALLOW_READ
     ALLOW_WRITE
@@ -1768,7 +1822,7 @@ unspecified, these default to the broader ``ALLOW_DAEMON`` and
 :index:`DENY_ADVERTISE_STARTD`
 :index:`DENY_ADVERTISE_SCHEDD`
 
-::
+.. code-block:: text
 
     ALLOW_ADVERTISE_MASTER
     ALLOW_ADVERTISE_STARTD
@@ -1786,7 +1840,7 @@ client, only the network address of the host may be authorized and not
 the specific identity of the server. :index:`ALLOW_CLIENT`
 :index:`DENY_CLIENT`
 
-::
+.. code-block:: text
 
       ALLOW_CLIENT
       DENY_CLIENT
@@ -1800,7 +1854,7 @@ All authorization settings are defined by a comma-separated list of
 fully qualified users. Each fully qualified user is described using the
 following format:
 
-::
+.. code-block:: text
 
     username@domain/hostname
 
@@ -1810,19 +1864,19 @@ describes one or more machines from which the user would be issuing a
 command. This host name may take the form of either a fully qualified
 host name of the form
 
-::
+.. code-block:: text
 
     bird.cs.wisc.edu
 
 or an IP address of the form
 
-::
+.. code-block:: text
 
     128.105.128.0
 
 An example is
 
-::
+.. code-block:: text
 
     zmiller@cs.wisc.edu/bird.cs.wisc.edu
 
@@ -1832,28 +1886,28 @@ slash character. A wild card character used in the host name is further
 limited to come at the beginning of a fully qualified host name or at
 the end of an IP address. For example,
 
-::
+.. code-block:: text
 
     *@cs.wisc.edu/bird.cs.wisc.edu
 
 refers to any user that comes from cs.wisc.edu, where the command is
 originating from the machine bird.cs.wisc.edu. Another valid example,
 
-::
+.. code-block:: text
 
     zmiller@cs.wisc.edu/*.cs.wisc.edu
 
 refers to commands coming from any machine within the cs.wisc.edu
 domain, and issued by zmiller. A third valid example,
 
-::
+.. code-block:: text
 
     *@cs.wisc.edu/*
 
 refers to commands coming from any user within the cs.wisc.edu domain
 where the command is issued from any machine. A fourth valid example,
 
-::
+.. code-block:: text
 
     *@cs.wisc.edu/128.105.*
 
@@ -1865,7 +1919,7 @@ If the set of machines is specified by an IP address, then further
 specification using a net mask identifies a physical set (subnet) of
 machines. This physical set of machines is specified using the form
 
-::
+.. code-block:: text
 
     network/netmask
 
@@ -1874,27 +1928,27 @@ may be a decimal number which refers to the number of leading bits of
 the IP address that are used in describing a subnet. Or, the net mask
 may take the form of
 
-::
+.. code-block:: text
 
     a.b.c.d
 
 where a, b, c, and d are decimal numbers that each specify an 8-bit
 mask. An example net mask is
 
-::
+.. code-block:: text
 
     255.255.192.0
 
 which specifies the bit mask
 
-::
+.. code-block:: text
 
     11111111.11111111.11000000.00000000
 
 A single complete example of a configuration variable that uses a net
 mask is
 
-::
+.. code-block:: condor-config
 
     ALLOW_WRITE = joesmith@cs.wisc.edu/128.105.128.0/17
 
@@ -1956,7 +2010,7 @@ An example of the configuration variables for the user-side
 authorization is derived from the necessary access levels as described
 in :ref:`admin-manual/security:htcondor's security model`.
 
-::
+.. code-block:: condor-config
 
     ALLOW_READ            = *@cs.wisc.edu/*
     ALLOW_WRITE           = *@cs.wisc.edu/*.cs.wisc.edu
@@ -1987,7 +2041,7 @@ In the local configuration file for each host, the host's owner should
 be authorized as the owner of the machine. An example of the entry in
 the local configuration file:
 
-::
+.. code-block:: condor-config
 
     ALLOW_OWNER = username@cs.wisc.edu/hostname.cs.wisc.edu
 
@@ -2269,7 +2323,7 @@ Examples of Security Configuration
 
 Here is a sample security configuration:
 
-::
+.. code-block:: condor-config
 
     ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
     ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
@@ -2324,7 +2378,7 @@ on Subsystem Names), which is one of: ``STARTD``, ``SCHEDD``,
 ``MASTER``, ``NEGOTIATOR``, or ``COLLECTOR``. For example, to grant
 different read access for the *condor_schedd*:
 
-::
+.. code-block:: condor-config
 
     ALLOW_READ_SCHEDD = <list of machines>
 
@@ -2336,7 +2390,7 @@ this.
 -  Let any machine join the pool. Only the central manager has
    administrative access.
 
-   ::
+   .. code-block:: condor-config
 
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
        ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
@@ -2344,7 +2398,7 @@ this.
 -  Only allow machines at NCSA to join or view the pool. The central
    manager is the only machine with ``ADMINISTRATOR`` access.
 
-   ::
+   .. code-block:: condor-config
 
        ALLOW_READ = *.ncsa.uiuc.edu
        ALLOW_WRITE = *.ncsa.uiuc.edu
@@ -2357,7 +2411,7 @@ this.
    to view pool statistics. The machine named bigcheese administers the
    pool (not the central manager).
 
-   ::
+   .. code-block:: condor-config
 
        ALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
        DENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
@@ -2373,7 +2427,7 @@ this.
    readable. This works for all configuration file entries, not just
    host access entries.
 
-   ::
+   .. code-block:: condor-config
 
        ALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu
        ALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
@@ -2387,7 +2441,7 @@ this.
    perform most administrative functions. However, only biggercheese can
    update user priorities.
 
-   ::
+   .. code-block:: condor-config
 
        DENY_READ = *.mil
        ALLOW_READ_SCHEDD = *.ncsa.uiuc.edu
@@ -2454,7 +2508,7 @@ The control lists are defined by configuration settings that contain
 ``SETTABLE_ATTRS`` in their name. The name of the control lists have the
 following form:
 
-::
+.. code-block:: text
 
     <SUBSYS>.SETTABLE_ATTRS_<PERMISSION-LEVEL>
 
@@ -2479,7 +2533,7 @@ cards characters (\*).
 
 Some examples of valid definitions of control lists with explanations:
 
--  ::
+-  .. code-block:: condor-config
 
        SETTABLE_ATTRS_CONFIG = *
 
@@ -2487,7 +2541,7 @@ Some examples of valid definitions of control lists with explanations:
    request that came from a machine in the ``CONFIG`` access level. This
    was the default behavior before HTCondor version 6.3.2.
 
--  ::
+-  .. code-block:: condor-config
 
        SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG
 
@@ -2496,7 +2550,7 @@ Some examples of valid definitions of control lists with explanations:
    matched MAX_*_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
    with ``ADMINISTRATOR`` access.
 
--  ::
+-  .. code-block:: condor-config
 
        STARTD.SETTABLE_ATTRS_OWNER = HasDataSet
 
@@ -2765,7 +2819,7 @@ Under Unix, HTCondor runs jobs as one of
    replaced with the slot number. Here is configuration for this
    example:
 
-   ::
+   .. code-block:: condor-config
 
           SLOT1_USER = cndrusr1
           SLOT2_USER = cndrusr2
@@ -2777,13 +2831,13 @@ Under Unix, HTCondor runs jobs as one of
    :index:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` is introduced and set
    to a regular expression that matches the account names just created:
 
-   ::
+   .. code-block:: condor-config
 
           DEDICATED_EXECUTE_ACCOUNT_REGEXP = cndrusr[0-9]+
 
    Finally, tell HTCondor not to run jobs as the job owner:
 
-   ::
+   .. code-block:: condor-config
 
           STARTER_ALLOW_RUNAS_OWNER = False
 
@@ -2803,7 +2857,7 @@ Under Unix, HTCondor runs jobs as one of
       :index:`SUBMIT_ATTRS`. If this were the only attribute to be
       added to all job ClassAds, it would be set up with
 
-      ::
+      .. code-block:: condor-config
 
             SUBMIT_ATTRS = RunAsOwner
             RunAsOwner = True
@@ -2817,7 +2871,7 @@ Under Unix, HTCondor runs jobs as one of
       not trusted. To correct this, set in the configuration for the
       *condor_starter*
 
-      ::
+      .. code-block:: condor-config
 
             TRUST_UID_DOMAIN = True
 
@@ -2840,7 +2894,7 @@ Notes:
 
 #. The *condor_starter* logs a line similar to
 
-   ::
+   .. code-block:: text
 
        Tracking process family by login "cndrusr1"
 

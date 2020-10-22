@@ -13,11 +13,12 @@ for filename in "$@" ; do
   type=`file -h $filename`
   if echo $type | grep -q -e 'dynamically linked shared library' -e 'executable' ; then
     basefile=`basename $filename`
-    libraries=`otool -L $filename | grep '^[[:space:]][^@]' | sed 's|^.\([^ ]*\) .*|\1|' | grep -v '^/usr/lib' | grep -v '^/System/' | grep -v "$basefile "`
+    libraries=`otool -L $filename | grep '^[[:space:]][^@]' | sed 's|^.\([^ ]*\) .*|\1|' | grep -v '^/usr/lib' | grep -v '^/System/' | grep -v '^/Library/' | grep -v "$basefile "`
     external_resolver="@executable_path/../lib/condor"
     internal_resolver="@executable_path/../lib"
+    tool_args=""
     if echo $type | grep -q -e 'dynamically linked shared library' ; then
-      install_name_tool -id $basefile $filename
+      tool_args="-id $basefile"
       if echo $filename | grep -q -e 'libcondor_utils' -e 'libpyclassad' -e 'libclassad' -e 'libchirp_client' -e 'libcondorapi' ; then
         external_resolver="@loader_path/condor"
         internal_resolver="@loader_path"
@@ -34,10 +35,13 @@ for filename in "$@" ; do
     for lib in $libraries ; do
       baselib=`basename $lib`
       if echo $baselib | grep -q -e 'classad' -e 'condor' ; then
-        install_name_tool -change "$lib" "$internal_resolver/$baselib" $filename
+        tool_args="$tool_args -change $lib $internal_resolver/$baselib"
       else
-        install_name_tool -change "$lib" "$external_resolver/$baselib" $filename
+        tool_args="$tool_args -change $lib $external_resolver/$baselib"
       fi
     done
+    if [ "$tool_args" != "" ] ; then
+      install_name_tool $tool_args $filename
+    fi
   fi
 done

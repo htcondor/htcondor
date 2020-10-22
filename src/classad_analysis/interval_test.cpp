@@ -22,7 +22,7 @@
 #include "analysis.h"
 
 int main( ) {
-	string buffer = "";
+	std::string buffer = "";
 
 		// i1 = [7,23)
 	Interval *i1 = new Interval;
@@ -31,9 +31,9 @@ int main( ) {
 	i1->upper.SetIntegerValue( 23 );
 	i1->openUpper = true;
 	if( !IntervalToString( i1, buffer ) ) {
-		cerr << "IntervalToString failed on i1" << endl;
+		std::cerr << "IntervalToString failed on i1" << std::endl;
 	}
-	cout << "i1 = " << buffer << endl;
+	std::cout << "i1 = " << buffer << std::endl;
 	buffer = "";
 
 		// i2 = [12, 23]
@@ -43,88 +43,88 @@ int main( ) {
 	i2->upper.SetIntegerValue( 23 );
 	i2->openUpper = false;
 	if( !IntervalToString( i2, buffer ) ) {
-		cerr << "IntervalToString failed on i2" << endl;
+		std::cerr << "IntervalToString failed on i2" << std::endl;
 	}
-	cout << "i2 = " << buffer << endl;
+	std::cout << "i2 = " << buffer << std::endl;
 	buffer = "";
 
 		// i3 = [foo]
 	Interval *i3 = new Interval;
 	i3->lower.SetStringValue( "foo" );
 	if( !IntervalToString( i3, buffer ) ) {
-		cerr << "IntervalToString failed on i3" << endl;
+		std::cerr << "IntervalToString failed on i3" << std::endl;
 	}
-	cout << "i3 = " << buffer << endl;
+	std::cout << "i3 = " << buffer << std::endl;
 	buffer = "";
 
 		// i4 = [bar]
 	Interval *i4 = new Interval;
 	i4->lower.SetStringValue( "bar" );
 	if( !IntervalToString( i4, buffer ) ) {
-		cerr << "IntervalToString failed on i4" << endl;
+		std::cerr << "IntervalToString failed on i4" << std::endl;
 	}
-	cout << "i4 = " << buffer << endl;
+	std::cout << "i4 = " << buffer << std::endl;
 	buffer = "";
 
 		// i5 = [zap]
 	Interval *i5 = new Interval;
 	i5->lower.SetStringValue( "zap" );
 	if( !IntervalToString( i5, buffer ) ) {
-		cerr << "IntervalToString failed on i5" << endl;
+		std::cerr << "IntervalToString failed on i5" << std::endl;
 	}
-	cout << "i5 = " << buffer << endl;
+	std::cout << "i5 = " << buffer << std::endl;
 	buffer = "";
 
 		// test 1
-	cout << endl;
+	std::cout << std::endl;
 	ValueRange vr1;
 
 	vr1.Init( i1 );
 	vr1.ToString( buffer );
-	cout << "Init vr1 with [7,23): " << buffer << endl;
+	std::cout << "Init vr1 with [7,23): " << buffer << std::endl;
 	buffer = "";
 
 	vr1.Intersect( i2 );
 	vr1.ToString( buffer );
-	cout << "Intersect vr1 with [12,23]: " << buffer << endl;
+	std::cout << "Intersect vr1 with [12,23]: " << buffer << std::endl;
 	buffer = "";
 
 		// test 2
-	cout << endl;
+	std::cout << std::endl;
 	ValueRange vr2;
 
 	vr2.Init( i3, false, true );
 	vr2.ToString( buffer );
-	cout << "Init vr2 with NOT[foo]: " << buffer << endl;
+	std::cout << "Init vr2 with NOT[foo]: " << buffer << std::endl;
 	buffer = "";
 
 	vr2.Intersect( i4, false, true );
 	vr2.ToString( buffer );
-	cout << "Intersect vr2 with NOT[bar]: " << buffer << endl;
+	std::cout << "Intersect vr2 with NOT[bar]: " << buffer << std::endl;
 	buffer = "";
 
 	vr2.Intersect( i3 );
 	vr2.ToString( buffer );
-	cout << "Intersect vr2 with [foo]: " << buffer << endl;
+	std::cout << "Intersect vr2 with [foo]: " << buffer << std::endl;
 	buffer = "";
 
 		// test 3
-	cout << endl;
+	std::cout << std::endl;
 	ValueRange vr3;
 
 	vr3.Init( i3, false, true );
 	vr3.ToString( buffer );
-	cout << "Init vr3 with NOT[foo]: " << buffer << endl;
+	std::cout << "Init vr3 with NOT[foo]: " << buffer << std::endl;
 	buffer = "";
 
 	vr3.Intersect( i4, false, true );
 	vr3.ToString( buffer );
-	cout << "Intersect vr3 with NOT[bar]: " << buffer << endl;
+	std::cout << "Intersect vr3 with NOT[bar]: " << buffer << std::endl;
 	buffer = "";
 
 	vr3.Intersect( i5 );
 	vr3.ToString( buffer );
-	cout << "Intersect vr3 with [zap]: " << buffer << endl;
+	std::cout << "Intersect vr3 with [zap]: " << buffer << std::endl;
 	buffer = "";
 
 	delete i1;

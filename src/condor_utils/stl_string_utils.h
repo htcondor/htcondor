@@ -41,9 +41,6 @@ int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2
 int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr_cat(std::string& s, const char* format, va_list pargs);
 
-// Return the string form of the given integer value
-template <typename T> std::string IntToStr( T val );
-
 // comparison ops between the two houses divided
 bool operator==(const MyString& L, const std::string& R);
 bool operator==(const std::string& L, const MyString& R);
@@ -77,6 +74,11 @@ void lower_case(std::string &str);
 void upper_case(std::string &str);
 void title_case(std::string &str); // capitalize each word
 
+// Return a string based on string src, but for each character in Q that
+// occurs in src, insert the character escape before it.
+// For example, for src="Alain", Q="abc", and escape='_', the result will
+// be "Al_ain".
+std::string EscapeChars(const std::string& src, const std::string& Q, char escape);
 
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre);

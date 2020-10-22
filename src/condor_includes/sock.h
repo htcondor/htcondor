@@ -86,6 +86,7 @@ public:
 	friend class SharedPortListener;
 	friend class SharedPortEndpoint;
 	friend class DockerProc;
+	friend class OsProc;
 
 	/*
 	**	Methods
@@ -238,6 +239,8 @@ public:
         // RETURNS: true -- success; false -- failure
         //------------------------------------------
 
+        bool zkm_wrap(const unsigned char* input, int input_len,
+                  unsigned char*& output, int& outputlen);
         bool wrap(const unsigned char* input, int input_len,
                   unsigned char*& output, int& outputlen);
         //------------------------------------------
@@ -247,6 +250,8 @@ public:
         // RETURNS: TRUE -- success, FALSE -- failure
         //------------------------------------------
 
+        bool zkm_unwrap(const unsigned char* input, int input_len,
+                    unsigned char*& output, int& outputlen);
         bool unwrap(const unsigned char* input, int input_len,
                     unsigned char*& output, int& outputlen);
         //------------------------------------------
@@ -497,7 +502,7 @@ protected:
 
 	void set_connect_addr(char const *addr);
 
-	inline SOCKET get_socket (void) { return _sock; }
+	inline SOCKET get_socket (void) const { return _sock; }
 	const char * serialize(const char *);
 	static void close_serialized_socket(char const *buf);
 	char * serialize() const;
@@ -518,9 +523,6 @@ protected:
 	bool test_connection();
 	/// get timeout time for pending connect operation;
 	time_t connect_timeout_time() const;
-
-	///
-	int move_descriptor_up();
 
     /// called whenever the bound or connected state changes
     void addr_changed();
@@ -565,7 +567,8 @@ protected:
 	// Buffer to hold the string version of our own IP address. 
 	mutable char _my_ip_buf[IP_STRING_BUF_SIZE];
 
-	Condor_Crypt_Base * crypto_;         // The actual crypto
+	Condor_Crypt_Base    * crypto_;         // The actual crypto object
+	Condor_Crypto_State  * crypto_state_;   // The object state
 	CONDOR_MD_MODE      mdMode_;        // MAC mode
 	KeyInfo           * mdKey_;
 
@@ -658,7 +661,7 @@ private:
 	   setConnectFailureErrno.
 	   @param timed_out True if we failed due to timeout.
 	**/
-	void reportConnectionFailure(bool timed_out);
+	void reportConnectionFailure(bool timed_out) const;
 
 	/**
 	   This function puts the socket back in a state suitable for another

@@ -140,7 +140,6 @@ my @default_build_configure_args =
 # x86_64_RedHat5
 # x86_64_RedHat6
 # x86_64_SL6
-# x86_64_Solaris11
 # x86_64_Ubuntu10
 # x86_64_Ubuntu12
 # x86_64_Windows7
@@ -270,7 +269,8 @@ our %submit_info = (
 		},
 	},
 
-	'x86_64_Debian8'	=> 'x86_64_Debian7',
+	'x86_64_Debian8'	        => 'x86_64_Debian7',
+	'nmi-zdev:x86_64_Debian8'	=> 'x86_64_Debian7',
 
 	##########################################################################
 	# Platform DEB 9 on x86_64
@@ -288,6 +288,28 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'nmi-zdev:x86_64_Debian9'  => 'x86_64_Debian9',
+	'nmi-zdev:x86_64_Debian10' => 'x86_64_Debian9',
+
+	##########################################################################
+	# Platform CentOS 8 on x86_64
+	##########################################################################
+	'x86_64_CentOS8'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args },
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	'nmi-zdev:x86_64_CentOS8' => 'x86_64_CentOS8',
+	'nmi-zdev:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
 
 	##########################################################################
 	# Platform RHEL 7 on x86_64
@@ -308,6 +330,7 @@ our %submit_info = (
 
 	'x86_64_CentOS7'	=> 'x86_64_RedHat7',
 	'x86_64_SL7'		=> 'x86_64_RedHat7',
+	'nmi-zdev:x86_64_CentOS7' => 'x86_64_RedHat7',
 
 	# 32 bit CentOS 7
 	'x86_CentOS7'		=> {
@@ -325,6 +348,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+
+	'nmi-zdev:x86_CentOS7' => 'x86_CentOS7',
 
 	##########################################################################
 	# Platform RedHat and SL
@@ -350,6 +375,7 @@ our %submit_info = (
 	'x86_64_rhap_6.7'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.8'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.9'	=> 'x86_64_RedHat6',
+	'nmi-zdev:x86_64_CentOS6'	=> 'x86_64_RedHat6',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:rhel-6.4-64'	=> 'x86_64_RedHat6',
@@ -402,6 +428,7 @@ our %submit_info = (
 	'x86_rhap_6.7'		=> 'x86_RedHat6',
 	'x86_rhap_6.8'		=> 'x86_RedHat6',
 	'x86_rhap_6.9'		=> 'x86_RedHat6',
+	'nmi-zdev:x86_CentOS6' => 'x86_RedHat6',
 
 	# 32 bit RedHat 5
 	'x86_RedHat5'		=> {
@@ -466,6 +493,7 @@ our %submit_info = (
 	'x86_64_MacOSX9',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX10',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX13',	=> 'x86_64_MacOSX',
+	'x86_64_MacOSX15',	=> 'x86_64_MacOSX',
 
 	#
 	# The SWAMP platforms.
@@ -522,6 +550,12 @@ our %submit_info = (
 	'x86_64_Fedora24'				=> 'x86_64_Fedora',
 	'x86_64_Fedora25'				=> 'x86_64_Fedora',
 	'x86_64_Fedora27'				=> 'x86_64_Fedora',
+	'nmi-zdev:x86_64_Fedora27'		=> 'x86_64_Fedora',
+	'nmi-zdev:x86_64_Fedora28'		=> 'x86_64_Fedora',
+	'nmi-zdev:x86_64_Fedora29'		=> 'x86_64_Fedora',
+	'nmi-zdev:x86_64_Fedora30'		=> 'x86_64_Fedora',
+	'nmi-zdev:x86_64_Fedora31'		=> 'x86_64_Fedora',
+	'nmi-zdev:x86_64_Fedora32'		=> 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',
@@ -537,33 +571,6 @@ our %submit_info = (
 	'x86_64_fedora_27'				=> 'x86_64_Fedora',
 	'x86_64_fedora_28'				=> 'x86_64_Fedora',
 
-
-	##########################################################################
-	# Platform Solaris 11 on x86_64
-	# Building openssl is problematic on this platform.	 There is
-	# some confusion betwen 64-bit and 32-bit, which causes linkage
-	# problems.	 Since ssh_to_job depends on openssl's base64 functions,
-	# that is also disabled.
-	##########################################################################
-	'x86_64_Solaris11'	=> {
-		'build' => {
-			# we can use ssh_to_job on solaris if we use the proper kerberose
-			# this is OK since we build kerberose only for batlab.
-			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_CURL:BOOL' => 'OFF',
-								  #'-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [],
-			'xtests'	=> undef,
-		},  
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-	'x86_64_sol_5.11'	=> 'x86_64_Solaris11',
 
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86_64
@@ -642,6 +649,8 @@ our %submit_info = (
 		},
 	},
 
+	'nmi-zdev:x86_64_Ubuntu16'	=> 'x86_64_Ubuntu16',
+
 	'x86_64_Ubuntu18'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
@@ -656,6 +665,9 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+
+	'nmi-zdev:x86_64_Ubuntu18'	=> 'x86_64_Ubuntu18',
+	'nmi-zdev:x86_64_Ubuntu20'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',

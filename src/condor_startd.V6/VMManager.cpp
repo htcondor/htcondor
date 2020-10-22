@@ -65,7 +65,7 @@ VMManager::~VMManager()
 }
 
 int
-VMManager::numOfVM(void)
+VMManager::numOfVM(void) const
 {
 	return m_vm_registered_num;
 }

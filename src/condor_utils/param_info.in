@@ -387,7 +387,7 @@ tags=vm-gahp
 
 [PROCD_ADDRESS]
 default=$(LOCK)/procd_pipe
-win32_default=\\.\pipe\condor_procd_pipe
+win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
 
@@ -406,6 +406,12 @@ default=$(FULL_HOSTNAME)
 type=string
 usage=to specify that each machine has its own UID space.
 tags=starter
+
+[ACCOUNTING_DOMAIN]
+default=$(UID_DOMAIN)
+type=string
+usage=Specifies the accounting namespace for submitters.
+tags=schedd
 
 [TRUST_UID_DOMAIN]
 default=
@@ -492,6 +498,12 @@ restart=never
 default=(ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 type=string
 tags=dagman,condor_submit_dag
+restart=never
+
+[DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE]
+default=false
+type=bool
+tags=dagman
 restart=never
 
 [DAGMAN_CONFIG_FILE]
@@ -648,6 +660,13 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_HOLD_CLAIM_TIME]
+default=20
+type=int
+customization=normal
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_MAX_HOLD_SCRIPTS]
 default=20
 type=int
 customization=normal
@@ -826,6 +845,12 @@ default=1e10
 type=double
 tags=accountant
 
+[NICE_USER_ACCOUNTING_GROUP_NAME]
+default=nice-user
+type=string
+tags=accountant,submit
+
+
 [REMOTE_PRIO_FACTOR]
 default=1e7
 type=double
@@ -876,6 +901,12 @@ tags=matchmaker
 default=false
 type=bool
 tags=shadow,remoteresource
+
+[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
+default=false
+type=bool
+usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
+tags=security
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
@@ -928,6 +959,11 @@ tags=shadow,baseshadow
 default=true
 type=bool
 tags=shadow,baseshadow
+
+[RESERVED_MEMORY]
+default=0
+type=int
+tags=startd
 
 [RESERVED_SWAP]
 default=0
@@ -1137,6 +1173,18 @@ tags=daemon_core
 default=false
 type=bool
 tags=daemon_core
+
+[SEC_CREDENTIAL_SWEEP_INTERVAL]
+default=300
+type=int
+description=Period to check for old (marked) credentials
+tags=security
+
+[SEC_CREDENTIAL_SWEEP_DELAY]
+default=3600
+type=int
+description=Default delay before sweeping unused credentials
+tags=security
 
 [SEC_CREDENTIAL_REFRESH_INTERVAL]
 default=-1
@@ -1482,6 +1530,18 @@ default=$(SBIN)/condor_c-gahp
 win32_default=$(SBIN)\condor_c-gahp.exe
 type=path
 tags=gridmanager,condorresource
+
+[C_GAHP_CONTACT_SCHEDD_DELAY]
+default=5
+type=int
+
+[CGAHP_SCHEDD_INTERACTION_TIME]
+default=5
+type=int
+
+[C_GAHP_MAX_FILE_REQUESTS]
+default=10
+type=int
 
 [JAVA_EXTRA_ARGUMENTS]
 default=
@@ -1858,7 +1918,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, MemoryUsage, DiskUsage
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -2011,6 +2071,12 @@ tags=submit
 [SUBMIT_SKIP_FILECHECKS]
 default=true
 type=string
+tags=submit
+
+[SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS]
+description=Submit should generate requirements clauses for job attribues that begin with Request
+default=true
+type=bool
 tags=submit
 
 [SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
@@ -2284,8 +2350,8 @@ type=string
 tags=java_config
 
 [JAVA_CLASSPATH_DEFAULT]
-default=$(LIB) $(LIB)/scimark2lib.jar .
-win32_default=$(BIN) $(BIN)/scimark2lib.jar .
+default=$(LIB) .
+win32_default=$(BIN) .
 type=string
 tags=java_config
 
@@ -2325,7 +2391,7 @@ type=string
 tags=sshd_wrapper
 
 [CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY]
-default=false
+default=true
 type=bool
 tags=condor_ssh_to_job
 
@@ -2434,6 +2500,18 @@ tags=condor_auth_passwd
 default=
 description=Maximum age of accepted tokens.
 type=int
+tags=condor_auth_passwd
+
+[SEC_TOKEN_REQUEST_LIMITS]
+default=
+description=Authorization limits for token requests
+type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_BLACKLIST_EXPR]
+default=
+description=Expression describing token blacklist.
+type=string
 tags=condor_auth_passwd
 
 [SEC_ISSUED_TOKEN_EXPIRATION]
@@ -2578,7 +2656,7 @@ type=string
 tags=starter
 
 [STARTER_NUM_THREADS_ENV_VARS]
-default=OMP_NUM_THREADS NUMEXPR_NUM_THREADS MKL_NUM_THREADS CUBACORES JULIA_NUM_THREADS GOMAXPROCS
+default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT
 type=string
 tags=starter
 
@@ -2612,12 +2690,6 @@ tags=schedd,starter
 default=
 type=string
 tags=starter,StarterHookMgr
-
-[JAVA_BENCHMARK_TIME]
-default=2
-type=int
-usage=If this time is zero or undefined, no Java benchmarks will be run.
-tags=starter,java_detect
 
 [VM_STATUS_INTERVAL]
 default=60
@@ -2989,7 +3061,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType
+default=Owner ClusterId ProcId TotalSubmitProcs MyType TargetType User
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -3099,6 +3171,7 @@ tags=schedd
 
 [LOCAL_UNIV_EXECUTE]
 default=$(SPOOL)/local_univ_execute
+win32_default=$(SPOOL)\local_univ_execute
 type=string
 tags=schedd
 
@@ -3215,6 +3288,16 @@ tags=schedd
 default=$(FLOCK_TO)
 type=string
 tags=schedd
+
+[FLOCK_INCREMENT]
+default=1
+type=int
+range=1,
+
+[MIN_FLOCK_LEVEL]
+default=0
+type=int
+range=0,
 
 [FLOCK_BY_DEFAULT]
 default=true
@@ -3971,6 +4054,12 @@ version=8.1.1
 type=bool
 customization=expert
 
+[AUTO_INCLUDE_CREDD_IN_DAEMON_LIST]
+default=false
+version=8.9.7
+type=bool
+customization=expert
+
 [COLLECTOR_USES_SHARED_PORT]
 default=true
 version=8.1.4
@@ -4022,10 +4111,9 @@ default=
 type=string
 tags=rooster
 
-# the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
 default=1000000
-description=Max Procd Log (size rotation only, no scale suffix)
+description=Max Procd Log (size rotation only)
 tags=procd
 
 [SHADOW_WORKLIFE]
@@ -4171,12 +4259,6 @@ default=false
 type=bool
 tags=shadow
 restart=true
-
-[SHADOW_SKIP_DATAFLOW_JOBS]
-default=false
-type=bool
-tags=shadow,dataflow
-description=Skip dataflow jobs (output files exist, more recent than input files)?
 
 [SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
 default=25%
@@ -4533,6 +4615,13 @@ version=7.9.2
 type=int
 description=Maximum size of transferred output files
 tags=schedd
+
+[MAX_REMAP_RECURSIONS]
+default=128
+version=8.8.9
+type=int
+description=Maximum number of filetransfer remaps to apply before aborting
+tags=file_transfer
 
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
@@ -5376,9 +5465,6 @@ type=path
 [CREDD_PORT]
 default=9620
 
-[CRED_STORE_DIR]
-default=$(LOCAL_DIR)/cred_dir
-type=path
 [CREDD_ARGS]
 default=-p $(CREDD_PORT) -f
 [CREDD_LOG]
@@ -5393,6 +5479,45 @@ default=$(MAX_DEFAULT_LOG)
 [CREDD_OAUTH_MODE]
 default=true
 type=bool
+
+[CREDMON_KRB]
+default=$(SBIN)/condor_credmon_krb
+win32_default=
+type=path
+
+[CREDMON_OAUTH]
+default=$(SBIN)/condor_credmon_oauth
+win32_default=
+type=path
+
+# standard API endpoints for common OAuth token providers
+[BOX_AUTHORIZATION_URL]
+default=https://account.box.com/api/oauth2/authorize
+type=string
+[BOX_TOKEN_URL]
+default=https://api.box.com/oauth2/token
+type=string
+
+[GDRIVE_AUTHORIZATION_URL]
+default=https://accounts.google.com/o/oauth2/v2/auth
+type=string
+[GDRIVE_TOKEN_URL]
+default=https://oauth2.googleapis.com/token
+type=string
+
+[ONEDRIVE_AUTHORIZATION_URL]
+default=https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+type=string
+[ONEDRIVE_TOKEN_URL]
+default=https://login.microsoftonline.com/common/oauth2/v2.0/token
+type=string
+
+[DROPBOX_AUTHORIZATION_URL]
+default=https://www.dropbox.com/oauth2/authorize
+type=string
+[DROPBOX_TOKEN_URL]
+default=https://api.dropboxapi.com/oauth2/token
+type=string
 
 # benchmarking knobs
 [BenchmarkTimer]
@@ -5879,7 +6004,6 @@ default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
-	JAVA_BENCHMARK_TIME=0
 @end
 
 [$ROLE.Execute]
@@ -5968,7 +6092,7 @@ default : @fin
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
-	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group", RequestedAcctGroup)
+	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group ", RequestedAcctGroup)
 @fin
 
 
@@ -6035,10 +6159,10 @@ default : @end
 @end
 
 [$FEATURE.GPUs]
-description=Settings to detect and use GPUs as custom resources
+description=Settings to detect and use GPUs as custom resources, args:(optional-discovery-args)
 default : @end
-	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
-	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
+	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery $(1) -properties $(GPU_DISCOVERY_EXTRA)
+	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 
 	use feature : GPUsMonitor
@@ -6323,6 +6447,29 @@ win32_default : @end
 	VMWARE_NETWORKING_TYPE=nat
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
 	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
+
+[$FEATURE.KRB]
+description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
+default : @end
+	SEC_CREDENTIAL_DIRECTORY_KRB=/var/lib/condor/krb_credentials
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_KRB
+	SEC_CREDENTIAL_PRODUCER=$(LIBEXEC)/cred_producer_krb
+	SEC_CREDENTIAL_MONITOR_KRB_LOG=$(LOG)/CredMonKrbLog
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST = True
+	USE_KEYRING_SESSIONS=True
+@end
+
+
+[$FEATURE.OAUTH]
+description=Enable the daemons and features need to support running jobs with OAuth
+default : @end
+	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
+	SEC_CREDENTIAL_MONITOR_OAUTH_LOG=$(LOG)/CredMonOAuthLog
+	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
+	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
+	TRUST_CREDENTIAL_DIRECTORY=True
 @end
 
 

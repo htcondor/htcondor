@@ -32,7 +32,7 @@ public:
 
 	bool Init( const char * filename, const char * streamname, bool is_output, int f = -1 );
 	int Handler( int fd );
-	int GetJobPipe();
+	int GetJobPipe() const;
 
 	static int ReconnectAll();
 

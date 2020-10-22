@@ -120,6 +120,7 @@ public:
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
 		*/
+	void setJobFailed( void );
 	bool transferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
@@ -236,7 +237,10 @@ public:
 		    to shadow by using file transfer
 		*/
 	bool uploadWorkingFiles(void);
-	
+
+		/** Send checkpoint files to shadow */
+	bool uploadCheckpointFiles();
+
 		/* Update Job ClassAd with checkpoint info and log it */
 	void updateCkptInfo(void);
 
@@ -250,6 +254,8 @@ public:
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
 
 private:
+
+	void recordSandboxContents( const char * filename );
 
 		// // // // // // // // // // // //
 		// Private helper methods
@@ -440,12 +446,12 @@ private:
 		// The proxy is about to expire, do something!
 	void proxyExpiring();
 
-	bool refreshSandboxCredentials();
-	void refreshSandboxCredentials_from_timer() { (void)refreshSandboxCredentials(); }
-	bool refreshSandboxCredentialsMultiple();
-	void refreshSandboxCredentialsMultiple_from_timer() { (void)refreshSandboxCredentialsMultiple(); }
+	bool refreshSandboxCredentialsKRB();
+	void refreshSandboxCredentialsKRB_from_timer() { (void)refreshSandboxCredentialsKRB(); }
+	bool refreshSandboxCredentialsOAuth();
+	void refreshSandboxCredentialsOAuth_from_timer() { (void)refreshSandboxCredentialsOAuth(); }
 
-	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
+	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
 		// // // // // // // //
 		// Private Data Members
@@ -517,7 +523,7 @@ private:
 		/** timer id of timer to invoke job_lease_expired() when syscall_sock closed */
 	int syscall_sock_lost_tid;
 		/** invoked when job lease expired - exits w/ well known status */
-	void job_lease_expired();
+	void job_lease_expired() const;
 		/** must be invoked whenever our syscall_sock is reconnected */
 	void syscall_sock_reconnect();
 		/** must be invoked whenever we notice our syscall_sock is borked */
@@ -540,6 +546,8 @@ private:
 		*/
 	bool m_job_update_attrs_set;
 	StringList m_job_update_attrs;
+
+	bool job_failed = false;
 };
 
 

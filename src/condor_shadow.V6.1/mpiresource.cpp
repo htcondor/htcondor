@@ -33,10 +33,10 @@ MpiResource::MpiResource( BaseShadow *base_shadow ) :
 void 
 MpiResource::printExit( FILE *fp )
 {
-	MyString line;
-	line.formatstr( "%25s    ", machineName ? machineName : "Unknown machine" );
+	std::string line;
+	formatstr( line, "%25s    ", machineName ? machineName : "Unknown machine" );
 	printExitString( jobAd, exit_reason, line );
-	fprintf( fp, "%s\n", line.Value() );
+	fprintf( fp, "%s\n", line.c_str() );
 }
 
 void

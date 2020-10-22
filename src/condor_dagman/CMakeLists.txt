@@ -16,11 +16,27 @@
  # 
  ############################################################### 
 
+set(DAGSrcs 
+dag.cpp
+dagman_classad.cpp
+dagman_commands.cpp
+dagman_main.cpp
+dagman_metrics.cpp
+dagman_multi_dag.cpp
+dagman_recursive_submit.cpp
+dagman_stats.cpp
+dagman_submit.cpp
+dagman_util.cpp
+dag_tokener.cpp
+debug.cpp
+job.cpp
+jobstate_log.cpp
+parse.cpp
+script.cpp
+scriptQ.cpp
+throttle_by_category.cpp
+)
 
-condor_selective_glob("condor_submit_dag*;dagman_instantiate*" submitDAG)
-
-condor_glob(DAGHdrs DAGSrcs "${submitDAG};${metricsReporter}")
-
-condor_exe(condor_dagman "${DAGHdrs};${DAGSrcs}" ${C_BIN} "${CONDOR_LIBS}" ON)
+condor_exe(condor_dagman "${DAGSrcs}" ${C_BIN} "${CONDOR_LIBS}" ON)
 
 condor_exe(condor_submit_dag "condor_submit_dag.cpp;dagman_multi_dag.cpp;dag_tokener.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

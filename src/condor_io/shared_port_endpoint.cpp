@@ -51,7 +51,7 @@ bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 MyString
-SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
+SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
 	static unsigned short rand_tag = 0;
 	static unsigned int sequence = 0;
 	if( !rand_tag ) {
@@ -72,7 +72,7 @@ SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
 	}
 
 	MyString m_local_id;
-	if( !sequence ) {
+	if( (sequence == 0) || (! addSequenceNo) ) {
 		m_local_id.formatstr("%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
 	}
 	else {
@@ -1222,16 +1222,6 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	dprintf(D_FULLDEBUG|D_COMMAND,
 			"SharedPortEndpoint: received forwarded connection from %s.\n",
 			remote_sock->peer_description());
-
-
-		// See the comment in SharedPortClient::PassSocket() explaining
-		// why this ACK is here.
-	int status=0;
-	named_sock->encode();
-	named_sock->timeout(5);
-	if( !named_sock->put(status) || !named_sock->end_of_message() ) {
-		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to send final status (success) for SHARED_PORT_PASS_SOCK\n");
-	}
 
 
 	if( !return_remote_sock ) {

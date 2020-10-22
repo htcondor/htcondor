@@ -22,6 +22,7 @@
 REMOTE_CMD=""
 REMOTE_HOSTNAME=""
 REMOTE_USER=`whoami`
+REMOTE_PORT=22
 # Fix the home directory when spawned from a root process
 unset HOME
 export HOME=`echo ~`
@@ -30,6 +31,8 @@ REMOTE_GLITE="~/bosco/glite"
 # We do this in case $HOME isn't set properly
 PASSPHRASE_LOCATION=`echo ~/.bosco/.pass`
 PRIVATE_KEY_LOCATION=`echo ~/.ssh/bosco_key.rsa`
+# Set 'ssh -o BatchMode yes' by default so we fail if a password is requested
+SSH_BATCHMODE=yes
 
 
 # Parse command line arguments 
@@ -44,8 +47,9 @@ Options: \n \
  --rgahp-nopass \t\tno passphrase protecting ssh private key (same as empty rgahp-pass)\n \
  --rgahp-glite PATH \tpath to the directory of the script (~/bosco/glite)\n \
  --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/batch_gahp)\n \
+ --rgahp-nobatchmode \t\tDisable SSH BatchMode \n \
  --help, -h \t\t\tprint this\n \
- remote_hostname: USER@HOST same string that can be used to ssh to the host\n \
+ remote_hostname: [USER@]HOST[:PORT] same string that can be used to ssh to the host\n \
  remote arguments are passed to the REMOTE_CMD
  REMOTE_CMD can be expressed as argument or option
 "
@@ -68,6 +72,8 @@ while [ $# != 0 ] ; do
             shift 2;;
         --rgahp-script ) REMOTE_CMD="$2"
             shift 2;;
+        --rgahp-nobatchmode ) SSH_BATCHMODE=no
+            shift ;;
         --rgahp-* ) echo "Unknown option: $1" 1>&2
             echo -e "$USAGE"
             exit 1;;
@@ -80,10 +86,10 @@ while [ $# != 0 ] ; do
         -* ) break;;
         * )
             if [ "$REMOTE_HOSTNAME" = "" ] ; then
-                REMOTE_HOSTNAME=`echo "$1" | sed 's/.*@//'`
-                echo "$1" | grep -q '@'
-                if [ $? -eq 0 ] ; then
-                    REMOTE_USER=`echo "$1" | sed 's/@.*//'`
+                if  [[ $1 =~ ^(([A-Za-z_][A-Za-z0-9_-]*)@)?([A-Za-z0-9\.-]+)(:([0-9]*))?$ ]]; then
+                    REMOTE_USER="${BASH_REMATCH[2]:-$REMOTE_USER}"
+                    REMOTE_HOSTNAME="${BASH_REMATCH[3]:-$REMOTE_HOSTNAME}"
+                    REMOTE_PORT="${BASH_REMATCH[5]:-$REMOTE_PORT}"
                 fi
                 shift
             elif [ "$REMOTE_CMD" = "" ] ; then
@@ -138,10 +144,14 @@ fi
 # remove hostname from arglist
 shift
 
-# use BatchMode so we fail if a password is requested
-#echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
+SSH_ARGS=(-p $REMOTE_PORT)
+# Some HPCs require a PIN when specifying "-o BatchMode yes", so we should allow users
+# https://opensciencegrid.atlassian.net/browse/SOFTWARE-4239
+[[ $SSH_BATCHMODE == "yes" ]] && SSH_ARGS+=(-o "BatchMode yes")
+
+#echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
 if [ "${REMOTE_CMD}" = "batch_gahp" ] ; then
-    ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
     SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # We need to set up a tunnel from the remote machine for the file
@@ -160,14 +170,14 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     GRIDMANAGER_ADDRESS=`echo "$CONDOR_INHERIT" | sed 's/[^<]*<\([^?>]*\).*/\1/'`
     SSH_STATUS=255
     if [[ `ssh -V 2>&1` =~ ^OpenSSH_[5-9].* ]] ; then
-        SSH_ARGS="-o ExitOnForwardFailure=yes"
+        SSH_ARGS+=(-o ExitOnForwardFailure=yes)
         tries=3
     else
         tries=1
     fi
     while ((tries-- > 0 && SSH_STATUS == 255)) ; do
         let port=${RANDOM}+32768
-        ssh $SSH_ARGS -R $port:$GRIDMANAGER_ADDRESS -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+        ssh "${SSH_ARGS[@]}" -R $port:$GRIDMANAGER_ADDRESS $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
         SSH_STATUS=$?
     done
 else

@@ -23,63 +23,7 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
  
-#if defined(Solaris) 
-
-/*
- * This works for Solaris >= 2.3
- */
-#include <unistd.h>
-
-int
-sysapi_phys_memory_raw_no_param(void)
-{
-	long pages, pagesz;
-	double hack, size;
-
-	pages = sysconf(_SC_PHYS_PAGES);
-	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
-
-	if (pages == -1 || pagesz == -1 ) {
-		return -1;
-	}
-
-#if defined(X86)
-		/* 
-		   This is super-ugly.  For some reason, Intel Solaris seems
-		   to have some kind of rounding error for reporting memory.
-		   These values just came from a little trail and error and
-		   seem to work pretty well.  -Derek Wright (1/29/98)
- 	    */
-	hack = (double)pages * (double)pagesz;
-	
-	/* I don't know if this divisor is right, but it'll do for now.
-		Keller 05/20/99 */
-	if ((hack / 1024.0) > INT_MAX)
-	{
-		return INT_MAX;
-	}
-
-	if( hack > 260000 ) {
-		return (int) (hack / 1023.0);		
-	} else if( hack > 130000 ) {
-		return (int) (hack / 1020.0);
-	} else if( hack > 65000 ) {
-		return (int) (hack / 1010.0);
-	} else {
-		return (int) (hack / 1000.0);
-	}
-#else
-	size = (double)pages * (double)pagesz;
-	size /= 1024.0;
-
-	if (size > INT_MAX) {
-		return INT_MAX;
-	}
-	return (int)size;
-#endif
-}
-
-#elif defined(LINUX)
+#if defined(LINUX)
 #include <stdio.h>
 
 int 

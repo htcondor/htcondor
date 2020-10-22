@@ -112,8 +112,8 @@ protected:
      *                           'condor_transferer' process
      * Description: reaper of downloading 'condor_transferer' process
      */
-    static int 
-	downloadReplicaTransfererReaper(Service* service, int pid, int exitStatus);
+    int 
+	downloadReplicaTransfererReaper(int pid, int exitStatus);
 private:
     std::string    m_name;
     ClassAd*       m_classAd;
@@ -171,7 +171,7 @@ private:
     time_t  m_lastHadAliveTime;
 
 // Debugging utilities
-	void printDataMembers()
+	void printDataMembers() const
     {
         dprintf( D_ALWAYS, "\n"
 						   "Replication interval                  - %d\n"

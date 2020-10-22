@@ -54,16 +54,22 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
+// DAGMan global schedd object. Only used here to hand off to a splice DAG.
+DCSchedd *_schedd = NULL;
+
 static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory);
 
-static bool parse_node( Dag *dag,
+static bool parse_node( Dag *dag, const char * nodeName, 
+						const char * submitFileOrSubmitDesc,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
 						const char *submitOrDagFile);
+
+static bool pre_parse_node(MyString & nodename, const char * &submitFile);
 
 static bool parse_script(const char *endline, Dag *dag, 
 		const char *filename, int lineNumber);
@@ -135,9 +141,37 @@ void parseSetDoNameMunge(bool doit)
 	_mungeNames = doit;
 }
 
+struct _parse_inline_submit_callback_args { char * line; int source_id; };
+
+static int parse_inline_submit_callback(void* pv, MACRO_SOURCE& /*source*/, MACRO_SET& /*macro_set*/, char * line, std::string & /*errmsg*/)
+{
+	char ** stopline = (char**)pv;
+	*stopline = line;
+	if (!line || *line != '}') {
+		return -1; /// return failure
+	}
+	return 1; // stop scanning, return success
+}
+
+int parse_up_to_close_brace(SubmitHash & hash, MacroStream &ms, std::string & errmsg, char** closeline)
+{
+	*closeline = NULL;
+
+	MACRO_EVAL_CONTEXT ctx;
+	ctx.init("SUBMIT", 2);
+
+	int err = Parse_macros(ms,
+		0, hash.macros(), READ_MACROS_SUBMIT_SYNTAX,
+		&ctx, errmsg, parse_inline_submit_callback, closeline);
+	if (err < 0)
+		return err;
+	return 0;
+}
+
+
 //-----------------------------------------------------------------------------
 bool parse(Dag *dag, const char *filename, bool useDagDir,
-			bool incrementDagNum)
+			DCSchedd *schedd, bool incrementDagNum)
 {
 	ASSERT( dag != NULL );
 
@@ -146,6 +180,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	}
 
 	_useDagDir = useDagDir;
+	_schedd = schedd;
 
 		//
 		// If useDagDir is true, we have to cd into the directory so we can
@@ -171,6 +206,8 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		}
 		tmpFilename = condor_basename( filename );
 	}
+	MyString tmpcwd;
+	condor_getcwd( tmpcwd );
 
 	FILE *fp = safe_fopen_wrapper_follow(tmpFilename, "r");
 	if(fp == NULL) {
@@ -183,7 +220,13 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
    	}
 
 	char *line;
-	int lineNumber = 0;
+	//int lineNumber = 0;
+
+	MACRO_SOURCE src = { false, false, 0, 0, 0, 0 };
+	MacroStreamYourFile ms(fp, src);
+	src.line = 0;
+	src.id = 4; // index into macro_set.sources. 4 is the first index after the pre-defined ones
+	int gl_opts = 3; // CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
 
 	//
 	// We now parse in two passes, so that commands such as PARENT..CHILD
@@ -196,14 +239,15 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	// PASS 1.
 	// This loop will read every line of the input file
 	//
-	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
-		std::string varline(line);
+	while ( ((line=ms.getline(gl_opts)) != NULL) ) {
+		//std::string varline(line);
+		int lineNumber = src.line;
 
 		//
 		// Find the terminating '\0'
 		//
-		char * endline = line;
-		while (*endline != '\0') endline++;
+		//char * endline = line;
+		//while (*endline != '\0') endline++;
 
 
 		// Note that getline will truncate leading spaces (as defined by isspace())
@@ -225,10 +269,56 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_node( dag, 
-					   token,
-					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile" );
+			MyString nodename;
+			const char * subfile = NULL;
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) { subfile = "submitDesc"; } // Set a pseudo filename
+			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
+						   "JOB",
+						   filename, lineNumber, tmpDirectory.Value(), "",
+						   "submitfile" );
+			if (parsed_line_successfully && inline_submit) {
+				// go into inline subfile parsing mode
+				if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true)) {
+					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
+					  "description for node %s, DAGMAN_USE_CONDOR_SUBMIT must "
+					  "be set to False. Aborting.\n", nodename.Value());
+					parsed_line_successfully = false;
+				}
+				else { 
+					// Check for duplicate keys in dag->SubmitDescriptions
+					// If a duplicate exists, std::map.insert() will not throw any
+					// errors but it also won't overwrite the existing value.
+					// In this case, throw an error and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+							"already exists with name %s, will not be overwritten."
+							"\n", nodename.Value());
+					}
+					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename.Value()), new SubmitHash()));
+					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename.Value()));
+					submitDesc->init();
+					submitDesc->setDisableFileChecks(true);
+					std::string errmsg;
+					char * stopline = NULL;
+					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
+						parsed_line_successfully = false;
+					} else {
+						// Attach the submit description to the actual node
+						Job *job;
+						job = dag->FindAllNodesByName((const char *)nodename.Value(), 
+							"", filename, lineNumber);
+						if (job) {
+							job->setSubmitDesc(submitDesc);
+						}
+						else {
+							debug_printf(DEBUG_NORMAL, "Error: unable to find node "
+								"%s in our DAG structure, aborting.\n", nodename.Value());
+						}
+					}
+				}
+			}
 		}
 
 		// Handle a SUBDAG spec
@@ -239,7 +329,64 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 
 		// Handle a FINAL spec
 		else if(strcasecmp(token, "FINAL") == 0) {
-			parsed_line_successfully = parse_node( dag, 
+			MyString nodename;
+			const char * subfile;
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) { subfile = "submitDesc"; } // // Generate a pseudo filename?
+			parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile,
+					"FINAL",
+					filename, lineNumber, tmpDirectory.Value(), "",
+					"submitfile");
+			if (parsed_line_successfully && inline_submit) {
+				// go into inline subfile parsing mode
+				if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true)) {
+					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
+					  "description for node %s, DAGMAN_USE_CONDOR_SUBMIT must "
+					  "be set to False. Aborting.\n", nodename.Value());
+					parsed_line_successfully = false;
+				}
+				else { 
+					// Check for duplicate keys in dag->SubmitDescriptions
+					// If a duplicate exists, std::map.insert() will not throw any
+					// errors but it also won't overwrite the existing value.
+					// In this case, throw an error and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+							"already exists with name %s, will not be overwritten."
+							"\n", nodename.Value());
+					}
+					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename.Value()), new SubmitHash()));
+					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename.Value()));
+					submitDesc->init();
+					submitDesc->setDisableFileChecks(true);
+					std::string errmsg;
+					char * stopline = NULL;
+					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
+						parsed_line_successfully = false;
+					} else {
+						// Attach the submit description to the actual node
+						Job *job;
+						job = dag->FindAllNodesByName((const char *)nodename.Value(), 
+							"", filename, lineNumber);
+						if (job) {
+							job->setSubmitDesc(submitDesc);
+						}
+						else {
+							debug_printf(DEBUG_NORMAL, "Error: unable to find node "
+								"%s in our DAG structure, aborting.\n", nodename.Value());
+						}
+					}
+				}
+			}
+		}
+
+		// Handle a PROVISIONER spec
+		else if(strcasecmp(token, "PROVISIONER") == 0) {
+			MyString nodename;
+			const char * subfile;
+			pre_parse_node(nodename, subfile);
+			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
 					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
@@ -250,6 +397,44 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			parsed_line_successfully = parse_splice(dag, filename,
 						lineNumber);
 		}
+
+		// Handle a SUBMIT-DESCRIPTION spec
+		else if(strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
+			MyString descName;
+			const char* desc;
+			pre_parse_node(descName, desc);
+			bool is_submit_description = desc && *desc == '{';
+			if (is_submit_description) {
+				// Start parsing submit description
+				if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true)) {
+					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
+					  "description for node %s, DAGMAN_USE_CONDOR_SUBMIT must "
+					  "be set to False. Aborting.\n", descName.Value());
+					parsed_line_successfully = false;
+				}
+				else {
+					// Check for duplicate keys in dag->SubmitDescriptions
+					// If a duplicate exists, std::map.insert() will not throw any
+					// errors but it also won't overwrite the existing value.
+					// In this case, throw an error and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(descName.Value())) == dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+							"already exists with name %s, will not be overwritten."
+							"\n", descName.Value());
+					}
+					dag->SubmitDescriptions.insert(std::make_pair(std::string(descName.Value()), new SubmitHash()));
+					SubmitHash* submitDesc = dag->SubmitDescriptions.at(descName.Value());
+					submitDesc->init();
+					submitDesc->setDisableFileChecks(true);
+					std::string errmsg;
+					char * stopline = NULL;
+					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
+						parsed_line_successfully = false;
+					}
+				}
+			}
+		}
+
 		else {
 				// Just accept everything for now -- we'll detect unknown
 				// command names in the second pass.
@@ -274,13 +459,16 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		return false;
 	}
 
-	lineNumber = 0;
+	// reset line number because we seeked back to the start of the file.
+	//lineNumber = 0;
+	src.line = 0;
 
 	//
 	// This loop will read every line of the input file
 	//
-	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
-		std::string varline(line);
+	while ( ((line=ms.getline(gl_opts)) != NULL) ) {
+		//std::string varline(line);
+		int lineNumber = src.line;
 		//
 		// Find the terminating '\0'
 		//
@@ -307,8 +495,34 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-				// Parsed in first pass.
+				// Parsed in first pass. 
+				// However we still need to check if this is an inline submit 
+				// description, and if so advance the line parser.
 			parsed_line_successfully = true;
+			int startLineNumber = lineNumber;
+			MyString nodename;
+			const char * subfile = NULL;
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) {
+				// It's probably pointless to look for a missing close brace at
+				// this point since it would have failed on the first pass.
+				bool found_close_bracket = false;
+				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
+					lineNumber++;
+					if (line[0] == '}') {
+						found_close_bracket = true;
+						break;
+					}
+				}
+				if (!found_close_bracket) {
+					debug_printf(DEBUG_NORMAL, "Error: no closing brace in JOB %s "
+						"submit description (starting on line %d)\n",
+						nodename.Value(), startLineNumber);
+					parsed_line_successfully = false;
+				}
+			}
+			
 		}
 
 		// Handle a SUBDAG spec
@@ -317,14 +531,45 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			parsed_line_successfully = true;
 		}
 
-		// Handle a FINAL spec
-		else if(strcasecmp(token, "FINAL") == 0) {
+		// Handle a PROVISIONER spec
+		else if(strcasecmp(token, "PROVISIONER") == 0) {
 				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
 
+		// Handle a FINAL spec
+		else if(strcasecmp(token, "FINAL") == 0) {
+				// Parsed in first pass.
+				// However we still need to check if this is an inline submit 
+				// description, and if so advance the line parser.
+			parsed_line_successfully = true;
+			int startLineNumber = lineNumber;
+			MyString nodename;
+			const char * subfile = NULL;
+			pre_parse_node(nodename, subfile);
+			bool inline_submit = subfile && *subfile == '{';
+			if (inline_submit) {
+				// It's probably pointless to look for a missing close brace at
+				// this point since it would have failed on the first pass.
+				bool found_close_bracket = false;
+				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
+					lineNumber++;
+					if (line[0] == '}') {
+						found_close_bracket = true;
+						break;
+					}
+				}
+				if (!found_close_bracket) {
+					debug_printf(DEBUG_NORMAL, "Error: no closing brace in FINAL "
+						"%s submit description (starting on line %d)\n",
+						nodename.Value(), startLineNumber);
+					parsed_line_successfully = false;
+				}
+			}
+		}
+
 		// Handle a SCRIPT spec
-		// Example Syntax is:  SCRIPT (PRE|POST) [DEFER status time] JobName ScriptName Args ...
+		// Example Syntax is:  SCRIPT (PRE|POST|HOLD) [DEFER status time] JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
 			parsed_line_successfully = parse_script(endline, dag, 
 				filename, lineNumber);
@@ -456,14 +701,45 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 						filename, lineNumber );
 		}
 
+		// Handle a SUBMIT-DESCRIPTION spec
+		else if(strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
+				// Parsed in first pass.
+				// However we still need to advance the line parser.
+			parsed_line_successfully = true;
+			int startLineNumber = lineNumber;
+			MyString descName;
+			const char *desc = NULL;
+			pre_parse_node(descName, desc);
+			bool is_submit_description = desc && *desc == '{';
+			if (is_submit_description) {
+				// It's probably pointless to look for a missing close brace at
+				// this point since it would have failed on the first pass.
+				bool found_close_bracket = false;
+				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
+					lineNumber++;
+					if (line[0] == '}') {
+						found_close_bracket = true;
+						break;
+					}
+				}
+				if (!found_close_bracket) {
+					debug_printf(DEBUG_NORMAL, "Error: no closing brace in "
+						" SUBMIT-DESCRIPTION %s (starting on line %d)\n",
+						descName.Value(), startLineNumber);
+					parsed_line_successfully = false;
+				}
+			}
+		}
+
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
 				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
-				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, FINAL, "
+				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, "
 				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
-				"CONNECT, PIN_IN, PIN_OUT, or INCLUDE token (found %s)\n",
+				"CONNECT, PIN_IN, PIN_OUT, INCLUDE or SUBMIT-DESCRIPTION token "
+				"(found %s)\n",
 				filename, lineNumber, token );
 			parsed_line_successfully = false;
 		}
@@ -507,7 +783,10 @@ parse_subdag( Dag *dag,
 		return false;
 	}
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-		return parse_node( dag, nodeTypeKeyword, dagFile,
+		MyString nodename;
+		const char * subfile;
+		pre_parse_node(nodename, subfile);
+		return parse_node( dag, nodename.c_str(), subfile, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
 	}
 
@@ -531,8 +810,33 @@ static const char* next_possibly_quoted_token( void )
 }
 
 //-----------------------------------------------------------------------------
+// parse just enough of the line to know if this is an inline submit file or a submit filename
+static bool
+pre_parse_node(MyString & nodename, const char * &submitFile)
+{
+	nodename.clear();
+	submitFile = NULL;
+
+	// first token is the node name
+	const char *nodeName = strtok(NULL, DELIMITERS);
+	if (nodeName) {
+		nodename = nodeName;
+	}
+
+	// next token is the either the submit file name,
+	// or an inline submit description
+	submitFile = next_possibly_quoted_token();
+	if (!submitFile) {
+		return false;
+	}
+
+	// return success for pre-parse. we have two tokens, we don't yet know if they have valid values though!!!
+	return true;
+}
+
+//-----------------------------------------------------------------------------
 static bool 
-parse_node( Dag *dag, 
+parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc,
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
@@ -545,11 +849,14 @@ parse_node( Dag *dag,
 	bool done = false;
 	Dag *tmp = NULL;
 
+	NodeType type = NodeType::JOB;
+	if ( strcasecmp ( nodeTypeKeyword, "FINAL" ) == 0 ) type = NodeType::FINAL;
+	if ( strcasecmp ( nodeTypeKeyword, "PROVISIONER" ) == 0 ) type = NodeType::PROVISIONER;
+
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
 
 		// first token is the node name
-	const char *nodeName = strtok( NULL, DELIMITERS );
 	if ( !nodeName ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
 					"specified\n", dagFile, lineNum );
@@ -586,11 +893,11 @@ parse_node( Dag *dag,
 	MyString tmpNodeName = munge_job_name(nodeName);
 	nodeName = tmpNodeName.Value();
 
-		// next token is the submit file name
-	const char *submitFile = next_possibly_quoted_token();
-	if ( !submitFile ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
-					"specified\n", dagFile, lineNum );
+		// next token is the either the submit file name,
+		// or an inline submit description
+	if ( !submitFileOrSubmitDesc ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file or "
+					"submit description specified\n", dagFile, lineNum );
 		exampleSyntax( example.Value() );
 		return false;
 	}
@@ -669,37 +976,39 @@ parse_node( Dag *dag,
 	}
 
 	// If this is a "SUBDAG" line, generate the real submit file name.
+	// This can only be done with real submit files, not inline descriptions.
 	MyString nestedDagFile("");
 	MyString dagSubmitFile(""); // must be outside if so it stays in scope
-	if ( strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH ) {
-			// Save original DAG file name (needed for rescue DAG).
-		nestedDagFile = submitFile;
+	if ( submitFileOrSubmitDesc ) {
+		if ( strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH ) {
+				// Save original DAG file name (needed for rescue DAG).
+			nestedDagFile = submitFileOrSubmitDesc;
 
-			// Generate the "real" submit file name (append ".condor.sub"
-			// to the DAG file name).
-		dagSubmitFile = submitFile;
-		dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
-		submitFile = dagSubmitFile.Value();
+				// Generate the "real" submit file name (append ".condor.sub"
+				// to the DAG file name).
+			dagSubmitFile = submitFileOrSubmitDesc;
+			dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
+			submitFileOrSubmitDesc = dagSubmitFile.Value();
 
-	} else if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
-			// If the submit file name ends in ".condor.sub", we assume
-			// that this node is a nested DAG, and set the DAG filename
-			// accordingly.
-		nestedDagFile = submitFile;
-		nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
-		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
-					"keyword for nested DAGs is deprecated; please "
-					"use SUBDAG EXTERNAL instead\n" );
-		check_warning_strictness( DAG_STRICT_3 );
+		} else if ( strstr( submitFileOrSubmitDesc, DAG_SUBMIT_FILE_SUFFIX) ) {
+				// If the submit file name ends in ".condor.sub", we assume
+				// that this node is a nested DAG, and set the DAG filename
+				// accordingly.
+			nestedDagFile = submitFileOrSubmitDesc;
+			nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+			debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
+						"keyword for nested DAGs is deprecated; please "
+						"use SUBDAG EXTERNAL instead\n" );
+			check_warning_strictness( DAG_STRICT_3 );
+		}
 	}
 
 	// looks ok, so add it
-	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
 	if( !AddNode( dag, nodeName, directory,
-				submitFile, noop, done, isFinal, whynot ) )
+				submitFileOrSubmitDesc, noop, done, type, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
-					  dagFile, lineNum, whynot.Value() );
+					dagFile, lineNum, whynot.Value() );
 		exampleSyntax( example.Value() );
 		return false;
 	}
@@ -728,7 +1037,7 @@ parse_node( Dag *dag,
 //
 // Function: parse_script
 // Purpose:  Parse a line of the format:
-//             SCRIPT [DEFER status time] (PRE|POST) JobName ScriptName Args ...
+//             SCRIPT [DEFER status time] (PRE|POST|HOLD) JobName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
 static bool 
@@ -738,15 +1047,15 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT [DEFER status time] (PRE|POST) JobName Script Args ...";
+	const char * example = "SCRIPT [DEFER status time] (PRE|POST|HOLD) JobName Script Args ...";
 
 	//
 	// Second keyword is either PRE, POST or DEFER
 	//
-	char * prepost = strtok( NULL, DELIMITERS );
-	if ( !prepost ) {
+	char * type_name = strtok( NULL, DELIMITERS );
+	if ( !type_name ) {
 		debug_printf( DEBUG_QUIET,
-					"ERROR: %s (line %d): Missing PRE, POST, or DEFER\n",
+					"ERROR: %s (line %d): Missing PRE, POST, HOLD, or DEFER\n",
 					filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -754,7 +1063,7 @@ parse_script(
 
 	int defer_status = SCRIPT_DEFER_STATUS_NONE;
 	int defer_time = 0;
-	if ( !strcasecmp( prepost, "DEFER" ) ) {
+	if ( !strcasecmp( type_name, "DEFER" ) ) {
 			// Our script has a defer statement.
 		char *token = strtok( NULL, DELIMITERS );
 		if ( token == NULL ) {
@@ -791,26 +1100,28 @@ parse_script(
 			return false;
 		}
 
-			// The next token must be PRE or POST.
-		prepost = strtok( NULL, DELIMITERS );
-		if ( !prepost ) {
+			// The next token must be PRE, POST or HOLD.
+		type_name = strtok( NULL, DELIMITERS );
+		if ( !type_name ) {
 			debug_printf( DEBUG_QUIET,
-						"ERROR: %s (line %d): Missing PRE or POST\n",
+						"ERROR: %s (line %d): Missing PRE, POST or HOLD\n",
 						filename, lineNumber );
 			exampleSyntax( example );
 			return false;
 		}
 	}
 
-	bool   post;
-	if ( !strcasecmp (prepost, "PRE" ) ) {
-		post = false;
-	} else if ( !strcasecmp (prepost, "POST") ) {
-		post = true;
+	ScriptType scriptType;
+	if ( !strcasecmp (type_name, "PRE" ) ) {
+		scriptType = ScriptType::PRE;
+	} else if ( !strcasecmp (type_name, "POST") ) {
+		scriptType = ScriptType::POST;
+	} else if ( !strcasecmp (type_name, "HOLD") ) {
+		scriptType = ScriptType::HOLD;
 	} else {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "After specifying \"SCRIPT\", you must "
-					  "indicate if you want \"PRE\" or \"POST\" "
+					  "indicate if you want \"PRE\", \"POST\", \"HOLD\" "
 					  "(or DEFER)\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
@@ -855,7 +1166,7 @@ parse_script(
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
-					  filename, lineNumber, post ? "POST" : "PRE", 
+					  filename, lineNumber, type_name, 
 					  jobNameOrig );
 		exampleSyntax( example );
 		return false;
@@ -876,7 +1187,7 @@ parse_script(
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): "
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
-					  filename, lineNumber, post ? "POST" : "PRE", 
+					  filename, lineNumber, type_name, 
 					  jobNameOrig );
 		exampleSyntax( example );
 		return false;
@@ -891,10 +1202,10 @@ parse_script(
 
 		MyString whynot;
 			// This fails if the node already has a script.
-		if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
+		if( !job->AddScript( scriptType, rest, defer_status, defer_time, whynot ) ) {
 			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  	"failed to add %s script to node %s: %s\n",
-					  	filename, lineNumber, post ? "POST" : "PRE",
+					  	filename, lineNumber, type_name,
 					  	job->GetJobName(), whynot.Value() );
 			return false;
 		}
@@ -1065,7 +1376,7 @@ parse_parent(
 		std::string joinNodeName;
 		formatstr(joinNodeName, "_condor_join_node%d", ++numJoinNodes);
 		Job* joinNode = AddNode(dag, joinNodeName.c_str(), "", "noop.sub", true, 
-			false, false, failReason);
+			false, NodeType::JOB, failReason);
 		if (!joinNode) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) while attempting to"
 				" add join node\n", failReason.Value(), lineNumber);
@@ -1215,7 +1526,7 @@ parse_retry(
 		debug_printf( DEBUG_DEBUG_3, "parse_retry(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -1340,7 +1651,7 @@ parse_abort(
 		debug_printf( DEBUG_DEBUG_3, "parse_abort(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -1636,7 +1947,7 @@ parse_priority(
 		debug_printf( DEBUG_DEBUG_3, "parse_priority(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have PRIORITY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -1732,7 +2043,7 @@ parse_category(
 		debug_printf( DEBUG_DEBUG_3, "parse_category(): found job %s\n",
 					job->GetJobName() );
 
-		if ( job->GetFinal() ) {
+		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
@@ -1861,6 +2172,7 @@ parse_splice(
 							dag->MaxJobsSubmitted(),
 							dag->MaxPreScripts(),
 							dag->MaxPostScripts(),
+							dag->MaxHoldScripts(),
 							dag->UseDagDir(),
 							dag->MaxIdleJobProcs(),
 							dag->RetrySubmitFirst(),
@@ -1873,6 +2185,7 @@ parse_splice(
 							dag->GenerateSubdagSubmits(),
 							NULL, // this Dag will never submit a job
 							true, /* we are a splice! */
+							_schedd,
 							current_splice_scope() );
 	
 	// initialize whatever the DIR line was, or defaults to, here.
@@ -1893,7 +2206,7 @@ parse_splice(
 	}
 
 	// parse the splice file into a separate dag.
-	if (!parse(splice_dag, spliceFile.Value(), _useDagDir, false)) {
+	if (!parse(splice_dag, spliceFile.Value(), _useDagDir, _schedd, false)) {
 		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
 			spliceName.Value(), spliceFile.Value());
 		return false;
@@ -2304,7 +2617,7 @@ parse_done(
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 
-	if ( job->GetFinal() ) {
+	if ( job->GetType() == NodeType::FINAL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
 					  filename, lineNumber, jobNameOrig );
@@ -2506,7 +2819,7 @@ parse_include(
 		// include file path is always relative to the submit directory,
 		// *not* relative to the DAG file's directory, even if
 		// 'condor_submit -usedagdir' is specified.
-	return parse( dag, tmpFilename.Value(), false, false );
+	return parse( dag, tmpFilename.Value(), false, _schedd, false );
 }
 
 static MyString munge_job_name(const char *jobName)
@@ -2517,7 +2830,7 @@ static MyString munge_job_name(const char *jobName)
 	MyString newName;
 
 	if ( _mungeNames ) {
-		newName = IntToStr(_thisDagNum) + "." + jobName;
+		newName = std::to_string(_thisDagNum) + "." + jobName;
 	} else {
 		newName = jobName;
 	}

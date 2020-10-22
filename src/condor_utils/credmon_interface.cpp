@@ -28,6 +28,31 @@
 #include <fnmatch.h>
 #endif
 
+// constuct filename <cred_dir>/<user><ext>
+// if user ends in @domain, only part before the @ will be used
+static const char * credmon_user_filename(MyString & file, const char * cred_dir, const char *user, const char * ext=NULL)
+{
+	size_t len = strlen(cred_dir) + strlen(user) + 10;
+	if (ext) {
+		len += strlen(ext);
+	}
+	file.reserve_at_least((int)len);
+	dircat(cred_dir, user, file);
+
+	// if username has a @ we need to remove that from the filename
+	const char *at = strchr(user, '@');
+	if (at) {
+		int ix = file.FindChar('@', (int)strlen(cred_dir));
+		file.truncate(ix);
+	}
+	// append file extension (if any)
+	if (ext) {
+		file += ext;
+	}
+	return file.c_str();
+}
+
+
 
 #define CREDMON_PID_FILE_READ_INTERVAL 20
 
@@ -61,6 +86,188 @@ int get_credmon_pid() {
 	return _static_credmon_pid;
 }
 
+//const int credmon_type_PWD = 0;
+//const int credmon_type_KRB = 1;
+//const int credmon_type_OAUTH = 2;
+static const char * const credmon_type_names[] = { "Password", "Kerberos", "OAuth" };
+static const char * credmon_type_name(int cred_type) {
+	if (cred_type < 0 || cred_type >= (int)COUNTOF(credmon_type_names)) {
+		return "!error";
+	}
+	return credmon_type_names[cred_type];
+}
+
+void credmon_clear_completion(int /*cred_type*/, const char * cred_dir)
+{
+	if (! cred_dir)
+		return;
+
+	MyString ccfile;
+	dircat(cred_dir, "CREDMON_COMPLETE", ccfile);
+
+	//TODO: the code in the master that was doing this before did not setpriv, should it?
+	//priv_state priv = set_root_priv();
+
+	dprintf(D_SECURITY, "CREDMON: removing %s.", ccfile.c_str());
+	unlink(ccfile.c_str());
+
+	//set_priv(priv);
+}
+
+bool credmon_poll_for_completion(int cred_type, const char * cred_dir, int timeout)
+{
+	if (! cred_dir)
+		return true;
+
+	const char * type = credmon_type_name(cred_type);
+
+	bool success = false;
+
+	MyString ccfile;
+	dircat(cred_dir, "CREDMON_COMPLETE", ccfile);
+	for (;;) {
+		// look for existence of file that says everything is up-to-date.
+		// stat the file as root
+		struct stat stat_buf;
+		priv_state priv = set_root_priv();
+		int rc = stat(ccfile.c_str(), &stat_buf);
+		set_priv(priv);
+		if (rc == 0) {
+			success = true;
+			break;
+		}
+		if (timeout < 0)
+			break;
+		if (!(timeout % 10)) {
+			dprintf(D_ALWAYS, "%s User credentials not up-to-date.  Will wait up to %d more seconds.\n", type, timeout);
+		}
+		sleep(1);
+		--timeout;
+	}
+	return success;
+}
+
+// returns true if there is a credmon and we managed to kick it
+bool credmon_kick(int cred_type)
+{
+	const int read_file_interval = 20;
+#if 0 //def WIN32
+	const char * file = "wakeid";
+	const HANDLE no_handle = INVALID_HANDLE_VALUE;
+	static HANDLE krb_handle = no_handle; // handle is an Event handle for Windows
+	static HANDLE oauth_handle = no_handle;
+	HANDLE * credmon_handle = NULL;
+#else
+	const char * file = "pid";
+	const int no_handle = -1;
+	static int krb_handle = no_handle; // handle is the pid for Linux
+	static int oauth_handle = no_handle;
+	int * credmon_handle = NULL;
+#endif
+	static time_t krb_credmon_refresh = 0;
+	static time_t oauth_credmon_refresh = 0;
+	time_t * refresh_time = NULL;
+
+	const char * type = credmon_type_name(cred_type);
+	auto_free_ptr cred_dir;
+
+	int now = time(NULL);
+	if (cred_type == credmon_type_KRB) {
+		credmon_handle = &krb_handle;
+		if (krb_handle == no_handle || now > krb_credmon_refresh) {
+			cred_dir.set(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+			refresh_time = &krb_credmon_refresh;
+		}
+	} else if (cred_type == credmon_type_OAUTH) {
+		credmon_handle = &oauth_handle;
+		if (oauth_handle == no_handle || now > oauth_credmon_refresh) {
+			cred_dir.set(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+			refresh_time = &oauth_credmon_refresh;
+		}
+	}
+	// no credmon handle, nothing to wake
+	if ( ! credmon_handle) {
+		return false;
+	}
+
+	// cred_dir is set, we need to refresh the credmon handle
+	if (cred_dir) {
+		MyString idfile;
+		dircat(cred_dir, file, idfile);
+
+		int fd = safe_open_no_create(idfile.c_str(), O_RDONLY | _O_BINARY);
+		if (fd) {
+			char buf[256];
+			memset(buf, 0, sizeof(buf));
+			size_t len = _condor_full_read(fd, buf, sizeof(buf));
+			buf[len] = 0;
+#if 0 //def WIN32
+			HANDLE h = INVALID_HANDLE_VALUE;
+			// TODO: Open an event handle
+#else
+			char * endp = NULL;
+			int h = strtol(buf, &endp, 10);
+			if (h > 0 && endp > buf) {
+				*credmon_handle = h;
+			}
+#endif
+			close(fd);
+			*refresh_time = now + read_file_interval;
+		}
+	}
+
+	// if cred_dir if not set, but we have a credmon handle, we can just kick it.
+	if (*credmon_handle != no_handle) {
+#ifdef WIN32
+		//TODO: signal the credmon
+		// SetEvent(*credmon_handle);
+		dprintf(D_ALWAYS, "Windows %s credmon: handle=%d (can't send signal)\n", type, *credmon_handle);
+#else
+		int rc = kill(*credmon_handle, SIGHUP);
+		if (rc == -1) {
+			dprintf(D_ALWAYS, "failed to signal %s credmon: pid=%d err=%i\n", type, *credmon_handle, errno);
+			return false;
+		}
+#endif
+		return true;
+	}
+
+	return false;
+}
+
+
+bool credmon_kick_and_poll_for_ccfile(int cred_type, const char * ccfile, int timeout)
+{
+	const char * type = credmon_type_name(cred_type);
+
+	credmon_kick(cred_type);
+
+	bool success = false;
+
+	for (;;) {
+		// look for existence of file that says everything is up-to-date.
+		// stat the file as root
+		struct stat stat_buf;
+		priv_state priv = set_root_priv();
+		int rc = stat(ccfile, &stat_buf);
+		set_priv(priv);
+		if (rc == 0) {
+			success = true;
+			break;
+		}
+		if (timeout < 0)
+			break;
+		if (!(timeout % 10)) {
+			dprintf(D_ALWAYS, "%s User credentials not up-to-date.  Will wait up to %d more seconds.\n", type, timeout);
+		}
+		sleep(1);
+		--timeout;
+	}
+	return success;
+}
+
+
+#if 0
 
 bool credmon_fill_watchfile_name(char* watchfilename, const char* user, const char* name = NULL) {
 
@@ -126,6 +333,10 @@ bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
 	}
 
 	if(send_signal) {
+#ifdef WIN32
+		//TODO: wake up the credmon
+		// SetEvent()
+#else
 		// now signal the credmon
 		pid_t credmon_pid = get_credmon_pid();
 		if (credmon_pid == -1) {
@@ -134,16 +345,12 @@ bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
 		}
 
 		dprintf(D_FULLDEBUG, "CREDMON: sending SIGHUP to credmon pid %i\n", credmon_pid);
-#ifdef WIN32
-		//TODO: send reconfig signal to credmon
-		int rc = -1;
-#else
 		int rc = kill(credmon_pid, SIGHUP);
-#endif
 		if (rc == -1) {
 			dprintf(D_ALWAYS, "CREDMON: failed to signal credmon: %i\n", errno);
 			return false;
 		}
+#endif
 	}
 	return true;
 }
@@ -174,7 +381,9 @@ bool credmon_poll_continue(const char* user, int retry, const char* name) {
 	return true;
 }
 
+#endif
 
+#if 0
 // takes a username, or NULL to refresh ALL credentials
 // if force_fresh, we delete the file we are polling first
 // if send_signal we SIGUP the credmon
@@ -211,29 +420,17 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 	dprintf(D_ALWAYS, "CREDMON: FAILURE: credmon never created %s after 20 seconds!\n", watchfilename);
 	return false;
 }
+#endif
 
-bool credmon_mark_creds_for_sweeping(const char* user) {
+bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user) {
 
-	// construct filename to create
-	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!cred_dir) {
 		return false;
 	}
 
-	// get username (up to '@' if present, else whole thing)
-	char username[256];
-	const char *at = strchr(user, '@');
-	if(at) {
-		strncpy(username, user, (at-user));
-		username[at-user] = 0;
-	} else {
-		strncpy(username, user, 255);
-		username[255] = 0;
-	}
-
-	// check to see if .cc already exists
-	char markfilename[PATH_MAX];
-	sprintf(markfilename, "%s%c%s.mark", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+	// construct <cred_dir>/<user>.mark
+	MyString markfile;
+	const char * markfilename = credmon_user_filename(markfile, cred_dir, user, ".mark");
 
 	priv_state priv = set_root_priv();
 	FILE* f = safe_fcreate_replace_if_exists(markfilename, "w", 0600);
@@ -263,72 +460,136 @@ int markfilter(const dirent*d) {
 }
 #endif
 
-void process_cred_mark_dir(const char *src) {
-	auto_free_ptr cred_dir_name(param("SEC_CREDENTIAL_DIRECTORY"));
+void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 
 	// in theory, this should never be undefined if we got here, but we're about
 	// to recursively delete directories as root so let's bail just to be safe.
-	if(!cred_dir_name) {
-		dprintf(D_ALWAYS, "CREDMON: SWEEPING, but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+	if(!cred_dir_name || !markfile) {
+		dprintf(D_ALWAYS, "CREDMON: SWEEPING, but SEC_CREDENTIAL_DIRECTORY_OAUTH not defined!\n");
 		return;
 	}
 
-	Directory cred_dir(cred_dir_name.ptr(), PRIV_ROOT);
+	Directory cred_dir(cred_dir_name, PRIV_ROOT);
 
-	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, MARK: %s\n", cred_dir_name.ptr(), src );
-	if ( cred_dir.Find_Named_Entry( src ) ) {
+	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, MARK: %s\n", cred_dir_name, markfile );
+	if ( cred_dir.Find_Named_Entry( markfile ) ) {
 		// it's possible that there are two users named "marky" and
 		// "marky.mark".  make sure the marky.mark file is NOT a
 		// directory, otherwise we'll delete poor marky's creds.
 		if (cred_dir.IsDirectory()) {
-			dprintf( D_ALWAYS, "SKIPPING DIRECTORY \"%s\" in %s\n", src, cred_dir_name.ptr());
+			dprintf( D_ALWAYS, "SKIPPING DIRECTORY \"%s\" in %s\n", markfile, cred_dir_name);
+			return;
+		}
+
+		// also make sure the .mark file is older than the sweep delay.
+		int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
+		int now = time(0);
+		int mtime = cred_dir.GetModifyTime();
+		if ( (now - mtime) >= sweep_delay ) {
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is at least %i seconds old. Sweeping...\n", markfile, mtime, sweep_delay);
+		} else {
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is less than %i seconds old. Skipping...\n", markfile, mtime, sweep_delay);
 			return;
 		}
 	} else {
-		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", src, cred_dir_name.ptr());
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", markfile, cred_dir_name);
 		return;
 	}
 
 	// delete the mark file (now that we're sure it's not a directory)
-	dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, src );
+	dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, markfile );
 	if (!cred_dir.Remove_Current_File()) {
-		dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, src );
+		dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, markfile );
 		return;
 	}
 
 	// delete the user's dir
-	MyString username = src;
+	MyString username = markfile;
 	username = username.substr(0, username.Length()-5);
-	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name.ptr(), username.Value());
+	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name, username.Value());
 	if ( cred_dir.Find_Named_Entry( username.Value() ) ) {
-		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, username.Value() );
+		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, username.Value() );
 		if (!cred_dir.Remove_Current_File()) {
-			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, username.Value() );
+			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, username.Value() );
 			return;
 		}
 	} else {
-		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", username.Value(), cred_dir_name.ptr());
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", username.Value(), cred_dir_name);
 		return;
 	}
 }
 
 
 void process_cred_mark_file(const char *src) {
-   //char * src = fname;
-   char * trg = strdup(src);
-   strcpy((trg + strlen(src) - 5), ".cred");
-   dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
-   unlink(trg);
-   strcpy((trg + strlen(src) - 5), ".cc");
-   dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
-   unlink(trg);
-   strcpy((trg + strlen(src) - 5), ".mark");
-   dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
+	// make sure the .mark file is older than the sweep delay.
+	// default is to clean up after 8 hours of no jobs.
+	StatInfo si(src);
+	if (si.Error()) {
+		dprintf(D_ALWAYS, "CREDMON: Error %i trying to stat %s\n", si.Error(), src);
+		return;
+	}
 
-   unlink(trg);
+	int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
+	int now = time(0);
+	int mtime = si.GetModifyTime();
+	if ( (now - mtime) > sweep_delay ) {
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Sweeping...\n", src, mtime, sweep_delay);
+	} else {
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Skipping...\n", src, mtime, sweep_delay);
+		return;
+	}
 
-   free(trg);
+	//char * src = fname;
+	char * trg = strdup(src);
+	strcpy((trg + strlen(src) - 5), ".cred");
+	dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
+	unlink(trg);
+	strcpy((trg + strlen(src) - 5), ".cc");
+	dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
+	unlink(trg);
+	strcpy((trg + strlen(src) - 5), ".mark");
+	dprintf(D_FULLDEBUG, "CREDMON: %li: FOUND %s UNLINK %s\n", time(0), src, trg);
+
+	unlink(trg);
+
+	free(trg);
 }
+
+#if 1
+
+void credmon_sweep_creds(const char * cred_dir, int cred_type)
+{
+	if ( ! cred_dir || (cred_type != credmon_type_KRB && cred_type != credmon_type_OAUTH))
+		return;
+
+#ifdef WIN32
+	// TODO: implement this.
+#else
+	MyString fullpathname;
+	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir);
+	struct dirent **namelist;
+	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
+	if (n >= 0) {
+		while (n--) {
+			if(cred_type == credmon_type_OAUTH) {
+				process_cred_mark_dir(cred_dir, namelist[n]->d_name);
+			} else if (cred_type == credmon_type_KRB) {
+				dircat(cred_dir, namelist[n]->d_name, fullpathname);
+				priv_state priv = set_root_priv();
+				process_cred_mark_file(fullpathname.c_str());
+				set_priv(priv);
+			}
+			free(namelist[n]);
+
+		}
+		free(namelist);
+	} else {
+		dprintf(D_FULLDEBUG, "CREDMON: skipping sweep, scandir(%s) got errno %i\n", cred_dir, errno);
+	}
+#endif
+}
+
+#else // old single cred_dir function
 
 void credmon_sweep_creds() {
 
@@ -365,29 +626,17 @@ void credmon_sweep_creds() {
 	}
 #endif
 }
+#endif
 
 
-bool credmon_clear_mark(const char* user) {
-	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
+bool credmon_clear_mark(const char * cred_dir , const char* user) {
 	if(!cred_dir) {
-		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_clear_mark() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
 	}
 
-	// get username (up to '@' if present, else whole thing)
-	char username[256];
-	const char *at = strchr(user, '@');
-	if(at) {
-		strncpy(username, user, (at-user));
-		username[at-user] = 0;
-	} else {
-		strncpy(username, user, 255);
-		username[255] = 0;
-	}
-
-	// unlink the "mark" file on every update
-	char markfilename[PATH_MAX];
-	sprintf(markfilename, "%s%c%s.mark", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+	// construct /<cred_dir>/<user>.mark
+	MyString markfile;
+	const char * markfilename = credmon_user_filename(markfile, cred_dir, user, ".mark");
 
 	priv_state priv = set_root_priv();
 	int rc = unlink(markfilename);

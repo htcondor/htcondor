@@ -3,7 +3,7 @@
 *condor_token_request*
 ======================
 
-interactively request a token from a remote daemon for the TOKEN authentication method
+interactively request a token from a remote daemon for the IDTOKENS authentication method
 :index:`condor_token_request<single: condor_token_request; HTCondor commands>`\ :index:`condor_token_request command`
 
 Synopsis
@@ -90,18 +90,18 @@ Examples
 To obtain a token with a lifetime of 10 minutes from the default *condor_collector*
 (the token is not returned until the daemon's administrator takes action):
 
-::
+.. code-block:: console
 
-    % condor_token_request -lifetime 600
+    $ condor_token_request -lifetime 600
     Token request enqueued.  Ask an administrator to please approve request 6108900.
     eyJhbGciOiJIUzI1NiIsImtpZCI6IlBPT0wifQ.eyJpYX...ii7lAfCA
 
 To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 ``WRITE``:
 
-::
+.. code-block:: console
 
-    % condor_token_request -name bird.cs.wisc.edu \
+    $ condor_token_request -name bird.cs.wisc.edu \
                            -identity bucky@cs.wisc.edu
                            -authz READ -authz WRITE
     Token request enqueued.  Ask an administrator to please approve request 2578154
@@ -110,9 +110,9 @@ To request a token from ``bird.cs.wisc.edu`` which is limited to ``READ`` and
 To create a token from the collector in the ``htcondor.cs.wisc.edu`` pool
 and then to save it to ``~/.condor/tokens.d/friend``:
 
-::
+.. code-block:: console
 
-    % condor_token_request -pool htcondor.cs.wisc.edu \
+    $ condor_token_request -pool htcondor.cs.wisc.edu \
                          -identity friend@cs.wisc.edu \
                          -lifetime 600 -token friend
     Token request enqueued.  Ask an administrator to please approve request 2720841.

@@ -146,11 +146,11 @@ public:
 	virtual ClassAd* machClassAd( void );
 
 		/// Return the job's universe integer.
-	int jobUniverse( void );
+	int jobUniverse( void ) const;
 
-	int jobCluster( void );
-	int jobProc( void );
-	int jobSubproc( void );
+	int jobCluster( void ) const;
+	int jobProc( void ) const;
+	int jobSubproc( void ) const;
 
 		/// Total bytes sent by this job 
 	virtual float bytesSent( void ) = 0;
@@ -213,6 +213,7 @@ public:
 			true if the failure is deemed transient and will therefore
 			be automatically tried again (e.g. when the shadow reconnects).
 		*/
+	virtual void setJobFailed( void );
 	virtual bool transferOutput( bool &transient_failure ) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 
@@ -238,11 +239,11 @@ public:
 		 */
 	virtual void gotHold( void );
 
-	bool hadRemove( void ) { return had_remove; };
-	bool hadHold( void ) { return had_hold; };
-	bool isExiting( void ) { return requested_exit; };
-	bool isGracefulShutdown( void ) { return graceful_exit; };
-	bool isFastShutdown( void ) { return fast_exit; };
+	bool hadRemove( void ) const { return had_remove; };
+	bool hadHold( void ) const { return had_hold; };
+	bool isExiting( void ) const { return requested_exit; };
+	bool isGracefulShutdown( void ) const { return graceful_exit; };
+	bool isFastShutdown( void ) const { return fast_exit; };
 
 
 		/** Someone is attempting to reconnect to this job.
@@ -279,8 +280,15 @@ public:
 	bool writeOutputAdFile( ClassAd* ad );
 	void initOutputAdFile( void );
 
+	void setUpdateAdFile( const char* path );
+	const char* getUpdateAdFile( void ) { return m_job_update_ad_file.c_str(); };
+	bool writeUpdateAdFile( ClassAd* ad );
+
 	void setCredPath( const char* path );
 	const char* getCredPath( void ) { return job_CredPath; };
+
+	void setKrb5CCName( const char* path );
+	const char* getKrb5CCName( void ) { return job_Krb5CCName; };
 
 		/**
 		   Send a periodic update ClassAd to our controller.  The
@@ -327,7 +335,7 @@ public:
 	virtual void removeFromOutputFiles( const char* filename ) = 0;
 
 		/// Has user_priv been initialized yet?
-	bool userPrivInitialized( void ); 
+	bool userPrivInitialized( void ) const; 
 
 		/** Are we currently using file transfer? 
 		    Used elsewhere to determine if we need to potentially
@@ -358,7 +366,9 @@ public:
 
 		/* Upload files in a job working directory */
 	virtual bool uploadWorkingFiles(void) { return false; }
-	
+
+	virtual bool uploadCheckpointFiles(void) { return false; }
+
 		/* Update Job ClassAd with checkpoint info and log it */
 	virtual void updateCkptInfo(void) {};
 
@@ -476,7 +486,10 @@ protected:
 	char* job_output_ad_file;
 	bool job_output_ad_is_stdout;
 
+	std::string m_job_update_ad_file;
+
 	char* job_CredPath;
+	char* job_Krb5CCName;
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;
@@ -533,7 +546,7 @@ private:
 		     the job.  Possible values: "exit" (on its own), "hold",
 		     "remove", or "evict" (PREEMPT, condor_vacate, condor_off).
 		*/
-	const char* getExitReasonString( void );
+	const char* getExitReasonString( void ) const;
 
 	int m_exit_hook_timer_tid;
 };

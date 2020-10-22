@@ -42,25 +42,25 @@ int main( int argc, char *argv[] )
 	classad::ClassAd *newAd = parser.ParseClassAd( newBuffer );
 	newBuffer = "";
 	pp.Unparse( newBuffer, newAd );
-	cout << "New ClassAd:" << endl;
-	cout << "------------" << endl;
-	cout << newBuffer << endl << endl;
+	std::cout << "New ClassAd:" << std::endl;
+	std::cout << "------------" << std::endl;
+	std::cout << newBuffer << std::endl << std::endl;
 	ClassAd *oldAd = toOldClassAd( newAd );
 	if( oldAd == NULL ) {
-		cout << "toOldClassAd returned NULL" << endl;
+		std::cout << "toOldClassAd returned NULL" << std::endl;
 	}
 	else {
 		sPrintAd( oldBuffer, *oldAd );
-		cout << "Old ClassAd:" << endl;
-		cout << "------------" << endl;
-		cout << oldBuffer << endl << endl;
+		std::cout << "Old ClassAd:" << std::endl;
+		std::cout << "------------" << std::endl;
+		std::cout << &oldBuffer << std::endl << std::endl;
 	}
 
 	newBuffer = "";
 	newAd = toNewClassAd( oldAd );
 	pp.Unparse( newBuffer, newAd );
-	cout << "New ClassAd:" << endl;
-	cout << "------------" << endl;
-	cout << newBuffer << endl << endl;
+	std::cout << "New ClassAd:" << std::endl;
+	std::cout << "------------" << std::endl;
+	std::cout << newBuffer << std::endl << std::endl;
 
 }

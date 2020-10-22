@@ -39,9 +39,9 @@ ScriptQ::ScriptQ( Dag* dag ) :
         EXCEPT( "ERROR: out of memory!");
     }
 
- 	// register daemonCore reaper for PRE/POST script completion
+	// register daemonCore reaper for PRE/POST/HOLD script completion
     _scriptReaperId =
-		daemonCore->Register_Reaper( "PRE/POST Script Reaper",
+		daemonCore->Register_Reaper( "PRE/POST/HOLD Script Reaper",
 									 (ReaperHandlercpp)&ScriptQ::ScriptReaper,
 									 "ScriptQ::ScriptReaper", this );
 }
@@ -58,15 +58,15 @@ int
 ScriptQ::Run( Script *script )
 {
 	//TEMP -- should ScriptQ object know whether it's pre or post?
-	const char *prefix = script->_post ? "POST" : "PRE";
+	const char *prefix = script->GetScriptName();
 
 	bool deferScript = false;
 
 		// Defer PRE scripts if the DAG is halted (we need to go ahead
 		// and run POST scripts so we don't "waste" the fact that the
 		// job completed).  (Allow PRE script for final node, though.)
-	if ( _dag->IsHalted() && !script->_post &&
-				!script->GetNode()->GetFinal() ) {
+	if ( _dag->IsHalted() && ( script->_type == ScriptType::PRE ) &&
+				!( script->GetNode()->GetType() == NodeType::FINAL ) ) {
 		debug_printf( DEBUG_DEBUG_1,
 					"Deferring %s script of node %s because DAG is halted\n",
 					prefix, script->GetNodeName() );
@@ -77,8 +77,12 @@ ScriptQ::Run( Script *script )
 		// running limit.
 		//TEMP -- the scriptQ object should really know the max scripts
 		// limit, instead of getting it from the Dag object.  wenger 2015-03-18
-	int maxScripts =
-		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
+	int maxScripts = 20; // TODO: Use better default value?
+	switch( script->_type ) {
+		case ScriptType::PRE: maxScripts = _dag->_maxPreScripts; break;
+		case ScriptType::POST: maxScripts = _dag->_maxPostScripts; break;
+		case ScriptType::HOLD: maxScripts = _dag->_maxHoldScripts; break;
+	}
 	if ( maxScripts != 0 && _numScriptsRunning >= maxScripts ) {
 			// max scripts already running
 		debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
@@ -86,7 +90,6 @@ ScriptQ::Run( Script *script )
 					  prefix, script->GetNodeName() );
 		deferScript = true;
 	}
-
 	if ( deferScript ) {
 		_scriptDeferredCount++;
 		_waitingQueue->push( script );
@@ -96,7 +99,7 @@ ScriptQ::Run( Script *script )
 	debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
 				  prefix, script->GetNodeName() );
 	_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
-				script->_post );
+				( script->_type ) );
 	if( int pid = script->BackgroundRun( _scriptReaperId,
 				_dag->_dagStatus, _dag->NumNodesFailed() ) ) {
 		_numScriptsRunning++;
@@ -116,11 +119,11 @@ ScriptQ::Run( Script *script )
 	// script count, which will throw off the maxpre/maxpost throttles.
 	// wenger 2007-11-08
 	const int returnVal = 1<<8;
-	if( ! script->_post ) {
+	if( script->_type == ScriptType::PRE ) {
 		_dag->PreScriptReaper( script->GetNode(), returnVal );
-	} else {
+	} else if( script->_type == ScriptType::POST ) {
 		_dag->PostScriptReaper( script->GetNode(), returnVal );
-	}
+	} 
 
 	return 0;
 }
@@ -162,7 +165,7 @@ ScriptQ::RunWaitingScripts( bool justOne )
 }
 
 int
-ScriptQ::NumScriptsRunning()
+ScriptQ::NumScriptsRunning() const
 {
 	return _numScriptsRunning;
 }
@@ -190,7 +193,7 @@ ScriptQ::ScriptReaper( int pid, int status )
 		++_scriptDeferredCount;
 		script->_nextRunTime = time( NULL ) + script->_deferTime;
 		_waitingQueue->push( script );
-		const char *prefix = script->_post ? "POST" : "PRE";
+		const char *prefix = script->GetScriptName();
 		debug_printf( DEBUG_NORMAL, "Deferring %s script of node %s for %ld seconds (exit status was %d)...\n",
 					prefix, script->GetNodeName(), script->_deferTime,
 					script->_deferStatus );
@@ -198,10 +201,12 @@ ScriptQ::ScriptReaper( int pid, int status )
 		script->_done = TRUE;
 
 		// call appropriate DAG reaper
-		if( ! script->_post ) {
+		if( script->_type == ScriptType::PRE ) {
 			_dag->PreScriptReaper( script->GetNode(), status );
-		} else {
+		} else if( script->_type == ScriptType::POST ) {
 			_dag->PostScriptReaper( script->GetNode(), status );
+		} else if( script->_type == ScriptType::HOLD ) {
+			_dag->HoldScriptReaper( script->GetNode() );
 		}
 	}
 

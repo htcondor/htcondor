@@ -62,7 +62,8 @@ const amask_t A_ALL	= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
   we really want *everything*, and it's lame to have to keep changing
   all those call sites whenever we add another special-case bit.
 */
-const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_SLOT);
+//const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_SLOT);
+//const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED);
 
 #define IS_PUBLIC(mask)		((mask) & A_PUBLIC)
 #define IS_STATIC(mask)		((mask) & A_STATIC)
@@ -193,7 +194,9 @@ public:
 	typedef std::map<string, double, classad::CaseIgnLTStr> slotres_map_t;
 	typedef std::vector<std::string> slotres_assigned_ids_t;
 	typedef std::vector<FullSlotId> slotres_assigned_id_owners_t;
+	typedef std::set<std::string> slotres_offline_ids_t;
 	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	typedef std::map<string, slotres_offline_ids_t, classad::CaseIgnLTStr> slotres_offline_ids_map_t;
 	typedef std::map<string, slotres_assigned_id_owners_t, classad::CaseIgnLTStr> slotres_devIdOwners_map_t;
 
 	MachAttributes();
@@ -204,12 +207,21 @@ public:
                                // creating data structure needed in compute and publish
     void init_machine_resources();
 
-	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
-	void compute( amask_t );			  // Actually recompute desired stats
+	void publish_static(ClassAd*);     // things that can only change on reconfig
+	void publish_dynamic(ClassAd*);    // things that can change at runtime
+	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
+	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
+	void compute_for_policy();  // formerly compute(A_TIMEOUT | A_SHARED) - before we evaluate policy like PREEMPT
+	void update_condor_load(float load) {
+		m_condor_load = load;
+		if( m_condor_load > m_load ) {
+			m_condor_load = m_load;
+		}
+	}
 
 		// Initiate benchmark computations benchmarks on the given resource
 	void start_benchmarks( Resource*, int &count );	
-	void benchmarks_finished( Resource* );	
+	void benchmarks_finished( Resource* );
 
 #if defined(WIN32)
 		// For testing communication with the CredD, if one is
@@ -220,13 +232,15 @@ public:
 
 		// On shutdown, print one last D_IDLE debug message, so we don't
 		// lose statistics when the startd is restarted.
-	void final_idle_dprintf();
+	void final_idle_dprintf() const;
 
 		// Functions to return the value of shared attributes
 	double			num_cpus()	const { return m_num_cpus; };
 	double			num_real_cpus()	const { return m_num_real_cpus; };
 	int				phys_mem()	const { return m_phys_mem; };
 	long long		virt_mem()	const { return m_virt_mem; };
+	long long		total_disk() const { return m_total_disk; }
+	bool			always_recompute_disk() const { return m_always_recompute_disk; }
 	float		load()			const { return m_load; };
 	float		condor_load()	const { return m_condor_load; };
 	time_t		keyboard_idle() const { return m_idle; };
@@ -237,6 +251,8 @@ public:
 	const char * AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
+	void         ReconfigOfflineDevIds();
+	void         RefreshDevIds(slotres_map_t::iterator & slot_res_count, slotres_devIds_map_t::iterator & slot_res_devids, int assign_to, int assign_to_sub);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
@@ -264,9 +280,12 @@ private:
 	double			m_num_cpus;
 	double			m_num_real_cpus;
 	int				m_phys_mem;
+	bool			m_always_recompute_disk; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
+	long long		m_total_disk; // the value of total_disk if m_recompute_disk is false
 	slotres_map_t   m_machres_map;
 	slotres_devIds_map_t m_machres_devIds_map;
-	slotres_devIds_map_t m_machres_offline_devIds_map;
+	slotres_devIds_map_t m_machres_offline_devIds_map; // startup list of offline ids
+	slotres_offline_ids_map_t m_machres_runtime_offline_ids_map; // dynamic list of offline ids (unique set of ids, startup + runtime)
 	slotres_devIdOwners_map_t m_machres_devIdOwners_map;
 	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
 	double init_machine_resource_from_script(const char * tag, const char * script_cmd);
@@ -318,6 +337,7 @@ class CpuAttributes
 public:
     typedef MachAttributes::slotres_map_t slotres_map_t;
 	typedef MachAttributes::slotres_devIds_map_t slotres_devIds_map_t;
+	typedef MachAttributes::slotres_offline_ids_map_t slotres_offline_ids_map_t;
 	typedef MachAttributes::slotres_assigned_ids_t slotres_assigned_ids_t;
 
 	friend class AvailAttributes;
@@ -331,32 +351,36 @@ public:
 	void attach( Resource* );	// Attach to the given Resource
 	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
+	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
-	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
-	void compute( amask_t );			  // Actually recompute desired stats
+	void publish_static(ClassAd*);  // Publish desired info to given CA
+	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
+	void compute_virt_mem();
+	void compute_disk();
+	void set_condor_load(float load) { c_condor_load = load; }
 
 		// Load average methods
-	float condor_load() { return c_condor_load; };
-	float owner_load() { return c_owner_load; };
-	float total_load() { return c_owner_load + c_condor_load; };
+	float condor_load() const { return c_condor_load; };
+	float owner_load() const { return c_owner_load; };
+	float total_load() const { return c_owner_load + c_condor_load; };
 	void set_owner_load( float v ) { c_owner_load = v; };
 
 		// Keyboad activity methods
 	void set_keyboard( time_t k ) { c_idle = k; };
 	void set_console( time_t k ) { c_console_idle = k; };
-	time_t keyboard_idle() { return c_idle; };
-	time_t console_idle() { return c_console_idle; };
-	int	type() { return c_type; };
+	time_t keyboard_idle() const { return c_idle; };
+	time_t console_idle() const { return c_console_idle; };
+	int	type() const { return c_type; };
 
-	void display( amask_t );
-	void dprintf( int, const char*, ... );
-	void show_totals( int );
+	void display(int dpf_flags) const;
+	void dprintf( int, const char*, ... ) const;
+	void cat_totals(MyString & buf) const;
 
-	double num_cpus() { return c_num_cpus; }
+	double num_cpus() const { return c_num_cpus; }
 	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
-	long long get_disk() { return c_disk; }
-	double get_disk_fraction() { return c_disk_fraction; }
-	long long get_total_disk() { return c_total_disk; }
+	long long get_disk() const { return c_disk; }
+	double get_disk_fraction() const { return c_disk_fraction; }
+	long long get_total_disk() const { return c_total_disk; }
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
@@ -368,6 +392,24 @@ public:
 			c_total_disk = r_attr->c_total_disk;
 		}
 	}
+	bool set_total_disk(long long total, bool refresh) {
+		// if input total is < 0, that means to figure it out
+		if (total > 0) {
+			bool changed = total != c_total_disk;
+			c_total_disk = total;
+			return changed;
+		} else if (c_total_disk == 0) {
+			// calculate disk at least once if a value is not passed in
+			refresh = true;
+		}
+		// refresh disk if the flag was passed in, or we do not yet have a value
+		if (refresh) {
+			c_total_disk = sysapi_disk_space(executeDir());
+			return true;
+		}
+		return false;
+	}
+
 	static void swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
@@ -437,7 +479,7 @@ public:
 	bool decrement( CpuAttributes* cap );
 	bool computeRemainder(slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	bool computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
-	void show_totals( int dprintf_mask, CpuAttributes *cap );
+	void cat_totals(MyString & buf, const char * execute_partition_id);
 
 private:
 	int				a_num_cpus;

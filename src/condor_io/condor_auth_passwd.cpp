@@ -45,6 +45,8 @@
 #include "subsystem_info.h"
 #include "secure_file.h"
 #include "condor_secman.h"
+#include "compat_classad_util.h"
+#include "classad/exprTree.h"
 
 #include "condor_auth_passwd.h"
 
@@ -86,8 +88,6 @@ static int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
 { return RSA_padding_add_PKCS1_PSS(rsa, EM, mHash, Hash, sLen); }
 #endif
 
-bool Condor_Auth_Passwd::m_attempt_pool_password = true;
-
 GCC_DIAG_OFF(float-equal)
 GCC_DIAG_OFF(cast-qual)
 #include "jwt-cpp/jwt.h"
@@ -116,11 +116,13 @@ bool checkToken(const std::string &line,
 		}
 		const std::string &tmp_key_id = decoded_jwt.get_key_id();
 		if (!server_key_ids.empty() && (server_key_ids.find(tmp_key_id) == server_key_ids.end())) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it was signed with key %s (not known to the server).\n", tmp_key_id.c_str());
 			return false;
 		}
 		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
 		const std::string &tmp_issuer = decoded_jwt.get_issuer();
 		if (!issuer.empty() && issuer != tmp_issuer) {
+			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it is from trust domain %s (server trust domain is %s).\n", tmp_issuer.c_str(), issuer.c_str());
 			return false;
 		}
 		if (!decoded_jwt.has_subject()) {
@@ -147,7 +149,7 @@ bool findToken(const std::string &tokenfilename,
 	std::string &token,
 	std::string &signature)
 {
-	dprintf(D_SECURITY, "TOKEN: Will use tokens found in %s.\n", tokenfilename.c_str());
+	dprintf(D_SECURITY, "IDTOKENS: Examining %s for valid tokens from issuer %s.\n", tokenfilename.c_str(), issuer.c_str());
 
 	std::unique_ptr<FILE,decltype(&fclose)> 
 		f(safe_fopen_no_create( tokenfilename.c_str(), "r" ), fclose);
@@ -158,14 +160,8 @@ bool findToken(const std::string &tokenfilename,
 		return false;
 	}
     for( std::string line; readLine( line, f.get(), false ); ) {
-        line.erase( line.length() - 1, 1 );
-		line.erase(line.begin(),
-			std::find_if(line.begin(),
-				line.end(),
-				[](int ch) {return !isspace(ch);}));
-		if (line.empty() || line[0] == '#') {
-			continue;
-		}
+		trim(line);
+		if (line.empty() || line[0] == '#') continue;
 		bool good_token = checkToken(line, issuer, server_key_ids, tokenfilename, username, token, signature);
 		if (good_token) {
 			return true;
@@ -189,6 +185,11 @@ findTokens(const std::string &issuer,
 		return true;
 	}
 
+	auto subsys = get_mySubSystem();
+
+		// If we are supposed to retrieve a token on behalf of a user, then
+		// owner will be set and we will use PRIV_USER.  In all other cases,
+		// if we are a daemon we should read the token as PRIV_CONDOR.
 	TemporaryPrivSentry tps( !owner.empty() );
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
@@ -196,6 +197,8 @@ findTokens(const std::string &issuer,
 			return false;
 		}
 		set_user_priv();
+	} else if (subsys->isDaemon()) {
+		set_priv(PRIV_CONDOR);
 	}
 
 	// Note we reuse the exclude regexp from the configuration subsys.
@@ -247,7 +250,7 @@ findTokens(const std::string &issuer,
 	const char *file;
 	std::vector<std::string> tokens;
 	std::string subsys_token_file;
-	std::string subsys_agt_name = get_mySubSystemName();
+	std::string subsys_agt_name = subsys->getName();
 	subsys_agt_name += "_auto_generated_token";
 
 	while ( (file = dir.Next()) ) {
@@ -384,6 +387,7 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_TOKEN),
     m_crypto(NULL),
+    m_crypto_state(NULL),
 	m_client_status(0),
 	m_server_status(0),
 	m_ret_value(0),
@@ -395,11 +399,21 @@ Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     m_k_prime_len(0),
 	m_state(ServerRec1)
 {
+	if (m_version == 2) {
+		std::string blacklist_param;
+		classad::ExprTree *expr = nullptr;
+		if (param(blacklist_param, "SEC_TOKEN_BLACKLIST_EXPR") &&
+			!ParseClassAdRvalExpr(blacklist_param.c_str(), expr))
+		{
+			m_token_blacklist_expr.reset(expr);
+		}
+	}
 }
 
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
 {
     if(m_crypto) delete(m_crypto);
+    if(m_crypto_state) delete(m_crypto_state);
     if (m_k) free(m_k);
     if (m_k_prime) free(m_k_prime);
 }
@@ -445,7 +459,7 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		std::string shared_key;
 		CondorError err;
 		if (key_id == "POOL") {
-			std::unique_ptr<char> pool_passwd(getStoredCredential(POOL_PASSWORD_USERNAME, ""));
+			std::unique_ptr<char> pool_passwd(getStoredPassword(POOL_PASSWORD_USERNAME, ""));
 			if (!pool_passwd.get()) {
 				return nullptr;
 			}
@@ -471,7 +485,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordA = getStoredCredential(name,domain);
+	//TODO: the 'password here on Unix is actually the cred converted to base64. is that right?
+	passwordA = getStoredPassword(name,domain);
 	free(name);
 
 		// Split nameB into name and domain, then get password
@@ -482,7 +497,8 @@ Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, c
 		*domain = '\0';
 		domain++;
 	}
-	passwordB = getStoredCredential(name,domain);
+	//TODO: the 'password' here on Unix is actually the cred converted to base64. is that right?
+	passwordB = getStoredPassword(name,domain);
 	free(name);
 
 		// If we failed to find either password, fail.
@@ -557,8 +573,10 @@ Condor_Auth_Passwd::fetchLogin()
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
 					std::string local_token;
+						// Note we don't log the token generation here as it is an ephemeral token
+						// used server-side to complete the secret generation process.
 					if (!Condor_Auth_Passwd::generate_token(identity, match_key,
-						authz_list, lifetime, local_token, &err))
+						authz_list, lifetime, local_token, 0, &err))
 					{
 						dprintf(D_SECURITY, "Failed to generate a token: %s\n",
 							err.getFullText().c_str());
@@ -676,6 +694,8 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 		// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
 
 	if ( !key || !keylen ) {
 		// cannot setup anything without a key
@@ -684,7 +704,16 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
 	KeyInfo thekey(key,keylen,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
+
 	return m_crypto ? true : false;
 }
 
@@ -722,16 +751,16 @@ Condor_Auth_Passwd::encrypt_or_decrypt(bool want_encrypt,
 	}
 	
 		// make certain we got a crypto object
-	if (!m_crypto) {
+	if (!m_crypto || !m_crypto_state) {
 		return false;
 	}
 
 		// do the work
-	m_crypto->resetState();
+	m_crypto_state->reset();
 	if (want_encrypt) {
-		result = m_crypto->encrypt(input,input_len,output,output_len);
+		result = m_crypto->encrypt(m_crypto_state, input,input_len,output,output_len);
 	} else {
-		result = m_crypto->decrypt(input,input_len,output,output_len);
+		result = m_crypto->decrypt(m_crypto_state, input,input_len,output,output_len);
 	}
 	
 		// mark output_len as zero upon failure
@@ -759,7 +788,7 @@ Condor_Auth_Passwd::wrap(const char *   input,
 	bool result;
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::wrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -777,7 +806,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
-	dprintf(D_SECURITY, "In Condor_Auth_Passwd::unwrap.\n");
+	dprintf(D_ALWAYS, "ZKM: In Condor_Auth_Passwd::unwrap.\n");
 	result = decrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -888,6 +917,17 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 					return false;
 				}
 			}
+			dprintf(D_AUDIT, mySock_->getUniqueId(),
+				"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
+
+			if (isTokenBlacklisted(jwt)) {
+				dprintf(D_SECURITY, "User token with payload %s has been blacklisted.\n", jwt.get_payload().c_str());
+				free(ka);
+				free(kb);
+				free(seed_ka);
+				free(seed_kb);
+				return false;
+			}
 
 			const std::string& algo = jwt.get_algorithm();
 			if (algo == "HS256") {
@@ -933,6 +973,63 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 
     return true;
 }
+
+
+bool
+Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
+{
+	if (!m_token_blacklist_expr) {
+		return false;
+	}
+	classad::ClassAd ad;
+	auto claims = jwt.get_payload_claims();
+	for (const auto &pair : claims) {
+		bool inserted = true;
+		const auto &claim = pair.second;
+		switch (claim.get_type()) {
+		case jwt::claim::type::null:
+			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+			break;
+		case jwt::claim::type::boolean:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
+			break;
+		case jwt::claim::type::int64:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
+			break;
+		case jwt::claim::type::number:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
+			break;
+		case jwt::claim::type::string:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
+			break;
+		// TODO: these are not currently supported
+		case jwt::claim::type::array: // fallthrough
+		case jwt::claim::type::object: // fallthrough
+		default:
+			break;
+		}
+
+			// If, somehow, we can't build the ad, be paranoid,
+			// and assume blacklisted. "abundance of caution"
+		if (!inserted) {
+			return true;
+		}
+	}
+
+	classad::EvalState state;
+	state.SetScopes(&ad);
+	classad::Value val;
+	bool blacklisted = true;
+		// Out of an abundance of caution, if we fail to evaluate the
+		// expression or it doesn't evaluate to something boolean-like,
+		// we consider the token potentially suspect.
+	if (!m_token_blacklist_expr->Evaluate(state, val) ||
+		!val.IsBooleanValueEquiv(blacklisted)) {
+		return true;
+	}
+	return blacklisted;
+}
+
 
 void
 Condor_Auth_Passwd::setup_seed(unsigned char *ka, unsigned char *kb) 
@@ -1513,6 +1610,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	const std::vector<std::string> &authz_list,
 	long lifetime,
 	std::string &token,
+	int ident,
 	CondorError *err)
 {
 	std::string example_username(POOL_PASSWORD_USERNAME);
@@ -1570,10 +1668,20 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	if (lifetime >= 0) {
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
 	}
+		// Set a unique JTI so we can identify the token we issued later on.
+	std::unique_ptr<char,decltype(&::free)> hexkey( Condor_Crypt_Base::randomHexKey(16), free );
+	if (hexkey) {
+		jwt_builder.set_id(hexkey.get());
+	}
 
 	try {
 		auto jwt_token = jwt_builder.sign(jwt::algorithm::hs256(jwt_key_str));
 		token = jwt_token;
+		if (ident && IsDebugCategory( D_AUDIT )) {
+			// Annoyingly, there's no way to get the payload from the jwt_builder object.
+			auto decoded_jwt = jwt::decode(token);
+			dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
+		}
 	} catch (...) {
 		return false;
 	}
@@ -2634,7 +2742,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 
 int Condor_Auth_Passwd :: isValid() const
 {
-	if ( m_crypto ) {
+	if ( m_crypto && m_crypto_state) {
 		return TRUE;
 	} else {
 		return FALSE;
@@ -2662,6 +2770,9 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
 
+	if ( m_crypto_state ) delete m_crypto_state;
+	m_crypto_state = NULL;
+
 		// Calculate W based on K'
 	if (m_version == 1) {
 		hmac( t_buf->rb, AUTH_PW_KEY_LEN,
@@ -2681,7 +2792,15 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
 	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
-	m_crypto = new Condor_Crypt_3des(thekey);
+	m_crypto = new Condor_Crypt_3des();
+	if ( m_crypto ) {
+		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
+		// if this failed, clean up other mem
+		if ( !m_crypto_state ) {
+			delete m_crypto;
+			m_crypto = NULL;
+		}
+	}
 
 	if ( key ) free(key);	// KeyInfo makes a copy of the key
 
@@ -2703,8 +2822,6 @@ Condor_Auth_Passwd::key_strength_bytes() const
 bool
 Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
-	check_pool_password();
-
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
 	std::vector<std::string> creds;
 	CondorError err;
@@ -2724,12 +2841,11 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 }
 
 void
-Condor_Auth_Passwd::check_pool_password()
+Condor_Auth_Passwd::create_pool_password_if_needed()
 {
-		// Only attempt to drop the pool password once.
-	if (!m_attempt_pool_password) {return;}
-	m_attempt_pool_password = false;
+	// This method is invoked by DaemonCore upon startup and a reconfig.
 
+	// Currently only the Collector will generate a pool password by default...
 	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
 		return;
 	}
@@ -2767,7 +2883,12 @@ Condor_Auth_Passwd::check_pool_password()
 	}
 
 		// Write out the password.
-	write_password_file(pool_password.c_str(), password_buffer);
+	if (TRUE == write_password_file(pool_password.c_str(), password_buffer)) {
+		dprintf(D_ALWAYS, "Created a pool password in file %s\n", pool_password.c_str());
+	}
+	else {
+		dprintf(D_ALWAYS, "WARNING: Failed to create a pool password in file %s\n", pool_password.c_str());
+	}
 }
 
 

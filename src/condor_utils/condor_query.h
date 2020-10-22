@@ -175,7 +175,7 @@ class CondorQuery
 
 	// Add a non-requirements attribute to send along with the
 	// query.  The server will decide what, if anything to do with it
-	int addExtraAttribute(const char*);
+	int addExtraAttribute(const char *name, const char *value);
 
 		// Set the list of desired attributes
 		// to be returned in the queried ads.
@@ -188,7 +188,7 @@ class CondorQuery
 	void setDesiredAttrsExpr(const char *expr);
 
 	void setResultLimit(int limit) { resultLimit = limit; }
-	int  getResultLimit() { return resultLimit; }
+	int  getResultLimit() const { return resultLimit; }
 
   private:
 		// These are unimplemented, so make them private so that they

@@ -65,16 +65,16 @@ public:
     UdpWakeOnLanWaker (
 	char const *mac,
 	char const *subnet,
-        unsigned short port = default_port ) throw ();
+        unsigned short port = default_port ) noexcept;
 
     /** Constructor
         */
     UdpWakeOnLanWaker (
-        ClassAd *ad ) throw ();
+        ClassAd *ad ) noexcept;
 	
     /** Destructor
         */
-    ~UdpWakeOnLanWaker () throw ();
+    ~UdpWakeOnLanWaker () noexcept;
     /** Initialize the internal structures (can be called multiple
         times--such as in the case of a reconfiguration)
 		@return true if it was succesful; otherwise, false.

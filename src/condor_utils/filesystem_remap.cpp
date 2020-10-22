@@ -396,12 +396,14 @@ FilesystemRemap::AddDevShmMapping() {
 		return -1;
 	}
 
+#ifdef HAVE_MS_PRIVATE
 	if (mount("none", "/dev/shm", NULL, MS_PRIVATE, NULL)) {
 		dprintf(D_ALWAYS, "Marking /dev/shm as a private mount failed. (errno=%d, %s)\n", errno, strerror(errno));
 		return -1;
 	} else {
 		dprintf(D_FULLDEBUG, "Mounting /dev/shm as a private mount successful.\n");
 	}
+#endif
 
 	return 0;
 #else
@@ -552,7 +554,11 @@ int FilesystemRemap::PerformMappings() {
 
 	// do mounts for RemapProc()
 	if ((!retval) && m_remap_proc) {
+    	TemporaryPrivSentry sentry(PRIV_ROOT);
 		retval = mount("proc", "/proc", "proc", 0, NULL);
+		if (retval < 0) {
+			dprintf(D_ALWAYS, "Cannot remount proc, errno is %d\n", errno);
+		}
 	}
 #endif
 	return retval;

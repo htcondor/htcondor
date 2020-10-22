@@ -4,6 +4,7 @@
 
 #include <string>
 #include <map>
+#include <algorithm>
 #include <openssl/hmac.h>
 #include "classad/classad.h"
 #include "CondorError.h"
@@ -213,6 +214,16 @@ AWSv4Impl::createSignature( const std::string & secretAccessKey,
 }
 
 bool
+isPathStyleBucket( const std::string & bucket ) {
+    if( bucket.find( "_" ) != std::string::npos ) { return true; }
+    if( std::find_if( bucket.begin(), bucket.end(),
+      [](const char c){return isupper(c); } ) != bucket.end() ) {
+        return true;
+    }
+    return false;
+}
+
+bool
 generate_presigned_url( const std::string & accessKeyID,
   const std::string & secretAccessKey,
   const std::string & securityToken,
@@ -223,7 +234,7 @@ generate_presigned_url( const std::string & accessKeyID,
   CondorError & err ) {
 
     time_t now; time( & now );
-        // Allow for modest clock skews.
+    // Allow for modest clock skews.
     now -= 5;
     struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
     char dateAndTime[] = "YYYYMMDDThhmmssZ";
@@ -232,17 +243,21 @@ generate_presigned_url( const std::string & accessKeyID,
     char date[] = "YYYYMMDD";
     strftime( date, sizeof(date), "%Y%m%d", & brokenDownTime );
 
+    // If the named bucket isn't valid as part of a DNS name,
+    // we assume it's an old "path-style"-only bucket.
+    std::string canonicalURI( "/" );
+
     // Extract the S3 bucket and key from the S3 URL.
     std::string bucket, key;
     if(! starts_with( s3url, "s3://" )) {
-        err.push( "AWS SigV4", 1, "An S3 URL must begin with s3://." );
+        err.push( "AWS SigV4", 1, "an S3 URL must begin with s3://" );
         return false;
     }
     size_t protocolLength = 5; // std::string("s3://").size()
     size_t middle = s3url.find( "/", protocolLength );
     if( middle == std::string::npos ) {
-        err.push( "AWS SigV4", 2, "An S3 URL must be of the form s3://<bucket>/<object>, "
-            "s3://<bucket>.s3-<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints." );
+        err.push( "AWS SigV4", 2, "an S3 URL must be of the form s3://<bucket>/<object>, "
+            "s3://<bucket>.s3.<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints" );
         return false;
     }
     std::string region = input_region;
@@ -259,27 +274,30 @@ generate_presigned_url( const std::string & accessKeyID,
     if (bucket_or_hostname.find(".") == std::string::npos) {
         bucket = bucket_or_hostname;
         if(! region.empty()) {
-            host = bucket + ".s3-" + region + ".amazonaws.com";
+            host = bucket + ".s3." + region + ".amazonaws.com";
         } else {
             host = bucket + ".s3.amazonaws.com";
+
+            // If the bucket name isn't valid for DNS, assume it's an
+            // old "path-style" bucket.
+            if( isPathStyleBucket( bucket ) ) {
+                host = "s3.amazonaws.com";
+                region = "us-east-1";
+                formatstr_cat( canonicalURI, "%s/",
+                  AWSv4Impl::pathEncode(bucket).c_str() );
+            }
         }
-    // URLs of the form s3://<bucket>.s3-<region>.amazonaws.com/<object>
+    // URLs of the form s3://<bucket>.s3.<region>.amazonaws.com/<object>
     } else if (bucket_or_hostname.substr(bucket_or_hostname.size() - 14) == ".amazonaws.com") {
         auto bucket_and_region = bucket_or_hostname.substr(0, bucket_or_hostname.size() - 14);
-        auto last_idx = bucket_and_region.rfind(".");
+        auto last_idx = bucket_and_region.rfind(".s3.");
         if (last_idx == std::string::npos) {
-            err.push( "AWS SigV4", 3, "Invalid format for domain-based buckets.  Must be of the"
-                " form s3://<bucket>.s3-<region>.amazonaws.com/<object>" );
+            err.push( "AWS SigV4", 3, "invalid format for domain-based buckets; must be of the"
+                " form s3://<bucket>.s3.<region>.amazonaws.com/<object>" );
             return false;
         }
         bucket = bucket_and_region.substr(0, last_idx);
-        auto region_with_prefix = bucket_and_region.substr(last_idx);
-        if (region_with_prefix.substr(0, 4) != ".s3-") {
-            err.push( "AWS SigV4", 4, "Invalid format for domain-based buckets.  Must be of the"
-                " form s3://<bucket>.s3-<region>.amazonaws.com/<object>" );
-            return false;
-        }
-        region = region_with_prefix.substr(4);
+        region = bucket_and_region.substr(last_idx + 4);
     } else {
         // All other URLs were s3://<something-without-dots>/<something>
         // where the first part is now in 'host' and the second part
@@ -300,8 +318,7 @@ generate_presigned_url( const std::string & accessKeyID,
 
     // Part 1: The canonical URI.  Note that we don't have to worry about
     // path normalization, because S3 keys aren't actually path names.
-    std::string canonicalURI;
-    formatstr( canonicalURI, "/%s", AWSv4Impl::pathEncode(key).c_str() );
+    formatstr_cat( canonicalURI, "%s", AWSv4Impl::pathEncode(key).c_str() );
 
     // Part 4: The signed headers.
     std::string signedHeaders = "host";
@@ -353,7 +370,7 @@ generate_presigned_url( const std::string & accessKeyID,
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     std::string canonicalRequestHash;
     if(! AWSv4Impl::doSha256( canonicalRequest, messageDigest, & mdLength )) {
-        err.push( "AWS SigV4", 5, "Unable to hash canonical request, failing." );
+        err.push( "AWS SigV4", 5, "unable to hash canonical request, failing" );
         return false;
     }
     AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, canonicalRequestHash );
@@ -364,13 +381,13 @@ generate_presigned_url( const std::string & accessKeyID,
 
     std::string signature;
     if(! AWSv4Impl::createSignature( secretAccessKey, date, region, service, stringToSign, signature )) {
-        err.push( "AWS SigV4", 6, "Failed to create signature, failing." );
+        err.push( "AWS SigV4", 6, "failed to create signature, failing" );
         return false;
     }
 
     formatstr( presignedURL,
-        "https://%s/%s?%s&X-Amz-Signature=%s",
-        host.c_str(), key.c_str(), canonicalQueryString.c_str(),
+        "https://%s%s?%s&X-Amz-Signature=%s",
+        host.c_str(), canonicalURI.c_str(), canonicalQueryString.c_str(),
         signature.c_str() );
 
     return true;
@@ -385,13 +402,13 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	std::string accessKeyIDFile;
 	jobAd.EvaluateAttrString( ATTR_EC2_ACCESS_KEY_ID, accessKeyIDFile );
 	if( accessKeyIDFile.empty() ) {
-		dprintf( D_ALWAYS, "Public key file not defined.\n" );
+		err.push( "AWS SigV4", 7, "access key file not defined" );
 		return false;
 	}
 
 	std::string accessKeyID;
 	if(! AWSv4Impl::readShortFile( accessKeyIDFile, accessKeyID )) {
-		dprintf( D_ALWAYS, "Unable to read from public key file.\n" );
+		err.push( "AWS SigV4", 8, "unable to read from access key file" );
 		return false;
 	}
 	trim( accessKeyID );
@@ -400,13 +417,13 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	std::string secretAccessKeyFile;
 	jobAd.EvaluateAttrString( ATTR_EC2_SECRET_ACCESS_KEY, secretAccessKeyFile );
 	if( secretAccessKeyFile.empty() ) {
-		dprintf( D_ALWAYS, "Private key file not defined.\n" );
+		err.push( "AWS SigV4", 9, "secret key file not defined" );
 		return false;
 	}
 
 	std::string secretAccessKey;
 	if(! AWSv4Impl::readShortFile( secretAccessKeyFile, secretAccessKey )) {
-		dprintf( D_ALWAYS, "Unable to read from secret key file.\n" );
+		err.push( "AWS SigV4", 10, "unable to read from secret key file" );
 		return false;
 	}
 	trim( secretAccessKey );
@@ -419,7 +436,7 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	jobAd.EvaluateAttrString( ATTR_EC2_SESSION_TOKEN, securityTokenFile );
 	if(! securityTokenFile.empty()) {
 		if(! AWSv4Impl::readShortFile( securityTokenFile, securityToken )) {
-			dprintf( D_ALWAYS, "Unable to read from security token file.\n" );
+			err.push( "AWS SigV4", 11, "unable to read from security token file" );
 			return false;
 		}
 		trim( securityToken );

@@ -243,22 +243,22 @@ StringList::contains_list(StringList & subset, bool anycase)
 		} else {
 			ret_val = contains(x);
 		}
-		if( ret_val == false ) {
-			return false;
-		}
+if (ret_val == false) {
+	return false;
+}
 	}
 	return true;
 }
 
 
 bool
-StringList::contains( const char *st )
+StringList::contains(const char *st)
 {
 	char	*x;
 
-	m_strings.Rewind ();
-	while ((x = m_strings.Next ())) {
-		if( strcmp(st, x) == MATCH ) {
+	m_strings.Rewind();
+	while ((x = m_strings.Next())) {
+		if (strcmp(st, x) == MATCH) {
 			return true;
 		}
 	}
@@ -267,13 +267,13 @@ StringList::contains( const char *st )
 
 
 bool
-StringList::contains_anycase( const char *st )
+StringList::contains_anycase(const char *st)
 {
 	char	*x;
 
-	m_strings.Rewind ();
-	while ((x = m_strings.Next ())) {
-		if( strcasecmp(st, x) == MATCH ) {
+	m_strings.Rewind();
+	while ((x = m_strings.Next())) {
+		if (strcasecmp(st, x) == MATCH) {
 			return true;
 		}
 	}
@@ -308,14 +308,14 @@ StringList::remove_anycase(const char *str)
 }
 
 bool
-StringList::prefix( const char *st )
+StringList::prefix(const char *st)
 {
 	char    *x;
 
-	m_strings.Rewind ();
-	while( (x = m_strings.Next()) ) {
+	m_strings.Rewind();
+	while ((x = m_strings.Next())) {
 		size_t len = strlen(x);
-		if( strncmp(st, x, len) == MATCH ) {
+		if (strncmp(st, x, len) == MATCH) {
 			return true;
 		}
 	}
@@ -323,18 +323,60 @@ StringList::prefix( const char *st )
 }
 
 bool
-StringList::prefix_anycase( const char *st )
+StringList::prefix_anycase(const char *st)
 {
 	char    *x;
 
-	m_strings.Rewind ();
-	while( (x = m_strings.Next()) ) {
+	m_strings.Rewind();
+	while ((x = m_strings.Next())) {
 		size_t len = strlen(x);
-		if( strncasecmp(st, x, len) == MATCH ) {
+		if (strncasecmp(st, x, len) == MATCH) {
 			return true;
 		}
 	}
 	return false;
+}
+
+bool 
+StringList::prefix_wildcard_impl(const char *input_str, bool anycase)
+{
+	StringList prefix_list;
+	const char *laststar;
+	const char *st;
+
+	// Make a temp string list where each string ends with a wildcard
+	m_strings.Rewind();
+	while ((st = m_strings.Next())) {
+		laststar = strrchr(st, '*');
+		// If an asterisk is not already at the end of the input string, append one
+		if (!laststar || (laststar && laststar[1] != '\0')) {
+			std::string newst(st);
+			newst += '*';
+			prefix_list.append(newst.c_str());
+		}
+		else {
+			prefix_list.append(st);
+		}
+	}
+
+	if (anycase) {
+		return prefix_list.contains_anycase_withwildcard(input_str);
+	} 
+	else {
+		return prefix_list.contains_withwildcard(input_str);
+	}
+}
+
+bool
+StringList::prefix_withwildcard(const char *input_str)
+{
+	return prefix_wildcard_impl(input_str, false);
+}
+
+bool
+StringList::prefix_anycase_withwildcard(const char *input_str)
+{
+	return prefix_wildcard_impl(input_str, true);
 }
 
 bool
@@ -367,9 +409,11 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 	char *x;
 	char *matchstart;
 	char *matchend;
-	char *asterisk;
+	char *asterisk = NULL;
+	char *ending_asterisk = NULL;
     bool result;
 	int temp;
+	const char *pos;
 	
 	if ( !string )
 		return NULL;
@@ -396,88 +440,70 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 			continue;
 		}
 
-		if ( asterisk == x ) {
-			char *asterisk2 = strrchr(x,'*');
-			if ( asterisk2 && asterisk2[1] == '\0' && asterisk2 != asterisk) {
-				// asterisks at start and end behavior
-				const char *pos;
-				*asterisk2 = '\0';
-				if (anycase) {
-					pos = strcasestr(string,&x[1]);
-				} else {
-					pos = strstr(string,&x[1]);
-				}
-				*asterisk2 = '*';
-				if ( pos ) {
-					if( matches ) {
-						matches->append( x );
-					}
-					else {
-						return x;
-					}
-				}
-				continue;
-			}
-			// asterisk at the start behavior
+		// If we made it here, we know there is an asterisk in the pattern, and
+		// 'asterisk' points to ths first asterisk encountered. Now set astrisk2 
+		// iff there is a second astrisk at the end of the string.
+		ending_asterisk = strrchr(x, '*');
+		if (asterisk == ending_asterisk || &asterisk[1] == ending_asterisk || ending_asterisk[1] != '\0' ) {
+			ending_asterisk = NULL;
+		}
+
+		if ( asterisk == x ) {  
+			// if there is an asterisk at the start (and maybe also at the end)
 			matchstart = NULL;
 			matchend = &(x[1]);
-		} else {
+		} else {  // if there is NOT an astrisk at the start...
 			if ( asterisk[1] == '\0' ) {
-				// asterisk at the end behavior.
-				*asterisk = '\0';	// remove asterisk
-				if (anycase) {
-					temp = strncasecmp(x,string,strlen(x));
-				} else {
-					temp = strncmp(x,string,strlen(x));
-				}
-				*asterisk = '*';	// replace asterisk
-				if ( temp == MATCH ) {
-					if( matches ) {
-						matches->append( x );
-					}
-					else {
-						return x;
-					}
-				}
-				continue;
+				// asterisk solely at the end behavior.
+				matchstart = x;
+				matchend = NULL;
 			} else {
-				// asterisk must be in the middle somewhere				
+				// asterisk in the middle somewhere (and maybe also at the end) 				
 				matchstart = x;
 				matchend = &(asterisk[1]);
 			}
 		}
 
-		// at this point, we know that there is an  asterisk either at the start
+		// at this point, we _know_ that there is an  asterisk either at the start
 		// or in the middle somewhere, and both matchstart and matchend are set 
-		// appropiately with what we want
+		// appropiately with what we want.  there may optionally also still
+		// be an asterisk at the end.
 
 		result = true;
 		*asterisk = '\0';	// replace asterisk with a NULL
+		if (ending_asterisk) *ending_asterisk = '\0';
+		size_t stringchars_consumed = 0;
 		if ( matchstart ) {
+			size_t matchstart_len = strlen(matchstart);
 			if ( anycase ) {
-				temp = strncasecmp(matchstart,string,strlen(matchstart));
+				temp = strncasecmp(matchstart,string,matchstart_len);
 			} else {
-				temp = strncmp(matchstart,string,strlen(matchstart));
+				temp = strncmp(matchstart,string,matchstart_len);
 			}
-			if ( temp != MATCH ) 
+			if (temp != MATCH) {
 				result = false;
+			}
+			else {
+				stringchars_consumed = MIN(matchstart_len, strlen(string));
+			}
 		}
 		if ( matchend && result == true) {
-			size_t len = strlen(string);
-			size_t matchendlen = strlen(matchend);
-			if ( matchendlen > len )	// make certain we do not SEGV below
+			if (anycase) {
+				pos = strcasestr(&string[stringchars_consumed], &asterisk[1]);
+			}
+			else {
+				pos = strstr(&string[stringchars_consumed], &asterisk[1]);
+			}
+			if (!pos) {
 				result = false;
-			if ( result == true ) {
-				if (anycase) {
-					temp = strcasecmp(&(string[len-matchendlen]),matchend);
-				} else {
-					temp = strcmp(&(string[len-matchendlen]),matchend);
-				}
-				if ( temp != MATCH )
+			} else {
+				if (!ending_asterisk && pos[strlen(pos)] != '\0') {
 					result = false;
+				}
 			}
 		}
-		*asterisk = '*';	// set asterisk back no matter what the result
+		*asterisk = '*';	// set asterisks back no matter what the result
+		if (ending_asterisk) *ending_asterisk = '*';
 		if ( result == true ) {
 			if( matches ) {
 				matches->append( x );

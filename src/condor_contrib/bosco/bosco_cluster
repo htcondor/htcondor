@@ -45,6 +45,9 @@ commands:
  -s|--status [host]         Get status of installed cluster
  -t|--test [host]           Test the installed cluster (all clusters)
  -o|--override directory    Override the bosco installation with a directory structure
+ -b|--base-dir directory    Set the name of the remote base install directory (default: bosco)
+ -u|--url URL               Set the URL to fetch HTCondor binaries from
+ -d|--debug                 Display debugging output
  -h|--help                  Show this help message
 
 Where host is user@fqdn.example.com
@@ -153,7 +156,10 @@ start_ssh () {
     if [ -f $PASSPHRASE_LOCATION ]; then
         PASSPHRASE=`cat $PASSPHRASE_LOCATION`
     fi
-    
+
+    # Run stop_ssh on shell exit
+    trap stop_ssh EXIT
+
     # Start the ssh-agent
     eval `ssh-agent -s` > /dev/null
 
@@ -231,8 +237,12 @@ show_progress () {
     exit_code=$?
     disown $dots_pid
     kill -9 $dots_pid
-    echo ""
-    
+    if [ $exit_code -ne 0 ] ; then
+        echo "Failure"
+    else
+        echo ""
+    fi
+
     return $exit_code
 
 }
@@ -240,38 +250,30 @@ show_progress () {
 
 
 ssh_find_remote () {
-    # Last attempt to find remote platform
-    # More imprecise than findplatform but may succeed when upload fails (e.g. multiple login nodes in DNS RR)
+    # Find the platform of the remote host
     # 1. remote host
     remote_host=$1
-    findplatform_path=$2
-    # if .. else .. only from Python 2.5, no RH5 support
-    #ssh uc3-sub /usr/bin/python -c \"import platform\; mydist = platform.dist\(\)\; print \'DEB6\' if mydist[0]==\'debian\' and mydist[1].startswith\(\'6.\'\) else \(\'RH5\' if mydist[1].startswith\(\'5.\'\) else \'RH6\' if mydist[1].startswith\(\'6.\'\) else \'UNKNOWN\'\) if mydist[0]==\'redhat\'  else \'UNKNOWN\'\"
-    cmd_out=`ssh $remote_host "python -c \"import sys; print sys.platform\"" 2>/dev/null`
-    if [ $? -eq 0 -a "x$cmd_out" == "xdarwin" ]; then
-        # assume all Mac OK
-        echo "`$findplatform_path --url --force MAC`"
-        return 0
-    fi
-    cmd_out=`ssh $remote_host "python -c \"import platform; mydist = platform.dist(); print '%s%s' % (mydist[0], mydist[1])\"" 2>/dev/null`
+    cmd_out=`ssh $remote_host "python -c \"import sys; import platform; mydist = platform.dist(); print('%s %s%s' % (sys.platform, mydist[0], mydist[1]))\"" 2>/dev/null`
     if [ $? -eq 0 ]; then
         # check for linux
         case "$cmd_out" in 
-            redhat5*) echo "`$findplatform_path --url --force RH5`"
-                       ;;
-            redhat6*) echo "`$findplatform_path --url --force RH6`"
-                       ;;
-            redhat7*) echo "`$findplatform_path --url --force RH7`"
-                       ;;
-            centos7*) echo "`$findplatform_path --url --force RH7`"
-                       ;;
-            debian6*) echo "`$findplatform_path --url --force DEB6`"
-                       ;;
-            debian7*) echo "`$findplatform_path --url --force DEB7`"
-                       ;;
-            Ubuntu12*) echo "`$findplatform_path --url --force UBUNTU12`"
-                       ;;
-            *) ;; 
+            (*redhat7* | *centos7*)
+                echo "CentOS7" ;;
+            (*redhat8* | *centos8*)
+                echo "CentOS8" ;;
+            (*debian9*)
+                echo "Debian9" ;;
+            (*debian10*)
+                echo "Debian10" ;;
+            (*Ubuntu16*)
+                echo "Ubuntu16" ;;
+            (*Ubuntu18*)
+                echo "Ubuntu18" ;;
+            (*Ubuntu20*)
+                echo "Ubuntu20" ;;
+            (*darwin*)
+                echo "MacOSX" ;;
+            (*) ;;
         esac
         return 0
     fi
@@ -382,6 +384,9 @@ get_min_queue () {
 
 
 stop_ssh () {
+    # Remove on-exit call of stop_ssh
+    trap - EXIT
+
     # Shut down the master ssh socket
     if [ "x$ssh_master_connection" != "x" ]; then
         kill $ssh_master_connection
@@ -737,7 +742,7 @@ if [ `uname` = "Darwin" ] ; then
     # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
     TEMP="$@"
 else
-    TEMP=`getopt -a -o a:ls:t:r:hp:o: --longoptions add:,platform:,list,status:,test:,remove:,help,override:  -n 'bosco_cluster' -- "$@"`
+    TEMP=`getopt -a -o a:ls:t:r:dhp:o:b:u: --longoptions add:,platform:,list,status:,test:,remove:,debug,help,override:,base-dir:,url:  -n 'bosco_cluster' -- "$@"`
 
     if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 fi
@@ -746,11 +751,15 @@ eval set -- "$TEMP"
 
 platform_force=
 override_dir=
+release_url=
+rc_url=
+daily_url=
 
 # test and remove could have 0 or 1 parameter
 while true; do
     case "$1" in
         -h|--help) usage; exit 1; shift ;;
+        -d|--debug) debug=1; shift;;
         -p|--platform) platform_force=$2; shift 2;;
         -a|--add) remote_host=$2; shift 2; break;;
         -l|--list) list $2
@@ -762,7 +771,8 @@ while true; do
         -t|--test) test_cluster $2; exit 0 ;;
         -r|--remove) remove_cluster $2; exit 0;;
         -o|--override) override_dir=$2; shift 2;;
-        
+        -b|--base-dir) remote_base_dir_host=$2; shift 2;;
+        -u|--url) release_url=$2; shift 2;;
         --) echo "No command found" >&2; usage; exit 1;;
         *) echo "Unknown option: $1" >&2; usage; exit 1;;
     esac
@@ -839,10 +849,13 @@ fi
 start_ssh
 
 # Quickly test the ssh
-qmgr_out=`ssh -o "PasswordAuthentication=no" $remote_host "pwd" 2>/dev/null`
+ssh_opts='-o PasswordAuthentication=no'
+[[ $debug = 1 ]] && ssh_opts="$ssh_opts -vvv"
+qmgr_out=$(ssh $ssh_opts "$remote_host" "pwd" 2>&1)
 if [ $? -ne 0 ]; then
     echo "Password-less ssh to $remote_host did NOT work, even after adding the ssh-keys."
     echo "Does the remote resource allow password-less ssh?"
+    echo "$qmgr_out"
     exit 1
 fi
 
@@ -873,59 +886,81 @@ if [ "x$max_queued" == "x" ]; then
 fi
 
 
-# BOSCO is downloaded for the appropriate platform, not copied from the installation, this is not needed
-## First, find the blahp
-#glite_location=`condor_config_val GLITE_LOCATION`
-#release_dir=`condor_config_val RELEASE_DIR`
-#
-#if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
-#    echo "Unable to determine condor locations using condor_config_val."
-#    echo "There could be a problem in one of your condor config files."
-#    echo "Exiting..."
-#    exit 1
-#fi
-
-
-# Find remote platform
-# TODO: add the possibility to force a specific platform for the remote system (./bosco_findplatform --force=RH5)
-findplatform_path="`which bosco_findplatform`"
-if [ $? -ne 0 ]; then
-    echo "Unable to find the bosco_findplatform script."
-    echo "Is BOSCO installed and setup correctly?"
-    exit 1
-fi
-
-if [ "x$TMP_INSTALL" == "x" ]; then
-    TMP_INSTALL="DEFAULT"
-fi
-
-if [ -z "${platform_force}" ]; then
-    url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url`
-else
-    url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url --force ${platform_force}`
-fi
-
-if [ "x$url" == "x" ]; then
-    # Attempt in a different way
-    url=`ssh_find_remote $remote_host $findplatform_path`
-    if [ "x$url" == "x" ]; then
-        echo "BOSCO does not support the remote host's OS."
-        echo "Aborting installation to $remote_host."
-        exit 1
+# Find the URL we should use to download the HTCondor binaries to be used
+# on the remote host.
+if [ -z "${release_url}" ]; then
+    url_base=`condor_config_val BOSCO_URL_BASE 2>/dev/null`
+    if [ -z "${url_base}" ] ; then
+        url_base="https://research.cs.wisc.edu/htcondor/tarball/"
     fi
-fi    
 
+    ver_str=(`condor_version`)
+    if [ -z "${ver_str[0]}" ] ; then
+        echo "Unable to determine HTCondor version."
+	echo "Is it installed and set up correctly?"
+	exit 1
+    fi
+    version="${ver_str[1]}"
+    series=`echo $version | sed -e 's/[.][0-9][0-9]*$//'`
+    if [ "$(uname)" == "Darwin" ] ; then
+        date=`date -j -f "%b %d %Y" "${ver_str[2]} ${ver_str[3]} ${ver_str[4]}" "+%Y%m%d"`
+    else
+        date=`date -d "${ver_str[2]} ${ver_str[3]} ${ver_str[4]}" "+%Y%m%d"`
+    fi
+
+    if [ ! -z "${platform_force}" ] ; then
+        platform="${platform_force}"
+    else
+        platform=`ssh_find_remote $remote_host`
+        if [ -z "${platform}" ] ; then
+            echo "Failed to detect remote host's platform."
+            exit 1;
+        fi
+    fi
+
+    release_url="${url_base}${series}/${version}/release/condor-${version}-x86_64_${platform}-stripped.tar.gz"
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" ; then
+        daily_url="${url_base}${series}/${version}/daily/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
+    fi
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " ; then
+        rc_url="${url_base}${series}/${version}/rc/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
+    fi
+fi
 
 # Create a tmp dir, download the files and rsync them to the remote system
 # A download to the remote system would be faster but we cannot count on ports different form the SSH one
 # OS X mktemp requires a template
 tmp_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
-show_progress "Downloading for $remote_host" curl -s -o $tmp_dir/bosco-download.tar.gz $url 
-show_progress "Unpacking" tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
-archive_dir=`ls -d $tmp_dir/condor*`
-if [ $? -ne 0 ]; then
+rc=1
+if [ ! -z "$daily_url" ] ; then
+    show_progress "Downloading daily build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $daily_url
+    rc=$?
+    if [ $rc -ne 0 ] ; then
+        echo "Failed to download daily build."
+    fi
+fi
+if [ ! -z "$rc_url" -a $rc -ne 0 ] ; then
+    show_progress "Downloading rc build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $rc_url
+    rc=$?
+    if [ $rc -ne 0 ] ; then
+        echo "Failed to download rc build."
+    fi
+fi
+if [ $rc -ne 0 ] ; then
+    show_progress "Downloading release build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $release_url
+    rc=$?
+    if [ $rc -ne 0 ] ; then
+        echo "Failed to download release build."
+    fi
+fi
+if [ $rc -eq 0 ] ; then
+    show_progress "Unpacking" tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
+    rc=$?
+    archive_dir=`ls -d $tmp_dir/condor*`
+fi
+if [ $rc -ne 0 ]; then
     echo "Unable to download and prepare BOSCO for remote installation."
-    echo "Download URL: $url"
+    echo "Download URL: $release_url"
     echo "Aborting installation to $remote_host."
     rm -r $tmp_dir
     exit 1
@@ -936,11 +971,11 @@ fi
 #TODO: do we need a separate sandbox for each cluster?
 remote_base_dir_root="bosco/cluster"
 remote_base_dir_default="$remote_base_dir_root/default"
-remote_base_dir_host="bosco"
+[[ $remote_base_dir_host ]] || remote_base_dir_host=bosco
 tmp_install_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
-mkdir -p $tmp_install_dir/$remote_base_dir_host
-local_install_dir=$tmp_install_dir/$remote_base_dir_host
-remote_sandbox_dir=$remote_base_dir_host/sandbox
+mkdir -p "$tmp_install_dir/$remote_base_dir_host"
+local_install_dir="$tmp_install_dir/$remote_base_dir_host"
+remote_sandbox_dir="$remote_base_dir_host/sandbox"
 
 # TODO: uncomment to enable subdirs
 #remote_base_dir_host="$remote_base_dir_root/$remote_host"
@@ -965,6 +1000,9 @@ else
 fi
 rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_glite_dir/lib/ 2>/dev/null
+if [ -d $archive_dir/libexec/glite/libexec ] ; then
+    rsync -aq $archive_dir/libexec/glite/libexec $remote_glite_dir/
+fi
 show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdir/condor $remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
 
@@ -975,7 +1013,7 @@ else
     export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
     export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
     show_progress "Creating BOSCO for the WN's" glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
-    rsync -aq  $tmp_dir/glideinExec.tar.gz $local_install_dir/campus_factory/ 2>/dev/null
+    rsync -aq  $tmp_dir/glideinExec.tar.gz "$local_install_dir/campus_factory/" 2>/dev/null
 fi
 
 cat >$remote_glite_dir/etc/condor_config.ft-gahp 2>/dev/null <<EOF
@@ -1011,18 +1049,18 @@ if [ ! -n "$PRIVATE_ON_MU" ]; then
         rm -r $tmp_dir
         exit 1
     fi 
-    rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_jobs 2>/dev/null
+    rsync -aq $bosco_passwd_file "$local_install_dir/campus_factory/share/glidein_jobs" 2>/dev/null
     rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
 fi
 
 # If patch is set, perform the patch
 if [ ! -z "${override_dir}" ]; then
     echo "Patching bosco installation from directory: $override_dir"
-    rsync -aq $override_dir/ $local_install_dir
+    rsync -aq $override_dir/ "$local_install_dir"
 fi
 
 # Do the actual rsync
-show_progress "Installing on cluster $remote_host" rsync -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" $local_install_dir $remote_host:
+show_progress "Installing on cluster $remote_host" rsync -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" "$local_install_dir" $remote_host:
 exit_code=$?
 
 rm -rf $tmp_install_dir
@@ -1075,4 +1113,3 @@ EOM
 
 
 fi
-

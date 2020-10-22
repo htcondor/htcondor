@@ -150,18 +150,18 @@ single HTCondor job. Note that the output of the ``PROGRAM`` field will
 be truncated to fit the display, similar to the artificial truncation
 shown in this example output.
 
-::
+.. code-block:: console
 
-    % condor_who 
+    $ condor_who 
      
     OWNER                    CLIENT            SLOT JOB RUNTIME    PID    PROGRAM 
     smith1@crane.cs.wisc.edu crane.cs.wisc.edu    2 320.0 0+00:00:08 7776 D:\scratch\condor\execut
 
 Example 2 Verbose sample output.
 
-::
+.. code-block:: console
 
-    % condor_who -verbose 
+    $ condor_who -verbose 
      
     LOG directory "D:\scratch\condor\master\test/log" 
      
@@ -192,16 +192,3 @@ Exit Status
 *condor_who* will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

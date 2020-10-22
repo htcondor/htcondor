@@ -31,6 +31,10 @@
 */
 class StringList {
 public:
+	StringList(const std::string & s, const std::string & delim ) :
+		StringList( s.c_str(), delim.c_str() ) { }
+	StringList(const std::string & s, const char * delim = " ," ) :
+		StringList( s.c_str(), delim ) { }
 	StringList(const char *s = NULL, const char *delim = " ," );
 	StringList(const char *s, char delim_char, bool keep_empty_fields );
 	StringList( const StringList &other );
@@ -46,6 +50,8 @@ public:
 	// any item in the list is a prefix of the given string.
 	bool prefix( const char * );
 	bool prefix_anycase( const char * );
+	bool prefix_withwildcard(const char *);
+	bool prefix_anycase_withwildcard(const char *);
 	bool contains( const char * );
 	bool contains_anycase( const char * );
 	bool contains_withwildcard( const char *str );
@@ -131,7 +137,7 @@ public:
 	const List<char> &getList( void ) const { return m_strings; };
 	const char *getDelimiters(void) const { return m_delimiters; };
 
-	StringList &operator=(StringList &&rhs) {
+	StringList &operator=(StringList &&rhs)  noexcept {
 		clearAll();
 		free(m_delimiters);
 		this->m_strings = std::move(rhs.m_strings);
@@ -143,6 +149,7 @@ protected:
     const char * contains_withwildcard( const char *string,
 										bool anycase,
 										StringList *matches=NULL) ;
+	bool prefix_wildcard_impl(const char *string, bool anycase);
 	List<char>	 m_strings;
 	char		*m_delimiters;
 

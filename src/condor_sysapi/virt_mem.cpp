@@ -86,40 +86,6 @@ sysapi_swap_space_raw()
 	return (int)free_swap;
 }
 
-#elif defined(Solaris)
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/swap.h>
-
-/*
-** Try to determine the swap space available on our own machine.  The answer
-** is in kilobytes.
-*/
-int
-sysapi_swap_space_raw()
-{
-	struct anoninfo 	ai;
-	double avail;
-	int factor;
-
-	sysapi_internal_reconfig();
-
-	factor = sysconf(_SC_PAGESIZE) >> 10;
-
-	memset( &ai, 0, sizeof(ai) );
-	if( swapctl(SC_AINFO, &ai) >= 0 ) {
-		avail = (double)(ai.ani_max - ai.ani_resv) * (double)factor;
-		if (avail > INT_MAX) {
-			return INT_MAX;
-		}
-		return (int)avail;
-	} else {
-		dprintf( D_FULLDEBUG, "swapctl call failed, errno = %d\n", errno );
-		return -1;
-	}
-}
-
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>
 int

@@ -1,7 +1,7 @@
 
 [Unit]
 Description=Condor Distributed High-Throughput-Computing
-After=network-online.target nslcd.service ypbind.service time-sync.target nfs.client.target autofs.service
+After=network-online.target nslcd.service ypbind.service time-sync.target nfs-client.target autofs.service
 Wants=network-online.target
 # Disabled until HTCondor security fixed.
 # Requires=condor.socket
@@ -20,8 +20,9 @@ TimeoutStopSec=150seconds
 StandardOutput=syslog
 NotifyAccess=main
 KillSignal=SIGQUIT
-LimitNOFILE=32767
-TasksMax=32767
+# Matches values in Linux Kernel Tuning script
+LimitNOFILE=32768
+TasksMax=4194303
 
 [Install]
 WantedBy=multi-user.target

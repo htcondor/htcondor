@@ -158,7 +158,7 @@ DCTransferQueue::~DCTransferQueue( void )
 }
 
 bool
-DCTransferQueue::GoAheadAlways( bool downloading ) {
+DCTransferQueue::GoAheadAlways( bool downloading ) const {
 	if( downloading ) {
 		return m_unlimited_downloads;
 	}

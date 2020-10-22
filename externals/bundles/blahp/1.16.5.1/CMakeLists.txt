@@ -33,9 +33,9 @@ if ( WITH_BLAHP )
 		endif()
 
 		if (PREFER_CPP11)
-			set( CPP11_FLAG -std=c++11 )
+			set( CPP11_FLAG "-fcommon -std=c++11" )
 		else()
-			set( CPP11_FLAG "-I${BOOST_INCLUDE}" )
+			set( CPP11_FLAG "-fcommon -I${BOOST_INCLUDE}" )
 		endif()
 
 		if ( BUILDING_OPENSSL )
@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p26 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p27 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -101,6 +101,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/runtime-project.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/bash-source.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/kill-job.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-refresh.patch -p1 &&
 							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&

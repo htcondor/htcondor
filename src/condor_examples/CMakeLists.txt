@@ -39,11 +39,6 @@ install(FILES		00-small-shadow
 endif ()
 
 
-install(FILES		condor.sysconfig
-		DESTINATION	"${C_SYSCONFIG}"
-		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
-		RENAME		condor)
-
 install (FILES
 		condor.boot.generic
 		condor_config.local.central.manager
@@ -132,11 +127,6 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 						DESTINATION	"${C_ETC}"
 						RENAME	condor_config)					
 	endif ()					
-
-	install(FILES		condor.boot.rpm
-			DESTINATION	"${C_INIT}"
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
-			RENAME		condor)
 
 elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 

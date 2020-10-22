@@ -189,17 +189,21 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
 
-    bool param_defined(const char* name);
+	bool param_defined(const char* name);
+	// Does not check if the expanded parameter is nonempty, only that
+	// the parameter was assigned a value by something other than the
+	// param table.
+	bool param_defined_by_config(const char* name);
 	const char * param_unexpanded(const char *name);
 	char* param_or_except( const char *name );
-    int param_integer( const char *name, int default_value = 0,
+	int param_integer( const char *name, int default_value = 0,
 					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
 	// Alternate param_integer():
 	bool param_integer( const char *name, int &value,
 						bool use_default, int default_value,
 						bool check_ranges = true,
 						int min_value = INT_MIN, int max_value = INT_MAX,
-                        ClassAd *me=NULL, ClassAd *target=NULL,
+						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
 	bool param_longlong( const char *name, long long int &value,
@@ -207,19 +211,19 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 						bool check_ranges = true,
 						long long min_value = (std::numeric_limits<long long>::min)(),
 						long long max_value = (std::numeric_limits<long long>::max)(),
-                        ClassAd *me=NULL, ClassAd *target=NULL,
+						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
 
 	double param_double(const char *name, double default_value = 0,
-                        double min_value = -DBL_MAX, double max_value = DBL_MAX,
-                        ClassAd *me=NULL, ClassAd *target=NULL,
+						double min_value = -DBL_MAX, double max_value = DBL_MAX,
+						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
 	bool param_boolean_crufty( const char *name, bool default_value );
 
 	bool param_boolean( const char *name, bool default_value,
-                        bool do_log = true,
+						bool do_log = true,
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
@@ -398,6 +402,9 @@ public:
 	MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
 	MACRO_SET & set;
 	HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
+	HASHITER( const HASHITER & rhs) :
+	opts(rhs.opts), ix(rhs.ix), is_def(rhs.is_def), pdef(rhs.pdef), set(rhs.set)
+	{ }
 	HASHITER & operator =( const HASHITER & rhs ) {
 		if( this != & rhs ) {
 			this->opts = rhs.opts;

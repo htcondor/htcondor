@@ -43,9 +43,9 @@ is named ``history``. Since the history file is rotated, there may be
 multiple history files, and all of them should be converted. On Unix
 platform variants, the easiest way to do this is:
 
-::
+.. code-block:: console
 
-    cd `condor_config_val SPOOL` 
+    $ cd `condor_config_val SPOOL`
     condor_convert_history history*
 
 *condor_convert_history* makes a back up of each original history
@@ -61,16 +61,3 @@ Exit Status
 *condor_convert_history* will exit with a status value of 0 (zero)
 upon success, and it will exit with the value 1 (one) upon failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

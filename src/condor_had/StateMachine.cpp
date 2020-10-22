@@ -911,7 +911,7 @@ dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
     win in checkList election process
 */
 bool
-HADStateMachine::checkList( List<int>* list )
+HADStateMachine::checkList( List<int>* list ) const
 {
     int id;
 
@@ -1034,7 +1034,7 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
   Function :
 */
 void
-HADStateMachine::printStep( const char *curState, const char *nextState )
+HADStateMachine::printStep( const char *curState, const char *nextState ) const
 {
       dprintf( D_FULLDEBUG,
                 "State machine step : pid <%d> port <%d> "

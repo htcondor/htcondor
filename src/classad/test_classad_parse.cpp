@@ -34,7 +34,7 @@ class adsource {
 public:
 	adsource() : ix(0), ad_index(0), cluster(0), proc(0), addr(0), sock1(0), sock2(0), machine(0), user(0), slots(4) { now = time(NULL); }
 	bool fail() { return false; }
-	bool eof() { return ix >= NUMELMS(ad_data); }
+	bool eof() const { return ix >= NUMELMS(ad_data); }
 	bool get_line(std::string & buffer);
 	int urand() { int r = rand(); return r < 0 ? -r : r; }
 protected:
@@ -255,7 +255,7 @@ static int get_image_size()
 				"%ld %ld %ld %ld "
 				"%lu %lu %lu %lu %lu "
 				"%ld %ld %ld %ld %ld %ld "
-				"%lu %lu %llu %llu %lu %lu %lu %lu %lu %lu %lu "
+				"%lu %lu %ld %llu %lu %lu %lu %lu %lu %lu %lu "
 				"%ld %ld %ld %ld %lu",
 				&procRaw.pid, s, &c, &procRaw.ppid, 
 				&i, &i, &i, &i, 

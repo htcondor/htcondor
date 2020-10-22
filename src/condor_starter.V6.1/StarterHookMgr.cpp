@@ -282,7 +282,7 @@ void
 HookPrepareJobClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
 	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
-		MyString status_msg = "";
+		std::string status_msg;
 		statusString(exit_status, status_msg);
 		int subcode;
 		if (WIFSIGNALED(exit_status)) {
@@ -293,7 +293,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		}
 		MyString err_msg;
 		err_msg.formatstr("HOOK_PREPARE_JOB (%s) failed (%s)", m_hook_path,
-						status_msg.Value());
+						status_msg.c_str());
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
 				err_msg.Value());

@@ -16,5 +16,10 @@
  # 
  ############################################################### 
 
-condor_glob(ccbHdrs ccbSrcs "")
-set( CCB_UTIL_SRCS "${ccbHdrs};${ccbSrcs}" PARENT_SCOPE )
+# These will be expanded by condor_utils, so we need absolute paths
+set(CCB_UTIL_SRCS
+${CMAKE_CURRENT_SOURCE_DIR}/ccb_client.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/ccb_listener.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/ccb_server.cpp
+PARENT_SCOPE
+)

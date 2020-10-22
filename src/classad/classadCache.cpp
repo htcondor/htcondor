@@ -318,7 +318,7 @@ public:
 		fprintf( fp, "Hits:%lu (%.2f%%) Misses: %lu (%.2f%%) Querys: %lu\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_QueryCount ); 
 	};
 
-	void get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse) {
+	void get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse) const {
 		hits = m_HitCount;
 		misses = m_MissCount;
 		querys = m_QueryCount;

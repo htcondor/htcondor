@@ -91,7 +91,7 @@ class BaseShadow : public Service
 		 */
 	virtual void spawn( void ) = 0;
 
-	bool waitingToUpdateSchedd() { return m_cleanup_retry_tid != -1; }
+	bool waitingToUpdateSchedd() const { return m_cleanup_retry_tid != -1; }
 
 		/** Shadow should attempt to reconnect to a disconnected
 			starter that might still be running for this job.  
@@ -106,7 +106,7 @@ class BaseShadow : public Service
 		/** Given our config parameters, figure out how long we should
 			delay until our next attempt to reconnect.
 		*/
-	int nextReconnectDelay( int attempts );
+	int nextReconnectDelay( int attempts ) const;
 
 		/**	Called by any part of the shadow that finally decides the
 			reconnect has completely failed, we should give up, try
@@ -297,9 +297,9 @@ class BaseShadow : public Service
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }
 		/// Returns this job's cluster number
-	int getCluster() { return cluster; }
+	int getCluster() const { return cluster; }
 		/// Returns this job's proc number
-	int getProc() { return proc; }
+	int getProc() const { return proc; }
 		/// Returns this job's GlobalJobId string
 	const char* getGlobalJobId() { return gjid; }
 		/// Returns the schedd address
@@ -336,7 +336,7 @@ class BaseShadow : public Service
 
 	virtual int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss ) = 0;
 
-	virtual int getDiskUsage( void ) = 0;
+	virtual int64_t getDiskUsage( void ) = 0;
 
 	virtual struct rusage getRUsage( void ) = 0;
 
@@ -415,6 +415,8 @@ class BaseShadow : public Service
 	bool attemptingReconnectAtStartup;
 
 	bool isDataflowJob = false;
+
+	void logDataflowJobSkippedEvent();
 
  protected:
 

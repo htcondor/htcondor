@@ -47,6 +47,7 @@ Build-Depends: autotools-dev,
                python-sphinx-rtd-theme,
                python3-all-dev,
                uuid-dev,
+               voms-dev,
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 3.9.8
@@ -62,12 +63,35 @@ Depends: adduser,
          python,
          python-requests,
          lsb-base (>= 3.0-6),
-         libclassad10 (= ${binary:Version}),
+         libclassad12 (= ${binary:Version}),
+         libcom-err2,
+         libglobus-callout0,
+         libglobus-common0,
+         libglobus-gsi-callback0,
+         libglobus-gsi-cert-utils0,
+         libglobus-gsi-credential1,
+         libglobus-gsi-openssl-error0,
+         libglobus-gsi-proxy-core0,
+         libglobus-gsi-proxy-ssl1,
+         libglobus-gsi-sysconfig1,
+         libglobus-gss-assist3,
+         libglobus-gssapi-gsi4,
+         libglobus-openssl-module0,
+         libglobus-xio-gsi-driver,
+         libgssapi-krb5-2,
+         libk5crypto3,
+         libkrb5-3,
+         libkrb5support0,
+         libltdl7,
+         libmunge2,
+         libssl1.1,
+         libvomsapi1v5,
          ${misc:Depends},
          ${perl:Depends},
          ${python:Depends},
          ${shlibs:Depends}
-Recommends: ecryptfs-utils
+Recommends: ecryptfs-utils,
+            openssh-server
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
@@ -214,7 +238,7 @@ Description: distributed workload management system - debugging symbols
 Package: libclassad-dev
 Architecture: any
 Section: libdevel
-Depends: libclassad10 (= ${binary:Version}),
+Depends: libclassad12 (= ${binary:Version}),
          ${misc:Depends}
 Conflicts: libclassad0-dev
 Replaces: libclassad0-dev
@@ -227,7 +251,7 @@ Description: HTCondor classads expression language - development library
  .
  This package provides the static library and header files.
 
-Package: libclassad10
+Package: libclassad12
 Architecture: any
 Section: libs
 Depends: ${misc:Depends},

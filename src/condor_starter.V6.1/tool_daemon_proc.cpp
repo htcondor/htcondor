@@ -75,7 +75,7 @@ ToolDaemonProc::StartJob()
 	const char* base = NULL;
 	base = condor_basename( tmp );
 	if( Starter->jic->iwdIsChanged() ) {
-		DaemonNameStr.formatstr( "%s%c%s", Starter->GetWorkingDir(),
+		DaemonNameStr.formatstr( "%s%c%s", Starter->GetWorkingDir(0),
 							   DIR_DELIM_CHAR, base );
 	} else if( ! fullpath(tmp) ) {
 		DaemonNameStr.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
@@ -109,9 +109,7 @@ ToolDaemonProc::StartJob()
     char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		MyString reniceAttr = "Renice = ";
-		reniceAttr += ptmp;
-		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting ToolDaemonProc::StartJob...\n" );
 			free( ptmp );

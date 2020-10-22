@@ -148,6 +148,7 @@
 #define ATTR_DAG_NODES_FAILED "DAG_NodesFailed"
 #define ATTR_DAG_NODES_POSTRUN "DAG_NodesPostrun"
 #define ATTR_DAG_NODES_PRERUN "DAG_NodesPrerun"
+#define ATTR_DAG_NODES_HOLDRUN "DAG_NodesHoldrun"
 #define ATTR_DAG_NODES_QUEUED "DAG_NodesQueued"
 #define ATTR_DAG_NODES_READY "DAG_NodesReady"
 #define ATTR_DAG_NODES_TOTAL "DAG_NodesTotal"
@@ -158,6 +159,7 @@
 #define ATTR_DAGMAN_MAXJOBS "DAGMan_MaxJobs"
 #define ATTR_DAGMAN_MAXPRESCRIPTS "DAGMan_MaxPreScripts"
 #define ATTR_DAGMAN_MAXPOSTSCRIPTS "DAGMan_MaxPostScripts"
+#define ATTR_DAGMAN_MAXHOLDSCRIPTS "DAGMan_MaxHoldScripts"
 #define ATTR_DEFERRAL_OFFSET  "DeferralOffset"
 #define ATTR_DEFERRAL_PREP_TIME  "DeferralPrepTime"
 #define ATTR_DEFERRAL_TIME  "DeferralTime"
@@ -165,6 +167,7 @@
 #define ATTR_DESTINATION  "Destination"
 #define ATTR_DISK  "Disk"
 #define ATTR_DISK_USAGE  "DiskUsage"
+#define ATTR_SCRATCH_DIR_FILE_COUNT "ScratchDirFileCount"
 #define ATTR_DOCKER_IMAGE "DockerImage"
 #define ATTR_DOCKER_NETWORK_TYPE "DockerNetworkType"
 #define ATTR_DOCKER_VOLUMES "DockerVolumes"
@@ -270,6 +273,7 @@
 #define ATTR_HAS_SINGULARITY "HasSingularity"
 #define ATTR_HAS_TDP  "HasTDP"
 #define ATTR_HAS_TRANSFER_INPUT_REMAPS "HasTransferInputRemaps"
+#define ATTR_HAS_USER_NAMESPACES "HasUserNamespaces"
 #define ATTR_HAS_WIN_RUN_AS_OWNER  "HasWindowsRunAsOwner"
 #define ATTR_HAS_VM  "HasVM"
 #define ATTR_HELD_JOBS  "HeldJobs"
@@ -298,7 +302,7 @@
 #define ATTR_IS_WAKEABLE  "IsWakeAble"
 #define ATTR_INACTIVE  "Inactive"
 #define ATTR_JAR_FILES  "JarFiles"
-#define ATTR_JAVA_MFLOPS  "JavaMFlops"
+#define ATTR_JAVA_SPECIFICATION_VERSION  "JavaSpecificationVersion"
 #define ATTR_JAVA_VENDOR  "JavaVendor"
 #define ATTR_JAVA_VERSION  "JavaVersion"
 #define ATTR_JOB_ACTION  "JobAction"
@@ -344,6 +348,7 @@
 #define ATTR_JOB_KEYWORD  "JobKeyword"
 #define ATTR_JOB_LEASE_DURATION  "JobLeaseDuration"
 #define ATTR_JOB_LEASE_EXPIRATION  "JobLeaseExpiration"
+#define ATTR_JOB_LIMIT_DIRECTORY_ACCESS "LimitDirectoryAccess"
 #define ATTR_JOB_SPOOL_EXECUTABLE  "SpoolExecutable"
 #define ATTR_JOB_EXIT_STATUS  "ExitStatus"
 #define ATTR_JOB_EXIT_REQUIREMENTS  "ExitRequirements"
@@ -360,10 +365,10 @@
 #define ATTR_JOB_RUNAS_OWNER  "RunAsOwner"
 #define ATTR_JOB_LOAD_USER_PROFILE  "LoadUserProfile"
 #define ATTR_JOB_LOCAL_CPU  "LocalCpu"
-#define ATTR_JOB_LOCAL_SYS_CPU  "LocalSysCpu"
-#define ATTR_JOB_LOCAL_USER_CPU  "LocalUserCpu"
 #define ATTR_JOB_MANAGED  "Managed"
 #define ATTR_JOB_MANAGED_MANAGER  "ManagedManager"
+#define ATTR_JOB_MANIFEST_DESIRED "ManifestDesired"
+#define ATTR_JOB_MANIFEST_DIR "ManifestDir"
 #define ATTR_JOB_MATCHED  "Matched"
 #define ATTR_JOB_NONESSENTIAL  "Nonessential"
 #define ATTR_JOB_NOOP  "IsNoopJob"
@@ -399,6 +404,7 @@
 #define ATTR_JOB_SET_NAME "SetMemberNames"
 #define ATTR_JOB_SUBMISSION  "Submission"
 #define ATTR_JOB_SUBMISSION_ID  "SubmissionId"
+#define ATTR_JOB_BATCH_ID "JobBatchId"
 #define ATTR_JOB_BATCH_NAME "JobBatchName"
 #define ATTR_JOB_START  "JobStart"
 #define ATTR_JOB_START_DATE  "JobStartDate"
@@ -424,6 +430,7 @@
 #define ATTR_JOB_VM_VNC  "JobVMVNCConsole"
 #define ATTR_JOB_VM_CPU_UTILIZATION  "JobVMCpuUtilization"
 #define ATTR_JOB_SEND_CREDENTIAL  "SendCredential"
+#define ATTR_OAUTH_SERVICES_NEEDED "OAuthServicesNeeded"
 #define ATTR_KEYBOARD_IDLE  "KeyboardIdle"
 #define ATTR_KEYSTORE_FILE  "KeystoreFile"
 #define ATTR_KEYSTORE_ALIAS  "KeystoreAlias"
@@ -470,6 +477,7 @@
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
 #define ATTR_PARENT_SLOT_ID "ParentSlotId"
+#define ATTR_DSLOT_ID "DSlotId"
 #define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_CURB_MATCHMAKING "CurbMatchmaking"
@@ -486,7 +494,11 @@
 #define ATTR_MY_CURRENT_TIME  "MyCurrentTime"
 #define ATTR_MY_TYPE  "MyType"
 #define ATTR_NAME  "Name"
-#define ATTR_NICE_USER  "NiceUser"
+#define ATTR_NICE_USER_deprecated  "NiceUser"
+#ifdef NO_DEPRECATE_NICE_USER
+#define ATTR_NICE_USER ATTR_NICE_USER_deprecated
+#endif
+
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
@@ -581,6 +593,7 @@
 #define ATTR_REMOVE_REASON  "RemoveReason"
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
+#define ATTR_CUDA_VERSION "CUDAVersion"
 #define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
@@ -772,7 +785,6 @@
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
-#define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
@@ -801,6 +813,11 @@
 #define ATTR_ENCRYPT_OUTPUT_FILES  "EncryptOutputFiles"
 #define ATTR_DONT_ENCRYPT_INPUT_FILES  "DontEncryptInputFiles"
 #define ATTR_DONT_ENCRYPT_OUTPUT_FILES  "DontEncryptOutputFiles"
+
+#define ATTR_CONDOR_VERSION "CondorVersion"
+#define ATTR_CHECKPOINT_FILES "TransferCheckpoint"
+#define ATTR_PRESERVE_RELATIVE_PATHS "PreserveRelativePaths"
+
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"
 #define ATTR_SERVER_TIME  "ServerTime"
 #define ATTR_SHADOW_BIRTHDATE  "ShadowBday"
@@ -855,6 +872,7 @@
 #define ATTR_SEC_SID  "Sid"
 #define ATTR_SEC_SUBSYSTEM  "Subsystem"
 #define ATTR_SEC_REMOTE_VERSION  "RemoteVersion"
+#define ATTR_SEC_SHORT_VERSION  "ShortVersion"
 #define ATTR_SEC_SERVER_ENDPOINT  "ServerEndpoint"
 #define ATTR_SEC_SERVER_COMMAND_SOCK  "ServerCommandSock"
 #define ATTR_SEC_SERVER_PID  "ServerPid"
@@ -984,6 +1002,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 //************* End of changes for EC2 Jobs *****************//
 
+// Provisioner jobs
+#define ATTR_PROVISIONER_STATE "ProvisionerState"
+#define ATTR_PROVISIONER_RESOURCE_ID "ProvisionerResourceID"
+
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
@@ -1080,6 +1102,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 #define ATTR_HASH_NAME  "HashName"
 #define ATTR_AUTHENTICATED_IDENTITY  "AuthenticatedIdentity"
+#define ATTR_AUTHENTICATION_METHOD  "AuthenticationMethod"
 #define ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME  "DelegateJobGSICredentialsLifetime"
 
 #define ATTR_DOTNET_VERSIONS  "DotNetVersions"
@@ -1121,6 +1144,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_START_EXPR  "StartExpr"
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
+#define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
+
+#define ATTR_RECENT_DRAINS_LIST  "RecentDrainsList"
+#define ATTR_RECENT_CANCELS_LIST "RecentCancelsList"
 
 #define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 
@@ -1150,6 +1177,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SIZE "Size"
 #define ATTR_CHECKSUM "Checksum"
 #define ATTR_CHECKSUM_TYPE "ChecksumType"
+
+// Attributes related to dataflow jobs
+#define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
+#define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

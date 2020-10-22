@@ -41,6 +41,7 @@ public:
     static const char * getThreadLocalGSICred();
     static const char * getThreadLocalToken();
     static bool applyThreadLocalConfigOverrides(ConfigOverrides & old);
+    static void setFamilySession(const std::string &family_session);
 
     void setToken(const Token &);
     void setTag(const std::string &tag);

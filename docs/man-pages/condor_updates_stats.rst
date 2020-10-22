@@ -84,7 +84,7 @@ Examples
 Assuming the default of 128 updates kept, and assuming that the update
 interval is 5 minutes, *condor_updates_stats* displays:
 
-::
+.. code-block:: console
 
     $ condor_status -l host1 | condor_updates_stats --interval=300 
     (Reading from stdin) 
@@ -102,16 +102,3 @@ Within this display, update numbered 27, which occurs later in time than
 the missed update numbered 28, is Ok. Each change in state, in reverse
 time order, displays in this condensed version.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

@@ -32,7 +32,7 @@ Configuration Templates: Using Predefined Sets of Configuration
 Predefined sets of configuration can be identified and incorporated into
 the configuration using the syntax
 
-::
+.. code-block:: text
 
       use <category name> : <template name>
 
@@ -203,6 +203,13 @@ incorporates.
        (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
        about job hooks.)
 
+    -  ``OAuth``
+
+       Sets configuration that enables the *condor_credd* and *condor_credmon_oauth* daemons,
+       which allow for the automatic renewal of user-supplied OAuth2 credentials.
+       Intended for submit nodes that are also configured
+       with the companion OAuth credmon WSGI application
+       running on a HTTPS-enabled web server.
 
 
     -  ``UWCS_Desktop_Policy_Values``
@@ -361,7 +368,7 @@ As an example, consider the *condor_startd* as it starts up. A
 *condor_startd* previous to HTCondor version 8.1.6 fails to start when
 it sees:
 
-::
+.. code-block:: condor-config
 
     @use feature : GPUs
 
@@ -369,7 +376,7 @@ Running an older *condor_config_val* also identifies the ``@use`` line
 as being bad. A *condor_startd* of HTCondor version 8.1.6 or more
 recent sees
 
-::
+.. code-block:: condor-config
 
     use feature : GPUs
 
@@ -378,30 +385,30 @@ Configuration Template Examples
 
 -  Preempt a job if its memory usage exceeds the requested memory:
 
-   ::
+   .. code-block:: condor-config
 
-        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
         use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
 
 -  Put a job on hold if its memory usage exceeds the requested memory:
 
-   ::
+   .. code-block:: condor-config
 
-        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory) 
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
         use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
 
 -  Update dynamic GPU information every 15 minutes:
 
-   ::
+   .. code-block:: condor-config
 
-        use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic) 
+        use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic)
 
    where ``dynamic_gpu_info.pl`` is a simple perl script that strips off
-   the DetectedGPUs line from textttcondor_gpu_discovery:
+   the DetectedGPUs line from *condor_gpu_discovery*:
 
-   ::
+   .. code-block:: perl
 
-        #!/usr/bin/env perl 
+        #!/usr/bin/env perl
         my @attrs = `@ARGV`; 
         for (@attrs) { 
             next if ($_ =~ /^Detected/i); 

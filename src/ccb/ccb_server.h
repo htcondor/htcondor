@@ -29,6 +29,13 @@
  */
 
 #include "MyString.h"
+#include "dc_service.h"
+
+class StatisticsPool;
+void AddCCBStatsToPool(StatisticsPool& pool, int publevel);
+
+class Sock;
+class Stream;
 
 class CCBTarget;
 class CCBServerRequest;
@@ -94,7 +101,7 @@ class CCBServer: Service {
 	int EpollSockets(int);
 	void EpollAdd(CCBTarget *);
 	void EpollRemove(CCBTarget *);
-	void SetSmallBuffers(Sock *sock);
+	void SetSmallBuffers(Sock *sock) const;
 
 	int HandleRegistration(int cmd,Stream *stream);
 	int HandleRequest(int cmd,Stream *stream);
@@ -121,7 +128,7 @@ class CCBTarget {
 	CCBTarget(Sock *sock);
 	~CCBTarget();
 
-	CCBID getCCBID() { return m_ccbid; }
+	CCBID getCCBID() const { return m_ccbid; }
 	void setCCBID(CCBID ccbid) { m_ccbid = ccbid; }
 	Sock *getSock() { return m_sock; }
 
@@ -154,8 +161,8 @@ class CCBServerRequest {
 
 	Sock *getSock() { return m_sock; }
 	void setRequestID( CCBID request_id ) { m_request_id = request_id; }
-	CCBID getRequestID() { return m_request_id; }
-	CCBID getTargetCCBID() { return m_target_ccbid; }
+	CCBID getRequestID() const { return m_request_id; }
+	CCBID getTargetCCBID() const { return m_target_ccbid; }
 	char const *getReturnAddr() { return m_return_addr.Value(); }
 	char const *getConnectID() { return m_connect_id.Value(); }
 

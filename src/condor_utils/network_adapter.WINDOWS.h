@@ -43,16 +43,16 @@ public:
 	//@{
 
 	/// Constructor
-	WindowsNetworkAdapter () throw ();
+	WindowsNetworkAdapter () noexcept;
 
 	/// Constructor
-	WindowsNetworkAdapter ( const condor_sockaddr & ipaddr) throw ();
+	WindowsNetworkAdapter ( const condor_sockaddr & ipaddr) noexcept;
 
 	/// Alternate
-	WindowsNetworkAdapter ( LPCSTR description ) throw ();
+	WindowsNetworkAdapter ( LPCSTR description ) noexcept;
 
 	/// Destructor
-	virtual ~WindowsNetworkAdapter () throw ();
+	virtual ~WindowsNetworkAdapter () noexcept;
 
 	//@}
 

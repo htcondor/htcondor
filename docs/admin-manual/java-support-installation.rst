@@ -17,9 +17,9 @@ Edit the configuration file. Modify the ``JAVA`` :index:`JAVA`
 entry to point to the JVM binary, typically ``/usr/bin/java``. Restart
 the *condor_startd* daemon on that host. For example,
 
-::
+.. code-block:: console
 
-    % condor_restart -startd bluejay
+    $ condor_restart -startd bluejay
 
 The *condor_startd* daemon takes a few moments to exercise the Java
 capabilities of the *condor_starter*, query its properties, and then
@@ -27,9 +27,9 @@ advertise the machine to the pool as Java-capable. If the set up
 succeeded, then *condor_status* will tell you the host is now
 Java-capable by printing the Java vendor and the version number:
 
-::
+.. code-block:: console
 
-    % condor_status -java bluejay
+    $ condor_status -java bluejay
 
 After a suitable amount of time, if this command does not give any
 output, then the *condor_starter* is having difficulty executing the
@@ -42,28 +42,28 @@ To reproduce the test that the *condor_starter* is attempting, try
 running the Java *condor_starter* directly. To find where the
 *condor_starter* is installed, run this command:
 
-::
+.. code-block:: console
 
-    % condor_config_val STARTER
+    $ condor_config_val STARTER
 
 This command prints out the path to the *condor_starter*, perhaps
 something like this:
 
-::
+.. code-block:: console
 
-    /usr/condor/sbin/condor_starter
+    $ /usr/condor/sbin/condor_starter
 
 Use this path to execute the *condor_starter* directly with the
 *-classad* argument. This tells the starter to run its tests and display
 its properties.
 
-::
+.. code-block:: console
 
-    /usr/condor/sbin/condor_starter -classad
+    $ /usr/condor/sbin/condor_starter -classad
 
 This command will display a short list of cryptic properties, such as:
 
-::
+.. code-block:: condor-classad
 
     IsDaemonCore = True
     HasFileTransfer = True
@@ -73,11 +73,10 @@ This command will display a short list of cryptic properties, such as:
 If the Java configuration is correct, there will also be a short list of
 Java properties, such as:
 
-::
+.. code-block:: condor-classad
 
     JavaVendor = "Sun Microsystems Inc."
     JavaVersion = "1.2.2"
-    JavaMFlops = 9.279696
     HasJava = True
 
 If the Java installation is incorrect, then any error messages from the
@@ -89,7 +88,7 @@ value. The administrator can change this value through configuration by
 setting a different value for ``JAVA_EXTRA_ARGUMENTS``
 :index:`JAVA_EXTRA_ARGUMENTS`.
 
-::
+.. code-block:: condor-config
 
     JAVA_EXTRA_ARGUMENTS = -Xmx1024m
 

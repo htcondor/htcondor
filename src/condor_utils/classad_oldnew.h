@@ -28,16 +28,12 @@
 
 #include "classad/classad_distribution.h"
 
-#include "classad/value.h"
-#include "classad/matchClassad.h"
-
 // Forward dec'l
 class ReliSock;
 
 void AttrList_setPublishServerTime(bool publish);
 
-namespace compat_classad { class ClassAd; } //forward declaration
-compat_classad::ClassAd* getClassAd( Stream *sock );
+classad::ClassAd* getClassAd( Stream *sock );
 
 bool getClassAd( Stream *sock, classad::ClassAd& ad);
 bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options);

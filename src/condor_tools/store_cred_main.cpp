@@ -30,39 +30,61 @@
 #include "get_daemon_name.h"
 #include "condor_string.h"
 #include "secure_file.h"
+#include "match_prefix.h"
+#include "iso_dates.h"
 
 #if defined(WIN32)
 #include "lsa_mgr.h"  // for CONFIG_MODE
 #endif
 
+const int MODE_MASK = 3;
+const int CRED_TYPE_MASK = 0x2c;
+
+const char * cred_type_name(int mode) {
+	switch (mode & CRED_TYPE_MASK) {
+	case 0:
+	case STORE_CRED_USER_PWD: return "password";
+	case STORE_CRED_USER_KRB: return "kerberos";
+	case STORE_CRED_USER_OAUTH: return "oauth";
+	}
+	return "unknown";
+}
+
 struct StoreCredOptions {
 	int mode;
-	char pw[MAX_PASSWORD_LENGTH + 1];
 	char username[MAX_PASSWORD_LENGTH + 1];
 	char *daemonname;
-	char *password_file;
+	const char *pw; // password if supplied on the command line
+	const char *service; // service name from the -s argument
+	const char *credential_file;
+	const char *pool_password_file;
 	bool help;
 };
 
 const char *MyName;
 void usage(void);
-bool parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]);
+bool parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[]);
 void badOption(const char* option);
 void badCommand(const char* command);
-void optionNeedsArg(const char* option);
+void optionNeedsArg(const char* option, const char * type);
 bool goAheadAnyways();
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 	
 	MyString my_full_name;
 	const char *full_name;
-	char* pw = NULL;
 	struct StoreCredOptions options;
 	int result = FAILURE_ABORTED;
 	bool pool_password_arg = false;
-	bool pool_password_delete = false;
+	bool is_query = false;
 	Daemon *daemon = NULL;
-	char *credd_host;
+	auto_free_ptr credd_host;
+	ClassAd cred_info; // additional info passed in to do_store_cred
+	int cred_type = 0;
+	time_t cred_timestamp = 0;
+	ClassAd return_ad;
+	const char * errret = NULL;
+	char cred_time[ISO8601_DateAndTimeBufferMax];
 
 	MyName = condor_basename(argv[0]);
 	
@@ -74,9 +96,10 @@ int main(int argc, char *argv[]) {
 	if (!parseCommandLine(&options, argc, argv)) {
 		goto cleanup;
 	}
+	cred_type = (options.mode & CRED_TYPE_MASK);
 
 	// if -h was given, just print usage
-	if (options.help || (options.mode == 0)) {
+	if (options.help || (options.mode < 0 && options.pool_password_file == NULL)) {
 		usage();
 		goto cleanup;
 	}
@@ -85,21 +108,22 @@ int main(int argc, char *argv[]) {
 	// if the -f argument was given, we just want to prompt for a password
 	// and write it to a file (in our weirdo XORed format)
 	//
-	if (options.password_file != NULL) {
-		if (options.pw[0] == '\0') {
-			pw = get_password();
+	if (options.pool_password_file != NULL) {
+		auto_free_ptr pw;
+		if (!options.pw || options.pw[0] == '\0') {
+			pw.set(get_password());
 			printf("\n");
 		}
 		else {
-			pw = strdup(options.pw);
-			SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH + 1);
+			pw.set(strdup(options.pw));
+			//SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH + 1);
 		}
-		result = write_password_file(options.password_file, pw);
-		SecureZeroMemory(pw, strlen(pw));
+		result = write_password_file(options.pool_password_file, pw);
+		SecureZeroMemory(pw.ptr(), strlen(pw.ptr()));
 		if (result != SUCCESS) {
 			fprintf(stderr,
 			        "error writing password file: %s\n",
-			        options.password_file);
+			        options.pool_password_file);
 		}
 		goto cleanup;
 	}
@@ -107,20 +131,22 @@ int main(int argc, char *argv[]) {
 
 	// determine the username to use
 	if ( strcmp(options.username, "") == 0 ) {
+		if (cred_type == STORE_CRED_USER_KRB || cred_type == STORE_CRED_USER_OAUTH) {
+			// for KRB and OAuth pass an empty username to indicate that we want
+			// the Credd to use the mapped authenticated username
+			my_full_name = "";
+		} else {
 			// default to current user and domain
-		char* my_name = my_username();	
-		char* my_domain = my_domainname();
-
-		my_full_name.formatstr("%s@%s", my_name, my_domain);
-		if ( my_name) { free(my_name); }
-		if ( my_domain) { free(my_domain); }
-		my_name = my_domain = NULL;
+			auto_free_ptr my_name(my_username());
+			auto_free_ptr my_domain(my_domainname());
+			my_full_name.formatstr("%s@%s", my_name.ptr(), my_domain.ptr());
+		}
 	} else if (strcmp(options.username, POOL_PASSWORD_USERNAME) == 0) {
 #if !defined(WIN32)
 		// we don't support querying the pool password on UNIX
 		// (since it is not possible to do so through the
 		//  STORE_POOL_CRED command)
-		if (options.mode == QUERY_MODE) {
+		if ((options.mode&MODE_MASK) == GENERIC_QUERY) {
 			fprintf(stderr, "Querying the pool password is not supported.\n");
 			goto cleanup;
 		}
@@ -139,16 +165,30 @@ int main(int argc, char *argv[]) {
 		free(domain);
 	} else {
 			// username was specified on the command line
-		my_full_name += options.username;
+		my_full_name = options.username;
 	}
+	// print the account, if we haven't looked up the account because we want the credd
+	// to figure it out print the name of the current user just as a double check
 	full_name = my_full_name.Value();
-	printf("Account: %s\n\n", full_name);
+	if (my_full_name.empty()) {
+		auto_free_ptr user(my_username());
+		printf("Account: <current> (%s)\n", user.ptr());
+	} else {
+		printf("Account: %s\n", full_name);
+	}
+	printf("CredType: %s\n\n", cred_type_name(options.mode));
+
+	// setup cred_info classad
+	if (options.service) {
+		cred_info.Assign("service", options.service);
+	}
 
 	// determine where to direct our command
 	daemon = NULL;
-	credd_host = NULL;
+	credd_host.set(param("CREDD_HOST"));
+	is_query = (options.mode & MODE_MASK) == GENERIC_QUERY;
 	if (options.daemonname != NULL) {
-		if (pool_password_arg && (options.mode != QUERY_MODE)) {
+		if (pool_password_arg && ! is_query) {
 			// daemon named on command line; go to master for pool password
 			//printf("sending command to master: %s\n", options.daemonname);
 			daemon = new Daemon(DT_MASTER, options.daemonname);
@@ -159,52 +199,78 @@ int main(int argc, char *argv[]) {
 			daemon = new Daemon(DT_SCHEDD, options.daemonname);
 		}
 	}
-	else if (!pool_password_arg && ((credd_host = param("CREDD_HOST")) != NULL)) {
+	else if (!pool_password_arg && credd_host) {
 		// no daemon given, use credd for user passwords if CREDD_HOST is defined
 		// (otherwise, we use the local schedd)
 		//printf("sending command to CREDD: %s\n", credd_host);
+		daemon = new Daemon(DT_CREDD);
+	}
+	else if (cred_type == STORE_CRED_USER_KRB || cred_type == STORE_CRED_USER_OAUTH) {
+		// only a CREDD can process these types of creds (for now?), use a local CREDD
 		daemon = new Daemon(DT_CREDD);
 	}
 	else {
 		//printf("sending command to local daemon\n");
 	}
 
-	// flag the case where we're deleting the pool password
-	if (pool_password_arg && (options.mode == DELETE_MODE)) {
-		pool_password_delete = true;
-	}
-
-	switch (options.mode) {
-		case ADD_MODE:
-		case DELETE_MODE:
-			if (!pool_password_delete) {
-				if ( strcmp(options.pw, "") == 0 ) {
-					// get password from the user.
-					pw = get_password();
-					printf("\n\n");
+	switch (options.mode & MODE_MASK) {
+		case GENERIC_ADD: {
+			auto_free_ptr cred;
+			size_t credlen = 0;
+			if (options.credential_file) {
+				if (MATCH == strcmp(options.credential_file, "-")) {
+					int max_len = 0x1000 * 0x1000; // max read from stdin is 1 Mb
+					cred.set((char*)malloc(max_len));
+					#ifdef _WIN32
+					// disable CR+LF munging of the stdin stream, we want to treat it as binary data
+					_setmode(_fileno(stdin), _O_BINARY);
+					#endif
+					credlen = _condor_full_read(fileno(stdin), cred.ptr(), max_len);
+					if (((ssize_t)credlen) < 0) {
+						fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
+						goto cleanup;
+					}
 				} else {
-					// got the passwd from the command line.
-					pw = strdup(options.pw);
-					SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
+					char *buf = NULL;
+					bool read_as_root = false;
+					int verify_opts = 0;
+					if ( ! read_secure_file(options.credential_file, (void**)&buf, &credlen, read_as_root, verify_opts)) {
+						fprintf(stderr, "Could not read credential from %s\n", options.credential_file);
+						result = FAILURE;
+					} else {
+						cred.set(buf);
+					}
 				}
+			} else if (options.pw && options.pw[0]) {
+				cred.set(strdup(options.pw));
+				credlen = strlen(options.pw);
+			} else if (cred_type == STORE_CRED_USER_KRB) {
+				//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
+				result = FAILURE;
+			} else if (cred_type == STORE_CRED_USER_OAUTH) {
+				//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
+				result = FAILURE;
+			} else {
+				cred.set(get_password());
+				credlen = strlen(cred);
 			}
-			if ( pw || pool_password_delete) {
-				result = store_cred(full_name, pw, options.mode, daemon);
+
+			if (cred.ptr() && credlen) {
+				result = do_store_cred(full_name, options.mode, (const unsigned char*)cred.ptr(), (int)credlen, return_ad, &cred_info, daemon);
 				if ((result == FAILURE_NOT_SECURE) && goAheadAnyways()) {
 						// if user is ok with it, send the password in the clear
-					result = store_cred(full_name, pw, options.mode, daemon, true);
+					result = do_store_cred(full_name, options.mode, (const unsigned char*)cred.ptr(), (int)credlen, return_ad, &cred_info, daemon);
 				}
-				if (pw) {
-					SecureZeroMemory(pw, strlen(pw));
-					free(pw);
-				}
+				SecureZeroMemory(cred.ptr(), credlen);
 			}
-			break;
-		case QUERY_MODE:
-			result = queryCredential(full_name, daemon);
+		} break;
+
+		case GENERIC_DELETE:
+		case GENERIC_QUERY:
+			result = do_store_cred(full_name, options.mode, NULL, 0, return_ad, &cred_info, daemon);
 			break;
 #if defined(WIN32)
-		case CONFIG_MODE:
+		case GENERIC_CONFIG:
 			return interactive();
 			break;
 #endif
@@ -213,20 +279,46 @@ int main(int argc, char *argv[]) {
 			goto cleanup;
 	}
 
+	// the result is a bit overloaded,  it could be an error code, or it might be a timestamp
+	// unpack that here.
+	cred_time[0] = 0;
+	cred_timestamp = 0;
+	if ( ! store_cred_failed(result, options.mode, &errret) && result > 100) {
+		cred_timestamp = result;
+		time_to_iso8601(cred_time, *localtime(&cred_timestamp), ISO8601_ExtendedFormat, ISO8601_DateAndTime, false);
+		cred_time[10] = ' ';
+		result = SUCCESS;
+	}
+
 	// output result of operation
 	switch (result) {
+		case SUCCESS_PENDING:
 		case SUCCESS:
-			if (options.mode == QUERY_MODE) {
-				printf("A credential is stored and is valid.\n");
+			if (is_query) {
+				const char * pending = (result == SUCCESS_PENDING) ? " and is waiting for processing" : " and is valid";
+				if (cred_timestamp) {
+					printf("A credential was stored on %s%s.\n", cred_time, pending);
+				} else {
+					printf("A credential was stored%s.\n", pending);
+				}
+			} else {
+				const char * pending = (result == SUCCESS_PENDING) ? " and is waiting for processing" : "";
+				if (((options.mode & MODE_MASK) == GENERIC_ADD) && cred_timestamp) {
+					printf("Operation succeeded%s. Credential was stored on %s\n", pending, cred_time);
+				} else {
+					printf("Operation succeeded%s.\n", pending);
+				}
 			}
-			else {
-				printf("Operation succeeded.\n");
+			if (return_ad.size()) {
+				printf("\nCredential info:\n");
+				fPrintAd(stdout, return_ad);
+				printf("\n");
 			}
 			break;
 
 		case FAILURE:
 			printf("Operation failed.\n");
-			if (pool_password_arg && (options.mode != QUERY_MODE)) {
+			if (pool_password_arg && ! is_query) {
 				printf("    Make sure you have CONFIG access to the target Master.\n");
 			}
 			else {
@@ -235,9 +327,8 @@ int main(int argc, char *argv[]) {
 			break;
 
 		case FAILURE_BAD_PASSWORD:
-			if (options.mode == QUERY_MODE) {
-				printf("A credential is stored, but it is invalid. "
-				       "Run 'condor_store_cred add' again.\n");
+			if (is_query) {
+				printf("A credential is stored, but it is invalid. Run 'condor_store_cred add' again.\n");
 			}
 			else {
 				printf("Operation failed: bad password.\n");
@@ -245,7 +336,7 @@ int main(int argc, char *argv[]) {
 			break;
 
 		case FAILURE_NOT_FOUND:
-			if (options.mode == QUERY_MODE) {
+			if (is_query) {
 				printf("No credential is stored.\n");
 			}
 			else {
@@ -253,21 +344,21 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 
-		case FAILURE_NOT_SECURE:
-		case FAILURE_ABORTED:
-			printf("Operation aborted.\n");
-			break;
-
-		case FAILURE_NOT_SUPPORTED:
+		case FAILURE_NO_IMPERSONATE:
 			printf("Operation failed.\n"
-			       "    The target daemon is not running as SYSTEM.\n");
+			       "    The target daemon is not running as SYSTEM and cannot store credentials securely.\n");
 			break;
 
 		default:
-			fprintf(stderr, "Operation failed: unknown error code\n");
+			if (errret) {
+				fprintf(stderr, "%s\n", errret);
+			} else {
+				fprintf(stderr, "Operation failed: unknown error code %d\n", (int)result);
+			}
+			break;
 	}
 
-cleanup:			
+cleanup:
 	if (options.daemonname) {
 		free(options.daemonname);
 	}
@@ -275,51 +366,94 @@ cleanup:
 		delete daemon;
 	}
 	
-	if ( result == SUCCESS ) {
-	   	return 0;
+	if ( result == SUCCESS || result == SUCCESS_PENDING ) {
+		return 0;
 	} else {
 		return 1;
 	}
 }
 
-bool
-parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
+static bool qualify_mode(int & mode, const char * tag)
+{
+	// it's ok for there to be no qualifier
+	if ( ! tag) {
+		return true;
+	}
 
-	int i;
-	opts->mode = 0;
-	opts->pw[0] = opts->pw[MAX_PASSWORD_LENGTH] = '\0';
-	opts->username[0] = opts->username[MAX_PASSWORD_LENGTH] = '\0';
+	std::string utag(tag);
+	lower_case(utag);
+	tag = utag.c_str();
+
+	if (is_dash_arg_prefix(tag, "pwd") || is_dash_arg_prefix(tag, "password", 2)) {
+		mode |= STORE_CRED_USER_PWD;
+	} else if (is_dash_arg_prefix(tag, "krb", 2) || is_dash_arg_prefix(tag, "kerberos", 2)) {
+		mode |= STORE_CRED_USER_KRB;
+	} else if (is_dash_arg_prefix(tag, "oauth", 2) || is_dash_arg_prefix(tag, "oath", 2) || is_dash_arg_prefix(tag, "scitokens", 3)) {
+		mode |= STORE_CRED_USER_OAUTH;
+	} else {
+		return false;
+	}
+	return true;
+}
+
+bool
+parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
+{
+	bool no_wait = false;
+	char arg_prefix[16];
+	opts->mode = -1;
 	opts->daemonname = NULL;
-	opts->password_file = NULL;;
+	opts->credential_file = NULL;
+	opts->pool_password_file = NULL;;
+	opts->pw = NULL;
+	opts->service = NULL;
 	opts->help = false;
+	SecureZeroMemory(opts->username, sizeof(opts->username));
 
 	bool err = false;
-	for (i=1; i<argc && !err; i++) {
-		switch(argv[i][0]) {
+	for (int ix = 1; ix < argc && ! err; ++ix) {
+		// argument may be something like "add-krb", in which case we want to split it into "add" and "-krb"
+		const char * arg = argv[ix];
+		const char * dasharg = strchr(arg, '-');
+		if (dasharg && (dasharg != arg)) {
+			strncpy(arg_prefix, arg, sizeof(arg_prefix)-1);
+			arg_prefix[dasharg - arg] = 0;
+			arg = arg_prefix;
+		}
+		switch(*arg) {
 		case 'a':
 		case 'A':	// Add
-			if (strcasecmp(argv[i], ADD_CREDENTIAL) == 0) {
-				if (!opts->mode) {
-					opts->mode = ADD_MODE;
+			if (strcasecmp(arg, ADD_CREDENTIAL) == MATCH) {
+				if (opts->mode < 0) {
+					opts->mode = GENERIC_ADD;
+					if ( ! qualify_mode(opts->mode, dasharg)) {
+						fprintf(stderr, "ERROR: %s is not a known credential type\n", dasharg);
+						usage();
+						err = true;
+					}
 				}
-				else if (opts->mode != ADD_MODE) {
-					fprintf(stderr,
-					        "ERROR: exactly one command must be provided\n");
+				else if ((opts->mode&MODE_MASK) != GENERIC_ADD) {
+					fprintf(stderr, "ERROR: exactly one command must be provided\n");
 					usage();
 					err = true;
 				}
 			} else {
 				err = true;
-				badCommand(argv[i]);
+				badCommand(arg);
 			}	
 			break;
 		case 'd':	
 		case 'D':	// Delete
-			if (strcasecmp(argv[i], DELETE_CREDENTIAL) == 0) {
-				if (!opts->mode) {
-					opts->mode = DELETE_MODE;
+			if (strcasecmp(arg, DELETE_CREDENTIAL) == MATCH) {
+				if (opts->mode < 0) {
+					opts->mode =  GENERIC_DELETE;
+					if ( ! qualify_mode(opts->mode, dasharg)) {
+						fprintf(stderr, "ERROR: %s is not a known credential type\n", dasharg);
+						usage();
+						err = true;
+					}
 				}
-				else if (opts->mode != DELETE_MODE) {
+				else if ((opts->mode&MODE_MASK) != GENERIC_DELETE) {
 					fprintf(stderr,
 					        "ERROR: exactly one command must be provided\n");
 					usage();
@@ -327,16 +461,21 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				}
 			} else {
 				err = true;
-				badCommand(argv[i]);
+				badCommand(arg);
 			}	
 			break;
 		case 'q':	
 		case 'Q':	// tell me if I have anything stored
-			if (strcasecmp(argv[i], QUERY_CREDENTIAL) == 0) {
-				if (!opts->mode) {
-					opts->mode = QUERY_MODE;
+			if (strcasecmp(arg, QUERY_CREDENTIAL) == MATCH) {
+				if (opts->mode < 0) {
+					opts->mode = GENERIC_QUERY;
+					if ( ! qualify_mode(opts->mode, dasharg)) {
+						fprintf(stderr, "ERROR: %s is not a known credential type\n", dasharg);
+						usage();
+						err = true;
+					}
 				}
-				else if (opts->mode != QUERY_MODE) {
+				else if ((opts->mode&MODE_MASK) != GENERIC_QUERY) {
 					fprintf(stderr,
 					        "ERROR: exactly one command must be provided\n");
 					usage();
@@ -344,15 +483,20 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				}
 			} else {
 				err = true;
-				badCommand(argv[i]);
+				badCommand(arg);
 			}	
 			break;
 #if defined(WIN32)
 		case 'c':	
 		case 'C':	// Config
-			if (strcasecmp(argv[i], CONFIG_CREDENTIAL) == 0) {
-				if (!opts->mode) {
-					opts->mode = CONFIG_MODE;
+			if (strcasecmp(arg, CONFIG_CREDENTIAL) == MATCH) {
+				if (opts->mode < 0) {
+					opts->mode = GENERIC_CONFIG;
+					if ( ! qualify_mode(opts->mode, dasharg)) {
+						fprintf(stderr, "ERROR: %s is not a known credential type\n", dasharg);
+						usage();
+						err = true;
+					}
 				}
 				else {
 					fprintf(stderr, "ERROR: exactly one command must be provided\n");
@@ -361,50 +505,52 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				}
 			} else {
 				err = true;
-				badCommand(argv[i]);
+				badCommand(arg);
 			}	
 			break;
 #endif
 		case '-':
 			// various switches
-			switch (argv[i][1]) {
+			switch (arg[1]) {
 				case 'n':
-					if (i+1 < argc) {
+					if (ix+1 < argc) {
 						if (opts->daemonname != NULL) {
-							fprintf(stderr, "ERROR: only one '-n' arg my be provided\n");
+							fprintf(stderr, "ERROR: only one '-n' arg may be provided\n");
 							usage();
 							err = true;
 						}
 						else {
-							opts->daemonname = get_daemon_name(argv[i+1]);
+							opts->daemonname = get_daemon_name(argv[ix+1]);
 							if (opts->daemonname == NULL) {
 								fprintf(stderr, "ERROR: %s is not a valid daemon name\n",
-									argv[i+1]);
+									argv[ix+1]);
 								err = true;
 							}
-							i++;
+							++ix;
 						}
 					} else {
 						err = true;
-						optionNeedsArg(argv[i]);
+						optionNeedsArg(arg, "name");
 					}
 					break;
+
 				case 'p':
-					if (i+1 < argc) {
-						if (opts->pw[0] != '\0') {
-							fprintf(stderr, "ERROR: only one '-p' args may be provided\n");
+					if (ix+1 < argc) {
+						if (opts->pw) {
+							fprintf(stderr, "ERROR: only one '-p' arg may be provided\n");
 							usage();
 							err = true;
 						}
 						else {
-							strncpy(opts->pw, argv[i+1], MAX_PASSWORD_LENGTH);
-							i++;
+							opts->pw = argv[ix+1];
+							++ix;
 						}
 					} else {
 						err = true;
-						optionNeedsArg(argv[i]);
+						optionNeedsArg(arg, "password");
 					}
 					break;
+
 				case 'c':
 					if (opts->username[0] != '\0') {
 						fprintf(stderr, "ERROR: only one '-c' or '-u' arg may be provided\n");
@@ -415,16 +561,17 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 						strcpy(opts->username, POOL_PASSWORD_USERNAME);
 					}
 					break;
+
 				case 'u':
-					if (i+1 < argc) {
+					if (ix+1 < argc) {
 						if (opts->username[0] != '\0') {
 							fprintf(stderr, "ERROR: only one of '-s' or '-u' may be provided\n");
 							usage();
 							err = true;
 						}
 						else {
-							strcpy_len(opts->username, argv[i+1], COUNTOF(opts->username));
-							i++;
+							strcpy_len(opts->username, argv[ix+1], COUNTOF(opts->username));
+							++ix;
 							char* at_ptr = strchr(opts->username, '@');
 							// '@' must be in the string, but not the beginning
 							// or end of the string.
@@ -438,18 +585,54 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 						}
 					} else {
 						err = true;
-						optionNeedsArg(argv[i]);
+						optionNeedsArg(arg, "username");
 					}
 					break;
+
+				case 'i':
+					if (ix+1 < argc) {
+						if (opts->credential_file) {
+							fprintf(stderr, "ERROR: credential filename already specified\n");
+							usage();
+							err = true;
+						}
+						else {
+							opts->credential_file = argv[ix + 1];
+							++ix;
+						}
+					} else {
+						err = true;
+						optionNeedsArg(arg, "filename");
+					}
+					break;
+
+				case 's':
+					if (ix+1 < argc) {
+						if (opts->service) {
+							fprintf(stderr, "ERROR: OAuth service already specified\n");
+							usage();
+							err = true;
+						}
+						else {
+							opts->service = argv[ix + 1];
+							++ix;
+			}
+					} else {
+						err = true;
+						optionNeedsArg(arg, "service");
+					}
+					break;
+
+
 #if !defined(WIN32)
 				case 'f':
-					if (i+1 >= argc) {
+					if (ix+1 >= argc) {
 						err = true;
-						optionNeedsArg(argv[i]);
+						optionNeedsArg(arg, "filename");
 					}
-					opts->password_file = argv[i+1];
-					i++;
-					opts->mode = ADD_MODE;
+					opts->pool_password_file = argv[ix+1];
+					++ix;
+					opts->mode = GENERIC_ADD;
 					break;
 #endif
 				case 'd':
@@ -460,13 +643,37 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 					break;
 				default:
 					err = true;
-					badOption(argv[i]);
+					badOption(arg);
 			}
 			break;	// break for case '-'
 		default:
 			err = true;
-			badCommand(argv[i]);
+			badCommand(argv[ix]);
 			break;
+		}
+	}
+
+	// do inter-argument validation
+	if ( ! err) {
+		int cred_type = opts->mode & CRED_TYPE_MASK;
+		int op_type = opts->mode & MODE_MASK;
+		//int legacy = opts->mode & STORE_CRED_LEGACY;
+		if ( ! cred_type) {
+			opts->mode |= STORE_CRED_LEGACY_PWD;
+		}
+
+		if (op_type == GENERIC_ADD) {
+			// Krb and OAuth require a credential file
+			if (cred_type == STORE_CRED_USER_KRB || cred_type == STORE_CRED_USER_OAUTH) {
+				if (! opts->credential_file) {
+					fprintf(stderr, "ERROR: add-krb and add-oauth commands require a credential filename argument\n");
+					err = true;
+				}
+			}
+			// when storing Krb credentials, we want to wait for the credmon to process
+			if ((cred_type == STORE_CRED_USER_KRB) && ! no_wait) {
+				opts->mode |= STORE_CRED_WAIT_FOR_CREDMON;
+			}
 		}
 	}
 
@@ -486,30 +693,43 @@ badOption(const char* option) {
 }
 
 void
-optionNeedsArg(const char* option)
+optionNeedsArg(const char* option, const char * type)
 {
-	fprintf(stderr, "ERROR: Option '%s' requires an argument\n\n", option);
+	fprintf(stderr, "ERROR: Option '%s' requires a %s argument\n\n", option, type);
 	usage();
 }
 
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [options] action\n", MyName );
+	fprintf( stderr, "Usage: %s action [options]\n", MyName );
 	fprintf( stderr, "  where action is one of:\n" );
-	fprintf( stderr, "    add               (Add credential to secure storage)\n" );
-	fprintf( stderr, "    delete            (Remove credential from secure storage)\n" );
-	fprintf( stderr, "    query             (Check if a credential has been stored)\n" );
-	fprintf( stderr, "  and where [options] is one or more of:\n" );
-	fprintf( stderr, "    -u username       (use the specified username)\n" );
-	fprintf( stderr, "    -c                (update/query the condor pool password)\n");
-	fprintf( stderr, "    -p password       (use the specified password rather than prompting)\n" );
-	fprintf( stderr, "    -n name           (update/query to the named machine)\n" );
+	fprintf( stderr, "    add[-type]        Add credential to secure storage\n" );
+	fprintf( stderr, "    delete[-type]     Remove credential from secure storage\n" );
+	fprintf( stderr, "    query[-type]      Check if a credential has been stored\n" );
+	fprintf( stderr, "  and -type is an optional credential type. it must be one of:\n" );
+	fprintf( stderr, "    -pwd              Credential is a password (default)\n" );
+	fprintf( stderr, "    -krb              Credential is Kerberos/AFS token\n" );
+	fprintf( stderr, "    -oauth            Credential is Scitoken or OAuth2 token\n" );
+	fprintf( stderr, "  and where [options] is zero or more of:\n" );
+	fprintf( stderr, "    -u username       Use the specified username\n" );
+	fprintf( stderr, "    -c                Manage the condor pool password\n");
+	fprintf( stderr, "    -p <password>     Use the specified password rather than prompting\n" );
+	fprintf( stderr, "    -i <filename>     Read the credential from <filename>\n"
+	                 "                         If <filename> is -, read from stdin\n"
+	);
+	fprintf( stderr, "    -s <service>      Add/Remove/Query for the given OAuth2 service\n" );
+	fprintf( stderr, "    -n <name>         Manage credentials on the named machine\n" );
 #if !defined(WIN32)
-	fprintf( stderr, "    -f filename       (generate a pool password file)\n" );
+	fprintf( stderr, "    -f <filename>     Write password to a pool password file\n" );
 #endif
-	fprintf( stderr, "    -d                (display debugging messages)\n" );
-	fprintf( stderr, "    -h                (display this message)\n" );
+	fprintf( stderr, "    -d                Display debugging messages\n" );
+	fprintf( stderr, "    -h                Display this message\n" );
+	fprintf( stderr, "\nIf no -u argument is supplied, the name of the current user will be used.\n"
+	                 "The add-krb and add-oauth action must be used with the -i argument to specify\n"
+	                 "a file to read the credential from. The add or add-pwd action will prompt for\n"
+	                 "a password unless the -p argument is used.\n"
+	);
 	fprintf( stderr, "\n" );
 
 	exit( 1 );

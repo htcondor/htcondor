@@ -147,6 +147,16 @@ public:
 		// Notfication to our controller
 		// // // // // // // // // // // //
 
+		/**
+		   Write a periodic update ClassAd to a file, if requested.
+
+		   @param update_ad Update ad to use if you've already got the info
+		   @param insure_update Should we insure the update gets there?
+		   @return true if success, false if failure
+		*/
+	virtual bool periodicJobUpdate(ClassAd* update_ad = NULL,
+								   bool insure_update = false);
+
 		/** Notify our controller that the job is about to spawn
 		 */
 	void notifyJobPreSpawn( void );
@@ -231,6 +241,13 @@ protected:
 		/** Initialize our local UserLog-writing code.
 		 */
 	virtual bool initLocalUserLog( void );
+
+		/// If the job ad says so, acquire user credentials
+		// returns 0 if nothing to do, 1 if success < 0 on failure
+	int initUserCredentials();
+	void refreshSandboxCredentials_from_timer() { (void)initUserCredentials(); }
+	int m_refresh_sandbox_creds_tid; /// timer id of the credential refresh timer
+
 };
 
 

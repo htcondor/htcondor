@@ -26,7 +26,6 @@
 #include "condor_string.h"
 #include "env.h"
 #include "MyString.h"
-#include "string_list.h"
 
 
 #define DAG_SUBMIT_FILE_SUFFIX ".condor.sub"
@@ -45,6 +44,16 @@ const int MAX_RESCUE_DAG_DEFAULT = 100;
 // The absolute maximum allowed rescue DAG number (the real maximum
 // is normally configured lower).
 const int ABS_MAX_RESCUE_DAG_NUM = 999;
+
+enum DagStatus {
+    DAG_STATUS_OK = 0,
+    DAG_STATUS_ERROR = 1, // Error not enumerated below
+    DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
+    DAG_STATUS_ABORT = 3, // Hit special DAG abort value
+    DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
+    DAG_STATUS_CYCLE = 5, // A cycle in the DAG
+    DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
+};
 
 class EnvFilter : public Env
 {
@@ -71,12 +80,12 @@ struct SubmitDagShallowOptions
     int iMaxPre;
     int iMaxPost;
     MyString appendFile; // append to .condor.sub file before queue
-    StringList appendLines; // append to .condor.sub file before queue
+    std::list<std::string> appendLines; // append to .condor.sub file before queue
     MyString strConfigFile;
     bool dumpRescueDag;
     bool runValgrind;
     MyString primaryDagFile;
-    StringList    dagFiles;
+    std::list<std::string> dagFiles;
     bool doRecovery;
     bool bPostRun;
     bool bPostRunSet; // whether this was actually set on the command line
@@ -132,6 +141,7 @@ struct SubmitDagDeepOptions
     bool useDagDir;
     MyString strOutfileDir;
     MyString batchName; // optional value from -batch-name argument, will be double quoted if it exists.
+    std::string batchId;
     bool autoRescue;
     int doRescueFrom;
     bool allowVerMismatch;
@@ -167,9 +177,9 @@ public:
 
     bool usingPythonBindings = false;
 
-    void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
+    bool writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
         /* const */ SubmitDagShallowOptions &shallowOpts,
-        /* const */ StringList &dagFileAttrLines );
+        /* const */ std::list<std::string> &dagFileAttrLines ) const;
     
     int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
         const char *dagFile, const char *directory, int priority,
@@ -177,10 +187,10 @@ public:
 
     int setUpOptions( SubmitDagDeepOptions &deepOpts,
         SubmitDagShallowOptions &shallowOpts,
-        StringList &dagFileAttrLines );
+        std::list<std::string> &dagFileAttrLines );
 
-    bool GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir, 
-        MyString &configFile, StringList &attrLines, MyString &errMsg );
+    bool GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
+        MyString &configFile, std::list<std::string> &attrLines, MyString &errMsg );
 
     bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
 
@@ -189,7 +199,7 @@ public:
 
     bool fileExists(const MyString &strFile);
 
-    void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
+    bool ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
         SubmitDagShallowOptions &shallowOpts);
 
     MyString RescueDagName(const char *primaryDagFile,

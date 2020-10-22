@@ -20,9 +20,7 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
 
     # ADD_PRECOMPILED_HEADER macro expects to operate on a global _SRCS
     SET(_SRCS ${_SRCS_PARAM})
-    if ( CONDOR_BUILD_SHARED_LIBS )
-        list(APPEND _SRCS ${CMAKE_SOURCE_DIR}/src/condor_utils/condor_version.cpp)
-    endif()
+
     ADD_PRECOMPILED_HEADER()
     if ( WINDOWS )
         # Add windows version information to the exe 
@@ -39,7 +37,9 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
 
     add_executable( ${_CNDR_TARGET} ${_SRCS})
 
-    condor_set_link_libs( ${_CNDR_TARGET} "${_LINK_LIBS}")
+	# always link in the condor_version.o for CondorVersion to parse
+    condor_set_link_libs( ${_CNDR_TARGET} "condor_version_obj;${_LINK_LIBS}")
+	add_dependencies(${_CNDR_TARGET} condor_version_obj)
 
     set(${_CNDR_TARGET}_loc ${_INSTALL_LOC})
 

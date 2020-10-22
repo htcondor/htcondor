@@ -48,6 +48,7 @@
 #include "HashTable.h"
 #include <set>
 #include "dagman_metrics.h"
+#include "enum_utils.h"
 
 using namespace std;
 
@@ -58,7 +59,7 @@ const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
 const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
 const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
 
-// NOTE: this must be kept in sync with the dag_status enum
+// NOTE: this must be kept in sync with the DagStatus enum
 const char * Dag::_dag_status_names[] = {
     "DAG_STATUS_OK",
     "DAG_STATUS_ERROR",
@@ -81,18 +82,20 @@ void touch (const char * filename) {
 }
 
 //---------------------------------------------------------------------------
-Dag::Dag( /* const */ StringList &dagFiles,
+Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
+		  const int maxHoldScripts,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
-		  const MyString &spliceScope ) :
+		  DCSchedd *schedd, const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
+	_maxHoldScripts       (maxHoldScripts),
 	MAX_SIGNAL			  (64),
 	_splices              (hashFunction),
 	_dagFiles             (dagFiles),
@@ -114,6 +117,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_DAGManJobId		  (DAGManJobID),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
+	_holdRunNodeCount	  (0),
 	_checkCondorEvents    (),
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
@@ -131,7 +135,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_alwaysRunPost		  (true),
 	_dry_run			  (0),
 	_dagPriority		  (0),
-	_metrics			  (NULL)
+	_metrics			  (NULL),
+	_schedd				  (schedd)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.Value() );
 
@@ -145,7 +150,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 
 	// for the toplevel dag, emit the dag files we ended up using.
 	if (_isSplice == false) {
-		ASSERT( dagFiles.number() >= 1 );
+		ASSERT( dagFiles.size() >= 1 );
 		PrintDagFiles( dagFiles );
 	}
 
@@ -163,12 +168,14 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	if (_isSplice == false) {
 		_preScriptQ = new ScriptQ( this );
 		_postScriptQ = new ScriptQ( this );
+		_holdScriptQ = new ScriptQ( this );
 		if( !_preScriptQ || !_postScriptQ ) {
 			EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 		}
 	} else {
 		_preScriptQ = NULL;
 		_postScriptQ = NULL;
+		_holdScriptQ = NULL;
 	}
 
 	debug_printf( DEBUG_DEBUG_4, "_maxJobsSubmitted = %d, "
@@ -203,8 +210,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 
 	_dagIsHalted = false;
 	_dagIsAborted = false;
-	_dagFiles.rewind();
-	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.next() );
+	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.front() );
 	_dagStatus = DAG_STATUS_OK;
 
 	_allNodesIt = NULL;
@@ -234,6 +240,7 @@ Dag::~Dag()
 
     delete _preScriptQ;
     delete _postScriptQ;
+	delete _holdScriptQ;
     delete _submitQ;
     delete _readyQ;
 
@@ -248,6 +255,9 @@ Dag::~Dag()
 	DeletePinList( _pinOuts );
 	delete _allNodesIt;
 
+	delete _provisionerClassad;
+	_provisionerClassad = NULL;
+
     return;
 }
 
@@ -257,6 +267,7 @@ Dag::RunWaitingScripts()
 {
 	_preScriptQ->RunWaitingScripts();
 	_postScriptQ->RunWaitingScripts();
+	_holdScriptQ->RunWaitingScripts();
 }
 
 //-------------------------------------------------------------------------
@@ -275,7 +286,7 @@ Dag::ReportMetrics( int exitCode )
 		return;
 	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
 	if ( report_graph_metrics == true ) {
-		if (_dagStatus != dag_status::DAG_STATUS_CYCLE ) {
+		if (_dagStatus != DagStatus::DAG_STATUS_CYCLE ) {
 			_metrics->GatherGraphMetrics( this );
 		}
 	}
@@ -361,13 +372,19 @@ bool Dag::Bootstrap (bool recovery)
 		PrintReadyQ( DEBUG_DEBUG_2 );
     }	
     
+		// If we have a provisioner job, submit that before any other jobs
+	if( HasProvisionerNode() ) {
+		StartProvisionerNode();
+	}
 		// Note: we're bypassing the ready queue here...
-    jobs.ToBeforeFirst();
-    while( jobs.Next( job ) ) {
-		if( job->CanSubmit() ) {
-			StartNode( job, false );
+	else {
+		jobs.ToBeforeFirst();
+		while( jobs.Next( job ) ) {
+			if( job->CanSubmit() ) {
+				StartNode( job, false );
+			}
 		}
-    }
+	}
 
     return true;
 }
@@ -590,20 +607,12 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_ABORTED:
-#if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->GetEventTime(),
-							_metrics );
-#endif
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent( job, event->proc );
 				ProcessAbortEvent(event, job, recovery);
 				break;
               
 			case ULOG_JOB_TERMINATED:
-#if !defined(DISABLE_NODE_TIME_METRICS)
-				job->TermAbortMetrics( event->proc, event->GetEventTime(),
-							_metrics );
-#endif
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent( job, event->proc );
 				ProcessTerminatedEvent(event, job, recovery);
@@ -635,10 +644,6 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_EXECUTE:
-#if !defined(DISABLE_NODE_TIME_METRICS)
-				job->ExecMetrics( event->proc, event->GetEventTime(),
-							_metrics );
-#endif
 				ProcessNotIdleEvent( job, event->proc );
 				break;
 
@@ -701,6 +706,9 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
   // same *job* (not job proc).
 
 	if ( job ) {
+
+		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
+
 		DecrementProcCount( job );
 
 			// This code is here because if a held job is removed, we
@@ -745,6 +753,9 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
+
+		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
+
 		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -999,7 +1010,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						"POST script %s", errStr.Value() );
 
 				// Log post script success or failure if necessary.
-			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
 
 				//
 				// Deal with retries.
@@ -1050,7 +1061,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						"%scompleted successfully.\n", header.Value() );
 			job->retval = 0;
 				// Log post script success or failure if necessary.
-			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
 			TerminateJob( job, recovery );
 		}
 
@@ -1086,8 +1097,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		debug_printf( DEBUG_QUIET, "Error: DAG semantics violated!  "
 					"Node %s was submitted but has unfinished parents!\n",
 					job->GetJobName() );
-		_dagFiles.rewind();
-		char *dagFile = _dagFiles.next();
+		const char *dagFile = _dagFiles.front().c_str();
 		debug_printf( DEBUG_QUIET, "This may indicate log file corruption; "
 					"you may want to check the log files and re-run the "
 					"DAG in recovery mode by giving the command "
@@ -1164,6 +1174,13 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		}
 	}
 
+		// If this is a provisioner node, initialize the classad object
+		// that communicates with the schedd.
+	if ( job->GetType() == NodeType::PROVISIONER ) {
+		CondorID provisionerId = CondorID( job->GetCluster(), job->GetProc(), 0 );
+		_provisionerClassad = new ProvisionerClassad( provisionerId, _schedd );
+	}
+
 	PrintReadyQ( DEBUG_DEBUG_2 );
 }
 
@@ -1227,6 +1244,8 @@ Dag::ProcessNotIdleEvent( Job *job, int proc ) {
 		_numIdleJobProcs = 0;
 	}
 
+	job->SetProcEvent( proc, EXEC_MASK );
+
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);
 }
@@ -1255,6 +1274,11 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 						event->cluster, job->GetJobName(), _maxJobHolds );
 			RemoveBatchJob( job );
 		}
+	}
+
+	if( job->_scriptHold != NULL ) {
+		// TODO: Does running a HOLD script warrant a separate helper function?
+		RunHoldScript( job, true );
 	}
 }
 
@@ -1389,12 +1413,12 @@ Dag::FindAllNodesByName( const char* nodeName,
 	}
 
 		// We want to skip final nodes if we're in ALL_NODES mode.
-	if ( node && node->GetFinal() && _allNodesIt ) {
+	if ( node && node->GetType() == NodeType::FINAL && _allNodesIt ) {
 		debug_printf( DEBUG_QUIET, finalSkipMsg, node->GetJobName(),
 					file, line );
 			// We know there can only be one FINAL node.
 		node = _allNodesIt->Next();
-		ASSERT( !node || !node->GetFinal() );
+		ASSERT( !node || !( node->GetType() == NodeType::FINAL ) );
 	}
 
 		// Delete the ALL_NODES iterator if we've hit the last node.
@@ -1484,15 +1508,13 @@ Dag::SetAllowEvents( int allowEvents)
 
 //-------------------------------------------------------------------------
 void
-Dag::PrintDagFiles( /* const */ StringList &dagFiles )
+Dag::PrintDagFiles( /* const */ std::list<std::string> &dagFiles )
 {
-	if ( dagFiles.number() > 1 ) {
+	if ( dagFiles.size() > 1 ) {
 		debug_printf( DEBUG_VERBOSE, "All DAG files:\n");
-		dagFiles.rewind();
-		char *dagFile;
 		int thisDagNum = 0;
-		while ( (dagFile = dagFiles.next()) != NULL ) {
-			debug_printf( DEBUG_VERBOSE, "  %s (DAG #%d)\n", dagFile,
+		for ( auto it = dagFiles.begin(); it != dagFiles.end(); ++it ) {
+			debug_printf( DEBUG_VERBOSE, "  %s (DAG #%d)\n", it->c_str(),
 						thisDagNum++);
 		}
 	}
@@ -1516,7 +1538,6 @@ Dag::StartNode( Job *node, bool isRetry )
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
 	// actual job to HTCondor if/when the script exits successfully
-
     if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
 		node->SetStatus( Job::STATUS_PRERUN );
 		_preRunNodeCount++;
@@ -1553,7 +1574,7 @@ Dag::StartFinalNode()
 		Job* job;
 		_readyQ->Rewind();
 		while ( _readyQ->Next( job ) ) {
-			if ( !job->GetFinal() ) {
+			if ( !(job->GetType() == NodeType::FINAL) ) {
 				debug_printf( DEBUG_DEBUG_1,
 							"Removing node %s from ready queue\n",
 							job->GetJobName() );
@@ -1571,6 +1592,31 @@ Dag::StartFinalNode()
 	}
 
 	return false;
+}
+
+//-------------------------------------------------------------------------
+bool
+Dag::StartProvisionerNode()
+{
+	if ( _provisioner_node && _provisioner_node->GetStatus() == Job::STATUS_READY ) {
+		debug_printf( DEBUG_QUIET, "Starting provisioner node...\n" );
+		if ( StartNode( _provisioner_node, false ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+//-------------------------------------------------------------------------
+int
+Dag::GetProvisionerJobAdState()
+{
+	int provisionerState = -1;
+	if (_provisionerClassad) {
+		provisionerState = _provisionerClassad->GetProvisionerState();
+	}
+	return provisionerState;
 }
 
 //-------------------------------------------------------------------------
@@ -1618,6 +1664,23 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// to fire up any PRE scripts that were deferred while we were
 			// halted.
 		_preScriptQ->RunWaitingScripts();
+	}
+
+		// Check if we are waiting for a provisioner node to become ready
+	if ( HasProvisionerNode() && !_provisioner_ready ) {
+			// If we just moved into a provisioned state, we can start
+			// submitting the other jobs in the dag
+		if ( GetProvisionerJobAdState() == ProvisionerState::PROVISIONING_COMPLETE ) {
+			_provisioner_ready = true;
+			Job* job;
+			ListIterator<Job> jobs (_jobs);
+			jobs.ToBeforeFirst();
+			while( jobs.Next( job ) ) {
+				if( job->CanSubmit() ) {
+					StartNode( job, false );
+				}
+			}
+		}
 	}
 
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
@@ -1776,7 +1839,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		job->retval = 0;
 	}
 
-	_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+	_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::PRE );
 
 	if ( preScriptFailed ) {
 
@@ -1875,6 +1938,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 
 	return true;
 }
+
 //---------------------------------------------------------------------------
 // Note that the actual handling of the post script's exit status is
 // done not when the reaper is called, but in ProcessLogEvents when
@@ -1931,6 +1995,34 @@ Dag::PostScriptReaper( Job *job, int status )
 			break;
 		}
 	}
+	return true;
+}
+
+//---------------------------------------------------------------------------
+// Run a HOLD script.
+
+bool Dag::RunHoldScript( Job *job, bool incrementRunCount )
+{
+	// Make sure we are allowed to run this script.
+	if( !job->_scriptHold ) {
+		return false;
+	}
+	// Run the HOLD script. This is a best-effort attempt that does not change
+	// the node status.
+	if ( incrementRunCount ) {
+		_holdRunNodeCount++;
+	}
+	_holdScriptQ->Run( job->_scriptHold );
+
+	return true;
+}
+
+int
+Dag::HoldScriptReaper( Job *job )
+{
+	ASSERT( job != NULL );
+	_holdRunNodeCount--;
+
 	return true;
 }
 
@@ -2339,7 +2431,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 {
 		// Print the JOB/DATA line.
 	const char *keyword = "";
-	if ( node->GetFinal() ) {
+	if ( node->GetType() == NodeType::FINAL ) {
 		keyword = "FINAL";
 	} else {
 		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
@@ -2437,7 +2529,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		// Never mark a FINAL node as done.
 		// Also avoid a possible race condition where the job
 		// has been skipped but is not yet marked as DONE.
-	if ( node->GetStatus() == Job::STATUS_DONE && !node->GetFinal() ) {
+	if ( node->GetStatus() == Job::STATUS_DONE && !( node->GetType() == NodeType::FINAL ) ) {
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
 
@@ -2477,13 +2569,18 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 void
 Dag::WriteScriptToRescue( FILE *fp, Script *script )
 {
-	const char *prepost = script->_post ? "POST" : "PRE";
+	const char *type;
+	switch( script->_type ) {
+		case ScriptType::PRE: type = "PRE"; break;
+		case ScriptType::POST: type = "POST"; break;
+		case ScriptType::HOLD: type = "HOLD"; break;
+	}
 	fprintf( fp, "SCRIPT " );
 	if ( script->_deferStatus != SCRIPT_DEFER_STATUS_NONE ) {
 		fprintf( fp, "DEFER %d %d ", script->_deferStatus,
 					(int)script->_deferTime );
 	}
-	fprintf( fp, "%s %s %s\n", prepost, script->GetNode()->GetJobName(),
+	fprintf( fp, "%s %s %s\n", type, script->GetNode()->GetJobName(),
 				script->GetCmd() );
 }
 
@@ -3025,12 +3122,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// Print DAG file list.
 		//
 	fprintf( outfile, "  DagFiles = {\n" );
-	char *dagFile;
-	_dagFiles.rewind();
 	const char *separator = "";
-	while ( (dagFile = _dagFiles.next()) ) {
+	for ( auto it = _dagFiles.begin(); it != _dagFiles.end(); ++it ) {
 		fprintf( outfile, "%s    %s", separator,
-					EscapeClassadString( dagFile ) );
+					EscapeClassadString( it->c_str() ) );
 		separator = ",\n";
 	}
 	fprintf( outfile, "\n  };\n" );
@@ -3349,6 +3444,36 @@ Dag::GetReject( MyString &firstLocation )
 	return _reject;
 }
 
+//-------------------------------------------------------------------------
+void 
+Dag::SetMaxJobsSubmitted(int newMax) {
+
+	bool isChanged = (newMax != _maxJobsSubmitted);
+	bool removeJobsAfterLimitChange = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
+
+	// Update our internal max jobs count
+	_maxJobsSubmitted = newMax;
+
+	// If maxJobs is set to 0, that means no maximum limit. Exit now.
+	if (_maxJobsSubmitted == 0) return;
+
+	// Optionally remove jobs to meet the new limit, starting with most recent
+	if (isChanged && removeJobsAfterLimitChange) {
+		int submittedJobsCount = 0;
+		Job* job;
+		ListIterator<Job> iList (_jobs);
+		while ((job = iList.Next()) != NULL) {
+			if (job->GetStatus() == Job::STATUS_SUBMITTED) {
+				submittedJobsCount++;
+				if (submittedJobsCount > _maxJobsSubmitted) {
+					job->retry_max++;
+					RemoveBatchJob(job);
+				}
+			}
+		}
+	}
+}
+
 //===========================================================================
 
 /** Set the filename of the jobstate.log file.
@@ -3446,6 +3571,13 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 					"of -MaxPost limit (%d) or DEFER\n",
 					_postScriptQ->GetScriptDeferredCount(),
 					_maxPostScripts );
+	}
+
+	if( _holdScriptQ->GetScriptDeferredCount() > 0 || force ) {
+		debug_printf( level, "Note: %d total HOLD script deferrals because "
+					"of -MaxHold limit (%d) or DEFER\n",
+					_holdScriptQ->GetScriptDeferredCount(),
+					_maxHoldScripts );
 	}
 }
 
@@ -3716,7 +3848,7 @@ bool Dag::Add( Job& job )
 		// Final node status is set to STATUS_NOT_READY here, so it
 		// won't get run even though it has no parents; its status
 		// will get changed when it should be run.
-	if ( job.GetFinal() ) {
+	if ( ( job.GetType() == NodeType::FINAL ) ) {
 		if ( _final_job ) {
         	debug_printf( DEBUG_QUIET, "Error: DAG already has a final "
 						"node %s; attempting to add final node %s\n",
@@ -3726,6 +3858,17 @@ bool Dag::Add( Job& job )
 		job.SetStatus( Job::STATUS_NOT_READY );
 		_final_job = &job;
 	}
+
+	if ( ( job.GetType() == NodeType::PROVISIONER ) ) {
+		if ( _provisioner_node ) {
+			debug_printf( DEBUG_QUIET, "Error: DAG already has a provisioner "
+						"node %s; attempting to add provisioner node %s\n",
+						_provisioner_node->GetJobName(), job.GetJobName() );
+			return false;
+		}
+		_provisioner_node = &job;
+	}
+
 	return _jobs.Append(&job);
 }
 
@@ -4126,7 +4269,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 // in the submit command's stdout (which we stashed in the Job object)
 
 bool
-Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
+Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const
 {
 		// Changed this if from "if( recovery )" during work on PR 806 --
 		// this is better because if you get two submit events for the
@@ -4197,6 +4340,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
 	bool use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
+	// If a submit description is already set, override the DAGMAN_USE_CONDOR_SUBMIT knob
+	if (node->GetSubmitDesc()) { use_condor_submit = false; }
 
 		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
@@ -4264,10 +4409,16 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			// " " to *not* override batch names specified at a lower
 			// level.
 		const char *batchName;
+		std::string batchId;
 		if ( !node->GetDagFile() && dm._batchName == " " ) {
 			batchName = "";
 		} else {
 			batchName = dm._batchName.Value();
+		}
+		if ( !node->GetDagFile() && dm._batchId == " " ) {
+			batchId = "";
+		} else {
+			batchId = dm._batchId.c_str();
 		}
 
 		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
@@ -4276,7 +4427,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					node->GetRetries(),
 					node->GetDirectory(), _defaultNodeLog,
 					( ! node->NoChildren()) && dm._claim_hold_time > 0,
-					batchName );
+					batchName, batchId );
 	} else {
 #ifdef DEAD_CODE
 		MyString parents = ParentListString(node);
@@ -4298,14 +4449,20 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// " " to *not* override batch names specified at a lower
 		// level.
 		const char *batchName;
+		const char *batchId;
 		if (!node->GetDagFile() && dm._batchName == " ") {
 			batchName = "";
 		} else {
 			batchName = dm._batchName.Value();
 		}
+				if ( !node->GetDagFile() && dm._batchId == " " ) {
+			batchId = "";
+		} else {
+			batchId = dm._batchId.c_str();
+		}
 
 		submit_success = direct_condor_submit(dm, node,
-			_defaultNodeLog, parents.c_str(), batchName, condorID);
+			_defaultNodeLog, parents.c_str(), batchName, batchId, condorID);
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
@@ -4367,7 +4524,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetFinal() ) {
+	if ( _dagStatus == DagStatus::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
 		max_submit_attempts = min( max_submit_attempts, 2 );
 	}
 

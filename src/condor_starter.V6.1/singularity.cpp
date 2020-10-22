@@ -9,6 +9,8 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
+#include "stat_wrapper.h"
+#include "stat_info.h"
 
 using namespace htcondor;
 
@@ -37,7 +39,7 @@ static bool find_singularity(std::string &exec)
 
 
 bool
-Singularity::advertise(classad::ClassAd &ad)
+Singularity::advertise(ClassAd &ad)
 {
 	if (m_enabled && ad.InsertAttr("HasSingularity", true)) {
 		return false;
@@ -122,7 +124,7 @@ Singularity::detect(CondorError &err)
 }
 
 bool
-Singularity::job_enabled(compat_classad::ClassAd &machineAd, compat_classad::ClassAd &jobAd)
+Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
 	return param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd);
 }
@@ -216,6 +218,53 @@ Singularity::setup(ClassAd &machineAd,
 		binds.rewind();
 		char *next_bind;
 		while ( (next_bind=binds.next()) ) {
+			std::string bind_src_dir(next_bind);
+			// BIND exprs can be src:dst:ro 
+			size_t colon = bind_src_dir.find(':');
+			if (colon != std::string::npos) {
+				bind_src_dir = bind_src_dir.substr(0, colon);
+			}
+			StatWrapper sw(bind_src_dir.c_str());
+			sw.Stat();
+			if (! sw.IsBufValid()) {
+				dprintf(D_ALWAYS, "Skipping invalid singularity bind source directory %s\n", next_bind);
+				continue;
+			} 
+
+			// Older singularity versions that do not support underlay
+			// may require the target directory to exist.  OSG wants
+			// to ignore mount requests where this is the case.
+			if (param_boolean("SINGULARITY_IGNORE_MISSING_BIND_TARGET", false)) {
+				// We an only check this when the image format is a directory
+				// That's OK for OSG, that's all they use
+				StatInfo si(image.c_str());
+				if (si.IsDirectory()) {
+					// target dir is after the colon, if it exists
+					std::string target_dir;
+					char *colon = strchr(next_bind,':');
+					if (colon == nullptr) {
+						// "/dir"
+						target_dir = next_bind;
+					} else {
+						// "/dir:dir2"
+						target_dir = colon + 1;
+					}
+					size_t colon_pos = target_dir.find(':');
+					if (colon_pos != std::string::npos) {
+						target_dir = target_dir.substr(0, colon_pos);
+					}
+
+					std::string abs_target_dir = image + "/" + target_dir;
+					StatInfo td(abs_target_dir.c_str());
+					if (! td.IsDirectory()) {
+						dprintf(D_ALWAYS, "Target directory %s does not exist in image, skipping mount\n", abs_target_dir.c_str());
+						continue;
+					}
+
+				} else {
+					dprintf(D_ALWAYS, "Image %s is NOT directory, skipping test for missing bind target for %s\n", image.c_str(), next_bind);
+				}
+			}
 			sing_args.AppendArg("-B");
 			sing_args.AppendArg(next_bind);
 		}
@@ -224,6 +273,8 @@ Singularity::setup(ClassAd &machineAd,
 	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
 		sing_args.AppendArg("--no-home");
 	}
+
+	sing_args.AppendArg("-C");
 
 	MyString args_error;
 	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
@@ -243,7 +294,6 @@ Singularity::setup(ClassAd &machineAd,
 		sing_args.AppendArg("--nv");
 	}
 
-	sing_args.AppendArg("-C");
 	sing_args.AppendArg(image.c_str());
 
 	sing_args.AppendArg(exec.c_str());
@@ -268,9 +318,13 @@ envToList(void *list, const MyString &Name, const MyString & /*value*/) {
 
 bool
 Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
-	
+
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
+
+	MyString oldScratchDir;
+	job_env.GetEnv("_CONDOR_SCRATCH_DIR", oldScratchDir);
+	job_env.SetEnv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER", oldScratchDir);
 
 	job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
 	job_env.SetEnv("TEMP", target_dir.c_str());
@@ -291,7 +345,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	}
 	return true;
 }
-bool 
+bool
 Singularity::convertEnv(Env *job_env) {
 	std::list<std::string> envNames;
 	job_env->Walk(envToList, (void *)&envNames);
@@ -305,3 +359,46 @@ Singularity::convertEnv(Env *job_env) {
 	}
 	return true;
 }
+
+bool 
+Singularity::runTest(const std::string &JobName, const ArgList &args, const Env &env) {
+
+	TemporaryPrivSentry sentry(PRIV_USER);
+
+	// First replace "exec" with "test"
+	ArgList testArgs;
+	for (int i = 0; i < args.Count(); i++) {
+		const char *arg = args.GetArg(i);
+		if (strcmp(arg, "exec") == 0) {
+			arg = "test";
+		}
+		testArgs.AppendArg(arg);
+	}
+
+	MyString stredArgs;
+	testArgs.GetArgsStringForDisplay(&stredArgs);
+
+	dprintf(D_FULLDEBUG, "Runnning singularity test for job %s cmd is %s\n", JobName.c_str(), stredArgs.c_str());
+	FILE *sing_test_output = my_popen(testArgs, "r", 0, &env, true);
+	if (!sing_test_output) {
+		dprintf(D_ALWAYS, "Error running singularity test job: %s\n", stredArgs.c_str());
+		return false;
+	}
+
+	char buf[256];
+	buf[0] = '\0';
+
+	int nread = fread(buf, 255, 1, sing_test_output);
+	dprintf(D_ALWAYS, "sing test:%d  %s\n", nread, buf);
+
+	int rc = my_pclose(sing_test_output);
+	if (rc != 0)  {
+		dprintf(D_ALWAYS, "Non zero return code %d from singularity test of %s\n", rc, stredArgs.c_str());
+		return false;
+	}
+
+	
+	dprintf(D_FULLDEBUG, "Successfully ran singularity test\n");
+	return true;
+}
+

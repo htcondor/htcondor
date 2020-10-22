@@ -16,14 +16,20 @@
  # 
  ############################################################### 
 
-file( GLOB negotiatorRmvElements Example* accountant_log_fixer.cpp protocol-test.cpp )
+set(negotiatorElements
+Accountant.cpp
+main.cpp
+matchmaker.cpp
+matchmaker_negotiate.cpp
+NegotiatorPluginManager.cpp
+)
 
 if (UNIX)
   set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
-condor_daemon( negotiator "${negotiatorRmvElements}"
-  "${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}" )
+condor_daemon( EXE condor_negotiator SOURCES "${negotiatorElements}"
+  LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}" )
 
 condor_exe_test( test_protocol_matching
   "protocol-test.cpp;matchmaker.cpp;Accountant.cpp;matchmaker_negotiate.cpp"

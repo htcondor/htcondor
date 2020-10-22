@@ -4,10 +4,13 @@ if( LINUX AND HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_PTHREADS )
 	include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
 	include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
-	condor_glob( HeaderFiles SourceFiles "TimeSensitiveQueue.cpp;pandadClassAdLogPlugin.cpp" )
+	set(SourceFiles 
+		main.cpp
+		PipeBuffer.cpp
+	)
 
 	condor_exe( pandad
-				"${HeaderFiles};${SourceFiles}"
+				"${SourceFiles}"
 				${C_LIBEXEC}
 				"${CONDOR_TOOL_LIBS};${CURL_FOUND}"
 				OFF )

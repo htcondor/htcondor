@@ -321,7 +321,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	# below are options an overrides to enable packge generation for rpm & deb
 elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
-	execute_process( COMMAND python -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHONARCHLIB)
+	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHONARCHLIB)
+	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
 
 	# it's a smaller subset easier to differentiate.
 	# check the operating system name
@@ -392,9 +393,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( CMAKE_INSTALL_PREFIX "")
 		set( CPACK_SET_DESTDIR "ON")
 
-		# Processing control files
-		add_subdirectory(build/packaging/debian)
-
 	elseif ( RPM_SYSTEM_NAME )
 		# This variable will be defined if the platfrom support RPM
 		message (STATUS "Configuring RPM package on ${LINUX_NAME}-${LINUX_VER} -> ${RPM_SYSTEM_NAME}.${SYS_ARCH}")
@@ -423,7 +421,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set ( CPACK_RPM_PACKAGE_URL ${URL})
 		set ( CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
 
-		PackageDate( RPM CPACK_RPM_DATE)
+		string(TIMESTAMP CPACK_RPM_DATE "+%a %b %d %Y")
 
 		#Specify SPEC file template
 		set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_SOURCE_DIR}/build/packaging/rpm/condor.spec.in")
@@ -451,7 +449,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_SBIN			usr/sbin )
 		set( C_INCLUDE		usr/include/condor )
 		set( C_INCLUDE_PUBLIC		usr/include )
-		set( C_MAN			usr/share/man )
+		set( C_MAN			usr/share/man/man1 )
 		set( C_SRC			usr/src)
 		set( C_SQL			usr/share/condor/sql)
 		set( C_INIT			etc/init.d )

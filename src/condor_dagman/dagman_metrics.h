@@ -31,11 +31,6 @@
 
 #include <unordered_map>
 
-// Note:  the code i Job::ExecMetrics() and Job::TermAbortMetrics() is
-// not compatible with NOOP nodes, which goofs up the really large DAG
-// test.  wenger 2013-07-09
-#define DISABLE_NODE_TIME_METRICS
-
 using namespace std;
 
 class DagmanMetrics {
@@ -78,7 +73,7 @@ public:
 		/** Report the metrics to the Pegasus metrics server(s), assuming
 			that reporting is enabled.
 			@param exitCode The exit code of this DAGMan.
-			@param status The status of this DAGMan (see dag_status in
+			@param status The status of this DAGMan (see DagStatus in
 					dag.h).
 		 	@return false if an error occurred, true otherwise (note
 				that a return value of true does not necessarily
@@ -86,7 +81,7 @@ public:
 				metrics reporting is disabled, metrics are not reported
 				but the return value is true)
 		*/
-	bool Report( int exitCode, Dag::dag_status status );
+	bool Report( int exitCode, DagStatus status );
 
 		/** Calls other functions which measure some graph metrics. Assumes the
 			DAG is valid and does not contain any cycles.
@@ -95,11 +90,11 @@ public:
 
 		/** Write the metrics file.
 			@param exitCode The exit code of this DAGMan.
-			@param status The status of this DAGMan (see dag_status in
+			@param status The status of this DAGMan (see DagStatus in
 					dag.h).
 			@return true if writing succeeded, false otherwise
 		*/
-	bool WriteMetricsFile( int exitCode, Dag::dag_status status );
+	bool WriteMetricsFile( int exitCode, DagStatus status );
 
 private:
 		/** Get the current time, in seconds (and fractional seconds)
@@ -140,8 +135,8 @@ private:
 
 		// The IDs (in the form to be reported in the metrics) of this
 		// DAGMan, and it's parent DAGMan (if there is one).
-	static MyString _dagmanId;
-	static MyString _parentDagmanId;
+	static std::string _dagmanId;
+	static std::string _parentDagmanId;
 
 		// The name of the primary DAG file.
 	char *_primaryDagFile;
@@ -169,9 +164,6 @@ private:
 	int _simpleNodesFailed;
 	int _subdagNodesSuccessful;
 	int _subdagNodesFailed;
-
-		// Total execute time of all node jobs.
-	double _totalNodeJobTime;
 
 		// Graph metrics
 	int _graphHeight;

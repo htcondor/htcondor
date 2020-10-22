@@ -89,11 +89,6 @@
 #include <algorithm> // for std::sort
 #include "CondorError.h"
 
-#ifdef WIN32
-// Note inversion of argument order...
-#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
-#endif
-
 // define this to keep param who's values match defaults from going into to runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
 // define this to parse for #opt:newcomment/#opt:oldcomment to decide commenting rules
@@ -529,7 +524,6 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 
 	if ( ! reqdAttrs.isEmpty()) {
-		MyString buffer;
 
 		for (const char * attr = reqdAttrs.first(); attr; attr = reqdAttrs.next()) {
 			auto_free_ptr expr(NULL);
@@ -541,12 +535,11 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 				expr.set(param(attr));
 			}
 			if ( ! expr) continue;
-			buffer.formatstr("%s = %s", attr, expr.ptr());
 
-			if ( ! ad->Insert(buffer.Value())) {
+			if ( ! ad->AssignExpr(attr, expr.ptr())) {
 				dprintf(D_ALWAYS,
-						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), subsys);
+						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+						attr, expr.ptr(), subsys);
 			}
 		}
 	}
@@ -644,7 +637,9 @@ bool validate_config(bool abort_if_invalid, int opt)
 	if (deprecation_check) {
 		int err = 0; const char * pszMsg = 0;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
-		re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS);
+		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS)) {
+			EXCEPT("Programmer error in condor_config: invalid regexp\n");
+		}
 	}
 
 	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
@@ -1183,7 +1178,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
 
 		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
-	ClassAd::Reconfig();
+	ClassAdReconfig();
 
 	return true;
 }
@@ -2055,6 +2050,16 @@ clear_global_config_table()
 MACRO_SET * param_get_macro_set()
 {
 	return &ConfigMacroSet;
+}
+
+bool param_defined_by_config(const char *name)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	ctx.without_default = true;
+
+	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
+	return pval != NULL;
 }
 
 const char * param_unexpanded(const char *name)
@@ -3683,7 +3688,7 @@ bool param_eval_string(std::string &buf, const char *param_name, const char *def
 {
 	if (!param(buf, param_name, default_value)) {return false;}
 
-	compat_classad::ClassAd rhs;
+	ClassAd rhs;
 	if (me) {
 		rhs = *me;
 	}

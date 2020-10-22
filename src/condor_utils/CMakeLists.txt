@@ -20,21 +20,522 @@ condor_exe( condor_testingd "testingd.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( test_user_mapping "test_user_mapping.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
-##################################################
-# utils library
+# We need this .o statically linked into every exe for the version object
+# to parse.  Make this an object library to link everywhere.
+add_library(condor_version_obj STATIC condor_version.cpp)
+
+# These are the sources for .o's that go into both libcondor_utils and libcondorapi
+# Ideally, as we break dependencies, more of these move into just libcondor_utils
+set(CONDOR_API_AND_UTILS_SRC
+basename.cpp
+chomp.cpp
+classad_merge.cpp
+classad_merge.h
+compat_classad.cpp
+compat_classad.h
+compat_classad_util.cpp
+compat_classad_util.h
+condor_arglist.cpp
+condor_arglist.h
+condor_attributes.cpp
+condor_environ.cpp
+CondorError.cpp
+CondorError.h
+condor_event.cpp
+condor_event.h
+condor_open.h
+condor_snutils.cpp
+condor_ver_info.cpp
+condor_ver_info.h
+condor_version.h
+condor_version.cpp
+consumption_policy.cpp
+consumption_policy.h
+directory.cpp
+directory.h
+directory_util.cpp
+directory_util.h
+distribution.cpp
+dprintf_common.cpp
+dprintf_config.cpp
+dprintf.cpp
+dprintf_setup.cpp
+env.cpp
+env.h
+except.cpp
+file_lock.cpp
+filename_tools.cpp
+filename_tools_cpp.cpp
+format_time.cpp
+format_time.h
+get_random_num.cpp
+HashTable.cpp
+HashTable.h
+iso_dates.cpp
+iso_dates.h
+log_rotate.cpp
+log_rotate.h
+misc_utils.cpp
+misc_utils.h
+my_distribution.cpp
+MyString.cpp
+MyString.h
+my_username.cpp
+my_username.h
+read_user_log.cpp
+read_user_log.h
+read_user_log_state.cpp
+read_user_log_state.h
+rotate_file.cpp
+setenv.cpp
+setenv.h
+simple_arg.cpp
+simple_arg.h
+stat_info.cpp
+stat_info.h
+stat_wrapper.cpp
+stat_wrapper.h
+stl_string_utils.cpp
+stl_string_utils.h
+strcasestr.cpp
+string_list.cpp
+string_list.h
+stringSpace.cpp
+stringSpace.h
+strnewp.cpp
+strupr.cpp
+subsystem_info.cpp
+subsystem_info.h
+ToE.cpp
+uids.cpp
+user_log_header.cpp
+user_log_header.h
+utc_time.cpp
+utc_time.h
+write_user_log.cpp
+write_user_log.h
+write_user_log_state.cpp
+write_user_log_state.h
+)
+
+if (NOT WINDOWS)
+	list(APPEND CONDOR_API_AND_UTILS_SRC
+		dprintf_syslog.cpp
+		dprintf_syslog.h
+	)
+endif(NOT WINDOWS)
+
 if(WINDOWS)
-  file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* dprintf_syslog*
-  testingd.cpp sinful-tool.cpp test_user_mapping.cpp
-  test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
-else()
-  file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
-  testingd.cpp sinful-tool.cpp test_user_mapping.cpp
-  test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
-endif()
+	list(APPEND CONDOR_API_AND_UTILS_SRC
+    	directory.WINDOWS.cpp
+		directory_util.cpp
+		dynuser.WINDOWS.cpp
+		get_last_error_string.WINDOWS.cpp
+		lock_file.WINDOWS.cpp
+		lsa_mgr.cpp
+		ntsysinfo.WINDOWS.cpp
+		perm.WINDOWS.cpp
+		posix.WINDOWS.cpp
+		process_control.WINDOWS.cpp
+		stat.WINDOWS.cpp
+		token_cache.WINDOWS.cpp
+		truncate.WINDOWS.cpp
+		uids.windows.credd.cpp
+	)
+endif(WINDOWS)
 
-condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
+if(NOT WINDOWS)
+	list(APPEND CONDOR_API_AND_UTILS_SRC
+		credential.unix.cpp
+		credential.unix.h
+		lock_file.unix.cpp
+		passwd_cache.unix.cpp
+		passwd_cache.unix.h
+		sig_install.unix.cpp
+		X509credential.unix.cpp
+		X509credential.unix.h
+	)
+endif(NOT WINDOWS)
 
-############ generate params
+# These sources compile to .o's which only go into libcondorapi
+set(CONDOR_API_SRC
+	libcondorapi_stubs.cpp
+	../condor_sysapi/kernel_version.cpp
+	../condor_sysapi/kernel_version.cpp
+	../condor_sysapi/reconfig.cpp
+	../condor_sysapi/sysapi.h
+)
+
+# These are the sources which only go into libcondorutils
+set(CONDOR_UTILS_SRC
+access.cpp
+access.h
+adcluster.cpp
+adcluster.h
+ad_printmask.cpp
+ad_printmask.h
+AWSv4-utils.cpp
+AWSv4-utils.h
+backward_file_reader.cpp
+binary_search.h
+build_job_env.cpp
+build_job_env.h
+check_events.cpp
+check_events.h
+classad_collection.cpp
+classad_collection.h
+classad_command_util.cpp
+classad_command_util.h
+classad_cron_job.cpp
+classad_helpers.cpp
+classad_helpers.h
+classadHistory.cpp
+classadHistory.h
+classad_log.cpp
+ClassAdLogEntry.cpp
+ClassAdLogEntry.h
+classad_log.h
+ClassAdLogParser.cpp
+ClassAdLogParser.h
+ClassAdLogPlugin.h
+ClassAdLogProber.cpp
+ClassAdLogProber.h
+ClassAdLogReader.cpp
+ClassAdLogReader.h
+classad_oldnew.cpp
+classad_oldnew.h
+classad_usermap.cpp
+classad_visa.cpp
+classad_visa.h
+classy_counted_ptr.h
+command_name_tables.h
+command_strings.cpp
+command_strings.h
+compat_classad_list.cpp
+compat_classad_list.h
+condor_adtypes.cpp
+condor_api.h
+condor_base64.cpp
+condor_base64.h
+condor_blkng_full_disk_io.cpp
+condor_claimid_parser.h
+condor_common.cpp
+condor_config.cpp
+condor_create_id.cpp
+condor_crontab.cpp
+condor_crontab.h
+condor_fsync.cpp
+condor_fsync.h
+condor_ftp.cpp
+condor_full_io.cpp
+condor_getcwd.cpp
+condor_getcwd.h
+condor_holdcodes.h
+condor_id.cpp
+condor_id.h
+condor_md.cpp
+condor_mkstemp.cpp
+condor_netaddr.cpp
+condor_netdb.cpp
+condor_perms.cpp
+condor_pidenvid.cpp
+condor_q.cpp
+condor_q.h
+condor_query.cpp
+condor_query.h
+condor_scitokens.cpp
+condor_scitokens.h
+condor_sinful.cpp
+condor_sinful.h
+condor_sockaddr.cpp
+condor_sockfunc.cpp
+condor_sockfunc_ex.cpp
+condor_state.cpp
+condor_threads.cpp
+condor_threads.h
+condor_timeslice.cpp
+condor_timeslice.h
+condor_universe.cpp
+condor_url.cpp
+condor_url.h
+condor_user_policy.cpp
+condor_user_policy.h
+config.cpp
+console-utils.cpp
+console-utils.h
+copy_file.cpp
+credmon_interface.cpp
+credmon_interface.h
+cron_job.cpp
+cron_job_io.cpp
+cron_job_list.cpp
+cron_job_mgr.cpp
+cron_job_mode.cpp
+cron_job_params.cpp
+cronos.cpp
+cron_param.cpp
+dagman_utils.cpp
+dagman_utils.h
+data_reuse.cpp
+data_reuse.h
+date_util.cpp
+date_util.h
+dc_service.cpp
+dc_service.h
+d_format_time.cpp
+docker-api.cpp
+docker-api.h
+domain_tools.cpp
+domain_tools.h
+dynuser.h
+email.cpp
+email_cpp.cpp
+email_file.cpp
+enum_utils.cpp
+enum_utils.h
+error_utils.cpp
+error_utils.h
+escapes.cpp
+exit_utils.cpp
+expr_analyze.cpp
+expr_analyze.h
+extArray.h
+file_modified_trigger.cpp
+file_modified_trigger.h
+filesystem_remap.cpp
+filesystem_remap.h
+file_transfer.cpp
+file_transfer.h
+file_transfer_stats.cpp
+file_transfer_stats.h
+forkwork.cpp
+forkwork.h
+fs_util.cpp
+gahp_common.cpp
+gahp_common.h
+generic_query.cpp
+generic_query.h
+generic_stats.cpp
+generic_stats.h
+get_daemon_name.cpp
+get_daemon_name.h
+get_exec_path.cpp
+get_port_range.cpp
+get_random_num_secure.cpp
+globus_utils.cpp
+hashkey.cpp
+hashkey.h
+hibernation_manager.cpp
+hibernation_manager.h
+hibernator.cpp
+hibernator.h
+hibernator.tools.cpp
+hibernator.tools.h
+historyFileFinder.cpp
+historyFileFinder.h
+history_queue.cpp
+history_queue.h
+history_utils.h
+hook_utils.cpp
+hook_utils.h
+internet.cpp
+ipv6_addrinfo.cpp
+ipv6_hostname.cpp
+ipv6_interface.cpp
+ipv6_interface.h
+java_config.cpp
+java_config.h
+JobLogMirror.cpp
+JobLogMirror.h
+KeyCache.cpp
+killfamily.cpp
+killfamily.h
+limit.h
+limit_directory_access.cpp
+limit_directory_access.h
+linebuffer.cpp
+link.cpp
+link.h
+list.h
+LoadPlugins.cpp
+LoadPlugins.h
+log.cpp
+log.h
+log_transaction.cpp
+log_transaction.h
+make_printmask.cpp
+MapFile.cpp
+MapFile.h
+mark_thread.cpp
+match_prefix.cpp
+metric_units.cpp
+metric_units.h
+mk_cache_links.cpp
+mk_cache_links.h
+my_async_fread.cpp
+my_async_fread.h
+my_getopt.cpp
+my_hostname.cpp
+my_hostname.h
+my_popen.cpp
+my_popen.h
+named_classad.cpp
+named_classad_list.cpp
+NegotiationUtils.cpp
+NegotiationUtils.h
+net_string_list.cpp
+net_string_list.h
+network_adapter.cpp
+network_adapter.h
+nullfile.cpp
+overflow.cpp
+overflow.h
+param_info.cpp
+param_info.h
+param_info_help.cpp
+param_info_tables.h
+path_utils.cpp
+path_utils.h
+perm.h
+PluginManager.h
+printf_format.cpp
+print_wrapped_text.cpp
+print_wrapped_text.h
+prioritysimplelist.h
+proc.cpp
+procd_config.cpp
+procd_config.h
+proc_family_direct.cpp
+proc_family_direct.h
+proc_family_interface.cpp
+proc_family_interface.h
+proc_family_proxy.cpp
+proc_family_proxy.h
+proc_id.cpp
+query_result_type.h
+ranger.cpp
+ranger.h
+read_multiple_logs.cpp
+read_multiple_logs.h
+Regex.cpp
+Regex.h
+secure_file.cpp
+secure_file.h
+selector.cpp
+selector.h
+set_user_priv_from_ad.cpp
+sig_name.cpp
+sig_name.h
+simplelist.h
+socket_proxy.cpp
+socket_proxy.h
+SourceRoute.cpp
+SourceRoute.h
+spooled_job_files.cpp
+spooled_job_files.h
+spool_version.cpp
+spool_version.h
+status_string.cpp
+status_string.h
+status_types.h
+stopwatch.h
+store_cred.cpp
+store_cred.h
+str_isxxx.cpp
+str_isxxx.h
+submit_glob.cpp
+submit_protocol.cpp
+submit_protocol.h
+submit_utils.cpp
+submit_utils.h
+systemd_manager.cpp
+systemd_manager.h
+threads_implementation.h
+timed_queue.h
+time_offset.cpp
+time_offset.h
+tmp_dir.cpp
+tmp_dir.h
+ToE.h
+token_cache.h
+tokener.cpp
+tokener.h
+token_utils.cpp
+token_utils.h
+totals.cpp
+totals.h
+transfer_request.cpp
+translation_utils.cpp
+translation_utils.h
+tree.h
+udp_waker.cpp
+udp_waker.h
+usagemon.cpp
+usagemon.h
+user_job_policy.cpp
+user_job_policy.h
+user_log.c++.h
+userlog_to_classads.cpp
+userlog_to_classads.h
+vm_univ_utils.cpp
+vm_univ_utils.h
+wait_for_user_log.cpp
+wait_for_user_log.h
+waker.cpp
+waker.h
+which.cpp
+which.h
+xform_utils.cpp
+xform_utils.h
+zkm_base64.cpp
+zkm_base64.h
+)
+
+if(NOT WINDOWS)
+	list(APPEND CONDOR_UTILS_SRC
+		access_euid.unix.cpp
+		ClassAdLogPluginManager.unix.cpp
+		detach.unix.cpp
+		fdpass.unix.cpp
+		getdtablesize.unix.cpp
+		getmnt.unix.cpp
+		limit.unix.cpp
+		network_adapter.unix.cpp
+		network_adapter.unix.h
+		sleep.unix.cpp
+	)
+endif(NOT WINDOWS)
+
+if(LINUX)
+	list(APPEND CONDOR_UTILS_SRC
+		hibernator.linux.cpp
+		hibernator.linux.h
+		network_adapter.linux.cpp
+		network_adapter.linux.h
+	)
+endif(LINUX)
+
+if(WINDOWS)
+	list(APPEND CONDOR_UTILS_SRC
+		access_desktop.WINDOWS.cpp
+		executable_scripts.WINDOWS.cpp
+		firewall.WINDOWS.cpp
+		hibernator.WINDOWS.cpp
+		load_dll.WINDOWS.cpp
+		network_adapter.WINDOWS.cpp
+		profile.WINDOWS.cpp
+		remote_close.WINDOWS.cpp
+		rmdir.WINDOWS.cpp
+		security.WINDOWS.cpp
+		setup_api_dll.WINDOWS.cpp
+		string_conversion.WINDOWS.cpp
+		system_info.WINDOWS.cpp
+		uuid_lib.WINDOWS.cpp
+	)
+endif(WINDOWS)
+
+
+##################################################
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
 		COMMAND perl
 		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h -o ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
@@ -52,6 +553,11 @@ if(UNIX)
 endif(UNIX)
 
 ############ end generate params
+# These sources depend on the generated param_info_tables.  Everything else can build in parallel
+set_source_files_properties(config.cpp condor_config.cpp param_info.cpp param_info_help.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
+
+# Only command_strings.cpp depends on the generator above.  Everything else can build in parallel
+set_source_files_properties(command_strings.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
 
 
 # These are source files that reside in other directories that we want to
@@ -78,8 +584,19 @@ if (DARWIN)
 	set_source_files_properties(../condor_io/condor_crypt_blowfish.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 endif()
 
-condor_shared_lib( condor_utils "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
-add_dependencies(condor_utils utils_genparams )
+# Build "Object" libraries, which are just a set of .o files which can later to into libraries
+add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
+add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
+add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
+add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
+
+# linux condor_utils.so from the .o's built above
+condor_shared_lib(condor_utils 
+	$<TARGET_OBJECTS:condor_api_and_utils_objects>
+	$<TARGET_OBJECTS:condor_utils_objects>
+	$<TARGET_OBJECTS:condor_extra_objects>
+)
+
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 else()
@@ -93,8 +610,11 @@ endif()
 # for linux also make a static version of condor_utils
 #
 if (LINUX OR DARWIN)
-   condor_static_lib( condor_utils_s "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
-   add_dependencies( condor_utils_s utils_genparams )
+   condor_static_lib(condor_utils_s
+		$<TARGET_OBJECTS:condor_api_and_utils_objects>
+		$<TARGET_OBJECTS:condor_utils_objects>
+		$<TARGET_OBJECTS:condor_extra_objects>
+	)
    set_target_properties( condor_utils_s PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
    if (HAVE_GNU_LD)
 	target_link_libraries( condor_utils_s -Wl,--wrap,exit )
@@ -135,25 +655,22 @@ if ( DARWIN )
 	set_target_properties( condor_utils PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${UTILS_LIB_NAME}.dylib)" )
 endif()
-add_dependencies(condor_utils utils_genparams )
 
 ##################################################
 # condorapi & tests
 
-condor_selective_glob("ToE.cpp;my_username.*;condor_event.*;misc_utils.*;user_log_header.*;write_user_log*;CondorError*;get_last_error_string.*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf.cpp;dprintf_c*;dprintf_setup.cpp;sig_install.*;basename.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;condor_snutils.*;stringSpace.*;string_list.*;stl_string_utils.*;MyString.*;directory*;filename_tools_cpp.*;filename_tools.*;stat_info.*;consumption_policy.*;env.*;condor_arglist.*;setenv.*;condor_ver_info.*;HashTable.*;condor_version.*;${SAFE_OPEN_SRC}" ApiSrcs)
 if(WINDOWS)
-    condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
-else()
-    condor_selective_glob("dprintf_syslog*" ApiSrcs)
 endif()
 
-if(LINUX)
-    condor_selective_glob("../condor_sysapi/kernel_version.*;../condor_sysapi/sysapi.*;../condor_sysapi/reconfig.*" ApiSrcs)
-endif()
+add_library(condor_api_objects OBJECT ${CONDOR_API_SRC})
+condor_static_lib(condorapi 
+						$<TARGET_OBJECTS:condor_api_objects>
+						$<TARGET_OBJECTS:condor_api_and_utils_objects>
+						$<TARGET_OBJECTS:condor_safe_objects>
+)
 
-condor_static_lib( condorapi "${ApiSrcs}" )
-add_dependencies( condorapi condor_utils )
+#add_dependencies( condorapi condor_utils )
 
 if (HAVE_OLD_SCANDIR)
 	add_definitions(-DHAVE_OLD_SCANDIR)
@@ -163,15 +680,18 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker-api.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
-
 target_link_libraries(condorapi ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()
 
 if (LINUX OR DARWIN)
-	condor_shared_lib( condorapi_shared "${ApiSrcs}" )
-	add_dependencies( condorapi_shared condor_utils )
+	condor_shared_lib(condorapi_shared 
+						$<TARGET_OBJECTS:condor_api_objects>
+						$<TARGET_OBJECTS:condor_api_and_utils_objects>
+						$<TARGET_OBJECTS:condor_safe_objects>
+	)
+	#add_dependencies( condorapi_shared condor_utils )
 	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()

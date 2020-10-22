@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "adcluster.h"
+#include "string_list.h"
 
 #if 1
 
@@ -324,7 +325,10 @@ template <class K> ClassAd * AdAggregationResults<K>::next()
 		StringTokenIterator iter(it->first, 100, "\n");
 		const char * line;
 		while ((line = iter.next())) {
-			ad.Insert(line);
+			int r = ad.Insert(line);
+			if (!r) {
+				dprintf(D_FULLDEBUG, "Cannot process autocluster attribute %s\n", line);
+			}
 		}
 		ad.InsertAttr(attrId, it->second);
 

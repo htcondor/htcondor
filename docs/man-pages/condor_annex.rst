@@ -105,6 +105,10 @@ Options
     Set the maximum idle duration in decimal *hours*. An instance idle
     for longer than this duration will terminate itself. Defaults to 15
     minutes.
+ **-tag** *name* *value*
+    Add a tag named *name* with value *value* to each instance in the
+    requested annex.  Only works at annex creation.  This option may be
+    specified more than once.
  **-config-dir** */full/path/to/directory*
     Copy the contents of */full/path/to/directory* to each instance's
     configuration directory.
@@ -177,9 +181,9 @@ Examples
 To start an on-demand annex named 'MyFirstAnnex' with one core, using
 the default AMI and instance type, run
 
-::
+.. code-block:: console
 
-      condor_annex -count 1 -annex-name MyFirstAnnex
+      $ condor_annex -count 1 -annex-name MyFirstAnnex
 
 You will be asked to confirm that the defaults are what you want.
 
@@ -188,26 +192,13 @@ As of 2017-04-17, the following example will cost a minimum of $90.
 To start an on-demand annex with 100 GPUs that job owners 'big' and
 'little' may use (be sure to include yourself!), run
 
-::
+.. code-block:: console
 
-      condor_annex -count 100 -annex-name MySecondAnnex \
+      $ condor_annex -count 100 -annex-name MySecondAnnex \
         -aws-on-demand-instance-type p2.xlarge -owner "big, little"
 
 Exit Status
 -----------
 
 *condor_annex* will exit with a status value of 0 (zero) on success.
-
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
 

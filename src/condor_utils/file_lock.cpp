@@ -372,6 +372,9 @@ FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
 	}
 #ifndef WIN32	
 	if (m_delete == 1) {
+		if (file == NULL) {
+			EXCEPT("FileLock::SetFdFpFile(). Programmer error: deleting lock with null filename");
+		}
 		char *nPath = CreateHashName(file);	
 		SetPath(nPath);	
 		delete []nPath;
@@ -524,6 +527,10 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 }
 
 
+// fstat can't really fail, but to quell static analysis,
+// we stuff the result of fstat here.
+static int dummyGlobal;
+
 bool
 FileLock::obtain( LOCK_TYPE t )
 {
@@ -582,7 +589,7 @@ FileLock::obtain( LOCK_TYPE t )
 			// if we deal with our own fd and are not unlocking
 		if (m_delete == 1 && t != UN_LOCK){
 			struct stat si; 
-			fstat(m_fd, &si);
+			dummyGlobal = fstat(m_fd, &si);
 				// no more hard links ... it was deleted while we were waiting
 				// in that case we need to reopen and restart
 			if ( si.st_nlink < 1 ){
@@ -747,12 +754,21 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 #endif
 		sprintf(dest, "%s", path  );
 	delete []temp_filename; 
-	for (int i = 0 ; i < 4; i+=2 ) {
-		snprintf(dest+strlen(dest), 3, "%s", hashVal+i);
-		snprintf(dest+strlen(dest), 2, "%c", DIR_DELIM_CHAR);
-	}
+
+	char *destPtr = dest + strlen(dest);
+	char *hashPtr = hashVal;
+
+	// append the first 2 chars of the hash value to filename
+	*destPtr++ = *hashPtr++;
+	*destPtr++ = *hashPtr++;
+	// make it a directory..
+	*destPtr++ = DIR_DELIM_CHAR;
+
+	// and repeat
+	*destPtr++ = *hashPtr++;
+	*destPtr++ = *hashPtr++;
+	*destPtr++ = DIR_DELIM_CHAR;
 	 
-	
-	sprintf(dest+strlen(dest), "%s.lockc", hashVal+4);
+	sprintf(destPtr, "%s.lockc", hashVal+4);
 	return dest;
 }

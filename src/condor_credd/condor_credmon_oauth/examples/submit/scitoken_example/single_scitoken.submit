@@ -1,0 +1,15 @@
+executable = /bin/sleep
+arguments = 300
+transfer_executable = false
+
+# Get a token from a SciTokens issuer called "mytokens"
+use_oauth_services = mytokens
+
+# Ask issuer to issue token with read and write permissions to
+# "/public" on "datastore.example.edu"
+mytokens_oauth_permissions = read:/public write:/public
+mytokens_oauth_resource = https://datastore.example.edu/
+
+# Successful submission will result in token:
+# $_CONDOR_CREDS/mytokens.use
+queue

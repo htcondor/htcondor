@@ -1951,7 +1951,7 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 
 		// construct the IP_ADDR attribute
 	formatstr( buf, "%sIpAddr", _subsys );
-	if ( ad->LookupString( buf.c_str(), buf2 ) ) {
+	if ( ad->LookupString( buf, buf2 ) ) {
 		New_addr( strdup( buf2.c_str() ) );
 		found_addr = true;
 		addr_attr_name = buf;
@@ -2087,12 +2087,6 @@ Daemon::New_addr( char* str )
 				free( our_network_name );
 			}
 			if( !using_private ) {
-				// Remove junk from address that we don't care about so
-				// it is not so noisy in logs and such.
-				sinful.setPrivateAddr(NULL);
-				sinful.setPrivateNetworkName(NULL);
-				free(_addr);
-				_addr = strdup( sinful.getSinful() );
 				dprintf( D_HOSTNAME, "Private network name not matched.\n");
 			}
 		}

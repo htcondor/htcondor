@@ -52,13 +52,13 @@ public:
 	void AppendLog(LogRecord *);
 	LogRecord *FirstEntry(char const *key);
 	LogRecord *NextEntry();
-	bool EmptyTransaction() { return m_EmptyTransaction; }
+	bool EmptyTransaction() const { return m_EmptyTransaction; }
 	void InTransactionListKeysWithOpType( int op_type, std::list<std::string> &new_keys );
 	bool KeysInTransaction(std::set<std::string> & keys, bool add_keys=false);
 	// transaction triggers are used by clients of this class to keep track of things that the client needs to do on commit
 	// they are stored here, but only the client knows what they mean.
 	int  SetTriggers(int mask) { m_triggers |= mask; return m_triggers; }
-	int  GetTriggers() { return m_triggers; }
+	int  GetTriggers() const { return m_triggers; }
 private:
 	HashTable<YourString,LogRecordList *> op_log;
 	LogRecordList ordered_op_log;

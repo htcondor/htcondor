@@ -100,14 +100,14 @@ class Condition : public BoolExpr
 		/** Determines whether the Condition is a complex Condition
 			@return true if Condition is complex, false if it is normal
 		*/
-	bool IsComplex( );
+	bool IsComplex( ) const;
 
 		/** Determines whether the Condition is a complex Condition with
 			multiple attributes;
 			@return true if Condition is complex and has multiple attributes,
 			false if it is normal or has only one attribute.
 		*/
-	bool HasMultipleAttrs( );
+	bool HasMultipleAttrs( ) const;
 
 		/** A repository for annotations for the Profile.
 			@see ConditionExplain

@@ -151,6 +151,9 @@ DCCredd::getCredentialData (const char * cred_name,
 	rsock.encode();
 
 	rsock.put (cred_name);
+	rsock.put ("DOMAIN");
+	int mode = 0; // TODO: set the mode to one of STORE_CRED_USER_KRB, STORE_CRED_USER_PWD, or STORE_CRED_USER_OAUTH
+	rsock.put(mode);
 
 	rsock.decode();
 

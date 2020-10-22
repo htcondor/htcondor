@@ -71,9 +71,9 @@ currently held by the *condor_collector* daemon. In this case the
 For any of these INVALIDATE commands, the ClassAd in the required file
 consists of three entries. The file contents will be similar to:
 
-::
+.. code-block:: condor-classad-expr
 
-    MyType = "Query" 
+    MyType = "Query"
     TargetType = "Machine" 
     Requirements = Name == "condor.example.com"
 
@@ -146,17 +146,17 @@ avoid this machine being matched, an administrator chooses to delete the
 machine's *condor_startd* ClassAd. Create a file (called
 ``remove_file`` in this example) with the three required attributes:
 
-::
+.. code-block:: condor-classad
 
-    MyType = "Query" 
+    MyType = "Query"
     TargetType = "Machine" 
     Requirements = Name == "condor.example.com"
 
 This file is used with the command:
 
-::
+.. code-block:: console
 
-    % condor_advertise INVALIDATE_STARTD_ADS remove_file
+    $ condor_advertise INVALIDATE_STARTD_ADS remove_file
 
 Exit Status
 -----------
@@ -169,16 +169,3 @@ multiple *condor_collector* daemons, it is possible that some but not
 all publications succeed; in this case, the exit status is 1, indicating
 failure.
 
-Author
-------
-
-Center for High Throughput Computing, University of Wisconsin-Madison
-
-Copyright
----------
-
-Copyright © 1990-2019 Center for High Throughput Computing, Computer
-Sciences Department, University of Wisconsin-Madison, Madison, WI. All
-Rights Reserved. Licensed under the Apache License, Version 2.0.
-
-      

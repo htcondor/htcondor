@@ -103,7 +103,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	std::string JobName;
 	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n",
 				 ATTR_JOB_CMD );
 		job_not_started = true;
 		return 0;
@@ -117,9 +117,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// NULL)
 	PrivSepHelper* privsep_helper = Starter->privSepHelper();
 
-		// // // // // // 
+		// // // // // //
 		// Arguments
-		// // // // // // 
+		// // // // // //
 
 		// prepend the full path to this name so that we
 		// don't have to rely on the PATH inside the
@@ -142,7 +142,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     }
 	else if ( strcmp(CONDOR_EXEC,JobName.c_str()) == 0 ) {
 		formatstr( JobName, "%s%c%s",
-		                 Starter->GetWorkingDir(),
+		                 Starter->GetWorkingDir(0),
 		                 DIR_DELIM_CHAR,
 		                 CONDOR_EXEC );
     }
@@ -167,7 +167,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			dprintf ( D_ALWAYS, "Failed to chmod %s!\n", JobName.c_str() );
 			return 0;
 		}
-	} 
+	}
 
 	ArgList args;
 
@@ -333,9 +333,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if( ptmp ) {
 			// insert renice expr into our copy of the job ad
-		MyString reniceAttr = "Renice = ";
-		reniceAttr += ptmp;
-		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+		if( !JobAd->AssignExpr( "Renice", ptmp ) ) {
 			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
 				"into job ad, Aborting OsProc::StartJob...\n" );
 			free( ptmp );
@@ -377,6 +375,37 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		MyString env_string;
 		job_env.getDelimitedStringForDisplay(&env_string);
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.Value());
+	}
+
+	// Stash the environment in the manifest directory, if desired.
+	std::string manifest_dir = "_condor_manifest";
+	bool want_manifest = false;
+	if( JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir ) ||
+	   (JobAd->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
+		int cluster, proc;
+		if( JobAd->LookupInteger( ATTR_CLUSTER_ID, cluster ) && JobAd->LookupInteger( ATTR_PROC_ID, proc ) ) {
+			formatstr( manifest_dir, "%d_%d_manifest", cluster, proc );
+		}
+		JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir );
+		// Assumes we're in the root of the sandbox.
+		int r = mkdir( manifest_dir.c_str(), 0700 );
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Cannot make manifest directory %s: %s\n", manifest_dir.c_str(), strerror(errno));
+		}
+		// jic->addToOutputFiles( manifest_dir.c_str() );
+		std::string f = manifest_dir + DIR_DELIM_CHAR + "environment";
+
+		// Assume we're in the root of the sandbox.
+		FILE * file = fopen( f.c_str(), "w" );
+		if( file != NULL ) {
+			MyString env_string;
+			job_env.getDelimitedStringForDisplay(&env_string);
+
+			fprintf( file, "%s\n", env_string.Value());
+			fclose(file);
+		} else {
+			dprintf( D_ALWAYS, "Failed to open environment log %s: %d (%s)\n", f.c_str(), errno, strerror(errno) );
+		}
 	}
 
 	// Check to see if we need to start this process paused, and if
@@ -446,31 +475,20 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
 
-#if defined ( WIN32 )
-    owner_profile_.update ();
-    /*************************************************************
-    NOTE: We currently *ONLY* support loading slot-user profiles.
-    This limitation will be addressed shortly, by allowing regular 
-    users to load their registry hive - Ben [2008-09-31]
-    **************************************************************/
-    bool load_profile = false,
-         run_as_owner = false;
-    JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
-    JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
-    if ( load_profile && !run_as_owner ) {
-        if ( owner_profile_.load () ) {
-            /* publish the users environment into that of the main 
-
-            job's environment */
-            if ( !owner_profile_.environment ( job_env ) ) {
-                dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
-                    "export owner's environment.\n" );
-            }            
-        } else {
-            dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to load "
-                "owner's profile.\n" );
-        }
-    }
+#ifdef WIN32
+	// if we loaded a slot user profile, import environment variables from it
+	bool load_profile = false;
+	bool run_as_owner = false;
+	JobAd->LookupBool ( ATTR_JOB_LOAD_PROFILE, load_profile );
+	JobAd->LookupBool ( ATTR_JOB_RUNAS_OWNER,  run_as_owner );
+	if (load_profile && !run_as_owner) {
+		const char * username = get_user_loginname();
+		/* publish the users environment into that of the main job's environment */
+		if (!OwnerProfile::environment(job_env, priv_state_get_handle(), username)) {
+			dprintf(D_ALWAYS, "Failed to export environment for %s into the job.\n",
+				username ? username : "<null>");
+		}
+	}
 #endif
 
 		// While we are still in user priv, print out the username
@@ -498,6 +516,22 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			free(affinity_mask);
 			return 0;
 		}
+
+		if (param_boolean("SINGULARITY_RUN_TEST_BEFORE_JOB", true)) {
+			bool result = htcondor::Singularity::runTest(JobName, args, job_env);
+			if (!result) {
+				dprintf(D_FULLDEBUG, "Singularity test failed\n");
+				free(affinity_mask);
+				job_not_started = true;
+				Starter->jic->notifyStarterError( "Singularity test failed, not running singularity job",
+			    	                              true,
+			        	                          CONDOR_HOLD_CODE_SingularityTestFailed,
+			            	                      0);
+				return 0;
+			}
+		}
+
+
 	} else if (sing_result == htcondor::Singularity::FAILURE) {
 		dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
 		job_not_started = true;
@@ -710,7 +744,7 @@ OsProc::JobReaper( int pid, int status )
 
 				std::string jobAdFileName;
 				formatstr( jobAdFileName, "%s/.job.ad",
-					Starter->GetWorkingDir() );
+					Starter->GetWorkingDir(0) );
 				ToE::writeTag( & toe, jobAdFileName );
 
 				// Update the schedd's copy of the job ad.
@@ -721,7 +755,7 @@ OsProc::JobReaper( int pid, int status )
 				// If we didn't write a ToE, check to see if the startd did.
 				std::string jobAdFileName;
 				formatstr( jobAdFileName, "%s/.job.ad",
-					Starter->GetWorkingDir() );
+					Starter->GetWorkingDir(0) );
 				FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
 				if(! f) {
 					dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
@@ -788,16 +822,6 @@ OsProc::JobExit( void )
 	}
 
 #if defined ( WIN32 )
-    
-    /* If we loaded the user's profile, then we should dump it now */
-    if ( owner_profile_.loaded () ) {
-        owner_profile_.unload ();
-        
-        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
-        owner_profile_.destroy ();
-        /* !!!! DO NOT DO THIS IN THE FUTURE !!!! */
-        
-    }
 
     priv_state old = set_user_priv ();
     HANDLE user_token = priv_state_get_handle ();
@@ -1001,26 +1025,24 @@ bool
 OsProc::PublishUpdateAd( ClassAd* ad ) 
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
-	MyString buf;
+	std::string buf;
 
 	if (m_proc_exited) {
-		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
+		buf = "Exited";
 	} else if( is_checkpointed ) {
-		buf.formatstr( "%s=\"Checkpointed\"", ATTR_JOB_STATE );
+		buf = "Checkpointed";
 	} else if( is_suspended ) {
-		buf.formatstr( "%s=\"Suspended\"", ATTR_JOB_STATE );
+		buf = "Suspended";
 	} else {
-		buf.formatstr( "%s=\"Running\"", ATTR_JOB_STATE );
+		buf = "Running";
 	}
-	ad->Insert( buf.Value() );
+	ad->Assign( ATTR_JOB_STATE, buf );
 
-	buf.formatstr( "%s=%d", ATTR_NUM_PIDS, num_pids );
-	ad->Insert( buf.Value() );
+	ad->Assign( ATTR_NUM_PIDS, num_pids );
 
 	if (m_proc_exited) {
 		if( dumped_core ) {
-			buf.formatstr( "%s = True", ATTR_JOB_CORE_DUMPED );
-			ad->Insert( buf.Value() );
+			ad->Assign( ATTR_JOB_CORE_DUMPED, true );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 
@@ -1035,7 +1057,7 @@ OsProc::PublishToEnv( Env * proc_env ) {
 		MyString name;
 		formatstr( name, "_%s_HOW_CODE", myDistro->Get() );
 		name.upper_case();
-		proc_env->SetEnv( name, IntToStr( howCode ) );
+		proc_env->SetEnv( name, std::to_string( howCode ) );
 	}
 }
 
@@ -1117,7 +1139,7 @@ OsProc::SetupSingularitySsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = Starter->GetWorkingDir();
+	std::string workingDir = Starter->GetWorkingDir(0);
 	std::string pipeName = workingDir + "/.docker_sock";	
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
@@ -1168,10 +1190,19 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
 
+	// we have the pid of the singularity process, need pid of the job
+	// sometimes this is the direct child of singularity, sometimes singularity
+	// runs an init-like process and the job is the grandchild of singularity
+
+	// if a grandkid exists, use that, otherwise child, otherwise sing itself
+
 	int pid = findChildProc(JobPid);
 	if (pid == -1) {
 		pid = JobPid; // hope for the best
 	}
+	if (findChildProc(pid) > 0)
+		pid = findChildProc(pid);
+
 	ArgList args;
 	args.AppendArg("/usr/bin/nsenter");
 	args.AppendArg("-t"); // target pid
@@ -1214,8 +1245,13 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		htcondor::Singularity::retargetEnvs(env, target_dir, "");
 	}
 
+	std::string bin_dir;
+	param(bin_dir, "BIN");
+	if (bin_dir.empty()) bin_dir = "/usr/bin";
+	bin_dir += "/condor_nsenter";
+
 	singExecPid = daemonCore->Create_Process(
-		"/usr/bin/nsenter",
+		bin_dir.c_str(),
 		args,
 		setuid ? PRIV_ROOT : PRIV_USER,
 		singReaperId,

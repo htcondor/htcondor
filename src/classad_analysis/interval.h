@@ -72,9 +72,9 @@ class IndexSet
 	bool RemoveIndex( int );
 	bool RemoveAllIndeces( );
 	bool AddAllIndeces( );
-	bool GetCardinality( int & );
+	bool GetCardinality( int & ) const;
 	bool Equals( IndexSet & );
-	bool IsEmpty( );
+	bool IsEmpty( ) const;
 	bool HasIndex( int );
 	bool ToString( std::string &buffer );
 	bool Union( IndexSet & );
@@ -123,7 +123,7 @@ class ValueRange
 								 List< ExtArray< HyperRect * > > & );
    
 	bool ToString( std::string & );
-	bool IsInitialized( );
+	bool IsInitialized( ) const;
  private:
 	bool initialized;
 	classad::Value::ValueType type;
@@ -146,8 +146,8 @@ class ValueRangeTable
 	bool Init( int numCols, int numRows );
 	bool SetValueRange( int col, int row, ValueRange * );
 	bool GetValueRange( int col, int row, ValueRange *& );
-	bool GetNumRows( int & );
-	bool GetNumColumns( int & );
+	bool GetNumRows( int & ) const;
+	bool GetNumColumns( int & ) const;
 	bool ToString( std::string &buffer );
  private:
 	bool initialized;
@@ -165,8 +165,8 @@ class ValueTable
 	bool SetOp( int row, classad::Operation::OpKind );
 	bool SetValue( int col, int row, classad::Value & );
 	bool GetValue( int col, int row, classad::Value & );
-	bool GetNumRows( int & );
-	bool GetNumColumns( int & );
+	bool GetNumRows( int & ) const;
+	bool GetNumColumns( int & ) const;
 	bool GetUpperBound( int row, classad::Value & );
 	bool GetLowerBound( int row, classad::Value & );
 	bool ToString( std::string &buffer );
@@ -192,8 +192,8 @@ class HyperRect
 	bool SetIndexSet( IndexSet & );
 	bool GetIndexSet( IndexSet & );
 	bool FillIndexSet( );
-	bool GetDimensions( int & );
-	bool GetNumContexts( int & );
+	bool GetDimensions( int & ) const;
+	bool GetNumContexts( int & ) const;
 	bool ToString( std::string &buffer );
  private:
 	// The assignment overload was VERY broken. Make it private and remove the

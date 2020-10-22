@@ -98,10 +98,6 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 	}
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
-#elif defined(Solaris)
-	int cpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
-	if( num_cpus ) *num_cpus = cpus;
-	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(WIN32)
 		int coreCount = 0;
 		int logicalCoreCount = 0;

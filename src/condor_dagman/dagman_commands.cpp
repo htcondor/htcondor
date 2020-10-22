@@ -24,6 +24,7 @@
 #include "debug.h"
 #include "parse.h"
 #include "dagman_commands.h"
+#include "submit_utils.h"
 
 bool
 PauseDag(Dagman &dm)
@@ -62,9 +63,9 @@ ResumeDag(Dagman &dm)
 Job*
 AddNode( Dag *dag, const char *name,
 		 const char* directory,
-		 const char* submitFile,
+		 const char* submitFileOrSubmitDesc,
 		 bool noop,
-		 bool done, bool isFinal,
+		 bool done, NodeType type,
 		 MyString &failReason )
 {
 	MyString why;
@@ -72,18 +73,18 @@ AddNode( Dag *dag, const char *name,
 		failReason = why;
 		return NULL;
 	}
-	if( !IsValidSubmitFileName( submitFile, why ) ) {
+	if( !IsValidSubmitName( submitFileOrSubmitDesc, why ) ) {
 		failReason = why;
 		return NULL;
 	}
-	if( done && isFinal) {
+	if( done && type == NodeType::FINAL ) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
 					name );
         debug_printf( DEBUG_QUIET, "%s", failReason.Value() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}
-	Job* node = new Job( name, directory, submitFile );
+	Job* node = new Job( name, directory, submitFileOrSubmitDesc );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -95,11 +96,21 @@ AddNode( Dag *dag, const char *name,
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
-	node->SetFinal( isFinal );
+	node->SetType( type );
+
+		// At parse time, we don't know if submitFileOrSubmitDescName refers
+		// to a file (which might not exist yet).
+		// If there is a submit description matching this name, set a pointer
+		// from the job now. We'll decide which one to use at submit time.
+	if( dag->SubmitDescriptions.find( submitFileOrSubmitDesc ) != dag->SubmitDescriptions.end() ) {
+		SubmitHash* submitDesc = dag->SubmitDescriptions.at( submitFileOrSubmitDesc );
+		node->setSubmitDesc( submitDesc );
+	}
+
 	ASSERT( dag != NULL );
 	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding ";
-		failReason += isFinal? "Final " : "";
+		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
 		failReason += "node to DAG";
 		delete node;
 		return NULL;
@@ -147,7 +158,7 @@ IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 }
 
 bool
-IsValidSubmitFileName( const char *name, MyString &whynot )
+IsValidSubmitName( const char *name, MyString &whynot )
 {
 	if( name == NULL ) {
 		whynot = "missing submit file name";

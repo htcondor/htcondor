@@ -123,7 +123,8 @@ static void* dlsym(void* hlib, const char * symbol) {
 }
 #endif
 
-// this coded was stolen from helper_cuda.h in the cuda 5.5 sdk.
+// Function taken from helper_cuda.h in the CUDA SDK
+// https://github.com/NVIDIA/cuda-samples/blob/master/Common/helper_cuda.h
 int ConvertSMVer2Cores(int major, int minor)
 {
 	// Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
@@ -153,6 +154,7 @@ int ConvertSMVer2Cores(int major, int minor)
         { 0x70, 64 }, // Volta Generation (SM 7.0) GV100 class
         { 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
         { 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
+        { 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
         {   -1, -1 }
     };
 
@@ -277,7 +279,6 @@ struct _simulated_cuda_device {
 };
 struct _simulated_cuda_config {
 	int driverVer;
-	int runtimeVer;
 	int deviceCount;
 	const struct _simulated_cuda_device * device;
 };
@@ -285,8 +286,8 @@ struct _simulated_cuda_config {
 static const struct _simulated_cuda_device GeForceGTX480 = { "GeForce GTX 480", 0x20, 1400*1000, 15, 0, 1536*1024*1024 };
 static const struct _simulated_cuda_device GeForceGT330 = { "GeForce GT 330",  0x12, 1340*1000, 12,  0, 1024*1024*1024 };
 static const struct _simulated_cuda_config aSimConfig[] = {
-	{6000, 5050, 1, &GeForceGT330 },
-	{4020, 4010, 2, &GeForceGTX480 },
+	{6000, 1, &GeForceGT330 },
+	{4020, 2, &GeForceGTX480 },
 };
 const int sim_index_max = (int)(sizeof(aSimConfig)/sizeof(aSimConfig[0]));
 
@@ -313,13 +314,6 @@ cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
 	*pver = aSimConfig[ix].driverVer;
 	return cudaSuccess; 
 }
-cudaError_t CUDACALL sim_cudaRuntimeGetVersion(int* pver) {
-	if (sim_index < 0 || sim_index > sim_index_max)
-		return cudaErrorInvalidValue;
-	int ix = sim_index < sim_index_max ? sim_index : 0;
-	*pver = aSimConfig[ix].runtimeVer;
-	return cudaSuccess; 
-}
 
 cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
 	if (sim_index < 0 || sim_index > sim_index_max)
@@ -336,8 +330,8 @@ cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
 	}
 
 	p->name = dev->name;
-	unsigned char uuid[16] = {0x01,0x22,0x33,0x34,  0x44,0x45, 0x56,0x67, 0x89,0x9a, 0xab,0xbc,0xcd,0xde,0xef,0xf0 };
-	uuid[0] = (unsigned char)devID;
+	unsigned char uuid[16] = {0xa1,0x22,0x33,0x34,  0x44,0x45, 0x56,0x67, 0x89,0x9a, 0xab,0xbc,0xcd,0xde,0xef,0xf0 };
+	uuid[0] = (unsigned char)((devID*0x11) + 0xa0);
 	memcpy(p->uuid, uuid, 16);
 	sprintf(p->pciId, "0000:%02x:00.0", devID + 0x40);
 	p->ccMajor = (dev->SM & 0xF0) >> 4;
@@ -541,10 +535,14 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
 	}
 
-		char name[256];
-		memset(name, 0, sizeof(name));
-		cuDeviceGetName(name, sizeof(name), dev);
+		// for some reason PowerPC was having trouble with a stack buffer for cuGetDeviceName
+		// so we switch to malloc and a larger buffer, and we overdo the null termination.
+		char * name = (char*)malloc(1028);
+		memset(name, 0, 1028);
+		cuDeviceGetName(name, 1024, dev);
+		name[1024] = 0; // this shouldn't be necessary, but it can't hurt.
 		p->name = name;
+		free(name);
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
@@ -852,6 +850,8 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
+	int opt_uuid = 0;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
+	int opt_short_uuid = 0; // use shortened uuids
 	//int opt_rdp = 0;
 	std::list<int> dwl; // Device White List
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
@@ -907,6 +907,9 @@ main( int argc, const char** argv)
 			opt_extra = 1; // publish extra GPU properties
 		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
+			// We need the basic properties in order to determine the
+			// dynamic ones (most noticeably, the PCI bus ID).
+			opt_basic = 1;
 			opt_dynamic = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
@@ -934,6 +937,13 @@ main( int argc, const char** argv)
 			if (argv[i+1]) {
 				opt_tag = argv[++i];
 			}
+		}
+		else if (is_dash_arg_prefix(argv[i], "uuid", 2)) {
+			opt_uuid = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "short-uuid", -1)) {
+			opt_uuid = 1;
+			opt_short_uuid = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
@@ -983,7 +993,6 @@ main( int argc, const char** argv)
 	typedef cudaError_t (CUDACALL* cuda_t)(int*); //Used for DLFCN
 	cuda_t cudaGetDeviceCount = NULL; 
 	cuda_t cudaDriverGetVersion = NULL;
-	cuda_t cudaRuntimeGetVersion = NULL;
 	dev_basic_props getBasicProps = NULL;
 
 	// function pointers for the NVIDIA management layer, used for dynamic attributes.
@@ -1019,7 +1028,6 @@ main( int argc, const char** argv)
 
 		cudaGetDeviceCount = sim_cudaGetDeviceCount;
 		cudaDriverGetVersion = sim_cudaDriverGetVersion;
-		cudaRuntimeGetVersion = sim_cudaRuntimeGetVersion;
 		getBasicProps = sim_getBasicProps;
 
 		nvmlInit = sim_nvmlInit;
@@ -1181,16 +1189,15 @@ main( int argc, const char** argv)
 
 	// lookup the function pointers we will need later from the cudart library
 	//
-	if ( ! opt_simulate) {
+	if ( !opt_simulate && cuda_handle) {
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cuDriverGetVersion");
-			cudaRuntimeGetVersion = cu_cudaRuntimeGetVersion;
 			getBasicProps = cu_getBasicProps;
 		} else {
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cudaDriverGetVersion");
-			cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
+			cuda_t cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
 			if (cudaRuntimeGetVersion) {
 				int runtimeVersion = 0;
 				cudaRuntimeGetVersion(&runtimeVersion);
@@ -1245,6 +1252,7 @@ main( int argc, const char** argv)
 	//
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
+#if 0
 	for (dev = 0; dev < deviceCount; dev++) {
 		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
@@ -1264,6 +1272,7 @@ main( int argc, const char** argv)
 	if (opt_config) {
 		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
 	}
+#endif
 
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {
@@ -1272,24 +1281,52 @@ main( int argc, const char** argv)
 			continue;
 		}
 
+	#if 1
+		char gpuid[100];
+		sprintf(gpuid,"%s%d",opt_pre,dev); // establish a default GPU identifier. e.g CUDA0. we might replace this later
+	#else
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
-		KVP& props = dev_props.find(prefix)->second;
+	#endif
 
-		if (opt_basic && getBasicProps) {
-			int driverVersion=0, runtimeVersion=0;
+		if ((opt_basic || opt_uuid) && getBasicProps) {
 
-			//printf("%sDev=%d\n",  prefix,dev);
+			BasicProps bp;
+			cudaError_t rv = getBasicProps(dev, &bp);
+			const char * uuidstr = NULL;
+			if (cudaSuccess == rv) {
+				uuidstr = bp.printUuid();
+			}
+			if (opt_uuid && uuidstr && uuidstr[0]) {
+				strcpy(gpuid, "GPU-");
+				strcat(gpuid, uuidstr);
+				if (opt_short_uuid) {
+					gpuid[12] = 0;
+				}
+			}
 
-			if (cudaDriverGetVersion) {
+			dev_props[gpuid].clear(); // this has the side effect of creating the KVP for gpuid.
+			KVP& props = dev_props.find(gpuid)->second;
+
+			if ((cudaSuccess == rv) && opt_basic) {
+				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", bp.printUuid());
+				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
+				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
+				props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
+				props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
+				props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
+				if (opt_extra) {
+					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
+					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
+					props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
+				}
+			}
+
+			int driverVersion=0;
+			if (opt_basic && cudaDriverGetVersion) {
 				cudaDriverGetVersion(&driverVersion);
 				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-			}
-			if (cudaRuntimeGetVersion) {
-				cudaRuntimeGetVersion(&runtimeVersion);
-				if (runtimeVersion) {
-					props["RuntimeVersion"] = Format("%d.%d", runtimeVersion/1000, runtimeVersion%100);
-				}
+				props["MaxSupportedVersion"] = Format("%d", driverVersion);
 			}
 
 			if (dev < g_cl_cCuda) {
@@ -1304,26 +1341,11 @@ main( int argc, const char** argv)
 				}
 			}
 
-			BasicProps bp;
-			if (cudaSuccess == getBasicProps(dev, &bp)) {
-				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
-				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", bp.printUuid());
-				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
-				props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
-				props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
-				props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
-				if (opt_extra) {
-					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
-					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-					if (bp.ccMajor <= 6) {
-						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
-					} else {
-						// CoresPerCU not meaningful for Architecture 7 and later
-					}
-				}
-			}
 		} else if (opt_basic && ocl_handle) {
 			cl_device_id did = cl_gpu_ids[dev];
+
+			dev_props[gpuid].clear(); // this has the side effect of creating the KVP for gpuid.
+			KVP& props = dev_props.find(gpuid)->second;
 
 			std::string val;
 			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_NAME, val)) {
@@ -1364,7 +1386,19 @@ main( int argc, const char** argv)
 			}
 		}
 
+		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
+		detected_gpus += gpuid;
+		++filteredDeviceCount;
 	}
+
+#if 1
+	if ( ! opt_cron) {
+		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+	}
+	if (opt_config) {
+		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
+	}
+#endif
 
 	// check for device homogeneity so we can print out simpler
 	// config/device attributes 
@@ -1398,7 +1432,9 @@ main( int argc, const char** argv)
 		for (MKVP::const_iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
 			for (KVP::const_iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
 				if (common.find(it->first) != common.end()) continue;
-				printf("%s%s=%s\n", mit->first.c_str(), it->first.c_str(), it->second.c_str());
+				std::string attrpre(mit->first.c_str());
+				std::replace(attrpre.begin(), attrpre.end(), '-', '_');
+				printf("%s%s=%s\n", attrpre.c_str(), it->first.c_str(), it->second.c_str());
 			}
 		}
 	}
@@ -1483,6 +1519,8 @@ void usage(FILE* out, const char * argv0)
 		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
 		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
+		"    -uuid             Use GPU uuid instead of index as GPU id\n"
+		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id\n"
 		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"

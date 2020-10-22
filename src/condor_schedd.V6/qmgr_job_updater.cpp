@@ -115,6 +115,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_PROPORTIONAL_SET_SIZE );
 	common_job_queue_attrs->insert( ATTR_MEMORY_USAGE );
 	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
+	common_job_queue_attrs->insert( ATTR_SCRATCH_DIR_FILE_COUNT );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU );
@@ -401,7 +402,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			if( ! updateExprTree(name, tree) ) {
 				had_error = true;
 			}
-			undirty_attrs.push_back( name );
+			undirty_attrs.emplace_back(name );
 		}
 	}
 	m_pull_attrs->rewind();
@@ -416,7 +417,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			had_error = true;
 		} else {
 			job_ad->AssignExpr( name, value );
-			undirty_attrs.push_back( name );
+			undirty_attrs.emplace_back(name );
 		}
 		free( value );
 	}
@@ -484,7 +485,7 @@ QmgrJobUpdater::periodicUpdateQ( void )
 }
 
 bool
-QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
+QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree ) const
 {
 	if( ! tree ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateExprTree: tree is NULL!\n" );

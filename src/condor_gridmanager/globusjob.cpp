@@ -351,13 +351,8 @@ static bool write_classad_input_file( ClassAd *classad,
 
 	ClassAd tmpclassad(*classad);
 
-	std::string CmdExpr;
-	CmdExpr = ATTR_JOB_CMD;
-	CmdExpr += "=\"";
-	CmdExpr += condor_basename( executable_path.c_str() );
-	CmdExpr += '"';
 	// TODO: Store old Cmd as OrigCmd?
-	tmpclassad.Insert(CmdExpr.c_str());
+	tmpclassad.Assign(ATTR_JOB_CMD, condor_basename( executable_path.c_str() ));
 
 	PROC_ID procID;
 	if( ! tmpclassad.LookupInteger( ATTR_CLUSTER_ID, procID.cluster ) ) {
@@ -394,7 +389,7 @@ static bool write_classad_input_file( ClassAd *classad,
 
 		// Fix the universe, too, since the starter is going to expect
 		// "VANILLA", not "GLOBUS"...
-	tmpclassad.Insert( "JobUniverse = 5" );
+	tmpclassad.Assign( ATTR_JOB_UNIVERSE, 5 );
 
 	dprintf(D_FULLDEBUG,"(%d.%d) Writing ClassAd to file %s\n",
 		procID.cluster, procID.proc, out_filename.c_str());
@@ -1674,12 +1669,12 @@ void GlobusJob::doEvaluateState()
 			if ( jobContact != NULL ) {
 				myResource->JMComplete( this );
 				myResource->CancelSubmit( this );
-				GlobusSetRemoteJobId( NULL, false );
 				jmDown = false;
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				GlobusSetRemoteJobId( NULL, false );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -2100,12 +2095,12 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				myResource->CancelSubmit( this );
 				myResource->JMComplete( this );
 				jmDown = false;
-				GlobusSetRemoteJobId( NULL, false );
 				requestScheddUpdate( this, false );
 
 				if ( condorState == REMOVED ) {
 					gmState = GM_DELETE;
 				} else {
+					GlobusSetRemoteJobId( NULL, false );
 					gmState = GM_CLEAR_REQUEST;
 				}
 

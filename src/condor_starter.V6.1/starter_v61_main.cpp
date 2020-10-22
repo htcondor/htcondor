@@ -87,7 +87,9 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
-	printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	if(param_boolean("ENABLE_URL_TRANSFERS", true)) {
+		printf( "%s = True\n", ATTR_HAS_JOB_TRANSFER_PLUGINS );	 // job supplied transfer plugins
+	}
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
@@ -110,7 +112,6 @@ printClassAd( void )
 	ClassAd *ad = java_detect();
 	if(ad) {
 		int gotone=0;
-		float mflops;
 		char *str = 0;
 
 		if(ad->LookupString(ATTR_JAVA_VENDOR,&str)) {
@@ -125,14 +126,10 @@ printClassAd( void )
 			str = 0;
 			gotone++;
 		}
-		if(ad->LookupString("JavaSpecificationVersion",&str)) {
-			printf("JavaSpecificationVersion = \"%s\"\n",str);
+		if(ad->LookupString(ATTR_JAVA_SPECIFICATION_VERSION,&str)) {
+			printf("%s = \"%s\"\n",ATTR_JAVA_SPECIFICATION_VERSION,str);
 			free(str);
 			str = 0;
-			gotone++;
-		}
-		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {
-			printf("%s = %f\n", ATTR_JAVA_MFLOPS,mflops);
 			gotone++;
 		}
 		if(gotone>0) printf( "%s = True\n",ATTR_HAS_JAVA);		
@@ -178,14 +175,12 @@ printClassAd( void )
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;
 	CondorError e;
-	ft.InitializePlugins(e);
-	if (e.code()) {
-		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
-	}
-
-	MyString method_list = ft.GetSupportedMethods();
+	MyString method_list = ft.GetSupportedMethods(e);
 	if (!method_list.IsEmpty()) {
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.Value());
+	}
+	if (e.code()) {
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
 
 #if defined(WIN32)
@@ -351,7 +346,8 @@ parseArgs( int argc, char* argv [] )
 {
 	JobInfoCommunicator* jic = NULL;
 	char* job_input_ad = NULL; 
-	char* job_output_ad = NULL; 
+	char* job_output_ad = NULL;
+	char* job_update_ad = NULL;
 	char* job_keyword = NULL; 
 	int job_cluster = -1;
 	int job_proc = -1;
@@ -365,6 +361,7 @@ parseArgs( int argc, char* argv [] )
 	bool warn_multi_keyword = false;
 	bool warn_multi_input_ad = false;
 	bool warn_multi_output_ad = false;
+	bool warn_multi_update_ad = false;
 	bool warn_multi_cluster = false;
 	bool warn_multi_proc = false;
 	bool warn_multi_subproc = false;
@@ -377,6 +374,7 @@ parseArgs( int argc, char* argv [] )
 
 	char _jobinputad[] = "-job-input-ad";
 	char _joboutputad[] = "-job-output-ad";
+	char _jobupdatead[] = "-job-update-ad";
 	char _jobkeyword[] = "-job-keyword";
 	char _jobcluster[] = "-job-cluster";
 	char _jobproc[] = "-job-proc";
@@ -482,6 +480,13 @@ parseArgs( int argc, char* argv [] )
 			target = _joboutputad;
 			break;
 
+		case 'u':
+			if( strncmp(_jobupdatead, opt, opt_len) ) {
+				invalid( opt );
+			}
+			target = _jobupdatead;
+			break;
+
 		case 'p':
 			if( strncmp(_jobproc, opt, opt_len) ) {
 				invalid( opt );
@@ -539,6 +544,12 @@ parseArgs( int argc, char* argv [] )
 				free( job_output_ad );
 			}
 			job_output_ad = strdup( arg );
+		} else if( target == _jobupdatead ) {
+			if( job_update_ad ) {
+				warn_multi_update_ad = true;
+				free( job_update_ad );
+			}
+			job_update_ad = strdup( arg );
 		} else if( target == _jobstdin ) {
 			if( job_stdin ) {
 				warn_multi_stdin = true;
@@ -630,6 +641,11 @@ parseArgs( int argc, char* argv [] )
 				 "multiple '%s' options given, using \"%s\"\n",
 				 _joboutputad, job_output_ad );
 	}
+	if( warn_multi_update_ad ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _jobupdatead, job_update_ad );
+	}
 	if( warn_multi_stdin ) {
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%s\"\n",
@@ -677,6 +693,7 @@ parseArgs( int argc, char* argv [] )
 		shadow_host = NULL;
 		free( schedd_addr );
 		free( job_output_ad );
+		free( job_update_ad );
 		free( job_stdin );
 		free( job_stdout );
 		free( job_stderr );
@@ -723,6 +740,10 @@ parseArgs( int argc, char* argv [] )
 	if( job_output_ad ) {
         jic->setOutputAdFile( job_output_ad );		
 		free( job_output_ad );
+	}
+	if( job_update_ad ) {
+		jic->setUpdateAdFile( job_update_ad );
+		free( job_update_ad );
 	}
 	if( job_stdin ) {
         jic->setStdin( job_stdin );		

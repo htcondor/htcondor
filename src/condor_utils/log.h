@@ -20,6 +20,8 @@
 #if !defined(_LOG_H)
 #define _LOG_H
 
+#include "condor_common.h"
+#include "condor_classad.h"
 #include <string>
 using std::string;
 
@@ -49,7 +51,7 @@ public:
 	
 	LogRecord();
 	virtual ~LogRecord();
-	int get_op_type() { return op_type; }
+	int get_op_type() const { return op_type; }
 
 	int Write(FILE *fp);
 	int Read(FILE *fp);
@@ -68,17 +70,16 @@ protected:
 	int op_type;	/* This is the type of operation being performed */
 
 private:
-	int WriteHeader(FILE *fp);
+	int WriteHeader(FILE *fp) const;
 	virtual int WriteBody(FILE *) { return 0; }
 	int WriteTail(FILE *fp);
 };
 
-namespace compat_classad { class ClassAd; }
 class ConstructLogEntry
 {
 public:
-	virtual compat_classad::ClassAd* New(const char * key, const char * mytype) const = 0;
-	virtual void Delete(compat_classad::ClassAd*& val) const = 0;
+	virtual ClassAd* New(const char * key, const char * mytype) const = 0;
+	virtual void Delete(ClassAd*& val) const = 0;
 	virtual ~ConstructLogEntry() {}; // declare (superfluous) virtual constructor to get rid of g++ warning.
 };
 

@@ -27,7 +27,7 @@
 char *
 format_date( time_t date )
 {
-    static char buf[ 12 ];
+    static char buf[ 48 ];
     struct tm   *tm;
 
 	if (date<0) {
@@ -48,7 +48,7 @@ format_date( time_t date )
 char *
 format_date_year( time_t date )
 {
-    static char buf[ 18 ];
+    static char buf[ 60 ];
     struct tm   *tm;
 
 	if (date<0) {

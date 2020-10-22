@@ -863,11 +863,6 @@ WriteUserLog::checkGlobalLogRotation( void )
 	if ( m_global_disable || (NULL==m_global_path) ) {
 		return false;
 	}
-	if ( !m_global_lock ||
-		 m_global_lock->isFakeLock() ||
-		 m_global_lock->isUnlocked() ) {
-		dprintf( D_ALWAYS, "WriteUserLog checking for event log rotation, but no lock\n" );
-	}
 
 	// Don't rotate if max rotations is set to zero
 	if ( 0 == m_global_max_rotations ) {
@@ -1633,7 +1628,7 @@ WriteUserLog::setEnableFsync(bool enabled) {
 }
 
 bool
-WriteUserLog::getEnableFsync() {
+WriteUserLog::getEnableFsync() const {
 	return m_enable_fsync;
 }
 

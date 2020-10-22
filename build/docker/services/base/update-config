@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Copy extra configs from `/root/config` if any.
+if [[ -d /root/config ]]; then
+    cp /root/config/*.conf /etc/condor/config.d/
+fi
+
+if pgrep condor_master &>/dev/null; then
+    condor_reconfig
+fi
+
+# vim:et:sw=4:sts=4:ts=8

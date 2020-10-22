@@ -143,7 +143,6 @@ int	  ProcId = -1;
 int		ClustersCreated = 0;
 int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
-bool    nice_user_setting = false;
 bool	NewExecutable = false;
 int		dash_remote=0;
 int		dash_factory=0;
@@ -155,6 +154,7 @@ int		sim_starting_cluster=0;			// initial clusterId value for a SimSchedd
 char* RunAsOwnerCredD = NULL;
 #endif
 char * batch_name_line = NULL;
+char * batch_id_line = NULL;
 bool sent_credential_to_credd = false;
 bool allow_crlf_script = false;
 
@@ -546,15 +546,6 @@ main( int argc, const char *argv[] )
 
 	set_mySubSystem( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
 
-#if !defined(WIN32)
-		// Make sure root isn't trying to submit.
-	if( getuid() == 0 || getgid() == 0 ) {
-		fprintf( stderr, "\nERROR: Submitting jobs as user/group 0 (root) is not "
-				 "allowed for security reasons.\n" );
-		exit( 1 );
-	}
-#endif /* not WIN32 */
-
 	MyName = condor_basename(argv[0]);
 	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
@@ -616,6 +607,9 @@ main( int argc, const char *argv[] )
 							sim_current_condor_version = true;
 							sim_starting_cluster = atoi(strchr(opt, '=') + 1);
 							sim_starting_cluster = MAX(sim_starting_cluster - 1, 0);
+						} else if (starts_with(opt, "oauth=")) {
+							// log oauth request, 4 = succeed, 2 = fail
+							DashDryRun = atoi(strchr(opt,'=')+1) ? 4 : 2;
 						} else {
 							int optval = atoi(opt);
 							// if the argument is -dry:<number> and number is > 0x10,
@@ -741,6 +735,23 @@ main( int argc, const char *argv[] )
 				// freeing something behind the back of the extraLines
 				batch_name_line = strdup(tmp.c_str());
 				extraLines.Append(batch_name_line);
+			} else if (is_dash_arg_prefix(ptr[0], "batch-id", 1)) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -batch-id requires another argument\n",
+							 MyName );
+					exit( 1 );
+				}
+				const char * bid = *ptr;
+				MyString tmp; // if -batch-id was specified, this holds the string 'MY.JobBatchId = "id"'
+				if (*bid == '"') {
+					tmp.formatstr("MY.%s = %s", ATTR_JOB_BATCH_ID, bid);
+				} else {
+					tmp.formatstr("MY.%s = \"%s\"", ATTR_JOB_BATCH_ID, bid);
+				}
+				// if batch_id_line is not NULL,  we will leak a bit here, but that's better than
+				// freeing something behind the back of the extraLines
+				batch_id_line = strdup(tmp.c_str());
+				extraLines.Append(batch_id_line);
 			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
 				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
 					fprintf( stderr, "%s: -queue requires at least one argument\n",
@@ -951,30 +962,30 @@ main( int argc, const char *argv[] )
 
 #ifdef WIN32
 		// setup the username to query
-		char userdom[256];
-		char* the_username = my_username();
-		char* the_domainname = my_domainname();
-		sprintf(userdom, "%s@%s", the_username, the_domainname);
-		free(the_username);
-		free(the_domainname);
+		MyString userdom;
+		auto_free_ptr the_username(my_username());
+		auto_free_ptr the_domainname(my_domainname());
+		userdom = the_username;
+		userdom += "@";
+		if (the_domainname) { userdom += the_domainname.ptr(); }
 
 		// if we have a credd, query it first
 		bool cred_is_stored = false;
 		int store_cred_result;
 		Daemon my_credd(DT_CREDD);
 		if (my_credd.locate()) {
-			store_cred_result = store_cred(userdom, NULL, QUERY_MODE, &my_credd);
+			store_cred_result = do_store_cred(userdom.c_str(), NULL, QUERY_PWD_MODE, &my_credd);
 			if ( store_cred_result == SUCCESS ||
-							store_cred_result == FAILURE_NOT_SUPPORTED) {
+							store_cred_result == FAILURE_NO_IMPERSONATE) {
 				cred_is_stored = true;
 			}
 		}
 
 		if (!cred_is_stored) {
 			// query the schedd
-			store_cred_result = store_cred(userdom, NULL, QUERY_MODE, MySchedd);
+			store_cred_result = do_store_cred(userdom.c_str(), NULL, QUERY_PWD_MODE, MySchedd);
 			if ( store_cred_result == SUCCESS ||
-							store_cred_result == FAILURE_NOT_SUPPORTED) {
+							store_cred_result == FAILURE_NO_IMPERSONATE) {
 				cred_is_stored = true;
 			} else if (DashDryRun && (store_cred_result == FAILURE)) {
 				// if we can't contact the schedd, just keep going.
@@ -984,7 +995,7 @@ main( int argc, const char *argv[] )
 		if (!cred_is_stored) {
 			fprintf( stderr, "\nERROR: No credential stored for %s\n"
 					"\n\tCorrect this by running:\n"
-					"\tcondor_store_cred add\n", userdom );
+					"\tcondor_store_cred add\n", userdom.c_str() );
 			exit(1);
 		}
 #endif
@@ -1001,13 +1012,15 @@ main( int argc, const char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// But, if there's an active ssh, stay alive, in case we are
+		// running in a container.
 		// This effectively means executable, transfer_executable,
 		// arguments, universe, and queue X are ignored from the submit
 		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
-			extraLines.Append( "executable=/bin/sleep" );
+			extraLines.Append( "executable=/bin/sh" );
+			extraLines.Append( "arguments=\"-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'\"");
 			extraLines.Append( "transfer_executable=false" );
-			extraLines.Append( "arguments=180" );
 		}
 	}
 
@@ -2620,224 +2633,79 @@ init_params()
 }
 
 
-// The code below needs work before it can build on Windows or older Macs
+bool credd_has_tokens(std::string & tokens, MyString & URL) {
 
-MyString credd_has_tokens(MyString m) {
+	URL.clear();
+	tokens.clear();
+
+	std::string requests_error;
+	ClassAdList requests;
+	if (submit_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+		if ( ! requests_error.empty()) {
+			printf ("%s\n", requests_error.c_str());
+			exit(1);
+		}
+	} else {
+		return false;
+	}
 
 	if (IsDebugLevel(D_SECURITY)) {
-			char *myname = my_username();
-			dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), myname);
-			free(myname);
+		char *myname = my_username();
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", tokens.c_str(), myname);
+		free(myname);
 	}
 
-	// PHASE 1
-	//
-	// scan the submit keys for things that match the form
-	// <service>_OAUTH_[PERMISSIONS|RESOURCE](_<handle>)?
-	// and create a list of individual tokens (with handles)
-	// that we need to have.
+	StringList unique_names(tokens.c_str());
 
-	StringList services(m.c_str());
-	char* service;
-
-	StringList token_names;
-
-	services.rewind();
-	while ((service = services.next())) {
-		dprintf(D_ALWAYS, "CRED: getting details for %s\n", service);
-
-/*
- * QUESTION:  do i need to actually do the PARAM in order to make the refcount NON-ZERO?
- *
-		permissions = submit_hash.submit_param_mystring(param_name);
-*/
-
-		// there may not be any options (PERMISSIONS|RESOURCE) but we'll still
-		// need to add a token anyways.  this keeps track of whether we found
-		// any options so we don't add the base case if we did
-		bool found_defs = false;
-
-		// iterate the submit keys
-		HASHITER it = hash_iter_begin(submit_hash.macros());
-		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
-			MyString key = hash_iter_key(it);
-
-			// for building the things we will extract from the submit keys
-			MyString param_name;
-
-			param_name.formatstr("%s_OAUTH_RESOURCE", service);
-			if (0 == strncasecmp(param_name.c_str(), key.c_str(), param_name.Length())) {
-				// true if we find anything at all
-				found_defs = true;
-
-				MyString handle = service;
-				// we have a match, see if there is a handle at the end
-				if (key.Length() > param_name.Length()) {
-					handle += "*";
-					handle += key.substr(param_name.Length()+1, key.Length());
-				}
-				token_names.append(handle.c_str());
-			}
-
-			param_name.formatstr("%s_OAUTH_PERMISSIONS", service);
-			if (0 == strncasecmp(param_name.c_str(), key.c_str(), param_name.Length())) {
-				// true if we find anything at all
-				found_defs = true;
-
-				MyString handle = service;
-				// we have a match, see if there is a handle at the end
-				if (key.Length() > param_name.Length()) {
-					handle += "*";
-					handle += key.substr(param_name.Length()+1, key.Length());
-				}
-				token_names.append(handle.c_str());
-			}
-		}
-		hash_iter_delete(&it);
-
-		// if there were no options, we still need to add this token to the list
-		if(!found_defs) {
-			token_names.append(service);
-		}
-	}
-
-	StringList unique_names;
-	unique_names.create_union(token_names, true);
-	unique_names.qsort();
-
-	// stick the list of unique names into the job ad.  we will need it later when
-	// the starter asks for its list of creds from the shadow.
-	char* commalist = unique_names.print_to_string();  // up to us to free()
-	MyString quotedlist;
-	quotedlist.formatstr("\"%s\"", commalist);
-	free(commalist);
-	submit_hash.set_arg_variable("+OAuthServicesNeeded", quotedlist.Value());
-	dprintf(D_SECURITY, "OAUTH: recording OAuthServicesNeeded as %s.\n", quotedlist.Value());
-
-
-	// PHASE 2
-	//
-	// Lookup each unique token name, create an ad for this token request
-	// (and fill in defaults from config file if needed).
-	//
-	// Then, insert that ad into the "master" ad that we will send to credd
-	// (nested classad)
-
-
-	// we'll have one classad per token.  create an array while we build them up
-	ClassAdList requests;
-
-	char* token;
-	unique_names.rewind();
-
-	for(int index = 0; index < unique_names.number(); index++) {
-		token = unique_names.next();
-		ClassAd *request_ad = new ClassAd();
-		MyString token_MyS = token;
-
-		MyString service_name;
-		MyString handle;
-		int starpos = token_MyS.FindChar('*');
-		if(starpos == -1) {
-			// no handle, just service
-			service_name = token_MyS;
-		} else {
-			// no split into two
-			service_name = token_MyS.substr(0,starpos);
-			handle = token_MyS.substr(starpos+1,token_MyS.Length());
-		}
-		request_ad->Assign("Service", service_name);
-		request_ad->Assign("Handle", handle);
-
-		MyString param_name;
-		MyString config_param_name;
-		MyString param_val;
-
-		// get permissions (scopes) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_PERMISSIONS", service_name.c_str());
-		if (handle.Length()) {
-			param_name += "_";
-			param_name += handle;
-		}
-		param_val = submit_hash.submit_param_mystring(param_name.c_str(), NULL);
-		if(param_val.Length() == 0) {
-			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_SCOPES", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
-			if (param_val[0] == 'R') {
-				printf ("You must specify %s to use OAuth service %s.\n", param_name.c_str(), service_name.c_str());
-				exit(1);
-			}
-			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
-			param_val = param(config_param_name.c_str());
-		}
-		request_ad->Assign("Scopes", param_val);
-
-		// get resource (audience) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
-		if (handle.Length()) {
-			param_name += "_";
-			param_name += handle;
-		}
-		param_val = submit_hash.submit_param_mystring(param_name.c_str(), NULL);
-		if(param_val.Length() == 0) {
-			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_AUDIENCE", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
-			if (param_val[0] == 'R') {
-				printf ("You must specify %s to use OAuth service %s.\n", param_name.c_str(), service_name.c_str());
-				exit(1);
-			}
-			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
-			param_val = param(config_param_name.c_str());
-		}
-		request_ad->Assign("Audience", param_val);
-		request_ad->Assign("Username", my_username());
-
-		if (IsDebugLevel (D_SECURITY)) {
-			std::string dbgout;
-			classad::ClassAdUnParser unp;
-			unp.Unparse(dbgout, request_ad);
-			dprintf(D_SECURITY, "OAUTH REQUEST: %s\n", dbgout.c_str());
-		}
-
-		requests.Insert(request_ad);
-	}
 
 	// PHASE 3
 	//
 	// Send all the requests to the CREDD
 	//
-	Daemon my_credd(DT_CREDD);
-	if (my_credd.locate()) {
-		CondorError e;
-		ReliSock *r;
-		r = (ReliSock*)my_credd.startCommand(ZKM_QUERY_CREDS, Stream::reli_sock, 20, &e);
-
-		if(!r) {
-			fprintf( stderr, "\nCRED: startCommand to CredD failed!\n");
-			exit( 1 );
-		}
-
-		r->encode();
-		int numads = unique_names.number();
-		r->code(numads);
+	if (DashDryRun & (2|4)) {
+		std::string buf;
+		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
 		requests.Rewind();
-		for (int i=0; i<numads; i++) {
-			putClassAd(r, *(requests.Next()));
+		for (const char * name = unique_names.first(); name != NULL; name = unique_names.next()) {
+			fprintf(stdout, "# %s \n%s\n", name, formatAd(buf, *requests.Next(), "\t"));
+			buf.clear();
 		}
-		r->end_of_message();
-		r->decode();
-		MyString URL;
-		r->code(URL);
-		r->end_of_message();
-		r->close();
-		delete r;
-		return URL;
-	} else {
-		fprintf( stderr, "\nCRED: locate(credd) failed!\n");
-		exit( 1 );
+		if (! (DashDryRun & 4)) {
+			URL = "http://getcreds.example.com";
+		}
+		return true;
 	}
+
+	// build a vector of the request ads from the classad list.
+	std::vector<const classad::ClassAd*> req_ads;
+	requests.Rewind();
+	classad::ClassAd * ad;
+	while ((ad = requests.Next())) { req_ads.push_back(ad); }
+
+	std::string url;
+	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
+	if (rv > 0) { URL = url; }
+	else if (rv < 0) {
+		// this little bit of nonsense preserves the pre 8.9.9 error messages to stdout
+		// do_check_oauth_creds will also dprintf the same(ish) messages
+		switch (rv) {
+		case -1:
+			fprintf( stderr, "\nCRED: invalid request to credd!\n");
+			break;
+		case -2: // could not locate
+			fprintf( stderr, "\nCRED: locate(credd) failed!\n");
+			break;
+		case -3: // start command failed
+			fprintf( stderr, "\nCRED: startCommand to CredD failed!\n");
+			break;
+		case -4: // communication failure (timeout of protocol mismatch)
+			fprintf( stderr, "\nCRED: communication failure!\n");
+			break;
+		}
+		exit(1);
+	}
+
+	return true;
 }
 
 
@@ -2859,11 +2727,9 @@ int process_job_credentials()
 		// create a "request file" and provide a URL that references
 		// it.  we forward this URL to the user so they can obtain the
 		// tokens needed.
-
-		MyString tokens_needed = submit_hash.submit_param_mystring("UseOAuthServices", "use_oauth_services");
-
-		if (!tokens_needed.empty()) {
-			MyString URL = credd_has_tokens(tokens_needed);
+		MyString URL;
+		std::string tokens_needed;
+		if (credd_has_tokens(tokens_needed, URL)) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL
@@ -2879,7 +2745,8 @@ int process_job_credentials()
 
 			// force this to be written into the job, by using set_arg_variable
 			// it is also available to the submit file parser itself (i.e. can be used in If statements)
-			submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
+			//TJ:gt7462 don't set SendCredential for OAuth, now that we have multiple credmons, this applies only to Krb credential
+			//submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 		} else {
 			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
@@ -2925,6 +2792,39 @@ int process_job_credentials()
 				exit( 1 );
 			}
 
+#if 1 // support new credd commands only
+			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
+			Daemon my_credd(DT_CREDD);
+			if (my_credd.locate()) {
+				// this version check will fail if CredD is not
+				// local.  the version is not exchanged over
+				// the wire until calling startCommand().  if
+				// we want to support remote submit we should
+				// just send the command anyway, after checking
+				// to make sure older CredDs won't completely
+				// choke on the new protocol.
+				CondorVersionInfo cvi(my_credd.version());
+				bool new_credd = cvi.built_since_version(8, 9, 7);
+				if (new_credd) {
+					const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
+					const char * err = NULL;
+					ClassAd return_ad;
+					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
+					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
+					if (store_cred_failed(result, mode, &err)) {
+						fprintf( stderr, "\nERROR: store_cred of Kerberose credential failed - %s\n", err ? err : "");
+						exit(1);
+					}
+				} else {
+					fprintf( stderr, "\nERROR: Credd is too old to support storing of Kerberose credentials\n"
+							"  Credd version: %s", cvi.get_version_string());
+					exit(1);
+				}
+			} else {
+				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
+				exit( 1 );
+			}
+#else
 			// immediately convert to base64
 			char* ut64 = zkm_base64_encode(uber_ticket, (int)bytes_read);
 
@@ -2946,19 +2846,11 @@ int process_job_credentials()
 
 			// my_domainname() returns NULL on UNIX... no need to use this
 
-			// setup the username to query
-			char userdom[256];
-			char* the_username = my_username();
-			char* the_domainname = my_domainname();
-			sprintf(userdom, "%s@%s", the_username, the_domainname);
-			free(the_username);
-			free(the_domainname);
-
 			dprintf(D_ALWAYS, "CREDMON: storing cred for user %s\n", userdom);
 			Daemon my_credd(DT_CREDD);
 			int store_cred_result;
 			if (my_credd.locate()) {
-				store_cred_result = store_cred(userdom, ut64, ADD_MODE, &my_credd);
+				store_cred_result = do_store_cred(userdom.c_str(), ut64, STORE_CRED_LEGACY | ADD_KRB_MODE, &my_credd);
 				if ( store_cred_result != SUCCESS ) {
 					fprintf( stderr, "\nERROR: store_cred failed!\n");
 					exit( 1 );
@@ -2969,6 +2861,7 @@ int process_job_credentials()
 			}
 			free(ut64);
 			free(zkmbuf);
+#endif
 		}
 	}  // end of block to run a credential producer
 

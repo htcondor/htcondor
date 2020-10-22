@@ -18,9 +18,6 @@ Hooks may also behave as a Job Router.
 The Daemon ClassAd hooks permit the *condor_startd* and the
 *condor_schedd* daemons to execute hooks once or on a periodic basis.
 
-Note that standard universe jobs execute different *condor_starter* and
-*condor_shadow* daemons that do not implement any hook mechanisms.
-
 Job Hooks That Fetch Work
 -------------------------
 
@@ -370,7 +367,7 @@ on a machine with 4 slots, 3 of the slots use the global keyword for
 running work from a database-driven system, and one of the slots uses a
 custom keyword to handle work fetched from a web service.
 
-::
+.. code-block:: condor-config
 
       # Most slots fetch and run work from the database system.
       STARTD_JOB_HOOK_KEYWORD = DATABASE
@@ -426,7 +423,7 @@ For example, a common configuration would be to always wait 5 minutes
 Claimed/Idle, in which case the *condor_startd* should fetch
 immediately:
 
-::
+.. code-block:: condor-config
 
     FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300)
 
@@ -456,14 +453,14 @@ installation.
 
 In the configuration of the execute machine:
 
-::
+.. code-block:: condor-config
 
     JAVA5_HOOK_PREPARE_JOB = $(LIBEXEC)/java5_prepare_hook
 
 With this configuration, a job that sets the ``HookKeyword`` attribute
 with
 
-::
+.. code-block:: condor-submit
 
     +HookKeyword = "JAVA5"
 
@@ -474,7 +471,7 @@ the double quote marks are required to correctly define the attribute.
 Any output from this hook is an update to the job ClassAd. Therefore,
 the hook that changes the executable may be
 
-::
+.. code-block:: bash
 
     #!/bin/sh
 
@@ -486,14 +483,14 @@ If some machines in your pool have this hook and others do not, this
 fact should be advertised. Add to the configuration of every execute
 machine that has the hook:
 
-::
+.. code-block:: condor-config
 
     HasJava5PrepareHook = True
     STARTD_ATTRS = HasJava5PrepareHook $(STARTD_ATTRS)
 
 The submit description file for this example job may be
 
-::
+.. code-block:: condor-submit
 
     universe = vanilla
     executable = /usr/bin/java
@@ -510,6 +507,7 @@ The submit description file for this example job may be
     log    = hello.log
 
     +HookKeyword="JAVA5"
+
     queue
 
 Note that the
@@ -561,7 +559,7 @@ accomplished without the hook to process the job.
 There are 2 ways in which the Job Router Hooks may be enabled. A job's
 submit description file may cause the hooks to be invoked with
 
-::
+.. code-block:: condor-submit
 
     +HookKeyword = "HOOKNAME"
 
@@ -574,7 +572,7 @@ The job's ClassAd attribute definition of ``HookKeyword`` takes
 precedence, but if not present, hooks may be enabled by defining on the
 submit machine the configuration variable
 
-::
+.. code-block:: condor-config
 
      JOB_ROUTER_HOOK_KEYWORD = HOOKNAME
 
@@ -695,7 +693,7 @@ Job output
 The output of the job is incorporated into one or more ClassAds when the
 job exits. When the job outputs the special line:
 
-::
+.. code-block:: text
 
       - update:true
 
@@ -740,7 +738,7 @@ defined below:
 
 For example, if the Startd Cron job returns:
 
-::
+.. code-block:: text
 
       Value=1
       SlotId=1
@@ -766,7 +764,7 @@ Here is a complete configuration example. It defines all three of the
 available types of jobs: ones that use the *condor_startd*, benchmark
 jobs, and ones that use the *condor_schedd*.
 
-::
+.. code-block:: condor-config
 
     #
     # Startd Cron Stuff
@@ -818,7 +816,8 @@ jobs, and ones that use the *condor_schedd*.
     BENCHMARKS_KFLOPS_JOB_LOAD = 1.0
 
     #
-    # Schedd Cron Stuff
+    # Schedd Cron Stuff. Unlike the Startd,
+    # a restart of the Schedd is required for changes to take effect
     #
     SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
     SCHEDD_CRON_JOBLIST =

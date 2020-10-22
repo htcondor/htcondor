@@ -16,13 +16,22 @@
  # 
  ############################################################### 
 
+# for qmgr_job_updaters
 include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
-## Create targets
-file( GLOB shadowRmvElements Example* *.t.* )
-# Build a small shadow on 32-bit Linux platforms
-if (LINUX AND (${BIT_MODE} MATCHES "32"))
-    condor_daemon( shadow_s "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW};${CMAKE_DL_LIBS}" "${C_SBIN}" )
-endif()
-condor_daemon( shadow "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW};${CMAKE_DL_LIBS}" "${C_SBIN}" )
+set(shadowElements
+baseshadow.cpp
+mpiresource.cpp
+NTreceivers.cpp
+parallelshadow.cpp
+pseudo_ops.cpp
+remoteresource.cpp
+shadow.cpp
+shadow_user_policy.cpp
+shadow_v61_main.cpp
+uuid_stubs.cpp
+)
+
+
+condor_daemon( EXE condor_shadow SOURCES "${shadowElements}" LIBRARIES "${CONDOR_LIBS_FOR_SHADOW};${CMAKE_DL_LIBS}" INSTALL "${C_SBIN}" )
 

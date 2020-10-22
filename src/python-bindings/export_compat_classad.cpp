@@ -7,7 +7,7 @@
 void
 enable_classad_extensions()
 {
-    compat_classad::ClassAd::Reconfig();
+    ClassAdReconfig();
     enable_deprecation_warnings();
 }
 

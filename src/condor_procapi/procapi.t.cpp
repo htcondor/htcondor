@@ -34,7 +34,7 @@ main () {
 	int fam_status;
 	int info_status;
 
-	pidnevid_init(&penvid);
+	pidenvid_init(&penvid);
 	
 	for ( int i=0 ; i < 1 ; i++ ) {
 

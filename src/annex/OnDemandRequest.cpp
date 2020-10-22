@@ -10,11 +10,12 @@
 OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	const std::string & su, const std::string & pkf, const std::string & skf,
 	ClassAdCollection * c, const std::string & cid,
-	const std::string & aid ) :
+	const std::string & aid,
+	const std::vector< std::pair< std::string, std::string > > & t ) :
   gahp( egc ), reply( r ), scratchpad( s ),
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
   targetCapacity(0),
-  commandID( cid ), commandState( c ), annexID( aid ) {
+  commandID( cid ), commandState( c ), annexID( aid ), tags( t ) {
   	ClassAd * commandState;
 	if( c->Lookup( commandID, commandState ) ) {
 		commandState->LookupString( "State_ClientToken", clientToken );
@@ -26,7 +27,7 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 			StringList sl( iidString.c_str(), "," );
 			sl.rewind(); char * current = sl.next();
 			for( ; current != NULL; current = sl.next() ) {
-				instanceIDs.push_back( current );
+				instanceIDs.emplace_back(current );
 			}
 		}
 	}
@@ -178,6 +179,16 @@ OnDemandRequest::operator() () {
 		parameters_and_values.append( "htcondor:AnnexName" );
 		parameters_and_values.append( "TagSpecification.1.Tag.1.Value" );
 		parameters_and_values.append( annexID.c_str() );
+
+        std::string buffer;
+        for( unsigned i = 0; i < tags.size(); ++i ) {
+            formatstr( buffer, "TagSpecification.1.Tag.%u.Key", i + 2 );
+            parameters_and_values.append( buffer.c_str() );
+            parameters_and_values.append( tags[i].first.c_str() );
+            formatstr( buffer, "TagSpecification.1.Tag.%u.Value", i + 2 );
+            parameters_and_values.append( buffer.c_str() );
+            parameters_and_values.append( tags[i].second.c_str() );
+        }
 
 		// Earlier versions of the API don't know about TagSpecification.
 		parameters_and_values.append( "Version" );

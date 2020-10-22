@@ -34,8 +34,8 @@
 using namespace std;
 
 double DagmanMetrics::_startTime = 0.0;
-MyString DagmanMetrics::_dagmanId = "";
-MyString DagmanMetrics::_parentDagmanId = "";
+std::string DagmanMetrics::_dagmanId;
+std::string DagmanMetrics::_parentDagmanId;
 
 //---------------------------------------------------------------------------
 void
@@ -49,12 +49,10 @@ void
 DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
 			int parentDagmanCluster )
 {
-	_dagmanId = "";
-	_dagmanId += IntToStr( DAGManJobId._cluster );
+	_dagmanId = std::to_string( DAGManJobId._cluster );
 
 	if ( parentDagmanCluster >= 0 ) {
-		_parentDagmanId = "";
-		_parentDagmanId += IntToStr( parentDagmanCluster );
+		_parentDagmanId = std::to_string( parentDagmanCluster );
 	}
 }
 
@@ -67,7 +65,6 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_simpleNodesFailed( 0 ),
 	_subdagNodesSuccessful( 0 ),
 	_subdagNodesFailed( 0 ), 
-	_totalNodeJobTime( 0.0 ),
 	_graphHeight( 0 ),
 	_graphWidth( 0 ),
 	_graphNumEdges( 0 ),
@@ -118,34 +115,6 @@ DagmanMetrics::~DagmanMetrics()
 
 //---------------------------------------------------------------------------
 void
-DagmanMetrics::ProcStarted( const struct tm &eventTime )
-{
-		// Avoid possible mktime() craziness unless we really need the
-		// metrics -- see gittrac #2898.
-	if ( false ) {
-		double et = GetTime( eventTime );
-			// We decrement by et - _startTime instead of just et here to
-			// reduce numerical error.
-		_totalNodeJobTime -= ( et - _startTime );
-	}
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanMetrics::ProcFinished( const struct tm &eventTime )
-{
-		// Avoid possible mktime() craziness unless we really need the
-		// metrics -- see gittrac #2898.
-	if ( false ) {
-		double et = GetTime( eventTime );
-			// We increment by et - _startTime instead of just et here to
-			// reduce numerical error.
-		_totalNodeJobTime += ( et - _startTime );
-	}
-}
-
-//---------------------------------------------------------------------------
-void
 DagmanMetrics::NodeFinished( bool isSubdag, bool successful )
 {
 	if ( isSubdag ) {
@@ -165,7 +134,7 @@ DagmanMetrics::NodeFinished( bool isSubdag, bool successful )
 
 //---------------------------------------------------------------------------
 bool
-DagmanMetrics::Report( int exitCode, Dag::dag_status status )
+DagmanMetrics::Report( int exitCode, DagStatus status )
 {
 	if ( !WriteMetricsFile( exitCode, status ) ) {
 		return false;
@@ -176,7 +145,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 
 //---------------------------------------------------------------------------
 bool
-DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
+DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 {
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
@@ -200,9 +169,9 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
 	fprintf( fp, "    \"exitcode\":%d,\n", exitCode );
-	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.Value() );
+	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.c_str() );
 	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n",
-				_parentDagmanId.Value() );
+				_parentDagmanId.c_str() );
 	fprintf( fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum );
 	fprintf( fp, "    \"jobs\":%d,\n", _simpleNodes );
 	fprintf( fp, "    \"jobs_failed\":%d,\n", _simpleNodesFailed );
@@ -214,7 +183,6 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	int totalNodesRun = _simpleNodesSuccessful + _simpleNodesFailed +
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
-	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
 
 	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
 	if ( report_graph_metrics == true ) {
@@ -225,7 +193,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	}
 
 		// Last item must NOT have trailing comma!
-	fprintf( fp, "    \"dag_status\":%d\n", status );
+	fprintf( fp, "    \"DagStatus\":%d\n", status );
 	fprintf( fp, "}\n" );
 
 	if ( fclose( fp ) != 0 ) {

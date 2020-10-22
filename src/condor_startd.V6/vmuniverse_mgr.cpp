@@ -160,7 +160,7 @@ VMStarterInfo::addProcessForVM(pid_t vm_pid)
 }
 
 pid_t
-VMStarterInfo::getProcessForVM(void)
+VMStarterInfo::getProcessForVM(void) const
 {
 	return m_vm_pid;
 }
@@ -190,7 +190,7 @@ VMStarterInfo::getIPForVM(void)
 }
 
 void 
-VMStarterInfo::publishVMInfo(ClassAd* ad, amask_t  /*mask*/ )
+VMStarterInfo::publishVMInfo(ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -292,7 +292,7 @@ VMUniverseMgr::printVMGahpInfo( int debug_level )
 }
 
 void
-VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
+VMUniverseMgr::publish( ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -571,7 +571,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 }
 
 int
-VMUniverseMgr::getFreeVMMemSize()
+VMUniverseMgr::getFreeVMMemSize() const
 {
 	return (m_vm_max_memory - m_vm_used_memory);
 }
@@ -1057,7 +1057,7 @@ VMUniverseMgr::getIPForVM(pid_t s_pid)
 }
 
 void
-VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask )
+VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad)
 {
 	if( !ad ) {
 		return;
@@ -1068,6 +1068,6 @@ VMUniverseMgr::publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask )
 		return;
 	}
 
-	info->publishVMInfo(ad, mask);
+	info->publishVMInfo(ad);
 	return;
 }

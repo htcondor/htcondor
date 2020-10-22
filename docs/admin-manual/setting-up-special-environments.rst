@@ -140,14 +140,14 @@ output.
 URL transfers are enabled by default in the configuration of execute
 machines. Disabling URL transfers is accomplished by setting
 
-::
+.. code-block:: condor-config
 
     ENABLE_URL_TRANSFERS = FALSE
 
 A comma separated list giving the absolute path and name of all
 available plug-ins is specified as in the example:
 
-::
+.. code-block:: condor-config
 
     FILETRANSFER_PLUGINS = /opt/condor/plugins/wget-plugin, \
                            /opt/condor/plugins/hdfs-plugin, \
@@ -168,7 +168,7 @@ command line argument **-classad**. In response to invocation with this
 command line argument, the plug-in must respond with an output of three
 ClassAd attributes. The first two are fixed:
 
-::
+.. code-block:: condor-classad
 
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
@@ -177,7 +177,7 @@ The third ClassAd attribute is ``SupportedMethods``. This attribute is a
 string containing a comma separated list of the protocols that the
 plug-in handles. So, for example
 
-::
+.. code-block:: condor-classad
 
     SupportedMethods = "http,ftp,file"
 
@@ -208,7 +208,7 @@ status of the plug-in.
 As an example of the transfer of a subset of output files, assume that
 the submit description file contains
 
-::
+.. code-block:: condor-submit
 
     output_destination = url://server/some/directory/
     transfer_output_files = foo, bar, qux
@@ -218,11 +218,11 @@ times. The directory delimiter (/ on Unix, and \\ on Windows) is
 appended to the destination URL, such that the three (Unix) invocations
 of the plug-in will appear similar to
 
-::
+.. code-block:: console
 
-    url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
-    url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
-    url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
+    $ url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
+    $ url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
+    $ url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
 
 Note that this functionality is not limited to a predefined set of
 protocols. New ones can be invented. As an invented example, the zkm
@@ -230,7 +230,7 @@ transfer type writes random bytes to a file. The plug-in that handles
 zkm transfers would respond to invocation with the **-classad** command
 line argument with:
 
-::
+.. code-block:: condor-classad
 
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
@@ -239,7 +239,7 @@ line argument with:
 And, then when a job requested that this plug-in be invoked, for the
 invented example:
 
-::
+.. code-block:: condor-submit
 
     transfer_input_files = zkm://128/r-data
 
@@ -247,6 +247,15 @@ the plug-in will be invoked with a first command line argument of
 zkm://128/r-data and a second command line argument giving the full path
 along with the file name ``r-data`` as the location for the plug-in to
 write 128 bytes of random data.
+
+URL plugins exist already for transferring files to/from
+Box.com accounts (``box://...``),
+Google Drive accounts (``gdrive://...``),
+and Microsoft OneDrive accounts (``onedrive://...``).
+These plugins require users to have obtained OAuth2 credentials
+for the relevant service(s) before they can be used.
+See :ref:`enabling_oauth_credentials` for how to enable users
+to fetch OAuth2 credentials.
 
 The transfer of output files in this manner was introduced in HTCondor
 version 7.6.0. Incompatibility and inability to function will result if
@@ -272,7 +281,7 @@ Another option for transferring files over HTTP is for users to specify
 a list of public input files. These are specified in the submit file as
 follows:
 
-::
+.. code-block:: condor-submit
 
     public_input_files = file1,file2,file3
 
@@ -348,6 +357,102 @@ for a proxy server address; by setting this appropriately on execute
 nodes, a system can dramatically improve transfer speeds for commonly
 used files.
 
+.. _enabling_oauth_credentials:
+
+Enabling the Fetching and Use of OAuth2 Credentials
+---------------------------------------------------
+
+HTCondor can be configured
+to allow users to request and securely store credentials
+from most OAuth2 service providers.
+Users' jobs can then request these credentials
+to be securely transferred to job sandboxes,
+where they can be used by file transfer plugins
+or be accessed by the users' executable(s).
+
+There are three steps to setting up HTCondor
+to enable users to be able to request credentials
+from OAuth2 services:
+
+1. Enabling the *condor_credd* and *condor_credmon_oauth* daemons,
+2. Enabling the companion OAuth2 credmon WSGI application, and
+3. Setting up API clients and related configuration.
+
+First, to enable the *condor_credd* and *condor_credmon_oauth* daemons,
+one can use the ``use feature: oauth`` template.
+This template adds the *condor_credd* and *condor_credmon_oauth*
+to the ``DAEMON_LIST`` :index:`DAEMON_LIST`
+and sets up the ``SEC_CREDENTIAL_DIRECTORY_OAUTH`` :index:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
+with the default path of ``/var/lib/condor/oauth_credentials``.
+The directory specified in ``SEC_CREDENTIAL_DIRECTORY_OAUTH``
+must be owned by root:condor with full user and group permissions
+and must have the setgid flag set.
+
+Second, to enable the OAuth2 credmon WSGI application,
+the ``condor_credmon_oauth.wsgi`` script
+should be placed in a well-known location (e.g. ``/var/www/wsgi-scripts/condor_credmon_oauth``)
+and a HTTPS-enabled web server running on the submit machine
+should be configured to execute this script as the user ``condor``.
+
+Third, for each OAuth2 service that one wishes to configure,
+an OAuth2 client application should be registered for each submit machine
+on each service's API console.
+For example, for Box.com,
+a client can be registered by logging in to `<https://app.box.com/developers/console>`_,
+creating a new "Custom App",
+and selecting "Standard OAuth 2.0 (User Authentication)."
+
+For each client, store the client ID in the HTCondor configuration
+under ``<OAuth2ServiceName>_CLIENT_ID``.
+Store the client secret in a file only readable by root,
+then point to it using ``<OAuth2ServiceName>_CLIENT_SECRET_FILE``.
+For our Box.com example, this might look like:
+
+.. code-block:: condor-config
+
+    BOX_CLIENT_ID = ex4mpl3cl13nt1d
+    BOX_CLIENT_SECRET_FILE = /etc/condor/.secrets/box_client_secret
+
+.. code-block:: console
+
+    # ls -l /etc/condor/.secrets/box_client_secret
+    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/.secrets/box_client_secret
+    # cat /etc/condor/.secrets/box_client_secret
+    EXAmpL3ClI3NtS3cREt
+
+Each service will need to redirect users back
+to a known URL on the submit machine
+after each user has approved access to their credentials.
+For example, Box.com asks for the "OAuth 2.0 Redirect URI."
+This should be set to match ``<OAuth2ServiceName>_RETURN_URL_SUFFIX`` such that
+the user is returned to ``https://<submit_hostname>/<return_url_suffix>``.
+The return URL suffix should be composed using the directory where the WSGI application is running,
+the subdirectory ``return/``,
+and then the name of the OAuth2 service.
+For our Box.com example, if running the WSGI application at the root of the webserver (``/``),
+this should be ``BOX_RETURN_URL_SUFFIX = /return/box``.
+
+The *condor_credmon_oauth* and its companion WSGI application
+need to know where to send users to fetch their initial credentials
+and where to send API requests to refresh these credentials.
+Some well known service providers (``condor_config_val -dump TOKEN_URL``)
+already have their authorization and token URLs predefined in the default HTCondor config.
+Other service providers will require searching through API documentation to find these URLs,
+which then must be added to the HTCondor configuration.
+For example, if you search the Box.com API documentation,
+you should find the following authorization and token URLs,
+and these URLs could be added them to the HTCondor config as below:
+
+.. code-block:: condor-config
+
+    BOX_AUTHORIZATION_URL = https://account.box.com/api/oauth2/authorize
+    BOX_TOKEN_URL = https://api.box.com/oauth2/token
+
+After configuring OAuth2 clients,
+make sure users know which names (``<OAuth2ServiceName>s``) have been configured
+so that they know what they should put under ``use_oauth_services``
+in their job submit files.
+
 Configuring HTCondor for Multiple Platforms
 -------------------------------------------
 
@@ -374,9 +479,9 @@ using ``$(ARCH)`` and ``$(OPSYS)``, as defined automatically by
 HTCondor. For example, for 32-bit Intel Windows 7 machines and 64-bit
 Intel Linux machines, the files ought to be named:
 
-::
+.. code-block:: console
 
-      condor_config.INTEL.WINDOWS
+      $ condor_config.INTEL.WINDOWS
       condor_config.X86_64.LINUX
 
 Then, assuming these files are in the directory defined by the ``ETC``
@@ -384,7 +489,7 @@ configuration variable, and machine-specific configuration files are in
 the same directory, named by each machine's host name,
 ``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE` becomes:
 
-::
+.. code-block:: condor-config
 
     LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \
                         $(ETC)/$(HOSTNAME).local
@@ -395,14 +500,14 @@ link based on platform name. For example, consider a soft link named
 ``condor_config.platform`` that points to ``condor_config.@sys``. In
 this case, the files might be named:
 
-::
+.. code-block:: console
 
-      condor_config.i386_linux2
+      $ condor_config.i386_linux2
       condor_config.platform -> condor_config.@sys
 
 and the ``LOCAL_CONFIG_FILE`` configuration variable would be set to
 
-::
+.. code-block:: condor-config
 
     LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \
                         $(ETC)/$(HOSTNAME).local
@@ -519,7 +624,7 @@ following steps need to be taken:
 The actual commands to execute depend upon the platform. The location of
 the system linker (*ld*), is as follows:
 
-::
+.. code-block:: text
 
     Operating System              Location of ld (ld-path)
     Linux                         /usr/bin
@@ -527,12 +632,12 @@ the system linker (*ld*), is as follows:
 On these platforms, issue the following commands (as root), where
 *ld-path* is replaced by the path to the system's *ld*.
 
-::
+.. code-block:: console
 
-      mv /[ld-path]/ld /<ld-path>/ld.real
-      cp /usr/local/condor/lib/ld /<ld-path>/ld
-      chown root /<ld-path>/ld
-      chmod 755 /<ld-path>/ld
+    $ mv /[ld-path]/ld /<ld-path>/ld.real
+    $ cp /usr/local/condor/lib/ld /<ld-path>/ld
+    $ chown root /<ld-path>/ld
+    $ chmod 755 /<ld-path>/ld
 
 If you remove HTCondor from your system later on, linking will continue
 to work, since the HTCondor linker will always default to compiling
@@ -630,18 +735,18 @@ can write, and the file will not get in the way. The **-pidfile** and
 the process ID in a file. It will be necessary to add lines to the XDM
 configuration similar to
 
-::
+.. code-block:: console
 
-      condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
+      $ condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
 
 This will start the *condor_kbdd* as the user who is currently logged
 in and write the log to a file in the directory ``$HOME/.kbdd.log/``.
 This will also save the process ID of the daemon to ``˜/.kbdd.pid``, so
 that when the user logs out, XDM can do:
 
-::
+.. code-block:: console
 
-      condor_kbdd -k $HOME/.kbdd.pid
+      $ condor_kbdd -k $HOME/.kbdd.pid
 
 This will shut down the process recorded in file ``˜/.kbdd.pid`` and
 exit.
@@ -722,7 +827,7 @@ main *condor_collector* and the HTCondorView collector are started up
 by the same *condor_master* daemon on the same machine. In this
 example, the HTCondorView collector uses port 12345.
 
-::
+.. code-block:: condor-config
 
       VIEW_SERVER = $(COLLECTOR)
       VIEW_SERVER_ARGS = -f -p 12345
@@ -746,7 +851,7 @@ HTCondorView server.
 
 Define the following configuration variable:
 
-::
+.. code-block:: condor-config
 
       CONDOR_VIEW_HOST = full.hostname[:portnumber]
 
@@ -767,9 +872,9 @@ change to take effect, so it will begin forwarding updates. A query to
 the HTCondorView collector will verify that it is working. A query
 example:
 
-::
+.. code-block:: console
 
-      condor_status -pool condor.view.host[:portnumber]
+      $ condor_status -pool condor.view.host[:portnumber]
 
 A *condor_collector* may also be configured to report to multiple
 HTCondorView servers. The configuration variable ``CONDOR_VIEW_HOST``
@@ -780,7 +885,7 @@ The following demonstrates an example configuration for two HTCondorView
 servers, where both HTCondorView servers (and the *condor_collector*)
 are running on the same machine, localhost.localdomain:
 
-::
+.. code-block:: text
 
     VIEWSERV01 = $(COLLECTOR)
     VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
@@ -850,7 +955,7 @@ The configuration for the host specifies ``VMP_VM_LIST``
 all inner virtual machines running on this host. An example
 configuration on the host machine:
 
-::
+.. code-block:: text
 
     VMP_VM_LIST = vmware1.domain.com, vmware2.domain.com
 
@@ -859,7 +964,7 @@ The configuration for each separate inner virtual machine specifies
 host for the inner virtual machine. An example configuration on an inner
 virtual machine:
 
-::
+.. code-block:: text
 
     VMP_HOST_MACHINE = host.domain.com
 
@@ -881,7 +986,7 @@ inner virtual machine ought to use this syntax to avoid starting jobs
 when its host is too busy processing other items. An example
 configuration for ``START`` on an inner virtual machine:
 
-::
+.. code-block:: text
 
     START = ( (KeyboardIdle > 150 ) && ( HOST_KeyboardIdle > 150 ) \
             && ( LoadAvg <= 0.3 ) && ( HOST_TotalLoadAvg <= 0.3 ) )
@@ -935,7 +1040,7 @@ Each execute machine defines the configuration variable
 identifies the dedicated scheduler it is managed by. The local
 configuration file contains a modified form of
 
-::
+.. code-block:: text
 
     DedicatedScheduler = "DedicatedScheduler@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -946,7 +1051,7 @@ string "full.host.name".
 If running personal HTCondor, the name of the scheduler includes the
 user name it was started as, so the configuration appears as:
 
-::
+.. code-block:: text
 
     DedicatedScheduler = "DedicatedScheduler@username@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -961,7 +1066,7 @@ requirements on a resource for it to be considered dedicated.
 Job ClassAds from the dedicated scheduler contain the attribute
 ``Scheduler``. The attribute is defined by a string of the form
 
-::
+.. code-block:: text
 
     Scheduler = "DedicatedScheduler@full.host.name"
 
@@ -976,7 +1081,7 @@ Policy Scenario: Machine Runs Only Jobs That Require Dedicated Resources
     run jobs that require the dedicated resource. To enact this policy,
     configure the following expressions:
 
-    ::
+    .. code-block:: text
 
         START     = Scheduler =?= $(DedicatedScheduler)
         SUSPEND   = False
@@ -1008,7 +1113,7 @@ Policy Scenario: Run Both Jobs That Do and Do Not Require Dedicated Resources
     To implement this, configure the machine as a dedicated resource as
     above, modifying only the ``START`` expression:
 
-    ::
+    .. code-block:: text
 
         START = True
 
@@ -1025,7 +1130,7 @@ Policy Scenario: Adding Desktop Resources To The Mix
     set in the global configuration. Locally, the configuration is
     modified to this hybrid policy by adding a second case.
 
-    ::
+    .. code-block:: text
 
         SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
         PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
@@ -1070,7 +1175,7 @@ beginning. Thus, the administrator should be careful when enabling
 preemption of these dedicated resources. Enable dedicated preemption
 with the configuration:
 
-::
+.. code-block:: text
 
     STARTD_JOB_EXPRS = JobPrio
     SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
@@ -1110,7 +1215,7 @@ must be advertised in the *condor_startd* ClassAd by appending
 The submit description file for a parallel universe job which must not
 cross group boundaries contains
 
-::
+.. code-block:: text
 
     +WantParallelSchedulingGroups = True
 
@@ -1204,7 +1309,7 @@ section briefly lists these expressions. More detail can be found in
 
 The following example shows a possible configuration to enable backfill:
 
-::
+.. code-block:: text
 
     # Turn on backfill functionality, and use BOINC
     ENABLE_BACKFILL = TRUE
@@ -1378,7 +1483,7 @@ Optional configuration variables:
     is to use the **-attach_project** argument to specify a project URL
     and account key. For example:
 
-    ::
+    .. code-block:: text
 
         BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
 
@@ -1397,7 +1502,7 @@ Optional configuration variables:
 
 The following example shows one possible usage of these settings:
 
-::
+.. code-block:: text
 
     # Define a shared macro that can be used to define other settings.
     # This directory must be manually created before attempting to run
@@ -1418,7 +1523,7 @@ The following example shows one possible usage of these settings:
 If the HTCondor daemons reading this configuration are running as root,
 an additional variable must be defined:
 
-::
+.. code-block:: text
 
     # Specify the user that the boinc_client should run as:
     BOINC_Owner = nobody
@@ -1457,7 +1562,7 @@ BOINC project:
    the file define the project URL and the authentication key. The
    format is:
 
-   ::
+   .. code-block:: text
 
        <account>
          <master_url>[URL]</master_url>
@@ -1466,7 +1571,7 @@ BOINC project:
 
    For example:
 
-   ::
+   .. code-block:: text
 
        <account>
          <master_url>http://einstein.phys.uwm.edu</master_url>
@@ -1507,7 +1612,7 @@ when dealing with the Windows installation:
    configuration variable ``BOINC_Executable``
    :index:`BOINC_Executable` is written:
 
-   ::
+   .. code-block:: text
 
        BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
 
@@ -1521,7 +1626,7 @@ when dealing with the Windows installation:
    ``BOINC_Arguments`` :index:`BOINC_Arguments` configuration
    variable. For Windows, rewrite the argument line as:
 
-   ::
+   .. code-block:: text
 
        BOINC_Arguments = --dir $(BOINC_HOME) \
                  --attach_project http://einstein.phys.uwm.edu [account_key]
@@ -1529,7 +1634,7 @@ when dealing with the Windows installation:
    As a consequence of setting the BOINC home directory, some projects
    may fail with the authentication error:
 
-   ::
+   .. code-block:: text
 
        Scheduler request failed: Peer
        certificate cannot be authenticated
@@ -1550,7 +1655,7 @@ when dealing with the Windows installation:
 
    Setting this option causes the addition of the job attribute
 
-   ::
+   .. code-block:: text
 
        RunAsUser = True
 
@@ -1599,7 +1704,7 @@ takes care of killing all child processes.
 To enable the use of per job PID namespaces, set the configuration to
 include
 
-::
+.. code-block:: text
 
       USE_PID_NAMESPACES = True
 
@@ -1652,7 +1757,7 @@ maximum GIDs included in the range are specified with the
 example, the following would enable GID-based tracking for an execute
 machine with 8 slots.
 
-::
+.. code-block:: text
 
     USE_GID_PROCESS_TRACKING = True
     MIN_TRACKING_GID = 750
@@ -1701,7 +1806,7 @@ default, and needs to be enabled with a boot time option.
 This setting needs to be inherited down to the per-job cgroup with the
 following commands in ``rc.local``:
 
-::
+.. code-block:: text
 
     /usr/sbin/cgconfigparser -l /etc/cgconfig.conf
     /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
@@ -1761,7 +1866,7 @@ An initial sample of a ``USER_JOB_WRAPPER`` script is provided in the
 installation at ``$(LIBEXEC)/condor_limits_wrapper.sh``. Here is the
 contents of that file:
 
-::
+.. code-block:: text
 
     #!/bin/bash
     # Copyright 2008 Red Hat, Inc.
@@ -1861,35 +1966,30 @@ require editing of system configuration files.
 To enable cgroup-based limits, first ensure that cgroup-based tracking
 is enabled, as it is by default on supported systems, as described in
 section  `3.14.13 <#x42-3790003.14.13>`_. Once set, the
-*condor_starter* will create a cgroup for each job, and set two
-attributes in that cgroup which control resource usage therein. These
-two attributes are the cpu.shares attribute in the cpu controller, and
-one of two attributes in the memory controller, either
-memory.limit_in_bytes, or memory.soft_limit_in_bytes. The
+*condor_starter* will create a cgroup for each job, and set
+attributes in that cgroup to control memory and cpu usage. These
+attributes are the cpu.shares attribute in the cpu controller, and
+two attributes in the memory controller, both
+memory.limit_in_bytes, and memory.soft_limit_in_bytes. The
 configuration variable ``CGROUP_MEMORY_LIMIT_POLICY``
-:index:`CGROUP_MEMORY_LIMIT_POLICY` controls whether the hard
-limit (the former) or the soft limit will be used. If
-``CGROUP_MEMORY_LIMIT_POLICY`` is set to the string ``hard``, the hard
-limit will be used. If set to ``soft``, the soft limit will be used.
-Otherwise, no limit will be set if the value is ``none``. The default is
+:index:`CGROUP_MEMORY_LIMIT_POLICY` controls this.
+If ``CGROUP_MEMORY_LIMIT_POLICY`` is set to the string ``hard``, the hard
+limit will be set to the slot size, and the soft limit to 90% of the
+slot size.. If set to ``soft``, the soft limit will be set to the slot
+size and the hard limit will be set to the memory size of the whole startd.
+By default, this whole size is the detected memory the size, minus
+RESERVED_MEMORY.  Or, if MEMORY is defined, that value is used..
+
+No limits will be set if the value is ``none``. The default is
 ``none``. If the hard limit is in force, then the total amount of
 physical memory used by the sum of all processes in this job will not be
-allowed to exceed the limit. If the processes try to allocate more
-memory, the allocation will succeed, and virtual memory will be
-allocated, but no additional physical memory will be allocated. The
-system will keep the amount of physical memory constant by swapping some
-page from that job out of memory. However, if the soft limit is in
-place, the job will be allowed to go over the limit if there is free
-memory available on the system. Only when there is contention between
-other processes for physical memory will the system force physical
-memory into swap and push the physical memory used towards the assigned
-limit. The memory size used in both cases is the machine ClassAd
+allowed to exceed the limit. If the process goes above the hard
+limit, the job will be put on hold.
+ The memory size used in both cases is the machine ClassAd
 attribute ``Memory``. Note that ``Memory`` is a static amount when using
 static slots, but it is dynamic when partitionable slots are used. That
 is, the limit is whatever the "Mem" column of condor_status reports for
-that slot. If the job exceeds both the physical memory and swap space,
-the job will be killed by the Linux Out-of-Memory killer, and HTCondor
-will put the job on hold with an appropriate message.
+that slot.
 
 If ``CGROUP_MEMORY_LIMIT_POLICY`` is set, HTCondor will also also use
 cgroups to limit the amount of swap space used by each job. By default,
@@ -1898,24 +1998,8 @@ of Virtual Memory in the slot, minus the amount of physical memory. Note
 that HTCondor measures virtual memory in kbytes, and physical memory in
 megabytes. To prevent jobs with high memory usage from thrashing and
 excessive paging, and force HTCondor to put them on hold instead, you
-can set a lower limit on the amount of swap space they are allowed to
-use. With partitionable slots, this is done in the per slot definition,
-and must be a percentage of the total swap space on the system. For
-example,
-
-::
-
-    NUM_SLOTS_TYPE_1 = 1
-    SLOT_TYPE_1_PARTITIONABLE = true
-    SLOT_TYPE_1 = cpus=100%,swap=10%
-
-Optionally, if the administrator sets the config file setting
-``PROPORTIONAL_SWAP_ASSSIGNMENT``
-:index:`PROPORTIONAL_SWAP_ASSSIGNMENT` = true, the maximum amount
-of swap space per slot will be set to the same proportion of the total
-swap as as the proportion of physical memory. That is, if a slot (static
-or dyanmic) has half of the physical memory of the machine, it will be
-given half of the swap space.
+can tell condor that a job should never use swap, by setting
+DISABLE_SWAP_FOR_JOB to true (the default is false).
 
 In addition to memory, the *condor_starter* can also control the total
 amount of CPU used by all processes within a job. To do this, it writes
@@ -1964,7 +2048,7 @@ HTCondor should constrain the number of running jobs which need the X
 software to 3. The administrator picks XSW as the name of the resource
 and sets the configuration
 
-::
+.. code-block:: text
 
     XSW_LIMIT = 3
 
@@ -1979,7 +2063,7 @@ not covered by specifically-named limits. The configuration variable
 ``CONCURRENCY_LIMIT_DEFAULT`` :index:`CONCURRENCY_LIMIT_DEFAULT`
 sets this value. For example,
 
-::
+.. code-block:: text
 
     CONCURRENCY_LIMIT_DEFAULT = 1
 
@@ -1994,20 +2078,20 @@ submit description file or adding an attribute to the job ClassAd. In
 the submit description file, an example job that requires the X software
 adds:
 
-::
+.. code-block:: text
 
     concurrency_limits = XSW
 
 This results in the job ClassAd attribute
 
-::
+.. code-block:: text
 
     ConcurrencyLimits = "XSW"
 
 Jobs may declare that they need more than one type of resource. In this
 case, specify a comma-separated list of resources:
 
-::
+.. code-block:: text
 
     concurrency_limits = XSW, DATABASE, FILESERVER
 
@@ -2017,7 +2101,7 @@ syntax that follows the resource name by a colon character and the
 integer number of resources. For example, if the above job uses three
 units of the file server resource, it is declared with
 
-::
+.. code-block:: text
 
     concurrency_limits = XSW, DATABASE, FILESERVER:3
 
@@ -2026,7 +2110,7 @@ member of the set, the configuration may become tedious, as it defines
 each member of the set individually. A shortcut defines a name for a
 set. For example, define the sets called ``LARGE`` and ``SMALL``:
 
-::
+.. code-block:: text
 
     CONCURRENCY_LIMIT_DEFAULT = 5
     CONCURRENCY_LIMIT_DEFAULT_LARGE = 100
@@ -2053,21 +2137,21 @@ number of network intensive jobs on each network to 10. Configuration of
 each execute machine advertises which local network it is on. A machine
 on ``"NETWORK_A"`` configures
 
-::
+.. code-block:: text
 
     NETWORK = "NETWORK_A"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 and a machine on ``"NETWORK_B"`` configures
 
-::
+.. code-block:: text
 
     NETWORK = "NETWORK_B"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 The configuration for the negotiator sets the concurrency limits:
 
-::
+.. code-block:: text
 
     NETWORK_A_LIMIT = 10
     NETWORK_B_LIMIT = 10
@@ -2075,7 +2159,7 @@ The configuration for the negotiator sets the concurrency limits:
 Each network intensive job identifies itself by specifying the limit
 within the submit description file:
 
-::
+.. code-block:: text
 
     concurrency_limits_expr = TARGET.NETWORK
 
@@ -2088,7 +2172,7 @@ the matched machine. The other limit is of a specialized application
 called ``"SWX"`` in this example. The negotiator configuration is
 extended to also include
 
-::
+.. code-block:: text
 
     SWX_LIMIT = 15
 
@@ -2096,7 +2180,7 @@ The network intensive job that also uses two units of the ``SWX``
 application identifies the needed resources in the single submit
 command:
 
-::
+.. code-block:: text
 
     concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 

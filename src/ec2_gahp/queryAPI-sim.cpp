@@ -356,7 +356,7 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
     }
 
     if( groupNames.empty() ) {
-        groupNames.push_back( "default" );
+        groupNames.emplace_back("default" );
     }
 
     // Create the (unique) corresponding Instance.

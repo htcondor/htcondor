@@ -289,11 +289,17 @@ bool XFormHash::rewind_to_state(MACRO_SET_CHECKPOINT_HDR * chkhdr, bool and_dele
 
 XFormHash::~XFormHash()
 {
-	if (LocalMacroSet.errors) delete LocalMacroSet.errors;
+	delete LocalMacroSet.errors;
 	LocalMacroSet.errors = NULL;
+	delete LocalMacroSet.table;
+	LocalMacroSet.table = NULL;
+	delete LocalMacroSet.metat;
+	LocalMacroSet.metat = NULL;
+	LocalMacroSet.sources.clear();
+	LocalMacroSet.apool.clear();
 }
 
-void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+void XFormHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
 {
 	va_list ap;
 	va_start(ap, format);
@@ -312,7 +318,7 @@ void XFormHash::push_error(FILE * fh, const char* format, ... ) //CHECK_PRINTF_F
 	free(message);
 }
 
-void XFormHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF_FORMAT(3,4);
+void XFormHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
 {
 	va_list ap;
 	va_start(ap, format);
@@ -394,7 +400,7 @@ void XFormHash::set_live_variable(const char *name, const char *live_value, MACR
 	}
 }
 
-void XFormHash::clear_live_variables()
+void XFormHash::clear_live_variables() const
 {
 	if (LocalMacroSet.metat) {
 		for (int ii = 0; ii < LocalMacroSet.size; ++ii) {
@@ -746,7 +752,7 @@ int MacroStreamXFormSource::open(const char * statements_in, int & offset, std::
 {
 	const char * statements = statements_in + offset;
 	size_t cb = strlen(statements);
-	char * buf = (char*)malloc(cb + 1);
+	char * buf = (char*)malloc(cb + 2);
 	file_string.set(buf);
 	StringTokenIterator lines(statements, 0, "\r\n");
 	int start, length, linecount = 0;
@@ -1316,7 +1322,7 @@ struct _parse_rules_args {
 const char * append_substituted_regex (
 	std::string &output,      // substituted regex will be appended to this
 	const char * input,       // original input passed to pcre_exec (ovector has offsets into this)
-	int ovector[], // output vector from pcre_exec
+	const int ovector[], // output vector from pcre_exec
 	int cvec,      // output count from pcre_exec
 	const char * replacement, // replacement template string
 	char tagChar)  // char that introduces a subtitution in replacement string, usually \ or $
@@ -1695,7 +1701,7 @@ public:
 	MacroStreamXFormSource & xforms;
 	MACRO_SET_CHECKPOINT_HDR* checkpoint;
 	FILE* outfile;
-	compat_classad::CondorClassAdFileParseHelper *input_helper;
+	CondorClassAdFileParseHelper *input_helper;
 	std::string errmsg;
 };
 

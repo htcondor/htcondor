@@ -16,11 +16,19 @@
  # 
  ############################################################### 
 
+set(ANALYSIS_UTIL_SRCS 
+	${CMAKE_CURRENT_SOURCE_DIR}/analysis.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/boolExpr.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/boolValue.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/condition.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/conversion.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/explain.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/interval.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/multiProfile.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/profile.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/resourceGroup.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/result.cpp
+PARENT_SCOPE
+)
 
-condor_selective_glob( "analysis.*;boolExpr.*;condition.*;multiProfile.*;profile.*;resourceGroup.*;boolValue.*;explain.*;interval.*;result.*" AnalSrcs )
-
-set_source_files_properties(interval.cpp PROPERTIES COMPILE_FLAGS
--Wno-float-equal)
-set( ANALYSIS_UTIL_SRCS "${AnalSrcs};${CMAKE_CURRENT_SOURCE_DIR}/conversion.cpp;${CMAKE_CURRENT_SOURCE_DIR}/conversion.h" PARENT_SCOPE)
-
-# # condor_shared_lib( gangmatch "portGraph.cpp;gmr.cpp;gangster.cpp")
+set_source_files_properties(interval.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)

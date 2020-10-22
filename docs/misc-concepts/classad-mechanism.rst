@@ -14,7 +14,7 @@ A ClassAd is a set of uniquely named expressions. Each named
 expression is called an attribute. The following shows
 ten attributes, a portion of an example ClassAd.
 
-::
+.. code-block:: condor-classad
 
     MyType       = "Machine"
     TargetType   = "Job"
@@ -84,7 +84,7 @@ HTCondor older than 7.5.1.
 The syntax varies slightly between Old and New ClassAds. Here is an
 example ClassAd presented in both forms. The Old form:
 
-::
+.. code-block:: condor-classad
 
     Foo = 3
     Bar = "ab\"cd\ef"
@@ -92,7 +92,7 @@ example ClassAd presented in both forms. The Old form:
 
 The New form:
 
-::
+.. code-block:: condor-classad
 
     [
     Foo = 3;
@@ -209,7 +209,7 @@ The operators that may be used in ClassAd expressions are similar to
 those available in C. The available operators and their relative
 precedence is shown in the following example:
 
-::
+.. code-block:: text
 
       - (unary negation)   (high precedence)
       *   /
@@ -243,7 +243,7 @@ Integer, but only returns the value 1 or 0 (implying ``True`` or
 ``False``), it is called out as Boolean. The format of each function is
 given as
 
-::
+.. code-block:: text
 
     ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
 
@@ -557,7 +557,7 @@ Optional parameters are given within square brackets.
 
     Here are examples:
 
-    ::
+    .. code-block:: text
 
              8     = quantize(3, 8)
              4     = quantize(3, 2)
@@ -659,7 +659,7 @@ Optional parameters are given within square brackets.
 
     For example:
 
-    ::
+    .. code-block:: text
 
             "a, b, c" = join(", ", "a", "b", "c")
             "abc"   = join(split("a b c"))
@@ -701,13 +701,52 @@ Optional parameters are given within square brackets.
     evaluates to ``ERROR`` or ``UNDEFINED``, ``ERROR`` is returned.
 
     This function returns ``ERROR`` if other than 2 arguments are given.
-    
+
     :index:`stricmp()<single: stricmp(); ClassAd functions>`
 
 ``Integer stricmp(AnyType Expr1, AnyType Expr2)``
     This function is the same as ``strcmp``, except that letter case is
-    not significant. 
+    not significant.
+
+    :index:`versioncmp()<single: versioncmp(); ClassAd functions>`
+
+``Integer versioncmp(String left, String right)``
+    This function version-compares two strings.  It returns an integer
+
+    - less than zero if ``left`` is an earlier version than ``right``
+    - zero if the strings are identical
+    - more than zero if ``left`` is a later version than ``right``.
+
+    A version comparison is a lexicographic comparison unless the first
+    difference between the two strings occurs in a string of digits, in
+    which case, sort by the value of that number (assuming that more
+    leading zeroes mean smaller numbers).  Thus ``7.x`` is earlier than
+    ``7.y`` and ``7.01`` is earlier than ``7.10``.
+
+    :index:`versionGT()<single: versionGT(); ClassAd functions>`
+    :index:`versionLT()<single: versionLT(); ClassAd functions>`
+    :index:`versionGE()<single: versionGE(); ClassAd functions>`
+    :index:`versionLE()<single: versionLE(); ClassAd functions>`
+    :index:`versionEQ()<single: versionEQ(); ClassAd functions>`
+
+``Boolean versionGT(String left, String right)``
+``Boolean versionLT(String left, String right)``
+``Boolean versionGE(String left, String right)``
+``Boolean versionLE(String left, String right)``
+``Boolean versionEQ(String left, String right)``
+
+    As ``versioncmp()`` (above), but for a specific comparison and returning
+    a boolean.  The two letter codes stand for "Greater Than", "Less Than",
+    "Greater than or Equal", "Less than or Equal", and "EQual", respectively.
+
+    :index:`version_in_range()<single: version_in_range; ClassAd functions>`
+
+``Boolean version_in_range(String version, String min, String max)``
+
+    Equivalent to ``versionLE(min, version) && versionLE(version, max)``.
+
     :index:`toUpper()<single: toUpper(); ClassAd functions>`
+
 ``String toUpper(AnyType Expr)``
     The single argument is converted to type ``String`` by function
     ``string(Expr)``. The return value is this string, with all lower
@@ -1360,7 +1399,7 @@ For both machine and job, the ``rank`` expression specifies the
 desirability of the match (where higher numbers mean better matches).
 For example, a job ClassAd may contain the following expressions:
 
-::
+.. code-block:: condor-classad
 
     Requirements = (Arch == "INTEL") && (OpSys == "LINUX")
     Rank         = TARGET.Memory + TARGET.Mips
@@ -1376,13 +1415,12 @@ expression), while satisfying other required criteria.
 Similarly, the machine may place constraints and preferences on the jobs
 that it will run by setting the machine's configuration. For example,
 
-::
+.. code-block:: condor-classad
 
         Friend        = Owner == "tannenba" || Owner == "wright"
         ResearchGroup = Owner == "jbasney" || Owner == "raman"
         Trusted       = Owner != "rival" && Owner != "riffraff"
-        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 &&
-                             KeyboardIdle > 15*60 )
+        START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 && KeyboardIdle > 15*60 )
         RANK          = Friend + ResearchGroup*10
 
 The above policy states that the computer will never run jobs owned by
@@ -1420,15 +1458,15 @@ Here are several examples. To find all computers which have had their
 keyboards idle for more than 60 minutes and have more than 4000 MB of
 memory, the desired ClassAd expression is
 
-::
+.. code-block:: condor-classad-expr
 
     KeyboardIdle > 60*60 && Memory > 4000
 
 On a Unix platform, the command appears as
 
-::
+.. code-block:: console
 
-    % condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
+    $ condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
 
     Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime
     100
@@ -1443,9 +1481,9 @@ On a Unix platform, the command appears as
 
 The Windows equivalent command is
 
-::
+.. code-block:: doscon
 
-    >condor_status -const "KeyboardIdle > 60*60 && Memory > 4000"
+    > condor_status -const "KeyboardIdle > 60*60 && Memory > 4000"
 
 Here is an example for a Unix platform that utilizes a regular
 expression ClassAd function to list specific information. A file
@@ -1453,9 +1491,9 @@ contains ClassAd information. *condor_advertise* is used to inject this
 information, and *condor_status* constrains the search with an
 expression that contains a ClassAd function.
 
-::
+.. code-block:: console
 
-    % cat ad
+    $ cat ad
     MyType = "Generic"
     FauxType = "DBMS"
     Name = "random-test"
@@ -1464,10 +1502,9 @@ expression that contains a ClassAd function.
     DaemonStartTime = 1153192799
     UpdateSequenceNumber = 1
 
-    % condor_advertise UPDATE_AD_GENERIC ad
+    $ condor_advertise UPDATE_AD_GENERIC ad
 
-    % condor_status -any -constraint 'FauxType=="DBMS" &&
-      regexp("random.*", Name, "i")'
+    $ condor_status -any -constraint 'FauxType=="DBMS" && regexp("random.*", Name, "i")'
 
     MyType               TargetType           Name
 
@@ -1476,7 +1513,7 @@ expression that contains a ClassAd function.
 The ClassAd expression describing a machine that advertises a Windows
 operating system:
 
-::
+.. code-block:: condor-classad-expr
 
     OpSys == "WINDOWS"
 
@@ -1484,17 +1521,17 @@ Here are three equivalent ways on a Unix platform to list all machines
 advertising a Windows operating system. Spaces appear in these examples
 to show where they are permitted.
 
-::
+.. code-block:: console
 
-    % condor_status -constraint ' OpSys == "WINDOWS"  '
+    $ condor_status -constraint ' OpSys == "WINDOWS"  '
 
-::
+.. code-block:: console
 
-    % condor_status -constraint OpSys==\"WINDOWS\"
+    $ condor_status -constraint OpSys==\"WINDOWS\"
 
-::
+.. code-block:: console
 
-    % condor_status -constraint "OpSys==\"WINDOWS\""
+    $ condor_status -constraint "OpSys==\"WINDOWS\""
 
 The equivalent command on a Windows platform to list all machines
 advertising a Windows operating system must delimit the single argument
@@ -1502,9 +1539,9 @@ with double quote marks, and then escape the needed double quote marks
 that identify the string within the expression. Spaces appear in this
 example where they are permitted.
 
-::
+.. code-block:: doscon
 
-    >condor_status -constraint " OpSys == ""WINDOWS"" "
+    > condor_status -constraint " OpSys == ""WINDOWS"" "
 
 Extending ClassAds with User-written Functions
 ----------------------------------------------
@@ -1531,7 +1568,7 @@ the following steps on Linux:
 -  Build ``shared.cpp`` into a shared library. On Linux, the command
    line to do so is
 
-   ::
+   .. code-block:: console
 
        $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \
          -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
@@ -1539,7 +1576,7 @@ the following steps on Linux:
 -  Copy the file ``shared.so`` to a location that all of the HTCondor
    tools and daemons can read.
 
-   ::
+   .. code-block:: console
 
        $ cp shared.so `condor_config_val LIBEXEC`
 
@@ -1548,14 +1585,14 @@ the following steps on Linux:
    configuration variable to the full name of the shared library. In
    this case,
 
-   ::
+   .. code-block:: condor-config
 
        CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
 
 -  Restart HTCondor.
 -  Test the new functions by running
 
-   ::
+   .. code-block:: console
 
        $ condor_status -format "%s\n" todays_date()
 

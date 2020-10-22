@@ -197,7 +197,7 @@ main_init( int argc, char ** const argv )
 
 	(void)daemonCore->Register_Pipe (stdin_buffer.getPipeEnd(),
 					"stdin pipe",
-					(PipeHandler)&stdin_pipe_handler,
+					&stdin_pipe_handler,
 					"stdin_pipe_handler");
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
@@ -234,9 +234,8 @@ main_init( int argc, char ** const argv )
 	int reaper_id =
 		daemonCore->Register_Reaper(
 							"worker_thread_reaper",
-							(ReaperHandler)&worker_thread_reaper,
-							"worker_thread_reaper",
-							NULL);
+							&worker_thread_reaper,
+							"worker_thread_reaper");
 
 
 
@@ -245,8 +244,6 @@ main_init( int argc, char ** const argv )
 									1,
 									flush_pending_requests,
 									"flush_pending_requests");
-									
-									  
 
 
 	std::string exec_name;
@@ -322,7 +319,7 @@ main_init( int argc, char ** const argv )
 
 
 int
-stdin_pipe_handler(Service*, int) {
+stdin_pipe_handler(int) {
 
 	std::string* line;
 	while ((line = stdin_buffer.GetNextLine()) != NULL) {
@@ -416,8 +413,10 @@ stdin_pipe_handler(Service*, int) {
 				flush_request(0, command);
 				flush_request(1, command);
 				gahp_output_return_success();
-			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
-				flush_request (1, 	// worker for stage in requests
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0 ||
+					   strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_OUT) == 0 ||
+					   strcasecmp (args.argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY) == 0) {
+				flush_request (1, 	// worker for staging requests
 							   command);
 				gahp_output_return_success(); 
 			} else {
@@ -483,7 +482,7 @@ process_next_request() {
 */
 
 int
-worker_thread_reaper (Service*, int pid, int exit_status) {
+worker_thread_reaper (int pid, int exit_status) {
 
 	dprintf (D_ALWAYS, "Worker process pid=%d exited with status %d\n", 
 			 pid, 
@@ -554,8 +553,8 @@ verify_gahp_command(char ** argv, int argc) {
 
 		return TRUE;
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY) == 0) {
-		// Expecting:GAHP_COMMAND_JOB_REFRESH_PROXY <req_id> <schedd_name> <job_id> <proxy file>
-		return verify_number_args (argc, 5) &&
+		// Expecting:GAHP_COMMAND_JOB_REFRESH_PROXY <req_id> <schedd_name> <job_id> <proxy file> [<expiration time>]
+		return (verify_number_args (argc, 5) || verify_number_args (argc, 6)) &&
 				verify_request_id (argv[1]) &&
 				verify_schedd_name (argv[2]) &&
 				verify_job_id (argv[3]);

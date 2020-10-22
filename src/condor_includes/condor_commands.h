@@ -81,7 +81,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define REJECTED			(SCHED_VERS+26)
 #define X_EVENT_NOTIFICATION		(SCHED_VERS+27)
 //#define RECONFIG			(SCHED_VERS+28)			/* Not used */
-//#define GET_HISTORY			(SCHED_VERS+29)		/* Not used */
+#define GET_HISTORY			(SCHED_VERS+29)		/* repurposed in 8.9.7 to be query startd history */
 //#define UNLINK_HISTORY_FILE			(SCHED_VERS+30)	/* Not used */
 //#define UNLINK_HISTORY_FILE_DONE	(SCHED_VERS+31)		/* Not used */
 //#define DO_NOT_UNLINK_HISTORY_FILE	(SCHED_VERS+32)	/* Not used */
@@ -185,6 +185,10 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 
 // Given a token request from a trusted collector, generate an identity token.
 #define COLLECTOR_TOKEN_REQUEST (SCHED_VERS+123)
+// Get the SubmitterCeiling
+#define GET_CEILING (SCHED_VERS+124)
+#define SET_CEILING (SCHED_VERS+125)
+
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
@@ -512,7 +516,7 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define CREDD_REMOVE_CRED (CREDD_BASE+2)
 #define CREDD_QUERY_CRED (CREDD_BASE+3)
 #define CREDD_REFRESH_ALL (CREDD_BASE+20)
-#define ZKM_QUERY_CREDS (CREDD_BASE+30)
+#define CREDD_CHECK_CREDS (CREDD_BASE+30)	// check to see if the desired oauth tokens are stored
 #define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
 #define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
 
@@ -544,6 +548,8 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 /* Replies specific to the REQUEST_CLAIM command */
 #define REQUEST_CLAIM_LEFTOVERS		3
 #define REQUEST_CLAIM_PAIR			4
+#define REQUEST_CLAIM_LEFTOVERS_2	5
+#define REQUEST_CLAIM_PAIR_2		6
 
 /* Replies specific to the SWAP_CLAIM_AND_ACTIVATION command */
 #define SWAP_CLAIM_ALREADY_SWAPPED	4

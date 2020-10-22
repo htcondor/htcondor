@@ -31,6 +31,7 @@
 #include "read_multiple_logs.h"
 #include "CondorError.h"
 #include "stringSpace.h"
+#include "submit_utils.h"
 
 #include <deque>
 #include <forward_list>
@@ -64,6 +65,17 @@ typedef int JobID_t;
   typedef int EdgeID_t;
   #define NO_EDGE_ID -1
 #endif
+
+enum NodeType {
+	JOB,
+	FINAL,
+	PROVISIONER
+};
+
+#define EXEC_MASK 0x1
+#define ABORT_TERM_MASK 0x2
+#define IDLE_MASK 0x4 // set when proc is idle, formerly a separate _isIdle vector
+#define HOLD_MASK 0x8 // set when proc is held, formerly a separate _onHold vector
 
 /**  The job class represents a job in the DAG and its state in the HTCondor
      system.  A job is given a name, a CondorID, and three queues.  The
@@ -147,7 +159,7 @@ class Job {
 	#else
 		// Once we are done with AdjustEdges this should agree
 		// but some code checks for parents during parse time (see the splice code)
-		// so we check _numparents (set at parse time) and also _parent (set by AdjustEdges)
+		// so we check _numparehttps://politics.theonion.com/wisconsin-primary-voters-receive-i-voted-gravestones-1842729790nts (set at parse time) and also _parent (set by AdjustEdges)
 		return _parent == NO_ID && _numparents == 0;
 	#endif
 	}
@@ -198,9 +210,11 @@ class Job {
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
+		@param submitDesc SubmitHash of all submit parameters (optional, alternative
+		    to cmdFile)
     */
     Job( const char* jobName,
-				const char* directory, const char* cmdFile ); 
+				const char* directory, const char* cmdFile );
   
     ~Job();
 
@@ -216,24 +230,28 @@ class Job {
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
+	inline SubmitHash* GetSubmitDesc() const { return _submitDesc; }
+	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
 	inline JobID_t GetJobID() const { return _jobID; }
 	inline int GetRetryMax() const { return retry_max; }
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
+	const char* GetHoldScriptName() const;
 	static const char* JobTypeString() { return "HTCondor"; }
 
-	bool AddScript( bool post, const char *cmd, int defer_status,
+	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
 				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 
-	void SetFinal(bool value) { _final = value; }
-	bool GetFinal() const { return _final; }
+	void SetType( NodeType type ) { _type = type; }
+	NodeType GetType() const { return _type; }
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) const { return _noop; }
 
 	Script * _scriptPre;
 	Script * _scriptPost;
+	Script * _scriptHold;
 
 
 #ifdef DEAD_CODE
@@ -326,6 +344,12 @@ class Job {
 	*/
 	void SetProcIsIdle( int proc, bool isIdle );
 
+	/** Set an event for a proc
+		@param proc The proc for which we're setting
+		@param event The event
+	*/
+	void SetProcEvent( int proc, int event );
+
 		/** Is the specified node a child of this node?
 			@param child Pointer to the node to check for childhood.
 			@return true: specified node is our child, false: otherwise
@@ -362,7 +386,7 @@ class Job {
 	bool SanityCheck() const;
 
 	bool CanAddParent(Job* parent, MyString &whynot);
-	bool CanAddChild(Job* child, MyString &whynot);
+	bool CanAddChild(Job* child, MyString &whynot) const;
 	// check to see if we can add this as a child, and it allows us as a parent..
 	bool CanAddChildren(std::forward_list<Job*> & children, MyString &whynot);
 #ifdef DEAD_CODE
@@ -379,7 +403,7 @@ class Job {
 
 	bool AddVar(const char * name, const char * value, const char* filename, int lineno);
 	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }
-	bool HasVars() { return ! varsFromDag.empty(); }
+	bool HasVars() const { return ! varsFromDag.empty(); }
 	int PrintVars(std::string &vars);
 
 	// called after the DAG has been parsed to build the parent and waiting edge lists
@@ -396,13 +420,13 @@ class Job {
         	@return true: node should abort the DAG; false node should
 				not abort the DAG
 		*/
-	bool DoAbort() { return have_abort_dag_val &&
+	bool DoAbort() const { return have_abort_dag_val &&
 				( retval == abort_dag_val ); }
 
 		/** Should we retry this node (if it failed)?
 			@return true: retry the node; false: don't retry
 		*/
-	bool DoRetry() { return !DoAbort() &&
+	bool DoRetry() const { return !DoAbort() &&
 				( GetRetries() < GetRetryMax() ); }
 
     /** Returns true if the node's pre script, batch job, or post
@@ -485,7 +509,7 @@ class Job {
 	/** Get the time at which the most recent event occurred for this job.
 		@return the last event time.
 	*/
-	time_t GetLastEventTime() { return _lastEventTime; }
+	time_t GetLastEventTime() const { return _lastEventTime; }
 
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
@@ -495,22 +519,6 @@ class Job {
 	int GetSubProc() const { return _CondorID._subproc; }
 	bool SetCondorID(const CondorID& cid);
 	const CondorID& GetID() const { return _CondorID; }
-
-		/** Update the DAGMan metrics for an execute event.
-			@param proc The proc ID of this event.
-			@param eventTime The time at which this event occurred.
-			@param metrics The DagmanMetrics object to update.
-		*/
-	void ExecMetrics( int proc, const struct tm &eventTime,
-				DagmanMetrics *metrics );
-
-		/** Update the DAGMan metrics for a terminated or aborted event.
-			@param proc The proc ID of this event.
-			@param eventTime The time at which this event occurred.
-			@param metrics The DagmanMetrics object to update.
-		*/
-	void TermAbortMetrics( int proc, const struct tm &eventTime,
-				DagmanMetrics *metrics );
 
 private:
     /** */ CondorID _CondorID;
@@ -567,8 +575,8 @@ private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
 	bool _noop;
-		// whether this is a final job
-	bool _final;
+		// What type of node (job, final, provisioner)
+	NodeType _type;
 public:
 
 #ifdef DEAD_CODE
@@ -647,6 +655,10 @@ private:
         // filename of condor submit file
         // Do not malloc or free! _directory is managed in a StringSpace!
     const char * _cmdFile;
+
+		// SubmitHash of submit desciption
+		// Alternative submission method to _cmdFile above.
+	SubmitHash* _submitDesc;
 
 	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
 	// otherwise NULL).
@@ -739,16 +751,6 @@ private:
 		// can also be "local").
 	char *_jobTag;
 
-		//
-		// bit flags for _gotEvents
-		//
-	enum {
-		EXEC_MASK = 0x1,
-		ABORT_TERM_MASK = 0x2,
-		IDLE_MASK = 0x4, // set when proc is idle, formerly a separate _isIdle vector
-		HOLD_MASK = 0x8, // set when proc is held, formerly a separate _onHold vector
-	};
-
 		// _gotEvents[proc] & EXEC_MASK is true iff we've gotten an
 		// execute event for proc; _gotEvents[proc] & ABORT_TERM_MASK
 		// is true iff we've gotten an aborted or terminated event
@@ -819,10 +821,10 @@ public:
 		_ary.insert(it, id);
 		return true;
 	}
-	inline size_t size() {
+	inline size_t size() const {
 		return _ary.size();
 	}
-	inline bool empty() {
+	inline bool empty() const {
 		return _ary.empty();
 	}
 
@@ -905,7 +907,7 @@ public:
 		return NULL;
 	}
 
-	int Waiting() { return _num_waiting; }
+	int Waiting() const { return _num_waiting; }
 
 	void MarkAllWaiting() {
 		_num_waiting = (int)_wait.size();

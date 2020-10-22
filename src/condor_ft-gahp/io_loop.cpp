@@ -227,7 +227,7 @@ main_init( int, char ** const)
 
 	(void)daemonCore->Register_Pipe (stdin_buffer.getPipeEnd(),
 					"stdin pipe",
-					(PipeHandler)&stdin_pipe_handler,
+					&stdin_pipe_handler,
 					"stdin_pipe_handler");
 
 	// Setup dprintf to display pid
@@ -242,33 +242,25 @@ main_init( int, char ** const)
 	download_sandbox_reaper_id = daemonCore->Register_Reaper(
 				"download_sandbox_reaper",
 				&download_sandbox_reaper,
-				"download_sandbox",
-				NULL
-				);
+				"download_sandbox");
 	dprintf(D_FULLDEBUG, "registered download_sandbox_reaper() at %i\n", download_sandbox_reaper_id);
 
 	upload_sandbox_reaper_id = daemonCore->Register_Reaper(
 				"upload_sandbox_reaper",
 				&upload_sandbox_reaper,
-				"upload_sandbox",
-				NULL
-				);
+				"upload_sandbox");
 	dprintf(D_FULLDEBUG, "registered upload_sandbox_reaper() at %i\n", upload_sandbox_reaper_id);
 
 	download_proxy_reaper_id = daemonCore->Register_Reaper(
 				"download_proxy_reaper",
 				&download_proxy_reaper,
-				"download_proxy",
-				NULL
-				);
+				"download_proxy");
 	dprintf(D_FULLDEBUG, "registered download_proxy_reaper() at %i\n", download_proxy_reaper_id);
 
 	destroy_sandbox_reaper_id = daemonCore->Register_Reaper(
 				"destroy_sandbox_reaper",
 				&destroy_sandbox_reaper,
-				"destroy_sandbox",
-				NULL
-				);
+				"destroy_sandbox");
 	dprintf(D_FULLDEBUG, "registered destroy_sandbox_reaper() at %i\n", destroy_sandbox_reaper_id);
 
 	dprintf (D_FULLDEBUG, "FT-GAHP IO initialized\n");
@@ -276,7 +268,7 @@ main_init( int, char ** const)
 
 
 int
-stdin_pipe_handler(Service*, int) {
+stdin_pipe_handler(int) {
 
 	std::string* line;
 	while ((line = stdin_buffer.GetNextLine()) != NULL) {
@@ -368,6 +360,7 @@ stdin_pipe_handler(Service*, int) {
 										claimid.secSessionId(),
 										claimid.secSessionKey(),
 										claimid.secSessionInfo(),
+										AUTH_METHOD_FAMILY,
 										CONDOR_PARENT_FQU,
 										NULL,
 										0,
@@ -1192,7 +1185,7 @@ int do_command_destroy_sandbox(void *arg, Stream*) {
 }
 
 
-int download_sandbox_reaper(Service*, int pid, int status) {
+int download_sandbox_reaper(int pid, int status) {
 
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
@@ -1234,7 +1227,7 @@ int download_sandbox_reaper(Service*, int pid, int status) {
 	return 0;
 }
 
-int upload_sandbox_reaper(Service*, int pid, int status) {
+int upload_sandbox_reaper(int pid, int status) {
 
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
@@ -1270,7 +1263,7 @@ int upload_sandbox_reaper(Service*, int pid, int status) {
 	return 0;
 }
 
-int download_proxy_reaper(Service*, int pid, int status) {
+int download_proxy_reaper(int pid, int status) {
 
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
@@ -1307,7 +1300,7 @@ int download_proxy_reaper(Service*, int pid, int status) {
 	return 0;
 }
 
-int destroy_sandbox_reaper(Service*, int pid, int status) {
+int destroy_sandbox_reaper(int pid, int status) {
 
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;

@@ -128,7 +128,7 @@ public:
 		// We must "decorate".
 	MyString to_ip_and_port_string() const;
 		// Have I mentioned recently how much I hate life?
-	MyString to_ccb_safe_string();
+	MyString to_ccb_safe_string() const;
 		// The string will fit in a buffer whose size is as least
 		// IP_STRING_BUF_SIZE.
 		// if it fails on inet_ntop(), returns NULL and given buf

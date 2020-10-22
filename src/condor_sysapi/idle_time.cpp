@@ -79,13 +79,6 @@ static int is_number(const char *str);
 
 #endif
 
-/* we must now use the kstat interface to get this information under later
-	releases of Solaris */
-#if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
-static time_t solaris_kbd_idle(void);
-static time_t solaris_mouse_idle(void);
-#endif
-
 #endif
 
 
@@ -223,12 +216,6 @@ static char *AltUtmpName = "";
 static char *UtmpName = "/var/run/utx.active";
 static char *AltUtmpName = "";
 #define UTMP_KIND utmpx
-#elif defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
-#include <utmpx.h>
-static char *UtmpName = "/etc/utmpx";
-static char *AltUtmpName = "/var/adm/utmpx";
-#undef UTMP_KIND
-#define UTMP_KIND utmpx
 #else
 static char *UtmpName = "/etc/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
@@ -324,19 +311,11 @@ all_pty_idle_time( time_t now )
 	}
 
 	if( !dev ) {
-#if defined(Solaris)
-		dev = new Directory( "/devices/pseudo" );
-#else
 		dev = new Directory( "/dev" );
-#endif
 	}
 
 	for( dev->Rewind();  (f = dev->Next()); ) {
-#if defined(Solaris)
-		if( strncmp("pts",f,3) == MATCH ) 
-#else
 		if( strncmp("tty",f,3) == MATCH || strncmp("pty",f,3) == MATCH ) 
-#endif
 		{
 			idle_time = dev_idle_time( f, now );
 			if( idle_time < answer ) {
@@ -365,7 +344,7 @@ all_pty_idle_time( time_t now )
 		this stuff is created each and every time this function is called.
 		psilord 1/4/2002
 	*/
-#if defined(LINUX) && (!defined(GLIBC20) && !defined(GLIBC21))
+#if defined(LINUX) 
 	if (dev != NULL)
 	{
 		delete dev;
@@ -400,9 +379,6 @@ dev_idle_time( const char *path, time_t now )
 {
 	struct stat	buf;
 	time_t answer;
-#  if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
-	time_t kstat_answer;
-#  endif
 	static char pathname[100] = "/dev/";
 	static int null_major_device = -1;
 
@@ -457,36 +433,6 @@ dev_idle_time( const char *path, time_t now )
 	if( buf.st_atime > now ) {
 		answer = 0;
 	}
-
-	/* under solaris2[89], we'll catch when someone asks about specifically
-		about a console or mouse device, and specially figure
-		them out since we cannot stat() them anymore under
-		solaris 8 update 6+ or solaris 9. stat() will return 0
-		for the access time no matter what. */
-
-#  if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
-	
-		/* if I happen not to be dealing with a console device, we better 
-			choose what the stat() answer would have been, so initialize this
-			to zero for force it when the MAX macro gets used */
-		kstat_answer = 0;
-
-		if (strstr(path, "kbd") != NULL)
-		{
-			kstat_answer = solaris_kbd_idle();
-		}
-
-		if (strstr(path, "mouse") != NULL || strstr(path, "consms") != NULL)
-		{
-			kstat_answer = solaris_mouse_idle();
-		}
-	
-	/* ok, now we'll grab the higher of the two answers. zero for the busted
-		stat() or the real value for the kstat(). If they are both zero,
-		then, well, someone is using it */
-	answer = MAX(answer, kstat_answer);
-
-#  endif
 
 	if( IsDebugVerbose( D_IDLE ) ) {
         dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
@@ -616,7 +562,7 @@ get_mouse_info(idle_t *fill_me)
 		    tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
 		    do {
 			tok = strtok_r(NULL, DELIMS, &tok_loc);
-			if (is_number(tok)) {
+			if (tok && is_number(tok)) {
 			    /* It is ok if this overflows */
 			    fill_me->num_mouse_intr += strtoul(tok, NULL, 10);
 
@@ -873,231 +819,6 @@ extract_idle_time(
 }
 
 #endif  /* the end of the Mac OS X code, and the  */
-
-/* under solaris 8 with update 6 and later, and solaris 9, use the kstat 
-	interface to determine the console and mouse idle times. stat() on the
-	actual kbd or mouse device no longer returns(by design according to 
-	solaris) the access time. These are localized functions static to this
-	object file. */
-#if defined(Solaris28) || defined(Solaris29) || defined(Solaris10) || defined(Solaris11)
-static time_t solaris_kbd_idle(void)
-{
-	kstat_ctl_t     *kc = NULL;  /* libkstat cookie */ 
-	kstat_t         *kbd_ksp = NULL; 
-	void *p = NULL;
-	time_t answer;
-
-	/* open the kstat device */
-	if ((kc = kstat_open()) == NULL) {
-
-		dprintf(D_FULLDEBUG, 
-			"solaris_kbd_idle(): Can't open /dev/kstat: %d(%s)\n",
-			errno, strerror(errno));
-
-		dprintf(D_FULLDEBUG, "solaris_kbd_idle(): assuming zero idle time!\n");
-
-		return (time_t)0;
-	}
-
-	/* find the keyboard device */
-	kbd_ksp = kstat_lookup(kc, "conskbd", 0, "activity");
-	if (kbd_ksp == NULL) {
-		
-		if (errno == ENOMEM)
-		{
-			/* NOTE: This is an educated guess for what a Solaris machine which 
-				doesn't support the lookup I'm asking gives back as an errno
-				here. Since this is a possibility on solaris 8 machines
-				BEFORE Update 6, I have to notice it, and then silently
-				ignore it, because the stat() that was done previously on the
-				device will have worked as expected. I suppose it might
-				be possible to have this error happen on a machine where
-				this code should have worked, in which case sorry.
-				*/
-			if (kstat_close(kc) != 0)
-			{
-				/* XXX I hope there isn't a resource leak if this ever 
-					happens */
-				dprintf(D_FULLDEBUG, 
-					"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
-					errno, strerror(errno));
-			}
-
-			return (time_t)0;
-		}
-
-		dprintf(D_FULLDEBUG, 
-			"solaris_kbd_idle(): Keyboard init failed: %d(%s)\n",
-			errno, strerror(errno));
-
-		dprintf(D_FULLDEBUG, "solaris_kbd_idle(): assuming zero idle time!\n");
-
-		if (kstat_close(kc) != 0)
-		{
-			/* XXX I hope there isn't a resource leak if this ever happens */
-	
-			dprintf(D_FULLDEBUG, 
-				"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
-				errno, strerror(errno));
-		}
-
-		return (time_t)0;
-	}
-
-	/* get the idle time from the keyboard device */
-	if (kstat_read(kc, kbd_ksp, NULL) == -1 ||
-		(p = kstat_data_lookup(kbd_ksp, "idle_sec")) == NULL)
-	{
-		dprintf(D_FULLDEBUG, 
-			"solaris_kbd_idle(): Can't get idle time from /dev/kstat: %d(%s)\n",
-			errno, strerror(errno));
-
-		if (kstat_close(kc) != 0)
-		{
-			/* XXX I hope there isn't a resource leak if this ever happens */
-	
-			dprintf(D_FULLDEBUG, 
-				"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
-				errno, strerror(errno));
-		}
-
-		return (time_t)0;
-	}
-
-	/* ok sanity check it, and look at the value BEFORE I do a kstat_close */
-	answer = ((kstat_named_t *)p)->value.l;
-	if (answer < (time_t)0)
-	{
-		dprintf(D_FULLDEBUG,
-			"solaris_kbd_idle(): WARNING! Fixing a negative idle time!\n");
-			
-		answer = 0;
-	}
-
-	/* close kstat */
-	if (kstat_close(kc) != 0)
-	{
-		/* XXX I hope there isn't a resource leak if this ever happens */
-
-		dprintf(D_FULLDEBUG, 
-			"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
-			errno, strerror(errno));
-	}
-	
-	return answer;
-}
-
-static time_t solaris_mouse_idle(void)
-{
-	kstat_ctl_t     *kc = NULL;  /* libkstat cookie */ 
-	kstat_t         *ms_ksp = NULL; 
-	time_t answer;
-	void *p = NULL;
-
-	/* open kstat */
-	if ((kc = kstat_open()) == NULL) {
-
-		dprintf(D_ALWAYS, 
-			"solaris_mouse_idle(): Can't open /dev/kstat: %d(%s)\n",
-			errno, strerror(errno));
-
-		dprintf(D_FULLDEBUG, 
-			"solaris_mouse_idle(): assuming zero idle time!\n");
-
-		return (time_t)0;
-	}
-
-	/* find the mouse device */
-	ms_ksp = kstat_lookup(kc, "consms", 0, "activity");
-	if (ms_ksp == NULL) {
-
-		if (errno == ENOMEM)
-		{
-			/* NOTE: This is an educated guess for what a Solaris machine which 
-				doesn't support the lookup I'm asking gives back as an errno
-				here. Since this is a possibility on solaris 8 machines
-				BEFORE Update 6, I have to notice it, and then silently
-				ignore it, because the stat() that was done previously on the
-				device will have worked as expected. I suppose it might
-				be possible to have this error happen on a machine where
-				this code should have worked, in which case sorry.
-				*/
-			if (kstat_close(kc) != 0)
-			{
-				/* XXX I hope there isn't a resource leak if this ever 
-					happens */
-				dprintf(D_FULLDEBUG, 
-					"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
-					errno, strerror(errno));
-			}
-
-			return (time_t)0;
-		}
-
-		dprintf(D_FULLDEBUG, 
-			"solaris_mouse_idle(): Mouse init failed: %d(%s)\n",
-			errno, strerror(errno));
-
-		dprintf(D_FULLDEBUG, 
-			"solaris_mouse_idle(): assuming zero idle time!\n");
-
-		if (kstat_close(kc) != 0)
-		{
-			/* XXX I hope there isn't a resource leak if this ever happens */
-
-			dprintf(D_FULLDEBUG,
-				"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
-				errno, strerror(errno));
-		}
-
-		return (time_t)0;
-	}
-
-	/* get the idle time from the mouse device */
-	if (kstat_read(kc, ms_ksp, NULL) == -1 ||
-		(p = kstat_data_lookup(ms_ksp, "idle_sec")) == NULL)
-	{
-		dprintf(D_FULLDEBUG,
-			"solaris_mouse_idle(): Can't get idle time from /dev/kstat: "
-				"%d(%s)\n", errno, strerror(errno));
-
-		if (kstat_close(kc) != 0)
-		{
-			/* XXX I hope there isn't a resource leak if this ever happens */
-
-			dprintf(D_FULLDEBUG, 
-				"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
-				errno, strerror(errno));
-		}
-
-		return (time_t)0;
-	}
-
-	/* ok, sanity check the result */
-	answer = ((kstat_named_t *)p)->value.l;
-	if (answer < (time_t)0)
-	{
-		dprintf(D_FULLDEBUG,
-			"solaris_mouse_idle(): WARNING! Fixing a negative idle time!\n");
-			
-		answer = 0;
-	}
-
-	/* close kstat */
-	if (kstat_close(kc) != 0)
-	{
-		/* XXX I hope there isn't a resource leak if this ever happens */
-
-		dprintf(D_FULLDEBUG,
-			"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
-			errno, strerror(errno));
-	}
-
-	return answer;
-}
-
-#endif
-
 
 /* ok, the purpose of this code is to create an interface that is a C linkage
  out of this file. This will get a little ugly. The sysapi entry points

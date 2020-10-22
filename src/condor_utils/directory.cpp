@@ -160,7 +160,7 @@ Directory::~Directory()
 }
 
 filesize_t
-Directory::GetDirectorySize()
+Directory::GetDirectorySize(size_t * number_of_entries /*=NULL*/)
 {
 	const char* thefile = NULL;
 	filesize_t dir_size = 0;
@@ -170,10 +170,13 @@ Directory::GetDirectorySize()
 	Rewind();
 
 	while ( (thefile=Next()) ) {
+		if (number_of_entries) {
+			(*number_of_entries)++;
+		}
 		if ( IsDirectory() && !IsSymlink() ) {
 			// recursively traverse down directory tree
 			Directory subdir( GetFullPath(), desired_priv_state );
-			dir_size += subdir.GetDirectorySize();
+			dir_size += subdir.GetDirectorySize(number_of_entries);
 		} else {
 			dir_size += GetFileSize();
 		}
@@ -601,16 +604,16 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 	}
 
 	if( rval != 0 ) { 
-		MyString errmsg;
+		std::string errmsg;
 		if( rval < 0 ) {
 			errmsg = "my_spawnl returned ";
-			errmsg += IntToStr( rval );
+			errmsg += std::to_string( rval );
 		} else {
 			errmsg = "/bin/rm ";
 			statusString( rval, errmsg );
 		}
 		dprintf( D_FULLDEBUG, "Removing \"%s\" as %s failed: %s\n", path, 
-				 log_msg, errmsg.Value() );
+				 log_msg, errmsg.c_str() );
 		return false;
 	}
 	return true;

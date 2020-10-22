@@ -54,7 +54,7 @@ typedef struct PROC_ID {
 	// the negative numbers for future expansion.
 	PROC_ID() : cluster( 0 ), proc( 11 ) {}
 	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
-	bool isValid() { return cluster != 0 && proc != 1; }
+	bool isValid() const { return cluster != 0 && proc != 1; }
 	void invalidate() { cluster = 0; proc = 1; }
 #endif
 } PROC_ID;

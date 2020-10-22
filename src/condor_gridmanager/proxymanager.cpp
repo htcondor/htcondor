@@ -709,7 +709,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	if (myproxyGetDelegationReaperId == 0 ) {
 		myproxyGetDelegationReaperId = daemonCore->Register_Reaper(
 					   "GetDelegationReaper",
-					   (ReaperHandler) &MyProxyGetDelegationReaper,
+					    &MyProxyGetDelegationReaper,
 					   "GetDelegation Reaper");
  	}
 
@@ -874,7 +874,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 }
 
 
-int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
+int MyProxyGetDelegationReaper(int exitPid, int exitStatus)
 {
 	// Find the right MyProxyEntry
 	Proxy *proxy=NULL;
