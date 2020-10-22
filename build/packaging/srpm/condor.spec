@@ -1543,6 +1543,17 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Oct 21 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.11-1
+- HTCondor now properly tracks usage over vanilla universe checkpoints
+- New ClassAd equality and inequality operators in the Python bindings
+- Fixed a bug where removing in-use routes could crash the job router
+- Fixed a bug where condor_chirp would abort after success on Windows
+- Fixed a bug where using MACHINE_RESOURCE_NAMES could crash the startd
+- Improved condor c-gahp to prioritize commands over file transfers
+- Fixed a rare crash in the schedd when running many local universe jobs
+- With GSI, avoid unnecessary reverse DNS lookup when HOST_ALIAS is set
+- Fix a bug that could cause grid universe jobs to fail upon proxy refresh
+
 * Thu Aug 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.8-1
 - Added htcondor.dags and htcondor.htchirp to the HTCondor Python bindings
 - New condor_watch_q tool that efficiently provides live job status updates

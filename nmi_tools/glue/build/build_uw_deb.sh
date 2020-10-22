@@ -62,8 +62,6 @@ elif $(grep -qi focal /etc/os-release); then
     mv debian/rules.focal debian/rules
     mv debian/patches/series.focal debian/patches/series
 else
-    dist='unstable'
-    build='full'
     suffix=''
 fi
 
