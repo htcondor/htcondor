@@ -162,7 +162,7 @@ my $ccKey = "check-connectivity-${VERSION}.zip";
 		Properties => {
 			FunctionName => "HTCondorAnnex-CheckConnectivity",
 			Role => { "Fn::GetAtt" => [ "LeaseFunctionRole", "Arn" ] },
-			Runtime => "python2.7",
+			Runtime => "python3.8",
 			Timeout => 5,
 			Handler => "check-connectivity.condor_ping_handler",
 			Code => {
