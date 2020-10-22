@@ -1,6 +1,6 @@
 #!/bin/sh
 
-openssl genrsa -out root-ca.key 1024
+openssl genrsa -out root-ca.key 2048
 openssl req -new -x509 -days 3650 -key root-ca.key -out root-ca.crt -config ../openssl.cnf -batch -subj "/C=US/ST=Wisconsin/L=Madison/O=CHTC/O=TEST/CN=CA"
 
 perl ../mk_new_ca_dir.pl CondorSigningCA1
@@ -13,6 +13,6 @@ echo N is $N
 cp ../signing_policy certificates/$N.signing_policy
 cp CondorSigningCA1/signing-ca-1.crt certificates/$N.0
 
-#openssl req -newkey rsa:1024 -keyout cert.key -nodes -config ../openssl.cnf -out cert.req -batch -subj "/C=US/ST=Wisconsin/L=Madison/O=CHTC/O=TEST/CN=CERT"
-#openssl ca -config ../openssl.cnf -out cert.crt -in cert.req -batch
+openssl req -newkey rsa:2048 -keyout cert.key -nodes -config ../openssl.cnf -out cert.req -batch -subj "/C=US/ST=Wisconsin/L=Madison/O=CHTC/O=TEST/CN=CERT"
+openssl ca -config ../openssl.cnf -out cert.crt -in cert.req -batch
 

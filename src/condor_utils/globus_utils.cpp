@@ -1576,11 +1576,10 @@ x509_receive_delegation( const char *destination_file,
 		goto cleanup;
 	}
 
-	// as of 2014-01-16, many various pieces of the OSG software stack no
-	// longer work with proxies less than 1024 bits, so make sure globus is
-	// defaulting to at least that large
-	if (globus_bits < 1024) {
-		globus_bits = 1024;
+	// As of January 2015, NIST recommends asymmetric key lengths no less than
+	// 2048 bits, so make sure Globus is defaulting to at least that large
+	if (globus_bits < 2048) {
+		globus_bits = 2048;
 		result = (*globus_gsi_proxy_handle_attrs_set_keybits_ptr)( handle_attrs, globus_bits );
 		if ( result != GLOBUS_SUCCESS ) {
 			rc = -1;
