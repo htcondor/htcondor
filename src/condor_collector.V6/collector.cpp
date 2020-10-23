@@ -67,7 +67,8 @@ int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName = NULL;
 Timeslice CollectorDaemon::view_sock_timeslice;
-vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
+std::deque<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
+
 bool CollectorDaemon::update_vc_nonblocking = false;
 int CollectorDaemon::update_vc_max_backlog = 1000;
 
@@ -1869,7 +1870,7 @@ void CollectorDaemon::Config()
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
-    for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+    for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
         if (e->backlog) {
             daemonCore->Cancel_Socket(e->sock);
         }
@@ -1902,10 +1903,7 @@ void CollectorDaemon::Config()
                 vhsock = new SafeSock();
             }
 
-            vc_list.emplace_back();
-            vc_list.back().name = vhost;
-            vc_list.back().collector = vhd;
-            vc_list.back().sock = vhsock;
+            vc_list.emplace_back(vhost, vhd, vhsock);
         }
     }
 
@@ -2200,7 +2198,7 @@ dprintf(D_FULLDEBUG,"JEF forward_classad(): something to do\n");
 		return;
 	}
 
-    for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+    for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
         DCCollector* view_coll = e->collector;
         Sock* view_sock = e->sock;
         const char* view_name = e->name.c_str();
@@ -2240,11 +2238,11 @@ dprintf(D_FULLDEBUG,"JEF forward_classad(): something to do\n");
         }
 
 		if (e->backlog) {
-			if (e->pending_updates.size() >= update_vc_max_backlog) {
+			if ((int)e->pending_updates.size() >= update_vc_max_backlog) {
 				dprintf(D_FULLDEBUG,"JEF dropping view update due to full backlog\n");
 			} else {
 dprintf(D_FULLDEBUG,"JEF forward_classad(): already backlogged, adding update to pending list\n");
-				e->pending_updates.emplace_back(update_entry(cmd, new ClassAd(*theAd), pvtAd?new ClassAd(*pvtAd):nullptr));
+				e->pending_updates.emplace_back(cmd, new ClassAd(*theAd), pvtAd?new ClassAd(*pvtAd):nullptr);
 			}
 			continue;
 		}
@@ -2255,7 +2253,7 @@ dprintf(D_FULLDEBUG,"JEF forward_classad(): already backlogged, adding update to
 dprintf(D_FULLDEBUG,"JEF forward_classad(): now backlogged, registering socket\n");
 			int retval = daemonCore->Register_Socket(view_sock, "View Collector socket",
 				&CollectorDaemon::forward_classad_callback,
-				"View Collector update", NULL, ALLOW, HANDLE_WRITE);
+				"View Collector update", ALLOW, HANDLE_WRITE);
 			if (retval < 0) {
 				// TODO Handle this more gracefully
 				EXCEPT("Failed to register socket for async write to view collector!");
@@ -2334,7 +2332,7 @@ dprintf(D_FULLDEBUG,"JEF finish_forward_classad(): nonblocking\n");
 }
 
 int
-CollectorDaemon::forward_classad_callback(Service *data, Stream *sock)
+CollectorDaemon::forward_classad_callback(Stream *sock)
 {
 dprintf(D_FULLDEBUG,"JEF forward_classad_callback() called\n");
 	ReliSock *rsock = (ReliSock *)sock;

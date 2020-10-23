@@ -89,6 +89,7 @@ class CollectorDaemon {
 public:
 
 	CollectorDaemon() {};
+	CollectorDaemon(const CollectorDaemon &) = delete;
 	virtual ~CollectorDaemon() {};
 
 	virtual void Init();             // main_init
@@ -125,14 +126,29 @@ public:
 	// data for a pending forwarded update over TCP
 	struct update_entry {
 		update_entry(int _cmd, ClassAd *_ad1, ClassAd *_ad2) : cmd(_cmd), ad1(_ad1), ad2(_ad2) {}
+		update_entry(const update_entry &) = delete;
+		update_entry(update_entry &&) = default;
 		int cmd;
 		std::unique_ptr<ClassAd> ad1;
 		std::unique_ptr<ClassAd> ad2;
 	};
 
+	// data pertaining to each view collector entry
+	struct vc_entry {
+		vc_entry() : collector(nullptr), sock(nullptr), backlog(false) {}
+		vc_entry(const char * n, DCCollector* c, Sock* s) : name(n), collector(c), sock(s), backlog(false) {}
+		vc_entry(const vc_entry &) = delete;
+		vc_entry(vc_entry&&) = default;
+		std::string name;
+		DCCollector* collector;
+		Sock* sock;
+		bool backlog;
+		std::deque<update_entry> pending_updates;
+	};
+
 	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 	static int finish_forward_classad(vc_entry &vc, int cmd, const ClassAd *theAd, const ClassAd *pvtAd, bool raw_command);
-	static int forward_classad_callback(Service *data, Stream *sock);
+	static int forward_classad_callback(Stream *sock);
 
 		// Take an incoming session and forward a token request to the schedd.
 	static int schedd_token_request(int, Stream *stream);
@@ -141,14 +157,6 @@ public:
 	// A get method to support SOAP
 	static CollectorEngine & getCollector( void ) { return collector; };
 
-    // data pertaining to each view collector entry
-    struct vc_entry {
-        std::string name;
-        DCCollector* collector;
-        Sock* sock;
-        bool backlog = false;
-        std::deque<update_entry> pending_updates;
-    };
 
     static OfflineCollectorPlugin offline_plugin_;
 
@@ -187,7 +195,7 @@ protected:
 	static CollectorStats collectorStats;
 	static CollectorEngine collector;
 	static Timeslice view_sock_timeslice;
-    static std::vector<vc_entry> vc_list;
+	static std::deque<vc_entry> vc_list;
 	static bool update_vc_nonblocking;
 	static int update_vc_max_backlog;
 
