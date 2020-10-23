@@ -28,9 +28,6 @@
 # Check that networking is up
 [ "${NETWORKING}" = "no" ] && exit 1
 
-# Check that HTCondor is configured to run
-chkconfig condor || exit 1
-
 start() {
     echo -n "Configuring HTCondor to be an EC2 annex: "
 
