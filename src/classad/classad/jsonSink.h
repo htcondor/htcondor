@@ -36,6 +36,8 @@ class ClassAdJsonUnParser
 	/// Constructor
 	ClassAdJsonUnParser( );
 
+	ClassAdJsonUnParser(bool oneline);
+
 	/// Destructor
 	virtual ~ClassAdJsonUnParser( );
 
@@ -64,6 +66,7 @@ class ClassAdJsonUnParser
 
 	int m_indentLevel;
 	int m_indentIncrement;
+	bool m_oneline;
 };
 
 

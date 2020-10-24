@@ -2415,8 +2415,11 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 }
 ///////////// end XML functions /////////
 
-int
-fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
+static int
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline);
+
+static int
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
 {
     if(!fp)
     {
@@ -2424,15 +2427,21 @@ fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list
     }
 
     std::string out;
-    sPrintAdAsJson(out,ad,attr_white_list);
+    sPrintAdAsJson(out,ad,attr_white_list,oneline);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
 {
-	classad::ClassAdJsonUnParser unparser;
+    return fPrintAdAsJson(fp, ad, attr_white_list, false);
+}
+
+int
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
+{
+	classad::ClassAdJsonUnParser unparser(oneline);
 
 	if ( attr_white_list ) {
 		classad::ClassAd tmp_ad;
@@ -2450,6 +2459,24 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 		unparser.Unparse( output, &ad );
 	}
 	return TRUE;
+}
+
+int
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
+{
+    return sPrintAdAsJson(output, ad, attr_white_list, false);
+}
+
+int
+fPrintAdAsJsonLine(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
+{
+    return fPrintAdAsJson(fp, ad, attr_white_list, true);
+}
+
+int
+sPrintAdAsJsonLine(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
+{
+    return sPrintAdAsJson(output, ad, attr_white_list, true);
 }
 
 char const *
