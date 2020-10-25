@@ -1543,6 +1543,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Oct 26 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.9-1
+- The RPM packages requires globus, munge, scitokens, and voms from EPEL
+- Improved cgroup memory policy settings that set both hard and soft limit
+- Cgroup memory usage reporting no longer includes the kernel buffer cache
+- Numerous Python binding improvements, see version history
+- Can create a manifest of files on the execute node at job start and finish
+- Added provisioner nodes to DAGMan, allowing users to provision resources
+- DAGMan can now produce .dot graphs without running the workflow
+
 * Wed Oct 21 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.11-1
 - HTCondor now properly tracks usage over vanilla universe checkpoints
 - New ClassAd equality and inequality operators in the Python bindings

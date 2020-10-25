@@ -1,3 +1,15 @@
+condor (8.9.9-1) stable; urgency=medium
+
+  * The RPM packages requires globus, munge, scitokens, and voms from EPEL
+  * Improved cgroup memory policy settings that set both hard and soft limit
+  * Cgroup memory usage reporting no longer includes the kernel buffer cache
+  * Numerous Python binding improvements, see version history
+  * Can create a manifest of files on the execute node at job start and finish
+  * Added provisioner nodes to DAGMan, allowing users to provision resources
+  * DAGMan can now produce .dot graphs without running the workflow
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 25 Oct 2020 12:32:40 -0500
+
 condor (8.8.11-1) stable; urgency=medium
 
   * HTCondor now properly tracks usage over vanilla universe checkpoints
