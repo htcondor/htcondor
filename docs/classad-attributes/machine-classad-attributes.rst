@@ -563,6 +563,12 @@ Machine ClassAd Attributes
     Time when draining of this *condor_startd* was last initiated (e.g.
     due to *condor_defrag* or *condor_drain*).
 
+:index:`LastDrainStopTime<single: LastDrainStopTime; ClassAd machine attribute>`
+
+``LastDrainStopTime``
+    Time when draining of this *condor_startd* was last stopped (e.g.
+    by being cancelled).
+
 :index:`LastHeardFrom<single: LastHeardFrom; ClassAd machine attribute>`
 
 ``LastHeardFrom``

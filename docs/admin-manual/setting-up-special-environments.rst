@@ -1985,7 +1985,8 @@ No limits will be set if the value is ``none``. The default is
 physical memory used by the sum of all processes in this job will not be
 allowed to exceed the limit. If the process goes above the hard
 limit, the job will be put on hold.
- The memory size used in both cases is the machine ClassAd
+
+The memory size used in both cases is the machine ClassAd
 attribute ``Memory``. Note that ``Memory`` is a static amount when using
 static slots, but it is dynamic when partitionable slots are used. That
 is, the limit is whatever the "Mem" column of condor_status reports for

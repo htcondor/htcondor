@@ -133,6 +133,13 @@ Defrag ClassAd Attributes
     attribute, but could be customized by the site administrator via the
     configuration variable ``DEFRAG_NAME`` :index:`DEFRAG_NAME`.
 
+:index:`RecentCancelsList<single: RecentCancelsList; ClassAd Defrag attribute>`
+
+``RecentCancelsList``:
+    A ClassAd list of ClassAds describing the last ten cancel commands sent
+    by this daemon.  Attributes include ``when``, as the number of seconds
+    since the Unix epoch; and ``who``, the ``Name`` of the slot being drained.
+
 :index:`RecentDrainFailures<single: RecentDrainFailures; ClassAd Defrag attribute>`
 
 ``RecentDrainFailures``:
@@ -144,6 +151,15 @@ Defrag ClassAd Attributes
 ``RecentDrainSuccesses``:
     Count of successful attempts to initiate draining during the past
     ``RecentStatsLifetime`` seconds.
+
+:index:`RecentDrainsList<single: RecentDrainsList; ClassAd Defrag attribute>`
+
+``RecentDrainsList``:
+    A ClassAd list of ClassAds describing the last ten drain commands sent
+    by this daemon.  Attributes include ``when``, as the number of seconds
+    since the Unix epoch; ``who``, the ``Name`` of the slot being drained;
+    and ``what``, one of the three strings ``graceful``, ``quick``, or
+    ``fast``.
 
 :index:`RecentStatsLifetime<single: RecentStatsLifetime; ClassAd Defrag attribute>`
 
@@ -170,5 +186,3 @@ Defrag ClassAd Attributes
 ``WholeMachinesPeak``:
     Largest number of machines that were ever observed to be
     simultaneously defragmented.
-
-

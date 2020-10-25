@@ -140,8 +140,8 @@ we tell HTCondor which input file to send to each instance of the program.
 
 :index:`examples<single: examples; submit description file>`
 
-Using the Power and Flexibility of the Queue Command
-----------------------------------------------------
+Submitting many similar jobs with one queue command
+---------------------------------------------------
 
 A wide variety of job submissions can be specified with extra
 information to the **queue** :index:`queue<single: queue; submit commands>`
