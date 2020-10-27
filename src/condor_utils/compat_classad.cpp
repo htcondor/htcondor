@@ -2415,10 +2415,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 }
 ///////////// end XML functions /////////
 
-static int
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline);
-
-static int
+int
 fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
 {
     if(!fp)
@@ -2430,12 +2427,6 @@ fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list
     sPrintAdAsJson(out,ad,attr_white_list,oneline);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
-}
-
-int
-fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
-{
-    return fPrintAdAsJson(fp, ad, attr_white_list, false);
 }
 
 int
@@ -2459,24 +2450,6 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 		unparser.Unparse( output, &ad );
 	}
 	return TRUE;
-}
-
-int
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
-{
-    return sPrintAdAsJson(output, ad, attr_white_list, false);
-}
-
-int
-fPrintAdAsJsonLine(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
-{
-    return fPrintAdAsJson(fp, ad, attr_white_list, true);
-}
-
-int
-sPrintAdAsJsonLine(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
-{
-    return sPrintAdAsJson(output, ad, attr_white_list, true);
 }
 
 char const *

@@ -1244,9 +1244,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					if ( printCount != 0 ) {
 						printf(",\n");
 					}
-					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection);
+					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, false);
 				} else if ( use_json_lines ) {
-					fPrintAdAsJsonLine(stdout, *ad, projection.isEmpty() ? NULL : &projection);
+					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, true);
 				}
 				else {
 					fPrintAd(stdout, *ad, false, projection.isEmpty() ? NULL : &projection);
@@ -1330,9 +1330,9 @@ static void printJob(ClassAd & ad)
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection);
+			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, false);
 		} else if ( use_json_lines ) {
-			fPrintAdAsJsonLine(stdout, ad, projection.isEmpty() ? NULL : &projection);
+			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, true);
 		} else {
 			fPrintAd(stdout, ad, false, projection.isEmpty() ? NULL : &projection);
 		}

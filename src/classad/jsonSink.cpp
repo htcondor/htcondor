@@ -30,18 +30,15 @@ using namespace std;
 namespace classad {
 
 ClassAdJsonUnParser::
-ClassAdJsonUnParser()
+ClassAdJsonUnParser() : ClassAdJsonUnParser(false)
 {
-	m_indentLevel = 0;
-	m_indentIncrement = 2;
-	m_oneline = false;
 }
 
 ClassAdJsonUnParser::
 ClassAdJsonUnParser(bool oneline)
 {
 	m_indentLevel = 0;
-	m_indentIncrement = 0;
+	m_indentIncrement = 2;
 	m_oneline = oneline;
 }
 
