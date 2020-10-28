@@ -39,6 +39,7 @@ extensions = [
     'ticket',
     'macro',
     'index',
+    'jira',
 ]
 autosectionlabel_prefix_document = True
 
