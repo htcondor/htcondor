@@ -19,7 +19,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- For compability with 8.9.9 (and eventually, the next stable series), add
+  the family of version comparison functions.
+  :jira:`36`
 
 Bugs Fixed:
 
