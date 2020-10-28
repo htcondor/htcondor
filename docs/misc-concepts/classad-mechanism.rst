@@ -721,7 +721,7 @@ Optional parameters are given within square brackets.
     difference between the two strings occurs in a string of digits, in
     which case, sort by the value of that number (assuming that more
     leading zeroes mean smaller numbers).  Thus ``7.x`` is earlier than
-    ``7.y`` and ``7.01`` is earlier than ``7.10``.
+    ``7.y`` and ``7.9`` is earlier than ``7.10``.
 
     :index:`versionGT()<single: versionGT(); ClassAd functions>`
     :index:`versionLT()<single: versionLT(); ClassAd functions>`

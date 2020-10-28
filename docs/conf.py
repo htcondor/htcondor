@@ -35,6 +35,7 @@ extensions = [
     'macro',
     'macro-def',
     'index',
+    'jira',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
