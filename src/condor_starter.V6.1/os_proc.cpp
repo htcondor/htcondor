@@ -497,6 +497,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
+	int orig_args_len = args.Count();
 	if (SupportsPIDNamespace()) {
 		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
 	} else {
@@ -518,7 +519,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 
 		if (param_boolean("SINGULARITY_RUN_TEST_BEFORE_JOB", true)) {
-			bool result = htcondor::Singularity::runTest(JobName, args, job_env);
+			bool result = htcondor::Singularity::runTest(JobName, args, orig_args_len, job_env);
 			if (!result) {
 				dprintf(D_FULLDEBUG, "Singularity test failed\n");
 				free(affinity_mask);

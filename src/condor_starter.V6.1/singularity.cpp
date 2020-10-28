@@ -361,13 +361,15 @@ Singularity::convertEnv(Env *job_env) {
 }
 
 bool 
-Singularity::runTest(const std::string &JobName, const ArgList &args, const Env &env) {
+Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env) {
 
 	TemporaryPrivSentry sentry(PRIV_USER);
 
 	// First replace "exec" with "test"
 	ArgList testArgs;
-	for (int i = 0; i < args.Count(); i++) {
+
+	// The last orig_args_len args are the real exec + its args.  Skip those for the test
+	for (int i = 0; i < args.Count() - orig_args_len; i++) {
 		const char *arg = args.GetArg(i);
 		if (strcmp(arg, "exec") == 0) {
 			arg = "test";
