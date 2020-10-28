@@ -35,7 +35,7 @@
 
 // "natural" string compare -- a replacement for strcmp(3)
 // takes numeric portions into account, as specified in strverscmp(3)
-int natural_cmp(const char *s1, const char *s2)
+static int natural_cmp(const char *s1, const char *s2)
 {
 	const char *s1_beg = s1;      // s1 begin
 	const char *n1_beg, *n2_beg;  // s1/s2 number begin
