@@ -4015,12 +4015,6 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 
 		// Ensure user is not changing an immutable attribute to a committed job
 		bool is_immutable_attr = immutable_attrs.find(attr_name) != immutable_attrs.end();
-		if (is_immutable_attr) {
-			// late materialization is allowed to change some 'immutable' attributes in the cluster ad.
-			if ((key.proc == -1) && YourStringNoCase(ATTR_TOTAL_SUBMIT_PROCS) == attr_name) {
-				is_immutable_attr = false;
-			}
-		}
 		if (is_immutable_attr)
 		{
 
