@@ -716,7 +716,11 @@ Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
 Requires: boost169-python3
+%if ! 0%{?amzn}
 Requires: python36
+%else
+Requires: python3
+%endif
 %else
 Requires: boost-python3
 Requires: python3
