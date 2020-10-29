@@ -162,3 +162,10 @@ def test_versioncmp_inequality(left, right, expected):
     if rv > 0:
         rv = 1
     assert rv == expected
+
+
+def test_versioncmp_example():
+    sequence = ['000', '00', '01', '010', '09', '0', '1', '9', '10']
+    for i,left in enumerate(sequence[:-1]):
+        for right in sequence[i+1:]:
+            assert evaluate_expr('versionLT("{}","{}")'.format(left,right))
