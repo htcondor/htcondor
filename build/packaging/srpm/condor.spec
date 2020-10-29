@@ -478,11 +478,10 @@ Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
 Requires: boost169-python3
-Requires: python36
 %else
 Requires: boost-python3
-Requires: python3
 %endif
+Requires: python3
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
