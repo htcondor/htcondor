@@ -2754,7 +2754,7 @@ When a PROVISIONER is defined in a DAG, it gets run at the beginning of the
 DAG, and no other nodes are run until the PROVISIONER has advertised that it
 is ready. It does this by setting the ``ProvisionerState`` attribute in its
 job classad to the enumerated value ``ProvisionerState::PROVISIONING_COMPLETE``
-(currently: 4). Once DAGMan sees that it is ready, it will start running
+(currently: 2). Once DAGMan sees that it is ready, it will start running
 other nodes in the DAG as usual. At this point the PROVISIONER job continues
 to run, typically sleeping and waiting while other nodes in the DAG use its
 resources.
