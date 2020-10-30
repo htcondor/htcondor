@@ -323,7 +323,7 @@ check_reverse_connectivity() {
     # Create tmp file for the python script to test connectivity
     tmpfile=`mktemp -t tmpreversetest.XXXXXX`
     cat << EOF > $tmpfile
-#!/usr/bin/python
+#!/usr/bin/python3
 import sys,socket
 (host,port)=sys.argv[1].split(":")
 s = socket.socket()

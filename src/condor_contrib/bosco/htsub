@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 """
 htsub command to submit high throughput jobs via BOSCO/HTCondor:
 http://jira.opensciencegrid.org/browse/CAMPUS-54
@@ -34,8 +34,6 @@ htstat
 htqueue
 htquery
 """
-
-from __future__ import print_function
 
 __author__ = 'marco'
 
@@ -141,7 +139,7 @@ def make_submit_file(options, args):
     return rets
 
 
-import commands
+import subprocess
 
 def do_submit(sub_dir, sub_str):
     """
@@ -157,7 +155,7 @@ def do_submit(sub_dir, sub_str):
     fd.close()
     log("Submitting HTCondor job: condor_submit %s" % fname, logging.DEBUG)
     log("Submit file:\n%s" % sub_str, logging.DEBUG)
-    ec, out = commands.getstatusoutput('condor_submit %s' % fname)
+    ec, out = subprocess.getstatusoutput('condor_submit %s' % fname)
     if ec==0:
         print("Job submitted successfully: %s" % out)
     else:
