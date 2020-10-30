@@ -108,6 +108,11 @@ Source7: 00-restart_peaceful.config
 
 Source8: htcondor.pp
 
+# Patch to use Python 2 for file transfer plugins
+# The use the python-requests library and the one in EPEL is based Python 3.6
+# However, Amazon Linux 2 has Python 3.7
+Patch2: amzn2-python2.patch
+
 #% if 0% osg
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
@@ -259,10 +264,14 @@ Requires: blahp >= 1.16.1
 
 # Useful tools are using the Python bindings
 Requires: python3-condor
+# The use the python-requests library in EPEL is based Python 3.6
+# However, Amazon Linux 2 has Python 3.7
+%if ! 0%{?amzn}
 %if 0%{?rhel} == 7
 Requires: python36-requests
 %else
 Requires: python3-requests
+%endif
 %endif
 
 %if 0%{?rhel} == 7
@@ -478,11 +487,10 @@ Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
 Requires: boost169-python3
-Requires: python36
 %else
 Requires: boost-python3
-Requires: python3
 %endif
+Requires: python3
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
@@ -624,6 +632,13 @@ exit 0
 %else
 # For release tarballs
 %setup -q -n %{name}-%{tarball_version}
+%endif
+
+# Patch to use Python 2 for file transfer plugins
+# The use the python-requests library and the one in EPEL is based Python 3.6
+# However, Amazon Linux 2 has Python 3.7
+%if 0%{?amzn}
+%patch2 -p1
 %endif
 
 %if 0%{?osg} || 0%{?hcc}
