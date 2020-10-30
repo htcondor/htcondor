@@ -291,9 +291,9 @@ failure only for the cases where the PRE script fails, when
 +-----+-----------+-----------+-------+
 | S   | F         | F         | **F** |
 +-----+-----------+-----------+-------+
-| S   | not run   | \-        | **F** |
+| F   | not run   | \-        | **F** |
 +-----+-----------+-----------+-------+
-| S   | not run   | not run   | **F** |
+| F   | not run   | not run   | **F** |
 +-----+-----------+-----------+-------+
 
 Table 2.1: Node **S**\ uccess or **F**\ ailure definition with
@@ -2732,6 +2732,37 @@ A diagram of the above example:
   Diagram of the splice connect example
 
 .. _final-node:
+
+PROVISIONER node
+''''''''''''''''
+
+:index:`PROVISIONER command<single: PROVISIONER command; DAG input file>`
+:index:`PROVISIONER node<single: PROVISIONER node; DAGMan>`
+
+A PROVISIONER node is a single and special node that is always run at the
+beginning of a DAG. It can be used to provision resources (ie. Amazon EC2
+instances, in-memory database servers) that can then be used by the remainder
+of the nodes in the workflow.
+
+The syntax used for the *PROVISIONER* command is
+
+.. code-block:: condor-dagman
+
+    PROVISIONER JobName SubmitDescriptionFileName
+
+When a PROVISIONER is defined in a DAG, it gets run at the beginning of the
+DAG, and no other nodes are run until the PROVISIONER has advertised that it
+is ready. It does this by setting the ``ProvisionerState`` attribute in its
+job classad to the enumerated value ``ProvisionerState::PROVISIONING_COMPLETE``
+(currently: 4). Once DAGMan sees that it is ready, it will start running
+other nodes in the DAG as usual. At this point the PROVISIONER job continues
+to run, typically sleeping and waiting while other nodes in the DAG use its
+resources.
+
+A PROVISIONER runs for a set amount of time defined in its job. It does not
+get terminated automatically at the end of a DAG workflow. The expectation
+is that it needs to explicitly deprovision any resources, such as expensive
+cloud computing instances that should not be allowed to run indefinitely. 
 
 FINAL node
 ''''''''''
