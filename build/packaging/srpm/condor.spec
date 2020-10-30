@@ -716,11 +716,10 @@ Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
 Requires: boost169-python3
-Requires: python36
 %else
 Requires: boost-python3
-Requires: python3
 %endif
+Requires: python3
 
 %if 0%{?rhel} >= 7 && ! %uw_build
 # auto provides generator does not pick these up for some reason
