@@ -1387,6 +1387,33 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		}
 	}
 
+	std::string chirp_prefix;
+	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
+	if (chirp_prefix == "Chirp*") {
+		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
+			if ( ! strncasecmp(attr_it->first.c_str(), "Chirp", 5) ) {
+				old_expr = jobAd->Lookup(attr_it->first);
+				new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					jobAd->Insert( attr_it->first, new_expr->Copy() );
+				}
+			}
+		}
+	} else if (!chirp_prefix.empty()) {
+		// TODO cache the StringList
+		StringList prefix_list;
+		prefix_list.initializeFromString(chirp_prefix.c_str());
+		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
+			if ( prefix_list.contains_anycase_withwildcard(attr_it->first.c_str()) ) {
+				old_expr = jobAd->Lookup(attr_it->first);
+				new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					jobAd->Insert( attr_it->first, new_expr->Copy() );
+				}
+			}
+		}
+	}
+
 	if (freeAttrs) {
 		int i = 0;
 		while (attrs_to_copy[i] != NULL) {
