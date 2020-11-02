@@ -412,7 +412,7 @@ LOCAL_STORE_CRED(const char *username, const char *servicename, MyString &ccfile
 //   but the caller should wait for a .cc file before proceeding,
 //   the ccfile argument will be returned
 long long
-KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, MyString & ccfile)
+KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, MyString & ccfile, bool &is_local)
 {
 	dprintf(D_ALWAYS, "Krb store cred user %s len %i mode %i\n", username, credlen, mode);
 
@@ -422,16 +422,24 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 		return FAILURE;
 	}
 
+	// default to this being a real krb store cred
+	is_local = false;
+
 	// special case: if the credential starts with the magic string
 	// "LOCAL:", we are not actually going to store anything in the krb directory,
 	// but instead simply touch a file in the OAuth directory.  detect this right away
 	// and call that function instead.
 	if (strncmp((const char*)cred, "LOCAL:", 6) == MATCH) {
 		std::string servicename((const char*)&cred[6]);
-		dprintf(D_ALWAYS, "KRB_STORE_CRED: detected magic value with username \"%s\" and service name \"%s\".\n", username, servicename.c_str());
+		dprintf(D_SECURITY, "KRB_STORE_CRED: detected magic value with username \"%s\" and service name \"%s\".\n", username, servicename.c_str());
+
+		// signal that we attempted to put this in the oauth directory instead
+		is_local = true;
+
+		// pass through return from LOCAL store.
 		return LOCAL_STORE_CRED(username, servicename.c_str(), ccfile);
 	}
-	
+
 	// make sure that the cc filename is cleared
 	ccfile.clear();
 
@@ -589,7 +597,8 @@ long long store_cred_blob(const char *user, int mode, const unsigned char *blob,
 			dprintf(D_ALWAYS, "GOT KRB STORE CRED mode=%d\n", mode);
 			int krb_mode = (mode & MODE_MASK) | STORE_CRED_USER_KRB;
 			ClassAd return_ad;
-			return KRB_STORE_CRED(username.c_str(), blob, bloblen, krb_mode, return_ad, ccfile);
+			bool unused; // not changing behavior for legacy mode, but API was updated
+			return KRB_STORE_CRED(username.c_str(), blob, bloblen, krb_mode, return_ad, ccfile, unused);
 		} else {
 			return FAILURE;
 		}
@@ -1437,7 +1446,14 @@ int store_cred_handler(int /*i*/, Stream *s)
 				if (cred_type == STORE_CRED_USER_KRB) {
 					dprintf(D_ALWAYS, "GOT KRB STORE CRED mode=%d\n", mode);
 					int krb_mode = (mode & MODE_MASK) | STORE_CRED_USER_KRB;
-					answer = KRB_STORE_CRED(username.c_str(), (unsigned char*)cred.ptr(), credlen, krb_mode, return_ad, ccfile);
+					bool is_local = false; // to find out if the KRB was a "LOCAL"
+					answer = KRB_STORE_CRED(username.c_str(), (unsigned char*)cred.ptr(), credlen, krb_mode, return_ad, ccfile, is_local);
+					// if this was a "locally issued" cred, switch cred type to OAUTH from here
+					// on out so we SIGHUP the correct (OAuth) credmon and not the krb one.
+					if(is_local) {
+						dprintf(D_SECURITY | D_FULLDEBUG, "STORE_CRED: modifying mode to STORE_CRED_USER_OAUTH.\n");
+						mode = STORE_CRED_USER_OAUTH;
+					}
 				} else if (cred_type == STORE_CRED_USER_OAUTH) {
 					dprintf(D_ALWAYS, "GOT OAUTH STORE CRED mode=%d\n", mode);
 					int oauth_mode = (mode & MODE_MASK) | STORE_CRED_USER_OAUTH;
