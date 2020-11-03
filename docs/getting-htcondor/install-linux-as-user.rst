@@ -1,9 +1,9 @@
-.. _user_install_macosx:
+.. _user_install_linux:
 
-Mac OS X (as user)
-==================
+Linux (as user)
+===============
 
-To install HTCondor on Mac OS X, run the following commands:
+To install HTCondor on Linux as a normal user, run the following commands:
 
 .. code-block:: shell
 

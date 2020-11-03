@@ -9,21 +9,4 @@ To install HTCondor on Mac OS X, run the following commands:
 
     # [FIXME]
 
-You can check to see if the install procedure succeeded; the following commands
-should complete without errors:
-
-.. code-block:: shell
-
-  condor_q
-  condor_status
-
-The output will look something like this:
-
-.. code-block:: console
-
-  $ condor_q
-  [stuff]
-  $ condor_status
-  [stuff]
-
-[A link to the quick-start guide goes here.]
+.. include:: minicondor-test-and-quickstart.include

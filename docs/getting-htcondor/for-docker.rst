@@ -1,7 +1,7 @@
 .. _docker_image_list:
 
-for Docker
-==========
+Docker Images
+=============
 
 HTCondor provides five main Docker images on Docker Hub:
 
@@ -11,10 +11,5 @@ HTCondor provides five main Docker images on Docker Hub:
 * ``htcondor/submit``, an image configured as a submit node
 * ``htcondor/base``, an unconfigured "base" image
 
-These images share the same set of tags:
-
-* ``something``, ....
-* ``something``, ....
-* ``something``, ....
-
-[do we bother to mention ``htcondor/build-<osname>``?]
+Images are tagged by ``<version>--<os>``, for example, ``8.9.9-el7``.  Not
+all versions are available for all supported operating systems.
