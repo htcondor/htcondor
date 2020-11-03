@@ -1168,7 +1168,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			&time_req,
 			NULL);
 
-		dprintf(D_NETWORK, "gss_assist_accept_sec_context(2)"
+		dprintf(D_NETWORK, "gss_assist_accept_sec_context(2):"
 			"maj:%8.8x:min:%8.8x:ret:%8.8x "
 			"outlen:%lu:context:%p\n",
 			(unsigned int) major_status,
