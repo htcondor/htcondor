@@ -595,7 +595,8 @@ ProcFamily::aggregate_usage_cgroup_io_wait(ProcFamilyUsage* usage) {
 		cgroup_read_value_end(&handle);
 	}
 
-	if (ret != ECGEOF) {
+	// kernels with BFQ enabled don't have io_wait_time, don't spam logs if it isn't here
+	if ((ret != ECGEOF) && (ret != ENOENT)) {
 		dprintf(D_ALWAYS, "Internal cgroup error when retrieving iowait statistics: %s\n", cgroup_strerror(ret));
 		return 1;
 	}
