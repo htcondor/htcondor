@@ -508,7 +508,7 @@ we tell the *condor_job_router* daemon to call a simple script which
 queries the collector and outputs a routing table. The script, called
 osg_ress_routing_table.sh, is just this:
 
-.. code:: bash
+.. code-block:: bash
 
     #!/bin/sh
 

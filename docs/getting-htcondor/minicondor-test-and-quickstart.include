@@ -15,5 +15,6 @@ The output will look something like this:
     $ condor_status
     [stuff]
 
-[Links to the user and admin quick-start guides goes here.]
+For a brief introduction to using HTCondor, proceed to the :ref:`quick_start_guide`.
 
+If you're looking to set up a multi-machine pool, [FIXME].

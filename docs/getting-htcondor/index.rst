@@ -1,3 +1,5 @@
+.. _getting_htcondor:
+
 Getting HTCondor
 ================
 
@@ -20,7 +22,9 @@ If you have administrative privileges on your machine, continue on to the
 instructions corresponding to your operating system:
 
 * :ref:`Windows <admin_install_windows>`
-* :ref:`Linux <admin_install_linux>`
+* :ref:`Linux <admin_install_linux>`.  HTCondor supports Enterprise Linux 7
+  and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
+  Ubuntu 18.04 and 20.04.
 * :ref:`Mac OS X <admin_install_macosx>`
 
 .. rubric:: Tarballs
@@ -28,7 +32,9 @@ instructions corresponding to your operating system:
 If you don't administrative privileges on your machine, you can still
 install HTCondor, although some features will not be available:
 
-* :ref:`Linux <user_install_linux>`
+* :ref:`Linux <user_install_linux>`.  HTCondor supports Enterprise Linux 7
+  and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
+  Ubuntu 18.04 and 20.04.
 * :ref:`Mac OS X <user_install_macosx>`
 
 [a link to or exceedingly brief summary of the missing features]
