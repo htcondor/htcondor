@@ -584,7 +584,7 @@ TranslateClient::hookExited(int exit_status)
 	std::string key = m_routed_job->src_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_TRANSLATE_JOB))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "TranslateClient::hookExited (%s):"
+		dprintf(D_ALWAYS|D_FAILURE, "TranslateClient::hookExited (%s): "
 			"Failed to remove hook info for job key %s.\n", 
 			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("TranslateClient::hookExited: Received exit "
@@ -669,7 +669,7 @@ StatusClient::hookExited(int exit_status)
 	std::string key = m_routed_job->dest_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_UPDATE_JOB_INFO))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "StatusClient::hookExited (%s):"
+		dprintf(D_ALWAYS|D_FAILURE, "StatusClient::hookExited (%s): "
 			"Failed to remove hook info for job key %s.\n", 
 			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("StatusClient::hookExited: Received exit notification "

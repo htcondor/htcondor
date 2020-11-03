@@ -652,7 +652,7 @@ CCBClient::CCBResultsCallback(DCMsgCallback *cb)
 		msg.LookupString(ATTR_ERROR_STRING,remote_errmsg);
 
 		if( !result ) {
-			dprintf(D_ALWAYS,"CCBClient:"
+			dprintf(D_ALWAYS,"CCBClient: "
 				"received failure message from CCB server %s in response to "
 				"(non-blocking) request for reversed connection to %s: %s\n",
 				m_cur_ccb_address.c_str(),

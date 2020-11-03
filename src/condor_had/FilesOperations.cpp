@@ -102,7 +102,7 @@ FilesOperations::unlinkFile( const char* filePath,
 	StatWrapper statWrapper( temporaryFilePath );
 	
 	if ( statWrapper.GetRc( ) && statWrapper.GetErrno( ) == ENOENT ) {
-		dprintf( D_ALWAYS, "FilesOperations::unlinkFile the specified file %s"
+		dprintf( D_ALWAYS, "FilesOperations::unlinkFile the specified file %s "
 						   "does not exist\n", temporaryFilePath.Value( ) );
 		return true;
     }

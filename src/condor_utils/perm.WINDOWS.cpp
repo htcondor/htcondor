@@ -891,7 +891,7 @@ perm::set_acls( const char *filename )
 
 	if (err != ERROR_SUCCESS)
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to set file ACL"
+		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to set file ACL "
 				"(err=%d).\n", filename,GetLastError() );
 		return false;
 	}

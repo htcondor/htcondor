@@ -3285,7 +3285,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	condor_sockaddr peer_addr;
 	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
-		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
 				"sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
 		return false;
 	}
@@ -3300,7 +3300,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	ClassAd *auth_info = ReconcileSecurityPolicyAds(policy,policy);
 	if(!auth_info) {
-		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
 				"ReconcileSecurityPolicyAds() failed.\n",sesid);
 		return false;
 	}

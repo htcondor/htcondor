@@ -469,7 +469,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 	// Is the lock current?
 	bool	is_lock_current = ( m_state->Rotation() == m_lock_rot );
 
-	dprintf( D_FULLDEBUG, "Opening log file #%d '%s'"
+	dprintf( D_FULLDEBUG, "Opening log file #%d '%s' "
 			 "(is_lock_cur=%s,seek=%s,read_header=%s)\n",
 			 m_state->Rotation(), m_state->CurPath(),
 			 is_lock_current ? "true" : "false",
