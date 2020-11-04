@@ -1191,7 +1191,6 @@ Condor_Auth_SSL::wrap(const char *   input,
 	bool result;
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
-	dprintf(D_ALWAYS, "ZKM: In wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -1209,7 +1208,6 @@ Condor_Auth_SSL::unwrap(const char *   input,
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
-	dprintf(D_ALWAYS, "ZKM: In unwrap.\n");
 	result = decrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
