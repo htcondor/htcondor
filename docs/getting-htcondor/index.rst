@@ -9,6 +9,7 @@ Getting HTCondor
 
     install-windows-as-administrator
     install-linux-as-root
+    from-our-repositories
     install-macosx-as-root
 
     install-linux-as-user
