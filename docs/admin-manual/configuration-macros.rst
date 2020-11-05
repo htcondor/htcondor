@@ -6635,10 +6635,30 @@ These macros affect the *condor_collector*.
     third of ``CLASSAD_LIFETIME``.
 
 :macro-def:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`
-    When this boolean variable is set to ``True``, the *condor_collector*
+    When this boolean variable is set to ``False``, the *condor_collector*
     will not forward the private portion of Machine ads to the
     ``CONDOR_VIEW_HOST`` if the ad's ``State`` is ``Claimed``.
     The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
+
+:macro-def:`COLLECTOR_FORWARD_PROJECTION`
+    An expresion that evaluates to a string in the context of an update. The string is treated as a list
+    of attributes to forward.  If the string has no attributes, it is ignored. The intended use is to
+    restrict the list of attributes forwarded for claimed Machine ads.
+    When ``$(NEGOTIATOR_CONSIDER_PREEMPTION)`` is false, the negotiator needs only a few attributes from
+    Machine ads that are in the ``Claimed`` state. A Suggested use might be
+
+    .. code-block:: condor-config
+
+          if ! $(NEGOTIATOR_CONSIDER_PREEMPTION)
+             COLLECTOR_FORWARD_PROJECTION = IfThenElse(State is "Claimed", "$(FORWARD_CLAIMED_ATTRS)", "")
+             # forward only the few attributes needed by the Negotiator and a few more needed by condor_status
+             FORWARD_CLAIMED_ATTRS = Name MyType MyAddress StartdIpAddr Machine Requirements \
+                State Activity AccountingGroup Owner RemoteUser SlotWeight ConcurrencyLimits \
+                Arch OpSys Memory Cpus CondorLoadAvg EnteredCurrentActivity
+          endif
+
+    There is no default value for this variable.
+
 
 The following macros control where, when, and for how long HTCondor
 persistently stores absent ClassAds. See

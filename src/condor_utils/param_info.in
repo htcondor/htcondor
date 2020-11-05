@@ -1401,6 +1401,12 @@ type=bool
 default=$(NEGOTIATOR_CONSIDER_PREEMPTION)
 type=string
 
+[COLLECTOR_FORWARD_PROJECTION]
+default=
+type=string
+tags=collector
+description=An expression that returns a list of attributes to forward for the current ad
+
 [COLLECTOR_STATS_SWEEP]
 default=14400
 type=int

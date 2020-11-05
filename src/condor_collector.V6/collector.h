@@ -176,6 +176,7 @@ protected:
 	static CollectorEngine collector;
 	static Timeslice view_sock_timeslice;
     static std::vector<vc_entry> vc_list;
+	static ConstraintHolder vc_projection;
 
 	static int HandleQueryInProcPolicy;	// one of above HandleQueryInProc* constants
 	static int ClientTimeout;
