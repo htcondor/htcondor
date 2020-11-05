@@ -3,6 +3,7 @@ should complete without errors:
 
 .. code-block:: shell
 
+    # FIXME
     condor_q
     condor_status
 
@@ -11,10 +12,11 @@ The output will look something like this:
 .. code-block:: console
 
     $ condor_q
-    [stuff]
+    [FIXME]
     $ condor_status
-    [stuff]
+    [FIXME]
 
-For a brief introduction to using HTCondor, proceed to the :ref:`quick_start_guide`.
+For a brief introduction to using HTCondor, proceed to the
+:ref:`quick_start_guide`.
 
 If you're looking to set up a multi-machine pool, [FIXME].

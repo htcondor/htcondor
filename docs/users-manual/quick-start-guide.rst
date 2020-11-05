@@ -443,3 +443,8 @@ Mac) convention of appending the directory name with a slash character (/).
         infile-B.txt
         * outfile.txt
         * science3.log
+
+Where to Go from Here
+---------------------
+
+[FIXME]

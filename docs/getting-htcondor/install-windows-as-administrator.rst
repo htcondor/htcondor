@@ -3,6 +3,6 @@
 Windows (as Administrator)
 ==========================
 
-Something about the MSI goes here.
+[FIXME] Something about the MSI goes here.
 
 .. include:: minicondor-test-and-quickstart.include

@@ -1,3 +1,5 @@
+.. _admin_quick_start:
+
 Quick Start: Setting up an HTCondor Pool
 ========================================
 

@@ -3,13 +3,31 @@
 Docker Images
 =============
 
-HTCondor provides five main Docker images on Docker Hub:
+HTCondor provides images on Docker Hub.
 
-* ``htcondor/minicondor``, a stand-alone HTCondor configuration
+.. rubric:: Getting Started with HTCondor
+
+If you're just getting started with HTCondor, use ``htcondor/minicondor``,
+a stand-alone HTCondor configuration.  The following command will work on
+most systems with Docker installed:
+
+.. code-block:: shell
+
+    # FIXME: Does this automagically start an interactive shell?
+    docker run htcondor/minicondor:v8.9.9-el7
+
+From here, you can proceed to the :ref:`quick_start_guide`.
+
+.. rubric:: Setting up a Whole Pool
+
+If you're looking to set up a whole pool, the following images correspond
+to the three required roles.  See the [FIXME] for more information about
+the roles and how to configure these images to work together.
+
 * ``htcondor/cm``, an image configured as a central manager
 * ``htcondor/execute``, an image configured as an execute node
 * ``htcondor/submit``, an image configured as a submit node
-* ``htcondor/base``, an unconfigured "base" image
 
-Images are tagged by ``<version>--<os>``, for example, ``8.9.9-el7``.  Not
+All images are tagged by ``<version>-<os>``, for example, ``8.9.9-el7``.  Not
 all versions are available for all supported operating systems.
+

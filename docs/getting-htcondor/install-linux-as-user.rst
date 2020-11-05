@@ -7,7 +7,7 @@ To install HTCondor on Linux as a normal user, run the following commands:
 
 .. code-block:: shell
 
-    # FIXME
+    # [FIXME]
 
 You'll need to run the following command now, and every time you log in:
 

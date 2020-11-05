@@ -7,7 +7,7 @@ To install HTCondor on Mac OS X, run the following commands:
 
 .. code-block:: shell
 
-    # FIXME
+    # [FIXME]
 
 You'll need to run the following command now, and every time you log in:
 
