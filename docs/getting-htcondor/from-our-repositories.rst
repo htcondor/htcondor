@@ -7,8 +7,13 @@ If you're not already familiar with HTCondor, we recommend you follow our
 :ref:`instructions <admin_install_linux>` for your first installation.
 
 If you're looking to automate the installation of HTCondor using your existing
-toolchain, this page contains information about the RPM and deb
-repositories we offer.
+toolchain, the latest information is embedded in the output of the script run
+as part of the :ref:`instructions <admin_install_linux>`.  This script can
+be run as a normal user (or ``nobody``), so we recommend this approach.
+
+Otherwise, this page contains information about the RPM and deb
+repositories we offer.  These repositories will almost always have more
+recent releases than the distributions.
 
 RPM-based Distributions
 -----------------------

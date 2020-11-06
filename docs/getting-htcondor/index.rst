@@ -17,9 +17,14 @@ Getting HTCondor
 
     for-docker
 
-.. rubric:: Native Packages
+These instructions show how to install HTCondor and run all of its
+components on a single computer for testing and exploration.  We recommend
+that new users start here and proceed to the [user quick start guide],
+links to which will be repeated [...].  Experienced users ... [admin guid].
 
-If you have administrative privileges on your machine, continue on to the
+.. rubric:: Installing HTCondor with Administrative Privileges
+
+If you have administrative privileges on your machine, choose to the
 instructions corresponding to your operating system:
 
 * :ref:`Windows <admin_install_windows>`
@@ -28,7 +33,7 @@ instructions corresponding to your operating system:
   Ubuntu 18.04 and 20.04.
 * :ref:`Mac OS X <admin_install_macosx>`
 
-.. rubric:: Tarballs
+.. rubric:: Hand-Installation of HTCondor with User Privileges
 
 If you don't administrative privileges on your machine, you can still
 install HTCondor, although some features will not be available:

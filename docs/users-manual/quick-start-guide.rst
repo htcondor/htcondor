@@ -448,3 +448,8 @@ Where to Go from Here
 ---------------------
 
 [FIXME]
+* user's manual?: maybe direct link to "running a job",
+  "submitting a job"  list of features?
+* YouTube channel?
+* slide decks?
+* user tutorial video?
