@@ -18,11 +18,21 @@ Getting HTCondor
     for-docker
 
 These instructions show how to install HTCondor and run all of its
-components on a single computer for testing and exploration.  We recommend
-that new users start here and proceed to the [user quick start guide],
-links to which will be repeated [...].  Experienced users ... [admin guide].
+components on a single computer, so that you can test HTCondor and
+explore its features.  We recommend that new users start with the
+first set of instructions here and then continue with the
+:ref:`quick_start_guide`; that link will appear again at the end of
+these instructions.
 
-[fIXME] something about containers/the cloud, point below
+If you know how to use Docker, you may find one of our pre-made images
+easier to use; see the :ref:`docker` entry.  If you're familiar with
+cloud computing, you can also get HTCondor :ref:`in the cloud<cloud>`.
+
+Experienced users who want to make a HTCondor pool out of multiple
+physical machines should read the [FIXME] admin quick start guide
+to choose the first machine on which to follow these instructions.   For
+container infrastructures, see the :ref:`docker` or :ref:`kubernetes`
+entries.  For cloud infastructures, see the :ref:`cloud` entry.
 
 .. rubric:: Installing HTCondor with Administrative Privileges
 
@@ -47,6 +57,8 @@ install HTCondor, although some features will not be available:
 
 [FIXME] (a link to or exceedingly brief summary of the missing features)
 
+.. _docker:
+
 .. rubric:: Docker Images
 
 HTCondor is also `available <https://hub.docker.com/u/htcondor>`_ on Docker Hub.
@@ -57,9 +69,13 @@ container, you can proceed directly to :ref:`quick_start_guide`.
 
 For other options, see our :ref:`docker image list <docker_image_list>`.
 
+.. _kubernetes:
+
 .. rubric:: Kubernetes
 
 [FIXME]
+
+.. _cloud:
 
 .. rubric:: In the Cloud
 
