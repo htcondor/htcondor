@@ -303,6 +303,38 @@ file.
     ``$(Process)`` or ``$(ProcId)`` will have the same value as the job
     ClassAd attribute ``ProcId``.
 
+``$$(a_machine_classad_attribue)``
+    When the machine is matched to this job for it to run on, any 
+    dollar-dollar expressions are looked up from the machine ad, and then
+    expanded.  This lets you put the value of some machine ad attribute
+    into your job.  For example, if you to pass the actual amount of
+    memory a slot has provisioned as an argument to the job, you 
+    could add ``arguments = --mem $$(Memory)`` 
+
+    .. code-block:: condor-submit
+
+      arguments = --mem $$(Memory) 
+
+    or, if you wanted to put the name of the machine the job ran on
+    into the output file name, you could add
+
+    .. code-block: condor-submit
+
+      output = output_file.$$(Name)
+
+``$$([ an_evaluated_classad_expression ])``
+    This dollar-dollar-bracket syntax is useful when you need to 
+    perform some math on a value before passing it to your job.
+    For example, if want to pass 90% of the allocated memory as an
+    argument to your job, the submit file can have
+
+    .. code-block: condor-submit
+    
+     arguments = --mem $$([ Memory * 0.9 ])
+
+     and when the job is matched to a machine, condor will evaluate
+     this expression in the context of both the job and machine ad
+
 ``$(Item)``
     The default name of the variable when no ``<varname>`` is provided
     in a **queue** command.
