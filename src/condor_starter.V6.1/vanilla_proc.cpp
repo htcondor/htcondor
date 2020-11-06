@@ -1405,6 +1405,7 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 	}
 }
 
+#if defined(HAVE_EXT_LIBCGROUP)
 #ifdef LINUX
 void 
 VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
@@ -1514,4 +1515,5 @@ VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
 			climits.set_memsw_limit_bytes(1024 * 1024 * hard_limit);
 		}
 }
+#endif
 #endif
