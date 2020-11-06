@@ -20,7 +20,9 @@ Getting HTCondor
 These instructions show how to install HTCondor and run all of its
 components on a single computer for testing and exploration.  We recommend
 that new users start here and proceed to the [user quick start guide],
-links to which will be repeated [...].  Experienced users ... [admin guid].
+links to which will be repeated [...].  Experienced users ... [admin guide].
+
+[fIXME] something about containers/the cloud, point below
 
 .. rubric:: Installing HTCondor with Administrative Privileges
 
@@ -74,5 +76,4 @@ HTCondor also supports cloud-native distribution.
   :ref:`google_cloud_marketplace` that lets you construct an entire
   HTCondor pool via your web browser.  If you're new to HTCondor,
   you can proceed to the :ref:`quick_start_guide` immediately after
-  following those instructions.
-
+  following those instructions.  [FIXME]  Link to admin quick-start guide.
