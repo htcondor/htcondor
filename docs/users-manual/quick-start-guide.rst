@@ -447,9 +447,18 @@ Mac) convention of appending the directory name with a slash character (/).
 Where to Go from Here
 ---------------------
 
-[FIXME]
-* user's manual?: maybe direct link to "running a job",
-  "submitting a job"  list of features?
-* YouTube channel?
-* slide decks?
-* user tutorial video?
+.. What we really want here is a link to a nice page in the user manual
+.. that briefly describes HTCondor's major features and/or what you'd use
+.. them for, as kind of a roadmap to the user manual.
+
+* Consider watching our
+  `video tutorial <https://www.youtube.com/watch?v=p2X6s_7e51k&list=PLO7gMRGDPNumCuo3pCdRk23GDLNKFVjHn>`_
+  for new users.
+* `Additional tutorials <https://www.youtube.com/playlist?list=PLO7gMRGDPNumCuo3pCdRk23GDLNKFVjHn>`_
+  about other aspects of using HTCondor are available
+  in our `YouTube channel <https://www.youtube.com/channel/UCd1UBXmZIgB4p85t2tu-gLw>`_.
+* Slides from `past HTCondor Weeks <https://research.cs.wisc.edu/htcondor/past_condor_weeks.html>`_ -- our annual conference -- include the tutorials given there.
+* The :doc:`../users-manual/index` is a good reference.
+* If you like what you've seen but want to run more jobs simultaneously, the
+  [FIXME] administrator's quick start guide will help you make more of your
+  machines available to run jobs.
