@@ -17,7 +17,7 @@ A list of recent HTCondor software releases is available on our downloads page:
 https://research.cs.wisc.edu/htcondor/downloads.
 
 Selecting a release channel will lead you to the 
-:ref:`Getting Started <getting-htcondor>` section of the HTCondor Manual, which describes 
+:ref:`/getting-htcondor` section of the HTCondor Manual, which describes 
 how to download and install HTCondor.
 
 Support

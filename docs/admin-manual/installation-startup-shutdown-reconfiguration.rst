@@ -385,11 +385,11 @@ Installation on Unix
 --------------------
 
 Installing HTCondor from repositories is preferred for systems that you
-administer. See our :ref:`getting-htcondor/index:installing htcondor with administrative privileges`
+administer. See our :ref:`/getting-htcondor:installing htcondor with administrative privileges`
 instructions for more details. 
 
 If you do not have administrative privileges, see our 
-:ref:`getting-htcondor/index:hand-installation of htcondor with user privileges` instructions.
+:ref:`/getting-htcondor:hand-installation of htcondor with user privileges` instructions.
 
 Starting HTCondor Under Unix After Installation
 '''''''''''''''''''''''''''''''''''''''''''''''
@@ -554,8 +554,8 @@ single file named similarly to:
 approximately 107 Mbytes in size, and it can be removed once HTCondor is
 fully installed.
 
-For Windows installation instructions, see either :ref:`getting-htcondor/index:installing htcondor with administrative privileges`
- or :ref:`getting-htcondor/index:hand-installation of htcondor with user privileges`. 
+For Windows installation instructions, see either :ref:`/getting-htcondor:installing htcondor with administrative privileges`
+ or :ref:`/getting-htcondor:hand-installation of htcondor with user privileges`. 
 
 Starting HTCondor Under Windows After Installation
 ''''''''''''''''''''''''''''''''''''''''''''''''''

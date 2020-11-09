@@ -27,9 +27,9 @@ Install a Personal HTCondor
 
 We recommend that you install a personal HTCondor to make use of
 *condor_annex*; it's simpler to configure that way. These instructions 
-are under the :ref:`getting-started/index:hand-installation of htcondor 
+are under the :ref:`/getting-started:hand-installation of htcondor 
 with user privileges` section of the manual's 
-:ref:`Getting HTCondor <getting-htcondor>` page. Make sure you are 
+:ref:`Getting HTCondor </getting-htcondor>` page. Make sure you are 
 using HTCondor version 8.7.8 or later. 
 
 Once you have a working personal HTCondor installation, continue with 
