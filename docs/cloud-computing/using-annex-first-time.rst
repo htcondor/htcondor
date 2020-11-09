@@ -26,102 +26,18 @@ Install a Personal HTCondor
 ---------------------------
 
 We recommend that you install a personal HTCondor to make use of
-*condor_annex*; it's simpler to configure that way. These instructions
-assume version 8.7.8 of HTCondor, but should work the 8.8.x series as
-well; change '8.7.8' in the instructions wherever it appears.
+*condor_annex*; it's simpler to configure that way. These instructions 
+are under the :ref:`/getting-started:hand-installation of htcondor 
+with user privileges` section of the manual's 
+:ref:`Getting HTCondor </getting-htcondor>` page. Make sure you are 
+using HTCondor version 8.7.8 or later. 
 
-These instructions assume that it's OK to create a directory named
-``condor-8.7.8`` in your home directory; adjust them accordingly if you
-want to install HTCondor somewhere else.
+Once you have a working personal HTCondor installation, continue with 
+the additional setup instructions below, that are specific to using *condor_annex*. 
 
-Start by downloading (from
-`https://research.cs.wisc.edu/htcondor/downloads/ <https://research.cs.wisc.edu/htcondor/downloads/>`_)
-the 8.7.8 release from the "tarballs" section that matches your Linux
-version. (If you don't know your Linux version, ask your system
-administrator.) These instructions assume that the file you downloaded
-is located in your home directory on the Linux machine, so copy it there
-if necessary.
-
-Then do the following; note that in this box, like other terminal boxes,
-the commands you type are preceded by by ``$`` to distinguish them from
-any expected output, so don't copy that part of each of the following
-lines. (Lines which end in a ``\`` continue on the following line; be
-sure to copy both lines. Don't copy the ``\`` itself.)
-
-.. code-block:: console
-
-    $ mkdir ~/condor-8.7.8; cd ~/condor-8.7.8; mkdir local
-    $ tar -z -x -f ~/condor-8.7.8-*-stripped.tar.gz
-    $ ./condor-8.7.8-*-stripped/condor_install --local-dir `pwd`/local \
-    --make-personal-condor
-    $ . ./condor.sh
-    $ condor_master
-
-Testing
-'''''''
-
-Give HTCondor a few seconds to spin up and the try a few commands to
-make sure the basics are working. Your output will vary depending on the
-time of day, the name of your Linux machine, and its core count, but it
-should generally be pretty similar to the following.
-
-.. code-block:: console
-
-    $ condor_q
-     Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35
-    OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
-
-    0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended
-    $ condor_status -any
-    MyType             TargetType         Name
-
-    Negotiator         None               NEGOTIATOR
-    Collector          None               Personal Condor at 127.0.0.1@submit-3
-    Machine            Job                slot1@submit-3.batlab.org
-    Machine            Job                slot2@submit-3.batlab.org
-    Machine            Job                slot3@submit-3.batlab.org
-    Machine            Job                slot4@submit-3.batlab.org
-    Machine            Job                slot5@submit-3.batlab.org
-    Machine            Job                slot6@submit-3.batlab.org
-    Machine            Job                slot7@submit-3.batlab.org
-    Machine            Job                slot8@submit-3.batlab.org
-    Scheduler          None               submit-3.batlab.org
-    DaemonMaster       None               submit-3.batlab.org
-    Accounting         none               <none>
-
-You should also try to submit a job; create the following file. (We'll
-refer to the contents of the box by the emphasized filename in later
-terminals and/or files.)
-
-.. code-block:: condor-submit
-
-    # ~/condor-annex/sleep.submit
-
-    executable = /bin/sleep
-    arguments = 600
-    queue
-
-and submit it:
-
-.. code-block:: console
-
-    $ condor_submit ~/condor-annex/sleep.submit
-    Submitting job(s).
-    1 job(s) submitted to cluster 1.
-    $ condor_reschedule
-
-After a little while:
-
-.. code-block:: console
-
-    $ condor_q
-
-
-     Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35
-    OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
-    tlmiller CMD: /bin/sleep   2/3  13:56      _      1      _      1 3.0
-
-    1 jobs; 0 completed, 0 removed, 0 idle, 1 running, 0 held, 0 suspended
+	In the following instructions, it is assumed that the local installation 
+	has been done in the folder ``~/condor-8.7.8``. Change this path depending 
+	on your HTCondor version and how you followed the installation instructions. 
 
 Configure Public Interface
 ''''''''''''''''''''''''''
