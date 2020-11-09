@@ -180,6 +180,14 @@ struct UpdatesStats {
 	stats_entry_recent<long> ForkQueriesFrom[SUBSYSTEM_ID_COUNT]; // Track subsystems < the AUTO subsys.
 #endif
 
+	stats_entry_abs<int> PendingForwards;
+	stats_entry_recent<int> BeganQueuedForwarding;
+	stats_entry_recent<long> QueuedForward;
+	stats_entry_recent<long> DroppedForward;
+	stats_entry_recent<long> DirectForward;
+	stats_entry_recent<long> TotalForward;
+	stats_entry_recent<long> ErrorForward;
+
 	// per-ad-type counters 
 	std::map<std::string, UpdatesCounters> PerClass;
 

@@ -2237,19 +2237,27 @@ dprintf(D_FULLDEBUG,"JEF forward_classad(): something to do\n");
             raw_command = true;
         }
 
+		int num_pending = 0;
 		if (e->backlog) {
-			if ((int)e->pending_updates.size() >= update_vc_max_backlog) {
+			num_pending = (int)e->pending_updates.size();
+			collectorStats.global.PendingForwards = num_pending;
+			if (num_pending >= update_vc_max_backlog) {
 				dprintf(D_FULLDEBUG,"JEF dropping view update due to full backlog\n");
+				collectorStats.global.DroppedForward += 1;
 			} else {
 dprintf(D_FULLDEBUG,"JEF forward_classad(): already backlogged, adding update to pending list\n");
 				e->pending_updates.emplace_back(cmd, new ClassAd(*theAd), pvtAd?new ClassAd(*pvtAd):nullptr);
+				collectorStats.global.QueuedForward += 1;
 			}
 			continue;
 		}
+		collectorStats.global.PendingForwards = 0;
+		collectorStats.global.DirectForward += 1;
 
 		finish_forward_classad(*e, cmd, theAd, pvtAd, raw_command);
 
 		if (e->backlog) {
+			collectorStats.global.BeganQueuedForwarding += 1;
 dprintf(D_FULLDEBUG,"JEF forward_classad(): now backlogged, registering socket\n");
 			int retval = daemonCore->Register_Socket(view_sock, "View Collector socket",
 				&CollectorDaemon::forward_classad_callback,
@@ -2310,6 +2318,7 @@ dprintf(D_FULLDEBUG,"JEF finish_forward_classad(): nonblocking\n");
 			goto error_exit;
 		}
 	}
+	collectorStats.global.TotalForward += 1;
 
 	int retval;
 	if (do_nonblocking) {
@@ -2325,6 +2334,7 @@ dprintf(D_FULLDEBUG,"JEF finish_forward_classad(): nonblocking\n");
 	return TRUE;
 
  error_exit:
+	collectorStats.global.ErrorForward += 1;
 	vc.sock->close();
 	vc.backlog = false;
 	vc.pending_updates.clear();
@@ -2348,6 +2358,7 @@ dprintf(D_FULLDEBUG,"JEF forward_classad_callback() called\n");
 	vc->backlog = rsock->clear_backlog_flag();
 	if ( !retval ) {
 		dprintf( D_ALWAYS, "Can't send finish_end_of_message to View Collector %s\n", vc->name.c_str() );
+		collectorStats.global.ErrorForward += 1;
 		vc->sock->close();
 		vc->backlog = false;
 		vc->pending_updates.clear();

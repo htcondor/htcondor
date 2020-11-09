@@ -377,6 +377,14 @@ void UpdatesStats::Init()
 	STATS_POOL_ADD(Pool, "", PendingQueries, IF_BASICPUB);
 	STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", DroppedQueries, IF_BASICPUB);
 
+	STATS_POOL_ADD(Pool, "", PendingForwards, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", BeganQueuedForwarding, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", QueuedForward, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", DroppedForward, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", DirectForward, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", TotalForward, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", ErrorForward, IF_BASICPUB);
+
 	ADD_EXTERN_RUNTIME(Pool, HandleQuery, IF_VERBOSEPUB);
 	ADD_EXTERN_RUNTIME(Pool, HandleLocate, IF_VERBOSEPUB);
 
