@@ -84,6 +84,9 @@ questions:
 
     Generally jobs should not be either submitted or run on the central
     manager machine.
+    
+    Install HTCondor on the central manager before installing on the
+    other machines within the pool.
 
 2. Which machines should be allowed to submit jobs?
     HTCondor can restrict the machines allowed to submit jobs.
@@ -357,8 +360,15 @@ questions:
     directory of any machines that are submitting jobs to HTCondor. See
     question 6 above for details on this.
 
+    The HTCondor release directory takes up a fair amount of space. The
+    size requirement for the release directory is approximately 250
+    Mbytes. HTCondor itself, however, needs space to store all of the
+    jobs and their input files. If there will be large numbers of jobs,
+    consider installing HTCondor on a volume with a large amount of free
+    space.
 
-Installation Requirements
+
+Windows-Specific Preparation Notes
 '''''''''''''''''''''''''
 
 -  HTCondor for Windows is supported for Windows Vista or a more recent
@@ -370,52 +380,6 @@ Installation Requirements
    system. However, for security purposes, NTFS is preferred.
 -  HTCondor for Windows uses the Visual C++ 2012 C runtime library.
 
-Preparing to Install HTCondor under Windows
-'''''''''''''''''''''''''''''''''''''''''''
-
-:index:`preparation<single: preparation; installation>`
-
-Before installing the Windows version of HTCondor, there are two major
-decisions to make about the basic layout of the pool.
-
-#. What machine will be the central manager?
-#. Is there enough disk space for HTCondor?
-
-If the answers to these questions are already known, skip to the Windows
-Installation Procedure section below,
-:ref:`admin-manual/installation-startup-shutdown-reconfiguration:installation
-on windows`
-
--  What machine will be the central manager?
-
-   One machine in your pool must be the central manager. This is the
-   centralized information repository for the HTCondor pool and is also
-   the machine that matches available machines with waiting jobs. If the
-   central manager machine crashes, any currently active matches in the
-   system will keep running, but no new matches will be made. Moreover,
-   most HTCondor tools will stop working. Because of the importance of
-   this machine for the proper functioning of HTCondor, we recommend
-   installing it on a machine that is likely to stay up all the time, or
-   at the very least, one that will be rebooted quickly if it does
-   crash. Also, because all the services will send updates (by default
-   every 5 minutes) to this machine, it is advisable to consider network
-   traffic and network layout when choosing the central manager.
-
-   Install HTCondor on the central manager before installing on the
-   other machines within the pool.
-
-   Generally jobs should not be either submitted or run on the central
-   manager machine.
-
--  Is there enough disk space for HTCondor?
-   :index:`required disk space<single: required disk space; installation>`
-
-   The HTCondor release directory takes up a fair amount of space. The
-   size requirement for the release directory is approximately 250
-   Mbytes. HTCondor itself, however, needs space to store all of the
-   jobs and their input files. If there will be large numbers of jobs,
-   consider installing HTCondor on a volume with a large amount of free
-   space.
 
 Installation on Unix
 --------------------
