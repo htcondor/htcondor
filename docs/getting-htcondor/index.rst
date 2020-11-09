@@ -96,4 +96,10 @@ HTCondor also supports cloud-native distribution.
   :ref:`google_cloud_marketplace` that lets you construct an entire
   HTCondor pool via your web browser.  If you're new to HTCondor,
   you can proceed to the :ref:`quick_start_guide` immediately after
-  following those instructions.  [FIXME]  Link to admin quick-start guide.
+  following those instructions.
+* We also have documention on creating a
+  :doc:`../cloud-computing/condor-in-the-cloud` by hand.
+
+If you're new to HTCondor administration, consider reading our
+:ref:`quick-start guide <admin_quick_start>` before the rest of the
+:doc:`../admin-manual/index`.
