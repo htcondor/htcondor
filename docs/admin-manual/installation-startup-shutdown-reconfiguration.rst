@@ -29,7 +29,7 @@ and fill out the online form.
 to work properly.**
 
 Preparation
----------------
+-----------
 
 Before installation, you need to make a few important decisions about
 the basic layout of your pool. These decisions answer the following
@@ -84,7 +84,7 @@ questions:
 
     Generally jobs should not be either submitted or run on the central
     manager machine.
-    
+
     Install HTCondor on the central manager before installing on the
     other machines within the pool.
 
@@ -369,7 +369,7 @@ questions:
 
 
 Windows-Specific Preparation Notes
-'''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''
 
 -  HTCondor for Windows is supported for Windows Vista or a more recent
    version.
@@ -385,11 +385,12 @@ Installation on Unix
 --------------------
 
 Installing HTCondor from repositories is preferred for systems that you
-administer. See our :ref:`/getting-htcondor:installing htcondor with administrative privileges`
-instructions for more details. 
+administer.  See our :ref:`install_with_administrative_privileges`
+instructions for more details.
 
-If you do not have administrative privileges, see our 
-:ref:`/getting-htcondor:hand-installation of htcondor with user privileges` instructions.
+If you do not have administrative privileges, see our
+:ref:`hand_install_with_user_privileges`
+instructions for more details.
 
 Starting HTCondor Under Unix After Installation
 '''''''''''''''''''''''''''''''''''''''''''''''
@@ -554,8 +555,10 @@ single file named similarly to:
 approximately 107 Mbytes in size, and it can be removed once HTCondor is
 fully installed.
 
-For Windows installation instructions, see either :ref:`/getting-htcondor:installing htcondor with administrative privileges`
- or :ref:`/getting-htcondor:hand-installation of htcondor with user privileges`. 
+We have
+:doc:`instructions <../getting-htcondor/install-windows-as-administrator>`
+on obtaining the MSI and then using it to install HTCondor.  Note that we
+don't support unprivileged installations on Windows.
 
 Starting HTCondor Under Windows After Installation
 ''''''''''''''''''''''''''''''''''''''''''''''''''

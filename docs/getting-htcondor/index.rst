@@ -34,6 +34,8 @@ to choose the first machine on which to follow these instructions.   For
 container infrastructures, see the :ref:`docker` or :ref:`kubernetes`
 entries.  For cloud infastructures, see the :ref:`cloud` entry.
 
+.. _install_with_administrative_privileges:
+
 .. rubric:: Installing HTCondor with Administrative Privileges
 
 If you have administrative privileges on your machine, choose to the
@@ -44,6 +46,8 @@ instructions corresponding to your operating system:
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
 * :ref:`Mac OS X <admin_install_macosx>`
+
+.. _hand_install_with_user_privileges:
 
 .. rubric:: Hand-Installation of HTCondor with User Privileges
 
