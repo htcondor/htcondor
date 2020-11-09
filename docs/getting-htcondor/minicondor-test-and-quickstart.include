@@ -19,4 +19,5 @@ The output will look something like this:
 For a brief introduction to using HTCondor, proceed to the
 :ref:`quick_start_guide`.
 
-If you're looking to set up a multi-machine pool, [FIXME].
+If you're looking to set up a multi-machine pool, proceed to the
+:ref:`admin_quick_start`.
