@@ -3994,6 +3994,10 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		}
 	}
 
+	// TODO Add a way to efficiently test if the key refers to an ad
+	// created in the currently-active transaction. Currently, submit
+	// transforms and late materialization get free reign to modify
+	// attributes for invalid job ids.
 	if (JobQueue->Lookup(key, job)) {
 		// If we made it here, the user is adding or editing attrbiutes
 		// to an ad that has already been committed in the queue.
@@ -4015,12 +4019,6 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 
 		// Ensure user is not changing an immutable attribute to a committed job
 		bool is_immutable_attr = immutable_attrs.find(attr_name) != immutable_attrs.end();
-		if (is_immutable_attr) {
-			// late materialization is allowed to change some 'immutable' attributes in the cluster ad.
-			if ((key.proc == -1) && YourStringNoCase(ATTR_TOTAL_SUBMIT_PROCS) == attr_name) {
-				is_immutable_attr = false;
-			}
-		}
 		if (is_immutable_attr)
 		{
 
@@ -4070,14 +4068,18 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		// submit transforms come from inside the schedd and have no restrictions
 		// on which cluster/proc may be edited (the transform itself guarantees that only
 		// jobs in the submit transaction will be edited)
-	} else if (Q_SOCK != NULL || (flags&NONDURABLE)) {
-		// If we made it here, the user (i.e. not the schedd itself)
-		// is modifying attributes in an ad that has not been committed yet
-		// (we know this because it cannot be found in the JobQueue above).
-		// Restrict the user to only modifying attributes in the current cluster
-		// returned by NewCluster, and also restrict the user to procs that have been
-		// returned by NewProc.
-		if ((key.cluster != active_cluster_num) || (key.proc >= next_proc_num)) {
+	} else if (flags & SetAttribute_LateMaterialization) {
+		// late materialization comes from inside the schedd and has no
+		// restrictions on which cluster/proc may be edited
+	} else if (JobQueue->InTransaction() && active_cluster_num > 0) {
+		// We have an active transaction that's adding new ads.
+		// Assume the modification is for one of those ads (we know it's
+		// not for an ad that's already in the queue).
+		// Restrict to only modifying attributes in the last cluster
+		// returned by NewCluster, and also restrict to procs that have
+		// been returned by NewProc or the cluster ad (proc -1).
+		// If we got a completely bogus job id, we'll still reject it.
+		if ((key.cluster != active_cluster_num) || (key.proc >= next_proc_num) || (key.proc < -1)) {
 			dprintf(D_ALWAYS,"%s modifying attribute %s in non-active cluster cid=%d acid=%d\n", 
 					func_name, attr_name, key.cluster, active_cluster_num);
 			if (err) err->pushf("QMGMT", ENOENT, "Modifying attribute %s in "
@@ -4102,6 +4104,14 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 			// to return failure if needed.
 			free( val );
 		}
+	} else {
+		dprintf(D_ALWAYS,"%s modifying attribute %s in nonexistent job %d.%d\n",
+				func_name, attr_name, key.cluster, key.proc);
+		if (err) err->pushf("QMGMT", ENOENT, "Modifying attribute %s in "
+			"nonexistent job %d.%d",
+			attr_name, key.cluster, key.proc);
+		errno = ENOENT;
+		return -1;
 	}
 
 	return 1;
@@ -5217,7 +5227,13 @@ int TransactionWatcher::CommitIfAny(SetAttributeFlags_t flags, CondorError * err
 	int rval = 0;
 	if (started && ! completed) {
 		rval = CommitTransactionAndLive(flags, errorStack);
-		completed = true;
+		if (rval == 0) {
+			// Only set the completed flag if our CommitTransaction succeeded... if
+			// it failed (perhaps due to SUBMIT_REQUIREMENTS not met), we cannot mark it
+			// as completed because that means we will not abort it in the 
+			// Transactionwatcher::AbortIfAny() method below and will likely ASSERT.
+			completed = true;
+		}
 	}
 	return rval;
 }
@@ -5682,6 +5698,14 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 		int rval = CheckTransaction(new_ad_keys, errorStack);
 		if ( rval < 0 ) {
+			// This transaction failed checks (e.g. SUBMIT_REQUIREMENTS), so now the question
+			// is should we abort this transaction (that we refuse to commit) right now right here,
+			// or should we simply return an error an rely on our caller to abort the transaction?
+			// If we abort it now, our caller may get confused if they call AbortTransaction and it
+			// subsequently fails.  On the other hand, we don't want to leave a transaction pending
+			// that is never aborted in the event our caller never checks...
+			// Current thinking is do not call AbortTransaction here, let the caller do it so 
+			// that the logic in AbortTranscationAndRecomputeClusters() works correctly...
 			return rval;
 		}
 	}

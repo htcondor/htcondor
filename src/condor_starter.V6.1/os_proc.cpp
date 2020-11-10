@@ -103,7 +103,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	std::string JobName;
 	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n",
 				 ATTR_JOB_CMD );
 		job_not_started = true;
 		return 0;
@@ -117,9 +117,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// NULL)
 	PrivSepHelper* privsep_helper = Starter->privSepHelper();
 
-		// // // // // // 
+		// // // // // //
 		// Arguments
-		// // // // // // 
+		// // // // // //
 
 		// prepend the full path to this name so that we
 		// don't have to rely on the PATH inside the
@@ -167,7 +167,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			dprintf ( D_ALWAYS, "Failed to chmod %s!\n", JobName.c_str() );
 			return 0;
 		}
-	} 
+	}
 
 	ArgList args;
 
@@ -388,7 +388,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 		JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir );
 		// Assumes we're in the root of the sandbox.
-		mkdir( manifest_dir.c_str(), 0700 );
+		int r = mkdir( manifest_dir.c_str(), 0700 );
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Cannot make manifest directory %s: %s\n", manifest_dir.c_str(), strerror(errno));
+		}
 		// jic->addToOutputFiles( manifest_dir.c_str() );
 		std::string f = manifest_dir + DIR_DELIM_CHAR + "environment";
 
@@ -494,6 +497,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
+	int orig_args_len = args.Count();
 	if (SupportsPIDNamespace()) {
 		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
 	} else {
@@ -513,6 +517,22 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			free(affinity_mask);
 			return 0;
 		}
+
+		if (param_boolean("SINGULARITY_RUN_TEST_BEFORE_JOB", true)) {
+			bool result = htcondor::Singularity::runTest(JobName, args, orig_args_len, job_env);
+			if (!result) {
+				dprintf(D_FULLDEBUG, "Singularity test failed\n");
+				free(affinity_mask);
+				job_not_started = true;
+				Starter->jic->notifyStarterError( "Singularity test failed, not running singularity job",
+			    	                              true,
+			        	                          CONDOR_HOLD_CODE_SingularityTestFailed,
+			            	                      0);
+				return 0;
+			}
+		}
+
+
 	} else if (sing_result == htcondor::Singularity::FAILURE) {
 		dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
 		job_not_started = true;

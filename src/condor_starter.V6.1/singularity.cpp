@@ -359,3 +359,48 @@ Singularity::convertEnv(Env *job_env) {
 	}
 	return true;
 }
+
+bool 
+Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env) {
+
+	TemporaryPrivSentry sentry(PRIV_USER);
+
+	// First replace "exec" with "test"
+	ArgList testArgs;
+
+	// The last orig_args_len args are the real exec + its args.  Skip those for the test
+	for (int i = 0; i < args.Count() - orig_args_len; i++) {
+		const char *arg = args.GetArg(i);
+		if (strcmp(arg, "exec") == 0) {
+			arg = "test";
+		}
+		testArgs.AppendArg(arg);
+	}
+
+	MyString stredArgs;
+	testArgs.GetArgsStringForDisplay(&stredArgs);
+
+	dprintf(D_FULLDEBUG, "Runnning singularity test for job %s cmd is %s\n", JobName.c_str(), stredArgs.c_str());
+	FILE *sing_test_output = my_popen(testArgs, "r", 0, &env, true);
+	if (!sing_test_output) {
+		dprintf(D_ALWAYS, "Error running singularity test job: %s\n", stredArgs.c_str());
+		return false;
+	}
+
+	char buf[256];
+	buf[0] = '\0';
+
+	int nread = fread(buf, 255, 1, sing_test_output);
+	dprintf(D_ALWAYS, "sing test:%d  %s\n", nread, buf);
+
+	int rc = my_pclose(sing_test_output);
+	if (rc != 0)  {
+		dprintf(D_ALWAYS, "Non zero return code %d from singularity test of %s\n", rc, stredArgs.c_str());
+		return false;
+	}
+
+	
+	dprintf(D_FULLDEBUG, "Successfully ran singularity test\n");
+	return true;
+}
+

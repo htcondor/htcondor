@@ -54,6 +54,30 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		return FALSE;
 	}
 
+
+	// Handle the instance tags.
+    std::string buffer;
+	std::vector< std::pair< std::string, std::string > > tags;
+	if( command->LookupString( ATTR_EC2_TAG_NAMES, buffer ) ) {
+		StringList tagNames( buffer );
+
+		char * tagName = NULL;
+		tagNames.rewind();
+		while( (tagName = tagNames.next()) ) {
+			std::string tagAttr(ATTR_EC2_TAG_PREFIX);
+			tagAttr.append(tagName);
+
+			char * tagValue = NULL;
+			if(! command->LookupString(tagAttr, &tagValue)) {
+				return FALSE;
+			}
+
+			tags.push_back( std::make_pair( tagName, tagValue ) );
+			free( tagValue );
+		}
+    }
+
+
 	// Is this less of a hack than handing the command ad to ReplyAndClean?
 	std::string expectedDelay;
 	command->LookupString( "ExpectedDelay", expectedDelay );
@@ -363,7 +387,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		OnDemandRequest * odr = new OnDemandRequest( reply, gahp, scratchpad,
 			serviceURL, publicKeyFile, secretKeyFile, commandState,
-			commandID, annexID );
+			commandID, annexID, tags );
 
 		time_t endOfLease = 0;
 		command->LookupInteger( "EndOfLease", endOfLease );

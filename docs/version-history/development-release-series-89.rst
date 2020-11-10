@@ -4,18 +4,76 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 8.9.11
+-------------
+
+Release Notes:
+
+.. HTCondor version 8.8.11 released on Month Date, 2020.
+
+- HTCondor version 8.9.11 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+Version 8.9.10
+--------------
+
+Release Notes:
+
+-  HTCondor version 8.9.10 not yet released.
+
+.. HTCondor version 8.9.10 released on Month Date, 2020.
+
+New Features:
+
+- Added statistics to the collector ad about CCB.
+  :ticket:`7842`
+
+- You may now tag instances from the command line of `condor_annex`.  Use
+  the ``-tag <name> <value>`` command-line option once for each tag.
+  :ticket:`7834`
+
+Bugs Fixed:
+
+- Fixed a bug specific to MacOS X which could cause the shared port daemon's
+  initial childalive message to be lost.  This would cause `condor_who` to
+  wrongly think that HTCondor hadn't started up until the shared port daemon
+  sent its second childalive message.
+  :ticket:`7866`
+
 Version 8.9.9
 -------------
 
 Release Notes:
 
--  HTCondor version 8.9.9 not yet released.
+-  HTCondor version 8.9.9 released on October 26, 2020.
 
-.. HTCondor version 8.8.9 released on Month Date, 2020.
+-  The RPMs have been restructured to require additional packages from EPEL.
+   In addition to the boost libraries, the RPMs depend on the Globus, munge,
+   SciTokens, and VOMS libraries in EPEL.
+   :ticket:`7681`
 
--  *condor_q* no longer prints misleading message about the matchmaker
-   when asked to analyze a job.
-   :ticket:`5834`
+-  When the *condor_startd* is running as root on a Linux machine,
+   unless CGROUP_MEMORY_LIMIT_POLICY is ``none``, HTCondor now always
+   sets both the soft and hard cgroup memory limit for a job. When
+   CGROUP_MEMORY_LIMIT_POLICY is ``soft``, the soft limit is set to the
+   slot size, and the hard limit is set to the TotalMemory of the whole
+   startd.  When CGROUP_MEMORY_LIMIT_POLICY is ``hard``, the hard limit
+   is set to the slot size, and the soft limit is set 90% lower.
+   Also added knob DISABLE_SWAP_FOR_JOB, which when set to ``true``, 
+   prevents the job from using any swap space. This knob defaults to ``false``.
+   :ticket:`7882`
+
+- When running on a Linux system with cgroups enabled, the ``MemoryUsage``
+  attribute of a job no longer includes the memory used by the kernel disk
+  cache.
+  :ticket:`7882`
 
 -  We deprecated the exceptions raised by the
    :ref:`apis/python-bindings/index:Python Bindings`.  The new
@@ -25,44 +83,133 @@ Release Notes:
    of each exception type they replaced.
    :ticket:`6935`
 
+-  We changed the default value of ``PROCD_ADDRESS`` on Windows to make it
+   less likely for multiple instances of HTCondor on the machine to collide.
+   :ticket:`7789`
+
+-  The *condor_schedd* will no longer modify a job's ``User`` attribute when the job's
+   ``NiceUser`` attribute is set.  The ``nice_user`` submit keyword is now implemented
+   entirely by *condor_submit*.   Because of this change the ``nice_user`` mechanism
+   will only work when *condor_submit* and the *condor_schedd* are both version 8.9.9 or later.
+   :ticket:`7783`
+
 New Features:
 
 -  You may now instruct HTCondor to record certain information about the
    files present in the top level of a job's sandbox and the job's environment
    variables.  The list of files is recorded when transfer-in completes
-   and again when transfer-out starts.  Set ``manifest`` to true in your
+   and again when transfer-out starts.  Set ``manifest`` to ``true`` in your
    submit file to enable, or ``manifest_dir`` to specify where the lists
    are recorded.  See the :ref:`man-pages/condor_submit:*condor_submit*`
    man page for details.
    :ticket:`7381`
 
-   This features is not presently avaiable on Windows.
+   This feature is not presently available on Windows.
 
-- Added :class:`htcondor.JobStatus` enumeration to the Python bindings.
-  :ticket:`7726`
+- DAGMan now waits for ``PROVISIONER`` nodes to reach a ready status before 
+  submitting any other jobs.
+  :ticket:`7610`
 
-- Added a family of version comparison functions to ClassAds.
-  :ticket:`7504`
+- Added a ``-Dot`` argument to *condor_dagman* which tells DAGMan to simply
+  output a .dot file graphic representation of the dag, then exit immediately
+  without submitting any jobs.
+  :ticket:`7796`
+
+- Set a variety of defaults into *condor_dagman* so it can now easily be
+  invoked directly from the command line using ``condor_dagman mydag.dag``
+  :ticket:`7806`
+
+- Singularity jobs now ignore bind mount directories if the source
+  directory for the bind mount does not exist on the host machine
+  :ticket:`7807`
+
+- Singularity jobs now ignore bind mount directories if the target
+  directory for the bind mount does not exist in the image and
+  SINGULARITY_IGNORE_MISSING_BIND_TARGET is set to ``true``
+  (default is ``false``).
+  :ticket:`7846`
+
+- Improved startup time of the daemons.
+  :ticket:`7799`
+
+-  Added a machine-ad attribute, ``LastDrainStopTime``, which records the last
+   time a drain command was cancelled.  Added two attributes to the defrag
+   daemon's ad, ``RecentCancelsList`` and ``RecentDrainsList``, which record
+   information about the last ten cancel or drain commands, respectively,
+   that the defrag daemon sent.
+   :ticket:`7732`
+
+-  The accounting group that the ``nice_user`` submit command puts jobs into is now
+   configurable by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` in the configuration
+   of *condor_submit*.
+   :ticket:`7792`
+
+- Python 3 bindings are now available on macOS. They are linked against
+  Python 3.8 provided by python.org.
+  :ticket:`7090`
+
+-  Added `oauth-services` method to the python-bindings :class:`~htcondor.Submit` class. 
+   The python-bindings :class:`~htcondor.CredCheck` class can now be used to check if the
+   OAuth services that a job needs are present before the job is submitted.
+   :ticket:`7606`
+
+-  The Python API daemon objects :class:`~htcondor.Schedd`, :class:`~htcondor.Startd`,
+   :class:`~htcondor.Negotiator` and :class:`~htcondor.Credd` now have a location member
+   whose value can be passed to the constructor of a class of the same type to create a new
+   object pointing to the same HTCondor daemon.
+   :ticket:`7670`
+
+-  The Python API daemon object :class:`~htcondor.Schedd` constructor now accepts None
+   and interprets that to be the address of the local HTCondor Schedd.
+   :ticket:`7668`
+
+-  The Python API now includes the job status enumeration.
+   :ticket:`7726`
+
+-  The Python API methods that take a constraint argument will now accept an :class:``~classad.ExprTree``
+   in addition to the native Python types, string, bool, int and None.
+   :ticket:`7657`
+
+- Updated the ``htcondor.Submit.from_dag()`` Python binding to support the
+  full range of command-line arguments available to *condor_submit_dag*.
+  :ticket:`7823`
 
 - Added the :mod:`htcondor.personal` module to the Python bindings. Its primary
   feature is the :class:`htcondor.personal.PersonalPool` class, which is
-  responsible for managing the lifecycle of a "personal" single-machine
+  responsible for managing the life-cycle of a "personal" single-machine
   HTCondor pool. A personal pool can (for example) be used for testing and
   development of HTCondor workflows before deploying to a larger pool.
   Personal pools do not require administrator/root privileges.
   HTCondor itself must still be installed on your system.
+  :ticket:`7745`
+
+- Added a family of version comparison functions to ClassAds.
+  :ticket:`7504`
 
 - Added the OAuth2 Credmon (aka "SciTokens Credmon") daemon
   (*condor_credmon_oauth*), WSGI application, helper libraries, example
-  configuration, and documentation to HTCondor.
+  configuration, and documentation to HTCondor for Enterprise Linux 7
+  platforms.
   :ticket:`7741`
 
+- The *bosco_cluster* can optionally specify the remote installation directory.
+  :ticket:`7843`
+
+- HTCondor lets the administrator know when a SciToken mapping contains a
+  trailing slash and optionally allow it to map. It is easy for an administrator
+  to overlook the trailing slash when cutting a pasting from a browser.
+  :ticket:`7557`
+
 Bugs Fixed:
+
+-  Fixed a bug that could cause the *condor_schedd* to abort if a SUBMIT_REQUIREMENT
+   prevented a late materialization job from materializing.
+   :ticket:`7874`
 
 -  ``condor_annex -check-setup`` now respects the configuration setting
    ``ANNEX_DEFAULT_AWS_REGION``.  In addition, ``condor_annex -setup`` now
    sets ``ANNEX_DEFAULT_AWS_REGION`` if it hasn't already been set.  This
-   makes first-time setup in a nondefault region much less confusing.
+   makes first-time setup in a non-default region much less confusing.
    :ticket:`7832`
 
 -  Fixed a bug introduced in 8.9.6 where enabling pid namespaces in the startd
@@ -72,6 +219,40 @@ Bugs Fixed:
 -  *condor_watch_q* now correctly groups jobs submitted by DAGMan after
    *condor_watch_q* has started running.
    :ticket:`7800`
+
+-  Fixed a bug in the ClassAd library where calling the ClassAd sum function
+   on an empty list returned undefined.  It now returns 0.
+   :ticket:`7838`
+
+-  Fixed a bug in Docker Universe that caused a confusing warning message
+   about an unaccessible file in /root/.docker 
+   :ticket:`7805`
+
+-  Fixed a bug in the *condor_collector* that caused it to handle queries
+   from the *condor_negotiator* at normal priority instead of high priority.
+   :ticket:`7729`
+
+-  Fixed attribute ``ProportionalSetSizeKb`` to behave the same as
+   ``ResidentSetSize`` in the slot ad.
+   :ticket:`7787`
+
+-  Removed the Java benchmark ``JavaMFlops`` from the machine ad.
+   :ticket:`7795`
+
+-  Read IDTOKENS used by daemons with the correct UID.
+   :ticket:`7767`
+
+-  Fixed the Python ``htcondor.Submit.from_dag()`` binding so it now throws an
+   ``IOError`` exception when the specified .dag file is not found.
+   :ticket:`7808`
+
+-  Fixed a bug that would cause a job to go on hold with a memory usage
+   exceeded message in the rare case where the usage could not be obtained.
+   :ticket:`7886`
+
+-  *condor_q* no longer prints misleading message about the matchmaker
+   when asked to analyze a job.
+   :ticket:`5834`
 
 Version 8.9.8
 -------------
@@ -414,7 +595,7 @@ New Features:
   when invoked with the ``-json`` flag. :ticket:`7454`
 
 - Request IDs used for *condor_token_request* are now zero-padded, ensuring
-  they are always a fixed-length. :ticket:`7461`
+  they are always a fixed length. :ticket:`7461`
 
 - All token generation and usage is now logged using HTCondor's audit log
   mechanism. :ticket:`7450`
@@ -450,7 +631,7 @@ New Features:
   :ticket:`7453`
 
 - When running on a Linux system with cgroups enabled, the MemoryUsage
-  attribute of a job now includes the memory usage by the kernel disk
+  attribute of a job now includes the memory used by the kernel disk
   cache.  This helps users set Request_Memory to more useful values.
   :ticket:`7442`
 
@@ -492,13 +673,13 @@ New Features:
   :ticket:`7421`
 
 - Feature to enhance the reliability of *condor_ssh_to_job* is now on
-  by default: :macro:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY` is now true
+  by default: :macro:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY` is now ``true``
   :ticket:`7536`
 
 - Enhanced the dataflow jobs that we introduced in version 8.9.5. In
   addition to output files, we now also check the executable and stdin files.
   If any of these are newer than the input files, we consider this to be a
-  dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to True.
+  dataflow job and we skip it if :macro:`SHADOW_SKIP_DATAFLOW_JOBS` set to ``True``.
   :ticket:`7488`
 
 - When HTCondor is running as root on a Linux machine, it now makes /dev/shm
@@ -506,7 +687,7 @@ New Features:
   one job aren't visible to other jobs, and that HTCondor now cleans up
   any leftover files in /dev/shm when the job exits.  If you want to the
   old behavior of a shared /dev/shm, you can set :macro:`MOUNT_PRIVATE_DEV_SHM` 
-  to false.
+  to ``false``.
   :ticket:`7443` 
 
 - When configuration parameter :macro:`HAD_USE_PRIMARY` is set to ``True``,
@@ -824,7 +1005,7 @@ New Features:
   job self-checkpoints.
   :ticket:`7189`
 
-- Added ``$(SUBMIT_TIME)``, ``$(YEAR), ``$(MONTH)``, and ``$(DAY)`` as
+- Added ``$(SUBMIT_TIME)``, ``$(YEAR)``, ``$(MONTH)``, and ``$(DAY)`` as
   built-in submit variables. These expand to the time of submission.
   :ticket:`7283`
 
@@ -1450,8 +1631,8 @@ New Features:
 
 -  In the Python bindings, the ``JobEventLog`` class now has a ``close``
    method. It is also now its own iterable context manager (implements
-   ``_enter__`` and ``_exit__``). The ``JobEvent`` class now
-   implements ``_str__`` and ``_repr__``. :ticket:`6814`
+   ``__enter__`` and ``__exit__``). The ``JobEvent`` class now
+   implements ``__str__`` and ``__repr__``. :ticket:`6814`
 
 -  the *condor_hdfs* daemon which allowed the hdfs daemons to run under
    the *condor_master* has been removed from the contributed source.

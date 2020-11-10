@@ -781,10 +781,7 @@ ClassAd * JobAggregationResults::next()
 		StringTokenIterator iter(it->first, 100, "\n");
 		const char * line;
 		while ((line = iter.next())) {
-			if (!ad.Insert(line)) {
-				dprintf(D_ALWAYS, "Negotiator sent unparseable autocluster attribute: %s\n", line);
-				continue;
-			}
+			(void) ad.Insert(line);
 		}
 		if (this->is_def_autocluster) {
 			ad.Assign(ATTR_AUTO_CLUSTER_ID,it->second);

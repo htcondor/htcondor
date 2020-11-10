@@ -1,3 +1,29 @@
+condor (8.9.9-1) stable; urgency=medium
+
+  * The RPM packages requires globus, munge, scitokens, and voms from EPEL
+  * Improved cgroup memory policy settings that set both hard and soft limit
+  * Cgroup memory usage reporting no longer includes the kernel buffer cache
+  * Numerous Python binding improvements, see version history
+  * Can create a manifest of files on the execute node at job start and finish
+  * Added provisioner nodes to DAGMan, allowing users to provision resources
+  * DAGMan can now produce .dot graphs without running the workflow
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 25 Oct 2020 12:32:40 -0500
+
+condor (8.8.11-1) stable; urgency=medium
+
+  * HTCondor now properly tracks usage over vanilla universe checkpoints
+  * New ClassAd equality and inequality operators in the Python bindings
+  * Fixed a bug where removing in-use routes could crash the job router
+  * Fixed a bug where condor_chirp would abort after success on Windows
+  * Fixed a bug where using MACHINE_RESOURCE_NAMES could crash the startd
+  * Improved condor c-gahp to prioritize commands over file transfers
+  * Fixed a rare crash in the schedd when running many local universe jobs
+  * With GSI, avoid unnecessary reverse DNS lookup when HOST_ALIAS is set
+  * Fix a bug that could cause grid universe jobs to fail upon proxy refresh
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 21 Oct 2020 06:38:00 -0500
+
 condor (8.9.8-1) unstable; urgency=medium
 
   * Added htcondor.dags and htcondor.htchirp to the HTCondor Python bindings

@@ -5759,19 +5759,27 @@ These settings affect the *condor_starter*.
                 cmd = /bin/sleep
 
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
-    A string with possible values of ``hard``, ``soft`` and ``none``.
-    The default value is ``none``. If set to ``hard``, the cgroup-based
-    limit on the total amount of physical memory used by the sum of all
-    processes in the job will not be allowed to exceed the limit given
-    by the cgroup memory controller attribute memory.limit_in_bytes.
-    If the processes try to allocate more memory, the allocation will
-    succeed, and virtual memory will be allocated, but no additional
-    physical memory will be allocated. If set to
-    ``soft``, the cgroup-based limit on the total amount of physical
-    memory used by the sum of all processes in the job will be allowed
-    to go over the limit, if there is free memory available on the
-    system. If set to ``none``, no limit will be enforced, but the
-    memory usage of the job will be accurately measured by a cgroup.
+    A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
+    The default value is ``none``. If set to ``hard``, when the job tries
+    to use more memory than the slot size, it will be put on hold with
+    an appropriate message.  Also, the cgroup soft limit will set to
+    90% of the hard limit to encourage the kernel to lower 
+    cacheable memory the job is using.
+    If set to ``soft``, cgroup soft limit will be set to the slot size,
+    and the hard limit will be set to the total memory allocated to the startd,
+    (by default the total memory on the system minus RESERVED_MEMORY), or 
+    the value of MEMORY, if set.  If set to ``none``, no limit will be enforced, 
+    but the memory usage of the job will be accurately measured by a cgroup.
+    When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
+    CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
+    in the context of the machine and the job which determine the hard and soft limits.
+
+:macro-def:`DISABLE_SWAP_FOR_JOB`
+    A boolean that defaults to false.  When true, and cgroups are in effect, the
+    *condor_starter* will set the memws to the same value as the hard memory limit.
+    This will prevent the job from using any swap space.  If it needs more memory than
+    the hard limit, it will be put on hold.  When false, the job is allowed to use any
+    swap space configured by the operating system.
 
 :macro-def:`USE_VISIBLE_DESKTOP`
     This boolean variable is only meaningful on Windows machines. If
@@ -6024,6 +6032,11 @@ These settings affect the *condor_starter*.
 :macro-def:`SINGULARITY_BIND_EXPR`
     A string value containing a list of bind mount specifications to be
     passed to Singularity. The default value is ``"SingularityBind"``.
+
+:macro-def:`SINGULARITY_IGNORE_MISSING_BIND_TARGET`
+    A boolean value defaulting to false.  If true, and the singularity
+    image is a directory, and the target of a bind mount doesn't exist in
+    the target, then skip this bind mount.
 
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value containing a list of extra arguments to be appended
@@ -6733,6 +6746,10 @@ These macros affect the *condor_negotiator*.
     Sets the priority factor for nice users, as described in
     :doc:`/admin-manual/user-priorities-negotiation`.
     Defaults to 10000000000.
+
+:macro-def:`NICE_USER_ACCOUNTING_GROUP_NAME`
+    Sets the name used for the nice-user accounting group by *condor_submit*.
+    Defaults to nice-user.
 
 :macro-def:`REMOTE_PRIO_FACTOR`
     Defines the priority factor for remote users, which are those users
@@ -7596,6 +7613,12 @@ These macros affect the *condor_gridmanager*.
     consecutive connections to the remote *condor_schedd* in order to
     send batched sets of commands to be executed on that remote
     *condor_schedd* daemon. The default value is 5.
+
+:macro-def:`C_GAHP_MAX_FILE_REQUESTS`
+    Limits the number of file transfer commands of each type (input,
+    output, proxy refresh) that are performed before other (potentially
+    higher-priority) commands are read and performed.
+    The default value is 10.
 
 :macro-def:`GLITE_LOCATION`
     The complete path to the directory containing the Glite software.
@@ -10296,7 +10319,9 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     These configuration variables are defined by a comma and/or white
     space separated list of job names to run. Each is the logical name
     of a job. This name must be unique; no two jobs may have the same
-    name.
+    name. The *condor_startd* reads this configuration variable on startup
+    and on reconfig.  The *condor_schedd* reads this variable and other 
+    ``SCHEDD_CRON_*`` variables only on startup.
 
 :macro-def:`STARTD_CRON_<JobName>_PREFIX`  and :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`  and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
     Specifies a string which is prepended by HTCondor to all attribute

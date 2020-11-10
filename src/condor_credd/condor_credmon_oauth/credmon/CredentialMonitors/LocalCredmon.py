@@ -78,7 +78,7 @@ class LocalCredmon(OAuthCredmon):
         base, _ = os.path.split(cred_fname)
         username = os.path.basename(base)
 
-        if self.should_renew(base, username):
+        if self.should_renew(username, self.provider):
             self.log.info('Found %s, acquiring SciToken and .use file', cred_fname)
             success = self.refresh_access_token(username, self.provider)
             if success:

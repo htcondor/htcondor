@@ -24,7 +24,6 @@
 #include "../condor_utils/dagman_utils.h"
 #include "MyString.h"
 #include "which.h"
-#include "string_list.h"
 #include "condor_distribution.h"
 #include "condor_config.h"
 #include "env.h"
@@ -64,7 +63,7 @@ int parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 #if 0 // Moved to dagman_utils
 int setUpOptions( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts,
-			StringList &dagFileAttrLines );
+			std::list<std::string> &dagFileAttrLines );
 void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts);
 #endif
@@ -74,7 +73,7 @@ int parseArgumentsLine( const MyString &subLine,
 #if 0 // Moved to dagman_utils
 void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts,
-			/* const */ StringList &dagFileAttrLines );
+			/* const */ std::list<std::string> &dagFileAttrLines );
 #endif
 int submitDag( SubmitDagShallowOptions &shallowOpts );
 
@@ -97,7 +96,7 @@ int main(int argc, char *argv[])
 	myDistro->Init( argc, argv );
 
 		// Save submit append lines from DAG file here (see gittrac #5107).
-	StringList dagFileAttrLines;
+	std::list<std::string> dagFileAttrLines;
 
 		// Load command-line arguments into the deepOpts and shallowOpts
 		// structures.
@@ -175,15 +174,12 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 {
 	int result = 0;
 
-	shallowOpts.dagFiles.rewind();
-
 		// Go through all DAG files specified on the command line...
-	const char *dagFile;
-	while ( (dagFile = shallowOpts.dagFiles.next()) ) {
+	for (auto dagfile_it = shallowOpts.dagFiles.begin(); dagfile_it != shallowOpts.dagFiles.end(); ++dagfile_it) {
 
 			// Get logical lines from this DAG file.
 		MultiLogFiles::FileReader reader;
-		MyString errMsg = reader.Open( dagFile );
+		MyString errMsg = reader.Open( dagfile_it->c_str() );
 		if ( errMsg != "" ) {
 			fprintf( stderr, "Error reading DAG file: %s\n",
 						errMsg.Value() );
@@ -316,7 +312,7 @@ parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 int
 setUpOptions( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts,
-			StringList &dagFileAttrLines )
+			std::list<std::string> &dagFileAttrLines )
 {
 	shallowOpts.strLibOut = shallowOpts.primaryDagFile + ".lib.out";
 	shallowOpts.strLibErr = shallowOpts.primaryDagFile + ".lib.err";
@@ -590,9 +586,16 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 
 		MyString subLine;
 		while ( reader.NextLogicalLine( subLine ) ) {
-			StringList tokens( subLine.Value(), " \t" );
-			tokens.rewind();
-			const char *first = tokens.next();
+			// Initialize list of tokens from subLine
+			std::list<std::string> tokens;
+			MyStringTokener tok;
+			subLine.trim();
+			tok.Tokenize( subLine.Value() );
+			while( const char* token = tok.GetNextToken( " \t", true ) ) {
+				tokens.push_back( std::string( token ) );
+			}
+
+			const char *first = tokens.front().c_str();
 			if ( first && !strcasecmp( first, "arguments" ) ) {
 				if ( parseArgumentsLine( subLine, shallowOpts ) != 0 ) {
 					return 1;
@@ -672,7 +675,7 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 //---------------------------------------------------------------------------
 void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts,
-			/* const */ StringList &dagFileAttrLines )
+			/* const */ std::list<std::string> &dagFileAttrLines )
 {
 	FILE *pSubFile = safe_fopen_wrapper_follow(shallowOpts.strSubFile.Value(), "w");
 	if (!pSubFile)
@@ -987,7 +990,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 		{
 				// We assume an argument without a leading hyphen is
 				// a DAG file name.
-			shallowOpts.dagFiles.append(strArg.Value());
+			shallowOpts.dagFiles.push_back(strArg.Value());
 			if ( shallowOpts.primaryDagFile == "" ) {
 				shallowOpts.primaryDagFile = strArg;
 			}
@@ -1115,7 +1118,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-append argument needs a value\n");
 					printUsage();
 				}
-				shallowOpts.appendLines.append(argv[++iArg]);
+				shallowOpts.appendLines.push_back(argv[++iArg]);
 			}
 			else if (strArg.find("-bat") != -1) // -batch-name
 			{

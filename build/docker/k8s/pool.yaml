@@ -23,7 +23,7 @@ spec:
  restartPolicy: Never
  containers:
   - name: cm
-    image: htcondor/cm:8.9.6-el7
+    image: htcondor/cm:8.9.8-el7
     imagePullPolicy: Always
     resources:
       limits:
@@ -56,7 +56,7 @@ spec:
  restartPolicy: Never
  containers:
   - name: submit-container
-    image: htcondor/submit:8.9.6-el7
+    image: htcondor/submit:8.9.8-el7
     imagePullPolicy: Always
     resources:
       limits:
@@ -97,7 +97,7 @@ spec:
     spec:
             containers:
              - name: execute
-               image: htcondor/execute:8.9.6-el7
+               image: htcondor/execute:8.9.8-el7
                imagePullPolicy: Always
                resources:
                  limits:
@@ -119,8 +119,8 @@ spec:
                    value: unix:///shared/docker.sock
              - name: dind-daemon
                image: docker:dind
-               # 996 is the condor group
-               args: ["-G", "996"]
+               # 64 is the condor group
+               args: ["-G", "64"]
                resources:
                  limits:
                    memory: "4G"

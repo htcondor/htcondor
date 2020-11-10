@@ -1076,6 +1076,7 @@ private:
 
 	PoolSubmitterMap		SubmitterMap;  // Map between remote pools and advertised submitters
 
+	int				MinFlockLevel;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive

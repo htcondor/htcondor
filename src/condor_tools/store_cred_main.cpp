@@ -718,7 +718,7 @@ usage()
 	fprintf( stderr, "    -i <filename>     Read the credential from <filename>\n"
 	                 "                         If <filename> is -, read from stdin\n"
 	);
-	fprintf( stderr, "    -s <service>      Add/Remove/Query for the given OAuth2 service" );
+	fprintf( stderr, "    -s <service>      Add/Remove/Query for the given OAuth2 service\n" );
 	fprintf( stderr, "    -n <name>         Manage credentials on the named machine\n" );
 #if !defined(WIN32)
 	fprintf( stderr, "    -f <filename>     Write password to a pool password file\n" );

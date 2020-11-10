@@ -148,6 +148,7 @@
 #define ATTR_DAG_NODES_FAILED "DAG_NodesFailed"
 #define ATTR_DAG_NODES_POSTRUN "DAG_NodesPostrun"
 #define ATTR_DAG_NODES_PRERUN "DAG_NodesPrerun"
+#define ATTR_DAG_NODES_HOLDRUN "DAG_NodesHoldrun"
 #define ATTR_DAG_NODES_QUEUED "DAG_NodesQueued"
 #define ATTR_DAG_NODES_READY "DAG_NodesReady"
 #define ATTR_DAG_NODES_TOTAL "DAG_NodesTotal"
@@ -158,6 +159,7 @@
 #define ATTR_DAGMAN_MAXJOBS "DAGMan_MaxJobs"
 #define ATTR_DAGMAN_MAXPRESCRIPTS "DAGMan_MaxPreScripts"
 #define ATTR_DAGMAN_MAXPOSTSCRIPTS "DAGMan_MaxPostScripts"
+#define ATTR_DAGMAN_MAXHOLDSCRIPTS "DAGMan_MaxHoldScripts"
 #define ATTR_DEFERRAL_OFFSET  "DeferralOffset"
 #define ATTR_DEFERRAL_PREP_TIME  "DeferralPrepTime"
 #define ATTR_DEFERRAL_TIME  "DeferralTime"
@@ -1143,6 +1145,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
 #define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
+
+#define ATTR_RECENT_DRAINS_LIST  "RecentDrainsList"
+#define ATTR_RECENT_CANCELS_LIST "RecentCancelsList"
 
 #define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 

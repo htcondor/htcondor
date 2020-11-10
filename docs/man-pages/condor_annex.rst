@@ -105,6 +105,10 @@ Options
     Set the maximum idle duration in decimal *hours*. An instance idle
     for longer than this duration will terminate itself. Defaults to 15
     minutes.
+ **-tag** *name* *value*
+    Add a tag named *name* with value *value* to each instance in the
+    requested annex.  Only works at annex creation.  This option may be
+    specified more than once.
  **-config-dir** */full/path/to/directory*
     Copy the contents of */full/path/to/directory* to each instance's
     configuration directory.

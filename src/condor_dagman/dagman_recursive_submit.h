@@ -46,12 +46,12 @@ struct SubmitDagShallowOptions
 	int iMaxPre;
 	int iMaxPost;
 	MyString appendFile; // append to .condor.sub file before queue
-	StringList appendLines; // append to .condor.sub file before queue
+	std::list<std::string> appendLines; // append to .condor.sub file before queue
 	MyString strConfigFile;
 	bool dumpRescueDag;
 	bool runValgrind;
 	MyString primaryDagFile;
-	StringList	dagFiles;
+	std::list<std::string>	dagFiles;
 	bool doRecovery;
 	bool bPostRun;
 	bool bPostRunSet; // whether this was actually set on the command line

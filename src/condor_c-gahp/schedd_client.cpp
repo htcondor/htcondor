@@ -522,7 +522,7 @@ doContactSchedd()
 
 		curr_file_requests++;
 
-		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(current_command->classad);
+		time_t expiration_time = (current_command->proxy_expiration >= 0) ? current_command->proxy_expiration : GetDesiredDelegatedJobCredentialExpiration(current_command->classad);
 		time_t result_expiration_time = 0;
 
 		bool result;
@@ -1515,10 +1515,12 @@ handle_gahp_command(char ** argv, int argc) {
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY)==0) {
 		int req_id = 0;
 		int cluster_id, proc_id;
+		int proxy_expire = -1;
 
-		if (!(argc == 5 &&
+		if (!((argc == 5 ||argc == 6) &&
 			get_int (argv[1], &req_id) &&
-			get_job_id (argv[3], &cluster_id, &proc_id))) {
+			get_job_id (argv[3], &cluster_id, &proc_id) &&
+			(argc == 5 || get_int(argv[5], &proxy_expire)))) {
 
 			dprintf (D_ALWAYS, "Invalid args to %s\n", argv[0]);
 			return FALSE;
@@ -1529,7 +1531,8 @@ handle_gahp_command(char ** argv, int argc) {
 				req_id,
 				cluster_id,
 				proc_id,
-				argv[4]));
+				argv[4],
+				proxy_expire));
 		return TRUE;
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE)==0) {
 		static bool init_done = false;

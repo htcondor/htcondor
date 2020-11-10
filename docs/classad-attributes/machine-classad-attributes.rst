@@ -1,13 +1,15 @@
 Machine ClassAd Attributes
 ==========================
 
+
 :index:`machine attributes<single: machine attributes; ClassAd>`
 :index:`AcceptedWhileDraining<single: AcceptedWhileDraining; machine attribute>`
 
 ``AcceptedWhileDraining``
     Boolean which indicates if the slot accepted its current job while
     the machine was draining.
-    :index:`Activity<single: Activity; ClassAd machine attribute>`
+
+:index:`Activity<single: Activity; ClassAd machine attribute>`
 
 ``Activity``
     String which describes HTCondor job activity on the machine. Can
@@ -34,7 +36,8 @@ Machine ClassAd Attributes
     ``"Retiring"``
         Waiting for a job to finish or for the maximum retirement time to expire
 
-    :index:`Arch<single: Arch; ClassAd machine attribute>`
+
+:index:`Arch<single: Arch; ClassAd machine attribute>`
 
 ``Arch``
     String with the architecture of the machine. Currently supported
@@ -58,7 +61,8 @@ Machine ClassAd Attributes
     ``"PPC64"``
         64-bit PowerPC
 
-    :index:`CanHibernate<single: CanHibernate; ClassAd machine attribute>`
+
+:index:`CanHibernate<single: CanHibernate; ClassAd machine attribute>`
 
 ``CanHibernate``
     The *condor_startd* has the capability to shut down or hibernate a
@@ -68,7 +72,8 @@ Machine ClassAd Attributes
     *condor_startd* initializes, it checks for this support. If the
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
-    :index:`ClockDay<single: ClockDay; ClassAd machine attribute>`
+
+:index:`ClockDay<single: ClockDay; ClassAd machine attribute>`
 
 ``ClockDay``
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
@@ -76,33 +81,39 @@ Machine ClassAd Attributes
 
 ``ClockMin``
     The number of minutes passed since midnight.
-    :index:`CondorLoadAvg<single: CondorLoadAvg; ClassAd machine attribute>`
+
+:index:`CondorLoadAvg<single: CondorLoadAvg; ClassAd machine attribute>`
 
 ``CondorLoadAvg``
     The load average contributed by HTCondor, either from remote jobs or
     running benchmarks.
-    :index:`CondorVersion<single: CondorVersion; ClassAd machine attribute>`
+
+:index:`CondorVersion<single: CondorVersion; ClassAd machine attribute>`
 
 ``CondorVersion``
     A string containing the HTCondor version number for the
     *condor_startd* daemon, the release date, and the build
     identification number.
-    :index:`ConsoleIdle<single: ConsoleIdle; ClassAd machine attribute>`
+
+:index:`ConsoleIdle<single: ConsoleIdle; ClassAd machine attribute>`
 
 ``ConsoleIdle``
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
     with ``SLOTS_CONNECTED_TO_CONSOLE``
-    :index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
+
+:index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros` section.
-    :index:`Cpus<single: Cpus; ClassAd machine attribute>`
+
+:index:`Cpus<single: Cpus; ClassAd machine attribute>`
 
 ``Cpus``
     The number of CPUs (cores) in this slot. It is 1 for a single CPU
     slot, 2 for a dual CPU slot, etc. For a partitionable slot, it is
     the remaining number of CPUs in the partitionable slot.
-    :index:`CpuFamily<single: CpuFamily; ClassAd machine attribute>`
+
+:index:`CpuFamily<single: CpuFamily; ClassAd machine attribute>`
 
 ``CpuFamily``
     On Linux machines, the Cpu family, as defined in the /proc/cpuinfo
@@ -111,12 +122,14 @@ Machine ClassAd Attributes
 ``CpuModel``
     On Linux machines, the Cpu model number, as defined in the
     /proc/cpuinfo file.
-    :index:`CpuCacheSize<single: CpuCacheSize; ClassAd machine attribute>`
+
+:index:`CpuCacheSize<single: CpuCacheSize; ClassAd machine attribute>`
 
 ``CpuCacheSize``
     On Linux machines, the size of the L3 cache, in kbytes, as defined
     in the /proc/cpuinfo file.
-    :index:`CurrentRank<single: CurrentRank; ClassAd machine attribute>`
+
+:index:`CurrentRank<single: CurrentRank; ClassAd machine attribute>`
 
 ``CurrentRank``
     A float which represents this machine owner's affinity for running
@@ -128,13 +141,15 @@ Machine ClassAd Attributes
 
 ``DetectedCpus``
     Set by the value of configuration variable ``DETECTED_CORES``
-    :index:`DETECTED_CORES`.
-    :index:`DetectedMemory<single: DetectedMemory; ClassAd machine attribute>`
+
+:index:`DETECTED_CORES`.
+:index:`DetectedMemory<single: DetectedMemory; ClassAd machine attribute>`
 
 ``DetectedMemory``
     Set by the value of configuration variable ``DETECTED_MEMORY``
-    :index:`DETECTED_MEMORY`. Specified in MiB.
-    :index:`Disk<single: Disk; ClassAd machine attribute>`
+
+:index:`DETECTED_MEMORY`. Specified in MiB.
+:index:`Disk<single: Disk; ClassAd machine attribute>`
 
 ``Disk``
     The amount of disk space on this machine available for the job in
@@ -142,22 +157,26 @@ Machine ClassAd Attributes
     of disk space available in the directory specified in the HTCondor
     configuration files by the ``EXECUTE`` :index:`EXECUTE` macro,
     minus any space reserved with the ``RESERVED_DISK``
-    :index:`RESERVED_DISK` macro. For static slots, this value
+
+:index:`RESERVED_DISK` macro. For static slots, this value
     will be the same as machine ClassAd attribute ``TotalSlotDisk``. For
     partitionable slots, this value will be the quantity of disk space
     remaining in the partitionable slot.
-    :index:`Draining<single: Draining; ClassAd machine attribute>`
+
+:index:`Draining<single: Draining; ClassAd machine attribute>`
 
 ``Draining``
     This attribute is ``True`` when the slot is draining and undefined
     if not.
-    :index:`DrainingRequestId<single: DrainingRequestId; ClassAd machine attribute>`
+
+:index:`DrainingRequestId<single: DrainingRequestId; ClassAd machine attribute>`
 
 ``DrainingRequestId``
     This attribute contains a string that is the request id of the
     draining request that put this slot in a draining state. It is
     undefined if the slot is not draining.
-    :index:`DotNetVersions<single: DotNetVersions; ClassAd machine attribute>`
+
+:index:`DotNetVersions<single: DotNetVersions; ClassAd machine attribute>`
 
 ``DotNetVersions``
     The .NET framework versions currently installed on this computer.
@@ -176,26 +195,30 @@ Machine ClassAd Attributes
      ``"4.0Full"``
         for .Net Framework 4.0 Full install
 
-    :index:`DynamicSlot<single: DynamicSlot; ClassAd machine attribute>`
+
+:index:`DynamicSlot<single: DynamicSlot; ClassAd machine attribute>`
 
 ``DynamicSlot``
     For SMP machines that allow dynamic partitioning of a slot, this
     boolean value identifies that this dynamic slot may be partitioned.
-    :index:`EnteredCurrentActivity<single: EnteredCurrentActivity; ClassAd machine attribute>`
+
+:index:`EnteredCurrentActivity<single: EnteredCurrentActivity; ClassAd machine attribute>`
 
 ``EnteredCurrentActivity``
     Time at which the machine entered the current Activity (see
     ``Activity`` entry above). On all platforms (including NT), this is
     measured in the number of integer seconds since the Unix epoch
     (00:00:00 UTC, Jan 1, 1970).
-    :index:`ExpectedMachineGracefulDrainingBadput<single: ExpectedMachineGracefulDrainingBadput; ClassAd machine attribute>`
+
+:index:`ExpectedMachineGracefulDrainingBadput<single: ExpectedMachineGracefulDrainingBadput; ClassAd machine attribute>`
 
 ``ExpectedMachineGracefulDrainingBadput``
     The job run time in cpu-seconds that would be lost if graceful
     draining were initiated at the time this ClassAd was published. This
     calculation assumes that jobs will run for the full retirement time
     and then be evicted without saving a checkpoint.
-    :index:`ExpectedMachineGracefulDrainingCompletion<single: ExpectedMachineGracefulDrainingCompletion; ClassAd machine attribute>`
+
+:index:`ExpectedMachineGracefulDrainingCompletion<single: ExpectedMachineGracefulDrainingCompletion; ClassAd machine attribute>`
 
 ``ExpectedMachineGracefulDrainingCompletion``
     The estimated time at which graceful draining of the machine could
@@ -209,21 +232,24 @@ Machine ClassAd Attributes
     avoid suspension during draining, the ``SUSPEND`` and ``CONTINUE``
     expressions could be configured to pay attention to the ``Draining``
     attribute.
-    :index:`ExpectedMachineQuickDrainingBadput<single: ExpectedMachineQuickDrainingBadput; ClassAd machine attribute>`
+
+:index:`ExpectedMachineQuickDrainingBadput<single: ExpectedMachineQuickDrainingBadput; ClassAd machine attribute>`
 
 ``ExpectedMachineGracefulQuickBadput``
     The job run time in cpu-seconds that would be lost if quick or fast
     draining were initiated at the time this ClassAd was published. This
     calculation assumes that all evicted jobs will not save a
     checkpoint.
-    :index:`ExpectedMachineQuickDrainingCompletion<single: ExpectedMachineQuickDrainingCompletion; ClassAd machine attribute>`
+
+:index:`ExpectedMachineQuickDrainingCompletion<single: ExpectedMachineQuickDrainingCompletion; ClassAd machine attribute>`
 
 ``ExpectedMachineQuickDrainingCompletion``
     Time at which quick or fast draining of the machine could complete
     if it were initiated at the time this ClassAd was published and
     there are no active claims. This is measured in the number of
     integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
-    :index:`FileSystemDomain<single: FileSystemDomain; ClassAd machine attribute>`
+
+:index:`FileSystemDomain<single: FileSystemDomain; ClassAd machine attribute>`
 
 ``FileSystemDomain``
     A domain name configured by the HTCondor administrator which
@@ -235,68 +261,106 @@ Machine ClassAd Attributes
 ``HasDocker``
     A boolean value set to ``True`` if the machine is capable of
     executing docker universe jobs.
-    :index:`HasEncryptExecuteDirectory<single: HasEncryptExecuteDirectory; ClassAd machine attribute>`
+
+:index:`HasEncryptExecuteDirectory<single: HasEncryptExecuteDirectory; ClassAd machine attribute>`
 
 ``HasEncryptExecuteDirectory``
     A boolean value set to ``True`` if the machine is capable of
     encrypting execute directories.
-    :index:`HasFileTransfer<single: HasFileTransfer; ClassAd machine attribute>`
+
+:index:`HasFileTransfer<single: HasFileTransfer; ClassAd machine attribute>`
 
 ``HasFileTransfer``
     A boolean value that when ``True`` identifies that the machine can
     use the file transfer mechanism.
-    :index:`HasFileTransferPluginMethods<single: HasFileTransferPluginMethods; ClassAd machine attribute>`
+
+:index:`HasFileTransferPluginMethods<single: HasFileTransferPluginMethods; ClassAd machine attribute>`
 
 ``HasFileTransferPluginMethods``
     A string of comma-separated file transfer protocols that the machine
     can support. The value can be modified with ``FILETRANSFER_PLUGINS``
-    :index:`FILETRANSFER_PLUGINS` as defined in
+
+:index:`FILETRANSFER_PLUGINS` as defined in
     :ref:`admin-manual/configuration-macros:condor_starter configuration file
     entries`.
-    :index:`Has_sse4_1<single: Has_sse4_1; ClassAd machine attribute>`
+
+:index:`Has_sse4_1<single: Has_sse4_1; ClassAd machine attribute>`
 
 ``HasUserNamespaces``
     A boolean value that when ``True`` identifies that the jobs on this machine
     can create user namespaces without root privileges.
-    :index:`HasUserNamespaces<single: HasUserNamespaces; ClassAd machine attribute>`
+
+:index:`HasUserNamespaces<single: HasUserNamespaces; ClassAd machine attribute>`
 
 ``Has_sse4_1``
     A boolean value set to ``True`` if the machine being advertised
     supports the SSE 4.1 instructions, and ``Undefined`` otherwise.
-    :index:`Has_sse4_2<single: Has_sse4_2; ClassAd machine attribute>`
+
+:index:`Has_sse4_2<single: Has_sse4_2; ClassAd machine attribute>`
 
 ``Has_sse4_2``
     A boolean value set to ``True`` if the machine being advertised
     supports the SSE 4.2 instructions, and ``Undefined`` otherwise.
-    :index:`has_ssse3<single: has_ssse3; ClassAd machine attribute>`
+
+:index:`has_ssse3<single: has_ssse3; ClassAd machine attribute>`
 
 ``has_ssse3``
     A boolean value set to ``True`` if the machine being advertised
     supports the SSSE 3 instructions, and ``Undefined`` otherwise.
-    :index:`has_avx<single: has_avx; ClassAd machine attribute>`
+
+:index:`has_avx<single: has_avx; ClassAd machine attribute>`
 
 ``has_avx``
     A boolean value set to ``True`` if the machine being advertised
     supports the avx instructions, and ``Undefined`` otherwise.
 
-    :index:`HasSelfCheckpointTransfers<single: HasSelfCheckpointTransfers; ClassAd machine attribute>`
+:index:`has_avx2<single: has_avx; ClassAd machine attribute>`
+
+``has_avx2``
+    A boolean value set to ``True`` if the machine being advertised
+    supports the avx2 instructions, and ``Undefined`` otherwise.
+
+:index:`has_avx512f<single: has_avx512f ClassAd machine attribute>`
+
+``has_avx512f``
+    A boolean value set to ``True`` if the machine being advertised
+    support the avx512f (foundational) instructions.
+
+:index:`has_avx512dq<single: has_avx512dq ClassAd machine attribute>`
+
+``has_avx512dq``
+    A boolean value set to ``True`` if the machine being advertised
+    support the avx512dq instructions.
+
+:index:`has_avx512dnni<single: has_avx512dnni ClassAd machine attribute>`
+
+``has_avx512dnni``
+    A boolean value set to ``True`` if the machine being advertised
+    support the avx512dnni instructions.
+
+
+:index:`HasSelfCheckpointTransfers<single: HasSelfCheckpointTransfers; ClassAd machine attribute>`
+
 ``HasSelfCheckpointTransfers``
     A boolean value set to ``True`` if the machine being advertised
     supports transferring (checkpoint) files (to the submit node)
     when the job successfully self-checkpoints.
-    :index:`HasSingularity<single: HasSingularity; ClassAd machine attribute>`
+
+:index:`HasSingularity<single: HasSingularity; ClassAd machine attribute>`
 
 ``HasSingularity``
     A boolean value set to ``True`` if the machine being advertised
     supports running jobs within Singularity containers.
-    :index:`HasVM<single: HasVM; ClassAd machine attribute>`
+
+:index:`HasVM<single: HasVM; ClassAd machine attribute>`
 
 ``HasVM``
     If the configuration triggers the detection of virtual machine
     software, a boolean value reporting the success thereof; otherwise
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
-    :index:`IsWakeAble<single: IsWakeAble; ClassAd machine attribute>`
+
+:index:`IsWakeAble<single: IsWakeAble; ClassAd machine attribute>`
 
 ``IsWakeAble``
     A boolean value that when ``True`` identifies that the machine has
@@ -308,7 +372,8 @@ Machine ClassAd Attributes
     detect if the operating system and network adapter both support
     waking from hibernation by receipt of a WOL packet. The default
     value is ``False``.
-    :index:`IsWakeEnabled<single: IsWakeEnabled; ClassAd machine attribute>`
+
+:index:`IsWakeEnabled<single: IsWakeEnabled; ClassAd machine attribute>`
 
 ``IsWakeEnabled``
     If the hardware and software have the capacity to be woken into a
@@ -316,34 +381,39 @@ Machine ClassAd Attributes
     packet, this feature can still be disabled via the BIOS or software.
     If BIOS or the operating system have disabled this feature, the
     *condor_startd* sets this boolean attribute to ``False``.
-    :index:`JobBusyTimeAvg<single: JobBusyTimeAvg; ClassAd machine attribute>`
+
+:index:`JobBusyTimeAvg<single: JobBusyTimeAvg; ClassAd machine attribute>`
 
 ``JobBusyTimeAvg``
     The Average lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* that
     has exited. This attribute will be undefined until the first time a
     *condor_starter* has exited.
-    :index:`JobBusyTimeCount<single: JobBusyTimeCount; ClassAd machine attribute>`
+
+:index:`JobBusyTimeCount<single: JobBusyTimeCount; ClassAd machine attribute>`
 
 ``JobBusyTimeCount``
     The total number of of jobs used to calulate the ``JobBusyTimeAvg``
     attribute. This is also the the total number times a
     *condor_starter* has exited.
-    :index:`JobBusyTimeMax<single: JobBusyTimeMax; ClassAd machine attribute>`
+
+:index:`JobBusyTimeMax<single: JobBusyTimeMax; ClassAd machine attribute>`
 
 ``JobBusyTimeMax``
     The Maximum lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* s
     that has exited. This attribute will be undefined until the first
     time a *condor_starter* has exited.
-    :index:`JobBusyTimeMin<single: JobBusyTimeMin; ClassAd machine attribute>`
+
+:index:`JobBusyTimeMin<single: JobBusyTimeMin; ClassAd machine attribute>`
 
 ``JobBusyTimeMin``
     The Minimum lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* that
     has exited. This attribute will be undefined until the first time a
     *condor_starter* has exited.
-    :index:`RecentJobBusyTimeAvg<single: RecentJobBusyTimeAvg; ClassAd machine attribute>`
+
+:index:`RecentJobBusyTimeAvg<single: RecentJobBusyTimeAvg; ClassAd machine attribute>`
 
 ``RecentJobBusyTimeAvg``
     The Average lifetime of all jobs that have exited in the last 20
@@ -351,13 +421,15 @@ Machine ClassAd Attributes
     the lifetime of each *condor_starter* that has exited in the last
     20 minutes. This attribute will be undefined if no *condor_starter*
     has exited in the last 20 minutes.
-    :index:`RecentJobBusyTimeCount<single: RecentJobBusyTimeCount; ClassAd machine attribute>`
+
+:index:`RecentJobBusyTimeCount<single: RecentJobBusyTimeCount; ClassAd machine attribute>`
 
 ``RecentJobBusyTimeCount``
     The total number of jobs used to calulate the
     ``RecentJobBusyTimeAvg`` attribute. This is also the the total
     number times a *condor_starter* has exited in the last 20 minutes.
-    :index:`RecentJobBusyTimeMax<single: RecentJobBusyTimeMax; ClassAd machine attribute>`
+
+:index:`RecentJobBusyTimeMax<single: RecentJobBusyTimeMax; ClassAd machine attribute>`
 
 ``RecentJobBusyTimeMax``
     The Maximum lifetime of all jobs that have exited in the last 20
@@ -365,90 +437,105 @@ Machine ClassAd Attributes
     the lifetime of each *condor_starter* s that has exited in the
     last 20 minutes. This attribute will be undefined if no
     *condor_starter* has exited in the last 20 minutes.
-    :index:`RecentJobBusyTimeMin<single: RecentJobBusyTimeMin; ClassAd machine attribute>`
+
+:index:`RecentJobBusyTimeMin<single: RecentJobBusyTimeMin; ClassAd machine attribute>`
 
 ``RecentJobBusyTimeMin``
     The Minimum lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* that
     has exited. This attribute will be undefined if no *condor_starter*
     has exited in the last 20 minutes.
-    :index:`JobDurationAvg<single: JobDurationAvg; ClassAd machine attribute>`
+
+:index:`JobDurationAvg<single: JobDurationAvg; ClassAd machine attribute>`
 
 ``JobDurationAvg``
     The Average lifetime time of all jobs, not including time spent
     transferring files. This attribute will be undefined until the first
     time a job exits. Jobs that never start (because they fail to
     transfer input, for instance) will not be included in the average.
-    :index:`JobDurationCount<single: JobDurationCount; ClassAd machine attribute>`
+
+:index:`JobDurationCount<single: JobDurationCount; ClassAd machine attribute>`
 
 ``JobDurationCount``
     The total number of of jobs used to calulate the ``JobDurationAvg``
     attribute. This is also the the total number times a job has exited.
     Jobs that never start (because input transfer fails, for instance)
     are not included in the count.
-    :index:`JobDurationMax<single: JobDurationMax; ClassAd machine attribute>`
+
+:index:`JobDurationMax<single: JobDurationMax; ClassAd machine attribute>`
 
 ``JobDurationMax``
     The lifetime of the longest lived job that has exited. This
     attribute will be undefined until the first time a job exits.
-    :index:`JobDurationMin<single: JobDurationMin; ClassAd machine attribute>`
+
+:index:`JobDurationMin<single: JobDurationMin; ClassAd machine attribute>`
 
 ``JobDurationMin``
     The lifetime of the shortest lived job that has exited. This
     attribute will be undefined until the first time a job exits.
-    :index:`RecentJobDurationAvg<single: RecentJobDurationAvg; ClassAd machine attribute>`
+
+:index:`RecentJobDurationAvg<single: RecentJobDurationAvg; ClassAd machine attribute>`
 
 ``RecentJobDurationAvg``
     The Average lifetime time of all jobs, not including time spent
     transferring files, that have exited in the last 20 minutes. This
     attribute will be undefined if no job has exited in the last 20
     minutes.
-    :index:`RecentJobDurationCount<single: RecentJobDurationCount; ClassAd machine attribute>`
+
+:index:`RecentJobDurationCount<single: RecentJobDurationCount; ClassAd machine attribute>`
 
 ``RecentJobDurationCount``
     The total number of jobs used to calulate the
     ``RecentJobDurationAvg`` attribute. This is the total number of jobs
     that began execution and have exited in the last 20 minutes.
-    :index:`RecentJobDurationMax<single: RecentJobDurationMax; ClassAd machine attribute>`
+
+:index:`RecentJobDurationMax<single: RecentJobDurationMax; ClassAd machine attribute>`
 
 ``RecentJobDurationMax``
     The lifetime of the longest lived job that has exited in the last 20
     minutes. This attribute will be undefined if no job has exited in
     the last 20 minutes.
-    :index:`RecentJobDurationMin<single: RecentJobDurationMin; ClassAd machine attribute>`
+
+:index:`RecentJobDurationMin<single: RecentJobDurationMin; ClassAd machine attribute>`
 
 ``RecentJobDurationMin``
     The lifetime of the shortest lived job that has exited in the last
     20 minutes. This attribute will be undefined if no job has exited in
     the last 20 minutes.
-    :index:`JobPreemptions<single: JobPreemptions; ClassAd machine attribute>`
+
+:index:`JobPreemptions<single: JobPreemptions; ClassAd machine attribute>`
 
 ``JobPreemptions``
     The total number of times a running job has been preempted on this
     machine.
-    :index:`JobRankPreemptions<single: JobRankPreemptions; ClassAd machine attribute>`
+
+:index:`JobRankPreemptions<single: JobRankPreemptions; ClassAd machine attribute>`
 
 ``JobRankPreemptions``
     The total number of times a running job has been preempted on this
     machine due to the machine's rank of jobs since the *condor_startd*
     started running.
-    :index:`JobStarts<single: JobStarts; ClassAd machine attribute>`
+
+:index:`JobStarts<single: JobStarts; ClassAd machine attribute>`
 
 ``JobStarts``
     The total number of jobs which have been started on this machine
     since the *condor_startd* started running.
-    :index:`JobUserPrioPreemptions<single: JobUserPrioPreemptions; ClassAd machine attribute>`
+
+:index:`JobUserPrioPreemptions<single: JobUserPrioPreemptions; ClassAd machine attribute>`
 
 ``JobUserPrioPreemptions``
     The total number of times a running job has been preempted on this
     machine based on a fair share allocation of the pool since the
     *condor_startd* started running.
-    :index:`JobVM_VCPUS<single: JobVM_VCPUS; ClassAd machine attribute>`
+
+:index:`JobVM_VCPUS<single: JobVM_VCPUS; ClassAd machine attribute>`
 
 ``JobVM_VCPUS``
     An attribute defined if a vm universe job is running on this slot.
     Defined by the number of virtualized CPUs in the virtual machine.
-    :index:`KeyboardIdle<single: KeyboardIdle; ClassAd machine attribute>`
+
+:index:`KeyboardIdle<single: KeyboardIdle; ClassAd machine attribute>`
 
 ``KeyboardIdle``
     The number of seconds since activity on any keyboard or mouse
@@ -459,20 +546,30 @@ Machine ClassAd Attributes
     ``KeyboardIdle`` will always be equal to or less than
     ``ConsoleIdle``. The value can be modified with
     ``SLOTS_CONNECTED_TO_KEYBOARD``
-    :index:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
+
+:index:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration file
     macros` section.
-    :index:`KFlops<single: KFlops; ClassAd machine attribute>`
+
+:index:`KFlops<single: KFlops; ClassAd machine attribute>`
 
 ``KFlops``
     Relative floating point performance as determined via a Linpack
     benchmark.
-    :index:`LastDrainStartTime<single: LastDrainStartTime; ClassAd machine attribute>`
+
+:index:`LastDrainStartTime<single: LastDrainStartTime; ClassAd machine attribute>`
 
 ``LastDrainStartTime``
     Time when draining of this *condor_startd* was last initiated (e.g.
     due to *condor_defrag* or *condor_drain*).
-    :index:`LastHeardFrom<single: LastHeardFrom; ClassAd machine attribute>`
+
+:index:`LastDrainStopTime<single: LastDrainStopTime; ClassAd machine attribute>`
+
+``LastDrainStopTime``
+    Time when draining of this *condor_startd* was last stopped (e.g.
+    by being cancelled).
+
+:index:`LastHeardFrom<single: LastHeardFrom; ClassAd machine attribute>`
 
 ``LastHeardFrom``
     Time when the HTCondor central manager last received a status update
@@ -482,20 +579,24 @@ Machine ClassAd Attributes
     It is not present in the *condor_startd* copy of the ClassAd.
     Therefore, you could not use this attribute in defining
     *condor_startd* expressions (and you would not want to).
-    :index:`LoadAvg<single: LoadAvg; ClassAd machine attribute>`
+
+:index:`LoadAvg<single: LoadAvg; ClassAd machine attribute>`
 
 ``LoadAvg``
     A floating point number representing the current load average.
-    :index:`Machine<single: Machine; ClassAd machine attribute>`
+
+:index:`Machine<single: Machine; ClassAd machine attribute>`
 
 ``Machine``
     A string with the machine's fully qualified host name.
-    :index:`MachineMaxVacateTime<single: MachineMaxVacateTime; ClassAd machine attribute>`
+
+:index:`MachineMaxVacateTime<single: MachineMaxVacateTime; ClassAd machine attribute>`
 
 ``MachineMaxVacateTime``
     An integer expression that specifies the time in seconds the machine
     will allow the job to gracefully shut down.
-    :index:`MaxJobRetirementTime<single: MaxJobRetirementTime; ClassAd machine attribute>`
+
+:index:`MaxJobRetirementTime<single: MaxJobRetirementTime; ClassAd machine attribute>`
 
 ``MaxJobRetirementTime``
     When the *condor_startd* wants to kick the job off, a job which has
@@ -519,49 +620,59 @@ Machine ClassAd Attributes
 ``Mips``
     Relative integer performance as determined via a Dhrystone
     benchmark.
-    :index:`MonitorSelfAge<single: MonitorSelfAge; ClassAd machine attribute>`
+
+:index:`MonitorSelfAge<single: MonitorSelfAge; ClassAd machine attribute>`
 
 ``MonitorSelfAge``
     The number of seconds that this daemon has been running.
-    :index:`MonitorSelfCPUUsage<single: MonitorSelfCPUUsage; ClassAd machine attribute>`
+
+:index:`MonitorSelfCPUUsage<single: MonitorSelfCPUUsage; ClassAd machine attribute>`
 
 ``MonitorSelfCPUUsage``
     The fraction of recent CPU time utilized by this daemon.
-    :index:`MonitorSelfImageSize<single: MonitorSelfImageSize; ClassAd machine attribute>`
+
+:index:`MonitorSelfImageSize<single: MonitorSelfImageSize; ClassAd machine attribute>`
 
 ``MonitorSelfImageSize``
     The amount of virtual memory consumed by this daemon in KiB.
-    :index:`MonitorSelfRegisteredSocketCount<single: MonitorSelfRegisteredSocketCount; ClassAd machine attribute>`
+
+:index:`MonitorSelfRegisteredSocketCount<single: MonitorSelfRegisteredSocketCount; ClassAd machine attribute>`
 
 ``MonitorSelfRegisteredSocketCount``
     The current number of sockets registered by this daemon.
-    :index:`MonitorSelfResidentSetSize<single: MonitorSelfResidentSetSize; ClassAd machine attribute>`
+
+:index:`MonitorSelfResidentSetSize<single: MonitorSelfResidentSetSize; ClassAd machine attribute>`
 
 ``MonitorSelfResidentSetSize``
     The amount of resident memory used by this daemon in KiB.
-    :index:`MonitorSelfSecuritySessions<single: MonitorSelfSecuritySessions; ClassAd machine attribute>`
+
+:index:`MonitorSelfSecuritySessions<single: MonitorSelfSecuritySessions; ClassAd machine attribute>`
 
 ``MonitorSelfSecuritySessions``
     The number of open (cached) security sessions for this daemon.
-    :index:`MonitorSelfTime<single: MonitorSelfTime; ClassAd machine attribute>`
+
+:index:`MonitorSelfTime<single: MonitorSelfTime; ClassAd machine attribute>`
 
 ``MonitorSelfTime``
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which this daemon last checked
     and set the attributes with names that begin with the string
     ``MonitorSelf``.
-    :index:`MyAddress<single: MyAddress; ClassAd machine attribute>`
+
+:index:`MyAddress<single: MyAddress; ClassAd machine attribute>`
 
 ``MyAddress``
     String with the IP and port address of the *condor_startd* daemon
     which is publishing this machine ClassAd. When using CCB,
     *condor_shared_port*, and/or an additional private network
     interface, that information will be included here as well.
-    :index:`MyType<single: MyType; ClassAd machine attribute>`
+
+:index:`MyType<single: MyType; ClassAd machine attribute>`
 
 ``MyType``
     The ClassAd type; always set to the literal string ``"Machine"``.
-    :index:`Name<single: Name; ClassAd machine attribute>`
+
+:index:`Name<single: Name; ClassAd machine attribute>`
 
 ``Name``
     The name of this resource; typically the same value as the
@@ -571,13 +682,15 @@ Machine ClassAd Attributes
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
-    :index:`Offline<single: Offline; ClassAd machine attribute>`
+
+:index:`Offline<single: Offline; ClassAd machine attribute>`
 
 ``Offline<name>``
     A string that lists specific instances of a user-defined machine
     resource, identified by ``name``. Each instance is currently
     unavailable for purposes of match making.
-    :index:`OfflineUniverses<single: OfflineUniverses; ClassAd machine attribute>`
+
+:index:`OfflineUniverses<single: OfflineUniverses; ClassAd machine attribute>`
 
 ``OfflineUniverses``
     A ClassAd list that specifies which job universes are presently
@@ -590,7 +703,8 @@ Machine ClassAd Attributes
         START = OfflineUniverses is undefined || (! member( JobUniverse, OfflineUniverses ))
 
     May currently only contain ``"VM"`` and ``13``.
-    :index:`OpSys<single: OpSys; ClassAd machine attribute>`
+
+:index:`OpSys<single: OpSys; ClassAd machine attribute>`
 
 ``OpSys``
     String describing the operating system running on this machine.
@@ -610,7 +724,8 @@ Machine ClassAd Attributes
      ``"WINDOWS"``
         for all versions of Windows
 
-    :index:`OpSysAndVer<single: OpSysAndVer; ClassAd machine attribute>`
+
+:index:`OpSysAndVer<single: OpSysAndVer; ClassAd machine attribute>`
 
 ``OpSysAndVer``
     A string indicating an operating system and a version number.
@@ -683,7 +798,8 @@ Machine ClassAd Attributes
      ``"WINDOWS601"``
         for Windows 7
 
-    :index:`OpSysLegacy<single: OpSysLegacy; ClassAd machine attribute>`
+
+:index:`OpSysLegacy<single: OpSysLegacy; ClassAd machine attribute>`
 
 ``OpSysLegacy``
     A string that holds the long-standing values for the ``OpSys``
@@ -703,7 +819,8 @@ Machine ClassAd Attributes
      ``"WINDOWS"``
         for all versions of Windows
 
-    :index:`OpSysLongName<single: OpSysLongName; ClassAd machine attribute>`
+
+:index:`OpSysLongName<single: OpSysLongName; ClassAd machine attribute>`
 
 ``OpSysLongName``
     A string giving a full description of the operating system. For
@@ -735,7 +852,8 @@ Machine ClassAd Attributes
      ``"Windows 7 SP2"``
         for Windows 7
 
-    :index:`OpSysMajorVer<single: OpSysMajorVer; ClassAd machine attribute>`
+
+:index:`OpSysMajorVer<single: OpSysMajorVer; ClassAd machine attribute>`
 
 ``OpSysMajorVer``
     An integer value representing the major version of the operating
@@ -772,7 +890,8 @@ Machine ClassAd Attributes
      ``601``
         for Windows 7
 
-    :index:`OpSysName<single: OpSysName; ClassAd machine attribute>`
+
+:index:`OpSysName<single: OpSysName; ClassAd machine attribute>`
 
 ``OpSysName``
     A string containing a terse description of the operating system.
@@ -804,7 +923,8 @@ Machine ClassAd Attributes
      ``"SLCern"``
         for CERN's Scientific Linux
 
-    :index:`OpSysShortName<single: OpSysShortName; ClassAd machine attribute>`
+
+:index:`OpSysShortName<single: OpSysShortName; ClassAd machine attribute>`
 
 ``OpSysShortName``
     A string containing a short name for the operating system.
@@ -835,7 +955,8 @@ Machine ClassAd Attributes
      ``"SLCern"``
         for CERN's Scientific Linux
 
-    :index:`OpSysVer<single: OpSysVer; ClassAd machine attribute>`
+
+:index:`OpSysVer<single: OpSysVer; ClassAd machine attribute>`
 
 ``OpSysVer``
     An integer value representing the operating system version number.
@@ -871,40 +992,47 @@ Machine ClassAd Attributes
      ``601``
         for Windows 7 or Windows Server 2008
 
-    :index:`PartitionableSlot<single: PartitionableSlot; ClassAd machine attribute>`
+
+:index:`PartitionableSlot<single: PartitionableSlot; ClassAd machine attribute>`
 
 ``PartitionableSlot``
     For SMP machines, a boolean value identifying that this slot may be
     partitioned.
-    :index:`RecentJobPreemptions<single: RecentJobPreemptions; ClassAd machine attribute>`
+
+:index:`RecentJobPreemptions<single: RecentJobPreemptions; ClassAd machine attribute>`
 
 ``RecentJobPreemptions``
     The total number of jobs which have been preempted from this machine
     in the last twenty minutes.
-    :index:`RecentJobRankPreemptions<single: RecentJobRankPreemptions; ClassAd machine attribute>`
+
+:index:`RecentJobRankPreemptions<single: RecentJobRankPreemptions; ClassAd machine attribute>`
 
 ``RecentJobRankPreemptions``
     The total number of times a running job has been preempted on this
     machine due to the machine's rank of jobs in the last twenty
     minutes.
-    :index:`RecentJobStarts<single: RecentJobStarts; ClassAd machine attribute>`
+
+:index:`RecentJobStarts<single: RecentJobStarts; ClassAd machine attribute>`
 
 ``RecentJobStarts``
     The total number of jobs which have been started on this machine in
     the last twenty minutes.
-    :index:`RecentJobUserPrioPreemptions<single: RecentJobUserPrioPreemptions; ClassAd machine attribute>`
+
+:index:`RecentJobUserPrioPreemptions<single: RecentJobUserPrioPreemptions; ClassAd machine attribute>`
 
 ``RecentJobUserPrio``
     The total number of times a running job has been preempted on this
     machine based on a fair share allocation of the pool in the last
     twenty minutes.
-    :index:`Requirements<single: Requirements; ClassAd machine attribute>`
+
+:index:`Requirements<single: Requirements; ClassAd machine attribute>`
 
 ``Requirements``
     A boolean, which when evaluated within the context of the machine
     ClassAd and a job ClassAd, must evaluate to TRUE before HTCondor
     will allow the job to use this machine.
-    :index:`RetirementTimeRemaining<single: RetirementTimeRemaining; ClassAd machine attribute>`
+
+:index:`RetirementTimeRemaining<single: RetirementTimeRemaining; ClassAd machine attribute>`
 
 ``RetirementTimeRemaining``
     An integer number of seconds after ``MyCurrentTime`` when the
@@ -914,13 +1042,15 @@ Machine ClassAd Attributes
     of time remaining for the current running job. This may be less than
     the amount offered by the machine's ``MaxJobRetirementTime``
     expression, because the job may ask for less.
-    :index:`SingularityVersion<single: SingularityVersion; ClassAd machine attribute>`
+
+:index:`SingularityVersion<single: SingularityVersion; ClassAd machine attribute>`
 
 ``SingularityVersion``
     A string containing the version of Singularity available, if the
     machine being advertised supports running jobs within a Singularity
     container (see ``HasSingularity``).
-    :index:`SlotID<single: SlotID; ClassAd machine attribute>`
+
+:index:`SlotID<single: SlotID; ClassAd machine attribute>`
 
 ``SlotID``
     For SMP machines, the integer that identifies the slot. The value
@@ -931,13 +1061,15 @@ Machine ClassAd Attributes
         name="slotX@full.hostname"
 
     For non-SMP machines with one slot, the value will be 1.
-    :index:`SlotType<single: SlotType; ClassAd machine attribute>`
+
+:index:`SlotType<single: SlotType; ClassAd machine attribute>`
 
 ``SlotType``
     For SMP machines with partitionable slots, the partitionable slot
     will have this attribute set to ``"Partitionable"``, and all dynamic
     slots will have this attribute set to ``"Dynamic"``.
-    :index:`SlotWeight<single: SlotWeight; ClassAd machine attribute>`
+
+:index:`SlotWeight<single: SlotWeight; ClassAd machine attribute>`
 
 ``SlotWeight``
     This specifies the weight of the slot when calculating usage,
@@ -946,14 +1078,16 @@ Machine ClassAd Attributes
     two ``SlotWeight = 1`` slots. See the description of ``SlotWeight``
     in :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros`.
-    :index:`StartdIpAddr<single: StartdIpAddr; ClassAd machine attribute>`
+
+:index:`StartdIpAddr<single: StartdIpAddr; ClassAd machine attribute>`
 
 ``StartdIpAddr``
     String with the IP and port address of the *condor_startd* daemon
     which is publishing this machine ClassAd. When using CCB,
     *condor_shared_port*, and/or an additional private network
     interface, that information will be included here as well.
-    :index:`State<single: State; ClassAd machine attribute>`
+
+:index:`State<single: State; ClassAd machine attribute>`
 
 ``State``
     String which publishes the machine's HTCondor state. Can be:
@@ -978,60 +1112,70 @@ Machine ClassAd Attributes
         This slot is not accepting jobs, because the machine is being
         drained.
 
-    :index:`TargetType<single: TargetType; ClassAd machine attribute>`
+
+:index:`TargetType<single: TargetType; ClassAd machine attribute>`
 
 ``TargetType``
     Describes what type of ClassAd to match with. Always set to the
     string literal ``"Job"``, because machine ClassAds always want to be
     matched with jobs, and vice-versa.
-    :index:`TotalCondorLoadAvg<single: TotalCondorLoadAvg; ClassAd machine attribute>`
+
+:index:`TotalCondorLoadAvg<single: TotalCondorLoadAvg; ClassAd machine attribute>`
 
 ``TotalCondorLoadAvg``
     The load average contributed by HTCondor summed across all slots on
     the machine, either from remote jobs or running benchmarks.
-    :index:`TotalCpus<single: TotalCpus; ClassAd machine attribute>`
+
+:index:`TotalCpus<single: TotalCpus; ClassAd machine attribute>`
 
 ``TotalCpus``
     The number of CPUs (cores) that are on the machine. This is in
     contrast with ``Cpus``, which is the number of CPUs in the slot.
-    :index:`TotalDisk<single: TotalDisk; ClassAd machine attribute>`
+
+:index:`TotalDisk<single: TotalDisk; ClassAd machine attribute>`
 
 ``TotalDisk``
     The quantity of disk space in KiB available across the machine (not
     the slot). For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
     attribute ``TotalSlotDisk``.
-    :index:`TotalLoadAvg<single: TotalLoadAvg; ClassAd machine attribute>`
+
+:index:`TotalLoadAvg<single: TotalLoadAvg; ClassAd machine attribute>`
 
 ``TotalLoadAvg``
     A floating point number representing the current load average summed
     across all slots on the machine.
-    :index:`TotalMachineDrainingBadput<single: TotalMachineDrainingBadput; ClassAd machine attribute>`
+
+:index:`TotalMachineDrainingBadput<single: TotalMachineDrainingBadput; ClassAd machine attribute>`
 
 ``TotalMachineDrainingBadput``
     The total job runtime in cpu-seconds that has been lost due to job
     evictions caused by draining since this *condor_startd* began
     executing. In this calculation, it is assumed that jobs are evicted
     without checkpointing.
-    :index:`TotalMachineDrainingUnclaimedTime<single: TotalMachineDrainingUnclaimedTime; ClassAd machine attribute>`
+
+:index:`TotalMachineDrainingUnclaimedTime<single: TotalMachineDrainingUnclaimedTime; ClassAd machine attribute>`
 
 ``TotalMachineDrainingUnclaimedTime``
     The total machine-wide time in cpu-seconds that has not been used
     (i.e. not matched to a job submitter) due to draining since this
     *condor_startd* began executing.
-    :index:`TotalMemory<single: TotalMemory; ClassAd machine attribute>`
+
+:index:`TotalMemory<single: TotalMemory; ClassAd machine attribute>`
 
 ``TotalMemory``
     The quantity of RAM in MiB available across the machine (not the
     slot). For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
     attribute ``TotalSlotMemory``.
-    :index:`TotalSlotCpus<single: TotalSlotCpus; ClassAd machine attribute>`
+
+:index:`TotalSlotCpus<single: TotalSlotCpus; ClassAd machine attribute>`
 
 ``TotalSlotCpus``
     The number of CPUs (cores) in this slot. For static slots, this
     value will be the same as in ``Cpus``.
-    :index:`TotalSlotDisk<single: TotalSlotDisk; ClassAd machine attribute>`
+
+:index:`TotalSlotDisk<single: TotalSlotDisk; ClassAd machine attribute>`
 
 ``TotalSlotDisk``
     The quantity of disk space in KiB given to this slot. For static
@@ -1039,7 +1183,8 @@ Machine ClassAd Attributes
     ``Disk``. For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
     attribute ``TotalDisk``.
-    :index:`TotalSlotMemory<single: TotalSlotMemory; ClassAd machine attribute>`
+
+:index:`TotalSlotMemory<single: TotalSlotMemory; ClassAd machine attribute>`
 
 ``TotalSlotMemory``
     The quantity of RAM in MiB given to this slot. For static slots,
@@ -1047,122 +1192,140 @@ Machine ClassAd Attributes
     For partitionable slots, where there is one partitionable slot per
     machine, this value will be the same as machine ClassAd attribute
     ``TotalMemory``.
-    :index:`TotalSlots<single: TotalSlots; ClassAd machine attribute>`
+
+:index:`TotalSlots<single: TotalSlots; ClassAd machine attribute>`
 
 ``TotalSlots``
     A sum of the static slots, partitionable slots, and dynamic slots on
     the machine at the current time.
-    :index:`TotalTimeBackfillBusy<single: TotalTimeBackfillBusy; ClassAd machine attribute>`
+
+:index:`TotalTimeBackfillBusy<single: TotalTimeBackfillBusy; ClassAd machine attribute>`
 
 ``TotalTimeBackfillBusy``
     The number of seconds that this machine (slot) has accumulated
     within the backfill busy state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeBackfillIdle<single: TotalTimeBackfillIdle; ClassAd machine attribute>`
+
+:index:`TotalTimeBackfillIdle<single: TotalTimeBackfillIdle; ClassAd machine attribute>`
 
 ``TotalTimeBackfillIdle``
     The number of seconds that this machine (slot) has accumulated
     within the backfill idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeBackfillKilling<single: TotalTimeBackfillKilling; ClassAd machine attribute>`
+
+:index:`TotalTimeBackfillKilling<single: TotalTimeBackfillKilling; ClassAd machine attribute>`
 
 ``TotalTimeBackfillKilling``
     The number of seconds that this machine (slot) has accumulated
     within the backfill killing state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeClaimedBusy<single: TotalTimeClaimedBusy; ClassAd machine attribute>`
+
+:index:`TotalTimeClaimedBusy<single: TotalTimeClaimedBusy; ClassAd machine attribute>`
 
 ``TotalTimeClaimedBusy``
     The number of seconds that this machine (slot) has accumulated
     within the claimed busy state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeClaimedIdle<single: TotalTimeClaimedIdle; ClassAd machine attribute>`
+
+:index:`TotalTimeClaimedIdle<single: TotalTimeClaimedIdle; ClassAd machine attribute>`
 
 ``TotalTimeClaimedIdle``
     The number of seconds that this machine (slot) has accumulated
     within the claimed idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeClaimedRetiring<single: TotalTimeClaimedRetiring; ClassAd machine attribute>`
+
+:index:`TotalTimeClaimedRetiring<single: TotalTimeClaimedRetiring; ClassAd machine attribute>`
 
 ``TotalTimeClaimedRetiring``
     The number of seconds that this machine (slot) has accumulated
     within the claimed retiring state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeClaimedSuspended<single: TotalTimeClaimedSuspended; ClassAd machine attribute>`
+
+:index:`TotalTimeClaimedSuspended<single: TotalTimeClaimedSuspended; ClassAd machine attribute>`
 
 ``TotalTimeClaimedSuspended``
     The number of seconds that this machine (slot) has accumulated
     within the claimed suspended state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeMatchedIdle<single: TotalTimeMatchedIdle; ClassAd machine attribute>`
+
+:index:`TotalTimeMatchedIdle<single: TotalTimeMatchedIdle; ClassAd machine attribute>`
 
 ``TotalTimeMatchedIdle``
     The number of seconds that this machine (slot) has accumulated
     within the matched idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeOwnerIdle<single: TotalTimeOwnerIdle; ClassAd machine attribute>`
+
+:index:`TotalTimeOwnerIdle<single: TotalTimeOwnerIdle; ClassAd machine attribute>`
 
 ``TotalTimeOwnerIdle``
     The number of seconds that this machine (slot) has accumulated
     within the owner idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimePreemptingKilling<single: TotalTimePreemptingKilling; ClassAd machine attribute>`
+
+:index:`TotalTimePreemptingKilling<single: TotalTimePreemptingKilling; ClassAd machine attribute>`
 
 ``TotalTimePreemptingKilling``
     The number of seconds that this machine (slot) has accumulated
     within the preempting killing state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimePreemptingVacating<single: TotalTimePreemptingVacating; ClassAd machine attribute>`
+
+:index:`TotalTimePreemptingVacating<single: TotalTimePreemptingVacating; ClassAd machine attribute>`
 
 ``TotalTimePreemptingVacating``
     The number of seconds that this machine (slot) has accumulated
     within the preempting vacating state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeUnclaimedBenchmarking<single: TotalTimeUnclaimedBenchmarking; ClassAd machine attribute>`
+
+:index:`TotalTimeUnclaimedBenchmarking<single: TotalTimeUnclaimedBenchmarking; ClassAd machine attribute>`
 
 ``TotalTimeUnclaimedBenchmarking``
     The number of seconds that this machine (slot) has accumulated
     within the unclaimed benchmarking state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`TotalTimeUnclaimedIdle<single: TotalTimeUnclaimedIdle; ClassAd machine attribute>`
+
+:index:`TotalTimeUnclaimedIdle<single: TotalTimeUnclaimedIdle; ClassAd machine attribute>`
 
 ``TotalTimeUnclaimedIdle``
     The number of seconds that this machine (slot) has accumulated
     within the unclaimed idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
-    :index:`UidDomain<single: UidDomain; ClassAd machine attribute>`
+
+:index:`UidDomain<single: UidDomain; ClassAd machine attribute>`
 
 ``UidDomain``
     a domain name configured by the HTCondor administrator which
     describes a cluster of machines which all have the same ``passwd``
     file entries, and therefore all have the same logins.
-    :index:`VirtualMemory<single: VirtualMemory; ClassAd machine attribute>`
+
+:index:`VirtualMemory<single: VirtualMemory; ClassAd machine attribute>`
 
 ``VirtualMemory``
     The amount of currently available virtual memory (swap space)
     expressed in KiB. On Linux platforms, it is the sum of paging space
     and physical memory, which more accurately represents the virtual
     memory size of the machine.
-    :index:`VM_AvailNum<single: VM_AvailNum; ClassAd machine attribute>`
+
+:index:`VM_AvailNum<single: VM_AvailNum; ClassAd machine attribute>`
 
 ``VM_AvailNum``
     The maximum number of vm universe jobs that can be started on this
     machine. This maximum is set by the configuration variable
     ``VM_MAX_NUMBER`` :index:`VM_MAX_NUMBER`.
-    :index:`VM_Guest_Mem<single: VM_Guest_Mem; ClassAd machine attribute>`
+
+:index:`VM_Guest_Mem<single: VM_Guest_Mem; ClassAd machine attribute>`
 
 ``VM_Guest_Mem``
     An attribute defined if a vm universe job is running on this slot.
@@ -1173,39 +1336,46 @@ Machine ClassAd Attributes
     Gives the amount of memory available for starting additional VM jobs
     on this machine, given in Mbytes. The maximum value is set by the
     configuration variable ``VM_MEMORY`` :index:`VM_MEMORY`.
-    :index:`VM_Networking<single: VM_Networking; ClassAd machine attribute>`
+
+:index:`VM_Networking<single: VM_Networking; ClassAd machine attribute>`
 
 ``VM_Networking``
     A boolean value indicating whether networking is allowed for virtual
     machines on this machine.
-    :index:`VM_Type<single: VM_Type; ClassAd machine attribute>`
+
+:index:`VM_Type<single: VM_Type; ClassAd machine attribute>`
 
 ``VM_Type``
     The type of virtual machine software that can run on this machine.
     The value is set by the configuration variable ``VM_TYPE``
-    :index:`VM_TYPE`.
-    :index:`VMOfflineReason<single: VMOfflineReason; ClassAd machine attribute>`
+
+:index:`VM_TYPE`.
+:index:`VMOfflineReason<single: VMOfflineReason; ClassAd machine attribute>`
 
 ``VMOfflineReason``
     The reason the VM universe went offline (usually because a VM
     universe job failed to launch).
-    :index:`VMOfflineTime<single: VMOfflineTime; ClassAd machine attribute>`
+
+:index:`VMOfflineTime<single: VMOfflineTime; ClassAd machine attribute>`
 
 ``VMOfflineTime``
     The time that the VM universe went offline.
-    :index:`WindowsBuildNumber<single: WindowsBuildNumber; ClassAd machine attribute>`
+
+:index:`WindowsBuildNumber<single: WindowsBuildNumber; ClassAd machine attribute>`
 
 ``WindowsBuildNumber``
     An integer, extracted from the platform type, representing a build
     number for a Windows operating system. This attribute only exists on
     Windows machines.
-    :index:`WindowsMajorVersion<single: WindowsMajorVersion; ClassAd machine attribute>`
+
+:index:`WindowsMajorVersion<single: WindowsMajorVersion; ClassAd machine attribute>`
 
 ``WindowsMajorVersion``
     An integer, extracted from the platform type, representing a major
     version number (currently 5 or 6) for a Windows operating system.
     This attribute only exists on Windows machines.
-    :index:`WindowsMinorVersion<single: WindowsMinorVersion; ClassAd machine attribute>`
+
+:index:`WindowsMinorVersion<single: WindowsMinorVersion; ClassAd machine attribute>`
 
 ``WindowsMinorVersion``
     An integer, extracted from the platform type, representing a minor
@@ -1214,36 +1384,43 @@ Machine ClassAd Attributes
 
 In addition, there are a few attributes that are automatically inserted
 into the machine ClassAd whenever a resource is in the Claimed state:
+
 :index:`ClientMachine<single: ClientMachine; ClassAd machine attribute (in Claimed State)>`
 
 ``ClientMachine``
     The host name of the machine that has claimed this resource
-    :index:`RemoteAutoregroup<single: RemoteAutoregroup; ClassAd machine attribute (in Claimed State)>`
+
+:index:`RemoteAutoregroup<single: RemoteAutoregroup; ClassAd machine attribute (in Claimed State)>`
 
 ``RemoteAutoregroup``
     A boolean attribute which is ``True`` if this resource was claimed
     via negotiation when the configuration variable
     ``GROUP_AUTOREGROUP`` :index:`GROUP_AUTOREGROUP` is ``True``.
     It is ``False`` otherwise.
-    :index:`RemoteGroup<single: RemoteGroup; ClassAd machine attribute (in Claimed State)>`
+
+:index:`RemoteGroup<single: RemoteGroup; ClassAd machine attribute (in Claimed State)>`
 
 ``RemoteGroup``
     The accounting group name corresponding to the submitter that
     claimed this resource.
-    :index:`RemoteNegotiatingGroup<single: RemoteNegotiatingGroup; ClassAd machine attribute (in Claimed State)>`
+
+:index:`RemoteNegotiatingGroup<single: RemoteNegotiatingGroup; ClassAd machine attribute (in Claimed State)>`
 
 ``RemoteNegotiatingGroup``
     The accounting group name under which this resource negotiated when
     it was claimed. This attribute will frequently be the same as
     attribute ``RemoteGroup``, but it may differ in cases such as when
     configuration variable ``GROUP_AUTOREGROUP``
-    :index:`GROUP_AUTOREGROUP` is ``True``, in which case it will
+
+:index:`GROUP_AUTOREGROUP` is ``True``, in which case it will
     have the name of the root group, identified as ``<none>``.
-    :index:`RemoteOwner<single: RemoteOwner; ClassAd machine attribute (in Claimed State)>`
+
+:index:`RemoteOwner<single: RemoteOwner; ClassAd machine attribute (in Claimed State)>`
 
 ``RemoteOwner``
     The name of the user who originally claimed this resource.
-    :index:`RemoteUser<single: RemoteUser; ClassAd machine attribute (in Claimed State)>`
+
+:index:`RemoteUser<single: RemoteUser; ClassAd machine attribute (in Claimed State)>`
 
 ``RemoteUser``
     The name of the user who is currently using this resource. In
@@ -1253,19 +1430,22 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     ``RemoteUser`` would hold the name of the entity currently using the
     resource, while ``RemoteOwner`` would hold the name of the entity
     that claimed the resource.
-    :index:`PreemptingOwner<single: PreemptingOwner; ClassAd machine attribute (in Claimed State)>`
+
+:index:`PreemptingOwner<single: PreemptingOwner; ClassAd machine attribute (in Claimed State)>`
 
 ``PreemptingOwner``
     The name of the user who is preempting the job that is currently
     running on this resource.
-    :index:`PreemptingUser<single: PreemptingUser; ClassAd machine attribute (in Claimed State)>`
+
+:index:`PreemptingUser<single: PreemptingUser; ClassAd machine attribute (in Claimed State)>`
 
 ``PreemptingUser``
     The name of the user who is preempting the job that is currently
     running on this resource. The relationship between
     ``PreemptingUser`` and ``PreemptingOwner`` is the same as the
     relationship between ``RemoteUser`` and ``RemoteOwner``.
-    :index:`PreemptingRank<single: PreemptingRank; ClassAd machine attribute (in Claimed State)>`
+
+:index:`PreemptingRank<single: PreemptingRank; ClassAd machine attribute (in Claimed State)>`
 
 ``PreemptingRank``
     A float which represents this machine owner's affinity for running
@@ -1275,23 +1455,27 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     is already a job running, the attribute's value is computed by
     evaluating the machine's ``Rank`` expression with respect to the
     preempting job's ClassAd.
-    :index:`TotalClaimRunTime<single: TotalClaimRunTime; ClassAd machine attribute (in Claimed State)>`
+
+:index:`TotalClaimRunTime<single: TotalClaimRunTime; ClassAd machine attribute (in Claimed State)>`
 
 ``TotalClaimRunTime``
     A running total of the amount of time (in seconds) that all jobs
     (under the same claim) ran (have spent in the Claimed/Busy state).
-    :index:`TotalClaimSuspendTime<single: TotalClaimSuspendTime; ClassAd machine attribute (in Claimed State)>`
+
+:index:`TotalClaimSuspendTime<single: TotalClaimSuspendTime; ClassAd machine attribute (in Claimed State)>`
 
 ``TotalClaimSuspendTime``
     A running total of the amount of time (in seconds) that all jobs
     (under the same claim) have been suspended (in the Claimed/Suspended
     state).
-    :index:`TotalJobRunTime<single: TotalJobRunTime; ClassAd machine attribute (in Claimed State)>`
+
+:index:`TotalJobRunTime<single: TotalJobRunTime; ClassAd machine attribute (in Claimed State)>`
 
 ``TotalJobRunTime``
     A running total of the amount of time (in seconds) that a single job
     ran (has spent in the Claimed/Busy state).
-    :index:`TotalJobSuspendTime<single: TotalJobSuspendTime; ClassAd machine attribute (in Claimed State)>`
+
+:index:`TotalJobSuspendTime<single: TotalJobSuspendTime; ClassAd machine attribute (in Claimed State)>`
 
 ``TotalJobSuspendTime``
     A running total of the amount of time (in seconds) that a single job
@@ -1300,18 +1484,21 @@ into the machine ClassAd whenever a resource is in the Claimed state:
 There are a few attributes that are only inserted into the machine
 ClassAd if a job is currently executing. If the resource is claimed but
 no job are running, none of these attributes will be defined.
+
 :index:`JobId<single: JobId; ClassAd machine attribute (when running)>`
 
 ``JobId``
     The job's identifier (for example, 152.3), as seen from *condor_q*
     on the submitting machine.
-    :index:`JobStart<single: JobStart; ClassAd machine attribute (when running)>`
+
+:index:`JobStart<single: JobStart; ClassAd machine attribute (when running)>`
 
 ``JobStart``
     The time stamp in integer seconds of when the job began executing,
     since the Unix epoch (00:00:00 UTC, Jan 1, 1970). For idle machines,
     the value is ``UNDEFINED``.
-    :index:`LastPeriodicCheckpoint<single: LastPeriodicCheckpoint; ClassAd machine attribute (when running)>`
+
+:index:`LastPeriodicCheckpoint<single: LastPeriodicCheckpoint; ClassAd machine attribute (when running)>`
 
 ``LastPeriodicCheckpoint``
     If the job has performed a periodic checkpoint, this attribute will
@@ -1320,10 +1507,12 @@ no job are running, none of these attributes will be defined.
     checkpoint, or cannot checkpoint at all, the
     ``LastPeriodicCheckpoint`` attribute will not be defined.
 
+
 :index:`offline ClassAd`
 
 There are a few attributes that are applicable to machines that are
 offline, that is, hibernating.
+
 :index:`MachineLastMatchTime<single: MachineLastMatchTime; ClassAd machine attribute (when offline)>`
 
 ``MachineLastMatchTime``
@@ -1333,14 +1522,16 @@ offline, that is, hibernating.
     ``slot<X>_MachineLastMatchTime`` defined, where ``<X>`` is replaced
     by the slot id of each of the slots with ``MachineLastMatchTime``
     defined.
-    :index:`Offline<single: Offline; ClassAd machine attribute (when offline)>`
+
+:index:`Offline<single: Offline; ClassAd machine attribute (when offline)>`
 
 ``Offline``
     A boolean value, that when ``True``, indicates this machine is in an
     offline state in the *condor_collector*. Such ClassAds are stored
     persistently, such that they will continue to exist after the
     *condor_collector* restarts.
-    :index:`Unhibernate<single: Unhibernate; ClassAd machine attribute (when offline)>`
+
+:index:`Unhibernate<single: Unhibernate; ClassAd machine attribute (when offline)>`
 
 ``Unhibernate``
     A boolean expression that specifies when a hibernating machine
@@ -1350,17 +1541,20 @@ For machines with user-defined or custom resource specifications,
 including GPUs, the following attributes will be in the ClassAd for each
 slot. In the name of the attribute, ``<name>`` is substituted with the
 configured name given to the resource.
+
 :index:`Assigned<single: Assigned; ClassAd machine attribute (for a user-defined resource)>`
 
 ``Assigned<name>``
     A space separated list that identifies which of these resources are
     currently assigned to slots.
-    :index:`Offline<single: Offline; ClassAd machine attribute (for a user-defined resource)>`
+
+:index:`Offline<single: Offline; ClassAd machine attribute (for a user-defined resource)>`
 
 ``Offline<name>``
     A space separated list that indicates which of these resources is
     unavailable for match making.
-    :index:`Total<single: Total; ClassAd machine attribute (for a user-defined resource)>`
+
+:index:`Total<single: Total; ClassAd machine attribute (for a user-defined resource)>`
 
 ``Total<name>``
     An integer quantity of the total number of these resources.
@@ -1368,79 +1562,95 @@ configured name given to the resource.
 For machines with custom resource specifications that include GPUs, the
 following attributes may be in the ClassAd for each slot, depending on
 the value of configuration variable ``MACHINE_RESOURCE_INVENTORY_GPUs``
+
 :index:`MACHINE_RESOURCE_INVENTORY_GPUs` and what GPUs are
 detected. In the name of the attribute, ``<name>`` is substituted with
 the *prefix string* assigned for the GPU.
+
 :index:`<name>BoardTempC<single: <name>BoardTempC; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>BoardTempC``
     For NVIDIA devices, a dynamic attribute representing the temperature
     in Celsius of the board containing the GPU.
-    :index:`<name>Capability<single: <name>Capability; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>Capability<single: <name>Capability; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>Capability``
     The CUDA-defined capability for the GPU.
-    :index:`<name>ClockMhz<single: <name>ClockMhz; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>ClockMhz<single: <name>ClockMhz; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>ClockMhz``
     For CUDA or Open CL devices, the integer clocking speed of the GPU
     in MHz.
-    :index:`<name>ComputeUnits<single: <name>ComputeUnits; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>ComputeUnits<single: <name>ComputeUnits; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>ComputeUnits``
     For CUDA or Open CL devices, the integer number of compute units per
     GPU.
-    :index:`<name>CoresPerCU<single: <name>CoresPerCU; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>CoresPerCU<single: <name>CoresPerCU; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>CoresPerCU``
     For CUDA devices, the integer number of cores per compute unit.
-    :index:`<name>DeviceName<single: <name>DeviceName; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>DeviceName<single: <name>DeviceName; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>DeviceName``
     For CUDA or Open CL devices, a string representing the
     manufacturer's proprietary device name.
-    :index:`<name>DieTempC<single: <name>DieTempC; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>DieTempC<single: <name>DieTempC; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>DieTempC``
     For NVIDIA devices, a dynamic attribute representing the temperature
     in Celsius of the GPU die.
-    :index:`<name>DriverVersion<single: <name>DriverVersion; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>DriverVersion<single: <name>DriverVersion; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>DriverVersion``
     For CUDA devices, a string representing the manufacturer's driver
     version.
-    :index:`<name>ECCEnabled<single: <name>ECCEnabled; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>ECCEnabled<single: <name>ECCEnabled; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>ECCEnabled``
     For CUDA or Open CL devices, a boolean value representing whether
     error correction is enabled.
-    :index:`<name>EccErrorsDoubleBit<single: <name>EccErrorsDoubleBit; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>EccErrorsDoubleBit<single: <name>EccErrorsDoubleBit; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>EccErrorsDoubleBit``
     For NVIDIA devices, a count of the number of double bit errors
     detected for this GPU.
-    :index:`<name>EccErrorsSingleBit<single: <name>EccErrorsSingleBit; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>EccErrorsSingleBit<single: <name>EccErrorsSingleBit; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>EccErrorsSingleBit``
     For NVIDIA devices, a count of the number of single bit errors
     detected for this GPU.
-    :index:`<name>FanSpeedPct<single: <name>FanSpeedPct; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>FanSpeedPct<single: <name>FanSpeedPct; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>FanSpeedPct``
     For NVIDIA devices, a value between 0 and 100 (inclusive), used to
     represent the level of fan operation as percentage of full fan
     speed.
-    :index:`<name>GlobalMemoryMb<single: <name>GlobalMemoryMb; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>GlobalMemoryMb<single: <name>GlobalMemoryMb; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>GlobalMemoryMb``
     For CUDA or Open CL devices, the quantity of memory in Mbytes in
     this GPU.
-    :index:`<name>OpenCLVersion<single: <name>OpenCLVersion; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>OpenCLVersion<single: <name>OpenCLVersion; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>OpenCLVersion``
     For Open CL devices, a string representing the manufacturer's
     version number.
-    :index:`<name>RuntimeVersion<single: <name>RuntimeVersion; ClassAd machine attribute (for GPU resources)>`
+
+:index:`<name>RuntimeVersion<single: <name>RuntimeVersion; ClassAd machine attribute (for GPU resources)>`
 
 ``<name>RuntimeVersion``
     For CUDA devices, a string representing the manufacturer's version
@@ -1448,63 +1658,75 @@ the *prefix string* assigned for the GPU.
 
 The following attributes are advertised for a machine in which
 partitionable slot preemption is enabled.
+
 :index:`ChildAccountingGroup<single: ChildAccountingGroup; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildAccountingGroup``
     A ClassAd list containing the values of the ``AccountingGroup``
     attribute for each dynamic slot of the partitionable slot.
-    :index:`ChildActivity<single: ChildActivity; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildActivity<single: ChildActivity; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildActivity``
     A ClassAd list containing the values of the ``Activity`` attribute
     for each dynamic slot of the partitionable slot.
-    :index:`ChildCpus<single: ChildCpus; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildCpus<single: ChildCpus; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildCpus``
     A ClassAd list containing the values of the ``Cpus`` attribute for
     each dynamic slot of the partitionable slot.
-    :index:`ChildCurrentRank<single: ChildCurrentRank; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildCurrentRank<single: ChildCurrentRank; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildCurrentRank``
     A ClassAd list containing the values of the ``CurrentRank``
     attribute for each dynamic slot of the partitionable slot.
-    :index:`ChildEnteredCurrentState<single: ChildEnteredCurrentState; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildEnteredCurrentState<single: ChildEnteredCurrentState; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildEnteredCurrentState``
     A ClassAd list containing the values of the ``EnteredCurrentState``
     attribute for each dynamic slot of the partitionable slot.
-    :index:`ChildMemory<single: ChildMemory; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildMemory<single: ChildMemory; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildMemory``
     A ClassAd list containing the values of the ``Memory`` attribute for
     each dynamic slot of the partitionable slot.
-    :index:`ChildName<single: ChildName; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildName<single: ChildName; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildName``
     A ClassAd list containing the values of the ``Name`` attribute for
     each dynamic slot of the partitionable slot.
-    :index:`ChildRemoteOwner<single: ChildRemoteOwner; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildRemoteOwner<single: ChildRemoteOwner; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildRemoteOwner``
     A ClassAd list containing the values of the ``RemoteOwner``
     attribute for each dynamic slot of the partitionable slot.
-    :index:`ChildRemoteUser<single: ChildRemoteUser; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildRemoteUser<single: ChildRemoteUser; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildRemoteUser``
     A ClassAd list containing the values of the ``RemoteUser`` attribute
     for each dynamic slot of the partitionable slot.
-    :index:`ChildRetirementTimeRemaining<single: ChildRetirementTimeRemaining; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildRetirementTimeRemaining<single: ChildRetirementTimeRemaining; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildRetirementTimeRemaining``
     A ClassAd list containing the values of the
     ``RetirementTimeRemaining`` attribute for each dynamic slot of the
     partitionable slot.
-    :index:`ChildState<single: ChildState; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`ChildState<single: ChildState; ClassAd machine attribute (for pslot preemption)>`
 
 ``ChildState``
     A ClassAd list containing the values of the ``State`` attribute for
     each dynamic slot of the partitionable slot.
-    :index:`PslotRollupInformation<single: PslotRollupInformation; ClassAd machine attribute (for pslot preemption)>`
+
+:index:`PslotRollupInformation<single: PslotRollupInformation; ClassAd machine attribute (for pslot preemption)>`
 
 ``PslotRollupInformation``
     A boolean value set to ``True`` in both the partitionable and

@@ -82,6 +82,13 @@ expression could be
 
       SINGULARITY_BIND_EXPR = (Owner == "TrustedUser") ? SomeExpressionFromJob : ""
 
+If the source directory for the bind mount is missing on the host machine,
+HTCondor will skip that mount and run the job without it.  If the image is
+an exploded file directory, and the target directory is missing inside
+the image, and the configuration parameter SINGULRITY_IGNORE_MISSING_BIND_TARGET
+is set to true (the default is false), then this mount attempt will also
+be skipped.  Otherwise, the job will return an error when run.
+
 Also, note that if the slot the job runs in is provisioned with GPUs,
 perhaps in response to a RequestGPU line in the submit file, the
 Singularity flag "-nv" will be passed to Singularity, which should make

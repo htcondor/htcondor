@@ -652,68 +652,9 @@ VanillaProc::StartJob()
 	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
-		std::string mem_limit;
-		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "none");
-		bool mem_is_soft = mem_limit == "soft";
-		std::string cgroup_string = cgroup;
-		CgroupLimits climits(cgroup_string);
-		if (mem_is_soft || (mem_limit == "hard")) {
-			ClassAd * MachineAd = Starter->jic->machClassAd();
-			int MemMb;
-			if (MachineAd->LookupInteger(ATTR_MEMORY, MemMb)) {
-				// cgroups prevents us from setting hard limits lower
-				// than memsw limit.  If we are reusing this cgroup,
-				// we don't know what the previous values were
-				// So, set mem to 0, memsw to +inf, so that the real
-				// values can be set without interference
-
-				climits.set_memory_limit_bytes(0);
-				climits.set_memsw_limit_bytes(LONG_MAX);
-
-				uint64_t MemMb_big = MemMb;
-				m_memory_limit = MemMb_big;
-				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
-
-				// Note that ATTR_VIRTUAL_MEMORY on Linux
-				// is sum of memory and swap, in Kilobytes
-
-				int VMemKb;
-				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, VMemKb)) {
-
-					uint64_t memsw_limit = ((uint64_t)1024) * VMemKb;
-					if (VMemKb > 0) {
-						// we're not allowed to set memsw limit <
-						// the hard memory limit.  If we haven't set the hard
-						// memory limit, the default may be infinity.
-						// So, if we've set soft, set hard limit to memsw - one page
-						if (mem_is_soft) {
-							uint64_t hard_limit = memsw_limit - 4096;
-							climits.set_memory_limit_bytes(hard_limit, false);
-						}
-						climits.set_memsw_limit_bytes(memsw_limit);
-					}
-				} else {
-					dprintf(D_ALWAYS, "Not setting virtual memory limit in cgroup because "
-						"Virtual Memory attribute missing in machine ad.\n");
-				}
-			} else {
-				dprintf(D_ALWAYS, "Not setting memory limit in cgroup because "
-					"Memory attribute missing in machine ad.\n");
-			}
-		} else if (mem_limit == "none") {
-			dprintf(D_FULLDEBUG, "Not enforcing memory limit.\n");
-		} else {
-			dprintf(D_ALWAYS, "Invalid value of CGROUP_MEMORY_LIMIT_POLICY: %s.  Ignoring.\n", mem_limit.c_str());
-		}
-
-		// Now, set the CPU shares
-		ClassAd * MachineAd = Starter->jic->machClassAd();
-		int numCores = 1;
-		if (MachineAd->LookupInteger(ATTR_CPUS, numCores)) {
-			climits.set_cpu_shares(numCores*100);
-		} else {
-			dprintf(D_FULLDEBUG, "Invalid value of Cpus in machine ClassAd; ignoring.\n");
-		}
+#ifdef LINUX
+		setCgroupMemoryLimits(cgroup);
+#endif
 		setupOOMEvent(cgroup);
 	}
 
@@ -1152,7 +1093,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
 	Starter->jic->periodicJobUpdate( &updateAd, true );
-	int usage;
+	int usage = 0;
 	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
 
 		//
@@ -1463,3 +1404,114 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 		return this->OsProc::streamingOpenFlags( isOutput );
 	}
 }
+
+#ifdef LINUX
+void 
+VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
+
+		ClassAd * MachineAd = Starter->jic->machClassAd();
+		std::string cgroup_string = cgroup;
+		CgroupLimits climits(cgroup_string);
+
+		// First, set the CPU shares
+		int numCores = 1;
+		if (MachineAd->LookupInteger(ATTR_CPUS, numCores)) {
+			climits.set_cpu_shares(numCores*100);
+		} else {
+			dprintf(D_FULLDEBUG, "Invalid value of Cpus in machine ClassAd; ignoring.\n");
+		}
+
+		// Now, set the memory limits
+		std::string mem_limit;
+		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "none");
+		if (mem_limit == "none") {
+			dprintf(D_ALWAYS, "Not enforcing cgroup memory limit because CGROUP_MEMORY_LIMIT_POLICY is \"none\".\n");
+			return;
+		}
+
+		if ((mem_limit != "hard") && (mem_limit != "soft") && (mem_limit != "custom")) {
+			dprintf(D_ALWAYS, "Not enforcing cgroup memory limit because CGROUP_MEMORY_LIMIT_POLICY is an unknown value: %s.\n", mem_limit.c_str());
+			return;
+		}
+
+		// The default hard memory limit -- the amount of memory in the slot
+		std::string hard_memory_limit_expr = "My.Memory";
+
+		// The default soft memory limit -- 90% of the amount of memory in the slot
+		std::string soft_memory_limit_expr = "0.9 * My.Memory";
+
+		if (mem_limit == "soft") {
+				// If the policy is soft, make the hard limit the total memory for this startd
+				hard_memory_limit_expr = "My.TotalMemory";
+				// If the policy is soft, make the soft limit the slot size
+				soft_memory_limit_expr = "My.Memory";
+		} else if (mem_limit == "custom") {
+				param(hard_memory_limit_expr, "CGROUP_HARD_MEMORY_LIMIT_EXPR", "");
+				if (hard_memory_limit_expr.empty()) {
+					dprintf(D_ALWAYS, "Missing CGROUP_HARD_MEMORY_LIMIT_EXPR, this must be set when CGROUP_MEMORY_LIMIT_POLICY is custom\n");
+					return;
+				}
+				param(soft_memory_limit_expr, "CGROUP_SOFT_MEMORY_LIMIT_EXPR", "");
+				if (soft_memory_limit_expr.empty()) {
+					dprintf(D_ALWAYS, "Missing CGROUP_SOFT_MEMORY_LIMIT_EXPR, this must be set when CGROUP_MEMORY_LIMIT_POLICY is custom\n");
+					return;
+				}
+		}
+
+		int64_t hard_limit = 0;
+		int64_t soft_limit = 0;
+
+		ExprTree *expr = nullptr;
+		::ParseClassAdRvalExpr(hard_memory_limit_expr.c_str(), expr);
+		if (expr == nullptr) {
+			dprintf(D_ALWAYS, "Can't parse CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
+			return;
+		}
+
+		classad::Value value;
+		int evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		if ((!evalRet) || (!value.IsNumber(hard_limit))) {
+			dprintf(D_ALWAYS, "Can't evaluate CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
+			delete expr;
+			return;
+		}
+
+		delete expr;
+		expr = nullptr;
+
+		::ParseClassAdRvalExpr(soft_memory_limit_expr.c_str(), expr);
+		if (expr == nullptr) {
+			dprintf(D_ALWAYS, "Can't parse CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
+			return;
+		}
+
+		evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		if ((!evalRet) || (!value.IsNumber(soft_limit))) {
+			dprintf(D_ALWAYS, "Can't evaluate CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
+			delete expr;
+			return;
+		}
+		delete expr;
+
+		// cgroups prevents us from setting hard limits above
+		// the memsw limit.  If we are reusing this cgroup,
+		// we don't know what the previous values were
+		// So, set mem to 0, memsw to +inf, so that the real
+		// values can be set without interference
+
+		climits.set_memory_limit_bytes(0, true);
+		climits.set_memsw_limit_bytes(LONG_MAX);
+
+		// If we get an OOM, check against this value to see if it our fault, or a global OOM
+		m_memory_limit = soft_limit;
+		climits.set_memory_limit_bytes(1024 * 1024 * hard_limit, false /* == hard */);
+		climits.set_memory_limit_bytes(1024 * 1024 * soft_limit, true /* == soft */);
+
+		// if DISABLE_SWAP_FOR_JOB is true, set swap to hard memory limit
+		// otherwise, leave at infinity
+
+		if (param_boolean("DISABLE_SWAP_FOR_JOB", false)) {
+			climits.set_memsw_limit_bytes(1024 * 1024 * hard_limit);
+		}
+}
+#endif

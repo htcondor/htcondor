@@ -431,6 +431,7 @@ Matchmaker ()
 	rejPreemptForRank = 0;
 	rejForSubmitterLimit = 0;
 	rejForConcurrencyLimit = 0;
+	rejForSubmitterCeiling = 0;
 
 	cachedPrio = 0;
 	cachedOnlyForStartdRank = false;

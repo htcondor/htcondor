@@ -96,8 +96,38 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 		launchConfiguration.LookupString( "SubnetId", blob[ "SubnetId" ] );
 		launchConfiguration.LookupString( "WeightedCapacity", blob[ "WeightedCapacity" ] );
 
-		// We can add support for the actual tagging specification later.
-		blob[ "Tags" ] = "htcondor:AnnexName=" + annexID;
+
+		std::string b;
+		StringList taglist;
+		formatstr( b, "%s=%s", "htcondor:AnnexName", annexID.c_str() );
+		taglist.append( b.c_str() );
+
+		std::string buffer;
+		if( command->LookupString( ATTR_EC2_TAG_NAMES, buffer ) ) {
+			StringList tagNames(buffer);
+
+			char * tagName = NULL;
+			tagNames.rewind();
+			while( (tagName = tagNames.next()) ) {
+				std::string tagAttr(ATTR_EC2_TAG_PREFIX);
+				tagAttr.append(tagName);
+
+				char * tagValue = NULL;
+				if(! command->LookupString(tagAttr, &tagValue)) {
+					return FALSE;
+				}
+
+				formatstr( b, "%s=%s", tagName, tagValue );
+				taglist.append( b.c_str() );
+
+				free( tagValue );
+			}
+		}
+
+		char * s = taglist.print_to_string();
+		blob[ "Tags" ] = s;
+		free( s );
+
 
 		ExprTree * iipTree = launchConfiguration.Lookup( "IamInstanceProfile" );
 		if( iipTree != NULL ) {

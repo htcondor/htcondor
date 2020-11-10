@@ -143,7 +143,6 @@ int	  ProcId = -1;
 int		ClustersCreated = 0;
 int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
-bool    nice_user_setting = false;
 bool	NewExecutable = false;
 int		dash_remote=0;
 int		dash_factory=0;
@@ -2634,7 +2633,6 @@ init_params()
 }
 
 
-#if 1
 bool credd_has_tokens(std::string & tokens, MyString & URL) {
 
 	URL.clear();
@@ -2659,204 +2657,6 @@ bool credd_has_tokens(std::string & tokens, MyString & URL) {
 
 	StringList unique_names(tokens.c_str());
 
-#else
-MyString credd_has_tokens(MyString m) {
-	if (IsDebugLevel(D_SECURITY)) {
-			char *myname = my_username();
-			dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), myname);
-			free(myname);
-	}
-
-	// PHASE 1
-	//
-	// scan the submit keys for things that match the form
-	// <service>_OAUTH_[PERMISSIONS|RESOURCE](_<handle>)?
-	// and create a list of individual tokens (with handles)
-	// that we need to have.
-
-	StringList services(m.c_str());
-	char* service;
-
-	StringList token_names;
-
-	services.rewind();
-	while ((service = services.next())) {
-		dprintf(D_ALWAYS, "CRED: getting details for %s\n", service);
-
-/*
- * QUESTION:  do i need to actually do the PARAM in order to make the refcount NON-ZERO?
- *
-		permissions = submit_hash.submit_param_mystring(param_name);
-*/
-
-		// there may not be any options (PERMISSIONS|RESOURCE) but we'll still
-		// need to add a token anyways.  this keeps track of whether we found
-		// any options so we don't add the base case if we did
-		bool found_defs = false;
-
-		// iterate the submit keys
-		HASHITER it = hash_iter_begin(submit_hash.macros());
-		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
-			MyString key = hash_iter_key(it);
-
-			// for building the things we will extract from the submit keys
-			MyString param_name;
-
-			param_name.formatstr("%s_OAUTH_RESOURCE", service);
-			if (0 == strncasecmp(param_name.c_str(), key.c_str(), param_name.Length())) {
-				// true if we find anything at all
-				found_defs = true;
-
-				MyString handle = service;
-				// we have a match, see if there is a handle at the end
-				if (key.Length() > param_name.Length()) {
-					handle += "*";
-					handle += key.substr(param_name.Length()+1, key.Length());
-				}
-				token_names.append(handle.c_str());
-			}
-
-			param_name.formatstr("%s_OAUTH_PERMISSIONS", service);
-			if (0 == strncasecmp(param_name.c_str(), key.c_str(), param_name.Length())) {
-				// true if we find anything at all
-				found_defs = true;
-
-				MyString handle = service;
-				// we have a match, see if there is a handle at the end
-				if (key.Length() > param_name.Length()) {
-					handle += "*";
-					handle += key.substr(param_name.Length()+1, key.Length());
-				}
-				token_names.append(handle.c_str());
-			}
-		}
-		hash_iter_delete(&it);
-
-		// if there were no options, we still need to add this token to the list
-		if(!found_defs) {
-			token_names.append(service);
-		}
-	}
-
-	StringList unique_names;
-	unique_names.create_union(token_names, true);
-	unique_names.qsort();
-
-	// stick the list of unique names into the job ad.  we will need it later when
-	// the starter asks for its list of creds from the shadow.
-	char* commalist = unique_names.print_to_string();  // up to us to free()
-	MyString quotedlist;
-	quotedlist.formatstr("\"%s\"", commalist);
-	free(commalist);
-	submit_hash.set_arg_variable("+OAuthServicesNeeded", quotedlist.Value());
-	dprintf(D_SECURITY, "OAUTH: recording OAuthServicesNeeded as %s.\n", quotedlist.Value());
-
-
-	// PHASE 2
-	//
-	// Lookup each unique token name, create an ad for this token request
-	// (and fill in defaults from config file if needed).
-	//
-	// Then, insert that ad into the "master" ad that we will send to credd
-	// (nested classad)
-
-
-	// we'll have one classad per token.  create an array while we build them up
-	ClassAdList requests;
-
-	char* token;
-	unique_names.rewind();
-
-	for(int index = 0; index < unique_names.number(); index++) {
-		token = unique_names.next();
-		ClassAd *request_ad = new ClassAd();
-		MyString token_MyS = token;
-
-		MyString service_name;
-		MyString handle;
-		int starpos = token_MyS.FindChar('*');
-		if(starpos == -1) {
-			// no handle, just service
-			service_name = token_MyS;
-		} else {
-			// no split into two
-			service_name = token_MyS.substr(0,starpos);
-			handle = token_MyS.substr(starpos+1,token_MyS.Length());
-		}
-		request_ad->Assign("Service", service_name);
-		request_ad->Assign("Handle", handle);
-
-		MyString param_name;
-		MyString config_param_name;
-		MyString param_val;
-
-		// get permissions (scopes) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_PERMISSIONS", service_name.c_str());
-		if (handle.Length()) {
-			param_name += "_";
-			param_name += handle;
-		}
-		param_val = submit_hash.submit_param_mystring(param_name.c_str(), NULL);
-		if(param_val.Length() == 0) {
-			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_SCOPES", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
-			if (param_val[0] == 'R') {
-				printf ("You must specify %s to use OAuth service %s.\n", param_name.c_str(), service_name.c_str());
-				exit(1);
-			}
-			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
-			param_val = param(config_param_name.c_str());
-		}
-		request_ad->Assign("Scopes", param_val);
-
-		// get resource (audience) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
-		if (handle.Length()) {
-			param_name += "_";
-			param_name += handle;
-		}
-		param_val = submit_hash.submit_param_mystring(param_name.c_str(), NULL);
-		if(param_val.Length() == 0) {
-			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_AUDIENCE", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
-			if (param_val[0] == 'R') {
-				printf ("You must specify %s to use OAuth service %s.\n", param_name.c_str(), service_name.c_str());
-				exit(1);
-			}
-			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
-			param_val = param(config_param_name.c_str());
-		}
-		request_ad->Assign("Audience", param_val);
-
-		// right now, we only ever want to obtain creds for the user
-		// principal as determined by the CredD.  omitting username
-		// tells the CredD to take the authenticated user from the
-		// socket and use that.
-		//
-		// NOTE: this will fail when talking to a pre-8.9.7 CredD
-		// because it is expecting this username and does not know to
-		// use the authenticated from the socket.
-		//
-		// in the future, if we wish to obtain credentials on behalf of
-		// another user, you would fill in this attribute, presumably
-		// with some value obtained from the submit file.
-		//
-		// request_ad->Assign("Username", "<username>");
-
-		if (IsDebugLevel (D_SECURITY)) {
-			std::string dbgout;
-			classad::ClassAdUnParser unp;
-			unp.Unparse(dbgout, request_ad);
-			dprintf(D_SECURITY, "OAUTH REQUEST: %s\n", dbgout.c_str());
-		}
-
-		requests.Insert(request_ad);
-	}
-
-	MyString URL;
-#endif
 
 	// PHASE 3
 	//
@@ -2870,21 +2670,12 @@ MyString credd_has_tokens(MyString m) {
 			fprintf(stdout, "# %s \n%s\n", name, formatAd(buf, *requests.Next(), "\t"));
 			buf.clear();
 		}
-	#if 1
 		if (! (DashDryRun & 4)) {
 			URL = "http://getcreds.example.com";
 		}
 		return true;
-	#else
-		buf.clear();
-		if (! (DashDryRun & 4)) {
-			buf = "http://getcreds.example.com";
-		}
-		return buf;
-	#endif
 	}
 
-#if 1
 	// build a vector of the request ads from the classad list.
 	std::vector<const classad::ClassAd*> req_ads;
 	requests.Rewind();
@@ -2915,37 +2706,6 @@ MyString credd_has_tokens(MyString m) {
 	}
 
 	return true;
-#else
-	Daemon my_credd(DT_CREDD);
-	if (my_credd.locate()) {
-		CondorError e;
-		ReliSock *r;
-		r = (ReliSock*)my_credd.startCommand(CREDD_CHECK_CREDS, Stream::reli_sock, 20, &e);
-
-		if(!r) {
-			fprintf( stderr, "\nCRED: startCommand to CredD failed!\n");
-			exit( 1 );
-		}
-
-		r->encode();
-		int numads = unique_names.number();
-		r->code(numads);
-		requests.Rewind();
-		for (int i=0; i<numads; i++) {
-			putClassAd(r, *(requests.Next()));
-		}
-		r->end_of_message();
-		r->decode();
-		r->code(URL);
-		r->end_of_message();
-		r->close();
-		delete r;
-		return URL;
-	} else {
-		fprintf( stderr, "\nCRED: locate(credd) failed!\n");
-		exit( 1 );
-	}
-#endif
 }
 
 
@@ -2967,16 +2727,9 @@ int process_job_credentials()
 		// create a "request file" and provide a URL that references
 		// it.  we forward this URL to the user so they can obtain the
 		// tokens needed.
-#if 1
 		MyString URL;
 		std::string tokens_needed;
 		if (credd_has_tokens(tokens_needed, URL)) {
-#else
-		MyString tokens_needed = submit_hash.submit_param_mystring("UseOAuthServices", "use_oauth_services");
-
-		if (!tokens_needed.empty()) {
-			MyString URL = credd_has_tokens(tokens_needed);
-#endif
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL
@@ -3000,6 +2753,43 @@ int process_job_credentials()
 	}
 
 
+	// If LOCAL_CREDMON_PROVIDER_NAME is set, this means.  we want to
+	// instruct the credd to create a file in the OAUTH tree but not
+	// actually go through the OAuth flow.  this is somewhat of a hack to
+	// support SciTokens in "local issuer mode".
+	std::string pname;
+	if (!param(pname, "LOCAL_CREDMON_PROVIDER_NAME")) {
+		dprintf(D_SECURITY, "CREDMON: skipping the storage of any LOCAL credential with CredD.\n");
+	} else {
+		dprintf(D_ALWAYS, "CREDMON: LOCAL_CREDMON_PROVIDER_NAME is set and provider name is \"%s\"\n", pname.c_str());
+		Daemon my_credd(DT_CREDD);
+		if (my_credd.locate()) {
+			// we're piggybacking on "krb" mode but using a magic value
+			const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
+			const char * err = NULL;
+			ClassAd return_ad;
+
+			// construct the "magic string":
+			std::string magic("LOCAL:");
+			magic += pname.c_str();
+			dprintf(D_SECURITY, "CREDMON: sending magic value \"%s\" to CredD.\n", magic.c_str());
+
+			// pass an empty username here, which tells the CredD to take the authenticated name from the socket
+			long long result = do_store_cred("", mode, (const unsigned char*)magic.c_str(), magic.length(), return_ad, NULL, &my_credd);
+			if (store_cred_failed(result, mode, &err)) {
+				fprintf( stderr, "\nERROR: store_cred of LOCAL credential failed - %s\n", err ? err : "");
+				exit(1);
+			}
+		} else {
+			fprintf( stderr, "\nERROR: locate(credd) failed!\n");
+			exit( 1 );
+		}
+
+		// ZKM TODO
+		//
+		// we should add this service name into UseOAuthServices and set SendCredential to TRUE
+		//
+	}
 
 	// deal with credentials generated by a user-invoked script
 
@@ -3059,11 +2849,11 @@ int process_job_credentials()
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
 					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
 					if (store_cred_failed(result, mode, &err)) {
-						fprintf( stderr, "\nERROR: store_cred of Kerberose credential failed - %s\n", err ? err : "");
+						fprintf( stderr, "\nERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "");
 						exit(1);
 					}
 				} else {
-					fprintf( stderr, "\nERROR: Credd is too old to support storing of Kerberose credentials\n"
+					fprintf( stderr, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
 							"  Credd version: %s", cvi.get_version_string());
 					exit(1);
 				}

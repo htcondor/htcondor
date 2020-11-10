@@ -1252,7 +1252,8 @@ FILE TRANSFER COMMANDS
 
     :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
  preserve_relative_paths = < True | False >
-    This command modifies the behavior of the file transfer commands.  When
+    For vanilla and Docker -universe jobs (and others that use the shadow),
+    this command modifies the behavior of the file transfer commands.  When
     set to true, the destination for an entry that is a relative path in a
     file transfer list becomes its relative path, not its basename.  For
     example, ``input_data/b`` (and its contents, if it is a directory) will
@@ -2657,9 +2658,10 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     bottom-feeder job! This is very handy if a user has some jobs they
     wish to run, but do not wish to use resources that could instead be
     used to run other people's HTCondor jobs. Jobs submitted in this
-    fashion have ``"nice-user."`` prepended to the owner name when
-    viewed from *condor_q* or *condor_userprio*. The default value is
-    ``False``. :index:`noop_job<single: noop_job; submit commands>`
+    fashion have an accounting group.  The accounting group is configurable
+    by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` which defaults to ``nice-user``
+    The default value is ``False``. 
+    :index:`noop_job<single: noop_job; submit commands>`
  noop_job = <ClassAd Boolean Expression>
     When this boolean expression is ``True``, the job is immediately
     removed from the queue, and HTCondor makes no attempt at running the

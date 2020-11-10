@@ -69,6 +69,7 @@ static void Usage() {
 			"\t\t[-MaxJobs <int N>]\n"
 			"\t\t[-MaxPre <int N>]\n"
 			"\t\t[-MaxPost <int N>]\n"
+			"\t\t[-MaxHold <int N>]\n"
 			"\t\t(obsolete) [-NoEventChecks]\n"
 			"\t\t(obsolete) [-AllowLogError]\n"
 			"\t\t[-DontAlwaysRunPost]\n"
@@ -109,6 +110,7 @@ Dagman::Dagman() :
 	maxJobs (0),
 	maxPreScripts (20),
 	maxPostScripts (20),
+	maxHoldScripts (20),
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
@@ -149,7 +151,8 @@ Dagman::Dagman() :
 	_batchName(""),
 	_batchId(""),
 	_dagmanClassad(NULL),
-	_removeNodeJobs(true)
+	_removeNodeJobs(true),
+	_schedd(nullptr)
 {
 	debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -341,6 +344,11 @@ Dagman::Config()
 				0, INT_MAX );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n",
 				maxPostScripts );
+
+	maxHoldScripts = param_integer( "DAGMAN_MAX_HOLD_SCRIPTS", maxHoldScripts,
+				0, INT_MAX );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_HOLD_SCRIPTS setting: %d\n",
+				maxHoldScripts );
 
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
 				mungeNodeNames );
@@ -731,7 +739,7 @@ void main_init (int argc, char ** const argv) {
 	for (i = 1; i < argc; i++) {
 		// If argument is not a flag/option, assume it's a dag filename
 		if( argv[i][0] != '-') {
-			dagman.dagFiles.append( argv[i] );
+			dagman.dagFiles.push_back( std::string(argv[i]) );
 		}
 		else if( !strcasecmp( "-Debug", argv[i] ) ) {
 			i++;
@@ -755,7 +763,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No DAG specified\n" );
 				Usage();
 			}
-			dagman.dagFiles.append( argv[i] );
+			dagman.dagFiles.push_back( std::string(argv[i]) );
 		} else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -793,6 +801,14 @@ void main_init (int argc, char ** const argv) {
 			}
 			dagman.maxPostScripts = atoi( argv[i] );
 
+		} else if( !strcasecmp( "-MaxHold", argv[i] ) ) {
+			i++;
+			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+				debug_printf( DEBUG_SILENT,
+							  "Integer missing after -MaxHold\n" );
+				Usage();
+			}
+			dagman.maxHoldScripts = atoi( argv[i] );
 		} else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
 			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
 						"ignored; please use the DAGMAN_ALLOW_EVENTS "
@@ -930,16 +946,16 @@ void main_init (int argc, char ** const argv) {
 
 	// We expect at the very least to have a dag filename specified
 	// If not, show the Usage details and exit now.
-	if( dagman.dagFiles.number() == 0 ) {
+	if( dagman.dagFiles.size() == 0 ) {
 		Usage();
 	}
 
-	dagman.dagFiles.rewind();
-	dagman.primaryDagFile = dagman.dagFiles.next();
-	dagman.multiDags = (dagman.dagFiles.number() > 1);
+	dagman.primaryDagFile = dagman.dagFiles.front();
+	dagman.multiDags = (dagman.dagFiles.size() > 1);
 
 	dagman._dagmanClassad->Initialize( dagman.maxJobs, dagman.maxIdle, 
-				dagman.maxPreScripts, dagman.maxPostScripts );
+				dagman.maxPreScripts, dagman.maxPostScripts,
+				dagman.maxHoldScripts );
 
 	dagman._dagmanClassad->GetSetBatchId( dagman._batchId );
 
@@ -1045,6 +1061,10 @@ void main_init (int argc, char ** const argv) {
 		debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
 		Usage();
 	}
+	if( dagman.maxHoldScripts < 0 ) {
+		debug_printf( DEBUG_SILENT, "-MaxHold must be non-negative\n" );
+		Usage();
+	}
 	if( dagman.doRescueFrom < 0 ) {
 		debug_printf( DEBUG_SILENT, "-DoRescueFrom must be non-negative\n" );
 		Usage();
@@ -1119,15 +1139,14 @@ void main_init (int argc, char ** const argv) {
 	//
 	debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
 				   lockFileName.c_str() );
-	if ( dagman.dagFiles.number() == 1 ) {
+	if ( dagman.dagFiles.size() == 1 ) {
 		debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
 				  	dagman.primaryDagFile.Value() );
 	} else {
 		MyString msg = "DAG Input files are ";
-		dagman.dagFiles.rewind();
-		const char *dagFile;
-		while ( (dagFile = dagman.dagFiles.next()) != NULL ) {
-			msg += dagFile;
+
+		for ( auto it = dagman.dagFiles.begin(); it != dagman.dagFiles.end(); ++it ) {
+			msg += it->c_str();
 			msg += " ";
 		}
 		msg += "\n";
@@ -1192,7 +1211,7 @@ void main_init (int argc, char ** const argv) {
 	// wenger 2010-03-25
 	dagman.dag = new Dag( dagman.dagFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dagman.useDagDir,
+						  dagman.maxHoldScripts, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,
@@ -1221,22 +1240,19 @@ void main_init (int argc, char ** const argv) {
 	// takes care of adding jobs and dependencies to the DagMan
 	//
 
-	dagman.mungeNodeNames = (dagman.dagFiles.number() > 1);
+	dagman.mungeNodeNames = (dagman.dagFiles.size() > 1);
 	parseSetDoNameMunge( dagman.mungeNodeNames );
-   	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
-		dagman.dagFiles.number() );
-	dagman.dagFiles.rewind();
-	char *dagFile;
+   	debug_printf( DEBUG_VERBOSE, "Parsing %zu dagfiles\n", 
+		dagman.dagFiles.size() );
 
 	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
 	// of the parsing, copies of the dagman.dagFile string list happen which
 	// mess up the iteration of this list.
-	StringList sl( dagman.dagFiles );
-	sl.rewind();
-	while ( (dagFile = sl.next()) != NULL ) {
-		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
+	std::list<std::string> sl( dagman.dagFiles );
+	for ( auto it = sl.begin(); it != sl.end(); ++it ) {
+		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", it->c_str() );
 
-		if( !parse( dagman.dag, dagFile, dagman.useDagDir, dagman._schedd ) ) {
+		if( !parse( dagman.dag, it->c_str(), dagman.useDagDir, dagman._schedd ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1258,7 +1274,7 @@ void main_init (int argc, char ** const argv) {
 			
 				// Note: debug_error calls DC_Exit().
 			debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
-					 	dagFile );
+					 	it->c_str() );
 		}
 	}
 	if( dagman.dag->GetDagPriority() != 0 ) {
@@ -1599,11 +1615,11 @@ print_status( bool forceScheddUpdate ) {
 
 	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
 
-	debug_printf( DEBUG_VERBOSE, " Done	 Pre   Queued	Post   Ready   Un-Ready   Failed\n" );
+	debug_printf( DEBUG_VERBOSE, " Done     Pre   Queued    Post   Ready   Un-Ready   Failed\n" );
 
-	debug_printf( DEBUG_VERBOSE, "  ===	 ===	  ===	 ===	 ===		===	  ===\n" );
+	debug_printf( DEBUG_VERBOSE, "  ===     ===      ===     ===     ===        ===      ===\n" );
 
-	debug_printf( DEBUG_VERBOSE, "%5d   %5d	%5d   %5d   %5d	  %5d	%5d\n",
+	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
 				  done, pre, submitted, post, ready, unready, failed );
 	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
 				dagman.dag->NumHeldJobProcs() );
@@ -1630,16 +1646,17 @@ jobad_update() {
 	int pre = dagman.dag->PreRunNodeCount();
 	int submitted = dagman.dag->NumJobsSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
+	int hold = dagman.dag->HoldRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
 	int unready = dagman.dag->NumNodesUnready( true );
 
 	if ( dagman._dagmanClassad ) {
 		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-					ready, failed, unready, dagman.dag->_dagStatus,
+					hold, ready, failed, unready, dagman.dag->_dagStatus,
 					dagman.dag->Recovery(), dagman._dagmanStats,
 					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
-					dagman.maxPostScripts );
+					dagman.maxPostScripts, dagman.maxHoldScripts );
 
 		// It's possible that certain DAGMan attributes were changed in the job ad.
 		// If this happened, update the internal values in our dagman data structure.
@@ -1647,6 +1664,7 @@ jobad_update() {
 		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
 		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
 		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
+		dagman.dag->SetMaxHoldScripts(dagman.maxHoldScripts);
 	}
 
 }

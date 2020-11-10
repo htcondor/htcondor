@@ -33,7 +33,7 @@ bool ResumeDag(Dagman &dm);
 
 Job* AddNode( Dag *dag, const char *name,
 			  const char* directory,
-			  const char* submitFile,
+			  const char* submitFileOrSubmitDesc,
 			  bool noop,
 			  bool done, NodeType type, MyString &failReason );
 
@@ -48,8 +48,7 @@ bool SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile,
 			MyString &whynot );
 
 bool IsValidNodeName( Dag *dm, const char *name, MyString &whynot );
-bool IsValidSubmitFileName( const char *name, MyString &whynot );
-bool IsValidSubmitDescription( SubmitHash *desc, MyString &whynot );
+bool IsValidSubmitName( const char *name, MyString &whynot );
 
 /*
 bool RemoveNode( const char *name );

@@ -38,8 +38,6 @@ override_dh_auto_configure:
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_PCRE:BOOL=ON \
-		-DHAVE_EXT_VOMS:BOOL=OFF \
-		-DWITH_VOMS:BOOL=OFF \
 		-DWITH_LIBCGROUP:BOOL=ON \
 		-DWANT_CONTRIB:BOOL=OFF \
 		-DWITH_BOSCO:BOOL=OFF \
@@ -83,13 +81,9 @@ override_dh_auto_install:
 	# remove compat symlinks
 	rm debian/tmp/usr/sbin/condor_vm_vmware.pl
 	rm debian/tmp/usr/sbin/grid_monitor.sh
-	mkdir debian/tmp/lib/python3/dist-packages
-	mv debian/tmp/lib/python3/*classad* debian/tmp/lib/python3/dist-packages
-	mv debian/tmp/lib/python3/*htcondor* debian/tmp/lib/python3/dist-packages
 
 
 override_dh_fixperms-arch:
-	chmod -x debian/htcondor/etc/default/condor
 	chmod -x debian/htcondor/usr/lib/condor/libexec/interactive.sub
 
 

@@ -6,14 +6,17 @@ they were part of the Grid, the differences between clouds and the Grid
 have made it difficult to convert access into utility; a job in the Grid
 universe starts a virtual machine, rather than the user's executable.
 
-Therefore, HTCondor includes a tool, *condor_annex*, to
-help users and administrators use cloud resources to run HTCondor jobs.
-Most of this chapter is concerned with using the *condor_annex* tool
+We offer two solutions to this problem.  The first, a tool called
+*condor_annex*, helps users or administrators extend an existing HTCondor
+pool with cloud resources.  The second is an easy way to create an
+entire HTCondor pool from scratch on the cloud,
+using our :ref:`google_cloud_marketplace`.
+
+The rest of this chapter is concerned with using the *condor_annex* tool
 to add nodes to an existing HTCondor pool; it includes instructions on
 how to create a single-node HTCondor installation as a normal user so
-that you can expand it with cloud resources.  It also possible to create
-a pool entirely out of cloud resources, although this is not presently
-automated; see :ref:`condor_in_the_cloud` for instructions.
+that you can expand it with cloud resources.  It also discusses how to
+manually construct a :ref:`condor_in_the_cloud` using *condor_annex*.
 
 .. toctree::
    :maxdepth: 2
@@ -25,3 +28,4 @@ automated; see :ref:`condor_in_the_cloud` for instructions.
    annex-customization-guide
    annex-configuration
    condor-in-the-cloud
+   google-cloud-marketplace

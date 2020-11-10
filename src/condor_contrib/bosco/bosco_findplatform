@@ -1,7 +1,5 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 #Marco Mambelli - first version 10/8/2012 
-
-from __future__ import print_function
 
 import sys
 import os
@@ -47,8 +45,8 @@ def findversion_mac(detail=False):
   # system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"
   #      System Version: Mac OS X 10.6.8 (10K549)
   #
-  import commands 
-  ec, out = commands.getstatusoutput('system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"')
+  import subprocess
+  ec, out = subprocess.getstatusoutput('system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"')
   retv = out.strip()[len("System Version:"):].strip()
   if detail and ec==0:
     return retv
@@ -113,8 +111,6 @@ Codename:    oneiric
     if 'DISTRIB_RELEASE' in line:
         # TODO These checks need to to be conditioned on whether the
         #   distro is Debian or Ubuntu.
-        if line[len('DISTRIB_RELEASE='):].startswith('8.'):
-          retv=DEB8
         if line[len('DISTRIB_RELEASE='):].startswith('9.'):
           retv=DEB9
         if line[len('DISTRIB_RELEASE='):].startswith('10.'):
@@ -151,8 +147,6 @@ def findversion():
         if mydist[1].startswith('8.'):
           return RH8
       if mydist[0].lower()=='debian':
-        if mydist[1].startswith('8.'):
-          return DEB8
         if mydist[1].startswith('9.'):
           return DEB9
         if mydist[1].startswith('10.'):
@@ -192,10 +186,10 @@ def findversion_detail():
 def install(platform, multiuser=False, options=None):
   """Install BOSCO for the platform"""
   import tempfile
-  import urllib2
+  import urllib.request, urllib.error, urllib.parse
   import shutil
   import tarfile
-  import commands
+  import subprocess
   # make tmp dir
   if not platform in SUPPORTED_PLATFORMS:
       print("Your system is not supported. Aborting the installation.")
@@ -206,7 +200,7 @@ def install(platform, multiuser=False, options=None):
     condor_dir = ""
     try:
       print("Downloading BOSCO from %s" % URL_DICT[platform])
-      response = urllib2.urlopen(URL_DICT[platform])
+      response = urllib.request.urlopen(URL_DICT[platform])
       fname = os.path.join(tmp_dir, 'bosco-download.tar.gz')
       f = open(fname, 'wb')
       shutil.copyfileobj(response, f)
@@ -242,7 +236,7 @@ def install(platform, multiuser=False, options=None):
                 "cd %s/%s; ./bosco_install %s" % (tmp_dir, condor_dir_list[0], options_list)
                ]
     for cmd in cmd_list:
-      ec, out = commands.getstatusoutput(cmd)
+      ec, out = subprocess.getstatusoutput(cmd)
       if ec != 0:
         print("Error installing BOSCO")
         print("Command %s failed:\n%s" % (cmd, out))

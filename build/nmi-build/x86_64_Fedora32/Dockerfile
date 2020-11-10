@@ -227,6 +227,7 @@ RUN dnf install -y \
 # Tools needed for building
 RUN dnf install -y \
     make \
+    patchelf \
     rpm-build \
     && dnf clean all
 
@@ -261,6 +262,7 @@ RUN dnf install -y \
     'perl(Archive::Tar)' \
     'perl(Data::Dumper)' \
     'perl(Digest::MD5)' \
+    'podman' \
     'python3-devel' \
     'python3-setuptools' \
     'python-devel' \
@@ -269,6 +271,34 @@ RUN dnf install -y \
     'python-sphinx_rtd_theme' \
     'sqlite-devel' \
     'systemd-devel' \
+    && dnf clean all
+
+# Additional dependencies for OSG style build
+RUN dnf install -y \
+    globus-callout-devel \
+    globus-common-devel \
+    globus-ftp-client-devel \
+    globus-ftp-control-devel \
+    globus-gass-server-ez-devel \
+    globus-gass-transfer-devel \
+    globus-gram-client-devel \
+    globus-gsi-callback-devel \
+    globus-gsi-cert-utils-devel \
+    globus-gsi-credential-devel \
+    globus-gsi-openssl-error-devel \
+    globus-gsi-proxy-core-devel \
+    globus-gsi-proxy-ssl-devel \
+    globus-gsi-sysconfig-devel \
+    globus-gss-assist-devel \
+    globus-gssapi-error-devel \
+    globus-gssapi-gsi-devel \
+    globus-io-devel \
+    globus-openssl-module-devel \
+    globus-rsl-devel \
+    globus-xio-devel \
+    munge-devel \
+    scitokens-cpp-devel \
+    voms-devel \
     && dnf clean all
 
 RUN pip3 install pytest pytest-httpserver

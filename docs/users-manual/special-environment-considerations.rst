@@ -15,17 +15,12 @@ an AFS volume without relying on having your AFS permissions.
 If a job you submit to HTCondor needs to access files residing in AFS,
 you have the following choices:
 
-#. Copy the needed files from AFS to either a local hard disk where
-   HTCondor can access them using remote system calls (if this is a
-   standard universe job), or copy them to an NFS volume.
 #. If the files must be kept on AFS, then set a host ACL (using the AFS
    *fs setacl* command) on the subdirectory to serve as the current
-   working directory for the job. If this is a standard universe job,
-   then the host ACL needs to give read/write permission to any process
-   on the submit machine. If this is a vanilla universe job, then set
-   the ACL such that any host in the pool can access the files without
-   being authenticated. If you do not know how to use an AFS host ACL,
-   ask the person at your site responsible for the AFS configuration.
+   working directory for the job. Set the ACL such that any host in 
+   the pool can access the files without being authenticated. If you 
+   do not know how to use an AFS host ACL, ask the person at your site 
+   responsible for the AFS configuration.
 
 The Center for High Throughput Computing hopes to improve upon how
 HTCondor deals with AFS authentication in a subsequent release.

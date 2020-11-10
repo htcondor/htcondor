@@ -35,6 +35,7 @@ extensions = [
     'macro',
     'macro-def',
     'index',
+    'jira',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -62,7 +63,7 @@ Licensed under the Apache License, Version 2.0.'
 # The short X.Y version.
 version = '8.9'
 # The full version, including alpha/beta/rc tags.
-release = '8.9.9'
+release = '8.9.11'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2020

@@ -790,7 +790,7 @@ check_log_dir()
 {
 	const char	*f;
 	Directory dir(Log, PRIV_ROOT);
-	int coreFileMaxSize = param_integer("PREEN_COREFILE_MAX_SIZE", 10000000);
+	int coreFileMaxSize = param_integer("PREEN_COREFILE_MAX_SIZE", 50000000);
 	int coreFileStaleAge = param_integer("PREEN_COREFILE_STAGE_AGE", 5184000);
 	unsigned int coreFilesPerProgram = param_integer("PREEN_COREFILES_PER_PROCESS", 10);
 	StringList invalid;

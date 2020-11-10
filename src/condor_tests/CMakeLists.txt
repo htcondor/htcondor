@@ -219,6 +219,8 @@ if (BUILD_TESTING)
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_manifest "Test manifest functionality" "core;quick;full" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 	endif()
 

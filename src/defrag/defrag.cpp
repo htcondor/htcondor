@@ -76,7 +76,7 @@ DefragLog::write_to_ad(ClassAd * ad) const {
 		list += buffer;
 	}
 	list[list.length() - 1] = '}';
-	ad->AssignExpr( "RecentDrainsList", list.c_str() );
+	ad->AssignExpr( ATTR_RECENT_DRAINS_LIST, list.c_str() );
 
 	list = "{ ";
 	for( auto i = cancels.crbegin(); i != cancels.crend(); ++i ) {
@@ -85,7 +85,7 @@ DefragLog::write_to_ad(ClassAd * ad) const {
 		list += buffer;
 	}
 	list[list.length() - 1] = '}';
-	ad->AssignExpr( "RecentCancelsList", list.c_str() );
+	ad->AssignExpr( ATTR_RECENT_CANCELS_LIST, list.c_str() );
 }
 
 DefragLog defrag_log;

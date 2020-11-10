@@ -1029,7 +1029,7 @@ bool convert_python_to_constraint(boost::python::object value, classad::ExprTree
 // convert a python object to an unparsed constraint expression, 
 // returns true if conversion was successful, althrough the result may be the empty string
 // if value is NULL or true constraint will be the empty string
-bool convert_python_to_constraint(boost::python::object value, std::string & constraint, bool validate /*=false*/)
+bool convert_python_to_constraint(boost::python::object value, std::string & constraint, bool validate, bool * is_number /*=NULL*/)
 {
 	constraint.clear();
 
@@ -1074,6 +1074,9 @@ bool convert_python_to_constraint(boost::python::object value, std::string & con
 						expr = NULL;
 					}
 					return false;
+				}
+				if (is_number && (vt == classad::Value::INTEGER_VALUE || vt == classad::Value::REAL_VALUE)) {
+					*is_number = true;
 				}
 			}
 		}

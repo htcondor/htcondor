@@ -99,6 +99,9 @@ public:
 			@return true if success, false if failure
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
+#ifdef LINUX
+	void setCgroupMemoryLimits(const char *cgroup);
+#endif
 
 	virtual std::string CgroupSuffix() { return "";}
 

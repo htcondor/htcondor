@@ -276,6 +276,7 @@ RUN apt update && apt install -y \
     libx11-dev \
     libxml2-dev \
     libxss-dev \
+    patchelf \
     pkg-config \
     po-debconf \
     python3-all-dev \
@@ -285,6 +286,7 @@ RUN apt update && apt install -y \
     python-sphinx \
     python-sphinx-rtd-theme \
     uuid-dev \
+    voms-dev \
     zlib1g-dev \
     && apt clean
 

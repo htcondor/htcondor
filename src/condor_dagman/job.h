@@ -72,6 +72,11 @@ enum NodeType {
 	PROVISIONER
 };
 
+#define EXEC_MASK 0x1
+#define ABORT_TERM_MASK 0x2
+#define IDLE_MASK 0x4 // set when proc is idle, formerly a separate _isIdle vector
+#define HOLD_MASK 0x8 // set when proc is held, formerly a separate _onHold vector
+
 /**  The job class represents a job in the DAG and its state in the HTCondor
      system.  A job is given a name, a CondorID, and three queues.  The
      parents queue is a list of parent jobs that this one depends on.  That
@@ -232,9 +237,10 @@ class Job {
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
+	const char* GetHoldScriptName() const;
 	static const char* JobTypeString() { return "HTCondor"; }
 
-	bool AddScript( bool post, const char *cmd, int defer_status,
+	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
 				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 
@@ -245,6 +251,7 @@ class Job {
 
 	Script * _scriptPre;
 	Script * _scriptPost;
+	Script * _scriptHold;
 
 
 #ifdef DEAD_CODE
@@ -336,6 +343,12 @@ class Job {
 		@param isIdle True iff the specified proc is idle; false otherwise
 	*/
 	void SetProcIsIdle( int proc, bool isIdle );
+
+	/** Set an event for a proc
+		@param proc The proc for which we're setting
+		@param event The event
+	*/
+	void SetProcEvent( int proc, int event );
 
 		/** Is the specified node a child of this node?
 			@param child Pointer to the node to check for childhood.
@@ -506,22 +519,6 @@ class Job {
 	int GetSubProc() const { return _CondorID._subproc; }
 	bool SetCondorID(const CondorID& cid);
 	const CondorID& GetID() const { return _CondorID; }
-
-		/** Update the DAGMan metrics for an execute event.
-			@param proc The proc ID of this event.
-			@param eventTime The time at which this event occurred.
-			@param metrics The DagmanMetrics object to update.
-		*/
-	void ExecMetrics( int proc, const struct tm &eventTime,
-				DagmanMetrics *metrics );
-
-		/** Update the DAGMan metrics for a terminated or aborted event.
-			@param proc The proc ID of this event.
-			@param eventTime The time at which this event occurred.
-			@param metrics The DagmanMetrics object to update.
-		*/
-	void TermAbortMetrics( int proc, const struct tm &eventTime,
-				DagmanMetrics *metrics );
 
 private:
     /** */ CondorID _CondorID;
@@ -753,16 +750,6 @@ private:
 		// The job tag for this node ("-" if nothing is specified;
 		// can also be "local").
 	char *_jobTag;
-
-		//
-		// bit flags for _gotEvents
-		//
-	enum {
-		EXEC_MASK = 0x1,
-		ABORT_TERM_MASK = 0x2,
-		IDLE_MASK = 0x4, // set when proc is idle, formerly a separate _isIdle vector
-		HOLD_MASK = 0x8, // set when proc is held, formerly a separate _onHold vector
-	};
 
 		// _gotEvents[proc] & EXEC_MASK is true iff we've gotten an
 		// execute event for proc; _gotEvents[proc] & ABORT_TERM_MASK

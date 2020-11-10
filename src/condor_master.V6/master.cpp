@@ -1073,11 +1073,13 @@ init_params()
 
 	// To do fast polling for a daemon's address file, the master sleeps
 	// for 100ms before registering a 0-second timer for the next file
-	// existence check. On Darwin, this is causing the shared port daemon's
-	// child-alive message to be lost frequently. So Darwin gets the old
-	// 1 second check interval that doesn't include a sleep in the master.
+	// existence check.  On Darwin, without an ugly hack in
+	// do_shared_port_local_connect(), this causes the shared port daemon's
+	// child-alive message to be lost frequently.  I'm leaving the fall-back
+	// to the older (slower) code in place in case we discover problems with
+	// the ugly hack.
 #if defined(DARWIN)
-	DaemonStartFastPoll = false;
+	DaemonStartFastPoll = true;
 #else
 	DaemonStartFastPoll = true;
 #endif
@@ -1912,6 +1914,12 @@ main( int argc, char **argv )
                 if (mkdir("/var/lock/condor", 0775) == 0) {
                     dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
                     dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
+                }
+            }
+            if (stat("/var/lock/condor/local", &sbuf) != 0 && errno == ENOENT) {
+                if (mkdir("/var/lock/condor/local", 01777) == 0) {
+                    dummyGlobal = chown("/var/lock/condor/local", pwbuf->pw_uid, pwbuf->pw_gid);
+                    dummyGlobal = chmod("/var/lock/condor/local", 01777); // Override umask
                 }
             }
         }

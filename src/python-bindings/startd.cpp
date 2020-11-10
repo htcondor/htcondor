@@ -55,7 +55,7 @@ struct Startd
     drain_jobs(int how_fast=DRAIN_GRACEFUL, bool resume_on_completion=false, boost::python::object check_obj=boost::python::object(""), boost::python::object start_obj = boost::python::object() )
     {
 		std::string check_expr;
-		if ( ! convert_python_to_constraint(check_obj, check_expr, true)) {
+		if ( ! convert_python_to_constraint(check_obj, check_expr, true, NULL)) {
 			THROW_EX(HTCondorValueError, "Invalid check expression");
 		}
 		const char * check_expr_ptr = nullptr;

@@ -31,6 +31,10 @@
 */
 class StringList {
 public:
+	StringList(const std::string & s, const std::string & delim ) :
+		StringList( s.c_str(), delim.c_str() ) { }
+	StringList(const std::string & s, const char * delim = " ," ) :
+		StringList( s.c_str(), delim ) { }
 	StringList(const char *s = NULL, const char *delim = " ," );
 	StringList(const char *s, char delim_char, bool keep_empty_fields );
 	StringList( const StringList &other );

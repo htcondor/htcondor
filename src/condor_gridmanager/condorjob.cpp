@@ -767,9 +767,11 @@ void CondorJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_SUBMITTED;
 			} else {
+				time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 				rc = gahp->condor_job_refresh_proxy( remoteScheddName,
 													 remoteJobId,
-													 jobProxy->proxy_filename );
+													 jobProxy->proxy_filename,
+													 proxy_expiration );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -800,7 +802,7 @@ void CondorJob::doEvaluateState()
 					}
 				} else {
 					lastProxyExpireTime = jobProxy->expiration_time;
-					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+					delegatedProxyExpireTime = proxy_expiration;
 					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
 					time_t actual_expiration = delegatedProxyExpireTime;
 					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
@@ -1382,6 +1384,33 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree = new_expr->Copy();
 			jobAd->Insert( attrs_to_copy[index], pTree );
+		}
+	}
+
+	std::string chirp_prefix;
+	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
+	if (chirp_prefix == "Chirp*") {
+		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
+			if ( ! strncasecmp(attr_it->first.c_str(), "Chirp", 5) ) {
+				old_expr = jobAd->Lookup(attr_it->first);
+				new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					jobAd->Insert( attr_it->first, new_expr->Copy() );
+				}
+			}
+		}
+	} else if (!chirp_prefix.empty()) {
+		// TODO cache the StringList
+		StringList prefix_list;
+		prefix_list.initializeFromString(chirp_prefix.c_str());
+		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
+			if ( prefix_list.contains_anycase_withwildcard(attr_it->first.c_str()) ) {
+				old_expr = jobAd->Lookup(attr_it->first);
+				new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					jobAd->Insert( attr_it->first, new_expr->Copy() );
+				}
+			}
 		}
 	}
 

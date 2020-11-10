@@ -216,7 +216,7 @@ tag-unversioned:
 .PHONY: clean-stamps
 clean-stamps:
 	$(foreach it,$(basetargets) $(imgtargets),\
-		-rm -f .$(it).stamp)
+		rm -f .$(it).stamp;)
 
 .PHONY: clean
 clean: clean-stamps

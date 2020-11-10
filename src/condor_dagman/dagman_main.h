@@ -81,6 +81,7 @@ class Dagman {
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once
+	int maxHoldScripts;  // max. number of HOLD scripts to run at once
 	bool paused;
 
 	char* condorSubmitExe;
@@ -130,7 +131,7 @@ class Dagman {
 
 		// The list of all DAG files to be run by this invocation of
 		// condor_dagman.
-	StringList dagFiles;
+	std::list<std::string> dagFiles;
 
 		// Whether we have more than one DAG file; we need to save this
 		// separately because dagFiles will get reset if we're automatically
