@@ -25,6 +25,12 @@ New Features:
 - Added support for requesting GPUs with grid universe jobs of type `batch`.
   :ticket:`7757`
 
+- Added new configuration variable :macro:`MIN_FLOCK_LEVEL`, which can be
+  used to specify how many of the remote HTCondor pools listed in
+  ``FLOCK_COLLECTOR_HOSTS`` should always be flocked to.
+  The default is 0.
+  :jira:`62`
+
 Bugs Fixed:
 
 - Fixed a bug specific to MacOS X which could cause the shared port daemon's
