@@ -22,6 +22,9 @@ New Features:
   the ``-tag <name> <value>`` command-line option once for each tag.
   :ticket:`7834`
 
+- Added support for requesting GPUs with grid universe jobs of type `batch`.
+  :ticket:`7757`
+
 Bugs Fixed:
 
 - Fixed a bug specific to MacOS X which could cause the shared port daemon's
