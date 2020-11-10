@@ -31,6 +31,12 @@ New Features:
   The default is 0.
   :jira:`62`
 
+- Job attributes set by the job using the Chirp command
+  ``set_job_attr_delayed`` are now propagated back to the orginating
+  *condor_schedd* by the Job Router and Condor-C (a.k.a grid universe type
+  ``condor``).
+  :jira:`63`
+
 Bugs Fixed:
 
 - Fixed a bug specific to MacOS X which could cause the shared port daemon's
