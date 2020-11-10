@@ -39,13 +39,13 @@ def main():
     # Start the pty
     pid, child = pty.fork()
     if pid == 0:
-        os.execv ("/usr/bin/ssh-add", [''] + [ BOSCO_KEY ] )
+        os.execv ("/usr/bin/ssh-add", ['ssh-add'] + [ BOSCO_KEY ] )
     else:
         # Read from the input
         sent_pass = False
         while True:
             time.sleep(0.3)
-            read = os.read(child, max_read)
+            read = os.read(child, max_read).decode()
 
             # No authentication agent
             if re.search('.*authentication agent.*', read):
@@ -65,11 +65,11 @@ def main():
 
                 # Read in the password
                 f = open(BOSCO_PASS)
-                bosco_pass = f.read()
+                bosco_pass = f.read().encode()
                 f.close()
                 
                 # Write the password out
-                os.write(child, bosco_pass + "\n")
+                os.write(child, bosco_pass + b'\n')
 
                 continue
 
