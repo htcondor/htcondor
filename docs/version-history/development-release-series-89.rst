@@ -22,6 +22,21 @@ New Features:
   the ``-tag <name> <value>`` command-line option once for each tag.
   :ticket:`7834`
 
+- Added support for requesting GPUs with grid universe jobs of type `batch`.
+  :ticket:`7757`
+
+- Added new configuration variable :macro:`MIN_FLOCK_LEVEL`, which can be
+  used to specify how many of the remote HTCondor pools listed in
+  ``FLOCK_COLLECTOR_HOSTS`` should always be flocked to.
+  The default is 0.
+  :jira:`62`
+
+- Job attributes set by the job using the Chirp command
+  ``set_job_attr_delayed`` are now propagated back to the orginating
+  *condor_schedd* by the Job Router and Condor-C (a.k.a grid universe type
+  ``condor``).
+  :jira:`63`
+
 Bugs Fixed:
 
 - Fixed a bug specific to MacOS X which could cause the shared port daemon's
