@@ -36,7 +36,7 @@ extern "C" char* d_format_time(double);   // this should be in a .h
 
 
 // "private" helper for when we already know the cluster/proc
-static FILE* email_user_open_id( ClassAd *jobAd, int cluster, int proc, 
+static FILE* email_user_open_id( ClassAd *jobAd, int cluster, int proc,
 								 const char *subject );
 
 static void
@@ -56,7 +56,7 @@ email_user_open_id( ClassAd *jobAd, int, int, const char *subject )
 	  message should go.  This info is in the classad.
     */
     if( ! jobAd->LookupString(ATTR_NOTIFY_USER, &email_addr) ) {
-			// no email address specified in the job ad; try owner 
+			// no email address specified in the job ad; try owner
 		if( ! jobAd->LookupString(ATTR_OWNER, &email_addr) ) {
 				// we're screwed, give up.
 			return NULL;
@@ -107,7 +107,7 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
 	while( (tmp = email_attrs.next()) ) {
 		expr_tree = job_ad->LookupExpr(tmp);
 		if( ! expr_tree ) {
-            dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.", 
+            dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.",
                     tmp);
 			continue;
 		}
@@ -131,7 +131,7 @@ email_check_domain( const char* addr, ClassAd* job_ad )
 		return strdup( addr );
 	}
 
-		// No host name specified; add a domain. 
+		// No host name specified; add a domain.
 	char* domain = NULL;
 
 		// First, we check for EMAIL_DOMAIN in the config file
@@ -145,11 +145,11 @@ email_check_domain( const char* addr, ClassAd* job_ad )
 		// If that's not there, look for UID_DOMAIN in the config file
 	if( ! domain ) {
 		domain = param( "UID_DOMAIN" );
-	} 
+	}
 	
 	if( ! domain ) {
 			// we're screwed, we can't append a domain, just return
-			// the username again... 
+			// the username again...
 		return strdup( addr );
 	}
 	
@@ -253,7 +253,7 @@ Email::sendAction( ClassAd* ad, const char* reason,
 
 /*
 void
-Email::sendError( ClassAd* ad, const char* err_summary, 
+Email::sendError( ClassAd* ad, const char* err_summary,
 				  const char* err_msg )
 {
 		// TODO!
@@ -283,7 +283,7 @@ Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 	} else {
 		fp = email_user_open_id( ad, cluster, proc, full_subject.Value() );
 	}
-	return fp; 
+	return fp;
 }
 
 
@@ -298,10 +298,17 @@ Email::writeJobId( ClassAd* ad )
 	char* cmd = NULL;
 	ad->LookupString( ATTR_JOB_CMD, &cmd );
 
+	std::string batch_name;
+	ad->LookupString(ATTR_JOB_BATCH_NAME, batch_name);
+
+	std::string iwd;
+	ad->LookupString(ATTR_JOB_IWD, iwd);
+
 	MyString args;
 	ArgList::GetArgsStringForDisplay(ad,&args);
 
 	fprintf( fp, "Condor job %d.%d\n", cluster, proc);
+
 	if( cmd ) {
 		fprintf( fp, "\t%s", cmd );
 		free( cmd );
@@ -311,6 +318,13 @@ Email::writeJobId( ClassAd* ad )
 		} else {
 			fprintf( fp, "\n" );
 		}
+	}
+
+	if (batch_name.length() > 0) {
+		fprintf( fp, "\tfrom batch %s\n", batch_name.c_str());
+	}
+	if (iwd.length() > 0) {
+		fprintf( fp, "\tsubmitted from directory %s\n", iwd.c_str());
 	}
 	return true;
 }
@@ -324,7 +338,7 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 		return false;
 	}
 
-		// gather all the info out of the job ad which we want to 
+		// gather all the info out of the job ad which we want to
 		// put into the email message.
 
 	bool had_core = false;
@@ -385,7 +399,7 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 		arch_time = now;
 		fprintf(fp, "Completed at:        %s", ctime(&arch_time));
 		
-		fprintf(fp, "Real Time:           %s\n", 
+		fprintf(fp, "Real Time:           %s\n",
 				d_format_time(real_time));
 	}	
 
@@ -428,17 +442,17 @@ Email::writeBytes( float run_sent, float run_recv, float tot_sent,
 	}
 
 	fprintf( fp, "\nNetwork:\n" );
-	fprintf( fp, "%10s Run Bytes Received By Job\n", 
+	fprintf( fp, "%10s Run Bytes Received By Job\n",
 			 metric_units(run_recv) );
 	fprintf( fp, "%10s Run Bytes Sent By Job\n",
 			 metric_units(run_sent) );
-	fprintf( fp, "%10s Total Bytes Received By Job\n", 
+	fprintf( fp, "%10s Total Bytes Received By Job\n",
 			 metric_units(tot_recv) );
 	fprintf( fp, "%10s Total Bytes Sent By Job\n",
 			 metric_units(tot_sent) );
 }
 
-void 
+void
 Email::writeCustom( ClassAd *ad )
 {
 		// if we're not currently open w/ a message, we're done
