@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Enhanced the optional job completion sent to the submitter to now
+  include the batch name, if defined, and the submitting directory,
+  so the user has a better idea of which job the job id is. HTCONDOR-71
+
 
 Bugs Fixed:
 
