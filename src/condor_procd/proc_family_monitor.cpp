@@ -506,9 +506,6 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 
 	// get usage from the requested family and all subfamilies
 	//
-	dprintf(D_ALWAYS,
-	        "gathering usage data for family with root pid %u\n",
-	        pid);
 	ASSERT(usage != NULL);
 	usage->user_cpu_time = 0;
 	usage->sys_cpu_time = 0;
