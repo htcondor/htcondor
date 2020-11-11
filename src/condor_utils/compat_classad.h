@@ -359,20 +359,24 @@ int sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
  * @param fp The file to be printed to.
  * @param ad The classad containing the attribute
  * @param An optional white-list of attributes to be printed.
+ * @param An optional bool to omit newlines from json output.
  * @return TRUE as long as the file existed.
  */
 int fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad,
-				   StringList *attr_white_list = NULL);
+				   StringList *attr_white_list = NULL,
+				   bool oneline = false);
 
 /* Prints the classad as JSON to a string. fPrintAdAsJson calls this.
  * @param output The string to have filled with the JSON-ified classad.
  *   The string is appended to, not overwritten.
  * @param ad The ad to be printed.
  * @param An optional white-list of attributes to be printed.
+ * @param An optional bool to omit newlines from json output.
  * @return TRUE
  */
 int sPrintAdAsJson(std::string &output, const classad::ClassAd &ad,
-				   StringList *attr_white_list = NULL);
+				   StringList *attr_white_list = NULL,
+				   bool oneline = false);
 
 /** Given an attribute name, return a buffer containing the name
  *  and it's unevaluated value, like so:

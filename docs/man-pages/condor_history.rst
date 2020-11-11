@@ -16,7 +16,7 @@ Synopsis
 [**-local**] [**-startd**] [**-userlog** *filename*]
 [**-format** *formatString AttributeName*]
 [**-autoformat[:jlhVr,tng]  ** *attr1 [attr2 ...]*]
-[**-l | -long | -xml | -json** ] [**-match | -limit  ** *number*]
+[**-l | -long | -xml | -json | -jsonl** ] [**-match | -limit  ** *number*]
 [**cluster | cluster.process | owner** ]
 
 Description
@@ -159,6 +159,8 @@ Options
     `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`_.
  **-json**
     Display job ClassAds in JSON format.
+ **-jsonl**
+    Display job ClassAds in JSON-Lines format: one job ad per line.
 
 Exit Status
 -----------
