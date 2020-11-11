@@ -4923,6 +4923,16 @@ These macros control the *condor_schedd*.
     into sets of 2 *condor_collector* daemons, and each set will be
     considered for flocking.
 
+:macro-def:`MIN_FLOCK_LEVEL`
+    This integer value specifies a number of remote pools that the
+    *condor_schedd* should always flock to.
+    It defaults to 0, meaning that none of the pools listed in
+    ``FLOCK_COLLECTOR_HOSTS`` will be considered for flocking when
+    there are no idle jobs in need of match-making.
+    Setting a larger value N means the *condor_schedd* will always
+    flock to (i.e. look for matches in) the first N pools listed in
+    ``FLOCK_COLLECTOR_HOSTS``.
+
 :macro-def:`NEGOTIATE_ALL_JOBS_IN_CLUSTER`
     If this macro is set to False (the default), when the
     *condor_schedd* fails to start an idle job, it will not try to
