@@ -17,28 +17,27 @@ Getting HTCondor
 
     for-docker
 
+    admin-quick-start
+
 These instructions show how to install HTCondor and run all of its
 components on a single computer, so that you can test HTCondor and
 explore its features.  We recommend that new users start with the
-first set of instructions here and then continue with the
-:ref:`quick_start_guide`; that link will appear again at the end of
-these instructions.
+:ref:`first set of instructions <install_with_administrative_privileges>`
+here and then continue with the :doc:`../users-manual/quick-start-guide`;
+that link will appear again at the end of these instructions.
 
-If you know how to use Docker, you may find one of our pre-made images
-easier to use; see the :ref:`docker` entry.  If you're familiar with
-cloud computing, you can also get HTCondor :ref:`in the cloud<cloud>`.
+If you know how to use Docker, you may find it easier to start with the
+``htcondor/mini`` image; see the :ref:`docker` entry.  If you're familiar
+with cloud computing, you may also get HTCondor :ref:`in the cloud<cloud>`.
 
-Experienced users who want to make a HTCondor pool out of multiple
-physical machines should read the [FIXME] admin quick start guide
-to choose the first machine on which to follow these instructions.   For
-container infrastructures, see the :ref:`docker` or :ref:`kubernetes`
-entries.  For cloud infastructures, see the :ref:`cloud` entry.
+Experienced users who want to make an HTCondor pool out of multiple
+machines should read the :doc:`admin-quick-start` first.
 
 .. _install_with_administrative_privileges:
 
 .. rubric:: Installing HTCondor with Administrative Privileges
 
-If you have administrative privileges on your machine, choose to the
+If you have administrative privileges on your machine, choose the
 instructions corresponding to your operating system:
 
 * :ref:`Windows <admin_install_windows>`
@@ -52,7 +51,7 @@ instructions corresponding to your operating system:
 .. rubric:: Hand-Installation of HTCondor with User Privileges
 
 If you don't administrative privileges on your machine, you can still
-install HTCondor, although some features will not be available:
+install HTCondor, although some features will not be available.
 
 * :ref:`Linux <user_install_linux>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
@@ -100,6 +99,6 @@ HTCondor also supports cloud-native distribution.
 * We also have documention on creating a
   :doc:`../cloud-computing/condor-in-the-cloud` by hand.
 
-If you're new to HTCondor administration, consider reading our
-:ref:`quick-start guide <admin_quick_start>` before the rest of the
+If you're new to HTCondor administration, consider reading the
+:doc:`admin-quick-start` before the rest of the
 :doc:`../admin-manual/index`.

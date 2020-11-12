@@ -1,22 +1,19 @@
-.. admin_quick_start:
+.. _admin_quick_start_guide:
 
 Administrative Quick Start Guide
 ================================
 
-The purpose of this page is to guide you from a functioning single-machine
-installation of HTCondor (as you may have obtained by
-:ref:`getting_htcondor`) to a pool of machines working together to execute
-your jobs.  The first step is to understand the different roles into which
-HTCondor splits the responsibilities of managing jobs, so that you can
-choose the appropriate machine for each role.  The second step is to install
-HTCondor onto those machines, and the third step is to configure those machines
-to work together and to communicate securely.
+This guide does not contain step-by-step instructions for
+:doc:`index`.  Rather, it briefly describes the three roles performed by
+every HTCondor pool and the resource and networking requirements for each
+role; our recommendations for securing the communications between different
+machines in the pool; and how to use HTCondor's configuration system to
+set up those roles and that security.
 
-The Three Major Roles
----------------------
+The Three Roles
+---------------
 
-Even a single-machine installation of HTCondor performs all three of these
-roles.
+Even a single-machine installation of HTCondor performs all three roles.
 
 The Execute Role
 ################
@@ -29,11 +26,13 @@ the job's input and output; and advertising, monitoring, and managing the
 resources of the execute machine.  HTCondor can manage pools containing
 tens of thousands of execute machines, so this is by far the most common role.
 
-The execute role uses resources very few resources, so almost any machine
-can contribute to a pool in the execute role.  The execute role can run on
-a machine with only outbound network connectivity, but being able to
-accept inbound connections from the machine(s) performing the submit role
-will simplify setup and reduce overhead.
+The execute role itself uses very few resources, so almost any machine
+can contribute to a pool.  The execute role can run on a machine with only
+outbound network connectivity, but being able to accept inbound connections
+from the machine(s) performing the submit role will simplify setup and reduce
+overhead.  The execute machine does not need to allow user access, or
+even share user IDs with other machines in the pool (although this may be
+very convenient, especially on Windows).
 
 The Submit Role
 ###############
@@ -41,7 +40,7 @@ The Submit Role
 We'll discuss what "advertising" a machine's resources means in the next
 section, but the execute role leaves an obvious question unanswered: where
 do the jobs come from?  The answer is the submit role.  This role is
-responsible for accepting, monitoring, managing, scheduling jobs on its
+responsible for accepting, monitoring, managing, and scheduling jobs on its
 assigned resources; transferring the input and output of jobs; and requesting
 and accepting resource assignments.  (A "resource" is some reserved fraction
 of an execute machine.)  HTCondor allows arbitrarily many submit roles in a
@@ -49,13 +48,15 @@ pool, but for administrative convenience, most pools only have one, or a
 small number, of machines acting in the submit role.
 
 A submit-role machine requires a bit under of a megabyte of RAM for each
-running job, and its ability to transfer data to the execute-role machines
-may be a performance bottleneck.  We typically recommend adding another submit
-machine for every twenty thousand simultaneously running jobs.  A submit
-machine must have outbound network connectivity, but a submit machine without
-inbound network connectivity can't use execute-role machines without inbound
-network connectivity.  As execute machines are more numerous, submit
-machines typically allow inbound connections.
+running job, and its ability to transfer data to and from the execute-role
+machines may become a performance bottleneck.  We typically recommend adding
+another submit machine for every twenty thousand simultaneously running
+jobs.  A submit machine must have outbound network connectivity, but a submit
+machine without inbound network connectivity can't use execute-role machines
+without inbound network connectivity.  As execute machines are more numerous,
+submit machines typically allow inbound connections.  Although you may allow
+users to submit jobs over the network, we recommend allowing users SSH access
+to the submit machine.
 
 The Central Manager Role
 ########################
@@ -79,16 +80,35 @@ fine.
 Security
 --------
 
-Although the next logical step is to assign roles to machines (installing
-HTCondor as necessary), and after that, to configure those machines to
-work together and communicate securely, we're going to discuss security
-first, since doing all of the set-up for each role in one go will save you
-some time.
+The security system in HTCondor is
+:doc:`far more flexible <../admin-manual/security>` than you will probably
+ever need, so in this quick-start guide, we will only introduce the simplest
+secure configuration.
 
-Actually, we're mostly going to avoid discussing security, because HTCondor
-supports a lot of different authentication methods and has a very fine-grained
-authorization model that you'll hopefully never have to actually worry about.
-If you're curious, you can read the [FIXME].
+This configuration distinguishes between two types of connections: connections
+between HTCondor processes on different machines -- each HTCondor role is
+performed by one or more daemon processes, but HTCondor automatically secures
+the connections between daemons on the same machine -- and connections from
+users to daemons.
+
+Users only connect to the submit-role daemons and the collector (one of the
+central manager daemons).  This configuration secures connections to the
+submit role, so that users can't pretend to be someone else, or interfere
+with each other's jobs, but it allows read-only connections to the
+collector from any process on the submit machine (or any attacker capable
+of spoofing their source address).  On Linux (or Mac), user connections to
+the submit role are authenticated transparently, leveraging the ability of
+user processes to act on the local filesystem.  On Windows, the process
+is :ref:`more complicated <[FIXME]>`.  HTCondor calls the former method
+``FS`` and the latter method ``NTSSPI``.
+
+Daemon-to-daemon connections are secured with a shared secret -- a password
+stored on each machine in the pool, but readable only by privileged
+processes like the HTCondor daemons.  This is easy to set up, because you
+only need to securely copy the same file to the same place on all machines,
+but has the disadvantage that you can't securely distinguish between different
+machines or roles which have the same password.  HTCondor calls this
+this authentication method ``PASSWORD``.
 
 .. Instead, we're just going to tell you how to set up token-based security.  A
 .. token is a crytographically-secured blob that operates like a passport: it
@@ -100,16 +120,23 @@ If you're curious, you can read the [FIXME].
 .. a token, but holders of tokens can verify that they're talking to the
 .. holder of the same key that signed their token.
 
-Instead, we're just going to tell you how to set up security based on
-a shared secret -- a password stored, readable only by privileged processes
-(like HTCondor), on each machine in the pool.  The advantage of this approach
-is that every machine using the same password makes the password easy to
-distribute.  The disadvantage of this approach is that every machine using
-the same password makes it impossible to securely distinguish between
-machines.
+Installation
+------------
 
-In this configuration, users will only interact with HTCondor on the submit
-machine (or via remote access to it).  
+It is (still) conventional to install HTCondor on the physical hardware,
+and recommended that you do so with administrative privileges, so that
+you can access all of HTCondor's features.  See
+:ref:`install_with_administrative_privileges` for instructions on doing
+so for a single machine.  If you're automating a Linux installation,
+:doc:`the details <from-our-repositories>` about our repositories may be
+useful.
+
+If you're using cloud-based infrastructure, we have :ref:`options <cloud>`
+which may save you time.
+
+For container infrastructures, we offer :ref:`Docker images <docker>`
+corresponding to the different roles, as well as assistance with
+:ref:`Kubernetes <kubernetes>`.
 
 Configuration
 -------------
@@ -129,73 +156,50 @@ HTCondor configuration files should generally be owned by root
 (or Administrator, on Windows).  We recommend that you don't make changes
 to the configuration files established by the installation procedure;
 this avoids conflicts between your changes and any changes we may have to
-make to the base configuration.  Instead, you should add (or edit) files
-in configuration directory; its location can be determined on a given
-machine by running ``condor_config_val LOCAL_CONFIG_DIR`` there.  [FIXME:
-we need to make this true.]  HTCondor will process files in this directory
-in lexicographic order, so we recommend naming files ``##-name.config``;
-for example, a setting in ``00-base.config`` will be overridden by a
-setting in ``99-specific.config``.
+make to the base configuration in future updates.  Instead, you should add
+(or edit) files in configuration directory; its location can be determined
+on a given machine by running ``condor_config_val LOCAL_CONFIG_DIR`` there.
+[FIXME: we need to make this true.]  HTCondor will process files in this
+directory in lexicographic order, so we recommend naming files
+``##-name.config`` so that, for example, a setting in ``00-base.config``
+will be overridden by a setting in ``99-specific.config``.
 
 Configuring an Execute-role Machine
-===================================
+###################################
 
-.. code-block: condor-config
+.. code-block:: condor-config
 
     # Make this an execute-role machine.  Roles are not exclusive.
     use role: execute
 
-    # This configures HTCondor to use password security.  You MUST have
-    # the same password file on all machines in the same pool.  Machines
-    # with the same operating system will look for the password file in
-    # the same place; run 'condor_config_val SEC_PASSWORD_FILE' on one
-    # of them to discover where, or set SEC_PASSWORD_FILE in this
-    # configuration file.
-    #
     # The following line configures this role to accept only PASSWORD-
-    # authenticated connections.
-    #
-    # [FIXME]  This metaknob doesn't exist but should, and set:
-    #
-    # SEC_PASSWORD_FILE = $(LOCAL_DIR)/condor_pool_password
-    #
-    # or whatever the IDTOKENS default actually is.
-    #
-    # It should also set, as I understand it:
-    #
-    # SEC_DAEMON_INTEGRITY = REQUIRED
-    # SEC_DAEMON_AUTHENTICATION = REQUIRED
-    # SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
-    # SEC_NEGOTIATOR_INTEGRITY = REQUIRED
-    # SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED
-    # SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD
-    # ALLOW_DAEMON = condor_pool@*
-
-    # Maybe instead
-    # use security : strong
-    # and
-    # use security : password
-    # where the latter sets
-    # SEC_DEFAULT_AUTHENTICATION_METHODS = PASSWORD
-    # ALLOW_DAEMON = condor_pool@*
+    # authenticated connections, and to encrypt and verify the integrity
+    # of those connections.
+    use security : strong
     use security : password
+
+    # FIXME: use security : password doesn't exist yet.  It should set
+    #
+    #   SEC_DEFAULT_AUTHENTICATION_METHODS = PASSWORD
+    #   ALLOW_DAEMON = condor_pool@*
+    #   ALLOW_ADMINISTRATOR = condor_pool@*
 
     # An execute machine must know the location of the central manager.
     COLLECTOR_HOST = cm.example.com
 
-    # FIXME: what else?
-
 Configuring a Submit-role Machine
-=================================
+#################################
 
 Be sure to uncomment the appropriate ``SEC_CLIENT_AUTHENTICATION_METHODS`` line.
 
-.. code-block: condor-config
+.. code-block:: condor-config
 
     # Make this an execute-role machine.  Roles are not exclusive.
     use role: submit
 
-    # [FIXME] See above.
+    # The following line configures this role to accept only PASSWORD-
+    # authenticated connections, and to encrypt and verify the integrity
+    # of those connections.
     use security : strong
     use security : password
 
@@ -203,12 +207,13 @@ Be sure to uncomment the appropriate ``SEC_CLIENT_AUTHENTICATION_METHODS`` line.
     # (or Mac), the easiest secure method is FS, which requires no other
     # set-up.  On Windows, the easiest secure method is NTSSPI, which
     # requires users to run condor_store_cred before interacting with
-    # HTCondor.
+    # HTCondor.  Note that we set DEFAULT rather than CLIENT because the
+    # daemon must also _accept_ FS.
 
     # On Linux (or Mac):
-    # SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD
+    # SEC_DEFAULT_AUTHENTICATION_METHODS = FS, PASSWORD
     # On Windows:
-    # SEC_CLIENT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD
+    # SEC_DEFAULT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD
 
     # This allows any authenticated user on this machine to interact with
     # HTCondor as a normal user.
@@ -217,18 +222,23 @@ Be sure to uncomment the appropriate ``SEC_CLIENT_AUTHENTICATION_METHODS`` line.
     # A submit machine must know the location of the central manager.
     COLLECTOR_HOST = cm.example.com
 
-    # FIXME: what else?
-
 Configuring a Central Manager
-=============================
+#############################
 
-.. code-block: condor-config
+Be sure to set ``ALLOW_READ`` to the fully-qualified domain name or IP
+address of the submit-role machine(s).
 
-    # Make this an execute-role machine.  Roles are not exclusive.
-    use role: submit
+.. code-block:: condor-config
 
-    # [FIXME] Commentary
+    # Make this a central manager.  Roles are not exclusive.
+    use role: central-manager
+
+    # The following line configures this role to accept only PASSWORD-
+    # authenticated connections, and to encrypt and verify the integrity
+    # of those connections.
     use security : strong
     use security : password
 
-    # FIXME: what else?
+    # Allow read-only connections from any process on the submit machine(s).
+    ALLOW_READ = <submit-role machine's FQDN or address>
+
