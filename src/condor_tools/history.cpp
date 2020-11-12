@@ -80,6 +80,9 @@ void Usage(const char* name, int iExitCode)
 		"\t-limit <number>\t\tLimit the number of jobs displayed\n"
 		"\t-match <number>\t\tOld name for -limit\n"
 		"\t-long\t\t\tDisplay entire classads\n"
+		"\t-xml\t\t\tDisplay classads in XML format\n"
+		"\t-json\t\t\tDisplay classads in JSON format\n"
+		"\t-jsonl\t\t\tDisplay classads in JSON-Lines format: one ad per line\n"
 		"\t-attributes <attr-list>\tDisplay only the given attributes\n"
 		"\t-wide[:<width>]\tcon\tDon't truncate fields to fit into 80 columns\n"
 		"\t-format <fmt> <attr>\tDisplay attr using printf formatting\n"
@@ -122,6 +125,7 @@ static  bool longformat=false;
 static  bool diagnostic = false;
 static  bool use_xml=false;
 static  bool use_json = false;
+static  bool use_json_lines = false;
 static  bool wide_format=false;
 static  int  wide_format_width = 0;
 static  bool customFormat=false;
@@ -204,6 +208,11 @@ main(int argc, const char* argv[])
 		longformat = true;
 	}
     
+    else if (is_dash_arg_prefix(argv[i],"jsonl",5)) {
+		use_json_lines = true;
+		longformat = true;
+	}
+
     else if (is_dash_arg_prefix(argv[i],"json",4)) {
 		use_json = true;
 		longformat = true;
@@ -535,8 +544,8 @@ main(int argc, const char* argv[])
 	  exit( 1 );
   }
 
-  if ( use_xml && use_json ) {
-    fprintf( stderr, "Error: Cannot print as both XML and JSON\n" );
+  if ( use_xml + use_json + use_json_lines > 1 ) {
+    fprintf( stderr, "Error: Cannot use more than one of XML and JSON[L]\n" );
     exit( 1 );
   }
 
@@ -1235,7 +1244,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					if ( printCount != 0 ) {
 						printf(",\n");
 					}
-					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection);
+					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, false);
+				} else if ( use_json_lines ) {
+					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection, true);
 				}
 				else {
 					fPrintAd(stdout, *ad, false, projection.isEmpty() ? NULL : &projection);
@@ -1319,7 +1330,9 @@ static void printJob(ClassAd & ad)
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection);
+			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, false);
+		} else if ( use_json_lines ) {
+			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, true);
 		} else {
 			fPrintAd(stdout, ad, false, projection.isEmpty() ? NULL : &projection);
 		}
