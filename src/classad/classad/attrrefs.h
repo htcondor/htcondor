@@ -94,8 +94,6 @@ class AttributeReference : public ExprTree
 
 		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
 
-		static int Deref(const AttributeReference & ref, EvalState &, ExprTree*&);
-
 	protected:
 		/// Constructor
     	AttributeReference ();

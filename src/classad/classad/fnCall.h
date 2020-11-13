@@ -212,7 +212,6 @@ class FunctionCall : public ExprTree
 	static bool convTime(const char*,const ArgumentList&,EvalState&,Value&);
 	
 	static bool unparse(const char*,const ArgumentList&,EvalState&,Value&);
-	static bool hasRefs(const char*, const ArgumentList&, EvalState&, Value&);
 	
 	// (floor, ceil, round)
 	static bool doRound(const char*,const ArgumentList&,EvalState&,Value&);

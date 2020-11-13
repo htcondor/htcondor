@@ -239,7 +239,6 @@ FunctionCall( )
 		// turn the contents of an expression into a string
 		// but *do not* evaluate it
 		functionTable["unparse"		] =	(void*)unparse;
-		functionTable["unresolved"	] = (void*)hasRefs;
 
 			// mathematical functions
 		functionTable["floor"		] =	(void*)doRound;
@@ -2114,80 +2113,6 @@ unparse(const char*, const ArgumentList &argList, EvalState &state,
 	
 	return (true); 
 }
-
-bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& state, Value& result)
-{
-	std::string val;
-	Value arg;
-
-	// takes at least one argument which must be an attribute reference
-	if (argList.size() < 1 || argList.size() > 2 || argList[0]->GetKind() != ATTRREF_NODE) {
-		result.SetErrorValue( );
-		return true;
-	}
-
-	// de-reference the first argument to the the exprtree that it points to
-	ExprTree * expr = nullptr;
-	AttributeReference * atref = reinterpret_cast<AttributeReference *>(argList[0]);
-	int er = AttributeReference::Deref(*atref, state, expr);
-	if (er != EVAL_OK) {
-		result.SetUndefinedValue();
-		return true;
-	}
-
-	// for the 2 arg form, the second argument is a regex pattern to be compared against
-	// each of the unresolved references
-	pcre * re = nullptr;
-	if (argList.size() == 2) {
-		const char* pattern = nullptr;
-		if ( !argList[1]->Evaluate(state, arg) || ! arg.IsStringValue(pattern)) {
-			result.SetErrorValue();
-			return false;
-		}
-
-		const char  *error_message;
-		int error_offset;
-		re = pcre_compile(pattern, PCRE_CASELESS, &error_message, &error_offset, NULL);
-		if ( ! re) {
-			// error in pattern
-			result.SetErrorValue();
-			return true;
-		}
-		result.SetBooleanValue(false); // assume no match
-	}
-
-	if (expr && state.curAd) {
-		classad::References attrs;
-		if (ClassAd::_GetExternalReferences(expr, state.curAd, state, attrs, true)) {
-			for (auto it = attrs.begin(); it != attrs.end(); ++it) {
-				const char * attr = it->c_str();
-				size_t len = it->length();
-				if (0 == strncasecmp(attr, "target.", 7)) {
-					attr += 7;
-					len -= 7;
-				}
-				if (re) {
-					int ovec[6];
-					if (pcre_exec(re, NULL, attr, len, 0, PCRE_NOTEMPTY, ovec, 6) > 0) {
-						result.SetBooleanValue(true); // found a match
-						break;
-					}
-				} else {
-					if (!val.empty()) val += ",";
-					val += attr;
-				}
-			}
-		}
-	}
-
-	if ( ! re) {
-		result.SetStringValue(val);
-	} else {
-		pcre_free(re);
-	}
-	return true;
-}
-
 
 bool FunctionCall::
 convBool( const char*, const ArgumentList &argList, EvalState &state, 

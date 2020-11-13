@@ -757,15 +757,14 @@ class ClassAd : public ExprTree
 
 		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
 
-		static bool _GetExternalReferences( const ExprTree *, const ClassAd *,
-					EvalState &, References&, bool fullNames );
-
   	private:
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
 		friend 	class EvalState;
 		friend 	class ClassAdIterator;
 
+		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
+					EvalState &, References&, bool fullNames ) const;
 
 		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
 					EvalState &, PortReferences& ) const;
