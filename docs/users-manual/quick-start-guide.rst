@@ -11,7 +11,7 @@ is returned to the machine that submitted the jobs.
 
 This guide provides enough guidance to submit and observe the successful
 completion of a first job.  It then suggests extensions that you can apply
-to your individual jobs.
+to your particular jobs.
 
 This guide presumes that
 

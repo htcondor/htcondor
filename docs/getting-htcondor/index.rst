@@ -51,14 +51,15 @@ instructions corresponding to your operating system:
 .. rubric:: Hand-Installation of HTCondor with User Privileges
 
 If you don't administrative privileges on your machine, you can still
-install HTCondor, although some features will not be available.
+install HTCondor.  An unprivileged installation isn't able to effectively
+limit the resource usage of the jobs it runs, but since it only
+works for the user who installed it, at least you know who to blame for
+misbehaving jobs.
 
 * :ref:`Linux <user_install_linux>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
 * :ref:`Mac OS X <user_install_macosx>`
-
-[FIXME] (a link to or exceedingly brief summary of the missing features)
 
 .. _docker:
 

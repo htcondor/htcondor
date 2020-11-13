@@ -38,7 +38,7 @@ If both commands worked, the installation likely succeeded.
 
 .. rubric:: Where to Go from Here
 
-* For a brief introduction to using HTCondor, go to the
-  :ref:`quick_start_guide`.
+* For a brief introduction to running jobs with HTCondor,
+  see the :ref:`quick_start_guide`.
 * If you're looking to set up a multi-machine pool, go to the
   :ref:`admin_quick_start_guide`.
