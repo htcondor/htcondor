@@ -68,7 +68,7 @@ fi
 # testing -> rc repo
 # stable -> release repo
 
-dist='unstable'
+dist='testing'
 echo "Distribution is $dist"
 echo "Suffix is '$suffix'"
 
