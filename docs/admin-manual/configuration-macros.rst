@@ -3582,6 +3582,12 @@ section.
     defined, HTCondor subtracts it from the amount of memory it
     advertises as available.
 
+``DISK`` :index:`DISK`
+    Normally, HTCondor will automatically detect the amount of physical
+    disk available on your machine. Define ``DISK`` to tell HTCondor
+    how much physical disk (in kB) your machine has, overriding the
+    value HTCondor computes automatically.
+
 ``STARTD_NAME`` :index:`STARTD_NAME`
     Used to give an alternative value to the ``Name`` attribute in the
     *condor_startd* 's ClassAd. This esoteric configuration macro
