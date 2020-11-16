@@ -57,6 +57,11 @@ New Features:
   ``condor``).
   :jira:`63`
 
+- When a :macro:`SEC_CREDENTIAL_PRODUCER` is configured for *condor_submit* it now
+  assumes that the CREDD is the current version when does not know what version it is,
+  which is common when the CREDD is running on a different machine than *condor_submit*.
+  :jira:`76`
+
 Bugs Fixed:
 
 - Fixed a bug specific to MacOS X which could cause the shared port daemon's
