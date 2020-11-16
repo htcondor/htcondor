@@ -2843,7 +2843,7 @@ int process_job_credentials()
 				bool new_credd = true; // assume new credd
 				if (my_credd.version()) {
 					CondorVersionInfo cvi(my_credd.version());
-					new_credd = (cvi.getMajorVer() > 0) && cvi.built_since_version(8, 9, 7);
+					new_credd = (cvi.getMajorVer() <= 0) || cvi.built_since_version(8, 9, 7);
 				}
 				if (new_credd) {
 					const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
