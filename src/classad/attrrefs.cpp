@@ -365,6 +365,12 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 	return false;
 }
 
+/*static*/
+int AttributeReference::Deref(const AttributeReference & ref, EvalState & state, ExprTree*& tree)
+{
+	ExprTree * sig = nullptr;
+	return ref.FindExpr(state, tree, sig, false);
+}
 
 int AttributeReference::
 FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
