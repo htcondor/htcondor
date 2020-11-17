@@ -69,7 +69,8 @@ HTCondor is also `available <https://hub.docker.com/u/htcondor>`_ on Docker Hub.
 
 If you're new to HTCondor, the ``htcondor/mini`` image is equivalent to
 following any of the the instructions above, and once you've started the
-container, you can proceed directly to :ref:`quick_start_guide`.
+container, you can proceed directly to :ref:`quick_start_guide` and learn
+how to run jobs.
 
 For other options, see our :ref:`docker image list <docker_image_list>`.
 
@@ -77,7 +78,14 @@ For other options, see our :ref:`docker image list <docker_image_list>`.
 
 .. rubric:: Kubernetes
 
-[FIXME]
+You can deploy a complete HTCondor pool with the following command:
+
+.. code-block:: shell
+
+    kubectl apply -f https://github.com/htcondor/htcondor/blob/latest/build/docker/k8s/pool.yaml
+
+If you're new to HTCondor, you can proceed directly to
+the :ref:`quick_start_guide` after logging in to the ``submit`` pod.
 
 .. _cloud:
 
@@ -99,6 +107,8 @@ HTCondor also supports cloud-native distribution.
   following those instructions.
 * We also have documention on creating a
   :doc:`../cloud-computing/condor-in-the-cloud` by hand.
+
+.. rubric:: For New Administrators
 
 If you're new to HTCondor administration, consider reading the
 :doc:`admin-quick-start` before the rest of the

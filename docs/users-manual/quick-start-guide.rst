@@ -460,5 +460,5 @@ Where to Go from Here
 * Slides from `past HTCondor Weeks <https://research.cs.wisc.edu/htcondor/past_condor_weeks.html>`_ -- our annual conference -- include the tutorials given there.
 * The :doc:`../users-manual/index` is a good reference.
 * If you like what you've seen but want to run more jobs simultaneously, the
-  [FIXME] administrator's quick start guide will help you make more of your
-  machines available to run jobs.
+  :doc:`administrator's quick start guide <../getting-htcondor/admin-quick-start>`
+  will help you make more of your machines available to run jobs.
