@@ -25,6 +25,14 @@ New Features:
 - Added support for requesting GPUs with grid universe jobs of type `batch`.
   :ticket:`7757`
 
+- The python ``schedd.submit`` method now accepts a ``Submit`` object and itemdata
+  to define the jobs, to be submitted.  The use of a ClassAd to define the job is now deprecated
+  for this method
+  :ticket:`7853`
+
+- OAuth and Krb credentials are now work for local universe jobs.
+  :ticket:`7693`
+
 - Added new configuration variable :macro:`MIN_FLOCK_LEVEL`, which can be
   used to specify how many of the remote HTCondor pools listed in
   ``FLOCK_COLLECTOR_HOSTS`` should always be flocked to.
@@ -37,10 +45,16 @@ New Features:
   ``condor``).
   :jira:`63`
 
+- A new configuration variable :macro:`DEFAULT_DRAINING_START_EXPR` can be used to define
+  what the ``START`` value of a slot should be while it is draining. This configuration variable
+  is used when the command to drain does not have an override value for ``START``.
+  :jira:`67`
+
 - When a :macro:`SEC_CREDENTIAL_PRODUCER` is configured for *condor_submit* it now
   assumes that the CREDD is the current version when does not know what version it is,
   which is common when the CREDD is running on a different machine than *condor_submit*.
   :jira:`76`
+
 
 Bugs Fixed:
 
