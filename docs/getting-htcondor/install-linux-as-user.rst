@@ -3,16 +3,59 @@
 Linux (as user)
 ===============
 
-To install HTCondor on Linux as a normal user, run the following commands:
+Installing HTCondor on Linux as a normal user is a multi-step process.
+
+Download
+--------
+
+The first step is to download HTCondor for your platform.  If you know
+which platform you're using, that HTCondor supports it, and which
+version you want, you can download the corresponding file from
+`our website <https://research.cs.wisc.edu/htcondor/tarball/current/>`_;
+otherwise, we recommend using our download script, as follows.
 
 .. code-block:: shell
 
+    cd
+    # [FIXME] Verify that this actually works everywhere.
+    curl -fsSL https://get.htcondor.com | /bin/bash -s -- --download
+
+Install
+-------
+
+Unpack the tarball and rename the resulting directory:
+
+.. code-block:: shell
+
+    tar -x -f condor.tar.gz
+    mv condor-*unstripped condor
+
+You won't need ``condor.tar.gz`` again, so you can remove it now if you wish.
+
+Configure
+---------
+
+.. code-block:: shell
+
+    cd condor
     # [FIXME]
+    ./bin/make-minicondor-from-tarball
+
+Using HTCondor
+--------------
 
 You'll need to run the following command now, and every time you log in:
 
 .. code-block:: shell
 
-    . ~/condor/install/condor.sh
+    . ~/condor/condor.sh
+
+Then to start HTCondor (if the machine has rebooted since you last logged in):
+
+.. code-block:: shell
+
+    condor_master
+
+It will finish silently after starting up, if everything went well.
 
 .. include:: minicondor-test-and-quickstart.include

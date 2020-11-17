@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# [FIXME] Is this technically a minicondor, or a personal condor?
+
+RELEASE_DIR=`pwd`
+LOCK=/tmp/condor-lock-${RANDOM}
+LOCAL_DIR=${RELEASE_DIR}/local
+LOCAL_CONFIG_DIR=${LOCAL_DIR}/config.d
+USER_ID=`id -u`
+GROUP_ID=`id -g`
+CONDOR_IDS=${USER_ID}.${GROUP_ID}
+
+if [ $USER_ID -eq 0 -o $GROUP_ID -eq 0 ]; then
+    echo "Please visit https://htcondor.readthedocs.io/en/latest/getting-htcondor for instructions on installing HTCondor as root."
+    exit 1
+fi
+
+if [ ! -x ${RELEASE_DIR}/sbin/condor_master ]; then
+    echo "This directory doesn't have sbin/condor_master; did you unpack the tarball?"
+    exit 1
+fi
+
+if [ -e ${RELEASE_DIR}/etc/condor_config ]; then
+    echo "Refusing to overwrite existing etc/condor_config file, aborting."
+    exit 1
+fi
+
+if [ -e ${LOCAL_CONFIG_DIR}/00-personal-condor ]; then
+    echo "Refusing to overwrite existing local/config.d/00-personal-condor file, aborting."
+    exit 1
+fi
+
+if [ -e ${RELEASE_DIR}/condor.sh ]; then
+    echo "Refusing to overwrite existing condor.sh, aborting."
+    exit 1
+fi
+
+mkdir -p ${LOCAL_DIR}
+mkdir -p ${LOCAL_DIR}/log
+mkdir -p ${LOCAL_DIR}/spool
+mkdir -p ${LOCAL_DIR}/execute
+mkdir -p ${LOCAL_CONFIG_DIR}
+mkdir -p ${RELEASE_DIR}/etc
+
+if [ ! -d ${LOCAL_DIR} -o \
+     ! -d ${LOCAL_DIR}/log -o \
+     ! -d ${LOCAL_DIR}/spool -o \
+     ! -d ${LOCAL_DIR}/execute -o \
+     ! -d ${LOCAL_CONFIG_DIR} -o \
+     ! -d ${RELEASE_DIR}/etc ]; then
+    echo "Failed to create a subdirectory, aborting."
+    exit 1
+fi
+
+(
+cat <<EOF
+RELEASE_DIR=${RELEASE_DIR}
+LOCAL_DIR=\$(RELEASE_DIR)/local
+LOCAL_CONFIG_DIR=\$(LOCAL_DIR)/config.d
+
+LOCK=${LOCK}
+CONDOR_IDS=${CONDOR_IDS}
+EOF
+) > ${RELEASE_DIR}/etc/condor_config
+
+# use security: user_based sets ALLOW_ADMINISTRATOR to
+# $(USERNAME)@$(CONDOR_HOST), which makes sense, except use role: personal
+# set $(CONDOR_HOST) to 127.0.0.1, which the command-line tools will never
+# use as their origin address unless NETWORK_INTERFACE is also 127.0.0.1;
+# the problem is that this makes condor_off not work.  We don't want to set
+# NETWORK_INTERFACE is 127.0.0.1 because we'll just have to undo it if ever
+# want to expand the personal condor?
+(
+cat <<EOF
+CONDOR_HOST = \$(FULL_HOSTNAME)
+use security: user_based
+use role: personal
+EOF
+) > ${LOCAL_CONFIG_DIR}/00-personal-condor
+
+# [FIXME] Should this set up Python 3, instead?
+(
+cat <<EOF
+CONDOR_CONFIG=${RELEASE_DIR}/etc/condor_config
+export CONDOR_CONFIG
+
+PATH=${RELEASE_DIR}/bin:${RELEASE_DIR}/sbin:\$PATH
+export PATH
+
+if [ "X" != "X${PYTHONPATH-}" ]; then
+    PYTHONPATH=${RELEASE_DIR}/lib/python:\$PYTHONPATH
+else
+    PYTHONPATH=${RELEASE_DIR}/lib/python
+fi
+export PYTHONPATH
+EOF
+) > ${RELEASE_DIR}/condor.sh
