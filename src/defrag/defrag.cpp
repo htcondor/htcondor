@@ -870,8 +870,8 @@ Defrag::drain(const ClassAd &startd_ad)
 	}
 
 	std::string request_id;
-	bool resume_on_completion = true;
-	bool rval = startd.drainJobs( m_draining_schedule, resume_on_completion, draining_check_expr.c_str(), m_draining_start_expr.c_str(), request_id );
+	bool rval = startd.drainJobs( m_draining_schedule, "Defrag", DRAIN_RESUME_ON_COMPLETION,
+		draining_check_expr.c_str(), m_draining_start_expr.c_str(), request_id );
 
 	if( !rval ) {
 		dprintf(D_ALWAYS,"Failed to send request to drain %s: %s\n",startd.name(),startd.error());

@@ -195,6 +195,12 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define DRAIN_QUICK 10
 #define DRAIN_FAST 20
 
+// values for OnCompletion for draining request
+// note that prior to 8.9.11 only Resume and Nothing are recognised
+#define DRAIN_NOTHING_ON_COMPLETION 0
+#define DRAIN_RESUME_ON_COMPLETION  1
+#define DRAIN_EXIT_ON_COMPLETION    2
+#define DRAIN_RESTART_ON_COMPLETION 3
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)

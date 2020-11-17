@@ -51,7 +51,7 @@ ResMgr::ResMgr() :
 
 	draining = false;
 	draining_is_graceful = false;
-	resume_on_completion_of_draining = false;
+	on_completion_of_draining = DRAIN_NOTHING_ON_COMPLETION;
 	draining_id = 0;
 	last_drain_start_time = 0;
 	last_drain_stop_time = 0;
@@ -2559,7 +2559,15 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 ExprTree * globalDrainingStartExpr = NULL;
 
 bool
-ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
+ResMgr::startDraining(
+	int how_fast,
+	const std::string & reason,
+	int on_completion,
+	ExprTree *check_expr,
+	ExprTree *start_expr,
+	std::string &new_request_id,
+	std::string &error_msg,
+	int &error_code)
 {
 	// For now, let's assume that that you never want to change the start
 	// expression while draining.
@@ -2598,13 +2606,15 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 	last_drain_start_time = time(NULL);
 	draining_id += 1;
 	formatstr(new_request_id,"%d",draining_id);
-	this->resume_on_completion_of_draining = resume_on_completion;
+	this->on_completion_of_draining = on_completion;
+	this->drain_reason = reason;
 
 	// Insert draining attributes into the resource ads, in case the
 	// retirement expression uses them.
 	for( int i = 0; i < nresources; i++ ) {
 		ClassAd &ad = *(resources[i]->r_classad);
 		// put these into the resources ClassAd now, they are also set by this->publish
+		ad.InsertAttr( ATTR_DRAIN_REASON, reason );
 		ad.InsertAttr( ATTR_DRAINING, true );
 		ad.InsertAttr( ATTR_DRAINING_REQUEST_ID, new_request_id );
 		ad.InsertAttr( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
@@ -2680,6 +2690,7 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 	}
 
 	draining = false;
+	drain_reason.clear();
 	// If we want to record when a non-resuming drain actually finished, we
 	// should only call this here if we've started draining since the last
 	// time we stopped.
@@ -2752,7 +2763,7 @@ ResMgr::drainingIsComplete(Resource * /*rip*/)
 bool
 ResMgr::considerResumingAfterDraining()
 {
-	if( !draining || !resume_on_completion_of_draining ) {
+	if( !draining || !on_completion_of_draining ) {
 		return false;
 	}
 
@@ -2762,6 +2773,15 @@ ResMgr::considerResumingAfterDraining()
 		{
 			return false;
 		}
+	}
+
+	if (on_completion_of_draining != DRAIN_RESUME_ON_COMPLETION) {
+		bool restart = (on_completion_of_draining != DRAIN_EXIT_ON_COMPLETION);
+		dprintf(D_ALWAYS,"As specified in draining request, %s after completion of draining.\n",
+			restart ? "restarting" : "exiting");
+		const bool fast = false;
+		daemonCore->beginDaemonRestart(fast, restart);
+		return true;
 	}
 
 	dprintf(D_ALWAYS,"As specified in draining request, resuming normal operation after completion of draining.\n");
@@ -2779,6 +2799,7 @@ ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 {
 	if( isSlotDraining(rip) ) {
 		cap->Assign( ATTR_DRAINING, true );
+		cap->Assign(ATTR_DRAIN_REASON, this->drain_reason);
 
 		std::string request_id;
 		if (draining) { formatstr(request_id, "%d", draining_id); }
@@ -2786,7 +2807,8 @@ ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 	}
 	else {
 		// in case we are writing into resource->r_classad, do a deep delete
-		caDeleteThruParent(cap, ATTR_DRAINING );
+		caDeleteThruParent(cap, ATTR_DRAINING);
+		caDeleteThruParent(cap, ATTR_DRAIN_REASON);
 		caDeleteThruParent(cap, ATTR_DRAINING_REQUEST_ID );
 	}
 
