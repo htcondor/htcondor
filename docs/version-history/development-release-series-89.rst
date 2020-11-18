@@ -59,6 +59,10 @@ New Features:
   script executable that runs when a job goes on hold.
   :jira:`65`
 
+- Added a new ``SUBMIT-DESCRIPTION`` command to DAGMan, which allows inline
+  submit descriptions to be declared indepedently of jobs.
+  :jira:`64`
+
 
 Bugs Fixed:
 
