@@ -88,5 +88,6 @@ Command Reference Manual (man pages)
    condor_wait
    condor_watch_q
    condor_who
+   get_htcondor
    gidd_alloc
    procd_ctl
