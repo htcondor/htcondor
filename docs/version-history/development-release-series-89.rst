@@ -75,6 +75,14 @@ New Features:
   which is common when the CREDD is running on a different machine than *condor_submit*.
   :jira:`76`
 
+- Added a new ``SCRIPT HOLD`` feature to DAGMan, allowing users to define a
+  script executable that runs when a job goes on hold.
+  :jira:`65`
+
+- Added a new ``SUBMIT-DESCRIPTION`` command to DAGMan, which allows inline
+  submit descriptions to be declared indepedently of jobs.
+  :jira:`64`
+
 
 Bugs Fixed:
 
