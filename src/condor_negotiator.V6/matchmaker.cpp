@@ -3635,7 +3635,7 @@ trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 		startdAds.Close();
 
 		if ( removed > 0 ) {
-			dprintf(D_FULLDEBUG,
+			dprintf(D_ALWAYS,
 					"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_EARLY_PREEMPTION=False\n",
 					removed);
 		}
@@ -4787,7 +4787,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 
 		if (limitUsed >= submitterCeiling) {
-			dprintf(D_FULLDEBUG, "  This submitter has hit the ceiling (got %f new slots this cycle), stopping negotiation\n", limitUsed);
+			dprintf(D_ALWAYS, "  This submitter has hit the ceiling (got %f new slots this cycle), stopping negotiation\n", limitUsed);
 			break; // stop negotiating
 		}
 
