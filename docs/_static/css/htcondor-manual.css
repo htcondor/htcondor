@@ -3,6 +3,10 @@ a.macro {
 	font-size: 90%;
 }
 
+table th p {
+	margin-bottom: 0px;
+}
+
 table.indextable {
 	margin-bottom: 20px;
 }
