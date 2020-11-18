@@ -63,7 +63,7 @@ Depends: adduser,
          python,
          python-requests,
          lsb-base (>= 3.0-6),
-         libclassad12 (= ${binary:Version}),
+         libclassad13 (= ${binary:Version}),
          libcomerr2,
          libglobus-callout0,
          libglobus-common0,
@@ -238,7 +238,7 @@ Description: distributed workload management system - debugging symbols
 Package: libclassad-dev
 Architecture: any
 Section: libdevel
-Depends: libclassad12 (= ${binary:Version}),
+Depends: libclassad13 (= ${binary:Version}),
          ${misc:Depends}
 Conflicts: libclassad0-dev
 Replaces: libclassad0-dev
@@ -251,7 +251,7 @@ Description: HTCondor classads expression language - development library
  .
  This package provides the static library and header files.
 
-Package: libclassad12
+Package: libclassad13
 Architecture: any
 Section: libs
 Depends: ${misc:Depends},
