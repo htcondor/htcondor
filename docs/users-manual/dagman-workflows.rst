@@ -628,6 +628,55 @@ The main drawback of using inline submit descriptions is that they do not
 support the ``queue`` statement or any variations thereof. Any job described 
 inline in the .dag file will only have a single instance submitted.
 
+SUBMIT-DESCRIPTION command
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to declaring inline submit descriptions as part of a job, they
+can be declared independently of jobs using the *SUBMIT-DESCRIPTION* command.
+This can be helpful to reduce the size and readability of a .dag file when
+many nodes are running the same job.
+
+A *SUBMIT-DESCRIPTION* can be defined using the following syntax:
+
+.. code-block:: condor-dagman
+
+    SUBMIT-DESCRIPTION [DescriptionName] {
+        # submit attributes go here
+    }
+
+An independently declared submit description must have a unique name that is
+not used by any of the jobs. It can then be linked to a job as follows:
+
+.. code-block:: condor-dagman
+
+    JOB [JobName] [DescriptionName]
+
+For example, the previous diamond.dag example could be written as follows:
+
+.. code-block:: condor-dagman
+
+    # File name: diamond.dag
+
+    SUBMIT-DESCRIPTION DiamondDesc  {
+        executable   = /path/diamond.exe
+        output       = diamond.out.$(cluster)
+        error        = diamond.err.$(cluster)
+        log          = diamond_condor.log
+        universe     = vanilla
+    }
+
+    JOB A DiamondDesc
+    JOB B DiamondDesc
+    JOB C DiamondDesc
+    JOB D DiamondDesc
+
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+
+
+
+
+
 
 DAG Submission
 --------------
