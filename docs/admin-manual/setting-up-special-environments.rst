@@ -1932,6 +1932,8 @@ The following variables are set in the environment of the the
     ``USER_JOB_WRAPPER`` script should create, if there is an error. The
     text in this file will be included in any HTCondor failure messages.
 
+.. _resource_limits_with_cgroups:
+
 Limiting Resource Usage Using Cgroups
 -------------------------------------
 

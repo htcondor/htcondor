@@ -4,11 +4,39 @@ Administrative Quick Start Guide
 ================================
 
 This guide does not contain step-by-step instructions for
-:doc:`index`.  Rather, it briefly describes the three roles performed by
-every HTCondor pool and the resource and networking requirements for each
-role; our recommendations for securing the communications between different
-machines in the pool; and how to use HTCondor's configuration system to
-set up those roles and that security.
+:doc:`getting HTCondor <index>`.  Rather, it is a guide to joining multiple
+machines into a single pool of computational resources for use by HTCondor
+jobs.
+
+This guide begins by briefly describing the three roles required by every
+HTCondor pool, as well as the resources and networking required by each
+of those roles.  This information will enable you to choose which machine(s)
+will perform which role(s).  This guide also include instructions on how to
+use the ``get_htcondor`` tool to install and configure Linux (or Mac) machines
+to perform each of the roles.
+
+If you're curious, using Windows machines, or you want to to automate the
+configuration of their pool using a tool like Puppet, the
+:ref:`last section <the_details>` of this guide briefly describes what
+the ``get_htcondor`` tool does and provides a link to the rest of the details.
+
+.. sidebar:: Single-machine Installations
+
+    If you just finished installing a single-machine ("mini") HTCondor
+    using ``get_htcondor``, you can just run ``get_htcondor`` again (and
+    follow its instructions) to reconfigure the machine to be one of
+    these three roles.
+
+    We don't recommend trying to add a machine configured as a "mini"
+    HTCondor to pool, or trying to add execute machines to an existing
+    "mini" HTCondor pool.  We also don't recommend creating an entire
+    pool out of unprivileged installations.
+
+    If you installed a "mini" HTCondor without using ``get_htcondor``,
+    you can change to a specific role by removing the ``00-minicondor.config``
+    file and replacing it with the ``00-<role-name>.config`` file in the
+    directory from which you originally copied the former.
+    Then see :ref:`the_details` for what else you'll need to do.
 
 The Three Roles
 ---------------
@@ -77,168 +105,116 @@ the pool's resources, so a fast network is important.  For very large pools,
 memory may become a limiting factor, but any reasonably modern CPU should be
 fine.
 
-Security
---------
+Assigning Roles to Machines
+---------------------------
 
-The security system in HTCondor is
-:doc:`far more flexible <../admin-manual/security>` than you will probably
-ever need, so in this quick-start guide, we will only introduce the simplest
-secure configuration.
+The easiest way to assign a role to a machine is when you initially
+:doc:`get HTCondor <index>`.  You'll need to supply the same password for
+each machine in the same pool; sharing that secret is how the machines
+recognize each other as members of the same pool, and connections between
+machines are encrypted with it.
 
-This configuration distinguishes between two types of connections: connections
-between HTCondor processes on different machines -- each HTCondor role is
-performed by one or more daemon processes, but HTCondor automatically secures
-the connections between daemons on the same machine -- and connections from
-users to daemons.
+Start with the central manager, and then add the submit machine(s), and
+then add the execute machine(s).  The latter will need to know the name
+(or IP address) of the central manager machine.
 
-Users only connect to the submit-role daemons and the collector (one of the
-central manager daemons).  This configuration secures connections to the
-submit role, so that users can't pretend to be someone else, or interfere
-with each other's jobs, but it allows read-only connections to the
-collector from any process on the submit machine (or any attacker capable
-of spoofing their source address).  On Linux (or Mac), user connections to
-the submit role are authenticated transparently, leveraging the ability of
-user processes to act on the local filesystem.  On Windows, the process
-is :ref:`more complicated <[FIXME]>`.  HTCondor calls the former method
-``FS`` and the latter method ``NTSSPI``.
+.. rubric:: Central Manager
 
-Daemon-to-daemon connections are secured with a shared secret -- a password
-stored on each machine in the pool, but readable only by privileged
-processes like the HTCondor daemons.  This is easy to set up, because you
-only need to securely copy the same file to the same place on all machines,
-but has the disadvantage that you can't securely distinguish between different
-machines or roles which have the same password.  HTCondor calls this
-this authentication method ``PASSWORD``.
+.. code-block:: shell
 
-.. Instead, we're just going to tell you how to set up token-based security.  A
-.. token is a crytographically-secured blob that operates like a passport: it
-.. authenticates the holder, authorizes them to do certain things (e.g., enter
-.. a foreign country), and is issued by a recognized authority.  In this case,
-.. the recognized authority is the central manager.  On start-up, the central
-.. manager generates a secret (if it doesn't know one already), which it can
-.. then use to create tokens.  Only the holder of the secret key can verify
-.. a token, but holders of tokens can verify that they're talking to the
-.. holder of the same key that signed their token.
+    sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run --central-manager
 
-Installation
-------------
+.. rubric:: Submit
 
-It is (still) conventional to install HTCondor on the physical hardware,
-and recommended that you do so with administrative privileges, so that
-you can access all of HTCondor's features.  See
-:ref:`install_with_administrative_privileges` for instructions on doing
-so for a single machine.  If you're automating a Linux installation,
-:doc:`the details <from-our-repositories>` about our repositories may be
-useful.
+.. code-block:: shell
 
-If you're using cloud-based infrastructure, we have :ref:`options <cloud>`
-which may save you time.
+    sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run --submit <name-of-central-manager>
 
-For container infrastructures, we offer :ref:`Docker images <docker>`
-corresponding to the different roles, as well as assistance with
-:ref:`Kubernetes <kubernetes>`.
+.. rubric:: Execute
 
-Configuration
--------------
+.. code-block:: shell
 
-.. These instrutions assume that the machine is unconfigured; in the
-.. natively-packaged sense of having removed the minicondor package.
-.. It seems like the right place to tell users how to undo, or not do,
-.. the minicondor package or configuration on the various install method's
-.. pages, or separate pages linked to from them.
+    sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run --execute <name-of-central-manager> 
 
-We recommend separate machines for each role, so the following instructions
-are broken into three sections, one for each role.
+At this point, users logged in on the submit machine should be able to see
+execute machines in the pool (using ``condor_status``), submit jobs
+(using ``condor_submit``), and see them run (using ``condor_q``).
 
-.. rubric: Making Configuration Changes
+Where to Go from Here
+#####################
 
-HTCondor configuration files should generally be owned by root
-(or Administrator, on Windows).  We recommend that you don't make changes
-to the configuration files established by the installation procedure;
-this avoids conflicts between your changes and any changes we may have to
-make to the base configuration in future updates.  Instead, you should add
-(or edit) files in configuration directory; its location can be determined
-on a given machine by running ``condor_config_val LOCAL_CONFIG_DIR`` there.
-[FIXME: we need to make this true.]  HTCondor will process files in this
-directory in lexicographic order, so we recommend naming files
-``##-name.config`` so that, for example, a setting in ``00-base.config``
-will be overridden by a setting in ``99-specific.config``.
+There are two major directions you can go from here, but before we discuss
+them, a warning.
 
-Configuring an Execute-role Machine
-###################################
+.. admonition:: Making Configuration Changes
+    :class: warning
 
-.. code-block:: condor-config
+    HTCondor configuration files should generally be owned by root
+    (or Administrator, on Windows), but readable by all users.  We recommend
+    that you don't make changes to the configuration files established by the
+    installation procedure; this avoids conflicts between your changes and any
+    changes we may have to make to the base configuration in future
+    updates.  Instead, you should add (or edit) files in configuration
+    directory; its location can be determined on a given machine by running
+    ``condor_config_val LOCAL_CONFIG_DIR`` there.  HTCondor will process files
+    in this directory in lexicographic order, so we recommend naming files
+    ``##-name.config`` so that, for example, a setting in ``00-base.config``
+    will be overridden by a setting in ``99-specific.config``.
 
-    # Make this an execute-role machine.  Roles are not exclusive.
-    use role: execute
+.. rubric:: Enabling Features
 
-    # The following line configures this role to accept only PASSWORD-
-    # authenticated connections, and to encrypt and verify the integrity
-    # of those connections.
-    use security : strong
-    use security : password
+Some features of HTCondor, for one reason or another, aren't (or can't be)
+enabled by default.  Areas of potentially general interest include:
 
-    # FIXME: use security : password doesn't exist yet.  It should set
-    #
-    #   SEC_DEFAULT_AUTHENTICATION_METHODS = PASSWORD
-    #   ALLOW_DAEMON = condor_pool@*
-    #   ALLOW_ADMINISTRATOR = condor_pool@*
+* :doc:`../admin-manual/setting-up-special-environments` (particularly
+  :ref:`enabling_oauth_credentials` and :ref:`resource_limits_with_cgroups`),
+* :doc:`../admin-manual/setting-up-vm-docker-universes`
+* :doc:`../admin-manual/singularity-support`
 
-    # An execute machine must know the location of the central manager.
-    COLLECTOR_HOST = cm.example.com
+.. rubric:: Implementing Policies
 
-Configuring a Submit-role Machine
-#################################
+Although your HTCondor pool should be fully functional at this point, it
+may not be behaving precisely as you wish, particularly with respect to
+resource allocation.  You can tune how HTCondor allocates resource to
+users, or groups of users, using the user priority and group quota systems,
+described in :doc:`../admin-manual/user-priorities-negotiation`.  You
+can enforce machine-speficic policies -- for instance, preferring GPU jobs
+on machines with GPUs -- using the options described in
+:doc:`../admin-manual/policy-configuration`.
 
-Be sure to uncomment the appropriate ``SEC_CLIENT_AUTHENTICATION_METHODS`` line.
+.. rubric:: Further Reading
 
-.. code-block:: condor-config
+* It may be helpful to at least skim the :doc:`../users-manual/index` to get
+  an idea of what yours users might want or expect, particularly the
+  sections on :doc:`../users-manual/dagman-workflows`,
+  :doc:`../users-manual/choosing-an-htcondor-universe`, and
+  :doc:`../users-manual/self-checkpointing-applications`.
+* Understanding :doc:`../misc-concepts/classad-mechanism` is essential for
+  many administrative tasks.
+* The rest of the :doc:`../admin-manual/index`, particularly the section on
+  :doc:`../admin-manual/monitoring`.
+* Slides from
+  `past HTCondor Weeks <https://research.cs.wisc.edu/htcondor/past_condor_weeks.html>`_
+  -- our annual conference -- include a number of tutorials and talks on
+  administrative topics, including monitoring and examples of policies and
+  their implementations.
 
-    # Make this an execute-role machine.  Roles are not exclusive.
-    use role: submit
+.. _the_details:
 
-    # The following line configures this role to accept only PASSWORD-
-    # authenticated connections, and to encrypt and verify the integrity
-    # of those connections.
-    use security : strong
-    use security : password
+What ``get_htcondor`` Does to Configure a Role
+##############################################
 
-    # The submit role must also accept connections from users.  On Linux
-    # (or Mac), the easiest secure method is FS, which requires no other
-    # set-up.  On Windows, the easiest secure method is NTSSPI, which
-    # requires users to run condor_store_cred before interacting with
-    # HTCondor.  Note that we set DEFAULT rather than CLIENT because the
-    # daemon must also _accept_ FS.
+Mechanically, the different role arguments accomplish three tasks:
 
-    # On Linux (or Mac):
-    # SEC_DEFAULT_AUTHENTICATION_METHODS = FS, PASSWORD
-    # On Windows:
-    # SEC_DEFAULT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD
+* set the HTCondor configuration variable ``COLLECTOR_HOST`` to the name
+  (or IP address) of your central manager;
+* copies a configuration file (``00-<role-name>.config``) into HTCondor
+  configuration directory (``/etc/condor/config.d`` on Linux (or Mac);
+  run ``condor_config_val LOCAL_CONFIG_DIR`` for Windows); and
+* copy the password to its conventional location, a file owned by root
+  and not readable by anyone else (run ``condor_config_val SEC_PASSWORD_FILE``
+  to determine exactly where).
 
-    # This allows any authenticated user on this machine to interact with
-    # HTCondor as a normal user.
-    ALLOW_WRITE = *@$(FULL_HOSTNAME) *@$(IP_ADDRESS)
-
-    # A submit machine must know the location of the central manager.
-    COLLECTOR_HOST = cm.example.com
-
-Configuring a Central Manager
-#############################
-
-Be sure to set ``ALLOW_READ`` to the fully-qualified domain name or IP
-address of the submit-role machine(s).
-
-.. code-block:: condor-config
-
-    # Make this a central manager.  Roles are not exclusive.
-    use role: central-manager
-
-    # The following line configures this role to accept only PASSWORD-
-    # authenticated connections, and to encrypt and verify the integrity
-    # of those connections.
-    use security : strong
-    use security : password
-
-    # Allow read-only connections from any process on the submit machine(s).
-    ALLOW_READ = <submit-role machine's FQDN or address>
-
+The configuration files include comments about what they're doing; for
+a precise break-down, consult the ``get_htcondor``
+:doc:`documentation <../man-pages/get_htcondor>`.
