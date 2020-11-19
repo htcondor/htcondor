@@ -10,10 +10,8 @@ Getting HTCondor
     install-windows-as-administrator
     install-linux-as-root
     from-our-repositories
-    install-macosx-as-root
 
     install-linux-as-user
-    install-macosx-as-user
 
     for-docker
 
@@ -44,7 +42,6 @@ instructions corresponding to your operating system:
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
-* :doc:`Mac OS X <install-macosx-as-root>`
 
 .. _hand_install_with_user_privileges:
 
@@ -59,7 +56,6 @@ misbehaving jobs.
 * :doc:`Linux <install-linux-as-user>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
-* :doc:`Mac OS X <install-macosx-as-user>`
 
 .. _docker:
 
