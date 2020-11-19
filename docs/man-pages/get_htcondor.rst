@@ -18,9 +18,10 @@ Synopsis
 Description
 -----------
 
+[FIXME]: how do we make this link version-sensitive?  Do we point to the downloads page, instead?
+
 See https://htcondor.readthedocs.io/en/latest/getting-htcondor for detailed
-instructions on using this tool.  [FIXME: how do we make that link
-version-sensitive?  Do we point to the downloads page, instead?]
+instructions on using this tool.
 
 Options
 -------
@@ -104,7 +105,7 @@ this authentication method ``PASSWORD``.
 Execute-role Machine Configuration
 ##################################
 
-..  # FIXME: use security : password doesn't exist yet.  It should set
+..  # use security : password doesn't exist yet.  It should set
 ..  #
 ..  #   SEC_DEFAULT_AUTHENTICATION_METHODS = PASSWORD
 ..  #   ALLOW_DAEMON = condor_pool@*

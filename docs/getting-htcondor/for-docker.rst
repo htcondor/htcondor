@@ -13,16 +13,15 @@ most systems with Docker installed:
 
 .. code-block:: shell
 
-    # FIXME: Does this automagically start an interactive shell?
-    docker run htcondor/minicondor:v8.9.9-el7
+    docker run -it htcondor/minicondor:v8.9.9-el7
 
 From here, you can proceed to the :ref:`quick_start_guide`.
 
 .. rubric:: Setting up a Whole Pool
 
 If you're looking to set up a whole pool, the following images correspond
-to the three required roles.  See the [FIXME] for more information about
-the roles and how to configure these images to work together.
+to the three required roles.  See the :doc:`admin-quick-start` for more
+information about the roles and how to configure these images to work together.
 
 * ``htcondor/cm``, an image configured as a central manager
 * ``htcondor/execute``, an image configured as an execute node

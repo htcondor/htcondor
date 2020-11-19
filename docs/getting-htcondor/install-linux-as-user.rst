@@ -38,7 +38,6 @@ Configure
 .. code-block:: shell
 
     cd condor
-    # [FIXME]
     ./bin/make-minicondor-from-tarball
 
 Using HTCondor
