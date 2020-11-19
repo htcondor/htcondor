@@ -23,8 +23,8 @@ usage() {
 	--dry-run	: Do not install, just print commands [default]
 	--no-dry-run	: Issue all the commands neeed to install HTCondor
 	--channel NAME	: Specify version channel to install; NAME can be
-	     latest : Most recent release with new features [default]
-	     stable : Most recent release with only bug-fixes 
+	     current: Most recent release with new features [default]
+	     stable : Most recent release with only bug-fixes
 	--dist		: Display detected operating system and exit
 	-h, --help	: Display this message and exit
 	EOF
@@ -44,6 +44,13 @@ install_config_file() {
 	fi
 }
 
+is_download() {
+	if [ -z "$DOWNLOAD" ]; then
+		return 1
+	else
+		return 0
+	fi
+}
 
 is_dry_run() {
 	if [ -z "$DRY_RUN" ]; then
@@ -111,12 +118,15 @@ check_forked() {
 				dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
 				case "$dist_version" in
 					10)
+						dist_version_number=10
 						dist_version="buster"
 					;;
 					9)
+						dist_version_number=9
 						dist_version="stretch"
 					;;
 					8|'Kali Linux 2')
+						dist_version_number=8
 						dist_version="jessie"
 					;;
 				esac
@@ -280,7 +290,7 @@ do_install() {
 	fi
 
 
-	
+
 	echo -e "\n# Installing HTCondor for ${lsb_dist^} $dist_version"
 
 	# Run install binaries for each distro accordingly
@@ -351,15 +361,55 @@ do_install() {
 
 	# Open port 9618 on system firewall
 	do_configure_firewall
-	
+
 	# Finally, start the HTCondor service
 	do_start_service
 
 	echo
 }
 
+do_download() {
+	get_distribution
+
+	# FIXME: The 'stable' symlink doesn't exist here yet.
+	TARBALL_BASE_URL=${DOWNLOAD_URL}/tarball/${CHANNEL}
+
+	# FIXME: How do we figure this out?
+	CONDOR_VERSION=8.9.9
+
+	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CONDOR_VERSION}/release
+
+	OS_VERSION=$dist_version
+	case "$lsb_dist" in
+		fedora)
+			# FIXME: we don't have a Fedora tarball.
+			;;
+		ubuntu)
+			OS_NAME=Ubuntu
+			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
+			dist_version_number=`echo $dist_version_number | sed -e s'/\.[0-9]*//'`
+			OS_VERSION=$dist_version_number
+			;;
+		debian)
+			OS_NAME=Debian
+			OS_VERSION=$dist_version_number
+			;;
+		centos|rhel|amzn)
+			OS_NAME=CentOS
+			;;
+	esac
+
+    TARBALL_NAME=condor-${CONDOR_VERSION}-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz
+	TARBALL_URL=${TARBALL_DIR_URL}/${TARBALL_NAME}
+
+	# FIXME: On Ubuntu 16, and possibly others, curl may not exist.  Install
+	# it during the previous step.
+	echo "Downloading ${TARBALL_NAME}..."
+	curl -fSL ${TARBALL_URL} -o ${TARBALL_NAME}
+}
+
 # Set global defaults
-CHANNEL="development"
+CHANNEL="current"
 DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
 DRY_RUN=1
 sh_c='sh -c'
@@ -373,8 +423,8 @@ while [ $# -gt 0 ]; do
 				stable)
 					CHANNEL="stable"
 					;;
-				latest|developer)
-					CHANNEL="development"
+				current|latest|developer)
+					CHANNEL="current"
 					;;
 				*)
 					echo "Illegal option $2 for --channel"
@@ -393,6 +443,9 @@ while [ $# -gt 0 ]; do
 		--dist)
 			DIST=1
 			;;
+		--download)
+			DOWNLOAD=1
+			;;
 		--help|-h)
 			usage
 			;;
@@ -405,7 +458,13 @@ while [ $# -gt 0 ]; do
 	shift $(( $# > 0 ? 1 : 0 ))
 done
 
-# wrapped up in a function so that we have some protection against only getting
+# wrapped up in functions so that we have some protection against only getting
 # half the file during "curl | sh"
-do_install
+
+if is_download; then
+	do_download
+else
+	do_install
+fi
+
 exit 0
