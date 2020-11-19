@@ -21,13 +21,15 @@ It is possible to manually install HTCondor on Windows, without the
 provided MSI program, but we strongly discourage this unless you have 
 a specific need for this approach and have extensive HTCondor experience. 
 
-Quickstart GUI Installation Instructions Using the MSI Program
-''''''''''''''''''''''''''''''''''''''''''''''''
+Quickstart Installation Instructions
+--------------------------------------------------------------
 
 These instructions describe how to use the HTCondor Windows Installer
 to install all components of an HTCondor system on a single computer. 
 
-Start the installer by double clicking on the MSI file. 
+Download the HTCondor Windows Installer and start the installer by 
+double clicking on the MSI file. Then follow the directions below for 
+each option. 
 
 If HTCondor is already installed.
     If HTCondor has been previously installed, a dialog box will appear
@@ -91,13 +93,14 @@ STEP 9: Choose Setup Type
 
 .. include:: minicondor-test-and-quickstart.include
 
-Detailed GUI Installation Instructions Using the MSI Program
+Customizing, Expanding, and Automating the Installation Process
+---------------------------------------------------------------------
+
+Detailed Installation Instructions Using the MSI Program
 ''''''''''''''''''''''''''''''''''''''''''''''''
 
-If you are branching out and installing HTCondor on multiple computers, 
-want to create a multi-node pool, or simply want more detail about 
-each configuration option provided by the installer, read through 
-the following list. 
+This section describes the different HTCondor Installer options in 
+greater detail. 
 
 STEP 1: License Agreement.
     The first step in installing HTCondor is a welcome screen and
@@ -424,7 +427,7 @@ Microsoft's website at
 `http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx <http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx>`_.
 
 Manual Installation of HTCondor on Windows
-'''''''''''''''''''''''''''''''''''''''
+------------------------------------------
 
 :index:`manual install<single: manual install; Windows>`
 
