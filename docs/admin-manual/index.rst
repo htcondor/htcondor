@@ -6,7 +6,6 @@ Administrators' Manual
    :glob:
 
    introduction-admin-manual
-   quick-start-condor-pool
    installation-startup-shutdown-reconfiguration
    introduction-to-configuration
    configuration-templates
