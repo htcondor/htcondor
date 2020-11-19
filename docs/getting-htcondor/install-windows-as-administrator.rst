@@ -4,18 +4,13 @@ Windows (as Administrator)
 ==========================
 
 Installation of HTCondor must be done by a user with administrator
-privileges. After installation, the HTCondor services will be run under
-the local system account. When HTCondor is running a user job, however,
-it will run that user job with normal user permissions.
+privileges. We have provided quickstart instructions below to walk 
+you through a single-node HTCondor installation using the HTCondor
+Windows installer GUI. 
 
-Download the HTCondor Windows Installer and choose whether to use the 
-click-through GUI installation helper or run the installer in unattended
-batch mode. For those who are installing a single node HTCondor pool, 
-we recommend following the quickstart instructions. 
-
-In all cases, the installer will need certain values set to proceed, 
-provided as a series of prompts (in the GUI) or in a configuration file (if 
-using the batch install). 
+For more information about the installation options, or how to use 
+the installer in unattended batch mode, see the middle section of 
+this guide. 
 
 It is possible to manually install HTCondor on Windows, without the 
 provided MSI program, but we strongly discourage this unless you have 
