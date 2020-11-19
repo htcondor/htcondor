@@ -17,28 +17,27 @@ Getting HTCondor
 
     for-docker
 
+    admin-quick-start
+
 These instructions show how to install HTCondor and run all of its
 components on a single computer, so that you can test HTCondor and
 explore its features.  We recommend that new users start with the
-first set of instructions here and then continue with the
-:ref:`quick_start_guide`; that link will appear again at the end of
-these instructions.
+:ref:`first set of instructions <install_with_administrative_privileges>`
+here and then continue with the :doc:`../users-manual/quick-start-guide`;
+that link will appear again at the end of these instructions.
 
-If you know how to use Docker, you may find one of our pre-made images
-easier to use; see the :ref:`docker` entry.  If you're familiar with
-cloud computing, you can also get HTCondor :ref:`in the cloud<cloud>`.
+If you know how to use Docker, you may find it easier to start with the
+``htcondor/mini`` image; see the :ref:`docker` entry.  If you're familiar
+with cloud computing, you may also get HTCondor :ref:`in the cloud<cloud>`.
 
-Experienced users who want to make a HTCondor pool out of multiple
-physical machines should read the [FIXME] admin quick start guide
-to choose the first machine on which to follow these instructions.   For
-container infrastructures, see the :ref:`docker` or :ref:`kubernetes`
-entries.  For cloud infastructures, see the :ref:`cloud` entry.
+Experienced users who want to make an HTCondor pool out of multiple
+machines should read the :doc:`admin-quick-start` first.
 
 .. _install_with_administrative_privileges:
 
 .. rubric:: Installing HTCondor with Administrative Privileges
 
-If you have administrative privileges on your machine, choose to the
+If you have administrative privileges on your machine, choose the
 instructions corresponding to your operating system:
 
 * :ref:`Windows <admin_install_windows>`
@@ -52,14 +51,15 @@ instructions corresponding to your operating system:
 .. rubric:: Hand-Installation of HTCondor with User Privileges
 
 If you don't administrative privileges on your machine, you can still
-install HTCondor, although some features will not be available:
+install HTCondor.  An unprivileged installation isn't able to effectively
+limit the resource usage of the jobs it runs, but since it only
+works for the user who installed it, at least you know who to blame for
+misbehaving jobs.
 
 * :ref:`Linux <user_install_linux>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
 * :ref:`Mac OS X <user_install_macosx>`
-
-[FIXME] (a link to or exceedingly brief summary of the missing features)
 
 .. _docker:
 
@@ -69,7 +69,8 @@ HTCondor is also `available <https://hub.docker.com/u/htcondor>`_ on Docker Hub.
 
 If you're new to HTCondor, the ``htcondor/mini`` image is equivalent to
 following any of the the instructions above, and once you've started the
-container, you can proceed directly to :ref:`quick_start_guide`.
+container, you can proceed directly to :ref:`quick_start_guide` and learn
+how to run jobs.
 
 For other options, see our :ref:`docker image list <docker_image_list>`.
 
@@ -77,7 +78,14 @@ For other options, see our :ref:`docker image list <docker_image_list>`.
 
 .. rubric:: Kubernetes
 
-[FIXME]
+You can deploy a complete HTCondor pool with the following command:
+
+.. code-block:: shell
+
+    kubectl apply -f https://github.com/htcondor/htcondor/blob/latest/build/docker/k8s/pool.yaml
+
+If you're new to HTCondor, you can proceed directly to
+the :ref:`quick_start_guide` after logging in to the ``submit`` pod.
 
 .. _cloud:
 
@@ -100,6 +108,8 @@ HTCondor also supports cloud-native distribution.
 * We also have documention on creating a
   :doc:`../cloud-computing/condor-in-the-cloud` by hand.
 
-If you're new to HTCondor administration, consider reading our
-:ref:`quick-start guide <admin_quick_start>` before the rest of the
+.. rubric:: For New Administrators
+
+If you're new to HTCondor administration, consider reading the
+:doc:`admin-quick-start` before the rest of the
 :doc:`../admin-manual/index`.
