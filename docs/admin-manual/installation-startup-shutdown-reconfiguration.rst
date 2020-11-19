@@ -560,6 +560,9 @@ We have
 on obtaining the MSI and then using it to install HTCondor.  Note that we
 don't support unprivileged installations on Windows.
 
+For more details on the MSI, including how to automate it, see the
+:doc:`windows-installer` section.
+
 Starting HTCondor Under Windows After Installation
 ''''''''''''''''''''''''''''''''''''''''''''''''''
 

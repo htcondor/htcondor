@@ -40,11 +40,11 @@ machines should read the :doc:`admin-quick-start` first.
 If you have administrative privileges on your machine, choose the
 instructions corresponding to your operating system:
 
-* :ref:`Windows <admin_install_windows>`
-* :ref:`Linux <admin_install_linux>`.  HTCondor supports Enterprise Linux 7
+* :doc:`Windows <install-windows-as-administrator>`
+* :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
-* :ref:`Mac OS X <admin_install_macosx>`
+* :doc:`Mac OS X <install-macosx-as-root>`
 
 .. _hand_install_with_user_privileges:
 
@@ -56,10 +56,10 @@ limit the resource usage of the jobs it runs, but since it only
 works for the user who installed it, at least you know who to blame for
 misbehaving jobs.
 
-* :ref:`Linux <user_install_linux>`.  HTCondor supports Enterprise Linux 7
+* :doc:`Linux <install-linux-as-user>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
-* :ref:`Mac OS X <user_install_macosx>`
+* :doc:`Mac OS X <install-macosx-as-user>`
 
 .. _docker:
 

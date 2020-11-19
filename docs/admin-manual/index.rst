@@ -22,4 +22,5 @@ Administrators' Manual
    java-support-installation
    setting-up-vm-docker-universes
    singularity-support
-   power-management      
+   power-management
+   windows-installer
