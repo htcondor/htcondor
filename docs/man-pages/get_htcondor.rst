@@ -18,8 +18,6 @@ Synopsis
 Description
 -----------
 
-[FIXME]: how do we make this link version-sensitive?  Do we point to the downloads page, instead?
-
 See https://htcondor.readthedocs.io/en/latest/getting-htcondor for detailed
 instructions on using this tool.
 
