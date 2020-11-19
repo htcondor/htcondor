@@ -86,6 +86,12 @@ STEP 9: Choose Setup Type
     Clicking on the Custom choice permits changing the installation
     directory.
 
+
+This should complete the installation process. The installer will have
+automatically started HTCondor in the background and you do **not** need to 
+restart Windows for HTCondor to work. 
+
+
 .. include:: minicondor-test-and-quickstart.include
 
 Customizing, Expanding, and Automating the Installation Process
