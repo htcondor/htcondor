@@ -18,6 +18,10 @@ New Features:
 - Added statistics to the collector ad about CCB.
   :ticket:`7842`
 
+- When running a singularity job, the starter first runs `singularity test`
+  if this returns non-zero, the job is put on hold.
+  :ticket:`7801`
+
 - You may now tag instances from the command line of `condor_annex`.  Use
   the ``-tag <name> <value>`` command-line option once for each tag.
   :ticket:`7834`
