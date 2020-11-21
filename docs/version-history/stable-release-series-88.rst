@@ -19,13 +19,16 @@ Release Notes:
 
 New Features:
 
-- For compability with 8.9.9 (and eventually, the next stable series), add
-  the family of version comparison functions.
+- For compatibility with 8.9.9 (and eventually, the next stable series), add
+  the family of version comparison functions to ClassAds.
   :jira:`36`
 
 Bugs Fixed:
 
-- None.
+- Increased default Globus proxy key length to 2048 bits to align with NIST
+  recommendations as of January 2015. The larger key size is required on
+  modern Linuxes.
+  :jira:`29`
 
 Version 8.8.11
 --------------
