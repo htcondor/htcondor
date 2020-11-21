@@ -425,8 +425,13 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     ``SHADOW_SIZE_ESTIMATE`` :index:`SHADOW_SIZE_ESTIMATE` is
     used.
 
+``DISK`` :index:`DISK`
+    Tells HTCondor how much disk space (in kB) to advertise as being available
+    for use by jobs. If ``DISK`` is not specified, HTCondor will advertise the
+    amount of free space on your execute partition, minus ``RESERVED_DISK``.
+
 ``RESERVED_DISK`` :index:`RESERVED_DISK`
-    Determines how much disk space you want to reserve for your own
+    Determines how much disk space (in kB) you want to reserve for your own
     machine. When HTCondor is reporting the amount of free disk space in
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor_startd*, which advertises the
@@ -3581,12 +3586,6 @@ section.
     available to be used by HTCondor jobs. If ``RESERVED_MEMORY`` is
     defined, HTCondor subtracts it from the amount of memory it
     advertises as available.
-
-``DISK`` :index:`DISK`
-    Normally, HTCondor will automatically detect the amount of physical
-    disk available on your machine. Define ``DISK`` to tell HTCondor
-    how much physical disk (in kB) your machine has, overriding the
-    value HTCondor computes automatically.
 
 ``STARTD_NAME`` :index:`STARTD_NAME`
     Used to give an alternative value to the ``Name`` attribute in the
