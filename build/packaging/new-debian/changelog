@@ -1,3 +1,10 @@
+condor (8.8.12-1) stable; urgency=medium
+
+  * Added a family of version comparison functions to ClassAds
+  * Increased default Globus proxy key length to meet current NIST guidance
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sat, 21 Nov 2020 16:40:52 -0600
+
 condor (8.8.11-1) stable; urgency=medium
 
   * HTCondor now properly tracks usage over vanilla universe checkpoints
