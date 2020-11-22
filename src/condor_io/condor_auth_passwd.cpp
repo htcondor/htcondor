@@ -2818,7 +2818,7 @@ Condor_Auth_Passwd::key_strength_bytes() const
 
 
 bool
-Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
+Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad, const classad::ClassAd * /*cli_ad*/, const classad::ClassAd * /*srv_ad*/)
 {
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
 	std::vector<std::string> creds;

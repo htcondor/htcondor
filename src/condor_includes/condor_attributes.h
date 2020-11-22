@@ -74,6 +74,7 @@
 #define ATTR_CAPABILITY  "Capability"
 #define ATTR_CE_REQUIREMENTS  "CERequirements"
 #define ATTR_CLAIM_STARTD  "ClaimStartd"
+#define ATTR_CLIENT_HOSTNAME "ClientHostname"
 #define ATTR_COD_CLAIMS  "CODClaims"
 #define ATTR_COLLECTOR_HOST  "CollectorHost"
 #define ATTR_COMMAND  "Command"

@@ -2473,6 +2473,11 @@ default=
 type=string
 tags=misc_utils
 
+[SEC_FS_SKIP_HOSTNAME_CHECK]
+default=false
+type=string
+tags=condor_auth_fs
+
 [SEC_PASSWORD_FILE]
 default=$(SEC_PASSWORD_DIRECTORY)/POOL
 type=string

@@ -152,8 +152,11 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		const std::vector<std::string> &authz_list, long lifetime, std::string &token,
 		int ident, CondorError *err);
 
-	/** Metadata needed prior to starting authorization */
-	static bool preauth_metadata(classad::ClassAd &ad);
+	/**
+         *  Metadata needed prior to starting authorization
+         *  Currently the client and server ad are ignored.
+         */
+	static bool preauth_metadata(classad::ClassAd &ad, const classad::ClassAd *cli_ad, const classad::ClassAd *srv_ad);
 
 	void set_remote_issuer(const std::string &issuer) {m_server_issuer = issuer;}
 	void set_remote_keys(const std::vector<std::string> &keys);
