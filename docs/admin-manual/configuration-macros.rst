@@ -9186,6 +9186,12 @@ macros are described in the :doc:`/admin-manual/security` section.
     the timeout to use for different types of commands, for example
     ``SEC_CLIENT_AUTHENTICATION_TIMEOUT``.
 
+:macro-def:`SEC_FS_SKIP_HOSTNAME_CHECK`
+    Whether the server should check that the client has the same hostname
+    and skip the ``FS`` authentication method on a mismatch.  If set to
+    ``true``, then the server will always try ``FS`` when enabled.  Deffaults
+    to ``false``.
+
 :macro-def:`SEC_PASSWORD_FILE`
     For Unix machines, the path and file name of the file containing the
     pool password for password authentication.

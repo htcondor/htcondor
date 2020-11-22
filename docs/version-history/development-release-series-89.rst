@@ -19,6 +19,8 @@ New Features:
   include the batch name, if defined, and the submitting directory,
   so the user has a better idea of which job the job id is. HTCONDOR-71
 
+- Enhance the filesystem authentication method so it will not be attempted
+  if the client and server are not on the same host. :jira:`87`
 
 Bugs Fixed:
 
