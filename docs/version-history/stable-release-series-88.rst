@@ -8,6 +8,23 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.13
+-------------
+
+Release Notes:
+
+- HTCondor version 8.8.13 not yet released.
+
+.. HTCondor version 8.8.13 released on Month Date, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 8.8.12
 --------------
 
@@ -89,6 +106,10 @@ Bugs Fixed:
   was ignored when a Condor-C job's refreshed proxy was forwarded to the
   remote *condor_schedd*.
   :ticket:`7856`
+
+- Fixed a bug where worker nodes with very large (multi petabyte) scratch
+  space could run jobs, but not reuse claims, causing lower utilization.
+  :ticket:`7857`
 
 - Attribute ``GridJobId`` is no longer removed from the job ad when the job
   enters ``Completed`` or ``Removed`` status.

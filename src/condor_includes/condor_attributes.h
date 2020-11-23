@@ -1131,6 +1131,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_JOB_MAX_VACATE_TIME  "JobMaxVacateTime"
 #define ATTR_WANT_GRACEFUL_REMOVAL  "WantGracefulRemoval"
 #define ATTR_HOW_FAST  "HowFast"
+#define ATTR_DRAIN_REASON "DrainReason"
 #define ATTR_RESUME_ON_COMPLETION  "ResumeOnCompletion"
 #define ATTR_DRAINING  "Draining"
 #define ATTR_DRAINING_REQUEST_ID  "DrainingRequestId"

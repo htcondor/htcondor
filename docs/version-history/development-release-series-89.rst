@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Enhanced the optional job completion sent to the submitter to now
+  include the batch name, if defined, and the submitting directory,
+  so the user has a better idea of which job the job id is. HTCONDOR-71
+
 
 Bugs Fixed:
 
@@ -35,9 +38,55 @@ New Features:
 - Added statistics to the collector ad about CCB.
   :ticket:`7842`
 
+- When running a singularity job, the starter first runs `singularity test`
+  if this returns non-zero, the job is put on hold.
+  :ticket:`7801`
+
 - You may now tag instances from the command line of `condor_annex`.  Use
   the ``-tag <name> <value>`` command-line option once for each tag.
   :ticket:`7834`
+
+- Added support for requesting GPUs with grid universe jobs of type `batch`.
+  :ticket:`7757`
+
+- The python ``schedd.submit`` method now accepts a ``Submit`` object and itemdata
+  to define the jobs, to be submitted.  The use of a ClassAd to define the job is now deprecated
+  for this method
+  :ticket:`7853`
+
+- OAuth and Krb credentials are now work for local universe jobs.
+  :ticket:`7693`
+
+- Added new configuration variable :macro:`MIN_FLOCK_LEVEL`, which can be
+  used to specify how many of the remote HTCondor pools listed in
+  ``FLOCK_COLLECTOR_HOSTS`` should always be flocked to.
+  The default is 0.
+  :jira:`62`
+
+- Job attributes set by the job using the Chirp command
+  ``set_job_attr_delayed`` are now propagated back to the orginating
+  *condor_schedd* by the Job Router and Condor-C (a.k.a grid universe type
+  ``condor``).
+  :jira:`63`
+
+- A new configuration variable :macro:`DEFAULT_DRAINING_START_EXPR` can be used to define
+  what the ``START`` value of a slot should be while it is draining. This configuration variable
+  is used when the command to drain does not have an override value for ``START``.
+  :jira:`67`
+
+- When a :macro:`SEC_CREDENTIAL_PRODUCER` is configured for *condor_submit* it now
+  assumes that the CREDD is the current version when does not know what version it is,
+  which is common when the CREDD is running on a different machine than *condor_submit*.
+  :jira:`76`
+
+- Added a new ``SCRIPT HOLD`` feature to DAGMan, allowing users to define a
+  script executable that runs when a job goes on hold.
+  :jira:`65`
+
+- Added a new ``SUBMIT-DESCRIPTION`` command to DAGMan, which allows inline
+  submit descriptions to be declared indepedently of jobs.
+  :jira:`64`
+
 
 Bugs Fixed:
 

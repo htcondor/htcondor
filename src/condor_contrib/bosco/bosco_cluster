@@ -919,10 +919,10 @@ if [ -z "${release_url}" ]; then
     fi
 
     release_url="${url_base}${series}/${version}/release/condor-${version}-x86_64_${platform}-stripped.tar.gz"
-    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" ; then
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
         daily_url="${url_base}${series}/${version}/daily/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
     fi
-    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " ; then
+    if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
         rc_url="${url_base}${series}/${version}/rc/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
     fi
 fi

@@ -23,13 +23,12 @@
 /*
   This file holds utility functions that rely on *new* ClassAds.
 */
-#include "stream.h"
-#include "string_list.h"
 
 #include "classad/classad_distribution.h"
 
 // Forward dec'l
 class ReliSock;
+class Stream;
 
 void AttrList_setPublishServerTime(bool publish);
 

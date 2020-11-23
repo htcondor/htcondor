@@ -52,7 +52,10 @@ struct Startd
     }
 
     std::string
-    drain_jobs(int how_fast=DRAIN_GRACEFUL, bool resume_on_completion=false, boost::python::object check_obj=boost::python::object(""), boost::python::object start_obj = boost::python::object() )
+    drain_jobs(int how_fast=DRAIN_GRACEFUL, int on_completion=DRAIN_NOTHING_ON_COMPLETION,
+		boost::python::object check_obj=boost::python::object(""),
+		boost::python::object start_obj = boost::python::object(),
+		boost::python::object reason_arg = boost::python::object())
     {
 		std::string check_expr;
 		if ( ! convert_python_to_constraint(check_obj, check_expr, true, NULL)) {
@@ -71,10 +74,17 @@ struct Startd
 			printer.Unparse( start_expr, expr.get());
 		}
 
+		const char * reason = NULL;
+		std::string reason_str;
+		if (reason_arg.ptr() != Py_None) {
+			reason_str = boost::python::extract<std::string>(reason_arg);
+			reason = reason_str.c_str();
+		}
+
         std::string request_id;
 
         DCStartd startd(m_addr.c_str());
-        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr_ptr, start_expr.c_str(), request_id);
+        bool rval = startd.drainJobs(how_fast, reason, on_completion, check_expr_ptr, start_expr.c_str(), request_id);
         if (!rval) {THROW_EX(HTCondorReplyError, "Startd failed to begin draining jobs.");}
         return request_id;
     }
@@ -166,14 +176,15 @@ export_startd()
 
             :param drain_type: How fast to drain the jobs.  Defaults to ``DRAIN_GRACEFUL`` if not specified.
             :type drain_type: :class:`DrainTypes`
-            :param bool resume_on_completion: Whether the startd should start accepting jobs again
+            :param int on_completion: Whether the startd should start accepting jobs again
                 once draining is complete.  Otherwise, it will remain in the drained state.
-                Defaults to ``False``.
+                Defaults to ``False``.  Values are 1 for Resume, 2 for Exit, 3 for Restart
             :param check_expr: An expression string that must evaluate to ``true`` for all slots for
                 draining to begin. Defaults to ``'true'``.
             :type check_expr: str or :class:`ExprTree`
             :param start_expr: The expression that the startd should use while draining.
             :type start_expr: str or :class:`ExprTree`
+            :param str reason: A string describing the reason for draining.  defaults to "by command"
             :return: An opaque request ID that can be used to cancel draining via :meth:`Startd.cancelDrainJobs`
             :rtype: str
             )C0ND0R",

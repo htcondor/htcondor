@@ -94,7 +94,14 @@ perhaps in response to a RequestGPU line in the submit file, the
 Singularity flag "-nv" will be passed to Singularity, which should make
 the appropriate nvidia devices visible inside the container.
 
-Finally, if an administrator wants to pass additional arguments to the
+When the `condor_starter` runs a job with singularity, it first
+runs singularity test on that image.  If no test is defined inside
+the image, it runs /bin/sh /bin/true.  If the test returns non-zero,
+for example if the image is missing, or malformed, the job is put
+on hold.  This is controlled by the condor knob 
+``SINGULARITY_RUN_TEST_BEFORE_JOB``, which defaults to true.
+
+If an administrator wants to pass additional arguments to the
 singularity exec command that HTCondor does not currently support, the
 parameter SINGULARITY_EXTRA_ARGUMENTS allows arbitraty additional
 parameters to be passed to the singularity exec command. For example, to
