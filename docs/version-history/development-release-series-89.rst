@@ -89,6 +89,12 @@ New Features:
   HTCondor binaries should be fetched.
   :jira:`21`
 
+- Added the ability to have finer grain control over the SSH connection when
+  using the remote gahp. One can now specify the SSH port and also
+  whether or not SSH BatchMode is used.
+  :jira:`18`
+  :jira:`19`
+
 Bugs Fixed:
 
 - Fixed a bug introduced in 8.9.9 that, only when accounting groups with quotas
@@ -160,11 +166,13 @@ Release Notes:
    will only work when *condor_submit* and the *condor_schedd* are both version 8.9.9 or later.
    :ticket:`7783`
 
-- Added the ability to have finer grain control over the SSH connection when
-  using the remote gahp. One can now specify the SSH port and also
-  whether or not SSH BatchMode is used.
-  :jira:`18`
-  :jira:`19`
+Known Issues:
+
+- If group quotas are in use, the negotatior will eventually stop making
+  matches. This defect was introduced in HTCondor 8.9.9. It will be fixed in
+  HTCondor 8.9.10 to be released on November 24, 2020.
+  In the meantime, one may revert the Central Manager machine to HTCondor
+  8.9.8, leaving the remainder of the pool at HTCondor 8.9.9.
 
 New Features:
 
