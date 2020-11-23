@@ -76,6 +76,10 @@ Bugs Fixed:
   sent its second childalive message.
   :ticket:`7866`
 
+- The *condor_credd* now signals the OAuth credmon, not the Kerberos credmon,
+  when processing a locally-issued credential.
+  :ticket:`7889`
+
 Version 8.9.9
 -------------
 
