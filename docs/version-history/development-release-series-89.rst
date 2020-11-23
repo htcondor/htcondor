@@ -256,6 +256,12 @@ New Features:
   to overlook the trailing slash when cutting a pasting from a browser.
   :ticket:`7557`
 
+- All of the Python scripts distributed with HTCondor have been upgraded
+  to run under Python 3.
+  :ticket:`7698`
+  :ticket:`7844`
+  :ticket:`7872`
+
 Bugs Fixed:
 
 -  Fixed a bug that could cause the *condor_schedd* to abort if a SUBMIT_REQUIREMENT
