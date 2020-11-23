@@ -384,6 +384,9 @@ New Features:
    :macro:`OFFLINE_MACHINE_RESOURCE_GPUs` will now take effect on a *condor_reconfig*.
    :ticket:`7651`
 
+-  The *condor_useprio* tool now display any submitter ceilings that are set.
+   ;tiket:`7837`
+
 -  HTCondor now supports setting an upper bound on the number of cores user can
    be given.  This is called the submitter ceiling. The ceiling can be set with
    the ``condor_userprio -setceiling`` command line option.
