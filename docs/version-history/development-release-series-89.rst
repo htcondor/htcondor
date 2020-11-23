@@ -95,6 +95,10 @@ Bugs Fixed:
   when processing a locally-issued credential.
   :ticket:`7889`
 
+- Fixed a bug in DAGMan where a ``_gotEvents`` warning kept appearing
+  incorrectly in the output file.
+  :jira:`15`
+  
 - Fixed a bug which caused the ``condor-annex-ec2`` script to exit prematurely
   on some systemd platforms.
   :jira:`22`
