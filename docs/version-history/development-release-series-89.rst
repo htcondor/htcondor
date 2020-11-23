@@ -78,6 +78,13 @@ New Features:
   submit descriptions to be declared indepedently of jobs.
   :jira:`64`
 
+- The ``--add`` option of *bosco_cluster* now attempts to install a version
+  of HTCondor on the remote cluster that closely matches the version installed
+  locally.
+  The new ``--url`` option can be used to specify the URL from which the
+  HTCondor binaries should be fetched.
+  :jira:`21`
+
 Bugs Fixed:
 
 - Fixed a bug introduced in 8.9.9 that, only when accounting groups with quotas
