@@ -45,6 +45,10 @@ New Features:
   for this method
   :ticket:`7853`
 
+- A new python method ``schedd.edit`` can be used to set multiple attributes for a job specification
+  with a single call to this method.
+  :jira:`28`
+
 - OAuth and Krb credentials are now work for local universe jobs.
   :ticket:`7693`
 
