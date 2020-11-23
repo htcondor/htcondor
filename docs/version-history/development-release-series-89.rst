@@ -50,6 +50,14 @@ Release Notes:
    will only work when *condor_submit* and the *condor_schedd* are both version 8.9.9 or later.
    :ticket:`7783`
 
+Known Issues:
+
+- If group quotas are in use, the negotatior will eventually stop making
+  matches. This defect was introduced in HTCondor 8.9.9. It will be fixed in
+  HTCondor 8.9.10 to be released on November 24, 2020.
+  In the meantime, one may revert the Central Manager machine to HTCondor
+  8.9.8, leaving the remainder of the pool at HTCondor 8.9.9.
+
 New Features:
 
 -  You may now instruct HTCondor to record certain information about the
