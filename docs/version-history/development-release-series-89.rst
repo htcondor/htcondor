@@ -156,6 +156,12 @@ Release Notes:
    will only work when *condor_submit* and the *condor_schedd* are both version 8.9.9 or later.
    :ticket:`7783`
 
+- Added the ability to have finer grain control over the SSH connection when
+  using the remote gahp. One can now specify the SSH port and also
+  whether or not SSH BatchMode is used.
+  :jira:`18`
+  :jira:`19`
+
 New Features:
 
 -  You may now instruct HTCondor to record certain information about the
