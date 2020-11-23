@@ -269,8 +269,8 @@ New Features:
   to overlook the trailing slash when cutting a pasting from a browser.
   :ticket:`7557`
 
-- All of the Python scripts distributed with HTCondor have been upgraded
-  to run under Python 3.
+- The Python scripts distributed with HTCondor (except those dealing
+  with the OAuth credmon) have been upgraded to run under Python 3.
   :ticket:`7698`
   :ticket:`7844`
   :ticket:`7872`
