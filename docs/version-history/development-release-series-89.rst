@@ -13,6 +13,17 @@ Release Notes:
 
 .. HTCondor version 8.9.10 released on Month Date, 2020.
 
+- For *condor_annex* users: Amazon Web Services is deprecating support for
+  the Python 2.7 runtime used by *condor_annex*.  If you ran the
+  *condor_annnex* setup command with a previous version of HTCondor, you
+  should update your setup to use the new runtime.  (Go to the AWS Lambda
+  `console <https://console.aws.amazon.com/lambda>` and look for the
+  ``HTCondorAnnex-CheckConnectivity`` function; click on it.  Scroll
+  down to "Runtime settings"; click the "Edit" button.  Select "Python 3.8"
+  from the drop-down list under "Runtime".  Then hit the "Save" button.
+  You'll have to repeat this for each region you're using.)
+  :jira:24
+
 New Features:
 
 - Added statistics to the collector ad about CCB.
