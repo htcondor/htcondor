@@ -89,11 +89,20 @@ New Features:
   HTCondor binaries should be fetched.
   :jira:`21`
 
+- The Python scripts distributed with HTCondor (except those dealing
+  with the OAuth credmon) have been upgraded to run under Python 3.
+  :ticket:`7698`
+  :ticket:`7844`
+  :ticket:`7872`
+
 - Added the ability to have finer grain control over the SSH connection when
   using the remote gahp. One can now specify the SSH port and also
   whether or not SSH BatchMode is used.
   :jira:`18`
   :jira:`19`
+
+-  The *condor_useprio* tool now displays any submitter ceilings that are set.
+   :tiket:`7837`
 
 Bugs Fixed:
 
@@ -281,12 +290,6 @@ New Features:
   to overlook the trailing slash when cutting a pasting from a browser.
   :ticket:`7557`
 
-- The Python scripts distributed with HTCondor (except those dealing
-  with the OAuth credmon) have been upgraded to run under Python 3.
-  :ticket:`7698`
-  :ticket:`7844`
-  :ticket:`7872`
-
 Bugs Fixed:
 
 -  Fixed a bug that could cause the *condor_schedd* to abort if a SUBMIT_REQUIREMENT
@@ -441,9 +444,6 @@ New Features:
 -  Configuration variables of the form :macro:`OFFLINE_MACHINE_RESOURCE_<TAG>` such as
    :macro:`OFFLINE_MACHINE_RESOURCE_GPUs` will now take effect on a *condor_reconfig*.
    :ticket:`7651`
-
--  The *condor_useprio* tool now display any submitter ceilings that are set.
-   ;tiket:`7837`
 
 -  HTCondor now supports setting an upper bound on the number of cores user can
    be given.  This is called the submitter ceiling. The ceiling can be set with
