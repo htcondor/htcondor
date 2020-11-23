@@ -67,7 +67,6 @@ New Features:
   submit descriptions to be declared indepedently of jobs.
   :jira:`64`
 
-
 Bugs Fixed:
 
 - Fixed a bug introduced in 8.9.9 that, only when accounting groups with quotas
@@ -84,6 +83,10 @@ Bugs Fixed:
 - The *condor_credd* now signals the OAuth credmon, not the Kerberos credmon,
   when processing a locally-issued credential.
   :ticket:`7889`
+
+- Fixed a bug which caused the ``condor-annex-ec2`` script to exit prematurely
+  on some systemd platforms.
+  :jira:`22`
 
 Version 8.9.9
 -------------
