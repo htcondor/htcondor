@@ -134,7 +134,7 @@ Version 8.9.9
 
 Known Issues:
 
-- If group quotas are in use, the negotatior will eventually stop making
+- If group quotas are in use, the negotiator will eventually stop making
   matches. This defect was introduced in HTCondor 8.9.9. It will be fixed in
   HTCondor 8.9.10 to be released on November 24, 2020.
   In the meantime, one may revert the Central Manager machine to HTCondor
