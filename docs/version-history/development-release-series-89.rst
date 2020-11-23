@@ -70,6 +70,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug introduced in 8.9.9 that, only when accounting groups with quotas
+  were defined that caused the matchmaker to stop making new matches after several
+  negotiation cycles.
+  :jira:`83`
+
 - Fixed a bug specific to MacOS X which could cause the shared port daemon's
   initial childalive message to be lost.  This would cause `condor_who` to
   wrongly think that HTCondor hadn't started up until the shared port daemon
