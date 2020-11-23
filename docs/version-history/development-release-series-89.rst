@@ -67,7 +67,6 @@ New Features:
   submit descriptions to be declared indepedently of jobs.
   :jira:`64`
 
-
 Bugs Fixed:
 
 - Fixed a bug introduced in 8.9.9 that, only when accounting groups with quotas
@@ -88,6 +87,10 @@ Bugs Fixed:
 - Fixed a bug in DAGMan where a ``_gotEvents`` warning kept appearing
   incorrectly in the output file.
   :jira:`15`
+  
+- Fixed a bug which caused the ``condor-annex-ec2`` script to exit prematurely
+  on some systemd platforms.
+  :jira:`22`
 
 Version 8.9.9
 -------------
