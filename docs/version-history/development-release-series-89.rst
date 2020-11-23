@@ -85,6 +85,10 @@ Bugs Fixed:
   when processing a locally-issued credential.
   :ticket:`7889`
 
+- Fixed a bug in DAGMan where a ``_gotEvents`` warning kept appearing
+  incorrectly in the output file.
+  :jira:`15`
+
 Version 8.9.9
 -------------
 
