@@ -9,13 +9,11 @@ Version 8.9.10
 
 Release Notes:
 
--  HTCondor version 8.9.10 not yet released.
-
-.. HTCondor version 8.9.10 released on Month Date, 2020.
+- HTCondor version 8.9.10 released on November 24, 2020.
 
 - For *condor_annex* users: Amazon Web Services is deprecating support for
   the Python 2.7 runtime used by *condor_annex*.  If you ran the
-  *condor_annnex* setup command with a previous version of HTCondor, you
+  *condor_annex* setup command with a previous version of HTCondor, you
   should update your setup to use the new runtime.  (Go to the AWS Lambda
   `console <https://console.aws.amazon.com/lambda>` and look for the
   ``HTCondorAnnex-CheckConnectivity`` function; click on it.  Scroll
@@ -26,31 +24,37 @@ Release Notes:
 
 New Features:
 
-- Added statistics to the collector ad about CCB.
-  :ticket:`7842`
-
-- When running a singularity job, the starter first runs `singularity test`
-  if this returns non-zero, the job is put on hold.
-  :ticket:`7801`
-
-- You may now tag instances from the command line of `condor_annex`.  Use
-  the ``-tag <name> <value>`` command-line option once for each tag.
-  :ticket:`7834`
-
-- Added support for requesting GPUs with grid universe jobs of type `batch`.
-  :ticket:`7757`
+- Added support for OAuth, SciTokens, and Kerberos credentials in local
+  universe jobs.
+  :ticket:`7693`
 
 - The python ``schedd.submit`` method now accepts a ``Submit`` object and itemdata
   to define the jobs, to be submitted.  The use of a ClassAd to define the job is now deprecated
   for this method
   :ticket:`7853`
 
-- A new python method ``schedd.edit`` can be used to set multiple attributes for a job specification
+- A new Python method ``schedd.edit`` can be used to set multiple attributes for a job specification
   with a single call to this method.
   :jira:`28`
 
-- OAuth and Krb credentials are now work for local universe jobs.
-  :ticket:`7693`
+- Added a new ``SCRIPT HOLD`` feature to DAGMan, allowing users to define a
+  script executable that runs when a job goes on hold.
+  :jira:`65`
+
+- Added a new ``SUBMIT-DESCRIPTION`` command to DAGMan, which allows inline
+  jobs to share submit descriptions.
+  :jira:`64`
+
+- You may now tag instances from the command line of `condor_annex`.  Use
+  the ``-tag <name> <value>`` command-line option once for each tag.
+  :ticket:`7834`
+
+- When running a singularity job, the starter first runs `singularity test`
+  if this returns non-zero, the job is put on hold.
+  :ticket:`7801`
+
+- Added support for requesting GPUs with grid universe jobs of type `batch`.
+  :ticket:`7757`
 
 - Added new configuration variable :macro:`MIN_FLOCK_LEVEL`, which can be
   used to specify how many of the remote HTCondor pools listed in
@@ -59,7 +63,7 @@ New Features:
   :jira:`62`
 
 - Job attributes set by the job using the Chirp command
-  ``set_job_attr_delayed`` are now propagated back to the orginating
+  ``set_job_attr_delayed`` are now propagated back to the originating
   *condor_schedd* by the Job Router and Condor-C (a.k.a grid universe type
   ``condor``).
   :jira:`63`
@@ -73,14 +77,6 @@ New Features:
   assumes that the CREDD is the current version when does not know what version it is,
   which is common when the CREDD is running on a different machine than *condor_submit*.
   :jira:`76`
-
-- Added a new ``SCRIPT HOLD`` feature to DAGMan, allowing users to define a
-  script executable that runs when a job goes on hold.
-  :jira:`65`
-
-- Added a new ``SUBMIT-DESCRIPTION`` command to DAGMan, which allows inline
-  submit descriptions to be declared indepedently of jobs.
-  :jira:`64`
 
 - The ``--add`` option of *bosco_cluster* now attempts to install a version
   of HTCondor on the remote cluster that closely matches the version installed
@@ -104,18 +100,15 @@ New Features:
 -  The *condor_useprio* tool now displays any submitter ceilings that are set.
    :tiket:`7837`
 
+- Added statistics to the collector ad about CCB.
+  :ticket:`7842`
+
 Bugs Fixed:
 
 - Fixed a bug introduced in 8.9.9 that, only when accounting groups with quotas
   were defined that caused the matchmaker to stop making new matches after several
   negotiation cycles.
   :jira:`83`
-
-- Fixed a bug specific to MacOS X which could cause the shared port daemon's
-  initial childalive message to be lost.  This would cause `condor_who` to
-  wrongly think that HTCondor hadn't started up until the shared port daemon
-  sent its second childalive message.
-  :ticket:`7866`
 
 - The *condor_credd* now signals the OAuth credmon, not the Kerberos credmon,
   when processing a locally-issued credential.
@@ -128,6 +121,12 @@ Bugs Fixed:
 - Fixed a bug which caused the ``condor-annex-ec2`` script to exit prematurely
   on some systemd platforms.
   :jira:`22`
+
+- Fixed a bug specific to MacOS X which could cause the shared port daemon's
+  initial childalive message to be lost.  This would cause `condor_who` to
+  wrongly think that HTCondor hadn't started up until the shared port daemon
+  sent its second childalive message.
+  :ticket:`7866`
 
 Version 8.9.9
 -------------
