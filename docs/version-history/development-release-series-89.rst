@@ -20,7 +20,7 @@ Release Notes:
   down to "Runtime settings"; click the "Edit" button.  Select "Python 3.8"
   from the drop-down list under "Runtime".  Then hit the "Save" button.
   You'll have to repeat this for each region you're using.)
-  :jira:24
+  :jira:`24`
 
 New Features:
 
@@ -98,7 +98,7 @@ New Features:
   :jira:`19`
 
 -  The *condor_useprio* tool now displays any submitter ceilings that are set.
-   :tiket:`7837`
+   :ticket:`7837`
 
 - Added statistics to the collector ad about CCB.
   :ticket:`7842`
