@@ -53,12 +53,27 @@ Job ClassAd Attributes
     specified in
     the :doc:`/man-pages/condor_submit` section.
 
+:index:`BatchProject<single: BatchProject; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; BatchProject>`
+
+``BatchProject``
+    For **batch** grid universe jobs, the name of the
+    project/account/allocation that should be charged for the job's
+    resource usage.
+
 :index:`BatchQueue<single: BatchQueue; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; BatchQueue>`
 
 ``BatchQueue``
-    For grid universe jobs destined for PBS, LSF or SGE, the name of the
+    For **batch** grid universe jobs, the name of the
     queue in the remote batch system.
+
+:index:`BatchRuntime<single: BatchRuntime; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; BatchRuntime>`
+
+``BatchRuntime``
+    For **batch** grid universe jobs, a limit in seconds on the job's
+    execution time, enforced by the remote batch system.
 
 :index:`BlockReadKbytes<single: BlockReadKbytes; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; BlockReadKbytes>`

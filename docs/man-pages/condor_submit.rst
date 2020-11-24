@@ -1650,6 +1650,11 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  azure_size = <machine type>
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
+    :index:`batch_project<single: batch_project; submit commands>`
+ batch_project = <projectname>
+    Used for **batch** grid universe jobs.
+    Specifies the name of the PBS/LSF/SGE/SLURM project, account, or
+    allocation that should be charged for the resources used by the job.
     :index:`batch_queue<single: batch_queue; submit commands>`
  batch_queue = <queuename>
     Used for **batch** grid universe jobs.
@@ -1659,6 +1664,11 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     specified by supplying the name after an ``@`` symbol.
     For example, to submit a job to the ``debug`` queue on cluster ``foo``,
     you would use the value ``debug@foo``.
+    :index:`batch_runtime<single: batch_runtime; submit commands>`
+ batch_runtime = <seconds>
+    Used for **batch** grid universe jobs.
+    Specifies a limit in seconds on the execution time of the job.
+    This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
     :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
  boinc_authenticator_file = <pathname>
     For grid type **boinc** jobs, specifies a path and file name of the
