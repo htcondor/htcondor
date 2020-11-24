@@ -1558,6 +1558,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Nov 23 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.12-1
+- Added a family of version comparison functions to ClassAds
+- Increased default Globus proxy key length to meet current NIST guidance
+
 * Mon Oct 26 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.9-1
 - The RPM packages requires globus, munge, scitokens, and voms from EPEL
 - Improved cgroup memory policy settings that set both hard and soft limit
