@@ -60,7 +60,7 @@ Depends: adduser,
          libdate-manip-perl,
          python3,
          lsb-base (>= 3.0-6),
-         libclassad10 (= ${binary:Version}),
+         libclassad11 (= ${binary:Version}),
          ${misc:Depends},
          ${perl:Depends},
          ${python3:Depends},
@@ -214,7 +214,7 @@ Description: distributed workload management system - debugging symbols
 Package: libclassad-dev
 Architecture: any
 Section: libdevel
-Depends: libclassad10 (= ${binary:Version}),
+Depends: libclassad11 (= ${binary:Version}),
          ${misc:Depends}
 Conflicts: libclassad0-dev
 Replaces: libclassad0-dev
@@ -227,7 +227,7 @@ Description: HTCondor classads expression language - development library
  .
  This package provides the static library and header files.
 
-Package: libclassad10
+Package: libclassad11
 Architecture: any
 Section: libs
 Depends: ${misc:Depends},
