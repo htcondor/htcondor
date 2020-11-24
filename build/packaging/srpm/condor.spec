@@ -2177,6 +2177,10 @@ fi
 %endif
 
 %changelog
+* Mon Nov 23 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.12-1
+- Added a family of version comparison functions to ClassAds
+- Increased default Globus proxy key length to meet current NIST guidance
+
 * Wed Oct 21 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.11-1
 - HTCondor now properly tracks usage over vanilla universe checkpoints
 - New ClassAd equality and inequality operators in the Python bindings
