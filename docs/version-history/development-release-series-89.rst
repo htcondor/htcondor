@@ -17,7 +17,8 @@ New Features:
 
 - Enhanced the optional job completion sent to the submitter to now
   include the batch name, if defined, and the submitting directory,
-  so the user has a better idea of which job the job id is. HTCONDOR-71
+  so the user has a better idea of which job the job id is.
+  :jira:`71`
 
 - Added submit commands ``batch_project`` and ``batch_runtime``, used to
   set job attributes ``BatchProject`` and ``BatchRuntime`` for **batch**
