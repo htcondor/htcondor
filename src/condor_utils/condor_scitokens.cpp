@@ -38,6 +38,8 @@ static int (*enforcer_generate_acls_ptr)(const Enforcer enf, const SciToken scit
 static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
 static int (*scitoken_get_expiration_ptr)(const SciToken token, long long *value, char **err_msg) =
 	nullptr;
+static int (*scitoken_get_claim_string_list_ptr)(const SciToken token, const char *key, char ***value, char **err_msg) = nullptr;
+static int (*scitoken_free_string_list_ptr)(char **value) = nullptr;
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
@@ -72,6 +74,9 @@ init_scitokens(CondorError &err)
 		}
 		g_init_success = false;
 	}
+	scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
+	scitoken_free_string_list_ptr = (int (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
+
 	return (g_init_success = true);
 #else
 	err.pushf("SCITOKENS", 1, "SciTokens library not supported on Windwos.");
@@ -83,7 +88,7 @@ init_scitokens(CondorError &err)
 
 bool
 htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
-	long long &expiry, std::vector<std::string> &bounding_set, int ident, CondorError &err)
+	long long &expiry, std::vector<std::string> &bounding_set, std::vector<std::string> &groups, std::string &jti, int ident, CondorError &err)
 {
 	if (!init_scitokens(err)) {
 		return false;
@@ -173,6 +178,24 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			}
 
 			(*enforcer_acl_free_ptr)(acls);
+		}
+
+		char *jti_char = nullptr;
+		if (!(*scitoken_get_claim_string_ptr)(token, "jti", &jti_char, nullptr)) {
+			if (jti_char) {jti = jti_char;}
+			free(jti_char);
+		}
+
+		char **group_list;
+		if (scitoken_get_claim_string_list_ptr &&
+			!(*scitoken_get_claim_string_list_ptr)(token, "wlcg.groups", &group_list, nullptr) &&
+			group_list)
+		{
+			int idx = 0;
+			char *grp;
+			while ( (grp = group_list[idx++]) ) {
+				groups.emplace_back(grp);
+			}
 		}
 
 		issuer = iss;

@@ -1023,14 +1023,30 @@ Condor_Auth_SSL::server_verify_scitoken()
 	std::string issuer, subject;
 	long long expiry;
 	std::vector<std::string> bounding_set;
+	std::vector<std::string> groups;
+	std::string jti;
 	if (!htcondor::validate_scitoken(m_client_scitoken, issuer, subject, expiry,
-		bounding_set, mySock_->getUniqueId(), err))
+		bounding_set, groups, jti, mySock_->getUniqueId(), err))
 	{
 		dprintf(D_SECURITY, "%s\n", err.getFullText().c_str());
 		return false;
 	}
+	classad::ClassAd ad;
+	if (!groups.empty()) {
+		std::stringstream ss;
+		bool first = true;
+		for (const auto &grp : groups) {
+			ss << (first ? "" : ",") << grp;
+			first = false;
+		}
+		ad.InsertAttr(ATTR_TOKEN_GROUPS, ss.str());
+	}
+	if (!jti.empty()) {
+		ad.InsertAttr(ATTR_TOKEN_ID, jti);
+	}
+	ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
+	ad.InsertAttr(ATTR_TOKEN_SUBJECT, subject);
 	if (!bounding_set.empty()) {
-		classad::ClassAd ad;
 		std::stringstream ss;
 		for (const auto &auth : bounding_set) {
 			dprintf(D_SECURITY|D_FULLDEBUG,
@@ -1039,8 +1055,8 @@ Condor_Auth_SSL::server_verify_scitoken()
 			ss << auth << ",";
 		}
 		ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
-		mySock_->setPolicyAd(ad);
 	}
+	mySock_->setPolicyAd(ad);
 	m_scitokens_auth_name = issuer + "," + subject;
 	return true;
 }

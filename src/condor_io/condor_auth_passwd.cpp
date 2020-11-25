@@ -2084,6 +2084,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 		if (!m_t_client.a_token.empty()) {
 			std::vector<std::string> authz;
 			time_t expiry = 0;
+			std::string username, issuer, groups, jti;
 			try {
 				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
 				if (decoded_jwt.has_payload_claim("scope")) {
@@ -2104,6 +2105,15 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 					auto token_expiry = decoded_jwt.get_expires_at();
 					expiry = std::chrono::duration_cast<std::chrono::seconds>(token_expiry.time_since_epoch()).count();
 				}
+				if (decoded_jwt.has_subject()) {
+					username = decoded_jwt.get_subject();
+				}
+				if (decoded_jwt.has_issuer()) {
+					issuer = decoded_jwt.get_issuer();
+				}
+				if (decoded_jwt.has_id()) {
+					jti = decoded_jwt.get_id();
+				}
 			} catch (...) {
 				dprintf(D_SECURITY, "PW: Unable to parse final token.\n");
 			}
@@ -2115,6 +2125,9 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				}
 				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
 			}
+			ad.InsertAttr(ATTR_TOKEN_SUBJECT, username);
+			ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
+			if (!jti.empty()) ad.InsertAttr(ATTR_TOKEN_ID, jti);
 			if (expiry > 0) {
 				ad.InsertAttr("TokenExpirationTime", expiry);
 			}
