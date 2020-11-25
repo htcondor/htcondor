@@ -68,7 +68,7 @@ following any of the the instructions above, and once you've started the
 container, you can proceed directly to :ref:`quick_start_guide` and learn
 how to run jobs.
 
-For other options, see our :ref:`docker image list <docker_image_list>`.
+For other options, see our :doc:`docker image list <for-docker>`.
 
 .. _kubernetes:
 

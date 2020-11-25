@@ -27,16 +27,12 @@ the ``get_htcondor`` tool does and provides a link to the rest of the details.
     follow its instructions) to reconfigure the machine to be one of
     these three roles.
 
+    [FIXME]  Does re-running the MSI work to pick a role?
+
     We don't recommend trying to add a machine configured as a "mini"
     HTCondor to pool, or trying to add execute machines to an existing
     "mini" HTCondor pool.  We also don't recommend creating an entire
     pool out of unprivileged installations.
-
-    If you installed a "mini" HTCondor without using ``get_htcondor``,
-    you can change to a specific role by removing the ``00-minicondor.config``
-    file and replacing it with the ``00-<role-name>.config`` file in the
-    directory from which you originally copied the former.
-    Then see :ref:`the_details` for what else you'll need to do.
 
 The Three Roles
 ---------------

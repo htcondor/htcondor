@@ -55,7 +55,7 @@ Options
 Exit Status
 -----------
 
-[FIXME]
+[FIXME]  Always 0, I assume?
 
 Installed Configuration
 -----------------------
@@ -68,12 +68,29 @@ The configurations this tool installs makes extensive use of meta-knobs.  We
 won't discuss them in detail here; the :doc:`condor_config_val` tool can
 display their details for you.
 
-minicondor
+Minicondor
 ##########
 
-[FIXME]
+[FIXME]  What will this actually be?
 
-the three roles
+A minicondor performs all of the roles on a single machine, so we can use
+the FS method to authenticate all connections.  Likewise, we force all
+network communications to occur over the loopback device, so we don't have
+to worry about eavesdropping; not requiring encryption is more efficient.
+
+.. code-block:: condor-config
+
+    # Require user-based security.  The default list of authentication
+    # methods includes FS on Linux.
+    use security: user_based
+
+    # This role includes the other three roles.
+    use role: personal
+
+    # Never make connections to other machines.
+    NETWORK_INTERFACE = 127.0.0.1
+
+The Three Roles
 ###############
 
 Because the three roles must communicate over the network to form a complete
