@@ -4340,7 +4340,7 @@ type=string
 tags=defrag
 
 [DEFRAG_REQUIREMENTS]
-default=PartitionableSlot && Offline=!=True
+default=
 type=string
 description=
 tags=defrag
@@ -4352,7 +4352,7 @@ description=
 tags=defrag
 
 [DEFRAG_WHOLE_MACHINE_EXPR]
-default=Cpus == TotalCpus && Offline=!=True
+default=Cpus == TotalSlotCpus
 type=string
 customization=normal
 description=

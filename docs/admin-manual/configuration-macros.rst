@@ -10669,23 +10669,29 @@ general discussion of *condor_defrag* may be found in
     value of its ``START`` expression at the time draining begins).
 
 :macro-def:`DEFRAG_REQUIREMENTS`
-    An expression that specifies which machines to drain. The default is
-
-    .. code-block:: condor-classad-expr
-
-          PartitionableSlot && Offline=!=True
-
+    An expression that narrows the selection of which machines to drain.
+    By default *condor_defrag* will drain all machines that are drainable.
     A machine, meaning a *condor_startd*, is matched if any of its
-    slots match this expression. Machines are automatically excluded if
-    they are already draining, or if they match
+    partitionable slots match this expression. Machines are automatically excluded if
+    they cannot be drained, are already draining, or if they match
     ``DEFRAG_WHOLE_MACHINE_EXPR``
     :index:`DEFRAG_WHOLE_MACHINE_EXPR`.
 
+    The *condor_defrag* daemon will always add the following requirements to ``DEFRAG_REQUIREMENTS``
+
+    .. code-block:: condor-classad-expr
+
+          PartitionableSlot && Offline =!= true && Draining =!= true
+
 :macro-def:`DEFRAG_CANCEL_REQUIREMENTS`
-    An expression that specifies which draining machines should have
-    draining be canceled. This defaults to
+    An expression that is periodically evaluated against machines that are draining.
+    When this expression evaluates to ``True``, draining will be cancelled.
+    This defaults to 
     ``$(DEFRAG_WHOLE_MACHINE_EXPR)``\ :index:`DEFRAG_WHOLE_MACHINE_EXPR`.
     This could be used to drain partial rather than whole machines.
+    Beginning with version 8.9.11, only machines that have no ``DrainReason``
+    or a value of ``"Defrag"`` for ``DrainReason``
+    will be checked to see if draining should be cancelled.
 
 :macro-def:`DEFRAG_RANK`
     An expression that specifies which machines are more desirable to
@@ -10702,10 +10708,11 @@ general discussion of *condor_defrag* may be found in
 
     .. code-block:: condor-classad-expr
 
-          Cpus == TotalCpus && Offline=!=True
+          Cpus == TotalSlotCpus
 
-    A machine is matched if any slot on the machine matches this
-    expression. Each *condor_startd* is considered to be one machine.
+    A machine is matched if any Partitionable slot on the machine matches this
+    expression and the machine is not draining or was drained by *condor_defrag*.
+    Each *condor_startd* is considered to be one machine.
     Whole machines are excluded when selecting machines to drain. They
     are also counted against ``DEFRAG_MAX_WHOLE_MACHINES``.
 
