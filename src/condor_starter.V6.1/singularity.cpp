@@ -208,7 +208,11 @@ Singularity::setup(ClassAd &machineAd,
 		// Update the environment variables
 		retargetEnvs(job_env, target_dir, execute_dir);
 
+	} else {
+		sing_args.AppendArg("--pwd");
+		sing_args.AppendArg(job_iwd.c_str());
 	}
+
 	sing_args.AppendArg("-B");
 	sing_args.AppendArg(bind_spec.c_str());
 
