@@ -1,3 +1,22 @@
+condor (8.9.10-1) stable; urgency=medium
+
+  * Fix bug where negotiator stopped making matches when group quotas are used
+  * Support OAuth, SciTokens, and Kerberos credentials in local universe jobs
+  * The Python schedd.submit method now takes a Submit object
+  * DAGMan can now optionally run a script when a job goes on hold
+  * DAGMan now provides a method for inline jobs to share submit descriptions
+  * Can now add arbitrary tags to condor annex instances
+  * Runs the "singularity test" before running the a singularity job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 24 Nov 2020 09:52:13 -0600
+
+condor (8.8.12-1) stable; urgency=medium
+
+  * Added a family of version comparison functions to ClassAds
+  * Increased default Globus proxy key length to meet current NIST guidance
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sat, 21 Nov 2020 16:40:52 -0600
+
 condor (8.9.9-1) stable; urgency=medium
 
   * The RPM packages requires globus, munge, scitokens, and voms from EPEL
