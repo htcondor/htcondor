@@ -20,8 +20,10 @@
 #include "condor_common.h"
 #include "condor_open.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "HashTable.h"
 #include "MapFile.h"
+#include "directory.h"
 
 #ifdef USE_MAPFILE_V2
 
@@ -447,6 +449,60 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 
 		offset = 0;
 		offset = ParseField(input_line, offset, method);
+
+		if (method == "INCLUDE") {
+			MyString path;
+			offset = ParseField(input_line, offset, path);
+			if (path.IsEmpty()) {
+				dprintf(D_ALWAYS, "ERROR: Empty filename for INCLUDE directive in the map (line %d)\n", line);
+				continue;
+			}
+			StatInfo si(path.c_str());
+			if (si.IsDirectory()) {
+				const char* _errstr;
+				int _erroffset;
+				std::string excludeRegex;
+					// We simply fail invalid regex as the config subsys should have EXCEPT'd
+					// in this case.
+				if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
+					dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
+					return 1;
+				}
+				Regex excludeFilesRegex;
+				if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+					dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
+						"config parameter is not a valid "
+						"regular expression.  Value: %s,  Error: %s",
+						excludeRegex.c_str(), _errstr ? _errstr : "");
+					return 1;
+				}
+				if(!excludeFilesRegex.isInitialized() ) {
+					dprintf(D_FULLDEBUG, "Failed to initialize exclude files regex.");
+					return 1;
+				}
+
+				Directory dir(&si);
+				dir.Rewind();
+				while (dir.Next()) {
+
+					if (dir.IsDirectory()) {
+						continue;
+					}
+					auto full_path = dir.GetFullPath();
+					if(!excludeFilesRegex.match(full_path)) {
+						ParseCanonicalizationFile(full_path, assume_hash);
+					} else {
+						dprintf(D_FULLDEBUG, "Ignoring token file "
+							"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
+							"'%s'\n", full_path);
+					}
+				}
+			} else {
+				ParseCanonicalizationFile(path, assume_hash);
+			}
+			continue;
+		}
+
 #ifdef USE_MAPFILE_V2
 		if (method.Length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
