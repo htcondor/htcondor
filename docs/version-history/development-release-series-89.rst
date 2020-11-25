@@ -27,7 +27,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug with singularity support where the job's cwd wasn't
+  being set to the scratch directory when `SINGULARITY_TARGET_DIR` wasn't
+  also set.
+  :jira:`91`
 
 Version 8.9.10
 --------------
