@@ -53,6 +53,34 @@ Job ClassAd Attributes
     specified in
     the :doc:`/man-pages/condor_submit` section.
 
+:index:`AuthTokenSubject<single: AuthTokenSubject; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenSubject>`
+
+``AuthTokenSubject``
+    A string recording the subject in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenIssuer<single: AuthTokenIssuer; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenIssuer>`
+
+``AuthTokenIssuer``
+    A string recording the issuer in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenGroup<single: AuthTokenGroup; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenGroup>`
+
+``AuthTokenGroup``
+    A string recording the groups in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenId<single: AuthTokenId; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenId>`
+
+``AuthTokenId``
+    A string recording the unique identifier of the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
 :index:`BatchProject<single: BatchProject; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; BatchProject>`
 

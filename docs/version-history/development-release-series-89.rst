@@ -25,6 +25,11 @@ New Features:
   grid universe jobs.
   :jira:`44`
 
+- When token authentication (IDTOKENS or SCITOKENS) is used, HTCondor will
+  now record the subject, issuer, and groups, from the token used to
+  submit jobs.
+  :jira:`90`
+
 Bugs Fixed:
 
 - None.
