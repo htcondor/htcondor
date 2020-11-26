@@ -79,7 +79,98 @@ init_scitokens(CondorError &err)
 #endif
 }
 
+std::string
+normalize_token(const std::string &input_token)
+{
+	static const std::string whitespace = " \t\f\n\v\r";
+	static const std::string nonheader_whitespace = "\r\n";
+	auto begin = input_token.find_first_not_of(whitespace);
+	if (begin == std::string::npos) {return "";}
+
+	std::string token = input_token.substr(begin);
+	auto end = token.find_last_not_of(whitespace);
+	token = token.substr(0, end + 1);
+
+		// If non-permitted header characters are present ("\r\n"),
+		// then this token is not permitted.
+	if (token.find(nonheader_whitespace) != std::string::npos) {return "";}
+
+	return token;
+}
+
+std::string
+find_token_in_file(const std::string &token_file)
+{   
+	dprintf(D_FULLDEBUG,  "Looking for token in file %s\n", token_file.c_str());
+	int fd = safe_open_no_create(token_file.c_str(), O_RDONLY);
+	if (fd == -1) {
+		return "";
+	}
+
+	static const size_t max_size = 16384;
+
+	std::vector<char> input_buffer;
+	input_buffer.reserve(max_size);
+
+	ssize_t cur_size = 0;
+
+	ssize_t retval;
+	do {
+		retval = read(fd, &input_buffer[cur_size], max_size - cur_size);
+		if (retval != -1) cur_size += retval;
+	} while ((retval > 0) || ((retval == -1) && (errno == EAGAIN || errno == EINTR)));
+
+	close(fd);
+
+	if (retval == -1) {
+		return "";
+	}
+
+	std::string token(&input_buffer[0], cur_size);
+
+	return normalize_token(token);
+}
+
 } // end anonymous namespace
+
+std::string
+htcondor::discover_token()
+{
+	const char *bearer_token = getenv("BEARER_TOKEN");
+	std::string token;
+	if (bearer_token && *bearer_token &&
+		!(token = normalize_token(bearer_token)).empty())
+	{
+		return token;
+	}
+
+	const char *bearer_token_file = getenv("BEARER_TOKEN_FILE");
+	if (bearer_token_file &&
+		!(token = find_token_in_file(bearer_token_file)).empty())
+	{
+		return token;
+	}
+
+#ifndef WIN32
+	uid_t euid = geteuid();
+	std::string fname = "/bt_u";
+	fname += std::to_string(euid);
+
+	const char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
+	if (xdg_runtime_dir) {
+		std::string xdg_token_file = std::string(xdg_runtime_dir) + fname;
+		if (!(token = find_token_in_file(xdg_token_file)).empty()) {
+			return token;
+		}
+	}
+
+	return find_token_in_file("/tmp" + fname);
+#else
+		// WLCG profile doesn't define search paths on Windows;
+		// skip this for now.
+	return "";
+#endif
+}
 
 bool
 htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
