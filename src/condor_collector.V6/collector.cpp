@@ -119,6 +119,8 @@ int CollectorDaemon::pending_query_workers = 0;
 bool CollectorDaemon::want_track_queries_by_subsys = false;
 #endif
 
+AdTransforms CollectorDaemon::m_ad_xfm;
+
 //---------------------------------------------------------
 
 
@@ -1992,6 +1994,9 @@ void CollectorDaemon::Config()
 	}
 
 	forwardClaimedPrivateAds = param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true);
+
+	m_ad_xfm.config();
+
 	return;
 }
 
@@ -2202,6 +2207,10 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 		dprintf( D_FULLDEBUG, "Trying to forward ad on, but %s=False\n", ATTR_SHOULD_FORWARD );
 		return;
 	}
+
+	// Transform ad
+	//
+	m_ad_xfm.transform(theAd, nullptr);
 
     for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
         DCCollector* view_coll = e->collector;

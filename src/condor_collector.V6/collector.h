@@ -31,6 +31,7 @@
 #include "collector_stats.h"
 #include "dc_collector.h"
 #include "offline_plugin.h"
+#include "ad_transforms.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -217,6 +218,7 @@ private:
 
 	static int setAttrLastHeardFrom( ClassAd* cad, unsigned long time );
 
+	static AdTransforms m_ad_xfm;
 };
 
 #endif
