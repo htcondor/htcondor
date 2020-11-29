@@ -77,9 +77,7 @@ else (WINDOWS)
         endif()
         if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8")
             set(USE_SYSTEM_BOOST True)
-        endif()
-        if (${SYSTEM_NAME} MATCHES "Ubuntu-20")
-            # BOOST_COMPONENTS breaks CMake boost detection on Ubuntu 20.04
+            # BOOST_COMPONENTS breaks CMake boost detection on Ubuntu 20.04, Debian bullseye
             set(BOOST_COMPONENTS "" )
         endif()
     endif()
