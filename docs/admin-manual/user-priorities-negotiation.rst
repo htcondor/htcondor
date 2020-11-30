@@ -34,19 +34,40 @@ Real User Priority (RUP)
 :index:`real user priority (RUP)`
 :index:`real (RUP)<single: real (RUP); user priority>`
 
-A user's RUP measures the resource usage of the user through time. Every
-user begins with a RUP of one half (0.5), and at steady state, the RUP
-of a user equilibrates to the number of resources used by that user.
-Therefore, if a specific user continuously uses exactly ten resources
-for a long period of time, the RUP of that user stabilizes at ten.
+A user's RUP reports a smoothed average of the number of cores a user
+has used over some recent period of time. Every user begins with a RUP of 
+one half (0.5), which is the lowest possible value. At steady state, the RUP
+of a user equilibrates to the number of cores currently used.
+So, if a specific user continuously uses exactly ten cores
+for a long period of time, the RUP of that user asymtompically 
+approaches ten.
 
-However, if the user decreases the number of resources used, the RUP
-gets better. The rate at which the priority value decays can be set by
-the macro ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE`, a time
-period defined in seconds. Intuitively, if the ``PRIORITY_HALFLIFE``
-:index:`PRIORITY_HALFLIFE` in a pool is set to 86400 (one day),
-and if a user whose RUP was 10 has no running jobs, that user's RUP
-would be 5 one day later, 2.5 two days later, and so on.
+However, if the user decreases the number of cores used, the RUP
+asymtompically lowers to the new value. The rate at which the priority 
+value decays can be set by the macro ``PRIORITY_HALFLIFE`` 
+:index:`PRIORITY_HALFLIFE`, a time period defined in seconds. Intuitively,
+if the ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE` in a pool is set 
+to the default of 86400 seconds (one day), and a user with a RUP of 10 
+has no running jobs, that user's RUP would be 5 one day later, 2.5 
+two days later, and so on.
+
+For example, if a new user has no historical usage, their RUP will start 
+at 0.5  If that user then has 100 cores running, their RUP will grow
+as the graph below show:
+
+.. figure:: /_images/user-prio1.png
+    :width: 1600
+    :alt: User Priority
+    :align: center
+
+Or, if a new user with no historical usage has 100 cores running
+for 24 hours, then removes all the jobs, so has no cores running, 
+their RUP will grow and shrink as shown below:
+
+.. figure:: /_images/user-prio2.png
+    :width: 1600
+    :alt: User Priority
+    :align: center
 
 Effective User Priority (EUP)
 -----------------------------
