@@ -33,7 +33,7 @@ if (HAVE_EXT_GLOBUS)
 	condor_exe( nordugrid_gahp
 				"${HeaderFiles};${SourceFiles}"
 				${C_SBIN}
-				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}"
+                "${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND};${HAVE_LIBDL}"
 				OFF )
 
 	# Check nordugrid_gahp's shared library dependencies and copy a

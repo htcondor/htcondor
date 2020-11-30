@@ -49,6 +49,12 @@ if $(grep -qi stretch /etc/os-release); then
     suffix=''
 elif $(grep -qi buster /etc/os-release); then
     suffix='b1'
+elif $(grep -qi bullseye /etc/os-release); then
+    suffix='n1'
+    mv debian/control.focal debian/control
+    mv debian/htcondor.install.focal debian/htcondor.install
+    mv debian/rules.focal debian/rules
+    mv debian/patches/series.focal debian/patches/series
 elif $(grep -qi xenial /etc/os-release); then
     suffix=''
 elif $(grep -qi bionic /etc/os-release); then
