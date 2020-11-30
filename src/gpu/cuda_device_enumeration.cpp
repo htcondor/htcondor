@@ -309,6 +309,8 @@ setCUDAFunctionPointers() {
 
 		return cudart_handle;
 	} else {
+	    fprintf( stderr, "Unable to load a CUDA library (%s or %s).\n",
+	        cuda_library, cudart_library );
 		return NULL;
 	}
 }

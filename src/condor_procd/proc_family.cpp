@@ -876,6 +876,7 @@ ProcFamily::remove_exited_processes()
 			// away when we pull out a separate ProcGroup
 			// class
 			//
+#if defined(CHATTY_PROC_LOG)
 			if (m_root_pid != 0) {
 				dprintf(D_ALWAYS,
 				        "process %u (of family %u) has exited\n",
@@ -887,7 +888,7 @@ ProcFamily::remove_exited_processes()
 				        "process %u (not in monitored family) has exited\n",
 				        member->m_proc_info->pid);
 			}
-
+#endif /* defined(CHATTY_PROC_LOG) */
 			// save CPU usage from this process
 			//
 			m_exited_user_cpu_time +=
