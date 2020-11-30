@@ -1965,11 +1965,27 @@ ProcAPI::buildPidList() {
 	std::vector<pid_t> newPidList;
 	int rv = build_pid_list(newPidList);
 
+    double fraction = 0.70;
+    char * fraction_str = getenv( "_CONDOR_PROCAPI_RETRY_FRACTION" );
+    if( fraction_str ) {
+        char * endptr = NULL;
+        double d = strtod( fraction_str, & endptr );
+        if( endptr != NULL && *endptr == '\0' ) {
+            fraction = d;
+        }
+    }
+    dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f\n", fraction );
+
+    bool suddenly_too_many_fewer = false;
+    if( rv >= 0 && rv < (int)(pidList.size() * 0.70) ) {
+        suddenly_too_many_fewer = true;
+    }
+
 	if( rv == -1 ) {
 		return PROCAPI_FAILURE;
 	} else if( rv == -2 ) {
 		return PROCAPI_FAILURE;
-	} else if( rv == -3 ) {
+	} else if( rv == -3 || suddenly_too_many_fewer ) {
 		dprintf( D_ALWAYS, "ProcAPI: detected invalid read of /proc.\n" );
 
 		std::stringstream buffer;
@@ -1995,8 +2011,6 @@ ProcAPI::buildPidList() {
 			return PROCAPI_SUCCESS;
 		}
 	} else {
-		// We could compare the number of PID entries against the number of
-		// PID entries we found last time, but the seems really hard to tune.
 		pidList = newPidList;
 		return PROCAPI_SUCCESS;
 	}
