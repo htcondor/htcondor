@@ -76,22 +76,45 @@ Effective User Priority (EUP)
 :index:`effective (EUP)<single: effective (EUP); user priority>`
 
 The effective user priority (EUP) of a user is used to determine how
-many resources that user may receive. The EUP is linearly related to the
-RUP by a priority factor which may be defined on a per-user basis.
-Unless otherwise configured, an initial priority factor for all users as
+many cores a user should receive. The EUP is simply the
+RUP multiplied by a priority factor the administrator can set per-user.
+The default initial priority factor for all new users as
 they first submit jobs is set by the configuration variable
 ``DEFAULT_PRIO_FACTOR`` :index:`DEFAULT_PRIO_FACTOR`, and defaults
-to the value 1000.0. If desired, the priority factors of specific users
-can be increased using *condor_userprio*, so that some are served
-preferentially.
+to 1000.0. An administrator can change this priority factor 
+using the *condor_userprio* command.  For example, setting
+the priority factor of some user to 2,000 will grant that user
+twice as many cores as a user with the default priority factor of 
+1,000, assuming they both have the same historical usage.
 
 The number of resources that a user may receive is inversely related to
-the ratio between the EUPs of submitting users. Therefore user A with
+the ratio between the EUPs of submitting users. User A with
 EUP=5 will receive twice as many resources as user B with EUP=10 and
 four times as many resources as user C with EUP=20. However, if A does
 not use the full number of resources that A may be given, the available
 resources are repartitioned and distributed among remaining users
 according to the inverse ratio rule.
+
+Assume two users with no history, named A and B, using a pool with 100 cores. To
+simplify the math, also assume both users have an equal priority factor of 1.0.
+User A submits a very large number of short-running jobs at time t = 0 zero.  User
+B waits until 48 hours later, and also submits an infinite number of short jobs.
+At the beginning, the EUP doesn't matter, as there is only one user with jobs, 
+and so user A gets the whole pool.  At the 48 hour mark, both users compete for
+the pool.  Assuming the default PRIORITY_HALFLIFE of 24 hours, user A's RUP
+should be about 75.0 at the 48 hour mark, and User B will still be the minimum of
+.5.  At that instance, User B deserves 150 times User A.  However, this ratio will
+decay quickly.  User A's share of the pool will drop from all 100 cores to less than
+one core immediately, but will quickly rebound to a handful of cores, and will 
+asymtompically approach half of the pool as User B gets the inverse. A graph
+of these two users might look like this:
+
+.. figure:: /_images/fair-share.png
+    :width: 1600
+    :alt: Fair Share
+    :align: center
+
+
 
 HTCondor supplies mechanisms to directly support two policies in which
 EUP may be useful:
