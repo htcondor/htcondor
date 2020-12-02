@@ -2534,6 +2534,7 @@ usage()
 #if !defined(WIN32)
 	fprintf( stderr, "\t-interactive\t\tsubmit an interactive session job\n" );
 #endif
+	fprintf( stderr, "\t-factory\t\tSubmit a late materialization job factory\n");
 	fprintf( stderr, "\t-name <name>\t\tsubmit to the specified schedd\n" );
 	fprintf( stderr, "\t-remote <name>\t\tsubmit to the specified remote schedd\n"
 					 "\t              \t\t(implies -spool)\n" );
