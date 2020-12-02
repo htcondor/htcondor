@@ -116,7 +116,7 @@ void hex_dump(FILE* out, const unsigned char * buf, size_t cb, int offset)
 }
 
 #ifdef WIN32
-// to simplfy the dynamic loading of .so/.dll, make a Windows function
+// to simplify the dynamic loading of .so/.dll, make a Windows function
 // for looking up a symbol that looks like the equivalent *nix function.
 static void* dlsym(void* hlib, const char * symbol) {
 	return (void*)GetProcAddress((HINSTANCE)(LONG_PTR)hlib, symbol);
@@ -175,7 +175,7 @@ const std::string & Format(const char * fmt, ...) {
 	static char * temp = NULL;
 	static int    max_temp = 0;
 
-	if ( ! temp) { max_temp = 4096; temp = (char*)malloc(max_temp+1); }
+	if (! temp) { max_temp = 4096; temp = (char*)malloc(max_temp+1); }
 
 	va_list args;
 	va_start(args, fmt);
@@ -307,6 +307,7 @@ cudaError_t CUDACALL sim_cudaGetDeviceCount(int* pdevs) {
 	}
 	return cudaSuccess;
 }
+
 cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
 	if (sim_index < 0 || sim_index > sim_index_max)
 		return cudaErrorInvalidValue;
@@ -381,7 +382,7 @@ int print_error(int mode, const char * fmt, ...) {
 	bool is_error = true;
 	switch (mode) {
 	case MODE_VERBOSE:
-		if ( ! g_verbose) return 0;
+		if (! g_verbose) return 0;
 		is_error = false;
 		out = stdout;
 		break;
@@ -390,7 +391,7 @@ int print_error(int mode, const char * fmt, ...) {
 		is_error = false;
 		// fall through
 	case MODE_DIAGNOSTIC_ERR:
-		if ( ! g_diagnostic) return 0;
+		if (! g_diagnostic) return 0;
 		break;
 	}
 
@@ -410,7 +411,7 @@ int print_error(int mode, const char * fmt, ...) {
 		// TJ: I don't think its possible to get where when g_config_syntax is on
 		// because all known inputs will be < 4k in size.
 		// but if we do, just suppress this error message
-		if ( ! g_config_syntax) {
+		if (! g_config_syntax) {
 			fprintf(stderr, "internal error, %d is not enough space to format, value will be truncated.\n", max_temp);
 		}
 		temp[max_temp-1] = 0;
@@ -448,7 +449,7 @@ bool cu_Init(void* cu_handle) {
 	g_cu_handle = cu_handle;
 	print_error(MODE_DIAGNOSTIC_MSG, "diag: using nvcuda for gpu discovery\n");
 	cuInit = (cu_uint_t)dlsym(cu_handle, "cuInit");
-	if ( ! cuInit) return false;
+	if (! cuInit) return false;
 
 	cuDeviceGet = (cuda_dev_int_t)dlsym(cu_handle, "cuDeviceGet");
 	cuDeviceGetAttribute = (cuda_ga_t)dlsym(cu_handle, "cuDeviceGetAttribute");
@@ -458,7 +459,7 @@ bool cu_Init(void* cu_handle) {
 	cuDeviceGetLuid = (cuda_luid_t)dlsym(cu_handle, "cuDeviceGetLuid");
 	cuDeviceComputeCapability = (cuda_cc_t)dlsym(cu_handle, "cuDeviceComputeCapability");
 	cuDeviceTotalMem = (cuda_size_t)dlsym(cu_handle, "cuDeviceTotalMem_v2");
-	if ( ! cuDeviceTotalMem) {
+	if (! cuDeviceTotalMem) {
 		print_error(MODE_DIAGNOSTIC_MSG, "diag: dlsym failed for cuDeviceTotalMem_v2, a max of 4GB Memory will be reported\n");
 		cuDeviceTotalMem = (cuda_size_t)dlsym(cu_handle, "cuDeviceTotalMem");
 	}
@@ -475,12 +476,12 @@ bool cu_Init(void* cu_handle) {
 	return ret == CUDA_SUCCESS;
 }
 
-cudaError_t CUDACALL cu_cudaRuntimeGetVersion(int* pver) { 
+cudaError_t CUDACALL cu_cudaRuntimeGetVersion(int* pver) {
 	*pver = 0;
 	cudaError_t ret = cudaErrorNoDevice;
 
 #ifdef WIN32
-	// On windows, the CUDA runtime isn't installed in the system directory, 
+	// On windows, the CUDA runtime isn't installed in the system directory,
 	// but we can locate it by looking in the registry.
 	// TODO: handle multiple installed runtimes...
 	const char * reg_key = "SOFTWARE\\NVIDIA Corporation\\GPU Computing Toolkit\\CUDA";
@@ -520,7 +521,7 @@ cudaError_t CUDACALL cu_cudaRuntimeGetVersion(int* pver) {
 		dlclose(handle);
 	}
 #endif
-	return ret; 
+	return ret;
 }
 
 cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
@@ -552,7 +553,7 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		cuDeviceGetAttribute(&p->multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
 		cuDeviceGetAttribute(&p->ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, dev);
 	}
-	return res; 
+	return res;
 }
 
 cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropInts * dpi, BasicProps * p)
@@ -570,6 +571,7 @@ cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropI
 	}
 	return cudaSuccess;
 }
+
 cudaError_t CUDACALL cuda9_getBasicProps(int devID, BasicProps * p) {
 	cudaDevicePropBuffer buf;
 	memset(buf.props, 0, sizeof(buf.props));
@@ -588,6 +590,7 @@ cudaError_t CUDACALL cuda9_getBasicProps(int devID, BasicProps * p) {
 
 	return basicPropsFromCudaProps(dps, dpi, p);
 }
+
 cudaError_t CUDACALL cuda10_getBasicProps(int devID, BasicProps * p) {
 	cudaDevicePropBuffer buf;
 	memset(buf.props, 0, sizeof(buf.props));
@@ -660,7 +663,7 @@ clReturn oclGetInfo(cl_platform_id plid, cl_e_platform_info eInfo, std::string &
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
-		if ( ! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
+		if (! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = (unsigned int)(cb*2);
 		clr = ocl.GetPlatformInfo(plid, eInfo, g_cBuffer, g_buffer, &cb);
 	}
@@ -680,7 +683,7 @@ clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, std::string & val)
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
-		if ( ! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
+		if (! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = (unsigned int)(cb*2);
 		clr = ocl.GetDeviceInfo(did, eInfo, g_cBuffer, g_buffer, &cb);
 	}
@@ -724,7 +727,7 @@ int ocl_Init(void) {
 	}
 	ocl_was_initialized = 1;
 
-	if ( ! ocl.GetPlatformIDs) {
+	if (! ocl.GetPlatformIDs) {
 		return cudaErrorInitializationError;
 	}
 
@@ -861,6 +864,9 @@ main( int argc, const char** argv)
 	const char * opt_tag = "GPUs";
 	const char * opt_pre = "CUDA";
 	const char * opt_pre_arg = NULL;
+	int opt_repeat = 0;
+	int opt_packed = 0;
+	const char * opt_mapping = NULL;
 	const char * pcolon;
 	int i;
     int dev;
@@ -929,6 +935,24 @@ main( int argc, const char** argv)
 		else if (is_dash_arg_prefix(argv[i], "diagnostic", 4)) {
 			g_diagnostic = 1;
 		}
+		else if (is_dash_arg_prefix(argv[i], "repeat", -1)) {
+			if (! argv[i+1] || '-' == *argv[i+1]) {
+				opt_repeat = 2;
+			} else {
+				opt_repeat = atoi(argv[++i]);
+			}
+		}
+		else if (is_dash_arg_prefix(argv[i], "packed", -1)) {
+			opt_packed = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "mapping", -1)) {
+			if (! argv[i+1] || '-' == *argv[i+1]) {
+				fprintf (stderr, "Error: -mapping requires an argument\n");
+				usage(stderr, argv[0]);
+				return 1;
+			}
+			opt_mapping = argv[++i];
+		}
 		else if (is_dash_arg_prefix(argv[i], "config", -1)) {
 			g_config_syntax = 1;
 			opt_config = 1;
@@ -955,7 +979,7 @@ main( int argc, const char** argv)
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
-			if ( ! argv[i+1] || '-' == *argv[i+1]) {
+			if (! argv[i+1] || '-' == *argv[i+1]) {
 				fprintf (stderr, "Error: -device requires an argument\n");
 				usage(stderr, argv[0]);
 				return 1;
@@ -978,7 +1002,7 @@ main( int argc, const char** argv)
 		else if (is_dash_arg_prefix(argv[i], "nvcuda",-1)) {
 			// use nvcuda instead of cudart, (option is for testing...)
 			opt_nvcuda = 1;
-		} 
+		}
 		else if (is_dash_arg_prefix(argv[i], "rl", 2) || is_dash_arg_prefix(argv[i], "cudarl", 6)) {
 			opt_cudarl = 1;
 		}
@@ -991,7 +1015,7 @@ main( int argc, const char** argv)
 
 	// function pointers for runtime linking to cudarl stuff
 	typedef cudaError_t (CUDACALL* cuda_t)(int*); //Used for DLFCN
-	cuda_t cudaGetDeviceCount = NULL; 
+	cuda_t cudaGetDeviceCount = NULL;
 	cuda_t cudaDriverGetVersion = NULL;
 	dev_basic_props getBasicProps = NULL;
 
@@ -1042,22 +1066,22 @@ main( int argc, const char** argv)
 	} else {
 
 	#ifdef WIN32
-		if ( ! opt_cuda_only) {
+		if (! opt_cuda_only) {
 			const char * opencl_library = "OpenCL.dll";
 			ocl_handle = LoadLibrary(opencl_library);
-			if ( ! ocl_handle && opt_opencl) {
+			if (! ocl_handle && opt_opencl) {
 				print_error(MODE_ERROR, "Error %d: Cant open library: %s\r\n", GetLastError(), opencl_library);
 			}
 		}
 
 		const char * cudart_library = "cudart.dll"; // "cudart32_55.dll"
-		if ( ! opt_cudarl) cuda_handle = LoadLibrary("nvcuda.dll");
+		if (! opt_cudarl) cuda_handle = LoadLibrary("nvcuda.dll");
 		if (cuda_handle && cu_Init(cuda_handle)) {
 			opt_nvcuda = 1;
 			cudart_library = "nvcuda.dll";
 		} else {
-			if ( ! cuda_handle) {
-				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "can't open nvcuda.dll. Error %d\r\n", GetLastError());
+			if (! cuda_handle) {
+				if (! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "can't open nvcuda.dll. Error %d\r\n", GetLastError());
 			} else {
 				FreeLibrary(cuda_handle);
 				cuda_handle = NULL;
@@ -1069,7 +1093,7 @@ main( int argc, const char** argv)
 				// if no cuda, fall back to OpenCL detection
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %d: Can't open library: %s\r\n", GetLastError(), cudart_library);
-				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if (! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
@@ -1079,15 +1103,15 @@ main( int argc, const char** argv)
 		const char * nvml_library = "nvml.dll";
 		if (opt_dynamic) {
 			nvml_handle = LoadLibrary(nvml_library);
-			if ( ! nvml_handle) {
+			if (! nvml_handle) {
 				print_error(MODE_ERROR, "Error %d: Can't open library: %s\r\n", GetLastError(), nvml_library);
 			}
 		}
 	#else
-		if ( ! opt_cuda_only) {
+		if (! opt_cuda_only) {
 			const char * opencl_library = "libOpenCL.so";
 			ocl_handle = dlopen(opencl_library, RTLD_LAZY);
-			if ( ! ocl_handle && opt_opencl) {
+			if (! ocl_handle && opt_opencl) {
 				print_error(MODE_ERROR, "Error %s: Can't open library: %s\n", dlerror(), opencl_library);
 			}
 			dlerror(); //Reset error
@@ -1095,13 +1119,13 @@ main( int argc, const char** argv)
 
 		const char * cudart_library = "libcudart.so";
 		const char * nvcuda_library = "libcuda.so";
-		if ( ! opt_cudarl) cuda_handle = dlopen(nvcuda_library, RTLD_LAZY);
+		if (! opt_cudarl) cuda_handle = dlopen(nvcuda_library, RTLD_LAZY);
 		if (cuda_handle && cu_Init(cuda_handle)) {
 			opt_nvcuda = 1;
 			cudart_library = nvcuda_library;
 		} else {
-			if ( ! cuda_handle) {
-				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "Can't open %s. Error %s\n", nvcuda_library, dlerror());
+			if (! cuda_handle) {
+				if (! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "Can't open %s. Error %s\n", nvcuda_library, dlerror());
 			} else {
 				dlclose(cuda_handle);
 				cuda_handle = NULL;
@@ -1113,7 +1137,7 @@ main( int argc, const char** argv)
 				// if no cuda, fall back to OpenCL detection
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %s: Can't open library: %s\n", dlerror(), cudart_library);
-				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if (! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
@@ -1122,11 +1146,11 @@ main( int argc, const char** argv)
 		const char * nvml_library = "libnvidia-ml.so.1";
 		if (opt_dynamic) {
 			nvml_handle = dlopen(nvml_library, RTLD_LAZY);
-			if ( ! nvml_handle) {
+			if (! nvml_handle) {
 				nvml_library = "libnvidia-ml.so";
 				nvml_handle = dlopen(nvml_library, RTLD_LAZY);
 			}
-			if ( ! nvml_handle) {
+			if (! nvml_handle) {
 				print_error(MODE_ERROR, "Error %s: Cant open library: %s\n", dlerror(), nvml_library);
 			}
 			dlerror(); //Reset error
@@ -1146,13 +1170,13 @@ main( int argc, const char** argv)
 			cudaGetDeviceCount = ocl_GetDeviceCount;
 			opt_pre = "OCL";
 		}
-		if ( ! cudaGetDeviceCount) {
+		if (! cudaGetDeviceCount) {
 			#ifdef WIN32
 			print_error(MODE_ERROR, "Error %d: Cant find %s in library: %s\r\n", GetLastError(), "cudaGetDeviceCount", cudart_library);
 			#else
 			print_error(MODE_ERROR, "Error %s: Cant find %s in library: %s\n", dlerror(), "cudaGetDeviceCount", cudart_library);
 			#endif
-			if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
+			if (! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 			if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 			return 0;
 		}
@@ -1172,16 +1196,16 @@ main( int argc, const char** argv)
 	if (opt_opencl) {
 		int cd = 0;
 		ocl_GetDeviceCount(&cd);
-		if ( ! deviceCount) {
+		if (! deviceCount) {
 			deviceCount = cd;
 			opt_pre = "OCL";
 		}
 	}
-    
+
 	// If there are no devices, there is nothing more to do
     if (deviceCount == 0) {
         // There is no device supporting CUDA
-		if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
+		if (! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 		if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 		return 0;
 	}
@@ -1189,7 +1213,7 @@ main( int argc, const char** argv)
 
 	// lookup the function pointers we will need later from the cudart library
 	//
-	if ( !opt_simulate && cuda_handle) {
+	if (! opt_simulate && cuda_handle) {
 		if (opt_nvcuda) {
 			// if we have nvcuda loaded rather than cudart, we can simulate 
 			// cudart functions from nvcuda functions. 
@@ -1211,9 +1235,9 @@ main( int argc, const char** argv)
 	// load functions we will need from the nvml library, if we don't have that library
 	// that's ok it just means there is no dynamic info.
 	//
-	if ( ! opt_simulate && nvml_handle) {
+	if (! opt_simulate && nvml_handle) {
 		nvmlInit = (nvml_void) dlsym(nvml_handle, "nvmlInit_v2"); // (void)
-		if ( ! nvmlInit) {
+		if (! nvmlInit) {
 			have_nvml = 0;
 		} else {
 			have_nvml = 1;
@@ -1252,27 +1276,6 @@ main( int argc, const char** argv)
 	//
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
-#if 0
-	for (dev = 0; dev < deviceCount; dev++) {
-		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
-			continue;
-		}
-
-		char prefix[100];
-		sprintf(prefix,"%s%d",opt_pre,dev);
-		dev_props[prefix].clear(); // this has the side effect of creating the KVP for prefix.
-		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
-		detected_gpus += prefix;
-		++filteredDeviceCount;
-	}
-
-	if ( ! opt_cron) {
-		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
-	}
-	if (opt_config) {
-		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
-	}
-#endif
 
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {
@@ -1281,13 +1284,8 @@ main( int argc, const char** argv)
 			continue;
 		}
 
-	#if 1
 		char gpuid[100];
 		sprintf(gpuid,"%s%d",opt_pre,dev); // establish a default GPU identifier. e.g CUDA0. we might replace this later
-	#else
-		char prefix[100];
-		sprintf(prefix,"%s%d",opt_pre,dev);
-	#endif
 
 		if ((opt_basic || opt_uuid) && getBasicProps) {
 
@@ -1335,7 +1333,7 @@ main( int argc, const char** argv)
 				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, fullver)) {
 					size_t ix = fullver.find_first_of(' '); // skip OpenCL
 					std::string vervend = fullver.substr(ix+1);
-					ix = vervend.find_first_of(' '); 
+					ix = vervend.find_first_of(' ');
 					std::string ver = vervend.substr(0, ix); // split version from vendor info.
 					props["OpenCLVersion"] = ver;
 				}
@@ -1365,7 +1363,7 @@ main( int argc, const char** argv)
 			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, val)) {
 				size_t ix = val.find_first_of(' '); // skip OpenCL
 				std::string vervend = val.substr(ix+1);
-				ix = vervend.find_first_of(' '); 
+				ix = vervend.find_first_of(' ');
 				std::string ver = vervend.substr(0, ix); // split version from vendor info.
 				props["OpenCLVersion"] = ver;
 			}
@@ -1386,25 +1384,59 @@ main( int argc, const char** argv)
 			}
 		}
 
-		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
+		if (! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += gpuid;
 		++filteredDeviceCount;
 	}
 
-#if 1
-	if ( ! opt_cron) {
+	//
+	// If the user requested it, adjust detected_gpus.
+	//
+	if( opt_repeat ) {
+		std::string original_detected_gpus = detected_gpus;
+
+		if( opt_packed == 0 ) {
+			for( int i = 1; i < opt_repeat; ++i ) {
+				detected_gpus += ", " + original_detected_gpus;
+			}
+		} else {
+			// We could try to do this via the data structures, but we don't
+			// actually record the UUIDs anywhere than a data structure keyed
+			// by the UUID...
+			detected_gpus.clear();
+
+			size_t left = 0, delim = 0;
+			do {
+				delim = original_detected_gpus.find( ", ", left );
+
+				// If delim is std::string::npos, this code will break if
+				// original_detected_gpus is almost 2^64 characters long.
+				// I'm not worried.
+				std::string id = original_detected_gpus.substr( left, delim - left );
+				if(! detected_gpus.empty()) { detected_gpus += ", "; }
+				detected_gpus += id;
+				for( int i = 1; i < opt_repeat; ++i ) {
+					detected_gpus += ", " + id;
+				}
+
+				if( delim == std::string::npos ) { break; }
+				left = delim + 2;
+			} while( true );
+		}
+	}
+
+	if (! opt_cron) {
 		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
 	}
 	if (opt_config) {
 		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
 	}
-#endif
 
 	// check for device homogeneity so we can print out simpler
-	// config/device attributes 
+	// config/device attributes
 	if (opt_basic) {
 		KVP common;
-		if ( ! opt_hetero && ! dev_props.empty()) {
+		if (! opt_hetero && ! dev_props.empty()) {
 			const KVP & dev0 = dev_props.begin()->second;
 			for (KVP::const_iterator it = dev0.begin(); it != dev0.end(); ++it) {
 				bool all_match = true;
@@ -1415,7 +1447,7 @@ main( int argc, const char** argv)
 					if (pair == devN.end() || pair->second != it->second) {
 						all_match = false;
 					}
-					if ( ! all_match) break;
+					if (! all_match) break;
 				}
 				if (all_match) {
 					common[it->first] = it->second;
@@ -1424,7 +1456,7 @@ main( int argc, const char** argv)
 		}
 
 		// now print out device properties.
-		if ( ! common.empty()) {
+		if (! common.empty()) {
 			for (KVP::const_iterator it = common.begin(); it != common.end(); ++it) {
 				printf("%s%s=%s\n", opt_pre, it->first.c_str(), it->second.c_str());
 			}
@@ -1525,6 +1557,10 @@ void usage(FILE* out, const char * argv0)
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
 		"    -config           Output in HTCondor config syntax\n"
+		"    -repeat [<N>]     Repeat listed of detected GPU N (default 2) times\n"
+		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
+		"    -packed           When repeating, repeat each GPU, not the whole list\n"
+		"                      (e.g., DetectedGPUs = \"CUDA0, CUDA0, CUDA1, CUDA1\")\n"
 		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"
 		"    -help             Show this screen and exit\n"
 		"    -verbose          Show detection progress\n"
