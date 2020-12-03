@@ -1339,7 +1339,7 @@ will be written to the UserLog of the Cluster ad.  This event will indicate how 
 before the factory was removed.
 
 If Late Materialization of jobs is paused due to an error in materialization or because condor_hold 
-was just to hold the cluster id, a ``Job Materialization Paused`` event will be written to the UserLog of the
+was used to hold the cluster id, a ``Job Materialization Paused`` event will be written to the UserLog of the
 Cluster ad. This event will indicate the reason for the pause.
 
 When ``condor_release`` is used to release the the cluster id of a Late Materialization job factory,
