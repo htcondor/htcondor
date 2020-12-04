@@ -1556,7 +1556,7 @@ void usage(FILE* out, const char * argv0)
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
 		"    -config           Output in HTCondor config syntax\n"
-		"    -repeat [<N>]     Repeat listed of detected GPU N (default 2) times\n"
+		"    -repeat [<N>]     Repeat list of detected GPUs N (default 2) times\n"
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
 		"    -packed           When repeating, repeat each GPU, not the whole list\n"
 		"                      (e.g., DetectedGPUs = \"CUDA0, CUDA0, CUDA1, CUDA1\")\n"
