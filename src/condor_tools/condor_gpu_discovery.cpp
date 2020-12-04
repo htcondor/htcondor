@@ -866,7 +866,6 @@ main( int argc, const char** argv)
 	const char * opt_pre_arg = NULL;
 	int opt_repeat = 0;
 	int opt_packed = 0;
-	const char * opt_mapping = NULL;
 	const char * pcolon;
 	int i;
     int dev;
@@ -944,14 +943,6 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "packed", -1)) {
 			opt_packed = 1;
-		}
-		else if (is_dash_arg_prefix(argv[i], "mapping", -1)) {
-			if (! argv[i+1] || '-' == *argv[i+1]) {
-				fprintf (stderr, "Error: -mapping requires an argument\n");
-				usage(stderr, argv[0]);
-				return 1;
-			}
-			opt_mapping = argv[++i];
 		}
 		else if (is_dash_arg_prefix(argv[i], "config", -1)) {
 			g_config_syntax = 1;
