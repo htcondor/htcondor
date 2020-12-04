@@ -694,9 +694,9 @@ reinitialize ()
 		NegotiatorMatchExprNames.rewind();
 		while( (expr_name=NegotiatorMatchExprNames.next()) ) {
 			if( strncmp(expr_name,ATTR_NEGOTIATOR_MATCH_EXPR,prefix_len) != 0 ) {
-				MyString new_name = ATTR_NEGOTIATOR_MATCH_EXPR;
+				std::string new_name = ATTR_NEGOTIATOR_MATCH_EXPR;
 				new_name += expr_name;
-				NegotiatorMatchExprNames.insert(new_name.Value());
+				NegotiatorMatchExprNames.insert(new_name.c_str());
 				NegotiatorMatchExprNames.deleteCurrent();
 			}
 		}
@@ -2222,15 +2222,15 @@ void Matchmaker::hgq_construct_tree() {
         group->name = gname;
 
         // group quota setting
-        MyString vname;
-        vname.formatstr("GROUP_QUOTA_%s", gname.c_str());
-        double quota = param_double(vname.Value(), -1.0, 0, INT_MAX);
+		std::string vname;
+        formatstr(vname, "GROUP_QUOTA_%s", gname.c_str());
+        double quota = param_double(vname.c_str(), -1.0, 0, INT_MAX);
         if (quota >= 0) {
             group->config_quota = quota;
             group->static_quota = true;
         } else {
-            vname.formatstr("GROUP_QUOTA_DYNAMIC_%s", gname.c_str());
-            quota = param_double(vname.Value(), -1.0, 0.0, 1.0);
+            formatstr(vname, "GROUP_QUOTA_DYNAMIC_%s", gname.c_str());
+            quota = param_double(vname.c_str(), -1.0, 0.0, 1.0);
             if (quota >= 0) {
                 group->config_quota = quota;
                 group->static_quota = false;
@@ -2248,10 +2248,10 @@ void Matchmaker::hgq_construct_tree() {
         }
 
         // accept surplus
-	    vname.formatstr("GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
-        group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
-	    vname.formatstr("GROUP_AUTOREGROUP_%s", gname.c_str());
-        group->autoregroup = param_boolean(vname.Value(), default_autoregroup);
+	    formatstr(vname, "GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
+        group->accept_surplus = param_boolean(vname.c_str(), default_accept_surplus);
+	    formatstr(vname, "GROUP_AUTOREGROUP_%s", gname.c_str());
+        group->autoregroup = param_boolean(vname.c_str(), default_autoregroup);
         if (group->autoregroup) autoregroup = true;
         if (group->accept_surplus) accept_surplus = true;
     }
@@ -3301,12 +3301,12 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					submitterShare);
 				dprintf (D_FULLDEBUG, "    submitterAbsShare   = %f\n",
 					submitterAbsShare);
-				MyString starvation;
+				std::string starvation;
 				if( submitterLimitStarved > 0 ) {
-					starvation.formatstr(" (starved %f)",submitterLimitStarved);
+					formatstr(starvation, " (starved %f)",submitterLimitStarved);
 				}
 				dprintf (D_FULLDEBUG, "    submitterLimit    = %f%s\n",
-					submitterLimit, starvation.Value());
+					submitterLimit, starvation.c_str());
 				dprintf (D_FULLDEBUG, "    submitterCeiling remaining   = %d\n",
 					submitterCeiling);
 				dprintf (D_FULLDEBUG, "    submitterUsage    = %f\n",
@@ -3757,7 +3757,6 @@ obtainAdsFromCollector (
 	int newSequence, oldSequence;
 	bool reevaluate_ad;
 	char    *remoteHost = NULL;
-	MyString buffer;
 	CollectorList* collects = daemonCore->getCollectorList();
 
     cp_resources = false;
@@ -5149,7 +5148,7 @@ rejectForConcurrencyLimits(std::string &limits)
 
 	StringList list(limits.c_str());
 	char *limit;
-	MyString str;
+	std::string str;
 	list.rewind();
 	while ((limit = list.next())) {
 		double increment;
@@ -5733,10 +5732,10 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 
 class NotifyStartdOfMatchHandler {
 public:
-	MyString m_startdName;
-	MyString m_startdAddr;
+	std::string m_startdName;
+	std::string  m_startdAddr;
+	std::string  m_claim_id;
 	int m_timeout;
-	MyString m_claim_id;
 	DCStartd m_startd;
 	bool m_nonblocking;
 
@@ -5744,8 +5743,8 @@ public:
 		
 		m_startdName(startdName),
 		m_startdAddr(startdAddr),
-		m_timeout(timeout),
 		m_claim_id(claim_id),
+		m_timeout(timeout),
 		m_startd(startdAddr),
 		m_nonblocking(nonblocking) {}
 
@@ -5757,7 +5756,7 @@ public:
 
 		if(!success) {
 			dprintf (D_ALWAYS,"      Failed to initiate socket to send MATCH_INFO to %s\n",
-					 self->m_startdName.Value());
+					 self->m_startdName.c_str());
 		}
 		else {
 			self->WriteMatchInfo(sock);
@@ -5770,21 +5769,21 @@ public:
 
 	bool WriteMatchInfo(Sock *sock) const
 	{
-		ClaimIdParser idp( m_claim_id.Value() );
+		ClaimIdParser idp( m_claim_id.c_str() );
 		ASSERT(sock);
 
 		// pass the startd MATCH_INFO and claim id string
 		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/claim id to %s\n",
-		         m_startdName.Value());
+		         m_startdName.c_str());
 		dprintf (D_FULLDEBUG, "      (Claim ID is \"%s\" )\n",
 		         idp.publicClaimId() );
 
-		if ( !sock->put_secret (m_claim_id.Value()) ||
+		if ( !sock->put_secret (m_claim_id.c_str()) ||
 			 !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS,
 			        "      Could not send MATCH_INFO/claim id to %s\n",
-			        m_startdName.Value() );
+			        m_startdName.c_str() );
 			dprintf (D_FULLDEBUG,
 			        "      (Claim ID is \"%s\")\n",
 			        idp.publicClaimId() );
@@ -5796,7 +5795,7 @@ public:
 	bool startCommand()
 	{
 		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n",
-					m_startdName.Value(), m_startdAddr.Value());
+					m_startdName.c_str(), m_startdAddr.c_str());
 
 		if(!m_nonblocking) {
 			Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
@@ -5804,7 +5803,7 @@ public:
 			bool result = false;
 			if(!sock) {
 				dprintf (D_ALWAYS,"      Failed to initiate socket (blocking mode) to send MATCH_INFO to %s\n",
-						 m_startdName.Value());
+						 m_startdName.c_str());
 			}
 			else {
 				result = WriteMatchInfo(sock);
