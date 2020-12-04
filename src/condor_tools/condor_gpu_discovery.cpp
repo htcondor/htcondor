@@ -866,7 +866,6 @@ main( int argc, const char** argv)
 	const char * opt_pre_arg = NULL;
 	int opt_repeat = 0;
 	int opt_packed = 0;
-	const char * opt_mapping = NULL;
 	const char * pcolon;
 	int i;
     int dev;
