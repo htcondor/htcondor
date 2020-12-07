@@ -18,6 +18,7 @@
 
 set(negotiatorElements
 Accountant.cpp
+GroupEntry.cpp
 main.cpp
 matchmaker.cpp
 matchmaker_negotiate.cpp
@@ -25,14 +26,14 @@ NegotiatorPluginManager.cpp
 )
 
 if (UNIX)
-  set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+		set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp GroupEntry.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
 condor_daemon( EXE condor_negotiator SOURCES "${negotiatorElements}"
   LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}" )
 
 condor_exe_test( test_protocol_matching
-  "protocol-test.cpp;matchmaker.cpp;Accountant.cpp;matchmaker_negotiate.cpp"
+  "protocol-test.cpp;matchmaker.cpp;Accountant.cpp;GroupEntry.cpp;matchmaker_negotiate.cpp"
   "${CONDOR_LIBS}" )
 
 condor_exe(accountant_log_fixer "accountant_log_fixer.cpp" ${C_LIBEXEC} "" OFF)

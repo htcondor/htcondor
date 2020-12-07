@@ -266,7 +266,6 @@ class Matchmaker : public Service
 		void OptimizeJobAdForMatchmaking(ClassAd *ad);
 
 		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
-		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
 		void addRemoteUserPrios( ClassAd* ad );
 		void addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
@@ -535,21 +534,6 @@ class Matchmaker : public Service
 
         void hgq_construct_tree();
         void hgq_assign_quotas(GroupEntry* group, double quota);
-        double hgq_fairshare(GroupEntry* group);
-        double hgq_allocate_surplus(GroupEntry* group, double surplus);
-        double hgq_recover_remainders(GroupEntry* group);
-        double hgq_round_robin(GroupEntry* group, double surplus);
-
-        struct ord_by_rr_time {
-            vector<GroupEntry*>* data;
-            bool operator()(unsigned long const& ja, unsigned long const& jb) const {
-                GroupEntry* a = (*data)[ja];
-                GroupEntry* b = (*data)[jb];
-                if (a->subtree_rr_time != b->subtree_rr_time) return a->subtree_rr_time < b->subtree_rr_time;
-                if (a->subtree_quota != b->subtree_quota) return a->subtree_quota > b->subtree_quota;
-                return a->subtree_requested > b->subtree_requested;
-            }
-        };
 
         // true if resource ads with consumption policies are present
         // for the current negotiation cycle
