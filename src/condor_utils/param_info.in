@@ -3330,6 +3330,14 @@ default=false
 type=bool
 tags=schedd
 
+[GRIDMANAGER_SELECTION_EXPR]
+default=
+type=string
+
+[GRIDMANAGER_LOG_APPEND_SELECTION_EXPR]
+default=false
+type=bool
+
 [MAX_JOB_QUEUE_LOG_ROTATIONS]
 default=1
 type=int
