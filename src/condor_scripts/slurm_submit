@@ -29,8 +29,8 @@ def write_dag_files(jobfile, runtime, node_count, email):
     request_disk = 10M
 }}
 JOB B {{
-    annex_runtime = 1800
-    annex_node_count = 1
+    annex_runtime = {runtime}
+    annex_node_count = {node_count}
     annex_name = {getpass.getuser()}-test
     annex_user = {getpass.getuser()}
     universe=grid
