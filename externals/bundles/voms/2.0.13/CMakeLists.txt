@@ -35,6 +35,7 @@ if ( WITH_VOMS AND WITH_GLOBUS )
 
 		if ( DARWIN )
 			set ( VOMS_PATCH patch -N -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/netdb.patch &&
+				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/undeclared_funcs.patch &&
 				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/libressl.patch )
 			set ( CONFIGURE_ENV export CFLAGS=-I${DARWIN_OPENSSL_INCLUDE} && export CXXFLAGS=-I${DARWIN_OPENSSL_INCLUDE} && export OPENSSL_CFLAGS=-I${DARWIN_OPENSSL_INCLUDE} && export OPENSSL_LIBS="-L${DARWIN_OPENSSL_LIB_DIR} -lssl -lcrypto" )
 		ELSE()

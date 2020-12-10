@@ -1,0 +1,22 @@
+diff -ru voms-2.0.13/src/sslutils/namespaces.c voms-2.0.13-patched/src/sslutils/namespaces.c
+--- voms-2.0.13/src/sslutils/namespaces.c	2016-02-11 08:02:37.000000000 -0600
++++ voms-2.0.13-patched/src/sslutils/namespaces.c	2020-12-10 10:37:52.000000000 -0600
+@@ -72,6 +72,7 @@
+ #define yydebug         namespacesdebug
+ #define yynerrs         namespacesnerrs
+ 
++extern int namespaceslex();
+ 
+ /* Copy the first part of user declarations.  */
+ 
+diff -ru voms-2.0.13/src/sslutils/signing_policy.c voms-2.0.13-patched/src/sslutils/signing_policy.c
+--- voms-2.0.13/src/sslutils/signing_policy.c	2016-02-11 08:02:37.000000000 -0600
++++ voms-2.0.13-patched/src/sslutils/signing_policy.c	2020-12-10 10:37:33.000000000 -0600
+@@ -72,6 +72,7 @@
+ #define yydebug         signingdebug
+ #define yynerrs         signingnerrs
+ 
++extern int signinglex();
+ 
+ /* Copy the first part of user declarations.  */
+ 
