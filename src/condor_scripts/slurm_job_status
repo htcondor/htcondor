@@ -109,8 +109,10 @@ def main():
             slurm_jobs_running += 1
         if event.cluster == slurm_cluster_id and event.type == htcondor.JobEventType.JOB_TERMINATED:
             slurm_jobs_running -= 1
-            if slurm_jobs_runnings == 0:
-                slurm_job_status = "COMPLETE"
+            if slurm_jobs_running == 0:
+                slurm_job_state = "COMPLETE"
+        if event.type == htcondor.JobEventType.JOB_HELD or event.type == htcondor.JobEventType.EXECUTABLE_ERROR:
+            slrum_job_state = "ERROR"
 
     # Now that we have all the information we want, display it
     print(f"The status of Slurm job {dagman_cluster_id}.0 is:")

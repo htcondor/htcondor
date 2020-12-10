@@ -5,6 +5,7 @@ import getpass
 import htcondor
 import os
 import sys
+import stat
 
 def write_dag_files(jobfile, runtime, node_count, email):
 
@@ -16,6 +17,9 @@ def write_dag_files(jobfile, runtime, node_count, email):
     sendmail_sh_file = open("sendmail.sh", "w")
     sendmail_sh_file.write(sendmail_sh)
     sendmail_sh_file.close()
+    st = os.stat("sendmail.sh")
+    os.chmod("sendmail.sh", st.st_mode | stat.S_IEXEC)
+
 
     slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
     slurm_config_file = open("slurm_submit.config", "w")
@@ -39,7 +43,7 @@ JOB B {{
     executable=/home/jfrey/hobblein/hobblein_remote.sh
     # args: <node count> <run time> <annex name> <user>
     arguments=$(annex_node_count) $(annex_runtime) $(annex_name) $(annex_user)
-    #+NodeNumber=$(annex_node_count)
+    +NodeNumber=$(annex_node_count)
     #+HostNumber=$(annex_node_count)
     +BatchRuntime=$(annex_runtime)
     #+WholeNodes=true
@@ -65,7 +69,6 @@ CONFIG slurm_submit.config
 VARS C Requirements="(Facility == \\\"CHTC_Slurm\\\")"
 VARS C +MayUseSlurm="True"
 VARS C +WantFlocking="True"
-VARS C +SlurmNodeCount="{node_count}"
 """
 
     dag_file = open("slurm_submit.dag", "w")
@@ -87,8 +90,8 @@ Options:
 def parse_args():
 
     # The following argument combinations are acceptable:
-    # <this> -file <job-filename> -runtime <time> -node_count <count>
-    # <this> -file <job-filename> -runtime <time> -node_count <count> -email <email>
+    # <this> -file <job-filename> -runtime <time-seconds> -node_count <count>
+    # <this> -file <job-filename> -runtime <time-seconds> -node_count <count> -email <email>
     
     if len(sys.argv) not in range(7, 9):
         print_help()
@@ -96,7 +99,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-file", type=str, action="store", help="Filename of job to run on the glideins")
-    parser.add_argument("-runtime", type=int, action="store", help="Runtime for provisioned Slurm glideins")
+    parser.add_argument("-runtime", type=int, action="store", help="Runtime for provisioned Slurm glideins (seconds)")
     parser.add_argument("-node_count", type=int, action="store", help="Number of Slurm nodes to provision")
     parser.add_argument("-email", type=str, action="store", help="Email address for notifications")
     args = parser.parse_args()
@@ -118,6 +121,9 @@ def main():
     node_count = args["node_count"]
     email = None # Email is the only optional argument
     if args["email"]: email = args["email"]
+
+    # Cleanup any old files left behind from a previous run
+    os.system("rm -rf slurm_submit.dag.*")
 
     # Write the slurm_submit.dag file to disk
     write_dag_files(jobfile, runtime, node_count, email)
