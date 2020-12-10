@@ -10,8 +10,9 @@
 
 namespace htcondor {
 
-	// Validate a given scitoken and populate the output variables (issuer, subject, expiry,
-	// bounding_set) with the corresponding information from the token.
+	// Validate a given scitoken and populate the output variables (issuer,
+	// subject, expiry, bounding_set, groups) with the corresponding
+	// information from the token.
 	//
 	// Ident should be a unique identifier used as part of the audit trail.
 bool
