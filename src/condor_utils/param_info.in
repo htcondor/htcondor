@@ -5942,10 +5942,14 @@ default : @end
 	STARTD_CRON_$(1)_MONITOR_METRICS = $(5+)
 @end
 
+[GPU_MONITOR]
+default=$(LIBEXEC)/condor_gpu_utilization
+win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
+
 [$FEATURE.GPUsMonitor]
 description=Settings to monitor GPU usage
 default : @end
-	use feature : Monitor( GPUs, WaitForExit, 1, $(LIBEXEC)/condor_gpu_utilization, SUM:GPUs, PEAK:GPUsMemory )
+	use feature : Monitor( GPUs, WaitForExit, 1, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
 @end
 
 [$FEATURE.PartitionableSlot]
