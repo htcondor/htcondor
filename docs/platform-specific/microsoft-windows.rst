@@ -18,10 +18,8 @@ administrating or customizing the policy and set up of HTCondor, also
 read the :doc:`/admin-manual/index` chapter. After
 reading these chapters, review the information in this chapter for
 important information and differences when using and administrating
-HTCondor on Windows. For information on installing HTCondor for Windows,
-see
-:ref:`admin-manual/installation-startup-shutdown-reconfiguration:installation
-on windows`.
+HTCondor on Windows.  For information on installing HTCondor for Windows,
+see :doc:`../getting-htcondor/install-windows-as-administrator`.
 
 Limitations under Windows
 -------------------------

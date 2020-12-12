@@ -1020,9 +1020,7 @@ submit machine, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
 other resource requirements for a submit machine apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
-See the
-:ref:`admin-manual/installation-startup-shutdown-reconfiguration:installation
-on unix` section for details on these issues.
+See :doc:`directories` for more information.
 
 Configuration Examples for Dedicated Resources
 ''''''''''''''''''''''''''''''''''''''''''''''

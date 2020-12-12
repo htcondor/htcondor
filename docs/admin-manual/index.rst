@@ -23,3 +23,4 @@ Administrators' Manual
    singularity-support
    power-management
    windows-installer
+   directories
