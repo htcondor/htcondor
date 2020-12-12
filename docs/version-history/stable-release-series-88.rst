@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where ``use feature: GPUsMonitor`` set the wrong path to the
+  GPU monitor binary on Windows.
+  :jira:`125`
 
 Version 8.8.12
 --------------
