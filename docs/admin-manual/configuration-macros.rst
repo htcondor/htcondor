@@ -146,8 +146,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
         LOCAL_DIR = $(tilde)
 
-.. _LOG:
-
 :macro-def:`LOG`
     Used to specify the directory where each HTCondor daemon writes its
     log files. The names of the log files themselves are defined with
@@ -165,8 +163,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     specify the directory where the *condor_master* should write its
     process ID (PID) file. The default if not defined is ``$(LOG)``.
 
-.. _SPOOL:
-
 :macro-def:`SPOOL`
     The spool directory is where certain files used by the
     *condor_schedd* are stored, such as the job queue file and the
@@ -183,8 +179,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
-
-.. _EXECUTE:
 
 :macro-def:`EXECUTE`
     This directory acts as a place to create the scratch directory of
@@ -1019,8 +1013,6 @@ There is one for each subsystem (listed in
 The macro name for each substitutes ``<SUBSYS>`` with the name of the
 subsystem corresponding to the daemon.
 
-.. _SUBSYS_LOG:
-
 :macro-def:`<SUBSYS>_LOG`
     Defines the path and file name of the
     log file for a given subsystem. For example, ``$(STARTD_LOG)`` gives
@@ -1113,8 +1105,6 @@ subsystem corresponding to the daemon.
     required for log files which are accessed by more than one process.
     Currently, this includes only the ``SHADOW`` subsystem. This macro
     is defined relative to the ``$(LOCK)`` macro.
-
-.. _JOB_QUEUE_LOG:
 
 :macro-def:`JOB_QUEUE_LOG`
     A full path and file name, specifying the job queue log. The default
@@ -3158,8 +3148,6 @@ section.
     falling between 0 and 300, with all further updates occurring at
     fixed 300 second intervals following the initial update.
 
-.. _MachineMaxVacateTime:
-
 :macro-def:`MachineMaxVacateTime`
     An integer expression representing the number of seconds the machine
     is willing to wait for a job that has been soft-killed to gracefully
@@ -5063,7 +5051,7 @@ These macros control the *condor_schedd*.
     :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
     overrides this configuration variable.
 
-    See :ref:`MachineMaxVacateTime<MachineMaxVacateTime>` for details on
+    See :macro:`MachineMaxVacateTime` for details on
     how HTCondor computes the job's max vacate time.
 
 :macro-def:`SCHEDD_ROUND_ATTR_<xxxx>`
