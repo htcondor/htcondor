@@ -146,6 +146,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
         LOCAL_DIR = $(tilde)
 
+.. _LOG:
 
 :macro-def:`LOG`
     Used to specify the directory where each HTCondor daemon writes its
@@ -164,6 +165,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     specify the directory where the *condor_master* should write its
     process ID (PID) file. The default if not defined is ``$(LOG)``.
 
+.. _SPOOL:
+
 :macro-def:`SPOOL`
     The spool directory is where certain files used by the
     *condor_schedd* are stored, such as the job queue file and the
@@ -180,6 +183,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
+
+.. _EXECUTE:
 
 :macro-def:`EXECUTE`
     This directory acts as a place to create the scratch directory of
@@ -1014,6 +1019,8 @@ There is one for each subsystem (listed in
 The macro name for each substitutes ``<SUBSYS>`` with the name of the
 subsystem corresponding to the daemon.
 
+.. _SUBSYS_LOG:
+
 :macro-def:`<SUBSYS>_LOG`
     Defines the path and file name of the
     log file for a given subsystem. For example, ``$(STARTD_LOG)`` gives
@@ -1106,6 +1113,8 @@ subsystem corresponding to the daemon.
     required for log files which are accessed by more than one process.
     Currently, this includes only the ``SHADOW`` subsystem. This macro
     is defined relative to the ``$(LOCK)`` macro.
+
+.. _JOB_QUEUE_LOG:
 
 :macro-def:`JOB_QUEUE_LOG`
     A full path and file name, specifying the job queue log. The default
