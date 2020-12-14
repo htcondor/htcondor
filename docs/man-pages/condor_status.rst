@@ -287,10 +287,9 @@ General Remarks
    manager at different rates, and since there is a delay as information
    propagates through the network and the system.
 -  Note that the ``ActivityTime`` in the ``Idle`` state is not the
-   amount of time that the machine has been idle. See the section on
-   *condor_startd* states in the Administrator's Manual for more
-   information 
-   (:doc:`/admin-manual/installation-startup-shutdown-reconfiguration`).
+   amount of time that the machine has been idle.  See
+   :ref:`the section <admin-manual/policy-configuration:Machine States>`
+   in the Administrator's Manual for more information.
 -  When using *condor_status* on a pool with SMP machines, you can
    either provide the host name, in which case you will get back
    information about all slots that are represented on that host, or you
