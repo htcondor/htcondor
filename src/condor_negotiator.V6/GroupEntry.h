@@ -15,6 +15,14 @@ struct GroupEntry {
 		GroupEntry();
 		~GroupEntry();
 
+        static GroupEntry *hgq_construct_tree(
+       	 	std::map<std::string, GroupEntry*> &group_entry_map,
+       	 	std::vector<GroupEntry*> &hgq_groups,
+			bool &global_autoregroup,
+			bool &global_accept_surplus);
+
+        void hgq_assign_quotas(double quota);
+
 		double hgq_fairshare();
 		double hgq_allocate_surplus(double surplus);
 		double hgq_recover_remainders();

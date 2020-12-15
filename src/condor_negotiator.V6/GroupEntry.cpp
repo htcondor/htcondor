@@ -1,6 +1,9 @@
-
 #include "GroupEntry.h"
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_attributes.h"
 #include <algorithm>
+#include <deque>
 
 GroupEntry::GroupEntry():
 		name(),
@@ -47,6 +50,253 @@ GroupEntry::~GroupEntry() {
 		}
 
 		if (NULL != sort_ad) delete sort_ad;
+}
+
+
+GroupEntry *
+GroupEntry::hgq_construct_tree(
+				std::map<std::string, GroupEntry *> &group_entry_map,
+				std::vector<GroupEntry *> &hgq_groups,
+				bool &global_autoregroup,
+				bool &global_accept_surplus) {
+
+		// need to construct group structure
+		// groups is list of group names
+		// in form group.subgroup group.subgroup.subgroup etc
+		char* groupnames = param("GROUP_NAMES");
+
+		// Populate the group array, which contains an entry for each group.
+		std::string hgq_root_name = "<none>";
+		vector<string> groups;
+		if (NULL != groupnames) {
+				StringList group_name_list;
+				group_name_list.initializeFromString(groupnames);
+				group_name_list.rewind();
+				while (char* g = group_name_list.next()) {
+						const string gname(g);
+
+						// Best to sanity-check this as early as possible.  This will also
+						// be useful if we ever decided to allow users to name the root group
+						if (gname == hgq_root_name) {
+								dprintf(D_ALWAYS, "group quotas: ERROR: group name \"%s\" is reserved for root group -- ignoring this group\n", gname.c_str());
+								continue;
+						}
+
+						// store the group name
+						groups.push_back(gname);
+				}
+
+				free(groupnames);
+				groupnames = NULL;
+		}
+
+		// This is convenient for making sure a parent group always appears before its children
+		std::sort(groups.begin(), groups.end(), Accountant::ci_less());
+
+		GroupEntry *hgq_root_group = new GroupEntry;
+		hgq_root_group->name = hgq_root_name;
+		hgq_root_group->accept_surplus = true;
+
+		group_entry_map.clear();
+		group_entry_map[hgq_root_name] = hgq_root_group;
+
+		global_accept_surplus = false;
+		global_autoregroup = false;
+		const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
+		const bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
+		if (default_autoregroup) global_autoregroup = true;
+		if (default_accept_surplus) global_accept_surplus = true;
+
+		// build the tree structure from our group path info
+		for (unsigned long j = 0;  j < groups.size();  ++j) {
+				string gname = groups[j];
+
+				// parse the group name into a path of sub-group names
+				vector<string> gpath;
+				parse_group_name(gname, gpath);
+
+				// insert the path of the current group into the tree structure
+				GroupEntry* group = hgq_root_group;
+				bool missing_parent = false;
+				for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
+						// chmap is mostly a structure to avoid n^2 behavior in groups with many children
+						map<string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
+						if (f == group->chmap.end()) {
+								dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
+								missing_parent = true;
+								break;
+						}
+						group = group->children[f->second];
+				}
+				if (missing_parent) continue;
+
+				if (group->chmap.count(gpath.back()) > 0) {
+						// duplicate group -- ignore
+						dprintf(D_ALWAYS, "group quotas: WARNING: ignoring duplicate group name %s\n", gname.c_str());
+						continue;
+				}
+
+				// enter the new group
+				group->children.push_back(new GroupEntry);
+				group->chmap[gpath.back()] = group->children.size()-1;
+				group_entry_map[gname] = group->children.back();
+				group->children.back()->parent = group;
+				group = group->children.back();
+
+				// "group" now refers to our current group in the list.
+				// Fill in entry values from config.
+				group->name = gname;
+
+				// group quota setting
+				std::string vname;
+				formatstr(vname, "GROUP_QUOTA_%s", gname.c_str());
+				double quota = param_double(vname.c_str(), -1.0, 0, INT_MAX);
+				if (quota >= 0) {
+						group->config_quota = quota;
+						group->static_quota = true;
+				} else {
+						formatstr(vname, "GROUP_QUOTA_DYNAMIC_%s", gname.c_str());
+						quota = param_double(vname.c_str(), -1.0, 0.0, 1.0);
+						if (quota >= 0) {
+								group->config_quota = quota;
+								group->static_quota = false;
+						} else {
+								dprintf(D_ALWAYS, "group quotas: WARNING: no quota specified for group \"%s\", defaulting to zero\n", gname.c_str());
+								group->config_quota = 0.0;
+								group->static_quota = false;
+						}
+				}
+
+				// defensive sanity checking
+				if (group->config_quota < 0) {
+						dprintf(D_ALWAYS, "group quotas: ERROR: negative quota (%g) defaulting to zero\n", double(group->config_quota));
+						group->config_quota = 0;
+				}
+
+				// accept surplus
+				formatstr(vname, "GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
+				group->accept_surplus = param_boolean(vname.c_str(), default_accept_surplus);
+				formatstr(vname, "GROUP_AUTOREGROUP_%s", gname.c_str());
+				group->autoregroup = param_boolean(vname.c_str(), default_autoregroup);
+				if (group->autoregroup) global_autoregroup = true;
+				if (group->accept_surplus) global_accept_surplus = true;
+		}
+
+		// Set the root group's autoregroup state to match the effective global value for autoregroup
+		// we do this for the benefit of the accountant, it also can be use to remove some special cases
+		// in the negotiator loops.
+		hgq_root_group->autoregroup = global_autoregroup;
+
+		// With the tree structure in place, we can make a list of groups in breadth-first order
+		// For more convenient iteration over the structure
+		hgq_groups.clear();
+		std::deque<GroupEntry*> grpq;
+		grpq.push_back(hgq_root_group);
+		while (!grpq.empty()) {
+				GroupEntry* group = grpq.front();
+				grpq.pop_front();
+				hgq_groups.push_back(group);
+				for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+						grpq.push_back(*j);
+				}
+		}
+
+		string group_sort_expr;
+		if (!param(group_sort_expr, "GROUP_SORT_EXPR")) {
+				// Should never fail! Default provided via param-info
+				EXCEPT("Failed to obtain value for GROUP_SORT_EXPR");
+		}
+		ExprTree* test_sort_expr = NULL;
+		if (ParseClassAdRvalExpr(group_sort_expr.c_str(), test_sort_expr)) {
+				EXCEPT("Failed to parse GROUP_SORT_EXPR = %s", group_sort_expr.c_str());
+		}
+		delete test_sort_expr;
+		for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+				GroupEntry* group = *j;
+				group->sort_ad->Assign(ATTR_ACCOUNTING_GROUP, group->name);
+				// group-specific values might be supported in the future:
+				group->sort_ad->AssignExpr(ATTR_SORT_EXPR, group_sort_expr.c_str());
+				group->sort_ad->Assign(ATTR_SORT_EXPR_STRING, group_sort_expr);
+		}
+		return hgq_root_group;
+}
+
+void 
+GroupEntry::hgq_assign_quotas(double quota) {
+		dprintf(D_FULLDEBUG, "group quotas: subtree %s receiving quota= %g\n", this->name.c_str(), quota);
+
+		bool allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
+
+		// if quota is zero, we can leave this subtree with default quotas of zero
+		if (quota <= 0) return;
+
+		// incoming quota is quota for subtree
+		this->subtree_quota = quota;
+
+		// compute the sum of any static quotas of any children
+		double sqsum = 0;
+		double dqsum = 0;
+		for (unsigned long j = 0;  j < this->children.size();  ++j) {
+				GroupEntry* child = this->children[j];
+				if (child->static_quota) {
+						sqsum += child->config_quota;
+				} else {
+						dqsum += child->config_quota;
+				}
+		}
+
+		// static quotas get first dibs on any available quota
+		// total static quota assignable is bounded by quota coming from above
+		double sqa = (allow_quota_oversub) ? sqsum : std::min(sqsum, quota);
+
+		// children with dynamic quotas get allocated from the remainder
+		double dqa = std::max(0.0, quota - sqa);
+
+		dprintf(D_FULLDEBUG, "group quotas: group %s, allocated %g for static children, %g for dynamic children\n", this->name.c_str(), sqa, dqa);
+
+		// Prevent (0/0) in the case of all static quotas == 0.
+		// In this case, all quotas will still be correctly assigned zero.
+		double Zs = (sqsum > 0) ? sqsum : 1;
+
+		// If dqsum exceeds 1, then dynamic quota values get scaled so that they sum to 1
+		double Zd = std::max(dqsum, double(1));
+
+		// quota assigned to all children
+		double chq = 0;
+		for (unsigned long j = 0;  j < this->children.size();  ++j) {
+				GroupEntry* child = this->children[j];
+				// Each child with a static quota gets its proportion of the total of static quota assignable.
+				// Each child with dynamic quota gets the dynamic quota assignable weighted by its configured dynamic quota value
+				double q = (child->static_quota) ? (child->config_quota * (sqa / Zs)) : (child->config_quota * (dqa / Zd));
+				if (q < 0) q = 0;
+
+				if (child->static_quota && (q < child->config_quota)) {
+						dprintf(D_ALWAYS, "group quotas: WARNING: static quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, q);
+				} else if (Zd - 1 > 0.0001) {
+						dprintf(D_ALWAYS, "group quotas: WARNING: dynamic quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, child->config_quota / Zd);
+				}
+
+				child->hgq_assign_quotas(q);
+				chq += q;
+		}
+
+		// Current group gets anything remaining after assigning to any children
+		// If there are no children (a leaf) then this group gets all the quota
+		this->quota = (allow_quota_oversub) ? quota : (quota - chq);
+
+		// However, if we are the root ("<none>") group, the "quota" cannot be configured by the
+		// admin, and the "quota" represents the entire pool.  We calculate the surplus at any node
+		// as the difference between this quota and any demand.  So, if we left the "quota" to be the
+		// whole pool, we would be double-counting surplus slots.  Therefore, no matter what allow_quota_oversub
+		// is, set the "quota" of the root <none> node (really the limit of usage at exactly this node)
+		// to be the total size of the pool, minus the sum allocation of all the child nodes under it, recursively.
+
+		if (this->name == "<none>") {
+				this->quota = quota - chq;
+		}
+
+		if (this->quota < 0) this->quota = 0;
+		dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", this->name.c_str(), this->quota);
 }
 
 double 
