@@ -6346,7 +6346,7 @@ description=Shared port stuff for a HAD node. args:(controlee, ip_or_hostname, h
 default: @end
    HAD_LIST = $(HAD_LIST) $(2):$(3)
    REPLICATION_LIST = $(REPLICATION_LIST) $(2):$(4)
-   HAD_CONTROLEE = $(1)
+   HAD_CONTROLLEE = $(1)
    MASTER_$(1)_CONTROLLER = HAD
 @end
 
