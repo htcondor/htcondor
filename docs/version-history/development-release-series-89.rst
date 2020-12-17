@@ -30,6 +30,11 @@ New Features:
   grid universe jobs.
   :jira:`44`
 
+- When singularity is enabled, when there is an error running singularity
+  test before the job, the first line of singularity stderr is logged to 
+  the hold message in the job.
+  :jira:`133`
+
 Bugs Fixed:
 
 - Fixed a bug with singularity support where the job's cwd wasn't
