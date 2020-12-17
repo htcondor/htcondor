@@ -514,7 +514,7 @@ class Dag {
 			implies removeCondorJobs.
     */
     void RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
-				bool bForce ) const;
+				bool bForce );
 
     /** Remove all pre- and post-scripts that are currently running.
 	All currently running scripts will be killed via daemoncore.
