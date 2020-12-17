@@ -365,7 +365,7 @@ Singularity::convertEnv(Env *job_env) {
 }
 
 bool 
-Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env) {
+Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env, std::string &errorMessage) {
 
 	TemporaryPrivSentry sentry(PRIV_USER);
 
@@ -385,7 +385,7 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	testArgs.GetArgsStringForDisplay(&stredArgs);
 
 	dprintf(D_FULLDEBUG, "Runnning singularity test for job %s cmd is %s\n", JobName.c_str(), stredArgs.c_str());
-	FILE *sing_test_output = my_popen(testArgs, "r", 0, &env, true);
+	FILE *sing_test_output = my_popen(testArgs, "r", MY_POPEN_OPT_WANT_STDERR, &env, true);
 	if (!sing_test_output) {
 		dprintf(D_ALWAYS, "Error running singularity test job: %s\n", stredArgs.c_str());
 		return false;
@@ -394,12 +394,21 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	char buf[256];
 	buf[0] = '\0';
 
-	int nread = fread(buf, 255, 1, sing_test_output);
-	dprintf(D_ALWAYS, "sing test:%d  %s\n", nread, buf);
+	int nread = fread(buf, 1, 255, sing_test_output);
+	if (nread > 0) buf[nread] = '\0';
+	char *pos = nullptr;
+	if ((pos = strchr(buf, '\n'))) {
+		*pos = '\0';
+	}
+
+	errorMessage = buf;
 
 	int rc = my_pclose(sing_test_output);
+	dprintf(D_ALWAYS, "singularity test returns %d\n", rc);
+
 	if (rc != 0)  {
 		dprintf(D_ALWAYS, "Non zero return code %d from singularity test of %s\n", rc, stredArgs.c_str());
+		dprintf(D_ALWAYS, "     singularity output was %s\n", errorMessage.c_str());
 		return false;
 	}
 

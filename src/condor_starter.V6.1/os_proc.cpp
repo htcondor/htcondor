@@ -519,13 +519,15 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 
 		if (param_boolean("SINGULARITY_RUN_TEST_BEFORE_JOB", true)) {
-			bool result = htcondor::Singularity::runTest(JobName, args, orig_args_len, job_env);
+			std::string singErrorMessage;
+			bool result = htcondor::Singularity::runTest(JobName, args, orig_args_len, job_env, singErrorMessage);
 			if (!result) {
-				dprintf(D_FULLDEBUG, "Singularity test failed\n");
 				free(affinity_mask);
 				job_not_started = true;
-				Starter->jic->notifyStarterError( "Singularity test failed, not running singularity job",
-			    	                              true,
+				std::string starterErrorMessage = "Singularity test failed:";
+				starterErrorMessage += singErrorMessage;
+				Starter->jic->notifyStarterError( starterErrorMessage.c_str(),
+			    	                              	true,
 			        	                          CONDOR_HOLD_CODE_SingularityTestFailed,
 			            	                      0);
 				return 0;
