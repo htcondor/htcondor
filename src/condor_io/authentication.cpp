@@ -36,6 +36,7 @@
 #include "condor_ipverify.h"
 #include "CondorError.h"
 #include "globus_utils.h"
+#include "condor_scitokens.h"
 
 
 
@@ -1108,7 +1109,7 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 			method_bitmask &= ~CAUTH_GSI;
 		}
 #ifdef HAVE_EXT_SCITOKENS
-		if ( (method_bitmask & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
+		if ( (method_bitmask & CAUTH_SCITOKENS) && (Condor_Auth_SSL::Initialize() == false || htcondor::init_scitokens() == false) )
 #else
 		if (method_bitmask & CAUTH_SCITOKENS)
 #endif
@@ -1189,7 +1190,7 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 			continue;
 		}
 #ifdef HAVE_EXT_SCITOKENS
-		if ( (shouldUseMethod & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_SCITOKENS) && (Condor_Auth_SSL::Initialize() == false || htcondor::init_scitokens() == false) )
 #else
 		if (shouldUseMethod & CAUTH_SCITOKENS)
 #endif

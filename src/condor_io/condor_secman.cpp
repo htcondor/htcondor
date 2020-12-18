@@ -3146,6 +3146,10 @@ getDefaultAuthenticationMethods(DCpermission perm) {
 	methods += ",GSI";
 #endif
 
+#if defined(HAVE_EXT_SCITOKENS)
+	methods += ",SCITOKENS";
+#endif
+
 	// SSL is last as this may cause the client to be anonymous.
 	methods += ",SSL";
 
