@@ -415,9 +415,9 @@ authenticate:
 				// better way to do this...  anyways, 'firm' is equal to the bit value
 				// of a particular method, so we'll just convert each item in the list
 				// and keep it if it's not that particular bit.
-				StringList meth_iter( m_methods_to_try.c_str() );
+				StringList meth_iter( m_methods_to_try );
 				meth_iter.rewind();
-				MyString new_list;
+				std::string new_list;
 				char *tmp = NULL;
 				while( (tmp = meth_iter.next()) ) {
 					int that_bit = SecMan::getAuthBitmask( tmp );
@@ -425,7 +425,7 @@ authenticate:
 					// keep if this isn't the failed method.
 					if (firm != that_bit) {
 						// and of course, keep the comma's correct.
-						if (new_list.Length() > 0) {
+						if (new_list.length() > 0) {
 							new_list += ",";
 						}
 						new_list += tmp;
@@ -591,7 +591,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
 
 	// this will hold what we pass to the mapping function
-	MyString auth_name_to_map = authentication_name;
+	std::string auth_name_to_map = authentication_name;
 
 	bool included_voms = false;
 
@@ -610,8 +610,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (global_map_file) {
 		MyString canonical_user;
 
-		dprintf (D_SECURITY, "ZKM: 1: attempting to map '%s'\n", auth_name_to_map.Value());
-		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.Value(), canonical_user);
+		dprintf (D_SECURITY, "ZKM: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
+		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
 		dprintf (D_SECURITY, "ZKM: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
 
 		// if it did not find a user, and we included voms attrs, try again without voms
@@ -631,8 +631,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		// 
 		// reminder: GetCanonicalization returns "true" on failure.
 		if (mapret && authentication_type == CAUTH_SCITOKENS) {
-			auth_name_to_map = auth_name_to_map + "/";
-			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.Value(), canonical_user);
+			auth_name_to_map += "/";
+			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
 			if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
 				// just continue as if everything is fine.  we've now
 				// already updated canonical_user with the result. complain
@@ -1076,11 +1076,11 @@ void Authentication::setAuthType( int state ) {
 }
 
 
-int Authentication::handshake(MyString my_methods, bool non_blocking) {
+int Authentication::handshake(const std::string& my_methods, bool non_blocking) {
 
     int shouldUseMethod = 0;
     
-    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(my_methods = '%s')\n", my_methods.Value());
+    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(my_methods = '%s')\n", my_methods.c_str());
 
     if ( mySock->isClient() ) {
 
@@ -1088,7 +1088,7 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
         mySock->encode();
-		int method_bitmask = SecMan::getAuthBitmask(my_methods.Value());
+		int method_bitmask = SecMan::getAuthBitmask(my_methods.c_str());
 #if defined(HAVE_EXT_KRB5)
 		if ( (method_bitmask & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false )
 #else
@@ -1150,7 +1150,7 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 }
 
 int
-Authentication::handshake_continue(MyString my_methods, bool non_blocking)
+Authentication::handshake_continue(const std::string& my_methods, bool non_blocking)
 {
 	//server
 	if( non_blocking && !mySock->readReady() ) {
@@ -1227,12 +1227,12 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 	return shouldUseMethod;
 }
 
-int Authentication::selectAuthenticationType( MyString method_order, int remote_methods ) {
+int Authentication::selectAuthenticationType( const std::string& method_order, int remote_methods ) {
 
 	// the first one in the list that is also in the bitmask is the one
 	// that we pick.  so, iterate the list.
 
-	StringList method_list( method_order.Value() );
+	StringList method_list( method_order );
 
 	char * tmp = NULL;
 	method_list.rewind();
