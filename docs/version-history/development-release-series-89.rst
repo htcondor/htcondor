@@ -30,6 +30,10 @@ New Features:
   grid universe jobs.
   :jira:`44`
 
+- The python ``schedd.submit`` method now honors the **spool** argument
+  even when the first argument is a ``Submit`` object.
+  :jira:`131`
+
 - When singularity is enabled, when there is an error running singularity
   test before the job, the first line of singularity stderr is logged to 
   the hold message in the job.
