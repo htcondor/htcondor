@@ -10,6 +10,9 @@
 
 namespace htcondor {
 
+bool
+init_scitokens();
+
 	// Validate a given scitoken and populate the output variables (issuer, subject, expiry,
 	// bounding_set) with the corresponding information from the token.
 	//
