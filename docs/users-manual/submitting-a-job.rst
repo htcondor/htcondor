@@ -413,7 +413,7 @@ Consider the example
 
 .. code-block:: condor-submit
 
-      include : list-infiles.sh |
+      include : ./list-infiles.sh |
 
 In this example, the bar character at the end of the line causes the
 script ``list-infiles.sh`` to be invoked, and the output of the script
