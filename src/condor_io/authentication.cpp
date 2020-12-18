@@ -70,7 +70,8 @@ char const *AUTH_METHOD_FAMILY = "FAMILY";
 char const *AUTH_METHOD_MATCH = "MATCH";
 
 Authentication::Authentication( ReliSock *sock )
-	: m_auth(NULL),
+	: m_method_id(-1),
+	  m_auth(NULL),
 	  m_key(NULL),
 	  m_auth_timeout_time(0),
 	  m_continue_handshake(false),
@@ -194,6 +195,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 			dprintf(D_SECURITY, "AUTHENTICATE: auth would still block\n");
 			return 2;
 		}
+		firm = m_method_id;
 		m_continue_auth = false;
 		do_authenticate = false;
 		goto authenticate;
@@ -226,6 +228,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 			break;
 		}
 
+		m_method_id = firm;
 		m_method_name = "";
 		switch ( firm ) {
 #if defined(HAVE_EXT_GLOBUS)

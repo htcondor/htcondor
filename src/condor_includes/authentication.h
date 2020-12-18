@@ -200,6 +200,7 @@ class Authentication {
     Condor_Auth_Base *   authenticator_;    // This is it.
     ReliSock         *   mySock;
     int                  auth_status;
+	int         m_method_id;
     char*                method_used;
 	std::string	m_method_name;
 	std::string	m_methods_to_try;
