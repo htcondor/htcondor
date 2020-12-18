@@ -4435,12 +4435,13 @@ void export_schedd()
             :param int count: A queue count for each item from the iterator, defaults to 1.
             :param from: an iterator of strings or dictionaries containing the itemdata
                 for each job as in ``queue in`` or ``queue from``.
+            :param bool spool: Modify the job ClassAds to indicate that it should wait for input before starting. defaults to false.
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
                 range of Job ids Cluster ID of the submitted job(s).
             :rtype: :class:`SubmitResult`
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object(), boost::python::arg("spool")=false)
             )
         .add_property("oauth_services", &Submit::needs_oauth_services,
             R"C0ND0R(
