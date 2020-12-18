@@ -1162,47 +1162,53 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 	}
 	dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
 
-	shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	while ( (shouldUseMethod = selectAuthenticationType( my_methods, client_methods )) ) {
 #if defined(HAVE_EXT_KRB5) 
-	if ( (shouldUseMethod & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false )
 #else
-	if (shouldUseMethod & CAUTH_KERBEROS)
+		if (shouldUseMethod & CAUTH_KERBEROS)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_KERBEROS;
-	}
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_KERBEROS;
+			continue;
+		}
 #ifdef HAVE_EXT_OPENSSL
-	if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
 #else
-	if (shouldUseMethod & CAUTH_SSL)
+		if (shouldUseMethod & CAUTH_SSL)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_SSL;
-	}
-	if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
-		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
-		client_methods &= ~CAUTH_GSI;
-		shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
-	}
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_SSL;
+			continue;
+		}
+		if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
+			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
+			client_methods &= ~CAUTH_GSI;
+			continue;
+		}
 #ifdef HAVE_EXT_SCITOKENS
-	if ( (shouldUseMethod & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
 #else
-	if (shouldUseMethod & CAUTH_SCITOKENS)
+		if (shouldUseMethod & CAUTH_SCITOKENS)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding SciTokens: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_SCITOKENS;
-	}
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding SciTokens: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_SCITOKENS;
+			continue;
+		}
 #if defined(HAVE_EXT_MUNGE)
-	if ( (shouldUseMethod & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
 #else
-	if (shouldUseMethod & CAUTH_MUNGE)
+		if (shouldUseMethod & CAUTH_MUNGE)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_MUNGE;
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_MUNGE;
+			continue;
+		}
+		break;
 	}
 
 	dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
