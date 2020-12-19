@@ -186,7 +186,7 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			free(jti_char);
 		}
 
-		char **group_list;
+		char **group_list = nullptr;
 		if (scitoken_get_claim_string_list_ptr &&
 			!(*scitoken_get_claim_string_list_ptr)(token, "wlcg.groups", &group_list, nullptr) &&
 			group_list)
@@ -196,6 +196,9 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			while ( (grp = group_list[idx++]) ) {
 				groups.emplace_back(grp);
 			}
+		}
+		if (scitoken_free_string_list_ptr && group_list) {
+			(*scitoken_free_string_list_ptr)(group_list);
 		}
 
 		issuer = iss;
