@@ -2125,8 +2125,20 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				}
 				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
 			}
-			ad.InsertAttr(ATTR_TOKEN_SUBJECT, username);
-			ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
+			if (username.empty()) {
+				// This should not be possible: the SciTokens library should fail such a token.
+				dprintf(D_SECURITY, "Impossible token: token was validated with empty username.\n");
+				m_ret_value = 0;
+			} else {
+				ad.InsertAttr(ATTR_TOKEN_SUBJECT, username);
+			}
+			if (issuer.empty()) {
+				// Again, not possible - can't validate without an issuer!
+				dprintf(D_SECURITY, "Impossible token: token was validated with empty issuer.\n");
+				m_ret_value = 0;
+			else {
+				ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
+			}
 			if (!jti.empty()) ad.InsertAttr(ATTR_TOKEN_ID, jti);
 			if (expiry > 0) {
 				ad.InsertAttr("TokenExpirationTime", expiry);
