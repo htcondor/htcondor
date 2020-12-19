@@ -57,6 +57,7 @@ class Defrag: public Service {
 	std::string m_defrag_requirements;
 	std::string m_draining_start_expr;
 	ClassAd m_rank_ad;
+	classad::References m_drain_attrs;  // attributes needed to evaluate draining and DEFRAG_RANK expression
 	int m_draining_schedule;
 	std::string m_draining_schedule_str;
 	std::string m_cancel_requirements; // Requirements to stop a drain.
@@ -82,11 +83,11 @@ class Defrag: public Service {
 
 	void poll_cancel(MachineSet &); // Cancel any machines that match DEFRAG_CANCEL_REQUIREMENTS
 
-	bool drain(const ClassAd &startd_ad);
-	bool cancel_drain(const ClassAd &startd_ad);
+	bool drain_this(const ClassAd &startd_ad);
+	bool cancel_this_drain(const ClassAd &startd_ad);
 
 	void validateExpr(char const *constraint,char const *constraint_source);
-	bool queryMachines(char const *constraint,char const *constraint_source,ClassAdList &startdAds);
+	bool queryMachines(char const *constraint,char const *constraint_source,ClassAdList &startdAds,classad::References * projection);
 
 		// returns number of machines matching constraint
 		// (does not double-count ads with matching machine attributes)

@@ -43,13 +43,16 @@ static int (*scitoken_free_string_list_ptr)(char **value) = nullptr;
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
+bool g_init_tried = false;
 bool g_init_success = false; 
 
+} // end anonymous namespace
+
 bool
-init_scitokens(CondorError &err)
+htcondor::init_scitokens()
 {
-	if (g_init_success) {
-		return true;
+	if (g_init_tried) {
+		return g_init_success;
 	}
 
 #ifndef WIN32
@@ -67,30 +70,27 @@ init_scitokens(CondorError &err)
 		!(scitoken_get_expiration_ptr = (int (*)(const SciToken token, long long *value, char **err_msg))dlsym(dl_hdl, "scitoken_get_expiration"))
 	) {
 		const char *err_msg = dlerror();
-		if (err_msg) {
-			err.pushf("SCITOKENS", 1, "Failed to open SciTokens library: %s", err_msg);
-		} else {
-			err.pushf("SCITOKENS", 1, "Failed to initialize SciTokens (no error message available)");
-		}
+		dprintf(D_SECURITY, "Failed to open SciTokens library: %s\n", err_msg ? err_msg : "(no error message available)");
 		g_init_success = false;
+	} else {
+		g_init_success = true;
 	}
 	scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
 	scitoken_free_string_list_ptr = (int (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
-
-	return (g_init_success = true);
 #else
-	err.pushf("SCITOKENS", 1, "SciTokens library not supported on Windwos.");
-	return (g_init_success = false);
+	dprintf(D_SECURITY, "SciTokens is not supported on Windows.\n");
+	g_init_success = false;
 #endif
+	g_init_tried = true;
+	return g_init_success;
 }
-
-} // end anonymous namespace
 
 bool
 htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
 	long long &expiry, std::vector<std::string> &bounding_set, std::vector<std::string> &groups, std::string &jti, int ident, CondorError &err)
 {
-	if (!init_scitokens(err)) {
+	if (!htcondor::init_scitokens()) {
+		err.pushf("SCITOKENS", 1, "Failed to open SciTokens library.");
 		return false;
 	}
 

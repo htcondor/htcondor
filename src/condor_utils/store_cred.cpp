@@ -1737,7 +1737,7 @@ do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force)
 			// first see if we're operating on the pool password
 		int cmd = STORE_CRED;
 		int domain_pos = -1;
-		if (username_is_pool_password(user, &domain_pos)) {
+		if (username_is_pool_password(user, &domain_pos) && (mode & MODE_MASK) != GENERIC_QUERY) {
 			cmd = STORE_POOL_CRED;
 			user += domain_pos + 1;	// we only need to send the domain name for STORE_POOL_CRED
 		}

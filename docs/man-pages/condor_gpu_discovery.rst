@@ -1,5 +1,3 @@
-      
-
 *condor_gpu_discovery*
 ========================
 
@@ -134,6 +132,12 @@ Options
     Output in the syntax of HTCondor configuration, instead of ClassAd
     language. An additional attribute is produced ``NUM_DETECTED_GPUs``
     which is set to the number of GPUs detected.
+ **-repeat** [*N*]
+    Repeat listed GPUs *N* (default 2) times.  This results in a list
+    that looks like ``CUDA0, CUDA1, CUDA0, CUDA1``.
+ **-packed**
+    When repeating GPUs, repeat each GPU *N* times, not the whole list.
+    This results in a list that looks like ``CUDA0, CUDA0, CUDA1, CUDA1``.
  **-cron**
     This option suppresses the ``DetectedGpus`` attribute so that the
     output is suitable for use with *condor_startd* cron. Combine this

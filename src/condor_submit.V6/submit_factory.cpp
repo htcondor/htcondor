@@ -370,9 +370,12 @@ int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o)
 	if (o.queue_num) { formatstr_cat(submit_digest, "%d ", o.queue_num); }
 	auto_free_ptr submit_vars(o.vars.print_to_delimed_string(","));
 	if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
-	char slice_str[16*3+1];
-	if (o.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-	if ( ! o.items_filename.empty()) { submit_digest += "from "; submit_digest += o.items_filename.c_str(); }
+	if ( ! o.items_filename.empty()) {
+		submit_digest += "from ";
+		char slice_str[16*3+1];
+		if (o.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
+		submit_digest += o.items_filename.c_str();
+	}
 	submit_digest += "\n";
 
 	return rval;

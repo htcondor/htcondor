@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+
+import argparse
+import getpass
+import htcondor
+import os
+import sys
+import stat
+
+def write_dag_files(jobfile, runtime, node_count, email):
+
+    sendmail_sh = f"""#!/bin/sh
+
+#sendmail test@example.com
+"""
+
+    sendmail_sh_file = open("sendmail.sh", "w")
+    sendmail_sh_file.write(sendmail_sh)
+    sendmail_sh_file.close()
+    st = os.stat("sendmail.sh")
+    os.chmod("sendmail.sh", st.st_mode | stat.S_IEXEC)
+
+
+    slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
+    slurm_config_file = open("slurm_submit.config", "w")
+    slurm_config_file.write(slurm_config)
+    slurm_config_file.close()
+
+    slurm_dag = f"""JOB A {{
+    executable = sendmail.sh
+    universe = local
+    output = job-A-email.$(cluster).$(process).out
+    request_disk = 10M
+}}
+JOB B {{
+    annex_runtime = {runtime}
+    annex_node_count = {node_count}
+    annex_name = {getpass.getuser()}-test
+    annex_user = {getpass.getuser()}
+    universe=grid
+    grid_resource=batch slurm hpclogin1.chtc.wisc.edu
+    transfer_executable=false
+    executable=/home/jfrey/hobblein/hobblein_remote.sh
+    # args: <node count> <run time> <annex name> <user>
+    arguments=$(annex_node_count) $(annex_runtime) $(annex_name) $(annex_user)
+    +NodeNumber=$(annex_node_count)
+    #+HostNumber=$(annex_node_count)
+    +BatchRuntime=$(annex_runtime)
+    #+WholeNodes=true
+    output = job-B.$(Cluster).$(Process).out
+    error = job-B.$(Cluster).$(Process).err
+    log = annex.log
+    request_disk = 30
+    notification=NEVER
+}}
+JOB C {jobfile}
+JOB D {{
+    executable = sendmail.sh
+    universe = local
+    output = job-D-email.$(cluster).$(process).out
+    request_disk = 10M
+}}
+
+PARENT A CHILD B C
+PARENT B C CHILD D
+
+CONFIG slurm_submit.config
+
+VARS C Requirements="(Facility == \\\"CHTC_Slurm\\\")"
+VARS C +MayUseSlurm="True"
+VARS C +WantFlocking="True"
+"""
+
+    dag_file = open("slurm_submit.dag", "w")
+    dag_file.write(slurm_dag)
+    dag_file.close()
+
+
+def print_help(stream=sys.stderr):
+    help_msg = """Usage: {0} [-file] <job-filename> -runtime <time> -node_count <count> [-email <email-address>]
+
+Options:
+    -file          Filename of job to run (the -file prefix is optional if this is the first argument)
+    -runtime       Runtime for provisioned Slurm glideins (minutes)
+    -node_count    Number of Slurm nodes to provision
+    -email         Email address for notifications (optional)    
+"""
+    stream.write(help_msg.format(sys.argv[0]))
+
+def parse_args():
+
+    # The following argument combinations are acceptable:
+    # <this> -file <job-filename> -runtime <time-seconds> -node_count <count>
+    # <this> -file <job-filename> -runtime <time-seconds> -node_count <count> -email <email>
+    
+    if len(sys.argv) not in range(7, 9):
+        print_help()
+        sys.exit(-1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-file", type=str, action="store", help="Filename of job to run on the glideins")
+    parser.add_argument("-runtime", type=int, action="store", help="Runtime for provisioned Slurm glideins (seconds)")
+    parser.add_argument("-node_count", type=int, action="store", help="Number of Slurm nodes to provision")
+    parser.add_argument("-email", type=str, action="store", help="Email address for notifications")
+    args = parser.parse_args()
+    
+    return {"file": args.file, "runtime": args.runtime, "node_count": args.node_count, "email": args.email}
+
+
+def main():
+
+    # Parse arguments and set default values if undeclared
+    try:
+        args = parse_args()
+    except Exception as err:
+        print(f"Failed to parse arguments: {err}", file=sys.stderr)
+
+    # Set variables according to arguments
+    jobfile = args["file"]
+    runtime = args["runtime"]
+    node_count = args["node_count"]
+    email = None # Email is the only optional argument
+    if args["email"]: email = args["email"]
+
+    # Cleanup any old files left behind from a previous run
+    os.system("rm -rf slurm_submit.dag.*")
+
+    # Write the slurm_submit.dag file to disk
+    write_dag_files(jobfile, runtime, node_count, email)
+
+    # Submit it
+    dag_submit = htcondor.Submit.from_dag("slurm_submit.dag")
+    schedd = htcondor.Schedd()
+    with schedd.transaction() as txn:
+        cluster_id = dag_submit.queue(txn, 1)
+        print("Slurm job(s) submitted to cluster " + str(cluster_id))
+
+
+if __name__ == "__main__":
+    main()

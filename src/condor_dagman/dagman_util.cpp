@@ -30,6 +30,7 @@
 #include "../condor_procapi/procapi.h"
 #include "dagman_main.h"
 
+# if 0 // Moved to dagman_utils
 //-----------------------------------------------------------------------------
 int util_popen (ArgList &args) {
 	MyString cmd; // for debug output
@@ -210,3 +211,4 @@ int util_check_lock_file(const char *lockFileName) {
 
 	return result;
 }
+#endif

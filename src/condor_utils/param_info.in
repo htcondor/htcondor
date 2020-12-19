@@ -3330,6 +3330,14 @@ default=false
 type=bool
 tags=schedd
 
+[GRIDMANAGER_SELECTION_EXPR]
+default=
+type=string
+
+[GRIDMANAGER_LOG_APPEND_SELECTION_EXPR]
+default=false
+type=bool
+
 [MAX_JOB_QUEUE_LOG_ROTATIONS]
 default=1
 type=int
@@ -4340,7 +4348,7 @@ type=string
 tags=defrag
 
 [DEFRAG_REQUIREMENTS]
-default=PartitionableSlot && Offline=!=True
+default=
 type=string
 description=
 tags=defrag
@@ -4352,7 +4360,7 @@ description=
 tags=defrag
 
 [DEFRAG_WHOLE_MACHINE_EXPR]
-default=Cpus == TotalCpus && Offline=!=True
+default=Cpus == TotalSlotCpus
 type=string
 customization=normal
 description=
@@ -6188,10 +6196,14 @@ default : @end
 	STARTD_CRON_$(1)_MONITOR_METRICS = $(5+)
 @end
 
+[GPU_MONITOR]
+default=$(LIBEXEC)/condor_gpu_utilization
+win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
+
 [$FEATURE.GPUsMonitor]
 description=Settings to monitor GPU usage
 default : @end
-	use feature : Monitor( GPUs, WaitForExit, 1, $(LIBEXEC)/condor_gpu_utilization, SUM:GPUs, PEAK:GPUsMemory )
+	use feature : Monitor( GPUs, WaitForExit, 1, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
 
     STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
@@ -6334,7 +6346,7 @@ description=Shared port stuff for a HAD node. args:(controlee, ip_or_hostname, h
 default: @end
    HAD_LIST = $(HAD_LIST) $(2):$(3)
    REPLICATION_LIST = $(REPLICATION_LIST) $(2):$(4)
-   HAD_CONTROLEE = $(1)
+   HAD_CONTROLLEE = $(1)
    MASTER_$(1)_CONTROLLER = HAD
 @end
 

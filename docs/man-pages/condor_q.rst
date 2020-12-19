@@ -418,6 +418,9 @@ Options
     because it reduces the load on the *condor_schedd*. A job event log
     does not contain all of the job information, so some fields in the
     normal output of *condor_q* will be blank.
+ **-factory**
+    (output option) Display information about late materialization job
+    factories in the *condor_shedd*. 
  **-autocluster**
     (output option) Output *condor_schedd* daemon auto cluster
     information. For each auto cluster, output the unique ID of the auto

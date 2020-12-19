@@ -35,7 +35,7 @@
 #include "condor_attributes.h"
 #include "dag.h"
 #include "debug.h"
-#include "submit.h"
+#include "dagman_submit.h"
 #include "util.h"
 #include "dagman_main.h"
 #include "dagman_multi_dag.h"
@@ -872,7 +872,7 @@ Dag::RemoveBatchJob(Job *node) {
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
 	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", display.Value() );
-	if ( util_popen( args ) != 0 ) {
+	if ( _dagmanUtils.popen( args ) != 0 ) {
 			// Note: error here can't be fatal because there's a
 			// race condition where you could do a condor_rm on
 			// a job that already terminated.  wenger 2006-02-08.
@@ -2182,7 +2182,7 @@ Dag::NumNodesDone( bool includeFinal ) const
 // where we need to condor_rm any running node jobs, and the schedd
 // won't do it for us.  wenger 2014-10-29.
 void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
-			bool bForce ) const
+			bool bForce )
 {
 	if ( bForce ) removeCondorJobs = true;
 
@@ -2204,7 +2204,7 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 		// NOTE: having whitespace in the constraint argument will cause quoting problems on windows
 		constraint.formatstr(ATTR_DAGMAN_JOB_ID "==%d", dmJobId._cluster );
 		args.AppendArg( constraint.Value() );
-		if ( util_popen( args ) != 0 ) {
+		if ( _dagmanUtils.popen( args ) != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
 	}
