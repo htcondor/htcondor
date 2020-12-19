@@ -79,13 +79,19 @@ init_scitokens(CondorError &err)
 #endif
 }
 
-std::string
-normalize_token(const std::string &input_token)
+bool
+normalize_token(const std::string &input_token, std::string &output_token)
 {
 	static const std::string whitespace = " \t\f\n\v\r";
+		// Tokens are meant for use in an HTTP header; these are forbidden
+		// characters.
 	static const std::string nonheader_whitespace = "\r\n";
 	auto begin = input_token.find_first_not_of(whitespace);
-	if (begin == std::string::npos) {return "";}
+		// No token here, but not an error.
+	if (begin == std::string::npos) {
+		output_token = "";
+		return true;
+	}
 
 	std::string token = input_token.substr(begin);
 	auto end = token.find_last_not_of(whitespace);
@@ -93,42 +99,59 @@ normalize_token(const std::string &input_token)
 
 		// If non-permitted header characters are present ("\r\n"),
 		// then this token is not permitted.
-	if (token.find(nonheader_whitespace) != std::string::npos) {return "";}
+	if (token.find(nonheader_whitespace) != std::string::npos) {
+		output_token = "";
+		dprintf(D_SECURITY, "Token discovery failure: token contains non-permitted character sequence (\\r\\n)\n");
+		return false;
+	}
 
-	return token;
+	output_token = token;
+	return true;
 }
 
-std::string
-find_token_in_file(const std::string &token_file)
+bool
+find_token_in_file(const std::string &token_file, std::string &output_token)
 {   
 	dprintf(D_FULLDEBUG,  "Looking for token in file %s\n", token_file.c_str());
 	int fd = safe_open_no_create(token_file.c_str(), O_RDONLY);
 	if (fd == -1) {
-		return "";
+		output_token = "";
+		if (errno == ENOENT) {
+			return true;
+		}
+		dprintf(D_SECURITY,  "Token discovery failure: failed to open file %s: %s (errno=%d).\n",
+			token_file.c_str(), strerror(errno), errno);
+		return false;
 	}
 
+	// As a pragmatic matter, we limit tokens to 16KB; this is often the limit
+	// in size of HTTP headers for many web servers.
+	// This also avoids unbounded memory use in case if the user points us to
+	// a large file.
 	static const size_t max_size = 16384;
 
 	std::vector<char> input_buffer;
-	input_buffer.reserve(max_size);
+	input_buffer.resize(max_size);
 
-	ssize_t cur_size = 0;
-
-	ssize_t retval;
-	do {
-		retval = read(fd, &input_buffer[cur_size], max_size - cur_size);
-		if (retval != -1) cur_size += retval;
-	} while ((retval > 0) || ((retval == -1) && (errno == EAGAIN || errno == EINTR)));
+	ssize_t retval = full_read(fd, &input_buffer[0], max_size);
 
 	close(fd);
 
 	if (retval == -1) {
-		return "";
+		output_token = "";
+		dprintf(D_SECURITY,  "Token discovery failure: failed to read file %s: %s (errno=%d).\n",
+			token_file.c_str(), strerror(errno), errno);
+		return false;
+	}
+	if (retval == 16384) {
+		// Token may have been truncated!  Erring on the side of caution.
+		dprintf(D_SECURITY, "Token discovery failure: token was larger than 16KB limit.\n");
+		return false;
 	}
 
-	std::string token(&input_buffer[0], cur_size);
+	std::string token(&input_buffer[0], retval);
 
-	return normalize_token(token);
+	return normalize_token(token, output_token);
 }
 
 } // end anonymous namespace
@@ -138,17 +161,17 @@ htcondor::discover_token()
 {
 	const char *bearer_token = getenv("BEARER_TOKEN");
 	std::string token;
-	if (bearer_token && *bearer_token &&
-		!(token = normalize_token(bearer_token)).empty())
+	if (bearer_token && *bearer_token)
 	{
-		return token;
+		if (!normalize_token(bearer_token, token)) {return "";}
+		if (!token.empty()) {return token;}
 	}
 
 	const char *bearer_token_file = getenv("BEARER_TOKEN_FILE");
-	if (bearer_token_file &&
-		!(token = find_token_in_file(bearer_token_file)).empty())
+	if (bearer_token_file)
 	{
-		return token;
+		if (!find_token_in_file(bearer_token_file, token)) {return "";}
+		if (!token.empty()) {return token;}
 	}
 
 #ifndef WIN32
@@ -159,12 +182,12 @@ htcondor::discover_token()
 	const char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
 	if (xdg_runtime_dir) {
 		std::string xdg_token_file = std::string(xdg_runtime_dir) + fname;
-		if (!(token = find_token_in_file(xdg_token_file)).empty()) {
-			return token;
-		}
+		if (!find_token_in_file(xdg_token_file, token)) {return "";}
+		if (!token.empty()) {return token;}
 	}
 
-	return find_token_in_file("/tmp" + fname);
+	if (!find_token_in_file("/tmp" + fname, token)) {return "";}
+	return token;
 #else
 		// WLCG profile doesn't define search paths on Windows;
 		// skip this for now.
