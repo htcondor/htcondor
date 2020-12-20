@@ -356,8 +356,13 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 		std::string scitoken;
 		if (m_scitokens_mode) {
 			if (m_scitokens_file.empty()) {
-				ouch( "No SciToken file provided\n" );
-				m_auth_state->m_client_status = AUTH_SSL_ERROR;
+					// Try to use the token from the environment.
+				scitoken = htcondor::discover_token();
+
+				if (scitoken.empty()) {
+					ouch( "No SciToken file provided\n" );
+					m_auth_state->m_client_status = AUTH_SSL_ERROR;
+				}
 			} else {
 				std::unique_ptr<FILE,decltype(&::fclose)> f(
 					safe_fopen_no_create( m_scitokens_file.c_str(), "r" ), 
