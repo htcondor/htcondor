@@ -447,6 +447,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	filter_attrs.insert( ATTR_TOKEN_SUBJECT );
 	filter_attrs.insert( ATTR_TOKEN_ISSUER );
 	filter_attrs.insert( ATTR_TOKEN_GROUPS );
+	filter_attrs.insert( ATTR_TOKEN_SCOPES );
 	filter_attrs.insert( ATTR_TOKEN_ID );
 
 	int cluster = NewCluster();

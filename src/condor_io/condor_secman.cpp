@@ -3547,6 +3547,7 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_SUBJECT);
 	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_ISSUER);
 	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_GROUPS);
+	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_SCOPES);
 	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_ID);
 	sec_copy_attribute(policy_ad, *policy, ATTR_REMOTE_POOL);
 	sec_copy_attribute(policy_ad, *policy, "ScheddSession");

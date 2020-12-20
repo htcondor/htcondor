@@ -20,7 +20,7 @@ init_scitokens();
 bool
 validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
 	long long &expiry, std::vector<std::string> &bounding_set, std::vector<std::string> &groups,
-	std::string &jti, int ident, CondorError &err);
+	std::vector<std::string> &scopes, std::string &jti, int ident, CondorError &err);
 
 }
 

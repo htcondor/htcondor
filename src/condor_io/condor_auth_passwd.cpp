@@ -2082,18 +2082,19 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 		setRemoteDomain(domain);
 
 		if (!m_t_client.a_token.empty()) {
-			std::vector<std::string> authz;
+			std::vector<std::string> authz, scopes;
 			time_t expiry = 0;
 			std::string username, issuer, groups, jti;
 			try {
 				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
 				if (decoded_jwt.has_payload_claim("scope")) {
 						// throws std::bad_cast if this isn't a string; caught below.
-					const std::string &scopes = decoded_jwt.get_payload_claim("scope").as_string();
-					StringList scope_list(scopes.c_str());
+					const std::string &scopes_str = decoded_jwt.get_payload_claim("scope").as_string();
+					StringList scope_list(scopes_str.c_str());
 					scope_list.rewind();
 					const char *scope;
 					while ( (scope = scope_list.next()) ) {
+						scopes.emplace_back(scope);
 						if (strncmp(scope, "condor:/", 8)) {
 							continue;
 						}
@@ -2125,6 +2126,15 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				}
 				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
 			}
+			if (!scopes.empty()) {
+				std::stringstream ss;
+				bool first = true;
+				for (const auto &scope : scopes) {
+					ss << (first ? "" : ",") << scope;
+					first = false;
+				}
+				ad.InsertAttr(ATTR_TOKEN_SCOPES, ss.str());
+			}
 			if (username.empty()) {
 				// This should not be possible: the SciTokens library should fail such a token.
 				dprintf(D_SECURITY, "Impossible token: token was validated with empty username.\n");
@@ -2136,7 +2146,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				// Again, not possible - can't validate without an issuer!
 				dprintf(D_SECURITY, "Impossible token: token was validated with empty issuer.\n");
 				m_ret_value = 0;
-			else {
+			} else {
 				ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
 			}
 			if (!jti.empty()) ad.InsertAttr(ATTR_TOKEN_ID, jti);

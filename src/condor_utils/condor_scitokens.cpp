@@ -87,7 +87,7 @@ htcondor::init_scitokens()
 
 bool
 htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
-	long long &expiry, std::vector<std::string> &bounding_set, std::vector<std::string> &groups, std::string &jti, int ident, CondorError &err)
+	long long &expiry, std::vector<std::string> &bounding_set, std::vector<std::string> &groups, std::vector<std::string> &scopes, std::string &jti, int ident, CondorError &err)
 {
 	if (!htcondor::init_scitokens()) {
 		err.pushf("SCITOKENS", 1, "Failed to open SciTokens library.");
@@ -178,6 +178,17 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			}
 
 			(*enforcer_acl_free_ptr)(acls);
+		}
+
+		char *scopes_char = nullptr;
+		if (!(*scitoken_get_claim_string_ptr)(token, "scope", &scopes_char, nullptr)) {
+			StringList scopes_list(scopes_char);
+			scopes_list.rewind();
+			free(scopes_char);
+			char *scope;
+			while ( (scope = scopes_list.next()) ) {
+				scopes.emplace_back(scope);
+			}
 		}
 
 		char *jti_char = nullptr;
