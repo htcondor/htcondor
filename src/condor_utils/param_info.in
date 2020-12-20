@@ -3047,7 +3047,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
