@@ -21,6 +21,12 @@ bool
 validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
 	long long &expiry, std::vector<std::string> &bounding_set, int ident, CondorError &err);
 
+	// Determine the value of the current token from the process's environment.
+	// Follows the WLCG Bearer Token Discovery schema.
+	// On error or no token discovered, returns the empty string.
+std::string
+discover_token();
+
 }
 
 #endif // __CONDOR_SCITOKENS_H_
