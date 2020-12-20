@@ -466,7 +466,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 					// in this case.
 				if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
 					dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
-					return 1;
+					return -1;
 				}
 				Regex excludeFilesRegex;
 				if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
@@ -474,11 +474,11 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 						"config parameter is not a valid "
 						"regular expression.  Value: %s,  Error: %s",
 						excludeRegex.c_str(), _errstr ? _errstr : "");
-					return 1;
+					return -1;
 				}
 				if(!excludeFilesRegex.isInitialized() ) {
 					dprintf(D_FULLDEBUG, "Failed to initialize exclude files regex.");
-					return 1;
+					return -1;
 				}
 
 				Directory dir(&si);
