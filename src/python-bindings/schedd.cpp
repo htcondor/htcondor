@@ -920,11 +920,12 @@ protected:
 
 struct SubmitJobsIterator {
 
-	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner)
+	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, num, from)
 		, m_ssqa(m_hash)
 		, m_iter_qargs(false)
 		, m_return_proc_ads(procs)
+		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
 			m_hash.init();
@@ -933,11 +934,12 @@ struct SubmitJobsIterator {
 			m_hash.init_base_ad(qdate, owner.c_str());
 	}
 
-	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner)
+	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, 0, boost::python::object())
 		, m_ssqa(m_hash)
 		, m_iter_qargs(true)
 		, m_return_proc_ads(procs)
+		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
 		m_hash.init();
@@ -1011,12 +1013,12 @@ struct SubmitJobsIterator {
 		ClassAd * job = NULL;
 		if (rval == 2 && jid.proc > 0) {
 			JOB_ID_KEY cid(jid.cluster, 0);
-			job = m_hash.make_job_ad(cid, item_index, step, false, false, NULL, NULL);
+			job = m_hash.make_job_ad(cid, item_index, step, false, m_spool, NULL, NULL);
 			if (job) {
-				job = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+				job = m_hash.make_job_ad(jid, item_index, step, false, m_spool, NULL, NULL);
 			}
 		} else {
-			job = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+			job = m_hash.make_job_ad(jid, item_index, step, false, m_spool, NULL, NULL);
 		}
 
 		if ( ! job) {
@@ -1054,6 +1056,7 @@ private:
 	SubmitStepFromQArgs m_ssqa;
 	bool m_iter_qargs;
 	bool m_return_proc_ads;
+	bool m_spool;
 };
 
 struct EditResult {
@@ -3391,7 +3394,7 @@ public:
     }
 
 	boost::shared_ptr<SubmitResult>
-	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from)
+	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from, bool spool=false)
 	{
 		if (!txn.get() || !txn->transaction()) {
 		    THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
@@ -3450,7 +3453,7 @@ public:
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
 
 			// make a proc0 ad (because that's the same as a cluster ad)
-			ClassAd *proc_ad = m_hash.make_job_ad(JOB_ID_KEY(cluster, 0), 0, 0, false, false, NULL, NULL);
+			ClassAd *proc_ad = m_hash.make_job_ad(JOB_ID_KEY(cluster, 0), 0, 0, false, spool, NULL, NULL);
 			process_submit_errstack(m_hash.error_stack());
 			if ( ! proc_ad) {
 				THROW_EX(HTCondorInternalError, "Failed to create new job ad");
@@ -3510,7 +3513,7 @@ public:
 				    THROW_EX(HTCondorInternalError, "Internal error: newProc does not match iterator procid");
 				}
 
-				ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+				ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, spool, NULL, NULL);
 				process_submit_errstack(m_hash.error_stack());
 				if ( ! proc_ad) {
 				    THROW_EX(HTCondorInternalError, "Failed to create new job ad");
@@ -3788,7 +3791,7 @@ boost::python::object Schedd::submit(boost::python::object submitObj, int count/
 
 	boost::shared_ptr<ConnectionSentry> txn(new ConnectionSentry(*this, true)); // Automatically connects / disconnects.
 
-	return boost::python::object(sub.queue_from_iter(txn, count, itemdata));
+	return boost::python::object(sub.queue_from_iter(txn, count, itemdata, spool));
 }
 
 
@@ -4432,12 +4435,13 @@ void export_schedd()
             :param int count: A queue count for each item from the iterator, defaults to 1.
             :param from: an iterator of strings or dictionaries containing the itemdata
                 for each job as in ``queue in`` or ``queue from``.
+            :param bool spool: Modify the job ClassAds to indicate that it should wait for input before starting. defaults to false.
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
                 range of Job ids Cluster ID of the submitted job(s).
             :rtype: :class:`SubmitResult`
             :raises RuntimeError: if the submission fails.
             )C0ND0R",
-            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("itemdata")=boost::python::object(), boost::python::arg("spool")=false)
             )
         .add_property("oauth_services", &Submit::needs_oauth_services,
             R"C0ND0R(

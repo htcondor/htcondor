@@ -38,6 +38,8 @@
 #define valgrind_exe "valgrind"
 #endif
 
+const int UTIL_MAX_LINE_LENGTH = 1024;
+
 // The default maximum rescue DAG number.
 const int MAX_RESCUE_DAG_DEFAULT = 100;
 
@@ -62,6 +64,20 @@ public:
     virtual ~EnvFilter( void ) { };
     virtual bool ImportFilter( const MyString & /*var*/,
                                const MyString & /*val*/ ) const;
+};
+
+// this is a simple tokenizer class for parsing keywords out of a line of text
+// token separator defaults to whitespace, "" or '' can be used to have tokens
+// containing whitespace, but there is no way to escape " inside a "" string or
+// ' inside a '' string. outer "" and '' are not considered part of the token.
+
+class dag_tokener {
+public:
+	dag_tokener(const char * line_in);
+	void rewind() { tokens.Rewind(); }
+	const char * next() { return tokens.AtEnd() ? NULL : tokens.Next()->c_str(); }
+protected:
+	List<std::string> tokens; // parsed tokens
 };
 
     //
@@ -211,6 +227,36 @@ public:
     MyString HaltFileName( const MyString &primaryDagFile );
 
     void tolerant_unlink( const char *pathname );
+
+    /** Determine whether the strictness setting turns a warning into a fatal
+    error.
+    @param strictness: The strictness level of the warning.
+    @param quit_if_error: Whether to exit immediately if the warning is
+        treated as an error
+    @return true iff the warning is treated as an error
+    */
+    bool check_warning_strictness( strict_level_t strictness,
+                bool quit_if_error = true );
+
+    /** Execute a command, printing verbose messages and failure warnings.
+        @param cmd The command or script to execute
+        @return The return status of the command
+    */
+    int popen (ArgList &args);
+
+    /** Create the given lock file, containing the PID of this process.
+        @param lockFileName: the name of the lock file to create
+        @return: 0 if successful, -1 if not
+    */
+    int create_lock_file(const char *lockFileName, bool abortDuplicates);
+
+    /** Check the given lock file and see whether the PID given in it
+        does, in fact, exist.
+        @param lockFileName: the name of the lock file to check
+        @return: 0 if successful, -1 if there was an error, 1 if the
+            relevant PID does exist and this DAGMan should abort
+    */
+    int check_lock_file(const char *lockFileName);
 
 };
 

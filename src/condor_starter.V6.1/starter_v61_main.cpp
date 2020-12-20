@@ -241,7 +241,14 @@ main_pre_dc_init( int argc, char* argv[] )
 			// state, so I am just leaving Termlog turned off in all
 			// cases.
 
-		//Termlog = 1;
+		// (Re)name the log file StarterLog.testing to make it clear
+		// to admins that this is not the StarterLog they are looking for.
+		std::string baseLog;
+		param(baseLog, "STARTER_LOG", "");
+		if (!baseLog.empty()) {
+			std::string newLog = baseLog + ".testing";
+			config_insert("STARTER_LOG", newLog.c_str());
+		}
 		dprintf_config(get_mySubSystem()->getName());
 
 		printClassAd();

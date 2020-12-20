@@ -67,11 +67,18 @@ Job ClassAd Attributes
     A string recording the issuer in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
-:index:`AuthTokenGroup<single: AuthTokenGroup; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenGroup>`
+:index:`AuthTokenGroups<single: AuthTokenGroups; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenGroups>`
 
-``AuthTokenGroup``
+``AuthTokenGroups``
     A string recording the groups in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenScopes<single: AuthTokenScopes; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenScopes>`
+
+``AuthTokenScopes``
+    A string recording the scopes in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenId<single: AuthTokenId; ClassAd job attributes>`

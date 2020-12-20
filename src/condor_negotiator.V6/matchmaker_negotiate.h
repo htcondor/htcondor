@@ -77,22 +77,4 @@ class ResourceRequestList {
 	std::set<int> m_rejected_auto_clusters;
 };
 
-#if 0
-	class RequestListManager {
-
-	 public:
-
-		 RequestListManager() { }
-		 ~RequestListManager();
-
-		 ResourceRequestList *getRequestList(const MyString& schedd_and_submitter);
-		 void clear();
-
-	 private:
-		typedef std::map< MyString,classy_counted_ptr<ResourceRequestList> > RequestListMap;
-		RequestListMap m_request_lists_map;
-
-	};
-#endif 
-
 #endif

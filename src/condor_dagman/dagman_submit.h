@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef CONDOR_SUBMIT_H
-#define CONDOR_SUBMIT_H
+#ifndef DAGMAN_SUBMIT_H
+#define DAGMAN_SUBMIT_H
 
 #include "condor_id.h"
 
@@ -81,4 +81,4 @@ int get_fake_condorID();
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
 			   const char* directory, const char *logFile );
 
-#endif /* #ifndef CONDOR_SUBMIT_H */
+#endif /* #ifndef DAGMAN_SUBMIT_H */

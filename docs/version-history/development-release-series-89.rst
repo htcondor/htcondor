@@ -5,7 +5,7 @@ This is the development release series of HTCondor. The details of each
 version are described below.
 
 Version 8.9.11
--------------
+--------------
 
 Release Notes:
 
@@ -14,6 +14,11 @@ Release Notes:
 - HTCondor version 8.9.11 not yet released.
 
 New Features:
+
+- Added command-line options to *condor_gpu_discovery* to report GPUs
+  multiple times.  If your GPU jobs are small and known to be well-behaved,
+  this makes it easier for them to share a GPU.
+  :jira:`106`
 
 - Enhanced the optional job completion sent to the submitter to now
   include the batch name, if defined, and the submitting directory,
@@ -26,13 +31,25 @@ New Features:
   :jira:`44`
 
 - When token authentication (IDTOKENS or SCITOKENS) is used, HTCondor will
-  now record the subject, issuer, and groups, from the token used to
+  now record the subject, issuer, scopes, and groups, from the token used to
   submit jobs.
   :jira:`90`
 
+- The python ``schedd.submit`` method now honors the **spool** argument
+  even when the first argument is a ``Submit`` object.
+  :jira:`131`
+
+- When singularity is enabled, when there is an error running singularity
+  test before the job, the first line of singularity stderr is logged to 
+  the hold message in the job.
+  :jira:`133`
+
 Bugs Fixed:
 
-- None.
+- Fixed a bug with singularity support where the job's cwd wasn't
+  being set to the scratch directory when `SINGULARITY_TARGET_DIR` wasn't
+  also set.
+  :jira:`91`
 
 Version 8.9.10
 --------------

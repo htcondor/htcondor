@@ -1416,7 +1416,7 @@ void main_init (int argc, char ** const argv) {
 			debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
 						   lockFileName.c_str());
 			if (dagman.abortDuplicates) {
-				if (util_check_lock_file(lockFileName.c_str()) == 1) {
+				if (dagmanUtils.check_lock_file(lockFileName.c_str()) == 1) {
 					debug_printf( DEBUG_QUIET, "Aborting because it "
 							"looks like another instance of DAGMan is "
 							"currently running on this DAG; if that is "
@@ -1443,7 +1443,7 @@ void main_init (int argc, char ** const argv) {
 			// If this DAGMan continues, it should overwrite the lock
 			// file if it exists.
 			//
-		util_create_lock_file(lockFileName.c_str(), dagman.abortDuplicates);
+		dagmanUtils.create_lock_file(lockFileName.c_str(), dagman.abortDuplicates);
 
 		debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
 		if( !dagman.dag->Bootstrap( recovery ) ) {

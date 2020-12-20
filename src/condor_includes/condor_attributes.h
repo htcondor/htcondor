@@ -239,6 +239,7 @@
 #define ATTR_TOKEN_SUBJECT "AuthTokenSubject"
 #define ATTR_TOKEN_ISSUER "AuthTokenIssuer"
 #define ATTR_TOKEN_GROUPS "AuthTokenGroups"
+#define ATTR_TOKEN_SCOPES "AuthTokenScopes"
 #define ATTR_TOKEN_ID "AuthTokenId"
 #define ATTR_DELEGATED_PROXY_EXPIRATION  "DelegatedProxyExpiration"
 #define ATTR_GRID_RESOURCE  "GridResource"

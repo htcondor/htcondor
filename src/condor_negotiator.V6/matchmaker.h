@@ -28,6 +28,7 @@
 #include "dc_collector.h"
 #include "condor_ver_info.h"
 #include "matchmaker_negotiate.h"
+#include "GroupEntry.h"
 
 #include <vector>
 #include <string>
@@ -39,60 +40,8 @@ typedef struct MapEntry {
 	int sequenceNum;
 	ClassAd *oldAd;
 } MapEntry;
-/* ODBC object extern */
-//extern ODBC *DBObj;
-
-struct GroupEntry {
-    typedef vector<int>::size_type size_type;
-
-	GroupEntry();
-	~GroupEntry();
-
-    // these are set from configuration
-	string name;
-    double config_quota;
-	bool static_quota;
-	bool accept_surplus;
-    bool autoregroup;
-
-    // current usage information coming into this negotiation cycle
-    double usage;
-    ClassAdListDoesNotDeleteAds* submitterAds;
-    double priority;
-
-    // slot quota as computed by HGQ
-    double quota;
-    // slots requested: jobs submitted against this group
-    double requested;
-    // slots requested, not mutated
-    double currently_requested;
-    // slots allocated to this group by HGQ
-    double allocated;
-    // sum of slot quotas in this subtree
-    double subtree_quota;
-    // all slots requested by this group and its subtree
-    double subtree_requested;
-
-	// sum of usage of this node and all children
-	double subtree_usage;
-    // true if this group got served by most recent round robin
-    bool rr;
-    // timestamp of most recent allocation from round robin
-    double rr_time;
-    double subtree_rr_time;
-
-    // tree structure
-    GroupEntry* parent;
-    vector<GroupEntry*> children;
-    map<string, size_type, Accountant::ci_less> chmap;
-
-    // attributes for configurable sorting
-    ClassAd* sort_ad;
-    double sort_key;
-};
 
 /* Disable floating-point equality warnings */
-
 GCC_DIAG_OFF(float-equal)
 
 class Matchmaker : public Service
@@ -108,7 +57,6 @@ class Matchmaker : public Service
 		// reinitialization method (reconfig)
 		int reinitialize ();	
 
-            //typedef HashTable<MyString, MyString> ClaimIdHash;
         typedef std::map<std::string, std::set<std::string> > ClaimIdHash;
 
 		// command handlers
@@ -318,7 +266,6 @@ class Matchmaker : public Service
 		void OptimizeJobAdForMatchmaking(ClassAd *ad);
 
 		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
-		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
 		void addRemoteUserPrios( ClassAd* ad );
 		void addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
@@ -578,30 +525,10 @@ class Matchmaker : public Service
 
         // set at startup/restart/reinit
         GroupEntry* hgq_root_group;
-        string hgq_root_name;
         vector<GroupEntry*> hgq_groups;
         map<string, GroupEntry*> group_entry_map;
         bool accept_surplus;
         bool autoregroup;
-        bool allow_quota_oversub;
-
-        void hgq_construct_tree();
-        void hgq_assign_quotas(GroupEntry* group, double quota);
-        double hgq_fairshare(GroupEntry* group);
-        double hgq_allocate_surplus(GroupEntry* group, double surplus);
-        double hgq_recover_remainders(GroupEntry* group);
-        double hgq_round_robin(GroupEntry* group, double surplus);
-
-        struct ord_by_rr_time {
-            vector<GroupEntry*>* data;
-            bool operator()(unsigned long const& ja, unsigned long const& jb) const {
-                GroupEntry* a = (*data)[ja];
-                GroupEntry* b = (*data)[jb];
-                if (a->subtree_rr_time != b->subtree_rr_time) return a->subtree_rr_time < b->subtree_rr_time;
-                if (a->subtree_quota != b->subtree_quota) return a->subtree_quota > b->subtree_quota;
-                return a->subtree_requested > b->subtree_requested;
-            }
-        };
 
         // true if resource ads with consumption policies are present
         // for the current negotiation cycle

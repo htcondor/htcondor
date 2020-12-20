@@ -2619,6 +2619,7 @@ usage (const char *myName, int other)
 		"\t<cluster>\t\t Get information about specific cluster\n"
 		"\t<cluster>.<proc>\t Get information about specific job\n"
 		"\t<owner>\t\t\t Information about jobs owned by <owner>\n"
+		"\t-factory\t\t Get information about late materialization job factories\n"
 		"\t-autocluster\t\t Get information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\t Get information about jobs that match <expr>\n"
 		"\t-unmatchable\t\t Get information about jobs that do not match any machines\n"

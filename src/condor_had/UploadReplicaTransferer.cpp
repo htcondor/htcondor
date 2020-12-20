@@ -233,8 +233,11 @@ UploadReplicaTransferer::uploadFile( MyString& filePath, MyString& extension )
 {
     dprintf( D_ALWAYS, "UploadReplicaTransferer::uploadFile %s.%s started\n", 
 			 filePath.Value( ), extension.Value( ) );
+
+	int fips_mode = param_integer("HAD_FIPS_MODE", 0);
+
     // sending the temporary file through the opened socket
-	if( ! utilSafePutFile( *m_socket, filePath + "." + extension ) ){
+	if( ! utilSafePutFile( *m_socket, filePath + "." + extension, fips_mode ) ){
 		dprintf( D_ALWAYS, "UploadReplicaTransferer::uploadFile failed, "
                 "unlinking %s.%s\n", filePath.Value(), extension.Value());
 		FilesOperations::safeUnlinkFile( filePath.Value( ), 

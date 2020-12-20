@@ -1023,10 +1023,10 @@ Condor_Auth_SSL::server_verify_scitoken()
 	std::string issuer, subject;
 	long long expiry;
 	std::vector<std::string> bounding_set;
-	std::vector<std::string> groups;
+	std::vector<std::string> groups, scopes;
 	std::string jti;
 	if (!htcondor::validate_scitoken(m_client_scitoken, issuer, subject, expiry,
-		bounding_set, groups, jti, mySock_->getUniqueId(), err))
+		bounding_set, groups, scopes, jti, mySock_->getUniqueId(), err))
 	{
 		dprintf(D_SECURITY, "%s\n", err.getFullText().c_str());
 		return false;
@@ -1040,6 +1040,17 @@ Condor_Auth_SSL::server_verify_scitoken()
 			first = false;
 		}
 		ad.InsertAttr(ATTR_TOKEN_GROUPS, ss.str());
+	}
+		// These are *not* the same as authz; the authz are filtered (and stripped)
+		// for the prefix condor:/
+	if (!scopes.empty()) {
+		std::stringstream ss;
+		bool first = true;
+		for (const auto &scope : scopes) {
+			ss << (first ? "" : ",") << scope;
+			first = false;
+		}
+		ad.InsertAttr(ATTR_TOKEN_SCOPES, ss.str());
 	}
 	if (!jti.empty()) {
 		ad.InsertAttr(ATTR_TOKEN_ID, jti);
