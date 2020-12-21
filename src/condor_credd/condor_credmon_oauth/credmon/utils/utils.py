@@ -100,7 +100,7 @@ def setup_logging(log_path = None, log_level = None):
 
     # Get the log path
     if (log_path is None) and (htcondor is not None) and (
-            ('CREDMON_OAUTH_LOG' in htcondor.param)
+            ('CREDMON_OAUTH_LOG' in htcondor.param) or
             ('SEC_CREDENTIAL_MONITOR_LOG' in htcondor.param) or
             ('SEC_CREDENTIAL_MONITOR_OAUTH_LOG' in htcondor.param)
             ):
