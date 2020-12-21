@@ -149,9 +149,11 @@ htcondor::init_scitokens()
 		g_init_success = false;
 	} else {
 		g_init_success = true;
+			// Note: these methods are only in a more recent version of the SciTokens library; hence, if they
+			// are missing it's considered non-fatal.
+		scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
+		scitoken_free_string_list_ptr = (int (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
 	}
-	scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
-	scitoken_free_string_list_ptr = (int (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
 #else
 	dprintf(D_SECURITY, "SciTokens is not supported on Windows.\n");
 	g_init_success = false;
