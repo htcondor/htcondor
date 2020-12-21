@@ -6484,7 +6484,7 @@ default : @end
 description=Enable the daemons and features need to support running jobs with OAuth
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
-	SEC_CREDENTIAL_MONITOR_OAUTH_LOG=$(LOG)/CredMonOAuthLog
+	CREDMON_OAUTH_LOG=$(LOG)/CredMonOAuthLog
 	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	TRUST_CREDENTIAL_DIRECTORY=True
