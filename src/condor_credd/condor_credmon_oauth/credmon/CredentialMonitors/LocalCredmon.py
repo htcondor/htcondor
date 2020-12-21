@@ -49,6 +49,7 @@ class LocalCredmon(OAuthCredmon):
         token.update_claims({'sub': username})
         user_authz = self.authz_template.format(username=username)
         token.update_claims({'scope': user_authz})
+        token.update_claims({'ver': 'scitokens:2.0'})
 
         # Serialize the token and write it to a file
         serialized_token = token.serialize(issuer=self.token_issuer, lifetime=int(self.token_lifetime))
