@@ -23,7 +23,7 @@ bool
 enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 	int deviceCount = 0;
 
-	if( (cudaGetDeviceCount(&deviceCount) != cudaSuccess) ) {
+	if( (cuDeviceGetCount(&deviceCount) != cudaSuccess) ) {
 		return false;
 	}
 
@@ -37,8 +37,8 @@ enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 	return true;
 }
 
-static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
-static const char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
+char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
 	char *p = buf;
 	char *endp = buf + bufsiz -1;
 	for (int ix = 0; ix < 16; ++ix) {
@@ -204,7 +204,7 @@ loadNVMLLibrary() {
 #endif /* defined(WIN32) */
 
 dlopen_return_t
-setNVMLFunctionPointers() {
+setNVMLFunctionPointers( bool simulate /* FIXME */ ) {
 	dlopen_return_t nvml_handle = loadNVMLLibrary();
 	if(! nvml_handle) { return NULL; }
 
@@ -225,6 +225,15 @@ setNVMLFunctionPointers() {
 	nvmlErrorString =
 		(cc_nvml)dlsym( nvml_handle, "nvmlErrorString" );
 
+	nvmlDeviceGetFanSpeed =
+		(nvml_device_uint)dlsym( nvml_handle, "nvmlDeviceGetFanSpeed" );
+	nvmlDeviceGetPowerUsage =
+		(nvml_device_uint)dlsym( nvml_handle, "nvmlDeviceGetPowerUsage" );
+	nvmlDeviceGetTemperature =
+		(nvml_dgt)dlsym( nvml_handle, "nvmlDeviceGetTemperature" );
+	nvmlDeviceGetTotalEccErrors =
+		(nvml_dgtee)dlsym( nvml_handle, "nvmlDeviceGetTotalEccErrors" );
+
 	return nvml_handle;
 }
 
@@ -233,7 +242,7 @@ setNVMLFunctionPointers() {
 //
 
 dlopen_return_t
-setCUDAFunctionPointers() {
+setCUDAFunctionPointers( bool simulate /* FIXME */ ) {
 	//
 	// We try to load and initialize the nvcuda library; if that fails,
 	// we load the cudart library, instead.
@@ -268,9 +277,9 @@ setCUDAFunctionPointers() {
 			(cuda_cc_t)dlsym( cuda_handle, "cuDeviceComputeCapability" );
 		cuDeviceTotalMem =
 			(cuda_size_t)dlsym( cuda_handle, "cuDeviceTotalMem_v2" );
-
-		cudaGetDeviceCount =
+		cuDeviceGetCount =
 			(cuda_t)dlsym( cuda_handle, "cuDeviceGetCount" );
+
 		cudaDriverGetVersion =
 			(cuda_t)dlsym( cuda_handle, "cudaDriverGetVersion" );
 #if defined(WIN32)
@@ -284,7 +293,7 @@ setCUDAFunctionPointers() {
 
 		return cuda_handle;
 	} else if( cudart_handle ) {
-		cudaGetDeviceCount =
+		cuDeviceGetCount =
 			(cuda_t)dlsym( cudart_handle, "cudaGetDeviceCount" );
 		cudaDriverGetVersion =
 			(cuda_t)dlsym( cudart_handle, "cudaDriverGetVersion" );

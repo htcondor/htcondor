@@ -1,6 +1,9 @@
 #ifndef   _CUDA_DEVICE_ENUMERATION_H
 #define   _CUDA_DEVICE_ENUMERATION_H
 
+char hex_digit( unsigned char n );
+char * print_uuid( char * buf, int bufsize, const unsigned char uuid[16] );
+
 #if defined(WIN32)
 #define CUDACALL __stdcall
 #else
@@ -34,11 +37,22 @@ GPUFP nvml_dghbi         nvmlDeviceGetHandleByIndex;
 GPUFP nvml_dghbp         nvmlDeviceGetHandleByPciBusId;
 GPUFP cc_nvml            nvmlErrorString;
 
-dlopen_return_t setNVMLFunctionPointers( /* bool simulate = false */ );
+
+typedef nvmlReturn_t (*nvml_device_uint)( nvmlDevice_t, unsigned int * );
+typedef nvmlReturn_t (*nvml_dgt)( nvmlDevice_t, nvmlTemperatureSensors_t, unsigned int * );
+typedef nvmlReturn_t (*nvml_dgtee)( nvmlDevice_t, nvmlMemoryErrorType_t, nvmlEccCounterType_t, unsigned long long * );
+
+GPUFP nvml_device_uint  nvmlDeviceGetFanSpeed;
+GPUFP nvml_device_uint  nvmlDeviceGetPowerUsage;
+GPUFP nvml_dgt          nvmlDeviceGetTemperature;
+GPUFP nvml_dgtee        nvmlDeviceGetTotalEccErrors;
+
+dlopen_return_t setNVMLFunctionPointers( bool simulate = false );
 
 //
 // CUDA (device enumeration).
 //
+
 class BasicProps;
 
 typedef CUresult (CUDACALL* cu_uint_t)(unsigned int);
@@ -46,12 +60,13 @@ typedef cudaError_t (CUDACALL* cuda_t)(int *);
 typedef cudaError_t (CUDACALL* dev_basic_props)(int, BasicProps *);
 typedef cudaError_t (CUDACALL* cuda_DevicePropBuf_int)(struct cudaDevicePropBuffer *, int);
 
-GPUFP cu_uint_t cuInit;
-GPUFP cuda_t cudaGetDeviceCount;
-GPUFP cuda_t cudaDriverGetVersion;
-GPUFP cuda_t cudaRuntimeGetVersion;
-GPUFP dev_basic_props getBasicProps;
-GPUFP cuda_DevicePropBuf_int cudaGetDevicePropertiesOfIndeterminateStructure;
+GPUFP cu_uint_t                 cuInit;
+GPUFP cuda_t                    cuDeviceGetCount;
+GPUFP cuda_t                    cudaDriverGetVersion;
+GPUFP cuda_t                    cudaRuntimeGetVersion;
+
+GPUFP dev_basic_props           getBasicProps;
+GPUFP cuda_DevicePropBuf_int    cudaGetDevicePropertiesOfIndeterminateStructure;
 
 typedef void * cudev;
 typedef cudaError_t (CUDACALL* cuda_dev_int_t)(cudev *, int);
@@ -62,17 +77,25 @@ typedef cudaError_t (CUDACALL* cuda_cc_t)(int *, int *, cudev);
 typedef cudaError_t (CUDACALL* cuda_size_t)(size_t *, cudev);
 typedef cudaError_t (CUDACALL* cuda_ga_t)(int *, int, cudev);
 
-GPUFP cuda_dev_int_t cuDeviceGet;
-GPUFP cuda_name_t cuDeviceGetName;
-GPUFP cuda_uuid_t cuDeviceGetUuid;
-GPUFP cuda_pciid_t cuDeviceGetPCIBusId;
-GPUFP cuda_cc_t cuDeviceComputeCapability;
-GPUFP cuda_size_t cuDeviceTotalMem;
-GPUFP cuda_ga_t cuDeviceGetAttribute;
+GPUFP cuda_dev_int_t            cuDeviceGet;
+GPUFP cuda_uuid_t               cuDeviceGetUuid;
+GPUFP cuda_name_t               cuDeviceGetName;
+GPUFP cuda_size_t               cuDeviceTotalMem;
+GPUFP cuda_pciid_t              cuDeviceGetPCIBusId;
+GPUFP cuda_ga_t                 cuDeviceGetAttribute;
+GPUFP cuda_cc_t                 cuDeviceComputeCapability;
 
-dlopen_return_t setCUDAFunctionPointers( /* bool simulate = false */ );
+dlopen_return_t setCUDAFunctionPointers( bool simulate = false );
 
 #undef GPUFP
+
+//
+// We can simulate CUDA device enumeration for testing purposes.
+//
+
+extern int sim_index;
+extern int sim_device_count;
+extern const int sim_index_max;
 
 // basic device properties we can query from the driver
 class BasicProps {
