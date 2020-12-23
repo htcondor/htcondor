@@ -248,7 +248,8 @@ int main() {
 				if( devices[i] == NULL ) { continue; }
 				if (cudaDevices[i].hasUUID()) {
 					char gpuid[64] = "GPU-";
-					cudaDevices[i].printUUID(gpuid+4, 9);
+					cudaDevices[i].printUUID(gpuid+4, 60);
+					// FIXME: only if in -short mode...
 					gpuid[12] = 0;
 					fprintf(stdout, "SlotMergeConstraint = StringListMember(\"CUDA%u\", AssignedGPUs) || StringListMember(\"%s\", AssignedGPUs)\n", i, gpuid);
 				} else {

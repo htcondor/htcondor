@@ -282,7 +282,7 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 			(cuda_t)dlsym( cuda_handle, "cuDeviceGetCount" );
 
 		cudaDriverGetVersion =
-			(cuda_t)dlsym( cuda_handle, "cudaDriverGetVersion" );
+			(cuda_t)dlsym( cuda_handle, "cuDriverGetVersion" );
 #if defined(WIN32)
 		cudaRuntimeGetVersion = cu_cudaRuntimeGetVersion;
 #else

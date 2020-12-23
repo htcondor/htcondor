@@ -553,7 +553,7 @@ main( int argc, const char** argv)
 			cudaError_t rv = getBasicProps(dev, &bp);
 			if( cudaSuccess == rv && opt_uuid ) {
 				strcpy(gpuid, "GPU-");
-				bp.printUUID(gpuid + 4, 16);
+				bp.printUUID(gpuid + 4, 96);
 
 				if( opt_short_uuid ) {
 					gpuid[12] = 0;
@@ -565,7 +565,7 @@ main( int argc, const char** argv)
 
 			if ((cudaSuccess == rv) && opt_basic) {
 				char uuidstr[64];
-				bp.printUUID(uuidstr, 16);
+				bp.printUUID(uuidstr, 64);
 				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", uuidstr);
 				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
 				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
@@ -660,8 +660,8 @@ main( int argc, const char** argv)
 			}
 		} else {
 			// We could try to do this via the data structures, but we don't
-			// actually record the UUIDs anywhere than a data structure keyed
-			// by the UUID...
+			// actually record the UUIDs anywhere other than a data structure
+			// keyed by the UUID...
 			detected_gpus.clear();
 
 			size_t left = 0, delim = 0;
