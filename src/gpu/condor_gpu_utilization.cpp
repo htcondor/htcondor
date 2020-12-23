@@ -247,13 +247,21 @@ int main() {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
 				if( devices[i] == NULL ) { continue; }
 				if (cudaDevices[i].hasUUID()) {
+					char short_gpuid[64] = "GPU-";
+					cudaDevices[i].printUUID(short_gpuid+4, 60);
+					short_gpuid[12] = 0;
+
 					char gpuid[64] = "GPU-";
 					cudaDevices[i].printUUID(gpuid+4, 60);
-					// FIXME: only if in -short mode...
-					gpuid[12] = 0;
-					fprintf(stdout, "SlotMergeConstraint = StringListMember(\"CUDA%u\", AssignedGPUs) || StringListMember(\"%s\", AssignedGPUs)\n", i, gpuid);
+
+					fprintf(stdout, "SlotMergeConstraint = "
+						"StringListMember(\"CUDA%u\", AssignedGPUs) "
+						"|| StringListMember(\"%s\", AssignedGPUs) "
+						"|| StringListMember(\"%s\", AssignedGPUs)\n",
+						i, short_gpuid, gpuid);
 				} else {
-					fprintf(stdout, "SlotMergeConstraint = StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
+					fprintf(stdout, "SlotMergeConstraint = "
+						"StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
 				}
 				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1000000.0 );
 				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );
