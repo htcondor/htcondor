@@ -235,7 +235,7 @@ loadOpenCLLibrary() {
 }
 
 dlopen_return_t
-setOCLFunctionPointers( bool /* simulate = false */ ) {
+setOCLFunctionPointers() {
 	dlopen_return_t ocl_handle = loadOpenCLLibrary();
 	if(! ocl_handle) { return NULL; }
 

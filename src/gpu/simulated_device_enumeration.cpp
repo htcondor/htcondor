@@ -109,3 +109,22 @@ sim_nvmlDeviceGetHandleByPciBusId(const char * pciBusId, nvmlDevice_t * pdev) {
 	* pdev = (nvmlDevice_t)(size_t)(devID+1);
 	return NVML_SUCCESS;
 };
+
+void
+setSimulatedCUDAFunctionPointers() {
+    getBasicProps = sim_getBasicProps;
+    cuDeviceGetCount = sim_cudaGetDeviceCount;
+    cudaDriverGetVersion = sim_cudaDriverGetVersion;
+}
+
+void
+setSimulatedNVMLFunctionPointers() {
+    nvmlInit = sim_nvmlInit;
+    nvmlShutdown = sim_nvmlInit;
+
+    nvmlDeviceGetFanSpeed = sim_nvmlDeviceGetFanSpeed;
+    nvmlDeviceGetPowerUsage = sim_nvmlDeviceGetPowerUsage;
+    nvmlDeviceGetTemperature = sim_nvmlDeviceGetTemperature;
+    nvmlDeviceGetTotalEccErrors = sim_nvmlDeviceGetTotalEccErrors;
+    nvmlDeviceGetHandleByPciBusId = sim_nvmlDeviceGetHandleByPciBusId;
+}

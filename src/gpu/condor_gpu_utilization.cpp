@@ -103,15 +103,13 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 int main() {
 	// The actual filtering is done by the startd on the basis
 	// of the SlotMergeConstraint we set for each ad we emit.
-	//
-	// FIXME: Which is fine, but it might be nice to avoid doing any work
-	// that we know the startd is just going to throw away.
-	// FIXME: Also, see cnodor_gpu_discovery for the other environmental
-	// variable we may want/need to worry about.
+
 #if defined(WINDOWS)
 	_putenv( "CUDA_VISIBLE_DEVICES=" );
+	_putenv( "GPU_DEVICE_ORDINAL=" );
 #else
 	unsetenv( "CUDA_VISIBLE_DEVICES" );
+	unsetenv( "GPU_DEVICE_ORDINAL" );
 #endif
 
 	auto cuda_handle = setCUDAFunctionPointers();

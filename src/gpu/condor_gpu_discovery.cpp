@@ -292,15 +292,13 @@ main( int argc, const char** argv)
 	int opt_dynamic = 0; // publish dynamic GPU properties
 	int opt_cron = 0;  // publish in a form usable by STARTD_CRON
 	int opt_hetero = 0;  // don't assume properties are homogeneous
-	bool opt_simulate = false; // pretend to detect GPUs
+	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
 	int opt_uuid = 0;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
 	int opt_short_uuid = 0; // use shortened uuids
 	std::list<int> dwl; // Device White List
-
-// FIXME: only opt_opencl used right now
-	int opt_nvcuda = 0; // use nvcuda rather than cudarl
-	int opt_cudarl = 0; // force use of use cudarl rather than nvcuda
+	bool opt_nvcuda = false; // force use of nvcuda rather than cudart
+	bool opt_cudart = false; // force use of use cudart rather than nvcuda
 	int opt_opencl = 0; // prefer opencl detection
 	int opt_cuda_only = 0; // require cuda detection
 
@@ -424,7 +422,7 @@ main( int argc, const char** argv)
 			dwl.push_back( atoi(argv[++i]) );
 		}
 		else if (is_dash_arg_colon_prefix(argv[i], "simulate", &pcolon, 3)) {
-			opt_simulate = true;
+			opt_simulate = 1;
 			if (pcolon) {
 				sim_index = atoi(pcolon+1);
 				if (sim_index < 0 || sim_index > sim_index_max) {
@@ -437,11 +435,12 @@ main( int argc, const char** argv)
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "nvcuda",-1)) {
-			// use nvcuda instead of cudart, (option is for testing...)
-			opt_nvcuda = 1;
+			// use nvcuda instead of cudart (option is for testing)
+			opt_nvcuda = true;
 		}
-		else if (is_dash_arg_prefix(argv[i], "rl", 2) || is_dash_arg_prefix(argv[i], "cudarl", 6)) {
-			opt_cudarl = 1;
+		else if (is_dash_arg_prefix(argv[i], "cudart", 6)) {
+			// use cudart instead of nvcuda (option is for testing)
+			opt_cudart = true;
 		}
 		else {
 			fprintf(stderr, "option %s is not valid\n", argv[i]);
@@ -454,33 +453,47 @@ main( int argc, const char** argv)
 	//
 	// Load and prepare libraries.
 	//
-	auto cuda_handle = setCUDAFunctionPointers( opt_simulate );
-	if( cuda_handle ) {
-		if( cuInit(0) != CUDA_SUCCESS ) {
-			fprintf( stderr, "cuInit(0) failed, aborting.\n" );
-			dlclose( cuda_handle );
-			cuda_handle = NULL;
-		}
-	}
+	dlopen_return_t cuda_handle = NULL;
+	dlopen_return_t nvml_handle = NULL;
+	dlopen_return_t ocl_handle = NULL;
 
-	auto nvml_handle = setNVMLFunctionPointers( opt_simulate );
-	if(! nvml_handle) {
-		fprintf( stderr, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
+	if( opt_simulate ) {
+		setSimulatedCUDAFunctionPointers();
+		setSimulatedNVMLFunctionPointers();
 	} else {
-		if( nvmlInit() != NVML_SUCCESS ) {
-			fprintf( stderr, "nvmlInit() failed; will not discover dynamic properties or MIG instances.\n" );
-			dlclose( nvml_handle );
-			nvml_handle = NULL;
+		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart );
+		if( cuda_handle && !opt_cudart ) {
+			if( cuInit(0) != CUDA_SUCCESS ) {
+				fprintf( stderr, "cuInit(0) failed, aborting.\n" );
+				dlclose( cuda_handle );
+				cuda_handle = NULL;
+			}
+		}
+
+		// When we add MIG instance discovery, make loading NVML unconditional
+		// and adjust the warnings to mention MIG instance discovery.
+		if( opt_dynamic ) {
+			nvml_handle = setNVMLFunctionPointers();
+			if(! nvml_handle) {
+				fprintf( stderr, "Unable to load NVML; will not discover dynamic properties.\n" );
+			} else {
+				if( nvmlInit() != NVML_SUCCESS ) {
+					fprintf( stderr, "nvmlInit() failed; will not discover dynamic properties.\n" );
+					dlclose( nvml_handle );
+					nvml_handle = NULL;
+				}
+			}
+		}
+
+		if(! opt_cuda_only) {
+			ocl_handle = setOCLFunctionPointers();
 		}
 	}
-
-    auto ocl_handle = setOCLFunctionPointers( opt_simulate );
-
 
 	//
 	// Determine if we can find any devices before proceeding.
 	//
-	if( cuda_handle && cuDeviceGetCount( & deviceCount ) != cudaSuccess ) {
+	if( cuDeviceGetCount && cuDeviceGetCount( & deviceCount ) != cudaSuccess ) {
 		deviceCount = 0;
 	}
 
@@ -792,7 +805,6 @@ void usage(FILE* out, const char * argv0)
 		"    -prefix <string>  use <string> as property prefix, default is CUDA or OCL\n"
 		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
-		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
 		"    -uuid             Use GPU uuid instead of index as GPU id\n"
 		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id\n"
 		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
@@ -807,6 +819,8 @@ void usage(FILE* out, const char * argv0)
 		"    -help             Show this screen and exit\n"
 		"    -verbose          Show detection progress\n"
 		//"    -diagnostic       Show detection diagnostic information\n"
+		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
+		//"    -cudart           Use cudart rather than nvcuda for detection\n"
 		"\n"
 	);
 }

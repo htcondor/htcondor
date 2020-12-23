@@ -19,6 +19,6 @@ clReturn oclGetInfo( cl_platform_id plid, cl_e_platform_info eInfo, std::string 
 template <class t>
 clReturn oclGetInfo( cl_device_id did, cl_e_device_info eInfo, t & val );
 
-dlopen_return_t setOCLFunctionPointers( bool /* simulate = false */ );
+dlopen_return_t setOCLFunctionPointers();
 
 #endif /* _OPENCL_DEVICE_ENUMERATION_H */

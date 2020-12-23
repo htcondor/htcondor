@@ -47,7 +47,8 @@ GPUFP nvml_device_uint  nvmlDeviceGetPowerUsage;
 GPUFP nvml_dgt          nvmlDeviceGetTemperature;
 GPUFP nvml_dgtee        nvmlDeviceGetTotalEccErrors;
 
-dlopen_return_t setNVMLFunctionPointers( bool simulate = false );
+dlopen_return_t setNVMLFunctionPointers();
+void setSimulatedNVMLFunctionPointers();
 
 //
 // CUDA (device enumeration).
@@ -85,7 +86,8 @@ GPUFP cuda_pciid_t              cuDeviceGetPCIBusId;
 GPUFP cuda_ga_t                 cuDeviceGetAttribute;
 GPUFP cuda_cc_t                 cuDeviceComputeCapability;
 
-dlopen_return_t setCUDAFunctionPointers( bool simulate = false );
+dlopen_return_t setCUDAFunctionPointers( bool force_nvcuda = false, bool force_cudart = false );
+void setSimulatedCUDAFunctionPointers();
 
 #undef GPUFP
 

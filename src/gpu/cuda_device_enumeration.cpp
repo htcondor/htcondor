@@ -119,7 +119,7 @@ cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropI
 	p->ECCEnabled = dpi->ECCEnabled;
 	memcpy(p->uuid, dps->uuid, sizeof(p->uuid));
 	if (dpi->pciBusID || dpi->pciDeviceID) {
-		sprintf(p->pciId, "%04x:%02x:%02x.0", dpi->pciDomainID, dpi->pciBusID, dpi->pciDeviceID);
+		sprintf(p->pciId, "%04X:%02X:%02X.0", dpi->pciDomainID, dpi->pciBusID, dpi->pciDeviceID);
 	}
 	return cudaSuccess;
 }
@@ -168,6 +168,7 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
+		cuDeviceTotalMem(&p->totalGlobalMem, dev);
 		cuDeviceGetAttribute(&p->clockRate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, dev);
 		cuDeviceGetAttribute(&p->multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
 		cuDeviceGetAttribute(&p->ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, dev);
@@ -204,7 +205,7 @@ loadNVMLLibrary() {
 #endif /* defined(WIN32) */
 
 dlopen_return_t
-setNVMLFunctionPointers( bool simulate /* FIXME */ ) {
+setNVMLFunctionPointers() {
 	dlopen_return_t nvml_handle = loadNVMLLibrary();
 	if(! nvml_handle) { return NULL; }
 
@@ -242,7 +243,7 @@ setNVMLFunctionPointers( bool simulate /* FIXME */ ) {
 //
 
 dlopen_return_t
-setCUDAFunctionPointers( bool simulate /* FIXME */ ) {
+setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 	//
 	// We try to load and initialize the nvcuda library; if that fails,
 	// we load the cudart library, instead.
@@ -259,7 +260,7 @@ setCUDAFunctionPointers( bool simulate /* FIXME */ ) {
 	dlopen_return_t cuda_handle = dlopen( cuda_library, RTLD_LAZY );
 	dlopen_return_t cudart_handle = dlopen( cudart_library, RTLD_LAZY );
 
-	if( cuda_handle ) {
+	if( cuda_handle && ! force_cudart ) {
 		cuInit =
 			(cu_uint_t)dlsym( cuda_handle, "cuInit" );
 
@@ -292,7 +293,7 @@ setCUDAFunctionPointers( bool simulate /* FIXME */ ) {
 		getBasicProps = cu_getBasicProps;
 
 		return cuda_handle;
-	} else if( cudart_handle ) {
+	} else if( cudart_handle && ! force_nvcuda ) {
 		cuDeviceGetCount =
 			(cuda_t)dlsym( cudart_handle, "cudaGetDeviceCount" );
 		cudaDriverGetVersion =
