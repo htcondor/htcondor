@@ -44,6 +44,13 @@ New Features:
   the hold message in the job.
   :jira:`133`
 
+- When the startd initializes, it runs the ``condor_starter`` with the
+  -classad option to probe the features this starter support.  As a
+  side-effect, the starter logs some information to a StarterLog file.
+  This StarterLog is almost never of interest when debugging jobs. To
+  make that more clear, this starter log is now named StarterLog.testing.
+  :jira:`132`
+
 Bugs Fixed:
 
 - Fixed a bug with singularity support where the job's cwd wasn't
