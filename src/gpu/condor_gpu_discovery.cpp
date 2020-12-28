@@ -360,6 +360,11 @@ main( int argc, const char** argv)
 			// dynamic ones (most noticeably, the PCI bus ID).
 			opt_basic = 1;
 			opt_dynamic = 1;
+
+            // Even if it made sense to ask NVML about OpenCL devices, we
+            // don't get the PCI bus ID from OpenCL, so we can't determine
+            // which device the dynamic properties apply to.
+			opt_opencl = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
 			opt_cron = 1;
@@ -368,6 +373,9 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "opencl", -1)) {
 			opt_opencl = 1;
+
+            // See comment for the -dynamic flag.
+			opt_dynamic = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cuda", -1)) {
 			opt_cuda_only = 1;
@@ -513,15 +521,17 @@ main( int argc, const char** argv)
 	if( opt_pre_arg ) { opt_pre = opt_pre_arg; }
 
 
-    //
-    // FIXME: This should replaced by a call to enumerateCUDADevices() to
-    // enumerateOpenCLDevices(), as appropriate and expanded.  Additional
-    // dynamic properties for CUDA devices should be discovered via
-    // populateNVMLDevices(), which will extend the existing CUDA properties
-    // by matching on PCI bus IDs (FIXME: GUIDs).
-    //
-    // Future work: call (and implement) enumerateMIGDevices().
-    //
+	// We're doing it this way so that we can share the device-enumeration
+	// logic between condor_gpu_discovery and condor_gpu_utilization; it's
+	// not presently hard, but MIG device instances will change that.
+	std::vector< BasicProps > enumeratedDevices;
+	if(! opt_opencl) {
+		if(! enumerateCUDADevices(enumeratedDevices)) {
+			fprintf( stderr, "Failed to enumerate GPU devices, aborting.\n" );
+			return 1;
+		}
+	}
+
 
 	//
 	// we will build an array of key=value pairs to hold properties of each device
@@ -532,61 +542,62 @@ main( int argc, const char** argv)
 	typedef std::map<std::string, KVP> MKVP;
 	MKVP dev_props;
 
-	// print out info about detected GPU resources
-	//
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
-
-	// print out static and/or dynamic info about detected GPU resources
-	for( dev = 0; dev < deviceCount; dev++ ) {
+	for( dev = 0; dev < deviceCount; ++dev ) {
 		// Skip devices not on the whitelist.
 		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 
-		char gpuid[100];
-		sprintf(gpuid,"%s%d",opt_pre,dev); // establish a default GPU identifier. e.g CUDA0. we might replace this later
+		// Determine the GPU ID.
+		char gpuID[128];
+		snprintf( gpuID, 128, "%s%d", opt_pre, dev );
+		gpuID[127] = '\0';
 
-		if ((opt_basic || opt_uuid) && getBasicProps) {
+		// The -uuid and -short-uuid flags don't imply -properties.
+		if( opt_uuid && !opt_opencl ) {
+			strcpy(gpuID, "GPU-");
+			enumeratedDevices[dev].printUUID(gpuID + 4, 96);
+			if( opt_short_uuid ) { gpuID[12] = 0; }
+		}
 
-			BasicProps bp;
-			cudaError_t rv = getBasicProps(dev, &bp);
-			if( cudaSuccess == rv && opt_uuid ) {
-				strcpy(gpuid, "GPU-");
-				bp.printUUID(gpuid + 4, 96);
+		if (! detected_gpus.empty()) { detected_gpus += ", "; }
+		detected_gpus += gpuID;
+		++filteredDeviceCount;
 
-				if( opt_short_uuid ) {
-					gpuid[12] = 0;
-				}
+		if(! opt_basic) { continue; }
+
+		dev_props[gpuID].clear();
+		KVP & props = dev_props.find(gpuID)->second;
+
+		if(! opt_opencl) {
+			// Report CUDA properties.
+			BasicProps bp = enumeratedDevices[dev];
+
+			char uuidstr[64];
+			bp.printUUID(uuidstr, 64);
+			props["DeviceUuid"] = Format("\"%s\"", uuidstr);
+			props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
+			if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
+			props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
+			props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
+			props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
+
+			if( opt_extra ) {
+				props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
+				props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
+				props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
 			}
 
-			dev_props[gpuid].clear(); // this has the side effect of creating the KVP for gpuid.
-			KVP& props = dev_props.find(gpuid)->second;
-
-			if ((cudaSuccess == rv) && opt_basic) {
-				char uuidstr[64];
-				bp.printUUID(uuidstr, 64);
-				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", uuidstr);
-				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
-				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
-				props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
-				props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
-				props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
-				if (opt_extra) {
-					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
-					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-					props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
-				}
-			}
-
-			int driverVersion=0;
-			if (opt_basic && cudaDriverGetVersion) {
-				cudaDriverGetVersion(&driverVersion);
+			if( cudaDriverGetVersion ) {
+				int driverVersion = 0;
+				cudaDriverGetVersion( & driverVersion );
 				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
 				props["MaxSupportedVersion"] = Format("%d", driverVersion);
 			}
 
-			if (dev < g_cl_cCuda) {
+			if( dev < g_cl_cCuda ) {
 				cl_device_id did = cl_gpu_ids[g_cl_ixFirstCuda + dev];
 				std::string fullver;
 				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, fullver)) {
@@ -597,12 +608,9 @@ main( int argc, const char** argv)
 					props["OpenCLVersion"] = ver;
 				}
 			}
-
-		} else if (opt_basic && ocl_handle) {
+		} else {
+			// Report OpenCL properties.
 			cl_device_id did = cl_gpu_ids[dev];
-
-			dev_props[gpuid].clear(); // this has the side effect of creating the KVP for gpuid.
-			KVP& props = dev_props.find(gpuid)->second;
 
 			std::string val;
 			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_NAME, val)) {
@@ -613,11 +621,11 @@ main( int argc, const char** argv)
 			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_GLOBAL_MEM_SIZE, mem_bytes)) {
 				props["GlobalMemoryMb"] = Format("%.0f", mem_bytes/(1024.*1024.));
 			}
+
 			int ecc_enabled = 0;
 			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_ERROR_CORRECTION_SUPPORT, ecc_enabled)) {
 				props["ECCEnabled"] = ecc_enabled ? "true" : "false";
 			}
-			//printf("%sCapability=%d.%d\n", prefix, deviceProp.major, deviceProp.minor);
 
 			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, val)) {
 				size_t ix = val.find_first_of(' '); // skip OpenCL
@@ -628,7 +636,6 @@ main( int argc, const char** argv)
 			}
 
 			if (opt_extra) {
-
 				unsigned int cus = 0;
 				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_MAX_COMPUTE_UNITS, cus)) {
 					props["ComputeUnits"] = Format("%u", cus);
@@ -638,15 +645,10 @@ main( int argc, const char** argv)
 				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_MAX_CLOCK_FREQUENCY, clock_mhz)) {
 					props["ClockMhz"] = Format("%u", clock_mhz);
 				}
+			} /* end if reporting extra OpenCL properties */
+		} /* end if reporting OpenCL properties */
+	} /* end enumerated device loop */
 
-				//if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VENDOR, val)) { props["Vendor"] = ver; }
-			}
-		}
-
-		if (! detected_gpus.empty()) { detected_gpus += ", "; }
-		detected_gpus += gpuid;
-		++filteredDeviceCount;
-	}
 
 	//
 	// If the user requested it, adjust detected_gpus.
@@ -684,12 +686,15 @@ main( int argc, const char** argv)
 		}
 	}
 
+
 	if (! opt_cron) {
 		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
 	}
+
 	if (opt_config) {
 		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
 	}
+
 
 	// check for device homogeneity so we can print out simpler
 	// config/device attributes
