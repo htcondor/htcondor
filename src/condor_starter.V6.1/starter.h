@@ -330,6 +330,7 @@ public:
 
 	virtual void RecordJobExitStatus(int status);
 
+	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
@@ -447,6 +448,9 @@ private:
 
 		// Manage the data reuse directory.
 	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
+
+	// The string to set the tmp env vars to
+	std::string tmpdir;
 };
 
 #endif

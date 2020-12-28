@@ -541,6 +541,7 @@ VanillaProc::StartJob()
 					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir, next_dir);
 				}
 			}
+		Starter->setTmpDir("/tmp");
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir);
 			delete fs_remap;

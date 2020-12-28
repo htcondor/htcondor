@@ -3343,9 +3343,10 @@ CStarter::PublishToEnv( Env* proc_env )
 		// Condor will clean these up on job exits, and there's
 		// no chance of file collisions with other running slots
 
-	proc_env->SetEnv("TMPDIR", GetWorkingDir(true));
-	proc_env->SetEnv("TEMP", GetWorkingDir(true)); // Windows
-	proc_env->SetEnv("TMP", GetWorkingDir(true)); // Windows
+	std::string tmpdirenv = this->tmpdir.empty() ? GetWorkingDir(true) : this->tmpdir;
+	proc_env->SetEnv("TMPDIR", tmpdirenv);
+	proc_env->SetEnv("TEMP",tmpdirenv);
+	proc_env->SetEnv("TMP", tmpdirenv);
 
 		// Programs built with OpenMP (including matlab, gnu sort
 		// and others) look at OMP_NUM_THREADS
