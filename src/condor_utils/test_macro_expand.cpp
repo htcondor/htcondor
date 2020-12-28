@@ -995,7 +995,7 @@ void testing_$EVAL_expand(bool verbose)
 	REQUIRE( expand("$EVAL(BobsGroups)") == "Security,WoodShop" );
 	REQUIRE( expand("$EVAL(BobsFirst)") == "Security" );
 	REQUIRE( expand("$EVAL(BobsShop)") == "WoodShop" );
-	REQUIRE( expand("$EVAL(BobsUnShop)") == "undefined" );
+	REQUIRE( expand("$EVAL(BobsUnShop)") == "Security" );
 
 	insert_macro("AlicesGroups", "userMap(\"grouptest\",\"alice\")", TestingMacroSet,  TestMacroSource, def_ctx);
 	insert_macro("AlicesFirst", "userMap(\"grouptest\",\"alice\",undefined)", TestingMacroSet,  TestMacroSource, def_ctx);
@@ -1005,7 +1005,7 @@ void testing_$EVAL_expand(bool verbose)
 	REQUIRE( expand("$EVAL(AlicesGroups)") == "Security,MetalShop" );
 	REQUIRE( expand("$EVAL(AlicesFirst)") == "Security" );
 	REQUIRE( expand("$EVAL(AlicesShop)") == "MetalShop" );
-	REQUIRE( expand("$EVAL(AlicesUnShop)") == "AutoShop" );
+	REQUIRE( expand("$EVAL(AlicesUnShop)") == "Security" );
 	REQUIRE( expand("$EVAL(AlicesDefGroup)") == "Security" );
 
 	insert_macro("JohnsGroups", "userMap(\"grouptest\",\"john\")", TestingMacroSet,  TestMacroSource, def_ctx);

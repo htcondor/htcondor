@@ -27,6 +27,11 @@ Bugs Fixed:
   GPU monitor binary on Windows.
   :jira:`125`
 
+- Fixed a bug where the ClassAd ``usermap`` function did not work as documented.
+  When the third agument did not match an item in the mapped list, it should
+  have returned the first item in the list, but it returned undefined instead.
+  :jira:`144`
+
 Version 8.8.12
 --------------
 
