@@ -2632,6 +2632,19 @@ written to the job's execute directory while the job is running.
     ``RequestCpus``, but may be larger due to the minimum given to a
     dynamic slot.
 
+:index:`CpusUsage<single: CpusUsage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; CpusUsage>`
+
+
+``CpusUsage``
+    CpusUsage (Note the plural `Cpus`) is a floating point value that 
+    represents the number of cpu cores fully used over the lifetime of
+    the job.  A cpu-bound, single-threaded job will have a CpusUsage of 1.0.
+    A job that is blocked on I/O for half of its life and is cpu bound
+    for the other have will have a CpusUsage of 0.5.  A job that uses two
+    cores fully will have a CpusUsage of 2.0.  Jobs with unexpectedly low 
+    CpusUsage may be showing lowered throughput due to blocking on network or disk.
+
 :index:`DiskProvisioned<single: DiskProvisioned; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; DiskProvisioned>`
 
