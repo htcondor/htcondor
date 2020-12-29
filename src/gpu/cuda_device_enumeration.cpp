@@ -40,7 +40,7 @@ enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
 char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
 	char *p = buf;
-	char *endp = buf + bufsiz -1;
+	char *endp = buf + bufsiz - 1;
 	for (int ix = 0; ix < 16; ++ix) {
 		if (ix == 4 || ix == 6 || ix == 8 || ix == 10) *p++ = '-';
 		unsigned char ch = uuid[ix];
@@ -221,8 +221,8 @@ setNVMLFunctionPointers() {
 		(nvml_dm)dlsym( nvml_handle, "nvmlDeviceGetMemoryInfo" );
 	nvmlDeviceGetHandleByIndex =
 		(nvml_dghbi)dlsym( nvml_handle, "nvmlDeviceGetHandleByIndex_v2" );
-	nvmlDeviceGetHandleByPciBusId =
-		(nvml_dghbp)dlsym( nvml_handle, "nvmlDeviceGetHandleByPciBusId_v2" );
+	nvmlDeviceGetHandleByUUID =
+		(nvml_dghbc)dlsym( nvml_handle, "nvmlDeviceGetHandleByUUID" );
 	nvmlErrorString =
 		(cc_nvml)dlsym( nvml_handle, "nvmlErrorString" );
 
@@ -234,6 +234,8 @@ setNVMLFunctionPointers() {
 		(nvml_dgt)dlsym( nvml_handle, "nvmlDeviceGetTemperature" );
 	nvmlDeviceGetTotalEccErrors =
 		(nvml_dgtee)dlsym( nvml_handle, "nvmlDeviceGetTotalEccErrors" );
+    nvmlDeviceGetUUID =
+        (nvml_dgu)dlsym( nvml_handle, "nvmlDeviceGetUUID" );
 
 	return nvml_handle;
 }
@@ -292,6 +294,7 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 
 		getBasicProps = cu_getBasicProps;
 
+		findNVMLDeviceHandle = nvml_findNVMLDeviceHandle;
 		return cuda_handle;
 	} else if( cudart_handle && ! force_nvcuda ) {
 		cuDeviceGetCount =
@@ -317,10 +320,32 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 			return NULL;
 		}
 
+		findNVMLDeviceHandle = nvml_findNVMLDeviceHandle;
 		return cudart_handle;
 	} else {
 	    fprintf( stderr, "Unable to load a CUDA library (%s or %s).\n",
 	        cuda_library, cudart_library );
 		return NULL;
 	}
+}
+
+nvmlReturn_t
+nvml_findNVMLDeviceHandle(unsigned char uuid[16], nvmlDevice_t * device) {
+/*
+	// Scan the MIG devices for the given UUID.
+	static bool enumerated = false;
+	static std::map< std::string, BasicProps > enumeratedDevices;
+	if(! enumerated) {
+		enumerated = enumerateMIGDevices( enumeratedDevices );
+		if(! enumerated) { return false; }
+	}
+*/
+
+	// NVML returns "UUID" strings, not UUIDs.  For CUDA devices, that
+	// seems to always mean "GID-<UUID>".  That will change for MIG
+	// instance UUIDs, but those will be recorded as strings in the
+	// BasicProps.
+	char uuidstr[NVML_DEVICE_UUID_V2_BUFFER_SIZE + 4] = "GPU-";
+	print_uuid( uuidstr + 4, NVML_DEVICE_UUID_V2_BUFFER_SIZE, uuid );
+	return nvmlDeviceGetHandleByUUID( uuidstr, device );
 }

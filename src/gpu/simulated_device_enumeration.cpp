@@ -100,15 +100,25 @@ nvmlReturn_t sim_nvmlDeviceGetTemperature(nvmlDevice_t dev, nvmlTemperatureSenso
 nvmlReturn_t sim_nvmlDeviceGetTotalEccErrors(nvmlDevice_t /*dev*/, nvmlMemoryErrorType_t /*met*/, nvmlEccCounterType_t /*mec*/, unsigned long long * pval) { *pval = 0; /*sim_jitter-1+(int)dev;*/ return NVML_SUCCESS; }
 
 nvmlReturn_t
-sim_nvmlDeviceGetHandleByPciBusId(const char * pciBusId, nvmlDevice_t * pdev) {
+sim_nvmlDeviceGetHandleByUUID(const char * uuid, nvmlDevice_t * pdev) {
 	unsigned int devID;
-	if( sscanf(pciBusId, "0000:%02x:00.0", & devID) != 1 ) {
+
+	if( sscanf(uuid, "%02x223334-4445-5667-899aabbccddeeff0", & devID) != 1 ) {
 		return NVML_ERROR_NOT_FOUND;
 	}
-	devID -= 0x40;
+	devID = (devID - 0xa0)/0x11;
+
 	* pdev = (nvmlDevice_t)(size_t)(devID+1);
 	return NVML_SUCCESS;
 };
+
+nvmlReturn_t
+sim_findNVMLDeviceHandle(unsigned char uuid[16], nvmlDevice_t * device) {
+	char uuidstr[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+	print_uuid( uuidstr, NVML_DEVICE_UUID_V2_BUFFER_SIZE, uuid );
+
+	return nvmlDeviceGetHandleByUUID( uuidstr, device );
+}
 
 void
 setSimulatedCUDAFunctionPointers() {
@@ -126,5 +136,7 @@ setSimulatedNVMLFunctionPointers() {
     nvmlDeviceGetPowerUsage = sim_nvmlDeviceGetPowerUsage;
     nvmlDeviceGetTemperature = sim_nvmlDeviceGetTemperature;
     nvmlDeviceGetTotalEccErrors = sim_nvmlDeviceGetTotalEccErrors;
-    nvmlDeviceGetHandleByPciBusId = sim_nvmlDeviceGetHandleByPciBusId;
+    nvmlDeviceGetHandleByUUID = sim_nvmlDeviceGetHandleByUUID;
+
+	findNVMLDeviceHandle = sim_findNVMLDeviceHandle;
 }

@@ -283,6 +283,22 @@ bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
 	return true;
 }
 
+std::string constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int opt_short_uuid, std::vector< BasicProps > & enumeratedDevices ) {
+	// Determine the GPU ID.
+	char gpuID[128];
+	snprintf( gpuID, 128, "%s%d", opt_pre, dev );
+	gpuID[127] = '\0';
+
+	// The -uuid and -short-uuid flags don't imply -properties.
+	if( opt_uuid && !opt_opencl ) {
+		strcpy(gpuID, "GPU-");
+		enumeratedDevices[dev].printUUID(gpuID + 4, 96);
+		if( opt_short_uuid ) { gpuID[12] = 0; }
+	}
+
+	return std::string(gpuID);
+}
+
 int
 main( int argc, const char** argv)
 {
@@ -309,7 +325,7 @@ main( int argc, const char** argv)
 	int opt_packed = 0;
 	const char * pcolon;
 	int i;
-    int dev;
+	int dev;
 
 	//
 	// When run with CUDA_VISIBLE_DEVICES set, only report the visible
@@ -550,17 +566,7 @@ main( int argc, const char** argv)
 			continue;
 		}
 
-		// Determine the GPU ID.
-		char gpuID[128];
-		snprintf( gpuID, 128, "%s%d", opt_pre, dev );
-		gpuID[127] = '\0';
-
-		// The -uuid and -short-uuid flags don't imply -properties.
-		if( opt_uuid && !opt_opencl ) {
-			strcpy(gpuID, "GPU-");
-			enumeratedDevices[dev].printUUID(gpuID + 4, 96);
-			if( opt_short_uuid ) { gpuID[12] = 0; }
-		}
+		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
 
 		if (! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += gpuID;
@@ -575,8 +581,8 @@ main( int argc, const char** argv)
 			// Report CUDA properties.
 			BasicProps bp = enumeratedDevices[dev];
 
-			char uuidstr[64];
-			bp.printUUID(uuidstr, 64);
+			char uuidstr[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+			bp.printUUID(uuidstr, NVML_DEVICE_UUID_V2_BUFFER_SIZE);
 			props["DeviceUuid"] = Format("\"%s\"", uuidstr);
 			props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
 			if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
@@ -737,49 +743,50 @@ main( int argc, const char** argv)
 
 
 	// Dynamic properties
-	if ( !opt_dynamic ) return 0;
+	if(! opt_dynamic) { return 0; }
 
-	// everything after here is dynamic properties
 	for (dev = 0; dev < deviceCount; dev++) {
 		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 
-		// get a handle to this device
+		// Convert from CUDA device index to NVML handle.  We used
+		// to do this with nvmlDeviceGetHandleByPciBusId(), but that can't
+		// work with MIG devices.  This also fixes a bug in the old code
+		// where -uuid and -dynamic didn't work together.
 		nvmlDevice_t device;
-		char prefix[100];
-		sprintf(prefix,"%s%d",opt_pre,dev);
-		KVP& props = dev_props.find(prefix)->second;
-		std::string unquoted = props["DevicePciBusId"].substr( 1, props["DevicePciBusId"].length() - 2 );
-		nvmlReturn_t result = nvmlDeviceGetHandleByPciBusId( unquoted.c_str(), & device );
-		if( result != NVML_SUCCESS ) {
+		if(NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
 			continue;
 		}
 
+		// Determine the GPU ID.
+		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+		std::replace( gpuID.begin(), gpuID.end(), '-', '_' );
+
 		unsigned int tuint;
-		result = nvmlDeviceGetFanSpeed(device,&tuint);
+		nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
 		if ( result == NVML_SUCCESS ) {
-			printf("%sFanSpeedPct=%u\n",prefix,tuint);
+			printf("%sFanSpeedPct=%u\n",gpuID.c_str(),tuint);
 		}
 
 		result = nvmlDeviceGetPowerUsage(device,&tuint);
 		if ( result == NVML_SUCCESS ) {
-			printf("%sPowerUsage_mw=%u\n",prefix,tuint);
+			printf("%sPowerUsage_mw=%u\n",gpuID.c_str(),tuint);
 		}
 
 		result = nvmlDeviceGetTemperature(device,NVML_TEMPERATURE_GPU,&tuint);
 		if ( result == NVML_SUCCESS ) {
-			printf("%sDieTempC=%u\n",prefix,tuint);
+			printf("%sDieTempC=%u\n",gpuID.c_str(),tuint);
 		}
 
 		unsigned long long eccCounts;
 		result = nvmlDeviceGetTotalEccErrors(device,NVML_SINGLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
 		if ( result == NVML_SUCCESS ) {
-			printf("%sEccErrorsSingleBit=%llu\n",prefix,eccCounts);
+			printf("%sEccErrorsSingleBit=%llu\n",gpuID.c_str(),eccCounts);
 		}
 		result = nvmlDeviceGetTotalEccErrors(device,NVML_DOUBLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
 		if ( result == NVML_SUCCESS ) {
-			printf("%sEccErrorsDoubleBit=%llu\n",prefix,eccCounts);
+			printf("%sEccErrorsDoubleBit=%llu\n",gpuID.c_str(),eccCounts);
 		}
 
 	}

@@ -204,3 +204,5 @@ typedef struct nvmlMemory_t {
 	unsigned long long total;
 	unsigned long long used;
 } nvmlMemory_t;
+
+#define NVML_DEVICE_UUID_V2_BUFFER_SIZE 96

@@ -16,7 +16,7 @@ char * print_uuid( char * buf, int bufsize, const unsigned char uuid[16] );
 
 typedef nvmlReturn_t (*nvml_void)(void);
 typedef nvmlReturn_t (*nvml_dghbi)(unsigned int, nvmlDevice_t *);
-typedef nvmlReturn_t (*nvml_dghbp)(const char *, nvmlDevice_t *);
+typedef nvmlReturn_t (*nvml_dghbc)(const char *, nvmlDevice_t *);
 typedef nvmlReturn_t (*nvml_unsigned_int)(unsigned int *);
 typedef nvmlReturn_t (*nvml_dgs)( nvmlDevice_t, nvmlSamplingType_t, unsigned long long, nvmlValueType_t *, unsigned int *, nvmlSample_t * );
 typedef nvmlReturn_t (*nvml_dm)( nvmlDevice_t, nvmlMemory_t * );
@@ -34,21 +34,37 @@ GPUFP nvml_unsigned_int  nvmlDeviceGetCount;
 GPUFP nvml_dgs           nvmlDeviceGetSamples;
 GPUFP nvml_dm            nvmlDeviceGetMemoryInfo;
 GPUFP nvml_dghbi         nvmlDeviceGetHandleByIndex;
-GPUFP nvml_dghbp         nvmlDeviceGetHandleByPciBusId;
+GPUFP nvml_dghbc         nvmlDeviceGetHandleByUUID;
 GPUFP cc_nvml            nvmlErrorString;
 
 
 typedef nvmlReturn_t (*nvml_device_uint)( nvmlDevice_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_dgt)( nvmlDevice_t, nvmlTemperatureSensors_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_dgtee)( nvmlDevice_t, nvmlMemoryErrorType_t, nvmlEccCounterType_t, unsigned long long * );
+typedef nvmlReturn_t (*nvml_dgu)( nvmlDevice_t, char *, unsigned int );
 
 GPUFP nvml_device_uint  nvmlDeviceGetFanSpeed;
 GPUFP nvml_device_uint  nvmlDeviceGetPowerUsage;
 GPUFP nvml_dgt          nvmlDeviceGetTemperature;
 GPUFP nvml_dgtee        nvmlDeviceGetTotalEccErrors;
 
+GPUFP nvml_dgu          nvmlDeviceGetUUID;
+
 dlopen_return_t setNVMLFunctionPointers();
 void setSimulatedNVMLFunctionPointers();
+
+//
+// findNVMLDeviceHandle() is current a convenience function that converts
+// a BasicProp's UUID into the string that NVML wants.  Later, it will
+// also scan the MIG devices for that UUID, since as of the latest NVML
+// documentation (date June 2020), nvmlDeviceGetHandleByUUID() won't
+// return MIG device handles.
+//
+
+typedef nvmlReturn_t (* fndh)(unsigned char uuid[16], nvmlDevice_t * device);
+GPUFP fndh findNVMLDeviceHandle;
+
+nvmlReturn_t nvml_findNVMLDeviceHandle(unsigned char uuid[16], nvmlDevice_t * device);
 
 //
 // CUDA (device enumeration).

@@ -161,12 +161,12 @@ int main() {
 		elapsedTimes[i] = 0;
 		runningSampleCounts[i] = 0;
 
-		r = nvmlDeviceGetHandleByPciBusId( cudaDevices[i].pciId, &(devices[i]) );
+		r = findNVMLDeviceHandle( cudaDevices[i].uuid, &(devices[i]) );
 		if( r == NVML_ERROR_NO_PERMISSION ) {
 			// Ignore devices we don't have permission for rather than fail.
 			continue;
 		} else if( r != NVML_SUCCESS ) {
-			fprintf( stderr, "nvmlGetDeviceHandleByIndex(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
+			fprintf( stderr, "findNVMLDeviceHandle() for device %u failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
 			fail();
 		}
 
@@ -247,12 +247,12 @@ int main() {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
 				if( devices[i] == NULL ) { continue; }
 				if (cudaDevices[i].hasUUID()) {
-					char short_gpuid[64] = "GPU-";
-					cudaDevices[i].printUUID(short_gpuid+4, 60);
+					char short_gpuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE+4] = "GPU-";
+					cudaDevices[i].printUUID(short_gpuid+4, NVML_DEVICE_UUID_V2_BUFFER_SIZE);
 					short_gpuid[12] = 0;
 
-					char gpuid[64] = "GPU-";
-					cudaDevices[i].printUUID(gpuid+4, 60);
+					char gpuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE+4] = "GPU-";
+					cudaDevices[i].printUUID(gpuid+4, NVML_DEVICE_UUID_V2_BUFFER_SIZE);
 
 					fprintf(stdout, "SlotMergeConstraint = "
 						"StringListMember(\"CUDA%u\", AssignedGPUs) "
