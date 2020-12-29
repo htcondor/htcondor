@@ -119,7 +119,7 @@ int CollectorDaemon::pending_query_workers = 0;
 bool CollectorDaemon::want_track_queries_by_subsys = false;
 #endif
 
-AdTransforms CollectorDaemon::m_ad_xfm;
+AdTransforms CollectorDaemon::m_forward_ad_xfm;
 
 //---------------------------------------------------------
 
@@ -1995,7 +1995,8 @@ void CollectorDaemon::Config()
 
 	forwardClaimedPrivateAds = param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true);
 
-	m_ad_xfm.config();
+	// load FORWARD_AD_TRANSFORM_NAMES and FORWARD_AD_TRANSFORM_*
+	m_forward_ad_xfm.config("FORWARD_AD");
 
 	return;
 }
@@ -2210,7 +2211,7 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 
 	// Transform ad
 	//
-	m_ad_xfm.transform(theAd, nullptr);
+	m_forward_ad_xfm.transform(theAd, nullptr);
 
     for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
         DCCollector* view_coll = e->collector;

@@ -23,10 +23,8 @@
 #include "ad_transforms.h"
 #include "condor_attributes.h"
 
-constexpr char AdTransforms::m_param_prefix[];
-
 void 
-AdTransforms::config()
+AdTransforms::config(const char * param_prefix)
 {
 	int rval;
 
@@ -38,7 +36,7 @@ AdTransforms::config()
 	m_transforms_list.clear();
 
 	std::string adtransNames;
-	if( !param( adtransNames, (std::string(m_param_prefix) + "_TRANSFORM_NAMES").c_str() ) ) {
+	if( !param( adtransNames, (std::string(param_prefix) + "_TRANSFORM_NAMES").c_str() ) ) {
 		return;
 	}
 	StringList nameList(adtransNames.c_str());
@@ -48,12 +46,12 @@ AdTransforms::config()
 
 		if (!strcasecmp(name, "NAMES") ) { continue; }  // prevent recursion!
 
-		std::string attributeName = std::string(m_param_prefix) + "_TRANSFORM_" + name;
+		std::string attributeName = std::string(param_prefix) + "_TRANSFORM_" + name;
 
 		// fetch unexpanded param, we will only expand it now for the old (classad) style transforms.
 		const char * raw_transform_text = param_unexpanded(attributeName.c_str());
 		if (!raw_transform_text) {
-			dprintf(D_ALWAYS, (std::string(m_param_prefix) + "_TRANSFORM_%s not defined, ignoring.\n").c_str(), name);
+			dprintf(D_ALWAYS, (std::string(param_prefix) + "_TRANSFORM_%s not defined, ignoring.\n").c_str(), name);
 			continue;
 		}
 
@@ -64,7 +62,7 @@ AdTransforms::config()
 		std::string errmsg = "";
 		int offset = 0;
 		if ( (rval=xfm->open(raw_transform_text, offset, errmsg)) < 0 ) {
-			dprintf(D_ALWAYS, (std::string(m_param_prefix) + "_TRANSFORM_%s macro stream malformed, ignoring. (err=%d) %s\n").c_str(),
+			dprintf(D_ALWAYS, (std::string(param_prefix) + "_TRANSFORM_%s macro stream malformed, ignoring. (err=%d) %s\n").c_str(),
 				name, rval, errmsg.c_str());
 			continue;
 		}
@@ -73,7 +71,7 @@ AdTransforms::config()
 		m_transforms_list.emplace_back(std::move(xfm));
 		std::string xfm_text;
 		dprintf(D_ALWAYS, 
-			(std::string(m_param_prefix) + "_TRANSFORM_%s setup as transform rule #%lu :\n%s\n").c_str(),
+			(std::string(param_prefix) + "_TRANSFORM_%s setup as transform rule #%lu :\n%s\n").c_str(),
 			name, m_transforms_list.size(), m_transforms_list.back()->getFormattedText(xfm_text, "\t") );
 	}
 }

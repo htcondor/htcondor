@@ -218,7 +218,7 @@ private:
 
 	static int setAttrLastHeardFrom( ClassAd* cad, unsigned long time );
 
-	static AdTransforms m_ad_xfm;
+	static AdTransforms m_forward_ad_xfm;
 };
 
 #endif

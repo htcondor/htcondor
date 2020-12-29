@@ -30,7 +30,7 @@ class AdTransforms {
 		AdTransforms() {}
 		~AdTransforms() {}
 
-		void config();
+		void config(const char * param_prefix);
 
 		int transform(ClassAd *ad, CondorError *errorStack);
 
@@ -41,8 +41,6 @@ class AdTransforms {
 		XFormHash m_mset;
 			// m_mset owns this pointer; we do not manage it.
 		MACRO_SET_CHECKPOINT_HDR *m_mset_ckpt;
-
-		static constexpr char m_param_prefix[] = "FORWARD_AD";
 };
 
 #endif
