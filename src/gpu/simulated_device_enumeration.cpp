@@ -81,7 +81,7 @@ cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
 	p->name = dev->name;
 	unsigned char uuid[16] = {0xa1,0x22,0x33,0x34,  0x44,0x45, 0x56,0x67, 0x89,0x9a, 0xab,0xbc,0xcd,0xde,0xef,0xf0 };
 	uuid[0] = (unsigned char)((devID*0x11) + 0xa0);
-	memcpy(p->uuid, uuid, 16);
+	p->setUUIDFromBuffer( uuid );
 	sprintf(p->pciId, "0000:%02x:00.0", devID + 0x40);
 	p->ccMajor = (dev->SM & 0xF0) >> 4;
 	p->ccMinor = (dev->SM & 0x0F);
@@ -113,11 +113,8 @@ sim_nvmlDeviceGetHandleByUUID(const char * uuid, nvmlDevice_t * pdev) {
 };
 
 nvmlReturn_t
-sim_findNVMLDeviceHandle(unsigned char uuid[16], nvmlDevice_t * device) {
-	char uuidstr[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
-	print_uuid( uuidstr, NVML_DEVICE_UUID_V2_BUFFER_SIZE, uuid );
-
-	return nvmlDeviceGetHandleByUUID( uuidstr, device );
+sim_findNVMLDeviceHandle(const std::string & uuid, nvmlDevice_t * device) {
+	return nvmlDeviceGetHandleByUUID( uuid.c_str(), device );
 }
 
 void

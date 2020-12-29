@@ -78,45 +78,45 @@ void hex_dump(FILE* out, const unsigned char * buf, size_t cb, int offset)
 int ConvertSMVer2Cores(int major, int minor)
 {
 	// Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
-    typedef struct {
-        int SM; // 0xMm (hexidecimal notation), M = SM Major version, and m = SM minor version
-        int Cores;
+	typedef struct {
+		int SM; // 0xMm (hexidecimal notation), M = SM Major version, and m = SM minor version
+		int Cores;
 	} sSMtoCores;
 
-    sSMtoCores nGpuArchCoresPerSM[] =
-    {
-        { 0x10,  8 }, // Tesla Generation (SM 1.0) G80 class
-        { 0x11,  8 }, // Tesla Generation (SM 1.1) G8x class
-        { 0x12,  8 }, // Tesla Generation (SM 1.2) G9x class
-        { 0x13,  8 }, // Tesla Generation (SM 1.3) GT200 class
-        { 0x20, 32 }, // Fermi Generation (SM 2.0) GF100 class
-        { 0x21, 48 }, // Fermi Generation (SM 2.1) GF10x class
-        { 0x30, 192}, // Kepler Generation (SM 3.0) GK10x class
-        { 0x32, 192}, // Kepler Generation (SM 3.2) GK20A class
-        { 0x35, 192}, // Kepler Generation (SM 3.5) GK11x class
-        { 0x37, 192}, // Kepler Generation (SM 3.7) GK21x class
-        { 0x50, 128}, // Maxwell Generation (SM 5.0) GM10x class
-        { 0x52, 128}, // Maxwell Generation (SM 5.2) GM20x class
-        { 0x53, 128}, // Maxwell Generation (SM 5.3) GM20x class
-        { 0x60, 64 }, // Pascal Generation (SM 6.0) GP100 class
-        { 0x61, 128}, // Pascal Generation (SM 6.1) GP10x class
-        { 0x62, 128}, // Pascal Generation (SM 6.2) GP10x class
-        { 0x70, 64 }, // Volta Generation (SM 7.0) GV100 class
-        { 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
-        { 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
-        { 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
-        {   -1, -1 }
-    };
+	sSMtoCores nGpuArchCoresPerSM[] =
+	{
+		{ 0x10,  8 }, // Tesla Generation (SM 1.0) G80 class
+		{ 0x11,  8 }, // Tesla Generation (SM 1.1) G8x class
+		{ 0x12,  8 }, // Tesla Generation (SM 1.2) G9x class
+		{ 0x13,  8 }, // Tesla Generation (SM 1.3) GT200 class
+		{ 0x20, 32 }, // Fermi Generation (SM 2.0) GF100 class
+		{ 0x21, 48 }, // Fermi Generation (SM 2.1) GF10x class
+		{ 0x30, 192}, // Kepler Generation (SM 3.0) GK10x class
+		{ 0x32, 192}, // Kepler Generation (SM 3.2) GK20A class
+		{ 0x35, 192}, // Kepler Generation (SM 3.5) GK11x class
+		{ 0x37, 192}, // Kepler Generation (SM 3.7) GK21x class
+		{ 0x50, 128}, // Maxwell Generation (SM 5.0) GM10x class
+		{ 0x52, 128}, // Maxwell Generation (SM 5.2) GM20x class
+		{ 0x53, 128}, // Maxwell Generation (SM 5.3) GM20x class
+		{ 0x60, 64 }, // Pascal Generation (SM 6.0) GP100 class
+		{ 0x61, 128}, // Pascal Generation (SM 6.1) GP10x class
+		{ 0x62, 128}, // Pascal Generation (SM 6.2) GP10x class
+		{ 0x70, 64 }, // Volta Generation (SM 7.0) GV100 class
+		{ 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
+		{ 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
+		{ 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
+		{   -1, -1 }
+	};
 
-    int index = 0;
-    while (nGpuArchCoresPerSM[index].SM != -1) {
-        if (nGpuArchCoresPerSM[index].SM == ((major << 4) + minor) ) {
-            return nGpuArchCoresPerSM[index].Cores;
-        }
-        index++;
-    }
-    // If we don't find the values, default to the last known generation
-    return nGpuArchCoresPerSM[index-1].Cores;
+	int index = 0;
+	while (nGpuArchCoresPerSM[index].SM != -1) {
+		if (nGpuArchCoresPerSM[index].SM == ((major << 4) + minor) ) {
+			return nGpuArchCoresPerSM[index].Cores;
+		}
+		index++;
+	}
+	// If we don't find the values, default to the last known generation
+	return nGpuArchCoresPerSM[index-1].Cores;
 }
 
 // because we don't have access to condor_utils, make a limited local version
@@ -285,14 +285,14 @@ bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
 
 std::string constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int opt_short_uuid, std::vector< BasicProps > & enumeratedDevices ) {
 	// Determine the GPU ID.
-	char gpuID[128];
-	snprintf( gpuID, 128, "%s%d", opt_pre, dev );
-	gpuID[127] = '\0';
+	std::string gpuID = Format( "%s%i", opt_pre, dev );
 
 	// The -uuid and -short-uuid flags don't imply -properties.
 	if( opt_uuid && !opt_opencl ) {
-		strcpy(gpuID, "GPU-");
-		enumeratedDevices[dev].printUUID(gpuID + 4, 96);
+	    gpuID = enumeratedDevices[dev].uuid;
+	    if( gpuID.find( "GPU-" ) != 0 ) {
+	        gpuID = "GPU-" + gpuID;
+	    }
 		if( opt_short_uuid ) { gpuID[12] = 0; }
 	}
 
@@ -355,9 +355,9 @@ main( int argc, const char** argv)
 	unsetenv( "GPU_DEVICE_ORDINAL" );
 #endif
 
-    //
-    // Argument parsing.
-    //
+	//
+	// Argument parsing.
+	//
 	for (i=1; i<argc && argv[i]; i++) {
 		if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			opt_basic = 1; // publish basic GPU properties
@@ -377,9 +377,9 @@ main( int argc, const char** argv)
 			opt_basic = 1;
 			opt_dynamic = 1;
 
-            // Even if it made sense to ask NVML about OpenCL devices, we
-            // don't get the PCI bus ID from OpenCL, so we can't determine
-            // which device the dynamic properties apply to.
+			// Even if it made sense to ask NVML about OpenCL devices, we
+			// don't get the PCI bus ID from OpenCL, so we can't determine
+			// which device the dynamic properties apply to.
 			opt_opencl = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
@@ -390,7 +390,7 @@ main( int argc, const char** argv)
 		else if (is_dash_arg_prefix(argv[i], "opencl", -1)) {
 			opt_opencl = 1;
 
-            // See comment for the -dynamic flag.
+			// See comment for the -dynamic flag.
 			opt_dynamic = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cuda", -1)) {
@@ -581,9 +581,7 @@ main( int argc, const char** argv)
 			// Report CUDA properties.
 			BasicProps bp = enumeratedDevices[dev];
 
-			char uuidstr[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
-			bp.printUUID(uuidstr, NVML_DEVICE_UUID_V2_BUFFER_SIZE);
-			props["DeviceUuid"] = Format("\"%s\"", uuidstr);
+			props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str());
 			props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
 			if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
 			props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
@@ -592,7 +590,9 @@ main( int argc, const char** argv)
 
 			if( opt_extra ) {
 				props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
-				props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
+				if( bp.multiProcessorCount != 0 ) {
+					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
+				}
 				props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
 			}
 
@@ -792,16 +792,16 @@ main( int argc, const char** argv)
 	}
 
 
-    //
-    // Clean up on the way out.
-    //
-    if( nvml_handle ) {
-        nvmlShutdown();
-        dlclose( nvml_handle );
-    }
-    if( cuda_handle ) { dlclose( cuda_handle ); }
+	//
+	// Clean up on the way out.
+	//
+	if( nvml_handle ) {
+		nvmlShutdown();
+		dlclose( nvml_handle );
+	}
+	if( cuda_handle ) { dlclose( cuda_handle ); }
 
-    return 0;
+	return 0;
 }
 
 void usage(FILE* out, const char * argv0)

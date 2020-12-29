@@ -246,19 +246,21 @@ int main() {
 		if( time( NULL ) - lastReport >= reportInterval ) {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
 				if( devices[i] == NULL ) { continue; }
-				if (cudaDevices[i].hasUUID()) {
-					char short_gpuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE+4] = "GPU-";
-					cudaDevices[i].printUUID(short_gpuid+4, NVML_DEVICE_UUID_V2_BUFFER_SIZE);
-					short_gpuid[12] = 0;
+				if(! cudaDevices[i].uuid.empty()) {
+					std::string gpuID = cudaDevices[i].uuid;
+					// Some of our UUIDs came from CUDA.
+					if( gpuID.find( "GPU-" ) != 0 ) {
+						gpuID = "GPU-" + cudaDevices[i].uuid;
+					}
 
-					char gpuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE+4] = "GPU-";
-					cudaDevices[i].printUUID(gpuid+4, NVML_DEVICE_UUID_V2_BUFFER_SIZE);
+					std::string short_gpuID = gpuID;
+					short_gpuID[12] = 0;
 
 					fprintf(stdout, "SlotMergeConstraint = "
 						"StringListMember(\"CUDA%u\", AssignedGPUs) "
 						"|| StringListMember(\"%s\", AssignedGPUs) "
 						"|| StringListMember(\"%s\", AssignedGPUs)\n",
-						i, short_gpuid, gpuid);
+						i, short_gpuID.c_str(), gpuID.c_str() );
 				} else {
 					fprintf(stdout, "SlotMergeConstraint = "
 						"StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);

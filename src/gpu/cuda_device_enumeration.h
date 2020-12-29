@@ -22,6 +22,11 @@ typedef nvmlReturn_t (*nvml_dgs)( nvmlDevice_t, nvmlSamplingType_t, unsigned lon
 typedef nvmlReturn_t (*nvml_dm)( nvmlDevice_t, nvmlMemory_t * );
 typedef const char * (*cc_nvml)( nvmlReturn_t );
 
+typedef nvmlReturn_t (*nvml_get_pci)( nvmlDevice_t, nvmlPciInfo_t * );
+typedef nvmlReturn_t (*nvml_get_uint)( nvmlDevice_t, unsigned int * );
+typedef nvmlReturn_t (*nvml_get_char)( nvmlDevice_t, char *, unsigned int );
+typedef nvmlReturn_t (*nvml_get_dhbi)( nvmlDevice_t, unsigned int, nvmlDevice_t * );
+
 #ifndef   DEFINE_GPU_FUNCTION_POINTERS
 	#define GPUFP extern
 #else
@@ -37,34 +42,37 @@ GPUFP nvml_dghbi         nvmlDeviceGetHandleByIndex;
 GPUFP nvml_dghbc         nvmlDeviceGetHandleByUUID;
 GPUFP cc_nvml            nvmlErrorString;
 
+GPUFP nvml_get_pci       nvmlDeviceGetPciInfo_v3;
+GPUFP nvml_get_uint      nvmlDeviceGetGpuInstanceId;
+GPUFP nvml_get_uint      nvmlDeviceGetComputeInstanceId;
+GPUFP nvml_get_uint      nvmlDeviceGetMaxMigDeviceCount;
+GPUFP nvml_get_char      nvmlDeviceGetUUID;
+GPUFP nvml_get_char      nvmlDeviceGetName;
+GPUFP nvml_get_dhbi      nvmlDeviceGetMigDeviceHandleByIndex;
 
-typedef nvmlReturn_t (*nvml_device_uint)( nvmlDevice_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_dgt)( nvmlDevice_t, nvmlTemperatureSensors_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_dgtee)( nvmlDevice_t, nvmlMemoryErrorType_t, nvmlEccCounterType_t, unsigned long long * );
-typedef nvmlReturn_t (*nvml_dgu)( nvmlDevice_t, char *, unsigned int );
+typedef nvmlReturn_t (*nvml_get_int_int)( nvmlDevice_t, int *, int * );
+typedef nvmlReturn_t (*nvml_get_clock)( nvmlDevice_t, nvmlClockType_t, unsigned int * );
+typedef nvmlReturn_t (*nvml_get_attrs)( nvmlDevice_t, nvmlDeviceAttributes_t * );
+typedef nvmlReturn_t (*nvml_get_eccm)( nvmlDevice_t, nvmlEnableState_t *, nvmlEnableState_t * );
 
-GPUFP nvml_device_uint  nvmlDeviceGetFanSpeed;
-GPUFP nvml_device_uint  nvmlDeviceGetPowerUsage;
+GPUFP nvml_get_uint     nvmlDeviceGetFanSpeed;
+GPUFP nvml_get_uint     nvmlDeviceGetPowerUsage;
 GPUFP nvml_dgt          nvmlDeviceGetTemperature;
 GPUFP nvml_dgtee        nvmlDeviceGetTotalEccErrors;
-
-GPUFP nvml_dgu          nvmlDeviceGetUUID;
+GPUFP nvml_get_int_int  nvmlDeviceGetCudaComputeCapability;
+GPUFP nvml_get_clock    nvmlDeviceGetMaxClockInfo;
+GPUFP nvml_get_attrs    nvmlDeviceGetAttributes;
+GPUFP nvml_get_eccm     nvmlDeviceGetEccMode;
 
 dlopen_return_t setNVMLFunctionPointers();
 void setSimulatedNVMLFunctionPointers();
 
-//
-// findNVMLDeviceHandle() is current a convenience function that converts
-// a BasicProp's UUID into the string that NVML wants.  Later, it will
-// also scan the MIG devices for that UUID, since as of the latest NVML
-// documentation (date June 2020), nvmlDeviceGetHandleByUUID() won't
-// return MIG device handles.
-//
-
-typedef nvmlReturn_t (* fndh)(unsigned char uuid[16], nvmlDevice_t * device);
+typedef nvmlReturn_t (* fndh)(const std::string & uuid, nvmlDevice_t * device);
 GPUFP fndh findNVMLDeviceHandle;
 
-nvmlReturn_t nvml_findNVMLDeviceHandle(unsigned char uuid[16], nvmlDevice_t * device);
+nvmlReturn_t nvml_findNVMLDeviceHandle(const std::string & uuid, nvmlDevice_t * device);
 
 //
 // CUDA (device enumeration).
@@ -120,8 +128,8 @@ class BasicProps {
 	public:
 		BasicProps();
 
+		std::string   uuid;
 		std::string   name;
-		unsigned char uuid[16];
 		char          pciId[16];
 		size_t        totalGlobalMem;
 		int           ccMajor;
@@ -130,10 +138,10 @@ class BasicProps {
 		int           clockRate;
 		int           ECCEnabled;
 
-		bool hasUUID() { return uuid[0] || uuid[6] || uuid[8]; }
-		const char * printUUID(char* buf, int bufsiz);
+		void setUUIDFromBuffer( const unsigned char buffer[16] );
 };
 
 bool enumerateCUDADevices( std::vector< BasicProps > & devices );
+nvmlReturn_t enumerateMIGDevices( std::vector< BasicProps > & devices );
 
 #endif /* _CUDA_DEVICE_ENUMERATION_H */

@@ -53,14 +53,15 @@ char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
 }
 
 BasicProps::BasicProps() : totalGlobalMem(0), ccMajor(0), ccMinor(0), multiProcessorCount(0), clockRate(0), ECCEnabled(0) {
-	memset( uuid, 0, sizeof(uuid) );
 	memset( pciId, 0, sizeof(pciId) );
 }
 
-const char * BasicProps::printUUID(char* buf, int bufsiz) {
-	return print_uuid(buf, bufsiz, uuid);
+void
+BasicProps::setUUIDFromBuffer( const unsigned char uuid[16] ) {
+	char buffer[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+	print_uuid(buffer, NVML_DEVICE_UUID_V2_BUFFER_SIZE, uuid);
+	this->uuid = buffer;
 }
-
 
 // ----------------------------------------------------------------------------
 
@@ -117,7 +118,7 @@ cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropI
 	p->clockRate = dpi->clockRate;
 	p->multiProcessorCount = dpi->multiProcessorCount;
 	p->ECCEnabled = dpi->ECCEnabled;
-	memcpy(p->uuid, dps->uuid, sizeof(p->uuid));
+	p->setUUIDFromBuffer( dps->uuid );
 	if (dpi->pciBusID || dpi->pciDeviceID) {
 		sprintf(p->pciId, "%04X:%02X:%02X.0", dpi->pciDomainID, dpi->pciBusID, dpi->pciDeviceID);
 	}
@@ -149,7 +150,7 @@ cudaError_t CUDACALL cuda10_getBasicProps(int devID, BasicProps * p) {
 	const int ints_offset = (sizeof(cudaDevicePropStrings) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1);
 	cudaDevicePropStrings * dps = (cudaDevicePropStrings *)(&buf);
 	cudaDevicePropInts * dpi = (cudaDevicePropInts *)(&buf.props[ints_offset]);
-	memcpy(p->uuid, dps->uuid, sizeof(dps->uuid));
+	p->setUUIDFromBuffer(dps->uuid);
 	return basicPropsFromCudaProps(dps, dpi, p);
 }
 
@@ -165,7 +166,11 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		name[1024] = 0; // this shouldn't be necessary, but it can't hurt.
 		p->name = name;
 		free(name);
-		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
+		if( cuDeviceGetUuid ) {
+			unsigned char buffer[16];
+			cuDeviceGetUuid( buffer, dev );
+			p->setUUIDFromBuffer( buffer );
+		}
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
 		cuDeviceTotalMem(&p->totalGlobalMem, dev);
@@ -227,15 +232,36 @@ setNVMLFunctionPointers() {
 		(cc_nvml)dlsym( nvml_handle, "nvmlErrorString" );
 
 	nvmlDeviceGetFanSpeed =
-		(nvml_device_uint)dlsym( nvml_handle, "nvmlDeviceGetFanSpeed" );
+		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetFanSpeed" );
 	nvmlDeviceGetPowerUsage =
-		(nvml_device_uint)dlsym( nvml_handle, "nvmlDeviceGetPowerUsage" );
+		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetPowerUsage" );
 	nvmlDeviceGetTemperature =
 		(nvml_dgt)dlsym( nvml_handle, "nvmlDeviceGetTemperature" );
 	nvmlDeviceGetTotalEccErrors =
 		(nvml_dgtee)dlsym( nvml_handle, "nvmlDeviceGetTotalEccErrors" );
-    nvmlDeviceGetUUID =
-        (nvml_dgu)dlsym( nvml_handle, "nvmlDeviceGetUUID" );
+
+	nvmlDeviceGetPciInfo_v3 =
+		(nvml_get_pci)dlsym( nvml_handle, "nvmlDeviceGetPciInfo_v3" );
+	nvmlDeviceGetGpuInstanceId =
+		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetGpuInstanceID" );
+	nvmlDeviceGetComputeInstanceId =
+		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetComputeInstanceID" );
+	nvmlDeviceGetMaxMigDeviceCount =
+		(nvml_get_uint)dlsym( nvml_handle, "nvmlDeviceGetMaxMigDeviceCount" );
+	nvmlDeviceGetName =
+		(nvml_get_char)dlsym( nvml_handle, "nvmlDeviceGetName" );
+	nvmlDeviceGetUUID =
+		(nvml_get_char)dlsym( nvml_handle, "nvmlDeviceGetUUID" );
+	nvmlDeviceGetMigDeviceHandleByIndex =
+		(nvml_get_dhbi)dlsym( nvml_handle, "nvmlDeviceGetMigDeviceHandleByIndex" );
+	nvmlDeviceGetCudaComputeCapability =
+		(nvml_get_int_int)dlsym( nvml_handle, "nvmlDeviceGetCudaComputeCapability" );
+	nvmlDeviceGetMaxClockInfo =
+		(nvml_get_clock)dlsym( nvml_handle, "nvmlDeviceGetMaxClockInfo" );
+	nvmlDeviceGetAttributes =
+		(nvml_get_attrs)dlsym( nvml_handle, "nvmlDeviceGetAttributes" );
+	nvmlDeviceGetEccMode =
+		(nvml_get_eccm)dlsym( nvml_handle, "nvmlDeviceGetEccMode" );
 
 	return nvml_handle;
 }
@@ -323,14 +349,14 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 		findNVMLDeviceHandle = nvml_findNVMLDeviceHandle;
 		return cudart_handle;
 	} else {
-	    fprintf( stderr, "Unable to load a CUDA library (%s or %s).\n",
-	        cuda_library, cudart_library );
+		fprintf( stderr, "Unable to load a CUDA library (%s or %s).\n",
+			cuda_library, cudart_library );
 		return NULL;
 	}
 }
 
 nvmlReturn_t
-nvml_findNVMLDeviceHandle(unsigned char uuid[16], nvmlDevice_t * device) {
+nvml_findNVMLDeviceHandle(const std::string & uuid, nvmlDevice_t * device) {
 /*
 	// Scan the MIG devices for the given UUID.
 	static bool enumerated = false;
@@ -340,12 +366,101 @@ nvml_findNVMLDeviceHandle(unsigned char uuid[16], nvmlDevice_t * device) {
 		if(! enumerated) { return false; }
 	}
 */
+	if( uuid.find("GPU-") != 0 ) {
+		std::string nvmlUUID = "GPU-" + uuid;
+		return nvmlDeviceGetHandleByUUID( nvmlUUID.c_str(), device );
+	} else {
+		return nvmlDeviceGetHandleByUUID( uuid.c_str(), device );
+	}
+}
 
-	// NVML returns "UUID" strings, not UUIDs.  For CUDA devices, that
-	// seems to always mean "GID-<UUID>".  That will change for MIG
-	// instance UUIDs, but those will be recorded as strings in the
-	// BasicProps.
-	char uuidstr[NVML_DEVICE_UUID_V2_BUFFER_SIZE + 4] = "GPU-";
-	print_uuid( uuidstr + 4, NVML_DEVICE_UUID_V2_BUFFER_SIZE, uuid );
-	return nvmlDeviceGetHandleByUUID( uuidstr, device );
+nvmlReturn_t
+nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
+	nvmlReturn_t r;
+
+	char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+	r = nvmlDeviceGetUUID( migDevice, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
+	if( NVML_SUCCESS != r ) { return r; }
+	p->uuid = std::string(uuid);
+
+	char name[NVML_DEVICE_NAME_BUFFER_SIZE];
+	r = nvmlDeviceGetName( migDevice, name, NVML_DEVICE_NAME_BUFFER_SIZE );
+	if( NVML_SUCCESS == r ) {
+		p->name = name;
+	}
+
+	nvmlPciInfo_t pci;
+	r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
+	if( NVML_SUCCESS == r ) {
+		strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+	}
+
+	nvmlMemory_t memory;
+	r = nvmlDeviceGetMemoryInfo( migDevice, & memory );
+	if( NVML_SUCCESS == r ) {
+		p->totalGlobalMem = memory.total;
+	}
+
+	int ccMajor = 0, ccMinor = 0;
+	r = nvmlDeviceGetCudaComputeCapability( migDevice, & ccMajor, & ccMinor );
+	if( NVML_SUCCESS == r ) {
+		p->ccMajor = ccMajor;
+		p->ccMinor = ccMinor;
+	}
+
+	// This is not always the same as cuDeviceGetAttribute(CLOCK_RATE).
+	unsigned int clock = 0;
+	r = nvmlDeviceGetMaxClockInfo( migDevice, NVML_CLOCK_GRAPHICS, & clock );
+	if( NVML_SUCCESS == r ) {
+		// in MHz from NVML but KHz from CUDA
+		p->clockRate = clock * 1000;
+	}
+
+	// This only exists for MIG devices.
+	nvmlDeviceAttributes_t attributes;
+	r = nvmlDeviceGetAttributes( migDevice, & attributes );
+	if( NVML_SUCCESS == r ) {
+		p->multiProcessorCount = attributes.multiprocessorCount;
+	}
+
+	nvmlEnableState_t current, pending;
+	r = nvmlDeviceGetEccMode( migDevice, & current, & pending );
+	if( NVML_SUCCESS == r ) {
+		p->ECCEnabled = (current == NVML_FEATURE_ENABLED);
+	}
+
+	return NVML_SUCCESS;
+}
+
+nvmlReturn_t
+enumerateMIGDevices( std::vector< BasicProps > & devices ) {
+	unsigned int deviceCount = 0;
+	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
+	if( NVML_SUCCESS != r ) { return r; }
+
+	for( unsigned int i = 0; i < deviceCount; ++i ) {
+		nvmlDevice_t device;
+		r = nvmlDeviceGetHandleByIndex( i, & device );
+		if( NVML_SUCCESS != r ) { return r; }
+
+		unsigned int maxMigDeviceCount = 0;
+		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if( NVML_SUCCESS == r && maxMigDeviceCount != 0 ) {
+			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
+				nvmlDevice_t migDevice;
+				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
+				if( NVML_SUCCESS != r ) { return r; }
+
+				BasicProps bp;
+				std::string migID;
+				r = nvml_getBasicProps( migDevice, & bp );
+				if( NVML_SUCCESS != r ) { return r; }
+
+				devices.push_back( bp );
+			}
+
+			return NVML_SUCCESS;
+		}
+	}
+	return r;
 }

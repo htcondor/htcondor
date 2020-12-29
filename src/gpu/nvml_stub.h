@@ -199,10 +199,48 @@ typedef struct nvmlSample_st
 } nvmlSample_t;
 
 // Memory info
-typedef struct nvmlMemory_t {
-	unsigned long long free;
-	unsigned long long total;
-	unsigned long long used;
+typedef struct nvmlMemory_st {
+    unsigned long long free;
+    unsigned long long total;
+    unsigned long long used;
 } nvmlMemory_t;
 
 #define NVML_DEVICE_UUID_V2_BUFFER_SIZE 96
+#define NVML_DEVICE_NAME_BUFFER_SIZE            64
+#define NVML_DEVICE_PCI_BUS_ID_BUFFER_SIZE      32
+#define NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE   16
+
+typedef struct nvmlPciInfo_st {
+    char busIdLegacy[NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE];
+    unsigned int domain;
+    unsigned int bus;
+    unsigned int device;
+    unsigned int pciDeviceId;
+
+    unsigned int pciSubSystemId;
+    char busId[NVML_DEVICE_PCI_BUS_ID_BUFFER_SIZE];
+} nvmlPciInfo_t;
+
+typedef enum nvmlClockType_enum
+{
+    NVML_CLOCK_GRAPHICS  = 0,        //!< Graphics clock domain
+    NVML_CLOCK_SM        = 1,        //!< SM clock domain
+    NVML_CLOCK_MEM       = 2,        //!< Memory clock domain
+    NVML_CLOCK_VIDEO     = 3,        //!< Video encoder/decoder clock domain
+
+    // Keep this last
+    NVML_CLOCK_COUNT                 //!< Count of clock types
+} nvmlClockType_t;
+
+typedef struct nvmlDeviceAttributes_st
+{
+    unsigned int multiprocessorCount;       //!< Streaming Multiprocessor count
+    unsigned int sharedCopyEngineCount;     //!< Shared Copy Engine count
+    unsigned int sharedDecoderCount;        //!< Shared Decoder Engine count
+    unsigned int sharedEncoderCount;        //!< Shared Encoder Engine count
+    unsigned int sharedJpegCount;           //!< Shared JPEG Engine count
+    unsigned int sharedOfaCount;            //!< Shared OFA Engine count
+    unsigned int gpuInstanceSliceCount;     //!< GPU instance slice count
+    unsigned int computeInstanceSliceCount; //!< Compute instance slice count
+    unsigned long long memorySizeMB;        //!< Device memory size (in MiB)
+} nvmlDeviceAttributes_t;
