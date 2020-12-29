@@ -52,7 +52,7 @@
 
 #include <sstream>
 
-extern CStarter *Starter;
+extern Starter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 extern const char* JOB_AD_FILENAME;

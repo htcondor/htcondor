@@ -49,7 +49,7 @@
 #include <sys/eventfd.h>
 #endif
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 void StarterStatistics::Clear() {
    this->InitTime = time(NULL);

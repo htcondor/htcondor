@@ -46,13 +46,13 @@ class DataReuseDirectory;
 
 	@see UserProc
  */
-class CStarter : public Service
+class Starter : public Service
 {
 public:
 		/// Constructor
-	CStarter();
+	Starter();
 		/// Destructor
-	virtual ~CStarter();
+	virtual ~Starter();
 
 		/** This is called at the end of main_init().  It calls
 			Config(), registers a bunch of signals, registers a
@@ -366,8 +366,8 @@ private:
 
 		   @return true if we published anything, otherwise false.
 
-		   @see CStarter::publishUpdateAd()
-		   @see CStarter::publishJobExitAd()
+		   @see Starter::publishUpdateAd()
+		   @see Starter::publishJobExitAd()
 		   @see UserProc::PublishUpdateAd()
 		*/
 	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);

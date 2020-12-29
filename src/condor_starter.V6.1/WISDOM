@@ -59,9 +59,9 @@ First, we'll look at reaping.
 Reaping
 --------------------
 
-Since the starter is a "multi" starter, in the CStarter class there's
+Since the starter is a "multi" starter, in the Starter class there's
 a list of all the UserProc objects it ever spawned, called m_job_list.
-Any time the starter reaps a child process (via CStarter::Reaper()),
+Any time the starter reaps a child process (via Starter::Reaper()),
 it walks through the m_job_list of active UserProc objects and invokes
 the JobReaper() method on each one. This gives each UserProc a chance
 to take any actions once a given process exits.  Normally, the only
@@ -69,14 +69,14 @@ time a UserProc would take action is if the pid that just exited
 matched the pid of the UserProc, but in rare cases such as the
 ToolDaemonProtocol, a given UserProc might care that another one
 exited.  If UserProc::JobReaper() returns true, it means that UserProc
-object is no longer active and CStarter::Reaper() moves the UserProc
+object is no longer active and Starter::Reaper() moves the UserProc
 from the m_job_list to the m_reaped_job_list.
 
-CStarter::Reaper() also has the logic to know if it should spawn
+Starter::Reaper() also has the logic to know if it should spawn
 additional processes after a given UserProc has exited (this is for
 pre/post script support).
 
-Finally, if CStarter::Reaper() sees that there are no more active
+Finally, if Starter::Reaper() sees that there are no more active
 UserProc objects, it initiates the "cleanup" process...
 
 --------------------
@@ -100,32 +100,32 @@ this part of the process:
 
 Here's how the code paths work for these steps:
 
-When CStarter::Reaper() sees the last UserProc gone, it invokes
-CStarter::allJobsDone() to begin the cleanup process [step 1].
+When Starter::Reaper() sees the last UserProc gone, it invokes
+Starter::allJobsDone() to begin the cleanup process [step 1].
 
-CStarter::allJobsDone() invokes JIC::allJobsDone().  The JIC takes a
+Starter::allJobsDone() invokes JIC::allJobsDone().  The JIC takes a
 few actions now that the last UserProc is gone (e.g. canceling the
 timer for periodic updates), and then decides to invoke
 HOOK_JOB_EXIT.  If it invokes the hook, the JIC returns false to
-CStarter::allJobsDone() to halt progress on the cleanup until the hook
-exits.  If there's no hook, the JIC returns true so that CStarter
+Starter::allJobsDone() to halt progress on the cleanup until the hook
+exits.  If there's no hook, the JIC returns true so that Starter
 moves on.
 
 The next step after allJobsDone() is transferOutput() [step 2].  So,
 whenever allJobsDone() is finally done (immediately if there's no
 HOOK_JOB_EXIT, or once that hook completes),
-CStarter::transferOutput() is invoked.  Again, this just turns around
+Starter::transferOutput() is invoked.  Again, this just turns around
 and calls JIC::transferOutput().  Only JICShadow does anything at this
 stage, so in all other cases, JIC::transferOutput immediately returns
 true.  JICShadow::transferOutput() does the output file transfer (if
 needed given the job classad) in the foreground.  Only if the transfer
 fails (e.g. transient network error and we're now disconnected) will
 JICShadow::transferOutput() return false.  As with allJobsDone(), if
-JIC::transferOutput() returns true, the CStarter is ready to move on,
+JIC::transferOutput() returns true, the Starter is ready to move on,
 else, we stop the cleanup process and wait for external events (in
 this case, the startd giving up and killing us, or a shadow reconnect).
 
-After transferOutput() comes CStarter::cleanupJobs().  This iterates
+After transferOutput() comes Starter::cleanupJobs().  This iterates
 over all the UserProc objects in the m_reaped_job_list and invokes
 UserProc::JobExit() on each one.  Depending on what kind of UserProc
 it is, JobExit() will turn around and invoke JIC::notifyJobExit()
@@ -151,16 +151,16 @@ JICLocalSchedd:
 - write output ad to local file
 
 Note that if there are any failures, JIC::notifyJobExit() will return
-false, which indicates to CStarter::cleanupJobs() that the UserProc
+false, which indicates to Starter::cleanupJobs() that the UserProc
 wasn't safely cleaned up (due to schedd timeout, disconnected shadow,
-etc) and the CStarter will leave the UserProc in the m_reaped_job_list
+etc) and the Starter will leave the UserProc in the m_reaped_job_list
 and wait for external events (a timer to retry the schedd update, a
 shadow reconnect, the startd giving up and hard-killing, etc).  If
 JIC::notifyJobExit() returns true, UserProc::JobExit() returns true,
 which means the starter is truly done with that UserProc.  At this
-point, the CStarter will delete the UserProc object and remove it from
+point, the Starter will delete the UserProc object and remove it from
 the m_reaped_job_list.  Once m_reaped_job_list is empty,
-CStarter::cleanupJobs() calls JIC::allJobsGone().  In the case of
+Starter::cleanupJobs() calls JIC::allJobsGone().  In the case of
 JICLocal*, the starter finally exits at this stage.  In the case of
 JICShadow, the starter waits around for the shadow to deactivate the
 claim (I guess in the theory that the shadow might decide to send it
@@ -174,27 +174,27 @@ In general, the starter attempts to retry any steps that fail, since
 it will never move on to another phase in the cleanup if one step
 fails.  The basic approach here is that whenever the right external
 event comes in after an aborted step, the external event should always
-invoke CStarter::allJobsDone() to restart the process.  Everything in
+invoke Starter::allJobsDone() to restart the process.  Everything in
 the JIC that's invoked as part of this process remembers how far it
 got, and will immediately return success (to move on to the next step)
 if a certain cleanup task is already done.  Since the return values
-are always propagated from each step, the CStarter will quickly hit
+are always propagated from each step, the Starter will quickly hit
 the spot that needs to be retried, and continue on the process until
 completion or it hits another failure it can't recover from.
 
 For example, if file transfer failed, the shadow reconnect handler
-calls CStarter::allJobsDone().  JobInfoCommunicator::allJobsDone()
+calls Starter::allJobsDone().  JobInfoCommunicator::allJobsDone()
 knows that stage was already completed, so it returns true.
-CStarter::allJobsDone() sees the true and moves on to invoke
+Starter::allJobsDone() sees the true and moves on to invoke
 JIC::transferOutput() so we retry the output.
 
 For another example, let's say it's a local universe job and the
 starter failed to do the qmgmt update, so it sets a timer to retry a
-few minutes later.  The timer calls CStarter::allJobsDone().
-JIC::allJobsDone() has nothing to do and returns true.  CStarter then
-calls CStarter::transferOutput(), which calls JIC::transferOutput().
+few minutes later.  The timer calls Starter::allJobsDone().
+JIC::allJobsDone() has nothing to do and returns true.  Starter then
+calls Starter::transferOutput(), which calls JIC::transferOutput().
 That immediately returns success for JICLocal* and turns around and
-calls CStarter::cleanupJobs().  This iterates over the UserProc
+calls Starter::cleanupJobs().  This iterates over the UserProc
 objects left in the m_reaped_job_list, and finds the one that failed
 to talk to the schedd, invokes UserProc::JobExit() again, which calls
 JIC::notifyJobExit().  JIC::notifyJobExit() is smart about remembering
@@ -205,9 +205,9 @@ Assuming that works, JIC::notifyJobExit() will finish its notification
 tasks by generating the job notificaiton email (if needed), writing
 the final job classad to a local file (if configured), and finally
 returns true.  Once JIC::notifyJobExit() returns true,
-UserProc::JobExit() propagates that, the CStarter removes the UserProc
+UserProc::JobExit() propagates that, the Starter removes the UserProc
 from m_reaped_job_list and deletes the UserProc object.  Assuming
-that's the last UserProc in m_reaped_job_list, CStarter::cleanupJobs()
+that's the last UserProc in m_reaped_job_list, Starter::cleanupJobs()
 will call JIC::allJobsGone() and the starter exits with the
 appropriate exit status to tell the schedd what to do with the job.
 

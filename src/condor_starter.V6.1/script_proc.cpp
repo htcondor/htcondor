@@ -32,7 +32,7 @@
 #include "basename.h"
 
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 
 /* ScriptProc class implementation */

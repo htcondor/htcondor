@@ -44,8 +44,8 @@
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
 
-static CStarter StarterObj;
-CStarter *Starter = &StarterObj;
+static Starter StarterObj;
+Starter *Starter = &StarterObj;
 
 extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;

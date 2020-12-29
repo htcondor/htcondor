@@ -70,9 +70,9 @@ extern const char* JOB_WRAPPER_FAILURE_FILE;
 #endif
 
 
-/* CStarter class implementation */
+/* Starter class implementation */
 
-CStarter::CStarter() : 
+Starter::Starter() : 
 	jic(NULL),
 	m_deferred_job_update(false),
 	job_exit_status(0),
@@ -100,7 +100,7 @@ CStarter::CStarter() :
 }
 
 
-CStarter::~CStarter()
+Starter::~Starter()
 {
 	if( Execute ) {
 		free(Execute);
@@ -121,12 +121,12 @@ CStarter::~CStarter()
 
 
 bool
-CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
+Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				bool is_gsh, int stdin_fd, int stdout_fd, 
 				int stderr_fd )
 {
 	if( ! my_jic ) {
-		EXCEPT( "CStarter::Init() called with no JobInfoCommunicator!" ); 
+		EXCEPT( "Starter::Init() called with no JobInfoCommunicator!" ); 
 	}
 	if( jic ) {
 		delete( jic );
@@ -167,30 +167,30 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		// calling the appropriate JIC method
 		//
 	daemonCore->Register_Signal(DC_SIGSUSPEND, "DC_SIGSUSPEND", 
-		(SignalHandlercpp)&CStarter::RemoteSuspend, "RemoteSuspend",
+		(SignalHandlercpp)&Starter::RemoteSuspend, "RemoteSuspend",
 		this);
 	daemonCore->Register_Signal(DC_SIGCONTINUE, "DC_SIGCONTINUE",
-		(SignalHandlercpp)&CStarter::RemoteContinue, "RemoteContinue",
+		(SignalHandlercpp)&Starter::RemoteContinue, "RemoteContinue",
 		this);
 	daemonCore->Register_Signal(DC_SIGHARDKILL, "DC_SIGHARDKILL",
-		(SignalHandlercpp)&CStarter::RemoteShutdownFast, "RemoteShutdownFast",
+		(SignalHandlercpp)&Starter::RemoteShutdownFast, "RemoteShutdownFast",
 		this);
 	daemonCore->Register_Signal(DC_SIGSOFTKILL, "DC_SIGSOFTKILL",
-		(SignalHandlercpp)&CStarter::RemoteShutdownGraceful, "RemoteShutdownGraceful",
+		(SignalHandlercpp)&Starter::RemoteShutdownGraceful, "RemoteShutdownGraceful",
 		this);
 	daemonCore->Register_Signal(DC_SIGPCKPT, "DC_SIGPCKPT",
-		(SignalHandlercpp)&CStarter::RemotePeriodicCkpt, "RemotePeriodicCkpt",
+		(SignalHandlercpp)&Starter::RemotePeriodicCkpt, "RemotePeriodicCkpt",
 		this);
 	daemonCore->Register_Signal(DC_SIGREMOVE, "DC_SIGREMOVE",
-		(SignalHandlercpp)&CStarter::RemoteRemove, "RemoteRemove",
+		(SignalHandlercpp)&Starter::RemoteRemove, "RemoteRemove",
 		this);
 	daemonCore->Register_Signal(SIGUSR1, "SIGUSR1",
-		(SignalHandlercpp)&CStarter::RemoteRemove, "RemoteRemove",
+		(SignalHandlercpp)&Starter::RemoteRemove, "RemoteRemove",
 		this);
 	daemonCore->Register_Signal(DC_SIGHOLD, "DC_SIGHOLD",
-		(SignalHandlercpp)&CStarter::RemoteHold, "RemoteHold",
+		(SignalHandlercpp)&Starter::RemoteHold, "RemoteHold",
 		this);
-	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&CStarter::Reaper,
+	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&Starter::Reaper,
 		"Reaper", this);
 
 		// Register a command with DaemonCore to handle ClassAd-only
@@ -205,40 +205,40 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		// for COD, who knows...
 	daemonCore->
 		Register_Command( CA_CMD, "CA_CMD",
-						  (CommandHandlercpp)&CStarter::classadCommand,
-						  "CStarter::classadCommand", this, WRITE );
+						  (CommandHandlercpp)&Starter::classadCommand,
+						  "Starter::classadCommand", this, WRITE );
 	daemonCore->
 		Register_Command( UPDATE_GSI_CRED, "UPDATE_GSI_CRED",
-						  (CommandHandlercpp)&CStarter::updateX509Proxy,
-						  "CStarter::updateX509Proxy", this, WRITE );
+						  (CommandHandlercpp)&Starter::updateX509Proxy,
+						  "Starter::updateX509Proxy", this, WRITE );
 	daemonCore->
 		Register_Command( DELEGATE_GSI_CRED_STARTER,
 						  "DELEGATE_GSI_CRED_STARTER",
-						  (CommandHandlercpp)&CStarter::updateX509Proxy,
-						  "CStarter::updateX509Proxy", this, WRITE );
+						  (CommandHandlercpp)&Starter::updateX509Proxy,
+						  "Starter::updateX509Proxy", this, WRITE );
 	daemonCore->
 		Register_Command( STARTER_HOLD_JOB,
 						  "STARTER_HOLD_JOB",
-						  (CommandHandlercpp)&CStarter::remoteHoldCommand,
-						  "CStarter::remoteHoldCommand", this, DAEMON );
+						  (CommandHandlercpp)&Starter::remoteHoldCommand,
+						  "Starter::remoteHoldCommand", this, DAEMON );
 	daemonCore->
 		Register_Command( CREATE_JOB_OWNER_SEC_SESSION,
 						  "CREATE_JOB_OWNER_SEC_SESSION",
-						  (CommandHandlercpp)&CStarter::createJobOwnerSecSession,
-						  "CStarter::createJobOwnerSecSession", this, DAEMON );
+						  (CommandHandlercpp)&Starter::createJobOwnerSecSession,
+						  "Starter::createJobOwnerSecSession", this, DAEMON );
 
 		// Job-owner commands are registered at READ authorization level.
 		// Why?  See the explanation in createJobOwnerSecSession().
 	daemonCore->
 		Register_Command( START_SSHD,
 						  "START_SSHD",
-						  (CommandHandlercpp)&CStarter::startSSHD,
-						  "CStarter::startSSHD", this, READ );
+						  (CommandHandlercpp)&Starter::startSSHD,
+						  "Starter::startSSHD", this, READ );
 	daemonCore->
 		Register_Command( STARTER_PEEK,
 						"STARTER_PEEK",
-						(CommandHandlercpp)&CStarter::peek,
-						"CStarter::peek", this, READ );
+						(CommandHandlercpp)&Starter::peek,
+						"Starter::peek", this, READ );
 
 		// initialize our JobInfoCommunicator
 	if( ! jic->init() ) {
@@ -267,7 +267,7 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 
 
 void
-CStarter::StarterExit( int code )
+Starter::StarterExit( int code )
 {
 	FinalCleanup();
 #if !defined(WIN32)
@@ -281,7 +281,7 @@ CStarter::StarterExit( int code )
 	DC_Exit( code );
 }
 
-void CStarter::FinalCleanup()
+void Starter::FinalCleanup()
 {
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
@@ -297,7 +297,7 @@ void CStarter::FinalCleanup()
 
 
 void
-CStarter::Config()
+Starter::Config()
 {
 	if( Execute ) {
 		free( Execute );
@@ -353,7 +353,7 @@ CStarter::Config()
  * @return true if ????, otherwise false
  */ 
 int
-CStarter::RemoteShutdownGraceful( int )
+Starter::RemoteShutdownGraceful( int )
 {
 	bool graceful_in_progress = false;
 
@@ -380,7 +380,7 @@ CStarter::RemoteShutdownGraceful( int )
  * @return true if there are no jobs running and we can shutdown now
  */
 bool
-CStarter::ShutdownGraceful( void )
+Starter::ShutdownGraceful( void )
 {
 	bool jobRunning = false;
 	UserProc *job;
@@ -424,7 +424,7 @@ CStarter::ShutdownGraceful( void )
  * @return true if ????, otherwise false
  */
 int
-CStarter::RemoteShutdownFast(int)
+Starter::RemoteShutdownFast(int)
 {
 	bool fast_in_progress = false;
 
@@ -452,7 +452,7 @@ CStarter::RemoteShutdownFast(int)
  * @return true if there are no jobs running and we can shutdown now
  */
 bool
-CStarter::ShutdownFast( void )
+Starter::ShutdownFast( void )
 {
 	bool jobRunning = false;
 	UserProc *job;
@@ -496,7 +496,7 @@ CStarter::ShutdownFast( void )
  * @return true if ????, otherwise false
  */ 
 int
-CStarter::RemoteRemove( int )
+Starter::RemoteRemove( int )
 {
 		// tell our JobInfoCommunicator about this so it can take any
 		// necessary actions
@@ -526,7 +526,7 @@ CStarter::RemoteRemove( int )
  * @return true if all the jobs have been removed
  */
 bool
-CStarter::Remove( ) {
+Starter::Remove( ) {
 	bool jobRunning = false;
 	UserProc *job;
 
@@ -565,7 +565,7 @@ CStarter::Remove( ) {
  * @return true if ????, otherwise false
  */ 
 int
-CStarter::RemoteHold( int )
+Starter::RemoteHold( int )
 {
 		// tell our JobInfoCommunicator about this so it can take any
 		// necessary actions
@@ -590,7 +590,7 @@ CStarter::RemoteHold( int )
 }
 
 int
-CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
+Starter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 {
 		// A Condor daemon on the submit side (e.g. schedd) wishes to
 		// create a security session for use by a user
@@ -711,7 +711,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 }
 
 int
-CStarter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char const *fmt,va_list args)
+Starter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char const *fmt,va_list args)
 {
 	std::string error_msg;
 	vformatstr( error_msg, fmt, args );
@@ -738,7 +738,7 @@ CStarter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char co
 }
 
 int
-CStarter::SSHDRetry(Stream *s,char const *fmt,...)
+Starter::SSHDRetry(Stream *s,char const *fmt,...)
 {
 	va_list args;
 	va_start( args, fmt );
@@ -748,7 +748,7 @@ CStarter::SSHDRetry(Stream *s,char const *fmt,...)
 	return FALSE;
 }
 int
-CStarter::SSHDFailed(Stream *s,char const *fmt,...)
+Starter::SSHDFailed(Stream *s,char const *fmt,...)
 {
 	va_list args;
 	va_start( args, fmt );
@@ -759,7 +759,7 @@ CStarter::SSHDFailed(Stream *s,char const *fmt,...)
 }
 
 int
-CStarter::PeekRetry(Stream *s,char const *fmt,...)
+Starter::PeekRetry(Stream *s,char const *fmt,...)
 {
         va_list args;
         va_start( args, fmt );
@@ -769,7 +769,7 @@ CStarter::PeekRetry(Stream *s,char const *fmt,...)
         return FALSE;
 }
 int
-CStarter::PeekFailed(Stream *s,char const *fmt,...)
+Starter::PeekFailed(Stream *s,char const *fmt,...)
 {
         va_list args;
         va_start( args, fmt );
@@ -863,7 +863,7 @@ static bool extract_delimited_data(
 #endif
 
 int
-CStarter::peek(int /*cmd*/, Stream *sock)
+Starter::peek(int /*cmd*/, Stream *sock)
 {
 	// This command should only be allowed by the job owner.
 	MyString error_msg;
@@ -1236,7 +1236,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 }
 
 int
-CStarter::startSSHD( int /*cmd*/, Stream* s )
+Starter::startSSHD( int /*cmd*/, Stream* s )
 {
 		// This command should only be allowed by the job owner.
 	MyString error_msg;
@@ -1695,7 +1695,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
  * @return true if ????, otherwise false
  */ 
 int 
-CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
+Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 {
 	MyString hold_reason;
 	int hold_code;
@@ -1709,7 +1709,7 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ALWAYS,"Failed to read message from %s in CStarter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ALWAYS,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
 		return FALSE;
 	}
 
@@ -1721,7 +1721,7 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 	int reply = 1;
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
-		dprintf(D_ALWAYS,"Failed to send response to startd in CStarter::remoteHoldCommand()\n");
+		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteHoldCommand()\n");
 	}
 
 	if( !soft ) {
@@ -1754,7 +1754,7 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
  * @return true if all the jobs have been put on hold & removed from the queue
  */
 bool
-CStarter::Hold( void )
+Starter::Hold( void )
 {	
 	bool jobRunning = false;
 	UserProc *job;
@@ -1785,7 +1785,7 @@ CStarter::Hold( void )
 }
 
 #ifdef WIN32
-bool CStarter::loadUserRegistry(const ClassAd * JobAd)
+bool Starter::loadUserRegistry(const ClassAd * JobAd)
 {
 	m_owner_profile.update ();
 	MyString username(m_owner_profile.username());
@@ -1823,7 +1823,7 @@ bool CStarter::loadUserRegistry(const ClassAd * JobAd)
 #endif
 
 bool
-CStarter::createTempExecuteDir( void )
+Starter::createTempExecuteDir( void )
 {
 		// Once our JobInfoCommmunicator has initialized the right
 		// user for the priv_state code, we can finally make the
@@ -2030,7 +2030,7 @@ CStarter::createTempExecuteDir( void )
  * @return true
  **/
 int
-CStarter::jobEnvironmentReady( void )
+Starter::jobEnvironmentReady( void )
 {
 #if defined(LINUX)
 		//
@@ -2116,7 +2116,7 @@ CStarter::jobEnvironmentReady( void )
  * @return
  **/
 bool
-CStarter::jobWaitUntilExecuteTime( void )
+Starter::jobWaitUntilExecuteTime( void )
 {
 		//
 		// Return value
@@ -2243,7 +2243,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 			//
 		this->deferral_tid = daemonCore->Register_Timer(
 										deltaT,
-										(TimerHandlercpp)&CStarter::SpawnPreScript,
+										(TimerHandlercpp)&Starter::SpawnPreScript,
 										"deferred job start",
 										this );
 			//
@@ -2307,7 +2307,7 @@ CStarter::jobWaitUntilExecuteTime( void )
  * @return true if the deferred job was removed successfully
  **/
 bool
-CStarter::removeDeferredJobs() {
+Starter::removeDeferredJobs() {
 	bool ret = true;
 	
 	if ( this->deferral_tid == -1 ) {
@@ -2345,7 +2345,7 @@ CStarter::removeDeferredJobs() {
  * return true if no errors occured
  **/
 void
-CStarter::SpawnPreScript( void )
+Starter::SpawnPreScript( void )
 {
 		//
 		// Unset the deferral timer so that we know that no job
@@ -2400,7 +2400,7 @@ CStarter::SpawnPreScript( void )
 	}
 }
 
-void CStarter::getJobOwnerFQUOrDummy(std::string &result) const
+void Starter::getJobOwnerFQUOrDummy(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -2411,7 +2411,7 @@ void CStarter::getJobOwnerFQUOrDummy(std::string &result) const
 	}
 }
 
-bool CStarter::getJobClaimId(std::string &result) const
+bool Starter::getJobClaimId(std::string &result) const
 {
 	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
 	if( jobAd ) {
@@ -2426,7 +2426,7 @@ bool CStarter::getJobClaimId(std::string &result) const
  * 
  **/
 int
-CStarter::SpawnJob( void )
+Starter::SpawnJob( void )
 {
 		// Now that we've got all our files, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
@@ -2553,7 +2553,7 @@ CStarter::SpawnJob( void )
 }
 
 void
-CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
+Starter::WriteRecoveryFile( ClassAd *recovery_ad )
 {
 	MyString tmp_file;
 	FILE *tmp_fp;
@@ -2596,7 +2596,7 @@ CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
 }
 
 void
-CStarter::RemoveRecoveryFile()
+Starter::RemoveRecoveryFile()
 {
 	if ( m_recoveryFile.Length() > 0 ) {
 		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
@@ -2614,7 +2614,7 @@ CStarter::RemoveRecoveryFile()
  * @return true if the jobs were suspended
  */ 
 int
-CStarter::RemoteSuspend(int)
+Starter::RemoteSuspend(int)
 {
 	int retval = this->Suspend();
 
@@ -2640,7 +2640,7 @@ CStarter::RemoteSuspend(int)
  * @return true if the jobs were successfully suspended
  */
 bool
-CStarter::Suspend( void ) {
+Starter::Suspend( void ) {
 	dprintf(D_ALWAYS, "Suspending all jobs.\n");
 
 	UserProc *job;
@@ -2671,7 +2671,7 @@ CStarter::Suspend( void ) {
  * @return true if jobs were unsuspended
  */ 
 int
-CStarter::RemoteContinue(int)
+Starter::RemoteContinue(int)
 {
 	int retval = this->Continue();
 
@@ -2697,7 +2697,7 @@ CStarter::RemoteContinue(int)
  * @return true if the jobs were successfully continued
  */
 bool
-CStarter::Continue( void )
+Starter::Continue( void )
 {
 	dprintf(D_ALWAYS, "Continuing all jobs.\n");
 
@@ -2729,7 +2729,7 @@ CStarter::Continue( void )
  * @return true if jobs were checkpointed
  */ 
 int
-CStarter::RemotePeriodicCkpt(int)
+Starter::RemotePeriodicCkpt(int)
 {
 	return ( this->PeriodicCkpt( ) );
 }
@@ -2741,7 +2741,7 @@ CStarter::RemotePeriodicCkpt(int)
  * @return true if the jobs were successfully checkpointed
  */
 bool
-CStarter::PeriodicCkpt( void )
+Starter::PeriodicCkpt( void )
 {
 	dprintf(D_ALWAYS, "Periodic Checkpointing all jobs.\n");
 
@@ -2799,7 +2799,7 @@ void copyProcList( List<UserProc> & from, List<UserProc> & to ) {
 
 
 int
-CStarter::Reaper(int pid, int exit_status)
+Starter::Reaper(int pid, int exit_status)
 {
 	int handled_jobs = 0;
 	int all_jobs = 0;
@@ -2885,7 +2885,7 @@ CStarter::Reaper(int pid, int exit_status)
 	}
 
 	//
-	// The ToE tag code, via CStarter::publishUpdateAd() -- and in the
+	// The ToE tag code, via Starter::publishUpdateAd() -- and in the
 	// future, maybe other features via and/or means in the future --
 	// calls Rewind() on m_job_list as well.  Rather than fixing only
 	// the ToE tag code and leaving this landmine, copy m_job_list
@@ -2934,7 +2934,7 @@ CStarter::Reaper(int pid, int exit_status)
 				// so, we can directly call allJobsDone() to do final
 				// cleanup.
 			if( !allJobsDone() ) {
-				dprintf(D_ALWAYS, "Returning from CStarter::JobReaper()\n");
+				dprintf(D_ALWAYS, "Returning from Starter::JobReaper()\n");
 				return 0;
 			}
 		}
@@ -2950,7 +2950,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 
 bool
-CStarter::allJobsDone( void )
+Starter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
 	bool bRet=false;
@@ -2990,7 +2990,7 @@ CStarter::allJobsDone( void )
 
 
 bool
-CStarter::transferOutput( void )
+Starter::transferOutput( void )
 {
 	UserProc *job;
 	bool transient_failure = false;
@@ -3055,7 +3055,7 @@ CStarter::transferOutput( void )
 
 
 bool
-CStarter::cleanupJobs( void )
+Starter::cleanupJobs( void )
 {
 		// Now that we're done with HOOK_JOB_EXIT and transfering
 		// files, we can finally go through the m_reaped_job_list and
@@ -3084,21 +3084,21 @@ CStarter::cleanupJobs( void )
 
 
 bool
-CStarter::publishUpdateAd( ClassAd* ad )
+Starter::publishUpdateAd( ClassAd* ad )
 {
 	return publishJobInfoAd(&m_job_list, ad);
 }
 
 
 bool
-CStarter::publishJobExitAd( ClassAd* ad )
+Starter::publishJobExitAd( ClassAd* ad )
 {
 	return publishJobInfoAd(&m_reaped_job_list, ad);
 }
 
 
 bool
-CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
+Starter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 {
 		// Iterate through all our UserProcs and have those publish,
 		// as well.  This method is virtual, so we'll get all the
@@ -3124,7 +3124,7 @@ CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 
 
 bool
-CStarter::publishPreScriptUpdateAd( ClassAd* ad )
+Starter::publishPreScriptUpdateAd( ClassAd* ad )
 {
 	if( pre_script && pre_script->PublishUpdateAd(ad) ) {
 		return true;
@@ -3134,7 +3134,7 @@ CStarter::publishPreScriptUpdateAd( ClassAd* ad )
 
 
 bool
-CStarter::publishPostScriptUpdateAd( ClassAd* ad )
+Starter::publishPostScriptUpdateAd( ClassAd* ad )
 {
 	if( post_script && post_script->PublishUpdateAd(ad) ) {
 		return true;
@@ -3143,7 +3143,7 @@ CStarter::publishPostScriptUpdateAd( ClassAd* ad )
 }
 
 bool
-CStarter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
+Starter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
 {
 	char *env_str = param( "STARTER_JOB_ENVIRONMENT" );
 
@@ -3178,7 +3178,7 @@ CStarter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
 static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag);
 
 void
-CStarter::PublishToEnv( Env* proc_env )
+Starter::PublishToEnv( Env* proc_env )
 {
 	ASSERT(proc_env);
 
@@ -3547,7 +3547,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 }
 
 int
-CStarter::getMySlotNumber( void )
+Starter::getMySlotNumber( void )
 {
 	int slot_number = 0; // default to 0, let our caller decide how to interpret that.
 
@@ -3615,7 +3615,7 @@ CStarter::getMySlotNumber( void )
 }
 
 MyString
-CStarter::getMySlotName(void)
+Starter::getMySlotName(void)
 {
 	MyString slotName = "";
 	if (param(slotName, "STARTER_SLOT_NAME")) {
@@ -3652,7 +3652,7 @@ CStarter::getMySlotName(void)
 
 
 void
-CStarter::closeSavedStdin( void )
+Starter::closeSavedStdin( void )
 {
 	if( starter_stdin_fd > -1 ) {
 		close( starter_stdin_fd );
@@ -3662,7 +3662,7 @@ CStarter::closeSavedStdin( void )
 
 
 void
-CStarter::closeSavedStdout( void )
+Starter::closeSavedStdout( void )
 {
 	if( starter_stdout_fd > -1 ) {
 		close( starter_stdout_fd );
@@ -3672,7 +3672,7 @@ CStarter::closeSavedStdout( void )
 
 
 void
-CStarter::closeSavedStderr( void )
+Starter::closeSavedStderr( void )
 {
 	if( starter_stderr_fd > -1 ) {
 		close( starter_stderr_fd );
@@ -3682,7 +3682,7 @@ CStarter::closeSavedStderr( void )
 
 
 int
-CStarter::classadCommand( int, Stream* s ) const
+Starter::classadCommand( int, Stream* s ) const
 {
 	ClassAd ad;
 	ReliSock* rsock = (ReliSock*)s;
@@ -3715,7 +3715,7 @@ CStarter::classadCommand( int, Stream* s ) const
 
 
 int 
-CStarter::updateX509Proxy( int cmd, Stream* s )
+Starter::updateX509Proxy( int cmd, Stream* s )
 {
 	ASSERT(s);
 	ReliSock* rsock = (ReliSock*)s;
@@ -3725,7 +3725,7 @@ CStarter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-CStarter::removeTempExecuteDir( void )
+Starter::removeTempExecuteDir( void )
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -3788,7 +3788,7 @@ CStarter::removeTempExecuteDir( void )
 
 #if !defined(WIN32)
 void
-CStarter::exitAfterGlexec( int code )
+Starter::exitAfterGlexec( int code )
 {
 	// tell Daemon Core to uninitialize its process family tracking
 	// subsystem. this will make sure that we tell our ProcD to exit,
@@ -3815,7 +3815,7 @@ CStarter::exitAfterGlexec( int code )
 #endif
 
 bool
-CStarter::WriteAdFiles() const
+Starter::WriteAdFiles() const
 {
 
 	ClassAd* ad;
@@ -3915,7 +3915,7 @@ CStarter::WriteAdFiles() const
 }
 
 void
-CStarter::RecordJobExitStatus(int status) {
+Starter::RecordJobExitStatus(int status) {
 	recorded_job_exit_status = true;
 	job_exit_status = status;
 }
