@@ -2716,6 +2716,30 @@ int process_job_credentials()
 		return 0;
 	}
 
+	MyString storer;
+	if(param(storer, "SEC_CREDENTIAL_STORER")) {
+		// SEC_CREDENTIAL_STORER is a script to run that calls
+		// condor_store_cred when it has new credentials to store.
+		// Pass it parameters of the services needed as defined
+		// in the submit file.
+		std::string services;
+		if (submit_hash.NeedsOAuthServices(services)) {
+			ArgList args;
+			StringList service_list(storer + " " + services);
+			for (const char * service = service_list.first(); service != NULL; service = service_list.next()) {
+				args.AppendArg(service);
+			}
+			if (my_system(args) != 0) {
+				fprintf(stderr, "\nERROR: (%i) invoking %s\n", errno, storer.c_str());
+				exit(1);
+			}
+			sent_credential_to_credd = true;
+		} else {
+			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
+		}
+		return 0;
+	}
+
 	// do this by default, the knob is just to skip in case this code causes problems
 	if(param_boolean("SEC_PROCESS_SUBMIT_TOKENS", true)) {
 
