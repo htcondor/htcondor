@@ -522,6 +522,19 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 
 
 #######################
+%package credmon-vault
+Summary: Vault credmon for HTCondor.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: python3-condor
+Requires: python-six
+
+%description credmon-vault
+The Vault credmon allows users to obtain credentials from Vault using
+htgettoken and to use those credentials securely inside running jobs.
+
+
+#######################
 %package bosco
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
 Url: https://osg-bosco.github.io/docs/
@@ -860,6 +873,9 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
 ln -s ../../../..%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 %endif
 ###
+
+# Move vault credmon config file out of examples and into config.d
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1469,6 +1485,15 @@ rm -rf %{buildroot}
 %_var/www/wsgi-scripts/scitokens-credmon
 ###
 %endif
+
+%files credmon-vault
+%doc examples/condor_credmon_oauth
+%_sbindir/condor_credmon_vault
+%_bindir/vault_store_cred
+%_libexecdir/condor/credmon
+%config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
+%ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
+%ghost %_var/lib/condor/oauth_credentials/pid
 
 %files bosco
 %defattr(-,root,root,-)
