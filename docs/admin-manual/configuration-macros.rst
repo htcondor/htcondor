@@ -7404,7 +7404,7 @@ condor_credd Configuration File Macros
 :index:`condor_credd daemon`
 :index:`condor_credd configuration variables<single: condor_credd configuration variables; configuration>`
 
-These macros affect the *condor_credd*.
+These macros affect the *condor_credd* and its credmon plugin.
 
 :macro-def:`CREDD_HOST`
     The host name of the machine running the *condor_credd* daemon.
@@ -7413,7 +7413,7 @@ These macros affect the *condor_credd*.
     An integer value representing the number of seconds that the
     *condor_credd*, *condor_starter*, and *condor_schedd* daemons
     will wait for valid credentials to be produced by a credential
-    montior (CREDMON) service. The default value is 20.
+    monitor (CREDMON) service. The default value is 20.
 
 :macro-def:`CREDD_CACHE_LOCALLY`
     A boolean value that defaults to ``False``. When ``True``, the first
@@ -7437,6 +7437,24 @@ These macros affect the *condor_credd*.
     ``LOGON_INTERACTIVE`` method. This can be useful if many
     authentication failures are noticed, potentially leading to users
     getting locked out.
+
+:macro-def:`CREDMON_KRB`
+    The path to the credmon daemon process when using the Kerberos 
+    credentials type.  The default is /usr/sbin/condor_credmon_krb
+
+:macro-def:`CREDMON_OAUTH`
+    The path to the credmon daemon process when using the OAuth2
+    credentials type.  The default is /usr/sbin/condor_credmon_oauth.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_LIFETIME`
+    The time in seconds for credmon to delay after new OAuth2
+    credentials are stored before deleting them.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM`
+    The minimum time in seconds that OAuth2 tokens should have remaining
+    on them when they are generated.  After half that amount of time 
+    elapses, they are renewed.  This is currently implemented only
+    in the vault credmon, not the default oauth credmon.
 
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
@@ -9371,6 +9389,19 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
     The directory that users' OAuth2 credentials should be stored in.
     This directory must be owned by root:condor with the setgid flag enabled.
+
+:macro-def:`SEC_CREDENTIAL_PRODUCER`
+    A script for *condor_submit* to execute to produce credentials while
+    using the kerberos type of credentials.  No parameters are passed,
+    and credentials most be sent to stdout.
+
+:macro-def:`SEC_CREDENTIAL_STORER`
+    A script for *condor_submit* to execute to produce credentials while
+    using the OAuth2 type of credentials.  The oauth services specified
+    in the ``use_auth_services`` line in the submit file are passed as
+    parameters to the script, and the script should use
+    ``condor_store_cred`` to store credentials for each service.
+
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------
