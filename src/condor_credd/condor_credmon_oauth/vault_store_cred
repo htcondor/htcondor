@@ -6,7 +6,7 @@
 
 ME="${0##*/}"
 
-env >/tmp/vault_store_cred.env
+ARGS="$@"
 
 # When condor_submit launches this the cursor is not at the beginning
 #   of a new line, so always send a newline before anything else to
@@ -34,6 +34,10 @@ fatal()
 {
     newlineifneeded
     echo "$ME: $@"
+    if [ "$VERBOSE" = "" ]; then
+        echo "  More details may be available by running"
+        echo "    $ME -v $ARGS"
+    fi
     exit 1
 } >&2
 
