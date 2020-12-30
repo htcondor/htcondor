@@ -175,12 +175,13 @@ if ($content[0] eq "def.$owner, def\n") {
 `condor_rm -all`;
 
 # map owner to group "should_fail", succeed
-`condor_submit $submitfile accounting_group=should_fail`;
+`condor_submit $submitfile accounting_group=not`;
 @content = `$command`;
-if (!(defined($content[0]))) {
+print "Command is $command.\nOutput is:\n", @content;
+if ($content[0] eq "def.$owner, def\n") {
 	RegisterResult(1, check_name=>"specify group not in the list", test_name=>$testname);
 } else {
-	print "ERROE: should not submit job successfully\n";
+	print "ERROR: should be able to submit job successfully\n";
 	RegisterResult(0, check_name=>"specify group not in the list", test_name=>$testname);
 }
 
