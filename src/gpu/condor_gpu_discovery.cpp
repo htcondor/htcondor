@@ -289,15 +289,48 @@ std::string constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt
 
 	// The -uuid and -short-uuid flags don't imply -properties.
 	if( opt_uuid && !opt_opencl ) {
-	    gpuID = enumeratedDevices[dev].uuid;
-	    if( gpuID.find( "GPU-" ) != 0 ) {
-	        gpuID = "GPU-" + gpuID;
-	    }
+		gpuID = enumeratedDevices[dev].uuid;
+		if( gpuID.find( "GPU-" ) != 0 ) {
+			gpuID = "GPU-" + gpuID;
+		}
 		if( opt_short_uuid ) { gpuID[12] = 0; }
 	}
 
 	return std::string(gpuID);
 }
+
+
+void
+printDynamicProperties( std::string gpuID, nvmlDevice_t device ) {
+	std::replace( gpuID.begin(), gpuID.end(), '-', '_' );
+
+	unsigned int tuint;
+	nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
+	if ( result == NVML_SUCCESS ) {
+		printf("%sFanSpeedPct=%u\n",gpuID.c_str(),tuint);
+	}
+
+	result = nvmlDeviceGetPowerUsage(device,&tuint);
+	if ( result == NVML_SUCCESS ) {
+		printf("%sPowerUsage_mw=%u\n",gpuID.c_str(),tuint);
+	}
+
+	result = nvmlDeviceGetTemperature(device,NVML_TEMPERATURE_GPU,&tuint);
+	if ( result == NVML_SUCCESS ) {
+		printf("%sDieTempC=%u\n",gpuID.c_str(),tuint);
+	}
+
+	unsigned long long eccCounts;
+	result = nvmlDeviceGetTotalEccErrors(device,NVML_SINGLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
+	if ( result == NVML_SUCCESS ) {
+		printf("%sEccErrorsSingleBit=%llu\n",gpuID.c_str(),eccCounts);
+	}
+	result = nvmlDeviceGetTotalEccErrors(device,NVML_DOUBLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
+	if ( result == NVML_SUCCESS ) {
+		printf("%sEccErrorsDoubleBit=%llu\n",gpuID.c_str(),eccCounts);
+	}
+}
+
 
 int
 main( int argc, const char** argv)
@@ -494,18 +527,16 @@ main( int argc, const char** argv)
 			}
 		}
 
-		// When we add MIG instance discovery, make loading NVML unconditional
-		// and adjust the warnings to mention MIG instance discovery.
-		if( opt_dynamic ) {
-			nvml_handle = setNVMLFunctionPointers();
-			if(! nvml_handle) {
-				fprintf( stderr, "Unable to load NVML; will not discover dynamic properties.\n" );
-			} else {
-				if( nvmlInit() != NVML_SUCCESS ) {
-					fprintf( stderr, "nvmlInit() failed; will not discover dynamic properties.\n" );
-					dlclose( nvml_handle );
-					nvml_handle = NULL;
-				}
+		nvml_handle = setNVMLFunctionPointers();
+		if(! nvml_handle) {
+			// We should definitely warn if opt_dynamic is set, but if it
+			// isn't, maybe this should only show up in -debug?
+			fprintf( stderr, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
+		} else {
+			if( nvmlInit() != NVML_SUCCESS ) {
+				fprintf( stderr, "nvmlInit() failed; will not discover dynamic properties or MIG instances.\n" );
+				dlclose( nvml_handle );
+				nvml_handle = NULL;
 			}
 		}
 
@@ -520,6 +551,9 @@ main( int argc, const char** argv)
 	if( cuDeviceGetCount && cuDeviceGetCount( & deviceCount ) != cudaSuccess ) {
 		deviceCount = 0;
 	}
+
+	// We assume here that at least one CUDA device exists if any MIG
+	// devices exist.
 
 	if( ocl_handle && (deviceCount == 0 || opt_opencl) ) {
 		ocl_GetDeviceCount( & deviceCount );
@@ -538,13 +572,24 @@ main( int argc, const char** argv)
 
 
 	// We're doing it this way so that we can share the device-enumeration
-	// logic between condor_gpu_discovery and condor_gpu_utilization; it's
-	// not presently hard, but MIG device instances will change that.
+	// logic between condor_gpu_discovery and condor_gpu_utilization.
+	std::vector< BasicProps > migDevices;
 	std::vector< BasicProps > enumeratedDevices;
 	if(! opt_opencl) {
 		if(! enumerateCUDADevices(enumeratedDevices)) {
 			fprintf( stderr, "Failed to enumerate GPU devices, aborting.\n" );
 			return 1;
+		}
+
+		if( nvml_handle ) {
+			nvmlReturn_t r = enumerateMIGDevices(migDevices);
+			if(r != NVML_SUCCESS) {
+				fprintf( stderr, "Failed to enumerate MIG devices (%d: %s), aborting.\n", r, nvmlErrorString(r) );
+				return 1;
+			}
+
+			// We don't want to report the parent device of any MIG instance
+			// as available for use (to avoid overcommitting it), so FIXME
 		}
 	}
 
@@ -742,18 +787,17 @@ main( int argc, const char** argv)
 	}
 
 
+	//
 	// Dynamic properties
+	//
 	if(! opt_dynamic) { return 0; }
 
-	for (dev = 0; dev < deviceCount; dev++) {
+	// Dynamic properties for CUDA devices
+	for( dev = 0; dev < deviceCount; ++dev ) {
 		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 
-		// Convert from CUDA device index to NVML handle.  We used
-		// to do this with nvmlDeviceGetHandleByPciBusId(), but that can't
-		// work with MIG devices.  This also fixes a bug in the old code
-		// where -uuid and -dynamic didn't work together.
 		nvmlDevice_t device;
 		if(NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
 			continue;
@@ -761,34 +805,17 @@ main( int argc, const char** argv)
 
 		// Determine the GPU ID.
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
-		std::replace( gpuID.begin(), gpuID.end(), '-', '_' );
+		printDynamicProperties( gpuID, device );
+	}
 
-		unsigned int tuint;
-		nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
-		if ( result == NVML_SUCCESS ) {
-			printf("%sFanSpeedPct=%u\n",gpuID.c_str(),tuint);
+	// Dynamic properties for MIG instances.
+	for( auto bp : migDevices ) {
+		nvmlDevice_t device;
+		if(NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
+			continue;
 		}
 
-		result = nvmlDeviceGetPowerUsage(device,&tuint);
-		if ( result == NVML_SUCCESS ) {
-			printf("%sPowerUsage_mw=%u\n",gpuID.c_str(),tuint);
-		}
-
-		result = nvmlDeviceGetTemperature(device,NVML_TEMPERATURE_GPU,&tuint);
-		if ( result == NVML_SUCCESS ) {
-			printf("%sDieTempC=%u\n",gpuID.c_str(),tuint);
-		}
-
-		unsigned long long eccCounts;
-		result = nvmlDeviceGetTotalEccErrors(device,NVML_SINGLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
-		if ( result == NVML_SUCCESS ) {
-			printf("%sEccErrorsSingleBit=%llu\n",gpuID.c_str(),eccCounts);
-		}
-		result = nvmlDeviceGetTotalEccErrors(device,NVML_DOUBLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
-		if ( result == NVML_SUCCESS ) {
-			printf("%sEccErrorsDoubleBit=%llu\n",gpuID.c_str(),eccCounts);
-		}
-
+		printDynamicProperties( bp.uuid, device );
 	}
 
 

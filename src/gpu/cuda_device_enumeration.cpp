@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #if       defined(WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -355,33 +356,65 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 	}
 }
 
+
+nvmlReturn_t
+getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
+	unsigned int deviceCount = 0;
+	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
+	if( NVML_SUCCESS != r ) { return r; }
+
+	for( unsigned int i = 0; i < deviceCount; ++i ) {
+		nvmlDevice_t device;
+		r = nvmlDeviceGetHandleByIndex( i, & device );
+		if( NVML_SUCCESS != r ) { return r; }
+
+		unsigned int maxMigDeviceCount = 0;
+		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if( NVML_SUCCESS == r && maxMigDeviceCount != 0 ) {
+			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
+				nvmlDevice_t migDevice;
+				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
+				if( NVML_SUCCESS != r ) { return r; }
+
+				char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+				r = nvmlDeviceGetUUID( migDevice, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
+				if( NVML_SUCCESS != r ) { return r; }
+				map[std::string(uuid)] = migDevice;
+			}
+		}
+	}
+
+	return NVML_SUCCESS;
+}
+
 nvmlReturn_t
 nvml_findNVMLDeviceHandle(const std::string & uuid, nvmlDevice_t * device) {
-/*
-	// Scan the MIG devices for the given UUID.
-	static bool enumerated = false;
-	static std::map< std::string, BasicProps > enumeratedDevices;
-	if(! enumerated) {
-		enumerated = enumerateMIGDevices( enumeratedDevices );
-		if(! enumerated) { return false; }
-	}
-*/
-	if( uuid.find("GPU-") != 0 ) {
+	if( uuid.find("MIG-") == 0 ) {
+		// Unfortunately, nvmlDeviceGetHandleByUUID() doesn't work when
+		// passed a MIG instance's UUID, so we have to scan them all.
+		std::map< std::string, nvmlDevice_t > uuidsToHandles;
+		nvmlReturn_t r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
+		if( NVML_SUCCESS != r ) { return r;	}
+
+		auto iter = uuidsToHandles.find(uuid);
+		if( iter != uuidsToHandles.end() ) {
+			* device = iter->second;
+			return NVML_SUCCESS;
+		} else {
+			return NVML_ERROR_NOT_FOUND;
+		}
+	} else if( uuid.find("GPU-") == 0 ) {
+		return nvmlDeviceGetHandleByUUID( uuid.c_str(), device );
+	} else {
+		// Assume it's a CUDA UUID.
 		std::string nvmlUUID = "GPU-" + uuid;
 		return nvmlDeviceGetHandleByUUID( nvmlUUID.c_str(), device );
-	} else {
-		return nvmlDeviceGetHandleByUUID( uuid.c_str(), device );
 	}
 }
 
 nvmlReturn_t
 nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	nvmlReturn_t r;
-
-	char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
-	r = nvmlDeviceGetUUID( migDevice, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
-	if( NVML_SUCCESS != r ) { return r; }
-	p->uuid = std::string(uuid);
 
 	char name[NVML_DEVICE_NAME_BUFFER_SIZE];
 	r = nvmlDeviceGetName( migDevice, name, NVML_DEVICE_NAME_BUFFER_SIZE );
@@ -434,33 +467,20 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 
 nvmlReturn_t
 enumerateMIGDevices( std::vector< BasicProps > & devices ) {
-	unsigned int deviceCount = 0;
-	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
-	if( NVML_SUCCESS != r ) { return r; }
+	std::map< std::string, nvmlDevice_t > uuidsToHandles;
+	nvmlReturn_t r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
+	if( NVML_SUCCESS != r ) { return r;	}
 
-	for( unsigned int i = 0; i < deviceCount; ++i ) {
-		nvmlDevice_t device;
-		r = nvmlDeviceGetHandleByIndex( i, & device );
+	for( auto i = uuidsToHandles.begin(); i != uuidsToHandles.end(); ++i ) {
+		nvmlDevice_t migDevice = i->second;
+
+		BasicProps bp;
+		bp.uuid = i->first;
+		r = nvml_getBasicProps( migDevice, & bp );
 		if( NVML_SUCCESS != r ) { return r; }
 
-		unsigned int maxMigDeviceCount = 0;
-		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
-		if( NVML_SUCCESS == r && maxMigDeviceCount != 0 ) {
-			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
-				nvmlDevice_t migDevice;
-				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
-				if( NVML_SUCCESS != r ) { return r; }
-
-				BasicProps bp;
-				std::string migID;
-				r = nvml_getBasicProps( migDevice, & bp );
-				if( NVML_SUCCESS != r ) { return r; }
-
-				devices.push_back( bp );
-			}
-
-			return NVML_SUCCESS;
-		}
+		devices.push_back( bp );
 	}
-	return r;
+
+	return NVML_SUCCESS;
 }
