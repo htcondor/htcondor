@@ -27,7 +27,7 @@
 
 class AdTransforms {
 	public:
-		AdTransforms() {}
+		AdTransforms() : m_mset_ckpt(nullptr) {}
 		~AdTransforms() {}
 
 		void config(const char * param_prefix);
