@@ -40,6 +40,10 @@
 
 #include "condor_attributes.h"
 
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#include <openssl/err.h>
+
 #include <algorithm>
 #include <sstream>
 #include <string.h>

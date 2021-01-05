@@ -23,12 +23,8 @@
 
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 
-extern "C" {
-#include "openssl/ssl.h"
-#include "openssl/x509.h"
-#include "openssl/x509v3.h"
-#include "openssl/err.h"
-}
+#include <openssl/ssl.h>
+
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "condor_crypt_3des.h"
 

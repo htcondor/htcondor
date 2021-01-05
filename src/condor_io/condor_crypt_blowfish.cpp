@@ -22,6 +22,8 @@
 #include "condor_crypt_blowfish.h"
 #include "condor_debug.h"
 
+#include <openssl/blowfish.h>
+
 bool Condor_Crypt_Blowfish :: encrypt(Condor_Crypto_State *cs,
                                       const unsigned char *  input,
                                       int              input_len, 
