@@ -304,6 +304,7 @@ std::string constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt
 void
 printDynamicProperties( std::string gpuID, nvmlDevice_t device ) {
 	std::replace( gpuID.begin(), gpuID.end(), '-', '_' );
+	std::replace( gpuID.begin(), gpuID.end(), '/', '_' );
 
 	unsigned int tuint;
 	nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
@@ -329,6 +330,35 @@ printDynamicProperties( std::string gpuID, nvmlDevice_t device ) {
 	result = nvmlDeviceGetTotalEccErrors(device,NVML_DOUBLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
 	if ( result == NVML_SUCCESS ) {
 		printf("%sEccErrorsDoubleBit=%llu\n",gpuID.c_str(),eccCounts);
+	}
+}
+
+
+typedef std::map<std::string, std::string> KVP;
+typedef std::map<std::string, KVP> MKVP;
+
+void
+setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra ) {
+	props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str());
+	props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
+	if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
+	props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
+	props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
+	props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
+
+	if( opt_extra ) {
+		props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
+		if( bp.multiProcessorCount != 0 ) {
+			props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
+		}
+		props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
+	}
+
+	if( cudaDriverGetVersion ) {
+		int driverVersion = 0;
+		cudaDriverGetVersion( & driverVersion );
+		props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
+		props["MaxSupportedVersion"] = Format("%d", driverVersion);
 	}
 }
 
@@ -595,8 +625,8 @@ main( int argc, const char** argv)
 			// a list of parent devices to skip in the loop below.
 			for( const BasicProps & bp : migDevices ) {
 			    std::string parentUUID = bp.uuid;
-			    if( parentUUID.find( "MIG-" ) != 0 ) { /* WTF? */ continue; }
-			    parentUUID = parentUUID.substr( 4 );
+			    if( parentUUID.find( "MIG-GPU-" ) != 0 ) { /* WTF? */ continue; }
+			    parentUUID = parentUUID.substr( 8 );
 			    parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
 			    skipDevices.insert(parentUUID);
 fprintf( stderr, "Adding %s to skip device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
@@ -610,8 +640,6 @@ fprintf( stderr, "Adding %s to skip device list for MIG instance %s\n", parentUU
 	// we build the whole list before showing anything so we can decide whether
 	// we are looking at a homogenous or heterogeneous pool
 	//
-	typedef std::map<std::string, std::string> KVP;
-	typedef std::map<std::string, KVP> MKVP;
 	MKVP dev_props;
 
 	std::string detected_gpus;
@@ -627,7 +655,7 @@ fprintf( stderr, "Adding %s to skip device list for MIG instance %s\n", parentUU
 		// Skip devices which have MIG instances associated with them so
 		// that we don't overcommit.
 		if((! opt_opencl) && nvml_handle) {
-			const std::string & UUID = enumeratedDevices[dev].uuid ;
+			const std::string & UUID = enumeratedDevices[dev].uuid;
 			if( skipDevices.find( UUID ) != skipDevices.end() ) {
 fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str() );
 				continue;
@@ -646,29 +674,9 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 		if(! opt_opencl) {
 			// Report CUDA properties.
 			BasicProps bp = enumeratedDevices[dev];
+			setPropertiesFromBasicProps( props, bp, opt_extra );
 
-			props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str());
-			props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
-			if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
-			props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
-			props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
-			props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
-
-			if( opt_extra ) {
-				props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
-				if( bp.multiProcessorCount != 0 ) {
-					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-				}
-				props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
-			}
-
-			if( cudaDriverGetVersion ) {
-				int driverVersion = 0;
-				cudaDriverGetVersion( & driverVersion );
-				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-				props["MaxSupportedVersion"] = Format("%d", driverVersion);
-			}
-
+			// Not sure what this does, actually.
 			if( dev < g_cl_cCuda ) {
 				cl_device_id did = cl_gpu_ids[g_cl_ixFirstCuda + dev];
 				std::string fullver;
@@ -721,6 +729,22 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 		} /* end if reporting OpenCL properties */
 	} /* end enumerated device loop */
 
+	//
+	// If we found any, construct the properties for MIG instances.
+	//
+	for( const BasicProps & bp : migDevices ) {
+		std::string gpuID = bp.uuid;
+		// if( opt_short_uuid ) { ... }
+
+		if (! detected_gpus.empty()) { detected_gpus += ", "; }
+		detected_gpus += gpuID;
+		++filteredDeviceCount;
+
+		dev_props[gpuID].clear();
+		KVP & props = dev_props.find(gpuID)->second;
+
+		setPropertiesFromBasicProps( props, bp, opt_extra );
+	}
 
 	//
 	// If the user requested it, adjust detected_gpus.
@@ -819,13 +843,20 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 			continue;
 		}
 
+		// Determine the GPU ID.
+		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+
+		const std::string & UUID = enumeratedDevices[dev].uuid;
+		if( skipDevices.find( UUID ) != skipDevices.end() ) {
+fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str() );
+			continue;
+		}
+
 		nvmlDevice_t device;
 		if(NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
 			continue;
 		}
 
-		// Determine the GPU ID.
-		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
 		printDynamicProperties( gpuID, device );
 	}
 
