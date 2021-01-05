@@ -651,7 +651,7 @@ bool Condor_Auth_X509::get_server_info(std::string &name, std::string &cred)
     gss_buffer_desc name_buf;
 
     if ( !m_globusActivated ) {
-        return NULL;
+        return false;
     }
 
     // Now, we do some authorization work 
