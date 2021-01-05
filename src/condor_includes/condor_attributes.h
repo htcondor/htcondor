@@ -883,6 +883,7 @@
 #define ATTR_SEC_SERVER_ENDPOINT  "ServerEndpoint"
 #define ATTR_SEC_SERVER_COMMAND_SOCK  "ServerCommandSock"
 #define ATTR_SEC_SERVER_PID  "ServerPid"
+#define ATTR_SERVER_PUBLIC_CERT  "ServerPublicCert"
 #define ATTR_SEC_CONNECT_SINFUL  "ConnectSinful"
 #define ATTR_SEC_PARENT_UNIQUE_ID  "ParentUniqueID"
 #define ATTR_SEC_PACKET_COUNT  "PacketCount"

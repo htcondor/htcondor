@@ -950,7 +950,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 
 		if (!cred.empty()) {
 			classad::ClassAd ad;
-			ad.InsertAttr("ServerPublicCert", cred);
+			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, cred);
 			mySock_->setPolicyAd(ad);
 		}
 

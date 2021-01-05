@@ -1629,7 +1629,7 @@ skip_san:
 		auto len = BIO_get_mem_data(bio.get(), &pem_raw);
 		if (len) {
 			classad::ClassAd ad;
-			ad.InsertAttr("ServerPublicCert", pem_raw, len);
+			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, pem_raw, len);
 			mySock_->setPolicyAd(ad);
 		}
 	}
