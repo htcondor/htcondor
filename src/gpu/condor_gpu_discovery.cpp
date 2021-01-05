@@ -23,8 +23,9 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
-#include <map>
 #include <list>
+#include <map>
+#include <set>
 #include <algorithm>
 
 #include <time.h>
@@ -573,6 +574,7 @@ main( int argc, const char** argv)
 
 	// We're doing it this way so that we can share the device-enumeration
 	// logic between condor_gpu_discovery and condor_gpu_utilization.
+	std::set< std::string > skipDevices;
 	std::vector< BasicProps > migDevices;
 	std::vector< BasicProps > enumeratedDevices;
 	if(! opt_opencl) {
@@ -589,7 +591,16 @@ main( int argc, const char** argv)
 			}
 
 			// We don't want to report the parent device of any MIG instance
-			// as available for use (to avoid overcommitting it), so FIXME
+			// as available for use (to avoid overcommitting it), so construct
+			// a list of parent devices to skip in the loop below.
+			for( const BasicProps & bp : migDevices ) {
+			    std::string parentUUID = bp.uuid;
+			    if( parentUUID.find( "MIG-" ) != 0 ) { /* WTF? */ continue; }
+			    parentUUID = parentUUID.substr( 4 );
+			    parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
+			    skipDevices.insert(parentUUID);
+fprintf( stderr, "Adding %s to skip device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
+			}
 		}
 	}
 
@@ -612,6 +623,16 @@ main( int argc, const char** argv)
 		}
 
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+
+		// Skip devices which have MIG instances associated with them so
+		// that we don't overcommit.
+		if((! opt_opencl) && nvml_handle) {
+			const std::string & UUID = enumeratedDevices[dev].uuid ;
+			if( skipDevices.find( UUID ) != skipDevices.end() ) {
+fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str() );
+				continue;
+			}
+		}
 
 		if (! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += gpuID;
