@@ -1618,6 +1618,22 @@ skip_san:
 		}
 	}
 
+	if (mySock_->isClient()) {
+		std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new( BIO_s_mem() ), BIO_free);
+
+		if (!PEM_write_bio_X509(bio.get(), cert)) {
+			dprintf(D_SECURITY, "Unable to convert server host cert to PEM format.\n");
+			goto err_occured;
+		}
+		char *pem_raw;
+		auto len = BIO_get_mem_data(bio.get(), &pem_raw);
+		if (len) {
+			classad::ClassAd ad;
+			ad.InsertAttr("ServerPublicCert", pem_raw, len);
+			mySock_->setPolicyAd(ad);
+		}
+	}
+
 success:
 	if (success) {
 		ouch("Server checks out; returning SSL_get_verify_result.\n");
