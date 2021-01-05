@@ -1,6 +1,19 @@
 Job ClassAd Attributes
 ======================
 
+Both active HTCondor jobs (those in a `condor_schedd`) and historical jobs
+(those in the history file), are described by classads.  Active jobs can be
+queried and displayed with the `condor_q` command, and historical jobs
+are queried with the `condor_history` command, as in the examples below.
+Note that not all job attributes are described here, some are for internal
+HTCondor use, and are subject to change.  Also, not all jobs contain
+all attributes.
+
+.. code-block:: console
+
+    $ condor_history -l username
+    $ condor_q -l
+
 
 :index:`job attributes<single: job attributes; ClassAd>`
 :index:`Absent<single: Absent; ClassAd job attribute>`
@@ -226,6 +239,22 @@ Job ClassAd Attributes
     The time when the job completed, or the value 0 if the job has not
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970).
+
+:index:`CondorPlatform<single: CondorPlatform; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; CondorPlatform>`
+
+``CondorPlatform``
+    A string that describes the operating system version that the 
+    `condor_submit` command that submitted this job was built for.  Note
+    this may be different that the operating system that is actually running.
+
+:index:`CondorVersion<single: CondorVersion; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; CondorVersion>`
+
+``CondorVersion``
+    A string that describes the HTCondor version of the `condor_submit`
+    command that created this job.  Note this may be different than the
+    version of the HTCondor daemon that runs the job.
 
 :index:`ConcurrencyLimits<single: ConcurrencyLimits; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; ConcurrencyLimits>`
@@ -742,7 +771,9 @@ Job ClassAd Attributes
     job identifier composed of attributes ``ClusterId`` and ``ProcId``
     separated by a period, and the job's submission time in seconds
     since 1970-01-01 00:00:00 UTC, separated by # characters. The value
-    submit.example.com#152.3#1358363336 is an example.
+    submit.example.com#152.3#1358363336 is an example.  While HTCondor
+    guaratees this string will be globally unique, the contents are subject
+    to change, and users should not parse out components of this string.
 
 :index:`GridJobStatus<single: GridJobStatus; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; GridJobStatus>`
@@ -1087,6 +1118,13 @@ Job ClassAd Attributes
     setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
     :ref:`admin-manual/configuration-macros:daemon logging configuration file
     entries`) but it applies to the job event log instead of the system event log.
+
+:index:`JobBatchName<single: JobBatchName; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; JobBatchName>`
+
+``JobBatchName``
+    If a job is given a batch name with the -batch-name option to `condor_submit`, this 
+    string valued attribute will contain the batch name.
 
 :index:`JobCurrentFinishTransferInputDate<single: JobCurrentFinishTransferInputDate; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferInputDate>`
@@ -2247,6 +2285,14 @@ Job ClassAd Attributes
     ``PostCmdExitSignal``. The exit status of a post command without one
     of ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` defined is
     ignored. :index:`TotalSuspensions<single: TotalSuspensions; ClassAd job attribute>`
+
+:index:`ToE<single: ToE; ClassAd job attribute>`
+:index:`ClassAd job attribute<single: ClassAd job attribute; ToE>`
+
+``ToE``
+    ToE stands for Ticket of Execution, and is itself a nested classad that
+    describes how a job was terminated by the execute machine.
+    See the :doc:`/users-manual/managing-a-job` section for full details.
 
 :index:`job ClassAd attribute<single: job ClassAd attribute; TotalSuspensions>`
 

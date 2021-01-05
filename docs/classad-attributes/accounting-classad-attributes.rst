@@ -1,6 +1,15 @@
 Accounting ClassAd Attributes
 =============================
 
+The `condor_negotiator` keeps information about each submitter and group
+in accounting ads that are also sent to the `condor_collector`.  Th
+`condor_userprio` command queries and displays these ads.  For example,
+to see the full set of raw accounting ads, run the command:
+
+.. code-block:: console
+
+    $ condor_userprio -l
+
 
 :index:`AccountingGroup`
 :index:`AccountingGroup<single: Accounting ClassAd attribute; AccountingGroup>`
