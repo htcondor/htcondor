@@ -484,3 +484,23 @@ enumerateMIGDevices( std::vector< BasicProps > & devices ) {
 
 	return NVML_SUCCESS;
 }
+
+std::string
+gpuIDFromUUID( const std::string & uuid, int opt_short_uuid ) {
+	std::string gpuID = uuid;
+
+	// Some of our UUIDs came from CUDA.
+	if( gpuID.find( "GPU-" ) == std::string::npos ) {
+		gpuID = "GPU-" + gpuID;
+	}
+
+	if( opt_short_uuid ) {
+		if( gpuID.find("MIG-") == 0 ) {
+			gpuID.replace( gpuID.find( "-", 8 ), gpuID.find( "/" ), "" );
+		} else if( gpuID.find("GPU-") == 0 ) {
+			gpuID[12] = 0;
+		}
+	}
+
+	return gpuID;
+}

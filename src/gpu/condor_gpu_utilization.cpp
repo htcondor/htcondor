@@ -247,14 +247,8 @@ int main() {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
 				if( devices[i] == NULL ) { continue; }
 				if(! cudaDevices[i].uuid.empty()) {
-					std::string gpuID = cudaDevices[i].uuid;
-					// Some of our UUIDs came from CUDA.
-					if( gpuID.find( "GPU-" ) != 0 ) {
-						gpuID = "GPU-" + cudaDevices[i].uuid;
-					}
-
-					std::string short_gpuID = gpuID;
-					short_gpuID[12] = 0;
+					std::string gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 0);
+					std::string short_gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 1);
 
 					fprintf(stdout, "SlotMergeConstraint = "
 						"StringListMember(\"CUDA%u\", AssignedGPUs) "

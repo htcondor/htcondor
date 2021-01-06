@@ -284,20 +284,17 @@ bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
 	return true;
 }
 
-std::string constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int opt_short_uuid, std::vector< BasicProps > & enumeratedDevices ) {
+std::string
+constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int opt_short_uuid, std::vector< BasicProps > & enumeratedDevices ) {
 	// Determine the GPU ID.
 	std::string gpuID = Format( "%s%i", opt_pre, dev );
 
 	// The -uuid and -short-uuid flags don't imply -properties.
 	if( opt_uuid && !opt_opencl ) {
-		gpuID = enumeratedDevices[dev].uuid;
-		if( gpuID.find( "GPU-" ) != 0 ) {
-			gpuID = "GPU-" + gpuID;
-		}
-		if( opt_short_uuid ) { gpuID[12] = 0; }
+		gpuID = gpuIDFromUUID( enumeratedDevices[dev].uuid, opt_short_uuid );
 	}
 
-	return std::string(gpuID);
+	return gpuID;
 }
 
 
@@ -625,7 +622,7 @@ main( int argc, const char** argv)
 			// a list of parent devices to skip in the loop below.
 			for( const BasicProps & bp : migDevices ) {
 			    std::string parentUUID = bp.uuid;
-			    if( parentUUID.find( "MIG-GPU-" ) != 0 ) { /* WTF? */ continue; }
+			    if( parentUUID.find( "MIG-GPU-" ) != 0 ) { continue; }
 			    parentUUID = parentUUID.substr( 8 );
 			    parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
 			    skipDevices.insert(parentUUID);
@@ -733,16 +730,13 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 	// If we found any, construct the properties for MIG instances.
 	//
 	for( const BasicProps & bp : migDevices ) {
-		std::string gpuID = bp.uuid;
-		// if( opt_short_uuid ) { ... }
-
+		std::string gpuID = gpuIDFromUUID( bp.uuid, opt_short_uuid );
 		if (! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
 
 		dev_props[gpuID].clear();
 		KVP & props = dev_props.find(gpuID)->second;
-
 		setPropertiesFromBasicProps( props, bp, opt_extra );
 	}
 
@@ -826,6 +820,7 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 				if (common.find(it->first) != common.end()) continue;
 				std::string attrpre(mit->first.c_str());
 				std::replace(attrpre.begin(), attrpre.end(), '-', '_');
+				std::replace(attrpre.begin(), attrpre.end(), '/', '_');
 				printf("%s%s=%s\n", attrpre.c_str(), it->first.c_str(), it->second.c_str());
 			}
 		}
