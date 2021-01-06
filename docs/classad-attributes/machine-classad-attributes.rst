@@ -142,7 +142,7 @@ Machine ClassAd Attributes
 ``DetectedCpus``
     Set by the value of configuration variable ``DETECTED_CORES``
 
-:index:`DETECTED_CORES`.
+:index:`DETECTED_CORES`
 :index:`DetectedMemory<single: DetectedMemory; ClassAd machine attribute>`
 
 ``DetectedMemory``
@@ -1323,7 +1323,7 @@ Machine ClassAd Attributes
 ``VM_AvailNum``
     The maximum number of vm universe jobs that can be started on this
     machine. This maximum is set by the configuration variable
-    ``VM_MAX_NUMBER`` :index:`VM_MAX_NUMBER`.
+    ``VM_MAX_NUMBER``. :index:`VM_MAX_NUMBER`
 
 :index:`VM_Guest_Mem<single: VM_Guest_Mem; ClassAd machine attribute>`
 
@@ -1335,7 +1335,7 @@ Machine ClassAd Attributes
 ``VM_Memory``
     Gives the amount of memory available for starting additional VM jobs
     on this machine, given in Mbytes. The maximum value is set by the
-    configuration variable ``VM_MEMORY`` :index:`VM_MEMORY`.
+    configuration variable ``VM_MEMORY``. :index:`VM_MEMORY`
 
 :index:`VM_Networking<single: VM_Networking; ClassAd machine attribute>`
 
@@ -1349,7 +1349,7 @@ Machine ClassAd Attributes
     The type of virtual machine software that can run on this machine.
     The value is set by the configuration variable ``VM_TYPE``
 
-:index:`VM_TYPE`.
+:index:`VM_TYPE`
 :index:`VMOfflineReason<single: VMOfflineReason; ClassAd machine attribute>`
 
 ``VMOfflineReason``

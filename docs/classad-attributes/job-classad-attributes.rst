@@ -222,7 +222,7 @@ all attributes.
     the job. This relies on ``SlotWeight`` being listed in
     ``SYSTEM_JOB_MACHINE_ATTRS``
 
-:index:`SYSTEM_JOB_MACHINE_ATTRS`.
+:index:`SYSTEM_JOB_MACHINE_ATTRS`
 :index:`CommittedSuspensionTime<single: CommittedSuspensionTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CommittedSuspensionTime>`
 
@@ -275,7 +275,7 @@ all attributes.
     ran the job. This relies on ``SlotWeight`` being listed in
     ``SYSTEM_JOB_MACHINE_ATTRS``
 
-:index:`SYSTEM_JOB_MACHINE_ATTRS`.
+:index:`SYSTEM_JOB_MACHINE_ATTRS`
 :index:`CumulativeSuspensionTime<single: CumulativeSuspensionTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CumulativeSuspensionTime>`
 
@@ -373,7 +373,8 @@ all attributes.
     determined by the configuration setting
     ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
 
-:index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`, which defaults
+:index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`
+    which defaults
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
@@ -1361,7 +1362,7 @@ all attributes.
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
 
-:index:`KILLING_TIMEOUT`.
+:index:`KILLING_TIMEOUT`
 :index:`LastMatchTime<single: LastMatchTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; LastMatchTime>`
 
@@ -1455,7 +1456,8 @@ all attributes.
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_INPUT_MB``
 
-:index:`MAX_TRANSFER_INPUT_MB` is used. If the observed size
+:index:`MAX_TRANSFER_INPUT_MB`
+    is used. If the observed size
     of all input files at submit time is larger than the limit, the job
     will be immediately placed on hold with a ``HoldReasonCode`` value
     of 32. If the job passes this initial test, but the size of the
@@ -1474,7 +1476,8 @@ all attributes.
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_OUTPUT_MB``
 
-:index:`MAX_TRANSFER_OUTPUT_MB` is used. If the total size of
+:index:`MAX_TRANSFER_OUTPUT_MB`
+    is used. If the total size of
     the job's output files to be transferred is larger than the limit,
     the job will be placed on hold with a ``HoldReasonCode`` value of
     33. The output will be transferred up to the point when the limit is
@@ -1506,7 +1509,7 @@ all attributes.
     the next job is started. The value is limited by the configuration
     variable ``MAX_NEXT_JOB_START_DELAY``
 
-:index:`MAX_NEXT_JOB_START_DELAY`.
+:index:`MAX_NEXT_JOB_START_DELAY`
 :index:`NiceUser<single: NiceUser; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; NiceUser>`
 
@@ -2087,7 +2090,7 @@ all attributes.
     its definition is specified by configuration variable
     ``JOB_DEFAULT_REQUESTMEMORY``
 
-:index:`JOB_DEFAULT_REQUESTMEMORY`.
+:index:`JOB_DEFAULT_REQUESTMEMORY`
 :index:`Requirements<single: Requirements; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; Requirements>`
 
@@ -2182,9 +2185,8 @@ all attributes.
     A boolean attribute defined by the *condor_negotiator* when it
     makes a match. It will be ``True`` if the resource was claimed via
     negotiation when the configuration variable ``GROUP_AUTOREGROUP``
-
-:index:`GROUP_AUTOREGROUP` was ``True``. It will be ``False``
-    otherwise.
+:index:`GROUP_AUTOREGROUP` 
+    was ``True``. It will be ``False`` otherwise.
 
 :index:`SubmitterGlobalJobId<single: SubmitterGlobalJobId; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; SubmitterGlobalJobId>`
@@ -2456,7 +2458,7 @@ all attributes.
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
     ``MAX_CONCURRENT_DOWNLOADS`` :index:`MAX_CONCURRENT_DOWNLOADS`
-    or ``MAX_CONCURRENT_UPLOADS`` :index:`MAX_CONCURRENT_UPLOADS`.
+    or ``MAX_CONCURRENT_UPLOADS``. :index:`MAX_CONCURRENT_UPLOADS`
 
 :index:`UserLog<single: UserLog; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; UserLog>`
