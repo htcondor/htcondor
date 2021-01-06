@@ -411,10 +411,9 @@ the easiest way is to install the ``condor-credmon-oauth`` rpm.  This
 installs the *condor_credmon_oauth* daemon and enables both it and
 *condor_credd* with reasonable defaults.
 
-Second, if it is also desired to use the OAuth2 credmon WSGI application
-as a token issuer, an HTTPS-enabled web server running on the submit machine
-needs to be configured to execute its wsgi script as the user ``condor``.
-An example configuration is available at the path found with
+Second, a token issuer, an HTTPS-enabled web server running on the submit
+machine needs to be configured to execute its wsgi script as the user
+``condor``.  An example configuration is available at the path found with
 ``rpm -ql condor-credmon-oauth|grep "condor_credmon_oauth\.conf"`` which
 you can copy to an apache webserver's configuration directory.
 
