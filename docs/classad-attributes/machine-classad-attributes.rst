@@ -49,19 +49,6 @@ Machine ClassAd Attributes
     ``"X86_64"``
         AMD/Intel 64-bit X86
 
-    These strings show definitions for architectures no longer
-    supported:
-
-    ``"IA64"``
-        Intel Itanium
-
-    ``"PPC"``
-        32-bit PowerPC
-
-    ``"PPC64"``
-        64-bit PowerPC
-
-
 :index:`CanHibernate<single: CanHibernate; ClassAd machine attribute>`
 
 ``CanHibernate``
@@ -100,9 +87,7 @@ Machine ClassAd Attributes
 ``ConsoleIdle``
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
-    with ``SLOTS_CONNECTED_TO_CONSOLE``
-
-:index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
+    with ``SLOTS_CONNECTED_TO_CONSOLE`` :index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros` section.
 
@@ -146,9 +131,9 @@ Machine ClassAd Attributes
 :index:`DetectedMemory<single: DetectedMemory; ClassAd machine attribute>`
 
 ``DetectedMemory``
-    Set by the value of configuration variable ``DETECTED_MEMORY``
+    Set by the value of configuration variable ``DETECTED_MEMORY``.
+    :index:`DETECTED_MEMORY` Specified in MiB.
 
-:index:`DETECTED_MEMORY`. Specified in MiB.
 :index:`Disk<single: Disk; ClassAd machine attribute>`
 
 ``Disk``
@@ -156,9 +141,8 @@ Machine ClassAd Attributes
     KiB (for example, 23000 = 23 MiB). Specifically, this is the amount
     of disk space available in the directory specified in the HTCondor
     configuration files by the ``EXECUTE`` :index:`EXECUTE` macro,
-    minus any space reserved with the ``RESERVED_DISK``
-
-:index:`RESERVED_DISK` macro. For static slots, this value
+    minus any space reserved with the ``RESERVED_DISK`` :index:`RESERVED_DISK`
+    macro. For static slots, this value
     will be the same as machine ClassAd attribute ``TotalSlotDisk``. For
     partitionable slots, this value will be the quantity of disk space
     remaining in the partitionable slot.
@@ -278,10 +262,8 @@ Machine ClassAd Attributes
 
 ``HasFileTransferPluginMethods``
     A string of comma-separated file transfer protocols that the machine
-    can support. The value can be modified with ``FILETRANSFER_PLUGINS``
-
-:index:`FILETRANSFER_PLUGINS` as defined in
-    :ref:`admin-manual/configuration-macros:condor_starter configuration file
+    can support. The value can be modified with ``FILETRANSFER_PLUGINS`` :index:`FILETRANSFER_PLUGINS` 
+    as defined in :ref:`admin-manual/configuration-macros:condor_starter configuration file
     entries`.
 
 :index:`Has_sse4_1<single: Has_sse4_1; ClassAd machine attribute>`
@@ -545,9 +527,7 @@ Machine ClassAd Attributes
     keyboard activity from telnet and rlogin sessions. Note that
     ``KeyboardIdle`` will always be equal to or less than
     ``ConsoleIdle``. The value can be modified with
-    ``SLOTS_CONNECTED_TO_KEYBOARD``
-
-:index:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
+    ``SLOTS_CONNECTED_TO_KEYBOARD`` :index:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration file
     macros` section.
 
@@ -827,22 +807,16 @@ Machine ClassAd Attributes
     Linux platforms, this is generally the string taken from
     ``/etc/hosts``, with extra characters stripped off Debian versions.
 
-     ``"Red Hat Enterprise Linux Server release 5.7 (Tikanga)"``
-        for RedHat Linux version 5
      ``"Red Hat Enterprise Linux Server release 6.2 (Santiago)"``
         for RedHat Linux version 6
      ``"Red Hat Enterprise Linux Server release 7.0 (Maipo)"``
         for RedHat Linux version 7.0
      ``"Ubuntu 14.04.1 LTS"``
         for Ubuntu 14.04 point release 1
-     ``"Debian GNU/Linux 7"``
-        for Debian 7.0 (wheezy)
      ``"Debian GNU/Linux 8"``
         for Debian 8.0 (jessie)
      ``"Fedora release 16 (Verne)"``
         for Fedora Linux version 16
-     ``"MacOSX 6.5"``
-        for MacOS version 10.6.5 (Snow Leopard)
      ``"MacOSX 7.3"``
         for MacOS version 10.7.3 (Lion)
      ``"FreeBSD8.2-RELEASE-p3"``
@@ -1410,9 +1384,8 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     The accounting group name under which this resource negotiated when
     it was claimed. This attribute will frequently be the same as
     attribute ``RemoteGroup``, but it may differ in cases such as when
-    configuration variable ``GROUP_AUTOREGROUP``
-
-:index:`GROUP_AUTOREGROUP` is ``True``, in which case it will
+    configuration variable ``GROUP_AUTOREGROUP`` :index:`GROUP_AUTOREGROUP` 
+    is ``True``, in which case it will
     have the name of the root group, identified as ``<none>``.
 
 :index:`RemoteOwner<single: RemoteOwner; ClassAd machine attribute (in Claimed State)>`
