@@ -303,6 +303,7 @@ printDynamicProperties( std::string gpuID, nvmlDevice_t device ) {
 	std::replace( gpuID.begin(), gpuID.end(), '-', '_' );
 	std::replace( gpuID.begin(), gpuID.end(), '/', '_' );
 
+fprintf( stderr, "printDynamicProperties(%s)\n", gpuID.c_str() );
 	unsigned int tuint;
 	nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
 	if ( result == NVML_SUCCESS ) {
@@ -337,7 +338,7 @@ typedef std::map<std::string, KVP> MKVP;
 void
 setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra ) {
 	props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str());
-	props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
+	if(! bp.name.empty()) { props["DeviceName"] = Format("\"%s\"", bp.name.c_str()); }
 	if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
 	props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
 	props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
@@ -678,6 +679,8 @@ fprintf( stderr, "[CUDA dev_props] Skipping %s.\n", UUID.c_str() );
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
 
+fprintf( stderr, "[CUDA dev_props] Adding CUDA device %s\n", gpuID.c_str() );
+
 		if(! opt_basic) { continue; }
 
 		dev_props[gpuID].clear();
@@ -761,6 +764,10 @@ fprintf( stderr, "[nvml dev_props] Skipping CUDA device %s.\n", bp.uuid.c_str() 
 		if (! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
+
+fprintf( stderr, "[nvml dev_props] Adding NVML device %s\n", gpuID.c_str() );
+
+		if(! opt_basic) { continue; }
 
 		dev_props[gpuID].clear();
 		KVP & props = dev_props.find(gpuID)->second;
@@ -882,15 +889,16 @@ fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", U
 		printDynamicProperties( gpuID, device );
 	}
 
-	// Dynamic properties for MIG instances.
+	// Dynamic properties for NVML devices
 	for( auto bp : nvmlDevices ) {
 		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
-fprintf( stderr, "[dynamic MIG properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
+fprintf( stderr, "[dynamic NVML properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
 		nvmlDevice_t device;
 		if(NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
+fprintf( stderr, "[dynamic NVML properties] Skipping NVML device %s because I can't find its handle.\n", bp.uuid.c_str() );
 			continue;
 		}
 

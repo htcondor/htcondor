@@ -524,10 +524,13 @@ gpuIDFromUUID( const std::string & uuid, int opt_short_uuid ) {
 	}
 
 	if( opt_short_uuid ) {
+		// MIG-GPU-<UUID>/x/y
 		if( gpuID.find("MIG-") == 0 ) {
-			gpuID.replace( gpuID.find( "-", 8 ), gpuID.find( "/" ), "" );
+			size_t first_dash_in_uuid = gpuID.find( "-", 8 );
+			size_t first_slash = gpuID.find( "/" );
+			gpuID.replace( first_dash_in_uuid, first_slash - first_dash_in_uuid, "" );
 		} else if( gpuID.find("GPU-") == 0 ) {
-			gpuID[12] = 0;
+			gpuID.erase( 12 );
 		}
 	}
 
