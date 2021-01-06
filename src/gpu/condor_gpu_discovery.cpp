@@ -601,8 +601,9 @@ main( int argc, const char** argv)
 
 	// We're doing it this way so that we can share the device-enumeration
 	// logic between condor_gpu_discovery and condor_gpu_utilization.
-	std::set< std::string > skipDevices;
-	std::vector< BasicProps > migDevices;
+	std::set< std::string > migDevices;
+	std::set< std::string > cudaDevices;
+	std::vector< BasicProps > nvmlDevices;
 	std::vector< BasicProps > enumeratedDevices;
 	if(! opt_opencl) {
 		if(! enumerateCUDADevices(enumeratedDevices)) {
@@ -610,8 +611,23 @@ main( int argc, const char** argv)
 			return 1;
 		}
 
+		//
+		// We have to report NVML devices, because enabling MIG on any
+		// GPU prevents CUDA from reporting any MIG-capable GPU, even
+		// if we wouldn't otherwise report it because it hasn't enabled
+		// MIG.  Since don't know if that applies to non-MIG-capable GPUs,
+		// record all the UUIDs we found via CUDA and skip them when
+		// reporting the devices we found via NVML.
+		//
+		for( const BasicProps & bp : enumeratedDevices ) {
+			// NVML and CUDA UUIDs differ in this prefix.
+			std::string UUID = "GPU-" + bp.uuid;
+			cudaDevices.insert( UUID );
+fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
+		}
+
 		if( nvml_handle ) {
-			nvmlReturn_t r = enumerateMIGDevices(migDevices);
+			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
 				fprintf( stderr, "Failed to enumerate MIG devices (%d: %s), aborting.\n", r, nvmlErrorString(r) );
 				return 1;
@@ -620,13 +636,13 @@ main( int argc, const char** argv)
 			// We don't want to report the parent device of any MIG instance
 			// as available for use (to avoid overcommitting it), so construct
 			// a list of parent devices to skip in the loop below.
-			for( const BasicProps & bp : migDevices ) {
-			    std::string parentUUID = bp.uuid;
-			    if( parentUUID.find( "MIG-GPU-" ) != 0 ) { continue; }
-			    parentUUID = parentUUID.substr( 8 );
-			    parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
-			    skipDevices.insert(parentUUID);
-fprintf( stderr, "Adding %s to skip device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
+			for( const BasicProps & bp : nvmlDevices ) {
+				std::string parentUUID = bp.uuid;
+				if( parentUUID.find( "MIG-GPU-" ) != 0 ) { continue; }
+				parentUUID = parentUUID.substr( 8 );
+				parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
+				migDevices.insert(parentUUID);
+fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
 			}
 		}
 	}
@@ -649,12 +665,11 @@ fprintf( stderr, "Adding %s to skip device list for MIG instance %s\n", parentUU
 
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
 
-		// Skip devices which have MIG instances associated with them so
-		// that we don't overcommit.
+		// Skip devices which have MIG instances associated with them.
 		if((! opt_opencl) && nvml_handle) {
 			const std::string & UUID = enumeratedDevices[dev].uuid;
-			if( skipDevices.find( UUID ) != skipDevices.end() ) {
-fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str() );
+			if( migDevices.find( UUID ) != migDevices.end() ) {
+fprintf( stderr, "[CUDA dev_props] Skipping %s.\n", UUID.c_str() );
 				continue;
 			}
 		}
@@ -727,9 +742,21 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 	} /* end enumerated device loop */
 
 	//
-	// If we found any, construct the properties for MIG instances.
+	// Construct the properties for NVML devices.  This includes MIG devices
+	// and any non-MIG NVML device we found that isn't either (a) a parent of
+	// a MIG device or (b) a CUDA device we've already included.
 	//
-	for( const BasicProps & bp : migDevices ) {
+	for( const BasicProps & bp : nvmlDevices ) {
+		if( migDevices.find( bp.uuid ) != migDevices.end() ) {
+fprintf( stderr, "[nvml dev_props] Skipping MIG device parent %s.\n", bp.uuid.c_str() );
+			continue;
+		}
+
+		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
+fprintf( stderr, "[nvml dev_props] Skipping CUDA device %s.\n", bp.uuid.c_str() );
+			continue;
+		}
+
 		std::string gpuID = gpuIDFromUUID( bp.uuid, opt_short_uuid );
 		if (! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += gpuID;
@@ -842,8 +869,8 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
 
 		const std::string & UUID = enumeratedDevices[dev].uuid;
-		if( skipDevices.find( UUID ) != skipDevices.end() ) {
-fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str() );
+		if( migDevices.find( UUID ) != migDevices.end() ) {
+fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", UUID.c_str() );
 			continue;
 		}
 
@@ -856,7 +883,12 @@ fprintf( stderr, "Skipping %s because it's a MIG parent device.\n", gpuID.c_str(
 	}
 
 	// Dynamic properties for MIG instances.
-	for( auto bp : migDevices ) {
+	for( auto bp : nvmlDevices ) {
+		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
+fprintf( stderr, "[dynamic MIG properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
+			continue;
+		}
+
 		nvmlDevice_t device;
 		if(NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
 			continue;

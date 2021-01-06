@@ -466,7 +466,7 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 }
 
 nvmlReturn_t
-enumerateMIGDevices( std::vector< BasicProps > & devices ) {
+enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 	std::map< std::string, nvmlDevice_t > uuidsToHandles;
 	nvmlReturn_t r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
 	if( NVML_SUCCESS != r ) { return r;	}
@@ -481,6 +481,35 @@ enumerateMIGDevices( std::vector< BasicProps > & devices ) {
 
 		devices.push_back( bp );
 	}
+
+    //
+    // Enumerate non-MIG NVML devices.
+    //
+	unsigned int deviceCount = 0;
+	r = nvmlDeviceGetCount(& deviceCount);
+	if( NVML_SUCCESS != r ) { return r; }
+
+	for( unsigned int i = 0; i < deviceCount; ++i ) {
+		nvmlDevice_t device;
+		r = nvmlDeviceGetHandleByIndex( i, & device );
+		if( NVML_SUCCESS != r ) { return r; }
+
+		unsigned int maxMigDeviceCount = 0;
+		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if( NVML_SUCCESS == r && maxMigDeviceCount == 0 ) {
+			char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+			r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
+			if( NVML_SUCCESS != r ) { return r; }
+
+    		BasicProps bp;
+	    	bp.uuid = uuid;
+		    r = nvml_getBasicProps( device, & bp );
+		    if( NVML_SUCCESS != r ) { return r; }
+
+fprintf( stderr, "Adding NVML device %s\n", uuid );
+		    devices.push_back( bp );
+        }
+    }
 
 	return NVML_SUCCESS;
 }
