@@ -33,7 +33,7 @@ $(buildcmd) \
   $(if $(findstring yes,$(NOCACHE)),--no-cache,) \
   -t htcondor/$(1):$(VERSION)-el$(2)$(SUFFIX) \
   $(if $(findstring yes,$(UNVERSIONED)),-t htcondor/$(1):el$(2)$(SUFFIX),) \
-  -f $(1)/Dockerfile \
+  -f $(1)/Dockerfile-el \
   .
 endef
 

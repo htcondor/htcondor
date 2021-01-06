@@ -24,7 +24,7 @@ RUN \
 
 # Install extra packages commonly used by jobs
 # including the docker repo and packages
-COPY execute/packagelist.txt /tmp/packagelist.txt
+COPY execute/packagelist-el.txt /tmp/packagelist.txt
 RUN \
     yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
     yum install -y docker-ce-cli && \

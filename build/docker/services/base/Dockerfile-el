@@ -42,7 +42,8 @@ RUN \
     \
     yum -y update; \
     ## ^^ ignore errors; some packages (like "filesystem") might fail to update in a container environment \
-    yum -y install epel-release yum-plugin-priorities && \
+    yum -y install epel-release && \
+    if [ 7 -eq ${EL} ]; then yum -y install yum-plugin-priorities; fi && \
     \
     (curl -sSL https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-${SERIES}-rhel${EL}.repo && \
      echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-HTCondor" \
@@ -76,6 +77,7 @@ RUN \
 COPY base/supervisord.conf /etc/supervisord.conf
 COPY base/condor/*.conf /etc/condor/config.d/
 COPY base/start.sh base/update-config base/update-secrets /
+COPY base/pre-exec.sh /root/config/pre-exec.sh
 
 CMD ["/bin/bash", "-x", "/start.sh"]
 
