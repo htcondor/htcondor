@@ -40,7 +40,8 @@ RUN \
         SERIES=stable; \
     fi; \
     \
-    yum -y update && \
+    yum -y update; \
+    ## ^^ ignore errors; some packages (like "filesystem") might fail to update in a container environment \
     yum -y install epel-release yum-plugin-priorities && \
     \
     (curl -sSL https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-${SERIES}-rhel${EL}.repo && \
