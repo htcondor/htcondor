@@ -1444,10 +1444,10 @@ Dagman::ResolveDefaultLog()
 	_defaultNodeLog.replaceString( "@(OWNER)", owner.Value() );
 	_defaultNodeLog.replaceString( "@(NODE_NAME)", nodeName.Value() );
 
-	if ( _defaultNodeLog.find( "@" ) >= 0 ) {
+	if ( _defaultNodeLog.find( "@(" ) >= 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
-					"default node log file %s contains an '@' character -- "
-					"unresolved macro substituion?\n",
+					"default node log file %s contains a '@(' character "
+					"sequence -- unresolved macro substituion?\n",
 					_defaultNodeLog.Value() );
 		check_warning_strictness( DAG_STRICT_1 );
 	}
