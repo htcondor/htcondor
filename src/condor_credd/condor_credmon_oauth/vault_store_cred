@@ -26,7 +26,11 @@ usage()
     echo "Usage: $ME [-vd] oauth_service ..."
     echo "  -v shows more progress than normal" 
     echo "  -d shows a lot of debug information" 
-    echo "  Each oauth_service is an issuer optionally followed by hyphen and role"
+    echo "  Each oauth_service is an issuer optionally followed by underscore and role"
+    echo "  Options may be added to each oauth_service:"
+    echo "    &handle=<name>       A name to be added to the credential"
+    echo "    &scope=<scopes>      A comma-separated list of scopes to request"
+    echo "    &audience=<audience> A token audience to request"
     exit 1
 } >&2
 
@@ -87,38 +91,68 @@ fi
 NL="
 "
 
-for SERVICE; do 
+for REQUEST; do 
     SHOWSTORING=false
     if [ -n "$VERBOSE" ]; then
         SHOWSTORING=true
     fi
-    ISSUER="${SERVICE%-*}"
-    OPTS="$CONDOROPTS -i $ISSUER"
+    IFS="&" read -r -a PARTS <<< "$REQUEST"
+    SERVICE="${PARTS[0]}"
+    ISSUER="${SERVICE%_*}"
+    # using arrays for options works better for quoting
+    read -r -a OPTS <<< "$CONDOROPTS"
+    OPTS+=("-i" "$ISSUER")
     if [ "$SERVICE" != "$ISSUER" ]; then
-        ROLE="${SERVICE#*-}"
-        OPTS="$OPTS -r $ROLE"
-        if [ "$SERVICE" != "$ISSUER-$ROLE" ]; then
-            fatal "Only one hyphen allowed in use_oauth_services name"
+        ROLE="${SERVICE#*_}"
+        OPTS+=("-r" "$ROLE")
+        if [ "$SERVICE" != "${ISSUER}_$ROLE" ]; then
+            fatal "Only one underscore allowed in use_oauth_services name"
         fi
     fi
-    if [ -f $VTOKEN.$SERVICE ] && ! condor_store_cred query-oauth -s $SERVICE >/dev/null; then
-        verbose "Removing $VTOKEN.$SERVICE because there are no $SERVICE credentials stored"
-        rm -f $VTOKEN.$SERVICE
-    fi
+    STOREOPTS=()
+    for PART in "${PARTS[@]:1}"; do
+        VAL="${PART#*=}"
+        case "$PART" in
+            handle=*)
+                SERVICE+="_$VAL";;
+            scopes=*)
+                STOREOPTS+=("-S" "$VAL")
+                OPTS+=("--scopes=$VAL");;
+            audience=*)
+                STOREOPTS+=("-A" "$VAL")
+                OPTS+=("--audience=$VAL");;
+        esac
+    done
+    STOREOPTS=("-s" "$SERVICE" "${STOREOPTS[@]}")
+    verbose "Checking if ${STOREOPTS[@]} credentials exist"
+    condor_store_cred query-oauth "${STOREOPTS[@]}" >$STOREOUT
+    case $? in
+        0) ;;
+        1)  if [ -f "$VTOKEN.$SERVICE" ]; then
+                verbose "Removing $VTOKEN.$SERVICE because there are no $SERVICE credentials stored"
+                rm -f "$VTOKEN.$SERVICE"
+            fi;;
+        2) fatal "Credentials exist that do not match the request.
+They can be removed by
+  condor_store_cred delete-oauth -s $SERVICE
+but make sure no other job is using them."
+            ;;
+        *) fatal "Querying condor credentials failed";;
+    esac
     if [ -n "$BTOKEN" ]; then
-        OPTS="-o $BTOKEN.$SERVICE $OPTS"
+        OPTS=("-o" "$BTOKEN.$SERVICE" "${OPTS[@]}")
     fi
-    OPTS="--vaulttokenttl=28d $OPTS --vaulttokeninfile=$VTOKEN.$SERVICE --vaulttokenfile=/dev/stdout --showbearerurl"
+    OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=$VTOKEN.$SERVICE" "--vaulttokenfile=/dev/stdout" "--showbearerurl")
     verbose "Attempting to get tokens for $SERVICE"
     # First attempt to get tokens quietly without oidc
-    CRED="`htgettoken $OPTS --nooidc ${VERBOSE:--q}`"
+    CRED="`htgettoken "${OPTS[@]}" --nooidc ${VERBOSE:--q}`"
     if [ $? != 0 ]; then
         # OIDC authentication probably needed, so remove -q to tell the user
         #  what is happening
         SHOWSTORING=true
         newlineifneeded
         echo "Authentication needed for $SERVICE" >&2
-        CRED="`htgettoken $OPTS $VERBOSE`"
+        CRED="`htgettoken "${OPTS[@]}" $VERBOSE`"
         if [ $? != 0 ]; then
             fatal "htgettoken failed"
         fi
@@ -140,7 +174,7 @@ for SERVICE; do
     # A new long-duration vault token was received, followed by bearer URL
     # Exchange vault token for a shorter duration vault token on disk
     # Normally do this quietly
-    echo ${CRED%$NL*}|htgettoken $CONDOROPTS --nobearertoken --vaulttokeninfile=/dev/stdin --vaulttokenfile=$VTOKEN.$SERVICE ${VERBOSE:--q} >&2
+    echo ${CRED%$NL*}|htgettoken $CONDOROPTS --nobearertoken --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN.$SERVICE" ${VERBOSE:--q} >&2
     if [ $? != 0 ]; then
         fatal "Failed to exchange vault token"
     fi
@@ -161,7 +195,7 @@ for SERVICE; do
         echo "  \"vault_token\": \"$TOK\","
         echo "  \"vault_url\": \"$URL\""
         echo "}"
-        )|condor_store_cred add-oauth -s "$SERVICE" -i - >$STOREOUT
+        )|condor_store_cred add-oauth "${STOREOPTS[@]}" -i - >$STOREOUT
     if [ $? != 0 ]; then
         fatal "Failed to store condor credentials for $SERVICE"
     fi

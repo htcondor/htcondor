@@ -76,20 +76,13 @@ class VaultCredmon(AbstractCredentialMonitor):
         top_path = os.path.join(self.cred_dir, username, token_name + '.top')
         try:
             with open(top_path, 'r') as f:
-                vault_token = f.readline().strip()
-                vault_url = f.readline().strip()
-        except Exception as e:
-            self.log.error("Could not open vault token file %s: %s", top_path, str(e))
-            return False
-        try:
-            with open(top_path, 'r') as f:
                 top_data = json.load(f)
         except IOError as ie:
             self.log.warning("Could not open %s: %s", top_path, str(ie))
-            return True
+            return False
         except ValueError as ve:
             self.log.warning("The file at %s is invalid; could not parse as JSON: %s", top_path, str(ve))
-            return True
+            return False
 
         if 'vault_token' not in top_data:
             self.log.error("vault_token missing from %s", top_path)
@@ -100,6 +93,10 @@ class VaultCredmon(AbstractCredentialMonitor):
             return False
 
         params = {'minimum_seconds' : self.get_minimum_seconds()}
+        if 'scopes' in top_data:
+            params['scopes'] = top_data['scopes']
+        if 'audience' in top_data:
+            params['audience'] = top_data['audience']
         url = top_data['vault_url'] + '?' + urllib_parse.urlencode(params)
         headers = {'X-Vault-Token' : top_data['vault_token']}
         request = urllib_request.Request(url=url, headers=headers)
