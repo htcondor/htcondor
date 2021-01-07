@@ -131,12 +131,12 @@ class BasicProps {
 		std::string   uuid;
 		std::string   name;
 		char          pciId[16];
-		size_t        totalGlobalMem;
-		int           ccMajor;
-		int           ccMinor;
-		int           multiProcessorCount;
-		int           clockRate;
-		int           ECCEnabled;
+		size_t        totalGlobalMem {(size_t)-1};
+		int           ccMajor {-1};
+		int           ccMinor {-1};
+		int           multiProcessorCount {-1};
+		int           clockRate {-1};
+		int           ECCEnabled {-1};
 
 		void setUUIDFromBuffer( const unsigned char buffer[16] );
 };

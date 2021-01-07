@@ -340,16 +340,18 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 	props["DeviceUuid"] = Format("\"%s\"", bp.uuid.c_str());
 	if(! bp.name.empty()) { props["DeviceName"] = Format("\"%s\"", bp.name.c_str()); }
 	if( bp.pciId[0] ) { props["DevicePciBusId"] = Format("\"%s\"", bp.pciId); }
-	props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
-	props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
-	props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
+	if( bp.ccMajor != -1 && bp.ccMinor != -1 ) { props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor); }
+	if( bp.ECCEnabled != -1 ) { props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false"; }
+	if( bp.totalGlobalMem != (size_t)-1 ) { props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.)); }
 
 	if( opt_extra ) {
-		props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
-		if( bp.multiProcessorCount != 0 ) {
+		if( bp.clockRate != -1 ) { props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f); }
+		if( bp.multiProcessorCount > 0 ) {
 			props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
 		}
-		props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
+		if( bp.ccMajor != -1 && bp.ccMinor != -1 ) {
+			props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
+		}
 	}
 
 	if( cudaDriverGetVersion ) {

@@ -132,11 +132,27 @@ int main() {
 		fail();
 	}
 
+	//
+	// This code reports the utilization of every CUDA-enumerated device,
+	// but the only reason it cares about CUDA-enumeration is because we
+	// allow the use of CUDA indices as GPU identifiers.  This code will
+	// output the correct merge constraints if we use UUIDs or short UUIDs,
+	// because we use the UUID from the CUDA device.
+	//
+	// This code will fail if run on a system with more than one GPU if
+	// any GPU has MIG enabled, because the CUDA and NVML device counts
+	// will differ.  (CUDA will only enumerate one device if any GPU has
+	// MIG enabled.)
+	//
+
 	unsigned int deviceCount = 0;
 	if( nvmlDeviceGetCount(& deviceCount) != NVML_SUCCESS ) {
 		fprintf( stderr, "nvmlDeviceGetCount() failed, aborting.\n" );
 		fail();
 	}
+	// FIXME: It would be better to fail() if any device has MIG enabled,
+	// rather than only in the multi-GPU case, because we know we won't
+	// get anything useful.
 	if( deviceCount != cudaDevices.size() ) {
 		fprintf( stderr, "nvmlDeviceGetCount() disagrees with CUDA device count, aborting.\n" );
 		fail();
