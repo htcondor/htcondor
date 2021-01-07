@@ -542,9 +542,9 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		devices.push_back( bp );
 	}
 
-    //
-    // Enumerate non-MIG NVML devices.
-    //
+	//
+	// Enumerate non-MIG NVML devices.
+	//
 	unsigned int deviceCount = 0;
 	r = nvmlDeviceGetCount(& deviceCount);
 	if( NVML_SUCCESS != r ) { return r; }
@@ -561,15 +561,15 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 			r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
 			if( NVML_SUCCESS != r ) { return r; }
 
-    		BasicProps bp;
-	    	bp.uuid = uuid;
-		    r = nvml_getBasicProps( device, & bp );
-		    if( NVML_SUCCESS != r ) { return r; }
+			BasicProps bp;
+			bp.uuid = uuid;
+			r = nvml_getBasicProps( device, & bp );
+			if( NVML_SUCCESS != r ) { return r; }
 
-fprintf( stderr, "Adding NVML device %s\n", uuid );
-		    devices.push_back( bp );
-        }
-    }
+			// fprintf( stderr, "Adding NVML device %s\n", uuid );
+			devices.push_back( bp );
+		}
+	}
 
 	return NVML_SUCCESS;
 }

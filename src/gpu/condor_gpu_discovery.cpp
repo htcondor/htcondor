@@ -226,7 +226,7 @@ printDynamicProperties( std::string gpuID, nvmlDevice_t device ) {
 	std::replace( gpuID.begin(), gpuID.end(), '-', '_' );
 	std::replace( gpuID.begin(), gpuID.end(), '/', '_' );
 
-fprintf( stderr, "printDynamicProperties(%s)\n", gpuID.c_str() );
+	// fprintf( stderr, "printDynamicProperties(%s)\n", gpuID.c_str() );
 	unsigned int tuint;
 	nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
 	if ( result == NVML_SUCCESS ) {
@@ -491,7 +491,7 @@ main( int argc, const char** argv)
 		if(! nvml_handle) {
 			// We should definitely warn if opt_dynamic is set, but if it
 			// isn't, maybe this should only show up in -debug?
-			fprintf( stderr, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
+			print_error(MODE_ERROR, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
 		} else {
 		    nvmlReturn_t r = nvmlInit();
 			if( r != NVML_SUCCESS ) {
@@ -556,7 +556,7 @@ main( int argc, const char** argv)
 			// NVML and CUDA UUIDs differ in this prefix.
 			std::string UUID = "GPU-" + bp.uuid;
 			cudaDevices.insert( UUID );
-fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
+			// fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
 		}
 
 		if( nvml_handle ) {
@@ -575,7 +575,7 @@ fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
 				parentUUID = parentUUID.substr( 8 );
 				parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
 				migDevices.insert(parentUUID);
-fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
+				// fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
 			}
 		}
 	}
@@ -602,7 +602,7 @@ fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUI
 		if((! opt_opencl) && nvml_handle) {
 			const std::string & UUID = enumeratedDevices[dev].uuid;
 			if( migDevices.find( UUID ) != migDevices.end() ) {
-fprintf( stderr, "[CUDA dev_props] Skipping %s.\n", UUID.c_str() );
+				// fprintf( stderr, "[CUDA dev_props] Skipping %s.\n", UUID.c_str() );
 				continue;
 			}
 		}
@@ -611,7 +611,7 @@ fprintf( stderr, "[CUDA dev_props] Skipping %s.\n", UUID.c_str() );
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
 
-fprintf( stderr, "[CUDA dev_props] Adding CUDA device %s\n", gpuID.c_str() );
+		// fprintf( stderr, "[CUDA dev_props] Adding CUDA device %s\n", gpuID.c_str() );
 
 		if(! opt_basic) { continue; }
 
@@ -683,12 +683,12 @@ fprintf( stderr, "[CUDA dev_props] Adding CUDA device %s\n", gpuID.c_str() );
 	//
 	for( const BasicProps & bp : nvmlDevices ) {
 		if( migDevices.find( bp.uuid ) != migDevices.end() ) {
-fprintf( stderr, "[nvml dev_props] Skipping MIG device parent %s.\n", bp.uuid.c_str() );
+			// fprintf( stderr, "[nvml dev_props] Skipping MIG device parent %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
 		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
-fprintf( stderr, "[nvml dev_props] Skipping CUDA device %s.\n", bp.uuid.c_str() );
+			// fprintf( stderr, "[nvml dev_props] Skipping CUDA device %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
@@ -697,7 +697,7 @@ fprintf( stderr, "[nvml dev_props] Skipping CUDA device %s.\n", bp.uuid.c_str() 
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
 
-fprintf( stderr, "[nvml dev_props] Adding NVML device %s\n", gpuID.c_str() );
+		// fprintf( stderr, "[nvml dev_props] Adding NVML device %s\n", gpuID.c_str() );
 
 		if(! opt_basic) { continue; }
 
@@ -809,7 +809,7 @@ fprintf( stderr, "[nvml dev_props] Adding NVML device %s\n", gpuID.c_str() );
 
 		const std::string & UUID = enumeratedDevices[dev].uuid;
 		if( migDevices.find( UUID ) != migDevices.end() ) {
-fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", UUID.c_str() );
+			// fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", UUID.c_str() );
 			continue;
 		}
 
@@ -824,13 +824,13 @@ fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", U
 	// Dynamic properties for NVML devices
 	for( auto bp : nvmlDevices ) {
 		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
-fprintf( stderr, "[dynamic NVML properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
+			// fprintf( stderr, "[dynamic NVML properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
 		nvmlDevice_t device;
 		if(NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
-fprintf( stderr, "[dynamic NVML properties] Skipping NVML device %s because I can't find its handle.\n", bp.uuid.c_str() );
+			// fprintf( stderr, "[dynamic NVML properties] Skipping NVML device %s because I can't find its handle.\n", bp.uuid.c_str() );
 			continue;
 		}
 
