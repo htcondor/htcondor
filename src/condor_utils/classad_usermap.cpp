@@ -109,7 +109,7 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 
 		mf = new MapFile();
 		ASSERT(mf);
-		int rval = mf->ParseCanonicalizationFile(filename, true);
+		int rval = mf->ParseCanonicalizationFile(filename, true, true);
 		if (rval < 0) {
 			dprintf(D_ALWAYS, "PARSE ERROR %d in classad userMap '%s' from file %s\n", rval, mapname, filename);
 			delete mf;
@@ -127,7 +127,7 @@ int add_user_mapping(const char * mapname, char * mapdata)
 {
 	MapFile * mf = new MapFile();
 	MyStringCharSource src(mapdata, false);
-	int rval = mf->ParseCanonicalization(src, mapname, true);
+	int rval = mf->ParseCanonicalization(src, mapname, true, true);
 	if (rval < 0) {
 		dprintf(D_ALWAYS, "PARSE ERROR %d in classad userMap '%s' from knob\n", rval, mapname);
 	} else {

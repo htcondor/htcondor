@@ -575,9 +575,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			// this is both slower, and less secure, so it is now possible to opt in to a syntax where
 			// keys are assumed to be literals (i.e. hashable keys) unless the start and end with /
 			bool assume_hash = param_boolean("CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS", false);
+			const bool allow_include = true;
 
 			int line;
-			if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile.ptr(), assume_hash))) {
+			if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile.ptr(), assume_hash, allow_include))) {
 				dprintf(D_SECURITY, "ZKM: Error parsing %s at line %d", credential_mapfile.ptr(), line);
 				delete global_map_file;
 				global_map_file = NULL;
