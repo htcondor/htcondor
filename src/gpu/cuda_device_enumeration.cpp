@@ -20,6 +20,33 @@
 #define DEFINE_GPU_FUNCTION_POINTERS
 #include "cuda_device_enumeration.h"
 
+#include "print_error.h"
+
+static char printable_digit(unsigned char n) { return (n >= ' ' && n <= '~') ? n : '.'; }
+
+void hex_dump(FILE* out, const unsigned char * buf, size_t cb, int offset)
+{
+	char line[6 + 16 * 3 + 2 + 16 + 2 + 2];
+	for (size_t lx = 0; lx < cb && lx < 0xFFFF; lx += 16) {
+		memset(line, ' ', sizeof(line));
+		line[sizeof(line) - 1] = 0;
+		sprintf(line, "%04X:", (int)lx);
+		char * pb = line + 5;
+		*pb++ = ' ';
+		char * pa = pb + 16 * 3 + 2;
+		for (size_t ix = 0; ix < 16; ++ix) {
+			if (lx + ix >= cb) break;
+			unsigned char ch = buf[lx + ix];
+			*pa++ = printable_digit(ch);
+			*pb++ = hex_digit((ch >> 4) & 0xF);
+			*pb++ = hex_digit(ch & 0xF);
+			*pb++ = ' ';
+		}
+		fprintf(out, "%s\n", line);
+		if ((int)lx > offset && (int)lx <= offset+16) fprintf(out, "strings: %04X\n", offset);
+	}
+}
+
 bool
 enumerateCUDADevices( std::vector< BasicProps > & devices ) {
 	int deviceCount = 0;
@@ -83,6 +110,7 @@ CUDACALL cu_cudaRuntimeGetVersion( int * pver ) {
 	int bitness = KEY_WOW64_64KEY; //KEY_WOW64_32KEY; KEY_WOW64_64KEY
 	int res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, reg_key, 0, KEY_READ | bitness, &hkey);
 	if (res != ERROR_SUCCESS) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: cuInit found no CUDA-capable devices. code=%d\n", ret);
 		return ret;
 	}
 	char version[100];
@@ -134,6 +162,10 @@ cudaError_t CUDACALL cuda9_getBasicProps(int devID, BasicProps * p) {
 		return err;
 
 	const int ints_offset = 256;
+	if( g_diagnostic ) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: cudaDviceProperties 9 buffer:\n");
+		hex_dump(stdout, &buf.props[0], sizeof(buf), ints_offset);
+	}
 	cudaDevicePropStrings * dps = (cudaDevicePropStrings *)(&buf);
 	cudaDevicePropInts * dpi = (cudaDevicePropInts *)(&buf.props[ints_offset]);
 
@@ -149,6 +181,10 @@ cudaError_t CUDACALL cuda10_getBasicProps(int devID, BasicProps * p) {
 
 	// skip over the integers, and align on a size_t boundary
 	const int ints_offset = (sizeof(cudaDevicePropStrings) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1);
+	if( g_diagnostic ) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: cudaDviceProperties 10 buffer:\n");
+		hex_dump(stdout, &buf.props[0], sizeof(buf), ints_offset);
+	}
 	cudaDevicePropStrings * dps = (cudaDevicePropStrings *)(&buf);
 	cudaDevicePropInts * dpi = (cudaDevicePropInts *)(&buf.props[ints_offset]);
 	p->setUUIDFromBuffer(dps->uuid);
@@ -159,6 +195,13 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 	cudev dev;
 	cudaError_t res = cuDeviceGet(&dev, devID);
 	if (cudaSuccess == res) {
+		if( g_diagnostic ) {
+			print_error(MODE_DIAGNOSTIC_MSG, "# querying ordinal:%d, dev:%p using cuDevice* API\n", devID, dev);
+			size_t mem = 0;
+			cudaError_t er = cuDeviceTotalMem(&mem, (cudev)(size_t)devID);
+			print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
+		}
+
 		// for some reason PowerPC was having trouble with a stack buffer for cuGetDeviceName
 		// so we switch to malloc and a larger buffer, and we overdo the null termination.
 		char * name = (char*)malloc(1028);
@@ -174,7 +217,8 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		}
 		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
 		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
-		cuDeviceTotalMem(&p->totalGlobalMem, dev);
+		cudaError_t r = cuDeviceTotalMem(&p->totalGlobalMem, dev);
+		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%p) returns %d, value = %llu\n", dev, r, (unsigned long long)p->totalGlobalMem);
 		cuDeviceGetAttribute(&p->clockRate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, dev);
 		cuDeviceGetAttribute(&p->multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
 		cuDeviceGetAttribute(&p->ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, dev);
@@ -192,8 +236,10 @@ loadNVMLLibrary() {
 	const char * nvml_library = "nvml.dll";
 	dlopen_return_t nvml_handle = dlopen( nvml_library, RTLD_LAZY );
 	if(! nvml_handle) {
-		fprintf( stderr, "Unable to load %s.\n", nvml_library );
+		print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", nvml_library, dlerror());
 	}
+
+	dlerror(); // reset error
 	return nvml_handle;
 }
 #else  /* defined(WIN32) */
@@ -202,10 +248,15 @@ loadNVMLLibrary() {
 	const char * nvml_library = "libnvidia-ml.so.1";
 	dlopen_return_t nvml_handle = dlopen( nvml_library, RTLD_LAZY );
 	if(! nvml_handle) {
+		print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", nvml_library, dlerror());
+		dlerror(); // reset error
+
 		const char * nvml_fallback_library = "libnvidia-ml.so";
 		nvml_handle = dlopen( nvml_fallback_library, RTLD_LAZY );
-		fprintf( stderr, "Unable to load %s or %s.\n", nvml_library, nvml_fallback_library );
+		print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", nvml_fallback_library, dlerror());
 	}
+
+	dlerror(); // reset error
 	return nvml_handle;
 }
 #endif /* defined(WIN32) */
@@ -287,9 +338,16 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 #endif
 
 	dlopen_return_t cuda_handle = dlopen( cuda_library, RTLD_LAZY );
+	if(! cuda_handle) { print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", cuda_library, dlerror()); }
+	dlerror(); // reset error
+
 	dlopen_return_t cudart_handle = dlopen( cudart_library, RTLD_LAZY );
+	if(! cudart_handle) { print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", cudart_library, dlerror()); }
+	dlerror(); // reset error
 
 	if( cuda_handle && ! force_cudart ) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: using nvcuda for gpu discovery\n");
+
 		cuInit =
 			(cu_uint_t)dlsym( cuda_handle, "cuInit" );
 
@@ -324,6 +382,8 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 		findNVMLDeviceHandle = nvml_findNVMLDeviceHandle;
 		return cuda_handle;
 	} else if( cudart_handle && ! force_nvcuda ) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: using cudart for gpu discovery\n");
+
 		cuDeviceGetCount =
 			(cuda_t)dlsym( cudart_handle, "cudaGetDeviceCount" );
 		cudaDriverGetVersion =

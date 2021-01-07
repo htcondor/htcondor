@@ -49,31 +49,6 @@
 
 #include "print_error.h"
 
-static char printable_digit(unsigned char n) { return (n >= ' ' && n <= '~') ? n : '.'; }
-
-void hex_dump(FILE* out, const unsigned char * buf, size_t cb, int offset)
-{
-	char line[6 + 16 * 3 + 2 + 16 + 2 + 2];
-	for (size_t lx = 0; lx < cb && lx < 0xFFFF; lx += 16) {
-		memset(line, ' ', sizeof(line));
-		line[sizeof(line) - 1] = 0;
-		sprintf(line, "%04X:", (int)lx);
-		char * pb = line + 5;
-		*pb++ = ' ';
-		char * pa = pb + 16 * 3 + 2;
-		for (size_t ix = 0; ix < 16; ++ix) {
-			if (lx + ix >= cb) break;
-			unsigned char ch = buf[lx + ix];
-			*pa++ = printable_digit(ch);
-			*pb++ = hex_digit((ch >> 4) & 0xF);
-			*pb++ = hex_digit(ch & 0xF);
-			*pb++ = ' ';
-		}
-		fprintf(out, "%s\n", line);
-		if ((int)lx > offset && (int)lx <= offset+16) fprintf(out, "strings: %04X\n", offset);
-	}
-}
-
 // Function taken from helper_cuda.h in the CUDA SDK
 // https://github.com/NVIDIA/cuda-samples/blob/master/Common/helper_cuda.h
 int ConvertSMVer2Cores(int major, int minor)
@@ -215,58 +190,6 @@ is_dash_arg_colon_prefix(const char * parg, const char * pval, const char ** ppc
 	return is_arg_colon_prefix(parg, pval, ppcolon, must_match_length);
 }
 #endif // MATCH_PREFIX
-
-int g_verbose = 0;
-int g_diagnostic = 0;
-int g_config_syntax = 0;
-int g_config_fail_on_error = 0;
-
-int print_error(int mode, const char * fmt, ...) {
-	char temp[4096];
-	char * ptmp = temp;
-	int max_temp = (int)(sizeof(temp)/sizeof(temp[0]));
-
-	FILE * out = g_config_syntax ? stdout : stderr;
-	bool is_error = true;
-	switch (mode) {
-	case MODE_VERBOSE:
-		if (! g_verbose) return 0;
-		is_error = false;
-		out = stdout;
-		break;
-	case MODE_DIAGNOSTIC_MSG:
-		out = stdout;
-		is_error = false;
-		// fall through
-	case MODE_DIAGNOSTIC_ERR:
-		if (! g_diagnostic) return 0;
-		break;
-	}
-
-	// if config syntax is desired, turn error messages into comments
-	// unless g_config_fail_on_error is set.
-	if (g_config_syntax && ( !is_error || ! g_config_fail_on_error)) {
-		*ptmp++ = '#';
-		--max_temp;
-	}
-
-	va_list args;
-	va_start(args, fmt);
-	int cch = vsnprintf(ptmp, max_temp, fmt, args);
-	va_end (args);
-
-	if (cch < 0 || cch >= max_temp) {
-		// TJ: I don't think its possible to get where when g_config_syntax is on
-		// because all known inputs will be < 4k in size.
-		// but if we do, just suppress this error message
-		if (! g_config_syntax) {
-			fprintf(stderr, "internal error, %d is not enough space to format, value will be truncated.\n", max_temp);
-		}
-		temp[max_temp-1] = 0;
-	}
-
-	return fputs(temp, out);
-}
 
 void usage(FILE* output, const char* argv0);
 
@@ -551,8 +474,14 @@ main( int argc, const char** argv)
 	} else {
 		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart );
 		if( cuda_handle && !opt_cudart ) {
-			if( cuInit(0) != CUDA_SUCCESS ) {
-				fprintf( stderr, "cuInit(0) failed, aborting.\n" );
+			CUresult r = cuInit(0);
+			if( r != CUDA_SUCCESS ) {
+				if( r == CUDA_ERROR_NO_DEVICE ) {
+					print_error(MODE_DIAGNOSTIC_MSG, "diag: cuInit found no CUDA-capable devices. code=%d\n", r);
+				} else {
+					print_error(MODE_ERROR, "Error: cuInit returned %d\n", r);
+				}
+
 				dlclose( cuda_handle );
 				cuda_handle = NULL;
 			}
@@ -564,8 +493,9 @@ main( int argc, const char** argv)
 			// isn't, maybe this should only show up in -debug?
 			fprintf( stderr, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
 		} else {
-			if( nvmlInit() != NVML_SUCCESS ) {
-				fprintf( stderr, "nvmlInit() failed; will not discover dynamic properties or MIG instances.\n" );
+		    nvmlReturn_t r = nvmlInit();
+			if( r != NVML_SUCCESS ) {
+			    print_error(MODE_ERROR, "Warning: nvmlInit() failed with error %d; will not discover dynamic properties or MIG instances.\n", r );
 				dlclose( nvml_handle );
 				nvml_handle = NULL;
 			}

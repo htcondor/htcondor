@@ -2,6 +2,9 @@
 #define   _PRINT_ERROR_H
 
 extern int g_verbose;
+extern int g_diagnostic;
+extern int g_config_syntax;
+extern int g_config_fail_on_error;
 
 #define MODE_ERROR          1
 #define MODE_VERBOSE        2

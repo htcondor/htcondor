@@ -229,8 +229,10 @@ loadOpenCLLibrary() {
 
 	dlopen_return_t opencl_handle = dlopen( opencl_library, RTLD_LAZY );
 	if(! opencl_handle) {
-		fprintf( stderr, "Unable to load %s.\n", opencl_library );
+		print_error(MODE_DIAGNOSTIC_MSG, "Can't open library '%s': '%s'\n", opencl_library, dlerror());
 	}
+
+	dlerror(); // reset error
 	return opencl_handle;
 }
 
