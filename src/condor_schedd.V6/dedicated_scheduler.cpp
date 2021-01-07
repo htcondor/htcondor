@@ -1537,7 +1537,7 @@ DedicatedScheduler::handleDedicatedJobs( void )
 
 		// Preempt any machines we selected in computeSchedule
 	if( ! preemptResources() ) {
-		dprintf( D_ALWAYS, "ERROR: Can't preempt resources"
+		dprintf( D_ALWAYS, "ERROR: Can't preempt resources, "
 				 "aborting handleDedicatedJobs\n" );
 		return FALSE;
 	}

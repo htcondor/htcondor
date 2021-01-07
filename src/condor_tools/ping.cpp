@@ -71,7 +71,7 @@ void process_err_stack(CondorError *errstack) {
 }
 
 
-void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
 	if(!rv) {
@@ -79,7 +79,7 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 		return;
 	}
 
-	printf("%s using (", name.Value());
+	printf("%s command using (", name.Value());
 
 	ad->LookupString("encryption", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
@@ -122,12 +122,12 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 
 	ad->LookupString("myremoteusername", val);
 	printf("%s", val.c_str());
-
+	printf(" to %s.", dname);
 	printf ("\n");
 }
 
 
-void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+void print_useful_info_2(bool rv, char* dname, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
 	std::string  val;
 
 	if(!rv) {
@@ -137,6 +137,7 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 		return;
 	}
 
+	printf("Destination:                 %s\n", dname);
 	ad->LookupString("remoteversion", val);
 	printf("Remote Version:              %s\n", val.c_str());
 	val = CondorVersion();
@@ -195,7 +196,7 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 }
 
 
-void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_10(bool rv, char*, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
 	printf("%20s", name.Value());
@@ -244,7 +245,7 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 }
 
 
-void print_info(bool rv, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
+void print_info(bool rv, char* dname, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
 	MyString cmd_map_ent;
         const std::string &tag = SecMan::getTag();
 	if (tag.size()) {
@@ -280,11 +281,11 @@ void print_info(bool rv, const char * addr, Sock* s, MyString name, int cmd, Cla
 	if (output_mode == 0) {
 		// print nothing!!
 	} else if (output_mode == 1) {
-		print_useful_info_1(rv, name, s, policy, authz_ad, errstack);
+		print_useful_info_1(rv, dname, name, s, policy, authz_ad, errstack);
 	} else if (output_mode == 2) {
-		print_useful_info_2(rv, cmd, name, s, policy, authz_ad, errstack);
+		print_useful_info_2(rv, dname, cmd, name, s, policy, authz_ad, errstack);
 	} else if (output_mode == 10) {
-		print_useful_info_10(rv, name, s, policy, authz_ad, errstack);
+		print_useful_info_10(rv, dname, name, s, policy, authz_ad, errstack);
 	}
 }
 
@@ -341,7 +342,9 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 				fn_success = true;
 			}
 		}
-		print_info(fn_success, sock->get_connect_addr(), sock, name, num, &authz_ad, &errstack, output_mode);
+		char* dname = const_cast<char*>(d->idStr());
+		print_info(fn_success, dname, sock->get_connect_addr(), sock, name, num, &authz_ad, &errstack, output_mode);
+		free(dname);
 	} else {
 		// we know that d->addr() is not null because we checked before
 		// calling do_item.  but i'll be paranoid and check again.
@@ -499,10 +502,10 @@ int main( int argc, char *argv[] )
 
 	// use some default
 	if(worklist_name.size() == 0) {
-		if(output_mode) {
-			fprintf( stderr, "WARNING: Missing <authz-level | command-name | command-int> argument, defaulting to DC_NOP\n");
+		if(output_mode > 1) {
+			fprintf( stderr, "WARNING: Missing <authz-level | command-name | command-int> argument, defaulting to WRITE.\n");
 		}
-		worklist_name.push_back("DC_NOP");
+		worklist_name.push_back("WRITE");
 	}
 
 
@@ -527,7 +530,10 @@ int main( int argc, char *argv[] )
 	// LETS GET TO WORK!
 	//
 
-	if(dtype == DT_NONE) {
+	if(dtype == DT_NONE && !address) {
+		if(output_mode > 1) {
+			fprintf( stderr, "WARNING: Missing daemon argument, defaulting to SCHEDD.\n");
+		}
 		dtype = DT_SCHEDD;
 	}
 

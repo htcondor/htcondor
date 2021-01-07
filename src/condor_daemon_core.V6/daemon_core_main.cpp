@@ -2509,7 +2509,9 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 		std::string key_name;
 		auto map_file = Authentication::getGlobalMapFile();
 		std::string identity;
-		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, static_cast<Sock*>(stream)->getUniqueId(), err))
+		std::string jti;
+		std::vector<std::string> groups, scopes;
+		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, groups, scopes, jti, static_cast<Sock*>(stream)->getUniqueId(), err))
 		{
 			error_code = err.code();
 			error_string = err.getFullText();

@@ -138,7 +138,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	rsock->end_of_message();
 
 	if (reqad.LookupBool(ATTR_TREQ_HAS_CONSTRAINT, has_constraint) == 0) {
-		dprintf(D_ALWAYS, "requestSandBoxLocation(): Client reqad from %s"
+		dprintf(D_ALWAYS, "requestSandBoxLocation(): Client reqad from %s "
 			"must have %s as an attribute.\n", fquser.Value(), 
 			ATTR_TREQ_HAS_CONSTRAINT);
 

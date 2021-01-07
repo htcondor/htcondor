@@ -642,17 +642,16 @@ StringList * getDaemonList(char const *param_name,char const *fqh)
     return expanded_names;
 }
 
-char * Condor_Auth_X509::get_server_info()
+bool Condor_Auth_X509::get_server_info(std::string &name, std::string &cred)
 {
     OM_uint32	major_status = 0;
     OM_uint32	minor_status = 0;            
     OM_uint32   lifetime, flags;
     gss_OID     mech, name_type;
     gss_buffer_desc name_buf;
-    char *      server = NULL;
 
     if ( !m_globusActivated ) {
-        return NULL;
+        return false;
     }
 
     // Now, we do some authorization work 
@@ -667,7 +666,7 @@ char * Condor_Auth_X509::get_server_info()
                                        NULL);
     if (major_status != GSS_S_COMPLETE) {
         dprintf(D_SECURITY, "Unable to obtain target principal name\n");
-        return NULL;
+        return false;
     }
 
 	major_status = (*gss_display_name_ptr)(&minor_status,
@@ -676,15 +675,31 @@ char * Condor_Auth_X509::get_server_info()
 									&name_type);
 	if( major_status != GSS_S_COMPLETE) {
 		dprintf(D_SECURITY, "Unable to convert target principal name\n");
-		return NULL;
+		return false;
 	}
-
-	server = new char[name_buf.length+1];
-	memset(server, 0, name_buf.length+1);
-	memcpy(server, name_buf.value, name_buf.length);
+	name = std::string(static_cast<char*>(name_buf.value), name_buf.length);
 	(*gss_release_buffer_ptr)( &minor_status, &name_buf );
 
-    return server;
+	globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
+	X509 *cert_raw = NULL;
+	auto ret = (*globus_gsi_cred_get_cert_ptr)(peer_cred, &cert_raw);
+	if (ret != GLOBUS_SUCCESS) {
+		return false;
+	}
+	std::unique_ptr<X509, decltype(&X509_free)> cert(cert_raw, X509_free);
+
+	std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new( BIO_s_mem() ), BIO_free);
+
+	if (!PEM_write_bio_X509(bio.get(), cert.get())) {
+		return false;
+	}
+	char *pem_raw;
+	auto len = BIO_get_mem_data(bio.get(), &pem_raw);
+	if (len) {
+		cred = std::string(pem_raw, len);
+	}
+
+	return true;
 }   
 
 int Condor_Auth_X509::authenticate_self_gss(CondorError* errstack)
@@ -864,10 +879,18 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
             goto clear; 
         }
 
-        char * server = get_server_info();
+		std::string server, cred;
+		if (!get_server_info(server, cred)) {
+			errstack->push("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Authentication to remote server appeared to succeed but we were unable"
+				" to extract the remote side's name");
+			dprintf(D_SECURITY, "Failed to extract a DN or hostcert from the remote server connection");
+			status = 0;
+			goto clear;
+		}
 
 		// store the raw subject name for later mapping
-		setAuthenticatedName(server);
+		setAuthenticatedName(server.c_str());
 
 		// Default to user name "gsi@unmapped".
 		// Later on, if configured, we will invoke the callout in nameGssToLocal.
@@ -898,15 +921,15 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         // anycase here, so if the host name and what we are looking for
         // are in different cases, then we will run into problems.
 		if( daemonNames ) {
-			status = daemonNames->contains_withwildcard(server) == TRUE? 1 : 0;
+			status = daemonNames->contains_withwildcard(server.c_str()) == TRUE? 1 : 0;
 
 			if( !status ) {
 				errstack->pushf("GSI", GSI_ERR_UNAUTHORIZED_SERVER,
 								"Failed to authenticate because the subject '%s' is not currently trusted by you.  "
-								"If it should be, add it to GSI_DAEMON_NAME or undefine GSI_DAEMON_NAME.", server);
+								"If it should be, add it to GSI_DAEMON_NAME or undefine GSI_DAEMON_NAME.", server.c_str());
 				dprintf(D_SECURITY,
 						"GSI_DAEMON_NAME is defined and the server %s is not specified in the GSI_DAEMON_NAME parameter\n",
-						server);
+						server.c_str());
 			}
 		}
 		else {
@@ -914,7 +937,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		}
 
         if (status) {
-            dprintf(D_SECURITY, "valid GSS connection established to %s\n", server);            
+            dprintf(D_SECURITY, "valid GSS connection established to %s\n", server.c_str());
         }
 
         mySock_->encode();
@@ -925,7 +948,12 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
             status = 0;
         }
 
-        delete [] server;
+		if (!cred.empty()) {
+			classad::ClassAd ad;
+			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, cred);
+			mySock_->setPolicyAd(ad);
+		}
+
         delete daemonNames;
     }
  clear:
@@ -1168,7 +1196,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			&time_req,
 			NULL);
 
-		dprintf(D_NETWORK, "gss_assist_accept_sec_context(2)"
+		dprintf(D_NETWORK, "gss_assist_accept_sec_context(2):"
 			"maj:%8.8x:min:%8.8x:ret:%8.8x "
 			"outlen:%lu:context:%p\n",
 			(unsigned int) major_status,

@@ -33,7 +33,7 @@
 #include "jic_local_schedd.h"
 #include "condor_version.h"
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 
 JICLocalSchedd::JICLocalSchedd( const char* classad_filename,

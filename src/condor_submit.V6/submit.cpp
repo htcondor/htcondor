@@ -2534,6 +2534,7 @@ usage()
 #if !defined(WIN32)
 	fprintf( stderr, "\t-interactive\t\tsubmit an interactive session job\n" );
 #endif
+	fprintf( stderr, "\t-factory\t\tSubmit a late materialization job factory\n");
 	fprintf( stderr, "\t-name <name>\t\tsubmit to the specified schedd\n" );
 	fprintf( stderr, "\t-remote <name>\t\tsubmit to the specified remote schedd\n"
 					 "\t              \t\t(implies -spool)\n" );
@@ -2840,8 +2841,11 @@ int process_job_credentials()
 				// just send the command anyway, after checking
 				// to make sure older CredDs won't completely
 				// choke on the new protocol.
-				CondorVersionInfo cvi(my_credd.version());
-				bool new_credd = cvi.built_since_version(8, 9, 7);
+				bool new_credd = true; // assume new credd
+				if (my_credd.version()) {
+					CondorVersionInfo cvi(my_credd.version());
+					new_credd = (cvi.getMajorVer() <= 0) || cvi.built_since_version(8, 9, 7);
+				}
 				if (new_credd) {
 					const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
 					const char * err = NULL;
@@ -2854,7 +2858,7 @@ int process_job_credentials()
 					}
 				} else {
 					fprintf( stderr, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
-							"  Credd version: %s", cvi.get_version_string());
+							"  Credd version: %s", my_credd.version());
 					exit(1);
 				}
 			} else {

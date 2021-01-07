@@ -421,8 +421,13 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     ``SHADOW_SIZE_ESTIMATE`` :index:`SHADOW_SIZE_ESTIMATE` is
     used.
 
+:macro-def:`DISK`
+    Tells HTCondor how much disk space (in kB) to advertise as being available
+    for use by jobs. If ``DISK`` is not specified, HTCondor will advertise the
+    amount of free space on your execute partition, minus ``RESERVED_DISK``.
+
 :macro-def:`RESERVED_DISK`
-    Determines how much disk space you want to reserve for your own
+    Determines how much disk space (in kB) you want to reserve for your own
     machine. When HTCondor is reporting the amount of free disk space in
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor_startd*, which advertises the
@@ -4923,6 +4928,16 @@ These macros control the *condor_schedd*.
     into sets of 2 *condor_collector* daemons, and each set will be
     considered for flocking.
 
+:macro-def:`MIN_FLOCK_LEVEL`
+    This integer value specifies a number of remote pools that the
+    *condor_schedd* should always flock to.
+    It defaults to 0, meaning that none of the pools listed in
+    ``FLOCK_COLLECTOR_HOSTS`` will be considered for flocking when
+    there are no idle jobs in need of match-making.
+    Setting a larger value N means the *condor_schedd* will always
+    flock to (i.e. look for matches in) the first N pools listed in
+    ``FLOCK_COLLECTOR_HOSTS``.
+
 :macro-def:`NEGOTIATE_ALL_JOBS_IN_CLUSTER`
     If this macro is set to False (the default), when the
     *condor_schedd* fails to start an idle job, it will not try to
@@ -6635,10 +6650,30 @@ These macros affect the *condor_collector*.
     third of ``CLASSAD_LIFETIME``.
 
 :macro-def:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`
-    When this boolean variable is set to ``True``, the *condor_collector*
+    When this boolean variable is set to ``False``, the *condor_collector*
     will not forward the private portion of Machine ads to the
     ``CONDOR_VIEW_HOST`` if the ad's ``State`` is ``Claimed``.
     The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
+
+:macro-def:`COLLECTOR_FORWARD_PROJECTION`
+    An expresion that evaluates to a string in the context of an update. The string is treated as a list
+    of attributes to forward.  If the string has no attributes, it is ignored. The intended use is to
+    restrict the list of attributes forwarded for claimed Machine ads.
+    When ``$(NEGOTIATOR_CONSIDER_PREEMPTION)`` is false, the negotiator needs only a few attributes from
+    Machine ads that are in the ``Claimed`` state. A Suggested use might be
+
+    .. code-block:: condor-config
+
+          if ! $(NEGOTIATOR_CONSIDER_PREEMPTION)
+             COLLECTOR_FORWARD_PROJECTION = IfThenElse(State is "Claimed", "$(FORWARD_CLAIMED_ATTRS)", "")
+             # forward only the few attributes needed by the Negotiator and a few more needed by condor_status
+             FORWARD_CLAIMED_ATTRS = Name MyType MyAddress StartdIpAddr Machine Requirements \
+                State Activity AccountingGroup Owner RemoteUser SlotWeight ConcurrencyLimits \
+                Arch OpSys Memory Cpus CondorLoadAvg EnteredCurrentActivity
+          endif
+
+    There is no default value for this variable.
+
 
 The following macros control where, when, and for how long HTCondor
 persistently stores absent ClassAds. See
@@ -10633,23 +10668,29 @@ general discussion of *condor_defrag* may be found in
     value of its ``START`` expression at the time draining begins).
 
 :macro-def:`DEFRAG_REQUIREMENTS`
-    An expression that specifies which machines to drain. The default is
-
-    .. code-block:: condor-classad-expr
-
-          PartitionableSlot && Offline=!=True
-
+    An expression that narrows the selection of which machines to drain.
+    By default *condor_defrag* will drain all machines that are drainable.
     A machine, meaning a *condor_startd*, is matched if any of its
-    slots match this expression. Machines are automatically excluded if
-    they are already draining, or if they match
+    partitionable slots match this expression. Machines are automatically excluded if
+    they cannot be drained, are already draining, or if they match
     ``DEFRAG_WHOLE_MACHINE_EXPR``
     :index:`DEFRAG_WHOLE_MACHINE_EXPR`.
 
+    The *condor_defrag* daemon will always add the following requirements to ``DEFRAG_REQUIREMENTS``
+
+    .. code-block:: condor-classad-expr
+
+          PartitionableSlot && Offline =!= true && Draining =!= true
+
 :macro-def:`DEFRAG_CANCEL_REQUIREMENTS`
-    An expression that specifies which draining machines should have
-    draining be canceled. This defaults to
+    An expression that is periodically evaluated against machines that are draining.
+    When this expression evaluates to ``True``, draining will be cancelled.
+    This defaults to 
     ``$(DEFRAG_WHOLE_MACHINE_EXPR)``\ :index:`DEFRAG_WHOLE_MACHINE_EXPR`.
     This could be used to drain partial rather than whole machines.
+    Beginning with version 8.9.11, only machines that have no ``DrainReason``
+    or a value of ``"Defrag"`` for ``DrainReason``
+    will be checked to see if draining should be cancelled.
 
 :macro-def:`DEFRAG_RANK`
     An expression that specifies which machines are more desirable to
@@ -10666,10 +10707,11 @@ general discussion of *condor_defrag* may be found in
 
     .. code-block:: condor-classad-expr
 
-          Cpus == TotalCpus && Offline=!=True
+          Cpus == TotalSlotCpus
 
-    A machine is matched if any slot on the machine matches this
-    expression. Each *condor_startd* is considered to be one machine.
+    A machine is matched if any Partitionable slot on the machine matches this
+    expression and the machine is not draining or was drained by *condor_defrag*.
+    Each *condor_startd* is considered to be one machine.
     Whole machines are excluded when selecting machines to drain. They
     are also counted against ``DEFRAG_MAX_WHOLE_MACHINES``.
 

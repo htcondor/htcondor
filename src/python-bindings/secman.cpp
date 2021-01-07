@@ -286,6 +286,11 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // get_connect_addr() may return a different sinful string than was used to
         // create the socket, due to processing of things like private network interfaces.
         addr = sock->get_connect_addr();
+
+	// Get the policy stored in the socket.
+	ClassAd sock_policy;
+        sock->getPolicyAd(sock_policy);
+
         // Don't leak sock!
         delete sock;
         sock = NULL;
@@ -320,6 +325,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         if (m_tag_set) {SecMan::setTag(origTag);}
         policy = k->policy();
         authz_ad->Update(*policy);
+	authz_ad->Update(sock_policy);
 
         return authz_ad;
 }

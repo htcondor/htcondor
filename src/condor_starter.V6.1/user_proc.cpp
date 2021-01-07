@@ -29,7 +29,7 @@
 #include "stream_handler.h"
 #include "subsystem_info.h"
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
 

@@ -1558,6 +1558,19 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 24 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.10-1
+- Fix bug where negotiator stopped making matches when group quotas are used
+- Support OAuth, SciTokens, and Kerberos credentials in local universe jobs
+- The Python schedd.submit method now takes a Submit object
+- DAGMan can now optionally run a script when a job goes on hold
+- DAGMan now provides a method for inline jobs to share submit descriptions
+- Can now add arbitrary tags to condor annex instances
+- Runs the "singularity test" before running the a singularity job
+
+* Mon Nov 23 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.12-1
+- Added a family of version comparison functions to ClassAds
+- Increased default Globus proxy key length to meet current NIST guidance
+
 * Mon Oct 26 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.9-1
 - The RPM packages requires globus, munge, scitokens, and voms from EPEL
 - Improved cgroup memory policy settings that set both hard and soft limit

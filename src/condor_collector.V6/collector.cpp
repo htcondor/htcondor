@@ -34,6 +34,7 @@
 #include "condor_universe.h"
 #include "ipv6_hostname.h"
 #include "condor_threads.h"
+#include "classad_helpers.h"
 
 #include "condor_claimid_parser.h"
 #include "authentication.h"
@@ -68,6 +69,7 @@ int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName = NULL;
 Timeslice CollectorDaemon::view_sock_timeslice;
 vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
+ConstraintHolder CollectorDaemon::vc_projection;
 
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
@@ -116,6 +118,8 @@ int CollectorDaemon::pending_query_workers = 0;
 #ifdef TRACK_QUERIES_BY_SUBSYS
 bool CollectorDaemon::want_track_queries_by_subsys = false;
 #endif
+
+AdTransforms CollectorDaemon::m_forward_ad_xfm;
 
 //---------------------------------------------------------
 
@@ -1865,9 +1869,11 @@ void CollectorDaemon::Config()
 
     offline_plugin_.configure ();
 
+    vc_projection.clear();
+
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
-    for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+    for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
         delete e->collector;
         delete e->sock;
     }
@@ -1913,14 +1919,21 @@ void CollectorDaemon::Config()
 	if (viewCollectorTypes) delete viewCollectorTypes;
 	viewCollectorTypes = NULL;
 	if (!vc_list.empty()) {
-		tmp = param("CONDOR_VIEW_CLASSAD_TYPES");
+		auto_free_ptr tmp(param("CONDOR_VIEW_CLASSAD_TYPES"));
 		if (tmp) {
 			viewCollectorTypes = new StringList(tmp);
-			char *printable_string = viewCollectorTypes->print_to_string();
+			auto_free_ptr types(viewCollectorTypes->print_to_string());
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
-					printable_string?printable_string:"");
-			free(printable_string);
-			free(tmp);
+				types ? types.ptr() : "");
+		}
+
+		vc_projection.set(param("COLLECTOR_FORWARD_PROJECTION"));
+		if ( ! vc_projection.empty()) {
+			if ( ! vc_projection.Expr()) {
+				dprintf(D_ALWAYS, "ignoring COLLECTOR_FORWARD_PROJECTION, it is not a valid expression: %s\n", vc_projection.c_str());
+			} else {
+				dprintf(D_ALWAYS, "COLLECTOR_FORWARD_PROJECTION configured, will forward: %s\n", vc_projection.c_str());
+			}
 		}
 	}
 
@@ -1981,6 +1994,10 @@ void CollectorDaemon::Config()
 	}
 
 	forwardClaimedPrivateAds = param_boolean("COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS", true);
+
+	// load FORWARD_AD_TRANSFORM_NAMES and FORWARD_AD_TRANSFORM_*
+	m_forward_ad_xfm.config("FORWARD_AD");
+
 	return;
 }
 
@@ -2192,7 +2209,11 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 		return;
 	}
 
-    for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+	// Transform ad
+	//
+	m_forward_ad_xfm.transform(theAd, nullptr);
+
+    for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
         DCCollector* view_coll = e->collector;
         Sock* view_sock = e->sock;
         const char* view_name = e->name.c_str();
@@ -2252,7 +2273,20 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
         }
 
         if (theAd) {
-            if (!putClassAd(view_sock, *theAd)) {
+            // if there is a COLLECTOR_FORWARD_PROJECTION expression, evaluate it against the ad we plan to send
+            // and send only the projected attributes if the projection is non-empty
+            classad::References proj, * whitelist = nullptr;
+            classad::ExprTree * proj_expr = vc_projection.Expr(); // we already reported errors on config load
+            if (proj_expr) {
+                classad::Value val;
+                const char * proj_str = NULL;
+                if (EvalExprTree(proj_expr, theAd, NULL, val) && val.IsStringValue(proj_str)) {
+                    add_attrs_from_string_tokens(proj, proj_str);
+                }
+                if ( ! proj.empty()) { whitelist = &proj; }
+            }
+
+            if (!putClassAd(view_sock, *theAd, 0, whitelist)) {
                 dprintf( D_ALWAYS, "Can't forward classad to View Collector %s\n", view_name);
                 view_sock->end_of_message();
                 view_sock->close();

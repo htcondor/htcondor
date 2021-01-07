@@ -8,24 +8,49 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.13
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.13 not yet released.
+
+.. HTCondor version 8.8.13 released on Month Date, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where ``use feature: GPUsMonitor`` set the wrong path to the
+  GPU monitor binary on Windows.
+  :jira:`125`
+
+- Fixed a bug where the ClassAd ``usermap`` function did not work as documented.
+  When the third agument did not match an item in the mapped list, it should
+  have returned the first item in the list, but it returned undefined instead.
+  :jira:`144`
+
 Version 8.8.12
 --------------
 
 Release Notes:
 
-- HTCondor version 8.8.12 not yet released.
-
-.. HTCondor version 8.8.12 released on Month Date, 2020.
+- HTCondor version 8.8.12 released on November 23, 2020.
 
 New Features:
 
-- For compability with 8.9.9 (and eventually, the next stable series), add
-  the family of version comparison functions.
+- For compatibility with 8.9.9 (and eventually, the next stable series), add
+  the family of version comparison functions to ClassAds.
   :jira:`36`
 
 Bugs Fixed:
 
-- None.
+- Increased default Globus proxy key length to 2048 bits to align with NIST
+  recommendations as of January 2015. The larger key size is required on
+  modern Linuxes.
+  :jira:`29`
 
 Version 8.8.11
 --------------
@@ -89,6 +114,10 @@ Bugs Fixed:
   was ignored when a Condor-C job's refreshed proxy was forwarded to the
   remote *condor_schedd*.
   :ticket:`7856`
+
+- Fixed a bug where worker nodes with very large (multi petabyte) scratch
+  space could run jobs, but not reuse claims, causing lower utilization.
+  :ticket:`7857`
 
 - Attribute ``GridJobId`` is no longer removed from the job ad when the job
   enters ``Completed`` or ``Removed`` status.

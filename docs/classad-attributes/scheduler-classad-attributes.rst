@@ -12,9 +12,8 @@ Scheduler ClassAd Attributes
 
 ``CollectorHost``:
     The name of the main *condor_collector* which this *condor_schedd*
-    daemon reports to, as copied from ``COLLECTOR_HOST``
-
-:index:`COLLECTOR_HOST`. If a *condor_schedd* flocks to other
+    daemon reports to, as copied from ``COLLECTOR_HOST``. :index:`COLLECTOR_HOST`
+    If a *condor_schedd* flocks to other
     *condor_collector* daemons, this attribute still represents the
     "home" *condor_collector*, so this value can be used to discover if
     a *condor_schedd* is currently flocking.
@@ -59,7 +58,8 @@ Scheduler ClassAd Attributes
 :index:`JobQueueBirthdate<single: JobQueueBirthdate; ClassAd Scheduler attribute>`
 
 ``JobQueueBirthdate``:
-    Description is not yet written.
+    This attribute contains the Unix epoch time when the job_queue.log file which
+    stores the scheduler's database was first created.
 
 :index:`JobsAccumBadputTime<single: JobsAccumBadputTime; ClassAd Scheduler attribute>`
 
@@ -437,10 +437,9 @@ Scheduler ClassAd Attributes
 ``NumJobStartsDelayed``:
     The number times a job requiring a *condor_shadow* daemon could
     have been started, but was not started because of the values of
-    configuration variables ``JOB_START_COUNT``
+    configuration variables ``JOB_START_COUNT`` :index:`JOB_START_COUNT`
+    and ``JOB_START_DELAY`` :index:`JOB_START_DELAY`
 
-:index:`JOB_START_COUNT` and ``JOB_START_DELAY``
-:index:`JOB_START_DELAY`.
 :index:`NumPendingClaims<single: NumPendingClaims; ClassAd Scheduler attribute>`
 
 ``NumPendingClaims``:
@@ -457,7 +456,7 @@ Scheduler ClassAd Attributes
 :index:`PublicNetworkIpAddr<single: PublicNetworkIpAddr; ClassAd Scheduler attribute>`
 
 ``PublicNetworkIpAddr``:
-    Description is not yet written.
+    This is the public network address of this daemon.
 
 :index:`RecentDaemonCoreDutyCycle<single: RecentDaemonCoreDutyCycle; ClassAd Scheduler attribute>`
 
@@ -715,9 +714,8 @@ Scheduler ClassAd Attributes
     A Statistics attribute defining the maximum time in seconds over
     which attributes with names that begin with ``Recent`` are
     collected. The value is set by the configuration variable
-    ``STATISTICS_WINDOW_SECONDS``
-
-:index:`STATISTICS_WINDOW_SECONDS`, which defaults to 1200
+    ``STATISTICS_WINDOW_SECONDS`` :index:`STATISTICS_WINDOW_SECONDS`
+    , which defaults to 1200
     seconds (20 minutes). This statistic only appears in the Scheduler
     ClassAd if the level of verbosity set by the configuration variable
     ``STATISTICS_TO_PUBLISH`` is set to 2 or higher.
@@ -731,7 +729,8 @@ Scheduler ClassAd Attributes
 :index:`ServerTime<single: ServerTime; ClassAd Scheduler attribute>`
 
 ``ServerTime``:
-    Description is not yet written.
+    This is the current time, in Unix epoch seconds when the reply to
+    this query started.
 
 :index:`ShadowsReconnections<single: ShadowsReconnections; ClassAd Scheduler attribute>`
 
@@ -784,9 +783,8 @@ Scheduler ClassAd Attributes
 
 ``StartSchedulerUniverse``:
     The same boolean value as set in the configuration variable
-    ``START_SCHEDULER_UNIVERSE``
-
-:index:`START_SCHEDULER_UNIVERSE`. See the definition in
+    ``START_SCHEDULER_UNIVERSE``. :index:`START_SCHEDULER_UNIVERSE`
+    See the definition in
     the :ref:`admin-manual/configuration-macros:condor_schedd
     configuration file entries` section.
 
@@ -914,17 +912,14 @@ Each of the per-user statistics is prefixed by a user name in the form
 ``Owner_<username>_FileTransferUploadBytes``. In this case, the
 attribute represents activity by the specified user. The published user
 name is actually the file transfer queue name, as defined by
-configuration variable ``TRANSFER_QUEUE_USER_EXPR``
-
-:index:`TRANSFER_QUEUE_USER_EXPR`. This expression defaults to
+configuration variable ``TRANSFER_QUEUE_USER_EXPR``. :index:`TRANSFER_QUEUE_USER_EXPR`
+This expression defaults to
 ``Owner_`` followed by the name of the job owner. The attributes that
 are rates have a suffix that specifies the time span of the exponential
 moving average. By default the time spans that are published are 1m, 5m,
 1h, and 1d. This can be changed by configuring configuration variable
-``TRANSFER_IO_REPORT_TIMESPANS``
-
-:index:`TRANSFER_IO_REPORT_TIMESPANS`. These attributes are only
-reported once a full time span has accumulated.
+``TRANSFER_IO_REPORT_TIMESPANS``.  :index:`TRANSFER_IO_REPORT_TIMESPANS`
+These attributes are only reported once a full time span has accumulated.
 
 :index:`FileTransferDiskThrottleExcess<single: FileTransferDiskThrottleExcess; ClassAd Scheduler attribute>`
 
@@ -939,10 +934,8 @@ reported once a full time span has accumulated.
 
 ``FileTransferDiskThrottleHigh``
     The desired upper limit for the disk load from file transfers, as
-    configured by ``FILE_TRANSFER_DISK_LOAD_THROTTLE``
-
-:index:`FILE_TRANSFER_DISK_LOAD_THROTTLE`. This attribute is
-    published only if configuration variable
+    configured by ``FILE_TRANSFER_DISK_LOAD_THROTTLE``. :index:`FILE_TRANSFER_DISK_LOAD_THROTTLE`
+    This attribute is published only if configuration variable
     ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
 
 :index:`FileTransferDiskThrottleLevel<single: FileTransferDiskThrottleLevel; ClassAd Scheduler attribute>`
@@ -957,10 +950,8 @@ reported once a full time span has accumulated.
 
 ``FileTransferDiskThrottleLow``
     The lower limit for the disk load from file transfers, as configured
-    by ``FILE_TRANSFER_DISK_LOAD_THROTTLE``
-
-:index:`FILE_TRANSFER_DISK_LOAD_THROTTLE`. This attribute is
-    published only if configuration variable
+    by ``FILE_TRANSFER_DISK_LOAD_THROTTLE``. :index:`FILE_TRANSFER_DISK_LOAD_THROTTLE`
+    This attribute is published only if configuration variable
     ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
 
 :index:`FileTransferDiskThrottleShortfall<single: FileTransferDiskThrottleShortfall; ClassAd Scheduler attribute>`
@@ -976,36 +967,33 @@ reported once a full time span has accumulated.
 
 ``FileTransferDownloadBytes``
     Total number of bytes downloaded as output from jobs since this
-    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` 
+    contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferDownloadBytes``. The published user
     name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferDownloadBytesPerSecond<single: FileTransferDownloadBytesPerSecond; ClassAd Scheduler attribute>`
 
 ``FileTransferDownloadBytesPerSecond_<timespan>``
     Exponential moving average over the specified time span of the rate
     at which bytes have been downloaded as output from jobs. The time
     spans that are published are configured by
-    ``TRANSFER_IO_REPORT_TIMESPANS``
-
-:index:`TRANSFER_IO_REPORT_TIMESPANS`, which defaults to 1m,
+    ``TRANSFER_IO_REPORT_TIMESPANS`` :index:`TRANSFER_IO_REPORT_TIMESPANS`
+    , which defaults to 1m,
     5m, 1h, and 1d. When less than one full time span has accumulated,
-    the attribute is not published. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    the attribute is not published. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` 
+    contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferDownloadBytesPerSecond_<timespan>``.
     The published user name is actually the file transfer queue name, as
     defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferFileReadLoad<single: FileTransferFileReadLoad; ClassAd Scheduler attribute>`
 
 ``FileTransferFileReadLoad_<timespan>``
@@ -1014,35 +1002,30 @@ reported once a full time span has accumulated.
     from files to be transferred as input to jobs. One file transfer
     process spending nearly all of its time reading files will generate
     a load close to 1.0. The time spans that are published are
-    configured by ``TRANSFER_IO_REPORT_TIMESPANS``
-
-:index:`TRANSFER_IO_REPORT_TIMESPANS`, which defaults to 1m,
+    configured by ``TRANSFER_IO_REPORT_TIMESPANS`` :index:`TRANSFER_IO_REPORT_TIMESPANS`
+    , which defaults to 1m,
     5m, 1h, and 1d. When less than one full time span has accumulated,
-    the attribute is not published. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
-    each active user, this attribute is also published prefixed by the
+    the attribute is not published. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH`
+    contains ``TRANSFER:2``, for each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferFileReadLoad_<timespan>``. The
     published user name is actually the file transfer queue name, as
     defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferFileReadSeconds<single: FileTransferFileReadSeconds; ClassAd Scheduler attribute>`
 
 ``FileTransferFileReadSeconds``
     Total number of submit-side transfer process seconds spent reading
     from files to be transferred as input to jobs since this
-    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
-    each active user, this attribute is also published prefixed by the
+    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH`
+    contains ``TRANSFER:2``, for each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferFileReadSeconds``. The published user
     name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferFileWriteLoad<single: FileTransferFileWriteLoad; ClassAd Scheduler attribute>`
 
 ``FileTransferFileWriteLoad_<timespan>``
@@ -1051,35 +1034,32 @@ reported once a full time span has accumulated.
     to files transferred as output from jobs. One file transfer process
     spending nearly all of its time writing to files will generate a
     load close to 1.0. The time spans that are published are configured
-    by ``TRANSFER_IO_REPORT_TIMESPANS``
-
-:index:`TRANSFER_IO_REPORT_TIMESPANS`, which defaults to 1m,
+    by ``TRANSFER_IO_REPORT_TIMESPANS`` :index:`TRANSFER_IO_REPORT_TIMESPANS`
+    , which defaults to 1m,
     5m, 1h, and 1d. When less than one full time span has accumulated,
-    the attribute is not published. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    the attribute is not published. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH`
+    contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferFileWriteLoad_<timespan>``. The
     published user name is actually the file transfer queue name, as
     defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferFileWriteSeconds<single: FileTransferFileWriteSeconds; ClassAd Scheduler attribute>`
 
 ``FileTransferFileWriteSeconds``
     Total number of submit-side transfer process seconds spent writing
     to files transferred as output from jobs since this *condor_schedd*
-    was started. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    was started. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH`
+    contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferFileWriteSeconds``. The published
     user name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferFileNetReadLoad<single: FileTransferFileNetReadLoad; ClassAd Scheduler attribute>`
 
 ``FileTransferNetReadLoad_<timespan>``
@@ -1092,20 +1072,18 @@ reported once a full time span has accumulated.
     be a network bottleneck on the path between the submit and execute
     machine. It could also be caused by slow reads from the disk on the
     execute side. The time spans that are published are configured by
-    ``TRANSFER_IO_REPORT_TIMESPANS``
-
-:index:`TRANSFER_IO_REPORT_TIMESPANS`, which defaults to 1m,
+    ``TRANSFER_IO_REPORT_TIMESPANS`` :index:`TRANSFER_IO_REPORT_TIMESPANS`
+    , which defaults to 1m,
     5m, 1h, and 1d. When less than one full time span has accumulated,
-    the attribute is not published. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    the attribute is not published. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH`
+    contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferNetReadLoad_<timespan>``. The
     published user name is actually the file transfer queue name, as
     defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferNetReadSeconds<single: FileTransferNetReadSeconds; ClassAd Scheduler attribute>`
 
 ``FileTransferNetReadSeconds``
@@ -1115,16 +1093,14 @@ reported once a full time span has accumulated.
     spend a long time writing to the network could be a network
     bottleneck on the path between the submit and execute machine. It
     could also be caused by slow reads from the disk on the execute
-    side. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    side. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferNetReadSeconds``. The published user
     name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferNetWriteLoad<single: FileTransferNetWriteLoad; ClassAd Scheduler attribute>`
 
 ``FileTransferNetWriteLoad_<timespan>``
@@ -1147,7 +1123,7 @@ reported once a full time span has accumulated.
     published user name is actually the file transfer queue name, as
     defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferNetWriteSeconds<single: FileTransferNetWriteSeconds; ClassAd Scheduler attribute>`
 
 ``FileTransferNetWriteSeconds``
@@ -1158,54 +1134,44 @@ reported once a full time span has accumulated.
     bottleneck on the path between the submit and execute machine. It
     could also be caused by slow writes to the disk on the execute side.
     The time spans that are published are configured by
-    ``TRANSFER_IO_REPORT_TIMESPANS``
-
-:index:`TRANSFER_IO_REPORT_TIMESPANS`, which defaults to 1m,
+    ``TRANSFER_IO_REPORT_TIMESPANS``, :index:`TRANSFER_IO_REPORT_TIMESPANS`  which defaults to 1m,
     5m, 1h, and 1d. When less than one full time span has accumulated,
-    the attribute is not published. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    the attribute is not published. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferNetWriteSeconds``. The published user
     name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferUploadBytes<single: FileTransferUploadBytes; ClassAd Scheduler attribute>`
 
 ``FileTransferUploadBytes``
     Total number of bytes uploaded as input to jobs since this
-    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferUploadBytes``. The published user
     name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`FileTransferUploadBytesPerSecond<single: FileTransferUploadBytesPerSecond; ClassAd Scheduler attribute>`
 
 ``FileTransferUploadBytesPerSecond_<timespan>``
     Exponential moving average over the specified time span of the rate
     at which bytes have been uploaded as input to jobs. The time spans
     that are published are configured by
-    ``TRANSFER_IO_REPORT_TIMESPANS``
-
-:index:`TRANSFER_IO_REPORT_TIMESPANS`, which defaults to 1m,
+    ``TRANSFER_IO_REPORT_TIMESPANS`` :index:`TRANSFER_IO_REPORT_TIMESPANS`, which defaults to 1m,
     5m, 1h, and 1d. When less than one full time span has accumulated,
-    the attribute is not published. If ``STATISTICS_TO_PUBLISH``
-
-:index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    the attribute is not published. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
     each active user, this attribute is also published prefixed by the
     user name, with the name
     ``Owner_<username>_FileTransferUploadBytesPerSecond_<timespan>``.
     The published user name is actually the file transfer queue name, as
     defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
-:index:`TRANSFER_QUEUE_USER_EXPR`.
+:index:`TRANSFER_QUEUE_USER_EXPR`
 :index:`TransferQueueMBWaitingToDownload<single: TransferQueueMBWaitingToDownload; ClassAd Scheduler attribute>`
 
 ``TransferQueueMBWaitingToDownload``

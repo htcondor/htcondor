@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+
+import argparse
+import htcondor
+import os
+import re
+import sys
+
+from datetime import datetime
+
+
+def print_help(stream=sys.stderr):
+    help_msg = """Usage: {0} <slurm-job-id>
+
+"""
+    stream.write(help_msg.format(sys.argv[0]))
+
+
+def parse_args():
+
+    # The only arguments that are acceptable are
+    # <this> <dagman-job-id>
+    # Assume dagman-job-id could be in NNN or NNN.0 format
+
+    if len(sys.argv) != 2:
+        print_help()
+        sys.exit(-1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("id", nargs=1)
+    args = parser.parse_args()
+    
+    return {"dagman_cluster_id": args.id[0].split('.')[0]}
+
+
+# Retrieve the filenames of a DAGs output and event logs based on DAGMan cluster id
+def get_dagman_files(dagman_cluster_id):
+    
+    dag = None
+    log = None
+    out = None
+
+    schedd = htcondor.Schedd()
+    env = schedd.query(
+        constraint=f"ClusterId == {dagman_cluster_id}",
+        projection=["Env"],
+    )
+    
+    if env:
+        env = dict(item.split("=") for item in env[0]["Env"].split(";"))
+        out = env["_CONDOR_DAGMAN_LOG"]
+        log = out.replace(".dagman.out", ".nodes.log")
+        dag = out.replace(".dagman.out", "")
+
+    return dag, out, log
+
+
+def main():
+
+    # Internal variables
+    dagman_cluster_id = None
+    provisioner_cluster_id = None
+    slurm_cluster_id = None
+   
+    # User-facing variables (all values set below are default/initial state)
+    provisioner_job_started_time = None
+    provisioner_job_scheduled_end_time = None
+    slurm_job_state = "NOT SUBMITTED"
+    slurm_job_started_time = None
+    slurm_jobs_running = 0
+    slurm_nodes_requested = None
+    slurm_runtime = None
+
+    # Parse arguments and set default values if undeclared
+    try:
+        args = parse_args()
+    except Exception as err:
+        print(f"Failed to parse arguments: {err}", file=sys.stderr)
+
+    dagman_cluster_id = args['dagman_cluster_id']
+    dagman_dag, dagman_out, dagman_log = get_dagman_files(dagman_cluster_id)
+
+    if dagman_dag is None:
+        print(f"No Slurm jobs found for cluster ID {dagman_cluster_id}.")
+        sys.exit(0)
+
+    # Parse the .dag file to retrieve some user input values
+    dagman_dag_file = open(dagman_dag, "r")
+    for line in dagman_dag_file.readlines():
+        if "annex_node_count =" in line:
+            slurm_nodes_requested = line.split("=")[1].strip()
+        if "annex_runtime =" in line:
+            slurm_runtime = int(line.split("=")[1].strip())
+
+    # Parse the DAGMan event log for useful information
+    dagman_events = htcondor.JobEventLog(dagman_log)
+    for event in dagman_events.events(0):
+        if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: B":
+            provisioner_cluster_id = event.cluster
+            provisioner_job_started_time = datetime.fromtimestamp(event.timestamp)
+            provisioner_job_scheduled_end_time = datetime.fromtimestamp(event.timestamp + slurm_runtime)
+            slurm_job_state = "PROVISIONING REQUEST PENDING"
+        if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: C":
+            slurm_cluster_id = event.cluster
+            if slurm_job_started_time is None:
+                slurm_job_started_time = datetime.fromtimestamp(event.timestamp)
+        if event.cluster == slurm_cluster_id and event.type == htcondor.JobEventType.EXECUTE:
+            slurm_job_state = "RUNNING"
+            slurm_jobs_running += 1
+        if event.cluster == slurm_cluster_id and event.type == htcondor.JobEventType.JOB_TERMINATED:
+            slurm_jobs_running -= 1
+            if slurm_jobs_running == 0:
+                slurm_job_state = "COMPLETE"
+        if event.type == htcondor.JobEventType.JOB_HELD or event.type == htcondor.JobEventType.EXECUTABLE_ERROR:
+            slrum_job_state = "ERROR"
+
+    # Now that we have all the information we want, display it
+    print(f"The status of Slurm job {dagman_cluster_id}.0 is:")
+    print(f"Job is {slurm_job_state}", end='')
+    if slurm_job_state is "RUNNING":
+        print(f" on {slurm_jobs_running}/{slurm_nodes_requested} of requested Slurm nodes", end='')
+    print("")
+    if slurm_job_started_time is not None:
+        print(f"Job started at {slurm_job_started_time}")
+    if provisioner_job_started_time is not None:
+        print(f"Slurm resources acquired {provisioner_job_started_time}")
+        print(f"Slurm resources will shut down {provisioner_job_scheduled_end_time}")
+
+        
+if __name__ == "__main__":
+    main()

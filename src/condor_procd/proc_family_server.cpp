@@ -247,6 +247,8 @@ ProcFamilyServer::get_usage()
 	read_from_client(&pid, sizeof(pid_t));
 
 	ProcFamilyUsage usage;
+	dprintf(D_ALWAYS, "PROC_FAMILY_GET_USAGE for pid %d\n", pid);
+
 	proc_family_error_t err = m_monitor.get_family_usage(pid, &usage);
 	
 	write_to_client(&err, sizeof(proc_family_error_t));
@@ -505,7 +507,8 @@ ProcFamilyServer::wait_loop()
 				break;
 				
 			case PROC_FAMILY_GET_USAGE:
-				dprintf(D_ALWAYS, "PROC_FAMILY_GET_USAGE\n");
+				// print this out on the same line with the pid of interest
+				//dprintf(D_ALWAYS, "PROC_FAMILY_GET_USAGE\n");
 				get_usage();
 				break;
 

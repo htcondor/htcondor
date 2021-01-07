@@ -917,8 +917,12 @@ endif()
 
 #####################################
 # Do we want to link in libssl and kerberos or dlopen() them at runtime?
-if (LINUX AND NOT WANT_PYTHON_WHEELS)
-	set( DLOPEN_SECURITY_LIBS TRUE )
+if (NOT DEFINED DLOPEN_SECURITY_LIBS)
+	if (LINUX AND NOT WANT_PYTHON_WHEELS)
+		set(DLOPEN_SECURITY_LIBS TRUE)
+	else()
+		set(DLOPEN_SECURITY_LIBS FALSE)
+	endif()
 endif()
 
 ################################################################################
@@ -1060,8 +1064,12 @@ endif()
 
 #####################################
 # Do we want to link in the GSI libraries or dlopen() them at runtime?
-if (HAVE_EXT_GLOBUS AND LINUX AND NOT WANT_PYTHON_WHEELS)
-	set( DLOPEN_GSI_LIBS TRUE )
+if (NOT DEFINED DLOPEN_GSI_LIBS)
+	if (HAVE_EXT_GLOBUS AND LINUX AND NOT WANT_PYTHON_WHEELS)
+		set(DLOPEN_GSI_LIBS TRUE)
+	else()
+		set(DLOPEN_GSI_LIBS FALSE)
+	endif()
 endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")

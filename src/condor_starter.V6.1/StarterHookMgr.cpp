@@ -26,7 +26,7 @@
 #include "status_string.h"
 #include "classad_merge.h"
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 
 // // // // // // // // // // // //

@@ -32,6 +32,7 @@ set(CollectorLibSrcs
 	collector_engine.cpp
 	view_server.cpp
 	collector.cpp
+        ad_transforms.cpp
 )
 
 #

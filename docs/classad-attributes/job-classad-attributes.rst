@@ -1,6 +1,19 @@
 Job ClassAd Attributes
 ======================
 
+Both active HTCondor jobs (those in a `condor_schedd`) and historical jobs
+(those in the history file), are described by classads.  Active jobs can be
+queried and displayed with the `condor_q` command, and historical jobs
+are queried with the `condor_history` command, as in the examples below.
+Note that not all job attributes are described here, some are for internal
+HTCondor use, and are subject to change.  Also, not all jobs contain
+all attributes.
+
+.. code-block:: console
+
+    $ condor_history -l username
+    $ condor_q -l
+
 
 :index:`job attributes<single: job attributes; ClassAd>`
 :index:`Absent<single: Absent; ClassAd job attribute>`
@@ -53,12 +66,62 @@ Job ClassAd Attributes
     specified in
     the :doc:`/man-pages/condor_submit` section.
 
+:index:`AuthTokenSubject<single: AuthTokenSubject; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenSubject>`
+
+``AuthTokenSubject``
+    A string recording the subject in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenIssuer<single: AuthTokenIssuer; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenIssuer>`
+
+``AuthTokenIssuer``
+    A string recording the issuer in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenGroups<single: AuthTokenGroups; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenGroups>`
+
+``AuthTokenGroups``
+    A string recording the groups in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenScopes<single: AuthTokenScopes; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenScopes>`
+
+``AuthTokenScopes``
+    A string recording the scopes in the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`AuthTokenId<single: AuthTokenId; ClassAd job attributes>`
+:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenId>`
+
+``AuthTokenId``
+    A string recording the unique identifier of the authentication token (IDTOKENS or
+    SCITOKENS) used to submit the job.
+
+:index:`BatchProject<single: BatchProject; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; BatchProject>`
+
+``BatchProject``
+    For **batch** grid universe jobs, the name of the
+    project/account/allocation that should be charged for the job's
+    resource usage.
+
 :index:`BatchQueue<single: BatchQueue; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; BatchQueue>`
 
 ``BatchQueue``
-    For grid universe jobs destined for PBS, LSF or SGE, the name of the
+    For **batch** grid universe jobs, the name of the
     queue in the remote batch system.
+
+:index:`BatchRuntime<single: BatchRuntime; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; BatchRuntime>`
+
+``BatchRuntime``
+    For **batch** grid universe jobs, a limit in seconds on the job's
+    execution time, enforced by the remote batch system.
 
 :index:`BlockReadKbytes<single: BlockReadKbytes; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; BlockReadKbytes>`
@@ -159,7 +222,7 @@ Job ClassAd Attributes
     the job. This relies on ``SlotWeight`` being listed in
     ``SYSTEM_JOB_MACHINE_ATTRS``
 
-:index:`SYSTEM_JOB_MACHINE_ATTRS`.
+:index:`SYSTEM_JOB_MACHINE_ATTRS`
 :index:`CommittedSuspensionTime<single: CommittedSuspensionTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CommittedSuspensionTime>`
 
@@ -176,6 +239,22 @@ Job ClassAd Attributes
     The time when the job completed, or the value 0 if the job has not
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970).
+
+:index:`CondorPlatform<single: CondorPlatform; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; CondorPlatform>`
+
+``CondorPlatform``
+    A string that describes the operating system version that the 
+    `condor_submit` command that submitted this job was built for.  Note
+    this may be different that the operating system that is actually running.
+
+:index:`CondorVersion<single: CondorVersion; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; CondorVersion>`
+
+``CondorVersion``
+    A string that describes the HTCondor version of the `condor_submit`
+    command that created this job.  Note this may be different than the
+    version of the HTCondor daemon that runs the job.
 
 :index:`ConcurrencyLimits<single: ConcurrencyLimits; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; ConcurrencyLimits>`
@@ -196,7 +275,7 @@ Job ClassAd Attributes
     ran the job. This relies on ``SlotWeight`` being listed in
     ``SYSTEM_JOB_MACHINE_ATTRS``
 
-:index:`SYSTEM_JOB_MACHINE_ATTRS`.
+:index:`SYSTEM_JOB_MACHINE_ATTRS`
 :index:`CumulativeSuspensionTime<single: CumulativeSuspensionTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CumulativeSuspensionTime>`
 
@@ -294,7 +373,8 @@ Job ClassAd Attributes
     determined by the configuration setting
     ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
 
-:index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`, which defaults
+:index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`
+    which defaults
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
@@ -692,7 +772,9 @@ Job ClassAd Attributes
     job identifier composed of attributes ``ClusterId`` and ``ProcId``
     separated by a period, and the job's submission time in seconds
     since 1970-01-01 00:00:00 UTC, separated by # characters. The value
-    submit.example.com#152.3#1358363336 is an example.
+    submit.example.com#152.3#1358363336 is an example.  While HTCondor
+    guaratees this string will be globally unique, the contents are subject
+    to change, and users should not parse out components of this string.
 
 :index:`GridJobStatus<single: GridJobStatus; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; GridJobStatus>`
@@ -1038,6 +1120,13 @@ Job ClassAd Attributes
     :ref:`admin-manual/configuration-macros:daemon logging configuration file
     entries`) but it applies to the job event log instead of the system event log.
 
+:index:`JobBatchName<single: JobBatchName; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; JobBatchName>`
+
+``JobBatchName``
+    If a job is given a batch name with the -batch-name option to `condor_submit`, this 
+    string valued attribute will contain the batch name.
+
 :index:`JobCurrentFinishTransferInputDate<single: JobCurrentFinishTransferInputDate; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; JobCurrentFinishTransferInputDate>`
 
@@ -1273,7 +1362,7 @@ Job ClassAd Attributes
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
 
-:index:`KILLING_TIMEOUT`.
+:index:`KILLING_TIMEOUT`
 :index:`LastMatchTime<single: LastMatchTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; LastMatchTime>`
 
@@ -1367,7 +1456,8 @@ Job ClassAd Attributes
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_INPUT_MB``
 
-:index:`MAX_TRANSFER_INPUT_MB` is used. If the observed size
+:index:`MAX_TRANSFER_INPUT_MB`
+    is used. If the observed size
     of all input files at submit time is larger than the limit, the job
     will be immediately placed on hold with a ``HoldReasonCode`` value
     of 32. If the job passes this initial test, but the size of the
@@ -1386,7 +1476,8 @@ Job ClassAd Attributes
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the system setting ``MAX_TRANSFER_OUTPUT_MB``
 
-:index:`MAX_TRANSFER_OUTPUT_MB` is used. If the total size of
+:index:`MAX_TRANSFER_OUTPUT_MB`
+    is used. If the total size of
     the job's output files to be transferred is larger than the limit,
     the job will be placed on hold with a ``HoldReasonCode`` value of
     33. The output will be transferred up to the point when the limit is
@@ -1418,7 +1509,7 @@ Job ClassAd Attributes
     the next job is started. The value is limited by the configuration
     variable ``MAX_NEXT_JOB_START_DELAY``
 
-:index:`MAX_NEXT_JOB_START_DELAY`.
+:index:`MAX_NEXT_JOB_START_DELAY`
 :index:`NiceUser<single: NiceUser; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; NiceUser>`
 
@@ -1999,7 +2090,7 @@ Job ClassAd Attributes
     its definition is specified by configuration variable
     ``JOB_DEFAULT_REQUESTMEMORY``
 
-:index:`JOB_DEFAULT_REQUESTMEMORY`.
+:index:`JOB_DEFAULT_REQUESTMEMORY`
 :index:`Requirements<single: Requirements; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; Requirements>`
 
@@ -2094,9 +2185,8 @@ Job ClassAd Attributes
     A boolean attribute defined by the *condor_negotiator* when it
     makes a match. It will be ``True`` if the resource was claimed via
     negotiation when the configuration variable ``GROUP_AUTOREGROUP``
-
-:index:`GROUP_AUTOREGROUP` was ``True``. It will be ``False``
-    otherwise.
+:index:`GROUP_AUTOREGROUP` 
+    was ``True``. It will be ``False`` otherwise.
 
 :index:`SubmitterGlobalJobId<single: SubmitterGlobalJobId; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; SubmitterGlobalJobId>`
@@ -2197,6 +2287,14 @@ Job ClassAd Attributes
     ``PostCmdExitSignal``. The exit status of a post command without one
     of ``SuccessPostExitCode`` or ``SuccessPostExitSignal`` defined is
     ignored. :index:`TotalSuspensions<single: TotalSuspensions; ClassAd job attribute>`
+
+:index:`ToE<single: ToE; ClassAd job attribute>`
+:index:`ClassAd job attribute<single: ClassAd job attribute; ToE>`
+
+``ToE``
+    ToE stands for Ticket of Execution, and is itself a nested classad that
+    describes how a job was terminated by the execute machine.
+    See the :doc:`/users-manual/managing-a-job` section for full details.
 
 :index:`job ClassAd attribute<single: job ClassAd attribute; TotalSuspensions>`
 
@@ -2360,7 +2458,7 @@ Job ClassAd Attributes
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
     ``MAX_CONCURRENT_DOWNLOADS`` :index:`MAX_CONCURRENT_DOWNLOADS`
-    or ``MAX_CONCURRENT_UPLOADS`` :index:`MAX_CONCURRENT_UPLOADS`.
+    or ``MAX_CONCURRENT_UPLOADS``. :index:`MAX_CONCURRENT_UPLOADS`
 
 :index:`UserLog<single: UserLog; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; UserLog>`
@@ -2581,6 +2679,19 @@ written to the job's execute directory while the job is running.
     dynamically-allocated slots, it is based upon the job attribute
     ``RequestCpus``, but may be larger due to the minimum given to a
     dynamic slot.
+
+:index:`CpusUsage<single: CpusUsage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; CpusUsage>`
+
+
+``CpusUsage``
+    CpusUsage (Note the plural `Cpus`) is a floating point value that 
+    represents the number of cpu cores fully used over the lifetime of
+    the job.  A cpu-bound, single-threaded job will have a CpusUsage of 1.0.
+    A job that is blocked on I/O for half of its life and is cpu bound
+    for the other have will have a CpusUsage of 0.5.  A job that uses two
+    cores fully will have a CpusUsage of 2.0.  Jobs with unexpectedly low 
+    CpusUsage may be showing lowered throughput due to blocking on network or disk.
 
 :index:`DiskProvisioned<single: DiskProvisioned; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; DiskProvisioned>`

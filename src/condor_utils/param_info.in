@@ -1401,6 +1401,12 @@ type=bool
 default=$(NEGOTIATOR_CONSIDER_PREEMPTION)
 type=string
 
+[COLLECTOR_FORWARD_PROJECTION]
+default=
+type=string
+tags=collector
+description=An expression that returns a list of attributes to forward for the current ad
+
 [COLLECTOR_STATS_SWEEP]
 default=14400
 type=int
@@ -3041,7 +3047,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -3323,6 +3329,14 @@ range=0,
 default=false
 type=bool
 tags=schedd
+
+[GRIDMANAGER_SELECTION_EXPR]
+default=
+type=string
+
+[GRIDMANAGER_LOG_APPEND_SELECTION_EXPR]
+default=false
+type=bool
 
 [MAX_JOB_QUEUE_LOG_ROTATIONS]
 default=1
@@ -4334,7 +4348,7 @@ type=string
 tags=defrag
 
 [DEFRAG_REQUIREMENTS]
-default=PartitionableSlot && Offline=!=True
+default=
 type=string
 description=
 tags=defrag
@@ -4346,7 +4360,7 @@ description=
 tags=defrag
 
 [DEFRAG_WHOLE_MACHINE_EXPR]
-default=Cpus == TotalCpus && Offline=!=True
+default=Cpus == TotalSlotCpus
 type=string
 customization=normal
 description=
@@ -6182,10 +6196,14 @@ default : @end
 	STARTD_CRON_$(1)_MONITOR_METRICS = $(5+)
 @end
 
+[GPU_MONITOR]
+default=$(LIBEXEC)/condor_gpu_utilization
+win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
+
 [$FEATURE.GPUsMonitor]
 description=Settings to monitor GPU usage
 default : @end
-	use feature : Monitor( GPUs, WaitForExit, 1, $(LIBEXEC)/condor_gpu_utilization, SUM:GPUs, PEAK:GPUsMemory )
+	use feature : Monitor( GPUs, WaitForExit, 1, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
 
     STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
@@ -6328,7 +6346,7 @@ description=Shared port stuff for a HAD node. args:(controlee, ip_or_hostname, h
 default: @end
    HAD_LIST = $(HAD_LIST) $(2):$(3)
    REPLICATION_LIST = $(REPLICATION_LIST) $(2):$(4)
-   HAD_CONTROLEE = $(1)
+   HAD_CONTROLLEE = $(1)
    MASTER_$(1)_CONTROLLER = HAD
 @end
 
@@ -6466,7 +6484,7 @@ default : @end
 description=Enable the daemons and features need to support running jobs with OAuth
 default : @end
 	SEC_CREDENTIAL_DIRECTORY_OAUTH=/var/lib/condor/oauth_credentials
-	SEC_CREDENTIAL_MONITOR_OAUTH_LOG=$(LOG)/CredMonOAuthLog
+	CREDMON_OAUTH_LOG=$(LOG)/CredMonOAuthLog
 	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	TRUST_CREDENTIAL_DIRECTORY=True

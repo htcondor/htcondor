@@ -10973,6 +10973,26 @@ DaemonCore::getCollectorList() {
 	return m_collector_list;
 }
 
+// trigger daemon shutdown/restart if we have not already done so
+// used by DAEMON_SHUTDOWN knobs, and sometimes by the startd when draining completes
+void DaemonCore::beginDaemonRestart(bool fast /* = false*/, bool restart /*= true*/)
+{
+	if (fast) {
+		// turning off restart is 'sticky' since always defaults to true on daemon startup
+		if ( ! restart) m_wants_restart = false;
+		if ( ! m_in_daemon_shutdown_fast) {
+			m_in_daemon_shutdown_fast = true;
+			daemonCore->Send_Signal(daemonCore->getpid(), SIGQUIT);
+		}
+	} else {
+		// turning off restart is 'sticky' since always defaults to true on daemon startup
+		if ( ! restart) m_wants_restart = false;
+		if ( ! m_in_daemon_shutdown_fast && ! m_in_daemon_shutdown) {
+			m_in_daemon_shutdown = true;
+			daemonCore->Send_Signal(daemonCore->getpid(), SIGTERM);
+		}
+	}
+}
 
 int
 DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
@@ -10986,16 +11006,13 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 		evalExpr(ad1, "DAEMON_SHUTDOWN_FAST", ATTR_DAEMON_SHUTDOWN_FAST,
 				 "starting fast shutdown"))	{
 			// Daemon wants to quickly shut itself down and not restart.
-		m_wants_restart = false;
-		m_in_daemon_shutdown_fast = true;
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		beginDaemonShutdown(true);
 	}
 	else if (!m_in_daemon_shutdown &&
 			 evalExpr(ad1, "DAEMON_SHUTDOWN", ATTR_DAEMON_SHUTDOWN,
 					  "starting graceful shutdown")) {
-		m_wants_restart = false;
-		m_in_daemon_shutdown = true;
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+			// Daemon wants to gracefully shut itself down and not restart.
+		beginDaemonShutdown(false);
 	}
 
 		// Even if we just decided to shut ourselves down, we should

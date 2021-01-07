@@ -920,7 +920,7 @@ sub install( $ )
 {
     my $release_dir=shift(@_);
 
-    my @release_dirs = qw( etc include src lib libexec bin sbin man );
+    my @release_dirs = qw( etc include lib libexec bin sbin man );
 
 	# Get the absolute path to the release directory
 	my $release_src_dir;

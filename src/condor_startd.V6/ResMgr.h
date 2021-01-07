@@ -321,7 +321,7 @@ public:
 	bool considerResumingAfterDraining();
 
 		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
-	bool startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
+	bool startDraining(int how_fast,const std::string & reason, int on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
 
 	bool cancelDraining(std::string request_id,std::string &error_msg,int &error_code);
 
@@ -421,9 +421,10 @@ private:
 	void cancelHibernateTimer();
 #endif /* HAVE_HIBERNATION */
 
+	std::string drain_reason;
 	bool draining;
 	bool draining_is_graceful;
-	bool resume_on_completion_of_draining;
+	unsigned char on_completion_of_draining;
 	int draining_id;
 	time_t last_drain_start_time;
 	time_t last_drain_stop_time;

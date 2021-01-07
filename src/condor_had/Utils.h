@@ -92,32 +92,38 @@ utilToSinful( char* address );
  */
 void
 utilClearList( StringList& list );
+
 /* Function    : utilSafePutFile
  * Arguments   : socket   - socket, through which the file will be transferred
  *			     filePath - OS path to file, which is to be transferred
+ *			     fips_mode- 0 = send leading 16 byte MD5 hash as MAC,
+ *                          1 = send 16 leading zeros then a SHA-2 HASH as a hex string
  * Description : transfers the specified file along with its locally calculated
- *				 MAC
+ *				 MAC or HASH
  * Return value: bool - success/failure value
  * Note        : 1) in order to verify that the file is received without errors
- *				 the receiver of it must calculate MAC on the received file and
- *				 to compare it with the sent MAC
+ *				 the receiver of it must calculate MAC/HASH on the received file and
+ *				 to compare it with the sent MAC/HASH
  *				 2) the socket has to be connected to the receiving side
  */
 bool
-utilSafePutFile( ReliSock& socket, const MyString& filePath );
+utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode );
+
 /* Function    : utilSafeGetFile
  * Arguments   : socket   - socket, through which the file will be received
  * 				 filePath - OS path to file, where the received data is to be
  *						    stored
+ *				 fips_mode - 0 = check leading MD5 MAC if it is non-zero
+ *				             1 = do not check leading MD5 MAC, check SHA-2 HASH if it exists
  * Return value: bool - success/failure value
  * Description : 1) receives the specified file along with its remotely 
- * 				 calculated MAC and verifies that the file was received without 
- *				 errors by calculating the MAC locally and by comparing it to 
- *				 the remote MAC of the file, that has been sent
+ * 				 calculated MAC or hash and verifies that the file was received without 
+ *				 errors by calculating the MAC/hash locally and by comparing it to 
+ *				 the remote MAC/hash of the file, that has been sent
  *				 2) the socket has to be connected to the transferring side
  */
 bool
-utilSafeGetFile( ReliSock& socket, const MyString& filePath );
+utilSafeGetFile( ReliSock& socket, const MyString& filePath, int fips_mode );
 
 /* Function   : utilClearList
  * Arguments  : list - the list to be cleared

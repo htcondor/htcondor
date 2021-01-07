@@ -282,6 +282,24 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given or the argument is not an attribute reference.
 
+``String unresolved(Attribute attr)``
+    This function returns the external attribute references and unresolved
+    attribute references of the expression that is the value of the provided attribute.
+    If the provided attribute cannot be found, then ``undefined`` is returned.
+
+    For example, if the ``Requirements`` expression has the value ``OpSys == "LINUX" && TARGET.Arch == "ARM"``,
+    then ``unresolved(Requirements)`` will return ``"Arch,OpSys"``.
+
+``Boolean unresolved(Attribute attr, String pattern)``
+    This function returns ``True`` when at least one of the external or unresolved attribute
+    references of the expression that is the value of the provided attribute matches the
+    given Perl regular expression pattern.  If none of the references match the pattern, then
+    ``False`` is returned. If the provided attribute cannot be found, then ``undefined`` is returned.
+
+    For example if the ``Requirements`` expression has the value ``OpSys == "LINUX" && Arch == "ARM"``,
+    then ``unresolved(Requirements, "^OpSys")`` will return ``True``, and ``unresolved(Requirements, "OpSys.+")``
+    will return ``False``.
+
 :index:`ifThenElse()<single: ifThenElse(); ClassAd functions>`
 
 

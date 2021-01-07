@@ -698,17 +698,18 @@ void Accountant::AddMatch(const string& CustomerName, ClassAd* ResourceAd)
   SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   // If this is a nested group (group_a.b.c), update usage up the tree
-  while (GroupName.length() > 0) {
+  std::string GroupNamePart = GroupName;
+  while (GroupNamePart.length() > 0) {
 	float GroupHierWeightedResourcesUsed = 0.0;
-  	GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed += SlotWeight;
-  	SetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	SetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 
-  	size_t last_dot = GroupName.find_last_of(".");
+  	size_t last_dot = GroupNamePart.find_last_of(".");
   	if (last_dot == std::string::npos) {
-		GroupName = "";
+		GroupNamePart = "";
   } else {
-		GroupName = GroupName.substr(0, last_dot);
+		GroupNamePart = GroupNamePart.substr(0, last_dot);
   }
   }
 
@@ -819,18 +820,19 @@ void Accountant::RemoveMatch(const string& ResourceName, time_t T)
       GroupWeightedResourcesUsed = 0.0;
   }
   // If this is a nested group (group_a.b.c), update usage up the tree
-  while (GroupName.length() > 0) {
+  std::string GroupNamePart = GroupName;
+  while (GroupNamePart.length() > 0) {
 	float GroupHierWeightedResourcesUsed = 0.0;
-  	GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed -= SlotWeight;
 	if (GroupHierWeightedResourcesUsed < 0) GroupHierWeightedResourcesUsed = 0;
-  	SetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	SetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 
-  	size_t last_dot = GroupName.find_last_of(".");
+  	size_t last_dot = GroupNamePart.find_last_of(".");
   	if (last_dot == std::string::npos) {
-		GroupName = "";
+		GroupNamePart = "";
   } else {
-		GroupName = GroupName.substr(0, last_dot);
+		GroupNamePart = GroupNamePart.substr(0, last_dot);
   }
   }
   dprintf(D_ACCOUNTANT, "GroupResourcesUsed =%d GroupWeightedResourcesUsed= %f SlotWeight=%f\n",

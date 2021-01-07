@@ -32,6 +32,7 @@
 #include "util_lib_proto.h"
 #include "dc_startd.h"
 #include "get_daemon_name.h"
+//#include "compat_classad.h"
 #include <algorithm>
 #include <iterator>
 #include <sstream>
@@ -90,8 +91,11 @@ DefragLog::write_to_ad(ClassAd * ad) const {
 
 DefragLog defrag_log;
 
+// This constraint clause ignores machines that were drained by others
+#define DEFRAG_DRAIN_REASON_CONSTRAINT "(" ATTR_DRAIN_REASON " is undefined || " ATTR_DRAIN_REASON " == \"Defrag\")"
+
 static char const * const ATTR_LAST_POLL = "LastPoll";
-static char const * const DRAINING_CONSTRAINT = "Draining && Offline=!=True";
+static char const * const DRAINING_CONSTRAINT = "PartitionableSlot && Offline=!=True && Draining && " DEFRAG_DRAIN_REASON_CONSTRAINT;
 
 Defrag::Defrag():
 	m_polling_interval(-1),
@@ -195,14 +199,17 @@ void Defrag::config()
 	m_max_draining = param_integer("DEFRAG_MAX_CONCURRENT_DRAINING",-1,-1);
 	m_max_whole_machines = param_integer("DEFRAG_MAX_WHOLE_MACHINES",-1,-1);
 
-	ASSERT( param(m_defrag_requirements,"DEFRAG_REQUIREMENTS") );
-	validateExpr( m_defrag_requirements.c_str(), "DEFRAG_REQUIREMENTS" );
+	param(m_defrag_requirements,"DEFRAG_REQUIREMENTS");
+	if ( ! m_defrag_requirements.empty()) {
+		validateExpr(m_defrag_requirements.c_str(), "DEFRAG_REQUIREMENTS");
+	}
 
 	ASSERT( param( m_draining_start_expr, "DEFRAG_DRAINING_START_EXPR" ) );
 	validateExpr( m_draining_start_expr.c_str(), "DEFRAG_DRAINING_START_EXPR" );
 
 	ASSERT( param(m_whole_machine_expr,"DEFRAG_WHOLE_MACHINE_EXPR") );
 	validateExpr( m_whole_machine_expr.c_str(), "DEFRAG_WHOLE_MACHINE_EXPR" );
+	m_whole_machine_expr += " && Offline =!= True && PartitionableSlot && " DEFRAG_DRAIN_REASON_CONSTRAINT;
 
 	ASSERT( param(m_draining_schedule_str,"DEFRAG_DRAINING_SCHEDULE") );
 	if( m_draining_schedule_str.empty() ) {
@@ -216,16 +223,29 @@ void Defrag::config()
 		}
 	}
 
-	MyString rank;
-	param(rank,"DEFRAG_RANK");
-	if( rank.IsEmpty() ) {
-		m_rank_ad.Delete(ATTR_RANK);
-	}
-	else {
-		if( !m_rank_ad.AssignExpr(ATTR_RANK,rank.Value()) ) {
-			EXCEPT("Invalid expression for DEFRAG_RANK: %s",
-				   rank.Value());
+	m_drain_attrs.clear();
+	// we always need the attributes of a location lookup to send drain or cancel commands
+	m_drain_attrs.insert(ATTR_NAME);
+	m_drain_attrs.insert(ATTR_MACHINE);
+	m_drain_attrs.insert(ATTR_VERSION);
+	m_drain_attrs.insert(ATTR_PLATFORM); // TODO: get rid if this after Daemon object is fixed to work without it.
+	m_drain_attrs.insert(ATTR_MY_ADDRESS);
+	m_drain_attrs.insert(ATTR_ADDRESS_V1);
+	// also these special attributes to choose draining candidates
+	m_drain_attrs.insert(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION);
+	m_drain_attrs.insert(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION);
+	m_drain_attrs.insert(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT);
+	m_drain_attrs.insert(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT);
+	m_drain_attrs.insert(ATTR_DRAIN_REASON);
+
+	auto_free_ptr rank(param("DEFRAG_RANK"));
+	m_rank_ad.Delete(ATTR_RANK);
+	if (rank) {
+		if( !m_rank_ad.AssignExpr(ATTR_RANK,rank) ) {
+			EXCEPT("Invalid expression for DEFRAG_RANK: %s", rank.ptr());
 		}
+		// add rank references to the projection
+		GetExprReferences(m_rank_ad.Lookup(ATTR_RANK), m_rank_ad, NULL, &m_drain_attrs);
 	}
 
 	int update_interval = param_integer("DEFRAG_UPDATE_INTERVAL", 300);
@@ -255,6 +275,7 @@ void Defrag::config()
 	} else {
 		m_cancel_requirements = "";
 	}
+
 
 	param(m_defrag_name,"DEFRAG_NAME");
 
@@ -295,12 +316,18 @@ void Defrag::validateExpr(char const *constraint,char const *constraint_source)
 	delete requirements;
 }
 
-bool Defrag::queryMachines(char const *constraint,char const *constraint_source,ClassAdList &startdAds)
+bool Defrag::queryMachines(char const *constraint,char const *constraint_source,ClassAdList &startdAds, classad::References * projection)
 {
 	CondorQuery startdQuery(STARTD_AD);
 
 	validateExpr(constraint,constraint_source);
 	startdQuery.addANDConstraint(constraint);
+	if (projection) {
+		startdQuery.setDesiredAttrs(*projection);
+	} else {
+		// if no projection supplied, just get the Name attribute
+		startdQuery.setDesiredAttrs("Name");
+	}
 
 	CollectorList* collects = daemonCore->getCollectorList();
 	ASSERT( collects );
@@ -404,7 +431,7 @@ int Defrag::countMachines(char const *constraint,char const *constraint_source,	
 	ClassAdList startdAds;
 	int count = 0;
 
-	if( !queryMachines(constraint,constraint_source,startdAds) ) {
+	if( !queryMachines(constraint,constraint_source,startdAds,NULL) ) {
 		return -1;
 	}
 
@@ -529,9 +556,11 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 	}
 
 	MachineSet draining_whole_machines;
-	std::stringstream draining_whole_machines_ss;
-	draining_whole_machines_ss << "(" <<  m_cancel_requirements << ") && (" << DRAINING_CONSTRAINT << ")";
-	int num_draining_whole_machines = countMachines(draining_whole_machines_ss.str().c_str(),
+	std::string draining_whole_machines_ex(DRAINING_CONSTRAINT);
+	if ( ! m_cancel_requirements.empty()) {
+		formatstr_cat(draining_whole_machines_ex, " && (%s)", m_cancel_requirements.c_str());
+	}
+	int num_draining_whole_machines = countMachines(draining_whole_machines_ex.c_str(),
 		"<DEFRAG_CANCEL_REQUIREMENTS>", &draining_whole_machines);
 
 	if (num_draining_whole_machines)
@@ -544,7 +573,7 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 	}
 
 	ClassAdList startdAds;
-	if (!queryMachines(DRAINING_CONSTRAINT, "DRAINING_CONSTRAINT <all draining slots>",startdAds))
+	if (!queryMachines(DRAINING_CONSTRAINT, "DRAINING_CONSTRAINT <all draining slots>",startdAds,&m_drain_attrs))
 	{
 		return;
 	}
@@ -565,7 +594,7 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 		slotNameToDaemonName(name,machine);
 
 		if( !cancelled_machines.count(machine) && draining_whole_machines.count(machine) ) {
-			cancel_drain(startd_ad);
+			cancel_this_drain(startd_ad);
 			cancelled_machines.insert(machine);
 			cancel_count ++;
 		}
@@ -761,9 +790,11 @@ void Defrag::poll()
 	dprintf(D_ALWAYS,"Looking for %d machines to drain.\n",num_to_drain);
 
 	ClassAdList startdAds;
-	std::string requirements;
-	formatstr(requirements,"(%s) && Draining =!= true",m_defrag_requirements.c_str());
-	if( !queryMachines(requirements.c_str(),"DEFRAG_REQUIREMENTS",startdAds) ) {
+	std::string requirements = "PartitionableSlot && Offline =!= true && Draining =!= true";
+	if ( ! m_defrag_requirements.empty()) {
+		formatstr_cat(requirements, " && (%s)", m_defrag_requirements.c_str());
+	}
+	if( !queryMachines(requirements.c_str(),"DEFRAG_REQUIREMENTS",startdAds,&m_drain_attrs) ) {
 		dprintf(D_ALWAYS,"Doing nothing, because the query to select machines matching DEFRAG_REQUIREMENTS failed.\n");
 		return;
 	}
@@ -806,7 +837,7 @@ void Defrag::poll()
 			continue;
 		}
 
-		if( drain(startd_ad) ) {
+		if( drain_this(startd_ad) ) {
 			machines_done.insert(machine);
 
 			if( ++num_drained >= num_to_drain ) {
@@ -826,7 +857,7 @@ void Defrag::poll()
 }
 
 bool
-Defrag::drain(const ClassAd &startd_ad)
+Defrag::drain_this(const ClassAd &startd_ad)
 {
 	std::string name;
 	startd_ad.LookupString(ATTR_NAME,name);
@@ -870,8 +901,8 @@ Defrag::drain(const ClassAd &startd_ad)
 	}
 
 	std::string request_id;
-	bool resume_on_completion = true;
-	bool rval = startd.drainJobs( m_draining_schedule, resume_on_completion, draining_check_expr.c_str(), m_draining_start_expr.c_str(), request_id );
+	bool rval = startd.drainJobs( m_draining_schedule, "Defrag", DRAIN_RESUME_ON_COMPLETION,
+		draining_check_expr.c_str(), m_draining_start_expr.c_str(), request_id );
 
 	if( !rval ) {
 		dprintf(D_ALWAYS,"Failed to send request to drain %s: %s\n",startd.name(),startd.error());
@@ -885,7 +916,7 @@ Defrag::drain(const ClassAd &startd_ad)
 }
 
 bool
-Defrag::cancel_drain(const ClassAd &startd_ad)
+Defrag::cancel_this_drain(const ClassAd &startd_ad)
 {
 
 	std::string name;

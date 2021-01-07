@@ -50,7 +50,7 @@
 
 #include <algorithm>
 
-extern CStarter *Starter;
+extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;

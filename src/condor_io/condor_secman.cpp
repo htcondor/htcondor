@@ -3154,6 +3154,10 @@ getDefaultAuthenticationMethods(DCpermission perm) {
 	methods += ",GSI";
 #endif
 
+#if defined(HAVE_EXT_SCITOKENS)
+	methods += ",SCITOKENS";
+#endif
+
 	// SSL is last as this may cause the client to be anonymous.
 	methods += ",SSL";
 
@@ -3297,7 +3301,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	condor_sockaddr peer_addr;
 	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
-		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
 				"sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
 		return false;
 	}
@@ -3312,7 +3316,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	ClassAd *auth_info = ReconcileSecurityPolicyAds(policy,policy);
 	if(!auth_info) {
-		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
 				"ReconcileSecurityPolicyAds() failed.\n",sesid);
 		return false;
 	}
@@ -3423,13 +3427,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		}
 
 		if( !fixed ) {
-			dprintf(D_ALWAYS, "SECMAN: failed to create session %s%s.\n",
-					sesid,
-					existing ? " (key already exists)" : "");
 			ClassAd *existing_policy = existing ? existing->policy() : NULL;
 			if( existing_policy ) {
-				dprintf(D_ALWAYS,"SECMAN: existing session %s:\n", sesid);
-				dPrintAd(D_SECURITY, *existing_policy);
+				dprintf(D_SECURITY,"SECMAN: not creating new session, found existing session %s\n", sesid);
+				dPrintAd(D_SECURITY | D_FULLDEBUG, *existing_policy);
+			} else {
+				dprintf(D_ALWAYS, "SECMAN: failed to create session %s.\n", sesid);
 			}
 			delete keyinfo;
 			return false;
@@ -3562,6 +3565,11 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_VONAME);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FIRST_FQAN);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FQAN);
+	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_SUBJECT);
+	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_ISSUER);
+	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_GROUPS);
+	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_SCOPES);
+	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_ID);
 	sec_copy_attribute(policy_ad, *policy, ATTR_REMOTE_POOL);
 	sec_copy_attribute(policy_ad, *policy, "ScheddSession");
 	return true;

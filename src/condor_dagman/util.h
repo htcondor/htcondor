@@ -31,7 +31,6 @@ int BinaryHash(void *buffer, int nbytes, int numBuckets);
 void StringDup(char *&dst, char *src);
 /// Create a new string containing the ascii representation of an integer
 char *IntToString (int i);
-#endif
 
 const int UTIL_MAX_LINE_LENGTH = 1024;
 
@@ -54,5 +53,7 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates);
 		relevant PID does exist and this DAGMan should abort
 */
 int util_check_lock_file(const char *lockFileName);
+
+#endif
 
 #endif /* #ifndef _UTIL_H_ */

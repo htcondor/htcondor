@@ -49,7 +49,7 @@
 #include <sys/eventfd.h>
 #endif
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 void StarterStatistics::Clear() {
    this->InitTime = time(NULL);
@@ -541,6 +541,7 @@ VanillaProc::StartJob()
 					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir, next_dir);
 				}
 			}
+		Starter->setTmpDir("/tmp");
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir);
 			delete fs_remap;
@@ -1405,6 +1406,7 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 	}
 }
 
+#if defined(HAVE_EXT_LIBCGROUP)
 #ifdef LINUX
 void 
 VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
@@ -1514,4 +1516,5 @@ VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
 			climits.set_memsw_limit_bytes(1024 * 1024 * hard_limit);
 		}
 }
+#endif
 #endif

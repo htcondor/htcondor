@@ -177,8 +177,8 @@ class Authentication {
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
     
-    int handshake(MyString clientCanUse, bool non_blocking);
-    int handshake_continue(MyString clientCanUse, bool non_blocking);
+    int handshake(const std::string& clientCanUse, bool non_blocking);
+    int handshake_continue(const std::string& clientCanUse, bool non_blocking);
 
     int authenticate_finish( CondorError* errstack );
 
@@ -186,7 +186,7 @@ class Authentication {
     
     void setAuthType( int state );
     
-    int selectAuthenticationType( MyString my_methods, int remote_methods );
+    int selectAuthenticationType( const std::string& my_methods, int remote_methods );
 
 	void map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name);
 
@@ -200,6 +200,7 @@ class Authentication {
     Condor_Auth_Base *   authenticator_;    // This is it.
     ReliSock         *   mySock;
     int                  auth_status;
+	int         m_method_id;
     char*                method_used;
 	std::string	m_method_name;
 	std::string	m_methods_to_try;

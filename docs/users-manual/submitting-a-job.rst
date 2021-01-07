@@ -303,6 +303,38 @@ file.
     ``$(Process)`` or ``$(ProcId)`` will have the same value as the job
     ClassAd attribute ``ProcId``.
 
+``$$(a_machine_classad_attribue)``
+    When the machine is matched to this job for it to run on, any 
+    dollar-dollar expressions are looked up from the machine ad, and then
+    expanded.  This lets you put the value of some machine ad attribute
+    into your job.  For example, if you to pass the actual amount of
+    memory a slot has provisioned as an argument to the job, you 
+    could add ``arguments = --mem $$(Memory)`` 
+
+    .. code-block:: condor-submit
+
+      arguments = --mem $$(Memory) 
+
+    or, if you wanted to put the name of the machine the job ran on
+    into the output file name, you could add
+
+    .. code-block: condor-submit
+
+      output = output_file.$$(Name)
+
+``$$([ an_evaluated_classad_expression ])``
+    This dollar-dollar-bracket syntax is useful when you need to 
+    perform some math on a value before passing it to your job.
+    For example, if want to pass 90% of the allocated memory as an
+    argument to your job, the submit file can have
+
+    .. code-block: condor-submit
+    
+     arguments = --mem $$([ Memory * 0.9 ])
+
+     and when the job is matched to a machine, condor will evaluate
+     this expression in the context of both the job and machine ad
+
 ``$(Item)``
     The default name of the variable when no ``<varname>`` is provided
     in a **queue** command.
@@ -381,7 +413,7 @@ Consider the example
 
 .. code-block:: condor-submit
 
-      include : list-infiles.sh |
+      include : ./list-infiles.sh |
 
 In this example, the bar character at the end of the line causes the
 script ``list-infiles.sh`` to be invoked, and the output of the script
@@ -1221,5 +1253,168 @@ benefit.
 -  Development may have an interactive nature, and proceed more quickly
    when done on a pool machine. It may also be that the development
    platforms required reside within Condor's purview as execute hosts.
+
+
+Submitting Lots of Jobs
+-----------------------
+
+:index:`late materialization<single: late materialization; lots of jobs>` :index:`late materialization`
+
+When submitting a lot of jobs with a single submit file, you can dramatically speed up submission
+and reduce the load on the *condor_schedd* by submitting the jobs as a late materialization job factory.
+
+A submission of this form sends a single ClassAd, called the Cluster ad, to the *condor_schedd*, as
+well as instructions to create the individual jobs as variations on that Cluster ad. These instructions
+are sent as a *submit digest* and optional *itemdata*.  The *submit digest* is the submit file stripped down
+to just the statements that vary between jobs.  The *itemdata* is the arguments to the ``Queue`` statement
+when the arguments are more than just a count of jobs.
+
+The *condor_schedd* will use the *submit digest* and the *itemdata* to create the individual job ClassAds
+when they are needed.  Materialization is controlled by two values stored in the Cluster classad, and
+by optional limits configured in the *condor_schedd*.  
+
+The ``max_idle`` limit specifies the maximum number of non-running jobs that should be materialized in the 
+*condor_schedd* at any one time. One or more jobs will materialize whenever a job enters the Run state
+and the number of non-running jobs that are still in the *condor_schedd* is less than this limit. This
+limit is stored in the Cluster ad in the `JobMaterializeMaxIdle` attribute.
+
+The ``max_materialize`` limit specifies an overall limit on the number of jobs that can be materialized in
+the *condor_schedd* at any one time.  One or more jobs will materialize when a job leaves the *condor_schedd*
+and the number of materialized jobs remaining is less than this limit. This limit is stored in the Cluster
+ad in the `JobMaterializeLimit` attribute.
+
+Late materialization can be used as a way for a user to submit millions of jobs without hitting the 
+:macro:`MAX_JOBS_PER_OWNER` or :macro:`MAX_JOBS_PER_SUBMISSION` limits in the *condor_schedd*, since
+the *condor_schedd* will enforce these limits by applying them to the ``max_materialize`` and ``max_idle``
+values specified in the Cluster ad.
+
+To give an example, the following submit file:
+
+.. code-block:: condor-submit
+
+    executable     = foo
+    arguments      = input_file.$(Process)
+
+    request_memory = 4096
+    request_cpus   = 1
+    request_disk   = 16383
+
+    error   = err.$(Process)
+    output  = out.$(Process)
+    log     = foo.log
+
+    should_transfer_files = yes
+    transfer_input_files = input_file.$(Process)
+
+    # submit as a factory with an idle jobs limit
+    max_idle = 100
+
+    # submit 15,000 instances of this job
+    queue 15*1000
+
+
+When submitted as a late materialization factory, the *submit digest* for this factory
+will contain only the submit statments that vary between jobs, and the collapsed queue statement
+like this:
+
+.. code-block:: condor-submit
+
+    arguments = input_file.$(Process)
+    error = err.$(Process)
+    output = out.$(Process)
+    transfer_input_files = input_file.$(Process)
+
+    queue 15000
+
+Materialization log events
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a Late Materialization job factory is submitted to the *condor_schedd*, a ``Cluster submitted`` event
+will be written to the UserLog of the Cluster ad.  This will be the same log file used by the first job
+materialized by the factory.  To avoid confustion,
+it is recommended that you use the same log file for all jobs in the factory.
+
+When the Late Materialization job factory is removed from the *condor_schedd*, a ``Cluster removed`` event
+will be written to the UserLog of the Cluster ad.  This event will indicate how many jobs were materialized
+before the factory was removed.
+
+If Late Materialization of jobs is paused due to an error in materialization or because condor_hold 
+was used to hold the cluster id, a ``Job Materialization Paused`` event will be written to the UserLog of the
+Cluster ad. This event will indicate the reason for the pause.
+
+When ``condor_release`` is used to release the the cluster id of a Late Materialization job factory,
+and materialization  was paused because of a previous use of *condor_hold*, a ``Job Materialization Resumed``
+event will be written to the UserLog of the Cluster ad.
+
+Limitations
+~~~~~~~~~~~
+
+Currently, not all features of *condor_submit* will work with late materialization.
+The following limitations apply:
+
+- Only a single ``Queue`` statement is allowed, lines from the submit file after the 
+  first ``Queue`` statement will be ignored.
+- the ``$RANDOM_INTEGER`` and ``$RANDOM_CHOICE`` macro functions will expand at submit
+  time to produce the Cluster ad, but these macro functions will not be included in
+  the *submit digest* and so will have the same value for all jobs.
+- Spooling of input files does not work with late materialization.
+- :macro:`SUBMIT_REQUIREMENT_*` and :macro:`JOB_TRANSFORM_*` configuration parameters in
+  the *condor_schedd* are applied to jobs as they are materialized,
+  but not to the Cluster ad as it is submitted.  So a :macro:`SUBMIT_REQUIREMENT` might not fail
+  at submit time, causing the user to think that they had met the submit requirements when in 
+  fact the jobs would fail to materialize at some time in the future.  This can be 
+  confusing because a factory that has no materialized jobs is not visible in the normal
+  *condor_q* output. The only way to see late materialization job factories is to use the
+  ``-factory`` option with *condor_q*
+
+Displaying the Factory
+~~~~~~~~~~~~~~~~~~~~~~
+
+*condor_q* can be use to show late materialization job factories in the *condor_schedd* by
+using the ``-factory`` option.
+
+.. code-block::
+
+    > condor_q -factory
+    -- Schedd: submit.example.org : <192.168.101.101:9618?... @ 12/01/20 13:35:00
+    ID     OWNER          SUBMITTED  LIMIT PRESNT   RUN    IDLE   HOLD NEXTID MODE DIGEST
+    77.    bob         12/01  13:30  15000    130     30     80     20   1230      /var/lib/condor/spool/77/condor_submit.77.digest
+
+The factory above shows that 30 jobs are currently running,
+80 are idle, 20 are held and that the next job to materialize will
+be job ``77.1230``.  The total of Idle + Held jobs is 100,
+which is equal to the ``max_idle`` value specified in the submit file.
+
+The path to the *submit digest* file is shown. This file is used to reload the factory
+when the *condor_schedd* is restarted.  If the factory is unable to materialize jobs
+because of an error, the ``MODE`` field will show ``Held`` or ``Errs`` to indicate
+there is a problem. ``Errs`` indicates a problem reloading the factory, ``Held``
+indicates a problem materializing jobs.
+
+In case of a factory problem, use ``condor_q -factory -long`` to see the the factory information
+and the ``JobMaterializePauseReason`` attribute.
+
+Removing a Factory
+~~~~~~~~~~~~~~~~~~
+
+The Late materialization job factory will be remove from the schedd automatically once all of the
+jobs have materialized and completed.  To remove the factory without first completing all of the jobs
+use *condor_rm* with the ClusterId of the factory as the argument.
+
+Editing a Factory
+~~~~~~~~~~~~~~~~~
+
+The *submit digest* for a Late Materialization job factory cannot be changed after submission, but the Cluster ad
+for the factory can be edited using *condor_qedit*.  Any *condor_qedit* command that has the ClusterId as a edit
+target will edit all currently materialized jobs, as well as editing the Cluster ad so that all jobs that materialize
+in the future will also be edited.
+
+
+
+
+
+
+
+
 
 
