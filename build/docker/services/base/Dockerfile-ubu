@@ -8,10 +8,10 @@ ARG UBU
 ARG BUILDDATE
 ARG VERSION
 ARG SUFFIX
+ARG SERIES
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/base:${VERSION}-ubu${UBU}${SUFFIX}" \
-      org.label-schema.description="HTCondor ${VERSION} base image for Ubuntu ${UBU}" \
+LABEL org.label-schema.name="HTCondor Ubuntu base image" \
       org.label-schema.vendor="HTCondor" \
       org.label-schema.license="Apache-2.0" \
       org.label-schema.build-date="${BUILDDATE}"
@@ -31,21 +31,26 @@ RUN groupadd -g 64 -r condor && \
 # ssh is for condor_ssh_to_job
 RUN \
     export DEBIAN_FRONTEND=noninteractive  && \
-    majorminor=${VERSION%.*}  && \
+    if [ -z "${SERIES}" ]; then \
+        [ -n "${VERSION}" ] && SERIES=${VERSION%.*}; \
+    fi; \
     case ${UBU} in  \
         18.04) nickname=bionic  ;; \
         20.04) nickname=focal  ;; \
         *) echo "don't know Ubuntu version ${UBU}"; exit 1  ;; \
     esac;  \
     wget -qO - https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key | apt-key add -  && \
-    echo "deb http://research.cs.wisc.edu/htcondor/ubuntu/${majorminor}/${nickname} ${nickname} contrib" >> /etc/apt/sources.list  && \
-    echo "deb-src http://research.cs.wisc.edu/htcondor/ubuntu/${majorminor}/${nickname} ${nickname} contrib" >> /etc/apt/sources.list  && \
+    echo "deb http://research.cs.wisc.edu/htcondor/ubuntu/${SERIES}/${nickname} ${nickname} contrib" >> /etc/apt/sources.list  && \
+    echo "deb-src http://research.cs.wisc.edu/htcondor/ubuntu/${SERIES}/${nickname} ${nickname} contrib" >> /etc/apt/sources.list  && \
     apt-get update -q && \
-    version_release=$(apt-cache madison htcondor | grep -F ${VERSION} | awk '/Packages/ {print $3; exit}')  && \
-    # ^^ get the version-release string because unlike RHEL I can't install with just the version
-    apt-get install -qy htcondor=$version_release libclassad12=$version_release  && \
-    # ^^ I have to explicitly specify the version-release of libclassad because otherwise it will try to install the latest and barf because it doesn't work with a different version of condor.
-    #    yum doesn't have this problem.
+    if [ -n "${VERSION}" ]; then \
+        version_release=$(apt-cache madison htcondor | grep -F ${VERSION} | awk '/Packages/ {print $3; exit}')  && \
+        # ^^ get the version-release string because unlike RHEL I can't install with just the version \
+        apt-get install -qy htcondor=$version_release libclassad12=$version_release; \
+        # ^^ I have to explicitly specify the version-release of libclassad because otherwise it will try to install the latest and barf because it doesn't work with a different version of condor. \
+    else \
+        apt-get install -qy htcondor; \
+    fi && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*  && \
     :
 

@@ -1,20 +1,12 @@
 # This is an execute node image for HTCondor
-ARG UBU
-ARG VERSION
-ARG SUFFIX
+ARG BASETAG
 
-FROM htcondor/base:${VERSION}-ubu${UBU}${SUFFIX}
+FROM htcondor/base:${BASETAG}
 
-ARG UBU
-ARG VERSION
 ARG BUILDDATE
-ARG SUFFIX
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/execute:${VERSION}-ubu${UBU}${SUFFIX}" \
-      org.label-schema.description="HTCondor ${VERSION} execute image for Ubuntu ${UBU}" \
-      org.label-schema.vendor="HTCondor" \
-      org.label-schema.license="Apache-2.0" \
+LABEL org.label-schema.name="HTCondor Ubuntu execute image" \
       org.label-schema.build-date="${BUILDDATE}"
 
 # Create slot users slot1 through slot64

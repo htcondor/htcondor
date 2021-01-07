@@ -6,22 +6,15 @@
 # TODO: can't use minihtcondor package because post-install script tries to start the service via systemctl which doesn't work in a container.
 
 # Become the "submituser" user to submit jobs.
-ARG UBU
-ARG VERSION
-ARG SUFFIX
+ARG BASETAG
 
-FROM htcondor/base:${VERSION}-ubu${UBU}${SUFFIX}
+FROM htcondor/base:${BASETAG}
 
-ARG UBU
-ARG VERSION
 ARG BUILDDATE
-ARG SUFFIX
+
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/mini:${VERSION}-ubu${UBU}${SUFFIX}" \
-      org.label-schema.description="HTCondor ${VERSION} minicondor image for Ubuntu ${UBU}" \
-      org.label-schema.vendor="HTCondor" \
-      org.label-schema.license="Apache-2.0" \
+LABEL org.label-schema.name="HTCondor Ubuntu minicondor" \
       org.label-schema.build-date="${BUILDDATE}"
 
 

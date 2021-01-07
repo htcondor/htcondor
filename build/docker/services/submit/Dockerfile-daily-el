@@ -6,13 +6,12 @@ FROM htcondor/base:${BASETAG}
 ARG BUILDDATE
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="HTCondor Ubuntu submit image" \
+LABEL org.label-schema.name="HTCondor RHEL-compatible submit image (daily build)" \
       org.label-schema.build-date="${BUILDDATE}"
 
 # Add a test submitter user
-RUN useradd -m submituser
+RUN useradd submituser
 
 COPY submit/condor/*.conf /etc/condor/config.d/
 
 EXPOSE 9618
-

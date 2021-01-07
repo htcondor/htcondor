@@ -1,19 +1,12 @@
 # This is a central manager image for HTCondor
-ARG UBU
-ARG VERSION
-ARG SUFFIX
+ARG BASETAG
 
-FROM htcondor/base:${VERSION}-ubu${UBU}${SUFFIX}
+FROM htcondor/base:${BASETAG}
 
-ARG UBU
-ARG VERSION
 ARG BUILDDATE
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/cm:${VERSION}-ubu${UBU}${SUFFIX}" \
-      org.label-schema.description="HTCondor ${VERSION} central manager image for Ubuntu ${UBU}" \
-      org.label-schema.vendor="HTCondor" \
-      org.label-schema.license="Apache-2.0" \
+LABEL org.label-schema.name="HTCondor Ubuntu central manager image" \
       org.label-schema.build-date="${BUILDDATE}"
 
 COPY cm/condor/*.conf /etc/condor/config.d/

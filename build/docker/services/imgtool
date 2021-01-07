@@ -9,6 +9,7 @@ import argparse
 import time
 import random
 from typing import Dict, Tuple
+# mypy: no-strict-optional
 
 
 SUPPORTED_DISTROS = [
@@ -17,27 +18,21 @@ SUPPORTED_DISTROS = [
     "ubu18.04",
     "ubu20.04",
 ]
+SUPPORTED_DAILY_DISTROS = [
+    "el7",
+    "el8",
+]
 
 
-# "base" must be first
-IMAGES = ["base", "mini", "execute", "submit", "cm"]
+IMAGES = ["execute", "submit", "cm"]
 
 
 REPO = "dockerreg.chtc.wisc.edu"
 # ^^ TODO default repo should be dockerhub
 
 
-def builddate():
+def today():
     return time.strftime("%Y%m%d", time.localtime())
-
-
-def parse_CondorVersion_date(in_date: str) -> time.struct_time:
-    """Convert the date from CondorVersion into a time object
-    >>> time.strftime("%Y%m%d", parse_CondorVersion_date("Jun 30 2020"))
-    '20200630'
-
-    """
-    return time.strptime(in_date, "%b %d %Y")
 
 
 def get_CondorVersion_and_CondorPlatform(tag: str, executable: str) -> Tuple[bytes, bytes]:
@@ -77,12 +72,13 @@ def get_CondorVersion_and_CondorPlatform(tag: str, executable: str) -> Tuple[byt
     return condor_version_b, condor_platform_b
 
 
-def parse_CondorVersion(condor_version_b: bytes) -> Dict[str,bytes]:
+def parse_CondorVersion(condor_version_b: bytes) -> Dict[str,str]:
     """Extract the various information from CondorVersion
     (as returned by get_CondorVersion_and_CondorPlatform()).
+    The date is converted to YYYYMMDD format (used in tags)
 
     >>> parse_CondorVersion(b'8.9.8 Jun 30 2020 BuildID: 508520 PackageID: 8.9.8-0.508520')
-    {'version': '8.9.8', 'date': 'Jun 30 2020', 'buildid': '508520', 'packageid': '8.9.8-0.508520'}
+    {'version': '8.9.8', 'date': '20200630', 'buildid': '508520', 'packageid': '8.9.8-0.508520'}
 
     """
     condor_version = condor_version_b.decode("latin-1")
@@ -93,20 +89,39 @@ def parse_CondorVersion(condor_version_b: bytes) -> Dict[str,bytes]:
                      PackageID:\s+(?P<packageid>[^\n]+)
                      $""",
                      condor_version, re.X)
-    try:
-        return match.groupdict()
-    except AttributeError:
+    if match:
+        parsed = dict(match.groupdict())
+        parsed["date"] = time.strftime("%Y%m%d", time.strptime(parsed["date"], "%b %d %Y"))
+        return parsed
+    else:
         raise RuntimeError("Can't parse CondorVersion: %s" % condor_version)
 
 
-def docker_build(image, version, distro, executable):
+def add_htcondor_labels(executable: str, tmptag: str, realtag: str, condor_version_b: bytes, condor_platform_b: bytes, version_info: Dict[str,str]):
+    dockerfile = b"""\
+FROM   %b
+LABEL  org.htcondor.condor-version="%b"  org.htcondor.condor-platform="%b"  org.htcondor.build-date="%b"  org.htcondor.buildid="%b"  org.htcondor.packageid="%b"
+""" % (
+        tmptag.encode(),
+        condor_version_b,
+        condor_platform_b,
+        version_info["date"].encode(),
+        version_info["buildid"].encode(),
+        version_info["packageid"].encode(),
+    )
+    subprocess.run(
+        [executable, "build", "-t", realtag, "-f", "-", "."], input=dockerfile, check=True
+    )
+
+
+def docker_build(image: str, version: str, distro: str, executable: str) -> str:
     ubu = None
     el = None
     cmd = [
         executable,
         "build",
         f"--build-arg=VERSION={version}",
-        f"--build-arg=BUILDDATE={builddate()}",
+        f"--build-arg=BUILDDATE={today()}",
     ]
     if distro.startswith("el"):
         el = distro[2:]
@@ -129,7 +144,8 @@ def docker_build(image, version, distro, executable):
             tmptag, executable
         )
 
-        realversion = parse_CondorVersion(condor_version_b)["version"]
+        version_info = parse_CondorVersion(condor_version_b)
+        realversion = version_info["version"]
         if version:
             if realversion != version:
                 print(f"WARNING: condor_version version {realversion} does not match requested version {version}")
@@ -138,17 +154,116 @@ def docker_build(image, version, distro, executable):
 
         realtag = f"htcondor/{image}:{version}-{distro}"
 
-        dockerfile = b"""\
-FROM   %b
-LABEL  org.htcondor.condor-version="%b"  org.htcondor.condor-platform="%b"
-""" % (
-            tmptag.encode(),
-            condor_version_b,
-            condor_platform_b,
+        add_htcondor_labels(executable, tmptag, realtag, condor_version_b, condor_platform_b, version_info)
+
+        return realtag
+    finally:
+        subprocess.run([executable, "rmi", tmptag])
+
+
+def docker_build_base(version: str, distro: str, executable: str) -> str:
+    return docker_build("base", version, distro, executable)
+
+
+def docker_build_derived(image: str, basetag: str, distro: str, executable: str) -> str:
+    if ":" in basetag:
+        basetag_arg = basetag.split(":", 1)[1]
+    else:
+        basetag_arg = basetag
+
+    cmd = [
+        executable,
+        "build",
+        f"--build-arg=BASETAG={basetag_arg}",
+        f"--build-arg=BUILDDATE={today()}",
+    ]
+    if distro.startswith("el"):
+        dockerfile = "Dockerfile-el"
+    elif distro.startswith("ubu"):
+        dockerfile = "Dockerfile-ubu"
+    else:
+        assert False, "not one of the supported distros -- should have been caught"
+
+    tag = f"htcondor/{image}:{basetag_arg}"
+    cmd.extend(["-t", tag, "-f", f"{image}/{dockerfile}", "."])
+
+    subprocess.run(cmd, stdin=subprocess.DEVNULL, check=True)
+
+    return tag
+
+
+def docker_build_base_daily(series: str, distro: str, executable: str) -> str:
+    return docker_build_daily("base", series, distro, executable)
+
+
+def docker_build_derived_daily(image: str, basetag: str, distro: str, executable: str) -> str:
+    if ":" in basetag:
+        basetag_arg = basetag.split(":", 1)[1]
+    else:
+        basetag_arg = basetag
+
+    cmd = [
+        executable,
+        "build",
+        f"--build-arg=BASETAG={basetag_arg}",
+        f"--build-arg=BUILDDATE={today()}",
+    ]
+    if distro.startswith("el"):
+        dockerfile = "Dockerfile-daily-el"
+    elif distro.startswith("ubu"):
+        # XXX daily builds for ubuntu don't exist yet
+        raise RuntimeError("Daily builds aren't available for Ubuntu")
+        # dockerfile = "Dockerfile-daily-ubu"
+    else:
+        assert False, "not one of the supported distros -- should have been caught"
+
+    tag = f"htcondor/{image}:{basetag_arg}"
+    cmd.extend(["-t", tag, "-f", f"{image}/{dockerfile}", "."])
+
+    subprocess.run(cmd, stdin=subprocess.DEVNULL, check=True)
+
+    return tag
+
+
+def docker_build_daily(image: str, series: str, distro: str, executable: str) -> str:
+    ubu = None
+    el = None
+    cmd = [
+        executable,
+        "build",
+        f"--build-arg=SERIES={series}",
+        f"--build-arg=BUILDDATE={today()}",
+    ]
+    if distro.startswith("el"):
+        el = distro[2:]
+        cmd.append(f"--build-arg=EL={el}")
+        dockerfile = "Dockerfile-daily-el"
+    elif distro.startswith("ubu"):
+        # XXX daily builds for ubuntu don't exist yet
+        raise RuntimeError("Daily builds aren't available for Ubuntu")
+        # ubu = distro[3:]
+        # cmd.append(f"--build-arg=UBU={ubu}")
+        # dockerfile = "Dockerfile-daily-ubu"
+    else:
+        assert False, "not one of the supported distros -- should have been caught"
+
+    tmptag = f"htcondor/{image}:tmp{random.randint(10000,99999)}"
+    cmd.extend(["-t", tmptag, "-f", f"{image}/{dockerfile}", "."])
+
+    subprocess.run(cmd, stdin=subprocess.DEVNULL, check=True)
+
+    try:
+        condor_version_b, condor_platform_b = get_CondorVersion_and_CondorPlatform(
+            tmptag, executable
         )
-        subprocess.run(
-            [executable, "build", "-t", realtag, "-f", "-", "."], input=dockerfile
-        )
+
+        version_info = parse_CondorVersion(condor_version_b)
+
+        realtag = f"htcondor/{image}:{series}-{today()}-{distro}"
+
+        add_htcondor_labels(executable, tmptag, realtag, condor_version_b, condor_platform_b, version_info)
+
+        return realtag
     finally:
         subprocess.run([executable, "rmi", tmptag])
 
@@ -162,49 +277,80 @@ def docker_push(image, version, distro, executable):
     subprocess.run([executable, "rmi", tag_with_repo], check=False)
 
 
-def main(argv):
+def docker_push_daily(image, series, executable):
+    tag = f"htcondor/{image}:{series}-{today()}-{distro}"
+    tag_with_repo = f"{REPO}/{tag}"
+
+    subprocess.run([executable, "tag", tag, tag_with_repo], check=True)
+    subprocess.run([executable, "push", tag_with_repo], check=True)
+    subprocess.run([executable, "rmi", tag_with_repo], check=False)
+
+
+def push_tag(executable, tag, repository):
+    tag_with_repo = f"{repository}/{tag}"
+
+    subprocess.run([executable, "tag", tag, tag_with_repo], check=True)
+    subprocess.run([executable, "push", tag_with_repo], check=True)
+    subprocess.run([executable, "rmi", tag_with_repo], check=False)
+
+
+def main(argv) -> int:
     locale.setlocale(locale.LC_ALL, "C")  # no parsing surprises please
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", help="Command to run", choices=["build", "push"])
     parser.add_argument("version", help="Version of HTCondor to install")
-    parser.add_argument(
-        "image",
-        help="Image to build/push (default %(default)s)",
-        choices=IMAGES + ["all"],
-        nargs="?",
-        default="all",
-    )
     parser.add_argument(
         "--distro",
         help="Distribution to build/push for (default %(default)s)",
         choices=SUPPORTED_DISTROS + ["all"],
-        default="ubu18.04",
+        default="el7",
     )
+    parser.add_argument(
+        "--series",
+        help="The release series for daily or latest builds (default %(default)s). "
+        "Not used if an exact version is specified.",
+        default="8.9"
+    )
+    parser.add_argument("--push", action="store_true", dest="push", help="Push resulting builds")
+    #parser.add_argument("--nopush", action="store_false", dest="push", help="Do not push resulting builds")
+    parser.add_argument("--mini", action="store_true", dest="mini", help="Build minicondor")
+    #parser.add_argument("--nomini", action="store_false", dest="mini", help="Do not build minicondor")
     parser.add_argument("--podman", action="store_true", help="Use podman")
     args = parser.parse_args(argv[1:])
 
-    if not re.match(r"[0-9]+[.][0-9]+[.][0-9]+", args.version):
-        parser.error("Bad version '{args.version}' -- should be like '8.9.9'")
+    if not (args.version in ["daily", "latest"] or re.match(r"[0-9]+[.][0-9]+[.][0-9]+", args.version)):
+        parser.error("Bad version '{args.version}' -- should be like '8.9.9', 'daily', or 'latest'")
 
-    if args.image == "all":
-        images = IMAGES
-    else:
-        images = [args.image]
+    images = IMAGES
+    if args.mini:
+        images.append("mini")
+
     if args.distro == "all":
-        distros = SUPPORTED_DISTROS
+        if args.version == "daily":
+            distros = SUPPORTED_DAILY_DISTROS
+        else:
+            distros = SUPPORTED_DISTROS
     else:
         distros = [args.distro]
 
     executable = "podman" if args.podman else "docker"
 
-    for image in images:
-        for distro in distros:
-            if args.command == "build":
-                docker_build(image, args.version, distro, executable=executable)
-            elif args.command == "push":
-                docker_push(image, args.version, distro, executable=executable)
+    to_push = []
+    for distro in distros:
+        if args.version == "daily":
+            basetag = docker_build_base_daily(series=args.series, distro=distro, executable=executable)
+        else:
+            basetag = docker_build_base(args.version, distro, executable=executable)
+        to_push.append(basetag)
+
+        for image in images:
+            if args.version == "daily":
+                to_push.append(docker_build_derived_daily(image, basetag, distro, executable=executable))
             else:
-                assert False, "invalid command -- should have been caught"
+                to_push.append(docker_build_derived(image, basetag, distro, executable=executable))
+
+    if args.push:
+        for tag in to_push:
+            push_tag(executable, tag, REPO)
 
     return 0
 

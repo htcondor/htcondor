@@ -6,7 +6,7 @@ FROM htcondor/base:${BASETAG}
 ARG BUILDDATE
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="HTCondor RHEL-compatible central manager image" \
+LABEL org.label-schema.name="HTCondor RHEL-compatible central manager image (daily build)" \
       org.label-schema.build-date="${BUILDDATE}"
 
 COPY cm/condor/*.conf /etc/condor/config.d/

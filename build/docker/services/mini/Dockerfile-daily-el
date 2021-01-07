@@ -8,24 +8,18 @@ ARG BASETAG
 FROM htcondor/base:${BASETAG}
 
 ARG BUILDDATE
-ARG VERSION
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="HTCondor RHEL-compatible minicondor" \
+LABEL org.label-schema.name="HTCondor RHEL-compatible minicondor (daily build)" \
       org.label-schema.build-date="${BUILDDATE}"
-
 
 # perl is needed for condor_run. Reinstalling condor to get the man pages too.
 # git and flask are needed for the restd; jq is too useful not to include.
 RUN \
     yum install -y perl  && \
-    yum reinstall -y --setopt=tsflags='' "*condor*" && \
+    yum reinstall -y --setopt=tsflags='' --enablerepo=htcondor-daily "*condor*" && \
     yum install -y --setopt=tsflags='' man-db && \
-    if [ -n "${VERSION}" ]; then \
-        yum install -y --setopt=tsflags='' "minicondor = ${VERSION}"; \
-    else \
-        yum install -y --setopt=tsflags='' minicondor; \
-    fi && \
+    yum install -y --setopt=tsflags='' --enablerepo=htcondor-daily minicondor && \
     \
     yum install -y git-core python3-flask jq &&  \
     \

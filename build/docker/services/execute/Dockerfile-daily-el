@@ -6,7 +6,7 @@ FROM htcondor/base:${BASETAG}
 ARG BUILDDATE
 
 # https://label-schema.org/rc1
-LABEL org.label-schema.name="HTCondor RHEL-compatible execute image" \
+LABEL org.label-schema.name="HTCondor RHEL-compatible execute image (daily build)" \
       org.label-schema.build-date="${BUILDDATE}"
 
 # Create slot users slot1 through slot64
