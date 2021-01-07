@@ -157,18 +157,20 @@ utilClearList( StringList& list )
     }
 }
 
-
 // encode an unsigned character array as a null terminated hex string
+// the caller must supply an input buffer that is at least 2*datalen+1 in size
 static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
-static const char * encode_hex(char * buf, const unsigned char * data, int datalen)
+static const char * encode_hex(char * buf, int bufsiz, const unsigned char * data, int datalen)
 {
-	if (!buf) return "";
+	if (!buf || bufsiz < 3) return "";
 	const unsigned char * d = data;
 	char * p = buf;
+	char * endp = buf + bufsiz - 2; // we advance by 2 each loop iteration
 	while (datalen-- > 0) {
 		unsigned char ch = *d++;
 		*p++ = hex_digit((ch >> 4) & 0xF);
 		*p++ = hex_digit(ch & 0xF);
+		if (p >= endp) break;
 	}
 	*p = 0;
 	return buf;
@@ -181,7 +183,7 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 	// bool       successValue = true;
 	filesize_t bytes        = 0; // set by socket.put_file
 	char       md[MD5_MAC_SIZE]; // holds MD5 digest in non-fips mode, and all zeros in fips mode
-	char       file_hash[SHA256_DIGEST_LENGTH * 2 + 1]; // the SHA256 checksum as a hex string, used only in FIPS mode,
+	char       file_hash[SHA256_DIGEST_LENGTH * 2 + 4]; // the SHA256 checksum as a hex string, used only in FIPS mode
 	dprintf(D_ALWAYS, "utilSafePutFile %s started\n", filePath.Value());
 
 	// The original MD5 sum was done using a ifstream opened in text mode.  This is wrong
@@ -220,7 +222,7 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 
 		memset(hash, 0, sizeof(hash));
 		SHA256_Final(hash, &context);
-		encode_hex(file_hash, hash, sizeof(hash));
+		encode_hex(file_hash, sizeof(file_hash), hash, sizeof(hash));
 	} else {
 
 		// initializing MD5 structures
@@ -252,7 +254,7 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 	socket.encode( );
 
 	if ( ! socket.code_bytes(md, sizeof(md))) {
-		dprintf(D_ALWAYS, "utilSafePutFile unable to send MAC");
+		dprintf(D_ALWAYS, "utilSafePutFile unable to send MAC\n");
 		return false;
 	}
 	if (fips_mode) {
@@ -348,7 +350,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 	int hash_diff = 0;
 	if (fips_mode) {
 		unsigned char hash[SHA256_DIGEST_LENGTH];	 // TODO: support other sizes of SHA-2 hash here?
-		char hex_hash[SHA256_DIGEST_LENGTH * 2 + 1]; // the SHA256 checksum as a hex string
+		char hex_hash[SHA256_DIGEST_LENGTH * 2 + 4]; // the SHA256 checksum as a hex string
 
 		SHA256_CTX  context;
 		SHA256_Init(&context);
@@ -363,7 +365,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 
 		memset(hash, 0, sizeof(hash));
 		SHA256_Final(hash, &context);
-		encode_hex(hex_hash, hash, sizeof(hash));
+		encode_hex(hex_hash, sizeof(hex_hash), hash, sizeof(hash));
 
 		hash_diff = strcasecmp(file_hash.c_str(), hex_hash);
 		if (hash_diff) {
