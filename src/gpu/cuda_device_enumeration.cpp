@@ -53,7 +53,7 @@ char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
 	return buf;
 }
 
-BasicProps::BasicProps() : totalGlobalMem(0), ccMajor(0), ccMinor(0), multiProcessorCount(0), clockRate(0), ECCEnabled(0) {
+BasicProps::BasicProps() {
 	memset( pciId, 0, sizeof(pciId) );
 }
 
