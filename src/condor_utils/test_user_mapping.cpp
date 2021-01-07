@@ -238,7 +238,7 @@ void testing_lookups(bool verbose, const char * mode)
 	}
 }
 
-int read_mapfile(const char * mapfile, bool assume_hash, const char * lookup_method, const char * user)
+int read_mapfile(const char * mapfile, bool assume_hash, bool dump_it, const char * lookup_method, const char * user)
 {
 	int rval = 0;
 	double dstart;
@@ -264,6 +264,12 @@ int read_mapfile(const char * mapfile, bool assume_hash, const char * lookup_met
 	if (dash_verbose) {
 		double elapsed_time = _condor_debug_get_time_double() - dstart;
 		print_usage(stdout, gmf, elapsed_time);
+	}
+
+	if (dump_it) {
+		fprintf(stdout, "Resulting map:\n===========\n");
+		gmf->dump(stdout);
+		fprintf(stdout, "\n===========\n\n");
 	}
 
 	if (user) {
@@ -437,6 +443,8 @@ void Usage(const char * appname, FILE * out)
 		"    -timelist <file>\t Map each line from <file> against <mapfile> or <gridfile>\n"
 		"                         and report total time spent doing the mapping. This option does\n"
 		"                         not print the results, it is just a timing test\n"
+		"    -debug[:<flags>]\t Send log messages to stdout as map is read. set flags to D_FULLDEBUG\n"
+		"                         to see success messages for each file and map entry\n"
 		, appname);
 }
 
@@ -452,6 +460,7 @@ int main( int /*argc*/, const char ** argv) {
 	const char * pcolon;
 	bool other_arg = false;
 	bool assume_hash = false;
+	bool dump_map = false;
 	bool show_failed_lookups = false;
 	const char * mapfile = NULL;
 	const char * gridfile = NULL;
@@ -527,6 +536,14 @@ int main( int /*argc*/, const char ** argv) {
 			}
 		} else if (is_dash_arg_prefix(arg, "hash", 2)) {
 			assume_hash = true;
+		} else if (is_dash_arg_prefix(arg, "dump", 2)) {
+			dump_map = true;
+		} else if (is_dash_arg_colon_prefix(arg, "debug", &pcolon, 3)) {
+			// dprintf to console
+			dprintf_set_tool_debug("TOOL", 0);
+			if (pcolon && pcolon[1]) {
+				set_debug_flags( ++pcolon, 0 );
+			}
 		} else {
 			fprintf(stderr, "unknown argument %s\n", arg);
 			Usage(argv[0], stderr);
@@ -541,7 +558,7 @@ int main( int /*argc*/, const char ** argv) {
 	if (test_flags & 0x0020) testing_lookups(dash_verbose, "hash");
 
 	if (mapfile) {
-		int rval = read_mapfile(mapfile, assume_hash, lookup_method, user);
+		int rval = read_mapfile(mapfile, assume_hash, dump_map, lookup_method, user);
 		if (rval < 0) {
 			fprintf(stderr, "mapfile read returned %d\n", rval);
 		}

@@ -24,6 +24,7 @@
 #include "HashTable.h"
 #include "MapFile.h"
 #include "directory.h"
+#include "basename.h"
 
 #ifdef USE_MAPFILE_V2
 
@@ -79,6 +80,7 @@ public:
 	bool is_hash_type() const { return entry_type == 2; }
 protected:
 	friend class MapFile;
+	void dump(FILE* fp);
 	char entry_type; // 0 = base, 1 = CanonicalMapRegexEntry, 2 = CanonicalMapHashEntry
 	char spare[sizeof(void*)-1];
 };
@@ -90,6 +92,9 @@ public:
 	void clear() { if (re) pcre_free(re); re = NULL; canonicalization = NULL; }
 	bool add(const char* pattern, int options, const char * canon, const char **errptr, int * erroffset);
 	bool matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon);
+	void dump(FILE * fp) {
+		fprintf(fp, "   REGEX { /<compiled_regex>/%x %s }\n", re_options, canonicalization);
+	}
 private:
 	friend class MapFile;
 	//Regex re;
@@ -107,6 +112,15 @@ public:
 	static CanonicalMapHashEntry * is_type(CanonicalMapEntry * that) {
 		if (that && that->is_hash_type()) { return reinterpret_cast<CanonicalMapHashEntry*>(that); }
 		return NULL;
+	}
+	void dump(FILE * fp) {
+		fprintf(fp, "   HASH {\n");
+		if (hm) {
+			for (auto it = hm->begin(); it != hm->end(); ++it) {
+				fprintf(fp, "        \"%s\"  %s\n", it->first.c_str(), it->second);
+			}
+		}
+		fprintf(fp, "   } # end HASH\n");
 	}
 
 private:
@@ -141,6 +155,15 @@ bool CanonicalMapEntry::matches(const char * principal, int cch, ExtArray<MyStri
 		return reinterpret_cast<CanonicalMapHashEntry*>(this)->matches(principal, cch, groups, pcanon);
 	}
 	return false;
+}
+
+void CanonicalMapEntry::dump(FILE* fp)
+{
+	if (entry_type == 1) {
+		reinterpret_cast<CanonicalMapRegexEntry*>(this)->dump(fp);
+	} else if (entry_type == 2) {
+		reinterpret_cast<CanonicalMapHashEntry*>(this)->dump(fp);
+	}
 }
 
 CanonicalMapEntry::~CanonicalMapEntry() {
@@ -406,7 +429,7 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 }
 
 int
-MapFile::ParseCanonicalizationFile(const MyString filename, bool assume_hash /*=false*/)
+MapFile::ParseCanonicalizationFile(const MyString filename, bool assume_hash /*=false*/, bool allow_include /*=true*/)
 {
 	FILE *file = safe_fopen_wrapper_follow(filename.Value(), "r");
 	if (NULL == file) {
@@ -415,15 +438,17 @@ MapFile::ParseCanonicalizationFile(const MyString filename, bool assume_hash /*=
 				filename.Value(),
 				strerror(errno));
 		return -1;
+	} else {
+		dprintf(D_FULLDEBUG, "Reading mapfile %s\n", filename.c_str());
 	}
 
 	MyStringFpSource myfs(file, true);
 
-	return ParseCanonicalization(myfs, filename.Value(), assume_hash);
+	return ParseCanonicalization(myfs, filename.Value(), assume_hash, allow_include);
 }
 
 int
-MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool assume_hash /*=false*/)
+MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool assume_hash /*=false*/, bool allow_include /*=true*/)
 {
 	int line = 0;
 
@@ -450,55 +475,39 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 		offset = 0;
 		offset = ParseField(input_line, offset, method);
 
-		if (method == "INCLUDE") {
+		if (method == "@include") {
+			if ( ! allow_include) {
+				dprintf(D_ALWAYS, "ERROR: @include directive not allowed in the map file %s (line %d)\n", srcname, line);
+				continue;
+			}
 			MyString path;
 			offset = ParseField(input_line, offset, path);
 			if (path.IsEmpty()) {
-				dprintf(D_ALWAYS, "ERROR: Empty filename for INCLUDE directive in the map (line %d)\n", line);
+				dprintf(D_ALWAYS, "ERROR: Empty filename for @include directive in the map %s (line %d)\n", srcname, line);
 				continue;
+			}
+			if ( ! fullpath(path.c_str()) && condor_basename(srcname) > srcname) {
+				MyString filen(path);
+				MyString dirn; dirn.append(srcname, (int)(condor_basename(srcname) - srcname));
+				dircat(dirn.c_str(), filen.c_str(), path);
 			}
 			StatInfo si(path.c_str());
 			if (si.IsDirectory()) {
-				const char* _errstr;
-				int _erroffset;
-				std::string excludeRegex;
-					// We simply fail invalid regex as the config subsys should have EXCEPT'd
-					// in this case.
-				if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
-					dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
-					return -1;
-				}
-				Regex excludeFilesRegex;
-				if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
-					dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
-						"config parameter is not a valid "
-						"regular expression.  Value: %s,  Error: %s",
-						excludeRegex.c_str(), _errstr ? _errstr : "");
-					return -1;
-				}
-				if(!excludeFilesRegex.isInitialized() ) {
-					dprintf(D_FULLDEBUG, "Failed to initialize exclude files regex.");
-					return -1;
+				StringList file_list;
+				if ( ! get_config_dir_file_list( path.c_str(), file_list)) {
+					dprintf(D_ALWAYS, "ERROR: Could not include dir %s\n", path.c_str());
+					continue;
 				}
 
-				Directory dir(&si);
-				dir.Rewind();
-				while (dir.Next()) {
-
-					if (dir.IsDirectory()) {
-						continue;
-					}
-					auto full_path = dir.GetFullPath();
-					if(!excludeFilesRegex.match(full_path)) {
-						ParseCanonicalizationFile(full_path, assume_hash);
-					} else {
-						dprintf(D_FULLDEBUG, "Ignoring token file "
-							"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
-							"'%s'\n", full_path);
-					}
+				file_list.rewind();
+				char const *fname;
+				while ((fname = file_list.next())) {
+					// read file, but don't allow it to have @include directives
+					ParseCanonicalizationFile(fname, assume_hash, false);
 				}
 			} else {
-				ParseCanonicalizationFile(path, assume_hash);
+				// read file, but don't allow it to have @include directives
+				ParseCanonicalizationFile(path, assume_hash, false);
 			}
 			continue;
 		}
@@ -661,6 +670,22 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 	return 0;
 }
 
+
+#ifdef USE_MAPFILE_V2
+void MapFile::dump(FILE* fp)
+{
+	for (auto it = methods.begin(); it != methods.end(); ++it) {
+		const char * method = it->first.c_str();
+		fprintf(fp, "\n%s = {\n", method);
+
+		for (CanonicalMapEntry * entry = it->second->first; entry; entry = entry->next) {
+			entry->dump(fp);
+		}
+		fprintf(fp, "} # end %s\n", method);
+	}
+}
+
+#endif
 
 int
 MapFile::GetCanonicalization(const MyString method,
