@@ -15,6 +15,17 @@ Release Notes:
 
 New Features:
 
+- HTCondor now detects instances of multi-instance GPUs.  These devices will
+  be reported as individual GPUs, each named as required to access them via
+  ``CUDA_VISIBLE_DEVICES``.  Some of the ``-extra`` and ``-dynamic``
+  properties are unavailable for these devices.  Due to driver limitations,
+  if MIG is enabled on any GPU, HTCondor will detect all devices on the system
+  using NVML; some ``-extra`` properties will not be reported for these
+  systems as a result.
+
+  This feature does not include reporting the utilization of MIG instances.
+  :jira:`137`
+
 - Added command-line options to *condor_gpu_discovery* to report GPUs
   multiple times.  If your GPU jobs are small and known to be well-behaved,
   this makes it easier for them to share a GPU.
@@ -52,6 +63,10 @@ New Features:
   :jira:`132`
 
 Bugs Fixed:
+
+- Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
+  ``-uuid``.
+  :jira:`137`
 
 - Fixed a bug with singularity support where the job's cwd wasn't
   being set to the scratch directory when `SINGULARITY_TARGET_DIR` wasn't
