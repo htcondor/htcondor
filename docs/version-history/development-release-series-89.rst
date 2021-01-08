@@ -4,6 +4,28 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 8.9.11
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.11 released on January 27, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
+
+   :ticket:`7893`
+   :ticket:`7894`
+
 Version 8.9.10
 --------------
 
