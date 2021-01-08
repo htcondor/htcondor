@@ -24,6 +24,11 @@ dlclose( dlopen_return_t hlib ) {
 	return FreeLibrary( hlib );
 }
 
+inline char *
+dlerror() {
+    return GetLastError();
+}
+
 #else
 
 #include <dlfcn.h>
