@@ -1,8 +1,17 @@
-#include <unistd.h>
+#include <time.h>
 #include <string.h>
 
 #include <string>
 #include <vector>
+
+// For pi_dynlink.h
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
+#define NOMCX
+#define NOIME
+#include <Windows.h>
+#endif
 
 #include "pi_dynlink.h"
 

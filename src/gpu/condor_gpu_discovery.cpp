@@ -31,6 +31,7 @@
 #include <time.h>
 #include <stdarg.h> // for va_start
 
+// For pi_dynlink.h
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOSERVICE

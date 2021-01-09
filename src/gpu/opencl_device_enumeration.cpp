@@ -1,8 +1,16 @@
-#include <unistd.h>
 #include <stdlib.h>
 
 #include <vector>
 #include <string>
+
+// For pi_dynlink.h
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
+#define NOMCX
+#define NOIME
+#include <Windows.h>
+#endif
 
 #include "pi_dynlink.h"
 #include "opencl_header_doc.h"
@@ -107,6 +115,10 @@ clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, t & val) {
 	}
 	return clr;
 }
+
+template clReturn oclGetInfo<int>(cl_device_id did, cl_e_device_info eInfo, int & val);
+template clReturn oclGetInfo<unsigned int>(cl_device_id did, cl_e_device_info eInfo, unsigned int & val);
+template clReturn oclGetInfo<unsigned long long>(cl_device_id did, cl_e_device_info eInfo, unsigned long long & val);
 
 static int ocl_device_count = 0;
 static int ocl_was_initialized = 0;
