@@ -26,7 +26,8 @@ KeyInfo:: KeyInfo()
     : keyData_    (0),
       keyDataLen_ (0),
       protocol_   (CONDOR_NO_PROTOCOL),
-      duration_   (0)
+      duration_   (0),
+      connState_  (0)
 {
     
 }
@@ -36,7 +37,7 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
       keyDataLen_ (copy.keyDataLen_),
       protocol_   (copy.protocol_),
       duration_   (copy.duration_),
-      state_      (copy.state_)
+      connState_  (copy.connState_)
 {
     init(copy.keyData_, copy.keyDataLen_);
 }
@@ -45,13 +46,13 @@ KeyInfo :: KeyInfo(const unsigned char * keyData,
                    int             keyDataLen,
                    Protocol        protocol,
                    int             duration,
-                   std::shared_ptr<CryptoState> state )
+                   std::shared_ptr<ConnCryptoState> connState )
     : 
       keyData_    (0),
       keyDataLen_ (keyDataLen),
 	  protocol_   (protocol),
       duration_   (duration),
-      state_      (state)
+      connState_      (connState)
 {
     init(keyData, keyDataLen);
 }
@@ -67,7 +68,7 @@ KeyInfo& KeyInfo :: operator=(const KeyInfo& copy)
 		keyDataLen_ = copy.keyDataLen_;
 		protocol_   = copy.protocol_;
 		duration_   = copy.duration_;
-		state_      = copy.state_;
+		connState_  = copy.connState_;
 
 		init(copy.keyData_, copy.keyDataLen_);
 	}

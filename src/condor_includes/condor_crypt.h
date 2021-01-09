@@ -97,7 +97,7 @@ class Condor_Crypt_Base {
                          unsigned char *& output, 
                          int&             output_len) = 0;
 
-    virtual int ciphertext_size(int ciphertext) const {return ciphertext;}
+    virtual int ciphertext_size_with_cs(int ciphertext, std::shared_ptr<ConnCryptoState> ccs) const = 0;
 
  protected:
     static int encryptedSize(int inputLength, int blockSize = 8);

@@ -30,6 +30,8 @@
 #include <openssl/des.h>
 #include <openssl/blowfish.h>
 
+#include "condor_crypt_aesgcm.h"
+
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     m_keyInfo(key)
 {
@@ -79,6 +81,12 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
             m_ivec = (unsigned char*)malloc(m_ivec_len);
             break;
         }
+        case CONDOR_AESGCM: {
+            // ZKM TODO FIXME: CODE MISSING HERE TO INIT AES PROPERLY
+            dprintf(D_ALWAYS, "TRYING TO INIT AES PROPERLY.\n");
+            Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState());
+            break;
+        }
         default:
             dprintf(D_ALWAYS, "CRYPTO: WARNING: Initialized crypto state for unknown proto %i.\n", proto);
             break;
@@ -96,13 +104,19 @@ Condor_Crypto_State::~Condor_Crypto_State() {
 }
 
 void Condor_Crypto_State::reset() {
-    dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: resetting m_ivec(len %i) and m_num\n", m_ivec_len);
+    dprintf(D_ALWAYS, "CRYPTO: protocol(%i) resetting.\n", m_keyInfo.getProtocol());
 
-    if(m_ivec) {
-	memset(m_ivec, 0, m_ivec_len);
+    if(m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: AES reset.\n");
+        Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState());
+    } else {
+        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: simple reset m_ivec(len %i) and m_num\n", m_ivec_len);
+
+        if(m_ivec) {
+            memset(m_ivec, 0, m_ivec_len);
+        }
+        m_num = 0;
     }
-   
-    m_num = 0;
 }
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)

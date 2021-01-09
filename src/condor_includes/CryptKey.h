@@ -30,7 +30,7 @@ enum Protocol {
     CONDOR_AESGCM
 };
 
-struct CryptoState {
+struct ConnCryptoState {
 		// The IV is split in two: a 32-bit counter and a
 		// 64-bit random number for a total of 12 bytes.
 		// The ctr is added to the last 4 bytes of the IV.
@@ -62,7 +62,7 @@ class KeyInfo {
             int             keyDataLen,
             Protocol        protocol,
             int             duration,
-            std::shared_ptr<CryptoState> state);
+            std::shared_ptr<ConnCryptoState> connState);
     //------------------------------------------
     // Construct a key object
     //------------------------------------------
@@ -111,7 +111,7 @@ class KeyInfo {
 	*/
 	unsigned char * getPaddedKeyData(int len) const;
 
-    std::shared_ptr<CryptoState> getCryptoState() const {return state_;}
+    std::shared_ptr<ConnCryptoState> getConnCryptoState() const {return connState_;}
 
  private:
     void init(const unsigned char * keyData, int keyDataLen);
@@ -122,7 +122,7 @@ class KeyInfo {
     Protocol        protocol_;
     int             duration_;
 
-    std::shared_ptr<CryptoState> state_;
+    std::shared_ptr<ConnCryptoState> connState_;
 };
 
 #endif

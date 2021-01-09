@@ -3375,9 +3375,9 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		unsigned char keybuf2[32];
 		memcpy(keybuf2, keybuf, 16);
 		memcpy(keybuf2 + 16, keybuf, 16);
-		keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0, std::shared_ptr<CryptoState>());
+		keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0, std::shared_ptr<ConnCryptoState>());
 	} else {
-		keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0, std::shared_ptr<CryptoState>());
+		keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0, std::shared_ptr<ConnCryptoState>());
 	}
 	free( keybuf );
 	keybuf = NULL;

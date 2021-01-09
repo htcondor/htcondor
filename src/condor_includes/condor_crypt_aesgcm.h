@@ -29,20 +29,23 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
 //    Condor_Crypt_AESGCM();
 //    ~Condor_Crypt_AESGCM();
 
-    void resetState();
-    void resetState(std::shared_ptr<CryptoState>);
+    // ZKM TODO FIXME: Get rid of these, and any callers should call the
+    // reset() method on their state object instead
+//    void resetState();
+//    static void resetState(ConnCryptoState *connState);
+    static void resetState(std::shared_ptr<ConnCryptoState> connState);
 
     bool encrypt(Condor_Crypto_State *,
                  const unsigned char *,
                  int                  ,
                  unsigned char *&     ,
-                 int&                 ) {return false;}
+                 int&                 ) {ASSERT("ZKM: WRONG CALL.\n"); return false;}
 
     bool decrypt(Condor_Crypto_State *,
                        const unsigned char *,
                        int             ,
                        unsigned char *&,
-                       int&            ) {return false;}
+                       int&            ) {ASSERT("ZKM: WRONG CALL.\n"); return false;}
 
     bool encrypt(Condor_Crypto_State * cs,
                  const unsigned char * aad_data,
@@ -60,11 +63,11 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
                  unsigned char *       output, 
                  int&                  output_len);
 
-    virtual int ciphertext_size(int plaintext) const;
+    virtual int ciphertext_size_with_cs(int plaintext_size, std::shared_ptr<ConnCryptoState> connState) const;
 
  private:
     // ZKM TODO FIXME: Move all this from m_state to the Condor_Crypto_State param
-    std::shared_ptr<CryptoState> m_state;
+    //std::shared_ptr<ConnCryptoState> m_conn_state;
 };
 
 #endif

@@ -907,19 +907,19 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						switch (method) {
 							case CONDOR_BLOWFISH:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH, 0, std::shared_ptr<CryptoState>());
+								m_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH, 0, std::shared_ptr<ConnCryptoState>());
 								break;
 							case CONDOR_3DES:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 24, CONDOR_3DES, 0, std::shared_ptr<CryptoState>());
+								m_key = new KeyInfo(rbuf, 24, CONDOR_3DES, 0, std::shared_ptr<ConnCryptoState>());
 								break;
 							case CONDOR_AESGCM:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 32, CONDOR_AESGCM, 0, std::shared_ptr<CryptoState>(new CryptoState()));
+								m_key = new KeyInfo(rbuf, 32, CONDOR_AESGCM, 0, std::shared_ptr<ConnCryptoState>(new ConnCryptoState()));
 								break;
 							default:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 24, CONDOR_NO_PROTOCOL, 0, std::shared_ptr<CryptoState>());
+								m_key = new KeyInfo(rbuf, 24, CONDOR_NO_PROTOCOL, 0, std::shared_ptr<ConnCryptoState>());
 								break;
 						}
 

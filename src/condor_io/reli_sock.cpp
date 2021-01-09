@@ -982,7 +982,7 @@ read_packet:
 				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
 		}
 
-		if ( ((Condor_Crypt_AESGCM*)p_sock->get_crypto())->decrypt(
+		if ( ! ((Condor_Crypt_AESGCM*)p_sock->get_crypto())->decrypt(
                         p_sock->crypto_state_,
 			aad_data,
 			aad_len,
@@ -1192,7 +1192,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
 		}
 
-		if ( ((Condor_Crypt_AESGCM*)p_sock->get_crypto())->encrypt(
+		if ( ! ((Condor_Crypt_AESGCM*)p_sock->get_crypto())->encrypt(
                         p_sock->crypto_state_,
 			aad_data,
 			aad_len,

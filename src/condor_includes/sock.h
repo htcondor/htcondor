@@ -26,6 +26,7 @@
 #include "CondorError.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
+#include "condor_crypt_aesgcm.h"
 
 #include <unordered_set>
 
@@ -234,7 +235,21 @@ public:
         //------------------------------------------
         bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
 
-	int ciphertext_size(int cipher_size) {return crypto_ ? crypto_->ciphertext_size(cipher_size) : cipher_size;}
+	// for all methods other than AESGCM, the ConnCryptoState should be NULL, and thus the cipher size is the same as plaintext size.
+	int ciphertext_size(int plaintext_size) {
+	dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_ is %p.\n", crypto_);
+	if (!crypto_) return plaintext_size;
+	dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_state_ is %p.\n", crypto_state_);
+	if (!crypto_state_) return plaintext_size;
+	dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_state_->m_keyInfo is %p.\n", (void*)&crypto_state_->m_keyInfo);
+	dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_state_->m_keyInfo.getConnCryptoState() is %p.\n", (void*)(crypto_state_->m_keyInfo.getConnCryptoState().get()));
+	if (!(crypto_state_->m_keyInfo.getConnCryptoState().get())) return plaintext_size;
+
+	int cs = ((Condor_Crypt_AESGCM*)crypto_)->ciphertext_size_with_cs(plaintext_size, crypto_state_->m_keyInfo.getConnCryptoState());
+	dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): went from plaintext_size %i to ciphertext_size %i.\n", plaintext_size, cs);
+	return cs;
+	}
+
         //------------------------------------------
         // PURPOSE: set sock to use a particular encryption key
         // REQUIRE: KeyInfo -- a wrapper for keyData

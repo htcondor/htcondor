@@ -1012,9 +1012,9 @@ int Authentication::exchangeKey(KeyInfo *& key)
 				if (protocol == CONDOR_AESGCM) {
 					key = new KeyInfo((unsigned char *)decryptedKey, keyLength,
 						(Protocol) protocol, duration,
-						std::shared_ptr<CryptoState>(new CryptoState()));
+						std::shared_ptr<ConnCryptoState>(new ConnCryptoState()));
 				} else {
-					key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration, std::shared_ptr<CryptoState>());
+					key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration, std::shared_ptr<ConnCryptoState>());
 				}
 			} else {
 					// Failure!
