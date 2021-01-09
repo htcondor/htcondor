@@ -26,7 +26,9 @@ dlclose( dlopen_return_t hlib ) {
 
 inline char *
 dlerror() {
-    return GetLastError();
+	static char buffer[64];
+	snprintf( buffer, 64, "%lu", GetLastError );
+	return buffer;
 }
 
 #else
