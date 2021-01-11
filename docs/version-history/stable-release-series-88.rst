@@ -52,6 +52,12 @@ Bugs Fixed:
   modern Linuxes.
   :jira:`29`
 
+- Fixed a bug in the *condor_job_router_info* that would build the umbrella 
+  constraint value incorrectly when the tool was run as root.  This incorrect
+  constraint would result in no jobs matching when the ``-match-jobs``
+  ` or ``-route-jobs`` options were used.
+  :jira:`38`
+
 Version 8.8.11
 --------------
 
