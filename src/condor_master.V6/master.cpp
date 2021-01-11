@@ -1895,32 +1895,55 @@ main( int argc, char **argv )
     }
 #endif
 
-#ifdef LINUX
-    // Check for necessary directories if we were started by the system
-    if (getuid() == 0 && getppid() == 1) {
-        // If the condor user is in LDAP, systemd will silently fail to create
-        // these necessary directories at boot. The condor user and paths are
-        // hard coded here, because they match the systemd configuration.
-        struct stat sbuf;
-        struct passwd *pwbuf = getpwnam("condor");
-        if (pwbuf) {
-            if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
-                if (mkdir("/var/run/condor", 0775) == 0) {
-                    dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
-                    dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
-                }
-            }
-            if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
-                if (mkdir("/var/lock/condor", 0775) == 0) {
-                    dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
-                    dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
-                }
-            }
-            if (stat("/var/lock/condor/local", &sbuf) != 0 && errno == ENOENT) {
-                if (mkdir("/var/lock/condor/local", 01777) == 0) {
-                    dummyGlobal = chown("/var/lock/condor/local", pwbuf->pw_uid, pwbuf->pw_gid);
-                    dummyGlobal = chmod("/var/lock/condor/local", 01777); // Override umask
-                }
+#ifndef WIN32
+    //
+    // Create the necessary directories.
+    //
+
+    typedef struct {
+        const char * param;
+        unsigned int uid;
+        unsigned int gid;
+        mode_t mode;
+    } required_directories_t;
+
+    uid_t u = get_condor_uid();
+    gid_t g = get_condor_gid();
+
+    uid_t r = 0;
+    gid_t s = 0;
+    if(! can_switch_ids()) {
+        r= u;
+        s= g;
+    }
+
+    std::vector<required_directories_t> required_directories {
+        { "SEC_PASSWORD_DIRECTORY",         r, s, 00700 },
+        { "SEC_TOKEN_SYSTEM_DIRECTORY",     u, g, 00700 },
+        { "LOCAL_DIR",                      u, g, 00755 },
+        { "EXECUTE",                        u, g, 01777 },
+        { "SEC_CREDENTIAL_DIRECTORY_KRB",   r, s, 00755 },
+        { "SEC_CREDENTIAL_DIRECTORY_OAUTH", r, g, 02770 },
+        { "SPOOL",                          u, g, 00775 },
+        { "LOCAL_UNIV_EXECUTE",             u, g, 01777 },
+        { "LOCK",                           u, g, 00755 },
+        { "LOCAL_DISK_LOCK_DIR",            u, g, 01777 },
+        { "LOG",                            u, g, 00755 },
+        { "RUN",                            u, g, 00755 }
+    };
+
+    // Initialize the param() system.
+    config();
+
+    struct stat sbuf;
+    for( const auto & dir : required_directories ) {
+        std::string name;
+        param( name, dir.param );
+        // fprintf( stderr, "%s (%s) %u %u %o\n", dir.param, name.c_str(), dir.uid, dir.gid, dir.mode );
+        if( stat( name.c_str(), &sbuf ) != 0 && errno == ENOENT ) {
+            if( mkdir( name.c_str(), dir.mode ) == 0 ) {
+                dummyGlobal = chown( name.c_str(), dir.uid, dir.gid );
+                dummyGlobal = chmod( name.c_str(), dir.mode ); // Override umask
             }
         }
     }
