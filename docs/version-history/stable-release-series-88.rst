@@ -45,6 +45,10 @@ New Features:
   the family of version comparison functions to ClassAds.
   :jira:`36`
 
+- For compatibility with 8.9 (and eventually, the next stable series), add
+  the ``unresolved`` function to ClassAds.
+  :jira:`66`
+
 Bugs Fixed:
 
 - Increased default Globus proxy key length to 2048 bits to align with NIST
