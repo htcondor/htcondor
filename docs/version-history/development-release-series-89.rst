@@ -15,6 +15,10 @@ Release Notes:
 
 New Features:
 
+- HTCondor now creates a number of directories on start-up, rather than
+  fail later on when it needs them to exist.  See the ticket for details.
+  :jira:`73`
+
 - HTCondor now detects instances of multi-instance GPUs.  These devices will
   be reported as individual GPUs, each named as required to access them via
   ``CUDA_VISIBLE_DEVICES``.  Some of the ``-extra`` and ``-dynamic``

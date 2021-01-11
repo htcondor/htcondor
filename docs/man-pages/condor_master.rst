@@ -1,5 +1,3 @@
-      
-
 *condor_master*
 ================
 
@@ -36,6 +34,14 @@ in the ``DC_DAEMON_LIST`` configuration macro, the *condor_master*
 daemon will spawn them automatically appending a *-f* argument. For
 those listed in ``DAEMON_LIST``, but not in ``DC_DAEMON_LIST``, there
 will be no *-f* argument.
+
+The *condor_master* creates certain directories necessary for its proper
+functioning on start-up if they don't already exist, using the values of
+the configuration settings
+``SEC_PASSWORD_DIRECTORY``, ``SEC_TOKEN_SYSTEM_DIRECTORY``, ``LOCAL_DIR``,
+``EXECUTE``, ``SEC_CREDENTIAL_DIRECTORY_KRB``,
+``SEC_CREDENTIAL_DIRECTORY_OAUTH``, ``SPOOL``, ``LOCAL_UNIV_EXECUTE``,
+``LOCK``, ``LOCAL_DISK_LOCK_DIR``, ``LOG``, and ``RUN``.
 
 Options
 -------
