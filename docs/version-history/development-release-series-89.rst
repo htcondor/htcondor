@@ -62,6 +62,17 @@ New Features:
   make that more clear, this starter log is now named StarterLog.testing.
   :jira:`132`
 
+- The *condor_collector* can now use a projection when forwarding ads to a
+  View Collector.  A new configuration variable ``COLLECTOR_FORWARD_PROJECTION``
+  can be configured to enabled this.
+  :jira:`51`
+
+- The *condor_drain* command now has a ``-reason`` argument and will supply a default
+  reason value if it is not used.  The *condor_defrag* daemon will always pass ``defrag``
+  as the reason so that draining initiated by the administrator can be distinguished
+  by drainging initiated by *condor_defrag*.
+  :jira:`77`
+
 Bugs Fixed:
 
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
@@ -72,6 +83,7 @@ Bugs Fixed:
   being set to the scratch directory when `SINGULARITY_TARGET_DIR` wasn't
   also set.
   :jira:`91`
+
 
 Version 8.9.10
 --------------
