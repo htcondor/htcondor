@@ -92,6 +92,7 @@ void init_condor_ids(void);
 void uninit_user_ids(void);
 void uninit_file_owner_ids(void);
 int set_file_owner_ids( uid_t uid, gid_t gid );
+bool user_ids_are_inited();
 int init_user_ids(const char username[], const char domain[]);
 int init_user_ids_quiet(const char username[]);
 int set_user_ids(uid_t uid, gid_t gid);
@@ -155,12 +156,16 @@ extern passwd_cache* pcache(void);
 class TemporaryPrivSentry {
 
 public:
-	TemporaryPrivSentry(bool clear_user_ids = false) {
+	TemporaryPrivSentry() : TemporaryPrivSentry(!user_ids_are_inited()) {}
+
+	TemporaryPrivSentry(bool clear_user_ids) {
 		m_orig_state = get_priv_state();
 		m_clear_user_ids = clear_user_ids;
 	}
 
-	TemporaryPrivSentry(priv_state dest_state, bool clear_user_ids = false) {
+	TemporaryPrivSentry(priv_state dest_state) : TemporaryPrivSentry(dest_state, !user_ids_are_inited()) {}
+
+	TemporaryPrivSentry(priv_state dest_state, bool clear_user_ids) {
 		m_orig_state = set_priv(dest_state);
 		m_clear_user_ids = clear_user_ids;
 	}

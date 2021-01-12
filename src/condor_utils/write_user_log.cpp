@@ -158,8 +158,6 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 	std::string user_log_file;
 	std::string dagman_log_file;
 
-	TemporaryPrivSentry temp_priv;
-
 	m_global_disable = false;
 
 	if ( init_user ) {
@@ -178,6 +176,8 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 		m_init_user_ids = true;
 	}
 	m_set_user_priv = true;
+
+	TemporaryPrivSentry temp_priv;
 
 	// switch to user priv
 	set_user_priv();

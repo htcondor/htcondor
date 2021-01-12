@@ -285,6 +285,11 @@ can_switch_ids( void )
 	return SwitchIds;
 }
 
+bool
+user_ids_are_inited()
+{
+	return (bool)UserIdsInited;
+}
 
 #ifdef LINUX
 static int should_use_keyring_sessions() {
