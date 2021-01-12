@@ -6184,7 +6184,6 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 {
 	ClassAd	*ad = NULL;
 	char	*attr_val;
-	std::string tmp;
 
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
@@ -6193,8 +6192,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		if( tmp_ad.LookupString(attr_name, tmp) == 1) {
-			val = tmp;
+		if( tmp_ad.LookupString(attr_name, val) == 1) {
 			return 1;
 		}
 		val = "";
@@ -6208,8 +6206,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 		return -1;
 	}
 
-	if (ad->LookupString(attr_name, tmp) == 1) {
-		val = tmp;
+	if (ad->LookupString(attr_name, val) == 1) {
 		return 0;
 	}
 	val = "";
