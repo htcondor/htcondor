@@ -95,6 +95,7 @@
 #include "condor_secman.h"
 #include "token_utils.h"
 #include "jobsets.h"
+#include "classad_collection.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -14047,6 +14048,14 @@ void Scheduler::reconfig() {
 		// to check here for changes.  
 	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 	SetMaxHistoricalLogs(max_saved_rotations);
+
+	dprintf(D_ALWAYS,"Checking ExportJobs() params\n");
+	std::string export_list;
+	std::string export_dir;
+	if ( param(export_list, "SCHEDD_EXPORT_LIST") && param(export_dir, "SCHEDD_EXPORT_DIR") ) {
+		dprintf(D_ALWAYS,"Calling ExportJobs()\n");
+		ExportJobs(export_list.c_str(), export_dir.c_str());
+	}
 }
 
 // NOTE: this is likely unreachable now, and may be removed
@@ -17637,4 +17646,122 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 	if (success) {
 		daemonCore->Reset_Timer(self->timeoutid,0,1);
 	}
+}
+
+
+bool
+Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir)
+{
+	dprintf(D_ALWAYS,"ExportJobs('%s','%s')\n",cluster_ids,output_dir);
+	std::string owner;
+	std::string domain;
+	std::set<int> clusters;
+	StringList clusters_strlist(cluster_ids);
+	const char *next_cluster_str;
+	JobQueueKey job_id;
+	int max_cluster_id = 0;
+	int tmp_int = 0;
+
+	clusters_strlist.rewind();
+	while ( (next_cluster_str = clusters_strlist.next()) ) {
+		int next_cluster = atoi(next_cluster_str);
+		if ( next_cluster <= 0 ) {
+			dprintf(D_ALWAYS, "ExportJobs(): Ignoring invalid cluster id %s\n", next_cluster_str);
+			continue;
+		}
+		std::string next_owner;
+		if ( GetAttributeString(next_cluster, -1, ATTR_OWNER, next_owner) < 0 ) {
+			dprintf(D_ALWAYS, "ExportJobs(): Ignoring missing cluster id %d\n", next_cluster);
+			continue;
+		}
+		if ( owner.empty() ) {
+			owner = next_owner;
+			GetAttributeString(next_cluster, -1, ATTR_NT_DOMAIN, domain);
+		} else if ( next_owner != owner ) {
+			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner.c_str(), next_owner.c_str());
+			return false;
+		}
+		// TODO check for late materialization
+		// TODO check for spooled
+		// TODO check for active jobs (running, externally managed)
+		clusters.insert(next_cluster);
+		if ( next_cluster > max_cluster_id ) {
+			max_cluster_id = next_cluster + 1;
+		}
+	}
+	if ( clusters.empty() || owner.empty() ) {
+		dprintf(D_ALWAYS, "ExportJobs(): No clusters to export\n");
+		return false;
+	}
+	// TODO check that client is authorized to modify this owner's jobs
+
+	TemporaryPrivSentry tps(true);
+	if ( !init_user_ids(owner.c_str(), domain.c_str()) ) {
+		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
+		return false;
+	}
+	set_user_priv();
+
+	BeginTransaction();
+
+	// TODO make output_dir if it doesn't exist?
+
+	std::string queue_fname = output_dir;
+	queue_fname += "/job_queue.log";
+	GenericClassAdCollection<JobQueueKey, ClassAd*> export_queue(new ConstructClassAdLogTableEntry<ClassAd>(), queue_fname.c_str(), 0);
+
+	// TODO handle header ad
+	job_id.cluster = 0;
+	job_id.proc = 0;
+	export_queue.NewClassAd(job_id, JOB_ADTYPE, STARTD_ADTYPE);
+	if ( GetAttributeInt(0, 0, ATTR_NEXT_CLUSTER_NUM, &tmp_int) >= 0 ) {
+		std::string int_str = std::to_string(tmp_int);
+		export_queue.SetAttribute(job_id, ATTR_NEXT_CLUSTER_NUM, int_str.c_str());
+	}
+	if ( GetAttributeInt(0, 0, ATTR_NEXT_JOBSET_NUM, &tmp_int) >= 0 ) {
+		std::string int_str = std::to_string(tmp_int);
+		export_queue.SetAttribute(job_id, ATTR_NEXT_JOBSET_NUM, int_str.c_str());
+	}
+
+	JobQueueJob *src_ad = NULL;
+
+	int init_scan = 1;
+	while ( (src_ad = GetNextJobOrClusterByConstraint(NULL, init_scan)) ) {
+		init_scan = 0;
+		job_id = src_ad->jid;
+		if ( clusters.find(job_id.cluster) == clusters.end() ) {
+			continue;
+		}
+
+		export_queue.NewClassAd(job_id, JOB_ADTYPE, STARTD_ADTYPE);
+
+		for ( auto attr_itr = src_ad->begin(); attr_itr != src_ad->end(); attr_itr++ ) {
+			if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_IWD) && job_id.proc >= 0 ) {
+				char *dir = gen_ckpt_name("##", job_id.cluster, job_id.proc, 0);
+				std::string val;
+				val = '"';
+				val += dir;
+				val += '"';
+				free(dir);
+				export_queue.SetAttribute(job_id, ATTR_JOB_IWD, val.c_str());
+			} else if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_LEAVE_IN_QUEUE) ) {
+				// nothing
+			} else {
+				const char *val = ExprTreeToString(attr_itr->second);
+				export_queue.SetAttribute(job_id, attr_itr->first.c_str(), val);
+			}
+		}
+		if ( job_id.cluster > 0 && job_id.proc == -1 ) {
+			export_queue.SetAttribute(job_id, ATTR_JOB_LEAVE_IN_QUEUE, "true");
+		}
+
+		if ( job_id.cluster > 0 && job_id.proc >= 0 ) {
+			SetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+			SetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_MANAGED_MANAGER, "Lumberjack");
+		}
+	}
+
+	CommitTransactionOrDieTrying();
+	dprintf(D_ALWAYS,"ExportJobs() returning true\n");
+	return true;
 }

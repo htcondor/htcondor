@@ -804,6 +804,8 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
+	bool ExportJobs(const char *cluster_ids, const char *output_dir);
+
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
