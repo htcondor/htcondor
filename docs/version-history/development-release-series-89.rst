@@ -73,6 +73,10 @@ New Features:
   by drainging initiated by *condor_defrag*.
   :jira:`77`
 
+- Added a new a ClassAd function to help write submit transforms.  You can now use unresolved()
+  to check for existing constraints on a particular attribute (or attribute regex).
+  :jira:`66`
+
 Bugs Fixed:
 
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
