@@ -103,15 +103,13 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 int main() {
 	// The actual filtering is done by the startd on the basis
 	// of the SlotMergeConstraint we set for each ad we emit.
-	//
-	// FIXME: Which is fine, but it might be nice to avoid doing any work
-	// that we know the startd is just going to throw away.
-	// FIXME: Also, see cnodor_gpu_discovery for the other environmental
-	// variable we may want/need to worry about.
+
 #if defined(WINDOWS)
 	_putenv( "CUDA_VISIBLE_DEVICES=" );
+	_putenv( "GPU_DEVICE_ORDINAL=" );
 #else
 	unsetenv( "CUDA_VISIBLE_DEVICES" );
+	unsetenv( "GPU_DEVICE_ORDINAL" );
 #endif
 
 	auto cuda_handle = setCUDAFunctionPointers();
@@ -134,11 +132,27 @@ int main() {
 		fail();
 	}
 
+	//
+	// This code reports the utilization of every CUDA-enumerated device,
+	// but the only reason it cares about CUDA-enumeration is because we
+	// allow the use of CUDA indices as GPU identifiers.  This code will
+	// output the correct merge constraints if we use UUIDs or short UUIDs,
+	// because we use the UUID from the CUDA device.
+	//
+	// This code will fail if run on a system with more than one GPU if
+	// any GPU has MIG enabled, because the CUDA and NVML device counts
+	// will differ.  (CUDA will only enumerate one device if any GPU has
+	// MIG enabled.)
+	//
+
 	unsigned int deviceCount = 0;
 	if( nvmlDeviceGetCount(& deviceCount) != NVML_SUCCESS ) {
 		fprintf( stderr, "nvmlDeviceGetCount() failed, aborting.\n" );
 		fail();
 	}
+	// FIXME: It would be better to fail() if any device has MIG enabled,
+	// rather than only in the multi-GPU case, because we know we won't
+	// get anything useful.
 	if( deviceCount != cudaDevices.size() ) {
 		fprintf( stderr, "nvmlDeviceGetCount() disagrees with CUDA device count, aborting.\n" );
 		fail();
@@ -163,12 +177,12 @@ int main() {
 		elapsedTimes[i] = 0;
 		runningSampleCounts[i] = 0;
 
-		r = nvmlDeviceGetHandleByPciBusId( cudaDevices[i].pciId, &(devices[i]) );
+		r = findNVMLDeviceHandle( cudaDevices[i].uuid, &(devices[i]) );
 		if( r == NVML_ERROR_NO_PERMISSION ) {
 			// Ignore devices we don't have permission for rather than fail.
 			continue;
 		} else if( r != NVML_SUCCESS ) {
-			fprintf( stderr, "nvmlGetDeviceHandleByIndex(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
+			fprintf( stderr, "findNVMLDeviceHandle() for device %u failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
 			fail();
 		}
 
@@ -248,13 +262,18 @@ int main() {
 		if( time( NULL ) - lastReport >= reportInterval ) {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
 				if( devices[i] == NULL ) { continue; }
-				if (cudaDevices[i].hasUUID()) {
-					char gpuid[64] = "GPU-";
-					cudaDevices[i].printUUID(gpuid+4, 9);
-					gpuid[12] = 0;
-					fprintf(stdout, "SlotMergeConstraint = StringListMember(\"CUDA%u\", AssignedGPUs) || StringListMember(\"%s\", AssignedGPUs)\n", i, gpuid);
+				if(! cudaDevices[i].uuid.empty()) {
+					std::string gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 0);
+					std::string short_gpuID = gpuIDFromUUID(cudaDevices[i].uuid, 1);
+
+					fprintf(stdout, "SlotMergeConstraint = "
+						"StringListMember(\"CUDA%u\", AssignedGPUs) "
+						"|| StringListMember(\"%s\", AssignedGPUs) "
+						"|| StringListMember(\"%s\", AssignedGPUs)\n",
+						i, short_gpuID.c_str(), gpuID.c_str() );
 				} else {
-					fprintf(stdout, "SlotMergeConstraint = StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
+					fprintf(stdout, "SlotMergeConstraint = "
+						"StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
 				}
 				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1000000.0 );
 				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );

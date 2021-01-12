@@ -24,6 +24,13 @@ dlclose( dlopen_return_t hlib ) {
 	return FreeLibrary( hlib );
 }
 
+inline char *
+dlerror() {
+	static char buffer[64];
+	snprintf( buffer, 64, "%lu", GetLastError );
+	return buffer;
+}
+
 #else
 
 #include <dlfcn.h>

@@ -1024,10 +1024,10 @@ Kerberos Authentication
 If Kerberos is used for authentication, then a mapping from a Kerberos
 domain (called a realm) to an HTCondor UID domain is necessary. There
 are two ways to accomplish this mapping. For a first way to specify the
-mapping, see admin-manual/security:the unified map file for authentication`
-to use HTCondor's unified map file. A second way to specify the mapping defines
+mapping, see :ref:`admin-manual/security:the unified map file for authentication`
+to use HTCondor's unified map file. A second way to specify the mapping is to set
 the configuration variable ``KERBEROS_MAP_FILE``
-:index:`KERBEROS_MAP_FILE` to define a path to an
+:index:`KERBEROS_MAP_FILE` to the path of an
 administrator-maintained Kerberos-specific map file. The configuration
 syntax is
 

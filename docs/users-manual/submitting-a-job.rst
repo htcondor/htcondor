@@ -1271,7 +1271,7 @@ when the arguments are more than just a count of jobs.
 
 The *condor_schedd* will use the *submit digest* and the *itemdata* to create the individual job ClassAds
 when they are needed.  Materialization is controlled by two values stored in the Cluster classad, and
-by optional limits configured in the *condor_schedd*.  
+by optional limits configured in the *condor_schedd*.
 
 The ``max_idle`` limit specifies the maximum number of non-running jobs that should be materialized in the 
 *condor_schedd* at any one time. One or more jobs will materialize whenever a job enters the Run state
@@ -1327,7 +1327,7 @@ like this:
     queue 15000
 
 Materialization log events
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''
 
 When a Late Materialization job factory is submitted to the *condor_schedd*, a ``Cluster submitted`` event
 will be written to the UserLog of the Cluster ad.  This will be the same log file used by the first job
@@ -1347,7 +1347,7 @@ and materialization  was paused because of a previous use of *condor_hold*, a ``
 event will be written to the UserLog of the Cluster ad.
 
 Limitations
-~~~~~~~~~~~
+'''''''''''
 
 Currently, not all features of *condor_submit* will work with late materialization.
 The following limitations apply:
@@ -1368,7 +1368,7 @@ The following limitations apply:
   ``-factory`` option with *condor_q*
 
 Displaying the Factory
-~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''
 
 *condor_q* can be use to show late materialization job factories in the *condor_schedd* by
 using the ``-factory`` option.
@@ -1395,26 +1395,16 @@ In case of a factory problem, use ``condor_q -factory -long`` to see the the fac
 and the ``JobMaterializePauseReason`` attribute.
 
 Removing a Factory
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 The Late materialization job factory will be remove from the schedd automatically once all of the
 jobs have materialized and completed.  To remove the factory without first completing all of the jobs
 use *condor_rm* with the ClusterId of the factory as the argument.
 
 Editing a Factory
-~~~~~~~~~~~~~~~~~
+'''''''''''''''''
 
 The *submit digest* for a Late Materialization job factory cannot be changed after submission, but the Cluster ad
 for the factory can be edited using *condor_qedit*.  Any *condor_qedit* command that has the ClusterId as a edit
 target will edit all currently materialized jobs, as well as editing the Cluster ad so that all jobs that materialize
 in the future will also be edited.
-
-
-
-
-
-
-
-
-
-
