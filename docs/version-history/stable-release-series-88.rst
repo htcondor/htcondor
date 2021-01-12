@@ -19,7 +19,14 @@ Release Notes:
 
 New Features:
 
-- None.
+- The HA replication mechanism can now accept either SHA-2 or MD5 checksums.
+  This is because support for MD5 checksums must be removed in the 9.0 release of HTCondor.
+  The checksum that replication will send is controlled by a new configuration variable
+  ``HAD_FIPS_MODE`` which defaults to 0 for compatibility with older versions
+  of HTCondor.  For compatibility with the upcoming 9.0 release of HTCondor
+  set ``HAD_FIPS_MODE`` to 1. Setting it to 1 will break compatibility with versions
+  of HTCondor before this release.
+  :jira:`130`
 
 Bugs Fixed:
 
