@@ -9,8 +9,9 @@ Synopsis
 
 **condor_drain** [**-help** ]
 
-**condor_drain** [**-debug** ] [**-pool** *pool-name*] [**-graceful
-| -quick | -fast** ] [**-resume-on-completion** ]
+**condor_drain** [**-debug** ] [**-pool** *pool-name*]
+[**-graceful | -quick | -fast**] [**-reason** *reason-text*]
+[**-resume-on-completion | -restart-on-completion | -exit-on-completion**]
 [**-check** *expr*] [**-start** *expr*] *machine-name*
 
 **condor_drain** [**-debug** ] [**-pool** *pool-name*] **-cancel**
@@ -85,9 +86,19 @@ Options
  **-fast**
     Honor neither the maximum vacate time policy nor the retirement time
     policy.
+ **-reason** *reason-text*
+    Set the drain reason to *reason-text*. While the *condor_startd* is draining
+    it will advertise the given reason. If this option is not used the
+    reason defaults to the name of the user that started the drain.
  **-resume-on-completion**
     When done draining, resume normal operation, such that potentially
     the whole machine could be claimed.
+ **-restart-on-completion**
+    When done draining, restart the *condor_startd* daemon so that
+    configuration changes will take effect.
+ **-exit-on-completion**
+    When done draining, shut down the *condor_startd* daemon and tell
+    the *condor_master* not to restart it automatically.
  **-check** *expr*
     Abort draining, if ``expr`` is not true for all slots to be drained.
  **-start** *expr*
