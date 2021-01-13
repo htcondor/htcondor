@@ -835,7 +835,8 @@ main( int argc, const char** argv)
 			continue;
 		}
 
-		printDynamicProperties( bp.uuid, device );
+		std::string gpuID = gpuIDFromUUID( bp.uuid, opt_short_uuid );
+		printDynamicProperties( gpuID, device );
 	}
 
 
