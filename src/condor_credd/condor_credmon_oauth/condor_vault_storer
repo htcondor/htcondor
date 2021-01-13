@@ -82,7 +82,7 @@ fi
 #  new one is generated.
 ID="`id -u`"
 VTOKEN="/tmp/vt_u$ID"
-BOTKEN=""
+BTOKEN=""
 if [ -z "$BEARER_TOKEN_FILE" ]; then
     # Also store the bearer token with a .$SERVICE extension
     BTOKEN="${XDG_RUNTIME_DIR:-/tmp}/bt_u$ID"
