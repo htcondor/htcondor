@@ -528,6 +528,7 @@ Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor
 Requires: python-six
+Conflicts: %name-credmon-oauth
 
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
