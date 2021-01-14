@@ -57,7 +57,9 @@ dlerror() {
 			}
 		}
 	} else {
-		szError = "Unknown error";
+		char buf[32];
+		snprintf( buf, 32, "unknown error %u", iErrCode );
+		szError = buf;
 	}
 
 	return szError.c_str();
