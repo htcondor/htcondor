@@ -5678,7 +5678,9 @@ These settings affect the *condor_starter*.
     libraries and programs will look at the value of environment
     variables, such as ``OMP_NUM_THREADS``, to control how many CPU cores to use.  
     Defaults to
-    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS, NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT.
+    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS,
+    NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
+    TF_LOOP_PARALLEL_ITERATIONS, TF_NUM_THREADS.
 
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd

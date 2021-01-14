@@ -81,6 +81,12 @@ New Features:
   to check for existing constraints on a particular attribute (or attribute regex).
   :jira:`66`
 
+- Added TensorFlow environment variables ``TF_NUM_THREADS`` and
+  ``TF_LOOP_PARALLEL_ITERATIONS`` to the list of environment variables
+  exported by the *condor_starter* per these
+  `recommendations <https://github.com/theislab/diffxpy/blob/master/docs/parallelization.rst>`_.
+  :jira:`185`
+
 Bugs Fixed:
 
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
@@ -104,7 +110,7 @@ Release Notes:
   the Python 2.7 runtime used by *condor_annex*.  If you ran the
   *condor_annex* setup command with a previous version of HTCondor, you
   should update your setup to use the new runtime.  (Go to the AWS Lambda
-  `console <https://console.aws.amazon.com/lambda>` and look for the
+  `console <https://console.aws.amazon.com/lambda>`_ and look for the
   ``HTCondorAnnex-CheckConnectivity`` function; click on it.  Scroll
   down to "Runtime settings"; click the "Edit" button.  Select "Python 3.8"
   from the drop-down list under "Runtime".  Then hit the "Save" button.
