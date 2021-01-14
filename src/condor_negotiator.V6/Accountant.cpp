@@ -397,7 +397,7 @@ int Accountant::GetResourcesUsed(const string& CustomerName)
 // Return the number of resources used (floating point version)
 //------------------------------------------------------------------
 
-float Accountant::GetWeightedResourcesUsed(const string& CustomerName) 
+float Accountant::GetWeightedResourcesUsed(const string& CustomerName)
 {
   float WeightedResourcesUsed=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);

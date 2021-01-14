@@ -544,8 +544,6 @@ class Matchmaker : public Service
 
 		void StartNewNegotiationCycleStat();
 		void publishNegotiationCycleStats( ClassAd *ad );
-
-		double calculate_subtree_usage(GroupEntry *group);
 };
 GCC_DIAG_ON(float-equal)
 

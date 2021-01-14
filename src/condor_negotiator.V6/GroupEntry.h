@@ -27,6 +27,14 @@ struct GroupEntry {
 		double hgq_allocate_surplus(double surplus);
 		double hgq_recover_remainders();
 		double hgq_round_robin(double surplus);
+		double strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_group, double slots);
+
+		static void hgq_prepare_for_matchmaking(
+				double hgq_total_quota,
+				GroupEntry *hgq_root_group,
+				std::vector<GroupEntry *> &hgq_groups,
+				Accountant &accountant,
+				ClassAdListDoesNotDeleteAds &submitterAds);
 
 		// these are set from configuration
 		std::string name;
@@ -91,6 +99,7 @@ struct group_order {
 		// I don't want anybody defaulting this obj by accident
 		group_order() : autoregroup(false), root_group(0) {}
 };
+double calculate_subtree_usage(Accountant &accountant, GroupEntry *group);
 
 struct ord_by_rr_time {
 		vector<GroupEntry*>* data;

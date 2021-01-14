@@ -1,9 +1,23 @@
 #include "GroupEntry.h"
+#include "compat_classad_list.h"
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include <algorithm>
 #include <deque>
+
+double calculate_subtree_usage(Accountant &accountant, GroupEntry *group) {
+		double subtree_usage = 0.0;
+
+		for (vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
+				subtree_usage += calculate_subtree_usage(accountant, *i);
+		}
+		subtree_usage += accountant.GetWeightedResourcesUsed(group->name);
+
+		group->subtree_usage = subtree_usage;;
+		dprintf(D_FULLDEBUG, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
+		return subtree_usage;
+}
 
 GroupEntry::GroupEntry():
 		name(),
@@ -221,7 +235,119 @@ GroupEntry::hgq_construct_tree(
 		return hgq_root_group;
 }
 
-void 
+/*static*/ void
+GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, Accountant &accountant, ClassAdListDoesNotDeleteAds &submitterAds) {
+		// Fill in latest usage/prio info for the groups.
+		// While we're at it, reset fields prior to reloading from submitter ads.
+
+		// note this is different than GroupEntry::autoregroup
+		const bool autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
+
+		for( GroupEntry *group : hgq_groups) {
+				group->quota = 0;
+				group->requested = 0;
+				group->currently_requested = 0;
+				group->allocated = 0;
+				group->subtree_quota = 0;
+				group->subtree_requested = 0;
+				if (NULL == group->submitterAds) group->submitterAds = new ClassAdListDoesNotDeleteAds;
+				group->submitterAds->Open();
+				while (ClassAd* ad = group->submitterAds->Next()) {
+						group->submitterAds->Remove(ad);
+				}
+				group->submitterAds->Close();
+
+				group->usage = accountant.GetWeightedResourcesUsed(group->name);
+				group->priority = accountant.GetPriority(group->name);
+		}
+
+		// cycle through the submitter ads, and load them into the appropriate group node in the tree
+		dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(submitterAds.MyLength()));
+		submitterAds.Open();
+		while (ClassAd* ad = submitterAds.Next()) {
+				std::string tname;
+				if (!ad->LookupString(ATTR_NAME, tname)) {
+						dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
+						continue;
+				}
+				// this holds the submitter name, which includes group, if present
+				const string subname(tname);
+
+				// is there a username separator?
+				string::size_type pos = subname.find_last_of('@');
+				if (pos==string::npos) {
+						dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter with badly-formed name \"%s\"\n", subname.c_str());
+						continue;
+				}
+
+				GroupEntry* group = accountant.GetAssignedGroup(subname);
+
+				// attach the submitter ad to the assigned group
+				group->submitterAds->Insert(ad);
+
+				// Accumulate the submitter jobs submitted against this group
+				// To do: investigate getting these values directly from schedds.  The
+				// collector info can be a bit stale, direct from schedd might be improvement.
+				int numidle=0;
+				ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
+				int numrunning=0;
+				ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
+
+				// The HGQ codes uses number of idle jobs to determine how to allocate
+				// surplus.  This should really be weighted demand when slot weights
+				// and paritionable slot are in use.  The schedd can tell us the cpu-weighed
+				// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
+
+				if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", true)) {
+						double weightedIdle = numidle;
+						double weightedRunning = numrunning;
+
+						int r = ad->LookupFloat(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
+						if (!r) {
+								dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_IDLE_JOBS\n");
+						}
+						r = ad->LookupFloat(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+						if (!r) {
+								dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_RUNNING_JOBS\n");
+						}
+
+						group->requested += weightedRunning + weightedIdle;
+				} else {
+						group->requested += numrunning + numidle;
+				}
+				group->currently_requested = group->requested;
+		}
+
+		// Any groups with autoregroup are allowed to also negotiate in root group ("none")
+		if (autoregroup) {
+				unsigned long n = 0;
+				for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+						GroupEntry* group = *j;
+						if (group == hgq_root_group) continue;
+						if (!group->autoregroup) continue;
+						group->submitterAds->Open();
+						while (ClassAd* ad = group->submitterAds->Next()) {
+								hgq_root_group->submitterAds->Insert(ad);
+						}
+						group->submitterAds->Close();
+						++n;
+				}
+				dprintf(D_ALWAYS, "group quotas: autoregroup mode: appended %lu submitters to group %s negotiation\n", n, hgq_root_group->name.c_str());
+		}
+
+		hgq_root_group->hgq_assign_quotas(hgq_total_quota);
+
+		for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+				GroupEntry* group = *j;
+				dprintf(D_FULLDEBUG, "group quotas: group= %s  cquota= %g  static= %d  accept= %d  quota= %g  req= %g  usage= %g\n",
+								group->name.c_str(), group->config_quota, int(group->static_quota), int(group->accept_surplus), group->quota,
+								group->requested, group->usage);
+		}
+
+		return;
+}
+
+void
 GroupEntry::hgq_assign_quotas(double quota) {
 		dprintf(D_FULLDEBUG, "group quotas: subtree %s receiving quota= %g\n", this->name.c_str(), quota);
 
@@ -299,7 +425,7 @@ GroupEntry::hgq_assign_quotas(double quota) {
 		dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", this->name.c_str(), this->quota);
 }
 
-double 
+double
 GroupEntry::hgq_fairshare() {
 		dprintf(D_FULLDEBUG, "group quotas: fairshare (1): group= %s  quota= %g  requested= %g\n",
 						this->name.c_str(), this->quota, this->requested);
@@ -623,8 +749,10 @@ GroupEntry::hgq_round_robin(double surplus) {
 }
 
 
-void hgq_allocate_surplus_loop(bool by_quota,
-				vector<GroupEntry*>& groups, vector<double>& allocated, vector<double>& subtree_requested,
+void hgq_allocate_surplus_loop(
+				bool by_quota,
+				vector<GroupEntry*>& groups, vector<double>& allocated,
+				vector<double>& subtree_requested,
 				double& surplus, double& requested)
 {
 		int iter = 0;
@@ -681,4 +809,41 @@ void hgq_allocate_surplus_loop(bool by_quota,
 						surplus = 0;
 				}
 		}
+}
+
+double
+GroupEntry::strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_group, double slots) {
+		if (param_boolean("NEGOTIATOR_STRICT_ENFORCE_QUOTA", true)) {
+				dprintf(D_FULLDEBUG, "NEGOTIATOR_STRICT_ENFORCE_QUOTA is true, current proposed allocation for %s is %g\n", this->name.c_str(), slots);
+				calculate_subtree_usage(accountant, hgq_root_group); // usage changes with every negotiation
+				GroupEntry *limitingGroup = this;
+
+				double my_new_allocation = slots - this->usage; // resources above what we already have
+				if (my_new_allocation < 0) {
+						//continue; // shouldn't get here
+				}
+
+				while (limitingGroup != NULL) {
+						if (limitingGroup->accept_surplus == false) {
+								// This is the extra available at this node
+								double subtree_available = -1;
+								if (limitingGroup->static_quota) {
+										subtree_available = limitingGroup->config_quota - limitingGroup->subtree_usage;
+								} else {
+										subtree_available = limitingGroup->subtree_quota - limitingGroup->subtree_usage;
+								}
+								if (subtree_available < 0) subtree_available = 0;
+								dprintf(D_FULLDEBUG, "\tmy_new_allocation is %g subtree_available is %g\n", my_new_allocation, subtree_available);
+								if (my_new_allocation > subtree_available) {
+										dprintf(D_ALWAYS, "Group %s with accept_surplus=false has total usage = %g and config quota of %g -- constraining allocation in subgroup %s to %g\n",
+														limitingGroup->name.c_str(), limitingGroup->subtree_usage, limitingGroup->config_quota, this->name.c_str(), subtree_available + this->usage);
+
+										my_new_allocation = subtree_available; // cap new allocation to the available
+								}
+						}
+						limitingGroup = limitingGroup->parent;
+				}
+				slots = my_new_allocation + this->usage; // negotiation units are absolute quota, not new
+		}
+		return slots;
 }
