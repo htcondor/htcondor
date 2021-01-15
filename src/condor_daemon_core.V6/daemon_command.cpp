@@ -913,9 +913,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
 								m_key = new KeyInfo(rbuf, 24, CONDOR_3DES, 0, std::shared_ptr<ConnCryptoState>());
 								break;
-							case CONDOR_AESGCM:
+							case CONDOR_AESGCM: {
+								auto ccs = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
+								dprintf(D_ALWAYS, "ZKM: ***** DAEMON AES EXPLICIT INIT of new ConnCryptoState %p.\n", ccs.get());
+								Condor_Crypt_AESGCM::initState(ccs);
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 32, CONDOR_AESGCM, 0, std::shared_ptr<ConnCryptoState>(new ConnCryptoState()));
+								m_key = new KeyInfo(rbuf, 32, CONDOR_AESGCM, 0, ccs);
+								}
 								break;
 							default:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);

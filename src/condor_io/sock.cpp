@@ -2087,12 +2087,40 @@ char * Sock::serializeCryptoInfo() const
     char * outbuf = NULL;
     if (len > 0) {
         int buflen = len*2+32;
+	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
+		// ZKM FIXME TODO (compute actual size?)
+		buflen += 8192;
+	}
         outbuf = new char[buflen];
+
+        char * ptr = outbuf + strlen(outbuf);
+
         sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
                 (int)get_encryption());
 
+	// if protocol is 3 (AES) then we need to send the ConnCryptoState
+	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
+		dprintf(D_ALWAYS, "ZKM: SOCK: sending more ConnCryptoState!.\n");
+		// this is daemon-to-daemon inheritance so no need to worry
+		// about byte-order.  furthermore there are no pointers, just a
+		// struct with data.  we send hex bytes, receiver serializes
+		// them.
+
+		char * ptr = outbuf + strlen(outbuf);
+		char * ccs_serial = (char*)(get_crypto_key().getConnCryptoState().get());
+		dprintf(D_ALWAYS, "ZKM SERIALIZE: encoding %i bytes.\n", sizeof(ConnCryptoState));
+		for (int i=0; i < sizeof(ConnCryptoState); i++, ccs_serial++, ptr+=2) {
+			dprintf(D_ALWAYS, "ZKM SERIALIZE: index %i byte %02x.\n", i, *ccs_serial);
+		    sprintf(ptr, "%02X", *ccs_serial);
+		}
+
+		sprintf(ptr, "*");
+		ptr++;
+	}
+	dprintf(D_ALWAYS, "ZKM: SOCK: buf so far: %s.\n", outbuf);
+
         // Hex encode the binary key
-        char * ptr = outbuf + strlen(outbuf);
+        ptr = outbuf + strlen(outbuf);
         for (int i=0; i < len; i++, kserial++, ptr+=2) {
             sprintf(ptr, "%02X", *kserial);
         }
@@ -2151,6 +2179,9 @@ const char * Sock::serializeCryptoInfo(const char * buf)
     // NOTE:
     // currently we are not serializing the ivec.  this works because the
     // crypto state (including ivec) is reset to zero after inheriting.
+    //
+    // ZKM FIXME TODO
+    // NOTE: THAT IS NOT TRUE ANYMORE WITH AES
 
     int citems = sscanf(ptmp, "%d*", &encoded_len);
     if ( citems == 1 && encoded_len > 0 ) {
@@ -2176,19 +2207,59 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         ASSERT( ptmp && citems == 1 );
         ptmp++;
 
+	dprintf(D_ALWAYS, "ZKM: SOCK: CRYPTO: read so far: p: %i, m: %i.\n", protocol, encryption_mode);
+
+	// if protocol is 3 (AES) then we expect to receive the following additional (the ConnCryptoState object)
+	//std::shared_ptr<ConnCryptoState> ccs;
+	auto ccs = std::shared_ptr<ConnCryptoState>();
+	if(protocol == CONDOR_AESGCM) {
+		unsigned int hex;
+		dprintf(D_ALWAYS, "ZKM: SOCK: receiving more ConnCryptoState: %s\n", ptmp);
+		// this is daemon-to-daemon inheritance so no need to worry
+		// about byte-order.  furthermore there are no points, just a
+		// struct with data.  sender dumps hex bytes, we serialize
+		// them.
+		ccs = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
+		char* ptr = (char*)(ccs.get());
+		for(unsigned int i = 0; i < sizeof(ConnCryptoState); i++) {
+			citems = sscanf(ptmp, "%2X", &hex);
+			if (citems != 1) break;
+			*ptr = (unsigned char)hex;
+			ptmp += 2;  // since we just consumed 2 bytes of hex
+			ptr++;      // since we just stored a single byte of binary
+		}
+		// "EOM" check
+		ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp && citems == 1 );
+		ptmp++;
+	}
+
+	dprintf(D_ALWAYS, "ZKM: SOCK: len is %i, remaining sock info: %s\n", len, ptmp);
+
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
+		dprintf(D_ALWAYS, "ZKM DECODE index %i\n);", i);
             citems = sscanf(ptmp, "%2X", &hex);
 			if (citems != 1) break;
+		dprintf(D_ALWAYS, "ZKM DECODE citems %i, val %02X\n);", citems, (unsigned char)hex);
+		
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
         }        
+	dprintf(D_ALWAYS, "ZKM DECODE DONE! ccs is %p.\n", ccs.get());
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0, std::shared_ptr<ConnCryptoState>());
+        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0, ccs);
+	dprintf(D_ALWAYS, "ZKM MADE KeyInfo.\n");
+	dprintf(D_ALWAYS, "ZKM MADE ccs is %p.\n", k.getConnCryptoState().get());
+
+/*
+	dprintf(D_ALWAYS, "ZKM DECODE doing memcpy of %i bytes from %p to %p\n", sizeof(ConnCryptoState), (char*)(&ccs));
+	memcpy((char*)&(k.getConnCryptoState()), ccs, sizeof(ConnCryptoState));
+*/
         set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
 		ASSERT( *ptmp == '*' );
@@ -2948,7 +3019,7 @@ const KeyInfo& Sock :: get_crypto_key() const
     if (crypto_state_) {
         return crypto_state_->getkey();
     } else {
-        dprintf(D_ALWAYS, "ZKM: get_crypto_key: no crypto_state_\n");
+        dprintf(D_ALWAYS, "ZKM: SOCK: get_crypto_key: no crypto_state_\n");
     }
     ASSERT(0);	// This does not return...
     return  crypto_state_->getkey();  // just to make compiler happy...

@@ -33,7 +33,7 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
     // reset() method on their state object instead
 //    void resetState();
 //    static void resetState(ConnCryptoState *connState);
-    static void resetState(std::shared_ptr<ConnCryptoState> connState);
+    static void initState(std::shared_ptr<ConnCryptoState> connState);
 
     bool encrypt(Condor_Crypto_State *,
                  const unsigned char *,

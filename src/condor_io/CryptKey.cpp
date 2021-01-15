@@ -29,7 +29,7 @@ KeyInfo:: KeyInfo()
       duration_   (0),
       connState_  (0)
 {
-    
+    ASSERT("BLANK KEYS DISALLOWED");
 }
 
 KeyInfo :: KeyInfo(const KeyInfo& copy)
@@ -54,6 +54,14 @@ KeyInfo :: KeyInfo(const unsigned char * keyData,
       duration_   (duration),
       connState_      (connState)
 {
+/*
+    if(connState.get()) {
+        connState_ = connState;
+    } else {
+	dprintf(D_ALWAYS, "ZKM: **** CREATING new ConnCryptoState.\n");
+        connState_ = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
+    }
+*/
     init(keyData, keyDataLen);
 }
 

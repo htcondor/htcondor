@@ -56,8 +56,8 @@ public:
     // CURRENTLY UNUSED: unsigned char *m_additional;
 
 private:
-    Condor_Crypto_State() {} ;
-    Condor_Crypto_State(Condor_Crypto_State&) {};
+    Condor_Crypto_State() {ASSERT("PRIVATE CONSTRUCTOR CALLED\n");} ;
+    Condor_Crypto_State(Condor_Crypto_State&) {ASSERT("PRIVATE COPY CONSTRUCTOR CALLED\n");};
 
 };
 

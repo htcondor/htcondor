@@ -83,8 +83,8 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
         }
         case CONDOR_AESGCM: {
             // ZKM TODO FIXME: CODE MISSING HERE TO INIT AES PROPERLY
-            dprintf(D_ALWAYS, "TRYING TO INIT AES PROPERLY.\n");
-            Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState());
+            dprintf(D_ALWAYS, "ZKM: ***** NOT RESETTING AES PROPERLY.\n");
+            //Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState(), true);
             break;
         }
         default:
@@ -107,8 +107,8 @@ void Condor_Crypto_State::reset() {
     dprintf(D_ALWAYS, "CRYPTO: protocol(%i) resetting.\n", m_keyInfo.getProtocol());
 
     if(m_keyInfo.getProtocol() == CONDOR_AESGCM) {
-        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: AES reset.\n");
-        Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState());
+        dprintf(D_SECURITY | D_VERBOSE, "ZKM: *****: CRYPTO: IGNORING AES reset.\n");
+        //Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState());
     } else {
         dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: simple reset m_ivec(len %i) and m_num\n", m_ivec_len);
 

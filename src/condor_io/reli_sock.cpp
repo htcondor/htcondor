@@ -1141,6 +1141,20 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 	}
 
 	if (p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+
+                if (!p_sock->m_send_md_ctx) {
+			dprintf (D_ALWAYS, "ZKM: ***** We got here with no p_cok->m_send_ctx.  Creating one now.\n");
+                        p_sock->m_send_md_ctx.reset(EVP_MD_CTX_create());
+                        if (!p_sock->m_send_md_ctx) {
+                                dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
+                                return false;
+                        }
+                        if (1 != EVP_DigestInit_ex(p_sock->m_send_md_ctx.get(), EVP_sha256(), NULL)) {
+                                dprintf(D_NETWORK, "IO: Failed to initialize SHA-256 context.\n");
+                                return false;
+                        }
+                }
+
 		auto cipher_sz = p_sock->ciphertext_size(buf.num_untouched());
 		ns = cipher_sz;
 		len = (int) htonl(ns);

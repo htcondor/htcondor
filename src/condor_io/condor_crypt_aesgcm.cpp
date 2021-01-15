@@ -55,10 +55,9 @@ void Condor_Crypt_AESGCM::resetState()
 */
 
 // this function is static
-void Condor_Crypt_AESGCM::resetState(std::shared_ptr<ConnCryptoState> connState)
+void Condor_Crypt_AESGCM::initState(std::shared_ptr<ConnCryptoState> connState)
 {
-	dprintf(D_NETWORK, "Condor_Crypt_AESGCM::resetState with key\n");
-	dprintf(D_ALWAYS,  "******** Condor_Crypt_AESGCM::resetState with key\n");
+	dprintf(D_NETWORK, "ZKM: ******: Condor_Crypt_AESGCM::initState for %p.\n", connState.get());
 	if (connState.get()) {
 		std::shared_ptr<ConnCryptoState> m_conn_crypto_state = connState;
 		if (!memcmp(m_conn_crypto_state->m_iv_enc.iv, g_unset_iv, IV_SIZE)) {
@@ -132,7 +131,8 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     }
 
     int32_t base = ntohl(m_conn_crypto_state->m_iv_enc.ctr.pkt);
-    int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_enc);
+    //int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_enc);
+    int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     if (m_conn_crypto_state->m_ctr_enc == 0xffffffff) {
         dprintf(D_NETWORK, "Hit max number of packets per connection.\n");
@@ -141,7 +141,8 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
 
 
     int32_t base_conn = ntohl(m_conn_crypto_state->m_iv_enc.ctr.conn);
-    int32_t result_conn = base_conn + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
+    //int32_t result_conn = base_conn + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
+    int32_t result_conn = base_conn;
     int32_t ctr_encoded_conn = htonl(result_conn);
 
     if (m_conn_crypto_state->m_ctr_conn == 0xffffffff) {
@@ -316,7 +317,8 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     int32_t base = ntohl(m_conn_crypto_state->m_iv_dec.ctr.pkt);
-    int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_dec);
+    //int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_dec);
+    int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     dprintf(D_NETWORK, "IV base value %d\n", base);
     dprintf(D_NETWORK, "IV Counter value _dec %u\n", m_conn_crypto_state->m_ctr_dec);
@@ -324,7 +326,8 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     dprintf(D_NETWORK, "IV Counter plus base value (encoded) %d\n", ctr_encoded);
 
     int32_t result_conn = ntohl(m_conn_crypto_state->m_iv_dec.ctr.conn);
-    int32_t base_conn = result_conn - *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
+    //int32_t base_conn = result_conn - *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
+    int32_t base_conn = result_conn;
     int32_t ctr_encoded_conn = htonl(result_conn);
     dprintf(D_NETWORK, "IV conn base value %d\n", base_conn);
     dprintf(D_NETWORK, "IV Connection counter value %d\n", m_conn_crypto_state->m_ctr_conn);
