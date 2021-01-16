@@ -2107,9 +2107,9 @@ char * Sock::serializeCryptoInfo() const
 		// them.
 
 		char * ptr = outbuf + strlen(outbuf);
-		char * ccs_serial = (char*)(get_crypto_key().getConnCryptoState().get());
-		dprintf(D_ALWAYS, "ZKM SERIALIZE: encoding %i bytes.\n", sizeof(ConnCryptoState));
-		for (int i=0; i < sizeof(ConnCryptoState); i++, ccs_serial++, ptr+=2) {
+		unsigned char * ccs_serial = (unsigned char*)(get_crypto_key().getConnCryptoState().get());
+		dprintf(D_ALWAYS, "ZKM SERIALIZE: encoding %lu bytes.\n", sizeof(ConnCryptoState));
+		for (unsigned int i=0; i < sizeof(ConnCryptoState); i++, ccs_serial++, ptr+=2) {
 			dprintf(D_ALWAYS, "ZKM SERIALIZE: index %i byte %02x.\n", i, *ccs_serial);
 		    sprintf(ptr, "%02X", *ccs_serial);
 		}
