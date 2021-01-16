@@ -1141,9 +1141,9 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 	}
 
 	if (p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
-
+/*
                 if (!p_sock->m_send_md_ctx) {
-			dprintf (D_ALWAYS, "ZKM: ***** We got here with no p_cok->m_send_ctx.  Creating one now.\n");
+			dprintf (D_ALWAYS, "ZKM: ***** We got here with no p_sock->m_send_ctx.  Creating one now.\n");
                         p_sock->m_send_md_ctx.reset(EVP_MD_CTX_create());
                         if (!p_sock->m_send_md_ctx) {
                                 dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
@@ -1154,6 +1154,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
                                 return false;
                         }
                 }
+*/
 
 		auto cipher_sz = p_sock->ciphertext_size(buf.num_untouched());
 		ns = cipher_sz;
@@ -1307,6 +1308,47 @@ ReliSock::type() const
 	return Stream::reli_sock; 
 }
 
+char * ReliSock::serializeMsgInfo() const
+{
+	char *buf = new char[10];
+	sprintf(buf, "%i*%i*%i*%i",
+		m_final_send_header,
+		m_final_recv_header,
+		m_finished_send_header,
+		m_finished_recv_header
+		);
+	dprintf(D_ALWAYS, "ZKM: *** MsgInfo out: %s.\n", buf);
+	return buf;
+}
+
+
+const char * ReliSock::serializeMsgInfo(const char * buf)
+{
+	dprintf(D_ALWAYS, "ZKM: *** beginning vals: %i %i %i %i.\n",
+		m_final_send_header,
+		m_final_recv_header,
+		m_finished_send_header,
+		m_finished_recv_header
+		);
+	dprintf(D_ALWAYS, "ZKM: *** reading MsgInfo at beginning of %s.\n", buf);
+	sscanf(buf, "%i*%i*%i*%i*",
+		(int*)&m_final_send_header,
+		(int*)&m_final_recv_header,
+		(int*)&m_finished_send_header,
+		(int*)&m_finished_recv_header
+		);
+	buf += 8;
+	dprintf(D_ALWAYS, "ZKM: *** ending vals: %i %i %i %i.\n",
+		m_final_send_header,
+		m_final_recv_header,
+		m_finished_send_header,
+		m_finished_recv_header
+		);
+	dprintf(D_ALWAYS, "ZKM: *** leftovers: %s.\n", buf);
+	return buf;
+}
+
+
 char *
 ReliSock::serialize() const
 {
@@ -1314,12 +1356,14 @@ ReliSock::serialize() const
 
 	char * parent_state = Sock::serialize();
 	char * crypto = serializeCryptoInfo();
+	char * msg = serializeMsgInfo();
 	char * md = serializeMdInfo();
 
-	formatstr( state, "%s%d*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().Value(), crypto, md );
+	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().Value(), crypto, msg, md );
 
 	delete[] parent_state;
 	delete[] crypto;
+	delete[] msg;
 	delete[] md;
 
 	return state.detach_buffer();
@@ -1355,6 +1399,8 @@ ReliSock::serialize(const char *buf)
         ptmp = ++ptr;
         // The next part is for crypto
         ptmp = serializeCryptoInfo(ptmp);
+        // The next part is for message digest state
+        ptmp = serializeMsgInfo(ptmp);
         // Followed by Md
         ptmp = serializeMdInfo(ptmp);
 

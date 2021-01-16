@@ -413,6 +413,8 @@ protected:
 	bool m_final_recv_header{false};
 	bool m_finished_send_header{false};
 	bool m_finished_recv_header{false};
+	char * serializeMsgInfo() const;
+	const char * serializeMsgInfo(const char * buf);
 
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
