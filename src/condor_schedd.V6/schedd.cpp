@@ -14054,8 +14054,17 @@ void Scheduler::reconfig() {
 	std::string export_dir;
 	if ( param(export_list, "SCHEDD_EXPORT_LIST") && param(export_dir, "SCHEDD_EXPORT_DIR") ) {
 		dprintf(D_ALWAYS,"Calling ExportJobs()\n");
-		ExportJobs(export_list.c_str(), export_dir.c_str());
+		auto_free_ptr ckpt_dir(param("SCHEDD_EXPORT_CKPT_DIR"));
+		ExportJobs(export_list.c_str(), export_dir.c_str(), ckpt_dir);
 	}
+
+	dprintf(D_ALWAYS,"Checking ImportExportedJobResults() params\n");
+	auto_free_ptr import_job_log(param("SCHEDD_IMPORT_JOB_LOG"));
+	if (import_job_log) {
+		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_job_log.ptr());
+		ImportExportedJobResults(import_job_log);
+	}
+
 }
 
 // NOTE: this is likely unreachable now, and may be removed
@@ -17650,11 +17659,15 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 
 
 bool
-Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir)
+Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const char * ckpt_dir /*="##"*/)
 {
 	dprintf(D_ALWAYS,"ExportJobs('%s','%s')\n",cluster_ids,output_dir);
+#if 1
+	OwnerInfo * owner = nullptr;
+#else
 	std::string owner;
 	std::string domain;
+#endif
 	std::set<int> clusters;
 	StringList clusters_strlist(cluster_ids);
 	const char *next_cluster_str;
@@ -17669,6 +17682,19 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir)
 			dprintf(D_ALWAYS, "ExportJobs(): Ignoring invalid cluster id %s\n", next_cluster_str);
 			continue;
 		}
+#if 1
+		JobQueueCluster * jqc = GetClusterAd(next_cluster);
+		if ( ! jqc) {
+			dprintf(D_ALWAYS, "ExportJobs(): Ignoring missing cluster id %d\n", next_cluster);
+			continue;
+		}
+		if ( ! owner) {
+			owner = jqc->ownerinfo;
+		} else if ( owner != jqc->ownerinfo ) {
+			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner->Name(), jqc->ownerinfo->Name());
+			return false;
+		}
+#else
 		std::string next_owner;
 		if ( GetAttributeString(next_cluster, -1, ATTR_OWNER, next_owner) < 0 ) {
 			dprintf(D_ALWAYS, "ExportJobs(): Ignoring missing cluster id %d\n", next_cluster);
@@ -17681,6 +17707,7 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir)
 			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner.c_str(), next_owner.c_str());
 			return false;
 		}
+#endif
 		// TODO check for late materialization
 		// TODO check for spooled
 		// TODO check for active jobs (running, externally managed)
@@ -17689,14 +17716,19 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir)
 			max_cluster_id = next_cluster + 1;
 		}
 	}
-	if ( clusters.empty() || owner.empty() ) {
+	if ( clusters.empty() ) {
 		dprintf(D_ALWAYS, "ExportJobs(): No clusters to export\n");
 		return false;
 	}
 	// TODO check that client is authorized to modify this owner's jobs
 
 	TemporaryPrivSentry tps(true);
+#if 1
+	JobQueueCluster * jqc = GetClusterAd(max_cluster_id);
+	if ( !init_user_ids_from_ad(*jqc) ) {
+#else
 	if ( !init_user_ids(owner.c_str(), domain.c_str()) ) {
+#endif
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
 	}
@@ -17737,7 +17769,7 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir)
 
 		for ( auto attr_itr = src_ad->begin(); attr_itr != src_ad->end(); attr_itr++ ) {
 			if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_IWD) && job_id.proc >= 0 ) {
-				char *dir = gen_ckpt_name("##", job_id.cluster, job_id.proc, 0);
+				char *dir = gen_ckpt_name(ckpt_dir, job_id.cluster, job_id.proc, 0);
 				std::string val;
 				val = '"';
 				val += dir;
@@ -17765,3 +17797,110 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir)
 	dprintf(D_ALWAYS,"ExportJobs() returning true\n");
 	return true;
 }
+
+bool
+Scheduler::ImportExportedJobResults(const char * job_log_file)
+{
+	dprintf(D_ALWAYS,"ImportExportedJobResults(%s)\n", job_log_file);
+
+	// Load the external job_log
+	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>(), job_log_file, 0);
+
+	std::set<int> clusters_found;
+
+	BeginTransaction();
+
+	std::string tmpstr;
+	ConstraintHolder hold_reason;
+
+	// Note that in the inport_queue at this time, the proc ads are not chained to the cluster ads
+	ClassAd *ad;
+	JobQueueKey jid;
+	import_queue.StartIterateAllClassAds();
+	while(import_queue.Iterate(jid,ad)) {
+		if (jid.cluster <= 0) continue; // ignore the header ad and set ads
+		if (jid.proc < 0) {
+			// this is a cluster ad, we only care about factory ads
+			// TODO: handle late materialization factories
+			clusters_found.insert(jid.cluster);
+		} else {
+			// this is a proc ad, check to see if it corresponds to a job that we have
+
+			JobQueueJob * job = GetJobAd(jid);
+			if ( ! job) {
+				// ignore if this doesn't correspond to a job in the queue.
+				// TODO: handle jobs that were externally materialized
+				continue;
+			}
+
+			// check to see if this corresponds to a job that is externally managed
+			// and not HELD or REMOVED, we skip external jobs for which this is not true.
+			if (job->Status() == HELD || job->Status() == REMOVED) {
+				continue;
+			}
+			if ( ! job->LookupString(ATTR_JOB_MANAGED, tmpstr) || tmpstr != MANAGED_EXTERNAL) {
+				continue;
+			}
+			if ( ! job->LookupString(ATTR_JOB_MANAGED_MANAGER, tmpstr) || tmpstr != "Lumberjack") {
+				continue;
+			}
+
+		#ifdef SMART_MERGE_BACK_OF_JOB_STATUS // smarter merge-back of job state
+			// grab the state from the external ad
+			int external_status = -1;
+			int hold_code=-1, hold_subcode=-1;
+			ad->LookupInteger(ATTR_JOB_STATUS, external_status);
+			if (external_status == HELD) {
+				// If external statis held, grab hold info and remove it from the ad
+				// so it doesn't get merged back.
+				ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
+				ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, hold_subcode);
+				ad->Delete(ATTR_HOLD_REASON_CODE);
+				ad->Delete(ATTR_HOLD_REASON_SUBCODE);
+				hold_reason.set(ad->Remove(ATTR_HOLD_REASON));
+			}
+			ad->Delete(ATTR_JOB_STATUS);
+		#endif
+
+			// delete the attributes from the external ad we don't want to merge back
+			ad->Delete(ATTR_JOB_LEAVE_IN_QUEUE);
+			ad->Delete(ATTR_JOB_IWD);
+			// delete immutable attributes that we couldn't merge back even if we wanted to
+			ad->Delete(ATTR_OWNER);
+			ad->Delete(ATTR_USER);
+			ad->Delete(ATTR_MY_TYPE);
+			ad->Delete(ATTR_TARGET_TYPE);
+			//ad->Delete(ATTR_PROC_ID);
+
+			// merge back attributes that have changed
+			for (auto it = ad->begin(); it != ad->end(); ++it) {
+				ExprTree * expr = job->Lookup(it->first);
+				if ( ! expr || ! (*expr == *(it->second))) {
+					const char *val = ExprTreeToString(it->second);
+					SetAttribute(jid.cluster, jid.proc, it->first.c_str(), val);
+				}
+			}
+
+		#ifdef SMART_MERGE_BACK_OF_JOB_STATUS // smarter merge-back of job state
+			if (job->Status() != external_status) {
+				// update state counters
+				SetAttributeInt(jid.cluster, jid.proc, ATTR_JOB_STATE, external_status);
+				if (external_status == HELD) {
+					SetAttribute(jid.cluster, jid.proc, ATTR_HOLD_REASON_CODE, hold_code);
+					SetAttribute(jid.cluster, jid.proc, ATTR_HOLD_REASON_SUBCODE, hold_subcode);
+					SetAttribute(jid.cluster, jid.proc, ATTR_HOLD_REASON, hold_reason.c_str());
+				}
+			}
+		#endif
+
+			// take the job out of the managed state
+			DeleteAttribute(jid.cluster, jid.proc, ATTR_JOB_MANAGED);
+			DeleteAttribute(jid.cluster, jid.proc, ATTR_JOB_MANAGED_MANAGER);
+		}
+	}
+
+	CommitTransactionOrDieTrying();
+	dprintf(D_ALWAYS,"ImportExportedJobResults() returning true\n");
+	return true;
+}
+

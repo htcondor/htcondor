@@ -804,7 +804,8 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
-	bool ExportJobs(const char *cluster_ids, const char *output_dir);
+	bool ExportJobs(const char *cluster_ids, const char *output_dir, const char * ckpt_dir="##");
+	bool ImportExportedJobResults(const char * job_log_file);
 
 private:
 
