@@ -179,7 +179,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     }
 
     char hex[3 * IV_SIZE + 1];
-    dprintf(D_ALWAYS,"Condor_Crypt_AESGCM::encrypt DUMP : Final IV used for outgoing encrypt: %s\n",
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : Final IV used for outgoing encrypt: %s\n",
         debug_hex_dump(hex, reinterpret_cast<char*>(iv), IV_SIZE));
 
     if (cs->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
@@ -261,7 +261,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         return false;
     }
     char hex2[3 * MAC_SIZE + 1];
-    dprintf(D_ALWAYS,"Condor_Crypt_AESGCM::encrypt DUMP : Outgoing MAC : %s\n",
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : Outgoing MAC : %s\n",
         debug_hex_dump(hex2, reinterpret_cast<char*>(output + output_len - MAC_SIZE), MAC_SIZE));
 
     // store the compute mac in our state obj for use next time
@@ -415,15 +415,15 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 
 
     dprintf(D_NETWORK,
-        "Condor_Crypt_AESGCM::decrypt about to decrypt cipher text."
+        "Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
         " Input length is %d\n",
         input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE);
     if (!EVP_DecryptUpdate(ctx, output, &len, input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1), input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed due to failed cipher text update.\n");
         return false;
     }
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt produced output of size %d\n", len);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt Cipher text: "
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : produced output of size %d\n", len);
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP :Cipher text: "
         "%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
         *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1)),
         *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) + 1),
@@ -433,7 +433,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         *(input + input_len - MAC_SIZE - 3),
         *(input + input_len - MAC_SIZE - 2),
         *(input + input_len - MAC_SIZE - 1));
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt Plain text: "
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : Plain text: "
         "%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
         *(output),
         *(output + 1),
@@ -450,19 +450,19 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     char hex2[3 * MAC_SIZE + 1];
-    dprintf(D_ALWAYS,"Condor_Crypt_AESGCM::decrypt: Incoming MAC : %s\n",
+    dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: DUMP : Incoming MAC : %s\n",
         debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - MAC_SIZE), MAC_SIZE));
 
 
     memcpy(m_conn_crypto_state->m_prev_mac_dec, input + input_len - MAC_SIZE, MAC_SIZE);
 
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt about to finalize output.\n");
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : about to finalize output.\n");
     if (!EVP_DecryptFinal_ex(ctx, output + len, &len)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed due to finalize decryption and check of tag.\n");
        return false;
     }
 
-    dprintf(D_NETWORK, "decrypt; input_len is %d and output_len is %d\n", input_len, input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE);
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : input_len is %d and output_len is %d\n", input_len, input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE);
     output_len = input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE;
 
         // Only touch state after success
