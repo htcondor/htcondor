@@ -9,7 +9,7 @@
 double calculate_subtree_usage(Accountant &accountant, GroupEntry *group) {
 		double subtree_usage = 0.0;
 
-		for (vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
+		for (std::vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
 				subtree_usage += calculate_subtree_usage(accountant, *i);
 		}
 		subtree_usage += accountant.GetWeightedResourcesUsed(group->name);
@@ -81,13 +81,13 @@ GroupEntry::hgq_construct_tree(
 
 		// Populate the group array, which contains an entry for each group.
 		std::string hgq_root_name = "<none>";
-		vector<string> groups;
+		std::vector<std::string> groups;
 		if (NULL != groupnames) {
 				StringList group_name_list;
 				group_name_list.initializeFromString(groupnames);
 				group_name_list.rewind();
 				while (char* g = group_name_list.next()) {
-						const string gname(g);
+						const std::string gname(g);
 
 						// Best to sanity-check this as early as possible.  This will also
 						// be useful if we ever decided to allow users to name the root group
@@ -123,10 +123,10 @@ GroupEntry::hgq_construct_tree(
 
 		// build the tree structure from our group path info
 		for (unsigned long j = 0;  j < groups.size();  ++j) {
-				string gname = groups[j];
+				std::string gname = groups[j];
 
 				// parse the group name into a path of sub-group names
-				vector<string> gpath;
+				std::vector<std::string> gpath;
 				parse_group_name(gname, gpath);
 
 				// insert the path of the current group into the tree structure
@@ -134,7 +134,7 @@ GroupEntry::hgq_construct_tree(
 				bool missing_parent = false;
 				for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
 						// chmap is mostly a structure to avoid n^2 behavior in groups with many children
-						map<string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
+						std::map<std::string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
 						if (f == group->chmap.end()) {
 								dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
 								missing_parent = true;
@@ -210,12 +210,12 @@ GroupEntry::hgq_construct_tree(
 				GroupEntry* group = grpq.front();
 				grpq.pop_front();
 				hgq_groups.push_back(group);
-				for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+				for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
 						grpq.push_back(*j);
 				}
 		}
 
-		string group_sort_expr;
+		std::string group_sort_expr;
 		if (!param(group_sort_expr, "GROUP_SORT_EXPR")) {
 				// Should never fail! Default provided via param-info
 				EXCEPT("Failed to obtain value for GROUP_SORT_EXPR");
@@ -225,7 +225,7 @@ GroupEntry::hgq_construct_tree(
 				EXCEPT("Failed to parse GROUP_SORT_EXPR = %s", group_sort_expr.c_str());
 		}
 		delete test_sort_expr;
-		for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
 				GroupEntry* group = *j;
 				group->sort_ad->Assign(ATTR_ACCOUNTING_GROUP, group->name);
 				// group-specific values might be supported in the future:
@@ -271,11 +271,11 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 						continue;
 				}
 				// this holds the submitter name, which includes group, if present
-				const string subname(tname);
+				const std::string subname(tname);
 
 				// is there a username separator?
-				string::size_type pos = subname.find_last_of('@');
-				if (pos==string::npos) {
+				std::string::size_type pos = subname.find_last_of('@');
+				if (pos==std::string::npos) {
 						dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter with badly-formed name \"%s\"\n", subname.c_str());
 						continue;
 				}
@@ -321,7 +321,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 		// Any groups with autoregroup are allowed to also negotiate in root group ("none")
 		if (autoregroup) {
 				unsigned long n = 0;
-				for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+				for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
 						GroupEntry* group = *j;
 						if (group == hgq_root_group) continue;
 						if (!group->autoregroup) continue;
@@ -337,7 +337,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 
 		hgq_root_group->hgq_assign_quotas(hgq_total_quota);
 
-		for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
 				GroupEntry* group = *j;
 				dprintf(D_FULLDEBUG, "group quotas: group= %s  cquota= %g  static= %d  accept= %d  quota= %g  req= %g  usage= %g\n",
 								group->name.c_str(), group->config_quota, int(group->static_quota), int(group->accept_surplus), group->quota,
@@ -480,13 +480,13 @@ GroupEntry::hgq_allocate_surplus(double surplus) {
 		// Surplus allocation policy is that a group shares surplus on equal footing with its children.
 		// So we load children and their parent (current group) into a single vector for treatment.
 		// Convention will be that current group (subtree root) is last element.
-		vector<GroupEntry*> groups(this->children);
+		std::vector<GroupEntry*> groups(this->children);
 		groups.push_back(this);
 
 		// This vector will accumulate allocations.
 		// We will proceed with recursive allocations after allocations at this level
 		// are completed.  This keeps recursive calls to a minimum.
-		vector<double> allocated(groups.size(), 0);
+		std::vector<double> allocated(groups.size(), 0);
 
 		// Temporarily hacking current group to behave like a child that accepts surplus
 		// avoids some special cases below.  Somewhere I just made a kitten cry.
@@ -520,7 +520,7 @@ GroupEntry::hgq_allocate_surplus(double surplus) {
 				dprintf(D_FULLDEBUG, "group quotas: allocate-surplus (2b): quota-based allocation, group= %s  requested= %g  surplus= %g\n",
 								this->name.c_str(), requested, surplus);
 
-				vector<double> subtree_requested(groups.size(), 0);
+				std::vector<double> subtree_requested(groups.size(), 0);
 				for (unsigned long j = 0;  j < groups.size();  ++j) {
 						GroupEntry* grp = groups[j];
 						// By conditioning on accept_surplus here, I don't have to check it below
@@ -644,13 +644,13 @@ GroupEntry::hgq_round_robin(double surplus) {
 		// Surplus allocation policy is that a group shares surplus on equal footing with its children.
 		// So we load children and their parent (current group) into a single vector for treatment.
 		// Convention will be that current group (subtree root) is last element.
-		vector<GroupEntry*> groups(this->children);
+		std::vector<GroupEntry*> groups(this->children);
 		groups.push_back(this);
 
 		// This vector will accumulate allocations.
 		// We will proceed with recursive allocations after allocations at this level
 		// are completed.  This keeps recursive calls to a minimum.
-		vector<double> allocated(groups.size(), 0);
+		std::vector<double> allocated(groups.size(), 0);
 
 		// Temporarily hacking current group to behave like a child that accepts surplus
 		// avoids some special cases below.  Somewhere I just made a kitten cry.  Even more.
@@ -664,7 +664,7 @@ GroupEntry::hgq_round_robin(double surplus) {
 		this->subtree_requested = this->requested;
 
 		double outstanding = 0;
-		vector<double> subtree_requested(groups.size(), 0);
+		std::vector<double> subtree_requested(groups.size(), 0);
 		for (unsigned long j = 0;  j < groups.size();  ++j) {
 				GroupEntry* grp = groups[j];
 				if (grp->accept_surplus && (grp->subtree_requested > 0)) {
@@ -674,7 +674,7 @@ GroupEntry::hgq_round_robin(double surplus) {
 		}
 
 		// indexes allow indirect sorting
-		vector<unsigned long> idx(groups.size());
+		std::vector<unsigned long> idx(groups.size());
 		for (unsigned long j = 0;  j < idx.size();  ++j) idx[j] = j;
 
 		// order the groups to determine who gets first cut
@@ -751,8 +751,8 @@ GroupEntry::hgq_round_robin(double surplus) {
 
 void hgq_allocate_surplus_loop(
 				bool by_quota,
-				vector<GroupEntry*>& groups, vector<double>& allocated,
-				vector<double>& subtree_requested,
+				std::vector<GroupEntry*>& groups, std::vector<double>& allocated,
+				std::vector<double>& subtree_requested,
 				double& surplus, double& requested)
 {
 		int iter = 0;

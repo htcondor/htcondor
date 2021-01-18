@@ -102,7 +102,7 @@ struct group_order {
 double calculate_subtree_usage(Accountant &accountant, GroupEntry *group);
 
 struct ord_by_rr_time {
-		vector<GroupEntry*>* data;
+		std::vector<GroupEntry*>* data;
 		bool operator()(unsigned long const& ja, unsigned long const& jb) const {
 				GroupEntry* a = (*data)[ja];
 				GroupEntry* b = (*data)[jb];

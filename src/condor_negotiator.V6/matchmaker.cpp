@@ -272,7 +272,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	if ( expr_tree == NULL || expr_tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
 		return false;
 	}
-	vector<classad::ExprTree*> expr_list;
+	std::vector<classad::ExprTree*> expr_list;
 	((const classad::ExprList*)expr_tree)->GetComponents( expr_list );
 	if ( (unsigned)idx >= expr_list.size() ) {
 		return false;
@@ -1716,7 +1716,7 @@ negotiationTime ()
 
             // make sure working values are reset for this iteration
             groupQuotasHash->clear();
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
                 group->allocated = 0;
                 group->subtree_requested = 0;
@@ -1745,7 +1745,7 @@ negotiationTime ()
             double allocated_total = 0;
             unsigned long served_groups = 0;
             unsigned long unserved_groups = 0;
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
                 dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
                         group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
@@ -1774,7 +1774,7 @@ negotiationTime ()
             }
 
             // fill in sorting classad attributes for configurable sorting
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
                 ClassAd* ad = group->sort_ad;
                 ad->Assign(ATTR_GROUP_QUOTA, group->quota);
@@ -1784,7 +1784,7 @@ negotiationTime ()
                 float v = 0;
                 if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
                     v = FLT_MAX;
-                    string e;
+					std::string e;
                     ad->LookupString(ATTR_SORT_EXPR_STRING, e);
                     dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
                             e.c_str(), group->name.c_str(), v);
@@ -1793,7 +1793,7 @@ negotiationTime ()
             }
 
             // present accounting groups for negotiation in "starvation order":
-            vector<GroupEntry*> negotiating_groups(hgq_groups);
+			std::vector<GroupEntry*> negotiating_groups(hgq_groups);
             std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order(autoregroup, hgq_root_group));
 
             // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
@@ -1807,7 +1807,7 @@ negotiationTime ()
                 dprintf(D_ALWAYS, "group quotas: entering RR iteration n= %g\n", n);
 
                 // Do the negotiations
-                for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
+                for (std::vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
                     GroupEntry* group = *j;
 
                     dprintf(D_FULLDEBUG, "Group %s - sortkey= %g\n", group->name.c_str(), group->sort_key);
@@ -1863,7 +1863,7 @@ negotiationTime ()
 
             // After round robin, assess where we are relative to HGQ allocation goals
             double usage_total = 0;
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
 
                 double usage = accountant.GetWeightedResourcesUsed(group->name);
@@ -1892,7 +1892,7 @@ negotiationTime ()
         }
 
         // For the purposes of RR consistency I want to update these after all allocation rounds are completed.
-        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
             GroupEntry* group = *j;
             // If we were served by RR this cycle, then update timestamp of most recent round-robin.
             // I also update when requested is zero because I want to favor groups that have been actually
@@ -2106,7 +2106,7 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
-    for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
         forwardGroupAccounting(cl, *j);
     }
 }
@@ -5471,14 +5471,14 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
 	// machines.
-    set<MyString> names;
+	std::set<MyString> names;
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
 	submitterAds.Open();
 	while (ClassAd* ad = submitterAds.Next()) {
 		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
-        std::pair<set<MyString>::iterator, bool> r = names.insert(subname);
+        std::pair<std::set<MyString>::iterator, bool> r = names.insert(subname);
         // Only count each submitter once
         if (!r.second) continue;
 
