@@ -481,6 +481,12 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         "Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
         " Input length is %d\n",
         input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE);
+
+    if( input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE < 0) {
+        dprintf(D_NETWORK, "failing.\n");
+        return false;
+    }
+
     if (!EVP_DecryptUpdate(ctx, output, &len, input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1), input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed due to failed cipher text update.\n");
         return false;
