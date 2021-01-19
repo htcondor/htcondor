@@ -423,7 +423,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : produced output of size %d\n", len);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP :Cipher text: "
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : Cipher text: "
         "%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
         *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1)),
         *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) + 1),
@@ -450,7 +450,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     char hex2[3 * MAC_SIZE + 1];
-    dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: DUMP : Incoming MAC : %s\n",
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt: DUMP : Incoming MAC : %s\n",
         debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - MAC_SIZE), MAC_SIZE));
 
 
