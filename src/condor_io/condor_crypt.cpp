@@ -83,8 +83,8 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
         }
         case CONDOR_AESGCM: {
             // ZKM TODO FIXME: CODE MISSING HERE TO INIT AES PROPERLY
-            dprintf(D_ALWAYS, "ZKM: ***** NOT RESETTING AES PROPERLY.\n");
-            //Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState(), true);
+            dprintf(D_ALWAYS, "ZKM: ***** RESETTING AES PROPERLY.\n");
+            Condor_Crypt_AESGCM::initState(m_keyInfo.getConnCryptoState());
             break;
         }
         default:

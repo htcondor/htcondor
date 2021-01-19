@@ -2252,16 +2252,21 @@ const char * Sock::serializeCryptoInfo(const char * buf)
 	dprintf(D_ALWAYS, "ZKM DECODE DONE! ccs is %p.\n", ccs.get());
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0, ccs);
+        //
+        // This is super-wacky.  We do NOT pass in the ConnCryptoState -- it will get "inited"
+        // during set_crypto_key below.  Instead, hang on to it, and set it afterards.
+        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0, std::shared_ptr<ConnCryptoState>(new ConnCryptoState));
 	dprintf(D_ALWAYS, "ZKM MADE KeyInfo.\n");
 	dprintf(D_ALWAYS, "ZKM MADE ccs is %p.\n", k.getConnCryptoState().get());
 
-/*
-	dprintf(D_ALWAYS, "ZKM DECODE doing memcpy of %i bytes from %p to %p\n", sizeof(ConnCryptoState), (char*)(&ccs));
-	memcpy((char*)&(k.getConnCryptoState()), ccs, sizeof(ConnCryptoState));
-*/
         set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
+
+        std::shared_ptr<ConnCryptoState> dest_ccs = crypto_state_->getkey().getConnCryptoState();
+
+	dprintf(D_ALWAYS, "ZKM DECODE doing memcpy of %lu bytes from %p to %p\n", sizeof(ConnCryptoState), (char*)(ccs.get()), (char*)(dest_ccs.get()));
+	memcpy((char*)(dest_ccs.get()), (char*)(ccs.get()), sizeof(ConnCryptoState));
+
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
         ptmp++;
@@ -2954,6 +2959,9 @@ void Sock::resetCrypto()
 #ifdef HAVE_EXT_OPENSSL
   if (crypto_state_) {
     crypto_state_->reset();
+    if (crypto_state_->getkey().getProtocol() == CONDOR_AESGCM) {
+        Condor_Crypt_AESGCM::initState(crypto_state_->getkey().getConnCryptoState());
+    }
   }
 #endif
 }

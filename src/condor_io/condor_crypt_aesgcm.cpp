@@ -362,6 +362,11 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     //
     // let's just check and scream a bit if they're not the same
 
+    // force consistency:
+    if ( (m_conn_crypto_state->m_ctr_dec == 0) ) {
+        memset(m_conn_crypto_state->m_iv_dec.iv, '\0', IV_SIZE);
+    }
+
     if (
          (0 == memcmp(m_conn_crypto_state->m_iv_dec.iv, g_unset_iv, IV_SIZE) ) !=
          (m_conn_crypto_state->m_ctr_dec == 0)
