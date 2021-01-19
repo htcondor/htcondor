@@ -450,7 +450,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     char hex2[3 * MAC_SIZE + 1];
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt: DUMP : Incoming MAC : %s\n",
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : Incoming MAC : %s\n",
         debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - MAC_SIZE), MAC_SIZE));
 
 

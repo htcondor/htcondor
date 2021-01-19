@@ -3272,13 +3272,17 @@ SecMan::getCryptProtocolNameToEnum(char const *name) {
 	while ((tmp = list.next())) {
 		dprintf(D_NETWORK, "Considering crypto protocol %s.\n", tmp);
 		if (!strcasecmp(tmp, "BLOWFISH")) {
+			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_BLOWFISH;
 		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(name, "TRIPLEDES")) {
+			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_3DES;
 		} else if (!strcasecmp(tmp, "AESGCM")) {
+			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_AESGCM;
 		}
 	}
+	dprintf(D_NETWORK, "Could not decide on crypto protocol %s, return CONDOR_NO_PROTOCL.\n", tmp);
 	return CONDOR_NO_PROTOCOL;
 }
 
@@ -3364,6 +3368,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 
 	Protocol crypt_protocol = getCryptProtocolNameToEnum(crypto_method.c_str());
+	dprintf(D_ALWAYS,"SECMAN: ZKM: *** %s translated to %i\n", crypto_method.c_str(), crypt_protocol);
+
 	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
 	if(!keybuf) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
@@ -3375,8 +3381,13 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		unsigned char keybuf2[32];
 		memcpy(keybuf2, keybuf, 16);
 		memcpy(keybuf2 + 16, keybuf, 16);
-		keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0, std::shared_ptr<ConnCryptoState>());
+		std::shared_ptr<ConnCryptoState> ccs = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
+		dprintf (D_ALWAYS, "ZKM: *** explicitly calling AES initState on new AES object. %p \n", ccs.get());
+		Condor_Crypt_AESGCM::initState(ccs);
+		dprintf (D_ALWAYS, "ZKM: *** MADE IT HERE after calling above.\n");
+		keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0, ccs);
 	} else {
+		dprintf (D_ALWAYS, "ZKM: *** NOT creating new ConnCryptoState for non AES(protocol %i) object.\n", crypt_protocol);
 		keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0, std::shared_ptr<ConnCryptoState>());
 	}
 	free( keybuf );

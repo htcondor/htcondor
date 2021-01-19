@@ -761,6 +761,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				if (session->key()) {
 					// copy this to the HandleReq() scope
+					dprintf(D_ALWAYS, "ZKM: EXPECT TO SEE COPY CONSTRUCTOR FOR newKeyInfo() next.\n");
 					m_key = new KeyInfo(*session->key());
 				}
 

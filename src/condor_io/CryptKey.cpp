@@ -58,6 +58,7 @@ KeyInfo :: KeyInfo(const unsigned char * keyData,
       connState_      (connState)
 {
     if(protocol_ == CONDOR_AESGCM) {
+	dprintf (D_ALWAYS, "ZKM: BLOWUP IF %p IS ZERO.\n", connState_.get());
         ASSERT(connState_.get());
     }
     init(keyData, keyDataLen);
