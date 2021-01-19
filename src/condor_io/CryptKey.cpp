@@ -39,6 +39,9 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
       duration_   (copy.duration_),
       connState_  (copy.connState_)
 {
+    if(protocol_ == CONDOR_AESGCM) {
+        ASSERT(connState_.get());
+    }
     init(copy.keyData_, copy.keyDataLen_);
 }
 
@@ -54,14 +57,9 @@ KeyInfo :: KeyInfo(const unsigned char * keyData,
       duration_   (duration),
       connState_      (connState)
 {
-/*
-    if(connState.get()) {
-        connState_ = connState;
-    } else {
-	dprintf(D_ALWAYS, "ZKM: **** CREATING new ConnCryptoState.\n");
-        connState_ = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
+    if(protocol_ == CONDOR_AESGCM) {
+        ASSERT(connState_.get());
     }
-*/
     init(keyData, keyDataLen);
 }
 
@@ -78,6 +76,9 @@ KeyInfo& KeyInfo :: operator=(const KeyInfo& copy)
 		duration_   = copy.duration_;
 		connState_  = copy.connState_;
 
+		if(copy.protocol_ == CONDOR_AESGCM) {
+			ASSERT(connState_.get());
+		}
 		init(copy.keyData_, copy.keyDataLen_);
 	}
 
