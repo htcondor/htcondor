@@ -137,9 +137,22 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         return false;
     }
 
+    // normally we would do the math here to change the IV.  however, for
+    // debugging only, I am treating the counter as ZERO.  that is, the result
+    // is the base.
+    //
+    // this means the IV does not change from message to message, which in
+    // real life, it needs to, but for now it does not.
+    //
+    // the reason i made this hack is thought i was seeing the _enc and _dec
+    // counters be off by one the sending/receiving side (in non-negotiated
+    // sessions I believe)
+    //
+    // making these zero let me continue debugging past that issue.
+
     int32_t base = ntohl(m_conn_crypto_state->m_iv_enc.ctr.pkt);
-    int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_enc);
-    //int32_t result = base;
+    //int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_enc);
+    int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     if (m_conn_crypto_state->m_ctr_enc == 0xffffffff) {
         dprintf(D_NETWORK, "Hit max number of packets per connection.\n");
@@ -147,9 +160,13 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     }
 
 
+    // we have decided the connection counter is not needed, and possibly also
+    // a bad idea according to Lamport's "byzantine general problem". (that is,
+    // how would both sides agree a connection was made).
+
     int32_t base_conn = ntohl(m_conn_crypto_state->m_iv_enc.ctr.conn);
-    int32_t result_conn = base_conn + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
-    //int32_t result_conn = base_conn;
+    //int32_t result_conn = base_conn + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
+    int32_t result_conn = base_conn;
     int32_t ctr_encoded_conn = htonl(result_conn);
 
     if (m_conn_crypto_state->m_ctr_conn == 0xffffffff) {
@@ -205,6 +222,12 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         return false;
     }
 
+    // this part may work fine, but once things are out of sync, it's totally fubar.
+    //
+    // so far now, we are not including the MAC of the previous message in the
+    // additional digest date of the current packet.
+    //
+/*
     if (!sending_IV) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of previous MAC: %s\n",
             MAC_SIZE, debug_hex_dump(hex, reinterpret_cast<const char *>(m_conn_crypto_state->m_prev_mac_enc), MAC_SIZE));
@@ -216,6 +239,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     } else {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : No previous MAC, so not adding to EncryptUpdate()\n");
     }
+*/
 
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of plaintext. (not printing)\n", input_len);
     if (1 != EVP_EncryptUpdate(ctx, output + (sending_IV ? IV_SIZE : 0),
@@ -332,7 +356,10 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     // original decrypt code used the non-zero IV check.
     bool receiving_IV = (0 == memcmp(m_conn_crypto_state->m_iv_dec.iv, g_unset_iv, IV_SIZE) );
 
-    // encrypt code uses non-zero counter.
+    // on the code for the encrypt side, it checks to see if the number of message is non-zero.
+    //
+    // but on the decypt side, it looks to see if the IV is all zeros.
+    //
     // let's just check and scream a bit if they're not the same
 
     if (
@@ -343,10 +370,17 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : INCONSISTENT STATE.  iv  is nonzero: %i\n", 0 != memcmp(m_conn_crypto_state->m_iv_dec.iv, g_unset_iv, IV_SIZE));
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : INCONSISTENT STATE.  ctr is nonzero: %i\n", 0 != m_conn_crypto_state->m_ctr_dec);
     } else {
+        // things seem to be as expected.
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : This is %sthe first decrypt.\n", (m_conn_crypto_state->m_ctr_dec ? "NOT " : ""));
     }
 
-    // if you want to force the IV to be read every time, it happens here.
+    // if you want to force the IV to be read every time, it would happen here.
+    //
+    // you should be able to set receiving_IV to true and have that happen.
+    // however, the code is not yet wired to look at that variable, and instead
+    // does some conditional math as needed.
+
+
     //
     // how does the rest of the code know to fast forward past this?
     //
@@ -355,18 +389,36 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         memcpy(m_conn_crypto_state->m_iv_dec.iv, input, IV_SIZE);
     }
 
+    // normally we would do the math here to change the IV.  however, for
+    // debugging only, I am treating the counter as ZERO.  that is, the result
+    // is the base.
+    //
+    // this means the IV does not change from message to message, which in
+    // real life, it needs to, but for now it does not.
+    //
+    // the reason i made this hack is thought i was seeing the _enc and _dec
+    // counters be off by one the sending/receiving side (in non-negotiated
+    // sessions I believe)
+    //
+    // making these zero let me continue debugging past that issue.
+   
     int32_t base = ntohl(m_conn_crypto_state->m_iv_dec.ctr.pkt);
-    int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_dec);
-    //int32_t result = base;
+    //int32_t result = base + *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_dec);
+    int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV base value %d\n", base);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter value _dec %u\n", m_conn_crypto_state->m_ctr_dec);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value %d\n", result);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value (encoded) %d\n", ctr_encoded);
 
+
+    // we have decided the connection counter is not needed, and possibly also
+    // a bad idea according to Lamport's "byzantine general problem". (that is,
+    // how would both sides agree a connection was made).
+
     int32_t result_conn = ntohl(m_conn_crypto_state->m_iv_dec.ctr.conn);
-    int32_t base_conn = result_conn - *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
-    //int32_t base_conn = result_conn;
+    //int32_t base_conn = result_conn - *reinterpret_cast<int32_t*>(&m_conn_crypto_state->m_ctr_conn);
+    int32_t base_conn = result_conn;
     int32_t ctr_encoded_conn = htonl(result_conn);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV conn base value %d\n", base_conn);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Connection counter value %d\n", m_conn_crypto_state->m_ctr_conn);
@@ -401,6 +453,12 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
 
+    // this part may work fine, but once things are out of sync, it's totally fubar.
+    //
+    // so far now, we are not including the MAC of the previous message in the
+    // additional digest date of the current packet.
+    //
+/*
     if (!receiving_IV) {
         // if we aren't receiving an IV, it means there was a previous msg MAC we want to add
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of previous MAC: %s\n",
@@ -412,7 +470,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     } else {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : No previous MAC, so not adding to EncryptUpdate()\n");
     }
-
+*/
 
     dprintf(D_NETWORK,
         "Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
@@ -456,7 +514,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 
     memcpy(m_conn_crypto_state->m_prev_mac_dec, input + input_len - MAC_SIZE, MAC_SIZE);
 
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : about to finalize output.\n");
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : about to finalize output (len is %i).\n", len);
     if (!EVP_DecryptFinal_ex(ctx, output + len, &len)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed due to finalize decryption and check of tag.\n");
        return false;
