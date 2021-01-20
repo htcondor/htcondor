@@ -6492,9 +6492,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 					result.SetUndefinedValue();
 				}
 
-				int intValue;
-				if (result.IsIntegerValue(intValue)) {
-					machine->Assign(*it, (int) (b4 + intValue));
+				long long longValue;
+				if (result.IsIntegerValue(longValue)) {
+					machine->Assign(*it, (long long) (b4 + longValue));
 				} else if (result.IsRealValue(realValue)) {
 					machine->Assign(*it, (b4 + realValue));
 				} else {
