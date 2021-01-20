@@ -1965,7 +1965,18 @@ ProcAPI::buildPidList() {
 	std::vector<pid_t> newPidList;
 	int rv = build_pid_list(newPidList);
 
-    double fraction = 0.70;
+    //
+    // Based on analysis of our logs from December 2020 and the first
+    // three weeks of 2021.  On the faulting machines, approximately
+    // 1 read in 4337 results in 10% fewer PIDs than the previous read;
+    // depending on the machine, as few as 2 in 26 or as many as 2 in 3
+    // of these short reads result in a failure we (humans) noticed.
+    //
+    // Conversely, every observed failure had a read short by at least
+    // 15%, so even with a high false positive rate, it's worth the low
+    // overhead to use the 10% threshold.
+    //
+    double fraction = 0.90;
     char * fraction_str = getenv( "_CONDOR_PROCAPI_RETRY_FRACTION" );
     if( fraction_str ) {
         char * endptr = NULL;
@@ -1977,7 +1988,7 @@ ProcAPI::buildPidList() {
     dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f\n", fraction );
 
     bool suddenly_too_many_fewer = false;
-    if( rv >= 0 && rv < (int)(pidList.size() * 0.70) ) {
+    if( rv >= 0 && rv < (int)(pidList.size() * fraction) ) {
         suddenly_too_many_fewer = true;
     }
 
