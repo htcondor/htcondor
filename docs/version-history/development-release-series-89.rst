@@ -77,6 +77,10 @@ New Features:
   by drainging initiated by *condor_defrag*.
   :jira:`77`
 
+- The  *condor_defrag* daemon will now supply a ``-reason`` argument of ``defrag``
+  and will ignore machines that have have a draining reason that is not ``defrag``.
+  :jira:`89`
+
 - Added a new a ClassAd function to help write submit transforms.  You can now use unresolved()
   to check for existing constraints on a particular attribute (or attribute regex).
   :jira:`66`
@@ -90,6 +94,7 @@ New Features:
 - Certificate map files can now use the ``@include`` directive to include another file
   or all of the files in a directory.
   :jira:`46`
+
 
 Bugs Fixed:
 
