@@ -49,6 +49,7 @@ INDEXED_KEYWORD_ATTRS = {
     "JobState",
     "LastRemoteHost",
     "LastRemotePool",
+    "MATCH_EXP_JOBGLIDEIN_ResourceName",
     "MATCH_EXP_JOB_GLIDECLIENT_Name",
     "MATCH_EXP_JOB_GLIDEIN_ClusterId",
     "MATCH_EXP_JOB_GLIDEIN_Entry_Name",
@@ -98,6 +99,7 @@ NOINDEX_KEYWORD_ATTRS = {
     "HoldReason",
     "In",
     "Iwd",
+    "JOBGLIDEIN_ResourceName",
     "LastHoldReason",
     "LastRejMatchReason",
     "OtherJobRemoveRequirements",
@@ -125,6 +127,7 @@ NOINDEX_KEYWORD_ATTRS = {
 
 FLOAT_ATTRS = {
     "CPUsUsage",
+    "JobBatchId",
     "JobDuration",
     "NetworkInputMb",
     "NetworkOutputMb",
@@ -185,6 +188,8 @@ INT_ATTRS = {
     "LastJobStatus",
     "LocalSysCpu",
     "LocalUserCpu",
+    "MachineAttrCpus0",
+    "MachineAttrSlotWeight0",
     "MATCH_EXP_JOB_GLIDEIN_Job_Max_Time",
     "MATCH_EXP_JOB_GLIDEIN_MaxMemMBs",
     "MATCH_EXP_JOB_GLIDEIN_Max_Walltime",
