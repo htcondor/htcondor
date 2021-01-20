@@ -87,6 +87,10 @@ New Features:
   `recommendations <https://github.com/theislab/diffxpy/blob/master/docs/parallelization.rst>`_.
   :jira:`185`
 
+- Certificate map files can now use the ``@include`` directive to include another file
+  or all of the files in a directory.
+  :jira:`46`
+
 Bugs Fixed:
 
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
