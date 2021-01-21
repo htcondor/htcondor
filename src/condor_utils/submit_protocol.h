@@ -12,7 +12,6 @@ public:
 	virtual int get_Capabilities(ClassAd& reply) = 0;
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 ) = 0;
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 ) = 0;
-	virtual int send_SpoolFileIfNeeded(ClassAd& ad) = 0;
 	virtual int send_SpoolFile(char const *filename) = 0;
 	virtual int send_SpoolFileBytes(char const *filename) = 0;
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack) = 0;
@@ -48,7 +47,6 @@ public:
 	virtual int get_Capabilities(ClassAd& reply);
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
-	virtual int send_SpoolFileIfNeeded(ClassAd& ad);
 	virtual int send_SpoolFile(char const *filename);
 	virtual int send_SpoolFileBytes(char const *filename);
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
