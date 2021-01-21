@@ -3,14 +3,48 @@ Singularity Support
 
 :index:`Singularity<single: Singularity; installation>` :index:`Singularity`
 
-Note: This documentation is very basic and needs improvement!
+Singularity (https://sylabs.io/singularity/) is a container runtime system
+popular in scientific and HPC communities.  HTCondor can run jobs
+inside Singularity containers either in a transparent way, where the
+job does not know that it is being contained, or, the HTCondor
+administrator can configure the HTCondor startd so that a job can
+opt into running inside a container.
 
-Here's an example configuration file:
+The decision to run a job inside Singularity
+resides on the worker node, although it can delegate that to the job.
+
+By default, jobs will not be run in Singularity.
+
+For Singularity to work, the administrator must install Singularity
+on the worker node.  The HTCondor startd will detect this installation
+at startup.  When it detects a useable installation, it will 
+advertise two attributes in the slot ad:
 
 ::
+       HasSingularity = true
+       SingularityVersion = "singularity version 3.7.0-1.el7"
 
-      # Only set if singularity is not in $PATH.
-      #SINGULARITY = /opt/singularity/bin/singularity
+HTCondor will run a job under Singularity when the startd configuration knob
+SINGULARITY_JOB evaluates to true.  This is evaluated in the context of the
+slot ad and the job ad.  If it evaluates to false or undefined, the job will
+run as normal, without singularity.
+
+When SINGULARITY_JOB evaluates to true, a second HTCondor knob is required
+to name the singularity image that must be run, SINGULARITY_IMAGE_EXPR.
+This also is evluated in the context of the machine and the job ad, and must
+evaluate to a string.  This image name is passed to the singularity exec
+command, and can be any valid value for a singularity image name.  So, it
+may be a path to file on a local file system that contains an singularity
+image, in any format that singularity supports.  It may be a string that
+begins with "docker://", and refer to an image located on docker hub,
+or other repository.  It can begin with "http:", and refer to an image
+to be fetched from an HTTP server.
+
+Here's the simplest possible configuration file.  It will force all
+jobs on this machine to run under Singularity, and to use an image
+that it located in the filesystem in the path "/cvfms/cernvm-prod.cern.ch/cvm3":
+
+::
 
       # Forces _all_ jobs to run inside singularity.
       SINGULARITY_JOB = true
@@ -18,43 +52,47 @@ Here's an example configuration file:
       # Forces all jobs to use the CernVM-based image.
       SINGULARITY_IMAGE_EXPR = "/cvmfs/cernvm-prod.cern.ch/cvm3"
 
-      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
-      SINGULARITY_TARGET_DIR = /srv
-
-      # Writable scratch directories inside the image.  Auto-deleted after the job exits.
-      MOUNT_UNDER_SCRATCH = /tmp, /var/tmp
-
-This provides the user with no opportunity to select a specific image.
-Here are some changes to the above example to allow the user to specify
-an image path:
+Another common configuration is to allow the job to select whether
+to run under Singularity, and if so, which image to use.  This looks like:
 
 ::
 
       SINGULARITY_JOB = !isUndefined(TARGET.SingularityImage)
       SINGULARITY_IMAGE_EXPR = TARGET.SingularityImage
 
-Then, users could add the following to their submit file (note the
+Then, users would add the following to their submit file (note the
 quoting):
 
 ::
 
       +SingularityImage = "/cvmfs/cernvm-prod.cern.ch/cvm3"
 
-Finally, let's pick an image based on the OS - not the filename:
+or maybe
 
 ::
+      +SingularityImage = "docker://ubuntu:20"
 
-      SINGULARITY_JOB = (TARGET.DESIRED_OS isnt MY.OpSysAndVer) && ((TARGET.DESIRED_OS is "CentOS6") || (TARGET.DESIRED_OS is "CentOS7"))
-      SINGULARITY_IMAGE_EXPR = (TARGET.DESIRED_OS is "CentOS6") ? "/cvmfs/cernvm-prod.cern.ch/cvm3" : "/cvmfs/cms.cern.ch/rootfs/x86_64/centos7/latest"
 
-Then, the user adds to their submit file:
+There are some rarely-used settings that some administrators may
+need to set. By default, HTCondor looks for the Singularity runtime
+in /usr/bin/singularity, but this can be overridden with the SINGULARITY
+parameter:
 
 ::
+      SINGULARITY = /opt/singularity/bin/singularity
 
-      +DESIRED_OS="CentOS6"
+By default, the initial working directoy of the job will be the
+scratch directory, just like a vanilla universe job.  This directory
+probably doesn't exist in the image's filesystem.  Usually,
+Singularity will be able to create this directory in the image, but
+unprivileged versions of singularity with certain image types may
+not be able to do so.  If this is the case, the current directory
+on the inside of the container can be set via a knob.  This will
+still map to the scratch directoy outside the container.
 
-That would cause the job to run on the native host for CentOS6 hosts and
-inside a CentOS6 Singularity container on CentOS7 hosts.
+::
+      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      SINGULARITY_TARGET_DIR = /srv
 
 By default, singularity will bind mount the scratch directory that
 contains transfered input files, working files, and other per-job
@@ -92,12 +130,4 @@ inside the container, an administrator could set
 ::
 
     SINGULARITY_EXTRA_ARGUMENTS = --nv
-
-If Singularity is installed as non-setuid, the following flag must be
-set for *condor_ssh_to_job* to work.
-
-::
-
-    SINGULARITY_IS_SETUID = false
-
 
