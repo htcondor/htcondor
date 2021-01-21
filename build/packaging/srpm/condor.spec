@@ -538,7 +538,10 @@ Requires: %name = %version-%release
 Requires: python3-condor
 Requires: python-six
 %if 0%{?osg}
-Requires: htgettoken
+# Although htgettoken is only needed on the submit machine and
+#  condor-credmon-vault is needed on both the submit and credd machines,
+#  htgettoken is small so it doesn't hurt to require it in both places.
+Requires: htgettoken >= 1.1
 %endif
 Conflicts: %name-credmon-oauth
 
