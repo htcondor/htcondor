@@ -49,7 +49,7 @@ def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadat
     try:
         if not args.dry_run:
             history_iter = schedd.history(
-                requirements="true",
+                constraint="true",
                 projection=[],
                 match=min(10000, args.schedd_history_max_ads),
                 since=since_str
@@ -67,33 +67,32 @@ def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadat
                 logging.warning(message)
                 continue
 
-            ad_list = buffered_ads.setdefault(args.es_index_name, [])
+            idx = elastic.get_index(args.es_index_name)
+            ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((convert.unique_doc_id(dict_ad), dict_ad))
 
             if len(ad_list) == args.es_bunch_size:
                 st = time.time()
                 if not args.read_only:
                     elastic.post_ads(
-                        es.handle, args.es_index_name, ad_list, metadata=metadata
+                        es.handle, idx, ad_list, metadata=metadata
                     )
                 logging.debug(
                     f"Posting {len(ad_list)} ads from {schedd_ad['Name']} (process_schedd)"
                 )
                 total_upload += time.time() - st
-                buffered_ads[args.es_index_name] = []
+                buffered_ads[idx] = []
 
             count += 1
 
             # Find the most recent job and use its job id as the since parameter
-            job_completion = job_ad.get("EnteredCurrentStatus", 0)
+            job_completion = convert.record_time(job_ad, fallback_to_launch=False)
             if job_completion > last_completion:
                 last_completion = job_completion
                 since = {
                     "ClusterId": job_ad.get("ClusterId", 0),
                     "ProcId": job_ad.get("ProcId", 0),
-                    "EnteredCurrentStatus": job_ad.get(
-                        "EnteredCurrentStatus", int(time.time())
-                    ),
+                    "EnteredCurrentStatus": job_completion,
                 }
 
             if utils.time_remaining(start_time, args.schedd_history_timeout) <= 0:
@@ -192,20 +191,21 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
                 logging.warning(message)
                 continue
 
-            ad_list = buffered_ads.setdefault(args.es_index_name, [])
+            idx = elastic.get_index(args.es_index_name)
+            ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((convert.unique_doc_id(dict_ad), dict_ad))
 
             if len(ad_list) == args.es_bunch_size:
                 st = time.time()
                 if not args.read_only:
                     elastic.post_ads(
-                        es.handle, args.es_index_name, ad_list, metadata=metadata
+                        es.handle, idx, ad_list, metadata=metadata
                     )
                 logging.debug(
                     f"Posting {len(ad_list)} ads from {startd_ad['Machine']} (process_startd)"
                 )
                 total_upload += time.time() - st
-                buffered_ads[args.es_index_name] = []
+                buffered_ads[idx] = []
 
             count += 1
 

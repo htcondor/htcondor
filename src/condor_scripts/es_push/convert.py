@@ -24,6 +24,7 @@ INDEXED_KEYWORD_ATTRS = {
     "AccountingGroup",
     "AcctGroup",
     "AcctGroupUser",
+    "AssignedGPUs",
     "AutoClusterId",
     "BatchQueue",
     "CloudLabelNames",
@@ -33,6 +34,7 @@ INDEXED_KEYWORD_ATTRS = {
     "DAGNodeName",
     "DAGParentNodeNames",
     "DockerImage",
+    "FileSystemDomain",
     "GLIDEIN_Entry_Name",
     "GlideinClient",
     "GlideinEntryName",
@@ -47,6 +49,7 @@ INDEXED_KEYWORD_ATTRS = {
     "JobDescription",
     "JobKeyword",
     "JobState",
+    "KillSig",
     "LastRemoteHost",
     "LastRemotePool",
     "MATCH_EXP_JOBGLIDEIN_ResourceName",
@@ -64,12 +67,15 @@ INDEXED_KEYWORD_ATTRS = {
     "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Slot",
     "MyType",
     "NTDomain",
+    "OAuthServicesNeeded",
     "Owner",
     "ProjectName",
     "RemoteHost",
     "RemotePool",
+    "RemoveKillSig",
     "ScheddName",
     "ShouldTransferFiles",
+    "SingularityImage",
     "StartdName",
     "StartdSlot",
     "Status",
@@ -94,6 +100,10 @@ NOINDEX_KEYWORD_ATTRS = {
     "Cmd",
     "DAGManNodesLog",
     "DAGManNodesMask",
+    "DontEncryptInputFiles",
+    "DontEncryptOutputFiles",
+    "EncryptInputFiles",
+    "EncryptOutputFiles",
     "Err",
     "ExitReason",
     "HoldReason",
@@ -102,11 +112,13 @@ NOINDEX_KEYWORD_ATTRS = {
     "JOBGLIDEIN_ResourceName",
     "LastHoldReason",
     "LastRejMatchReason",
+    "NotifyUser",
     "OtherJobRemoveRequirements",
     "Out",
     "OutputDestination",
     "PostCmd",
     "PreCmd",
+    "PublicInputFiles",
     "ReleaseReason",
     "RemoteIwd",
     "RemoveReason",
@@ -119,6 +131,8 @@ NOINDEX_KEYWORD_ATTRS = {
     "SubmitEventNotes",
     "TransferCheckpoint",
     "TransferInput",
+    "TransferInputRemaps",
+    "TransferIntermediate",
     "TransferOutput",
     "TransferOutputRemaps",
     "TransferPlugins",
@@ -140,6 +154,8 @@ INT_ATTRS = {
     "BlockReads",
     "BlockWriteKbytes",
     "BlockWrites",
+    "BufferBlockSize",
+    "BufferSize",
     "BytesRecvd",
     "BytesSent",
     "ClusterId",
@@ -182,7 +198,6 @@ INT_ATTRS = {
     "JobSuccessExitCode",
     "JobUniverse",
     "KeepClaimIdle",
-    "KillSig",
     "LastHoldReasonCode",
     "LastHoldReasonSubCode",
     "LastJobStatus",
@@ -327,12 +342,15 @@ BOOL_ATTRS = {
     "PreserveRelativePaths",
     "RunAsOwner",
     "SendCredential",
+    "SpoolOnEvict",
     "StreamErr",
     "StreamOut",
     "SuccessCheckpointExitBySignal",
     "SuccessPostExitBySignal",
     "SuccessPreExitBySignal",
     "TerminationPending",
+    "TransferErr",
+    "TransferExecutable",
     "TransferIn",
     "TransferOut",
     "TransferQueued",
@@ -455,7 +473,7 @@ def to_json(ad, return_dict=False, reduce_data=False):
         return json.dumps(result)
 
 
-def record_time(ad):
+def record_time(ad, fallback_to_launch=True):
     """
     RecordTime falls back to launch time as last-resort and for jobs in the queue
 
@@ -471,7 +489,10 @@ def record_time(ad):
         elif ad.get("EnteredCurrentStatus", 0) > 0:
             return ad["EnteredCurrentStatus"]
 
-    return _LAUNCH_TIME
+    if fallback_to_launch:
+        return _LAUNCH_TIME
+
+    return 0
 
 
 def case_normalize(attr):
@@ -548,8 +569,6 @@ def bulk_convert_ad_data(ad, result):
             or key in NOINDEX_KEYWORD_ATTRS
         ):
             value = str(value)
-            if len(value) > 256:  # truncate strings longer than 256 characters
-                value = f"{value[:253]}..."
         elif key in FLOAT_ATTRS:
             try:
                 value = float(value)
@@ -557,7 +576,8 @@ def bulk_convert_ad_data(ad, result):
                 logging.warning(
                     f"Failed to convert key {key} with value {repr(value)} to float"
                 )
-                continue
+                key = f"{key}_STRING"
+                value = str(value)
         elif (
             key in INT_ATTRS
             or AUTO_ATTRS["provisioned_attrs"].match(key)
@@ -569,7 +589,8 @@ def bulk_convert_ad_data(ad, result):
                 logging.warning(
                     f"Failed to convert key {key} with value {repr(value)} to int"
                 )
-                continue
+                key = f"{key}_STRING"
+                value = str(value)
         elif key in BOOL_ATTRS or AUTO_ATTRS["target_boolean_attrs"].match(key):
             try:
                 value = bool(value)
@@ -577,7 +598,8 @@ def bulk_convert_ad_data(ad, result):
                 logging.warning(
                     f"Failed to convert key {key} with value {repr(value)} to bool"
                 )
-                continue
+                key = f"{key}_STRING"
+                value = str(value)
         elif key in DATE_ATTRS or AUTO_ATTRS["date_attrs"].match(key):
             try:
                 value = int(value)
@@ -587,7 +609,14 @@ def bulk_convert_ad_data(ad, result):
                 logging.warning(
                     f"Failed to convert key {key} with value {repr(value)} to int for a date field"
                 )
-                continue
+                key = f"{key}_STRING"
+                value = str(value)
+        else:
+            value = str(value)
+
+        # truncate strings longer than 256 characters
+        if type(value) == type(str()) and len(value) > 256:
+            value = f"{value[:253]}..."
 
         result[key] = value
 

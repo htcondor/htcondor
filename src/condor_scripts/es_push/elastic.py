@@ -11,33 +11,26 @@ import collections
 import elasticsearch
 import importlib.util
 
+from pathlib import Path
+
 from . import convert
-
-
-def filter_name(keys):
-    for key in keys:
-        if key.startswith("MATCH_EXP_JOB_"):
-            key = key[len("MATCH_EXP_JOB_") :]
-        if key.endswith("_RAW"):
-            key = key[: -len("_RAW")]
-        yield key
 
 
 def make_mappings():
     props = {}
-    for name in filter_name(convert.TEXT_ATTRS):
+    for name in convert.TEXT_ATTRS:
         props[name] = {"type": "text"}
-    for name in filter_name(convert.INDEXED_KEYWORD_ATTRS):
+    for name in convert.INDEXED_KEYWORD_ATTRS:
         props[name] = {"type": "keyword"}
-    for name in filter_name(convert.NOINDEX_KEYWORD_ATTRS):
+    for name in convert.NOINDEX_KEYWORD_ATTRS:
         props[name] = {"type": "keyword", "index": "false"}
-    for name in filter_name(convert.FLOAT_ATTRS):
+    for name in convert.FLOAT_ATTRS:
         props[name] = {"type": "double"}
-    for name in filter_name(convert.INT_ATTRS):
+    for name in convert.INT_ATTRS:
         props[name] = {"type": "long"}
-    for name in filter_name(convert.DATE_ATTRS):
+    for name in convert.DATE_ATTRS:
         props[name] = {"type": "date", "format": "epoch_second"}
-    for name in filter_name(convert.BOOL_ATTRS):
+    for name in convert.BOOL_ATTRS:
         props[name] = {"type": "boolean"}
     props["metadata"] = {
         "properties": {
@@ -49,8 +42,8 @@ def make_mappings():
     dynamic_templates = [
         {
             "raw_expressions": {  # Attrs ending in "_EXPR" are generated during
-                "match": "*_EXPR",  # ad conversion for expressions that cannot be
-                "mapping": {"type": "keyword", "index": "false"},  # evaluated.
+                "match": "*_EXPR",  # ad conversion for expressions that cannot be evaluated
+                "mapping": {"type": "keyword", "index": "false", "ignore_above": 256},
             }
         },
         {
@@ -60,17 +53,16 @@ def make_mappings():
             }
         },
         {
-            "provisioned_attrs",
-            {  # Attrs ending in "Provisioned" are
+            "provisioned_attrs": {  # Attrs ending in "Provisioned" are
                 "match": "*Provisioned",  # resource numbers
-                "mapping": {"type": "long",},
-            },
+                "mapping": {"type": "long"},
+            }
         },
         {
             "resource_request_attrs": {  # Attrs starting with "Request" are
                 "match_pattern": "regex",  # usually resource numbers
                 "match": "^Request[A-Z].*$",
-                "mapping": {"type": "long",},
+                "mapping": {"type": "long"},
             }
         },
         {
@@ -88,7 +80,12 @@ def make_mappings():
         },
     ]
 
-    mappings = {"dynamic_templates": dynamic_templates, "properties": props}
+    mappings = {
+        "dynamic_templates": dynamic_templates,
+        "properties": props,
+        "date_detection": False,
+        "numeric_detection": False,
+    }
     return mappings
 
 
@@ -147,6 +144,7 @@ class ElasticInterface(object):
         username=None,
         password=None,
         use_https=False,
+        logdir=Path.cwd(),
     ):
 
         es_client = {
@@ -175,6 +173,7 @@ class ElasticInterface(object):
                 es_client["verify_certs"] = True
 
         self.handle = elasticsearch.Elasticsearch([es_client])
+        self.logdir = Path(logdir)
 
     def make_mapping(self, idx):
         idx_clt = elasticsearch.client.IndicesClient(self.handle)
@@ -183,7 +182,7 @@ class ElasticInterface(object):
 
         body = json.dumps({"mappings": mappings, "settings": {"index": settings}})
 
-        with open("last_mappings.json", "w") as jsonfile:
+        with Path(self.logdir / "es_push_last_mappings.json").open("w") as jsonfile:
             json.dump(json.loads(body), jsonfile, indent=2, sort_keys=True)
 
         result = self.handle.indices.create(  # pylint: disable = unexpected-keyword-arg
@@ -195,6 +194,22 @@ class ElasticInterface(object):
             logging.error(
                 f'Creation of index {idx} failed: {str(result.get("error", ""))}'
             )
+
+
+_INDEX_CACHE = set()
+
+
+def get_index(idx):
+    global _INDEX_CACHE
+
+    if idx in _INDEX_CACHE:
+        return idx
+
+    _es_handle = get_server_handle()
+    _es_handle.make_mapping(idx)
+    _INDEX_CACHE.add(idx)
+
+    return idx
 
 
 def make_es_body(ads, metadata=None):
