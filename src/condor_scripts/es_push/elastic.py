@@ -96,7 +96,7 @@ def make_settings():
                 "analyzer_keyword": {"tokenizer": "keyword", "filter": "lowercase"}
             }
         },
-        "mapping.total_fields.limit": 2000,
+        "mapping.total_fields.limit": 5000,
     }
     return settings
 
