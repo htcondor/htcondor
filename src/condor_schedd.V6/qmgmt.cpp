@@ -7428,7 +7428,7 @@ SendSpoolFile(char const *)
 }
 
 int
-SendSpoolFileIfNeeded(ClassAd& ad)
+SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 {
 	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
 		EXCEPT( "SendSpoolFileIfNeeded called when Q_SOCK is NULL" );
