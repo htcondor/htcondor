@@ -13,6 +13,28 @@ Release Notes:
 
 - HTCondor version 8.9.11 not yet released.
 
+- The ``condor_procd`` now attempts to detect invalidly short reads of
+  the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
+  find its own PID, the PID of its parent, or PID 1, it considers the read
+  invalid and will immediately retry it.  However, these precautions do
+  not detect the majority of short reads.  In addition, therefore, the
+  ``condor_procd`` compares the number of PIDs it just read to the number
+  of PIDs it read the last time it checked; if the number is too much
+  smaller, that is also considered an invalid read.  If the re-read fails,
+  the result of the previous read is returned.  The ``condor_procd`` checks
+  for this condition because not finding every PID on the system causes
+  a wide variety of user-visible failures, which (usually) result in HTCondor
+  completely restarting.
+
+  The default threshold for "too much smaller" is that the current read is less
+  than 90% of the previous read; in our testing, this detected every actual
+  short read with an overhead of roughly one additional read per 4000.  You
+  can tune the threshold by setting ``_CONDOR_PROCAPI_RETRY_FRACTION``
+  in the ``condor_master``'s environment to the threshold's floating-point
+  value (so that the default is ``0.90``).  This value is only passed to the
+  ``condor_procd`` on start-up.
+  :jira:`33`
+
 New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than

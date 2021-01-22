@@ -1,5 +1,3 @@
-      
-
 *condor_procd*
 ===============
 
@@ -84,6 +82,31 @@ Options
     a binary used to send a signal to a PID. The *glexec* binary,
     specified by *glexec-path*, executes the program specified with
     *glexec-kill-path* under the right privileges to send the signal.
+
+Dealing with Short Reads
+------------------------
+
+For unknown reasons, on Linux, attemps to read the list of PIDs from the
+/proc filesystem do not always return all of the PIDs on the system.  The
+*condor_procd* attempts to detect when this occurs, using two methods.
+
+Obviously, if the list of PIDs does not include PID 1 or the *condor_procd*'s
+own PID, the list is incomplete.  Likewise, the *condor_procd*'s parent PID
+must be present (it may be PID 1).
+
+If any of these PIDs are missing, the *condor_procd* immediately retries
+the read.  If the read is still incomplete, it returns the results of the
+previous read.
+
+Additionally, the *condor_procd* compares the number of PIDs it just read
+to the number of PIDs from the last time it (successfully) checked.  If the
+number is too much smaller, it will retry.  The default threshold is 0.90,
+meaning that if the current read has 90% or fewer of the last read's PIDs,
+it's considered invalid.  In our testing, this threshold was met by roughly
+1 in 4000 reads, but successfully detected all real short reads.  If you
+need to adjust the threshold, you may do so by setting the environment
+variable _CONDOR_PROCAPI_RETRY_FRACTION.  (In the normal case, simply
+have it in the environment when the *condor_master* starts up.)
 
 General Remarks
 ---------------
