@@ -222,12 +222,6 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         return false;
     }
 
-    // this part may work fine, but once things are out of sync, it's totally fubar.
-    //
-    // so far now, we are not including the MAC of the previous message in the
-    // additional digest date of the current packet.
-    //
-/*
     if (!sending_IV) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of previous MAC: %s\n",
             MAC_SIZE, debug_hex_dump(hex, reinterpret_cast<const char *>(m_conn_crypto_state->m_prev_mac_enc), MAC_SIZE));
@@ -239,7 +233,6 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     } else {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : No previous MAC, so not adding to EncryptUpdate()\n");
     }
-*/
 
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of plaintext. (not printing)\n", input_len);
     if (1 != EVP_EncryptUpdate(ctx, output + (sending_IV ? IV_SIZE : 0),
@@ -257,6 +250,10 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     }
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : Finalized an additional %d bytes written to ciphertext.\n", len2);
     len += len2;
+
+    // we never use the result of len or len2 after this.  how would len2 be non-zero?
+    ASSERT(len2 == 0);
+
     dprintf(D_NETWORK,
         "Condor_Crypt_AESGCM::encrypt DUMP : Plain text: %0x %0x %0x %0x ... %0x %0x %0x %0x\n",
         *(input),
@@ -351,32 +348,16 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
 
-    // check our sanity.  if m_iv_dec is unset then m_ctr_dec should be zero and vice-versa.
-    //
-    // original decrypt code used the non-zero IV check.
-    bool receiving_IV = (0 == memcmp(m_conn_crypto_state->m_iv_dec.iv, g_unset_iv, IV_SIZE) );
+    // see if we should be treating the first IV_SIZE bytes as IV (first message only)
+    bool receiving_IV = (m_conn_crypto_state->m_ctr_dec == 0);
 
     // on the code for the encrypt side, it checks to see if the number of message is non-zero.
     //
     // but on the decypt side, it looks to see if the IV is all zeros.
     //
-    // let's just check and scream a bit if they're not the same
-
-    // force consistency:
-    if ( (m_conn_crypto_state->m_ctr_dec == 0) ) {
+    // let's force consistency:
+    if ( receiving_IV ) {
         memset(m_conn_crypto_state->m_iv_dec.iv, '\0', IV_SIZE);
-    }
-
-    if (
-         (0 == memcmp(m_conn_crypto_state->m_iv_dec.iv, g_unset_iv, IV_SIZE) ) !=
-         (m_conn_crypto_state->m_ctr_dec == 0)
-       ) {
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : INCONSISTENT STATE.  This is MAYBE First decrypt.\n");
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : INCONSISTENT STATE.  iv  is nonzero: %i\n", 0 != memcmp(m_conn_crypto_state->m_iv_dec.iv, g_unset_iv, IV_SIZE));
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : INCONSISTENT STATE.  ctr is nonzero: %i\n", 0 != m_conn_crypto_state->m_ctr_dec);
-    } else {
-        // things seem to be as expected.
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : This is %sthe first decrypt.\n", (m_conn_crypto_state->m_ctr_dec ? "NOT " : ""));
     }
 
     // if you want to force the IV to be read every time, it would happen here.
@@ -386,10 +367,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     // does some conditional math as needed.
 
 
-    //
-    // how does the rest of the code know to fast forward past this?
-    //
-    if (!memcmp(m_conn_crypto_state->m_iv_dec.iv, g_unset_iv, IV_SIZE)) {
+    if (receiving_IV) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : First decrypt - initializing IV\n");
         memcpy(m_conn_crypto_state->m_iv_dec.iv, input, IV_SIZE);
     }
@@ -440,7 +418,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : about to init key %0x %0x %0x %0x.\n",
         *(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
 
-    char hex[3 * IV_SIZE + 1];
+    char hex[3 * (std::max(IV_SIZE,aad_len)) + 1];
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV used for incoming decrypt: %s\n",
         debug_hex_dump(hex,
         reinterpret_cast<const char *>(iv), IV_SIZE));
@@ -452,22 +430,17 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 
     int len;
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of AAD data: %s\n",
-        aad_len, debug_hex_dump(hex, reinterpret_cast<const char *>(aad), std::min(IV_SIZE, aad_len)));
+        aad_len, debug_hex_dump(hex, reinterpret_cast<const char *>(aad), aad_len));
     if (aad && !EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed when authenticating user AAD.\n");
         return false;
     }
 
-    // this part may work fine, but once things are out of sync, it's totally fubar.
-    //
-    // so far now, we are not including the MAC of the previous message in the
-    // additional digest date of the current packet.
-    //
-/*
     if (!receiving_IV) {
         // if we aren't receiving an IV, it means there was a previous msg MAC we want to add
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of previous MAC: %s\n",
             MAC_SIZE, debug_hex_dump(hex, reinterpret_cast<const char *>(m_conn_crypto_state->m_prev_mac_dec), MAC_SIZE));
+// ZKM FIXME TODO why is this EncryptUpdate and not DecryptUpdate?  (It seems to work though ?!?!)
         if (1 != EVP_EncryptUpdate(ctx, NULL, &len, m_conn_crypto_state->m_prev_mac_dec, MAC_SIZE)) {
             dprintf(D_NETWORK, "Failed to authenticate prior MAC.\n");
             return false;
@@ -475,29 +448,29 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     } else {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : No previous MAC, so not adding to EncryptUpdate()\n");
     }
-*/
+
 
     dprintf(D_NETWORK,
         "Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
         " Input length is %d\n",
-        input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE);
+        input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE);
 
-    if( input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE < 0) {
-        dprintf(D_NETWORK, "failing.\n");
+    if( (input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE) < 0) {
+        dprintf(D_NETWORK, "FAILING.\n");
         return false;
     }
 
-    if (!EVP_DecryptUpdate(ctx, output, &len, input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1), input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE)) {
+    if (!EVP_DecryptUpdate(ctx, output, &len, input + (receiving_IV ? IV_SIZE : 0), input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed due to failed cipher text update.\n");
         return false;
     }
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : produced output of size %d\n", len);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : Cipher text: "
         "%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
-        *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1)),
-        *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) + 1),
-        *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) + 2),
-        *(input + IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) + 3),
+        *(input + (receiving_IV ? IV_SIZE : 0)),
+        *(input + (receiving_IV ? IV_SIZE : 0) + 1),
+        *(input + (receiving_IV ? IV_SIZE : 0) + 2),
+        *(input + (receiving_IV ? IV_SIZE : 0) + 3),
         *(input + input_len - MAC_SIZE - 4),
         *(input + input_len - MAC_SIZE - 3),
         *(input + input_len - MAC_SIZE - 2),
@@ -531,8 +504,8 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
        return false;
     }
 
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : input_len is %d and output_len is %d\n", input_len, input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE);
-    output_len = input_len - IV_SIZE * (m_conn_crypto_state->m_ctr_dec ? 0 : 1) - MAC_SIZE;
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : input_len is %d and output_len is %d\n", input_len, input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE);
+    output_len = input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE;
 
         // Only touch state after success
     m_conn_crypto_state->m_ctr_dec ++;
