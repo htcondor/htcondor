@@ -8,6 +8,9 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <functional>
+
+typedef HashTable<MyString, float> groupQuotasHashType;
 
 struct GroupEntry {
 		typedef std::vector<int>::size_type size_type;
@@ -35,6 +38,15 @@ struct GroupEntry {
 				std::vector<GroupEntry *> &hgq_groups,
 				Accountant &accountant,
 				ClassAdListDoesNotDeleteAds &submitterAds);
+
+		static void hgq_negotiate_with_all_groups(
+						GroupEntry *hgq_root_group, 
+						std::vector<GroupEntry *> &hqg_groups, 
+						groupQuotasHashType *groupQuotasHash, 
+						double hgq_total_quota, 
+						Accountant &accountant,
+						const std::function<void(GroupEntry *g, int limit)> &fn,
+						bool global_accept_surplus);
 
 		// these are set from configuration
 		std::string name;
