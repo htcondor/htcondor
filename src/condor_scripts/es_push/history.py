@@ -163,7 +163,7 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
     since_str = f"""(GlobalJobId == "{since['GlobalJobId']}") && (EnteredCurrentStatus == {since['EnteredCurrentStatus']})"""
 
     startd = htcondor.Startd(startd_ad)
-    logging.info("Querying {startd_ad['Machine']} for history since: {since_str}")
+    logging.info(f"Querying {startd_ad['Machine']} for history since: {since_str}")
     buffered_ads = {}
     count = 0
     total_upload = 0
@@ -173,10 +173,10 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
     try:
         if not args.dry_run:
             history_iter = startd.history(
-                constraint="true",
+                requirements="true",
                 projection=[],
-                match=max(10000, args.startd_history_max_ads),
-                since=since_str,
+                match=min(10000, args.startd_history_max_ads),
+                since=since_str
             )
         else:
             history_iter = []
