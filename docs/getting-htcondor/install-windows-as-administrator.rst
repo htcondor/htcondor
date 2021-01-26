@@ -48,7 +48,9 @@ STEP 2: HTCondor Pool Configuration.
 
     Experienced users who are making a pool should create a new pool
     only on the machine they've chosen as their central manager.  See
-    the :doc:`admin-quick-start`.
+    the :doc:`admin-quick-start`.  Otherwise, choose the option to
+    join an existing pool and enter the name or IP address of the
+    central manager.
 
 STEP 3: This Machine's Roles.
     Check the "submit jobs" box.  From the list of execution options,

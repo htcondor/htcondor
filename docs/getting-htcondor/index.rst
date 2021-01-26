@@ -47,7 +47,7 @@ instructions corresponding to your operating system:
 
 .. rubric:: Hand-Installation of HTCondor with User Privileges
 
-If you don't administrative privileges on your machine, you can still
+If you don't have administrative privileges on your machine, you can still
 install HTCondor.  An unprivileged installation isn't able to effectively
 limit the resource usage of the jobs it runs, but since it only
 works for the user who installed it, at least you know who to blame for
@@ -94,8 +94,6 @@ HTCondor also supports cloud-native distribution.
   `minicondor image <https://aws.amazon.com/marketplace/pp/B073WHVRPR>`_
   preconfigured for use with :ref:`condor_annex <annex_users_guide>`,
   which allows to easily add cloud resources to your pool.
-  If you're new to HTCondor, you can proceed directly to
-  the :ref:`quick_start_guide` after logging in to your new instance.
 * For Google Cloud Platform, we have a technology preview of a
   :ref:`google_cloud_marketplace` that lets you construct an entire
   HTCondor pool via your web browser.  If you're new to HTCondor,
