@@ -146,15 +146,22 @@ class Builder:
 
     def add_htcondor_labels(self, image_name: str, version_info: VersionInfo):
         dockerfile = """\
-    FROM   %s
-    LABEL  org.htcondor.condor-version="%s"  org.htcondor.condor-platform="%s"  org.htcondor.build-date="%s"  org.htcondor.build-id="%s"  org.htcondor.package-id="%s"
-    """ % (
+FROM %s
+LABEL \
+org.htcondor.condor-version="%s" \
+org.htcondor.condor-platform="%s" \
+org.htcondor.build-date="%s" \
+org.htcondor.build-id="%s" \
+org.htcondor.package-id="%s" \
+org.htcondor.version="%s"
+""" % (
             image_name,
             version_info.condor_version_str,
             version_info.condor_platform_str,
             version_info.date,
             version_info.build_id,
             version_info.package_id,
+            version_info.version,
         )
         subprocess.run(
             [self.executable, "build", "-t", image_name, "-f", "-", "."],
