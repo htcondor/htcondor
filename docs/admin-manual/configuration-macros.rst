@@ -1622,10 +1622,10 @@ that DaemonCore uses which affect all HTCondor daemons.
     ``<SUBSYS>.SETTABLE_ATTRS`` are settings used to restrict the
     configuration values that can be changed using the
     *condor_config_val* command.
-    admin-manual/security:authorization on Setting up
+    See :ref:`admin-manual/security:authorization` on Setting up
     Security in HTCondor for details on these macros and how to
     configure them. In particular,
-    admin-manual/security:authorization contains details
+    :ref:`admin-manual/security:authorization` contains details
     specific to these macros.
 
 :macro-def:`SHUTDOWN_GRACEFUL_TIMEOUT`
