@@ -27,6 +27,8 @@ These sections of the format file begin with the keywords
 ``SELECT``, ``WHERE``, ``GROUP``, or ``SUMMARY`` which must be in that order if they appear.
 These keywords must be all uppercase and must be the first word on the line.
 
+A line beginning with # is treated as a comment
+
 A custom print format file must begin with the ``SELECT`` keyword.
 The ``SELECT`` keyword can be followed by options to qualify the type of
 query, the global formatting options and whether or not there will be column
@@ -145,6 +147,70 @@ and the summary line.  These sections can be multiple lines, but must begin with
 ``SUMMARY [STANDARD | NONE]``
    Enable or disable the summary totals.
    The summary can also be disabled using ``NOSUMMARY`` or ``BARE`` keywords on the ``SELECT`` line.
+
+Examples
+--------
+
+This print format file produces the default ``-nobatch`` output of *condor_q*
+
+.. code-block::
+
+   # queue.cpf
+   # produce the standard output of condor_q
+   SELECT
+      ClusterId     AS "    ID"  NOSUFFIX WIDTH AUTO
+      ProcId        AS " "       NOPREFIX          PRINTF ".%-3d"
+      Owner         AS "OWNER"         WIDTH -14   PRINTAS OWNER
+      QDate         AS "  SUBMITTED"   WIDTH 11    PRINTAS QDATE
+      RemoteUserCpu AS "    RUN_TIME"  WIDTH 12    PRINTAS CPU_TIME
+      JobStatus     AS ST                          PRINTAS JOB_STATUS
+      JobPrio       AS PRI
+      ImageSize     AS SIZE            WIDTH 6     PRINTAS MEMORY_USAGE
+      Cmd           AS CMD                         PRINTAS JOB_DESCRIPTION
+   SUMMARY STANDARD
+
+This print format file produces only totals
+
+.. code-block::
+
+   # q_totals.cpf
+   # show only totals with condor_q
+   SELECT NOHEADER NOTITLE
+   SUMMARY STANDARD   
+
+This print format file shows typical fields of the Schedd autoclusters.
+
+.. code-block::
+
+   # negotiator_autocluster.cpf
+   SELECT FROM AUTOCLUSTER
+      Owner         AS OWNER         WIDTH -14   PRINTAS OWNER
+      JobCount      AS COUNT                     PRINTF %5d
+      AutoClusterId AS " ID"         WIDTH 3
+      JobUniverse   AS UNI                       PRINTF %3d
+      RequestMemory AS REQ_MEMORY    WIDTH 10    PRINTAS READABLE_MB
+      RequestDisk   AS REQUEST_DISK  WIDTH 12    PRINTAS READABLE_KB
+      JobIDs        AS JOBIDS
+   GROUP BY Owner
+
+This print format file shows the use of ``SELECT UNIQUE`` 
+
+.. code-block::
+
+   # count_jobs_by_owner.cpf
+   # aggregate by the given attributes, return unique values plus count and jobids.
+   # This query builds an autocluster set in the schedd on the fly using all of the displayed attributes
+   # And all of the GROUP BY attributes (except JobCount and JobIds)
+   SELECT UNIQUE NOSUMMARY
+      Owner         AS OWNER      WIDTH -20
+      JobUniverse   AS "UNIVERSE "   PRINTAS JOB_UNIVERSE
+      JobStatus     AS STATUS     PRINTAS JOB_STATUS_RAW
+      RequestCpus   AS CPUS
+      RequestMemory AS MEMORY
+      JobCount      AS COUNT      PRINTF  %5d
+      JobIDs
+   GROUP BY
+      Owner
 
 PRINTAS functions for *condor_q*
 --------------------------------
