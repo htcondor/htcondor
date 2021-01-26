@@ -32,7 +32,6 @@
 #include "parse.h"
 #include "util.h"
 #include "debug.h"
-#include "list.h"
 #include "util_lib_proto.h"
 #include "dagman_commands.h"
 #include "dagman_main.h"

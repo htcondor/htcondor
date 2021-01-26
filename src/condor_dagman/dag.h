@@ -22,7 +22,6 @@
 #define DAG_H
 
 #include "condor_common.h"
-#include "list.h"
 #include "job.h"
 #include "scriptQ.h"
 #include "condor_constants.h"      /* from condor_includes/ directory */
@@ -1081,7 +1080,7 @@ class Dag {
 
 protected:
     // List of Job objects
-    List<Job>     _jobs;
+    std::list<Job>     _jobs;
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
@@ -1387,7 +1386,7 @@ private:
 	static void DeletePinList( PinList &pinList );
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
-	mutable ListIterator<Job> *_allNodesIt;
+	mutable std::list<Job>::iterator _allNodesIt;
 
 		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;

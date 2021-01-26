@@ -213,7 +213,6 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_haltFile = _dagmanUtils.HaltFileName( _dagFiles.front() );
 	_dagStatus = DAG_STATUS_OK;
 
-	_allNodesIt = NULL;
 	_graph_width = 0;
 	_graph_height = 0;
 
@@ -230,13 +229,10 @@ Dag::~Dag()
 	}
 		// remember kids, delete is safe *even* if ptr == NULL...
 
-    // delete all jobs in _jobs
-    Job *job = NULL;
-    _jobs.Rewind();
-    while( (job = _jobs.Next()) ) {
-      delete job;
-      _jobs.DeleteCurrent();
-    }
+	// delete all jobs in _jobs
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		_jobs.erase(it);
+	}
 
     delete _preScriptQ;
     delete _postScriptQ;
@@ -253,7 +249,6 @@ Dag::~Dag()
 
 	DeletePinList( _pinIns );
 	DeletePinList( _pinOuts );
-	delete _allNodesIt;
 
 	delete _provisionerClassad;
 	_provisionerClassad = NULL;
@@ -296,19 +291,15 @@ Dag::ReportMetrics( int exitCode )
 //-------------------------------------------------------------------------
 bool Dag::Bootstrap (bool recovery)
 {
-    Job* job;
-    ListIterator<Job> jobs (_jobs);
-
 	// This function should never be called on a dag object which is acting
 	// like a splice.
 	ASSERT( _isSplice == false );
 
     // update dependencies for pre-completed jobs (jobs marked DONE in
     // the DAG input file)
-    jobs.ToBeforeFirst();
-    while( jobs.Next( job ) ) {
-		if( job->GetStatus() == Job::STATUS_DONE ) {
-			TerminateJob( job, false, true );
+    for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		if( it->GetStatus() == Job::STATUS_DONE ) {
+			TerminateJob( &*it, false, true );
 		}
     }
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
@@ -344,10 +335,9 @@ bool Dag::Bootstrap (bool recovery)
 		}
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
-		jobs.ToBeforeFirst();
-		while( jobs.Next( job ) ) {
-			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
-				if ( !RunPostScript( job, _alwaysRunPost, 0, false ) ) {
+		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+			if( it->GetStatus() == Job::STATUS_POSTRUN ) {
+				if ( !RunPostScript( &*it, _alwaysRunPost, 0, false ) ) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -378,10 +368,9 @@ bool Dag::Bootstrap (bool recovery)
 	}
 		// Note: we're bypassing the ready queue here...
 	else {
-		jobs.ToBeforeFirst();
-		while( jobs.Next( job ) ) {
-			if( job->CanSubmit() ) {
-				StartNode( job, false );
+		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+			if( it->CanSubmit() ) {
+				StartNode( &*it, false );
 			}
 		}
 	}
@@ -1386,20 +1375,11 @@ Dag::FindAllNodesByName( const char* nodeName,
 	if ( nodeName ) {
 		if ( strcasecmp( nodeName, ALL_NODES ) ) {
 				// Looking for a specific node.
-
-			delete _allNodesIt; // just to be safe
-			_allNodesIt = NULL;
-
 			node =  FindNodeByName( nodeName );
-
 		} else {
 				// First call when looking for ALL_NODES.
-
-			delete _allNodesIt; // just to be safe
-			_allNodesIt = new ListIterator<Job>( _jobs );
-			_allNodesIt->ToBeforeFirst();
-	
-			node =  _allNodesIt->Next();
+			_allNodesIt = _jobs.begin();
+			node = &*_allNodesIt;
 		}
 
 	} else {
@@ -1423,7 +1403,6 @@ Dag::FindAllNodesByName( const char* nodeName,
 
 		// Delete the ALL_NODES iterator if we've hit the last node.
 	if ( !node && _allNodesIt ) {
-		delete _allNodesIt;
 		_allNodesIt = NULL;
 	}
 
@@ -1674,10 +1653,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			_provisioner_ready = true;
 			Job* job;
 			ListIterator<Job> jobs (_jobs);
-			jobs.ToBeforeFirst();
-			while( jobs.Next( job ) ) {
-				if( job->CanSubmit() ) {
-					StartNode( job, false );
+			for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+				if( it->CanSubmit() ) {
+					StartNode( *it, false );
 				}
 			}
 		}
@@ -3869,7 +3847,8 @@ bool Dag::Add( Job& job )
 		_provisioner_node = &job;
 	}
 
-	return _jobs.Append(&job);
+	_jobs.push_back(job);
+	return true;
 }
 
 #if 0
@@ -4620,7 +4599,6 @@ Dag::SetDirectory(char *dir)
 void
 Dag::PropagateDirectoryToAllNodes(void)
 {
-	Job *job = NULL;
 	MyString key;
 
 	if (m_directory == ".") {
@@ -4628,9 +4606,8 @@ Dag::PropagateDirectoryToAllNodes(void)
 	}
 
 	// Propagate the directory setting to all nodes in the DAG.
-	_jobs.Rewind();
-	while( (job = _jobs.Next()) ) {
-		job->PrefixDirectory(m_directory);
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		it->PrefixDirectory(m_directory);
 	}
 
 	// I wipe out m_directory here. If this gets called multiple
@@ -4867,9 +4844,8 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()"
 		" with prefix %s\n",prefix.Value());
 
-	_jobs.Rewind();
-	while( (job = _jobs.Next()) ) {
-		job->PrefixName(prefix);
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		it->PrefixName(prefix);
 	}
 
 	// Here we must reindex the hash view with the prefixed name.
@@ -4882,10 +4858,9 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	}
 
 	// Then, reindex all the jobs keyed by their new name
-	_jobs.Rewind();
-	while( (job = _jobs.Next()) ) {
-		key = job->GetJobName();
-		if (_nodeNameHash.insert(key, job) != 0) {
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		key = it->GetJobName();
+		if (_nodeNameHash.insert(key, &*it) != 0) {
 			// I'm reinserting everything newly, so this should never happen
 			// unless two jobs have an identical name, which means another
 			// part o the code failed to keep the constraint that all jobs have
@@ -4939,19 +4914,16 @@ Dag::FinalRecordedNodes(void)
 void
 Dag::RecordInitialAndTerminalNodes(void)
 {
-	Job *job = NULL;
-
-	_jobs.Rewind();
-	while( (job = _jobs.Next()) ) {
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
 
 		// record the initial nodes
-		if (job->NoParents()) {
-			_splice_initial_nodes.add(job);
+		if (it->NoParents()) {
+			_splice_initial_nodes.add(&*it);
 		}
 
 		// record the final nodes
-		if (job->NoChildren()) {
-			_splice_terminal_nodes.add(job);
+		if (it->NoChildren()) {
+			_splice_terminal_nodes.add(&*it);
 		}
 	}
 }
@@ -4962,16 +4934,14 @@ Dag::RecordInitialAndTerminalNodes(void)
 OwnedMaterials*
 Dag::RelinquishNodeOwnership(void)
 {
-	Job *job = NULL;
 	MyString key;
 
 	ExtArray<Job*> *nodes = new ExtArray<Job*>();
 
 	// 1. Copy the jobs
-	_jobs.Rewind();
-	while( (job = _jobs.Next()) ) {
-		nodes->add(job);
-		_jobs.DeleteCurrent();
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		nodes->add(&*it);
+		it = _jobs.erase(it);
 	}
 
 	// shove it into a packet and give it back
@@ -5022,20 +4992,15 @@ Dag::LiftSplices(SpliceLayer layer)
 void
 Dag::AdjustEdges()
 {
-	Job* job;
-	_jobs.Rewind();
-	while ((job = _jobs.Next())) {
-		job->BeginAdjustEdges(this);
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		it->BeginAdjustEdges(this);
 	}
 
-	_jobs.Rewind();
-	while ((job = _jobs.Next())) {
-		job->AdjustEdges(this);
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		it->AdjustEdges(this);
 	}
-
-	_jobs.Rewind();
-	while ((job = _jobs.Next())) {
-		job->FinalizeAdjustEdges(this);
+	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		it->FinalizeAdjustEdges(this);
 	}
 }
 
@@ -5181,10 +5146,8 @@ Dag::ResolveVarsInterpolations(void)
 void Dag::SetNodePriorities()
 {
 	if ( GetDagPriority() != 0 ) {
-		Job* job;
-		_jobs.Rewind();
-		while( (job = _jobs.Next()) != NULL ) {
-			job->_effectivePriority += GetDagPriority();
+		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+			it->_effectivePriority += GetDagPriority();
 		}
 	}
 }

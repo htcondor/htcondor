@@ -25,7 +25,6 @@
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_utils/ directory */
 #include "MyString.h"
-#include "list.h"
 #include "condor_id.h"
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
