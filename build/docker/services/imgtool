@@ -275,10 +275,12 @@ class Builder:
             version_info = self.get_condor_version_info(tmp_image_name)
             self.add_htcondor_labels(tmp_image_name, version_info)
 
-            real_image_name = f"htcondor/base:{self.series}-{today()}-{distro}"
-            subprocess.run([self.executable, "tag", tmp_image_name, real_image_name])
+            real_image_names = [f"htcondor/base:{self.series}-daily-{distro}"]
+            if self.want_latest_series:
+                real_image_names.append(f"htcondor/base:daily-{distro}")
+            self.docker_tag(tmp_image_name, *real_image_names)
 
-            return [real_image_name]
+            return real_image_names
         finally:
             subprocess.run([self.executable, "rmi", tmp_image_name])
 
