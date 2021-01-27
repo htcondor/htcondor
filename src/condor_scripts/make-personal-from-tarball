@@ -62,14 +62,15 @@ EOF
 ) > ${RELEASE_DIR}/etc/condor_config
 
 #
-# NETWORK_INTERFACE must be set to 127.0.0.1 for condor_off to work.
+# Because user-based authentication includes the hostname as part of the
+# identity, we have to set CONDOR_HOST back to the hostname for condor_off
+# (or other administrative commands) to work.
 #
 (
 cat <<EOF
-CONDOR_HOST = \$(FULL_HOSTNAME)
-NETWORK_INTERFACE = 127.0.0.1
 use security: user_based
 use role: personal
+CONDOR_HOST = \$(FULL_HOSTNAME)
 EOF
 ) > ${LOCAL_CONFIG_DIR}/00-personal-condor
 
