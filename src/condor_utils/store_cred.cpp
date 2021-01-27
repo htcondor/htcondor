@@ -216,6 +216,35 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 	return rc;
 }
 
+// this checks for a specific set of valid characters - ones that could be used
+// in boath an OAuth service name and a valid file name.  perhaps this is too
+// restrictive, but rather than enumerate all bad characters and potential miss
+// some, let's just declare what we are okay with.
+//
+// we restrict service names to alphanumeric plus the following:
+//     - + = _ .
+//
+// everything else is disallowed.
+
+bool okay_for_oauth_filename(std::string s) {
+	for (char c: s) {
+		if (
+			!isalpha(c) &&
+			!isdigit(c) &&
+			!(c == '-') &&
+			!(c == '+') &&
+			!(c == '=') &&
+			!(c == '_') &&
+			!(c == '.') ) {
+
+			// NOT any of the above... bad character.
+			dprintf(D_SECURITY | D_VERBOSE, "ERROR: encountered bad char '%c' in string \"%s\"\n", c, s.c_str());
+			return false;
+		}
+	}
+	return true;
+}
+
 long long
 OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, const ClassAd * ad, ClassAd & return_ad, MyString & ccfile)
 {
@@ -240,8 +269,12 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 
 	dprintf(D_ALWAYS, "OAUTH store cred user %s len %i mode %i\n", username, credlen, mode);
-	if (strchr(username, '@')) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "OAUTH store cred ERROR - username has a @, it should be bare\n");
+	if (!okay_for_oauth_filename(username)) {
+		// include a backtrace here because the username is NOT user-provided, it comes
+		// from the authenticted socket.  the caller of OAUTH_STORE_CRED should have
+		// verified it is in the correct form, but out of caution we check it again.
+		// this could arguably be an ASSERT() but we'd rather not crash the CredD.
+		dprintf(D_ALWAYS | D_BACKTRACE, "OAUTH store cred ERROR - Illegal char in username\n");
 		return FAILURE_BAD_ARGS;
 	}
 
@@ -265,7 +298,11 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 	std::string service;
 	if (ad && ad->LookupString("Service", service)) {
-		// TODO: PRAGMA_REMIND("convert service name to filename")
+		// this is user input so validate
+		if (!okay_for_oauth_filename(service)) {
+			dprintf(D_ALWAYS, "OAUTH store cred ERROR - Illegal char in Service name.\n");
+			return FAILURE_BAD_ARGS;
+		}
 	}
 
 	// if this is a query, just return the timestamp on the .use file
