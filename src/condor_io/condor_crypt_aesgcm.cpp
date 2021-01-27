@@ -83,7 +83,14 @@ int Condor_Crypt_AESGCM::ciphertext_size_with_cs(int plaintext_size, std::shared
     int ct_sz = plaintext_size;
     std::shared_ptr<ConnCryptoState> m_conn_crypto_state = connState;
     // Authentication tag is an additional 16 bytes; IV is 12 bytes
-    ct_sz += MAC_SIZE + IV_SIZE * (m_conn_crypto_state->m_ctr_enc ? 0 : 1);
+    //
+    // ideally, we would only need to send the IV on the first transmission,
+    // and it could be computed after that based on the message counter:
+    //ct_sz += MAC_SIZE + IV_SIZE * (m_conn_crypto_state->m_ctr_enc ? 0 : 1);
+
+    // however, we are opting to send it every time so the two sides are never
+    // out of sync as to whether or not they are expecting it.
+    ct_sz += MAC_SIZE + IV_SIZE;
     return ct_sz;
 }
 
@@ -116,7 +123,14 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     // the normal behavior is to only send it on first pack.  (for debugging
     // you may wish to hard code this to send on every packet, which yo ALSO
     // need to expect on the decrypt side.  see ::decrypt() function)
+
+    // ideally, we would only need to send the IV on the first transmission,
+    // and it could be computed after that based on the message counter:
     bool sending_IV = (m_conn_crypto_state->m_ctr_enc == 0);
+
+    // however, we are opting to send it every time so the two sides are never
+    // out of sync as to whether or not they are expecting it.
+    sending_IV = true;
 
         // Authentication tag is an additional 16 bytes; IV is 12 bytes
     output_len += MAC_SIZE + (sending_IV ? IV_SIZE : 0);
@@ -348,8 +362,13 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
 
-    // see if we should be treating the first IV_SIZE bytes as IV (first message only)
+    // Ideally, we would only need to receive the IV on the first transmission,
+    // and it could be computed after that based on the message counter:
     bool receiving_IV = (m_conn_crypto_state->m_ctr_dec == 0);
+
+    // however, we are opting to send it every time so the two sides are never
+    // out of sync as to whether or not they are expecting it.
+    receiving_IV = true;
 
     // on the code for the encrypt side, it checks to see if the number of message is non-zero.
     //
