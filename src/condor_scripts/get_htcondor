@@ -1,21 +1,17 @@
-#!/bin/sh
+#!/bin/bash
 set -e
+#
 # HTCondor for Linux Quick Install script
 #
-# See https://xxxx for the installation steps.
+# For the installation steps, including how to verify the contents of
+# this file, see:
+#
+#   https://htcondor.readthedocs.io/en/latest/getting-htcondor/
 #
 # This script is meant for quick & easy install via:
-#   $ curl -fsSL https://xxx -o get-htcondor.sh
-#   $ sh get-htcondor.sh
 #
-# For test builds (ie. release candidates):
+#   $ sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
 #
-# NOTE: Make sure to verify the contents of the script
-#       you downloaded matches the contents of install.sh
-#       located at https://github.com/....
-#       before executing.
-#
-
 
 usage() {
 	cat <<-EOF
@@ -165,6 +161,9 @@ get_distribution() {
 		;;
 
 		debian|raspbian)
+		    # FIXME: echoing VERSION_CODENAME out of /etc/os-release works
+		    # better on Devuan and is simpler... is that file missing on
+		    # raspbian?
 			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
 			case "$dist_version" in
 				10)
@@ -239,7 +238,7 @@ do_start_service() {
 
 do_install() {
 	# Figure out the distribution and version we are running on.
-    # This will set $lsb_dist and $dist_version.
+	# This will set $lsb_dist and $dist_version.
 	get_distribution
 
 	if [ -f "/etc/condor/condor_config" ]; then
@@ -249,12 +248,9 @@ do_install() {
 			You may update the existing install, or remove and then re-install.
 		EOF
 		case "$lsb_dist" in
-		fedora)
-			cat >&2 <<-'EOF'
-			To update enter as root: SOME DNF MAGIC
-			To remove enter as root: SOME DNF MAGIC
-			EOF
-			;;
+		# We don't release HTCondor on Fedora.
+		# fedora)
+		#	;;
 		ubuntu|debian)
 			cat >&2 <<-'EOF'
 			To update enter as root: SOME APT-GET MAGIC
@@ -289,8 +285,6 @@ do_install() {
 		fi
 	fi
 
-
-
 	echo -e "\n# Installing HTCondor for ${lsb_dist^} $dist_version"
 
 	# Run install binaries for each distro accordingly
@@ -300,7 +294,22 @@ do_install() {
 				if ! is_dry_run; then
 					set -x
 				fi
-				$sh_c "apt-get install -y -qq --no-install-recommends XXX >/dev/null"
+
+                echo -e "\n# Adding our repository"
+
+				# Install our repository key.
+				$sh_c "apt-get install gnupg"
+				$sh_c "curl -fsSL ${DOWNLOAD_URL}/debian/HTCondor-Release.gpg.key | apt-key add -"
+
+				# Add our repository.
+				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
+				$sh_c "echo \"deb [arch=amd64] ${DOWNLOAD_URL}/${lsb_dist}/${CHANNEL_DIR}/${dist_version} ${dist_version} contrib\" > ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb-src ${DOWNLOAD_URL}/${lsb_dist}/${CHANNEL_DIR}/${dist_version} ${dist_version} contrib\" >> ${HTCONDOR_LIST}"
+
+				echo -e "\n# Updating package lists"
+				$sh_c "apt-get update"
+				echo -e "\n# Installing HTCondor binaries and dependencies"
+				$sh_c "apt-get install -y minihtcondor"
 			)
 			;;
 		centos|rhel|amzn)
@@ -371,24 +380,23 @@ do_install() {
 do_download() {
 	get_distribution
 
-	# FIXME: The 'stable' symlink doesn't exist here yet.
-	TARBALL_BASE_URL=${DOWNLOAD_URL}/tarball/${CHANNEL}
-
-	# FIXME: How do we figure this out?
-	CONDOR_VERSION=8.9.9
-
-	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CONDOR_VERSION}/release
+	TARBALL_BASE_URL=${DOWNLOAD_URL}/tarball
+	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CHANNEL_DIR}/current
 
 	OS_VERSION=$dist_version
 	case "$lsb_dist" in
-		fedora)
-			# FIXME: we don't have a Fedora tarball.
-			;;
+		# We don't release HTCondor for Fedora.
+		# fedora)
+		#	;;
 		ubuntu)
 			OS_NAME=Ubuntu
 			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
 			dist_version_number=`echo $dist_version_number | sed -e s'/\.[0-9]*//'`
 			OS_VERSION=$dist_version_number
+
+			#
+			# FIXME: Ubuntu 18.04 ['s container] needs libgomp.so.1
+			#
 			;;
 		debian)
 			OS_NAME=Debian
@@ -397,15 +405,27 @@ do_download() {
 		centos|rhel|amzn)
 			OS_NAME=CentOS
 			;;
+		*)
+			if [ -z "$lsb_dist" ]; then
+				if is_darwin; then
+					echo
+					echo "Error: Unsupported operating system 'macOS'"
+					echo
+					exit 1
+				fi
+			fi
+			echo
+			echo "Error: Unsupported distribution '$lsb_dist'"
+			echo
+			exit 1
+			;;
 	esac
 
-    TARBALL_NAME=condor-${CONDOR_VERSION}-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz
+	TARBALL_NAME=condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz
 	TARBALL_URL=${TARBALL_DIR_URL}/${TARBALL_NAME}
 
-	# FIXME: On Ubuntu 16, and possibly others, curl may not exist.  Install
-	# it during the previous step.
-	echo "Downloading ${TARBALL_NAME}..."
-	curl -fSL ${TARBALL_URL} -o ${TARBALL_NAME}
+	echo "Downloading to condor.tar.gz..."
+	curl -fSL ${TARBALL_URL} -o condor.tar.gz
 }
 
 # Set global defaults
@@ -457,6 +477,15 @@ while [ $# -gt 0 ]; do
 	esac
 	shift $(( $# > 0 ? 1 : 0 ))
 done
+
+# We have to update this once every stable release; we don't want
+# to update a symlink, like we do for 'current', because we don't
+# want to surprise other stable-channel users with new features.
+if [ "${CHANNEL}" = "stable" ]; then
+	CHANNEL_DIR=8.8
+else
+	CHANNEL_DIR=${CHANNEL}
+fi
 
 # wrapped up in functions so that we have some protection against only getting
 # half the file during "curl | sh"
