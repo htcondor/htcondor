@@ -420,8 +420,8 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 						maxdelta = std::max(maxdelta, std::max(0.0, target - group->usage));
 				}
 
-								dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  requested= %g  allocated= %g  surplus= %g  maxdelta= %g\n",
-												static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, requested_total+allocated_total, allocated_total, surplus_quota, maxdelta );
+				dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  requested= %g  allocated= %g  surplus= %g  maxdelta= %g\n",
+								static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, requested_total+allocated_total, allocated_total, surplus_quota, maxdelta );
 
 				// The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
 				// default its behavior to execute once, and just negotiate for everything at once.  If a
@@ -544,12 +544,8 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 		}
 
 		// For the purposes of RR consistency I want to update these after all allocation rounds are completed.
-		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-				// GGT GroupEntry* group = *j;
-				// If we were served by RR this cycle, then update timestamp of most recent round-robin.
-				// I also update when requested is zero because I want to favor groups that have been actually
-				// waiting for an allocation the longest.
-				// GGT if (group->rr || (group->requested <= 0))  group->rr_time = negotiation_cycle_stats[0]->start_time;
+		for (GroupEntry *group: hgq_groups) {
+			if (group->rr || (group->requested <= 0))  group->rr_time = time(nullptr);
 		}
 }
 
