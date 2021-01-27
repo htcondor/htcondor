@@ -93,10 +93,6 @@ class VaultCredmon(AbstractCredentialMonitor):
             return False
 
         params = {'minimum_seconds' : self.get_minimum_seconds()}
-        if 'scopes' in top_data:
-            params['scopes'] = top_data['scopes']
-        if 'audience' in top_data:
-            params['audience'] = top_data['audience']
         url = top_data['vault_url'] + '?' + urllib_parse.urlencode(params)
         headers = {'X-Vault-Token' : top_data['vault_token']}
         request = urllib_request.Request(url=url, headers=headers)
@@ -120,6 +116,38 @@ class VaultCredmon(AbstractCredentialMonitor):
         if 'data' not in response or 'access_token' not in response['data']:
             self.log.error("access_token missing in read from %s", url)
             return False
+
+        if 'scopes' in top_data or 'audience' in top_data:
+            # Re-request access token with restricted scopes and/or audience.
+            # These were not included in the initial request because currently
+            #  this uses a separate token exchange flow in Vault which does
+            #  not renew the refresh token, but we want that to happen too.
+            # Just ignore the original access token in this case.
+
+            if 'scopes' in top_data:
+                params['scopes'] = top_data['scopes']
+            if 'audience' in top_data:
+                params['audience'] = top_data['audience']
+
+            url = top_data['vault_url'] + '?' + urllib_parse.urlencode(params)
+
+            try:
+                handle = urllib_request.urlopen(request, capath=capath)
+            except Exception as e:
+                self.log.error("read of exchanged access token from %s failed: %s", url, str(e))
+                return False
+            try:
+                response = json.load(handle)
+            except Exception as e:
+                self.log.error("could not parse json response from %s: %s", url, str(e))
+                return False
+
+            finally:
+                handle.close()
+
+            if 'data' not in response or 'access_token' not in response['data']:
+                self.log.error("exchanged access_token missing in read from %s", url)
+                return False
 
         access_token = response['data']['access_token']
 
