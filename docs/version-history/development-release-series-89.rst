@@ -120,6 +120,10 @@ New Features:
 
 Bugs Fixed:
 
+- The ``preserve_relative_paths`` submit command now properly allows jobs
+  to run on HTCondor versions 8.9.10 and later.
+  :jira:`189`
+
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
   ``-uuid``.
   :jira:`137`
