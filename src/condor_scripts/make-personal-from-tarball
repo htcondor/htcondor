@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# [FIXME] Is this technically a minicondor, or a personal condor?
-
 RELEASE_DIR=`pwd`
 LOCK=/tmp/condor-lock-${RANDOM}
 LOCAL_DIR=${RELEASE_DIR}/local
@@ -63,22 +61,18 @@ CONDOR_IDS=${CONDOR_IDS}
 EOF
 ) > ${RELEASE_DIR}/etc/condor_config
 
-# use security: user_based sets ALLOW_ADMINISTRATOR to
-# $(USERNAME)@$(CONDOR_HOST), which makes sense, except use role: personal
-# set $(CONDOR_HOST) to 127.0.0.1, which the command-line tools will never
-# use as their origin address unless NETWORK_INTERFACE is also 127.0.0.1;
-# the problem is that this makes condor_off not work.  We don't want to set
-# NETWORK_INTERFACE is 127.0.0.1 because we'll just have to undo it if ever
-# want to expand the personal condor?
+#
+# NETWORK_INTERFACE must be set to 127.0.0.1 for condor_off to work.
+#
 (
 cat <<EOF
 CONDOR_HOST = \$(FULL_HOSTNAME)
+NETWORK_INTERFACE = 127.0.0.1
 use security: user_based
 use role: personal
 EOF
 ) > ${LOCAL_CONFIG_DIR}/00-personal-condor
 
-# [FIXME] Should this set up Python 3, instead?
 (
 cat <<EOF
 CONDOR_CONFIG=${RELEASE_DIR}/etc/condor_config
@@ -88,9 +82,9 @@ PATH=${RELEASE_DIR}/bin:${RELEASE_DIR}/sbin:\$PATH
 export PATH
 
 if [ "X" != "X${PYTHONPATH-}" ]; then
-    PYTHONPATH=${RELEASE_DIR}/lib/python:\$PYTHONPATH
+    PYTHONPATH=${RELEASE_DIR}/lib/python3:\$PYTHONPATH
 else
-    PYTHONPATH=${RELEASE_DIR}/lib/python
+    PYTHONPATH=${RELEASE_DIR}/lib/python3
 fi
 export PYTHONPATH
 EOF
