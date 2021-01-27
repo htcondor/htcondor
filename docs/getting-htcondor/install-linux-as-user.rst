@@ -28,7 +28,7 @@ Unpack the tarball and rename the resulting directory:
 .. code-block:: shell
 
     tar -x -f condor.tar.gz
-    mv condor-*unstripped condor
+    mv condor-*stripped condor
 
 You won't need ``condor.tar.gz`` again, so you can remove it now if you wish.
 
