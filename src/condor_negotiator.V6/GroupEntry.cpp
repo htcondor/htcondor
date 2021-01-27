@@ -443,9 +443,9 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 						ad->Assign(ATTR_GROUP_RESOURCES_ALLOCATED, group->allocated);
 						ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
 						// Do this after all attributes are filled in
-						float v = 0;
+						double v = 0;
 						if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
-								v = FLT_MAX;
+								v = DBL_MAX;
 								std::string e;
 								ad->LookupString(ATTR_SORT_EXPR_STRING, e);
 								dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
