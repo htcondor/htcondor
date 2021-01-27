@@ -38,7 +38,7 @@ Configure
 .. code-block:: shell
 
     cd condor
-    ./bin/make-minicondor-from-tarball
+    ./bin/make-personal-from-tarball
 
 Using HTCondor
 --------------
