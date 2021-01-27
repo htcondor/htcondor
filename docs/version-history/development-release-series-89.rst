@@ -13,7 +13,33 @@ Release Notes:
 
 - HTCondor version 8.9.11 not yet released.
 
+- The ``condor_procd`` now attempts to detect invalidly short reads of
+  the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
+  find its own PID, the PID of its parent, or PID 1, it considers the read
+  invalid and will immediately retry it.  However, these precautions do
+  not detect the majority of short reads.  In addition, therefore, the
+  ``condor_procd`` compares the number of PIDs it just read to the number
+  of PIDs it read the last time it checked; if the number is too much
+  smaller, that is also considered an invalid read.  If the re-read fails,
+  the result of the previous read is returned.  The ``condor_procd`` checks
+  for this condition because not finding every PID on the system causes
+  a wide variety of user-visible failures, which (usually) result in HTCondor
+  completely restarting.
+
+  The default threshold for "too much smaller" is that the current read is less
+  than 90% of the previous read; in our testing, this detected every actual
+  short read with an overhead of roughly one additional read per 4000.  You
+  can tune the threshold by setting ``_CONDOR_PROCAPI_RETRY_FRACTION``
+  in the ``condor_master``'s environment to the threshold's floating-point
+  value (so that the default is ``0.90``).  This value is only passed to the
+  ``condor_procd`` on start-up.
+  :jira:`33`
+
 New Features:
+
+- HTCondor now creates a number of directories on start-up, rather than
+  fail later on when it needs them to exist.  See the ticket for details.
+  :jira:`73`
 
 - HTCondor now detects instances of multi-instance GPUs.  These devices will
   be reported as individual GPUs, each named as required to access them via
@@ -62,6 +88,36 @@ New Features:
   make that more clear, this starter log is now named StarterLog.testing.
   :jira:`132`
 
+- The *condor_collector* can now use a projection when forwarding ads to a
+  View Collector.  A new configuration variable ``COLLECTOR_FORWARD_PROJECTION``
+  can be configured to enabled this.
+  :jira:`51`
+
+- The *condor_drain* command now has a ``-reason`` argument and will supply a default
+  reason value if it is not used.  The *condor_defrag* daemon will always pass ``defrag``
+  as the reason so that draining initiated by the administrator can be distinguished
+  by drainging initiated by *condor_defrag*.
+  :jira:`77`
+
+- The  *condor_defrag* daemon will now supply a ``-reason`` argument of ``defrag``
+  and will ignore machines that have have a draining reason that is not ``defrag``.
+  :jira:`89`
+
+- Added a new a ClassAd function to help write submit transforms.  You can now use unresolved()
+  to check for existing constraints on a particular attribute (or attribute regex).
+  :jira:`66`
+
+- Added TensorFlow environment variables ``TF_NUM_THREADS`` and
+  ``TF_LOOP_PARALLEL_ITERATIONS`` to the list of environment variables
+  exported by the *condor_starter* per these
+  `recommendations <https://github.com/theislab/diffxpy/blob/master/docs/parallelization.rst>`_.
+  :jira:`185`
+
+- Certificate map files can now use the ``@include`` directive to include another file
+  or all of the files in a directory.
+  :jira:`46`
+
+
 Bugs Fixed:
 
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
@@ -72,6 +128,7 @@ Bugs Fixed:
   being set to the scratch directory when `SINGULARITY_TARGET_DIR` wasn't
   also set.
   :jira:`91`
+
 
 Version 8.9.10
 --------------
@@ -84,7 +141,7 @@ Release Notes:
   the Python 2.7 runtime used by *condor_annex*.  If you ran the
   *condor_annex* setup command with a previous version of HTCondor, you
   should update your setup to use the new runtime.  (Go to the AWS Lambda
-  `console <https://console.aws.amazon.com/lambda>` and look for the
+  `console <https://console.aws.amazon.com/lambda>`_ and look for the
   ``HTCondorAnnex-CheckConnectivity`` function; click on it.  Scroll
   down to "Runtime settings"; click the "Edit" button.  Select "Python 3.8"
   from the drop-down list under "Runtime".  Then hit the "Save" button.

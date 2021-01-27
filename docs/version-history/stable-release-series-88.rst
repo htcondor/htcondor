@@ -19,7 +19,14 @@ Release Notes:
 
 New Features:
 
-- None.
+- The HA replication mechanism can now accept either SHA-2 or MD5 checksums.
+  This is because support for MD5 checksums must be removed in the 9.0 release of HTCondor.
+  The checksum that replication will send is controlled by a new configuration variable
+  ``HAD_FIPS_MODE`` which defaults to 0 for compatibility with older versions
+  of HTCondor.  For compatibility with the upcoming 9.0 release of HTCondor
+  set ``HAD_FIPS_MODE`` to 1. Setting it to 1 will break compatibility with versions
+  of HTCondor before this release.
+  :jira:`130`
 
 Bugs Fixed:
 
@@ -31,6 +38,9 @@ Bugs Fixed:
   When the third agument did not match an item in the mapped list, it should
   have returned the first item in the list, but it returned undefined instead.
   :jira:`144`
+
+- Fixed a bug with pslot preemption and disks with more than 4 TB of space.
+  :jira:`194`
 
 Version 8.8.12
 --------------
@@ -44,6 +54,10 @@ New Features:
 - For compatibility with 8.9.9 (and eventually, the next stable series), add
   the family of version comparison functions to ClassAds.
   :jira:`36`
+
+- For compatibility with 8.9 (and eventually, the next stable series), add
+  the ``unresolved`` function to ClassAds.
+  :jira:`66`
 
 Bugs Fixed:
 

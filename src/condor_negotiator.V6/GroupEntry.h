@@ -8,6 +8,9 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <functional>
+
+typedef HashTable<MyString, float> groupQuotasHashType;
 
 struct GroupEntry {
 		typedef std::vector<int>::size_type size_type;
@@ -27,6 +30,23 @@ struct GroupEntry {
 		double hgq_allocate_surplus(double surplus);
 		double hgq_recover_remainders();
 		double hgq_round_robin(double surplus);
+		double strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_group, double slots);
+
+		static void hgq_prepare_for_matchmaking(
+				double hgq_total_quota,
+				GroupEntry *hgq_root_group,
+				std::vector<GroupEntry *> &hgq_groups,
+				Accountant &accountant,
+				ClassAdListDoesNotDeleteAds &submitterAds);
+
+		static void hgq_negotiate_with_all_groups(
+						GroupEntry *hgq_root_group, 
+						std::vector<GroupEntry *> &hqg_groups, 
+						groupQuotasHashType *groupQuotasHash, 
+						double hgq_total_quota, 
+						Accountant &accountant,
+						const std::function<void(GroupEntry *g, int limit)> &fn,
+						bool global_accept_surplus);
 
 		// these are set from configuration
 		std::string name;
@@ -91,9 +111,10 @@ struct group_order {
 		// I don't want anybody defaulting this obj by accident
 		group_order() : autoregroup(false), root_group(0) {}
 };
+double calculate_subtree_usage(Accountant &accountant, GroupEntry *group);
 
 struct ord_by_rr_time {
-		vector<GroupEntry*>* data;
+		std::vector<GroupEntry*>* data;
 		bool operator()(unsigned long const& ja, unsigned long const& jb) const {
 				GroupEntry* a = (*data)[ja];
 				GroupEntry* b = (*data)[jb];

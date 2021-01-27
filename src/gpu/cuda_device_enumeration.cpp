@@ -453,9 +453,13 @@ nvml_findNVMLDeviceHandle(const std::string & uuid, nvmlDevice_t * device) {
 	if( uuid.find("MIG-") == 0 ) {
 		// Unfortunately, nvmlDeviceGetHandleByUUID() doesn't work when
 		// passed a MIG instance's UUID, so we have to scan them all.
-		std::map< std::string, nvmlDevice_t > uuidsToHandles;
-		nvmlReturn_t r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
-		if( NVML_SUCCESS != r ) { return r;	}
+		nvmlReturn_t r;
+		static bool mapInitialized = false;
+		static std::map< std::string, nvmlDevice_t > uuidsToHandles;
+		if(! mapInitialized) {
+			r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
+			if( NVML_SUCCESS != r ) { return r;	}
+		}
 
 		auto iter = uuidsToHandles.find(uuid);
 		if( iter != uuidsToHandles.end() ) {
@@ -528,9 +532,13 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 
 nvmlReturn_t
 enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
-	std::map< std::string, nvmlDevice_t > uuidsToHandles;
-	nvmlReturn_t r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
-	if( NVML_SUCCESS != r ) { return r;	}
+	nvmlReturn_t r;
+	static bool mapInitialized = false;
+	static std::map< std::string, nvmlDevice_t > uuidsToHandles;
+	if(! mapInitialized) {
+		r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
+		if( NVML_SUCCESS != r ) { return r;	}
+	}
 
 	for( auto i = uuidsToHandles.begin(); i != uuidsToHandles.end(); ++i ) {
 		nvmlDevice_t migDevice = i->second;

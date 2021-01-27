@@ -1622,10 +1622,10 @@ that DaemonCore uses which affect all HTCondor daemons.
     ``<SUBSYS>.SETTABLE_ATTRS`` are settings used to restrict the
     configuration values that can be changed using the
     *condor_config_val* command.
-    admin-manual/security:authorization on Setting up
+    See :ref:`admin-manual/security:authorization` on Setting up
     Security in HTCondor for details on these macros and how to
     configure them. In particular,
-    admin-manual/security:authorization contains details
+    :ref:`admin-manual/security:authorization` contains details
     specific to these macros.
 
 :macro-def:`SHUTDOWN_GRACEFUL_TIMEOUT`
@@ -5678,7 +5678,9 @@ These settings affect the *condor_starter*.
     libraries and programs will look at the value of environment
     variables, such as ``OMP_NUM_THREADS``, to control how many CPU cores to use.  
     Defaults to
-    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS, NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT.
+    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS,
+    NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
+    TF_LOOP_PARALLEL_ITERATIONS, TF_NUM_THREADS.
 
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd
@@ -9747,6 +9749,16 @@ These macros affect the high availability operation of HTCondor.
 :macro-def:`HAD_LOG`
     Full path and file name of the log file. The default value is
     ``$(LOG)``/HADLog.
+
+:macro-def:`HAD_FIPS_MODE`
+    Controls what type of checksum will be sent along with files that are replicated.
+    Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums. Default value is 0.
+    Prior to verions 8.8.14 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
+    later release of HTCondor, MD5 support will be removed and only SHA-2 will be
+    supported.  This configuration variable is intended to provide a transition
+    between the 8.8 and 9.0 releases.  As soon as all of machines involved in replication
+    are running HTCondor 8.8.14 or 8.9.12 or later you should set this configuration variable
+    to 1 to prepare for the transiation to 9.0
 
 :macro-def:`REPLICATION_LIST`
     A comma-separated list of all *condor_replication* daemons in the

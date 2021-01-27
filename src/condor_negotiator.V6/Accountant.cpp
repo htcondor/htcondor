@@ -123,7 +123,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       GroupEntry* group = grpq.front();
       grpq.pop_front();
       hgq_submitter_group_map[group->name] = group;
-      for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+      for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
           grpq.push_back(*j);
       }
   }
@@ -293,7 +293,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       grpq.pop_front();
       // This creates entries if they don't already exist:
       GetPriority(group->name);
-      for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+      for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
           grpq.push_back(*j);
       }
   }
@@ -302,7 +302,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 }
 
 
-void parse_group_name(const string& gname, vector<string>& gpath) {
+void parse_group_name(const string& gname, std::vector<string>& gpath) {
     gpath.clear();
     string::size_type cur = 0;
     while (true) {
@@ -327,7 +327,7 @@ GroupEntry* Accountant::GetAssignedGroup(const string& CustomerName, bool& IsGro
     IsGroup = (pos == string::npos);
 
     // cache results from previous invocations
-    map<string, GroupEntry*, ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
+	std::map<string, GroupEntry*, ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
     if (fs != hgq_submitter_group_map.end()) return fs->second;
 
     ASSERT(NULL != hgq_root_group);
@@ -355,12 +355,12 @@ GroupEntry* Accountant::GetAssignedGroup(const string& CustomerName, bool& IsGro
 
     GroupEntry* group = hgq_root_group;
     // parse the group name into a path of sub-group names
-    vector<string> gpath;
+	std::vector<string> gpath;
     parse_group_name(gname, gpath);
 
     // walk down the tree using the group path
-    for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
-        map<string, GroupEntry::size_type, ci_less>::iterator f(group->chmap.find(*j));
+    for (std::vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
+			std::map<string, GroupEntry::size_type, ci_less>::iterator f(group->chmap.find(*j));
         if (f == group->chmap.end()) {
             if (hgq_root_group->children.size() > 0) {
                 // I only want to log a warning if an HGQ configuration exists
@@ -397,7 +397,7 @@ int Accountant::GetResourcesUsed(const string& CustomerName)
 // Return the number of resources used (floating point version)
 //------------------------------------------------------------------
 
-float Accountant::GetWeightedResourcesUsed(const string& CustomerName) 
+float Accountant::GetWeightedResourcesUsed(const string& CustomerName)
 {
   float WeightedResourcesUsed=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
@@ -1217,14 +1217,14 @@ ClassAd* Accountant::ReportState(bool rollup) {
 
     // assign acct group index numbers first, breadth first ordering
     int EntryNum=1;
-    map<string, int> gnmap;
+	std::map<string, int> gnmap;
     std::deque<GroupEntry*> grpq;
     grpq.push_back(hgq_root_group);
     while (!grpq.empty()) {
         GroupEntry* group = grpq.front();
         grpq.pop_front();
         gnmap[group->name] = EntryNum++;
-        for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+        for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
             grpq.push_back(*j);
         }
     }
@@ -1324,7 +1324,7 @@ ClassAd* Accountant::ReportState(bool rollup) {
 }
 
 
-void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<string, int>& gnmap) {
+void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<string, int>& gnmap) {
     // begin by loading straight "non-rolled" data into the attributes for (group)
     string CustomerName = group->name;
 
@@ -1429,7 +1429,7 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     
     // Populate group's children recursively, if it has any
     // Recursion is to allow for proper rollup from children to parents
-    for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
         ReportGroups(*j, ad, rollup, gnmap);
     }
 

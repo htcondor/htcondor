@@ -3,14 +3,51 @@ Singularity Support
 
 :index:`Singularity<single: Singularity; installation>` :index:`Singularity`
 
-Note: This documentation is very basic and needs improvement!
+Singularity (https://sylabs.io/singularity/) is a container runtime system
+popular in scientific and HPC communities.  HTCondor can run jobs
+inside Singularity containers either in a transparent way, where the
+job does not know that it is being contained, or, the HTCondor
+administrator can configure the HTCondor startd so that a job can
+opt into running inside a container.  This allows the operating
+system that the job sees to be different than the one on the host system,
+and provides more isolation between processes running in one job and another.
 
-Here's an example configuration file:
+The decision to run a job inside Singularity
+ultimately resides on the worker node, although it can delegate that to the job.
+
+By default, jobs will not be run in Singularity.
+
+For Singularity to work, the administrator must install Singularity
+on the worker node.  The HTCondor startd will detect this installation
+at startup.  When it detects a useable installation, it will
+advertise two attributes in the slot ad:
 
 .. code-block:: condor-config
 
-      # Only set if singularity is not in $PATH.
-      #SINGULARITY = /opt/singularity/bin/singularity
+       HasSingularity = true
+       SingularityVersion = "singularity version 3.7.0-1.el7"
+
+HTCondor will run a job under Singularity when the startd configuration knob
+``SINGULARITY_JOB`` evaluates to true.  This is evaluated in the context of the
+slot ad and the job ad.  If it evaluates to false or undefined, the job will
+run as normal, without singularity.
+
+When ``SINGULARITY_JOB`` evaluates to true, a second HTCondor knob is required
+to name the singularity image that must be run, ``SINGULARITY_IMAGE_EXPR``.
+This also is evluated in the context of the machine and the job ad, and must
+evaluate to a string.  This image name is passed to the singularity exec
+command, and can be any valid value for a singularity image name.  So, it
+may be a path to file on a local file system that contains an singularity
+image, in any format that singularity supports.  It may be a string that
+begins with ``docker://``, and refer to an image located on docker hub,
+or other repository.  It can begin with ``http://``, and refer to an image
+to be fetched from an HTTP server.
+
+Here's the simplest possible configuration file.  It will force all
+jobs on this machine to run under Singularity, and to use an image
+that it located in the filesystem in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
+
+.. code-block::
 
       # Forces _all_ jobs to run inside singularity.
       SINGULARITY_JOB = true
@@ -18,52 +55,42 @@ Here's an example configuration file:
       # Forces all jobs to use the CernVM-based image.
       SINGULARITY_IMAGE_EXPR = "/cvmfs/cernvm-prod.cern.ch/cvm3"
 
-      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
-      SINGULARITY_TARGET_DIR = /srv
-
-      # Writable scratch directories inside the image.  Auto-deleted after the job exits.
-      MOUNT_UNDER_SCRATCH = /tmp, /var/tmp
-
-This provides the user with no opportunity to select a specific image.
-Here are some changes to the above example to allow the user to specify
-an image path:
+Another common configuration is to allow the job to select whether
+to run under Singularity, and if so, which image to use.  This looks like:
 
 .. code-block:: condor-config
 
       SINGULARITY_JOB = !isUndefined(TARGET.SingularityImage)
       SINGULARITY_IMAGE_EXPR = TARGET.SingularityImage
 
-Then, users could add the following to their submit file (note the
+Then, users would add the following to their submit file (note the
 quoting):
 
 .. code-block:: condor-submit
 
       +SingularityImage = "/cvmfs/cernvm-prod.cern.ch/cvm3"
 
-Finally, let's pick an image based on the OS -- not the filename:
-
-.. code-block:: condor-config
-
-      SINGULARITY_JOB = (TARGET.DESIRED_OS isnt MY.OpSysAndVer) && ((TARGET.DESIRED_OS is "CentOS6") || (TARGET.DESIRED_OS is "CentOS7"))
-      SINGULARITY_IMAGE_EXPR = (TARGET.DESIRED_OS is "CentOS6") ? "/cvmfs/cernvm-prod.cern.ch/cvm3" : "/cvmfs/cms.cern.ch/rootfs/x86_64/centos7/latest"
-
-Then, the user adds to their submit file:
+or maybe
 
 .. code-block:: condor-submit
 
-      +DESIRED_OS="CentOS6"
-
-That would cause the job to run on the native host for CentOS6 hosts and
-inside a CentOS6 Singularity container on CentOS7 hosts.
+      +SingularityImage = "docker://ubuntu:20"
 
 By default, singularity will bind mount the scratch directory that
 contains transfered input files, working files, and other per-job
-information into the container. The administrator can optionally
-specific additional directories to be bind mounted into the container.
+information into the container, and make this the initial working
+directoy of the job.  Thus, file transfer for singularity jobs works
+just like with vanilla universe jobs.  Any new files the job
+writes to this directory will be copied back to the submit node,
+just like any other sandbox, subject to transfer_output_files,
+as in vanilla universe.
+
+The administrator can optionally
+specify additional directories to be bind mounted into the container.
 For example, if there is some common shared input data located on a
 machine, or on a shared filesystem, this directory can be bind-mounted
 and be visible inside the container. This is controlled by the
-configuration parameter SINGULARITY_BIND_EXPR. This is an expression,
+configuration parameter ``SINGULARITY_BIND_EXPR``. This is an expression,
 which is evaluated in the context of the machine and job ads, and which
 should evaluated to a string which contains a space separated list of
 directories to mount.
@@ -85,38 +112,75 @@ expression could be
 If the source directory for the bind mount is missing on the host machine,
 HTCondor will skip that mount and run the job without it.  If the image is
 an exploded file directory, and the target directory is missing inside
-the image, and the configuration parameter SINGULRITY_IGNORE_MISSING_BIND_TARGET
+the image, and the configuration parameter ``SINGULRITY_IGNORE_MISSING_BIND_TARGET``
 is set to true (the default is false), then this mount attempt will also
 be skipped.  Otherwise, the job will return an error when run.
 
-Also, note that if the slot the job runs in is provisioned with GPUs,
-perhaps in response to a RequestGPU line in the submit file, the
-Singularity flag "-nv" will be passed to Singularity, which should make
+In general, HTCondor will try to set as many Singularity command line
+options as possible from settings in the machine ad and job ad, as
+make sense.  For example, if the slot the job runs in is provisioned with GPUs,
+perhaps in response to a ``request_GPUs`` line in the submit file, the
+Singularity flag ``-nv`` will be passed to Singularity, which should make
 the appropriate nvidia devices visible inside the container.
+If the submit file requests environment variables to be set for the job,
+HTCondor passes those through Singularity into the job.
 
-When the `condor_starter` runs a job with singularity, it first
+Before the `condor_starter` runs a job with singularity, it first
 runs singularity test on that image.  If no test is defined inside
-the image, it runs /bin/sh /bin/true.  If the test returns non-zero,
+the image, it runs ``/bin/sh /bin/true``.  If the test returns non-zero,
 for example if the image is missing, or malformed, the job is put
-on hold.  This is controlled by the condor knob 
+on hold.  This is controlled by the condor knob
 ``SINGULARITY_RUN_TEST_BEFORE_JOB``, which defaults to true.
 
 If an administrator wants to pass additional arguments to the
 singularity exec command that HTCondor does not currently support, the
-parameter SINGULARITY_EXTRA_ARGUMENTS allows arbitraty additional
+parameter ``SINGULARITY_EXTRA_ARGUMENTS`` allows arbitraty additional
 parameters to be passed to the singularity exec command. For example, to
-pass the -nv argument, to allow the GPUs on the host to be visible
-inside the container, an administrator could set
+pass the ``-w`` argument, to make the image writeable, an administrator
+could set
 
 .. code-block:: condor-config
 
-    SINGULARITY_EXTRA_ARGUMENTS = --nv
+    SINGULARITY_EXTRA_ARGUMENTS = -w
 
-If Singularity is installed as non-setuid, the following flag must be
-set for *condor_ssh_to_job* to work.
+There are some rarely-used settings that some administrators may
+need to set. By default, HTCondor looks for the Singularity runtime
+in ``/usr/bin/singularity``, but this can be overridden with the SINGULARITY
+parameter:
+
+.. code-block:: condor-submit
+
+      SINGULARITY = /opt/singularity/bin/singularity
+
+By default, the initial working directory of the job will be the
+scratch directory, just like a vanilla universe job.  This directory
+probably doesn't exist in the image's filesystem.  Usually,
+Singularity will be able to create this directory in the image, but
+unprivileged versions of singularity with certain image types may
+not be able to do so.  If this is the case, the current directory
+on the inside of the container can be set via a knob.  This will
+still map to the scratch directoy outside the container.
 
 .. code-block:: condor-config
 
-    SINGULARITY_IS_SETUID = false
+      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      SINGULARITY_TARGET_DIR = /srv
 
+When the HTCondor starter runs a job under Singularity, it always
+prints to the log the exact command line used.  This can be helpful
+for debugging or for the curious.  An example command line printed
+to the StarterLog might look like the following:
 
+.. code-block:: text
+
+    About to exec /usr/bin/singularity exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/condor_exec.exe 3
+
+In this example, no GPUs have been requested, so there is no ``-nv`` option.
+``MOUNT_UNDER_SCRATCH`` is set to the default of ``/tmp,/var/tmp``, so condor
+translates those into ``-S`` (scratch directory) requests in the command line.
+The ``--pwd`` is set to the scratch directory, ``-B`` bind mounts the scratch
+directory with the same name on the inside of the container, and the
+``-C`` option is set to contain all namespaces.  Then the image is named,
+and the executable, which in this case has been transfered by HTCondor
+into the scratch directory, and the job's argument (3).  Not visible
+in the log are any environment variables that HTCondor is setting for the job.

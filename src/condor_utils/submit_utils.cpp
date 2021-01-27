@@ -54,7 +54,6 @@
 #include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
-#include "condor_md.h"
 #include "my_popen.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"

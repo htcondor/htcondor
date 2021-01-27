@@ -264,7 +264,7 @@ int setupAnalysis(
 
 void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 {
-	string		remoteUser;
+	std::string		remoteUser;
 
 	// fetch user priorities, and propagate the user priority values into the machine ad's
 	// we fetch user priorities either directly from the negotiator, or from a file
@@ -922,7 +922,7 @@ bool doJobRunAnalysis (
 	#endif
 
 		// 3. Is there a remote user?
-		string remoteUser;
+		std::string remoteUser;
 		if ( ! offer->LookupString(ATTR_REMOTE_USER, remoteUser)) {
 #if 1
 			ac.available++; // tj: is this correct?
@@ -1071,7 +1071,7 @@ const char * appendJobRunAnalysisToBuffer(std::string &out, ClassAd *job, std::s
 		out += "Last failed match: ";
 		out += ctime(&t);
 		out += "\n";
-		string rej_reason;
+		std::string rej_reason;
 		if (job->LookupString(ATTR_LAST_REJ_MATCH_REASON, rej_reason)) {
 			out += "Reason for last match failure: ";
 			out += rej_reason;

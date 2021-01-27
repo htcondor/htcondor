@@ -1,9 +1,23 @@
 #include "GroupEntry.h"
+#include "compat_classad_list.h"
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include <algorithm>
 #include <deque>
+
+double calculate_subtree_usage(Accountant &accountant, GroupEntry *group) {
+		double subtree_usage = 0.0;
+
+		for (std::vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
+				subtree_usage += calculate_subtree_usage(accountant, *i);
+		}
+		subtree_usage += accountant.GetWeightedResourcesUsed(group->name);
+
+		group->subtree_usage = subtree_usage;;
+		dprintf(D_FULLDEBUG, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
+		return subtree_usage;
+}
 
 GroupEntry::GroupEntry():
 		name(),
@@ -67,13 +81,13 @@ GroupEntry::hgq_construct_tree(
 
 		// Populate the group array, which contains an entry for each group.
 		std::string hgq_root_name = "<none>";
-		vector<string> groups;
+		std::vector<std::string> groups;
 		if (NULL != groupnames) {
 				StringList group_name_list;
 				group_name_list.initializeFromString(groupnames);
 				group_name_list.rewind();
 				while (char* g = group_name_list.next()) {
-						const string gname(g);
+						const std::string gname(g);
 
 						// Best to sanity-check this as early as possible.  This will also
 						// be useful if we ever decided to allow users to name the root group
@@ -109,10 +123,10 @@ GroupEntry::hgq_construct_tree(
 
 		// build the tree structure from our group path info
 		for (unsigned long j = 0;  j < groups.size();  ++j) {
-				string gname = groups[j];
+				std::string gname = groups[j];
 
 				// parse the group name into a path of sub-group names
-				vector<string> gpath;
+				std::vector<std::string> gpath;
 				parse_group_name(gname, gpath);
 
 				// insert the path of the current group into the tree structure
@@ -120,7 +134,7 @@ GroupEntry::hgq_construct_tree(
 				bool missing_parent = false;
 				for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
 						// chmap is mostly a structure to avoid n^2 behavior in groups with many children
-						map<string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
+						std::map<std::string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
 						if (f == group->chmap.end()) {
 								dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
 								missing_parent = true;
@@ -196,12 +210,12 @@ GroupEntry::hgq_construct_tree(
 				GroupEntry* group = grpq.front();
 				grpq.pop_front();
 				hgq_groups.push_back(group);
-				for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+				for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
 						grpq.push_back(*j);
 				}
 		}
 
-		string group_sort_expr;
+		std::string group_sort_expr;
 		if (!param(group_sort_expr, "GROUP_SORT_EXPR")) {
 				// Should never fail! Default provided via param-info
 				EXCEPT("Failed to obtain value for GROUP_SORT_EXPR");
@@ -211,7 +225,7 @@ GroupEntry::hgq_construct_tree(
 				EXCEPT("Failed to parse GROUP_SORT_EXPR = %s", group_sort_expr.c_str());
 		}
 		delete test_sort_expr;
-		for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
 				GroupEntry* group = *j;
 				group->sort_ad->Assign(ATTR_ACCOUNTING_GROUP, group->name);
 				// group-specific values might be supported in the future:
@@ -221,7 +235,325 @@ GroupEntry::hgq_construct_tree(
 		return hgq_root_group;
 }
 
-void 
+/*static*/ void
+GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, Accountant &accountant, ClassAdListDoesNotDeleteAds &submitterAds) {
+		// Fill in latest usage/prio info for the groups.
+		// While we're at it, reset fields prior to reloading from submitter ads.
+
+		// note this is different than GroupEntry::autoregroup
+		const bool autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
+
+		for( GroupEntry *group : hgq_groups) {
+				group->quota = 0;
+				group->requested = 0;
+				group->currently_requested = 0;
+				group->allocated = 0;
+				group->subtree_quota = 0;
+				group->subtree_requested = 0;
+				if (NULL == group->submitterAds) group->submitterAds = new ClassAdListDoesNotDeleteAds;
+				group->submitterAds->Open();
+				while (ClassAd* ad = group->submitterAds->Next()) {
+						group->submitterAds->Remove(ad);
+				}
+				group->submitterAds->Close();
+
+				group->usage = accountant.GetWeightedResourcesUsed(group->name);
+				group->priority = accountant.GetPriority(group->name);
+		}
+
+		// cycle through the submitter ads, and load them into the appropriate group node in the tree
+		dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(submitterAds.MyLength()));
+		submitterAds.Open();
+		while (ClassAd* ad = submitterAds.Next()) {
+				std::string tname;
+				if (!ad->LookupString(ATTR_NAME, tname)) {
+						dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
+						continue;
+				}
+				// this holds the submitter name, which includes group, if present
+				const std::string subname(tname);
+
+				// is there a username separator?
+				std::string::size_type pos = subname.find_last_of('@');
+				if (pos==std::string::npos) {
+						dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter with badly-formed name \"%s\"\n", subname.c_str());
+						continue;
+				}
+
+				GroupEntry* group = accountant.GetAssignedGroup(subname);
+
+				// attach the submitter ad to the assigned group
+				group->submitterAds->Insert(ad);
+
+				// Accumulate the submitter jobs submitted against this group
+				// To do: investigate getting these values directly from schedds.  The
+				// collector info can be a bit stale, direct from schedd might be improvement.
+				int numidle=0;
+				ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
+				int numrunning=0;
+				ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
+
+				// The HGQ codes uses number of idle jobs to determine how to allocate
+				// surplus.  This should really be weighted demand when slot weights
+				// and paritionable slot are in use.  The schedd can tell us the cpu-weighed
+				// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
+
+				if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", true)) {
+						double weightedIdle = numidle;
+						double weightedRunning = numrunning;
+
+						int r = ad->LookupFloat(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
+						if (!r) {
+								dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_IDLE_JOBS\n");
+						}
+						r = ad->LookupFloat(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+						if (!r) {
+								dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_RUNNING_JOBS\n");
+						}
+
+						group->requested += weightedRunning + weightedIdle;
+				} else {
+						group->requested += numrunning + numidle;
+				}
+				group->currently_requested = group->requested;
+		}
+
+		// Any groups with autoregroup are allowed to also negotiate in root group ("none")
+		if (autoregroup) {
+				unsigned long n = 0;
+				for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+						GroupEntry* group = *j;
+						if (group == hgq_root_group) continue;
+						if (!group->autoregroup) continue;
+						group->submitterAds->Open();
+						while (ClassAd* ad = group->submitterAds->Next()) {
+								hgq_root_group->submitterAds->Insert(ad);
+						}
+						group->submitterAds->Close();
+						++n;
+				}
+				dprintf(D_ALWAYS, "group quotas: autoregroup mode: appended %lu submitters to group %s negotiation\n", n, hgq_root_group->name.c_str());
+		}
+
+		hgq_root_group->hgq_assign_quotas(hgq_total_quota);
+
+		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+				GroupEntry* group = *j;
+				dprintf(D_FULLDEBUG, "group quotas: group= %s  cquota= %g  static= %d  accept= %d  quota= %g  req= %g  usage= %g\n",
+								group->name.c_str(), group->config_quota, int(group->static_quota), int(group->accept_surplus), group->quota,
+								group->requested, group->usage);
+		}
+
+		return;
+}
+
+void
+GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, groupQuotasHashType* groupQuotasHash, double hgq_total_quota, Accountant &accountant, const std::function<void(GroupEntry *, int)> &fn, bool global_accept_surplus) {
+		// GGT -- Why?  Do we really need this?  Why not just wait until next negotiation?
+		// A user/admin can set this to > 1, to allow the algorithm an opportunity to re-distribute
+		// slots that were not used due to rejection.
+		int maxrounds = 0;
+		if (param_defined("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS")) {
+				maxrounds = param_integer("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
+		} else {
+				// backward compatability
+				maxrounds = param_integer("HFS_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
+		}
+
+		const bool ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
+		const bool autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
+
+		// The allocation of slots may occur multiple times, if rejections
+		// prevent some allocations from being filled.
+		int iter = 0;
+		while (true) {
+				if (iter >= maxrounds) {
+						dprintf(D_ALWAYS, "group quotas: halting allocation rounds after %d iterations\n", iter);
+						break;
+				}
+
+				iter += 1;
+				dprintf(D_ALWAYS, "group quotas: allocation round %d\n", iter);
+				//negotiation_cycle_stats[0]->slot_share_iterations += 1;
+
+				// make sure working values are reset for this iteration
+				groupQuotasHash->clear();
+				for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+						GroupEntry* group = *j;
+						group->allocated = 0;
+						group->subtree_requested = 0;
+						group->rr = false;
+				}
+
+				// Allocate group slot quotas to satisfy group job requests
+				double surplus_quota = hgq_root_group->hgq_fairshare();
+
+				// This step is not relevant in a weighted-slot scenario, where slots may
+				// have a floating-point cost != 1.
+				if (!accountant.UsingWeightedSlots()) {
+						// Recover any fractional slot remainders from fairshare algorithm,
+						// and distribute them using round robin.
+						surplus_quota += hgq_root_group->hgq_recover_remainders();
+				}
+
+				if (autoregroup) {
+						dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
+						hgq_root_group->quota = hgq_total_quota;
+						hgq_root_group->allocated = hgq_total_quota;
+				}
+
+				double maxdelta = 0;
+				double requested_total = 0;
+				double allocated_total = 0;
+				unsigned long served_groups = 0;
+				unsigned long unserved_groups = 0;
+				for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+						GroupEntry* group = *j;
+						dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
+										group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
+						groupQuotasHash->insert(MyString(group->name.c_str()), group->quota);
+						requested_total += group->requested;
+						allocated_total += group->allocated;
+						if (group->allocated > 0) served_groups += 1;
+						else if (group->requested > 0) unserved_groups += 1;
+						double target = (global_accept_surplus) ? group->allocated : group->quota;
+						maxdelta = std::max(maxdelta, std::max(0.0, target - group->usage));
+				}
+
+								dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  requested= %g  allocated= %g  surplus= %g  maxdelta= %g\n",
+												static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, requested_total+allocated_total, allocated_total, surplus_quota, maxdelta );
+
+				// The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
+				// default its behavior to execute once, and just negotiate for everything at once.  If a
+				// user is concerned about the "overlapping effective pool" problem, they can decrease this
+				// increment so that round robin happens, and competing groups will not starve one another.
+				double ninc = 0;
+				if (param_defined("GROUP_QUOTA_ROUND_ROBIN_RATE")) {
+						ninc = param_double("GROUP_QUOTA_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
+				} else {
+						// backward compatability
+						ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
+				}
+
+				// fill in sorting classad attributes for configurable sorting
+				for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+						GroupEntry* group = *j;
+						ClassAd* ad = group->sort_ad;
+						ad->Assign(ATTR_GROUP_QUOTA, group->quota);
+						ad->Assign(ATTR_GROUP_RESOURCES_ALLOCATED, group->allocated);
+						ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
+						// Do this after all attributes are filled in
+						float v = 0;
+						if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
+								v = FLT_MAX;
+								std::string e;
+								ad->LookupString(ATTR_SORT_EXPR_STRING, e);
+								dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
+												e.c_str(), group->name.c_str(), v);
+						}
+						group->sort_key = v;
+				}
+
+				// present accounting groups for negotiation in "starvation order":
+				std::vector<GroupEntry*> negotiating_groups(hgq_groups);
+				std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order(autoregroup, hgq_root_group));
+
+				// This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
+				// for same subset of available slots.  It gives greatest weight to groups with the greatest difference
+				// between allocated and their current usage
+				double n = 0;
+				while (true) {
+						// Up our fraction of the full deltas.  Note that maxdelta may be zero, but we still
+						// want to negotiate at least once regardless, so loop halting check is at the end.
+						n = std::min(n+ninc, maxdelta);
+						dprintf(D_ALWAYS, "group quotas: entering RR iteration n= %g\n", n);
+
+						// Do the negotiations
+						for (std::vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
+								GroupEntry* group = *j;
+
+								dprintf(D_FULLDEBUG, "Group %s - sortkey= %g\n", group->name.c_str(), group->sort_key);
+
+								if (group->allocated <= 0) {
+										dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
+										continue;
+								}
+
+								if ((group->usage >= group->allocated) && !ConsiderPreemption) {
+										dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (quota=%g) (usage=%g) (allocation=%g)\n", group->name.c_str(), group->quota, group->usage, group->allocated);
+										continue;
+								}
+
+								if (group->submitterAds->MyLength() <= 0) {
+										dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+										continue;
+								}
+
+								dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
+
+								// if allocating surplus, use allocated, otherwise just use the group's quota directly
+								double target = std::max(group->allocated, group->quota);
+
+								double delta = std::max(0.0, target - group->usage);
+								// If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
+								// we just got allocated, so just negotiate for what we were allocated.
+								double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
+								// Defensive -- do not exceed allocated slots
+								slots = std::min(slots, target);
+								if (!accountant.UsingWeightedSlots()) {
+										slots = floor(slots);
+								}
+
+								slots = group->strict_enforce_quota(accountant, hgq_root_group, slots);
+
+								fn(group, slots);
+						}
+
+						// Halt when we have negotiated with full deltas
+						if (n >= maxdelta) break;
+				}
+
+				// After round robin, assess where we are relative to HGQ allocation goals
+				double usage_total = 0;
+				for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+						GroupEntry* group = *j;
+
+						double usage = accountant.GetWeightedResourcesUsed(group->name);
+
+						group->usage = usage;
+						dprintf(D_FULLDEBUG, "group quotas: Group %s  allocated= %g  usage= %g\n", group->name.c_str(), group->allocated, group->usage);
+
+						// I do not want to give credit for usage above what was allocated here.
+						usage_total += std::min(group->usage, group->allocated);
+
+						if (group->usage < group->allocated) {
+								// If we failed to match all the allocated slots for any reason, then take what we
+								// got and allow other groups a chance at the rest on next iteration
+								dprintf(D_FULLDEBUG, "group quotas: Group %s - resetting requested to %g\n", group->name.c_str(), group->usage);
+								group->requested = group->usage;
+						} else {
+								// otherwise restore requested to its original state for next iteration
+								group->requested += group->allocated;
+						}
+				}
+
+				dprintf(D_ALWAYS, "Round %d totals: allocated= %g  usage= %g\n", iter, allocated_total, usage_total);
+
+				// If we negotiated successfully for all slots, we're finished
+				if (usage_total >= allocated_total) break;
+		}
+
+		// For the purposes of RR consistency I want to update these after all allocation rounds are completed.
+		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+				// GGT GroupEntry* group = *j;
+				// If we were served by RR this cycle, then update timestamp of most recent round-robin.
+				// I also update when requested is zero because I want to favor groups that have been actually
+				// waiting for an allocation the longest.
+				// GGT if (group->rr || (group->requested <= 0))  group->rr_time = negotiation_cycle_stats[0]->start_time;
+		}
+}
+
+void
 GroupEntry::hgq_assign_quotas(double quota) {
 		dprintf(D_FULLDEBUG, "group quotas: subtree %s receiving quota= %g\n", this->name.c_str(), quota);
 
@@ -299,7 +631,7 @@ GroupEntry::hgq_assign_quotas(double quota) {
 		dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", this->name.c_str(), this->quota);
 }
 
-double 
+double
 GroupEntry::hgq_fairshare() {
 		dprintf(D_FULLDEBUG, "group quotas: fairshare (1): group= %s  quota= %g  requested= %g\n",
 						this->name.c_str(), this->quota, this->requested);
@@ -354,13 +686,13 @@ GroupEntry::hgq_allocate_surplus(double surplus) {
 		// Surplus allocation policy is that a group shares surplus on equal footing with its children.
 		// So we load children and their parent (current group) into a single vector for treatment.
 		// Convention will be that current group (subtree root) is last element.
-		vector<GroupEntry*> groups(this->children);
+		std::vector<GroupEntry*> groups(this->children);
 		groups.push_back(this);
 
 		// This vector will accumulate allocations.
 		// We will proceed with recursive allocations after allocations at this level
 		// are completed.  This keeps recursive calls to a minimum.
-		vector<double> allocated(groups.size(), 0);
+		std::vector<double> allocated(groups.size(), 0);
 
 		// Temporarily hacking current group to behave like a child that accepts surplus
 		// avoids some special cases below.  Somewhere I just made a kitten cry.
@@ -394,7 +726,7 @@ GroupEntry::hgq_allocate_surplus(double surplus) {
 				dprintf(D_FULLDEBUG, "group quotas: allocate-surplus (2b): quota-based allocation, group= %s  requested= %g  surplus= %g\n",
 								this->name.c_str(), requested, surplus);
 
-				vector<double> subtree_requested(groups.size(), 0);
+				std::vector<double> subtree_requested(groups.size(), 0);
 				for (unsigned long j = 0;  j < groups.size();  ++j) {
 						GroupEntry* grp = groups[j];
 						// By conditioning on accept_surplus here, I don't have to check it below
@@ -518,13 +850,13 @@ GroupEntry::hgq_round_robin(double surplus) {
 		// Surplus allocation policy is that a group shares surplus on equal footing with its children.
 		// So we load children and their parent (current group) into a single vector for treatment.
 		// Convention will be that current group (subtree root) is last element.
-		vector<GroupEntry*> groups(this->children);
+		std::vector<GroupEntry*> groups(this->children);
 		groups.push_back(this);
 
 		// This vector will accumulate allocations.
 		// We will proceed with recursive allocations after allocations at this level
 		// are completed.  This keeps recursive calls to a minimum.
-		vector<double> allocated(groups.size(), 0);
+		std::vector<double> allocated(groups.size(), 0);
 
 		// Temporarily hacking current group to behave like a child that accepts surplus
 		// avoids some special cases below.  Somewhere I just made a kitten cry.  Even more.
@@ -538,7 +870,7 @@ GroupEntry::hgq_round_robin(double surplus) {
 		this->subtree_requested = this->requested;
 
 		double outstanding = 0;
-		vector<double> subtree_requested(groups.size(), 0);
+		std::vector<double> subtree_requested(groups.size(), 0);
 		for (unsigned long j = 0;  j < groups.size();  ++j) {
 				GroupEntry* grp = groups[j];
 				if (grp->accept_surplus && (grp->subtree_requested > 0)) {
@@ -548,7 +880,7 @@ GroupEntry::hgq_round_robin(double surplus) {
 		}
 
 		// indexes allow indirect sorting
-		vector<unsigned long> idx(groups.size());
+		std::vector<unsigned long> idx(groups.size());
 		for (unsigned long j = 0;  j < idx.size();  ++j) idx[j] = j;
 
 		// order the groups to determine who gets first cut
@@ -623,8 +955,10 @@ GroupEntry::hgq_round_robin(double surplus) {
 }
 
 
-void hgq_allocate_surplus_loop(bool by_quota,
-				vector<GroupEntry*>& groups, vector<double>& allocated, vector<double>& subtree_requested,
+void hgq_allocate_surplus_loop(
+				bool by_quota,
+				std::vector<GroupEntry*>& groups, std::vector<double>& allocated,
+				std::vector<double>& subtree_requested,
 				double& surplus, double& requested)
 {
 		int iter = 0;
@@ -681,4 +1015,41 @@ void hgq_allocate_surplus_loop(bool by_quota,
 						surplus = 0;
 				}
 		}
+}
+
+double
+GroupEntry::strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_group, double slots) {
+		if (param_boolean("NEGOTIATOR_STRICT_ENFORCE_QUOTA", true)) {
+				dprintf(D_FULLDEBUG, "NEGOTIATOR_STRICT_ENFORCE_QUOTA is true, current proposed allocation for %s is %g\n", this->name.c_str(), slots);
+				calculate_subtree_usage(accountant, hgq_root_group); // usage changes with every negotiation
+				GroupEntry *limitingGroup = this;
+
+				double my_new_allocation = slots - this->usage; // resources above what we already have
+				if (my_new_allocation < 0) {
+						//continue; // shouldn't get here
+				}
+
+				while (limitingGroup != NULL) {
+						if (limitingGroup->accept_surplus == false) {
+								// This is the extra available at this node
+								double subtree_available = -1;
+								if (limitingGroup->static_quota) {
+										subtree_available = limitingGroup->config_quota - limitingGroup->subtree_usage;
+								} else {
+										subtree_available = limitingGroup->subtree_quota - limitingGroup->subtree_usage;
+								}
+								if (subtree_available < 0) subtree_available = 0;
+								dprintf(D_FULLDEBUG, "\tmy_new_allocation is %g subtree_available is %g\n", my_new_allocation, subtree_available);
+								if (my_new_allocation > subtree_available) {
+										dprintf(D_ALWAYS, "Group %s with accept_surplus=false has total usage = %g and config quota of %g -- constraining allocation in subgroup %s to %g\n",
+														limitingGroup->name.c_str(), limitingGroup->subtree_usage, limitingGroup->config_quota, this->name.c_str(), subtree_available + this->usage);
+
+										my_new_allocation = subtree_available; // cap new allocation to the available
+								}
+						}
+						limitingGroup = limitingGroup->parent;
+				}
+				slots = my_new_allocation + this->usage; // negotiation units are absolute quota, not new
+		}
+		return slots;
 }

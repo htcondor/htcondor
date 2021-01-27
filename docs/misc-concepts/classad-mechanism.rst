@@ -287,8 +287,10 @@ Optional parameters are given within square brackets.
     attribute references of the expression that is the value of the provided attribute.
     If the provided attribute cannot be found, then ``undefined`` is returned.
 
-    For example, if the ``Requirements`` expression has the value ``OpSys == "LINUX" && TARGET.Arch == "ARM"``,
-    then ``unresolved(Requirements)`` will return ``"Arch,OpSys"``.
+    For example, in a typical job ClassAd if the ``Requirements`` expression has the value
+    ``OpSys == "LINUX" && TARGET.Arch == "ARM" && Cpus >= RequestCpus``, then 
+    ``unresolved(Requirements)`` will return ``"Arch,Cpus,OpSys"`` because those will not
+    be attributes of the job ClassAd.
 
 ``Boolean unresolved(Attribute attr, String pattern)``
     This function returns ``True`` when at least one of the external or unresolved attribute
@@ -296,9 +298,21 @@ Optional parameters are given within square brackets.
     given Perl regular expression pattern.  If none of the references match the pattern, then
     ``False`` is returned. If the provided attribute cannot be found, then ``undefined`` is returned.
 
-    For example if the ``Requirements`` expression has the value ``OpSys == "LINUX" && Arch == "ARM"``,
-    then ``unresolved(Requirements, "^OpSys")`` will return ``True``, and ``unresolved(Requirements, "OpSys.+")``
-    will return ``False``.
+    For example, in a typical job ClassAd if the ``Requirements`` expression has the value
+    ``OpSys == "LINUX" && Arch == "ARM"``, then ``unresolved(Requirements, "^OpSys")`` will
+    return ``True``, and ``unresolved(Requirements, "OpSys.+")`` will return ``False``.
+
+    The intended use of this function is to make it easier to apply a submit transform to
+    a job only when the job does not already reference a certain attribute. For instance
+
+..  code-block:: text
+
+    JOB_TRANSFORM_DefPlatform @=end
+       # Apply this transform only when the job requirements does not reference OpSysAndver or OpSysName
+       REQUIREMENTS ! unresolved(Requirements, "OpSys.+")
+       # Add a clause to the job requirements to match only CentOs7 machines
+       SET Requirements $(Requirements) && OpSysAndVer == "CentOS7"
+    @end
 
 :index:`ifThenElse()<single: ifThenElse(); ClassAd functions>`
 
