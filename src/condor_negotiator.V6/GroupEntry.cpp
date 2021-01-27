@@ -544,8 +544,9 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 	}
 
 	// For the purposes of RR consistency I want to update these after all allocation rounds are completed.
+	time_t now = time(nullptr);
 	for (GroupEntry *group: hgq_groups) {
-		if (group->rr || (group->requested <= 0))  group->rr_time = time(nullptr);
+		if (group->rr || (group->requested <= 0))  group->rr_time = now;
 	}
 }
 
