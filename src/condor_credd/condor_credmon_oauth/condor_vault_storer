@@ -74,7 +74,7 @@ fi
 
 CONDOROPTS="$(condor_config_val SEC_CREDENTIAL_GETTOKEN_OPTS 2>/dev/null)"
 if [ -z "$CONDOROPTS" ] && [ -z "$HTGETTOKENOPTS" ]; then
-    fatal 'Neither SEC_CREDENTIAL_GETTOKEN_OPTS condor value nor $HTGETTOKENS environment set'
+    fatal 'Neither SEC_CREDENTIAL_GETTOKEN_OPTS condor value nor $HTGETTOKENOPTS environment set'
 fi
 
 # Keep the standard duration vault token in $VTOKEN.$SERVICE to make
