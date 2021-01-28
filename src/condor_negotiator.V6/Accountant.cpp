@@ -301,19 +301,6 @@ void Accountant::Initialize(GroupEntry* root_group)
   UpdatePriorities();
 }
 
-
-void parse_group_name(const string& gname, std::vector<string>& gpath) {
-    gpath.clear();
-    string::size_type cur = 0;
-    while (true) {
-        string::size_type nxt = gname.find_first_of('.', cur);
-        string::size_type n = (nxt == string::npos) ? string::npos : nxt-cur;
-        gpath.push_back(gname.substr(cur, n));
-        if (nxt == string::npos) break;
-        cur = 1+nxt;
-    }
-}
-
 GroupEntry* Accountant::GetAssignedGroup(const string& CustomerName) {
     bool unused;
     return GetAssignedGroup(CustomerName, unused);

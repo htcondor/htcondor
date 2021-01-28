@@ -27,7 +27,6 @@ GroupEntry::GroupEntry():
 	autoregroup(false),
 	usage(0),
 	submitterAds(NULL),
-	priority(0),
 	quota(0),
 	requested(0),
 	currently_requested(0),
@@ -69,10 +68,12 @@ GroupEntry::~GroupEntry() {
 
 GroupEntry *
 GroupEntry::hgq_construct_tree(
-		std::map<std::string, GroupEntry *> &group_entry_map,
 		std::vector<GroupEntry *> &hgq_groups,
 		bool &global_autoregroup,
 		bool &global_accept_surplus) {
+
+	// To find duplicates
+	std::map<std::string, GroupEntry *> group_entry_map;
 
 	// need to construct group structure
 	// groups is list of group names
@@ -258,7 +259,6 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 		group->submitterAds->Close();
 
 		group->usage = accountant.GetWeightedResourcesUsed(group->name);
-		group->priority = accountant.GetPriority(group->name);
 	}
 
 	// cycle through the submitter ads, and load them into the appropriate group node in the tree
@@ -1050,3 +1050,17 @@ GroupEntry::strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_gr
 	}
 	return slots;
 }
+
+// Really string::split, if C++ had one, turns a . separated string into a vector of strings
+void parse_group_name(const std::string& gname, std::vector<std::string>& gpath) {
+	gpath.clear();
+	std::string::size_type cur = 0;
+	while (true) {
+		std::string::size_type nxt = gname.find_first_of('.', cur);
+		std::string::size_type n = (nxt == std::string::npos) ? std::string::npos : nxt-cur;
+		gpath.push_back(gname.substr(cur, n));
+		if (nxt == std::string::npos) break;
+		cur = 1+nxt;
+	}
+}
+
