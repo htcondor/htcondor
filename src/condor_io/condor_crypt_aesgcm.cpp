@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_crypt_aesgcm.h"
 
+#include <algorithm>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
