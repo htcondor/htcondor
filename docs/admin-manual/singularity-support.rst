@@ -41,7 +41,9 @@ may be a path to file on a local file system that contains an singularity
 image, in any format that singularity supports.  It may be a string that
 begins with ``docker://``, and refer to an image located on docker hub,
 or other repository.  It can begin with ``http://``, and refer to an image
-to be fetched from an HTTP server.
+to be fetched from an HTTP server.  It can be a relative path, in which
+case it refers to a file in the scratch directory, so that the image
+can be transfered by HTCondor's file transfer mechanism.
 
 Here's the simplest possible configuration file.  It will force all
 jobs on this machine to run under Singularity, and to use an image
@@ -79,11 +81,65 @@ or maybe
 By default, singularity will bind mount the scratch directory that
 contains transfered input files, working files, and other per-job
 information into the container, and make this the initial working
-directoy of the job.  Thus, file transfer for singularity jobs works
+directory of the job.  Thus, file transfer for singularity jobs works
 just like with vanilla universe jobs.  Any new files the job
 writes to this directory will be copied back to the submit node,
 just like any other sandbox, subject to transfer_output_files,
 as in vanilla universe.
+
+Assuming singularity is configured on the startd as described
+above, A complete submit file that uses singularity might look like
+
+.. code-block:: condor-submit
+
+     executable = /usr/bin/sleep
+     arguments = 30
+     +SingularityImage = "docker://ubuntu"
+
+     Requirements = HasSingularity
+
+     Request_Disk = 1024
+     Request_Memory = 1024
+     Request_cpus = 1
+
+     should_transfer_files = yes
+     tranfer_input_files = some_input
+     when_to_transfer_output = on_exit
+
+     log = log
+     output = out.$(PROCESS)
+     error = err.$(PROCESS)
+
+     queue 1
+
+
+HTCondor can also transfer the whole singularity image, just like
+any other input file, and use that as the container image.  Given
+a singularity image file in the file named "image" in the submit
+directory, the submit file would look like:
+
+.. code-block:: condor-submit
+
+     executable = /usr/bin/sleep
+     arguments = 30
+     +SingularityImage = "image"
+
+     Requirements = HasSingularity
+
+     Request_Disk = 1024
+     Request_Memory = 1024
+     Request_cpus = 1
+
+     should_transfer_files = yes
+     tranfer_input_files = image
+     when_to_transfer_output = on_exit
+
+     log = log
+     output = out.$(PROCESS)
+     error = err.$(PROCESS)
+
+     queue 1
+
 
 The administrator can optionally
 specify additional directories to be bind mounted into the container.
@@ -159,7 +215,7 @@ Singularity will be able to create this directory in the image, but
 unprivileged versions of singularity with certain image types may
 not be able to do so.  If this is the case, the current directory
 on the inside of the container can be set via a knob.  This will
-still map to the scratch directoy outside the container.
+still map to the scratch directory outside the container.
 
 .. code-block:: condor-config
 
