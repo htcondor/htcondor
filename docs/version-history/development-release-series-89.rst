@@ -133,6 +133,9 @@ Bugs Fixed:
   also set.
   :jira:`91`
 
+- Fixed a bug in condor_watch_q regarding DAG node refresh times.
+  :jira:`201`
+
 Version 8.9.11
 --------------
 
