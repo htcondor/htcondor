@@ -2510,12 +2510,12 @@ command_drain_jobs(int /*dc_cmd*/, Stream* s )
 	ad.LookupInteger(ATTR_RESUME_ON_COMPLETION,on_completion);
 
 	// get the drain reason out of the command. if no reason supplied, 
-	// assume that the command is coming from the Defrag daemon unless the peer version is 8.9.11 or later
-	// an 8.9.11 defrag will never send an empty reason, so the caller must be a tool
+	// assume that the command is coming from the Defrag daemon unless the peer version is 8.9.12 or later
+	// an 8.9.12 defrag will never send an empty reason, so the caller must be a tool
 	std::string reason;
 	if ( ! ad.LookupString(ATTR_DRAIN_REASON, reason)) {
 		reason = "Defrag";
-		if (s->get_peer_version() && s->get_peer_version()->built_since_version(8,9,11)) {
+		if (s->get_peer_version() && s->get_peer_version()->built_since_version(8,9,12)) {
 			reason = "by command";
 		}
 	}

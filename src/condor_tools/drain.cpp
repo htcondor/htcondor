@@ -90,10 +90,10 @@ main( int argc, const char *argv[] )
 		exit( 1 );
 	}
 
-	// -exit-on-completion and -restart-on-completion only work with startd's that are 8.9.11 or later
+	// -exit-on-completion and -restart-on-completion only work with startd's that are 8.9.12 or later
 	if ((on_completion > DRAIN_RESUME_ON_COMPLETION) && startd.version()) {
 		CondorVersionInfo verinfo(startd.version());
-		if ( ! verinfo.built_since_version(8,9,11)) {
+		if ( ! verinfo.built_since_version(8,9,12)) {
 			fprintf(stderr, "ERROR: %s does not support %s\n%s\n",
 				startd.name(), on_completion_name(on_completion), startd.version());
 			exit(1);
