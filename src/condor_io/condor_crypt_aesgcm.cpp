@@ -26,10 +26,10 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-#define IV_SIZE 12
+#define IV_SIZE 16
 #define MAC_SIZE 16
 
-unsigned char g_unset_iv[IV_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+unsigned char g_unset_iv[IV_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 /*
 Condor_Crypt_AESGCM::Condor_Crypt_AESGCM(const KeyInfo& key)

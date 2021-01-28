@@ -35,7 +35,7 @@ struct ConnCryptoState {
 		// 64-bit random number for a total of 12 bytes.
 		// The ctr is added to the last 4 bytes of the IV.
 	union Packed_IV {
-		unsigned char iv[12]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		unsigned char iv[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
                 struct {
 		    uint32_t pkt;
 		    uint32_t conn;
