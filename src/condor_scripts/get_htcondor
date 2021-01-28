@@ -253,14 +253,14 @@ do_install() {
 		#	;;
 		ubuntu|debian)
 			cat >&2 <<-'EOF'
-			To update enter as root: SOME APT-GET MAGIC
-			To remove enter as root: SOME APT-GET MAGIC
+			To update enter as root: apt-get update && apt-get upgrade minihtcondor
+			To remove enter as root: apt-get remove minihtcondor
 			EOF
 			;;
 		centos|rhel|amzn)
 			cat >&2 <<-'EOF'
-			To update enter as root: yum update condor
-			To remove enter as root: yum remove condor
+			To update enter as root: yum update minicondor
+			To remove enter as root: yum remove minicondor
 			EOF
 			;;
 		esac
@@ -298,6 +298,7 @@ do_install() {
 				echo -e "\n# Adding our repository"
 
 				# Install our repository key.
+				$sh_c "apt-get update"
 				$sh_c "apt-get install gnupg"
 				$sh_c "curl -fsSL ${DOWNLOAD_URL}/debian/HTCondor-Release.gpg.key | apt-key add -"
 
@@ -374,6 +375,7 @@ do_install() {
 	esac
 
 	# Now that the binaries are installed, drop config files into config.d
+	# FIXME
 
 	# Open port 9618 on system firewall
 	do_configure_firewall
@@ -402,12 +404,19 @@ do_download() {
 			OS_VERSION=$dist_version_number
 
 			#
-			# FIXME: Ubuntu 18.04 ['s container] needs libgomp.so.1
+			# FIXME: Ubuntu 18.04 LTS (container and VM) and 16.04 (VM and
+			# therefore probably container) needs libgomp.so.1
+			# (from the package 'libgomp1').
 			#
 			;;
 		debian)
 			OS_NAME=Debian
 			OS_VERSION=$dist_version_number
+
+		    #
+		    # FIXME: The Debian VM (and therefore probably container) needs
+		    # libgomp.so.1 (from the package 'libgomp1').
+		    #
 			;;
 		centos|rhel|amzn)
 			OS_NAME=CentOS
