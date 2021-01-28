@@ -133,7 +133,7 @@ Bugs Fixed:
   also set.
   :jira:`91`
 
-- Fixed a bug in condor_watch_q regarding DAG node refresh times.
+- Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
   :jira:`201`
 
 Version 8.9.11
