@@ -1558,6 +1558,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
+- This release of HTCondor fixes security-related bugs described at
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002.html
+
 * Tue Nov 24 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.10-1
 - Fix bug where negotiator stopped making matches when group quotas are used
 - Support OAuth, SciTokens, and Kerberos credentials in local universe jobs

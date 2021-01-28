@@ -347,7 +347,7 @@ value of certain attributes, often multiple attributes. The list for *condor_q* 
    ``BytesSent``, ``BytesRecvd`` job attributes and total job execution time as calculated by the ``STDU_GOODPUT`` output.
 
 PRINTAS functions for *condor_status*
---------------------------------
+-------------------------------------
 
 ``ACTIVITY_CODE``
    Render a two character machine state and activity code from the ``State`` and ``Activity`` attributes of the machine ad.

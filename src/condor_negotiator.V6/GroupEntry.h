@@ -12,6 +12,8 @@
 
 typedef HashTable<MyString, float> groupQuotasHashType;
 
+void parse_group_name(const std::string& gname, std::vector<std::string>& gpath);
+
 struct GroupEntry {
 		typedef std::vector<int>::size_type size_type;
 
@@ -19,7 +21,6 @@ struct GroupEntry {
 		~GroupEntry();
 
         static GroupEntry *hgq_construct_tree(
-       	 	std::map<std::string, GroupEntry*> &group_entry_map,
        	 	std::vector<GroupEntry*> &hgq_groups,
 			bool &global_autoregroup,
 			bool &global_accept_surplus);
@@ -58,7 +59,6 @@ struct GroupEntry {
 		// current usage information coming into this negotiation cycle
 		double usage;
 		ClassAdListDoesNotDeleteAds* submitterAds;
-		double priority;
 
 		// slot quota as computed by HGQ
 		double quota;

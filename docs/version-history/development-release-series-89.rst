@@ -9,9 +9,9 @@ Version 8.9.11
 
 Release Notes:
 
-.. HTCondor version 8.8.11 released on Month Date, 2020.
+.. HTCondor version 8.9.12 released on Month Date, 2021.
 
-- HTCondor version 8.9.11 not yet released.
+- HTCondor version 8.9.12 not yet released.
 
 - The ``condor_procd`` now attempts to detect invalidly short reads of
   the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
@@ -120,6 +120,10 @@ New Features:
 
 Bugs Fixed:
 
+- The ``preserve_relative_paths`` submit command now properly allows jobs
+  to run on HTCondor versions 8.9.10 and later.
+  :jira:`189`
+
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
   ``-uuid``.
   :jira:`137`
@@ -129,6 +133,30 @@ Bugs Fixed:
   also set.
   :jira:`91`
 
+- Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
+  :jira:`201`
+
+Version 8.9.11
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.11 released on January 27, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002.html>`_.
+
+   :ticket:`7893`
+   :ticket:`7894`
 
 Version 8.9.10
 --------------
