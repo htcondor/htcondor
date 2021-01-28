@@ -32,7 +32,7 @@ LATEST_SERIES = "8.9"
 # ^^ TODO Gotta be a better way of doing this
 
 
-REPO = "dockerreg.chtc.wisc.edu"
+DEFAULT_REPO = "dockerreg.chtc.wisc.edu"
 # ^^ TODO default repo should be dockerhub
 
 
@@ -255,11 +255,15 @@ org.htcondor.version="%s"
         return [f"htcondor/{image}:{basetag}" for basetag in basetags]
 
     def push_image(self, image, repository):
-        image_with_repo = f"{repository}/{image}"
-
-        self.docker("tag", image, image_with_repo, check=True)
-        self.docker("push", image_with_repo, check=True)
-        self.docker("rmi", image_with_repo, check=False)
+        if self.executable == "podman" or repository != "docker.io":
+            image_with_repo = f"{repository}/{image}"
+            self.docker("tag", image, image_with_repo, check=True)
+            self.docker("push", image_with_repo, check=True)
+            self.docker("rmi", image_with_repo, check=False)
+        else:
+            # When it's real docker pushing to dockerhub: the tag/push/rmi
+            # sequence will cause the original build to be deleted as well
+            self.docker("push", image, check=True)
 
 
 def main(argv) -> int:
@@ -278,6 +282,7 @@ def main(argv) -> int:
     parser.add_argument(
         "--series",
         help="The release series for daily or latest builds (default %(default)s). "
+        "Either numeric (e.g. '8.9') or 'latest'. "
         "Only used if version is 'daily' or 'latest'.",
         default="latest",
     )
@@ -285,6 +290,11 @@ def main(argv) -> int:
         "--push", action="store_true", dest="push", help="Push resulting builds"
     )
     # parser.add_argument("--nopush", action="store_false", dest="push", help="Do not push resulting builds")
+    parser.add_argument(
+        "--repo",
+        help="Repository to push to (default %(default)s).",
+        default=DEFAULT_REPO,
+    )
     parser.add_argument(
         "--mini", action="store_true", dest="mini", help="Build minicondor"
     )
@@ -337,7 +347,7 @@ def main(argv) -> int:
 
     if args.push:
         for img in images_to_push:
-            builder.push_image(image=img, repository=REPO)
+            builder.push_image(image=img, repository=args.repo)
 
     return 0
 
