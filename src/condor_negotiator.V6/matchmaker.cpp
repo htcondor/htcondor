@@ -593,7 +593,7 @@ reinitialize ()
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
 	delete hgq_root_group;
-    hgq_root_group = GroupEntry::hgq_construct_tree(group_entry_map, hgq_groups, this->autoregroup, this->accept_surplus);
+    hgq_root_group = GroupEntry::hgq_construct_tree(hgq_groups, this->autoregroup, this->accept_surplus);
 
     // Initialize accountant params
     accountant.Initialize(hgq_root_group);
