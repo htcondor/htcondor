@@ -414,8 +414,9 @@ do_download() {
 			OS_VERSION=$dist_version_number
 
 		    #
-		    # FIXME: The Debian VM (and therefore probably container) needs
-		    # libgomp.so.1 (from the package 'libgomp1').
+		    # FIXME: The Debian 9 and 10 VMs (and therefore probably
+		    # the corresonding containers) need  libgomp.so.1
+		    # (from the package 'libgomp1').
 		    #
 			;;
 		centos|rhel|amzn)
