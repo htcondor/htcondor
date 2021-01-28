@@ -161,9 +161,9 @@ get_distribution() {
 		;;
 
 		debian|raspbian)
-		    # FIXME: echoing VERSION_CODENAME out of /etc/os-release works
-		    # better on Devuan and is simpler... is that file missing on
-		    # raspbian?
+			# FIXME: echoing VERSION_CODENAME out of /etc/os-release works
+			# better on Devuan and is simpler... is that file missing on
+			# raspbian?
 			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
 			case "$dist_version" in
 				10)
@@ -295,7 +295,7 @@ do_install() {
 					set -x
 				fi
 
-                echo -e "\n# Adding our repository"
+				echo -e "\n# Adding our repository"
 
 				# Install our repository key.
 				$sh_c "apt-get install gnupg"
@@ -308,6 +308,13 @@ do_install() {
 
 				echo -e "\n# Updating package lists"
 				$sh_c "apt-get update"
+
+				# In the Ubuntu 20.04 Docker container, this blows up
+				# when run out of the pipe with curl because the
+				# keyboard-configuration and console-configuration
+				# require interactive responses (and stdin is eaten by
+				# this file).  How much do we care?
+
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				$sh_c "apt-get install -y minihtcondor"
 			)
