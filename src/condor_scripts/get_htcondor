@@ -321,41 +321,53 @@ do_install() {
 			)
 			;;
 		centos|rhel|amzn)
-			repo_dist="$lsb_dist"
-			if [ "$lsb_dist" = "centos" ]; then
+			(
+			if ! is_dry_run; then
+				set -x
+			fi
+
+			repo_dist=${lsb_dist}
+			if [ "${repo_dist}" = "centos" ]; then
 				repo_dist="rhel"
 			fi
-			yum_repo="$DOWNLOAD_URL/yum/repo.d/htcondor-$CHANNEL-$repo_dist$dist_version.repo"
-			if ! curl -Ifs "$yum_repo" > /dev/null; then
-				echo "Error: Unable to access repository file $yum_repo, is it valid?"
-				exit 1
+			if [ "${repo_dist}" = "rhel" ]; then
+				repo_dist="el"
 			fi
-			if [ "$lsb_dist" = "fedora" ]; then
-				pkg_manager="dnf"
-				config_manager="dnf config-manager"
-				pre_reqs="dnf-plugins-core"
-				pkg_suffix="fc$dist_version"
-			else
-				pkg_manager="yum"
-				config_manager="yum-config-manager"
-				pre_reqs="yum-utils epel-release"
-				pkg_suffix="el"
+			repo_suffix="${repo_dist}${dist_version}"
+			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
+
+			if [ "${lsb_dist}" != "amzn" ]; then
+				echo -e "\n# Installing EPEL"
+				$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${dist_version}.noarch.rpm"
+
+				#
+				# Just to make our lives harder, the packages we need from
+				# EPEL depend on repositories which are disabled by default,
+				# and those repositories and how to enable them between
+				# RHEL and CentOS and between version 7 and 8.
+				#
+				if [ "${lsb_dist}" = "centos" ]; then
+					if [ "${dist_version}" -eq 8 ]; then
+						$sh_c "dnf config-manager --set-enabled powertools"
+					fi
+				elif [ "${lsb_dist}" = "rhel" ]; then
+					# subscription-manager only works if you've already
+					# "register"ed and "attach"ed the system.
+					# FIXME: document this.
+					if [ "${dist_version}" -eq 7 ]; then
+						$sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
+					elif [ "${dist_version}" -eq 8 ]; then
+						ARCH=$(/bin/arch)
+						$sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
+					fi
+				fi
 			fi
-			echo -e "\n# Installing prerequisite tools and repositories"
-			(
-				if ! is_dry_run; then
-					set -x
-				fi
-				$sh_c "$pkg_manager install -y $pre_reqs"
-				$sh_c "rpm --import https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor"
-				$sh_c "$config_manager --add-repo $yum_repo"
-			)
-			echo -e "\n# Installing HTCondor binaries and dependencies"
-			(
-				if ! is_dry_run; then
-					set -x
-				fi
-				$sh_c "$pkg_manager --setopt=tsflags='' install -y minicondor"
+
+			echo -e "\n# Installing the HTCondor repo"
+			$sh_c "yum install -y ${yum_repo_rpm}"
+
+			echo -e "\n$ Installing HTCondor"
+			$sh_c "yum install -y minicondor"
 			)
 			;;
 		*)
