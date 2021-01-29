@@ -460,8 +460,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         // if we aren't receiving an IV, it means there was a previous msg MAC we want to add
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of previous MAC: %s\n",
             MAC_SIZE, debug_hex_dump(hex, reinterpret_cast<const char *>(m_conn_crypto_state->m_prev_mac_dec), MAC_SIZE));
-// ZKM FIXME TODO why is this EncryptUpdate and not DecryptUpdate?  (It seems to work though ?!?!)
-        if (1 != EVP_EncryptUpdate(ctx, NULL, &len, m_conn_crypto_state->m_prev_mac_dec, MAC_SIZE)) {
+        if (1 != EVP_DecryptUpdate(ctx, NULL, &len, m_conn_crypto_state->m_prev_mac_dec, MAC_SIZE)) {
             dprintf(D_NETWORK, "Failed to authenticate prior MAC.\n");
             return false;
         }
