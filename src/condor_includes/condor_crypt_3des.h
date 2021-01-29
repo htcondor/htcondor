@@ -44,7 +44,7 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
                  unsigned char *& output, 
                  int&             output_len);
 
-    virtual int ciphertext_size_with_cs(int ciphertext, std::shared_ptr<ConnCryptoState>) const { return ciphertext; }
+    virtual int ciphertext_size_with_cs(int ciphertext, StreamCryptoState* ) const { return ciphertext; }
 
 };
 

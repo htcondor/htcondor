@@ -33,7 +33,7 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
     // reset() method on their state object instead
 //    void resetState();
 //    static void resetState(ConnCryptoState *connState);
-    static void initState(std::shared_ptr<ConnCryptoState> connState);
+    static void initState(StreamCryptoState *ss);
 
     bool encrypt(Condor_Crypto_State *,
                  const unsigned char *,
@@ -63,7 +63,7 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
                  unsigned char *       output, 
                  int&                  output_len);
 
-    virtual int ciphertext_size_with_cs(int plaintext_size, std::shared_ptr<ConnCryptoState> connState) const;
+    virtual int ciphertext_size_with_cs(int plaintext_size, StreamCryptoState *ss) const;
 
  private:
     // ZKM TODO FIXME: Move all this from m_state to the Condor_Crypto_State param

@@ -26,8 +26,7 @@ KeyInfo:: KeyInfo()
     : keyData_    (0),
       keyDataLen_ (0),
       protocol_   (CONDOR_NO_PROTOCOL),
-      duration_   (0),
-      connState_  (0)
+      duration_   (0)
 {
     ASSERT("BLANK KEYS DISALLOWED");
 }
@@ -36,31 +35,21 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
     : keyData_    ( 0 ),
       keyDataLen_ (copy.keyDataLen_),
       protocol_   (copy.protocol_),
-      duration_   (copy.duration_),
-      connState_  (copy.connState_)
+      duration_   (copy.duration_)
 {
-    if(protocol_ == CONDOR_AESGCM) {
-        ASSERT(connState_.get());
-    }
     init(copy.keyData_, copy.keyDataLen_);
 }
 
 KeyInfo :: KeyInfo(const unsigned char * keyData,
                    int             keyDataLen,
                    Protocol        protocol,
-                   int             duration,
-                   std::shared_ptr<ConnCryptoState> connState )
+                   int             duration )
     : 
       keyData_    (0),
       keyDataLen_ (keyDataLen),
 	  protocol_   (protocol),
-      duration_   (duration),
-      connState_      (connState)
+      duration_   (duration)
 {
-    if(protocol_ == CONDOR_AESGCM) {
-	dprintf (D_ALWAYS, "ZKM: BLOWUP IF %p IS ZERO.\n", connState_.get());
-        ASSERT(connState_.get());
-    }
     init(keyData, keyDataLen);
 }
 
@@ -75,11 +64,6 @@ KeyInfo& KeyInfo :: operator=(const KeyInfo& copy)
 		keyDataLen_ = copy.keyDataLen_;
 		protocol_   = copy.protocol_;
 		duration_   = copy.duration_;
-		connState_  = copy.connState_;
-
-		if(copy.protocol_ == CONDOR_AESGCM) {
-			ASSERT(connState_.get());
-		}
 		init(copy.keyData_, copy.keyDataLen_);
 	}
 

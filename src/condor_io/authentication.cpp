@@ -1010,15 +1010,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             // Now, unwrap it.  
             if ( authenticator_ && authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
 					// Success
-				if (protocol == CONDOR_AESGCM) {
-					auto ccs = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
-					dprintf(D_ALWAYS, "ZKM: ***** CLIENT AES EXPLICIT INIT of new ConnCryptoState %p.\n", ccs.get());
-					Condor_Crypt_AESGCM::initState(ccs);
-					key = new KeyInfo((unsigned char *)decryptedKey, keyLength,
-						(Protocol) protocol, duration, ccs);
-				} else {
-					key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration, std::shared_ptr<ConnCryptoState>());
-				}
+				key = new KeyInfo((unsigned char *)decryptedKey, keyLength, (Protocol)protocol, duration);
 			} else {
 					// Failure!
 				retval = 0;

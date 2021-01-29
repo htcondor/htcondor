@@ -2098,18 +2098,24 @@ char * Sock::serializeCryptoInfo() const
         sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
                 (int)get_encryption());
 
-	// if protocol is 3 (AES) then we need to send the ConnCryptoState
+	// if protocol is 3 (AES) then we need to send the StreamCryptoState
 	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
-		dprintf(D_ALWAYS, "ZKM: SOCK: sending more ConnCryptoState!.\n");
+		dprintf(D_ALWAYS, "ZKM: SOCK: sending more StreamCryptoState!.\n");
 		// this is daemon-to-daemon inheritance so no need to worry
 		// about byte-order.  furthermore there are no pointers, just a
 		// struct with data.  we send hex bytes, receiver serializes
 		// them.
 
+		// there should be a crypto_state_ object, and within that the
+		// stream state, that we need to extract information from and
+		// pass along.
+		dprintf(D_ALWAYS, "ZKM SOCK: crypto_state_ is %p.\n", crypto_state_);
+		dprintf(D_ALWAYS, "ZKM SOCK: stream_state is %p.\n", &(crypto_state_->m_stream_crypto_state));
+
 		char * ptr = outbuf + strlen(outbuf);
-		unsigned char * ccs_serial = (unsigned char*)(get_crypto_key().getConnCryptoState().get());
-		dprintf(D_ALWAYS, "ZKM SERIALIZE: encoding %lu bytes.\n", sizeof(ConnCryptoState));
-		for (unsigned int i=0; i < sizeof(ConnCryptoState); i++, ccs_serial++, ptr+=2) {
+		unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
+		dprintf(D_ALWAYS, "ZKM SERIALIZE: encoding %lu bytes.\n", sizeof(StreamCryptoState));
+		for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++, ptr+=2) {
 			dprintf(D_ALWAYS, "ZKM SERIALIZE: index %i byte %02x.\n", i, *ccs_serial);
 		    sprintf(ptr, "%02X", *ccs_serial);
 		}
@@ -2209,19 +2215,17 @@ const char * Sock::serializeCryptoInfo(const char * buf)
 
 	dprintf(D_ALWAYS, "ZKM: SOCK: CRYPTO: read so far: p: %i, m: %i.\n", protocol, encryption_mode);
 
-	// if protocol is 3 (AES) then we expect to receive the following additional (the ConnCryptoState object)
-	//std::shared_ptr<ConnCryptoState> ccs;
-	auto ccs = std::shared_ptr<ConnCryptoState>();
+	// if protocol is 3 (AES) then we expect to receive the following additional (the StreamCryptoState object)
+	StreamCryptoState scs;
 	if(protocol == CONDOR_AESGCM) {
 		unsigned int hex;
-		dprintf(D_ALWAYS, "ZKM: SOCK: receiving more ConnCryptoState: %s\n", ptmp);
+		dprintf(D_ALWAYS, "ZKM: SOCK: receiving more StreamCryptoState: %s\n", ptmp);
 		// this is daemon-to-daemon inheritance so no need to worry
 		// about byte-order.  furthermore there are no points, just a
 		// struct with data.  sender dumps hex bytes, we serialize
 		// them.
-		ccs = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
-		char* ptr = (char*)(ccs.get());
-		for(unsigned int i = 0; i < sizeof(ConnCryptoState); i++) {
+		char* ptr = (char*)(&scs);
+		for(unsigned int i = 0; i < sizeof(StreamCryptoState); i++) {
 			citems = sscanf(ptmp, "%2X", &hex);
 			if (citems != 1) break;
 			*ptr = (unsigned char)hex;
@@ -2240,32 +2244,29 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         unsigned char * ptr = kserial;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
-		dprintf(D_ALWAYS, "ZKM DECODE index %i\n);", i);
+		dprintf(D_ALWAYS, "ZKM DECODE index %i\n", i);
             citems = sscanf(ptmp, "%2X", &hex);
 			if (citems != 1) break;
-		dprintf(D_ALWAYS, "ZKM DECODE citems %i, val %02X\n);", citems, (unsigned char)hex);
+		dprintf(D_ALWAYS, "ZKM DECODE citems %i, val %02X\n", citems, (unsigned char)hex);
 		
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
         }        
-	dprintf(D_ALWAYS, "ZKM DECODE DONE! ccs is %p.\n", ccs.get());
 
         // Initialize crypto info
-        //
-        // This is super-wacky.  We do NOT pass in the ConnCryptoState -- it will get "inited"
-        // during set_crypto_key below.  Instead, hang on to it, and set it afterards.
-        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0, std::shared_ptr<ConnCryptoState>(new ConnCryptoState));
-	dprintf(D_ALWAYS, "ZKM MADE KeyInfo.\n");
-	dprintf(D_ALWAYS, "ZKM MADE ccs is %p.\n", k.getConnCryptoState().get());
+        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0);
 
         set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
 
-        std::shared_ptr<ConnCryptoState> dest_ccs = crypto_state_->getkey().getConnCryptoState();
-
-	dprintf(D_ALWAYS, "ZKM DECODE doing memcpy of %lu bytes from %p to %p\n", sizeof(ConnCryptoState), (char*)(ccs.get()), (char*)(dest_ccs.get()));
-	memcpy((char*)(dest_ccs.get()), (char*)(ccs.get()), sizeof(ConnCryptoState));
+        // now that we have set crypto state and have a crypto object, replace the AES
+        // StreamCryptoState with what we deserialized above.
+        dprintf(D_ALWAYS, "** ZKM, protocol is %i, crypto_ is %p, crypto_state_ is %p.\n", protocol, crypto_, crypto_state_);
+        if(protocol == CONDOR_AESGCM) {
+            dprintf(D_ALWAYS, "** ZKM, MEMCPY to %p from %p size %i.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+            memcpy(&(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+        }
 
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
@@ -2313,7 +2314,7 @@ const char * Sock::serializeMdInfo(const char * buf)
         }        
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kmd, len, CONDOR_NO_PROTOCOL, 0, std::shared_ptr<ConnCryptoState>());
+        KeyInfo k((unsigned char *)kmd, len, CONDOR_NO_PROTOCOL, 0);
         set_MD_mode(MD_ALWAYS_ON, &k, 0);
         free(kmd);
 		ASSERT( *ptmp == '*' );
@@ -2960,7 +2961,7 @@ void Sock::resetCrypto()
   if (crypto_state_) {
     crypto_state_->reset();
     if (crypto_state_->getkey().getProtocol() == CONDOR_AESGCM) {
-        Condor_Crypt_AESGCM::initState(crypto_state_->getkey().getConnCryptoState());
+        Condor_Crypt_AESGCM::initState(&(crypto_state_->m_stream_crypto_state));
     }
   }
 #endif

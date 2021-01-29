@@ -3378,17 +3378,14 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 	KeyInfo *keyinfo;
 	if (crypt_protocol == CONDOR_AESGCM) {
+		// should this be MAC_SIZE * 2?
 		unsigned char keybuf2[32];
 		memcpy(keybuf2, keybuf, 16);
 		memcpy(keybuf2 + 16, keybuf, 16);
-		std::shared_ptr<ConnCryptoState> ccs = std::shared_ptr<ConnCryptoState>(new ConnCryptoState());
-		dprintf (D_ALWAYS, "ZKM: *** NON-NEG-SESS: explicitly calling AES initState on new AES object. %p \n", ccs.get());
-		Condor_Crypt_AESGCM::initState(ccs);
-		dprintf (D_ALWAYS, "ZKM: *** NON-NEG-SESS: MADE IT HERE after calling above.\n");
-		keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0, ccs);
+		keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0);
 	} else {
-		dprintf (D_ALWAYS, "ZKM: *** NOT creating new ConnCryptoState for non AES(protocol %i) object.\n", crypt_protocol);
-		keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0, std::shared_ptr<ConnCryptoState>());
+		// should this be MAC_SIZE?
+		keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0);
 	}
 	free( keybuf );
 	keybuf = NULL;

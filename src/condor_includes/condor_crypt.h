@@ -26,6 +26,27 @@
 
 #include "CryptKey.h"
 
+struct StreamCryptoState {
+    // The IV is split in two: a 32-bit counter and a
+    // 64-bit random number for a total of 12 bytes.
+    // The ctr is added to the last 4 bytes of the IV.
+    union Packed_IV {
+        unsigned char iv[12]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        struct {
+            uint32_t pkt;
+            uint32_t conn;
+        } ctr;
+    };
+
+    uint32_t m_ctr_enc{0}; // Number of outgoing (encrypted) packets
+    uint32_t m_ctr_dec{0}; // Number of incoming (decrypted) packets
+    uint32_t m_ctr_conn{0}; // Number of times this session has been used by a connection
+    union Packed_IV m_iv_enc; // IV for outgoing data
+    union Packed_IV m_iv_dec; // IV for incoming data.
+    unsigned char m_prev_mac_enc[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    unsigned char m_prev_mac_dec[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+};
+
 
 class Condor_Crypto_State {
 
@@ -43,17 +64,22 @@ public:
     // duration
     KeyInfo       m_keyInfo;
 
+// these fields are used for 3DES and blowfish:
+//
+    // holds iv data for some methods (3DES and BLOWFISH)
     int m_ivec_len;
     unsigned char *m_ivec;
 
+    // sequence num
     int m_num;
 
-    // holds key data specific to the method (e.g. key schedules for DES)
+    // holds key data specific to some methods (e.g. key schedules for 3DES and BLOWFISH)
     int m_method_key_data_len;
     unsigned char *m_method_key_data;
 
-    // CURRENTLY UNUSED: int m_additional_len;
-    // CURRENTLY UNUSED: unsigned char *m_additional;
+// this data structure is used for AESGCM:
+//
+    StreamCryptoState m_stream_crypto_state;
 
 private:
     Condor_Crypto_State() {ASSERT("PRIVATE CONSTRUCTOR CALLED\n");} ;
@@ -97,7 +123,7 @@ class Condor_Crypt_Base {
                          unsigned char *& output, 
                          int&             output_len) = 0;
 
-    virtual int ciphertext_size_with_cs(int ciphertext, std::shared_ptr<ConnCryptoState> ccs) const = 0;
+    virtual int ciphertext_size_with_cs(int ciphertext, StreamCryptoState *ss) const = 0;
 
  protected:
     static int encryptedSize(int inputLength, int blockSize = 8);
