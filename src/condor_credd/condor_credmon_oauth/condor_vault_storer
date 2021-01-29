@@ -6,7 +6,7 @@
 
 ME="${0##*/}"
 
-ARGS="$@"
+ARGS=("$@")
 
 # When condor_submit launches this the cursor is not at the beginning
 #   of a new line, so always send a newline before anything else to
@@ -39,8 +39,8 @@ fatal()
     newlineifneeded
     echo "$ME: $@"
     if [ "$VERBOSE" = "" ]; then
-        echo "  More details may be available by running"
-        echo "    $ME -v $ARGS"
+        echo "  More details might be available by running"
+        echo "    $ME -v $(printf '"%s" ' "${ARGS[@]}")"
     fi
     exit 1
 } >&2
@@ -49,8 +49,8 @@ verbose()
 {
     if [ -n "$VERBOSE" ]; then
         newlineifneeded
-        echo "$@" >&2
-    fi
+        echo "$@"
+    fi >&2
 }
 
 VERBOSE=
@@ -125,10 +125,13 @@ for REQUEST; do
     done
     STOREOPTS=("-s" "$SERVICE" "${STOREOPTS[@]}")
     verbose "Checking if ${STOREOPTS[@]} credentials exist"
-    condor_store_cred query-oauth "${STOREOPTS[@]}" >$STOREOUT
+    STOREMSG="`condor_store_cred query-oauth "${STOREOPTS[@]}" >$STOREOUT 2>&1`"
     case $? in
         0) ;;
-        1)  if [ -f "$VTOKEN.$SERVICE" ]; then
+        1)  if [ -n "$STOREMSG" ]; then
+                verbose "$STOREMSG"
+            fi
+            if [ -f "$VTOKEN.$SERVICE" ]; then
                 verbose "Removing $VTOKEN.$SERVICE because there are no $SERVICE credentials stored"
                 rm -f "$VTOKEN.$SERVICE"
             fi;;
@@ -137,7 +140,7 @@ They can be removed by
   condor_store_cred delete-oauth -s $SERVICE
 but make sure no other job is using them."
             ;;
-        *) fatal "Querying condor credentials failed";;
+        *) fatal "${STOREMSG}${NL}Querying condor credentials failed";;
     esac
     if [ -n "$BTOKEN" ]; then
         OPTS=("-o" "$BTOKEN.$SERVICE" "${OPTS[@]}")
