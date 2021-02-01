@@ -55,7 +55,8 @@ Options
 Exit Status
 -----------
 
-[FIXME]  Always 0, I assume?
+On success, exits with code 0.  Failures detected by **get_htcondor** will
+result in exit code 1.  Other failures may have other exit codes.
 
 Installed Configuration
 -----------------------
@@ -70,8 +71,6 @@ display their details for you.
 
 Minicondor
 ##########
-
-[FIXME]  What will this actually be?
 
 A minicondor performs all of the roles on a single machine, so we can use
 the FS method to authenticate all connections.  Likewise, we force all
