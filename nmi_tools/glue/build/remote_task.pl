@@ -49,6 +49,7 @@ my $CHECK_NATIVE_TASK     = "remote_task-check_native";
 my $BUILD_TESTS_TASK      = "remote_task-build_tests";
 my $RUN_UNIT_TESTS        = "remote_task-run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task-coverity_analysis";
+my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 
 my $taskname = "";
 my $execstr = "";
@@ -192,6 +193,9 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 	$execstr = get_cmake_args();
 	$execstr .= " -DBUILD_TESTING:bool=false ";
 	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
+} elsif ($taskname eq $EXTRACT_TARBALLS_TASK) {
+    $execstr = get_extract_tarballs_script();
+    $execstr .= " .";
 }
 
 
@@ -289,6 +293,10 @@ sub get_cmake_args {
 
 sub get_tarball_check_script {
     return dirname($0) . "/check-tarball.pl";
+}
+
+sub get_extract_tarballs_script {
+    return dirname($0) . "/make-tarball-from-rpms";
 }
 
 sub get_tarball_name {

@@ -1,0 +1,16 @@
+#!/bin/sh
+# This command sets the RPATH for all the executables on a tarball directory
+if [ $# -ne 1 ]; then
+    echo 'Error: missing argument'
+    echo "Usage: $(basename $0) RPMs-directory"
+    exit 1
+fi
+tarball=$1
+if [ ! -d $tarball ]; then
+    echo "Error: $tarball is not a directory"
+    echo "Usage: $(basename $0) RPMs-directory"
+    exit 1
+fi
+
+cd $tarball
+patchelf --set-rpath '$ORIGIN/../lib64' $(file $(find -type f -executable)|grep 'ELF.*shared'|sed -e s/:.*//)
