@@ -68,15 +68,25 @@ ReliSock::init()
 
 ReliSock::ReliSock()
 	: Sock(),
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	m_send_md_ctx(nullptr, EVP_MD_CTX_free),
+	m_recv_md_ctx(nullptr, EVP_MD_CTX_free)
+#else
 	m_send_md_ctx(nullptr, EVP_MD_CTX_destroy),
 	m_recv_md_ctx(nullptr, EVP_MD_CTX_destroy)
+#endif
 {
 	init();
 }
 
 ReliSock::ReliSock(const ReliSock & orig) : Sock(orig),
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	m_send_md_ctx(nullptr, EVP_MD_CTX_free),
+	m_recv_md_ctx(nullptr, EVP_MD_CTX_free)
+#else
 	m_send_md_ctx(nullptr, EVP_MD_CTX_destroy),
 	m_recv_md_ctx(nullptr, EVP_MD_CTX_destroy)
+#endif
 {
 	init();
 	// now copy all cedar state info via the serialize() method
@@ -881,7 +891,11 @@ check_header:
 
         if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->_bytes_recvd < 1024*1024) {
                 if (!p_sock->m_recv_md_ctx) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+                        p_sock->m_recv_md_ctx.reset(EVP_MD_CTX_new());
+#else
                         p_sock->m_recv_md_ctx.reset(EVP_MD_CTX_create());
+#endif
                         if (!p_sock->m_recv_md_ctx) {
                                 dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
                                 return false;
@@ -1115,7 +1129,11 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 
 	if (!p_sock->get_encryption() && !p_sock->m_finished_send_header && p_sock->_bytes_sent < 1024*1024) {
 		if (!p_sock->m_send_md_ctx) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+			p_sock->m_send_md_ctx.reset(EVP_MD_CTX_new());
+#else
 			p_sock->m_send_md_ctx.reset(EVP_MD_CTX_create());
+#endif
 			if (!p_sock->m_send_md_ctx) {
 				dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
 				return false;
@@ -1144,7 +1162,11 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 /*
                 if (!p_sock->m_send_md_ctx) {
 			dprintf (D_ALWAYS, "ZKM: ***** We got here with no p_sock->m_send_ctx.  Creating one now.\n");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+                        p_sock->m_send_md_ctx.reset(EVP_MD_CTX_new());
+#else
                         p_sock->m_send_md_ctx.reset(EVP_MD_CTX_create());
+#endif
                         if (!p_sock->m_send_md_ctx) {
                                 dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
                                 return false;
