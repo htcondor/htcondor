@@ -14,7 +14,6 @@ the :doc:`admin-quick-start`.
 
 .. code-block:: shell
 
-    # [FIXME] Verify that this actually works everywhere.
     sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
 
 .. _inspecting_the_script:
