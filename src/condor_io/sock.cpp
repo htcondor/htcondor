@@ -2264,7 +2264,7 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         // StreamCryptoState with what we deserialized above.
         dprintf(D_ALWAYS, "** ZKM, protocol is %i, crypto_ is %p, crypto_state_ is %p.\n", protocol, crypto_, crypto_state_);
         if(protocol == CONDOR_AESGCM) {
-            dprintf(D_ALWAYS, "** ZKM, MEMCPY to %p from %p size %i.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+            dprintf(D_ALWAYS, "** ZKM, MEMCPY to %p from %p size %lu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
             memcpy(&(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
         }
 
