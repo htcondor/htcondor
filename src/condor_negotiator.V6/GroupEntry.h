@@ -49,6 +49,19 @@ struct GroupEntry {
 						const std::function<void(GroupEntry *g, int limit)> &fn,
 						bool global_accept_surplus);
 
+		// This maps submitter names to their assigned accounting group.
+		// When called with a defined group name, it maps that group name to itself.
+		static GroupEntry *GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName);
+		static GroupEntry *GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName, bool &IsGroup);
+		static void Initialize(GroupEntry *hgq_root_group);
+
+		struct ci_less {
+			bool operator()(const std::string& a, const std::string& b) const {
+				return strcasecmp(a.c_str(), b.c_str()) < 0;
+			}
+		};
+  		static std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
+
 		// these are set from configuration
 		std::string name;
 		double config_quota;
@@ -84,7 +97,7 @@ struct GroupEntry {
 		// tree structure
 		GroupEntry* parent;
 		std::vector<GroupEntry*> children;
-		std::map<std::string, size_type, Accountant::ci_less> chmap;
+		std::map<std::string, size_type, GroupEntry::ci_less> chmap;
 
 		// attributes for configurable sorting
 		ClassAd* sort_ad;
