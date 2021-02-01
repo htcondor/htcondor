@@ -199,9 +199,12 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         memcpy(output, iv, IV_SIZE);
     }
 
-    char hex[3 * IV_SIZE + 1];
+    // for debugging, hexdbg at different times needs to hold hex
+    // representation of IV, MAC, or initial AAD bytes.  currently
+    // none are larger than 16 so the 128 is plenty.
+    char hexdbg[128];
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : Final IV used for outgoing encrypt: %s\n",
-        debug_hex_dump(hex, reinterpret_cast<char*>(iv), IV_SIZE));
+        debug_hex_dump(hexdbg, reinterpret_cast<char*>(iv), IV_SIZE));
 
     if (cs->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
         dprintf(D_NETWORK, "Failed to have correct AES-GCM key type.\n");
@@ -219,8 +222,8 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
 
     // Authenticate additional data from the caller.
     int len;
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of AAD data: %s\n",
-        aad_len, debug_hex_dump(hex, reinterpret_cast<const char *>(aad), std::min(IV_SIZE, aad_len)));
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of AAD data: %s...\n",
+        aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
     if (aad && (1 != EVP_EncryptUpdate(ctx, NULL, &len, aad, aad_len))) {
         dprintf(D_NETWORK, "Failed to authenticate caller input data.\n");
         return false;
@@ -228,7 +231,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
 
     if (!sending_IV) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of previous MAC: %s\n",
-            MAC_SIZE, debug_hex_dump(hex, reinterpret_cast<const char *>(stream_state->m_prev_mac_enc), MAC_SIZE));
+            MAC_SIZE, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(stream_state->m_prev_mac_enc), MAC_SIZE));
 
         if ( 1 != EVP_EncryptUpdate(ctx, NULL, &len, stream_state->m_prev_mac_enc, MAC_SIZE)) {
             dprintf(D_NETWORK, "Failed to authenticate prior MAC.\n");
@@ -426,9 +429,12 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : about to init key %0x %0x %0x %0x.\n",
         *(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
 
-    char hex[3 * (std::max(IV_SIZE,aad_len)) + 1];
+    // for debugging, hexdbg at different times needs to hold hex
+    // representation of IV, MAC, or initial AAD bytes.  currently
+    // none are larger than 16 so the 128 is plenty.
+    char hexdbg[128];
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV used for incoming decrypt: %s\n",
-        debug_hex_dump(hex,
+        debug_hex_dump(hexdbg,
         reinterpret_cast<const char *>(iv), IV_SIZE));
 
     if (!EVP_DecryptInit_ex(ctx, NULL, NULL, kdp, iv)) {
@@ -437,8 +443,8 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     int len;
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of AAD data: %s\n",
-        aad_len, debug_hex_dump(hex, reinterpret_cast<const char *>(aad), aad_len));
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of AAD data: %s...\n",
+        aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
     if (aad && !EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed when authenticating user AAD.\n");
         return false;
@@ -447,7 +453,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     if (!receiving_IV) {
         // if we aren't receiving an IV, it means there was a previous msg MAC we want to add
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of previous MAC: %s\n",
-            MAC_SIZE, debug_hex_dump(hex, reinterpret_cast<const char *>(stream_state->m_prev_mac_dec), MAC_SIZE));
+            MAC_SIZE, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(stream_state->m_prev_mac_dec), MAC_SIZE));
         if (1 != EVP_DecryptUpdate(ctx, NULL, &len, stream_state->m_prev_mac_dec, MAC_SIZE)) {
             dprintf(D_NETWORK, "Failed to authenticate prior MAC.\n");
             return false;

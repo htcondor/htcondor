@@ -32,6 +32,11 @@
 
 #include <openssl/evp.h>
 
+//If openssl version less than 1.1
+#if OPENSSL_VERSION_NUMBER < 269484032 || defined(LIBRESSL_VERSION_NUMBER)
+#define OPENSSL10
+#endif
+
 /*
 **	R E L I A B L E    S O C K
 */

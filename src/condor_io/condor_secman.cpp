@@ -3282,7 +3282,7 @@ SecMan::getCryptProtocolNameToEnum(char const *name) {
 			return CONDOR_AESGCM;
 		}
 	}
-	dprintf(D_NETWORK, "Could not decide on crypto protocol %s, return CONDOR_NO_PROTOCL.\n", tmp);
+	dprintf(D_NETWORK, "Could not decide on crypto protocol from list %s, return CONDOR_NO_PROTOCL.\n", name);
 	return CONDOR_NO_PROTOCOL;
 }
 
