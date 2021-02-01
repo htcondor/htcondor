@@ -336,10 +336,16 @@ do_install() {
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
 
-			if [ "${lsb_dist}" != "amzn" ]; then
-				echo -e "\n# Installing EPEL"
-				$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${dist_version}.noarch.rpm"
+			echo -e "\n# Installing EPEL"
+			epel_version="${dist_version}"
+			if [ "${lsb_dist}" = "amzn" ]; then
+				if [ "${dist_version}" -eq 2 ]; then
+					epel_version="7"
+				fi
+			fi
+			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
+			if [ "${lsb_dist}" != "amzn" ]; then
 				#
 				# Just to make our lives harder, the packages we need from
 				# EPEL depend on repositories which are disabled by default,
