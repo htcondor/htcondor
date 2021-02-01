@@ -17,7 +17,6 @@ otherwise, we recommend using our download script, as follows.
 .. code-block:: shell
 
     cd
-    # [FIXME] Verify that this actually works everywhere.
     curl -fsSL https://get.htcondor.com | /bin/bash -s -- --download
 
 Install
