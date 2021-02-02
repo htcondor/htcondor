@@ -5799,11 +5799,11 @@ description=Should condor_adstash query Startd job history
 type=bool
 default=False
 [ADSTASH_SCHEDD_HISTORY_MAX_ADS]
-description=
+description=Stop retrieving ads from a Schedd after this many ads per poll
 type=int
 default=10000
 [ADSTASH_STARTD_HISTORY_MAX_ADS]
-description=
+description=Stop retrieving ads from a Startd after this many ads per poll
 type=int
 default=10000
 [ADSTASH_SCHEDD_HISTORY_TIMEOUT]
@@ -5818,16 +5818,20 @@ default=240
 description=Hostname[:port] for the Elasticsearch instance condor_adstash should push to
 type=string
 default=$(FULL_HOSTNAME):9200
-[ADSTASH_ES_USERNAME]
-type=string
-[ADSTASH_ES_PASSWORD_FILE]
-type=path
 [ADSTASH_ES_USE_HTTPS]
 description=Should condor_adstash use SSL to connect with Elasticsearch
 type=bool
 default=False
+[ADSTASH_ES_USERNAME]
+description=Elasticsearch username
+type=string
+default=
+[ADSTASH_ES_PASSWORD_FILE]
+description=File containing Elasticsearch password on its first line
+type=path
+default=
 [ADSTASH_ES_BUNCH_SIZE]
-description=
+description=How many docs should be pushed to Elasticsearch at a time
 type=int
 default=250
 [ADSTASH_ES_INDEX_NAME]
