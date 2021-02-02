@@ -1,3 +1,18 @@
+# Copyright 2021 HTCondor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import sys
 import os
 import logging
@@ -10,11 +25,13 @@ import htcondor
 from pathlib import Path
 
 
-def get_default_config():
+def get_default_config(name="ADSTASH"):
 
     defaults = {
-        "checkpoint_file": Path(htcondor.param.get("LOG", Path.cwd())) / "es_push_checkpoint.json",
-        "log_file": Path(htcondor.param.get("LOG", Path.cwd())) / "es_push.log",
+        "process_name": name,
+        "sample_interval": 20*60,
+        "checkpoint_file": Path(htcondor.param.get("LOG", Path.cwd())) / "adstash_checkpoint.json",
+        "log_file": Path(htcondor.param.get("LOG", Path.cwd())) / "adstash.log",
         "log_level": "WARNING",
         "threads": 1,
         "collectors": htcondor.param.get("CONDOR_HOST"),
@@ -28,36 +45,37 @@ def get_default_config():
         "es_use_https": False,
         "es_timeout": 2 * 60,
         "es_bunch_size": 250,
-        "es_index_name": "htcondor_000001",
+        "es_index_name": "htcondor-000001",
     }
     return defaults
 
 
-def get_htcondor_config():
+def get_htcondor_config(name="ADSTASH"):
 
     htcondor.reload_config()
     p = htcondor.param
     conf = {
-        "checkpoint_file": p.get("ES_PUSH_CHECKPOINT_FILE"),
-        "log_file": p.get("ES_PUSH_LOG"),
-        "debug_levels": p.get("ES_PUSH_DEBUG"),
-        "threads": p.get("ES_PUSH_NUM_THREADS"),
-        "collectors": p.get("ES_PUSH_READ_POOLS"),
-        "schedds": p.get("ES_PUSH_READ_SCHEDDS"),
-        "startds": p.get("ES_PUSH_READ_STARTDS"),
-        "schedd_history": p.get("ES_PUSH_SCHEDD_HISTORY"),
-        "startd_history": p.get("ES_PUSH_STARTD_HISTORY"),
-        "schedd_history_max_ads": p.get("ES_PUSH_SCHEDD_HISTORY_MAX_ADS"),
-        "startd_history_max_ads": p.get("ES_PUSH_STARTD_HISTORY_MAX_ADS"),
-        "schedd_history_timeout": p.get("ES_PUSH_SCHEDD_HISTORY_TIMEOUT"),
-        "startd_history_timeout": p.get("ES_PUSH_STARTD_HISTORY_TIMEOUT"),
-        "es_host": p.get("ES_PUSH_ES_HOST"),
-        "es_username": p.get("ES_PUSH_ES_USERNAME"),
-        "es_password_file": p.get("ES_PUSH_ES_PASSWORD_FILE"),
-        "es_use_https": p.get("ES_PUSH_ES_USE_HTTPS"),
-        "es_timeout": p.get("ES_PUSH_ES_TIMEOUT"),
-        "es_bunch_size": p.get("ES_PUSH_ES_BUNCH_SIZE"),
-        "es_index_name": p.get("ES_PUSH_ES_INDEX_NAME"),
+        "sample_interval": p.get(f"{name}_SAMPLE_INTERVAL"),
+        "checkpoint_file": p.get(f"{name}_CHECKPOINT_FILE"),
+        "log_file": p.get(f"{name}_LOG"),
+        "debug_levels": p.get(f"{name}_DEBUG"),
+        "threads": p.get(f"{name}_NUM_THREADS"),
+        "collectors": p.get(f"{name}_READ_POOLS"),
+        "schedds": p.get(f"{name}_READ_SCHEDDS"),
+        "startds": p.get(f"{name}_READ_STARTDS"),
+        "schedd_history": p.get(f"{name}_SCHEDD_HISTORY"),
+        "startd_history": p.get(f"{name}_STARTD_HISTORY"),
+        "schedd_history_max_ads": p.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
+        "startd_history_max_ads": p.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
+        "schedd_history_timeout": p.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
+        "startd_history_timeout": p.get(f"{name}_STARTD_HISTORY_TIMEOUT"),
+        "es_host": p.get(f"{name}_ES_HOST"),
+        "es_username": p.get(f"{name}_ES_USERNAME"),
+        "es_password_file": p.get(f"{name}_ES_PASSWORD_FILE"),
+        "es_use_https": p.get(f"{name}_ES_USE_HTTPS"),
+        "es_timeout": p.get(f"{name}_ES_TIMEOUT"),
+        "es_bunch_size": p.get(f"{name}_ES_BUNCH_SIZE"),
+        "es_index_name": p.get(f"{name}_ES_INDEX_NAME"),
     }
 
     # Convert debug level
@@ -71,7 +89,7 @@ def get_htcondor_config():
             with passwd.open() as f:
                 conf["es_password"] = str(f.read(4096)).split("\n")[0]
             if conf["es_password"] == "":
-                logging.warning(f"Got empty string from password file {passwd}")
+                logging.error(f"Got empty string from password file {passwd}")
         except Exception:
             logging.exception(
                 f"Fatal error while trying to read password file {passwd}"
@@ -91,30 +109,32 @@ def get_htcondor_config():
     return conf
 
 
-def get_environment_config():
+def get_environment_config(name="ADSTASH"):
 
     env = os.environ
     conf = {
-        "checkpoint_file": env.get("ES_PUSH_CHECKPOINT_FILE"),
-        "log_file": env.get("ES_PUSH_LOG"),
-        "log_level": env.get("ES_PUSH_LOG_LEVEL"),
-        "threads": env.get("ES_PUSH_NUM_THREADS"),
-        "collectors": env.get("ES_PUSH_READ_POOLS"),
-        "schedds": env.get("ES_PUSH_READ_SCHEDDS"),
-        "startds": env.get("ES_PUSH_READ_STARTDS"),
-        "schedd_history": env.get("ES_PUSH_SCHEDD_HISTORY"),
-        "startd_history": env.get("ES_PUSH_STARTD_HISTORY"),
-        "schedd_history_max_ads": env.get("ES_PUSH_SCHEDD_HISTORY_MAX_ADS"),
-        "startd_history_max_ads": env.get("ES_PUSH_STARTD_HISTORY_MAX_ADS"),
-        "schedd_history_timeout": env.get("ES_PUSH_SCHEDD_HISTORY_TIMEOUT"),
-        "startd_history_timeout": env.get("ES_PUSH_STARTD_HISTORY_TIMEOUT"),
-        "es_host": env.get("ES_PUSH_ES_HOST"),
-        "es_username": env.get("ES_PUSH_ES_USERNAME"),
-        "es_password": env.get("ES_PUSH_ES_PASSWORD"),
-        "es_use_https": env.get("ES_PUSH_ES_USE_HTTPS"),
-        "es_timeout": env.get("ES_PUSH_ES_TIMEOUT"),
-        "es_bunch_size": env.get("ES_PUSH_ES_BUNCH_SIZE"),
-        "es_index_name": env.get("ES_PUSH_ES_INDEX_NAME"),
+        "standalone": env.get(f"{name}_STANDALONE"),
+        "sample_interval": env.get(f"{name}_SAMPLE_INTERVAL"),
+        "checkpoint_file": env.get(f"{name}_CHECKPOINT_FILE"),
+        "log_file": env.get(f"{name}_LOG"),
+        "log_level": env.get(f"{name}_LOG_LEVEL"),
+        "threads": env.get(f"{name}_NUM_THREADS"),
+        "collectors": env.get(f"{name}_READ_POOLS"),
+        "schedds": env.get(f"{name}_READ_SCHEDDS"),
+        "startds": env.get(f"{name}_READ_STARTDS"),
+        "schedd_history": env.get(f"{name}_SCHEDD_HISTORY"),
+        "startd_history": env.get(f"{name}_STARTD_HISTORY"),
+        "schedd_history_max_ads": env.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
+        "startd_history_max_ads": env.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
+        "schedd_history_timeout": env.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
+        "startd_history_timeout": env.get(f"{name}_STARTD_HISTORY_TIMEOUT"),
+        "es_host": env.get(f"{name}_ES_HOST"),
+        "es_username": env.get(f"{name}_ES_USERNAME"),
+        "es_password": env.get(f"{name}_ES_PASSWORD"),
+        "es_use_https": env.get(f"{name}_ES_USE_HTTPS"),
+        "es_timeout": env.get(f"{name}_ES_TIMEOUT"),
+        "es_bunch_size": env.get(f"{name}_ES_BUNCH_SIZE"),
+        "es_index_name": env.get(f"{name}_ES_INDEX_NAME"),
     }
 
     # remove None values
@@ -171,6 +191,7 @@ def debug2fmt(debug=None):
 def normalize_config_types(conf):
 
     integers = [
+        "sample_interval",
         "threads",
         "schedd_history_max_ads",
         "startd_history_max_ads",
@@ -179,7 +200,7 @@ def normalize_config_types(conf):
         "es_timeout",
         "es_bunch_size",
     ]
-    bools = ["schedd_history", "startd_history", "es_use_https"]
+    bools = ["standalone", "schedd_history", "startd_history", "es_use_https"]
 
     # integers
     for key in integers:
@@ -216,31 +237,74 @@ def get_config(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
+    # Get this process's name first
+    name_parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False
+        )
+    name_parser.add_argument(
+        "--process_name",
+        default="ADSTASH",
+        metavar="NAME",
+        help=(
+            "This adstash process's name (used for config/env variables)"
+            "[default: %(default)s]"
+        ),
+    )
+    args, remaining_argv = name_parser.parse_known_args()
+    process_name = args.process_name
+
     # Start with defaults
-    defaults = get_default_config()
+    defaults = get_default_config(name=process_name)
 
     # Overwrite default values from condor_config
-    defaults.update(get_htcondor_config())
+    defaults.update(get_htcondor_config(name=process_name))
 
     # Overwrite default values from environment
-    defaults.update(get_environment_config())
+    defaults.update(get_environment_config(name=process_name))
 
-    parser = argparse.ArgumentParser()
+    # Set up main arg parser
+    parser = argparse.ArgumentParser(parents=[name_parser])
     parser.set_defaults(**defaults)
 
     # Configurable args
     parser.add_argument(
+        "--standalone",
+        action="store_true",
+        help=(
+            "Run %(prog)s in standalone mode "
+            "(run once, do not contact condor_master)"
+        ),
+    )
+    parser.add_argument(
+        "--sample_interval",
+        type=int,
+        metavar="SECONDS",
+        help=(
+            "Number of seconds between polling the list(s) of daemons "
+            "[default: %(default)s]"
+        ),
+    )
+    parser.add_argument(
         "--checkpoint_file",
+        metavar="PATH",
         help=(
             "Location of checkpoint file (will be created if missing) "
             "[default: %(default)s]"
         ),
     )
     parser.add_argument(
-        "--log_file", help=("Log file location " "[default: %(default)s]"),
+        "--log_file",
+        metavar="PATH",
+        help=(
+            "Log file location "
+            "[default: %(default)s]"
+        ),
     )
     parser.add_argument(
         "--log_level",
+        metavar="LEVEL",
         help=(
             "Log level (CRITICAL/ERROR/WARNING/INFO/DEBUG) " "[default: %(default)s]"
         ),
@@ -274,16 +338,23 @@ def get_config(argv=None):
     parser.add_argument(
         "--schedd_history",
         action="store_true",
-        help=("Poll Schedd histories " "[default: %(default)s]"),
+        help=(
+            "Poll Schedd histories "
+            "[default: %(default)s]"
+        ),
     )
     parser.add_argument(
         "--startd_history",
         action="store_true",
-        help=("Poll Startd histories " "[default: %(default)s]"),
+        help=(
+            "Poll Startd histories "
+            "[default: %(default)s]"
+        ),
     )
     parser.add_argument(
         "--schedd_history_max_ads",
         type=int,
+        metavar="NUM_ADS",
         help=(
             "Abort after reading this many Schedd history entries "
             "[default: %(default)s]"
@@ -292,13 +363,16 @@ def get_config(argv=None):
     parser.add_argument(
         "--startd_history_max_ads",
         type=int,
+        metavar="NUM_ADS",
         help=(
-            "Abort after reading many Startd history entries " "[default: %(default)s]"
+            "Abort after reading this many Startd history entries "
+            "[default: %(default)s]"
         ),
     )
     parser.add_argument(
         "--schedd_history_timeout",
         type=int,
+        metavar="SECONDS",
         help=(
             "Abort polling Schedd history after this many seconds "
             "[default: %(default)s]"
@@ -307,6 +381,7 @@ def get_config(argv=None):
     parser.add_argument(
         "--startd_history_timeout",
         type=int,
+        metavar="SECONDS",
         help=(
             "Abort polling Startd history after this many seconds "
             "[default: %(default)s]"
@@ -314,12 +389,16 @@ def get_config(argv=None):
     )
     parser.add_argument(
         "--es_host",
+        metavar="HOST[:PORT]",
         help=(
-            "Host of the Elasticsearch instance to be used " "[default: %(default)s]"
+            "Host of the Elasticsearch instance to be used "
+            "[default: %(default)s]"
         ),
     )
     parser.add_argument(
-        "--es_username", help=("Username to use with Elasticsearch instance"),
+        "--es_username",
+        metavar="USERNAME",
+        help=("Username to use with Elasticsearch instance"),
     )
     parser.add_argument(
         "--es_password", help=argparse.SUPPRESS,  # don't encourage use on command-line
@@ -329,20 +408,28 @@ def get_config(argv=None):
         action="store_true",
         help=("Use HTTPS when connecting to Elasticsearch " "[default: %(default)s]"),
     )
-    parser.add_argument(
-        "--es_timeout",
-        type=int,
-        help=(
-            "Max seconds to wait to connect to Elasticsearch " "[default: %(default)s]"
-        ),
-    )
+    #parser.add_argument(
+    #    "--es_timeout",
+    #    type=int,
+    #    metavar="SECONDS"
+    #    help=(
+    #        "Max seconds to wait to connect to Elasticsearch "
+    #        "[default: %(default)s]"
+    #    ),
+    #)
     parser.add_argument(
         "--es_bunch_size",
         type=int,
+        metavar="NUM_DOCS",
         help=("Send docs to ES in bunches of this number " "[default: %(default)s]"),
     )
     parser.add_argument(
-        "--es_index_name", help=("Elasticsearch index name " "[default: %(default)s]"),
+        "--es_index_name",
+        metavar="INDEX_NAME",
+        help=(
+            "Elasticsearch index name "
+            "[default: %(default)s]"
+        ),
     )
     parser.add_argument(
         "--read_only", action="store_true", help="Only read the info, don't submit it.",
@@ -356,4 +443,8 @@ def get_config(argv=None):
         ),
     )
 
-    return parser.parse_args(argv)
+    # Parse args and add process name back to the list
+    args = parser.parse_args(remaining_argv)
+    args_dict = vars(args)
+    args_dict['process_name'] = process_name
+    return args

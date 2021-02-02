@@ -1,12 +1,22 @@
-"""
-Various helper utilities for the HTCondor-ES integration
-"""
+# Copyright 2021 HTCondor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 import pwd
 import sys
 import time
-import shlex
 import socket
 import random
 import json
@@ -20,7 +30,7 @@ from pathlib import Path
 from . import config
 
 
-def get_schedds(args=None):
+def get_schedds(args):
     """
     Return a list of schedd ads representing all the schedds in the pool.
     """
@@ -36,11 +46,13 @@ def get_schedds(args=None):
         coll = htcondor.Collector(host)
         try:
             schedds = coll.locateAll(htcondor.DaemonTypes.Schedd)
-        except IOError as e:
-            logging.warning(str(e))
+        except IOError:
+            logging.exception(f"Error while getting Schedds from Collector {host}")
             continue
 
         for schedd in schedds:
+            if args.schedds and not (schedd["Name"] in args.schedds.split(",")):
+                continue
             schedd["MyPool"] = host
             try:
                 schedd_ads[schedd["Name"]] = schedd
@@ -49,9 +61,6 @@ def get_schedds(args=None):
 
     schedd_ads = list(schedd_ads.values())
     random.shuffle(schedd_ads)
-
-    if args and args.schedds:
-        return [s for s in schedd_ads if s["Name"] in args.schedds.split(",")]
 
     return schedd_ads
 
@@ -75,18 +84,18 @@ def get_startds(args=None):
             name_ads = coll.query(
                 htcondor.AdTypes.Startd,
                 constraint='(SlotType == "Static") || (SlotType == "Partitionable")',
-                projection=["Name", "CondorVersion"],
+                projection=["Name", "Machine", "CondorVersion"],
             )
             for ad in name_ads:
                 try:
-                    # Remote history bindings only exist in startds running 8.9.7+
-                    version = tuple(
-                        [int(x) for x in ad["CondorVersion"].split()[1].split(".")]
-                    )
-                    if ad["Name"][0:6] == "slot1@":
+                    if ad["Name"][0:6] == "slot1@" or not ("@" in ad["Name"]):
+                        if args.startds and not (startd["Machine"] in args.startds.split(",")):
+                            continue
+                        # Remote history bindings only exist in startds running 8.9.7+
+                        version = tuple([int(x) for x in ad["CondorVersion"].split()[1].split(".")])
                         if version < (8, 9, 7):
                             logging.warning(
-                                f"The Startd on {ad['Name'].split('@')[-1]} is running HTCondor < 8.9.7 and will be skipped"
+                                f"The Startd on {ad['Machine']} is running HTCondor < 8.9.7 and will be skipped"
                             )
                             continue
                         startd = coll.locate(htcondor.DaemonTypes.Startd, ad["Name"])
@@ -95,15 +104,12 @@ def get_startds(args=None):
                 except Exception:
                     continue
 
-        except IOError as e:
-            logging.warning(str(e))
+        except IOError:
+            logging.exception(f"Error while getting list of Startds from Collector {host}")
             continue
 
     startd_ads = list(startd_ads.values())
     random.shuffle(startd_ads)
-
-    if args and args.startds:
-        return [s for s in startd_ads if s["Machine"] in args.startds.split(",")]
 
     return startd_ads
 
@@ -166,7 +172,7 @@ def set_up_logging(args):
         logger.addHandler(streamhandler)
 
 
-def collect_metadata():
+def collect_process_metadata():
     """
     Return a dictionary with:
     - hostname

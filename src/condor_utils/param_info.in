@@ -5757,6 +5757,84 @@ customization=const
 default=($(CPUBusy) || $(KeyboardBusy))
 customization=const
 
+# Defaults for condor_adstash
+[ADSTASH_SAMPLE_INTERVAL]
+description=How often to have condor_adstash poll daemons
+type=int
+default=1200
+[ADSTASH_CHECKPOINT_FILE]
+description=Where condor_adstash should store its checkpoint
+type=path
+default=$(LOG)/adstash_checkpoint.json
+[ADSTASH_LOG]
+description=Where condor_adstash should store its log
+type=path
+default=$(LOG)/adstash.log
+[ADSTASH_DEBUG]
+description=Debug logging options for condor_adstash
+type=string
+default=D_ALWAYS
+[ADSTASH_NUM_THREADS]
+description=How many parallel queries condor_adstash should use
+type=int
+default=1
+[ADSTASH_READ_POOLS]
+description=Comma-separated list of Collectors condor_adstash should query
+type=string
+default=$(CONDOR_HOST)
+[ADSTASH_READ_SCHEDDS]
+description=Comma-separated list of Schedds condor_adstash should query (* for all)
+type=string
+default=*
+[ADSTASH_READ_STARTDS]
+description=Comma-separated list of Startds condor_adstash should query (* for all)
+type=string
+default=*
+[ADSTASH_SCHEDD_HISTORY]
+description=Should condor_adstash query Schedd job history
+type=bool
+default=False
+[ADSTASH_STARTD_HISTORY]
+description=Should condor_adstash query Startd job history
+type=bool
+default=False
+[ADSTASH_SCHEDD_HISTORY_MAX_ADS]
+description=
+type=int
+default=10000
+[ADSTASH_STARTD_HISTORY_MAX_ADS]
+description=
+type=int
+default=10000
+[ADSTASH_SCHEDD_HISTORY_TIMEOUT]
+description=Max time in seconds condor_adstash has to process each Schedd history
+type=int
+default=240
+[ADSTASH_STARTD_HISTORY_TIMEOUT]
+description=Max time in seconds condor_adstash has to process each Startd history
+type=int
+default=240
+[ADSTASH_ES_HOST]
+description=Hostname[:port] for the Elasticsearch instance condor_adstash should push to
+type=string
+default=$(FULL_HOSTNAME):9200
+[ADSTASH_ES_USERNAME]
+type=string
+[ADSTASH_ES_PASSWORD_FILE]
+type=path
+[ADSTASH_ES_USE_HTTPS]
+description=Should condor_adstash use SSL to connect with Elasticsearch
+type=bool
+default=False
+[ADSTASH_ES_BUNCH_SIZE]
+description=
+type=int
+default=250
+[ADSTASH_ES_INDEX_NAME]
+description=What Elasticsearch index should condor_adstash push ads to
+type=string
+default=htcondor-000001
+
 ######
 ## add metaknobs below this banner
 ##
@@ -6488,6 +6566,13 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	TRUST_CREDENTIAL_DIRECTORY=True
+@end
+
+[$FEATURE.ADSTASH]
+description=Enable sending of schedd job history ads to unauthenticated Elasticsearch on localhost
+default : @end
+	ADSTASH_SCHEDD_HISTORY=True
+	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
 @end
 
 

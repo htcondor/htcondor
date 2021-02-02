@@ -1,0 +1,52 @@
+###
+### Template that applies default values
+###
+
+use feature: adstash
+
+###
+### Commonly modified macros
+###
+
+# Set to true to poll and push Schedd history to Elasticsearch
+#ADSTASH_SCHEDD_HISTORY = True
+# Comma-separated whitelist of Schedds to read from (* for all, globs not supported)
+#ADSTASH_READ_SCHEDDS = *
+# Set to true to poll and push Startd history to Elasticsearch
+#ADSTASH_STARTD_HISTORY = False
+# Comma-separated whitelist of Startds to read from (* for all, globs not supported)
+#ADSTASH_READ_STARTDS = *
+
+# How often to poll the daemons (in seconds)
+#ADSTASH_SAMPLE_INTERVAL = 1200
+# Debug level
+#ADSTASH_DEBUG = D_ALWAYS
+# Number of parallel threads for polling ads and pushing docs
+#ADSTASH_NUM_THREADS = 1
+
+# Elasticsearch settings
+#ADSTASH_ES_HOST = $(FULL_HOSTNAME):9200
+#ADSTASH_ES_USERNAME = 
+#ADSTASH_ES_PASSWORD_FILE = 
+#ADSTASH_ES_USE_HTTPS = False
+#ADSTASH_ES_INDEX_NAME = htcondor-000001
+
+###
+### Rarely changed macros
+###
+
+# Log and restart file locations
+#ADSTASH_LOG = $(LOG)/adstash.log
+#ADSTASH_CHECKPOINT_FILE = $(LOG)/adstash_checkpoint.json
+
+# Comma-separated whitelist of Collectors to read from
+#ADSTASH_READ_POOLS = $(CONDOR_HOST)
+
+# Max number of ads and max time to poll daemons for
+#ADSTASH_SCHEDD_HISTORY_MAX_ADS = 10000
+#ADSTASH_SCHEDD_HISTORY_TIMEOUT = 240
+#ADSTASH_STARTD_HISTORY_MAX_ADS = 10000
+#ADSTASH_STARTD_HISTORY_TIMEOUT = 240
+
+# Max docs to push to Elasticsearch at a time
+#ADSTASH_ES_BUNCH_SIZE = 250
