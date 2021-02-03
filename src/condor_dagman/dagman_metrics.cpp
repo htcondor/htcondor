@@ -88,23 +88,19 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 		// in a rescue DAG) because they should have already been reported
 		// as being run.  wenger 2013-06-27
 		//
-	Job *node;
-	dag->_jobs.Rewind();
-	while ( (node = dag->_jobs.Next()) ) {
+	for (auto it = dag->_jobs.begin(); it != dag->_jobs.end(); it++) {
 		_graphNumVertices++;
 #ifdef DEAD_CODE
 		_graphNumEdges += node->NumChildren();
 #else
-		_graphNumEdges += node->CountChildren();
+		_graphNumEdges += (*it)->CountChildren();
 #endif
-		if ( node->GetDagFile() ) {
+		if ((*it)->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
 			_simpleNodes++;
 		}
 	}
-
-	dag->_jobs.Rewind();
 }
 
 //---------------------------------------------------------------------------
