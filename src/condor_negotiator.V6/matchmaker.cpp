@@ -1463,7 +1463,7 @@ getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, f
 
 	if (!user) return false;
 
-    GroupEntry* group = accountant.GetAssignedGroup(user);
+    GroupEntry* group = GroupEntry::GetAssignedGroup(hgq_root_group, user);
 
     // if group quotas not in effect, return here for backward compatability
     if (hgq_groups.size() <= 1) return false;
@@ -1803,7 +1803,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				bool isGroup;
 
-				GroupEntry *ge = accountant.GetAssignedGroup(name, isGroup);
+				GroupEntry *ge = GroupEntry::GetAssignedGroup(hgq_root_group, name, isGroup);
 				std::string groupName(ge->name);
 
 				updateAd.Assign("IsAccountingGroup", isGroup);
@@ -1851,7 +1851,7 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
     }
 
     bool isGroup=false;
-    GroupEntry* cgrp = accountant.GetAssignedGroup(CustomerName, isGroup);
+    GroupEntry* cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup);
 
 	if (!cgrp) {
         return;

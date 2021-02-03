@@ -1,6 +1,17 @@
-"""
-Methods for processing the history in a schedd queue.
-"""
+# Copyright 2021 HTCondor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import json
 import time
@@ -16,6 +27,10 @@ import elasticsearch
 from . import elastic, utils, convert
 
 _LAUNCH_TIME = int(time.time())
+
+# Lower the volume on third-party packages
+for k in logging.Logger.manager.loggerDict:
+    logging.getLogger(k).setLevel(logging.WARNING)
 
 
 def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadata=None):
@@ -95,29 +110,21 @@ def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadat
                     "EnteredCurrentStatus": job_completion,
                 }
 
-            if utils.time_remaining(start_time, args.schedd_history_timeout) <= 0:
-                message = f"History crawler on {schedd_ad['Name']} has been running for more than {args.schedd_history_timeout} seconds; exiting."
+            if utils.time_remaining(my_start, args.schedd_history_timeout) <= 0:
+                message = f"History crawler on {schedd_ad['Name']} has been running for more than {args.schedd_history_timeout} seconds; pushing last ads and exiting."
                 logging.error(message)
                 timed_out = True
                 break
 
-            if args.schedd_history_max_ads and count > args.schedd_history_max_ads:
-                logging.warning(
-                    f"Aborting after {args.schedd_history_max_ads} documents"
-                )
-                break
-
     except RuntimeError:
-        message = f"Failed to query schedd for job history: {schedd_ad['Name']}"
-        exc = traceback.format_exc()
-        message += f"\n{exc}"
-        logging.error(message)
-
-    except Exception as exn:
-        message = f"Failure when processing schedd history query on {schedd_ad['Name']}: {str(exn)}"
-        exc = traceback.format_exc()
-        message += f"\n{exc}"
+        message = f"Failed to query schedd {schedd_ad['Name']} for job history"
         logging.exception(message)
+        return since
+
+    except Exception:
+        message = f"Failure when processing schedd history query on {schedd_ad['Name']}"
+        logging.exception(message)
+        return since
 
     # Post the remaining ads
     for idx, ad_list in list(buffered_ads.items()):
@@ -136,6 +143,11 @@ def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadat
     logging.info(
         f"Schedd {schedd_ad['Name']} history: response count: {count}; last job {last_formatted}; query time {total_time - total_upload:.2f} min; upload time {total_upload:.2f} min"
     )
+    if count >= min(10000, args.schedd_history_max_ads):
+        logging.warning(
+            f"Max ads ({min(10000, args.schedd_history_max_ads)}) was reached "
+            f"for {schedd_ad['Name']}, older history may be missing!"
+        )
 
     # If we got to this point without a timeout, all these jobs have
     # been processed and uploaded, so we can update the checkpoint
@@ -217,29 +229,21 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
                     "EnteredCurrentStatus": job_ad.get("EnteredCurrentStatus"),
                 }
 
-            if utils.time_remaining(start_time, args.startd_history_timeout) <= 0:
-                message = f"History crawler on {startd_ad['Machine']} has been running for more than {args.startd_history_timeout} seconds; exiting."
+            if utils.time_remaining(my_start, args.startd_history_timeout) <= 0:
+                message = f"History crawler on {startd_ad['Machine']} has been running for more than {args.schedd_history_timeout} seconds; pushing last ads and exiting."
                 logging.error(message)
                 timed_out = True
                 break
 
-            if args.startd_history_max_ads and count > args.startd_history_max_ads:
-                logging.warning(
-                    f"Aborting after {args.startd_history_max_ads} documents"
-                )
-                break
-
     except RuntimeError:
-        message = f"Failed to query startd for job history: {startd_ad['Machine']}"
-        exc = traceback.format_exc()
-        message += f"\n{exc}"
-        logging.error(message)
-
-    except Exception as exn:
-        message = f"Failure when processing startd history query on {startd_ad['Machine']}: {str(exn)}"
-        exc = traceback.format_exc()
-        message += f"\n{exc}"
+        message = f"Failed to query startd {startd_ad['Machine']} for job history"
         logging.exception(message)
+        return since
+
+    except Exception:
+        message = f"Failure when processing startd history query on {startd_ad['Machine']}"
+        logging.exception(message)
+        return since
 
     # Post the remaining ads
     for idx, ad_list in list(buffered_ads.items()):
@@ -258,6 +262,11 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
     logging.info(
         f"Startd {startd_ad['Machine']} history: response count: {count}; last job {last_formatted}; query time {total_time - total_upload:.2f} min; upload time {total_upload:.2f} min"
     )
+    if count >= min(10000, args.startd_history_max_ads):
+        logging.warning(
+            f"Max ads ({min(10000, args.schedd_history_max_ads)}) was reached "
+            f"for {startd_ad['Machine']}, some history may be missing!"
+        )
 
     # If we got to this point without a timeout, all these jobs have
     # been processed and uploaded, so we can update the checkpoint
@@ -352,27 +361,24 @@ def process_histories(
     chkp_updater = multiprocessing.Process(target=_chkp_updater)
     chkp_updater.start()
 
-    # Check if one of the processes has timed out
-    timed_out = False
+    # Report processes if they timeout or error
     for name, future in futures:
-        if utils.time_remaining(starttime, timeout, positive=False) > 0:
-            try:
-                future.get(timeout)
-            except multiprocessing.TimeoutError:
-                # This implies that the checkpoint hasn't been updated
-                message = f"Daemon {name} history timed out; ignoring progress."
-                exc = traceback.format_exc()
-                message += f"\n{exc}"
-                logging.error(message)
-            except elasticsearch.exceptions.TransportError:
-                message = f"Transport error while sending history data of {name}; ignoring progress."
-                exc = traceback.format_exc()
-                message += f"\n{exc}"
-                logging.error(message)
+        try:
+            future.get(timeout)
+        except multiprocessing.TimeoutError:
+            # This implies that the checkpoint hasn't been updated
+            message = f"Daemon {name} history timed out; ignoring progress."
+            logging.warning(message)
+        except elasticsearch.exceptions.TransportError:
+            message = f"Transport error while sending history data of {name}; ignoring progress."
+            logging.exception(message)
+        except Exception:
+            message = f"Error getting progress from {name}."
+            logging.exception(message)
 
     checkpoint_queue.put(None)  # Send a poison pill
     chkp_updater.join()
 
-    logging.info(
+    logging.warning(
         f"Processing time for history: {((time.time() - starttime) / 60.0)} mins"
     )

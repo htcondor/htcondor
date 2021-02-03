@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <deque>
 
+ std::map<std::string, GroupEntry*, GroupEntry::ci_less> GroupEntry::hgq_submitter_group_map;
+ 
 double calculate_subtree_usage(Accountant &accountant, GroupEntry *group) {
 	double subtree_usage = 0.0;
 
@@ -65,6 +67,21 @@ GroupEntry::~GroupEntry() {
 	if (NULL != sort_ad) delete sort_ad;
 }
 
+void 
+GroupEntry::Initialize(GroupEntry *hgq_root_group) {
+	hgq_submitter_group_map.clear();
+	// Pre-set mapping from all defined group names to themselves.
+	std::deque<GroupEntry*> grpq;
+	grpq.push_back(hgq_root_group);
+	while (!grpq.empty()) {
+		GroupEntry* group = grpq.front();
+		grpq.pop_front();
+		hgq_submitter_group_map[group->name] = group;
+		for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+			grpq.push_back(*j);
+		}
+	}
+}
 
 GroupEntry *
 GroupEntry::hgq_construct_tree(
@@ -106,7 +123,7 @@ GroupEntry::hgq_construct_tree(
 	}
 
 	// This is convenient for making sure a parent group always appears before its children
-	std::sort(groups.begin(), groups.end(), Accountant::ci_less());
+	std::sort(groups.begin(), groups.end(), GroupEntry::ci_less());
 
 	GroupEntry *hgq_root_group = new GroupEntry;
 	hgq_root_group->name = hgq_root_name;
@@ -135,7 +152,7 @@ GroupEntry::hgq_construct_tree(
 		bool missing_parent = false;
 		for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
 			// chmap is mostly a structure to avoid n^2 behavior in groups with many children
-			std::map<std::string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
+			std::map<std::string, GroupEntry::size_type, GroupEntry::ci_less>::iterator f(group->chmap.find(gpath[k]));
 			if (f == group->chmap.end()) {
 				dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
 				missing_parent = true;
@@ -280,7 +297,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 			continue;
 		}
 
-		GroupEntry* group = accountant.GetAssignedGroup(subname);
+		GroupEntry* group = GetAssignedGroup(hgq_root_group, subname);
 
 		// attach the submitter ad to the assigned group
 		group->submitterAds->Insert(ad);
@@ -1050,6 +1067,73 @@ GroupEntry::strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_gr
 	}
 	return slots;
 }
+
+GroupEntry* 
+GroupEntry::GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName) {
+	bool unused;
+	return GetAssignedGroup(hgq_root_group, CustomerName, unused);
+}
+
+GroupEntry* 
+GroupEntry::GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName, bool& IsGroup) {
+	std::string subname = CustomerName;
+
+	// Is this an acct group, syntactically speaking?
+	std::string::size_type pos = subname.find_last_of('@');
+	IsGroup = (pos == std::string::npos);
+
+	// cache results from previous invocations
+	std::map<std::string, GroupEntry*, GroupEntry::ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
+	if (fs != hgq_submitter_group_map.end()) return fs->second;
+
+	ASSERT(NULL != hgq_root_group);
+
+	if (IsGroup) {
+		// This is either a defunct group or a malformed submitter name: map it to root group
+		dprintf(D_ALWAYS, "group quota: WARNING: defaulting submitter \"%s\" to root group\n", subname.c_str());
+		hgq_submitter_group_map[subname] = hgq_root_group;
+		return hgq_root_group;
+	}
+
+	// strip '@' and everything after it
+	std::string gname=subname.substr(0, pos);
+
+	// is there a group/user separator?
+	pos = gname.find_last_of('.');
+	if (pos != std::string::npos) {
+		// everything prior to separator is group name
+		gname = gname.substr(0, pos);
+	} else {
+		// if there is no separator, semantic is "no group", so it goes to root
+		hgq_submitter_group_map[subname] = hgq_root_group;
+		return hgq_root_group;
+	}
+
+	GroupEntry* group = hgq_root_group;
+	// parse the group name into a path of sub-group names
+	std::vector<std::string> gpath;
+	parse_group_name(gname, gpath);
+
+	// walk down the tree using the group path
+	for (std::vector<std::string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
+		std::map<std::string, GroupEntry::size_type, GroupEntry::ci_less>::iterator f(group->chmap.find(*j));
+		if (f == group->chmap.end()) {
+			if (hgq_root_group->children.size() > 0) {
+				// I only want to log a warning if an HGQ configuration exists
+				dprintf(D_ALWAYS, "group quotas: WARNING: defaulting undefined group name %s to group %s\n", 
+						gname.c_str(), group->name.c_str());
+			}
+			break;
+		} else {
+			group = group->children[f->second];
+		}
+	}
+
+	hgq_submitter_group_map[subname] = group;
+	return group;
+}
+
+
 
 // Really string::split, if C++ had one, turns a . separated string into a vector of strings
 void parse_group_name(const std::string& gname, std::vector<std::string>& gpath) {
