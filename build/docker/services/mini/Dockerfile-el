@@ -29,7 +29,9 @@ RUN \
     \
     yum install -y git-core python3-flask jq &&  \
     \
-    rpm -q perl condor man-db minicondor git-core python3-flask jq && \
+    rpm -q perl condor man-db minicondor jq && \
+    (rpm -q git || rpm -q git-core) && \
+    (rpm -q python3-flask || rpm -q python36-flask) && \
     yum clean all && \
     rm -rf /var/cache/yum/*
 
