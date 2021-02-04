@@ -236,6 +236,21 @@ do_start_service() {
 	fi
 }
 
+do_token_security() {
+	if [ -z "${PASSWORD}" ]; then
+		echo -n "Enter a pool password: "
+		read PASSWORD
+	fi
+
+	# So 'echo' is a shell built-in, which means no command-line to show
+	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
+	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
+	echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+
+	# Now issue myself a token.
+	$sh_c "condor_token_create -identity condor@${SECURITY_DOMAIN} > /etc/condor/tokens.d/condor@${SECURITY_DOMAIN}"
+}
+
 do_install() {
 	# Figure out the distribution and version we are running on.
 	# This will set $lsb_dist and $dist_version.
@@ -285,7 +300,11 @@ do_install() {
 		fi
 	fi
 
-	echo -e "\n# Installing HTCondor for ${lsb_dist^} $dist_version"
+	if [ -z "${ROLE}" ]; then
+		echo -e "\n# Installing mini HTCondor for ${lsb_dist^} $dist_version"
+	else
+		echo -e "\n# Installing HTCondor as ${ROLE} for ${lsb_dist^} $dist_version"
+	fi
 
 	# Run install binaries for each distro accordingly
 	case "$lsb_dist" in
@@ -317,7 +336,11 @@ do_install() {
 				# this file).  How much do we care?
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
-				$sh_c "apt-get install -y minihtcondor"
+				if [ -z "${ROLE}" ]; then
+					$sh_c "apt-get install -y minihtcondor"
+				else
+					$sh_c "apt-get install -y htcondor"
+				fi
 			)
 			;;
 		centos|rhel|amzn)
@@ -373,7 +396,11 @@ do_install() {
 			$sh_c "yum install -y ${yum_repo_rpm}"
 
 			echo -e "\n$ Installing HTCondor"
-			$sh_c "yum install -y minicondor"
+			if [ -z "${ROLE}" ]; then
+				$sh_c "yum install -y minicondor"
+			else
+				$sh_c "yum install -y condor"
+			fi
 			)
 			;;
 		*)
@@ -392,8 +419,73 @@ do_install() {
 			;;
 	esac
 
-	# Now that the binaries are installed, drop config files into config.d
-	# FIXME
+	if [ -z "${CONDOR_HOST}" ]; then
+		CONDOR_HOST='$(FULL_HOSTNAME)'
+	fi
+
+	# We can offer a command-line option for this later, if necessary; and
+	# it may be desirable to default this to the UID/FS domain, instead.
+	SECURITY_DOMAIN="localpool"
+
+	SECURITY_CONFIG=$(cat <<-EOF
+		# Security config
+		use security : strong
+
+		ALLOW_ADMINISTRATOR = condor@${SECURITY_DOMAIN}
+		ALLOW_OWNER = condor@${SECURITY_DOMAIN}
+		ALLOW_READ = *
+		ALLOW_WRITE = condor@${SECURITY_DOMAIN}
+		ALLOW_DAEMON = condor@${SECURITY_DOMAIN}
+		ALLOW_NEGOTIATOR = condor@${SECURITY_DOMAIN}
+
+		# Enable IDTOKENS (for daemons), FS (for users), and ANONYMOUS (for READ).
+		SEC_DEFAULT_AUTHENTICATION_METHODS = FS, IDTOKENS, ANONYMOUS
+		# Machines must share a pair of values -- their password (signing key)
+		# and their trust domain (issuer) -- to accept tokens from each other.
+		TRUST_DOMAIN = ${SECURITY_DOMAIN}
+
+		CONDOR_HOST = ${CONDOR_HOST}
+
+		# Role-specific config
+	EOF
+	)
+
+	# Configure the role, if any.
+	echo -e "\n# Configuring role, if any ..."
+	case "${ROLE}" in
+		"central manager")
+			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
+			$sh_c "echo '${SECURITY_CONFIG}' > ${CONFIG_FILE}"
+
+			$sh_c "echo 'use role : CentralManager' >> ${CONFIG_FILE}"
+
+			do_token_security
+			;;
+
+		"submit")
+			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
+			$sh_c "echo '${SECURITY_CONFIG}' > ${CONFIG_FILE}"
+
+			$sh_c "echo 'use role : submit' >> ${CONFIG_FILE}"
+			$sh_c "echo 'ALLOW_WRITE = \$(ALLOW_WRITE) *@\$(HOSTNAME)' >> ${CONFIG_FILE}"
+
+			do_token_security
+			;;
+
+		"execute")
+			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
+			$sh_c "echo '${SECURITY_CONFIG}' > ${CONFIG_FILE}"
+
+			$sh_c "echo 'use role : execute' >> ${CONFIG_FILE}"
+
+			do_token_security
+			;;
+
+		*)
+			# The mini[ht]condor package has done everything for us.
+			;;
+
+	esac
 
 	# Open port 9618 on system firewall
 	do_configure_firewall
@@ -472,10 +564,40 @@ DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
 DRY_RUN=1
 sh_c='sh -c'
 unset DIST
+PASSWORD=${GET_HTCONDOR_PASSWORD}
 
 # Process command-line options
 while [ $# -gt 0 ]; do
 	case "$1" in
+		--password)
+			PASSWORD=$2
+			if [ -z "${PASSWORD}" ]; then
+					echo "--password requires an argument"
+					exit 1
+			fi
+			shift
+			;;
+		--central-manager)
+			ROLE="central manager"
+			;;
+		--submit)
+			ROLE="submit"
+			CONDOR_HOST=$2
+			if [ -z "${CONDOR_HOST}" ]; then
+					echo "--submit requires the central manager as an argument"
+					exit 1
+			fi
+			shift
+			;;
+		--execute)
+			ROLE="execute"
+			CONDOR_HOST=$2
+			if [ -z "${CONDOR_HOST}" ]; then
+					echo "--execute requires the central manager as an argument"
+					exit 1
+			fi
+			shift
+			;;
 		--channel)
 			case "$2" in
 				stable)
