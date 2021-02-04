@@ -13806,6 +13806,14 @@ Scheduler::Register()
 								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
 								  "clear_dirty_job_attrs_handler", this, WRITE );
 
+	daemonCore->Register_CommandWithPayload( EXPORT_JOBS, "EXPORT_JOBS",
+								  (CommandHandlercpp)&Scheduler::export_jobs_handler,
+								  "export_jobs_handler", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload( IMPORT_EXPORTED_JOB_RESULTS, "IMPORT_EXPORTED_JOB_RESULTS",
+								  (CommandHandlercpp)&Scheduler::import_exported_job_results_handler,
+								  "import_exported_job_results_handler", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
 
 	 // These commands are for a startd reporting directly to the schedd sans negotiation
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -14049,6 +14057,7 @@ void Scheduler::reconfig() {
 	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 	SetMaxHistoricalLogs(max_saved_rotations);
 
+#if 0 // moved this code to command handlers
 	dprintf(D_ALWAYS,"Checking ExportJobs() params\n");
 	std::string export_list;
 	std::string export_dir;
@@ -14064,6 +14073,7 @@ void Scheduler::reconfig() {
 		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_job_log.ptr());
 		ImportExportedJobResults(import_job_log);
 	}
+#endif
 
 }
 
@@ -17659,9 +17669,9 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 
 
 bool
-Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const char * ckpt_dir /*="##"*/)
+Scheduler::ExportJobs(ClassAd & result, const char *cluster_ids, const char *output_dir, const char * ckpt_dir /*="##"*/)
 {
-	dprintf(D_ALWAYS,"ExportJobs('%s','%s')\n",cluster_ids,output_dir);
+	dprintf(D_ALWAYS,"ExportJobs('%s','%s','%s')\n",cluster_ids,output_dir,ckpt_dir);
 #if 1
 	OwnerInfo * owner = nullptr;
 #else
@@ -17691,6 +17701,7 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const cha
 		if ( ! owner) {
 			owner = jqc->ownerinfo;
 		} else if ( owner != jqc->ownerinfo ) {
+			result.Assign("Reason", "Cannot export for more than one user");
 			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner->Name(), jqc->ownerinfo->Name());
 			return false;
 		}
@@ -17717,18 +17728,21 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const cha
 		}
 	}
 	if ( clusters.empty() ) {
+		result.Assign("Reason", "No clusters to export");
 		dprintf(D_ALWAYS, "ExportJobs(): No clusters to export\n");
 		return false;
 	}
 	// TODO check that client is authorized to modify this owner's jobs
 
+
 	TemporaryPrivSentry tps(true);
 #if 1
-	JobQueueCluster * jqc = GetClusterAd(max_cluster_id);
-	if ( !init_user_ids_from_ad(*jqc) ) {
+	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
+	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc) ) {
 #else
 	if ( !init_user_ids(owner.c_str(), domain.c_str()) ) {
 #endif
+		result.Assign("Reason", "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
 	}
@@ -17739,7 +17753,7 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const cha
 	// TODO make output_dir if it doesn't exist?
 
 	std::string queue_fname = output_dir;
-	queue_fname += "/job_queue.log";
+	dircat(output_dir, "job_queue.log", queue_fname);
 	GenericClassAdCollection<JobQueueKey, ClassAd*> export_queue(new ConstructClassAdLogTableEntry<ClassAd>(), queue_fname.c_str(), 0);
 
 	// TODO handle header ad
@@ -17757,6 +17771,7 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const cha
 
 	JobQueueJob *src_ad = NULL;
 
+	int num_jobs = 0;
 	int init_scan = 1;
 	while ( (src_ad = GetNextJobOrClusterByConstraint(NULL, init_scan)) ) {
 		init_scan = 0;
@@ -17765,6 +17780,7 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const cha
 			continue;
 		}
 
+		++num_jobs;
 		export_queue.NewClassAd(job_id, JOB_ADTYPE, STARTD_ADTYPE);
 
 		for ( auto attr_itr = src_ad->begin(); attr_itr != src_ad->end(); attr_itr++ ) {
@@ -17794,12 +17810,66 @@ Scheduler::ExportJobs(const char *cluster_ids, const char *output_dir, const cha
 	}
 
 	CommitTransactionOrDieTrying();
+
+	result.Assign("Log", queue_fname);
+	result.Assign("User", jqc->ownerinfo->Name());
+	result.Assign("NumJobs", num_jobs);
+	result.Assign("NumClusters", (long)clusters.size());
+
 	dprintf(D_ALWAYS,"ExportJobs() returning true\n");
 	return true;
 }
 
+int
+Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
+{
+	ClassAd reqAd; // classad specifying arguments for the export
+	ClassAd resultAd; // classad returning results of the export
+
+	// IWD of exported jobs will be re-written to use this directory as a base 
+	// the default value of ## is intended to be replaced by a script that post-processes the job log.
+	std::string ckpt_dir("##");
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, reqAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "export_jobs_handler Failed to receive classad in the request\n" );
+		return FALSE;
+	}
+
+	std::string export_list;    // list of cluster ids to export
+	std::string export_dir;     // where to write the exported job queue and other files
+	if (! reqAd.LookupString("ClusterIds", export_list) ||
+		! reqAd.LookupString("ExportDir", export_dir))
+	{
+		resultAd.Assign("Reason", "Invalid arguments");
+		resultAd.Assign("Error", SCHEDD_ERR_MISSING_ARGUMENT);
+	}
+	else 
+	{
+		reqAd.LookupString("CkptDir", ckpt_dir); // the reqest ad *may* contain an override for the checkpoint directory
+		if ( ! ExportJobs(resultAd, export_list.c_str(), export_dir.c_str(), ckpt_dir.c_str())) {
+			resultAd.Assign("Error", SCHEDD_ERR_EXPORT_FAILED);
+		}
+	}
+
+	// send a reply consisting of a result classad
+	stream->encode();
+	if ( ! putClassAd(stream, resultAd)) {
+		dprintf( D_ALWAYS, "Error sending export-jobs result to client, aborting.\n" );
+		return FALSE;
+	}
+	if ( ! stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
 bool
-Scheduler::ImportExportedJobResults(const char * job_log_file)
+Scheduler::ImportExportedJobResults(ClassAd & result, const char * job_log_file)
 {
 	dprintf(D_ALWAYS,"ImportExportedJobResults(%s)\n", job_log_file);
 
@@ -17810,6 +17880,7 @@ Scheduler::ImportExportedJobResults(const char * job_log_file)
 
 	BeginTransaction();
 
+	int num_jobs = 0;
 	std::string tmpstr;
 	ConstraintHolder hold_reason;
 
@@ -17844,6 +17915,8 @@ Scheduler::ImportExportedJobResults(const char * job_log_file)
 			if ( ! job->LookupString(ATTR_JOB_MANAGED_MANAGER, tmpstr) || tmpstr != "Lumberjack") {
 				continue;
 			}
+
+			++num_jobs;
 
 		#ifdef SMART_MERGE_BACK_OF_JOB_STATUS // smarter merge-back of job state
 			// grab the state from the external ad
@@ -17900,7 +17973,51 @@ Scheduler::ImportExportedJobResults(const char * job_log_file)
 	}
 
 	CommitTransactionOrDieTrying();
+
+	result.Assign("NumJobs", num_jobs);
+
 	dprintf(D_ALWAYS,"ImportExportedJobResults() returning true\n");
 	return true;
+}
+
+int
+Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
+{
+	ClassAd reqAd; // classad specifying arguments for the export
+	ClassAd resultAd; // classad returning results of the export
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, reqAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "import_exported_job_results_handler Failed to receive classad in the request\n" );
+		return FALSE;
+	}
+
+	std::string import_job_log;     // where to write the exported job queue and other files
+	if ( ! reqAd.LookupString("Log", import_job_log) || import_job_log.empty())
+	{
+		resultAd.Assign("Reason", "Invalid arguments");
+		resultAd.Assign("Error", true);
+	}
+	else 
+	{
+		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_job_log.c_str());
+		if ( ! ImportExportedJobResults(resultAd, import_job_log.c_str())) {
+			resultAd.Assign("Error", true);
+		}
+	}
+
+	// send a reply consisting of a result classad
+	stream->encode();
+	if ( ! putClassAd(stream, resultAd)) {
+		dprintf( D_ALWAYS, "Error sending export-jobs result to client, aborting.\n" );
+		return FALSE;
+	}
+	if ( ! stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
 }
 

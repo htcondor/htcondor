@@ -804,8 +804,8 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
-	bool ExportJobs(const char *cluster_ids, const char *output_dir, const char * ckpt_dir="##");
-	bool ImportExportedJobResults(const char * job_log_file);
+	bool ExportJobs(ClassAd & result, const char *cluster_ids, const char *output_dir, const char * ckpt_dir="##");
+	bool ImportExportedJobResults(ClassAd & result, const char * job_log_file);
 
 private:
 
@@ -1102,6 +1102,10 @@ private:
 
 		// Mark a job as clean
 	int clear_dirty_job_attrs_handler(int, Stream *stream);
+
+		// command handlers for Lumberjack export and import
+	int export_jobs_handler(int, Stream *stream);
+	int import_exported_job_results_handler(int, Stream *stream);
 
 		// Command handlers for direct startd
    int receive_startd_update(int, Stream *s);

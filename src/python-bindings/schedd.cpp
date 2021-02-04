@@ -1709,6 +1709,59 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
+	object exportJobs(object job_spec, std::string export_dir, std::string ckpt_dir)
+	{
+		StringList ids;
+		boost::python::extract<std::string> str_obj(job_spec);
+		bool use_ids = false;
+		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
+			int id_len = py_len(job_spec);
+			for (int i = 0; i < id_len; i++)
+			{
+				std::string str = extract<std::string>(job_spec[i]);
+				ids.append(str.c_str());
+			}
+			use_ids = true;
+		}
+
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		if (use_ids)
+		{
+			condor::ModuleLock ml;
+			const char * ckpt = ckpt_dir.empty() ? nullptr : ckpt_dir.c_str();
+			result = schedd.exportJobs(&ids, export_dir.c_str(), ckpt, &errstack);
+		} else {
+			// TODO: handle job spec that is a constraint expression.
+		}
+		// TODO: throw if export fails (as indicated by no result ad or "Error" in the result ad)
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
+
+	object importExportedJobResults(std::string job_log)
+	{
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		{
+			condor::ModuleLock ml;
+			result = schedd.importExportedJobResults(job_log.c_str(), &errstack);
+		}
+		// TODO: throw if export fails (as indicated by no result ad or "Error" in the result ad)
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
+
     int submitMany(const ClassAdWrapper &wrapper, boost::python::object proc_ads, bool spool, boost::python::object ad_results=object())
     {
         PyObject *py_iter = PyObject_GetIter(proc_ads.ptr());
@@ -4263,6 +4316,28 @@ void export_schedd()
             :rtype: :class:`EditResult`
             )C0ND0R",
             boost::python::args("self", "edits"))
+        .def("export_jobs", &Schedd::exportJobs,
+            R"C0ND0R(
+            Export one or more job clusters from the queue to put those jobs into the externally managed state.
+
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str or ExprTree
+            :param str export_dir: The path to the directory that exported jobs will be written into.
+            :param str ckpt_dir: The path to the base directory that exported jobs will use as IWD while they are exported
+            :return: A ClassAd containing information about the export operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "job_spec", "export_dir", "ckpt_dir"))
+        .def("import_exported_job_results", &Schedd::importExportedJobResults,
+            R"C0ND0R(
+            Import results from previously exported jobs, and take those jobs back out of the externally managed state.
+
+            :param str job_log: The path to the job_queue.log file from the external schedd that has the completed jobs.
+            :return: A ClassAd containing information about the import operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "job_log"))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.
