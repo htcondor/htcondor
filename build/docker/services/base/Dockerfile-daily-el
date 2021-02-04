@@ -6,7 +6,7 @@ FROM centos:${EL}
 # "ARG EL" needs to be here again because the previous instance has gone out of scope.
 ARG EL
 ARG BUILDDATE
-ARG SERIES
+ARG SERIES=8.9
 ARG SUFFIX
 
 # https://label-schema.org/rc1

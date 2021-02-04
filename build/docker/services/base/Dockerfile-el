@@ -8,7 +8,7 @@ ARG EL
 ARG BUILDDATE
 ARG VERSION
 ARG SUFFIX
-ARG SERIES
+ARG SERIES=8.9
 
 # https://label-schema.org/rc1
 LABEL org.label-schema.name="HTCondor RHEL-compatible base image" \
@@ -36,7 +36,7 @@ RUN groupadd -g 64 -r condor && \
 # As of 2020-01-03, the GPG key must be downloaded separately
 # openssh-clients and openssh-server are for condor_ssh_to_job
 RUN \
-    if [ -z "${SERIES}" ]; then \
+    if [ -n "${VERSION}" ]; then \
         SERIES=${VERSION%.*}; \
     fi; \
     \
