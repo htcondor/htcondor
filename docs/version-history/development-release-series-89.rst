@@ -67,6 +67,13 @@ New Features:
   grid universe jobs.
   :jira:`44`
 
+- Added a new tool/daemon :ref:`condor_adstash` that polls for job history
+  ClassAds and pushes their contents to Elasticsearch. Setting ``use
+  feature: adstash`` will run *condor_adstash* as a daemon, though
+  care should be taken to configure it for your pool and Elasticsearch
+  instance. See the :ref:`admin-manual/monitoring:Elasticsearch`
+  documentation in the admin manual for more detail.
+
 - When token authentication (IDTOKENS or SCITOKENS) is used, HTCondor will
   now record the subject, issuer, scopes, and groups, from the token used to
   submit jobs.
