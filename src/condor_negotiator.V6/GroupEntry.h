@@ -62,6 +62,8 @@ struct GroupEntry {
 		};
   		static std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
 
+		void displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine = true) const;
+
 		// these are set from configuration
 		std::string name;
 		double config_quota;
