@@ -199,7 +199,7 @@ cred_matches(MyString & credfile, const ClassAd * requestAd)
 	}
 	// unfortunately the buffer is not null terminated so need to make a copy
 	std::string credbuf;
-	credbuf.assign(credp, clen);
+	credbuf.assign((char *) credp, clen);
 	free(credp);
 	classad::ClassAdJsonParser jsonp;
 	ClassAd credad;
