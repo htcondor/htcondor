@@ -32,11 +32,6 @@
 
 #include <openssl/evp.h>
 
-//If openssl version less than 1.1
-#if OPENSSL_VERSION_NUMBER < 269484032 || defined(LIBRESSL_VERSION_NUMBER)
-#define OPENSSL10
-#endif
-
 /*
 **	R E L I A B L E    S O C K
 */
@@ -411,12 +406,12 @@ protected:
 	// NOTE: We only check the first 1MB of sent / received data; after that,
 	// if we haven't seen an encrypted packet we assume such a thing will never
 	// happen.
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_send_md_ctx;
-	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_recv_md_ctx;
-#else
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> m_send_md_ctx;
 	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> m_recv_md_ctx;
+#else
+	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_send_md_ctx;
+	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_recv_md_ctx;
 #endif
 	std::vector<unsigned char> m_final_mds;
 	bool m_final_send_header{false};
