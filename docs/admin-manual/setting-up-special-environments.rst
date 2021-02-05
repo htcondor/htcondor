@@ -362,33 +362,34 @@ used files.
 Enabling the Fetching and Use of OAuth2 Credentials
 ---------------------------------------------------
 
-HTCondor supports two distinct methods for using OAuth2 credentials.
-One uses its own native OAuth client or issuer, and one uses a separate
-Hashicorp Vault server as the OAuth client and secure refresh token
-storage.  Each method uses a separate credmon implementation and rpm
-and have their own advantages and disadvantages.
+.. only:: Vault
+    HTCondor supports two distinct methods for using OAuth2 credentials.
+    One uses its own native OAuth client or issuer, and one uses a separate
+    Hashicorp Vault server as the OAuth client and secure refresh token
+    storage.  Each method uses a separate credmon implementation and rpm
+    and have their own advantages and disadvantages.
 
-If the native OAuth client is used with a remote token issuer, then each
-time a new refresh token is needed the user has to reauthorize it through
-a web browser.  An hour after all jobs of a user are stopped (by default), 
-the refresh tokens are deleted.  If the client is used with the native
-token issuer is used, then no web browser authorizations are needed but
-the public keys of every token issuer have to be managed by all the 
-resource providers.  In both cases, the tokens are only available inside
-HTCondor jobs.
+    If the native OAuth client is used with a remote token issuer, then each
+    time a new refresh token is needed the user has to reauthorize it through
+    a web browser.  An hour after all jobs of a user are stopped (by default),
+    the refresh tokens are deleted.  If the client is used with the native
+    token issuer is used, then no web browser authorizations are needed but
+    the public keys of every token issuer have to be managed by all the
+    resource providers.  In both cases, the tokens are only available inside
+    HTCondor jobs.
 
-If on the other hand a Vault server is used as the OAuth client, it
-stores the refresh token long term (typically about a month since last
-use) for multiple use cases.  It can be used both by multiple HTCondor
-submit machines and by other client commands that need access tokens.
-Submit machines keep a medium term vault token (typically about a week)
-so at most users have to authorize in their web browser once a week.  If
-kerberos is also available, new vault tokens can be obtained automatically
-without any user intervention.  The HTCondor vault credmon also stores a
-longer lived vault token for use as long as jobs might run.
+    If on the other hand a Vault server is used as the OAuth client, it
+    stores the refresh token long term (typically about a month since last
+    use) for multiple use cases.  It can be used both by multiple HTCondor
+    submit machines and by other client commands that need access tokens.
+    Submit machines keep a medium term vault token (typically about a week)
+    so at most users have to authorize in their web browser once a week.  If
+    kerberos is also available, new vault tokens can be obtained automatically
+    without any user intervention.  The HTCondor vault credmon also stores a
+    longer lived vault token for use as long as jobs might run.
 
-Using the native OAuth client and/or issuer
-'''''''''''''''''''''''''''''''''''''''''''
+    Using the native OAuth client and/or issuer
+    '''''''''''''''''''''''''''''''''''''''''''
 
 HTCondor can be configured
 to allow users to request and securely store credentials
@@ -409,7 +410,8 @@ from OAuth2 services:
 First, to enable the *condor_credd* and *condor_credmon_oauth* daemons,
 the easiest way is to install the ``condor-credmon-oauth`` rpm.  This
 installs the *condor_credmon_oauth* daemon and enables both it and
-*condor_credd* with reasonable defaults.
+*condor_credd* with reasonable defaults via the ``use feature: oauth``
+configuration template.
 
 Second, a token issuer, an HTTPS-enabled web server running on the submit
 machine needs to be configured to execute its wsgi script as the user
@@ -476,19 +478,20 @@ make sure users know which names (``<OAuth2ServiceName>s``) have been configured
 so that they know what they should put under ``use_oauth_services``
 in their job submit files.
 
-Using Vault as the OAuth client
-'''''''''''''''''''''''''''''''
+.. only:: Vault
+    Using Vault as the OAuth client
+    '''''''''''''''''''''''''''''''
 
-To instead configure HTCondor to use Vault as the OAuth client,
-install the ``condor-credmon-vault`` rpm.  Also install the
-`htgettoken <https://github.com/fermitools/htgettoken>`
-rpm on the submit machine.  Additionally, on the submit machine
-set the ``SEC_CREDENTIAL_GETTOKEN_OPTS`` configuration option to
-``-a <vault.name>`` where <vault.name> is the fully qualified domain name
-of the Vault machine.  *condor_submit* users will then be able to select
-the oauth services that are defined on the Vault server.  See the
-`htvault-config <https://gitub.com/fermitools/htvault-config>`
-documentation to see how to set up and configure the Vault server.
+    To instead configure HTCondor to use Vault as the OAuth client,
+    install the ``condor-credmon-vault`` rpm.  Also install the
+    `htgettoken <https://github.com/fermitools/htgettoken>`
+    rpm on the submit machine.  Additionally, on the submit machine
+    set the ``SEC_CREDENTIAL_GETTOKEN_OPTS`` configuration option to
+    ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
+    of the Vault machine.  *condor_submit* users will then be able to select
+    the oauth services that are defined on the Vault server.  See the
+    `htvault-config <https://gitub.com/fermitools/htvault-config>`
+    documentation to see how to set up and configure the Vault server.
 
 Configuring HTCondor for Multiple Platforms
 -------------------------------------------
