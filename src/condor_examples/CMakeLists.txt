@@ -56,7 +56,7 @@ install (FILES
 		condor_config.submit.generic
 		#condor_config.generic.rpm.patch
 		#condor_config.local.generic
-		condor_config.adstash
+		condor_config.local.adstash
 		condor.init
 		condor.plist
 		condor_config.annotated
