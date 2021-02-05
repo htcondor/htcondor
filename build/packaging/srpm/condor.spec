@@ -9,6 +9,7 @@
 # % define fedora   16
 # % define osg      0
 # % define uw_build 1
+# % define vaultcred 1
 
 %define python 0
 
@@ -33,6 +34,13 @@
 
 %if 0%{?hcc}
 %define blahp 0
+%endif
+
+# enable vaultcred by default for osg
+%if %undefined vaultcred
+%if 0%{?osg}
+%define vaultcred 1
+%endif
 %endif
 
 %define python 1
@@ -526,6 +534,27 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 %endif
 
 
+%if 0%{?vaultcred}
+#######################
+%package credmon-vault
+Summary: Vault credmon for HTCondor.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: python3-condor
+Requires: python-six
+%if 0%{?osg}
+# Although htgettoken is only needed on the submit machine and
+#  condor-credmon-vault is needed on both the submit and credd machines,
+#  htgettoken is small so it doesn't hurt to require it in both places.
+Requires: htgettoken >= 1.1
+%endif
+Conflicts: %name-credmon-oauth
+
+%description credmon-vault
+The Vault credmon allows users to obtain credentials from Vault using
+htgettoken and to use those credentials securely inside running jobs.
+%endif
+
 #######################
 %package bosco
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
@@ -865,6 +894,15 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
 ln -s ../../../..%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 %endif
 ###
+
+%if 0%{?vaultcred}
+# Move vault credmon config file out of examples and into config.d
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
+%else
+# Otherwise remove installed vault credmon files from the buildroot
+rm -f %{buildroot}/%{_sbindir}/condor_credmon_vault
+rm -f %{buildroot}/%{_bindir}/condor_vault_storer
+%endif
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1482,6 +1520,17 @@ rm -rf %{buildroot}
 %_bindir/scitokens_credential_producer
 %_var/www/wsgi-scripts/scitokens-credmon
 ###
+%endif
+
+%if 0%{?vaultcred}
+%files credmon-vault
+%doc examples/condor_credmon_oauth
+%_sbindir/condor_credmon_vault
+%_bindir/condor_vault_storer
+%_libexecdir/condor/credmon
+%config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
+%ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
+%ghost %_var/lib/condor/oauth_credentials/pid
 %endif
 
 %files bosco

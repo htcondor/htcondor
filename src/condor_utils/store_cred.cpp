@@ -64,6 +64,8 @@ static const char *err_strings[] = {
 	"Arguments are missing, client and server my be mismatched", // FAILURE_PROTOCOL_MISMATCH
 	"The credmon did not process credentials within the timeout period", // FAILURE_CREDMON_TIMEOUT
 	"Operation failed because of a configuration error", // FAILURE_CONFIG_ERROR
+	"Failure parsing credential as JSON", // FAILURE_JSON_PARSE
+	"Credential was found but it did not match requested scopes or audience", // FAILURE_CRED_MISMATCH
 };
 
 // check to see if store_cred return value is a failure, and return a string for the failure code if so
@@ -184,6 +186,47 @@ void SecureZeroMemory(void *p, size_t n)
 
 #endif
 
+int
+cred_matches(MyString & credfile, const ClassAd * requestAd)
+{
+	// read the file back to make sure the scopes & audience match
+	// the request
+	size_t clen = 0;
+	void *credp = NULL;
+	if (!read_secure_file(credfile.c_str(), &credp, &clen, true, SECURE_FILE_VERIFY_ACCESS)) {
+		// read_secure_file already logged the failure if it failed
+		return FAILURE_JSON_PARSE;
+	}
+	// unfortunately the buffer is not null terminated so need to make a copy
+	char credbuf[clen + 1];
+	memcpy((void *) &credbuf[0], credp, clen);
+	credbuf[clen] = '\0';
+	free(credp);
+	classad::ClassAdJsonParser jsonp;
+	ClassAd credad;
+	if (!jsonp.ParseClassAd(credbuf, credad)) {
+		dprintf(D_ALWAYS, "Error, could not parse cred from %s as JSON\n", credfile.c_str());
+		return FAILURE_JSON_PARSE;
+	}
+
+	std::string scopes;
+	std::string audience;
+	if (requestAd) {
+		requestAd->LookupString("Scopes", scopes);
+		requestAd->LookupString("Audience", audience);
+	}
+
+	std::string oldscopes;
+	std::string oldaudience;
+	credad.LookupString("scopes", oldscopes);
+	credad.LookupString("audience", oldaudience);
+	if ((scopes != oldscopes) || (audience != oldaudience)) {
+		return FAILURE_CRED_MISMATCH;
+	}
+
+	return SUCCESS;
+}
+
 long long
 PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int rawlen, int mode, MyString & ccfile)
 {
@@ -254,8 +297,10 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 /*
 	ad arg schema is
-		"service" : <SERVICE> name
-		"handle"  : optional <handle> name appended to service name to create filenames
+		"service"  : <SERVICE> name
+		"handle"   : optional <handle> name appended to service name to create filenames
+		"scopes"   : optional comma-separated <scopes> list to include in JSON storage or query
+		"audience" : optional <audience> to include in JSON storage or query
 		any of the .meta JSON keywords below
 
 	<service>_<handle>.meta JSON file is
@@ -305,7 +350,11 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
-	// if this is a query, just return the timestamp on the .use file
+	// If this is a query and the service name is empty, return the
+	//   timestamp on the last .top or .use file found.  If this is a
+	//   query and the service name is given, verify that any scopes or
+	//   audience given match and if so return the timestamp on the .use
+	//   file if present, else the .top file.
 	if ((mode & MODE_MASK) == GENERIC_QUERY) {
 		if (service.empty()) {
 			Directory creddir(cred_dir, PRIV_ROOT);
@@ -333,27 +382,33 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 			ccfile.clear();
 			return FAILURE_NOT_FOUND;
 		} else {
-			// does the .use file exist already?
-			dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+			// does the .top file exist?
+			dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
 			struct stat cred_stat_buf;
-			int rc = stat(ccfile.c_str(), &cred_stat_buf);
-			bool got_ccfile = rc == 0;
+			if (stat(ccfile.c_str(), &cred_stat_buf) == 0) {
+				std::string attr("Top"); attr += service; attr += "Time";
+				return_ad.Assign(attr, cred_stat_buf.st_mtime);
 
-			if (got_ccfile) { // if it exists, return it's timestamp
+				// read the file back to make sure the scopes & audience match
+				int rc = cred_matches(ccfile, ad);
 				ccfile.clear();
-				return_ad.Assign(service, cred_stat_buf.st_mtime);
-				return cred_stat_buf.st_mtime;
-			} else {
-				// if no use file, check for a .top file.  if that exists return its timestamp
-				dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
-				if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
-					std::string attr("Top"); attr += service; attr += "Time";
-					return_ad.Assign(attr, cred_stat_buf.st_mtime);
-					return SUCCESS_PENDING;
-				} else {
-					ccfile.clear();
-					return FAILURE_NOT_FOUND;
+				if (rc != SUCCESS) {
+					return rc;
 				}
+
+				// if there's also a .use file, get its mod
+				//  time as the service attribute
+				dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+				if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
+					ccfile.clear();
+					return_ad.Assign(service, cred_stat_buf.st_mtime);
+					return SUCCESS;
+				} else {
+					return SUCCESS_PENDING;
+				}
+			} else {
+				ccfile.clear();
+				return FAILURE_NOT_FOUND;
 			}
 		}
 	}
@@ -403,9 +458,33 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	// append filename for tokens file
 	dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
 
+	std::string scopes;
+	std::string audience;
+	if (ad) {
+		ad->LookupString("Scopes", scopes);
+		ad->LookupString("Audience", audience);
+	}
+	std::string jsoncred;
+	size_t clen = credlen;
+	if ((scopes != "") || (audience != "")) {
+		// Add scopes and/or audience into the JSON-formatted credentials
+		classad::ClassAdJsonParser jsonp;
+		ClassAd credad;
+		if (!jsonp.ParseClassAd((const char *) cred, credad)) {
+			dprintf(D_ALWAYS, "Error, could not parse cred for %s as JSON\n", ccfile.c_str());
+			return FAILURE_JSON_PARSE;
+		}
+		if (scopes != "") credad.Assign("scopes", scopes);
+		if (audience != "") credad.Assign("audience", audience);
+		sPrintAdAsJson(jsoncred, credad);
+		jsoncred += "\n";
+		cred = (const unsigned char *) jsoncred.c_str();
+		clen = jsoncred.length();
+	}
+
 	// create/overwrite the credential file
 	dprintf(D_ALWAYS, "Writing OAuth user cred data to %s\n", ccfile.c_str());
-	if ( ! replace_secure_file(ccfile.c_str(), ".tmp", cred, credlen, true)) {
+	if ( ! replace_secure_file(ccfile.c_str(), ".tmp", cred, clen, true)) {
 		// replace_secure_file already logged the failure if it failed.
 		ccfile.clear();
 		return FAILURE;
