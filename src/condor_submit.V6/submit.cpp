@@ -2657,7 +2657,7 @@ bool get_oauth_service_requests(std::string & service_requests) {
 			service_requests += " ";
 		service_requests += str;
 		std::string keys[] = { "handle", "scopes", "audience" };
-		for (int i = 0; i < (sizeof(keys)/sizeof(keys[0])); i++ ) {
+		for (size_t i = 0; i < (sizeof(keys)/sizeof(keys[0])); i++ ) {
 			str = "";
 			request->LookupString(keys[i], str);
 			if (str != "") {

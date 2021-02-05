@@ -198,13 +198,12 @@ cred_matches(MyString & credfile, const ClassAd * requestAd)
 		return FAILURE_JSON_PARSE;
 	}
 	// unfortunately the buffer is not null terminated so need to make a copy
-	char credbuf[clen + 1];
-	memcpy((void *) &credbuf[0], credp, clen);
-	credbuf[clen] = '\0';
+	std::string credbuf;
+	credbuf.assign(credp, clen);
 	free(credp);
 	classad::ClassAdJsonParser jsonp;
 	ClassAd credad;
-	if (!jsonp.ParseClassAd(credbuf, credad)) {
+	if (!jsonp.ParseClassAd(credbuf.c_str(), credad)) {
 		dprintf(D_ALWAYS, "Error, could not parse cred from %s as JSON\n", credfile.c_str());
 		return FAILURE_JSON_PARSE;
 	}
