@@ -7,7 +7,7 @@
 #include <deque>
 
  std::map<std::string, GroupEntry*, GroupEntry::ci_less> GroupEntry::hgq_submitter_group_map;
- 
+
 double calculate_subtree_usage(Accountant &accountant, GroupEntry *group) {
 	double subtree_usage = 0.0;
 
@@ -67,7 +67,7 @@ GroupEntry::~GroupEntry() {
 	if (NULL != sort_ad) delete sort_ad;
 }
 
-void 
+void
 GroupEntry::Initialize(GroupEntry *hgq_root_group) {
 	hgq_submitter_group_map.clear();
 	// Pre-set mapping from all defined group names to themselves.
@@ -354,12 +354,8 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 
 	hgq_root_group->hgq_assign_quotas(hgq_total_quota);
 
-	for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-		GroupEntry* group = *j;
-		dprintf(D_FULLDEBUG, "group quotas: group= %s  cquota= %g  static= %d  accept= %d  quota= %g  req= %g  usage= %g\n",
-				group->name.c_str(), group->config_quota, int(group->static_quota), int(group->accept_surplus), group->quota,
-				group->requested, group->usage);
-	}
+	dprintf(D_ALWAYS, "group quota: Quotas have been assigned to the following groups\n");
+	hgq_root_group->displayGroups(D_ALWAYS, false);
 
 	return;
 }
@@ -523,6 +519,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 
 				slots = group->strict_enforce_quota(accountant, hgq_root_group, slots);
 
+				// Finally, actuall call back into the negotiator, passing the group and the limit
 				fn(group, slots);
 			}
 
@@ -546,7 +543,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 			if (group->usage < group->allocated) {
 				// If we failed to match all the allocated slots for any reason, then take what we
 				// got and allow other groups a chance at the rest on next iteration
-				dprintf(D_FULLDEBUG, "group quotas: Group %s - resetting requested to %g\n", group->name.c_str(), group->usage);
+				dprintf(D_FULLDEBUG, "group quotas: Group %s - resetting requested to %g because not all the requested jobs matched to slots.\n", group->name.c_str(), group->usage);
 				group->requested = group->usage;
 			} else {
 				// otherwise restore requested to its original state for next iteration
@@ -1068,13 +1065,13 @@ GroupEntry::strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_gr
 	return slots;
 }
 
-GroupEntry* 
+GroupEntry*
 GroupEntry::GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName) {
 	bool unused;
 	return GetAssignedGroup(hgq_root_group, CustomerName, unused);
 }
 
-GroupEntry* 
+GroupEntry*
 GroupEntry::GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName, bool& IsGroup) {
 	std::string subname = CustomerName;
 
@@ -1120,7 +1117,7 @@ GroupEntry::GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& Cust
 		if (f == group->chmap.end()) {
 			if (hgq_root_group->children.size() > 0) {
 				// I only want to log a warning if an HGQ configuration exists
-				dprintf(D_ALWAYS, "group quotas: WARNING: defaulting undefined group name %s to group %s\n", 
+				dprintf(D_ALWAYS, "group quotas: WARNING: defaulting undefined group name %s to group %s\n",
 						gname.c_str(), group->name.c_str());
 			}
 			break;
@@ -1133,6 +1130,45 @@ GroupEntry::GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& Cust
 	return group;
 }
 
+void
+GroupEntry::displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine /* = true */) const {
+	if (firstLine) {
+		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s", "Group", "Computed","Config", "Quota",  "Use", "Claimed", "Requestd", "Submters");
+		if (!onlyConfigInfo) {
+			dprintf(dprintfLevel, "%8s", "Allocatd");
+		}
+
+		dprintf(dprintfLevel, "\n");
+		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s", "Name",  "quota",   "quota",  "static", "surplus", "cores", "cores", "in group");
+		if (!onlyConfigInfo) {
+			dprintf(dprintfLevel, "%8s", "cores");
+		}
+		dprintf(dprintfLevel, "\n");
+		dprintf(dprintfLevel, "------------------------------------------------------------------------------------");
+		if (!onlyConfigInfo) {
+			dprintf(dprintfLevel, "--------");
+		}
+		dprintf(dprintfLevel, "\n");
+	}
+	dprintf(dprintfLevel, "%-20s %8g %8g %8c %8c %8g %8g %8d",
+			this->name.c_str(),
+			this->quota,
+			this->config_quota,
+			this->static_quota ? 'Y' : 'N',
+			this->accept_surplus ? 'Y' : 'N',
+			this->usage,
+			this->requested,
+			this->submitterAds ? this->submitterAds->Length() : -1);
+
+	if (!onlyConfigInfo) {
+		dprintf(dprintfLevel, "%8g",
+			this->allocated);
+	}
+	dprintf(dprintfLevel, "\n");
+	for (const GroupEntry *g: this->children) {
+		g->displayGroups(onlyConfigInfo, false);
+	}
+}
 
 
 // Really string::split, if C++ had one, turns a . separated string into a vector of strings

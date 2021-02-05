@@ -1,5 +1,10 @@
 %define tarball_version 8.1.3
 
+# On EL7 don't terminate the build because of bad bytecompiling
+%if 0%{?rhel} == 7
+%define _python_bytecompile_errors_terminate_build 0
+%endif
+
 # optionally define any of these, here or externally
 # % define fedora   16
 # % define osg      0
@@ -1133,6 +1138,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/gdrive_plugin.pyo
 %_libexecdir/condor/onedrive_plugin.pyc
 %_libexecdir/condor/onedrive_plugin.pyo
+%_libexecdir/condor/adstash/__init__.pyc
+%_libexecdir/condor/adstash/__init__.pyo
 %endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
@@ -1144,6 +1151,12 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/adstash/__init__.py
+%_libexecdir/condor/adstash/config.py
+%_libexecdir/condor/adstash/convert.py
+%_libexecdir/condor/adstash/elastic.py
+%_libexecdir/condor/adstash/history.py
+%_libexecdir/condor/adstash/utils.py
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
@@ -1273,6 +1286,7 @@ rm -rf %{buildroot}
 %_bindir/condor_annex
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
+%_bindir/condor_adstash
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
