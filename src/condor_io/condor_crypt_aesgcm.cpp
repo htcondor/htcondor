@@ -46,42 +46,37 @@ void Condor_Crypt_AESGCM::resetState()
 // this function is static
 void Condor_Crypt_AESGCM::initState(StreamCryptoState* stream_state)
 {
-	dprintf(D_NETWORK, "ZKM: ******: Condor_Crypt_AESGCM::initState for %p.\n", stream_state);
+	dprintf(D_NETWORK | D_BACKTRACE, "ZKM: ******: Condor_Crypt_AESGCM::initState for %p.\n", stream_state);
 	if (stream_state) {
 		// reset encrypt side
-		if (!memcmp(stream_state->m_iv_enc.iv, g_unset_iv, IV_SIZE)) {
-			while (!memcmp(stream_state->m_iv_enc.iv, g_unset_iv, IV_SIZE)) {
-				RAND_pseudo_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
-			}
-			// Do not increment the first connection so it is connection 0.
-		} else if (stream_state->m_ctr_conn != 0xffffffff)
-			stream_state->m_ctr_conn ++;
-		else
-			dprintf(D_NETWORK, "Condor_Crypt_AESGCM::resetState - Max session reuse hit!\n");
+		RAND_pseudo_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
 		stream_state->m_ctr_enc = 0;
 
 		// reset decrypt side
 		memset(stream_state->m_iv_dec.iv, '\0', IV_SIZE);
 		stream_state->m_ctr_dec = 0;
-		dprintf(D_NETWORK, "Condor_Crypt_AESGCM::resetState: Connection count %u.\n", stream_state->m_ctr_conn);
 	} else {
 		// resetState();
 		ASSERT("stream_state must not be NULL!");
 	}	
+	dprintf(D_NETWORK, "ZKM: ******: Condor_Crypt_AESGCM::initState: Connection count %u.\n", stream_state->m_ctr_conn);
 }
 
-int Condor_Crypt_AESGCM::ciphertext_size_with_cs(int plaintext_size, StreamCryptoState * /*stream_state*/) const
+int Condor_Crypt_AESGCM::ciphertext_size_with_cs(int plaintext_size, StreamCryptoState * stream_state) const
 {
     int ct_sz = plaintext_size;
-    // Authentication tag is an additional 16 bytes; IV is 12 bytes
+    // Authentication tag is an additional 16 bytes; IV is also 16 bytes
     //
     // ideally, we would only need to send the IV on the first transmission,
     // and it could be computed after that based on the message counter:
-    //ct_sz += MAC_SIZE + IV_SIZE * (stream_state->m_ctr_enc ? 0 : 1);
+    //
+    ct_sz += MAC_SIZE + IV_SIZE * (stream_state->m_ctr_enc ? 0 : 1);
 
-    // however, we are opting to send it every time so the two sides are never
-    // out of sync as to whether or not they are expecting it.
-    ct_sz += MAC_SIZE + IV_SIZE;
+    // however, if we are opting to send it every time so the two sides are
+    // never out of sync as to whether or not they are expecting it, then use
+    // this line instead:
+    //ct_sz += MAC_SIZE + IV_SIZE;
+
     return ct_sz;
 }
 
@@ -120,7 +115,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
 
     // however, we are opting to send it every time so the two sides are never
     // out of sync as to whether or not they are expecting it.
-    sending_IV = true;
+    //sending_IV = true;
 
         // Authentication tag is an additional 16 bytes; IV is 12 bytes
     output_len += MAC_SIZE + (sending_IV ? IV_SIZE : 0);
@@ -155,8 +150,8 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     // making these zero let me continue debugging past that issue.
 
     int32_t base = ntohl(stream_state->m_iv_enc.ctr.pkt);
-    //int32_t result = base + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_enc);
-    int32_t result = base;
+    int32_t result = base + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_enc);
+    //int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     if (stream_state->m_ctr_enc == 0xffffffff) {
         dprintf(D_NETWORK, "Hit max number of packets per connection.\n");
@@ -360,7 +355,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 
     // however, we are opting to send it every time so the two sides are never
     // out of sync as to whether or not they are expecting it.
-    receiving_IV = true;
+    //receiving_IV = true;
 
     // on the code for the encrypt side, it checks to see if the number of message is non-zero.
     //
@@ -397,8 +392,8 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     // making these zero let me continue debugging past that issue.
    
     int32_t base = ntohl(stream_state->m_iv_dec.ctr.pkt);
-    //int32_t result = base + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_dec);
-    int32_t result = base;
+    int32_t result = base + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_dec);
+    //int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV base value %d\n", base);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter value _dec %u\n", stream_state->m_ctr_dec);
@@ -461,7 +456,6 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     } else {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : No previous MAC, so not adding to EncryptUpdate()\n");
     }
-
 
     dprintf(D_NETWORK,
         "Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
