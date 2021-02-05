@@ -282,8 +282,8 @@ ssh_detect_linux_distro () {
     os_release=`ssh $remote_host "cat /etc/os-release" 2> /dev/null`
     [[ $? -eq 0 ]] || return 1
 
-    dist=`awk -F '=' '/^ID=/ {print $2}' <<< $os_release | tr -d '"'`
-    ver=`awk -F '=' '/^VERSION_ID=/ {print $2}' <<< $os_release | tr -d '"'`
+    dist=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}' | tr -d '"'`
+    ver=`echo "$os_release | "awk -F '=' '/^VERSION_ID=/ {print $2}' | tr -d '"'`
     major_ver="${ver%%.*}"
 
     case "$dist" in
