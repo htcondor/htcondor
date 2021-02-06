@@ -1220,6 +1220,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid);
 		}
 	} else {
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: SETTING KEY BUT NOT TURNING ON CRYPTO!\n", m_sid);
 		m_sock->set_crypto_key(false, m_key);
 	}
 
