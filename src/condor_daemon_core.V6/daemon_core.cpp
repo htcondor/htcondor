@@ -6609,10 +6609,13 @@ void CreateProcessForkit::exec() {
 	if (m_affinity_mask) {
 		cpu_set_t mask;
 		CPU_ZERO(&mask);
+		dprintf(D_ALWAYS, "Calling sched_setaffinity for cpus ");
 		for (int i = 1; i < m_affinity_mask[0]; i++) {
+			dprintf(D_ALWAYS | D_NOHEADER, "%d ", m_affinity_mask[i]);
 			CPU_SET(m_affinity_mask[i], &mask);
 		}
-		dprintf(D_FULLDEBUG, "Calling sched_setaffinity\n");
+		dprintf(D_ALWAYS | D_NOHEADER, "\n");
+
 		// first argument of pid 0 means self.
 #ifdef HAVE_SCHED_SETAFFINITY_2ARG
 			// this is the old (rhel3 vintage) interface
