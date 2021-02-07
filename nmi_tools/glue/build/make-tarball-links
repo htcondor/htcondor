@@ -21,22 +21,42 @@ fi
 ln -s usr/bin bin
 ln -s usr/sbin sbin
 ln -s usr/lib lib
-ln -s usr/lib64 lib64
-ln -s usr/libexec/condor libexec
+if [ -d usr/lib64 ]; then
+    ln -s usr/lib64 lib64
+fi
+if [ -d usr/libexec/condor ]; then
+    ln -s usr/libexec/condor libexec
+fi
+if [ -d usr/lib/condor/libexec ]; then
+    ln -s usr/lib/condor/libexec libexec
+fi
 ln -s usr/share/man man
 ln -s usr/include include
 ln -s sbin/bosco_install bosco_install
 ln -s sbin/condor_configure condor_configure
 ln -s sbin/condor_install condor_install
-ln -s usr/share/doc/condor-[0-9]*/examples examples
-ln -s usr/share/doc/condor-[0-9]*/LICENSE-2.0.txt LICENSE-2.0.txt
-ln -s usr/share/doc/condor-[0-9]*/NOTICE.txt NOTICE.txt
+if [ -d usr/share/doc/htcondor/examples ]; then
+    ln -s usr/share/doc/htcondor/examples examples
+    # ln -s usr/share/doc/htcondor/LICENSE-2.0.txt LICENSE-2.0.txt
+    ln -s usr/share/doc/htcondor/NOTICE.txt NOTICE.txt
+else
+    ln -s usr/share/doc/condor-[0-9]*/examples examples
+    ln -s usr/share/doc/condor-[0-9]*/LICENSE-2.0.txt LICENSE-2.0.txt
+    ln -s usr/share/doc/condor-[0-9]*/NOTICE.txt NOTICE.txt
+fi
 ln -s ../examples etc/examples
 ln -s blahpd usr/bin/batch_gahp
 ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
-# Link to pickup condor_ssh_to_job_template
-ln -s ../lib64/condor/condor_ssh_to_job_sshd_config_template usr/lib/condor_ssh_to_job_sshd_config_template
-# Link for executables to pick up shared libaries
-ln -s ../lib64 usr/libexec/lib64
-cd usr/lib64/python3*/site-packages
-ln -s ../.. lib64
+if [ -d usr/lib64 ]; then
+    # Link to pickup condor_ssh_to_job_template
+    ln -s ../lib64/condor/condor_ssh_to_job_sshd_config_template usr/lib/condor_ssh_to_job_sshd_config_template
+    # Link for executables to pick up shared libaries
+    ln -s ../lib64 usr/libexec/lib64
+    cd usr/lib64/python3*/site-packages
+    ln -s ../.. lib64
+else
+    # Link for executables to pick up shared libaries
+    ln -s .. usr/lib/condor/lib
+    cd usr/lib/python3/dist-packages
+    ln -s ../.. lib
+fi

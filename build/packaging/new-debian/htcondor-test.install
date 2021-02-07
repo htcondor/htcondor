@@ -1,0 +1,4 @@
+debian/tmp/usr/lib/condor/condor_tests-*.tar.gz
+debian/tmp/usr/lib/condor/libexec/condor_sinful
+debian/tmp/usr/lib/condor/libexec/condor_testingd
+debian/tmp/usr/lib/condor/libexec/test_user_mapping

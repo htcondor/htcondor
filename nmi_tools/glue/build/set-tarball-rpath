@@ -13,4 +13,14 @@ if [ ! -d $tarball ]; then
 fi
 
 cd $tarball
-patchelf --set-rpath '$ORIGIN/../lib64' $(file $(find -type f -executable)|grep 'ELF.*shared'|sed -e s/:.*//)
+if [ -d usr/lib64 ]; then
+    RPATH='$ORIGIN/../lib64'
+else
+    RPATH='$ORIGIN/../lib'
+fi
+# New versions of patchelf take multiple file.
+# patchelf --set-rpath $RPATH $(file $(find -type f -executable)|grep 'ELF.*shared'|sed -e s/:.*//)
+# Unfortunately, we support some older platforms
+for file in $(file $(find -type f)|grep 'ELF.*shared'|sed -e s/:.*//); do
+    patchelf --set-rpath $RPATH $file
+done
