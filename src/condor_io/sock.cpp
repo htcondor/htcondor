@@ -3054,6 +3054,16 @@ Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 
     if (key != 0) {
         inited = initialize_crypto(key);
+        // In AES-GCM mode, we can't support sub-message encryption like
+        // was done for Blowfish or 3DES.  Since the receiver has to know
+        // a priori whether the message may have a secret (impossible in the
+        // current API, would add a lot of complexity) *AND* we want to have
+        // encryption on all the time anyway, we made the decision to have
+        // encryption be enabled unilaterally if an AES-GCM key is available.
+        //
+        // This raises the possibility of ripping out the various complex encryption
+        // and integrity negotiation in the future.
+        enable |= (key->getProtocol() == CONDOR_AESGCM);
     }
     else {
         // We are turning encryption off
