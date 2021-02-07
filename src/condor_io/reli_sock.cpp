@@ -537,7 +537,7 @@ ReliSock::end_of_message_internal()
 {
 	int ret_val = FALSE;
 
-	if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
+	if (crypto_state_ && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
 		resetCrypto();
 	}
 	switch(_coding){
