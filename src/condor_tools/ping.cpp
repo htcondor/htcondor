@@ -81,12 +81,13 @@ void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad
 
 	printf("%s command using (", name.Value());
 
-	ad->LookupString("encryption", val);
-	if (strcasecmp(val.c_str(), "no") == 0) {
+	std::string encryption_method;
+	ad->LookupString("encryption", encryption_method);
+	if (strcasecmp(encryption_method.c_str(), "no") == 0) {
 		printf("no encryption");
 	} else {
-		ad->LookupString("cryptomethods", val);
-		printf("%s", val.c_str());
+		ad->LookupString("cryptomethods", encryption_method);
+		printf("%s", encryption_method.c_str());
 	}
 
 	printf(", ");
@@ -94,6 +95,8 @@ void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no integrity");
+	} else if (encryption_method == "AESGCM") {
+		printf("AESGCM");
 	} else {
 #ifdef FIPS_MODE
 		printf("SHA");
@@ -149,17 +152,20 @@ void print_useful_info_2(bool rv, char* dname, int cmd, MyString name, Sock*, Cl
 	printf("Command:                     %i\n", cmd);
 
 
-	ad->LookupString("encryption", val);
-	if (strcasecmp(val.c_str(), "no") == 0) {
+	std::string encryption_method;
+	ad->LookupString("encryption", encryption_method);
+	if (strcasecmp(encryption_method.c_str(), "no") == 0) {
 		printf("Encryption:                  none\n");
 	} else {
-		ad->LookupString("cryptomethods", val);
-		printf("Encryption:                  %s\n", val.c_str());
+		ad->LookupString("cryptomethods", encryption_method);
+		printf("Encryption:                  %s\n", encryption_method.c_str());
 	}
 
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Integrity:                   none\n");
+	} else if ("AESGCM" == encryption_method) {
+		printf("Integrity:                   AESGCM\n");
 	} else {
 #ifdef FIPS_MODE
 		printf("Integrity:                   SHA\n");
@@ -214,17 +220,20 @@ void print_useful_info_10(bool rv, char*, MyString name, Sock*, ClassAd *ad, Cla
 	}
 	printf("%15s", val.c_str());
 
-	ad->LookupString("encryption", val);
-	if (strcasecmp(val.c_str(), "no") == 0) {
-		val = "none";
+	std::string encryption_method;
+	ad->LookupString("encryption", encryption_method);
+	if (strcasecmp(encryption_method.c_str(), "no") == 0) {
+		encryption_method = "none";
 	} else {
-		ad->LookupString("cryptomethods", val);
+		ad->LookupString("cryptomethods", encryption_method);
 	}
-	printf("%11s", val.c_str());
+	printf("%11s", encryption_method.c_str());
 
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
+	} else if (encryption_method == "AESGCM") {
+		val = encryption_method;
 	} else {
 #ifdef FIPS_MODE
 		val = "SHA";

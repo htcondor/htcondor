@@ -920,6 +920,13 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
 		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS, the_methods);
+			// AES-GCM will always internally encrypt and do integrity-checking,
+			// regardless of what was negotiated.  Might as well say that in the
+			// ad so the user is aware!
+		if ("AESGCM" == the_methods.substr(0, the_methods.find(','))) {
+			action_ad->Assign(ATTR_SEC_ENCRYPTION, "YES");
+			action_ad->Assign(ATTR_SEC_INTEGRITY, "YES");
+		}
 	}
 
 	if (cli_methods) {
