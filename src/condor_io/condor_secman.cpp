@@ -573,25 +573,21 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		}
 	}
 
-	// for those of you reading this code, a 'paramer'
-	// is a thing that param()s.
-	char *paramer = nullptr;
-
 	// crypto methods
-	paramer = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
-	if (!paramer) {
-		paramer = strdup(SecMan::getDefaultCryptoMethods().Value());
-	}
+	auto crypto_method_raw = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
+	std::string crypto_method = crypto_method_raw ? crypto_method_raw : SecMan::getDefaultCryptoMethods();
+	free(crypto_method_raw);
 
-	if (paramer) {
-		ad->Assign (ATTR_SEC_CRYPTO_METHODS, paramer);
-		free(paramer);
-		paramer = NULL;
+	crypto_method = SecMan::filterCryptoMethods(crypto_method);
+
+	if (!crypto_method.empty()) {
+		ad->Assign (ATTR_SEC_CRYPTO_METHODS, crypto_method);
 	} else {
 		if( sec_encryption == SEC_REQ_REQUIRED || 
 			sec_integrity == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no crypto methods, "
 					 "but it was required! failing...\n" );
+			return false;
 		} else {
 			dprintf( D_SECURITY, "SECMAN: no crypto methods, "
 					 "disabling crypto.\n" );
@@ -1958,6 +1954,24 @@ SecManStartCommand::receiveAuthInfo_inner()
 
 			m_auth_info.Assign(ATTR_SEC_USE_SESSION, "YES");
 
+			std::string encryption;
+			if (auth_response.EvaluateAttrString(ATTR_SEC_ENCRYPTION, encryption) && encryption == "YES") {
+				std::string crypto_method_list;
+				if (!auth_response.EvaluateAttrString(ATTR_SEC_CRYPTO_METHODS, crypto_method_list) ||
+					crypto_method_list.empty())
+				{
+					dprintf(D_ALWAYS, "SECMAN: Remote server requires encryption but provided no crypto method to use.\n");
+					m_errstack->push( "SECMAN", SECMAN_ERR_INVALID_POLICY, "Remote server requires encryption but provided no crypto method to use; potentially there were no mutually-compatible methods enabled between client and server." );
+					return StartCommandFailed;
+				}
+				std::string crypto_method = crypto_method_list.substr(0, crypto_method_list.find(','));
+				if (SecMan::filterCryptoMethods(crypto_method).empty()) {
+					dprintf(D_ALWAYS, "SECMAN: Remote server suggested a crypto method (%s) we don't support.\n", crypto_method.c_str());
+					m_errstack->pushf( "SECMAN", SECMAN_ERR_INVALID_POLICY, "Remote server suggested a crypto method (%s) we don't support", crypto_method.c_str());
+					return StartCommandFailed;
+				}
+			}
+
 			m_sock->encode();
 
 		}
@@ -3033,6 +3047,24 @@ SecMan::invalidateExpiredCache()
 			invalidateOneExpiredCache(session_cache_iter->second);
 		}
 	}
+}
+
+std::string SecMan::filterCryptoMethods(const std::string &input_methods)
+{
+	StringList meth_iter(input_methods.c_str());
+	meth_iter.rewind();
+	const char *tmp = NULL;
+	bool first = true;
+	std::string result;
+	while ((tmp = meth_iter.next())) {
+		if (strcmp(tmp, "AESGCM") && strcmp(tmp, "3DES") && strcmp(tmp, "TRIPLEDES") && strcmp(tmp, "BLOWFISH")) {
+			continue;
+		}
+		if (first) {first = false;}
+		else {result += ",";}
+		result += tmp;
+	}
+	return result;
 }
 
 	// Iterate through all the methods in a list;

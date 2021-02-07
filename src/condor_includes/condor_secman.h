@@ -216,6 +216,10 @@ public:
 	static  std::string		getAuthenticationMethods( DCpermission perm );
 
 	static	MyString 		getDefaultCryptoMethods();
+		// Given a list of crypto methods, return a list of those that are supported
+		// by this version of HTCondor.  Prevents clients and servers from suggesting
+		// a crypto method that isn't supported by the code.
+	static  std::string		filterCryptoMethods(const std::string &);
 	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
 	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
 	static	SecMan::sec_req 		sec_lookup_req( const ClassAd &ad, const char* pname );
