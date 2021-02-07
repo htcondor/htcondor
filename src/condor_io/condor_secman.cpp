@@ -919,7 +919,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 			// AES-GCM will always internally encrypt and do integrity-checking,
 			// regardless of what was negotiated.  Might as well say that in the
 			// ad so the user is aware!
-		if ("AESGCM" == the_methods.substr(0, the_methods.find(','))) {
+		if (SEC_FEAT_ACT_YES == authentication_action && "AESGCM" == the_methods.substr(0, the_methods.find(','))) {
 			action_ad->Assign(ATTR_SEC_ENCRYPTION, "YES");
 			action_ad->Assign(ATTR_SEC_INTEGRITY, "YES");
 		}
