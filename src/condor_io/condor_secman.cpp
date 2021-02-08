@@ -3480,19 +3480,20 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	while ((next_crypto = GetNextToken(",", true))) {
 		Protocol crypt_protocol = getCryptProtocolNameToEnum(next_crypto);
 
-		unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
+		unsigned char* keybuf;
+		if (crypt_protocol != CONDOR_AESGCM) {
+			keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
+		} else {
+			keybuf = Condor_Crypt_Base::hkdf(reinterpret_cast<const unsigned char *>(private_key), strlen(private_key), 32);
+		}
 		if(!keybuf) {
 			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
-				" oneWayHashKey() failed.\n",sesid);
+				" key generation failed.\n",sesid);
 			return false;
 		}
 		KeyInfo *keyinfo;
 		if (crypt_protocol == CONDOR_AESGCM) {
-			// should this be MAC_SIZE * 2?
-			unsigned char keybuf2[32];
-			memcpy(keybuf2, keybuf, 16);
-			memcpy(keybuf2 + 16, keybuf, 16);
-			keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0);
+			keyinfo = new KeyInfo(keybuf, 32, crypt_protocol, 0);
 		} else {
 			// should this be MAC_SIZE?
 			keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0);

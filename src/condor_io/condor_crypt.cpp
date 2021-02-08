@@ -22,6 +22,7 @@
 #include "condor_crypt.h"
 #include "condor_md.h"
 #include "condor_random_num.h"
+#include "condor_auth_passwd.h"
 #include <openssl/rand.h>              // SSLeay rand function
 #include "condor_debug.h"
 
@@ -168,4 +169,19 @@ char *Condor_Crypt_Base::randomHexKey(int length)
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 {
     return Condor_MD_MAC::computeOnce((const unsigned char *)initialKey, strlen(initialKey));
+}
+
+unsigned char * Condor_Crypt_Base::hkdf(const unsigned char *initialKey, size_t input_key_len, size_t output_key_len)
+{
+	auto result = static_cast<unsigned char *>(malloc(output_key_len));
+	if (!result) return nullptr;
+
+	auto retval = Condor_Auth_Passwd::hkdf(initialKey, input_key_len,
+		reinterpret_cast<const unsigned char *>("htcondor"), strlen("htcondor"),
+		reinterpret_cast<const unsigned char *>("keygen"), strlen("keygen"),
+		result, output_key_len);
+	if (retval < 0) {
+		return nullptr;
+	}
+	return result;
 }
