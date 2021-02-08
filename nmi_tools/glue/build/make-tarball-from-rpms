@@ -55,7 +55,8 @@ tar xfp tarball/usr/lib64/condor/condor_tests-$version.tar.gz
 rm tarball/usr/lib64/condor/condor_tests-$version.tar.gz
 mv condor_tests-* condor_tests-$version-$release-$arch_dist
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(file $(find -type f)|grep 'executable'|sed -e s/:.*//))
-$cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist
+(cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
+$cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib64'
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -rf condor_tests-$version-$release-$arch_dist
 
@@ -112,7 +113,7 @@ done
 
 rm -rf externals
 $cmd_dir/make-tarball-links tarball
-$cmd_dir/set-tarball-rpath tarball
+$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
 
 # Fixup directory permissions for the tarball
 chmod 755 tarball/etc/condor/passwords.d

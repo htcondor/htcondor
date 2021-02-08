@@ -119,7 +119,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
-elsif ($ENV{NMI_PLATFORM} =~ /x86_64_CentOS7/) {
+elsif ($ENV{NMI_PLATFORM} =~ /x86_64_CentOS7|x86_64_Debian9/) {
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
     print TASKLIST "$EXTRACT_TARBALLS_TASK 4h\n";

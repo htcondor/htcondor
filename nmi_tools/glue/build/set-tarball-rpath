@@ -1,26 +1,19 @@
 #!/bin/sh
 # This command sets the RPATH for all the executables on a tarball directory
-if [ $# -ne 1 ]; then
+if [ $# -ne 2 ]; then
     echo 'Error: missing argument'
-    echo "Usage: $(basename $0) RPMs-directory"
+    echo "Usage: $(basename $0) tarball-directory rpath"
     exit 1
 fi
 tarball=$1
+rpath=$2
 if [ ! -d $tarball ]; then
     echo "Error: $tarball is not a directory"
-    echo "Usage: $(basename $0) RPMs-directory"
+    echo "Usage: $(basename $0) tarball-directory rpath"
     exit 1
 fi
 
 cd $tarball
-if [ -d usr/lib64 ]; then
-    RPATH='$ORIGIN/../lib64'
-else
-    RPATH='$ORIGIN/../lib'
-fi
-# New versions of patchelf take multiple file.
-# patchelf --set-rpath $RPATH $(file $(find -type f -executable)|grep 'ELF.*shared'|sed -e s/:.*//)
-# Unfortunately, we support some older platforms
 for file in $(file $(find -type f)|grep 'ELF.*shared'|sed -e s/:.*//); do
-    patchelf --set-rpath $RPATH $file
+    patchelf --set-rpath $rpath $file
 done

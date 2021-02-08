@@ -52,7 +52,8 @@ tar xfp tarball/usr/lib/condor/condor_tests-$version.tar.gz
 rm tarball/usr/lib/condor/condor_tests-$version.tar.gz
 mv condor_tests-* condor_tests-$version-$release-$arch_dist
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(file $(find -type f)|grep 'executable'|sed -e s/:.*//))
-$cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist
+(cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
+$cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib'
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -rf condor_tests-$version-$release-$arch_dist
 
@@ -111,7 +112,7 @@ mkdir -p tarball/var/lib/condor/oauth_credentials
 mkdir -p tarball/var/lib/condor/oauth_credentials
 
 $cmd_dir/make-tarball-links tarball
-$cmd_dir/set-tarball-rpath tarball
+$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib'
 
 # Package final tarball
 mv tarball condor-$version-$release.$arch_dist-stripped

@@ -296,7 +296,12 @@ sub get_tarball_check_script {
 }
 
 sub get_extract_tarballs_script {
-    return dirname($0) . "/make-tarball-from-rpms";
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
+        return dirname($0) . "/make-tarball-from-rpms";
+    }
+    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
+        return dirname($0) . "/make-tarball-from-debs";
+    }
 }
 
 sub get_tarball_name {

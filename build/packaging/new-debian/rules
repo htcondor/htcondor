@@ -46,9 +46,9 @@ override_dh_auto_configure:
 
 
 override_dh_auto_build: doc/build
-	dh_auto_build -- VERBOSE=1 -j32
+	dh_auto_build -- VERBOSE=1
 	# The tests don't get built eventhough was asked for them
-	(cd obj-*; make tests -j32)
+	(cd obj-*; make tests)
 	# post-fixing things that have to be done due to changes introduced by
 	# repackaging
 	# 1. rebuild java stuff
@@ -77,7 +77,7 @@ doc/build:
 override_dh_auto_install:
 	dh_auto_install
 	# tar up the tests
-	(cd obj-*; make tests-tar-pkg -j32)
+	(cd obj-*; make tests-tar-pkg)
 	find debian/tmp|sort > /tmp/files
 	find obj-*|sort > /tmp/obj
 	mv obj-*/condor_tests-*.tar.gz debian/tmp/usr/lib/condor/condor_tests-$(upstreamver).tar.gz
