@@ -246,17 +246,17 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     if (!(ctx = EVP_CIPHER_CTX_new())) {
-        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to initialize EVP object.\n");
+        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: Failed to initialize EVP object.\n");
         return false;
     }
 
     if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
-        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to initialize AES-GCM-256 mode.\n");
+        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: Failed to initialize AES-GCM-256 mode.\n");
         return false;
     }
 
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, NULL)) {
-        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to initialize IV length to %d.\n", IV_SIZE);
+        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: Failed to initialize IV length to %d.\n", IV_SIZE);
         return false;
     }
 
@@ -266,7 +266,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     if (stream_state->m_ctr_dec == 0xffffffff) {
-        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Hit max number of packets per connection.\n");
+        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: Hit max number of packets per connection.\n");
         return false;
     }
 
