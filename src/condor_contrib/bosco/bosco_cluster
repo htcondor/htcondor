@@ -253,31 +253,51 @@ ssh_find_remote () {
     # Find the platform of the remote host
     # 1. remote host
     remote_host=$1
-    cmd_out=`ssh $remote_host "python3 -c \"import sys; import platform; mydist = platform.dist(); print('%s %s%s' % (sys.platform, mydist[0], mydist[1]))\"" 2>/dev/null`
-    if [ $? -eq 0 ]; then
-        # check for linux
-        case "$cmd_out" in 
-            (*redhat7* | *centos7*)
-                echo "CentOS7" ;;
-            (*redhat8* | *centos8*)
-                echo "CentOS8" ;;
-            (*debian9*)
-                echo "Debian9" ;;
-            (*debian10*)
-                echo "Debian10" ;;
-            (*Ubuntu16*)
-                echo "Ubuntu16" ;;
-            (*Ubuntu18*)
-                echo "Ubuntu18" ;;
-            (*Ubuntu20*)
-                echo "Ubuntu20" ;;
-            (*darwin*)
-                echo "MacOSX" ;;
-            (*) ;;
-        esac
-        return 0
-    fi
-    return 1
+
+    # Returns 'Darwin' for Mac OS X or 'Linux'
+    detect_os=`ssh $remote_host "uname -s"`
+    [[ $? -eq 0 ]] || return 1
+
+    case "$detect_os" in
+        Linux)
+            ssh_detect_linux_distro "$remote_host"
+            return $?
+            ;;
+        Darwin)
+            echo "MacOSX"
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+
+ssh_detect_linux_distro () {
+    # Find the linux distro of the remote host
+    # 1. remote host
+    remote_host=$1
+
+    os_release=`ssh $remote_host "cat /etc/os-release" 2> /dev/null`
+    [[ $? -eq 0 ]] || return 1
+
+    dist=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}' | tr -d '"'`
+    ver=`echo "$os_release | "awk -F '=' '/^VERSION_ID=/ {print $2}' | tr -d '"'`
+    major_ver="${ver%%.*}"
+
+    case "$dist" in
+        (rhel|centos)
+            echo "CentOS${major_ver}" ;;
+        debian)
+            echo "Debian${major_ver}" ;;
+        ubuntu)
+            echo "Ubuntu${major_ver}" ;;
+        (*)
+            return 1
+            ;;
+    esac
+    return 0
 }
 
 

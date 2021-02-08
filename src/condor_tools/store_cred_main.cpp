@@ -56,6 +56,8 @@ struct StoreCredOptions {
 	char *daemonname;
 	const char *pw; // password if supplied on the command line
 	const char *service; // service name from the -s argument
+	const char *scopes;  // scopes from the -S argument
+	const char *audience; // audience from the -A argument
 	const char *credential_file;
 	const char *pool_password_file;
 	bool help;
@@ -181,6 +183,12 @@ int main(int argc, const char *argv[]) {
 	// setup cred_info classad
 	if (options.service) {
 		cred_info.Assign("service", options.service);
+	}
+	if (options.scopes) {
+		cred_info.Assign("scopes", options.scopes);
+	}
+	if (options.audience) {
+		cred_info.Assign("audience", options.audience);
 	}
 
 	// determine where to direct our command
@@ -368,6 +376,8 @@ cleanup:
 	
 	if ( result == SUCCESS || result == SUCCESS_PENDING ) {
 		return 0;
+	} else if ( result == FAILURE_CRED_MISMATCH ) {
+		return 2;
 	} else {
 		return 1;
 	}
@@ -407,6 +417,8 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 	opts->pool_password_file = NULL;;
 	opts->pw = NULL;
 	opts->service = NULL;
+	opts->scopes = NULL;
+	opts->audience = NULL;
 	opts->help = false;
 	SecureZeroMemory(opts->username, sizeof(opts->username));
 
@@ -623,6 +635,40 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 					}
 					break;
 
+				case 'S':
+					if (ix+1 < argc) {
+						if (opts->scopes) {
+							fprintf(stderr, "ERROR: OAuth scopes already specified\n");
+							usage();
+							err = true;
+						}
+						else {
+							opts->scopes = argv[ix + 1];
+							++ix;
+			}
+					} else {
+						err = true;
+						optionNeedsArg(arg, "scopes");
+					}
+					break;
+
+				case 'A':
+					if (ix+1 < argc) {
+						if (opts->audience) {
+							fprintf(stderr, "ERROR: OAuth audience already specified\n");
+							usage();
+							err = true;
+						}
+						else {
+							opts->audience = argv[ix + 1];
+							++ix;
+			}
+					} else {
+						err = true;
+						optionNeedsArg(arg, "audience");
+					}
+					break;
+
 
 #if !defined(WIN32)
 				case 'f':
@@ -719,6 +765,9 @@ usage()
 	                 "                         If <filename> is -, read from stdin\n"
 	);
 	fprintf( stderr, "    -s <service>      Add/Remove/Query for the given OAuth2 service\n" );
+	fprintf( stderr, "    -S <scopes>       Add the given OAuth2 comma-separated scopes, or make sure\n" );
+	fprintf( stderr, "                         a Query matches\n" );
+	fprintf( stderr, "    -A <audience>     Add the given OAuth2 audience, or make sure a Query matches\n" );
 	fprintf( stderr, "    -n <name>         Manage credentials on the named machine\n" );
 #if !defined(WIN32)
 	fprintf( stderr, "    -f <filename>     Write password to a pool password file\n" );
@@ -729,6 +778,7 @@ usage()
 	                 "The add-krb and add-oauth action must be used with the -i argument to specify\n"
 	                 "a file to read the credential from. The add or add-pwd action will prompt for\n"
 	                 "a password unless the -p argument is used.\n"
+	                 "Using -A or -S with oauth requires the credential to be in JSON format.\n"
 	);
 	fprintf( stderr, "\n" );
 
