@@ -241,7 +241,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
     if (!output) {
-        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: cannot pass a null output buffer.\n");
+        dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: cannot pass a null output buffer.\n");
         return false;
     }
 
