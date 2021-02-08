@@ -957,7 +957,7 @@ read_packet:
 			p_sock->m_finished_recv_header = true;
 			unsigned md_size = EVP_MD_size(EVP_sha256());
 			aad_len = 2*md_size + header_size;
-			aad_with_digest.reserve(aad_len);
+			aad_with_digest.resize(aad_len,0);
 			aad_data = &aad_with_digest[0];
 			if (!p_sock->m_final_recv_header) {
 				if (1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data, &md_size)) {
@@ -965,7 +965,7 @@ read_packet:
 					return false;
 				}
 				p_sock->m_final_recv_header = true;
-				p_sock->m_final_mds.reserve(2*md_size);
+				p_sock->m_final_mds.resize(2*md_size,0);
 				memcpy(&p_sock->m_final_mds[0] + md_size, aad_data, md_size);
 			} else {
 				memcpy(aad_data, &p_sock->m_final_mds[0] + md_size, md_size);
@@ -983,7 +983,7 @@ read_packet:
 					dprintf(D_NETWORK|D_VERBOSE, "Successfully set second digest in AAD\n");
 				}
 				p_sock->m_final_send_header = true;
-				p_sock->m_final_mds.reserve(2*md_size);
+				p_sock->m_final_mds.resize(2*md_size,0);
 				memcpy(&p_sock->m_final_mds[0], aad_data + md_size, md_size);
 			} else {
 				memcpy(aad_data + md_size, &p_sock->m_final_mds[0], md_size);
@@ -1193,7 +1193,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			p_sock->m_finished_send_header = true;
 			unsigned md_size = EVP_MD_size(EVP_sha256());
 			aad_len = 2*md_size + header_size;
-			aad_with_digest.reserve(aad_len);
+			aad_with_digest.resize(aad_len,0);
 			aad_data = &aad_with_digest[0];
 			if (!p_sock->m_final_send_header) {
 				if (1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data, &md_size)) {
@@ -1201,7 +1201,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 					return false;
 				}
 				p_sock->m_final_send_header = true;
-				p_sock->m_final_mds.reserve(2*md_size);
+				p_sock->m_final_mds.resize(2*md_size,0);
 				memcpy(&p_sock->m_final_mds[0], aad_data, md_size);
 			} else {
 				memcpy(aad_data, &p_sock->m_final_mds[0], md_size);
@@ -1218,7 +1218,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 					dprintf(D_NETWORK, "Successfully set second digest in AAD when sending\n");
 				}
 				p_sock->m_final_recv_header = true;
-				p_sock->m_final_mds.reserve(2*md_size);
+				p_sock->m_final_mds.resize(2*md_size,0);
 				memcpy(&p_sock->m_final_mds[0] + md_size, aad_data + md_size, md_size);
 			} else {
 				memcpy(aad_data + md_size, &p_sock->m_final_mds[0] + md_size, md_size);
