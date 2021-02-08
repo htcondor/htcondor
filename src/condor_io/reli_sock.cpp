@@ -939,14 +939,14 @@ read_packet:
 		// Note that we don't check the header here as the body may be
 		// split across several function invocations.
 	if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->m_recv_md_ctx && (p_sock->_bytes_recvd < 1024*1024)) {
-	/*	if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), m_tmp->get_ptr(), m_tmp->num_untouched())) {
+		if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), m_tmp->get_ptr(), m_tmp->num_untouched())) {
 			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
 			return false;
 	        }
 		else {
 			dprintf(D_NETWORK, "AESGCM: Recv body digest added %u bytes \n", m_tmp->num_untouched());
 		}
-	*/}
+	}
 
 	if (p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
 		int length = m_tmp->num_untouched();
@@ -1150,14 +1150,16 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 		char hex[3*5 + 1];
 		dprintf(D_NETWORK, "Send Header contents: %s\n",
 			debug_hex_dump(hex, reinterpret_cast<char*>(hdr), header_size));
-/*
+
 		if (1 != EVP_DigestUpdate(p_sock->m_send_md_ctx.get(), buf.get_ptr(), buf.num_untouched())) {
 			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
 			return false;
 		}
-*/		dprintf(D_NETWORK, "AESGCM: Send digest added %u + %d bytes \n", header_size, buf.num_untouched());
+		dprintf(D_NETWORK, "AESGCM: Send digest added %u + %d bytes \n", header_size, buf.num_untouched());
 	}
 
+		// AES-GCM mode encrypts the whole message at send() time; do this now and
+		// compute the final digests
 	if (p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
 /*
                 if (!p_sock->m_send_md_ctx) {
