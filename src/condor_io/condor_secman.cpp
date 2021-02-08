@@ -3358,22 +3358,22 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 	list.rewind();
 	char *tmp;
 	while ((tmp = list.next())) {
-		dprintf(D_NETWORK, "Considering crypto protocol %s.\n", tmp);
+		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp);
 		if (!strcasecmp(tmp, "BLOWFISH")) {
-			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return "BLOWFISH";
 		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
-			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return "3DES";
 		} else if (!strcasecmp(tmp, "AES")) {
-			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			answer = tmp;
 		}
 	}
 	if (answer.empty()) {
-		dprintf(D_NETWORK, "Could not decide on crypto protocol from list %s, return CONDOR_NO_PROTOCL.\n", name.c_str());
+		dprintf(D_NETWORK, "Could not decide on crypto protocol from list %s, return CONDOR_NO_PROTOCOL.\n", name.c_str());
 	} else {
-		dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", answer.c_str());
+		dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", answer.c_str());
 	}
 	return answer;
 }
