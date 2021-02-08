@@ -96,7 +96,12 @@ class Condor_Crypt_Base {
 		// The supplied length specifies the number of random bytes,
 		// not the number of hex digits (which is twice the number of bytes).
 	static char *randomHexKey(int length = 24);
+	// Generate a 16-byte key using the MD5 algorithm.
     static unsigned char * oneWayHashKey(const char * initialKey);
+	// Generate a key from random data using the HKDF algorithm.
+	// Returns a key which must be free'd by the caller.
+	// Returns nullptr on error.
+    static unsigned char *hkdf(const unsigned char * initialKey, size_t input_key_len, size_t output_key_length);
     //------------------------------------------
     // PURPOSE: Generate a random key
     //          First method use rand function to generate the key
