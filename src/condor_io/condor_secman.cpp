@@ -44,6 +44,7 @@
 #include "condor_auth_ssl.h"
 
 #include <sstream>
+#include <algorithm>
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -3576,9 +3577,16 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_INTEGRITY);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_ENCRYPTION);
-	sec_copy_attribute(policy,imp_policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_VALID_COMMANDS);
+
+		// See comments in ExportSecSessionInfo; use a different delimiter as ','
+		// is a significant character and not allowed in session IDs.
+	std::string crypto_methods;
+	if (imp_policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods)) {
+		std::replace(crypto_methods.begin(), crypto_methods.end(), '.', ',');
+		policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods.c_str());
+	}
 
 	// we need to convert the short version (e.g. "8.9.7") into a proper version string
 	std::string short_version;
@@ -3652,9 +3660,16 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ClassAd exp_policy;
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_INTEGRITY);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_ENCRYPTION);
-	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_VALID_COMMANDS);
+
+	// CryptoMethods, unfortunately, contains ',' which is not a permissible character
+	// in claim IDs.  Wrap it in a random different delimiter...
+	std::string crypto_methods;
+	if (policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods)) {
+		std::replace(crypto_methods.begin(), crypto_methods.end(), ',', '.');
+		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods.c_str());
+	}
 
 	// we want to export "RemoteVersion" but the spaces in the full version
 	// string screw up parsing when importing.  so we have to extract just
