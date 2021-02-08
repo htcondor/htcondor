@@ -584,11 +584,7 @@ int main( int argc, char *argv[] )
 	all_okay = true;
 	for(size_t i=0; i<worklist_name.size(); i++) {
 		// any item failing induces failure of whole program
-		//
-		// also, I suspect an old bug in the Daemon object where internal state is confused
-		// after several calls to makeConnectedSocket().  Using a new copy of the Daemon for
-		// each call seems not to tickle that issue.  HTCONDOR-246
-		if (!do_item(new Daemon(*daemon), worklist_name[i], worklist_number[i], output_mode)) {
+		if (!do_item(daemon, worklist_name[i], worklist_number[i], output_mode)) {
 			all_okay = false;
 		}
 	}
