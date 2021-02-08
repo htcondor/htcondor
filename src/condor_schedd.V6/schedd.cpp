@@ -951,7 +951,7 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 		NEGOTIATOR_SIDE_MATCHSESSION_FQU,
 		nullptr,
 		duration,
-		&policy_ad
+		&policy_ad, true
 	);
 	if ( retval ) {
 		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
@@ -998,7 +998,7 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 		COLLECTOR_SIDE_MATCHSESSION_FQU,
 		nullptr,
 		duration,
-		&policy_ad
+		&policy_ad, true
 	);
 	if ( retval ) {
 		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);

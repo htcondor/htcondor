@@ -766,6 +766,30 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				session->renewLease();
 
+				// If the session has multiple crypto methods, we need to
+				// figure out which one to use.
+				// If the client's resume session ad gives a crypto method,
+				// use that.
+				// Otherwise, the client is 8.9, so if we have a list, use
+				// the first entry that's BLOWFISH or 3DES.
+				// Whichever one we use, set it as the preferred method
+				// for the session, in case we need to connect to our
+				// peer in the future.
+				std::string session_crypto_methods;
+				session->policy()->LookupString(ATTR_SEC_CRYPTO_METHODS, session_crypto_methods);
+				if (session_crypto_methods.find(',') != std::string::npos) {
+					std::string client_crypto_methods;
+					Protocol active_crypto = CONDOR_NO_PROTOCOL;
+					if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS, client_crypto_methods)) {
+						active_crypto = SecMan::getCryptProtocolNameToEnum(client_crypto_methods.c_str());
+					} else {
+						std::string pick_crypto;
+						pick_crypto = SecMan::getPreferredOldCryptProtocol(session_crypto_methods);
+						active_crypto = SecMan::getCryptProtocolNameToEnum(pick_crypto.c_str());
+					}
+					session->setPreferredProtocol(active_crypto);
+				}
+
 				if (session->key()) {
 					// copy this to the HandleReq() scope
 					m_key = new KeyInfo(*session->key());

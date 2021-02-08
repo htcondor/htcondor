@@ -1507,6 +1507,12 @@ SecManStartCommand::sendAuthInfo_inner()
 	if (m_have_session) {
 		MergeClassAds( &m_auth_info, m_enc_key->policy(), true );
 
+		Protocol crypto_type = m_enc_key->key()->getProtocol();
+		const char *crypto_name = SecMan::getCryptProtocolEnumToName(crypto_type);
+		if (crypto_name && crypto_name[0]) {
+			m_auth_info.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_name);
+		}
+
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
 					m_enc_key->id(), m_session_key.Value());
@@ -2920,6 +2926,7 @@ SecMan::SecMan() :
 		m_resume_proj.insert(ATTR_SEC_SERVER_COMMAND_SOCK);
 		m_resume_proj.insert(ATTR_SEC_CONNECT_SINFUL);
 		m_resume_proj.insert(ATTR_SEC_COOKIE);
+		m_resume_proj.insert(ATTR_SEC_CRYPTO_METHODS);
 	}
 
 	if ( NULL == m_ipverify ) {
@@ -3314,7 +3321,7 @@ SecMan::getCryptProtocolNameToEnum(char const *name) {
 		if (!strcasecmp(tmp, "BLOWFISH")) {
 			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_BLOWFISH;
-		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(name, "TRIPLEDES")) {
+		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
 			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_3DES;
 		} else if (!strcasecmp(tmp, "AESGCM")) {
@@ -3326,8 +3333,53 @@ SecMan::getCryptProtocolNameToEnum(char const *name) {
 	return CONDOR_NO_PROTOCOL;
 }
 
+const char *
+SecMan::getCryptProtocolEnumToName(Protocol proto)
+{
+	switch(proto) {
+	case CONDOR_NO_PROTOCOL:
+		return "";
+	case CONDOR_BLOWFISH:
+		return "BLOWFISH";
+	case CONDOR_3DES:
+		return "3DES";
+	case CONDOR_AESGCM:
+		return "AESGCM";
+	default:
+		return "";
+	}
+}
+
+std::string
+SecMan::getPreferredOldCryptProtocol(const std::string &name)
+{
+	std::string answer;
+	StringList list(name.c_str());
+	list.rewind();
+	char *tmp;
+	while ((tmp = list.next())) {
+		dprintf(D_NETWORK, "Considering crypto protocol %s.\n", tmp);
+		if (!strcasecmp(tmp, "BLOWFISH")) {
+			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			return "BLOWFISH";
+		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
+			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			return "3DES";
+		} else if (!strcasecmp(tmp, "AESGCM")) {
+			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			answer = tmp;
+		}
+	}
+	if (answer.empty()) {
+		dprintf(D_NETWORK, "Could not decide on crypto protocol from list %s, return CONDOR_NO_PROTOCL.\n", name.c_str());
+	} else {
+		dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", answer.c_str());
+	}
+	return answer;
+}
+
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool allow_multiple_methods)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3376,6 +3428,19 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		return false;
 	}
 
+	std::string crypto_methods;
+	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
+
+	// remove all but the first crypto method, if multiple methods
+	// aren't allowed
+	if (!allow_multiple_methods) {
+		size_t pos = crypto_methods.find(',');
+		if( pos != std::string::npos ) {
+			crypto_methods.erase(pos);
+			policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
+		}
+	}
+
 	policy.Assign(ATTR_SEC_USE_SESSION, "YES");
 	policy.Assign(ATTR_SEC_SID, sesid);
 	policy.Assign(ATTR_SEC_ENACT, "YES");
@@ -3390,45 +3455,6 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		policy.Assign(ATTR_SEC_USER,peer_fqu);
 	}
 
-
-	std::string crypto_method;
-	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method);
-		// Backward compat HACK: Until the introduction of AESGCM, SecMan only
-		// considered the first letter of the method - and we only sent the first
-		// method (preventing negotiation).
-		//
-		// Hence, we have a fictional protocol named 'B' in this list -- old clients
-		// will use BLOWFISH.
-		//
-		// When AESGCM was introduced, you have to spell the method name correct,
-		// meaning 'B' is automatically ignored and the real preference is used.
-	if (crypto_method.find("BLOWFISH") != std::string::npos) {
-		crypto_method = std::string("B,") + crypto_method;
-		policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_method);
-	}
-
-	Protocol crypt_protocol = getCryptProtocolNameToEnum(crypto_method.c_str());
-
-	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
-	if(!keybuf) {
-		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
-				" oneWayHashKey() failed.\n",sesid);
-		return false;
-	}
-	KeyInfo *keyinfo;
-	if (crypt_protocol == CONDOR_AESGCM) {
-		// should this be MAC_SIZE * 2?
-		unsigned char keybuf2[32];
-		memcpy(keybuf2, keybuf, 16);
-		memcpy(keybuf2 + 16, keybuf, 16);
-		keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0);
-	} else {
-		// should this be MAC_SIZE?
-		keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0);
-	}
-	free( keybuf );
-	keybuf = NULL;
-
 		// extract the session duration from the (imported) policy
 	int expiration_time = 0;
 
@@ -3436,7 +3462,6 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
 			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
-			delete keyinfo;
 			return false;
 		}
 	}
@@ -3447,7 +3472,37 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
 	}
 
-	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time,0);
+	// TODO What happens if we don't support any of the methods in the list?
+	//   The old code creates a KeyInfo with CONDOR_NO_PROTOCOL.
+	std::vector<KeyInfo*> keys_list;
+	Tokenize(crypto_methods);
+	const char *next_crypto;
+	while ((next_crypto = GetNextToken(",", true))) {
+		Protocol crypt_protocol = getCryptProtocolNameToEnum(next_crypto);
+
+		unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
+		if(!keybuf) {
+			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+				" oneWayHashKey() failed.\n",sesid);
+			return false;
+		}
+		KeyInfo *keyinfo;
+		if (crypt_protocol == CONDOR_AESGCM) {
+			// should this be MAC_SIZE * 2?
+			unsigned char keybuf2[32];
+			memcpy(keybuf2, keybuf, 16);
+			memcpy(keybuf2 + 16, keybuf, 16);
+			keyinfo = new KeyInfo(keybuf2, 32, crypt_protocol, 0);
+		} else {
+			// should this be MAC_SIZE?
+			keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0);
+		}
+		keys_list.push_back(keyinfo);
+		free( keybuf );
+		keybuf = NULL;
+	}
+
+	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keys_list,&policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {
 		KeyCacheEntry *existing = NULL;
@@ -3481,7 +3536,6 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 			} else {
 				dprintf(D_ALWAYS, "SECMAN: failed to create session %s.\n", sesid);
 			}
-			delete keyinfo;
 			return false;
 		}
 	}
@@ -3528,7 +3582,6 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		dPrintAd(D_SECURITY, policy);
 	}
 
-	delete keyinfo;
 	return true;
 }
 
@@ -3576,13 +3629,18 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_INTEGRITY);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_ENCRYPTION);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_VALID_COMMANDS);
+
+	// If the import policy has CryptoMethodsList, that should override
+	// CryptoMethods
+	sec_copy_attribute(policy, ATTR_SEC_CRYPTO_METHODS, imp_policy, ATTR_SEC_CRYPTO_METHODS_LIST);
 
 		// See comments in ExportSecSessionInfo; use a different delimiter as ','
 		// is a significant character and not allowed in session IDs.
 	std::string crypto_methods;
-	if (imp_policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods)) {
+	if (policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods)) {
 		std::replace(crypto_methods.begin(), crypto_methods.end(), '.', ',');
 		policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods.c_str());
 	}
@@ -3662,12 +3720,20 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_SESSION_EXPIRES);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_VALID_COMMANDS);
 
-	// CryptoMethods, unfortunately, contains ',' which is not a permissible character
-	// in claim IDs.  Wrap it in a random different delimiter...
 	std::string crypto_methods;
-	if (policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods)) {
+	policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
+	size_t pos = crypto_methods.find(',');
+	if( pos != std::string::npos ) {
+		std::string preferred = getPreferredOldCryptProtocol(crypto_methods);
+		if (preferred.empty()) {
+			preferred = crypto_methods.substr(0, pos);
+		}
+		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS, preferred);
+
+		// ',' is not a permissible character in claim IDs.
+		// Convert it to a different delimiter...
 		std::replace(crypto_methods.begin(), crypto_methods.end(), ',', '.');
-		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods.c_str());
+		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS_LIST, crypto_methods);
 	}
 
 	// we want to export "RemoteVersion" but the spaces in the full version

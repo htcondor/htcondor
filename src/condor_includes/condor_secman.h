@@ -274,7 +274,7 @@ public:
 		// these can be copied into the policy parameter:
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
 		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
-		classad::ClassAd *policy);
+		classad::ClassAd *policy, bool allow_multiple_methods=false);
 
 		// Get security session info to send to our peer so that peer
 		// can create pre-built security session compatible with ours.
@@ -296,6 +296,9 @@ public:
 
 		// Given a list of crypto methods, return the first valid protocol name.
 	static Protocol getCryptProtocolNameToEnum(char const *name);
+	static const char *getCryptProtocolEnumToName(Protocol proto);
+
+	static std::string getPreferredOldCryptProtocol(const std::string &name);
 
  private:
 	void invalidateOneExpiredCache(KeyCache *session_cache);
