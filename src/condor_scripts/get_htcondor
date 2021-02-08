@@ -418,10 +418,6 @@ do_install() {
 			;;
 	esac
 
-	if [ -z "${CONDOR_HOST}" ]; then
-		CONDOR_HOST='$(FULL_HOSTNAME)'
-	fi
-
 	SECURITY_CONFIG=$(cat <<-EOF
 		# Which pool is this?
 		CONDOR_HOST = ${CONDOR_HOST}
@@ -576,6 +572,12 @@ while [ $# -gt 0 ]; do
 			;;
 		--central-manager)
 			ROLE="central manager"
+			CONDOR_HOST=$2
+			if [ -z "${CONDOR_HOST}" ]; then
+					echo "--central-manager requires its external name as an argument"
+					exit 1
+			fi
+			shift
 			;;
 		--submit)
 			ROLE="submit"
