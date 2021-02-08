@@ -224,18 +224,6 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         return false;
     }
 
-    if (!sending_IV) {
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of previous MAC: %s\n",
-            MAC_SIZE, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(stream_state->m_prev_mac_enc), MAC_SIZE));
-
-        if ( 1 != EVP_EncryptUpdate(ctx, NULL, &len, stream_state->m_prev_mac_enc, MAC_SIZE)) {
-            dprintf(D_NETWORK, "Failed to authenticate prior MAC.\n");
-            return false;
-        }
-    } else {
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : No previous MAC, so not adding to EncryptUpdate()\n");
-    }
-
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of plaintext. (not printing)\n", input_len);
     if (1 != EVP_EncryptUpdate(ctx, output + (sending_IV ? IV_SIZE : 0),
         &len, input, input_len))
@@ -443,18 +431,6 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     if (aad && !EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len)) {
         dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt failed when authenticating user AAD.\n");
         return false;
-    }
-
-    if (!receiving_IV) {
-        // if we aren't receiving an IV, it means there was a previous msg MAC we want to add
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of previous MAC: %s\n",
-            MAC_SIZE, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(stream_state->m_prev_mac_dec), MAC_SIZE));
-        if (1 != EVP_DecryptUpdate(ctx, NULL, &len, stream_state->m_prev_mac_dec, MAC_SIZE)) {
-            dprintf(D_NETWORK, "Failed to authenticate prior MAC.\n");
-            return false;
-        }
-    } else {
-        dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : No previous MAC, so not adding to EncryptUpdate()\n");
     }
 
     dprintf(D_NETWORK,
