@@ -59,7 +59,6 @@ void Condor_Crypt_AESGCM::initState(StreamCryptoState* stream_state)
 		// resetState();
 		ASSERT("stream_state must not be NULL!");
 	}	
-	dprintf(D_NETWORK, "ZKM: ******: Condor_Crypt_AESGCM::initState: Connection count %u.\n", stream_state->m_ctr_conn);
 }
 
 int Condor_Crypt_AESGCM::ciphertext_size_with_cs(int plaintext_size, StreamCryptoState * stream_state) const
@@ -151,42 +150,20 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
 
     int32_t base = ntohl(stream_state->m_iv_enc.ctr.pkt);
     int32_t result = base + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_enc);
-    //int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     if (stream_state->m_ctr_enc == 0xffffffff) {
         dprintf(D_NETWORK, "Hit max number of packets per connection.\n");
         return false;
     }
 
-
-    // we have decided the connection counter is not needed, and possibly also
-    // a bad idea according to Lamport's "byzantine general problem". (that is,
-    // how would both sides agree a connection was made).
-
-    int32_t base_conn = ntohl(stream_state->m_iv_enc.ctr.conn);
-    //int32_t result_conn = base_conn + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_conn);
-    int32_t result_conn = base_conn;
-    int32_t ctr_encoded_conn = htonl(result_conn);
-
-    if (stream_state->m_ctr_conn == 0xffffffff) {
-        dprintf(D_NETWORK, "Hit max number of connections in a session.\n");
-        return false;
-    }
-
     unsigned char iv[IV_SIZE];
     memcpy(iv, &ctr_encoded, sizeof(ctr_encoded));
-    memcpy(iv + sizeof(ctr_encoded), &ctr_encoded_conn, sizeof(ctr_encoded_conn));
-    memcpy(iv + 2*sizeof(ctr_encoded), stream_state->m_iv_enc.iv + 2*sizeof(ctr_encoded), IV_SIZE - 2*sizeof(ctr_encoded));
+    memcpy(iv + sizeof(ctr_encoded), stream_state->m_iv_enc.iv + sizeof(ctr_encoded), IV_SIZE - sizeof(ctr_encoded));
 
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV base value %d\n", base);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter value _enc %u\n", stream_state->m_ctr_enc);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value %d\n", result);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value (encoded) %d\n", ctr_encoded);
-
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV conn base value %d\n", base_conn);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Connection counter value %d\n", stream_state->m_ctr_conn);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Connection Counter plus base value %d\n", result_conn);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV conn ctr value %d\n", ctr_encoded_conn);
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV base value %ld\n", base);
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter value _enc %lu\n", stream_state->m_ctr_enc);
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value %ld\n", result);
+    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value (encoded) %ld\n", ctr_encoded);
 
         // Only need to send IV for the first encrypted packet.
     if (sending_IV) {
@@ -332,11 +309,6 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         dprintf(D_NETWORK, "Hit max number of packets per connection.\n");
         return false;
     }
-    if (stream_state->m_ctr_conn == 0xffffffff) {
-        dprintf(D_NETWORK, "Hit max number of connections per session.\n");
-        return false;
-    }
-
     // Ideally, we would only need to receive the IV on the first transmission,
     // and it could be computed after that based on the message counter:
     bool receiving_IV = (stream_state->m_ctr_dec == 0);
@@ -381,32 +353,16 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
    
     int32_t base = ntohl(stream_state->m_iv_dec.ctr.pkt);
     int32_t result = base + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_dec);
-    //int32_t result = base;
     int32_t ctr_encoded = htonl(result);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV base value %d\n", base);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter value _dec %u\n", stream_state->m_ctr_dec);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value %d\n", result);
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value (encoded) %d\n", ctr_encoded);
 
-
-    // we have decided the connection counter is not needed, and possibly also
-    // a bad idea according to Lamport's "byzantine general problem". (that is,
-    // how would both sides agree a connection was made).
-
-    int32_t result_conn = ntohl(stream_state->m_iv_dec.ctr.conn);
-    //int32_t base_conn = result_conn - *reinterpret_cast<int32_t*>(&stream_state->m_ctr_conn);
-    int32_t base_conn = result_conn;
-    int32_t ctr_encoded_conn = htonl(result_conn);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV conn base value %d\n", base_conn);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Connection counter value %d\n", stream_state->m_ctr_conn);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Connection Counter plus base value %d\n", result_conn);
-    dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decyrpt DUMP : IV conn ctr value %d\n", ctr_encoded_conn);
-
         // Assemble our expected IV.
     unsigned char iv[IV_SIZE];
     memcpy(iv, &ctr_encoded, sizeof(ctr_encoded));
-    memcpy(iv + sizeof(ctr_encoded), &ctr_encoded_conn, sizeof(ctr_encoded_conn));
-    memcpy(iv + 2*sizeof(ctr_encoded), stream_state->m_iv_dec.iv + 2*sizeof(ctr_encoded), IV_SIZE - 2*sizeof(ctr_encoded));
+    memcpy(iv + sizeof(ctr_encoded), stream_state->m_iv_dec.iv + sizeof(ctr_encoded), IV_SIZE - sizeof(ctr_encoded));
 
     const unsigned char *kdp = cs->m_keyInfo.getKeyData();
     dprintf(D_NETWORK, "Condor_Crypt_AESGCM::decrypt DUMP : about to init key %0x %0x %0x %0x.\n",
