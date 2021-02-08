@@ -249,6 +249,8 @@ do_token_security() {
 
 	# Now issue myself a token.
 	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
+	# The requirement for this line is a bug.
+	$sh_c "chown condor.condor /etc/condor/tokens.d/condor@${CONDOR_HOST}"
 }
 
 do_install() {
@@ -418,6 +420,9 @@ do_install() {
 			;;
 	esac
 
+	# IDTOKENS must be before FS because FS can be used for local
+	# daemon-to-daemon communication, but it will authenticate as
+	# condor@<local host name>, not condor@<trust domain>.
 	SECURITY_CONFIG=$(cat <<-EOF
 		# Which pool is this?
 		CONDOR_HOST = ${CONDOR_HOST}
@@ -428,17 +433,17 @@ do_install() {
 
 		# Enable IDTOKENS (for daemons), FS (for local users),
 		# and ANONYMOUS (for remote users).  Remote users who want to submit
-		# jobs remotely should run `condor_token_fetch` on the submit node
-		# and copy the result to the machine they're submitting from
+		# jobs remotely should run condor_token_fetch on the submit node
+		# and copy the result to the machine they are submitting from
 		# (to a new file in ~/.condor/tokens.d).
-		SEC_DEFAULT_AUTHENTICATION_METHODS = FS, IDTOKENS, ANONYMOUS
+		SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
 
 		# Machines must share a pair of values -- their password (signing key)
 		# and their trust domain (issuer) -- to accept tokens from each other.
 		TRUST_DOMAIN = \$(CONDOR_HOST)
 
 		# Allow anyone to read.  In this configuration, users can only
-		# securely identify themselves to HTCondor if they're on the same
+		# securely identify themselves to HTCondor if they are on the same
 		# machine, so this is needed to make condor_status work.
 		ALLOW_READ = *
 
