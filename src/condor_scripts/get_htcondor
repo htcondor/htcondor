@@ -161,7 +161,7 @@ get_distribution() {
 		;;
 
 		debian|raspbian)
-			# FIXME: echoing VERSION_CODENAME out of /etc/os-release works
+			# Echoing VERSION_CODENAME out of /etc/os-release works
 			# better on Devuan and is simpler... is that file missing on
 			# raspbian?
 			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
@@ -248,7 +248,7 @@ do_token_security() {
 	echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
 
 	# Now issue myself a token.
-	$sh_c "condor_token_create -identity condor@${SECURITY_DOMAIN} > /etc/condor/tokens.d/condor@${SECURITY_DOMAIN}"
+	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
 }
 
 do_install() {
@@ -382,7 +382,6 @@ do_install() {
 				elif [ "${lsb_dist}" = "rhel" ]; then
 					# subscription-manager only works if you've already
 					# "register"ed and "attach"ed the system.
-					# FIXME: document this.
 					if [ "${dist_version}" -eq 7 ]; then
 						$sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
 					elif [ "${dist_version}" -eq 8 ]; then
@@ -423,28 +422,38 @@ do_install() {
 		CONDOR_HOST='$(FULL_HOSTNAME)'
 	fi
 
-	# We can offer a command-line option for this later, if necessary; and
-	# it may be desirable to default this to the UID/FS domain, instead.
-	SECURITY_DOMAIN="localpool"
-
 	SECURITY_CONFIG=$(cat <<-EOF
-		# Security config
+		# Which pool is this?
+		CONDOR_HOST = ${CONDOR_HOST}
+
+		# Strong security means that all connections are authenticated,
+		# encrypted, and checked for integrity.
 		use security : strong
 
-		ALLOW_ADMINISTRATOR = condor@${SECURITY_DOMAIN}
-		ALLOW_OWNER = condor@${SECURITY_DOMAIN}
-		ALLOW_READ = *
-		ALLOW_WRITE = condor@${SECURITY_DOMAIN}
-		ALLOW_DAEMON = condor@${SECURITY_DOMAIN}
-		ALLOW_NEGOTIATOR = condor@${SECURITY_DOMAIN}
-
-		# Enable IDTOKENS (for daemons), FS (for users), and ANONYMOUS (for READ).
+		# Enable IDTOKENS (for daemons), FS (for local users),
+		# and ANONYMOUS (for remote users).  Remote users who want to submit
+		# jobs remotely should run `condor_token_fetch` on the submit node
+		# and copy the result to the machine they're submitting from
+		# (to a new file in ~/.condor/tokens.d).
 		SEC_DEFAULT_AUTHENTICATION_METHODS = FS, IDTOKENS, ANONYMOUS
+
 		# Machines must share a pair of values -- their password (signing key)
 		# and their trust domain (issuer) -- to accept tokens from each other.
-		TRUST_DOMAIN = ${SECURITY_DOMAIN}
+		TRUST_DOMAIN = \$(CONDOR_HOST)
 
-		CONDOR_HOST = ${CONDOR_HOST}
+		# Allow anyone to read.  In this configuration, users can only
+		# securely identify themselves to HTCondor if they're on the same
+		# machine, so this is needed to make condor_status work.
+		ALLOW_READ = *
+
+		# The HTCondor daemons only accept non-read connections from another
+		# daemon with access to the token stored in /etc/condor/tokens.d,
+		# which is readable only by root the condor user.
+		ALLOW_ADMINISTRATOR = condor@\$(TRUST_DOMAIN)
+		ALLOW_OWNER = condor@\$(TRUST_DOMAIN)
+		ALLOW_WRITE = condor@\$(TRUST_DOMAIN)
+		ALLOW_DAEMON = condor@\$(TRUST_DOMAIN)
+		ALLOW_NEGOTIATOR = condor@\$(TRUST_DOMAIN)
 
 		# Role-specific config
 	EOF
@@ -512,22 +521,10 @@ do_download() {
 			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
 			dist_version_number=`echo $dist_version_number | sed -e s'/\.[0-9]*//'`
 			OS_VERSION=$dist_version_number
-
-			#
-			# FIXME: Ubuntu 18.04 LTS (container and VM) and 16.04 (VM and
-			# therefore probably container) needs libgomp.so.1
-			# (from the package 'libgomp1').
-			#
 			;;
 		debian)
 			OS_NAME=Debian
 			OS_VERSION=$dist_version_number
-
-			#
-			# FIXME: The Debian 9 and 10 VMs (and therefore probably
-			# the corresonding containers) need  libgomp.so.1
-			# (from the package 'libgomp1').
-			#
 			;;
 		centos|rhel)
 			OS_NAME=CentOS
