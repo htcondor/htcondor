@@ -2981,7 +2981,7 @@ Sock::initialize_crypto(KeyInfo * key)
             crypto_ = new Condor_Crypt_3des();
             break;
         case CONDOR_AESGCM:
-			setCryptoMethodUsed("AESGCM");
+			setCryptoMethodUsed("AES");
             set_MD_mode(MD_OFF);
             crypto_ = new Condor_Crypt_AESGCM();
                 // AES-GCM is incompatible with MD mode.

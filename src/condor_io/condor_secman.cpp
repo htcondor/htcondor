@@ -920,7 +920,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 			// AES-GCM will always internally encrypt and do integrity-checking,
 			// regardless of what was negotiated.  Might as well say that in the
 			// ad so the user is aware!
-		if (SEC_FEAT_ACT_YES == authentication_action && "AESGCM" == the_methods.substr(0, the_methods.find(','))) {
+		if (SEC_FEAT_ACT_YES == authentication_action && "AES" == the_methods.substr(0, the_methods.find(','))) {
 			action_ad->Assign(ATTR_SEC_ENCRYPTION, "YES");
 			action_ad->Assign(ATTR_SEC_INTEGRITY, "YES");
 		}
@@ -3065,7 +3065,7 @@ std::string SecMan::filterCryptoMethods(const std::string &input_methods)
 	bool first = true;
 	std::string result;
 	while ((tmp = meth_iter.next())) {
-		if (strcmp(tmp, "AESGCM") && strcmp(tmp, "3DES") && strcmp(tmp, "TRIPLEDES") && strcmp(tmp, "BLOWFISH")) {
+		if (strcmp(tmp, "AES") && strcmp(tmp, "3DES") && strcmp(tmp, "TRIPLEDES") && strcmp(tmp, "BLOWFISH")) {
 			continue;
 		}
 		if (first) {first = false;}
@@ -3219,7 +3219,7 @@ getDefaultAuthenticationMethods(DCpermission perm) {
 
 
 MyString SecMan::getDefaultCryptoMethods() {
-	return "AESGCM,BLOWFISH,3DES";
+	return "AES,BLOWFISH,3DES";
 }
 
 char* SecMan::my_unique_id() {
@@ -3324,7 +3324,7 @@ SecMan::getCryptProtocolNameToEnum(char const *name) {
 		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
 			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_3DES;
-		} else if (!strcasecmp(tmp, "AESGCM")) {
+		} else if (!strcasecmp(tmp, "AES")) {
 			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_AESGCM;
 		}
@@ -3344,7 +3344,7 @@ SecMan::getCryptProtocolEnumToName(Protocol proto)
 	case CONDOR_3DES:
 		return "3DES";
 	case CONDOR_AESGCM:
-		return "AESGCM";
+		return "AES";
 	default:
 		return "";
 	}
@@ -3365,7 +3365,7 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
 			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
 			return "3DES";
-		} else if (!strcasecmp(tmp, "AESGCM")) {
+		} else if (!strcasecmp(tmp, "AES")) {
 			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
 			answer = tmp;
 		}

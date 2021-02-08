@@ -95,8 +95,8 @@ void print_useful_info_1(bool rv, const char* dname, MyString name, Sock*, Class
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no integrity");
-	} else if (encryption_method == "AESGCM") {
-		printf("AESGCM");
+	} else if (encryption_method == "AES") {
+		printf("AES");
 	} else {
 #ifdef FIPS_MODE
 		printf("SHA");
@@ -164,8 +164,8 @@ void print_useful_info_2(bool rv, const char* dname, int cmd, MyString name, Soc
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Integrity:                   none\n");
-	} else if ("AESGCM" == encryption_method) {
-		printf("Integrity:                   AESGCM\n");
+	} else if ("AES" == encryption_method) {
+		printf("Integrity:                   AES\n");
 	} else {
 #ifdef FIPS_MODE
 		printf("Integrity:                   SHA\n");
@@ -232,7 +232,7 @@ void print_useful_info_10(bool rv, const char*, MyString name, Sock*, ClassAd *a
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
-	} else if (encryption_method == "AESGCM") {
+	} else if (encryption_method == "AES") {
 		val = encryption_method;
 	} else {
 #ifdef FIPS_MODE
