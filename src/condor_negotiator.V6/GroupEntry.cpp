@@ -458,7 +458,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 			// Do this after all attributes are filled in
 			double v = 0;
 			if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
-				v = DBL_MAX;
+				v = FLT_MAX;
 				std::string e;
 				ad->LookupString(ATTR_SORT_EXPR_STRING, e);
 				dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
@@ -502,7 +502,6 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 					continue;
 				}
 
-				dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
 				// if allocating surplus, use allocated, otherwise just use the group's quota directly
 				double target = std::max(group->allocated, group->quota);
@@ -519,6 +518,8 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 
 				slots = group->strict_enforce_quota(accountant, hgq_root_group, slots);
 
+				dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION with a quota limit of %g\n", group->name.c_str(), slots);
+				
 				// Finally, actuall call back into the negotiator, passing the group and the limit
 				fn(group, slots);
 			}
@@ -1135,20 +1136,20 @@ GroupEntry::displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine 
 	if (firstLine) {
 		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s", "Group", "Computed","Config", "Quota",  "Use", "Claimed", "Requestd", "Submters");
 		if (!onlyConfigInfo) {
-			dprintf(dprintfLevel, "%8s", "Allocatd");
+			dprintf(dprintfLevel | D_NOHEADER, "%8s", "Allocatd");
 		}
 
-		dprintf(dprintfLevel, "\n");
+		dprintf(dprintfLevel | D_NOHEADER, "\n");
 		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s", "Name",  "quota",   "quota",  "static", "surplus", "cores", "cores", "in group");
 		if (!onlyConfigInfo) {
-			dprintf(dprintfLevel, "%8s", "cores");
+			dprintf(dprintfLevel | D_NOHEADER, "%8s", "cores");
 		}
-		dprintf(dprintfLevel, "\n");
+		dprintf(dprintfLevel | D_NOHEADER, "\n");
 		dprintf(dprintfLevel, "------------------------------------------------------------------------------------");
 		if (!onlyConfigInfo) {
-			dprintf(dprintfLevel, "--------");
+			dprintf(dprintfLevel | D_NOHEADER, "--------");
 		}
-		dprintf(dprintfLevel, "\n");
+		dprintf(dprintfLevel | D_NOHEADER, "\n");
 	}
 	dprintf(dprintfLevel, "%-20s %8g %8g %8c %8c %8g %8g %8d",
 			this->name.c_str(),
@@ -1161,12 +1162,12 @@ GroupEntry::displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine 
 			this->submitterAds ? this->submitterAds->Length() : -1);
 
 	if (!onlyConfigInfo) {
-		dprintf(dprintfLevel, "%8g",
+		dprintf(dprintfLevel | D_NOHEADER, "%8g",
 			this->allocated);
 	}
-	dprintf(dprintfLevel, "\n");
+	dprintf(dprintfLevel | D_NOHEADER, "\n");
 	for (const GroupEntry *g: this->children) {
-		g->displayGroups(onlyConfigInfo, false);
+		g->displayGroups(dprintfLevel, onlyConfigInfo, false);
 	}
 }
 
