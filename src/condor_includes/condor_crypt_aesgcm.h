@@ -26,26 +26,19 @@
 class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
 
  public:
-//    Condor_Crypt_AESGCM();
-//    ~Condor_Crypt_AESGCM();
-
-    // ZKM TODO FIXME: Get rid of these, and any callers should call the
-    // reset() method on their state object instead
-//    void resetState();
-//    static void resetState(ConnCryptoState *connState);
     static void initState(StreamCryptoState *ss);
 
     bool encrypt(Condor_Crypto_State *,
                  const unsigned char *,
                  int                  ,
                  unsigned char *&     ,
-                 int&                 ) {ASSERT("ZKM: WRONG CALL.\n"); return false;}
+                 int&                 ) {ASSERT("AESGCM: You have called the wrong ::encrypt().\n"); return false;}
 
     bool decrypt(Condor_Crypto_State *,
                        const unsigned char *,
                        int             ,
                        unsigned char *&,
-                       int&            ) {ASSERT("ZKM: WRONG CALL.\n"); return false;}
+                       int&            ) {ASSERT("AESGCM: You have called the wrong ::decrypt().\n"); return false;}
 
     bool encrypt(Condor_Crypto_State * cs,
                  const unsigned char * aad_data,
@@ -65,9 +58,6 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
 
     virtual int ciphertext_size_with_cs(int plaintext_size, StreamCryptoState *ss) const;
 
- private:
-    // ZKM TODO FIXME: Move all this from m_state to the Condor_Crypto_State param
-    //std::shared_ptr<ConnCryptoState> m_conn_state;
 };
 
 #endif

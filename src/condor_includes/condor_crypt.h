@@ -40,8 +40,6 @@ struct StreamCryptoState {
     uint32_t m_ctr_dec{0}; // Number of incoming (decrypted) packets
     union Packed_IV m_iv_enc; // IV for outgoing data
     union Packed_IV m_iv_dec; // IV for incoming data.
-    unsigned char m_prev_mac_enc[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    unsigned char m_prev_mac_dec[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 };
 
 

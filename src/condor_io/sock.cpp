@@ -2088,8 +2088,8 @@ char * Sock::serializeCryptoInfo() const
     if (len > 0) {
         int buflen = len*2+32;
 	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
-		// ZKM FIXME TODO (compute actual size?)
-		buflen += 8192;
+		// grow the buffer to hold the StreamCryptoState data
+		buflen += (3 * sizeof(StreamCryptoState));
 	}
         outbuf = new char[buflen];
 
@@ -2100,30 +2100,23 @@ char * Sock::serializeCryptoInfo() const
 
 	// if protocol is 3 (AES) then we need to send the StreamCryptoState
 	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
-		dprintf(D_ALWAYS, "ZKM: SOCK: sending more StreamCryptoState!.\n");
+		dprintf(D_NETWORK|D_VERBOSE, "SOCK: sending more StreamCryptoState!.\n");
 		// this is daemon-to-daemon inheritance so no need to worry
 		// about byte-order.  furthermore there are no pointers, just a
 		// struct with data.  we send hex bytes, receiver serializes
 		// them.
 
-		// there should be a crypto_state_ object, and within that the
-		// stream state, that we need to extract information from and
-		// pass along.
-		dprintf(D_ALWAYS, "ZKM SOCK: crypto_state_ is %p.\n", crypto_state_);
-		dprintf(D_ALWAYS, "ZKM SOCK: stream_state is %p.\n", &(crypto_state_->m_stream_crypto_state));
-
 		char * ptr = outbuf + strlen(outbuf);
 		unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
-		dprintf(D_ALWAYS, "ZKM SERIALIZE: encoding %lu bytes.\n", sizeof(StreamCryptoState));
+		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %lu bytes.\n", sizeof(StreamCryptoState));
 		for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++, ptr+=2) {
-			dprintf(D_ALWAYS, "ZKM SERIALIZE: index %i byte %02x.\n", i, *ccs_serial);
-		    sprintf(ptr, "%02X", *ccs_serial);
+			sprintf(ptr, "%02X", *ccs_serial);
 		}
 
 		sprintf(ptr, "*");
 		ptr++;
 	}
-	dprintf(D_ALWAYS, "ZKM: SOCK: buf so far: %s.\n", outbuf);
+	dprintf(D_NETWORK|D_VERBOSE, "SOCK: buf so far: %s.\n", outbuf);
 
         // Hex encode the binary key
         ptr = outbuf + strlen(outbuf);
@@ -2183,11 +2176,12 @@ const char * Sock::serializeCryptoInfo(const char * buf)
     ASSERT(ptmp);
 
     // NOTE:
+    // for BLOWFISH and 3DES:
     // currently we are not serializing the ivec.  this works because the
     // crypto state (including ivec) is reset to zero after inheriting.
     //
-    // ZKM FIXME TODO
-    // NOTE: THAT IS NOT TRUE ANYMORE WITH AES
+    // for AEES:
+    // we do serialize the ivec along with other state contained in the StreamCryptoState
 
     int citems = sscanf(ptmp, "%d*", &encoded_len);
     if ( citems == 1 && encoded_len > 0 ) {
@@ -2213,19 +2207,19 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         ASSERT( ptmp && citems == 1 );
         ptmp++;
 
-	dprintf(D_ALWAYS, "ZKM: SOCK: CRYPTO: read so far: p: %i, m: %i.\n", protocol, encryption_mode);
+	dprintf(D_NETWORK|D_VERBOSE, "SOCK: CRYPTO: read so far: p: %i, m: %i.\n", protocol, encryption_mode);
 
 	// if protocol is 3 (AES) then we expect to receive the following additional (the StreamCryptoState object)
 	StreamCryptoState scs;
 	if(protocol == CONDOR_AESGCM) {
 		unsigned int hex;
-		dprintf(D_ALWAYS, "ZKM: SOCK: receiving more StreamCryptoState: %s\n", ptmp);
+		dprintf(D_NETWORK|D_VERBOSE, "SOCK: receiving more StreamCryptoState: %s\n", ptmp);
 		// this is daemon-to-daemon inheritance so no need to worry
 		// about byte-order.  furthermore there are no points, just a
 		// struct with data.  sender dumps hex bytes, we serialize
 		// them.
 		char* ptr = (char*)(&scs);
-		for(unsigned int i = 0; i < sizeof(StreamCryptoState); i++) {
+		for (unsigned int i = 0; i < sizeof(StreamCryptoState); i++) {
 			citems = sscanf(ptmp, "%2X", &hex);
 			if (citems != 1) break;
 			*ptr = (unsigned char)hex;
@@ -2238,17 +2232,15 @@ const char * Sock::serializeCryptoInfo(const char * buf)
 		ptmp++;
 	}
 
-	dprintf(D_ALWAYS, "ZKM: SOCK: len is %i, remaining sock info: %s\n", len, ptmp);
+	dprintf(D_NETWORK|D_VERBOSE, "SOCK: len is %i, remaining sock info: %s\n", len, ptmp);
 
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
-		dprintf(D_ALWAYS, "ZKM DECODE index %i\n", i);
             citems = sscanf(ptmp, "%2X", &hex);
-			if (citems != 1) break;
-		dprintf(D_ALWAYS, "ZKM DECODE citems %i, val %02X\n", citems, (unsigned char)hex);
-		
+            if (citems != 1) break;
+
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
@@ -2262,9 +2254,9 @@ const char * Sock::serializeCryptoInfo(const char * buf)
 
         // now that we have set crypto state and have a crypto object, replace the AES
         // StreamCryptoState with what we deserialized above.
-        dprintf(D_ALWAYS, "** ZKM, protocol is %i, crypto_ is %p, crypto_state_ is %p.\n", protocol, crypto_, crypto_state_);
+        dprintf(D_NETWORK|D_VERBOSE, "SOCK: protocol is %i, crypto_ is %p, crypto_state_ is %p.\n", protocol, crypto_, crypto_state_);
         if(protocol == CONDOR_AESGCM) {
-            dprintf(D_ALWAYS, "** ZKM, MEMCPY to %p from %p size %lu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+            dprintf(D_NETWORK|D_VERBOSE, "SOCK: MEMCPY to %p from %p size %lu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
             memcpy(&(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
         }
 
@@ -3028,7 +3020,7 @@ const KeyInfo& Sock :: get_crypto_key() const
     if (crypto_state_) {
         return crypto_state_->getkey();
     } else {
-        dprintf(D_ALWAYS, "ZKM: SOCK: get_crypto_key: no crypto_state_\n");
+        dprintf(D_ALWAYS, "SOCK: get_crypto_key: no crypto_state_\n");
     }
     ASSERT(0);	// This does not return...
     return  crypto_state_->getkey();  // just to make compiler happy...

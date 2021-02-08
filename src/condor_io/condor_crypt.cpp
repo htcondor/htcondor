@@ -82,8 +82,7 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
             break;
         }
         case CONDOR_AESGCM: {
-            // ZKM TODO FIXME: CODE MISSING HERE TO INIT AES PROPERLY
-            dprintf(D_ALWAYS, "ZKM: ***** RESETTING AES PROPERLY.\n");
+            // AESGCM provides a method to init the StreamCryptoState object, use that.
             Condor_Crypt_AESGCM::initState(&m_stream_crypto_state);
             break;
         }
@@ -100,15 +99,11 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
 Condor_Crypto_State::~Condor_Crypto_State() {
     if(m_ivec) free(m_ivec);
     if(m_method_key_data) free(m_method_key_data);
-    // CURRENTLY UNUSED: if(m_additional) free(m_additional);
 }
 
 void Condor_Crypto_State::reset() {
-    dprintf(D_ALWAYS, "CRYPTO: protocol(%i) resetting.\n", m_keyInfo.getProtocol());
-
     if(m_keyInfo.getProtocol() == CONDOR_AESGCM) {
-        dprintf(D_SECURITY | D_VERBOSE, "ZKM: *****: CRYPTO: IGNORING AES reset.\n");
-        //Condor_Crypt_AESGCM::resetState(m_keyInfo.getConnCryptoState());
+        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: protocol(AES), not clearing StreamCryptoState.\n");
     } else {
         dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: simple reset m_ivec(len %i) and m_num\n", m_ivec_len);
 

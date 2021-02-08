@@ -2244,7 +2244,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				// Mark the session as having state-tracking enabled.
 				// When combined with AES-GCM, this will cause the ReliSock to
 				// store the state of the encryption in the session cache.
-			if (!m_auth_info.InsertAttr( "TrackState", true )) {
+			if (!m_auth_info.InsertAttr("TrackState", true)) {
 				dprintf(D_SECURITY, "SECMAN: Failed to enable state tracking.\n");
 				return StartCommandFailed;
 			}
@@ -3053,7 +3053,7 @@ std::string SecMan::filterCryptoMethods(const std::string &input_methods)
 {
 	StringList meth_iter(input_methods.c_str());
 	meth_iter.rewind();
-	const char *tmp = NULL;
+	const char *tmp = nullptr;
 	bool first = true;
 	std::string result;
 	while ((tmp = meth_iter.next())) {
@@ -3309,19 +3309,19 @@ SecMan::getCryptProtocolNameToEnum(char const *name) {
 	list.rewind();
 	char *tmp;
 	while ((tmp = list.next())) {
-		dprintf(D_NETWORK, "Considering crypto protocol %s.\n", tmp);
+		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp);
 		if (!strcasecmp(tmp, "BLOWFISH")) {
-			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_BLOWFISH;
 		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(name, "TRIPLEDES")) {
-			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_3DES;
 		} else if (!strcasecmp(tmp, "AESGCM")) {
-			dprintf(D_NETWORK, "Decided on crypto protocol %s.\n", tmp);
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
 			return CONDOR_AESGCM;
 		}
 	}
-	dprintf(D_NETWORK, "Could not decide on crypto protocol from list %s, return CONDOR_NO_PROTOCL.\n", name);
+	dprintf(D_NETWORK, "Could not decide on crypto protocol from list %s, return CONDOR_NO_PROTOCOL.\n", name);
 	return CONDOR_NO_PROTOCOL;
 }
 
@@ -3407,7 +3407,6 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 
 	Protocol crypt_protocol = getCryptProtocolNameToEnum(crypto_method.c_str());
-	dprintf(D_ALWAYS,"SECMAN: ZKM: *** %s translated to %i\n", crypto_method.c_str(), crypt_protocol);
 
 	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
 	if(!keybuf) {

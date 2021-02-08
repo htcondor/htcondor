@@ -236,18 +236,14 @@ public:
         bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
 
         int ciphertext_size(int plaintext_size) {
-            dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_ is %p.\n", crypto_);
             if (!crypto_) return plaintext_size;
-            dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_state_ is %p.\n", crypto_state_);
             if (!crypto_state_) return plaintext_size;
-            dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_state_->m_keyInfo is %p.\n", (void*)&crypto_state_->m_keyInfo);
-            dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): crypto_state_->m_keyInfo.protocol_ %i.\n", crypto_state_->m_keyInfo.getProtocol());
 
             // for all methods other than AESGCM just return plaintext
             if (crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) return plaintext_size;
 
             int cs = ((Condor_Crypt_AESGCM*)crypto_)->ciphertext_size_with_cs(plaintext_size, &(crypto_state_->m_stream_crypto_state));
-            dprintf(D_ALWAYS, "ZKM: SOCK:CIPHERSIZE(): went from plaintext_size %i to ciphertext_size %i.\n", plaintext_size, cs);
+            dprintf(D_NETWORK, "Sock::ciphertext_size: went from plaintext_size %i to ciphertext_size %i.\n", plaintext_size, cs);
             return cs;
         }
 

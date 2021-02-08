@@ -34,6 +34,8 @@
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
 
+#define MAX_MESSAGE_SIZE (1024*1024)
+
 /**************************************************************/
 
 /* 
@@ -889,7 +891,7 @@ check_header:
 	}
 	m_tmp->grow_buf(len+1);
 
-        if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->_bytes_recvd < 1024*1024) {
+        if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->_bytes_recvd < MAX_MESSAGE_SIZE) {
                 if (!p_sock->m_recv_md_ctx) {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
                         p_sock->m_recv_md_ctx.reset(EVP_MD_CTX_create());
@@ -897,27 +899,23 @@ check_header:
                         p_sock->m_recv_md_ctx.reset(EVP_MD_CTX_new());
 #endif
                         if (!p_sock->m_recv_md_ctx) {
-                                dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
+                                dprintf(D_ALWAYS, "IO: Failed to create a new MD context.\n");
                                 return false;
                         }
                         if (1 != EVP_DigestInit_ex(p_sock->m_recv_md_ctx.get(), EVP_sha256(), NULL)) {
-                                dprintf(D_NETWORK, "IO: Failed to initialize SHA-256 context.\n");
+                                dprintf(D_ALWAYS, "IO: Failed to initialize SHA-256 context.\n");
                                 return false;
                         }
                 }
-		char hex[3*5 + 1];
-		dprintf(D_NETWORK, "Recv Header contents: %s\n",
-			debug_hex_dump(hex, reinterpret_cast<char*>(hdr), header_size));
-
 		if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), hdr, header_size)) {
-			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
+			dprintf(D_ALWAYS, "IO: Failed to update the message digest.\n");
 			return false;
 		}
-		dprintf(D_NETWORK, "AESGCM: Recv header digest added %u bytes \n", header_size);
-        }
+		dprintf(D_NETWORK|D_VERBOSE, "AESGCM: Recv header digest added %u bytes \n", header_size);
+	}
 
 read_packet:
-	dprintf(D_NETWORK, "Reading packet body of length %d\n", len);
+	dprintf(D_NETWORK|D_VERBOSE, "Reading packet body of length %d\n", len);
 	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
 	if (tmp_len != len) {
 		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {
@@ -940,11 +938,11 @@ read_packet:
 		// split across several function invocations.
 	if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->m_recv_md_ctx && (p_sock->_bytes_recvd < 1024*1024)) {
 		if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), m_tmp->get_ptr(), m_tmp->num_untouched())) {
-			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
+			dprintf(D_ALWAYS, "IO: Failed to update the message digest.\n");
 			return false;
 	        }
 		else {
-			dprintf(D_NETWORK, "AESGCM: Recv body digest added %u bytes \n", m_tmp->num_untouched());
+			dprintf(D_NETWORK|D_VERBOSE, "AESGCM: Recv body digest added %u bytes \n", m_tmp->num_untouched());
 		}
 	}
 
@@ -963,7 +961,7 @@ read_packet:
 			aad_data = &aad_with_digest[0];
 			if (!p_sock->m_final_recv_header) {
 				if (1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data, &md_size)) {
-					dprintf(D_NETWORK, "IO: Failed to compute final received message digest.\n");
+					dprintf(D_ALWAYS, "IO: Failed to compute final received message digest.\n");
 					return false;
 				}
 				p_sock->m_final_recv_header = true;
@@ -976,13 +974,13 @@ read_packet:
 				if (p_sock->m_send_md_ctx &&
 					(1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data + md_size, &md_size)))
 				{
-					dprintf(D_NETWORK, "IO: Failed to compute final send message digest.\n");
+					dprintf(D_ALWAYS, "IO: Failed to compute final send message digest.\n");
 					return false;
 				} else if (!p_sock->m_send_md_ctx) {
 					memset(aad_data + md_size, '\0', md_size);
-					dprintf(D_NETWORK, "Setting second digest in AAD to %u 0's\n", md_size);
+					dprintf(D_NETWORK|D_VERBOSE, "Setting second digest in AAD to %u 0's\n", md_size);
 				} else {
-					dprintf(D_NETWORK, "Successfully set second digest in AAD\n");
+					dprintf(D_NETWORK|D_VERBOSE, "Successfully set second digest in AAD\n");
 				}
 				p_sock->m_final_send_header = true;
 				p_sock->m_final_mds.reserve(2*md_size);
@@ -1005,7 +1003,7 @@ read_packet:
 			static_cast<unsigned char *>(new_buf.get_ptr()),
 			length))
 		{
-			dprintf(D_SECURITY, "IO: Failed to unwrap the packet.\n");
+			dprintf(D_ALWAYS, "IO: Failed to unwrap the packet.\n");
 			return false;
 		}
 		m_tmp->swap(new_buf);
