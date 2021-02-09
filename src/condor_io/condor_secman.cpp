@@ -1507,10 +1507,12 @@ SecManStartCommand::sendAuthInfo_inner()
 	if (m_have_session) {
 		MergeClassAds( &m_auth_info, m_enc_key->policy(), true );
 
-		Protocol crypto_type = m_enc_key->key()->getProtocol();
-		const char *crypto_name = SecMan::getCryptProtocolEnumToName(crypto_type);
-		if (crypto_name && crypto_name[0]) {
-			m_auth_info.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_name);
+		if (m_enc_key->key()) {
+			Protocol crypto_type = m_enc_key->key()->getProtocol();
+			const char *crypto_name = SecMan::getCryptProtocolEnumToName(crypto_type);
+			if (crypto_name && crypto_name[0]) {
+				m_auth_info.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_name);
+			}
 		}
 
 		if (IsDebugVerbose(D_SECURITY)) {
