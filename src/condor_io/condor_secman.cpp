@@ -1507,19 +1507,26 @@ SecManStartCommand::sendAuthInfo_inner()
 	if (m_have_session) {
 		MergeClassAds( &m_auth_info, m_enc_key->policy(), true );
 
+		if (IsDebugVerbose(D_SECURITY)) {
+			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
+					m_enc_key->id(), m_session_key.Value());
+			m_sec_man.key_printf(D_SECURITY, m_enc_key->key());
+			dPrintAd( D_SECURITY, m_auth_info );
+		}
+
+		// Ensure that CryptoMethods in the resume session ad that we
+		// send to the server matches the method and key we plan to use
+		// for this connection.
+		// Some sessions support a set of possible methods/keys, and
+		// some have no method/key.
 		if (m_enc_key->key()) {
 			Protocol crypto_type = m_enc_key->key()->getProtocol();
 			const char *crypto_name = SecMan::getCryptProtocolEnumToName(crypto_type);
 			if (crypto_name && crypto_name[0]) {
 				m_auth_info.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_name);
 			}
-		}
-
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
-					m_enc_key->id(), m_session_key.Value());
-			m_sec_man.key_printf(D_SECURITY, m_enc_key->key());
-			dPrintAd( D_SECURITY, m_auth_info );
+		} else {
+			m_auth_info.Delete(ATTR_SEC_CRYPTO_METHODS);
 		}
 
 			// Ideally, we would only increment our lease expiration time after
@@ -2329,6 +2336,8 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// update the ad with the crypto method actually used
 			if( m_sock->getCryptoMethodUsed() ) {
 				m_auth_info.Assign( ATTR_SEC_CRYPTO_METHODS, m_sock->getCryptoMethodUsed() );
+			} else {
+				m_auth_info.Delete( ATTR_SEC_CRYPTO_METHODS );
 			}
 
 			if (IsDebugVerbose(D_SECURITY)) {

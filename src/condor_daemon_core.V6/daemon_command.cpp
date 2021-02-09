@@ -768,8 +768,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				// If the session has multiple crypto methods, we need to
 				// figure out which one to use.
-				// If the client's resume session ad gives a crypto method,
-				// use that.
+				// If the client's resume session ad gives a crypto method
+				// list, use the first entry in it.
 				// Otherwise, the client is 8.9, so if we have a list, use
 				// the first entry that's BLOWFISH or 3DES.
 				// Whichever one we use, set it as the preferred method
@@ -964,6 +964,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						}
 
 						m_sec_man->key_printf (D_SECURITY, m_key);
+
+						// Update the session policy to reflect the
+						// crypto method we're using
+						m_policy->Assign(ATTR_SEC_CRYPTO_METHODS, SecMan::getCryptProtocolEnumToName(method));
+					} else {
+						m_policy->Delete(ATTR_SEC_CRYPTO_METHODS);
 					}
 
 					m_new_session = true;
