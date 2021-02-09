@@ -17,23 +17,22 @@
  *
  ***************************************************************/
 
+#include <openssl/evp.h>
+#include "CryptKey.h"
+
 
 #ifndef CONDOR_MESSAGE_DIGEST_MAC
 #define CONDOR_MESSAGE_DIGEST_MAC
 
 #ifdef FIPS_MODE
+#define MDFUNC EVP_sha256
+#define MDFUNCNAME "EVP_sha256"
 static const int MAC_SIZE = 32;
 #else
+#define MDFUNC EVP_md5
+#define MDFUNCNAME "MD5"
 static const int MAC_SIZE = 16;
 #endif
-
-#include "CryptKey.h"
-//----------------------------------------------------------------------
-// This class provides services for message digest (MD) and/or
-// message authentication code (MAC) services. The code uses
-// SHA256 as the basis to provide these services.
-//----------------------------------------------------------------------
-class MD_Context;
 
 class Condor_MD_MAC {
  public:
@@ -106,7 +105,7 @@ class Condor_MD_MAC {
     
     void init();       // initialize/reinitialize SHA
 
-    MD_Context *     context_;
+    EVP_MD_CTX       context_;
     KeyInfo      *   key_;
 };
 
