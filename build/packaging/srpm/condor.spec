@@ -930,9 +930,9 @@ mv %{buildroot}/usr/lib64/condor/libpyclassad3*.so %{buildroot}/usr/lib64
 #rm -rf %{buildroot}/usr/lib64/condor/libchirp_client.a
 #rm -rf %{buildroot}/usr/lib64/condor/libcondorapi.a
 #rm -rf %{buildroot}/usr/lib64/libclassad.a
-#rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE-2.0.txt
-#rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
-#rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE-2.0.txt
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
 
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarball_version
