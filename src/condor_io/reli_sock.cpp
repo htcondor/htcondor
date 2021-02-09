@@ -1333,7 +1333,7 @@ ReliSock::type() const
 char * ReliSock::serializeMsgInfo() const
 {
 	char *buf = new char[20 + 3*m_final_mds.size()];
-	sprintf(buf, "%i*%i*%i*%i*%lu*",
+	sprintf(buf, "%i*%i*%i*%i*%lu",
 		m_final_send_header,
 		m_final_recv_header,
 		m_finished_send_header,
@@ -1343,14 +1343,13 @@ char * ReliSock::serializeMsgInfo() const
 	dprintf(D_ALWAYS, "ZKM: *** MsgInfo out: %s.\n", buf);
 
 	if(m_final_mds.size()) {
+		strcat(buf, "*");
 		char * ptr = buf + strlen(buf);
 		unsigned char * vecdata = const_cast<unsigned char*>(&(m_final_mds[0]));
 		for (unsigned int i=0; i < m_final_mds.size(); i++, vecdata++, ptr+=2) {
 			dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %u.\n", *vecdata);
 			sprintf(ptr, "%02X", *vecdata);
 		}
-		// add final tag (and null)
-		strcpy(ptr, "*");
 	}
 
 	return buf;
@@ -1383,16 +1382,18 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 		m_finished_recv_header
 		);
 
-	// skip 5 *s
+	// skip to 5th *
 	for(int i = 0; i < 5; i++) {
 		buf = strchr(buf, '*') + 1;
 	}
+	buf--;
 
 	dprintf(D_ALWAYS, "ZKM: *** %lu bytes of vector data (and more): %s.\n", vecsize, buf);
 	m_final_mds.resize(vecsize);
 
 	int citems = 1;
 	if (vecsize) {
+		buf++;
 		unsigned int hex;
 		char* ptr = (char*)(&m_final_mds[0]);
 		for (unsigned int i = 0; i < vecsize; i++) {
@@ -1404,11 +1405,11 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 			ptr++;      // since we just stored a single byte of binary
 		}
 
-		// "EOM" check
-		buf = strchr(buf, '*');
-		ASSERT( buf && citems == 1 );
-		buf++;
 	}
+	// "EOM" check
+	buf = strchr(buf, '*');
+	ASSERT( buf && citems == 1 );
+	buf++;
 
 	return buf;
 }
