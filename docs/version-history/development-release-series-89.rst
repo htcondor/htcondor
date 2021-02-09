@@ -13,6 +13,12 @@ Release Notes:
 
 - HTCondor version 8.9.12 not yet released.
 
+- As an improved security measure, HTCondor will now prohibit Linux jobs
+  from running setuid executables by default.  We believe the only common setuid
+  program this impacts is ``ping``.  To allow jobs to run setuid binaries,
+  set ``DISABLE_SETUID`` to ``false`` in the configuration of the worker
+  node.
+
 - The ``condor_procd`` now attempts to detect invalidly short reads of
   the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
   find its own PID, the PID of its parent, or PID 1, it considers the read
@@ -36,6 +42,10 @@ Release Notes:
   :jira:`33`
 
 New Features:
+
+- HTCondor now prohibits jobs from running setuid executables on Linux. The
+  knob ``DISABLE_SETUID`` can be set to false to disable this.
+  :jira:`256`
 
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
