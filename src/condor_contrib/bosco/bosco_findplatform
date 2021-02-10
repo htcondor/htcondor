@@ -6,6 +6,8 @@ import os
 import platform
 import optparse
 
+from typing import Dict
+
 UNKNOWN="UNKNOWN"
 UNSUPPORTED="UNSUPPORTED"
 RH6="RH6"
@@ -21,6 +23,17 @@ UBUNTU20="UBUNTU20"
 
 SUPPORTED_OSX = ['10.13', '10.14', '10.15']
 SUPPORTED_PLATFORMS = [ RH6, RH7, RH8, OSX, DEB9, DEB10, UBUNTU16, UBUNTU18, UBUNTU20 ]
+
+# Mapping for distro name in /etc/os-release to Bosco naming scheme
+DISTRO_MAPPING = {'redhat': 'RH',
+                  'centos': 'RH',
+                  'debian': 'DEB',
+                  'ubuntu': 'UBUNTU',
+                  'linuxmint': 'UBUNTU'}
+
+MINT_TO_UBUNTU_VERSION = {'18': '16',
+                          '19': '18',
+                          '20': '20'}
 
 # download URLs for the different platforms
 URL_DICT={
@@ -56,6 +69,35 @@ def findversion_mac(detail=False):
       return OSX
     return OSX_UNSUPPORTED
   return UNKNOWN
+
+
+def get_distro_info() -> Dict[str, str]:
+    """
+    Return a dict containing the contents of /etc/os-release
+
+    NAME="Ubuntu"
+    VERSION="20.04.1 LTS (Focal Fossa)"
+    ID=ubuntu
+    ID_LIKE=debian
+    PRETTY_NAME="Ubuntu 20.04.1 LTS"
+    VERSION_ID="20.04"
+    HOME_URL="https://www.ubuntu.com/"
+    SUPPORT_URL="https://help.ubuntu.com/"
+    BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+    PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+    VERSION_CODENAME=focal
+    UBUNTU_CODENAME=focal
+    """
+    with open('/etc/os-release') as os_file:
+        os_release = os_file.readlines()
+
+    os_info = dict()
+    for line in os_release:
+        key, val = line.split('=', maxsplit=1)
+        os_info[key] = val.replace('"', '').strip()
+
+    return os_info
+
 
 def findversion_redhat(detail=False):
   # content of /etc/redhat-release
@@ -123,7 +165,7 @@ Codename:    oneiric
           retv=UBUNTU20
   return retv
 
-def findversion():
+def findversion() -> str:
   if not os.name=='posix':
     return UNSUPPORTED
   if sys.platform=='darwin':
@@ -136,39 +178,24 @@ def findversion():
     # only 64 bit supported
     if not platform.architecture()[0]=='64bit':
       return UNSUPPORTED
-    # try first platform.dist, use it only for positive recognition
-    mydist = platform.dist()
-    if mydist[0]:
-      if mydist[0].lower()=='redhat':
-        if mydist[1].startswith('6.'):
-          return RH6
-        if mydist[1].startswith('7.'):
-          return RH7
-        if mydist[1].startswith('8.'):
-          return RH8
-      if mydist[0].lower()=='debian':
-        if mydist[1].startswith('9.'):
-          return DEB9
-        if mydist[1].startswith('10.'):
-          return DEB10
-      if mydist[0].lower()=='ubuntu':
-        if mydist[1].startswith('16'):
-          return UBUNTU16
-        if mydist[1].startswith('18'):
-          return UBUNTU18
-        if mydist[1].startswith('20'):
-          return UBUNTU20
-      if mydist[0].lower()=='linuxmint':
-        if mydist[1].startswith('18'):
-          return UBUNTU16
-        if mydist[1].startswith('19'):
-          return UBUNTU18
-        if mydist[1].startswith('20'):
-          return UBUNTU20
-    if os.path.isfile('/etc/redhat-release'):
-      return findversion_redhat()
-    elif os.path.isfile('/etc/lsb-release'):
-      return findversion_debian()
+
+    try:
+      distro_info = get_distro_info()
+    except FileNotFoundError:
+      return UNKNOWN
+
+    distro = distro_info['ID']
+    bosco_distro = DISTRO_MAPPING[distro]
+    major_ver = distro_info['VERSION_ID'].split('.')[0]
+
+    if distro == 'linuxmunt':
+      try:
+        major_ver = MINT_TO_UBUNTU_VERSION[major_ver]
+      except KeyError:
+        return UNKNOWN
+
+    return f'{bosco_distro}{major_ver}'
+
   return UNKNOWN
 
 def findversion_detail():
