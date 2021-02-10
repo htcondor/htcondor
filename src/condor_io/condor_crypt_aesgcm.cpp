@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_crypt_aesgcm.h"
 
+#include <memory>
 #include <algorithm>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -90,18 +91,19 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     // Authentication tag is an additional 16 bytes; IV is 16 bytes
     output_len += MAC_SIZE + (sending_IV ? IV_SIZE : 0);
 
-    EVP_CIPHER_CTX *ctx;
-    if (!(ctx = EVP_CIPHER_CTX_new())) {
+    std::unique_ptr<EVP_CIPHER_CTX> ctx(EVP_CIPHER_CTX_new());
+    //std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(EVP_CIPHER_CTX_new());
+    if (!ctx) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to allocate new EVP method.\n");
         return false;
     }
 
-    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+    if (1 != EVP_EncryptInit_ex(ctx.get(), EVP_aes_256_gcm(), NULL, NULL, NULL)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to create AES-GCM-256 mode.\n");
         return false;
     }
 
-    if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, NULL)) {
+    if (1 != EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, NULL)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to set IV length.\n");
         return false;
     }
@@ -150,7 +152,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : about to init key %0x %0x %0x %0x.\n",
         *(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
 
-    if (1 != EVP_EncryptInit_ex(ctx, NULL, NULL, cs->m_keyInfo.getKeyData(), iv)) {
+    if (1 != EVP_EncryptInit_ex(ctx.get(), NULL, NULL, cs->m_keyInfo.getKeyData(), iv)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to initialize key and IV.\n");
         return false;
     }
@@ -159,13 +161,13 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     int len;
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of AAD data: %s...\n",
         aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
-    if (aad && (1 != EVP_EncryptUpdate(ctx, NULL, &len, aad, aad_len))) {
+    if (aad && (1 != EVP_EncryptUpdate(ctx.get(), NULL, &len, aad, aad_len))) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to authenticate caller input data.\n");
         return false;
     }
 
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of plaintext\n", input_len);
-    if (1 != EVP_EncryptUpdate(ctx, output + (sending_IV ? IV_SIZE : 0),
+    if (1 != EVP_EncryptUpdate(ctx.get(), output + (sending_IV ? IV_SIZE : 0),
         &len, input, input_len))
     {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to encrypt plaintext buffer.\n");
@@ -174,7 +176,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : First %d bytes written to ciphertext.\n", len);
 
     int len2;
-    if (1 != EVP_EncryptFinal_ex(ctx, output + (sending_IV ? IV_SIZE : 0) + len, &len2)) {
+    if (1 != EVP_EncryptFinal_ex(ctx.get(), output + (sending_IV ? IV_SIZE : 0) + len, &len2)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to finalize cipher text.\n");
         return false;
     }
@@ -207,7 +209,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         *(output + output_len - MAC_SIZE - 1));
 
     // extract the tag directly into the output stream to be given to CEDAR
-    if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, MAC_SIZE, output + output_len - MAC_SIZE)) {
+    if (1 != EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_GET_TAG, MAC_SIZE, output + output_len - MAC_SIZE)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to get tag.\n");
         return false;
     }
@@ -230,7 +232,8 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
                                   unsigned char *        output, 
                                   int&                   output_len)
 {
-    EVP_CIPHER_CTX *ctx;
+    std::unique_ptr<EVP_CIPHER_CTX> ctx(EVP_CIPHER_CTX_new());
+    //std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(EVP_CIPHER_CTX_new());
 
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt **********************\n");
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt with input buffer %d.\n", input_len);
@@ -245,17 +248,17 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
 
-    if (!(ctx = EVP_CIPHER_CTX_new())) {
+    if (!ctx) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: Failed to initialize EVP object.\n");
         return false;
     }
 
-    if (!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+    if (!EVP_DecryptInit_ex(ctx.get(), EVP_aes_256_gcm(), NULL, NULL, NULL)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: Failed to initialize AES-GCM-256 mode.\n");
         return false;
     }
 
-    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, NULL)) {
+    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_IVLEN, IV_SIZE, NULL)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: Failed to initialize IV length to %d.\n", IV_SIZE);
         return false;
     }
@@ -306,7 +309,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         debug_hex_dump(hexdbg,
         reinterpret_cast<const char *>(iv), IV_SIZE));
 
-    if (!EVP_DecryptInit_ex(ctx, NULL, NULL, kdp, iv)) {
+    if (!EVP_DecryptInit_ex(ctx.get(), NULL, NULL, kdp, iv)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed init.\n");
         return false;
     }
@@ -314,7 +317,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     int len;
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of AAD data: %s...\n",
         aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
-    if (aad && !EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_len)) {
+    if (aad && !EVP_DecryptUpdate(ctx.get(), NULL, &len, aad, aad_len)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed when authenticating user AAD.\n");
         return false;
     }
@@ -329,7 +332,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
 
-    if (!EVP_DecryptUpdate(ctx, output, &len, input + (receiving_IV ? IV_SIZE : 0), input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE)) {
+    if (!EVP_DecryptUpdate(ctx.get(), output, &len, input + (receiving_IV ? IV_SIZE : 0), input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed cipher text update.\n");
         return false;
     }
@@ -355,7 +358,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         *(output + len - 2),
         *(output + len - 1));
 
-    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, MAC_SIZE, const_cast<unsigned char *>(input + input_len - MAC_SIZE))) {
+    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_TAG, MAC_SIZE, const_cast<unsigned char *>(input + input_len - MAC_SIZE))) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed set of tag.\n");
         return false;
     }
@@ -365,7 +368,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - MAC_SIZE), MAC_SIZE));
 
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : about to finalize output (len is %i).\n", len);
-    if (!EVP_DecryptFinal_ex(ctx, output + len, &len)) {
+    if (!EVP_DecryptFinal_ex(ctx.get(), output + len, &len)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to finalize decryption and check of tag.\n");
        return false;
     }
