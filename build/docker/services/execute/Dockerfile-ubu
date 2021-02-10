@@ -12,7 +12,7 @@ LABEL org.label-schema.name="HTCondor Ubuntu execute image" \
 # Create slot users slot1 through slot64
 RUN \
    for n in `seq 1 64`; do \
-       useradd slot${n}; \
+       useradd slot${n} || exit $?; \
    done
 
 # Install extra packages commonly used by jobs
@@ -21,7 +21,7 @@ RUN \
     export DEBIAN_FRONTEND=noninteractive  &&\
     apt-get update -q  &&\
     grep '^[A-Za-z]' /tmp/packagelist.txt \
-        | xargs -r apt-get install -qy  ;\
+        | xargs -r apt-get install -qy  &&\
     rm -rf /var/lib/apt/lists/*  /var/cache/apt/*  &&\
     rm /tmp/packagelist.txt  &&\
     :

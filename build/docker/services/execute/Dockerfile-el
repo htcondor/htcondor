@@ -12,19 +12,24 @@ LABEL org.label-schema.name="HTCondor RHEL-compatible execute image" \
 # Create slot users slot1 through slot64
 RUN \
    for n in `seq 1 64`; do \
-       useradd slot${n}; \
+       useradd slot${n} || exit $?; \
    done
 
 # Install extra packages commonly used by jobs
 # including the docker repo and packages
-COPY execute/packagelist-el.txt /tmp/packagelist.txt
+COPY execute/packagelist-el${EL}.txt /tmp/packagelist.txt
 RUN \
-    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
+    if [ 7 -eq ${EL} ]; then \
+        yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo; \
+    else \
+        dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo; \
+    fi && \
     yum install -y docker-ce-cli && \
+    rpm -q docker-ce-cli && \
     grep '^[A-Za-z]' /tmp/packagelist.txt \
-    | xargs -r yum -y install; \
-    yum clean all; \
-    rm -rf /var/cache/yum/*; \
+    | (xargs -r yum -y install && xargs -r rpm -q) && \
+    yum clean all && \
+    rm -rf /var/cache/yum/* && \
     rm /tmp/packagelist.txt
 
 COPY execute/condor/*.conf /etc/condor/config.d/

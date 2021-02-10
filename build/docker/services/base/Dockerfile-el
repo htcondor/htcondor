@@ -47,8 +47,7 @@ RUN \
         yum -y install yum-plugin-priorities; \
     elif [ 8 -eq ${EL} ]; then \
         yum -y install dnf-plugins-core && \
-        (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled PowerTools) && \
-        yum -y erase dnf-plugins-core; \
+        (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled PowerTools); \
     fi && \
     \
     yum install -y https://research.cs.wisc.edu/htcondor/repo/${SERIES}/htcondor-release-current.el${EL}.noarch.rpm && \
