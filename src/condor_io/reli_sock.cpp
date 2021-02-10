@@ -1346,13 +1346,15 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: reading MsgInfo at beginning of %s.\n", buf);
 
 	long unsigned int vecsize;
-	sscanf(buf, "%i*%i*%i*%i*%lu*",
+	int num_read = sscanf(buf, "%i*%i*%i*%i*%lu*",
 		(int*)&m_final_send_header,
 		(int*)&m_final_recv_header,
 		(int*)&m_finished_send_header,
 		(int*)&m_finished_recv_header,
 		(long unsigned int*)&vecsize
 		);
+
+	ASSERT(num_read == 5)
 
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: set header vals: %i %i %i %i.\n",
 		m_final_send_header,
