@@ -180,7 +180,9 @@ unsigned char * Condor_Crypt_Base::hkdf(const unsigned char *initialKey, size_t 
 		reinterpret_cast<const unsigned char *>("htcondor"), strlen("htcondor"),
 		reinterpret_cast<const unsigned char *>("keygen"), strlen("keygen"),
 		result, output_key_len);
+
 	if (retval < 0) {
+		free(result);
 		return nullptr;
 	}
 	return result;
