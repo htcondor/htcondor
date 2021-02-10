@@ -3,6 +3,7 @@ ARG BASETAG
 
 FROM htcondor/base:${BASETAG}
 
+ARG EL
 ARG BUILDDATE
 
 # https://label-schema.org/rc1

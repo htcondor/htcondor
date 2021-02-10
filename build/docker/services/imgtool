@@ -244,6 +244,12 @@ org.htcondor.version="%s"
             f"--build-arg=BASETAG={basetags[0]}",
             f"--build-arg=BUILDDATE={today()}",
         ]
+        if distro.startswith("el"):
+            args.append(f"--build-arg=EL={distro[2:]}")
+        elif distro.startswith("ubu"):
+            args.append(f"--build-arg=UBU={distro[3:]}")
+        else:
+            assert False, "not one of the supported distros -- should have been caught"
         dockerfile = self.dockerfile_name(distro)
 
         for basetag in basetags:
