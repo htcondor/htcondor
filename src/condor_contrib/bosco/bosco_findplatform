@@ -108,7 +108,7 @@ def findversion() -> str:
     bosco_distro = DISTRO_MAPPING[distro]
     major_ver = distro_info['VERSION_ID'].split('.')[0]
 
-    if distro == 'linuxmunt':
+    if distro == 'linuxmint':
       try:
         major_ver = MINT_TO_UBUNTU_VERSION[major_ver]
       except KeyError:
