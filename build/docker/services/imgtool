@@ -81,7 +81,7 @@ class VersionInfo:
 
 
 class Builder:
-    def __init__(self, executable, series, version):
+    def __init__(self, executable, series, version, prefix):
         self.executable = executable
         if series == "latest":
             self.want_latest_series = True
@@ -90,6 +90,7 @@ class Builder:
             self.want_latest_series = False
             self.series = series
 
+        self.prefix = prefix
         self.version = version
         self.want_latest_version = version == "latest"
         self.want_daily = version == "daily"
@@ -197,7 +198,7 @@ org.htcondor.version="%s"
         else:
             assert False, "not one of the supported distros -- should have been caught"
         dockerfile = self.dockerfile_name(distro)
-        tmp_image_name = f"htcondor/base:tmp{random.randint(10000,99999)}"
+        tmp_image_name = f"{self.prefix}base:tmp{random.randint(10000,99999)}"
         args.extend(["-t", tmp_image_name, "-f", f"base/{dockerfile}", "."])
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
@@ -209,15 +210,15 @@ org.htcondor.version="%s"
             real_series = ".".join(real_version.split(".")[0:2])
 
             if self.want_daily:
-                real_image_names = [f"htcondor/base:{self.series}-daily-{distro}"]
+                real_image_names = [f"{self.prefix}base:{self.series}-daily-{distro}"]
                 if self.want_latest_series:
-                    real_image_names.append(f"htcondor/base:daily-{distro}")
+                    real_image_names.append(f"{self.prefix}base:daily-{distro}")
             else:
-                real_image_names = [f"htcondor/base:{real_version}-{distro}"]
+                real_image_names = [f"{self.prefix}base:{real_version}-{distro}"]
                 if self.want_latest_version:
-                    real_image_names.append(f"htcondor/base:{real_series}-{distro}")
+                    real_image_names.append(f"{self.prefix}base:{real_series}-{distro}")
                     if self.want_latest_series:
-                        real_image_names.append(f"htcondor/base:{distro}")
+                        real_image_names.append(f"{self.prefix}base:{distro}")
                 else:
                     if real_version != self.version:
                         raise RuntimeError(
@@ -243,6 +244,7 @@ org.htcondor.version="%s"
         args = [
             f"--build-arg=BASETAG={basetags[0]}",
             f"--build-arg=BUILDDATE={today()}",
+            f"--build-arg=PREFIX={self.prefix}",
         ]
         if distro.startswith("el"):
             args.append(f"--build-arg=EL={distro[2:]}")
@@ -253,12 +255,12 @@ org.htcondor.version="%s"
         dockerfile = self.dockerfile_name(distro)
 
         for basetag in basetags:
-            args.extend(["-t", f"htcondor/{image}:{basetag}"])
+            args.extend(["-t", f"{self.prefix}{image}:{basetag}"])
         args.extend(["-f", f"{image}/{dockerfile}", "."])
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
 
-        return [f"htcondor/{image}:{basetag}" for basetag in basetags]
+        return [f"{self.prefix}{image}:{basetag}" for basetag in basetags]
 
     def push_image(self, image, repository):
         if self.executable == "podman" or repository != "docker.io":
@@ -309,6 +311,14 @@ def main(argv) -> int:
     parser.add_argument(
         "--base-only", action="store_true", help="Build htcondor/base only"
     )
+    parser.add_argument(
+        "--prefix",
+        help="Prefix to use for the container names. Must include a '/' and must not "
+        "include a ':'.  Default: '%(default)s'; use something like "
+        "'myusername/htcondor-' to push images named 'htcondor-base', etc. "
+        "to your own docker account.",
+        default="htcondor/",
+    )
     args = parser.parse_args(argv[1:])
 
     if not (
@@ -316,8 +326,11 @@ def main(argv) -> int:
         or re.match(r"[0-9]+[.][0-9]+[.][0-9]+", args.version)
     ):
         parser.error(
-            "Bad version '{args.version}' -- should be like '8.9.9', 'daily', or 'latest'"
+            f"Bad version '{args.version}' -- should be like '8.9.9', 'daily', or 'latest'"
         )
+
+    if not re.fullmatch(r"[0-9a-z][.0-9a-z-]*/[.0-9a-z-]*", args.prefix):
+        parser.error(f"Invalid prefix '{args.prefix}'")
 
     images = IMAGES
     if args.mini:
@@ -337,7 +350,12 @@ def main(argv) -> int:
 
     executable = "podman" if args.podman else "docker"
 
-    builder = Builder(executable=executable, series=args.series, version=args.version)
+    builder = Builder(
+        executable=executable,
+        series=args.series,
+        version=args.version,
+        prefix=args.prefix,
+    )
 
     images_to_push = []
     for distro in distros:

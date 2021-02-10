@@ -1,7 +1,9 @@
 # This is a central manager image for HTCondor
 ARG BASETAG
+ARG PREFIX=htcondor/
 
-FROM htcondor/base:${BASETAG}
+FROM ${PREFIX}base:${BASETAG}
+
 
 ARG BUILDDATE
 

@@ -4,8 +4,9 @@
 
 # Become the "submituser" user to submit jobs.
 ARG BASETAG
+ARG PREFIX=htcondor/
 
-FROM htcondor/base:${BASETAG}
+FROM ${PREFIX}base:${BASETAG}
 
 ARG BUILDDATE
 ARG VERSION
