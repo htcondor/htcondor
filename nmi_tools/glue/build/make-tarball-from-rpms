@@ -25,11 +25,14 @@ for file in $rpmdir/*.rpm; do
     elif [[ $file == *-debuginfo-* ]]; then
         # Skip debug information
         echo Skipping $file
+    elif [[ $file == *-debugsource-* ]]; then
+        # Skip debug source
+        echo Skipping $file
     elif [[ $file == */python2-* ]]; then
-        # Skip debug information
+        # Skip Python 2 bindings
         echo Skipping $file
     elif [[ $file == *-credmon-oauth-* ]]; then
-        # Skip debug information
+        # Skip oath credmon
         echo Skipping $file
     else
         eval $(perl -e "(\$package, \$version, \$release, \$dist, \$arch) = '$file' =~ m:^.*/(.*)-([0-9][0-9.]*)-([0-9][0-9.]*)\.([^.]+)\.([^.]+)\.rpm$:; print \"package=\$package version=\$version release=\$release dist=\$dist arch=\$arch\";")
@@ -49,8 +52,9 @@ elif [[ $dist == fc32 ]]; then
     arch_dist="${arch}_Fedora32"
 fi
 
-# Repack the testing tarball
+# Blow away whatever BaTLab made
 rm -rf condor_tests-*
+# Repack the testing tarball
 tar xfp tarball/usr/lib64/condor/condor_tests-$version.tar.gz
 rm tarball/usr/lib64/condor/condor_tests-$version.tar.gz
 mv condor_tests-* condor_tests-$version-$release-$arch_dist
@@ -58,7 +62,7 @@ mv condor_tests-* condor_tests-$version-$release-$arch_dist
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
 $cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib64'
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
-rm -rf condor_tests-$version-$release-$arch_dist
+rm -r condor_tests-$version-$release-$arch_dist
 
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
@@ -107,11 +111,11 @@ elif [[ $arch_dist =~ Fedora32 ]]; then
     externals="$common_externals"
 fi
 
-mkdir externals
-yumdownloader --downloadonly --destdir=externals $externals
+mkdir external-packages
+yumdownloader --downloadonly --destdir=external-packages $externals
 
 # Extract external RPMs
-for file in externals/*.rpm; do
+for file in external-packages/*.rpm; do
     if [[ $file == *.i686.rpm ]]; then
         # Skip 32-bit components
         echo Skipping $file
@@ -122,7 +126,7 @@ for file in externals/*.rpm; do
     fi
 done
 
-rm -rf externals
+rm -r external-packages
 $cmd_dir/make-tarball-links tarball
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
 
@@ -136,7 +140,7 @@ chmod g-s tarball/var/lib/condor/oauth_credentials
 # Package final tarball
 mv tarball condor-$version-$release.$arch_dist-stripped
 tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release.$arch_dist-stripped.tar.gz condor-$version-$release.$arch_dist-stripped
-rm -rf condor-$version-$release.$arch_dist-stripped
+rm -r condor-$version-$release.$arch_dist-stripped
 
 ls -lh condor*.tar.gz
 exit 0

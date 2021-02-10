@@ -46,8 +46,9 @@ elif $(grep -qi focal /etc/os-release); then
     arch_dist="${arch}_Ubuntu20"
 fi
 
-# Repack the testing tarball
+# Blow away whatever BaTLab made
 rm -rf condor_tests-*
+# Repack the testing tarball
 tar xfp tarball/usr/lib/condor/condor_tests-$version.tar.gz
 rm tarball/usr/lib/condor/condor_tests-$version.tar.gz
 mv condor_tests-* condor_tests-$version-$release-$arch_dist
@@ -55,7 +56,7 @@ mv condor_tests-* condor_tests-$version-$release-$arch_dist
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
 $cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib'
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
-rm -rf condor_tests-$version-$release-$arch_dist
+rm -r condor_tests-$version-$release-$arch_dist
 
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
@@ -92,17 +93,17 @@ db9externals="libboost-python1.62.0 \
 
 externals="$db9externals"
 
-mkdir externals
-(cd externals; apt download $externals)
+mkdir external-packages
+(cd external-packages; apt download $externals)
 
 # Extract external debs
-for file in externals/*.deb; do
+for file in external-packages/*.deb; do
     echo ======= $file =======
     echo $file >> tarball/Manifest.txt
     ar p $file data.tar.xz | (cd tarball; tar xfpJ -)
 done
 
-rm -rf externals
+rm -r external-packages
 
 # Make necessary?? directories
 mkdir -p tarball/etc/condor/passwords.d
@@ -117,7 +118,7 @@ $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib'
 # Package final tarball
 mv tarball condor-$version-$release.$arch_dist-stripped
 tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release.$arch_dist-stripped.tar.gz condor-$version-$release.$arch_dist-stripped
-rm -rf condor-$version-$release.$arch_dist-stripped
+rm -r condor-$version-$release.$arch_dist-stripped
 
 ls -lh condor*.tar.gz
 exit 0
