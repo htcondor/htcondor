@@ -65,6 +65,8 @@ ReliSock::init()
 	m_target_shared_port_id = NULL;
 	m_finished_recv_header = false;
 	m_finished_send_header = false;
+	m_final_send_header = false;
+	m_final_recv_header = false;
 }
 
 
@@ -1159,24 +1161,6 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 		// AES-GCM mode encrypts the whole message at send() time; do this now and
 		// compute the final digests
 	if (p_sock->get_encryption() && p_sock->get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
-/*
-                if (!p_sock->m_send_md_ctx) {
-			dprintf (D_ALWAYS, "ZKM: ***** We got here with no p_sock->m_send_ctx.  Creating one now.\n");
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-                        p_sock->m_send_md_ctx.reset(EVP_MD_CTX_create());
-#else
-                        p_sock->m_send_md_ctx.reset(EVP_MD_CTX_new());
-#endif
-                        if (!p_sock->m_send_md_ctx) {
-                                dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
-                                return false;
-                        }
-                        if (1 != EVP_DigestInit_ex(p_sock->m_send_md_ctx.get(), EVP_sha256(), NULL)) {
-                                dprintf(D_NETWORK, "IO: Failed to initialize SHA-256 context.\n");
-                                return false;
-                        }
-                }
-*/
 
 		auto cipher_sz = p_sock->ciphertext_size(buf.num_untouched());
 		ns = cipher_sz;
@@ -1340,17 +1324,17 @@ char * ReliSock::serializeMsgInfo() const
 		m_finished_recv_header,
 		m_final_mds.size()
 		);
-	dprintf(D_ALWAYS, "ZKM: *** MsgInfo out: %s.\n", buf);
 
 	if(m_final_mds.size()) {
 		strcat(buf, "*");
 		char * ptr = buf + strlen(buf);
 		unsigned char * vecdata = const_cast<unsigned char*>(&(m_final_mds[0]));
 		for (unsigned int i=0; i < m_final_mds.size(); i++, vecdata++, ptr+=2) {
-			dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %u.\n", *vecdata);
 			sprintf(ptr, "%02X", *vecdata);
 		}
 	}
+
+	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: MsgInfo out: %s.\n", buf);
 
 	return buf;
 }
@@ -1358,13 +1342,7 @@ char * ReliSock::serializeMsgInfo() const
 
 const char * ReliSock::serializeMsgInfo(const char * buf)
 {
-	dprintf(D_ALWAYS, "ZKM: *** beginning vals: %i %i %i %i.\n",
-		m_final_send_header,
-		m_final_recv_header,
-		m_finished_send_header,
-		m_finished_recv_header
-		);
-	dprintf(D_ALWAYS, "ZKM: *** reading MsgInfo at beginning of %s.\n", buf);
+	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: reading MsgInfo at beginning of %s.\n", buf);
 
 	long unsigned int vecsize;
 	sscanf(buf, "%i*%i*%i*%i*%lu*",
@@ -1375,7 +1353,7 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 		(long unsigned int*)&vecsize
 		);
 
-	dprintf(D_ALWAYS, "ZKM: *** ending vals: %i %i %i %i.\n",
+	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: set header vals: %i %i %i %i.\n",
 		m_final_send_header,
 		m_final_recv_header,
 		m_finished_send_header,
@@ -1388,7 +1366,7 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 	}
 	buf--;
 
-	dprintf(D_ALWAYS, "ZKM: *** %lu bytes of vector data (and more): %s.\n", vecsize, buf);
+	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: consuming %lu hex bytes of vector data from  %s.\n", vecsize, buf);
 	m_final_mds.resize(vecsize);
 
 	int citems = 1;
@@ -1399,7 +1377,6 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 		for (unsigned int i = 0; i < vecsize; i++) {
 			citems = sscanf(buf, "%2X", &hex);
 			if (citems != 1) break;
-			dprintf(D_NETWORK|D_VERBOSE, "DESERIALIZE: decoding %u.\n", hex);
 			*ptr = (unsigned char)hex;
 			buf += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
