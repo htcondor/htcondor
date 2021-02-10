@@ -99,72 +99,6 @@ def get_distro_info() -> Dict[str, str]:
     return os_info
 
 
-def findversion_redhat(detail=False):
-  # content of /etc/redhat-release
-  #Scientific Linux release 6.2 (Carbon)
-  #Red Hat Enterprise Linux Server release 5.8 (Tikanga)
-  #Scientific Linux SL release 5.5 (Boron)
-  #CentOS release 4.2 (Final)
-  #
-  #Do we support FC:Fedora Core release 11 ... ?
-  #
-  # should I check that it is SL/RHEL/CentOS ? 
-  # no 
-  lines = open('/etc/redhat-release').readlines()
-  for line in lines:
-    if detail and 'release'in line:
-      return line
-    if 'release 6.' in line:
-      return RH6
-    if 'release 7.' in line:
-      return RH7
-    if 'release 8.' in line:
-      return RH8
-    return UNSUPPORTED
-  return UNKNOWN
-
-def findversion_debian(detail=False):
-  """cat /etc/*release
-DISTRIB_ID=Ubuntu
-DISTRIB_RELEASE=11.10
-DISTRIB_CODENAME=oneiric
-DISTRIB_DESCRIPTION="Ubuntu 11.10"
-
-user@bellatrix:~$ lsb_release
-No LSB modules are available.
-
-user@bellatrix:~$ lsb_release -a  
-No LSB modules are available.
-
-Distributor ID:    Ubuntu
-Description:    Ubuntu 11.10
-Release:    11.10
-Codename:    oneiric       
-"""
-  retv=UNSUPPORTED
-  lines = open('/etc/lsb-release').readlines()
-  for line in lines:
-    if detail:
-       if 'DISTRIB_DESCRIPTION' in line:
-        return line[len('DISTRIB_DESCRIPTION='):]
-    if 'DISTRIB_ID' in line:
-      if not 'Debian' in line and not 'Ubuntu' in line:
-        return UNSUPPORTED
-    if 'DISTRIB_RELEASE' in line:
-        # TODO These checks need to to be conditioned on whether the
-        #   distro is Debian or Ubuntu.
-        if line[len('DISTRIB_RELEASE='):].startswith('9.'):
-          retv=DEB9
-        if line[len('DISTRIB_RELEASE='):].startswith('10.'):
-          retv=DEB10
-        if line[len('DISTRIB_RELEASE='):].startswith('16.'):
-          retv=UBUNTU16
-        if line[len('DISTRIB_RELEASE='):].startswith('18.'):
-          retv=UBUNTU18
-        if line[len('DISTRIB_RELEASE='):].startswith('20.'):
-          retv=UBUNTU20
-  return retv
-
 def findversion() -> str:
   if not os.name=='posix':
     return UNSUPPORTED
@@ -205,9 +139,10 @@ def findversion_detail():
     return findversion_mac(True)
   elif sys.platform.startswith('linux'):
     if os.path.isfile('/etc/redhat-release'):
-      return findversion_redhat(True)
-    elif os.path.isfile('/etc/lsb-release'):
-      return findversion_debian(True)
+      try:
+        return get_distro_info()["PRETTY_NAME"]
+      except (KeyError, FileNotFoundError):
+        pass
   return UNKNOWN
 
 def install(platform, multiuser=False, options=None):
