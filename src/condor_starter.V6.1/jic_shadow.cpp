@@ -1857,20 +1857,18 @@ JICShadow::proxyExpiring()
 	// we log the return value, but even if it failed we still try to clean up
 	// because we are about to lose control of the job otherwise.
 	bool rv = holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
-	dprintf(D_ALWAYS, "ZKM: ABOUT TO HOLD, rv == %i\n", rv);
 
 	// this will actually clean up the job
 	if ( Starter->Hold( ) ) {
-		dprintf( D_FULLDEBUG, "ZKM: Hold() returns true\n" );
+		dprintf( D_FULLDEBUG, "JICSHADOW: Hold() returns true\n" );
 		this->allJobsDone();
 	} else {
-		dprintf( D_FULLDEBUG, "ZKM: Hold() returns false\n" );
+		dprintf( D_FULLDEBUG, "JICSHADOW: Hold() returns false\n" );
 	}
 
 	// and this causes us to exit relatively cleanly.  it tries to communicate
 	// with the shadow, which fails, but i'm not sure what to do about that.
 	bool sd = Starter->ShutdownFast();
-	dprintf(D_ALWAYS, "ZKM: STILL HERE, sd == %i\n", sd);
 
 	return;
 }
