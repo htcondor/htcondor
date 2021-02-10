@@ -105,7 +105,10 @@ def findversion() -> str:
       return "UNKNOWN"
 
     distro = distro_info['ID']
-    bosco_distro = DISTRO_MAPPING[distro]
+    try:
+        bosco_distro = DISTRO_MAPPING[distro]
+    except KeyError:
+        return "UNKNOWN"
     major_ver = distro_info['VERSION_ID'].split('.')[0]
 
     if distro == 'linuxmint':
