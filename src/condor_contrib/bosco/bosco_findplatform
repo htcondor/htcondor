@@ -122,8 +122,6 @@ def findversion() -> str:
   return "UNKNOWN"
 
 def findversion_detail():
-  #if not os.name=='posix':
-  #  return "UNKNOWN" 
   if sys.platform=='darwin':
     return findversion_mac(True)
   elif sys.platform.startswith('linux'):
