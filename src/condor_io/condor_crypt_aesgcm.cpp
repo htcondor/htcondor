@@ -62,6 +62,9 @@ int Condor_Crypt_AESGCM::ciphertext_size_with_cs(int plaintext_size, StreamCrypt
     return ct_sz;
 }
 
+// for cleaning up a unique_ptr to an EVP_CIPHER_CTX
+struct EVP_CTX_DELETER { void operator()(EVP_CIPHER_CTX* p) { EVP_CIPHER_CTX_free(p); } };
+
 bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
                                   const unsigned char *aad,
                                   int                  aad_len,
@@ -91,8 +94,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     // Authentication tag is an additional 16 bytes; IV is 16 bytes
     output_len += MAC_SIZE + (sending_IV ? IV_SIZE : 0);
 
-    std::unique_ptr<EVP_CIPHER_CTX> ctx(EVP_CIPHER_CTX_new());
-    //std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(EVP_CIPHER_CTX_new());
+    std::unique_ptr<EVP_CIPHER_CTX, EVP_CTX_DELETER> ctx(EVP_CIPHER_CTX_new());
     if (!ctx) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to allocate new EVP method.\n");
         return false;
@@ -232,8 +234,7 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
                                   unsigned char *        output, 
                                   int&                   output_len)
 {
-    std::unique_ptr<EVP_CIPHER_CTX> ctx(EVP_CIPHER_CTX_new());
-    //std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(EVP_CIPHER_CTX_new());
+    std::unique_ptr<EVP_CIPHER_CTX, EVP_CTX_DELETER> ctx(EVP_CIPHER_CTX_new());
 
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt **********************\n");
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt with input buffer %d.\n", input_len);
