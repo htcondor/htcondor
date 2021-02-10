@@ -1856,7 +1856,7 @@ JICShadow::proxyExpiring()
 {
 	// we log the return value, but even if it failed we still try to clean up
 	// because we are about to lose control of the job otherwise.
-	bool rv = holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
+	holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
 
 	// this will actually clean up the job
 	if ( Starter->Hold( ) ) {
@@ -1868,7 +1868,7 @@ JICShadow::proxyExpiring()
 
 	// and this causes us to exit relatively cleanly.  it tries to communicate
 	// with the shadow, which fails, but i'm not sure what to do about that.
-	bool sd = Starter->ShutdownFast();
+	Starter->ShutdownFast();
 
 	return;
 }
