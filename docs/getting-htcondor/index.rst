@@ -38,7 +38,7 @@ machines should read the :doc:`admin-quick-start` first.
 If you have administrative privileges on your machine, choose the
 instructions corresponding to your operating system:
 
-* :doc:`Windows <install-windows-as-administrator>`
+* :doc:`Windows <install-windows-as-administrator>`.
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
