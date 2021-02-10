@@ -353,6 +353,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 		// TODO any other info for the reply?
 	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
 
+	delete tmp_starter;
 	return rval;
 }
 

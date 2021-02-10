@@ -2093,8 +2093,6 @@ char * Sock::serializeCryptoInfo() const
 	}
         outbuf = new char[buflen];
 
-        char * ptr = outbuf + strlen(outbuf);
-
         sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
                 (int)get_encryption());
 
@@ -2119,7 +2117,7 @@ char * Sock::serializeCryptoInfo() const
 	dprintf(D_NETWORK|D_VERBOSE, "SOCK: buf so far: %s.\n", outbuf);
 
         // Hex encode the binary key
-        ptr = outbuf + strlen(outbuf);
+        char *ptr = outbuf + strlen(outbuf);
         for (int i=0; i < len; i++, kserial++, ptr+=2) {
             sprintf(ptr, "%02X", *kserial);
         }

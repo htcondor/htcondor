@@ -772,6 +772,7 @@ ReliSock::RcvMsg :: RcvMsg() :
 	p_sock(0),
 	m_partial_packet(false),
 	m_remaining_read_length(0),
+	m_len_t(0),
 	m_end(0),
 	m_tmp(NULL),
 	ready(0),
