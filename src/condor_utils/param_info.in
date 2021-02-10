@@ -1270,6 +1270,11 @@ default=
 type=string
 tags=daemon_core
 
+[DISABLE_SETUID]
+default=true
+type=bool
+tags=master
+
 [DISABLE_AUTHENTICATION_IP_CHECK]
 default=false
 type=bool
