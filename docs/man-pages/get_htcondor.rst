@@ -11,7 +11,7 @@ Synopsis
 
 **get_htcondor** <**-h** | **--help**>
 
-**get_htcondor** [**--[no-]dry-run**] [**--channel** *name*] [**--minicondor** | **--central-manager** | **--submit** | **--execute**]
+**get_htcondor** [**--[no-]dry-run**] [**--channel** *name*] [**--minicondor** | [**--central-manager** | **--submit** | **--execute**] *central-manager-name*]
 
 **get_htcondor** **--dist**
 
@@ -44,11 +44,12 @@ Options
     **--minicondor**
         Configure as a single-machine ("mini") HTCondor.  [default]
 
-    **--central-manager**
+    **--central-manager** *central-manager-name*
 
-    **--submit**
+    **--submit** *central-manager-name*
 
-    **--execute**
+    **--execute** *central-manager-name*
+
         Configure this installation with the central manager, submit,
         or execute role.
 
@@ -65,119 +66,47 @@ This tool may install four different configurations.  We discuss the
 minicondor configuration first, and then the three pool configurations
 as group.
 
-The configurations this tool installs makes extensive use of meta-knobs.  We
-won't discuss them in detail here; the :doc:`condor_config_val` tool can
-display their details for you.
+The configurations this tool installs makes extensive use of metaknobs,
+lines in HTCondor configuration files that look like ``use x : y``.  To
+determine exactly what configuration a metaknob sets, run
+``condor_config_val use x:y``.
 
 Minicondor
 ##########
 
-A minicondor performs all of the roles on a single machine, so we can use
-the FS method to authenticate all connections.  Likewise, we force all
-network communications to occur over the loopback device, so we don't have
-to worry about eavesdropping; not requiring encryption is more efficient.
+A minicondor performs all of the roles on a single machine, so we can force
+all network communications to occur over the loopback device, where we don't
+have to worry about eavesdropping or requiring encryption.  We
+use the ``FS`` method, which depends on the local filesytem, to identify
+which user is attempting to connect, and restrict access correspondingly.
 
-.. code-block:: condor-config
-
-    # Require user-based security.  The default list of authentication
-    # methods includes FS on Linux.
-    use security: user_based
-
-    # This role includes the other three roles.
-    use role: personal
-
-    # Never make connections to other machines.
-    NETWORK_INTERFACE = 127.0.0.1
+This tools installs the standard minicondor package from the HTCondor
+repositories; see the file it creates,
+``/etc/condor/config.d/00-minicondor``, for details.
 
 The Three Roles
 ###############
 
 Because the three roles must communicate over the network to form a complete
-pool, security is a much bigger concern.
+pool, security is a much bigger concern; we therefore require authentication
+and encryption on every connection.  Thankfully, almost all of the network
+communication is daemon-to-daemon, so we don't have to burden individual
+users with that aspect of security.  Instead, users submit jobs on the
+submit-role machine, using ``FS`` to authenticate.  Users may also need to
+contact the central manager, but they never need to write anything to it,
+so they use the ``ANONYMOUS`` method to authenticate, and the central
+manager is configured to allow the ``ANONYMOUS`` identity only to read.
 
-These configurations distinguish between two types of connections: connections
-between HTCondor processes on different machines -- and connections from
-users to daemons.
+Daemon-to-daemon communication is authenticated with the IDTOKENS method.
+(If a user needs to submit jobs remotely, they can also use the IDTOKENS
+method, it's just more work; see ``condor_token_fetch``.)  Each role
+installed by this tool has a copy of the password, which is used to
+generate an IDTOKEN, which is used for all daemon-to-daemon authentication;
+both the password and the IDTOKEN can only be read by privileged processes.
+An IDTOKEN can only be validated by the holder of the corresponding
+password, so each daemon in the pool has to have both.
 
-Users only connect to the submit-role daemons and the collector (one of the
-central manager daemons).  This configuration secures connections to the
-submit role, so that users can't pretend to be someone else, or interfere
-with each other's jobs, but it allows read-only connections to the
-collector from any process on the submit machine (or any attacker capable
-of spoofing their source address).  On Linux, user connections to
-the submit role are authenticated transparently, leveraging the ability of
-user processes to act on the local filesystem.
-
-Daemon-to-daemon connections are secured with a shared secret -- a password
-stored on each machine in the pool, but readable only by privileged
-processes like the HTCondor daemons.  This is easy to set up, because you
-only need to securely copy the same file to the same place on all machines,
-but has the disadvantage that you can't securely distinguish between different
-machines or roles which have the same password.  HTCondor calls this
-this authentication method ``PASSWORD``.
-
-Execute-role Machine Configuration
-##################################
-
-..  # use security : password doesn't exist yet.  It should set
-..  #
-..  #   SEC_DEFAULT_AUTHENTICATION_METHODS = PASSWORD
-..  #   ALLOW_DAEMON = condor_pool@*
-..  #   ALLOW_ADMINISTRATOR = condor_pool@*
-
-.. code-block:: condor-config
-
-    # Make this an execute-role machine.
-    use role: execute
-
-    # The following lines configure this role to accept only PASSWORD-
-    # authenticated connections, and to encrypt and verify the integrity
-    # of those connections.
-    use security : strong
-    use security : password
-
-    # An execute machine must know the location of the central manager.
-    COLLECTOR_HOST = <central manager's FQDN or address>
-
-Submit-role Machine Configuration
-#################################
-
-.. code-block:: condor-config
-
-    # Make this an execute-role machine.
-    use role: submit
-
-    # The following lines configure this role to accept only PASSWORD-
-    # authenticated connections, and to encrypt and verify the integrity
-    # of those connections.
-    use security : strong
-    use security : password
-
-    # The submit role must also accept connections from users.  On Linux,
-    # the easiest secure method is FS, which requires no other
-    # set-up.
-    SEC_DEFAULT_AUTHENTICATION_METHODS = FS, PASSWORD
-
-    # This allows any authenticated user on this machine to interact with
-    # HTCondor as a normal user.
-    ALLOW_WRITE = *@$(FULL_HOSTNAME) *@$(IP_ADDRESS)
-
-    # A submit machine must know the location of the central manager.
-    COLLECTOR_HOST = <central manager's FQDN or address>
-
-Central Manager Configuration
-#############################
-
-.. code-block:: condor-config
-
-    # Make this a central manager.
-    use role: central-manager
-
-    # The following lines configure this role to accept only PASSWORD-
-    # authenticated connections, and to encrypt and verify the integrity
-    # of those connections.
-    use security : strong
-    use security : password
-
-    # Allow read-only connections from any process on the submit machine(s).
-    ALLOW_READ = <submit-role machine's FQDN or address>
+This tool installs the role-specific configuration in the files
+``/etc/condor/config.d/01-central-manager.config``,
+``/etc/condor/config.d/01-submit.config``, and
+``/etc/condor/config.d/01-execute.config``; consult them for details.
