@@ -1024,10 +1024,10 @@ Kerberos Authentication
 If Kerberos is used for authentication, then a mapping from a Kerberos
 domain (called a realm) to an HTCondor UID domain is necessary. There
 are two ways to accomplish this mapping. For a first way to specify the
-mapping, see admin-manual/security:the unified map file for authentication`
-to use HTCondor's unified map file. A second way to specify the mapping defines
+mapping, see :ref:`admin-manual/security:the unified map file for authentication`
+to use HTCondor's unified map file. A second way to specify the mapping is to set
 the configuration variable ``KERBEROS_MAP_FILE``
-:index:`KERBEROS_MAP_FILE` to define a path to an
+:index:`KERBEROS_MAP_FILE` to the path of an
 administrator-maintained Kerberos-specific map file. The configuration
 syntax is
 
@@ -1483,8 +1483,8 @@ within a single file. The location of the unified map file is defined by
 the configuration variable ``CERTIFICATE_MAPFILE``
 :index:`CERTIFICATE_MAPFILE`; it specifies the path and file name
 of the unified map file. Each mapping is on its own line of the unified
-map file. Each line contains 3 fields, separated by white space (space
-or tab characters):
+map file. Each line contains either an ``@include`` directive, or 3 fields,
+separated by white space (space or tab characters):
 
 #. The name of the authentication method to which the mapping applies.
 #. A name or a regular expression representing the authenticated name to
@@ -1530,6 +1530,18 @@ A regular expression may need to contain spaces, and in this case the
 entire expression can be surrounded by double quote marks. If a double
 quote character also needs to appear in such an expression, it is
 preceded by a backslash.
+
+If the first field is the special value ``@include``, it should be
+followed by a file or directory path in the second field.  If a
+file is specified, it will be read and parsed as map file.  If
+a directory is specified, then each file in the directory is read
+as a map file unless the name of the file matches the pattern
+specified in the ``LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`` configuration variable.
+Files in the directory are read in lexical order.  When a map file
+is read as a result of an ``@include`` statement, any ``@include`` statements
+that it contains will be ignored.  If the file or directory path specified
+with an ``@include`` statement is a relative path, it will be treated as relative to
+the file currently being read.
 
 The default behavior of HTCondor when no map file is specified is to do
 the following mappings, with some additional logic noted below:

@@ -34,19 +34,40 @@ Real User Priority (RUP)
 :index:`real user priority (RUP)`
 :index:`real (RUP)<single: real (RUP); user priority>`
 
-A user's RUP measures the resource usage of the user through time. Every
-user begins with a RUP of one half (0.5), and at steady state, the RUP
-of a user equilibrates to the number of resources used by that user.
-Therefore, if a specific user continuously uses exactly ten resources
-for a long period of time, the RUP of that user stabilizes at ten.
+A user's RUP reports a smoothed average of the number of cores a user
+has used over some recent period of time. Every user begins with a RUP of 
+one half (0.5), which is the lowest possible value. At steady state, the RUP
+of a user equilibrates to the number of cores currently used.
+So, if a specific user continuously uses exactly ten cores
+for a long period of time, the RUP of that user asymtompically 
+approaches ten.
 
-However, if the user decreases the number of resources used, the RUP
-gets better. The rate at which the priority value decays can be set by
-the macro ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE`, a time
-period defined in seconds. Intuitively, if the ``PRIORITY_HALFLIFE``
-:index:`PRIORITY_HALFLIFE` in a pool is set to 86400 (one day),
-and if a user whose RUP was 10 has no running jobs, that user's RUP
-would be 5 one day later, 2.5 two days later, and so on.
+However, if the user decreases the number of cores used, the RUP
+asymtompically lowers to the new value. The rate at which the priority 
+value decays can be set by the macro ``PRIORITY_HALFLIFE`` 
+:index:`PRIORITY_HALFLIFE`, a time period defined in seconds. Intuitively,
+if the ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE` in a pool is set 
+to the default of 86400 seconds (one day), and a user with a RUP of 10 
+has no running jobs, that user's RUP would be 5 one day later, 2.5 
+two days later, and so on.
+
+For example, if a new user has no historical usage, their RUP will start 
+at 0.5  If that user then has 100 cores running, their RUP will grow
+as the graph below show:
+
+.. figure:: /_images/user-prio1.png
+    :width: 1600
+    :alt: User Priority
+    :align: center
+
+Or, if a new user with no historical usage has 100 cores running
+for 24 hours, then removes all the jobs, so has no cores running, 
+their RUP will grow and shrink as shown below:
+
+.. figure:: /_images/user-prio2.png
+    :width: 1600
+    :alt: User Priority
+    :align: center
 
 Effective User Priority (EUP)
 -----------------------------
@@ -55,22 +76,45 @@ Effective User Priority (EUP)
 :index:`effective (EUP)<single: effective (EUP); user priority>`
 
 The effective user priority (EUP) of a user is used to determine how
-many resources that user may receive. The EUP is linearly related to the
-RUP by a priority factor which may be defined on a per-user basis.
-Unless otherwise configured, an initial priority factor for all users as
+many cores a user should receive. The EUP is simply the
+RUP multiplied by a priority factor the administrator can set per-user.
+The default initial priority factor for all new users as
 they first submit jobs is set by the configuration variable
 ``DEFAULT_PRIO_FACTOR`` :index:`DEFAULT_PRIO_FACTOR`, and defaults
-to the value 1000.0. If desired, the priority factors of specific users
-can be increased using *condor_userprio*, so that some are served
-preferentially.
+to 1000.0. An administrator can change this priority factor 
+using the *condor_userprio* command.  For example, setting
+the priority factor of some user to 2,000 will grant that user
+twice as many cores as a user with the default priority factor of 
+1,000, assuming they both have the same historical usage.
 
 The number of resources that a user may receive is inversely related to
-the ratio between the EUPs of submitting users. Therefore user A with
+the ratio between the EUPs of submitting users. User A with
 EUP=5 will receive twice as many resources as user B with EUP=10 and
 four times as many resources as user C with EUP=20. However, if A does
 not use the full number of resources that A may be given, the available
 resources are repartitioned and distributed among remaining users
 according to the inverse ratio rule.
+
+Assume two users with no history, named A and B, using a pool with 100 cores. To
+simplify the math, also assume both users have an equal priority factor of 1.0.
+User A submits a very large number of short-running jobs at time t = 0 zero.  User
+B waits until 48 hours later, and also submits an infinite number of short jobs.
+At the beginning, the EUP doesn't matter, as there is only one user with jobs, 
+and so user A gets the whole pool.  At the 48 hour mark, both users compete for
+the pool.  Assuming the default PRIORITY_HALFLIFE of 24 hours, user A's RUP
+should be about 75.0 at the 48 hour mark, and User B will still be the minimum of
+.5.  At that instance, User B deserves 150 times User A.  However, this ratio will
+decay quickly.  User A's share of the pool will drop from all 100 cores to less than
+one core immediately, but will quickly rebound to a handful of cores, and will 
+asymtompically approach half of the pool as User B gets the inverse. A graph
+of these two users might look like this:
+
+.. figure:: /_images/fair-share.png
+    :width: 1600
+    :alt: Fair Share
+    :align: center
+
+
 
 HTCondor supplies mechanisms to directly support two policies in which
 EUP may be useful:

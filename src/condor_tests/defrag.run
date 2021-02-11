@@ -90,7 +90,7 @@ my $append_submit_commands = '
 # DRAIN_RANK.  It should not be drained, because this startd does not
 # match DRAIN_REQUIREMENTS
 SimpleJob::RunCheck(
-  duration=>30,
+  duration=>100,
   append_submit_commands => $append_submit_commands
 );
 
@@ -99,7 +99,7 @@ SimpleJob::RunCheck(
 # startd1.
 $append_submit_commands =~ s/DrainRank>=4/DrainRank==3/i;
 JobIsEvicted::RunCheck(
-  duration=>30,
+  duration=>100,
   append_submit_commands => $append_submit_commands
 );
 

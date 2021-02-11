@@ -148,7 +148,7 @@ int CondorJob::maxConnectFailures = 3;			// default value
 CondorJob::CondorJob( ClassAd *classad )
 	: BaseJob( classad )
 {
-	char buff[4096];
+	std::string buff;
 	ArgList args;
 	std::string error_string = "";
 	char *gahp_path;
@@ -208,9 +208,9 @@ CondorJob::CondorJob( ClassAd *classad )
 		delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
 	}
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
-	if ( buff[0] != '\0' ) {
+	buff.clear();
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	if ( !buff.empty() ) {
 		const char *token;
 
 		Tokenize( buff );
@@ -246,23 +246,23 @@ CondorJob::CondorJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
-	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( strrchr( buff, ' ' )+1 );
+	buff.clear();
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( !buff.empty() ) {
+		SetRemoteJobId( strrchr( buff.c_str(), ' ' )+1 );
 		job_already_submitted = true;
 	} else {
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff, sizeof(buff) );
-	if ( buff[0] != '\0' ) {
-		char *ptr = strchr( buff, '#' );
-		if ( ptr != NULL ) {
-			*ptr = '\0';
+	buff.clear();
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff );
+	if ( !buff.empty() ) {
+		size_t ptr = buff.find( '#' );
+		if ( ptr != std::string::npos ) {
+			buff.erase(ptr);
 		}
-		submitterId = strdup( buff );
+		submitterId = strdup( buff.c_str() );
 	} else {
 		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GLOBAL_JOB_ID );
@@ -270,8 +270,8 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	myResource = CondorResource::FindOrCreateResource( remoteScheddName,
-													   remotePoolName,
-													   jobProxy );
+	                                                   remotePoolName,
+	                                                   jobProxy, scitokenFile );
 	myResource->CondorRegisterJob( this, submitterId );
 	if ( job_already_submitted ) {
 		myResource->AlreadySubmitted( this );
@@ -284,9 +284,10 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 		// TODO remove remoteScheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
-	sprintf( buff, "CONDOR/%s/%s/%s", remotePoolName ? remotePoolName : "NULL",
-			 remoteScheddName,
-			 jobProxy != NULL ? jobProxy->subject->fqan : "NULL" );
+	formatstr( buff, "CONDOR/%s/%s/%s#%s", remotePoolName ? remotePoolName : "NULL",
+	           remoteScheddName,
+	           jobProxy != NULL ? jobProxy->subject->fqan : "NULL",
+	           scitokenFile.c_str() );
 	args.AppendArg("-f");
 	args.AppendArg("-s");
 	args.AppendArg(remoteScheddName);
@@ -294,7 +295,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		args.AppendArg("-P");
 		args.AppendArg(remotePoolName);
 	}
-	gahp = new GahpClient( buff, gahp_path, &args );
+	gahp = new GahpClient( buff.c_str(), gahp_path, &args );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
@@ -1384,6 +1385,33 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree = new_expr->Copy();
 			jobAd->Insert( attrs_to_copy[index], pTree );
+		}
+	}
+
+	std::string chirp_prefix;
+	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
+	if (chirp_prefix == "Chirp*") {
+		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
+			if ( ! strncasecmp(attr_it->first.c_str(), "Chirp", 5) ) {
+				old_expr = jobAd->Lookup(attr_it->first);
+				new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					jobAd->Insert( attr_it->first, new_expr->Copy() );
+				}
+			}
+		}
+	} else if (!chirp_prefix.empty()) {
+		// TODO cache the StringList
+		StringList prefix_list;
+		prefix_list.initializeFromString(chirp_prefix.c_str());
+		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
+			if ( prefix_list.contains_anycase_withwildcard(attr_it->first.c_str()) ) {
+				old_expr = jobAd->Lookup(attr_it->first);
+				new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					jobAd->Insert( attr_it->first, new_expr->Copy() );
+				}
+			}
 		}
 	}
 

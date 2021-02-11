@@ -2506,8 +2506,19 @@ command_drain_jobs(int /*dc_cmd*/, Stream* s )
 	int how_fast = DRAIN_GRACEFUL;
 	ad.LookupInteger(ATTR_HOW_FAST,how_fast);
 
-	bool resume_on_completion = false;
-	ad.LookupBool(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
+	int on_completion = DRAIN_NOTHING_ON_COMPLETION;
+	ad.LookupInteger(ATTR_RESUME_ON_COMPLETION,on_completion);
+
+	// get the drain reason out of the command. if no reason supplied, 
+	// assume that the command is coming from the Defrag daemon unless the peer version is 8.9.12 or later
+	// an 8.9.12 defrag will never send an empty reason, so the caller must be a tool
+	std::string reason;
+	if ( ! ad.LookupString(ATTR_DRAIN_REASON, reason)) {
+		reason = "Defrag";
+		if (s->get_peer_version() && s->get_peer_version()->built_since_version(8,9,12)) {
+			reason = "by command";
+		}
+	}
 
 	ExprTree *check_expr = ad.LookupExpr( ATTR_CHECK_EXPR );
 	ExprTree *start_expr = ad.LookupExpr( ATTR_START_EXPR );
@@ -2515,7 +2526,7 @@ command_drain_jobs(int /*dc_cmd*/, Stream* s )
 	std::string new_request_id;
 	std::string error_msg;
 	int error_code = 0;
-	bool ok = resmgr->startDraining(how_fast,resume_on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
+	bool ok = resmgr->startDraining(how_fast,reason,on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
 	if( !ok ) {
 		dprintf(D_ALWAYS,"Failed to start draining, error code %d: %s\n",error_code,error_msg.c_str());
 	}

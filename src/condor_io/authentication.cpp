@@ -36,6 +36,7 @@
 #include "condor_ipverify.h"
 #include "CondorError.h"
 #include "globus_utils.h"
+#include "condor_scitokens.h"
 
 
 
@@ -69,7 +70,8 @@ char const *AUTH_METHOD_FAMILY = "FAMILY";
 char const *AUTH_METHOD_MATCH = "MATCH";
 
 Authentication::Authentication( ReliSock *sock )
-	: m_auth(NULL),
+	: m_method_id(-1),
+	  m_auth(NULL),
 	  m_key(NULL),
 	  m_auth_timeout_time(0),
 	  m_continue_handshake(false),
@@ -193,6 +195,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 			dprintf(D_SECURITY, "AUTHENTICATE: auth would still block\n");
 			return 2;
 		}
+		firm = m_method_id;
 		m_continue_auth = false;
 		do_authenticate = false;
 		goto authenticate;
@@ -225,6 +228,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 			break;
 		}
 
+		m_method_id = firm;
 		m_method_name = "";
 		switch ( firm ) {
 #if defined(HAVE_EXT_GLOBUS)
@@ -411,9 +415,9 @@ authenticate:
 				// better way to do this...  anyways, 'firm' is equal to the bit value
 				// of a particular method, so we'll just convert each item in the list
 				// and keep it if it's not that particular bit.
-				StringList meth_iter( m_methods_to_try.c_str() );
+				StringList meth_iter( m_methods_to_try );
 				meth_iter.rewind();
-				MyString new_list;
+				std::string new_list;
 				char *tmp = NULL;
 				while( (tmp = meth_iter.next()) ) {
 					int that_bit = SecMan::getAuthBitmask( tmp );
@@ -421,7 +425,7 @@ authenticate:
 					// keep if this isn't the failed method.
 					if (firm != that_bit) {
 						// and of course, keep the comma's correct.
-						if (new_list.Length() > 0) {
+						if (new_list.length() > 0) {
 							new_list += ",";
 						}
 						new_list += tmp;
@@ -468,7 +472,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	// via getAuthenticatedName().
 
 	if(authenticator_) {
-		dprintf (D_SECURITY, "ZKM: setting default map to %s\n",
+		dprintf (D_SECURITY, "AUTHENTICATION: setting default map to %s\n",
 				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
 	}
 
@@ -485,14 +489,14 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	if (retval && use_mapfile && authenticator_) {
 		const char * name_to_map = authenticator_->getAuthenticatedName();
 		if (name_to_map) {
-			dprintf (D_SECURITY, "ZKM: name to map is '%s'\n", name_to_map);
-			dprintf (D_SECURITY, "ZKM: pre-map: current user is '%s'\n",
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is '%s'\n", name_to_map);
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: pre-map: current user is '%s'\n",
 					authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
-			dprintf (D_SECURITY, "ZKM: pre-map: current domain is '%s'\n",
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: pre-map: current domain is '%s'\n",
 					authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
 			map_authentication_name_to_canonical_name(auth_status, method_used, name_to_map);
 		} else {
-			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not mapping.\n");
 		}
 #if defined(HAVE_EXT_GLOBUS)
 	} else if (authenticator_ && (auth_status == CAUTH_GSI)) {
@@ -503,9 +507,9 @@ int Authentication::authenticate_finish(CondorError *errstack)
 		const char * name_to_map = authenticator_->getAuthenticatedName();
 		if (name_to_map) {
 			int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(name_to_map);
-			dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
+			dprintf(D_SECURITY|D_VERBOSE, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
 		} else {
-			dprintf (D_SECURITY, "ZKM: name to map is null, not calling GSI authorization.\n");
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not calling GSI authorization.\n");
 		}
 #endif
 	}
@@ -513,11 +517,11 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	// yeah, probably all of the log lines that start with ZKM: should be
 	// updated.  oh, i wish there were a D_ZKM, but alas, we're out of bits.
 	if( authenticator_ ) {
-		dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n",
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: post-map: current user is '%s'\n",
 				 authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
-		dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n",
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: post-map: current domain is '%s'\n",
 				 authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
-		dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n",
+		dprintf (D_SECURITY, "AUTHENTICATION: post-map: current FQU is '%s'\n",
 				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
 	}
 
@@ -560,10 +564,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			global_map_file = NULL;
 		}
 
-		dprintf (D_SECURITY, "ZKM: Parsing map file.\n");
+		dprintf (D_SECURITY, "AUTHENTICATION: Parsing map file.\n");
 		auto_free_ptr credential_mapfile(param("CERTIFICATE_MAPFILE"));
 		if ( ! credential_mapfile) {
-			dprintf(D_SECURITY, "ZKM: No CERTIFICATE_MAPFILE defined\n");
+			dprintf(D_SECURITY, "AUTHENTICATION: No CERTIFICATE_MAPFILE defined\n");
 		} else {
 			global_map_file = new MapFile();
 
@@ -571,23 +575,24 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			// this is both slower, and less secure, so it is now possible to opt in to a syntax where
 			// keys are assumed to be literals (i.e. hashable keys) unless the start and end with /
 			bool assume_hash = param_boolean("CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS", false);
+			const bool allow_include = true;
 
 			int line;
-			if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile.ptr(), assume_hash))) {
-				dprintf(D_SECURITY, "ZKM: Error parsing %s at line %d", credential_mapfile.ptr(), line);
+			if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile.ptr(), assume_hash, allow_include))) {
+				dprintf(D_SECURITY, "AUTHENTICATION: Error parsing %s at line %d", credential_mapfile.ptr(), line);
 				delete global_map_file;
 				global_map_file = NULL;
 			}
 		}
 		global_map_file_load_attempted = true;
 	} else {
-		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: map file already loaded.\n");
 	}
 
-	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
+	dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: attempting to map '%s'\n", authentication_name);
 
 	// this will hold what we pass to the mapping function
-	MyString auth_name_to_map = authentication_name;
+	std::string auth_name_to_map = authentication_name;
 
 	bool included_voms = false;
 
@@ -596,7 +601,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (authentication_type == CAUTH_GSI) {
 		const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
 		if (fqan && fqan[0]) {
-			dprintf (D_SECURITY, "ZKM: GSI was used, and FQAN is present.\n");
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: GSI was used, and FQAN is present.\n");
 			auth_name_to_map = fqan;
 			included_voms = true;
 		}
@@ -606,15 +611,15 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (global_map_file) {
 		MyString canonical_user;
 
-		dprintf (D_SECURITY, "ZKM: 1: attempting to map '%s'\n", auth_name_to_map.Value());
-		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.Value(), canonical_user);
-		dprintf (D_SECURITY, "ZKM: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
+		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
 
 		// if it did not find a user, and we included voms attrs, try again without voms
 		if (mapret && included_voms) {
-			dprintf (D_SECURITY, "ZKM: now attempting to map '%s'\n", authentication_name);
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now attempting to map '%s'\n", authentication_name);
 			mapret = global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user);
-			dprintf (D_SECURITY, "ZKM: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
 		}
 
 		// if the method is SCITOKENS and mapping failed, try again
@@ -627,8 +632,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		// 
 		// reminder: GetCanonicalization returns "true" on failure.
 		if (mapret && authentication_type == CAUTH_SCITOKENS) {
-			auth_name_to_map = auth_name_to_map + "/";
-			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.Value(), canonical_user);
+			auth_name_to_map += "/";
+			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
 			if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
 				// just continue as if everything is fine.  we've now
 				// already updated canonical_user with the result. complain
@@ -643,7 +648,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 
 		if (!mapret) {
 			// returns true on failure?
-			dprintf (D_FULLDEBUG, "ZKM: successful mapping to %s\n", canonical_user.Value());
+			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.Value());
 
 			// there is a switch for GSI to use the default globus function for this, in
 			// case there is some custom globus mapping add-on, or the admin just wants
@@ -664,12 +669,12 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 					dprintf (D_SECURITY, "Globus-based mapping failed; will use gsi@unmapped.\n");
 				}
 #else
-				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!\n");
+				dprintf(D_ALWAYS, "AUTHENTICATION: GSI not compiled, but was used?!!\n");
 #endif
 				return;
 			} else {
 
-				dprintf (D_SECURITY, "ZKM: found user %s, splitting.\n", canonical_user.Value());
+				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.Value());
 
 				MyString user;
 				MyString domain;
@@ -684,7 +689,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				return;
 			}
 		} else {
-			dprintf (D_FULLDEBUG, "ZKM: did not find user %s.\n", authentication_name);
+			dprintf (D_FULLDEBUG, "AUTHENTICATION: did not find user %s.\n", authentication_name);
 		}
 	} else if (authentication_type == CAUTH_GSI) {
         // See notes above around the nameGssToLocal call about why we invoke GSI authorization here.
@@ -695,10 +700,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(authentication_name);
 		dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
 #else
-		dprintf(D_ALWAYS, "ZKM: GSI not compiled, so can't call nameGssToLocal!!\n");
+		dprintf(D_ALWAYS, "AUTHENTICATION: GSI not compiled, so can't call nameGssToLocal!!\n");
 #endif
 	} else {
-		dprintf (D_FULLDEBUG, "ZKM: global_map_file not present!\n");
+		dprintf (D_FULLDEBUG, "AUTHENTICATION: global_map_file not present!\n");
 	}
 }
 
@@ -945,7 +950,6 @@ int Authentication :: wrap(char*  input,
     return FALSE;
 #else
     // Shouldn't we check the flag first?
-    dprintf(D_ALWAYS, "ZKM: Here we are in AUTHENTICATION::WRAP\n");
     if (authenticator_) {
         return authenticator_->wrap(input, input_len, output, output_len);
     }
@@ -964,7 +968,6 @@ int Authentication :: unwrap(char*  input,
     return FALSE;
 #else
     // Shouldn't we check the flag first?
-    dprintf(D_ALWAYS, "ZKM: Here we are in AUTHENTICATION::UNWRAP\n");
     if (authenticator_) {
         return authenticator_->unwrap(input, input_len, output, output_len);
     }
@@ -1074,11 +1077,11 @@ void Authentication::setAuthType( int state ) {
 }
 
 
-int Authentication::handshake(MyString my_methods, bool non_blocking) {
+int Authentication::handshake(const std::string& my_methods, bool non_blocking) {
 
     int shouldUseMethod = 0;
     
-    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(my_methods = '%s')\n", my_methods.Value());
+    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(my_methods = '%s')\n", my_methods.c_str());
 
     if ( mySock->isClient() ) {
 
@@ -1086,7 +1089,7 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
         mySock->encode();
-		int method_bitmask = SecMan::getAuthBitmask(my_methods.Value());
+		int method_bitmask = SecMan::getAuthBitmask(my_methods.c_str());
 #if defined(HAVE_EXT_KRB5)
 		if ( (method_bitmask & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false )
 #else
@@ -1110,7 +1113,7 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 			method_bitmask &= ~CAUTH_GSI;
 		}
 #ifdef HAVE_EXT_SCITOKENS
-		if ( (method_bitmask & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
+		if ( (method_bitmask & CAUTH_SCITOKENS) && (Condor_Auth_SSL::Initialize() == false || htcondor::init_scitokens() == false) )
 #else
 		if (method_bitmask & CAUTH_SCITOKENS)
 #endif
@@ -1148,7 +1151,7 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 }
 
 int
-Authentication::handshake_continue(MyString my_methods, bool non_blocking)
+Authentication::handshake_continue(const std::string& my_methods, bool non_blocking)
 {
 	//server
 	if( non_blocking && !mySock->readReady() ) {
@@ -1164,47 +1167,53 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 	}
 	dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
 
-	shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	while ( (shouldUseMethod = selectAuthenticationType( my_methods, client_methods )) ) {
 #if defined(HAVE_EXT_KRB5) 
-	if ( (shouldUseMethod & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false )
 #else
-	if (shouldUseMethod & CAUTH_KERBEROS)
+		if (shouldUseMethod & CAUTH_KERBEROS)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_KERBEROS;
-	}
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_KERBEROS;
+			continue;
+		}
 #ifdef HAVE_EXT_OPENSSL
-	if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
 #else
-	if (shouldUseMethod & CAUTH_SSL)
+		if (shouldUseMethod & CAUTH_SSL)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_SSL;
-	}
-	if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
-		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
-		client_methods &= ~CAUTH_GSI;
-		shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
-	}
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_SSL;
+			continue;
+		}
+		if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
+			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
+			client_methods &= ~CAUTH_GSI;
+			continue;
+		}
 #ifdef HAVE_EXT_SCITOKENS
-	if ( (shouldUseMethod & CAUTH_SCITOKENS) && Condor_Auth_SSL::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_SCITOKENS) && (Condor_Auth_SSL::Initialize() == false || htcondor::init_scitokens() == false) )
 #else
-	if (shouldUseMethod & CAUTH_SCITOKENS)
+		if (shouldUseMethod & CAUTH_SCITOKENS)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding SciTokens: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_SCITOKENS;
-	}
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding SciTokens: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_SCITOKENS;
+			continue;
+		}
 #if defined(HAVE_EXT_MUNGE)
-	if ( (shouldUseMethod & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
+		if ( (shouldUseMethod & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
 #else
-	if (shouldUseMethod & CAUTH_MUNGE)
+		if (shouldUseMethod & CAUTH_MUNGE)
 #endif
-	{
-		dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
-		shouldUseMethod &= ~CAUTH_MUNGE;
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
+			client_methods &= ~CAUTH_MUNGE;
+			continue;
+		}
+		break;
 	}
 
 	dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
@@ -1219,12 +1228,12 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 	return shouldUseMethod;
 }
 
-int Authentication::selectAuthenticationType( MyString method_order, int remote_methods ) {
+int Authentication::selectAuthenticationType( const std::string& method_order, int remote_methods ) {
 
 	// the first one in the list that is also in the bitmask is the one
 	// that we pick.  so, iterate the list.
 
-	StringList method_list( method_order.Value() );
+	StringList method_list( method_order );
 
 	char * tmp = NULL;
 	method_list.rewind();

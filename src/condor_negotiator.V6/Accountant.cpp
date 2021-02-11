@@ -115,18 +115,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 
   // Set up HGQ accounting-group related information
   hgq_root_group = root_group;
-  hgq_submitter_group_map.clear();
-  // Pre-set mapping from all defined group names to themselves.
-  std::deque<GroupEntry*> grpq;
-  grpq.push_back(hgq_root_group);
-  while (!grpq.empty()) {
-      GroupEntry* group = grpq.front();
-      grpq.pop_front();
-      hgq_submitter_group_map[group->name] = group;
-      for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-          grpq.push_back(*j);
-      }
-  }
+  GroupEntry::Initialize(hgq_root_group);
   
   HalfLifePeriod = param_double("PRIORITY_HALFLIFE");
 
@@ -286,97 +275,20 @@ void Accountant::Initialize(GroupEntry* root_group)
 
   // Ensure that table entries for acct groups get created on startup and reconfig
   // Do this after loading the accountant log, to give log data precedence
-  grpq.clear();
+  std::deque<GroupEntry*> grpq;
   grpq.push_back(hgq_root_group);
   while (!grpq.empty()) {
       GroupEntry* group = grpq.front();
       grpq.pop_front();
       // This creates entries if they don't already exist:
       GetPriority(group->name);
-      for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+      for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
           grpq.push_back(*j);
       }
   }
 
   UpdatePriorities();
 }
-
-
-void parse_group_name(const string& gname, vector<string>& gpath) {
-    gpath.clear();
-    string::size_type cur = 0;
-    while (true) {
-        string::size_type nxt = gname.find_first_of('.', cur);
-        string::size_type n = (nxt == string::npos) ? string::npos : nxt-cur;
-        gpath.push_back(gname.substr(cur, n));
-        if (nxt == string::npos) break;
-        cur = 1+nxt;
-    }
-}
-
-GroupEntry* Accountant::GetAssignedGroup(const string& CustomerName) {
-    bool unused;
-    return GetAssignedGroup(CustomerName, unused);
-}
-
-GroupEntry* Accountant::GetAssignedGroup(const string& CustomerName, bool& IsGroup) {
-    string subname = CustomerName;
-
-    // Is this an acct group, syntactically speaking?
-    string::size_type pos = subname.find_last_of('@');
-    IsGroup = (pos == string::npos);
-
-    // cache results from previous invocations
-    map<string, GroupEntry*, ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
-    if (fs != hgq_submitter_group_map.end()) return fs->second;
-
-    ASSERT(NULL != hgq_root_group);
-
-    if (IsGroup) {
-        // This is either a defunct group or a malformed submitter name: map it to root group
-        dprintf(D_ALWAYS, "group quota: WARNING: defaulting submitter \"%s\" to root group\n", subname.c_str());
-        hgq_submitter_group_map[subname] = hgq_root_group;
-        return hgq_root_group;
-    }
-
-    // strip '@' and everything after it
-    string gname=subname.substr(0, pos);
-
-    // is there a group/user separator?
-    pos = gname.find_last_of('.');
-    if (pos != string::npos) {
-        // everything prior to separator is group name
-        gname = gname.substr(0, pos);
-    } else {
-        // if there is no separator, semantic is "no group", so it goes to root
-        hgq_submitter_group_map[subname] = hgq_root_group;
-        return hgq_root_group;
-    }
-
-    GroupEntry* group = hgq_root_group;
-    // parse the group name into a path of sub-group names
-    vector<string> gpath;
-    parse_group_name(gname, gpath);
-
-    // walk down the tree using the group path
-    for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
-        map<string, GroupEntry::size_type, ci_less>::iterator f(group->chmap.find(*j));
-        if (f == group->chmap.end()) {
-            if (hgq_root_group->children.size() > 0) {
-                // I only want to log a warning if an HGQ configuration exists
-                dprintf(D_ALWAYS, "group quotas: WARNING: defaulting undefined group name %s to group %s\n", 
-                        gname.c_str(), group->name.c_str());
-            }
-            break;
-        } else {
-            group = group->children[f->second];
-        }
-    }
-
-    hgq_submitter_group_map[subname] = group;
-    return group;
-}
-
 
 bool Accountant::UsingWeightedSlots() const {
     return UseSlotWeights;
@@ -397,7 +309,7 @@ int Accountant::GetResourcesUsed(const string& CustomerName)
 // Return the number of resources used (floating point version)
 //------------------------------------------------------------------
 
-float Accountant::GetWeightedResourcesUsed(const string& CustomerName) 
+float Accountant::GetWeightedResourcesUsed(const string& CustomerName)
 {
   float WeightedResourcesUsed=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
@@ -440,7 +352,7 @@ int Accountant::GetCeiling(const string& CustomerName)
 // Get group priority local helper function.
 float Accountant::getGroupPriorityFactor(const string& CustomerName) 
 {
-    string GroupName = GetAssignedGroup(CustomerName)->name;
+    string GroupName = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName)->name;
 
     string groupPrioFactorConfig;
 	formatstr(groupPrioFactorConfig, "GROUP_PRIO_FACTOR_%s", GroupName.c_str());
@@ -669,7 +581,7 @@ void Accountant::AddMatch(const string& CustomerName, ClassAd* ResourceAd)
 
   // Do everything we just to update the customer's record a second time if
   // there is a group record to update
-  string GroupName = GetAssignedGroup(CustomerName)->name;
+  string GroupName = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName)->name;
 
 
   int GroupResourcesUsed=0;
@@ -698,17 +610,18 @@ void Accountant::AddMatch(const string& CustomerName, ClassAd* ResourceAd)
   SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   // If this is a nested group (group_a.b.c), update usage up the tree
-  while (GroupName.length() > 0) {
+  std::string GroupNamePart = GroupName;
+  while (GroupNamePart.length() > 0) {
 	float GroupHierWeightedResourcesUsed = 0.0;
-  	GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed += SlotWeight;
-  	SetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	SetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 
-  	size_t last_dot = GroupName.find_last_of(".");
+  	size_t last_dot = GroupNamePart.find_last_of(".");
   	if (last_dot == std::string::npos) {
-		GroupName = "";
+		GroupNamePart = "";
   } else {
-		GroupName = GroupName.substr(0, last_dot);
+		GroupNamePart = GroupNamePart.substr(0, last_dot);
   }
   }
 
@@ -783,7 +696,7 @@ void Accountant::RemoveMatch(const string& ResourceName, time_t T)
   float WeightedGroupUnchargedTime=0.0;
   float HierWeightedResourcesUsed = 0.0;
   
-  string GroupName = GetAssignedGroup(CustomerName)->name;
+  string GroupName = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName)->name;
   dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
   
   GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
@@ -819,18 +732,19 @@ void Accountant::RemoveMatch(const string& ResourceName, time_t T)
       GroupWeightedResourcesUsed = 0.0;
   }
   // If this is a nested group (group_a.b.c), update usage up the tree
-  while (GroupName.length() > 0) {
+  std::string GroupNamePart = GroupName;
+  while (GroupNamePart.length() > 0) {
 	float GroupHierWeightedResourcesUsed = 0.0;
-  	GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed -= SlotWeight;
 	if (GroupHierWeightedResourcesUsed < 0) GroupHierWeightedResourcesUsed = 0;
-  	SetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	SetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 
-  	size_t last_dot = GroupName.find_last_of(".");
+  	size_t last_dot = GroupNamePart.find_last_of(".");
   	if (last_dot == std::string::npos) {
-		GroupName = "";
+		GroupNamePart = "";
   } else {
-		GroupName = GroupName.substr(0, last_dot);
+		GroupNamePart = GroupNamePart.substr(0, last_dot);
   }
   }
   dprintf(D_ACCOUNTANT, "GroupResourcesUsed =%d GroupWeightedResourcesUsed= %f SlotWeight=%f\n",
@@ -1134,7 +1048,7 @@ ClassAd* Accountant::ReportState(const string& CustomerName) {
     ClassAd* ad = new ClassAd();
 
     bool isGroup=false;
-    string cgrp = GetAssignedGroup(CustomerName, isGroup)->name;
+    string cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup)->name;
     // This is a defunct group:
     if (isGroup && (cgrp != CustomerName)) return ad;
 
@@ -1147,7 +1061,7 @@ ClassAd* Accountant::ReportState(const string& CustomerName) {
         if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
 
         if (isGroup) {
-            string rgrp = GetAssignedGroup(rname)->name;
+            string rgrp = GroupEntry::GetAssignedGroup(hgq_root_group, rname)->name;
             if (cgrp != rgrp) continue;
         } else {
             // customername is a traditional submitter: group.username@host
@@ -1176,7 +1090,7 @@ void Accountant::CheckResources(const string& CustomerName, int& NumResources, f
     NumResourcesRW = 0;
 
     bool isGroup=false;
-    string cgrp = GetAssignedGroup(CustomerName.c_str(), isGroup)->name;
+    string cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName.c_str(), isGroup)->name;
     // This is a defunct group:
     if (isGroup && (cgrp != CustomerName)) return;
 
@@ -1190,7 +1104,7 @@ void Accountant::CheckResources(const string& CustomerName, int& NumResources, f
         if (ResourceAd->LookupString(RemoteUserAttr, rname) == 0) continue;
 
         if (isGroup) {
-            if (cgrp != GetAssignedGroup(rname)->name) continue;
+            if (cgrp != GroupEntry::GetAssignedGroup(hgq_root_group, rname)->name) continue;
         } else {
             if (CustomerName != rname) continue;
         }
@@ -1215,14 +1129,14 @@ ClassAd* Accountant::ReportState(bool rollup) {
 
     // assign acct group index numbers first, breadth first ordering
     int EntryNum=1;
-    map<string, int> gnmap;
+	std::map<string, int> gnmap;
     std::deque<GroupEntry*> grpq;
     grpq.push_back(hgq_root_group);
     while (!grpq.empty()) {
         GroupEntry* group = grpq.front();
         grpq.pop_front();
         gnmap[group->name] = EntryNum++;
-        for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+        for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
             grpq.push_back(*j);
         }
     }
@@ -1239,7 +1153,7 @@ ClassAd* Accountant::ReportState(bool rollup) {
         string CustomerName = HK.c_str()+CustomerRecord.length();
 
         bool isGroup=false;
-        GroupEntry* cgrp = GetAssignedGroup(CustomerName, isGroup);
+        GroupEntry* cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup);
 
         // entries for acct groups are now handled in ReportGroups(), above
         if (isGroup) continue;
@@ -1322,7 +1236,7 @@ ClassAd* Accountant::ReportState(bool rollup) {
 }
 
 
-void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<string, int>& gnmap) {
+void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<string, int>& gnmap) {
     // begin by loading straight "non-rolled" data into the attributes for (group)
     string CustomerName = group->name;
 
@@ -1334,7 +1248,7 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     } 
 
     bool isGroup=false;
-    GroupEntry* cgrp = GetAssignedGroup(CustomerName, isGroup);
+    GroupEntry* cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup);
 
     std::string cgname;
     int gnum = 0;
@@ -1427,7 +1341,7 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     
     // Populate group's children recursively, if it has any
     // Recursion is to allow for proper rollup from children to parents
-    for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
         ReportGroups(*j, ad, rollup, gnmap);
     }
 

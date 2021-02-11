@@ -100,16 +100,23 @@ def setup_logging(log_path = None, log_level = None):
 
     # Get the log path
     if (log_path is None) and (htcondor is not None) and (
+            ('CREDMON_OAUTH_LOG' in htcondor.param) or
             ('SEC_CREDENTIAL_MONITOR_LOG' in htcondor.param) or
             ('SEC_CREDENTIAL_MONITOR_OAUTH_LOG' in htcondor.param)
             ):
-        log_path = htcondor.param.get('SEC_CREDENTIAL_MONITOR_OAUTH_LOG', htcondor.param.get('SEC_CREDENTIAL_MONITOR_LOG'))
+        log_path = htcondor.param.get('CREDMON_OAUTH_LOG',
+                        htcondor.param.get('SEC_CREDENTIAL_MONITOR_OAUTH_LOG',
+                                htcondor.param.get('SEC_CREDENTIAL_MONITOR_LOG')))
     elif (log_path is None):
-        raise RuntimeError('The log file path must be specified in condor_config as SEC_CREDENTIAL_MONITOR_OAUTH_LOG or passed as an argument')
+        if sys.platform in ("win32", "cygwin"):
+            raise RuntimeError('The log file path must be specified in condor_config as CREDMON_OAUTH_LOG or passed as an argument')
+        else:
+            # Fall back to a default path on *nix(like) systems
+            log_path = "/var/log/condor/CredMonOAuthLog"
 
     # Get the log level
-    if (log_level is None) and (htcondor is not None) and ('SEC_CREDENTIAL_MONITOR_OAUTH_LOG_LEVEL' in htcondor.param):
-        log_level = logging.getLevelName(htcondor.param['SEC_CREDENTIAL_MONITOR_OAUTH_LOG_LEVEL'])
+    if (log_level is None) and (htcondor is not None) and ('CREDMON_OAUTH_LOG_LEVEL' in htcondor.param):
+        log_level = logging.getLevelName(htcondor.param['CREDMON_OAUTH_LOG_LEVEL'])
     if log_level is None:
         log_level = logging.INFO
 

@@ -21,12 +21,16 @@
 #include "condor_arglist.h"
 #include "condor_attributes.h"
 #include "condor_getcwd.h"
+#include "condor_daemon_core.h"
 #include "condor_version.h"
 #include "dagman_utils.h"
 #include "my_popen.h"
 #include "MyString.h"
 #include "read_multiple_logs.h"
+#include "../condor_procapi/processid.h"
+#include "../condor_procapi/procapi.h"
 #include "tmp_dir.h"
+#include "tokener.h"
 #include "which.h"
 
 
@@ -44,6 +48,16 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 		return false;
 	}
 	return IsSafeEnvV2Value( val.Value() );
+}
+
+dag_tokener::dag_tokener(const char * line_in)
+{
+	tokener tkns(line_in);
+	while(tkns.next()) {
+		std::string token;
+		tkns.copy_token(token);
+		tokens.Append(&token);
+	}
 }
 
 bool 
@@ -988,3 +1002,181 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 	return true;
 }
 
+//-----------------------------------------------------------------------------
+int 
+DagmanUtils::popen (ArgList &args) {
+	MyString cmd; // for debug output
+	args.GetArgsStringForDisplay( &cmd );
+    dprintf( D_ALWAYS, "Running: %s\n", cmd.Value() );
+
+	FILE *fp = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
+
+    int r = 0;
+    if (fp == NULL || (r = my_pclose(fp) & 0xff) != 0) {
+		dprintf( D_ERROR, "Warning: failure: %s\n", cmd.Value() );
+		if( fp != NULL ) {
+			dprintf ( D_ALWAYS,
+						"\t(my_pclose() returned %d (errno %d, %s))\n",
+						r, errno, strerror( errno ) );
+		} else {
+			dprintf ( D_ALWAYS,
+						"\t(my_popen() returned NULL (errno %d, %s))\n",
+						errno, strerror( errno ) );
+			r = -1;
+		}
+    }
+    return r;
+}
+
+//-----------------------------------------------------------------------------
+int
+DagmanUtils::create_lock_file(const char *lockFileName, bool abortDuplicates) {
+	int result = 0;
+
+	FILE *fp = safe_fopen_wrapper_follow( lockFileName, "w" );
+	if ( fp == NULL ) {
+		dprintf( D_ALWAYS,
+					"ERROR: could not open lock file %s for writing.\n",
+					lockFileName);
+		result = -1;
+	}
+
+		//
+		// Create the ProcessId object.
+		//
+	ProcessId *procId = NULL;
+	if ( result == 0 && abortDuplicates ) {
+		int status;
+		int precision_range = 1;
+		if ( ProcAPI::createProcessId( daemonCore->getpid(), procId,
+					status, &precision_range ) != PROCAPI_SUCCESS ) {
+			dprintf( D_ALWAYS, "ERROR: ProcAPI::createProcessId() "
+						"failed; %d\n", status );
+			result = -1;
+		}
+	}
+
+		//
+		// Write out the ProcessId object.
+		//
+	if ( result == 0 && abortDuplicates ) {
+		if ( procId->write( fp ) != ProcessId::SUCCESS ) {
+			dprintf( D_ALWAYS, "ERROR: ProcessId::write() failed\n");
+			result = -1;
+		}
+	}
+
+		//
+		// Confirm the ProcessId object's uniqueness.
+		//
+	if ( result == 0 && abortDuplicates ) {
+		int status;
+		if ( ProcAPI::confirmProcessId( *procId, status ) !=
+					PROCAPI_SUCCESS ) {
+			dprintf( D_ERROR, "Warning: ProcAPI::"
+						"confirmProcessId() failed; %d\n", status );
+		} else {
+			if ( !procId->isConfirmed() ) {
+				dprintf( D_ERROR, "Warning: ProcessId not "
+							"confirmed unique\n" );
+			} else {
+
+					//
+					// Write out the confirmation.
+					//
+				if ( procId->writeConfirmationOnly( fp ) !=
+							ProcessId::SUCCESS ) {
+					dprintf( D_ERROR, "ERROR: ProcessId::"
+								"writeConfirmationOnly() failed\n");
+					result = -1;
+				}
+			}
+		}
+	}
+
+	delete procId;
+
+	if ( fp != NULL ) {
+		if ( fclose( fp ) != 0 ) {
+			dprintf( D_ALWAYS, "ERROR: closing lock "
+						"file failed with errno %d (%s)\n", errno,
+						strerror( errno ) );
+		}
+	}
+
+	return result;
+}
+
+//-----------------------------------------------------------------------------
+int
+DagmanUtils::check_lock_file(const char *lockFileName) {
+	int result = 0;
+
+	FILE *fp = safe_fopen_wrapper_follow( lockFileName, "r" );
+	if ( fp == NULL ) {
+		dprintf( D_ALWAYS,
+					"ERROR: could not open lock file %s for reading.\n",
+					lockFileName );
+		result = -1;
+	}
+
+	ProcessId *procId = NULL;
+	if ( result != -1 ) {
+		int status;
+		procId = new ProcessId( fp, status );
+		if ( status != ProcessId::SUCCESS ) {
+			dprintf( D_ALWAYS, "ERROR: unable to create ProcessId "
+						"object from lock file %s\n", lockFileName );
+			result = -1;
+		}
+	}
+
+	if ( result != -1 ) {
+		int status;
+		int aliveResult = ProcAPI::isAlive( *procId, status );
+		if ( aliveResult != PROCAPI_SUCCESS ) {
+			dprintf( D_ALWAYS, "ERROR: failed to determine "
+						"whether DAGMan that wrote lock file is alive\n" );
+			result = -1;
+		} else {
+
+			if ( status == PROCAPI_ALIVE ) {
+				dprintf( D_ALWAYS,
+						"Duplicate DAGMan PID %d is alive; this DAGMan "
+						"should abort.\n", procId->getPid() );
+				result = 1;
+
+			} else if ( status == PROCAPI_DEAD ) {
+				dprintf( D_ALWAYS,
+						"Duplicate DAGMan PID %d is no longer alive; "
+						"this DAGMan should continue.\n",
+						procId->getPid() );
+				result = 0;
+
+			} else if ( status == PROCAPI_UNCERTAIN ) {
+				dprintf( D_ALWAYS,
+						"Duplicate DAGMan PID %d *may* be alive; this "
+						"DAGMan is continuing, but this will cause "
+						"problems if the duplicate DAGMan is alive.\n",
+						procId->getPid() );
+				result = 0;
+
+			} else {
+				EXCEPT( "Illegal ProcAPI::isAlive() status value: %d",
+							status );
+			}
+		}
+	}
+
+	delete procId;
+
+	if ( fp != NULL ) {
+		if ( fclose( fp ) != 0 ) {
+			dprintf( D_ALWAYS, "ERROR: closing lock "
+						"file failed with errno %d (%s)\n", errno,
+						strerror( errno ) );
+		}
+	}
+
+	return result;
+}

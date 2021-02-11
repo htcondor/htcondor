@@ -506,9 +506,6 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 
 	// get usage from the requested family and all subfamilies
 	//
-	dprintf(D_ALWAYS,
-	        "gathering usage data for family with root pid %u\n",
-	        pid);
 	ASSERT(usage != NULL);
 	usage->user_cpu_time = 0;
 	usage->sys_cpu_time = 0;
@@ -649,9 +646,11 @@ ProcFamilyMonitor::snapshot()
 		ProcFamilyMember* pfm;
 		int ret = m_member_table.lookup(curr->pid, pfm);
 		if (ret == -1) {
+#if defined(CHATTY_PROC_LOG)
 			dprintf(D_ALWAYS,
 			        "no methods have determined process %u to be in a monitored family\n",
 			        curr->pid);
+#endif /* defined(CHATTY_PROC_LOG) */
 			m_everybody_else->add_member(curr);
 		}
 		curr = curr->next;
@@ -705,11 +704,13 @@ ProcFamilyMonitor::add_member_to_family(ProcFamily* pf,
 		// this process is not already associated with a family;
 		// just go ahead and insert it
 		//
+#if defined(CHATTY_PROC_LOG)
 		dprintf(D_ALWAYS,
 		        "method %s: found family %u for process %u\n",
 		        method_str,
 		        pf->get_root_pid(),
 		        pi->pid);
+#endif /* defined(CHATTY_PROC_LOG) */
 		pf->add_member(pi);
 		return true;
 	}

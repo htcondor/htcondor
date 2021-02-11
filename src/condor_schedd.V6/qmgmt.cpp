@@ -472,6 +472,8 @@ ClusterCleanup(int cluster_id)
 	SpooledJobFiles::removeClusterSpooledFiles(cluster_id, submit_digest);
 
 	// garbage collect the shared ickpt file if necessary
+	// As of 9.0 new jobs will be unable to submit shared executables
+	// but there may still be some jobs in the queue that have that.
 	if (!hash.IsEmpty()) {
 		ickpt_share_try_removal(owner.Value(), hash.Value());
 	}
@@ -3994,6 +3996,10 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		}
 	}
 
+	// TODO Add a way to efficiently test if the key refers to an ad
+	// created in the currently-active transaction. Currently, submit
+	// transforms and late materialization get free reign to modify
+	// attributes for invalid job ids.
 	if (JobQueue->Lookup(key, job)) {
 		// If we made it here, the user is adding or editing attrbiutes
 		// to an ad that has already been committed in the queue.
@@ -4015,12 +4021,6 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 
 		// Ensure user is not changing an immutable attribute to a committed job
 		bool is_immutable_attr = immutable_attrs.find(attr_name) != immutable_attrs.end();
-		if (is_immutable_attr) {
-			// late materialization is allowed to change some 'immutable' attributes in the cluster ad.
-			if ((key.proc == -1) && YourStringNoCase(ATTR_TOTAL_SUBMIT_PROCS) == attr_name) {
-				is_immutable_attr = false;
-			}
-		}
 		if (is_immutable_attr)
 		{
 
@@ -4070,14 +4070,18 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		// submit transforms come from inside the schedd and have no restrictions
 		// on which cluster/proc may be edited (the transform itself guarantees that only
 		// jobs in the submit transaction will be edited)
-	} else if (Q_SOCK != NULL || (flags&NONDURABLE)) {
-		// If we made it here, the user (i.e. not the schedd itself)
-		// is modifying attributes in an ad that has not been committed yet
-		// (we know this because it cannot be found in the JobQueue above).
-		// Restrict the user to only modifying attributes in the current cluster
-		// returned by NewCluster, and also restrict the user to procs that have been
-		// returned by NewProc.
-		if ((key.cluster != active_cluster_num) || (key.proc >= next_proc_num)) {
+	} else if (flags & SetAttribute_LateMaterialization) {
+		// late materialization comes from inside the schedd and has no
+		// restrictions on which cluster/proc may be edited
+	} else if (JobQueue->InTransaction() && active_cluster_num > 0) {
+		// We have an active transaction that's adding new ads.
+		// Assume the modification is for one of those ads (we know it's
+		// not for an ad that's already in the queue).
+		// Restrict to only modifying attributes in the last cluster
+		// returned by NewCluster, and also restrict to procs that have
+		// been returned by NewProc or the cluster ad (proc -1).
+		// If we got a completely bogus job id, we'll still reject it.
+		if ((key.cluster != active_cluster_num) || (key.proc >= next_proc_num) || (key.proc < -1)) {
 			dprintf(D_ALWAYS,"%s modifying attribute %s in non-active cluster cid=%d acid=%d\n", 
 					func_name, attr_name, key.cluster, active_cluster_num);
 			if (err) err->pushf("QMGMT", ENOENT, "Modifying attribute %s in "
@@ -4102,6 +4106,14 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 			// to return failure if needed.
 			free( val );
 		}
+	} else {
+		dprintf(D_ALWAYS,"%s modifying attribute %s in nonexistent job %d.%d\n",
+				func_name, attr_name, key.cluster, key.proc);
+		if (err) err->pushf("QMGMT", ENOENT, "Modifying attribute %s in "
+			"nonexistent job %d.%d",
+			attr_name, key.cluster, key.proc);
+		errno = ENOENT;
+		return -1;
 	}
 
 	return 1;
@@ -7416,7 +7428,7 @@ SendSpoolFile(char const *)
 }
 
 int
-SendSpoolFileIfNeeded(ClassAd& ad)
+SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 {
 	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
 		EXCEPT( "SendSpoolFileIfNeeded called when Q_SOCK is NULL" );
@@ -7442,6 +7454,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 		return -1;
 	}
 
+#if 0 // for 9.0, we no longer support sharing of spooled exe because it uses MD5
 	// here we take advantage of ickpt sharing if possible. if a copy
 	// of the executable already exists we make a link to it and send
 	// a '1' back to the client. if that can't happen but sharing is
@@ -7521,6 +7534,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			}
 		}
 	}
+#endif
 
 	/* Tell client to go ahead with file transfer. */
 	Q_SOCK->getReliSock()->put(0);
@@ -7531,9 +7545,11 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 		return -1;
 	}
 
+#if 0  // for 9.0, we no longer support sharing of spooled exe because it uses MD5
 	if (!hash.empty()) {
 		ickpt_share_init_sharing(owner.c_str(), hash, path);
 	}
+#endif
 
 	free(path); path = NULL;
 	return 0;

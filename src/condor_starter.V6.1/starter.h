@@ -46,13 +46,13 @@ class DataReuseDirectory;
 
 	@see UserProc
  */
-class CStarter : public Service
+class Starter : public Service
 {
 public:
 		/// Constructor
-	CStarter();
+	Starter();
 		/// Destructor
-	virtual ~CStarter();
+	virtual ~Starter();
 
 		/** This is called at the end of main_init().  It calls
 			Config(), registers a bunch of signals, registers a
@@ -330,6 +330,7 @@ public:
 
 	virtual void RecordJobExitStatus(int status);
 
+	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
@@ -365,8 +366,8 @@ private:
 
 		   @return true if we published anything, otherwise false.
 
-		   @see CStarter::publishUpdateAd()
-		   @see CStarter::publishJobExitAd()
+		   @see Starter::publishUpdateAd()
+		   @see Starter::publishJobExitAd()
 		   @see UserProc::PublishUpdateAd()
 		*/
 	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);
@@ -447,6 +448,9 @@ private:
 
 		// Manage the data reuse directory.
 	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
+
+	// The string to set the tmp env vars to
+	std::string tmpdir;
 };
 
 #endif

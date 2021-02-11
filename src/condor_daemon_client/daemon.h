@@ -185,7 +185,9 @@ public:
 			@return The platform string of this daemon, or NULL if we
 			don't know it.
 		*/
+private:
 	const char* platform( void );
+public:
 
 		/** Return the full hostname where the daemon is running.
 		  This is the fully qualified hostname, including the domain

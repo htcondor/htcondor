@@ -22,12 +22,12 @@ dagman_classad.cpp
 dagman_commands.cpp
 dagman_main.cpp
 dagman_metrics.cpp
-dagman_multi_dag.cpp
-dagman_recursive_submit.cpp
+#dagman_multi_dag.cpp
+#dagman_recursive_submit.cpp
 dagman_stats.cpp
 dagman_submit.cpp
-dagman_util.cpp
-dag_tokener.cpp
+#dagman_util.cpp
+#dag_tokener.cpp
 debug.cpp
 job.cpp
 jobstate_log.cpp

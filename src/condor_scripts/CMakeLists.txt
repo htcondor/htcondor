@@ -46,6 +46,8 @@ if (NOT WINDOWS)
 
 	install ( FILES condor_ssh sshd.sh get_orted_cmd.sh orted_launcher.sh set_batchtok_cmd cred_producer_krb DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install ( FILES box_plugin.py gdrive_plugin.py onedrive_plugin.py DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( FILES condor_adstash DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( DIRECTORY adstash DESTINATION ${C_LIBEXEC} )
 
     if (LINUX)
         install ( FILES linux_kernel_tuning DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

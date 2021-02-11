@@ -3,6 +3,10 @@ a.macro {
 	font-size: 90%;
 }
 
+table th p {
+	margin-bottom: 0px;
+}
+
 table.indextable {
 	margin-bottom: 20px;
 }
@@ -11,6 +15,10 @@ table.indextable li {
 	max-width: 350px;
 	margin-left: 10px;
 	word-wrap: break-word;
+}
+
+.rst-content dl:not(.docutils) dt {
+	display: table-cell;
 }
 
 /* override table width restrictions */

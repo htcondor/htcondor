@@ -1,9 +1,15 @@
 %define tarball_version 8.1.3
 
+# On EL7 don't terminate the build because of bad bytecompiling
+%if 0%{?rhel} == 7
+%define _python_bytecompile_errors_terminate_build 0
+%endif
+
 # optionally define any of these, here or externally
 # % define fedora   16
 # % define osg      0
 # % define uw_build 1
+# % define vaultcred 1
 
 %define python 0
 
@@ -28,6 +34,13 @@
 
 %if 0%{?hcc}
 %define blahp 0
+%endif
+
+# enable vaultcred by default for osg
+%if %undefined vaultcred
+%if 0%{?osg}
+%define vaultcred 1
+%endif
 %endif
 
 %define python 1
@@ -107,6 +120,11 @@ Source6: 00-batch_gahp_blahp.config
 Source7: 00-restart_peaceful.config
 
 Source8: htcondor.pp
+
+# Patch to use Python 2 for file transfer plugins
+# The use the python-requests library and the one in EPEL is based Python 3.6
+# However, Amazon Linux 2 has Python 3.7
+Patch2: amzn2-python2.patch
 
 #% if 0% osg
 Patch8: osg_sysconfig_in_init_script.patch
@@ -259,10 +277,14 @@ Requires: blahp >= 1.16.1
 
 # Useful tools are using the Python bindings
 Requires: python3-condor
+# The use the python-requests library in EPEL is based Python 3.6
+# However, Amazon Linux 2 has Python 3.7
+%if ! 0%{?amzn}
 %if 0%{?rhel} == 7
 Requires: python36-requests
 %else
 Requires: python3-requests
+%endif
 %endif
 
 %if 0%{?rhel} == 7
@@ -478,11 +500,10 @@ Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
 Requires: boost169-python3
-Requires: python36
 %else
 Requires: boost-python3
-Requires: python3
 %endif
+Requires: python3
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
@@ -512,6 +533,27 @@ The OAuth2 credmon allows users to obtain credentials from configured
 OAuth2 endpoints and to use those credentials securely inside running jobs.
 %endif
 
+
+%if 0%{?vaultcred}
+#######################
+%package credmon-vault
+Summary: Vault credmon for HTCondor.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: python3-condor
+Requires: python-six
+%if 0%{?osg}
+# Although htgettoken is only needed on the submit machine and
+#  condor-credmon-vault is needed on both the submit and credd machines,
+#  htgettoken is small so it doesn't hurt to require it in both places.
+Requires: htgettoken >= 1.1
+%endif
+Conflicts: %name-credmon-oauth
+
+%description credmon-vault
+The Vault credmon allows users to obtain credentials from Vault using
+htgettoken and to use those credentials securely inside running jobs.
+%endif
 
 #######################
 %package bosco
@@ -624,6 +666,13 @@ exit 0
 %else
 # For release tarballs
 %setup -q -n %{name}-%{tarball_version}
+%endif
+
+# Patch to use Python 2 for file transfer plugins
+# The use the python-requests library and the one in EPEL is based Python 3.6
+# However, Amazon Linux 2 has Python 3.7
+%if 0%{?amzn}
+%patch2 -p1
 %endif
 
 %if 0%{?osg} || 0%{?hcc}
@@ -845,6 +894,15 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
 ln -s ../../../..%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 %endif
 ###
+
+%if 0%{?vaultcred}
+# Move vault credmon config file out of examples and into config.d
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
+%else
+# Otherwise remove installed vault credmon files from the buildroot
+rm -f %{buildroot}/%{_sbindir}/condor_credmon_vault
+rm -f %{buildroot}/%{_bindir}/condor_vault_storer
+%endif
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1118,6 +1176,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/gdrive_plugin.pyo
 %_libexecdir/condor/onedrive_plugin.pyc
 %_libexecdir/condor/onedrive_plugin.pyo
+%_libexecdir/condor/adstash/__init__.pyc
+%_libexecdir/condor/adstash/__init__.pyo
 %endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
@@ -1129,6 +1189,12 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/adstash/__init__.py
+%_libexecdir/condor/adstash/config.py
+%_libexecdir/condor/adstash/convert.py
+%_libexecdir/condor/adstash/elastic.py
+%_libexecdir/condor/adstash/history.py
+%_libexecdir/condor/adstash/utils.py
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
@@ -1258,6 +1324,7 @@ rm -rf %{buildroot}
 %_bindir/condor_annex
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
+%_bindir/condor_adstash
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1455,6 +1522,17 @@ rm -rf %{buildroot}
 ###
 %endif
 
+%if 0%{?vaultcred}
+%files credmon-vault
+%doc examples/condor_credmon_oauth
+%_sbindir/condor_credmon_vault
+%_bindir/condor_vault_storer
+%_libexecdir/condor/credmon
+%config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
+%ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
+%ghost %_var/lib/condor/oauth_credentials/pid
+%endif
+
 %files bosco
 %defattr(-,root,root,-)
 %if 0%{?hcc}
@@ -1543,6 +1621,24 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
+- This release of HTCondor fixes security-related bugs described at
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002.html
+
+* Tue Nov 24 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.10-1
+- Fix bug where negotiator stopped making matches when group quotas are used
+- Support OAuth, SciTokens, and Kerberos credentials in local universe jobs
+- The Python schedd.submit method now takes a Submit object
+- DAGMan can now optionally run a script when a job goes on hold
+- DAGMan now provides a method for inline jobs to share submit descriptions
+- Can now add arbitrary tags to condor annex instances
+- Runs the "singularity test" before running the a singularity job
+
+* Mon Nov 23 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.12-1
+- Added a family of version comparison functions to ClassAds
+- Increased default Globus proxy key length to meet current NIST guidance
+
 * Mon Oct 26 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.9-1
 - The RPM packages requires globus, munge, scitokens, and voms from EPEL
 - Improved cgroup memory policy settings that set both hard and soft limit

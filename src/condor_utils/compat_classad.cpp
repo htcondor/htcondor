@@ -522,23 +522,18 @@ bool userMap_func( const char * /*name*/,
 			result.SetListValue(lst);
 		#endif
 		} else {
-			// 3 arg form, return a string either the preferred item, or the first item
-			// preferred item match is case-insensitive
+			// 3 or 4 arg form, return as a string a either the preferred item, or the first item
+			// preferred item match is case-insensitive.  If the list is empty return undefined
 			std::string pref;
 			const char * selected_item = NULL;
 			const bool any_case = true;
 			if (prefVal.IsStringValue(pref)) { selected_item = items.find(pref.c_str(), any_case); }
-		#if 1
-			else if (prefVal.IsUndefinedValue()) { selected_item = items.first(); }
-		#else
-			// if preferred item is not in the list, use the first item
 			if ( ! selected_item) { selected_item = items.first(); }
-		#endif
 			if (selected_item) {
 				result.SetStringValue(selected_item);
 			} else if (cargs < 4) {
 				// if result has not been primed with the default value (i.e. this is the 3 arg form)
-				// set the result to undefined now.
+				// set the result to undefined now.  we end up here when the items list is empty
 				result.SetUndefinedValue();
 			}
 		}
@@ -2416,7 +2411,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 ///////////// end XML functions /////////
 
 int
-fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
 {
     if(!fp)
     {
@@ -2424,15 +2419,15 @@ fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list
     }
 
     std::string out;
-    sPrintAdAsJson(out,ad,attr_white_list);
+    sPrintAdAsJson(out,ad,attr_white_list,oneline);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
 {
-	classad::ClassAdJsonUnParser unparser;
+	classad::ClassAdJsonUnParser unparser(oneline);
 
 	if ( attr_white_list ) {
 		classad::ClassAd tmp_ad;

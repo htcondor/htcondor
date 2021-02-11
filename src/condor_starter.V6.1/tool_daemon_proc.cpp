@@ -35,7 +35,7 @@
 #include "perm.h"
 #endif
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 /* ToolDaemonProc class implementation */
 

@@ -13,7 +13,7 @@ Synopsis
 [**-pool** *pool_name*] [**-disable** ]
 [**-password** *passphrase*] [**-debug** ] [**-append** *command*
 **...**][\ **-batch-name** *batch_name*] [**-spool** ]
-[**-dump** *filename*] [**-interactive** ]
+[**-dump** *filename*] [**-interactive** ] [**-factory** ]
 [**-allow-crlf-script** ] [**-dry-run** ]
 [**-maxjobs** *number-of-jobs*] [**-single-cluster** ]
 [**-stm** *method*] [**<submit-variable>=<value>** ] [*submit
@@ -172,6 +172,13 @@ Options
     overwritten to be sleep and vanilla. The job ClassAd attribute
     ``InteractiveJob`` is set to ``True`` to identify interactive jobs
     for *condor_startd* policy usage.
+ **-factory**
+    Sends all of the jobs as a late materialization job factory.  A job factory
+    consists of a single cluster classad and a digest containing the submit
+    commands necessary to describe the differences between jobs.  If the ``Queue``
+    statment has itemdata, then the itemdata will be sent.  Using this option
+    is equivalent to using the **max_materialize**
+    :index:`max_materialize<single: max_materialize; submit commands>` submit command.
  **-allow-crlf-script**
     Changes the check for an invalid line ending on the executable
     script's ``#!`` line from an ERROR to a WARNING. The ``#!`` line
@@ -742,6 +749,26 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     require multiple machines in order to run.
 
     The **docker** universe runs a docker container as an HTCondor job.
+
+ max_materialize = <limit>
+    Submit jobs as a late materialization factory and instruct the *condor_schedd*
+    to keep the given number of jobs materialized.  Use this option to reduce the load
+    on the *condor_schedd* when submitting a large number of jobs.  The limit can be an expression but
+    it must evaluate to a constant at submit time.  A limit less than 1 will be treated
+    as unlimited.  The *condor_schedd* can be configured to
+    have a materialization limit as well, the lower of the two limits will be used.
+    (see  :ref:`users-manual/submitting-a-job:submitting lots of jobs` for more details).
+    :index:`max_materialize<single: max_materialize; submit commands>`
+
+ max_idle = <limit>
+    Submit jobs as a late materialization factory and instruct the *condor_schedd*
+    to keep the given number of non-running jobs materialized.  Use this option to reduce the load
+    on the *condor_schedd* when submitting a large number of jobs.  The limit may be an expression but
+    it must evaluate to a constant at submit time.  Jobs in the Held state are
+    considered to be Idle for this limit.  A limit of less than 1 will prevent jobs from being materialized
+    although the factory will still be submitted to the *condor_schedd*.
+    (see  :ref:`users-manual/submitting-a-job:submitting lots of jobs` for more details).
+    :index:`max_idle<single: max_idle; submit commands>`
 
 COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
 
@@ -1650,6 +1677,11 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  azure_size = <machine type>
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
+    :index:`batch_project<single: batch_project; submit commands>`
+ batch_project = <projectname>
+    Used for **batch** grid universe jobs.
+    Specifies the name of the PBS/LSF/SGE/SLURM project, account, or
+    allocation that should be charged for the resources used by the job.
     :index:`batch_queue<single: batch_queue; submit commands>`
  batch_queue = <queuename>
     Used for **batch** grid universe jobs.
@@ -1659,6 +1691,11 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     specified by supplying the name after an ``@`` symbol.
     For example, to submit a job to the ``debug`` queue on cluster ``foo``,
     you would use the value ``debug@foo``.
+    :index:`batch_runtime<single: batch_runtime; submit commands>`
+ batch_runtime = <seconds>
+    Used for **batch** grid universe jobs.
+    Specifies a limit in seconds on the execution time of the job.
+    This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
     :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
  boinc_authenticator_file = <pathname>
     For grid type **boinc** jobs, specifies a path and file name of the

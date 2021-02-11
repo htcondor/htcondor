@@ -27,6 +27,7 @@
 #include "daemon.h"
 #include "dc_startd.h"
 #include "condor_claimid_parser.h"
+#include "my_username.h"
 
 
 DCStartd::DCStartd( const char* tName, const char* tPool ) 
@@ -1265,7 +1266,7 @@ bool DCClaimIdMsg::readMsg( DCMessenger *, Sock *sock )
 }
 
 bool
-DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,char const *start_expr,std::string &request_id)
+DCStartd::drainJobs(int how_fast,const char * reason,int on_completion,char const *check_expr,char const *start_expr,std::string &request_id)
 {
 	std::string error_msg;
 	ClassAd request_ad;
@@ -1276,8 +1277,16 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 		return false;
 	}
 
+	if (reason) {
+		request_ad.Assign(ATTR_DRAIN_REASON, reason);
+	} else {
+		auto_free_ptr username(my_username());
+		if (! username) username.set(strdup("command"));
+		std::string reason("by "); reason += username.ptr();
+		request_ad.Assign(ATTR_DRAIN_REASON, reason);
+	}
 	request_ad.Assign(ATTR_HOW_FAST,how_fast);
-	request_ad.Assign(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
+	request_ad.Assign(ATTR_RESUME_ON_COMPLETION,on_completion);
 	if( check_expr ) {
 		request_ad.AssignExpr(ATTR_CHECK_EXPR,check_expr);
 	}

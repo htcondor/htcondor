@@ -245,6 +245,8 @@ typedef enum
 #ifdef HAVE_EXT_GLOBUS
 extern int (*globus_thread_set_model_ptr)(
 	const char *);
+extern globus_result_t (*globus_gsi_cred_get_cert_ptr)(
+	globus_gsi_cred_handle_t, X509 **);
 extern OM_uint32 (*globus_gss_assist_display_status_str_ptr)(
 	char **, char *, OM_uint32, OM_uint32, int);
 extern globus_result_t (*globus_gss_assist_map_and_authorize_ptr)(

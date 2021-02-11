@@ -1994,49 +1994,60 @@ handle_dc_start_token_request(int, Stream* stream)
 		time_t now = time(NULL);
 
 		CondorError err;
+		std::string rule_text;
 		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
 			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
 			iter = g_request_map.end();
-		}
-
-		std::string rule_text;
-		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
-			auto token_request = *(iter->second);
-			CondorError err;
-			std::string token;
-			if (!Condor_Auth_Passwd::generate_token(
-				token_request.getRequestedIdentity(),
-				final_key_name,
-				token_request.getBoundingSet(),
-				token_request.getLifetime(),
-				token,
-				static_cast<Sock*>(stream)->getUniqueId(),
-				&err))
-			{
-				result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
-				result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
-				token_request.setFailed();
-			} else {
-				g_request_map.erase(iter);
-				if (token.empty()) {
-					error_code = 6;
-					error_string = "Internal state error.";
+		} else {
+			if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
+				auto token_request = *(iter->second);
+				CondorError err;
+				std::string token;
+				if (!Condor_Auth_Passwd::generate_token(
+					token_request.getRequestedIdentity(),
+					final_key_name,
+					token_request.getBoundingSet(),
+					token_request.getLifetime(),
+					token,
+					static_cast<Sock*>(stream)->getUniqueId(),
+					&err))
+				{
+					result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+					result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+					token_request.setFailed();
+				} else {
+					g_request_map.erase(iter);
+					if (token.empty()) {
+						error_code = 6;
+						error_string = "Internal state error.";
+					}
+					result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+					dprintf(D_ALWAYS, "Token request %s approved via auto-approval rule %s.\n",
+						token_request.getPublicString().c_str(), rule_text.c_str());
 				}
-				result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
-				dprintf(D_ALWAYS, "Token request %s approved via auto-approval rule %s.\n",
-					token_request.getPublicString().c_str(), rule_text.c_str());
-			}
 			// Auto-approval rules are effectively host-based security; if we trust the network
 			// blindly, the lack of encryption does not bother us.
 			//
 			// In all other cases, encryption is a hard requirement.
-		} else if (!stream->get_encryption()) {
-			g_request_map.erase(iter);
-			result_ad.Clear();
-			result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was not encrypted.");
-			result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
+			} else if (!stream->get_encryption()) {
+				g_request_map.erase(iter);
+				result_ad.Clear();
+				result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was not encrypted.");
+				result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
+			} else {
+				Sock * sock = dynamic_cast<Sock *>(stream);
+				if( sock ) {
+					const char * method = sock->getAuthenticationMethodUsed();
+					if( strcasecmp( method, "ANONYMOUS" ) == 0 ) {
+						g_request_map.erase(iter);
+						result_ad.Clear();
+						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS authentication.");
+						result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
+					}
+				}
+			}
 		}
 	}
 
@@ -2509,7 +2520,9 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 		std::string key_name;
 		auto map_file = Authentication::getGlobalMapFile();
 		std::string identity;
-		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, static_cast<Sock*>(stream)->getUniqueId(), err))
+		std::string jti;
+		std::vector<std::string> groups, scopes;
+		if (!htcondor::validate_scitoken(scitoken, issuer, subject, expiry, bounding_set, groups, scopes, jti, static_cast<Sock*>(stream)->getUniqueId(), err))
 		{
 			error_code = err.code();
 			error_string = err.getFullText();

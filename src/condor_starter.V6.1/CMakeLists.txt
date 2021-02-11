@@ -19,7 +19,7 @@
 include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 set( starterElements
-baseStarter.cpp
+starter.cpp
 cgroup_limits.cpp
 cgroup.linux.cpp
 docker_proc.cpp

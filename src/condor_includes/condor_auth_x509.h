@@ -125,7 +125,11 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     CondorAuthX509Retval authenticate_server_gss_post(CondorError* errstack, bool non_blocking);
 	int authenticate_continue(CondorError* /*errstack*/, bool /*non_blocking*/);
 
-    char * get_server_info();
+	// Retrieve the human-readable version of the server name and, if available,
+	// the full public certificate as a PEM-formatted string.
+	//
+	// Returns false on failure.
+    bool get_server_info(std::string &name, std::string &cred);
 
 #ifdef WIN32
 	int ParseMapFile();

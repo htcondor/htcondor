@@ -571,7 +571,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	bool refresh_in_ad = false;
 	int total_procs = factory->TotalProcs(refresh_in_ad);
 	if (refresh_in_ad) {
-		SetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_TOTAL_SUBMIT_PROCS, total_procs);
+		SetSecureAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_TOTAL_SUBMIT_PROCS, total_procs);
 	}
 
 	// have the factory make a job and give us a pointer to it.

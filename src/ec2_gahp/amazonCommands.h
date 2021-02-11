@@ -506,7 +506,7 @@ class AmazonBulkQuery : public AmazonRequest {
 		StringList resultList;
 };
 
-class AmazonMetadataQuery : public AmazonRequest {
+class AmazonMetadataQuery : private AmazonRequest {
 	public:
 		AmazonMetadataQuery( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonMetadataQuery() { }

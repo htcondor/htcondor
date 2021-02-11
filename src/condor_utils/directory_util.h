@@ -20,7 +20,8 @@
 #ifndef DIRECTORY_UTIL_H
 #define DIRECTORY_UTIL_H
 
-#include <MyString.h>
+class MyString;
+#include <string>
 
 /** Returns a path to subdirectory to use for temporary files.
   @return The pointer returned must be de-allocated by the caller w/ free()
@@ -42,11 +43,13 @@ char* temp_dir_path();
   @return Value() of result parameter after it has been set by this function
 */
 const char* dircat(const char* dirpath, const char* filename, MyString & result);
+const char* dircat(const char* dirpath, const char* filename, std::string &result);
 
 /*
  same as above but filename and fileext are concatenated together to produce the effect filename
 */
 const char* dircat(const char* dirpath, const char* filename, const char * fileext, MyString & result);
+const char* dircat(const char* dirpath, const char* filename, const char * fileext, std::string & result);
 
 
 /** Take two strings, a directory path, and a subdirectory, and
@@ -64,6 +67,7 @@ const char* dircat(const char* dirpath, const char* filename, const char * filee
   @return Value() of result parameter after it has been set by this function
 */
 const char* dirscat(const char* dirpath, const char* subdir, MyString & result);
+const char* dirscat(const char* dirpath, const char* subdir, std::string &result);
 
 /** Touch a file and create directory path as well if necessary
 	@param path: the full path to the file to be touched

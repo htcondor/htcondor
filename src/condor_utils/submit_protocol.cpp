@@ -73,7 +73,6 @@
 #include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
-#include "condor_md.h"
 #include "submit_protocol.h"
 #include "submit_utils.h"
 
@@ -225,7 +224,6 @@ int ActualScheddQ::set_Foreach(int cluster, int itemnum, const char * filename, 
 }
 */
 
-int ActualScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) { return SendSpoolFileIfNeeded(ad); }
 int ActualScheddQ::send_SpoolFile(char const *filename) { return SendSpoolFile(filename); }
 int ActualScheddQ::send_SpoolFileBytes(char const *filename) { return SendSpoolFileBytes(filename); }
 

@@ -16,6 +16,9 @@
  #
  ###############################################################
 
+# boost is only used for python bindings
+if(WITH_PYTHON_BINDINGS)
+
 # Search for system's boost libraries.
 if (WINDOWS)
 	condor_pre_external( BOOST boost-1.68.0 "lib;boost" "done")
@@ -201,3 +204,5 @@ if (BOOST_VER)
 else(BOOST_VER)
 	message (WARNING "**boost not found **")
 endif(BOOST_VER)
+
+endif(WITH_PYTHON_BINDINGS)

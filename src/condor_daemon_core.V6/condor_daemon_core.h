@@ -1525,6 +1525,12 @@ class DaemonCore : public Service
 	bool wantsRestart( void ) const;
 
 		/**
+		   Tell the daemon to send itself the shutdown signal
+		*/
+	void beginDaemonRestart(bool fast = false, bool restart = true);
+	void beginDaemonShutdown(bool fast = false) { beginDaemonRestart(fast, false); }
+
+		/**
 		   Set whether this daemon should should send CHILDALIVE commands
 		   to its daemoncore parent. Must be called from
 		   main_pre_command_sock_init() to have any effect. The default

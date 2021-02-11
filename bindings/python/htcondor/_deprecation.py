@@ -63,12 +63,6 @@ def deprecate_class(message, cls):
 
 
 def deprecate_8_9_8():
-    ## from python-bindings/negotiator.cpp
-    deprecate_class(
-        "Negotiator is deprecated since v8.9.8 and will be removed in a future release.",
-        htcondor.Negotiator,
-    )
-
     ## from python-bindings/log_reader.cpp
 
     # FIXME: deprecate htcondor.EntryType enum

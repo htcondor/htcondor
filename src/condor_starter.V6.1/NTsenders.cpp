@@ -37,7 +37,7 @@
 
 static int CurrentSysCall;
 extern ReliSock *syscall_sock;
-extern CStarter *Starter;
+extern Starter *Starter;
 
 extern "C" {
 int
