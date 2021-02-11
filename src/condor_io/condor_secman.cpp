@@ -2416,22 +2416,27 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			int session_lease = 0;
 			m_auth_info.LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease );
 
-			dprintf(D_SECURITY|D_VERBOSE, "SESSION: client checking key type: %i\n", m_private_key->getProtocol());
 			std::vector<KeyInfo*> keyvec;
-			keyvec.push_back(new KeyInfo(*m_private_key));
-			if (m_private_key->getProtocol() == CONDOR_AESGCM) {
-				std::string all_methods;
-				if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
-					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
-					StringList sl(all_methods.c_str());
-					if (sl.contains_anycase("BLOWFISH")) {
-						keyvec.push_back(new KeyInfo(m_private_key->getKeyData(), 24, CONDOR_BLOWFISH, 0));
-						dprintf(D_SECURITY, "SESSION: client duplicated AES to BLOWFISH key for UDP.\n");
+			dprintf(D_SECURITY|D_VERBOSE, "SESSION: client checking key type: %i\n", (m_private_key ? m_private_key->getProtocol() : -1));
+			if (m_private_key) {
+				// put the normal key into the vector
+				keyvec.push_back(new KeyInfo(*m_private_key));
+
+				// now see if we want to (and are allowed) to add a BLOWFISH key in addition to AES
+				if (m_private_key->getProtocol() == CONDOR_AESGCM) {
+					std::string all_methods;
+					if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
+						dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
+						StringList sl(all_methods.c_str());
+						if (sl.contains_anycase("BLOWFISH")) {
+							keyvec.push_back(new KeyInfo(m_private_key->getKeyData(), 24, CONDOR_BLOWFISH, 0));
+							dprintf(D_SECURITY, "SESSION: client duplicated AES to BLOWFISH key for UDP.\n");
+						} else {
+							dprintf(D_SECURITY, "SESSION: BLOWFISH not allowed.  UDP will not work.\n");
+						}
 					} else {
-						dprintf(D_SECURITY, "SESSION: BLOWFISH not allowed.  UDP will not work.\n");
+						dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");
 					}
-				} else {
-					dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");
 				}
 			}
 
