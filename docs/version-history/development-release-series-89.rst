@@ -137,6 +137,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where jobs that asked for `transfer_output_files = .` would
+  be put on hold if they were evicted and restarted.
+  :jira:`267`
+
 - The ``preserve_relative_paths`` submit command now properly allows jobs
   to run on HTCondor versions 8.9.10 and later.
   :jira:`189`
