@@ -2386,7 +2386,7 @@ NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
 	}
 
 		// If we can, try reading out the passwords as root.
-	TemporaryPrivSentry sentry(get_priv_state() == PRIV_UNKNOWN ? PRIV_UNKNOWN : PRIV_ROOT);
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 
 	m_creds.clear();
 	std::unordered_set<std::string> tmp_creds;
