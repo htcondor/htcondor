@@ -25,6 +25,7 @@
 #include "CondorError.h"
 #include "condor_mkstemp.h"
 #include "ipv6_hostname.h"
+#include "condor_attributes.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -440,6 +441,32 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 int Condor_Auth_FS :: isValid() const
 {
     return TRUE;
+}
+
+bool
+Condor_Auth_FS::preauth_metadata(classad::ClassAd &ad, const classad::ClassAd * cli_ad, const classad::ClassAd * /*srv_ad*/)
+{
+		// In this case, we are not reconciling and are invoked client-side.
+	if (!cli_ad) {
+		auto hostname = get_local_fqdn();
+		return ad.InsertAttr(ATTR_CLIENT_HOSTNAME, hostname.c_str());
+	}
+
+	if (param_boolean("SEC_FS_SKIP_HOSTNAME_CHECK", false)) {
+		return true;
+	}
+
+	std::string srv_hostname = get_local_fqdn();
+	std::string cli_hostname;
+	if (!cli_ad->EvaluateAttrString(ATTR_CLIENT_HOSTNAME, cli_hostname)) {
+		return true;
+	}
+	if (srv_hostname != cli_hostname) {
+		dprintf(D_SECURITY, "Client is from host %s while server hostname is %s; skipping FS auth.\n",
+			cli_hostname.c_str(), srv_hostname.c_str());
+		return false;
+	}
+	return true;
 }
 
 #endif

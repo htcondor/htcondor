@@ -315,7 +315,10 @@ public:
 		// Once the authentication methods are known, fill in metadata from
 		// the relevant subclass; this may allow the remote client to skip a
 		// authentication which has no chance to succeed.
-	void UpdateAuthenticationMetadata(ClassAd &ad);
+		//
+		// If available (i.e., during the server-side reconcilation of security policies),
+		// the security policy ads from the client and server will be available.
+	void UpdateAuthenticationMetadata(ClassAd &ad, const ClassAd *cli_ad, const ClassAd *srv_ad);
 
 	// Attributes for cached Security Policy Ad
 	DCpermission m_cached_auth_level;

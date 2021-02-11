@@ -134,6 +134,8 @@ New Features:
   or all of the files in a directory.
   :jira:`46`
 
+- Enhance the filesystem authentication method so it will not be attempted
+  if the client and server are not on the same host. :jira:`87`
 
 Bugs Fixed:
 

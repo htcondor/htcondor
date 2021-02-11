@@ -96,8 +96,6 @@ Condor_Crypto_State::~Condor_Crypto_State() {
 }
 
 void Condor_Crypto_State::reset() {
-    dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: resetting m_ivec(len %i) and m_num\n", m_ivec_len);
-
     if(m_ivec) {
 	memset(m_ivec, 0, m_ivec_len);
     }

@@ -42,6 +42,7 @@
 #include "ipv6_hostname.h"
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
+#include "condor_auth_fs.h"
 
 #include <sstream>
 
@@ -442,7 +443,7 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 
 
 void
-SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
+SecMan::UpdateAuthenticationMetadata(ClassAd &ad, const ClassAd *cli_ad, const ClassAd *srv_ad)
 {
 	// We need the trust domain for TOKEN auto-request, but auto-request
 	// happens if and only if TOKEN isn't in the method list (indicating
@@ -454,19 +455,40 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 	}
 
 	std::string method_list_str;
-	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
+	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str) && !ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, method_list_str)) {
 		return;
 	}
 	StringList  method_list( method_list_str.c_str() );
 	const char *method;
 
 	method_list.rewind();
+        bool removed_method = false;
+        bool one_method = false;
+        std::stringstream ss;
 	while ( (method = method_list.next()) ) {
+                bool success = true;
 		if (!strcmp(method, "TOKEN") || !strcmp(method, "TOKENS") ||
 			!strcmp(method, "IDTOKEN") || !strcmp(method, "IDTOKENS"))
 		{
-			Condor_Auth_Passwd::preauth_metadata(ad);
+			success = Condor_Auth_Passwd::preauth_metadata(ad, cli_ad, srv_ad);
+		} else if (!strcmp(method, "FS")) {
+			success = Condor_Auth_FS::preauth_metadata(ad, cli_ad, srv_ad);
 		}
+                if (!success) {
+			removed_method = true;
+			continue;
+		}
+		if (one_method) {
+			ss << ",";
+		}
+		one_method = true;
+		ss << method;
+	}
+		// Update both old-style and new-style attribute; HTCondor uses the old-style
+		// methods internally and new-style over the wire.
+	if (removed_method) {
+		ad.InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS, ss.str());
+		ad.InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS_LIST, ss.str());
 	}
 }
 
@@ -555,7 +577,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 		// Some methods may need to insert additional metadata into this ad
 		// in order for the client & server to determine if they can be used.
-		UpdateAuthenticationMetadata(*ad);
+		UpdateAuthenticationMetadata(*ad, nullptr, nullptr);
 	} else {
 		if( sec_authentication == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
@@ -895,15 +917,6 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		// send the list for 6.5.0 and higher
 		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
-
-		// send the single method for pre 6.5.0
-		StringList  tmpmethodlist( the_methods.c_str() );
-		char* first;
-		tmpmethodlist.rewind();
-		first = tmpmethodlist.next();
-		if (first) {
-			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
-		}
 	}
 
 	if (cli_methods) {
@@ -976,7 +989,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 	action_ad->Assign(ATTR_SEC_ENACT, "YES");
 
-	UpdateAuthenticationMetadata(*action_ad);
+	UpdateAuthenticationMetadata(*action_ad, &cli_ad, &srv_ad);
 	std::string trust_domain;
 	if (srv_ad.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
 		action_ad->InsertAttr(ATTR_SEC_TRUST_DOMAIN, trust_domain);

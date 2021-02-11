@@ -54,6 +54,14 @@ class Condor_Auth_FS : public Condor_Auth_Base {
     // RETURNS: 1 -- true; 0 -- false
     //------------------------------------------
 
+    /**
+     *  Metadata needed prior to starting authorization
+     *
+     *  If the client and server don't appear to be on the same machine, then we
+     *  will return false and remove FS from the list of  protocols.
+     */
+    static bool preauth_metadata(classad::ClassAd &ad, const classad::ClassAd *cli_ad, const classad::ClassAd *srv_ad);
+
  private:
 
 	std::string m_new_dir;
