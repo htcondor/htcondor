@@ -3812,6 +3812,8 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 		// Convert it to a different delimiter...
 		std::replace(crypto_methods.begin(), crypto_methods.end(), ',', '.');
 		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS_LIST, crypto_methods);
+	} else if (!crypto_methods.empty()) {
+		exp_policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
 	}
 
 	// we want to export "RemoteVersion" but the spaces in the full version
