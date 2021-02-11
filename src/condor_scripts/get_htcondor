@@ -266,32 +266,6 @@ do_install() {
 	# This will set $lsb_dist and $dist_version.
 	get_distribution
 
-	if [ -f "/etc/condor/condor_config" ]; then
-		cat >&2 <<-'EOF'
-			Error: HTCondor appears to have been installed previously on this system. 
-
-			You may update the existing install, or remove and then re-install.
-		EOF
-		case "$lsb_dist" in
-		# We don't release HTCondor on Fedora.
-		# fedora)
-		#	;;
-		ubuntu|debian)
-			cat >&2 <<-'EOF'
-			To update enter as root: apt-get update && apt-get upgrade minihtcondor
-			To remove enter as root: apt-get remove minihtcondor
-			EOF
-			;;
-		centos|rhel|amzn)
-			cat >&2 <<-'EOF'
-			To update enter as root: yum update minicondor
-			To remove enter as root: yum remove minicondor
-			EOF
-			;;
-		esac
-		exit 1
-	fi
-
 	user="$(id -un 2>/dev/null || true)"
 
 	if is_dry_run; then
@@ -308,6 +282,46 @@ do_install() {
 			EOF
 			exit 1
 		fi
+	fi
+
+	#
+	# Check for a previous installation.  The instructions below remove
+	# the HTCondor package(s) and whatever packages they depended on but
+	# which no other package(s) did.  However, neither set of instructions
+	# removes HTCondor's repositories, which will prevent downgrades.  I
+	# thinks that's OK for now.
+	#
+	if [ -f "/etc/condor/condor_config" ]; then
+		cat >&2 <<-'EOF'
+			Error: HTCondor appears to have been installed previously on this system.
+
+			You may update the existing install, or remove and then re-install.
+		EOF
+		case "$lsb_dist" in
+		ubuntu|debian)
+			PACKAGE=htcondor
+			if [ -z "${ROLE}" ]; then
+				PACKAGE=minihtcondor
+			fi
+
+			cat >&2 <<-EOF
+				To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
+				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
+			EOF
+			;;
+		centos|rhel|amzn)
+			PACKAGE=condor
+			if [ -z "${ROLE}" ]; then
+				PACKAGE=minicondor
+			fi
+
+			cat >&2 <<-EOF
+				To update: $sh_c "yum update ${PACKAGE}"
+				To remove: $sh_c "yum -y autoremove ${PACKAGE} && rm -fr /etc/condor"
+			EOF
+			;;
+		esac
+		exit 1
 	fi
 
 	if [ -z "${ROLE}" ]; then
@@ -376,7 +390,7 @@ do_install() {
 					epel_version="7"
 				fi
 			fi
-			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
+			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
 			if [ "${lsb_dist}" != "amzn" ]; then
 				#
@@ -402,7 +416,7 @@ do_install() {
 			fi
 
 			echo -e "\n# Installing the HTCondor repo"
-			$sh_c "yum install -y ${yum_repo_rpm}"
+			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
 
 			echo -e "\n$ Installing HTCondor"
 			if [ -z "${ROLE}" ]; then
