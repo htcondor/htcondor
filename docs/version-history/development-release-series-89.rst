@@ -9,11 +9,43 @@ Version 8.9.11
 
 Release Notes:
 
-.. HTCondor version 8.8.11 released on Month Date, 2020.
+.. HTCondor version 8.9.12 released on Month Date, 2021.
 
-- HTCondor version 8.9.11 not yet released.
+- HTCondor version 8.9.12 not yet released.
+
+- As an improved security measure, HTCondor will now prohibit Linux jobs
+  from running setuid executables by default.  We believe the only common setuid
+  program this impacts is ``ping``.  To allow jobs to run setuid binaries,
+  set ``DISABLE_SETUID`` to ``false`` in the configuration of the worker
+  node.
+
+- The ``condor_procd`` now attempts to detect invalidly short reads of
+  the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
+  find its own PID, the PID of its parent, or PID 1, it considers the read
+  invalid and will immediately retry it.  However, these precautions do
+  not detect the majority of short reads.  In addition, therefore, the
+  ``condor_procd`` compares the number of PIDs it just read to the number
+  of PIDs it read the last time it checked; if the number is too much
+  smaller, that is also considered an invalid read.  If the re-read fails,
+  the result of the previous read is returned.  The ``condor_procd`` checks
+  for this condition because not finding every PID on the system causes
+  a wide variety of user-visible failures, which (usually) result in HTCondor
+  completely restarting.
+
+  The default threshold for "too much smaller" is that the current read is less
+  than 90% of the previous read; in our testing, this detected every actual
+  short read with an overhead of roughly one additional read per 4000.  You
+  can tune the threshold by setting ``_CONDOR_PROCAPI_RETRY_FRACTION``
+  in the ``condor_master``'s environment to the threshold's floating-point
+  value (so that the default is ``0.90``).  This value is only passed to the
+  ``condor_procd`` on start-up.
+  :jira:`33`
 
 New Features:
+
+- HTCondor now prohibits jobs from running setuid executables on Linux. The
+  knob ``DISABLE_SETUID`` can be set to false to disable this.
+  :jira:`256`
 
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
@@ -44,6 +76,13 @@ New Features:
   set job attributes ``BatchProject`` and ``BatchRuntime`` for **batch**
   grid universe jobs.
   :jira:`44`
+
+- Added a new tool/daemon :ref:`condor_adstash` that polls for job history
+  ClassAds and pushes their contents to Elasticsearch. Setting ``use
+  feature: adstash`` will run *condor_adstash* as a daemon, though
+  care should be taken to configure it for your pool and Elasticsearch
+  instance. See the :ref:`admin-manual/monitoring:Elasticsearch`
+  documentation in the admin manual for more detail.
 
 - When token authentication (IDTOKENS or SCITOKENS) is used, HTCondor will
   now record the subject, issuer, scopes, and groups, from the token used to
@@ -77,6 +116,10 @@ New Features:
   by drainging initiated by *condor_defrag*.
   :jira:`77`
 
+- The  *condor_defrag* daemon will now supply a ``-reason`` argument of ``defrag``
+  and will ignore machines that have have a draining reason that is not ``defrag``.
+  :jira:`89`
+
 - Added a new a ClassAd function to help write submit transforms.  You can now use unresolved()
   to check for existing constraints on a particular attribute (or attribute regex).
   :jira:`66`
@@ -87,7 +130,16 @@ New Features:
   `recommendations <https://github.com/theislab/diffxpy/blob/master/docs/parallelization.rst>`_.
   :jira:`185`
 
+- Certificate map files can now use the ``@include`` directive to include another file
+  or all of the files in a directory.
+  :jira:`46`
+
+
 Bugs Fixed:
+
+- The ``preserve_relative_paths`` submit command now properly allows jobs
+  to run on HTCondor versions 8.9.10 and later.
+  :jira:`189`
 
 - Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
   ``-uuid``.
@@ -98,6 +150,30 @@ Bugs Fixed:
   also set.
   :jira:`91`
 
+- Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
+  :jira:`201`
+
+Version 8.9.11
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.11 released on January 27, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002.html>`_.
+
+   :ticket:`7893`
+   :ticket:`7894`
 
 Version 8.9.10
 --------------

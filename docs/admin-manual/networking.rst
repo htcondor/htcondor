@@ -173,9 +173,9 @@ example:
     COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
 Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the
-:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
+:ref:`admin-manual/configuration-macros:Daemoncore configuration file entries`
 section and ``COLLECTOR_HOST`` is in the
-:ref:admin-manual/configuration-macros:htcondor-wide configuration file entries`
+:ref:`admin-manual/configuration-macros:HTCondor-wide configuration file entries`
 section.
 
 Restricting Port Usage to Operate with Firewalls

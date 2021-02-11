@@ -272,7 +272,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	if ( expr_tree == NULL || expr_tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
 		return false;
 	}
-	vector<classad::ExprTree*> expr_list;
+	std::vector<classad::ExprTree*> expr_list;
 	((const classad::ExprList*)expr_tree)->GetComponents( expr_list );
 	if ( (unsigned)idx >= expr_list.size() ) {
 		return false;
@@ -593,7 +593,7 @@ reinitialize ()
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
 	delete hgq_root_group;
-    hgq_root_group = GroupEntry::hgq_construct_tree(group_entry_map, hgq_groups, this->autoregroup, this->accept_surplus);
+    hgq_root_group = GroupEntry::hgq_construct_tree(hgq_groups, this->autoregroup, this->accept_surplus);
 
     // Initialize accountant params
     accountant.Initialize(hgq_root_group);
@@ -1463,7 +1463,7 @@ getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, f
 
 	if (!user) return false;
 
-    GroupEntry* group = accountant.GetAssignedGroup(user);
+    GroupEntry* group = GroupEntry::GetAssignedGroup(hgq_root_group, user);
 
     // if group quotas not in effect, return here for backward compatability
     if (hgq_groups.size() <= 1) return false;
@@ -1691,214 +1691,30 @@ negotiationTime ()
 
 		GroupEntry::hgq_prepare_for_matchmaking(hgq_total_quota, hgq_root_group, hgq_groups, accountant, submitterAds);
 
-        // A user/admin can set this to > 1, to allow the algorithm an opportunity to re-distribute
-        // slots that were not used due to rejection.
-        int maxrounds = 0;
-        if (param_defined("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS")) {
-            maxrounds = param_integer("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
-        } else {
-            // backward compatability
-            maxrounds = param_integer("HFS_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
-        }
+		auto callback = [&](GroupEntry *g, int slots) -> void {
+				const char *name = g->name.c_str();
+				if (autoregroup && (g == hgq_root_group)) {
+					name = nullptr;
+				}
+				negotiateWithGroup(cPoolsize,
+								weightedPoolsize,
+								minSlotWeight,
+								startdAds,
+								claimIds,
+								*(g->submitterAds),
+								slots,
+								name);
+		};
 
-        // The allocation of slots may occur multiple times, if rejections
-        // prevent some allocations from being filled.
-        int iter = 0;
-        while (true) {
-            if (iter >= maxrounds) {
-                dprintf(D_ALWAYS, "group quotas: halting allocation rounds after %d iterations\n", iter);
-                break;
-            }
+		GroupEntry::hgq_negotiate_with_all_groups(
+						hgq_root_group, 
+						hgq_groups,
+						groupQuotasHash,
+						hgq_total_quota,
+						accountant,
+						callback,
+						accept_surplus);
 
-            iter += 1;
-            dprintf(D_ALWAYS, "group quotas: allocation round %d\n", iter);
-            negotiation_cycle_stats[0]->slot_share_iterations += 1;
-
-            // make sure working values are reset for this iteration
-            groupQuotasHash->clear();
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-                group->allocated = 0;
-                group->subtree_requested = 0;
-                group->rr = false;
-            }
-
-            // Allocate group slot quotas to satisfy group job requests
-            double surplus_quota = hgq_root_group->hgq_fairshare();
-
-            // This step is not relevant in a weighted-slot scenario, where slots may
-            // have a floating-point cost != 1.
-            if (!accountant.UsingWeightedSlots()) {
-                // Recover any fractional slot remainders from fairshare algorithm,
-                // and distribute them using round robin.
-                surplus_quota += hgq_root_group->hgq_recover_remainders();
-            }
-
-            if (autoregroup) {
-                dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
-                hgq_root_group->quota = hgq_total_quota;
-                hgq_root_group->allocated = hgq_total_quota;
-            }
-
-            double maxdelta = 0;
-            double requested_total = 0;
-            double allocated_total = 0;
-            unsigned long served_groups = 0;
-            unsigned long unserved_groups = 0;
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-                dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
-                        group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-                groupQuotasHash->insert(MyString(group->name.c_str()), group->quota);
-                requested_total += group->requested;
-                allocated_total += group->allocated;
-                if (group->allocated > 0) served_groups += 1;
-                else if (group->requested > 0) unserved_groups += 1;
-                double target = (accept_surplus) ? group->allocated : group->quota;
-                maxdelta = std::max(maxdelta, std::max(0.0, target - group->usage));
-            }
-
-            dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g  maxdelta= %g\n",
-                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(effectivePoolsize), requested_total+allocated_total, allocated_total, surplus_quota, maxdelta );
-
-            // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
-            // default its behavior to execute once, and just negotiate for everything at once.  If a
-            // user is concerned about the "overlapping effective pool" problem, they can decrease this
-            // increment so that round robin happens, and competing groups will not starve one another.
-            double ninc = 0;
-            if (param_defined("GROUP_QUOTA_ROUND_ROBIN_RATE")) {
-                ninc = param_double("GROUP_QUOTA_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
-            } else {
-                // backward compatability
-                ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
-            }
-
-            // fill in sorting classad attributes for configurable sorting
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-                ClassAd* ad = group->sort_ad;
-                ad->Assign(ATTR_GROUP_QUOTA, group->quota);
-                ad->Assign(ATTR_GROUP_RESOURCES_ALLOCATED, group->allocated);
-                ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
-                // Do this after all attributes are filled in
-                float v = 0;
-                if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
-                    v = FLT_MAX;
-                    string e;
-                    ad->LookupString(ATTR_SORT_EXPR_STRING, e);
-                    dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
-                            e.c_str(), group->name.c_str(), v);
-                }
-                group->sort_key = v;
-            }
-
-            // present accounting groups for negotiation in "starvation order":
-            vector<GroupEntry*> negotiating_groups(hgq_groups);
-            std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order(autoregroup, hgq_root_group));
-
-            // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
-            // for same subset of available slots.  It gives greatest weight to groups with the greatest difference
-            // between allocated and their current usage
-            double n = 0;
-            while (true) {
-                // Up our fraction of the full deltas.  Note that maxdelta may be zero, but we still
-                // want to negotiate at least once regardless, so loop halting check is at the end.
-                n = std::min(n+ninc, maxdelta);
-                dprintf(D_ALWAYS, "group quotas: entering RR iteration n= %g\n", n);
-
-                // Do the negotiations
-                for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
-                    GroupEntry* group = *j;
-
-                    dprintf(D_FULLDEBUG, "Group %s - sortkey= %g\n", group->name.c_str(), group->sort_key);
-
-                    if (group->allocated <= 0) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
-                        continue;
-                    }
-
-                    if ((group->usage >= group->allocated) && !ConsiderPreemption) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (quota=%g) (usage=%g) (allocation=%g)\n", group->name.c_str(), group->quota, group->usage, group->allocated);
-                        continue;
-                    }
-		
-                    if (group->submitterAds->MyLength() <= 0) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
-                        continue;
-                    }
-		
-                    dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
-
-                    // if allocating surplus, use allocated, otherwise just use the group's quota directly
-                    double target = std::max(group->allocated, group->quota);
-
-                    double delta = std::max(0.0, target - group->usage);
-                    // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
-                    // we just got allocated, so just negotiate for what we were allocated.
-                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
-                    // Defensive -- do not exceed allocated slots
-                    slots = std::min(slots, target);
-                    if (!accountant.UsingWeightedSlots()) {
-                        slots = floor(slots);
-                    }
-
-					slots = group->strict_enforce_quota(accountant, hgq_root_group, slots);
-					
-                    if (autoregroup && (group == hgq_root_group)) {
-                        // note that in autoregroup mode, root group is guaranteed to be last group to negotiate
-                        dprintf(D_ALWAYS, "group quotas: autoregroup mode: negotiating with autoregroup for %s\n", group->name.c_str());
-                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
-                                           startdAds, claimIds, *(group->submitterAds),
-                                           slots, NULL);
-                    } else {
-                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
-                                           startdAds, claimIds, *(group->submitterAds),
-                                           slots, group->name.c_str());
-                    }
-                }
-
-                // Halt when we have negotiated with full deltas
-                if (n >= maxdelta) break;
-            }
-
-            // After round robin, assess where we are relative to HGQ allocation goals
-            double usage_total = 0;
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-
-                double usage = accountant.GetWeightedResourcesUsed(group->name);
-
-                group->usage = usage;
-                dprintf(D_FULLDEBUG, "group quotas: Group %s  allocated= %g  usage= %g\n", group->name.c_str(), group->allocated, group->usage);
-
-                // I do not want to give credit for usage above what was allocated here.
-                usage_total += std::min(group->usage, group->allocated);
-
-                if (group->usage < group->allocated) {
-                    // If we failed to match all the allocated slots for any reason, then take what we
-                    // got and allow other groups a chance at the rest on next iteration
-                    dprintf(D_FULLDEBUG, "group quotas: Group %s - resetting requested to %g\n", group->name.c_str(), group->usage);
-                    group->requested = group->usage;
-                } else {
-                    // otherwise restore requested to its original state for next iteration
-                    group->requested += group->allocated;
-                }
-            }
-
-            dprintf(D_ALWAYS, "Round %d totals: allocated= %g  usage= %g\n", iter, allocated_total, usage_total);
-
-            // If we negotiated successfully for all slots, we're finished
-            if (usage_total >= allocated_total) break;
-        }
-
-        // For the purposes of RR consistency I want to update these after all allocation rounds are completed.
-        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-            GroupEntry* group = *j;
-            // If we were served by RR this cycle, then update timestamp of most recent round-robin.
-            // I also update when requested is zero because I want to favor groups that have been actually
-            // waiting for an allocation the longest.
-            if (group->rr || (group->requested <= 0))  group->rr_time = negotiation_cycle_stats[0]->start_time;
-        }
     }
 
     // Leave this in as an easter egg for dev/testing purposes.
@@ -1987,7 +1803,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				bool isGroup;
 
-				GroupEntry *ge = accountant.GetAssignedGroup(name, isGroup);
+				GroupEntry *ge = GroupEntry::GetAssignedGroup(hgq_root_group, name, isGroup);
 				std::string groupName(ge->name);
 
 				updateAd.Assign("IsAccountingGroup", isGroup);
@@ -2035,7 +1851,7 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
     }
 
     bool isGroup=false;
-    GroupEntry* cgrp = accountant.GetAssignedGroup(CustomerName, isGroup);
+    GroupEntry* cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup);
 
 	if (!cgrp) {
         return;
@@ -2106,7 +1922,7 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
-    for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
         forwardGroupAccounting(cl, *j);
     }
 }
@@ -5471,14 +5287,14 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
 	// machines.
-    set<MyString> names;
+	std::set<MyString> names;
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
 	submitterAds.Open();
 	while (ClassAd* ad = submitterAds.Next()) {
 		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
-        std::pair<set<MyString>::iterator, bool> r = names.insert(subname);
+        std::pair<std::set<MyString>::iterator, bool> r = names.insert(subname);
         // Only count each submitter once
         if (!r.second) continue;
 
@@ -6492,9 +6308,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 					result.SetUndefinedValue();
 				}
 
-				int intValue;
-				if (result.IsIntegerValue(intValue)) {
-					machine->Assign(*it, (int) (b4 + intValue));
+				long long longValue;
+				if (result.IsIntegerValue(longValue)) {
+					machine->Assign(*it, (long long) (b4 + longValue));
 				} else if (result.IsRealValue(realValue)) {
 					machine->Assign(*it, (b4 + realValue));
 				} else {

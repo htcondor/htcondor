@@ -300,6 +300,13 @@ def oauth_return(provider):
     refresh_token = {
         'refresh_token': refresh_token_string
         }
+    if 'Scopes' in provider_ad and provider_ad['Scopes'] != "":
+        # add scopes to the .top file, with blanks removed, for check
+        #  that makes sure the scopes don't change for a given request
+        refresh_token['scopes'] = provider_ad['Scopes'].replace(" ","")
+    if 'Audience' in provider_ad and provider_ad['Audience'] != "":
+        # likewise for the audience
+        refresh_token['audience'] = provider_ad['Audience'].replace(" ","")
 
     # create a metadata file for refreshing the token
     metadata = {

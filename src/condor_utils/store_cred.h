@@ -43,6 +43,8 @@ const int FAILURE_BAD_ARGS = 8;			// argument missing or arguments contradict ea
 const int FAILURE_PROTOCOL_MISMATCH = 9; // not all of the correct information was sent on the wire, client and server my be mismatched.
 const int FAILURE_CREDMON_TIMEOUT = 10;  // The credmon did not process credentials within the timeout period
 const int FAILURE_CONFIG_ERROR = 11;    // an operation failed because of a configuration error
+const int FAILURE_JSON_PARSE = 12;      // Failure parsing credential as JSON
+const int FAILURE_CRED_MISMATCH = 13;   // Credential was found but it did not match requested scopes or audience
 
 // not a return code - reserved for caller's use
 const int FAILURE_ABORTED = -1;	
@@ -127,6 +129,8 @@ int store_cred_handler(int i, Stream *s);
 int cred_get_password_handler(int i, Stream *s);
 // command handler for CREDD_GET_CRED in Shadow
 int cred_get_cred_handler(int i, Stream *s);
+// check whether credfile has matching scopes and audience to those in requestAd
+int cred_matches(MyString & credfile, const classad::ClassAd * requestAd);
 
 bool read_from_keyboard(char* buf, int maxlength, bool echo = true);
 char* get_password(void);	// get password from user w/o echo on the screen

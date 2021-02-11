@@ -3323,6 +3323,7 @@ Scheduler::insert_submitter(const char * name)
 	Subdat->OldFlockLevel = MinFlockLevel;
 	Subdat->FlockLevel = MinFlockLevel;
 	Subdat->NegotiationTimestamp = time(NULL);
+	dprintf(D_FULLDEBUG, "Initializing flock level for %s to %d.\n", name, MinFlockLevel);
 	return Subdat;
 }
 

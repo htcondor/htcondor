@@ -490,7 +490,7 @@ def watch_q(
                     )
                     and time.time() - last_nodes_total_check_time > 60
                 ):
-                    last_nodes_total_check_time = datetime.datetime.now()
+                    last_nodes_total_check_time = time.time()
                     (
                         batch_name_to_nodes_total,
                         cluster_ids_with_nodes_total,

@@ -419,12 +419,12 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 			size_t ix1 = schedd_name.find(':');
 			schedd_name = line.substr(ix1+1);
 			ix1 = schedd_name.find_first_of(": \t\n");
-			if (ix1 != string::npos) {
+			if (ix1 != std::string::npos) {
 				size_t ix2 = schedd_name.find_first_not_of(": \t\n", ix1);
-				if (ix2 != string::npos) {
+				if (ix2 != std::string::npos) {
 					schedd_addr = schedd_name.substr(ix2);
 					ix2 = schedd_addr.find_first_of(" \t\n");
-					if (ix2 != string::npos) {
+					if (ix2 != std::string::npos) {
 						schedd_addr = schedd_addr.substr(0,ix2);
 					}
 				}
@@ -2955,7 +2955,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	if (cputime) {
 		alt_fmt = fmt;
 		size_t ix = alt_fmt.find("RUN_TIME");
-		if (ix != string::npos) {
+		if (ix != std::string::npos) {
 			alt_fmt[ix] = 'C';
 			alt_fmt[ix+1] = 'P';
 			alt_fmt[ix+2] = 'U';
@@ -4148,7 +4148,7 @@ bool print_jobs_analysis (
 				job->LookupInteger(ATTR_PROC_ID, proc_id);
 				sprintf(achJobId, "%d.%d", cluster_id, proc_id);
 
-				string owner;
+				std::string owner;
 				if (summarize_with_owner) job->LookupString(ATTR_OWNER, owner);
 				if (owner.empty()) owner = "";
 

@@ -39,6 +39,9 @@ Bugs Fixed:
   have returned the first item in the list, but it returned undefined instead.
   :jira:`144`
 
+- Fixed a bug with pslot preemption and disks with more than 4 TB of space.
+  :jira:`194`
+
 Version 8.8.12
 --------------
 

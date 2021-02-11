@@ -1049,7 +1049,8 @@ Upon submitting this job for the first time,
 the user will be directed to a webpage hosted on the submit machine
 which will guide the user through the process of obtaining a CloudBoxDrive credential.
 The credential is then stored securely on the submit machine.
-(**Note that the original job will have to be re-submitted at this point!**)
+(**Note: depending on which credential monitor is used, the original
+job may have to be re-submitted at this point.**)
 (Also note that at no point is the user's *password* stored on the submit machine.)
 Once a credential is stored on the submit machine,
 as long as it remains valid,
@@ -1133,6 +1134,14 @@ Submitting the above would result in a job with respective access tokens located
 ``$_CONDOR_CREDS/cloudboxdrive_readpublic.use`` and
 ``$_CONDOR_CREDS/cloudboxdrive_writeprivate.use``.
 
+Note that the permissions and resource settings for each handle (and for
+no handle) are stored separately from the job so multiple jobs from the
+same user running at the same time or for a period of time consecutively
+may not use a different set of permissions and resource settings for the
+same service and handle.  If that is attempted, a new job submission
+will fail with instructions on how to resolve the conflict, but the
+safest thing is to choose a unique handle.
+
 If a service provider does not require permissions or resources to be specified,
 a user can still request multiple credentials by affixing handles to
 ``<service>_oauth_permissions`` commands with empty values
@@ -1142,6 +1151,31 @@ a user can still request multiple credentials by affixing handles to
     use_oauth_services = cloudboxdrive
     cloudboxdrive_oauth_permissions_personal =
     cloudboxdrive_oauth_permissions_public =
+
+.. only:: Vault
+    When the Vault credential monitor is configured, the service name may
+    optionally be split into two parts with an underscore between them,
+    where the first part is the issuer and the second part is the role.  In
+    this example the issuer is "dune" and the role is "production", both
+    as configured by the administrator of the Vault server:
+
+    .. code-block:: condor-submit
+
+	use_oauth_services = dune_production
+
+    Vault server.  Vault does not require permissions or resources to be
+    set, but they may be set to reduce the default permissions or restrict
+    the resources that may use the credential.  The full service name
+    including an underscore may be used in an ``oauth_permissions`` or
+    ``oauth_resource``.  Avoid using handles that might be confused as
+    role names.  For example, the following will result in a conflict
+    between two credentials called ``dune_production.use``:
+
+    .. code-block:: condor-submit
+
+	use_oauth_services = dune, dune_production
+	dune_oauth_permissions_production =
+	dune_production_oauth_permissions =
 
 
 Jobs That Require GPUs

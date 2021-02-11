@@ -87,7 +87,7 @@ class Matchmaker : public Service
 		static float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 		                              ClassAd &request,ClassAd *resource);
 
-		bool getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, float& groupUsage);
+		bool getGroupInfoFromUserId(const char* user, std::string& groupName, float& groupQuota, float& groupUsage);
 
 		void forwardAccountingData(std::set<std::string> &names);
 		void forwardGroupAccounting(CollectorList *cl, GroupEntry *ge);
@@ -218,7 +218,7 @@ class Matchmaker : public Service
 			@param submitterPrio User priority
 			@param submitterPrioFactor Result is this submitter's prio factor
 		**/
-		void calculateSubmitterLimit(const string &submitterName,
+		void calculateSubmitterLimit(const std::string &submitterName,
 		                          char const *groupAccountingName,
 		                          float groupQuota,
 					  float groupusage,
@@ -279,7 +279,7 @@ class Matchmaker : public Service
 		std::map<std::string, ClassAd *> m_slotNameToAdMap;
 
 		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, const char* submitterName,
-			bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState);
+			bool only_startd_rank, std::string &dslot_claims, PreemptState &candidatePreemptState);
 
 		/** trimStartdAds will throw out startd ads have no business being 
 			visible to the matchmaking engine, but were fetched from the 
@@ -346,7 +346,7 @@ class Matchmaker : public Service
 		StringList NegotiatorMatchExprNames;
 		StringList NegotiatorMatchExprValues;
 
-		map<string, int> ScheddsTimeInCycle;
+		std::map<std::string, int> ScheddsTimeInCycle;
 
 		CollectorList* Collectors;
 
@@ -449,7 +449,7 @@ class Matchmaker : public Service
 		{
 		public:
 
-			ClassAd* pop_candidate(string &dslot_claims);
+			ClassAd* pop_candidate(std::string &dslot_claims);
 				// Return the previously-pop'd candidate back into the list.
 				// Note that this assumes there is empty space in the front of the list
 				// Also assume list was already sorted.
@@ -484,7 +484,7 @@ class Matchmaker : public Service
 					double candidatePostJobRankValue,
 					double candidatePreemptRankValue,
 					PreemptState candidatePreemptState,
-					const string &candidateDslotClaims);
+					const std::string &candidateDslotClaims);
 			void sort();
 			int length() const { return adListLen - adListHead; }
 
@@ -525,8 +525,7 @@ class Matchmaker : public Service
 
         // set at startup/restart/reinit
         GroupEntry* hgq_root_group;
-        vector<GroupEntry*> hgq_groups;
-        map<string, GroupEntry*> group_entry_map;
+		std::vector<GroupEntry*> hgq_groups;
         bool accept_surplus;
         bool autoregroup;
 
