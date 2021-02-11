@@ -15,14 +15,28 @@ set -e
 
 usage() {
 	cat <<-EOF
-	Options:
+	Specify only one of the following:
+	--dist		: Display detected operating system and exit
+	-h, --help	: Display this message and exit
+	--download	: Download the tarball for a user-level installation and exit.
 	--dry-run	: Do not install, just print commands [default]
 	--no-dry-run	: Issue all the commands neeed to install HTCondor
+
+	Installation options:
 	--channel NAME	: Specify version channel to install; NAME can be
 	     current: Most recent release with new features [default]
 	     stable : Most recent release with only bug-fixes
-	--dist		: Display detected operating system and exit
-	-h, --help	: Display this message and exit
+	--password	: Set the password used to secure the pool.  Use only if
+	          	  nobody else can log into the machine.  Otherwise specify
+	          	  in the environment (GET_HTCONDOR_PASSWORD) or interactively.
+
+	Installation options, specify only one:
+	--minicondor            : Install a complete stand-alone HTCondor.  [default]
+	--central-manager NAME	: Install as the central manager role.
+	--submit NAME		: Install as the submit role.
+	--execute NAME		: Install as the execute role.
+	     The NAME of central manager's machine must be a DNS name resolvable
+	     on all the machines in the pool, or an IP address.
 	EOF
 	exit 0
 }
@@ -597,6 +611,9 @@ while [ $# -gt 0 ]; do
 			fi
 			shift
 			;;
+		--minicondor)
+		    unset ROLE
+		    ;;
 		--central-manager)
 			ROLE="central manager"
 			CONDOR_HOST=$2
