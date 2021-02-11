@@ -2633,6 +2633,49 @@ init_params()
 }
 
 
+bool get_oauth_service_requests(std::string & service_requests) {
+
+	std::string services;
+	std::string requests_error;
+	ClassAdList requests;
+	if (submit_hash.NeedsOAuthServices(services, &requests, &requests_error)) {
+		if ( ! requests_error.empty()) {
+			printf ("%s\n", requests_error.c_str());
+			exit(1);
+		}
+	} else {
+		return false;
+	}
+
+	ClassAd *request;
+	while ((request = requests.Next())) {
+		std::string str;
+		request->LookupString("Service", str);
+		if (str == "")
+			continue;
+		if (service_requests != "")
+			service_requests += " ";
+		service_requests += str;
+		std::string keys[] = { "handle", "scopes", "audience" };
+		for (size_t i = 0; i < (sizeof(keys)/sizeof(keys[0])); i++ ) {
+			str = "";
+			request->LookupString(keys[i], str);
+			if (str != "") {
+				// make the value only comma-separated
+				StringList strlist(str);
+				str = "";
+				for (const char * item = strlist.first(); item != NULL; item = strlist.next()) {
+					if (str != "")
+						str += ",";
+					str += item;
+				}
+				service_requests += "&" + keys[i] + "=" + str;
+			}
+		}
+	}
+	return true;
+}
+
 bool credd_has_tokens(std::string & tokens, MyString & URL) {
 
 	URL.clear();
@@ -2713,6 +2756,30 @@ int process_job_credentials()
 {
 	// however, if we do need to send it for any job, we only need to do that once.
 	if (sent_credential_to_credd) {
+		return 0;
+	}
+
+	MyString storer;
+	if(param(storer, "SEC_CREDENTIAL_STORER")) {
+		// SEC_CREDENTIAL_STORER is a script to run that calls
+		// condor_store_cred when it has new credentials to store.
+		// Pass it parameters of the service requests needed as
+		// defined in the submit file.
+		std::string requests;
+		if (get_oauth_service_requests(requests)) {
+			ArgList args;
+			StringList request_list(storer + " " + requests, " ");
+			for (const char * request = request_list.first(); request != NULL; request = request_list.next()) {
+				args.AppendArg(request);
+			}
+			if (my_system(args) != 0) {
+				fprintf(stderr, "\nERROR: (%i) invoking %s\n", errno, storer.c_str());
+				exit(1);
+			}
+			sent_credential_to_credd = true;
+		} else {
+			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
+		}
 		return 0;
 	}
 

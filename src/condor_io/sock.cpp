@@ -2795,64 +2795,6 @@ Sock::isAuthenticated() const
 	return strcmp(_fqu,UNAUTHENTICATED_FQU) != 0;
 }
 
-/*
-
-// debug functions for crypto
-
-char zkm_buf[256];
-char* zkm_dump(const unsigned char* d, int l) {
-
-	// add terminator
-        if(l > 32) {
-		l = 32;
-	}
-
-	for (int i = 0; i < l; i++) {
-		if(d[i] >= 32 && d[i] < 127) {
-			zkm_buf[i] = d[i];
-		} else {
-			zkm_buf[i] = '.';
-		}
-	}
-
-
-        for (int i = 0; i < l; i++) {
-                sprintf(&zkm_buf[l+i*3], " %02X", d[i]);
-        }
-
-	zkm_buf[l*4] = '\0';
-        return &(zkm_buf[0]);
-}
-
-bool 
-Sock::zkm_wrap(const unsigned char* d_in,int l_in,
-                    unsigned char*& d_out,int& l_out)
-{    
-    d_out = (unsigned char *) malloc(l_out = l_in);
-    memcpy(d_out, d_in, l_out);
-
-    int coded = get_encryption();
-    dprintf(D_ALWAYS, "ZKM_WRAP REAL: got %d bytes:\n", l_in);
-    dprintf(D_ALWAYS, "ZKM_WRAP REAL: IN:  %s\n", zkm_dump(d_in, l_in));
-    dprintf(D_ALWAYS, "ZKM_WRAP REAL: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
-    return coded;
-}
-
-bool 
-Sock::zkm_unwrap(const unsigned char* d_in,int l_in,
-                      unsigned char*& d_out, int& l_out)
-{
-    d_out = (unsigned char *) malloc(l_out = l_in);
-    memcpy(d_out, d_in, l_out);
-
-    int coded = get_encryption();
-    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: got %d bytes:\n", l_in);
-    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: IN:  %s\n", zkm_dump(d_in, l_in));
-    dprintf(D_ALWAYS, "ZKM_UNWRAP REAL: OUT: %s\n", coded ? zkm_dump(d_out, l_out) : "DISABLED");
-    return coded;
-}
-*/
-
 bool 
 Sock::wrap(const unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
@@ -2941,7 +2883,7 @@ const KeyInfo& Sock :: get_crypto_key() const
     if (crypto_state_) {
         return crypto_state_->getkey();
     } else {
-        dprintf(D_ALWAYS, "ZKM: get_crypto_key: no crypto_state_\n");
+        dprintf(D_ALWAYS, "SOCK: get_crypto_key: no crypto_state_\n");
     }
     ASSERT(0);	// This does not return...
     return  crypto_state_->getkey();  // just to make compiler happy...

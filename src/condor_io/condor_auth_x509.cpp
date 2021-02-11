@@ -910,7 +910,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 				free(voms_fqan);
 			} else {
 				// complain!
-				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
+				dprintf(D_SECURITY, "VOMS: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
 			}
 		}
 
@@ -1327,7 +1327,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 				free(voname);
 			} else {
 				// complain!
-				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
+				dprintf(D_SECURITY, "VOMS: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
 			}
 		}
 		mySock_->setPolicyAd(ad);
@@ -1379,7 +1379,7 @@ Condor_Auth_X509::authenticate_server_gss_post(CondorError* errstack, bool non_b
 }
 
 void Condor_Auth_X509::setFQAN(const char *fqan) {
-	dprintf (D_FULLDEBUG, "ZKM: setting FQAN: %s\n", fqan ? fqan : "");
+	dprintf (D_FULLDEBUG, "X509: setting FQAN: %s\n", fqan ? fqan : "");
 	m_fqan = fqan ? fqan : "";
 }
 

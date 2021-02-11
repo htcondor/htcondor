@@ -65,6 +65,9 @@ extern DWORD start_as_service();
 extern void terminate(DWORD);
 #endif
 
+#ifdef LINUX
+#include <sys/prctl.h>
+#endif
 
 // local function prototypes
 void	init_params();
@@ -1861,6 +1864,11 @@ main_pre_command_sock_init()
 #endif
 	}
 
+#ifdef LINUX
+	if (param_boolean("DISABLE_SETUID", true)) {
+		prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	}
+#endif
 	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
 	// to force the credmon to refresh everything and to prevent the schedd
 	// from starting up until credentials are ready.

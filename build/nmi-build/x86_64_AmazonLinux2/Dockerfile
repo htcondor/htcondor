@@ -219,14 +219,8 @@ RUN yum install -y \
 
 # Add tools to add the HTCondor repository
 RUN yum install -y \
-    wget \
+    https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.amzn2.noarch.rpm \
     && yum clean all
-
-# Add HTCondor repository
-RUN wget https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor && \
-    rpm --import RPM-GPG-KEY-HTCondor && \
-    cd /etc/yum.repos.d && \
-    wget https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-prerelease-amzn2.repo
 
 # Need HTCondor to build and test HTCondor (BaTLab style)
 RUN yum install -y \
@@ -245,6 +239,7 @@ RUN yum install -y \
     make \
     patchelf \
     rpm-build \
+    yum-utils \
     && yum clean all
 
 # HTCondor build dependencies

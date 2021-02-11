@@ -949,7 +949,10 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 
 	version = line.c_str();
 
-	sscanf(version.c_str(), "Docker version %d.%d", &DockerAPI::majorVersion, &DockerAPI::minorVersion);
+	int count = sscanf(version.c_str(), "Docker version %d.%d", &DockerAPI::majorVersion, &DockerAPI::minorVersion);
+	if (count != 2) {
+		dprintf(D_ALWAYS, "Could not parse docker version string %s\n", version.c_str());
+	}
 	return 0;
 }
 int DockerAPI::majorVersion = -1;

@@ -71,7 +71,7 @@ void process_err_stack(CondorError *errstack) {
 }
 
 
-void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_1(bool rv, const char* dname, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
 	if(!rv) {
@@ -127,7 +127,7 @@ void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad
 }
 
 
-void print_useful_info_2(bool rv, char* dname, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+void print_useful_info_2(bool rv, const char* dname, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
 	std::string  val;
 
 	if(!rv) {
@@ -196,7 +196,7 @@ void print_useful_info_2(bool rv, char* dname, int cmd, MyString name, Sock*, Cl
 }
 
 
-void print_useful_info_10(bool rv, char*, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_10(bool rv, const char*, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
 	printf("%20s", name.Value());
@@ -245,7 +245,7 @@ void print_useful_info_10(bool rv, char*, MyString name, Sock*, ClassAd *ad, Cla
 }
 
 
-void print_info(bool rv, char* dname, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
+void print_info(bool rv, const char* dname, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
 	MyString cmd_map_ent;
         const std::string &tag = SecMan::getTag();
 	if (tag.size()) {
@@ -342,9 +342,8 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 				fn_success = true;
 			}
 		}
-		char* dname = const_cast<char*>(d->idStr());
+		const char* dname = d->idStr();
 		print_info(fn_success, dname, sock->get_connect_addr(), sock, name, num, &authz_ad, &errstack, output_mode);
-		free(dname);
 	} else {
 		// we know that d->addr() is not null because we checked before
 		// calling do_item.  but i'll be paranoid and check again.

@@ -1270,6 +1270,11 @@ default=
 type=string
 tags=daemon_core
 
+[DISABLE_SETUID]
+default=true
+type=bool
+tags=master
+
 [DISABLE_AUTHENTICATION_IP_CHECK]
 default=false
 type=bool
@@ -6380,6 +6385,91 @@ default: @end
    DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
    # change TOP_COLLECTOR_HOST to point all of the child collectors at a different top-level collector
    TOP_COLLECTOR_HOST=$(COLLECTOR_HOST)
+@end
+
+##
+## get_htcondor knobs
+##
+
+[$SECURITY.get_htcondor_idtokens]
+default: @end
+# Authenticate, encrypt, and monitor the integrity of all connections.
+use security : strong
+
+# This configuration specifies authentication methods first, and then
+# specifies various authorizations.  Think of a passport and a visa: the
+# former proves your identity, and the latter proves that that identity
+# is allowed into the country.
+#
+# HTCondor supports a wide variety of authentication methods, but we
+# recommend IDTOKENS as a good blend of simple and capable.  The
+# get_htcondor script will make sure each of your machines has an IDTOKEN,
+# but rather than force each user to acquire one, we add the FS ("filesystem")
+# method, which lets the HTCondor tools use the local filesystem to prove the
+# identity of the user who invoked them.  Finally, we allow ANONYMOUS
+# authentication, if nothing else works, to allow users read-only access
+# to remote daemons (e.g., for condor_status).
+#
+# Users who want to submit jobs remotely should run `condor_token_fetch` on
+# the machine they want to submit to and cut-and-paste the result to a file
+# in '~/.condor/tokens.d' on the machine they're submitting from.
+#
+# HTCondor does not presently try another authentication method if one
+# succeeds but authorization fails, so the list must be in this order:
+# IDTOKENS before FS because FS gives the daemon a different identity
+# than the IDTOKEN, and FS before ANONYMOUS because ANONYMOUS, of course,
+# gives no specific identity at all.
+SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+
+# IDTOKENs issued by HTCondor include the identity of the issuer.  This
+# identity is used to determine which IDTOKEN(s) to present to which
+# daemon(s).  The TRUST_DOMAIN variable sets that identity.  Setting it
+# to the same thing on each machine in your pool ensures that a token
+# issued by one machine is presented to every other machine in your pool.
+#
+# When get_htcondor creates an IDTOKEN for a machine, it uses this variable
+# to create the identity for that IDTOKEN.  This makes it easy to look at
+# the authorization lists (see below) and distinguish between IDTOKENS in
+# your pool and (if you allow them) IDTOKENS from other pools.
+TRUST_DOMAIN = $(CONDOR_HOST)
+
+# This section specifies the authorizations of the various identities we
+# expect to see, given the authentication methods above.
+
+# Allow anyone to read.  We could list the other identities here, and include
+# the ANONYMOUS identity, but if we're including ANONYMOUS, why bother?
+ALLOW_READ = *
+
+# Accept non-read connections only from other daemons in the same pool.
+ALLOW_ADMINISTRATOR = condor@$(TRUST_DOMAIN)
+ALLOW_OWNER = condor@$(TRUST_DOMAIN)
+ALLOW_WRITE = condor@$(TRUST_DOMAIN)
+ALLOW_DAEMON = condor@$(TRUST_DOMAIN)
+ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
+@end
+
+[$ROLE.get_htcondor_central_manager]
+default: @end
+use security : get_htcondor_idtokens
+
+use role : CentralManager
+@end
+
+[$ROLE.get_htcondor_submit]
+default: @end
+use security : get_htcondor_idtokens
+
+# Allow local users to submit jobs.
+ALLOW_WRITE = $(ALLOW_WRITE) *@$(HOSTNAME)
+
+use role : submit
+@end
+
+[$ROLE.get_htcondor_execute]
+default: @end
+use security : get_htcondor_idtokens
+
+use role : execute
 @end
 
 

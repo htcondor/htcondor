@@ -257,6 +257,7 @@ if( not TestGlue::is_windows() ) {
 		# to find the extra system libraries we include. Let them find them
 		# when looking under $ORIGIN/../lib/condor.
 		system( "ln -s condor/lib lib" );
+		system( "ln -s condor/lib64 lib64" );
 	}
     
 	if(-f "condor/condor_install") {
