@@ -211,15 +211,9 @@ RUN mkdir -p /usr/local/condor/etc/examples && \
 RUN dnf install -y \
     'dnf-command(config-manager)' \
     epel-release \
-    wget \
+    https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm \
     && dnf config-manager --set-enabled PowerTools \
     && dnf clean all
-
-# Add HTCondor repository
-RUN wget https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor && \
-    rpm --import RPM-GPG-KEY-HTCondor && \
-    cd /etc/yum.repos.d && \
-    wget https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-stable-rhel8.repo
 
 # Need HTCondor to build and test HTCondor (BaTLab style)
 RUN dnf install -y \
@@ -234,9 +228,10 @@ RUN dnf install -y \
 
 # Tools needed for building
 RUN dnf install -y \
-    rpm-build \
     make \
     patchelf \
+    rpm-build \
+    yum-utils \
     && dnf clean all
 
 # HTCondor build dependencies

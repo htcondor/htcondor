@@ -190,18 +190,20 @@ else {
 
 
 # copy all the bits in which are required to run batch_test (omg what a cf) 
-if ($boos) {
-#	system("cp -r $SrcDir/condor_tests $pub_dir");
-#	system("cp -r $SrcDir/condor_examples $pub_dir");
+if( $ENV{NMI_PLATFORM} =~ /AmazonLinux|CentOS|Fedora|Debian|Ubuntu/i ) {
+    system("tar xfp $pub_dir/condor_tests-*.tar.gz");
+    system("mv condor_tests-*/condor_tests $pub_dir");
+    system("rmdir condor_tests-*");
+} else {
+    system("cp -r $BldDir/condor_tests $pub_dir");
+    system("cp  $BldDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
 }
-system("cp -r $BldDir/condor_tests $pub_dir");
 system("cp -r $BldDir/condor_examples $pub_dir");
 # copy src/condor_utils/param_info_tables.h to condor_tests for parsing in param completeness test
 # ticket #3877 for param system completeness test.
 # We take the latest of this file, parse with a c program which
 # drops the current into an easy format for testing for completeness
 # in our framework.
-system("cp  $BldDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
 system("cp  $SrcDir/condor_utils/param_info.in $pub_dir/condor_tests");
 
 ######################################################################

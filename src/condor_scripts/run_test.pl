@@ -630,10 +630,10 @@ sub SetupPythonPath {
         system("dir $relpy");
         $relpy .= ";$reldir\\bin";
     } else {
-        system("ls -l $reldir");
-        system("ls -l $reldir/lib");
+        system("ls -lL $reldir");
+        system("ls -lL $reldir/lib");
         print "contents of $relpy:\n";
-        system("ls -l $relpy");
+        system("ls -lL $relpy");
     }
 
     my $pythonpath = "";

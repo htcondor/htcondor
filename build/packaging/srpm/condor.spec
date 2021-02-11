@@ -362,6 +362,25 @@ monitors their progress, and ultimately informs the user upon
 completion.
 
 #######################
+%package devel
+Summary: Development files for HTCondor
+Group: Applications/System
+
+%description devel
+Development files for HTCondor
+
+%if %uw_build
+#######################
+%package tarball
+Summary: Files needed to build an HTCondor tarball
+Group: Applications/System
+
+%description tarball
+Development files for HTCondor
+
+%endif
+
+#######################
 %package procd
 Summary: HTCondor Process tracking Daemon
 Group: Applications/System
@@ -690,9 +709,6 @@ make -C docs man
 
 export CMAKE_PREFIX_PATH=/usr
 
-# Since we don't package the tests and some tests require boost > 1.40, which
-# causes build issues with EL5, don't even bother building the tests.
-
 %if %uw_build
 %define condor_build_id UW_development
 
@@ -704,8 +720,8 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
-       -DBUILD_TESTING:BOOL=FALSE \
-       -DHAVE_BACKFILL:BOOL=FALSE \
+       -DBUILD_TESTING:BOOL=TRUE \
+       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
 %if %blahp
        -DWITH_BLAHP:BOOL=TRUE \
@@ -745,7 +761,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=FALSE \
+       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
@@ -775,6 +791,9 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
 
 make %{?_smp_mflags}
+%if %uw_build
+make %{?_smp_mflags} tests
+%endif
 
 %install
 # installation happens into a temporary location, this function is
@@ -788,6 +807,11 @@ function populate {
 rm -rf %{buildroot}
 echo ---------------------------- makefile ---------------------------------
 make install DESTDIR=%{buildroot}
+%if %uw_build
+make tests-tar-pkg
+# tarball of tests
+cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%endif
 
 # Drop in a symbolic link for backward compatibility
 ln -s ../..%{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
@@ -800,7 +824,7 @@ ln -s condor_shadow %{buildroot}/%{_sbindir}/condor_shadow_s
 %endif
 
 populate /usr/share/doc/condor-%{version}/examples %{buildroot}/usr/share/doc/condor-%{version}/etc/examples/*
-rm -rf %{buildroot}/usr/share/doc/condor-%{version}/etc
+#rm -rf %{buildroot}/usr/share/doc/condor-%{version}/etc
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
 # the default condor_config file is not architecture aware and thus
@@ -835,28 +859,28 @@ mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 
 # not packaging deployment tools
-rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
-rm -f %{buildroot}/%{_mandir}/man1/condor_cold_start.1
-rm -f %{buildroot}/%{_mandir}/man1/condor_cold_stop.1
-rm -f %{buildroot}/%{_mandir}/man1/uniq_pid_midwife.1
-rm -f %{buildroot}/%{_mandir}/man1/uniq_pid_undertaker.1
-rm -f %{buildroot}/%{_mandir}/man1/filelock_midwife.1
-rm -f %{buildroot}/%{_mandir}/man1/filelock_undertaker.1
-rm -f %{buildroot}/%{_mandir}/man1/install_release.1
-rm -f %{buildroot}/%{_mandir}/man1/cleanup_release.1
+#rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
+#rm -f %{buildroot}/%{_mandir}/man1/condor_cold_start.1
+#rm -f %{buildroot}/%{_mandir}/man1/condor_cold_stop.1
+#rm -f %{buildroot}/%{_mandir}/man1/uniq_pid_midwife.1
+#rm -f %{buildroot}/%{_mandir}/man1/uniq_pid_undertaker.1
+#rm -f %{buildroot}/%{_mandir}/man1/filelock_midwife.1
+#rm -f %{buildroot}/%{_mandir}/man1/filelock_undertaker.1
+#rm -f %{buildroot}/%{_mandir}/man1/install_release.1
+#rm -f %{buildroot}/%{_mandir}/man1/cleanup_release.1
 
 # not packaging configure/install scripts
-rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
+#rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 
 # not packaging legacy cruft
-rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
-rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
+#rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
+#rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
 
 # this one got removed but the manpage was left around
-rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
+#rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 
 # remove junk man page (Fedora 32 build)
-rm -f %{buildroot}/%{_mandir}/man1/_static/graphviz.css
+#rm -f %{buildroot}/%{_mandir}/man1/_static/graphviz.css
 
 # Remove python-based tools when no python bindings
 %if ! %python
@@ -905,8 +929,8 @@ rm -f %{buildroot}/%{_bindir}/condor_vault_storer
 %endif
 
 # Remove junk
-rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
-rm -rf %{buildroot}/%{_sysconfdir}/init.d
+#rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
+#rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -945,10 +969,10 @@ mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
 %endif
 mv %{buildroot}/usr/lib64/condor/libpyclassad3*.so %{buildroot}/usr/lib64
 
-rm -rf %{buildroot}/usr/include/condor
-rm -rf %{buildroot}/usr/lib64/condor/libchirp_client.a
-rm -rf %{buildroot}/usr/lib64/condor/libcondorapi.a
-rm -rf %{buildroot}/usr/lib64/libclassad.a
+#rm -rf %{buildroot}/usr/include/condor
+#rm -rf %{buildroot}/usr/lib64/condor/libchirp_client.a
+#rm -rf %{buildroot}/usr/lib64/condor/libcondorapi.a
+#rm -rf %{buildroot}/usr/lib64/libclassad.a
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE-2.0.txt
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
@@ -957,74 +981,74 @@ rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarball_version
 
 # Remove stuff that comes from the full-deploy
-rm -rf %{buildroot}%{_sbindir}/cleanup_release
-rm -rf %{buildroot}%{_sbindir}/condor
-rm -rf %{buildroot}%{_sbindir}/condor_cleanup_local
-rm -rf %{buildroot}%{_sbindir}/condor_cold_start
-rm -rf %{buildroot}%{_sbindir}/condor_cold_stop
-rm -rf %{buildroot}%{_sbindir}/condor_config_bind
-rm -rf %{buildroot}%{_sbindir}/condor_configure
-rm -rf %{buildroot}%{_sbindir}/condor_install
-rm -rf %{buildroot}%{_sbindir}/condor_install_local
-rm -rf %{buildroot}%{_sbindir}/condor_local_start
-rm -rf %{buildroot}%{_sbindir}/condor_local_stop
-rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
-rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
-rm -rf %{buildroot}%{_sbindir}/filelock_midwife
-rm -rf %{buildroot}%{_sbindir}/filelock_undertaker
-rm -rf %{buildroot}%{_sbindir}/install_release
-rm -rf %{buildroot}%{_sbindir}/uniq_pid_command
-rm -rf %{buildroot}%{_sbindir}/uniq_pid_midwife
-rm -rf %{buildroot}%{_sbindir}/uniq_pid_undertaker
-rm -rf %{buildroot}%{_sbindir}/condor_master_off
-rm -rf %{buildroot}%{_sbindir}/condor_reconfig_schedd
-rm -rf %{buildroot}%{_datadir}/condor/Execute.pm
-rm -rf %{buildroot}%{_datadir}/condor/ExecuteLock.pm
-rm -rf %{buildroot}%{_datadir}/condor/FileLock.pm
-rm -rf %{buildroot}%{_usrsrc}/chirp/chirp_*
-rm -rf %{buildroot}%{_usrsrc}/startd_factory
-rm -rf %{buildroot}/usr/DOC
-rm -rf %{buildroot}/usr/INSTALL
-rm -rf %{buildroot}/usr/LICENSE-2.0.txt
-rm -rf %{buildroot}/usr/NOTICE.txt
-rm -rf %{buildroot}/usr/README
-rm -rf %{buildroot}/usr/examples/
-rm -rf %{buildroot}%{_includedir}/MyString.h
-rm -rf %{buildroot}%{_includedir}/chirp_client.h
-rm -rf %{buildroot}%{_includedir}/compat_classad*
-rm -rf %{buildroot}%{_includedir}/condor_classad.h
-rm -rf %{buildroot}%{_includedir}/condor_constants.h
-rm -rf %{buildroot}%{_includedir}/condor_event.h
-rm -rf %{buildroot}%{_includedir}/condor_header_features.h
-rm -rf %{buildroot}%{_includedir}/condor_holdcodes.h
-rm -rf %{buildroot}%{_includedir}/file_lock.h
-rm -rf %{buildroot}%{_includedir}/iso_dates.h
-rm -rf %{buildroot}%{_includedir}/read_user_log.h
-rm -rf %{buildroot}%{_includedir}/stl_string_utils.h
-rm -rf %{buildroot}%{_includedir}/user_log.README
-rm -rf %{buildroot}%{_includedir}/user_log.c++.h
-rm -rf %{buildroot}%{_includedir}/usr/include/condor_ast.h
-rm -rf %{buildroot}%{_includedir}/condor_astbase.h
-rm -rf %{buildroot}%{_includedir}/condor_attrlist.h
-rm -rf %{buildroot}%{_includedir}/condor_exprtype.h
-rm -rf %{buildroot}%{_includedir}/condor_parser.h
-rm -rf %{buildroot}%{_includedir}/write_user_log.h
-rm -rf %{buildroot}%{_includedir}/condor_ast.h
-rm -rf %{buildroot}%{_includedir}/README
-rm -rf %{buildroot}%{_libexecdir}/condor/bgp_*
-rm -rf %{buildroot}%{_datadir}/condor/libchirp_client.a
-rm -rf %{buildroot}%{_datadir}/condor/libcondorapi.a
-rm -rf %{buildroot}%{_mandir}/man1/cleanup_release.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_cold_start.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_cold_stop.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_config_bind.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_configure.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_load_history.1*
-rm -rf %{buildroot}%{_mandir}/man1/filelock_midwife.1*
-rm -rf %{buildroot}%{_mandir}/man1/filelock_undertaker.1*
-rm -rf %{buildroot}%{_mandir}/man1/install_release.1*
-rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_midwife.1*
-rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_undertaker.1*
+#rm -rf %{buildroot}%{_sbindir}/cleanup_release
+#rm -rf %{buildroot}%{_sbindir}/condor
+#rm -rf %{buildroot}%{_sbindir}/condor_cleanup_local
+#rm -rf %{buildroot}%{_sbindir}/condor_cold_start
+#rm -rf %{buildroot}%{_sbindir}/condor_cold_stop
+#rm -rf %{buildroot}%{_sbindir}/condor_config_bind
+#rm -rf %{buildroot}%{_sbindir}/condor_configure
+#rm -rf %{buildroot}%{_sbindir}/condor_install
+#rm -rf %{buildroot}%{_sbindir}/condor_install_local
+#rm -rf %{buildroot}%{_sbindir}/condor_local_start
+#rm -rf %{buildroot}%{_sbindir}/condor_local_stop
+#rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
+#rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
+#rm -rf %{buildroot}%{_sbindir}/filelock_midwife
+#rm -rf %{buildroot}%{_sbindir}/filelock_undertaker
+#rm -rf %{buildroot}%{_sbindir}/install_release
+#rm -rf %{buildroot}%{_sbindir}/uniq_pid_command
+#rm -rf %{buildroot}%{_sbindir}/uniq_pid_midwife
+#rm -rf %{buildroot}%{_sbindir}/uniq_pid_undertaker
+#rm -rf %{buildroot}%{_sbindir}/condor_master_off
+#rm -rf %{buildroot}%{_sbindir}/condor_reconfig_schedd
+#rm -rf %{buildroot}%{_datadir}/condor/Execute.pm
+#rm -rf %{buildroot}%{_datadir}/condor/ExecuteLock.pm
+#rm -rf %{buildroot}%{_datadir}/condor/FileLock.pm
+#rm -rf %{buildroot}%{_usrsrc}/chirp/chirp_*
+#rm -rf %{buildroot}%{_usrsrc}/startd_factory
+#rm -rf %{buildroot}/usr/DOC
+#rm -rf %{buildroot}/usr/INSTALL
+#rm -rf %{buildroot}/usr/LICENSE-2.0.txt
+#rm -rf %{buildroot}/usr/NOTICE.txt
+#rm -rf %{buildroot}/usr/README
+#rm -rf %{buildroot}/usr/examples/
+#rm -rf %{buildroot}%{_includedir}/MyString.h
+#rm -rf %{buildroot}%{_includedir}/chirp_client.h
+#rm -rf %{buildroot}%{_includedir}/compat_classad*
+#rm -rf %{buildroot}%{_includedir}/condor_classad.h
+#rm -rf %{buildroot}%{_includedir}/condor_constants.h
+#rm -rf %{buildroot}%{_includedir}/condor_event.h
+#rm -rf %{buildroot}%{_includedir}/condor_header_features.h
+#rm -rf %{buildroot}%{_includedir}/condor_holdcodes.h
+#rm -rf %{buildroot}%{_includedir}/file_lock.h
+#rm -rf %{buildroot}%{_includedir}/iso_dates.h
+#rm -rf %{buildroot}%{_includedir}/read_user_log.h
+#rm -rf %{buildroot}%{_includedir}/stl_string_utils.h
+#rm -rf %{buildroot}%{_includedir}/user_log.README
+#rm -rf %{buildroot}%{_includedir}/user_log.c++.h
+#rm -rf %{buildroot}%{_includedir}/usr/include/condor_ast.h
+#rm -rf %{buildroot}%{_includedir}/condor_astbase.h
+#rm -rf %{buildroot}%{_includedir}/condor_attrlist.h
+#rm -rf %{buildroot}%{_includedir}/condor_exprtype.h
+#rm -rf %{buildroot}%{_includedir}/condor_parser.h
+#rm -rf %{buildroot}%{_includedir}/write_user_log.h
+#rm -rf %{buildroot}%{_includedir}/condor_ast.h
+#rm -rf %{buildroot}%{_includedir}/README
+#rm -rf %{buildroot}%{_libexecdir}/condor/bgp_*
+#rm -rf %{buildroot}%{_datadir}/condor/libchirp_client.a
+#rm -rf %{buildroot}%{_datadir}/condor/libcondorapi.a
+#rm -rf %{buildroot}%{_mandir}/man1/cleanup_release.1*
+#rm -rf %{buildroot}%{_mandir}/man1/condor_cold_start.1*
+#rm -rf %{buildroot}%{_mandir}/man1/condor_cold_stop.1*
+#rm -rf %{buildroot}%{_mandir}/man1/condor_config_bind.1*
+#rm -rf %{buildroot}%{_mandir}/man1/condor_configure.1*
+#rm -rf %{buildroot}%{_mandir}/man1/condor_load_history.1*
+#rm -rf %{buildroot}%{_mandir}/man1/filelock_midwife.1*
+#rm -rf %{buildroot}%{_mandir}/man1/filelock_undertaker.1*
+#rm -rf %{buildroot}%{_mandir}/man1/install_release.1*
+#rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_midwife.1*
+#rm -rf %{buildroot}%{_mandir}/man1/uniq_pid_undertaker.1*
 
 #rm -rf %{buildroot}%{_datadir}/condor/python/{htcondor,classad}.so
 #rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
@@ -1365,7 +1389,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_gridshell
 %_sbindir/gahp_server
 %_sbindir/grid_monitor
-%_sbindir/grid_monitor.sh
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
@@ -1384,6 +1407,38 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
+
+#################
+%files devel
+%{_includedir}/condor/MyString.h
+%{_includedir}/condor/chirp_client.h
+%{_includedir}/condor/compat_classad.h
+%{_includedir}/condor/compat_classad_list.h
+%{_includedir}/condor/compat_classad_util.h
+%{_includedir}/condor/condor_classad.h
+%{_includedir}/condor/condor_constants.h
+%{_includedir}/condor/condor_event.h
+%{_includedir}/condor/condor_header_features.h
+%{_includedir}/condor/condor_holdcodes.h
+%{_includedir}/condor/file_lock.h
+%{_includedir}/condor/iso_dates.h
+%{_includedir}/condor/read_user_log.h
+%{_includedir}/condor/stl_string_utils.h
+%{_includedir}/condor/user_log.README
+%{_includedir}/condor/user_log.c++.h
+%{_includedir}/condor/write_user_log.h
+%{_libdir}/condor/libchirp_client.a
+%{_libdir}/condor/libcondorapi.a
+%{_libdir}/libclassad.a
+
+
+%if %uw_build
+#################
+%files tarball
+%{_sbindir}/condor_configure
+%{_sbindir}/condor_install
+%{_mandir}/man1/condor_configure.1*
+%endif
 
 #################
 %files procd
@@ -1462,6 +1517,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
+%_libdir/condor/condor_tests-%{version}.tar.gz
 
 %if %parallel_setup
 %files parallel-setup
