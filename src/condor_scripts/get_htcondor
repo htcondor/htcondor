@@ -237,9 +237,17 @@ do_start_service() {
 }
 
 do_token_security() {
+	# This won't work in a pipeline (as we recommend using this script).
 	if [ -z "${PASSWORD}" ]; then
 		echo -n "Enter a pool password: "
 		read PASSWORD
+	fi
+
+	if [ -z "${PASSWORD}" ]; then
+		echo
+		echo "You must set a password!  Did you replace \$htcondor_password with a password?"
+		echo
+		exit 1
 	fi
 
 	# So 'echo' is a shell built-in, which means no command-line to show
