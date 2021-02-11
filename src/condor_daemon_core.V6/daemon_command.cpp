@@ -453,7 +453,23 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			SecMan::sec_feat_act will_enable_encryption = m_sec_man->sec_lookup_feat_act(*session->policy(), ATTR_SEC_ENCRYPTION);
 			bool turn_encryption_on = will_enable_encryption == SecMan::SEC_FEAT_ACT_YES;
 
-			if (!m_sock->set_crypto_key(turn_encryption_on, session->key())) {
+			KeyInfo* key_to_use;
+			KeyInfo* blowfish_key;
+
+			key_to_use = session->key();
+			blowfish_key = session->key(CONDOR_BLOWFISH);
+
+			dprintf(D_NETWORK|D_VERBOSE, "UDP: server normal key (proto %i): %p\n", key_to_use->getProtocol(), key_to_use);
+			dprintf(D_NETWORK|D_VERBOSE, "UDP: server BF key (proto %i): %p\n", (blowfish_key ? blowfish_key->getProtocol() : 0), blowfish_key);
+			dprintf(D_NETWORK|D_VERBOSE, "UDP: server m_is_tcp: 0\n");
+
+			// this is UDP.  if we were going to use AES, use BLOWFISH instead (if it exists)
+			if((key_to_use->getProtocol() == CONDOR_AESGCM) && (blowfish_key)) {
+				dprintf(D_NETWORK, "UDP: SWITCHING FROM AES TO BLOWFISH.\n");
+				key_to_use = blowfish_key;
+			}
+
+			if (!m_sock->set_crypto_key(turn_encryption_on, key_to_use)) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption for session %s, failing; this session was requested by %s with return address %s\n",sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -1654,14 +1670,35 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		}
 
 
-		// add the key to the cache
+		// add the key(s) to the cache
+
+		// if this is AES, we'll also create a derived BLOWFISH key (for UDP), if BLOWFISH is allowed
+
+		dprintf(D_SECURITY|D_VERBOSE, "SESSION: server checking key type: %i\n", m_key->getProtocol());
+		std::vector<KeyInfo*> keyvec;
+		keyvec.push_back(new KeyInfo(*m_key));
+		if (m_key->getProtocol() == CONDOR_AESGCM) {
+			std::string all_methods;
+			if (m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
+				dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
+				StringList sl(all_methods.c_str());
+				if (sl.contains_anycase("BLOWFISH")) {
+					keyvec.push_back(new KeyInfo(m_key->getKeyData(), 24, CONDOR_BLOWFISH, 0));
+					dprintf(D_SECURITY, "SESSION: server duplicated AES to BLOWFISH key for UDP.\n");
+				} else {
+					dprintf(D_SECURITY, "SESSION: BLOWFISH not allowed.  UDP will not work.\n");
+				}
+			} else {
+				dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");
+			}
+		}
 
 		// This is a session for incoming connections, so
 		// do not pass in m_sock->peer_addr() as addr,
 		// because then this key would get confused for an
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
-		KeyCacheEntry tmp_key(m_sid, NULL, m_key, m_policy, expiration_time, session_lease );
+		KeyCacheEntry tmp_key(m_sid, NULL, keyvec, m_policy, expiration_time, session_lease );
 		m_sec_man->session_cache->insert(tmp_key);
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
 		if (IsDebugVerbose(D_SECURITY)) {

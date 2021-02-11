@@ -45,6 +45,7 @@
 
 #include <sstream>
 #include <algorithm>
+#include <string>
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -917,6 +918,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
 		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS, the_methods);
+		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS_LIST, the_methods);
 			// AES-GCM will always internally encrypt and do integrity-checking,
 			// regardless of what was negotiated.  Might as well say that in the
 			// ad so the user is aware!
@@ -1536,6 +1538,16 @@ SecManStartCommand::sendAuthInfo_inner()
 			// which has the same error-handling as a restart of the server.
 		m_enc_key->renewLease();
 
+		// tweak the session if it's UDP
+		if(!m_is_tcp) {
+			dprintf(D_SECURITY, "SESSION: for outgoing UDP, forcing BLOWFISH, no MD5\n");
+			m_auth_info.Assign(ATTR_SEC_CRYPTO_METHODS, "BLOWFISH");
+			// Integrity not needed since these packets are assumed
+			// not to be leaving the local host.  Leaving it on
+			// might use MD5 and make us non-FIPS compliant.
+			m_auth_info.Assign(ATTR_SEC_INTEGRITY, "NO");
+		}
+
 		m_new_session = false;
 	} else {
 		if( !m_sec_man.FillInSecurityPolicyAd(
@@ -1757,9 +1769,31 @@ SecManStartCommand::sendAuthInfo_inner()
 
 			KeyInfo* ki  = NULL;
 			if (m_enc_key->key()) {
-				ki  = new KeyInfo(*(m_enc_key->key()));
+				KeyInfo* key_to_use;
+				KeyInfo* blowfish_key;
+
+				key_to_use = m_enc_key->key();
+				blowfish_key = m_enc_key->key(CONDOR_BLOWFISH);
+
+				dprintf(D_SECURITY|D_VERBOSE, "UDP: client normal key (proto %i): %p\n", key_to_use->getProtocol(), key_to_use);
+				dprintf(D_SECURITY|D_VERBOSE, "UDP: client BF key (proto %i): %p\n", (blowfish_key ? blowfish_key->getProtocol() : 0), blowfish_key);
+				dprintf(D_SECURITY|D_VERBOSE, "UDP: client m_is_tcp: %i\n", m_is_tcp);
+
+				// if UDP, and we were going to use AES, use BLOWFISH instead (if it exists)
+				if(!m_is_tcp && (key_to_use->getProtocol() == CONDOR_AESGCM)) {
+					if(blowfish_key) {
+						dprintf(D_SECURITY, "UDP: SWITCHING CRYPTO FROM AES TO BLOWFISH.\n");
+						key_to_use = blowfish_key;
+					} else {
+						// Fail now since this isn't going to work.
+						dprintf(D_ALWAYS, "UDP: ERROR: AES not supported for UDP.\n");
+						m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY, "AES not supported for UDP" );
+						return StartCommandFailed;
+					}
+				}
+				ki  = new KeyInfo(*(key_to_use));
 			}
-			
+
 			if (will_enable_mac == SecMan::SEC_FEAT_ACT_YES) {
 
 				if (!ki) {
@@ -1955,6 +1989,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS_LIST );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTH_REQUIRED );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENCRYPTION );
@@ -2381,10 +2416,29 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			int session_lease = 0;
 			m_auth_info.LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease );
 
+			dprintf(D_SECURITY|D_VERBOSE, "SESSION: client checking key type: %i\n", m_private_key->getProtocol());
+			std::vector<KeyInfo*> keyvec;
+			keyvec.push_back(new KeyInfo(*m_private_key));
+			if (m_private_key->getProtocol() == CONDOR_AESGCM) {
+				std::string all_methods;
+				if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
+					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
+					StringList sl(all_methods.c_str());
+					if (sl.contains_anycase("BLOWFISH")) {
+						keyvec.push_back(new KeyInfo(m_private_key->getKeyData(), 24, CONDOR_BLOWFISH, 0));
+						dprintf(D_SECURITY, "SESSION: client duplicated AES to BLOWFISH key for UDP.\n");
+					} else {
+						dprintf(D_SECURITY, "SESSION: BLOWFISH not allowed.  UDP will not work.\n");
+					}
+				} else {
+					dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");
+				}
+			}
+
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
 			condor_sockaddr peer_addr = m_sock->peer_addr();
-			KeyCacheEntry tmp_key( sesid, &peer_addr, m_private_key,
+			KeyCacheEntry tmp_key( sesid, &peer_addr, keyvec,
 								   &m_auth_info, expiration_time,
 								   session_lease ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
@@ -3441,6 +3495,13 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	std::string crypto_methods;
 	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
+
+	// preserve full list
+	policy.Assign(ATTR_SEC_CRYPTO_METHODS_LIST, crypto_methods);
+
+	// ZKM FIXME TODO:
+	// why would we disallow multiple methods?
+	allow_multiple_methods = true;
 
 	// remove all but the first crypto method, if multiple methods
 	// aren't allowed
