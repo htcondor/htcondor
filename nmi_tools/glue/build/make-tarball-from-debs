@@ -64,8 +64,7 @@ mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
 # Add blahp
 # Add condor-boinc
 # Add scitokens-cpp
-db9externals="libboost-python1.62.0 \
-    libglobus-callout0 \
+common_externals="libglobus-callout0 \
     libglobus-common0 \
     libglobus-ftp-client2 \
     libglobus-ftp-control1 \
@@ -91,7 +90,17 @@ db9externals="libboost-python1.62.0 \
     libmunge2 \
     libvomsapi1v5"
 
-externals="$db9externals"
+if [[ $arch_dist =~ Debian9 ]]; then
+    externals="$common_externals libboost-python1.62.0"
+elif [[ $arch_dist =~ Debian10 ]]; then
+    externals="$common_externals libboost-python1.67.0"
+elif [[ $arch_dist =~ Ubuntu16 ]]; then
+    externals="$common_externals libboost-python1.58.0"
+elif [[ $arch_dist =~ Ubuntu18 ]]; then
+    externals="$common_externals libboost-python1.65.1"
+elif [[ $arch_dist =~ Ubuntu20 ]]; then
+    externals="$common_externals libboost-python1.71.0"
+fi
 
 mkdir external-packages
 (cd external-packages; apt download $externals)

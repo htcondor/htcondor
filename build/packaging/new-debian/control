@@ -213,7 +213,7 @@ Description: distributed workload management system - single node configuration
  annex-compatible.  Do NOT install on a non-EC2 image.
 
 Package: htcondor-tarball
-Architecture: all
+Architecture: any
 Section: science
 Depends: htcondor (= ${binary:Version}),
          ${misc:Depends}
