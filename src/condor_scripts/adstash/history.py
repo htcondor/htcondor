@@ -20,7 +20,6 @@ import datetime
 import traceback
 import multiprocessing
 
-import classad
 import htcondor
 import elasticsearch
 

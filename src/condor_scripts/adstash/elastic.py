@@ -13,12 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import json
-import time
-import datetime
 import logging
-import socket
 import collections
 
 import elasticsearch
@@ -147,6 +143,7 @@ def get_server_handle(args=None):
             username=args.es_username,
             password=args.es_password,
             use_https=args.es_use_https,
+            ca_certs=args.ca_certs,
         )
     return _ES_HANDLE
 
@@ -161,6 +158,7 @@ class ElasticInterface(object):
         username=None,
         password=None,
         use_https=False,
+        ca_certs=None,
         logdir=Path.cwd(),
     ):
 
@@ -173,21 +171,23 @@ class ElasticInterface(object):
             # connect anonymously
             pass
         elif (username is None) != (password is None):
-            logger.warning(
+            logging.warning(
                 "Only one of username and password have been defined, attempting anonymous connection to Elasticsearch"
             )
         else:
             es_client["http_auth"] = (username, password)
 
         if use_https:
-            if importlib.util.find_spec("certifi") is None:
-                logger.error(
-                    '"certifi" library not found, cannot use HTTPS to connect to Elasticsearch'
-                )
-                sys.exit(1)
+            if ca_certs is not None:
+                logging.info(f"Using CA from {ca_certs}")
+                es_client["ca_certs"] = ca_certs
+            elif importlib.util.find_spec("certifi") is not None:
+                logging.info("Using CA from certifi library")
             else:
-                es_client["use_ssl"] = True
-                es_client["verify_certs"] = True
+                logging.error("Using HTTPS with Elasticsearch requires that either ca_certs be provided or certifi library be installed")
+                sys.exit(1)
+            es_client["use_ssl"] = True
+            es_client["verify_certs"] = True
 
         self.handle = elasticsearch.Elasticsearch([es_client])
         self.logdir = Path(logdir)

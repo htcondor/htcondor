@@ -17,7 +17,6 @@ import sys
 import os
 import logging
 import argparse
-import multiprocessing
 import re
 
 import htcondor
@@ -76,6 +75,7 @@ def get_htcondor_config(name="ADSTASH"):
         "es_timeout": p.get(f"{name}_ES_TIMEOUT"),
         "es_bunch_size": p.get(f"{name}_ES_BUNCH_SIZE"),
         "es_index_name": p.get(f"{name}_ES_INDEX_NAME"),
+        "ca_certs": p.get(f"{name}_CA_CERTS"),
     }
 
     # Convert debug level
@@ -135,6 +135,7 @@ def get_environment_config(name="ADSTASH"):
         "es_timeout": env.get(f"{name}_ES_TIMEOUT"),
         "es_bunch_size": env.get(f"{name}_ES_BUNCH_SIZE"),
         "es_index_name": env.get(f"{name}_ES_INDEX_NAME"),
+        "ca_certs": env.get(f"{name}_CA_CERTS"),
     }
 
     # remove None values
@@ -429,6 +430,14 @@ def get_config(argv=None):
         help=(
             "Elasticsearch index name "
             "[default: %(default)s]"
+        ),
+    )
+    parser.add_argument(
+        "--ca_certs",
+        metavar="PATH",
+        help=(
+            "Path to root certificate authority file "
+            "(will use certifi's CA if not set)"
         ),
     )
     parser.add_argument(
