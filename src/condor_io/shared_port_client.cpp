@@ -159,7 +159,15 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 		return false;
 	}
 
-	static_cast<ReliSock*>(sock)->resetHeaderMD();
+	// If we're talking to anything *but* the shared port daemon itself, the first
+	// CEDAR message will be swallowed by the remote shared_port daemon - resulting
+	// in a MD mismatch if we don't reset now.
+	//
+	// However, if we are talking to the shared port ("self"), the shared_port sees
+	// the whole conversation and we cannot reset.
+	if (strcmp(shared_port_id, "self")) {
+		static_cast<ReliSock*>(sock)->resetHeaderMD();
+	}
 
 	dprintf(D_FULLDEBUG,
 			"SharedPortClient: sent connection request to %s for shared port id %s\n",
