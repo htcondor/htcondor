@@ -2325,7 +2325,7 @@ using a shared file system`.
 :macro-def:`TRUST_LOCAL_UID_DOMAIN`
     This parameter works like ``TRUST_UID_DOMAIN``, but is only applied
     when the *condor_starter* and *condor_shadow* are on the same
-    machine. If this paramater is set to ``True``, then the
+    machine. If this parameter is set to ``True``, then the
     *condor_shadow* 's ``UID_DOMAIN`` doesn't have to be a substring
     its hostname. If this paramater is set to ``False``, then
     ``UID_DOMAIN`` controls whether this substring requirement is
