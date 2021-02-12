@@ -138,9 +138,9 @@ chmod 755 tarball/var/lib/condor/oauth_credentials
 chmod g-s tarball/var/lib/condor/oauth_credentials
 
 # Package final tarball
-mv tarball condor-$version-$release.$arch_dist-stripped
-tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release.$arch_dist-stripped.tar.gz condor-$version-$release.$arch_dist-stripped
-rm -r condor-$version-$release.$arch_dist-stripped
+mv tarball condor-$version-$release-$arch_dist-stripped
+tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release-$arch_dist-stripped.tar.gz condor-$version-$release-$arch_dist-stripped
+rm -r condor-$version-$release-$arch_dist-stripped
 
 ls -lh condor*.tar.gz
 exit 0
