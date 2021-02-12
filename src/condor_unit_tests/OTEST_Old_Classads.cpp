@@ -7063,7 +7063,7 @@ static bool test_random_different() {
 	classad.EvalInteger("A1", NULL, expect);
 	for(i = 0; i < 10; i++) {
 		classad.EvalInteger("A1", NULL, actual);
-		different_numbers = (actual != expect);
+		different_numbers |= (actual != expect);
 	}
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
