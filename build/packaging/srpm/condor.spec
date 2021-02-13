@@ -870,7 +870,12 @@ mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 #rm -f %{buildroot}/%{_mandir}/man1/cleanup_release.1
 
 # not packaging configure/install scripts
-#rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
+%if ! %uw_build
+rm -rf %{buildroot}%{_sbindir}/condor_configure
+rm -rf %{buildroot}%{_sbindir}/condor_install
+rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
+rm -f %{buildroot}/%{_mandir}/man1/condor_install.1
+%endif
 
 # not packaging legacy cruft
 #rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
@@ -900,13 +905,24 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/co
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
 %endif
 
+%if 0%{?vaultcred}
+# Move vault credmon config file out of examples and into config.d
+mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
+%else
+# Otherwise remove installed vault credmon files from the buildroot
+rm -f %{buildroot}/%{_sbindir}/condor_credmon_vault
+rm -f %{buildroot}/%{_bindir}/condor_vault_storer
+%endif
+
 # For non-EL7, remove oauth credmon from the buildroot
 %if 0%{?rhel} > 7 || 0%{?fedora}
 rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
 rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
 rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
+%if ! 0%{?vaultcred}
 rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth
+%endif
 %endif
 
 ###
@@ -918,15 +934,6 @@ mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
 ln -s ../../../..%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
 %endif
 ###
-
-%if 0%{?vaultcred}
-# Move vault credmon config file out of examples and into config.d
-mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
-%else
-# Otherwise remove installed vault credmon files from the buildroot
-rm -f %{buildroot}/%{_sbindir}/condor_credmon_vault
-rm -f %{buildroot}/%{_bindir}/condor_vault_storer
-%endif
 
 # Remove junk
 #rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1281,7 +1288,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_gather_info.1.gz
 %_mandir/man1/condor_router_rm.1.gz
 %_mandir/man1/condor_drain.1.gz
-%_mandir/man1/condor_install.1.gz
 %_mandir/man1/condor_ping.1.gz
 %_mandir/man1/condor_rmdir.1.gz
 %_mandir/man1/condor_tail.1.gz
@@ -1435,7 +1441,8 @@ rm -rf %{buildroot}
 %files tarball
 %{_sbindir}/condor_configure
 %{_sbindir}/condor_install
-%{_mandir}/man1/condor_configure.1*
+%{_mandir}/man1/condor_configure.1.gz
+%{_mandir}/man1/condor_install.1.gz
 %endif
 
 #################
@@ -1515,7 +1522,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
+%if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
+%endif
 
 %if %parallel_setup
 %files parallel-setup
