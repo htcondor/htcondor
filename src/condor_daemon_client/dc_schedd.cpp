@@ -305,13 +305,18 @@ DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
 }
 
 ClassAd* 
-DCSchedd::exportJobs( StringList* ids_list, const char * export_dir, const char * ckpt_dir, CondorError * errstack)
+DCSchedd::exportJobsWorker(
+	StringList* ids_list,
+	const char * constraint_str,
+	const char * export_dir,
+	const char * ckpt_dir,
+	CondorError * errstack)
 {
-	if( ! ids_list || ! export_dir) {
-		dprintf( D_ALWAYS, "DCSchedd::exportJobs: list of jobs or export dir is NULL, aborting\n" );
+	if ( ! export_dir || ( ! ids_list && ! constraint_str)) {
+		dprintf( D_ALWAYS, "DCSchedd::exportJobs: job selection or export dir is NULL, aborting\n" );
 		if (errstack) {
 			errstack->push("DCSchedd::exportJobs", SCHEDD_ERR_MISSING_ARGUMENT,
-			              "list of jobs or export dir argument is missing");
+			              "job selection export dir argument is missing");
 		}
 		return NULL;
 	}
@@ -319,8 +324,18 @@ DCSchedd::exportJobs( StringList* ids_list, const char * export_dir, const char 
 	ReliSock rsock;
 
 	ClassAd cmd_ad;
-	auto_free_ptr ids(ids_list->print_to_string());
-	cmd_ad.Assign("ClusterIds", (const char *)ids);
+	if (ids_list) {
+		auto_free_ptr ids(ids_list->print_to_string());
+		cmd_ad.Assign("ClusterIds", (const char *)ids);
+	} else {
+		if ( ! cmd_ad.AssignExpr("Constraint", constraint_str)) {
+			dprintf(D_ALWAYS, "DCSchedd::exportJobs invalid constraint : %s\n", constraint_str);
+			if (errstack) {
+				errstack->push("DCSchedd::exportJobs", SCHEDD_ERR_MISSING_ARGUMENT,
+							  "job selection constraint is invalid");
+			}
+		}
+	}
 	cmd_ad.Assign("ExportDir", export_dir);
 	if (ckpt_dir) { cmd_ad.Assign("CkptDir", ckpt_dir); }
 
@@ -379,6 +394,18 @@ DCSchedd::exportJobs( StringList* ids_list, const char * export_dir, const char 
 	}
 
 	return result_ad;
+}
+
+ClassAd*
+DCSchedd::exportJobs(StringList* ids_list, const char * export_dir, const char * ckpt_dir, CondorError * errstack)
+{
+	return exportJobsWorker(ids_list, nullptr, export_dir, ckpt_dir, errstack);
+}
+
+ClassAd*
+DCSchedd::exportJobs(const char * constraint_str, const char * export_dir, const char * ckpt_dir, CondorError * errstack)
+{
+	return exportJobsWorker(nullptr, constraint_str, export_dir, ckpt_dir, errstack);
 }
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack

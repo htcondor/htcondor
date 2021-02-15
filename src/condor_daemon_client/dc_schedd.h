@@ -281,10 +281,11 @@ public:
 						action_result_type_t result_type = AR_TOTALS );
 
 	/** export jobs to an external job_queue and put mark them as MANAGED by Lumberjack
-			@param ids What jobs to act on
+			@param ids or constraint What jobs to act on
 			@param export_dir what directory to export the jobs to. dir\job_queue.log will be the exported log
 	*/
 	ClassAd* exportJobs( StringList* ids, const char * export_dir, const char * ckpt_dir, CondorError * errstack);
+	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * ckpt_dir, CondorError * errstack);
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
 			@param exported_job_log path to the exported job_queue.log
@@ -422,6 +423,8 @@ private:
 		const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 	int requestImpersonationTokenFinish(Stream *stream);
+
+	ClassAd* exportJobsWorker( StringList* ids, const char * constraint, const char * export_dir, const char * ckpt_dir, CondorError * errstack);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

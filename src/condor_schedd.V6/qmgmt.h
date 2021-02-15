@@ -273,6 +273,8 @@ public:
 	void AttachJob(JobQueueJob * job);
 	void DetachJob(JobQueueJob * job);
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
+	JobQueueJob * FirstJob();
+	JobQueueJob * NextJob(JobQueueJob * job);
 	void JobStatusChanged(int old_status, int new_status);  // update cluster counters by job status.
 
 	void PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
@@ -553,6 +555,7 @@ typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void
 void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
 #define WalkJobQueue(fn) WalkJobQueue3( (fn), NULL, WalkJobQ_ ## fn ## _runtime )
 #define WalkJobQueue2(fn,pv) WalkJobQueue3( (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+void WalkNonJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm); // walk ads other than proc ads
 
 bool InWalkJobQueue();
 

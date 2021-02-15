@@ -17669,30 +17669,15 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 
 
 bool
-Scheduler::ExportJobs(ClassAd & result, const char *cluster_ids, const char *output_dir, const char * ckpt_dir /*="##"*/)
+Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char * ckpt_dir /*="##"*/)
 {
-	dprintf(D_ALWAYS,"ExportJobs('%s','%s','%s')\n",cluster_ids,output_dir,ckpt_dir);
-#if 1
+	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,ckpt_dir);
 	OwnerInfo * owner = nullptr;
-#else
-	std::string owner;
-	std::string domain;
-#endif
-	std::set<int> clusters;
-	StringList clusters_strlist(cluster_ids);
-	const char *next_cluster_str;
-	JobQueueKey job_id;
-	int max_cluster_id = 0;
-	int tmp_int = 0;
 
-	clusters_strlist.rewind();
-	while ( (next_cluster_str = clusters_strlist.next()) ) {
-		int next_cluster = atoi(next_cluster_str);
-		if ( next_cluster <= 0 ) {
-			dprintf(D_ALWAYS, "ExportJobs(): Ignoring invalid cluster id %s\n", next_cluster_str);
-			continue;
-		}
-#if 1
+	// verify that all of the jobs have the same owner and get the owner
+	//
+	for (auto it = clusters.begin(); it != clusters.end(); ++it) {
+		const int next_cluster = *it;
 		JobQueueCluster * jqc = GetClusterAd(next_cluster);
 		if ( ! jqc) {
 			dprintf(D_ALWAYS, "ExportJobs(): Ignoring missing cluster id %d\n", next_cluster);
@@ -17705,27 +17690,9 @@ Scheduler::ExportJobs(ClassAd & result, const char *cluster_ids, const char *out
 			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner->Name(), jqc->ownerinfo->Name());
 			return false;
 		}
-#else
-		std::string next_owner;
-		if ( GetAttributeString(next_cluster, -1, ATTR_OWNER, next_owner) < 0 ) {
-			dprintf(D_ALWAYS, "ExportJobs(): Ignoring missing cluster id %d\n", next_cluster);
-			continue;
-		}
-		if ( owner.empty() ) {
-			owner = next_owner;
-			GetAttributeString(next_cluster, -1, ATTR_NT_DOMAIN, domain);
-		} else if ( next_owner != owner ) {
-			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner.c_str(), next_owner.c_str());
-			return false;
-		}
-#endif
 		// TODO check for late materialization
 		// TODO check for spooled
 		// TODO check for active jobs (running, externally managed)
-		clusters.insert(next_cluster);
-		if ( next_cluster > max_cluster_id ) {
-			max_cluster_id = next_cluster + 1;
-		}
 	}
 	if ( clusters.empty() ) {
 		result.Assign("Reason", "No clusters to export");
@@ -17736,12 +17703,8 @@ Scheduler::ExportJobs(ClassAd & result, const char *cluster_ids, const char *out
 
 
 	TemporaryPrivSentry tps(true);
-#if 1
 	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
 	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc) ) {
-#else
-	if ( !init_user_ids(owner.c_str(), domain.c_str()) ) {
-#endif
 		result.Assign("Reason", "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
@@ -17751,40 +17714,99 @@ Scheduler::ExportJobs(ClassAd & result, const char *cluster_ids, const char *out
 	BeginTransaction();
 
 	// TODO make output_dir if it doesn't exist?
+	// TODO: truncate output job_queue.log if it is non-empty?
 
 	std::string queue_fname = output_dir;
 	dircat(output_dir, "job_queue.log", queue_fname);
 	GenericClassAdCollection<JobQueueKey, ClassAd*> export_queue(new ConstructClassAdLogTableEntry<ClassAd>(), queue_fname.c_str(), 0);
 
-	// TODO handle header ad
-	job_id.cluster = 0;
-	job_id.proc = 0;
-	export_queue.NewClassAd(job_id, JOB_ADTYPE, STARTD_ADTYPE);
+	// write the a header ad to the job queue
+	JobQueueKey hdr_id(0,0);
+	int tmp_int = 0;
+	export_queue.NewClassAd(hdr_id, JOB_ADTYPE, STARTD_ADTYPE);
 	if ( GetAttributeInt(0, 0, ATTR_NEXT_CLUSTER_NUM, &tmp_int) >= 0 ) {
 		std::string int_str = std::to_string(tmp_int);
-		export_queue.SetAttribute(job_id, ATTR_NEXT_CLUSTER_NUM, int_str.c_str());
+		export_queue.SetAttribute(hdr_id, ATTR_NEXT_CLUSTER_NUM, int_str.c_str());
 	}
 	if ( GetAttributeInt(0, 0, ATTR_NEXT_JOBSET_NUM, &tmp_int) >= 0 ) {
 		std::string int_str = std::to_string(tmp_int);
-		export_queue.SetAttribute(job_id, ATTR_NEXT_JOBSET_NUM, int_str.c_str());
+		export_queue.SetAttribute(hdr_id, ATTR_NEXT_JOBSET_NUM, int_str.c_str());
 	}
 
+#if 1 // alternate processing loop that will export jobs in cluster id order
+	int num_jobs = 0;
+	for (auto cid = clusters.begin(); cid != clusters.end(); ++cid) {
+		JobQueueCluster * jqc = GetClusterAd(*cid);
+		if ( ! jqc) continue;
+
+		// export the cluster classad, marking all of the jobs in the cluster as leave-in-queue
+		export_queue.NewClassAd(jqc->jid, JOB_ADTYPE, STARTD_ADTYPE);
+		for ( auto attr_itr = jqc->begin(); attr_itr != jqc->end(); attr_itr++ ) {
+			if (YourStringNoCase(ATTR_JOB_LEAVE_IN_QUEUE) == attr_itr->first.c_str()) {
+				// nothing
+			} else {
+				const char *val = ExprTreeToString(attr_itr->second);
+				export_queue.SetAttribute(jqc->jid, attr_itr->first.c_str(), val);
+			}
+		}
+		export_queue.SetAttribute(jqc->jid, ATTR_JOB_LEAVE_IN_QUEUE, "true");
+
+		if (jqc->factory) {
+			// TODO: move the submit digest and itemdata files
+			// and rewrite the path to the digest
+		}
+
+		// export all jobs in the cluster
+		for (JobQueueJob * job = jqc->FirstJob(); job != NULL; job = jqc->NextJob(job)) {
+			// skip jobs that are already externally managed.
+			if (jobExternallyManaged(job)) continue;
+
+			// TODO: skip jobs that aren't idle?
+
+			// add the job to the external queue
+			export_queue.NewClassAd(job->jid, JOB_ADTYPE, STARTD_ADTYPE);
+
+			// copy the job attributes to the external queue
+			for ( auto attr_itr = job->begin(); attr_itr != job->end(); attr_itr++ ) {
+				if (YourStringNoCase(ATTR_JOB_LEAVE_IN_QUEUE) == attr_itr->first.c_str()) {
+					// nothing
+				} else if (YourStringNoCase(ATTR_JOB_IWD) == attr_itr->first.c_str()) {
+					char *dir = gen_ckpt_name(ckpt_dir, job->jid.cluster, job->jid.proc, 0);
+					std::string val;
+					val = '"';
+					val += dir;
+					val += '"';
+					free(dir);
+					export_queue.SetAttribute(job->jid, ATTR_JOB_IWD, val.c_str());
+				} else {
+					const char *val = ExprTreeToString(attr_itr->second);
+					export_queue.SetAttribute(job->jid, attr_itr->first.c_str(), val);
+				}
+			}
+
+			// mark the job as externally managed in the local job queue
+			SetAttributeString(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+			SetAttributeString(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED_MANAGER, "Lumberjack");
+			++num_jobs;
+		}
+	}
+#else
 	JobQueueJob *src_ad = NULL;
 
 	int num_jobs = 0;
 	int init_scan = 1;
 	while ( (src_ad = GetNextJobOrClusterByConstraint(NULL, init_scan)) ) {
 		init_scan = 0;
-		job_id = src_ad->jid;
+		JobQueueKey job_id = src_ad->jid;
 		if ( clusters.find(job_id.cluster) == clusters.end() ) {
 			continue;
 		}
 
-		++num_jobs;
+		if (src_ad->IsJob()) { ++num_jobs; }
 		export_queue.NewClassAd(job_id, JOB_ADTYPE, STARTD_ADTYPE);
 
 		for ( auto attr_itr = src_ad->begin(); attr_itr != src_ad->end(); attr_itr++ ) {
-			if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_IWD) && job_id.proc >= 0 ) {
+			if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_IWD) && src_ad->IsJob() ) {
 				char *dir = gen_ckpt_name(ckpt_dir, job_id.cluster, job_id.proc, 0);
 				std::string val;
 				val = '"';
@@ -17799,17 +17821,22 @@ Scheduler::ExportJobs(ClassAd & result, const char *cluster_ids, const char *out
 				export_queue.SetAttribute(job_id, attr_itr->first.c_str(), val);
 			}
 		}
-		if ( job_id.cluster > 0 && job_id.proc == -1 ) {
+		if (src_ad->IsCluster()) {
 			export_queue.SetAttribute(job_id, ATTR_JOB_LEAVE_IN_QUEUE, "true");
 		}
 
-		if ( job_id.cluster > 0 && job_id.proc >= 0 ) {
+		if ( src_ad->IsJob() ) {
 			SetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
 			SetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_MANAGED_MANAGER, "Lumberjack");
 		}
 	}
+#endif
 
 	CommitTransactionOrDieTrying();
+
+	// flush changes, then close the log file
+	export_queue.FlushLog();
+	export_queue.StopLog();
 
 	result.Assign("Log", queue_fname);
 	result.Assign("User", jqc->ownerinfo->Name());
@@ -17839,8 +17866,9 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 
 	std::string export_list;    // list of cluster ids to export
 	std::string export_dir;     // where to write the exported job queue and other files
-	if (! reqAd.LookupString("ClusterIds", export_list) ||
-		! reqAd.LookupString("ExportDir", export_dir))
+	ExprTree * constr_expr = reqAd.Lookup("Constraint");
+	if ( ! reqAd.LookupString("ExportDir", export_dir) ||
+		( ! constr_expr && ! reqAd.LookupString("ClusterIds", export_list)))
 	{
 		resultAd.Assign("Reason", "Invalid arguments");
 		resultAd.Assign("Error", SCHEDD_ERR_MISSING_ARGUMENT);
@@ -17848,7 +17876,38 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 	else 
 	{
 		reqAd.LookupString("CkptDir", ckpt_dir); // the reqest ad *may* contain an override for the checkpoint directory
-		if ( ! ExportJobs(resultAd, export_list.c_str(), export_dir.c_str(), ckpt_dir.c_str())) {
+		std::set<int> clusters;
+		// we have a constrain expression, so we have to turn that into a set of cluster ids
+		if (constr_expr) {
+			schedd_runtime_probe runtime;
+			struct _cluster_ids_args {
+				std::set<int> * pids;
+				ExprTree * constraint;
+			} args = { &clusters, constr_expr };
+
+			// build up a set of cluster ids that match the constraint expression
+			WalkNonJobQueue3(
+				[](JobQueueJob *job, const JOB_ID_KEY & cid, void * pv) -> int {
+					struct _cluster_ids_args & args = *(struct _cluster_ids_args*)pv;
+					if (job->IsCluster()) {
+						if ( ! args.constraint || EvalExprBool(job, args.constraint)) {
+							args.pids->insert(cid.cluster);
+						}
+					}
+					return 0;
+				},
+				&args,
+				runtime);
+
+		} else {
+			// we have a string list of cluster ids
+			// build a set of cluster ids from the string of ids that was passed
+			StringTokenIterator sit(export_list);
+			for (const char * id = sit.first(); id != NULL; id = sit.next()) {
+				clusters.insert(atoi(id));
+			}
+		}
+		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), ckpt_dir.c_str())) {
 			resultAd.Assign("Error", SCHEDD_ERR_EXPORT_FAILED);
 		}
 	}
@@ -17875,6 +17934,8 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * job_log_file)
 
 	// Load the external job_log
 	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>(), job_log_file, 0);
+	// close the log file and disable changes
+	import_queue.StopLog();
 
 	std::set<int> clusters_found;
 

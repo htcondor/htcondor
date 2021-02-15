@@ -1711,6 +1711,7 @@ struct Schedd {
 
 	object exportJobs(object job_spec, std::string export_dir, std::string ckpt_dir)
 	{
+		std::string constraint;
 		StringList ids;
 		boost::python::extract<std::string> str_obj(job_spec);
 		bool use_ids = false;
@@ -1722,6 +1723,23 @@ struct Schedd {
 				ids.append(str.c_str());
 			}
 			use_ids = true;
+		} else {
+			bool is_number = false;
+			if (! convert_python_to_constraint(job_spec, constraint, true, &is_number)) {
+				THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+			}
+			// export does not allow empty or null constraint argument, so use "true" instead
+			if (constraint.empty()) { constraint = "true"; } else if (is_number) { // if the "constraint" string is really a number, treat it like a job id
+				extract<std::string> string_extract(job_spec);
+				if (string_extract.check()) {
+					constraint = string_extract();
+					JOB_ID_KEY jid;
+					if (jid.set(constraint.c_str())) {
+						ids.append(constraint.c_str());
+						use_ids = true;
+					}
+				}
+			}
 		}
 
 		DCSchedd schedd(m_addr.c_str());
@@ -1733,9 +1751,16 @@ struct Schedd {
 			const char * ckpt = ckpt_dir.empty() ? nullptr : ckpt_dir.c_str();
 			result = schedd.exportJobs(&ids, export_dir.c_str(), ckpt, &errstack);
 		} else {
-			// TODO: handle job spec that is a constraint expression.
+			condor::ModuleLock ml;
+			const char * ckpt = ckpt_dir.empty() ? nullptr : ckpt_dir.c_str();
+			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), ckpt, &errstack);
 		}
-		// TODO: throw if export fails (as indicated by no result ad or "Error" in the result ad)
+
+		if (errstack.code() > 0) {
+			THROW_EX(HTCondorIOError, errstack.getFullText(true).c_str());
+		} else if ( ! result) {
+			THROW_EX(HTCondorIOError, "No result ad");
+		}
 
 		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
 		if (result) { result_ptr->CopyFrom(*result); }

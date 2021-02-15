@@ -399,6 +399,25 @@ void JobQueueCluster::DetachAllJobs() {
 	}
 }
 
+JobQueueJob * JobQueueCluster::FirstJob() {
+	if (qe.empty()) return nullptr;
+	return qe.next()->as<JobQueueJob>();
+}
+
+JobQueueJob * JobQueueCluster::NextJob(JobQueueJob * job)
+{
+	if (! job || job->qe.empty()) return nullptr;
+	if (job->Cluster() != this) {
+		// TODO: assert here?
+		return nullptr;
+	}
+	job = job->qe.next()->as<JobQueueJob>();
+	// when we get to the end of the linked list, we hit the JobQueueCluster record again
+	if (job && job->IsCluster()) job = nullptr;
+	return job;
+}
+
+
 // This is where we can clean up any data structures that refer to the job object
 void
 ConstructClassAdLogTableEntry<JobQueueJob*>::Delete(ClassAd* &ad) const
@@ -7913,6 +7932,38 @@ WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 
 	in_walk_job_queue--;
 }
+
+// this function walks the job queue, but only looks at cluster & set records
+void WalkNonJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
+{
+	double begin = _condor_debug_get_time_double();
+
+	if( in_walk_job_queue ) {
+		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
+		dprintf_dump_stack();
+	}
+
+	in_walk_job_queue++;
+
+	JobQueue->StartIterateAllClassAds();
+
+	JobQueueKey key;
+	JobQueueJob * job;
+	while(JobQueue->Iterate(key, job)) {
+		if (key.cluster > 0 && key.proc >= 0) // ignore proc ads
+			continue;
+		int rval = func(job, key, pv);
+		if (rval < 0)
+			break;
+	}
+
+	double runtime = _condor_debug_get_time_double() - begin;
+	ftm += runtime;
+	WalkJobQ_runtime += runtime;
+
+	in_walk_job_queue--;
+}
+
 
 
 int dump_job_q_stats(int cat)

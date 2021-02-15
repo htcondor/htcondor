@@ -133,6 +133,9 @@ public:
 	void AppendLog(LogRecord *log);	// perform a log operation
 	bool TruncLog();				// clean log file on disk
 
+	// close the log file and discard any unwritten transactions, disable future changes
+	void StopLog();
+
 	void BeginTransaction();
 	bool AbortTransaction();
 	void CommitTransaction(const char * comment = NULL);
@@ -652,6 +655,17 @@ ClassAdLog<K,AD>::TruncLog()
 	}
 
 	return rotated;
+}
+
+template <typename K, typename AD>
+void
+ClassAdLog<K,AD>::StopLog()
+{
+	AbortTransaction();
+	if (log_fp) {
+		fclose(log_fp);
+		log_fp = NULL;
+	}
 }
 
 template <typename K, typename AD>

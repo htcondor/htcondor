@@ -170,6 +170,12 @@ public:
   */
   bool TruncLog() { return ClassAdLog<K,AD>::TruncLog(); }
 
+  /** Close the log file, discarding any changes that have not yet been written.
+      On return from this function, the transaction log will be closed and
+      changes to the ad collection will no longer be allowed
+  */
+  void StopLog() { return ClassAdLog<K,AD>::StopLog(); }
+
   void SetMaxHistoricalLogs(int max) { ClassAdLog<K,AD>::SetMaxHistoricalLogs(max); }
   int GetMaxHistoricalLogs() { return ClassAdLog<K,AD>::GetMaxHistoricalLogs(); }
 
