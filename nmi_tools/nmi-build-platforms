@@ -1,8 +1,8 @@
 # One platform per line. Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-08091100
-docker://htcondor/nmi-zdev:x86_64_CentOS7-08091000
+docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-08091101
+docker://htcondor/nmi-zdev:x86_64_CentOS7-08091101
 docker://htcondor/nmi-zdev:x86_64_CentOS8-08091101
 docker://htcondor/nmi-zdev:x86_64_Debian9-08091100
 docker://htcondor/nmi-zdev:x86_64_Debian10-08091100

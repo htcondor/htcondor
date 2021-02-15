@@ -217,6 +217,11 @@ BuildRequires: libtool-ltdl-devel
 BuildRequires: libcgroup-devel
 Requires: libcgroup
 
+%if 0%{?rhel} == 7
+BuildRequires: which
+BuildRequires: devtoolset-9-toolchain
+%endif
+
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 %ifarch x86_64
 BuildRequires: python36-devel
@@ -703,6 +708,12 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 
 %build
+
+%if 0%{?rhel} == 7
+. /opt/rh/devtoolset-9/enable
+export CC=$(which cc)
+export CXX=$(which c++)
+%endif
 
 # build man files
 make -C docs man
