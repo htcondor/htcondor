@@ -217,7 +217,7 @@ BuildRequires: libtool-ltdl-devel
 BuildRequires: libcgroup-devel
 Requires: libcgroup
 
-%if 0%{?rhel} == 7
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 BuildRequires: which
 BuildRequires: devtoolset-9-toolchain
 %endif
@@ -709,7 +709,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-%if 0%{?rhel} == 7
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
 . /opt/rh/devtoolset-9/enable
 export CC=$(which cc)
 export CXX=$(which c++)
