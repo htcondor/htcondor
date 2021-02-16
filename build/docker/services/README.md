@@ -1,3 +1,5 @@
+# TODO UPDATE SECTION ON SECRETS
+
 HTCondor Containers
 ===================
 
@@ -276,41 +278,40 @@ submituser@container$ condor_submit job.sub
 Building
 --------
 
-The images are built using a Makefile.  You need to be `root` or be in the
-`docker` Unix group in order to use the Makefile.
+The images are built and pushed using the `build-images` script.
 
-The Makefile needs to know what version of HTCondor the images are built for,
-in order to tag them properly.  The images for the various roles (`execute`,
-`cm`, `mini`, `submit`) are built on top of the `htcondor/base` image,
-which gets built first.  `htcondor/base` contains the HTCondor software,
-some common configuration and scripts.
 
-To build all the images, run:
+The images for the various roles (`execute`, `cm`, `mini`, `submit`) are built
+on top of the `htcondor/base` image, which gets built first.  `htcondor/base`
+contains the HTCondor software, some common configuration and scripts.
+
+To build (but not push) a complete set of images for the latest version on the default Linux distribution, run:
 ```console
-$ make build VERSION=8.9.5
+$ ./build-images
 ```
 
-The images will be named like `htcondor/execute:8.9.5-el7`.  To create
-versionless aliases for the built products (e.g. `htcondor/execute:el7`),
-pass `UNVERSIONED=yes` to `make`.
-
-
-To push the images to Docker Hub, run:
+Alternatively, you can build images for a specific version with
 ```console
-$ make push VERSION=8.9.5
+$ ./build-images --version=<VERSION>
+```
+(where `<VERSION>` is an HTCondor version number, like `8.9.11`).
+
+You can build daily images with
+```console
+$ ./build-images --version=daily
 ```
 
-To push to an alternate registry, set the `REGISTRY` parameter to the
-registry you want to push to:
+Build for different distributions with the `--distro` argument:
 ```console
-$ make push VERSION=8.9.5 REGISTRY=registry.example.net
+$ ./build-images --distro=el8
 ```
 
-To push the versionless tags for the images, pass `UNVERSIONED=yes` to
-`make`.
+Push the results with `--push`; you can optionally specify a different registry with `--registry`:
+```console
+$ ./build-images --push --registry=registry.example.net
+```
 
-See `make help` for additional targets and options.
-
+Run build-images with `--help` to see additional options and defaults.
 
 
 Known Issues
@@ -326,7 +327,5 @@ Known Issues
   `/update-secrets` in the container.
 
 - cgroups support is not yet implemented.
-
-- Docker universe support is not yet implemented.
 
 - Singularity support is not yet implemented.
