@@ -62,6 +62,11 @@ New Features:
   This feature does not include reporting the utilization of MIG instances.
   :jira:`137`
 
+- To make the debugging logs more consistent, the slot name is always
+  appended to the StarterLog.  Previously, a single slot startd's 
+  StarterLog would have no suffix.  Now it will be called StarterLog.slot1.
+  :jira:`178`
+  
 - Added command-line options to *condor_gpu_discovery* to report GPUs
   multiple times.  If your GPU jobs are small and known to be well-behaved,
   this makes it easier for them to share a GPU.
