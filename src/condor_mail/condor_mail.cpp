@@ -169,6 +169,7 @@ int main(array<String^>^ args) {
         NetworkCredential^ credentials     = FindCredentials(relay);
         if (credentials) {
             client->EnableSsl   = true;
+            client->Port        = 587;
             client->Credentials = credentials;
         }
         msg->From = gcnew MailAddress(from);
