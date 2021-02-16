@@ -23,10 +23,6 @@ condor_make_homedir() {
             echo "HTCondor's configuration doesn't define $dlabel. This might be an indication of a problem."
         fi
     done
-    # why should this be world writable?
-    #for dlabel in EXECUTE; do
-    #	chmod 1777 $(condor_config_val $dlabel)
-    #done
 }
 
 

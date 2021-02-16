@@ -245,7 +245,13 @@ bool abort_pid_watcher_threads = false;
 
 DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: m_create_family_session(true),
+	: m_use_udp_for_dc_signals(false),
+#ifdef WIN32
+	m_never_use_kill_for_dc_signals(true),
+#else
+	m_never_use_kill_for_dc_signals(false),
+#endif
+	m_create_family_session(true),
 	comTable(32),
 	sigTable(10),
 	reapTable(4),
@@ -396,6 +402,13 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 		m_wants_dc_udp_self = false;
 	}
 	m_invalidate_sessions_via_tcp = true;
+	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
+#ifdef WIN32
+	m_never_use_kill_for_dc_signals = true;
+#else
+	m_never_use_kill_for_dc_signals = param_boolean("NEVER_USE_KILL_FOR_DC_SIGNALS", false);
+#endif
+
 	super_dc_rsock = NULL;
 	super_dc_ssock = NULL;
 	m_super_dc_port = -1;
@@ -3080,6 +3093,13 @@ DaemonCore::reconfig(void) {
 
 	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
 
+	// DaemonCore::Send_Signal behaviors
+	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
+#ifdef WIN32
+#else
+	m_never_use_kill_for_dc_signals = param_boolean("NEVER_USE_KILL_FOR_DC_SIGNALS", false);
+#endif
+
 		// FAKE_CREATE_THREAD is an undocumented config knob which turns
 		// Create_Thread() into a simple function call in the main process,
 		// rather than a thread/fork.
@@ -4954,7 +4974,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 			else if( target_has_dcpm == FALSE ) {
 				use_kill = true;
 			}
-			else if( target_has_dcpm == TRUE &&
+			else if( target_has_dcpm == TRUE && ! m_never_use_kill_for_dc_signals &&
 			         (sig == SIGUSR1 || sig == SIGUSR2 || sig == SIGQUIT ||
 			          sig == SIGTERM || sig == SIGHUP) )
 			{
@@ -5066,7 +5086,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 
 	// now destination process is local, send via UDP; if remote, send via TCP
 	bool is_udp = false;
-	if ( is_local == TRUE && d->hasUDPCommandPort()) {
+	if (is_local && m_use_udp_for_dc_signals && d->hasUDPCommandPort()) {
 		msg->setStreamType(Stream::safe_sock);
 		if( !nonblocking ) msg->setTimeout(3);
 		is_udp = true;

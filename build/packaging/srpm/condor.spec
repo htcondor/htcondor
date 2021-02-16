@@ -864,7 +864,7 @@ populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{versio
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
-mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
+mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/execute
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/krb_credentials
 mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
