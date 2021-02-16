@@ -187,36 +187,23 @@ org.htcondor.version="%s"
             check=True,
         )
 
-    def dockerfile_name(self, distro: str) -> str:
-        if distro.startswith("el"):
-            if self.want_daily:
-                return "Dockerfile-daily-el"
-            else:
-                return "Dockerfile-el"
-        elif distro.startswith("ubu"):
-            if self.want_daily:
-                return "Dockerfile-daily-ubu"
-            else:
-                return "Dockerfile-ubu"
-        else:
-            assert False, "not one of the supported distros -- should have been caught"
-
     def build_base(self, distro: str) -> List[str]:
-        args = [f"--build-arg=BUILDDATE={today()}"]
-        if self.want_latest_version or self.want_daily:
-            args.append(f"--build-arg=SERIES={self.series}")
+        args = []
+        if self.want_latest_version:
+            args.extend([f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=latest"])
+        elif self.want_daily:
+            args.extend([f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=daily"])
         else:
             args.append(f"--build-arg=VERSION={self.version}")
 
         if distro.startswith("el"):
-            args.append(f"--build-arg=EL={distro[2:]}")
+            args.append(f"--build-arg=BASE_IMAGE=centos:{distro[2:]}")
         elif distro.startswith("ubu"):
-            args.append(f"--build-arg=UBU={distro[3:]}")
+            args.append(f"--build-arg=BASE_IMAGE=ubuntu:{distro[3:]}")
         else:
             assert False, "not one of the supported distros -- should have been caught"
-        dockerfile = self.dockerfile_name(distro)
         tmp_image_name = f"{self.prefix}base:tmp{random.randint(10000,99999)}"
-        args.extend(["-t", tmp_image_name, "-f", f"base/{dockerfile}", "."])
+        args.extend(["-t", tmp_image_name, "-f", f"base/Dockerfile", "base"])
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
 
@@ -251,33 +238,19 @@ org.htcondor.version="%s"
     def build_derived(
         self, image: str, baseimages: List[str], distro: str
     ) -> List[str]:
-        basetags = []
-        for img in baseimages:
-            if ":" in img:
-                basetags.append(img.split(":", 1)[1])
-            else:
-                basetags.append(img)
+        new_tags = [re.sub(r"base:", image + ":", x) for x in baseimages]
 
-        args = [
-            f"--build-arg=BASETAG={basetags[0]}",
-            f"--build-arg=BUILDDATE={today()}",
-            f"--build-arg=PREFIX={self.prefix}",
-        ]
-        if distro.startswith("el"):
-            args.append(f"--build-arg=EL={distro[2:]}")
-        elif distro.startswith("ubu"):
-            args.append(f"--build-arg=UBU={distro[3:]}")
-        else:
-            assert False, "not one of the supported distros -- should have been caught"
-        dockerfile = self.dockerfile_name(distro)
+        args = [f"--build-arg=BASE_IMAGE={baseimages[0]}"]
+        if image == "execute":
+            args.append(f"--build-arg=PACKAGE_LIST=packagelist-{distro}.txt")
 
-        for basetag in basetags:
-            args.extend(["-t", f"{self.prefix}{image}:{basetag}"])
-        args.extend(["-f", f"{image}/{dockerfile}", "."])
+        for new_tag in new_tags:
+            args.extend(["-t", new_tag])
+        args.extend(["-f", f"{image}/Dockerfile", image])
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
 
-        return [f"{self.prefix}{image}:{basetag}" for basetag in basetags]
+        return new_tags
 
     def push_image(self, image, registry):
         if self.executable == "podman" or registry != "docker.io":
