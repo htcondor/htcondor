@@ -1772,17 +1772,21 @@ create_dirs_at_master_startup()
         s= g;
     }
 
+	// Note: until such time that we create the parent directories, 
+	// be aware that the order of the below list is significant.  For instance,
+	// we will create LOCAL_DIR before we create subdirectories typically
+	// found in LOCAL_DIR like EXECUTE and SPOOL.
     std::vector<required_directories_t> required_directories {
         { "SEC_PASSWORD_DIRECTORY",         r, s, 00700 },
         { "SEC_TOKEN_SYSTEM_DIRECTORY",     r, s, 00700 },
         { "LOCAL_DIR",                      u, g, 00755 },
-        { "EXECUTE",                        u, g, 01777 },
+        { "EXECUTE",                        u, g, 00755 },
         { "SEC_CREDENTIAL_DIRECTORY_KRB",   r, s, 00755 },
         { "SEC_CREDENTIAL_DIRECTORY_OAUTH", r, g, 02770 },
         { "SPOOL",                          u, g, 00755 },
-        { "LOCAL_UNIV_EXECUTE",             u, g, 01777 },
+        { "LOCAL_UNIV_EXECUTE",             u, g, 00755 },
         { "LOCK",                           u, g, 00755 },
-        { "LOCAL_DISK_LOCK_DIR",            u, g, 01777 },
+        { "LOCAL_DISK_LOCK_DIR",            u, g, 01777 },  // typically never defined
         { "LOG",                            u, g, 00755 },
         { "RUN",                            u, g, 00755 }
     };
@@ -1792,7 +1796,12 @@ create_dirs_at_master_startup()
         std::string name;
         param( name, dir.param );
         // fprintf( stderr, "%s (%s) %u %u %o\n", dir.param, name.c_str(), dir.uid, dir.gid, dir.mode );
+		if( name.empty() ) {
+			continue;
+		}
+		TemporaryPrivSentry tps(PRIV_ROOT);
         if( stat( name.c_str(), &sbuf ) != 0 && errno == ENOENT ) {
+			// TODO: should we be calling mkdir_and_parents_if_neeed() instead of mkdir() ?
             if( mkdir( name.c_str(), dir.mode ) == 0 ) {
                 dummyGlobal = chown( name.c_str(), dir.uid, dir.gid );
                 dummyGlobal = chmod( name.c_str(), dir.mode ); // Override umask
