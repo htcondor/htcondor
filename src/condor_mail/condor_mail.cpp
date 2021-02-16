@@ -170,7 +170,6 @@ int main(array<String^>^ args) {
         if (credentials) {
             client->EnableSsl   = true;
             client->Credentials = credentials;
-            from                = credentials->UserName;
         }
         msg->From = gcnew MailAddress(from);
         msg->Subject = subject;
