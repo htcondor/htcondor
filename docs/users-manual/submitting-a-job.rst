@@ -335,6 +335,29 @@ file.
      and when the job is matched to a machine, condor will evaluate
      this expression in the context of both the job and machine ad
 
+``$(ARCH)``
+    The Architecture that HTCondor is running on, or the ARCH variable
+    in the config file.  Example might be X86_64.
+
+``$(OPSYS)``
+``$(OPSYSVER)``
+``$(OPSYSANDVER)``
+``$(OPSYSMAJORVER)``
+    These submit file macros are availle at submit time, and mimic
+    the classad attributes of the same names.:x
+ 
+``$(SUBMIT_FILE)``
+    The name of the submit_file as passed to the ``condor_submit`` command.
+ 
+``$(SUBMIT_TIME)``
+    The Unix epoch time submit was run.  Note, this may be useful for
+    naming output files.
+
+``$(Year)``
+``$(Month)``
+``$(Day)``
+    These integer values are derived from the `$(SUBMIT_FILE)` macro above.
+   
 ``$(Item)``
     The default name of the variable when no ``<varname>`` is provided
     in a **queue** command.
