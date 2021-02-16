@@ -27,7 +27,7 @@ SUPPORTED_DAILY_DISTROS = [
 # fmt:on
 
 
-IMAGES = ["execute", "submit", "cm"]
+IMAGES = ["execute", "submit", "cm", "mini"]
 LATEST_SERIES = "8.9"
 # ^^ TODO Gotta be a better way of doing this
 
@@ -297,16 +297,18 @@ def main(argv) -> int:
     parser.add_argument(
         "--push", action="store_true", dest="push", help="Push resulting builds"
     )
-    # parser.add_argument("--nopush", action="store_false", dest="push", help="Do not push resulting builds")
+    # parser.add_argument("--no-push", action="store_false", dest="push", help="Do not push resulting builds")
     parser.add_argument(
         "--repo",
         help="Repository to push to (default %(default)s).",
         default=DEFAULT_REPO,
     )
+    # parser.add_argument(
+    #     "--mini", action="store_true", dest="mini", help="Build minicondor"
+    # )
     parser.add_argument(
-        "--mini", action="store_true", dest="mini", help="Build minicondor"
+        "--no-mini", action="store_false", dest="mini", help="Do not build minicondor"
     )
-    # parser.add_argument("--nomini", action="store_false", dest="mini", help="Do not build minicondor")
     parser.add_argument("--podman", action="store_true", help="Use podman")
     parser.add_argument(
         "--base-only", action="store_true", help="Build htcondor/base only"
@@ -333,8 +335,8 @@ def main(argv) -> int:
         parser.error(f"Invalid prefix '{args.prefix}'")
 
     images = IMAGES
-    if args.mini:
-        images += ["mini"]
+    if not args.mini:
+        images.remove("mini")
 
     if args.distro == "all":
         if args.version == "daily":
