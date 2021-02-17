@@ -7138,7 +7138,7 @@ static bool test_random_different() {
 	classad.LookupInteger("A1", expect);
 	for(i = 0; i < 10; i++) {
 		classad.LookupInteger("A1", actual);
-		different_numbers = (actual != expect);
+		different_numbers |= (actual != expect);
 	}
 	emit_input_header();
 	emit_param("ClassAd", classad_string);

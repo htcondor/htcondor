@@ -48,11 +48,10 @@
 #include <netinet/in.h>
 #endif
 
-#ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
 #include "condor_crypt_3des.h"
+#include "condor_crypt_aesgcm.h"
 #include "condor_md.h"                // Message authentication stuff
-#endif
 
 #if !defined(WIN32)
 #define closesocket close
@@ -2088,12 +2087,37 @@ char * Sock::serializeCryptoInfo() const
     char * outbuf = NULL;
     if (len > 0) {
         int buflen = len*2+32;
+	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
+		// grow the buffer to hold the StreamCryptoState data
+		buflen += (3 * sizeof(StreamCryptoState));
+	}
         outbuf = new char[buflen];
+
         sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
                 (int)get_encryption());
 
+	// if protocol is 3 (AES) then we need to send the StreamCryptoState
+	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
+		dprintf(D_NETWORK|D_VERBOSE, "SOCK: sending more StreamCryptoState!.\n");
+		// this is daemon-to-daemon inheritance so no need to worry
+		// about byte-order.  furthermore there are no pointers, just a
+		// struct with data.  we send hex bytes, receiver serializes
+		// them.
+
+		char * ptr = outbuf + strlen(outbuf);
+		unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
+		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %lu bytes.\n", sizeof(StreamCryptoState));
+		for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++, ptr+=2) {
+			sprintf(ptr, "%02X", *ccs_serial);
+		}
+
+		sprintf(ptr, "*");
+		ptr++;
+	}
+	dprintf(D_NETWORK|D_VERBOSE, "SOCK: buf so far: %s.\n", outbuf);
+
         // Hex encode the binary key
-        char * ptr = outbuf + strlen(outbuf);
+        char *ptr = outbuf + strlen(outbuf);
         for (int i=0; i < len; i++, kserial++, ptr+=2) {
             sprintf(ptr, "%02X", *kserial);
         }
@@ -2150,8 +2174,12 @@ const char * Sock::serializeCryptoInfo(const char * buf)
     ASSERT(ptmp);
 
     // NOTE:
+    // for BLOWFISH and 3DES:
     // currently we are not serializing the ivec.  this works because the
     // crypto state (including ivec) is reset to zero after inheriting.
+    //
+    // for AEES:
+    // we do serialize the ivec along with other state contained in the StreamCryptoState
 
     int citems = sscanf(ptmp, "%d*", &encoded_len);
     if ( citems == 1 && encoded_len > 0 ) {
@@ -2177,21 +2205,59 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         ASSERT( ptmp && citems == 1 );
         ptmp++;
 
+	dprintf(D_NETWORK|D_VERBOSE, "SOCK: CRYPTO: read so far: p: %i, m: %i.\n", protocol, encryption_mode);
+
+	// if protocol is 3 (AES) then we expect to receive the following additional (the StreamCryptoState object)
+	StreamCryptoState scs;
+	if(protocol == CONDOR_AESGCM) {
+		unsigned int hex;
+		dprintf(D_NETWORK|D_VERBOSE, "SOCK: receiving more StreamCryptoState: %s\n", ptmp);
+		// this is daemon-to-daemon inheritance so no need to worry
+		// about byte-order.  furthermore there are no points, just a
+		// struct with data.  sender dumps hex bytes, we serialize
+		// them.
+		char* ptr = (char*)(&scs);
+		for (unsigned int i = 0; i < sizeof(StreamCryptoState); i++) {
+			citems = sscanf(ptmp, "%2X", &hex);
+			if (citems != 1) break;
+			*ptr = (unsigned char)hex;
+			ptmp += 2;  // since we just consumed 2 bytes of hex
+			ptr++;      // since we just stored a single byte of binary
+		}
+		// "EOM" check
+		ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp && citems == 1 );
+		ptmp++;
+	}
+
+	dprintf(D_NETWORK|D_VERBOSE, "SOCK: len is %i, remaining sock info: %s\n", len, ptmp);
+
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
             citems = sscanf(ptmp, "%2X", &hex);
-			if (citems != 1) break;
+            if (citems != 1) break;
+
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
         }        
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
+        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0);
+
         set_crypto_key(encryption_mode==1, &k, 0);
         free(kserial);
+
+        // now that we have set crypto state and have a crypto object, replace the AES
+        // StreamCryptoState with what we deserialized above.
+        dprintf(D_NETWORK|D_VERBOSE, "SOCK: protocol is %i, crypto_ is %p, crypto_state_ is %p.\n", protocol, crypto_, crypto_state_);
+        if(protocol == CONDOR_AESGCM) {
+            dprintf(D_NETWORK|D_VERBOSE, "SOCK: MEMCPY to %p from %p size %lu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+            memcpy(&(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+        }
+
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
         ptmp++;
@@ -2238,7 +2304,7 @@ const char * Sock::serializeMdInfo(const char * buf)
         }        
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kmd, len);
+        KeyInfo k((unsigned char *)kmd, len, CONDOR_NO_PROTOCOL, 0);
         set_MD_mode(MD_ALWAYS_ON, &k, 0);
         free(kmd);
 		ASSERT( *ptmp == '*' );
@@ -2826,6 +2892,9 @@ void Sock::resetCrypto()
 #ifdef HAVE_EXT_OPENSSL
   if (crypto_state_) {
     crypto_state_->reset();
+    if (crypto_state_->getkey().getProtocol() == CONDOR_AESGCM) {
+        Condor_Crypt_AESGCM::initState(&(crypto_state_->m_stream_crypto_state));
+    }
   }
 #endif
 }
@@ -2843,7 +2912,6 @@ Sock::initialize_crypto(KeyInfo * key)
     if (key) {
         switch (key->getProtocol()) 
         {
-#ifdef HAVE_EXT_OPENSSL
         case CONDOR_BLOWFISH :
 			setCryptoMethodUsed("BLOWFISH");
             crypto_ = new Condor_Crypt_Blowfish();
@@ -2852,7 +2920,12 @@ Sock::initialize_crypto(KeyInfo * key)
 			setCryptoMethodUsed("3DES");
             crypto_ = new Condor_Crypt_3des();
             break;
-#endif
+        case CONDOR_AESGCM:
+			setCryptoMethodUsed("AES");
+            set_MD_mode(MD_OFF);
+            crypto_ = new Condor_Crypt_AESGCM();
+                // AES-GCM is incompatible with MD mode.
+            break;
         default:
             break;
         }
@@ -2868,6 +2941,10 @@ Sock::initialize_crypto(KeyInfo * key)
 
 bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 {
+    if (mode != MD_OFF && crypto_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+        set_MD_mode(MD_OFF);
+    }
+
     mdMode_ = mode;
     delete mdKey_;
     mdKey_ = 0;
@@ -2909,6 +2986,16 @@ Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 
     if (key != 0) {
         inited = initialize_crypto(key);
+        // In AES-GCM mode, we can't support sub-message encryption like
+        // was done for Blowfish or 3DES.  Since the receiver has to know
+        // a priori whether the message may have a secret (impossible in the
+        // current API, would add a lot of complexity) *AND* we want to have
+        // encryption on all the time anyway, we made the decision to have
+        // encryption be enabled unilaterally if an AES-GCM key is available.
+        //
+        // This raises the possibility of ripping out the various complex encryption
+        // and integrity negotiation in the future.
+        enable |= (key->getProtocol() == CONDOR_AESGCM);
     }
     else {
         // We are turning encryption off

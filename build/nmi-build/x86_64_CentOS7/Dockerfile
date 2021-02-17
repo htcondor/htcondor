@@ -211,14 +211,8 @@ RUN mkdir -p /usr/local/condor/etc/examples && \
 RUN yum install -y \
     epel-release \
     centos-release-scl \
-    wget \
+    https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm \
     && yum clean all
-
-# Add HTCondor repository
-RUN wget https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor && \
-    rpm --import RPM-GPG-KEY-HTCondor && \
-    cd /etc/yum.repos.d && \
-    wget https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-stable-rhel7.repo
 
 # Need HTCondor to build and test HTCondor (BaTLab style)
 RUN yum install -y \

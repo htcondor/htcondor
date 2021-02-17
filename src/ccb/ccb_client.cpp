@@ -426,6 +426,7 @@ CCBClient::AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::s
 			m_target_sock->default_peer_description(),
 			m_target_peer_description.c_str());
 
+	static_cast<ReliSock*>(m_target_sock)->resetHeaderMD();
 	m_target_sock->isClient(true);
 	return true;
 }

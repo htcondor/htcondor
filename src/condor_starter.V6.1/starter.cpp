@@ -663,7 +663,7 @@ Starter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 			fqu.c_str(),
 			NULL,
 			0,
-			nullptr );
+			nullptr, true );
 	}
 	if( rc ) {
 			// get the final session parameters that were chosen

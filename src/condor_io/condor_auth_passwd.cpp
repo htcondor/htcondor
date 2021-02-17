@@ -185,12 +185,11 @@ findTokens(const std::string &issuer,
 		return true;
 	}
 
-	auto subsys = get_mySubSystem();
-
 		// If we are supposed to retrieve a token on behalf of a user, then
 		// owner will be set and we will use PRIV_USER.  In all other cases,
-		// if we are a daemon we should read the token as PRIV_CONDOR.
+		// if we are a daemon we should read the token as PRIV_ROOT.
 	TemporaryPrivSentry tps( !owner.empty() );
+	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
 			dprintf(D_FAILURE, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
@@ -198,7 +197,7 @@ findTokens(const std::string &issuer,
 		}
 		set_user_priv();
 	} else if (subsys->isDaemon()) {
-		set_priv(PRIV_CONDOR);
+		set_priv(PRIV_ROOT);
 	}
 
 	// Note we reuse the exclude regexp from the configuration subsys.
@@ -703,7 +702,7 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 	}
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
-	KeyInfo thekey(key,keylen,CONDOR_3DES);
+	KeyInfo thekey(key, keylen, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
 	if ( m_crypto ) {
 		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
@@ -2920,7 +2919,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
-	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
+	KeyInfo thekey(key, (int)key_len, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
 	if ( m_crypto ) {
 		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
@@ -2930,7 +2929,6 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 			m_crypto = NULL;
 		}
 	}
-
 	if ( key ) free(key);	// KeyInfo makes a copy of the key
 
 	return m_crypto ? true : false;
@@ -3029,6 +3027,8 @@ Condor_Auth_Passwd::should_try_auth()
 	CondorError err;
 	if (listNamedCredentials(creds, &err)) {
 		has_named_creds = !creds.empty();
+	} else {
+		dprintf(D_SECURITY, "Failed to determine available named credentials: %s\n", err.getFullText().c_str());
 	}
 	if (has_named_creds) {
 		dprintf(D_SECURITY|D_FULLDEBUG,

@@ -1010,7 +1010,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             // Now, unwrap it.  
             if ( authenticator_ && authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
 					// Success
-				key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
+				key = new KeyInfo((unsigned char *)decryptedKey, keyLength, (Protocol)protocol, duration);
 			} else {
 					// Failure!
 				retval = 0;

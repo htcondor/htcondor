@@ -38,13 +38,17 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 		printf("%s\n", token.c_str());
 		return 0;
 	}
+
 	TemporaryPrivSentry tps( !owner.empty() );
+	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
 			dprintf(D_FAILURE, "write_out_token(%s): Failed to switch to user priv\n", owner.c_str());
 			return 0;
 		}
 		set_user_priv();
+	} else if (subsys->isDaemon()) {
+		set_priv(PRIV_ROOT);
 	}
 
 	std::string dirpath;
@@ -63,7 +67,10 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 	}
 	mkdir_and_parents_if_needed(dirpath.c_str(), 0700);
 
-	std::string token_file = dirpath + DIR_DELIM_CHAR + token_name;
+	// Use condor_basename on the token_name to avoid any '../../' issues; since
+	// we may be writing out a token as root, we want to be certain we are writing it
+	// in the dirpath we got out of the condor_config configuration.
+	std::string token_file = dirpath + DIR_DELIM_CHAR + condor_basename( token_name.c_str() );
     int fd = safe_create_keep_if_exists(token_file.c_str(),
         O_CREAT | O_APPEND | O_WRONLY, 0600);
 	if (-1 == fd) {
