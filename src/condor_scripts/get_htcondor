@@ -271,8 +271,6 @@ do_token_security() {
 
 	# Now issue myself a token.
 	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
-	# The requirement for this line is a bug.
-	$sh_c "chown condor.condor /etc/condor/tokens.d/condor@${CONDOR_HOST}"
 }
 
 do_install() {
@@ -434,9 +432,9 @@ do_install() {
 
 			echo -e "\n$ Installing HTCondor"
 			if [ -z "${ROLE}" ]; then
-				$sh_c "yum install -y minicondor"
+				$sh_c "yum install ${YUM_REPO} -y minicondor"
 			else
-				$sh_c "yum install -y condor"
+				$sh_c "yum install ${YUM_REPO} -y condor"
 			fi
 			)
 			;;
@@ -456,73 +454,29 @@ do_install() {
 			;;
 	esac
 
-	# IDTOKENS must be before FS because FS can be used for local
-	# daemon-to-daemon communication, but it will authenticate as
-	# condor@<local host name>, not condor@<trust domain>.
-	SECURITY_CONFIG=$(cat <<-EOF
-		# Which pool is this?
-		CONDOR_HOST = ${CONDOR_HOST}
-
-		# Strong security means that all connections are authenticated,
-		# encrypted, and checked for integrity.
-		use security : strong
-
-		# Enable IDTOKENS (for daemons), FS (for local users),
-		# and ANONYMOUS (for remote users).  Remote users who want to submit
-		# jobs remotely should run condor_token_fetch on the submit node
-		# and copy the result to the machine they are submitting from
-		# (to a new file in ~/.condor/tokens.d).
-		SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
-
-		# Machines must share a pair of values -- their password (signing key)
-		# and their trust domain (issuer) -- to accept tokens from each other.
-		TRUST_DOMAIN = \$(CONDOR_HOST)
-
-		# Allow anyone to read.  In this configuration, users can only
-		# securely identify themselves to HTCondor if they are on the same
-		# machine, so this is needed to make condor_status work.
-		ALLOW_READ = *
-
-		# The HTCondor daemons only accept non-read connections from another
-		# daemon with access to the token stored in /etc/condor/tokens.d,
-		# which is readable only by root the condor user.
-		ALLOW_ADMINISTRATOR = condor@\$(TRUST_DOMAIN)
-		ALLOW_OWNER = condor@\$(TRUST_DOMAIN)
-		ALLOW_WRITE = condor@\$(TRUST_DOMAIN)
-		ALLOW_DAEMON = condor@\$(TRUST_DOMAIN)
-		ALLOW_NEGOTIATOR = condor@\$(TRUST_DOMAIN)
-
-		# Role-specific config
-	EOF
-	)
-
 	# Configure the role, if any.
 	echo -e "\n# Configuring role, if any ..."
 	case "${ROLE}" in
 		"central manager")
 			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
-			$sh_c "echo '${SECURITY_CONFIG}' > ${CONFIG_FILE}"
-
-			$sh_c "echo 'use role : CentralManager' >> ${CONFIG_FILE}"
+			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo 'use role : get_htcondor_central_manager' >> ${CONFIG_FILE}"
 
 			do_token_security
 			;;
 
 		"submit")
 			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
-			$sh_c "echo '${SECURITY_CONFIG}' > ${CONFIG_FILE}"
-
-			$sh_c "echo 'use role : submit' >> ${CONFIG_FILE}"
-			$sh_c "echo 'ALLOW_WRITE = \$(ALLOW_WRITE) *@\$(HOSTNAME)' >> ${CONFIG_FILE}"
+			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
 
 			do_token_security
 			;;
 
 		"execute")
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
-			$sh_c "echo '${SECURITY_CONFIG}' > ${CONFIG_FILE}"
-
-			$sh_c "echo 'use role : execute' >> ${CONFIG_FILE}"
+			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
 
 			do_token_security
 			;;
@@ -606,20 +560,20 @@ while [ $# -gt 0 ]; do
 		--password)
 			PASSWORD=$2
 			if [ -z "${PASSWORD}" ]; then
-					echo "--password requires an argument"
-					exit 1
+				echo "--password requires an argument"
+				exit 1
 			fi
 			shift
 			;;
 		--minicondor)
-		    unset ROLE
-		    ;;
+			unset ROLE
+			;;
 		--central-manager)
 			ROLE="central manager"
 			CONDOR_HOST=$2
 			if [ -z "${CONDOR_HOST}" ]; then
-					echo "--central-manager requires its external name as an argument"
-					exit 1
+				echo "--central-manager requires its external name as an argument"
+				exit 1
 			fi
 			shift
 			;;
@@ -627,8 +581,8 @@ while [ $# -gt 0 ]; do
 			ROLE="submit"
 			CONDOR_HOST=$2
 			if [ -z "${CONDOR_HOST}" ]; then
-					echo "--submit requires the central manager as an argument"
-					exit 1
+				echo "--submit requires the central manager as an argument"
+				exit 1
 			fi
 			shift
 			;;
@@ -636,9 +590,18 @@ while [ $# -gt 0 ]; do
 			ROLE="execute"
 			CONDOR_HOST=$2
 			if [ -z "${CONDOR_HOST}" ]; then
-					echo "--execute requires the central manager as an argument"
-					exit 1
+				echo "--execute requires the central manager as an argument"
+				exit 1
 			fi
+			shift
+			;;
+		--yum-repo)
+			REPO_SUFFIX=$2
+			if [ -z "${REPO_SUFFIX}" ]; then
+				echo "--yum-repo requires a repo-suffix as an argument"
+				exit 1
+			fi
+			YUM_REPO=--enablerepo=htcondor-${REPO_SUFFIX}
 			shift
 			;;
 		--channel)
@@ -648,6 +611,9 @@ while [ $# -gt 0 ]; do
 					;;
 				current|latest|developer)
 					CHANNEL="current"
+					;;
+				*-rc)
+					CHANNEL="$2"
 					;;
 				*)
 					echo "Illegal option $2 for --channel"
@@ -685,7 +651,7 @@ done
 # to update a symlink, like we do for 'current', because we don't
 # want to surprise other stable-channel users with new features.
 if [ "${CHANNEL}" = "stable" ]; then
-	CHANNEL_DIR=8.8
+	CHANNEL_DIR=9.0
 else
 	CHANNEL_DIR=${CHANNEL}
 fi
