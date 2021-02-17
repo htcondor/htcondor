@@ -9399,6 +9399,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     and credentials most be sent to stdout.
 
 .. only:: Vault
+
     :macro-def:`SEC_CREDENTIAL_STORER`
 	A script for *condor_submit* to execute to produce credentials while
 	using the OAuth2 type of credentials.  The oauth services specified

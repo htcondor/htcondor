@@ -14,6 +14,7 @@ Command Reference Manual (man pages)
    bosco_uninstall
    classads
    classad_eval
+   condor_adstash
    condor_advertise
    condor_annex
    condor_check_userlogs

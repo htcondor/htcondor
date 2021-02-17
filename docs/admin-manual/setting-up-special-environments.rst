@@ -363,6 +363,7 @@ Enabling the Fetching and Use of OAuth2 Credentials
 ---------------------------------------------------
 
 .. only:: Vault
+
     HTCondor supports two distinct methods for using OAuth2 credentials.
     One uses its own native OAuth client or issuer, and one uses a separate
     Hashicorp Vault server as the OAuth client and secure refresh token
@@ -479,6 +480,7 @@ so that they know what they should put under ``use_oauth_services``
 in their job submit files.
 
 .. only:: Vault
+
     Using Vault as the OAuth client
     '''''''''''''''''''''''''''''''
 

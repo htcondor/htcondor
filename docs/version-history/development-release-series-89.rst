@@ -4,7 +4,7 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 8.9.11
+Version 8.9.12
 --------------
 
 Release Notes:
