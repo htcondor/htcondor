@@ -41,14 +41,15 @@
 
 // Global variables
 int cmd = 0;
-char* pool = NULL;
-char* target = NULL;
-char* my_name = NULL;
+const char* pool = NULL;
+const char* target = NULL;
+const char* my_name = NULL;
 int how_fast = DRAIN_GRACEFUL;
-bool resume_on_completion = false;
-char *cancel_request_id = NULL;
-char *draining_check_expr = NULL;
-char *draining_start_expr = NULL;
+int on_completion = DRAIN_NOTHING_ON_COMPLETION;
+const char * drain_reason = NULL;
+const char *cancel_request_id = NULL;
+const char *draining_check_expr = NULL;
+const char *draining_start_expr = NULL;
 int dash_verbose = 0;
 
 // pass the exit code through dprintf_SetExitCode so that it knows
@@ -61,14 +62,16 @@ void version( void );
 void invalid( const char* opt );
 void ambiguous( const char* opt );
 void another( const char* opt );
-void parseArgv( int argc, char* argv[] );
+void conflict(const char * opt, int completion);
+const char * on_completion_name(int completion);
+void parseArgv( int argc, const char* argv[] );
 
 /*********************************************************************
    main()
 *********************************************************************/
 
 int
-main( int argc, char *argv[] )
+main( int argc, const char *argv[] )
 {
 
 	myDistro->Init( argc, argv );
@@ -87,11 +90,21 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
+	// -exit-on-completion and -restart-on-completion only work with startd's that are 8.9.12 or later
+	if ((on_completion > DRAIN_RESUME_ON_COMPLETION) && startd.version()) {
+		CondorVersionInfo verinfo(startd.version());
+		if ( ! verinfo.built_since_version(8,9,12)) {
+			fprintf(stderr, "ERROR: %s does not support %s\n%s\n",
+				startd.name(), on_completion_name(on_completion), startd.version());
+			exit(1);
+		}
+	}
+
 	bool rval = false;
 
 	if( cmd == DRAIN_JOBS ) {
 		std::string request_id;
-		rval = startd.drainJobs( how_fast, resume_on_completion, draining_check_expr, draining_start_expr, request_id );
+		rval = startd.drainJobs( how_fast, drain_reason, on_completion, draining_check_expr, draining_start_expr, request_id );
 		if( rval ) {
 			printf("Sent request to drain the startd %s with %s. This only "
 				"affects the single startd; any other startds running on the "
@@ -159,66 +172,82 @@ another( const char* opt )
 	usage( my_name );
 }
 
+const char * on_completion_name(int completion)
+{
+	const char * const opts[] = { "-resume-on-completion", "-exit-on-completion", "-restart-on-completion", "on-completion" };
+	int ix = completion - 1;
+	if (ix < 0 || ix > 3) ix = 3;
+	return opts[ix];
+}
+
 void
-parseArgv( int argc, char* argv[] )
+conflict(const char * opt, int completion)
+{
+	fprintf(stderr, "%s: '%s' conflicts with previous use of '%s'\n", my_name, opt, on_completion_name(completion));
+	usage(my_name);
+}
+
+void
+parseArgv( int argc, const char* argv[] )
 {
 	int i;
 
-	my_name = strdup(argv[0]);
+	my_name = argv[0];
 	cmd = DRAIN_JOBS;
 
 	for( i=1; i<argc; i++ ) {
-		if( match_prefix( argv[i], "-help" ) ) {
+		if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			usage(my_name);
 		}
-		else if( match_prefix( argv[i], "-version" ) ) {
+		else if (is_dash_arg_prefix(argv[i], "version", 1)) {
 			version();
 		}
-		else if( is_dash_arg_prefix( argv[i], "verbose", 4 ) ) {
+		else if (is_dash_arg_prefix(argv[i], "verbose", 4)) {
 			dash_verbose = 1;
 		}
-		else if( match_prefix( argv[i], "-pool" ) ) {
+		else if (is_dash_arg_prefix( argv[i], "pool", 1)) {
 			if( i+1 >= argc ) another(argv[i]);
-			if (pool) {
-				free(pool);
-			}
-			pool = strdup(argv[++i]);
+			pool = argv[++i];
 		}
-		else if( match_prefix( argv[i], "-cancel" ) ) {
+		else if (is_dash_arg_prefix(argv[i], "cancel", 1)) {
 			cmd = CANCEL_DRAIN_JOBS;
 		}
-		else if( match_prefix( argv[i], "-fast" ) ) {
+		else if (is_dash_arg_prefix(argv[i], "fast", 1)) {
 			how_fast = DRAIN_FAST;
 		}
-		else if( match_prefix( argv[i], "-quick" ) ) {
+		else if (is_dash_arg_prefix(argv[i], "quick", 1)) {
 			how_fast = DRAIN_QUICK;
 		}
-		else if( match_prefix( argv[i], "-graceful" ) ) {
+		else if (is_dash_arg_prefix(argv[i], "graceful", 1)) {
 			how_fast = DRAIN_GRACEFUL;
 		}
-		else if( match_prefix( argv[i], "-resume-on-completion" ) ) {
-			resume_on_completion = true;
+		else if (is_dash_arg_prefix(argv[i], "resume-on-completion", 1)) {
+			if (on_completion) conflict(argv[i], on_completion);
+			on_completion = DRAIN_RESUME_ON_COMPLETION;
 		}
-		else if( match_prefix( argv[i], "-request-id" ) ) {
-			if( i+1 >= argc ) another(argv[i]);
-			if (cancel_request_id) {
-				free(cancel_request_id);
-			}
-			cancel_request_id = strdup(argv[++i]);
+		else if (is_dash_arg_prefix(argv[i], "exit-on-completion", 2)) {
+			if (on_completion) conflict(argv[i], on_completion);
+			on_completion = DRAIN_EXIT_ON_COMPLETION;
 		}
-		else if( match_prefix( argv[i], "-check" ) ) {
+		else if (is_dash_arg_prefix(argv[i], "restart-on-completion", 4)) {
+			if (on_completion) conflict(argv[i], on_completion);
+			on_completion = DRAIN_RESTART_ON_COMPLETION;
+		}
+		else if (is_dash_arg_prefix(argv[i], "reason", 3)) {
+			if (i+1 >= argc) another(argv[i]);
+			drain_reason = argv[++i];
+		}
+		else if (is_dash_arg_prefix( argv[i], "request-id", 3)) {
 			if( i+1 >= argc ) another(argv[i]);
-			if (draining_check_expr) {
-				free(draining_check_expr);
-			}
-			draining_check_expr = strdup(argv[++i]);
+			cancel_request_id = argv[++i];
+		}
+		else if (is_dash_arg_prefix(argv[i], "check", 2)) {
+			if( i+1 >= argc ) another(argv[i]);
+			draining_check_expr = argv[++i];
 		}
 		else if( is_dash_arg_prefix( argv[i], "start", 5 ) ) {
 			if( i+1 >= argc ) another(argv[i]);
-			if (draining_start_expr) {
-				free(draining_start_expr);
-			}
-			draining_start_expr = strdup(argv[++i]);
+			draining_start_expr = argv[++i];
 		}
 		else if( argv[i][0] != '-' ) {
 			break;
@@ -234,7 +263,7 @@ parseArgv( int argc, char* argv[] )
         exit(2);
     }
 
-	target = strdup(argv[i]);
+	target = argv[i];
 
 	if( cmd == DRAIN_JOBS ) {
 		if( cancel_request_id ) {
@@ -245,6 +274,14 @@ parseArgv( int argc, char* argv[] )
 	if( cmd == CANCEL_DRAIN_JOBS ) {
 		if( draining_check_expr ) {
 			fprintf(stderr,"ERROR: -check may not be used with -cancel\n");
+			exit(2);
+		}
+		if (on_completion) {
+			fprintf(stderr, "ERROR: cannot use an -on-completion option with -cancel\n");
+			exit(2);
+		}
+		if (drain_reason) {
+			fprintf(stderr, "ERROR: cannot use -reason with -cancel\n");
 			exit(2);
 		}
 	}
@@ -259,11 +296,14 @@ usage( const char *str )
 	}
 	fprintf( stderr, "Usage: %s [OPTIONS] machine\n", str );
 	fprintf( stderr, "\nOPTIONS:\n" );
-	fprintf( stderr, "-cancel          Stop draining.\n" );
+	fprintf( stderr, "-cancel           Stop draining.\n" );
 	fprintf( stderr, "-graceful         (the default) Honor MaxVacateTime and MaxJobRetirementTime.\n" );
 	fprintf( stderr, "-quick            Honor MaxVacateTime but not MaxJobRetirementTime.\n" );
 	fprintf( stderr, "-fast             Honor neither MaxVacateTime nor MaxJobRetirementTime.\n" );
+	fprintf( stderr, "-reason <text>    While draining, advertise <text> as the reason.\n" );
 	fprintf( stderr, "-resume-on-completion    When done draining, resume normal operation.\n" );
+	fprintf( stderr, "-exit-on-completion      When done draining, STARTD should exit and not restart.\n" );
+	fprintf( stderr, "-restart-on-completion   When done draining, STARTD should restart.\n" );
 	fprintf( stderr, "-request-id <id>  Specific request id to cancel (optional).\n" );
 	fprintf( stderr, "-check <expr>     Must be true for all slots to be drained or request is aborted.\n" );
 	fprintf( stderr, "-start <expr>     Change START expression to this while draining.\n" );

@@ -603,7 +603,15 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 			bytes = -1;
 			break;
 		}
-		EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		int result = EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		if (result != 1) {
+			err.pushf("DataReuse", errno, "Failure when updating hash");
+			close(dest_fd);
+			unlink(&dest_tmp_fname[0]);
+			close(source_fd);
+			EVP_MD_CTX_destroy(mdctx);
+			return false;
+		}
 	}
 	if (bytes < 0) {
 		err.pushf("DataReuse", errno, "Failure when copying the file to cache directory: %s",
@@ -807,7 +815,14 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 			bytes = -1;
 			break;
 		}
-		EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		int result = EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		if (result != 1) {
+			err.pushf("DataReuse", errno, "Failure when updating hash");
+			close(dest_fd);
+			close(source_fd);
+			EVP_MD_CTX_destroy(mdctx);
+			return false;
+		}
 	}
 	if (bytes < 0) {
 		err.pushf("DataReuse", errno, "Failure when copying the file to destination: %s",

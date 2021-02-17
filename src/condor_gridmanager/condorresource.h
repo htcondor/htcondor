@@ -39,7 +39,7 @@ class CondorResource : public BaseResource
  public:
 
 	CondorResource( const char *resource_name, const char *pool_name,
-					const Proxy *proxy );
+	                const Proxy *proxy, const std::string &scitokens_file );
 	~CondorResource();
 
 	const char *ResourceType();
@@ -50,11 +50,13 @@ class CondorResource : public BaseResource
 	void DoScheddPoll();
 
 	static const char *HashName( const char *resource_name,
-								 const char *pool_name,
-								 const char *proxy_subject );
+	                             const char *pool_name,
+	                             const char *proxy_subject,
+	                             const std::string &scitokens_file );
 	static CondorResource *FindOrCreateResource( const char *resource_name,
-												 const char *pool_name,
-												 const Proxy *proxy );
+	                                             const char *pool_name,
+	                                             const Proxy *proxy,
+	                                             const std::string &scitokens_file );
 
 	static bool GahpErrorResourceDown( const char *errmsg );
 
@@ -66,6 +68,7 @@ class CondorResource : public BaseResource
 	bool scheddStatusActive;
 	char *proxySubject;
 	char *proxyFQAN;
+	std::string m_scitokensFile;
 
 	static HashTable <std::string, CondorResource *> ResourcesByName;
 

@@ -25,7 +25,6 @@
 
 #include "condor_common.h"
 #include "condor_crypt.h"          // base class
-#include <openssl/blowfish.h>
 
 class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
 
@@ -44,6 +43,9 @@ class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
                  int          input_len, 
                  unsigned char *&      output, 
                  int&         output_len);
+
+    virtual int ciphertext_size_with_cs(int ciphertext, StreamCryptoState *) const { return ciphertext; }
+
 };
 
 #endif

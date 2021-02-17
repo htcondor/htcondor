@@ -23,7 +23,7 @@
 #include "starter.h"
 #include "my_popen.h"
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 
 RemoteProc::RemoteProc( ClassAd * job_ad )

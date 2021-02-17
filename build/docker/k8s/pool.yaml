@@ -23,7 +23,7 @@ spec:
  restartPolicy: Never
  containers:
   - name: cm
-    image: htcondor/cm:8.9.8-el7
+    image: htcondor/cm:8.9.11-el7
     imagePullPolicy: Always
     resources:
       limits:
@@ -49,14 +49,14 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
- name: submit2
+ name: submit
  labels:
    htcondor-role: submit
 spec:
  restartPolicy: Never
  containers:
   - name: submit-container
-    image: htcondor/submit:8.9.8-el7
+    image: htcondor/submit:8.9.11-el7
     imagePullPolicy: Always
     resources:
       limits:
@@ -97,7 +97,7 @@ spec:
     spec:
             containers:
              - name: execute
-               image: htcondor/execute:8.9.8-el7
+               image: htcondor/execute:8.9.11-el7
                imagePullPolicy: Always
                resources:
                  limits:

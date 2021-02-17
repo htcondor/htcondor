@@ -31,6 +31,7 @@
 #include "collector_stats.h"
 #include "dc_collector.h"
 #include "offline_plugin.h"
+#include "ad_transforms.h"
 
 //----------------------------------------------------------------
 // Simple job universe stats
@@ -176,6 +177,7 @@ protected:
 	static CollectorEngine collector;
 	static Timeslice view_sock_timeslice;
     static std::vector<vc_entry> vc_list;
+	static ConstraintHolder vc_projection;
 
 	static int HandleQueryInProcPolicy;	// one of above HandleQueryInProc* constants
 	static int ClientTimeout;
@@ -216,6 +218,7 @@ private:
 
 	static int setAttrLastHeardFrom( ClassAd* cad, unsigned long time );
 
+	static AdTransforms m_forward_ad_xfm;
 };
 
 #endif

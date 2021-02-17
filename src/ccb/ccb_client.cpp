@@ -426,6 +426,7 @@ CCBClient::AcceptReversedConnection(std::shared_ptr<ReliSock> listen_sock,std::s
 			m_target_sock->default_peer_description(),
 			m_target_peer_description.c_str());
 
+	static_cast<ReliSock*>(m_target_sock)->resetHeaderMD();
 	m_target_sock->isClient(true);
 	return true;
 }
@@ -652,7 +653,7 @@ CCBClient::CCBResultsCallback(DCMsgCallback *cb)
 		msg.LookupString(ATTR_ERROR_STRING,remote_errmsg);
 
 		if( !result ) {
-			dprintf(D_ALWAYS,"CCBClient:"
+			dprintf(D_ALWAYS,"CCBClient: "
 				"received failure message from CCB server %s in response to "
 				"(non-blocking) request for reversed connection to %s: %s\n",
 				m_cur_ccb_address.c_str(),

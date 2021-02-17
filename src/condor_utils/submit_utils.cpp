@@ -54,7 +54,6 @@
 #include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
-#include "condor_md.h"
 #include "my_popen.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
@@ -3087,8 +3086,18 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT)) ) {
+		AssignJobString ( ATTR_BATCH_PROJECT, tmp );
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE)) ) {
 		AssignJobString ( ATTR_BATCH_QUEUE, tmp );
+		free( tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME)) ) {
+		AssignJobExpr ( ATTR_BATCH_RUNTIME, tmp );
 		free( tmp );
 	}
 
@@ -5047,7 +5056,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_GlobusRSL, ATTR_GLOBUS_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_CreamAttributes, ATTR_CREAM_ATTRIBUTES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_KeystoreFile, ATTR_KEYSTORE_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_KeystoreAlias, ATTR_KEYSTORE_ALIAS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_KeystorePassphraseFile,ATTR_KEYSTORE_PASSPHRASE_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -6280,8 +6291,7 @@ int SubmitHash::SetRequirements()
 			}
 
 			if( addVersionCheck ) {
-				// This is an ugly hack and should be changed.
-				answer += " && strcmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
+				answer += " && versioncmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
 			}
 
 

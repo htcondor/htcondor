@@ -38,16 +38,96 @@ static int (*enforcer_generate_acls_ptr)(const Enforcer enf, const SciToken scit
 static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
 static int (*scitoken_get_expiration_ptr)(const SciToken token, long long *value, char **err_msg) =
 	nullptr;
+static int (*scitoken_get_claim_string_list_ptr)(const SciToken token, const char *key, char ***value, char **err_msg) = nullptr;
+static int (*scitoken_free_string_list_ptr)(char **value) = nullptr;
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
-bool g_init_success = false; 
+bool g_init_tried = false;
+bool g_init_success = false;
 
 bool
-init_scitokens(CondorError &err)
+normalize_token(const std::string &input_token, std::string &output_token)
 {
-	if (g_init_success) {
+	static const std::string whitespace = " \t\f\n\v\r";
+		// Tokens are meant for use in an HTTP header; these are forbidden
+		// characters.
+	static const std::string nonheader_whitespace = "\r\n";
+	auto begin = input_token.find_first_not_of(whitespace);
+		// No token here, but not an error.
+	if (begin == std::string::npos) {
+		output_token = "";
 		return true;
+	}
+
+	std::string token = input_token.substr(begin);
+	auto end = token.find_last_not_of(whitespace);
+	token = token.substr(0, end + 1);
+
+		// If non-permitted header characters are present ("\r\n"),
+		// then this token is not permitted.
+	if (token.find(nonheader_whitespace) != std::string::npos) {
+		output_token = "";
+		dprintf(D_SECURITY, "Token discovery failure: token contains non-permitted character sequence (\\r\\n)\n");
+		return false;
+	}
+
+	output_token = token;
+	return true;
+}
+
+bool
+find_token_in_file(const std::string &token_file, std::string &output_token)
+{
+	dprintf(D_FULLDEBUG,  "Looking for token in file %s\n", token_file.c_str());
+	int fd = safe_open_no_create(token_file.c_str(), O_RDONLY);
+	if (fd == -1) {
+		output_token = "";
+		if (errno == ENOENT) {
+			return true;
+		}
+		dprintf(D_SECURITY,  "Token discovery failure: failed to open file %s: %s (errno=%d).\n",
+			token_file.c_str(), strerror(errno), errno);
+		return false;
+	}
+
+	// As a pragmatic matter, we limit tokens to 16KB; this is often the limit
+	// in size of HTTP headers for many web servers.
+	// This also avoids unbounded memory use in case if the user points us to
+	// a large file.
+	static const size_t max_size = 16384;
+
+	std::vector<char> input_buffer;
+	input_buffer.resize(max_size);
+
+	ssize_t retval = full_read(fd, &input_buffer[0], max_size);
+
+	close(fd);
+
+	if (retval == -1) {
+		output_token = "";
+		dprintf(D_SECURITY,  "Token discovery failure: failed to read file %s: %s (errno=%d).\n",
+			token_file.c_str(), strerror(errno), errno);
+		return false;
+	}
+	if (retval == 16384) {
+		// Token may have been truncated!  Erring on the side of caution.
+		dprintf(D_SECURITY, "Token discovery failure: token was larger than 16KB limit.\n");
+		return false;
+	}
+
+	std::string token(&input_buffer[0], retval);
+
+	return normalize_token(token, output_token);
+}
+
+} // end anonymous namespace
+
+bool
+htcondor::init_scitokens()
+{
+	if (g_init_tried) {
+		return g_init_success;
 	}
 
 #ifndef WIN32
@@ -65,27 +145,68 @@ init_scitokens(CondorError &err)
 		!(scitoken_get_expiration_ptr = (int (*)(const SciToken token, long long *value, char **err_msg))dlsym(dl_hdl, "scitoken_get_expiration"))
 	) {
 		const char *err_msg = dlerror();
-		if (err_msg) {
-			err.pushf("SCITOKENS", 1, "Failed to open SciTokens library: %s", err_msg);
-		} else {
-			err.pushf("SCITOKENS", 1, "Failed to initialize SciTokens (no error message available)");
-		}
+		dprintf(D_SECURITY, "Failed to open SciTokens library: %s\n", err_msg ? err_msg : "(no error message available)");
 		g_init_success = false;
+	} else {
+		g_init_success = true;
+			// Note: these methods are only in a more recent version of the SciTokens library; hence, if they
+			// are missing it's considered non-fatal.
+		scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
+		scitoken_free_string_list_ptr = (int (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
 	}
-	return (g_init_success = true);
 #else
-	err.pushf("SCITOKENS", 1, "SciTokens library not supported on Windwos.");
-	return (g_init_success = false);
+	dprintf(D_SECURITY, "SciTokens is not supported on Windows.\n");
+	g_init_success = false;
+#endif
+	g_init_tried = true;
+	return g_init_success;
+}
+
+std::string
+htcondor::discover_token()
+{
+	const char *bearer_token = getenv("BEARER_TOKEN");
+	std::string token;
+	if (bearer_token && *bearer_token)
+	{
+		if (!normalize_token(bearer_token, token)) {return "";}
+		if (!token.empty()) {return token;}
+	}
+
+	const char *bearer_token_file = getenv("BEARER_TOKEN_FILE");
+	if (bearer_token_file)
+	{
+		if (!find_token_in_file(bearer_token_file, token)) {return "";}
+		if (!token.empty()) {return token;}
+	}
+
+#ifndef WIN32
+	uid_t euid = geteuid();
+	std::string fname = "/bt_u";
+	fname += std::to_string(euid);
+
+	const char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
+	if (xdg_runtime_dir) {
+		std::string xdg_token_file = std::string(xdg_runtime_dir) + fname;
+		if (!find_token_in_file(xdg_token_file, token)) {return "";}
+		if (!token.empty()) {return token;}
+	}
+
+	if (!find_token_in_file("/tmp" + fname, token)) {return "";}
+	return token;
+#else
+		// WLCG profile doesn't define search paths on Windows;
+		// skip this for now.
+	return "";
 #endif
 }
 
-} // end anonymous namespace
-
 bool
 htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer, std::string &subject,
-	long long &expiry, std::vector<std::string> &bounding_set, int ident, CondorError &err)
+	long long &expiry, std::vector<std::string> &bounding_set, std::vector<std::string> &groups, std::vector<std::string> &scopes, std::string &jti, int ident, CondorError &err)
 {
-	if (!init_scitokens(err)) {
+	if (!htcondor::init_scitokens()) {
+		err.pushf("SCITOKENS", 1, "Failed to open SciTokens library.");
 		return false;
 	}
 
@@ -173,6 +294,38 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			}
 
 			(*enforcer_acl_free_ptr)(acls);
+		}
+
+		char *scopes_char = nullptr;
+		if (!(*scitoken_get_claim_string_ptr)(token, "scope", &scopes_char, nullptr)) {
+			StringList scopes_list(scopes_char);
+			scopes_list.rewind();
+			free(scopes_char);
+			char *scope;
+			while ( (scope = scopes_list.next()) ) {
+				scopes.emplace_back(scope);
+			}
+		}
+
+		char *jti_char = nullptr;
+		if (!(*scitoken_get_claim_string_ptr)(token, "jti", &jti_char, nullptr)) {
+			if (jti_char) {jti = jti_char;}
+			free(jti_char);
+		}
+
+		char **group_list = nullptr;
+		if (scitoken_get_claim_string_list_ptr &&
+			!(*scitoken_get_claim_string_list_ptr)(token, "wlcg.groups", &group_list, nullptr) &&
+			group_list)
+		{
+			int idx = 0;
+			char *grp;
+			while ( (grp = group_list[idx++]) ) {
+				groups.emplace_back(grp);
+			}
+		}
+		if (scitoken_free_string_list_ptr && group_list) {
+			(*scitoken_free_string_list_ptr)(group_list);
 		}
 
 		issuer = iss;

@@ -245,7 +245,13 @@ bool abort_pid_watcher_threads = false;
 
 DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: m_create_family_session(true),
+	: m_use_udp_for_dc_signals(false),
+#ifdef WIN32
+	m_never_use_kill_for_dc_signals(true),
+#else
+	m_never_use_kill_for_dc_signals(false),
+#endif
+	m_create_family_session(true),
 	comTable(32),
 	sigTable(10),
 	reapTable(4),
@@ -396,6 +402,13 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 		m_wants_dc_udp_self = false;
 	}
 	m_invalidate_sessions_via_tcp = true;
+	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
+#ifdef WIN32
+	m_never_use_kill_for_dc_signals = true;
+#else
+	m_never_use_kill_for_dc_signals = param_boolean("NEVER_USE_KILL_FOR_DC_SIGNALS", false);
+#endif
+
 	super_dc_rsock = NULL;
 	super_dc_ssock = NULL;
 	m_super_dc_port = -1;
@@ -3080,6 +3093,13 @@ DaemonCore::reconfig(void) {
 
 	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
 
+	// DaemonCore::Send_Signal behaviors
+	m_use_udp_for_dc_signals = param_boolean("USE_UDP_FOR_DC_SIGNALS", false);
+#ifdef WIN32
+#else
+	m_never_use_kill_for_dc_signals = param_boolean("NEVER_USE_KILL_FOR_DC_SIGNALS", false);
+#endif
+
 		// FAKE_CREATE_THREAD is an undocumented config knob which turns
 		// Create_Thread() into a simple function call in the main process,
 		// rather than a thread/fork.
@@ -4954,7 +4974,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 			else if( target_has_dcpm == FALSE ) {
 				use_kill = true;
 			}
-			else if( target_has_dcpm == TRUE &&
+			else if( target_has_dcpm == TRUE && ! m_never_use_kill_for_dc_signals &&
 			         (sig == SIGUSR1 || sig == SIGUSR2 || sig == SIGQUIT ||
 			          sig == SIGTERM || sig == SIGHUP) )
 			{
@@ -5066,7 +5086,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 
 	// now destination process is local, send via UDP; if remote, send via TCP
 	bool is_udp = false;
-	if ( is_local == TRUE && d->hasUDPCommandPort()) {
+	if (is_local && m_use_udp_for_dc_signals && d->hasUDPCommandPort()) {
 		msg->setStreamType(Stream::safe_sock);
 		if( !nonblocking ) msg->setTimeout(3);
 		is_udp = true;
@@ -6609,10 +6629,13 @@ void CreateProcessForkit::exec() {
 	if (m_affinity_mask) {
 		cpu_set_t mask;
 		CPU_ZERO(&mask);
+		dprintf(D_ALWAYS, "Calling sched_setaffinity for cpus ");
 		for (int i = 1; i < m_affinity_mask[0]; i++) {
+			dprintf(D_ALWAYS | D_NOHEADER, "%d ", m_affinity_mask[i]);
 			CPU_SET(m_affinity_mask[i], &mask);
 		}
-		dprintf(D_FULLDEBUG, "Calling sched_setaffinity\n");
+		dprintf(D_ALWAYS | D_NOHEADER, "\n");
+
 		// first argument of pid 0 means self.
 #ifdef HAVE_SCHED_SETAFFINITY_2ARG
 			// this is the old (rhel3 vintage) interface
@@ -10973,6 +10996,26 @@ DaemonCore::getCollectorList() {
 	return m_collector_list;
 }
 
+// trigger daemon shutdown/restart if we have not already done so
+// used by DAEMON_SHUTDOWN knobs, and sometimes by the startd when draining completes
+void DaemonCore::beginDaemonRestart(bool fast /* = false*/, bool restart /*= true*/)
+{
+	if (fast) {
+		// turning off restart is 'sticky' since always defaults to true on daemon startup
+		if ( ! restart) m_wants_restart = false;
+		if ( ! m_in_daemon_shutdown_fast) {
+			m_in_daemon_shutdown_fast = true;
+			daemonCore->Send_Signal(daemonCore->getpid(), SIGQUIT);
+		}
+	} else {
+		// turning off restart is 'sticky' since always defaults to true on daemon startup
+		if ( ! restart) m_wants_restart = false;
+		if ( ! m_in_daemon_shutdown_fast && ! m_in_daemon_shutdown) {
+			m_in_daemon_shutdown = true;
+			daemonCore->Send_Signal(daemonCore->getpid(), SIGTERM);
+		}
+	}
+}
 
 int
 DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
@@ -10986,16 +11029,13 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 		evalExpr(ad1, "DAEMON_SHUTDOWN_FAST", ATTR_DAEMON_SHUTDOWN_FAST,
 				 "starting fast shutdown"))	{
 			// Daemon wants to quickly shut itself down and not restart.
-		m_wants_restart = false;
-		m_in_daemon_shutdown_fast = true;
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		beginDaemonShutdown(true);
 	}
 	else if (!m_in_daemon_shutdown &&
 			 evalExpr(ad1, "DAEMON_SHUTDOWN", ATTR_DAEMON_SHUTDOWN,
 					  "starting graceful shutdown")) {
-		m_wants_restart = false;
-		m_in_daemon_shutdown = true;
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+			// Daemon wants to gracefully shut itself down and not restart.
+		beginDaemonShutdown(false);
 	}
 
 		// Even if we just decided to shut ourselves down, we should

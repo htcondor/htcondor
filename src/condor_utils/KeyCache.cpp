@@ -24,7 +24,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 
-KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, KeyInfo* key_param, ClassAd * policy_param, int expiration_param, int lease_interval ) {
+KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, const KeyInfo* key_param, const ClassAd * policy_param, int expiration_param, int lease_interval ) {
 	if (id_param) {
 		_id = strdup(id_param);
 	} else {
@@ -38,9 +38,45 @@ KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr
 	}
 
 	if (key_param) {
-		_key = new KeyInfo(*key_param);
+		_keys.push_back(new KeyInfo(*key_param));
+		_preferred_protocol = key_param->getProtocol();
 	} else {
-		_key = NULL;
+		_preferred_protocol = CONDOR_NO_PROTOCOL;
+	}
+
+	if (policy_param) {
+		_policy = new ClassAd(*policy_param);
+	} else {
+		_policy = NULL;
+	}
+
+	_expiration = expiration_param;
+	_lease_interval = lease_interval;
+	_lease_expiration = 0;
+	_lingering = false;
+	renewLease();
+}
+
+// NOTE: In this constructor, we assume ownership of the KeyInfo objects
+//   in the vector. In the single-KeyInfo constructor, we copy it.
+KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, std::vector<KeyInfo*> key_param, const ClassAd * policy_param, int expiration_param, int lease_interval ) {
+	if (id_param) {
+		_id = strdup(id_param);
+	} else {
+		_id = NULL;
+	}
+
+	if (addr_param) {
+		_addr = new condor_sockaddr(*addr_param);
+	} else {
+		_addr = NULL;
+	}
+
+	_keys = key_param;
+	if (_keys.empty()) {
+		_preferred_protocol = CONDOR_NO_PROTOCOL;
+	} else {
+		_preferred_protocol = _keys[0]->getProtocol();
 	}
 
 	if (policy_param) {
@@ -82,7 +118,16 @@ const condor_sockaddr*  KeyCacheEntry::addr() {
 }
 
 KeyInfo* KeyCacheEntry::key() {
-	return _key;
+	return key(_preferred_protocol);
+}
+
+KeyInfo* KeyCacheEntry::key(Protocol protocol) {
+	for ( auto key: _keys ) {
+		if ( key->getProtocol() == protocol ) {
+			return key;
+		}
+	}
+	return NULL;
 }
 
 ClassAd* KeyCacheEntry::policy() {
@@ -117,6 +162,17 @@ void KeyCacheEntry::setExpiration(int new_expiration) {
 	_expiration = new_expiration;
 }
 
+bool KeyCacheEntry::setPreferredProtocol(Protocol preferred)
+{
+	for (auto key : _keys) {
+		if (key->getProtocol() == preferred) {
+			_preferred_protocol = preferred;
+			return true;
+		}
+	}
+	return false;
+}
+
 void KeyCacheEntry::renewLease() {
 	if( _lease_interval ) {
 		_lease_expiration = time(0) + _lease_interval;
@@ -136,10 +192,8 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
     	_addr = NULL;
 	}
 
-	if (copy._key) {
-		_key = new KeyInfo(*(copy._key));
-	} else {
-		_key = NULL;
+	for (auto key : copy._keys) {
+		_keys.push_back(new KeyInfo(*key));
 	}
 
 	if (copy._policy) {
@@ -152,6 +206,7 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
 	_lease_interval = copy._lease_interval;
 	_lease_expiration = copy._lease_expiration;
 	_lingering = copy._lingering;
+	_preferred_protocol = copy._preferred_protocol;
 }
 
 
@@ -162,8 +217,8 @@ void KeyCacheEntry::delete_storage() {
 	if (_addr) {
 	  delete _addr;
 	}
-	if (_key) {
-	  delete _key;
+	for (auto key : _keys) {
+		delete key;
 	}
 	if (_policy) {
 	  delete _policy;

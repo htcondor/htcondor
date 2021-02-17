@@ -1,0 +1,2 @@
+debian/tmp/usr/sbin/condor_configure
+debian/tmp/usr/sbin/condor_install

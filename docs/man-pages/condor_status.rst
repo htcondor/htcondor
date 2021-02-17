@@ -175,8 +175,9 @@ Options
  **-constraint** *const*
     (Custom option) Add constraint expression.
  **-compact**
-    (Custom option) Show compact form, rolling up slots into a single
-    line.
+    (Custom option) Show compact form, with a single line per machine
+    using information from the partitionable slot.  Some information will
+    be incorrect if the machine has static slots.
  **-format** *fmt attr*
     (Custom option) Display attribute or expression *attr* in format
     *fmt*. To display the attribute or expression the format must
@@ -300,10 +301,12 @@ General Remarks
    an SMP machine. In this case, everything after the "@" sign is
    treated as a host name and that is what is resolved.
 -  You can use the **-direct** option in conjunction with almost any
-   other set of options. However, at this time, the only daemon that
-   will allow direct queries for its ad(s) is the *condor_startd*. So,
-   the only options currently not supported with **-direct** are
-   **-schedd** and **-master**. Most other options use startd ads for
+   other set of options. However, at this time, not all daemons will
+   respond to direct queries for its ad(s). The *condor_startd* will
+   respond to requests for Startd ads. The *condor_schedd* will respond
+   to requests for Schedd and Submitter ads.
+   So the only options currently not supported with **-direct** are
+   **-master** and **-collector**. Most other options use startd ads for
    their information, so they work seamlessly with **-direct**. The only
    other restriction on **-direct** is that you may only use 1
    **-direct** option at a time. If you want to query information
@@ -315,7 +318,10 @@ General Remarks
    conjunction with **-direct** just tells *condor_status* which
    collector to query to find the address of the daemon you want. The
    information actually displayed will still be retrieved directly from
-   the daemon you specified as the argument to **-direct**.
+   the daemon you specified as the argument to **-direct**.  Do not
+   use **-direct** to query the Collector ad, just use **-pool** and
+   **-collector**.
+   
 
 Examples
 --------
@@ -358,6 +364,60 @@ slot. This has the form ``slot#@hostname``. For example:
              INTEL/LINUX     1     0       0         1       0          0        0
 
                    Total     1     0       0         1       0          0        0
+
+Example 3 The **-compact** option gives a one line summary of each machine using information
+from the partitionable slot. If the normal output is this
+
+.. code-block:: console
+
+    $ condor_status vulture
+
+    Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
+
+    slot1@vulture.cs.w LINUX      X86_64 Unclaimed Idle      0.000  679  1+03:18:58
+    slot1_1@vulture.cs LINUX      X86_64 Claimed   Busy      1.160 1152  0+03:21:02
+    slot1_2@vulture.cs LINUX      X86_64 Claimed   Busy      1.150 2560  0+10:20:50
+    slot1_3@vulture.cs LINUX      X86_64 Claimed   Busy      1.160 2816  0+01:32:08
+    slot1_4@vulture.cs LINUX      X86_64 Claimed   Busy      0.000 5081  0+00:00:00
+
+                         Machines Owner Claimed Unclaimed Matched Preempting  Drain
+
+            X86_64/LINUX        5     0       4         1       0          0      0
+
+                   Total        5     0       4         1       0          0      0
+
+For the same machine in the same state the **-compact** option will show this
+
+.. code-block:: console
+
+    $ condor_status -compact vulture
+
+    Machine            Platform    Slots Cpus Gpus  TotalGb FreCpu  FreeGb  CpuLoad ST Jobs/Min MaxSlotGb
+
+    vulture.cs.wisc.ed x64/CentOS7     4    8    2       12      0     .66      .98 Cb      .25      4.96
+
+                         Machines Owner Claimed Unclaimed Matched Preempting  Drain
+
+            X86_64/CentOS7      4     0       4         1       0          0      0
+
+                   Total        4     0       4         1       0          0      0
+
+The ``Slots`` column shows that 4 slots have been carved out of the partitionable slot, leaving 0 cpus
+and .66 Gigabytes of memory free.  Static slots will not be counted in the ``Slots`` column.
+
+The ``ST`` column shows the consensus state of the dynamic slots using a two character code. The first character
+is the State, the second is the activity. If there is not a consensus for either the state or activity,
+then # will be shown.  The example shows Cb for Claimed/Busy since all of the dynamic slots are in that state.
+If one of the dynamic slots were Idle, then C# would be shown.
+
+The ``Jobs/Min`` shows the recent job start rate for the machine.  A large number here is normal for a
+machine that just came online, but if this number stays above 1 for more than a minute, that can be
+an indication of a machine is acting as a black hole for jobs, starting them quickly and then failing
+them just as quickly. 
+
+The ``MaxSlotGb`` column shows the memory allocated to the largest slot in Gigabytes, If the memory allocated
+for the largest slot cannot be determined, * will be displayed. 
+Static slots are not counted in the ``MaxSlotGb`` column.
 
 Constraint option examples
 

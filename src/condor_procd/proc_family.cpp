@@ -595,7 +595,8 @@ ProcFamily::aggregate_usage_cgroup_io_wait(ProcFamilyUsage* usage) {
 		cgroup_read_value_end(&handle);
 	}
 
-	if (ret != ECGEOF) {
+	// kernels with BFQ enabled don't have io_wait_time, don't spam logs if it isn't here
+	if ((ret != ECGEOF) && (ret != ENOENT)) {
 		dprintf(D_ALWAYS, "Internal cgroup error when retrieving iowait statistics: %s\n", cgroup_strerror(ret));
 		return 1;
 	}
@@ -875,6 +876,7 @@ ProcFamily::remove_exited_processes()
 			// away when we pull out a separate ProcGroup
 			// class
 			//
+#if defined(CHATTY_PROC_LOG)
 			if (m_root_pid != 0) {
 				dprintf(D_ALWAYS,
 				        "process %u (of family %u) has exited\n",
@@ -886,7 +888,7 @@ ProcFamily::remove_exited_processes()
 				        "process %u (not in monitored family) has exited\n",
 				        member->m_proc_info->pid);
 			}
-
+#endif /* defined(CHATTY_PROC_LOG) */
 			// save CPU usage from this process
 			//
 			m_exited_user_cpu_time +=

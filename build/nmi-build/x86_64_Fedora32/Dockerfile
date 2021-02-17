@@ -226,9 +226,11 @@ RUN dnf install -y \
 
 # Tools needed for building
 RUN dnf install -y \
+    hostname \
     make \
     patchelf \
     rpm-build \
+    dnf-utils \
     && dnf clean all
 
 # HTCondor build dependencies

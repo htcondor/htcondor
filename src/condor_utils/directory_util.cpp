@@ -100,10 +100,52 @@ const char* dircat(const char *dirpath, const char *filename, const char * filee
 	return result.Value();
 }
 
+const char* dircat(const char *dirpath, const char *filename, const char * fileext, std::string &result )
+{
+	ASSERT(dirpath);
+	ASSERT(filename);
+	// fileext may be NULL
+
+	// skip leading directory separator characters from the filename.
+	while (IS_ANY_DIR_DELIM_CHAR(*filename)) {
+		++filename;
+	}
+
+	// figure out the length of the directory string minus any trailing directory
+	// delimiter characters.  (Remember that on windows either \ or / is allowed here.)
+	int dirlen = strlen(dirpath);
+	while (dirlen > 0 && IS_ANY_DIR_DELIM_CHAR(dirpath[dirlen - 1])) {
+		--dirlen;
+	}
+
+	int extlen = 0;
+	if (fileext) { extlen = strlen(fileext); }
+
+	// reserve space for directory and filename and fileext plus delim and \0 at the end plus 1 more for dirscat
+	result.reserve(3 + dirlen + strlen(filename) + extlen);
+
+	// copy the directory minus any trailing delims, then append the platform specific delim, and then the filename
+	result = dirpath;
+	result.resize(dirlen);
+
+	result += DIR_DELIM_STRING;
+	result += filename;
+	if (fileext) {
+		result += fileext;
+	}
+
+	// return the result
+	return result.c_str();
+}
+
+
 const char* dircat(const char *dirpath, const char *filename, MyString &result ) {
 	return dircat(dirpath, filename, NULL, result);
 }
 
+const char* dircat(const char *dirpath, const char *filename, std::string &result ) {
+	return dircat(dirpath, filename, NULL, result);
+}
 
 const char* dirscat(const char *dirpath, const char *subdir, MyString &result )
 {
@@ -127,6 +169,30 @@ const char* dirscat(const char *dirpath, const char *subdir, MyString &result )
 		result += DIR_DELIM_STRING;
 	}
 	return result.Value();
+}
+
+const char* dirscat(const char *dirpath, const char *subdir, std::string &result )
+{
+	// dircat will make sure that directory delims between dirpath and subdir are minimal and correct
+	// but it will not correct trailing delims on the overall result.
+	dircat(dirpath, subdir, result);
+
+	// remove any trailing directory delims and replace with a single directory delim
+	// that is correct for this platform.
+	int len = result.length();
+	if (len > 0 && IS_ANY_DIR_DELIM_CHAR(result[len-1])) {
+		// make sure there is only one trailing directory delim and it is the correct one (if on windows)
+		do {
+			#ifdef WIN32
+			result[len-1] = DIR_DELIM_CHAR;
+			#endif
+			result.resize(len); // this is a noop unless there are multiple trailing directory delims
+			--len;
+		} while (len > 0 && IS_ANY_DIR_DELIM_CHAR(result[len-1]));
+	} else {
+		result += DIR_DELIM_STRING;
+	}
+	return result.c_str();
 }
 
 

@@ -1,0 +1,109 @@
+#!/usr/bin/python3
+
+import os
+import time
+import signal
+from functools import partial
+from multiprocessing import Process
+import multiprocessing
+try:
+    import queue as Queue
+except ImportError:
+    import Queue
+from optparse import OptionParser, OptionGroup
+import logging
+
+# credmon library in libexec
+import htcondor
+import sys
+sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
+
+from credmon.CredentialMonitors.VaultCredmon import VaultCredmon
+from credmon.utils import setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete
+
+parser = OptionParser()
+parser.add_option('-c', '--cred-dir', action='store', type='string', dest='cred_dir',
+                      help='Path to credential directory')
+parser.add_option('-l', '--log-file', action='store', type='string',
+                      dest='log_file', help='Path to log file')
+parser.add_option('-d', '--debug', action='store_const', dest='log_level',
+                      const=logging.DEBUG, default=logging.INFO,
+                      help='Set log level to DEBUG')
+
+def signal_handler(logger, send_queue, signum, frame):
+    """
+    Catch signals. Use SIGHUP as a sleep interrupt.
+    Any other signals should exit the program.
+    """
+    if signum == signal.SIGHUP:
+        logger.info('Got SIGHUP: Triggering READ of Credential Directory')
+        send_queue.put(False, block=False)
+        return
+    exit_msg = 'Got signal {0} at frame {1} terminating.'
+    send_queue.put(True, block=False)
+    logger.info(exit_msg.format(signum, frame))
+    sys.exit(0)
+
+def main():
+
+    htcondor.set_subsystem("CREDMON_OAUTH", htcondor.SubsystemType.Daemon)
+    (options, args) = parser.parse_args()
+
+    cred_dir = get_cred_dir(cred_dir = options.cred_dir)
+    logger = setup_logging(log_path = options.log_file, log_level = options.log_level)
+    logger.info('Starting condor_credmon and registering signals')
+
+    # create queue to end alerts to child to renew
+    send_queue = multiprocessing.Queue()
+
+    # catch signals
+    signal.signal(signal.SIGHUP, partial(signal_handler, logger, send_queue))
+    signal.signal(signal.SIGTERM, partial(signal_handler, logger, send_queue))
+    signal.signal(signal.SIGINT, partial(signal_handler, logger, send_queue))
+    signal.signal(signal.SIGQUIT, partial(signal_handler, logger, send_queue))
+    drop_pid(cred_dir)
+
+    # start the scan tokens loop
+    cred_process = Process(target=start_credmon_process, args=(send_queue,cred_dir,logger,))
+    cred_process.start()
+
+    # wait for CREDMON_COMPLETE and signal the condor_master
+    for tries in range(20*60):
+        if os.path.exists(os.path.join(cred_dir, "CREDMON_COMPLETE")):
+            try:
+                logger.info("Sending DC_SET_READY message to master")
+                htcondor.set_ready_state("Ready")
+            except Exception:
+                logger.warning("Could not send DC_SET_READY message to master")
+            break
+        time.sleep(1)
+
+    # join scan tokens loop
+    cred_process.join()
+
+def start_credmon_process(q, cred_dir, logger):
+
+    credmon_incomplete(cred_dir)
+
+    credmons = [
+        VaultCredmon(cred_dir),
+    ]
+
+    # set up scan tokens loop
+    while True:
+        for credmon in credmons:
+            try:
+                credmon.scan_tokens()
+            except Exception:
+                logger.exception("Fatal error while scanning for tokens")
+        credmon_complete(cred_dir)
+        logger.info('Sleeping for 60 seconds')
+        try:
+            credmon_quit = q.get(block=True, timeout=60)
+            if credmon_quit:
+                return
+        except Queue.Empty as eq:
+            pass
+
+if __name__ == '__main__':
+    main()

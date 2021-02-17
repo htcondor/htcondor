@@ -52,7 +52,7 @@
 
 #include <sstream>
 
-extern CStarter *Starter;
+extern Starter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 extern const char* JOB_AD_FILENAME;
@@ -497,6 +497,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
+	int orig_args_len = args.Count();
 	if (SupportsPIDNamespace()) {
 		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
 	} else {
@@ -518,13 +519,15 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 
 		if (param_boolean("SINGULARITY_RUN_TEST_BEFORE_JOB", true)) {
-			bool result = htcondor::Singularity::runTest(JobName, args, job_env);
+			std::string singErrorMessage;
+			bool result = htcondor::Singularity::runTest(JobName, args, orig_args_len, job_env, singErrorMessage);
 			if (!result) {
-				dprintf(D_FULLDEBUG, "Singularity test failed\n");
 				free(affinity_mask);
 				job_not_started = true;
-				Starter->jic->notifyStarterError( "Singularity test failed, not running singularity job",
-			    	                              true,
+				std::string starterErrorMessage = "Singularity test failed:";
+				starterErrorMessage += singErrorMessage;
+				Starter->jic->notifyStarterError( starterErrorMessage.c_str(),
+			    	                              	true,
 			        	                          CONDOR_HOLD_CODE_SingularityTestFailed,
 			            	                      0);
 				return 0;

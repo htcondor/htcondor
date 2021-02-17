@@ -28,7 +28,7 @@
 // for unlink
 #include "FilesOperations.h"
 // for rotate_file
-//#include "util_lib_proto.h"
+#include "util_lib_proto.h"
 
 #include "Utils.h"
 #include "DownloadReplicaTransferer.h"
@@ -278,7 +278,9 @@ DownloadReplicaTransferer::downloadFile(MyString& filePath, MyString& extension)
     dprintf( D_ALWAYS, "DownloadReplicaTransferer::downloadFile %s.%s\n", 
 			 filePath.Value( ), extension.Value( ) );
 
-	if( ! utilSafeGetFile( *m_socket, filePath + "." + extension) ) {
+	int fips_mode = param_integer("HAD_FIPS_MODE", 0);
+
+	if( ! utilSafeGetFile( *m_socket, filePath + "." + extension, fips_mode) ) {
 		dprintf( D_ALWAYS, "DownloadReplicaTransferer::downloadFile failed, "
 				"unlinking %s.%s\n", filePath.Value(), extension.Value());
 		FilesOperations::safeUnlinkFile( filePath.Value( ), 

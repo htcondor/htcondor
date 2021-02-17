@@ -35,7 +35,7 @@
 #include "basename.h"
 #include "secure_file.h"
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 
 JICLocal::JICLocal() 

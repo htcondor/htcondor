@@ -920,7 +920,7 @@ sub install( $ )
 {
     my $release_dir=shift(@_);
 
-    my @release_dirs = qw( etc include src lib libexec bin sbin man );
+    my @release_dirs = qw( etc include lib libexec bin sbin man );
 
 	# Get the absolute path to the release directory
 	my $release_src_dir;
@@ -1083,7 +1083,7 @@ sub install( $ )
 				 field	=> "uname",
 			 },
 			 {
-				 run	=> "/bin/true",
+				 run	=> "true",
 				 field	=> "true",
 			 },
 			 );
@@ -1092,7 +1092,7 @@ sub install( $ )
 		my $os = undef;
 		my $installer = undef;
 		foreach my $lookup ( @OsLookupTable ) {
-			my $text;
+			my $text = "";
 			if ( exists $lookup->{file}  and  -f $lookup->{file} ) {
 				$text = $lookup->{text};
 			}
@@ -1296,6 +1296,14 @@ sub determine_missing_libs
 	my ($p, $ldd, $lib, $loc);
 	my $status = "able_to_check";
 	my $line;
+
+	# In macOS Big Sur (Darwin version 20.x), all of the system shared
+	# libraries are bundled into a single cache file with no public way
+	# to query their presence. Don't try looking for them.
+	my $os_ver = `uname -v`;
+	if ($os_ver =~ /Darwin Kernel Version 2/) {
+		return;
+	}
 
 	# When checking the library dependencies, I turn off the warning that
 	# open gives me due to use warnings when it can't exec the ldd command

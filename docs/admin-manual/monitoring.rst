@@ -306,3 +306,47 @@ to the jobs themselves.
   ``DeviceGPUsMemoryPeakUsage``
     The largest amount of GPU memory used GPUs assigned to this slot,
     since the startd started up.
+
+Elasticsearch
+-------------
+
+:index:`Elasticsearch`
+:index:`adstash`
+:index:`condor_adstash`
+
+HTCondor supports pushing *condor_schedd* and *condor_startd* job
+history ClassAds to Elasticsearch via the *condor_adstash*
+tool/daemon.
+*condor_adstash* collects job history ClassAds as specified by its
+configuration, converts each ClassAd to a JSON document, and pushes
+each doc to the configured Elasticsearch index.
+The index is automatically created if it does not exist, and fields
+are added and configured based on well known job ClassAd attributes.
+(Custom attributes are also pushed, though always as keyword fields.)
+
+*condor_adstash* is a Python 3.6+ script that uses the
+:ref:`apis/python-bindings/index:Python Bindings<HTCondor Python Binding>`
+and the
+`Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`,
+both of which must be available to the system Python 3 installation
+if using the daemonized version of *condor_adstash*.
+*condor_adstash* can also be run as a standalone tool (e.g. in a
+Python 3 virtual environment containing the necessary libraries).
+
+Running *condor_adstash* as a daemon (i.e. under the watch of the
+*condor_master*) can be enabled by adding
+``use feature : adstash``
+to your HTCondor configuration.
+By default, this configuration will poll all *condor_schedds* that
+report to the ``$(CONDOR_HOST)`` *condor_collector* every 20 minutes
+and push the contents of the job history ClassAds to an Elasticsearch
+instance running on ``localhost`` to an index named
+``htcondor-000001``.
+Your situation and monitoring needs are likely different!
+See the ``condor_config.local.adstash`` example configuration file in
+the ``examples/`` directory for detailed information on how to modify
+your configuration.
+
+If you prefer to run *condor_adstash* in standalone mode, see the
+:ref:`man-pages/condor_adstash` man page for more
+details.

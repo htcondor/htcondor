@@ -22,6 +22,8 @@
 #include "condor_crypt_3des.h"
 #include "condor_debug.h"
 
+#include <openssl/des.h>
+
 bool Condor_Crypt_3des :: encrypt(Condor_Crypto_State *cs,
                                   const unsigned char *  input,
                                   int              input_len, 

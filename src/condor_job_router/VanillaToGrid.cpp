@@ -28,6 +28,7 @@
 #include "filename_tools.h"
 #include "string_list.h"
 #include "classad/classad_distribution.h"
+#include "condor_config.h"
 
 #include "submit_job.h"
 
@@ -410,6 +411,33 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 			if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
 				classad::ExprTree * toinsert = newgridexpr->Copy(); 
 				update.Insert(attr, toinsert);
+			}
+		}
+	}
+
+	std::string chirp_prefix;
+	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
+	if (chirp_prefix == "Chirp*") {
+		for ( auto attr_it = newgrid.begin(); attr_it != newgrid.end(); attr_it++ ) {
+			if ( ! strncasecmp(attr_it->first.c_str(), "Chirp", 5) ) {
+				classad::ExprTree *old_expr = orig.Lookup(attr_it->first);
+				classad::ExprTree *new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					update.Insert( attr_it->first, new_expr->Copy() );
+				}
+			}
+		}
+	} else if (!chirp_prefix.empty()) {
+		// TODO cache the StringList
+		StringList prefix_list;
+		prefix_list.initializeFromString(chirp_prefix.c_str());
+		for ( auto attr_it = newgrid.begin(); attr_it != newgrid.end(); attr_it++ ) {
+			if ( prefix_list.contains_anycase_withwildcard(attr_it->first.c_str()) ) {
+				classad::ExprTree *old_expr = orig.Lookup(attr_it->first);
+				classad::ExprTree *new_expr = attr_it->second;
+				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
+					update.Insert( attr_it->first, new_expr->Copy() );
+				}
 			}
 		}
 	}

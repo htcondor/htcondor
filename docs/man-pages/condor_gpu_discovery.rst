@@ -1,5 +1,3 @@
-      
-
 *condor_gpu_discovery*
 ========================
 
@@ -60,8 +58,19 @@ When ``-short-uuid`` is used, discovery of two GPUs may look like this
 
     DetectedGPUs="GPU-ddc1c098, GPU-9dc7c6d6"
 
-Any NVIDA runtime library later than 9.0 will accept the above identifiers in the
+Any NVIDIA runtime library later than 9.0 will accept the above identifiers in the
 ``CUDA_VISIBLE_DEVICES`` environment variable.
+
+If the NVML libary is available, and a multi-instance GPU (MIG) -capable
+device is present, has MIG enabled, and has created compute instances
+for each MIG instance, *condor_gpu_discovery* will report those instance
+as distinct devices.  Their names will be in the long UUID form unless
+the ``-short-uuid`` option is used, because they can not be enumerated
+via CUDA.  MIG instances don't have some of the properties reported by
+the ``-properties``, ``-extra``, and ``-dynamic`` options; these properties
+will be omitted.  If MIG is enabled on any GPU in the system, some properties
+become unavailable for every GPU in the system; `condor_gpu_discovery`
+will report what it can.
 
 Options
 -------
@@ -134,19 +143,22 @@ Options
     Output in the syntax of HTCondor configuration, instead of ClassAd
     language. An additional attribute is produced ``NUM_DETECTED_GPUs``
     which is set to the number of GPUs detected.
+ **-repeat** [*N*]
+    Repeat listed GPUs *N* (default 2) times.  This results in a list
+    that looks like ``CUDA0, CUDA1, CUDA0, CUDA1``.
+ **-packed**
+    When repeating GPUs, repeat each GPU *N* times, not the whole list.
+    This results in a list that looks like ``CUDA0, CUDA0, CUDA1, CUDA1``.
  **-cron**
     This option suppresses the ``DetectedGpus`` attribute so that the
     output is suitable for use with *condor_startd* cron. Combine this
     option with the **-dynamic** option to periodically refresh the
     dynamic Gpu information such as temperature. For example, to refresh
     GPU temperatures every 5 minutes
- **-verbose**
-    Also print detection progress. This option is for interactive use only.
 
     .. code-block:: condor-config
 
         use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron)
-          
 
  **-verbose**
     For interactive use of the tool, output extra information to show

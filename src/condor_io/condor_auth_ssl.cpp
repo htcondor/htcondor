@@ -40,6 +40,10 @@
 
 #include "condor_attributes.h"
 
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#include <openssl/err.h>
+
 #include <algorithm>
 #include <sstream>
 #include <string.h>
@@ -356,8 +360,13 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 		std::string scitoken;
 		if (m_scitokens_mode) {
 			if (m_scitokens_file.empty()) {
-				ouch( "No SciToken file provided\n" );
-				m_auth_state->m_client_status = AUTH_SSL_ERROR;
+					// Try to use the token from the environment.
+				scitoken = htcondor::discover_token();
+
+				if (scitoken.empty()) {
+					ouch( "No SciToken file provided\n" );
+					m_auth_state->m_client_status = AUTH_SSL_ERROR;
+				}
 			} else {
 				std::unique_ptr<FILE,decltype(&::fclose)> f(
 					safe_fopen_no_create( m_scitokens_file.c_str(), "r" ), 
@@ -1023,14 +1032,41 @@ Condor_Auth_SSL::server_verify_scitoken()
 	std::string issuer, subject;
 	long long expiry;
 	std::vector<std::string> bounding_set;
+	std::vector<std::string> groups, scopes;
+	std::string jti;
 	if (!htcondor::validate_scitoken(m_client_scitoken, issuer, subject, expiry,
-		bounding_set, mySock_->getUniqueId(), err))
+		bounding_set, groups, scopes, jti, mySock_->getUniqueId(), err))
 	{
 		dprintf(D_SECURITY, "%s\n", err.getFullText().c_str());
 		return false;
 	}
+	classad::ClassAd ad;
+	if (!groups.empty()) {
+		std::stringstream ss;
+		bool first = true;
+		for (const auto &grp : groups) {
+			ss << (first ? "" : ",") << grp;
+			first = false;
+		}
+		ad.InsertAttr(ATTR_TOKEN_GROUPS, ss.str());
+	}
+		// These are *not* the same as authz; the authz are filtered (and stripped)
+		// for the prefix condor:/
+	if (!scopes.empty()) {
+		std::stringstream ss;
+		bool first = true;
+		for (const auto &scope : scopes) {
+			ss << (first ? "" : ",") << scope;
+			first = false;
+		}
+		ad.InsertAttr(ATTR_TOKEN_SCOPES, ss.str());
+	}
+	if (!jti.empty()) {
+		ad.InsertAttr(ATTR_TOKEN_ID, jti);
+	}
+	ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
+	ad.InsertAttr(ATTR_TOKEN_SUBJECT, subject);
 	if (!bounding_set.empty()) {
-		classad::ClassAd ad;
 		std::stringstream ss;
 		for (const auto &auth : bounding_set) {
 			dprintf(D_SECURITY|D_FULLDEBUG,
@@ -1039,8 +1075,8 @@ Condor_Auth_SSL::server_verify_scitoken()
 			ss << auth << ",";
 		}
 		ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, ss.str());
-		mySock_->setPolicyAd(ad);
 	}
+	mySock_->setPolicyAd(ad);
 	m_scitokens_auth_name = issuer + "," + subject;
 	return true;
 }
@@ -1106,7 +1142,7 @@ Condor_Auth_SSL::setup_crypto(unsigned char* key, const int keylen)
 	}
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
-	KeyInfo thekey(key,keylen,CONDOR_3DES);
+	KeyInfo thekey(key, keylen, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
 	if ( m_crypto ) {
 		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
@@ -1191,7 +1227,6 @@ Condor_Auth_SSL::wrap(const char *   input,
 	bool result;
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
-	dprintf(D_ALWAYS, "ZKM: In wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -1209,7 +1244,6 @@ Condor_Auth_SSL::unwrap(const char *   input,
 	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
-	dprintf(D_ALWAYS, "ZKM: In unwrap.\n");
 	result = decrypt(in,input_len,out,output_len);
 	
 	output = (char *)out;
@@ -1585,6 +1619,22 @@ skip_san:
 		} else if (!success) {
 			dprintf(D_SECURITY|D_FULLDEBUG, "Unable to extract CN from certificate.\n");
 			goto err_occured;
+		}
+	}
+
+	if (mySock_->isClient()) {
+		std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new( BIO_s_mem() ), BIO_free);
+
+		if (!PEM_write_bio_X509(bio.get(), cert)) {
+			dprintf(D_SECURITY, "Unable to convert server host cert to PEM format.\n");
+			goto err_occured;
+		}
+		char *pem_raw;
+		auto len = BIO_get_mem_data(bio.get(), &pem_raw);
+		if (len) {
+			classad::ClassAd ad;
+			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, pem_raw, len);
+			mySock_->setPolicyAd(ad);
 		}
 	}
 

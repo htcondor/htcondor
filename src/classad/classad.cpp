@@ -1308,7 +1308,7 @@ GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) 
 
 bool ClassAd::
 _GetExternalReferences( const ExprTree *expr, const ClassAd *ad, 
-	EvalState &state, References& refs, bool fullNames ) const
+	EvalState &state, References& refs, bool fullNames )
 {
     switch( expr->GetKind( ) ) {
         case LITERAL_NODE:

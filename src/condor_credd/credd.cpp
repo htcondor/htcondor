@@ -307,6 +307,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			service_fname += "_";
 			service_fname += handle;
 		}
+		MyString service_name(service_fname);
 		service_fname += ".top";
 
 		dprintf(D_FULLDEBUG, "check_creds: checking for OAUTH %s/%s\n", user.c_str(), service_fname.c_str());
@@ -326,6 +327,19 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		if (rc==-1) {
 			dprintf(D_ALWAYS, "check_creds: did not find %s\n", tmpfname.Value());
 			missing.Insert(&requests[i]);
+		} else {
+			// check to see if new scopes and audience match previous cred
+			if (cred_matches(tmpfname, &requests[i]) == FAILURE_CRED_MISMATCH) {
+				r->encode();
+				URL = "ERROR - credentials exist that do not match the request";
+				URL += "\n  They can be removed with";
+				URL += "\n    condor_store_cred delete-oauth -s " + service_name;
+				URL += "\n  but make sure no other job is using them.";
+				(void) r->code(URL);
+				r->end_of_message();
+				return CLOSE_STREAM;
+			}
+			// else ignore other problems or a match
 		}
 	}
 

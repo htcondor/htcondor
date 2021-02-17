@@ -4,7 +4,7 @@ Windows (as Administrator)
 ==========================
 
 Installation of HTCondor must be done by a user with administrator
-privileges. We have provided quickstart instructions below to walk
+privileges.  We have provided quickstart instructions below to walk
 you through a single-node HTCondor installation using the HTCondor
 Windows installer GUI.
 
@@ -19,12 +19,18 @@ a specific need for this approach and have extensive HTCondor experience.
 Quickstart Installation Instructions
 ------------------------------------
 
-These instructions describe how to use the HTCondor Windows Installer
-to install all components of an HTCondor system on a single computer.
+To download the latest HTCondor Windows Installer:
 
-Download the HTCondor Windows Installer and start the installer by
-double clicking on the MSI file. Then follow the directions below for
-each option.
+#.  Go to the
+    `current channel <https://research.cs.wisc.edu/htcondor/tarball/current/>`_
+    download site.
+#.  Click on the second-latest version.  (The latest version should always be
+    the under-development version and will only have ``daily`` builds.)
+#.  Click on the ``release`` folder.
+#.  Click on the file ending in ``.msi`` (usually the first one).
+
+Start the installer by double clicking on the MSI file once it's downloaded.
+Then follow the directions below for each option.
 
 If HTCondor is already installed.
     If HTCondor has been previously installed, a dialog box will appear
@@ -48,7 +54,9 @@ STEP 2: HTCondor Pool Configuration.
 
     Experienced users who are making a pool should create a new pool
     only on the machine they've chosen as their central manager.  See
-    the :doc:`admin-quick-start`.
+    the :doc:`admin-quick-start`.  Otherwise, choose the option to
+    join an existing pool and enter the name or IP address of the
+    central manager.
 
 STEP 3: This Machine's Roles.
     Check the "submit jobs" box.  From the list of execution options,

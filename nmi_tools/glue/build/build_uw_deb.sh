@@ -50,13 +50,16 @@ if $(grep -qi stretch /etc/os-release); then
     mv debian/control.stretch debian/control
 elif $(grep -qi buster /etc/os-release); then
     suffix='n1'
-elif $(grep -qi xenial /etc/os-release); then
-    suffix=''
-    mv debian/control.xenial debian/control
-elif $(grep -qi bionic /etc/os-release); then
-    suffix='n1'
-elif $(grep -qi focal /etc/os-release); then
+elif $(grep -qi bullseye /etc/os-release); then
     suffix='n2'
+    mv debian/control.focal debian/control
+    mv debian/htcondor.install.focal debian/htcondor.install
+    mv debian/rules.focal debian/rules
+    mv debian/patches/series.focal debian/patches/series
+elif $(grep -qi bionic /etc/os-release); then
+    suffix=''
+elif $(grep -qi focal /etc/os-release); then
+    suffix='n1'
     mv debian/control.focal debian/control
     mv debian/htcondor.install.focal debian/htcondor.install
     mv debian/rules.focal debian/rules
@@ -70,8 +73,8 @@ fi
 # testing -> rc repo
 # stable -> release repo
 
-dist='unstable'
-#dist='testing'
+#dist='unstable'
+dist='testing'
 #dist='stable'
 echo "Distribution is $dist"
 echo "Suffix is '$suffix'"

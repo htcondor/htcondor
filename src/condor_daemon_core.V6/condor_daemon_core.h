@@ -1525,6 +1525,12 @@ class DaemonCore : public Service
 	bool wantsRestart( void ) const;
 
 		/**
+		   Tell the daemon to send itself the shutdown signal
+		*/
+	void beginDaemonRestart(bool fast = false, bool restart = true);
+	void beginDaemonShutdown(bool fast = false) { beginDaemonRestart(fast, false); }
+
+		/**
 		   Set whether this daemon should should send CHILDALIVE commands
 		   to its daemoncore parent. Must be called from
 		   main_pre_command_sock_init() to have any effect. The default
@@ -1648,6 +1654,10 @@ class DaemonCore : public Service
 
 		// do and our parents/children want/have a udp comment socket?
 	bool m_wants_dc_udp;
+		// Send_Signal should use UDP rather than TCP if possible (the standard pre 9.0 behavior)
+	bool m_use_udp_for_dc_signals;
+		// DaemonCore::Send_Signal should never use kill when the target is a daemon core daemon
+	bool m_never_use_kill_for_dc_signals;
 		// do we ourself want/have a udp comment socket?
 	bool m_wants_dc_udp_self;
 	bool m_invalidate_sessions_via_tcp;

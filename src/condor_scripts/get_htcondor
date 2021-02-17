@@ -1,32 +1,42 @@
-#!/bin/sh
+#!/bin/bash
 set -e
+#
 # HTCondor for Linux Quick Install script
 #
-# See https://xxxx for the installation steps.
+# For the installation steps, including how to verify the contents of
+# this file, see:
+#
+#   https://htcondor.readthedocs.io/en/latest/getting-htcondor/
 #
 # This script is meant for quick & easy install via:
-#   $ curl -fsSL https://xxx -o get-htcondor.sh
-#   $ sh get-htcondor.sh
 #
-# For test builds (ie. release candidates):
+#   $ sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
 #
-# NOTE: Make sure to verify the contents of the script
-#       you downloaded matches the contents of install.sh
-#       located at https://github.com/....
-#       before executing.
-#
-
 
 usage() {
 	cat <<-EOF
-	Options:
+	Specify only one of the following:
+	--dist		: Display detected operating system and exit
+	-h, --help	: Display this message and exit
+	--download	: Download the tarball for a user-level installation and exit.
 	--dry-run	: Do not install, just print commands [default]
 	--no-dry-run	: Issue all the commands neeed to install HTCondor
+
+	Installation options:
 	--channel NAME	: Specify version channel to install; NAME can be
 	     current: Most recent release with new features [default]
 	     stable : Most recent release with only bug-fixes
-	--dist		: Display detected operating system and exit
-	-h, --help	: Display this message and exit
+	--password	: Set the password used to secure the pool.  Use only if
+	          	  nobody else can log into the machine.  Otherwise specify
+	          	  in the environment (GET_HTCONDOR_PASSWORD) or interactively.
+
+	Installation options, specify only one:
+	--minicondor            : Install a complete stand-alone HTCondor.  [default]
+	--central-manager NAME	: Install as the central manager role.
+	--submit NAME		: Install as the submit role.
+	--execute NAME		: Install as the execute role.
+	     The NAME of central manager's machine must be a DNS name resolvable
+	     on all the machines in the pool, or an IP address.
 	EOF
 	exit 0
 }
@@ -165,6 +175,9 @@ get_distribution() {
 		;;
 
 		debian|raspbian)
+			# Echoing VERSION_CODENAME out of /etc/os-release works
+			# better on Devuan and is simpler... is that file missing on
+			# raspbian?
 			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
 			case "$dist_version" in
 				10)
@@ -237,39 +250,33 @@ do_start_service() {
 	fi
 }
 
-do_install() {
-	# Figure out the distribution and version we are running on.
-    # This will set $lsb_dist and $dist_version.
-	get_distribution
+do_token_security() {
+	# This won't work in a pipeline (as we recommend using this script).
+	if [ -z "${PASSWORD}" ]; then
+		echo -n "Enter a pool password: "
+		read PASSWORD
+	fi
 
-	if [ -f "/etc/condor/condor_config" ]; then
-		cat >&2 <<-'EOF'
-			Error: HTCondor appears to have been installed previously on this system. 
-
-			You may update the existing install, or remove and then re-install.
-		EOF
-		case "$lsb_dist" in
-		fedora)
-			cat >&2 <<-'EOF'
-			To update enter as root: SOME DNF MAGIC
-			To remove enter as root: SOME DNF MAGIC
-			EOF
-			;;
-		ubuntu|debian)
-			cat >&2 <<-'EOF'
-			To update enter as root: SOME APT-GET MAGIC
-			To remove enter as root: SOME APT-GET MAGIC
-			EOF
-			;;
-		centos|rhel|amzn)
-			cat >&2 <<-'EOF'
-			To update enter as root: yum update condor
-			To remove enter as root: yum remove condor
-			EOF
-			;;
-		esac
+	if [ -z "${PASSWORD}" ]; then
+		echo
+		echo "You must set a password!  Did you replace \$htcondor_password with a password?"
+		echo
 		exit 1
 	fi
+
+	# So 'echo' is a shell built-in, which means no command-line to show
+	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
+	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
+	echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+
+	# Now issue myself a token.
+	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
+}
+
+do_install() {
+	# Figure out the distribution and version we are running on.
+	# This will set $lsb_dist and $dist_version.
+	get_distribution
 
 	user="$(id -un 2>/dev/null || true)"
 
@@ -289,9 +296,51 @@ do_install() {
 		fi
 	fi
 
+	#
+	# Check for a previous installation.  The instructions below remove
+	# the HTCondor package(s) and whatever packages they depended on but
+	# which no other package(s) did.  However, neither set of instructions
+	# removes HTCondor's repositories, which will prevent downgrades.  I
+	# thinks that's OK for now.
+	#
+	if [ -f "/etc/condor/condor_config" ]; then
+		cat >&2 <<-'EOF'
+			Error: HTCondor appears to have been installed previously on this system.
 
+			You may update the existing install, or remove and then re-install.
+		EOF
+		case "$lsb_dist" in
+		ubuntu|debian)
+			PACKAGE=htcondor
+			if [ -z "${ROLE}" ]; then
+				PACKAGE=minihtcondor
+			fi
 
-	echo -e "\n# Installing HTCondor for ${lsb_dist^} $dist_version"
+			cat >&2 <<-EOF
+				To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
+				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
+			EOF
+			;;
+		centos|rhel|amzn)
+			PACKAGE=condor
+			if [ -z "${ROLE}" ]; then
+				PACKAGE=minicondor
+			fi
+
+			cat >&2 <<-EOF
+				To update: $sh_c "yum update ${PACKAGE}"
+				To remove: $sh_c "yum -y autoremove ${PACKAGE} && rm -fr /etc/condor"
+			EOF
+			;;
+		esac
+		exit 1
+	fi
+
+	if [ -z "${ROLE}" ]; then
+		echo -e "\n# Installing mini HTCondor for ${lsb_dist^} $dist_version"
+	else
+		echo -e "\n# Installing HTCondor as ${ROLE} for ${lsb_dist^} $dist_version"
+	fi
 
 	# Run install binaries for each distro accordingly
 	case "$lsb_dist" in
@@ -300,45 +349,93 @@ do_install() {
 				if ! is_dry_run; then
 					set -x
 				fi
-				$sh_c "apt-get install -y -qq --no-install-recommends XXX >/dev/null"
+
+				echo -e "\n# Adding our repository"
+
+				# Install our repository key.
+				$sh_c "apt-get update"
+				$sh_c "apt-get install gnupg"
+				$sh_c "curl -fsSL ${DOWNLOAD_URL}/debian/HTCondor-Release.gpg.key | apt-key add -"
+
+				# Add our repository.
+				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
+				$sh_c "echo \"deb [arch=amd64] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb-src ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
+
+				echo -e "\n# Updating package lists"
+				$sh_c "apt-get update"
+
+				# In the Ubuntu 20.04 Docker container, this blows up
+				# when run out of the pipe with curl because the
+				# keyboard-configuration and console-configuration
+				# require interactive responses (and stdin is eaten by
+				# this file).  How much do we care?
+
+				echo -e "\n# Installing HTCondor binaries and dependencies"
+				if [ -z "${ROLE}" ]; then
+					$sh_c "apt-get install -y minihtcondor"
+				else
+					$sh_c "apt-get install -y htcondor"
+				fi
 			)
 			;;
 		centos|rhel|amzn)
-			repo_dist="$lsb_dist"
-			if [ "$lsb_dist" = "centos" ]; then
+			(
+			if ! is_dry_run; then
+				set -x
+			fi
+
+			repo_dist=${lsb_dist}
+			if [ "${repo_dist}" = "centos" ]; then
 				repo_dist="rhel"
 			fi
-			yum_repo="$DOWNLOAD_URL/yum/repo.d/htcondor-$CHANNEL-$repo_dist$dist_version.repo"
-			if ! curl -Ifs "$yum_repo" > /dev/null; then
-				echo "Error: Unable to access repository file $yum_repo, is it valid?"
-				exit 1
+			if [ "${repo_dist}" = "rhel" ]; then
+				repo_dist="el"
 			fi
-			if [ "$lsb_dist" = "fedora" ]; then
-				pkg_manager="dnf"
-				config_manager="dnf config-manager"
-				pre_reqs="dnf-plugins-core"
-				pkg_suffix="fc$dist_version"
+			repo_suffix="${repo_dist}${dist_version}"
+			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
+
+			echo -e "\n# Installing EPEL"
+			epel_version="${dist_version}"
+			if [ "${lsb_dist}" = "amzn" ]; then
+				if [ "${dist_version}" -eq 2 ]; then
+					epel_version="7"
+				fi
+			fi
+			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
+
+			if [ "${lsb_dist}" != "amzn" ]; then
+				#
+				# Just to make our lives harder, the packages we need from
+				# EPEL depend on repositories which are disabled by default,
+				# and those repositories and how to enable them between
+				# RHEL and CentOS and between version 7 and 8.
+				#
+				if [ "${lsb_dist}" = "centos" ]; then
+					if [ "${dist_version}" -eq 8 ]; then
+						$sh_c "dnf config-manager --set-enabled PowerTools"
+					fi
+				elif [ "${lsb_dist}" = "rhel" ]; then
+					# subscription-manager only works if you've already
+					# "register"ed and "attach"ed the system.
+					if [ "${dist_version}" -eq 7 ]; then
+						$sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
+					elif [ "${dist_version}" -eq 8 ]; then
+						ARCH=$(/bin/arch)
+						$sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
+					fi
+				fi
+			fi
+
+			echo -e "\n# Installing the HTCondor repo"
+			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
+
+			echo -e "\n$ Installing HTCondor"
+			if [ -z "${ROLE}" ]; then
+				$sh_c "yum install ${YUM_REPO} -y minicondor"
 			else
-				pkg_manager="yum"
-				config_manager="yum-config-manager"
-				pre_reqs="yum-utils epel-release"
-				pkg_suffix="el"
+				$sh_c "yum install ${YUM_REPO} -y condor"
 			fi
-			echo -e "\n# Installing prerequisite tools and repositories"
-			(
-				if ! is_dry_run; then
-					set -x
-				fi
-				$sh_c "$pkg_manager install -y $pre_reqs"
-				$sh_c "rpm --import https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor"
-				$sh_c "$config_manager --add-repo $yum_repo"
-			)
-			echo -e "\n# Installing HTCondor binaries and dependencies"
-			(
-				if ! is_dry_run; then
-					set -x
-				fi
-				$sh_c "$pkg_manager --setopt=tsflags='' install -y minicondor"
 			)
 			;;
 		*)
@@ -357,7 +454,38 @@ do_install() {
 			;;
 	esac
 
-	# Now that the binaries are installed, drop config files into config.d
+	# Configure the role, if any.
+	echo -e "\n# Configuring role, if any ..."
+	case "${ROLE}" in
+		"central manager")
+			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
+			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo 'use role : get_htcondor_central_manager' >> ${CONFIG_FILE}"
+
+			do_token_security
+			;;
+
+		"submit")
+			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
+			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
+
+			do_token_security
+			;;
+
+		"execute")
+			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
+			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
+
+			do_token_security
+			;;
+
+		*)
+			# The mini[ht]condor package has done everything for us.
+			;;
+
+	esac
 
 	# Open port 9618 on system firewall
 	do_configure_firewall
@@ -371,19 +499,14 @@ do_install() {
 do_download() {
 	get_distribution
 
-	# FIXME: The 'stable' symlink doesn't exist here yet.
-	TARBALL_BASE_URL=${DOWNLOAD_URL}/tarball/${CHANNEL}
-
-	# FIXME: How do we figure this out?
-	CONDOR_VERSION=8.9.9
-
-	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CONDOR_VERSION}/release
+	TARBALL_BASE_URL=${DOWNLOAD_URL}/tarball
+	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CHANNEL_DIR}/current
 
 	OS_VERSION=$dist_version
 	case "$lsb_dist" in
-		fedora)
-			# FIXME: we don't have a Fedora tarball.
-			;;
+		# We don't release HTCondor for Fedora.
+		# fedora)
+		#	;;
 		ubuntu)
 			OS_NAME=Ubuntu
 			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
@@ -394,18 +517,33 @@ do_download() {
 			OS_NAME=Debian
 			OS_VERSION=$dist_version_number
 			;;
-		centos|rhel|amzn)
+		centos|rhel)
 			OS_NAME=CentOS
+			;;
+		amzn)
+			OS_NAME=AmazonLinux
+			;;
+		*)
+			if [ -z "$lsb_dist" ]; then
+				if is_darwin; then
+					echo
+					echo "Error: Unsupported operating system 'macOS'"
+					echo
+					exit 1
+				fi
+			fi
+			echo
+			echo "Error: Unsupported distribution '$lsb_dist'"
+			echo
+			exit 1
 			;;
 	esac
 
-    TARBALL_NAME=condor-${CONDOR_VERSION}-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz
+	TARBALL_NAME=condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz
 	TARBALL_URL=${TARBALL_DIR_URL}/${TARBALL_NAME}
 
-	# FIXME: On Ubuntu 16, and possibly others, curl may not exist.  Install
-	# it during the previous step.
-	echo "Downloading ${TARBALL_NAME}..."
-	curl -fSL ${TARBALL_URL} -o ${TARBALL_NAME}
+	echo "Downloading to condor.tar.gz..."
+	curl -fSL ${TARBALL_URL} -o condor.tar.gz
 }
 
 # Set global defaults
@@ -414,10 +552,58 @@ DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
 DRY_RUN=1
 sh_c='sh -c'
 unset DIST
+PASSWORD=${GET_HTCONDOR_PASSWORD}
 
 # Process command-line options
 while [ $# -gt 0 ]; do
 	case "$1" in
+		--password)
+			PASSWORD=$2
+			if [ -z "${PASSWORD}" ]; then
+				echo "--password requires an argument"
+				exit 1
+			fi
+			shift
+			;;
+		--minicondor)
+			unset ROLE
+			;;
+		--central-manager)
+			ROLE="central manager"
+			CONDOR_HOST=$2
+			if [ -z "${CONDOR_HOST}" ]; then
+				echo "--central-manager requires its external name as an argument"
+				exit 1
+			fi
+			shift
+			;;
+		--submit)
+			ROLE="submit"
+			CONDOR_HOST=$2
+			if [ -z "${CONDOR_HOST}" ]; then
+				echo "--submit requires the central manager as an argument"
+				exit 1
+			fi
+			shift
+			;;
+		--execute)
+			ROLE="execute"
+			CONDOR_HOST=$2
+			if [ -z "${CONDOR_HOST}" ]; then
+				echo "--execute requires the central manager as an argument"
+				exit 1
+			fi
+			shift
+			;;
+		--yum-repo)
+			REPO_SUFFIX=$2
+			if [ -z "${REPO_SUFFIX}" ]; then
+				echo "--yum-repo requires a repo-suffix as an argument"
+				exit 1
+			fi
+			YUM_REPO=--enablerepo=htcondor-${REPO_SUFFIX}
+			shift
+			;;
 		--channel)
 			case "$2" in
 				stable)
@@ -425,6 +611,9 @@ while [ $# -gt 0 ]; do
 					;;
 				current|latest|developer)
 					CHANNEL="current"
+					;;
+				*-rc)
+					CHANNEL="$2"
 					;;
 				*)
 					echo "Illegal option $2 for --channel"
@@ -457,6 +646,15 @@ while [ $# -gt 0 ]; do
 	esac
 	shift $(( $# > 0 ? 1 : 0 ))
 done
+
+# We have to update this once every stable release; we don't want
+# to update a symlink, like we do for 'current', because we don't
+# want to surprise other stable-channel users with new features.
+if [ "${CHANNEL}" = "stable" ]; then
+	CHANNEL_DIR=9.0
+else
+	CHANNEL_DIR=${CHANNEL}
+fi
 
 # wrapped up in functions so that we have some protection against only getting
 # half the file during "curl | sh"

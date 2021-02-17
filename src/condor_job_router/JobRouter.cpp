@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "JobRouter.h"
 #include "Scheduler.h"
-#include "condor_md.h"
 #include "my_username.h"
 #include "condor_uid.h"
 
@@ -2242,7 +2241,7 @@ JobRouter::UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update)
 	if (NULL == new_ad)
 	{
 		dprintf (D_ALWAYS, "JobRouter failure (%s): Ad %s disappeared "
-				"before update finished.  Nothing will be"
+				"before update finished.  Nothing will be "
 				"updated.\n", job->JobDesc().c_str(), job->dest_key.c_str());
 		GracefullyRemoveJob(job);
 		return;
@@ -2256,7 +2255,7 @@ JobRouter::UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update)
 	// Update the routed job's status
 	if (false == job->dest_ad.Update(update))
 	{
-		dprintf(D_ALWAYS, "JobRouter failure (%s): Failed to update"
+		dprintf(D_ALWAYS, "JobRouter failure (%s): Failed to update "
 				"routed job status.\n", job->JobDesc().c_str());
 		GracefullyRemoveJob(job);
 		return;

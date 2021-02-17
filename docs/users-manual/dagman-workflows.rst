@@ -183,12 +183,17 @@ produces four dependencies:
 SCRIPT
 ''''''
 
+The optional *SCRIPT* command specifies processing that is done either
+before a job within a node is submitted, after a job within a node
+completes its execution, or when a job goes on hold.
+
+PRE and POST scripts
+^^^^^^^^^^^^^^^^^^^^
+
 :index:`SCRIPT command<single: SCRIPT command; DAG input file>`
 :index:`PRE and POST scripts<single: PRE and POST scripts; DAGMan>`
 
-The optional *SCRIPT* command specifies processing that is done either
-before a job within a node is submitted or after a job within a node
-completes its execution. :index:`PRE script<single: PRE script; DAGMan>` Processing
+:index:`PRE script<single: PRE script; DAGMan>` Processing
 done before a job is submitted is called a *PRE* script. Processing done
 after a job completes its execution is
 :index:`POST script<single: POST script; DAGMan>` called a *POST* script. Note that
@@ -207,7 +212,7 @@ The syntax used for each *PRE* or *POST* command is
 
     SCRIPT [DEFER status time] POST [JobName | ALL_NODES] ExecutableName [arguments]
 
-The *SCRIPT* command uses the *PRE* or *POST* keyword, which specifies
+The *SCRIPT* command can use the *PRE* or *POST* keyword, which specifies
 the relative timing of when the script is to be run. The *JobName*
 identifies the node to which the script is attached. The
 *ExecutableName* specifies the executable (e.g., shell script or batch
@@ -215,19 +220,6 @@ file) to be executed, and may not contain spaces. The optional
 *arguments* are command line arguments to the script, and spaces delimit
 the arguments. Both *ExecutableName* and optional *arguments* are case
 sensitive.
-
-Scripts are executed on the submit machine; the submit machine is not
-necessarily the same machine upon which the node's job is run. Further,
-a single cluster of HTCondor jobs may be spread across several machines.
-
-The optional *DEFER* feature causes a retry of only the script, if the
-execution of the script exits with the exit code given by *status*. The
-retry occurs after at least *time* seconds, rather than being considered
-failed. While waiting for the retry, the script does not count against a
-*maxpre* or *maxpost* limit. The ordering of the *DEFER* feature within
-the *SCRIPT* specification is fixed. It must come directly after the
-*SCRIPT* keyword; this is done to avoid backward compatibility issues
-for any DAG with a *JobName* of DEFER.
 
 A PRE script is commonly used to place files in a staging area for the
 jobs to use. A POST script is commonly used to clean up or remove files
@@ -238,6 +230,45 @@ resulting files in the current directory. The HTCondor jobs can then use
 these files, producing output files. The POST script compresses the
 output files, writes them out to the tape, and then removes both the
 staged files and the output files.
+
+HOLD scripts
+^^^^^^^^^^^^
+
+:index:`HOLD script<single: HOLD script; DAGMan>`
+
+Additionally, the *SCRIPT* command can take a *HOLD* keyword, which indicates an
+executable to be run when a job goes on hold. These are typically used to
+notify a user when something goes wrong with their jobs.
+
+The syntax used for a *HOLD* command is
+
+.. code-block:: condor-dagman
+
+    SCRIPT [DEFER status time] HOLD [JobName | ALL_NODES] ExecutableName [arguments]
+
+Unlike *PRE* and *POST* scripts, *HOLD* scripts are not considered part of the
+DAG workflow and are run on a best-effort basis. If one does not complete
+successfully, it has no effect on the overall workflow and no error will be
+reported.
+
+DEFER retries
+^^^^^^^^^^^^^
+
+The optional *DEFER* feature causes a retry of only the script, if the
+execution of the script exits with the exit code given by *status*. The
+retry occurs after at least *time* seconds, rather than being considered
+failed. While waiting for the retry, the script does not count against a
+*maxpre* or *maxpost* limit. The ordering of the *DEFER* feature within
+the *SCRIPT* specification is fixed. It must come directly after the
+*SCRIPT* keyword; this is done to avoid backward compatibility issues
+for any DAG with a *JobName* of DEFER.
+
+Scripts as part of a DAG workflow
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Scripts are executed on the submit machine; the submit machine is not
+necessarily the same machine upon which the node's job is run. Further,
+a single cluster of HTCondor jobs may be spread across several machines.
 
 If the PRE script fails, then the HTCondor job associated with the node
 is not submitted, and (as of version 8.5.4) the POST script is not run
@@ -258,9 +289,7 @@ the definition of node success and failure for all variations of script
 and job success and failure, when ``DAGMAN_ALWAYS_RUN_POST`` is set to
 ``False``. In this table, a dash (``-``) represents the case where a
 script does not exist for the DAG, **S** represents success, and **F**
-represents failure.
-
-Table 2.2 lists the definition of node success and
+represents failure. Table 2.2 lists the definition of node success and
 failure only for the cases where the PRE script fails, when
 ``DAGMAN_ALWAYS_RUN_POST`` is set to ``True``.
 
@@ -291,9 +320,9 @@ failure only for the cases where the PRE script fails, when
 +-----+-----------+-----------+-------+
 | S   | F         | F         | **F** |
 +-----+-----------+-----------+-------+
-| S   | not run   | \-        | **F** |
+| F   | not run   | \-        | **F** |
 +-----+-----------+-----------+-------+
-| S   | not run   | not run   | **F** |
+| F   | not run   | not run   | **F** |
 +-----+-----------+-----------+-------+
 
 Table 2.1: Node **S**\ uccess or **F**\ ailure definition with
@@ -314,8 +343,8 @@ Table 2.2: Node **S**\ uccess or **F**\ ailure definition with
 ``DAGMAN_ALWAYS_RUN_POST = True``.
 
 
-
-**Special script argument macros**
+Special script argument macros
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The five macros ``$JOB``, ``$RETRY``, ``$MAX_RETRIES``, ``$DAG_STATUS``
 and ``$FAILED_COUNT`` can be used within the DAG input file as arguments
@@ -393,7 +422,8 @@ The special macros are as follows:
 -  ``$FAILED_COUNT`` is defined by the number of nodes that have failed
    in the DAG.
 
-**Examples that use PRE or POST scripts**
+Examples that use PRE or POST scripts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Examples use the diamond-shaped DAG. A first example uses a PRE script
 to expand a compressed file needed as input to each of the HTCondor jobs
@@ -597,6 +627,55 @@ between many files.
 The main drawback of using inline submit descriptions is that they do not
 support the ``queue`` statement or any variations thereof. Any job described 
 inline in the .dag file will only have a single instance submitted.
+
+SUBMIT-DESCRIPTION command
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to declaring inline submit descriptions as part of a job, they
+can be declared independently of jobs using the *SUBMIT-DESCRIPTION* command.
+This can be helpful to reduce the size and readability of a .dag file when
+many nodes are running the same job.
+
+A *SUBMIT-DESCRIPTION* can be defined using the following syntax:
+
+.. code-block:: condor-dagman
+
+    SUBMIT-DESCRIPTION [DescriptionName] {
+        # submit attributes go here
+    }
+
+An independently declared submit description must have a unique name that is
+not used by any of the jobs. It can then be linked to a job as follows:
+
+.. code-block:: condor-dagman
+
+    JOB [JobName] [DescriptionName]
+
+For example, the previous diamond.dag example could be written as follows:
+
+.. code-block:: condor-dagman
+
+    # File name: diamond.dag
+
+    SUBMIT-DESCRIPTION DiamondDesc  {
+        executable   = /path/diamond.exe
+        output       = diamond.out.$(cluster)
+        error        = diamond.err.$(cluster)
+        log          = diamond_condor.log
+        universe     = vanilla
+    }
+
+    JOB A DiamondDesc
+    JOB B DiamondDesc
+    JOB C DiamondDesc
+    JOB D DiamondDesc
+
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+
+
+
+
 
 
 DAG Submission
@@ -2732,6 +2811,37 @@ A diagram of the above example:
   Diagram of the splice connect example
 
 .. _final-node:
+
+PROVISIONER node
+''''''''''''''''
+
+:index:`PROVISIONER command<single: PROVISIONER command; DAG input file>`
+:index:`PROVISIONER node<single: PROVISIONER node; DAGMan>`
+
+A PROVISIONER node is a single and special node that is always run at the
+beginning of a DAG. It can be used to provision resources (ie. Amazon EC2
+instances, in-memory database servers) that can then be used by the remainder
+of the nodes in the workflow.
+
+The syntax used for the *PROVISIONER* command is
+
+.. code-block:: condor-dagman
+
+    PROVISIONER JobName SubmitDescriptionFileName
+
+When a PROVISIONER is defined in a DAG, it gets run at the beginning of the
+DAG, and no other nodes are run until the PROVISIONER has advertised that it
+is ready. It does this by setting the ``ProvisionerState`` attribute in its
+job classad to the enumerated value ``ProvisionerState::PROVISIONING_COMPLETE``
+(currently: 2). Once DAGMan sees that it is ready, it will start running
+other nodes in the DAG as usual. At this point the PROVISIONER job continues
+to run, typically sleeping and waiting while other nodes in the DAG use its
+resources.
+
+A PROVISIONER runs for a set amount of time defined in its job. It does not
+get terminated automatically at the end of a DAG workflow. The expectation
+is that it needs to explicitly deprovision any resources, such as expensive
+cloud computing instances that should not be allowed to run indefinitely. 
 
 FINAL node
 ''''''''''

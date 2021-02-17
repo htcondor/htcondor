@@ -44,6 +44,7 @@ my $CHECK_NATIVE_TASK     = "remote_task-check_native";
 my $BUILD_TESTS_TASK      = "remote_task-build_tests";
 my $RUN_UNIT_TESTS        = "remote_task-run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task-coverity_analysis";
+my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 
 # autoflush our STDOUT
 $| = 1;
@@ -118,6 +119,12 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
+elsif ($ENV{NMI_PLATFORM} =~ /AmazonLinux|CentOS|Fedora|Debian|Ubuntu/) {
+    print TASKLIST "$NATIVE_TASK 4h\n";
+    print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
+    print TASKLIST "$EXTRACT_TARBALLS_TASK 4h\n";
+    print TASKLIST "$CHECK_TAR_TASK 4h\n";
+}
 else {
     # Everything else
     print TASKLIST "$EXTERNALS_TASK 4h\n";

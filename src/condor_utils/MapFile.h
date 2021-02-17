@@ -50,10 +50,10 @@ class MapFile
 	~MapFile();
 
 	int
-	ParseCanonicalizationFile(const MyString filename, bool assume_hash=false);
+	ParseCanonicalizationFile(const MyString filename, bool assume_hash=false, bool allow_include=true);
 
 	int
-	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false);
+	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false, bool allow_include=true);
 
 	int
 	ParseUsermapFile(const MyString filename, bool assume_hash=true);
@@ -85,6 +85,7 @@ class MapFile
 #ifdef USE_MAPFILE_V2
 	bool empty() { return methods.empty(); }
 	void reserve(int cbReserve) { apool.reserve(cbReserve); } // reserve space in the allocation pool
+	void dump(FILE* fp);
 #else
 	bool empty() { return canonical_entries.length() == 0 && user_entries.length() == 0; }
 	void reserve(int /*cbReserve*/) { } // reserve space in the allocation pool

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # Copyright 2019 HTCondor Team, Computer Sciences Department,
 # University of Wisconsin-Madison, WI.
 #

@@ -282,6 +282,38 @@ Optional parameters are given within square brackets.
     This function returns ``ERROR`` if other than exactly 1 argument is
     given or the argument is not an attribute reference.
 
+``String unresolved(Attribute attr)``
+    This function returns the external attribute references and unresolved
+    attribute references of the expression that is the value of the provided attribute.
+    If the provided attribute cannot be found, then ``undefined`` is returned.
+
+    For example, in a typical job ClassAd if the ``Requirements`` expression has the value
+    ``OpSys == "LINUX" && TARGET.Arch == "ARM" && Cpus >= RequestCpus``, then 
+    ``unresolved(Requirements)`` will return ``"Arch,Cpus,OpSys"`` because those will not
+    be attributes of the job ClassAd.
+
+``Boolean unresolved(Attribute attr, String pattern)``
+    This function returns ``True`` when at least one of the external or unresolved attribute
+    references of the expression that is the value of the provided attribute matches the
+    given Perl regular expression pattern.  If none of the references match the pattern, then
+    ``False`` is returned. If the provided attribute cannot be found, then ``undefined`` is returned.
+
+    For example, in a typical job ClassAd if the ``Requirements`` expression has the value
+    ``OpSys == "LINUX" && Arch == "ARM"``, then ``unresolved(Requirements, "^OpSys")`` will
+    return ``True``, and ``unresolved(Requirements, "OpSys.+")`` will return ``False``.
+
+    The intended use of this function is to make it easier to apply a submit transform to
+    a job only when the job does not already reference a certain attribute. For instance
+
+..  code-block:: text
+
+    JOB_TRANSFORM_DefPlatform @=end
+       # Apply this transform only when the job requirements does not reference OpSysAndver or OpSysName
+       REQUIREMENTS ! unresolved(Requirements, "OpSys.+")
+       # Add a clause to the job requirements to match only CentOs7 machines
+       SET Requirements $(Requirements) && OpSysAndVer == "CentOS7"
+    @end
+
 :index:`ifThenElse()<single: ifThenElse(); ClassAd functions>`
 
 
@@ -721,7 +753,8 @@ Optional parameters are given within square brackets.
     difference between the two strings occurs in a string of digits, in
     which case, sort by the value of that number (assuming that more
     leading zeroes mean smaller numbers).  Thus ``7.x`` is earlier than
-    ``7.y`` and ``7.01`` is earlier than ``7.10``.
+    ``7.y``, ``7.9`` is earlier than ``7.10``, and the following sequence
+    is in order: ``000, 00, 01, 010, 09, 0, 1, 9, 10``.
 
     :index:`versionGT()<single: versionGT(); ClassAd functions>`
     :index:`versionLT()<single: versionLT(); ClassAd functions>`

@@ -49,6 +49,7 @@ my $CHECK_NATIVE_TASK     = "remote_task-check_native";
 my $BUILD_TESTS_TASK      = "remote_task-build_tests";
 my $RUN_UNIT_TESTS        = "remote_task-run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task-coverity_analysis";
+my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 
 my $taskname = "";
 my $execstr = "";
@@ -190,8 +191,11 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2020.06/bin";
 	$execstr = get_cmake_args();
-	$execstr .= " -DBUILD_TESTING:bool=false ";
+	$execstr .= " -DBUILD_TESTING:bool=false -DWITH_SCITOKENS:bool=false";
 	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
+} elsif ($taskname eq $EXTRACT_TARBALLS_TASK) {
+    $execstr = get_extract_tarballs_script();
+    $execstr .= " .";
 }
 
 
@@ -289,6 +293,15 @@ sub get_cmake_args {
 
 sub get_tarball_check_script {
     return dirname($0) . "/check-tarball.pl";
+}
+
+sub get_extract_tarballs_script {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
+        return dirname($0) . "/make-tarball-from-rpms";
+    }
+    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
+        return dirname($0) . "/make-tarball-from-debs";
+    }
 }
 
 sub get_tarball_name {

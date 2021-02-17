@@ -1,40 +1,37 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 #Marco Mambelli - first version 10/8/2012 
-
-from __future__ import print_function
 
 import sys
 import os
 import platform
 import optparse
 
-UNKNOWN="UNKNOWN"
-UNSUPPORTED="UNSUPPORTED"
-RH6="RH6"
-RH7="RH7"
-RH8="RH8"
-OSX="MAC"
-OSX_UNSUPPORTED="UNSUPPORTED"
-DEB9="DEB9"
-DEB10="DEB10"
-UBUNTU16="UBUNTU16"
-UBUNTU18="UBUNTU18"
-UBUNTU20="UBUNTU20"
+from typing import Dict
 
 SUPPORTED_OSX = ['10.13', '10.14', '10.15']
-SUPPORTED_PLATFORMS = [ RH6, RH7, RH8, OSX, DEB9, DEB10, UBUNTU16, UBUNTU18, UBUNTU20 ]
+
+# Mapping for distro name in /etc/os-release to Bosco naming scheme
+DISTRO_MAPPING = {'redhat': 'RH',
+                  'centos': 'RH',
+                  'debian': 'DEB',
+                  'ubuntu': 'UBUNTU',
+                  'linuxmint': 'UBUNTU'}
+
+MINT_TO_UBUNTU_VERSION = {'18': '16',
+                          '19': '18',
+                          '20': '20'}
 
 # download URLs for the different platforms
 URL_DICT={
-  DEB9: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian9.tar.gz",
-  DEB10: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian10.tar.gz",
-  OSX: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
-  RH6: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
-  RH7: "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat7.tar.gz",
-  RH8: "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat8.tar.gz",
-  UBUNTU16: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
-  UBUNTU18: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu18.tar.gz",
-  UBUNTU20: "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu20.tar.gz",
+  "DEB9": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian9.tar.gz",
+  "DEB10": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian10.tar.gz",
+  "MAC": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
+  "RH6": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
+  "RH7": "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat7.tar.gz",
+  "RH8": "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat8.tar.gz",
+  "UBUNTU16": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
+  "UBUNTU18": "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_Ubuntu18.tar.gz",
+  "UBUNTU20": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu20.tar.gz",
 }
 
 BIT32="32bit"
@@ -47,153 +44,103 @@ def findversion_mac(detail=False):
   # system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"
   #      System Version: Mac OS X 10.6.8 (10K549)
   #
-  import commands 
-  ec, out = commands.getstatusoutput('system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"')
+  import subprocess
+  ec, out = subprocess.getstatusoutput('system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"')
   retv = out.strip()[len("System Version:"):].strip()
   if detail and ec==0:
     return retv
   if retv.startswith('Mac OS X 10.'):
     version = [i.strip() for i in retv.strip()[len("Mac OS X "):].split('.')]
     if '.'.join(version[:2]) in SUPPORTED_OSX:
-      return OSX
-    return OSX_UNSUPPORTED
-  return UNKNOWN
+      return "MAC"
+    return "UNSUPPORTED"
+  return "UNSUPPORTED"
 
-def findversion_redhat(detail=False):
-  # content of /etc/redhat-release
-  #Scientific Linux release 6.2 (Carbon)
-  #Red Hat Enterprise Linux Server release 5.8 (Tikanga)
-  #Scientific Linux SL release 5.5 (Boron)
-  #CentOS release 4.2 (Final)
-  #
-  #Do we support FC:Fedora Core release 11 ... ?
-  #
-  # should I check that it is SL/RHEL/CentOS ? 
-  # no 
-  lines = open('/etc/redhat-release').readlines()
-  for line in lines:
-    if detail and 'release'in line:
-      return line
-    if 'release 6.' in line:
-      return RH6
-    if 'release 7.' in line:
-      return RH7
-    if 'release 8.' in line:
-      return RH8
-    return UNSUPPORTED
-  return UNKNOWN
 
-def findversion_debian(detail=False):
-  """cat /etc/*release
-DISTRIB_ID=Ubuntu
-DISTRIB_RELEASE=11.10
-DISTRIB_CODENAME=oneiric
-DISTRIB_DESCRIPTION="Ubuntu 11.10"
+def get_distro_info() -> Dict[str, str]:
+    """
+    Return a dict containing the contents of /etc/os-release
 
-user@bellatrix:~$ lsb_release
-No LSB modules are available.
+    NAME="Ubuntu"
+    VERSION="20.04.1 LTS (Focal Fossa)"
+    ID=ubuntu
+    ID_LIKE=debian
+    PRETTY_NAME="Ubuntu 20.04.1 LTS"
+    VERSION_ID="20.04"
+    HOME_URL="https://www.ubuntu.com/"
+    SUPPORT_URL="https://help.ubuntu.com/"
+    BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+    PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+    VERSION_CODENAME=focal
+    UBUNTU_CODENAME=focal
+    """
+    with open('/etc/os-release') as os_file:
+        os_release = os_file.readlines()
 
-user@bellatrix:~$ lsb_release -a  
-No LSB modules are available.
+    os_info = dict()
+    for line in os_release:
+        key, val = line.split('=', maxsplit=1)
+        os_info[key] = val.replace('"', '').strip()
 
-Distributor ID:    Ubuntu
-Description:    Ubuntu 11.10
-Release:    11.10
-Codename:    oneiric       
-"""
-  retv=UNSUPPORTED
-  lines = open('/etc/lsb-release').readlines()
-  for line in lines:
-    if detail:
-       if 'DISTRIB_DESCRIPTION' in line:
-        return line[len('DISTRIB_DESCRIPTION='):]
-    if 'DISTRIB_ID' in line:
-      if not 'Debian' in line and not 'Ubuntu' in line:
-        return UNSUPPORTED
-    if 'DISTRIB_RELEASE' in line:
-        # TODO These checks need to to be conditioned on whether the
-        #   distro is Debian or Ubuntu.
-        if line[len('DISTRIB_RELEASE='):].startswith('9.'):
-          retv=DEB9
-        if line[len('DISTRIB_RELEASE='):].startswith('10.'):
-          retv=DEB10
-        if line[len('DISTRIB_RELEASE='):].startswith('16.'):
-          retv=UBUNTU16
-        if line[len('DISTRIB_RELEASE='):].startswith('18.'):
-          retv=UBUNTU18
-        if line[len('DISTRIB_RELEASE='):].startswith('20.'):
-          retv=UBUNTU20
-  return retv
+    return os_info
 
-def findversion():
+
+def findversion() -> str:
   if not os.name=='posix':
-    return UNSUPPORTED
+    return "UNSUPPORTED"
   if sys.platform=='darwin':
     myver = platform.mac_ver()
     if myver[0]:
       if '.'.join(myver[0].split('.')[:2]) in SUPPORTED_OSX:
-        return OSX
+        return "MAC"
     return findversion_mac()
   elif sys.platform.startswith('linux'):
     # only 64 bit supported
     if not platform.architecture()[0]=='64bit':
-      return UNSUPPORTED
-    # try first platform.dist, use it only for positive recognition
-    mydist = platform.dist()
-    if mydist[0]:
-      if mydist[0].lower()=='redhat':
-        if mydist[1].startswith('6.'):
-          return RH6
-        if mydist[1].startswith('7.'):
-          return RH7
-        if mydist[1].startswith('8.'):
-          return RH8
-      if mydist[0].lower()=='debian':
-        if mydist[1].startswith('9.'):
-          return DEB9
-        if mydist[1].startswith('10.'):
-          return DEB10
-      if mydist[0].lower()=='ubuntu':
-        if mydist[1].startswith('16'):
-          return UBUNTU16
-        if mydist[1].startswith('18'):
-          return UBUNTU18
-        if mydist[1].startswith('20'):
-          return UBUNTU20
-      if mydist[0].lower()=='linuxmint':
-        if mydist[1].startswith('18'):
-          return UBUNTU16
-        if mydist[1].startswith('19'):
-          return UBUNTU18
-        if mydist[1].startswith('20'):
-          return UBUNTU20
-    if os.path.isfile('/etc/redhat-release'):
-      return findversion_redhat()
-    elif os.path.isfile('/etc/lsb-release'):
-      return findversion_debian()
-  return UNKNOWN
+      return "UNSUPPORTED"
+
+    try:
+      distro_info = get_distro_info()
+    except FileNotFoundError:
+      return "UNKNOWN"
+
+    distro = distro_info['ID']
+    try:
+        bosco_distro = DISTRO_MAPPING[distro]
+    except KeyError:
+        return "UNKNOWN"
+    major_ver = distro_info['VERSION_ID'].split('.')[0]
+
+    if distro == 'linuxmint':
+      try:
+        major_ver = MINT_TO_UBUNTU_VERSION[major_ver]
+      except KeyError:
+        return "UNKNOWN"
+
+    return f'{bosco_distro}{major_ver}'
+
+  return "UNKNOWN"
 
 def findversion_detail():
-  #if not os.name=='posix':
-  #  return UNKNOWN 
   if sys.platform=='darwin':
     return findversion_mac(True)
   elif sys.platform.startswith('linux'):
     if os.path.isfile('/etc/redhat-release'):
-      return findversion_redhat(True)
-    elif os.path.isfile('/etc/lsb-release'):
-      return findversion_debian(True)
-  return UNKNOWN
+      try:
+        return get_distro_info()["PRETTY_NAME"]
+      except (KeyError, FileNotFoundError):
+        pass
+  return "UNKNOWN"
 
 def install(platform, multiuser=False, options=None):
   """Install BOSCO for the platform"""
   import tempfile
-  import urllib2
+  import urllib.request, urllib.error, urllib.parse
   import shutil
   import tarfile
-  import commands
+  import subprocess
   # make tmp dir
-  if not platform in SUPPORTED_PLATFORMS:
+  if not platform in sorted(URL_DICT.keys()):
       print("Your system is not supported. Aborting the installation.")
       sys.exit(1)
   try:
@@ -202,7 +149,7 @@ def install(platform, multiuser=False, options=None):
     condor_dir = ""
     try:
       print("Downloading BOSCO from %s" % URL_DICT[platform])
-      response = urllib2.urlopen(URL_DICT[platform])
+      response = urllib.request.urlopen(URL_DICT[platform])
       fname = os.path.join(tmp_dir, 'bosco-download.tar.gz')
       f = open(fname, 'wb')
       shutil.copyfileobj(response, f)
@@ -238,7 +185,7 @@ def install(platform, multiuser=False, options=None):
                 "cd %s/%s; ./bosco_install %s" % (tmp_dir, condor_dir_list[0], options_list)
                ]
     for cmd in cmd_list:
-      ec, out = commands.getstatusoutput(cmd)
+      ec, out = subprocess.getstatusoutput(cmd)
       if ec != 0:
         print("Error installing BOSCO")
         print("Command %s failed:\n%s" % (cmd, out))
@@ -284,13 +231,13 @@ if __name__ == "__main__":
                     default=False, action='store_true')
   parser.add_option('-f', '--full', help='return the full version string form the OS', dest='details',
                     default=False, action='store_true')
-  parser.add_option('--force', help='force a specific platform %s' % SUPPORTED_PLATFORMS, dest='force',
+  parser.add_option('--force', help='force a specific platform %s' % sorted(URL_DICT.keys()), dest='force',
                     )
   parser.add_option('-i', '--install', help='basic bosco installation for the current platform', dest='install',
                     default=False, action='store_true')
   (opts, args) = parser.parse_args(my_par)
   # options consistency
-  if opts.force and not opts.force in SUPPORTED_PLATFORMS:
+  if opts.force and not opts.force in sorted(URL_DICT.keys()):
     print("The platform %s is not supported.\n" % opts.force)
     parser.print_help()
     sys.exit(-1)

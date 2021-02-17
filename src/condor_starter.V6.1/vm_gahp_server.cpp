@@ -36,7 +36,7 @@
 #include "vm_gahp_request.h"
 #include "setenv.h"
 
-extern CStarter* Starter;
+extern Starter* Starter;
 
 VMGahpServer::VMGahpServer(const char *vmgahpserver,
                            const char *vmtype,

@@ -12,9 +12,10 @@ if you would like to inspect it first, see
 are making a pool should add a flag to select the desired role; see
 the :doc:`admin-quick-start`.
 
+(RedHat systems must be attached to a subscription for this to work.)
+
 .. code-block:: shell
 
-    # [FIXME] Verify that this actually works everywhere.
     sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
 
 .. _inspecting_the_script:

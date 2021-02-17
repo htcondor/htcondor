@@ -26,6 +26,7 @@
 #include "CondorError.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
+#include "condor_crypt_aesgcm.h"
 
 #include <unordered_set>
 
@@ -233,6 +234,19 @@ public:
         // Encryption support below
         //------------------------------------------
         bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
+
+        int ciphertext_size(int plaintext_size) {
+            if (!crypto_) return plaintext_size;
+            if (!crypto_state_) return plaintext_size;
+
+            // for all methods other than AESGCM just return plaintext
+            if (crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) return plaintext_size;
+
+            int cs = ((Condor_Crypt_AESGCM*)crypto_)->ciphertext_size_with_cs(plaintext_size, &(crypto_state_->m_stream_crypto_state));
+            dprintf(D_NETWORK, "Sock::ciphertext_size: went from plaintext_size %i to ciphertext_size %i.\n", plaintext_size, cs);
+            return cs;
+        }
+
         //------------------------------------------
         // PURPOSE: set sock to use a particular encryption key
         // REQUIRE: KeyInfo -- a wrapper for keyData

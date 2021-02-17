@@ -216,6 +216,10 @@ public:
 	static  std::string		getAuthenticationMethods( DCpermission perm );
 
 	static	MyString 		getDefaultCryptoMethods();
+		// Given a list of crypto methods, return a list of those that are supported
+		// by this version of HTCondor.  Prevents clients and servers from suggesting
+		// a crypto method that isn't supported by the code.
+	static  std::string		filterCryptoMethods(const std::string &);
 	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
 	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
 	static	SecMan::sec_req 		sec_lookup_req( const ClassAd &ad, const char* pname );
@@ -270,7 +274,7 @@ public:
 		// these can be copied into the policy parameter:
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
 		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
-		classad::ClassAd *policy);
+		classad::ClassAd *policy, bool allow_multiple_methods=false);
 
 		// Get security session info to send to our peer so that peer
 		// can create pre-built security session compatible with ours.
@@ -289,6 +293,12 @@ public:
 		// the same session id as a newly requested non-negotiated security
 		// session, the lingering session will simply be replaced.
 	bool SetSessionLingerFlag(char const *session_id);
+
+		// Given a list of crypto methods, return the first valid protocol name.
+	static Protocol getCryptProtocolNameToEnum(char const *name);
+	static const char *getCryptProtocolEnumToName(Protocol proto);
+
+	static std::string getPreferredOldCryptProtocol(const std::string &name);
 
  private:
 	void invalidateOneExpiredCache(KeyCache *session_cache);

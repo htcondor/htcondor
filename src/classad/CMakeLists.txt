@@ -127,7 +127,7 @@ set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
 if (LINUX OR DARWIN)  
   add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
-  set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 12 )
+  set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 15 )
   target_link_libraries( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
   install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
 endif()

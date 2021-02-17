@@ -4,25 +4,303 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 8.9.11
+--------------
+
+Release Notes:
+
+.. HTCondor version 8.9.12 released on Month Date, 2021.
+
+- HTCondor version 8.9.12 not yet released.
+
+- As an improved security measure, HTCondor will now prohibit Linux jobs
+  from running setuid executables by default.  We believe the only common setuid
+  program this impacts is ``ping``.  To allow jobs to run setuid binaries,
+  set ``DISABLE_SETUID`` to ``false`` in the configuration of the worker
+  node.
+
+- The ``condor_procd`` now attempts to detect invalidly short reads of
+  the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
+  find its own PID, the PID of its parent, or PID 1, it considers the read
+  invalid and will immediately retry it.  However, these precautions do
+  not detect the majority of short reads.  In addition, therefore, the
+  ``condor_procd`` compares the number of PIDs it just read to the number
+  of PIDs it read the last time it checked; if the number is too much
+  smaller, that is also considered an invalid read.  If the re-read fails,
+  the result of the previous read is returned.  The ``condor_procd`` checks
+  for this condition because not finding every PID on the system causes
+  a wide variety of user-visible failures, which (usually) result in HTCondor
+  completely restarting.
+
+  The default threshold for "too much smaller" is that the current read is less
+  than 90% of the previous read; in our testing, this detected every actual
+  short read with an overhead of roughly one additional read per 4000.  You
+  can tune the threshold by setting ``_CONDOR_PROCAPI_RETRY_FRACTION``
+  in the ``condor_master``'s environment to the threshold's floating-point
+  value (so that the default is ``0.90``).  This value is only passed to the
+  ``condor_procd`` on start-up.
+  :jira:`33`
+
+New Features:
+
+- HTCondor now prohibits jobs from running setuid executables on Linux. The
+  knob ``DISABLE_SETUID`` can be set to false to disable this.
+  :jira:`256`
+
+- HTCondor now creates a number of directories on start-up, rather than
+  fail later on when it needs them to exist.  See the ticket for details.
+  :jira:`73`
+
+- HTCondor now detects instances of multi-instance GPUs.  These devices will
+  be reported as individual GPUs, each named as required to access them via
+  ``CUDA_VISIBLE_DEVICES``.  Some of the ``-extra`` and ``-dynamic``
+  properties are unavailable for these devices.  Due to driver limitations,
+  if MIG is enabled on any GPU, HTCondor will detect all devices on the system
+  using NVML; some ``-extra`` properties will not be reported for these
+  systems as a result.
+
+  This feature does not include reporting the utilization of MIG instances.
+  :jira:`137`
+
+- To make the debugging logs more consistent, the slot name is always
+  appended to the StarterLog.  Previously, a single slot startd's 
+  StarterLog would have no suffix.  Now it will be called StarterLog.slot1.
+  :jira:`178`
+  
+- Added command-line options to *condor_gpu_discovery* to report GPUs
+  multiple times.  If your GPU jobs are small and known to be well-behaved,
+  this makes it easier for them to share a GPU.
+  :jira:`106`
+
+- Enhanced the optional job completion sent to the submitter to now
+  include the batch name, if defined, and the submitting directory,
+  so the user has a better idea of which job the job id is.
+  :jira:`71`
+
+- Added submit commands ``batch_project`` and ``batch_runtime``, used to
+  set job attributes ``BatchProject`` and ``BatchRuntime`` for **batch**
+  grid universe jobs.
+  :jira:`44`
+
+- Added a new tool/daemon :ref:`condor_adstash` that polls for job history
+  ClassAds and pushes their contents to Elasticsearch. Setting ``use
+  feature: adstash`` will run *condor_adstash* as a daemon, though
+  care should be taken to configure it for your pool and Elasticsearch
+  instance. See the :ref:`admin-manual/monitoring:Elasticsearch`
+  documentation in the admin manual for more detail.
+
+- When token authentication (IDTOKENS or SCITOKENS) is used, HTCondor will
+  now record the subject, issuer, scopes, and groups, from the token used to
+  submit jobs.
+  :jira:`90`
+
+- The python ``schedd.submit`` method now honors the **spool** argument
+  even when the first argument is a ``Submit`` object.
+  :jira:`131`
+
+- When singularity is enabled, when there is an error running singularity
+  test before the job, the first line of singularity stderr is logged to 
+  the hold message in the job.
+  :jira:`133`
+
+- When the startd initializes, it runs the ``condor_starter`` with the
+  -classad option to probe the features this starter support.  As a
+  side-effect, the starter logs some information to a StarterLog file.
+  This StarterLog is almost never of interest when debugging jobs. To
+  make that more clear, this starter log is now named StarterLog.testing.
+  :jira:`132`
+
+- The *condor_collector* can now use a projection when forwarding ads to a
+  View Collector.  A new configuration variable ``COLLECTOR_FORWARD_PROJECTION``
+  can be configured to enabled this.
+  :jira:`51`
+
+- The *condor_drain* command now has a ``-reason`` argument and will supply a default
+  reason value if it is not used.  The *condor_defrag* daemon will always pass ``defrag``
+  as the reason so that draining initiated by the administrator can be distinguished
+  by drainging initiated by *condor_defrag*.
+  :jira:`77`
+
+- The  *condor_defrag* daemon will now supply a ``-reason`` argument of ``defrag``
+  and will ignore machines that have have a draining reason that is not ``defrag``.
+  :jira:`89`
+
+- Added a new a ClassAd function to help write submit transforms.  You can now use unresolved()
+  to check for existing constraints on a particular attribute (or attribute regex).
+  :jira:`66`
+
+- Added TensorFlow environment variables ``TF_NUM_THREADS`` and
+  ``TF_LOOP_PARALLEL_ITERATIONS`` to the list of environment variables
+  exported by the *condor_starter* per these
+  `recommendations <https://github.com/theislab/diffxpy/blob/master/docs/parallelization.rst>`_.
+  :jira:`185`
+
+- Certificate map files can now use the ``@include`` directive to include another file
+  or all of the files in a directory.
+  :jira:`46`
+
+
+Bugs Fixed:
+
+- Fixed a bug where jobs that asked for `transfer_output_files = .` would
+  be put on hold if they were evicted and restarted.
+  :jira:`267`
+
+- The ``preserve_relative_paths`` submit command now properly allows jobs
+  to run on HTCondor versions 8.9.10 and later.
+  :jira:`189`
+
+- Utilization is now properly reported if ``GPU_DISCOVERY_EXTRA`` includes
+  ``-uuid``.
+  :jira:`137`
+
+- Fixed a bug with singularity support where the job's cwd wasn't
+  being set to the scratch directory when `SINGULARITY_TARGET_DIR` wasn't
+  also set.
+  :jira:`91`
+
+- Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
+  :jira:`201`
+
+Version 8.9.11
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.11 released on January 27, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002.html>`_.
+
+   :ticket:`7893`
+   :ticket:`7894`
+
 Version 8.9.10
 --------------
 
 Release Notes:
 
--  HTCondor version 8.9.10 not yet released.
+- HTCondor version 8.9.10 released on November 24, 2020.
 
-.. HTCondor version 8.9.10 released on Month Date, 2020.
+- For *condor_annex* users: Amazon Web Services is deprecating support for
+  the Python 2.7 runtime used by *condor_annex*.  If you ran the
+  *condor_annex* setup command with a previous version of HTCondor, you
+  should update your setup to use the new runtime.  (Go to the AWS Lambda
+  `console <https://console.aws.amazon.com/lambda>`_ and look for the
+  ``HTCondorAnnex-CheckConnectivity`` function; click on it.  Scroll
+  down to "Runtime settings"; click the "Edit" button.  Select "Python 3.8"
+  from the drop-down list under "Runtime".  Then hit the "Save" button.
+  You'll have to repeat this for each region you're using.)
+  :jira:`24`
 
 New Features:
 
-- Added statistics to the collector ad about CCB.
-  :ticket:`7842`
+- Added support for OAuth, SciTokens, and Kerberos credentials in local
+  universe jobs.
+  :ticket:`7693`
+
+- The python ``schedd.submit`` method now accepts a ``Submit`` object and itemdata
+  to define the jobs, to be submitted.  The use of a ClassAd to define the job is now deprecated
+  for this method
+  :ticket:`7853`
+
+- A new Python method ``schedd.edit`` can be used to set multiple attributes for a job specification
+  with a single call to this method.
+  :jira:`28`
+
+- Added a new ``SCRIPT HOLD`` feature to DAGMan, allowing users to define a
+  script executable that runs when a job goes on hold.
+  :jira:`65`
+
+- Added a new ``SUBMIT-DESCRIPTION`` command to DAGMan, which allows inline
+  jobs to share submit descriptions.
+  :jira:`64`
 
 - You may now tag instances from the command line of `condor_annex`.  Use
   the ``-tag <name> <value>`` command-line option once for each tag.
   :ticket:`7834`
 
+- When running a singularity job, the starter first runs `singularity test`
+  if this returns non-zero, the job is put on hold.
+  :ticket:`7801`
+
+- Added support for requesting GPUs with grid universe jobs of type `batch`.
+  :ticket:`7757`
+
+- Added new configuration variable :macro:`MIN_FLOCK_LEVEL`, which can be
+  used to specify how many of the remote HTCondor pools listed in
+  ``FLOCK_COLLECTOR_HOSTS`` should always be flocked to.
+  The default is 0.
+  :jira:`62`
+
+- Job attributes set by the job using the Chirp command
+  ``set_job_attr_delayed`` are now propagated back to the originating
+  *condor_schedd* by the Job Router and Condor-C (a.k.a grid universe type
+  ``condor``).
+  :jira:`63`
+
+- A new configuration variable :macro:`DEFAULT_DRAINING_START_EXPR` can be used to define
+  what the ``START`` value of a slot should be while it is draining. This configuration variable
+  is used when the command to drain does not have an override value for ``START``.
+  :jira:`67`
+
+- When a :macro:`SEC_CREDENTIAL_PRODUCER` is configured for *condor_submit* it now
+  assumes that the CREDD is the current version when does not know what version it is,
+  which is common when the CREDD is running on a different machine than *condor_submit*.
+  :jira:`76`
+
+- The ``--add`` option of *bosco_cluster* now attempts to install a version
+  of HTCondor on the remote cluster that closely matches the version installed
+  locally.
+  The new ``--url`` option can be used to specify the URL from which the
+  HTCondor binaries should be fetched.
+  :jira:`21`
+
+- The Python scripts distributed with HTCondor (except those dealing
+  with the OAuth credmon) have been upgraded to run under Python 3.
+  :ticket:`7698`
+  :ticket:`7844`
+  :ticket:`7872`
+
+- Added the ability to have finer grain control over the SSH connection when
+  using the remote gahp. One can now specify the SSH port and also
+  whether or not SSH BatchMode is used.
+  :jira:`18`
+  :jira:`19`
+
+-  The *condor_useprio* tool now displays any submitter ceilings that are set.
+   :ticket:`7837`
+
+- Added statistics to the collector ad about CCB.
+  :ticket:`7842`
+
 Bugs Fixed:
+
+- Fixed a bug introduced in 8.9.9 that, only when accounting groups with quotas
+  were defined that caused the matchmaker to stop making new matches after several
+  negotiation cycles.
+  :jira:`83`
+
+- The *condor_credd* now signals the OAuth credmon, not the Kerberos credmon,
+  when processing a locally-issued credential.
+  :ticket:`7889`
+
+- Fixed a bug in DAGMan where a ``_gotEvents`` warning kept appearing
+  incorrectly in the output file.
+  :jira:`15`
+  
+- Fixed a bug which caused the ``condor-annex-ec2`` script to exit prematurely
+  on some systemd platforms.
+  :jira:`22`
 
 - Fixed a bug specific to MacOS X which could cause the shared port daemon's
   initial childalive message to be lost.  This would cause `condor_who` to
@@ -32,6 +310,14 @@ Bugs Fixed:
 
 Version 8.9.9
 -------------
+
+Known Issues:
+
+- If group quotas are in use, the negotiator will eventually stop making
+  matches. This defect was introduced in HTCondor 8.9.9. It will be fixed in
+  HTCondor 8.9.10 to be released on November 24, 2020.
+  In the meantime, one may revert the Central Manager machine to HTCondor
+  8.9.8, leaving the remainder of the pool at HTCondor 8.9.9.
 
 Release Notes:
 

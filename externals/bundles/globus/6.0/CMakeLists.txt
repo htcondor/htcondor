@@ -63,7 +63,7 @@ if (WITH_GLOBUS)
 							#--Patch step ----------
 							PATCH_COMMAND ${GLOBUS_PATCH}
 							#--Configure step ----------
-							CONFIGURE_COMMAND ./configure ${GLOBUS_FLAGS} --prefix=${GLOBUS_INSTALL_LOC}
+							CONFIGURE_COMMAND ./configure ${GLOBUS_FLAGS} --prefix=${GLOBUS_INSTALL_LOC} --disable-gsi-openssh
 							#--Build Step ----------
 							BUILD_COMMAND make &&
 								ln -sfn . ${GLOBUS_INSTALL_LOC}/include/globus

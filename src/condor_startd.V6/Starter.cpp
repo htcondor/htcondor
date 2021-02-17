@@ -815,12 +815,6 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	bool slot_arg = false;
 	enum { APPEND_NOTHING, APPEND_SLOT, APPEND_CLUSTER, APPEND_JOBID } append = APPEND_SLOT;
 
-	// by default, single slots machines get no log append and no slot argument.
-	if ( ! resmgr->is_smp()) {
-		slot_arg = false;
-		append = APPEND_NOTHING;
-	}
-
 	MyString ext;
 	if (param(ext, "STARTER_LOG_NAME_APPEND")) {
 		slot_arg = true;

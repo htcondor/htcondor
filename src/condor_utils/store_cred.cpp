@@ -64,6 +64,8 @@ static const char *err_strings[] = {
 	"Arguments are missing, client and server my be mismatched", // FAILURE_PROTOCOL_MISMATCH
 	"The credmon did not process credentials within the timeout period", // FAILURE_CREDMON_TIMEOUT
 	"Operation failed because of a configuration error", // FAILURE_CONFIG_ERROR
+	"Failure parsing credential as JSON", // FAILURE_JSON_PARSE
+	"Credential was found but it did not match requested scopes or audience", // FAILURE_CRED_MISMATCH
 };
 
 // check to see if store_cred return value is a failure, and return a string for the failure code if so
@@ -184,6 +186,46 @@ void SecureZeroMemory(void *p, size_t n)
 
 #endif
 
+int
+cred_matches(MyString & credfile, const ClassAd * requestAd)
+{
+	// read the file back to make sure the scopes & audience match
+	// the request
+	size_t clen = 0;
+	void *credp = NULL;
+	if (!read_secure_file(credfile.c_str(), &credp, &clen, true, SECURE_FILE_VERIFY_ACCESS)) {
+		// read_secure_file already logged the failure if it failed
+		return FAILURE_JSON_PARSE;
+	}
+	// unfortunately the buffer is not null terminated so need to make a copy
+	std::string credbuf;
+	credbuf.assign((char *) credp, clen);
+	free(credp);
+	classad::ClassAdJsonParser jsonp;
+	ClassAd credad;
+	if (!jsonp.ParseClassAd(credbuf.c_str(), credad)) {
+		dprintf(D_ALWAYS, "Error, could not parse cred from %s as JSON\n", credfile.c_str());
+		return FAILURE_JSON_PARSE;
+	}
+
+	std::string scopes;
+	std::string audience;
+	if (requestAd) {
+		requestAd->LookupString("Scopes", scopes);
+		requestAd->LookupString("Audience", audience);
+	}
+
+	std::string oldscopes;
+	std::string oldaudience;
+	credad.LookupString("scopes", oldscopes);
+	credad.LookupString("audience", oldaudience);
+	if ((scopes != oldscopes) || (audience != oldaudience)) {
+		return FAILURE_CRED_MISMATCH;
+	}
+
+	return SUCCESS;
+}
+
 long long
 PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int rawlen, int mode, MyString & ccfile)
 {
@@ -216,6 +258,35 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 	return rc;
 }
 
+// this checks for a specific set of valid characters - ones that could be used
+// in boath an OAuth service name and a valid file name.  perhaps this is too
+// restrictive, but rather than enumerate all bad characters and potential miss
+// some, let's just declare what we are okay with.
+//
+// we restrict service names to alphanumeric plus the following:
+//     - + = _ .
+//
+// everything else is disallowed.
+
+bool okay_for_oauth_filename(std::string s) {
+	for (char c: s) {
+		if (
+			!isalpha(c) &&
+			!isdigit(c) &&
+			!(c == '-') &&
+			!(c == '+') &&
+			!(c == '=') &&
+			!(c == '_') &&
+			!(c == '.') ) {
+
+			// NOT any of the above... bad character.
+			dprintf(D_SECURITY | D_VERBOSE, "ERROR: encountered bad char '%c' in string \"%s\"\n", c, s.c_str());
+			return false;
+		}
+	}
+	return true;
+}
+
 long long
 OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, const ClassAd * ad, ClassAd & return_ad, MyString & ccfile)
 {
@@ -225,8 +296,10 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 /*
 	ad arg schema is
-		"service" : <SERVICE> name
-		"handle"  : optional <handle> name appended to service name to create filenames
+		"service"  : <SERVICE> name
+		"handle"   : optional <handle> name appended to service name to create filenames
+		"scopes"   : optional comma-separated <scopes> list to include in JSON storage or query
+		"audience" : optional <audience> to include in JSON storage or query
 		any of the .meta JSON keywords below
 
 	<service>_<handle>.meta JSON file is
@@ -240,8 +313,12 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 
 	dprintf(D_ALWAYS, "OAUTH store cred user %s len %i mode %i\n", username, credlen, mode);
-	if (strchr(username, '@')) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "OAUTH store cred ERROR - username has a @, it should be bare\n");
+	if (!okay_for_oauth_filename(username)) {
+		// include a backtrace here because the username is NOT user-provided, it comes
+		// from the authenticted socket.  the caller of OAUTH_STORE_CRED should have
+		// verified it is in the correct form, but out of caution we check it again.
+		// this could arguably be an ASSERT() but we'd rather not crash the CredD.
+		dprintf(D_ALWAYS | D_BACKTRACE, "OAUTH store cred ERROR - Illegal char in username\n");
 		return FAILURE_BAD_ARGS;
 	}
 
@@ -265,10 +342,18 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 	std::string service;
 	if (ad && ad->LookupString("Service", service)) {
-		// TODO: PRAGMA_REMIND("convert service name to filename")
+		// this is user input so validate
+		if (!okay_for_oauth_filename(service)) {
+			dprintf(D_ALWAYS, "OAUTH store cred ERROR - Illegal char in Service name.\n");
+			return FAILURE_BAD_ARGS;
+		}
 	}
 
-	// if this is a query, just return the timestamp on the .use file
+	// If this is a query and the service name is empty, return the
+	//   timestamp on the last .top or .use file found.  If this is a
+	//   query and the service name is given, verify that any scopes or
+	//   audience given match and if so return the timestamp on the .use
+	//   file if present, else the .top file.
 	if ((mode & MODE_MASK) == GENERIC_QUERY) {
 		if (service.empty()) {
 			Directory creddir(cred_dir, PRIV_ROOT);
@@ -296,27 +381,33 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 			ccfile.clear();
 			return FAILURE_NOT_FOUND;
 		} else {
-			// does the .use file exist already?
-			dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+			// does the .top file exist?
+			dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
 			struct stat cred_stat_buf;
-			int rc = stat(ccfile.c_str(), &cred_stat_buf);
-			bool got_ccfile = rc == 0;
+			if (stat(ccfile.c_str(), &cred_stat_buf) == 0) {
+				std::string attr("Top"); attr += service; attr += "Time";
+				return_ad.Assign(attr, cred_stat_buf.st_mtime);
 
-			if (got_ccfile) { // if it exists, return it's timestamp
+				// read the file back to make sure the scopes & audience match
+				int rc = cred_matches(ccfile, ad);
 				ccfile.clear();
-				return_ad.Assign(service, cred_stat_buf.st_mtime);
-				return cred_stat_buf.st_mtime;
-			} else {
-				// if no use file, check for a .top file.  if that exists return its timestamp
-				dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
-				if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
-					std::string attr("Top"); attr += service; attr += "Time";
-					return_ad.Assign(attr, cred_stat_buf.st_mtime);
-					return SUCCESS_PENDING;
-				} else {
-					ccfile.clear();
-					return FAILURE_NOT_FOUND;
+				if (rc != SUCCESS) {
+					return rc;
 				}
+
+				// if there's also a .use file, get its mod
+				//  time as the service attribute
+				dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+				if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
+					ccfile.clear();
+					return_ad.Assign(service, cred_stat_buf.st_mtime);
+					return SUCCESS;
+				} else {
+					return SUCCESS_PENDING;
+				}
+			} else {
+				ccfile.clear();
+				return FAILURE_NOT_FOUND;
 			}
 		}
 	}
@@ -366,9 +457,33 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	// append filename for tokens file
 	dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
 
+	std::string scopes;
+	std::string audience;
+	if (ad) {
+		ad->LookupString("Scopes", scopes);
+		ad->LookupString("Audience", audience);
+	}
+	std::string jsoncred;
+	size_t clen = credlen;
+	if ((scopes != "") || (audience != "")) {
+		// Add scopes and/or audience into the JSON-formatted credentials
+		classad::ClassAdJsonParser jsonp;
+		ClassAd credad;
+		if (!jsonp.ParseClassAd((const char *) cred, credad)) {
+			dprintf(D_ALWAYS, "Error, could not parse cred for %s as JSON\n", ccfile.c_str());
+			return FAILURE_JSON_PARSE;
+		}
+		if (scopes != "") credad.Assign("scopes", scopes);
+		if (audience != "") credad.Assign("audience", audience);
+		sPrintAdAsJson(jsoncred, credad);
+		jsoncred += "\n";
+		cred = (const unsigned char *) jsoncred.c_str();
+		clen = jsoncred.length();
+	}
+
 	// create/overwrite the credential file
 	dprintf(D_ALWAYS, "Writing OAuth user cred data to %s\n", ccfile.c_str());
-	if ( ! replace_secure_file(ccfile.c_str(), ".tmp", cred, credlen, true)) {
+	if ( ! replace_secure_file(ccfile.c_str(), ".tmp", cred, clen, true)) {
 		// replace_secure_file already logged the failure if it failed.
 		ccfile.clear();
 		return FAILURE;
@@ -412,7 +527,7 @@ LOCAL_STORE_CRED(const char *username, const char *servicename, MyString &ccfile
 //   but the caller should wait for a .cc file before proceeding,
 //   the ccfile argument will be returned
 long long
-KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, MyString & ccfile)
+KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, MyString & ccfile, bool &detected_local_cred)
 {
 	dprintf(D_ALWAYS, "Krb store cred user %s len %i mode %i\n", username, credlen, mode);
 
@@ -422,16 +537,31 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 		return FAILURE;
 	}
 
+	// default to this being a real krb store cred
+	detected_local_cred = false;
+
 	// special case: if the credential starts with the magic string
 	// "LOCAL:", we are not actually going to store anything in the krb directory,
 	// but instead simply touch a file in the OAuth directory.  detect this right away
 	// and call that function instead.
 	if (strncmp((const char*)cred, "LOCAL:", 6) == MATCH) {
 		std::string servicename((const char*)&cred[6]);
-		dprintf(D_ALWAYS, "KRB_STORE_CRED: detected magic value with username \"%s\" and service name \"%s\".\n", username, servicename.c_str());
-		return LOCAL_STORE_CRED(username, servicename.c_str(), ccfile);
+
+		// capture return value
+		long long rv = LOCAL_STORE_CRED(username, servicename.c_str(), ccfile);
+
+		// report status
+		dprintf(D_SECURITY, "KRB_STORE_CRED: detected magic value with username \"%s\" and service name \"%s\", rv == %lli.\n", username, servicename.c_str(), rv);
+
+		// only update the return param if we succeeded
+		if (rv == SUCCESS) {
+			detected_local_cred = true;
+		}
+
+		// pass through return from LOCAL store.
+		return rv;
 	}
-	
+
 	// make sure that the cc filename is cleared
 	ccfile.clear();
 
@@ -589,7 +719,8 @@ long long store_cred_blob(const char *user, int mode, const unsigned char *blob,
 			dprintf(D_ALWAYS, "GOT KRB STORE CRED mode=%d\n", mode);
 			int krb_mode = (mode & MODE_MASK) | STORE_CRED_USER_KRB;
 			ClassAd return_ad;
-			return KRB_STORE_CRED(username.c_str(), blob, bloblen, krb_mode, return_ad, ccfile);
+			bool junk = false; // API requires this output parameter, we don't look at it.
+			return KRB_STORE_CRED(username.c_str(), blob, bloblen, krb_mode, return_ad, ccfile, junk);
 		} else {
 			return FAILURE;
 		}
@@ -1437,7 +1568,16 @@ int store_cred_handler(int /*i*/, Stream *s)
 				if (cred_type == STORE_CRED_USER_KRB) {
 					dprintf(D_ALWAYS, "GOT KRB STORE CRED mode=%d\n", mode);
 					int krb_mode = (mode & MODE_MASK) | STORE_CRED_USER_KRB;
-					answer = KRB_STORE_CRED(username.c_str(), (unsigned char*)cred.ptr(), credlen, krb_mode, return_ad, ccfile);
+					bool is_local = false; // to find out if the KRB was a "LOCAL"
+					answer = KRB_STORE_CRED(username.c_str(), (unsigned char*)cred.ptr(), credlen, krb_mode, return_ad, ccfile, is_local);
+					// if this was a "locally issued" cred, switch cred type to OAUTH from here
+					// on out so we SIGHUP the correct (OAuth) credmon and not the krb one.
+					if(is_local) {
+						// remove cred type from mode and change it to OAuth
+						mode &= (~CRED_TYPE_MASK);
+						mode |= STORE_CRED_USER_OAUTH;
+						dprintf(D_SECURITY | D_FULLDEBUG, "STORE_CRED: modifed mode to STORE_CRED_USER_OAUTH.  new mode: %i\n", mode);
+					}
 				} else if (cred_type == STORE_CRED_USER_OAUTH) {
 					dprintf(D_ALWAYS, "GOT OAUTH STORE CRED mode=%d\n", mode);
 					int oauth_mode = (mode & MODE_MASK) | STORE_CRED_USER_OAUTH;
@@ -1712,7 +1852,7 @@ do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force)
 			// first see if we're operating on the pool password
 		int cmd = STORE_CRED;
 		int domain_pos = -1;
-		if (username_is_pool_password(user, &domain_pos)) {
+		if (username_is_pool_password(user, &domain_pos) && (mode & MODE_MASK) != GENERIC_QUERY) {
 			cmd = STORE_POOL_CRED;
 			user += domain_pos + 1;	// we only need to send the domain name for STORE_POOL_CRED
 		}
@@ -2324,7 +2464,7 @@ NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
 	}
 
 		// If we can, try reading out the passwords as root.
-	TemporaryPrivSentry sentry(get_priv_state() == PRIV_UNKNOWN ? PRIV_UNKNOWN : PRIV_ROOT);
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 
 	m_creds.clear();
 	std::unordered_set<std::string> tmp_creds;

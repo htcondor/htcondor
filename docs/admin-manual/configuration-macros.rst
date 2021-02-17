@@ -420,8 +420,13 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     ``SHADOW_SIZE_ESTIMATE`` :index:`SHADOW_SIZE_ESTIMATE` is
     used.
 
+:macro-def:`DISK`
+    Tells HTCondor how much disk space (in kB) to advertise as being available
+    for use by jobs. If ``DISK`` is not specified, HTCondor will advertise the
+    amount of free space on your execute partition, minus ``RESERVED_DISK``.
+
 :macro-def:`RESERVED_DISK`
-    Determines how much disk space you want to reserve for your own
+    Determines how much disk space (in kB) you want to reserve for your own
     machine. When HTCondor is reporting the amount of free disk space in
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor_startd*, which advertises the
@@ -1616,10 +1621,10 @@ that DaemonCore uses which affect all HTCondor daemons.
     ``<SUBSYS>.SETTABLE_ATTRS`` are settings used to restrict the
     configuration values that can be changed using the
     *condor_config_val* command.
-    admin-manual/security:authorization on Setting up
+    See :ref:`admin-manual/security:authorization` on Setting up
     Security in HTCondor for details on these macros and how to
     configure them. In particular,
-    admin-manual/security:authorization contains details
+    :ref:`admin-manual/security:authorization` contains details
     specific to these macros.
 
 :macro-def:`SHUTDOWN_GRACEFUL_TIMEOUT`
@@ -2320,7 +2325,7 @@ using a shared file system`.
 :macro-def:`TRUST_LOCAL_UID_DOMAIN`
     This parameter works like ``TRUST_UID_DOMAIN``, but is only applied
     when the *condor_starter* and *condor_shadow* are on the same
-    machine. If this paramater is set to ``True``, then the
+    machine. If this parameter is set to ``True``, then the
     *condor_shadow* 's ``UID_DOMAIN`` doesn't have to be a substring
     its hostname. If this paramater is set to ``False``, then
     ``UID_DOMAIN`` controls whether this substring requirement is
@@ -4920,6 +4925,16 @@ These macros control the *condor_schedd*.
     into sets of 2 *condor_collector* daemons, and each set will be
     considered for flocking.
 
+:macro-def:`MIN_FLOCK_LEVEL`
+    This integer value specifies a number of remote pools that the
+    *condor_schedd* should always flock to.
+    It defaults to 0, meaning that none of the pools listed in
+    ``FLOCK_COLLECTOR_HOSTS`` will be considered for flocking when
+    there are no idle jobs in need of match-making.
+    Setting a larger value N means the *condor_schedd* will always
+    flock to (i.e. look for matches in) the first N pools listed in
+    ``FLOCK_COLLECTOR_HOSTS``.
+
 :macro-def:`NEGOTIATE_ALL_JOBS_IN_CLUSTER`
     If this macro is set to False (the default), when the
     *condor_schedd* fails to start an idle job, it will not try to
@@ -5590,6 +5605,12 @@ condor_starter Configuration File Entries
 
 These settings affect the *condor_starter*.
 
+:macro-def:`DISABLE_SETUID`
+    By default, HTCondor prevents jobs from running setuid executables
+    on Linux by setting the no-new-privileges flag.  This can be
+    disabled (i.e. to allow setuid binaries) by setting ``DISABLE_SETIUD``
+    to false.
+
 :macro-def:`EXEC_TRANSFER_ATTEMPTS`
     Sometimes due to a router misconfiguration, kernel bug, or other
     network problem, the transfer of the initial checkpoint from the
@@ -5660,7 +5681,9 @@ These settings affect the *condor_starter*.
     libraries and programs will look at the value of environment
     variables, such as ``OMP_NUM_THREADS``, to control how many CPU cores to use.  
     Defaults to
-    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS, NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT.
+    CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS,
+    NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
+    TF_LOOP_PARALLEL_ITERATIONS, TF_NUM_THREADS.
 
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd
@@ -6632,10 +6655,30 @@ These macros affect the *condor_collector*.
     third of ``CLASSAD_LIFETIME``.
 
 :macro-def:`COLLECTOR_FORWARD_CLAIMED_PRIVATE_ADS`
-    When this boolean variable is set to ``True``, the *condor_collector*
+    When this boolean variable is set to ``False``, the *condor_collector*
     will not forward the private portion of Machine ads to the
     ``CONDOR_VIEW_HOST`` if the ad's ``State`` is ``Claimed``.
     The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
+
+:macro-def:`COLLECTOR_FORWARD_PROJECTION`
+    An expresion that evaluates to a string in the context of an update. The string is treated as a list
+    of attributes to forward.  If the string has no attributes, it is ignored. The intended use is to
+    restrict the list of attributes forwarded for claimed Machine ads.
+    When ``$(NEGOTIATOR_CONSIDER_PREEMPTION)`` is false, the negotiator needs only a few attributes from
+    Machine ads that are in the ``Claimed`` state. A Suggested use might be
+
+    .. code-block:: condor-config
+
+          if ! $(NEGOTIATOR_CONSIDER_PREEMPTION)
+             COLLECTOR_FORWARD_PROJECTION = IfThenElse(State is "Claimed", "$(FORWARD_CLAIMED_ATTRS)", "")
+             # forward only the few attributes needed by the Negotiator and a few more needed by condor_status
+             FORWARD_CLAIMED_ATTRS = Name MyType MyAddress StartdIpAddr Machine Requirements \
+                State Activity AccountingGroup Owner RemoteUser SlotWeight ConcurrencyLimits \
+                Arch OpSys Memory Cpus CondorLoadAvg EnteredCurrentActivity
+          endif
+
+    There is no default value for this variable.
+
 
 The following macros control where, when, and for how long HTCondor
 persistently stores absent ClassAds. See
@@ -7364,7 +7407,7 @@ condor_credd Configuration File Macros
 :index:`condor_credd daemon`
 :index:`condor_credd configuration variables<single: condor_credd configuration variables; configuration>`
 
-These macros affect the *condor_credd*.
+These macros affect the *condor_credd* and its credmon plugin.
 
 :macro-def:`CREDD_HOST`
     The host name of the machine running the *condor_credd* daemon.
@@ -7373,7 +7416,7 @@ These macros affect the *condor_credd*.
     An integer value representing the number of seconds that the
     *condor_credd*, *condor_starter*, and *condor_schedd* daemons
     will wait for valid credentials to be produced by a credential
-    montior (CREDMON) service. The default value is 20.
+    monitor (CREDMON) service. The default value is 20.
 
 :macro-def:`CREDD_CACHE_LOCALLY`
     A boolean value that defaults to ``False``. When ``True``, the first
@@ -7397,6 +7440,24 @@ These macros affect the *condor_credd*.
     ``LOGON_INTERACTIVE`` method. This can be useful if many
     authentication failures are noticed, potentially leading to users
     getting locked out.
+
+:macro-def:`CREDMON_KRB`
+    The path to the credmon daemon process when using the Kerberos 
+    credentials type.  The default is /usr/sbin/condor_credmon_krb
+
+:macro-def:`CREDMON_OAUTH`
+    The path to the credmon daemon process when using the OAuth2
+    credentials type.  The default is /usr/sbin/condor_credmon_oauth.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_LIFETIME`
+    The time in seconds for credmon to delay after new OAuth2
+    credentials are stored before deleting them.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM`
+    The minimum time in seconds that OAuth2 tokens should have remaining
+    on them when they are generated.  After half that amount of time 
+    elapses, they are renewed.  This is currently implemented only
+    in the vault credmon, not the default oauth credmon.
 
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
@@ -9332,6 +9393,26 @@ macros are described in the :doc:`/admin-manual/security` section.
     The directory that users' OAuth2 credentials should be stored in.
     This directory must be owned by root:condor with the setgid flag enabled.
 
+:macro-def:`SEC_CREDENTIAL_PRODUCER`
+    A script for *condor_submit* to execute to produce credentials while
+    using the kerberos type of credentials.  No parameters are passed,
+    and credentials most be sent to stdout.
+
+.. only:: Vault
+    :macro-def:`SEC_CREDENTIAL_STORER`
+	A script for *condor_submit* to execute to produce credentials while
+	using the OAuth2 type of credentials.  The oauth services specified
+	in the ``use_auth_services`` line in the submit file are passed as
+	parameters to the script, and the script should use
+	``condor_store_cred`` to store credentials for each service.
+	Additional modifiers to each service may be passed: &handle=,
+	&scopes=, or &audience=.  The handle should be appended after
+	an underscore to the service name used with ``condor_store_cred``,
+	the comma-separated list of scopes should be passed to the command
+	with the -S option, and the audience should be passed to it with the
+	-A option.
+
+
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------
 
@@ -9709,6 +9790,16 @@ These macros affect the high availability operation of HTCondor.
 :macro-def:`HAD_LOG`
     Full path and file name of the log file. The default value is
     ``$(LOG)``/HADLog.
+
+:macro-def:`HAD_FIPS_MODE`
+    Controls what type of checksum will be sent along with files that are replicated.
+    Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums. Default value is 0.
+    Prior to verions 8.8.14 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
+    later release of HTCondor, MD5 support will be removed and only SHA-2 will be
+    supported.  This configuration variable is intended to provide a transition
+    between the 8.8 and 9.0 releases.  As soon as all of machines involved in replication
+    are running HTCondor 8.8.14 or 8.9.12 or later you should set this configuration variable
+    to 1 to prepare for the transiation to 9.0
 
 :macro-def:`REPLICATION_LIST`
     A comma-separated list of all *condor_replication* daemons in the
@@ -10630,23 +10721,29 @@ general discussion of *condor_defrag* may be found in
     value of its ``START`` expression at the time draining begins).
 
 :macro-def:`DEFRAG_REQUIREMENTS`
-    An expression that specifies which machines to drain. The default is
-
-    .. code-block:: condor-classad-expr
-
-          PartitionableSlot && Offline=!=True
-
+    An expression that narrows the selection of which machines to drain.
+    By default *condor_defrag* will drain all machines that are drainable.
     A machine, meaning a *condor_startd*, is matched if any of its
-    slots match this expression. Machines are automatically excluded if
-    they are already draining, or if they match
+    partitionable slots match this expression. Machines are automatically excluded if
+    they cannot be drained, are already draining, or if they match
     ``DEFRAG_WHOLE_MACHINE_EXPR``
     :index:`DEFRAG_WHOLE_MACHINE_EXPR`.
 
+    The *condor_defrag* daemon will always add the following requirements to ``DEFRAG_REQUIREMENTS``
+
+    .. code-block:: condor-classad-expr
+
+          PartitionableSlot && Offline =!= true && Draining =!= true
+
 :macro-def:`DEFRAG_CANCEL_REQUIREMENTS`
-    An expression that specifies which draining machines should have
-    draining be canceled. This defaults to
+    An expression that is periodically evaluated against machines that are draining.
+    When this expression evaluates to ``True``, draining will be cancelled.
+    This defaults to 
     ``$(DEFRAG_WHOLE_MACHINE_EXPR)``\ :index:`DEFRAG_WHOLE_MACHINE_EXPR`.
     This could be used to drain partial rather than whole machines.
+    Beginning with version 8.9.11, only machines that have no ``DrainReason``
+    or a value of ``"Defrag"`` for ``DrainReason``
+    will be checked to see if draining should be cancelled.
 
 :macro-def:`DEFRAG_RANK`
     An expression that specifies which machines are more desirable to
@@ -10663,10 +10760,11 @@ general discussion of *condor_defrag* may be found in
 
     .. code-block:: condor-classad-expr
 
-          Cpus == TotalCpus && Offline=!=True
+          Cpus == TotalSlotCpus
 
-    A machine is matched if any slot on the machine matches this
-    expression. Each *condor_startd* is considered to be one machine.
+    A machine is matched if any Partitionable slot on the machine matches this
+    expression and the machine is not draining or was drained by *condor_defrag*.
+    Each *condor_startd* is considered to be one machine.
     Whole machines are excluded when selecting machines to drain. They
     are also counted against ``DEFRAG_MAX_WHOLE_MACHINES``.
 

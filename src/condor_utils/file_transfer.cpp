@@ -3779,8 +3779,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	FileTransferList filelist;
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
 
+	// Remove any files from the catalog that are in the ExceptionList
+	if (ExceptionFiles) {
+		auto enditer = 
+			std::remove_if(
+					filelist.begin(),
+					filelist.end(),
+					[&](FileTransferItem &fti) 
+					{return ExceptionFiles->contains(condor_basename(fti.srcName().c_str()));});
+
+		filelist.erase(enditer, filelist.end());
+	}
+
 	filesize_t sandbox_size = 0;
-	FileTransferList::iterator filelist_it;
 		// Calculate the sandbox size as the sum of the known file transfer items
 		// (only those that are transferred via CEDAR).
 	sandbox_size = std::accumulate(filelist.begin(),

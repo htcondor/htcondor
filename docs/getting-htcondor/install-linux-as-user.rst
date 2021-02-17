@@ -17,7 +17,6 @@ otherwise, we recommend using our download script, as follows.
 .. code-block:: shell
 
     cd
-    # [FIXME] Verify that this actually works everywhere.
     curl -fsSL https://get.htcondor.com | /bin/bash -s -- --download
 
 Install
@@ -28,7 +27,7 @@ Unpack the tarball and rename the resulting directory:
 .. code-block:: shell
 
     tar -x -f condor.tar.gz
-    mv condor-*unstripped condor
+    mv condor-*stripped condor
 
 You won't need ``condor.tar.gz`` again, so you can remove it now if you wish.
 
@@ -38,7 +37,7 @@ Configure
 .. code-block:: shell
 
     cd condor
-    ./bin/make-minicondor-from-tarball
+    ./bin/make-personal-from-tarball
 
 Using HTCondor
 --------------

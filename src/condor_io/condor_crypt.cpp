@@ -22,6 +22,7 @@
 #include "condor_crypt.h"
 #include "condor_md.h"
 #include "condor_random_num.h"
+#include "condor_auth_passwd.h"
 #include <openssl/rand.h>              // SSLeay rand function
 #include "condor_debug.h"
 
@@ -29,6 +30,8 @@
 // function in each method object.
 #include <openssl/des.h>
 #include <openssl/blowfish.h>
+
+#include "condor_crypt_aesgcm.h"
 
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     m_keyInfo(key)
@@ -79,6 +82,11 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
             m_ivec = (unsigned char*)malloc(m_ivec_len);
             break;
         }
+        case CONDOR_AESGCM: {
+            // AESGCM provides a method to init the StreamCryptoState object, use that.
+            Condor_Crypt_AESGCM::initState(&m_stream_crypto_state);
+            break;
+        }
         default:
             dprintf(D_ALWAYS, "CRYPTO: WARNING: Initialized crypto state for unknown proto %i.\n", proto);
             break;
@@ -92,17 +100,19 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
 Condor_Crypto_State::~Condor_Crypto_State() {
     if(m_ivec) free(m_ivec);
     if(m_method_key_data) free(m_method_key_data);
-    // CURRENTLY UNUSED: if(m_additional) free(m_additional);
 }
 
 void Condor_Crypto_State::reset() {
-    dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: resetting m_ivec(len %i) and m_num\n", m_ivec_len);
+    if(m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: protocol(AES), not clearing StreamCryptoState.\n");
+    } else {
+        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: simple reset m_ivec(len %i) and m_num\n", m_ivec_len);
 
-    if(m_ivec) {
-	memset(m_ivec, 0, m_ivec_len);
+        if(m_ivec) {
+            memset(m_ivec, 0, m_ivec_len);
+        }
+        m_num = 0;
     }
-   
-    m_num = 0;
 }
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
@@ -159,4 +169,21 @@ char *Condor_Crypt_Base::randomHexKey(int length)
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 {
     return Condor_MD_MAC::computeOnce((const unsigned char *)initialKey, strlen(initialKey));
+}
+
+unsigned char * Condor_Crypt_Base::hkdf(const unsigned char *initialKey, size_t input_key_len, size_t output_key_len)
+{
+	auto result = static_cast<unsigned char *>(malloc(output_key_len));
+	if (!result) return nullptr;
+
+	auto retval = Condor_Auth_Passwd::hkdf(initialKey, input_key_len,
+		reinterpret_cast<const unsigned char *>("htcondor"), strlen("htcondor"),
+		reinterpret_cast<const unsigned char *>("keygen"), strlen("keygen"),
+		result, output_key_len);
+
+	if (retval < 0) {
+		free(result);
+		return nullptr;
+	}
+	return result;
 }

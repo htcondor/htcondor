@@ -35,7 +35,7 @@
 #include "fdpass.h"
 #endif
 
-extern CStarter *Starter;
+extern Starter *Starter;
 
 static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd);
 

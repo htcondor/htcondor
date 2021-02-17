@@ -22,6 +22,7 @@
 #include "MyString.h"
 #include "tokener.h"
 
+#if 0 // Moved to dagman_utils
 dag_tokener::dag_tokener(const char * line_in)
 {
 	tokener tkns(line_in);
@@ -31,3 +32,4 @@ dag_tokener::dag_tokener(const char * line_in)
 		tokens.Append(&token);
 	}
 }
+#endif
