@@ -1,5 +1,3 @@
-# TODO UPDATE SECTION ON SECRETS
-
 HTCondor Containers
 ===================
 
@@ -37,17 +35,19 @@ container$ su - submituser
 ```
 
 
-### Adding configuration
-
-To add extra configuration to the minicondor container, you can volume-mount
-a file to `/etc/condor/condor_config.local`.  For example, if you have a file
-called `condor_config.local` in your current directory, run docker like this:
+A simple way to add extra configuration to the minicondor container is to
+volume-mount a file to `/etc/condor/condor_config.local`.  For example,
+if you have a file called `condor_config.local` in your current directory,
+run docker like this:
 ```console
 dockerhost$ docker run --detach \
                 --name=minicondor \
                 -v `pwd`/condor_config.local:/etc/condor/condor_config.local \
                 htcondor/mini:el7
 ```
+See the [Providing Additional
+Configuration](#providing-additional-configuration) section below for more
+ways to add extra configuration.
 
 
 ### RESTD
@@ -84,16 +84,13 @@ to the central manager and the submit host, even for running jobs or using
 You must specify the address of the pool's central manager in the `CONDOR_HOST`
 environment variable or `CONDOR_SERVICE_HOST` environment variable.
 
-If you are using token auth, you must have a token mounted at
-`/root/secrets/token` inside the container.  The token must have the following
-privileges:
-- `READ`
-- `ADVERTISE_MASTER`
-- `ADVERTISE_STARTD`
-
-Otherwise, if you are using pool password auth, you must have a copy of
-the pool password file mounted at `/root/secrets/pool_password` inside the
-container, and specify `USE_POOL_PASSWORD=yes` in the container environment.
+You must also configure security -- see the [Configuring Access and
+Security](#configuring-access-and-security) section below.
+If you are using token auth, you will need a token with an identity that
+the central manager accepts, with the following privileges:
+-   `READ`
+-   `ADVERTISE_MASTER`
+-   `ADVERTISE_STARTD`
 
 Here are the environment variables that the container can use:
 - `CONDOR_HOST`/`CONDOR_SERVICE_HOST` (required): the address of the central
@@ -106,9 +103,8 @@ Here are the environment variables that the container can use:
 - `USE_POOL_PASSWORD` (optional, default no): set this to `yes` to use
   pool password authentication
 
-In addition, you can add more HTCondor configuration by putting it in
-`/root/config/*.conf` files in the container, or bind-mounting to
-`/etc/condor/condor_config.local`.
+To add additional configuration, see the [Providing Additional
+Configuration](#providing-additional-configuration) section below.
 
 
 ### Example
@@ -210,25 +206,21 @@ requires HTCondor 8.9.2+ on both sides of the connection.
 
 The central manager requires inbound connectivity on port 9618.
 
-You must have a copy of the master password file mounted at
-`/root/secrets/pool_password`.  If using tokens, this is the secret used to
-create new tokens and validate existing ones; if you are using pool password
-as your auth method, this is the pool password.
-
-If you are using pool password as your auth method, specify
-`USE_POOL_PASSWORD=yes` in the container environment.
-
-You can add more HTCondor configuration by putting it in `/root/config/*.conf`
-files in the container, or bind-mounting a configuration file to
-`/etc/condor/condor_config.local`.
+You must also configure security -- see the [Configuring Access and
+Security](#configuring-access-and-security) section below.
+If you are using token auth, you will need to the master password file --
+this is the secret used to create new tokens and validate existing ones.
 
 Here are the environment variables that the container can use:
 - `USE_POOL_PASSWORD` (optional, default no): set this to `yes` to use
   pool password authentication
 
+To add additional configuration, see the [Providing Additional
+Configuration](#providing-additional-configuration) section below.
 
-Using the Submit Host Container
--------------------------------
+
+Using the Submit Container
+--------------------------
 
 ### Overview
 
@@ -242,16 +234,13 @@ on both sides of the connection.  This container needs no inbound connectivity.
 You must specify the address of the pool's central manager in the `CONDOR_HOST`
 environment variable or `CONDOR_SERVICE_HOST` environment variable.
 
-If you are using token auth, you must have a token mounted at
-`/root/secrets/token` inside the container.  The token must have the following
-privileges:
-- `READ`
-- `ADVERTISE_MASTER`
-- `ADVERTISE_SCHEDD`
-
-Otherwise, if you are using pool password auth, you must have a copy of
-the pool password file mounted at `/root/secrets/pool_password` inside the
-container, and specify `USE_POOL_PASSWORD=yes` in the container environment.
+You must also configure security -- see the [Configuring Access and
+Security](#configuring-access-and-security) section below.
+If you are using token auth, you will need a token with an identity that the
+central manager accepts, with the following privileges:
+-   `READ`
+-   `ADVERTISE_MASTER`
+-   `ADVERTISE_SCHEDD`
 
 Here are the environment variables that the container can use:
 - `CONDOR_HOST`/`CONDOR_SERVICE_HOST` (required): the address of the central
@@ -259,9 +248,8 @@ Here are the environment variables that the container can use:
 - `USE_POOL_PASSWORD` (optional, default no): set this to `yes` to use
   pool password authentication
 
-In addition, you can add more HTCondor configuration by putting it in
-`/root/config/*.conf` files in the container, or bind-mounting a configuration
-file to `/etc/condor/condor_config.local`.
+To add additional configuration, see the [Providing Additional
+Configuration](#providing-additional-configuration) section below.
 
 
 ### Submitting jobs
@@ -274,6 +262,60 @@ submituser@container$ condor_submit job.sub
 ```
 
 
+Providing Additional Configuration
+----------------------------------
+
+You can add more HTCondor configuration in two ways:
+- Adding `/root/config/*.conf` files.
+- Adding an `/etc/condor/condor_config.local` file.
+
+If you change files in `/root/config`, you will need to run `/update-config`
+to copy the changes to the proper directory.  `/update-config` will also
+run `condor_reconfig` for you.
+
+If you change `/etc/condor/condor_config.local`, you will need to run
+`condor_reconfig` yourself.
+
+To perform additional pre-startup tasks, add a bash script to
+`/root/config/pre-exec.sh`.  It will be run just before daemons are launched
+(i.e. before `supervisord` starts).
+
+
+Configuring Access and Security
+-------------------------------
+
+You can use either token auth (IDTOKEN) or pool password auth (PASSWORD)
+Pool password is useful for testing but we recommend using token auth
+when possible.  Note that token auth will only be used if both sides of
+the connection are version 8.9.2 or newer.
+
+To use token auth only:
+-   Mount a directory with one or more token files at
+    `/etc/condor/tokens-orig.d`.
+
+To also enable pool password auth:
+-   Specify `USE_POOL_PASSWORD=yes` in the container environment.
+-   Mount a directory with one or more password files at
+    `/etc/condor/passwords-orig.d`.
+
+Note: token auth will be preferred over pool password if tokens are
+available.
+
+The `/update-secrets` script (also run at startup) will copy password files
+to `/etc/condor/passwords.d` and token files to `/etc/condor/tokens.d`,
+with the appropriate ownership and permissions set.
+
+If you make any changes to secrets, run `/update-secrets` afterward or
+restart the container to properly install the new secrets.
+
+Note: Deleting a token file from `/etc/condor/tokens-orig.d` or a password
+file from `/etc/condor/passwords-orig.d` does not delete the corresponding
+file from `/etc/condor/tokens.d` or `/etc/condor/passwords.d`.
+
+Compatibility note:  you can also put a pool password file into
+`/root/secrets/pool_password` and a token into `/root/secrets/token`.
+This method only lets you have one password file and one token file.
+
 
 Building
 --------
@@ -285,7 +327,8 @@ The images for the various roles (`execute`, `cm`, `mini`, `submit`) are built
 on top of the `htcondor/base` image, which gets built first.  `htcondor/base`
 contains the HTCondor software, some common configuration and scripts.
 
-To build (but not push) a complete set of images for the latest version on the default Linux distribution, run:
+To build (but not push) a complete set of images for the latest version
+on the default Linux distribution, run:
 ```console
 $ ./build-images
 ```
@@ -296,7 +339,7 @@ $ ./build-images --version=<VERSION>
 ```
 (where `<VERSION>` is an HTCondor version number, like `8.9.11`).
 
-You can build daily images with
+You can build daily images with:
 ```console
 $ ./build-images --version=daily
 ```
@@ -306,7 +349,8 @@ Build for different distributions with the `--distro` argument:
 $ ./build-images --distro=el8
 ```
 
-Push the results with `--push`; you can optionally specify a different registry with `--registry`:
+Push the results with `--push`; you can optionally specify a different
+registry with `--registry`:
 ```console
 $ ./build-images --push --registry=registry.example.net
 ```
@@ -316,10 +360,6 @@ Run build-images with `--help` to see additional options and defaults.
 
 Known Issues
 ------------
-
-- Logs are in multiple files in `/var/log/condor`.  This means you need
-  to enter the container to see the logs; also, they are destroyed when the
-  container is removed.
 
 - Changes to the volumes mounted at `/root/config` and `/root/secrets`
   do not get noticed automatically.  After updating config, run
