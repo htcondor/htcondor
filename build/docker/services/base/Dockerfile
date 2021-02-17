@@ -15,6 +15,12 @@ LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}${SUFFIX}" \
       org.label-schema.vendor="HTCondor" \
       org.label-schema.license="Apache-2.0"
 
+# Unset these from parent
+LABEL org.opencontainers.image.created="" \
+      org.opencontainers.image.licenses="" \
+      org.opencontainers.image.title="" \
+      org.opencontainers.image.vendor=""
+
 # Ensure that the 'condor' UID/GID matches across containers
 RUN groupadd -g 64 -r condor && \
     useradd -r -g condor -d /var/lib/condor -s /sbin/nologin \
