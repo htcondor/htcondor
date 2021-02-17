@@ -361,8 +361,8 @@ do_install() {
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
-				$sh_c "echo \"deb [arch=amd64] ${DOWNLOAD_URL}/${lsb_dist}/${CHANNEL_DIR}/${dist_version} ${dist_version} contrib\" > ${HTCONDOR_LIST}"
-				$sh_c "echo \"deb-src ${DOWNLOAD_URL}/${lsb_dist}/${CHANNEL_DIR}/${dist_version} ${dist_version} contrib\" >> ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb [arch=amd64] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb-src ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
 
 				echo -e "\n# Updating package lists"
 				$sh_c "apt-get update"
