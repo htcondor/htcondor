@@ -6,17 +6,26 @@
 Example usage:
 
 
-    Build the latest version of the latest series for all supported distros:
-        %(prog)s --distro=all latest
+    Build the latest version of the default series for the default distro:
+        %(prog)s
 
+    Build the latest daily build for all distros that support daily builds
+    and push to the default registry:
+        %(prog)s --distro=all --push --version=daily
 
-    Build the latest daily build for the default distribution and push to the
-    default registry:
-        %(prog)s --push daily
+    Build version 8.9.11 for EL8 and push to the CHTC registry:
+        %(prog)s --distro=el8 --version=8.9.11 --push --registry=chtc
 
+    Build the latest version of the 9.1 series for Ubuntu 20.04:
+        %(prog)s --distro=ubu20.04 --series=9.1
 
-    Build version 8.9.11 for Ubuntu 18.04 and push to the CHTC registry:
-        %(prog)s --distro=ubu18.04 --push --registry=chtc 8.9.11
+    Build the latest version of the default series for the default distro,
+    and push it to the `myuser` dockerhub user.
+
+        %(prog)s --prefix=myuser/ --push --registry=dockerhub
+
+    Same but with a prefix (naming an image "htcondor-execute" instead of "execute")
+        %(prog)s --prefix=myuser/htcondor- --push --registry=dockerhub
 
 """
 import locale
@@ -42,6 +51,12 @@ SUPPORTED_DAILY_DISTROS = [
     "el7",
     "el8",
 ]
+DISTRO_IMAGE = {
+         "el7": "centos:7",
+         "el8": "centos:8",
+    "ubu18.04": "ubuntu:18.04",
+    "ubu20.04": "ubuntu:20.04",
+}
 # fmt:on
 
 
@@ -88,6 +103,8 @@ def parse_condor_version_str(condor_version_str: str) -> Dict[str, str]:
 
 
 class VersionInfo:
+    """Contains the information that can be extracted from the output of condor_version"""
+
     def __init__(self, condor_version_str, condor_platform_str):
         self.condor_version_str = condor_version_str
         self.condor_platform_str = condor_platform_str
@@ -99,6 +116,26 @@ class VersionInfo:
 
 
 class Builder:
+    """Handles all image builds for a single version
+
+    Fields:
+    - executable: `docker` or `podman`
+
+    - series: str, a numeric series like `8.9`
+    - want_latest_series: bool, `latest` was passed to the `series` argument of the constructor
+
+    - version: the desired version -- can be numbers (`8.9.9`, `daily`, or `latest`)
+    - want_latest_version: bool, `latest` was passed to the `version` argument of the constructor
+    - want_daily: bool, `daily` was passed to the `version` argument of the constructor
+
+    - prefix: goes before the image names;
+        the image names are `base`, `execute`, `cm`, etc. so with a prefix of
+        `htcondor/`, you get `htcondor/base` etc.
+
+    series and want_latest_series are ignored if an exact version was passed.
+
+    """
+
     def __init__(self, executable, series, version, prefix):
         self.executable = executable
         if series == "latest":
@@ -117,14 +154,28 @@ class Builder:
             self.want_latest_series = False
 
     def docker(self, *args, **kwargs):
+        """Runs a single docker/poodman command with subprocess.run() and returns the result.
+
+        Accepts all keyword arguments that subprocess.run() does.
+
+        """
         return subprocess.run([self.executable] + list(args), **kwargs)
 
     def docker_tag(self, old_name, *new_names):
+        """Create new tags for an existing image.  Old versions of docker could
+        only create one new tag at a time.
+
+        - old_name: the old tag
+        - *new_names: one or more new tags, or a tuple/list of them
+
+        """
         if isinstance(new_names[0], (tuple, list)):
             new_names = new_names[0]
         for new_name in new_names:
-            print(f"Tagging {old_name} as {new_name}")
             self.docker("tag", old_name, new_name)
+            if self.executable == "podman":
+                # Podman is silent when tagging so print something
+                print(f"Tagged {old_name} as {new_name}")
 
     def get_condor_version_info(self, image_name: str) -> VersionInfo:
         """Get the version information out of CondorVersion and CondorPlatform from a container by running `condor_version`.
@@ -164,6 +215,15 @@ class Builder:
         return VersionInfo(condor_version_str, condor_platform_str)
 
     def add_htcondor_labels(self, image_name: str, version_info: VersionInfo):
+        """Take an existing docker image and add org.htcondor.* labels describing condor version information.
+
+        The new image will overwrite the old one.
+
+        - image_name: the name of the image to add labels to
+        - version_info: a VersionInfo object containing the info obtained by
+            running `condor_version` in the image
+
+        """
         dockerfile = """\
 FROM %s
 LABEL \
@@ -189,40 +249,75 @@ org.htcondor.version="%s"
         )
 
     def build_base(self, distro: str) -> List[str]:
-        args = []
+        """Build a base HTCondor image
+
+        - distro: the distribution to build images for e.g. `el7`
+
+        Returns a list of image names.
+
+        Images are built from the files in the `base/` subdirectory.  One image
+        is created but will have multiple tags:
+
+        Assuming the default `self.prefix` ("htcondor/"), the following image
+        names will be created:
+
+        Builds for the `daily` version:
+        - `htcondor/base:SERIES-daily-DISTRO`
+        - `htcondor/base:SERIES-DATE-DISTRO`
+        DATE is date the image is being built, not the date the HTCondor itself was built.
+
+        Builds for a specifically version (e.g. `8.9.11`):
+        - `htcondor/base:VERSION-DISTRO`
+
+        Builds for the `latest` version:
+        - `htcondor/base:VERSION-DISTRO`
+        - `htcondor/base:SERIES-DISTRO`
+        If the series is the `latest` series, also add:
+        - `htcondor/base:DISTRO`
+
+        """
+        args = [f"--build-arg=BASE_IMAGE={DISTRO_IMAGE[distro]}"]
         if self.want_latest_version:
-            args.extend([f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=latest"])
+            args.extend(
+                [f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=latest"]
+            )
         elif self.want_daily:
-            args.extend([f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=daily"])
+            args.extend(
+                [f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=daily"]
+            )
         else:
             args.append(f"--build-arg=VERSION={self.version}")
 
-        if distro.startswith("el"):
-            args.append(f"--build-arg=BASE_IMAGE=centos:{distro[2:]}")
-        elif distro.startswith("ubu"):
-            args.append(f"--build-arg=BASE_IMAGE=ubuntu:{distro[3:]}")
-        else:
-            assert False, "not one of the supported distros -- should have been caught"
+        # We don't know up front what the version of the installed software will be.
+        # Give the image a temporary name (better than parsing `docker build` output
+        # for the hash); we'll change the name once we know what's in there.
         tmp_image_name = f"{self.prefix}base:tmp{random.randint(10000,99999)}"
         args.extend(["-t", tmp_image_name, "-f", f"base/Dockerfile", "base"])
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
 
         try:
+            # Get the real version and series by running condor_version in the image.
             version_info = self.get_condor_version_info(tmp_image_name)
             self.add_htcondor_labels(tmp_image_name, version_info)
             real_version = version_info.version
             real_series = ".".join(real_version.split(".")[0:2])
 
+            # "daily" was requested
             if self.want_daily:
-                real_image_names = [f"{self.prefix}base:{self.series}-daily-{distro}"]
-                real_image_names.append(f"{self.prefix}base:{self.series}-{today()}-{distro}")
+                real_image_names = [
+                    f"{self.prefix}base:{real_series}-daily-{distro}",
+                    f"{self.prefix}base:{real_series}-{today()}-{distro}",
+                ]
             else:
                 real_image_names = [f"{self.prefix}base:{real_version}-{distro}"]
+                # "latest" was requested
                 if self.want_latest_version:
                     real_image_names.append(f"{self.prefix}base:{real_series}-{distro}")
                     if self.want_latest_series:
                         real_image_names.append(f"{self.prefix}base:{distro}")
+                # a specific version was requested -- make sure that's the version that
+                # actually got installed
                 else:
                     if real_version != self.version:
                         raise RuntimeError(
@@ -236,11 +331,19 @@ org.htcondor.version="%s"
             self.docker("rmi", tmp_image_name, check=False)
 
     def build_derived(
-        self, image: str, baseimages: List[str], distro: str
-    ) -> List[str]:
-        new_tags = [re.sub(r"base:", image + ":", x) for x in baseimages]
+        self, image: str, base_image: str, new_tags: List[str], distro: str
+    ):
+        """Build a single derived image.
 
-        args = [f"--build-arg=BASE_IMAGE={baseimages[0]}"]
+        - image: the new type of image, e.g. `execute`; must be a subdirectory
+            with a Dockerfile
+        - base_images: the image name to be used in the FROM line
+        - new_tags: a list of tags to be applied to the built image
+        - distro: the distribution, e.g. `el7`.  Currently used for getting the
+            right PACKAGE_LIST for the execute image
+
+        """
+        args = [f"--build-arg=BASE_IMAGE={base_image}"]
         if image == "execute":
             args.append(f"--build-arg=PACKAGE_LIST=packagelist-{distro}.txt")
 
@@ -250,28 +353,42 @@ org.htcondor.version="%s"
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
 
-        return new_tags
+    def push_image(self, image: str, registry: str):
+        """Push the named image to the given registry.
 
-    def push_image(self, image, registry):
-        if self.executable == "podman" or registry != "docker.io":
+        - image: the full image name with tag, e.g. `htcondor/base:8.9.9-el7`
+        - registry: the host:port (port optional) of the registry, e.g. `docker.io`
+
+        Normally done by tagging the image with the registry, pushing the
+        image, and removing the new tag.
+
+        Docker (real docker, not podman) considers the 'docker.io' registry
+        special so the full sequence is not necessary (and would cause the
+        original image to be deleted as well).
+
+        """
+
+        if self.executable == "docker" and registry == "docker.io":
+            self.docker("push", image, check=True)
+        else:
             image_with_registry = f"{registry}/{image}"
             self.docker("tag", image, image_with_registry, check=True)
             self.docker("push", image_with_registry, check=True)
             self.docker("rmi", image_with_registry, check=False)
-        else:
-            # When it's real docker pushing to dockerhub: the tag/push/rmi
-            # sequence will cause the original build to be deleted as well
-            self.docker("push", image, check=True)
 
 
-def main(argv) -> int:
-    locale.setlocale(locale.LC_ALL, "C")  # no parsing surprises please
+def parse_arguments(argv):
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+        prog=argv[0],
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "version",
-        help="Version of HTCondor to install.  Can be an exact version (e.g. '8.9.9'), 'daily', or 'latest'",
+        "--version",
+        help="Version of HTCondor to install. "
+        "Can be an exact version (e.g. '8.9.9'), 'daily', or 'latest' "
+        "(default %(default)s)",
+        default="latest",
     )
     parser.add_argument(
         "--distro",
@@ -292,8 +409,8 @@ def main(argv) -> int:
     # parser.add_argument("--no-push", action="store_false", dest="push", help="Do not push resulting builds")
     parser.add_argument(
         "--registry",
-        help="Registry to push to (default %(default)s). Enter HOST:PORT (port is "
-        "optional) or 'dockerhub' for Docker Hub or 'chtc' for the CHTC registry.",
+        help="Registry to push to (default %(default)s). Enter HOST[:PORT] "
+        "or 'dockerhub' for Docker Hub or 'chtc' for the CHTC registry.",
         default=DEFAULT_REGISTRY,
     )
     # parser.add_argument(
@@ -302,7 +419,14 @@ def main(argv) -> int:
     parser.add_argument(
         "--no-mini", action="store_false", dest="mini", help="Do not build minicondor"
     )
-    parser.add_argument("--podman", action="store_true", help="Use podman")
+    parser.add_argument(
+        "--podman",
+        action="store_const",
+        const="podman",
+        dest="executable",
+        default="docker",
+        help="Use podman",
+    )
     parser.add_argument(
         "--base-only", action="store_true", help="Build htcondor/base only"
     )
@@ -348,10 +472,16 @@ def main(argv) -> int:
     elif args.registry.lower() == "chtc":
         args.registry = "dockerreg.chtc.wisc.edu:443"
 
-    executable = "podman" if args.podman else "docker"
+    return args, distros, images
+
+
+def main(argv) -> int:
+    locale.setlocale(locale.LC_ALL, "C")  # no parsing surprises please
+
+    args, distros, images = parse_arguments(argv)
 
     builder = Builder(
-        executable=executable,
+        executable=args.executable,
         series=args.series,
         version=args.version,
         prefix=args.prefix,
@@ -359,15 +489,18 @@ def main(argv) -> int:
 
     images_to_push = []
     for distro in distros:
-        baseimages = builder.build_base(distro)
-        images_to_push.extend(baseimages)
+        base_images = builder.build_base(distro)
+        images_to_push.extend(base_images)
         if not args.base_only:
             for image in images:
-                images_to_push.extend(
-                    builder.build_derived(
-                        distro=distro, baseimages=baseimages, image=image
-                    )
+                new_tags = [re.sub(r"base:", f"{image}:", x) for x in base_images]
+                builder.build_derived(
+                    image=image,
+                    base_image=base_images[0],
+                    new_tags=new_tags,
+                    distro=distro,
                 )
+                images_to_push.extend(new_tags)
 
     if args.push:
         for img in images_to_push:
