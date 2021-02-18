@@ -101,6 +101,7 @@ if (WITH_PYTHON_BINDINGS)
     endif()
 
     # This is an awful hack, but it's easier than fixing than this file.
+    cmake_policy(SET CMP0040 OLD)
     add_custom_command(TARGET python_bindings POST_BUILD
         COMMAND ${CMAKE_COMMAND} ARGS -E remove -f "${CMAKE_CURRENT_BINARY_DIR}/*/__init__.py"
     )
