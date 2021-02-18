@@ -1180,7 +1180,7 @@ a user can still request multiple credentials by affixing handles to
 
     .. code-block:: condor-submit
 
-	use_oauth_services = dune_production
+        use_oauth_services = dune_production
 
     Vault server.  Vault does not require permissions or resources to be
     set, but they may be set to reduce the default permissions or restrict
@@ -1192,9 +1192,9 @@ a user can still request multiple credentials by affixing handles to
 
     .. code-block:: condor-submit
 
-	use_oauth_services = dune, dune_production
-	dune_oauth_permissions_production =
-	dune_production_oauth_permissions =
+        use_oauth_services = dune, dune_production
+        dune_oauth_permissions_production =
+        dune_production_oauth_permissions =
 
 
 Jobs That Require GPUs

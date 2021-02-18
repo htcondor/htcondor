@@ -207,9 +207,7 @@ incorporates.
 
        Sets configuration that enables the *condor_credd* and *condor_credmon_oauth* daemons,
        which allow for the automatic renewal of user-supplied OAuth2 credentials.
-       See section
-       :ref:`admin-manual/setting-up-special-environments:enabling_oauth_credentials`
-       for more information.
+       See section :ref:`enabling_oauth_credentials` for more information.
 
     -  ``Adstash``
 

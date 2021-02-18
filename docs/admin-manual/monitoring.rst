@@ -325,9 +325,9 @@ are added and configured based on well known job ClassAd attributes.
 (Custom attributes are also pushed, though always as keyword fields.)
 
 *condor_adstash* is a Python 3.6+ script that uses the
-:ref:`apis/python-bindings/index:Python Bindings<HTCondor Python Binding>`
+HTCondor :ref:`apis/python-bindings/index:Python Bindings`
 and the
-`Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`,
+`Python Elasticsearch Client <https://elasticsearch-py.readthedocs.io/>`_,
 both of which must be available to the system Python 3 installation
 if using the daemonized version of *condor_adstash*.
 *condor_adstash* can also be run as a standalone tool (e.g. in a
@@ -348,5 +348,5 @@ the ``examples/`` directory for detailed information on how to modify
 your configuration.
 
 If you prefer to run *condor_adstash* in standalone mode, see the
-:ref:`man-pages/condor_adstash` man page for more
+:doc:`../man-pages/condor_adstash` man page for more
 details.

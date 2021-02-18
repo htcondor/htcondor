@@ -9401,17 +9401,17 @@ macros are described in the :doc:`/admin-manual/security` section.
 .. only:: Vault
 
     :macro-def:`SEC_CREDENTIAL_STORER`
-	A script for *condor_submit* to execute to produce credentials while
-	using the OAuth2 type of credentials.  The oauth services specified
-	in the ``use_auth_services`` line in the submit file are passed as
-	parameters to the script, and the script should use
-	``condor_store_cred`` to store credentials for each service.
-	Additional modifiers to each service may be passed: &handle=,
-	&scopes=, or &audience=.  The handle should be appended after
-	an underscore to the service name used with ``condor_store_cred``,
-	the comma-separated list of scopes should be passed to the command
-	with the -S option, and the audience should be passed to it with the
-	-A option.
+        A script for *condor_submit* to execute to produce credentials while
+        using the OAuth2 type of credentials.  The oauth services specified
+        in the ``use_auth_services`` line in the submit file are passed as
+        parameters to the script, and the script should use
+        ``condor_store_cred`` to store credentials for each service.
+        Additional modifiers to each service may be passed: &handle=,
+        &scopes=, or &audience=.  The handle should be appended after
+        an underscore to the service name used with ``condor_store_cred``,
+        the comma-separated list of scopes should be passed to the command
+        with the -S option, and the audience should be passed to it with the
+        -A option.
 
 
 Configuration File Entries Relating to Virtual Machines
