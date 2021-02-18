@@ -53,17 +53,18 @@ LATEST_SERIES = "8.9"
 DEFAULT_REGISTRY = "docker.io"
 
 
-def today():
+def today() -> str:
+    """Current date in YYYYMMDD format (used in tags)"""
     return time.strftime("%Y%m%d", time.localtime())
 
 
 def parse_condor_version_str(condor_version_str: str) -> Dict[str, str]:
-    """Extract the various information from CondorVersion
+    """Extract various information from CondorVersion
     (as returned by get_condor_version_and_condor_platform()).
-    The date is converted to YYYYMMDD format (used in tags)
+    The date is converted to YYYY-MM-DD format.
 
     >>> parse_condor_version_str('8.9.8 Jun 30 2020 BuildID: 508520 PackageID: 8.9.8-0.508520')
-    {'version': '8.9.8', 'date': '20200630', 'build_id': '508520', 'package_id': '8.9.8-0.508520'}
+    {'version': '8.9.8', 'date': '2020-06-30', 'build_id': '508520', 'package_id': '8.9.8-0.508520'}
 
     """
     match = re.match(
@@ -79,7 +80,7 @@ def parse_condor_version_str(condor_version_str: str) -> Dict[str, str]:
     if match:
         parsed = dict(match.groupdict())
         parsed["date"] = time.strftime(
-            "%Y%m%d", time.strptime(parsed["date"], "%b %d %Y")
+            "%Y-%m-%d", time.strptime(parsed["date"], "%b %d %Y")
         )
         return parsed
     else:
