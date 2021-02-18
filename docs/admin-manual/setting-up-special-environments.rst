@@ -363,6 +363,7 @@ Enabling the Fetching and Use of OAuth2 Credentials
 ---------------------------------------------------
 
 .. only:: Vault
+
     HTCondor supports two distinct methods for using OAuth2 credentials.
     One uses its own native OAuth client or issuer, and one uses a separate
     Hashicorp Vault server as the OAuth client and secure refresh token
@@ -479,18 +480,19 @@ so that they know what they should put under ``use_oauth_services``
 in their job submit files.
 
 .. only:: Vault
+
     Using Vault as the OAuth client
     '''''''''''''''''''''''''''''''
 
     To instead configure HTCondor to use Vault as the OAuth client,
     install the ``condor-credmon-vault`` rpm.  Also install the
-    `htgettoken <https://github.com/fermitools/htgettoken>`
+    `htgettoken <https://github.com/fermitools/htgettoken>`_
     rpm on the submit machine.  Additionally, on the submit machine
     set the ``SEC_CREDENTIAL_GETTOKEN_OPTS`` configuration option to
     ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
     of the Vault machine.  *condor_submit* users will then be able to select
     the oauth services that are defined on the Vault server.  See the
-    `htvault-config <https://gitub.com/fermitools/htvault-config>`
+    `htvault-config <https://gitub.com/fermitools/htvault-config>`_
     documentation to see how to set up and configure the Vault server.
 
 Configuring HTCondor for Multiple Platforms
@@ -1060,9 +1062,7 @@ submit machine, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
 other resource requirements for a submit machine apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
-See the
-:ref:`admin-manual/installation-startup-shutdown-reconfiguration:installation
-on unix` section for details on these issues.
+See :doc:`directories` for more information.
 
 Configuration Examples for Dedicated Resources
 ''''''''''''''''''''''''''''''''''''''''''''''
@@ -1971,6 +1971,8 @@ The following variables are set in the environment of the the
     The full path and file name of the file that the
     ``USER_JOB_WRAPPER`` script should create, if there is an error. The
     text in this file will be included in any HTCondor failure messages.
+
+.. _resource_limits_with_cgroups:
 
 Limiting Resource Usage Using Cgroups
 -------------------------------------

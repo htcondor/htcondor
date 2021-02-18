@@ -304,16 +304,16 @@ file.
     ClassAd attribute ``ProcId``.
 
 ``$$(a_machine_classad_attribue)``
-    When the machine is matched to this job for it to run on, any 
+    When the machine is matched to this job for it to run on, any
     dollar-dollar expressions are looked up from the machine ad, and then
     expanded.  This lets you put the value of some machine ad attribute
     into your job.  For example, if you to pass the actual amount of
-    memory a slot has provisioned as an argument to the job, you 
-    could add ``arguments = --mem $$(Memory)`` 
+    memory a slot has provisioned as an argument to the job, you
+    could add ``arguments = --mem $$(Memory)``
 
     .. code-block:: condor-submit
 
-      arguments = --mem $$(Memory) 
+      arguments = --mem $$(Memory)
 
     or, if you wanted to put the name of the machine the job ran on
     into the output file name, you could add
@@ -323,41 +323,36 @@ file.
       output = output_file.$$(Name)
 
 ``$$([ an_evaluated_classad_expression ])``
-    This dollar-dollar-bracket syntax is useful when you need to 
+    This dollar-dollar-bracket syntax is useful when you need to
     perform some math on a value before passing it to your job.
     For example, if want to pass 90% of the allocated memory as an
     argument to your job, the submit file can have
 
     .. code-block: condor-submit
-    
-     arguments = --mem $$([ Memory * 0.9 ])
 
-     and when the job is matched to a machine, condor will evaluate
-     this expression in the context of both the job and machine ad
+        arguments = --mem $$([ Memory * 0.9 ])
+
+    and when the job is matched to a machine, condor will evaluate
+    this expression in the context of both the job and machine ad
 
 ``$(ARCH)``
     The Architecture that HTCondor is running on, or the ARCH variable
     in the config file.  Example might be X86_64.
 
-``$(OPSYS)``
-``$(OPSYSVER)``
-``$(OPSYSANDVER)``
-``$(OPSYSMAJORVER)``
+``$(OPSYS)`` ``$(OPSYSVER)`` ``$(OPSYSANDVER)`` ``$(OPSYSMAJORVER)``
     These submit file macros are availle at submit time, and mimic
-    the classad attributes of the same names.:x
- 
+    the classad attributes of the same names.
+
 ``$(SUBMIT_FILE)``
     The name of the submit_file as passed to the ``condor_submit`` command.
- 
+
 ``$(SUBMIT_TIME)``
     The Unix epoch time submit was run.  Note, this may be useful for
     naming output files.
 
-``$(Year)``
-``$(Month)``
-``$(Day)``
+``$(Year)`` ``$(Month)`` ``$(Day)``
     These integer values are derived from the `$(SUBMIT_FILE)` macro above.
-   
+
 ``$(Item)``
     The default name of the variable when no ``<varname>`` is provided
     in a **queue** command.
@@ -1176,6 +1171,7 @@ a user can still request multiple credentials by affixing handles to
     cloudboxdrive_oauth_permissions_public =
 
 .. only:: Vault
+
     When the Vault credential monitor is configured, the service name may
     optionally be split into two parts with an underscore between them,
     where the first part is the issuer and the second part is the role.  In
@@ -1184,7 +1180,7 @@ a user can still request multiple credentials by affixing handles to
 
     .. code-block:: condor-submit
 
-	use_oauth_services = dune_production
+        use_oauth_services = dune_production
 
     Vault server.  Vault does not require permissions or resources to be
     set, but they may be set to reduce the default permissions or restrict
@@ -1196,9 +1192,9 @@ a user can still request multiple credentials by affixing handles to
 
     .. code-block:: condor-submit
 
-	use_oauth_services = dune, dune_production
-	dune_oauth_permissions_production =
-	dune_production_oauth_permissions =
+        use_oauth_services = dune, dune_production
+        dune_oauth_permissions_production =
+        dune_production_oauth_permissions =
 
 
 Jobs That Require GPUs

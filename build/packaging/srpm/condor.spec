@@ -1450,6 +1450,7 @@ rm -rf %{buildroot}
 %if %uw_build
 #################
 %files tarball
+%{_bindir}/make-personal-from-tarball
 %{_sbindir}/condor_configure
 %{_sbindir}/condor_install
 %{_mandir}/man1/condor_configure.1.gz

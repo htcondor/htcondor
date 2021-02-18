@@ -1,3 +1,5 @@
+.. _annex_users_guide:
+
 HTCondor Annex User's Guide
 ===========================
 

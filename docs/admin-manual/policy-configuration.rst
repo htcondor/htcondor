@@ -1258,7 +1258,7 @@ This section describes various policy configurations, including the
 default policy. :index:`default with HTCondor<single: default with HTCondor; policy>`
 :index:`default policy<single: default policy; HTCondor>`
 
- Default Policy
+**Default Policy**
 
 These settings are the default as shipped with HTCondor. They have been
 used for many years with no problems. The vanilla expressions are
@@ -1463,7 +1463,7 @@ This ``MachineBusy`` macro is convenient if other than the default
 :index:`desktop/non-desktop<single: desktop/non-desktop; policy>`
 :index:`desktop/non-desktop<single: desktop/non-desktop; preemption>`
 
- Desktop/Non-Desktop Policy
+**Desktop/Non-Desktop Policy**
 
 Suppose you have two classes of machines in your pool: desktop machines
 and dedicated cluster machines. In this case, you might not want

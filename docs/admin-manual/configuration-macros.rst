@@ -146,7 +146,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
         LOCAL_DIR = $(tilde)
 
-
 :macro-def:`LOG`
     Used to specify the directory where each HTCondor daemon writes its
     log files. The names of the log files themselves are defined with
@@ -2326,7 +2325,7 @@ using a shared file system`.
 :macro-def:`TRUST_LOCAL_UID_DOMAIN`
     This parameter works like ``TRUST_UID_DOMAIN``, but is only applied
     when the *condor_starter* and *condor_shadow* are on the same
-    machine. If this paramater is set to ``True``, then the
+    machine. If this parameter is set to ``True``, then the
     *condor_shadow* 's ``UID_DOMAIN`` doesn't have to be a substring
     its hostname. If this paramater is set to ``False``, then
     ``UID_DOMAIN`` controls whether this substring requirement is
@@ -3153,8 +3152,6 @@ section.
     causes the initial update to occur at a random number of seconds
     falling between 0 and 300, with all further updates occurring at
     fixed 300 second intervals following the initial update.
-
-.. _MachineMaxVacateTime:
 
 :macro-def:`MachineMaxVacateTime`
     An integer expression representing the number of seconds the machine
@@ -5069,7 +5066,7 @@ These macros control the *condor_schedd*.
     :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
     overrides this configuration variable.
 
-    See :ref:`MachineMaxVacateTime<MachineMaxVacateTime>` for details on
+    See :macro:`MachineMaxVacateTime` for details on
     how HTCondor computes the job's max vacate time.
 
 :macro-def:`SCHEDD_ROUND_ATTR_<xxxx>`
@@ -9402,18 +9399,19 @@ macros are described in the :doc:`/admin-manual/security` section.
     and credentials most be sent to stdout.
 
 .. only:: Vault
+
     :macro-def:`SEC_CREDENTIAL_STORER`
-	A script for *condor_submit* to execute to produce credentials while
-	using the OAuth2 type of credentials.  The oauth services specified
-	in the ``use_auth_services`` line in the submit file are passed as
-	parameters to the script, and the script should use
-	``condor_store_cred`` to store credentials for each service.
-	Additional modifiers to each service may be passed: &handle=,
-	&scopes=, or &audience=.  The handle should be appended after
-	an underscore to the service name used with ``condor_store_cred``,
-	the comma-separated list of scopes should be passed to the command
-	with the -S option, and the audience should be passed to it with the
-	-A option.
+        A script for *condor_submit* to execute to produce credentials while
+        using the OAuth2 type of credentials.  The oauth services specified
+        in the ``use_auth_services`` line in the submit file are passed as
+        parameters to the script, and the script should use
+        ``condor_store_cred`` to store credentials for each service.
+        Additional modifiers to each service may be passed: &handle=,
+        &scopes=, or &audience=.  The handle should be appended after
+        an underscore to the service name used with ``condor_store_cred``,
+        the comma-separated list of scopes should be passed to the command
+        with the -S option, and the audience should be passed to it with the
+        -A option.
 
 
 Configuration File Entries Relating to Virtual Machines

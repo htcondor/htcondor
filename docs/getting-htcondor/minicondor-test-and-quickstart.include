@@ -1,0 +1,44 @@
+.. rubric:: Verifying a Single-Machine Installation
+
+You can easily check to see if the installation procedure succeeded.  The
+following commands should complete without errors, producing output that
+looks like the corresponding example.
+
+.. code-block:: shell
+
+    condor_status
+
+.. code-block:: console
+
+    Name                 OpSys      Arch   State     Activity     LoadAv Mem   Actv
+
+    slot1@azaphrael.org  LINUX      X86_64 Unclaimed Benchmarking  0.000 2011  0+00
+    slot2@azaphrael.org  LINUX      X86_64 Unclaimed Idle          0.000 2011  0+00
+    slot3@azaphrael.org  LINUX      X86_64 Unclaimed Idle          0.000 2011  0+00
+    slot4@azaphrael.org  LINUX      X86_64 Unclaimed Idle          0.000 2011  0+00
+
+               Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain
+
+    X86_64/LINUX    4     0       0        4        0          0        0      0
+           Total    4     0       0        4        0          0        0      0
+
+.. code-block:: shell
+
+    condor_q
+
+.. code-block:: console
+
+    -- Schedd: azaphrael.org : <184.60.25.78:34585?... @ 11/11/20 14:44:06
+    OWNER BATCH_NAME      SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
+
+    Total for query: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended
+    Total for all users: 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended
+
+If both commands worked, the installation likely succeeded.
+
+.. rubric:: Where to Go from Here
+
+* For a brief introduction to running jobs with HTCondor,
+  see the :ref:`quick_start_guide`.
+* If you're looking to set up a multi-machine pool, go to the
+  :ref:`admin_quick_start_guide`.
