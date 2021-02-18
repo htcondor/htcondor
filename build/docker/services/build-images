@@ -216,8 +216,7 @@ org.htcondor.version="%s"
 
             if self.want_daily:
                 real_image_names = [f"{self.prefix}base:{self.series}-daily-{distro}"]
-                if self.want_latest_series:
-                    real_image_names.append(f"{self.prefix}base:daily-{distro}")
+                real_image_names.append(f"{self.prefix}base:{self.series}-{today()}-{distro}")
             else:
                 real_image_names = [f"{self.prefix}base:{real_version}-{distro}"]
                 if self.want_latest_version:
