@@ -50,6 +50,9 @@ my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 $| = 1;
 
 my $boos = 1; # build out of source
+if ($ENV{NMI_PLATFORM} =~ /AmazonLinux|CentOS|Fedora|Debian|Ubuntu/) {
+	$boos = 0; # No need to shuffle stuff around streamlined builds
+}
 if ($boos) {
     # rewrite the directory structures so we can do out of source builds.
 	# we start in dir_nnn/userdir, which is the git clone
@@ -170,7 +173,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	print FH '#!/bin/sh' . "\n";
 	print FH 'pwd && ls -l' . "\n";
 	print FH 'ls -l ..' . "\n";
-	print FH 'ls -l ../sources' . "\n";
+	if ($boos) {
+		print FH 'ls -l ../sources' . "\n";
+	}
 	close(FH);
 	chmod(0777,'probe.cmd');
 }
