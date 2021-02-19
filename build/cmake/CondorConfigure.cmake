@@ -604,67 +604,13 @@ if( NOT WINDOWS)
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
 
-	check_cxx_source_compiles("
-		#include <sched.h>
-		int main() {
-			cpu_set_t s;
-			sched_setaffinity(0, 1024, &s);
-			return 0;
-		}
-		" HAVE_SCHED_SETAFFINITY )
+	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
 
-	check_cxx_source_compiles("
-		#include <sched.h>
-		int main() {
-			cpu_set_t s;
-			sched_setaffinity(0, &s);
-			return 0;
-		}
-		" HAVE_SCHED_SETAFFINITY_2ARG )
-
-	if(HAVE_SCHED_SETAFFINITY_2ARG)
-		set(HAVE_SCHED_SETAFFINITY ON)
+	# Some versions of Clang require an additional C++11 flag, as the default stdlib
+	# is from an old GCC version.
+	if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 	endif()
-
-	check_cxx_compiler_flag(-std=c++11 cxx_11)
-	check_cxx_compiler_flag(-std=c++0x cxx_0x)
-	if (cxx_11)
-
-		# Some versions of Clang require an additional C++11 flag, as the default stdlib
-		# is from an old GCC version.
-		if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-		endif()
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-		check_cxx_source_compiles("
-		#include <unordered_map>
-		#include <memory>
-		int main() {
-			std::unordered_map<int, int> ci;
-			std::shared_ptr<int> foo;
-			return 0;
-		}
-		" PREFER_CPP11 )
-	elseif(cxx_0x)
-		# older g++s support some of c++11 with the c++0x flag
-		# which we should try to enable, if they do not have
-		# the c++11 flag.  This at least gets us std::unique_ptr
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-	endif()
-
-
-	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
-	exec_program (${CMAKE_CXX_COMPILER}
-    		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
-    		OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION )
-
-	exec_program (${CMAKE_C_COMPILER}
-    		ARGS ${CMAKE_C_COMPILER_ARG1} -dumpversion
-    		OUTPUT_VARIABLE CMAKE_C_COMPILER_VERSION )
-
 endif()
 
 find_program(HAVE_VMWARE vmware)
@@ -890,8 +836,7 @@ endif()
 # above the addition of the .../src/classads subdir:
 if (LINUX
     AND PROPER
-    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    AND NOT (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.4.6))
+    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"))
 
     # I wrote a nice macro for testing linker flags, but it is useless
     # because at least some older versions of linker ignore all '-z'
@@ -1272,14 +1217,12 @@ else(MSVC)
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
 
 	# check compiler flag not working for this flag.
-	if (NOT CMAKE_C_COMPILER_VERSION VERSION_LESS "4.8")
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
 	if (c_Wdeprecated_declarations)
 		# we use deprecated declarations ourselves during refactoring,
 		# so we always want them treated as warnings and not errors
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
 	endif(c_Wdeprecated_declarations)
-	endif()
 
 	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
 	if (c_Wnonnull_compare)
@@ -1525,14 +1468,8 @@ dprint ( "BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}" )
 # the compiler used for C files
 dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 
-# version information about the compiler
-dprint ( "CMAKE_C_COMPILER_VERSION: ${CMAKE_C_COMPILER_VERSION}" )
-
 # the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
-
-# version information about the compiler
-dprint ( "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}" )
 
 # if the compiler is a variant of gcc, this should be set to 1
 dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )
