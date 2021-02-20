@@ -1713,12 +1713,6 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     the running instance. The label name will be lower-cased; use
     **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`
     to change the case.
-    :index:`cream_attributes<single: cream_attributes; submit commands>`
- cream_attributes = <name=value;...;name=value>
-    Provides a list of attribute/value pairs to be set in a CREAM job
-    description of a grid universe job destined for the CREAM grid
-    system. The pairs are separated by semicolons, and written in New
-    ClassAd syntax.
     :index:`delegate_job_GSI_credentials_lifetime<single: delegate_job_GSI_credentials_lifetime; submit commands>`
  delegate_job_GSI_credentials_lifetime = <seconds>
     Specifies the maximum number of seconds for which delegated proxies
@@ -1947,7 +1941,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     For each **grid-type-string** value, there are further type-specific
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
-    **grid-type-string** values are **batch**, **condor**, **cream**,
+    **grid-type-string** values are **batch**, **condor**,
     **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **pbs**, and **sge**.
     The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
@@ -1960,12 +1954,6 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     name of the remote *condor_schedd* daemon. The second parameter is
     the name of the pool to which the remote *condor_schedd* daemon
     belongs.
-
-    For a **grid-type-string** of **cream**, there are three parameters.
-    The first parameter is the web services address of the CREAM server.
-    The second parameter is the name of the batch system that sits
-    behind the CREAM server. The third parameter identifies a
-    site-specific queue within the batch system.
 
     For a **grid-type-string** of **ec2**, one additional parameter
     specifies the EC2 URL.
@@ -2075,7 +2063,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
     standard locations. If **x509userproxy** is set or if the job is a
-    grid universe job of grid type **gt2**, **gt5**, **cream**, or
+    grid universe job of grid type **gt2**, **gt5**, or
     **nordugrid**, then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
     :index:`x509userproxy<single: x509userproxy; submit commands>`
@@ -2100,7 +2088,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **gt2**, **gt5**, **condor**, **cream**, or **nordugrid**. Defining
+    **gt2**, **gt5**, **condor**, or **nordugrid**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.

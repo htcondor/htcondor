@@ -7572,10 +7572,10 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
+          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_PBS = 300
 
 
-    In this example, the job limit for all CREAM resources is 300.
+    In this example, the job limit for all PBS resources is 300.
     Defaults to 1000.
 
 :macro-def:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE`
@@ -7733,10 +7733,6 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the wrapper script that invokes
     the NorduGrid GAHP executable. The default value is
     ``$(SBIN)``/nordugrid_gahp.
-
-:macro-def:`CREAM_GAHP`
-    The complete path and file name of the CREAM GAHP executable. The
-    default value is ``$(SBIN)``/cream_gahp.
 
 :macro-def:`SGE_GAHP`
     The complete path and file name of the SGE GAHP executable. The use
