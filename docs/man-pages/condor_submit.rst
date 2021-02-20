@@ -1948,8 +1948,8 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
     **grid-type-string** values are **batch**, **condor**, **cream**,
-    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **pbs**, **sge**,
-    and **unicore**. The HTCondor manual chapter on Grid Computing
+    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **pbs**, and **sge**.
+    The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
     For a **grid-type-string** of **batch**, the single parameter is the
@@ -1988,24 +1988,6 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
 
     For a **grid-type-string** of **sge**, no additional parameters are
     used.
-
-    For a **grid-type-string** of **unicore**, the first parameter is
-    the name of the Unicore Usite to be used. The second parameter is
-    the name of the Unicore Vsite to be used.
-    :index:`keystore_alias<single: keystore_alias; submit commands>`
-
- keystore_alias = <name>
-    A string to locate the certificate in a Java keystore file, as used
-    for a **unicore** job.
-    :index:`keystore_file<single: keystore_file; submit commands>`
- keystore_file = <pathname>
-    The complete path and file name of the Java keystore file containing
-    the certificate to be used for a **unicore** job.
-    :index:`keystore_passphrase_file<single: keystore_passphrase_file; submit commands>`
- keystore_passphrase_file = <pathname>
-    The complete path and file name to the file containing the
-    passphrase protecting a Java keystore file containing the
-    certificate. Relevant for a **unicore** job.
     :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
  MyProxyCredentialName = <symbolic name>
     The symbolic name that identifies a credential to the *MyProxy*

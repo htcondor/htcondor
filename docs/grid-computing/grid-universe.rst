@@ -874,45 +874,6 @@ format this submit description file command is
 
     nordugrid_rsl = (name=value)(name=value)
 
-The unicore Grid Type
----------------------
-
-:index:`Unicore`
-:index:`submitting jobs to Unicore<single: submitting jobs to Unicore; grid computing>`
-
-Unicore is a Java-based grid scheduling system. See
-`http://www.unicore.eu/ <http://www.unicore.eu/>`_ for more information
-about Unicore.
-
-HTCondor jobs may be submitted to Unicore resources using the **grid**
-universe. The
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command specifies the name of the Unicore resource as follows:
-
-.. code-block:: text
-
-    grid_resource = unicore usite.example.com vsite
-
-**usite.example.com** is the host name of the Unicore gateway machine to
-which the HTCondor job is to be submitted. **vsite** is the name of the
-Unicore virtual resource to which the HTCondor job is to be submitted.
-
-Unicore uses certificates stored in a Java keystore file for
-authentication. The following submit description file commands are
-required to properly use the keystore file.
-
-**keystore_file** :index:`keystore_file<single: keystore_file; submit commands>`
-    Specifies the complete path and file name of the Java keystore file
-    to use.
-
-**keystore_alias** :index:`keystore_alias<single: keystore_alias; submit commands>`
-    A string that specifies which certificate in the Java keystore file
-    to use.
-
-**keystore_passphrase_file** :index:`keystore_passphrase_file<single: keystore_passphrase_file; submit commands>`
-    Specifies the complete path and file name of the file containing the
-    passphrase protecting the certificate in the Java keystore file.
-
 The batch Grid Type (for PBS, LSF, SGE, and SLURM)
 --------------------------------------------------
 

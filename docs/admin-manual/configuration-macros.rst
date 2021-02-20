@@ -7729,11 +7729,6 @@ These macros affect the *condor_gridmanager*.
     specified by ``BATCH_GAHP`` is the default if this variable is not
     defined.
 
-:macro-def:`UNICORE_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the Unicore GAHP executable. The default value is
-    ``$(SBIN)``/unicore_gahp.
-
 :macro-def:`NORDUGRID_GAHP`
     The complete path and file name of the wrapper script that invokes
     the NorduGrid GAHP executable. The default value is
