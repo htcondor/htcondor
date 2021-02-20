@@ -22,10 +22,7 @@
 #include "condor_classad.h"
 #include <map>
 
-using std::string;
-using std::map;
-
-typedef std::map<string, double, classad::CaseIgnLTStr> consumption_map_t;
+typedef std::map<std::string, double, classad::CaseIgnLTStr> consumption_map_t;
 
 // returns true if resource ad supports consumption policy feature
 bool cp_supports_policy(ClassAd& resource, bool strict = true);

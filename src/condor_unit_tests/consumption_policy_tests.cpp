@@ -54,8 +54,8 @@ using std::map;
 // fixture for building a resource (slot) ad and a request (job) ad
 struct cpfix {
     cpfix() {
-        string attrn;
-        string attrv;
+		std::string attrn;
+		std::string attrv;
 
         // currently (circa 8.1.1) there is some weird interaction between
         // classad caching and calls to quantize() where 2nd arg is a list,
@@ -111,7 +111,7 @@ struct cpfix {
 
 BOOST_AUTO_TEST_CASE(cp_supports_policy_1) {
     ClassAd ad;
-    string attr;
+	std::string attr;
 
     // empty ad, doesn't support
     BOOST_CHECK(!cp_supports_policy(ad));
@@ -177,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_2, cpfix) {
 
     // remove this requested attribute, test defaulting behavior for
     // requested-asset attributes for resource consumption
-    string attr;
+	std::string attr;
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
     request.Delete(attr);
 
@@ -200,7 +200,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_3, cpfix) {
     BOOST_CHECK(cp_supports_policy(resource));
 
     // test overriding behavior of _condor_RequestedXxx attributes
-    string attr;
+	std::string attr;
     formatstr(attr, "_condor_%s%s", ATTR_REQUEST_PREFIX, "Actuators");
     request.Assign(attr, 9);
 
@@ -226,7 +226,7 @@ BOOST_FIXTURE_TEST_CASE(cp_override_1, cpfix) {
     consumption_map_t consumption;
     cp_override_requested(request, resource, consumption);
 
-    string attr;
+	std::string attr;
     int v;
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
     request.LookupInteger(attr, v);
@@ -268,7 +268,7 @@ BOOST_FIXTURE_TEST_CASE(cp_restore_1, cpfix) {
     // now restore them and verify the result
     cp_restore_requested(request, consumption);
     
-    string attr;
+	std::string attr;
     int v;
     formatstr(attr, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
     BOOST_CHECK(!request.LookupInteger(attr, v));
