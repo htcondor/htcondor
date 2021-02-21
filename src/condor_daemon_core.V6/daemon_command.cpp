@@ -35,6 +35,7 @@
 #include "condor_version.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
+#include "condor_base64.h"
 
 
 // For AES (and newer).
@@ -724,6 +725,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_result = FALSE;
 					return CommandProtocolFinished;
 				}
+				m_auth_info.Delete(ATTR_SEC_NONCE);
 
 				// lookup the suggested key
 				if (!m_sec_man->session_cache->lookup(m_sid, session)) {
@@ -1076,6 +1078,28 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 					if ((!m_new_session)) {
+						std::string want_replay;
+						if (m_policy->EvaluateAttrString(ATTR_SEC_REPLAY_PROTECTION, want_replay) && want_replay == "YES") {
+							dprintf(D_SECURITY|D_FULLDEBUG, "DC_AUTHENTICATE: sending random nonce to remote side for replay protection.\n");
+							std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
+							std::unique_ptr<char, decltype(&free)> encoded_bytes(
+								condor_base64_encode(random_bytes.get(), 33, false),
+								&free);
+
+							ClassAd ad;
+							if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
+								m_result = false;
+								return CommandProtocolFinished;
+							}
+							m_sock->encode();
+							if (!putClassAd(m_sock, ad) || !m_sock->end_of_message()) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send nonce to peer at %s.\n", m_sock->peer_description());
+								m_result = false;
+								return CommandProtocolFinished;
+							}
+						}
+
 						char * remote_version = NULL;
 						m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
 						if(remote_version) {

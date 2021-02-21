@@ -515,6 +515,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	sec_req sec_integrity = sec_req_param(
 		 "SEC_%s_INTEGRITY", auth_level, SEC_REQ_OPTIONAL);
 
+	sec_req sec_replay = sec_req_param(
+		"SEC_%s_REPLAY_PROTECTION", auth_level, SEC_REQ_OPTIONAL);
 
 	// regarding SEC_NEGOTIATE values:
 	// REQUIRED- outgoing will always negotiate, and incoming must
@@ -538,7 +540,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	}
 
 
-	if (!ReconcileSecurityDependency (sec_authentication, sec_encryption) ||
+	if (!ReconcileSecurityDependency(sec_encryption, sec_replay) ||
+		!ReconcileSecurityDependency (sec_authentication, sec_encryption) ||
 		!ReconcileSecurityDependency (sec_authentication, sec_integrity) ||
 	    !ReconcileSecurityDependency (sec_negotiation, sec_authentication) ||
 	    !ReconcileSecurityDependency (sec_negotiation, sec_encryption) ||
@@ -613,6 +616,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	ad->Assign (ATTR_SEC_ENCRYPTION, SecMan::sec_req_rev[sec_encryption] );
 
 	ad->Assign ( ATTR_SEC_INTEGRITY, SecMan::sec_req_rev[sec_integrity] );
+
+	ad->Assign(ATTR_SEC_REPLAY_PROTECTION, SecMan::sec_req_rev[sec_replay]);
 
 	ad->Assign ( ATTR_SEC_ENACT, "NO" );
 
@@ -752,6 +757,17 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 	cli_ad.LookupString(attr, &cli_buf);
 	srv_ad.LookupString(attr, &srv_buf);
 
+		// If some attribute is missing (perhaps because it was part of an old
+		// condor version that doesn't support something like ReplayProtection),
+		// we assume that it means the other side doesn't support it and we
+		// assume that's equivalent to NEVER.
+	if (!cli_buf) {
+		cli_buf = strdup("NEVER");
+	}
+	if (!srv_buf) {
+		srv_buf = strdup("NEVER");
+	}
+
 	// convert it to an enum
 	cli_req = sec_alpha_to_sec_req(cli_buf);
 	srv_req = sec_alpha_to_sec_req(srv_buf);
@@ -848,6 +864,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	sec_feat_act authentication_action;
 	sec_feat_act encryption_action;
 	sec_feat_act integrity_action;
+	sec_feat_act replay_action;
+
 	bool auth_required = false;
 
 
@@ -863,9 +881,14 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 								ATTR_SEC_INTEGRITY,
 								cli_ad, srv_ad );
 
+	replay_action = ReconcileSecurityAttribute(
+								ATTR_SEC_REPLAY_PROTECTION,
+								cli_ad, srv_ad );
+
 	if ( (authentication_action == SEC_FEAT_ACT_FAIL) ||
 	     (encryption_action == SEC_FEAT_ACT_FAIL) ||
-	     (integrity_action == SEC_FEAT_ACT_FAIL) ) {
+	     (integrity_action == SEC_FEAT_ACT_FAIL) ||
+	     (replay_action == SEC_FEAT_ACT_FAIL)) {
 
 		// one or more decisions could not be agreed upon, so
 		// we fail.
@@ -891,6 +914,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 	action_ad->Assign(ATTR_SEC_INTEGRITY, SecMan::sec_feat_act_rev[integrity_action]);
 
+	action_ad->Assign(ATTR_SEC_REPLAY_PROTECTION, SecMan::sec_feat_act_rev[replay_action]);
 
 	char* cli_methods = NULL;
 	char* srv_methods = NULL;
@@ -1545,6 +1569,13 @@ SecManStartCommand::sendAuthInfo_inner()
 			m_auth_info.Delete(ATTR_SEC_CRYPTO_METHODS);
 		}
 
+			// When resuming, always send a nonce; this helps prevent replay attacks.
+		std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
+		std::unique_ptr<char, decltype(&free)> encoded_bytes(
+			condor_base64_encode(random_bytes.get(), 33, false),
+			&free);
+		m_auth_info.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get());
+
 			// Ideally, we would only increment our lease expiration time after
 			// verifying that the server renewed the lease on its side.  However,
 			// there is no ACK in the protocol, so we just do it here.  Worst case,
@@ -1917,7 +1948,11 @@ SecManStartCommand::sendAuthInfo_inner()
 						"Failed to send auth_info." );
 		return StartCommandFailed;
 	}
+		// Remove ECDH key; we don't need it in the policy.
+	m_auth_info.Delete("ECP256pub");
 
+		// No need to keep the nonce around as it's never used again.
+	m_auth_info.Delete("nonce");
 
 	if (m_is_tcp) {
 
@@ -2015,6 +2050,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_AUTH_REQUIRED );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ENCRYPTION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_INTEGRITY );
+			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_REPLAY_PROTECTION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_DURATION );
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_SESSION_LEASE );
 
@@ -2170,15 +2206,44 @@ SecManStartCommand::authenticate_inner()
 						m_sock->peer_description() );
 			}
 
-		} else {
 			// !m_new_session is equivalent to use_session in this client.
-			if (!m_new_session) {
-				// we are using this key
-				if (m_enc_key && m_enc_key->key()) {
-					m_private_key = new KeyInfo(*(m_enc_key->key()));
-				} else {
-					ASSERT (m_private_key == NULL);
+		} else if (!m_new_session) {
+
+				// AES-GCM mode keeps a checksum of the security handshake; by having
+				// a random nonce in the client and server side, each connection has
+				// a unique header, meaning any attempted replay will fail due to the
+				// incorrect checksum.
+			std::string want_replay;
+			if (m_auth_info.EvaluateAttrString(ATTR_SEC_REPLAY_PROTECTION, want_replay) && want_replay == "YES") {
+
+				if (m_nonblocking && !m_sock->readReady()) {
+					return WaitForSocketCallback();
 				}
+				ClassAd auth_response;
+				m_sock->decode();
+
+				if (!getClassAd(m_sock, auth_response) ||
+					!m_sock->end_of_message()) {
+
+					dprintf (D_ALWAYS, "SECMAN: Failed to read replay protection classad from server.\n");
+					m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to read replay protection classad from server." );
+					return StartCommandFailed;
+				}
+					// We otherwise ignore the contents of this ClassAd; we are simply relying
+					// on the side-effect of it changing the connection's chec; we are simply relying
+					// on the side-effect of it changing the connection's checksum.
+				if (IsDebugVerbose(D_SECURITY)) {
+					dprintf(D_SECURITY, "SECMAN: server replay protection responded with:\n");
+					dPrintAd(D_SECURITY, auth_response);
+				}
+			}
+
+			// we are using this key
+			if (m_enc_key && m_enc_key->key()) {
+				m_private_key = new KeyInfo(*(m_enc_key->key()));
+			} else {
+				ASSERT (m_private_key == NULL);
 			}
 		}
 	}
@@ -3224,6 +3289,7 @@ SecMan::SecMan() :
 		m_resume_proj.insert(ATTR_SEC_CONNECT_SINFUL);
 		m_resume_proj.insert(ATTR_SEC_COOKIE);
 		m_resume_proj.insert(ATTR_SEC_CRYPTO_METHODS);
+		m_resume_proj.insert(ATTR_SEC_NONCE);
 	}
 
 	if ( NULL == m_ipverify ) {
