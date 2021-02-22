@@ -224,10 +224,11 @@ RUN yum install -y \
 
 # Tools needed for building
 RUN yum install -y \
-    devtoolset-8 \
+    devtoolset-9-toolchain \
     make \
     patchelf \
     rpm-build \
+    which \
     && yum clean all
 
 # HTCondor build dependencies

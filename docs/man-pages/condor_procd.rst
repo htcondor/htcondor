@@ -77,11 +77,6 @@ Options
     This is the path and executable name of the *condor_softkill.exe*
     binary. It is used to send softkill signals to process families.
     This is a Windows-only feature.
- **-I** *glexec-kill-path glexec-path*
-    Specifies, with *glexec-kill-path*, the path and executable name of
-    a binary used to send a signal to a PID. The *glexec* binary,
-    specified by *glexec-path*, executes the program specified with
-    *glexec-kill-path* under the right privileges to send the signal.
 
 Dealing with Short Reads
 ------------------------

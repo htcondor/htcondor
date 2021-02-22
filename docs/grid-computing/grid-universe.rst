@@ -874,45 +874,6 @@ format this submit description file command is
 
     nordugrid_rsl = (name=value)(name=value)
 
-The unicore Grid Type
----------------------
-
-:index:`Unicore`
-:index:`submitting jobs to Unicore<single: submitting jobs to Unicore; grid computing>`
-
-Unicore is a Java-based grid scheduling system. See
-`http://www.unicore.eu/ <http://www.unicore.eu/>`_ for more information
-about Unicore.
-
-HTCondor jobs may be submitted to Unicore resources using the **grid**
-universe. The
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command specifies the name of the Unicore resource as follows:
-
-.. code-block:: text
-
-    grid_resource = unicore usite.example.com vsite
-
-**usite.example.com** is the host name of the Unicore gateway machine to
-which the HTCondor job is to be submitted. **vsite** is the name of the
-Unicore virtual resource to which the HTCondor job is to be submitted.
-
-Unicore uses certificates stored in a Java keystore file for
-authentication. The following submit description file commands are
-required to properly use the keystore file.
-
-**keystore_file** :index:`keystore_file<single: keystore_file; submit commands>`
-    Specifies the complete path and file name of the Java keystore file
-    to use.
-
-**keystore_alias** :index:`keystore_alias<single: keystore_alias; submit commands>`
-    A string that specifies which certificate in the Java keystore file
-    to use.
-
-**keystore_passphrase_file** :index:`keystore_passphrase_file<single: keystore_passphrase_file; submit commands>`
-    Specifies the complete path and file name of the file containing the
-    passphrase protecting the certificate in the Java keystore file.
-
 The batch Grid Type (for PBS, LSF, SGE, and SLURM)
 --------------------------------------------------
 
@@ -1612,67 +1573,6 @@ command. You can supply the name of a file containing an SSH public key
 that will allow access to the administrator account with the
 **azure_admin_key** :index:`azure_admin_key<single: azure_admin_key; submit commands>`
 command.
-
-The cream Grid Type
--------------------
-
-:index:`cream`
-:index:`submitting jobs to cream<single: submitting jobs to cream; grid computing>`
-
-CREAM is a job submission interface being developed at INFN for the
-gLite software stack. The CREAM homepage is
-`http://grid.pd.infn.it/cream/ <http://grid.pd.infn.it/cream/>`_. The
-protocol is based on web services.
-
-The protocol requires an X.509 proxy for the job, so the submit
-description file command
-**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` will
-be used.
-
-A CREAM resource specification is of the form:
-
-.. code-block:: text
-
-    grid_resource = cream <web-services-address> <batch-system> <queue-name>
-
-The <web-services-address> appears the same for most servers, differing
-only in the host name, as
-
-.. code-block:: text
-
-    <machinename[:port]>/ce-cream/services/CREAM2
-
-Future versions of HTCondor may require only the host name, filling in
-other aspects of the web service for the user.
-
-The <batch-system> is the name of the batch system that sits behind the
-CREAM server, into which it submits the jobs. Normal values are pbs,
-lsf, and condor.
-
-The <queue-name> identifies which queue within the batch system should
-be used. Values for this will vary by site, with no typical values.
-
-A full example for the specification of a CREAM
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>` is
-
-.. code-block:: text
-
-    grid_resource = cream https://cream-12.pd.infn.it:8443/ce-cream/services/CREAM2
-       pbs cream_1
-
-This is a single line within the submit description file, although it is
-shown here on two lines for formatting reasons.
-
-CREAM uses ClassAd syntax to describe jobs, although the attributes used
-are different than those for HTCondor. The submit description file
-command
-**cream_attributes** :index:`cream_attributes<single: cream_attributes; submit commands>`
-adds additional attributes to the CREAM-style job ClassAd that HTCondor
-constructs. The format for this submit description file command is
-
-.. code-block:: text
-
-    cream_attributes = name=value;name=value
 
 The BOINC Grid Type
 -------------------
