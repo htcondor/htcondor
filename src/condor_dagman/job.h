@@ -234,6 +234,7 @@ class Job {
 	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
 	inline JobID_t GetJobID() const { return _jobID; }
 	inline int GetRetryMax() const { return retry_max; }
+	void SetRetryMax( int new_max ) { retry_max = new_max; }
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
@@ -248,6 +249,8 @@ class Job {
 	NodeType GetType() const { return _type; }
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) const { return _noop; }
+	void SetHold( bool value ) { _hold = value; }
+	bool GetHold( void ) const { return _hold; }
 
 	Script * _scriptPre;
 	Script * _scriptPost;
@@ -575,6 +578,8 @@ private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
 	bool _noop;
+		// Whether this is a hold job (should be submitted on hold)
+	bool _hold;
 		// What type of node (job, final, provisioner)
 	NodeType _type;
 public:

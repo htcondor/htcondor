@@ -804,6 +804,13 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_PUT_FAILED_JOBS_ON_HOLD]
+default=false
+type=bool
+customization=normal
+tags=dagman,dagman_main
+restart=never
+
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)

@@ -324,6 +324,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( "log=" );
 	}
 
+		// If this is a hold job, add the attribute to submit on hold
+	if ( node->GetHold() ) {
+		debug_printf( DEBUG_VERBOSE, "Submitting node job on hold\n" );
+		args.AppendArg( "-a" );
+		args.AppendArg( "hold = true" );
+	}
+
 	ArgList parentNameArgs;
 	parentNameArgs.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString parentNodeNames = MyString("+DAGParentNodeNames = ") + "\"";
@@ -504,6 +511,12 @@ static void init_dag_vars(SubmitHash * submitHash,
 	if (dm._suppressJobLogs) {
 		debug_printf(DEBUG_VERBOSE, "Suppressing node job log file\n");
 		submitHash->set_arg_variable(SUBMIT_KEY_UserLogFile, "");
+	}
+
+	// If this is a hold job, add the attribute to submit on hold
+	if ( node->GetHold() ) {
+		debug_printf( DEBUG_VERBOSE, "Submitting node job on hold\n" );
+		submitHash->set_arg_variable(SUBMIT_KEY_Hold, "true");
 	}
 
 	// set any VARS specified in the DAG file
