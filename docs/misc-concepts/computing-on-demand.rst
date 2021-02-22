@@ -445,9 +445,7 @@ Release
     currently running on it.
 Delegate proxy
     Send an x509 proxy credential to the specific COD claim (optional,
-    only required in rare cases like using glexec to spawn the
-    *condor_starter* at the execute machine where the COD job is
-    running).
+    only required in rare cases).
 
 To issue these commands, a user or application invokes the *condor_cod*
 tool. A command may be specified as the first argument to this tool, as
@@ -810,9 +808,7 @@ Delegate proxy
 
 In some cases, a user will want to delegate a copy of their user
 credentials (in the form of an x509 proxy) to the machine where one of
-their COD jobs will run. For example, sites wishing to spawn the
-*condor_starter* using glexec will need a copy of this credential
-before the claim can be activated. Therefore, beginning with HTCondor
+their COD jobs will run. Therefore, beginning with HTCondor
 version 6.9.2, COD users have access to a the command delegate_proxy.
 If users do not specifically require this proxy delegation, this command
 should not be used and the rest of this section can be skipped.

@@ -930,17 +930,6 @@ all attributes.
     |              | policy evaluated to                 |                          |
     |              | undefined.                          |                          |
     +--------------+-------------------------------------+--------------------------+
-    | 28           | Failed while using                  |                          |
-    |              | glexec to set up the                |                          |
-    |              | job's working directory             |                          |
-    |              | (chown sandbox to the               |                          |
-    |              | user).                              |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 30           | Failed while using                  |                          |
-    |              | glexec to prepare output            |                          |
-    |              | for transfer (chown                 |                          |
-    |              | sandbox to condor).                 |                          |
-    +--------------+-------------------------------------+--------------------------+
     | 32           | The maximum total input             |                          |
     |              | file transfer size was              |                          |
     |              | exceeded. (See                      |                          |
