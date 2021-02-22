@@ -212,13 +212,9 @@ RUN useradd --uid  5001 --shell /bin/bash --create-home slot1 && \
 RUN mkdir -p /usr/local/condor/etc/examples && \
     echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.generic
 
-# Add in EPEL
-RUN yum install -y \
-    https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
-    && yum clean all
-
 # Add tools to add the HTCondor repository
 RUN yum install -y \
+    https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
     https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.amzn2.noarch.rpm \
     && yum clean all
 
