@@ -587,6 +587,7 @@ endif()
 # Build "Object" libraries, which are just a set of .o files which can later to into libraries
 add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
 add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
+add_dependencies(condor_utils_objects utils_genparams)
 add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
 
