@@ -362,8 +362,9 @@ public:
 
 // print hex bytes from data into buf, up to a maximum of datalen bytes
 // caller must supply the buffer and must insure that it is at least datalen*3+1
+// if compact=true, then the buffer must be at least datalen*2+1
 // this is intended to provide a way to add small hex dumps to dprintf logging
-extern const char * debug_hex_dump(char * buf, const char * data, int datalen);
+extern const char * debug_hex_dump(char * buf, const char * data, int datalen, bool compact = false);
 
 #endif // defined(__cplusplus)
 
