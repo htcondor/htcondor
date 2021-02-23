@@ -340,6 +340,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	MyString user_cred_path;
 	dircat(cred_dir, username, user_cred_path);
 
+	// lookup and validate service name
 	std::string service;
 	if (ad && ad->LookupString("Service", service)) {
 		// this is user input so validate
@@ -347,6 +348,25 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 			dprintf(D_ALWAYS, "OAUTH store cred ERROR - Illegal char in Service name.\n");
 			return FAILURE_BAD_ARGS;
 		}
+	}
+
+	// lookup and validate handle name
+	std::string handle;
+	if (ad && ad->LookupString("Handle", handle)) {
+		// this is user input so validate
+		if (!okay_for_oauth_filename(handle)) {
+			dprintf(D_ALWAYS, "OAUTH store cred ERROR - Illegal char in Handle name.\n");
+			return FAILURE_BAD_ARGS;
+		}
+	}
+
+	// if there is a service name and a handle name, concat the two together.
+	// this does mean we don't actually support querying service and/or handle
+	// separately.  until such time as these tokens live in some semi-structured
+	// data store, perhaps with the scopes and audience, this will have to do.
+	if (!service.empty() && !handle.empty()) {
+		service += "_";
+		service += handle;
 	}
 
 	// If this is a query and the service name is empty, return the
@@ -439,6 +459,11 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 	if (service.empty()) {
 		service = "scitokens";
+		if (!handle.empty()) {
+			// this is user input but has been validated above.
+			service += "_";
+			service += handle;
+		}
 	}
 
 	// create dir for user's creds, note that for OAUTH we *don't* create this as ROOT
