@@ -20,7 +20,6 @@
 condor_exe(condor_evicted_files "evicted_files.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_now "now.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_update_machine_ad "update_machine_ad.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_preen "preen.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_testwritelog "testwritelog.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_drain "drain.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -85,7 +84,6 @@ endif(WANT_FULL_DEPLOYMENT)
 clone_install(condor_vacate "${C_BIN}" "condor_reschedule" "${C_BIN}")
 
 if (WINDOWS)
-	clone_install(condor_cod "${C_BIN}" "condor_cod_request" "${C_BIN}")
 	clone_install(condor_vacate "${C_BIN}" "condor_squawk" "${C_BIN}")
 endif(WINDOWS)
 
