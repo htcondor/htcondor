@@ -25,8 +25,8 @@ Job Hooks That Fetch Work
 :index:`job hooks that fetch work<single: job hooks that fetch work; Hooks>`
 
 In the past, HTCondor has always sent work to the execute machines by
-pushing jobs to the *condor_startd* daemon, either from the
-*condor_schedd* daemon or via *condor_cod*. Beginning with the
+pushing jobs to the *condor_startd* daemon from the
+*condor_schedd* daemon. Beginning with the
 HTCondor version 7.1.0, the *condor_startd* daemon now has the ability
 to pull work by fetching jobs via a system of plug-ins or hooks. Any
 site can configure a set of hooks to fetch work, completely outside of
