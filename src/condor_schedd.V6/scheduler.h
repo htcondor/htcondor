@@ -650,7 +650,7 @@ class Scheduler : public Service
 		// Used by the DedicatedScheduler class
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
-	void			delete_shadow_rec(shadow_rec*);
+	void			delete_shadow_rec(shadow_rec *rec);
 	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
 									int fd );
 	shadow_rec*		add_shadow_rec(shadow_rec*);

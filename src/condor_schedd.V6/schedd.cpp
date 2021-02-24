@@ -3873,8 +3873,7 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 			mark_job_stopped( &job_id );
 		}
 		if( srec ) {
-			scheduler.RemoveShadowRecFromMrec(srec);
-			delete srec;
+			scheduler.delete_shadow_rec(srec);
 		}
 		return FALSE;
 	}
@@ -3971,8 +3970,7 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 			 "forking a shadow\n", srec->job_id.cluster, 
 			 srec->job_id.proc );
 	mark_job_stopped( &(srec->job_id) );
-	RemoveShadowRecFromMrec( srec );
-	delete srec;
+	delete_shadow_rec( srec );
 	return false;
 }
 
@@ -8773,8 +8771,7 @@ Scheduler::StartJobHandler()
 				  whatever match record it's associated with, and try
 				  the next job.
 				*/
-			RemoveShadowRecFromMrec(srec);
-			delete srec;
+			delete_shadow_rec(srec);
 			continue;
 		}
 
@@ -8788,8 +8785,7 @@ Scheduler::StartJobHandler()
 
 					// stop the running of this job
 					mark_job_stopped( job_id );
-					RemoveShadowRecFromMrec(srec);
-					delete srec;
+					delete_shadow_rec(srec);
 				
 					// start up a transferd for this job.
 					startTransferd(cluster, proc);
@@ -9232,7 +9228,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 						 "do not have a condor_shadow that will work, "
 						 "aborting.\n" );
 				noShadowForJob( srec, NO_SHADOW_STD );
-				srec = NULL;
 				return;
 			}
 			break;
@@ -9413,17 +9408,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 	if( ! rval ) {
 		mark_job_stopped(job_id);
-		if( FindSrecByProcID(*job_id) ) {
-				// we already added the srec to our tables..
-			delete_shadow_rec( srec );
-			srec = NULL;
-		} else {
-				// we didn't call add_shadow_rec(), so we can just do
-				// a little bit of clean-up and delete it. 
-			RemoveShadowRecFromMrec(srec);
-			delete srec;
-			srec = NULL;
-		}
+		delete_shadow_rec(srec);
 		return;
 	}
 
@@ -9819,8 +9804,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 		// since we couldn't spawn this shadow, we should remove this
 		// shadow record from the match record and delete the shadow
 		// rec so we don't leak memory or tie up this match
-	RemoveShadowRecFromMrec( srec );
-	delete srec;
+	delete_shadow_rec( srec );
 
 	if( why == NO_SHADOW_RECONNECT ) {
 			// we're done
@@ -9937,7 +9921,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 "No condor_starter installed that supports local universe",
 				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 				 false, notify_admin, true );
-		delete srec;
+		delete_shadow_rec( srec );
 		notify_admin = false;
 		return;
 	}
@@ -9997,9 +9981,8 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	if( ! rval ) {
 		dprintf( D_ALWAYS|D_FAILURE, "Can't spawn local starter for "
 				 "job %d.%d\n", job_id->cluster, job_id->proc );
-		shadowsByProcID->remove(srec->job_id);
 		mark_job_stopped( job_id );
-		delete srec;
+		delete_shadow_rec( srec );
 		return;
 	}
 
@@ -11102,6 +11085,14 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
+	if ( FindSrecByProcID(rec->job_id) == NULL ) {
+		// add_shadow_rec() wasn't called, do simple cleanup
+		// TODO Failure to spawn a reconnect shadow should probably still
+		//   do the code below our early return here.
+		RemoveShadowRecFromMrec(rec);
+		delete rec;
+		return;
+	}
 
 	int cluster = rec->job_id.cluster;
 	int proc = rec->job_id.proc;
