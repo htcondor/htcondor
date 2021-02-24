@@ -1,15 +1,15 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-v88:x86_64_AmazonLinux2-1
-docker://htcondor/nmi-v88:x86_64_CentOS7-1
-docker://htcondor/nmi-v88:x86_64_CentOS8-1
-docker://htcondor/nmi-v88:x86_64_Debian9-1
-docker://htcondor/nmi-v88:x86_64_Debian10-1
+docker://htcondor/nmi-v88:x86_64_AmazonLinux2-2
+docker://htcondor/nmi-v88:x86_64_CentOS7-2
+docker://htcondor/nmi-v88:x86_64_CentOS8-2
+docker://htcondor/nmi-v88:x86_64_Debian9-2
+docker://htcondor/nmi-v88:x86_64_Debian10-2
 x86_64_MacOSX15
-docker://htcondor/nmi-v88:x86_64_Ubuntu16-1
-docker://htcondor/nmi-v88:x86_64_Ubuntu18-1
-docker://htcondor/nmi-v88:x86_64_Ubuntu20-1
+docker://htcondor/nmi-v88:x86_64_Ubuntu16-2
+docker://htcondor/nmi-v88:x86_64_Ubuntu18-2
+docker://htcondor/nmi-v88:x86_64_Ubuntu20-2
 x86_64_Windows7
 x86_64_Windows8
 x86_64_Windows10
@@ -18,10 +18,10 @@ x86_64_Windows10
 x86_64_CentOS7
 
 # 32-bit platforms
-docker://htcondor/nmi-v88:x86_CentOS7-1
+docker://htcondor/nmi-v88:x86_CentOS7-2
 
 # Not officially supported.
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-v88:x86_64_Fedora27-1
+docker://htcondor/nmi-v88:x86_64_Fedora27-2
 
