@@ -166,6 +166,10 @@ Bugs Fixed:
   cred, and the *condor_credd* will now honor the handle in the stored filename.
   :jira:`291`
 
+- Condor-C (grid universe type **condor**) now works correctly when jobs
+  use different SciTokens.
+  :jira:`99`
+
 Version 8.9.11
 --------------
 
