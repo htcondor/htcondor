@@ -162,6 +162,10 @@ Bugs Fixed:
 - Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
   :jira:`201`
 
+- The tool ``condor_store_cred`` will now accept and use a handle for an OAuth
+  cred, and the *condor_credd* will now honor the handle in the stored filename.
+  :jira:`291`
+
 Version 8.9.11
 --------------
 
