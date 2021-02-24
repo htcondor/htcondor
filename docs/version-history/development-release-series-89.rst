@@ -41,6 +41,9 @@ Release Notes:
   ``condor_procd`` on start-up.
   :jira:`33`
 
+- SCITOKENS is now in the default list of authentication methods.
+  :jira:`47`
+
 New Features:
 
 - HTCondor now prohibits jobs from running setuid executables on Linux. The
