@@ -102,7 +102,7 @@ struct shadow_rec
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
-	bool			reconnect_succeeded;
+	bool			reconnect_done; // could be success or failure
 		//
 		// This flag will cause the schedd to keep certain claim
 		// attributes for jobs with leases during a graceful shutdown

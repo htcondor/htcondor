@@ -6496,12 +6496,6 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 			dprintf( D_FULLDEBUG, "(%d.%d) Killing shadow %d\n", 
 				(int) job_id.cluster, (int)job_id.proc, (int)(srec->pid));
 			scheduler.sendSignalToShadow(srec->pid, SIGKILL, job_id);
-			// TODO Should we try to upadte the JobsRestartReconnectsBadput
-			//   stat on a forcex?
-			if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
-				scheduler.stats.JobsRestartReconnectsAttempting += -1;
-				scheduler.stats.JobsRestartReconnectsFailed += 1;
-			}
 		}
 
 		break;
@@ -8074,7 +8068,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	srec->conn_fd = -1;
 	srec->isZombie = FALSE; 
 	srec->is_reconnect = true;
-	srec->reconnect_succeeded = false;
 	srec->keepClaimAttributes = false;
 
 		// the match_rec also needs to point to the srec...
@@ -10559,7 +10552,7 @@ shadow_rec::shadow_rec():
 	removed(FALSE),
 	isZombie(FALSE),
 	is_reconnect(false),
-	reconnect_succeeded(false),
+	reconnect_done(false),
 	keepClaimAttributes(false),
 	recycle_shadow_stream(NULL),
 	exit_already_handled(false)
@@ -10593,8 +10586,6 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	new_rec->removed = FALSE;
 	new_rec->conn_fd = fd;
 	new_rec->isZombie = FALSE; 
-	new_rec->is_reconnect = false;
-	new_rec->reconnect_succeeded = false;
 	new_rec->keepClaimAttributes = false;
 	
 	if (pid) {
@@ -11085,6 +11076,12 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
+	if ( rec->is_reconnect && !rec->reconnect_done ) {
+		// TODO Should we try to update the JobsRestartReconnectsBadput
+		//   stat on an interrupted reconnect attempt?
+		scheduler.stats.JobsRestartReconnectsAttempting += -1;
+		scheduler.stats.JobsRestartReconnectsInterrupted += 1;
+	}
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
 		// add_shadow_rec() wasn't called, do simple cleanup
 		// TODO Failure to spawn a reconnect shadow should probably still
@@ -11946,11 +11943,6 @@ Scheduler::child_exit(int pid, int status)
 				// we are preserving the claim for reconnect, then
 				// do not delete the claim.
 			 keep_claim = srec_keep_claim_attributes;
-
-			if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
-				 scheduler.stats.JobsRestartReconnectsAttempting -= 1;
-				 scheduler.stats.JobsRestartReconnectsInterrupted += 1;
-			}
 		}
 		
 			// We always want to delete the shadow record regardless 
@@ -12113,12 +12105,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Treat JOB_RECONNECT_FAILED exit code just like JOB_SHOULD_REQUEUE,
 		// except also update a few JobRestartReconnect statistics.
 		exit_code = JOB_SHOULD_REQUEUE;
-		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
-		scheduler.stats.JobsRestartReconnectsFailed += 1;
-		scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
-	} else if ( srec && srec->is_reconnect && !srec->reconnect_succeeded ) {
-		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
-		scheduler.stats.JobsRestartReconnectsInterrupted += 1;
+		if ( srec && srec->is_reconnect && !srec->reconnect_done ) {
+			scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+			scheduler.stats.JobsRestartReconnectsFailed += 1;
+			scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
+			srec->reconnect_done = true;
+		}
 	}
 	switch( exit_code ) {
 		case JOB_NO_MEM:

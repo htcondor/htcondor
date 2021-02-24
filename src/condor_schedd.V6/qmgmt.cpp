@@ -4026,10 +4026,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		PROC_ID job_id( cluster_id, proc_id );
 		shadow_rec *srec = scheduler.FindSrecByProcID(job_id);
 		GetAttributeInt( cluster_id, proc_id, ATTR_NUM_JOB_RECONNECTS, &curr_cnt );
-		if ( srec && srec->is_reconnect && !srec->reconnect_succeeded &&
+		if ( srec && srec->is_reconnect && !srec->reconnect_done &&
 			 new_cnt > curr_cnt ) {
 
-			srec->reconnect_succeeded = true;
+			srec->reconnect_done = true;
 			scheduler.stats.JobsRestartReconnectsSucceeded += 1;
 			scheduler.stats.JobsRestartReconnectsAttempting += -1;
 		}
