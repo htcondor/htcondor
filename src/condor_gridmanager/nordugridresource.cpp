@@ -22,6 +22,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "string_list.h"
+#include <openssl/sha.h>
 
 #include "nordugridresource.h"
 #include "nordugridjob.h"
@@ -198,8 +199,15 @@ void NordugridResource::DoJobStatus()
 			ldap_server.erase( pos );
 		}
 
+		// In newer releases of NorduGrid ARC, nordugrid-job-globalowner
+		// is the SHA512 hash of the proxy subject, instead of the proxy
+		// subject itself.
+		char proxy_hash[SHA512_DIGEST_LENGTH];
+		char proxy_hash_str[2*SHA512_DIGEST_LENGTH+1];
+		SHA512((unsigned char*)proxySubject, strlen(proxySubject), (unsigned char*)proxy_hash);
+		debug_hex_dump(proxy_hash_str, proxy_hash, sizeof(proxy_hash), true);
 		std::string filter;
-		formatstr( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
+		formatstr( filter, "(&(objectclass=nordugrid-job)(|(nordugrid-job-globalowner=%s)(nordugrid-job-globalowner=%s)))", proxySubject, proxy_hash_str );
 		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-globalid,nordugrid-job-status",
 													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
