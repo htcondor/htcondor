@@ -54,7 +54,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
 
 # Add HTCondor repository
 RUN wget -qO - https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key | apt-key add -
-RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9-daily focal main" > /etc/apt/sources.list.d/htcondor-daily.list
+RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9 focal main" > /etc/apt/sources.list.d/htcondor.list
 
 # Need HTCondor to build HTCondor (BatLab style)
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
