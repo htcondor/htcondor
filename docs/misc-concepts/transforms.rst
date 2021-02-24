@@ -25,10 +25,10 @@ to the to the native transform language when they read the configuration.
 General Concepts
 -------------------
 
-Tranforms consists of a sequence of lines containging ``key=value`` pairs or
+Transforms consists of a sequence of lines containing ``key=value`` pairs or
 transform commands such as ``SET``.  Transform commands execute in order from
 top to bottom and may make use of macro values set by earlier statements using
-``$(var)`` macro subsitution.   Unlike configuration files, Transform commands
+``$(var)`` macro substitution.   Unlike configuration files, Transform commands
 will use the value of ``$(var)`` defined at the time, rather than the last value
 defined in the configuration file. 
 
@@ -38,7 +38,7 @@ but `include` may not be used.
 A macro expansion of the form ``$(MY.<attr>)`` will expand as the value of the attribute
 ``<attr>`` of the ClassAd that is being transformed.  Expansion will expand simple string values without
 quotes but will not evaluate expressions. Use ``$STRING(MY.<attr>)`` or ``$INT(MY.<attr>)`` if
-you need to evalute the ClassAd attribute before expanding it. 
+you need to evaluate the ClassAd attribute before expanding it. 
 
 The existence of an attribute in the ClassAd being transformed can be tested by using ``if defined MY.<attr>``
 
@@ -48,7 +48,7 @@ In the definitions below.
 
     ``<newattr>`` must be a valid ClassAd attribute name
 
-    ``<expr>``    must be a valid ClassAd expression after ``$()`` macro expansion.  Dont forget to quote string values!
+    ``<expr>``    must be a valid ClassAd expression after ``$()`` macro expansion.  Don't forget to quote string values!
 
     ``<var>``     must be a valid macro name
 
@@ -60,7 +60,7 @@ Transform Commands
 -------------------
 
 ``<var> = <value>``
-   Sets the temporary macro variable ``<var>`` to ``<value>``. This is the same sort of macro assigment used
+   Sets the temporary macro variable ``<var>`` to ``<value>``. This is the same sort of macro assignment used
    in configuration and submit files, the value is everything after the ``=`` until then end of the line
    with leading and trailing whitespace removed.   Variables set in this way do not directly affect the
    resulting transformed ClassAd, but they can be used later in the transform by ``$(var)`` macro expansion. 
@@ -69,14 +69,14 @@ Transform Commands
    :ref:`grid-computing/job-router:Routing Table Entry Commands and Macro values` section.
 
 ``REQUIREMENTS <expr>``
-   Apply the tranform only if the expression given by ``<expr>`` evaluates to true when evaluated against
+   Apply the transform only if the expression given by ``<expr>`` evaluates to true when evaluated against
    the untransformed ClassAd.
 
 ``SET <attr> <expr>``
    Sets the ClassAd value of ``<attr>`` to ``<expr>`` in the ClassAd being transformed.
 
 ``DEFAULT <attr> <expr>``
-    Sets the ClassAd value of ``<attr>`` to ``<expr>`` in the ClassAd being tranformed if
+    Sets the ClassAd value of ``<attr>`` to ``<expr>`` in the ClassAd being transformed if
     that ClassAd does not currently have ``<attr>`` or if it is currently set to ``undefined``.  This
     is equivalent to
 
@@ -89,7 +89,7 @@ Transform Commands
 ``EVALSET <attr> <expr>``
     Evaluate ``<expr>`` and set the ClassAd value of ``<attr>`` to the result of the evaluation.
     Use this when the ClassAd value of ``<attr>`` must be a simple value rather than expression,
-    or when you need to capture the result of evaluating at tranform time.  Note that it is
+    or when you need to capture the result of evaluating at transform time.  Note that it is
     usually better to use ``SET`` with macro expansions when you want to modify a ClassAd attribute
     as part of a transform.
 
@@ -113,7 +113,7 @@ Transform Commands
       COPY /Resource(.+)/ OriginalResource\1
 
 ``RENAME <attr> <newattr>``
-    Renames the attribute ``<attr>`` to a new attribute name ``<newattr>``. This is the eqivalent of 
+    Renames the attribute ``<attr>`` to a new attribute name ``<newattr>``. This is the equivalent of 
     a COPY statement followed by a DELETE statement. 
 
 ``RENAME /<regex>/ <attrpat>``

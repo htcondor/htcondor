@@ -7572,10 +7572,10 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
+          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_PBS = 300
 
 
-    In this example, the job limit for all CREAM resources is 300.
+    In this example, the job limit for all PBS resources is 300.
     Defaults to 1000.
 
 :macro-def:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE`
@@ -7729,19 +7729,10 @@ These macros affect the *condor_gridmanager*.
     specified by ``BATCH_GAHP`` is the default if this variable is not
     defined.
 
-:macro-def:`UNICORE_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the Unicore GAHP executable. The default value is
-    ``$(SBIN)``/unicore_gahp.
-
 :macro-def:`NORDUGRID_GAHP`
     The complete path and file name of the wrapper script that invokes
     the NorduGrid GAHP executable. The default value is
     ``$(SBIN)``/nordugrid_gahp.
-
-:macro-def:`CREAM_GAHP`
-    The complete path and file name of the CREAM GAHP executable. The
-    default value is ``$(SBIN)``/cream_gahp.
 
 :macro-def:`SGE_GAHP`
     The complete path and file name of the SGE GAHP executable. The use
@@ -8150,43 +8141,6 @@ These macros affect the Grid Monitor.
     controls how long the *condor_gridmanager* will wait before
     attempting to start a new Grid Monitor job. The value is in seconds
     and the default is 3600 (1 hour).
-
-Configuration File Entries Relating to Grid Usage
--------------------------------------------------
-
-:index:`grid configuration variables<single: grid configuration variables; configuration>`
-
-These macros affect the HTCondor's usage of grid resources.
-
-:macro-def:`GLEXEC_JOB`
-    A boolean value that defaults to ``False``. When ``True``, it
-    enables the use of *glexec* on the machine.
-
-:macro-def:`GLEXEC`
-    The full path and file name of the *glexec* executable.
-
-:macro-def:`GLEXEC_RETRIES`
-    An integer value that specifies the maximum number of times to retry
-    a call to *glexec* when *glexec* exits with status 202 or 203, error
-    codes that indicate a possible transient error condition. The
-    default number of retries is 3.
-
-:macro-def:`GLEXEC_RETRY_DELAY`
-    An integer value that specifies the minimum number of seconds to
-    wait between retries of a failed call to *glexec*. The default is 5
-    seconds. The actual delay to be used is determined by a random
-    exponential backoff algorithm that chooses a delay with a minimum of
-    the value of ``GLEXEC_RETRY_DELAY`` and a maximum of 100 times that
-    value.
-
-:macro-def:`GLEXEC_HOLD_ON_INITIAL_FAILURE`
-    A boolean value that when ``False`` prevents a job from being put on
-    hold when a failure is encountered during the glexec setup phase of
-    managing a job. The default is ``True``. *glexec* is invoked
-    multiple times during each attempt to run a job. This configuration
-    setting only disables putting the job on hold for the initial
-    invocation. Subsequent failures during that run attempt always put
-    the job on hold.
 
 Configuration File Entries for DAGMan
 -------------------------------------

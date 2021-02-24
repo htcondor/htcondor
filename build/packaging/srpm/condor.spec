@@ -1233,7 +1233,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
-%_mandir/man1/condor_cod.1.gz
 %_mandir/man1/condor_config_val.1.gz
 %_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
@@ -1307,7 +1306,6 @@ rm -rf %{buildroot}
 %_bindir/condor_check_userlogs
 %_bindir/condor_q
 %_libexecdir/condor/condor_transferer
-%_bindir/condor_cod
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
 %_bindir/condor_userlog

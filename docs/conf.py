@@ -124,7 +124,6 @@ man_pages = [
     ('man-pages/condor_annex', 'condor_annex', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_check_userlogs', 'condor_check_userlogs', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_chirp', 'condor_chirp', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/condor_cod', 'condor_cod', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_configure', 'condor_configure', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_config_val', 'condor_config_val', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_continue', 'condor_continue', u'HTCondor Manual', [u'HTCondor Team'], 1),

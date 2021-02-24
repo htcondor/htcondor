@@ -28,6 +28,11 @@ New Features:
   of HTCondor before this release.
   :jira:`130`
 
+- Submission to NorduGrid ARC CE (grid universe type **nordugrid**) now works
+  with newer ARC CE versions where the X.509 Distinguished Names (DNs) of
+  job submitters are obscured in the LDAP information service.
+  :jira:`281`
+
 Bugs Fixed:
 
 - Fixed a bug where ``use feature: GPUsMonitor`` set the wrong path to the
