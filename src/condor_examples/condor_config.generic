@@ -18,7 +18,7 @@
 ##
 ######################################################################
 
-##  Where have you installed the bin, sbin and lib condor directories?   
+##  Where have you installed the bin, sbin and lib condor directories?
 RELEASE_DIR = /usr/local/condor
 
 ##  Where is the local condor directory for each host?  This is where the local config file(s), logs and
@@ -40,8 +40,25 @@ LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
 LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
 #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
 
-##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-use SECURITY : HOST_BASED
+##
+## Do NOT use host-based security by default.
+##
+## This was the default for the 8.8 series (and earlier), but it is
+## intrinsically insecure.  To make the 9.0 series secure by default, we
+## commented it out.
+##
+## You should seriously consider improving your security configuration.
+##
+## To continue to use your old security configuration, knowing that it is
+## insecure, add the line 'use SECURITY : HOST_BASED' to your local
+## configuration directory.  Don't just uncomment the final line in this
+## comment block; changes in this file may be lost during your next upgrade.
+## The following shell command will make the change on most Linux systems.
+##
+## echo 'use SECURITY : HOST_BASED' >> $(condor_config_val LOCAL_CONFIG_DIR)/00-insecure.config
+##
+# use SECURITY : HOST_BASED
+
 ##  To expand your condor pool beyond a single host, set ALLOW_WRITE to match all of the hosts
 #ALLOW_WRITE = *.cs.wisc.edu
 ##  FLOCK_FROM defines the machines that grant access to your pool via flocking. (i.e. these machines can join your pool).
