@@ -191,9 +191,9 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2020.06/bin";
 	#$execstr = get_cmake_args();
-	#$execstr .= " -DBUILD_TESTING:bool=false -DWITH_SCITOKENS:bool=false";
-	#$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
-	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
+	$execstr = "/usr/bin/cmake3 "
+	$execstr .= " -DBUILD_TESTING:bool=false -DWITH_SCITOKENS:bool=false";
+	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
 } elsif ($taskname eq $EXTRACT_TARBALLS_TASK) {
     $execstr = get_extract_tarballs_script();
     $execstr .= " .";
