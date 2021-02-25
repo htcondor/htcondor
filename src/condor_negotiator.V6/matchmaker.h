@@ -350,10 +350,9 @@ class Matchmaker : public Service
 
 		CollectorList* Collectors;
 
-		typedef HashTable<MyString, MapEntry*> AdHash;
+		typedef HashTable<std::string, MapEntry*> AdHash;
 		AdHash *stashedAds;			
 
-		typedef HashTable<MyString, float> groupQuotasHashType;
 		groupQuotasHashType *groupQuotasHash;
 
 		// rank condition on matches
@@ -526,7 +525,6 @@ class Matchmaker : public Service
         // set at startup/restart/reinit
         GroupEntry* hgq_root_group;
 		std::vector<GroupEntry*> hgq_groups;
-		std::map<std::string, GroupEntry*> group_entry_map;
         bool accept_surplus;
         bool autoregroup;
 

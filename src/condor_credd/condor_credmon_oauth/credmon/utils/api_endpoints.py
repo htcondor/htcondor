@@ -19,7 +19,7 @@ def user(token_url):
 
     url = {
         'box':          'https://api.box.com/2.0/users/me',
-        'gdrive':       'https://www.googleapis.com/drive/v3/about',
+        'gdrive':       'https://www.googleapis.com/drive/v3/about&fields=user',
         'onedrive':     'https://graph.microsoft.com/v1.0/me',
         'dropbox':      'https://api.dropboxapi.com/2/users/get_account',
     }

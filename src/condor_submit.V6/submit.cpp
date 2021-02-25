@@ -80,7 +80,6 @@
 #include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
-#include "condor_md.h"
 #include "my_popen.h"
 #include "zkm_base64.h"
 
@@ -2634,6 +2633,49 @@ init_params()
 }
 
 
+bool get_oauth_service_requests(std::string & service_requests) {
+
+	std::string services;
+	std::string requests_error;
+	ClassAdList requests;
+	if (submit_hash.NeedsOAuthServices(services, &requests, &requests_error)) {
+		if ( ! requests_error.empty()) {
+			printf ("%s\n", requests_error.c_str());
+			exit(1);
+		}
+	} else {
+		return false;
+	}
+
+	ClassAd *request;
+	while ((request = requests.Next())) {
+		std::string str;
+		request->LookupString("Service", str);
+		if (str == "")
+			continue;
+		if (service_requests != "")
+			service_requests += " ";
+		service_requests += str;
+		std::string keys[] = { "handle", "scopes", "audience" };
+		for (size_t i = 0; i < (sizeof(keys)/sizeof(keys[0])); i++ ) {
+			str = "";
+			request->LookupString(keys[i], str);
+			if (str != "") {
+				// make the value only comma-separated
+				StringList strlist(str);
+				str = "";
+				for (const char * item = strlist.first(); item != NULL; item = strlist.next()) {
+					if (str != "")
+						str += ",";
+					str += item;
+				}
+				service_requests += "&" + keys[i] + "=" + str;
+			}
+		}
+	}
+	return true;
+}
+
 bool credd_has_tokens(std::string & tokens, MyString & URL) {
 
 	URL.clear();
@@ -2714,6 +2756,30 @@ int process_job_credentials()
 {
 	// however, if we do need to send it for any job, we only need to do that once.
 	if (sent_credential_to_credd) {
+		return 0;
+	}
+
+	MyString storer;
+	if(param(storer, "SEC_CREDENTIAL_STORER")) {
+		// SEC_CREDENTIAL_STORER is a script to run that calls
+		// condor_store_cred when it has new credentials to store.
+		// Pass it parameters of the service requests needed as
+		// defined in the submit file.
+		std::string requests;
+		if (get_oauth_service_requests(requests)) {
+			ArgList args;
+			StringList request_list(storer + " " + requests, " ");
+			for (const char * request = request_list.first(); request != NULL; request = request_list.next()) {
+				args.AppendArg(request);
+			}
+			if (my_system(args) != 0) {
+				fprintf(stderr, "\nERROR: (%i) invoking %s\n", errno, storer.c_str());
+				exit(1);
+			}
+			sent_credential_to_credd = true;
+		} else {
+			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
+		}
 		return 0;
 	}
 
@@ -2929,48 +2995,10 @@ int SendLastExecutable()
 	// spool executable if necessary
 	if ( ename && copy_to_spool ) {
 
-		bool try_ickpt_sharing = false;
-		CondorVersionInfo cvi(MySchedd->version());
-		if (cvi.built_since_version(7, 3, 0)) {
-			try_ickpt_sharing = param_boolean("SHARE_SPOOLED_EXECUTABLES",
-												true);
-		}
-
-		std::string hash;
-		if (try_ickpt_sharing) {
-			Condor_MD_MAC cmm;
-			unsigned char* hash_raw;
-			if (!cmm.addMDFile(ename)) {
-				dprintf(D_ALWAYS,
-						"SHARE_SPOOLED_EXECUTABLES will not be used: "
-							"MD5 of file %s failed\n",
-						ename);
-			}
-			else if ((hash_raw = cmm.computeMD()) == NULL) {
-				dprintf(D_ALWAYS,
-						"SHARE_SPOOLED_EXECUTABLES will not be used: "
-							"no MD5 support in this Condor build\n");
-			}
-			else {
-				for (int i = 0; i < MAC_SIZE; i++) {
-					formatstr_cat(hash, "%02x", static_cast<int>(hash_raw[i]));
-				}
-				free(hash_raw);
-			}
-		}
-		int ret;
-		if ( ! hash.empty()) {
-			ClassAd tmp_ad;
-			tmp_ad.Assign(ATTR_OWNER, username);
-			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash);
-			ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
-		}
-		else {
-			char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
-			SpoolEname = chkptname;
-			if (chkptname) free(chkptname);
-			ret = MyQ->send_SpoolFile(SpoolEname.Value());
-		}
+		char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
+		SpoolEname = chkptname;
+		if (chkptname) free(chkptname);
+		int ret = MyQ->send_SpoolFile(SpoolEname.Value());
 
 		if (ret < 0) {
 			fprintf( stderr,

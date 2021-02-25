@@ -304,16 +304,16 @@ file.
     ClassAd attribute ``ProcId``.
 
 ``$$(a_machine_classad_attribue)``
-    When the machine is matched to this job for it to run on, any 
+    When the machine is matched to this job for it to run on, any
     dollar-dollar expressions are looked up from the machine ad, and then
     expanded.  This lets you put the value of some machine ad attribute
     into your job.  For example, if you to pass the actual amount of
-    memory a slot has provisioned as an argument to the job, you 
-    could add ``arguments = --mem $$(Memory)`` 
+    memory a slot has provisioned as an argument to the job, you
+    could add ``arguments = --mem $$(Memory)``
 
     .. code-block:: condor-submit
 
-      arguments = --mem $$(Memory) 
+      arguments = --mem $$(Memory)
 
     or, if you wanted to put the name of the machine the job ran on
     into the output file name, you could add
@@ -323,17 +323,35 @@ file.
       output = output_file.$$(Name)
 
 ``$$([ an_evaluated_classad_expression ])``
-    This dollar-dollar-bracket syntax is useful when you need to 
+    This dollar-dollar-bracket syntax is useful when you need to
     perform some math on a value before passing it to your job.
     For example, if want to pass 90% of the allocated memory as an
     argument to your job, the submit file can have
 
     .. code-block: condor-submit
-    
-     arguments = --mem $$([ Memory * 0.9 ])
 
-     and when the job is matched to a machine, condor will evaluate
-     this expression in the context of both the job and machine ad
+        arguments = --mem $$([ Memory * 0.9 ])
+
+    and when the job is matched to a machine, condor will evaluate
+    this expression in the context of both the job and machine ad
+
+``$(ARCH)``
+    The Architecture that HTCondor is running on, or the ARCH variable
+    in the config file.  Example might be X86_64.
+
+``$(OPSYS)`` ``$(OPSYSVER)`` ``$(OPSYSANDVER)`` ``$(OPSYSMAJORVER)``
+    These submit file macros are availle at submit time, and mimic
+    the classad attributes of the same names.
+
+``$(SUBMIT_FILE)``
+    The name of the submit_file as passed to the ``condor_submit`` command.
+
+``$(SUBMIT_TIME)``
+    The Unix epoch time submit was run.  Note, this may be useful for
+    naming output files.
+
+``$(Year)`` ``$(Month)`` ``$(Day)``
+    These integer values are derived from the `$(SUBMIT_FILE)` macro above.
 
 ``$(Item)``
     The default name of the variable when no ``<varname>`` is provided
@@ -1049,7 +1067,8 @@ Upon submitting this job for the first time,
 the user will be directed to a webpage hosted on the submit machine
 which will guide the user through the process of obtaining a CloudBoxDrive credential.
 The credential is then stored securely on the submit machine.
-(**Note that the original job will have to be re-submitted at this point!**)
+(**Note: depending on which credential monitor is used, the original
+job may have to be re-submitted at this point.**)
 (Also note that at no point is the user's *password* stored on the submit machine.)
 Once a credential is stored on the submit machine,
 as long as it remains valid,
@@ -1133,6 +1152,14 @@ Submitting the above would result in a job with respective access tokens located
 ``$_CONDOR_CREDS/cloudboxdrive_readpublic.use`` and
 ``$_CONDOR_CREDS/cloudboxdrive_writeprivate.use``.
 
+Note that the permissions and resource settings for each handle (and for
+no handle) are stored separately from the job so multiple jobs from the
+same user running at the same time or for a period of time consecutively
+may not use a different set of permissions and resource settings for the
+same service and handle.  If that is attempted, a new job submission
+will fail with instructions on how to resolve the conflict, but the
+safest thing is to choose a unique handle.
+
 If a service provider does not require permissions or resources to be specified,
 a user can still request multiple credentials by affixing handles to
 ``<service>_oauth_permissions`` commands with empty values
@@ -1142,6 +1169,32 @@ a user can still request multiple credentials by affixing handles to
     use_oauth_services = cloudboxdrive
     cloudboxdrive_oauth_permissions_personal =
     cloudboxdrive_oauth_permissions_public =
+
+.. only:: Vault
+
+    When the Vault credential monitor is configured, the service name may
+    optionally be split into two parts with an underscore between them,
+    where the first part is the issuer and the second part is the role.  In
+    this example the issuer is "dune" and the role is "production", both
+    as configured by the administrator of the Vault server:
+
+    .. code-block:: condor-submit
+
+        use_oauth_services = dune_production
+
+    Vault server.  Vault does not require permissions or resources to be
+    set, but they may be set to reduce the default permissions or restrict
+    the resources that may use the credential.  The full service name
+    including an underscore may be used in an ``oauth_permissions`` or
+    ``oauth_resource``.  Avoid using handles that might be confused as
+    role names.  For example, the following will result in a conflict
+    between two credentials called ``dune_production.use``:
+
+    .. code-block:: condor-submit
+
+        use_oauth_services = dune, dune_production
+        dune_oauth_permissions_production =
+        dune_production_oauth_permissions =
 
 
 Jobs That Require GPUs

@@ -1,20 +1,25 @@
-#!/usr/bin/python
+# Copyright 2021 HTCondor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import re
 import json
 import time
 import logging
-import zlib
-import base64
 
 import classad
 
-AUTO_ATTRS = {
-    "date_attrs": re.compile(r"^.*Date$"),
-    "provisioned_attrs": re.compile(r"^.*Provisioned$"),
-    "resource_request_attrs": re.compile(r"^Request[A-Z].*$"),
-    "target_boolean_attrs": re.compile(r"^(Want|Has|Is)[A-Z_].*$"),
-}
 
 # TEXT_ATTRS should only contain attrs that we want full text search on,
 # otherwise strings are stored as keywords.
@@ -536,14 +541,15 @@ def record_time(ad, fallback_to_launch=True):
     return 0
 
 
-def case_normalize(attr):
-    """
-    Given a ClassAd attr name, check to see if it's known. If so, normalize the
-    attr name's casing to the known value. Otherwise, make the key lowercase.
-    (Elasticsearch field names are case-sensitive.)
-    """
-    # Get the union of all known attrs
-    known_attrs = (
+AUTO_ATTRS = {
+    "date_attrs": re.compile(r"^(.*)(Date)$"),
+    "provisioned_attrs": re.compile(r"^(.*)(Provisioned)$"),
+    "resource_request_attrs": re.compile(r"^(Request)([A-Za-df-z].*)$"),  # ignore "Requested"
+    "target_boolean_attrs": re.compile(r"^(Want|Has|Is)([A-Z_].*)$", re.IGNORECASE),
+}
+
+
+KNOWN_ATTRS = (
         TEXT_ATTRS
         | INDEXED_KEYWORD_ATTRS
         | NOINDEX_KEYWORD_ATTRS
@@ -552,31 +558,44 @@ def case_normalize(attr):
         | DATE_ATTRS
         | BOOL_ATTRS
         | IGNORE_ATTRS
-    )
+)
+KNOWN_ATTRS_MAP = {x.casefold(): x for x in KNOWN_ATTRS}
 
-    # Build a dict of lowercased attrs -> known attrs
-    known_attrs = {x.casefold(): x for x in known_attrs}
 
-    # We can also make auto-mapped fields more readable
-    auto_attrs = [
-        re.compile(r"^(.*)(Date)$"),
-        re.compile(r"^(.*)(Provisioned)$"),
-        re.compile(r"^(Request)([A-Za-df-z].*)$"),  # ignore "Requested"
-        re.compile(r"^(Want|Has|Is)([A-Z_].*)$", re.IGNORECASE),
-    ]
+def case_normalize(attr):
+    """
+    Given a ClassAd attr name, check to see if it's known. If so, normalize the
+    attr name's casing to the known value. Otherwise, make the key lowercase.
+    (Elasticsearch field names are case-sensitive.)
+    """
+    if attr in KNOWN_ATTRS:
+        return attr
 
-    if attr.casefold() in known_attrs:
-        # Known attr
-        return known_attrs[attr.casefold()]
+    lower_attr = attr.casefold()
+    if lower_attr in KNOWN_ATTRS_MAP:
+        return KNOWN_ATTRS_MAP[lower_attr]
 
-    for attr_re in auto_attrs:
-        match = attr_re.match(attr)
+    # Do simple checks for auto attrs before resorting to regexp
+    if attr[-4:] == "Date":
+        match = AUTO_ATTRS["date_attrs"].match(attr)
         if match:
-            # Auto-mapped attr
+            return "".join([x.capitalize() for x in match.groups()])
+    elif attr[-11:] == "Provisioned":
+        match = AUTO_ATTRS["provisioned_attrs"].match(attr)
+        if match:
+            return "".join([x.capitalize() for x in match.groups()])
+
+    if attr[:7] == "Request":
+        match = AUTO_ATTRS["resource_request_attrs"].match(attr)
+        if match:
+            return "".join([x.capitalize() for x in match.groups()])
+    elif (lower_attr[:4] == "want" or lower_attr[:3] == "has" or lower_attr[:2] == "is"):
+        match = AUTO_ATTRS["target_boolean_attrs"].match(attr)
+        if match:
             return "".join([x.capitalize() for x in match.groups()])
 
     # Unknown attr
-    return attr.casefold()
+    return lower_attr
 
 
 def bulk_convert_ad_data(ad, result):
@@ -604,11 +623,7 @@ def bulk_convert_ad_data(ad, result):
                 key = f"{key}_EXPR"
             else:
                 continue
-        elif (
-            key in TEXT_ATTRS
-            or key in INDEXED_KEYWORD_ATTRS
-            or key in NOINDEX_KEYWORD_ATTRS
-        ):
+        elif key in TEXT_ATTRS or key in INDEXED_KEYWORD_ATTRS or key in NOINDEX_KEYWORD_ATTRS:
             value = str(value)
         elif key in FLOAT_ATTRS:
             try:
@@ -619,11 +634,7 @@ def bulk_convert_ad_data(ad, result):
                 )
                 key = f"{key}_STRING"
                 value = str(value)
-        elif (
-            key in INT_ATTRS
-            or AUTO_ATTRS["provisioned_attrs"].match(key)
-            or AUTO_ATTRS["resource_request_attrs"].match(key)
-        ):
+        elif key in INT_ATTRS or key[-11:] == "Provisioned" or key[:7] == "Request":
             try:
                 value = int(value)
             except ValueError:
@@ -632,7 +643,7 @@ def bulk_convert_ad_data(ad, result):
                 )
                 key = f"{key}_STRING"
                 value = str(value)
-        elif key in BOOL_ATTRS or AUTO_ATTRS["target_boolean_attrs"].match(key):
+        elif key in BOOL_ATTRS or (key[:4] == "Want" or key[:3] == "Has" or key[:2] == "Is"):
             try:
                 value = bool(value)
             except ValueError:
@@ -641,7 +652,7 @@ def bulk_convert_ad_data(ad, result):
                 )
                 key = f"{key}_STRING"
                 value = str(value)
-        elif key in DATE_ATTRS or AUTO_ATTRS["date_attrs"].match(key):
+        elif key in DATE_ATTRS or key[-4:] == "Date":
             try:
                 value = int(value)
                 if value == 0:
@@ -656,7 +667,7 @@ def bulk_convert_ad_data(ad, result):
             value = str(value)
 
         # truncate strings longer than 256 characters
-        if type(value) == type(str()) and len(value) > 256:
+        if isinstance(value, str) and len(value) > 256:
             value = f"{value[:253]}..."
 
         result[key] = value

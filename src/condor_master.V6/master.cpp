@@ -65,6 +65,9 @@ extern DWORD start_as_service();
 extern void terminate(DWORD);
 #endif
 
+#ifdef LINUX
+#include <sys/prctl.h>
+#endif
 
 // local function prototypes
 void	init_params();
@@ -1744,6 +1747,71 @@ run_preen_now()
 	return TRUE;
 }
 
+void
+create_dirs_at_master_startup()
+{
+#ifndef WIN32
+    //
+    // Create the necessary directories.
+    //
+
+    typedef struct {
+        const char * param;
+        unsigned int uid;
+        unsigned int gid;
+        mode_t mode;
+    } required_directories_t;
+
+    uid_t u = get_condor_uid();
+    gid_t g = get_condor_gid();
+
+    uid_t r = 0;
+    gid_t s = 0;
+    if(! can_switch_ids()) {
+        r= u;
+        s= g;
+    }
+
+	// Note: until such time that we create the parent directories, 
+	// be aware that the order of the below list is significant.  For instance,
+	// we will create LOCAL_DIR before we create subdirectories typically
+	// found in LOCAL_DIR like EXECUTE and SPOOL.
+    std::vector<required_directories_t> required_directories {
+        { "SEC_PASSWORD_DIRECTORY",         r, s, 00700 },
+        { "SEC_TOKEN_SYSTEM_DIRECTORY",     r, s, 00700 },
+        { "LOCAL_DIR",                      u, g, 00755 },
+        { "EXECUTE",                        u, g, 00755 },
+        { "SEC_CREDENTIAL_DIRECTORY_KRB",   r, s, 00755 },
+        { "SEC_CREDENTIAL_DIRECTORY_OAUTH", r, g, 02770 },
+        { "SPOOL",                          u, g, 00755 },
+        { "LOCAL_UNIV_EXECUTE",             u, g, 00755 },
+        { "LOCK",                           u, g, 00755 },
+        { "LOCAL_DISK_LOCK_DIR",            u, g, 01777 },  // typically never defined
+        { "LOG",                            u, g, 00755 },
+        { "RUN",                            u, g, 00755 }
+    };
+
+    struct stat sbuf;
+    for( const auto & dir : required_directories ) {
+        std::string name;
+        param( name, dir.param );
+        // fprintf( stderr, "%s (%s) %u %u %o\n", dir.param, name.c_str(), dir.uid, dir.gid, dir.mode );
+		if( name.empty() ) {
+			continue;
+		}
+		TemporaryPrivSentry tps(PRIV_ROOT);
+        if( stat( name.c_str(), &sbuf ) != 0 && errno == ENOENT ) {
+			// TODO: should we be calling mkdir_and_parents_if_neeed() instead of mkdir() ?
+            if( mkdir( name.c_str(), dir.mode ) == 0 ) {
+                dummyGlobal = chown( name.c_str(), dir.uid, dir.gid );
+                dummyGlobal = chmod( name.c_str(), dir.mode ); // Override umask
+            }
+        }
+    }
+#endif
+	return;
+}
+
 // this is the preen timer callback
 void run_preen() { run_preen_now(); }
 
@@ -1756,6 +1824,12 @@ RestartMaster()
 void
 main_pre_command_sock_init()
 {
+
+	// Create directories as needed... we need to do this as early as possible,
+	// but after daemonCore initializes the uids (priv) code and config code.
+	// So first thing in main_pre_command_sock_init() seems to be about the best spot.
+	create_dirs_at_master_startup();
+
 	/* Make sure we are the only copy of condor_master running */
 	char*  p;
 #ifndef WIN32
@@ -1799,6 +1873,11 @@ main_pre_command_sock_init()
 #endif
 	}
 
+#ifdef LINUX
+	if (param_boolean("DISABLE_SETUID", true)) {
+		prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	}
+#endif
 	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
 	// to force the credmon to refresh everything and to prevent the schedd
 	// from starting up until credentials are ready.
@@ -1843,7 +1922,6 @@ bool main_has_console()
     return false;
 }
 #endif
-
 
 int
 main( int argc, char **argv )
@@ -1892,60 +1970,6 @@ main( int argc, char **argv )
        } else {
           return (int)err;
        }
-    }
-#endif
-
-#ifndef WIN32
-    //
-    // Create the necessary directories.
-    //
-
-    typedef struct {
-        const char * param;
-        unsigned int uid;
-        unsigned int gid;
-        mode_t mode;
-    } required_directories_t;
-
-    uid_t u = get_condor_uid();
-    gid_t g = get_condor_gid();
-
-    uid_t r = 0;
-    gid_t s = 0;
-    if(! can_switch_ids()) {
-        r= u;
-        s= g;
-    }
-
-    std::vector<required_directories_t> required_directories {
-        { "SEC_PASSWORD_DIRECTORY",         r, s, 00700 },
-        { "SEC_TOKEN_SYSTEM_DIRECTORY",     u, g, 00700 },
-        { "LOCAL_DIR",                      u, g, 00755 },
-        { "EXECUTE",                        u, g, 01777 },
-        { "SEC_CREDENTIAL_DIRECTORY_KRB",   r, s, 00755 },
-        { "SEC_CREDENTIAL_DIRECTORY_OAUTH", r, g, 02770 },
-        { "SPOOL",                          u, g, 00775 },
-        { "LOCAL_UNIV_EXECUTE",             u, g, 01777 },
-        { "LOCK",                           u, g, 00755 },
-        { "LOCAL_DISK_LOCK_DIR",            u, g, 01777 },
-        { "LOG",                            u, g, 00755 },
-        { "RUN",                            u, g, 00755 }
-    };
-
-    // Initialize the param() system.
-    config();
-
-    struct stat sbuf;
-    for( const auto & dir : required_directories ) {
-        std::string name;
-        param( name, dir.param );
-        // fprintf( stderr, "%s (%s) %u %u %o\n", dir.param, name.c_str(), dir.uid, dir.gid, dir.mode );
-        if( stat( name.c_str(), &sbuf ) != 0 && errno == ENOENT ) {
-            if( mkdir( name.c_str(), dir.mode ) == 0 ) {
-                dummyGlobal = chown( name.c_str(), dir.uid, dir.gid );
-                dummyGlobal = chmod( name.c_str(), dir.mode ); // Override umask
-            }
-        }
     }
 #endif
 

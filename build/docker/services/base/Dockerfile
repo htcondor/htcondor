@@ -15,6 +15,12 @@ LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}${SUFFIX}" \
       org.label-schema.vendor="HTCondor" \
       org.label-schema.license="Apache-2.0"
 
+# Unset these from parent
+LABEL org.opencontainers.image.created="" \
+      org.opencontainers.image.licenses="" \
+      org.opencontainers.image.title="" \
+      org.opencontainers.image.vendor=""
+
 # Ensure that the 'condor' UID/GID matches across containers
 RUN groupadd -g 64 -r condor && \
     useradd -r -g condor -d /var/lib/condor -s /sbin/nologin \
@@ -34,7 +40,8 @@ RUN \
         SERIES=stable; \
     fi; \
     \
-    yum -y update && \
+    yum -y update; \
+    ## ^^ ignore errors; some packages (like "filesystem") might fail to update in a container environment \
     yum -y install epel-release yum-plugin-priorities && \
     \
     (curl -sSL https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-${SERIES}-rhel${EL}.repo && \

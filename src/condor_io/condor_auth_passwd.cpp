@@ -185,12 +185,11 @@ findTokens(const std::string &issuer,
 		return true;
 	}
 
-	auto subsys = get_mySubSystem();
-
 		// If we are supposed to retrieve a token on behalf of a user, then
 		// owner will be set and we will use PRIV_USER.  In all other cases,
-		// if we are a daemon we should read the token as PRIV_CONDOR.
+		// if we are a daemon we should read the token as PRIV_ROOT.
 	TemporaryPrivSentry tps( !owner.empty() );
+	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
 			dprintf(D_FAILURE, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
@@ -198,7 +197,7 @@ findTokens(const std::string &issuer,
 		}
 		set_user_priv();
 	} else if (subsys->isDaemon()) {
-		set_priv(PRIV_CONDOR);
+		set_priv(PRIV_ROOT);
 	}
 
 	// Note we reuse the exclude regexp from the configuration subsys.
@@ -703,7 +702,7 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 	}
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
-	KeyInfo thekey(key,keylen,CONDOR_3DES);
+	KeyInfo thekey(key, keylen, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
 	if ( m_crypto ) {
 		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
@@ -1974,6 +1973,12 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 			// hence, in this case we just use the server name twice (which is
 			// mandated to be the pool username).
 		m_sk.shared_key = fetchPassword(m_version == 2 ? m_t_server.b : m_t_client.a, m_t_client.a_token, m_t_server.b);
+
+		// In version 1, the only thing that is ever sent in practice is 
+		// condor_pool@whatever, and in that case, m_t_server.b == m_t_client.a
+		// and we could simplify the line of code above to this:
+		//     m_sk.shared_key = fetchPassword(m_t_server.b, m_t_client.a_token, m_t_server.b);
+
 		if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
@@ -2065,28 +2070,60 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 		m_ret_value = 0;
 	}
 
+	// the protocol has the client sending their claimed identity.  we'll log it
+	// here, but it should not be trusted.
+	dprintf (D_SECURITY | D_FULLDEBUG, "PW: client in mode %i and ID %s.\n", getMode(), m_t_client.a);
 
-		//m_ret_value is 1 for success, 0 for failure.
-	if ( m_ret_value == 1 ) {
-			// if all is good, set the remote user and domain names
-		char *login, *domain;
-		login = m_t_client.a; // client is remote to server
-		ASSERT(login);
-		domain = strchr(login,'@');
-		if (domain) {
-			*domain='\0';
-			domain++;
-		}
+	// sanity check -- we shouldn't be in this code if not using these methods
+	if ((getMode() != CAUTH_PASSWORD) && (getMode() != CAUTH_TOKEN)) {
+		dprintf(D_ALWAYS, "PW: ERROR: in ServerRec2 in unknown mode %i.\n", getMode());
+		m_ret_value = 0;  // signal failure
+	}
 
-		setRemoteUser(login);
-		setRemoteDomain(domain);
+	// we need to enforce that the id sent by the client matches what was
+	// extracted from the token (for IDTOKENS) or is the "condor pool"
+	// identity.
+	//
+	// the "expected_subject" string below will hold the expected value,
+	// and it is set below in two different ways.
+	//
+	// for password, it's going to be the POOL_PASSWORD_USERNAME (or, if
+	// SEC_PASSWORD_REPLACE_USERNAME is set to false it will be the user
+	// the client sent.) name that was sent.
+	//
+	// for token, it will be the subject extracted from the token.
+	//
+	// after everything is done / extracted, we will compare the "real"
+	// subject with what the client initially sent and only succeed if they
+	// match.
+	std::string expected_subject;
 
+	// for password, this is easy.  we expect to see "condor_pool@<something>".
+	if((m_version == 1)) {
+		expected_subject = POOL_PASSWORD_USERNAME;
+		expected_subject += "@";
+		expected_subject += getLocalDomain();
+	}
+
+	// if the protocol was so far successful, process the token if it exists.
+	if ( m_ret_value == 1 ) { //m_ret_value is 1 for success, 0 for failure.
+		// we have a token, let's decode it
 		if (!m_t_client.a_token.empty()) {
 			std::vector<std::string> authz, scopes;
 			time_t expiry = 0;
 			std::string username, issuer, groups, jti;
 			try {
 				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
+				dprintf(D_SECURITY | D_FULLDEBUG, "PW: decoded JWT.\n");
+
+				// extract the expected_subject
+				if(! decoded_jwt.has_subject() ) {
+					dprintf(D_ALWAYS, "JWT is missing a subject claim.\n");
+					throw; // skips rest of token handling
+				}
+				expected_subject = decoded_jwt.get_subject();
+
+				// extract other useful information
 				if (decoded_jwt.has_payload_claim("scope")) {
 						// throws std::bad_cast if this isn't a string; caught below.
 					const std::string &scopes_str = decoded_jwt.get_payload_claim("scope").as_string();
@@ -2154,12 +2191,70 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				ad.InsertAttr("TokenExpirationTime", expiry);
 			}
 			mySock_->setPolicyAd(ad);
+		} else {
+			// no token present.  that's expected for PASSWORD, but
+			// that's a failure if it's IDTOKENS auth.
+			if(getMode() == CAUTH_TOKEN) {
+				// no actual token present when using IDTOKENS is a
+				// failure.  set no ID and change the return code.
+				dprintf(D_ALWAYS, "PW: ERROR: There was no token present!\n");
+				m_ret_value = 0;
+			}
+		}
+	}
+
+	// if everything is still good, validate and set the authenticated information
+	if(m_ret_value) {
+		// for password... should the domain matter?  historically it has not,
+		// since we just accepted what the client sent in the first place.  so
+		// for password we only check up to the '@', and for tokens we check
+		// the whole thing.
+		bool match = false;
+		if (getMode() == CAUTH_PASSWORD) {
+			match = !strncmp(m_t_client.a, expected_subject.c_str(), strlen(POOL_PASSWORD_USERNAME)+1);
+		} else {
+			match = !strcmp(m_t_client.a, expected_subject.c_str());
+		}
+		if (match) {
+			char * login = strdup(expected_subject.c_str());
+			char * domain = strchr(login,'@');
+			if (domain) {
+				*domain='\0';
+				domain++;
+			}
+
+			dprintf(D_SECURITY | D_FULLDEBUG, "PW: setting authenticated user (%s) and domain (%s)\n",
+				login, domain ? domain : "NULL");
+			setRemoteUser(login);
+			setRemoteDomain(domain);
+			// TODO FIXME ZKM: in the next devel release:
+			// setAuthenticatedName(expected_subject.c_str());
+
+			free(login);
+		} else {
+			dprintf(D_ALWAYS, "PW: WARNING: client ID (%s) and expected ID (%s) do not match.  Failing.\n",
+				m_t_client.a, expected_subject.c_str());
+			m_ret_value = 0;
 		}
 	}
 
 	destroy_t_buf(&m_t_client);
 	destroy_t_buf(&m_t_server);
 	destroy_sk(&m_sk);
+
+	// an unfortunate issue here is that if we have failed, there is no
+	// communication back to the client.  if we have reached this point the
+	// client has already assumed success.  thus, the two sides will now be
+	// out of sync as the client is waiting to exchange keys at this point.
+	//
+	// fortunately, the server is operating in non-blocking mode so this
+	// will not interrupt operation.  the client will hang for 20 seconds
+	// before timing out.
+	//
+	// nevertheless, we must fail for now.  perhaps down the road the
+	// protocol could be expanded such that we could inform the client of
+	// this status and the connection could recover to potentially try
+	// other authentication methods, but now is not that time.
 
 		//return 1 for success, 0 for failure.
 	return (m_ret_value==1) ? Success : Fail;
@@ -2824,7 +2919,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
-	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
+	KeyInfo thekey(key, (int)key_len, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
 	if ( m_crypto ) {
 		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
@@ -2834,7 +2929,6 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 			m_crypto = NULL;
 		}
 	}
-
 	if ( key ) free(key);	// KeyInfo makes a copy of the key
 
 	return m_crypto ? true : false;
@@ -2933,6 +3027,8 @@ Condor_Auth_Passwd::should_try_auth()
 	CondorError err;
 	if (listNamedCredentials(creds, &err)) {
 		has_named_creds = !creds.empty();
+	} else {
+		dprintf(D_SECURITY, "Failed to determine available named credentials: %s\n", err.getFullText().c_str());
 	}
 	if (has_named_creds) {
 		dprintf(D_SECURITY|D_FULLDEBUG,

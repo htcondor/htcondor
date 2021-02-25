@@ -207,10 +207,14 @@ incorporates.
 
        Sets configuration that enables the *condor_credd* and *condor_credmon_oauth* daemons,
        which allow for the automatic renewal of user-supplied OAuth2 credentials.
-       Intended for submit nodes that are also configured
-       with the companion OAuth credmon WSGI application
-       running on a HTTPS-enabled web server.
+       See section :ref:`enabling_oauth_credentials` for more information.
 
+    -  ``Adstash``
+
+       Sets configuration that enables *condor_adstash* to run as a daemon.
+       *condor_adstash* polls job history ClassAds and pushes them to an
+       Elasticsearch index, see section
+       :ref:`admin-manual/monitoring:Elasticsearch` for more information.
 
     -  ``UWCS_Desktop_Policy_Values``
 

@@ -891,7 +891,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// now to make sure parallel universe support is complete for 6.7.17.
 	// wenger 2006-02-15.
 	//
-
+	bool putFailedJobsOnHold = param_boolean("DAGMAN_PUT_FAILED_JOBS_ON_HOLD", false);
 	if ( failed && job->_scriptPost == NULL ) {
 		if ( job->DoRetry() ) {
 			// If this is a cluster job with multiple procs, do not restart it now.
@@ -899,6 +899,13 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			if ( !job->is_cluster ) {
 				RestartNode( job, recovery );
 			}
+		} else if ( putFailedJobsOnHold ) {
+			job->SetHold( true );
+			// Increase the job's retry max, so it will try again after the
+			// retry count gets increased in the RestartNode() function.
+			// We might want to limit this to avoid livelock.
+			job->SetRetryMax( job->GetRetryMax() + 1 );
+			RestartNode( job, recovery );
 		} else {
 				// no more retries -- job failed
 			if( job->GetRetryMax() > 0 ) {

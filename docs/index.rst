@@ -10,6 +10,7 @@ Center for High Throughput Computing, University of Wisconsin–Madison.
    :glob:
    :caption: Contents
 
+   getting-htcondor/index
    overview/index
    users-manual/index
    admin-manual/index

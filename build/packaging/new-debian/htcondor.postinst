@@ -23,10 +23,6 @@ condor_make_homedir() {
             echo "HTCondor's configuration doesn't define $dlabel. This might be an indication of a problem."
         fi
     done
-    # why should this be world writable?
-    #for dlabel in EXECUTE; do
-    #	chmod 1777 $(condor_config_val $dlabel)
-    #done
 }
 
 
@@ -62,7 +58,6 @@ case "$1" in
         chmod 0700 /etc/condor/passwords.d
         mkdir -p /etc/condor/tokens.d
         chmod 0700 /etc/condor/tokens.d
-        chown condor /etc/condor/tokens.d
         mkdir -p /var/lib/condor/krb_credentials
         mkdir -p /var/lib/condor/oauth_credentials
         chmod 2770 /var/lib/condor/oauth_credentials

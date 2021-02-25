@@ -1585,9 +1585,9 @@ Stream::prepare_crypto_for_secret_is_noop() const
 void
 Stream::prepare_crypto_for_secret()
 {
+	dprintf(D_NETWORK,"start encrypting secret\n");
 	m_crypto_state_before_secret = true;
 	if( !prepare_crypto_for_secret_is_noop() ) {
-		dprintf(D_NETWORK,"encrypting secret\n");
 		m_crypto_state_before_secret = get_encryption(); // always false
 		set_crypto_mode(true);
 	}
@@ -1596,6 +1596,7 @@ Stream::prepare_crypto_for_secret()
 void
 Stream::restore_crypto_after_secret()
 {
+	dprintf(D_NETWORK,"done encrypting secret\n");
 	if( !m_crypto_state_before_secret ) {
 		set_crypto_mode(false); //restore crypto mode
 	}

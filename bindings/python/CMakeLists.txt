@@ -9,7 +9,7 @@ if (WITH_PYTHON_BINDINGS)
     configure_file(${SETUP_PY_IN} ${SETUP_PY})
 
     # Copy over module directories if __init__.py is missing, i.e. out of
-    # source build.  This is broken (see hack at the end of this file).
+    # source build.  This is broken (see the remove-file hack below)
     foreach(PACKAGE ${PACKAGES})
         set(PKG_DIR "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}")
         add_custom_command(OUTPUT "${PKG_DIR}/__init__.py"
@@ -48,6 +48,11 @@ if (WITH_PYTHON_BINDINGS)
             )
         endif()
         add_custom_target(python_bindings ALL DEPENDS ${TIMESTAMP_FILE})
+
+		# This is an awful hack, but it's easier than fixing than this file.
+		add_custom_command(TARGET python_bindings POST_BUILD
+			COMMAND ${CMAKE_COMMAND} ARGS -E remove -f "${CMAKE_CURRENT_BINARY_DIR}/*/__init__.py"
+			)
 
         if (WINDOWS) # Windows can call setup.py as normal
             install(CODE "execute_process(
@@ -100,10 +105,6 @@ if (WITH_PYTHON_BINDINGS)
         ")
     endif()
 
-    # This is an awful hack, but it's easier than fixing than this file.
-    add_custom_command(TARGET python_bindings POST_BUILD
-        COMMAND ${CMAKE_COMMAND} ARGS -E remove -f "${CMAKE_CURRENT_BINARY_DIR}/*/__init__.py"
-    )
 
 endif()
 

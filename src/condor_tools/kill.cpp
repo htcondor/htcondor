@@ -258,9 +258,11 @@ find_condor_pids() {
 	while( fgets(line,249,ps) != NULL ) {
 		if( strstr( line, "condor_" ) == line ) {
 			// found a line that begins with "condor_", so grab the pid
-			sscanf( line, "%*s %ld", &pid );
-			cpid = new CondorPid( pid, line );
-			condor_pids->Append( cpid );
+			int found = sscanf( line, "%*s %ld", &pid );
+			if (found == 1) {
+				cpid = new CondorPid( pid, line );
+				condor_pids->Append( cpid );
+			}
 		}
 	}
 	pclose(ps);

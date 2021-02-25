@@ -529,6 +529,8 @@ public:
         // RETURNS: true -- on, false -- off
         //------------------------------------------
 
+	int ciphertext_size(int plaintext_size) const {return plaintext_size;};
+
 	bool set_crypto_mode(bool enable);
         //------------------------------------------
         // PURPOSE: enable or disable encryption

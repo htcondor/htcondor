@@ -290,7 +290,7 @@ double _condor_debug_get_time_double()
 // caller must supply the buffer and must insure that it is at least datalen*3+1
 // this is intended to provide a way to add small hex dumps to dprintf logging
 static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
-const char * debug_hex_dump(char * buf, const char * data, int datalen)
+const char * debug_hex_dump(char * buf, const char * data, int datalen, bool compact)
 {
 	if (!buf) return "";
 	const unsigned char * d = (const unsigned char *)data;
@@ -301,7 +301,9 @@ const char * debug_hex_dump(char * buf, const char * data, int datalen)
 		*p++ = hex_digit((ch >> 4) & 0xF);
 		*p++ = hex_digit(ch & 0xF);
 		endp = p;
-		*p++ = ' ';
+		if (!compact) {
+			*p++ = ' ';
+		}
 	}
 	*endp = 0;
 	return buf;

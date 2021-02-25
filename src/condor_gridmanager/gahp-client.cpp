@@ -1112,7 +1112,7 @@ GahpServer::CreateSecuritySession()
 	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
 										session_id, session_key, NULL,
 										AUTH_METHOD_FAMILY,
-										CONDOR_CHILD_FQU, NULL, 0, nullptr ) ) {
+										CONDOR_CHILD_FQU, NULL, 0, nullptr, true ) ) {
 		free( session_id );
 		free( session_key );
 		return false;

@@ -472,6 +472,8 @@ ClusterCleanup(int cluster_id)
 	SpooledJobFiles::removeClusterSpooledFiles(cluster_id, submit_digest);
 
 	// garbage collect the shared ickpt file if necessary
+	// As of 9.0 new jobs will be unable to submit shared executables
+	// but there may still be some jobs in the queue that have that.
 	if (!hash.IsEmpty()) {
 		ickpt_share_try_removal(owner.Value(), hash.Value());
 	}
@@ -7426,7 +7428,7 @@ SendSpoolFile(char const *)
 }
 
 int
-SendSpoolFileIfNeeded(ClassAd& ad)
+SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 {
 	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
 		EXCEPT( "SendSpoolFileIfNeeded called when Q_SOCK is NULL" );
@@ -7452,6 +7454,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 		return -1;
 	}
 
+#if 0 // for 9.0, we no longer support sharing of spooled exe because it uses MD5
 	// here we take advantage of ickpt sharing if possible. if a copy
 	// of the executable already exists we make a link to it and send
 	// a '1' back to the client. if that can't happen but sharing is
@@ -7531,6 +7534,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 			}
 		}
 	}
+#endif
 
 	/* Tell client to go ahead with file transfer. */
 	Q_SOCK->getReliSock()->put(0);
@@ -7541,9 +7545,11 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 		return -1;
 	}
 
+#if 0  // for 9.0, we no longer support sharing of spooled exe because it uses MD5
 	if (!hash.empty()) {
 		ickpt_share_init_sharing(owner.c_str(), hash, path);
 	}
+#endif
 
 	free(path); path = NULL;
 	return 0;

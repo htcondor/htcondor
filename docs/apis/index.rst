@@ -21,6 +21,5 @@ it with the HTCondor community.
    chirp
    user-job-log-reader-api
    command-line-interface
-   drmaa-api
 
       

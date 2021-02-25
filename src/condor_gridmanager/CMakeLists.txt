@@ -68,12 +68,6 @@ if (NOT WINDOWS)
        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/grid_monitor_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/grid_manager_monitor_agent
        )
      install (FILES "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-     # CRUFT: grid_monitor.sh was renamed to grid_monitor in
-     #   Condor 7.7.6. The default in the config file was changed as
-     #   well. But we keep a symlink for the old location for
-     #   installations upgrading from older versions. This should
-     #   be removed eventually.
-     clone_install(grid_monitor "${C_SBIN}" "grid_monitor.sh" "${C_SBIN}")
    endif()
 
    if (HAVE_EXT_UNICOREGAHP)
@@ -92,12 +86,6 @@ if (NOT WINDOWS)
        nqs_resume.sh
        nqs_status.sh
        nqs_submit.sh
-       slurm_cancel.sh
-       slurm_hold.sh
-       slurm_resume.sh
-       slurm_status.sh
-       slurm_submit.sh
-       slurm_status.py
        DESTINATION ${C_LIBEXEC}/glite/bin
        PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
    endif()

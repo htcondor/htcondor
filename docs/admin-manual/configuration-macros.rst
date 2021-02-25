@@ -146,7 +146,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
         LOCAL_DIR = $(tilde)
 
-
 :macro-def:`LOG`
     Used to specify the directory where each HTCondor daemon writes its
     log files. The names of the log files themselves are defined with
@@ -1622,10 +1621,10 @@ that DaemonCore uses which affect all HTCondor daemons.
     ``<SUBSYS>.SETTABLE_ATTRS`` are settings used to restrict the
     configuration values that can be changed using the
     *condor_config_val* command.
-    admin-manual/security:authorization on Setting up
+    See :ref:`admin-manual/security:authorization` on Setting up
     Security in HTCondor for details on these macros and how to
     configure them. In particular,
-    admin-manual/security:authorization contains details
+    :ref:`admin-manual/security:authorization` contains details
     specific to these macros.
 
 :macro-def:`SHUTDOWN_GRACEFUL_TIMEOUT`
@@ -2326,7 +2325,7 @@ using a shared file system`.
 :macro-def:`TRUST_LOCAL_UID_DOMAIN`
     This parameter works like ``TRUST_UID_DOMAIN``, but is only applied
     when the *condor_starter* and *condor_shadow* are on the same
-    machine. If this paramater is set to ``True``, then the
+    machine. If this parameter is set to ``True``, then the
     *condor_shadow* 's ``UID_DOMAIN`` doesn't have to be a substring
     its hostname. If this paramater is set to ``False``, then
     ``UID_DOMAIN`` controls whether this substring requirement is
@@ -3153,8 +3152,6 @@ section.
     causes the initial update to occur at a random number of seconds
     falling between 0 and 300, with all further updates occurring at
     fixed 300 second intervals following the initial update.
-
-.. _MachineMaxVacateTime:
 
 :macro-def:`MachineMaxVacateTime`
     An integer expression representing the number of seconds the machine
@@ -5069,7 +5066,7 @@ These macros control the *condor_schedd*.
     :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
     overrides this configuration variable.
 
-    See :ref:`MachineMaxVacateTime<MachineMaxVacateTime>` for details on
+    See :macro:`MachineMaxVacateTime` for details on
     how HTCondor computes the job's max vacate time.
 
 :macro-def:`SCHEDD_ROUND_ATTR_<xxxx>`
@@ -5607,6 +5604,12 @@ condor_starter Configuration File Entries
 :index:`condor_starter configuration variables<single: condor_starter configuration variables; configuration>`
 
 These settings affect the *condor_starter*.
+
+:macro-def:`DISABLE_SETUID`
+    By default, HTCondor prevents jobs from running setuid executables
+    on Linux by setting the no-new-privileges flag.  This can be
+    disabled (i.e. to allow setuid binaries) by setting ``DISABLE_SETIUD``
+    to false.
 
 :macro-def:`EXEC_TRANSFER_ATTEMPTS`
     Sometimes due to a router misconfiguration, kernel bug, or other
@@ -7404,7 +7407,7 @@ condor_credd Configuration File Macros
 :index:`condor_credd daemon`
 :index:`condor_credd configuration variables<single: condor_credd configuration variables; configuration>`
 
-These macros affect the *condor_credd*.
+These macros affect the *condor_credd* and its credmon plugin.
 
 :macro-def:`CREDD_HOST`
     The host name of the machine running the *condor_credd* daemon.
@@ -7413,7 +7416,7 @@ These macros affect the *condor_credd*.
     An integer value representing the number of seconds that the
     *condor_credd*, *condor_starter*, and *condor_schedd* daemons
     will wait for valid credentials to be produced by a credential
-    montior (CREDMON) service. The default value is 20.
+    monitor (CREDMON) service. The default value is 20.
 
 :macro-def:`CREDD_CACHE_LOCALLY`
     A boolean value that defaults to ``False``. When ``True``, the first
@@ -7437,6 +7440,24 @@ These macros affect the *condor_credd*.
     ``LOGON_INTERACTIVE`` method. This can be useful if many
     authentication failures are noticed, potentially leading to users
     getting locked out.
+
+:macro-def:`CREDMON_KRB`
+    The path to the credmon daemon process when using the Kerberos 
+    credentials type.  The default is /usr/sbin/condor_credmon_krb
+
+:macro-def:`CREDMON_OAUTH`
+    The path to the credmon daemon process when using the OAuth2
+    credentials type.  The default is /usr/sbin/condor_credmon_oauth.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_LIFETIME`
+    The time in seconds for credmon to delay after new OAuth2
+    credentials are stored before deleting them.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM`
+    The minimum time in seconds that OAuth2 tokens should have remaining
+    on them when they are generated.  After half that amount of time 
+    elapses, they are renewed.  This is currently implemented only
+    in the vault credmon, not the default oauth credmon.
 
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
@@ -7551,10 +7572,10 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
+          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_PBS = 300
 
 
-    In this example, the job limit for all CREAM resources is 300.
+    In this example, the job limit for all PBS resources is 300.
     Defaults to 1000.
 
 :macro-def:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE`
@@ -7708,19 +7729,10 @@ These macros affect the *condor_gridmanager*.
     specified by ``BATCH_GAHP`` is the default if this variable is not
     defined.
 
-:macro-def:`UNICORE_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the Unicore GAHP executable. The default value is
-    ``$(SBIN)``/unicore_gahp.
-
 :macro-def:`NORDUGRID_GAHP`
     The complete path and file name of the wrapper script that invokes
     the NorduGrid GAHP executable. The default value is
     ``$(SBIN)``/nordugrid_gahp.
-
-:macro-def:`CREAM_GAHP`
-    The complete path and file name of the CREAM GAHP executable. The
-    default value is ``$(SBIN)``/cream_gahp.
 
 :macro-def:`SGE_GAHP`
     The complete path and file name of the SGE GAHP executable. The use
@@ -8129,43 +8141,6 @@ These macros affect the Grid Monitor.
     controls how long the *condor_gridmanager* will wait before
     attempting to start a new Grid Monitor job. The value is in seconds
     and the default is 3600 (1 hour).
-
-Configuration File Entries Relating to Grid Usage
--------------------------------------------------
-
-:index:`grid configuration variables<single: grid configuration variables; configuration>`
-
-These macros affect the HTCondor's usage of grid resources.
-
-:macro-def:`GLEXEC_JOB`
-    A boolean value that defaults to ``False``. When ``True``, it
-    enables the use of *glexec* on the machine.
-
-:macro-def:`GLEXEC`
-    The full path and file name of the *glexec* executable.
-
-:macro-def:`GLEXEC_RETRIES`
-    An integer value that specifies the maximum number of times to retry
-    a call to *glexec* when *glexec* exits with status 202 or 203, error
-    codes that indicate a possible transient error condition. The
-    default number of retries is 3.
-
-:macro-def:`GLEXEC_RETRY_DELAY`
-    An integer value that specifies the minimum number of seconds to
-    wait between retries of a failed call to *glexec*. The default is 5
-    seconds. The actual delay to be used is determined by a random
-    exponential backoff algorithm that chooses a delay with a minimum of
-    the value of ``GLEXEC_RETRY_DELAY`` and a maximum of 100 times that
-    value.
-
-:macro-def:`GLEXEC_HOLD_ON_INITIAL_FAILURE`
-    A boolean value that when ``False`` prevents a job from being put on
-    hold when a failure is encountered during the glexec setup phase of
-    managing a job. The default is ``True``. *glexec* is invoked
-    multiple times during each attempt to run a job. This configuration
-    setting only disables putting the job on hold for the initial
-    invocation. Subsequent failures during that run attempt always put
-    the job on hold.
 
 Configuration File Entries for DAGMan
 -------------------------------------
@@ -9371,6 +9346,27 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
     The directory that users' OAuth2 credentials should be stored in.
     This directory must be owned by root:condor with the setgid flag enabled.
+
+:macro-def:`SEC_CREDENTIAL_PRODUCER`
+    A script for *condor_submit* to execute to produce credentials while
+    using the kerberos type of credentials.  No parameters are passed,
+    and credentials most be sent to stdout.
+
+.. only:: Vault
+
+    :macro-def:`SEC_CREDENTIAL_STORER`
+        A script for *condor_submit* to execute to produce credentials while
+        using the OAuth2 type of credentials.  The oauth services specified
+        in the ``use_auth_services`` line in the submit file are passed as
+        parameters to the script, and the script should use
+        ``condor_store_cred`` to store credentials for each service.
+        Additional modifiers to each service may be passed: &handle=,
+        &scopes=, or &audience=.  The handle should be appended after
+        an underscore to the service name used with ``condor_store_cred``,
+        the comma-separated list of scopes should be passed to the command
+        with the -S option, and the audience should be passed to it with the
+        -A option.
+
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------

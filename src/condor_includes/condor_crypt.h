@@ -26,6 +26,22 @@
 
 #include "CryptKey.h"
 
+struct StreamCryptoState {
+    // The IV is a 16-byte random number.  The first 4 bytes are modified with
+    // a message counter to ensure it is unique.
+    union Packed_IV {
+        unsigned char iv[16]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        struct {
+            uint32_t pkt;
+        } ctr;
+    };
+
+    uint32_t m_ctr_enc{0}; // Number of outgoing (encrypted) packets
+    uint32_t m_ctr_dec{0}; // Number of incoming (decrypted) packets
+    union Packed_IV m_iv_enc; // IV for outgoing data
+    union Packed_IV m_iv_dec; // IV for incoming data.
+};
+
 
 class Condor_Crypto_State {
 
@@ -43,21 +59,26 @@ public:
     // duration
     KeyInfo       m_keyInfo;
 
+// these fields are used for 3DES and blowfish:
+//
+    // holds iv data for some methods (3DES and BLOWFISH)
     int m_ivec_len;
     unsigned char *m_ivec;
 
+    // sequence num
     int m_num;
 
-    // holds key data specific to the method (e.g. key schedules for DES)
+    // holds key data specific to some methods (e.g. key schedules for 3DES and BLOWFISH)
     int m_method_key_data_len;
     unsigned char *m_method_key_data;
 
-    // CURRENTLY UNUSED: int m_additional_len;
-    // CURRENTLY UNUSED: unsigned char *m_additional;
+// this data structure is used for AESGCM:
+//
+    StreamCryptoState m_stream_crypto_state;
 
 private:
-    Condor_Crypto_State() {} ;
-    Condor_Crypto_State(Condor_Crypto_State&) {};
+    Condor_Crypto_State() {ASSERT("PRIVATE CONSTRUCTOR CALLED\n");} ;
+    Condor_Crypto_State(Condor_Crypto_State&) {ASSERT("PRIVATE COPY CONSTRUCTOR CALLED\n");};
 
 };
 
@@ -75,7 +96,12 @@ class Condor_Crypt_Base {
 		// The supplied length specifies the number of random bytes,
 		// not the number of hex digits (which is twice the number of bytes).
 	static char *randomHexKey(int length = 24);
+	// Generate a 16-byte key using the MD5 algorithm.
     static unsigned char * oneWayHashKey(const char * initialKey);
+	// Generate a key from random data using the HKDF algorithm.
+	// Returns a key which must be free'd by the caller.
+	// Returns nullptr on error.
+    static unsigned char *hkdf(const unsigned char * initialKey, size_t input_key_len, size_t output_key_length);
     //------------------------------------------
     // PURPOSE: Generate a random key
     //          First method use rand function to generate the key
@@ -96,6 +122,8 @@ class Condor_Crypt_Base {
                          int              input_len, 
                          unsigned char *& output, 
                          int&             output_len) = 0;
+
+    virtual int ciphertext_size_with_cs(int ciphertext, StreamCryptoState *ss) const = 0;
 
  protected:
     static int encryptedSize(int inputLength, int blockSize = 8);

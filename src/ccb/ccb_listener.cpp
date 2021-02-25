@@ -532,6 +532,7 @@ CCBListener::ReverseConnected(Stream *stream)
 		}
 		else {
 			((ReliSock*)sock)->isClient(false);
+			static_cast<ReliSock*>(sock)->resetHeaderMD();
 			daemonCore->HandleReqAsync(sock);
 			sock = NULL; // daemonCore took ownership of sock
 			ReportReverseConnectResult(msg_ad,true);

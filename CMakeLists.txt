@@ -18,17 +18,14 @@
 
 ##########################################################################
 # Set project
-project(CONDOR)
-cmake_minimum_required(VERSION 2.8)
+project(CONDOR LANGUAGES C CXX)
+cmake_minimum_required(VERSION 3.8)
 
-# We can set these and remove the C++11 options from CondorConfigure.cmake
-
-# when we have cmake3 everywhere.
 # Exactly c++ 11 for all platforms
-#set(CMAKE_CXX_STANDARD 11)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_CXX_EXTENSIONS OFF)
-#set(PREFER_CPP11 ON) # Still have some ifdefs on this
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(PREFER_CPP11 ON) # Still have some ifdefs on this
 
 ##########################################################################
 #Setup package meta-data (used in packaging)
@@ -40,7 +37,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "8.9.11")
+set(VERSION "9.1.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for

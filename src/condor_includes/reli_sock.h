@@ -30,6 +30,8 @@
 
 #include <memory>
 
+#include <openssl/evp.h>
+
 /*
 **	R E L I A B L E    S O C K
 */
@@ -288,6 +290,9 @@ public:
 	const char * serialize(const char *);	// restore state from buffer
 	char * serialize() const;	// save state into buffer
 
+		// Reset the message digests for header integrity.
+	void resetHeaderMD();
+
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
@@ -297,6 +302,8 @@ protected:
 
         virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId);
         virtual bool set_encryption_id(const char * keyId);
+	Condor_Crypt_Base *get_crypto() {return crypto_;}
+	Condor_Crypto_State *get_crypto_state() {return crypto_state_;}
 
 	/*
 	**	Types
@@ -326,6 +333,7 @@ protected:
 		ReliSock      * p_sock; //preserve parent pointer to use for condor_read/write
 		bool		m_partial_packet; // A partial packet is stored.
 		size_t		m_remaining_read_length; // Length remaining on a partial packet
+		size_t		m_len_t; // Network-encoded length of packet (used to reconstruct header).
 		int		m_end; // The end status of the partial packet.
 		Buf		*m_tmp;
 	public:
@@ -391,6 +399,27 @@ protected:
 	bool m_has_backlog;
 	bool m_read_would_block;
 	bool m_non_blocking;
+
+	// Message digest covering communications prior to enabling encryption
+	// When encryption is enabled, this digest is included in the authenticated
+	// data in order to detect that the two sides didn't see the same handshake.
+	// NOTE: We only check the first 1MB of sent / received data; after that,
+	// if we haven't seen an encrypted packet we assume such a thing will never
+	// happen.
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> m_send_md_ctx;
+	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> m_recv_md_ctx;
+#else
+	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_send_md_ctx;
+	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_recv_md_ctx;
+#endif
+	std::vector<unsigned char> m_final_mds;
+	bool m_final_send_header{false};
+	bool m_final_recv_header{false};
+	bool m_finished_send_header{false};
+	bool m_finished_recv_header{false};
+	char * serializeMsgInfo() const;
+	const char * serializeMsgInfo(const char * buf);
 
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();

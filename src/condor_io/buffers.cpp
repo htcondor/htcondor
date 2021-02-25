@@ -43,16 +43,21 @@ sanity_check()
 Buf::Buf(
 	int	sz
 	)
+	: _dta{nullptr},
+	_dta_sz{0},
+	_dta_maxsz{sz},
+	_dta_pt{0},
+	_next{nullptr},
+	p_sock{nullptr}
 {
-	_dta = NULL;
-	_dta_maxsz = sz;
-	_dta_sz = 0;
-	_dta_pt = 0;
-	_next = NULL;
 	num_created++;
-	p_sock = NULL;
 }
 
+Buf::Buf(Sock *sock, int sz) :
+    Buf(sz)
+{
+	p_sock = sock;
+}
 
 Buf::~Buf()
 {

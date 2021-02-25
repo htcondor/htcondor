@@ -123,6 +123,7 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, is_cluster(false)
 	, countedAsDone(false)
 	, _noop(false)
+	, _hold(false)
 	, _type(NodeType::JOB)
 
 #ifdef DEAD_CDE

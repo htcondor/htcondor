@@ -44,11 +44,15 @@ my $CHECK_NATIVE_TASK     = "remote_task-check_native";
 my $BUILD_TESTS_TASK      = "remote_task-build_tests";
 my $RUN_UNIT_TESTS        = "remote_task-run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task-coverity_analysis";
+my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 
 # autoflush our STDOUT
 $| = 1;
 
 my $boos = 1; # build out of source
+if ($ENV{NMI_PLATFORM} =~ /AmazonLinux|CentOS|Fedora|Debian|Ubuntu/) {
+	$boos = 0; # No need to shuffle stuff around streamlined builds
+}
 if ($boos) {
     # rewrite the directory structures so we can do out of source builds.
 	# we start in dir_nnn/userdir, which is the git clone
@@ -118,6 +122,12 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
+elsif ($ENV{NMI_PLATFORM} =~ /AmazonLinux|CentOS|Fedora|Debian|Ubuntu/) {
+    print TASKLIST "$NATIVE_TASK 4h\n";
+    print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
+    print TASKLIST "$EXTRACT_TARBALLS_TASK 4h\n";
+    print TASKLIST "$CHECK_TAR_TASK 4h\n";
+}
 else {
     # Everything else
     print TASKLIST "$EXTERNALS_TASK 4h\n";
@@ -163,7 +173,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	print FH '#!/bin/sh' . "\n";
 	print FH 'pwd && ls -l' . "\n";
 	print FH 'ls -l ..' . "\n";
-	print FH 'ls -l ../sources' . "\n";
+	if ($boos) {
+		print FH 'ls -l ../sources' . "\n";
+	}
 	close(FH);
 	chmod(0777,'probe.cmd');
 }

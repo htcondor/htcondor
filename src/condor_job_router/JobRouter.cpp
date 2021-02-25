@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "JobRouter.h"
 #include "Scheduler.h"
-#include "condor_md.h"
 #include "my_username.h"
 #include "condor_uid.h"
 

@@ -412,10 +412,11 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
 	} else {
 		if (fetch_opts & fetch_MyJobs) {
-			const char * owner = my_username();
+			char * owner = my_username();
 			if (owner) { request_ad.InsertAttr("Me", owner); }
 			request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
 			want_authentication = true;
+			free(owner);
 		}
 		if (fetch_opts & fetch_SummaryOnly) {
 			request_ad.InsertAttr("SummaryOnly", true);

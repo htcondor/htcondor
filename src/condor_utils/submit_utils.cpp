@@ -54,7 +54,6 @@
 #include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
-#include "condor_md.h"
 #include "my_popen.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
@@ -6292,8 +6291,7 @@ int SubmitHash::SetRequirements()
 			}
 
 			if( addVersionCheck ) {
-				// This is an ugly hack and should be changed.
-				answer += " && strcmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
+				answer += " && versioncmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
 			}
 
 
