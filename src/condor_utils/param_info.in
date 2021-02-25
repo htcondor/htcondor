@@ -2480,7 +2480,8 @@ tags=misc_utils
 
 [SEC_PASSWORD_FILE]
 default=$(SEC_PASSWORD_DIRECTORY)/POOL
-type=string
+win32_default=
+type=path
 tags=store_cred
 
 [SEC_PASSWORD_DIRECTORY]
@@ -2498,13 +2499,32 @@ tags=condor_auth_passwd
 [SEC_TOKEN_DIRECTORY]
 default=
 description=Directory containing the tokens for token auth.
-type=string
+type=path
 tags=condor_auth_passwd
 
 [SEC_TOKEN_ISSUER_KEY]
 default=POOL
 description=Name of the key used to issue session tokens
 type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_POOL_SIGNING_KEY_FILE]
+default=$(SEC_PASSWORD_FILE)
+type=path
+description=Path to the POOL token signing key
+tags=condor_auth_passwd
+
+[SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD]
+default="$(SEC_PASSWORD_FILE)" == "$(SEC_TOKEN_POOL_SIGNING_KEY_FILE)"
+description=True when the token POOL signing key file should be read as a pool password file
+type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_SIGNING_KEY_DIRECTORY]
+default=
+win32_default=
+type=path
+description=Directory containing the token signing keys other than the POOL key
 tags=condor_auth_passwd
 
 [SEC_TOKEN_MAX_AGE]

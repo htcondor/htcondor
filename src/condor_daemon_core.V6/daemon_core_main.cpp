@@ -3147,8 +3147,8 @@ dc_reconfig()
 	// Clear out the passwd cache.
 	clear_passwd_cache();
 
-	// Flush the cached list of keys.
-	refreshNamedCredentials();
+	// Clear out the cached list of IDTOKEN issuer key names.
+	clearIssuerKeyNameCache();
 
 	// Allow us to search for new tokens
 	Condor_Auth_Passwd::retry_token_search();

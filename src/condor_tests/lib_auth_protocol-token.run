@@ -81,6 +81,7 @@ def main():
 	params = {
 		"DAEMON_LIST" : "MASTER",
 		"MASTER_DEBUG" : "D_SECURITY",
+		"TOOL_DEBUG" : "D_SECURITY",
 		"SHARED_PORT_PORT" : "0",
 
 		"SEC_DEFAULT_AUTHENTICATION_METHODS" : "TOKEN",
@@ -90,6 +91,7 @@ def main():
 		"SEC_PASSWORD_DIRECTORY" : passwordsDir,
 		"SEC_TOKEN_SYSTEM_DIRECTORY" : systemTokensDir,
 		"SEC_PASSWORD_FILE" : passwordFile,
+		"SEC_TOKEN_POOL_SIGNING_KEY_FILE" : "$(SEC_PASSWORD_FILE)",
 		"SEC_TOKEN_DIRECTORY" : userTokensDir,
 
 		# FIXME: I want there to be no permissions in the security system
@@ -113,7 +115,7 @@ def main():
 	#
 	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = ""
 	r = Utils.RunCommandCarefully( ( 'condor_ping',
-		'-type', 'master', '-table', 'ALL' ), 20 )
+		'-type', 'master', '-table', 'ALL', '-debug' ), 20 )
 	if r:
 		CondorTest.RegisterFailure( "null-operation", "condor_ping command worked" )
 		Utils.TLog("condor_ping output:\n" + r.output)
@@ -130,7 +132,7 @@ def main():
 	# Test if shared master password properly fails.
 	os.environ["_CONDOR_SEC_PASSWORD_FILE"] = wrongPasswordFile
 	r = Utils.RunCommandCarefully( ( 'condor_ping',
-		'-type', 'master', '-table', 'ALL' ), 20 )
+		'-type', 'master', '-table', 'ALL', '-debug' ), 20 )
 	if r:
 		CondorTest.RegisterFailure( "shared-master-password", "condor_ping command worked" )
 		Utils.TLog("condor_ping output:\n" + r.output)
@@ -140,7 +142,7 @@ def main():
 
 	# Test if shared master password properly succeeds.
 	r = Utils.RunCommandCarefully( ( 'condor_ping',
-		'-type', 'master', '-table', 'ALL' ), 20 )
+		'-type', 'master', '-table', 'ALL', '-debug' ), 20 )
 	if not r:
 		CondorTest.RegisterFailure( "shared-master-password", "condor_ping command failed" )
 		Utils.TLog("condor_ping output:\n" + r.output)
