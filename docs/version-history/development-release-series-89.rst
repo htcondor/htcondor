@@ -49,6 +49,9 @@ Release Notes:
   ``condor_procd`` on start-up.
   :jira:`33`
 
+- SCITOKENS is now in the default list of authentication methods.
+  :jira:`47`
+
 New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than
@@ -169,6 +172,10 @@ Bugs Fixed:
 - The tool ``condor_store_cred`` will now accept and use a handle for an OAuth
   cred, and the *condor_credd* will now honor the handle in the stored filename.
   :jira:`291`
+
+- Condor-C (grid universe type **condor**) now works correctly when jobs
+  use different SciTokens.
+  :jira:`99`
 
 Version 8.9.11
 --------------
