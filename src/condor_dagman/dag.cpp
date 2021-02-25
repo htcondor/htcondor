@@ -231,7 +231,8 @@ Dag::~Dag()
 		// remember kids, delete is safe *even* if ptr == NULL...
 
 	// delete all jobs in _jobs
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+	auto it = _jobs.begin();
+	while (it != _jobs.end()) {
 		_jobs.erase(it);
 	}
 
@@ -1371,21 +1372,25 @@ Job *
 Dag::FindAllNodesByName( const char* nodeName,
 			const char *finalSkipMsg, const char *file, int line ) const
 {
+	bool skipFinalNode = true;
 	Job *node = NULL;
-
 	if ( nodeName ) {
 		if ( strcasecmp( nodeName, ALL_NODES ) ) {
 				// Looking for a specific node.
+			_allNodesIt = _jobs.end(); 
+				// Specific node lookups should not skip the final node.
+				// TODO: Some commands (RETRY) should skip the final node,
+				// but others (SCRIPT) should not. Find a better way to do this.
+			skipFinalNode = false;
 			node =  FindNodeByName( nodeName );
 		} else {
 				// First call when looking for ALL_NODES.
 			_allNodesIt = _jobs.begin();
-			node = *_allNodesIt;
+			node = *_allNodesIt++;
 		}
 
 	} else {
 			// Second or subsequent call when looking for ALL_NODES.
-
 		if ( _allNodesIt != _jobs.end() ) {
 			node =  *_allNodesIt++;
 		} else {
@@ -1394,21 +1399,20 @@ Dag::FindAllNodesByName( const char* nodeName,
 	}
 
 		// We want to skip final nodes if we're in ALL_NODES mode.
-	if ( node && node->GetType() == NodeType::FINAL && _allNodesIt != _jobs.end()) {
-		debug_printf( DEBUG_QUIET, finalSkipMsg, node->GetJobName(),
+	if ( node && node->GetType() == NodeType::FINAL && skipFinalNode ) {
+		debug_printf( DEBUG_NORMAL, finalSkipMsg, node->GetJobName(),
 					file, line );
-			// We know there can only be one FINAL node.
-		node = *_allNodesIt++;
-		ASSERT( !node || !( node->GetType() == NodeType::FINAL ) );
+			// There can only be one FINAL node. 
+			// If there are more _jobs left in the container, advance the iterator.
+		if ( _allNodesIt != _jobs.end() ) {
+			node = *_allNodesIt++;
+		}
+			// If no more jobs left, return node = NULL
+		else {
+			node = NULL;
+		}
+		ASSERT( _allNodesIt == _jobs.end() || !( node->GetType() == NodeType::FINAL ) );
 	}
-
-		// Delete the ALL_NODES iterator if we've hit the last node.
-		// TODO: Make sure this works if we have multiple ALL_NODES declarations?
-	/*
-	if ( !node && _allNodesIt == _jobs.end() ) {
-		_allNodesIt = NULL;
-	}
-	*/
 
 	return node;
 }
@@ -2204,8 +2208,8 @@ void Dag::RemoveRunningScripts ( ) const {
 							(*it)->_scriptPre->_pid );
 				if (daemonCore->Shutdown_Fast((*it)->_scriptPre->_pid) == FALSE) {
 					debug_printf(DEBUG_QUIET,
-				             	"WARNING: shutdown_fast() failed on pid %d: %s\n",
-				             	(*it)->_scriptPre->_pid, strerror(errno));
+								"WARNING: shutdown_fast() failed on pid %d: %s\n",
+								(*it)->_scriptPre->_pid, strerror(errno));
 				}
 			}
         }
@@ -2219,8 +2223,8 @@ void Dag::RemoveRunningScripts ( ) const {
 							(*it)->_scriptPost->_pid );
 				if(daemonCore->Shutdown_Fast((*it)->_scriptPost->_pid) == FALSE) {
 					debug_printf(DEBUG_QUIET,
-				             	"WARNING: shutdown_fast() failed on pid %d: %s\n",
-				             	(*it)->_scriptPost->_pid, strerror( errno ));
+								"WARNING: shutdown_fast() failed on pid %d: %s\n",
+								(*it)->_scriptPost->_pid, strerror( errno ));
 				}
 			}
         }
@@ -2578,7 +2582,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 		_numNodesDone++;
 		_metrics->NodeFinished( job->GetDagFile() != NULL, true );
 		job->countedAsDone = true;
-		ASSERT( _numNodesDone <= _jobs.size() );
+		ASSERT( (unsigned int)_numNodesDone <= _jobs.size() );
 	} else {
 #ifdef MEMORY_HOG
 		// fall through to update children again. this is safe
@@ -2782,7 +2786,7 @@ bool
 Dag::isCycle ()
 {
 	bool cycle = false; 
-	
+
 	//Start DFS numbering from zero, although not necessary
 	DFS_ORDER = 0; 
 	// as a side effect of DFS cycle detection, will we determine width and height of the graph
@@ -4838,7 +4842,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 				"Dag::PrefixAllNodeNames(): This is an impossible error\n");
 		}
 	}
-
 	debug_printf(DEBUG_DEBUG_1, "Leaving: Dag::PrefixAllNodeNames()\n");
 }
 
@@ -4908,7 +4911,8 @@ Dag::RelinquishNodeOwnership(void)
 	ExtArray<Job*> *nodes = new ExtArray<Job*>();
 
 	// 1. Copy the jobs
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+	auto it = _jobs.begin();
+	while (it != _jobs.end()) {
 		nodes->add(*it);
 		it = _jobs.erase(it);
 	}
@@ -4923,6 +4927,7 @@ Dag::RelinquishNodeOwnership(void)
 OwnedMaterials*
 Dag::LiftSplices(SpliceLayer layer)
 {
+	//PrintJobList();
 	Dag *splice = NULL;
 	MyString key;
 	OwnedMaterials *om = NULL;
@@ -4935,7 +4940,6 @@ Dag::LiftSplices(SpliceLayer layer)
 	// recurse down the splice tree moving everything up into myself.
 	_splices.startIterations();
 	while(_splices.iterate(key, splice)) {
-
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.Value());
 		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
@@ -4964,7 +4968,6 @@ Dag::AdjustEdges()
 	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
 		(*it)->BeginAdjustEdges(this);
 	}
-
 	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
 		(*it)->AdjustEdges(this);
 	}

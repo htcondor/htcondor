@@ -1208,7 +1208,6 @@ parse_script(
 					  	job->GetJobName(), whynot.Value() );
 			return false;
 		}
-
 	}
 
 	if ( jobName ) {
@@ -2255,6 +2254,7 @@ parse_splice(
 	free(_spliceScope[_spliceScope.getlast()]);
 	_spliceScope.truncate(_spliceScope.getlast() - 1);
 	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %d\n", _spliceScope.length());
+
 	return true;
 }
 
