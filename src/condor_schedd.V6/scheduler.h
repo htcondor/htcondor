@@ -131,7 +131,7 @@ struct shadow_rec
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
-	bool			reconnect_succeeded;
+	bool			reconnect_done; // could be success or failure
 		//
 		// This flag will cause the schedd to keep certain claim
 		// attributes for jobs with leases during a graceful shutdown
@@ -712,7 +712,7 @@ class Scheduler : public Service
 		// Used by the DedicatedScheduler class
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
-	void			delete_shadow_rec(shadow_rec*);
+	void			delete_shadow_rec(shadow_rec *rec);
 	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
 									int fd );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
