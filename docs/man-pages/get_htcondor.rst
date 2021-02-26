@@ -11,7 +11,7 @@ Synopsis
 
 **get_htcondor** <**-h** | **--help**>
 
-**get_htcondor** [**--[no-]dry-run**] [**--channel** *name*] [**--minicondor** | [**--central-manager** | **--submit** | **--execute**] *central-manager-name*]
+**get_htcondor** [**--[no-]dry-run**] [**--channel** *name*] [**--minicondor** | [**--central-manager** | **--submit** | **--execute**] *central-manager-name*] [**--shared-filesystem-domain** *filesystem-domain-name*]
 
 **get_htcondor** **--dist**
 
@@ -52,6 +52,11 @@ Options
 
         Configure this installation with the central manager, submit,
         or execute role.
+
+    **--shared-filesystem-domain** *filesystem-domain-name*
+
+        Configure this installation to assume that machines specifying
+        the same *filesystem-domain-name* share a filesystem.
 
 Exit Status
 -----------
