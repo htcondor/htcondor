@@ -1080,7 +1080,7 @@ class Dag {
 
 protected:
     // List of Job objects
-    mutable std::vector<Job*>     _jobs;
+    mutable std::deque<Job*>     _jobs;
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
@@ -1386,7 +1386,7 @@ private:
 	static void DeletePinList( PinList &pinList );
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
-	mutable std::vector<Job*>::iterator _allNodesIt;
+	mutable std::deque<Job*>::iterator _allNodesIt;
 
 		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;
