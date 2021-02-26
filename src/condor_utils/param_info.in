@@ -1089,7 +1089,7 @@ win32_default=$(LIBEXEC)\condor_ckpt_probe.exe
 type=path
 
 [RELEASE_DIR]
-default=/tmp/condorinstall0
+default=/usr
 win32_default=c:\condor
 type=string
 usage=Where have you installed the bin, sbin and lib condor directories?
