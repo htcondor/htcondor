@@ -52,6 +52,14 @@ Release Notes:
 - SCITOKENS is now in the default list of authentication methods.
   :jira:`47`
 
+- Added configuration parameter `LEGACY_ALLOW_SEMANTICS`, which re-enables
+  the behavior of HTCondor 8.8 and prior when `ALLOW_DAEMON` or
+  `DENY_DAEMON` is not defined.
+  This parameter is intended to ease the transition of existing HTCondor
+  configurations from 8.8 to 9.0, and should not be used long-term or in
+  new installations.
+  :jira:`263`
+
 New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than
