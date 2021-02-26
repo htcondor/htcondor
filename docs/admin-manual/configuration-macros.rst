@@ -9367,6 +9367,16 @@ macros are described in the :doc:`/admin-manual/security` section.
         with the -S option, and the audience should be passed to it with the
         -A option.
 
+:macro-def:`LEGACY_ALLOW_SEMANTICS`
+    A boolean parameter that defaults to ``False``.
+    In HTCondor 8.8 and prior, if `ALLOW_DAEMON` or `DENY_DAEMON` wasn't
+    set in the configuration files, then the value of `ALLOW_WRITE` or
+    `DENY_DAEMON` (respectively) was used for these parameters.
+    Setting `LEGACY_ALLOW_SEMANTICS` to ``True`` enables this old behavior.
+    This is a potential security concern, so this setting should only be
+    used to ease the upgrade of an existing pool from 8.8 or prior to
+    9.0 or later.
+
 
 Configuration File Entries Relating to Virtual Machines
 -------------------------------------------------------

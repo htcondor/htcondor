@@ -13,11 +13,19 @@ Release Notes:
 
 - HTCondor version 8.9.12 not yet released.
 
+- We have changed the default configuration file.  It no longer sets
+  ``use security : host_based``.  This may cause your existing, insecure
+  security configuration to stop working.  Consider updating your
+  configuration.  See the comment in the new version of
+  ``/etc/condor/condor_config`` for details on the insecure work-around.
+  :jira:`301`
+
 - As an improved security measure, HTCondor will now prohibit Linux jobs
   from running setuid executables by default.  We believe the only common setuid
   program this impacts is ``ping``.  To allow jobs to run setuid binaries,
   set ``DISABLE_SETUID`` to ``false`` in the configuration of the worker
   node.
+  :jira:`256`
 
 - The ``condor_procd`` now attempts to detect invalidly short reads of
   the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
@@ -44,11 +52,15 @@ Release Notes:
 - SCITOKENS is now in the default list of authentication methods.
   :jira:`47`
 
-New Features:
+- Added configuration parameter `LEGACY_ALLOW_SEMANTICS`, which re-enables
+  the behavior of HTCondor 8.8 and prior when `ALLOW_DAEMON` or
+  `DENY_DAEMON` is not defined.
+  This parameter is intended to ease the transition of existing HTCondor
+  configurations from 8.8 to 9.0, and should not be used long-term or in
+  new installations.
+  :jira:`263`
 
-- HTCondor now prohibits jobs from running setuid executables on Linux. The
-  knob ``DISABLE_SETUID`` can be set to false to disable this.
-  :jira:`256`
+New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.

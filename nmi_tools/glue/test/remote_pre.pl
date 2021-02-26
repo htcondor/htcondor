@@ -278,6 +278,17 @@ if( not TestGlue::is_windows() ) {
 	# needing to be harvested later so before we start
 	# tweeking personal condors we have our condor_paths
 	# and CONDOR_CONFIG. 
+
+    #
+    # With 'use security : host_based' now remove from the default HTCondor
+    # config (HTCONDOR-301), we need to update or replace condor_install
+    # (HTCONDOR-52).  Until we do, fix it here by hand.  We'll assume for
+    # now that appending it will do.
+    #
+	my $mainConfigFile = $ENV{ CONDOR_CONFIG };
+	open( MAIN, ">> $mainConfigFile" ) or die "Failed to open original config file: $mainConfigFile :$!\n";
+	print MAIN "\nuse security : host_based\n";
+	close( MAIN );
 }
 
 #Look for condor_tests/testconfigappend which we want at the end

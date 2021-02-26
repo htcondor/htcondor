@@ -138,4 +138,4 @@ RUN dnf install -y \
     voms-devel \
     && dnf clean all
 
-RUN pip3 install pytest pytest-httpserver
+RUN dnf install -y python3-pip && dnf clean all && pip3 install pytest pytest-httpserver

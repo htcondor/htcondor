@@ -3,7 +3,7 @@
 @@ -19,25 +19,23 @@
  ######################################################################
  
- ##  Where have you installed the bin, sbin and lib condor directories?   
+ ##  Where have you installed the bin, sbin and lib condor directories?
 -RELEASE_DIR = /usr/local/condor
 +RELEASE_DIR = /usr
  
@@ -30,8 +30,8 @@
 +LOCAL_CONFIG_DIR = /etc/condor/config.d
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
- ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,36 @@
+ ##
+@@ -67,5 +65,36 @@ LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
