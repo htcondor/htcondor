@@ -1053,7 +1053,7 @@ type=int
 tags=sysapi,reconfig
 
 [RELEASE_DIR]
-default=/tmp/condorinstall0
+default=/usr
 win32_default=c:\condor
 type=string
 usage=Where have you installed the bin, sbin and lib condor directories?

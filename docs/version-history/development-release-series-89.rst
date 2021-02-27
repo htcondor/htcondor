@@ -154,6 +154,10 @@ New Features:
   or all of the files in a directory.
   :jira:`46`
 
+- The ClassAd returned by Python binding ``htcondor.SecMan.ping()`` now
+  includes extra information about the daemon's X.509 certificate if
+  SSL or GSI authentication was used.
+  :jira:`43`
 
 Bugs Fixed:
 
