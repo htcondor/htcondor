@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 2020, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,23 +17,28 @@
  *
  ***************************************************************/
 
-#ifndef _CONDOR_DAEMON_TYPES_H
-#define _CONDOR_DAEMON_TYPES_H
 
+#ifndef __CONDOR_DC_VPN_H__
+#define __CONDOR_DC_VPN_H__
 
-// if you add another type to this list, make sure to edit
-// daemon_types.C and add the string equivilant.
+#include "condor_common.h"
+#include "condor_classad.h"
+#include "condor_io.h"
+#include "enum_utils.h"
+#include "daemon.h"
 
-enum daemon_t { DT_NONE, DT_ANY,  DT_MASTER, DT_SCHEDD, DT_STARTD,
-				DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
-				DT_DAGMAN, DT_VIEW_COLLECTOR, DT_CLUSTER,  
-				DT_SHADOW, DT_STARTER, DT_CREDD, DT_STORK, 
-				DT_TRANSFERD, DT_LEASE_MANAGER, DT_HAD,
-				DT_VPN,
-				DT_GENERIC, _dt_threshold_ };
+class DCVPN : public Daemon {
+public:
 
-const char* daemonString( daemon_t dt );
-daemon_t stringToDaemonType( const char* name );
+	DCVPN(const char* const name = nullptr, const char* pool = nullptr);
+	~DCVPN();
 
-
-#endif /* _CONDOR_DAEMON_TYPES_H */
+	bool registerClient(const std::string &base64_pubkey,
+				std::string &ipaddr,
+				std::string &netmask,
+				std::string &gwaddr,
+				std::string &base64_server_pubkey,
+				std::string &server_endpoint,
+				CondorError &err);
+};
+#endif /* _CONDOR_DC_VPN_H */

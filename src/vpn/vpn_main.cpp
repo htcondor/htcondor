@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 2020, Condor Team, Computer Sciences Department,
+ * Copyright (C) 2021, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,11 +25,17 @@
 #include "condor_base64.h"
 #include "condor_rw.h"
 #include "selector.h"
+#include "get_daemon_name.h"
+
+#include "vpn_common.h"
 
 #include <net/if.h>
 #include <net/route.h>
 #include <linux/if_tun.h>
 #include <linux/sched.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 void main_config();
 
@@ -52,6 +58,8 @@ int g_boringtun_uapi_fd = -1;
 int g_boringtun_reaper = -1;
 // Pid of the currently-running boringtun process.
 int g_boringtun_pid = -1;
+// UDP port for the boringtun process.
+int g_boringtun_listen_port = -1;
 
 /// Globals related to slirp4netns
 //
@@ -62,104 +70,23 @@ int g_slirp4netns_reaper = -1;
 // Pid of the currently-running slirp4netns process.
 int g_slirp4netns_pid = -1;
 
-//-------------------------------------------------------------
-// Send a file descriptor, fd, to the Unix socket, sock.
-int sendfd(int sock, int fd)
-{
-	ssize_t rc;
-	struct msghdr msg;
-	struct cmsghdr *cmsg;
-	char cmsgbuf[CMSG_SPACE(sizeof(fd))];
-	struct iovec iov;
-	char dummy = '\0';
-	memset(&msg, 0, sizeof(msg));
-	iov.iov_base = &dummy;
-	iov.iov_len = 1;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = cmsgbuf;
-	msg.msg_controllen = sizeof(cmsgbuf);
-	cmsg = CMSG_FIRSTHDR(&msg);
-	cmsg->cmsg_level = SOL_SOCKET;
-	cmsg->cmsg_type = SCM_RIGHTS;
-	cmsg->cmsg_len = CMSG_LEN(sizeof(fd));
-	memcpy(CMSG_DATA(cmsg), &fd, sizeof(fd));
-	msg.msg_controllen = cmsg->cmsg_len;
-	if ((rc = sendmsg(sock, &msg, 0)) < 0) {
-		dprintf(D_ALWAYS, "Failed to send file descriptor to parent (errno=%d, %s).\n",
-			errno, strerror(errno));
-	}
-	return rc;
-}
+/// Name we will send to the collector.
+std::string g_vpn_name;
+/// Timer ID for updating the collector.
+int g_update_collector_tid = -1;
+/// Period, in seconds, for the collector update.
+int g_update_interval = 300;
 
-
-//-------------------------------------------------------------
-// Receive a file descriptor (return value) from a Unix socket pair.
-static int recvfd(int sock)
-{
-	int fd;
-	ssize_t rc;
-	struct msghdr msg;
-	struct cmsghdr *cmsg;
-	char cmsgbuf[CMSG_SPACE(sizeof(fd))];
-	struct iovec iov;
-	char dummy = '\0';
-	memset(&msg, 0, sizeof(msg));
-	iov.iov_base = &dummy;
-	iov.iov_len = 1;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = cmsgbuf;
-	msg.msg_controllen = sizeof(cmsgbuf);
-	if ((rc = recvmsg(sock, &msg, 0)) < 0) {
-		dprintf(D_ALWAYS, "Failed to receive a message from socket (errno=%d, %s)\n",
-			errno, strerror(errno));
-		return (int)rc;
-	}
-	if (rc == 0) {
-		dprintf(D_ALWAYS, "Received an empty message instead of a file descriptor.\n");
-		return -1;
-	}
-	cmsg = CMSG_FIRSTHDR(&msg);
-	if (cmsg == NULL || cmsg->cmsg_type != SCM_RIGHTS) {
-		dprintf(D_ALWAYS, "Message did not contain a file descriptor.\n");
-		return -1;
-	}
-	memcpy(&fd, CMSG_DATA(cmsg), sizeof(fd));
-	return fd;
-}
-
-
-//-------------------------------------------------------------
-int open_tun(const char *tapname)
-{
-	int fd;
-	if ((fd = open("/dev/net/tun", O_RDWR)) < 0) {
-		dprintf(D_ALWAYS, "Unable to open /dev/net/tun device (errno=%d, %s).\n",
-			errno, strerror(errno));
-		return fd;
-	}
-	struct ifreq ifr;
-	memset(&ifr, 0, sizeof(ifr));
-		// Ask for a TUN device with no extra packet headers and enable
-		// the multi-queue reading.
-	ifr.ifr_flags = IFF_TUN | IFF_NO_PI | IFF_MULTI_QUEUE;
-	strncpy(ifr.ifr_name, tapname, sizeof(ifr.ifr_name) - 1);
-	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0) {
-		dprintf(D_ALWAYS, "Failed to create the new TUN device %s (errno=%d, %s).\n",
-			tapname, errno, strerror(errno));
-		close(fd);
-		return -1;
-	}
-	return fd;
-}
+/// State of the IP address management
+// Offset into the network.
+int g_ipam_offset = 100;
 
 
 //-------------------------------------------------------------
 int configure_nat()
 {
 	std::string boringtun_network;
-	param(boringtun_network, "VPN_SERVER_NETWORK", "10.0.3.0/24");
+	param(boringtun_network, "VPN_SERVER_NETWORK", "10.0.0.0/24");
 
 	int result_fd[2];
 	if (pipe(result_fd) < 0) {
@@ -230,71 +157,7 @@ int configure_nat()
 
 
 //-------------------------------------------------------------
-int launch_boringtun()
-{
-	int uapi_sock[2];
-	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, uapi_sock) < 0) {
-		dprintf(D_ALWAYS, "Failed to create local socket for boringtun communications (errno=%d, %s).\n",
-			errno, strerror(errno));
-		DC_Exit(1);
-	}
-
-	std::string boringtun_executable;
-	param(boringtun_executable, "BORINGTUN", "/usr/bin/boringtun");
-
-	std::string log_level;
-	param(log_level, "BORINGTUN_DEBUG", "info");
-
-	ArgList boringtun_args;
-	boringtun_args.AppendArg("condor_boringtun");
-	boringtun_args.AppendArg("-f");
-	boringtun_args.AppendArg("condor0");
-
-	std::string wg_uapi_fd;
-	formatstr(wg_uapi_fd, "%d", uapi_sock[1]);
-	std::string wg_tun_fd;
-	formatstr(wg_tun_fd, "%d", g_tun_fd);
-
-	Env boringtun_env;
-	boringtun_env.SetEnv("WG_UAPI_FD", wg_uapi_fd);
-	boringtun_env.SetEnv("WG_TUN_FD", wg_tun_fd);
-	boringtun_env.SetEnv("WG_LOG_LEVEL", log_level);
-		// Disables attempts at dropping privilege.
-	boringtun_env.SetEnv("WG_SUDO", "1");
-
-	int fd_inherit[3];
-	fd_inherit[0] = g_tun_fd;
-	fd_inherit[1] = uapi_sock[1];
-	fd_inherit[2] = 0;
-
-	auto pid = daemonCore->Create_Process(
-		boringtun_executable.c_str(),
-		boringtun_args,
-		PRIV_CONDOR,
-		g_boringtun_reaper,
-		false,
-		false,
-		&boringtun_env,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		fd_inherit);
-
-	close(uapi_sock[1]);
-	if (pid) {
-		g_boringtun_uapi_fd = uapi_sock[0];
-		g_boringtun_pid = pid;
-		return 0;
-	} else {
-		close(uapi_sock[0]);
-		return 1;
-	}
-}
-
-
-//-------------------------------------------------------------
-std::string load_key_hex(const std::string &param_name)
+std::string load_key_base64(const std::string &param_name)
 {
 	std::string fname;
 	param(fname, param_name.c_str());
@@ -324,75 +187,16 @@ std::string load_key_hex(const std::string &param_name)
 		dprintf(D_ALWAYS, "Key file %s for %s has no key.\n", fname.c_str(), param_name.c_str());
 		return "";
 	}
-
-	unsigned char *binary_key = nullptr;
-	int binary_key_len = 0;
-	condor_base64_decode(base64_key.c_str(), &binary_key, &binary_key_len, false);
-
-	std::string hex_key;
-	for (int index = 0; index < binary_key_len; index++) {
-		formatstr_cat(hex_key, "%02x", static_cast<int>(binary_key[index]));
-	}
-	return hex_key;
+	return base64_key;
 }
 
+
 //-------------------------------------------------------------
-int boringtun_command(const std::string &command, std::unordered_map<std::string, std::string> response_map)
+std::string load_key_hex(const std::string &param_name)
 {
-	int command_bytes = condor_write("boringtun UAPI",
-		g_boringtun_uapi_fd, command.c_str(),
-		command.size(), 20);
-	if (command_bytes != static_cast<int>(command.size())) {
-		dprintf(D_ALWAYS, "Failed to send configuration command to boringtun"
-			" (errno=%d, %s).\n", errno, strerror(errno));
-		return errno;
-	}
+	auto base64_key = load_key_base64(param_name);
 
-	// Wait for response message.
-	Selector selector;
-	selector.add_fd( g_boringtun_uapi_fd, Selector::IO_READ );
-	selector.set_timeout(20);
-	selector.execute();
-	if (selector.timed_out()) {
-		dprintf(D_ALWAYS, "boringtun did not send back response.\n");
-		return 1;
-	}
-
-	char command_resp[1024];
-	auto resp_bytes = condor_read("boringtun UAPI", g_boringtun_uapi_fd,
-		command_resp, 1024, 20, 0, true);
-	if (resp_bytes <= 0) {
-		dprintf(D_ALWAYS, "Failed to get response back from borington\n");
-		return 1;
-	}
-
-	std::string response(command_resp, resp_bytes);
-	StringList response_list(response, "\n");
-	response_list.rewind();
-	const char *response_line;
-	int boring_errno = -1;
-	while ( (response_line=response_list.next()) ) {
-		std::string response_str(response_line);
-		auto pos = response_str.find("=");
-		if (pos == std::string::npos) {
-			dprintf(D_FULLDEBUG, "boringtun sent an invalid line: %s\n", response_line);
-		}
-		auto key = response.substr(0, pos);
-		auto val = response.substr(pos + 1);
-		response_map[key] = val;
-		if (key == "errno") {
-			try {
-				boring_errno = std::stol(val);
-			} catch (...) {
-				dprintf(D_ALWAYS, "boringtun sent an invalid errno: %s\n", val.c_str());
-				return 1;
-			}
-		}
-	}
-	if (boring_errno < 0) {
-		dprintf(D_ALWAYS, "boringtun did not respond with an errno.\n");
-	}
-	return boring_errno;
+	return base64_key_to_hex(base64_key);
 }
 
 
@@ -426,9 +230,41 @@ int configure_boringtun()
 		key.c_str()
 	);
 	std::unordered_map<std::string, std::string> response_map;
-	auto boring_err = boringtun_command(command, response_map);
+	auto boring_err = boringtun_command(g_boringtun_uapi_fd, command, response_map);
 
 	dprintf(D_FULLDEBUG, "Result of boringtun configuration: %d\n", boring_err);
+
+	command = "get=1\n\n";
+	boring_err = boringtun_command(g_boringtun_uapi_fd, command, response_map);
+	std::string server_listen_port = response_map["listen_port"];
+	try {
+		g_boringtun_listen_port = std::stol(server_listen_port);
+	} catch (...) {
+		dprintf(D_ALWAYS, "Failed to get listen_port from boringtun.\n");
+		DC_Exit(1);
+	}
+
+	return boring_err;
+}
+
+
+//-------------------------------------------------------------
+int register_boringtun_client(const std::string &pubkey, const std::string ipaddr)
+{
+	std::string command;
+	formatstr(command,
+		"set=1\n"
+		"public_key=%s\n"
+		"persistent_keepalive_interval=30\n"
+		"allowed_ip=%s/32\n"
+		"\n",
+		base64_key_to_hex(pubkey).c_str(),
+		ipaddr.c_str());
+
+	std::unordered_map<std::string, std::string> response_map;
+	auto boring_err = boringtun_command(g_boringtun_uapi_fd, command, response_map);
+	dprintf(D_FULLDEBUG, "Result of client %s registration: %d\n", pubkey.c_str(), boring_err);
+
 	return boring_err;
 }
 
@@ -601,6 +437,24 @@ int setup_child_namespace(int exit_pipe, int ready_sock)
 		return 1;
 	}
 
+		// TODO: Eventually, this should go into main_config.
+	std::string network_full;
+	param(network_full, "VPN_SERVER_NETWORK", "10.0.0.0/24");
+	std::string network = network_full.substr(0, network_full.find("/"));
+	in_addr_t network_addr = htonl(inet_network(network.c_str()));
+	if (!network_addr) {
+		dprintf(D_ALWAYS, "Failed to convert server network to IPv4: %s\n", network_full.c_str());
+		return 1;
+	}
+	in_addr_t ipaddr = htonl(ntohl(network_addr) + 2);
+
+	in_addr_t netmask = htonl(inet_network("255.255.255.0"));
+
+	if (configure_tun("condor0", ipaddr, 0, netmask)) {
+		dprintf(D_ALWAYS, "Failed to configure TUN network.\n");
+		return 1;
+	}
+
 		// Pass the TUN filedescriptor back to our parent indicating we're ready.
 	if (sendfd(ready_sock, tun_fd) < 0) {
 		return 1;
@@ -650,7 +504,138 @@ int reap_slirp4netns(int pid, int exit_status)
 
 
 //-------------------------------------------------------------
+void
+update_collector_ad() {
+	dprintf(D_FULLDEBUG, "Starting update of VPN ad in collector.\n");
+	ClassAd ad;
+	SetMyTypeName(ad, VPN_ADTYPE);
+	SetTargetTypeName(ad, "");
 
+	ad.InsertAttr(ATTR_NAME, g_vpn_name);
+
+	daemonCore->publish(&ad);
+	daemonCore->dc_stats.Publish(ad);
+	daemonCore->monitor_data.ExportData(&ad);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &ad, NULL, true);
+
+	daemonCore->Reset_Timer(g_update_collector_tid, g_update_interval, g_update_interval);
+	dprintf(D_FULLDEBUG, "Finished update of VPN ad.\n");
+}
+
+
+//-------------------------------------------------------------
+int determine_name()
+{
+	std::string name_str;
+	auto myname = get_mySubSystem()->getLocalName();
+	if (myname) {
+		auto valid_name = build_valid_daemon_name(myname);
+		if (valid_name) {
+			g_vpn_name = std::string(valid_name);
+			free(valid_name);
+
+			return 1;
+		}
+	} else {
+		auto default_name = default_daemon_name();
+		if (!default_name) {
+			dprintf(D_ALWAYS, "Failed to determine vpn server local name.\n");
+			return 1;
+		}
+		g_vpn_name = std::string(default_name);
+		free(default_name);
+	}
+	return 0;
+}	
+
+
+//-------------------------------------------------------------
+int register_client_failure(ReliSock &rsock, int error_code, const std::string &error_string)
+{
+	dprintf(D_ALWAYS, "%s\n", error_string.c_str());
+	ClassAd respAd;
+	respAd.InsertAttr(ATTR_ERROR_CODE, error_code);
+	respAd.InsertAttr(ATTR_ERROR_STRING, error_string);
+
+	rsock.encode();
+	if (!putClassAd(&rsock, respAd) || !rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to send error response\n");
+		return 1;
+	}
+	return 0;
+}
+
+
+//-------------------------------------------------------------
+int register_client(int, Stream *stream)
+{
+	ReliSock &rsock = *static_cast<ReliSock*>(stream);
+
+	rsock.decode();
+
+	ClassAd reqAd;
+	if (!getClassAd(&rsock, reqAd) || !rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to get registration request from client.\n");
+		return 1;
+	}
+	dprintf(D_FULLDEBUG, "Client registration request:\n");
+	dPrintAd(D_FULLDEBUG, reqAd);
+	std::string client_pubkey;
+	if (!reqAd.EvaluateAttrString("ClientPubkey", client_pubkey)) {
+		return register_client_failure(rsock, 1, "Registration request missing client pubkey");
+	}
+
+	std::string network;
+	param(network, "VPN_SERVER_NETWORK", "10.0.0.0/24");
+	std::string ip_network = network.substr(0, network.find('/'));
+
+	struct in_addr network_addr;
+	network_addr.s_addr = htonl(inet_network(ip_network.c_str()));
+	if (!network_addr.s_addr) {
+		return register_client_failure(rsock, 2, "Invalid server network configuration");
+	}
+
+	std::string base64_pubkey = load_key_base64("VPN_SERVER_PUBKEY");
+	if (base64_pubkey.empty()) {
+		return register_client_failure(rsock, 3, "VPN server has no pubkey configured");
+	}
+
+		// Arbitrarily put GW at 10.0.0.2
+	struct in_addr gw_addr;
+	gw_addr.s_addr = htonl(ntohl(network_addr.s_addr) + 2);
+	struct in_addr host_addr;
+	host_addr.s_addr = htonl(ntohl(network_addr.s_addr) + g_ipam_offset++);
+
+	std::string gw_str(inet_ntoa(gw_addr));
+	std::string host_str(inet_ntoa(host_addr));
+	//std::string net_str(inet_ntoa(network_addr));
+	std::string net_str = "255.255.255.0";
+
+	auto rval = register_boringtun_client(client_pubkey, host_str);
+	if (rval) {
+		return register_client_failure(rsock, 4, "Failed to register the client with boringtun");
+	}
+
+	const char *endpoint = daemonCore->InfoCommandSinfulString();
+	condor_sockaddr addr;
+	addr.from_sinful(endpoint);
+	std::string endpoint_ip;
+	formatstr(endpoint_ip, "%s:%d", addr.to_ip_string().c_str(), g_boringtun_listen_port);
+
+	ClassAd respAd;
+	respAd.InsertAttr("IpAddr", host_str);
+	respAd.InsertAttr("GW", host_str);
+	respAd.InsertAttr("Network", net_str);
+	respAd.InsertAttr("Pubkey", base64_pubkey);
+	respAd.InsertAttr("Endpoint", endpoint_ip);
+
+	rsock.encode();
+	if (!putClassAd(&rsock, respAd) || !rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to send registration response.\n");
+		return 1;
+	}
+	return 0;
+}
 
 } // end anonymous namespace
 
@@ -706,6 +691,15 @@ void main_init(int /* argc */, char * /* argv */ [])
 	}
 	dprintf(D_ALWAYS, "Successfully setup network namespace in child PID %d.\n", childpid);
 
+	std::vector<DCpermission> alt_perms;
+	alt_perms.push_back(ADVERTISE_STARTD_PERM);
+	alt_perms.push_back(ADVERTISE_SCHEDD_PERM);
+	alt_perms.push_back(ADVERTISE_MASTER_PERM);
+	alt_perms.push_back(NEGOTIATOR);
+	daemonCore->Register_Command(VPN_REGISTER, "Register VPN Client",
+		(CommandHandler) &register_client, "Register VPN Client",
+		DAEMON, D_COMMAND, true, 1, &alt_perms);
+
 	main_config();
 }
 
@@ -716,10 +710,18 @@ main_config()
 {
 	dprintf(D_FULLDEBUG, "main_config() called\n");
 
+	if (determine_name()) {
+		if (g_vpn_name.empty()) {
+			dprintf(D_ALWAYS, "Failed to determine the local server name.\n");
+			DC_Exit(1);
+		}
+	}
+	dprintf(D_FULLDEBUG, "Configuring VPN server %s.\n", g_vpn_name.c_str());
+
 	// Setup boringtun - connectivity for clients
 	//
 	if (g_boringtun_pid == -1) {
-		if (launch_boringtun()) {
+		if (launch_boringtun(g_tun_fd, g_boringtun_reaper, g_boringtun_uapi_fd, g_boringtun_pid)) {
 			dprintf(D_ALWAYS, "Failed to launch boringtun; fatal error.\n");
 			DC_Exit(1);
 		}
@@ -742,6 +744,12 @@ main_config()
 			DC_Exit(1);
 		}
 	}
+
+	g_update_interval = param_integer("VPN_UPDATE_INTERVAL", 300);
+	g_update_collector_tid = daemonCore->Register_Timer(
+		0, g_update_interval,
+		(TimerHandler) update_collector_ad,
+		"Update Collector");
 }
 
 //-------------------------------------------------------------

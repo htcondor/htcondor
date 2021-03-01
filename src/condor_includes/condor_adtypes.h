@@ -50,6 +50,7 @@
 #define GATEWAY_ADTYPE			"Gateway"
 #define CLUSTER_ADTYPE	 		"Cluster"
 #define GRID_ADTYPE			"Grid"
+#define VPN_ADTYPE			"VPN"
 #define BOGUS_ADTYPE		"Bogus"
 
 // Enumerated list of ad types (for the query object)
@@ -80,6 +81,7 @@ enum AdTypes
 	LEASE_MANAGER_AD,	// placeholder: this type no longer used
 	DEFRAG_AD,
 	ACCOUNTING_AD,
+	VPN_AD,
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,
 };

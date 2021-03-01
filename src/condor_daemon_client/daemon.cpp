@@ -153,6 +153,9 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_HAD:
 		_subsys = strdup( "HAD" );
 		break;
+	case DT_VPN:
+		_subsys = strdup( "VPN" );
+		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
 				"Daemon object", (int)_type, daemonString(_type) );
@@ -1079,6 +1082,10 @@ Daemon::locate( Daemon::LocateType method )
 		setSubsystem( "KBDD" );
 		rval = getDaemonInfo( NO_AD, true, method );
 		break;
+	case DT_VPN:
+		setSubsystem( "VPN" );
+		rval = getDaemonInfo( VPN_AD, true, method );
+		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::locate", (int)_type );
 	}
@@ -1324,12 +1331,15 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			formatstr( buf, "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
 			query.addANDConstraint( buf.c_str() );
 		} else if ( _name ) {
-			if ( _type == DT_GENERIC ) {
+			if ( _type == DT_GENERIC || _type == DT_VPN ) {
 				query.setGenericQueryType(_subsys);
 			}
 
 			formatstr( buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 			query.addANDConstraint( buf.c_str() );
+			if ( _type == DT_VPN ) {
+				query.addANDConstraint("MyType == \"VPN\"");
+			}
 			if (method == LOCATE_FOR_LOOKUP)
 			{
 				query.setLocationLookup(_name);
@@ -1349,6 +1359,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		CollectorList * collectors = CollectorList::create(_pool);
 		CondorError errstack;
 		if (collectors->query (query, ads) != Q_OK) {
+			dprintf(D_FULLDEBUG, "Failed to query.");
 			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText().c_str() );
 			return false;

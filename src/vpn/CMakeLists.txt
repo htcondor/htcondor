@@ -21,9 +21,13 @@ if (LINUX)
 
   set(VPN
 	vpn_main.cpp
+	vpn_common.cpp
   )
 
+  set(VPN_CLIENT vpn_client.cpp vpn_common.cpp)
+
   condor_exe( condor_vpn "${VPN}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+  condor_exe( condor_vpn_client "${VPN_CLIENT}" ${C_BIN} "${CONDOR_LIBS}" OFF )
 
 endif()
 

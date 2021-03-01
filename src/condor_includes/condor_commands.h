@@ -529,6 +529,13 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
 #define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
 
+/*
+*** Commands used by the VPN daemon
+ */
+#define VPN_BASE 82000
+#define VPN_REGISTER (VPN_BASE + 0)
+#define VPN_HEARTBEAT (VPN_BASE + 1)
+#define VPN_UNREGISTER (VPN_BASE + 2)
 
 /*
 *** Replies used in various stages of various protocols

@@ -30,5 +30,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/dc_schedd.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/dc_startd.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/dc_starter.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/dc_transferd.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/dc_vpn.cpp
 PARENT_SCOPE
 )
