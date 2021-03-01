@@ -159,6 +159,14 @@ New Features:
   SSL or GSI authentication was used.
   :jira:`43`
 
+- Added configuration parameter ``GRIDMANAGER_LOG_APPEND_SELECTION_EXPR``,
+  which allows each *condor_gridmanager* process to write to a separate
+  daemon log file.
+  When this paramaeter is set to ``True``, the evaluated value of
+  ``GRIDMANAGER_SELECTION_EXPR`` (if set) will be appended to the
+  filename specified by ``GRIDMANAGER_LOG``.
+  :jira:`102`
+
 Bugs Fixed:
 
 - Fixed a bug where jobs that asked for `transfer_output_files = .` would
