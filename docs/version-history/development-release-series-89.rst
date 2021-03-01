@@ -167,6 +167,11 @@ New Features:
   filename specified by ``GRIDMANAGER_LOG``.
   :jira:`102`
 
+- Added command-line argument ``-jsonl`` to *condor_history*.
+  This will print the output in JSON Lines format (one ClassAd per line
+  in JSON format).
+  :jira:`35`
+
 Bugs Fixed:
 
 - Fixed a bug where jobs that asked for `transfer_output_files = .` would
