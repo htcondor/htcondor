@@ -176,6 +176,11 @@ New Features:
   in JSON format).
   :jira:`35`
 
+- Running ``condor_ping`` with no arguments now defaults to doing a ping
+  against the *condor_schedd* at authorization level `WRITE`.
+  :ticket:`7892`
+  :jira:`246`
+
 Bugs Fixed:
 
 - Fixed a bug where jobs that asked for `transfer_output_files = .` would
