@@ -427,8 +427,9 @@ Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
 }
 
 char *
-Condor_Auth_Passwd::fetchTokenSharedKey(const std::string &token)
+Condor_Auth_Passwd::fetchTokenSharedKey(const std::string &token, int & len)
 {
+	len = 0;
 	std::string key_id;
 	try {
 			// Append a '.' to the token; we only send the <header>.<payload>, while
@@ -457,19 +458,26 @@ Condor_Auth_Passwd::fetchTokenSharedKey(const std::string &token)
 		dprintf(D_SECURITY, "Failed to fetch key named %s: %s\n", key_id.c_str(), err.getFullText().c_str());
 		return nullptr;
 	}
-	return strdup(shared_key.c_str());
+	len = (int)shared_key.size();
+	char * buf = (char*)malloc(len);
+	memcpy(buf, shared_key.data(), len);
+	return buf;
 }
 
 char *
-Condor_Auth_Passwd::fetchPoolSharedKey()
+Condor_Auth_Passwd::fetchPoolSharedKey(int & len)
 {
+	len = 0;
 	std::string shared_key;
 	CondorError err;
 	if (!getTokenSigningKey("", shared_key, &err)) {
 		dprintf(D_SECURITY, "Failed to fetch POOL key: %s\n", err.getFullText().c_str());
 		return nullptr;
 	}
-	return strdup(shared_key.c_str());
+	len = (int)shared_key.size();
+	char * buf = (char*)malloc(len);
+	memcpy(buf, shared_key.data(), len);
+	return buf;
 }
 
 char *
@@ -754,7 +762,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 bool
 Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init_text)
 {
-	if ( sk->shared_key == NULL ) {
+	if ( sk->shared_key == NULL || sk->len <= 0) {
 		return false;
 	}
 
@@ -794,8 +802,6 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 		memcpy(seed_ka + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
 		memcpy(seed_kb + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
 	}
-
-    sk->len = strlen(sk->shared_key);
 
 		// Generate the shared keys K and K'
 	if (m_version == 1) {
@@ -1629,7 +1635,7 @@ void
 Condor_Auth_Passwd::destroy_sk(struct sk_buf *sk) 
 {
     if(sk->shared_key) {
-		memset(sk->shared_key, 0, sk->len);
+        memset(sk->shared_key, 0, sk->len);
         free(sk->shared_key);
     }
 	if(sk->ka) {
@@ -1761,7 +1767,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 				m_sk.kb_len = m_k_prime_len; m_k_prime_len = 0;
 			} else {
 				dprintf(D_SECURITY, "PW: Client using pool password.\n");
-				m_sk.shared_key = fetchPoolSharedKey();
+				m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
 				dprintf(D_SECURITY, "PW: Client setting keys.\n");
 				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 					m_client_status = AUTH_PW_ERROR;
@@ -1901,9 +1907,9 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 			// hence, in this case we just use the server name twice (which is
 			// mandated to be the pool username).
 		if (m_t_client.a_token.empty()) {
-			m_sk.shared_key = fetchPoolSharedKey();
+			m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
 		} else {
-			m_sk.shared_key = fetchTokenSharedKey(m_t_client.a_token);
+			m_sk.shared_key = fetchTokenSharedKey(m_t_client.a_token, m_sk.len);
 		}
 		// In version 1, the only thing that is ever sent in practice is 
 		// condor_pool@whatever, and in that case, m_t_server.b == m_t_client.a
@@ -2894,21 +2900,21 @@ Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 }
 
 void
-Condor_Auth_Passwd::create_pool_password_if_needed()
+Condor_Auth_Passwd::create_pool_signing_key_if_needed()
 {
 	// This method is invoked by DaemonCore upon startup and a reconfig.
 
-	// Currently only the Collector will generate a pool password by default...
+	// Currently only the Collector will generate a token signing key by default...
 	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
 		return;
 	}
 
-	std::string pool_password;
-	if (!param(pool_password, "SEC_PASSWORD_FILE")) {
+	std::string filepath;
+	if (!param(filepath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE")) {
 		return;
 	}
 
-		// Try to create the pool password file if it doesn't exist.
+		// Try to create the signing key file if it doesn't exist.
 	int fd = -1;
 	{
 #ifdef WIN32
@@ -2919,7 +2925,7 @@ Condor_Auth_Passwd::create_pool_password_if_needed()
 		mode_t access_mode = 0600;
 
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		fd = safe_open_wrapper_follow(pool_password.c_str(), open_flags, access_mode);
+		fd = safe_open_wrapper_follow(filepath.c_str(), open_flags, access_mode);
 	}
 	if (fd < 0) {
 		return;
@@ -2927,20 +2933,19 @@ Condor_Auth_Passwd::create_pool_password_if_needed()
 		close(fd);
 	}
 
-		// Generate a password.
-	char password_buffer[65];
-	password_buffer[64] = '\0';
-	if (!RAND_bytes(reinterpret_cast<unsigned char *>(password_buffer), 64)) {
+		// Generate a signing key.
+	char rand_buffer[64];
+	if (!RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer))) {
 		// Insufficient entropy available; bail out!
 		return;
 	}
 
-		// Write out the password.
-	if (TRUE == write_password_file(pool_password.c_str(), password_buffer)) {
-		dprintf(D_ALWAYS, "Created a pool password in file %s\n", pool_password.c_str());
+		// Write out the signing key.
+	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {
+		dprintf(D_ALWAYS, "Created a POOL token signing key in file %s\n", filepath.c_str());
 	}
 	else {
-		dprintf(D_ALWAYS, "WARNING: Failed to create a pool password in file %s\n", pool_password.c_str());
+		dprintf(D_ALWAYS, "WARNING: Failed to create a POOL token signing keyin file %s\n", filepath.c_str());
 	}
 }
 

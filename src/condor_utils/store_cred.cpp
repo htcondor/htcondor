@@ -2457,9 +2457,10 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 {
 	// First, check to see if our cache is still usable; if so, return it
 	time_t now = time(NULL);
-	if ((now - m_last_refresh) < 10) {
+	if ((now - m_last_refresh) < param_integer("SEC_TOKEN_POOL_SIGNING_DIR_REFRESH_TIME",0)) {
 		return m_name_list;
 	}
+	m_last_refresh = now;
 
 	std::string poolkeypath;
 	param(poolkeypath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE");
@@ -2467,7 +2468,7 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 	// we also get all other signing keys from the token key directory if there is one
 	// it is not an error to have no directory, nor is it an error to have no exclusion list
 	Regex excludeFilesRegex;
-	auto_free_ptr dirpath(param("SEC_TOKEN_SIGNING_KEY_DIRECTORY"));
+	auto_free_ptr dirpath(param("SEC_PASSWORD_DIRECTORY"));
 	if (dirpath) {
 		auto_free_ptr excludeRegex(param("LOCAL_CONFIG_DIR_EXCLUDE_REGEXP"));
 		if (excludeRegex) {
@@ -2541,7 +2542,6 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 		}
 	}
 
-	m_last_refresh = time(NULL);
 	return m_name_list;
 }
 
@@ -2558,16 +2558,19 @@ bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, Co
 			if (err) err->push("TOKEN", 1, "No master pool token key setup in SEC_TOKEN_POOL_SIGNING_KEY_FILE");
 			return false;
 		}
-		// TODO: change default to false once this is added to the param table
-		// SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD = "$(SEC_PASSWORD_FILE)" == "$(SEC_TOKEN_POOL_SIGNING_KEY_FILE)"
-		is_legacy = param_boolean("SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD", true);
+		// secret knob to tell us to process the token signing key the way we would pre 9.0
+		// Set this to true if the key has imbedded nulls and had been used to sign tokens with
+		// an earlier version of Condor, and for some reason you don't want to just truncate the
+		// file itself
+		// 
+		is_legacy = param_boolean("SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD", false);
 
 	} else {
 
 		// we get all other signing keys from the token key directory
-		auto_free_ptr dirpath(param("SEC_TOKEN_SIGNING_KEY_DIRECTORY"));
+		auto_free_ptr dirpath(param("SEC_PASSWORD_DIRECTORY"));
 		if ( ! dirpath) {
-			if (err) err->push("TOKEN", 1, "SEC_TOKEN_SIGNING_KEY_DIRECTORY is undefined");
+			if (err) err->push("TOKEN", 1, "SEC_PASSWORD_DIRECTORY is undefined");
 			return false;
 		}
 		dircat(dirpath, key_id.c_str(), fullpath);
@@ -2602,7 +2605,6 @@ bool hasTokenSigningKey(const std::string &key_id, CondorError *err) {
 	return false;
 }
 
-// Note: an early version of this code (pre 9.0) used SEC_PASSWORD_DIRECTORY
 bool getTokenSigningKey(const std::string &key_id, std::string &contents, CondorError *err) {
 
 	// If using the POOL password as the signing key may have to truncate at first null for backward compat

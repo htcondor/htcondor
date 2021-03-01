@@ -165,8 +165,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	/** Retry search for tokens */
 	static void retry_token_search() {m_should_search_for_tokens = true;}
 
-	/** Check and generate a pool password if not already done */
-	static void create_pool_password_if_needed();
+	/** Check and generate a POOL token signing key if not already done */
+	static void create_pool_signing_key_if_needed();
 
 		/** Simple wrapper around the OpenSSL HKDF function. */
 	static int hkdf(const unsigned char *sk, size_t sk_len,
@@ -225,8 +225,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		/** Lookup a shared key based on the correspondent's
 			information.  
 		*/
-	static char* fetchPoolSharedKey();
-	static char* fetchTokenSharedKey(const std::string & token);
+	static char* fetchPoolSharedKey(int & len);
+	static char* fetchTokenSharedKey(const std::string & token, int & len);
 
 		/** Return a malloc-ed string "user@domain" that represents who we
 		 	are.
