@@ -60,6 +60,10 @@ Release Notes:
   new installations.
   :jira:`263`
 
+- On Windows, the *condor_master* now prefers TCP over UDP when forwarding
+  ``condor_reconfig`` and ``condor_off`` commands to other daemons.
+  :jira:`273`
+
 New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than
