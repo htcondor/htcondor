@@ -19,6 +19,12 @@ Release Notes:
 
 New Features:
 
+- Docker version 20.10.4 has a serious bug that prevents Docker Universe from 
+  working.  HTCondor now detects this version of Docker, and sets 
+  HasDocker = false in the slot ad, so Docker Universe jobs will not match on
+  such machines.
+  :jira:`310`
+
 - The HA replication mechanism can now accept either SHA-2 or MD5 checksums.
   This is because support for MD5 checksums must be removed in the 9.0 release of HTCondor.
   The checksum that replication will send is controlled by a new configuration variable
