@@ -51,8 +51,8 @@ Bugs Fixed:
   Schedd Restart Report.
   :jira:`190`
 
-- Fixed a bug that can crash the *condor_schedd* if a DAG is quickly
-  released and then removed.
+- Fixed a bug that in rare cases can crash the *condor_schedd* if a DAG
+  is quickly released and then removed.
   :jira:`309`
 
 Version 8.8.12

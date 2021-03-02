@@ -6447,7 +6447,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	delete act_rec;
 
 	if ( !GetJobAd(job_id.cluster, job_id.proc) ) {
-		dprintf(D_FULLDEBUG, "Job %d.%d is not in the queue, cannot perform action %s\n",
+		dprintf(D_ALWAYS, "Job %d.%d is not in the queue, cannot perform action %s\n",
 			job_id.cluster, job_id.proc, getJobActionString(action));
 		return TRUE;
 	}
