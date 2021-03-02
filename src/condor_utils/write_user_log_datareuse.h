@@ -16,8 +16,8 @@
  * limitations under the License.
  *
  ***************************************************************/
-#ifndef _CONDOR_WRITE_USER_LOG_CPP_H
-#define _CONDOR_WRITE_USER_LOG_CPP_H
+#ifndef _CONDOR_WRITE_USER_LOG_DATAREUSE_CPP_H
+#define _CONDOR_WRITE_USER_LOG_DATAREUSE_CPP_H
 
 #if defined(__cplusplus)
 
@@ -45,22 +45,7 @@ class FileLock;
 class StatWrapper;
 class ReadUserLogHeader;
 class WriteUserLogState;
-
-
-/*
-	This function tells the caller if a UserLog object should be
-	constructed or not, and if so, says where the user wants the user
-	log file to go. The difference between this function and simply
-	doing a LookupString() on ATTR_ULOG_FILE is that A) the result is
-	combined with IWD if necessary to form an absolute path, and B) if
-	EVENT_LOG is defined in the condor_config file, then the result
-	will be /dev/null even if ATTR_ULOG_FILE is not defined (since we
-	still want a UserLog object in this case so the global event log
-	is updated). Return function is true if ATTR_ULOG_FILE is found or
-	if EVENT_LOG is defined, else false.
-*/
-bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
-                      const char* ulog_path_attr = NULL);
+class CondorError;
 
 
 /** API for writing a log file.  Since an API for reading a log file
@@ -87,7 +72,7 @@ bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
       ULogEvent object.
     </UL>
 */
-class WriteUserLog
+class WriteUserLogDataReuse
 {
   public:
     typedef std::set<std::pair<int, int> > log_file_cache_refset_t;
@@ -109,14 +94,14 @@ class WriteUserLog
       ~log_file(); 
       log_file& operator=(const log_file& rhs);
       void set_user_priv_flag(bool v) { user_priv_flag = v; }
-      bool get_user_priv_flag() const { return user_priv_flag; }
+      bool get_user_priv_flag() { return user_priv_flag; }
     };
 
     typedef std::map<std::string, log_file*> log_file_cache_map_t;
 
-    WriteUserLog();
+    WriteUserLogDataReuse();
     
-    virtual ~WriteUserLog();
+    virtual ~WriteUserLogDataReuse();
     
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
@@ -205,7 +190,7 @@ public:
 	void setEnableFsync(bool enabled);
 
 	/**@return false if disabled, true if enabled*/
-	bool getEnableFsync() const;
+	bool getEnableFsync();
 
 	/** APIs for testing */
 	int getGlobalSequence( void ) const { return m_global_sequence; };
@@ -277,6 +262,8 @@ public:
 		mask.push_back(e);
 	}
 
+	FileLockBase *getLock(CondorError &err);
+
   private:
 
 	///
@@ -321,13 +308,13 @@ public:
 
 	/** Write to the user log? */		 bool		m_userlog_enable;
 	bool doWriteEvent( ULogEvent *event,
-		WriteUserLog::log_file& log,
+		WriteUserLogDataReuse::log_file& log,
 		bool is_global_event,
 		bool is_header_event,
 		int format_opts,
 		ClassAd *ad);
 	void writeJobAdInfoEvent(char const *attrsToWrite,
-		WriteUserLog::log_file& log, ULogEvent *event, ClassAd *param_jobad,
+		WriteUserLogDataReuse::log_file& log, ULogEvent *event, ClassAd *param_jobad,
 		bool is_global_event, int format_opts );
 
 	std::vector<log_file*> logs;
@@ -358,6 +345,11 @@ public:
     /** The global log file lock     */  FileLockBase *m_rotation_lock;
 
 	/** ULogEvent::formatOpt flags   */  int        m_format_opts; // formerly m_use_xml
+
+#if !defined(WIN32)
+	/** PrivSep: the user's UID      */  uid_t      m_privsep_uid;
+	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
+#endif
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;

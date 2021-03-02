@@ -20,8 +20,6 @@
 #ifndef STAT_INFO_H
 #define STAT_INFO_H
 
-#include "condor_common.h"
-#include "condor_sys_types.h"
 #include "condor_uid.h"
 
 #ifndef WIN32

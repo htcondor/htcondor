@@ -25,6 +25,8 @@
 #include "read_user_log_state.h"
 #include "write_user_log.h"
 
+class WriteUserLogDataReuse;
+
 // User log header info
 
 // Simple class to extract info from a log file header event
@@ -150,6 +152,7 @@ public:
 
 	// Read the header from a file
 	int Write( WriteUserLog &writer, int fd = -1 );
+	int Write( WriteUserLogDataReuse &writer, int fd = -1 );
 	bool GenerateEvent( GenericEvent &event );
 
 private:

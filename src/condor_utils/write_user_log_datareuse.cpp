@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include <stdarg.h>
+#include "write_user_log_datareuse.h"
 #include "write_user_log.h"
 #include "write_user_log_state.h"
 #include "read_user_log.h"
@@ -33,6 +34,9 @@
 #include "file_lock.h"
 #include "user_log_header.h"
 #include "condor_fsync.h"
+#include "condor_attributes.h"
+#include "CondorError.h"
+
 #include <string>
 #include <algorithm>
 #include "condor_attributes.h"
@@ -86,54 +90,17 @@ static int should_use_keyring_sessions() {
 #endif
 }
 
-bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
-                      const char* ulog_path_attr)
-{
-	bool ret_val = true;
-	char *global_log = NULL;
-
-	if ( ulog_path_attr == NULL ) {
-		ulog_path_attr = ATTR_ULOG_FILE;
-	}
-	if ( job_ad == NULL ||
-	     job_ad->EvaluateAttrString(ulog_path_attr,result) == false )
-	{
-		// failed to find attribute, check config file
-		global_log = param("EVENT_LOG");
-		if ( global_log ) {
-			// canonicalize to UNIX_NULL_FILE even on Win32
-			result = UNIX_NULL_FILE;
-		} else {
-			ret_val = false;
-		}
-	}
-
-	if ( global_log ) free(global_log);
-
-	if( ret_val && !fullpath(result.c_str()) ) {
-		std::string iwd;
-		if( job_ad && job_ad->EvaluateAttrString(ATTR_JOB_IWD,iwd) ) {
-			iwd += "/";
-			iwd += result;
-			result = iwd;
-		}
-	}
-
-	return ret_val;
-}
-
-
 // ***************************
 //  WriteUserLog constructors
 // ***************************
-WriteUserLog::WriteUserLog()
+WriteUserLogDataReuse::WriteUserLogDataReuse()
 {
 	log_file_cache = NULL;
 	Reset( );
 }
 
 // Destructor
-WriteUserLog::~WriteUserLog()
+WriteUserLogDataReuse::~WriteUserLogDataReuse()
 {
 	FreeGlobalResources( true );
 	FreeLocalResources( );
@@ -148,7 +115,7 @@ WriteUserLog::~WriteUserLog()
 // ***********************************
 
 bool
-WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
+WriteUserLogDataReuse::initialize(const ClassAd &job_ad, bool init_user)
 {
 	int cluster = -1;
 	int proc = -1;
@@ -214,14 +181,14 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 }
 
 bool
-WriteUserLog::initialize( const char *file, int c, int p, int s, int format_opts )
+WriteUserLogDataReuse::initialize( const char *file, int c, int p, int s, int format_opts )
 {
 	m_format_opts = format_opts;
 	return initialize(std::vector<const char*>(1,file),c,p,s);
 }
 
 bool
-WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, int s)
+WriteUserLogDataReuse::initialize( const std::vector<const char *>& file, int c, int p, int s)
 {
 		// Save parameter info
 	FreeLocalResources( );
@@ -297,7 +264,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 }
 
 void
-WriteUserLog::setJobId( int c, int p, int s )
+WriteUserLogDataReuse::setJobId( int c, int p, int s )
 {
 	m_cluster = c;
 	m_proc = p;
@@ -306,7 +273,7 @@ WriteUserLog::setJobId( int c, int p, int s )
 
 // Internal-only initializer, invoked by all of the others
 bool
-WriteUserLog::internalInitialize( int c, int p, int s )
+WriteUserLogDataReuse::internalInitialize( int c, int p, int s )
 {
 
 	m_cluster = c;
@@ -326,7 +293,7 @@ WriteUserLog::internalInitialize( int c, int p, int s )
 }
 
 // Read in just the m_format_opts configuration
-void WriteUserLog::setUseCLASSAD(int fmt_type)
+void WriteUserLogDataReuse::setUseCLASSAD(int fmt_type)
 {
 	if ( ! m_configured) {
 		m_format_opts = USERLOG_FORMAT_DEFAULT;
@@ -341,7 +308,7 @@ void WriteUserLog::setUseCLASSAD(int fmt_type)
 
 // Read in our configuration information
 bool
-WriteUserLog::Configure( bool force )
+WriteUserLogDataReuse::Configure( bool force )
 {
 	priv_state previous;
 	// If we're already configured and not in "force" mode, do nothing
@@ -433,7 +400,7 @@ WriteUserLog::Configure( bool force )
 }
 
 void
-WriteUserLog::Reset( void )
+WriteUserLogDataReuse::Reset( void )
 {
 	m_initialized = false;
 	m_configured = false;
@@ -483,13 +450,19 @@ WriteUserLog::Reset( void )
 	m_global_close = false;
 # endif
 
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
+
 	m_global_id_base = NULL;
 	(void) GetGlobalIdBase( );
 	m_global_sequence = 0;
 }
 
 void
-WriteUserLog::FreeGlobalResources( bool final )
+WriteUserLogDataReuse::FreeGlobalResources( bool final )
 {
 
 	if (m_global_path) {
@@ -534,7 +507,7 @@ WriteUserLog::FreeGlobalResources( bool final )
 // The (!copied) case is probably not necessary, but I am trying
 // to be as safe as possible.
 
-WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::log_file& rhs)
+WriteUserLogDataReuse::log_file& WriteUserLogDataReuse::log_file::operator=(const WriteUserLogDataReuse::log_file& rhs)
 {
 	if(this != &rhs) {
 		if(!copied) {
@@ -564,13 +537,14 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 	}
 	return *this;
 }
-WriteUserLog::log_file::log_file(const log_file& orig) : path(orig.path),
+
+WriteUserLogDataReuse::log_file::log_file(const log_file& orig) : path(orig.path),
 	lock(orig.lock), fd(orig.fd), copied(false), user_priv_flag(orig.user_priv_flag)
 {
 	orig.copied = true;
 }
 
-WriteUserLog::log_file::~log_file()
+WriteUserLogDataReuse::log_file::~log_file()
 {
 	if(!copied) {
 		if(fd >= 0) {
@@ -595,7 +569,8 @@ WriteUserLog::log_file::~log_file()
 	}
 }
 
-void WriteUserLog::freeLogs() {
+
+void WriteUserLogDataReuse::freeLogs() {
     // we do this only if local log files aren't being cached
     if (log_file_cache != NULL) return;
     for (std::vector<log_file*>::iterator j(logs.begin());  j != logs.end();  ++j) {
@@ -604,7 +579,7 @@ void WriteUserLog::freeLogs() {
 }
 
 void
-WriteUserLog::FreeLocalResources( void )
+WriteUserLogDataReuse::FreeLocalResources( void )
 {
     freeLogs();
 	logs.clear();
@@ -615,7 +590,7 @@ WriteUserLog::FreeLocalResources( void )
 }
 
 void
-WriteUserLog::setCreatorName( const char *name )
+WriteUserLogDataReuse::setCreatorName( const char *name )
 {
 	if ( name ) {
 		if ( m_creator_name ) {
@@ -627,7 +602,7 @@ WriteUserLog::setCreatorName( const char *name )
 }
 
 bool
-WriteUserLog::openFile(
+WriteUserLogDataReuse::openFile(
 	const char	 *file,
 	bool		  log_as_user,	// if false, we are logging to the global file
 	bool		  use_lock,		// use the lock
@@ -742,14 +717,14 @@ WriteUserLog::openFile(
 }
 
 bool
-WriteUserLog::openGlobalLog( bool reopen )
+WriteUserLogDataReuse::openGlobalLog( bool reopen )
 {
 	UserLogHeader	header;
 	return openGlobalLog( reopen, header );
 }
 
 bool
-WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
+WriteUserLogDataReuse::openGlobalLog( bool reopen, const UserLogHeader &header )
 {
 	if ( m_global_disable || (NULL==m_global_path) ) {
 		return true;
@@ -835,7 +810,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 }
 
 bool
-WriteUserLog::closeGlobalLog( void )
+WriteUserLogDataReuse::closeGlobalLog( void )
 {
 	if (m_global_lock) {
 		delete m_global_lock;
@@ -852,13 +827,18 @@ WriteUserLog::closeGlobalLog( void )
 	// be locked, seeked to the end of the file, and in condor priv state.
 	// return true if log was rotated, either by us or someone else.
 bool
-WriteUserLog::checkGlobalLogRotation( void )
+WriteUserLogDataReuse::checkGlobalLogRotation( void )
 {
 	if (m_global_fd < 0) {
 		return false;
 	}
 	if ( m_global_disable || (NULL==m_global_path) ) {
 		return false;
+	}
+	if ( !m_global_lock ||
+		 m_global_lock->isFakeLock() ||
+		 m_global_lock->isUnlocked() ) {
+		dprintf( D_ALWAYS, "WriteUserLog checking for event log rotation, but no lock\n" );
 	}
 
 	// Don't rotate if max rotations is set to zero
@@ -1087,7 +1067,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 }
 
 bool
-WriteUserLog::updateGlobalStat( void )
+WriteUserLogDataReuse::updateGlobalStat( void )
 {
 	if ( (NULL == m_global_stat) || (m_global_stat->Stat()) ) {
 		return false;
@@ -1099,7 +1079,7 @@ WriteUserLog::updateGlobalStat( void )
 }
 
 bool
-WriteUserLog::getGlobalLogSize( unsigned long &size, bool use_fd )
+WriteUserLogDataReuse::getGlobalLogSize( unsigned long &size, bool use_fd )
 {
 	StatWrapper	stat;
 	if ( m_global_close && m_global_fd < 0 ) {
@@ -1123,7 +1103,7 @@ WriteUserLog::getGlobalLogSize( unsigned long &size, bool use_fd )
 }
 
 bool
-WriteUserLog::globalLogRotated( ReadUserLogHeader &reader )
+WriteUserLogDataReuse::globalLogRotated( ReadUserLogHeader &reader )
 {
 	// log was rotated, so we need to reopen/create it and also
 	// recreate our lock.
@@ -1143,7 +1123,7 @@ WriteUserLog::globalLogRotated( ReadUserLogHeader &reader )
 }
 
 int
-WriteUserLog::doRotation( const char *path, int &fd,
+WriteUserLogDataReuse::doRotation( const char *path, int &fd,
 						  MyString &rotated, int max_rotations )
 {
 
@@ -1196,7 +1176,7 @@ WriteUserLog::doRotation( const char *path, int &fd,
 
 
 int
-WriteUserLog::writeGlobalEvent( ULogEvent &event,
+WriteUserLogDataReuse::writeGlobalEvent( ULogEvent &event,
 								int fd,
 								bool is_header_event )
 {
@@ -1212,7 +1192,7 @@ WriteUserLog::writeGlobalEvent( ULogEvent &event,
 }
 
 bool
-WriteUserLog::doWriteEvent( ULogEvent *event,
+WriteUserLogDataReuse::doWriteEvent( ULogEvent *event,
 							log_file& log,
 							bool is_global_event,
 							bool is_header_event,
@@ -1236,12 +1216,13 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 			set_user_priv();
 		}
 	}
+	bool was_locked = lock->isLocked();
 
 		// We're seeing sporadic test suite failures where a daemon
 		// takes more than 10 seconds to write to the user log.
 		// This will help narrow down where the delay is coming from.
 	time_t before = time(NULL);
-	lock->obtain (WRITE_LOCK);
+	if (!was_locked) {lock->obtain(WRITE_LOCK);}
 	time_t after = time(NULL);
 	if ( (after - before) > 5 ) {
 		dprintf( D_FULLDEBUG,
@@ -1310,7 +1291,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		}
 	}
 	before = time(NULL);
-	lock->release ();
+	if (!was_locked) {lock->release();}
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
 		dprintf( D_FULLDEBUG,
@@ -1321,7 +1302,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 }
 
 bool
-WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
+WriteUserLogDataReuse::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 {
 	ClassAd* eventAd = NULL;
 	bool success = true;
@@ -1377,7 +1358,7 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 }
 
 bool
-WriteUserLog::doWriteGlobalEvent( ULogEvent* event, ClassAd *ad) 
+WriteUserLogDataReuse::doWriteGlobalEvent( ULogEvent* event, ClassAd *ad) 
 {
 	log_file log;
 	return doWriteEvent(event, log, true, false, m_global_format_opts, ad);
@@ -1385,7 +1366,7 @@ WriteUserLog::doWriteGlobalEvent( ULogEvent* event, ClassAd *ad)
 
 // Return false on error, true on goodness
 bool
-WriteUserLog::writeEvent ( ULogEvent *event,
+WriteUserLogDataReuse::writeEvent ( ULogEvent *event,
 						   ClassAd *param_jobad,
 						   bool *written )
 {
@@ -1495,7 +1476,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 }
 
 void
-WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogEvent *event, ClassAd *param_jobad, bool is_global_event, int format_opts)
+WriteUserLogDataReuse::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogEvent *event, ClassAd *param_jobad, bool is_global_event, int format_opts)
 {
 	ExprTree *tree;
 	classad::Value result;
@@ -1560,7 +1541,7 @@ WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogE
 }
 
 bool
-WriteUserLog::writeEventNoFsync (ULogEvent *event, ClassAd *jobad,
+WriteUserLogDataReuse::writeEventNoFsync (ULogEvent *event, ClassAd *jobad,
 								 bool *written )
 {
 	bool saved_fsync_setting = getEnableFsync();
@@ -1572,7 +1553,7 @@ WriteUserLog::writeEventNoFsync (ULogEvent *event, ClassAd *jobad,
 
 // Generate the uniq global ID "base"
 const char *
-WriteUserLog::GetGlobalIdBase( void )
+WriteUserLogDataReuse::GetGlobalIdBase( void )
 {
 	if ( m_global_id_base ) {
 		return m_global_id_base;
@@ -1590,7 +1571,7 @@ WriteUserLog::GetGlobalIdBase( void )
 
 // Generates a uniq global file ID
 void
-WriteUserLog::GenerateGlobalId( MyString &id )
+WriteUserLogDataReuse::GenerateGlobalId( MyString &id )
 {
 	struct timeval now;
 	condor_gettimestamp( now );
@@ -1619,11 +1600,31 @@ WriteUserLog::GenerateGlobalId( MyString &id )
 */
 
 void
-WriteUserLog::setEnableFsync(bool enabled) {
+WriteUserLogDataReuse::setEnableFsync(bool enabled) {
 	m_enable_fsync = enabled;
 }
 
 bool
-WriteUserLog::getEnableFsync() const {
+WriteUserLogDataReuse::getEnableFsync() {
 	return m_enable_fsync;
+}
+
+FileLockBase *
+WriteUserLogDataReuse::getLock(CondorError &err) {
+	if (logs.empty()) {
+		err.pushf("WriteUserLog", 1, "User log has no configured logfiles.\n");
+		return nullptr;
+	}
+		// This interface returns a single file lock; for now, as we return a single lock, we
+		// touch nothing.
+	if (logs.size() != 1) {
+		err.pushf("WriteUserLog", 1, "User log has multiple configured logfiles; cannot lock.\n");
+		return nullptr;
+	}
+	for (auto log : logs) {
+		if (log->lock) {
+			return log->lock;
+		}
+	}
+	return nullptr;
 }
