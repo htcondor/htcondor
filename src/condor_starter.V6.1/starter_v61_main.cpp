@@ -154,6 +154,10 @@ printClassAd( void )
 		std::string dockerVersion;
 		if( DockerProc::Version( dockerVersion ) ) {
 			printf( "%s = \"%s\"\n", ATTR_DOCKER_VERSION, dockerVersion.c_str() );
+			if (dockerVersion.find("20.10.4,") != std::string::npos) {
+				dprintf(D_ALWAYS, "Docker Version 20.10.4 detected.  This version cannot work with HTCondor.  Please upgrade docker to get Docker universe support\n");
+				printf( "%s = False\n", ATTR_HAS_DOCKER );
+			}
 		}
 	}
 
