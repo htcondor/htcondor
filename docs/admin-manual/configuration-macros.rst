@@ -7509,6 +7509,16 @@ These macros affect the *condor_gridmanager*.
 
           GRIDMANAGER_SELECTION_EXPR = GridResource
 
+:macro-def:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR`
+    A boolean value that defaults to ``False``. When ``True``, the
+    evaluated value of ``GRIDMANAGER_SELECTION_EXPR`` (if set) is
+    appended to the value of ``GRIDMANAGER_LOG`` for each
+    *condor_gridmanager* instance.
+    The value is sanitized to remove characters that have special
+    meaning to the shell.
+    This allows each *condor_gridmanager* instance that runs concurrently
+    to write to a separate daemon log.
+
 :macro-def:`GRIDMANAGER_CONTACT_SCHEDD_DELAY`
     The minimum number of seconds between connections to the
     *condor_schedd*. The default is 5 seconds.

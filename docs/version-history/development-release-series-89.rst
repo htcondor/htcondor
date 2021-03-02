@@ -60,6 +60,10 @@ Release Notes:
   new installations.
   :jira:`263`
 
+- On Windows, the *condor_master* now prefers TCP over UDP when forwarding
+  ``condor_reconfig`` and ``condor_off`` commands to other daemons.
+  :jira:`273`
+
 New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than
@@ -158,6 +162,24 @@ New Features:
   includes extra information about the daemon's X.509 certificate if
   SSL or GSI authentication was used.
   :jira:`43`
+
+- Added configuration parameter ``GRIDMANAGER_LOG_APPEND_SELECTION_EXPR``,
+  which allows each *condor_gridmanager* process to write to a separate
+  daemon log file.
+  When this paramaeter is set to ``True``, the evaluated value of
+  ``GRIDMANAGER_SELECTION_EXPR`` (if set) will be appended to the
+  filename specified by ``GRIDMANAGER_LOG``.
+  :jira:`102`
+
+- Added command-line argument ``-jsonl`` to *condor_history*.
+  This will print the output in JSON Lines format (one ClassAd per line
+  in JSON format).
+  :jira:`35`
+
+- Running ``condor_ping`` with no arguments now defaults to doing a ping
+  against the *condor_schedd* at authorization level `WRITE`.
+  :ticket:`7892`
+  :jira:`246`
 
 Bugs Fixed:
 
