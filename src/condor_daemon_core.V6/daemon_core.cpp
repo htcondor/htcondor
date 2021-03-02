@@ -3140,7 +3140,7 @@ DaemonCore::reconfig(void) {
 		m_ccb_listeners->RegisterWithCCBServer(blocking);
 
 		// Drop a pool password if not already there; needed for PASSWORD and IDTOKENS security.
-		Condor_Auth_Passwd::create_pool_password_if_needed();
+		Condor_Auth_Passwd::create_pool_signing_key_if_needed();
 
 	}
 

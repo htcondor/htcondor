@@ -36,6 +36,19 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 	}
 }
 
+// writes a binary file with the pool password scramble 
+// returns true(success) or false(failure)
+//
+int write_binary_password_file(const char* path, const char* password, size_t password_len)
+{
+	char *scrambled_password = (char*)malloc(password_len);
+	memset(scrambled_password, 0, password_len);
+	simple_scramble(scrambled_password, password, (int)password_len);
+	int rc = write_secure_file(path, scrambled_password, password_len, true);
+	free(scrambled_password);
+	return rc;
+}
+
 // writes a pool password file using the given password
 // returns true(success) or false(failure)
 //
@@ -45,13 +58,9 @@ int write_password_file(const char* path, const char* password)
 	// is because the passwords in the future may be read as binary data
 	// and the NULL would matter.  8.4.X is cool with no trailing NULL.
 	size_t password_len = strlen(password);
-	char *scrambled_password = (char*)malloc(password_len);
-	memset(scrambled_password, 0, password_len);
-	simple_scramble(scrambled_password, password, (int)password_len);
-	int rc = write_secure_file(path, scrambled_password, password_len, true);
-	free(scrambled_password);
-	return rc;
+	return write_binary_password_file(path, password, password_len);
 }
+
 
 #if 0
 FILE* open_secure_file_for_write(const char* path, bool as_root, bool group_readable /*= false*/)
