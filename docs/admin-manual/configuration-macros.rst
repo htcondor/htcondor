@@ -9775,11 +9775,11 @@ These macros affect the high availability operation of HTCondor.
 :macro-def:`HAD_FIPS_MODE`
     Controls what type of checksum will be sent along with files that are replicated.
     Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums. Default value is 0.
-    Prior to verions 8.8.14 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
+    Prior to verions 8.8.13 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
     later release of HTCondor, MD5 support will be removed and only SHA-2 will be
     supported.  This configuration variable is intended to provide a transition
     between the 8.8 and 9.0 releases.  As soon as all of machines involved in replication
-    are running HTCondor 8.8.14 or 8.9.12 or later you should set this configuration variable
+    are running HTCondor 8.8.13 or 8.9.12 or later you should set this configuration variable
     to 1 to prepare for the transiation to 9.0
 
 :macro-def:`REPLICATION_LIST`
