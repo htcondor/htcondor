@@ -1951,9 +1951,38 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 
 	dprintf(D_FULLDEBUG, "ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 
-	if( saw_pid1 && saw_ppid && saw_pid ) {
+	//
+	// Cross-check the results of readdir() with the number of hardlinks
+	// to proc.  Each PID in /proc is a directory, which increases its
+	// hardlink count.  However, not all directories in /proc are PIDs,
+	// and the number of non-PID directories varies somewhat from system
+	// to system.
+	//
+
+	unsigned long margin = 24;
+	char * margin_str = getenv( "_CONDOR_PROCAPI_RETRY_MARGIN" );
+	if( margin_str ) {
+		char * endptr = NULL;
+		unsigned long m = strtol( margin_str, & endptr, 10 );
+		if( endptr != NULL && *endptr == '\0' ) {
+			margin = m;
+		}
+	}
+	dprintf( D_ALWAYS, "PROCAPI_RETRY_MARGIN = %lu\n", margin );
+
+	struct stat st;
+	if( stat( "/proc", & st ) != 0 ) {
+		dprintf( D_ALWAYS, "stat( /proc ) failed, declaring invalid read.\n" );
+		return -3;
+	}
+
+	bool saw_all_pids = (st.st_nlink - margin) <= (unsigned long)pid_entries;
+	dprintf( D_FULLDEBUG, "readdir() found %d PID entries, stat() found %lu hardlinks.\n", pid_entries, st.st_nlink );
+
+	if( saw_pid1 && saw_ppid && saw_pid && saw_all_pids ) {
 		return pid_entries;
 	} else {
+		dprintf( D_FULLDEBUG, "saw_pid1: %u, saw_ppid: %u, saw_pid: %u, saw_all_pids: %u\n", saw_pid1, saw_ppid, saw_pid, saw_all_pids );
 		return -3;
 	}
 }
