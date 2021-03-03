@@ -1280,6 +1280,11 @@ default=false
 type=bool
 tags=daemon_core
 
+[SEC_C_GAHP_WORKER_THREAD_DEFAULT_SESSION_DURATION]
+default=1800
+range=0,
+type=int
+
 [SEC_SESSION_DURATION_SLOP]
 default=20
 range=0,
