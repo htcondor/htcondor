@@ -343,6 +343,7 @@ int main( int argc, char *argv[] )
 		tcgetattr(0, &tio);
 		pty_is_raw = true;
 		old_tio = tio;
+		tio.c_iflag &= ~(ICRNL);
 		tio.c_oflag &= ~(OPOST);
 		tio.c_cflag |= (CS8);
 		tio.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
@@ -370,10 +371,10 @@ int main( int argc, char *argv[] )
 			select(masterPty + 1, &readfds, &writefds, &exceptfds, nullptr);
 
 			if (FD_ISSET(masterPty, &readfds)) {
-				char buf;
-				int r = read(masterPty, &buf, 1);
+				char buf[4096];
+				int r = read(masterPty, buf, 4096);
 				if (r > 0) {	
-					int ret = write(1, &buf, 1);
+					int ret = write(1, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
 					}
@@ -383,10 +384,10 @@ int main( int argc, char *argv[] )
 			}
 
 			if (FD_ISSET(0, &readfds)) {
-				char buf;
-				int r = read(0, &buf, 1);
+				char buf[4096];
+				int r = read(0, buf, 4096);
 				if (r > 0) {	
-					int ret = write(masterPty, &buf, 1);
+					int ret = write(masterPty, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
 					}
