@@ -9177,8 +9177,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     pool password for password authentication.
 
 :macro-def:`SEC_PASSWORD_DIRECTORY`
-    For Unix machines, the path to the directory containing password files
-    for token authentication.  Defaults to ``/etc/condor/passwords.d``.
+    The path to the directory containing signing key files
+    for token authentication.  Defaults to ``/etc/condor/passwords.d`` on
+    Unix and to ``$(RELEASE_DIR)\tokens.sk`` on Windows.
+
+:macro-def:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
+    The path and filename for the file containing the default signing key
+    for token authentication.  Defaults to ``/etc/condor/passwords.d/POOL`` on Unix
+    and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY`
     For Unix machines, the path to the directory containing tokens for

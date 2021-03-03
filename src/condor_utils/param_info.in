@@ -2487,12 +2487,13 @@ tags=misc_utils
 
 [SEC_PASSWORD_FILE]
 default=$(SEC_PASSWORD_DIRECTORY)/POOL
-type=string
+win32_default=
+type=path
 tags=store_cred
 
 [SEC_PASSWORD_DIRECTORY]
 default=/etc/condor/passwords.d
-win32_default=
+win32_default=$(RELEASE_DIR)\tokens.sk
 type=path
 tags=store_cred
 
@@ -2505,13 +2506,20 @@ tags=condor_auth_passwd
 [SEC_TOKEN_DIRECTORY]
 default=
 description=Directory containing the tokens for token auth.
-type=string
+type=path
 tags=condor_auth_passwd
 
 [SEC_TOKEN_ISSUER_KEY]
 default=POOL
 description=Name of the key used to issue session tokens
 type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_POOL_SIGNING_KEY_FILE]
+default=$(SEC_PASSWORD_DIRECTORY)/POOL
+win32_default=$(RELEASE_DIR)\tokens.sk\POOL
+type=path
+description=Path to the POOL token signing key
 tags=condor_auth_passwd
 
 [SEC_TOKEN_MAX_AGE]

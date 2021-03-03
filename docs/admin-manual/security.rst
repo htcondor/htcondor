@@ -83,8 +83,8 @@ are no unprivileged users logged in to the submit hosts:
 
 1. Start HTCondor on your central manager host (containing the *condor_collector* daemon) first.
    For a fresh install, this will automatically generate a random key in
-   the file specified by ``SEC_PASSWORD_FILE`` (defaulting to ``/etc/condor/passwords.d/POOL``
-   on Linux).
+   the file specified by ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``
+   (defaulting to ``/etc/condor/passwords.d/POOL`` on Linux and ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows).
 2. Install an auto-approval rule on the central manager using ``condor_token_request_auto_approve``.
    This automatically approves any daemons starting on a specified network for
    a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.168.0.0/24``
@@ -1249,18 +1249,24 @@ authentication to flock to a remote pool.
 
 Token-based authentication is a newer extension to ``PASSWORD`` authentication
 that allows the pool administrator to generate new, low-privilege tokens
-from a pool password.  It also allows the administrator to install multiple
-passwords.  As tokens are derived from a specific password, if an administrator
-removes the password from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
+from a pool signing key.  It also allows the administrator to install what are
+effectively multiple passwords. As tokens are derived from a specific signing key,
+if an administrator removes the signing key from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
 then all derived tokens are immediately invalid.  Most simple installs will
-utilize a single password, kept in ``SEC_PASSWORD_FILE`` (identical to ``PASSWORD``
-authentication).
+utilize a single signing key, kept in ``SEC_TOKEN_POOL_SIGNING_KEY``.  On Linux the same file
+can be both the pool signing key and the pool password if ``SEC_PASSWORD_FILE``
+and ``SEC_TOKEN_POOL_SIGNING_KEY`` to refer to the same file.  However this is not preferred
+because in order to properly interoperate with older versions of HTCondor the pool password will
+be read as a text file and truncated at the first NULL character.  This differs from
+the pool signing key which is read as binary in HTCondor 9.0.  Some releases in the 8.9 developer
+series used the pool password as the pool signing key for tokens, those versions will not
+interoperate with 9.0 if the pool signing key file contains NULL characters.
 
-The passwords in the ``SEC_PASSWORD_DIRECTORY`` or ``SEC_PASSWORD_FILE`` can still
-be created utilizing ``condor_store_cred`` (as specified in
+The pool password in the ``SEC_PASSWORD_FILE`` can be created utilizing ``condor_store_cred``
+(as specified in
 :ref:`admin-manual/security:password authentication`).  Alternately, the *condor_collector*
-process will automatically generate a password in ``SEC_PASSWORD_FILE`` on startup
-if that file is empty.
+process will automatically generate a pool signing key in ``SEC_TOKEN_POOL_SIGNING_KEY`` on startup
+if that file does not exist
 
 To generate a token, the administrator may utilize the ``condor_token_create``
 command-line utility:
@@ -1276,12 +1282,12 @@ as the identity ``frida@pool.example.com``.  For daemons, tokens are stored in
 ``SEC_TOKEN_SYSTEM_DIRECTORY``; on Unix platforms, this defaults to
 ``/etc/condor/tokens.d``.
 
-*Note* that each password is named (the pool password defaults to the special name
+*Note* that each pool signing key is named (the pool signing key defaults to the special name
 ``POOL``) by its corresponding filename in ``SEC_PASSWORD_DIRECTORY``; HTCondor
 will assume that, for all daemons in the same *trust domain* (defaulting to the
-HTCondor pool) will have the same passwords for the same name.  That is, the
-password contained in ``key1`` in host ``pool.example.com`` is identical to the
-password contained in ``key1`` in host ``submit.example.com``.
+HTCondor pool) will have the same signing key for the same name.  That is, the
+signing key contained in ``key1`` in host ``pool.example.com`` is identical to the
+signing key contained in ``key1`` in host ``submit.example.com``.
 
 Unlike pool passwords, tokens can have a limited lifetime and can limit the
 authorizations allowed to the client.  For example,
@@ -1407,7 +1413,7 @@ set; to blacklist a token across the entire pool, set
 ``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
 
 In order to invalidate all tokens issued by a given master password in
-``SEC_PASSWORD_DIRECTORY``, simply remove the password file from the directory.
+``SEC_PASSWORD_DIRECTORY``, simply remove the file from the directory.
 
 File System Authentication
 ''''''''''''''''''''''''''
