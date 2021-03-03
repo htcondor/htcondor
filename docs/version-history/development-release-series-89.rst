@@ -181,6 +181,12 @@ New Features:
   :ticket:`7892`
   :jira:`246`
 
+- Adjusted configuration defaults for *condor_c-gahp* so that a restart
+  of the remote *condor_collector* or *condor_schedd*  doesn't result in
+  a prolonged interruption of communication.
+  Previously, communication could be interrupted for up to a day.
+  :jira:`313`
+
 Bugs Fixed:
 
 - Fixed a bug where jobs that asked for `transfer_output_files = .` would
