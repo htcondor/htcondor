@@ -384,6 +384,24 @@ The Layperson's Description of the Pie Spin and Pie Slice
 :index:`pie slice<single: pie slice; scheduling>`
 :index:`pie spin<single: pie spin; scheduling>`
 
+The "pie spin" and "pie slice" are a metaphorical means to explain how
+HTCondor allocates resources.  In this metaphor, the pool's resources
+are a pie, and each submitter should get a slice of the pie proportional
+to their priority.  "Spinning the pie" means giving each submitter, in
+priority order, a chance to enlarge their the slice of the pie (up to
+its proper size).  A submitter acquires more pie when the negotiator matches
+one of their jobs to a machine; a submitter's jobs are sorted in job
+priority order, but all of a submitter's jobs from one schedd are considered
+before any of the submitter's jobs from another schedd.  Because not all jobs
+match all resources, there may still be resources left after spinning the pie,
+so the negotiator keeps spinning the pie until it runs out of jobs, or until
+no matches are assigned during a spin (meaning it ran out of resources).  In
+the first pie-spin, each job is matched against each machine in the pool, in
+case that machine prefers the job to the job it's currently running (if any);
+this step is skipped later pie-spins or if ``NEGOTIATOR_CONSIDER_PREEMPTION``
+if ``FALSE``; the latter can considerably speed up the negotiator if
+preemption is disabled on your pool.
+
 HTCondor schedules in a variety of ways. First, it takes all users who
 have submitted jobs and calculates their priority. Then, it totals the
 number of resources available at the moment, and using the ratios of the
