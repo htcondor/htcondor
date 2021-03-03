@@ -6,8 +6,8 @@ Features and Special Circumstances
     :glob:
 
     networking
-    high-availability
     setting-up-vm-docker-universes
     singularity-support
     power-management
+    high-availability
     java-support-installation
