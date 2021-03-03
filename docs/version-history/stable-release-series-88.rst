@@ -19,6 +19,12 @@ Release Notes:
 
 New Features:
 
+- Docker version 20.10.4 has a serious bug that prevents Docker Universe from 
+  working.  HTCondor now detects this version of Docker, and sets 
+  HasDocker = false in the slot ad, so Docker Universe jobs will not match on
+  such machines.
+  :jira:`310`
+
 - The HA replication mechanism can now accept either SHA-2 or MD5 checksums.
   This is because support for MD5 checksums must be removed in the 9.0 release of HTCondor.
   The checksum that replication will send is controlled by a new configuration variable
@@ -27,6 +33,11 @@ New Features:
   set ``HAD_FIPS_MODE`` to 1. Setting it to 1 will break compatibility with versions
   of HTCondor before this release.
   :jira:`130`
+
+- Submission to NorduGrid ARC CE (grid universe type **nordugrid**) now works
+  with newer ARC CE versions where the X.509 Distinguished Names (DNs) of
+  job submitters are obscured in the LDAP information service.
+  :jira:`281`
 
 Bugs Fixed:
 
@@ -41,6 +52,14 @@ Bugs Fixed:
 
 - Fixed a bug with pslot preemption and disks with more than 4 TB of space.
   :jira:`194`
+
+- Fixed a bug where the counts of job reconnections can be off in the
+  Schedd Restart Report.
+  :jira:`190`
+
+- Fixed a bug that in rare cases can crash the *condor_schedd* if a DAG
+  is quickly released and then removed.
+  :jira:`309`
 
 Version 8.8.12
 --------------

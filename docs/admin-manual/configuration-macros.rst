@@ -7509,6 +7509,16 @@ These macros affect the *condor_gridmanager*.
 
           GRIDMANAGER_SELECTION_EXPR = GridResource
 
+:macro-def:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR`
+    A boolean value that defaults to ``False``. When ``True``, the
+    evaluated value of ``GRIDMANAGER_SELECTION_EXPR`` (if set) is
+    appended to the value of ``GRIDMANAGER_LOG`` for each
+    *condor_gridmanager* instance.
+    The value is sanitized to remove characters that have special
+    meaning to the shell.
+    This allows each *condor_gridmanager* instance that runs concurrently
+    to write to a separate daemon log.
+
 :macro-def:`GRIDMANAGER_CONTACT_SCHEDD_DELAY`
     The minimum number of seconds between connections to the
     *condor_schedd*. The default is 5 seconds.
@@ -7572,10 +7582,10 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
+          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_PBS = 300
 
 
-    In this example, the job limit for all CREAM resources is 300.
+    In this example, the job limit for all PBS resources is 300.
     Defaults to 1000.
 
 :macro-def:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE`
@@ -7729,19 +7739,10 @@ These macros affect the *condor_gridmanager*.
     specified by ``BATCH_GAHP`` is the default if this variable is not
     defined.
 
-:macro-def:`UNICORE_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the Unicore GAHP executable. The default value is
-    ``$(SBIN)``/unicore_gahp.
-
 :macro-def:`NORDUGRID_GAHP`
     The complete path and file name of the wrapper script that invokes
     the NorduGrid GAHP executable. The default value is
     ``$(SBIN)``/nordugrid_gahp.
-
-:macro-def:`CREAM_GAHP`
-    The complete path and file name of the CREAM GAHP executable. The
-    default value is ``$(SBIN)``/cream_gahp.
 
 :macro-def:`SGE_GAHP`
     The complete path and file name of the SGE GAHP executable. The use
@@ -8150,43 +8151,6 @@ These macros affect the Grid Monitor.
     controls how long the *condor_gridmanager* will wait before
     attempting to start a new Grid Monitor job. The value is in seconds
     and the default is 3600 (1 hour).
-
-Configuration File Entries Relating to Grid Usage
--------------------------------------------------
-
-:index:`grid configuration variables<single: grid configuration variables; configuration>`
-
-These macros affect the HTCondor's usage of grid resources.
-
-:macro-def:`GLEXEC_JOB`
-    A boolean value that defaults to ``False``. When ``True``, it
-    enables the use of *glexec* on the machine.
-
-:macro-def:`GLEXEC`
-    The full path and file name of the *glexec* executable.
-
-:macro-def:`GLEXEC_RETRIES`
-    An integer value that specifies the maximum number of times to retry
-    a call to *glexec* when *glexec* exits with status 202 or 203, error
-    codes that indicate a possible transient error condition. The
-    default number of retries is 3.
-
-:macro-def:`GLEXEC_RETRY_DELAY`
-    An integer value that specifies the minimum number of seconds to
-    wait between retries of a failed call to *glexec*. The default is 5
-    seconds. The actual delay to be used is determined by a random
-    exponential backoff algorithm that chooses a delay with a minimum of
-    the value of ``GLEXEC_RETRY_DELAY`` and a maximum of 100 times that
-    value.
-
-:macro-def:`GLEXEC_HOLD_ON_INITIAL_FAILURE`
-    A boolean value that when ``False`` prevents a job from being put on
-    hold when a failure is encountered during the glexec setup phase of
-    managing a job. The default is ``True``. *glexec* is invoked
-    multiple times during each attempt to run a job. This configuration
-    setting only disables putting the job on hold for the initial
-    invocation. Subsequent failures during that run attempt always put
-    the job on hold.
 
 Configuration File Entries for DAGMan
 -------------------------------------
@@ -9213,8 +9177,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     pool password for password authentication.
 
 :macro-def:`SEC_PASSWORD_DIRECTORY`
-    For Unix machines, the path to the directory containing password files
-    for token authentication.  Defaults to ``/etc/condor/passwords.d``.
+    The path to the directory containing signing key files
+    for token authentication.  Defaults to ``/etc/condor/passwords.d`` on
+    Unix and to ``$(RELEASE_DIR)\tokens.sk`` on Windows.
+
+:macro-def:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
+    The path and filename for the file containing the default signing key
+    for token authentication.  Defaults to ``/etc/condor/passwords.d/POOL`` on Unix
+    and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY`
     For Unix machines, the path to the directory containing tokens for
@@ -9399,18 +9369,29 @@ macros are described in the :doc:`/admin-manual/security` section.
     and credentials most be sent to stdout.
 
 .. only:: Vault
+
     :macro-def:`SEC_CREDENTIAL_STORER`
-	A script for *condor_submit* to execute to produce credentials while
-	using the OAuth2 type of credentials.  The oauth services specified
-	in the ``use_auth_services`` line in the submit file are passed as
-	parameters to the script, and the script should use
-	``condor_store_cred`` to store credentials for each service.
-	Additional modifiers to each service may be passed: &handle=,
-	&scopes=, or &audience=.  The handle should be appended after
-	an underscore to the service name used with ``condor_store_cred``,
-	the comma-separated list of scopes should be passed to the command
-	with the -S option, and the audience should be passed to it with the
-	-A option.
+        A script for *condor_submit* to execute to produce credentials while
+        using the OAuth2 type of credentials.  The oauth services specified
+        in the ``use_auth_services`` line in the submit file are passed as
+        parameters to the script, and the script should use
+        ``condor_store_cred`` to store credentials for each service.
+        Additional modifiers to each service may be passed: &handle=,
+        &scopes=, or &audience=.  The handle should be appended after
+        an underscore to the service name used with ``condor_store_cred``,
+        the comma-separated list of scopes should be passed to the command
+        with the -S option, and the audience should be passed to it with the
+        -A option.
+
+:macro-def:`LEGACY_ALLOW_SEMANTICS`
+    A boolean parameter that defaults to ``False``.
+    In HTCondor 8.8 and prior, if `ALLOW_DAEMON` or `DENY_DAEMON` wasn't
+    set in the configuration files, then the value of `ALLOW_WRITE` or
+    `DENY_DAEMON` (respectively) was used for these parameters.
+    Setting `LEGACY_ALLOW_SEMANTICS` to ``True`` enables this old behavior.
+    This is a potential security concern, so this setting should only be
+    used to ease the upgrade of an existing pool from 8.8 or prior to
+    9.0 or later.
 
 
 Configuration File Entries Relating to Virtual Machines

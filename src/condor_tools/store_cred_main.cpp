@@ -56,6 +56,7 @@ struct StoreCredOptions {
 	char *daemonname;
 	const char *pw; // password if supplied on the command line
 	const char *service; // service name from the -s argument
+	const char *handle; // handle name from the -H argument
 	const char *scopes;  // scopes from the -S argument
 	const char *audience; // audience from the -A argument
 	const char *credential_file;
@@ -183,6 +184,9 @@ int main(int argc, const char *argv[]) {
 	// setup cred_info classad
 	if (options.service) {
 		cred_info.Assign("service", options.service);
+	}
+	if (options.handle) {
+		cred_info.Assign("handle", options.handle);
 	}
 	if (options.scopes) {
 		cred_info.Assign("scopes", options.scopes);
@@ -417,6 +421,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 	opts->pool_password_file = NULL;;
 	opts->pw = NULL;
 	opts->service = NULL;
+	opts->handle = NULL;
 	opts->scopes = NULL;
 	opts->audience = NULL;
 	opts->help = false;
@@ -635,6 +640,23 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 					}
 					break;
 
+				case 'H':
+					if (ix+1 < argc) {
+						if (opts->handle) {
+							fprintf(stderr, "ERROR: OAuth handle already specified\n");
+							usage();
+							err = true;
+						}
+						else {
+							opts->handle = argv[ix + 1];
+							++ix;
+			}
+					} else {
+						err = true;
+						optionNeedsArg(arg, "handle");
+					}
+					break;
+
 				case 'S':
 					if (ix+1 < argc) {
 						if (opts->scopes) {
@@ -765,6 +787,7 @@ usage()
 	                 "                         If <filename> is -, read from stdin\n"
 	);
 	fprintf( stderr, "    -s <service>      Add/Remove/Query for the given OAuth2 service\n" );
+	fprintf( stderr, "    -H <handle>       Specify a handle for the given OAuth2 service\n" );
 	fprintf( stderr, "    -S <scopes>       Add the given OAuth2 comma-separated scopes, or make sure\n" );
 	fprintf( stderr, "                         a Query matches\n" );
 	fprintf( stderr, "    -A <audience>     Add the given OAuth2 audience, or make sure a Query matches\n" );

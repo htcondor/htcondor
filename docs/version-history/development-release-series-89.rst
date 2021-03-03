@@ -4,7 +4,7 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 8.9.11
+Version 8.9.12
 --------------
 
 Release Notes:
@@ -13,11 +13,19 @@ Release Notes:
 
 - HTCondor version 8.9.12 not yet released.
 
+- We have changed the default configuration file.  It no longer sets
+  ``use security : host_based``.  This may cause your existing, insecure
+  security configuration to stop working.  Consider updating your
+  configuration.  See the comment in the new version of
+  ``/etc/condor/condor_config`` for details on the insecure work-around.
+  :jira:`301`
+
 - As an improved security measure, HTCondor will now prohibit Linux jobs
   from running setuid executables by default.  We believe the only common setuid
   program this impacts is ``ping``.  To allow jobs to run setuid binaries,
   set ``DISABLE_SETUID`` to ``false`` in the configuration of the worker
   node.
+  :jira:`256`
 
 - The ``condor_procd`` now attempts to detect invalidly short reads of
   the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
@@ -41,11 +49,22 @@ Release Notes:
   ``condor_procd`` on start-up.
   :jira:`33`
 
-New Features:
+- SCITOKENS is now in the default list of authentication methods.
+  :jira:`47`
 
-- HTCondor now prohibits jobs from running setuid executables on Linux. The
-  knob ``DISABLE_SETUID`` can be set to false to disable this.
-  :jira:`256`
+- Added configuration parameter `LEGACY_ALLOW_SEMANTICS`, which re-enables
+  the behavior of HTCondor 8.8 and prior when `ALLOW_DAEMON` or
+  `DENY_DAEMON` is not defined.
+  This parameter is intended to ease the transition of existing HTCondor
+  configurations from 8.8 to 9.0, and should not be used long-term or in
+  new installations.
+  :jira:`263`
+
+- On Windows, the *condor_master* now prefers TCP over UDP when forwarding
+  ``condor_reconfig`` and ``condor_off`` commands to other daemons.
+  :jira:`273`
+
+New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
@@ -139,6 +158,28 @@ New Features:
   or all of the files in a directory.
   :jira:`46`
 
+- The ClassAd returned by Python binding ``htcondor.SecMan.ping()`` now
+  includes extra information about the daemon's X.509 certificate if
+  SSL or GSI authentication was used.
+  :jira:`43`
+
+- Added configuration parameter ``GRIDMANAGER_LOG_APPEND_SELECTION_EXPR``,
+  which allows each *condor_gridmanager* process to write to a separate
+  daemon log file.
+  When this paramaeter is set to ``True``, the evaluated value of
+  ``GRIDMANAGER_SELECTION_EXPR`` (if set) will be appended to the
+  filename specified by ``GRIDMANAGER_LOG``.
+  :jira:`102`
+
+- Added command-line argument ``-jsonl`` to *condor_history*.
+  This will print the output in JSON Lines format (one ClassAd per line
+  in JSON format).
+  :jira:`35`
+
+- Running ``condor_ping`` with no arguments now defaults to doing a ping
+  against the *condor_schedd* at authorization level `WRITE`.
+  :ticket:`7892`
+  :jira:`246`
 
 Bugs Fixed:
 
@@ -161,6 +202,14 @@ Bugs Fixed:
 
 - Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
   :jira:`201`
+
+- The tool ``condor_store_cred`` will now accept and use a handle for an OAuth
+  cred, and the *condor_credd* will now honor the handle in the stored filename.
+  :jira:`291`
+
+- Condor-C (grid universe type **condor**) now works correctly when jobs
+  use different SciTokens.
+  :jira:`99`
 
 Version 8.9.11
 --------------

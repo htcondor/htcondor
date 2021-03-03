@@ -24,11 +24,13 @@ usage() {
 
 	Installation options:
 	--channel NAME	: Specify version channel to install; NAME can be
-	     current: Most recent release with new features [default]
-	     stable : Most recent release with only bug-fixes
+	    current: Most recent release with new features [default]
+	    stable : Most recent release with only bug-fixes
 	--password	: Set the password used to secure the pool.  Use only if
 	          	  nobody else can log into the machine.  Otherwise specify
 	          	  in the environment (GET_HTCONDOR_PASSWORD) or interactively.
+	--shared-filesystem-domain NAME : Specifies that machines installed with
+	    the same NAME share a filesystem.
 
 	Installation options, specify only one:
 	--minicondor            : Install a complete stand-alone HTCondor.  [default]
@@ -253,8 +255,15 @@ do_start_service() {
 do_token_security() {
 	# This won't work in a pipeline (as we recommend using this script).
 	if [ -z "${PASSWORD}" ]; then
-		echo -n "Enter a pool password: "
-		read PASSWORD
+		if ! is_dry_run; then
+			echo -n "Enter a pool password: "
+			read PASSWORD
+		else
+			PASSWORD="NONE"
+			echo
+			echo "SKIPPING PASSWORD PROMPT DURING DRY RUN"
+			echo
+		fi
 	fi
 
 	if [ -z "${PASSWORD}" ]; then
@@ -454,6 +463,60 @@ do_install() {
 			;;
 	esac
 
+	if [ -n "${SHARED_FS_DOMAIN}" ]; then
+		DOMAIN_CONFIG=$(cat <<-EOF
+
+			# HTCondor assumes that any two machines with the same value
+			# for this variable have the same shared filesystems.  Shared
+			# filesystems tend not to scale as well as you would like, but
+			# they do make it simpler to explain how a job accesses its file.
+			FILESYSTEM_DOMAIN = ${SHARED_FS_DOMAIN}
+
+			# If your jobs are accessing a shared filesystem, they probably
+			# need to be run as the user who submitted them (as opposed to
+			# user nobody or a local user which only runs batch jobs).  This
+			# variable must be set to the same thing on the submit machine
+			# and on the execute machine to do this.
+			UID_DOMAIN = ${SHARED_FS_DOMAIN}
+
+			# The UID_DOMAIN must normally be a suffix of the fully-qualified
+			# DNS name of the submit machine (as determined by a reverse
+			# lookup of the IP address used to contact the execute machine).
+			# Setting this variable relaxes that requirement, which is safe
+			# to do for this configuration because only submit machines you
+			# trust can contact your execute machines.
+			TRUST_UID_DOMAIN = TRUE
+
+			# Normally, before running a job as a particular user (that is,
+			# not as user nobody), HTCondor checks to make sure that user
+			# is in the password file.  Not all methods for sharing UIDs
+			# across machines store every user in every password file (for
+			# example, LDAP does not).  Setting this this variable relaxes
+			# this requirement.
+			SOFT_UID_DOMAIN = TRUE
+
+			# FIXME: This will be corrected in the next metaknob update,
+			# so remove this entire section when that happens.
+			#
+			# For some reason, FS authenticates as <user>@<UID_DOMAIN>
+			# not <user>@$<HOSTNAME> or user@<FULL_HOSTNAME>.  This
+			# means that users can not submit with the metaknob.
+			#
+			# Instead, make ALLOW_WRITE = * and change the allowed
+			# authentications so that only READ allows ANONYMOUS.  This
+			# change requires adding ANONYMOUS to the CLIENT methods.
+			SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
+			SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+			SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+
+			# This should probably be submit-only, but this is fine for
+			# testing.
+			ALLOW_WRITE = *
+
+		EOF
+		)
+	fi
+
 	# Configure the role, if any.
 	echo -e "\n# Configuring role, if any ..."
 	case "${ROLE}" in
@@ -470,6 +533,10 @@ do_install() {
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
 
+			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
+			fi
+
 			do_token_security
 			;;
 
@@ -477,6 +544,10 @@ do_install() {
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
+
+			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
+			fi
 
 			do_token_security
 			;;
@@ -561,6 +632,14 @@ while [ $# -gt 0 ]; do
 			PASSWORD=$2
 			if [ -z "${PASSWORD}" ]; then
 				echo "--password requires an argument"
+				exit 1
+			fi
+			shift
+			;;
+		--shared-filesystem-domain)
+			SHARED_FS_DOMAIN=$2
+			if [ -z "${SHARED_FS_DOMAIN}" ]; then
+				echo "--shared-filesystem-domain requires an argument"
 				exit 1
 			fi
 			shift

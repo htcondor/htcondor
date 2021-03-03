@@ -1184,12 +1184,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/nqs_resume.sh
 %_libexecdir/condor/glite/bin/nqs_status.sh
 %_libexecdir/condor/glite/bin/nqs_submit.sh
-%_libexecdir/condor/glite/bin/slurm_cancel.sh
-%_libexecdir/condor/glite/bin/slurm_hold.sh
-%_libexecdir/condor/glite/bin/slurm_resume.sh
-%_libexecdir/condor/glite/bin/slurm_status.py
-%_libexecdir/condor/glite/bin/slurm_status.sh
-%_libexecdir/condor/glite/bin/slurm_submit.sh
 %config(noreplace) %{_sysconfdir}/condor/config.d/00-batch_gahp_blahp.config
 %endif
 %if 0%{?osg} || 0%{?hcc}
@@ -1239,7 +1233,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
-%_mandir/man1/condor_cod.1.gz
 %_mandir/man1/condor_config_val.1.gz
 %_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
@@ -1313,7 +1306,6 @@ rm -rf %{buildroot}
 %_bindir/condor_check_userlogs
 %_bindir/condor_q
 %_libexecdir/condor/condor_transferer
-%_bindir/condor_cod
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
 %_bindir/condor_userlog
@@ -1450,6 +1442,7 @@ rm -rf %{buildroot}
 %if %uw_build
 #################
 %files tarball
+%{_bindir}/make-personal-from-tarball
 %{_sbindir}/condor_configure
 %{_sbindir}/condor_install
 %{_mandir}/man1/condor_configure.1.gz
