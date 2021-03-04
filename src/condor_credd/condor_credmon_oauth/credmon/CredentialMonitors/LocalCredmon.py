@@ -39,6 +39,11 @@ class LocalCredmon(OAuthCredmon):
             self._private_key_location = None
         if not self.token_issuer:
             self.token_issuer = 'https://{}'.format(htcondor.param["FULL_HOSTNAME"])
+        # algorithm is hardcoded to ES256, warn if private key does not appear to use EC
+        if (self._private_key_location is not None) and ("BEGIN EC PRIVATE KEY" not in self._private_key.split("\n")[0]):
+            self.log.warning("LOCAL_CREDMON_PRIVATE_KEY must use elipitcal curve cryptograph algorithm")
+            self.log.warning("`scitokens-admin-create-key --pem-private` should be used with `--ec` option")
+            self.log.warning("Errors are likely to occur when attempting to serialize SciTokens")
 
     def refresh_access_token(self, username, token_name):
         """
@@ -52,7 +57,11 @@ class LocalCredmon(OAuthCredmon):
         token.update_claims({'ver': 'scitokens:2.0'})
 
         # Serialize the token and write it to a file
-        serialized_token = token.serialize(issuer=self.token_issuer, lifetime=int(self.token_lifetime))
+        try:
+            serialized_token = token.serialize(issuer=self.token_issuer, lifetime=int(self.token_lifetime))
+        except TypeError:
+            self.log.exception("Failure when attempting to serialize a SciToken, likely due to algorithm mismatch")
+            return False
 
         oauth_response = {"access_token": serialized_token.decode(),
                           "expires_in":   int(self.token_lifetime)}

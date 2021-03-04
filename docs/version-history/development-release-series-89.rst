@@ -181,6 +181,12 @@ New Features:
   :ticket:`7892`
   :jira:`246`
 
+- Adjusted configuration defaults for *condor_c-gahp* so that a restart
+  of the remote *condor_collector* or *condor_schedd*  doesn't result in
+  a prolonged interruption of communication.
+  Previously, communication could be interrupted for up to a day.
+  :jira:`313`
+
 Bugs Fixed:
 
 - Fixed a bug where jobs that asked for `transfer_output_files = .` would
@@ -210,6 +216,11 @@ Bugs Fixed:
 - Condor-C (grid universe type **condor**) now works correctly when jobs
   use different SciTokens.
   :jira:`99`
+
+- The local issuer in the ``condor_credmon_oauth`` gives more useful
+  log output if it detects that the private key was generated with
+  something other than the expected EC algorithm.
+  :jira:`305`
 
 Version 8.9.11
 --------------
