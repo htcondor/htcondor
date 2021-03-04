@@ -3111,13 +3111,13 @@ dc_reconfig()
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
 
-		/* purify flags this as a stack bounds array read violation when 
-			we're expecting to use the default argument. However, due to
-			_craziness_ in the header file that declares this function
-			as an extern "C" linkage with a default argument(WTF!?) while
-			being called in a C++ context, something goes wrong. So, we'll
-			just supply the errant argument. */
-	config();
+		// We always want to be root when we read config as a daemon
+		// we do this because reading config can run scripts and even create files
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		int want_meta = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
+		config_ex(CONFIG_OPT_WANT_QUIET | want_meta);
+	}
 
 		// See if we're supposed to be allowing core files or not
 	if ( doCoreInit ) {
