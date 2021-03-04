@@ -1397,7 +1397,15 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     If **retry_until** is an integer, the job exiting with that exit
     code will cause retries to cease. If **retry_until** is a ClassAd
     expression, the expression evaluating to ``True`` will cause retries
-    to cease. :index:`success_exit_code<single: success_exit_code; submit commands>`
+    to cease.  For example, if you only want to retry exit codes
+    17, 34, and 81:
+
+    .. code-block:: condor-submit
+
+        max_retries = 5
+        retry_until = !member( ExitCode, {17, 34, 81} )
+
+    :index:`success_exit_code<single: success_exit_code; submit commands>`
 
  success_exit_code = <integer>
     The exit code that is considered successful for this job. Defaults
