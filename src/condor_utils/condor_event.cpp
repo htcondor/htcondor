@@ -4849,6 +4849,7 @@ NodeTerminatedEvent::toClassAd(bool event_time_utc)
 		delete myad;
 		return NULL;
 	}
+	free(rs);
 
 	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
 		delete myad;
