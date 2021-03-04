@@ -227,6 +227,9 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		*/
 	static char* fetchPoolSharedKey(int & len);
 	static char* fetchTokenSharedKey(const std::string & token, int & len);
+		/** Lookup the legacy pool password 
+		*/
+	char* fetchPoolPassword(int & len);
 
 		/** Return a malloc-ed string "user@domain" that represents who we
 		 	are.
