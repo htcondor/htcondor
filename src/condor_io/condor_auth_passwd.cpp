@@ -548,10 +548,14 @@ Condor_Auth_Passwd::fetchLogin()
 							err.getFullText().c_str());
 					}
 					else {
-						auto decoded_jwt = jwt::decode(local_token);
-						signature = decoded_jwt.get_signature();
-						token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
-						found_token = true;
+						try {
+							auto decoded_jwt = jwt::decode(local_token);
+							signature = decoded_jwt.get_signature();
+							token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
+							found_token = true;
+						} catch (...) {
+							dprintf(D_SECURITY, "Generated pool_password token is malformed\n");
+						}
 					}
 				} else {
 					dprintf(D_SECURITY, "No compatible security key found.\n");

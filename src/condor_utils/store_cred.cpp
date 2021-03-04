@@ -126,7 +126,7 @@ private:
 	time_t m_last_refresh;
 
 public:
-	IssuerKeyNameCache() {}
+	IssuerKeyNameCache() : m_last_refresh(0) {}
 
 	void Clear() {
 		m_name_list.clear();
@@ -1240,6 +1240,15 @@ cred_get_password_handler(int /*i*/, Stream *s)
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
 	client_ipaddr = strdup(sock->peer_addr().to_sinful().Value());
+
+	// we do not want to send out the pool password through a command handler
+	if(strcmp(user, POOL_PASSWORD_USERNAME) == 0) {
+		dprintf(D_ALWAYS,
+			"Refusing to fetch password for %s@%s requested by %s@%s at %s\n",
+			user,domain,
+			client_user,client_domain,client_ipaddr);
+		goto bail_out;
+	}
 
 		// Now fetch the password from the secure store --
 		// If not LocalSystem, this step will fail.

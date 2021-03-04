@@ -217,6 +217,11 @@ Bugs Fixed:
   use different SciTokens.
   :jira:`99`
 
+- The local issuer in the ``condor_credmon_oauth`` gives more useful
+  log output if it detects that the private key was generated with
+  something other than the expected EC algorithm.
+  :jira:`305`
+
 Version 8.9.11
 --------------
 
