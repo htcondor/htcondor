@@ -228,13 +228,14 @@ Dag::~Dag()
 	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
 		(void) UnmonitorLogFile();
 	}
-		// remember kids, delete is safe *even* if ptr == NULL...
 
-	// delete all jobs in _jobs
-	auto it = _jobs.begin();
-	while (it != _jobs.end()) {
-		_jobs.erase(it);
+	// Delete all job objects in _jobs
+	for (auto *job : _jobs) {
+		delete job;
 	}
+
+	// And remove them from the vector
+	_jobs.clear();
 
     delete _preScriptQ;
     delete _postScriptQ;
