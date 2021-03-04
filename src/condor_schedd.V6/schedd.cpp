@@ -12111,6 +12111,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Treat JOB_RECONNECT_FAILED exit code just like JOB_SHOULD_REQUEUE,
 		// except also update a few JobRestartReconnect statistics.
 		exit_code = JOB_SHOULD_REQUEUE;
+		// All of these conditions should be true if the exit code is
+		// JOB_RECONNECT_FAILED, but let's not rely on the shadow and
+		// local starter to be bug-free to keep our stats correct.
 		if ( srec && srec->is_reconnect && !srec->reconnect_done ) {
 			scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 			scheduler.stats.JobsRestartReconnectsFailed += 1;
