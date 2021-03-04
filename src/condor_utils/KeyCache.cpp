@@ -278,7 +278,7 @@ void KeyCache::delete_storage()
 			}
 		}
 		key_table->clear();
-		dprintf( D_SECURITY|D_FULLDEBUG, "KEYCACHE: deleted: %p\n", key_table );
+		//dprintf( D_SECURITY|D_FULLDEBUG, "KEYCACHE: deleted: %p\n", key_table );
 	}
 	if( m_index ) {
 		MyString index;
