@@ -655,6 +655,15 @@ all attributes.
     specified in
     the :doc:`/man-pages/condor_submit` section.
 
+:index:`EraseOutputAndErrorOnRestart<single: EraseOutputAndErrorOnRestart; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; EraseOutputAndErrorOnRestart>`
+
+``EraseOutputAndErrorOnRestart``
+    A boolean.  If missing or true, HTCondor will erase (truncate) the error
+    and output logs when the job restarts.  If this attribute is false, and
+    ``when_to_transfer_output`` is ``ON_EXIT_OR_EVICT``, HTCondor will instead
+    append to those files.
+
 :index:`ExecutableSize<single: ExecutableSize; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; ExecutableSize>`
 
