@@ -1418,10 +1418,14 @@ annex_main( int argc, char ** argv ) {
 			return condor_off( annexName, argc, argv, subCommandIndex );
 
 		case ct_condor_status:
+			// Obviously the wrong command int, but it no longer matters.
+			prepareCommandAd( commandArguments, CA_BULK_REQUEST );
 			return condor_status( annexName, sURLy.c_str(),
 				argc, argv, subCommandIndex );
 
 		case ct_status:
+			// Obviously the wrong command int, but it no longer matters.
+			prepareCommandAd( commandArguments, CA_BULK_REQUEST );
 			return status( annexName, wantClassAds, sURLy.c_str() );
 
 		case ct_setup: {
