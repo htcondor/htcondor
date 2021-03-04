@@ -33,9 +33,12 @@ Credential::Credential(const classad::ClassAd& class_ad) {
 		owner=val.c_str();
 	}
 
+	data = nullptr;
+	m_data_size = 0; // just in case
+	type = 0;
+
 	class_ad.EvaluateAttrInt (CREDATTR_TYPE, type);
 	class_ad.EvaluateAttrInt (CREDATTR_DATA_SIZE, m_data_size);
-	data = NULL;
 }
 
 Credential::Credential() : type(0), data(0), m_data_size(0) {}
