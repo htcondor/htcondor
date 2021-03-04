@@ -47,6 +47,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where ``condor_annex`` would crash when executing the ``-status``
+  or ``status`` commands if built with sufficiently-modern compilers.
+  :jira:`318`
+
 - Fixed a bug where ``use feature: GPUsMonitor`` set the wrong path to the
   GPU monitor binary on Windows.
   :jira:`125`
