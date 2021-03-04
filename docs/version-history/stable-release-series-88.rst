@@ -42,6 +42,12 @@ New Features:
   such machines.
   :jira:`310`
 
+- condor_ssh_to_job into a container now properly maps carriage return and 
+  newline.  The most common symptom of this problem was that the nano
+  editor would not work properly. Also, the performance of transfering large
+  amounts of data has been substantially improved.
+  :jira:`311`
+
 - The HA replication mechanism can now accept either SHA-2 or MD5 checksums.
   This is because support for MD5 checksums must be removed in the 9.0 release of HTCondor.
   The checksum that replication will send is controlled by a new configuration variable
