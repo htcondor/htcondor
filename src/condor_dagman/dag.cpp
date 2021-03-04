@@ -1419,7 +1419,6 @@ Dag::FindAllNodesByName( const char* nodeName,
 		else {
 			node = NULL;
 		}
-		ASSERT( _allNodesIt == _jobs.end() || !( node->GetType() == NodeType::FINAL ) );
 	}
 
 	return node;

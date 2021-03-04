@@ -385,7 +385,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 	if (line) data = line;
 
 	if (data.find("====") == 0 || data.find("----") == 0) {
-		subhead = line;
+		subhead = line ? line : "";
 		data.clear();
 
 		// first line after headings is not data, but underline

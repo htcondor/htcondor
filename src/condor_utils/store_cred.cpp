@@ -126,7 +126,7 @@ private:
 	time_t m_last_refresh;
 
 public:
-	IssuerKeyNameCache() {}
+	IssuerKeyNameCache() : m_last_refresh(0) {}
 
 	void Clear() {
 		m_name_list.clear();

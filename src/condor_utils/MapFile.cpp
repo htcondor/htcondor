@@ -380,9 +380,13 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 					// if this is a regex match, then it can be followed by i or U to modify the match
 					while ((ch = line[offset]) != 0) {
 						if (ch == 'i') {
-							*popts |= PCRE_CASELESS;
+							if (popts) {
+								*popts |= PCRE_CASELESS;
+							}
 						} else if (ch == 'U') {
-							*popts |= PCRE_UNGREEDY;
+							if (popts) {
+								*popts |= PCRE_UNGREEDY;
+							}
 						} else {
 							break;
 						}

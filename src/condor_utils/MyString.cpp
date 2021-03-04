@@ -138,7 +138,7 @@ operator=(const MyString& S)
 /** Destructively moves a MyString guts from rhs to this */
 MyString& 
 MyString::operator=(MyString &&rhs)  noexcept {
-	delete Data;
+	delete [] Data;
 	this->Data     = rhs.Data;
 	this->Len      = rhs.Len;
 	this->capacity = rhs.capacity;
