@@ -1010,6 +1010,11 @@ FILE TRANSFER COMMANDS
     method of encryption utilized will be as agreed upon in security
     negotiation; if that negotiation failed, then the file transfer
     mechanism must also fail for files to be network encrypted.
+    :index:`erase_output_and_error_on_restart<single: erase_output_and_error_on_restart; submit commands>`
+ erase_output_and_error_on_restart
+    If false, and ``when_to_transfer_output`` is ``ON_EXIT_OR_EVICT``, HTCondor
+    will append to the output and error logs rather than erase (truncate) them
+    when the job restarts.
     :index:`max_transfer_input_mb<single: max_transfer_input_mb; submit commands>`
  max_transfer_input_mb = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
