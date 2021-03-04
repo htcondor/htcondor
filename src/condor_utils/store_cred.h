@@ -143,23 +143,26 @@ char* get_password(void);	// get password from user w/o echo on the screen
 bool isValidCredential( const char *user, const char* pw );
 #endif
 
-/** Get the stored password from our password staff in the registry.  
-	Result must be deallocated with free()
-	by the caller if not NULL.  Will fail if not LocalSystem when
-	called.
+/** Get the stored password from our password stuff in the registry.  
+	Result must be deallocated with free() by the caller if not NULL.  
+	Will fail on Windows if not LocalSystem when called.
+	TODO: support this fully on Linux so a Linux CREDD can service Windows execute nodes
 	@return malloced string with the password, or NULL if failure.
+
+	TJ says - DO NOT USE THIS FOR SOME OTHER PURPOSE ON LINUX!
 */
 char* getStoredPassword(const char *user, const char *domain);
 
-/** Get a named credential from disk. */
-bool getNamedCredential(const std::string &cred, std::string &contents, CondorError *err);
+/** Get an IDTOKEN signing key from disk. */
+bool getTokenSigningKey(const std::string &key_id, std::string &contents, CondorError *err);
+/** Check to see if an IDTOKEN signing key exists,
+    uses the IssuerKeyNameCache if it is populated, but will not populate that cache */
+bool hasTokenSigningKey(const std::string &key_id, CondorError *err);
 
-/** List all the named credentials. To allow this to be invoked frequently,
+/** List all the IDTOKEN signing keys. To allow this to be invoked frequently,
  *  it will cache the list internally. */
-bool listNamedCredentials(std::vector<std::string> &creds, CondorError *err);
-
-/** Force-refresh the named credential list on the next lookup. */
-void refreshNamedCredentials();
+const std::string & getCachedIssuerKeyNames(CondorError * err);
+void clearIssuerKeyNameCache();
 
 #endif // STORE_CRED_H
 
