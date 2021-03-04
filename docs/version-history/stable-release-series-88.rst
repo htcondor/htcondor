@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where ``condor_annex`` would crash when executing the ``-status``
+  or ``status`` commands if built with sufficiently-modern compilers.
+  :jira:`318`
 
 Version 8.8.13
 --------------
