@@ -9,7 +9,7 @@ series.
 The details of each version are described below.
 
 Version 8.8.14
--------------
+--------------
 
 Release Notes:
 
