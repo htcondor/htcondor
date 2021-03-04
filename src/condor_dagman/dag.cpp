@@ -1418,7 +1418,6 @@ Dag::FindAllNodesByName( const char* nodeName,
 					file, line );
 			// We know there can only be one FINAL node.
 		node = _allNodesIt->Next();
-		ASSERT( !node || !( node->GetType() == NodeType::FINAL ) );
 	}
 
 		// Delete the ALL_NODES iterator if we've hit the last node.
