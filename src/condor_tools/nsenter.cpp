@@ -343,6 +343,7 @@ int main( int argc, char *argv[] )
 		tcgetattr(0, &tio);
 		pty_is_raw = true;
 		old_tio = tio;
+		tio.c_iflag &= ~(ICRNL);
 		tio.c_oflag &= ~(OPOST);
 		tio.c_cflag |= (CS8);
 		tio.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
