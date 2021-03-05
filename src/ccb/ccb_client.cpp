@@ -147,27 +147,27 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		if( SharedPortEndpoint::UseSharedPort() ) {
 			shared_listener = std::make_shared<SharedPortEndpoint>();
 			shared_listener->InitAndReconfig();
-			MyString errmsg;
+			std::string errmsg;
 			if( !shared_listener->CreateListener() ) {
-				errmsg.formatstr( "Failed to create shared port endpoint for reversed connection from %s.",
+				formatstr( errmsg, "Failed to create shared port endpoint for reversed connection from %s.",
 					m_target_peer_description.c_str() );
 			}
 			else if( !(listener_addr = shared_listener->GetMyRemoteAddress()) ) {
-				errmsg.formatstr( "Failed to get remote address for shared port endpoint for reversed connection from %s.",
+				formatstr( errmsg, "Failed to get remote address for shared port endpoint for reversed connection from %s.",
 					m_target_peer_description.c_str() );
 			}
 			if( !listener_addr ) {
 				if( error ) {
-					error->push( "CCBClient", CEDAR_ERR_CONNECT_FAILED, errmsg.Value() );
+					error->push( "CCBClient", CEDAR_ERR_CONNECT_FAILED, errmsg.c_str() );
 				}
-				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
+				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 				return false;
 			}
 		} else {
 			condor_sockaddr ccbSA;
-			MyString faked_sinful = "<" + ccb_address + ">";
+			std::string faked_sinful = "<" + ccb_address + ">";
 			if( ! ccbSA.from_sinful( faked_sinful ) ) {
-				dprintf( D_FULLDEBUG, "Failed to generate condor_sockaddr from faked sinful '%s', ignoring this broker.\n", faked_sinful.Value() );
+				dprintf( D_FULLDEBUG, "Failed to generate condor_sockaddr from faked sinful '%s', ignoring this broker.\n", faked_sinful.c_str() );
 				continue;
 			}
 
