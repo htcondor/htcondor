@@ -381,12 +381,12 @@ CCBListener::ReadMsgFromCCB()
 		return true;
 	}
 
-	MyString msg_str;
+	std::string msg_str;
 	sPrintAd(msg_str, msg);
 	dprintf( D_ALWAYS,
 			 "CCBListener: Unexpected message received from CCB "
 			 "server: %s\n",
-			 msg_str.Value() );
+			 msg_str.c_str() );
 	return false;
 }
 
@@ -394,10 +394,10 @@ bool
 CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 {
 	if( !msg.LookupString(ATTR_CCBID,m_ccbid) ) {
-		MyString msg_str;
+		std::string msg_str;
 		sPrintAd(msg_str, msg);
 		EXCEPT("CCBListener: no ccbid in registration reply: %s",
-			   msg_str.Value() );
+			   msg_str.c_str() );
 	}
 	msg.LookupString(ATTR_CLAIM_ID,m_reconnect_cookie);
 	dprintf(D_ALWAYS,
@@ -424,11 +424,11 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 		!msg.LookupString( ATTR_CLAIM_ID, connect_id) ||
 		!msg.LookupString( ATTR_REQUEST_ID, request_id) )
 	{
-		MyString msg_str;
+		std::string msg_str;
 		sPrintAd(msg_str, msg);
 		EXCEPT("CCBListener: invalid CCB request from %s: %s\n",
 			   m_ccb_address.c_str(),
-			   msg_str.Value() );
+			   msg_str.c_str() );
 	}
 
 	msg.LookupString( ATTR_NAME, name );
@@ -469,9 +469,9 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 	if( peer_description ) {
 		char const *peer_ip = sock->peer_ip_str();
 		if( peer_ip && !strstr(peer_description,peer_ip)) {
-			MyString desc;
-			desc.formatstr("%s at %s",peer_description,sock->get_sinful_peer());
-			sock->set_peer_description(desc.Value());
+			std::string desc;
+			formatstr(desc, "%s at %s",peer_description,sock->get_sinful_peer());
+			sock->set_peer_description(desc.c_str());
 		}
 		else {
 			sock->set_peer_description(peer_description);
@@ -480,7 +480,6 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 
 	incRefCount();      // do not delete self until called back
 
-	MyString sock_desc;
 	int rc = daemonCore->Register_Socket(
 		sock,
 		sock->peer_description(),
