@@ -421,11 +421,12 @@ private:
 			m_token_requests_tid = -1;
 		}
 		m_token_requests.erase(
-			std::remove_if(m_token_requests.begin(),
-				m_token_requests.end(),
-				[](const PendingRequest &req) {return req.m_client_id.empty();}),
-					m_token_requests.end()
-			);
+				std::remove_if(
+					m_token_requests.begin(),
+					m_token_requests.end(),
+					[](const PendingRequest &req) {return req.m_client_id.empty();}),
+				m_token_requests.end()
+				);
 	};
 
 	static bool
