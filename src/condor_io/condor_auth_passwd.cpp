@@ -206,7 +206,7 @@ findTokens(const std::string &issuer,
 	// Note we reuse the exclude regexp from the configuration subsys.
 	std::string dirpath;
 	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		MyString file_location;
+		std::string file_location;
 			// Only utilize a "user_file" if the owner is set.
 		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 			if (!owner.empty()) {

@@ -388,7 +388,7 @@ extern bool condor_fsync_on;
 
 MyString global_config_source;
 StringList local_config_sources;
-MyString user_config_source; // which if the files in local_config_sources is the user file
+std::string user_config_source; // which if the files in local_config_sources is the user file
 
 
 static void init_macro_eval_context(MACRO_EVAL_CONTEXT &ctx)
@@ -1552,7 +1552,7 @@ find_global(int config_options, MyString & config_file)
 // if basename is a fully qualified path, then it is used as-is. otherwise
 // it is prefixed with ~/.condor/ to create the effective file location
 bool
-find_user_file(MyString &file_location, const char * basename, bool check_access, bool daemon_ok)
+find_user_file(std::string &file_location, const char * basename, bool check_access, bool daemon_ok)
 {
 	file_location.clear();
 	if ( ! basename || ! basename[0])

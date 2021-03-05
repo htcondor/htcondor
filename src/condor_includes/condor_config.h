@@ -390,7 +390,7 @@ extern "C" {
 		// Find a file associated with a user; by default, this fails if called in a context
 		// where can_switch_ids() is true; set daemon_ok = false if calling this from a root-level
 		// condor.
-	bool find_user_file(MyString & filename, const char * basename, bool check_access, bool daemon_ok);
+	bool find_user_file(std::string & filename, const char * basename, bool check_access, bool daemon_ok);
 } // end extern "C"
 
 
