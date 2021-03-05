@@ -203,7 +203,7 @@ CCBServer::InitAndReconfig()
 	char *fname = param("CCB_RECONNECT_FILE");
 	if( fname ) {
 		m_reconnect_fname = fname;
-		if( m_reconnect_fname.find(".ccb_reconnect") == -1 ) {
+		if( m_reconnect_fname.find(".ccb_reconnect") == std::string::npos ) {
 			// required for preen to ignore this file
 			m_reconnect_fname += ".ccb_reconnect";
 		}
@@ -226,7 +226,7 @@ CCBServer::InitAndReconfig()
 			myHost = strdup( "localhost" );
 		}
 
-		m_reconnect_fname.formatstr("%s%c%s-%s.ccb_reconnect",
+		formatstr(m_reconnect_fname, "%s%c%s-%s.ccb_reconnect",
 			spool,
 			DIR_DELIM_CHAR,
 			myHost,
@@ -239,15 +239,15 @@ CCBServer::InitAndReconfig()
 
 	if( old_reconnect_fname != m_reconnect_fname &&
 		!old_reconnect_fname.empty() &&
-		!m_reconnect_fname.IsEmpty() )
+		!m_reconnect_fname.empty() )
 	{
 		// reconnect filename changed
 		// not worth freaking out on error here
-		IGNORE_RETURN remove( m_reconnect_fname.Value() );
-		IGNORE_RETURN rename( old_reconnect_fname.c_str(), m_reconnect_fname.Value() );
+		IGNORE_RETURN remove( m_reconnect_fname.c_str() );
+		IGNORE_RETURN rename( old_reconnect_fname.c_str(), m_reconnect_fname.c_str() );
 	}
 	if( old_reconnect_fname.empty() &&
-		!m_reconnect_fname.IsEmpty() &&
+		!m_reconnect_fname.empty() &&
 		m_reconnect_info.getNumElements() == 0 )
 	{
 		// we are starting up from scratch, so load saved info
@@ -506,7 +506,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 		// potential flexibility on the CCB server side to do things like
 		// assign different targets to different CCB server sub-processes,
 		// each with their own command port.
-	CCBIDToContactString( m_address.Value(), target->getCCBID(), ccb_contact );
+	CCBIDToContactString( m_address.c_str(), target->getCCBID(), ccb_contact );
 
 	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
 
@@ -1299,21 +1299,21 @@ CCBServer::OpenReconnectFile(bool only_if_exists)
 	if( m_reconnect_fp ) {
 		return true;
 	}
-	if( m_reconnect_fname.IsEmpty() ) {
+	if( m_reconnect_fname.empty() ) {
 		return false;
 	}
 	if( !only_if_exists ) {
-		m_reconnect_fp = safe_fcreate_fail_if_exists(m_reconnect_fname.Value(),"w+",0600);
+		m_reconnect_fp = safe_fcreate_fail_if_exists(m_reconnect_fname.c_str(),"w+",0600);
 	}
 	if( !m_reconnect_fp ) {
-		m_reconnect_fp = safe_fopen_no_create(m_reconnect_fname.Value(),"r+");
+		m_reconnect_fp = safe_fopen_no_create(m_reconnect_fname.c_str(),"r+");
 	}
 	if( !m_reconnect_fp ) {
 		if( only_if_exists && errno == ENOENT ) {
 			return false;
 		}
 		EXCEPT("CCB: Failed to open %s: %s",
-			   m_reconnect_fname.Value(),strerror(errno));
+			   m_reconnect_fname.c_str(),strerror(errno));
 	}
 	return true;
 }
@@ -1340,7 +1340,7 @@ CCBServer::LoadReconnectInfo()
 			!CCBIDFromString( cookie, cookie_str) )
 		{
 			dprintf(D_ALWAYS,"CCB: ERROR: line %lu is invalid in %s.", line,
-					m_reconnect_fname.Value());
+					m_reconnect_fname.c_str());
 			continue;
 		}
 
@@ -1358,7 +1358,7 @@ CCBServer::LoadReconnectInfo()
 	m_next_ccbid += 100;
 
 	dprintf(D_ALWAYS,"CCB: loaded %d reconnect records from %s.\n",
-			m_reconnect_info.getNumElements(), m_reconnect_fname.Value());
+			m_reconnect_info.getNumElements(), m_reconnect_fname.c_str());
 }
 
 bool
@@ -1371,7 +1371,7 @@ CCBServer::SaveReconnectInfo(CCBReconnectInfo *reconnect_info)
 	int rc = fseek(m_reconnect_fp,0,SEEK_END);
 	if( rc == -1 ) {
 		dprintf(D_ALWAYS,"CCB: failed to seek to end of %s: %s\n",
-				m_reconnect_fname.Value(), strerror(errno));
+				m_reconnect_fname.c_str(), strerror(errno));
 		return false;
 	}
 
@@ -1382,7 +1382,7 @@ CCBServer::SaveReconnectInfo(CCBReconnectInfo *reconnect_info)
 		CCBIDToString(reconnect_info->getReconnectCookie(),cookie_str));
 	if( rc == -1 ) {
 		dprintf(D_ALWAYS,"CCB: failed to write reconnect info in %s: %s\n",
-				m_reconnect_fname.Value(), strerror(errno));
+				m_reconnect_fname.c_str(), strerror(errno));
 		return false;
 	}
 	return true;
@@ -1391,13 +1391,13 @@ CCBServer::SaveReconnectInfo(CCBReconnectInfo *reconnect_info)
 void
 CCBServer::SaveAllReconnectInfo()
 {
-	if( m_reconnect_fname.IsEmpty() ) {
+	if( m_reconnect_fname.empty() ) {
 		return;
 	}
 	CloseReconnectFile();
 
 	if( m_reconnect_info.getNumElements()==0 ) {
-		IGNORE_RETURN remove( m_reconnect_fname.Value() );
+		IGNORE_RETURN remove( m_reconnect_fname.c_str() );
 		return;
 	}
 
