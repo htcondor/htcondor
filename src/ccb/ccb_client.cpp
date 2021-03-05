@@ -180,13 +180,13 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 			}
 
 			if( ! listen_sock->listen() ) {
-				MyString errmsg;
-				errmsg.formatstr( "Failed to listen for reversed connection from %s.",
+				std::string errmsg;
+				formatstr( errmsg, "Failed to listen for reversed connection from %s.",
 					m_target_peer_description.c_str() );
 				if( error ) {
-					error->push("CCBClient", CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
+					error->push("CCBClient", CEDAR_ERR_CONNECT_FAILED,errmsg.c_str());
 				}
-				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
+				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 
 				return false;
 			}
@@ -279,8 +279,8 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 			}
 
 			if( timed_out ) {
-				MyString errmsg;
-				errmsg.formatstr(
+				std::string errmsg;
+				formatstr(errmsg,
 					"Timed out waiting for response after requesting reversed "
 					"connection from %s ccbid %s via CCB server %s.",
 					m_target_peer_description.c_str(),
@@ -288,10 +288,10 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 					ccb_address.c_str());
 
 				if( error ) {
-					error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
+					error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.c_str());
 				}
 				else {
-					dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
+					dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 				}
 
 				break; // try next ccb server
@@ -347,15 +347,15 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, std::string &ccb_addre
 	// expected format: "<address>#ccbid"
 	char const *ptr = strchr(ccb_contact,'#');
 	if( !ptr ) {
-		MyString errmsg;
-		errmsg.formatstr("Bad CCB contact '%s' when connecting to %s.",
+		std::string errmsg;
+		formatstr(errmsg, "Bad CCB contact '%s' when connecting to %s.",
 					   ccb_contact, peer.c_str());
 
 		if( error ) {
-			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
+			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.c_str());
 		}
 		else {
-			dprintf(D_ALWAYS,"%s\n",errmsg.Value());
+			dprintf(D_ALWAYS,"%s\n",errmsg.c_str());
 		}
 		return false;
 	}
@@ -442,19 +442,19 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 
 	ClassAd msg;
 	bool result = false;
-	MyString errmsg;
+	std::string errmsg;
 
 	m_ccb_sock->decode();
 	if( !getClassAd(m_ccb_sock, msg) || !m_ccb_sock->end_of_message() ) {
-		errmsg.formatstr("Failed to read response from CCB server "
+		formatstr(errmsg, "Failed to read response from CCB server "
 					   "%s when requesting reversed connection to %s",
 					   m_ccb_sock->peer_description(),
 					   m_target_peer_description.c_str());
 		if( error ) {
-			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
+			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.c_str());
 		}
 		else {
-			dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
+			dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 		}
 		return false;
 	}
@@ -464,7 +464,7 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 		std::string remote_errmsg;
 		msg.LookupString(ATTR_ERROR_STRING,remote_errmsg);
 
-		errmsg.formatstr(
+		formatstr( errmsg,
 			"received failure message from CCB server %s in response to "
 			"request for reversed connection to %s: %s",
 			m_ccb_sock->peer_description(),
@@ -472,10 +472,10 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 			remote_errmsg.c_str());
 
 		if( error ) {
-			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
+			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.c_str());
 		}
 		else {
-			dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
+			dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.c_str());
 		}
 	}
 	else {
