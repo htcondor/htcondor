@@ -230,7 +230,7 @@ findTokens(const std::string &issuer,
 		return false;
 	}
 	Regex excludeFilesRegex;
-	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+	if (!excludeFilesRegex.compile(MyString(excludeRegex), &_errstr, &_erroffset)) {
 		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
 			"config parameter is not a valid "
 			"regular expression.  Value: %s,  Error: %s",
