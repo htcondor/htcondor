@@ -45,6 +45,7 @@ bool
 DCVPN::registerClient(const std::string &base64_pubkey,
 	std::string &ipaddr,
 	std::string &netmask,
+	std::string &network,
 	std::string &gwaddr,
 	std::string &base64_server_pubkey,
 	std::string &server_endpoint,
@@ -100,8 +101,13 @@ DCVPN::registerClient(const std::string &base64_pubkey,
 			"Server response did not include gateway address.");
 		return false;
 	}
-	if (!respAd.EvaluateAttrString("Network", netmask)) {
+	if (!respAd.EvaluateAttrString("Network", network)) {
 		err.push("DC_VPN", 6,
+			"Server response did not include network address.");
+		return false;
+	}
+	if (!respAd.EvaluateAttrString("Netmask", netmask)) {
+		err.push("DC_VPN", 7,
 			"Server response did not include network netmask.");
 		return false;
 	}

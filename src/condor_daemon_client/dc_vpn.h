@@ -36,6 +36,7 @@ public:
 	bool registerClient(const std::string &base64_pubkey,
 				std::string &ipaddr,
 				std::string &netmask,
+				std::string &network,
 				std::string &gwaddr,
 				std::string &base64_server_pubkey,
 				std::string &server_endpoint,

@@ -79,14 +79,43 @@ int g_update_interval = 300;
 
 /// State of the IP address management
 // Offset into the network.
-int g_ipam_offset = 100;
+in_addr_t g_ipam_offset = 100;
+in_addr_t g_ipam_network;
+in_addr_t g_ipam_netmask;
+#define DEFAULT_VPN_NETWORK "10.0.0.0/16"
+
+
+//-------------------------------------------------------------
+in_addr_t ipam_next_addr()
+{
+	in_addr_t result = htonl(ntohl(g_ipam_network) + (g_ipam_offset & ~ntohl(g_ipam_netmask)));
+	g_ipam_offset += 1;
+	dprintf(D_ALWAYS, "Current offset is %d.\n", g_ipam_offset);
+	struct in_addr addr;
+	addr.s_addr = result;
+	dprintf(D_ALWAYS, "Will offer an address of %s.\n", inet_ntoa(addr));
+	addr.s_addr = g_ipam_network;
+	dprintf(D_ALWAYS, "Network is currently %s.\n", inet_ntoa(addr));
+	addr.s_addr = g_ipam_netmask;
+	dprintf(D_ALWAYS, "Netmask is currently %s.\n", inet_ntoa(addr));
+
+		// Avoid the GW address
+	if (result == htonl(ntohl(g_ipam_network) + 2)) {return ipam_next_addr();}
+		// Avoid the network address
+	if (result == g_ipam_network) {return ipam_next_addr();}
+		// Avoid the broadcast address.
+	in_addr_t broadcast_addr = htonl((ntohl(g_ipam_network) & ntohl(g_ipam_netmask)) + ~ntohl(g_ipam_netmask));
+	if (result == broadcast_addr) {return ipam_next_addr();}
+
+	return result;
+}
 
 
 //-------------------------------------------------------------
 int configure_nat()
 {
 	std::string boringtun_network;
-	param(boringtun_network, "VPN_SERVER_NETWORK", "10.0.0.0/24");
+	param(boringtun_network, "VPN_SERVER_NETWORK", DEFAULT_VPN_NETWORK);
 
 	int result_fd[2];
 	if (pipe(result_fd) < 0) {
@@ -398,7 +427,7 @@ int setup_child_namespace(int exit_pipe, int ready_sock)
 
 		// TODO: Eventually, this should go into main_config.
 	std::string network_full;
-	param(network_full, "VPN_SERVER_NETWORK", "10.0.0.0/24");
+	param(network_full, "VPN_SERVER_NETWORK", DEFAULT_VPN_NETWORK);
 	std::string network = network_full.substr(0, network_full.find("/"));
 	in_addr_t network_addr = htonl(inet_network(network.c_str()));
 	if (!network_addr) {
@@ -544,16 +573,6 @@ int register_client(int, Stream *stream)
 		return register_client_failure(rsock, 1, "Registration request missing client pubkey");
 	}
 
-	std::string network;
-	param(network, "VPN_SERVER_NETWORK", "10.0.0.0/24");
-	std::string ip_network = network.substr(0, network.find('/'));
-
-	struct in_addr network_addr;
-	network_addr.s_addr = htonl(inet_network(ip_network.c_str()));
-	if (!network_addr.s_addr) {
-		return register_client_failure(rsock, 2, "Invalid server network configuration");
-	}
-
 	std::string base64_pubkey = load_key_base64("VPN_SERVER_PUBKEY");
 	if (base64_pubkey.empty()) {
 		return register_client_failure(rsock, 3, "VPN server has no pubkey configured");
@@ -561,14 +580,17 @@ int register_client(int, Stream *stream)
 
 		// Arbitrarily put GW at 10.0.0.2
 	struct in_addr gw_addr;
-	gw_addr.s_addr = htonl(ntohl(network_addr.s_addr) + 2);
+	gw_addr.s_addr = htonl(ntohl(g_ipam_network) + 1);
 	struct in_addr host_addr;
-	host_addr.s_addr = htonl(ntohl(network_addr.s_addr) + g_ipam_offset++);
+	host_addr.s_addr = ipam_next_addr();
 
 	std::string gw_str(inet_ntoa(gw_addr));
 	std::string host_str(inet_ntoa(host_addr));
-	//std::string net_str(inet_ntoa(network_addr));
-	std::string net_str = "255.255.255.0";
+	struct in_addr tmpaddr;
+	tmpaddr.s_addr = g_ipam_network;
+	std::string net_str = inet_ntoa(tmpaddr);
+	tmpaddr.s_addr = g_ipam_netmask;
+	std::string netmask_str = inet_ntoa(tmpaddr);
 
 	auto rval = register_boringtun_client(client_pubkey, host_str);
 	if (rval) {
@@ -583,8 +605,9 @@ int register_client(int, Stream *stream)
 
 	ClassAd respAd;
 	respAd.InsertAttr("IpAddr", host_str);
-	respAd.InsertAttr("GW", host_str);
+	respAd.InsertAttr("GW", gw_str);
 	respAd.InsertAttr("Network", net_str);
+	respAd.InsertAttr("Netmask", netmask_str);
 	respAd.InsertAttr("Pubkey", base64_pubkey);
 	respAd.InsertAttr("Endpoint", endpoint_ip);
 
@@ -595,6 +618,52 @@ int register_client(int, Stream *stream)
 	}
 	return 0;
 }
+
+
+bool setup_ipam()
+{
+	std::string vpn_network;
+	param(vpn_network, "VPN_SERVER_NETWORK", DEFAULT_VPN_NETWORK);
+
+	auto pos = vpn_network.find("/");
+	if (pos == std::string::npos) {
+		dprintf(D_ALWAYS, "VPN_SERVER_NETWORK parameter (%s) must be of the form IP / NETMASK.\n", vpn_network.c_str());
+		return false;
+	}
+
+	in_addr_t network = htonl(inet_network(vpn_network.substr(0, pos).c_str()));
+	if (!network) {
+		dprintf(D_ALWAYS, "Failed to parse IP address in VPN_SERVER_NETWORK parameter %s.\n", vpn_network.c_str());
+		return false;
+	}
+
+	int netmask;
+	try {
+		netmask = std::stol(vpn_network.substr(pos + 1));
+	} catch (...) {
+		dprintf(D_ALWAYS, "Failed to parse netmask in VPN_SERVER_NETWORK parameter %s.\n", vpn_network.c_str());
+		return false;
+	}
+	if (netmask < 0 || netmask > 32) {
+		dprintf(D_ALWAYS, "Invalid netmask (%d) in VPN_SERVER_NETWORK parameter %s.\n", netmask, vpn_network.c_str());
+		return false;
+	}
+
+	if (netmask == 0) g_ipam_netmask = 0;
+	else g_ipam_netmask = ~htonl((1 << (32 - netmask)) - 1);
+	g_ipam_network = network & g_ipam_netmask;
+
+	struct in_addr addr;
+	addr.s_addr = g_ipam_network;
+	std::string network_str(inet_ntoa(addr));
+	addr.s_addr = g_ipam_netmask;
+	std::string netmask_str(inet_ntoa(addr));
+	dprintf(D_FULLDEBUG, "VPN server will use network %s and netmask %s.\n",
+		network_str.c_str(), netmask_str.c_str());
+
+	return true;
+}
+
 
 } // end anonymous namespace
 
@@ -616,6 +685,11 @@ void main_init(int /* argc */, char * /* argv */ [])
 	g_slirp4netns_reaper = daemonCore->Register_Reaper("slirp4netns reaper",
 		&reap_slirp4netns,
 		"Restarts the slirp4netns daemon.");
+
+	if (!setup_ipam()) {
+		dprintf(D_ALWAYS, "Failed to setup IP address management.\n");
+		DC_Exit(1);
+	}
 
 	int exit_pipe[2];
 	if (pipe(exit_pipe) < 0) {

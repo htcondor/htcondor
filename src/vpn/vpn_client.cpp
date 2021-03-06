@@ -135,7 +135,7 @@ void reap_sigaction(int signum, siginfo_t *info, void * /*context*/)
 
 //-------------------------------------------------------------
 int launch_vpn_client(int argc, char *argv[], const std::string &ipaddr_str,
-	const std::string &netmask_str, const std::string & gwaddr_str,
+	const std::string &netmask_str, const std::string & /*network_str*/, const std::string & gwaddr_str,
 	const std::string &base64_server_pubkey, const std::string &server_endpoint,
 	const std::string &base64_client_privkey)
 {
@@ -357,15 +357,16 @@ int main(int argc, char *argv[]) {
 	CondorError err;
 	std::string ipaddr;
 	std::string netmask;
+	std::string network;
 	std::string gwaddr;
 	std::string base64_server_pubkey;
 	std::string server_endpoint;
-	if (!vpn.registerClient(base64_pubkey_str, ipaddr, netmask, gwaddr,
+	if (!vpn.registerClient(base64_pubkey_str, ipaddr, netmask, network, gwaddr,
 		base64_server_pubkey, server_endpoint, err))
 	{
 		fprintf(stderr, "Failed to register client: %s\n", err.getFullText().c_str());
 		exit(1);
 	}
 
-	return launch_vpn_client(argc - command_index, argv + command_index, ipaddr, netmask, gwaddr, base64_server_pubkey, server_endpoint, base64_key_str);
+	return launch_vpn_client(argc - command_index, argv + command_index, ipaddr, netmask, network, gwaddr, base64_server_pubkey, server_endpoint, base64_key_str);
 }
