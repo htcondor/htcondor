@@ -53,3 +53,12 @@ int sendfd(int sock, int fd);
 
 /// Receive a FD from a socket.
 int recvfd(int sock);
+
+/// Setup UID mapping inside the user namespace.
+//    Makes it so `id` returns a desired value.
+//  - req_uid: The requested UID; this is the apparent UID of the process in the namespace after mapping.
+//  - req_gid: The requested GID
+//  - parent_uid / parent_gid: The UID / GID in the parent namespace
+//  - returns: non-zero on failure.
+//  - The special value of `-1` for req_uid / req_gid indicates to map to the UID/GID in the parent namespace.
+int setup_uidgid_map(int req_uid, int req_gid, int parent_uid, int parent_gid);

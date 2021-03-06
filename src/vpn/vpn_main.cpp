@@ -362,8 +362,8 @@ int launch_slirp4netns()
 //-------------------------------------------------------------
 int setup_child_namespace(int exit_pipe, int ready_sock)
 {
-	auto euid = geteuid();
-	auto egid = getegid();
+	auto uid = geteuid();
+	auto gid = getegid();
 
 		// Create the new namespaces we will work in.
 	if (unshare(CLONE_NEWNET|CLONE_NEWUSER) < 0) {
@@ -371,51 +371,10 @@ int setup_child_namespace(int exit_pipe, int ready_sock)
 		return 1;
 	}
 
-		// Give ourselves root privileges in the new namespace; needed
-		// to manipulate the iptables.
-	auto setgroups_fd = open("/proc/self/setgroups", O_WRONLY);
-	if (setgroups_fd < 0) {
-		dprintf(D_ALWAYS, "Unable to open setgroups file (errno=%d, %s)\n",
-			errno, strerror(errno));
+	if (setup_uidgid_map(0, 0, uid, gid)) {
+		dprintf(D_ALWAYS, "Fatal error in setting up new UID / GID.\n");
 		return 1;
 	}
-	char deny[] = "deny";
-	if (4 != full_write(setgroups_fd, deny, 4)) {
-		dprintf(D_ALWAYS, "Unable to set setgroups policy (errno=%d, %s)\n",
-			errno, strerror(errno));
-		return 1;
-	}
-	close(setgroups_fd);
-
-	std::string uid_map;
-	formatstr( uid_map, "0 %d 1", euid);
-	auto uid_map_fd = open("/proc/self/uid_map", O_WRONLY);
-	if (uid_map_fd < 0) {
-		dprintf(D_ALWAYS, "Unable to open uid_map (errno=%d, %s)\n",
-			errno, strerror(errno));
-		return 1;
-	}
-	if (static_cast<int>(uid_map.size()) != full_write(uid_map_fd, uid_map.c_str(), uid_map.size())) {
-		dprintf(D_ALWAYS, "Unable to create UID map (errno=%d, %s)\n",
-			errno, strerror(errno));
-		return 1;
-	}
-	close(uid_map_fd);
-
-	std::string gid_map;
-	formatstr( gid_map, "0 %d 1", egid);
-	auto gid_map_fd = open("/proc/self/gid_map", O_WRONLY);
-	if (gid_map_fd < 0) {
-		dprintf(D_ALWAYS, "Unable to open gid_map (errno=%d, %s)\n",
-			errno, strerror(errno));
-		return 1;
-	}
-	if (static_cast<int>(gid_map.size()) != full_write(gid_map_fd, gid_map.c_str(), gid_map.size())) {
-		dprintf(D_ALWAYS, "Unable to create GID map (errno=%d, %s)\n",
-			errno, strerror(errno));
-		return 1;
-	}
-	close(gid_map_fd);
 
 		// Enable packet forwarding.
 	int fd;

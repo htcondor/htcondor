@@ -24,6 +24,7 @@
 #include "condor_distribution.h"
 #include "match_prefix.h"
 #include "subsystem_info.h"
+#include "selector.h"
 #include "dc_vpn.h"
 #include "vpn_common.h"
 
@@ -60,14 +61,19 @@ int setup_child_namespace(int ready_sock, int parent_ready_fd,
 	in_addr_t ipaddr, in_addr_t gw, in_addr_t netmask,
 	int argc, char *argv[])
 {
-        //auto euid = geteuid();
-        //auto egid = getegid();
+	auto uid = geteuid();
+	auto gid = getegid();
 
                 // Create the new namespaces we will work in.
         if (unshare(CLONE_NEWNET|CLONE_NEWUSER) < 0) {
                 dprintf(D_ALWAYS, "Failed to create new network and user namespace - fatal!  Check your system configuration to ensure these are both enabled\n");
                 return 1;
         }
+
+	if (setup_uidgid_map(-1, -1, uid, gid)) {
+		dprintf(D_ALWAYS, "Failed to set UID/GID mapping in the child namespace.\n");
+		return 1;
+	}
 
 	int tun_fd;
 	if ((tun_fd = open_tun("condor0")) < 0) {
@@ -100,9 +106,30 @@ int setup_child_namespace(int ready_sock, int parent_ready_fd,
 }
 
 
-int reap_boringtun(int /*pid*/, int /*exit_status*/)
+struct child_info {
+	pid_t boringtun_pid;
+	pid_t main_pid;
+	int boringtun_pipe_r;
+	int boringtun_pipe_w;
+	int main_pipe_r;
+	int main_pipe_w;
+};
+
+struct child_info g_child_info;
+
+void reap_sigaction(int signum, siginfo_t *info, void * /*context*/)
 {
-	return 0;
+	if (signum != SIGCHLD) {return;} // Internal logic error...
+
+	int write_pipe = -1;
+	if (info->si_pid == g_child_info.boringtun_pid) {
+		write_pipe = g_child_info.boringtun_pipe_w;
+	} else if (info->si_pid == g_child_info.main_pid) {
+		write_pipe = g_child_info.main_pipe_w;
+	}
+	if (write_pipe == -1) {return;}
+
+	full_write(write_pipe, "1", 1);
 }
 
 
@@ -140,6 +167,26 @@ int launch_vpn_client(int argc, char *argv[], const std::string &ipaddr_str,
 		return 1;
 	}
 
+	int boringtun_signal_pipe[2], main_signal_pipe[2];
+	if (((pipe2(boringtun_signal_pipe, O_CLOEXEC) < 0) ||
+		pipe2(main_signal_pipe, O_CLOEXEC) < 0))
+	{
+		fprintf(stderr, "Failed to create internal signal pipe (errno=%d, %s)\n", errno, strerror(errno));
+		return 1;
+	}
+	g_child_info.boringtun_pipe_r = boringtun_signal_pipe[0];
+	g_child_info.boringtun_pipe_w = boringtun_signal_pipe[1];
+	g_child_info.main_pipe_r = main_signal_pipe[0];
+	g_child_info.main_pipe_w = main_signal_pipe[1];
+	struct sigaction act;
+	memset(&act, '\0', sizeof(act));
+	act.sa_sigaction = &reap_sigaction;
+	act.sa_flags = SA_SIGINFO|SA_NOCLDSTOP;
+	if (sigaction(SIGCHLD, &act, nullptr) < 0) {
+		fprintf(stderr, "Failed to setup new signal handler.\n");
+		return 1;
+	}
+
 	int pid = fork();
 	if (pid < 0) {
 		fprintf(stderr, "Failed to fork new sub-process (errno=%d, %s).\n", errno, strerror(errno));
@@ -156,12 +203,11 @@ int launch_vpn_client(int argc, char *argv[], const std::string &ipaddr_str,
 	int uapi_fd;
 	pid_t boringtun_pid;
 
-	int reaper = daemonCore->Register_Reaper("Boringtun reaper", reap_boringtun, "Boringtun reaper");
-
-	if (launch_boringtun(tun_fd, reaper, uapi_fd, boringtun_pid)) {
+	if (launch_boringtun(tun_fd, -1, uapi_fd, boringtun_pid)) {
 		fprintf(stderr, "Failed to launch boringtun process.\n");
 		return 1;
 	}
+	g_child_info.boringtun_pid = boringtun_pid;
 
 	std::string private_key_hex = base64_key_to_hex(base64_client_privkey);
 	std::string server_pubkey_hex = base64_key_to_hex(base64_server_pubkey);
@@ -186,10 +232,28 @@ int launch_vpn_client(int argc, char *argv[], const std::string &ipaddr_str,
 		fprintf(stderr, "Failed to give child a go-ahead\n");
 	}
 
+	g_child_info.main_pid = pid;
+
+	Selector selector;
+	selector.add_fd(g_child_info.main_pipe_r, Selector::IO_READ);
+	selector.add_fd(g_child_info.boringtun_pipe_r, Selector::IO_READ);
+	while (!selector.has_ready()) {
+		selector.execute();
+	}
+
 	int child_status;
+	if (selector.fd_ready(g_child_info.boringtun_pipe_r, Selector::IO_READ)) {
+		while (true) {
+			int rval = waitpid(g_child_info.boringtun_pid, &child_status, 0);
+			if (rval > 0 || (rval == -1 && errno != EINTR)) {break;}
+		}
+		fprintf(stderr, "Boringtun failed with exit status %d.\n", child_status);
+		kill(pid, SIGKILL);
+	}
+
 	while (true) {
 		int rval = waitpid(pid, &child_status, 0);
-		if (rval == -1 && errno != EINTR) {break;}
+		if (rval > 0 || (rval == -1 && errno != EINTR)) {break;}
 	}
 
 	if (WIFEXITED(child_status)) {_exit(child_status);}
@@ -215,11 +279,11 @@ void print_usage(const char *argv0)
 
 }
 
-void main_init(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
 	if (!load_boringtun()) {
 		fprintf(stderr, "Failed to load libboringtun; necessary for %s.\n", argv[0]);
-		DC_Exit(1);
+		exit(1);
 	}
 
 	myDistro->Init( argc, argv );
@@ -303,22 +367,5 @@ void main_init(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	DC_Exit(launch_vpn_client(argc - command_index, argv + command_index, ipaddr, netmask, gwaddr, base64_server_pubkey, server_endpoint, base64_key_str));
-}
-
-
-void main_config() {}
-void main_shutdown_fast() {}
-void main_shutdown_graceful() {}
-
-int
-main( int argc, char **argv )
-{
-	set_mySubSystem("TOOL", SUBSYSTEM_TYPE_TOOL);
-
-	dc_main_init = main_init;
-	dc_main_config = main_config;
-	dc_main_shutdown_fast = main_shutdown_fast;
-	dc_main_shutdown_graceful = main_shutdown_graceful;
-	return dc_main( argc, argv );
+	return launch_vpn_client(argc - command_index, argv + command_index, ipaddr, netmask, gwaddr, base64_server_pubkey, server_endpoint, base64_key_str);
 }

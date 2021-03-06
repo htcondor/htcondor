@@ -95,29 +95,53 @@ int launch_boringtun(int tun_fd, int boringtun_reaper, int &uapi_fd, pid_t &bori
         fd_inherit[1] = uapi_sock[1];
         fd_inherit[2] = 0;
 
-        auto pid = daemonCore->Create_Process(
-                boringtun_executable.c_str(),
-                boringtun_args,
-                PRIV_CONDOR,
-                boringtun_reaper,
-                false,
-                false,
-                &boringtun_env,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                fd_inherit);
+	pid_t pid;
+	if (daemonCore) {
+		pid = daemonCore->Create_Process(
+			boringtun_executable.c_str(),
+			boringtun_args,
+			PRIV_CONDOR,
+			boringtun_reaper,
+			false,
+			false,
+			&boringtun_env,
+			NULL,
+			NULL,
+			NULL,
+			NULL,
+			fd_inherit);
 
-        close(uapi_sock[1]);
-        if (pid) {
-                uapi_fd = uapi_sock[0];
-                boringtun_pid = pid;
-                return 0;
-        } else {
-                close(uapi_sock[0]);
-                return 1;
-        }
+	} else {
+		// No DaemonCore - hand-launch fork. :(
+		std::unique_ptr<char *, decltype(&deleteStringArray)> exec_args_array(
+			boringtun_args.GetStringArray(),
+			&deleteStringArray);
+		std::unique_ptr<char *, decltype(&deleteStringArray)> env_array(
+			boringtun_env.getStringArray(),
+			&deleteStringArray);
+
+			// Launch boringtun as condor - no privileges are needed.
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+
+		pid = fork();
+		if (pid == 0) {
+			execve(boringtun_executable.c_str(), exec_args_array.get(), env_array.get());
+			dprintf(D_ALWAYS, "Failed to exec boringtun process %s (errno=%d, %s).\n",
+				boringtun_executable.c_str(), errno, strerror(errno));
+			_exit(1);
+		}
+	}
+	close(uapi_sock[1]);
+	if (pid) {
+		uapi_fd = uapi_sock[0];
+		boringtun_pid = pid;
+		return 0;
+	} else {
+		dprintf(D_ALWAYS, "Failed to fork boringtun process %s (errno=%d, %s).\n",
+			boringtun_executable.c_str(), errno, strerror(errno));
+		close(uapi_sock[0]);
+		return 1;
+	}
 }
 
 
@@ -353,4 +377,60 @@ int recvfd(int sock)
 	}
 	memcpy(&fd, CMSG_DATA(cmsg), sizeof(fd));
 	return fd;
+}
+
+//-------------------------------------------------------------
+// Write out a namespace's UID / GID map
+int setup_uidgid_map(int req_uid, int req_gid, int parent_uid, int parent_gid)
+{
+	if (req_uid == -1) {req_uid = parent_uid;}
+	if (req_gid == -1) {req_gid = parent_gid;}
+
+		// Give ourselves root privileges in the new namespace; needed
+		// to manipulate the iptables.
+	auto setgroups_fd = open("/proc/self/setgroups", O_WRONLY);
+	if (setgroups_fd < 0) {
+		dprintf(D_ALWAYS, "Unable to open setgroups file (errno=%d, %s)\n",
+			errno, strerror(errno));
+		return 1;
+	}
+	char deny[] = "deny";
+	if (4 != full_write(setgroups_fd, deny, 4)) {
+		dprintf(D_ALWAYS, "Unable to set setgroups policy (errno=%d, %s)\n",
+			errno, strerror(errno));
+			return 1;
+	}
+	close(setgroups_fd);
+
+	std::string uid_map;
+	formatstr( uid_map, "%d %d 1", req_uid, parent_uid);
+	auto uid_map_fd = open("/proc/self/uid_map", O_WRONLY);
+	if (uid_map_fd < 0) {
+		dprintf(D_ALWAYS, "Unable to open uid_map (errno=%d, %s)\n",
+			errno, strerror(errno));
+		return 1;
+	}
+	if (static_cast<int>(uid_map.size()) != full_write(uid_map_fd, uid_map.c_str(), uid_map.size())) {
+		dprintf(D_ALWAYS, "Unable to create UID map (errno=%d, %s)\n",
+			errno, strerror(errno));
+		return 1;
+	}
+	close(uid_map_fd);
+
+	std::string gid_map;
+	formatstr( gid_map, "%d %d 1", req_gid, parent_gid);
+	auto gid_map_fd = open("/proc/self/gid_map", O_WRONLY);
+	if (gid_map_fd < 0) {
+		dprintf(D_ALWAYS, "Unable to open gid_map (errno=%d, %s)\n",
+			errno, strerror(errno));
+		return 1;
+	}
+	if (static_cast<int>(gid_map.size()) != full_write(gid_map_fd, gid_map.c_str(), gid_map.size())) {
+		dprintf(D_ALWAYS, "Unable to create GID map (errno=%d, %s)\n",
+			errno, strerror(errno));
+		return 1;
+	}
+	close(gid_map_fd);
+
+	return 0;
 }
