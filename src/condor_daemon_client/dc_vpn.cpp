@@ -49,6 +49,8 @@ DCVPN::registerClient(const std::string &base64_pubkey,
 	std::string &gwaddr,
 	std::string &base64_server_pubkey,
 	std::string &server_endpoint,
+	std::string &lease,
+	unsigned int &lease_interval,
 	CondorError &err)
 {
 	std::unique_ptr<ReliSock>rsock_ptr;
@@ -81,6 +83,7 @@ DCVPN::registerClient(const std::string &base64_pubkey,
 	}
 	rsock.close();
 
+	dprintf(D_FULLDEBUG, "Registration response:\n");
 	dPrintAd(D_FULLDEBUG, respAd);
 
 	int error;
@@ -112,13 +115,130 @@ DCVPN::registerClient(const std::string &base64_pubkey,
 		return false;
 	}
 	if (!respAd.EvaluateAttrString("Pubkey", base64_server_pubkey)) {
-		err.push("DC_VPN", 7,
+		err.push("DC_VPN", 8,
 			"Server response did not include pubkey.");
 		return false;
 	}
 	if (!respAd.EvaluateAttrString("Endpoint", server_endpoint)) {
-		err.push("DC_VPN", 8,
+		err.push("DC_VPN", 9,
 			"Server response did not include endpoint.");
+		return false;
+	}
+	if (!respAd.EvaluateAttrString("Lease", lease)) {
+		err.push("DC_VPN", 10,
+			"Server response did not include lease.");
+		return false;
+	}
+	long lease_lifetime;
+	if (!respAd.EvaluateAttrInt("LeaseLifetime", lease_lifetime)) {
+		err.push("DC_VPN", 11,
+			"Server response did not include lease lifetime.");
+		return false;
+	}
+	lease_interval = (lease_lifetime / 3) - 5;
+	if (lease_lifetime < 5) lease_lifetime = 5;
+
+	return true;
+}
+
+
+bool
+DCVPN::heartbeat(const std::string &lease,
+	unsigned int &lease_interval,
+        CondorError &err)
+{
+	std::unique_ptr<ReliSock>rsock_ptr;
+	rsock_ptr.reset((ReliSock *)startCommand(
+		VPN_HEARTBEAT, Stream::reli_sock, 20, &err));
+	if (!rsock_ptr) {
+		err.push("DC_VPN", 1,
+			"Failed to connect to remote VPN server.");
+		return false;
+	}
+	ReliSock &rsock = *rsock_ptr.get();
+
+	ClassAd reqAd;
+	reqAd.InsertAttr("Lease", lease);
+
+	rsock.encode();
+	if (!putClassAd(&rsock, reqAd) || !rsock.end_of_message()) {
+		err.push("DC_VPN", 2,
+			"Failed to send client request to VPN server.");
+		return false;
+	}
+
+		// Receive the return code
+	rsock.decode();
+	ClassAd respAd;
+	if (!getClassAd(&rsock, respAd) || !rsock.end_of_message()) {
+		err.push("DC_VPN", 3,
+			"Failed to get registration response from VPN server.");
+		return false;
+	}
+	rsock.close();
+
+	//dPrintAd(D_FULLDEBUG, respAd);
+	int error;
+	if (respAd.EvaluateAttrInt(ATTR_ERROR_CODE, error) && error) {
+		std::string error_string = "(Unknown)";
+			respAd.EvaluateAttrString(ATTR_ERROR_STRING, error_string);
+			err.push("DC_VPN", error, error_string.c_str());
+		return false;
+	}
+
+	long int lease_lifetime;
+	if (!respAd.EvaluateAttrInt("LeaseLifetime", lease_lifetime)) {
+		err.push("DC_VPN", 11,
+			"Server response did not include lease lifetime.");
+		return false;
+	}
+	lease_interval = (lease_lifetime / 3) - 5;
+	if (lease_lifetime < 5) lease_lifetime = 5;
+
+	return true;
+}
+
+
+bool
+DCVPN::cancel(const std::string &lease,
+        CondorError &err)
+{
+	std::unique_ptr<ReliSock>rsock_ptr;
+	rsock_ptr.reset((ReliSock *)startCommand(
+		VPN_UNREGISTER, Stream::reli_sock, 20, &err));
+	if (!rsock_ptr) {
+		err.push("DC_VPN", 1,
+			"Failed to connect to remote VPN server.");
+		return false;
+	}
+	ReliSock &rsock = *rsock_ptr.get();
+
+	ClassAd reqAd;
+	reqAd.InsertAttr("Lease", lease);
+
+	rsock.encode();
+	if (!putClassAd(&rsock, reqAd) || !rsock.end_of_message()) {
+		err.push("DC_VPN", 2,
+			"Failed to send client request to VPN server.");
+		return false;
+	}
+
+		// Receive the return code
+	rsock.decode();
+	ClassAd respAd;
+	if (!getClassAd(&rsock, respAd) || !rsock.end_of_message()) {
+		err.push("DC_VPN", 3,
+			"Failed to get registration response from VPN server.");
+		return false;
+	}
+	rsock.close();
+
+	//dPrintAd(D_FULLDEBUG, respAd);
+	int error;
+	if (respAd.EvaluateAttrInt(ATTR_ERROR_CODE, error) && error) {
+		std::string error_string = "(Unknown)";
+			respAd.EvaluateAttrString(ATTR_ERROR_STRING, error_string);
+			err.push("DC_VPN", error, error_string.c_str());
 		return false;
 	}
 

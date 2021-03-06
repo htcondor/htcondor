@@ -134,7 +134,7 @@ void reap_sigaction(int signum, siginfo_t *info, void * /*context*/)
 
 
 //-------------------------------------------------------------
-int launch_vpn_client(int argc, char *argv[], const std::string &ipaddr_str,
+int launch_vpn_client(int argc, char *argv[], DCVPN &vpn, std::string lease, unsigned lease_interval, const std::string &ipaddr_str,
 	const std::string &netmask_str, const std::string & /*network_str*/, const std::string & gwaddr_str,
 	const std::string &base64_server_pubkey, const std::string &server_endpoint,
 	const std::string &base64_client_privkey)
@@ -237,8 +237,15 @@ int launch_vpn_client(int argc, char *argv[], const std::string &ipaddr_str,
 	Selector selector;
 	selector.add_fd(g_child_info.main_pipe_r, Selector::IO_READ);
 	selector.add_fd(g_child_info.boringtun_pipe_r, Selector::IO_READ);
+	selector.set_timeout(lease_interval);
 	while (!selector.has_ready()) {
 		selector.execute();
+		if (selector.timed_out()) {
+			CondorError err;
+			if (!vpn.heartbeat(lease, lease_interval, err)) {
+				fprintf(stderr, "Failed to renew lease: %s\n", err.getFullText().c_str());
+			}
+		}
 	}
 
 	int child_status;
@@ -250,6 +257,9 @@ int launch_vpn_client(int argc, char *argv[], const std::string &ipaddr_str,
 		fprintf(stderr, "Boringtun failed with exit status %d.\n", child_status);
 		kill(pid, SIGKILL);
 	}
+	CondorError err;
+	vpn.cancel(lease, err);
+	fprintf(stderr, "Failed to destroy remote lease: %s\n", err.getFullText().c_str());
 
 	while (true) {
 		int rval = waitpid(pid, &child_status, 0);
@@ -361,12 +371,14 @@ int main(int argc, char *argv[]) {
 	std::string gwaddr;
 	std::string base64_server_pubkey;
 	std::string server_endpoint;
+	std::string lease;
+	unsigned lease_interval;
 	if (!vpn.registerClient(base64_pubkey_str, ipaddr, netmask, network, gwaddr,
-		base64_server_pubkey, server_endpoint, err))
+		base64_server_pubkey, server_endpoint, lease, lease_interval, err))
 	{
 		fprintf(stderr, "Failed to register client: %s\n", err.getFullText().c_str());
 		exit(1);
 	}
 
-	return launch_vpn_client(argc - command_index, argv + command_index, ipaddr, netmask, network, gwaddr, base64_server_pubkey, server_endpoint, base64_key_str);
+	return launch_vpn_client(argc - command_index, argv + command_index, vpn, lease, lease_interval, ipaddr, netmask, network, gwaddr, base64_server_pubkey, server_endpoint, base64_key_str);
 }

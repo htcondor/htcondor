@@ -22,6 +22,7 @@ if (LINUX)
   set(VPN
 	vpn_main.cpp
 	vpn_common.cpp
+	vpn_lease_mgr.cpp
   )
 
   set(VPN_CLIENT vpn_client.cpp vpn_common.cpp)

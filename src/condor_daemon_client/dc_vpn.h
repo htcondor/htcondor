@@ -40,6 +40,12 @@ public:
 				std::string &gwaddr,
 				std::string &base64_server_pubkey,
 				std::string &server_endpoint,
+				std::string &lease,
+				unsigned &lease_interval,
 				CondorError &err);
+
+	bool heartbeat(const std::string & lease, unsigned &lease_interval, CondorError &err);
+
+	bool cancel(const std::string & lease, CondorError &err);
 };
 #endif /* _CONDOR_DC_VPN_H */

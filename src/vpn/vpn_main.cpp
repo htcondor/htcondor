@@ -28,6 +28,7 @@
 #include "get_daemon_name.h"
 
 #include "vpn_common.h"
+#include "vpn_lease_mgr.h"
 
 #include <net/if.h>
 #include <net/route.h>
@@ -76,39 +77,12 @@ std::string g_vpn_name;
 int g_update_collector_tid = -1;
 /// Period, in seconds, for the collector update.
 int g_update_interval = 300;
+/// Timer ID for scrubbing inactive leases.
+int g_lease_tid = -1;
 
 /// State of the IP address management
-// Offset into the network.
-in_addr_t g_ipam_offset = 100;
-in_addr_t g_ipam_network;
-in_addr_t g_ipam_netmask;
+std::unique_ptr<VPNLeaseMgr> g_lease_mgr;
 #define DEFAULT_VPN_NETWORK "10.0.0.0/16"
-
-
-//-------------------------------------------------------------
-in_addr_t ipam_next_addr()
-{
-	in_addr_t result = htonl(ntohl(g_ipam_network) + (g_ipam_offset & ~ntohl(g_ipam_netmask)));
-	g_ipam_offset += 1;
-	dprintf(D_ALWAYS, "Current offset is %d.\n", g_ipam_offset);
-	struct in_addr addr;
-	addr.s_addr = result;
-	dprintf(D_ALWAYS, "Will offer an address of %s.\n", inet_ntoa(addr));
-	addr.s_addr = g_ipam_network;
-	dprintf(D_ALWAYS, "Network is currently %s.\n", inet_ntoa(addr));
-	addr.s_addr = g_ipam_netmask;
-	dprintf(D_ALWAYS, "Netmask is currently %s.\n", inet_ntoa(addr));
-
-		// Avoid the GW address
-	if (result == htonl(ntohl(g_ipam_network) + 2)) {return ipam_next_addr();}
-		// Avoid the network address
-	if (result == g_ipam_network) {return ipam_next_addr();}
-		// Avoid the broadcast address.
-	in_addr_t broadcast_addr = htonl((ntohl(g_ipam_network) & ntohl(g_ipam_netmask)) + ~ntohl(g_ipam_netmask));
-	if (result == broadcast_addr) {return ipam_next_addr();}
-
-	return result;
-}
 
 
 //-------------------------------------------------------------
@@ -493,6 +467,14 @@ int reap_slirp4netns(int pid, int exit_status)
 
 //-------------------------------------------------------------
 void
+update_leases() {
+	dprintf(D_FULLDEBUG, "Starting maintenance of leases for VPN server.\n");
+	if (g_lease_mgr)
+		g_lease_mgr->Maintenance();
+}
+
+//-------------------------------------------------------------
+void
 update_collector_ad() {
 	dprintf(D_FULLDEBUG, "Starting update of VPN ad in collector.\n");
 	ClassAd ad;
@@ -572,30 +554,20 @@ int register_client(int, Stream *stream)
 	if (!reqAd.EvaluateAttrString("ClientPubkey", client_pubkey)) {
 		return register_client_failure(rsock, 1, "Registration request missing client pubkey");
 	}
+	ClassAd respAd;
 
 	std::string base64_pubkey = load_key_base64("VPN_SERVER_PUBKEY");
 	if (base64_pubkey.empty()) {
 		return register_client_failure(rsock, 3, "VPN server has no pubkey configured");
 	}
+	respAd.InsertAttr("Pubkey", base64_pubkey);
 
-		// Arbitrarily put GW at 10.0.0.2
-	struct in_addr gw_addr;
-	gw_addr.s_addr = htonl(ntohl(g_ipam_network) + 1);
-	struct in_addr host_addr;
-	host_addr.s_addr = ipam_next_addr();
-
-	std::string gw_str(inet_ntoa(gw_addr));
-	std::string host_str(inet_ntoa(host_addr));
-	struct in_addr tmpaddr;
-	tmpaddr.s_addr = g_ipam_network;
-	std::string net_str = inet_ntoa(tmpaddr);
-	tmpaddr.s_addr = g_ipam_netmask;
-	std::string netmask_str = inet_ntoa(tmpaddr);
-
-	auto rval = register_boringtun_client(client_pubkey, host_str);
-	if (rval) {
-		return register_client_failure(rsock, 4, "Failed to register the client with boringtun");
+	CondorError err;
+	if (!g_lease_mgr->CreateLease(client_pubkey, respAd, err)) {
+		return register_client_failure(rsock, err.code(), err.message());
 	}
+	std::string host_str;
+	respAd.EvaluateAttrString("IPAddr", host_str);
 
 	const char *endpoint = daemonCore->InfoCommandSinfulString();
 	condor_sockaddr addr;
@@ -603,17 +575,83 @@ int register_client(int, Stream *stream)
 	std::string endpoint_ip;
 	formatstr(endpoint_ip, "%s:%d", addr.to_ip_string().c_str(), g_boringtun_listen_port);
 
-	ClassAd respAd;
-	respAd.InsertAttr("IpAddr", host_str);
-	respAd.InsertAttr("GW", gw_str);
-	respAd.InsertAttr("Network", net_str);
-	respAd.InsertAttr("Netmask", netmask_str);
-	respAd.InsertAttr("Pubkey", base64_pubkey);
 	respAd.InsertAttr("Endpoint", endpoint_ip);
 
 	rsock.encode();
 	if (!putClassAd(&rsock, respAd) || !rsock.end_of_message()) {
 		dprintf(D_ALWAYS, "Failed to send registration response.\n");
+		return 1;
+	}
+	return 0;
+}
+
+
+//-------------------------------------------------------------
+int heartbeat_client(int, Stream *stream)
+{
+	ReliSock &rsock = *static_cast<ReliSock*>(stream);
+
+	rsock.decode();
+
+	ClassAd reqAd;
+	if (!getClassAd(&rsock, reqAd) || !rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to get heartbeat request from client.\n");
+		return 1;
+	}
+	dprintf(D_FULLDEBUG, "Client heartbeat request:\n");
+	dPrintAd(D_FULLDEBUG, reqAd);
+	std::string lease;
+	if (!reqAd.EvaluateAttrString("Lease", lease)) {
+		return register_client_failure(rsock, 1, "Heartbeat request missing client lease");
+	}
+	ClassAd respAd;
+
+	CondorError err;
+	unsigned lifetime;
+	if (!g_lease_mgr->RefreshLease(lease, lifetime, err)) {
+		return register_client_failure(rsock, err.code(), err.message());
+	}
+	respAd.InsertAttr(ATTR_ERROR_CODE, 0);
+	respAd.InsertAttr("LeaseLifetime", static_cast<long>(lifetime));
+
+	rsock.encode();
+	if (!putClassAd(&rsock, respAd) || !rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to send heartbea response.\n");
+		return 1;
+	}
+	return 0;
+}
+
+
+//-------------------------------------------------------------
+int unregister_client(int, Stream *stream)
+{
+	ReliSock &rsock = *static_cast<ReliSock*>(stream);
+
+	rsock.decode();
+
+	ClassAd reqAd;
+	if (!getClassAd(&rsock, reqAd) || !rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to get unregister request from client.\n");
+		return 1;
+	}
+	dprintf(D_FULLDEBUG, "Client unregister request:\n");
+	dPrintAd(D_FULLDEBUG, reqAd);
+	std::string lease;
+	if (!reqAd.EvaluateAttrString("Lease", lease)) {
+		return register_client_failure(rsock, 1, "Unregister request missing client lease");
+	}
+	ClassAd respAd;
+
+	CondorError err;
+	if (!g_lease_mgr->RemoveLease(lease, err)) {
+		return register_client_failure(rsock, err.code(), err.message());
+	}
+	respAd.InsertAttr(ATTR_ERROR_CODE, 0);
+
+	rsock.encode();
+	if (!putClassAd(&rsock, respAd) || !rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to send unregister response.\n");
 		return 1;
 	}
 	return 0;
@@ -631,8 +669,8 @@ bool setup_ipam()
 		return false;
 	}
 
-	in_addr_t network = htonl(inet_network(vpn_network.substr(0, pos).c_str()));
-	if (!network) {
+	in_addr_t network_addr = htonl(inet_network(vpn_network.substr(0, pos).c_str()));
+	if (!network_addr) {
 		dprintf(D_ALWAYS, "Failed to parse IP address in VPN_SERVER_NETWORK parameter %s.\n", vpn_network.c_str());
 		return false;
 	}
@@ -649,17 +687,20 @@ bool setup_ipam()
 		return false;
 	}
 
-	if (netmask == 0) g_ipam_netmask = 0;
-	else g_ipam_netmask = ~htonl((1 << (32 - netmask)) - 1);
-	g_ipam_network = network & g_ipam_netmask;
+	in_addr_t netmask_addr;
+	if (netmask == 0) netmask_addr = 0;
+	else netmask_addr = ~htonl((1 << (32 - netmask)) - 1);
+	network_addr = network_addr & netmask_addr;
 
 	struct in_addr addr;
-	addr.s_addr = g_ipam_network;
+	addr.s_addr = network_addr;
 	std::string network_str(inet_ntoa(addr));
-	addr.s_addr = g_ipam_netmask;
+	addr.s_addr = netmask_addr;
 	std::string netmask_str(inet_ntoa(addr));
 	dprintf(D_FULLDEBUG, "VPN server will use network %s and netmask %s.\n",
 		network_str.c_str(), netmask_str.c_str());
+
+	g_lease_mgr.reset(new VPNLeaseMgr(network_addr, netmask_addr, g_boringtun_uapi_fd));
 
 	return true;
 }
@@ -685,11 +726,6 @@ void main_init(int /* argc */, char * /* argv */ [])
 	g_slirp4netns_reaper = daemonCore->Register_Reaper("slirp4netns reaper",
 		&reap_slirp4netns,
 		"Restarts the slirp4netns daemon.");
-
-	if (!setup_ipam()) {
-		dprintf(D_ALWAYS, "Failed to setup IP address management.\n");
-		DC_Exit(1);
-	}
 
 	int exit_pipe[2];
 	if (pipe(exit_pipe) < 0) {
@@ -733,6 +769,14 @@ void main_init(int /* argc */, char * /* argv */ [])
 		(CommandHandler) &register_client, "Register VPN Client",
 		DAEMON, D_COMMAND, true, 1, &alt_perms);
 
+	daemonCore->Register_Command(VPN_HEARTBEAT, "Update VPN Client Lease",
+		(CommandHandler) &heartbeat_client, "Update VPN Client Lease",
+		DAEMON, D_COMMAND, true, 1, &alt_perms);
+
+	daemonCore->Register_Command(VPN_UNREGISTER, "Unregister VPN Client Lease",
+		(CommandHandler) &unregister_client, "Unregister VPN Client Lease",
+		DAEMON, D_COMMAND, true, 1, &alt_perms);
+
 	main_config();
 }
 
@@ -764,6 +808,11 @@ main_config()
 		}
 	}
 
+	if (!g_lease_mgr && !setup_ipam()) {
+		dprintf(D_ALWAYS, "Failed to setup IP address management.\n");
+		DC_Exit(1);
+	}
+	
 	// slirp4netns - connectivity from our netns to the outside
 	// world
 	//
@@ -778,11 +827,18 @@ main_config()
 		}
 	}
 
+		// TODO: handle re-register!
 	g_update_interval = param_integer("VPN_UPDATE_INTERVAL", 300);
 	g_update_collector_tid = daemonCore->Register_Timer(
 		0, g_update_interval,
 		(TimerHandler) update_collector_ad,
 		"Update Collector");
+
+	auto lease_interval = param_integer("VPN_LEASE_LIFETIME", 900) / 3;
+	g_lease_tid = daemonCore->Register_Timer(
+		lease_interval, lease_interval,
+		(TimerHandler) update_leases,
+		"Lease Update Timer");
 }
 
 //-------------------------------------------------------------
