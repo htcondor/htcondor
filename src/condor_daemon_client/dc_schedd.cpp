@@ -1348,8 +1348,8 @@ DCSchedd::actOnJobs( JobAction action,
 			return NULL;
 		}			
 	} else if( ids ) {
-		char* action_ids = ids->print_to_string();
-		if ( action_ids ) {
+		std::string action_ids = ids->to_string();
+		if (!action_ids.empty()) {
 			cmd_ad.Assign( ATTR_ACTION_IDS, action_ids );
 		}
 	} else {
