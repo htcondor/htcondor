@@ -291,7 +291,7 @@ XFormHash::~XFormHash()
 {
 	delete LocalMacroSet.errors;
 	LocalMacroSet.errors = NULL;
-	delete LocalMacroSet.table;
+	delete [] LocalMacroSet.table;
 	LocalMacroSet.table = NULL;
 	delete LocalMacroSet.metat;
 	LocalMacroSet.metat = NULL;
