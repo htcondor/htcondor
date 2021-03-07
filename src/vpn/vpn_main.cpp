@@ -481,6 +481,8 @@ update_collector_ad() {
 	SetMyTypeName(ad, VPN_ADTYPE);
 	SetTargetTypeName(ad, "");
 
+	if (g_lease_mgr) {g_lease_mgr->UpdateStats(ad);}
+
 	ad.InsertAttr(ATTR_NAME, g_vpn_name);
 
 	daemonCore->publish(&ad);
@@ -862,7 +864,7 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem("VPN", SUBSYSTEM_TYPE_DAEMON );
+	set_mySubSystem("VPN_SERVER", SUBSYSTEM_TYPE_VPN );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

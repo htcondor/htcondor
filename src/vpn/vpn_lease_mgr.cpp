@@ -140,6 +140,8 @@ VPNLeaseMgr::CreateLease(const std::string &base64_pubkey, classad::ClassAd &res
 
 	respAd.InsertAttr("Lease", base64_lease.get());
 
+	m_lifetime_clients_created++;
+
 	return true;
 }
 
@@ -170,6 +172,8 @@ VPNLeaseMgr::RefreshLease(const std::string &base64_lease_id, unsigned &lifetime
 
 	iter->second.m_expiry = time(NULL) + m_lease_lifetime;
 	lifetime = m_lease_lifetime;
+
+	m_lifetime_client_heartbeats++;
 
 	return true;
 }
@@ -221,6 +225,8 @@ VPNLeaseMgr::RemoveLease(const std::string &base64_lease_id, CondorError &err)
 		dprintf(D_ALWAYS, "Failed to remove public key %s from boringtun\n", pubkey.c_str());
 	}
 
+	m_lifetime_clients_removed++;
+
 	return true;
 }
 
@@ -248,6 +254,8 @@ VPNLeaseMgr::Maintenance()
 		if (iter != m_id_to_lease_map.end()) {m_id_to_lease_map.erase(iter);}
 		auto iter2 = m_ip_to_id_map.find(ip);
 		if (iter2 != m_ip_to_id_map.end()) {m_ip_to_id_map.erase(iter2);}
+
+		m_lifetime_clients_expired++;
 	}
 
 	if (!pubkeys.empty()) {
@@ -267,4 +275,15 @@ VPNLeaseMgr::Maintenance()
 			dprintf(D_ALWAYS, "Failed to remove %lu public keys from boringtun\n", pubkeys.size());
 		}
 	}
+}
+
+
+void
+VPNLeaseMgr::UpdateStats(classad::ClassAd &ad)
+{
+	ad.InsertAttr("LifetimeClientsCreated", static_cast<long long>(m_lifetime_clients_created));
+	ad.InsertAttr("LifetimeClientsRemoved", static_cast<long long>(m_lifetime_clients_removed));
+	ad.InsertAttr("LifetimeClientsExpired", static_cast<long long>(m_lifetime_clients_expired));
+	ad.InsertAttr("LifetimeClientHeartbeats", static_cast<long long>(m_lifetime_client_heartbeats));
+	ad.InsertAttr("ClientsActive", static_cast<long>(m_ip_to_id_map.size()));
 }

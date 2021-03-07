@@ -53,6 +53,8 @@ public:
 		// Periodic maintenance
 	void Maintenance();
 
+		// Stats for daemon ClassAd
+	void UpdateStats(classad::ClassAd &ad);
 private:
 	in_addr_t NextIP();
 
@@ -76,4 +78,10 @@ private:
 
 	std::unordered_map<uint64_t, Lease> m_id_to_lease_map;
 	std::unordered_map<in_addr_t, uint64_t> m_ip_to_id_map;
+
+// Statistics
+	uint64_t m_lifetime_clients_created{0};
+	uint64_t m_lifetime_clients_removed{0};
+	uint64_t m_lifetime_clients_expired{0};
+	uint64_t m_lifetime_client_heartbeats{0};
 };

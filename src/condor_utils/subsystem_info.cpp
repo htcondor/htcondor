@@ -169,6 +169,9 @@ SubsystemInfoTable::SubsystemInfoTable( void )
 	addEntry( SUBSYSTEM_TYPE_SHARED_PORT,
 			  SUBSYSTEM_CLASS_DAEMON,
 			  "SHARED_PORT" );
+	addEntry( SUBSYSTEM_TYPE_VPN,
+			  SUBSYSTEM_CLASS_DAEMON,
+			  "VPN_SERVER" );
 	addEntry( SUBSYSTEM_TYPE_TOOL,
 			  SUBSYSTEM_CLASS_CLIENT,
 			  "TOOL" );

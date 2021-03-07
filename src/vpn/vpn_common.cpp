@@ -27,9 +27,85 @@
 #include "selector.h"
 #include "condor_base64.h"
 
+#include "wireguard_ffi.h"
+
 #include <linux/if_tun.h>
 #include <net/route.h>
 #include <net/if.h>
+#include <dlfcn.h>
+
+
+//-------------------------------------------------------------
+namespace {
+
+struct x25519_key (*g_x25519_secret_key)() = nullptr;
+struct x25519_key (*g_x25519_public_key)(struct x25519_key) = nullptr;
+const char * (*g_x25519_key_to_base64)(struct x25519_key) = nullptr;
+void (*g_x25519_key_to_str_free)(const char *) = nullptr;
+bool tried_boringtun = false;
+bool loaded_boringtun = false;
+
+bool load_boringtun()
+{
+	if (tried_boringtun) return loaded_boringtun;
+
+	tried_boringtun = true;
+        void *dl_hdl;
+
+        if ((dl_hdl = dlopen("libboringtun.so", RTLD_LAZY)) == NULL ||
+                !(g_x25519_secret_key = (struct x25519_key (*)())dlsym(dl_hdl, "x25519_secret_key")) ||
+                !(g_x25519_public_key = (struct x25519_key (*)(struct x25519_key))dlsym(dl_hdl, "x25519_public_key")) ||
+                !(g_x25519_key_to_base64 = (const char *(*)(struct x25519_key))dlsym(dl_hdl, "x25519_key_to_base64")) ||
+                !(g_x25519_key_to_str_free = (void (*)(const char *))dlsym(dl_hdl, "x25519_key_to_str_free"))
+        ) {
+                dprintf(D_ALWAYS, "Failed to open boringtun library: %s\n", dlerror());
+                return false;
+        }
+	loaded_boringtun = true;
+        return true;
+}
+
+}
+
+
+//-------------------------------------------------------------
+bool vpn_generate_x25519_secret_key(struct x25519_key &privkey)
+{
+	if (!load_boringtun()) {return false;}
+
+	privkey = (*g_x25519_secret_key)();
+
+	return true;
+}
+
+
+//-------------------------------------------------------------
+bool vpn_generate_x25519_pubkey(struct x25519_key &privkey, struct x25519_key &pubkey)
+{
+	if (!load_boringtun()) {return false;}
+
+	pubkey = (*g_x25519_public_key)(privkey);
+
+	return true;
+}
+
+
+//-------------------------------------------------------------
+const char *vpn_x25519_key_to_base64(struct x25519_key &pubkey)
+{
+	if (!load_boringtun()) {return nullptr;}
+
+	return (*g_x25519_key_to_base64)(pubkey);
+}
+
+
+//-------------------------------------------------------------
+void vpn_x25519_key_to_str_free(const char *base64_pubkey)
+{
+	if (!load_boringtun()) {return;}
+
+	(*g_x25519_key_to_str_free)(base64_pubkey);
+}
 
 
 //-------------------------------------------------------------
@@ -124,7 +200,8 @@ int launch_boringtun(int tun_fd, int boringtun_reaper, int &uapi_fd, pid_t &bori
 		TemporaryPrivSentry sentry(PRIV_CONDOR);
 
 		pid = fork();
-		if (pid == 0) {
+		if (pid == 0) { // Child
+			close(uapi_sock[0]);
 			execve(boringtun_executable.c_str(), exec_args_array.get(), env_array.get());
 			dprintf(D_ALWAYS, "Failed to exec boringtun process %s (errno=%d, %s).\n",
 				boringtun_executable.c_str(), errno, strerror(errno));
@@ -132,7 +209,7 @@ int launch_boringtun(int tun_fd, int boringtun_reaper, int &uapi_fd, pid_t &bori
 		}
 	}
 	close(uapi_sock[1]);
-	if (pid) {
+	if (pid > 0) { // Parent
 		uapi_fd = uapi_sock[0];
 		boringtun_pid = pid;
 		return 0;

@@ -19,6 +19,10 @@
 
 #pragma once
 
+#ifdef LINUX
+
+#include "wireguard_ffi.h"
+
 #include <string>
 #include <unordered_map>
 
@@ -62,3 +66,17 @@ int recvfd(int sock);
 //  - returns: non-zero on failure.
 //  - The special value of `-1` for req_uid / req_gid indicates to map to the UID/GID in the parent namespace.
 int setup_uidgid_map(int req_uid, int req_gid, int parent_uid, int parent_gid);
+
+/// Generate a X25519 private key
+bool vpn_generate_x25519_secret_key(struct x25519_key &privkey);
+
+/// Derive a X25519 public key from a private key
+bool vpn_generate_x25519_pubkey(struct x25519_key &privkey, struct x25519_key &pubbkey);
+
+/// Convert a X25519 key to base64
+const char *vpn_x25519_key_to_base64(struct x25519_key &pubkey);
+
+/// Free memory from the base64 representation of a X25519 key
+void vpn_x25519_key_to_str_free(const char *base64_pubkey);
+
+#endif // LINUX

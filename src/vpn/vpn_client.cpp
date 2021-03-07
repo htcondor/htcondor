@@ -28,32 +28,8 @@
 #include "dc_vpn.h"
 #include "vpn_common.h"
 
-#include <dlfcn.h>
-
-#include "wireguard_ffi.h"
 
 namespace {
-
-struct x25519_key (*g_x25519_secret_key)() = nullptr;
-struct x25519_key (*g_x25519_public_key)(struct x25519_key) = nullptr;
-const char * (*g_x25519_key_to_base64)(struct x25519_key) = nullptr;
-void (*g_x25519_key_to_str_free)(const char *) = nullptr;
-
-bool load_boringtun()
-{
-	void *dl_hdl;
-
-	if ((dl_hdl = dlopen("libboringtun.so", RTLD_LAZY)) == NULL ||
-		!(g_x25519_secret_key = (struct x25519_key (*)())dlsym(dl_hdl, "x25519_secret_key")) ||
-		!(g_x25519_public_key = (struct x25519_key (*)(struct x25519_key))dlsym(dl_hdl, "x25519_public_key")) ||
-		!(g_x25519_key_to_base64 = (const char *(*)(struct x25519_key))dlsym(dl_hdl, "x25519_key_to_base64")) ||
-		!(g_x25519_key_to_str_free = (void (*)(const char *))dlsym(dl_hdl, "x25519_key_to_str_free"))
-	) {
-		fprintf(stderr, "Failed to open boringtun library: %s\n", dlerror());
-		return false;
-	}
-	return true;
-}
 
 
 //-------------------------------------------------------------
@@ -258,8 +234,8 @@ int launch_vpn_client(int argc, char *argv[], DCVPN &vpn, std::string lease, uns
 		kill(pid, SIGKILL);
 	}
 	CondorError err;
-	vpn.cancel(lease, err);
-	fprintf(stderr, "Failed to destroy remote lease: %s\n", err.getFullText().c_str());
+	if (!vpn.cancel(lease, err))
+		fprintf(stderr, "Failed to destroy remote lease: %s\n", err.getFullText().c_str());
 
 	while (true) {
 		int rval = waitpid(pid, &child_status, 0);
@@ -290,11 +266,6 @@ void print_usage(const char *argv0)
 }
 
 int main(int argc, char *argv[]) {
-
-	if (!load_boringtun()) {
-		fprintf(stderr, "Failed to load libboringtun; necessary for %s.\n", argv[0]);
-		exit(1);
-	}
 
 	myDistro->Init( argc, argv );
 	set_priv_initialize();
@@ -352,17 +323,25 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	struct x25519_key privkey = (*g_x25519_secret_key)();
+	struct x25519_key privkey;
+	if (!vpn_generate_x25519_secret_key(privkey)) {
+		fprintf(stderr, "Failed to generate secret key.\n");
+		exit(1);
+	}
 
-	struct x25519_key pubkey = (*g_x25519_public_key)(privkey);
+	struct x25519_key pubkey;
+	if (!vpn_generate_x25519_pubkey(privkey, pubkey)) {
+		fprintf(stderr, "Failed to generate public key.\n");
+		exit(1);
+	}
 
-	auto base64_pubkey = (*g_x25519_key_to_base64)(pubkey);
+	auto base64_pubkey = vpn_x25519_key_to_base64(pubkey);
 	std::string base64_pubkey_str(base64_pubkey);
-	(*g_x25519_key_to_str_free)(base64_pubkey);
+	vpn_x25519_key_to_str_free(base64_pubkey);
 
-	auto base64_key = (*g_x25519_key_to_base64)(privkey);
+	auto base64_key = vpn_x25519_key_to_base64(privkey);
 	std::string base64_key_str(base64_key);
-	(*g_x25519_key_to_str_free)(base64_key);
+	vpn_x25519_key_to_str_free(base64_key);
 
 	CondorError err;
 	std::string ipaddr;
