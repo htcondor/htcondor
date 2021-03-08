@@ -351,6 +351,7 @@ public:
 				continue;
 			}
 			if (pending_request.m_trust_domain == trust_domain) {
+				delete data;	// deallocate this duplicated request to avoid leak
 				return;
 			}
 		}
