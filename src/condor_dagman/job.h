@@ -829,18 +829,18 @@ public:
 	}
 
 	// this table holds all of the allocated edges, stored by EdgeId (which is the index into the table)
-	static std::deque<Edge*> _edgeTable;
+	static std::deque<std::unique_ptr<Edge>> _edgeTable;
 
 	static Edge * ById(EdgeID_t id) {
 		if (id >= 0 && id < (EdgeID_t)_edgeTable.size())
-			return _edgeTable.at(id);
+			return _edgeTable.at(id).get();
 		return NULL;
 	}
 	// create a new, empty edge returning it's ID
 	static EdgeID_t NewEdge(Edge* & edge) {
 		EdgeID_t id = (EdgeID_t)_edgeTable.size();
-		edge = new Edge();
-		_edgeTable.push_back(edge);
+		_edgeTable.push_back(std::unique_ptr<Edge>());
+		edge = ById(id);
 		return id;
 	}
 	// create an edge as a copy of an existing edge, returning the new EdgeID
@@ -848,8 +848,7 @@ public:
 		Edge* from = ById(id);
 		if ( ! from) return NO_ID;
 		id = (EdgeID_t)_edgeTable.size();
-		Edge* edge = new Edge(from->_ary);
-		_edgeTable.push_back(edge);
+		_edgeTable.emplace_back(std::unique_ptr<Edge>(new Edge(from->_ary)));
 		return id;
 	}
 
@@ -896,14 +895,13 @@ public:
 
 	static EdgeID_t NewWaitEdge(int num) {
 		EdgeID_t id = (EdgeID_t)_edgeTable.size();
-		WaitEdge * edge = new WaitEdge(num);
-		_edgeTable.push_back(edge);
+		_edgeTable.push_back(std::unique_ptr<Edge>(new WaitEdge(num)));
 		return id;
 	}
 
 	static WaitEdge * ById(EdgeID_t id) {
 		if (id >= 0 && id < (EdgeID_t)_edgeTable.size())
-			return static_cast<WaitEdge*>(_edgeTable.at(id));
+			return static_cast<WaitEdge*>(_edgeTable.at(id).get());
 		return NULL;
 	}
 
