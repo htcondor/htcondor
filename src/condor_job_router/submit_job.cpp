@@ -478,9 +478,9 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 
 			// See the comment in the function body of ExpandInputFileList
 			// for an explanation of what is going on here.
-		MyString transfer_input_error_msg;
+		std::string transfer_input_error_msg;
 		if( !FileTransfer::ExpandInputFileList( &src, transfer_input_error_msg ) ) {
-			failobj.fail("%s\n",transfer_input_error_msg.Value());
+			failobj.fail("%s\n",transfer_input_error_msg.c_str());
 			return false;
 		}
 	}
