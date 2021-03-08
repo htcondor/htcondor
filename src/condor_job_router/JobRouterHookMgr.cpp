@@ -77,7 +77,7 @@ JobRouterHookMgr::~JobRouterHookMgr()
 void
 JobRouterHookMgr::clearHookPaths()
 {
-	MyString key;
+	std::string key;
 	char** paths;
 	if (0 < m_hook_paths.getNumElements())
 	{
@@ -145,8 +145,7 @@ JobRouterHookMgr::getHookPath(HookType hook_type, const classad::ClassAd &ad)
 		return NULL;
 	}
 
-	MyString key(keyword.c_str());
-	if (0 > m_hook_paths.lookup(key, paths))
+	if (0 > m_hook_paths.lookup(keyword, paths))
 	{
 		// Initialize the hook paths for this keyword
 		paths = new char*[NUM_HOOKS];
@@ -154,18 +153,18 @@ JobRouterHookMgr::getHookPath(HookType hook_type, const classad::ClassAd &ad)
 		{
 			paths[i] = NULL;
 		}
-		m_hook_paths.insert(key, paths);
+		m_hook_paths.insert(keyword, paths);
 	}
 
 	hook_path = paths[m_hook_maps[hook_type]-1];
 	if (NULL == hook_path)
 	{
-		MyString _param;
-		_param.formatstr("%s_HOOK_%s", keyword.c_str(), getHookTypeString(hook_type));
+		std::string _param;
+		formatstr(_param, "%s_HOOK_%s", keyword.c_str(), getHookTypeString(hook_type));
         // Here the distinction between undefined hook and a hook path error 
         // is being collapsed
-		validateHookPath(_param.Value(), hook_path);
-		dprintf(D_FULLDEBUG, "Hook %s: %s\n", _param.Value(),
+		validateHookPath(_param.c_str(), hook_path);
+		dprintf(D_FULLDEBUG, "Hook %s: %s\n", _param.c_str(),
 			hook_path ? hook_path : "UNDEFINED");
 	}
 	else if (UNDEFINED == hook_path)
