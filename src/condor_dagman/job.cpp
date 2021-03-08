@@ -43,7 +43,7 @@ int Job::_nextJobstateSeqNum = 1;
 #ifdef MEMORY_HOG
 #else
 //EdgeID_t Edge::_edgeId_counter = 0; // Initialize the static data memmber
-std::deque<std::unique_ptr<Edge>> Edge::_edgeTable;
+std::deque<Edge*> Edge::_edgeTable;
 #endif
 
 
