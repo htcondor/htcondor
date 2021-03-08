@@ -127,7 +127,11 @@ SSHToJob::~SSHToJob()
 {
 	if( !m_session_dir.IsEmpty() ) {
 		Directory dir(m_session_dir.Value());
-		dir.Remove_Full_Path(m_session_dir.Value());
+		if (!dir.Remove_Full_Path(m_session_dir.Value())) {
+			// This isn't fatal, the starter will remove it on exit, but
+			// log the fact just in case
+			dprintf(D_ALWAYS, "SSHToJob: Can't remove session dir, letting the starter take care of it\n");
+		}
 	}
 }
 

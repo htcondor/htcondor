@@ -5775,6 +5775,7 @@ int SubmitHash::SetRequestResources()
 
 		attr = ATTR_REQUEST_PREFIX; attr.append(rname);
 		AssignJobExpr(attr.c_str(), val);
+		free(val);
 		RETURN_IF_ABORT();
 	}
 	hash_iter_delete(&it);

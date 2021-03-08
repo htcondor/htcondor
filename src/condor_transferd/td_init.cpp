@@ -305,12 +305,16 @@ TransferD::setup_transfer_request_handler(int  /*cmd*/, Stream *sock)
 	char* _sock_id = strdup( sock_id.Value() );		//de-const
 
 	// register the handler for any future transfer requests on this socket.
-	daemonCore->Register_Socket((Sock*)rsock, _sock_id,
+	int retval = daemonCore->Register_Socket((Sock*)rsock, _sock_id,
 		(SocketHandlercpp)&TransferD::accept_transfer_request_handler,
 		"TransferD::accept_transfer_request_handler", this, ALLOW);
 	
 	free( _sock_id );
 	
+	if (retval < 0) {
+		dprintf(D_ALWAYS, "Treq: Failure to register socket\n");
+		return false;
+	}
 	dprintf(D_ALWAYS, "Treq channel established.\n");
 	dprintf(D_ALWAYS, "Accepting Transfer Requests.\n");
 

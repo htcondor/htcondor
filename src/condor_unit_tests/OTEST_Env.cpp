@@ -325,7 +325,7 @@ static const char
 	   *V1R_MISS_NAME = "=1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3",
 	   *V1R_MISS_DELIM = "one1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3",
 	   *V1R_MISS_BOTH = "=1" V1_ENV_DELIM "two2" V1_ENV_DELIM "three=3",
-	*V2R ="one=1 two=2 three=3",	//V2Raw format
+	*V2R ="one=1 two=2 three=3\0",	//V2Raw format
 	   *V2R_MISS_NAME ="=1 two=2 three=3",
 	   *V2R_MISS_DELIM ="one1 two=2 three=3",
 	   *V2R_MISS_BOTH ="=1 two2 three=3",

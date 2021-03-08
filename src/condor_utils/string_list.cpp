@@ -580,6 +580,39 @@ StringList::print_to_string(void) const
 	return print_to_delimed_string(",");
 }
 
+std::string
+StringList::to_string(void) const 
+{
+	std::string s;
+
+    ListIterator<char>	 iter;
+    iter.Initialize( m_strings );
+    iter.ToBeforeFirst();
+	char *element;
+
+	// calculate and reserve space for strings and commas
+	size_t len = 0;
+	while (iter.Next(element)) {
+		len +=  strlen(element) + 1;
+	}
+	s.reserve(len);
+
+	// now append all the elements to our string
+    iter.ToBeforeFirst();
+	while (iter.Next(element)) {
+		s += element;
+		s += ',';
+	}
+
+	// Remove trailing comma
+	if (!s.empty()) {
+		s.pop_back();
+	}
+
+	// NRVO
+	return s;
+}
+
 char *
 StringList::print_to_delimed_string(const char *delim) const
 {

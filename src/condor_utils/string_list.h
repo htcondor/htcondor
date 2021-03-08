@@ -128,6 +128,7 @@ public:
 		rewind the string in order to construct this char array, and you
 		are responsible to release the memory allocated by this function
 		with free() */
+	std::string to_string(void) const;
 	char* print_to_string(void) const;
 	char* print_to_delimed_string(const char *delim = NULL) const;
 

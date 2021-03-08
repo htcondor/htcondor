@@ -480,6 +480,24 @@ Condor_Auth_Passwd::fetchPoolSharedKey(int & len)
 	return buf;
 }
 
+char* Condor_Auth_Passwd::fetchPoolPassword(int & len)
+{
+	len = 0;
+	// TODO: use correct domain for windows?
+	auto_free_ptr pwd(getStoredPassword(POOL_PASSWORD_USERNAME, getLocalDomain()));
+	if ( ! pwd) {
+		dprintf(D_SECURITY, "Failed to fetch pool password\n");
+		return NULL;
+	}
+	len = (int)strlen(pwd.ptr()) * 2;
+	char * buf = (char*)malloc(len+1);
+	strcpy(buf, pwd.ptr());
+	strcat(buf, pwd.ptr());
+	buf[len] = 0;
+	return buf;
+}
+
+
 char *
 Condor_Auth_Passwd::fetchLogin()
 {
@@ -1770,8 +1788,13 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 				m_sk.kb = m_k_prime; m_k_prime = NULL;
 				m_sk.kb_len = m_k_prime_len; m_k_prime_len = 0;
 			} else {
-				dprintf(D_SECURITY, "PW: Client using pool password.\n");
-				m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
+				if (m_version == 2) {
+					dprintf(D_SECURITY, "PW: Client using pool shared key.\n");
+					m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
+				} else {
+					dprintf(D_SECURITY, "PW: Client using pool password.\n");
+					m_sk.shared_key = fetchPoolPassword(m_sk.len);
+				}
 				dprintf(D_SECURITY, "PW: Client setting keys.\n");
 				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 					m_client_status = AUTH_PW_ERROR;
@@ -1911,7 +1934,11 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 			// hence, in this case we just use the server name twice (which is
 			// mandated to be the pool username).
 		if (m_t_client.a_token.empty()) {
-			m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
+			if (m_version == 2) {
+				m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
+			} else {
+				m_sk.shared_key = fetchPoolPassword(m_sk.len);
+			}
 		} else {
 			m_sk.shared_key = fetchTokenSharedKey(m_t_client.a_token, m_sk.len);
 		}

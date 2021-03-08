@@ -3082,6 +3082,10 @@ DaemonCore::reconfig(void) {
 		dprintf(D_ALWAYS, "Looks like we are under valgrind, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
 		m_use_clone_to_create_processes = false;
 	}
+#ifdef __SANITIZE_ADDRESS__
+		dprintf(D_ALWAYS, "Looks like we are under address sanitizer, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
+		m_use_clone_to_create_processes = false;
+#endif
 
 		// If we are NOT the schedd, then do not use clone, as only
 		// the schedd benefits from clone, and clone is more susceptable

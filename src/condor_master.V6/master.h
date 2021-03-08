@@ -177,6 +177,7 @@ class Daemons : public Service
 public:
 	Daemons();
 	void	RegisterDaemon(class daemon *);
+	void 	UnRegisterAllDaemons() { for(auto &kvpair: daemon_ptr) { delete kvpair.second;} ; daemon_ptr.clear();}
 	void 	InitParams();
 
 	void	CheckForNewExecutable();
