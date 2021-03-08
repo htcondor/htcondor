@@ -6423,8 +6423,9 @@ use security : strong
 # but rather than force each user to acquire one, we add the FS ("filesystem")
 # method, which lets the HTCondor tools use the local filesystem to prove the
 # identity of the user who invoked them.  Finally, we allow ANONYMOUS
-# authentication, if nothing else works, to allow users read-only access
-# to remote daemons (e.g., for condor_status).
+# authentication, for the READ authorization level only, so that if nothing
+# else works, we can allow users read-only access to remote daemons
+# (e.g., for condor_status).
 #
 # Users who want to submit jobs remotely should run `condor_token_fetch` on
 # the machine they want to submit to and cut-and-paste the result to a file
@@ -6435,7 +6436,12 @@ use security : strong
 # IDTOKENS before FS because FS gives the daemon a different identity
 # than the IDTOKEN, and FS before ANONYMOUS because ANONYMOUS, of course,
 # gives no specific identity at all.
-SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
+# Only allow ANONYMOUS authentication for READ-level authorizations.
+SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+# Since ANONYMOUS is not in the default authentication methods, we must
+# list it in the client methods explicitly (all other methods are server).
+SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
 
 # IDTOKENs issued by HTCondor include the identity of the issuer.  This
 # identity is used to determine which IDTOKEN(s) to present to which
@@ -6475,8 +6481,11 @@ use role : CentralManager
 default: @end
 use security : get_htcondor_idtokens
 
-# Allow local users to submit jobs.
-ALLOW_WRITE = $(ALLOW_WRITE) *@$(HOSTNAME)
+# Allow local users to submit jobs.  Since the only way to authenticate
+# is with IDTOKENS (all of whose holders we trust) and FS (the local users),
+# we can avoid writing things like *@$(HOSTNAME), which will fail if
+# UID_DOMAIN is set (and introduces more opportunities for DNS to fail).
+ALLOW_WRITE = $(ALLOW_WRITE) *
 
 use role : submit
 @end
