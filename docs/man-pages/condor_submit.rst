@@ -1204,6 +1204,9 @@ FILE TRANSFER COMMANDS
     temporary token, and ``+EC2SessionToken`` for the file containing the
     session token.
 
+    HTCondor does not presently support transferring entire buckets or
+    directories from S3.
+
     Temporary credentials have a limited lifetime.  If you are using S3 only
     to download input files, the job must start before the credentials
     expire.  If you are using S3 to upload output files, the job must finish
