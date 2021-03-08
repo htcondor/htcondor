@@ -63,7 +63,7 @@ class MyString
 	MyString(const char* S);
 
 	/** Constructor to copy a std::string */
-	MyString(const std::string& S);
+	/* explicit */ MyString(const std::string& S);
 
 	/** Copy constructor */
 	MyString(const MyString& S);

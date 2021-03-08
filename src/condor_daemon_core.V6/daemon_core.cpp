@@ -1341,10 +1341,10 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 
 		if( m_ccb_listeners ) {
-			MyString ccb_contact;
+			std::string ccb_contact;
 			m_ccb_listeners->GetCCBContactString(ccb_contact);
-			if( !ccb_contact.IsEmpty() ) {
-				m_sinful.setCCBContact(ccb_contact.Value());
+			if( !ccb_contact.empty() ) {
+				m_sinful.setCCBContact(ccb_contact.c_str());
 				publish_private_name = true;
 			}
 		}
