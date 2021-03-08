@@ -71,6 +71,11 @@ Bugs Fixed:
   is quickly released and then removed.
   :jira:`309`
 
+- Fixed a bug in DAGMan that prevented the use of the ``@`` symbol in the event
+  log file path, where it was mistaken as an unresolved macro substitution.
+  We now look for the ``@(`` character sequence to identify unresolved macros.
+  :jira:`159`
+
 Version 8.8.12
 --------------
 
