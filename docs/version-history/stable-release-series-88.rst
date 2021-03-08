@@ -61,7 +61,7 @@ Bugs Fixed:
   :jira:`144`
 
 - Fixed a bug with pslot preemption and disks with more than 4 TB of space.
-  :jira:`194`
+  :jira:`195`
 
 - Fixed a bug where the counts of job reconnections can be off in the
   Schedd Restart Report.
