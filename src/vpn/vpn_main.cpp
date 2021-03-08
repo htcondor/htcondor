@@ -483,6 +483,29 @@ update_collector_ad() {
 
 	if (g_lease_mgr) {g_lease_mgr->UpdateStats(ad);}
 
+	std::string command = "get=1\n\n";
+	std::unordered_map<std::string, std::string> response_map;
+	auto boring_err = boringtun_command(g_boringtun_uapi_fd, command, response_map);
+	dprintf(D_FULLDEBUG, "Result of boringtun status query: %d\n", boring_err);
+	if (!boring_err) {
+		const auto iter = response_map.find("rx_bytes");
+		if (iter != response_map.end()) {
+			try {
+				auto rx_bytes = std::stol(iter->second);
+				// Note bytes received by boringtun correspond to bytes
+				// sent by the client; hence, we swap the labels here.
+				ad.InsertAttr(ATTR_BYTES_SENT, rx_bytes);
+			} catch (...) {}
+		}
+		const auto iter2 = response_map.find("tx_bytes");
+		if (iter2 != response_map.end()) {
+			try {
+				auto tx_bytes = std::stol(iter2->second);
+				ad.InsertAttr(ATTR_BYTES_RECVD, tx_bytes);
+			} catch (...) {}
+		}
+	}
+
 	ad.InsertAttr(ATTR_NAME, g_vpn_name);
 
 	daemonCore->publish(&ad);
