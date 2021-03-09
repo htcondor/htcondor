@@ -338,17 +338,12 @@ public:
 		// Callbacks for collector updates; determine whether a token request would be useful!
 	static void
 	daemonUpdateCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain, bool should_try_token_request, void *miscdata) {
+		if (success || !should_try_token_request || !sock) return;
 
-			// Put our void *miscdata into a managed unique_ptr so it is deallocated on return
-		auto data_ptr = reinterpret_cast<DCTokenRequester::DCTokenRequesterData*>(miscdata);
-		if (!data_ptr) {
+		auto data = reinterpret_cast<DCTokenRequester::DCTokenRequesterData*>(miscdata);
+		if (!data) {
 			return;
 		}
-		std::unique_ptr<DCTokenRequester::DCTokenRequesterData> data(data_ptr);
-
-			// No need request a token if we already successfully updated the
-			// collector, or if no request tokens attempts desired...
-		if (success || !should_try_token_request || !sock) return;
 
 			// Avoiding requesting tokens for already-pending requests.
 		for (const auto &pending_request : m_token_requests) {
@@ -356,6 +351,7 @@ public:
 				continue;
 			}
 			if (pending_request.m_trust_domain == trust_domain) {
+				delete data;	// deallocate this duplicated request to avoid leak
 				return;
 			}
 		}
@@ -376,11 +372,7 @@ public:
 			back.m_daemon->setAuthenticationMethods({"SSL", "TOKEN"});
 		}
 		back.m_callback_fn = &DCTokenRequester::tokenRequestCallback;
-		back.m_callback_data = data.get();
-		// At this point, the m_callback_data pointer will be deallocated by
-		// tokenRequestCallback(), so do a release() here so it is not
-		// deallocated when data goes out of scope.
-		data.release();
+		back.m_callback_data = data;
 
 		if (m_token_requests_tid == -1) {
 			m_token_requests_tid = daemonCore->Register_Timer( 0,
@@ -440,12 +432,6 @@ private:
 
 	static bool
 	tryTokenRequest(PendingRequest &req) {
-
-		/* NOTE: upon leaving this function, in order to avoid leaking memory,
-		 * we MUST either have a) set req.m_client_id, or b) invoked the callback and 
-		 * cleared the req.m_client_id. 
-		 */
-
 		std::string subsys_name = get_mySubSystemName();
 
 		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
@@ -453,8 +439,6 @@ private:
 			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
 			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
-			req.m_client_id = "";
-			(*req.m_callback_fn)(false, req.m_callback_data);
 			return false;
 		}
 		std::string token;
@@ -478,7 +462,6 @@ private:
 			if (token.empty()) {
 				req.m_request_id = request_id;
 				dprintf(D_ALWAYS, "Token requested; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), request_id.c_str());
-				// m_client_id is set here, so safe to return without calling the callback
 				return true;
 			} else {
 				dprintf(D_ALWAYS, "Token request auto-approved.\n");
@@ -498,7 +481,6 @@ private:
 			if (token.empty()) {
 				dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
 				dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), req.m_request_id.c_str());
-				// m_client_id is set here, so safe to return without calling the callback
 				return true;
 			} else {
 				dprintf(D_ALWAYS, "Token request approved.\n");
@@ -665,9 +647,8 @@ DCTokenRequester::tokenRequestCallback(bool success, void *miscdata)
 	std::unique_ptr<DCTokenRequester::DCTokenRequesterData> data_uptr(data);
 
 	(*data->m_callback_fn)(success, data->m_callback_data);
-
-	// Note: miscdata is being deleted now, as data_uptr is going out of scope...
 }
+
 
 void
 DCTokenRequester::daemonUpdateCallback(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain,
