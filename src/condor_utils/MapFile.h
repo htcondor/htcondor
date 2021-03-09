@@ -66,7 +66,7 @@ class MapFile
 						std::string &canonicalization)
 	{
 		MyString internal_canon;
-		auto retval = GetCanonicalization(method, principal, internal_canon);
+		auto retval = GetCanonicalization(MyString(method), MyString(principal), internal_canon);
 		if (!retval) {
 			canonicalization = internal_canon;
 		}

@@ -691,7 +691,7 @@ void main_init (int argc, char ** const argv) {
 		// Version of this condor_submit_dag binary.
 		//.Defaults to same version as condor_dagman, updated by input args
 	bool allowVerMismatch = false;
-	const char *csdVersion = dagmanVersion.get_version_string();
+	char *csdVersion = dagmanVersion.get_version_string();
 
 	int i;
 	for (i = 0 ; i < argc ; i++) {
@@ -868,6 +868,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No CsdVersion value specified\n" );
 				Usage();
 			}
+			if (csdVersion) free(csdVersion);
 			csdVersion = argv[i];
 
 		} else if( !strcasecmp( "-AllowVersionMismatch", argv[i] ) ) {

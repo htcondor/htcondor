@@ -99,6 +99,7 @@ public:
 	// ipv6 only
 	void set_scope_id(uint32_t scope_id);
 
+	bool from_ip_string(const std::string& ip_string);
 	bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
@@ -108,7 +109,7 @@ public:
 
 		// sinful string could contain either IP address or hostname.
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
-	bool from_sinful(const MyString& ip_string);
+	bool from_sinful(const std::string& ip_string);
 	bool from_sinful(const char* sinful);
 		// The sinful string will fit in a buffer whose size is at least
 		// SINFUL_STRING_BUF_SIZE.

@@ -72,6 +72,14 @@ Env::AddErrorMessage(char const *msg,MyString *error_buffer)
 }
 
 bool
+Env::MergeFrom( const ClassAd * ad, std::string & error_msg ) {
+    MyString ms;
+    bool rv = MergeFrom(ad, &ms);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
+}
+
+bool
 Env::MergeFrom( const ClassAd *ad, MyString *error_msg )
 {
 	if(!ad) return true;
@@ -104,6 +112,14 @@ Env::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
 {
 		// Is it earlier than 6.7.15?
 	return !condor_version.built_since_version(6,7,15);
+}
+
+bool
+Env::InsertEnvIntoClassAd( ClassAd * ad, std::string & error_msg, char const * opsys, CondorVersionInfo * condor_version) const {
+    MyString ms;
+    bool rv = InsertEnvIntoClassAd(ad, &ms, opsys, condor_version);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
 }
 
 bool

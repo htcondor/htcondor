@@ -260,6 +260,7 @@ cleanup_memory( void )
 		free( FS_Preen );
 		FS_Preen = NULL;
 	}
+	daemons.UnRegisterAllDaemons();
 }
 
 #ifdef WIN32

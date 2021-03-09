@@ -331,9 +331,9 @@ class FileTransfer final: public Service {
 		// inputs.  See the lengthy comment in the function body for additional
 		// explanation of why this is necessary.
 		// Returns false on failure and sets error_msg.
-	static bool ExpandInputFileList( ClassAd *job, MyString &error_msg );
+	static bool ExpandInputFileList( ClassAd *job, std::string &error_msg );
 		// use this function when you don't want to party on the job ad like the above function does 
-	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, MyString &error_msg );
+	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, std::string &error_msg );
 
 	// When downloading files, store files matching source_name as the name
 	// specified by target_name.

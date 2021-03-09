@@ -125,7 +125,7 @@ def main():
 
     # TODO: there is much environment munging and path construction below that won't work on Windows
 
-    os.environ["PERL5LIB"] = ".."
+    os.environ["PERL5LIB"] = "..:."
 
     new_library_path = os.path.join(args.prefix_path, "lib")
     if "LD_LIBRARY_PATH" in os.environ:

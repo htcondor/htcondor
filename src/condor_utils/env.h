@@ -169,6 +169,7 @@ class Env {
 
 		// Add (or overwrite) environment entries from a ClassAd.
 	bool MergeFrom( const ClassAd *ad, MyString *error_msg );
+	bool MergeFrom( const ClassAd *ad, std::string & error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
 	bool SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg );
@@ -198,6 +199,7 @@ class Env {
 		// format depending on the Condor version and opsys of the
 		// receiver.
 	bool InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys=NULL, CondorVersionInfo *condor_version=NULL ) const;
+	bool InsertEnvIntoClassAd( ClassAd *ad, std::string & error_msg, char const *opsys=NULL, CondorVersionInfo *condor_version=NULL ) const;
 
 		// Returns true if specified condor version requires V1 env syntax.
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);

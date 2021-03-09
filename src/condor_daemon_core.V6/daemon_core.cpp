@@ -1341,10 +1341,10 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 
 		if( m_ccb_listeners ) {
-			MyString ccb_contact;
+			std::string ccb_contact;
 			m_ccb_listeners->GetCCBContactString(ccb_contact);
-			if( !ccb_contact.IsEmpty() ) {
-				m_sinful.setCCBContact(ccb_contact.Value());
+			if( !ccb_contact.empty() ) {
+				m_sinful.setCCBContact(ccb_contact.c_str());
 				publish_private_name = true;
 			}
 		}
@@ -3082,6 +3082,10 @@ DaemonCore::reconfig(void) {
 		dprintf(D_ALWAYS, "Looks like we are under valgrind, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
 		m_use_clone_to_create_processes = false;
 	}
+#ifdef __SANITIZE_ADDRESS__
+		dprintf(D_ALWAYS, "Looks like we are under address sanitizer, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
+		m_use_clone_to_create_processes = false;
+#endif
 
 		// If we are NOT the schedd, then do not use clone, as only
 		// the schedd benefits from clone, and clone is more susceptable

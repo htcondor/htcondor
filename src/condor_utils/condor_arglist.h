@@ -166,6 +166,9 @@ class ArgList {
 	bool AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg);
 	bool InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_string) const;
 
+	bool AppendArgsFromClassAd(ClassAd const *ad, std::string & error_msg);
+	bool InsertArgsIntoClassAd(ClassAd *ad, CondorVersionInfo *condor_version, std::string & error_string) const;
+
 		// Returns true if specified condor version requires V1 args syntax.
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
 
@@ -174,6 +177,7 @@ class ArgList {
 
 		// Get arguments from this ArgList object for descriptional purposes.
 	void GetArgsStringForDisplay(MyString *result,int start_arg=0) const;
+	void GetArgsStringForDisplay(std::string & result, int start_arg=0) const;
 
 		// ...
 	void GetArgsStringForLogging( MyString * result ) const;

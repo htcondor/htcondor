@@ -4630,9 +4630,13 @@ int SubmitHash::SetExecutable()
 	}
 #endif
 
+
 	if (FnCheckFile) {
 		int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
-		if (rval) { ABORT_AND_RETURN( rval ); }
+		if (rval) { 
+			if (ename) free(ename);
+			ABORT_AND_RETURN( rval );
+		}
 	}
 	if (ename) free(ename);
 	return 0;
@@ -5775,6 +5779,7 @@ int SubmitHash::SetRequestResources()
 
 		attr = ATTR_REQUEST_PREFIX; attr.append(rname);
 		AssignJobExpr(attr.c_str(), val);
+		free(val);
 		RETURN_IF_ABORT();
 	}
 	hash_iter_delete(&it);
@@ -7666,7 +7671,7 @@ int SubmitHash::FixupTransferInputFiles()
 
 	if (ComputeIWD()) { ABORT_AND_RETURN(1); }
 
-	MyString error_msg;
+	std::string error_msg;
 	MyString expanded_list;
 	bool success = FileTransfer::ExpandInputFileList(input_files.c_str(),JobIwd.c_str(),expanded_list,error_msg);
 	if (success) {
@@ -7676,7 +7681,7 @@ int SubmitHash::FixupTransferInputFiles()
 		}
 	} else {
 		MyString err_msg;
-		err_msg.formatstr( "\n%s\n",error_msg.Value());
+		err_msg.formatstr( "\n%s\n",error_msg.c_str());
 		print_wrapped_text( err_msg.Value(), stderr );
 		ABORT_AND_RETURN( 1 );
 	}

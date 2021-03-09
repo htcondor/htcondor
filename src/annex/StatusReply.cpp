@@ -79,9 +79,9 @@ printClassAds(	const std::map< std::string, std::string > & instances,
 		return;
 	}
 	unsigned char * md = mmc.computeMD();
-	MyString md5;
+	std::string md5;
 	for( int i = 0; i < MAC_SIZE; ++i ) {
-		md5.formatstr_cat( "%02x", (int)(md[i]) );
+		formatstr_cat( md5, "%02x", (int)(md[i]) );
 	}
 	free( md );
 

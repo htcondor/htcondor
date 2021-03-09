@@ -85,7 +85,7 @@ static char * get_daemon_param(const char * addr, const char * param_name);
 static bool get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait, ClassAd & ready_ad);
 
 // app globals
-static struct {
+static struct AppType {
 	const char * Name; // tool name as invoked from argv[0]
 	List<const char> target_names;    // list of target names to query
 	List<LOG_INFO>   all_log_info;    // pool of info from scanning log directories.
@@ -152,6 +152,11 @@ static struct {
 		return found;
 	}
 
+	~AppType() {
+		target_names.Clear();
+		all_log_info.Clear();
+		print_head.Clear();
+	}	
 } App;
 
 // init fields in the App structure that have no default initializers
@@ -1510,6 +1515,10 @@ main( int argc, char *argv[] )
 				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
 				print_daemon_info(info, App.quick_scan);
 			}
+			for (const auto &keyvalue : info) {
+				delete keyvalue.second;
+			}
+			info.clear();
 		}
 	}
 
