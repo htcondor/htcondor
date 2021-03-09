@@ -111,8 +111,14 @@ int main(int argc, char *argv[])
 		// command line, if we don't set the values here, condor_dagman
 		// won't be able to find those files when it tries to communicate
 		/// with the schedd.  wenger 2013-03-11
-	shallowOpts.strScheddDaemonAdFile = param( "SCHEDD_DAEMON_AD_FILE" );
-	shallowOpts.strScheddAddressFile = param( "SCHEDD_ADDRESS_FILE" );
+	char * schedd_daemon_ad_file = param( "SCHEDD_DAEMON_AD_FILE" );
+	shallowOpts.strScheddDaemonAdFile = schedd_daemon_ad_file;
+	if (schedd_daemon_ad_file) free(schedd_daemon_ad_file);
+
+	char * schedd_address_file = param( "SCHEDD_ADDRESS_FILE" );
+	shallowOpts.strScheddAddressFile = schedd_address_file;
+	if (schedd_address_file) free(schedd_address_file);
+
 	parseCommandLine(deepOpts, shallowOpts, argc, argv);
 
 	int tmpResult;

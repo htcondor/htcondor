@@ -4630,9 +4630,13 @@ int SubmitHash::SetExecutable()
 	}
 #endif
 
+
 	if (FnCheckFile) {
 		int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
-		if (rval) { ABORT_AND_RETURN( rval ); }
+		if (rval) { 
+			if (ename) free(ename);
+			ABORT_AND_RETURN( rval );
+		}
 	}
 	if (ename) free(ename);
 	return 0;
