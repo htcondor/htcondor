@@ -6400,7 +6400,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 }
 
 bool
-FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, MyString &error_msg )
+FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, std::string &error_msg )
 {
 	bool result = true;
 	StringList input_files(input_list,",");
@@ -6426,7 +6426,7 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 			// N.B.: It's only safe to flatten relative paths here because
 			// this code never calls destDir().
 			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false ) ) {
-				error_msg.formatstr_cat("Failed to expand '%s' in transfer input file list. ",path);
+				formatstr_cat(error_msg, "Failed to expand '%s' in transfer input file list. ",path);
 				result = false;
 			}
 			FileTransferList::iterator filelist_it;
@@ -6442,7 +6442,7 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 }
 
 bool
-FileTransfer::ExpandInputFileList( ClassAd *job, MyString &error_msg ) {
+FileTransfer::ExpandInputFileList( ClassAd *job, std::string &error_msg ) {
 
 		// If we are spooling input files, input directories that end
 		// in a slash must be expanded to list their contents so that
@@ -6476,7 +6476,7 @@ FileTransfer::ExpandInputFileList( ClassAd *job, MyString &error_msg ) {
 	std::string iwd;
 	if( job->LookupString(ATTR_JOB_IWD,iwd) != 1 )
 	{
-		error_msg.formatstr("Failed to expand transfer input list because no IWD found in job ad.");
+		formatstr(error_msg, "Failed to expand transfer input list because no IWD found in job ad.");
 		return false;
 	}
 

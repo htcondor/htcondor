@@ -517,6 +517,16 @@ ArgList::GetArgsStringForDisplay(ClassAd const *ad,MyString *result)
 }
 
 bool
+ArgList::AppendArgsFromClassAd(ClassAd const * ad, std::string & error_msg)
+{
+    MyString ms;
+    bool rv = AppendArgsFromClassAd(ad, &ms);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
+}
+
+
+bool
 ArgList::AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg)
 {
 	char *args1 = NULL;
@@ -548,6 +558,15 @@ ArgList::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
 		// Is it earlier than 6.7.15?
 	return !condor_version.built_since_version(6,7,15);
 }
+
+bool
+ArgList::InsertArgsIntoClassAd( ClassAd * ad, CondorVersionInfo * condor_version, std::string & error_msg) const {
+    MyString ms;
+    bool rv = InsertArgsIntoClassAd(ad, condor_version, &ms);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
+}
+
 
 bool
 ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_msg) const
@@ -703,6 +722,14 @@ void
 ArgList::GetArgsStringForDisplay(MyString *result,int start_arg) const
 {
 	GetArgsStringV2Raw(result,NULL,start_arg);
+}
+
+void
+ArgList::GetArgsStringForDisplay(std::string & result, int start_arg) const
+{
+	MyString ms;
+	GetArgsStringV2Raw( &ms, NULL, start_arg );
+	result = ms;
 }
 
 // Separate arguments with a space.  Replace whitespace in each argument

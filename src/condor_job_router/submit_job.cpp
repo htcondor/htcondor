@@ -47,7 +47,7 @@ public:
 	void SetCluster(int c) { cluster = c; }
 	void SetProc(int p) { proc = p; }
 
-	void SetSaveErrorMsg(MyString *s) { save_error_msg = s; }
+	void SetSaveErrorMsg(std::string *s) { save_error_msg = s; }
 
 	void SetNames(const char * schedd_name, const char * pool_name) {
 		if(schedd_name) {
@@ -75,7 +75,7 @@ public:
 
 		std::string msg;
 		msg = "ERROR ";
-		if(names.Length()) {
+		if(names.length()) {
 			msg += "(";
 			msg += names;
 			msg += ") ";
@@ -97,22 +97,22 @@ public:
 
 
 		if( save_error_msg ) {
-			*save_error_msg = msg.c_str();
+			*save_error_msg = msg;
 		}
 		else {
 			dprintf(D_ALWAYS, "%s", msg.c_str());
 		}
 	}
 private:
-	MyString names;
+	std::string names;
 	int cluster;
 	int proc;
 	Qmgr_connection * qmgr;
-	MyString *save_error_msg;
+	std::string *save_error_msg;
 };
 
 
-ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const char * my_identity)
+ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, const char * my_identity)
 {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
@@ -121,13 +121,13 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	int status;
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) == -1) {
 		if(error_details) {
-			error_details->formatstr("Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
+			formatstr(*error_details, "Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
 		}
 		return CJR_ERROR;
 	}
 	if(status != IDLE) {
 		if(error_details) {
-			error_details->formatstr("Job %d.%d isn't idle, is %s (%d)", cluster, proc, getJobStatusString(status), status); 
+			formatstr(*error_details, "Job %d.%d isn't idle, is %s (%d)", cluster, proc, getJobStatusString(status), status); 
 		}
 		return CJR_BUSY;
 	}
@@ -139,7 +139,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 		free(managed);
 		if( ! ok ) {
 			if(error_details) {
-				error_details->formatstr("Job %d.%d is already managed by another process", cluster, proc); 
+				formatstr(*error_details, "Job %d.%d is already managed by another process", cluster, proc); 
 			}
 			return CJR_BUSY;
 		}
@@ -149,7 +149,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	// No one else has a claim.  Claim it ourselves.
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL) == -1 ) {
 		if(error_details) {
-			error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+			formatstr(*error_details, "Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
 		}
 		return CJR_ERROR;
 	}
@@ -157,7 +157,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	if(my_identity) {
 		if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED_MANAGER, my_identity) == -1 ) {
 			if(error_details) {
-				error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+				formatstr(*error_details, "Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
 			}
 			return CJR_ERROR;
 		}
@@ -209,7 +209,7 @@ static Qmgr_connection *open_job(classad::ClassAd const &job,const char *schedd_
 }
 
 
-static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity,classad::ClassAd const &job)
+static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity,classad::ClassAd const &job)
 {
 	// Open a qmgr
 	FailObj failobj;
@@ -232,7 +232,7 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res == CJR_OK) {
-			error_details->formatstr("Failed to commit job claim for schedd %s in pool %s",
+			formatstr(*error_details, "Failed to commit job claim for schedd %s in pool %s",
 				schedd_name ? schedd_name : "local schedd",
 				pool_name ? pool_name : "local pool");
 		}
@@ -242,7 +242,7 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	return res;
 }
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity, bool target_is_sandboxed)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed)
 {
 	priv_state priv = set_user_priv_from_ad(ad);
 
@@ -256,7 +256,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 		if( SpooledJobFiles::jobRequiresSpoolDirectory(&ad) ) {
 			if( !SpooledJobFiles::createJobSpoolDirectory(&ad,PRIV_USER) ) {
 				if( error_details ) {
-					error_details->formatstr("Failed to create/chown source job spool directory to the user.");
+					formatstr(*error_details, "Failed to create/chown source job spool directory to the user.");
 				}
 				yield_job(ad,pool_name,schedd_name,true,cluster,proc,error_details,my_identity,false);
 				return CJR_ERROR;
@@ -270,7 +270,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 
 
 
-bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, MyString * error_details, const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying) {
+bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, std::string * error_details, const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying) {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
@@ -287,7 +287,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 	}
 	if( ! is_managed ) {
 		if(error_details) {
-			error_details->formatstr("Job %d.%d is not managed!", cluster, proc); 
+			formatstr(*error_details, "Job %d.%d is not managed!", cluster, proc); 
 		}
 		*keep_trying = false;
 		return false;
@@ -298,7 +298,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED_MANAGER, &manager) >= 0) {
 			if(strcmp(manager, my_identity) != 0) {
 				if(error_details) {
-					error_details->formatstr("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
+					formatstr(*error_details, "Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
 				}
 				free(manager);
 				*keep_trying = false;
@@ -318,7 +318,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 	const char * newsetting = done ? MANAGED_DONE : MANAGED_SCHEDD;
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, newsetting) == -1 ) {
 		if(error_details) {
-			error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, newsetting); 
+			formatstr(*error_details, "Encountered problem setting %s = %s", ATTR_JOB_MANAGED, newsetting); 
 		}
 		return false;
 	}
@@ -359,7 +359,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 
 static bool yield_job_with_current_privs(
 	const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details,
+	bool done, int cluster, int proc, std::string * error_details,
 	const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying,
 	classad::ClassAd const &job)
 {
@@ -387,7 +387,7 @@ static bool yield_job_with_current_privs(
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res) {
-			error_details->formatstr("Failed to commit job claim for schedd %s in pool %s",
+			formatstr(*error_details, "Failed to commit job claim for schedd %s in pool %s",
 				schedd_name ? schedd_name : "local schedd",
 				pool_name ? pool_name : "local pool");
 		}
@@ -400,7 +400,7 @@ static bool yield_job_with_current_privs(
 
 bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
-	MyString * error_details, const char * my_identity, bool target_is_sandboxed,
+	std::string * error_details, const char * my_identity, bool target_is_sandboxed,
         bool release_on_hold, bool *keep_trying)
 {
 	bool success;
@@ -478,17 +478,17 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 
 			// See the comment in the function body of ExpandInputFileList
 			// for an explanation of what is going on here.
-		MyString transfer_input_error_msg;
+		std::string transfer_input_error_msg;
 		if( !FileTransfer::ExpandInputFileList( &src, transfer_input_error_msg ) ) {
-			failobj.fail("%s\n",transfer_input_error_msg.Value());
+			failobj.fail("%s\n",transfer_input_error_msg.c_str());
 			return false;
 		}
 	}
 
 		// we want the job to hang around (taken from condor_submit.V6/submit.C)
-	MyString leaveinqueue;
-	leaveinqueue.formatstr("%s == %d", ATTR_JOB_STATUS, COMPLETED);
-	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
+	std::string leaveinqueue;
+	formatstr(leaveinqueue, "%s == %d", ATTR_JOB_STATUS, COMPLETED);
+	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.c_str());
 
 	ExprTree * tree;
 	const char *lhstr = 0;
@@ -757,15 +757,15 @@ static bool finalize_job_with_current_privs(classad::ClassAd const &job,int clus
 		return false;
 	}
 
-	MyString constraint;
-	constraint.formatstr("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	std::string constraint;
+	formatstr(constraint, "(ClusterId==%d&&ProcId==%d)", cluster, proc);
 
 
 	if( is_sandboxed ) {
 			// Get our sandbox back
 		int jobssent;
 		CondorError errstack;
-		bool success = schedd.receiveJobSandbox(constraint.Value(), &errstack, &jobssent);
+		bool success = schedd.receiveJobSandbox(constraint.c_str(), &errstack, &jobssent);
 		if( ! success ) {
 			dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
 			return false;
@@ -816,7 +816,7 @@ bool finalize_job(const std::string & owner, const std::string &domain, classad:
 	return success;
 }
 
-static bool remove_job_with_current_privs(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc)
+static bool remove_job_with_current_privs(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
 {
 	DCSchedd schedd(schedd_name,pool_name);
 	bool success = true;
@@ -826,7 +826,7 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 		if(!schedd_name) { schedd_name = "local schedd"; }
 		if(!pool_name) { pool_name = "local pool"; }
 		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
-		error_desc.formatstr("Unable to find address of %s at %s", schedd_name, pool_name);
+		formatstr(error_desc, "Unable to find address of %s at %s", schedd_name, pool_name);
 		return false;
 	}
 
@@ -861,7 +861,7 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 	return success;
 }
 
-bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc)
+bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
