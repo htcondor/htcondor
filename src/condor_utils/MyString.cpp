@@ -856,23 +856,6 @@ MyString::remove_prefix(const char * prefix)
 }
 
 void
-MyString::RemoveAllWhitespace( void )
-{
-	int i;
-	int j;
-	for ( i = 0, j = 0; i < Length(); i++ ) {
-		if ( !isspace( Data[i] ) ) {
-			if ( i != j ) {
-				Data[j] = Data[i];
-			}
-			j++;
-		}
-	}
-	Data[j] = '\0';
-	Len = j;
-}
-
-void
 MyString::init()
 {
     Data=NULL;

@@ -39,6 +39,7 @@ class AdNameHashKey
     MyString ip_addr;
 
 	void   sprint (MyString &) const;
+	void sprint( std::string & ) const;
     friend bool operator== (const AdNameHashKey &, const AdNameHashKey &);
 
 };

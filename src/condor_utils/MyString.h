@@ -298,10 +298,6 @@ class MyString
 	 */
 	bool remove_prefix(const char * prefix);
 
-	/** Remove all the whitespace from this string
-	*/
-	void RemoveAllWhitespace( void );
-
 	// ----------------------------------------
 	//           Serialization helpers
 	// ----------------------------------------
