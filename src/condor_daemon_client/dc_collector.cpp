@@ -687,9 +687,6 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		// on a cached TCP socket, just code the int ourselves...
 	update_rsock->encode();
 	if (update_rsock->put(cmd) && finishUpdate(this, update_rsock, ad1, ad2, callback_fn, miscdata)) {
-		if (callback_fn) {
-			(*callback_fn)(true, update_rsock, nullptr, update_rsock->getTrustDomain(), update_rsock->shouldTryTokenRequest(), miscdata);
-		}
 		return true;
 	}
 	dprintf( D_FULLDEBUG, 
