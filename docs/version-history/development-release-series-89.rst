@@ -197,6 +197,11 @@ Bugs Fixed:
   be put on hold if they were evicted and restarted.
   :jira:`267`
 
+- Fixed a bug where daemons would leak memory whenever sending updates
+  to the collector, at the rate of a few megabytes per day.  This leak
+  was introduced earlier in the HTCondor v8.9.x series.
+  :jira:`323`
+
 - The ``preserve_relative_paths`` submit command now properly allows jobs
   to run on HTCondor versions 8.9.10 and later.
   :jira:`189`
