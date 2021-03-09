@@ -44,7 +44,6 @@
 #include "condor_string.h"  /* for strnewp() */
 #include "string_list.h"
 #include "condor_daemon_core.h"
-#include "extArray.h"
 #include "HashTable.h"
 #include <set>
 #include "dagman_metrics.h"
@@ -4870,7 +4869,7 @@ Dag::LookupSplice(MyString name, Dag *&splice_dag)
 // This represents not the actual initial nodes of the dag just after
 // the file containing the dag had been parsed.
 // You must NOT free the returned array or the contained pointers.
-ExtArray<Job*>*
+std::vector<Job*>*
 Dag::InitialRecordedNodes(void)
 {
 	return &_splice_initial_nodes;
@@ -4880,7 +4879,7 @@ Dag::InitialRecordedNodes(void)
 // This represents not the actual final nodes of the dag just after
 // the file containing the dag had been parsed.
 // You must NOT free the returned array or the contained pointers.
-ExtArray<Job*>*
+std::vector<Job*>*
 Dag::FinalRecordedNodes(void)
 {
 	return &_splice_terminal_nodes;
@@ -4897,12 +4896,12 @@ Dag::RecordInitialAndTerminalNodes(void)
 
 		// record the initial nodes
 		if ((*it)->NoParents()) {
-			_splice_initial_nodes.add(*it);
+			_splice_initial_nodes.push_back(*it);
 		}
 
 		// record the final nodes
 		if ((*it)->NoChildren()) {
-			_splice_terminal_nodes.add(*it);
+			_splice_terminal_nodes.push_back(*it);
 		}
 	}
 }
@@ -4915,12 +4914,12 @@ Dag::RelinquishNodeOwnership(void)
 {
 	MyString key;
 
-	ExtArray<Job*> *nodes = new ExtArray<Job*>();
+	std::vector<Job*> *nodes = new std::vector<Job*>();
 
 	// 1. Copy the jobs
 	auto it = _jobs.begin();
 	while (it != _jobs.end()) {
-		nodes->add(*it);
+		nodes->push_back(*it);
 		it = _jobs.erase(it);
 	}
 
@@ -4992,11 +4991,11 @@ void
 Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 {
 	Job *job = NULL;
-	int i;
+	unsigned int i;
 	MyString key;
 	JobID_t key_id;
 
-	ExtArray<Job*> *nodes = om->nodes;
+	std::vector<Job*> *nodes = om->nodes;
 
 	// 0. Take ownership of the categories
 
@@ -5031,13 +5030,13 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 
 	// 1a. If there are any actual initial/final nodes, then ensure to record
 	// it into the recorded initial and final nodes for this node.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		if ((*nodes)[i]->NoParents()) {
-			_splice_initial_nodes.add((*nodes)[i]);
+			_splice_initial_nodes.push_back((*nodes)[i]);
 			continue;
 		}
 		if ((*nodes)[i]->NoChildren()) {
-			_splice_terminal_nodes.add((*nodes)[i]);
+			_splice_terminal_nodes.push_back((*nodes)[i]);
 		}
 	}
 
@@ -5045,7 +5044,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	// 1b. Re-set the node categories (if any) so they point to the
 	// ThrottleByCategory object in *this* DAG rather than the splice
 	// DAG (which will be deleted soon).
-	for ( i = 0; i < nodes->length(); i++ ) {
+	for ( i = 0; i < nodes->size(); i++ ) {
 		Job *tmpNode = (*nodes)[i];
 		spliceThrottle = tmpNode->GetThrottleInfo();
 		if ( spliceThrottle != NULL ) {
@@ -5058,12 +5057,12 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	}
 
 	// 1c. Copy the nodes into _jobs.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		_jobs.push_back((*nodes)[i]);
 	}
 
 	// 2. Update our name hash to include the new nodes.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		key = (*nodes)[i]->GetJobName();
 
 		debug_printf(DEBUG_DEBUG_1, "Creating view hash fixup for: job %s\n", 
@@ -5089,7 +5088,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	}
 
 	// 3. Update our node id hash to include the new nodes.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		key_id = (*nodes)[i]->GetJobID();
 		if (_nodeIDHash.insert(key_id, (*nodes)[i]) != 0) {
 			debug_error(1, DEBUG_QUIET, 

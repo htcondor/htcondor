@@ -37,7 +37,6 @@
 #include "dagman_main.h"
 #include "tmp_dir.h"
 #include "basename.h"
-#include "extArray.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "condor_getcwd.h"
 
@@ -45,7 +44,7 @@ static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const char * ILLEGAL_CHARS = "+";
 
-static ExtArray<char*> _spliceScope;
+static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
 
 // _thisDagNum will be incremented for each DAG specified on the
@@ -1254,11 +1253,11 @@ parse_parent(
 
 			// grab all of the final nodes of the splice and make them parents
 			// for this job.
-			ExtArray<Job*> *splice_final;
+			std::vector<Job*> *splice_final;
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
-			for (int i = 0; i < splice_final->length(); i++) {
+			for (unsigned int i = 0; i < splice_final->size(); i++) {
 				Job *job = (*splice_final)[i];
 				last_parent = parents.insert_after(last_parent, job);
 			}
@@ -1319,13 +1318,13 @@ parse_parent(
 				"Detected splice %s as a child....\n", filename, lineNumber,
 					jobName2);
 
-			ExtArray<Job*> *splice_initial;
+			std::vector<Job*> *splice_initial;
 			splice_initial = splice_dag->InitialRecordedNodes();
-			debug_printf( DEBUG_DEBUG_1, "Adding %d initial nodes\n", 
-				splice_initial->length());
+			debug_printf( DEBUG_DEBUG_1, "Adding %lu initial nodes\n", 
+				splice_initial->size());
 
 			// now add each initial node as a child
-			for (int i = 0; i < splice_initial->length(); i++) {
+			for (unsigned int i = 0; i < splice_initial->size(); i++) {
 				Job *job = (*splice_initial)[i];
 
 				last_child = children.insert_after(last_child, job);
@@ -2104,7 +2103,7 @@ parse_splice(
 		munge the names of the nodes to have the splice name in them so
 		the same splice dag file with different splice names don't conflict.
 	*/
-	_spliceScope.add(strdup(munge_job_name(spliceName.Value()).Value()));
+	_spliceScope.push_back(strdup(munge_job_name(spliceName.Value()).Value()));
 
 	//
 	// Next token is the splice file name
@@ -2251,9 +2250,8 @@ parse_splice(
 	debug_printf(DEBUG_DEBUG_1, "Done parsing splice %s\n", spliceName.Value());
 
 	// pop the just pushed value off of the end of the ext array
-	free(_spliceScope[_spliceScope.getlast()]);
-	_spliceScope.truncate(_spliceScope.getlast() - 1);
-	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %d\n", _spliceScope.length());
+	_spliceScope.pop_back();
+	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %lu\n", _spliceScope.size());
 
 	return true;
 }
@@ -2841,13 +2839,13 @@ static MyString current_splice_scope(void)
 {
 	MyString tmp;
 	MyString scope;
-	if(_spliceScope.length() > 0) {
+	if(_spliceScope.size() > 0) {
 		// While a natural choice might have been : as a splice scoping
 		// separator, this character was chosen because it is a valid character
 		// on all the file systems we use (whereas : can't be a file system
 		// character on windows). The plus, and really anything other than :,
 		// isn't the best choice. Sorry.
-		tmp = _spliceScope[_spliceScope.length() - 1];
+		tmp = _spliceScope.back();
 		scope = tmp + "+";
 	}
 	return scope;
