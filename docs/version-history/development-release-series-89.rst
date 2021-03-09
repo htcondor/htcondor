@@ -70,6 +70,10 @@ New Features:
   fail later on when it needs them to exist.  See the ticket for details.
   :jira:`73`
 
+- HTCondor daemons that read the configuration files as root when they start
+  up will now also read the configuration files as root when they are reconfigured.
+  :jira:`314`
+
 - HTCondor now detects instances of multi-instance GPUs.  These devices will
   be reported as individual GPUs, each named as required to access them via
   ``CUDA_VISIBLE_DEVICES``.  Some of the ``-extra`` and ``-dynamic``
