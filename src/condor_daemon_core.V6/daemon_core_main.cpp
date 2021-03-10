@@ -376,11 +376,10 @@ public:
 			back.m_daemon->setAuthenticationMethods({"SSL", "TOKEN"});
 		}
 		back.m_callback_fn = &DCTokenRequester::tokenRequestCallback;
-		back.m_callback_data = data.get();
 		// At this point, the m_callback_data pointer will be deallocated by
 		// tokenRequestCallback(), so do a release() here so it is not
 		// deallocated when data goes out of scope.
-		data.release();
+		back.m_callback_data = data.release();
 
 		if (m_token_requests_tid == -1) {
 			m_token_requests_tid = daemonCore->Register_Timer( 0,
