@@ -1602,7 +1602,7 @@ EventInfo::GenEventGeneric( void )
 	SetName( "Generic" );
 
 	GenericEvent	*e = new GenericEvent;
-	strncpy(e->info, m_options.m_genericEventStr, sizeof(e->info) );
+	strncpy(e->info, m_options.m_genericEventStr, sizeof(e->info) - 1 );
 	e->info[sizeof(e->info)-1] = '\0';
 
 	return SetEvent( e );

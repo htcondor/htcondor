@@ -64,7 +64,8 @@ mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
 # Add blahp
 # Add condor-boinc
 # Add scitokens-cpp
-common_externals="libglobus-callout0 \
+common_externals="libcgroup1 \
+    libglobus-callout0 \
     libglobus-common0 \
     libglobus-ftp-client2 \
     libglobus-ftp-control1 \
@@ -87,6 +88,7 @@ common_externals="libglobus-callout0 \
     libglobus-xio0 \
     libglobus-xio-gsi-driver \
     libglobus-xio-popen-driver \
+    libgomp1 \
     libmunge2 \
     libvomsapi1v5"
 
