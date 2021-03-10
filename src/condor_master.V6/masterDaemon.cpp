@@ -603,8 +603,8 @@ int daemon::RealStart( )
 		return 0;
 	}
 
-	if( !m_after_startup_wait_for_file.IsEmpty() ) {
-		if (0 != remove( m_after_startup_wait_for_file.Value())) {
+	if( !m_after_startup_wait_for_file.empty() ) {
+		if (0 != remove( m_after_startup_wait_for_file.c_str())) {
 			dprintf(D_ALWAYS, "Cannot remove wait-for-startup file %s\n", m_after_startup_wait_for_file.c_str());
 			// Now what?  restart?  exit?
 		}
@@ -1080,19 +1080,19 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 	}
 
 	bool wait = false;
-	if( !m_after_startup_wait_for_file.IsEmpty() ) {
-		StatInfo si( m_after_startup_wait_for_file.Value() );
+	if( !m_after_startup_wait_for_file.empty() ) {
+		StatInfo si( m_after_startup_wait_for_file.c_str() );
 		if( si.Error() != 0 ) {
 			wait = true;
 			dprintf(D_ALWAYS,"Waiting for %s to appear.\n",
-					m_after_startup_wait_for_file.Value() );
+					m_after_startup_wait_for_file.c_str() );
 			if( DaemonStartFastPoll ) {
 				Sleep(100);
 			}
 		}
 		else if( !first_time ) {
 			dprintf(D_ALWAYS,"Found %s.\n",
-					m_after_startup_wait_for_file.Value() );
+					m_after_startup_wait_for_file.c_str() );
 		}
 	}
 
