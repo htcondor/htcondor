@@ -744,6 +744,14 @@ int DaemonCore::FileDescriptorSafetyLimit()
 	return file_descriptor_safety_limit;
 }
 
+bool DaemonCore::TooManyRegisteredSockets(int fd,std::string *msg,int num_fds)
+{
+    MyString ms;
+    bool rv = TooManyRegisteredSockets(fd, msg == NULL ? NULL : & ms, num_fds);
+    if( msg != NULL && ! ms.empty() ) { * msg = ms; }
+    return rv;
+}
+
 bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 {
 	int registered_socket_count = RegisteredSocketCount();

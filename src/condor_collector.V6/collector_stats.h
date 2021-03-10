@@ -107,12 +107,11 @@ class CollectorClassStatsList
 class StatsHashKey
 {
   public:
-	MyString type;
-    MyString name;
-    MyString ip_addr;
+    std::string type;
+    std::string name;
+    std::string ip_addr;
     friend bool operator== (const StatsHashKey &, const StatsHashKey &);
-	void getstr( MyString & ) const;
-  private:
+    void getstr( std::string & ) const;
 };
 
 // Type for the hash tables ...

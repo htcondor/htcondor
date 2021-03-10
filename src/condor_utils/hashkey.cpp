@@ -30,6 +30,13 @@
 #include <netinet/in.h>
 #endif
 
+void
+AdNameHashKey::sprint( std::string &s ) const {
+    MyString ms;
+    sprint( ms );
+    s = ms;
+}
+
 void AdNameHashKey::sprint (MyString &s) const
 {
 	if (ip_addr.Length() )

@@ -860,6 +860,8 @@ class DaemonCore : public Service
 	   @return true of in danger of running out of file descriptors
 	 */
 	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL,int num_fds=1);
+    // Set default fd=-1 and msg=NULL when the MyString variant vanishes.
+	bool TooManyRegisteredSockets(int fd,std::string *msg,int num_fds=1);
 
 	/**
 	   @return Maximum number of persistent file descriptors that

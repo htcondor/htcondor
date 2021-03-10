@@ -143,10 +143,26 @@ OfflineCollectorPlugin::configure ()
 
 }
 
-const char* 
-OfflineCollectorPlugin::makeOfflineKey( 
-	const ClassAd &ad, 
-	MyString & s)
+void
+RemoveAllWhitespace( std::string & s ) {
+	size_t j = 0;
+	size_t l = s.size();
+	for( size_t i = 0; i < l; ++i ) {
+		if(! isspace( s[i] )) {
+		    if( i != j ) {
+		        s[j] = s[i];
+		    }
+		    ++j;
+		}
+	}
+    s.resize(j);
+}
+
+
+const char*
+OfflineCollectorPlugin::makeOfflineKey(
+	const ClassAd &ad,
+	std::string & s)
 {
 	AdNameHashKey hashKey;
 	if ( !makeStartdAdHashKey (
@@ -161,16 +177,16 @@ OfflineCollectorPlugin::makeOfflineKey(
 		return NULL;
 
 	}
-	hashKey.sprint ( s );
-	s.RemoveAllWhitespace();
-	return s.Value();
+	hashKey.sprint( s );
+	RemoveAllWhitespace( s );
+	return s.c_str();
 }
 
 bool
 OfflineCollectorPlugin::persistentStoreAd(const char *key, ClassAd &ad)
 {
 	ClassAd *p = NULL;
-	MyString s;
+	std::string s;
 
 	if (!_ads) return false;
 
@@ -184,7 +200,7 @@ OfflineCollectorPlugin::persistentStoreAd(const char *key, ClassAd &ad)
 
 	/* replace duplicate ads */
 	if ( _ads->LookupClassAd ( key, p ) ) {
-		
+
 		if ( !_ads->DestroyClassAd ( key ) ) {
 			dprintf (
 				D_FULLDEBUG,
@@ -196,14 +212,14 @@ OfflineCollectorPlugin::persistentStoreAd(const char *key, ClassAd &ad)
 			return false;
 		}
 
-		dprintf(D_FULLDEBUG, 
+		dprintf(D_FULLDEBUG,
 			"OfflineCollectorPlugin::persistentStoreRemove: "
 			"Replacing existing offline ad.\n");
 	}
 
 	/* try to add the new ad */
-	if ( !_ads->NewClassAd ( 
-		key, 
+	if ( !_ads->NewClassAd (
+		key,
 		&ad ) ) {
 
 		dprintf (
@@ -278,12 +294,12 @@ OfflineCollectorPlugin::update (
 		 return;
 	}
 
-	MyString s;
+	std::string s;
 	const char *key = makeOfflineKey(ad,s);
 	if (!key) return;
 
 	/* report whether this ad is "off-line" or not and update
-	   the ad accordingly. */		
+	   the ad accordingly. */
 	bool offline = false;
 	int lifetime = 0;
 
@@ -380,8 +396,8 @@ OfflineCollectorPlugin::mergeClassAd (
 	ExprTree *expr;
 	const char *attr_name;
 	for ( auto itr = ad.begin(); itr != ad.end(); itr++ ) {
-		MyString new_val;
-		MyString old_val;
+		std::string new_val;
+		std::string old_val;
 
 		attr_name = itr->first.c_str();
 		expr = itr->second;
@@ -405,7 +421,7 @@ OfflineCollectorPlugin::mergeClassAd (
 			continue;
 		}
 
-		_ads->SetAttribute(key, attr_name, new_val.Value());
+		_ads->SetAttribute(key, attr_name, new_val.c_str());
 	}
 
 	_ads->CommitTransaction ();
@@ -454,7 +470,7 @@ OfflineCollectorPlugin::expire (
 	bool already_absent = false;
 	ad.LookupBool(ATTR_ABSENT,already_absent);
 	if (already_absent) {
-		MyString s;
+		std::string s;
 		const char *key = makeOfflineKey(ad,s);
 		if (key) {
 			persistentRemoveAd(key);
@@ -506,7 +522,7 @@ OfflineCollectorPlugin::invalidate (
 	/* make sure the command is relevant to us */
 	if ( INVALIDATE_STARTD_ADS == command ) {
 
-		MyString s;
+		std::string s;
 		const char *key = makeOfflineKey(ad,s);
 		if (!key) return;
 
