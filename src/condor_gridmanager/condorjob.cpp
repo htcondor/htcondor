@@ -111,12 +111,8 @@ void CondorJobReconfig()
 	CondorJob::setConnectFailureRetry( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	CondorResource *next_resource;
-
-	CondorResource::ResourcesByName.startIterations();
-
-	while ( CondorResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : CondorResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 
 }

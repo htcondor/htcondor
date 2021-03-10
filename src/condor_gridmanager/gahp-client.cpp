@@ -5159,7 +5159,7 @@ GahpClient::arc_ping(const std::string &service_url)
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5222,7 +5222,7 @@ GahpClient::arc_job_new(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5291,7 +5291,7 @@ GahpClient::arc_job_status(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5360,7 +5360,7 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5432,7 +5432,7 @@ GahpClient::arc_job_info(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5509,7 +5509,7 @@ GahpClient::arc_job_stage_in(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5589,7 +5589,7 @@ GahpClient::arc_job_stage_out(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5651,7 +5651,7 @@ GahpClient::arc_job_kill(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5713,7 +5713,7 @@ GahpClient::arc_job_clean(const std::string &service_url,
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
