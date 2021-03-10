@@ -556,6 +556,48 @@ class GahpClient : public GenericGahpClient {
 		int
 		gridftp_transfer(const char *src_url, const char *dst_url);
 
+		int
+		arc_ping(const std::string &service_url);
+
+		int
+		arc_job_new(const std::string &service_url,
+		            const std::string &rsl,
+		            std::string &job_id);
+
+		int
+		arc_job_status(const std::string &service_url,
+		               const std::string &job_id,
+		               std::string &status);
+
+		int
+		arc_job_status_all(const std::string &service_url,
+		                   const std::string &states,
+		                   StringList &job_ids);
+
+		int
+		arc_job_info(const std::string &service_url,
+		             const std::string &job_id,
+		             std::string &results);
+
+		int
+		arc_job_stage_in(const std::string &service_url,
+		                 const std::string &job_id,
+		                 StringList &files);
+
+		int
+		arc_job_stage_out(const std::string &service_url,
+		                  const std::string &job_id,
+		                  StringList &src_files,
+		                  StringList &dest_files);
+
+		int
+		arc_job_kill(const std::string &service_url,
+		             const std::string &job_id);
+
+		int
+		arc_job_clean(const std::string &service_url,
+		              const std::string &job_id);
+
 		///
 		int 
 		unicore_job_create(const char * description,
