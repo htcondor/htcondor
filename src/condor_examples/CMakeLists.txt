@@ -65,6 +65,7 @@ install (FILES
 		condor-tmpfiles.conf
 		condor-annex-ec2.service
 		00-minicondor
+		50-security
 		50ec2.config
 		DESTINATION ${C_ETC_EXAMPLES})
 
