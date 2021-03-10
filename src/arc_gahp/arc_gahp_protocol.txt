@@ -949,6 +949,20 @@
 
     -----------------------------------------------
 
+    ARC_JOB_KILL
+
+    Direct the server to kill the job.
+
+    + Request Line:
+
+        ARC_JOB_KILL <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-id> <CRLF>
+
+        * job-id = job id (as returned by ARC_JOB_NEW) of the job to 
+                   kill
+
+    -----------------------------------------------
+
     ARC_JOB_CLEAN
 
     Direct the server to clean up files related to a completed or failed 
@@ -959,8 +973,8 @@
         ARC_JOB_CLEAN <SP> <request-ID> <SP> <service-URL>
             <SP> <job-id> <CRLF>
 
-        * job-id = job id (as returned by ARC_JOB_NEW) of the job whose 
-                   status is desired
+        * job-id = job id (as returned by ARC_JOB_NEW) of the job to 
+                   clean
 
     -----------------------------------------------
 
