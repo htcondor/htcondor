@@ -93,6 +93,8 @@ common_externals="boost169-python3 \
     globus-xio \
     globus-xio-gsi-driver \
     globus-xio-popen-driver \
+    libcgroup \
+    libgomp \
     munge-libs \
     scitokens-cpp \
     voms"

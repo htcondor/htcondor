@@ -70,6 +70,10 @@ New Features:
   fail later on when it needs them to exist.  See the ticket for details.
   :jira:`73`
 
+- HTCondor daemons that read the configuration files as root when they start
+  up will now also read the configuration files as root when they are reconfigured.
+  :jira:`314`
+
 - HTCondor now detects instances of multi-instance GPUs.  These devices will
   be reported as individual GPUs, each named as required to access them via
   ``CUDA_VISIBLE_DEVICES``.  Some of the ``-extra`` and ``-dynamic``
@@ -192,6 +196,11 @@ Bugs Fixed:
 - Fixed a bug where jobs that asked for `transfer_output_files = .` would
   be put on hold if they were evicted and restarted.
   :jira:`267`
+
+- Fixed a bug where daemons would leak memory whenever sending updates
+  to the collector, at the rate of a few megabytes per day.  This leak
+  was introduced earlier in the HTCondor v8.9.x series.
+  :jira:`323`
 
 - The ``preserve_relative_paths`` submit command now properly allows jobs
   to run on HTCondor versions 8.9.10 and later.

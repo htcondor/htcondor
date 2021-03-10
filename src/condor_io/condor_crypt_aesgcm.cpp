@@ -38,7 +38,7 @@ void Condor_Crypt_AESGCM::initState(StreamCryptoState* stream_state)
 	dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::initState for %p.\n", stream_state);
 	if (stream_state) {
 		// reset encrypt side
-		RAND_pseudo_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
+		RAND_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
 		stream_state->m_ctr_enc = 0;
 
 		// reset decrypt side

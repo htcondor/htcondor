@@ -1986,7 +1986,7 @@ GenericEvent::initFromClassAd(ClassAd* ad)
 void
 GenericEvent::setInfoText(char const *str)
 {
-	strncpy(info,str,sizeof(info));
+	strncpy(info,str,sizeof(info) - 1);
 	info[ sizeof(info) - 1 ] = '\0'; //ensure null-termination
 }
 

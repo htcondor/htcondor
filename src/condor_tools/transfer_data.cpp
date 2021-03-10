@@ -355,6 +355,7 @@ main(int argc, char *argv[])
 			}
 		}
 	}
+	free(args);
 
 		// Sanity check: make certain we now have a constraint
 	if ( global_constraint.Length() <= 0 ) {			
