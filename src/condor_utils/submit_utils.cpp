@@ -7086,6 +7086,7 @@ int SubmitHash::SetTransferFiles()
 {
 	RETURN_IF_ABORT();
 
+	char *macro_value;
 	std::string tmp;
 	bool in_files_specified = false;
 	bool out_files_specified = false;
@@ -7101,7 +7102,7 @@ int SubmitHash::SetTransferFiles()
 		pInputFilesSizeKb = &tmpInputFilesSizeKb;
 	}
 
-	auto_free_ptr macro_value = submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt);
+	macro_value = submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt);
 	if (macro_value) {
 		// as a special case transferinputfiles="" will produce an empty list of input files, not a syntax error
 		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
