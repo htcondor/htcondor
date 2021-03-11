@@ -35,6 +35,9 @@ int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr(std::string& s, const char* format, va_list pargs);
 
+// Returns number of replacements actually performed, or -1 if from is empty.
+int replace_str( std::string & str, const std::string & from, const std::string & to );
+
 // Appending versions of above.
 // These return number of new chars appended.
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);

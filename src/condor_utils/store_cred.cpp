@@ -193,7 +193,7 @@ void SecureZeroMemory(void *p, size_t n)
 #endif
 
 int
-cred_matches(MyString & credfile, const ClassAd * requestAd)
+cred_matches(const std::string & credfile, const ClassAd * requestAd)
 {
 	// read the file back to make sure the scopes & audience match
 	// the request
