@@ -75,7 +75,7 @@ public:
 
 	void setLastStatus(const char *result_msg);
 
-	MyString m_result_msg;
+	std::string m_result_msg;
 
 protected:
 
@@ -147,7 +147,7 @@ protected:
 	float m_cpu_time;
 
 	time_t m_last_status_time;
-	MyString m_last_status_result;
+	std::string m_last_status_result;
 	int m_vcpus;
 	std::string m_vm_job_mac;
 

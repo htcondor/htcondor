@@ -61,7 +61,6 @@ bool
 VMGahpConfig::init(const char* vmtype)
 {
 	char *config_value = NULL;
-	MyString fixedvalue;
 
 	if( !vmtype ) {
 		return false;
@@ -69,7 +68,7 @@ VMGahpConfig::init(const char* vmtype)
 
 	// Handle VM_TYPE
 	m_vm_type = vmtype;
-	m_vm_type.lower_case();
+	lower_case(m_vm_type);
 
 	// Read VM_MEMORY
 	int tmp_config_value = param_integer("VM_MEMORY", 0);

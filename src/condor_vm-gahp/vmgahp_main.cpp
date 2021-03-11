@@ -46,8 +46,8 @@ int	oriDebugFlags = 0;
 MyString workingdir;
 
 // This variables come from vmgahp_common.C
-extern MyString caller_name;
-extern MyString job_user_name;
+extern std::string caller_name;
+extern std::string job_user_name;
 extern uid_t caller_uid;
 extern uid_t caller_gid;
 extern uid_t job_user_uid;
@@ -466,7 +466,7 @@ void main_init(int argc, char *argv[])
 		// print information to stdout
 		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", CONDOR_VMGAHP_VERSION);
 		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_TYPE,
-				gahpconfig->m_vm_type.Value());
+				gahpconfig->m_vm_type.c_str());
 		write_to_daemoncore_pipe("%s = %d\n", ATTR_VM_MEMORY,
 				gahpconfig->m_vm_max_memory);
 		write_to_daemoncore_pipe("%s = %s\n", ATTR_VM_NETWORKING,

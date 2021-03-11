@@ -621,7 +621,7 @@ VirshType::Status()
 
  	if( m_vm_networking ) {
  		if( m_vm_mac.IsEmpty() == false ) {
- 			if( m_result_msg.IsEmpty() == false ) {
+ 			if( m_result_msg.empty() == false ) {
  				m_result_msg += " ";
  			}
  			m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
@@ -630,7 +630,7 @@ VirshType::Status()
  		}
 
  		if( m_vm_ip.IsEmpty() == false ) {
- 			if( m_result_msg.IsEmpty() == false ) {
+ 			if( m_result_msg.empty() == false ) {
  				m_result_msg += " ";
  			}
  			m_result_msg += VMGAHP_STATUS_COMMAND_IP;
@@ -639,7 +639,7 @@ VirshType::Status()
  		}
  	}
 
- 	if( m_result_msg.IsEmpty() == false ) {
+ 	if( m_result_msg.empty() == false ) {
  		m_result_msg += " ";
  	}
 

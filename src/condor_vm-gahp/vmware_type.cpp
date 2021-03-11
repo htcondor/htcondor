@@ -1048,7 +1048,7 @@ VMwareType::Snapshot()
 	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
+		m_result_msg = temp ? temp : "";
 		free( temp );
 		return false;
 	}
@@ -1122,7 +1122,7 @@ VMwareType::Start()
 	if( result != 0 ) {
 		Unregister();
 		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
+		m_result_msg = temp ? temp : "";
 		free( temp );
 		return false;
 	}
@@ -1381,7 +1381,7 @@ VMwareType::Suspend()
 	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
+		m_result_msg = temp ? temp : "";
 		free( temp );
 		return false;
 	}
@@ -1430,7 +1430,7 @@ VMwareType::Resume()
 	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
+		m_result_msg = temp ? temp : "";
 		free( temp );
 		return false;
 	}
@@ -1481,7 +1481,7 @@ VMwareType::Status()
 
 	diff_seconds = time(NULL) - m_last_status_time;
 
-	if( (diff_seconds < 10) && !m_last_status_result.IsEmpty() ) {
+	if( (diff_seconds < 10) && !m_last_status_result.empty() ) {
 		m_result_msg = m_last_status_result;
 		return true;
 	}
@@ -1501,7 +1501,7 @@ VMwareType::Status()
 	int result = systemCommand(systemcmd, m_file_owner, &cmd_out);
 	if( result != 0 ) {
 		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
+		m_result_msg = temp ? temp : "";
 		free( temp );
 		return false;
 	}
@@ -1574,7 +1574,7 @@ VMwareType::Status()
 
 	if( m_vm_networking ) {
 		if( m_vm_mac.IsEmpty() == false ) {
-			if( m_result_msg.IsEmpty() == false ) {
+			if( m_result_msg.empty() == false ) {
 				m_result_msg += " ";
 			}
 			m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
@@ -1583,7 +1583,7 @@ VMwareType::Status()
 		}
 
 		if( m_vm_ip.IsEmpty() == false ) {
-			if( m_result_msg.IsEmpty() == false ) {
+			if( m_result_msg.empty() == false ) {
 				m_result_msg += " ";
 			}
 			m_result_msg += VMGAHP_STATUS_COMMAND_IP;
@@ -1592,7 +1592,7 @@ VMwareType::Status()
 		}
 	}
 
-	if( m_result_msg.IsEmpty() == false ) {
+	if( m_result_msg.empty() == false ) {
 		m_result_msg += " ";
 	}
 

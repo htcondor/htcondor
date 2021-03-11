@@ -330,13 +330,13 @@ void
 VMGahp::printAllReqsWithResult()
 {
 	char *one_result = NULL;
-	MyString output;
+	std::string output;
 	m_result_list.rewind();
 	while( (one_result = m_result_list.next()) != NULL ) {
 		output = one_result;
 		output += "\n";
 		write_to_daemoncore_pipe(vmgahp_stdout_pipe,
-				output.Value(), output.Length());
+				output.c_str(), output.length());
 		m_result_list.deleteCurrent();
 	}
 }
@@ -687,7 +687,7 @@ VMGahp::executeStart(VMRequest *req)
 		return;
 	}
 
-	if(strcasecmp(vmtype, m_gahp_config->m_vm_type.Value()) != 0 ) {
+	if(strcasecmp(vmtype, m_gahp_config->m_vm_type.c_str()) != 0 ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
@@ -726,7 +726,7 @@ VMGahp::executeStart(VMRequest *req)
 	if( new_vm->CreateConfigFile() == false ) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = makeErrorMessage(new_vm->m_result_msg.Value());
+		req->m_result = makeErrorMessage(new_vm->m_result_msg.c_str());
 		delete new_vm;
 		new_vm = NULL;
 		vmprintf(D_FULLDEBUG, "CreateConfigFile fails in executeStart!\n");
@@ -738,7 +738,7 @@ VMGahp::executeStart(VMRequest *req)
 	if(result == false) {
 		req->m_has_result = true;
 		req->m_is_success = false;
-		req->m_result = makeErrorMessage(new_vm->m_result_msg.Value());
+		req->m_result = makeErrorMessage(new_vm->m_result_msg.c_str());
 		delete new_vm;
 		new_vm = NULL;
 		vmprintf(D_FULLDEBUG, "executeStart fail!\n");
@@ -763,7 +763,6 @@ VMGahp::executeStop(VMRequest *req)
 	// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
 
-	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
@@ -778,7 +777,7 @@ VMGahp::executeStop(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
+			req->m_result = makeErrorMessage(vm->m_result_msg.c_str());
 			removeVM(vm);
 			vmprintf(D_FULLDEBUG, "executeStop fail!\n");
 			return;
@@ -799,7 +798,6 @@ VMGahp::executeSuspend(VMRequest *req)
 	// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
 
-	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
@@ -814,7 +812,7 @@ VMGahp::executeSuspend(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
+			req->m_result = makeErrorMessage(vm->m_result_msg.c_str());
 			vmprintf(D_FULLDEBUG, "executeSuspend fail!\n");
 			return;
 		} else {
@@ -833,7 +831,6 @@ VMGahp::executeSoftSuspend(VMRequest *req)
 	// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
 
-	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
@@ -849,7 +846,7 @@ VMGahp::executeSoftSuspend(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
+			req->m_result = makeErrorMessage(vm->m_result_msg.c_str());
 			vmprintf(D_FULLDEBUG, "executeSoftSuspend fail!\n");
 			return;
 		} else {
@@ -868,7 +865,6 @@ VMGahp::executeResume(VMRequest *req)
 	// Expecting: VMGAHP_COMMAND_VM_RESUME <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
 
-	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
@@ -884,7 +880,7 @@ VMGahp::executeResume(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
+			req->m_result = makeErrorMessage(vm->m_result_msg.c_str());
 			vmprintf(D_FULLDEBUG, "executeResume fail!\n");
 			return;
 		} else {
@@ -903,7 +899,6 @@ VMGahp::executeCheckpoint(VMRequest *req)
 	// Expecting: VMGAHP_COMMAND_VM_CHECKPOINT <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
 
-	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
@@ -919,7 +914,7 @@ VMGahp::executeCheckpoint(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
+			req->m_result = makeErrorMessage(vm->m_result_msg.c_str());
 			vmprintf(D_FULLDEBUG, "executeCheckpoint fail!\n");
 			return;
 		} else {
@@ -952,7 +947,7 @@ VMGahp::executeStatus(VMRequest *req)
 		if(result == false) {
 			req->m_has_result = true;
 			req->m_is_success = false;
-			req->m_result = makeErrorMessage(vm->m_result_msg.Value());
+			req->m_result = makeErrorMessage(vm->m_result_msg.c_str());
 			return;
 		} else {
 
@@ -961,7 +956,7 @@ VMGahp::executeStatus(VMRequest *req)
 			req->m_result = vm->m_result_msg;
 
 			// If we have valid status of VM, we stash it.
-			vm->setLastStatus(req->m_result.Value());
+			vm->setLastStatus(req->m_result.c_str());
 			return;
 		}
 	}
@@ -973,7 +968,6 @@ VMGahp::executeGetpid(VMRequest *req)
 	// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
 
-	MyString err_message;
 	VMType *vm = findVM(vm_id);
 
 	if(vm == NULL) {
@@ -1010,7 +1004,7 @@ VMGahp::executeVersion(void)
 void
 VMGahp::executeCommands(void)
 {
-	MyString result;
+	std::string result;
 	result += "S";
 
 	int i = 0;
@@ -1020,13 +1014,13 @@ VMGahp::executeCommands(void)
 		i++;
 	}
 
-	write_to_daemoncore_pipe("%s\n", result.Value());
+	write_to_daemoncore_pipe("%s\n", result.c_str());
 }
 
 void
 VMGahp::executeSupportVMS(void)
 {
-	MyString result;
+	std::string result;
 	result += "S";
 
 	int i = 0;
@@ -1036,8 +1030,8 @@ VMGahp::executeSupportVMS(void)
 		i++;
 	}
 
-	vmprintf(D_FULLDEBUG, "Execute commands: %s\n", result.Value());
-	write_to_daemoncore_pipe("%s\n", result.Value());
+	vmprintf(D_FULLDEBUG, "Execute commands: %s\n", result.c_str());
+	write_to_daemoncore_pipe("%s\n", result.c_str());
 }
 
 void
@@ -1053,21 +1047,21 @@ VMGahp::executeResults(void)
 const char*
 VMGahp::make_result_line(VMRequest *req)
 {
-	static MyString res_str;
+	static std::string res_str;
 	res_str = "";
 
 	if(req->m_is_success) {
 		// Success
 		// Format: <req_id> 0 <result string>
 		formatstr( res_str, "%d 0 %s", req->m_reqid,
-		           req->m_result.Length() ? req->m_result.Value() : "NULL" );
+		           req->m_result.length() ? req->m_result.c_str() : "NULL" );
 	}else {
 		// Error
 		// Format: <req_id> 1 <result string>
 		formatstr( res_str, "%d 1 %s", req->m_reqid,
-		           req->m_result.Length() ? req->m_result.Value() : "NULL" );
+		           req->m_result.length() ? req->m_result.c_str() : "NULL" );
 	}
-	return res_str.Value();
+	return res_str.c_str();
 }
 
 int
@@ -1087,7 +1081,7 @@ VMGahp::killAllProcess()
 	}
 
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-	if( strcasecmp(m_gahp_config->m_vm_type.Value(),
+	if( strcasecmp(m_gahp_config->m_vm_type.c_str(),
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
@@ -1098,7 +1092,7 @@ VMGahp::killAllProcess()
 			}
 		}
 		set_priv(priv);
-	} else if(strcasecmp(m_gahp_config->m_vm_type.Value(),
+	} else if(strcasecmp(m_gahp_config->m_vm_type.c_str(),
 			     CONDOR_VM_UNIVERSE_KVM ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && KVMType::checkXenParams(m_gahp_config) ) {
@@ -1112,7 +1106,7 @@ VMGahp::killAllProcess()
 
 	} else
 #endif
-	if( strcasecmp(m_gahp_config->m_vm_type.Value(),
+	if( strcasecmp(m_gahp_config->m_vm_type.c_str(),
 				CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(m_gahp_config) ) {
