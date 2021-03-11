@@ -818,6 +818,7 @@ function populate {
 rm -rf %{buildroot}
 echo ---------------------------- makefile ---------------------------------
 make install DESTDIR=%{buildroot}
+
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
@@ -858,6 +859,7 @@ mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-htcondor-9.0.config
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
@@ -1116,6 +1118,7 @@ rm -rf %{buildroot}
 
 #################
 %files all
+%config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
 %if %uw_build
 #################
 %files externals

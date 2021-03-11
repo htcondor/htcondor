@@ -57,7 +57,6 @@ LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
 ##
 ## echo 'use SECURITY : HOST_BASED' >> $(condor_config_val LOCAL_CONFIG_DIR)/00-insecure.config
 ##
-# use SECURITY : HOST_BASED
 
 ##  To expand your condor pool beyond a single host, set ALLOW_WRITE to match all of the hosts
 #ALLOW_WRITE = *.cs.wisc.edu

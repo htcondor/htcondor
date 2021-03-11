@@ -273,6 +273,11 @@ do_token_security() {
 		exit 1
 	fi
 
+	# Remove the default 9.0 security configuration.  Arguably, the
+	# get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
+	# and adjust accordingly, which might make microversion upgrades easier.
+	rm -f /etc/condor/config.d/00-htcondor-9.0.config
+
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
 	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
@@ -494,24 +499,6 @@ do_install() {
 			# example, LDAP does not).  Setting this this variable relaxes
 			# this requirement.
 			SOFT_UID_DOMAIN = TRUE
-
-			# FIXME: This will be corrected in the next metaknob update,
-			# so remove this entire section when that happens.
-			#
-			# For some reason, FS authenticates as <user>@<UID_DOMAIN>
-			# not <user>@$<HOSTNAME> or user@<FULL_HOSTNAME>.  This
-			# means that users can not submit with the metaknob.
-			#
-			# Instead, make ALLOW_WRITE = * and change the allowed
-			# authentications so that only READ allows ANONYMOUS.  This
-			# change requires adding ANONYMOUS to the CLIENT methods.
-			SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
-			SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
-			SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
-
-			# This should probably be submit-only, but this is fine for
-			# testing.
-			ALLOW_WRITE = *
 
 		EOF
 		)
