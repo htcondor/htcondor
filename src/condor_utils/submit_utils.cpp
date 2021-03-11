@@ -7111,6 +7111,7 @@ int SubmitHash::SetTransferFiles()
 		} else {
 			input_file_list.initializeFromString(macro_value);
 		}
+		free(macro_value); macro_value = NULL;
 	}
 	RETURN_IF_ABORT();
 
