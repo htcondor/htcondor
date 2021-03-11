@@ -2778,7 +2778,7 @@ char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
 
 	// copy, adding quotes or not as requested.
 	if (quoted) { *p++ = quoted; }
-	memcpy(p, str, cch*sizeof(str[0]));
+	memcpy(p, str, std::min(cch, (int)strlen(str)));
 	if (quoted) { p[cch++] = quoted; }
 	p[cch] = 0;
 

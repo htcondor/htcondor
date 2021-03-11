@@ -685,8 +685,14 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		// since finishUpdate() assumes we've already sent the command
 		// int, and since we do *NOT* want to use startCommand() again
 		// on a cached TCP socket, just code the int ourselves...
+		//
+		// also note we do NOT pass the callback_fn to finishUpdate here - the idea
+		// is if finishUpdate fails, we turn around and try to start a new connection,
+		// and we only want to invoke the callback once.  So we avoid passing the callback to
+		// finishUpdate to prevent both finishUpdate and initiateUpdate from invoking the
+		// callback function in the case we need to create a new connection.
 	update_rsock->encode();
-	if (update_rsock->put(cmd) && finishUpdate(this, update_rsock, ad1, ad2, callback_fn, miscdata)) {
+	if (update_rsock->put(cmd) && finishUpdate(this, update_rsock, ad1, ad2, nullptr, nullptr)) {
 		if (callback_fn) {
 			(*callback_fn)(true, update_rsock, nullptr, update_rsock->getTrustDomain(), update_rsock->shouldTryTokenRequest(), miscdata);
 		}

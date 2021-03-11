@@ -1162,6 +1162,8 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 	if (cbTot > 0) {
 		store_buffers(src, &bufs[0], cbBuf, cbTot, bytes_read > 0);
 		bytes_read += cbTot;
+	} else {
+		free(buffer);
 	}
 
 	return error;
