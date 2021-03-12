@@ -2763,12 +2763,12 @@ const char * condor_basename_plus_dirs(const char *path, int num_dirs)
 	return path;
 }
 
-// strdup a string with room to grow and an optional leading quote
-// and room for a trailing quote.
+// copy a string stripping leading an trailing double quotes or quotes of the given type
+// and optionally adding leading and trailing quotes of the given type
 char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
 	ASSERT(cch >= 0);
 
-	// ignore leading and/or trailing quotes when we dup
+	// ignore leading and/or trailing quotes when we copy
 	char quote_char = 0;
 	if (*str=='"' || (*str && *str == quoted)) { quote_char = *str; ++str; --cch; }
 	if (cch > 0 && str[cch-1] && str[cch-1] == quote_char) --cch;
@@ -2778,7 +2778,7 @@ char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
 
 	// copy, adding quotes or not as requested.
 	if (quoted) { *p++ = quoted; }
-	memcpy(p, str, std::min(cch, (int)strlen(str)));
+	memcpy(p, str, cch*sizeof(str[0]));
 	if (quoted) { p[cch++] = quoted; }
 	p[cch] = 0;
 
@@ -2799,12 +2799,13 @@ char * strdup_quoted(const char* str, int cch, char quoted) {
 // strdup a string with room to grow and an optional leading quote
 // and room for a trailing quote, also canocalize windows path characters
 //
-char * strdup_path_quoted(const char* str, int cch, char quoted, char to_path_char) {
+char * strdup_path_quoted(const char* str, int cch, int cch_extra, char quoted, char to_path_char) {
 	if (cch < 0) cch = (int)strlen(str);
 
 	// malloc with room for quotes and a terminating 0
-	char * out = (char*)malloc(cch+3);
+	char * out = (char*)malloc(cch+3+cch_extra);
 	ASSERT(out);
+	memset(out + cch, 0, 3 + cch_extra);
 	strcpy_quoted(out, str, cch, quoted);
 	if (to_path_char) {
 		char path_char = (to_path_char == '/') ? '\\' : '/';
@@ -2824,7 +2825,7 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 		|| !ctx.cwd || !ctx.cwd[0]
 	   )
 	{
-		return strdup_path_quoted(name, cch, quoted, to_path_char);
+		return strdup_path_quoted(name, cch, 0, quoted, to_path_char);
 	}
 	else
 	{
@@ -2837,7 +2838,7 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 	#endif
 		if (has_dir_delim) { cch_cwd -= 1; }
 		if (cch < 0) { name = strlen_unquote(name, cch); }
-		char * str = strdup_path_quoted(ctx.cwd, cch_cwd + cch + 1, quoted, to_path_char);
+		char * str = strdup_path_quoted(ctx.cwd, cch_cwd, cch + 1, quoted, to_path_char);
 		if (str) {
 			char * p = str + cch_cwd;
 			if (quoted) ++p;
@@ -3659,7 +3660,7 @@ static const char * evaluate_macro_func (
 				if (full_path) {
 					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, to_path_char);
 				} else if (parts || to_path_char || bare) {
-					buf = strdup_path_quoted(umval, cchum, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
+					buf = strdup_path_quoted(umval, cchum, 0, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
 				} else {
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}
@@ -4339,7 +4340,7 @@ static ptrdiff_t evaluate_macro_func (
 				if (full_path) {
 					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, to_path_char);
 				} else if (parts || to_path_char || bare) {
-					buf = strdup_path_quoted(umval, cchum, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
+					buf = strdup_path_quoted(umval, cchum, 0, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
 				} else {
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}
