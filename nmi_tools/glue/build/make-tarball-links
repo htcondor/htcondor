@@ -17,13 +17,17 @@ if [ ! -d etc -o ! -d usr -o ! -d var ]; then
     echo That does not look like an HTCondor tarball
     exit 1
 fi
+# On Debian and Unbuntu consolidate shared objects into a single directory
+if [ -d lib ]; then
+    find lib -name \*.so\* -exec mv {} usr/lib \;
+    rm -rf lib
+fi
+if [ -d usr/lib/x86_64-linux-gnu ]; then
+    find usr/lib/x86_64-linux-gnu -name \*.so\* -exec mv {} usr/lib \;
+fi
 # Make compatabilty links to conform to the old tarball layout
 ln -s usr/bin bin
 ln -s usr/sbin sbin
-# On Debian /lib contains some systemd files
-if [ -d lib ]; then
-    rm -rf lib
-fi
 ln -s usr/lib lib
 if [ -d usr/lib64 ]; then
     ln -s usr/lib64 lib64
