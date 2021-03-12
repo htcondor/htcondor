@@ -1485,6 +1485,10 @@ Stream::set_crypto_mode(bool enabled)
 		}
 	}
 
+	if (mustEncrypt()) {
+		return false;
+	}
+
 	// turn off crypto
 	crypto_mode_ = false;
 

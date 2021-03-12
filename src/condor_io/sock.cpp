@@ -3036,6 +3036,12 @@ Sock::canEncrypt() const
 	return crypto_ != NULL;
 }
 
+bool
+Sock::mustEncrypt() const
+{
+	return crypto_state_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM;
+}
+
 void
 Sock::invalidateSock()
 {
