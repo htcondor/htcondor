@@ -57,6 +57,9 @@ const unsigned int PUT_FILE_EOM_NUM = 666;
 // It is used to make get_file() consume transferred data without writing it.
 const int GET_FILE_NULL_FD = -10;
 
+const size_t OLD_FILE_BUF_SZ = 65536;
+const size_t AES_FILE_BUF_SZ = 262144;
+
 int
 ReliSock::get_file( filesize_t *size, const char *destination,
 					bool flush_buffers, bool append, filesize_t max_bytes,
@@ -141,18 +144,21 @@ ReliSock::get_file( filesize_t *size, int fd,
 					bool flush_buffers, bool append, filesize_t max_bytes,
 					DCTransferQueue *xfer_q)
 {
-	char buf[65536];
 	filesize_t filesize, bytes_to_receive;
 	unsigned int eom_num;
 	filesize_t total = 0;
 	int retval = 0;
 	int saved_errno = 0;
+	bool buffered = get_encryption() && get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM;
+	size_t buf_sz = OLD_FILE_BUF_SZ;
 
 		// NOTE: the caller may pass fd=GET_FILE_NULL_FD, in which
 		// case we just read but do not write the data.
 
 	// Read the filesize from the other end of the wire
-	if ( !get(filesize) || !end_of_message() ) {
+	// If we're operating in buffered mode, also read the buffer size
+	// (each buffer-sized chunk will be sent in a seperate CEDAR message).
+	if ( !get(filesize) || !(buffered ? get(buf_sz) : 1) || !end_of_message() ) {
 		dprintf(D_ALWAYS, 
 				"Failed to receive filesize in ReliSock::get_file\n");
 		return -1;
@@ -161,6 +167,8 @@ ReliSock::get_file( filesize_t *size, int fd,
 	if ( append ) {
 		lseek( fd, 0, SEEK_END );
 	}
+
+	std::unique_ptr<char[]> buf(new char[buf_sz]);
 
 	// Log what's going on
 	dprintf( D_FULLDEBUG,
@@ -184,8 +192,16 @@ ReliSock::get_file( filesize_t *size, int fd,
 		}
 
 		int	iosize =
-			(int) MIN( (filesize_t) sizeof(buf), bytes_to_receive - total );
-		int	nbytes = get_bytes_nobuffer( buf, iosize, 0 );
+			(int) MIN( (filesize_t) buf_sz, bytes_to_receive - total );
+		int	nbytes;
+		if( buffered ) {
+			nbytes = get_bytes( buf.get(), iosize );
+			if( nbytes > 0 && !end_of_message() ) {
+				nbytes = 0;
+			}
+		} else {
+			nbytes = get_bytes_nobuffer( buf.get(), iosize, 0 );
+		}
 
 		if( xfer_q ) {
 			condor_gettimestamp(t2);
@@ -269,6 +285,14 @@ ReliSock::get_file( filesize_t *size, int fd,
 					 (long int)bytes_to_receive);
 			return GET_FILE_MAX_BYTES_EXCEEDED;
 		}
+	}
+
+	// Our caller may treat get_file() as the end of a CEDAR message
+	// and call end_of_message immediately afterwards. This call will
+	// keep that from failing.
+	if (buffered && !prepare_for_nobuffering(stream_decode)) {
+		dprintf( D_ALWAYS, "get_file: prepare_for_nobuffering() failed!\n" );
+		return -1;
 	}
 
 	if ( filesize == 0 ) {
@@ -378,7 +402,8 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 {
 	filesize_t	filesize;
 	filesize_t	total = 0;
-
+	bool buffered = get_encryption() && get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM;
+	const size_t buf_sz = buffered ? AES_FILE_BUF_SZ : OLD_FILE_BUF_SZ;
 
 	StatInfo filestat( fd );
 	if ( filestat.Error() ) {
@@ -428,7 +453,9 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 	}
 
 	// Send the file size to the receiver
-	if ( !put(bytes_to_send) || !end_of_message() ) {
+	// If we're operating in buffered mode, also send the buffer size
+	// (each buffer-sized chunk will be sent in a seperate CEDAR message).
+	if ( !put(bytes_to_send) || !(buffered ? put(buf_sz) : 1) || !end_of_message() ) {
 		dprintf(D_ALWAYS, "ReliSock: put_file: Failed to send filesize.\n");
 		return -1;
 	}
@@ -490,7 +517,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 		}
 #endif
 
-		char buf[65536];
+		std::unique_ptr<char[]> buf(new char[buf_sz]);
 		int nbytes, nrd;
 
 		// On Unix, always send the file using put_bytes_nobuffer().
@@ -504,7 +531,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 			}
 
 			// Be very careful about where the cast to size_t happens; see gt#4150
-			nrd = ::read(fd, buf, (size_t)((bytes_to_send-total) < (int)sizeof(buf) ? bytes_to_send-total : sizeof(buf)));
+			nrd = ::read(fd, buf.get(), (size_t)((bytes_to_send-total) < (int)buf_sz ? bytes_to_send-total : buf_sz));
 
 			if( xfer_q ) {
 				condor_gettimestamp(t2);
@@ -514,12 +541,20 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 			if( nrd <= 0) {
 				break;
 			}
-			if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
+			if( buffered ) {
+				nbytes = put_bytes(buf.get(), nrd);
+				if( nbytes > 0 && !end_of_message() ) {
+					nbytes = 0;
+				}
+			} else {
+				nbytes = put_bytes_nobuffer(buf.get(), nrd, 0);
+			}
+			if (nbytes < nrd) {
 					// put_bytes_nobuffer() does the appropriate
 					// looping for us already, the only way this could
 					// return less than we asked for is if it returned
 					// -1 on failure.
-				ASSERT( nbytes == -1 );
+				ASSERT( nbytes <= 0 );
 				dprintf( D_ALWAYS, "ReliSock::put_file: failed to put %d "
 						 "bytes (put_bytes_nobuffer() returned %d)\n",
 						 nrd, nbytes );
@@ -537,6 +572,14 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 		}
 	
 	} // end of if filesize > 0
+
+	// Our caller may treat put_file() as the end of a CEDAR message
+	// and call end_of_message immediately afterwards. This call will
+	// keep that from failing.
+	if (buffered && !prepare_for_nobuffering(stream_encode)) {
+		dprintf( D_ALWAYS, "put_file: prepare_for_nobuffering() failed!\n" );
+		return -1;
+	}
 
 	if ( bytes_to_send == 0 ) {
 		put(PUT_FILE_EOM_NUM);
