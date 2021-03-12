@@ -1167,8 +1167,13 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 		ns = cipher_sz;
 		len = (int) htonl(ns);
 
-		buf.grow_buf(cipher_sz);
-		Buf new_buf(p_sock, cipher_sz + header_size);
+		// TODO In a large message, this code will grow the max packet
+		//   size by 16 bytes per packet sent. When a small packet
+		//   comes through (at the end of a message), the max packet
+		//   size will shrink back down (but no smaller than
+		//   CONDOR_IO_BUF_SIZE).
+		Buf new_buf(p_sock);
+		new_buf.grow_buf(cipher_sz + header_size);
 		new_buf.alloc_buf();
 		memcpy(&hdr[1], &len, 4);
 		unsigned char *aad_data = reinterpret_cast<unsigned char *>(hdr);
