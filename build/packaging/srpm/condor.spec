@@ -1118,7 +1118,6 @@ rm -rf %{buildroot}
 
 #################
 %files all
-%config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
 %if %uw_build
 #################
 %files externals
@@ -1147,6 +1146,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/passwords.d/
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
+%config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
