@@ -6497,6 +6497,28 @@ use security : get_htcondor_idtokens
 use role : execute
 @end
 
+##
+## Version-specific knobx.
+##
+[$SECURITY.recommended_v9_0]
+default: @end
+# Make it easy to detect if this metaknob was set.
+SECURITY_MODEL = 9.0
+
+# Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
+# which they are by default.
+use security : strong
+
+# This allows anyone who can access port 9618 to READ, which lets
+# condor_status and condor_q work over the network out of the box.
+SEC_READ_AUTHENTICATION = OPTIONAL
+
+ALLOW_ADMINISTRATOR = root@*, condor@*, condor_pool@*
+ALLOW_DAEMON = condor@*, condor_pool@*
+ALLOW_NEGOTIATOR = condor@*, condor_pool@*
+ALLOW_WRITE = *
+ALLOW_READ = *
+@end
 
 ##
 ## Experimental meta knobs
