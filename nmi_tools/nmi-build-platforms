@@ -4,11 +4,11 @@
 docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-08091103
 docker://htcondor/nmi-zdev:x86_64_CentOS7-08091103
 docker://htcondor/nmi-zdev:x86_64_CentOS8-08091103
-docker://htcondor/nmi-zdev:x86_64_Debian9-08091103
-docker://htcondor/nmi-zdev:x86_64_Debian10-08091103
+docker://htcondor/nmi-zdev:x86_64_Debian9-08091104
+docker://htcondor/nmi-zdev:x86_64_Debian10-08091104
 x86_64_MacOSX15
-docker://htcondor/nmi-zdev:x86_64_Ubuntu18-08091103
-docker://htcondor/nmi-zdev:x86_64_Ubuntu20-08091103
+docker://htcondor/nmi-zdev:x86_64_Ubuntu18-08091104
+docker://htcondor/nmi-zdev:x86_64_Ubuntu20-08091104
 x86_64_Windows7
 x86_64_Windows8
 x86_64_Windows10
