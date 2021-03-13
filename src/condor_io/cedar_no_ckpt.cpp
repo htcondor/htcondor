@@ -338,8 +338,9 @@ MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 int
 ReliSock::put_empty_file( filesize_t *size )
 {
+	bool buffered = get_encryption() && get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM;
 	*size = 0;
-	if(!put(*size) || !end_of_message()) {
+	if(!put(*size) || !(buffered ? put(1) : 1) || !end_of_message()) {
 		dprintf(D_ALWAYS,"ReliSock: put_file: failed to send dummy file size\n");
 		return -1;
 	}
