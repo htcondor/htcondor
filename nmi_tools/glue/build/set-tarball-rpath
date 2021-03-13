@@ -14,6 +14,7 @@ if [ ! -d $tarball ]; then
 fi
 
 cd $tarball
-for file in $(file $(find -type f)|grep 'ELF.*shared'|sed -e s/:.*//); do
+for file in $(file $(find -type f)|grep  ' ELF '|sed -e s/:.*//); do
+    echo Setting RPATH to $rpath in $file
     patchelf --set-rpath $rpath $file
 done
