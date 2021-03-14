@@ -589,7 +589,7 @@ sysapi_get_linux_info(void)
 {
 	char* info_str = NULL;
 	FILE *my_fp;
-	const char * etc_issue_path[] = { "/etc/issue","/etc/redhat-release","/etc/issue.net",NULL };
+	const char * etc_issue_path[] = { "/etc/issue","/etc/redhat-release","/etc/system-release","/etc/issue.net",NULL };
 	int i;
 
 	for (i=0;etc_issue_path[i];i++) {
@@ -698,6 +698,10 @@ sysapi_find_linux_name( const char *info_str )
         else if ( strstr(distro_name_lc, "centos") )
         {
                 distro = strdup("CentOS");
+        }  
+        else if ( strstr(distro_name_lc, "amazon linux") )
+        {
+                distro = strdup("AmazonLinux");
         }  
         else if ( strstr(distro_name_lc, "opensuse") )
         {
