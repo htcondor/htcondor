@@ -122,7 +122,8 @@ if (BUILD_TESTING)
 
 		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/job_ec2_basic.accessKey;src/condor_tests/job_ec2_basic.secretKey;src/condor_tests/job_ec2_basic.userDataFile;${CMAKE_BINARY_DIR}/src/condor_tests/queryAPI-sim")
 		add_dependencies(job_ec2_basic queryAPI-sim)
-		condor_pl_test( job_hyperthread_check "hyper thread testing test" "quick;full;quicknolink" CTEST)
+		condor_pl_test( job_hyperthread_check "hyper thread testing test" "quick;full;quicknolink" CTEST DEPENDS src/condor_tests/count_cpus)
+
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink" CTEST DEPENDS "src/condor_tests/lib_procapi_pidtracking-byenv.cmd;src/condor_tests/x_pid_tracking.pl")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
 	endif()
