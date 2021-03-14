@@ -60,7 +60,7 @@ $success = sub
 	foreach my $item ( @lines )
 	{
 		#CondorTest::debug("ARG -$item-\n",1);
-		if($item =~ /^(.*?\..*?\..*)$/) {
+		if($item =~ /^(.*\..*)$/) {
 			print "MACHINE:$1\n";
 			$statusmachines = $1;
 		} elsif($item =~ /^(\/be\/here\/now).*$/) {

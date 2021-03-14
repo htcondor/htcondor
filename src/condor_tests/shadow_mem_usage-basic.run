@@ -43,14 +43,19 @@ CondorTest::StartCondorWithParams(
 #
 # for X86_64 shadows
 my %memory_data64 = (
+	"amazonlinux2"  => "644",
 	"centos7"  => "644",
+	"centos8"  => "644",
 	"debian6"  => "652",
 	"debian7"  => "688",
 	"debian8"  => "692",
 	"debian9"  => "768",
+	"debian10" => "768",
 	"fedora20" => "660",
 	"fedora21" => "668",
 	"fedora27" => "704",
+	"fedora32" => "704",
+	"fedora33" => "704",
 	"redhat5"  => "448",
 	"redhat6"  => "492",
 	"redhat7"  => "644",
@@ -60,6 +65,7 @@ my %memory_data64 = (
 	"ubuntu14" => "664",
 	"ubuntu16" => "664",
 	"ubuntu18" => "752",
+	"ubuntu20" => "752",
 );
 # for X86 shadows
 my %memory_data32 = (
