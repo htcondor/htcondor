@@ -405,7 +405,8 @@ if (BUILD_TESTING)
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe;src/condor_tests/lib_userlog.cmd")
-	add_dependencies_suffix_hack(lib_userlog "x_read_joblog.exe;x_write_joblog.exe")
+	add_dependencies_suffix_hack(lib_userlog x_read_joblog.exe)
+	add_dependencies_suffix_hack(lib_userlog x_write_joblog.exe)
 	condor_pl_test(lib_eventlog "Basic Event Log Test" "core;quick;full" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
 	add_dependencies_suffix_hack(lib_eventlog x_read_joblog.exe)
 	condor_pl_test(lib_eventlog-xml "Basic XML Event Log Test" "core;quick;full" CTEST DEPENDS "src/condor_tests/x_sleep.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;src/condor_tests/x_lib_eventlog.expected")
