@@ -61,10 +61,9 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
 
-# Add blahp
-# Add condor-boinc
-# Add scitokens-cpp
-common_externals="libcgroup1 \
+common_externals="blahp \
+    condor-boinc \
+    libcgroup1 \
     libglobus-callout0 \
     libglobus-common0 \
     libglobus-ftp-client2 \
@@ -90,6 +89,7 @@ common_externals="libcgroup1 \
     libglobus-xio-popen-driver \
     libgomp1 \
     libmunge2 \
+    libscitokens0 \
     libvomsapi1v5"
 
 if [[ $arch_dist =~ Debian9 ]]; then
