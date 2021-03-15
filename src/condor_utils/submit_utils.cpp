@@ -3471,6 +3471,7 @@ int SubmitHash::SetGridParams()
 		char *list_str = list.print_to_string();
 		AssignJobString(ATTR_GCE_METADATA, list_str);
 		free( list_str );
+		free(tmp);
 	}
 
 	// GceMetadataFile is not a necessary parameter
