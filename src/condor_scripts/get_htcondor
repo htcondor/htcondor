@@ -237,7 +237,6 @@ do_start_service() {
 			if ! is_dry_run; then
 				set -x
 			fi
-			$sh_c "mkdir --mode=0755 /var/lock/condor /var/run/condor; chown condor:condor /var/lock/condor /var/run/condor"
 			$sh_c "condor_master"
 		)
 	else
