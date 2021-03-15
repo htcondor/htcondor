@@ -275,7 +275,7 @@ do_token_security() {
 	# Remove the default 9.0 security configuration.  Arguably, the
 	# get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
 	# and adjust accordingly, which might make microversion upgrades easier.
-	rm -f /etc/condor/config.d/00-htcondor-9.0.config
+	$sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
 
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
