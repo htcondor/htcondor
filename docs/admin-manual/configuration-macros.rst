@@ -9353,7 +9353,9 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SCITOKENS_FILE`
     The path and file name of a file containing a SciToken for use by
     the client during the SCITOKENS authentication methods.  This variable
-    has no default value.
+    has no default value.  If left unset, HTCondor will use the bearer
+    token discovery protocol defined by the WLCG (https://zenodo.org/record/3937438)
+    to find one.
 
 :macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
     The number of seconds to wait before cleaning up unused credentials.

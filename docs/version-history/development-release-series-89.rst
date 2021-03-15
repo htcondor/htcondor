@@ -72,6 +72,11 @@ Release Notes:
 
 New Features:
 
+- If ``SCITOKENS_FILE`` is not specified, HTCondor will now follow WLCG's
+  bearer token discovery protocol to find it.  See
+  https://zenodo.org/record/3937438 for details.
+  :jira:`92`
+
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
   :jira:`73`
