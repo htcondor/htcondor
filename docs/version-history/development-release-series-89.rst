@@ -64,6 +64,12 @@ Release Notes:
   ``condor_reconfig`` and ``condor_off`` commands to other daemons.
   :jira:`273`
 
+- The ``condor_credmon_oauth`` now writes logs to the path in
+  `CREDMON_OAUTH_LOG` if defined, which matches the typical log config
+  parameter naming pattern, instead of using the path defined in
+  `SEC_CREDENTIAL_MONITOR_OAUTH_LOG`.
+  :jira:`122`
+
 New Features:
 
 - HTCondor now creates a number of directories on start-up, rather than
