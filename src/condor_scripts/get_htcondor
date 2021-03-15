@@ -509,7 +509,8 @@ do_install() {
 		"central manager")
 			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
 
 			do_token_security
 			;;
@@ -517,6 +518,7 @@ do_install() {
 		"submit")
 			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
@@ -529,6 +531,7 @@ do_install() {
 		"execute")
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
