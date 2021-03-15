@@ -812,11 +812,7 @@ protected:
 	Edge() {};
 	Edge(std::vector<JobID_t> & in) : _ary(in) {};
 public:
-	~Edge() {
-		for (auto *edge : _edgeTable) {
-			delete edge;
-		}
-	};
+	~Edge() {};
 
 	std::vector<JobID_t> _ary; // sorted array  of jobid's, either parent or child edge list
 	//std::set<JobID_t> _check; // used to double check the correctness of the edge list.
