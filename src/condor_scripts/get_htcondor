@@ -237,7 +237,6 @@ do_start_service() {
 			if ! is_dry_run; then
 				set -x
 			fi
-			$sh_c "mkdir --mode=0755 /var/lock/condor /var/run/condor; chown condor:condor /var/lock/condor /var/run/condor"
 			$sh_c "condor_master"
 		)
 	else
@@ -276,7 +275,7 @@ do_token_security() {
 	# Remove the default 9.0 security configuration.  Arguably, the
 	# get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
 	# and adjust accordingly, which might make microversion upgrades easier.
-	rm -f /etc/condor/config.d/00-htcondor-9.0.config
+	$sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
 
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
@@ -510,7 +509,8 @@ do_install() {
 		"central manager")
 			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
 
 			do_token_security
 			;;
@@ -518,6 +518,7 @@ do_install() {
 		"submit")
 			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
@@ -530,6 +531,7 @@ do_install() {
 		"execute")
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
