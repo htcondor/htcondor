@@ -723,7 +723,7 @@ finis:
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
 		CondorError errstack;
-		success = DisconnectQ(qmgr, true, &errstack); qmgr = NULL;
+		success = DisconnectQ(qmgr, false, &errstack); qmgr = NULL;
 		if (!success) {
 			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node->GetJobName(), errstack.getFullText().c_str());
 		}
