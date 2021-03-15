@@ -722,11 +722,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 finis:
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
-		CondorError errstack;
-		success = DisconnectQ(qmgr, false, &errstack); qmgr = NULL;
-		if (!success) {
-			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node->GetJobName(), errstack.getFullText().c_str());
-		}
+		DisconnectQ(qmgr, false); qmgr = NULL;
 	}
 	// report errors from submit
 	//
