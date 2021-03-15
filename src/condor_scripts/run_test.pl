@@ -410,7 +410,6 @@ sub DoChild
 
     my $test_starttime = time();
     debug("Test start @ $test_starttime \n",6);
-    sleep(1);
 
     # with wrapping all test(most) in a personal condor
     # we know where the published directories are if we ask by name
