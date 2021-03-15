@@ -424,6 +424,10 @@ getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
 	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
 	if( NVML_SUCCESS != r ) { return r; }
 
+	// if this version of the library doesn't have a nvmlDeviceGetMaxMigDeviceCount function
+	// then we behave as if the mig device cound was 0, trivial success.
+	if (! nvmlDeviceGetMaxMigDeviceCount) { return NVML_SUCCESS; }
+
 	for( unsigned int i = 0; i < deviceCount; ++i ) {
 		nvmlDevice_t device;
 		r = nvmlDeviceGetHandleByIndex( i, & device );
@@ -564,7 +568,9 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		if( NVML_SUCCESS != r ) { return r; }
 
 		unsigned int maxMigDeviceCount = 0;
-		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if (nvmlDeviceGetMaxMigDeviceCount) {
+			r = nvmlDeviceGetMaxMigDeviceCount(device, & maxMigDeviceCount);
+		}
 		if( NVML_SUCCESS == r && maxMigDeviceCount == 0 ) {
 			char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
 			r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
