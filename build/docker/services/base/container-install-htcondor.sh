@@ -127,12 +127,20 @@ fi
 
 # Create passwords directories for token or pool password auth.
 #
-# Only root needs to know the pool password but other condor daemons
-# need access to the tokens.
-#
-# TODO: Do the packages take care of this now?
+# Only root needs to know the pool password but before 8.9.12, the condor user
+# also needed to access the tokens.
+
 install -m 0700 -o root -g root -d /etc/condor/passwords.d
-install -m 0700 -o condor -g condor -d /etc/condor/tokens.d
+real_condor_version=$(condor_config_val CONDOR_VERSION)  # easier than parsing `condor_version`
+if python3 -c '
+import sys
+version = [int(x) for x in sys.argv[1].split(".")]
+sys.exit(0 if version >= [8, 9, 12] else 1)
+' "$real_condor_version"; then
+    install -m 0700 -o root -g root -d /etc/condor/tokens.d
+else
+    install -m 0700 -o condor -g condor -d /etc/condor/tokens.d
+fi
 
 
 # vim:et:sw=4:sts=4:ts=8
