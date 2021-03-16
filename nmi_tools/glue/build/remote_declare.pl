@@ -65,17 +65,25 @@ if ($boos) {
 	mkdir 'sources';
 	open(FH, '>', 'swap_userdir.cmd') or print "Cant open swap_userdir.cmd for writing: $!\n";
 	if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
+		print FH 'mkdir sources\msconfig' . "\n";
+		print FH 'for %%I in (userdir\msconfig\*) do copy %%I sources\msconfig\%%~nxI' . "\n";
+		print FH 'move userdir\msconfig\WiX sources\msconfig\WiX' . "\n";
+		print FH '"sources\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'del userdir\condor-*.tgz' . "\n";
-		print FH 'move userdir\* sources' . "\n";
+		print FH 'for %%I in (userdir\*) do move %%I sources' . "\n";
 		print FH 'move userdir\src sources\src' . "\n";
 		print FH 'move userdir\docs sources\docs' . "\n";
 		print FH 'move userdir\view sources\view' . "\n";
 		print FH 'move userdir\build sources\build' . "\n";
 		print FH 'move userdir\externals sources\externals' . "\n";
-		print FH 'move userdir\msconfig sources\msconfig' . "\n";
 		print FH 'move userdir\nmi_tools sources\nmi_tools' . "\n";
+		print FH 'move userdir\src sources\src' . "\n";
 		print FH '"sources\msconfig\tar.exe" -xvf swap_userdir.tgz' . "\n";
+		# try the necessary directories again, because sometimes we get AccessDenied the first time.
+		print FH 'move userdir\docs sources\docs' . "\n";
+		print FH 'move userdir\view sources\view' . "\n";
+		print FH 'move userdir\build sources\build' . "\n";
+		print FH 'move userdir\externals sources\externals' . "\n";
 	} else {
 		print FH '#!/bin/sh' . "\n";
 		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
