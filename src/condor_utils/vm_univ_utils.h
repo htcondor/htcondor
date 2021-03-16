@@ -27,7 +27,7 @@
 #include "string_list.h"
 
 // Removes leading/tailing single(') or double(") quote
-MyString delete_quotation_marks(const char *value);
+std::string delete_quotation_marks(const char *value);
 
 /*
   Find all suffix-matched files in the directory 'dirpath'.

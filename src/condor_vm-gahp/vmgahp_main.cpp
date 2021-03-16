@@ -43,7 +43,7 @@ int vmgahp_stderr_tid = -1;
 int	oriDebugFlags = 0;
 #endif
 
-MyString workingdir;
+std::string workingdir;
 
 // This variables come from vmgahp_common.C
 extern std::string caller_name;
@@ -72,8 +72,8 @@ void Reconfig()
 	// LOG directory defined in Condor config file.
 	// However, because vmgahp server is usually executed by starter
 	// we will change current working directory to job directory
-	if( !workingdir.IsEmpty() ) {
-		if( chdir(workingdir.Value()) < 0 ) {
+	if( !workingdir.empty() ) {
+		if( chdir(workingdir.c_str()) < 0 ) {
 			DC_Exit(1);
 		}
 	}
@@ -137,18 +137,21 @@ init_uids()
 	caller_gid = getgid();
 
 	// Set user uid/gid
-	MyString user_uid;
-	MyString user_gid;
-	user_uid = getenv("VMGAHP_USER_UID");
-	if( user_uid.IsEmpty() == false ) {
-		int env_uid = (int)strtol(user_uid.Value(), (char **)NULL, 10);
+	char *val;
+	std::string user_uid;
+	std::string user_gid;
+	val = getenv("VMGAHP_USER_UID");
+	user_uid = val ? val : "";
+	if( user_uid.empty() == false ) {
+		int env_uid = (int)strtol(user_uid.c_str(), (char **)NULL, 10);
 		if( env_uid > 0 ) {
 			job_user_uid = env_uid;
 
 			// Try to read user_gid
-			user_gid = getenv("VMGAHP_USER_GID");
-			if( user_gid.IsEmpty() == false ) {
-				int env_gid = (int)strtol(user_gid.Value(), (char **)NULL, 10);
+			val = getenv("VMGAHP_USER_GID");
+			user_gid = val ? val : "";
+			if( user_gid.empty() == false ) {
+				int env_gid = (int)strtol(user_gid.c_str(), (char **)NULL, 10);
 				if( env_gid > 0 ) {
 					job_user_gid = env_gid;
 				}
@@ -234,8 +237,9 @@ void main_init(int argc, char *argv[])
 {
 	init_uids();
 
-	MyString vmtype;
-	MyString matchstring;
+	char *val;
+	std::string vmtype;
+	std::string matchstring;
 
 #ifdef vmprintf
 	// use D_PID to prefix log lines with (pid:NNN), note that vmprintf output "VMGAHP[NNN]" instead
@@ -340,25 +344,27 @@ void main_init(int argc, char *argv[])
 		}
 
 		if( vmgahp_mode == VMGAHP_TEST_MODE ) {
-			if( vmtype.Length() == 0 ) {
+			if( vmtype.length() == 0 ) {
 				usage(argv[0]);
 			}
 		}else if( vmgahp_mode == VMGAHP_KILL_MODE ) {
-			if( ( vmtype.Length() == 0 ) ||
-			    ( matchstring.Length() == 0 ) )
+			if( ( vmtype.length() == 0 ) ||
+			    ( matchstring.length() == 0 ) )
 			{
 				usage(argv[0]);
 			}
 		}
 	}else {
-		vmtype = getenv("VMGAHP_VMTYPE");
-		if( vmtype.IsEmpty() ) {
+		val = getenv("VMGAHP_VMTYPE");
+		vmtype = val ? val : "";
+		if( vmtype.empty() ) {
 			vmprintf(D_ALWAYS, "cannot find vmtype\n");
 			DC_Exit(1);
 		}
 
-		workingdir = getenv("VMGAHP_WORKING_DIR");
-		if( workingdir.IsEmpty() ) {
+		char *val = getenv("VMGAHP_WORKING_DIR");
+		workingdir = val ? val : "";
+		if( workingdir.empty() ) {
 			vmprintf(D_ALWAYS, "cannot find vmgahp working dir\n");
 			DC_Exit(1);
 		}
@@ -369,17 +375,17 @@ void main_init(int argc, char *argv[])
 	Reconfig();
 
 	// change vmtype to lowercase
-	vmtype.lower_case();
+	lower_case(vmtype);
 
 	// check whether vmtype is supported by this gahp server
-	if( verify_vm_type(vmtype.Value()) == false ) {
+	if( verify_vm_type(vmtype.c_str()) == false ) {
 		DC_Exit(1);
 	}
 
 	initialize_uids();
 
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+	if( (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		// Xen requires root priviledge
 		if( !canSwitchUid() ) {
 			vmprintf(D_ALWAYS, "VMGahp server for Xen or KVM requires "
@@ -393,7 +399,7 @@ void main_init(int argc, char *argv[])
 	VMGahpConfig *gahpconfig = new VMGahpConfig;
 	ASSERT(gahpconfig);
 	set_root_priv();
-	if( gahpconfig->init(vmtype.Value()) == false ) {
+	if( gahpconfig->init(vmtype.c_str()) == false ) {
 		DC_Exit(1);
 	}
 
@@ -407,13 +413,13 @@ void main_init(int argc, char *argv[])
 	// used, and the testXen method belongs in the superclass.
 	// Therefore, there was only one place where this could have
 	// gone...
-	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
+	if( (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 		priv_state priv = set_root_priv();
 		if( XenType::checkXenParams(gahpconfig) == false ) {
 			DC_Exit(1);
 		}
 		set_priv(priv);
-	}else if ((strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+	}else if ((strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
                 priv_state priv = set_root_priv();
 		if( KVMType::checkXenParams(gahpconfig) == false ) {
 			DC_Exit(1);
@@ -421,7 +427,7 @@ void main_init(int argc, char *argv[])
 		set_priv(priv);
 	} else
 #endif
-	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
+	if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(gahpconfig) == false ) {
 			DC_Exit(1);
@@ -432,32 +438,32 @@ void main_init(int argc, char *argv[])
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-		if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
+		if( (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
 
 			if( XenType::checkXenParams(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
-						"be used.\n", vmtype.Value());
+						"be used.\n", vmtype.c_str());
 				DC_Exit(0);
 			}
 			set_priv(priv);
-		} else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		} else if ( (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 			priv_state priv = set_root_priv();
 
 			if( KVMType::checkXenParams(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
-						"be used.\n", vmtype.Value());
+						"be used.\n", vmtype.c_str());
 				DC_Exit(0);
 			}
 			set_priv(priv);
 
 		} else
 #endif
-		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
+		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 			priv_state priv = set_user_priv();
 			if( VMwareType::testVMware(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
-						"be used.\n", vmtype.Value());
+						"be used.\n", vmtype.c_str());
 				DC_Exit(0);
 			}
 			set_priv(priv);
@@ -484,7 +490,7 @@ void main_init(int argc, char *argv[])
 	}
 
 	if( vmgahp_mode == VMGAHP_KILL_MODE ) {
-		if( matchstring.IsEmpty() ) {
+		if( matchstring.empty() ) {
 			DC_Exit(0);
 		}
 
@@ -493,21 +499,21 @@ void main_init(int argc, char *argv[])
 		set_root_priv();
 
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-			XenType::killVMFast(matchstring.Value());
+		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+			XenType::killVMFast(matchstring.c_str());
 		}else
-		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0 ) {
-			KVMType::killVMFast(matchstring.Value());
+		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0 ) {
+			KVMType::killVMFast(matchstring.c_str());
 		}else
 #endif
-		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-			VMwareType::killVMFast(gahpconfig->m_prog_for_script.Value(),
-					gahpconfig->m_vm_script.Value(), matchstring.Value(), true);
+		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			VMwareType::killVMFast(gahpconfig->m_prog_for_script.c_str(),
+					gahpconfig->m_vm_script.c_str(), matchstring.c_str(), true);
 		}
 		DC_Exit(0);
 	}
 
-	vmgahp = new VMGahp(gahpconfig, workingdir.Value());
+	vmgahp = new VMGahp(gahpconfig, workingdir.c_str());
 	ASSERT(vmgahp);
 
 	/* Wait for command */

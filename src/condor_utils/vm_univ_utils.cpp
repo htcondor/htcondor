@@ -31,10 +31,10 @@
 #include "vm_univ_utils.h"
 
 // Removes leading/tailing single(') or double(") quote
-MyString 
+std::string 
 delete_quotation_marks(const char *value)
 {
-	MyString fixedvalue;
+	std::string fixedvalue;
 
 	if( !value || (value[0] == '\0')) {
 		return fixedvalue;
@@ -58,7 +58,7 @@ delete_quotation_marks(const char *value)
 	}
 		   
 	fixedvalue = tmpvalue;
-	fixedvalue.trim();
+	trim(fixedvalue);
 	free(tmpvalue);
 	return fixedvalue;
 }

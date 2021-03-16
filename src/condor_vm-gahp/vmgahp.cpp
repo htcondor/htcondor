@@ -708,8 +708,8 @@ VMGahp::executeStart(VMRequest *req)
 	}else
 #endif
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-		new_vm = new VMwareType(m_gahp_config->m_prog_for_script.Value(),
-				m_gahp_config->m_vm_script.Value(),
+		new_vm = new VMwareType(m_gahp_config->m_prog_for_script.c_str(),
+				m_gahp_config->m_vm_script.c_str(),
 				vmworkingdir.c_str(), m_jobAd);
 		ASSERT(new_vm);
 	}else
@@ -1110,8 +1110,8 @@ VMGahp::killAllProcess()
 				CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(m_gahp_config) ) {
-			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.Value(),
-					m_gahp_config->m_vm_script.Value(), m_workingdir.Value());
+			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.c_str(),
+					m_gahp_config->m_vm_script.c_str(), m_workingdir.c_str());
 			vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 		}
 		set_priv(priv);

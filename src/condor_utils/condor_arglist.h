@@ -115,6 +115,7 @@ class ArgList {
 
 	void AppendArg(char const *arg);
 	void AppendArg(MyString arg);
+	void AppendArg(const std::string &arg);
 	void AppendArg(int arg);
 	void InsertArg(char const *arg,int position);
 	void RemoveArg(int position);

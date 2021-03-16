@@ -209,6 +209,11 @@ ArgList::AppendArg(MyString arg) {
 }
 
 void
+ArgList::AppendArg(const std::string &arg) {
+	ASSERT(args_list.Append(arg.c_str()));
+}
+
+void
 ArgList::AppendArg(char const *arg) {
 	ASSERT(arg);
 	ASSERT(args_list.Append(arg));
