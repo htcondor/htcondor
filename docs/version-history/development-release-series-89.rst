@@ -16,9 +16,16 @@ Release Notes:
 - We have changed the default configuration file.  It no longer sets
   ``use security : host_based``.  This may cause your existing, insecure
   security configuration to stop working.  Consider updating your
-  configuration.  See the comment in the new version of
-  ``/etc/condor/condor_config`` for details on the insecure work-around.
+  configuration and see the next item.
   :jira:`301`
+
+- We have added a new configuration file (``config.d/00-htcondor-9.0.config``)
+  to the packaging.  It won't be replaced by future upgrades, but it sets a
+  new default for security, ``use security : recommended_v9_0``, whose
+  contents could be updated in future point releases.  You may safely delete
+  this file if you're upgrading.  This file has an extensive explanatory
+  comment, which includes the work-around for the previous item's problem.
+  :jira:`339`
 
 - As an improved security measure, HTCondor will now prohibit Linux jobs
   from running setuid executables by default.  We believe the only common setuid
@@ -64,7 +71,18 @@ Release Notes:
   ``condor_reconfig`` and ``condor_off`` commands to other daemons.
   :jira:`273`
 
+- The ``condor_credmon_oauth`` now writes logs to the path in
+  `CREDMON_OAUTH_LOG` if defined, which matches the typical log config
+  parameter naming pattern, instead of using the path defined in
+  `SEC_CREDENTIAL_MONITOR_OAUTH_LOG`.
+  :jira:`122`
+
 New Features:
+
+- If ``SCITOKENS_FILE`` is not specified, HTCondor will now follow WLCG's
+  bearer token discovery protocol to find it.  See
+  https://zenodo.org/record/3937438 for details.
+  :jira:`92`
 
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
