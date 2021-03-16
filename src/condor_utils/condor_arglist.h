@@ -150,12 +150,14 @@ class ArgList {
 		// Parse args string in V2 syntax.
 		// Double quotes have no special meaning, unlike V2Quoted syntax.
 	bool AppendArgsV2Raw(char const *args,MyString *error_msg);
+	bool AppendArgsV2Raw(char const *args, std::string & error_msg);
 
 		// Parse args string in V2Quoted syntax.
 		// Just like AppendArgsV1BlahOrV2Quoted(), except the input string
 		// _must_ be enclosed in double-quotes or an error (and message)
 		// will be generated.
 	bool AppendArgsV2Quoted(char const *args,MyString *error_msg);
+	bool AppendArgsV2Quoted(char const *args,std::string & error_msg);
 
 		// Internal on-the-wire format allowing V2 or V1 syntax in a
 		// backward compatible way.  For backward compatibility,
@@ -215,13 +217,13 @@ class ArgList {
 	bool GetArgsStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg);
 
 		// Create an args string for windows CreateProcess().
-	bool GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) const;
+	bool GetArgsStringWin32(MyString *result,int skip_args) const;
 
 		// Create args string for system()
 		// Every argument will be quoted so that it is treated literally
 		// and so that it is treated as a single argument even if it contains
 		// spaces.
-	bool GetArgsStringSystem(MyString *result,int skip_args,MyString *error_msg) const;
+	bool GetArgsStringSystem(MyString *result,int skip_args) const;
 
 	bool InputWasV1() const {return input_was_unknown_platform_v1;}
 

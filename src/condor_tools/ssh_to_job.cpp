@@ -654,7 +654,7 @@ bool SSHToJob::execute_ssh()
 
 	ReliSock sock;
 	std::string remote_user; // this will be filled in with the remote user name
-	MyString error_msg;
+	std::string error_msg;
 	bool start_sshd = starter.startSSHD(
 		known_hosts_file.Value(),
 		private_client_key_file.Value(),
@@ -672,7 +672,7 @@ bool SSHToJob::execute_ssh()
 		// If we're going to retry, don't bother to scare/confuse the user
 		// with why unless they asked for it.
 		if( (!m_retry_sensible) || (!m_auto_retry) || m_debug ) {
-			logError("%s\n",error_msg.Value());
+			logError("%s\n",error_msg.c_str());
 		}
 		return false;
 	}
@@ -764,16 +764,16 @@ bool SSHToJob::execute_ssh()
 	}
 	proxy_arglist.AppendArg("-proxy");
 	proxy_arglist.AppendArg(fdpass_sock_name.Value());
-	if( !proxy_arglist.GetArgsStringSystem(&proxy_command,0,&error_msg) ) {
-		logError("Failed to produce proxy command: %s\n",error_msg.Value());
+	if( !proxy_arglist.GetArgsStringSystem(&proxy_command,0) ) {
+		logError("Failed to produce proxy command.\n");
 		return false;
 	}
 
 	ArgList ssh_options_arglist;
-	if(!ssh_options_arglist.AppendArgsV2Raw(m_ssh_options.Value(),&error_msg)
+	if(!ssh_options_arglist.AppendArgsV2Raw(m_ssh_options.Value(), error_msg)
 	   || ssh_options_arglist.Count() < 1 )
 	{
-		logError("Failed to parse ssh options (%s): %s\n",m_ssh_options.Value(),error_msg.Value());
+		logError("Failed to parse ssh options (%s): %s\n",m_ssh_options.Value(),error_msg.c_str());
 		return false;
 	}
 
@@ -804,9 +804,9 @@ bool SSHToJob::execute_ssh()
 							is_scp ? "" : " condor-job.%h");
 	param(ssh_cmd,param_name.Value(),default_ssh_cmd.Value());
 
-	if( !ssh_arglist.AppendArgsV2Quoted(ssh_cmd.Value(),&error_msg) ) {
+	if( !ssh_arglist.AppendArgsV2Quoted(ssh_cmd.Value(), error_msg) ) {
 		logError("Error parsing configuration %s: %s\n",
-				param_name.Value(), error_msg.Value());
+				param_name.Value(), error_msg.c_str());
 		return false;
 	}
 

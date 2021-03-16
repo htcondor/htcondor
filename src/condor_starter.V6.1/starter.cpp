@@ -1355,10 +1355,8 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	}
 
 	MyString ssh_keygen_cmd;
-	if(!ssh_keygen_arglist.GetArgsStringSystem(&ssh_keygen_cmd,0,&error_msg)) {
-		return SSHDFailed(s,
-						  "Failed to produce ssh-keygen command string: %s",
-						  error_msg.Value());
+	if(!ssh_keygen_arglist.GetArgsStringSystem(&ssh_keygen_cmd,0)) {
+		return SSHDFailed(s, "Failed to produce ssh-keygen command string" );
 	}
 
 	int setup_pipe_fds[2];

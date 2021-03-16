@@ -4740,14 +4740,14 @@ FileTransfer::ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool down
 	bool try_again = true;
 	int hold_code = 0;
 	int hold_subcode = 0;
-	MyString error_desc;
+	std::string error_desc;
 
 	result = DoObtainAndSendTransferGoAhead(xfer_queue,downloading,s,sandbox_size,full_fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc);
 
 	if( !result ) {
-		SaveTransferInfo(false,try_again,hold_code,hold_subcode,error_desc.Value());
-		if( error_desc.Length() ) {
-			dprintf(D_ALWAYS,"%s\n",error_desc.Value());
+		SaveTransferInfo(false,try_again,hold_code,hold_subcode,error_desc.c_str());
+		if( error_desc.length() ) {
+			dprintf(D_ALWAYS,"%s\n",error_desc.c_str());
 		}
 	}
 	return result;
@@ -4777,7 +4777,7 @@ FileTransfer::GetTransferQueueUser()
 }
 
 bool
-FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
+FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc)
 {
 	ClassAd msg;
 	int go_ahead = GO_AHEAD_UNDEFINED;
@@ -4791,7 +4791,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 
 	s->decode();
 	if( !s->get(alive_interval) || !s->end_of_message() ) {
-		error_desc.formatstr("ObtainAndSendTransferGoAhead: failed on alive_interval before GoAhead");
+		formatstr(error_desc, "ObtainAndSendTransferGoAhead: failed on alive_interval before GoAhead");
 		return false;
 	}
 
@@ -4810,7 +4810,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 
 		s->encode();
 		if( !putClassAd(s, msg) || !s->end_of_message() ) {
-			error_desc.formatstr("Failed to send GoAhead new timeout message.");
+			formatstr(error_desc, "Failed to send GoAhead new timeout message.");
 		}
 	}
 	ASSERT( timeout > alive_slop );
@@ -4868,12 +4868,12 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 			msg.Assign(ATTR_TRY_AGAIN,try_again);
 			msg.Assign(ATTR_HOLD_REASON_CODE,hold_code);
 			msg.Assign(ATTR_HOLD_REASON_SUBCODE,hold_subcode);
-			if( error_desc.Length() ) {
-				msg.Assign(ATTR_HOLD_REASON,error_desc.Value());
+			if( error_desc.length() ) {
+				msg.Assign(ATTR_HOLD_REASON,error_desc.c_str());
 			}
 		}
 		if( !putClassAd(s, msg) || !s->end_of_message() ) {
-			error_desc.formatstr("Failed to send GoAhead message.");
+			formatstr(error_desc, "Failed to send GoAhead message.");
 			try_again = true;
 			return false;
 		}

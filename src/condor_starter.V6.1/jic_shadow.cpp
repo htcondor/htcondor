@@ -2843,7 +2843,7 @@ JICShadow::initUserCredentials() {
 			return false;
 		}
 	} else {
-		MyString credential;
+		std::string credential;
 		if ( ! shadow->getUserPassword(user, domain, credential)) {
 			dprintf(D_ALWAYS, "getUserPassword failed to get KRB cred from the shadow\n");
 			return false;

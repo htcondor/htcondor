@@ -303,6 +303,14 @@ ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
 }
 
 bool
+ArgList::AppendArgsV2Quoted(char const *args, std::string & error_msg) {
+    MyString ms;
+    bool rv = AppendArgsV2Quoted(args, &ms);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
+}
+
+bool
 ArgList::AppendArgsV2Quoted(char const *args,MyString *error_msg)
 {
 	if(!IsV2QuotedString(args)) {
@@ -463,6 +471,15 @@ ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
 		EXCEPT("Unexpected v1_syntax=%d in AppendArgsV1Raw",v1_syntax);
 	}
 	return false;
+}
+
+bool
+ArgList::AppendArgsV2Raw(char const *args,std::string &error_msg)
+{
+    MyString ms;
+    bool rv = split_args(args,&args_list,& ms);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
 }
 
 bool
@@ -828,7 +845,7 @@ ArgList::~ArgList()
 }
 
 bool
-ArgList::GetArgsStringWin32(MyString *result,int skip_args,MyString * /*error_msg*/) const
+ArgList::GetArgsStringWin32(MyString *result,int skip_args) const
 {
 	ASSERT(result);
 	SimpleListIterator<MyString> it(args_list);
@@ -1011,12 +1028,11 @@ ArgList::SetArgV1SyntaxToCurrentPlatform()
 }
 
 bool
-ArgList::GetArgsStringSystem(MyString *result,int skip_args,MyString *error_msg) const
+ArgList::GetArgsStringSystem(MyString *result,int skip_args) const
 {
 #ifdef WIN32
-	return GetArgsStringWin32(result,skip_args,error_msg);
+	return GetArgsStringWin32(result,skip_args);
 #else
-	(void)error_msg;
 	SimpleListIterator<MyString> it(args_list);
 	ASSERT(result);
 	MyString *arg=NULL;

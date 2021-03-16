@@ -52,8 +52,8 @@ MyString get_fqdn_from_hostname(const MyString& hostname);
 // Return value:
 // 0 - if failed
 // 1 - if succeeded
-int get_fqdn_and_ip_from_hostname(const MyString& hostname,
-		MyString& fqdn, condor_sockaddr& addr);
+int get_fqdn_and_ip_from_hostname(const std::string & hostname,
+		std::string & fqdn, condor_sockaddr & addr );
 
 // returns just hostname for given addr
 MyString get_hostname(const condor_sockaddr& addr);

@@ -214,15 +214,15 @@ MyString get_fqdn_from_hostname(const MyString& hostname) {
 	return ret;
 }
 
-int get_fqdn_and_ip_from_hostname(const MyString& hostname,
-		MyString& fqdn, condor_sockaddr& addr) {
+int get_fqdn_and_ip_from_hostname(const std::string & hostname,
+		std::string & fqdn, condor_sockaddr& addr) {
 
-	MyString ret;
+	std::string ret;
 	condor_sockaddr ret_addr;
 	bool found_ip = false;
 
 	// if the hostname contains dot, hostname is assumed to be full hostname
-	if (hostname.FindChar('.') != -1) {
+	if( hostname.find('.') != std::string::npos ) {
 		ret = hostname;
 	}
 
@@ -243,9 +243,9 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 		// to further seek fully-qualified domain name and corresponding
 		// ip address
 		addrinfo_iterator ai;
-		int res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
+		int res  = ipv6_getaddrinfo(hostname.c_str(), NULL, ai);
 		if (res) {
-			dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", hostname.Value(),
+			dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", hostname.c_str(),
 				gai_strerror(res), res);
 			return 0;
 		}
@@ -257,7 +257,7 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 			return 1;
 		}
 
-		hostent* h = gethostbyname(hostname.Value());
+		hostent* h = gethostbyname(hostname.c_str());
 		if (h && h->h_name && strchr(h->h_name, '.')) {
 			fqdn = h->h_name;
 			addr = condor_sockaddr((sockaddr*)h->h_addr);
@@ -277,14 +277,14 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 	MyString default_domain;
 
 	// if FQDN is still unresolved, try DEFAULT_DOMAIN_NAME
-	if (ret.Length() == 0 && param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+	if (ret.length() == 0 && param(default_domain, "DEFAULT_DOMAIN_NAME")) {
 		ret = hostname;
-		if (ret[ret.Length() - 1] != '.')
+		if (ret[ret.length() - 1] != '.')
 			ret += ".";
 		ret += default_domain;
 	}
 
-	if (ret.Length() > 0 && found_ip) {
+	if (ret.length() > 0 && found_ip) {
 		fqdn = ret;
 		addr = ret_addr;
 		return 1;

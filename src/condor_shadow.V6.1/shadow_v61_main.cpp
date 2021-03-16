@@ -511,10 +511,10 @@ recycleShadow(int previous_job_exit_reason)
 		ASSERT( schedd_addr );
 
 		DCSchedd schedd(schedd_addr);
-		MyString error_msg;
+		std::string error_msg;
 		if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg ) )
 		{
-			dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.Value());
+			dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.c_str());
 			delete new_job_ad;
 			return false;
 		}
