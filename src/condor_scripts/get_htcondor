@@ -426,7 +426,7 @@ do_install() {
 				#
 				if [ "${lsb_dist}" = "centos" ]; then
 					if [ "${dist_version}" -eq 8 ]; then
-						$sh_c "dnf config-manager --set-enabled PowerTools"
+						$sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
 					fi
 				elif [ "${lsb_dist}" = "rhel" ]; then
 					# subscription-manager only works if you've already
