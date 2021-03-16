@@ -27,7 +27,7 @@ New Features:
 
 - condor_ssh_to_job into a container now properly maps carriage return and 
   newline.  The most common symptom of this problem was that the nano
-  editor would not work properly. Also, the performance of transfering large
+  editor would not work properly. Also, the performance of transferring large
   amounts of data has been substantially improved.
   :jira:`311`
 
@@ -75,6 +75,10 @@ Bugs Fixed:
   log file path, where it was mistaken as an unresolved macro substitution.
   We now look for the ``@(`` character sequence to identify unresolved macros.
   :jira:`159`
+
+- Fixed a bug where the Operating System and Version information were not
+  detected on the Amazon Linux platform.
+  :jira:`342`
 
 Version 8.8.12
 --------------
