@@ -1515,7 +1515,7 @@ type=string
 tags=gridmanager,gahp-client
 
 [BATCH_GAHP]
-default=$(GLITE_LOCATION)/bin/batch_gahp
+default=$(BIN)/blahpd
 type=string
 tags=gridmanager,infnbatchjob
 

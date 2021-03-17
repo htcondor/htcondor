@@ -257,7 +257,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	buff = batchType;
 	if ( gahp_args.Count() > 0 ) {
 		formatstr_cat( buff, "/%s", args_str.Value() );
-		gahp_args.AppendArg( "batch_gahp" );
+		gahp_args.AppendArg( "blahpd" );
 	}
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );

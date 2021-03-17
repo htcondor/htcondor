@@ -46,7 +46,7 @@ Options: \n \
  --rgahp-pass PASSPHRASE \tlocation of passphrase protecting ssh private key (~/.bosco/.pass)\n \
  --rgahp-nopass \t\tno passphrase protecting ssh private key (same as empty rgahp-pass)\n \
  --rgahp-glite PATH \tpath to the directory of the script (~/bosco/glite)\n \
- --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/batch_gahp)\n \
+ --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/blahpd)\n \
  --rgahp-nobatchmode \t\tDisable SSH BatchMode \n \
  --help, -h \t\t\tprint this\n \
  remote_hostname: [USER@]HOST[:PORT] same string that can be used to ssh to the host\n \
@@ -149,9 +149,9 @@ SSH_ARGS=(-p $REMOTE_PORT)
 # https://opensciencegrid.atlassian.net/browse/SOFTWARE-4239
 [[ $SSH_BATCHMODE == "yes" ]] && SSH_ARGS+=(-o "BatchMode yes")
 
-#echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
-if [ "${REMOTE_CMD}" = "batch_gahp" ] ; then
-    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+#echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/blahpd $*'\""
+if [ "${REMOTE_CMD}" = "blahpd" ] ; then
+    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/blahpd $*'"
     SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # We need to set up a tunnel from the remote machine for the file

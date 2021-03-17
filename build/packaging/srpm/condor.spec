@@ -116,9 +116,6 @@ Source1: generate-tarball.sh
 Source3: osg-env.conf
 Source5: condor_config.local.dedicated.resource
 
-Source6: 00-batch_gahp_blahp.config
-Source7: 00-restart_peaceful.config
-
 Source8: htcondor.pp
 
 # Patch to use Python 2 for file transfer plugins
@@ -1093,14 +1090,6 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{bu
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
-%if %blahp
-install -p -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/condor/config.d/00-batch_gahp_blahp.config
-%endif
-
-%if 0%{?osg} || 0%{?hcc}
-install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-restart_peaceful.config
-%endif
-
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 
@@ -1187,10 +1176,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/nqs_resume.sh
 %_libexecdir/condor/glite/bin/nqs_status.sh
 %_libexecdir/condor/glite/bin/nqs_submit.sh
-%config(noreplace) %{_sysconfdir}/condor/config.d/00-batch_gahp_blahp.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-%config(noreplace) %{_sysconfdir}/condor/config.d/00-restart_peaceful.config
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster

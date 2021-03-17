@@ -1,6 +1,6 @@
 #!/bin/bash
 
-blahconffile="${GLITE_LOCATION:-/opt/glite}/etc/batch_gahp.config"
+blahconffile="${GLITE_LOCATION:-/}/etc/blah.config"
 binpath=`grep nqs_binpath $blahconffile|grep -v \#|awk -F"=" '{ print $2}'|sed -e 's/ //g'|sed -e 's/\"//g'`/
 
 usage_string="Usage: $0 -c <command> [-i <stdin>] [-o <stdout>] [-e <stderr>] [-x <x509userproxy>] [-v <environment>] [-s <yes | no>] [-- command_arguments]"
