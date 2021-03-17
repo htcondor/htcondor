@@ -53,8 +53,8 @@ Debian 9 and 10
 Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 9: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9/stretch stretch main``
-* Debian 10: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9/buster buster main``
+* Debian 9: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9 stretch main``
+* Debian 10: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9 buster main``
 
 Ubuntu 16.04, 18.04, and 20.04
 ##############################
@@ -62,5 +62,5 @@ Ubuntu 16.04, 18.04, and 20.04
 Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 18.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9/bionic bionic main``
-* Ubuntu 20.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9/focal focal main``
+* Ubuntu 18.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9 bionic main``
+* Ubuntu 20.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9 focal main``
