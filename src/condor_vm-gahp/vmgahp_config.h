@@ -40,7 +40,7 @@ class VMGahpConfig {
 
 		bool m_vm_networking;
 		StringList m_vm_networking_types;
-		MyString m_vm_default_networking_type;
+		std::string m_vm_default_networking_type;
 
 		bool m_vm_hardware_vt;
 

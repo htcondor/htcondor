@@ -184,10 +184,10 @@ has_suffix(const char *filename, const char *suffix)
 }
 
 void
-parse_param_string(const char *line, MyString &name, MyString &value, bool del_quotes)
+parse_param_string(const char *line, std::string &name, std::string &value, bool del_quotes)
 {
-	MyString one_line;
-	int pos=0;
+	std::string one_line;
+	size_t pos=0;
 
 	name = "";
 	value = "";
@@ -197,24 +197,24 @@ parse_param_string(const char *line, MyString &name, MyString &value, bool del_q
 	}
 
 	one_line = line;
-	one_line.chomp();
-	pos = one_line.FindChar('=', 0);
-	if( pos <= 0 ) {
+	chomp(one_line);
+	pos = one_line.find('=');
+	if( pos == 0 || pos == std::string::npos ) {
 		return;
 	}
 
 	name = one_line.substr(0, pos);
-	if( pos == (one_line.Length() - 1) ) {
+	if( pos == (one_line.length() - 1) ) {
 		value = "";
 	}else {
-		value = one_line.substr( pos+1, one_line.Length());
+		value = one_line.substr( pos+1 );
 	}
 
-	name.trim();
-	value.trim();
+	trim(name);
+	trim(value);
 
 	if( del_quotes ) {
-		value = delete_quotation_marks(value.Value());
+		value = delete_quotation_marks(value.c_str());
 	}
 	return;
 }

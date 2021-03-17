@@ -726,8 +726,8 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 	MyString vm_ip;
 	MyString vm_mac;
 
-	MyString tmp_name;
-	MyString tmp_value;
+	std::string tmp_name;
+	std::string tmp_value;
 	MyString one_arg;
 	int i = 2;
 	m_vm_utilization = 0.0;
@@ -740,35 +740,35 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 		}
 
 		parse_param_string(one_arg.Value(), tmp_name, tmp_value, true);
-		if( tmp_name.IsEmpty() || tmp_value.IsEmpty() ) {
+		if( tmp_name.empty() || tmp_value.empty() ) {
 			continue;
 		}
 
-		if(!strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_STATUS)) {
+		if(!strcasecmp(tmp_name.c_str(), VMGAHP_STATUS_COMMAND_STATUS)) {
 			vm_status = tmp_value;
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME) ) {
-			cpu_time = (float)strtod(tmp_value.Value(), (char **)NULL);
+		}else if( !strcasecmp(tmp_name.c_str(), VMGAHP_STATUS_COMMAND_CPUTIME) ) {
+			cpu_time = (float)strtod(tmp_value.c_str(), (char **)NULL);
 			if( cpu_time <= 0 ) {
 				cpu_time = 0;
 			}
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_PID) ) {
-			vm_pid = (int)strtol(tmp_value.Value(), (char **)NULL, 10);
+		}else if( !strcasecmp(tmp_name.c_str(), VMGAHP_STATUS_COMMAND_PID) ) {
+			vm_pid = (int)strtol(tmp_value.c_str(), (char **)NULL, 10);
 			if( vm_pid <= 0 ) {
 				vm_pid = 0;
 			}
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_MAC) ) {
+		}else if( !strcasecmp(tmp_name.c_str(), VMGAHP_STATUS_COMMAND_MAC) ) {
 			vm_mac = tmp_value;
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
+		}else if( !strcasecmp(tmp_name.c_str(), VMGAHP_STATUS_COMMAND_IP) ) {
 			vm_ip = tmp_value;
-		}else if ( !strcasecmp(tmp_name.Value(),VMGAHP_STATUS_COMMAND_CPUUTILIZATION) ) {
+		}else if ( !strcasecmp(tmp_name.c_str(),VMGAHP_STATUS_COMMAND_CPUUTILIZATION) ) {
 		      /* This is here for vm's which are spun via libvirt*/
-		      m_vm_utilization = (float)strtod(tmp_value.Value(), (char **)NULL);
-		} else if ( !strcasecmp( tmp_name.Value(), VMGAHP_STATUS_COMMAND_MEMORY ) ) {
+		      m_vm_utilization = (float)strtod(tmp_value.c_str(), (char **)NULL);
+		} else if ( !strcasecmp( tmp_name.c_str(), VMGAHP_STATUS_COMMAND_MEMORY ) ) {
 			// This comes from the GAHP in kbytes.
-			m_vm_memory = strtoul( tmp_value.Value(), (char **)NULL, 10 );
-		} else if ( !strcasecmp( tmp_name.Value(), VMGAHP_STATUS_COMMAND_MAX_MEMORY ) ) {
+			m_vm_memory = strtoul( tmp_value.c_str(), (char **)NULL, 10 );
+		} else if ( !strcasecmp( tmp_name.c_str(), VMGAHP_STATUS_COMMAND_MAX_MEMORY ) ) {
 			// This comes from the GAHP in kbytes.
-			m_vm_max_memory = strtoul( tmp_value.Value(), (char **)NULL, 10 );
+			m_vm_max_memory = strtoul( tmp_value.c_str(), (char **)NULL, 10 );
 		}
 	}
 

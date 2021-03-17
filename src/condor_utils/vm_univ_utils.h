@@ -52,7 +52,7 @@ void delete_all_files_in_filelist(StringList *file_list);
 bool has_suffix(const char *filename, const char *suffix);
 
 // Parse the string like "Name = Value" or "Name=Value"
-void parse_param_string(const char *line, MyString &name, MyString &value, bool del_quotes);
+void parse_param_string(const char *line, std::string &name, std::string &value, bool del_quotes);
 
 // Create name for virtual machine
 // name consists of user + cluster id + proc id

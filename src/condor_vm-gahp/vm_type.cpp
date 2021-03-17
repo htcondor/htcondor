@@ -151,7 +151,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 			}
 		}else {
 			// vm_networking_type is undefined
-			if( vmgahp->m_gahp_config->m_vm_default_networking_type.IsEmpty() == false ) {
+			if( vmgahp->m_gahp_config->m_vm_default_networking_type.empty() == false ) {
 				m_vm_networking_type = vmgahp->m_gahp_config->m_vm_default_networking_type;
 			}else {
 				m_vm_networking_type = "nat";

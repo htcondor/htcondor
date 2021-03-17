@@ -25,7 +25,6 @@
 #include "env.h"
 #include "condor_environ.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "condor_attributes.h"
 #include "condor_vm_universe_types.h"
 #include "vmgahp_common.h"
@@ -399,11 +398,11 @@ VMGahp::findVM(int vm_id)
 int
 VMGahp::waitForCommand(int   /*pipe_end*/)
 {
-	MyString *line = NULL;
+	std::string *line = NULL;
 
 	while((line = m_request_buffer.GetNextLine()) != NULL) {
 
-		const char *command = line->Value();
+		const char *command = line->c_str();
 
 		Gahp_Args args;
 		VMRequest *new_req = NULL;

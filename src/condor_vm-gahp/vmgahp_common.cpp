@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "gahp_common.h"
 #include "my_popen.h"
 #include "vmgahp_common.h"
@@ -656,10 +655,10 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 #endif
 	set_priv( prev );
 	if ( fp == NULL ) {
-		MyString args_string;
-		args.GetArgsStringForDisplay( &args_string, 0 );
+		std::string args_string;
+		args.GetArgsStringForDisplay( args_string, 0 );
 		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
-				  args_string.Value() );
+				  args_string.c_str() );
 		if (childerr) {
 			fclose(childerr);
 			fclose(fp_for_stdin);
@@ -725,11 +724,11 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	  }
 #endif
 	if( result != 0 ) {
-		MyString args_string;
-		args.GetArgsStringForDisplay(&args_string,0);
+		std::string args_string;
+		args.GetArgsStringForDisplay(args_string,0);
 		vmprintf(D_ALWAYS,
 		         "Command returned non-zero: %s\n",
-		         args_string.Value());
+		         args_string.c_str());
 		my_cmd_out->rewind();
 		const char *next_line;
 		while ( (next_line = my_cmd_out->next()) ) {
