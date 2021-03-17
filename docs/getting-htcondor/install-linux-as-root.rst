@@ -27,7 +27,7 @@ the :doc:`admin-quick-start`.
     your system as root, you can:
 
     * `read the script <https://get.htcondor.com>`_;
-    * compare the script to [FIXME] the version in our GitHub repository;
+    * compare the script to the versions `in our GitHub repository <https://github.com/htcondor/htcondor/blob/master/src/condor_scripts/get_htcondor>`_;
     * or run the script as user ``nobody``, dropping the ``--no-dry-run``
       flag.  This will cause the script to print out what it would do if
       run for real.  You can then inspect the output and copy-and-paste it

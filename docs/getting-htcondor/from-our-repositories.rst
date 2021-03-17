@@ -18,37 +18,32 @@ recent releases than the distributions.
 RPM-based Distributions
 -----------------------
 
-We support six RPM-based platforms: RedHat, CentOS, and Scientic Linux 7;
-Redhat and CentOS 8; and and Amazon Linux 2.  Binaries are only available
+We support five RPM-based platforms: RedHat and CentOS 7;
+Redhat and CentOS 8; and Amazon Linux 2.  Binaries are only available
 for x86-64.
 
-[TimT]  Repository packages are not presently available for these distributions.
+Repository packages are available for each platform:
 
-RedHat, CentOS, and Scientific Linux
-####################################
+* `RedHat 7 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el7.noarch.rpm>`_
+* `RedHat 8 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el8.noarch.rpm>`_
+* `CentOS 7 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el7.noarch.rpm>`_
+* `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el8.noarch.rpm>`_
+* `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.amzn2.noarch.rpm>`_
 
-Add our `RPM signing key <https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor>`_
-with ``rpm --import`` before using the repository files listed below.
+The HTCondor packages on these platforms depends on the corresponding
+version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
 
-.. warning::
+Additionally, the following repositories are required for specific platforms:
 
-    Add ``exclude=condor*`` to the EPEL repository file if you have it enabled
-    for RedHat, CentOS, or Scientific Linux 7.
-
-* `RedHat 7, CentOS 7, Scientific Linux 7 <https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-development-rhel7.repo>`_
-* `RedHat 8, Centos 8 <https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-development-rhel8.repo>`_
-
-Amazon Linux 2
-##############
-
-[TimT]  A repo file is not available for Amazon Linux 2.  The repository is at
-
-https://research.cs.wisc.edu/htcondor/yum/development/amzn2/.
+* On RedHat 7, ``rhel-*-optional-rpms``, ``rhel-*-extras-rpms``, and
+  ``rhel-ha-for-rhel-*-server-rpms``.
+* On RedHat 8, ``codeready-builder-for-rhel-8-${ARCH}-rpms``.
+* On CentOS 8, ``PowerTools`` (or ``powertools``).
 
 deb-based Distributions
 -----------------------
 
-We support five deb-based platforms: Debian 9 and 10; and Ubuntu 16.04, 18.04,
+We support four deb-based platforms: Debian 9 and 10; and Ubuntu 18.04
 and 20.04.  Binaries are only available for x86-64.  These repositories
 also include the source packages.
 
@@ -58,8 +53,8 @@ Debian 9 and 10
 Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 9: ``deb http://research.cs.wisc.edu/htcondor/debian/8.9/stretch stretch contrib``
-* Debian 10: ``deb http://research.cs.wisc.edu/htcondor/debian/8.9/buster buster contrib``
+* Debian 9: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9/stretch stretch main``
+* Debian 10: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9/buster buster main``
 
 Ubuntu 16.04, 18.04, and 20.04
 ##############################
@@ -67,6 +62,5 @@ Ubuntu 16.04, 18.04, and 20.04
 Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 16.04: ``deb http://research.cs.wisc.edu/htcondor/ubuntu/8.9/xenial xenial contrib``
-* Ubuntu 18.04: ``deb http://research.cs.wisc.edu/htcondor/ubuntu/8.9/bionic bionic contrib``
-* Ubuntu 20.04: ``deb http://research.cs.wisc.edu/htcondor/ubuntu/8.9/focal focal contrib``
+* Ubuntu 18.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9/bionic bionic main``
+* Ubuntu 20.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9/focal focal main``

@@ -114,8 +114,6 @@ This should complete the installation process. The installer will have
 automatically started HTCondor in the background and you do **not** need to
 restart Windows for HTCondor to work.
 
-[FIXME] Will the environment variables already be set?
-
 Open a command prompt to follow the next set of instructions.
 
 .. include:: minicondor-test-and-quickstart.include
