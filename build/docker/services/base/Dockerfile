@@ -1,75 +1,47 @@
 # This is the base image for HTCondor; no role-specific config
-ARG EL
+ARG BASE_IMAGE=centos:7
+FROM ${BASE_IMAGE}
+ARG BASE_IMAGE
+# ^^ Previous BASE_IMAGE has gone out of scope
 
-FROM centos:${EL}
+ARG VERSION=latest
+ARG SERIES=8.9
 
-# "ARG EL" needs to be here again because the previous instance has gone out of scope.
-ARG EL
-ARG BUILDDATE
-ARG VERSION
-ARG SUFFIX
+LABEL org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.title="HTCondor Base Image derived from ${BASE_IMAGE}" \
+      org.opencontainers.image.vendor="HTCondor"
 
-# https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/base:${VERSION}-el${EL}${SUFFIX}" \
-      org.label-schema.description="HTCondor ${VERSION} base image for RHEL ${EL}-compatible" \
-      org.label-schema.vendor="HTCondor" \
-      org.label-schema.license="Apache-2.0"
+# Unset these from parent
+LABEL \
+    build-date="" \
+    io.buildah.version="" \
+    license="" \
+    name="" \
+    org.label-schema.build-date="" \
+    org.label-schema.license="" \
+    org.label-schema.name="" \
+    org.label-schema.schema-version="" \
+    org.label-schema.vendor="" \
+    org.opencontainers.image.created="" \
+    vendor=""
 
-# Ensure that the 'condor' UID/GID matches across containers
-RUN groupadd -g 64 -r condor && \
-    useradd -r -g condor -d /var/lib/condor -s /sbin/nologin \
-      -u 64 -c "Owner of HTCondor Daemons" condor
-
-# EPEL is needed for supervisor
-# As of 2020-01-03, the GPG key must be downloaded separately
-# openssh-clients and openssh-server are for condor_ssh_to_job
+COPY container-install-htcondor.sh /root/container-install-htcondor.sh
 RUN \
-    # Get the release series based on the middle version
-    # odd numbers = development; even numbers = stable
-    tmp=${VERSION%.*}; \
-    tmp=${tmp#*.}; \
-    if (( (tmp % 2) == 1 )); then \
-        SERIES=development; \
-    else \
-        SERIES=stable; \
-    fi; \
-    \
-    yum -y update && \
-    yum -y install epel-release yum-plugin-priorities && \
-    \
-    (curl -sSL https://research.cs.wisc.edu/htcondor/yum/repo.d/htcondor-${SERIES}-rhel${EL}.repo && \
-     echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-HTCondor" \
-     ) > /etc/yum.repos.d/htcondor-${SERIES}-rhel${EL}.repo  && \
-    curl -sSL https://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor \
-      -o /etc/pki/rpm-gpg/RPM-GPG-KEY-HTCondor  && \
-    rpm --import /etc/pki/rpm-gpg/*  && \
-    \
-    yum -y install "condor = ${VERSION}" supervisor openssh-clients openssh-server && \
-    yum clean all && \
-    rm -rf /var/cache/yum/*
+  export HTCONDOR_VERSION=${VERSION} HTCONDOR_SERIES=${SERIES}; \
+  bash -x /root/container-install-htcondor.sh
 
-# Create passwords directories for token or pool password auth.
-#
-# Only root needs to know the pool password but other condor daemons
-# need access to the tokens.
-#
-# In the future, the RPMs will take care of this step.
-RUN \
-    install -m 0700 -o root -g root -d /etc/condor/passwords.d && \
-    install -m 0700 -o condor -g condor -d /etc/condor/tokens.d
-
-# We use supervisor for two reasons:
-# - As of 8.9.4, the master can't run as pid 1 because it immediately dies
-#   trying to send a signal to itself.
-# - We want something to restart the master in case it dies.
-#
-# A wrapper script is used to copy configs from a config volume mounted
-# at /root/config
-
-COPY base/supervisord.conf /etc/supervisord.conf
-COPY base/condor/*.conf /etc/condor/config.d/
-COPY base/start.sh base/update-config base/update-secrets /
+COPY condor/*.conf /etc/condor/config.d/
+COPY supervisord.conf /etc/supervisord.conf
+RUN mkdir -p /root/config
+COPY pre-exec.sh /root/config/pre-exec.sh
+COPY start.sh /
+COPY update-config /
+COPY update-secrets /
+RUN chmod +x \
+  /root/config/pre-exec.sh\
+  /start.sh \
+  /update-config \
+  /update-secrets
 
 CMD ["/bin/bash", "-x", "/start.sh"]
 
-LABEL org.label-schema.build-date="${BUILDDATE}"
