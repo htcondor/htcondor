@@ -6,13 +6,21 @@ Linux (as root)
 For ease of installation on Linux, we provide a script that will automatically
 download, install and start HTCondor.
 
+.. warning::
+
+    * RedHat systems must be attached to a subscription.
+    * Debian and Ubuntu containers don't come with ``curl`` installed,
+      so run the following first.
+
+      .. code-block:: shell
+
+         sudo apt-get install curl
+
 The command below shows how to download the script and run it immediately;
 if you would like to inspect it first, see
 :ref:`Inspecting the Script <inspecting_the_script>`.  Experienced users who
 are making a pool should add a flag to select the desired role; see
 the :doc:`admin-quick-start`.
-
-(RedHat systems must be attached to a subscription for this to work.)
 
 .. code-block:: shell
 
