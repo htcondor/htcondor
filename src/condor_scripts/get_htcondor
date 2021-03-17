@@ -231,7 +231,7 @@ do_configure_firewall() {
 
 do_start_service() {
 	# Start HTCondor via systemd if detected, else via just condor_master
-	if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] && command_exists systemctl; then
+	if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] || ! command_exists systemctl; then
 		echo -e "\n# Start the HTCondor service in the background (without systemd)"
 		(
 			if ! is_dry_run; then
@@ -367,7 +367,7 @@ do_install() {
 
 				# Install our repository key.
 				$sh_c "apt-get update"
-				$sh_c "apt-get install gnupg"
+				$sh_c "apt-get install -y gnupg"
 				$sh_c "curl -fsSL ${DOWNLOAD_URL}/debian/HTCondor-Release.gpg.key | apt-key add -"
 
 				# Add our repository.
@@ -377,6 +377,9 @@ do_install() {
 
 				echo -e "\n# Updating package lists"
 				$sh_c "apt-get update"
+
+				echo -e "\n# Installing ps"
+				$sh_c "apt-get install -y procps"
 
 				# In the Ubuntu 20.04 Docker container, this blows up
 				# when run out of the pipe with curl because the
@@ -426,6 +429,7 @@ do_install() {
 				#
 				if [ "${lsb_dist}" = "centos" ]; then
 					if [ "${dist_version}" -eq 8 ]; then
+						$sh_c "dnf -y install dnf-plugins-core"
 						$sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
 					fi
 				elif [ "${lsb_dist}" = "rhel" ]; then
