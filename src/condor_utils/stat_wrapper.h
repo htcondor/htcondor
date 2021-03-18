@@ -41,6 +41,7 @@ public:
 	// The forms that supply a path or fd will perform a Stat()
 	StatWrapper( const char *path, bool do_lstat = false );
 	StatWrapper( const MyString &path, bool do_lstat = false );
+	StatWrapper( const std::string &path, bool do_lstat = false );
 	StatWrapper( int fd );
 	StatWrapper( void );
 	~StatWrapper( void );

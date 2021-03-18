@@ -35,14 +35,12 @@ public:
      *             pVersionFilePath     - version string in dot-separated format
      *             pStateFilesPathsList - list of paths to the state files
      */
-    UploadReplicaTransferer(const MyString &command,
-                            const MyString&  pDaemonSinfulString,
-                            const MyString&  pVersionFilePath,
-                            //const MyString&  pStateFilePath):
+    UploadReplicaTransferer(const std::string &command,
+                            const std::string&  pDaemonSinfulString,
+                            const std::string&  pVersionFilePath,
 							const StringList& pStateFilePathsList):
          BaseReplicaTransferer( pDaemonSinfulString,
                                 pVersionFilePath,
-                                //pStateFilePath ) {};
 								pStateFilePathsList ),
 		 m_command( command ) {};
 	/* Function    : initialize
@@ -55,9 +53,9 @@ public:
 
 private:
     int upload();
-    int uploadFile(MyString& filePath, MyString& extension);
+    int uploadFile(const std::string& filePath, const std::string& extension);
 
-	MyString m_command;
+	std::string m_command;
 };
 
 #endif // UPLOAD_REPLICA_TRANSFERER_H

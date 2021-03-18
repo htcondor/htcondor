@@ -28,13 +28,11 @@
 
 
 BaseReplicaTransferer::BaseReplicaTransferer(
-                                 const MyString&  pDaemonSinfulString,
-                                 const MyString&  pVersionFilePath,
-                                 //const MyString&  pStateFilePath ):
+								 const std::string&  pDaemonSinfulString,
+								 const std::string&  pVersionFilePath,
 								 const StringList& pStateFilePathsList ):
    m_daemonSinfulString( pDaemonSinfulString ),
    m_versionFilePath( pVersionFilePath ),
-   //m_stateFilePathsList( pStateFilePathsList ), 
    m_socket( 0 ),
    m_connectionTimeout( DEFAULT_SEND_COMMAND_TIMEOUT ),
    m_maxTransferLifetime( DEFAULT_MAX_TRANSFER_LIFETIME )
@@ -70,18 +68,18 @@ BaseReplicaTransferer::reinitialize( )
 void
 BaseReplicaTransferer::safeUnlinkStateAndVersionFiles(
 	StringList& stateFilePathsList,
-    const MyString&   versionFilePath,
-    const MyString&   extension)
+    const std::string& versionFilePath,
+    const std::string& extension)
 {
-	FilesOperations::safeUnlinkFile( versionFilePath.Value( ),
-                                     extension.Value( ) );
+	FilesOperations::safeUnlinkFile( versionFilePath.c_str( ),
+	                                 extension.c_str( ) );
 	stateFilePathsList.rewind();
 
 	char* stateFilePath = NULL;
 
 	while( ( stateFilePath = stateFilePathsList.next( ) ) ) {
 		FilesOperations::safeUnlinkFile( stateFilePath,
-                                     	 extension.Value( ) );
+		                                 extension.c_str( ) );
 	}
 	stateFilePathsList.rewind();
 }

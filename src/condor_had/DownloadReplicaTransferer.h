@@ -35,14 +35,12 @@ public:
     *             pVersionFilePath     - version string in dot-separated format
     *             pStateFilesPathsList - list of paths to the state files
     */
-    DownloadReplicaTransferer(const MyString& command,
-                              const MyString&  pDaemonSinfulString,
-                              const MyString&  pVersionFilePath,
-                              //const MyString&  pStateFilePath):
+    DownloadReplicaTransferer(const std::string& command,
+                              const std::string& pDaemonSinfulString,
+                              const std::string& pVersionFilePath,
 							  const StringList& pStateFilePathsList):
         BaseReplicaTransferer( pDaemonSinfulString,
                                pVersionFilePath,
-                               //pStateFilePath ) {};
 							   pStateFilePathsList ),
         m_command( command ) {};
     /* Function    : initialize
@@ -55,12 +53,12 @@ public:
 
 private:
     int download();
-    int downloadFile(MyString& filePath, MyString& extension);
+    int downloadFile(const std::string& filePath, const std::string& extension);
 
     int transferFileCommand();
     int transferFileCommandNew();
 
-    MyString m_command;
+	std::string m_command;
 };
 
 #endif // DOWNLOAD_REPLICA_TRANSFERER_H

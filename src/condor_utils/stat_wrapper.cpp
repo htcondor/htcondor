@@ -84,6 +84,21 @@ StatWrapper::StatWrapper( const MyString &path, bool do_lstat )
 	}
 }
 
+StatWrapper::StatWrapper( const std::string &path, bool do_lstat )
+	: m_rc( 0 ),
+	  m_errno( 0 ),
+	  m_fd( -1 ),
+	  m_do_lstat( do_lstat ),
+	  m_buf_valid( false )
+{
+	memset( &m_statbuf, 0, sizeof(StatStructType) );
+
+	if ( !path.empty() ) {
+		m_path = path;
+		Stat();
+	}
+}
+
 StatWrapper::StatWrapper( const char *path, bool do_lstat )
 	: m_rc( 0 ),
 	  m_errno( 0 ),
