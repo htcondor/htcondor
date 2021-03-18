@@ -553,14 +553,20 @@ main( int argc, const char** argv)
 		// record all the UUIDs we found via CUDA and skip them when
 		// reporting the devices we found via NVML.
 		//
+		bool shouldEnumerateNVMLDevices = true;
 		for( const BasicProps & bp : enumeratedDevices ) {
-			// NVML and CUDA UUIDs differ in this prefix.
-			std::string UUID = "GPU-" + bp.uuid;
-			cudaDevices.insert( UUID );
-			// fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
+			if(! bp.uuid.empty()) {
+				// NVML and CUDA UUIDs differ in this prefix.
+				std::string UUID = "GPU-" + bp.uuid;
+				cudaDevices.insert( UUID );
+				// fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
+			} else {
+				fprintf( stderr, "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.\n" );
+				shouldEnumerateNVMLDevices = false;
+			}
 		}
 
-		if( nvml_handle ) {
+		if( shouldEnumerateNVMLDevices && nvml_handle ) {
 			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
 				fprintf( stderr, "Failed to enumerate MIG devices (%d: %s), aborting.\n", r, nvmlErrorString(r) );
