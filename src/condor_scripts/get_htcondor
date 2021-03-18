@@ -252,26 +252,6 @@ do_start_service() {
 }
 
 do_token_security() {
-	# This won't work in a pipeline (as we recommend using this script).
-	if [ -z "${PASSWORD}" ]; then
-		if ! is_dry_run; then
-			echo -n "Enter a pool password: "
-			read PASSWORD
-		else
-			PASSWORD="NONE"
-			echo
-			echo "SKIPPING PASSWORD PROMPT DURING DRY RUN"
-			echo
-		fi
-	fi
-
-	if [ -z "${PASSWORD}" ]; then
-		echo
-		echo "You must set a password!  Did you replace \$htcondor_password with a password?"
-		echo
-		exit 1
-	fi
-
 	# Remove the default 9.0 security configuration.  Arguably, the
 	# get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
 	# and adjust accordingly, which might make microversion upgrades easier.
@@ -347,6 +327,29 @@ do_install() {
 			;;
 		esac
 		exit 1
+	fi
+
+
+	#
+	# Check for the pool password / default signing key before installing.
+	#
+	if [ -n "${ROLE}" ]; then
+		if [ -z "${PASSWORD}" ]; then
+			if ! is_dry_run; then
+				echo -n "Enter a pool password: "
+				read PASSWORD
+			else
+				PASSWORD="NONE"
+				echo "SKIPPING PASSWORD PROMPT DURING DRY RUN"
+			fi
+		fi
+
+		if [ -z "${PASSWORD}" ]; then
+			echo
+			echo "You must set a password!  Did you replace \$htcondor_password with a password?"
+			echo
+			exit 1
+		fi
 	fi
 
 	if [ -z "${ROLE}" ]; then
