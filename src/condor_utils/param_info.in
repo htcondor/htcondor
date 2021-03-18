@@ -1522,7 +1522,7 @@ type=string
 tags=gridmanager,gahp-client
 
 [BATCH_GAHP]
-default=$(GLITE_LOCATION)/bin/batch_gahp
+default=$(BIN)/blahpd
 type=string
 tags=gridmanager,infnbatchjob
 
@@ -6469,9 +6469,13 @@ TRUST_DOMAIN = $(CONDOR_HOST)
 # the ANONYMOUS identity, but if we're including ANONYMOUS, why bother?
 ALLOW_READ = *
 
+# Give root on each machine ADMINISTRATOR access (in case something goes
+# wrong with IDTOKENS) and OWNER access (so they can force HTCondor to
+# stop all running jobs on that machine).  Do NOT issue IDTOKENS to root.
+ALLOW_ADMINISTRATOR = root@* condor@$(TRUST_DOMAIN)
+ALLOW_OWNER = root@* condor@$(TRUST_DOMAIN)
+
 # Accept non-read connections only from other daemons in the same pool.
-ALLOW_ADMINISTRATOR = condor@$(TRUST_DOMAIN)
-ALLOW_OWNER = condor@$(TRUST_DOMAIN)
 ALLOW_WRITE = condor@$(TRUST_DOMAIN)
 ALLOW_DAEMON = condor@$(TRUST_DOMAIN)
 ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
@@ -6504,6 +6508,28 @@ use security : get_htcondor_idtokens
 use role : execute
 @end
 
+##
+## Version-specific knobx.
+##
+[$SECURITY.recommended_v9_0]
+default: @end
+# Make it easy to detect if this metaknob was set.
+SECURITY_MODEL = 9.0
+
+# Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
+# which they are by default.
+use security : strong
+
+# This allows anyone who can access port 9618 to READ, which lets
+# condor_status and condor_q work over the network out of the box.
+SEC_READ_AUTHENTICATION = OPTIONAL
+
+ALLOW_ADMINISTRATOR = root@*, condor@*, condor_pool@*
+ALLOW_DAEMON = condor@*, condor_pool@*
+ALLOW_NEGOTIATOR = condor@*, condor_pool@*
+ALLOW_WRITE = *
+ALLOW_READ = *
+@end
 
 ##
 ## Experimental meta knobs

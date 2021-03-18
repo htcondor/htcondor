@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This is a simpler start.sh for minicondor since we don't have secrets or extra config.
+
 prog=${0##*/}
 
 add_values_to () {
@@ -33,6 +35,10 @@ done
 
 # The master will crash if run as pid 1 (bug?) plus supervisor can restart
 # it if it dies, and gives us the ability to run other services.
+
+if [[ -f /root/config/pre-exec.sh ]]; then
+    bash -x /root/config/pre-exec.sh
+fi
 
 exec /usr/bin/supervisord -c /etc/supervisord.conf
 

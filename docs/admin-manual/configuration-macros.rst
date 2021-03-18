@@ -7661,7 +7661,7 @@ These macros affect the *condor_gridmanager*.
 
 :macro-def:`BATCH_GAHP_CHECK_STATUS_ATTEMPTS`
     The number of times a failed status command issued to the
-    *batch_gahp* should be retried. These retries allow the
+    *blahpd* should be retried. These retries allow the
     *condor_gridmanager* to tolerate short-lived failures of the
     underlying batch system. The default value is 5.
 
@@ -7719,7 +7719,7 @@ These macros affect the *condor_gridmanager*.
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
     used for PBS, LSF, SGE, and similar batch systems. The default
-    location is ``$(GLITE_LOCATION)``/bin/batch_gahp.
+    location is ``$(BIN)``/blahpd.
 
 :macro-def:`PBS_GAHP`
     The complete path and file name of the PBS GAHP executable. The use
@@ -9353,7 +9353,9 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SCITOKENS_FILE`
     The path and file name of a file containing a SciToken for use by
     the client during the SCITOKENS authentication methods.  This variable
-    has no default value.
+    has no default value.  If left unset, HTCondor will use the bearer
+    token discovery protocol defined by the WLCG (https://zenodo.org/record/3937438)
+    to find one.
 
 :macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
     The number of seconds to wait before cleaning up unused credentials.

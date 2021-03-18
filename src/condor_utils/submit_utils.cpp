@@ -3471,6 +3471,7 @@ int SubmitHash::SetGridParams()
 		char *list_str = list.print_to_string();
 		AssignJobString(ATTR_GCE_METADATA, list_str);
 		free( list_str );
+		free(tmp);
 	}
 
 	// GceMetadataFile is not a necessary parameter
@@ -7111,6 +7112,7 @@ int SubmitHash::SetTransferFiles()
 		} else {
 			input_file_list.initializeFromString(macro_value);
 		}
+		free(macro_value); macro_value = NULL;
 	}
 	RETURN_IF_ABORT();
 

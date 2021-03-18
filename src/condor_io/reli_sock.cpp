@@ -356,9 +356,14 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	int pagesize = 65536;  // Optimize large writes to be page sized.
 	const char * cur;
 	unsigned char * buf = NULL;
-        
+
+	if (crypto_state_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+		dprintf(D_ALWAYS, "ReliSock::put_bytes_nobuffer is not allowed with AES encryption, failing\n");
+		return -1;
+	}
+
 	// First, encrypt the data if necessary
-	if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
+	if (get_encryption()) {
 		if (!wrap((const unsigned char *) buffer, length,  buf , l_out)) {
 			dprintf(D_SECURITY, "Encryption failed\n");
 			goto error;
@@ -429,6 +434,11 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	ASSERT(buffer != NULL);
 	ASSERT(max_length > 0);
 
+	if (crypto_state_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+		dprintf(D_ALWAYS, "ReliSock::get_bytes_nobuffer is not allowed with AES encryption, failing\n");
+		return -1;
+	}
+
 	// Find out how big the file is going to be, if requested.
 	// No receive_size means read max_length bytes.
 	this->decode();
@@ -462,7 +472,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	} 
 	else {
 		// See if it needs to be decrypted
-		if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
+		if (get_encryption()) {
 			unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
 			memcpy(buffer, buf, result);
 			free(buf);
@@ -1167,8 +1177,13 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 		ns = cipher_sz;
 		len = (int) htonl(ns);
 
-		buf.grow_buf(cipher_sz);
-		Buf new_buf(p_sock, cipher_sz + header_size);
+		// TODO In a large message, this code will grow the max packet
+		//   size by 16 bytes per packet sent. When a small packet
+		//   comes through (at the end of a message), the max packet
+		//   size will shrink back down (but no smaller than
+		//   CONDOR_IO_BUF_SIZE).
+		Buf new_buf(p_sock);
+		new_buf.grow_buf(cipher_sz + header_size);
 		new_buf.alloc_buf();
 		memcpy(&hdr[1], &len, 4);
 		unsigned char *aad_data = reinterpret_cast<unsigned char *>(hdr);

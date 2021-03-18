@@ -17,13 +17,17 @@ if [ ! -d etc -o ! -d usr -o ! -d var ]; then
     echo That does not look like an HTCondor tarball
     exit 1
 fi
+# On Debian and Unbuntu consolidate shared objects into a single directory
+if [ -d lib ]; then
+    find lib -name \*.so\* -exec mv {} usr/lib \;
+    rm -rf lib
+fi
+if [ -d usr/lib/x86_64-linux-gnu ]; then
+    find usr/lib/x86_64-linux-gnu -name \*.so\* -exec mv {} usr/lib \;
+fi
 # Make compatabilty links to conform to the old tarball layout
 ln -s usr/bin bin
 ln -s usr/sbin sbin
-# On Debian /lib contains some systemd files
-if [ -d lib ]; then
-    rm -rf lib
-fi
 ln -s usr/lib lib
 if [ -d usr/lib64 ]; then
     ln -s usr/lib64 lib64
@@ -51,13 +55,11 @@ elif [ -d usr/share/doc/condor/examples ]; then
     ln -s usr/share/doc/condor/NOTICE.txt NOTICE.txt
 else
     # Old RPM
-    ln -s usr/share/doc/condor*/examples examples
-    ln -s usr/share/doc/condor*/LICENSE-2.0.txt LICENSE-2.0.txt
-    ln -s usr/share/doc/condor*/NOTICE.txt NOTICE.txt
+    ln -s usr/share/doc/condor-[0-9]*/examples examples
+    ln -s usr/share/doc/condor-[0-9]*/LICENSE-2.0.txt LICENSE-2.0.txt
+    ln -s usr/share/doc/condor-[0-9]*/NOTICE.txt NOTICE.txt
 fi
 ln -s ../examples etc/examples
-ln -s blahpd usr/bin/batch_gahp
-ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
 if [ -d usr/lib64 ]; then
     # RPM based systems
     # Link to pickup condor_ssh_to_job_template
@@ -80,4 +82,30 @@ else
     (cd usr/lib; ln -s condor/*.class .)
     # Standard place for Python3 packages)
     (cd lib; mv python3 tmp; mv tmp/dist-packages python3; rmdir tmp)
+    # Remove the python2 packages
+    rm -rf usr/lib/python2*
+fi
+# batch_gahp -> blahp compatibility links
+ln -s blahpd usr/bin/batch_gahp
+ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
+# Construct a glite directory for Bosco
+if [ -d usr/libexec/condor/glite ]; then
+    # RPM based systems
+    mkdir -p usr/libexec/condor/glite/etc
+    (cd usr/libexec/condor/glite/etc; ln -s ../../../../../etc/bl* .)
+    mkdir -p usr/libexec/condor/glite/bin
+    (cd usr/libexec/condor/glite/bin; ln -s ../../../../bin/bl* .)
+    (cd usr/libexec/condor/glite/bin; ln -s ../../../../sbin/bl* .)
+    (cd usr/libexec/condor/glite/bin; ln -s ../../../blahp/* .)
+    ln -s ../../../lib64 usr/libexec/condor/glite
+fi
+if [ -d usr/lib/condor/libexec/glite ]; then
+    # Debian based systems
+    mkdir -p usr/lib/condor/libexec/glite/etc
+    (cd usr/lib/condor/libexec/glite/etc; ln -s ../../../../../../etc/bl* .)
+    mkdir -p usr/lib/condor/libexec/glite/bin
+    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../bin/bl* .)
+    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../sbin/bl* .)
+    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../libexec/blahp/* .)
+    ln -s ../../../../lib usr/lib/condor/libexec/glite
 fi

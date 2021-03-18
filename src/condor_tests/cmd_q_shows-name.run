@@ -49,7 +49,9 @@ my $collectorport = $condor_instance_local->GetCollectorAddress();
 my $localconfig = $condor_instance_local->GetCondorConfig();
 
 # where am I running
-my $currenthost = CondorTest::getFqdnHost();
+my $currenthost = `condor_status -af Machine -limit 1`;
+chomp($currenthost);
+
 my $primarycollector = $currenthost;
 $primarycollector = $primarycollector . ":" . $collectorport;
 

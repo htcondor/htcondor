@@ -1,0 +1,28 @@
+# GNU's bc (a numeric processing language) and dc (a calculator):
+bc
+# A GNU archiving program:
+cpio
+# The GNU line editor:
+ed
+# A utility for determining file types:
+file
+# A file compression utility:
+bzip2
+# A program for synchronizing files over a network:
+rsync
+# An enhanced version of csh, the C shell:
+tcsh
+# A GNU utility for monitoring a program's use of system resources:
+time
+# A utility for unpacking zip files:
+unzip
+# A utility for retrieving files using the HTTP or FTP protocols:
+wget
+# LZMA compression utilities:
+lzma
+# A file compression and packaging utility compatible with PKZIP:
+zip
+# Text file format converters
+dos2unix
+# Another downloader
+curl

@@ -231,13 +231,12 @@ do_configure_firewall() {
 
 do_start_service() {
 	# Start HTCondor via systemd if detected, else via just condor_master
-	if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] && command_exists systemctl; then
+	if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] || ! command_exists systemctl; then
 		echo -e "\n# Start the HTCondor service in the background (without systemd)"
 		(
 			if ! is_dry_run; then
 				set -x
 			fi
-			$sh_c "mkdir --mode=0755 /var/lock/condor /var/run/condor; chown condor:condor /var/lock/condor /var/run/condor"
 			$sh_c "condor_master"
 		)
 	else
@@ -272,6 +271,11 @@ do_token_security() {
 		echo
 		exit 1
 	fi
+
+	# Remove the default 9.0 security configuration.  Arguably, the
+	# get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
+	# and adjust accordingly, which might make microversion upgrades easier.
+	$sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
 
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
@@ -363,7 +367,7 @@ do_install() {
 
 				# Install our repository key.
 				$sh_c "apt-get update"
-				$sh_c "apt-get install gnupg"
+				$sh_c "apt-get install -y gnupg"
 				$sh_c "curl -fsSL ${DOWNLOAD_URL}/debian/HTCondor-Release.gpg.key | apt-key add -"
 
 				# Add our repository.
@@ -373,6 +377,9 @@ do_install() {
 
 				echo -e "\n# Updating package lists"
 				$sh_c "apt-get update"
+
+				echo -e "\n# Installing ps"
+				$sh_c "apt-get install -y procps"
 
 				# In the Ubuntu 20.04 Docker container, this blows up
 				# when run out of the pipe with curl because the
@@ -422,7 +429,8 @@ do_install() {
 				#
 				if [ "${lsb_dist}" = "centos" ]; then
 					if [ "${dist_version}" -eq 8 ]; then
-						$sh_c "dnf config-manager --set-enabled PowerTools"
+						$sh_c "dnf -y install dnf-plugins-core"
+						$sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
 					fi
 				elif [ "${lsb_dist}" = "rhel" ]; then
 					# subscription-manager only works if you've already
@@ -495,24 +503,6 @@ do_install() {
 			# this requirement.
 			SOFT_UID_DOMAIN = TRUE
 
-			# FIXME: This will be corrected in the next metaknob update,
-			# so remove this entire section when that happens.
-			#
-			# For some reason, FS authenticates as <user>@<UID_DOMAIN>
-			# not <user>@$<HOSTNAME> or user@<FULL_HOSTNAME>.  This
-			# means that users can not submit with the metaknob.
-			#
-			# Instead, make ALLOW_WRITE = * and change the allowed
-			# authentications so that only READ allows ANONYMOUS.  This
-			# change requires adding ANONYMOUS to the CLIENT methods.
-			SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
-			SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
-			SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
-
-			# This should probably be submit-only, but this is fine for
-			# testing.
-			ALLOW_WRITE = *
-
 		EOF
 		)
 	fi
@@ -523,7 +513,8 @@ do_install() {
 		"central manager")
 			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
 
 			do_token_security
 			;;
@@ -531,6 +522,7 @@ do_install() {
 		"submit")
 			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
@@ -543,6 +535,7 @@ do_install() {
 		"execute")
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
