@@ -6876,7 +6876,6 @@ int DaemonCore::Create_Process(
 	BOOL inherit_handles = FALSE;
 	char *newenv = NULL;
 	MyString strArgs;
-	MyString args_errors;
 	int namelen = 0;
 	bool bIs16Bit = FALSE;
 	int first_arg_to_copy = 0;
@@ -7479,8 +7478,8 @@ int DaemonCore::Create_Process(
 		first_arg_to_copy = 1;
 		args_success = args.GetArgsStringWin32 ( 
 			&strArgs,
-			first_arg_to_copy,
-			&args_errors );
+			first_arg_to_copy
+			);
 
 		dprintf ( 
 			D_ALWAYS, 
@@ -7513,8 +7512,8 @@ int DaemonCore::Create_Process(
 		first_arg_to_copy = 1;
 		args_success = args.GetArgsStringWin32 (
 			&strArgs,
-			first_arg_to_copy,
-			&args_errors);
+			first_arg_to_copy
+			);
 
 		dprintf ( 
 			D_ALWAYS, 
@@ -7588,8 +7587,8 @@ int DaemonCore::Create_Process(
 				first_arg_to_copy = 1;
 				args_success = args.GetArgsStringWin32 (
 					&strArgs,
-					first_arg_to_copy,
-					&args_errors );
+					first_arg_to_copy
+					);
 				
 				dprintf (
 					D_FULLDEBUG,
@@ -7614,13 +7613,13 @@ int DaemonCore::Create_Process(
 		first_arg_to_copy = 0;
 		args_success = args.GetArgsStringWin32 (
 			&strArgs,
-			first_arg_to_copy,
-			&args_errors );
+			first_arg_to_copy
+			);
 
 	}
 
 	if(!args_success) {
-		dprintf(D_ALWAYS, "ERROR: failed to produce Win32 argument string from CreateProcess: %s\n",args_errors.Value());
+		dprintf(D_ALWAYS, "ERROR: failed to produce Win32 argument string from CreateProcess\n");
 		goto wrapup;
 	}
 
