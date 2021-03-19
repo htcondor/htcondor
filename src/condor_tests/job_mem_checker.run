@@ -173,7 +173,7 @@ system("rm -rf mem_checker.out mem_checker.err mem_checker.log mem_checker.pid")
 	user_log => "mem_checker.log",
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
-	duration => "1024 10 60 30 60 50 60 25 60 5 60 50 60",
+	duration => "1024 1 6 3 6 5 6 3 6 5 6 5 6",
 	should_transfer_files => "YES",
 	when_to_transfer_output => "ON_EXIT",
 	append_submit_commands => $append_submit_commands,

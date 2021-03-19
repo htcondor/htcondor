@@ -98,6 +98,7 @@ if [ -d usr/libexec/condor/glite ]; then
     (cd usr/libexec/condor/glite/bin; ln -s ../../../../sbin/bl* .)
     (cd usr/libexec/condor/glite/bin; ln -s ../../../blahp/* .)
     ln -s ../../../lib64 usr/libexec/condor/glite
+    ln -s bin usr/libexec/condor/glite/libexec
 fi
 if [ -d usr/lib/condor/libexec/glite ]; then
     # Debian based systems
@@ -108,4 +109,5 @@ if [ -d usr/lib/condor/libexec/glite ]; then
     (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../sbin/bl* .)
     (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../libexec/blahp/* .)
     ln -s ../../../../lib usr/lib/condor/libexec/glite
+    ln -s bin usr/lib/condor/libexec/glite/libexec
 fi

@@ -492,9 +492,11 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	}
 
 	nvmlPciInfo_t pci;
-	r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
-	if( NVML_SUCCESS == r ) {
-		strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+	if(nvmlDeviceGetPciInfo_v3) {
+		r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
+		if( NVML_SUCCESS == r ) {
+			strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+		}
 	}
 
 	nvmlMemory_t memory;
@@ -504,10 +506,12 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	}
 
 	int ccMajor = 0, ccMinor = 0;
-	r = nvmlDeviceGetCudaComputeCapability( migDevice, & ccMajor, & ccMinor );
-	if( NVML_SUCCESS == r ) {
-		p->ccMajor = ccMajor;
-		p->ccMinor = ccMinor;
+	if(nvmlDeviceGetCudaComputeCapability) {
+		r = nvmlDeviceGetCudaComputeCapability( migDevice, & ccMajor, & ccMinor );
+		if( NVML_SUCCESS == r ) {
+			p->ccMajor = ccMajor;
+			p->ccMinor = ccMinor;
+		}
 	}
 
 	// This is not always the same as cuDeviceGetAttribute(CLOCK_RATE).
@@ -520,9 +524,11 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 
 	// This only exists for MIG devices.
 	nvmlDeviceAttributes_t attributes;
-	r = nvmlDeviceGetAttributes( migDevice, & attributes );
-	if( NVML_SUCCESS == r ) {
-		p->multiProcessorCount = attributes.multiprocessorCount;
+	if(nvmlDeviceGetAttributes) {
+		r = nvmlDeviceGetAttributes( migDevice, & attributes );
+		if( NVML_SUCCESS == r ) {
+			p->multiProcessorCount = attributes.multiprocessorCount;
+		}
 	}
 
 	nvmlEnableState_t current, pending;
