@@ -104,10 +104,10 @@ New Features:
   :jira:`137`
 
 - To make the debugging logs more consistent, the slot name is always
-  appended to the StarterLog.  Previously, a single slot startd's 
+  appended to the StarterLog.  Previously, a single slot startd's
   StarterLog would have no suffix.  Now it will be called StarterLog.slot1.
   :jira:`178`
-  
+
 - Added command-line options to *condor_gpu_discovery* to report GPUs
   multiple times.  If your GPU jobs are small and known to be well-behaved,
   this makes it easier for them to share a GPU.
@@ -140,7 +140,7 @@ New Features:
   :jira:`131`
 
 - When singularity is enabled, when there is an error running singularity
-  test before the job, the first line of singularity stderr is logged to 
+  test before the job, the first line of singularity stderr is logged to
   the hold message in the job.
   :jira:`133`
 
@@ -210,6 +210,10 @@ New Features:
   :jira:`313`
 
 Bugs Fixed:
+
+- Fixed a bug where an IDTOKEN could be sent to a user who had authenticated
+  with the ANONYMOUS method after the auto-approval period had expired.
+  :jira:`231`
 
 - Fixed a bug where jobs that asked for `transfer_output_files = .` would
   be put on hold if they were evicted and restarted.
