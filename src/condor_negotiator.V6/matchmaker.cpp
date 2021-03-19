@@ -5530,7 +5530,7 @@ insert_candidate(ClassAd * candidate,
 	int insert_idx = adListHead;
 	while ( insert_idx < adListLen - 1 )
 	{
-		if ( sort_compare( &new_entry, &AdListArray[insert_idx + 1] ) > 0 ) {
+		if ( sort_compare( new_entry, AdListArray[insert_idx + 1])) {
 			AdListArray[insert_idx] = AdListArray[insert_idx + 1];
 			insert_idx++;
 		} else {
@@ -5538,6 +5538,7 @@ insert_candidate(ClassAd * candidate,
 		}
 	}
 	AdListArray[insert_idx] = new_entry;
+
 	return true;
 }
 
@@ -5710,23 +5711,20 @@ void Matchmaker::DeleteMatchList()
 	unmutatedSlotAds.clear();
 }
 
-int Matchmaker::MatchListType::
-sort_compare(const void* elem1, const void* elem2)
+bool Matchmaker::MatchListType::
+sort_compare(const AdListEntry &Elem1, const AdListEntry &Elem2)
 {
-	const AdListEntry* Elem1 = (const AdListEntry*) elem1;
-	const AdListEntry* Elem2 = (const AdListEntry*) elem2;
+	const double candidateRankValue = Elem1.RankValue;
+	const double candidatePreJobRankValue = Elem1.PreJobRankValue;
+	const double candidatePostJobRankValue = Elem1.PostJobRankValue;
+	const double candidatePreemptRankValue = Elem1.PreemptRankValue;
+	const PreemptState candidatePreemptState = Elem1.PreemptStateValue;
 
-	const double candidateRankValue = Elem1->RankValue;
-	const double candidatePreJobRankValue = Elem1->PreJobRankValue;
-	const double candidatePostJobRankValue = Elem1->PostJobRankValue;
-	const double candidatePreemptRankValue = Elem1->PreemptRankValue;
-	const PreemptState candidatePreemptState = Elem1->PreemptStateValue;
-
-	const double bestRankValue = Elem2->RankValue;
-	const double bestPreJobRankValue = Elem2->PreJobRankValue;
-	const double bestPostJobRankValue = Elem2->PostJobRankValue;
-	const double bestPreemptRankValue = Elem2->PreemptRankValue;
-	const PreemptState bestPreemptState = Elem2->PreemptStateValue;
+	const double bestRankValue = Elem2.RankValue;
+	const double bestPreJobRankValue = Elem2.PreJobRankValue;
+	const double bestPostJobRankValue = Elem2.PostJobRankValue;
+	const double bestPreemptRankValue = Elem2.PreemptRankValue;
+	const PreemptState bestPreemptState = Elem2.PreemptStateValue;
 
 	if ( candidateRankValue == bestRankValue &&
 		 candidatePreJobRankValue == bestPreJobRankValue &&
@@ -5734,7 +5732,7 @@ sort_compare(const void* elem1, const void* elem2)
 		 candidatePreemptRankValue == bestPreemptRankValue &&
 		 candidatePreemptState == bestPreemptState )
 	{
-		return 0;
+		return false;
 	}
 
 	// the quality of a match is determined by a lexicographic sort on
@@ -5770,11 +5768,11 @@ sort_compare(const void* elem1, const void* elem2)
 	}
 
 	if ( newBestFound ) {
-		// candidate is better: candidate is elem1, and qsort man page
-		// says return < 0 is elem1 is less than elem2
-		return -1;
+		// candidate is better: candidate is elem1, and std::sort man page
+		// says return true is elem1 is better than elem2
+		return true;
 	} else {
-		return 1;
+		return false;
 	}
 }
 			
@@ -5787,7 +5785,7 @@ sort()
 
 	// Note: since we must use static members, sort() is
 	// _NOT_ thread safe!!!
-	qsort(AdListArray,adListLen,sizeof(AdListEntry),sort_compare);
+	std::sort(AdListArray,AdListArray + adListLen,sort_compare);
 
 	already_sorted = true;
 }
