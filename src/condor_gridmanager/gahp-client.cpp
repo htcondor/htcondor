@@ -24,7 +24,6 @@
 #include "condor_daemon_core.h"
 #include "globus_utils.h"
 #include "get_port_range.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "gahp_common.h"
 #include "env.h"
@@ -765,9 +764,9 @@ GahpServer::Startup()
 		gahp_path = param("GAHP");
 
 		char *args = param("GAHP_ARGS");
-		MyString args_error;
-		if(!gahp_args.AppendArgsV1RawOrV2Quoted(args,&args_error)) {
-			EXCEPT("Failed to parse arguments: %s",args_error.Value());
+		std::string args_error;
+		if(!gahp_args.AppendArgsV1RawOrV2Quoted(args, args_error)) {
+			EXCEPT("Failed to parse arguments: %s",args_error.c_str());
 		}
 		free(args);
 	}
@@ -1118,7 +1117,7 @@ GahpServer::CreateSecuritySession()
 		return false;
 	}
 
-	MyString session_info;
+	std::string session_info;
 	if ( !daemonCore->getSecMan()->ExportSecSessionInfo( session_id,
 														 session_info ) ) {
 		free( session_id );
@@ -1126,7 +1125,7 @@ GahpServer::CreateSecuritySession()
 		return false;
 	}
 
-	ClaimIdParser claimId( session_id, session_info.Value(), session_key );
+	ClaimIdParser claimId( session_id, session_info.c_str(), session_key );
 
 	free( session_id );
 	free( session_key );

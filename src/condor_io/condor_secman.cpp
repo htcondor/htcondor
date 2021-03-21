@@ -3777,6 +3777,14 @@ SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name,
 }
 
 bool
+SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
+    MyString ms;
+    bool rv = ExportSecSessionInfo(session_id, ms);
+    if(! ms.empty()) { session_info = ms; }
+    return rv;
+}
+
+bool
 SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ASSERT( session_id );
 

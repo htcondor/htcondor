@@ -95,6 +95,7 @@ bool split_args(char const *args,char ***args_array,MyString *error_msg=NULL);
 // Produce a string from a list of tokens, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg=0);
+void join_args(SimpleList<MyString> const & args_list, std::string & result, int start_arg=0);
 
 // Produce a string from a NULL-terminated string array, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
@@ -138,6 +139,7 @@ class ArgList {
 		// format was chosen for maximal backward compatibility with
 		// the old V1 syntax in the places where this function is used.
 	bool AppendArgsV1RawOrV2Quoted(char const *args,MyString *error_msg);
+	bool AppendArgsV1RawOrV2Quoted(char const *args,std::string & error_msg);
 
 		// Parse args string in V1Wacked or V2Quoted syntax.  This is
 		// used for argument strings in submit files.  If the string
@@ -191,11 +193,13 @@ class ArgList {
 
 		// Create a V1 format args string (no quoting or backwacking)
 		// false on error (e.g. because an argument contains spaces).
+	bool GetArgsStringV1Raw(std::string & result, std::string & error_msg) const;
 	bool GetArgsStringV1Raw(MyString *result,MyString *error_msg) const;
 
 		// Create a V2 format args string.  This differs from
 		// GetArgsStringV2Quoted in that string is _not_ enclosed in
 		// double quotes.
+	bool GetArgsStringV2Raw(std::string & result, int start_arg=0) const;
 	bool GetArgsStringV2Raw(MyString *result,MyString *error_msg,int start_arg=0) const;
 
 		// Create V2Quoted args string (i.e. enclosed in double-quotes).

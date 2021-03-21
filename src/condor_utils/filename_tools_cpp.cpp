@@ -125,6 +125,14 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 	}
 }
 
+int
+filename_remap_find( const char * input, const char * filename, std::string & output, int cur_remap_level ) {
+    MyString ms;
+    int rv = filename_remap_find( input, filename, ms, cur_remap_level );
+    if(! ms.empty()) { output = ms; }
+    return rv;
+}
+
 int filename_remap_find( const char *input, const char *filename, MyString &output, int cur_remap_level )
 {
 	if (cur_remap_level == 0) {
@@ -243,6 +251,20 @@ canonicalize_dir_delimiters( MyString &path ) {
 	canonicalize_dir_delimiters( tmp );
 	path = tmp;
 	free( tmp );
+}
+
+void
+filename_url_parse( char * input, std::string & method, std::string & server, int * port, std::string & path ) {
+	char *tmp_method = NULL;
+	char *tmp_server = NULL;
+	char *tmp_path = NULL;
+	filename_url_parse_malloc(input,&tmp_method,&tmp_server,port,&tmp_path);
+	method = tmp_method;
+	server = tmp_server;
+	path = tmp_path;
+	free( tmp_method );
+	free( tmp_server );
+	free( tmp_path );
 }
 
 void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path ) {
