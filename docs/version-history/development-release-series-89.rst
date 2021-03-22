@@ -13,6 +13,13 @@ Release Notes:
 
 - HTCondor version 8.9.12 not yet released.
 
+- We fixed a bug in how the IDTOKENS authentication method reads its
+  signing keys.  As a result, some previously-issued tokens will no
+  longer be valid with this release.  In some cases, truncating the
+  signing key just before the first zero byte will allow the old tokens
+  to be validated until you can resissue new tokens.
+  :jira:`295`
+
 - We have changed the default configuration file.  It no longer sets
   ``use security : host_based``.  This may cause your existing, insecure
   security configuration to stop working.  Consider updating your
