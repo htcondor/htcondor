@@ -276,6 +276,10 @@ Bugs Fixed:
   something other than the expected EC algorithm.
   :jira:`305`
 
+- Fixed a bug with *condor_dagman* direct job submission where certain submit
+  errors were not getting reported in the debug output.
+  :jira:`85`
+
 Version 8.9.11
 --------------
 
