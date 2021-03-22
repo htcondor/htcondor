@@ -25,8 +25,12 @@ struct xferProgress {
 };
 struct xferProgress myProgress;
 
-static int xferInfo(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
+static int xferInfo(void *p, double /* dltotal */, double dlnow, double /* ultotal */, double ulnow)
 {
+	/* Note : we cannot rely on dltotal or ultotal being correct, since
+	they will only be non-zero if the server responded with the optional
+	Content-Length header.  */
+
     struct xferProgress *progress = (struct xferProgress *)p;
     CURL *curl = progress->curl;
     double curTime = 0;
@@ -37,13 +41,13 @@ static int xferInfo(void *p, double dltotal, double dlnow, double ultotal, doubl
     if (curTime > 30) {
 
         // If this is a download and not making progress, abort
-        if (dltotal > 0 && curTime > dlnow) return 1;
+        if (dlnow > 0 && curTime > dlnow) return 1;
 
         // If this is an upload and not making progress, abort
-        if (ultotal > 0 && curTime > ulnow) return 1;
+        if (ulnow > 0 && curTime > ulnow) return 1;
 
-        // Sometimes a misconfigured proxy will report 0 bytes available. Abort.
-        if (dltotal <= 0 && ultotal <= 0) return 1;
+        // If not a single byte has been transferred either direction after 30 seconds, abort
+        if (dlnow <= 0 && ulnow <= 0) return 1;
     }
 
     // All good. Return success.
