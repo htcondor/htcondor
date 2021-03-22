@@ -219,7 +219,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 
 	temp_ad = r_job->src_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	hook_stdin = route_info.c_str();
 	hook_stdin += "\n------\n";
 	sPrintAd(hook_stdin, temp_ad);
@@ -238,7 +238,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		delete translate_client;
 		return -1;
 	}
-	if (0 == spawn(translate_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(translate_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
@@ -291,7 +291,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 
 	temp_ad = r_job->dest_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, temp_ad);
 
 	StatusClient* status_client = new StatusClient(hook_update_job_info, r_job);
@@ -308,7 +308,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 		delete status_client;
 		return -1;
 	}
-	if (0 == spawn(status_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(status_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
@@ -366,7 +366,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 
 	temp_ad = r_job->src_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, temp_ad);
 	hook_stdin += "\n------\n";
 
@@ -387,7 +387,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		delete exit_client;
 		return -1;
 	}
-	if (0 == spawn(exit_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(exit_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
@@ -445,7 +445,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 
 	temp_ad = r_job->dest_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, temp_ad);
 
 	CleanupClient* cleanup_client = new CleanupClient(hook_cleanup, r_job);
@@ -462,7 +462,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		delete cleanup_client;
 		return -1;
 	}
-	if (0 == spawn(cleanup_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(cleanup_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::JobCleanup: "

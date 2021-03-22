@@ -62,6 +62,11 @@ HookClientMgr::initialize() {
 	return (m_reaper_output_id != FALSE && m_reaper_ignore_id != FALSE);
 }
 
+bool
+HookClientMgr::spawn(HookClient* client, ArgList* args, const std::string & hook_stdin, priv_state priv, Env *env) {
+    MyString ms(hook_stdin);
+    return spawn(client, args, &ms, priv, env);
+}
 
 bool
 HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, priv_state priv, Env *env) {

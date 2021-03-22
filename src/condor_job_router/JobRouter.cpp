@@ -374,9 +374,9 @@ JobRouter::config() {
 
 	if (routing_cmd) {
 		ArgList args;
-		MyString error_msg;
-		if ( ! args.AppendArgsV1RawOrV2Quoted(routing_cmd, &error_msg)) {
-			EXCEPT("Invalid value specified for JOB_ROUTER_ENTRIES_CMD: %s", error_msg.Value());
+		std::string error_msg;
+		if ( ! args.AppendArgsV1RawOrV2Quoted(routing_cmd, error_msg)) {
+			EXCEPT("Invalid value specified for JOB_ROUTER_ENTRIES_CMD: %s", error_msg.c_str());
 		}
 
 			// I have tested with want_stderr 0 and 1, but I have not observed
@@ -833,7 +833,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	UserPolicy user_policy;
 	ClassAd converted_ad;
 	int action;
-	MyString reason;
+	std::string reason;
 	int reason_code;
 	int reason_subcode;
 	bool ret_val = false;
@@ -857,17 +857,17 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	switch(action)
 	{
 		case UNDEFINED_EVAL:
-			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
+			ret_val = SetJobHeld(job->src_ad, reason.c_str(), reason_code, reason_subcode);
 			break;
 		case STAYS_IN_QUEUE:
 			// do nothing
 			ret_val = true;
 			break;
 		case REMOVE_FROM_QUEUE:
-			ret_val = SetJobRemoved(job->src_ad, reason.Value());
+			ret_val = SetJobRemoved(job->src_ad, reason.c_str());
 			break;
 		case HOLD_IN_QUEUE:
-			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
+			ret_val = SetJobHeld(job->src_ad, reason.c_str(), reason_code, reason_subcode);
 			break;
 		case RELEASE_FROM_HOLD:
 			// When a job that is managed by the job router is
