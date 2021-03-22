@@ -248,6 +248,10 @@ Bugs Fixed:
   use different SciTokens.
   :jira:`99`
 
+- Fixed a bug where file transfers using HTTP may fail unnecessarily after
+  30 seconds if the HTTP server does not include a Content-Length header.
+  :jira:`354`
+
 - The local issuer in the ``condor_credmon_oauth`` gives more useful
   log output if it detects that the private key was generated with
   something other than the expected EC algorithm.
