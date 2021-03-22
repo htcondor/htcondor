@@ -84,6 +84,10 @@ New Features:
   https://zenodo.org/record/3937438 for details.
   :jira:`92`
 
+- Improvments made to error messages when jobs go on hold due to 
+  timeouts transferring files via HTTP.
+  :jira:`355`
+
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
   :jira:`73`
