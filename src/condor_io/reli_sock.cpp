@@ -1333,7 +1333,7 @@ ReliSock::type() const
 char * ReliSock::serializeMsgInfo() const
 {
 	char *buf = new char[20 + 3*m_final_mds.size()];
-	sprintf(buf, "%i*%i*%i*%i*%lu",
+	sprintf(buf, "%i*%i*%i*%i*%zu",
 		m_final_send_header,
 		m_final_recv_header,
 		m_finished_send_header,
@@ -1360,16 +1360,23 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 {
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: reading MsgInfo at beginning of %s.\n", buf);
 
-	long unsigned int vecsize;
-	int num_read = sscanf(buf, "%i*%i*%i*%i*%lu*",
-		(int*)&m_final_send_header,
-		(int*)&m_final_recv_header,
-		(int*)&m_finished_send_header,
-		(int*)&m_finished_recv_header,
-		(long unsigned int*)&vecsize
+	size_t vecsize;
+	int final_send_header, final_recv_header, finished_send_header, finished_recv_header;
+
+	int num_read = sscanf(buf, "%i*%i*%i*%i*%zu*",
+		&final_send_header,
+		&final_recv_header,
+		&finished_send_header,
+		&finished_recv_header,
+		&vecsize
 		);
 
 	ASSERT(num_read == 5)
+
+	this->m_final_send_header = (final_send_header == 0)       ? false : true;
+	this->m_final_recv_header = (final_recv_header == 0)       ? false : true;
+	this->m_finished_send_header = (finished_send_header == 0) ? false : true;
+	this->m_finished_recv_header = (finished_recv_header == 0) ? false : true;
 
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: set header vals: %i %i %i %i.\n",
 		m_final_send_header,
@@ -1384,7 +1391,7 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 	}
 	buf--;
 
-	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: consuming %lu hex bytes of vector data from  %s.\n", vecsize, buf);
+	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: consuming %zu hex bytes of vector data from  %s.\n", vecsize, buf);
 	m_final_mds.resize(vecsize);
 
 	int citems = 1;
