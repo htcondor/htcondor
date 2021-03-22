@@ -124,6 +124,7 @@ what output is expected, and, when relevant, the exit status expected.
    The job ClassAd returned by the hook needs to contain enough
    information for the *condor_starter* to eventually spawn the work.
    The required and optional attributes in this ClassAd are listed here:
+
     :index:`attributes<single: attributes; FetchWork>`
     :index:`Required attributes<single: Required attributes; Defining Applications>`
 
@@ -288,7 +289,7 @@ what output is expected, and, when relevant, the exit status expected.
 
     If any attribute that specifies a path (``Cmd``, ``In``,
     ``Out``,\ ``Err``, ``StarterUserLog``) is not a full path name, HTCondor
-automatically prepends the value of ``IWD``.
+    automatically prepends the value of ``IWD``.
 
    :index:`Reply to fetched work<single: Reply to fetched work; Fetch Hooks>`
 

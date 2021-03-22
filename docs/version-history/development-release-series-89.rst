@@ -84,7 +84,7 @@ New Features:
   https://zenodo.org/record/3937438 for details.
   :jira:`92`
 
-- Improvments made to error messages when jobs go on hold due to 
+- Improvments made to error messages when jobs go on hold due to
   timeouts transferring files via HTTP.
   :jira:`355`
 
@@ -215,11 +215,15 @@ New Features:
 
 Bugs Fixed:
 
+- Sufficiently old versions of the CUDA libraries no longer cause
+  `condor_gpu_discovery` to segfault.
+  :jira:`343`
+
 - Fixed a bug where an IDTOKEN could be sent to a user who had authenticated
   with the ANONYMOUS method after the auto-approval period had expired.
   :jira:`231`
 
-- Fixed a bug where jobs that asked for `transfer_output_files = .` would
+- Fixed a bug where jobs that asked for ``transfer_output_files = .`` would
   be put on hold if they were evicted and restarted.
   :jira:`267`
 
