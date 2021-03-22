@@ -53,8 +53,15 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
         ad.InsertAttr("HttpCacheHitOrMiss", HttpCacheHitOrMiss);
     if (!HttpCacheHost.empty())
         ad.InsertAttr("HttpCacheHost", HttpCacheHost);
-    if (!TransferError.empty())
-        ad.InsertAttr("TransferError", TransferError);
+    if (!TransferError.empty()) {
+        std::string augmented_error_msg = TransferError;
+        const char *proxy = getenv("http_proxy");
+        if (proxy) {
+            augmented_error_msg += " using http_proxy=";
+            augmented_error_msg += proxy;
+        }
+        ad.InsertAttr("TransferError", augmented_error_msg);
+    }
     if (!TransferFileName.empty())
         ad.InsertAttr("TransferFileName", TransferFileName);
     if (!TransferHostName.empty())

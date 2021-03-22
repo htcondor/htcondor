@@ -331,9 +331,17 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
     _this_file_stats->LibcurlReturnCode = rval;
 
     if( rval == CURLE_OK ) {
+            // Transfer successful!
         _this_file_stats->TransferSuccess = true;
         _this_file_stats->TransferError = "";
         _this_file_stats->TransferFileBytes = ftell( file );
+    }
+    else if ( rval == CURLE_ABORTED_BY_CALLBACK ) {
+            // Transfer failed because our xferInfo callback above returned abort.
+            // The error string returned by libcurl just says "Callback aborted",
+            // so lets give something more meaningful.
+        _this_file_stats->TransferSuccess = false;
+        _this_file_stats->TransferError = "Aborted due to lack of progress";
     }
     else {
         _this_file_stats->TransferSuccess = false;
