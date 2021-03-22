@@ -226,6 +226,10 @@ Bugs Fixed:
   `condor_gpu_discovery` to segfault.
   :jira:`343`
 
+- Malformed or missing SciToken can result in a schedd abort when using ``SCHEDD_AUDIT_LOG``.
+  :jira:`315`
+
+
 - Fixed a bug where an IDTOKEN could be sent to a user who had authenticated
   with the ANONYMOUS method after the auto-approval period had expired.
   :jira:`231`
