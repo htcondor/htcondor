@@ -104,13 +104,6 @@ what output is expected, and, when relevant, the exit status expected.
    and is the only hook that must be defined for any of the other
    *condor_startd* hooks to operate.
 
-   The job ClassAd returned by the hook needs to contain enough
-   information for the *condor_starter* to eventually spawn the work.
-   The required and optional attributes in this ClassAd are identical to
-   the ones described for Computing on Demand (COD) jobs in
-   the :ref:`misc-concepts/computing-on-demand:defining a cod application`
-   section.
-
     Command-line arguments passed to the hook
        None.
     Standard input given to the hook
@@ -127,6 +120,176 @@ what output is expected, and, when relevant, the exit status expected.
        variable.
     Exit status of the hook
        Ignored.
+
+   The job ClassAd returned by the hook needs to contain enough
+   information for the *condor_starter* to eventually spawn the work.
+   The required and optional attributes in this ClassAd are listed here:
+
+    :index:`attributes<single: attributes; FetchWork>`
+    :index:`Required attributes<single: Required attributes; Defining Applications>`
+
+    Attributes for a FetchWork application are either required or optional. The
+    following attributes are required:
+    :index:`required attributes<single: required attributes; FetchWork>`
+
+    ``Cmd``
+        This attribute :index:`Cmd<single: Cmd; required attributes>`\ defines the
+        full path to the executable program to be run as a FetchWork application.
+        Since HTCondor does not currently provide any mechanism to transfer
+        files on behalf of FetchWork applications, this path should be a valid
+        path on the machine where the application will be run. It is a
+        string attribute, and must therefore be enclosed in quotation marks
+        ("). There is no default.
+
+    ``Owner``
+        If the *condor_startd* daemon is executing as root on
+        :index:`Owner<single: Owner; required attributes>`\ the resource where a FetchWork
+        application will run, the user must also define ``Owner`` to specify
+        what user name the application will run as. On Windows, the
+        *condor_startd* daemon always runs as an Administrator service,
+        which is equivalent to running as root on Unix platforms. If the
+        user specifies any FetchWork application attributes with the *condor_cod*
+        *activate* command-line tool, the ``Owner`` attribute will be
+        defined as the user name that ran *condor_cod* *activate*. However,
+        if the user defines all attributes of their FetchWork application in the
+        HTCondor configuration files, and does not define any attributes
+        with the *condor_cod* *activate* command-line tool, there is no
+        default, and ``Owner`` must be specified in the configuration file.
+        ``Owner`` must contain a valid user name on the given FetchWork resource.
+        It is a string attribute, and must therefore be enclosed in
+        quotation marks (").
+
+    ``RequestCpus``
+        Required when running on a *condor_startd*
+        :index:`RequestCpus<single: RequestCpus; required attributes>`\ that uses
+        partitionable slots. It specifies the number of CPU cores from the
+        partitionable slot allocated for this job.
+
+    ``RequestDisk``
+        Required when running on a *condor_startd*
+        :index:`RequestDisk<single: RequestDisk; required attributes>`\ that uses
+        partitionable slots. It specifies the disk space, in Megabytes, from
+        the partitionable slot allocated for this job.
+
+    ``RequestMemory``
+        Required when running on a *condor_startd*
+        :index:`RequestMemory<single: RequestMemory; required attributes>`\ that uses
+        partitionable slots. It specifies the memory, in Megabytes, from the
+        partitionable slot allocated for this job.
+
+    :index:`optional attributes<single: optional attributes; FetchWork>`
+    :index:`Optional attributes<single: Optional attributes; Defining Applications>`
+
+    The following list of attributes are optional:
+
+    ``JobUniverse``
+        This attribute defines what HTCondor job
+        :index:`JobUniverse<single: JobUniverse; optional attributes>`\ universe to use
+        for the given FetchWork application. The only tested universes are vanilla
+        and java. This attribute must be an integer, with vanilla using the
+        value 5, and java using the value 10.
+
+    ``IWD``
+        IWD is an acronym for Initial Working Directory.
+        :index:`IWD<single: IWD; optional attributes>`\ It defines the full path
+        to the directory where a given FetchWork application are to be run. Unless
+        the application changes its current working directory, any relative
+        path names used by the application will be relative to the IWD. If
+        any other attributes that define file names (for example, ``In``,
+        ``Out``, and so on) do not contain a full path, the ``IWD`` will
+        automatically be pre-pended to those file names. It is a string
+        attribute, and must therefore be enclosed in quotation marks ("). If
+        the ``IWD`` is not specified, the temporary execution sandbox
+        created by the *condor_starter* will be used as the initial working
+        directory.
+
+    ``In``
+        This string defines the path to the file on the
+        :index:`In<single: In; optional attributes>`\ FetchWork resource that should be
+        used as standard input (``stdin``) for the FetchWork application. This
+        file (and all parent directories) must be readable by whatever user
+        the FetchWork application will run as. If not specified, the default is
+        ``/dev/null``. It is a string attribute, and must therefore be
+        enclosed in quotation marks (").
+
+    ``Out``
+        This string defines the path to the file on the
+        :index:`Out<single: Out; optional attributes>`\ FetchWork resource that should
+        be used as standard output (``stdout``) for the FetchWork application.
+        This file must be writable (and all parent directories readable) by
+        whatever user the FetchWork application will run as. If not specified, the
+        default is ``/dev/null``. It is a string attribute, and must
+        therefore be enclosed in quotation marks (").
+
+    ``Err``
+        This string defines the path to the file on the
+        :index:`Err<single: Err; optional attributes>`\ FetchWork resource that should
+        be used as standard error (``stderr``) for the FetchWork application. This
+        file must be writable (and all parent directories readable) by
+        whatever user the FetchWork application will run as. If not specified, the
+        default is ``/dev/null``. It is a string attribute, and must
+        therefore be enclosed in quotation marks (").
+
+    ``Env``
+        This string defines environment variables to
+        :index:`Env<single: Env; optional attributes>`\ set for a given FetchWork
+        application. Each environment variable has the form NAME=value.
+        Multiple variables are delimited with a semicolon. An example:
+        Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100" It is a string
+        attribute, and must therefore be enclosed in quotation marks (").
+
+    ``Args``
+        This string attribute defines the list of
+        :index:`Args<single: Args; optional attributes>`\ arguments to be supplied
+        to the program on the command-line. The arguments are delimited
+        (separated) by space characters. There is no default. If the
+        ``JobUniverse`` corresponds to the Java universe, the first argument
+        must be the name of the class containing ``main``. It is a string
+        attribute, and must therefore be enclosed in quotation marks (").
+
+    ``JarFiles``
+        This string attribute is only used if
+        :index:`JarFiles<single: JarFiles; optional attributes>`\ ``JobUniverse`` is 10
+        (the Java universe). If a given FetchWork application is a Java program,
+        specify the JAR files that the program requires with this attribute.
+        There is no default. It is a string attribute, and must therefore be
+        enclosed in quotation marks ("). Multiple file names may be
+        delimited with either commas or white space characters, and
+        therefore, file names can not contain spaces.
+
+    ``KillSig``
+        This attribute specifies what signal should be
+        :index:`KillSig<single: KillSig; optional attributes>`\ sent whenever the
+        HTCondor system needs to gracefully shutdown the FetchWork application. It
+        can either be specified as a string containing the signal name (for
+        example KillSig = "SIGQUIT"), or as an integer (KillSig = 3) The
+        default is to use SIGTERM.
+
+    ``StarterUserLog``
+        This string specifies a file name for a
+        :index:`StarterUserLog<single: StarterUserLog; optional attributes>`\ log file that
+        the *condor_starter* daemon can write with entries for relevant
+        events in the life of a given FetchWork application. It is similar to the
+        job event log file specified for regular HTCondor jobs with the
+        **Log** :index:`Log<single: Log; submit commands>` command in a submit
+        description file. However, certain attributes that are placed in a
+        job event log do not make sense in the FetchWork environment, and are
+        therefore omitted. The default is not to write this log file. It is
+        a string attribute, and must therefore be enclosed in quotation
+        marks (").
+
+    ``StarterUserLogUseXML``
+        If the ``StarterUserLog``
+        :index:`StarterUserLogUseXML<single: StarterUserLogUseXML; optional attributes>`\ attribute
+        is defined, the default format is a human-readable format. However,
+        HTCondor can write out this log in an XML representation, instead.
+        To enable the XML format for this job event log, the
+        ``StarterUserLogUseXML`` boolean is set to TRUE. The default if not
+        specified is FALSE.
+
+    If any attribute that specifies a path (``Cmd``, ``In``,
+    ``Out``,\ ``Err``, ``StarterUserLog``) is not a full path name, HTCondor
+    automatically prepends the value of ``IWD``.
 
    :index:`Reply to fetched work<single: Reply to fetched work; Fetch Hooks>`
 
