@@ -75,16 +75,16 @@ fi
 # stable -> release repo
 
 #dist='unstable'
-dist='testing'
-#dist='stable'
+#dist='testing'
+dist='stable'
 echo "Distribution is $dist"
 echo "Suffix is '$suffix'"
 
 # Nightly build changelog
-dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
+#dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
 
 # Final release changelog
-#dch --release --distribution $dist ignored
+dch --release --distribution $dist ignored
 
 if [ "$suffix" = '' ]; then
     build='full'

@@ -71,7 +71,7 @@ version = '8.8'
 release = '8.8.13'
 
 rst_epilog = """
-.. |release_date| replace:: Month Day, 2020
+.. |release_date| replace:: March 23, 2021
 """
 
 
