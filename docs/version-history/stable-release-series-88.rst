@@ -30,9 +30,7 @@ Version 8.8.13
 
 Release Notes:
 
-- HTCondor version 8.8.13 not yet released.
-
-.. HTCondor version 8.8.13 released on Month Date, 2021.
+- HTCondor version 8.8.13 released on March 23, 2021.
 
 New Features:
 
