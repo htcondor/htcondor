@@ -13,11 +13,11 @@ typedef std::unique_ptr<ClassAd> UniqueClassAdPtr;
 typedef std::map< long long, UniqueClassAdPtr > IdToClassaAdMap;
 typedef std::map< std::string, UniqueClassAdPtr > KeyToClassaAdMap;
 
-struct 	PrioEntry { MyString name; float prio; };
+struct 	PrioEntry { std::string name; float prio; };
 int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
 
 /* Warn about schedd-wide limits that may confuse analysis code */
-bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf);
+bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,std::string &result_buf);
 
 // these are in queue.cpp
 bool iter_ads_from_file(const char *filename,

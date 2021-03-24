@@ -554,6 +554,14 @@ ArgList::GetArgsStringForDisplay(ClassAd const *ad,MyString *result)
 	}
 }
 
+void
+ArgList::GetArgsStringForDisplay(ClassAd const *ad, std::string &result)
+{
+	if( ! ad->LookupString(ATTR_JOB_ARGUMENTS2, result) ) {
+		ad->LookupString(ATTR_JOB_ARGUMENTS1, result);
+	}
+}
+
 bool
 ArgList::AppendArgsFromClassAd(ClassAd const * ad, std::string & error_msg)
 {

@@ -179,6 +179,7 @@ class ArgList {
 
 		// Get arguments from ClassAd for descriptional purposes.
 	static void GetArgsStringForDisplay(ClassAd const *ad,MyString *result);
+	static void GetArgsStringForDisplay(ClassAd const *ad,std::string &result);
 
 		// Get arguments from this ArgList object for descriptional purposes.
 	void GetArgsStringForDisplay(MyString *result,int start_arg=0) const;
