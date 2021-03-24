@@ -5606,10 +5606,10 @@ condor_starter Configuration File Entries
 These settings affect the *condor_starter*.
 
 :macro-def:`DISABLE_SETUID`
-    By default, HTCondor prevents jobs from running setuid executables
+    HTCondor can prevent jobs from running setuid executables
     on Linux by setting the no-new-privileges flag.  This can be
-    disabled (i.e. to allow setuid binaries) by setting ``DISABLE_SETIUD``
-    to false.
+    enabled (i.e. to disallow setuid binaries) by setting ``DISABLE_SETIUD``
+    to true.
 
 :macro-def:`EXEC_TRANSFER_ATTEMPTS`
     Sometimes due to a router misconfiguration, kernel bug, or other

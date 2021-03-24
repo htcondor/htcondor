@@ -107,6 +107,10 @@ New Features:
   fail later on when it needs them to exist.  See the ticket for details.
   :jira:`73`
 
+- The default value for the knob DISABLE_SETUID is now false, so that
+  condor_ssh_to_job works on machines with SELinux enabled.
+  :jira:`358`
+
 - HTCondor daemons that read the configuration files as root when they start
   up will now also read the configuration files as root when they are reconfigured.
   :jira:`314`
