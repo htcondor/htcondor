@@ -13,12 +13,6 @@ Release Notes:
 
 - HTCondor version 8.9.12 not yet released.
 
-- We fixed a bug in how the IDTOKENS authentication method reads its
-  signing keys.  As a result, some previously-issued tokens will no
-  longer be valid with this release.  In some cases, truncating the
-  signing key just before the first zero byte will allow the old tokens
-  to be validated until you can resissue new tokens.
-  :jira:`295`
 
 - We have changed the default configuration file.  It no longer sets
   ``use security : host_based``.  This may cause your existing, insecure
@@ -33,6 +27,20 @@ Release Notes:
   this file if you're upgrading.  This file has an extensive explanatory
   comment, which includes the work-around for the previous item's problem.
   :jira:`339`
+
+- We fixed a bug in how the IDTOKENS authentication method reads its
+  signing keys.  As a result, some previously-issued tokens will no
+  longer be valid with this release.  In some cases, truncating the
+  signing key just before the first zero byte will allow the old tokens
+  to be validated until you can resissue new tokens.
+  :jira:`295`
+
+- HTCondor will now access tokens in directory ``/etc/condor/tokens.d`` as 
+  user root, meaning this directory and its contents should be only accessible
+  by user root for maximum secuirty.  If upgrading from an earlier v8.9.x release,
+  it may currently be accessible by user ``condor``, so recommend that 
+  admins issue command ``chown -R root:root /etc/condor/tokens.d``.
+  :jira:`266`
 
 - As an improved security measure, HTCondor will now prohibit Linux jobs
   from running setuid executables by default.  We believe the only common setuid
@@ -233,6 +241,10 @@ Bugs Fixed:
 - Fixed a bug where an IDTOKEN could be sent to a user who had authenticated
   with the ANONYMOUS method after the auto-approval period had expired.
   :jira:`231`
+
+- HTCondor daemons used to access tokens in ``/etc/condor/tokens.d`` as user ``condor``, now
+  instead tokens are accessed as user ``root``.  
+  :jira:`266`
 
 - Fixed a bug where jobs that asked for ``transfer_output_files = .`` would
   be put on hold if they were evicted and restarted.

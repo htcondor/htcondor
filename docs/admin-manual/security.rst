@@ -1280,7 +1280,8 @@ specified by ``SEC_TOKEN_DIRECTORY`` (defaults to ``~/.condor/tokens.d``).  Subs
 authentications to the pool will utilize this token and cause Frida to be authenticated
 as the identity ``frida@pool.example.com``.  For daemons, tokens are stored in
 ``SEC_TOKEN_SYSTEM_DIRECTORY``; on Unix platforms, this defaults to
-``/etc/condor/tokens.d``.
+``/etc/condor/tokens.d`` which should be a directory with permissions that only allow
+read and write access by user root.
 
 *Note* that each pool signing key is named (the pool signing key defaults to the special name
 ``POOL``) by its corresponding filename in ``SEC_PASSWORD_DIRECTORY``; HTCondor
