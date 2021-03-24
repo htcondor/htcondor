@@ -67,7 +67,7 @@ usage(char* name)
 static void
 convertHistoryFile(const char *oldHistoryFileName)
 {
-	MyString NewHistoryFileName;
+	std::string NewHistoryFileName;
 
 	FILE *OldLogFile = safe_fopen_wrapper( oldHistoryFileName, "r");
 	if( !OldLogFile ) {
@@ -78,9 +78,9 @@ convertHistoryFile(const char *oldHistoryFileName)
 	NewHistoryFileName = oldHistoryFileName;
 	NewHistoryFileName += ".new";
 
-	FILE *NewLogFile = safe_fopen_wrapper( NewHistoryFileName.Value(), "w");
+	FILE *NewLogFile = safe_fopen_wrapper( NewHistoryFileName.c_str(), "w");
 	if( !NewLogFile ) {
-		fprintf(stderr, "Can't create new history file (%s).\n", NewHistoryFileName.Value());
+		fprintf(stderr, "Can't create new history file (%s).\n", NewHistoryFileName.c_str());
 		exit(1);
 	}
 
@@ -129,13 +129,13 @@ convertHistoryFile(const char *oldHistoryFileName)
 
 	if( found == 0 ) {
 		fprintf(stderr, "Invalid History File: (%s)\n", oldHistoryFileName);
-		unlink(NewHistoryFileName.Value());
+		unlink(NewHistoryFileName.c_str());
 	} else {
-		MyString TmpBuf;
+		std::string TmpBuf;
 		TmpBuf = oldHistoryFileName;
 		TmpBuf += ".oldver";
 
-		rename( oldHistoryFileName, TmpBuf.Value());
-		rename( NewHistoryFileName.Value(), oldHistoryFileName);
+		rename( oldHistoryFileName, TmpBuf.c_str());
+		rename( NewHistoryFileName.c_str(), oldHistoryFileName);
 	}
 }

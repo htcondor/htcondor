@@ -24,8 +24,6 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 
-#include "MyString.h"
-
 #include "condor_commands.h"
 #include "condor_io.h"
 #include "daemon.h"
@@ -35,7 +33,7 @@
 //------------------------------------------------------------------------
 
 static int CalcTime(int,int,int);
-static int TimeLine(const MyString& Name,int FromDate, int ToDate, int Res);
+static int TimeLine(const std::string& Name,int FromDate, int ToDate, int Res);
 
 //------------------------------------------------------------------------
 
@@ -110,10 +108,10 @@ int main(int argc, char* argv[])
   int Options=0;
 
   int QueryType=-1;
-  MyString QueryArg;
+  std::string QueryArg;
 
-  MyString FileName;
-  MyString TimeFileName;
+  std::string FileName;
+  std::string TimeFileName;
   char* pool = NULL;
 
   myDistro->Init( argc, argv );
@@ -250,20 +248,20 @@ int main(int argc, char* argv[])
   char Line[MaxLen+1];
   char* LinePtr=Line;
 
-  if (QueryArg.Length()>MaxLen) {
+  if (QueryArg.length()>MaxLen) {
     fprintf(stderr, "Command line argument is too long\n");
     exit(1);
   }
-  strcpy(LinePtr, QueryArg.Value());
+  strcpy(LinePtr, QueryArg.c_str());
 
-  if (TimeFileName.Length()>0) TimeLine(TimeFileName,FromDate,ToDate,10);
+  if (TimeFileName.length()>0) TimeLine(TimeFileName,FromDate,ToDate,10);
 
   // Open the output file
   FILE* outfile=stdout;
-  if (FileName.Length()>0) outfile=safe_fopen_wrapper_follow(FileName.Value(),"w");
+  if (FileName.length()>0) outfile=safe_fopen_wrapper_follow(FileName.c_str(),"w");
 
   if (outfile == NULL) {
-	fprintf( stderr, "Failed to open file %s\n", FileName.Value() );
+	fprintf( stderr, "Failed to open file %s\n", FileName.c_str() );
 	exit( 1 );
   }
 
@@ -324,7 +322,7 @@ int main(int argc, char* argv[])
   }
 
   if (LineCount==0) fputs("No Data.\n",outfile);
-  if (FileName.Length()>0) fclose(outfile);
+  if (FileName.length()>0) fclose(outfile);
 
   return 0;
 }
@@ -343,12 +341,12 @@ int CalcTime(int month, int day, int year) {
   return mktime(&time_str);
 }
 
-int TimeLine(const MyString& TimeFileName,int FromDate, int ToDate, int Res)
+int TimeLine(const std::string& TimeFileName,int FromDate, int ToDate, int Res)
 {
   double Interval=double(ToDate-FromDate)/double(Res);
   float RelT;
   time_t T;
-  FILE* TimeFile=safe_fopen_wrapper_follow(TimeFileName.Value(),"w");
+  FILE* TimeFile=safe_fopen_wrapper_follow(TimeFileName.c_str(),"w");
   if (!TimeFile) return -1;
   for (int i=0; i<=Res; i++) {
     T=(time_t)FromDate+((int)Interval*i);

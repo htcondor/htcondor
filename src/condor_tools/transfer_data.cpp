@@ -91,7 +91,7 @@ procArg(const char* arg)
 	int		c, p;								// cluster/proc #
 	char*	tmp;
 
-	MyString constraint;
+	std::string constraint;
 
 	if(isdigit(*arg))
 	// process by cluster/proc #
@@ -106,8 +106,8 @@ procArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			constraint.formatstr( "%s==%d", ATTR_CLUSTER_ID, c );
-			addConstraint(constraint.Value());
+			formatstr( constraint, "%s==%d", ATTR_CLUSTER_ID, c );
+			addConstraint(constraint.c_str());
 			return;
 		}
 		if(*tmp == '.')
@@ -122,10 +122,10 @@ procArg(const char* arg)
 			if(*tmp == '\0')
 			// process a proc
 			{
-				constraint.formatstr( "(%s==%d && %s==%d)", 
+				formatstr( constraint, "(%s==%d && %s==%d)", 
 					ATTR_CLUSTER_ID, c,
 					ATTR_PROC_ID, p);
-				addConstraint(constraint.Value());
+				addConstraint(constraint.c_str());
 				return;
 			}
 		}
@@ -135,8 +135,8 @@ procArg(const char* arg)
 	else if(isalpha(*arg))
 	// process by user name
 	{
-		constraint.formatstr( "%s == \"%s\"", ATTR_OWNER, arg );
-		addConstraint(constraint.Value());
+		formatstr( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
+		addConstraint(constraint.c_str());
 	} else {
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );
 	}

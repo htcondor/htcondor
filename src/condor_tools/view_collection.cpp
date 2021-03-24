@@ -40,9 +40,9 @@ main(int argc, char *argv[])
 	// mess up the actual collection file
 	char tmpfile[L_tmpnam];
 	tmpnam(tmpfile);
-	MyString cmd;
-	cmd.formatstr( "cp %s %s", argv[1], tmpfile);
-	system(cmd.Value());
+	std::string cmd;
+	formatstr( cmd, "cp %s %s", argv[1], tmpfile);
+	system(cmd.c_str());
 	
 	ClassAdCollection c(NULL, tmpfile);
 
