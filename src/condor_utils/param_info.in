@@ -5471,6 +5471,12 @@ default=$(SBIN)/AzureGAHPServer
 win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
 
+[ARC_GAHP]
+default=$(SBIN)/arc_gahp
+
+[ARC_GAHP_LOG]
+default=/tmp/ArcGahpLog.$(USERNAME)
+
 [GAHP_SSL_CAFILE]
 default=
 type=path

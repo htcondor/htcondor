@@ -105,6 +105,7 @@
 #define SUBMIT_KEY_GridShell "gridshell"
 #define SUBMIT_KEY_GlobusRSL "globus_rsl"
 #define SUBMIT_KEY_NordugridRSL "nordugrid_rsl"
+#define SUBMIT_KEY_ArcRSL "src_rsl"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
 #define SUBMIT_KEY_KeystoreFile "keystore_file"
 #define SUBMIT_KEY_KeystoreAlias "keystore_alias"

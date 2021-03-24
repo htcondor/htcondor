@@ -99,6 +99,7 @@ static const char *GMStateNames[] = {
 #define HTTP_200_OK			200
 #define HTTP_201_CREATED	201
 #define HTTP_202_ACCEPTED	202
+#define HTTP_404_NOT_FOUND	404
 
 #define REMOTE_STDOUT_NAME	"_condor_stdout"
 #define REMOTE_STDERR_NAME	"_condor_stderr"
@@ -137,7 +138,7 @@ bool ArcJobAdMatch( const ClassAd *job_ad ) {
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.c_str(), "arc ", 10 ) == 0 ) {
+		 strncasecmp( resource.c_str(), "arc ", 4 ) == 0 ) {
 
 		return true;
 	}
@@ -374,6 +375,8 @@ void ArcJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
+#if 0
+				// This relies on ArcResource doing a bulk query
 				if ( m_lastRemoteStatusUpdate > enteredCurrentGmState ) {
 					if ( remoteJobState == REMOTE_STATE_ACCEPTING ||
 						 remoteJobState == REMOTE_STATE_ACCEPTED ||
@@ -385,6 +388,39 @@ void ArcJob::doEvaluateState()
 				} else if ( m_currentStatusUnknown ) {
 					gmState = GM_CANCEL;
 				}
+#else
+				std::string new_status;
+				rc = gahp->arc_job_status( resourceManagerString,
+										 remoteJobId, new_status );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				} else if ( rc == HTTP_404_NOT_FOUND ) {
+					// The job isn't there. Assume it timed out before we
+					// could stage in the data files.
+					SetRemoteJobId( NULL );
+					gmState = GM_CLEAR_REQUEST;
+					break;
+				} else if ( rc != HTTP_200_OK ) {
+					// What to do about failure?
+					errorString = gahp->getErrorString();
+					dprintf( D_ALWAYS, "(%d.%d) job recovery query failed: %s\n",
+							 procID.cluster, procID.proc,
+							 errorString.c_str() );
+					gmState = GM_HOLD;
+				} else {
+					remoteJobState = new_status;
+					SetRemoteJobStatus( new_status.c_str() );
+					if ( remoteJobState == REMOTE_STATE_ACCEPTING ||
+						 remoteJobState == REMOTE_STATE_ACCEPTED ||
+						 remoteJobState == REMOTE_STATE_PREPARING ) {
+						gmState = GM_STAGE_IN;
+					} else {
+						gmState = GM_SUBMITTED;
+					}
+				}
+				lastProbeTime = now;
+#endif
 			}
 			} break;
 		case GM_UNSUBMITTED: {
@@ -414,6 +450,7 @@ void ArcJob::doEvaluateState()
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 
 				std::string job_id;
+				std::string job_status;
 
 				// Once RequestSubmit() is called at least once, you must
 				// CancelRequest() once you're done with the request call
@@ -431,7 +468,8 @@ void ArcJob::doEvaluateState()
 				rc = gahp->arc_job_new(
 									resourceManagerString,
 									*RSL,
-									job_id );
+									job_id,
+									job_status );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -443,6 +481,8 @@ void ArcJob::doEvaluateState()
 				if ( rc == HTTP_201_CREATED ) {
 					ASSERT( !job_id.empty() );
 					SetRemoteJobId( job_id.c_str() );
+					remoteJobState = job_status;
+					SetRemoteJobStatus( job_status.c_str() );
 					WriteGridSubmitEventToUserLog( jobAd );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
@@ -575,7 +615,20 @@ void ArcJob::doEvaluateState()
 					gmState = GM_CANCEL;
 					break;
 				}
-				// TODO parse reply to get info
+				std::string val;
+				ClassAd info_ad;
+				classad::ClassAdParser parser;
+				parser.ParseClassAd(reply, info_ad, true);
+
+				if ( info_ad.LookupString("ExitCode", val ) ) {
+					exit_code = atoi(val.c_str());
+				}
+				if ( info_ad.LookupString("UsedTotalWallTime", val ) ) {
+					wallclock = atoi(val.c_str());
+				}
+				if ( info_ad.LookupString("UsedTotalCPUTime", val ) ) {
+					cpu = atoi(val.c_str());
+				}
 
 				// We can't distinguish between normal job exit and
 				// exit-by-signal.
@@ -894,7 +947,7 @@ std::string *ArcJob::buildSubmitRSL()
 
 	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
 
-	if ( jobAd->LookupString( ATTR_NORDUGRID_RSL, rsl_suffix ) &&
+	if ( jobAd->LookupString( ATTR_ARC_RSL, rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
 		*rsl = rsl_suffix;
 		return rsl;

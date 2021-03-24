@@ -5168,6 +5168,7 @@ GahpClient::arc_ping(const std::string &service_url)
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
@@ -5191,7 +5192,8 @@ GahpClient::arc_ping(const std::string &service_url)
 int
 GahpClient::arc_job_new(const std::string &service_url,
                         const std::string &rsl,
-                        std::string &job_id)
+                        std::string &job_id,
+                        std::string &job_status)
 {
 	static const char* command = "ARC_JOB_NEW";
 
@@ -5227,19 +5229,26 @@ GahpClient::arc_job_new(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 4) {
+		if (result->argc < 3) {
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
 			error_string = "";
 		}
 		job_id.clear();
-		if ( result->argc == 4 ) {
+		if ( result->argc == 5 ) {
 			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
 				job_id = result->argv[3];
+			}
+		}
+		job_status.clear();
+		if ( result->argc == 5 ) {
+			if ( strcasecmp(result->argv[4], NULLSTRING) ) {
+				job_status = result->argv[4];
 			}
 		}
 		delete result;
@@ -5300,6 +5309,7 @@ GahpClient::arc_job_status(const std::string &service_url,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
@@ -5369,6 +5379,7 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
@@ -5441,6 +5452,7 @@ GahpClient::arc_job_info(const std::string &service_url,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
@@ -5518,6 +5530,7 @@ GahpClient::arc_job_stage_in(const std::string &service_url,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
@@ -5598,6 +5611,7 @@ GahpClient::arc_job_stage_out(const std::string &service_url,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
@@ -5660,6 +5674,7 @@ GahpClient::arc_job_kill(const std::string &service_url,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
@@ -5722,6 +5737,7 @@ GahpClient::arc_job_clean(const std::string &service_url,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {

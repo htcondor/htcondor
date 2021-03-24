@@ -27,6 +27,10 @@
 #include "arcjob.h"
 #include "gridmanager.h"
 
+#define HTTP_200_OK			200
+#define HTTP_201_CREATED	201
+#define HTTP_202_ACCEPTED	202
+
 std::map <std::string, ArcResource *>
     ArcResource::ResourcesByName;
 
@@ -158,7 +162,7 @@ void ArcResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
-	} else if ( rc != 0 ) {
+	} else if ( rc != HTTP_200_OK ) {
 		ping_complete = true;
 		ping_succeeded = false;
 	} else {
