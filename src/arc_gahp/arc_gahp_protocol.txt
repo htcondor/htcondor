@@ -830,9 +830,10 @@
     + Result Line:
 
         <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
-            <job-id> <CRLF>
+            <job-id> <SP> <job-status> <CRLF>
 
         * job-id = unique identifier for this job assigned by the server
+        * job-status = ARC status of the job
 
     -----------------------------------------------
 
@@ -899,7 +900,8 @@
         <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
             <info> <CRLF>
 
-        * info = ARC information of the job
+        * info = the ComputingActivity element of the job info response,
+                 represented as a ClassAd
 
     -----------------------------------------------
 
