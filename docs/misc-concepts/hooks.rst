@@ -147,14 +147,7 @@ what output is expected, and, when relevant, the exit status expected.
         application will run, the user must also define ``Owner`` to specify
         what user name the application will run as. On Windows, the
         *condor_startd* daemon always runs as an Administrator service,
-        which is equivalent to running as root on Unix platforms. If the
-        user specifies any FetchWork application attributes with the *condor_cod*
-        *activate* command-line tool, the ``Owner`` attribute will be
-        defined as the user name that ran *condor_cod* *activate*. However,
-        if the user defines all attributes of their FetchWork application in the
-        HTCondor configuration files, and does not define any attributes
-        with the *condor_cod* *activate* command-line tool, there is no
-        default, and ``Owner`` must be specified in the configuration file.
+        which is equivalent to running as root on Unix platforms.
         ``Owner`` must contain a valid user name on the given FetchWork resource.
         It is a string attribute, and must therefore be enclosed in
         quotation marks (").
