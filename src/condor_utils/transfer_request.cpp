@@ -465,7 +465,7 @@ TransferRequest::put(Stream *sock)
 // utility functions for enum conversions.
 
 EncapMethod
-encap_method(MyString &line)
+encap_method(const std::string &line)
 {
 	if (line == "ENCAPSULATION_METHOD_OLD_CLASSADS") {
 		return ENCAP_METHOD_OLD_CLASSADS;
