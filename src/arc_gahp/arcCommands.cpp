@@ -1,0 +1,1276 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2021, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+#include "basename.h"
+#include "arcgahp_common.h"
+#include "arcCommands.h"
+
+#include "stat_wrapper.h"
+#include <sstream>
+#include <curl/curl.h>
+#include "thread_control.h"
+
+using std::string;
+using std::map;
+using std::vector;
+
+#define NULLSTRING "NULL"
+
+const char * nullStringIfEmpty( const string & str ) {
+	if( str.empty() ) { return NULLSTRING; }
+	else { return str.c_str(); }
+}
+
+// Utility function for parsing the JSON response returned by the server.
+bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting )
+{
+	const char *ptr = NULL;
+	bool in_key = false;
+	bool in_value_str = false;
+	bool in_value_int = false;
+	key.clear();
+	value.clear();
+
+	for ( ptr = input; *ptr; ptr++ ) {
+		if ( in_key ) {
+			if ( *ptr == '"' ) {
+				in_key = false;
+			} else {
+				key += *ptr;
+			}
+		} else if ( in_value_str ) {
+			if ( *ptr == '"' ) {
+				in_value_str = false;
+			} else {
+				value += *ptr;
+			}
+		} else if ( in_value_int ) {
+			if ( isdigit( *ptr ) ) {
+				value += *ptr;
+			} else {
+				in_value_int = false;
+			}
+		} else if ( *ptr == '"' ) {
+			if ( key.empty() ) {
+				in_key = true;
+			} else if ( value.empty() ) {
+				in_value_str = true;
+			}
+		} else if ( isdigit( *ptr ) ) {
+			if ( value.empty() ) {
+				value += *ptr;
+				in_value_int = true;
+			}
+		} else if ( *ptr == '{' || *ptr == '[' ) {
+			nesting++;
+		} else if ( *ptr == '}' || *ptr == ']' ) {
+			nesting--;
+		} else if ( *ptr == '\n' ) {
+			ptr++;
+			input = ptr;
+			return true;
+		}
+	}
+
+	input = ptr;
+	return false;
+}
+
+const char *escapeJSONString( const char *value )
+{
+	static string result;
+	result.clear();
+
+	while( *value ) {
+		if ( *value == '"' || *value == '\\' ) {
+			result += '\\';
+		}
+		result += *value;
+		value++;
+	}
+
+	return result.c_str();
+}
+
+// From the body of a failure reply from the server, extract the best
+// human-readable error message.
+void ExtractErrorMessage( const string &response, string &err_msg )
+{
+	string key;
+	string value;
+	int nesting = 0;
+
+	const char *pos = response.c_str();
+	while ( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( nesting == 2 && key == "message" ) {
+			err_msg = value;
+			return;
+		}
+	}
+}
+
+//
+// "This function gets called by libcurl as soon as there is data received
+//  that needs to be saved. The size of the data pointed to by ptr is size
+//  multiplied with nmemb, it will not be zero terminated. Return the number
+//  of bytes actually taken care of. If that amount differs from the amount
+//  passed to your function, it'll signal an error to the library. This will
+//  abort the transfer and return CURLE_WRITE_ERROR."
+//
+// We also make extensive use of this function in the XML parsing code,
+// for pretty much exactly the same reason.
+//
+size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
+	if( size == 0 || nmemb == 0 ) { return 0; }
+
+	string source( (const char *)ptr, size * nmemb );
+	string * ssptr = (string *)str;
+	ssptr->append( source );
+
+	return (size * nmemb);
+}
+
+HttpRequest::HttpRequest()
+{
+	includeResponseHeader = false;
+	contentType = "application/json";
+}
+
+HttpRequest::~HttpRequest() { }
+
+pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
+bool HttpRequest::SendRequest() 
+{
+	struct  curl_slist *curl_headers = NULL;
+	string buf;
+	unsigned long response_code = 0;
+	const char *ca_dir = NULL;
+	const char *ca_file = NULL;
+	FILE *in_fp = NULL;
+	FILE *out_fp = NULL;
+
+	this->responseBody.clear();
+
+	// Generate the final URI.
+	// TODO Eliminate this copy if we always use the serviceURL unmodified
+	string finalURI = this->serviceURL;
+	dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
+	if ( requestMethod == "POST" ) {
+		dprintf( D_FULLDEBUG, "Request body is '%s'\n", requestBody.c_str() );
+	}
+
+	// curl_global_init() is not thread-safe.  However, it's safe to call
+	// multiple times.  Therefore, we'll just call it before we drop the
+	// mutex, since we know that means only one thread is running.
+	CURLcode rv = curl_global_init( CURL_GLOBAL_ALL );
+	if( rv != 0 ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_global_init() failed.";
+		dprintf( D_ALWAYS, "curl_global_init() failed, failing.\n" );
+		return false;
+	}
+
+	CURL * curl = curl_easy_init();
+	if( curl == NULL ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_init() failed.";
+		dprintf( D_ALWAYS, "curl_easy_init() failed, failing.\n" );
+		goto error_return;
+	}
+
+	char errorBuffer[CURL_ERROR_SIZE];
+	rv = curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errorBuffer );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+/*  // Useful for debuggery.  Could be rewritten with CURLOPT_DEBUGFUNCTION
+	// and dumped via dprintf() to allow control via EC2_GAHP_DEBUG.
+	rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_VERBOSE ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_VERBOSE ) failed (%d): '%s', failing.\n",
+			rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+*/
+
+	rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_URL ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_URL ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+	rv = curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+	if ( requestMethod == "POST" ) {
+
+		rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+		
+		rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, requestBody.c_str() );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+
+	} else if ( requestMethod == "PUT" ) {
+
+		rv = curl_easy_setopt( curl, CURLOPT_PUT, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_PUT ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_PUT ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+
+		in_fp = fopen(this->requestBodyFilename.c_str(), "r");
+		if( in_fp == NULL ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "Failed to open file";
+			dprintf( D_ALWAYS, "fopen(%s) failed (%d): '%s', failing.\n",
+			         this->requestBodyFilename.c_str(), errno, strerror( errno ) );
+			goto error_return;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_READDATA, in_fp );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+
+		StatWrapper stw(this->requestBodyFilename.c_str());
+		curl_off_t filesize = stw.GetBuf()->st_size;
+		rv = curl_easy_setopt( curl, CURLOPT_INFILESIZE_LARGE, filesize );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_INFILESIZE_LARGE ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_INFILESIZE_LARGE ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+		
+	} else if ( requestMethod != "GET" ) {
+
+		rv = curl_easy_setopt( curl, CURLOPT_CUSTOMREQUEST, requestMethod.c_str() );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_CUSTOMREQUEST ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CUSTOMREQUEST ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+	}
+
+	buf = "Content-Type: ";
+	buf += contentType;
+	curl_headers = curl_slist_append( curl_headers, buf.c_str() );
+	if ( curl_headers == NULL ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_slist_append() failed.";
+		dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
+		goto error_return;
+	}
+
+	curl_headers = curl_slist_append( curl_headers, "Accept: application/json" );
+	if ( curl_headers == NULL ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_slist_append() failed.";
+		dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
+		goto error_return;
+	}
+
+	rv = curl_easy_setopt( curl, CURLOPT_HTTPHEADER, curl_headers );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_HTTPHEADER ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HTTPHEADER ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+	if ( includeResponseHeader ) {
+		rv = curl_easy_setopt( curl, CURLOPT_HEADER, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_HEADER ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HEADER ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+	}
+
+	if ( ! this->responseBodyFilename.empty() ) {
+		out_fp = fopen(this->responseBodyFilename.c_str(), "w");
+		if( out_fp == NULL ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "Failed to open file";
+			dprintf( D_ALWAYS, "fopen(%s) failed (%d): '%s', failing.\n",
+			         this->responseBodyFilename.c_str(), errno, strerror( errno ) );
+			goto error_return;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_WRITEDATA, out_fp );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEDATA ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEDATA ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+	} else {
+		rv = curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, & appendToString );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed (%d): '%s', failing.\n",
+			         rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_WRITEDATA, & this->responseBody );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEDATA ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEDATA ) failed (%d): '%s', failing.\n",
+			         rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+	}
+
+	//
+	// Set security options.
+	//
+	rv = curl_easy_setopt( curl, CURLOPT_SSL_VERIFYPEER, 1 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_SSL_VERIFYPEER ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_SSL_VERIFYPEER ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+	rv = curl_easy_setopt( curl, CURLOPT_SSL_VERIFYHOST, 2 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_SSL_VERIFYHOST ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_SSL_VERIFYHOST ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+	// NB: Contrary to libcurl's manual, it doesn't strdup() strings passed
+	// to it, so they MUST remain in scope until after we call
+	// curl_easy_cleanup().  Otherwise, curl_perform() will fail with
+	// a completely bogus error, number 60, claiming that there's a
+	// 'problem with the SSL CA cert'.
+
+	ca_dir = getenv( "X509_CERT_DIR" );
+	if ( ca_dir == NULL ) {
+		ca_dir = getenv( "GAHP_SSL_CADIR" );
+	}
+
+	ca_file = getenv( "X509_CERT_FILE" );
+	if ( ca_file == NULL ) {
+		ca_file = getenv( "GAHP_SSL_CAFILE" );
+	}
+
+	if ( ca_dir == NULL && ca_file == NULL ) {
+		ca_dir = "/etc/grid-security/certificates";
+	}
+
+	// FIXME: Update documentation to reflect no hardcoded default.
+	if( ca_dir ) {
+		dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", ca_dir );
+
+		rv = curl_easy_setopt( curl, CURLOPT_CAPATH, ca_dir );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_CAPATH ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAPATH ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+	}
+
+	if( ca_file ) {
+		dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", ca_file );
+
+		rv = curl_easy_setopt( curl, CURLOPT_CAINFO, ca_file );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_CAINFO ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAINFO ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			goto error_return;
+		}
+	}
+
+	if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
+		dprintf( D_FULLDEBUG, "Failed to set OPENSSL_ALLOW_PROXY.\n" );
+	}
+
+	if ( !proxyFile.empty() ) {
+		// TODO Add support for seperate cert and key files
+		// TODO Add support for proxy files
+		rv = curl_easy_setopt( curl, CURLOPT_SSLCERT, proxyFile.c_str() );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt(CURLOPT_SSLCERT) failed";
+			dprintf(D_ALWAYS, "curl_easy_setopt(CURLOPT_SSLCERT) failed (%d): '%s', failing\n",
+			        rv, curl_easy_strerror(rv));
+			goto error_return;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_SSLCERTTYPE, "PEM" );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt(CURLOPT_SSLCERTTYPE) failed";
+			dprintf(D_ALWAYS, "curl_easy_setopt(CURLOPT_SSLCERTTYPE) failed (%d): '%s', failing\n",
+			        rv, curl_easy_strerror(rv));
+			goto error_return;
+		}
+	}
+
+	arc_gahp_release_big_mutex();
+	pthread_mutex_lock( & globalCurlMutex );
+	rv = curl_easy_perform( curl );
+	pthread_mutex_unlock( & globalCurlMutex );
+	arc_gahp_grab_big_mutex();
+	if( rv != 0 ) {
+		this->errorCode = "E_CURL_IO";
+		std::ostringstream error;
+		error << "curl_easy_perform() failed (" << rv << "): '" << curl_easy_strerror( rv ) << "'.";
+		this->errorMessage = error.str();
+		dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
+		dprintf( D_FULLDEBUG, "%s\n", errorBuffer );
+		goto error_return;
+	}
+
+	rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & response_code );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_getinfo() failed.";
+		dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+	curl_easy_cleanup( curl );
+	curl = NULL;
+
+	curl_slist_free_all( curl_headers );
+	curl_headers = NULL;
+
+	if ( in_fp ) {
+		fclose(in_fp);
+	}
+	if ( out_fp ) {
+		fclose(out_fp);
+	}
+
+	if( response_code < 200 || response_code > 299 ) {
+		ExtractErrorMessage( responseBody, this->errorMessage );
+		if( this->errorMessage.empty() ) {
+			formatstr( this->errorMessage, "HTTP response was %lu, not 2XX, and no error message was returned.", response_code );
+		}
+		dprintf( D_ALWAYS, "Query did not return 2XX (%lu), failing.\n",
+				 response_code );
+		dprintf( D_ALWAYS, "Failure response text was '%s'.\n", responseBody.c_str() );
+		goto error_return;
+	}
+
+	this->errorCode = std::to_string(response_code);
+	this->errorMessage = "OK";
+
+	dprintf( D_FULLDEBUG, "Response was '%s'\n", responseBody.c_str() );
+	return true;
+
+ error_return:
+	if ( curl ) {
+		curl_easy_cleanup( curl );
+	}
+	if ( curl_headers ) {
+		curl_slist_free_all( curl_headers );
+	}
+	if ( in_fp ) {
+		fclose(in_fp);
+	}
+	if ( out_fp ) {
+		fclose(out_fp);
+	}
+
+	return false;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+// Expecting:ARC_PING <req_id> <serviceurl>
+bool ArcPingArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 3) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]);
+}
+
+// Expecting:ARC_PING <req_id> <serviceurl>
+bool ArcPingWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int requestID = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 3 ) ) {
+		gahp_request->m_result = create_result_string(requestID, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 3, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest ping_request;
+	ping_request.serviceURL = argv[2];
+	ping_request.serviceURL += "/jobs";
+	ping_request.requestMethod = "GET";
+	ping_request.proxyFile = gahp_request->m_proxy_file;
+
+	// Send the request.
+	if( ! ping_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( requestID,
+								ping_request.errorCode,
+								ping_request.errorMessage );
+	} else {
+		gahp_request->m_result = create_result_string( requestID,
+								ping_request.errorCode,
+								ping_request.errorMessage );
+	}
+
+	return true;
+}
+
+// Expecting:ARC_JOB_NEW <req_id> <serviceurl> <rsl>
+bool ArcJobNewArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 4) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_JOB_NEW <req_id> <serviceurl> <rsl>
+bool ArcJobNewWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		gahp_request->m_result = create_result_string(request_id, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 4, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest submit_request;
+	submit_request.serviceURL = argv[2];
+	submit_request.serviceURL += "/jobs?action=new";
+ 	submit_request.requestMethod = "POST";
+	submit_request.proxyFile = gahp_request->m_proxy_file;
+	submit_request.requestBody = argv[3];
+
+	// Send the request.
+	if( ! submit_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								submit_request.errorCode,
+								submit_request.errorMessage );
+		return true;
+	}
+
+	classad::ClassAd resp_ad;
+	classad::ClassAdJsonParser parser;
+	if ( ! parser.ParseClassAd(submit_request.responseBody, resp_ad, true) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ExprTree *expr = resp_ad.Lookup("job");
+	if ( expr == NULL || expr->GetKind() != classad::ExprTree::CLASSAD_NODE) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ClassAd *job_ad = (classad::ClassAd*)expr;
+	std::string val;
+
+	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	submit_request.errorCode = val;
+
+	val.clear();
+	if ( ! job_ad->EvaluateAttrString("reason", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	submit_request.errorMessage = val;
+
+	std::vector<std::string> result_args;
+
+	val.clear();
+	if ( ! job_ad->EvaluateAttrString("id", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	result_args.push_back(val);
+
+	val.clear();
+	if ( ! job_ad->EvaluateAttrString("state", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	result_args.push_back(val);
+
+	gahp_request->m_result = create_result_string( request_id,
+								submit_request.errorCode,
+								submit_request.errorMessage, result_args );
+
+	return true;
+}
+
+// Expecting:ARC_JOB_STATUS <req_id> <serviceurl> <job_id>
+bool ArcJobStatusArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 4) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_JOB_STATUS <req_id> <serviceurl> <job_id>
+bool ArcJobStatusWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		gahp_request->m_result = create_result_string(request_id, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 4, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest status_request;
+	status_request.serviceURL = argv[2];
+	status_request.serviceURL += "/jobs?action=status";
+ 	status_request.requestMethod = "POST";
+	status_request.proxyFile = gahp_request->m_proxy_file;
+	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
+//	status_request.requestBody="{\"job\":[{\"id\":\"1FeKDmC5WhynOSAtDmEBFKDmABFKDmABFKDmGPHKDmABFKDmZuDOhn\"},{\"id\":\"Mv3MDmU9WhynOSAtDmEBFKDmABFKDmABFKDmGPHKDmCBFKDmEhhugm\"}]}";
+
+	// Send the request.
+	if( ! status_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+		return true;
+	}
+
+	classad::ClassAd resp_ad;
+	classad::ClassAdJsonParser parser;
+	if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ExprTree *expr = resp_ad.Lookup("job");
+	if ( expr == NULL || expr->GetKind() != classad::ExprTree::CLASSAD_NODE) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ClassAd *job_ad = (classad::ClassAd*)expr;
+	std::string val;
+
+	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorCode = val;
+
+	val.clear();
+	if ( ! job_ad->EvaluateAttrString("reason", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorMessage = val;
+
+	std::vector<std::string> result_args;
+
+	if ( status_request.errorCode == "200" ) {
+		val.clear();
+		if ( ! job_ad->EvaluateAttrString("state", val) ) {
+			gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+			return true;
+		}
+		result_args.push_back(val);
+	}
+
+	gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage, result_args );
+
+	return true;
+}
+
+// Expecting:ARC_JOB_STATUS_ALL <req_id> <serviceurl> <statuses>
+bool ArcJobStatusAllArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 4) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_JOB_STATUS_ALL <req_id> <serviceurl> <statuses>
+bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		gahp_request->m_result = create_result_string(request_id, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 4, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest query_request;
+	query_request.serviceURL = argv[2];
+	query_request.serviceURL += "/jobs";
+	if( argv[3][0] != '\0' && strcasecmp( argv[3], NULLSTRING ) ) {
+		query_request.serviceURL += "?state=";
+		query_request.serviceURL += argv[3];
+	}
+ 	query_request.requestMethod = "GET";
+	query_request.proxyFile = gahp_request->m_proxy_file;
+
+	// Send the request.
+	if( ! query_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								query_request.errorCode,
+								query_request.errorMessage );
+		return true;
+	}
+
+		// TODO feed query result to status_request
+	// Fill in required attributes & parameters.
+	HttpRequest status_request;
+	status_request.serviceURL = argv[2];
+	status_request.serviceURL += "/jobs?action=status";
+ 	status_request.requestMethod = "POST";
+	status_request.proxyFile = gahp_request->m_proxy_file;
+	status_request.requestBody = query_request.responseBody;
+
+	// Send the request.
+	if( ! status_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+		return true;
+	}
+
+	classad::ClassAd resp_ad;
+	classad::ClassAdJsonParser parser;
+	if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ExprTree *expr = resp_ad.Lookup("job");
+	if ( expr == NULL ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	std::vector<classad::ExprTree*> expr_list;
+	if ( expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE ) {
+		((classad::ExprList*)expr)->GetComponents(expr_list);
+	} else if ( expr->GetKind() == classad::ExprTree::CLASSAD_NODE ) {
+		expr_list.push_back(expr);
+	}
+
+	std::vector<std::string> result_args;
+	result_args.push_back(std::to_string(expr_list.size()));
+
+	for ( auto itr = expr_list.begin(); itr != expr_list.end(); itr++ ) {
+		if ( (*itr)->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+			return true;
+		}
+		classad::ClassAd *job_ad = (classad::ClassAd*)*itr;
+		std::string val;
+
+		if ( ! job_ad->EvaluateAttrString("id", val) ) {
+			gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+			return true;
+		}
+		result_args.push_back(val);
+
+		val.clear();
+		if ( ! job_ad->EvaluateAttrString("state", val) ) {
+			gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+			return true;
+		}
+		result_args.push_back(val);
+	}
+
+	gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage, result_args );
+
+	return true;
+}
+
+// Expecting:ARC_JOB_INFO <req_id> <serviceurl> <job_id> [<proj_list>]
+bool ArcJobInfoArgsCheck(char **argv, int argc)
+{
+	return (verify_number_args(argc, 4) || verify_number_args(argc, 5)) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_JOB_INFO <req_id> <serviceurl> <job_id> [<proj_list>]
+bool ArcJobInfoWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	// Fill in required attributes & parameters.
+	HttpRequest status_request;
+	status_request.serviceURL = argv[2];
+	status_request.serviceURL += "/jobs?action=info";
+ 	status_request.requestMethod = "POST";
+	status_request.proxyFile = gahp_request->m_proxy_file;
+	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
+
+	// Send the request.
+	if( ! status_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+		return true;
+	} else {
+		gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+	}
+
+	classad::ClassAd resp_ad;
+	classad::ClassAdJsonParser parser;
+	if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	// First, extract the status-code and reason.
+	classad::ExprTree *expr = resp_ad.Lookup("job");
+	if ( expr == NULL || expr->GetKind() != classad::ExprTree::CLASSAD_NODE) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ClassAd *job_ad = (classad::ClassAd*)expr;
+	std::string val_str;
+
+	if ( ! job_ad->EvaluateAttrString("status-code", val_str) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorCode = val_str;
+
+	val_str.clear();
+	if ( ! job_ad->EvaluateAttrString("reason", val_str) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorMessage = val_str;
+
+	// Now, extract the ComputingActivity attributes (possibly a subset)
+	classad::Value value;
+	classad::ClassAd *info_ad;
+	if ( ! resp_ad.EvaluateExpr("job.info_document.ComputingActivity", value) || ! value.IsClassAdValue(info_ad) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	std::vector<std::string> result_args;
+	result_args.push_back("");
+
+	classad::ClassAdUnParser unparser;
+	if ( argc == 5 ) {
+		classad::References refs;
+		Tokenize(argv[4]);
+		const char *token;
+		while ( (token = GetNextToken(",", true)) ) {
+			refs.insert(token);
+		}
+		unparser.Unparse(result_args[0], info_ad, refs);
+	} else {
+		unparser.Unparse(result_args[0], info_ad);
+	}
+
+	gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage, result_args );
+
+	return true;
+}
+
+// Expecting:ARC_JOB_STAGE_IN <req_id> <serviceurl> <job_id> <count>
+//     <filename>*
+bool ArcJobStageInArgsCheck(char **argv, int argc)
+{
+	// TODO Verify filename arguments?
+	if ( argc < 5 ) {
+		return false;
+	}
+	int cnt = atoi(argv[4]);
+	return verify_number_args(argc, 5 + cnt) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_JOB_STAGE_IN <req_id> <serviceurl> <job_id> <count>
+//     <filename>*
+bool ArcJobStageInWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	int cnt = atoi(argv[4]);
+
+	// Fill in required attributes & parameters.
+	HttpRequest put_request;
+ 	put_request.requestMethod = "PUT";
+	put_request.proxyFile = gahp_request->m_proxy_file;
+
+	for ( int i = 5; i < cnt + 5; i++ ) {
+		formatstr(put_request.serviceURL, "%s/jobs/%s/session/%s", argv[2], argv[3], condor_basename(argv[i]));
+		put_request.requestBodyFilename = argv[i];
+
+		// Send the request.
+		if( ! put_request.SendRequest() ) {
+		
+			// TODO Fix construction of error message
+			gahp_request->m_result = create_result_string( request_id,
+								put_request.errorCode,
+								put_request.errorMessage );
+			return true;
+		}
+	}
+
+	gahp_request->m_result = create_result_string( request_id,
+								put_request.errorCode,
+								put_request.errorMessage );
+
+	return true;
+}
+
+// Expecting:ARC_JOB_STAGE_OUT <req_id> <serviceurl> <job_id> <count>
+//     [<remote_filename> <local_filename>]*
+bool ArcJobStageOutArgsCheck(char **argv, int argc)
+{
+	// TODO Verify filename arguments?
+	if ( argc < 5 ) {
+		return false;
+	}
+	int cnt = atoi(argv[4]);
+	return verify_number_args(argc, 5 + (2*cnt)) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_JOB_STAGE_OUT <req_id> <serviceurl> <job_id> <count>
+//     [<remote_filename> <local_filename>]*
+bool ArcJobStageOutWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	int cnt = atoi(argv[4]);
+
+	// Fill in required attributes & parameters.
+	HttpRequest get_request;
+ 	get_request.requestMethod = "GET";
+	get_request.proxyFile = gahp_request->m_proxy_file;
+
+	for ( int i = 5; i < (2*cnt + 5); i += 2 ) {
+		formatstr(get_request.serviceURL, "%s/jobs/%s/session/%s", argv[2], argv[3], condor_basename(argv[i]));
+		get_request.responseBodyFilename = argv[i+1];
+		
+		// Send the request.
+		if( ! get_request.SendRequest() ) {
+		
+			// TODO Fix construction of error message
+			gahp_request->m_result = create_result_string( request_id,
+								get_request.errorCode,
+								get_request.errorMessage );
+			return true;
+		}
+	}
+
+	gahp_request->m_result = create_result_string( request_id,
+								get_request.errorCode,
+								get_request.errorMessage );
+
+	return true;
+}
+
+// Expecting:ARC_KILL <req_id> <serviceurl> <job_id>
+bool ArcJobKillArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 4) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_KILL <req_id> <serviceurl> <job_id>
+bool ArcJobKillWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		gahp_request->m_result = create_result_string(request_id, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 4, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest status_request;
+	status_request.serviceURL = argv[2];
+	status_request.serviceURL += "/jobs?action=kill";
+ 	status_request.requestMethod = "POST";
+	status_request.proxyFile = gahp_request->m_proxy_file;
+	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
+
+	// Send the request.
+	if( ! status_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+		return true;
+	}
+
+	classad::ClassAd resp_ad;
+	classad::ClassAdJsonParser parser;
+	if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ExprTree *expr = resp_ad.Lookup("job");
+	if ( expr == NULL || expr->GetKind() != classad::ExprTree::CLASSAD_NODE) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ClassAd *job_ad = (classad::ClassAd*)expr;
+	std::string val;
+
+	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorCode = val;
+
+	val.clear();
+	if ( ! job_ad->EvaluateAttrString("reason", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorMessage = val;
+
+	gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+
+	return true;
+}
+
+// Expecting:ARC_CLEAN <req_id> <serviceurl> <job_id>
+bool ArcJobCleanArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 4) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_CLEAN <req_id> <serviceurl> <job_id>
+bool ArcJobCleanWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		gahp_request->m_result = create_result_string(request_id, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 4, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest status_request;
+	status_request.serviceURL = argv[2];
+	status_request.serviceURL += "/jobs?action=clean";
+ 	status_request.requestMethod = "POST";
+	status_request.proxyFile = gahp_request->m_proxy_file;
+	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
+
+	// Send the request.
+	if( ! status_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+		return true;
+	}
+
+	classad::ClassAd resp_ad;
+	classad::ClassAdJsonParser parser;
+	if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ExprTree *expr = resp_ad.Lookup("job");
+	if ( expr == NULL || expr->GetKind() != classad::ExprTree::CLASSAD_NODE) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+
+	classad::ClassAd *job_ad = (classad::ClassAd*)expr;
+	std::string val;
+
+	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorCode = val;
+
+	val.clear();
+	if ( ! job_ad->EvaluateAttrString("reason", val) ) {
+		gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+		return true;
+	}
+	status_request.errorMessage = val;
+
+	gahp_request->m_result = create_result_string( request_id,
+								status_request.errorCode,
+								status_request.errorMessage );
+
+	return true;
+}
+
