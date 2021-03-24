@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 	char* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
-	MyString method;
+	std::string method;
 	char *tmp;
 
 	myDistro->Init( argc, argv );
@@ -315,7 +315,7 @@ main(int argc, char *argv[])
 	if (st_method == STM_UNKNOWN) {
 		fprintf( stderr,
 			"%s: Unknown sandbox transfer method: %s\n", MyName,
-			method.Value());
+			method.c_str());
 		usage();
 		exit(1);
 	}

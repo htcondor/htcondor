@@ -466,13 +466,13 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::Cla
 
 int GetQueueConstraint(CondorQ & q, ConstraintHolder & constr) {
 	int err = 0;
-	MyString query;
+	std::string query;
 	q.useDefaultingOperator(true);
 	q.rawQuery(query);
 	if (query.empty()) {
 		constr.clear();
 	} else {
-		constr.set(query.StrDup());
+		constr.set(strdup(query.c_str()));
 	}
 	constr.Expr(&err);
 	return err;

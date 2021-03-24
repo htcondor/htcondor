@@ -996,9 +996,9 @@ void check_tmp_dir(){
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
 		// get temp path for file locking from the FileLock class
-		MyString tmpDir;
+		std::string tmpDir;
 		FileLock::getTempPath(tmpDir);
-		rec_lock_cleanup(tmpDir.Value(), 3);
+		rec_lock_cleanup(tmpDir.c_str(), 3);
 	}
   
 #endif	

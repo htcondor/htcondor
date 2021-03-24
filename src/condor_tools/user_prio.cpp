@@ -319,7 +319,7 @@ static void PrintModularAds(
 		prioAds = accountingAds;
 	}
 
-	MyString my_constraint;
+	std::string my_constraint;
 	constraint.makeQuery(my_constraint);
 	// if (diagnostic) { fprintf(stderr, "Using effective constraint: %s\n", my_constraint.c_str()); }
 

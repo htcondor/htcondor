@@ -534,7 +534,7 @@ main(int argc, const char* argv[])
 	// Since we only deal with one ad at a time, this doubles the speed of parsing
   classad::ClassAdSetExpressionCaching(false);
  
-  MyString my_constraint;
+  std::string my_constraint;
   constraint.makeQuery(my_constraint);
   if (diagnostic) {
 	  fprintf(stderr, "Using effective constraint: %s\n", my_constraint.c_str());

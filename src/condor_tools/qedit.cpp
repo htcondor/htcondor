@@ -128,32 +128,32 @@ int IsProtectedAttribute(const char *attr)
 	return NORMAL_ATTR;
 }
 
-static void appendProcsForCluster(MyString & out, int cluster, std::set<int> & procs)
+static void appendProcsForCluster(std::string & out, int cluster, std::set<int> & procs)
 {
 	if (cluster <= 0)
 		return;
 
 	if (procs.empty()) {
-		out.formatstr_cat(ATTR_CLUSTER_ID " == %d ", cluster);
+		formatstr_cat(out, ATTR_CLUSTER_ID " == %d ", cluster);
 	} else {
-		out.formatstr_cat("( " ATTR_CLUSTER_ID " == %d && ", cluster);
+		formatstr_cat(out, "( " ATTR_CLUSTER_ID " == %d && ", cluster);
 		if (procs.size() > 1) {
 			out += "(";
 			const char * op = "";
 			for (std::set<int>::iterator it = procs.begin(); it != procs.end(); ++it) {
 				out += op;
-				out.formatstr_cat(ATTR_PROC_ID " == %d ", *it);
+				formatstr_cat(out, ATTR_PROC_ID " == %d ", *it);
 				op = " || ";
 			}
 			out += ")";
 		} else {
-			out.formatstr_cat(ATTR_PROC_ID " == %d ", *procs.begin());
+			formatstr_cat(out, ATTR_PROC_ID " == %d ", *procs.begin());
 		}
 		out += ")";
 	}
 }
 
-const char * makeJobidConstraint(MyString & out, std::set<JOB_ID_KEY> & jobids)
+const char * makeJobidConstraint(std::string & out, std::set<JOB_ID_KEY> & jobids)
 {
 	if (jobids.empty()) return out.c_str();
 	int cluster = -1;
@@ -417,7 +417,7 @@ main(int argc, const char *argv[])
 	// 
 
 	ConstraintHolder constraint;
-	MyString query_string;
+	std::string query_string;
 	gquery.makeQuery(query_string);
 
 	// cook jobid strings into either a set of job ids, or more constraints
@@ -447,7 +447,7 @@ main(int argc, const char *argv[])
 		}
 	}
 	if ( ! query_string.empty()) {
-		constraint.set(query_string.StrDup());
+		constraint.set(strdup(query_string.c_str()));
 	}
 
 	// got the args, now check for consistency

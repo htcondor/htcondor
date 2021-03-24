@@ -989,9 +989,9 @@ main (int argc, char *argv[])
 			if ( ! mainPP.pm.has_headings()) {
 				if (mainPP.pm_head.Length() > 0) pheadings = &mainPP.pm_head;
 			}
-			MyString requirements;
+			std::string requirements;
 			if (Q_OK == query->getRequirements(requirements) && ! requirements.empty()) {
-				ConstraintHolder constrRaw(requirements.StrDup());
+				ConstraintHolder constrRaw(strdup(requirements.c_str()));
 				ExprTree * tree = constrRaw.Expr();
 				ConstraintHolder constrReduced(SkipExprParens(tree)->Copy());
 				pmms.where_expression = constrReduced.c_str();
@@ -1186,7 +1186,7 @@ main (int argc, char *argv[])
 	FNPROCESS_ADS_CALLBACK rightCallback = merge_ads_callback;
 
 	if( rightFileName != NULL ) {
-		MyString req;
+		std::string req;
 		q = query->getRequirements(req);
 		const char * constraint = req.empty() ? NULL : req.c_str();
 		if( read_classad_file( rightFileName, rightFileFormat, rightCallback, rightArg, constraint, result_limit ) ) {
