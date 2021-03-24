@@ -35,10 +35,10 @@ Release Notes:
   to be validated until you can resissue new tokens.
   :jira:`295`
 
-- HTCondor will now access tokens in directory ``/etc/condor/tokens.d`` as 
+- HTCondor will now access tokens in directory ``/etc/condor/tokens.d`` as
   user root, meaning this directory and its contents should be only accessible
   by user root for maximum secuirty.  If upgrading from an earlier v8.9.x release,
-  it may currently be accessible by user ``condor``, so recommend that 
+  it may currently be accessible by user ``condor``, so recommend that
   admins issue command ``chown -R root:root /etc/condor/tokens.d``.
   :jira:`266`
 
@@ -74,9 +74,10 @@ Release Notes:
 - SCITOKENS is now in the default list of authentication methods.
   :jira:`47`
 
-- Added configuration parameter `LEGACY_ALLOW_SEMANTICS`, which re-enables
-  the behavior of HTCondor 8.8 and prior when `ALLOW_DAEMON` or
-  `DENY_DAEMON` is not defined.
+- Added configuration parameter ``LEGACY_ALLOW_SEMANTICS``, which re-enables
+  the behavior of HTCondor 8.8 and prior when ``ALLOW_DAEMON`` or
+  ``DENY_DAEMON`` is not defined.
+
   This parameter is intended to ease the transition of existing HTCondor
   configurations from 8.8 to 9.0, and should not be used long-term or in
   new installations.
@@ -86,10 +87,10 @@ Release Notes:
   ``condor_reconfig`` and ``condor_off`` commands to other daemons.
   :jira:`273`
 
-- The ``condor_credmon_oauth`` now writes logs to the path in
-  `CREDMON_OAUTH_LOG` if defined, which matches the typical log config
+- The `condor_credmon_oauth` now writes logs to the path in
+  ``CREDMON_OAUTH_LOG`` if defined, which matches the typical log config
   parameter naming pattern, instead of using the path defined in
-  `SEC_CREDENTIAL_MONITOR_OAUTH_LOG`.
+  ``SEC_CREDENTIAL_MONITOR_OAUTH_LOG``.
   :jira:`122`
 
 New Features:
