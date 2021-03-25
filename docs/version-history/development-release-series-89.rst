@@ -9,10 +9,7 @@ Version 8.9.12
 
 Release Notes:
 
-.. HTCondor version 8.9.12 released on Month Date, 2021.
-
-- HTCondor version 8.9.12 not yet released.
-
+- HTCondor version 8.9.12 released on March 25, 2021.
 
 - We have changed the default configuration file.  It no longer sets
   ``use security : host_based``.  This may cause your existing, insecure
@@ -32,12 +29,12 @@ Release Notes:
   signing keys.  As a result, some previously-issued tokens will no
   longer be valid with this release.  In some cases, truncating the
   signing key just before the first zero byte will allow the old tokens
-  to be validated until you can resissue new tokens.
+  to be validated until you can reissue new tokens.
   :jira:`295`
 
 - HTCondor will now access tokens in directory ``/etc/condor/tokens.d`` as
   user root, meaning this directory and its contents should be only accessible
-  by user root for maximum secuirty.  If upgrading from an earlier v8.9.x release,
+  by user root for maximum security.  If upgrading from an earlier v8.9.x release,
   it may currently be accessible by user ``condor``, so recommend that
   admins issue command ``chown -R root:root /etc/condor/tokens.d``.
   :jira:`266`
@@ -100,7 +97,7 @@ New Features:
   https://zenodo.org/record/3937438 for details.
   :jira:`92`
 
-- Improvments made to error messages when jobs go on hold due to
+- Improvements made to error messages when jobs go on hold due to
   timeouts transferring files via HTTP.
   :jira:`355`
 
@@ -183,7 +180,7 @@ New Features:
 - The *condor_drain* command now has a ``-reason`` argument and will supply a default
   reason value if it is not used.  The *condor_defrag* daemon will always pass ``defrag``
   as the reason so that draining initiated by the administrator can be distinguished
-  by drainging initiated by *condor_defrag*.
+  by draining initiated by *condor_defrag*.
   :jira:`77`
 
 - The  *condor_defrag* daemon will now supply a ``-reason`` argument of ``defrag``
@@ -212,7 +209,7 @@ New Features:
 - Added configuration parameter ``GRIDMANAGER_LOG_APPEND_SELECTION_EXPR``,
   which allows each *condor_gridmanager* process to write to a separate
   daemon log file.
-  When this paramaeter is set to ``True``, the evaluated value of
+  When this parameter is set to ``True``, the evaluated value of
   ``GRIDMANAGER_SELECTION_EXPR`` (if set) will be appended to the
   filename specified by ``GRIDMANAGER_LOG``.
   :jira:`102`
