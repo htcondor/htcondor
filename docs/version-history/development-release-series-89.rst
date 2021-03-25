@@ -297,6 +297,11 @@ Bugs Fixed:
   errors were not getting reported in the debug output.
   :jira:`85`
 
+- The minihtcondor DEB package no longer aborts if installed on 
+  systems that do not have systemd installed, as is common with Debian and Ubuntu
+  docker containers.
+  :jira:`362`
+
 Version 8.9.11
 --------------
 
