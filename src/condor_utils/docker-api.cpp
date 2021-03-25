@@ -152,6 +152,7 @@ int DockerAPI::createContainer(
 	if (param_boolean("DOCKER_DROP_ALL_CAPABILITIES", true /*default*/,
 		true /*do_log*/, &machineAd, &jobAd)) {
 		runArgs.AppendArg("--cap-drop=all");
+		runArgs.AppendArg("--cap-add=SYS_PTRACE");
 
 		// --no-new-privileges flag appears in docker 1.11
 		runArgs.AppendArg("--security-opt");

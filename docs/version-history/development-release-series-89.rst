@@ -13,6 +13,13 @@ Release Notes:
 
 - HTCondor version 8.9.12 not yet released.
 
+- We fixed a bug in how the IDTOKENS authentication method reads its
+  signing keys.  As a result, some previously-issued tokens will no
+  longer be valid with this release.  In some cases, truncating the
+  signing key just before the first zero byte will allow the old tokens
+  to be validated until you can resissue new tokens.
+  :jira:`295`
+
 - We have changed the default configuration file.  It no longer sets
   ``use security : host_based``.  This may cause your existing, insecure
   security configuration to stop working.  Consider updating your
@@ -84,6 +91,10 @@ New Features:
   https://zenodo.org/record/3937438 for details.
   :jira:`92`
 
+- Improvments made to error messages when jobs go on hold due to
+  timeouts transferring files via HTTP.
+  :jira:`355`
+
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
   :jira:`73`
@@ -104,10 +115,10 @@ New Features:
   :jira:`137`
 
 - To make the debugging logs more consistent, the slot name is always
-  appended to the StarterLog.  Previously, a single slot startd's 
+  appended to the StarterLog.  Previously, a single slot startd's
   StarterLog would have no suffix.  Now it will be called StarterLog.slot1.
   :jira:`178`
-  
+
 - Added command-line options to *condor_gpu_discovery* to report GPUs
   multiple times.  If your GPU jobs are small and known to be well-behaved,
   this makes it easier for them to share a GPU.
@@ -140,7 +151,7 @@ New Features:
   :jira:`131`
 
 - When singularity is enabled, when there is an error running singularity
-  test before the job, the first line of singularity stderr is logged to 
+  test before the job, the first line of singularity stderr is logged to
   the hold message in the job.
   :jira:`133`
 
@@ -211,7 +222,19 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where jobs that asked for `transfer_output_files = .` would
+- Sufficiently old versions of the CUDA libraries no longer cause
+  `condor_gpu_discovery` to segfault.
+  :jira:`343`
+
+- Malformed or missing SciToken can result in a schedd abort when using ``SCHEDD_AUDIT_LOG``.
+  :jira:`315`
+
+
+- Fixed a bug where an IDTOKEN could be sent to a user who had authenticated
+  with the ANONYMOUS method after the auto-approval period had expired.
+  :jira:`231`
+
+- Fixed a bug where jobs that asked for ``transfer_output_files = .`` would
   be put on hold if they were evicted and restarted.
   :jira:`267`
 
@@ -244,10 +267,18 @@ Bugs Fixed:
   use different SciTokens.
   :jira:`99`
 
+- Fixed a bug where file transfers using HTTP may fail unnecessarily after
+  30 seconds if the HTTP server does not include a Content-Length header.
+  :jira:`354`
+
 - The local issuer in the ``condor_credmon_oauth`` gives more useful
   log output if it detects that the private key was generated with
   something other than the expected EC algorithm.
   :jira:`305`
+
+- Fixed a bug with *condor_dagman* direct job submission where certain submit
+  errors were not getting reported in the debug output.
+  :jira:`85`
 
 Version 8.9.11
 --------------

@@ -25,9 +25,8 @@ the ``get_htcondor`` tool does and provides a link to the rest of the details.
     If you just finished installing a single-machine ("mini") HTCondor
     using ``get_htcondor``, you can just run ``get_htcondor`` again (and
     follow its instructions) to reconfigure the machine to be one of
-    these three roles.
-
-    [FIXME]  Does re-running the MSI work to pick a role?
+    these three roles; this may destroy any other configuration changes
+    you've made.
 
     We don't recommend trying to add a machine configured as a "mini"
     HTCondor to pool, or trying to add execute machines to an existing
@@ -98,8 +97,7 @@ submit machine in a pool.  However, users should never need access to the
 central manager.  Every machine in the pool updates the central manager every
 few minutes, and it answers both system and user queries about the status of
 the pool's resources, so a fast network is important.  For very large pools,
-memory may become a limiting factor, but any reasonably modern CPU should be
-fine.
+memory may become a limiting factor.
 
 Assigning Roles to Machines
 ---------------------------

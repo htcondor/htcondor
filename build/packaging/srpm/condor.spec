@@ -881,8 +881,9 @@ mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 # not packaging configure/install scripts
 %if ! %uw_build
-rm -rf %{buildroot}%{_sbindir}/condor_configure
-rm -rf %{buildroot}%{_sbindir}/condor_install
+rm -f %{buildroot}%{_bindir}/make-personal-from-tarball
+rm -f %{buildroot}%{_sbindir}/condor_configure
+rm -f %{buildroot}%{_sbindir}/condor_install
 rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_install.1
 %endif
@@ -1676,6 +1677,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 23 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.13-1
+- condor_ssh_to_job now maps CR and NL to work with editors like nano
+- Improved the performance of data transfer in condor_ssh_to_job
+- HA replication now accepts SHA-2 checksums to prepare for MD5 removal
+- Submission to NorduGrid ARC CE works with newer ARC CE versions
+- Fixed condor_annex crashes on platforms with newer compilers
+- Fixed "use feature: GPUsMonitor" to locate the monitor binary on Windows
+- Fixed a bug that prevented using the '@' character in an event log path
+
 * Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
 - This release of HTCondor fixes security-related bugs described at
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001.html
